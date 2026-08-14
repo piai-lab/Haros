@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
+import { goBackInAppHistory } from "~/appNavigation";
 import {
   type AppSettings,
   type FollowUpBehavior,
@@ -166,6 +167,7 @@ function SettingsRouteView() {
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
+  const modelServiceSetupFlow = routeSearch.setup === "model-service";
   const {
     isDefaultActiveTheme,
     resetAllThemes,
@@ -1291,6 +1293,8 @@ function SettingsRouteView() {
                   defaults={defaults}
                   updateSettings={updateSettings}
                   resetEpoch={resetEpoch}
+                  startInAddFlow={modelServiceSetupFlow}
+                  {...(modelServiceSetupFlow ? { onSetupReady: goBackInAppHistory } : {})}
                 />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}

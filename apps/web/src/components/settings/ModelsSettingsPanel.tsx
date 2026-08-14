@@ -176,22 +176,44 @@ function authEventExternalHost(event: OmniMindModelServiceAuthEvent): string | n
 
 export function ModelsSettingsPanel({
   active,
+  startInAddFlow = false,
+  onSetupReady,
   ...binding
-}: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
+}: AppSettingsBinding & {
+  readonly resetEpoch: number;
+  readonly active: boolean;
+  readonly startInAddFlow?: boolean;
+  readonly onSetupReady?: () => void;
+}) {
   if (!active) return null;
-  return <ActiveModelsSettingsPanel active {...binding} />;
+  return (
+    <ActiveModelsSettingsPanel
+      active
+      startInAddFlow={startInAddFlow}
+      {...(onSetupReady ? { onSetupReady } : {})}
+      {...binding}
+    />
+  );
 }
 
 function ActiveModelsSettingsPanel({
   resetEpoch,
   active,
-}: AppSettingsBinding & { readonly resetEpoch: number; readonly active: boolean }) {
+  startInAddFlow,
+  onSetupReady,
+}: AppSettingsBinding & {
+  readonly resetEpoch: number;
+  readonly active: boolean;
+  readonly startInAddFlow: boolean;
+  readonly onSetupReady?: () => void;
+}) {
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
   const authRequestControllerRef = useRef<AbortController | null>(null);
   const customTestControllerRef = useRef<AbortController | null>(null);
   const authRequestIdRef = useRef<string | null>(null);
   const openedAuthUrlsRef = useRef(new Set<string>());
+  const setupCompletionArmedRef = useRef(false);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -205,7 +227,7 @@ function ActiveModelsSettingsPanel({
   const [confirmedOpenReadFailure, setConfirmedOpenReadFailure] = useState(false);
   const openReadRetryAttemptedRef = useRef(false);
   const [selectedModelServiceId, setSelectedModelServiceId] = useState<string | null>(null);
-  const [modelServiceBrowserOpen, setModelServiceBrowserOpen] = useState(false);
+  const [modelServiceBrowserOpen, setModelServiceBrowserOpen] = useState(startInAddFlow);
   const [modelServiceSearch, setModelServiceSearch] = useState("");
   const [modelServiceModelSearch, setModelServiceModelSearch] = useState("");
   const [modelServiceDetailReturnView, setModelServiceDetailReturnView] = useState<
@@ -238,6 +260,29 @@ function ActiveModelsSettingsPanel({
       ...(modelServiceDetailReturnView === "browser" ? { intent: "add_service" as const } : {}),
     }),
   );
+  const finishSetupIfReady = useCallback(
+    (service: OmniMindModelServiceDescriptor | null | undefined) => {
+      if (
+        !setupCompletionArmedRef.current ||
+        !service ||
+        service.availableModelCount <= 0 ||
+        !onSetupReady
+      ) {
+        return;
+      }
+      setupCompletionArmedRef.current = false;
+      onSetupReady();
+    },
+    [onSetupReady],
+  );
+
+  useEffect(() => {
+    const readyService = [
+      ...(modelServicesQuery.data?.services ?? []),
+      ...(addModelServicesQuery.data?.services ?? []),
+    ].find((service) => service.availableModelCount > 0);
+    finishSetupIfReady(readyService);
+  }, [addModelServicesQuery.data?.services, finishSetupIfReady, modelServicesQuery.data?.services]);
 
   useEffect(() => {
     if (modelServicesTransport !== "open") {
@@ -289,6 +334,7 @@ function ActiveModelsSettingsPanel({
   );
 
   useSettingsRestoreSignal(resetEpoch, () => {
+    setupCompletionArmedRef.current = false;
     setSelectedModelServiceId(null);
     setModelServiceBrowserOpen(false);
     setModelServiceSearch("");
@@ -485,7 +531,10 @@ function ActiveModelsSettingsPanel({
         return;
       }
 
+      if (!("service" in result)) return;
+      const completedService = result.service;
       setAuthDialog(null);
+      if (result.state === "complete") setupCompletionArmedRef.current = true;
       setModelServiceNotice({
         tone: result.state === "complete" ? "status" : "error",
         text:
@@ -502,8 +551,9 @@ function ActiveModelsSettingsPanel({
                 : t("settings.modelServiceAuthSaved"),
       });
       await invalidateModelServiceConsumers();
+      finishSetupIfReady(completedService);
     },
-    [invalidateModelServiceConsumers, t],
+    [finishSetupIfReady, invalidateModelServiceConsumers, t],
   );
 
   const consumeAuthResult = useCallback(
@@ -809,6 +859,7 @@ function ActiveModelsSettingsPanel({
         config: customModelServiceConfig(editor),
         apiKey: editor.apiKey || null,
       });
+      if (result.state === "complete") setupCompletionArmedRef.current = true;
       await invalidateModelServiceConsumers();
       setCustomServiceEditor(null);
       setModelServiceBrowserOpen(false);
@@ -825,12 +876,13 @@ function ActiveModelsSettingsPanel({
               ? t("settings.customApiSavedAuthFailed")
               : t("settings.customApiSavedSyncFailed"),
       });
+      finishSetupIfReady(result.service);
     } catch {
       setModelServiceNotice({ tone: "error", text: t("settings.customApiSaveFailed") });
     } finally {
       setModelServiceMutation(null);
     }
-  }, [customServiceEditor, invalidateModelServiceConsumers, t]);
+  }, [customServiceEditor, finishSetupIfReady, invalidateModelServiceConsumers, t]);
 
   const confirmRemoveCustomService = useCallback(async () => {
     const service = removeCustomService;
@@ -1602,7 +1654,9 @@ function ActiveModelsSettingsPanel({
                     origin={selectedModelService.origin}
                     className="size-7"
                   />
-                  <span className="truncate">{modelServiceInstanceLabel(selectedModelService)}</span>
+                  <span className="truncate">
+                    {modelServiceInstanceLabel(selectedModelService)}
+                  </span>
                 </div>
                 {selectedCustomConfig ? (
                   <div className="flex flex-wrap items-center justify-end gap-2">

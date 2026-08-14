@@ -193,6 +193,8 @@ function setNativeApi(input: {
 
 async function renderPanel(input: {
   readonly active?: boolean;
+  readonly startInAddFlow?: boolean;
+  readonly onSetupReady?: () => void;
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
@@ -227,6 +229,8 @@ async function renderPanel(input: {
         settings={settings}
         defaults={settings}
         updateSettings={() => {}}
+        startInAddFlow={input.startInAddFlow ?? false}
+        {...(input.onSetupReady ? { onSetupReady: input.onSetupReady } : {})}
       />
     </QueryClientProvider>
   );
@@ -258,6 +262,78 @@ afterEach(() => {
 });
 
 describe("ModelsSettingsPanel model services", () => {
+  it("enters Add directly for Chat setup and returns only after an exact usable service exists", async () => {
+    const setupService = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+    });
+    const configuredService = service({ availableModelCount: 2 });
+    let catalogProjected = false;
+    const requestId = "00000000-0000-4000-8000-000000000071";
+    const promptId = "00000000-0000-4000-8000-000000000072";
+    const onSetupReady = vi.fn();
+    const mounted = await renderPanel({
+      startInAddFlow: true,
+      onSetupReady,
+      list: async (input) =>
+        catalogProjected && !input?.intent
+          ? {
+              state: "ready",
+              services: [configuredService],
+              connectableServices: [],
+              errorCode: null,
+            }
+          : {
+              state: "empty",
+              services: [],
+              connectableServices: [setupService],
+              errorCode: null,
+            },
+      get: async () => ({ state: "ready", service: setupService, errorCode: null }),
+      beginLogin: async () => ({
+        state: "prompt",
+        requestId,
+        prompt: {
+          promptId,
+          type: "secret",
+          message: "Provider-owned instruction",
+        },
+        events: [],
+      }),
+      answerLogin: async () => {
+        catalogProjected = true;
+        return {
+          state: "complete",
+          requestId,
+          service: setupService,
+          events: [],
+        };
+      },
+    });
+
+    expect(
+      mounted.screen.getByRole("textbox", { name: "settings.searchModelServices" }),
+    ).toBeVisible();
+    expect(onSetupReady).not.toHaveBeenCalled();
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+    await mounted.screen.getByLabelText("settings.modelServicePromptSecret").fill("test-secret");
+    await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+
+    await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
+    expect(mounted.calls.list).toHaveBeenCalledWith(
+      { intent: "add_service" },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
   it("does not query model services or server config while the route is inactive", async () => {
     const mounted = await renderPanel({
       active: false,

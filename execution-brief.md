@@ -124,7 +124,9 @@ E6 已由 fresh completion audit 对 exact product `66e0213c5…` 复核唯一 v
 
 E7 已在 exact pushed product `6e3e2ef3d…` 形成 producer candidate：本地 LobeHub 模型服务图标、intent-scoped Extension 服务、OmniMind Agent package/ecosystem lifecycle，以及 Git writing 在调用功能设置中的可达入口均已闭合；被动 Settings/package list 继续 zero-execute，Pi 仍拥有 service/model/package authority，没有新增 Registry、parser、store、cache 或跨 Engine lifecycle。该 SHA 的 cumulative focused gates、arm64 DMG、fresh task-specific installed-App 打开/关闭/重开证据已完成，但 producer 不把它改写为 E7 Exit。
 
-因此当前唯一下一动作是冻结 exact pushed control-plane `7aefe89eb…` 及其后续 Campaign evidence：E5/E7 fresh independent completion audit已结论`CLEAN`，E8 cumulative source/live/packaged producer evidence已完成并保持candidate语义，不再重复无新假设的OAuth、live或package journey。先前丢失的CI/Release side work没有从聊天摘要复刻；维护者重新授权后已按当前sole owner以删除式方案重建：普通CI只保留一条Linux quality job并取消同ref旧run，Release只在tag/手动触发时生成三平台build artifact，不发布、不改feed、不读secrets，artifact保留5天。剩余停止门是Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full completion audit；完整 Run 仍保持 non-candidate。
+E5/E7/E8 的既有 independent audit 只证明其冻结 slice，不覆盖维护者随后明确要求的完整首次使用与 Model-services 用户旅程。当前唯一下一动作已恢复为用户授权的 completion sequence：先闭合“全产品无可发送精确模型”时的 Chat 首启 setup surface及草稿/返回/首发连续性；再分别闭合 Add 紧凑 IA 与 service/model icon 降级链、Pi-owned 模型获取与安全 credential 可达性，最后从 exact pushed SHA 做 fresh isolated packaged journey 和独立 completion audit。每个关注点单独形成可审查 commit；既有 E1/E2/E5/E6/E7 owner 无当前根反例时不重开，E3/E4 的历史 lifecycle debt也不吸收入 onboarding 提交。
+
+先前丢失的CI/Release side work没有从聊天摘要复刻；维护者重新授权后已按当前sole owner以删除式方案重建：普通CI只保留一条Linux quality job并取消同ref旧run，Release只在tag/手动触发时生成三平台build artifact，不发布、不改feed、不读secrets，artifact保留5天。Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full completion audit继续作为外部门独立记录，不能被本轮产品 completion 伪装为已闭合。
 
 进入门是：`Model services / 模型服务`、普通展示名 `OmniMind`、Pi ModelRuntime authority、`.omnimind/.pi` 隔离和 next-turn/stop-first 语义已在 Workbench、Product State 与 Execution sole owner 中唯一；当前 snapshot 与 Pi stable `v0.84.1` 仍匹配。停止门是任何方案需要第二 Provider/Model Registry、静态供应商能力镜像、通用推理策略、跨 Engine Session continuation、新 switch RPC、未举证的持久化，或越出已授权 Pi-owned typed mutation seam 转而建立 Host parser/writer/store/fetcher。
 

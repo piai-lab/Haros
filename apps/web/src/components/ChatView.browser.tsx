@@ -6911,6 +6911,75 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("offers first-run model setup only for a truly empty product and preserves the Chat draft", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      const setupPrompt = page.getByTestId("model-readiness-prompt");
+      await expect.element(setupPrompt).toBeInTheDocument();
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 320, height: 700 });
+      expect(setupPrompt.element().scrollWidth).toBeLessThanOrEqual(
+        setupPrompt.element().clientWidth,
+      );
+      await page.getByRole("textbox").fill("Keep this draft while I connect a model.");
+      const setupButton = page.getByRole("button", {
+        name: EN_MESSAGES["composer.modelSetupAction"],
+      });
+      setupButton.element().focus();
+      await userEvent.keyboard("{Enter}");
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "Model setup should open the existing Settings route.",
+      );
+
+      await expect
+        .element(page.getByRole("textbox", { name: EN_MESSAGES["settings.searchModelServices"] }))
+        .toBeInTheDocument();
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+        "Keep this draft while I connect a model.",
+      );
+      expect(listModelServices).toHaveBeenCalledWith(
+        { intent: "add_service" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
   it("creates and selects a new project from an empty project draft without navigating away", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,

@@ -369,9 +369,7 @@ describe("reachable OmniMind-owned product copy", () => {
       );
       expect(
         modelServiceCopy.flatMap(([key, message]) =>
-          forbidden.flatMap((pattern) =>
-            pattern.test(message) ? [`${key}: ${message}`] : [],
-          ),
+          forbidden.flatMap((pattern) => (pattern.test(message) ? [`${key}: ${message}`] : [])),
         ),
       ).toEqual([]);
     }
@@ -384,5 +382,14 @@ describe("reachable OmniMind-owned product copy", () => {
     expect(ZH_CN_MESSAGES["settings.modelServiceOriginModelsJson"]).toBe("通过 API 地址连接");
     expect(EN_MESSAGES["settings.noServiceModels"]).toContain("service");
     expect(ZH_CN_MESSAGES["settings.noServiceModels"]).toContain("服务");
+  });
+
+  it("distinguishes first-run setup from recovery in both supported languages", () => {
+    expect(EN_MESSAGES["composer.modelSetupTitle"]).toBe("Set up a model to get started");
+    expect(ZH_CN_MESSAGES["composer.modelSetupTitle"]).toBe("配置模型后开始");
+    expect(EN_MESSAGES["composer.modelSetupDescription"]).toContain("draft and attachments");
+    expect(ZH_CN_MESSAGES["composer.modelSetupDescription"]).toContain("草稿和附件");
+    expect(EN_MESSAGES["composer.modelRecoveryDescription"]).toContain("existing connection");
+    expect(ZH_CN_MESSAGES["composer.modelRecoveryDescription"]).toContain("现有连接");
   });
 });
