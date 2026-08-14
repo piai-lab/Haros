@@ -7272,6 +7272,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
             source: "browser.fixture",
             models: [
               {
+                slug: "unconfigured/local-model",
+                name: "Unconfigured Model",
+                upstreamProviderId: "unconfigured",
+                upstreamProviderName: "Unconfigured",
+                upstreamProviderOrigin: "builtin",
+              },
+              {
                 slug: "deepseek/deepseek-v4-flash",
                 name: "DeepSeek V4 Flash",
                 upstreamProviderId: "deepseek",
@@ -7294,6 +7301,22 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expect
         .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
         .not.toBeInTheDocument();
+      await page.getByRole("textbox").fill("Use the configured service.");
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(() => {
+        const turnStarts = wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.turn.start");
+        expect(turnStarts).toHaveLength(1);
+        expect(turnStarts[0]).toMatchObject({
+          modelSelection: {
+            provider: "omnimind",
+            model: "deepseek/deepseek-v4-flash",
+          },
+        });
+      });
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

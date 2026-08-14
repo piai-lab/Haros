@@ -5,6 +5,7 @@ import {
   EventId,
   MessageId,
   type ModelSelection,
+  type OmniMindModelServicesListResult,
   type NativeApi,
   type OrchestrationShellSnapshot,
   type ProjectScript,
@@ -125,7 +126,10 @@ import {
   normalizeProviderStatusForLocalConfig,
   resolveProviderSendAvailabilityWithRefresh,
 } from "~/lib/providerAvailability";
-import { omniMindModelServicesListQueryOptions } from "~/lib/omnimindModelServicesReactQuery";
+import {
+  omniMindModelServicesListQueryOptions,
+  omniMindModelServicesQueryKeys,
+} from "~/lib/omnimindModelServicesReactQuery";
 import {
   loadConfirmedCustomBinaryPaths,
   saveConfirmedCustomBinaryPaths,
@@ -433,6 +437,8 @@ import {
   hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
   hasUsableOmniMindModelServiceBinding,
+  isSettledPassiveModelServicesQueryState,
+  resolveUsableOmniMindModelServiceSelection,
   type PassiveModelServicesState,
 } from "./chat/modelReadinessPrompt.logic";
 import {
@@ -2339,11 +2345,29 @@ export default function ChatView({
     modelHintByProvider: composerModelHintByProvider,
     agentDiscoveryPolicy: "eager-core",
   });
+  const passiveModelServicesQueryState = queryClient.getQueryState<OmniMindModelServicesListResult>(
+    omniMindModelServicesQueryKeys.list(),
+  );
+  const cachedPassiveModelServices =
+    passiveModelServicesQueryState &&
+    isSettledPassiveModelServicesQueryState(passiveModelServicesQueryState)
+      ? passiveModelServicesQueryState.data
+      : undefined;
+  const runtimeCatalogFallbackModel =
+    selectedProvider === "omnimind"
+      ? cachedPassiveModelServices?.state === "ready"
+        ? (resolveUsableOmniMindModelServiceSelection({
+            modelOptions: selectableModelOptionsByProvider.omnimind,
+            services: cachedPassiveModelServices.services,
+          })?.model ?? null)
+        : null
+      : undefined;
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
     selectedProvider,
     threadModelSelection: serverThread?.modelSelection,
     projectModelSelection: activeProject?.defaultModelSelection,
+    runtimeCatalogFallbackModel,
     customModelsByProvider,
     availableModelOptionsByProvider: selectableModelOptionsByProvider,
   });

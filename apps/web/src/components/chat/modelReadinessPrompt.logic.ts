@@ -13,6 +13,14 @@ import type { ProviderModelOption } from "~/providerModelOptions";
 export type PassiveModelServicesState = "unknown" | "empty" | "configured" | "error";
 export type ModelReadinessPromptMode = "setup" | "recover" | null;
 
+export function isSettledPassiveModelServicesQueryState(input: {
+  readonly status: "pending" | "error" | "success";
+  readonly fetchStatus: "fetching" | "paused" | "idle";
+  readonly isInvalidated: boolean;
+}): boolean {
+  return input.status === "success" && input.fetchStatus === "idle" && !input.isInvalidated;
+}
+
 export function hasUsableExactModelBinding(input: {
   readonly providerStatuses: readonly ServerProviderStatus[];
   readonly exactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
@@ -61,6 +69,25 @@ export function hasUsableOmniMindModelServiceBinding(input: {
       service.authState === "configured" &&
       service.availableModelCount > 0,
   );
+}
+
+export function resolveUsableOmniMindModelServiceSelection(input: {
+  readonly modelOptions: ReadonlyArray<ProviderModelOption>;
+  readonly services: ReadonlyArray<OmniMindModelServiceDescriptor>;
+}): ModelSelection | null {
+  const model = input.modelOptions.find(
+    (option) =>
+      option.upstreamProviderId !== undefined &&
+      option.upstreamProviderOrigin !== undefined &&
+      input.services.some(
+        (service) =>
+          service.serviceId === option.upstreamProviderId &&
+          service.origin === option.upstreamProviderOrigin &&
+          service.authState === "configured" &&
+          service.availableModelCount > 0,
+      ),
+  );
+  return model ? { provider: "omnimind", model: model.slug } : null;
 }
 
 export function areUsableProviderCatalogsSettled(input: {

@@ -704,6 +704,7 @@ export function deriveEffectiveComposerModelState(input: {
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
   stickyModelSelection?: ModelSelection | null | undefined;
+  runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
   customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
@@ -745,9 +746,11 @@ export function deriveEffectiveComposerModelState(input: {
     input.selectedProvider === "omnimind" || input.selectedProvider === "pi";
   if (!(requiresExactRuntimeCatalogSelection && hasRememberedExactSelection)) {
     selectedModel ??=
-      resolveAvailableModel(getDefaultModel(input.selectedProvider)) ??
-      input.availableModelOptionsByProvider?.[input.selectedProvider]?.[0]?.slug ??
-      null;
+      input.runtimeCatalogFallbackModel !== undefined
+        ? resolveAvailableModel(input.runtimeCatalogFallbackModel)
+        : (resolveAvailableModel(getDefaultModel(input.selectedProvider)) ??
+          input.availableModelOptionsByProvider?.[input.selectedProvider]?.[0]?.slug ??
+          null);
   }
 
   const inheritedModelOptions = deriveEffectiveComposerModelOptions(input);

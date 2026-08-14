@@ -7,6 +7,8 @@ import {
   hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
   hasUsableOmniMindModelServiceBinding,
+  isSettledPassiveModelServicesQueryState,
+  resolveUsableOmniMindModelServiceSelection,
 } from "./modelReadinessPrompt.logic";
 
 function providerStatus(
@@ -24,6 +26,37 @@ function providerStatus(
 }
 
 describe("model readiness prompt", () => {
+  it("does not reuse stale model-service data while authority is invalidated or refetching", () => {
+    expect(
+      isSettledPassiveModelServicesQueryState({
+        status: "success",
+        fetchStatus: "idle",
+        isInvalidated: false,
+      }),
+    ).toBe(true);
+    expect(
+      isSettledPassiveModelServicesQueryState({
+        status: "success",
+        fetchStatus: "idle",
+        isInvalidated: true,
+      }),
+    ).toBe(false);
+    expect(
+      isSettledPassiveModelServicesQueryState({
+        status: "success",
+        fetchStatus: "fetching",
+        isInvalidated: false,
+      }),
+    ).toBe(false);
+    expect(
+      isSettledPassiveModelServicesQueryState({
+        status: "error",
+        fetchStatus: "idle",
+        isInvalidated: false,
+      }),
+    ).toBe(false);
+  });
+
   it("suppresses setup when any Engine has a usable exact model binding", () => {
     const exactModelSelections = {
       codex: { provider: "codex", model: "gpt-5.5" },
@@ -171,6 +204,46 @@ describe("model readiness prompt", () => {
         services: [{ ...configuredBuiltin, origin: "extension" }],
       }),
     ).toBe(true);
+  });
+
+  it("selects the first catalog model owned by a configured exact service", () => {
+    const selection = resolveUsableOmniMindModelServiceSelection({
+      modelOptions: [
+        {
+          slug: "unconfigured/local-model",
+          name: "Local Model",
+          upstreamProviderId: "unconfigured",
+          upstreamProviderName: "Unconfigured",
+          upstreamProviderOrigin: "builtin",
+        },
+        {
+          slug: "configured/model-y",
+          name: "Model Y",
+          upstreamProviderId: "configured",
+          upstreamProviderName: "Configured",
+          upstreamProviderOrigin: "builtin",
+        },
+      ],
+      services: [
+        {
+          serviceId: "configured",
+          providerId: "configured",
+          displayName: "Configured",
+          origin: "builtin",
+          authMethods: [],
+          authState: "configured",
+          authSource: "stored",
+          storedCredentialType: "api_key",
+          knownModelCount: 1,
+          availableModelCount: 1,
+          supportsNetworkRefresh: false,
+          catalogState: "ready",
+          catalogErrorCode: null,
+        },
+      ],
+    });
+
+    expect(selection).toEqual({ provider: "omnimind", model: "configured/model-y" });
   });
 
   it("routes configured but unavailable services to recovery instead of first-run setup", () => {

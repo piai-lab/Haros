@@ -534,6 +534,25 @@ describe("composerDraftStore modelSelection", () => {
     expect(state.selectedModel).toBe("service-b/model-b");
   });
 
+  it("uses an authority-selected OmniMind catalog fallback instead of the first catalog row", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: { modelSelectionByProvider: {}, activeProvider: "omnimind" },
+      selectedProvider: "omnimind",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      runtimeCatalogFallbackModel: "service-b/model-b",
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        omnimind: [
+          { slug: "service-a/model-a", name: "Model A" },
+          { slug: "service-b/model-b", name: "Model B" },
+        ],
+      },
+    });
+
+    expect(state.selectedModel).toBe("service-b/model-b");
+  });
+
   it("returns no model when the selected Engine has no authoritative catalog", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {

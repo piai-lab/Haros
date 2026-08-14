@@ -2,7 +2,12 @@
 // Purpose: Public Zustand facade for composer drafts, model choices, attachments, and persistence.
 // Exports: Stable composer draft API, hooks, and promotion helpers.
 
-import { type ModelSelection, type ProviderKind, type ThreadId } from "@omnimind/contracts";
+import {
+  type ModelSelection,
+  type ModelSlug,
+  type ProviderKind,
+  type ThreadId,
+} from "@omnimind/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -122,6 +127,7 @@ export function useEffectiveComposerModelState(input: {
   selectedProvider: ProviderKind;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
+  runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
   customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
@@ -137,6 +143,9 @@ export function useEffectiveComposerModelState(input: {
     threadModelSelection: input.threadModelSelection,
     projectModelSelection: input.projectModelSelection,
     stickyModelSelection,
+    ...(input.runtimeCatalogFallbackModel !== undefined
+      ? { runtimeCatalogFallbackModel: input.runtimeCatalogFallbackModel }
+      : {}),
     customModelsByProvider: input.customModelsByProvider,
     ...(input.availableModelOptionsByProvider !== undefined
       ? { availableModelOptionsByProvider: input.availableModelOptionsByProvider }
