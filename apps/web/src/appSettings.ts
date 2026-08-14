@@ -560,7 +560,11 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),
     terminalFontFamily: normalizeTerminalFontFamily(settings.terminalFontFamily),
     customCodexModels: normalizeCustomModelSlugs(settings.customCodexModels, "codex"),
-    customOmniMindModels: normalizeCustomModelSlugs(settings.customOmniMindModels, "omnimind"),
+    // Compatibility-only input from releases that allowed free-form OmniMind model hints.
+    // Keep every byte and position intact so the explicit Model services migration UI can
+    // convert or remove one exact entry at a time. Runtime catalog consumers normalize at
+    // getAppModelOptions instead; passive settings reads must never migrate this array.
+    customOmniMindModels: [...settings.customOmniMindModels],
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),
     customCursorModels: normalizeCustomModelSlugs(settings.customCursorModels, "cursor"),
     customAntigravityModels: normalizeCustomModelSlugs(

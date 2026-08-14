@@ -142,6 +142,11 @@ interface CustomModelDiscoveryState {
   readonly selectedModelIds: ReadonlySet<string>;
 }
 
+interface LegacyOmniMindModelHintTarget {
+  readonly index: number;
+  readonly expectedValue: string;
+}
+
 type CustomModelServiceAction = "discover" | "test" | "save";
 
 const EMPTY_CUSTOM_MODEL_DISCOVERY: CustomModelDiscoveryState = {
@@ -817,6 +822,8 @@ function ActiveModelsSettingsPanel({
   active,
   startInAddFlow,
   onSetupReady,
+  settings,
+  updateSettings,
 }: AppSettingsBinding & {
   readonly resetEpoch: number;
   readonly active: boolean;
@@ -843,6 +850,8 @@ function ActiveModelsSettingsPanel({
   } | null>(null);
   const modelServiceDetailShouldFocusRef = useRef(false);
   const customServiceEditorInitialFingerprintRef = useRef<string | null>(null);
+  const latestSettingsRef = useRef(settings);
+  latestSettingsRef.current = settings;
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -871,6 +880,10 @@ function ActiveModelsSettingsPanel({
     : 0;
   const [customServiceEditor, setCustomServiceEditor] =
     useState<CustomModelServiceEditorState | null>(null);
+  const [legacyOmniMindModelHintTarget, setLegacyOmniMindModelHintTarget] =
+    useState<LegacyOmniMindModelHintTarget | null>(null);
+  const [legacyOmniMindModelHintRemoval, setLegacyOmniMindModelHintRemoval] =
+    useState<LegacyOmniMindModelHintTarget | null>(null);
   const [customServiceApiKeyVisible, setCustomServiceApiKeyVisible] = useState(false);
   const [customModelDiscovery, setCustomModelDiscovery] = useState<CustomModelDiscoveryState>(
     EMPTY_CUSTOM_MODEL_DISCOVERY,
@@ -1032,6 +1045,8 @@ function ActiveModelsSettingsPanel({
     setLogoutService(null);
     setRemoveCustomService(null);
     setCustomServiceEditor(null);
+    setLegacyOmniMindModelHintTarget(null);
+    setLegacyOmniMindModelHintRemoval(null);
     customServiceEditorInitialFingerprintRef.current = null;
     setCustomServiceApiKeyVisible(false);
     setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
@@ -1470,7 +1485,10 @@ function ActiveModelsSettingsPanel({
   );
 
   const openCustomServiceEditor = useCallback(
-    (config?: NonNullable<typeof selectedCustomConfig>) => {
+    (
+      config?: NonNullable<typeof selectedCustomConfig>,
+      legacyTarget?: LegacyOmniMindModelHintTarget,
+    ) => {
       const nextEditor: CustomModelServiceEditorState = config
         ? {
             mode: "edit",
@@ -1510,7 +1528,12 @@ function ActiveModelsSettingsPanel({
             testedFingerprint: null,
             testState: "idle",
           }
-        : createCustomModelServiceEditor();
+        : legacyTarget
+          ? {
+              ...createCustomModelServiceEditor(),
+              models: [{ ...DEFAULT_CUSTOM_MODEL, modelId: legacyTarget.expectedValue }],
+            }
+          : createCustomModelServiceEditor();
       setModelServiceNotice(null);
       customServiceEditorInitialFingerprintRef.current = customModelServiceFingerprint(nextEditor);
       setCustomServiceApiKeyVisible(false);
@@ -1519,6 +1542,7 @@ function ActiveModelsSettingsPanel({
       setPendingCustomServiceRiskAction(null);
       setConfirmedCustomServiceEndpoint(null);
       setConfirmedCustomServiceCommands(new Set());
+      setLegacyOmniMindModelHintTarget(legacyTarget ?? null);
       setCustomServiceEditor(nextEditor);
     },
     [selectedModelService?.authSource],
@@ -1531,6 +1555,7 @@ function ActiveModelsSettingsPanel({
     customDiscoveryControllerRef.current = null;
     customServiceEditorInitialFingerprintRef.current = null;
     setCustomServiceEditor(null);
+    setLegacyOmniMindModelHintTarget(null);
     setCustomServiceApiKeyVisible(false);
     setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
     setCustomServiceDiscardRequested(false);
@@ -1538,6 +1563,40 @@ function ActiveModelsSettingsPanel({
     setConfirmedCustomServiceEndpoint(null);
     setConfirmedCustomServiceCommands(new Set());
   }, []);
+
+  const removeLegacyOmniMindModelHintIfCurrent = useCallback(
+    (target: LegacyOmniMindModelHintTarget): boolean => {
+      const currentHints = latestSettingsRef.current.customOmniMindModels;
+      if (currentHints[target.index] !== target.expectedValue) return false;
+      updateSettings({
+        customOmniMindModels: currentHints.filter((_, index) => index !== target.index),
+      });
+      return true;
+    },
+    [updateSettings],
+  );
+
+  const openLegacyOmniMindModelConversion = useCallback(
+    (index: number, expectedValue: string) => {
+      openCustomServiceEditor(undefined, { index, expectedValue });
+    },
+    [openCustomServiceEditor],
+  );
+
+  const confirmRemoveLegacyOmniMindModelHint = useCallback(() => {
+    const target = legacyOmniMindModelHintRemoval;
+    if (!target) return;
+    const removed = removeLegacyOmniMindModelHintIfCurrent(target);
+    setLegacyOmniMindModelHintRemoval(null);
+    setModelServiceNotice({
+      tone: removed ? "status" : "error",
+      text: t(
+        removed
+          ? "settings.legacyOmniMindModelHintRemoved"
+          : "settings.legacyOmniMindModelHintChanged",
+      ),
+    });
+  }, [legacyOmniMindModelHintRemoval, removeLegacyOmniMindModelHintIfCurrent, t]);
 
   const requestCloseCustomServiceEditor = useCallback(() => {
     if (customServiceEditorDirty) {
@@ -1711,6 +1770,7 @@ function ActiveModelsSettingsPanel({
   const saveCustomService = useCallback(async () => {
     const editor = customServiceEditor;
     if (!editor || editor.testedFingerprint !== customModelServiceFingerprint(editor)) return;
+    const legacyTarget = legacyOmniMindModelHintTarget;
     const credential = customModelServiceCredentialInput(editor);
     if (!credential) return;
     setModelServiceMutation("custom:save");
@@ -1741,6 +1801,9 @@ function ActiveModelsSettingsPanel({
         });
         return;
       }
+      const legacyHintRemoved = legacyTarget
+        ? removeLegacyOmniMindModelHintIfCurrent(legacyTarget)
+        : false;
       closeCustomServiceEditor();
       setModelServiceBrowserOpen(false);
       if (result.service) {
@@ -1748,11 +1811,18 @@ function ActiveModelsSettingsPanel({
         setSelectedModelServiceId(result.service.serviceId);
       }
       setModelServiceNotice({
-        tone: result.state === "complete" ? "status" : "error",
+        tone:
+          legacyTarget && !legacyHintRemoved
+            ? "error"
+            : result.state === "complete"
+              ? "status"
+              : "error",
         text:
-          result.state === "complete"
-            ? t("settings.customApiSaved")
-            : t("settings.customApiSavedSyncWarning"),
+          legacyTarget && !legacyHintRemoved
+            ? t("settings.legacyOmniMindModelConvertedHintChanged")
+            : result.state === "complete"
+              ? t("settings.customApiSaved")
+              : t("settings.customApiSavedSyncWarning"),
       });
       await finishSetupIfReady(result.service);
     } catch {
@@ -1765,6 +1835,8 @@ function ActiveModelsSettingsPanel({
     customServiceEditor,
     finishSetupIfReady,
     invalidateModelServiceConsumers,
+    legacyOmniMindModelHintTarget,
+    removeLegacyOmniMindModelHintIfCurrent,
     t,
   ]);
 
@@ -2073,6 +2145,64 @@ function ActiveModelsSettingsPanel({
             </div>
           }
         >
+          {settings.customOmniMindModels.length > 0 ? (
+            <div className="mb-4 space-y-2">
+              <div>
+                <h3 className="text-sm font-medium text-foreground">
+                  {t("settings.legacyOmniMindModels")}
+                </h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {t("settings.legacyOmniMindModelsDescription")}
+                </p>
+              </div>
+              <SettingsCard>
+                {settings.customOmniMindModels.map((hint, index) => (
+                  <SettingsListRow
+                    key={`${index}:${hint}`}
+                    title={
+                      <code className="break-all text-xs text-foreground">
+                        {hint || t("settings.legacyOmniMindModelEmpty")}
+                      </code>
+                    }
+                    description={t("settings.legacyOmniMindModelDescription", {
+                      number: index + 1,
+                    })}
+                    actions={
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          aria-label={t("settings.legacyOmniMindModelConvertNamed", {
+                            number: index + 1,
+                            model: hint,
+                          })}
+                          onClick={() => openLegacyOmniMindModelConversion(index, hint)}
+                        >
+                          {t("settings.legacyOmniMindModelConvert")}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={t("settings.legacyOmniMindModelRemoveNamed", {
+                            number: index + 1,
+                            model: hint,
+                          })}
+                          onClick={() =>
+                            setLegacyOmniMindModelHintRemoval({
+                              index,
+                              expectedValue: hint,
+                            })
+                          }
+                        >
+                          {t("settings.legacyOmniMindModelRemove")}
+                        </Button>
+                      </div>
+                    }
+                  />
+                ))}
+              </SettingsCard>
+            </div>
+          ) : null}
           <div
             aria-live="polite"
             aria-busy={modelServicesCapability === null || modelServicesQuery.isPending}
@@ -2403,6 +2533,11 @@ function ActiveModelsSettingsPanel({
             <p className="text-sm leading-relaxed text-muted-foreground">
               {t("settings.customApiDescription")}
             </p>
+            {legacyOmniMindModelHintTarget ? (
+              <p className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                {t("settings.legacyOmniMindModelConversionDescription")}
+              </p>
+            ) : null}
             <SettingsCard className="space-y-0 p-0">
               <div className="grid gap-4 border-b border-border p-4 sm:grid-cols-2">
                 <label className="space-y-1.5 text-xs font-medium text-foreground">
@@ -4141,6 +4276,30 @@ function ActiveModelsSettingsPanel({
                 : logoutService?.storedCredentialType === "oauth"
                   ? t("settings.signOutModelService")
                   : t("settings.removeApiKey")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
+
+      <AlertDialog
+        open={legacyOmniMindModelHintRemoval !== null}
+        onOpenChange={(open) => !open && setLegacyOmniMindModelHintRemoval(null)}
+      >
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.legacyOmniMindModelRemoveTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.legacyOmniMindModelRemoveDescription", {
+                model: legacyOmniMindModelHintRemoval?.expectedValue ?? "",
+              })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline" size="sm" />}>
+              {t("common.cancel")}
+            </AlertDialogClose>
+            <Button size="sm" variant="destructive" onClick={confirmRemoveLegacyOmniMindModelHint}>
+              {t("settings.legacyOmniMindModelRemove")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

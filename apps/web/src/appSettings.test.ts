@@ -656,6 +656,22 @@ describe("provider-indexed custom model settings", () => {
     ]);
   });
 
+  it("preserves every legacy OmniMind model hint until the user explicitly handles it", () => {
+    const legacyHints = [
+      ...Array.from({ length: 33 }, (_, index) => `legacy/model-${index}`),
+      "legacy/model-0",
+      "deepseek/deepseek-v4-flash",
+      "  opaque legacy value  ",
+    ];
+
+    const normalized = normalizeStoredAppSettings(
+      AppSettingsSchema.makeUnsafe({ customOmniMindModels: legacyHints }),
+    );
+
+    expect(normalized.customOmniMindModels).toEqual(legacyHints);
+    expect(normalized.customOmniMindModels).not.toBe(legacyHints);
+  });
+
   it("reads custom models for each provider", () => {
     expect(getCustomModelsForProvider(settings, "omnimind")).toEqual(["deepseek/custom-omnimind"]);
     expect(getCustomModelsForProvider(settings, "codex")).toEqual(["custom/codex-model"]);
