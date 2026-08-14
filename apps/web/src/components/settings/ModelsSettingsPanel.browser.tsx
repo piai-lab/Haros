@@ -4,14 +4,15 @@
 
 import "../../index.css";
 
-import type {
-  NativeApi,
-  ModelSelection,
-  OmniMindCustomModelServiceModelInput,
-  OmniMindModelServiceAuthResult,
-  OmniMindModelServiceDescriptor,
-  OmniMindModelServicesGetResult,
-  OmniMindModelServicesListResult,
+import {
+  ThreadId,
+  type NativeApi,
+  type ModelSelection,
+  type OmniMindCustomModelServiceModelInput,
+  type OmniMindModelServiceAuthResult,
+  type OmniMindModelServiceDescriptor,
+  type OmniMindModelServicesGetResult,
+  type OmniMindModelServicesListResult,
 } from "@omnimind/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -26,7 +27,7 @@ import { render } from "vitest-browser-react";
 
 import { AppSettingsSchema } from "~/appSettings";
 import { useComposerDraftStore } from "~/composerDraftStore";
-import { resetComposerDraftStore } from "~/composerDraftStoreTestFixtures";
+import { makeQueuedChatTurn, resetComposerDraftStore } from "~/composerDraftStoreTestFixtures";
 import { serverQueryKeys } from "~/lib/serverReactQuery";
 import { createBrowserTestServerConfig } from "~/test/browserHarness";
 
@@ -1490,10 +1491,19 @@ describe("ModelsSettingsPanel model services", () => {
         omnimind: referencedSelection,
       },
     }));
+    useComposerDraftStore.getState().enqueueQueuedTurn(ThreadId.makeUnsafe("queued-reference"), {
+      ...makeQueuedChatTurn("queued-custom-service"),
+      selectedProvider: "omnimind",
+      selectedModel: referencedSelection.model,
+      modelSelection: referencedSelection,
+    });
     await mounted.screen.getByRole("button", { name: "common.delete" }).click();
     const deleteDialog = mounted.screen.getByLabelText("settings.customApiDeleteTitle");
     expect(deleteDialog.element().textContent).toContain(
-      'settings.customApiDeleteReferences:{"count":1}',
+      'settings.customApiDeleteReferences:{"count":2}',
+    );
+    expect(deleteDialog.element().textContent).toContain(
+      'settings.customApiDeleteDescriptionStored:{"name":"Saved Custom"}',
     );
     await deleteDialog.getByRole("button", { name: "common.delete" }).click();
     await expect.poll(() => removeCustom).toHaveBeenCalledTimes(1);

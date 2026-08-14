@@ -278,6 +278,14 @@ function countCustomServiceReferences(serviceId: string): number {
   const draftReferences = Object.values(composerState.draftsByThreadId).filter((draft) =>
     modelSelectionUsesCustomService(draft.modelSelectionByProvider.omnimind, serviceId),
   ).length;
+  const queuedTurnReferences = Object.values(composerState.draftsByThreadId).reduce(
+    (count, draft) =>
+      count +
+      draft.queuedTurns.filter((turn) =>
+        modelSelectionUsesCustomService(turn.modelSelection, serviceId),
+      ).length,
+    0,
+  );
   const stickyReference = modelSelectionUsesCustomService(
     composerState.stickyModelSelectionByProvider.omnimind,
     serviceId,
@@ -290,7 +298,32 @@ function countCustomServiceReferences(serviceId: string): number {
   const persistedThreadReferences = Object.values(appState.threadShellById ?? {}).filter((thread) =>
     modelSelectionUsesCustomService(thread.modelSelection, serviceId),
   ).length;
-  return draftReferences + stickyReference + projectReferences + persistedThreadReferences;
+  return (
+    draftReferences +
+    queuedTurnReferences +
+    stickyReference +
+    projectReferences +
+    persistedThreadReferences
+  );
+}
+
+function customApiDeleteDescriptionKey(
+  service: OmniMindModelServiceDescriptor | null,
+):
+  | "settings.customApiDeleteDescriptionStored"
+  | "settings.customApiDeleteDescriptionEnvironment"
+  | "settings.customApiDeleteDescriptionCommand"
+  | "settings.customApiDeleteDescriptionConfiguration" {
+  if (service?.authSource === "environment") {
+    return "settings.customApiDeleteDescriptionEnvironment";
+  }
+  if (service?.authSource === "models_json_command") {
+    return "settings.customApiDeleteDescriptionCommand";
+  }
+  if (service?.authSource === "stored" || service?.authSource === "runtime") {
+    return "settings.customApiDeleteDescriptionStored";
+  }
+  return "settings.customApiDeleteDescriptionConfiguration";
 }
 
 function customModelServiceCommandFingerprint(
@@ -3333,7 +3366,7 @@ function ActiveModelsSettingsPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>{t("settings.customApiDeleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {t("settings.customApiDeleteDescription", {
+              {t(customApiDeleteDescriptionKey(removeCustomService), {
                 name: removeCustomService ? modelServiceInstanceLabel(removeCustomService) : "",
               })}
               {removeCustomServiceReferenceCount > 0 ? (
