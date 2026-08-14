@@ -93,6 +93,58 @@ const OmniMindCustomModelCost = Schema.Struct({
   ),
 });
 
+export const OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API = {
+  "openai-completions": [
+    "supportsDeveloperRole",
+    "supportsReasoningEffort",
+    "supportsUsageInStreaming",
+    "maxTokensField",
+    "requiresToolResultName",
+    "requiresAssistantAfterToolResult",
+    "requiresThinkingAsText",
+    "requiresReasoningContentOnAssistantMessages",
+    "supportsOpenAIGrammarTools",
+    "supportsStrictMode",
+  ],
+  "openai-responses": [
+    "supportsDeveloperRole",
+    "supportsStrictMode",
+    "supportsOpenAIGrammarTools",
+    "supportsToolSearch",
+  ],
+  "anthropic-messages": [
+    "supportsEagerToolInputStreaming",
+    "supportsCacheControlOnTools",
+    "supportsTemperature",
+    "forceAdaptiveThinking",
+    "allowEmptySignature",
+    "supportsStrictTools",
+    "supportsToolReferences",
+  ],
+  "google-generative-ai": [],
+} as const satisfies Record<OmniMindCustomModelServiceApi, readonly string[]>;
+
+const OmniMindCustomModelCompat = Schema.Struct({
+  supportsDeveloperRole: Schema.optional(Schema.Boolean),
+  supportsReasoningEffort: Schema.optional(Schema.Boolean),
+  supportsUsageInStreaming: Schema.optional(Schema.Boolean),
+  maxTokensField: Schema.optional(Schema.Literals(["max_completion_tokens", "max_tokens"])),
+  requiresToolResultName: Schema.optional(Schema.Boolean),
+  requiresAssistantAfterToolResult: Schema.optional(Schema.Boolean),
+  requiresThinkingAsText: Schema.optional(Schema.Boolean),
+  requiresReasoningContentOnAssistantMessages: Schema.optional(Schema.Boolean),
+  supportsOpenAIGrammarTools: Schema.optional(Schema.Boolean),
+  supportsStrictMode: Schema.optional(Schema.Boolean),
+  supportsToolSearch: Schema.optional(Schema.Boolean),
+  supportsEagerToolInputStreaming: Schema.optional(Schema.Boolean),
+  supportsCacheControlOnTools: Schema.optional(Schema.Boolean),
+  supportsTemperature: Schema.optional(Schema.Boolean),
+  forceAdaptiveThinking: Schema.optional(Schema.Boolean),
+  allowEmptySignature: Schema.optional(Schema.Boolean),
+  supportsStrictTools: Schema.optional(Schema.Boolean),
+  supportsToolReferences: Schema.optional(Schema.Boolean),
+});
+
 export const OmniMindCustomModelServiceModelInput = Schema.Struct({
   modelId: BoundedModelId,
   displayName: Schema.optional(BoundedDisplayName),
@@ -106,6 +158,7 @@ export const OmniMindCustomModelServiceModelInput = Schema.Struct({
       .check(Schema.isMaxLength(2)),
   ),
   cost: Schema.optional(OmniMindCustomModelCost),
+  compat: Schema.optional(OmniMindCustomModelCompat),
   contextWindow: Schema.optional(PositiveInt),
   maxTokens: Schema.optional(PositiveInt),
 });

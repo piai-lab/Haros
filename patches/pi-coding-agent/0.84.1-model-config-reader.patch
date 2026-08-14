@@ -1,5 +1,5 @@
 diff --git a/package-lock.json b/package-lock.json
-index 48e638d..c17a5db 100644
+index 48e638d5e..c17a5db1e 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -3599,6 +3599,12 @@
@@ -24,7 +24,7 @@ index 48e638d..c17a5db 100644
  				"proper-lockfile": "4.1.2",
  				"semver": "7.8.0",
 diff --git a/packages/coding-agent/package.json b/packages/coding-agent/package.json
-index f6fc21a..1e293a8 100644
+index f6fc21a3d..1e293a821 100644
 --- a/packages/coding-agent/package.json
 +++ b/packages/coding-agent/package.json
 @@ -58,6 +58,7 @@
@@ -36,7 +36,7 @@ index f6fc21a..1e293a8 100644
  		"proper-lockfile": "4.1.2",
  		"semver": "7.8.0",
 diff --git a/packages/coding-agent/src/core/agent-session-services.ts b/packages/coding-agent/src/core/agent-session-services.ts
-index 531f51d..4c720a4 100644
+index 531f51d61..4c720a475 100644
 --- a/packages/coding-agent/src/core/agent-session-services.ts
 +++ b/packages/coding-agent/src/core/agent-session-services.ts
 @@ -151,45 +151,54 @@ export async function createAgentSessionServices(
@@ -130,7 +130,7 @@ index 531f51d..4c720a4 100644
  
  /**
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7f679a4..0929b9c 100644
+index 7f679a494..0df8bc5e3 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
 @@ -1,6 +1,11 @@
@@ -146,7 +146,7 @@ index 7f679a4..0929b9c 100644
  import { type Static, Type } from "typebox";
  import { Compile } from "typebox/compile";
  import type { TLocalizedValidationError } from "typebox/error";
-@@ -213,6 +218,222 @@ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
+@@ -213,6 +218,254 @@ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
  export type ModelsJsonProvider = Static<typeof ProviderConfigSchema>;
  type ModelsJson = Static<typeof ModelsConfigSchema>;
  
@@ -216,6 +216,26 @@ index 7f679a4..0929b9c 100644
 +	"contextWindow",
 +	"maxTokens",
 +] as const satisfies readonly (keyof ModelsJsonModel)[];
++const MODEL_CONFIG_EDITABLE_COMPAT_FIELDS = [
++	"supportsDeveloperRole",
++	"supportsReasoningEffort",
++	"supportsUsageInStreaming",
++	"maxTokensField",
++	"requiresToolResultName",
++	"requiresAssistantAfterToolResult",
++	"requiresThinkingAsText",
++	"requiresReasoningContentOnAssistantMessages",
++	"supportsOpenAIGrammarTools",
++	"supportsStrictMode",
++	"supportsToolSearch",
++	"supportsEagerToolInputStreaming",
++	"supportsCacheControlOnTools",
++	"supportsTemperature",
++	"forceAdaptiveThinking",
++	"allowEmptySignature",
++	"supportsStrictTools",
++	"supportsToolReferences",
++] as const;
 +
 +function deleteOmittedEditableFields<T extends object>(
 +	merged: T,
@@ -241,6 +261,18 @@ index 7f679a4..0929b9c 100644
 +			...structuredClone(currentModel),
 +			...structuredClone(editedModel),
 +		} as ModelsJsonModel;
++		if (Object.prototype.hasOwnProperty.call(editedModel, "compat")) {
++			const currentCompat = structuredClone(currentModel.compat ?? {}) as Record<string, unknown>;
++			const editedCompat = structuredClone(editedModel.compat ?? {}) as Record<string, unknown>;
++			const mergedCompat = { ...currentCompat, ...editedCompat };
++			deleteOmittedEditableFields(
++				mergedCompat,
++				editedCompat,
++				MODEL_CONFIG_EDITABLE_COMPAT_FIELDS,
++			);
++			if (Object.keys(mergedCompat).length > 0) merged.compat = mergedCompat;
++			else delete merged.compat;
++		}
 +		deleteOmittedEditableFields(merged, editedModel, MODEL_CONFIG_EDITABLE_MODEL_FIELDS);
 +		return merged;
 +	});
@@ -369,7 +401,7 @@ index 7f679a4..0929b9c 100644
  function formatValidationPath(error: TLocalizedValidationError): string {
  	if (error.keyword === "required") {
  		const requiredProperties = (error.params as { requiredProperties?: string[] }).requiredProperties;
-@@ -242,27 +463,14 @@ export class ModelConfig {
+@@ -242,27 +495,14 @@ export class ModelConfig {
  		this.error = error;
  	}
  
@@ -399,7 +431,7 @@ index 7f679a4..0929b9c 100644
  			);
  		}
  
-@@ -272,7 +480,10 @@ export class ModelConfig {
+@@ -272,7 +512,10 @@ export class ModelConfig {
  					.Errors(parsed)
  					.map((error) => `  - ${formatValidationPath(error)}: ${error.message}`)
  					.join("\n") || "Unknown schema error";
@@ -411,7 +443,7 @@ index 7f679a4..0929b9c 100644
  		}
  
  		const config = parsed as ModelsJson;
-@@ -283,10 +494,61 @@ export class ModelConfig {
+@@ -283,10 +526,61 @@ export class ModelConfig {
  		return new ModelConfig(providers);
  	}
  
@@ -473,7 +505,7 @@ index 7f679a4..0929b9c 100644
  	getProviderIds(): readonly string[] {
  		return [...this.providers.keys()];
  	}
-@@ -294,4 +556,135 @@ export class ModelConfig {
+@@ -294,4 +588,135 @@ export class ModelConfig {
  	getError(): string | undefined {
  		return this.error;
  	}
@@ -610,7 +642,7 @@ index 7f679a4..0929b9c 100644
 +	}
  }
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b..6aeb007 100644
+index 6f4071b60..6aeb00795 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -17,6 +17,7 @@ import {
@@ -1010,7 +1042,7 @@ index 6f4071b..6aeb007 100644
  		if (options.providers) {
  			for (const providerId of new Set(options.providers)) this.recomposeProvider(providerId);
 diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
-index e221d2e..4ac3597 100644
+index e221d2e7e..4ac359790 100644
 --- a/packages/coding-agent/src/core/package-manager.ts
 +++ b/packages/coding-agent/src/core/package-manager.ts
 @@ -1,5 +1,5 @@
@@ -1382,7 +1414,7 @@ index e221d2e..4ac3597 100644
  		const parsed = this.parseSource(source);
  		if (parsed.type === "npm") {
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 1be7fcd..04b8931 100644
+index 1be7fcdb5..04b8931c2 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
 @@ -444,8 +444,16 @@ export function composeModelProvider(
@@ -1405,7 +1437,7 @@ index 1be7fcd..04b8931 100644
  	const oauth = composeOAuthAuth(providerId, base, config, extension);
  	if (!apiKey && !oauth) throw new Error(`Provider ${providerId}: no authentication method configured.`);
 diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
-index c24d0a2..1d1ba2a 100644
+index c24d0a210..1d1ba2afb 100644
 --- a/packages/coding-agent/src/core/resource-loader.ts
 +++ b/packages/coding-agent/src/core/resource-loader.ts
 @@ -17,7 +17,12 @@ import {
@@ -1759,7 +1791,7 @@ index c24d0a2..1d1ba2a 100644
  			temporary: true,
  		});
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2a..44e6c74 100644
+index 3d05c2af4..44e6c74bf 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
 @@ -168,6 +168,15 @@ export {
@@ -1806,10 +1838,10 @@ index 3d05c2a..44e6c74 100644
  } from "./core/package-manager.ts";
 diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
 new file mode 100644
-index 0000000..c9e4a64
+index 000000000..33baa77e6
 --- /dev/null
 +++ b/packages/coding-agent/test/model-config-mutation.test.ts
-@@ -0,0 +1,571 @@
+@@ -0,0 +1,582 @@
 +import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -2054,7 +2086,12 @@ index 0000000..c9e4a64
 +								cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
 +								samplingParams: { temperature: 0.25 },
 +								headers: { Authorization: "Bearer hidden" },
-+								compat: { supportsStore: false },
++								compat: {
++									supportsStore: false,
++									supportsDeveloperRole: true,
++									supportsUsageInStreaming: true,
++									openRouterRouting: { order: ["hidden"] },
++								},
 +							},
 +							{ id: "remove-me", samplingParams: { keep: false } },
 +						],
@@ -2090,6 +2127,7 @@ index 0000000..c9e4a64
 +								},
 +							],
 +						},
++						compat: { supportsDeveloperRole: false, supportsStrictMode: true },
 +					},
 +				],
 +			},
@@ -2117,7 +2155,12 @@ index 0000000..c9e4a64
 +				},
 +				samplingParams: { temperature: 0.25 },
 +				headers: { Authorization: "Bearer hidden" },
-+				compat: { supportsStore: false },
++				compat: {
++					supportsStore: false,
++					supportsDeveloperRole: false,
++					supportsStrictMode: true,
++					openRouterRouting: { order: ["hidden"] },
++				},
 +			},
 +		]);
 +	});
@@ -2162,7 +2205,7 @@ index 0000000..c9e4a64
 +								},
 +								samplingParams: { temperature: 0.25 },
 +								headers: { Authorization: "Bearer hidden" },
-+								compat: { supportsStore: false },
++								compat: { supportsStore: false, supportsStrictMode: true },
 +							},
 +						],
 +					},
@@ -2178,7 +2221,7 @@ index 0000000..c9e4a64
 +				name: "Target renamed",
 +				baseUrl: "https://example.test/v1",
 +				api: "openai-completions",
-+				models: [{ id: "rich-model" }],
++				models: [{ id: "rich-model", compat: {} }],
 +			},
 +		});
 +
@@ -2383,7 +2426,7 @@ index 0000000..c9e4a64
 +});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 0000000..39e4d88
+index 000000000..39e4d88eb
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 @@ -0,0 +1,497 @@
@@ -2885,7 +2928,7 @@ index 0000000..39e4d88
 +	});
 +});
 diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
-index 31c89fa..878b692 100644
+index 31c89faff..878b69221 100644
 --- a/packages/coding-agent/test/package-manager.test.ts
 +++ b/packages/coding-agent/test/package-manager.test.ts
 @@ -297,6 +297,156 @@ Content`,
@@ -3046,7 +3089,7 @@ index 31c89fa..878b692 100644
  		it("should use the agent dir as baseDir for user .pi/agent skills", async () => {
  			const skillPath = join(agentDir, "skills", "user-pi", "SKILL.md");
 diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
-index 145eca3..066e627 100644
+index 145eca3b2..066e627d0 100644
 --- a/packages/coding-agent/test/resource-loader.test.ts
 +++ b/packages/coding-agent/test/resource-loader.test.ts
 @@ -4,7 +4,9 @@ import { join } from "node:path";

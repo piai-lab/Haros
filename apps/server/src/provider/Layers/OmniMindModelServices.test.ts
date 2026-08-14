@@ -2228,6 +2228,36 @@ describe("OmniMindModelServicesLive", () => {
     expect(Date.now() - startedAt).toBeLessThan(1_000);
   });
 
+  it("rejects compatibility options from another protocol before any request", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const fetchRequest = vi.spyOn(globalThis, "fetch");
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.testCustom({
+          config: {
+            serviceId: null,
+            displayName: "Mismatched gateway",
+            api: "openai-responses",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                modelId: "model-one",
+                compat: { requiresToolResultName: true },
+              },
+            ],
+          },
+          credential: { type: "stored_key", apiKey: "unused-key" },
+          testModelId: "model-one",
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root }))),
+    );
+
+    expect(result).toMatchObject({ state: "failed", errorCode: "invalid_configuration" });
+    expect(fetchRequest).not.toHaveBeenCalled();
+  });
+
   it("retests an existing custom connection with its retained Pi-owned credential", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
@@ -2540,7 +2570,12 @@ describe("OmniMindModelServicesLive", () => {
                 cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
                 samplingParams: { temperature: 0.25 },
                 headers: { "X-Retained": "hidden-value" },
-                compat: { supportsStore: false },
+                compat: {
+                  supportsStore: false,
+                  supportsDeveloperRole: true,
+                  supportsUsageInStreaming: true,
+                  openRouterRouting: { order: ["hidden"] },
+                },
               },
               { id: "remove-model", samplingParams: { temperature: 0.75 } },
             ],
@@ -2553,7 +2588,7 @@ describe("OmniMindModelServicesLive", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const service = yield* OmniMindModelServices;
-        return yield* service.saveCustom({
+        const saved = yield* service.saveCustom({
           config: {
             serviceId: "rich",
             displayName: "After",
@@ -2584,6 +2619,11 @@ describe("OmniMindModelServicesLive", () => {
                     },
                   ],
                 },
+                compat: {
+                  supportsDeveloperRole: false,
+                  supportsStrictMode: true,
+                  supportsToolSearch: true,
+                },
                 contextWindow: 128_000,
                 maxTokens: 16_384,
               },
@@ -2591,11 +2631,13 @@ describe("OmniMindModelServicesLive", () => {
           },
           credential: { type: "preserve" },
         });
+        const reopened = yield* service.get({ serviceId: "rich" });
+        return { saved, reopened };
       }).pipe(Effect.provide(layer)),
     );
     const stored = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
 
-    expect(result).toMatchObject({ state: "complete" });
+    expect(result.saved).toMatchObject({ state: "complete" });
     expect(stored.providers.rich.authHeader).toBe(false);
     expect(stored.providers.rich.models).toEqual([
       {
@@ -2625,9 +2667,23 @@ describe("OmniMindModelServicesLive", () => {
         },
         samplingParams: { temperature: 0.25 },
         headers: { "X-Retained": "hidden-value" },
-        compat: { supportsStore: false },
+        compat: {
+          supportsStore: false,
+          supportsDeveloperRole: false,
+          supportsStrictMode: true,
+          supportsToolSearch: true,
+          openRouterRouting: { order: ["hidden"] },
+        },
       },
     ]);
+    expect(result.reopened.state).toBe("ready");
+    if (result.reopened.state !== "ready") throw new Error("custom service did not reopen");
+    expect(result.reopened.customConfig?.models[0]?.compat).toEqual({
+      supportsDeveloperRole: false,
+      supportsStrictMode: true,
+      supportsToolSearch: true,
+    });
+    expect(JSON.stringify(result.reopened.customConfig)).not.toContain("openRouterRouting");
   });
 
   it("clears public model cost while preserving credential-blind hidden fields", async () => {
@@ -2663,7 +2719,7 @@ describe("OmniMindModelServicesLive", () => {
                 },
                 samplingParams: { temperature: 0.25 },
                 headers: { "X-Retained": "hidden-value" },
-                compat: { supportsStore: false },
+                compat: { supportsStore: false, supportsStrictMode: true },
               },
             ],
           },
@@ -2681,7 +2737,7 @@ describe("OmniMindModelServicesLive", () => {
             displayName: "Rich",
             api: "openai-completions",
             baseUrl: "https://gateway.example.test/v1",
-            models: [{ modelId: "model-one" }],
+            models: [{ modelId: "model-one", compat: {} }],
           },
           credential: { type: "preserve" },
         });
@@ -2696,6 +2752,77 @@ describe("OmniMindModelServicesLive", () => {
         samplingParams: { temperature: 0.25 },
         headers: { "X-Retained": "hidden-value" },
         compat: { supportsStore: false },
+      },
+    ]);
+  });
+
+  it("clears omitted public compat when the effective model protocol changes", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          switching: {
+            name: "Switching gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                id: "inherited-model",
+                compat: {
+                  requiresToolResultName: true,
+                  supportsStore: false,
+                },
+              },
+              {
+                id: "overridden-model",
+                api: "anthropic-messages",
+                compat: {
+                  supportsTemperature: false,
+                  openRouterRouting: { order: ["hidden"] },
+                },
+              },
+            ],
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+    const layer = makeTestLayer({ root });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "switching",
+            displayName: "Switching gateway",
+            api: "openai-responses",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              { modelId: "inherited-model" },
+              { modelId: "overridden-model", api: "openai-responses" },
+            ],
+          },
+          credential: { type: "preserve" },
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+    const stored = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({ state: "complete" });
+    expect(stored.providers.switching.models).toEqual([
+      {
+        id: "inherited-model",
+        compat: { supportsStore: false },
+      },
+      {
+        id: "overridden-model",
+        api: "openai-responses",
+        compat: { openRouterRouting: { order: ["hidden"] } },
       },
     ]);
   });

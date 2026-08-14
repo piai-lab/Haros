@@ -902,6 +902,11 @@ describe("ModelsSettingsPanel model services", () => {
     await mounted.screen
       .getByRole("option", { name: "settings.customApiProtocol.openai-responses" })
       .click();
+    await mounted.screen.getByText("settings.customApiCompat", { exact: true }).click();
+    await mounted.screen.getByLabelText("settings.customApiCompat.supportsDeveloperRole").click();
+    await mounted.screen.getByRole("option", { name: "common.off" }).click();
+    await mounted.screen.getByLabelText("settings.customApiCompat.supportsToolSearch").click();
+    await mounted.screen.getByRole("option", { name: "common.on" }).click();
     await mounted.screen
       .getByLabelText("settings.customApiModelEndpoint")
       .fill("https://model.example.test/v1");
@@ -997,6 +1002,7 @@ describe("ModelsSettingsPanel model services", () => {
                     },
                   ],
                 },
+                compat: { supportsDeveloperRole: false, supportsToolSearch: true },
                 contextWindow: 128_000,
                 maxTokens: 8_192,
               },
@@ -1470,6 +1476,7 @@ describe("ModelsSettingsPanel model services", () => {
               },
             ],
           },
+          compat: { supportsTemperature: false, supportsStrictTools: true },
         },
       ],
     };
@@ -1530,6 +1537,14 @@ describe("ModelsSettingsPanel model services", () => {
     expect(
       mounted.screen.getByLabelText("settings.customApiModelCostTier.output", { exact: true }),
     ).toHaveValue(3.5);
+    await mounted.screen.getByText("settings.customApiCompat", { exact: true }).click();
+    expect(
+      mounted.screen.getByLabelText("settings.customApiCompat.supportsTemperature"),
+    ).toHaveTextContent("false");
+    await mounted.screen.getByLabelText("settings.customApiCompat.supportsTemperature").click();
+    await mounted.screen.getByRole("option", { name: "settings.customApiModelUseDefault" }).click();
+    await mounted.screen.getByLabelText("settings.customApiCompat.supportsStrictTools").click();
+    await mounted.screen.getByRole("option", { name: "settings.customApiModelUseDefault" }).click();
     await mounted.screen.getByLabelText("settings.customApiModelPricingMode").click();
     await mounted.screen
       .getByRole("option", { name: "settings.customApiModelPricingNone" })
@@ -1546,11 +1561,18 @@ describe("ModelsSettingsPanel model services", () => {
         expect.objectContaining({
           config: expect.objectContaining({
             serviceId: "saved-custom",
-            models: [expect.not.objectContaining({ cost: expect.anything() })],
+            models: [expect.objectContaining({ compat: {} })],
           }),
           credential: { type: "preserve" },
         }),
       );
+    expect(saveCustom).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          models: [expect.not.objectContaining({ cost: expect.anything() })],
+        }),
+      }),
+    );
 
     await expect
       .poll(() => document.body.textContent)

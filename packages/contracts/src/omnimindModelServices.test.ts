@@ -293,6 +293,11 @@ describe("OmniMind model-services contracts", () => {
                 },
               ],
             },
+            compat: {
+              supportsDeveloperRole: false,
+              supportsStrictMode: true,
+              supportsToolSearch: true,
+            },
           },
         ],
       },
@@ -320,6 +325,11 @@ describe("OmniMind model-services contracts", () => {
                 cacheWrite: 1,
               },
             ],
+          },
+          compat: {
+            supportsDeveloperRole: false,
+            supportsStrictMode: true,
+            supportsToolSearch: true,
           },
         },
       ],
@@ -363,7 +373,7 @@ describe("OmniMind model-services contracts", () => {
     ).toThrow();
     expect(JSON.stringify(decoded)).not.toContain("headers");
     expect(JSON.stringify(decoded)).not.toContain("samplingParams");
-    expect(JSON.stringify(decoded)).not.toContain("compat");
+    expect(JSON.stringify(decoded)).not.toContain("openRouterRouting");
   });
 
   it("keeps generic model discovery bounded and credential-blind", () => {

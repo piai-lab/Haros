@@ -25,6 +25,7 @@ import type {
   OmniMindCustomModelServiceConfigInput,
   OmniMindCustomModelServiceConfig,
   OmniMindCustomModelServiceModelInput,
+  OmniMindCustomModelServiceApi,
   OmniMindCustomModelServiceRemoveResult,
   OmniMindCustomModelServiceSaveResult,
   OmniMindCustomModelServiceTestResult,
@@ -41,6 +42,7 @@ import type {
   OmniMindModelServicesProjectionIntent,
 } from "@omnimind/contracts";
 import {
+  OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
   OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
   OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT,
   OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT,
@@ -175,6 +177,46 @@ function normalizedCustomBaseUrl(value: string): string {
   return parsed.toString().replace(/\/$/u, "");
 }
 
+type CustomCompatField =
+  (typeof OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API)[keyof typeof OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API][number];
+
+function projectCustomCompat(
+  api: OmniMindCustomModelServiceApi,
+  compat: Record<string, unknown> | undefined,
+): Record<string, boolean | string> | undefined {
+  if (!compat) return undefined;
+  const projected: Record<string, boolean | string> = {};
+  for (const field of OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[
+    api
+  ] as readonly CustomCompatField[]) {
+    const value = compat[field];
+    if (typeof value === "boolean") projected[field] = value;
+    else if (
+      field === "maxTokensField" &&
+      (value === "max_completion_tokens" || value === "max_tokens")
+    ) {
+      projected[field] = value;
+    }
+  }
+  return Object.keys(projected).length > 0 ? projected : undefined;
+}
+
+function customCompatForMutation(
+  api: OmniMindCustomModelServiceApi,
+  compat: Readonly<Record<string, boolean | string | undefined>> | undefined,
+): Record<string, boolean | string> | undefined {
+  if (!compat) return undefined;
+  const allowed = new Set<string>(OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[api]);
+  if (Object.keys(compat).some((field) => !allowed.has(field))) {
+    throw new InvalidCustomServiceEditError();
+  }
+  return Object.fromEntries(
+    Object.entries(compat).filter(
+      (entry): entry is [string, boolean | string] => entry[1] !== undefined,
+    ),
+  );
+}
+
 function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
   return {
     name: input.displayName,
@@ -183,6 +225,8 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
     ...(input.authHeader !== undefined ? { authHeader: input.authHeader } : {}),
     models: input.models.map((model) => {
       const thinkingLevelMap = compactThinkingLevelMap(model.thinkingLevelMap);
+      const effectiveApi = model.api ?? input.api;
+      const compat = customCompatForMutation(effectiveApi, model.compat);
       return {
         id: model.modelId,
         ...(model.displayName ? { name: model.displayName } : {}),
@@ -204,11 +248,34 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
               },
             }
           : {}),
+        ...(compat ? { compat } : {}),
         ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
         ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
       };
     }),
   };
+}
+
+function clearOmittedCompatAfterApiChange(
+  input: OmniMindCustomModelServiceConfigInput,
+  previous: ReturnType<
+    OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
+  >,
+): OmniMindCustomModelServiceConfigInput {
+  if (!previous || !isCustomApiProtocol(previous.api)) return input;
+  const previousModels = new Map((previous.models ?? []).map((model) => [model.id, model]));
+  let changed = false;
+  const models = input.models.map((model) => {
+    if (model.compat !== undefined) return model;
+    const previousModel = previousModels.get(model.modelId);
+    if (!previousModel) return model;
+    const previousApi = isCustomApiProtocol(previousModel.api) ? previousModel.api : previous.api;
+    const nextApi = model.api ?? input.api;
+    if (previousApi === nextApi) return model;
+    changed = true;
+    return { ...model, compat: {} };
+  });
+  return changed ? { ...input, models } : input;
 }
 
 function customProviderDiscoveryConfig(input: OmniMindCustomModelServiceDiscoveryConfigInput) {
@@ -281,10 +348,13 @@ function projectCustomConfig(
   ) {
     return undefined;
   }
+  const providerApi = provider.api;
   const models = provider.models.flatMap<OmniMindCustomModelServiceModelInput>((model) => {
     const modelId = safeModelId(model.id);
     if (!modelId) return [];
     const thinkingLevelMap = compactThinkingLevelMap(model.thinkingLevelMap);
+    const modelApi = isCustomApiProtocol(model.api) ? model.api : providerApi;
+    const compat = projectCustomCompat(modelApi, model.compat);
     return [
       {
         modelId,
@@ -317,6 +387,7 @@ function projectCustomConfig(
               },
             }
           : {}),
+        ...(compat ? { compat } : {}),
         ...(model.contextWindow !== undefined
           ? { contextWindow: Math.max(1, Math.trunc(model.contextWindow)) }
           : {}),
@@ -1840,6 +1911,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               if (previous && previous.origin !== "models_json") {
                 throw new Error("Only a models.json model service can be edited");
               }
+              const configForMutation = previous
+                ? clearOmittedCompatAfterApiChange(
+                    input.config,
+                    (await createMutationRuntime(signal)).runtime.getModelConfigProvider(serviceId),
+                  )
+                : input.config;
               let removedStoredCredential = false;
               let credentialSynchronizationWarning = false;
               if (
@@ -1878,7 +1955,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   {
                     type: "upsert",
                     providerId: serviceId,
-                    provider: customProviderConfig(input.config),
+                    provider: customProviderConfig(configForMutation),
                     ...(credentialReference ? { credentialReference } : {}),
                   },
                   { signal },

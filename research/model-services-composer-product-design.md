@@ -1433,6 +1433,14 @@ Advanced: api, baseUrl override, reasoning, thinkingLevelMap,
           input, contextWindow, maxTokens, cost, headers, compat
 ```
 
+这里的“可达”不等于把 Pi 原始对象完整送进 Renderer。当前 product-owned typed seam 应按三类处理：
+
+- `cost` 与按 effective `api` 判别的通用标量 `compat` 可逐字段投影和编辑；恢复默认只清这些公开字段，Pi 必须继续保留未公开的 routing、template、session/cache 与未来字段；
+- `google-generative-ai` 当前没有真实 compat consumer，不显示假开关；改变数据保留、会话亲和或外发 identity 的 compat 必须另行裁决；
+- `headers` 保持 secret-blind。普通读取不返回值、环境变量名或 command；只有 Pi-owned、write-only、reference-aware 的定向 mutation seam 存在后才可施工，Host 不得用 raw JSON 或第二 parser 补洞。
+
+因此“hidden rich fields 无损保留”和“用户可编辑”是两个不同 claim。已安全公开的字段必须可 set/clear/reopen；未公开字段必须继续准确标为未交付，不能以 round-trip 测试冒充产品可达。
+
 不要为官方 built-in provider 默认开放一整张兼容参数表，也不要猜测 reasoning/context capability。
 
 ### 10.17 第三方 endpoint 风险
@@ -1613,7 +1621,7 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 2. generic API 只允许 `openai-completions`、`openai-responses`、`anthropic-messages`、`google-generative-ai`；非标准协议只来自 Pi Extension；
 3. 使用唯一 Pi providerId；
 4. 通过 Pi 上游 API或已授权的 product-owned Pi typed mutation seam 原子更新 `models.json.providers`；
-5. 支持 display name、base URL、api、headers 和真实 model definitions；
+5. 支持 display name、base URL、api 和真实 model definitions；高级 compat 只开放 §10.16 的安全 typed subset，headers 必须等待 Pi-owned write-only reference mutation seam；
 6. 只对 Pi config/extension 真能表达的 instance 显示 auth/refresh capability；
 7. 删除/重命名/selection impact；
 8. custom endpoint 风险确认；
@@ -1630,32 +1638,32 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 
 ### 10.23 Settings 验收矩阵
 
-| Case                      | 预期                                                                    |
-| ------------------------- | ----------------------------------------------------------------------- |
+| Case                      | 预期                                                                                                                                    |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | 打开 Model services       | 物理 no-follow 读取 `.omnimind`；`.pi` 只做 root metadata 非别名证明，内部 state zero-open/read/write；symlink/junction 逃逸 typed fail |
-| 未配置任何 credential     | 显示 setup-required，不把 provider 误报为不存在                         |
-| 同供应商两个实例          | 行、credential、catalog、model slug 可独立区分                          |
-| API Key 保存              | 走 Pi api-key login 并在 packaged restart 后仍存在；renderer 不回读明文 |
-| runtime API key preview   | operation 内可验证，取消/重启后不残留，且不冒充“已保存”                 |
-| API Key 移除              | 仅删除目标实例 stored credential；若 ambient/fallback 仍有效则准确显示  |
-| 多字段 API-key login      | Cloudflare 类 secret + account/gateway prompt 顺序、取消与脱敏正确      |
-| OAuth success             | auth 成功与 catalog refresh 分别呈现                                    |
-| OAuth cancel/timeout      | 不产生假成功或半登录 UI                                                 |
-| 从供应商获取成功          | 仅刷新目标 service，显示真实模型数                                      |
-| 从供应商获取失败          | last-good 保留，Composer 仍能使用有效旧目录                             |
-| refresh cancel            | 不清空列表、不留下永久 loading                                          |
-| static provider           | 不显示无效 refresh CTA                                                  |
-| custom endpoint           | 风险确认后才 test/refresh/save                                          |
-| command/env credential    | 打开/搜索页面不执行、不展开；只有显式 test/send 按 Pi 语义解析          |
-| custom provider reload    | 新 Session 从 Pi models.json 读到同一配置                               |
-| active Session reconcile  | 当前 turn 不热切；下一次 send 前读到最新 auth/config/catalog            |
-| sync-after-commit failure | 重读 credential metadata，不重复提交 key/OAuth                          |
-| 删除被引用实例            | 明确影响并使 selection unavailable；不 silent fallback                  |
-| Git writing default       | 不出现在 Model services；底层字段保留，等待调用功能 owner 确定新归属     |
-| 独立 Engine custom slug   | 在 Agent engines detail 可达，storage 无迁移                            |
-| zh-CN / en                | title、description、state、action、error key 一一对应                   |
-| keyboard/screen reader    | list/detail/login/refresh/confirm/focus return 完整                     |
-| packaged restart          | service config、auth metadata、catalog 和 Composer selection 恢复       |
+| 未配置任何 credential     | 显示 setup-required，不把 provider 误报为不存在                                                                                         |
+| 同供应商两个实例          | 行、credential、catalog、model slug 可独立区分                                                                                          |
+| API Key 保存              | 走 Pi api-key login 并在 packaged restart 后仍存在；renderer 不回读明文                                                                 |
+| runtime API key preview   | operation 内可验证，取消/重启后不残留，且不冒充“已保存”                                                                                 |
+| API Key 移除              | 仅删除目标实例 stored credential；若 ambient/fallback 仍有效则准确显示                                                                  |
+| 多字段 API-key login      | Cloudflare 类 secret + account/gateway prompt 顺序、取消与脱敏正确                                                                      |
+| OAuth success             | auth 成功与 catalog refresh 分别呈现                                                                                                    |
+| OAuth cancel/timeout      | 不产生假成功或半登录 UI                                                                                                                 |
+| 从供应商获取成功          | 仅刷新目标 service，显示真实模型数                                                                                                      |
+| 从供应商获取失败          | last-good 保留，Composer 仍能使用有效旧目录                                                                                             |
+| refresh cancel            | 不清空列表、不留下永久 loading                                                                                                          |
+| static provider           | 不显示无效 refresh CTA                                                                                                                  |
+| custom endpoint           | 风险确认后才 test/refresh/save                                                                                                          |
+| command/env credential    | 打开/搜索页面不执行、不展开；只有显式 test/send 按 Pi 语义解析                                                                          |
+| custom provider reload    | 新 Session 从 Pi models.json 读到同一配置                                                                                               |
+| active Session reconcile  | 当前 turn 不热切；下一次 send 前读到最新 auth/config/catalog                                                                            |
+| sync-after-commit failure | 重读 credential metadata，不重复提交 key/OAuth                                                                                          |
+| 删除被引用实例            | 明确影响并使 selection unavailable；不 silent fallback                                                                                  |
+| Git writing default       | 不出现在 Model services；底层字段保留，等待调用功能 owner 确定新归属                                                                    |
+| 独立 Engine custom slug   | 在 Agent engines detail 可达，storage 无迁移                                                                                            |
+| zh-CN / en                | title、description、state、action、error key 一一对应                                                                                   |
+| keyboard/screen reader    | list/detail/login/refresh/confirm/focus return 完整                                                                                     |
+| packaged restart          | service config、auth metadata、catalog 和 Composer selection 恢复                                                                       |
 
 ### 10.24 Settings 完成定义
 
@@ -2114,36 +2122,36 @@ fresh launch
 
 ## 21. 维护者决策覆盖审计
 
-| 已明确的认知/决定                                                                 | 本文位置                 | 覆盖状态                                                       |
-| --------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------- |
-| 页面正式名称使用 `Model services / 模型服务`                                      | §0.1、§10.2              | 已覆盖；Workbench sole owner 已同步，产品代码尚未同步          |
-| 普通 UI 显示 `OmniMind`，技术语境保留 `OmniMind Agent`                            | §0.1、§2.1、§5、§10.2    | 已覆盖；Workbench sole owner 已同步，产品代码尚未同步          |
-| 不再让“模型与写作”定义整页                                                        | §10.2、§10.4             | 已覆盖；Git writing 退出 Model services，新归属明确 defer      |
-| OmniMind Agent 内置 Pi，模型体系无条件跟随 Pi                                     | §4.10、§9.2、§10.5–10.7  | 已覆盖；以 locked 0.84.1 source 为证据                         |
-| Pi 支持什么，OmniMind Agent 原则上就支持什么                                      | §9.2、§10.13–10.18       | 已覆盖；只做 Host/UX 产品化，不做能力镜像                      |
-| 只能比 Pi 更好，但不等于比 Pi 更多                                                | §9.2、§10.20             | 已覆盖；“更好”落在 IA、反馈、恢复、双语和多 Engine 协作        |
-| 不复制 Proma 的供应商请求实现                                                     | §10.15、§10.20、§16      | 已覆盖；明确禁止 enum/URL/preset/fetcher/Channel store         |
-| 借鉴 Proma 的“从供应商获取”                                                       | §10.10、§10.15           | 已覆盖；映射 Pi provider-scoped `refresh()`                    |
-| 首次配置/登录后自动获取，仍保留手动刷新                                           | §10.10、§10.15           | 已覆盖；字段输入期间不自动联网                                 |
-| 同一模型服务商允许多个实例                                                        | §9.3、§10.11             | 已覆盖；使用稳定 Pi providerId，不另建 Channel runtime         |
-| ModelRuntime 已有 provider/model/auth/API key/OAuth/refresh/cache/custom provider | §4.10、§10.5             | 已覆盖；区分 upstream 能力与 OmniMind Host 暴露现状            |
-| 当前 OmniMind Host 并未把完整 ModelRuntime mutation 暴露给 Settings               | §10.5–10.7               | 已覆盖；这是不能只做前端的关键缺口                             |
-| `setRuntimeApiKey` 不持久，持久 API Key 必须走 Pi api-key login                   | §4.10、§10.7、§10.13     | 已覆盖；修正了会导致重启后丢 key 的旧表述                      |
-| Pi auth 可能多 prompt/device/manual-code，不是一张固定 key 表单                   | §10.6、§10.10、§10.14    | 已覆盖；Host 必须桥接 typed interaction                        |
-| 当前 listModels 只返回 available，空动态目录会退回静态 UI options                 | §4.2、§10.5、§10.16      | 已覆盖；Settings/Composer 不再把静态候选当可发送证据           |
-| query invalidation 不会自动刷新 active Session ModelRuntime snapshot              | §10.7、§10.19            | 已覆盖；下一 turn 前按 agentDir mutation generation reconcile  |
+| 已明确的认知/决定                                                                 | 本文位置                 | 覆盖状态                                                                        |
+| --------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------- |
+| 页面正式名称使用 `Model services / 模型服务`                                      | §0.1、§10.2              | 已覆盖；Workbench sole owner 已同步，产品代码尚未同步                           |
+| 普通 UI 显示 `OmniMind`，技术语境保留 `OmniMind Agent`                            | §0.1、§2.1、§5、§10.2    | 已覆盖；Workbench sole owner 已同步，产品代码尚未同步                           |
+| 不再让“模型与写作”定义整页                                                        | §10.2、§10.4             | 已覆盖；Git writing 退出 Model services，新归属明确 defer                       |
+| OmniMind Agent 内置 Pi，模型体系无条件跟随 Pi                                     | §4.10、§9.2、§10.5–10.7  | 已覆盖；以 locked 0.84.1 source 为证据                                          |
+| Pi 支持什么，OmniMind Agent 原则上就支持什么                                      | §9.2、§10.13–10.18       | 已覆盖；只做 Host/UX 产品化，不做能力镜像                                       |
+| 只能比 Pi 更好，但不等于比 Pi 更多                                                | §9.2、§10.20             | 已覆盖；“更好”落在 IA、反馈、恢复、双语和多 Engine 协作                         |
+| 不复制 Proma 的供应商请求实现                                                     | §10.15、§10.20、§16      | 已覆盖；明确禁止 enum/URL/preset/fetcher/Channel store                          |
+| 借鉴 Proma 的“从供应商获取”                                                       | §10.10、§10.15           | 已覆盖；映射 Pi provider-scoped `refresh()`                                     |
+| 首次配置/登录后自动获取，仍保留手动刷新                                           | §10.10、§10.15           | 已覆盖；字段输入期间不自动联网                                                  |
+| 同一模型服务商允许多个实例                                                        | §9.3、§10.11             | 已覆盖；使用稳定 Pi providerId，不另建 Channel runtime                          |
+| ModelRuntime 已有 provider/model/auth/API key/OAuth/refresh/cache/custom provider | §4.10、§10.5             | 已覆盖；区分 upstream 能力与 OmniMind Host 暴露现状                             |
+| 当前 OmniMind Host 并未把完整 ModelRuntime mutation 暴露给 Settings               | §10.5–10.7               | 已覆盖；这是不能只做前端的关键缺口                                              |
+| `setRuntimeApiKey` 不持久，持久 API Key 必须走 Pi api-key login                   | §4.10、§10.7、§10.13     | 已覆盖；修正了会导致重启后丢 key 的旧表述                                       |
+| Pi auth 可能多 prompt/device/manual-code，不是一张固定 key 表单                   | §10.6、§10.10、§10.14    | 已覆盖；Host 必须桥接 typed interaction                                         |
+| 当前 listModels 只返回 available，空动态目录会退回静态 UI options                 | §4.2、§10.5、§10.16      | 已覆盖；Settings/Composer 不再把静态候选当可发送证据                            |
+| query invalidation 不会自动刷新 active Session ModelRuntime snapshot              | §10.7、§10.19            | 已覆盖；下一 turn 前按 agentDir mutation generation reconcile                   |
 | Pi 当前没有公开的 models.json 持久 custom-provider mutation API                   | §10.7.3、§10.22          | 已覆盖；维护者已授权既有product-owned Pi内的窄typed seam，上游等价API出现后删除 |
-| Codex/Claude/OpenCode 等独立 Engine 怎么办                                        | §9.1、§10.3              | 已覆盖；保留 Agent engines/native owner，不塞进 Model services |
-| 现有统一模型发现 Hook 应复用                                                      | §4.2、§10.19、§11.1      | 已覆盖；mutation 后失效同一 catalog query                      |
-| Composer Context ring 右侧增加 Engine icon                                        | §1.1、§5.1–5.2           | 已覆盖                                                         |
-| 选 Engine 后自动选择目标默认/记忆模型                                             | §3.1、§6                 | 已覆盖；不跨 Engine 猜 fallback                                |
-| Engine 右侧选择模型和 effort/思考强度                                             | §5.3–5.5、§8             | 已覆盖；Model + options 保持组合入口                           |
-| Codex Fast 等好能力必须保留                                                       | §1.2、§4.6–4.7、§5.3     | 已覆盖；不做第三个 Fast 入口                                   |
-| 不制造“通用推理策略 -> Engine 特有能力”两层                                       | §1.1–1.3、§2.4           | 已覆盖；使用 Engine -> Model -> real options                   |
-| 切换只影响下一次发送，不破坏当前 turn                                             | §7                       | 已覆盖；包含 Queue、stop-first、失败恢复和 provenance          |
-| 奥卡姆剃刀与未来维护成本                                                          | §1.3、§11–§12、§16–§17   | 已覆盖；复用现有 owner 并写明 stop-loss                        |
-| 页面必须真正用户化、详细、双语、可访问                                            | §5、§10.8–10.21、§14–§15 | 已覆盖；含 ASCII、状态、错误、响应式和 packaged journey        |
-| 模型服务使用LobeHub彩色品牌图标，但不建立第二identity/capability authority         | §10.8、§11、§15          | 已覆盖；本地锁定、按需导入、fallback、legal/SBOM与offline边界  |
+| Codex/Claude/OpenCode 等独立 Engine 怎么办                                        | §9.1、§10.3              | 已覆盖；保留 Agent engines/native owner，不塞进 Model services                  |
+| 现有统一模型发现 Hook 应复用                                                      | §4.2、§10.19、§11.1      | 已覆盖；mutation 后失效同一 catalog query                                       |
+| Composer Context ring 右侧增加 Engine icon                                        | §1.1、§5.1–5.2           | 已覆盖                                                                          |
+| 选 Engine 后自动选择目标默认/记忆模型                                             | §3.1、§6                 | 已覆盖；不跨 Engine 猜 fallback                                                 |
+| Engine 右侧选择模型和 effort/思考强度                                             | §5.3–5.5、§8             | 已覆盖；Model + options 保持组合入口                                            |
+| Codex Fast 等好能力必须保留                                                       | §1.2、§4.6–4.7、§5.3     | 已覆盖；不做第三个 Fast 入口                                                    |
+| 不制造“通用推理策略 -> Engine 特有能力”两层                                       | §1.1–1.3、§2.4           | 已覆盖；使用 Engine -> Model -> real options                                    |
+| 切换只影响下一次发送，不破坏当前 turn                                             | §7                       | 已覆盖；包含 Queue、stop-first、失败恢复和 provenance                           |
+| 奥卡姆剃刀与未来维护成本                                                          | §1.3、§11–§12、§16–§17   | 已覆盖；复用现有 owner 并写明 stop-loss                                         |
+| 页面必须真正用户化、详细、双语、可访问                                            | §5、§10.8–10.21、§14–§15 | 已覆盖；含 ASCII、状态、错误、响应式和 packaged journey                         |
+| 模型服务使用LobeHub彩色品牌图标，但不建立第二identity/capability authority        | §10.8、§11、§15          | 已覆盖；本地锁定、按需导入、fallback、legal/SBOM与offline边界                   |
 
 审计结论：**修订后的本文已经同时覆盖 Model services Settings 与 Composer 两条主线；上一版“只深写 Composer、浅写 Settings”的问题已纠正。Workbench 与 Execution sole owner 均已完成同步；仍未生效的是后续产品实现与真实验收。**
 

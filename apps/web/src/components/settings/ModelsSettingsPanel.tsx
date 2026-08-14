@@ -4,6 +4,7 @@
 
 import {
   OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT,
+  OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API,
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
   type OmniMindModelServiceAuthEvent,
   type OmniMindModelServiceAuthPrompt,
@@ -46,7 +47,7 @@ import {
 } from "~/lib/omnimindModelServicesReactQuery";
 import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
-import { useI18n } from "~/i18n";
+import { useI18n, type MessageKey } from "~/i18n";
 import { useStore } from "~/store";
 
 import { Button } from "../ui/button";
@@ -153,6 +154,28 @@ const CUSTOM_MODEL_THINKING_LEVEL_LABEL_KEYS = {
   xhigh: "settings.customApiThinkingLevel.xhigh",
   max: "settings.customApiThinkingLevel.max",
 } as const;
+type CustomModelCompat = NonNullable<OmniMindCustomModelServiceModelInput["compat"]>;
+type CustomModelBooleanCompatField = Exclude<keyof CustomModelCompat, "maxTokensField">;
+const CUSTOM_MODEL_COMPAT_LABEL_KEYS: Record<CustomModelBooleanCompatField, MessageKey> = {
+  supportsDeveloperRole: "settings.customApiCompat.supportsDeveloperRole",
+  supportsReasoningEffort: "settings.customApiCompat.supportsReasoningEffort",
+  supportsUsageInStreaming: "settings.customApiCompat.supportsUsageInStreaming",
+  requiresToolResultName: "settings.customApiCompat.requiresToolResultName",
+  requiresAssistantAfterToolResult: "settings.customApiCompat.requiresAssistantAfterToolResult",
+  requiresThinkingAsText: "settings.customApiCompat.requiresThinkingAsText",
+  requiresReasoningContentOnAssistantMessages:
+    "settings.customApiCompat.requiresReasoningContentOnAssistantMessages",
+  supportsOpenAIGrammarTools: "settings.customApiCompat.supportsOpenAIGrammarTools",
+  supportsStrictMode: "settings.customApiCompat.supportsStrictMode",
+  supportsToolSearch: "settings.customApiCompat.supportsToolSearch",
+  supportsEagerToolInputStreaming: "settings.customApiCompat.supportsEagerToolInputStreaming",
+  supportsCacheControlOnTools: "settings.customApiCompat.supportsCacheControlOnTools",
+  supportsTemperature: "settings.customApiCompat.supportsTemperature",
+  forceAdaptiveThinking: "settings.customApiCompat.forceAdaptiveThinking",
+  allowEmptySignature: "settings.customApiCompat.allowEmptySignature",
+  supportsStrictTools: "settings.customApiCompat.supportsStrictTools",
+  supportsToolReferences: "settings.customApiCompat.supportsToolReferences",
+};
 
 // Presentation preference only. Runtime projection remains the sole authority for
 // whether a service exists and what it can do; unknown and Extension services stay
@@ -213,6 +236,7 @@ function customModelServiceConfig(
             },
           }
         : {}),
+      ...(model.compat ? { compat: { ...model.compat } } : {}),
       ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
       ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
     })),
@@ -1101,6 +1125,7 @@ function ActiveModelsSettingsPanel({
                     },
                   }
                 : {}),
+              ...(model.compat ? { compat: { ...model.compat } } : {}),
             })),
             testedFingerprint: null,
             testState: "idle",
@@ -2014,10 +2039,18 @@ function ActiveModelsSettingsPanel({
                   <Select
                     value={customServiceEditor.api}
                     onValueChange={(value) =>
-                      updateCustomServiceEditor((current) => ({
-                        ...current,
-                        api: value as OmniMindCustomModelServiceApi,
-                      }))
+                      updateCustomServiceEditor((current) => {
+                        const api = value as OmniMindCustomModelServiceApi;
+                        return {
+                          ...current,
+                          api,
+                          models: current.models.map((model) =>
+                            model.api === undefined && current.api !== api
+                              ? { ...model, compat: {} }
+                              : model,
+                          ),
+                        };
+                      })
                     }
                   >
                     <SelectTrigger aria-label={t("settings.customApiProtocol")}>
@@ -2429,17 +2462,20 @@ function ActiveModelsSettingsPanel({
                             onValueChange={(value) =>
                               updateCustomServiceEditor((current) => ({
                                 ...current,
-                                models: current.models.map((entry, modelIndex) =>
-                                  modelIndex === index
-                                    ? {
-                                        ...entry,
-                                        api:
-                                          value === "provider_default"
-                                            ? undefined
-                                            : (value as OmniMindCustomModelServiceApi),
-                                      }
-                                    : entry,
-                                ),
+                                models: current.models.map((entry, modelIndex) => {
+                                  if (modelIndex !== index) return entry;
+                                  const api =
+                                    value === "provider_default"
+                                      ? undefined
+                                      : (value as OmniMindCustomModelServiceApi);
+                                  const protocolChanged =
+                                    (entry.api ?? current.api) !== (api ?? current.api);
+                                  return {
+                                    ...entry,
+                                    api,
+                                    ...(protocolChanged ? { compat: {} } : {}),
+                                  };
+                                }),
                               }))
                             }
                           >
@@ -2916,6 +2952,112 @@ function ActiveModelsSettingsPanel({
                           </Select>
                         </label>
                       </div>
+                      {(() => {
+                        const effectiveApi = model.api ?? customServiceEditor.api;
+                        const fields = OMNIMIND_CUSTOM_MODEL_COMPAT_FIELDS_BY_API[
+                          effectiveApi
+                        ].filter(
+                          (field): field is CustomModelBooleanCompatField =>
+                            field !== "maxTokensField",
+                        );
+                        if (fields.length === 0 && effectiveApi !== "openai-completions")
+                          return null;
+                        return (
+                          <details className="mt-4 rounded-lg border border-border px-3 py-2">
+                            <summary className="cursor-pointer text-xs font-medium text-foreground">
+                              {t("settings.customApiCompat")}
+                            </summary>
+                            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                              {t("settings.customApiCompatDescription")}
+                            </p>
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                              {effectiveApi === "openai-completions" ? (
+                                <label className="space-y-1.5 text-xs font-medium text-foreground">
+                                  <span>{t("settings.customApiCompat.maxTokensField")}</span>
+                                  <Select
+                                    value={model.compat?.maxTokensField ?? "provider_default"}
+                                    onValueChange={(value) =>
+                                      updateCustomServiceEditor((current) => ({
+                                        ...current,
+                                        models: current.models.map((entry, modelIndex) => {
+                                          if (modelIndex !== index) return entry;
+                                          const compat = { ...entry.compat };
+                                          if (value === "provider_default")
+                                            delete compat.maxTokensField;
+                                          else
+                                            compat.maxTokensField = value as
+                                              | "max_completion_tokens"
+                                              | "max_tokens";
+                                          return { ...entry, compat };
+                                        }),
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      aria-label={t("settings.customApiCompat.maxTokensField")}
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SettingsSelectPopup align="start">
+                                      <SelectItem value="provider_default">
+                                        {t("settings.customApiModelUseDefault")}
+                                      </SelectItem>
+                                      <SelectItem value="max_completion_tokens">
+                                        {t(
+                                          "settings.customApiCompat.maxTokensField.max_completion_tokens",
+                                        )}
+                                      </SelectItem>
+                                      <SelectItem value="max_tokens">
+                                        {t("settings.customApiCompat.maxTokensField.max_tokens")}
+                                      </SelectItem>
+                                    </SettingsSelectPopup>
+                                  </Select>
+                                </label>
+                              ) : null}
+                              {fields.map((field) => (
+                                <label
+                                  key={field}
+                                  className="space-y-1.5 text-xs font-medium text-foreground"
+                                >
+                                  <span>{t(CUSTOM_MODEL_COMPAT_LABEL_KEYS[field])}</span>
+                                  <Select
+                                    value={
+                                      model.compat?.[field] === undefined
+                                        ? "provider_default"
+                                        : String(model.compat[field])
+                                    }
+                                    onValueChange={(value) =>
+                                      updateCustomServiceEditor((current) => ({
+                                        ...current,
+                                        models: current.models.map((entry, modelIndex) => {
+                                          if (modelIndex !== index) return entry;
+                                          const compat = { ...entry.compat };
+                                          if (value === "provider_default") delete compat[field];
+                                          else compat[field] = value === "true";
+                                          return { ...entry, compat };
+                                        }),
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      aria-label={t(CUSTOM_MODEL_COMPAT_LABEL_KEYS[field])}
+                                    >
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SettingsSelectPopup align="start">
+                                      <SelectItem value="provider_default">
+                                        {t("settings.customApiModelUseDefault")}
+                                      </SelectItem>
+                                      <SelectItem value="true">{t("common.on")}</SelectItem>
+                                      <SelectItem value="false">{t("common.off")}</SelectItem>
+                                    </SettingsSelectPopup>
+                                  </Select>
+                                </label>
+                              ))}
+                            </div>
+                          </details>
+                        );
+                      })()}
                     </details>
                     <div className="mt-3 flex justify-end">
                       {customServiceEditor.models.length > 1 ? (
