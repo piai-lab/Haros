@@ -150,7 +150,7 @@ const BUILTIN_MODEL_FAMILY_ICONS: ReadonlyArray<{
   },
   {
     pattern:
-      /^(?:(?:mistralai|mistral)\/|(?:workers-ai\/)?@cf\/mistralai\/)?(?:open-)?(?:mistral|codestral)-[a-z0-9][a-z0-9.:-]*$|^mistral\.(?:codestral|devstral|magistral|ministral|mistral|pixtral|voxtral)[a-z0-9.:-]*$/u,
+      /^(?:(?:mistralai|mistral)\/|(?:workers-ai\/)?@cf\/mistralai\/)?(?:(?:open-)?(?:mistral|mixtral)|codestral|(?:labs-)?devstral|magistral|ministral|pixtral|voxtral)(?:-[a-z0-9][a-z0-9.:-]*)?$|^mistral\.(?:codestral|devstral|magistral|ministral|mistral|pixtral|voxtral)[a-z0-9.:-]*$/u,
     src: mistralIconUrl,
   },
   {
@@ -164,12 +164,12 @@ const BUILTIN_MODEL_FAMILY_ICONS: ReadonlyArray<{
     src: glmIconUrl,
   },
   {
-    pattern: /^(?:(?:xai|~?x-ai)\/grok-|xai\.grok-)[a-z0-9][a-z0-9.:-]*$/u,
+    pattern: /^(?:(?:xai|~?x-ai)\/)?grok-[a-z0-9][a-z0-9.:-]*$|^xai\.grok-[a-z0-9][a-z0-9.:-]*$/u,
     src: grokIconUrl,
   },
   {
     pattern:
-      /^(?:(?:openai\/|openai\.|@cf\/openai\/|~openai\/|accounts\/fireworks\/(?:models|routers)\/)?gpt-[a-z0-9][a-z0-9.:-]*|(?:openai[/.])?o(?:1|3|4)(?:-[a-z0-9][a-z0-9.:-]*)?)$/u,
+      /^(?:(?:openai\/|openai\.|@cf\/openai\/|~openai\/|accounts\/fireworks\/(?:models|routers)\/)?gpt-[a-z0-9][a-z0-9.:-]*|(?:openai[/.])?o(?:1|3|4)(?:[-:][a-z0-9][a-z0-9.:-]*)?)$/u,
     src: openAIIconUrl,
   },
   {

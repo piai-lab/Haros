@@ -37,10 +37,7 @@ const BRAND_ASSET_PROOFS = {
   ZAI: ["zai.svg", "Z.ai"],
 } as const;
 
-function expectBundledBrandAsset(
-  src: string | null,
-  brand: keyof typeof BRAND_ASSET_PROOFS,
-): void {
+function expectBundledBrandAsset(src: string | null, brand: keyof typeof BRAND_ASSET_PROOFS): void {
   expect(src).not.toBeNull();
   const [assetFile, title] = BRAND_ASSET_PROOFS[brand];
   const decoded = decodeURIComponent(src ?? "");
@@ -191,6 +188,14 @@ describe("ModelServiceIcon", () => {
       ["vercel-ai-gateway", "mistral/mistral-large-latest", "Mistral"],
       ["vercel-ai-gateway", "xiaomi/mimo-v2-flash", "XiaomiMiMo"],
       ["mistral", "open-mistral-7b", "Mistral"],
+      ["mistral", "devstral-small-2507", "Mistral"],
+      ["mistral", "labs-devstral-small-2512", "Mistral"],
+      ["mistral", "open-mixtral-8x22b", "Mistral"],
+      ["openrouter", "mistralai/mixtral-8x22b-instruct", "Mistral"],
+      ["vercel-ai-gateway", "mistral/ministral-14b", "Mistral"],
+      ["vercel-ai-gateway", "mistral/codestral", "Mistral"],
+      ["openrouter", "openai/o3:batch", "OpenAI"],
+      ["github-copilot", "grok-4.5", "Grok"],
       ["cerebras", "zai-glm-4.7", "ChatGLM"],
     ] as const;
     for (const [serviceId, modelId, brand] of pinnedAggregateFamilies) {
