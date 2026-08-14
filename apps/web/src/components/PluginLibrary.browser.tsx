@@ -214,6 +214,38 @@ describe("PluginLibrary OmniMind Agent packages", () => {
     expect(fixture.reload).not.toHaveBeenCalled();
   });
 
+  it("installs and updates only through the typed package actions", async () => {
+    fixture.list.mockResolvedValue({
+      packages: [
+        {
+          packageId,
+          displayName: "@team/agent-tools",
+          kind: "npm",
+          installed: true,
+          filtered: false,
+          manageable: true,
+          updateAvailable: true,
+        },
+      ],
+    });
+    fixture.install.mockResolvedValue({ changed: true, snapshot: { packages: [] } });
+    fixture.update.mockResolvedValue({ changed: true, snapshot: { packages: [] } });
+    await renderLibrary();
+    await page.getByRole("button", { name: "Packages" }).click();
+
+    const sourceInput = page.getByPlaceholder("npm:@scope/package");
+    await sourceInput.fill("npm:@example/agent-tools@1.0.0");
+    await page.getByRole("button", { name: "Install package" }).click();
+    await expect.poll(() => fixture.install.mock.calls.length).toBe(1);
+    expect(fixture.install).toHaveBeenCalledWith({ source: "npm:@example/agent-tools@1.0.0" });
+    await expect.poll(() => sourceInput).toHaveValue("");
+
+    await page.getByRole("button", { name: "Update", exact: true }).click();
+    await expect.poll(() => fixture.update.mock.calls.length).toBe(1);
+    expect(fixture.update).toHaveBeenCalledWith({ packageId });
+    expect(fixture.confirm).not.toHaveBeenCalled();
+  });
+
   it("uses a localized app-owned removal dialog and never the native confirm", async () => {
     fixture.locale = "zh-CN";
     fixture.remove.mockResolvedValue({ packages: [] });

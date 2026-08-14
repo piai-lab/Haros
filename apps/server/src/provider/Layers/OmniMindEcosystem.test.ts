@@ -42,6 +42,9 @@ function makeHarness() {
   ]);
   const checkPublicPackageUpdates = vi.fn(async () => []);
   const setPublicPackageResourceEnabled = vi.fn(async () => true);
+  const installPublicPackage = vi.fn(async () => undefined);
+  const updatePublicPackage = vi.fn(async () => undefined);
+  const removePublicPackage = vi.fn(async () => true);
   const reloadSessionResources = vi.fn(() => Effect.succeed({ state: "reloaded" as const }));
   const settingsManager = { flush };
   const sdk = {
@@ -51,9 +54,9 @@ function makeHarness() {
       listPublicConfiguredPackageResources = listPublicConfiguredPackageResources;
       checkPublicPackageUpdates = checkPublicPackageUpdates;
       setPublicPackageResourceEnabled = setPublicPackageResourceEnabled;
-      installPublicPackage = vi.fn(async () => undefined);
-      updatePublicPackage = vi.fn(async () => undefined);
-      removePublicPackage = vi.fn(async () => true);
+      installPublicPackage = installPublicPackage;
+      updatePublicPackage = updatePublicPackage;
+      removePublicPackage = removePublicPackage;
     },
   } as unknown as OmniMindCodingAgentModule;
   const layer = makeOmniMindEcosystemLive({ loadModule: async () => sdk }).pipe(
@@ -76,6 +79,9 @@ function makeHarness() {
     listPublicConfiguredPackageResources,
     checkPublicPackageUpdates,
     setPublicPackageResourceEnabled,
+    installPublicPackage,
+    updatePublicPackage,
+    removePublicPackage,
     reloadSessionResources,
     flush,
   };
@@ -173,6 +179,26 @@ describe("OmniMindEcosystemLive", () => {
       false,
     );
     expect(harness.flush).toHaveBeenCalledTimes(1);
+  });
+
+  it("routes install, update, and remove through the Pi package owner", async () => {
+    const harness = makeHarness();
+    const source = "npm:@example/plugin@1.0.0";
+
+    await expect(harness.run((service) => service.install({ source }))).resolves.toMatchObject({
+      changed: true,
+    });
+    await expect(
+      harness.run((service) => service.update({ packageId: harness.packageId })),
+    ).resolves.toMatchObject({ changed: true });
+    await expect(
+      harness.run((service) => service.remove({ packageId: harness.packageId })),
+    ).resolves.toMatchObject({ changed: true });
+
+    expect(harness.installPublicPackage).toHaveBeenCalledWith(source);
+    expect(harness.updatePublicPackage).toHaveBeenCalledWith({ packageId: harness.packageId });
+    expect(harness.removePublicPackage).toHaveBeenCalledWith({ packageId: harness.packageId });
+    expect(harness.flush).toHaveBeenCalledTimes(2);
   });
 
   it("routes an explicit reload to the exact live thread owner", async () => {
