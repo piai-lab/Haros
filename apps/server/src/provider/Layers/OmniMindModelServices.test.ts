@@ -72,6 +72,51 @@ async function makeRoot(): Promise<string> {
   return root;
 }
 
+async function seedStoredCustomService(root: string, serviceId: string): Promise<void> {
+  const agentDir = path.join(root, "agent");
+  await mkdir(agentDir, { recursive: true });
+  await writeFile(
+    path.join(agentDir, "models.json"),
+    JSON.stringify({
+      providers: {
+        [serviceId]: {
+          name: "Credential transition service",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [{ id: "model-one" }],
+        },
+      },
+    }),
+    { mode: 0o600 },
+  );
+  await writeFile(
+    path.join(agentDir, "auth.json"),
+    JSON.stringify({ [serviceId]: { type: "api_key", key: "stored-transition-key" } }),
+    { mode: 0o600 },
+  );
+}
+
+async function seedReferencedCustomService(root: string, serviceId: string): Promise<void> {
+  const agentDir = path.join(root, "agent");
+  await mkdir(agentDir, { recursive: true });
+  await writeFile(
+    path.join(agentDir, "models.json"),
+    JSON.stringify({
+      providers: {
+        [serviceId]: {
+          name: "Credential transition service",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          apiKey: "${TRANSITION_API_KEY}",
+          models: [{ id: "model-one" }],
+        },
+      },
+    }),
+    { mode: 0o600 },
+  );
+  await writeFile(path.join(agentDir, "auth.json"), "{}", { mode: 0o600 });
+}
+
 async function snapshotDirectory(directory: string) {
   const names = (await readdir(directory)).sort();
   return Promise.all(
@@ -117,6 +162,7 @@ function makeTestLayer(input: {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
   readonly authRequestTimeoutMs?: number;
+  readonly customConnectionTestTimeoutMs?: number;
   readonly customModelDiscoveryTimeoutMs?: number;
 }) {
   return makeOmniMindModelServicesLive({
@@ -125,6 +171,9 @@ function makeTestLayer(input: {
     ...(input.authRequestTimeoutMs === undefined
       ? {}
       : { authRequestTimeoutMs: input.authRequestTimeoutMs }),
+    ...(input.customConnectionTestTimeoutMs === undefined
+      ? {}
+      : { customConnectionTestTimeoutMs: input.customConnectionTestTimeoutMs }),
     ...(input.customModelDiscoveryTimeoutMs === undefined
       ? {}
       : { customModelDiscoveryTimeoutMs: input.customModelDiscoveryTimeoutMs }),
@@ -1798,16 +1847,7 @@ describe("OmniMindModelServicesLive", () => {
         displayName: "小米代理",
         api: "openai-completions",
         baseUrl: "https://redacted.example.test/v1",
-        models: [
-          {
-            modelId: "mimo",
-            displayName: "mimo",
-            reasoning: false,
-            input: ["text"],
-            contextWindow: 128_000,
-            maxTokens: 16_384,
-          },
-        ],
+        models: [{ modelId: "mimo" }],
       },
     });
     expect(JSON.stringify(result)).not.toContain(agentDir);
@@ -1862,7 +1902,7 @@ describe("OmniMindModelServicesLive", () => {
               },
             ],
           },
-          apiKey: "test-only-custom-key",
+          credential: { type: "stored_key", apiKey: "test-only-custom-key" },
           testModelId: "model-one",
         });
       }).pipe(Effect.provide(layer)),
@@ -1905,7 +1945,7 @@ describe("OmniMindModelServicesLive", () => {
             api: "openai-completions",
             baseUrl: "https://gateway.example.test/v1",
           },
-          apiKey: "discovery-only-key",
+          credential: { type: "stored_key", apiKey: "discovery-only-key" },
         });
       }).pipe(Effect.provide(makeTestLayer({ root }))),
     );
@@ -1965,7 +2005,7 @@ describe("OmniMindModelServicesLive", () => {
             api: "openai-completions",
             baseUrl: "https://gateway.example.test/v1",
           },
-          apiKey: null,
+          credential: { type: "preserve" },
         });
       }).pipe(Effect.provide(makeTestLayer({ root }))),
     );
@@ -1994,7 +2034,7 @@ describe("OmniMindModelServicesLive", () => {
               api: "openai-completions",
               baseUrl,
             },
-            apiKey: "secret-discovery-key",
+            credential: { type: "stored_key", apiKey: "secret-discovery-key" },
           });
         }).pipe(Effect.provide(layer)),
       );
@@ -2053,10 +2093,82 @@ describe("OmniMindModelServicesLive", () => {
             api: "openai-completions",
             baseUrl: "https://gateway.example.test/v1",
           },
-          apiKey: "timeout-key",
+          credential: { type: "stored_key", apiKey: "timeout-key" },
         });
       }).pipe(Effect.provide(makeTestLayer({ root, customModelDiscoveryTimeoutMs: 20 }))),
     );
+    expect(result).toMatchObject({ state: "failed", errorCode: "connection_failed" });
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
+  });
+
+  it("rejects preserved credentials for non-custom service identities before loading or network", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const fetchRequest = vi.spyOn(globalThis, "fetch");
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const createAgentSessionServices = vi.fn();
+    const layer = makeTestLayer({
+      root,
+      loadModule: async () =>
+        ({ ...sdk, createAgentSessionServices }) as unknown as OmniMindCodingAgentModule,
+    });
+    const run = (serviceId: string) =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* OmniMindModelServices;
+          return yield* service.discoverCustom({
+            config: {
+              serviceId,
+              displayName: "Untrusted edit",
+              api: "openai-completions",
+              baseUrl: "https://attacker.example.test/v1",
+            },
+            credential: { type: "preserve" },
+          });
+        }).pipe(Effect.provide(layer)),
+      );
+
+    await expect(run("deepseek")).resolves.toMatchObject({
+      state: "failed",
+      errorCode: "invalid_configuration",
+    });
+    await expect(run("unregistered-extension-or-service")).resolves.toMatchObject({
+      state: "failed",
+      errorCode: "invalid_configuration",
+    });
+    expect(createAgentSessionServices).not.toHaveBeenCalled();
+    expect(fetchRequest).not.toHaveBeenCalled();
+  });
+
+  it("bounds a custom connection test that never resolves", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (_request, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+            once: true,
+          });
+        }),
+    );
+    const startedAt = Date.now();
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.testCustom({
+          config: {
+            serviceId: null,
+            displayName: "Timeout gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ modelId: "model-one" }],
+          },
+          credential: { type: "stored_key", apiKey: "timeout-key" },
+          testModelId: "model-one",
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root, customConnectionTestTimeoutMs: 20 }))),
+    );
+
     expect(result).toMatchObject({ state: "failed", errorCode: "connection_failed" });
     expect(Date.now() - startedAt).toBeLessThan(1_000);
   });
@@ -2125,7 +2237,7 @@ describe("OmniMindModelServicesLive", () => {
               },
             ],
           },
-          apiKey: null,
+          credential: { type: "preserve" },
           testModelId: "model-one",
         });
       }).pipe(Effect.provide(layer)),
@@ -2161,7 +2273,7 @@ describe("OmniMindModelServicesLive", () => {
         const service = yield* OmniMindModelServices;
         const saved = yield* service.saveCustom({
           config: firstConfig,
-          apiKey: "persisted-custom-key",
+          credential: { type: "stored_key", apiKey: "persisted-custom-key" },
         });
         if (!saved.service) throw new Error("Expected saved custom service projection");
         const serviceId = saved.service.serviceId;
@@ -2178,7 +2290,7 @@ describe("OmniMindModelServicesLive", () => {
               },
             ],
           },
-          apiKey: null,
+          credential: { type: "preserve" },
         });
         const reopenedAfterEdit = yield* service.get({ serviceId });
         const removed = yield* service.removeCustom({ serviceId });
@@ -2266,7 +2378,7 @@ describe("OmniMindModelServicesLive", () => {
               },
             ],
           },
-          apiKey: null,
+          credential: { type: "preserve" },
         });
       }).pipe(Effect.provide(layer)),
     );
@@ -2287,6 +2399,272 @@ describe("OmniMindModelServicesLive", () => {
         compat: { supportsStore: false },
       },
     ]);
+  });
+
+  it("keeps the stored credential and config unchanged when credential removal fails", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await seedStoredCustomService(root, "transition");
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const mutateModelConfigProvider = vi.fn(sdk.mutateModelConfigProvider);
+    const loadModule = async () =>
+      ({
+        ...sdk,
+        mutateModelConfigProvider,
+        ModelRuntime: new Proxy(sdk.ModelRuntime, {
+          get(target, property, receiver) {
+            if (property !== "create") return Reflect.get(target, property, receiver);
+            return async (...args: Parameters<typeof sdk.ModelRuntime.create>) => {
+              const runtime = await sdk.ModelRuntime.create(...args);
+              return new Proxy(runtime, {
+                get(runtimeTarget, runtimeProperty, runtimeReceiver) {
+                  if (runtimeProperty === "logout") {
+                    return async () => {
+                      throw new Error("credential removal rejected");
+                    };
+                  }
+                  const value = Reflect.get(runtimeTarget, runtimeProperty, runtimeReceiver);
+                  return typeof value === "function" ? value.bind(runtimeTarget) : value;
+                },
+              });
+            };
+          },
+        }),
+      }) as OmniMindCodingAgentModule;
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "transition",
+            displayName: "Credential transition service",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ modelId: "model-one" }],
+          },
+          credential: { type: "environment", variableName: "TRANSITION_API_KEY" },
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root, loadModule }))),
+    );
+    const agentDir = path.join(root, "agent");
+    const auth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    const config = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({ state: "credential_unchanged" });
+    expect(auth.transition).toMatchObject({ type: "api_key", key: "stored-transition-key" });
+    expect(config.providers.transition.apiKey).toBeUndefined();
+    expect(mutateModelConfigProvider).not.toHaveBeenCalled();
+  });
+
+  it("continues a stored-to-environment transition after durable removal sync warning", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await seedStoredCustomService(root, "transition");
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const loadModule = async () =>
+      ({
+        ...sdk,
+        ModelRuntime: new Proxy(sdk.ModelRuntime, {
+          get(target, property, receiver) {
+            if (property !== "create") return Reflect.get(target, property, receiver);
+            return async (...args: Parameters<typeof sdk.ModelRuntime.create>) => {
+              const runtime = await sdk.ModelRuntime.create(...args);
+              return new Proxy(runtime, {
+                get(runtimeTarget, runtimeProperty, runtimeReceiver) {
+                  if (runtimeProperty === "logout") {
+                    return async (providerId: string, options: { signal?: AbortSignal }) => {
+                      await runtime.logout(providerId, options);
+                      throw new sdk.CredentialSynchronizationError(
+                        providerId,
+                        "logout",
+                        undefined,
+                        { cause: new Error("process-local refresh failed") },
+                      );
+                    };
+                  }
+                  const value = Reflect.get(runtimeTarget, runtimeProperty, runtimeReceiver);
+                  return typeof value === "function" ? value.bind(runtimeTarget) : value;
+                },
+              });
+            };
+          },
+        }),
+      }) as OmniMindCodingAgentModule;
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "transition",
+            displayName: "Credential transition service",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ modelId: "model-one" }],
+          },
+          credential: { type: "environment", variableName: "TRANSITION_API_KEY" },
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root, loadModule }))),
+    );
+    const agentDir = path.join(root, "agent");
+    const auth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    const config = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({ state: "complete_with_sync_warning" });
+    expect(auth.transition).toBeUndefined();
+    expect(config.providers.transition.apiKey).toBe("${TRANSITION_API_KEY}");
+  });
+
+  it("reports a retryable partial transition when config mutation fails after key removal", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await seedStoredCustomService(root, "transition");
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const loadModule = async () =>
+      ({
+        ...sdk,
+        mutateModelConfigProvider: async () => {
+          throw new Error("config mutation rejected");
+        },
+      }) as OmniMindCodingAgentModule;
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "transition",
+            displayName: "Credential transition service",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ modelId: "model-one" }],
+          },
+          credential: { type: "command", command: "printf transition-key" },
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root, loadModule }))),
+    );
+    const agentDir = path.join(root, "agent");
+    const auth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    const config = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({
+      state: "credential_removed_retry_required",
+      service: { serviceId: "transition", authState: "setup_required" },
+    });
+    expect(auth.transition).toBeUndefined();
+    expect(config.providers.transition.apiKey).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain("printf transition-key");
+  });
+
+  it("does not store a key when clearing the previous reference fails", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await seedReferencedCustomService(root, "transition");
+    const sdk = await import("@omnimind/pi-coding-agent");
+    let loginCalls = 0;
+    const loadModule = async () =>
+      ({
+        ...sdk,
+        mutateModelConfigProvider: async () => {
+          throw new Error("config mutation rejected");
+        },
+        ModelRuntime: new Proxy(sdk.ModelRuntime, {
+          get(target, property, receiver) {
+            if (property !== "create") return Reflect.get(target, property, receiver);
+            return async (...args: Parameters<typeof sdk.ModelRuntime.create>) => {
+              const runtime = await sdk.ModelRuntime.create(...args);
+              return new Proxy(runtime, {
+                get(runtimeTarget, runtimeProperty, runtimeReceiver) {
+                  if (runtimeProperty === "login") {
+                    return async () => {
+                      loginCalls += 1;
+                    };
+                  }
+                  const value = Reflect.get(runtimeTarget, runtimeProperty, runtimeReceiver);
+                  return typeof value === "function" ? value.bind(runtimeTarget) : value;
+                },
+              });
+            };
+          },
+        }),
+      }) as OmniMindCodingAgentModule;
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "transition",
+            displayName: "Credential transition service",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ modelId: "model-one" }],
+          },
+          credential: { type: "stored_key", apiKey: "replacement-key" },
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root, loadModule }))),
+    );
+    const agentDir = path.join(root, "agent");
+    const auth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    const config = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({ state: "credential_unchanged" });
+    expect(loginCalls).toBe(0);
+    expect(auth.transition).toBeUndefined();
+    expect(config.providers.transition.apiKey).toBe("${TRANSITION_API_KEY}");
+  });
+
+  it("keeps the service retryable when storing a key fails after clearing its reference", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await seedReferencedCustomService(root, "transition");
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const loadModule = async () =>
+      ({
+        ...sdk,
+        ModelRuntime: new Proxy(sdk.ModelRuntime, {
+          get(target, property, receiver) {
+            if (property !== "create") return Reflect.get(target, property, receiver);
+            return async (...args: Parameters<typeof sdk.ModelRuntime.create>) => {
+              const runtime = await sdk.ModelRuntime.create(...args);
+              return new Proxy(runtime, {
+                get(runtimeTarget, runtimeProperty, runtimeReceiver) {
+                  if (runtimeProperty === "login") {
+                    return async () => {
+                      throw new Error("credential store rejected");
+                    };
+                  }
+                  const value = Reflect.get(runtimeTarget, runtimeProperty, runtimeReceiver);
+                  return typeof value === "function" ? value.bind(runtimeTarget) : value;
+                },
+              });
+            };
+          },
+        }),
+      }) as OmniMindCodingAgentModule;
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "transition",
+            displayName: "Credential transition service",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ modelId: "model-one" }],
+          },
+          credential: { type: "stored_key", apiKey: "replacement-key" },
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root, loadModule }))),
+    );
+    const agentDir = path.join(root, "agent");
+    const auth = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    const config = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({
+      state: "config_saved_auth_failed",
+      service: { serviceId: "transition", authState: "setup_required" },
+    });
+    expect(auth.transition).toBeUndefined();
+    expect(config.providers.transition.apiKey).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain("replacement-key");
   });
 
   it("keeps a custom service visible when Pi cannot delete its credential", async () => {
@@ -2338,7 +2716,10 @@ describe("OmniMindModelServicesLive", () => {
               },
             ],
           },
-          apiKey: "credential-that-must-remain-reachable",
+          credential: {
+            type: "stored_key",
+            apiKey: "credential-that-must-remain-reachable",
+          },
         });
         if (!saved.service) throw new Error("Expected saved custom service projection");
         rejectLogout = true;
@@ -2400,11 +2781,11 @@ describe("OmniMindModelServicesLive", () => {
         const service = yield* OmniMindModelServices;
         yield* service.saveCustom({
           config: makeConfig("gateway-primary", "shared-model"),
-          apiKey: "primary-instance-key",
+          credential: { type: "stored_key", apiKey: "primary-instance-key" },
         });
         yield* service.saveCustom({
           config: makeConfig("gateway-secondary", "shared-model"),
-          apiKey: "secondary-instance-key",
+          credential: { type: "stored_key", apiKey: "secondary-instance-key" },
         });
       }).pipe(Effect.provide(saveLayer)),
     );

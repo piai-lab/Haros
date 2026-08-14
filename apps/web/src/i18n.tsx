@@ -2021,7 +2021,7 @@ export const EN_MESSAGES = {
   "settings.noSkillsDescription":
     "Add a skill folder containing a SKILL.md to the OmniMind skills folder above, or install skills for any supported engine.",
   "settings.engineManaged": "Engine managed",
-  "settings.configuredModelServices": "OmniMind",
+  "settings.configuredModelServices": "Connected",
   "settings.modelServicesLoading": "Loading model services…",
   "settings.modelServicesChecking": "Checking…",
   "settings.modelServicesCapabilityChecking": "Checking Server support…",
@@ -2065,6 +2065,32 @@ export const EN_MESSAGES = {
   "settings.customApiKeyPreservePlaceholder": "Leave blank to keep the saved key",
   "settings.customApiKeyDescription":
     "This API key is used only to connect this model service and is saved on this device. It won’t be shown again after you save.",
+  "settings.customApiCredentialMethod": "Credential method",
+  "settings.customApiCredentialMethod.preserve": "Keep current method",
+  "settings.customApiCredentialMethod.stored_key": "Save an API key on this device",
+  "settings.customApiCredentialMethod.environment": "Read from an environment variable",
+  "settings.customApiCredentialMethod.command": "Run a local command",
+  "settings.customApiCredentialAdvanced": "Advanced credential source",
+  "settings.customApiCredentialAdvancedDescription":
+    "Use an environment variable or local command only when you manage credentials outside OmniMind.",
+  "settings.customApiCredentialPreserveDescription":
+    "Keep the current hidden credential source: {source}. Nothing is revealed or executed while this page is open.",
+  "settings.customApiCredentialSource.stored_key": "saved API key",
+  "settings.customApiCredentialSource.environment": "environment variable",
+  "settings.customApiCredentialSource.command": "local command",
+  "settings.customApiCredentialSource.configuration": "connection configuration",
+  "settings.customApiCredentialSource.unknown": "existing private configuration",
+  "settings.customApiEnvironmentVariable": "Environment variable name",
+  "settings.customApiEnvironmentVariablePlaceholder": "MODEL_SERVICE_API_KEY",
+  "settings.customApiEnvironmentDescription":
+    "OmniMind stores only the variable name. The value is read when you test, get models, or send a request.",
+  "settings.customApiCredentialCommand": "Credential command",
+  "settings.customApiCredentialCommandPlaceholder":
+    "security find-generic-password -w -s my-service",
+  "settings.customApiCredentialCommandDescription":
+    "Advanced: the command is saved privately and is never shown again. It is not run while browsing settings; testing, getting models, and future model requests will run it to obtain a credential.",
+  "settings.customApiCredentialCommandExecutionWarning":
+    "Continuing will run the configured command on this device to obtain a credential for this request.",
   "settings.customApiShowKey": "Show API key",
   "settings.customApiHideKey": "Hide API key",
   "settings.customApiRiskTitle": "Send a test request to this endpoint?",
@@ -2074,6 +2100,12 @@ export const EN_MESSAGES = {
   "settings.customApiRiskContinueDiscover": "Continue and get models",
   "settings.customApiRiskContinueSave": "Continue and save",
   "settings.customApiDiscoveryRiskTitle": "Get models from this endpoint?",
+  "settings.customApiDiscoveryRiskDescription":
+    "This sends a model-catalog request to the endpoint using the selected credential. Its operator may process or retain the request, and compatibility is not guaranteed. Continue only if you trust this service and its privacy practices.",
+  "settings.customApiSaveRiskTitle": "Save this API connection?",
+  "settings.customApiSaveRiskDescription":
+    "Saving does not send a request now. Future model requests will use this endpoint and the selected credential source.",
+  "settings.customApiCommandRiskTitle": "Run the credential command?",
   "settings.customApiDiscardTitle": "Discard unsaved changes?",
   "settings.customApiDiscardDescription": "The changes to this API connection have not been saved.",
   "settings.customApiKeepEditing": "Keep editing",
@@ -2086,7 +2118,7 @@ export const EN_MESSAGES = {
   "settings.customApiCancelDiscovery": "Stop getting models",
   "settings.customApiDiscoveredModels": "Models found",
   "settings.customApiDiscoveryDescription":
-    "Select the models to add. Discovery does not guess context limits, output limits, thinking, or image support; review those facts before testing.",
+    "Select the models to add. You can test and save with the service defaults, then add advanced limits only when you know them.",
   "settings.customApiDiscoverySucceeded": "Found {count} models. Select the ones to add.",
   "settings.customApiDiscoveryFailed.invalid_configuration":
     "Check the connection name, API format, and endpoint.",
@@ -2105,6 +2137,10 @@ export const EN_MESSAGES = {
   "settings.customApiModelIdPlaceholder": "model-id",
   "settings.customApiModelName": "Display name",
   "settings.customApiModelNamePlaceholder": "Model name",
+  "settings.customApiModelAdvanced": "Advanced model settings",
+  "settings.customApiModelAdvancedDescription":
+    "Leave these fields empty to use the model service defaults.",
+  "settings.customApiModelUseDefault": "Use service default",
   "settings.customApiContextWindow": "Context window",
   "settings.customApiMaxTokens": "Maximum output tokens",
   "settings.customApiModelThinking": "Thinking",
@@ -2113,6 +2149,7 @@ export const EN_MESSAGES = {
     "Testing is required before every save. Editing any field invalidates the previous test.",
   "settings.customApiTestConnection": "Test connection",
   "settings.customApiTesting": "Testing…",
+  "settings.customApiCancelTest": "Cancel test",
   "settings.customApiSave": "Save connection",
   "settings.customApiSaving": "Saving…",
   "settings.customApiTestSucceeded": "Connection test passed. You can save this configuration.",
@@ -2126,6 +2163,12 @@ export const EN_MESSAGES = {
   "settings.customApiSaved": "The API connection was saved and reloaded.",
   "settings.customApiSavedAuthFailed":
     "The connection was saved, but the API key could not be stored. Edit the connection and try again.",
+  "settings.customApiCredentialUnchanged":
+    "The credential method was not changed. The connection remains available so you can review it and try again.",
+  "settings.customApiCredentialRemovedRetryRequired":
+    "The saved API key was removed, but the new credential source was not saved. The connection remains available; choose the credential method and try again.",
+  "settings.customApiSavedSyncWarning":
+    "The connection and credential source were saved, but the in-app model state could not be refreshed. Reload before use.",
   "settings.customApiSavedSyncFailed":
     "The connection was saved, but its latest model state could not be loaded. Reload and review it before use.",
   "settings.customApiSaveFailed": "The connection was not saved. Review the fields and try again.",
@@ -5014,7 +5057,7 @@ export const ZH_CN_MESSAGES = {
   "settings.noSkillsDescription":
     "请在上方 OmniMind 技能文件夹中添加包含 SKILL.md 的技能文件夹，或为受支持的引擎安装技能。",
   "settings.engineManaged": "由引擎管理",
-  "settings.configuredModelServices": "OmniMind",
+  "settings.configuredModelServices": "已连接",
   "settings.modelServicesLoading": "正在加载模型服务…",
   "settings.modelServicesChecking": "正在检查…",
   "settings.modelServicesCapabilityChecking": "正在检查 Server 支持情况…",
@@ -5052,6 +5095,32 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiKeyPreservePlaceholder": "留空以保留已保存的 Key",
   "settings.customApiKeyDescription":
     "API Key 仅用于连接此模型服务，并保存在这台设备上；保存后不会再次显示。",
+  "settings.customApiCredentialMethod": "凭据方式",
+  "settings.customApiCredentialMethod.preserve": "保留当前方式",
+  "settings.customApiCredentialMethod.stored_key": "在此设备保存 API Key",
+  "settings.customApiCredentialMethod.environment": "从环境变量读取",
+  "settings.customApiCredentialMethod.command": "运行本机命令",
+  "settings.customApiCredentialAdvanced": "高级凭据来源",
+  "settings.customApiCredentialAdvancedDescription":
+    "仅在你于 OmniMind 外部管理凭据时，使用环境变量或本机命令。",
+  "settings.customApiCredentialPreserveDescription":
+    "保留当前隐藏的凭据来源：{source}。打开此页面不会显示或执行它。",
+  "settings.customApiCredentialSource.stored_key": "已保存的 API Key",
+  "settings.customApiCredentialSource.environment": "环境变量",
+  "settings.customApiCredentialSource.command": "本机命令",
+  "settings.customApiCredentialSource.configuration": "连接配置",
+  "settings.customApiCredentialSource.unknown": "现有私有配置",
+  "settings.customApiEnvironmentVariable": "环境变量名称",
+  "settings.customApiEnvironmentVariablePlaceholder": "MODEL_SERVICE_API_KEY",
+  "settings.customApiEnvironmentDescription":
+    "OmniMind 只保存变量名；测试、获取模型或实际发送请求时才读取变量值。",
+  "settings.customApiCredentialCommand": "凭据命令",
+  "settings.customApiCredentialCommandPlaceholder":
+    "security find-generic-password -w -s my-service",
+  "settings.customApiCredentialCommandDescription":
+    "高级：命令会私密保存，之后不再显示；浏览设置时不会执行，测试、获取模型以及之后的模型请求会执行它来获取凭据。",
+  "settings.customApiCredentialCommandExecutionWarning":
+    "继续后将执行此设备上配置的命令，为本次请求获取凭据。",
   "settings.customApiShowKey": "显示 API Key",
   "settings.customApiHideKey": "隐藏 API Key",
   "settings.customApiRiskTitle": "向这个 API 地址发送测试请求？",
@@ -5061,6 +5130,12 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiRiskContinueDiscover": "继续并获取模型",
   "settings.customApiRiskContinueSave": "继续并保存",
   "settings.customApiDiscoveryRiskTitle": "从这个 API 地址获取模型？",
+  "settings.customApiDiscoveryRiskDescription":
+    "这会使用所选凭据向该地址发送模型目录请求。其运营方可能处理或保留该请求，且协议兼容性无法保证。请仅在信任该服务及其隐私做法时继续。",
+  "settings.customApiSaveRiskTitle": "保存这个 API 连接？",
+  "settings.customApiSaveRiskDescription":
+    "保存操作现在不会发送请求；之后的模型请求会使用此 API 地址和所选凭据来源。",
+  "settings.customApiCommandRiskTitle": "执行凭据命令？",
   "settings.customApiDiscardTitle": "放弃未保存的更改？",
   "settings.customApiDiscardDescription": "对此 API 连接所做的更改尚未保存。",
   "settings.customApiKeepEditing": "继续编辑",
@@ -5073,7 +5148,7 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiCancelDiscovery": "停止获取模型",
   "settings.customApiDiscoveredModels": "发现的模型",
   "settings.customApiDiscoveryDescription":
-    "选择要添加的模型。获取过程不会猜测上下文上限、输出上限、思考或图像能力；测试前请确认这些信息。",
+    "选择要添加的模型。可以先使用服务默认值完成测试和保存，仅在确认具体能力时再填写高级限制。",
   "settings.customApiDiscoverySucceeded": "发现 {count} 个模型，请选择要添加的项目。",
   "settings.customApiDiscoveryFailed.invalid_configuration":
     "请检查连接名称、API 格式和 API 地址。",
@@ -5091,6 +5166,9 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiModelIdPlaceholder": "model-id",
   "settings.customApiModelName": "显示名称",
   "settings.customApiModelNamePlaceholder": "模型名称",
+  "settings.customApiModelAdvanced": "高级模型设置",
+  "settings.customApiModelAdvancedDescription": "留空即可使用模型服务的默认值。",
+  "settings.customApiModelUseDefault": "使用服务默认值",
   "settings.customApiContextWindow": "上下文窗口",
   "settings.customApiMaxTokens": "最大输出 Token",
   "settings.customApiModelThinking": "思考",
@@ -5098,6 +5176,7 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiTestRequired": "每次保存前都必须测试；修改任意字段后，需要重新测试。",
   "settings.customApiTestConnection": "测试连接",
   "settings.customApiTesting": "正在测试…",
+  "settings.customApiCancelTest": "取消测试",
   "settings.customApiSave": "保存连接",
   "settings.customApiSaving": "正在保存…",
   "settings.customApiTestSucceeded": "连接测试通过，可以保存此配置。",
@@ -5108,6 +5187,11 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiTestFailed.cancelled": "连接测试已取消。",
   "settings.customApiSaved": "API 连接已保存并重新载入。",
   "settings.customApiSavedAuthFailed": "连接已保存，但无法保存 API Key。请编辑连接后重试。",
+  "settings.customApiCredentialUnchanged": "凭据方式未更改。连接仍然可见，你可以检查后重试。",
+  "settings.customApiCredentialRemovedRetryRequired":
+    "已保存的 API Key 已移除，但新的凭据来源尚未保存。连接仍然可见，请重新选择凭据方式后重试。",
+  "settings.customApiSavedSyncWarning":
+    "连接和凭据来源已保存，但应用内模型状态未能刷新。请重新载入后再使用。",
   "settings.customApiSavedSyncFailed":
     "连接已保存，但无法载入最新模型状态。请重新载入并确认后再使用。",
   "settings.customApiSaveFailed": "连接未保存，请检查字段后重试。",

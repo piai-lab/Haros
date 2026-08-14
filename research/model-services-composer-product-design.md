@@ -1402,7 +1402,7 @@ Unsupported      不显示按钮，说明目录由服务内置/手动配置
 - 不要求先保存完整表单才能获取，前提是安全地把临时 config/credential 交给 Server；
 - 不把拉取失败解释为 credential 必然错误；按 auth/network/provider error 分类；
 - 不在失败时用空数组覆盖 last-good；Pi models store 已拥有持久化策略；
-- 不维护每个供应商 `/models` URL 和响应 parser；由 Pi provider `refreshModels` 决定；
+- Host 不维护逐供应商 `/models` URL、响应 parser 或 catalog fetcher。已有动态 provider 继续由 Pi provider `refreshModels` 决定；Pi `models.json` 官方支持的四种 generic 协议，则由 product-owned Pi ModelConfig/ModelRuntime 的窄 typed discovery seam 统一解析、校验、限流和取消。两条路径都不得把协议解析复制到 Host；
 - 不伪造 last synced timestamp；只有 runtime/store 暴露可靠 `checkedAt` 时显示；
 - 可取消请求必须真实传递 AbortSignal，不能只隐藏 spinner；
 - 成功后 Composer 当前 selection 若仍有效则保持；失效时明确要求重新选择。

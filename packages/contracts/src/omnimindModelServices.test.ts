@@ -155,7 +155,7 @@ describe("OmniMind model-services contracts", () => {
     expect(JSON.stringify(decoded)).not.toContain("must-not-decode");
   });
 
-  it("requires a bounded secret only at the custom test boundary and permits null on edit", () => {
+  it("accepts typed credential intents without returning their private values", () => {
     expect(
       Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
         config: {
@@ -174,14 +174,75 @@ describe("OmniMind model-services contracts", () => {
             },
           ],
         },
-        apiKey: null,
+        credential: { type: "preserve" },
         testModelId: "model-one",
-      }).apiKey,
-    ).toBeNull();
+      }).credential,
+    ).toEqual({ type: "preserve" });
     expect(() =>
       Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
         config: {},
-        apiKey: "",
+        credential: { type: "stored_key", apiKey: "" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "anthropic-messages",
+          baseUrl: "https://gateway.example.test",
+          models: [
+            {
+              modelId: "model-one",
+              displayName: "Model One",
+              reasoning: false,
+              input: ["text"],
+              contextWindow: 32_000,
+              maxTokens: 4_096,
+            },
+          ],
+        },
+        credential: { type: "environment", variableName: "CUSTOM_API_KEY" },
+        testModelId: "model-one",
+      }).credential,
+    ).toEqual({ type: "environment", variableName: "CUSTOM_API_KEY" });
+    expect(
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: null,
+          displayName: "Basic only",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "command", command: "printf private-key" },
+        testModelId: "model-one",
+      }).config.models,
+    ).toEqual([{ modelId: "model-one" }]);
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: null,
+          displayName: "Invalid env",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "environment", variableName: "NOT VALID" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: null,
+          displayName: "Invalid command",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "command", command: "printf key\n" },
         testModelId: "model-one",
       }),
     ).toThrow();
@@ -202,7 +263,7 @@ describe("OmniMind model-services contracts", () => {
           api: "openai-responses",
           baseUrl: "https://gateway.example.test/v1",
         },
-        apiKey: "discovery-only-secret",
+        credential: { type: "stored_key", apiKey: "discovery-only-secret" },
       }).config,
     ).toEqual({
       serviceId: null,

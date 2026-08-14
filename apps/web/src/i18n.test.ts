@@ -90,6 +90,20 @@ describe("message catalogs", () => {
     expect(ZH_CN_MESSAGES["settings.customApiDiscoveryFailed.catalog_unavailable"]).toContain(
       "手工添加",
     );
+    expect(EN_MESSAGES["settings.customApiDiscoveryRiskDescription"]).toContain(
+      "model-catalog request",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiDiscoveryRiskDescription"]).toContain("模型目录请求");
+    expect(EN_MESSAGES["settings.customApiSaveRiskDescription"]).toContain(
+      "does not send a request now",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiSaveRiskDescription"]).toContain("现在不会发送请求");
+    expect(EN_MESSAGES["settings.customApiCredentialCommandDescription"]).toContain(
+      "future model requests will run it",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiCredentialCommandDescription"]).toContain(
+      "之后的模型请求会执行它",
+    );
   });
 
   it("keeps engine update feedback concise and truthful in both supported languages", () => {

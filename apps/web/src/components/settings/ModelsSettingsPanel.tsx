@@ -12,6 +12,7 @@ import {
   type OmniMindModelServiceModel,
   type OmniMindCustomModelServiceApi,
   type OmniMindCustomModelServiceConfigInput,
+  type OmniMindCustomModelServiceCredentialInput,
   type OmniMindCustomModelServiceDiscoveredModel,
   type OmniMindCustomModelServiceModelInput,
 } from "@omnimind/contracts";
@@ -64,6 +65,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 import { Checkbox } from "../ui/checkbox";
 import { SearchInput } from "../ui/search-input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
@@ -103,7 +105,11 @@ interface CustomModelServiceEditorState {
   readonly displayName: string;
   readonly api: OmniMindCustomModelServiceApi;
   readonly baseUrl: string;
+  readonly credentialMode: "preserve" | "stored_key" | "environment" | "command";
   readonly apiKey: string;
+  readonly environmentVariableName: string;
+  readonly credentialCommand: string;
+  readonly existingAuthSource: OmniMindModelServiceDescriptor["authSource"];
   readonly models: ReadonlyArray<OmniMindCustomModelServiceModelInput>;
   readonly testedFingerprint: string | null;
   readonly testState: "idle" | "testing" | "success" | "failed";
@@ -123,12 +129,6 @@ const EMPTY_CUSTOM_MODEL_DISCOVERY: CustomModelDiscoveryState = {
 
 const DEFAULT_CUSTOM_MODEL: OmniMindCustomModelServiceModelInput = {
   modelId: "",
-  displayName: "",
-  reasoning: false,
-  input: ["text"],
-  // Pi requires these facts, but the Host must not invent a capability default.
-  contextWindow: 0,
-  maxTokens: 0,
 };
 
 function createCustomModelServiceEditor(): CustomModelServiceEditorState {
@@ -138,7 +138,11 @@ function createCustomModelServiceEditor(): CustomModelServiceEditorState {
     displayName: "",
     api: "openai-completions",
     baseUrl: "",
+    credentialMode: "stored_key",
     apiKey: "",
+    environmentVariableName: "",
+    credentialCommand: "",
+    existingAuthSource: null,
     models: [{ ...DEFAULT_CUSTOM_MODEL }],
     testedFingerprint: null,
     testState: "idle",
@@ -154,9 +158,12 @@ function customModelServiceConfig(
     api: editor.api,
     baseUrl: editor.baseUrl.trim(),
     models: editor.models.map((model) => ({
-      ...model,
       modelId: model.modelId.trim(),
-      displayName: model.displayName.trim(),
+      ...(model.displayName?.trim() ? { displayName: model.displayName.trim() } : {}),
+      ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+      ...(model.input ? { input: [...model.input] } : {}),
+      ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
+      ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
     })),
   };
 }
@@ -171,11 +178,78 @@ function customModelServiceDiscoveryConfig(editor: CustomModelServiceEditorState
 }
 
 function customModelServiceFingerprint(editor: CustomModelServiceEditorState): string {
-  return JSON.stringify({ config: customModelServiceConfig(editor), apiKey: editor.apiKey });
+  return JSON.stringify({
+    config: customModelServiceConfig(editor),
+    credentialMode: editor.credentialMode,
+    apiKey: editor.apiKey,
+    environmentVariableName: editor.environmentVariableName,
+    credentialCommand: editor.credentialCommand,
+  });
 }
 
-function customModelServiceEndpointFingerprint(editor: CustomModelServiceEditorState): string {
-  return JSON.stringify({ api: editor.api, baseUrl: editor.baseUrl.trim() });
+function customModelServiceCredentialInput(
+  editor: CustomModelServiceEditorState,
+): OmniMindCustomModelServiceCredentialInput | null {
+  switch (editor.credentialMode) {
+    case "preserve":
+      return editor.mode === "edit" ? { type: "preserve" } : null;
+    case "stored_key":
+      return editor.apiKey.length > 0 ? { type: "stored_key", apiKey: editor.apiKey } : null;
+    case "environment": {
+      const variableName = editor.environmentVariableName.trim();
+      return /^[A-Za-z_][A-Za-z0-9_]*$/u.test(variableName)
+        ? { type: "environment", variableName }
+        : null;
+    }
+    case "command":
+      return editor.credentialCommand.length > 0 &&
+        editor.credentialCommand.length <= 4_096 &&
+        editor.credentialCommand === editor.credentialCommand.trim() &&
+        !/[\u0000-\u001f\u007f-\u009f]/u.test(editor.credentialCommand)
+        ? { type: "command", command: editor.credentialCommand }
+        : null;
+  }
+}
+
+function customModelServiceRiskFingerprint(editor: CustomModelServiceEditorState): string {
+  return JSON.stringify({
+    api: editor.api,
+    baseUrl: editor.baseUrl.trim(),
+  });
+}
+
+function customModelServiceCommandFingerprint(
+  editor: CustomModelServiceEditorState,
+): string | null {
+  return editor.credentialMode === "command" ? editor.credentialCommand : null;
+}
+
+function customCredentialSourceKind(
+  source: CustomModelServiceEditorState["existingAuthSource"],
+): "stored_key" | "environment" | "command" | "configuration" | "unknown" {
+  switch (source) {
+    case "stored":
+    case "runtime":
+      return "stored_key";
+    case "environment":
+      return "environment";
+    case "models_json_command":
+      return "command";
+    case "models_json_key":
+    case "fallback":
+      return "configuration";
+    default:
+      return "unknown";
+  }
+}
+
+function stableModelServiceInstanceSuffix(serviceId: string): string {
+  let hash = 0x811c9dc5;
+  for (const character of serviceId) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `#${(hash >>> 0).toString(16).padStart(8, "0").slice(0, 6).toUpperCase()}`;
 }
 
 const subscribeModelServicesCapability = (listener: () => void) =>
@@ -288,6 +362,9 @@ function ActiveModelsSettingsPanel({
   const [confirmedCustomServiceEndpoint, setConfirmedCustomServiceEndpoint] = useState<
     string | null
   >(null);
+  const [confirmedCustomServiceCommand, setConfirmedCustomServiceCommand] = useState<string | null>(
+    null,
+  );
   const [modelServiceMutation, setModelServiceMutation] = useState<string | null>(null);
   const [modelServiceNotice, setModelServiceNotice] = useState<ModelServiceNotice | null>(null);
   const modelServiceDetailRegionId = useId();
@@ -464,7 +541,7 @@ function ActiveModelsSettingsPanel({
       (modelServiceDisplayNameCounts.get(service.displayName) ?? 0) > 1
         ? t("settings.modelServiceInstanceNamed", {
             name: service.displayName,
-            id: service.serviceId,
+            id: stableModelServiceInstanceSuffix(service.serviceId),
           })
         : service.displayName,
     [modelServiceDisplayNameCounts, t],
@@ -853,8 +930,15 @@ function ActiveModelsSettingsPanel({
             displayName: config.displayName,
             api: config.api,
             baseUrl: config.baseUrl,
+            credentialMode: "preserve",
             apiKey: "",
-            models: config.models.map((model) => ({ ...model, input: [...model.input] })),
+            environmentVariableName: "",
+            credentialCommand: "",
+            existingAuthSource: selectedModelService?.authSource ?? null,
+            models: config.models.map((model) => ({
+              ...model,
+              ...(model.input ? { input: [...model.input] } : {}),
+            })),
             testedFingerprint: null,
             testState: "idle",
           }
@@ -866,9 +950,10 @@ function ActiveModelsSettingsPanel({
       setCustomServiceDiscardRequested(false);
       setPendingCustomServiceRiskAction(null);
       setConfirmedCustomServiceEndpoint(null);
+      setConfirmedCustomServiceCommand(null);
       setCustomServiceEditor(nextEditor);
     },
-    [],
+    [selectedModelService?.authSource],
   );
 
   const closeCustomServiceEditor = useCallback(() => {
@@ -883,6 +968,7 @@ function ActiveModelsSettingsPanel({
     setCustomServiceDiscardRequested(false);
     setPendingCustomServiceRiskAction(null);
     setConfirmedCustomServiceEndpoint(null);
+    setConfirmedCustomServiceCommand(null);
   }, []);
 
   const requestCloseCustomServiceEditor = useCallback(() => {
@@ -896,6 +982,8 @@ function ActiveModelsSettingsPanel({
   const testCustomService = useCallback(async () => {
     const editor = customServiceEditor;
     if (!editor) return;
+    const credential = customModelServiceCredentialInput(editor);
+    if (!credential) return;
     customTestControllerRef.current?.abort();
     const controller = new AbortController();
     customTestControllerRef.current = controller;
@@ -906,7 +994,7 @@ function ActiveModelsSettingsPanel({
       const result = await ensureNativeApi().omnimindModelServices.testCustom(
         {
           config: customModelServiceConfig(editor),
-          apiKey: editor.apiKey || null,
+          credential,
           testModelId: editor.models[0]?.modelId.trim() ?? "",
         },
         { signal: controller.signal },
@@ -949,9 +1037,22 @@ function ActiveModelsSettingsPanel({
     }
   }, [customServiceEditor, t]);
 
+  const cancelCustomServiceTest = useCallback(() => {
+    customTestControllerRef.current?.abort();
+    customTestControllerRef.current = null;
+    setCustomServiceEditor((current) =>
+      current?.testState === "testing"
+        ? { ...current, testState: "idle", testedFingerprint: null }
+        : current,
+    );
+    setModelServiceNotice(null);
+  }, []);
+
   const discoverCustomServiceModels = useCallback(async () => {
     const editor = customServiceEditor;
     if (!editor) return;
+    const credential = customModelServiceCredentialInput(editor);
+    if (!credential) return;
     customDiscoveryControllerRef.current?.abort();
     const controller = new AbortController();
     customDiscoveryControllerRef.current = controller;
@@ -961,7 +1062,7 @@ function ActiveModelsSettingsPanel({
       const result = await ensureNativeApi().omnimindModelServices.discoverCustom(
         {
           config: customModelServiceDiscoveryConfig(editor),
-          apiKey: editor.apiKey || null,
+          credential,
         },
         { signal: controller.signal },
       );
@@ -1042,15 +1143,33 @@ function ActiveModelsSettingsPanel({
   const saveCustomService = useCallback(async () => {
     const editor = customServiceEditor;
     if (!editor || editor.testedFingerprint !== customModelServiceFingerprint(editor)) return;
+    const credential = customModelServiceCredentialInput(editor);
+    if (!credential) return;
     setModelServiceMutation("custom:save");
     setModelServiceNotice(null);
     try {
       const result = await ensureNativeApi().omnimindModelServices.saveCustom({
         config: customModelServiceConfig(editor),
-        apiKey: editor.apiKey || null,
+        credential,
       });
-      if (result.state === "complete") setupCompletionArmedRef.current = true;
+      const completed =
+        result.state === "complete" || result.state === "complete_with_sync_warning";
+      if (completed) setupCompletionArmedRef.current = true;
       await invalidateModelServiceConsumers();
+      if (!completed) {
+        setModelServiceNotice({
+          tone: "error",
+          text:
+            result.state === "credential_unchanged"
+              ? t("settings.customApiCredentialUnchanged")
+              : result.state === "credential_removed_retry_required"
+                ? t("settings.customApiCredentialRemovedRetryRequired")
+                : result.state === "config_saved_auth_failed"
+                  ? t("settings.customApiSavedAuthFailed")
+                  : t("settings.customApiSavedSyncFailed"),
+        });
+        return;
+      }
       closeCustomServiceEditor();
       setModelServiceBrowserOpen(false);
       if (result.service) {
@@ -1062,9 +1181,7 @@ function ActiveModelsSettingsPanel({
         text:
           result.state === "complete"
             ? t("settings.customApiSaved")
-            : result.state === "config_saved_auth_failed"
-              ? t("settings.customApiSavedAuthFailed")
-              : t("settings.customApiSavedSyncFailed"),
+            : t("settings.customApiSavedSyncWarning"),
       });
       finishSetupIfReady(result.service);
     } catch {
@@ -1084,8 +1201,14 @@ function ActiveModelsSettingsPanel({
     (action: "discover" | "test" | "save") => {
       const editor = customServiceEditor;
       if (!editor) return;
-      const endpointFingerprint = customModelServiceEndpointFingerprint(editor);
-      if (confirmedCustomServiceEndpoint !== endpointFingerprint) {
+      const endpointNeedsConfirmation =
+        confirmedCustomServiceEndpoint !== customModelServiceRiskFingerprint(editor);
+      const commandFingerprint = customModelServiceCommandFingerprint(editor);
+      const commandNeedsConfirmation =
+        action !== "save" &&
+        commandFingerprint !== null &&
+        confirmedCustomServiceCommand !== commandFingerprint;
+      if (endpointNeedsConfirmation || commandNeedsConfirmation) {
         setPendingCustomServiceRiskAction(action);
         return;
       }
@@ -1095,6 +1218,7 @@ function ActiveModelsSettingsPanel({
     },
     [
       confirmedCustomServiceEndpoint,
+      confirmedCustomServiceCommand,
       customServiceEditor,
       discoverCustomServiceModels,
       saveCustomService,
@@ -1106,7 +1230,10 @@ function ActiveModelsSettingsPanel({
     const action = pendingCustomServiceRiskAction;
     const editor = customServiceEditor;
     if (!action || !editor) return;
-    setConfirmedCustomServiceEndpoint(customModelServiceEndpointFingerprint(editor));
+    setConfirmedCustomServiceEndpoint(customModelServiceRiskFingerprint(editor));
+    if (action !== "save") {
+      setConfirmedCustomServiceCommand(customModelServiceCommandFingerprint(editor));
+    }
     setPendingCustomServiceRiskAction(null);
     if (action === "discover") void discoverCustomServiceModels();
     else if (action === "test") void testCustomService();
@@ -1281,14 +1408,8 @@ function ActiveModelsSettingsPanel({
       config.displayName.length > 0 &&
       /^https?:\/\/\S+$/iu.test(config.baseUrl) &&
       config.models.length > 0 &&
-      config.models.every(
-        (model) =>
-          model.modelId.length > 0 &&
-          model.displayName.length > 0 &&
-          model.contextWindow > 0 &&
-          model.maxTokens > 0,
-      ) &&
-      (customServiceEditor.mode === "edit" || customServiceEditor.apiKey.length > 0)
+      config.models.every((model) => model.modelId.length > 0) &&
+      customModelServiceCredentialInput(customServiceEditor) !== null
     );
   }, [customServiceEditor]);
   const customServiceDiscoveryFormValid = useMemo(() => {
@@ -1297,9 +1418,19 @@ function ActiveModelsSettingsPanel({
     return (
       config.displayName.length > 0 &&
       /^https?:\/\/\S+$/iu.test(config.baseUrl) &&
-      (customServiceEditor.mode === "edit" || customServiceEditor.apiKey.length > 0)
+      customModelServiceCredentialInput(customServiceEditor) !== null
     );
   }, [customServiceEditor]);
+  const pendingCustomServiceRiskNeedsEndpoint =
+    pendingCustomServiceRiskAction !== null &&
+    customServiceEditor !== null &&
+    confirmedCustomServiceEndpoint !== customModelServiceRiskFingerprint(customServiceEditor);
+  const pendingCustomServiceRiskNeedsCommand =
+    pendingCustomServiceRiskAction !== null &&
+    pendingCustomServiceRiskAction !== "save" &&
+    customServiceEditor !== null &&
+    customModelServiceCommandFingerprint(customServiceEditor) !== null &&
+    confirmedCustomServiceCommand !== customModelServiceCommandFingerprint(customServiceEditor);
 
   return (
     <div className="space-y-6">
@@ -1683,48 +1814,188 @@ function ActiveModelsSettingsPanel({
                     {t(`settings.customApiProtocolHelp.${customServiceEditor.api}`)}
                   </span>
                 </label>
-                <div className="space-y-1.5 text-xs font-medium text-foreground sm:col-span-2">
-                  <label htmlFor={customServiceApiKeyInputId}>{t("settings.customApiKey")}</label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id={customServiceApiKeyInputId}
-                      type={customServiceApiKeyVisible ? "text" : "password"}
-                      autoComplete="off"
-                      value={customServiceEditor.apiKey}
-                      onChange={(event) =>
+                <div className="space-y-3 sm:col-span-2">
+                  <label className="space-y-1.5 text-xs font-medium text-foreground">
+                    <span>{t("settings.customApiCredentialMethod")}</span>
+                    <Select
+                      value={customServiceEditor.credentialMode}
+                      onValueChange={(value) =>
                         updateCustomServiceEditor((current) => ({
                           ...current,
-                          apiKey: event.target.value,
+                          credentialMode: value as CustomModelServiceEditorState["credentialMode"],
+                          apiKey: "",
+                          environmentVariableName: "",
+                          credentialCommand: "",
                         }))
                       }
-                      placeholder={
-                        customServiceEditor.mode === "edit"
-                          ? t("settings.customApiKeyPreservePlaceholder")
-                          : t("settings.customApiKeyPlaceholder")
-                      }
-                    />
-                    <Button
-                      type="button"
-                      size="icon-sm"
-                      variant="outline"
-                      aria-label={t(
-                        customServiceApiKeyVisible
-                          ? "settings.customApiHideKey"
-                          : "settings.customApiShowKey",
-                      )}
-                      title={t(
-                        customServiceApiKeyVisible
-                          ? "settings.customApiHideKey"
-                          : "settings.customApiShowKey",
-                      )}
-                      onClick={() => setCustomServiceApiKeyVisible((visible) => !visible)}
                     >
-                      <EyeIcon aria-hidden="true" />
-                    </Button>
-                  </div>
-                  <span className="block font-normal text-muted-foreground">
-                    {t("settings.customApiKeyDescription")}
-                  </span>
+                      <SelectTrigger aria-label={t("settings.customApiCredentialMethod")}>
+                        <SelectValue>
+                          {t(
+                            `settings.customApiCredentialMethod.${customServiceEditor.credentialMode}`,
+                          )}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SettingsSelectPopup align="start">
+                        {customServiceEditor.mode === "edit" ? (
+                          <SelectItem value="preserve">
+                            {t("settings.customApiCredentialMethod.preserve")}
+                          </SelectItem>
+                        ) : null}
+                        <SelectItem value="stored_key">
+                          {t("settings.customApiCredentialMethod.stored_key")}
+                        </SelectItem>
+                      </SettingsSelectPopup>
+                    </Select>
+                  </label>
+
+                  {customServiceEditor.credentialMode === "preserve" ? (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {t("settings.customApiCredentialPreserveDescription", {
+                        source: t(
+                          `settings.customApiCredentialSource.${customCredentialSourceKind(
+                            customServiceEditor.existingAuthSource,
+                          )}`,
+                        ),
+                      })}
+                    </p>
+                  ) : null}
+
+                  {customServiceEditor.credentialMode === "stored_key" ? (
+                    <div className="space-y-1.5 text-xs font-medium text-foreground">
+                      <label htmlFor={customServiceApiKeyInputId}>
+                        {t("settings.customApiKey")}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id={customServiceApiKeyInputId}
+                          type={customServiceApiKeyVisible ? "text" : "password"}
+                          autoComplete="off"
+                          value={customServiceEditor.apiKey}
+                          onChange={(event) =>
+                            updateCustomServiceEditor((current) => ({
+                              ...current,
+                              apiKey: event.target.value,
+                            }))
+                          }
+                          placeholder={t("settings.customApiKeyPlaceholder")}
+                        />
+                        <Button
+                          type="button"
+                          size="icon-sm"
+                          variant="outline"
+                          aria-label={t(
+                            customServiceApiKeyVisible
+                              ? "settings.customApiHideKey"
+                              : "settings.customApiShowKey",
+                          )}
+                          title={t(
+                            customServiceApiKeyVisible
+                              ? "settings.customApiHideKey"
+                              : "settings.customApiShowKey",
+                          )}
+                          onClick={() => setCustomServiceApiKeyVisible((visible) => !visible)}
+                        >
+                          <EyeIcon aria-hidden="true" />
+                        </Button>
+                      </div>
+                      <span className="block font-normal text-muted-foreground">
+                        {t("settings.customApiKeyDescription")}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <details className="rounded-lg border border-border px-3 py-2">
+                    <summary className="cursor-pointer text-xs font-medium text-foreground">
+                      {t("settings.customApiCredentialAdvanced")}
+                    </summary>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {t("settings.customApiCredentialAdvancedDescription")}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={
+                          customServiceEditor.credentialMode === "environment"
+                            ? "secondary"
+                            : "outline"
+                        }
+                        aria-pressed={customServiceEditor.credentialMode === "environment"}
+                        onClick={() =>
+                          updateCustomServiceEditor((current) => ({
+                            ...current,
+                            credentialMode: "environment",
+                            apiKey: "",
+                            credentialCommand: "",
+                          }))
+                        }
+                      >
+                        {t("settings.customApiCredentialMethod.environment")}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={
+                          customServiceEditor.credentialMode === "command" ? "secondary" : "outline"
+                        }
+                        aria-pressed={customServiceEditor.credentialMode === "command"}
+                        onClick={() =>
+                          updateCustomServiceEditor((current) => ({
+                            ...current,
+                            credentialMode: "command",
+                            apiKey: "",
+                            environmentVariableName: "",
+                          }))
+                        }
+                      >
+                        {t("settings.customApiCredentialMethod.command")}
+                      </Button>
+                    </div>
+
+                    {customServiceEditor.credentialMode === "environment" ? (
+                      <label className="mt-3 block space-y-1.5 text-xs font-medium text-foreground">
+                        <span>{t("settings.customApiEnvironmentVariable")}</span>
+                        <Input
+                          value={customServiceEditor.environmentVariableName}
+                          onChange={(event) =>
+                            updateCustomServiceEditor((current) => ({
+                              ...current,
+                              environmentVariableName: event.target.value,
+                            }))
+                          }
+                          placeholder={t("settings.customApiEnvironmentVariablePlaceholder")}
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                        <span className="block font-normal text-muted-foreground">
+                          {t("settings.customApiEnvironmentDescription")}
+                        </span>
+                      </label>
+                    ) : null}
+
+                    {customServiceEditor.credentialMode === "command" ? (
+                      <label className="mt-3 block space-y-1.5 text-xs font-medium text-foreground">
+                        <span>{t("settings.customApiCredentialCommand")}</span>
+                        <Textarea
+                          value={customServiceEditor.credentialCommand}
+                          onChange={(event) =>
+                            updateCustomServiceEditor((current) => ({
+                              ...current,
+                              credentialCommand: event.target.value,
+                            }))
+                          }
+                          placeholder={t("settings.customApiCredentialCommandPlaceholder")}
+                          className="min-h-20 font-mono text-xs"
+                          autoComplete="off"
+                          spellCheck={false}
+                        />
+                        <span className="block font-normal leading-relaxed text-muted-foreground">
+                          {t("settings.customApiCredentialCommandDescription")}
+                        </span>
+                      </label>
+                    ) : null}
+                  </details>
                 </div>
               </div>
 
@@ -1851,13 +2122,16 @@ function ActiveModelsSettingsPanel({
                       <label className="space-y-1.5 text-xs font-medium text-foreground">
                         <span>{t("settings.customApiModelName")}</span>
                         <Input
-                          value={model.displayName}
+                          value={model.displayName ?? ""}
                           onChange={(event) =>
                             updateCustomServiceEditor((current) => ({
                               ...current,
                               models: current.models.map((entry, modelIndex) =>
                                 modelIndex === index
-                                  ? { ...entry, displayName: event.target.value }
+                                  ? {
+                                      ...entry,
+                                      displayName: event.target.value || undefined,
+                                    }
                                   : entry,
                               ),
                             }))
@@ -1865,79 +2139,101 @@ function ActiveModelsSettingsPanel({
                           placeholder={t("settings.customApiModelNamePlaceholder")}
                         />
                       </label>
-                      <label className="space-y-1.5 text-xs font-medium text-foreground">
-                        <span>{t("settings.customApiContextWindow")}</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={model.contextWindow || ""}
-                          onChange={(event) =>
-                            updateCustomServiceEditor((current) => ({
-                              ...current,
-                              models: current.models.map((entry, modelIndex) =>
-                                modelIndex === index
-                                  ? { ...entry, contextWindow: Number(event.target.value) }
-                                  : entry,
-                              ),
-                            }))
-                          }
-                        />
-                      </label>
-                      <label className="space-y-1.5 text-xs font-medium text-foreground">
-                        <span>{t("settings.customApiMaxTokens")}</span>
-                        <Input
-                          type="number"
-                          min={1}
-                          value={model.maxTokens || ""}
-                          onChange={(event) =>
-                            updateCustomServiceEditor((current) => ({
-                              ...current,
-                              models: current.models.map((entry, modelIndex) =>
-                                modelIndex === index
-                                  ? { ...entry, maxTokens: Number(event.target.value) }
-                                  : entry,
-                              ),
-                            }))
-                          }
-                        />
-                      </label>
                     </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
-                      <label className="flex items-center gap-2 text-xs text-foreground">
-                        <Checkbox
-                          checked={model.reasoning}
-                          onCheckedChange={(checked) =>
-                            updateCustomServiceEditor((current) => ({
-                              ...current,
-                              models: current.models.map((entry, modelIndex) =>
-                                modelIndex === index
-                                  ? { ...entry, reasoning: checked === true }
-                                  : entry,
-                              ),
-                            }))
-                          }
-                        />
-                        {t("settings.customApiModelThinking")}
-                      </label>
-                      <label className="flex items-center gap-2 text-xs text-foreground">
-                        <Checkbox
-                          checked={model.input.includes("image")}
-                          onCheckedChange={(checked) =>
-                            updateCustomServiceEditor((current) => ({
-                              ...current,
-                              models: current.models.map((entry, modelIndex) =>
-                                modelIndex === index
-                                  ? {
-                                      ...entry,
-                                      input: checked === true ? ["text", "image"] : ["text"],
-                                    }
-                                  : entry,
-                              ),
-                            }))
-                          }
-                        />
-                        {t("settings.customApiModelImages")}
-                      </label>
+                    <details className="mt-3 rounded-lg border border-border px-3 py-2">
+                      <summary className="cursor-pointer text-xs font-medium text-foreground">
+                        {t("settings.customApiModelAdvanced")}
+                      </summary>
+                      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                        {t("settings.customApiModelAdvancedDescription")}
+                      </p>
+                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                        <label className="space-y-1.5 text-xs font-medium text-foreground">
+                          <span>{t("settings.customApiContextWindow")}</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={model.contextWindow ?? ""}
+                            placeholder={t("settings.customApiModelUseDefault")}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              updateCustomServiceEditor((current) => ({
+                                ...current,
+                                models: current.models.map((entry, modelIndex) =>
+                                  modelIndex === index
+                                    ? {
+                                        ...entry,
+                                        contextWindow: value === "" ? undefined : Number(value),
+                                      }
+                                    : entry,
+                                ),
+                              }));
+                            }}
+                          />
+                        </label>
+                        <label className="space-y-1.5 text-xs font-medium text-foreground">
+                          <span>{t("settings.customApiMaxTokens")}</span>
+                          <Input
+                            type="number"
+                            min={1}
+                            value={model.maxTokens ?? ""}
+                            placeholder={t("settings.customApiModelUseDefault")}
+                            onChange={(event) => {
+                              const value = event.target.value;
+                              updateCustomServiceEditor((current) => ({
+                                ...current,
+                                models: current.models.map((entry, modelIndex) =>
+                                  modelIndex === index
+                                    ? {
+                                        ...entry,
+                                        maxTokens: value === "" ? undefined : Number(value),
+                                      }
+                                    : entry,
+                                ),
+                              }));
+                            }}
+                          />
+                        </label>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                        <label className="flex items-center gap-2 text-xs text-foreground">
+                          <Checkbox
+                            checked={model.reasoning === true}
+                            onCheckedChange={(checked) =>
+                              updateCustomServiceEditor((current) => ({
+                                ...current,
+                                models: current.models.map((entry, modelIndex) =>
+                                  modelIndex === index
+                                    ? { ...entry, reasoning: checked === true || undefined }
+                                    : entry,
+                                ),
+                              }))
+                            }
+                          />
+                          {t("settings.customApiModelThinking")}
+                        </label>
+                        <label className="flex items-center gap-2 text-xs text-foreground">
+                          <Checkbox
+                            checked={model.input?.includes("image") ?? false}
+                            onCheckedChange={(checked) =>
+                              updateCustomServiceEditor((current) => ({
+                                ...current,
+                                models: current.models.map((entry, modelIndex) =>
+                                  modelIndex === index
+                                    ? {
+                                        ...entry,
+                                        input: checked === true ? ["text", "image"] : undefined,
+                                      }
+                                    : entry,
+                                ),
+                              }))
+                            }
+                          />
+                          {t("settings.customApiModelImages")}
+                        </label>
+                      </div>
+                    </details>
+                    <div className="mt-3 flex justify-end">
                       {customServiceEditor.models.length > 1 ? (
                         <Button
                           size="xs"
@@ -1966,20 +2262,23 @@ function ActiveModelsSettingsPanel({
                 {t("settings.customApiTestRequired")}
               </p>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  disabled={
-                    !customServiceFormValid ||
-                    customServiceEditor.testState === "testing" ||
-                    customModelDiscovery.status === "loading" ||
-                    modelServiceMutation !== null
-                  }
-                  onClick={() => requestCustomServiceAction("test")}
-                >
-                  {customServiceEditor.testState === "testing"
-                    ? t("settings.customApiTesting")
-                    : t("settings.customApiTestConnection")}
-                </Button>
+                {customServiceEditor.testState === "testing" ? (
+                  <Button variant="outline" onClick={cancelCustomServiceTest}>
+                    {t("settings.customApiCancelTest")}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    disabled={
+                      !customServiceFormValid ||
+                      customModelDiscovery.status === "loading" ||
+                      modelServiceMutation !== null
+                    }
+                    onClick={() => requestCustomServiceAction("test")}
+                  >
+                    {t("settings.customApiTestConnection")}
+                  </Button>
+                )}
                 <Button
                   disabled={
                     customServiceEditor.testedFingerprint !==
@@ -2522,14 +2821,31 @@ function ActiveModelsSettingsPanel({
           <AlertDialogHeader>
             <AlertDialogTitle>
               {t(
-                pendingCustomServiceRiskAction === "discover"
-                  ? "settings.customApiDiscoveryRiskTitle"
-                  : "settings.customApiRiskTitle",
+                pendingCustomServiceRiskNeedsEndpoint
+                  ? pendingCustomServiceRiskAction === "save"
+                    ? "settings.customApiSaveRiskTitle"
+                    : pendingCustomServiceRiskAction === "discover"
+                      ? "settings.customApiDiscoveryRiskTitle"
+                      : "settings.customApiRiskTitle"
+                  : "settings.customApiCommandRiskTitle",
               )}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("settings.customApiRiskDescription")}
-            </AlertDialogDescription>
+            {pendingCustomServiceRiskNeedsEndpoint ? (
+              <AlertDialogDescription>
+                {t(
+                  pendingCustomServiceRiskAction === "save"
+                    ? "settings.customApiSaveRiskDescription"
+                    : pendingCustomServiceRiskAction === "discover"
+                      ? "settings.customApiDiscoveryRiskDescription"
+                    : "settings.customApiRiskDescription",
+                )}
+              </AlertDialogDescription>
+            ) : null}
+            {pendingCustomServiceRiskNeedsCommand ? (
+              <p className="text-sm leading-relaxed text-destructive">
+                {t("settings.customApiCredentialCommandExecutionWarning")}
+              </p>
+            ) : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogClose render={<Button variant="outline" size="sm" />}>

@@ -154,12 +154,12 @@ function setNativeApi(input: {
         state: "success",
         models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
           modelId: model.modelId,
-          displayName: model.displayName,
+          displayName: model.displayName ?? model.modelId,
           available: true,
-          reasoning: model.reasoning,
-          input: [...model.input],
-          contextWindow: model.contextWindow,
-          maxTokens: model.maxTokens,
+          reasoning: model.reasoning ?? false,
+          input: [...(model.input ?? ["text"])],
+          contextWindow: model.contextWindow ?? 128_000,
+          maxTokens: model.maxTokens ?? 16_384,
         })),
         errorCode: null,
       })),
@@ -594,6 +594,47 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
+  it("disambiguates same-name service instances without exposing their full IDs", async () => {
+    const firstId = "11111111-1111-4111-8111-111111111111";
+    const secondId = "22222222-2222-4222-8222-222222222222";
+    const services = [firstId, secondId].map((serviceId) =>
+      service({
+        serviceId,
+        providerId: serviceId,
+        displayName: "Team Gateway",
+        origin: "models_json",
+        authState: "configured",
+        authSource: "stored",
+        storedCredentialType: "api_key",
+      }),
+    );
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services,
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+    });
+
+    await expect.poll(() => document.body.textContent).toContain("Team Gateway");
+    expect(document.body.textContent).not.toContain(firstId);
+    expect(document.body.textContent).not.toContain(secondId);
+    const suffixes = document.body.textContent?.match(/#[0-9A-F]{6}/gu) ?? [];
+    expect(new Set(suffixes).size).toBe(2);
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
   it("keeps the runtime service catalog behind a searchable add flow and returns from details", async () => {
     const connectableServices = Array.from({ length: 40 }, (_, index) =>
       service({
@@ -727,12 +768,12 @@ describe("ModelsSettingsPanel model services", () => {
       state: "success" as const,
       models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
         modelId: model.modelId,
-        displayName: model.displayName,
+        displayName: model.displayName ?? model.modelId,
         available: true,
-        reasoning: model.reasoning,
-        input: [...model.input],
-        contextWindow: model.contextWindow,
-        maxTokens: model.maxTokens,
+        reasoning: model.reasoning ?? false,
+        input: [...(model.input ?? ["text"])],
+        contextWindow: model.contextWindow ?? 128_000,
+        maxTokens: model.maxTokens ?? 16_384,
       })),
       errorCode: null,
     }));
@@ -782,6 +823,9 @@ describe("ModelsSettingsPanel model services", () => {
     expect(apiKeyInput).toHaveAttribute("type", "password");
     await mounted.screen.getByLabelText("settings.customApiModelId").fill("custom-model");
     await mounted.screen.getByLabelText("settings.customApiModelName").fill("Custom Model");
+    await mounted.screen
+      .getByText("settings.customApiModelAdvanced", { exact: true })
+      .click();
     await mounted.screen.getByLabelText("settings.customApiContextWindow").fill("128000");
     await mounted.screen.getByLabelText("settings.customApiMaxTokens").fill("8192");
 
@@ -809,14 +853,12 @@ describe("ModelsSettingsPanel model services", () => {
               {
                 modelId: "custom-model",
                 displayName: "Custom Model",
-                reasoning: false,
-                input: ["text"],
                 contextWindow: 128_000,
                 maxTokens: 8_192,
               },
             ],
           },
-          apiKey: "browser-secret",
+          credential: { type: "stored_key", apiKey: "browser-secret" },
           testModelId: "custom-model",
         },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -834,7 +876,7 @@ describe("ModelsSettingsPanel model services", () => {
       .toHaveBeenCalledWith(
         expect.objectContaining({
           config: expect.objectContaining({ serviceId: null, displayName: "Custom Service" }),
-          apiKey: "browser-secret",
+          credential: { type: "stored_key", apiKey: "browser-secret" },
         }),
       );
     expect(document.body.textContent).not.toContain("browser-secret");
@@ -852,6 +894,28 @@ describe("ModelsSettingsPanel model services", () => {
       ],
       errorCode: null,
     }));
+    const testCustom = vi.fn(async ({ config }) => ({
+      state: "success" as const,
+      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+        modelId: model.modelId,
+        displayName: model.displayName ?? model.modelId,
+        available: true,
+        reasoning: false,
+        input: ["text" as const],
+        contextWindow: 128_000,
+        maxTokens: 16_384,
+      })),
+      errorCode: null,
+    }));
+    const saveCustom = vi.fn(async () => ({
+      state: "complete" as const,
+      service: service({
+        serviceId: "saved-basic",
+        providerId: "saved-basic",
+        displayName: "Custom Service",
+        origin: "models_json",
+      }),
+    }));
     const mounted = await renderPanel({
       list: async () => ({
         state: "empty",
@@ -868,6 +932,8 @@ describe("ModelsSettingsPanel model services", () => {
         errorCode: null,
       }),
       discoverCustom,
+      testCustom,
+      saveCustom,
     });
 
     await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
@@ -898,7 +964,7 @@ describe("ModelsSettingsPanel model services", () => {
             api: "openai-completions",
             baseUrl: "https://api.example.test/v1",
           },
-          apiKey: "browser-secret",
+          credential: { type: "stored_key", apiKey: "browser-secret" },
         },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
@@ -921,6 +987,178 @@ describe("ModelsSettingsPanel model services", () => {
     expect(
       mounted.screen.getByRole("button", { name: "settings.customApiAddModel" }),
     ).toBeVisible();
+
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await expect
+      .poll(() => testCustom)
+      .toHaveBeenCalledWith(
+        {
+          config: {
+            serviceId: null,
+            displayName: "Custom Service",
+            api: "openai-completions",
+            baseUrl: "https://api.example.test/v1",
+            models: [{ modelId: "provider-model-a", displayName: "Provider Model A" }],
+          },
+          credential: { type: "stored_key", apiKey: "browser-secret" },
+          testModelId: "provider-model-a",
+        },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    const saveButton = mounted.screen.getByRole("button", { name: "settings.customApiSave" });
+    await expect.poll(() => saveButton).toBeEnabled();
+    await saveButton.click();
+    await expect
+      .poll(() => saveCustom)
+      .toHaveBeenCalledWith({
+        config: {
+          serviceId: null,
+          displayName: "Custom Service",
+          api: "openai-completions",
+          baseUrl: "https://api.example.test/v1",
+          models: [{ modelId: "provider-model-a", displayName: "Provider Model A" }],
+        },
+        credential: { type: "stored_key", apiKey: "browser-secret" },
+      });
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("keeps command credentials in the advanced path and does not repeat endpoint trust on save", async () => {
+    const testCustom = vi.fn(async ({ config }) => ({
+      state: "success" as const,
+      models: config.models.map((model: OmniMindCustomModelServiceModelInput) => ({
+        modelId: model.modelId,
+        displayName: model.modelId,
+        available: true,
+        reasoning: false,
+        input: ["text" as const],
+        contextWindow: 128_000,
+        maxTokens: 16_384,
+      })),
+      errorCode: null,
+    }));
+    const saveCustom = vi.fn(async () => ({
+      state: "complete" as const,
+      service: service({ serviceId: "command-service", origin: "models_json" }),
+    }));
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+      testCustom,
+      saveCustom,
+    });
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    await mounted.screen.getByRole("button", { name: /settings\.connectByApiAddress/ }).click();
+    await mounted.screen.getByLabelText("settings.customApiConnectionName").fill("Command Service");
+    await mounted.screen
+      .getByLabelText("settings.customApiEndpoint")
+      .fill("https://api.example.test/v1");
+    await mounted.screen.getByLabelText("settings.customApiModelId").fill("command-model");
+    await mounted.screen
+      .getByText("settings.customApiCredentialAdvanced", { exact: true })
+      .click();
+    await mounted.screen
+      .getByRole("button", { name: "settings.customApiCredentialMethod.command" })
+      .click();
+    await mounted.screen
+      .getByLabelText("settings.customApiCredentialCommand")
+      .fill("printf command-key");
+
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    expect(document.body.textContent).toContain(
+      "settings.customApiCredentialCommandExecutionWarning",
+    );
+    await confirmCustomApiRisk(mounted.screen);
+    await expect
+      .poll(() => testCustom)
+      .toHaveBeenCalledWith(
+        expect.objectContaining({
+          credential: { type: "command", command: "printf command-key" },
+        }),
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    const saveButton = mounted.screen.getByRole("button", { name: "settings.customApiSave" });
+    await expect.poll(() => saveButton).toBeEnabled();
+    await saveButton.click();
+    await expect
+      .poll(() => saveCustom)
+      .toHaveBeenCalledWith(
+        expect.objectContaining({
+          credential: { type: "command", command: "printf command-key" },
+        }),
+      );
+    expect(document.body.textContent).not.toContain("settings.customApiSaveRiskTitle");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("cancels an in-flight custom connection test", async () => {
+    let observedSignal: AbortSignal | undefined;
+    const testCustom = vi.fn(
+      (_input, options) =>
+        new Promise<{
+          state: "cancelled";
+          models: [];
+          errorCode: "cancelled";
+        }>((resolve) => {
+          observedSignal = options?.signal;
+          options?.signal?.addEventListener(
+            "abort",
+            () => resolve({ state: "cancelled", models: [], errorCode: "cancelled" }),
+            { once: true },
+          );
+        }),
+    );
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+      testCustom,
+    });
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    await mounted.screen.getByRole("button", { name: /settings\.connectByApiAddress/ }).click();
+    await mounted.screen.getByLabelText("settings.customApiConnectionName").fill("Slow Service");
+    await mounted.screen
+      .getByLabelText("settings.customApiEndpoint")
+      .fill("https://api.example.test/v1");
+    await mounted.screen.getByLabelText("settings.customApiKey").fill("browser-secret");
+    await mounted.screen.getByLabelText("settings.customApiModelId").fill("slow-model");
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await confirmCustomApiRisk(mounted.screen);
+    await expect.poll(() => testCustom).toHaveBeenCalledTimes(1);
+    expect(observedSignal?.aborted).toBe(false);
+    await mounted.screen.getByRole("button", { name: "settings.customApiCancelTest" }).click();
+    expect(observedSignal?.aborted).toBe(true);
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.customApiTestConnection");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -1096,7 +1334,7 @@ describe("ModelsSettingsPanel model services", () => {
     expect(mounted.screen.getByLabelText("settings.customApiConnectionName")).toHaveValue(
       "Saved Custom",
     );
-    expect(mounted.screen.getByLabelText("settings.customApiKey")).toHaveValue("");
+    expect(document.body.textContent).toContain("settings.customApiCredentialPreserveDescription");
     expect(document.body.textContent).not.toContain("browser-secret");
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
     await confirmCustomApiRisk(mounted.screen);
@@ -1109,7 +1347,7 @@ describe("ModelsSettingsPanel model services", () => {
       .toHaveBeenCalledWith(
         expect.objectContaining({
           config: expect.objectContaining({ serviceId: "saved-custom" }),
-          apiKey: null,
+          credential: { type: "preserve" },
         }),
       );
 
@@ -1853,8 +2091,10 @@ describe("ModelsSettingsPanel model services", () => {
       }),
     });
 
-    await expect.poll(() => document.body.textContent).toContain("deepseek-primary");
-    expect(document.body.textContent).toContain("deepseek-backup");
+    await expect.poll(() => document.body.textContent).toContain("settings.modelServiceInstanceNamed");
+    expect(document.body.textContent).not.toContain("deepseek-primary");
+    expect(document.body.textContent).not.toContain("deepseek-backup");
+    expect(new Set(document.body.textContent?.match(/#[0-9A-F]{6}/gu) ?? []).size).toBe(2);
     expect(document.body.textContent).toContain("settings.modelServiceRefreshRequired");
 
     await mounted.screen.unmount();

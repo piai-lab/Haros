@@ -1046,11 +1046,15 @@ describe("wsNativeApi", () => {
     };
 
     await api.omnimindModelServices.testCustom(
-      { config, apiKey: "test-secret", testModelId: "model-one" },
+      {
+        config,
+        credential: { type: "stored_key", apiKey: "test-secret" },
+        testModelId: "model-one",
+      },
       { signal: controller.signal },
     );
     await api.omnimindModelServices.saveCustom(
-      { config, apiKey: "test-secret" },
+      { config, credential: { type: "stored_key", apiKey: "test-secret" } },
       { signal: controller.signal },
     );
     await api.omnimindModelServices.removeCustom(
@@ -1061,13 +1065,17 @@ describe("wsNativeApi", () => {
     expect(requestMock).toHaveBeenNthCalledWith(
       1,
       WS_METHODS.omnimindModelServicesTestCustom,
-      { config, apiKey: "test-secret", testModelId: "model-one" },
+      {
+        config,
+        credential: { type: "stored_key", apiKey: "test-secret" },
+        testModelId: "model-one",
+      },
       { signal: controller.signal, timeoutMs: null },
     );
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
       WS_METHODS.omnimindModelServicesSaveCustom,
-      { config, apiKey: "test-secret" },
+      { config, credential: { type: "stored_key", apiKey: "test-secret" } },
       { signal: controller.signal, timeoutMs: null },
     );
     expect(requestMock).toHaveBeenNthCalledWith(

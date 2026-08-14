@@ -61,13 +61,15 @@ const BoundedEndpointUrl = TrimmedNonEmptyString.check(
 
 export const OmniMindCustomModelServiceModelInput = Schema.Struct({
   modelId: BoundedModelId,
-  displayName: BoundedDisplayName,
-  reasoning: Schema.Boolean,
-  input: Schema.Array(Schema.Literals(["text", "image"]))
-    .check(Schema.isMinLength(1))
-    .check(Schema.isMaxLength(2)),
-  contextWindow: PositiveInt,
-  maxTokens: PositiveInt,
+  displayName: Schema.optional(BoundedDisplayName),
+  reasoning: Schema.optional(Schema.Boolean),
+  input: Schema.optional(
+    Schema.Array(Schema.Literals(["text", "image"]))
+      .check(Schema.isMinLength(1))
+      .check(Schema.isMaxLength(2)),
+  ),
+  contextWindow: Schema.optional(PositiveInt),
+  maxTokens: Schema.optional(PositiveInt),
 });
 export type OmniMindCustomModelServiceModelInput = typeof OmniMindCustomModelServiceModelInput.Type;
 
@@ -380,11 +382,30 @@ export type OmniMindModelServiceRefreshResult = typeof OmniMindModelServiceRefre
 
 const BoundedSecret = Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(65_536));
 
+const CredentialEnvironmentVariableName = Schema.String.check(
+  Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u),
+);
+const CredentialCommand = Schema.String.check(
+  Schema.isMinLength(1),
+  Schema.isMaxLength(4_096),
+  Schema.isPattern(/^[^\u0000-\u001f\u007f-\u009f]+$/u),
+);
+
+export const OmniMindCustomModelServiceCredentialInput = Schema.Union([
+  Schema.Struct({ type: Schema.Literal("preserve") }),
+  Schema.Struct({ type: Schema.Literal("stored_key"), apiKey: BoundedSecret }),
+  Schema.Struct({
+    type: Schema.Literal("environment"),
+    variableName: CredentialEnvironmentVariableName,
+  }),
+  Schema.Struct({ type: Schema.Literal("command"), command: CredentialCommand }),
+]);
+export type OmniMindCustomModelServiceCredentialInput =
+  typeof OmniMindCustomModelServiceCredentialInput.Type;
+
 export const OmniMindCustomModelServiceTestInput = Schema.Struct({
   config: OmniMindCustomModelServiceConfigInput,
-  // Existing services may reuse their Pi-owned stored credential. The secret is
-  // required only for a new preview and is never returned by this contract.
-  apiKey: Schema.NullOr(BoundedSecret),
+  credential: OmniMindCustomModelServiceCredentialInput,
   testModelId: BoundedModelId,
 });
 export type OmniMindCustomModelServiceTestInput = typeof OmniMindCustomModelServiceTestInput.Type;
@@ -411,9 +432,7 @@ const BoundedDiscoveredModels = Schema.Array(OmniMindCustomModelServiceDiscovere
 
 export const OmniMindCustomModelServiceDiscoverInput = Schema.Struct({
   config: OmniMindCustomModelServiceDiscoveryConfigInput,
-  // Existing services may reuse their Pi-owned credential. The secret is
-  // required only for a new discovery intent and is never returned.
-  apiKey: Schema.NullOr(BoundedSecret),
+  credential: OmniMindCustomModelServiceCredentialInput,
 });
 export type OmniMindCustomModelServiceDiscoverInput =
   typeof OmniMindCustomModelServiceDiscoverInput.Type;
@@ -466,18 +485,22 @@ export type OmniMindCustomModelServiceTestResult = typeof OmniMindCustomModelSer
 
 export const OmniMindCustomModelServiceSaveInput = Schema.Struct({
   config: OmniMindCustomModelServiceConfigInput,
-  // Null preserves the existing Pi-owned credential during an edit.
-  apiKey: Schema.NullOr(BoundedSecret),
+  credential: OmniMindCustomModelServiceCredentialInput,
 });
 export type OmniMindCustomModelServiceSaveInput = typeof OmniMindCustomModelServiceSaveInput.Type;
 
 export const OmniMindCustomModelServiceSaveResult = Schema.Union([
   Schema.Struct({
-    state: Schema.Literal("complete"),
+    state: Schema.Literals(["complete", "complete_with_sync_warning"]),
     service: OmniMindModelServiceDescriptor,
   }),
   Schema.Struct({
-    state: Schema.Literals(["config_saved_auth_failed", "config_saved_sync_failed"]),
+    state: Schema.Literals([
+      "credential_unchanged",
+      "credential_removed_retry_required",
+      "config_saved_auth_failed",
+      "config_saved_sync_failed",
+    ]),
     service: Schema.NullOr(OmniMindModelServiceDescriptor),
   }),
 ]);

@@ -20,6 +20,7 @@ import type {
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import type {
   OmniMindCustomModelServiceDiscoveryConfigInput,
+  OmniMindCustomModelServiceCredentialInput,
   OmniMindCustomModelServiceDiscoverResult,
   OmniMindCustomModelServiceConfigInput,
   OmniMindCustomModelServiceConfig,
@@ -78,7 +79,10 @@ const CUSTOM_API_PROTOCOLS = [
   "google-generative-ai",
 ] as const;
 const CUSTOM_CONNECTION_TEST_PROMPT = "Reply with OK.";
+const CUSTOM_CONNECTION_TEST_TIMEOUT_MS = 20_000;
 const CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS = 20_000;
+
+class InvalidCustomServiceEditError extends Error {}
 
 type ReadTextFile = (filePath: string, signal?: AbortSignal) => Promise<string>;
 
@@ -88,6 +92,7 @@ export interface OmniMindModelServicesLiveOptions {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: ReadTextFile;
   readonly authRequestTimeoutMs?: number;
+  readonly customConnectionTestTimeoutMs?: number;
   readonly customModelDiscoveryTimeoutMs?: number;
 }
 
@@ -154,11 +159,11 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
     api: input.api,
     models: input.models.map((model) => ({
       id: model.modelId,
-      name: model.displayName,
-      reasoning: model.reasoning,
-      input: [...model.input],
-      contextWindow: model.contextWindow,
-      maxTokens: model.maxTokens,
+      ...(model.displayName ? { name: model.displayName } : {}),
+      ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+      ...(model.input ? { input: [...model.input] } : {}),
+      ...(model.contextWindow !== undefined ? { contextWindow: model.contextWindow } : {}),
+      ...(model.maxTokens !== undefined ? { maxTokens: model.maxTokens } : {}),
     })),
   } as const;
 }
@@ -171,18 +176,23 @@ function customProviderDiscoveryConfig(input: OmniMindCustomModelServiceDiscover
   } as const;
 }
 
-function projectCustomModels(
-  models: ReadonlyArray<OmniMindCustomModelServiceModelInput>,
-): ReadonlyArray<OmniMindModelServiceModel> {
-  return models.map((model) => ({
-    modelId: model.modelId,
-    displayName: model.displayName,
-    available: true,
-    reasoning: model.reasoning,
-    input: [...model.input],
-    contextWindow: model.contextWindow,
-    maxTokens: model.maxTokens,
-  }));
+function credentialReferenceMutation(
+  credential: OmniMindCustomModelServiceCredentialInput,
+):
+  | { readonly type: "environment"; readonly variableName: string }
+  | { readonly type: "command"; readonly command: string }
+  | { readonly type: "clear" }
+  | undefined {
+  switch (credential.type) {
+    case "preserve":
+      return undefined;
+    case "stored_key":
+      return { type: "clear" };
+    case "environment":
+      return { type: "environment", variableName: credential.variableName };
+    case "command":
+      return { type: "command", command: credential.command };
+  }
 }
 
 function isCustomApiProtocol(value: string | undefined): value is CustomApiProtocol {
@@ -204,17 +214,23 @@ function projectCustomConfig(
     return [
       {
         modelId,
-        displayName: safeDisplayName(model.name, modelId),
-        reasoning: model.reasoning ?? false,
-        input: model.input?.filter(
+        ...(model.name ? { displayName: safeDisplayName(model.name, modelId) } : {}),
+        ...(model.reasoning !== undefined ? { reasoning: model.reasoning } : {}),
+        ...(model.input?.filter(
           (kind): kind is "text" | "image" => kind === "text" || kind === "image",
         ).length
-          ? model.input.filter(
-              (kind): kind is "text" | "image" => kind === "text" || kind === "image",
-            )
-          : ["text"],
-        contextWindow: Math.max(1, Math.trunc(model.contextWindow ?? 128_000)),
-        maxTokens: Math.max(1, Math.trunc(model.maxTokens ?? 16_384)),
+          ? {
+              input: model.input.filter(
+                (kind): kind is "text" | "image" => kind === "text" || kind === "image",
+              ),
+            }
+          : {}),
+        ...(model.contextWindow !== undefined
+          ? { contextWindow: Math.max(1, Math.trunc(model.contextWindow)) }
+          : {}),
+        ...(model.maxTokens !== undefined
+          ? { maxTokens: Math.max(1, Math.trunc(model.maxTokens)) }
+          : {}),
       },
     ];
   });
@@ -980,6 +996,66 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         return service;
       };
 
+      const findProjectedService = async (serviceId: string, signal: AbortSignal) => {
+        const projection = await project(signal);
+        return projection.all.find((entry) => entry.serviceId === serviceId) ?? null;
+      };
+
+      const createCustomPreviewRuntime = async (input: {
+        readonly serviceId: string | null;
+        readonly credential: OmniMindCustomModelServiceCredentialInput;
+        readonly signal: AbortSignal;
+      }) => {
+        if (input.serviceId === null && input.credential.type === "preserve") {
+          throw new Error("A new custom model service requires a credential source");
+        }
+        if (input.serviceId !== null) {
+          const current = await findProjectedService(input.serviceId, input.signal);
+          if (current?.origin !== "models_json") {
+            throw new InvalidCustomServiceEditError();
+          }
+        }
+        const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+        input.signal.throwIfAborted();
+        const agentDir = resolveOmniMindAgentDir(config.baseDir);
+        const providerId = input.serviceId ?? "omnimind-custom-preview";
+        const credentials: CredentialStore =
+          input.credential.type === "preserve"
+            ? await StaticCredentialStore.create({
+                authPath: path.join(agentDir, "auth.json"),
+                readTextFile: (filePath, readSignal) =>
+                  readOmniMindPrivateTextFile({
+                    agentDir,
+                    filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
+                    ...(readSignal ? { signal: readSignal } : {}),
+                  }),
+                signal: input.signal,
+              })
+            : new InMemoryCredentialStore();
+        if (input.credential.type === "stored_key") {
+          const apiKey = input.credential.apiKey;
+          await credentials.modify(providerId, async () => ({ type: "api_key", key: apiKey }), {
+            signal: input.signal,
+          });
+        }
+        const runtime = await sdk.ModelRuntime.create({
+          credentials,
+          modelsPath: null,
+          ...(input.serviceId === null
+            ? {}
+            : { modelsConfigReader: createOmniMindModelsConfigReader(agentDir) }),
+          allowModelNetwork: false,
+          refreshOnCreate: false,
+          signal: input.signal,
+        });
+        return {
+          sdk,
+          runtime,
+          providerId,
+          credentialReference: credentialReferenceMutation(input.credential),
+        };
+      };
+
       const notifyRequest = (request: ModelServiceAuthRequest) => {
         for (const checkpoint of request.checkpoints) checkpoint();
         request.checkpoints.clear();
@@ -1473,7 +1549,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
           ),
         discoverCustom: (input) =>
           Effect.promise(async (requestSignal) => {
-            if (input.config.serviceId === null && input.apiKey === null) {
+            if (input.config.serviceId === null && input.credential.type === "preserve") {
               return {
                 state: "failed",
                 models: [],
@@ -1486,40 +1562,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             const signal = AbortSignal.any([requestSignal, timeoutSignal]);
             let sdk: OmniMindCodingAgentModule | undefined;
             try {
-              sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
-              signal.throwIfAborted();
-              const agentDir = resolveOmniMindAgentDir(config.baseDir);
-              const providerId = input.config.serviceId ?? "omnimind-custom-discovery-preview";
-              const credentials =
-                input.apiKey === null
-                  ? await StaticCredentialStore.create({
-                      authPath: path.join(agentDir, "auth.json"),
-                      readTextFile: (filePath, readSignal) =>
-                        readOmniMindPrivateTextFile({
-                          agentDir,
-                          filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
-                          ...(readSignal ? { signal: readSignal } : {}),
-                        }),
-                      signal,
-                    })
-                  : new InMemoryCredentialStore();
-              if (input.apiKey !== null) {
-                await credentials.modify(
-                  providerId,
-                  async () => ({ type: "api_key", key: input.apiKey! }),
-                  { signal },
-                );
-              }
-              const runtime = await sdk.ModelRuntime.create({
-                credentials,
-                modelsPath: null,
-                ...(input.config.serviceId === null
-                  ? {}
-                  : { modelsConfigReader: createOmniMindModelsConfigReader(agentDir) }),
-                allowModelNetwork: false,
-                refreshOnCreate: false,
+              const preview = await createCustomPreviewRuntime({
+                serviceId: input.config.serviceId,
+                credential: input.credential,
                 signal,
               });
+              sdk = preview.sdk;
               let previewConfig: ReturnType<typeof customProviderDiscoveryConfig>;
               try {
                 previewConfig = customProviderDiscoveryConfig(input.config);
@@ -1530,10 +1578,15 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   errorCode: "invalid_configuration",
                 } satisfies OmniMindCustomModelServiceDiscoverResult;
               }
-              runtime.registerModelConfigProviderPreview(providerId, previewConfig);
-              const discovered = await runtime.discoverModelConfigProviderModels(providerId, {
-                signal,
-              });
+              preview.runtime.registerModelConfigProviderPreview(
+                preview.providerId,
+                previewConfig,
+                preview.credentialReference,
+              );
+              const discovered = await preview.runtime.discoverModelConfigProviderModels(
+                preview.providerId,
+                { signal },
+              );
               const models = discovered
                 .flatMap(({ id, name }) => {
                   const modelId = safeModelId(id);
@@ -1568,6 +1621,13 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   errorCode: error.code === "request_failed" ? "connection_failed" : error.code,
                 } satisfies OmniMindCustomModelServiceDiscoverResult;
               }
+              if (error instanceof InvalidCustomServiceEditError) {
+                return {
+                  state: "failed",
+                  models: [],
+                  errorCode: "invalid_configuration",
+                } satisfies OmniMindCustomModelServiceDiscoverResult;
+              }
               return {
                 state: "failed",
                 models: [],
@@ -1576,54 +1636,30 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             }
           }),
         testCustom: (input) =>
-          Effect.promise(async (signal) => {
+          Effect.promise(async (requestSignal) => {
+            const timeoutSignal = AbortSignal.timeout(
+              options.customConnectionTestTimeoutMs ?? CUSTOM_CONNECTION_TEST_TIMEOUT_MS,
+            );
+            const signal = AbortSignal.any([requestSignal, timeoutSignal]);
             try {
-              const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
-              signal.throwIfAborted();
-              if (input.config.serviceId === null && input.apiKey === null) {
+              if (input.config.serviceId === null && input.credential.type === "preserve") {
                 return {
                   state: "failed",
                   models: [],
                   errorCode: "authentication_failed",
                 } satisfies OmniMindCustomModelServiceTestResult;
               }
-              const agentDir = resolveOmniMindAgentDir(config.baseDir);
-              const providerId = input.config.serviceId ?? "omnimind-custom-preview";
-              const credentials =
-                input.apiKey === null
-                  ? await StaticCredentialStore.create({
-                      authPath: path.join(agentDir, "auth.json"),
-                      readTextFile: (filePath, readSignal) =>
-                        readOmniMindPrivateTextFile({
-                          agentDir,
-                          filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
-                          ...(readSignal ? { signal: readSignal } : {}),
-                        }),
-                      signal,
-                    })
-                  : new InMemoryCredentialStore();
-              if (input.apiKey !== null) {
-                await credentials.modify(
-                  providerId,
-                  async () => ({ type: "api_key", key: input.apiKey! }),
-                  { signal },
-                );
-              }
-              const runtime = await sdk.ModelRuntime.create({
-                credentials,
-                modelsPath: null,
-                ...(input.config.serviceId === null
-                  ? {}
-                  : { modelsConfigReader: createOmniMindModelsConfigReader(agentDir) }),
-                allowModelNetwork: false,
-                refreshOnCreate: false,
+              const preview = await createCustomPreviewRuntime({
+                serviceId: input.config.serviceId,
+                credential: input.credential,
                 signal,
               });
-              runtime.registerModelConfigProviderPreview(
-                providerId,
+              preview.runtime.registerModelConfigProviderPreview(
+                preview.providerId,
                 customProviderConfig(input.config),
+                preview.credentialReference,
               );
-              const model = runtime.getModel(providerId, input.testModelId);
+              const model = preview.runtime.getModel(preview.providerId, input.testModelId);
               if (!model) {
                 return {
                   state: "failed",
@@ -1631,7 +1667,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   errorCode: "model_unavailable",
                 } satisfies OmniMindCustomModelServiceTestResult;
               }
-              const response = await runtime.complete(
+              const response = await preview.runtime.complete(
                 model,
                 {
                   messages: [
@@ -1642,22 +1678,48 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               );
               if (response.stopReason === "error" || response.stopReason === "aborted") {
                 return {
-                  state: response.stopReason === "aborted" ? "cancelled" : "failed",
+                  state: requestSignal.aborted ? "cancelled" : "failed",
                   models: [],
-                  errorCode: response.stopReason === "aborted" ? "cancelled" : "connection_failed",
+                  errorCode: requestSignal.aborted ? "cancelled" : "connection_failed",
                 } satisfies OmniMindCustomModelServiceTestResult;
               }
+              const testedModels = input.config.models.flatMap<OmniMindModelServiceModel>(
+                ({ modelId }) => {
+                  const configuredModel = preview.runtime.getModel(preview.providerId, modelId);
+                  if (!configuredModel) return [];
+                  return [
+                    {
+                      modelId: configuredModel.id,
+                      displayName: safeDisplayName(configuredModel.name, configuredModel.id),
+                      available: true,
+                      reasoning: configuredModel.reasoning,
+                      input: configuredModel.input.filter(
+                        (kind): kind is "text" | "image" => kind === "text" || kind === "image",
+                      ),
+                      contextWindow: Math.max(0, Math.trunc(configuredModel.contextWindow)),
+                      maxTokens: Math.max(0, Math.trunc(configuredModel.maxTokens)),
+                    },
+                  ];
+                },
+              );
               return {
                 state: "success",
-                models: projectCustomModels(input.config.models),
+                models: testedModels,
                 errorCode: null,
               } satisfies OmniMindCustomModelServiceTestResult;
-            } catch {
-              if (signal.aborted) {
+            } catch (error) {
+              if (requestSignal.aborted) {
                 return {
                   state: "cancelled",
                   models: [],
                   errorCode: "cancelled",
+                } satisfies OmniMindCustomModelServiceTestResult;
+              }
+              if (error instanceof InvalidCustomServiceEditError) {
+                return {
+                  state: "failed",
+                  models: [],
+                  errorCode: "invalid_configuration",
                 } satisfies OmniMindCustomModelServiceTestResult;
               }
               return {
@@ -1671,33 +1733,94 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
           Effect.promise((signal) =>
             serializeMutation(async () => {
               const serviceId = input.config.serviceId ?? crypto.randomUUID();
-              if (input.config.serviceId === null && input.apiKey === null) {
-                throw new Error("A new custom model service requires an API key");
+              if (input.config.serviceId === null && input.credential.type === "preserve") {
+                throw new Error("A new custom model service requires a credential source");
               }
               const agentDir = resolveOmniMindAgentDir(config.baseDir);
               const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
               signal.throwIfAborted();
-              const mutation = await sdk.mutateModelConfigProvider(
-                path.join(agentDir, "models.json"),
-                {
-                  type: "upsert",
-                  providerId: serviceId,
-                  provider: customProviderConfig(input.config),
-                },
-                { signal },
-              );
+              const previous =
+                input.config.serviceId === null
+                  ? null
+                  : await findProjectedService(serviceId, signal);
+              if (previous && previous.origin !== "models_json") {
+                throw new Error("Only a models.json model service can be edited");
+              }
+              let removedStoredCredential = false;
+              let credentialSynchronizationWarning = false;
+              if (
+                previous &&
+                (input.credential.type === "environment" || input.credential.type === "command") &&
+                previous.storedCredentialType !== null
+              ) {
+                try {
+                  const { runtime } = await createMutationRuntime(signal);
+                  await runtime.logout(serviceId, { signal });
+                  removedStoredCredential = true;
+                } catch (error) {
+                  if (error instanceof sdk.CredentialSynchronizationError) {
+                    // Pi removes the durable credential before attempting its
+                    // process-local refresh. Continue toward the requested
+                    // config reference, while preserving the warning.
+                    removedStoredCredential = true;
+                    credentialSynchronizationWarning = true;
+                  } else {
+                    publishOmniMindModelRuntimeMutation(agentDir);
+                    return {
+                      state: "credential_unchanged",
+                      service: previous,
+                    } satisfies OmniMindCustomModelServiceSaveResult;
+                  }
+                }
+                if (removedStoredCredential) {
+                  publishOmniMindModelRuntimeMutation(agentDir);
+                }
+              }
+              const credentialReference = credentialReferenceMutation(input.credential);
+              let mutation: Awaited<ReturnType<typeof sdk.mutateModelConfigProvider>>;
+              try {
+                mutation = await sdk.mutateModelConfigProvider(
+                  path.join(agentDir, "models.json"),
+                  {
+                    type: "upsert",
+                    providerId: serviceId,
+                    provider: customProviderConfig(input.config),
+                    ...(credentialReference ? { credentialReference } : {}),
+                  },
+                  { signal },
+                );
+              } catch (error) {
+                if (previous && input.credential.type !== "preserve") {
+                  publishOmniMindModelRuntimeMutation(agentDir);
+                  let service = previous;
+                  try {
+                    service = await getProjectedService(serviceId, new AbortController().signal);
+                  } catch {
+                    // Keep the last safe descriptor when reprojection itself
+                    // is unavailable; the editor remains open for retry.
+                  }
+                  return {
+                    state: removedStoredCredential
+                      ? "credential_removed_retry_required"
+                      : "credential_unchanged",
+                    service,
+                  } satisfies OmniMindCustomModelServiceSaveResult;
+                }
+                throw error;
+              }
               if (!mutation.providerIds.includes(serviceId)) {
                 throw new Error("Custom model service was not accepted by Pi ModelConfig");
               }
               publishOmniMindModelRuntimeMutation(agentDir);
               let authFailed = false;
               let synchronizationFailed = false;
-              if (input.apiKey !== null) {
+              if (input.credential.type === "stored_key") {
+                const apiKey = input.credential.apiKey;
                 try {
                   const { runtime } = await createMutationRuntime(signal);
                   await runtime.login(serviceId, "api_key", {
                     signal,
-                    prompt: async () => input.apiKey!,
+                    prompt: async () => apiKey,
                     notify: () => undefined,
                   });
                 } catch (error) {
@@ -1729,6 +1852,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 } satisfies OmniMindCustomModelServiceSaveResult;
               }
               if (!service) throw new Error("Saved custom model service could not be projected");
+              if (credentialSynchronizationWarning) {
+                return {
+                  state: "complete_with_sync_warning",
+                  service,
+                } satisfies OmniMindCustomModelServiceSaveResult;
+              }
               return {
                 state: "complete",
                 service,
