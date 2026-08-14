@@ -574,15 +574,43 @@ index 6f4071b..5746f6c 100644
 +			signal: options.signal,
 +		});
 diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
-index e221d2e..345a796 100644
+index e221d2e..4ac3597 100644
 --- a/packages/coding-agent/src/core/package-manager.ts
 +++ b/packages/coding-agent/src/core/package-manager.ts
-@@ -101,0 +102,16 @@ export interface ConfiguredPackage {
+@@ -2 +2 @@ import type { ChildProcess, ChildProcessByStdio } from "node:child_process";
+-import { createHash } from "node:crypto";
++import { createHash, createHmac, randomBytes } from "node:crypto";
+@@ -101,0 +102,41 @@ export interface ConfiguredPackage {
++export type PublicPackageKind = "npm" | "git" | "local" | "unsupported";
++
++export interface PublicConfiguredPackage {
++	packageId: string;
++	displayName: string;
++	kind: PublicPackageKind;
++	scope: "user" | "project";
++	filtered: boolean;
++	installed: boolean;
++	manageable: boolean;
++}
++
 +export type PackageResourceType = "extensions" | "skills" | "prompts" | "themes";
 +
 +export interface PackageResourceIntent {
 +	source: string;
 +	scope: "user" | "project";
++}
++
++export interface PublicPackageIntent {
++	packageId: string;
++}
++
++export interface PublicPackageResourceSelection extends PublicPackageIntent {
++	resourceType: PackageResourceType;
++	resourcePath: string;
++}
++
++export interface PublicConfiguredPackageResource extends PublicPackageResourceSelection {
++	enabled: boolean;
 +}
 +
 +export interface PackageResourceSelection extends PackageResourceIntent {
@@ -594,13 +622,136 @@ index e221d2e..345a796 100644
 +	enabled: boolean;
 +}
 +
-@@ -109,0 +126,2 @@ export interface PackageManager {
+@@ -109,0 +151,9 @@ export interface PackageManager {
++	listPublicConfiguredPackages(): PublicConfiguredPackage[];
++	checkPublicPackageUpdates(): Promise<string[]>;
++	listPublicConfiguredPackageResources(intent: PublicPackageIntent): Promise<PublicConfiguredPackageResource[]>;
++	installPublicPackage(source: string): Promise<void>;
++	updatePublicPackage(intent: PublicPackageIntent): Promise<void>;
++	removePublicPackage(intent: PublicPackageIntent): Promise<boolean>;
++	setPublicPackageResourceEnabled(selection: PublicPackageResourceSelection, enabled: boolean): Promise<boolean>;
 +	listConfiguredPackageResources(intent: PackageResourceIntent): Promise<ConfiguredPackageResource[]>;
 +	setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean>;
-@@ -192 +210 @@ interface PackageFilter {
+@@ -143,0 +194,2 @@ type ParsedSource = NpmSource | GitSource | LocalSource;
++const PUBLIC_PACKAGE_ID_KEY = randomBytes(32);
++
+@@ -192 +244 @@ interface PackageFilter {
 -type ResourceType = "extensions" | "skills" | "prompts" | "themes";
 +type ResourceType = PackageResourceType;
-@@ -977,0 +996,68 @@ export class DefaultPackageManager implements PackageManager {
+@@ -977,0 +1030,181 @@ export class DefaultPackageManager implements PackageManager {
++	listPublicConfiguredPackages(): PublicConfiguredPackage[] {
++		return this.listRawConfiguredPackages().map((pkg) => {
++			const projection = this.projectPublicPackageSource(pkg.source);
++			let installed = false;
++			if (projection.manageable) {
++				try {
++					installed = this.getInstalledPath(pkg.source, pkg.scope) !== undefined;
++				} catch {
++					installed = false;
++				}
++			}
++			return {
++				packageId: this.getPublicPackageId(pkg.source, pkg.scope),
++				displayName: projection.displayName,
++				kind: projection.kind,
++				scope: pkg.scope,
++				filtered: pkg.filtered,
++				installed,
++				manageable: projection.manageable,
++			};
++		});
++	}
++
++	async checkPublicPackageUpdates(): Promise<string[]> {
++		if (isOfflineModeEnabled()) return [];
++		const checks = this.listRawConfiguredPackages()
++			.map((configured) => ({
++				...configured,
++				packageId: this.getPublicPackageId(configured.source, configured.scope),
++				projection: this.projectPublicPackageSource(configured.source),
++				installedPath: (() => {
++					try {
++						return this.getInstalledPath(configured.source, configured.scope);
++					} catch {
++						return undefined;
++					}
++				})(),
++			}))
++			.filter((configured) => configured.projection.manageable)
++			.map((configured) => async (): Promise<string | undefined> => {
++				const parsed = this.parseSource(configured.source);
++				if (parsed.type === "local" || parsed.pinned || !configured.installedPath) return undefined;
++				const hasUpdate =
++					parsed.type === "npm"
++						? await this.npmHasAvailableUpdate(parsed, configured.installedPath)
++						: await this.gitHasAvailableUpdate(configured.installedPath);
++				return hasUpdate ? configured.packageId : undefined;
++			});
++		return (await this.runWithConcurrency(checks, UPDATE_CHECK_CONCURRENCY)).filter(
++			(packageId): packageId is string => packageId !== undefined,
++		);
++	}
++
++	async listPublicConfiguredPackageResources(
++		intent: PublicPackageIntent,
++	): Promise<PublicConfiguredPackageResource[]> {
++		const current = this.requirePublicConfiguredPackage(intent.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		return (await this.listConfiguredPackageResources({ source: current.source, scope: current.scope })).map(
++			({ source: _source, scope: _scope, ...resource }) => ({ packageId: current.packageId, ...resource }),
++		);
++	}
++
++	async installPublicPackage(source: string): Promise<void> {
++		const projection = this.projectPublicPackageSource(source);
++		const canonicalInput = source.startsWith("npm:") || source.startsWith("git:https://");
++		if (!projection.manageable || !canonicalInput) {
++			throw new Error("Package source is not a supported public package identity");
++		}
++		try {
++			await this.installAndPersist(source);
++		} catch {
++			throw new Error("Public package installation failed");
++		}
++	}
++
++	async updatePublicPackage(intent: PublicPackageIntent): Promise<void> {
++		const current = this.requirePublicConfiguredPackage(intent.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		try {
++			await this.update(current.source);
++		} catch {
++			throw new Error("Public package update failed");
++		}
++	}
++
++	async removePublicPackage(intent: PublicPackageIntent): Promise<boolean> {
++		const current = this.requirePublicConfiguredPackage(intent.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		try {
++			return await this.removeAndPersist(current.source);
++		} catch {
++			throw new Error("Public package removal failed");
++		}
++	}
++
++	async setPublicPackageResourceEnabled(
++		selection: PublicPackageResourceSelection,
++		enabled: boolean,
++	): Promise<boolean> {
++		const current = this.requirePublicConfiguredPackage(selection.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		return this.setPackageResourceEnabled(
++			{
++				source: current.source,
++				scope: current.scope,
++				resourceType: selection.resourceType,
++				resourcePath: selection.resourcePath,
++			},
++			enabled,
++		);
++	}
++
 +	async listConfiguredPackageResources(intent: PackageResourceIntent): Promise<ConfiguredPackageResource[]> {
 +		this.assertProjectTrustedForScope(intent.scope);
 +		const settings =
@@ -667,6 +818,91 @@ index e221d2e..345a796 100644
 +		if (selection.scope === "project") this.settingsManager.setProjectPackages(packages);
 +		else this.settingsManager.setPackages(packages);
 +		return true;
++	}
++
+@@ -1345,0 +1579,84 @@ export class DefaultPackageManager implements PackageManager {
++	private listRawConfiguredPackages(): Array<{
++		source: string;
++		scope: "user" | "project";
++		filtered: boolean;
++	}> {
++		const result: Array<{ source: string; scope: "user" | "project"; filtered: boolean }> = [];
++		for (const pkg of this.settingsManager.getGlobalSettings().packages ?? []) {
++			result.push({ source: this.getPackageSourceString(pkg), scope: "user", filtered: typeof pkg === "object" });
++		}
++		for (const pkg of this.settingsManager.getProjectSettings().packages ?? []) {
++			result.push({ source: this.getPackageSourceString(pkg), scope: "project", filtered: typeof pkg === "object" });
++		}
++		return result;
++	}
++
++	private getPublicPackageId(source: string, scope: "user" | "project"): string {
++		return createHmac("sha256", PUBLIC_PACKAGE_ID_KEY).update(`${scope}\0${source}`).digest("hex");
++	}
++
++	private projectPublicPackageSource(source: string): {
++		displayName: string;
++		kind: PublicPackageKind;
++		manageable: boolean;
++	} {
++		try {
++			const parsed = this.parseSource(source);
++			if (parsed.type === "npm") {
++				const safeName = /^(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*|[a-z0-9][a-z0-9._-]*)$/iu.test(
++					parsed.name,
++				);
++				const safeVersion = parsed.version === undefined || /^[a-z0-9*+._~^<>=| -]+$/iu.test(parsed.version);
++				return {
++					displayName: safeName ? parsed.name : "npm package",
++					kind: "npm",
++					manageable: safeName && safeVersion,
++				};
++			}
++			if (parsed.type === "git") {
++				let publicUrl: URL;
++				try {
++					publicUrl = new URL(parsed.repo);
++				} catch {
++					return { displayName: "Git package", kind: "git", manageable: false };
++				}
++				const safe =
++					publicUrl.protocol === "https:" &&
++					publicUrl.username === "" &&
++					publicUrl.password === "" &&
++					publicUrl.search === "" &&
++					publicUrl.hash === "" &&
++					publicUrl.port === "" &&
++					publicUrl.hostname !== "localhost" &&
++					!publicUrl.hostname.endsWith(".local") &&
++					!/^\d+(?:\.\d+){3}$/u.test(publicUrl.hostname);
++				return {
++					displayName: safe ? `${parsed.host}/${parsed.path}` : "Git package",
++					kind: "git",
++					manageable: safe,
++				};
++			}
++			return { displayName: "Local package", kind: "local", manageable: false };
++		} catch {
++			return { displayName: "Package", kind: "unsupported", manageable: false };
++		}
++	}
++
++	private requirePublicConfiguredPackage(packageId: string): {
++		packageId: string;
++		source: string;
++		scope: "user" | "project";
++		projection: ReturnType<DefaultPackageManager["projectPublicPackageSource"]>;
++	} {
++		const matches = this.listRawConfiguredPackages()
++			.map((entry) => ({
++				packageId: this.getPublicPackageId(entry.source, entry.scope),
++				source: entry.source,
++				scope: entry.scope,
++				projection: this.projectPublicPackageSource(entry.source),
++			}))
++			.filter((entry) => entry.packageId === packageId);
++		if (matches.length !== 1) throw new Error("Configured package is no longer available");
++		return matches[0];
 +	}
 +
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
@@ -1011,7 +1247,7 @@ index c24d0a2..1d1ba2a 100644
 +	): Promise<LoadExtensionsResult> {
 +		const resolvedPaths = await this.packageManager.resolve(onMissingPackage);
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2a..a7df134 100644
+index 3d05c2a..e9e701d 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
 @@ -171,0 +172,8 @@ export { ModelRegistry } from "./core/model-registry.ts";
@@ -1027,6 +1263,12 @@ index 3d05c2a..a7df134 100644
 +	mutateModelConfigProvider,
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
+@@ -187,0 +199,5 @@ export type {
++	PublicConfiguredPackage,
++	PublicConfiguredPackageResource,
++	PublicPackageIntent,
++	PublicPackageKind,
++	PublicPackageResourceSelection,
 diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
 new file mode 100644
 index 0000000..f7f1ee4
@@ -1666,13 +1908,70 @@ index 0000000..217cf2a
 +	});
 +});
 diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
-index 31c89fa..3e51f5b 100644
+index 31c89fa..878b692 100644
 --- a/packages/coding-agent/test/package-manager.test.ts
 +++ b/packages/coding-agent/test/package-manager.test.ts
-@@ -297,0 +298,93 @@ Content`,
+@@ -297,0 +298,150 @@ Content`,
 +	});
 +
 +	describe("package resource lifecycle", () => {
++		it("projects opaque package identities without exposing private sources", async () => {
++			const privateLocalPath = join(tempDir, "private", "local-package");
++			settingsManager.setPackages([
++				"npm:@scope/public-package@1.2.3",
++				"git:ssh://token@example.invalid/owner/repo.git",
++				"git:https://example.invalid/owner/repo.git?token=secret",
++				privateLocalPath,
++			]);
++
++			const packages = packageManager.listPublicConfiguredPackages();
++			expect(packages).toHaveLength(4);
++			expect(JSON.stringify(packages)).not.toContain("token");
++			expect(JSON.stringify(packages)).not.toContain(privateLocalPath);
++			expect(packages[0]).toMatchObject({
++				displayName: "@scope/public-package",
++				kind: "npm",
++				manageable: true,
++			});
++			expect(packages.slice(1)).toEqual(
++				expect.arrayContaining([
++					expect.objectContaining({ displayName: "Git package", manageable: false }),
++					expect.objectContaining({ displayName: "Local package", kind: "local", manageable: false }),
++				]),
++			);
++			for (const pkg of packages) expect(pkg.packageId).toMatch(/^[a-f0-9]{64}$/u);
++		});
++
++		it("rejects credential-bearing public install inputs before invoking package commands", async () => {
++			const internals = packageManager as unknown as PackageManagerInternals;
++			const runCommand = vi.spyOn(internals, "runCommand");
++
++			await expect(
++				packageManager.installPublicPackage("git:ssh://token@example.invalid/owner/repo.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://example.invalid/owner/repo.git?token=secret"),
++			).rejects.toThrow("supported public package identity");
++			expect(runCommand).not.toHaveBeenCalled();
++		});
++
++		it("accepts canonical scoped npm installs and rematches opaque actions against current settings", async () => {
++			const install = vi.spyOn(packageManager, "installAndPersist").mockResolvedValue(undefined);
++			await expect(packageManager.installPublicPackage("npm:@scope/public-package@1.2.3")).resolves.toBeUndefined();
++			expect(install).toHaveBeenCalledWith("npm:@scope/public-package@1.2.3");
++
++			settingsManager.setPackages(["npm:@scope/public-package@1.2.3"]);
++			const [{ packageId }] = packageManager.listPublicConfiguredPackages();
++			const update = vi.spyOn(packageManager, "update").mockResolvedValue(undefined);
++			await expect(packageManager.updatePublicPackage({ packageId })).resolves.toBeUndefined();
++			expect(update).toHaveBeenCalledWith("npm:@scope/public-package@1.2.3");
++
++			settingsManager.setPackages(["npm:replacement-package"]);
++			update.mockClear();
++			await expect(packageManager.updatePublicPackage({ packageId })).rejects.toThrow("no longer available");
++			expect(update).not.toHaveBeenCalled();
++		});
++
 +		it("uses resolved package identities and preserves sibling filters", async () => {
 +			const packageDir = join(tempDir, "local-package");
 +			const extensionPath = join(packageDir, "extensions", "entry.ts");
