@@ -447,6 +447,103 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
+  it("keeps custom setup intent alive through a bounded detail-capacity retry", async () => {
+    const customService = service({
+      serviceId: "saved-custom",
+      providerId: "saved-custom",
+      displayName: "Saved Custom",
+      origin: "models_json",
+      availableModelCount: 1,
+    });
+    let saved = false;
+    let intentDetailCalls = 0;
+    const onSetupReady = vi.fn();
+    const mounted = await renderPanel({
+      startInAddFlow: true,
+      onSetupReady,
+      list: async () =>
+        saved
+          ? {
+              state: "ready",
+              services: [customService],
+              connectableServices: [],
+              errorCode: null,
+            }
+          : {
+              state: "empty",
+              services: [],
+              connectableServices: [],
+              customApiConfiguration: {
+                protocols: [
+                  "openai-completions",
+                  "openai-responses",
+                  "anthropic-messages",
+                  "google-generative-ai",
+                ],
+              },
+              errorCode: null,
+            },
+      get: async ({ serviceId, intent }) => {
+        if (serviceId !== customService.serviceId || intent !== "add_service") {
+          return { state: "empty", service: null, errorCode: null };
+        }
+        intentDetailCalls += 1;
+        if (intentDetailCalls === 1) {
+          throw {
+            code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+            retryAfterMs: 1,
+          };
+        }
+        return {
+          state: "ready",
+          service: customService,
+          models: [
+            {
+              modelId: "custom-model",
+              displayName: "Custom Model",
+              available: true,
+              reasoning: false,
+              input: ["text"],
+              contextWindow: 128_000,
+              maxTokens: 16_384,
+            },
+          ],
+          errorCode: null,
+        };
+      },
+      saveCustom: async () => {
+        saved = true;
+        return { state: "complete", service: customService } as const;
+      },
+    });
+
+    const apiEntry = mounted.screen.getByRole("button", {
+      name: /settings\.connectByApiAddress/,
+    });
+    await apiEntry.click();
+    await mounted.screen.getByLabelText("settings.customApiConnectionName").fill("Saved Custom");
+    await mounted.screen
+      .getByLabelText("settings.customApiEndpoint")
+      .fill("https://api.example.test/v1");
+    await mounted.screen.getByLabelText("settings.customApiKey").fill("browser-secret");
+    await mounted.screen.getByLabelText("settings.customApiModelId").fill("custom-model");
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await confirmCustomApiRisk(mounted.screen);
+    const saveButton = mounted.screen.getByRole("button", { name: "settings.customApiSave" });
+    await expect.poll(() => saveButton).toBeEnabled();
+    await saveButton.click();
+
+    await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
+    expect(onSetupReady).toHaveBeenCalledWith({
+      provider: "omnimind",
+      model: "saved-custom/custom-model",
+    });
+    expect(intentDetailCalls).toBe(2);
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
   it("does not query model services or server config while the route is inactive", async () => {
     const mounted = await renderPanel({
       active: false,

@@ -44,6 +44,7 @@ import {
   readNativeApiTransportState,
 } from "~/nativeApi";
 import {
+  cancelOmniMindModelServicesAddIntentQueries,
   omniMindModelServicesQueryKeys,
   omniMindModelServiceDetailQueryOptions,
   omniMindModelServicesListQueryOptions,
@@ -930,6 +931,26 @@ function ActiveModelsSettingsPanel({
       ...(modelServiceDetailReturnView === "browser" ? { intent: "add_service" as const } : {}),
     }),
   );
+
+  useEffect(() => {
+    if (active && modelServicesCapability === true && modelServiceBrowserOpen) return;
+    void cancelOmniMindModelServicesAddIntentQueries(queryClient);
+  }, [active, modelServiceBrowserOpen, modelServicesCapability, queryClient]);
+
+  useEffect(
+    () => () => {
+      void cancelOmniMindModelServicesAddIntentQueries(queryClient);
+    },
+    [queryClient],
+  );
+
+  useEffect(() => {
+    if (modelServiceDetailReturnView !== "browser" || selectedModelServiceId === null) return;
+    const queryKey = omniMindModelServicesQueryKeys.detail(selectedModelServiceId, "add_service");
+    return () => {
+      void queryClient.cancelQueries({ queryKey, exact: true });
+    };
+  }, [modelServiceDetailReturnView, queryClient, selectedModelServiceId]);
   const finishSetupIfReady = useCallback(
     async (service: OmniMindModelServiceDescriptor | null | undefined) => {
       if (
@@ -938,7 +959,7 @@ function ActiveModelsSettingsPanel({
         service.availableModelCount <= 0 ||
         !onSetupReady
       ) {
-        return;
+        return false;
       }
       setupCompletionArmedRef.current = false;
       try {
@@ -953,15 +974,17 @@ function ActiveModelsSettingsPanel({
           detail.state === "ready" ? detail.models?.find((entry) => entry.available) : null;
         if (!model) {
           setupCompletionArmedRef.current = true;
-          return;
+          return false;
         }
         setupTargetServiceIdRef.current = null;
         onSetupReady({
           provider: "omnimind",
           model: `${service.serviceId}/${model.modelId}`,
         });
+        return true;
       } catch {
         setupCompletionArmedRef.current = true;
+        return false;
       }
     },
     [onSetupReady, queryClient],
@@ -1805,11 +1828,6 @@ function ActiveModelsSettingsPanel({
         ? removeLegacyOmniMindModelHintIfCurrent(legacyTarget)
         : false;
       closeCustomServiceEditor();
-      setModelServiceBrowserOpen(false);
-      if (result.service) {
-        setModelServiceDetailReturnView("overview");
-        setSelectedModelServiceId(result.service.serviceId);
-      }
       setModelServiceNotice({
         tone:
           legacyTarget && !legacyHintRemoved
@@ -1824,7 +1842,14 @@ function ActiveModelsSettingsPanel({
               ? t("settings.customApiSaved")
               : t("settings.customApiSavedSyncWarning"),
       });
-      await finishSetupIfReady(result.service);
+      const setupCompleted = await finishSetupIfReady(result.service);
+      if (!setupCompleted) {
+        setModelServiceBrowserOpen(false);
+        if (result.service) {
+          setModelServiceDetailReturnView("overview");
+          setSelectedModelServiceId(result.service.serviceId);
+        }
+      }
     } catch {
       setModelServiceNotice({ tone: "error", text: t("settings.customApiSaveFailed") });
     } finally {

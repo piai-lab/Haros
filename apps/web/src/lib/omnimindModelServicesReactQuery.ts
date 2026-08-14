@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, type QueryClient } from "@tanstack/react-query";
 
 import { ensureNativeApi } from "~/nativeApi";
 
@@ -42,6 +42,23 @@ export const omniMindModelServicesQueryKeys = {
     ["omnimind-model-services", "detail", serviceId, intent] as const,
 };
 
+function isAddServiceIntentQueryKey(queryKey: readonly unknown[]): boolean {
+  return (
+    queryKey[0] === omniMindModelServicesQueryKeys.all[0] &&
+    ((queryKey[1] === "list" && queryKey[2] === "add_service") ||
+      (queryKey[1] === "detail" && queryKey[3] === "add_service"))
+  );
+}
+
+export async function cancelOmniMindModelServicesAddIntentQueries(
+  queryClient: QueryClient,
+): Promise<void> {
+  await queryClient.cancelQueries({
+    queryKey: omniMindModelServicesQueryKeys.all,
+    predicate: (query) => isAddServiceIntentQueryKey(query.queryKey),
+  });
+}
+
 export function omniMindModelServicesListQueryOptions(input: {
   enabled: boolean;
   intent?: "add_service";
@@ -54,7 +71,7 @@ export function omniMindModelServicesListQueryOptions(input: {
         signal,
       }),
     staleTime: 10_000,
-    ...(input.intent ? { retry: false as const } : MODEL_SERVICES_READ_RETRY_OPTIONS),
+    ...MODEL_SERVICES_READ_RETRY_OPTIONS,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
@@ -78,7 +95,7 @@ export function omniMindModelServiceDetailQueryOptions(input: {
       );
     },
     staleTime: 10_000,
-    ...(input.intent ? { retry: false as const } : MODEL_SERVICES_READ_RETRY_OPTIONS),
+    ...MODEL_SERVICES_READ_RETRY_OPTIONS,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });

@@ -2,9 +2,11 @@
 // Purpose: Locks Model services query identity and inactive/detail admission gates.
 // Layer: Web query tests
 
-import { describe, expect, it } from "vitest";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  cancelOmniMindModelServicesAddIntentQueries,
   omniMindModelServiceDetailQueryOptions,
   omniMindModelServicesListQueryOptions,
   omniMindModelServicesQueryKeys,
@@ -78,7 +80,7 @@ describe("OmniMind model services React Query options", () => {
     ).toBe(250);
   });
 
-  it("never retries intent-scoped Extension projection after the user leaves Add", () => {
+  it("retries only capacity admission for intent-scoped Extension projection", () => {
     const addList = omniMindModelServicesListQueryOptions({
       enabled: true,
       intent: "add_service",
@@ -89,7 +91,61 @@ describe("OmniMind model services React Query options", () => {
       intent: "add_service",
     });
 
-    expect(addList.retry).toBe(false);
-    expect(addDetail.retry).toBe(false);
+    for (const options of [addList, addDetail]) {
+      const retry = options.retry;
+      expect(retry).toBeTypeOf("function");
+      if (typeof retry !== "function") continue;
+
+      expect(retry(0, { code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED" })).toBe(true);
+      expect(retry(0, { code: "EXTENSION_PROJECTION_FAILED" })).toBe(false);
+      expect(retry(0, new Error("Extension load failed"))).toBe(false);
+    }
+  });
+
+  it("cancels a queued intent retry when the user leaves Add", async () => {
+    vi.useFakeTimers();
+    try {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { gcTime: Number.POSITIVE_INFINITY } },
+      });
+      let calls = 0;
+      let aborts = 0;
+      const observer = new QueryObserver(queryClient, {
+        queryKey: omniMindModelServicesQueryKeys.detail("extension-service", "add_service"),
+        queryFn: ({ signal }) => {
+          calls += 1;
+          signal.addEventListener("abort", () => {
+            aborts += 1;
+          });
+          return Promise.reject({
+            code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+            retryAfterMs: 250,
+          });
+        },
+        retry: (failureCount, error) =>
+          typeof error === "object" &&
+          error !== null &&
+          "code" in error &&
+          error.code === "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED" &&
+          failureCount < 12,
+        retryDelay: 250,
+      });
+      const unsubscribe = observer.subscribe(() => undefined);
+
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(calls).toBe(1);
+      await cancelOmniMindModelServicesAddIntentQueries(queryClient);
+      vi.advanceTimersByTime(1_000);
+      await Promise.resolve();
+
+      expect(calls).toBe(1);
+      expect(aborts).toBe(1);
+      expect(queryClient.getQueryState(observer.options.queryKey)?.fetchStatus).toBe("idle");
+      unsubscribe();
+      queryClient.clear();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
