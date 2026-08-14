@@ -35,6 +35,7 @@ export const SETTINGS_TARGETS = {
   // Engine details. Existing shared URLs must not break when product copy changes.
   engineDetails: "setting-installed-clis",
   environmentPanel: "environment-panel",
+  gitWritingModel: "setting-git-writing-model",
 } as const;
 
 export type SettingsNavItem = {

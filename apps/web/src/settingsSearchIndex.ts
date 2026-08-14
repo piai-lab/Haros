@@ -88,6 +88,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Show the GitHub repository link in the chat Environment panel. git changes worktree",
   },
   {
+    id: "general:git-writing-model",
+    section: "general",
+    title: "Git writing model",
+    keywords:
+      "Choose the model used to generate commit messages pull request titles and branch names.",
+    target: SETTINGS_TARGETS.gitWritingModel,
+  },
+  {
     id: "general:environment-pull-request",
     section: "general",
     title: "Pull request",
@@ -477,6 +485,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "External MCP integrations": "settings.integrations",
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",
+  "Git writing model": "settings.gitWritingModel",
   "Engine details": "settings.installedClis",
   "Independent engine models": "settings.independentEngineModels",
   Keybindings: "settings.keybindings",

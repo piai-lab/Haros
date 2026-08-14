@@ -3,9 +3,14 @@
 // Layer: Route screen
 // Exports: Settings route component for `/settings`
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
+import {
+  DEFAULT_GIT_TEXT_GENERATION_MODEL,
+  PROVIDER_DISPLAY_NAMES,
+  type ProviderKind,
+} from "@omnimind/contracts";
 import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 
@@ -21,6 +26,7 @@ import {
   normalizeChatFontSizePx,
   normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
+  getGitTextGenerationModelOptions,
   isGitTextGenerationSettingsDirty,
   TERMINAL_FONT_FAMILY_SUGGESTIONS,
   useAppSettings,
@@ -81,6 +87,7 @@ import { Switch } from "../components/ui/switch";
 import { RouteInsetSurface } from "../components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavigationControls";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
+import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isElectron } from "../env";
@@ -88,6 +95,7 @@ import { useI18n, type MessageKey } from "../i18n";
 import { RotateCcwIcon } from "../lib/icons";
 import { cn, isMacPlatform } from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
+import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
@@ -100,6 +108,7 @@ import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
 const PROVIDER_SELECT_OPTIONS = PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind);
+const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
 
 const SETTINGS_SECTION_LABEL_KEY = {
   general: "settings.general",
@@ -168,6 +177,46 @@ function SettingsRouteView() {
   } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const { t } = useI18n();
+  const currentGitTextGenerationProvider = settings.textGenerationProvider ?? "codex";
+  const currentGitTextGenerationModel =
+    settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+  const serverConfigQuery = useQuery({
+    ...serverConfigQueryOptions(),
+    enabled: activeSection === "general",
+  });
+  const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
+    () => ({ [currentGitTextGenerationProvider]: currentGitTextGenerationModel }),
+    [currentGitTextGenerationModel, currentGitTextGenerationProvider],
+  );
+  const { modelOptionsByProvider: gitWritingCatalogOptionsByProvider } = useProviderModelCatalog({
+    selectedProvider: currentGitTextGenerationProvider,
+    discoveryEnabled: activeSection === "general",
+    selectedProviderDiscoveryEnabled: activeSection === "general",
+    cwd: serverConfigQuery.data?.cwd ?? null,
+    modelHintByProvider: gitWritingModelHintByProvider,
+    prefetchProviders: GIT_WRITING_DISCOVERY_PROVIDERS,
+  });
+  const gitTextGenerationModelOptions = useMemo(
+    () =>
+      getGitTextGenerationModelOptions(settings, {
+        codex: gitWritingCatalogOptionsByProvider.codex,
+        kilo: gitWritingCatalogOptionsByProvider.kilo,
+        opencode: gitWritingCatalogOptionsByProvider.opencode,
+      }),
+    [
+      gitWritingCatalogOptionsByProvider.codex,
+      gitWritingCatalogOptionsByProvider.kilo,
+      gitWritingCatalogOptionsByProvider.opencode,
+      settings,
+    ],
+  );
+  const currentGitTextGenerationValue = `${currentGitTextGenerationProvider}:${currentGitTextGenerationModel}`;
+  const selectedGitTextGenerationModelLabel =
+    gitTextGenerationModelOptions.find(
+      (option) =>
+        option.provider === currentGitTextGenerationProvider &&
+        option.slug === currentGitTextGenerationModel,
+    )?.name ?? currentGitTextGenerationModel;
   const uiDensityOptions = useMemo(
     () =>
       [
@@ -613,6 +662,55 @@ function SettingsRouteView() {
             resetLabel: t("settings.repositoryLabel"),
             ariaLabel: t("settings.repositoryDescription"),
           })}
+
+          <div id={SETTINGS_TARGETS.gitWritingModel}>
+            <SettingsRow
+              title={t("settings.gitWritingModel")}
+              description={t("settings.gitWritingModelDescription")}
+              resetAction={
+                isGitTextGenerationModelDirty ? (
+                  <SettingResetButton
+                    label={t("settings.gitWritingModel")}
+                    onClick={() =>
+                      updateSettings({
+                        textGenerationProvider: defaults.textGenerationProvider,
+                        textGenerationModel: defaults.textGenerationModel,
+                      })
+                    }
+                  />
+                ) : null
+              }
+              control={
+                <SettingsSelectControl
+                  value={currentGitTextGenerationValue}
+                  onValueChange={(value) => {
+                    const separatorIndex = value.indexOf(":");
+                    if (separatorIndex <= 0 || separatorIndex === value.length - 1) return;
+                    const provider = value.slice(0, separatorIndex) as ProviderKind;
+                    const model = value.slice(separatorIndex + 1);
+                    if (!PROVIDER_SELECT_OPTIONS.includes(provider)) return;
+                    updateSettings({
+                      textGenerationProvider: provider,
+                      textGenerationModel: model,
+                    });
+                  }}
+                  ariaLabel={t("settings.gitTextGenerationModel")}
+                  triggerClassName="w-full sm:w-56"
+                  valueContent={selectedGitTextGenerationModelLabel}
+                >
+                  {gitTextGenerationModelOptions.map((option) => (
+                    <SelectItem
+                      hideIndicator
+                      key={`${option.provider}:${option.slug}`}
+                      value={`${option.provider}:${option.slug}`}
+                    >
+                      {PROVIDER_DISPLAY_NAMES[option.provider]} / {option.name}
+                    </SelectItem>
+                  ))}
+                </SettingsSelectControl>
+              }
+            />
+          </div>
 
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentPullRequest",

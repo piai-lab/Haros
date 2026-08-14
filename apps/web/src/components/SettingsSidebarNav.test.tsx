@@ -89,6 +89,16 @@ describe("rankSettingsSearchEntries", () => {
     )!;
     expect(settingsSearchEntryTarget(customModelsEntry)).toBe("setting-installed-clis");
   });
+
+  it("routes Git writing to its calling-feature setting instead of Model services", () => {
+    const [entry] = rankSettingsSearchEntries("Git writing model", 1);
+    expect(entry).toMatchObject({
+      id: "general:git-writing-model",
+      section: "general",
+      target: SETTINGS_TARGETS.gitWritingModel,
+    });
+    expect(SETTINGS_TARGETS.gitWritingModel).toBe("setting-git-writing-model");
+  });
 });
 
 describe("SettingsSidebarNav", () => {
