@@ -162,6 +162,13 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Source proof：direct recovery owner unit `199`、cross/same-Engine browser与Web typecheck/format gates通过；atomic binding Contracts `41/41`、Decider+Engine `29/29`、ProviderCommandReactor `140/140`、Server typecheck、document contract `19/19`、format/lint与diff-check通过。Fresh Judge分别复核两项delta并给出`CLEAN`、P0/P1=0；未新增public command/RPC、event type、ledger、store、registry或第二projection owner。
 - Boundary：本addendum只关闭已证明的mounted/reopen direct Composer recovery与Product SQLite内部binding原子性。Provider native Session启动/恢复与Product SQLite不能伪装成跨进程事务；进程在二者之间退出仍按unknown/quarantine/no-replay处理。native acceptance之后的未知窗口、generation-less legacy orphan兼容边界以及final exact installed-App全链仍不得由source gates替代；本SHA尚未重建安装App，因此保持source-only candidate，不提升F-18或完整V1状态。
 
+### Provider runtime generation-less authority delta addendum — 2026-08-15
+
+- Exact pushed product SHA `4f0e2a8fc5d7241d9acfb2dba4eafbd6637abf0e`。它supersede上方仍将generation-less orphan兼容记为OPEN的历史边界：migration 066在首次建立runtime journal表时已同时引入lifecycle generation字段，当前全部adapter也只能经ProviderService在持久化UUID generation的`starting` binding后发出事件，因此不存在需要无binding或UUID binding继续接纳generation-less row的已发布数据路径。
+- Ingestion现在只允许同Thread、同Provider且generation精确匹配的row投影；generation-less只保留给binding自身仍显式标为`legacy`的同Provider诊断尾部。无binding、UUID binding下的generation-less、provider/generation mismatch及`provider.replacement.restore.failed`均只推进durable consumer cursor而不进入Product projection；Ingestion不猜测、不补写authority。
+- Source proof：完整ProviderRuntimeIngestion `101/101`，ProviderService、PiAdapter、AntigravityAdapter generation传播反例各`1/1`，Server typecheck、document contract `19/19`、format/lint与diff-check通过。测试harness不在emit/drain时改写binding；非baseline provider/thread均在各自fixture显式建立authority。Fresh Judge独立复核最终delta结论`CLEAN`、P0/P1=0。
+- Boundary：本addendum关闭generation-less no-binding/UUID污染，不改变native acceptance未知窗口、Provider native资源与Product SQLite之间的跨进程边界，也不替代final exact installed-App journey。本SHA尚未重建安装App，因此仍是source-only candidate；Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full fresh completion audit继续blocked。
+
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 4. Internal acceptance priority
