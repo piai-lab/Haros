@@ -124,7 +124,7 @@ E6 已由 fresh completion audit 对 exact product `66e0213c5…` 复核唯一 v
 
 E7 已在 exact pushed product `6e3e2ef3d…` 形成 producer candidate：本地 LobeHub 模型服务图标、intent-scoped Extension 服务、OmniMind Agent package/ecosystem lifecycle，以及 Git writing 在调用功能设置中的可达入口均已闭合；被动 Settings/package list 继续 zero-execute，Pi 仍拥有 service/model/package authority，没有新增 Registry、parser、store、cache 或跨 Engine lifecycle。该 SHA 的 cumulative focused gates、arm64 DMG、fresh task-specific installed-App 打开/关闭/重开证据已完成，但 producer 不把它改写为 E7 Exit。
 
-因此当前唯一下一动作是冻结 exact pushed product `63a551b27…` 及其后续 Campaign evidence：E5/E7 fresh independent completion audit已结论`CLEAN`，E8 cumulative source/live/packaged producer evidence已完成并保持candidate语义，不再重复无新假设的OAuth、live或package journey。剩余都是明确停止门：Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey、full completion audit，以及未提交的 `.github/workflows/ci.yml`、`.github/workflows/release.yml` 与 `scripts/release-smoke.ts` side work 曾被一次越权工作树 reset 丢失。该 side work 没有从聊天摘要重造；在其 owner/维护者裁决恢复前，完整 Run 必须保持 non-candidate，且不得以 E8 顺手重建或把当前 baseline冒充该 side task结果。
+因此当前唯一下一动作是冻结 exact pushed control-plane `7aefe89eb…` 及其后续 Campaign evidence：E5/E7 fresh independent completion audit已结论`CLEAN`，E8 cumulative source/live/packaged producer evidence已完成并保持candidate语义，不再重复无新假设的OAuth、live或package journey。先前丢失的CI/Release side work没有从聊天摘要复刻；维护者重新授权后已按当前sole owner以删除式方案重建：普通CI只保留一条Linux quality job并取消同ref旧run，Release只在tag/手动触发时生成三平台build artifact，不发布、不改feed、不读secrets，artifact保留5天。剩余停止门是Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full completion audit；完整 Run 仍保持 non-candidate。
 
 进入门是：`Model services / 模型服务`、普通展示名 `OmniMind`、Pi ModelRuntime authority、`.omnimind/.pi` 隔离和 next-turn/stop-first 语义已在 Workbench、Product State 与 Execution sole owner 中唯一；当前 snapshot 与 Pi stable `v0.84.1` 仍匹配。停止门是任何方案需要第二 Provider/Model Registry、静态供应商能力镜像、通用推理策略、跨 Engine Session continuation、新 switch RPC、未举证的持久化，或越出已授权 Pi-owned typed mutation seam 转而建立 Host parser/writer/store/fetcher。
 
@@ -132,6 +132,6 @@ E7 已在 exact pushed product `6e3e2ef3d…` 形成 producer candidate：本地
 
 Stage 4/F-18 的已冻结本地证据继续有效；Apple signing/notary、Windows Trusted Signing、Windows/Linux runner journey 与独立 fresh-context completion audit仍按维护者此前决定暂停，不因本轮 Model services/Composer 施工被伪装为已闭合。
 
-后续显式恢复跨平台验收时，优先直接运行现有 `.github/workflows/release.yml` 的手动 build-only 模式（`publish_release=false`）：GitHub-hosted `windows-2022` 与 `ubuntu-24.04` lane 构建 artifact、执行 packaged startup smoke 并只保存 Actions artifact，不创建 GitHub Release、不上传 updater feed。Windows 未配置 Trusted Signing 时只能形成未签名构建/启动证据，不能闭合签名或 production release claim。不得以本地未签名 DMG、Docker arm64、authored test 或本 Runner 自审改写为三平台 candidate/verified。
+后续显式恢复跨平台验收时，优先直接手动运行现有 `.github/workflows/release.yml` build-only workflow：GitHub-hosted macOS arm64、`windows-2022` 与 `ubuntu-24.04` lane 构建 artifact、执行 packaged startup smoke 并只保存5天 Actions artifact，不创建 GitHub Release、不上传 updater feed。该workflow明确不读取签名secret，所以只能形成未签名构建/启动证据，不能闭合Apple signing/notary、Windows Trusted Signing或 production release claim。不得以本地未签名 DMG、Docker arm64、authored test 或本 Runner 自审改写为三平台 candidate/verified。
 
 任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。

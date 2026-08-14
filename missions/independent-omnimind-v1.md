@@ -121,6 +121,14 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Independent E7 verdict：允许Exit。Judge复核Browser `25/25`、Web logic `86/86`、三域typecheck、244-component legal closure，并审查Extension intent/retire、被动zero-execute、Package opaque identity/action rematch、Git-writing persistence/search/deep-link；除已修复fixture外未发现P0/P1。
 - Independent E8 verdict：当前producer evidence表述诚实，仅允许保持candidate；不得升为完整V1 Exit/verified。Apple signing/notary、Windows Trusted Signing、Windows/Linux journey、full-V1 audit及丢失的CI/Release side work仍准确blocked/non-candidate。
 
+### CI/Release build-only control-plane addendum — 2026-08-14
+
+- Exact pushed control-plane SHA `7aefe89eb855be2bace98403dc8d7e8859cea545`。先前未提交的workflow side work被越权reset丢失后没有从摘要复制；维护者以“节省GitHub Actions额度为最高优先级”重新授权，当前实现从sole owner重新推导。
+- Normal CI只保留一条`ubuntu-24.04` quality job；PR以PR number、main push以ref作concurrency group，同ref新commit会取消旧run。Windows回归、macOS runner与独立release-smoke job全部删除；release smoke复用同一Linux quality job的已安装依赖执行。
+- `.github/workflows/release.yml`只由正式version tag或手动input触发，固定构建macOS arm64、Linux x64与Windows x64未签名artifact；三条lane继续做exact source/lock provenance与packaged startup smoke，仅上传5天Actions artifact。workflow只有`contents: read`，无write/OIDC/secrets，已删除GitHub/npm publication、release finalization、public-repository gate与updater-feed变更；所有第三方Action固定40位commit SHA。
+- Local control-plane proof：两个workflow YAML parse、release smoke、scripts typecheck、7个release owner test files `40/40`、format与diff-check通过。当前branch没有PR且CI只对PR/main push触发，因此本commit推送后没有伪造GitHub-hosted运行证据。该改动不进入Desktop shipped bytes，不重建packaged App。
+- Stop boundary：丢失side work不再是blocker，但Apple signing/notary、Windows Trusted Signing、GitHub-hosted Windows/Linux/macOS native journey与full V1 audit仍OPEN/blocked；Actions artifact不是Release，未改update feed，完整Run仍non-candidate。
+
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 4. Internal acceptance priority
