@@ -106,7 +106,7 @@ index 531f51d6..4c720a47 100644
 +		}
 +	}
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7f679a49..4a1a1359 100644
+index 7f679a49..f2a490b1 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
 @@ -3 +3,6 @@
@@ -117,18 +117,24 @@ index 7f679a49..4a1a1359 100644
 +import { basename, dirname, join } from "node:path";
 +import { applyEdits, modify } from "jsonc-parser";
 +import lockfile from "proper-lockfile";
-@@ -215,0 +221,157 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
+@@ -215,0 +221,184 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
 +export interface ModelConfigReadOptions {
 +	readonly signal?: AbortSignal;
 +}
 +
 +export type ModelConfigReader = (options: ModelConfigReadOptions) => Promise<string | undefined>;
 +
++export type ModelConfigCredentialReferenceMutation =
++	| { readonly type: "environment"; readonly variableName: string }
++	| { readonly type: "command"; readonly command: string }
++	| { readonly type: "clear" };
++
 +export type ModelConfigProviderMutation =
 +	| {
 +			type: "upsert";
 +			providerId: string;
 +			provider: ModelsJsonProvider;
++			credentialReference?: ModelConfigCredentialReferenceMutation;
 +	  }
 +	| {
 +			type: "remove";
@@ -150,6 +156,8 @@ index 7f679a49..4a1a1359 100644
 +
 +const MAX_MODELS_CONFIG_BYTES = 4 * 1024 * 1024;
 +const MODELS_CONFIG_FILE_MODE = 0o600;
++const ENVIRONMENT_VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/u;
++const MAX_CREDENTIAL_COMMAND_LENGTH = 4_096;
 +const MODEL_CONFIG_PROVIDER_FIELDS = [
 +	"name",
 +	"baseUrl",
@@ -188,6 +196,25 @@ index 7f679a49..4a1a1359 100644
 +			? { models: mergeEditedModels(currentProvider?.models, editedProvider.models) }
 +			: {}),
 +	};
++}
++
++function encodeCredentialReference(mutation: ModelConfigCredentialReferenceMutation): string | undefined {
++	if (mutation.type === "clear") return undefined;
++	if (mutation.type === "environment") {
++		if (!ENVIRONMENT_VARIABLE_NAME.test(mutation.variableName)) {
++			throw new Error("Credential environment variable name is invalid");
++		}
++		return `\${${mutation.variableName}}`;
++	}
++	if (
++		mutation.command.length === 0 ||
++		mutation.command.length > MAX_CREDENTIAL_COMMAND_LENGTH ||
++		mutation.command !== mutation.command.trim() ||
++		/[\u0000-\u001f\u007f-\u009f]/u.test(mutation.command)
++	) {
++		throw new Error("Credential command is invalid");
++	}
++	return `!${mutation.command}`;
 +}
 +
 +function isMissingPathError(error: unknown): boolean {
@@ -275,7 +302,7 @@ index 7f679a49..4a1a1359 100644
 +	}
 +}
 +
-@@ -245,14 +407 @@ export class ModelConfig {
+@@ -245,14 +434 @@ export class ModelConfig {
 -	static async load(modelsJsonPath: string | undefined): Promise<ModelConfig> {
 -		if (!modelsJsonPath) return new ModelConfig(new Map());
 -		const path = normalizePath(modelsJsonPath);
@@ -291,16 +318,16 @@ index 7f679a49..4a1a1359 100644
 -		}
 -
 +	private static fromContent(content: string, sourceLabel?: string): ModelConfig {
-@@ -265 +414 @@ export class ModelConfig {
+@@ -265 +441 @@ export class ModelConfig {
 -				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
 +				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
-@@ -275 +424,4 @@ export class ModelConfig {
+@@ -275 +451,4 @@ export class ModelConfig {
 -			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
 +			return new ModelConfig(
 +				new Map(),
 +				`Invalid models.json schema:\n${errors}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
 +			);
-@@ -285,0 +438,35 @@ export class ModelConfig {
+@@ -285,0 +465,35 @@ export class ModelConfig {
 +	static async load(
 +		modelsJsonPath: string | undefined,
 +		options: { reader?: ModelConfigReader; signal?: AbortSignal } = {},
@@ -336,14 +363,24 @@ index 7f679a49..4a1a1359 100644
 +		return ModelConfig.fromContent(content, normalizedPath);
 +	}
 +
-@@ -289,0 +477,6 @@ export class ModelConfig {
-+	withProviderEdit(providerId: string, provider: ModelsJsonProvider): ModelConfig {
+@@ -289,0 +504,16 @@ export class ModelConfig {
++	withProviderEdit(
++		providerId: string,
++		provider: ModelsJsonProvider,
++		credentialReference?: ModelConfigCredentialReferenceMutation,
++	): ModelConfig {
 +		const providers = new Map(this.providers);
-+		providers.set(providerId, deepFreeze(mergeModelConfigProviderEdit(this.providers.get(providerId), provider)));
++		const edited = mergeModelConfigProviderEdit(this.providers.get(providerId), provider);
++		if (credentialReference) {
++			const apiKey = encodeCredentialReference(credentialReference);
++			if (apiKey === undefined) delete edited.apiKey;
++			else edited.apiKey = apiKey;
++		}
++		providers.set(providerId, deepFreeze(edited));
 +		return new ModelConfig(providers, this.error);
 +	}
 +
-@@ -296,0 +490,117 @@ export class ModelConfig {
+@@ -296,0 +527,128 @@ export class ModelConfig {
 +
 +	static validateContent(content: string): ModelConfig {
 +		return ModelConfig.fromContent(content);
@@ -422,6 +459,17 @@ index 7f679a49..4a1a1359 100644
 +				);
 +			}
 +		}
++		if (mutation.type === "upsert" && mutation.credentialReference) {
++			nextContent = applyEdits(
++				nextContent,
++				modify(
++					nextContent,
++					["providers", mutation.providerId, "apiKey"],
++					encodeCredentialReference(mutation.credentialReference),
++					{ formattingOptions: formattingOptions(nextContent) },
++				),
++			);
++		}
 +		if (Buffer.byteLength(nextContent, "utf8") > MAX_MODELS_CONFIG_BYTES) {
 +			throw new Error("models.json exceeds the safe mutation boundary");
 +		}
@@ -462,24 +510,25 @@ index 7f679a49..4a1a1359 100644
 +		await release().catch(() => undefined);
 +	}
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b6..1b845620 100644
+index 6f4071b6..6aeb0079 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -19,0 +20 @@ import {
 +	InMemoryCredentialStore,
-@@ -43 +44,10 @@ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
+@@ -43 +44,11 @@ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
 -import { ModelConfig } from "./model-config.ts";
 +import {
 +	ModelConfig,
 +	type ModelConfigMutationOptions,
 +	type ModelConfigMutationResult,
++	type ModelConfigCredentialReferenceMutation,
 +	type ModelConfigProviderMutation,
 +	type ModelConfigReader,
 +	type ModelsJsonModel,
 +	type ModelsJsonProvider,
 +	mutateModelConfigProviderFile,
 +} from "./model-config.ts";
-@@ -57,0 +68,29 @@ import { RuntimeCredentials } from "./runtime-credentials.ts";
+@@ -57,0 +69,29 @@ import { RuntimeCredentials } from "./runtime-credentials.ts";
 +export type { ModelConfigReader, ModelConfigReadOptions } from "./model-config.ts";
 +
 +/**
@@ -509,10 +558,10 @@ index 6f4071b6..1b845620 100644
 +	});
 +}
 +
-@@ -70,0 +110,2 @@ export interface CreateModelRuntimeOptions {
+@@ -70,0 +111,2 @@ export interface CreateModelRuntimeOptions {
 +	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
 +	modelsConfigReader?: ModelConfigReader;
-@@ -92,0 +134,150 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
+@@ -92,0 +135,150 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
 +export interface ModelConfigProviderDiscoveryOptions {
 +	readonly signal?: AbortSignal;
 +}
@@ -663,23 +712,23 @@ index 6f4071b6..1b845620 100644
 +	}
 +}
 +
-@@ -138,0 +330 @@ export class ModelRuntime implements Models {
+@@ -138,0 +331 @@ export class ModelRuntime implements Models {
 +	private readonly modelsConfigReader: ModelConfigReader | undefined;
-@@ -157,0 +350 @@ export class ModelRuntime implements Models {
+@@ -157,0 +351 @@ export class ModelRuntime implements Models {
 +		modelsConfigReader: ModelConfigReader | undefined,
-@@ -164,0 +358 @@ export class ModelRuntime implements Models {
+@@ -164,0 +359 @@ export class ModelRuntime implements Models {
 +		this.modelsConfigReader = modelsConfigReader;
-@@ -172,0 +367,3 @@ export class ModelRuntime implements Models {
+@@ -172,0 +368,3 @@ export class ModelRuntime implements Models {
 +		if (options.modelsConfigReader && options.modelsPath !== null) {
 +			throw new Error("modelsConfigReader requires modelsPath: null");
 +		}
-@@ -176 +373,4 @@ export class ModelRuntime implements Models {
+@@ -176 +374,4 @@ export class ModelRuntime implements Models {
 -		const config = await ModelConfig.load(modelsPath);
 +		const config = await ModelConfig.load(modelsPath, {
 +			reader: options.modelsConfigReader,
 +			signal: options.signal,
 +		});
-@@ -179,3 +379,5 @@ export class ModelRuntime implements Models {
+@@ -179,3 +380,5 @@ export class ModelRuntime implements Models {
 -			(modelsPath
 -				? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
 -				: new InMemoryCodingAgentModelsStore());
@@ -688,9 +737,9 @@ index 6f4071b6..1b845620 100644
 +				: modelsPath
 +					? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
 +					: new InMemoryCodingAgentModelsStore());
-@@ -193,0 +396 @@ export class ModelRuntime implements Models {
+@@ -193,0 +397 @@ export class ModelRuntime implements Models {
 +			options.modelsConfigReader,
-@@ -572,0 +776,78 @@ export class ModelRuntime implements Models {
+@@ -572,0 +777,88 @@ export class ModelRuntime implements Models {
 +	/** Provider IDs accepted from the current official models.json configuration snapshot. */
 +	getModelConfigProviderIds(): readonly string[] {
 +		return this.config.getProviderIds();
@@ -713,8 +762,12 @@ index 6f4071b6..1b845620 100644
 +	}
 +
 +	/** Apply one credential-blind edit to this disposable runtime without exposing retained secrets. */
-+	registerModelConfigProviderPreview(providerId: string, provider: ModelsJsonProvider): void {
-+		this.config = this.config.withProviderEdit(providerId, provider);
++	registerModelConfigProviderPreview(
++		providerId: string,
++		provider: ModelsJsonProvider,
++		credentialReference?: ModelConfigCredentialReferenceMutation,
++	): void {
++		this.config = this.config.withProviderEdit(providerId, provider, credentialReference);
 +		this.recomposeProvider(providerId);
 +		this.updateModelSnapshot();
 +	}
@@ -735,7 +788,13 @@ index 6f4071b6..1b845620 100644
 +		if (!config?.baseUrl || !api || !DISCOVERABLE_MODEL_CONFIG_APIS.has(api)) {
 +			throw new ModelConfigProviderDiscoveryError("invalid_configuration");
 +		}
-+		const auth = await this.models.getAuth(providerId, { signal });
++		let auth: AuthResult | undefined;
++		try {
++			auth = await this.models.getAuth(providerId, { signal });
++		} catch (cause) {
++			signal.throwIfAborted();
++			throw new ModelConfigProviderDiscoveryError("authentication_failed", { cause });
++		}
 +		if (!auth) throw new ModelConfigProviderDiscoveryError("authentication_failed");
 +		const headers = new Headers();
 +		for (const [name, value] of Object.entries(auth.auth.headers ?? {})) {
@@ -769,7 +828,7 @@ index 6f4071b6..1b845620 100644
 +		}
 +	}
 +
-@@ -691 +972,4 @@ export class ModelRuntime implements Models {
+@@ -691 +983,4 @@ export class ModelRuntime implements Models {
 -		this.config = await ModelConfig.load(this.modelsPath);
 +		this.config = await ModelConfig.load(this.modelsPath, {
 +			reader: this.modelsConfigReader,
@@ -1449,11 +1508,12 @@ index c24d0a21..1d1ba2af 100644
 +	): Promise<LoadExtensionsResult> {
 +		const resolvedPaths = await this.packageManager.resolve(onMissingPackage);
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2af..12ff9160 100644
+index 3d05c2af..44e6c74b 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
-@@ -170,0 +171,8 @@ export { convertToLlm } from "./core/messages.ts";
+@@ -170,0 +171,9 @@ export { convertToLlm } from "./core/messages.ts";
 +export type {
++	ModelConfigCredentialReferenceMutation,
 +	ModelConfigMutationOptions,
 +	ModelConfigMutationResult,
 +	ModelConfigProviderMutation,
@@ -1461,15 +1521,15 @@ index 3d05c2af..12ff9160 100644
 +	ModelsJsonModelOverride,
 +	ModelsJsonProvider,
 +} from "./core/model-config.ts";
-@@ -183,0 +192,5 @@ export {
+@@ -183,0 +193,5 @@ export {
 +	type ModelConfigProviderDiscoveryOptions,
 +	ModelConfigProviderDiscoveryError,
 +	type ModelConfigProviderDiscoveryErrorCode,
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
-@@ -185,0 +199 @@ export {
+@@ -185,0 +200 @@ export {
 +	mutateModelConfigProvider,
-@@ -191,0 +206,5 @@ export type {
+@@ -191,0 +207,5 @@ export type {
 +	PublicConfiguredPackage,
 +	PublicConfiguredPackageResource,
 +	PublicPackageIntent,
@@ -1477,10 +1537,10 @@ index 3d05c2af..12ff9160 100644
 +	PublicPackageResourceSelection,
 diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
 new file mode 100644
-index 00000000..f7f1ee40
+index 00000000..44d6dbce
 --- /dev/null
 +++ b/packages/coding-agent/test/model-config-mutation.test.ts
-@@ -0,0 +1,372 @@
+@@ -0,0 +1,444 @@
 +import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -1635,6 +1695,78 @@ index 00000000..f7f1ee40
 +		expect(target.apiKey).toBe("existing-safe-reference");
 +		expect(target.headers).toEqual({ "X-Existing": "keep" });
 +		expect(target.compat).toEqual({ supportsStore: false });
++	});
++
++	it("encodes typed credential references while preserving or explicitly clearing the existing mode", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target", "model"),
++			credentialReference: { type: "environment", variableName: "PRIVATE_API_KEY" },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
++			"${PRIVATE_API_KEY}",
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: { ...provider("Target renamed", "model") },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
++			"${PRIVATE_API_KEY}",
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target renamed", "model"),
++			credentialReference: { type: "command", command: "security find-generic-password -w -s private" },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
++			"!security find-generic-password -w -s private",
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target renamed", "model"),
++			credentialReference: { type: "clear" },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target).not.toHaveProperty(
++			"apiKey",
++		);
++	});
++
++	it("rejects invalid typed credential references without changing the file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target", "model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "target",
++				provider: provider("Target", "model"),
++				credentialReference: { type: "environment", variableName: "NOT VALID" },
++			}),
++		).rejects.toThrow("environment variable name");
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "target",
++				provider: provider("Target", "model"),
++				credentialReference: { type: "command", command: "echo first\necho second" },
++			}),
++		).rejects.toThrow("Credential command is invalid");
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
 +	});
 +
 +	it("preserves hidden fields on retained models while explicitly removing omitted models", async () => {
@@ -1855,10 +1987,10 @@ index 00000000..f7f1ee40
 +});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 00000000..a865d401
+index 00000000..39e4d88e
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-@@ -0,0 +1,450 @@
+@@ -0,0 +1,497 @@
 +import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
@@ -1976,6 +2108,53 @@ index 00000000..a865d401
 +			id: "model",
 +			samplingParams: { temperature: 0.25 },
 +		});
++	});
++
++	it("keeps typed environment and command references passive until an explicit operation", async () => {
++		const root = await mkdtemp(join(tmpdir(), "pi-model-config-reference-"));
++		const marker = join(root, "command-ran");
++		try {
++			const runtime = await createRuntime(async () => '{"providers":{}}');
++			runtime.registerModelConfigProviderPreview(
++				"command-provider",
++				{
++					baseUrl: "https://example.test/v1",
++					api: "openai-completions",
++					models: [],
++				},
++				{ type: "command", command: `printf touched > '${marker}'; printf test-key` },
++			);
++			expect(runtime.getProviderAuthStatus("command-provider")).toMatchObject({
++				configured: true,
++				source: "models_json_command",
++			});
++			await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
++
++			vi.stubGlobal(
++				"fetch",
++				vi.fn(async () => new Response(JSON.stringify({ data: [{ id: "model" }] }), { status: 200 })),
++			);
++			await expect(runtime.discoverModelConfigProviderModels("command-provider")).resolves.toEqual([
++				{ id: "model" },
++			]);
++			expect(await readFile(marker, "utf8")).toBe("touched");
++
++			const missingEnvironmentRuntime = await createRuntime(async () => '{"providers":{}}');
++			missingEnvironmentRuntime.registerModelConfigProviderPreview(
++				"environment-provider",
++				{
++					baseUrl: "https://example.test/v1",
++					api: "openai-completions",
++					models: [],
++				},
++				{ type: "environment", variableName: "OMNIMIND_PI_TEST_MISSING_API_KEY_7B184" },
++			);
++			await expect(
++				missingEnvironmentRuntime.discoverModelConfigProviderModels("environment-provider"),
++			).rejects.toMatchObject({ code: "authentication_failed" });
++		} finally {
++			await rm(root, { recursive: true, force: true });
++		}
 +	});
 +
 +	it.each([
