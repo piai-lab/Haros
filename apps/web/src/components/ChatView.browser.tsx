@@ -7235,9 +7235,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
       await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
         .toBeInTheDocument();
-      await page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }).click();
+      await expect
+        .element(page.getByRole("heading", { name: EN_MESSAGES["composer.engineRecoveryTitle"] }))
+        .toBeInTheDocument();
+      await page
+        .getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] })
+        .click();
       await waitForURL(
         mounted.router,
         (path) => path === "/settings",
@@ -7355,7 +7360,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
         .toBeInTheDocument();
       await expect
         .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
@@ -7486,12 +7491,27 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("heading", { name: EN_MESSAGES["composer.engineRecoveryTitle"] }))
         .toBeInTheDocument();
       await expect
         .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
         .not.toBeInTheDocument();
       expect(listModelServices).toHaveBeenCalledTimes(1);
+      await page
+        .getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] })
+        .click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "Remembered Pi recovery should open Agent engines.",
+      );
+      expect(mounted.router.state.location.search).toMatchObject({
+        section: "providers",
+        target: SETTINGS_TARGETS.engineDetails,
+      });
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

@@ -1647,6 +1647,10 @@ export const EN_MESSAGES = {
   "composer.modelRecoveryDescription":
     "Review the existing connection to sign in again, retry, or reload its model catalog.",
   "composer.modelRecoveryAction": "Review model services",
+  "composer.engineRecoveryTitle": "Your Agent engine needs attention",
+  "composer.engineRecoveryDescription":
+    "Review the installed engine to sign in again, retry, or reload its model catalog.",
+  "composer.engineRecoveryAction": "Review Agent engines",
   "timeline.thinking": "Thinking",
   "timeline.details": "Details",
   "timeline.workedFor": "Worked for {duration}",
@@ -4828,6 +4832,9 @@ export const ZH_CN_MESSAGES = {
   "composer.modelRecoveryTitle": "模型服务需要处理",
   "composer.modelRecoveryDescription": "请检查现有连接，并重新登录、重试或重新加载模型目录。",
   "composer.modelRecoveryAction": "查看模型服务",
+  "composer.engineRecoveryTitle": "Agent 引擎需要处理",
+  "composer.engineRecoveryDescription": "请检查已安装的引擎，并重新登录、重试或重新加载模型目录。",
+  "composer.engineRecoveryAction": "查看 Agent 引擎",
   "timeline.thinking": "正在思考",
   "timeline.details": "详情",
   "timeline.workedFor": "工作了 {duration}",

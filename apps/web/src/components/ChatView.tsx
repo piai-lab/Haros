@@ -4146,11 +4146,11 @@ export default function ChatView({
     modelServicesTransport,
     passiveModelServicesState,
   });
+  const modelReadinessRecoversIndependentEngine =
+    modelReadinessPromptMode === "recover" &&
+    passiveModelServicesState === "empty" &&
+    hasRecoverableIndependentEngineModelBinding;
   const openModelReadinessFlow = useCallback(() => {
-    const recoversIndependentEngine =
-      modelReadinessPromptMode === "recover" &&
-      passiveModelServicesState === "empty" &&
-      hasRecoverableIndependentEngineModelBinding;
     void navigate({
       to: "/settings",
       search:
@@ -4170,7 +4170,7 @@ export default function ChatView({
                   }
                 : {}),
             }
-          : recoversIndependentEngine
+          : modelReadinessRecoversIndependentEngine
             ? { section: "providers", target: SETTINGS_TARGETS.engineDetails }
             : { section: "models" },
     });
@@ -4178,7 +4178,7 @@ export default function ChatView({
     activeThread,
     composerDraft.activeProvider,
     composerDraft.modelSelectionByProvider,
-    hasRecoverableIndependentEngineModelBinding,
+    modelReadinessRecoversIndependentEngine,
     modelReadinessPromptMode,
     navigate,
     passiveModelServicesState,
@@ -12477,7 +12477,9 @@ export default function ChatView({
                       aria-label={
                         modelReadinessPromptMode === "setup"
                           ? t("composer.modelSetupTitle")
-                          : t("composer.modelRecoveryTitle")
+                          : modelReadinessRecoversIndependentEngine
+                            ? t("composer.engineRecoveryTitle")
+                            : t("composer.modelRecoveryTitle")
                       }
                       className={cn(
                         "mx-auto mb-5 flex w-full items-center justify-between gap-4 px-6",
@@ -12490,12 +12492,16 @@ export default function ChatView({
                         <h3 className="text-sm font-medium text-foreground">
                           {modelReadinessPromptMode === "setup"
                             ? t("composer.modelSetupTitle")
-                            : t("composer.modelRecoveryTitle")}
+                            : modelReadinessRecoversIndependentEngine
+                              ? t("composer.engineRecoveryTitle")
+                              : t("composer.modelRecoveryTitle")}
                         </h3>
                         <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                           {modelReadinessPromptMode === "setup"
                             ? t("composer.modelSetupDescription")
-                            : t("composer.modelRecoveryDescription")}
+                            : modelReadinessRecoversIndependentEngine
+                              ? t("composer.engineRecoveryDescription")
+                              : t("composer.modelRecoveryDescription")}
                         </p>
                       </div>
                       <Button
@@ -12506,7 +12512,9 @@ export default function ChatView({
                       >
                         {modelReadinessPromptMode === "setup"
                           ? t("composer.modelSetupAction")
-                          : t("composer.modelRecoveryAction")}
+                          : modelReadinessRecoversIndependentEngine
+                            ? t("composer.engineRecoveryAction")
+                            : t("composer.modelRecoveryAction")}
                       </Button>
                     </section>
                   ) : null}
