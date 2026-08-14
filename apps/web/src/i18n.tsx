@@ -2185,6 +2185,10 @@ export const EN_MESSAGES = {
   "settings.chooseModelServiceDescription":
     "Choose a service to connect. OmniMind will discover its available models after authentication.",
   "settings.searchModelServices": "Search model services…",
+  "settings.recommendedModelServices": "Recommended",
+  "settings.otherModelServices": "Other services",
+  "settings.modelServiceAuthMethodApiKey": "API Key",
+  "settings.modelServiceAuthMethodSignIn": "Sign in",
   "settings.modelServiceSourcesChecking": "Checking installed model services…",
   "settings.modelServiceSourcesPartial":
     "Some installed model services could not be loaded. The services shown below are still available.",
@@ -5208,6 +5212,10 @@ export const ZH_CN_MESSAGES = {
   "settings.chooseModelServiceDescription":
     "选择要连接的服务，认证后 OmniMind 会自动发现可用模型。",
   "settings.searchModelServices": "搜索模型服务…",
+  "settings.recommendedModelServices": "推荐",
+  "settings.otherModelServices": "其他服务",
+  "settings.modelServiceAuthMethodApiKey": "API Key",
+  "settings.modelServiceAuthMethodSignIn": "登录",
   "settings.modelServiceSourcesChecking": "正在检查已安装的模型服务…",
   "settings.modelServiceSourcesPartial": "部分已安装的模型服务未能加载，下方已显示的服务仍可使用。",
   "settings.modelServiceSourcesUnavailable": "暂时无法检查已安装的模型服务，内置服务仍可使用。",

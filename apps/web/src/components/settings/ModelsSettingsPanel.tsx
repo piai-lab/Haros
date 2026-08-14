@@ -132,6 +132,21 @@ const DEFAULT_CUSTOM_MODEL: OmniMindCustomModelServiceModelInput = {
   modelId: "",
 };
 
+// Presentation preference only. Runtime projection remains the sole authority for
+// whether a service exists and what it can do; unknown and Extension services stay
+// in the complete searchable result set below.
+const PREFERRED_MODEL_SERVICE_IDS = [
+  "deepseek",
+  "openai",
+  "openai-codex",
+  "anthropic",
+  "google",
+  "xiaomi",
+] as const;
+const PREFERRED_MODEL_SERVICE_RANK = new Map<string, number>(
+  PREFERRED_MODEL_SERVICE_IDS.map((serviceId, index) => [serviceId, index]),
+);
+
 function createCustomModelServiceEditor(): CustomModelServiceEditorState {
   return {
     mode: "create",
@@ -318,8 +333,9 @@ function ActiveModelsSettingsPanel({
   const openedAuthUrlsRef = useRef(new Set<string>());
   const setupCompletionArmedRef = useRef(false);
   const addModelServiceButtonRef = useRef<HTMLButtonElement | null>(null);
+  const modelServiceSearchInputRef = useRef<HTMLInputElement | null>(null);
   const modelServiceDetailBackButtonRef = useRef<HTMLButtonElement | null>(null);
-  const modelServiceBrowserListRef = useRef<HTMLUListElement | null>(null);
+  const modelServiceBrowserListRef = useRef<HTMLDivElement | null>(null);
   const modelServiceBrowserItemRefs = useRef(new Map<string, HTMLButtonElement>());
   const modelServiceBrowserRestoreRef = useRef<{
     readonly serviceId: string;
@@ -1344,6 +1360,46 @@ function ActiveModelsSettingsPanel({
       ].some((value) => value.toLocaleLowerCase().includes(query)),
     );
   }, [connectableModelServices, modelServiceInstanceLabel, modelServiceSearch]);
+  const modelServiceSearchActive = modelServiceSearch.trim().length > 0;
+  const preferredConnectableModelServices = useMemo(
+    () =>
+      modelServiceSearchActive
+        ? []
+        : filteredConnectableModelServices
+            .filter((service) => PREFERRED_MODEL_SERVICE_RANK.has(service.serviceId))
+            .toSorted(
+              (left, right) =>
+                (PREFERRED_MODEL_SERVICE_RANK.get(left.serviceId) ?? Number.MAX_SAFE_INTEGER) -
+                (PREFERRED_MODEL_SERVICE_RANK.get(right.serviceId) ?? Number.MAX_SAFE_INTEGER),
+            ),
+    [filteredConnectableModelServices, modelServiceSearchActive],
+  );
+  const otherConnectableModelServices = useMemo(
+    () =>
+      modelServiceSearchActive
+        ? filteredConnectableModelServices
+        : filteredConnectableModelServices.filter(
+            (service) => !PREFERRED_MODEL_SERVICE_RANK.has(service.serviceId),
+          ),
+    [filteredConnectableModelServices, modelServiceSearchActive],
+  );
+  const modelServiceAuthMethodsLabel = useCallback(
+    (service: OmniMindModelServiceDescriptor) => {
+      const labels = [
+        ...new Set(
+          service.authMethods
+            .filter((method) => method.canLogin)
+            .map((method) =>
+              method.type === "api_key"
+                ? t("settings.modelServiceAuthMethodApiKey")
+                : t("settings.modelServiceAuthMethodSignIn"),
+            ),
+        ),
+      ];
+      return labels.length > 0 ? labels.join(" · ") : t("settings.modelServiceNoInteractiveAuth");
+    },
+    [t],
+  );
 
   const filteredSelectedModelServiceModels = useMemo(() => {
     const query = modelServiceModelSearch.trim().toLocaleLowerCase(locale);
@@ -1608,6 +1664,7 @@ function ActiveModelsSettingsPanel({
               event.preventDefault();
               if (modelServiceSearch.length > 0) {
                 setModelServiceSearch("");
+                modelServiceSearchInputRef.current?.focus();
                 return;
               }
               closeModelServiceBrowser();
@@ -1618,6 +1675,7 @@ function ActiveModelsSettingsPanel({
                 {t("settings.chooseModelServiceDescription")}
               </p>
               <SearchInput
+                ref={modelServiceSearchInputRef}
                 autoFocus
                 value={modelServiceSearch}
                 onChange={(event) => setModelServiceSearch(event.target.value)}
@@ -1666,57 +1724,85 @@ function ActiveModelsSettingsPanel({
               </div>
             ) : null}
             {filteredConnectableModelServices.length > 0 ? (
-              <ul
+              <div
                 ref={modelServiceBrowserListRef}
                 data-model-service-results="compact-list"
-                className="max-h-[min(24rem,calc(100vh-18rem))] list-none divide-y divide-border/70 overflow-y-auto rounded-xl border border-border bg-background"
+                className="max-h-[min(24rem,calc(100vh-18rem))] overflow-y-auto rounded-xl border border-border bg-background"
               >
-                {filteredConnectableModelServices.map((service) => {
-                  const instanceLabel = modelServiceInstanceLabel(service);
-                  return (
-                    <li key={service.serviceId}>
-                      <button
-                        ref={(node) => {
-                          if (node)
-                            modelServiceBrowserItemRefs.current.set(service.serviceId, node);
-                          else modelServiceBrowserItemRefs.current.delete(service.serviceId);
-                        }}
-                        type="button"
-                        className={cn(
-                          "group flex min-h-14 w-full items-center gap-3 px-3 py-2.5 text-left outline-none transition-colors",
-                          "hover:bg-foreground/[0.04]",
-                          "focus-visible:bg-foreground/[0.045] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
-                        )}
-                        data-model-service-result={service.serviceId}
-                        aria-label={t("settings.connectModelServiceNamed", {
-                          name: instanceLabel,
-                        })}
-                        onClick={() => openModelServiceDetails(service.serviceId, "browser")}
-                      >
-                        <ModelServiceIcon
-                          serviceId={service.serviceId}
-                          origin={service.origin}
-                          className="size-6"
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-foreground">
-                            {instanceLabel}
-                          </span>
-                          <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                            {service.authMethods.length > 0
-                              ? service.authMethods.map((method) => method.label).join(" · ")
-                              : modelServiceAuthLabel(service)}
-                          </span>
-                        </span>
-                        <ChevronRightIcon
-                          aria-hidden="true"
-                          className="size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground/70"
-                        />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
+                {[
+                  ...(preferredConnectableModelServices.length > 0
+                    ? [
+                        {
+                          key: "recommended",
+                          label: t("settings.recommendedModelServices"),
+                          services: preferredConnectableModelServices,
+                        },
+                      ]
+                    : []),
+                  ...(otherConnectableModelServices.length > 0
+                    ? [
+                        {
+                          key: modelServiceSearchActive ? "results" : "other",
+                          label: modelServiceSearchActive ? null : t("settings.otherModelServices"),
+                          services: otherConnectableModelServices,
+                        },
+                      ]
+                    : []),
+                ].map((group) => (
+                  <section key={group.key} aria-label={group.label ?? undefined}>
+                    {group.label ? (
+                      <h3 className="border-b border-border/70 bg-muted/35 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                        {group.label}
+                      </h3>
+                    ) : null}
+                    <ul className="list-none divide-y divide-border/70">
+                      {group.services.map((service) => {
+                        const instanceLabel = modelServiceInstanceLabel(service);
+                        return (
+                          <li key={service.serviceId}>
+                            <button
+                              ref={(node) => {
+                                if (node)
+                                  modelServiceBrowserItemRefs.current.set(service.serviceId, node);
+                                else modelServiceBrowserItemRefs.current.delete(service.serviceId);
+                              }}
+                              type="button"
+                              className={cn(
+                                "group flex min-h-14 w-full items-center gap-3 px-3 py-2.5 text-left outline-none transition-colors",
+                                "hover:bg-foreground/[0.04]",
+                                "focus-visible:bg-foreground/[0.045] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
+                              )}
+                              data-model-service-result={service.serviceId}
+                              aria-label={t("settings.connectModelServiceNamed", {
+                                name: instanceLabel,
+                              })}
+                              onClick={() => openModelServiceDetails(service.serviceId, "browser")}
+                            >
+                              <ModelServiceIcon
+                                serviceId={service.serviceId}
+                                origin={service.origin}
+                                className="size-6"
+                              />
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm font-medium text-foreground">
+                                  {instanceLabel}
+                                </span>
+                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                  {modelServiceAuthMethodsLabel(service)}
+                                </span>
+                              </span>
+                              <ChevronRightIcon
+                                aria-hidden="true"
+                                className="size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground/70"
+                              />
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             ) : (
               <SettingsEmptyState>{t("settings.noMatchingModelServices")}</SettingsEmptyState>
             )}
@@ -2434,21 +2520,8 @@ function ActiveModelsSettingsPanel({
                     description={modelServiceAuthLabel(selectedModelService)}
                     actions={
                       <div className="flex max-w-[min(24rem,55vw)] flex-wrap items-center justify-end gap-2">
-                        <span
-                          className="break-words text-right text-xs text-muted-foreground"
-                          title={
-                            selectedModelService.authMethods.length > 0
-                              ? selectedModelService.authMethods
-                                  .map((method) => method.label)
-                                  .join(" · ")
-                              : undefined
-                          }
-                        >
-                          {selectedModelService.authMethods.length > 0
-                            ? selectedModelService.authMethods
-                                .map((method) => method.label)
-                                .join(" · ")
-                            : t("settings.modelServiceNoInteractiveAuth")}
+                        <span className="break-words text-right text-xs text-muted-foreground">
+                          {modelServiceAuthMethodsLabel(selectedModelService)}
                         </span>
                         {selectedModelServiceApiKeyMethod ? (
                           <Button

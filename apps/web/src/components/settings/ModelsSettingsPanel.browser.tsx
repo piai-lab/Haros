@@ -723,12 +723,19 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).not.toContain("Service 39");
 
     await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
-    const results = document.querySelector<HTMLUListElement>(
+    const results = document.querySelector<HTMLDivElement>(
       '[data-model-service-results="compact-list"]',
     );
     expect(results).not.toBeNull();
     expect(results?.querySelectorAll("li")).toHaveLength(40);
     expect(results?.className).not.toContain("grid-cols");
+    expect(document.body.textContent).toContain("settings.recommendedModelServices");
+    expect(document.body.textContent).toContain("settings.otherModelServices");
+    expect(document.body.textContent?.indexOf("DeepSeek")).toBeLessThan(
+      document.body.textContent?.indexOf("Service 0") ?? Number.MAX_SAFE_INTEGER,
+    );
+    expect(document.body.textContent).toContain("settings.modelServiceAuthMethodApiKey");
+    expect(document.body.textContent).not.toContain("DeepSeek API key");
     const search = mounted.screen.getByRole("textbox", { name: "settings.searchModelServices" });
     await search.fill("deepseek");
     expect(document.body.textContent).toContain("DeepSeek");
@@ -1495,7 +1502,8 @@ describe("ModelsSettingsPanel model services", () => {
     await expect
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceAuthentication");
-    expect(document.body.textContent).toContain("DeepSeek API key");
+    expect(document.body.textContent).toContain("settings.modelServiceAuthMethodApiKey");
+    expect(document.body.textContent).not.toContain("DeepSeek API key");
     expect(document.body.textContent).toContain("settings.modelServiceOriginModelsJson");
     expect(document.body.textContent).toContain("settings.modelServiceSupportsRefresh");
 

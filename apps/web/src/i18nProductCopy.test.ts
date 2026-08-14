@@ -382,6 +382,14 @@ describe("reachable OmniMind-owned product copy", () => {
     expect(ZH_CN_MESSAGES["settings.modelServiceOriginModelsJson"]).toBe("通过 API 地址连接");
     expect(EN_MESSAGES["settings.noServiceModels"]).toContain("service");
     expect(ZH_CN_MESSAGES["settings.noServiceModels"]).toContain("服务");
+    expect(EN_MESSAGES["settings.recommendedModelServices"]).toBe("Recommended");
+    expect(ZH_CN_MESSAGES["settings.recommendedModelServices"]).toBe("推荐");
+    expect(EN_MESSAGES["settings.otherModelServices"]).toBe("Other services");
+    expect(ZH_CN_MESSAGES["settings.otherModelServices"]).toBe("其他服务");
+    expect(EN_MESSAGES["settings.modelServiceAuthMethodApiKey"]).toBe("API Key");
+    expect(ZH_CN_MESSAGES["settings.modelServiceAuthMethodApiKey"]).toBe("API Key");
+    expect(EN_MESSAGES["settings.modelServiceAuthMethodSignIn"]).toBe("Sign in");
+    expect(ZH_CN_MESSAGES["settings.modelServiceAuthMethodSignIn"]).toBe("登录");
   });
 
   it("distinguishes first-run setup from recovery in both supported languages", () => {
