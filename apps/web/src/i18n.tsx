@@ -2211,9 +2211,9 @@ export const EN_MESSAGES = {
   "settings.customApiDeleteReferences":
     "This service is used by {count} saved or draft model selections. Those selections will remain visible but unavailable until you choose another model.",
   "settings.customApiDeleting": "Deleting…",
-  "settings.customApiRemoved": "The API connection and its credential were deleted.",
+  "settings.customApiRemoved": "The API connection and its credential setup were removed.",
   "settings.customApiRemovedSyncWarning":
-    "The connection and credential were deleted, but the in-app model state did not finish refreshing. Reload before continuing.",
+    "The connection and its credential setup were removed, but the in-app model state did not finish refreshing. Reload before continuing.",
   "settings.customApiRemoveFailed": "The API connection could not be deleted.",
   "settings.customApiRemoveBlockedActive":
     "This connection is still used by a live model session. Stop that session, then try again.",
@@ -5274,9 +5274,9 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiDeleteReferences":
     "检测到此服务仍被 {count} 个已保存或草稿模型选择引用。删除后，这些选择会继续显示为不可用，直到你重新选择模型。",
   "settings.customApiDeleting": "正在删除…",
-  "settings.customApiRemoved": "API 连接及其凭据已删除。",
+  "settings.customApiRemoved": "API 连接及其凭据设置已移除。",
   "settings.customApiRemovedSyncWarning":
-    "连接及其凭据已删除，但应用内模型状态尚未完成刷新。请重新载入后再继续。",
+    "连接及其凭据设置已移除，但应用内模型状态尚未完成刷新。请重新载入后再继续。",
   "settings.customApiRemoveFailed": "无法删除 API 连接。",
   "settings.customApiRemoveBlockedActive":
     "此连接仍被运行中的模型会话使用。请先停止该会话，再重试。",
