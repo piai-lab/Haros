@@ -1900,63 +1900,64 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             }),
           ),
         removeCustom: (input) =>
-          Effect.promise((signal) =>
-            serializeMutation(async () => {
-              const listSessionsStrict = providerService.listSessionsStrict;
-              if (!listSessionsStrict) {
-                throw new Error("Authoritative provider session observation is unavailable");
-              }
-              const sessions = await Effect.runPromise(listSessionsStrict());
-              const modelPrefix = `${input.serviceId}/`;
-              const ownsLiveSession = sessions.some(
-                (session) =>
-                  session.provider === "omnimind" &&
-                  session.model?.startsWith(modelPrefix) === true &&
-                  (session.status === "connecting" ||
-                    session.status === "ready" ||
-                    session.status === "running" ||
-                    session.activeTurnId !== undefined),
-              );
-              if (ownsLiveSession) {
+          providerService.withModelServiceMutationFence(
+            input.serviceId,
+            Effect.promise((signal) =>
+              serializeMutation(async () => {
+                const sessions = await Effect.runPromise(providerService.listSessionsStrict());
+                const modelPrefix = `${input.serviceId}/`;
+                const ownsLiveSession = sessions.some(
+                  (session) =>
+                    session.provider === "omnimind" &&
+                    session.model?.startsWith(modelPrefix) === true &&
+                    (session.status === "connecting" ||
+                      session.status === "ready" ||
+                      session.status === "running" ||
+                      session.activeTurnId !== undefined),
+                );
+                if (ownsLiveSession) {
+                  return {
+                    state: "blocked_active_operation",
+                    serviceId: input.serviceId,
+                  } satisfies OmniMindCustomModelServiceRemoveResult;
+                }
+                const previous = await getProjectedService(input.serviceId, signal);
+                if (previous.origin !== "models_json") {
+                  throw new Error("Only a models.json model service can be removed");
+                }
+                const agentDir = resolveOmniMindAgentDir(config.baseDir);
+                const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+                const { runtime } = await createMutationRuntime(signal);
+                let synchronizationFailed = false;
+                try {
+                  await runtime.logout(input.serviceId, { signal });
+                } catch (error) {
+                  if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
+                  // Pi deletes the credential before it refreshes the in-memory
+                  // provider projection. A synchronization error therefore still
+                  // proves that the durable credential was removed; every other
+                  // failure leaves models.json intact so the service remains
+                  // visible and the cleanup can be retried.
+                  synchronizationFailed = true;
+                }
+                publishOmniMindModelRuntimeMutation(agentDir);
+                const mutation = await sdk.mutateModelConfigProvider(
+                  path.join(agentDir, "models.json"),
+                  { type: "remove", providerId: input.serviceId },
+                  { signal },
+                );
+                if (mutation.providerIds.includes(input.serviceId)) {
+                  throw new Error(
+                    "Custom model service removal was not accepted by Pi ModelConfig",
+                  );
+                }
+                publishOmniMindModelRuntimeMutation(agentDir);
                 return {
-                  state: "blocked_active_operation",
+                  state: synchronizationFailed ? "complete_with_sync_warning" : "complete",
                   serviceId: input.serviceId,
                 } satisfies OmniMindCustomModelServiceRemoveResult;
-              }
-              const previous = await getProjectedService(input.serviceId, signal);
-              if (previous.origin !== "models_json") {
-                throw new Error("Only a models.json model service can be removed");
-              }
-              const agentDir = resolveOmniMindAgentDir(config.baseDir);
-              const sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
-              const { runtime } = await createMutationRuntime(signal);
-              let synchronizationFailed = false;
-              try {
-                await runtime.logout(input.serviceId, { signal });
-              } catch (error) {
-                if (!(error instanceof sdk.CredentialSynchronizationError)) throw error;
-                // Pi deletes the credential before it refreshes the in-memory
-                // provider projection. A synchronization error therefore still
-                // proves that the durable credential was removed; every other
-                // failure leaves models.json intact so the service remains
-                // visible and the cleanup can be retried.
-                synchronizationFailed = true;
-              }
-              publishOmniMindModelRuntimeMutation(agentDir);
-              const mutation = await sdk.mutateModelConfigProvider(
-                path.join(agentDir, "models.json"),
-                { type: "remove", providerId: input.serviceId },
-                { signal },
-              );
-              if (mutation.providerIds.includes(input.serviceId)) {
-                throw new Error("Custom model service removal was not accepted by Pi ModelConfig");
-              }
-              publishOmniMindModelRuntimeMutation(agentDir);
-              return {
-                state: synchronizationFailed ? "complete_with_sync_warning" : "complete",
-                serviceId: input.serviceId,
-              } satisfies OmniMindCustomModelServiceRemoveResult;
-            }),
+              }),
+            ),
           ),
       } satisfies OmniMindModelServicesShape;
     }),

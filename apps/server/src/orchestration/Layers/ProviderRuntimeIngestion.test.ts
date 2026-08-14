@@ -94,6 +94,8 @@ function createProviderServiceHarness() {
     respondToUserInput: () => unsupported(),
     stopSession: () => unsupported(),
     listSessions: () => Effect.succeed([...runtimeSessions]),
+    listSessionsStrict: () => Effect.succeed([...runtimeSessions]),
+    withModelServiceMutationFence: (_serviceId, effect) => effect,
     getCapabilities: (provider) =>
       Effect.succeed({
         sessionModelSwitch: "in-session",

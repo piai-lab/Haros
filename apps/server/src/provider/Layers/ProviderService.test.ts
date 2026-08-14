@@ -392,6 +392,7 @@ function makeProviderServiceLayer(
   providers?: {
     readonly includeRestartRollbackDroid?: boolean;
     readonly includePi?: boolean;
+    readonly includeOmniMind?: boolean;
   },
 ) {
   const codex = makeFakeCodexAdapter();
@@ -401,6 +402,7 @@ function makeProviderServiceLayer(
     conversationRollback: "restart-session",
   });
   const pi = makeFakeCodexAdapter("pi");
+  const omnimind = makeFakeCodexAdapter("omnimind");
   const registry: typeof ProviderAdapterRegistry.Service = {
     getByProvider: (provider) =>
       provider === "codex"
@@ -413,7 +415,9 @@ function makeProviderServiceLayer(
               ? Effect.succeed(droid.adapter)
               : provider === "pi" && providers?.includePi === true
                 ? Effect.succeed(pi.adapter)
-                : Effect.fail(new ProviderUnsupportedError({ provider })),
+                : provider === "omnimind" && providers?.includeOmniMind === true
+                  ? Effect.succeed(omnimind.adapter)
+                  : Effect.fail(new ProviderUnsupportedError({ provider })),
     listProviders: () =>
       Effect.succeed([
         "codex",
@@ -421,6 +425,7 @@ function makeProviderServiceLayer(
         "antigravity",
         ...(providers?.includeRestartRollbackDroid === true ? (["droid"] as const) : []),
         ...(providers?.includePi === true ? (["pi"] as const) : []),
+        ...(providers?.includeOmniMind === true ? (["omnimind"] as const) : []),
       ] as const),
   };
 
@@ -447,12 +452,16 @@ function makeProviderServiceLayer(
     antigravity,
     droid,
     pi,
+    omnimind,
     layer,
     rawLayer,
   };
 }
 
 const routing = makeProviderServiceLayer();
+const modelServiceAdmission = makeProviderServiceLayer(undefined, {
+  includeOmniMind: true,
+});
 const rotationRetryPersistAttempts = new Map<string, number>();
 const ROTATION_RETRY_FAILURE_EVENT_ID = "terminal-rotation-settlement-retry";
 const rotationRetry = makeProviderServiceLayer({
@@ -731,6 +740,133 @@ it.effect(
     }).pipe(Effect.provide(NodeServices.layer)),
 );
 
+modelServiceAdmission.layer("ProviderServiceLive model-service admission fence", (it) => {
+  it.effect("holds destructive mutation until an exact custom-service start is registered", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-model-service-start-first");
+      const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+      if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
+      const releaseStart = yield* Deferred.make<void>();
+      modelServiceAdmission.omnimind.startSession.mockImplementationOnce((input) =>
+        Deferred.await(releaseStart).pipe(Effect.andThen(defaultStart(input))),
+      );
+
+      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const startFiber = yield* provider
+        .startSession(threadId, {
+          provider: "omnimind",
+          threadId,
+          modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+          runtimeMode: "full-access",
+        })
+        .pipe(Effect.forkChild);
+      yield* waitUntil(
+        () => modelServiceAdmission.omnimind.startSession.mock.calls.length > startCallCount,
+        500,
+        10,
+        "OmniMind custom-service start",
+      );
+
+      const mutationEntered = yield* Deferred.make<void>();
+      const mutationFiber = yield* provider
+        .withModelServiceMutationFence("gateway", Deferred.succeed(mutationEntered, undefined))
+        .pipe(Effect.forkChild);
+      yield* sleep(25);
+      assert.equal(yield* Deferred.isDone(mutationEntered), false);
+
+      yield* Deferred.succeed(releaseStart, undefined);
+      yield* Fiber.join(startFiber);
+      yield* Fiber.join(mutationFiber);
+      assert.equal(yield* Deferred.isDone(mutationEntered), true);
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
+  it.effect("holds an exact custom-service start until destructive mutation releases", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-model-service-delete-first");
+      const mutationEntered = yield* Deferred.make<void>();
+      const releaseMutation = yield* Deferred.make<void>();
+      const mutationFiber = yield* provider
+        .withModelServiceMutationFence(
+          "gateway",
+          Deferred.succeed(mutationEntered, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseMutation)),
+          ),
+        )
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(mutationEntered);
+
+      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const startFiber = yield* provider
+        .startSession(threadId, {
+          provider: "omnimind",
+          threadId,
+          modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+          runtimeMode: "full-access",
+        })
+        .pipe(Effect.forkChild);
+      yield* sleep(25);
+      assert.equal(modelServiceAdmission.omnimind.startSession.mock.calls.length, startCallCount);
+
+      yield* Deferred.succeed(releaseMutation, undefined);
+      yield* Fiber.join(mutationFiber);
+      yield* Fiber.join(startFiber);
+      assert.equal(
+        modelServiceAdmission.omnimind.startSession.mock.calls.length,
+        startCallCount + 1,
+      );
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
+  it.effect("holds destructive mutation until custom-service recovery is registered", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-model-service-recovery-first");
+      yield* provider.startSession(threadId, {
+        provider: "omnimind",
+        threadId,
+        modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+        runtimeMode: "full-access",
+      });
+      yield* provider.stopRuntimeSession!({ threadId });
+
+      const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+      if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
+      const releaseRecovery = yield* Deferred.make<void>();
+      modelServiceAdmission.omnimind.startSession.mockImplementationOnce((input) =>
+        Deferred.await(releaseRecovery).pipe(Effect.andThen(defaultStart(input))),
+      );
+      const startCallCount = modelServiceAdmission.omnimind.startSession.mock.calls.length;
+      const recoveryFiber = yield* provider
+        .sendTurn({ threadId, input: "recover", attachments: [] })
+        .pipe(Effect.forkChild);
+      yield* waitUntil(
+        () => modelServiceAdmission.omnimind.startSession.mock.calls.length > startCallCount,
+        500,
+        10,
+        "OmniMind custom-service recovery",
+      );
+
+      const mutationEntered = yield* Deferred.make<void>();
+      const mutationFiber = yield* provider
+        .withModelServiceMutationFence("gateway", Deferred.succeed(mutationEntered, undefined))
+        .pipe(Effect.forkChild);
+      yield* sleep(25);
+      assert.equal(yield* Deferred.isDone(mutationEntered), false);
+
+      yield* Deferred.succeed(releaseRecovery, undefined);
+      yield* Fiber.join(recoveryFiber);
+      yield* Fiber.join(mutationFiber);
+      assert.equal(yield* Deferred.isDone(mutationEntered), true);
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+});
+
 routing.layer("ProviderServiceLive routing", (it) => {
   it.effect("keeps strict session reads failed when the directory is unavailable", () =>
     Effect.gen(function* () {
@@ -745,7 +881,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
         .mockImplementation(() => Effect.fail(persistenceFailure));
 
       const compatibilityList = yield* provider.listSessions();
-      const strictList = yield* Effect.result(provider.listSessionsStrict!());
+      const strictList = yield* Effect.result(provider.listSessionsStrict());
 
       assert.deepEqual(compatibilityList, []);
       assertFailure(strictList, persistenceFailure);

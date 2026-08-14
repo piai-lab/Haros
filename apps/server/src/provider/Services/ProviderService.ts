@@ -181,10 +181,21 @@ export interface ProviderServiceShape {
    * into an empty list. Destructive consumers must use this strict form so an
    * unknown owner set cannot be mistaken for no live owner.
    */
-  readonly listSessionsStrict?: () => Effect.Effect<
+  readonly listSessionsStrict: () => Effect.Effect<
     ReadonlyArray<ProviderSession>,
     ProviderServiceError
   >;
+
+  /**
+   * Serialize destructive model-service mutation with admission of a runtime
+   * that selects that exact service. ProviderService owns this fence because
+   * it is the sole authority that can exclude new session starts while a
+   * destructive consumer rechecks live ownership.
+   */
+  readonly withModelServiceMutationFence: <A, E, R>(
+    serviceId: string,
+    effect: Effect.Effect<A, E, R>,
+  ) => Effect.Effect<A, E, R>;
 
   /**
    * Read static capabilities for a provider adapter.

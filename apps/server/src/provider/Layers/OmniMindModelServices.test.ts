@@ -168,6 +168,7 @@ function makeTestLayer(input: {
   readonly customModelDiscoveryTimeoutMs?: number;
   readonly providerSessions?: ReadonlyArray<ProviderSession>;
   readonly listProviderSessions?: NonNullable<ProviderServiceShape["listSessionsStrict"]>;
+  readonly withModelServiceMutationFence?: ProviderServiceShape["withModelServiceMutationFence"];
 }) {
   return makeOmniMindModelServicesLive({
     ...(input.loadModule ? { loadModule: input.loadModule } : {}),
@@ -186,6 +187,10 @@ function makeTestLayer(input: {
       Layer.succeed(ProviderService, {
         listSessionsStrict:
           input.listProviderSessions ?? (() => Effect.succeed(input.providerSessions ?? [])),
+        withModelServiceMutationFence:
+          input.withModelServiceMutationFence ??
+          (((_serviceId, effect) =>
+            effect) as ProviderServiceShape["withModelServiceMutationFence"]),
       } as unknown as ProviderServiceShape),
     ),
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), input.root)),
@@ -2367,29 +2372,39 @@ describe("OmniMindModelServicesLive", () => {
     const loadModule = vi.fn(async () => {
       throw new Error("Pi mutation must not start while the service is active");
     });
+    const observationOrder: string[] = [];
+    const providerSessions = [
+      {
+        provider: "omnimind",
+        status: "ready",
+        runtimeMode: "full-access",
+        model: "active-gateway/model-one",
+        threadId: "thread-active-gateway",
+        createdAt: "2026-08-14T00:00:00.000Z",
+        updatedAt: "2026-08-14T00:00:01.000Z",
+      } as ProviderSession,
+      {
+        provider: "omnimind",
+        status: "ready",
+        runtimeMode: "full-access",
+        model: "other-gateway/model-one",
+        threadId: "thread-other-gateway",
+        createdAt: "2026-08-14T00:00:00.000Z",
+        updatedAt: "2026-08-14T00:00:01.000Z",
+      } as ProviderSession,
+    ];
     const layer = makeTestLayer({
       root,
       loadModule,
-      providerSessions: [
-        {
-          provider: "omnimind",
-          status: "ready",
-          runtimeMode: "full-access",
-          model: "active-gateway/model-one",
-          threadId: "thread-active-gateway",
-          createdAt: "2026-08-14T00:00:00.000Z",
-          updatedAt: "2026-08-14T00:00:01.000Z",
-        } as ProviderSession,
-        {
-          provider: "omnimind",
-          status: "ready",
-          runtimeMode: "full-access",
-          model: "other-gateway/model-one",
-          threadId: "thread-other-gateway",
-          createdAt: "2026-08-14T00:00:00.000Z",
-          updatedAt: "2026-08-14T00:00:01.000Z",
-        } as ProviderSession,
-      ],
+      listProviderSessions: () =>
+        Effect.sync(() => {
+          observationOrder.push("strict-session-recheck");
+          return providerSessions;
+        }),
+      withModelServiceMutationFence: ((serviceId, effect) =>
+        Effect.sync(() => observationOrder.push(`fence:${serviceId}`)).pipe(
+          Effect.andThen(effect),
+        )) as ProviderServiceShape["withModelServiceMutationFence"],
     });
 
     const removal = await Effect.runPromise(
@@ -2403,6 +2418,7 @@ describe("OmniMindModelServicesLive", () => {
       state: "blocked_active_operation",
       serviceId: "active-gateway",
     });
+    expect(observationOrder).toEqual(["fence:active-gateway", "strict-session-recheck"]);
     expect(loadModule).not.toHaveBeenCalled();
     expect(await snapshotDirectory(agentDir)).toEqual(before);
   });

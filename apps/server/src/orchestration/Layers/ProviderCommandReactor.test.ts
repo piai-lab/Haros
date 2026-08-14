@@ -486,6 +486,8 @@ describe("ProviderCommandReactor", () => {
         ProviderServiceShape["clearSessionResumeCursor"]
       >,
       listSessions,
+      listSessionsStrict: listSessions,
+      withModelServiceMutationFence: (_serviceId, effect) => effect,
       getCapabilities: (_provider) =>
         Effect.succeed({
           sessionModelSwitch: input?.sessionModelSwitch ?? "in-session",

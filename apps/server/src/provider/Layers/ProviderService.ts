@@ -259,6 +259,12 @@ function readPersistedModelSelection(
   return Schema.is(ModelSelection)(raw) ? raw : undefined;
 }
 
+function modelServiceIdFromSelection(selection: ModelSelection | undefined): string | undefined {
+  if (selection?.provider !== "omnimind") return undefined;
+  const separatorIndex = selection.model.indexOf("/");
+  return separatorIndex > 0 ? selection.model.slice(0, separatorIndex) : undefined;
+}
+
 function readPersistedProviderOptions(
   runtimePayload: ProviderRuntimeBinding["runtimePayload"],
 ): ProviderStartOptions | undefined {
@@ -369,6 +375,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     const registry = yield* ProviderAdapterRegistry;
     const directory = yield* ProviderSessionDirectory;
     const lifecycle = makeProviderLifecycleCoordinator();
+    const modelServiceAdmissionLock = makeKeyedLock<string>();
     for (const binding of yield* directory.listBindings()) {
       if (
         binding.lifecycleGeneration !== undefined &&
@@ -1436,7 +1443,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           }),
         );
 
-        return yield* lifecycle.run(threadId, (lease) =>
+        const bindingForAdmission = yield* getCurrentBinding();
+        const modelServiceId = modelServiceIdFromSelection(
+          readPersistedModelSelection(bindingForAdmission.runtimePayload),
+        );
+        const recovery = lifecycle.run(threadId, (lease) =>
           Effect.gen(function* () {
             const binding = yield* getCurrentBinding();
             const adapter = yield* registry.getByProvider(binding.provider);
@@ -1521,6 +1532,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             return adapter;
           }),
         );
+        return yield* modelServiceId === undefined
+          ? recovery
+          : modelServiceAdmissionLock.withLock(modelServiceId, recovery);
       });
 
     const retiredGatewaySessionRecoveries = new Set<ThreadId>();
@@ -1704,7 +1718,16 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         const replacementFence = yield* waitForCurrentInterruptionFence(threadId);
         clearRuntimeIdleTimer(threadId);
         yield* waitForRuntimeIdleStop(threadId);
-        return yield* lifecycle.run(threadId, (lease) =>
+        const persistedSelectionForAdmission = Option.getOrUndefined(
+          yield* directory.getBinding(threadId),
+        );
+        const modelServiceId = modelServiceIdFromSelection(
+          input.modelSelection ??
+            (persistedSelectionForAdmission === undefined
+              ? undefined
+              : readPersistedModelSelection(persistedSelectionForAdmission.runtimePayload)),
+        );
+        const start = lifecycle.run(threadId, (lease) =>
           Effect.gen(function* () {
             const persistedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
             if (persistedBinding && isReplacementRestoreFailedBinding(persistedBinding)) {
@@ -2120,6 +2143,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             });
           }),
         );
+        return yield* modelServiceId === undefined
+          ? start
+          : modelServiceAdmissionLock.withLock(modelServiceId, start);
       });
 
     const forkThread: NonNullable<ProviderServiceShape["forkThread"]> = (rawInput) =>
@@ -3299,6 +3325,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       clearSessionResumeCursor,
       listSessions,
       listSessionsStrict,
+      withModelServiceMutationFence: (serviceId, effect) =>
+        modelServiceAdmissionLock.withLock(serviceId, effect),
       getCapabilities,
       rollbackConversation,
       compactThread,
