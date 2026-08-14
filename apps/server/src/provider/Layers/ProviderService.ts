@@ -3047,6 +3047,68 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         retireRuntimeIdleGeneration(input.threadId);
       });
 
+    const reconcileAuthoritativeSessions = (
+      activeSessions: ReadonlyArray<ProviderSession>,
+      persistedBindings: ReadonlyArray<ProviderRuntimeBinding>,
+    ): ReadonlyArray<ProviderSession> => {
+      const bindingsByThreadId = new Map(
+        persistedBindings.map((binding) => [binding.threadId, binding] as const),
+      );
+      const sessionsByThreadId = new Map<ThreadId, Array<ProviderSession>>();
+      for (const session of activeSessions) {
+        const sessions = sessionsByThreadId.get(session.threadId) ?? [];
+        sessions.push(session);
+        sessionsByThreadId.set(session.threadId, sessions);
+      }
+      const authoritativeSessions: Array<ProviderSession> = [];
+      for (const [threadId, sessions] of sessionsByThreadId) {
+        const binding = bindingsByThreadId.get(threadId);
+        const currentGeneration = lifecycle.currentGeneration(threadId);
+        const bindingGenerationIsCurrent =
+          binding?.lifecycleGeneration === undefined ||
+          (currentGeneration !== undefined && binding.lifecycleGeneration === currentGeneration);
+        const matching = binding
+          ? bindingGenerationIsCurrent
+            ? sessions.filter((session) => session.provider === binding.provider)
+            : []
+          : sessions;
+        // A single physical owner is required. During the narrow startup
+        // window with no binding, preserve one unambiguous live session;
+        // dual matches fail closed instead of inheriting registry order.
+        if (matching.length === 1) {
+          authoritativeSessions.push(matching[0]!);
+        }
+      }
+
+      return authoritativeSessions.map((session) => {
+        const binding = bindingsByThreadId.get(session.threadId);
+        if (!binding) {
+          return session;
+        }
+
+        const overrides: {
+          resumeCursor?: ProviderSession["resumeCursor"];
+          runtimeMode?: ProviderSession["runtimeMode"];
+        } = {};
+        if (session.resumeCursor === undefined && binding.resumeCursor !== undefined) {
+          overrides.resumeCursor = binding.resumeCursor;
+        }
+        if (binding.runtimeMode !== undefined) {
+          overrides.runtimeMode = binding.runtimeMode;
+        }
+        return Object.assign({}, session, overrides);
+      });
+    };
+
+    const listSessionsStrict: ProviderServiceShape["listSessionsStrict"] = () =>
+      Effect.gen(function* () {
+        const activeSessions = (yield* Effect.forEach(adapters, (adapter) =>
+          adapter.listSessions(),
+        )).flatMap((sessions) => sessions);
+        const persistedBindings = yield* directory.listBindings();
+        return reconcileAuthoritativeSessions(activeSessions, persistedBindings);
+      });
+
     const listSessions: ProviderServiceShape["listSessions"] = () =>
       Effect.gen(function* () {
         const activeSessions = (yield* Effect.forEach(adapters, (adapter) =>
@@ -3062,54 +3124,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           );
           return [];
         }
-        const persistedBindings = persistedBindingsExit.value;
-        const bindingsByThreadId = new Map(
-          persistedBindings.map((binding) => [binding.threadId, binding] as const),
-        );
-        const sessionsByThreadId = new Map<ThreadId, Array<ProviderSession>>();
-        for (const session of activeSessions) {
-          const sessions = sessionsByThreadId.get(session.threadId) ?? [];
-          sessions.push(session);
-          sessionsByThreadId.set(session.threadId, sessions);
-        }
-        const authoritativeSessions: Array<ProviderSession> = [];
-        for (const [threadId, sessions] of sessionsByThreadId) {
-          const binding = bindingsByThreadId.get(threadId);
-          const currentGeneration = lifecycle.currentGeneration(threadId);
-          const bindingGenerationIsCurrent =
-            binding?.lifecycleGeneration === undefined ||
-            (currentGeneration !== undefined && binding.lifecycleGeneration === currentGeneration);
-          const matching = binding
-            ? bindingGenerationIsCurrent
-              ? sessions.filter((session) => session.provider === binding.provider)
-              : []
-            : sessions;
-          // A single physical owner is required. During the narrow startup
-          // window with no binding, preserve one unambiguous live session;
-          // dual matches fail closed instead of inheriting registry order.
-          if (matching.length === 1) {
-            authoritativeSessions.push(matching[0]!);
-          }
-        }
-
-        return authoritativeSessions.map((session) => {
-          const binding = bindingsByThreadId.get(session.threadId);
-          if (!binding) {
-            return session;
-          }
-
-          const overrides: {
-            resumeCursor?: ProviderSession["resumeCursor"];
-            runtimeMode?: ProviderSession["runtimeMode"];
-          } = {};
-          if (session.resumeCursor === undefined && binding.resumeCursor !== undefined) {
-            overrides.resumeCursor = binding.resumeCursor;
-          }
-          if (binding.runtimeMode !== undefined) {
-            overrides.runtimeMode = binding.runtimeMode;
-          }
-          return Object.assign({}, session, overrides);
-        });
+        return reconcileAuthoritativeSessions(activeSessions, persistedBindingsExit.value);
       });
 
     const getCapabilities: ProviderServiceShape["getCapabilities"] = (provider) =>
@@ -3283,6 +3298,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       hasLiveRuntimeTasks,
       clearSessionResumeCursor,
       listSessions,
+      listSessionsStrict,
       getCapabilities,
       rollbackConversation,
       compactThread,

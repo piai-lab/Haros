@@ -15,6 +15,7 @@ import os from "node:os";
 import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import type { ProviderSession } from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -23,6 +24,7 @@ import { LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL } from "../../managedAttachmentPrin
 import { provideWsConnectionSession } from "../../wsConnectionSessions.ts";
 import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
 import { OmniMindModelServices } from "../Services/OmniMindModelServices.ts";
+import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
 import { makeOmniMindModelServicesLive } from "./OmniMindModelServices.ts";
 
 const roots: string[] = [];
@@ -164,6 +166,8 @@ function makeTestLayer(input: {
   readonly authRequestTimeoutMs?: number;
   readonly customConnectionTestTimeoutMs?: number;
   readonly customModelDiscoveryTimeoutMs?: number;
+  readonly providerSessions?: ReadonlyArray<ProviderSession>;
+  readonly listProviderSessions?: NonNullable<ProviderServiceShape["listSessionsStrict"]>;
 }) {
   return makeOmniMindModelServicesLive({
     ...(input.loadModule ? { loadModule: input.loadModule } : {}),
@@ -178,6 +182,12 @@ function makeTestLayer(input: {
       ? {}
       : { customModelDiscoveryTimeoutMs: input.customModelDiscoveryTimeoutMs }),
   }).pipe(
+    Layer.provide(
+      Layer.succeed(ProviderService, {
+        listSessionsStrict:
+          input.listProviderSessions ?? (() => Effect.succeed(input.providerSessions ?? [])),
+      } as unknown as ProviderServiceShape),
+    ),
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), input.root)),
     Layer.provideMerge(NodeServices.layer),
   );
@@ -2325,6 +2335,99 @@ describe("OmniMindModelServicesLive", () => {
       result.serviceId,
     );
     expect(JSON.stringify(result)).not.toContain("persisted-custom-key");
+  });
+
+  it("refuses to hot-remove a custom service owned by a ready OmniMind session", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          "active-gateway": {
+            name: "Active gateway",
+            api: "openai-responses",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [{ id: "model-one", name: "Model One" }],
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+    await writeFile(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({
+        "active-gateway": { type: "api_key", key: "credential-must-not-be-touched" },
+      }),
+      { mode: 0o600 },
+    );
+    const before = await snapshotDirectory(agentDir);
+    const loadModule = vi.fn(async () => {
+      throw new Error("Pi mutation must not start while the service is active");
+    });
+    const layer = makeTestLayer({
+      root,
+      loadModule,
+      providerSessions: [
+        {
+          provider: "omnimind",
+          status: "ready",
+          runtimeMode: "full-access",
+          model: "active-gateway/model-one",
+          threadId: "thread-active-gateway",
+          createdAt: "2026-08-14T00:00:00.000Z",
+          updatedAt: "2026-08-14T00:00:01.000Z",
+        } as ProviderSession,
+        {
+          provider: "omnimind",
+          status: "ready",
+          runtimeMode: "full-access",
+          model: "other-gateway/model-one",
+          threadId: "thread-other-gateway",
+          createdAt: "2026-08-14T00:00:00.000Z",
+          updatedAt: "2026-08-14T00:00:01.000Z",
+        } as ProviderSession,
+      ],
+    });
+
+    const removal = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.removeCustom({ serviceId: "active-gateway" });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(removal).toEqual({
+      state: "blocked_active_operation",
+      serviceId: "active-gateway",
+    });
+    expect(loadModule).not.toHaveBeenCalled();
+    expect(await snapshotDirectory(agentDir)).toEqual(before);
+  });
+
+  it("fails closed before custom-service removal when active sessions cannot be observed", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const loadModule = vi.fn(async () => {
+      throw new Error("Pi mutation must not start without an authoritative session snapshot");
+    });
+    const layer = makeTestLayer({
+      root,
+      loadModule,
+      listProviderSessions: () => Effect.die(new Error("session snapshot unavailable")),
+    });
+
+    const removal = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* Effect.exit(service.removeCustom({ serviceId: "unobserved-gateway" }));
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(removal._tag).toBe("Failure");
+    expect(loadModule).not.toHaveBeenCalled();
   });
 
   it("preserves Pi-owned rich model fields when editing only visible service fields", async () => {

@@ -2193,11 +2193,15 @@ export const EN_MESSAGES = {
   "settings.customApiDeleteTitle": "Delete API connection?",
   "settings.customApiDeleteDescription":
     "Delete {name} and its saved API key? Existing conversations are not changed; future sends can no longer use this service.",
+  "settings.customApiDeleteReferences":
+    "This service is used by {count} saved or draft model selections. Those selections will remain visible but unavailable until you choose another model.",
   "settings.customApiDeleting": "Deleting…",
   "settings.customApiRemoved": "The API connection and its credential were deleted.",
   "settings.customApiRemovedSyncWarning":
     "The connection was deleted, but credential cleanup could not be confirmed. Review the service state before continuing.",
   "settings.customApiRemoveFailed": "The API connection could not be deleted.",
+  "settings.customApiRemoveBlockedActive":
+    "This connection is still used by a live model session. Stop that session, then try again.",
   "settings.connectableModelServices": "Connect a model service",
   "settings.chooseModelServiceDescription":
     "Choose a service to connect. OmniMind will discover its available models after authentication.",
@@ -5237,11 +5241,15 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiDeleteTitle": "删除 API 连接？",
   "settings.customApiDeleteDescription":
     "要删除 {name} 及其已保存的 API Key 吗？现有对话不会改变；之后的新发送将不能再使用此服务。",
+  "settings.customApiDeleteReferences":
+    "检测到此服务仍被 {count} 个已保存或草稿模型选择引用。删除后，这些选择会继续显示为不可用，直到你重新选择模型。",
   "settings.customApiDeleting": "正在删除…",
   "settings.customApiRemoved": "API 连接及其凭据已删除。",
   "settings.customApiRemovedSyncWarning":
     "连接已删除，但未能确认凭据清理完成。继续前请检查服务状态。",
   "settings.customApiRemoveFailed": "无法删除 API 连接。",
+  "settings.customApiRemoveBlockedActive":
+    "此连接仍被运行中的模型会话使用。请先停止该会话，再重试。",
   "settings.connectableModelServices": "连接模型服务",
   "settings.chooseModelServiceDescription":
     "选择要连接的服务，认证后 OmniMind 会自动发现可用模型。",

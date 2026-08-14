@@ -738,10 +738,17 @@ export function deriveEffectiveComposerModelState(input: {
     selectedSource = candidate ?? null;
     break;
   }
-  selectedModel ??=
-    resolveAvailableModel(getDefaultModel(input.selectedProvider)) ??
-    input.availableModelOptionsByProvider?.[input.selectedProvider]?.[0]?.slug ??
-    null;
+  const hasRememberedExactSelection = selectionCandidates.some(
+    (candidate) => candidate !== null && candidate !== undefined,
+  );
+  const requiresExactRuntimeCatalogSelection =
+    input.selectedProvider === "omnimind" || input.selectedProvider === "pi";
+  if (!(requiresExactRuntimeCatalogSelection && hasRememberedExactSelection)) {
+    selectedModel ??=
+      resolveAvailableModel(getDefaultModel(input.selectedProvider)) ??
+      input.availableModelOptionsByProvider?.[input.selectedProvider]?.[0]?.slug ??
+      null;
+  }
 
   const inheritedModelOptions = deriveEffectiveComposerModelOptions(input);
   const modelOptions = legacyReplaceProviderModelOptions(

@@ -25,6 +25,8 @@ import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import { AppSettingsSchema } from "~/appSettings";
+import { useComposerDraftStore } from "~/composerDraftStore";
+import { resetComposerDraftStore } from "~/composerDraftStoreTestFixtures";
 import { serverQueryKeys } from "~/lib/serverReactQuery";
 import { createBrowserTestServerConfig } from "~/test/browserHarness";
 
@@ -307,6 +309,7 @@ async function confirmCustomApiRisk(
 }
 
 afterEach(() => {
+  resetComposerDraftStore();
   delete window.nativeApi;
   document.body.innerHTML = "";
   vi.clearAllMocks();
@@ -976,9 +979,7 @@ describe("ModelsSettingsPanel model services", () => {
     expect(testCustom).toHaveBeenLastCalledWith(
       expect.objectContaining({
         config: expect.objectContaining({
-          models: [
-            expect.objectContaining({ baseUrl: "https://other-model.example.test/v1" }),
-          ],
+          models: [expect.objectContaining({ baseUrl: "https://other-model.example.test/v1" })],
         }),
       }),
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -1107,6 +1108,7 @@ describe("ModelsSettingsPanel model services", () => {
     ).toBeVisible();
 
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await confirmCustomApiRisk(mounted.screen);
     await expect
       .poll(() => testCustom)
       .toHaveBeenCalledWith(
@@ -1410,10 +1412,13 @@ describe("ModelsSettingsPanel model services", () => {
       ],
     };
     const saveCustom = vi.fn(async () => ({ state: "complete" as const, service: customService }));
-    const removeCustom = vi.fn(async ({ serviceId }) => ({
-      state: "complete" as const,
-      serviceId,
-    }));
+    let removeAttempts = 0;
+    const removeCustom = vi.fn(async ({ serviceId }) => {
+      removeAttempts += 1;
+      return removeAttempts === 1
+        ? ({ state: "blocked_active_operation" as const, serviceId } as const)
+        : ({ state: "complete" as const, serviceId } as const);
+    });
     const mounted = await renderPanel({
       list: async () => ({
         state: "ready",
@@ -1470,12 +1475,34 @@ describe("ModelsSettingsPanel model services", () => {
     await expect
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceDetailsNamed");
+    const referencedSelection = {
+      provider: "omnimind" as const,
+      model: "saved-custom/saved-model",
+    };
+    useComposerDraftStore.setState((state) => ({
+      stickyModelSelectionByProvider: {
+        ...state.stickyModelSelectionByProvider,
+        omnimind: referencedSelection,
+      },
+    }));
     await mounted.screen.getByRole("button", { name: "common.delete" }).click();
+    const deleteDialog = mounted.screen.getByLabelText("settings.customApiDeleteTitle");
+    expect(deleteDialog.element().textContent).toContain(
+      'settings.customApiDeleteReferences:{"count":1}',
+    );
+    await deleteDialog.getByRole("button", { name: "common.delete" }).click();
+    await expect.poll(() => removeCustom).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).toContain("settings.customApiRemoveBlockedActive");
+    expect(mounted.screen.getByLabelText("settings.customApiDeleteTitle")).toBeVisible();
     await mounted.screen
       .getByLabelText("settings.customApiDeleteTitle")
       .getByRole("button", { name: "common.delete" })
       .click();
-    await expect.poll(() => removeCustom).toHaveBeenCalledWith({ serviceId: "saved-custom" });
+    await expect.poll(() => removeCustom).toHaveBeenCalledTimes(2);
+    expect(removeCustom).toHaveBeenLastCalledWith({ serviceId: "saved-custom" });
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.omnimind).toEqual(
+      referencedSelection,
+    );
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

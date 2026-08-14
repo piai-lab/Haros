@@ -115,11 +115,14 @@ export function makeServerProviderLayer(
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),
     );
+    const omniMindModelServicesLayer = OmniMindModelServicesLive.pipe(
+      Layer.provide(providerServiceLayer),
+    );
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
       OmniMindEcosystemLive,
-      OmniMindModelServicesLive,
+      omniMindModelServicesLayer,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,
     );

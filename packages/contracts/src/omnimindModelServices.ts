@@ -531,7 +531,7 @@ export type OmniMindCustomModelServiceRemoveInput =
   typeof OmniMindCustomModelServiceRemoveInput.Type;
 
 export const OmniMindCustomModelServiceRemoveResult = Schema.Struct({
-  state: Schema.Literals(["complete", "complete_with_sync_warning"]),
+  state: Schema.Literals(["complete", "complete_with_sync_warning", "blocked_active_operation"]),
   serviceId: BoundedIdentifier,
 });
 export type OmniMindCustomModelServiceRemoveResult =

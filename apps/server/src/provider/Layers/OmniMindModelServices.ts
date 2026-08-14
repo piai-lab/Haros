@@ -66,6 +66,7 @@ import {
   OmniMindModelServices,
   type OmniMindModelServicesShape,
 } from "../Services/OmniMindModelServices.ts";
+import { ProviderService } from "../Services/ProviderService.ts";
 
 const MAX_SAFE_LABEL_LENGTH = 256;
 const MAX_SAFE_MODEL_ID_LENGTH = 512;
@@ -929,6 +930,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
     OmniMindModelServices,
     Effect.gen(function* () {
       const config = yield* ServerConfig;
+      const providerService = yield* ProviderService;
       const authRequests = new Map<string, ModelServiceAuthRequest>();
       const oauthLogoDataUrl = loadOmniMindOAuthLogoDataUrl(config.staticDir);
       let mutationTail: Promise<void> = Promise.resolve();
@@ -1900,6 +1902,27 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
         removeCustom: (input) =>
           Effect.promise((signal) =>
             serializeMutation(async () => {
+              const listSessionsStrict = providerService.listSessionsStrict;
+              if (!listSessionsStrict) {
+                throw new Error("Authoritative provider session observation is unavailable");
+              }
+              const sessions = await Effect.runPromise(listSessionsStrict());
+              const modelPrefix = `${input.serviceId}/`;
+              const ownsLiveSession = sessions.some(
+                (session) =>
+                  session.provider === "omnimind" &&
+                  session.model?.startsWith(modelPrefix) === true &&
+                  (session.status === "connecting" ||
+                    session.status === "ready" ||
+                    session.status === "running" ||
+                    session.activeTurnId !== undefined),
+              );
+              if (ownsLiveSession) {
+                return {
+                  state: "blocked_active_operation",
+                  serviceId: input.serviceId,
+                } satisfies OmniMindCustomModelServiceRemoveResult;
+              }
               const previous = await getProjectedService(input.serviceId, signal);
               if (previous.origin !== "models_json") {
                 throw new Error("Only a models.json model service can be removed");

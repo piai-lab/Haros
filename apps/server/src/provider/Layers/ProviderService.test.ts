@@ -732,6 +732,27 @@ it.effect(
 );
 
 routing.layer("ProviderServiceLive routing", (it) => {
+  it.effect("keeps strict session reads failed when the directory is unavailable", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const persistenceFailure = new ProviderSessionDirectoryPersistenceError({
+        operation: "listBindings",
+        detail: "injected strict session read failure",
+      });
+      const listBindingsSpy = vi
+        .spyOn(directory, "listBindings")
+        .mockImplementation(() => Effect.fail(persistenceFailure));
+
+      const compatibilityList = yield* provider.listSessions();
+      const strictList = yield* Effect.result(provider.listSessionsStrict!());
+
+      assert.deepEqual(compatibilityList, []);
+      assertFailure(strictList, persistenceFailure);
+      listBindingsSpy.mockRestore();
+    }),
+  );
+
   it.effect("reuses a deferred native fork binding and preserves its inherited cwd", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

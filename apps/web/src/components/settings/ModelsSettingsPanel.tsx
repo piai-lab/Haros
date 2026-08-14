@@ -30,6 +30,7 @@ import {
 } from "react";
 
 import { type AppSettingsBinding } from "~/appSettings";
+import { useComposerDraftStore } from "~/composerDraftStore";
 import {
   onNativeApiServerCapabilitiesChange,
   onNativeApiTransportStateChange,
@@ -45,6 +46,7 @@ import {
 import { providerDiscoveryQueryKeys } from "~/lib/providerDiscoveryReactQuery";
 import { cn } from "~/lib/utils";
 import { useI18n } from "~/i18n";
+import { useStore } from "~/store";
 
 import { Button } from "../ui/button";
 import {
@@ -254,6 +256,34 @@ function customModelServiceRiskFingerprint(editor: CustomModelServiceEditorState
   });
 }
 
+function modelSelectionUsesCustomService(
+  selection: ModelSelection | null | undefined,
+  serviceId: string,
+): boolean {
+  return selection?.provider === "omnimind" && selection.model.startsWith(`${serviceId}/`);
+}
+
+function countCustomServiceReferences(serviceId: string): number {
+  const composerState = useComposerDraftStore.getState();
+  const appState = useStore.getState();
+  const draftReferences = Object.values(composerState.draftsByThreadId).filter((draft) =>
+    modelSelectionUsesCustomService(draft.modelSelectionByProvider.omnimind, serviceId),
+  ).length;
+  const stickyReference = modelSelectionUsesCustomService(
+    composerState.stickyModelSelectionByProvider.omnimind,
+    serviceId,
+  )
+    ? 1
+    : 0;
+  const projectReferences = appState.projects.filter((project) =>
+    modelSelectionUsesCustomService(project.defaultModelSelection, serviceId),
+  ).length;
+  const persistedThreadReferences = Object.values(appState.threadShellById ?? {}).filter((thread) =>
+    modelSelectionUsesCustomService(thread.modelSelection, serviceId),
+  ).length;
+  return draftReferences + stickyReference + projectReferences + persistedThreadReferences;
+}
+
 function customModelServiceCommandFingerprint(
   editor: CustomModelServiceEditorState,
 ): string | null {
@@ -387,6 +417,9 @@ function ActiveModelsSettingsPanel({
   const [logoutService, setLogoutService] = useState<OmniMindModelServiceDescriptor | null>(null);
   const [removeCustomService, setRemoveCustomService] =
     useState<OmniMindModelServiceDescriptor | null>(null);
+  const removeCustomServiceReferenceCount = removeCustomService
+    ? countCustomServiceReferences(removeCustomService.serviceId)
+    : 0;
   const [customServiceEditor, setCustomServiceEditor] =
     useState<CustomModelServiceEditorState | null>(null);
   const [customServiceApiKeyVisible, setCustomServiceApiKeyVisible] = useState(false);
@@ -1343,6 +1376,10 @@ function ActiveModelsSettingsPanel({
       const result = await ensureNativeApi().omnimindModelServices.removeCustom({
         serviceId: service.serviceId,
       });
+      if (result.state === "blocked_active_operation") {
+        setModelServiceNotice({ tone: "error", text: t("settings.customApiRemoveBlockedActive") });
+        return;
+      }
       setRemoveCustomService(null);
       setSelectedModelServiceId(null);
       setModelServiceBrowserOpen(false);
@@ -3285,6 +3322,13 @@ function ActiveModelsSettingsPanel({
               {t("settings.customApiDeleteDescription", {
                 name: removeCustomService ? modelServiceInstanceLabel(removeCustomService) : "",
               })}
+              {removeCustomServiceReferenceCount > 0 ? (
+                <span className="mt-2 block">
+                  {t("settings.customApiDeleteReferences", {
+                    count: removeCustomServiceReferenceCount,
+                  })}
+                </span>
+              ) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   OmniMindCustomModelServiceDiscoverInput,
   OmniMindCustomModelServiceDiscoverResult,
+  OmniMindCustomModelServiceRemoveResult,
   OmniMindCustomModelServiceSaveResult,
   OmniMindCustomModelServiceTestInput,
   OmniMindModelServiceAnswerLoginInput,
@@ -36,6 +37,15 @@ const descriptor = {
 } as const;
 
 describe("OmniMind model-services contracts", () => {
+  it("decodes an active-session removal block without exposing runtime details", () => {
+    expect(
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceRemoveResult)({
+        state: "blocked_active_operation",
+        serviceId: "custom-gateway",
+      }),
+    ).toEqual({ state: "blocked_active_operation", serviceId: "custom-gateway" });
+  });
+
   it("decodes the credential-blind list projection", () => {
     const decoded = Schema.decodeUnknownSync(OmniMindModelServicesListResult)({
       state: "ready",

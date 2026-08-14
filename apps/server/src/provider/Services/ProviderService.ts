@@ -177,6 +177,16 @@ export interface ProviderServiceShape {
   readonly listSessions: () => Effect.Effect<ReadonlyArray<ProviderSession>>;
 
   /**
+   * Read authoritative sessions without converting a directory read failure
+   * into an empty list. Destructive consumers must use this strict form so an
+   * unknown owner set cannot be mistaken for no live owner.
+   */
+  readonly listSessionsStrict?: () => Effect.Effect<
+    ReadonlyArray<ProviderSession>,
+    ProviderServiceError
+  >;
+
+  /**
    * Read static capabilities for a provider adapter.
    */
   readonly getCapabilities: (

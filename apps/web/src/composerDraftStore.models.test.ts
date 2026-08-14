@@ -94,7 +94,6 @@ describe("resolvePreferredComposerModelSelection", () => {
       }),
     ).toBeNull();
   });
-
 });
 
 describe("composerDraftStore modelSelection", () => {
@@ -467,7 +466,7 @@ describe("composerDraftStore modelSelection", () => {
     expect(state.selectedModel).toBe("opencode/gpt-5-nano");
   });
 
-  it("falls back to the first live Pi model when discovery omits a saved custom hint", () => {
+  it("keeps a remembered Pi model unavailable when the runtime catalog no longer contains it", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
         modelSelectionByProvider: {
@@ -497,7 +496,42 @@ describe("composerDraftStore modelSelection", () => {
       },
     });
 
-    expect(state.selectedModel).toBe("openai/gpt-5.1");
+    expect(state.selectedModel).toBeNull();
+  });
+
+  it("does not silently replace a removed OmniMind service with another service model", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: {
+        modelSelectionByProvider: {
+          omnimind: modelSelection("omnimind", "service-a/model-a"),
+        },
+        activeProvider: "omnimind",
+      },
+      selectedProvider: "omnimind",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        omnimind: [{ slug: "service-b/model-b", name: "Model B" }],
+      },
+    });
+
+    expect(state.selectedModel).toBeNull();
+  });
+
+  it("selects the first OmniMind catalog model only when no exact selection was remembered", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: { modelSelectionByProvider: {}, activeProvider: "omnimind" },
+      selectedProvider: "omnimind",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        omnimind: [{ slug: "service-b/model-b", name: "Model B" }],
+      },
+    });
+
+    expect(state.selectedModel).toBe("service-b/model-b");
   });
 
   it("returns no model when the selected Engine has no authoritative catalog", () => {
