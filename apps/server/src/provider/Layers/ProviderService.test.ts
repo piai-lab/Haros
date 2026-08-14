@@ -924,6 +924,96 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
       }),
   );
 
+  it.effect("keeps turn persistence behind a replacement that may restore the old service", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-model-service-turn-persistence-fence");
+      yield* provider.startSession(threadId, {
+        provider: "omnimind",
+        threadId,
+        modelSelection: { provider: "omnimind", model: "gateway-a/model-one" },
+        runtimeMode: "full-access",
+      });
+
+      const defaultHasSession = modelServiceAdmission.omnimind.hasSession.getMockImplementation();
+      if (!defaultHasSession) assert.fail("Expected the fake OmniMind session probe");
+      const lifecycleEntered = yield* Deferred.make<void>();
+      const releaseLifecycle = yield* Deferred.make<void>();
+      modelServiceAdmission.omnimind.hasSession.mockImplementationOnce((probedThreadId) =>
+        Deferred.succeed(lifecycleEntered, undefined).pipe(
+          Effect.andThen(Deferred.await(releaseLifecycle)),
+          Effect.andThen(defaultHasSession(probedThreadId)),
+        ),
+      );
+      if (!provider.clearSessionResumeCursor) {
+        assert.fail("Expected the runtime resume-cursor owner");
+      }
+      const lifecycleFiber = yield* provider
+        .clearSessionResumeCursor({ threadId, preserveActiveRuntime: true })
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(lifecycleEntered);
+
+      const defaultStart = modelServiceAdmission.omnimind.startSession.getMockImplementation();
+      if (!defaultStart) assert.fail("Expected the fake OmniMind start implementation");
+      const replacementFailure = new ProviderAdapterSessionNotFoundError({
+        provider: "omnimind",
+        threadId,
+      });
+      modelServiceAdmission.omnimind.startSession
+        .mockImplementationOnce(() => Effect.fail(replacementFailure))
+        .mockImplementationOnce(defaultStart);
+      const replacementFiber = yield* provider
+        .startSession(threadId, {
+          provider: "omnimind",
+          threadId,
+          modelSelection: { provider: "omnimind", model: "gateway-b/model-two" },
+          runtimeMode: "full-access",
+        })
+        .pipe(Effect.result, Effect.forkChild);
+      yield* sleep(25);
+
+      const startOwnsOldFence = yield* Deferred.make<void>();
+      const fenceProbe = yield* provider
+        .withModelServiceMutationFence(
+          "gateway-a",
+          Deferred.succeed(startOwnsOldFence, undefined),
+        )
+        .pipe(Effect.forkChild);
+      yield* sleep(25);
+      assert.equal(yield* Deferred.isDone(startOwnsOldFence), false);
+      yield* Fiber.interrupt(fenceProbe);
+
+      const sendFiber = yield* provider
+        .sendTurn({
+          threadId,
+          input: "persist model C",
+          attachments: [],
+          modelSelection: { provider: "omnimind", model: "gateway-c/model-three" },
+        })
+        .pipe(Effect.forkChild);
+      yield* sleep(25);
+      const bindingBeforeRelease = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(
+        asRuntimePayloadRecord(bindingBeforeRelease?.runtimePayload).modelSelection !== undefined &&
+          (
+            asRuntimePayloadRecord(bindingBeforeRelease?.runtimePayload)
+              .modelSelection as ProviderSessionStartInput["modelSelection"]
+          )?.model,
+        "gateway-a/model-one",
+      );
+
+      yield* Deferred.succeed(releaseLifecycle, undefined);
+      yield* Fiber.join(lifecycleFiber);
+      assertFailure(yield* Fiber.join(replacementFiber), replacementFailure);
+      yield* Fiber.join(sendFiber);
+
+      const restoreCall = modelServiceAdmission.omnimind.startSession.mock.calls.at(-1)?.[0];
+      assert.equal(restoreCall?.modelSelection?.model, "gateway-a/model-one");
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
   it.effect("rechecks the current custom service after a queued recovery acquires its fence", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

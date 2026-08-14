@@ -843,7 +843,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       readonly turnId: string;
       readonly generation: number;
       readonly resumeCursor?: unknown;
-      readonly modelSelection?: unknown;
+      readonly modelSelection?: ModelSelection;
       readonly lastRuntimeEvent: string;
     }
     interface ThreadDispatchState {
@@ -921,7 +921,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         }
       };
 
-      return withBindingWriteLock(
+      const persist = withBindingWriteLock(
         input.threadId,
         Effect.gen(function* () {
           // Older successful results stay retained while newer invocations are
@@ -981,6 +981,43 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           markPersistenceSucceeded(true);
         }),
       ).pipe(Effect.onError(() => rollbackFailedPersistence));
+      if (input.modelSelection === undefined) return persist;
+
+      return Effect.gen(function* () {
+        while (true) {
+          const admissionBinding = Option.getOrUndefined(
+            yield* directory.getBinding(input.threadId),
+          );
+          const previousServiceId = modelServiceIdFromSelection(
+            admissionBinding === undefined
+              ? undefined
+              : readPersistedModelSelection(admissionBinding.runtimePayload),
+          );
+          const nextServiceId = modelServiceIdFromSelection(input.modelSelection);
+          const outcome = yield* withModelServiceAdmissionLocks(
+            [
+              previousServiceId ?? unboundModelServiceAdmissionKey(input.threadId),
+              nextServiceId,
+            ],
+            Effect.gen(function* () {
+              const currentBinding = Option.getOrUndefined(
+                yield* directory.getBinding(input.threadId),
+              );
+              const currentServiceId = modelServiceIdFromSelection(
+                currentBinding === undefined
+                  ? undefined
+                  : readPersistedModelSelection(currentBinding.runtimePayload),
+              );
+              if (currentServiceId !== previousServiceId) {
+                return { retry: true } as const;
+              }
+              yield* persist;
+              return { retry: false } as const;
+            }),
+          );
+          if (!outcome.retry) return;
+        }
+      });
     };
 
     const finishTurnDispatch = (
