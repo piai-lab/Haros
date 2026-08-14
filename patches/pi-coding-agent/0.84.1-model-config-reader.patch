@@ -462,7 +462,7 @@ index 7f679a49..4a1a1359 100644
 +		await release().catch(() => undefined);
 +	}
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b6..1edc564c 100644
+index 6f4071b6..1b845620 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -19,0 +20 @@ import {
@@ -512,9 +512,26 @@ index 6f4071b6..1edc564c 100644
 @@ -70,0 +110,2 @@ export interface CreateModelRuntimeOptions {
 +	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
 +	modelsConfigReader?: ModelConfigReader;
-@@ -92,0 +134,121 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
+@@ -92,0 +134,150 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
 +export interface ModelConfigProviderDiscoveryOptions {
 +	readonly signal?: AbortSignal;
++}
++
++export type ModelConfigProviderDiscoveryErrorCode =
++	| "invalid_configuration"
++	| "authentication_failed"
++	| "request_failed"
++	| "catalog_unavailable"
++	| "response_too_large";
++
++export class ModelConfigProviderDiscoveryError extends Error {
++	readonly code: ModelConfigProviderDiscoveryErrorCode;
++
++	constructor(code: ModelConfigProviderDiscoveryErrorCode, options?: ErrorOptions) {
++		super("Model discovery failed", options);
++		this.name = "ModelConfigProviderDiscoveryError";
++		this.code = code;
++	}
 +}
 +
 +const MAX_DISCOVERED_MODEL_COUNT = 4_096;
@@ -527,14 +544,19 @@ index 6f4071b6..1edc564c 100644
 +]);
 +
 +function appendDiscoveryPath(baseUrl: string, version: string): URL {
-+	const url = new URL(baseUrl);
++	let url: URL;
++	try {
++		url = new URL(baseUrl);
++	} catch (cause) {
++		throw new ModelConfigProviderDiscoveryError("invalid_configuration", { cause });
++	}
 +	if (
 +		(url.protocol !== "https:" && url.protocol !== "http:") ||
 +		url.username !== "" ||
 +		url.password !== "" ||
 +		url.hash !== ""
 +	) {
-+		throw new Error("Model discovery endpoint is invalid");
++		throw new ModelConfigProviderDiscoveryError("invalid_configuration");
 +	}
 +	const normalizedPath = url.pathname.replace(/\/+$/u, "");
 +	url.pathname = normalizedPath.endsWith(`/${version}`)
@@ -563,13 +585,15 @@ index 6f4071b6..1edc564c 100644
 +
 +function discoveredModelsFromPayload(api: string, payload: unknown): ModelsJsonModel[] {
 +	if (typeof payload !== "object" || payload === null) {
-+		throw new Error("Model discovery response is invalid");
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
 +	}
 +	const record = payload as Record<string, unknown>;
 +	const entries = api === "google-generative-ai" ? record.models : record.data;
-+	if (!Array.isArray(entries)) throw new Error("Model discovery response is invalid");
++	if (!Array.isArray(entries)) {
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	}
 +	if (entries.length > MAX_DISCOVERED_MODEL_COUNT) {
-+		throw new Error("Model discovery response exceeds the model limit");
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
 +	}
 +	const models = new Map<string, ModelsJsonModel>();
 +	for (const entry of entries) {
@@ -589,18 +613,23 @@ index 6f4071b6..1edc564c 100644
 +		);
 +		models.set(id, name ? { id, name } : { id });
 +	}
-+	if (models.size === 0) throw new Error("Model discovery response contains no usable models");
++	if (models.size === 0) {
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	}
 +	return [...models.values()];
 +}
 +
 +async function readBoundedDiscoveryResponse(response: Response, signal?: AbortSignal): Promise<unknown> {
-+	if (!response.ok) throw new Error("Model discovery request failed");
++	if (response.status === 401 || response.status === 403) {
++		throw new ModelConfigProviderDiscoveryError("authentication_failed");
++	}
++	if (!response.ok) throw new ModelConfigProviderDiscoveryError("request_failed");
 +	const declaredLength = Number(response.headers.get("content-length"));
 +	if (Number.isFinite(declaredLength) && declaredLength > MAX_DISCOVERY_RESPONSE_BYTES) {
-+		throw new Error("Model discovery response exceeds the size limit");
++		throw new ModelConfigProviderDiscoveryError("response_too_large");
 +	}
 +	const reader = response.body?.getReader();
-+	if (!reader) throw new Error("Model discovery response is invalid");
++	if (!reader) throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
 +	const chunks: Uint8Array[] = [];
 +	let totalBytes = 0;
 +	const abortRead = () => void reader.cancel(signal?.reason).catch(() => undefined);
@@ -613,7 +642,7 @@ index 6f4071b6..1edc564c 100644
 +			totalBytes += value.byteLength;
 +			if (totalBytes > MAX_DISCOVERY_RESPONSE_BYTES) {
 +				await reader.cancel();
-+				throw new Error("Model discovery response exceeds the size limit");
++				throw new ModelConfigProviderDiscoveryError("response_too_large");
 +			}
 +			chunks.push(value);
 +		}
@@ -630,27 +659,27 @@ index 6f4071b6..1edc564c 100644
 +	try {
 +		return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 +	} catch {
-+		throw new Error("Model discovery response is invalid");
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
 +	}
 +}
 +
-@@ -138,0 +301 @@ export class ModelRuntime implements Models {
+@@ -138,0 +330 @@ export class ModelRuntime implements Models {
 +	private readonly modelsConfigReader: ModelConfigReader | undefined;
-@@ -157,0 +321 @@ export class ModelRuntime implements Models {
+@@ -157,0 +350 @@ export class ModelRuntime implements Models {
 +		modelsConfigReader: ModelConfigReader | undefined,
-@@ -164,0 +329 @@ export class ModelRuntime implements Models {
+@@ -164,0 +358 @@ export class ModelRuntime implements Models {
 +		this.modelsConfigReader = modelsConfigReader;
-@@ -172,0 +338,3 @@ export class ModelRuntime implements Models {
+@@ -172,0 +367,3 @@ export class ModelRuntime implements Models {
 +		if (options.modelsConfigReader && options.modelsPath !== null) {
 +			throw new Error("modelsConfigReader requires modelsPath: null");
 +		}
-@@ -176 +344,4 @@ export class ModelRuntime implements Models {
+@@ -176 +373,4 @@ export class ModelRuntime implements Models {
 -		const config = await ModelConfig.load(modelsPath);
 +		const config = await ModelConfig.load(modelsPath, {
 +			reader: options.modelsConfigReader,
 +			signal: options.signal,
 +		});
-@@ -179,3 +350,5 @@ export class ModelRuntime implements Models {
+@@ -179,3 +379,5 @@ export class ModelRuntime implements Models {
 -			(modelsPath
 -				? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
 -				: new InMemoryCodingAgentModelsStore());
@@ -659,9 +688,9 @@ index 6f4071b6..1edc564c 100644
 +				: modelsPath
 +					? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
 +					: new InMemoryCodingAgentModelsStore());
-@@ -193,0 +367 @@ export class ModelRuntime implements Models {
+@@ -193,0 +396 @@ export class ModelRuntime implements Models {
 +			options.modelsConfigReader,
-@@ -572,0 +747,72 @@ export class ModelRuntime implements Models {
+@@ -572,0 +776,78 @@ export class ModelRuntime implements Models {
 +	/** Provider IDs accepted from the current official models.json configuration snapshot. */
 +	getModelConfigProviderIds(): readonly string[] {
 +		return this.config.getProviderIds();
@@ -704,10 +733,10 @@ index 6f4071b6..1edc564c 100644
 +		const config = this.config.getProvider(providerId);
 +		const api = config?.api;
 +		if (!config?.baseUrl || !api || !DISCOVERABLE_MODEL_CONFIG_APIS.has(api)) {
-+			throw new Error("Provider does not support generic model discovery");
++			throw new ModelConfigProviderDiscoveryError("invalid_configuration");
 +		}
 +		const auth = await this.models.getAuth(providerId, { signal });
-+		if (!auth) throw new Error("Provider credential is not configured");
++		if (!auth) throw new ModelConfigProviderDiscoveryError("authentication_failed");
 +		const headers = new Headers();
 +		for (const [name, value] of Object.entries(auth.auth.headers ?? {})) {
 +			if (value !== null) headers.set(name, value);
@@ -725,16 +754,22 @@ index 6f4071b6..1edc564c 100644
 +			endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1");
 +			setHeaderUnlessPresent(headers, "Authorization", auth.auth.apiKey ? `Bearer ${auth.auth.apiKey}` : undefined);
 +		}
-+		const response = await fetch(endpoint, {
-+			method: "GET",
-+			headers,
-+			redirect: "error",
-+			signal,
-+		});
-+		return discoveredModelsFromPayload(api, await readBoundedDiscoveryResponse(response, signal));
++		try {
++			const response = await fetch(endpoint, {
++				method: "GET",
++				headers,
++				redirect: "error",
++				signal,
++			});
++			return discoveredModelsFromPayload(api, await readBoundedDiscoveryResponse(response, signal));
++		} catch (cause) {
++			signal.throwIfAborted();
++			if (cause instanceof ModelConfigProviderDiscoveryError) throw cause;
++			throw new ModelConfigProviderDiscoveryError("request_failed", { cause });
++		}
 +	}
 +
-@@ -691 +937,4 @@ export class ModelRuntime implements Models {
+@@ -691 +972,4 @@ export class ModelRuntime implements Models {
 -		this.config = await ModelConfig.load(this.modelsPath);
 +		this.config = await ModelConfig.load(this.modelsPath, {
 +			reader: this.modelsConfigReader,
@@ -1414,7 +1449,7 @@ index c24d0a21..1d1ba2af 100644
 +	): Promise<LoadExtensionsResult> {
 +		const resolvedPaths = await this.packageManager.resolve(onMissingPackage);
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2af..f79c1c52 100644
+index 3d05c2af..12ff9160 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
 @@ -170,0 +171,8 @@ export { convertToLlm } from "./core/messages.ts";
@@ -1426,13 +1461,15 @@ index 3d05c2af..f79c1c52 100644
 +	ModelsJsonModelOverride,
 +	ModelsJsonProvider,
 +} from "./core/model-config.ts";
-@@ -183,0 +192,3 @@ export {
+@@ -183,0 +192,5 @@ export {
 +	type ModelConfigProviderDiscoveryOptions,
++	ModelConfigProviderDiscoveryError,
++	type ModelConfigProviderDiscoveryErrorCode,
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
-@@ -185,0 +197 @@ export {
+@@ -185,0 +199 @@ export {
 +	mutateModelConfigProvider,
-@@ -191,0 +204,5 @@ export type {
+@@ -191,0 +206,5 @@ export type {
 +	PublicConfiguredPackage,
 +	PublicConfiguredPackageResource,
 +	PublicPackageIntent,
@@ -1818,17 +1855,17 @@ index 00000000..f7f1ee40
 +});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 00000000..4e78c2e6
+index 00000000..a865d401
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-@@ -0,0 +1,393 @@
+@@ -0,0 +1,450 @@
 +import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 +import { tmpdir } from "node:os";
 +import { join } from "node:path";
 +import { afterEach, describe, expect, it, vi } from "vitest";
 +import { AuthStorage } from "../src/core/auth-storage.ts";
 +import { ModelRegistry } from "../src/core/model-registry.ts";
-+import { ModelRuntime } from "../src/core/model-runtime.ts";
++import { ModelConfigProviderDiscoveryError, ModelRuntime } from "../src/core/model-runtime.ts";
 +import { InMemoryCodingAgentModelsStore } from "../src/core/models-store.ts";
 +
 +function modelsJson(provider: string, model: string): string {
@@ -2031,10 +2068,65 @@ index 00000000..4e78c2e6
 +		await expect(
 +			runtime.discoverModelConfigProviderModels("custom", { signal: controller.signal }),
 +		).rejects.toMatchObject({ name: "AbortError" });
-+		await expect(runtime.discoverModelConfigProviderModels("missing")).rejects.toThrow(
-+			"does not support generic model discovery",
-+		);
++		await expect(runtime.discoverModelConfigProviderModels("missing")).rejects.toMatchObject({
++			name: "ModelConfigProviderDiscoveryError",
++			code: "invalid_configuration",
++		});
 +		expect(fetchMock).not.toHaveBeenCalled();
++	});
++
++	it("returns bounded typed failures without endpoint or credential diagnostics", async () => {
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: "https://secret-endpoint.example.test/v1",
++						api: "openai-completions",
++						apiKey: "secret-key",
++						models: [],
++					},
++				},
++			}),
++		);
++		vi.stubGlobal(
++			"fetch",
++			vi.fn(async () => new Response(null, { status: 401 })),
++		);
++		const authenticationFailure = await runtime
++			.discoverModelConfigProviderModels("custom")
++			.catch((error: unknown) => error);
++		expect(authenticationFailure).toBeInstanceOf(ModelConfigProviderDiscoveryError);
++		expect(authenticationFailure).toMatchObject({ code: "authentication_failed" });
++		expect(String(authenticationFailure)).not.toContain("secret");
++
++		vi.stubGlobal(
++			"fetch",
++			vi.fn(
++				async () =>
++					new Response(JSON.stringify({ data: [] }), {
++						status: 200,
++						headers: { "content-type": "application/json" },
++					}),
++			),
++		);
++		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
++			code: "catalog_unavailable",
++		});
++
++		const invalidRuntime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: "not-a-url",
++						api: "openai-completions",
++						apiKey: "secret-key",
++					},
++				},
++			}),
++		);
++		await expect(invalidRuntime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
++			code: "invalid_configuration",
++		});
 +	});
 +
 +	it("stops reading an unbounded chunked discovery response at the byte limit", async () => {
@@ -2071,7 +2163,9 @@ index 00000000..4e78c2e6
 +			}),
 +		);
 +
-+		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toThrow("exceeds the size limit");
++		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
++			code: "response_too_large",
++		});
 +		expect(pulls).toBeLessThanOrEqual(6);
 +		expect(cancelled).toBe(true);
 +	});
