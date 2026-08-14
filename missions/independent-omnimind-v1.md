@@ -108,6 +108,12 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Exact packaged proof：同一pushed product生成arm64 DMG `244865278` bytes、SHA-256 `9e5a88c2717fbd6ebda34c2c3630135e42ae77b816279e244bdf03eed556389a`；installed ASAR `241941229` bytes、SHA-256 `1e84b2f7f4a39b7e102f7c6931064add5077e6334dc374d187281b3f0c0bb147`，244-component staged legal closure通过。fresh `/private/tmp/omnimind-e7-final-profile-UqUDZz` 中Main、GPU/Network Helper、Renderer与bundled Server的cwd/log/SQLite均证明使用task-specific HOME/userData/OMNIMIND_HOME/XDG/TMP后才操作窗口。真实Settings搜索进入Git写作模型，动态列表展示Codex/Kilo/OpenCode，选择Kilo后完整退出/重开仍保持；能力库的OmniMind Agent扩展包tab、公开source输入和空态在同一SHA打开与重开后均存在。App最终完全退出，默认profile未作为输入或证据。
 - Stop boundary：本项只是E7 producer candidate，E5与E7 fresh independent completion audit、E8 cumulative audit、Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey仍OPEN/blocked；当前App strict codesign仍失败，未发布Release、未改update feed。此前未提交的`.github/workflows/ci.yml`、`.github/workflows/release.yml`与`scripts/release-smoke.ts` side work曾被越权reset丢失且没有从摘要重造；其owner/维护者裁决前，完整Run保持non-candidate，本addendum不能掩盖该缺口。
 
+### E8 cumulative producer evidence addendum — 2026-08-14
+
+- Frozen product仍为 exact pushed `6e3e2ef3d00b00921062c483b6033c73646dd264`；本 addendum 不改产品 bytes，不将 producer 证据改写为 independent Exit。E7 addendum 记录的6/6 typecheck、Contracts/Server/Web/Chromium focused gates、exact DMG/ASAR hashes与fresh task-specific installed-App重开journey共同构成当前 cumulative source/packaged证据。
+- Live provider proof：授权清单权限为`0600`，凭据、完整endpoint与原始响应只在单次Bun进程内读取，没有写入argv、Git、日志、截图、artifact或证据文本。Pinned Pi OpenAI Completions stream对MiMo完成首轮与携带上一轮assistant message的continuation；两次均HTTP 200、`stop`、可见正文非空，并同时观察到thinking/text流事件与usage。请求使用硬timeout、禁止retry且在该两轮后停止；该证据只支持direct Pi stream/continuation，不伪装成packaged Model-services credential journey。
+- Stop boundary：E8仍未Exit。E5与E7 fresh independent completion audit、Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full V1 completion audit仍OPEN/blocked；当前App仍为ad-hoc且strict codesign失败，未创建Release、未改update feed。已丢失的CI/Release side work未被重造，其owner/维护者裁决前完整Run保持non-candidate。
+
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 4. Internal acceptance priority
