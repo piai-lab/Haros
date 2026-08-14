@@ -6925,6 +6925,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("offers first-run model setup only for a truly empty product and preserves the Chat draft", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
@@ -6935,6 +6939,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       available: true,
       authStatus: "unknown" as const,
       supportsAutoRuntimeMode: true,
+      checkedAt: NOW_ISO,
+    };
+    const readyPiStatus = {
+      provider: "pi" as const,
+      status: "ready" as const,
+      available: true,
+      authStatus: "unknown" as const,
+      supportsAutoRuntimeMode: false,
       checkedAt: NOW_ISO,
     };
     const refreshProviders = vi.fn(async () => ({
@@ -7063,8 +7075,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [readyOmniMindStatus],
+          providers: [readyOmniMindStatus, readyPiStatus],
         };
+        nextFixture.providerPassivePresence = ["omnimind", "pi"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
           // Bundled Pi can enumerate builtin models without any configured
@@ -7189,6 +7202,99 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
     } finally {
       historyBack.mockRestore();
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("accepts a configured OmniMind catalog fallback without a remembered selection", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "omnimind");
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const configuredService = {
+      serviceId: "deepseek",
+      providerId: "deepseek",
+      displayName: "DeepSeek",
+      origin: "builtin" as const,
+      authMethods: [] as const,
+      authState: "configured" as const,
+      authSource: "stored" as const,
+      storedCredentialType: "api_key" as const,
+      knownModelCount: 1,
+      availableModelCount: 1,
+      supportsNetworkRefresh: true,
+      catalogState: "ready" as const,
+      catalogErrorCode: null,
+    };
+    const listModelServices = vi.fn(async () => ({
+      state: "ready" as const,
+      services: [configuredService],
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: {
+            source: "browser.fixture",
+            models: [
+              {
+                slug: "deepseek/deepseek-v4-flash",
+                name: "DeepSeek V4 Flash",
+                upstreamProviderId: "deepseek",
+                upstreamProviderName: "DeepSeek",
+                upstreamProviderOrigin: "builtin",
+              },
+            ],
+          },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await vi.waitFor(() => expect(listModelServices).toHaveBeenCalledTimes(1));
+      await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
+        .not.toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .not.toBeInTheDocument();
+    } finally {
       await mounted.cleanup();
       restoreNativeApi();
     }

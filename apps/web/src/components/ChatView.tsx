@@ -4005,7 +4005,6 @@ export default function ChatView({
     const result: Partial<Record<ProviderKind, ModelSelection>> = {};
     for (const provider of COMPOSER_PROVIDER_KINDS) {
       const candidates = [
-        selectedModelSelection?.provider === provider ? selectedModelSelection : null,
         composerDraft.modelSelectionByProvider[provider] ?? null,
         serverThread?.modelSelection.provider === provider ? serverThread.modelSelection : null,
         activeProject?.defaultModelSelection?.provider === provider
@@ -4020,7 +4019,6 @@ export default function ChatView({
   }, [
     activeProject?.defaultModelSelection,
     composerDraft.modelSelectionByProvider,
-    selectedModelSelection,
     serverThread?.modelSelection,
     stickyModelSelectionByProvider,
   ]);
@@ -4146,7 +4144,9 @@ export default function ChatView({
   const hasUsableOmniMindServiceBinding =
     passiveModelServicesQuery.data?.state === "ready" &&
     hasUsableOmniMindModelServiceBinding({
-      selection: exactModelSelectionsByProvider.omnimind,
+      selection:
+        exactModelSelectionsByProvider.omnimind ??
+        (selectedModelSelection?.provider === "omnimind" ? selectedModelSelection : undefined),
       modelOptions: selectableModelOptionsByProvider.omnimind,
       services: passiveModelServicesQuery.data.services,
     });
