@@ -7258,12 +7258,24 @@ describe("ChatView timeline estimator parity (full app)", () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
-    const listModelServices = vi.fn(async () => ({
-      state: "empty" as const,
-      services: [] as const,
-      connectableServices: [] as const,
-      errorCode: null,
-    }));
+    let modelServicesListAttempts = 0;
+    const listModelServices = vi.fn(async () => {
+      modelServicesListAttempts += 1;
+      if (modelServicesListAttempts === 1) {
+        throw {
+          _tag: "WsRpcError",
+          code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+          retryable: true,
+          retryAfterMs: 1,
+        };
+      }
+      return {
+        state: "empty" as const,
+        services: [] as const,
+        connectableServices: [] as const,
+        errorCode: null,
+      };
+    });
     Object.defineProperty(window, "nativeApi", {
       configurable: true,
       value: {
@@ -7348,7 +7360,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expect
         .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
         .not.toBeInTheDocument();
-      expect(listModelServices).toHaveBeenCalledTimes(1);
+      expect(listModelServices).toHaveBeenCalledTimes(2);
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

@@ -53,4 +53,43 @@ describe("OmniMind model services React Query options", () => {
       "add_service",
     ]);
   });
+
+  it("retries only bounded server read-capacity rejections", () => {
+    const options = omniMindModelServicesListQueryOptions({ enabled: true });
+    const retry = options.retry;
+    const retryDelay = options.retryDelay;
+    expect(retry).toBeTypeOf("function");
+    expect(retryDelay).toBeTypeOf("function");
+    if (typeof retry !== "function" || typeof retryDelay !== "function") return;
+
+    const capacityError = {
+      code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+      retryAfterMs: 375,
+    };
+    expect(retry(0, capacityError)).toBe(true);
+    expect(retry(11, capacityError)).toBe(true);
+    expect(retry(12, capacityError)).toBe(false);
+    expect(retry(0, { code: "RPC_REQUEST_CAPACITY_EXCEEDED" })).toBe(false);
+    expect(retryDelay(0, capacityError)).toBe(375);
+    expect(
+      retryDelay(0, {
+        code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+      }),
+    ).toBe(250);
+  });
+
+  it("never retries intent-scoped Extension projection after the user leaves Add", () => {
+    const addList = omniMindModelServicesListQueryOptions({
+      enabled: true,
+      intent: "add_service",
+    });
+    const addDetail = omniMindModelServiceDetailQueryOptions({
+      enabled: true,
+      serviceId: "extension-service",
+      intent: "add_service",
+    });
+
+    expect(addList.retry).toBe(false);
+    expect(addDetail.retry).toBe(false);
+  });
 });
