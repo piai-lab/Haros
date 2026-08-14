@@ -15,6 +15,7 @@ import {
   type OmniMindCustomModelServiceModelInput,
 } from "@omnimind/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useBlocker } from "@tanstack/react-router";
 import {
   useCallback,
   useEffect,
@@ -65,7 +66,7 @@ import { Input } from "../ui/input";
 import { Checkbox } from "../ui/checkbox";
 import { SearchInput } from "../ui/search-input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import { ArrowLeftIcon, ChevronRightIcon, PlusIcon } from "~/lib/icons";
+import { ArrowLeftIcon, ChevronRightIcon, EyeIcon, PlusIcon } from "~/lib/icons";
 import { ModelServiceIcon } from "../ModelServiceIcon";
 import { useSettingsRestoreSignal } from "./SettingControls";
 import {
@@ -151,6 +152,10 @@ function customModelServiceFingerprint(editor: CustomModelServiceEditorState): s
   return JSON.stringify({ config: customModelServiceConfig(editor), apiKey: editor.apiKey });
 }
 
+function customModelServiceEndpointFingerprint(editor: CustomModelServiceEditorState): string {
+  return JSON.stringify({ api: editor.api, baseUrl: editor.baseUrl.trim() });
+}
+
 const subscribeModelServicesCapability = (listener: () => void) =>
   onNativeApiServerCapabilitiesChange(listener);
 const readModelServicesCapability = () =>
@@ -223,6 +228,7 @@ function ActiveModelsSettingsPanel({
     readonly scrollTop: number;
   } | null>(null);
   const modelServiceDetailShouldFocusRef = useRef(false);
+  const customServiceEditorInitialFingerprintRef = useRef<string | null>(null);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -248,9 +254,28 @@ function ActiveModelsSettingsPanel({
     useState<OmniMindModelServiceDescriptor | null>(null);
   const [customServiceEditor, setCustomServiceEditor] =
     useState<CustomModelServiceEditorState | null>(null);
+  const [customServiceApiKeyVisible, setCustomServiceApiKeyVisible] = useState(false);
+  const [customServiceDiscardRequested, setCustomServiceDiscardRequested] = useState(false);
+  const [pendingCustomServiceRiskAction, setPendingCustomServiceRiskAction] = useState<
+    "test" | "save" | null
+  >(null);
+  const [confirmedCustomServiceEndpoint, setConfirmedCustomServiceEndpoint] = useState<
+    string | null
+  >(null);
   const [modelServiceMutation, setModelServiceMutation] = useState<string | null>(null);
   const [modelServiceNotice, setModelServiceNotice] = useState<ModelServiceNotice | null>(null);
   const modelServiceDetailRegionId = useId();
+  const customServiceApiKeyInputId = useId();
+  const customServiceEditorDirty =
+    customServiceEditor !== null &&
+    customServiceEditorInitialFingerprintRef.current !== null &&
+    customModelServiceFingerprint(customServiceEditor) !==
+      customServiceEditorInitialFingerprintRef.current;
+  const customServiceNavigationBlocker = useBlocker({
+    shouldBlockFn: () => customServiceEditorDirty,
+    enableBeforeUnload: customServiceEditorDirty,
+    withResolver: true,
+  });
   const modelServicesQuery = useQuery(
     omniMindModelServicesListQueryOptions({
       enabled: active && modelServicesCapability === true,
@@ -356,6 +381,11 @@ function ActiveModelsSettingsPanel({
     setLogoutService(null);
     setRemoveCustomService(null);
     setCustomServiceEditor(null);
+    customServiceEditorInitialFingerprintRef.current = null;
+    setCustomServiceApiKeyVisible(false);
+    setCustomServiceDiscardRequested(false);
+    setPendingCustomServiceRiskAction(null);
+    setConfirmedCustomServiceEndpoint(null);
     setModelServiceMutation(null);
     setModelServiceNotice(null);
   });
@@ -782,25 +812,49 @@ function ActiveModelsSettingsPanel({
 
   const openCustomServiceEditor = useCallback(
     (config?: NonNullable<typeof selectedCustomConfig>) => {
+      const nextEditor: CustomModelServiceEditorState = config
+        ? {
+            mode: "edit",
+            serviceId: config.serviceId,
+            displayName: config.displayName,
+            api: config.api,
+            baseUrl: config.baseUrl,
+            apiKey: "",
+            models: config.models.map((model) => ({ ...model, input: [...model.input] })),
+            testedFingerprint: null,
+            testState: "idle",
+          }
+        : createCustomModelServiceEditor();
       setModelServiceNotice(null);
-      setCustomServiceEditor(
-        config
-          ? {
-              mode: "edit",
-              serviceId: config.serviceId,
-              displayName: config.displayName,
-              api: config.api,
-              baseUrl: config.baseUrl,
-              apiKey: "",
-              models: config.models.map((model) => ({ ...model, input: [...model.input] })),
-              testedFingerprint: null,
-              testState: "idle",
-            }
-          : createCustomModelServiceEditor(),
-      );
+      customServiceEditorInitialFingerprintRef.current =
+        customModelServiceFingerprint(nextEditor);
+      setCustomServiceApiKeyVisible(false);
+      setCustomServiceDiscardRequested(false);
+      setPendingCustomServiceRiskAction(null);
+      setConfirmedCustomServiceEndpoint(null);
+      setCustomServiceEditor(nextEditor);
     },
     [],
   );
+
+  const closeCustomServiceEditor = useCallback(() => {
+    customTestControllerRef.current?.abort();
+    customTestControllerRef.current = null;
+    customServiceEditorInitialFingerprintRef.current = null;
+    setCustomServiceEditor(null);
+    setCustomServiceApiKeyVisible(false);
+    setCustomServiceDiscardRequested(false);
+    setPendingCustomServiceRiskAction(null);
+    setConfirmedCustomServiceEndpoint(null);
+  }, []);
+
+  const requestCloseCustomServiceEditor = useCallback(() => {
+    if (customServiceEditorDirty) {
+      setCustomServiceDiscardRequested(true);
+      return;
+    }
+    closeCustomServiceEditor();
+  }, [closeCustomServiceEditor, customServiceEditorDirty]);
 
   const testCustomService = useCallback(async () => {
     const editor = customServiceEditor;
@@ -870,7 +924,7 @@ function ActiveModelsSettingsPanel({
       });
       if (result.state === "complete") setupCompletionArmedRef.current = true;
       await invalidateModelServiceConsumers();
-      setCustomServiceEditor(null);
+      closeCustomServiceEditor();
       setModelServiceBrowserOpen(false);
       if (result.service) {
         setModelServiceDetailReturnView("overview");
@@ -891,7 +945,59 @@ function ActiveModelsSettingsPanel({
     } finally {
       setModelServiceMutation(null);
     }
-  }, [customServiceEditor, finishSetupIfReady, invalidateModelServiceConsumers, t]);
+  }, [
+    closeCustomServiceEditor,
+    customServiceEditor,
+    finishSetupIfReady,
+    invalidateModelServiceConsumers,
+    t,
+  ]);
+
+  const requestCustomServiceAction = useCallback(
+    (action: "test" | "save") => {
+      const editor = customServiceEditor;
+      if (!editor) return;
+      const endpointFingerprint = customModelServiceEndpointFingerprint(editor);
+      if (confirmedCustomServiceEndpoint !== endpointFingerprint) {
+        setPendingCustomServiceRiskAction(action);
+        return;
+      }
+      if (action === "test") void testCustomService();
+      else void saveCustomService();
+    },
+    [
+      confirmedCustomServiceEndpoint,
+      customServiceEditor,
+      saveCustomService,
+      testCustomService,
+    ],
+  );
+
+  const confirmCustomServiceRisk = useCallback(() => {
+    const action = pendingCustomServiceRiskAction;
+    const editor = customServiceEditor;
+    if (!action || !editor) return;
+    setConfirmedCustomServiceEndpoint(customModelServiceEndpointFingerprint(editor));
+    setPendingCustomServiceRiskAction(null);
+    if (action === "test") void testCustomService();
+    else void saveCustomService();
+  }, [customServiceEditor, pendingCustomServiceRiskAction, saveCustomService, testCustomService]);
+
+  const cancelCustomServiceDiscard = useCallback(() => {
+    setCustomServiceDiscardRequested(false);
+    if (customServiceNavigationBlocker.status === "blocked") {
+      customServiceNavigationBlocker.reset();
+    }
+  }, [customServiceNavigationBlocker]);
+
+  const confirmCustomServiceDiscard = useCallback(() => {
+    const proceed =
+      customServiceNavigationBlocker.status === "blocked"
+        ? customServiceNavigationBlocker.proceed
+        : null;
+    closeCustomServiceEditor();
+    proceed?.();
+  }, [closeCustomServiceEditor, customServiceNavigationBlocker]);
 
   const confirmRemoveCustomService = useCallback(async () => {
     const service = removeCustomService;
@@ -1360,7 +1466,7 @@ function ActiveModelsSettingsPanel({
               disabled={
                 customServiceEditor.testState === "testing" || modelServiceMutation !== null
               }
-              onClick={() => setCustomServiceEditor(null)}
+              onClick={requestCloseCustomServiceEditor}
             >
               <ArrowLeftIcon aria-hidden="true" />
               {t("common.back")}
@@ -1432,28 +1538,51 @@ function ActiveModelsSettingsPanel({
                     {t(`settings.customApiProtocolHelp.${customServiceEditor.api}`)}
                   </span>
                 </label>
-                <label className="space-y-1.5 text-xs font-medium text-foreground sm:col-span-2">
-                  <span>{t("settings.customApiKey")}</span>
-                  <Input
-                    type="password"
-                    autoComplete="off"
-                    value={customServiceEditor.apiKey}
-                    onChange={(event) =>
-                      updateCustomServiceEditor((current) => ({
-                        ...current,
-                        apiKey: event.target.value,
-                      }))
-                    }
-                    placeholder={
-                      customServiceEditor.mode === "edit"
-                        ? t("settings.customApiKeyPreservePlaceholder")
-                        : t("settings.customApiKeyPlaceholder")
-                    }
-                  />
+                <div className="space-y-1.5 text-xs font-medium text-foreground sm:col-span-2">
+                  <label htmlFor={customServiceApiKeyInputId}>
+                    {t("settings.customApiKey")}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id={customServiceApiKeyInputId}
+                      type={customServiceApiKeyVisible ? "text" : "password"}
+                      autoComplete="off"
+                      value={customServiceEditor.apiKey}
+                      onChange={(event) =>
+                        updateCustomServiceEditor((current) => ({
+                          ...current,
+                          apiKey: event.target.value,
+                        }))
+                      }
+                      placeholder={
+                        customServiceEditor.mode === "edit"
+                          ? t("settings.customApiKeyPreservePlaceholder")
+                          : t("settings.customApiKeyPlaceholder")
+                      }
+                    />
+                    <Button
+                      type="button"
+                      size="icon-sm"
+                      variant="outline"
+                      aria-label={t(
+                        customServiceApiKeyVisible
+                          ? "settings.customApiHideKey"
+                          : "settings.customApiShowKey",
+                      )}
+                      title={t(
+                        customServiceApiKeyVisible
+                          ? "settings.customApiHideKey"
+                          : "settings.customApiShowKey",
+                      )}
+                      onClick={() => setCustomServiceApiKeyVisible((visible) => !visible)}
+                    >
+                      <EyeIcon aria-hidden="true" />
+                    </Button>
+                  </div>
                   <span className="block font-normal text-muted-foreground">
                     {t("settings.customApiKeyDescription")}
                   </span>
-                </label>
+                </div>
               </div>
 
               <div className="space-y-3 p-4">
@@ -1630,7 +1759,7 @@ function ActiveModelsSettingsPanel({
                     customServiceEditor.testState === "testing" ||
                     modelServiceMutation !== null
                   }
-                  onClick={() => void testCustomService()}
+                  onClick={() => requestCustomServiceAction("test")}
                 >
                   {customServiceEditor.testState === "testing"
                     ? t("settings.customApiTesting")
@@ -1642,7 +1771,7 @@ function ActiveModelsSettingsPanel({
                       customModelServiceFingerprint(customServiceEditor) ||
                     modelServiceMutation !== null
                   }
-                  onClick={() => void saveCustomService()}
+                  onClick={() => requestCustomServiceAction("save")}
                 >
                   {modelServiceMutation === "custom:save"
                     ? t("settings.customApiSaving")
@@ -2170,6 +2299,54 @@ function ActiveModelsSettingsPanel({
           </DialogFooter>
         </DialogPopup>
       </Dialog>
+
+      <AlertDialog
+        open={pendingCustomServiceRiskAction !== null}
+        onOpenChange={(open) => !open && setPendingCustomServiceRiskAction(null)}
+      >
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.customApiRiskTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.customApiRiskDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogClose render={<Button variant="outline" size="sm" />}>
+              {t("common.cancel")}
+            </AlertDialogClose>
+            <Button size="sm" onClick={confirmCustomServiceRisk}>
+              {pendingCustomServiceRiskAction === "save"
+                ? t("settings.customApiRiskContinueSave")
+                : t("settings.customApiRiskContinueTest")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
+
+      <AlertDialog
+        open={
+          customServiceDiscardRequested || customServiceNavigationBlocker.status === "blocked"
+        }
+        onOpenChange={(open) => !open && cancelCustomServiceDiscard()}
+      >
+        <AlertDialogPopup>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("settings.customApiDiscardTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("settings.customApiDiscardDescription")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button variant="outline" size="sm" onClick={cancelCustomServiceDiscard}>
+              {t("settings.customApiKeepEditing")}
+            </Button>
+            <Button size="sm" variant="destructive" onClick={confirmCustomServiceDiscard}>
+              {t("settings.customApiDiscardConfirm")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogPopup>
+      </AlertDialog>
 
       <AlertDialog
         open={logoutService !== null}

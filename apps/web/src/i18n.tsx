@@ -2065,6 +2065,18 @@ export const EN_MESSAGES = {
   "settings.customApiKeyPreservePlaceholder": "Leave blank to keep the saved key",
   "settings.customApiKeyDescription":
     "This API key is used only to connect this model service and is saved on this device. It won’t be shown again after you save.",
+  "settings.customApiShowKey": "Show API key",
+  "settings.customApiHideKey": "Hide API key",
+  "settings.customApiRiskTitle": "Send a test request to this endpoint?",
+  "settings.customApiRiskDescription":
+    "The endpoint will receive the API key and the test request. Its operator may process or retain this data, and compatibility is not guaranteed. Continue only if you trust this service and its privacy practices.",
+  "settings.customApiRiskContinueTest": "Continue and test",
+  "settings.customApiRiskContinueSave": "Continue and save",
+  "settings.customApiDiscardTitle": "Discard unsaved changes?",
+  "settings.customApiDiscardDescription":
+    "The changes to this API connection have not been saved.",
+  "settings.customApiKeepEditing": "Keep editing",
+  "settings.customApiDiscardConfirm": "Discard changes",
   "settings.customApiModels": "Models",
   "settings.customApiModelsDescription":
     "Add the model identities and capabilities exposed by this endpoint.",
@@ -5020,6 +5032,17 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiKeyPreservePlaceholder": "留空以保留已保存的 Key",
   "settings.customApiKeyDescription":
     "API Key 仅用于连接此模型服务，并保存在这台设备上；保存后不会再次显示。",
+  "settings.customApiShowKey": "显示 API Key",
+  "settings.customApiHideKey": "隐藏 API Key",
+  "settings.customApiRiskTitle": "向这个 API 地址发送测试请求？",
+  "settings.customApiRiskDescription":
+    "该地址将收到 API Key 和测试请求，其运营方可能处理或保留这些数据，且协议兼容性无法保证。请仅在信任该服务及其隐私做法时继续。",
+  "settings.customApiRiskContinueTest": "继续并测试",
+  "settings.customApiRiskContinueSave": "继续并保存",
+  "settings.customApiDiscardTitle": "放弃未保存的更改？",
+  "settings.customApiDiscardDescription": "对此 API 连接所做的更改尚未保存。",
+  "settings.customApiKeepEditing": "继续编辑",
+  "settings.customApiDiscardConfirm": "放弃更改",
   "settings.customApiModels": "模型",
   "settings.customApiModelsDescription": "添加此地址实际提供的模型身份与能力。",
   "settings.customApiAddModel": "添加模型",

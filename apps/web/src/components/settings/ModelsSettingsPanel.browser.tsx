@@ -13,6 +13,12 @@ import type {
   OmniMindModelServicesListResult,
 } from "@omnimind/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  RouterContextProvider,
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+} from "@tanstack/react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -218,26 +224,33 @@ async function renderPanel(input: {
 }) {
   const calls = setNativeApi(input);
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const router = createRouter({
+    history: createMemoryHistory({ initialEntries: ["/"] }),
+    routeTree: createRootRoute(),
+  });
   if (input.primeServerConfig !== false) {
     queryClient.setQueryData(serverQueryKeys.config(), createBrowserTestServerConfig(checkedAt));
   }
   const view = (active: boolean) => (
-    <QueryClientProvider client={queryClient}>
-      <ModelsSettingsPanel
-        active={active}
-        resetEpoch={0}
-        settings={settings}
-        defaults={settings}
-        updateSettings={() => {}}
-        startInAddFlow={input.startInAddFlow ?? false}
-        {...(input.onSetupReady ? { onSetupReady: input.onSetupReady } : {})}
-      />
-    </QueryClientProvider>
+    <RouterContextProvider router={router}>
+      <QueryClientProvider client={queryClient}>
+        <ModelsSettingsPanel
+          active={active}
+          resetEpoch={0}
+          settings={settings}
+          defaults={settings}
+          updateSettings={() => {}}
+          startInAddFlow={input.startInAddFlow ?? false}
+          {...(input.onSetupReady ? { onSetupReady: input.onSetupReady } : {})}
+        />
+      </QueryClientProvider>
+    </RouterContextProvider>
   );
   const screen = await render(view(input.active ?? true));
   return {
     calls,
     queryClient,
+    router,
     screen,
     rerenderActive: (active: boolean) => screen.rerender(view(active)),
   };
@@ -253,6 +266,21 @@ async function openConnectableService(
   });
   connectButton.element().focus();
   await userEvent.keyboard("{Enter}");
+}
+
+async function confirmCustomApiRisk(
+  screen: Awaited<ReturnType<typeof renderPanel>>["screen"],
+  action: "test" | "save" = "test",
+) {
+  await screen
+    .getByLabelText("settings.customApiRiskTitle")
+    .getByRole("button", {
+      name:
+        action === "save"
+          ? "settings.customApiRiskContinueSave"
+          : "settings.customApiRiskContinueTest",
+    })
+    .click();
 }
 
 afterEach(() => {
@@ -723,6 +751,13 @@ describe("ModelsSettingsPanel model services", () => {
       .getByLabelText("settings.customApiEndpoint")
       .fill("https://api.example.test/v1");
     await mounted.screen.getByLabelText("settings.customApiKey").fill("browser-secret");
+    const apiKeyInput = mounted.screen.getByLabelText("settings.customApiKey");
+    expect(apiKeyInput).toHaveAttribute("type", "password");
+    await mounted.screen.getByRole("button", { name: "settings.customApiShowKey" }).click();
+    expect(apiKeyInput).toHaveAttribute("type", "text");
+    expect(apiKeyInput).toHaveValue("browser-secret");
+    await mounted.screen.getByRole("button", { name: "settings.customApiHideKey" }).click();
+    expect(apiKeyInput).toHaveAttribute("type", "password");
     await mounted.screen.getByLabelText("settings.customApiModelId").fill("custom-model");
     await mounted.screen.getByLabelText("settings.customApiModelName").fill("Custom Model");
     await mounted.screen.getByLabelText("settings.customApiContextWindow").fill("128000");
@@ -731,6 +766,14 @@ describe("ModelsSettingsPanel model services", () => {
     const saveButton = mounted.screen.getByRole("button", { name: "settings.customApiSave" });
     expect(saveButton).toBeDisabled();
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    expect(testCustom).not.toHaveBeenCalled();
+    await mounted.screen
+      .getByLabelText("settings.customApiRiskTitle")
+      .getByRole("button", { name: "common.cancel" })
+      .click();
+    expect(testCustom).not.toHaveBeenCalled();
+    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await confirmCustomApiRisk(mounted.screen);
     await expect
       .poll(() => testCustom)
       .toHaveBeenCalledWith(
@@ -773,6 +816,50 @@ describe("ModelsSettingsPanel model services", () => {
         }),
       );
     expect(document.body.textContent).not.toContain("browser-secret");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("keeps an unsaved API connection draft across Back and route navigation until confirmed", async () => {
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+    });
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    await mounted.screen.getByRole("button", { name: /settings\.connectByApiAddress/ }).click();
+    const nameInput = mounted.screen.getByLabelText("settings.customApiConnectionName");
+    await nameInput.fill("Unsaved connection");
+
+    await mounted.screen.getByRole("button", { name: "common.back" }).click();
+    expect(document.body.textContent).toContain("settings.customApiDiscardTitle");
+    await mounted.screen
+      .getByLabelText("settings.customApiDiscardTitle")
+      .getByRole("button", { name: "settings.customApiKeepEditing" })
+      .click();
+    expect(nameInput).toHaveValue("Unsaved connection");
+
+    mounted.router.history.push("/next");
+    await expect.poll(() => document.body.textContent).toContain("settings.customApiDiscardTitle");
+    expect(mounted.router.history.location.pathname).toBe("/");
+    await mounted.screen
+      .getByLabelText("settings.customApiDiscardTitle")
+      .getByRole("button", { name: "settings.customApiDiscardConfirm" })
+      .click();
+    await expect.poll(() => mounted.router.history.location.pathname).toBe("/next");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -846,6 +933,10 @@ describe("ModelsSettingsPanel model services", () => {
     expect(mounted.screen.getByLabelText("settings.customApiKey")).toHaveValue("");
     expect(document.body.textContent).not.toContain("browser-secret");
     await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
+    await confirmCustomApiRisk(mounted.screen);
+    await expect
+      .poll(() => mounted.screen.getByRole("button", { name: "settings.customApiSave" }))
+      .toBeEnabled();
     await mounted.screen.getByRole("button", { name: "settings.customApiSave" }).click();
     await expect
       .poll(() => saveCustom)
