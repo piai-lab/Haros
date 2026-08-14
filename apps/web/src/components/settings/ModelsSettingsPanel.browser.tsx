@@ -905,13 +905,18 @@ describe("ModelsSettingsPanel model services", () => {
       .getByLabelText("settings.customApiModelEndpoint")
       .fill("https://model.example.test/v1");
     await mounted.screen
-      .getByRole("combobox", { name: "high settings.customApiThinkingMap", exact: true })
+      .getByRole("combobox", {
+        name: 'settings.customApiThinkingMapControl:{"level":"settings.customApiThinkingLevel.high"}',
+        exact: true,
+      })
       .click();
     await mounted.screen
       .getByRole("option", { name: "settings.customApiThinkingMap.mapped" })
       .click();
     await mounted.screen
-      .getByLabelText("high settings.customApiThinkingMap.mapped")
+      .getByLabelText(
+        'settings.customApiThinkingMapValue:{"level":"settings.customApiThinkingLevel.high"}',
+      )
       .fill("high-budget");
     await mounted.screen.getByLabelText("settings.customApiModelThinking").click();
     await mounted.screen.getByRole("option", { name: "common.off" }).click();

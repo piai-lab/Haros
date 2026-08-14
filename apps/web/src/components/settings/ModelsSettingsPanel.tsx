@@ -143,6 +143,15 @@ const CUSTOM_MODEL_THINKING_LEVELS = [
   "xhigh",
   "max",
 ] as const;
+const CUSTOM_MODEL_THINKING_LEVEL_LABEL_KEYS = {
+  off: "settings.customApiThinkingLevel.off",
+  minimal: "settings.customApiThinkingLevel.minimal",
+  low: "settings.customApiThinkingLevel.low",
+  medium: "settings.customApiThinkingLevel.medium",
+  high: "settings.customApiThinkingLevel.high",
+  xhigh: "settings.customApiThinkingLevel.xhigh",
+  max: "settings.customApiThinkingLevel.max",
+} as const;
 
 // Presentation preference only. Runtime projection remains the sole authority for
 // whether a service exists and what it can do; unknown and Extension services stay
@@ -2472,6 +2481,7 @@ function ActiveModelsSettingsPanel({
                         </p>
                         <div className="mt-2 grid gap-2">
                           {CUSTOM_MODEL_THINKING_LEVELS.map((level) => {
+                            const levelLabel = t(CUSTOM_MODEL_THINKING_LEVEL_LABEL_KEYS[level]);
                             const levelValue = model.thinkingLevelMap?.[level];
                             const levelMode =
                               levelValue === undefined
@@ -2499,7 +2509,7 @@ function ActiveModelsSettingsPanel({
                                 key={level}
                                 className="grid grid-cols-[4rem_minmax(0,8rem)_1fr] items-center gap-2 text-xs"
                               >
-                                <span className="text-muted-foreground">{level}</span>
+                                <span className="text-muted-foreground">{levelLabel}</span>
                                 <Select
                                   value={levelMode}
                                   onValueChange={(value) =>
@@ -2513,7 +2523,9 @@ function ActiveModelsSettingsPanel({
                                   }
                                 >
                                   <SelectTrigger
-                                    aria-label={`${level} ${t("settings.customApiThinkingMap")}`}
+                                    aria-label={t("settings.customApiThinkingMapControl", {
+                                      level: levelLabel,
+                                    })}
                                   >
                                     <SelectValue />
                                   </SelectTrigger>
@@ -2531,7 +2543,9 @@ function ActiveModelsSettingsPanel({
                                 </Select>
                                 {levelMode === "mapped" ? (
                                   <Input
-                                    aria-label={`${level} ${t("settings.customApiThinkingMap.mapped")}`}
+                                    aria-label={t("settings.customApiThinkingMapValue", {
+                                      level: levelLabel,
+                                    })}
                                     value={levelValue ?? ""}
                                     spellCheck={false}
                                     onChange={(event) =>
