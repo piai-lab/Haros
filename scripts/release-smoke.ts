@@ -215,6 +215,16 @@ function verifyReleaseWorkflowSafety(): void {
   );
   assertContains(
     workflow,
+    "VITE_PUBLIC_SITE_ORIGIN: https://omnimind.wisdomeyes.cn",
+    "Production desktop builds must retain the canonical public-site origin.",
+  );
+  assertContains(
+    workflow,
+    "VITE_FEEDBACK_ENDPOINT: https://omnimind.wisdomeyes.cn/api/v1/feedback",
+    "Production desktop builds must retain the independently configured feedback endpoint.",
+  );
+  assertContains(
+    workflow,
     "node scripts/verify-release-source-provenance.ts",
     "Expected preflight to bind release source provenance before artifact jobs.",
   );
