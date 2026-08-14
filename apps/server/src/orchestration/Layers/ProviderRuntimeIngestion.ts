@@ -1780,7 +1780,7 @@ const make = Effect.gen(function* () {
       }
     });
 
-  const processRuntimeEvent = (event: ProviderRuntimeEvent) =>
+  const processRuntimeEventWithinLease = (event: ProviderRuntimeEvent) =>
     Effect.gen(function* () {
       // ProviderService fences adapter events before journaling, but an event
       // accepted while a replacement generation was current can remain in the
@@ -2633,6 +2633,12 @@ const make = Effect.gen(function* () {
         yield* clearAssistantDeliveryModeBindingsForThread(thread.id);
       }
     });
+
+  const processRuntimeEvent = (event: ProviderRuntimeEvent) =>
+    providerService.withRuntimeEventProjectionLease(
+      event.threadId,
+      processRuntimeEventWithinLease(event),
+    );
 
   const processDomainEvent = (event: RuntimeIngestionDomainEvent) =>
     Effect.gen(function* () {

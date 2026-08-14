@@ -205,6 +205,17 @@ export interface ProviderServiceShape {
   ) => Effect.Effect<A, E, R>;
 
   /**
+   * Keep one runtime event's binding validation and Product projection inside
+   * the same per-thread lifecycle lease. A provider replacement cannot change
+   * the authoritative binding after ingestion validates an event but before
+   * its asynchronous projection finishes.
+   */
+  readonly withRuntimeEventProjectionLease: <A, E, R>(
+    threadId: ThreadId,
+    effect: Effect.Effect<A, E, R>,
+  ) => Effect.Effect<A, E, R>;
+
+  /**
    * Read static capabilities for a provider adapter.
    */
   readonly getCapabilities: (

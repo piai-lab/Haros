@@ -489,6 +489,7 @@ describe("ProviderCommandReactor", () => {
       listSessions,
       listSessionsStrict: listSessions,
       withModelServiceMutationFence: (_serviceId, effect) => effect,
+      withRuntimeEventProjectionLease: (_threadId, effect) => effect,
       getCapabilities: (_provider) =>
         Effect.succeed({
           sessionModelSwitch: input?.sessionModelSwitch ?? "in-session",

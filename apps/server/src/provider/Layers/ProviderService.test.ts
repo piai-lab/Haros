@@ -1430,6 +1430,43 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
+  it.effect("waits for runtime-event projection before replacing the thread binding", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-runtime-event-projection-lease");
+      const projectionEntered = yield* Deferred.make<void>();
+      const releaseProjection = yield* Deferred.make<void>();
+
+      const projectionFiber = yield* provider
+        .withRuntimeEventProjectionLease(
+          threadId,
+          Deferred.succeed(projectionEntered, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseProjection)),
+          ),
+        )
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(projectionEntered);
+
+      const startCallCount = routing.codex.startSession.mock.calls.length;
+      const startFiber = yield* provider
+        .startSession(threadId, {
+          provider: "codex",
+          threadId,
+          cwd: "/tmp/project",
+          runtimeMode: "full-access",
+        })
+        .pipe(Effect.forkChild);
+      yield* sleep(25);
+      assert.equal(routing.codex.startSession.mock.calls.length, startCallCount);
+
+      yield* Deferred.succeed(releaseProjection, undefined);
+      yield* Fiber.join(projectionFiber);
+      yield* Fiber.join(startFiber);
+      assert.equal(routing.codex.startSession.mock.calls.length, startCallCount + 1);
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
   it.effect("serializes overlapping same-provider and cross-provider starts", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

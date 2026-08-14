@@ -78,6 +78,9 @@ type LegacyProviderRuntimeEvent = {
 function createProviderServiceHarness() {
   const runtimeEventPubSub = Effect.runSync(PubSub.unbounded<ProviderRuntimeEvent>());
   const runtimeSessions: ProviderSession[] = [];
+  let runtimeProjectionLeaseDepth = 0;
+  let runtimeProjectionLeaseCalls = 0;
+  let listSessionsObservedWithinRuntimeProjectionLease = false;
 
   const unsupported = () => Effect.die(new Error("Unsupported provider call in test")) as never;
   const service: ProviderServiceShape = {
@@ -94,9 +97,27 @@ function createProviderServiceHarness() {
     respondToRequest: () => unsupported(),
     respondToUserInput: () => unsupported(),
     stopSession: () => unsupported(),
-    listSessions: () => Effect.succeed([...runtimeSessions]),
+    listSessions: () =>
+      Effect.sync(() => {
+        if (runtimeProjectionLeaseDepth > 0) {
+          listSessionsObservedWithinRuntimeProjectionLease = true;
+        }
+        return [...runtimeSessions];
+      }),
     listSessionsStrict: () => Effect.succeed([...runtimeSessions]),
     withModelServiceMutationFence: (_serviceId, effect) => effect,
+    withRuntimeEventProjectionLease: (_threadId, effect) =>
+      Effect.sync(() => {
+        runtimeProjectionLeaseCalls += 1;
+        runtimeProjectionLeaseDepth += 1;
+      }).pipe(
+        Effect.andThen(effect),
+        Effect.ensuring(
+          Effect.sync(() => {
+            runtimeProjectionLeaseDepth -= 1;
+          }),
+        ),
+      ),
     getCapabilities: (provider) =>
       Effect.succeed({
         sessionModelSwitch: "in-session",
@@ -156,6 +177,9 @@ function createProviderServiceHarness() {
     service,
     emit,
     setSession,
+    runtimeProjectionLeaseCalls: () => runtimeProjectionLeaseCalls,
+    listSessionsObservedWithinRuntimeProjectionLease: () =>
+      listSessionsObservedWithinRuntimeProjectionLease,
   };
 }
 
@@ -374,12 +398,32 @@ describe("ProviderRuntimeIngestion", () => {
       engine,
       emit: provider.emit,
       setProviderSession: provider.setSession,
+      runtimeProjectionLeaseCalls: provider.runtimeProjectionLeaseCalls,
+      listSessionsObservedWithinRuntimeProjectionLease:
+        provider.listSessionsObservedWithinRuntimeProjectionLease,
       drain,
       startIngestion,
       runtimeEventRepository,
       providerSessionDirectory,
     };
   }
+
+  it("keeps binding validation and asynchronous runtime projection in one lifecycle lease", async () => {
+    const harness = await createHarness();
+
+    harness.emit({
+      type: "turn.started",
+      eventId: asEventId("evt-runtime-projection-lifecycle-lease"),
+      provider: "codex",
+      createdAt: "2026-08-14T08:00:00.000Z",
+      threadId: asThreadId("thread-1"),
+      turnId: asTurnId("turn-runtime-projection-lifecycle-lease"),
+    });
+    await harness.drain();
+
+    expect(harness.runtimeProjectionLeaseCalls()).toBeGreaterThan(0);
+    expect(harness.listSessionsObservedWithinRuntimeProjectionLease()).toBe(true);
+  });
 
   it("fences delayed replacement rows against the restored provider binding", async () => {
     const harness = await createHarness({ startIngestion: false });

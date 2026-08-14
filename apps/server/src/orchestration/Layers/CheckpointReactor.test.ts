@@ -126,6 +126,7 @@ function createProviderServiceHarness(
     listSessions,
     listSessionsStrict: listSessions,
     withModelServiceMutationFence: (_serviceId, effect) => effect,
+    withRuntimeEventProjectionLease: (_threadId, effect) => effect,
     getCapabilities: () => Effect.succeed({ sessionModelSwitch: "in-session" }),
     rollbackConversation,
     compactThread: () => unsupported(),

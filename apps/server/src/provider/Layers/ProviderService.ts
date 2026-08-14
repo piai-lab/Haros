@@ -3521,6 +3521,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       listSessionsStrict,
       withModelServiceMutationFence: (serviceId, effect) =>
         modelServiceAdmissionLock.withLock(serviceId, effect),
+      withRuntimeEventProjectionLease: (threadId, effect) =>
+        lifecycle.runCurrent(threadId, () => effect),
       getCapabilities,
       rollbackConversation,
       compactThread,
