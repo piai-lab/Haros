@@ -14,6 +14,7 @@ import {
   type ProjectId,
   type ProviderKind,
   type ProviderListModelsResult,
+  type NativeApi,
   type ServerConfig,
   ThreadId,
   TurnId,
@@ -6915,6 +6916,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
+    let resolveProviderRefresh!: (
+      result: Awaited<ReturnType<NativeApi["server"]["refreshProviders"]>>,
+    ) => void;
+    const providerRefresh =
+      new Promise<Awaited<ReturnType<NativeApi["server"]["refreshProviders"]>>>((resolve) => {
+        resolveProviderRefresh = resolve;
+      });
+    const refreshProviders = vi.fn(() => providerRefresh);
     const listModelServices = vi.fn(async () => ({
       state: "empty" as const,
       services: [] as const,
@@ -6925,6 +6934,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configurable: true,
       value: {
         ...nativeApi,
+        server: {
+          ...nativeApi.server,
+          refreshProviders,
+        },
         omnimindModelServices: {
           ...nativeApi.omnimindModelServices,
           list: listModelServices,
@@ -6947,6 +6960,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       const setupPrompt = page.getByTestId("model-readiness-prompt");
+      await expect.poll(() => refreshProviders).toHaveBeenCalledOnce();
+      await expect.element(setupPrompt).not.toBeInTheDocument();
+      resolveProviderRefresh({ providers: [] });
       await expect.element(setupPrompt).toBeInTheDocument();
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 320, height: 700 });
       expect(setupPrompt.element().scrollWidth).toBeLessThanOrEqual(
@@ -6974,6 +6990,61 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { intent: "add_service" },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("waits for the existing provider probe and suppresses setup when an Engine becomes usable", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const readyCodex = createBrowserTestServerConfig(NOW_ISO).providers.find(
+      (status) => status.provider === "codex",
+    )!;
+    const refreshProviders = vi.fn(async () => ({ providers: [readyCodex] }));
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        server: {
+          ...nativeApi.server,
+          refreshProviders,
+        },
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await expect.poll(() => refreshProviders).toHaveBeenCalledOnce();
+      await expect.poll(() => listModelServices).toHaveBeenCalled();
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

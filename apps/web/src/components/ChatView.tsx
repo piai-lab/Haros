@@ -100,6 +100,7 @@ import {
 } from "~/lib/providerDiscoveryReactQuery";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import {
+  hasReceivedProviderStatusSnapshot,
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
@@ -4044,6 +4045,9 @@ export default function ChatView({
       }),
     [exactModelSelectionsByProvider, providerStatuses],
   );
+  const refreshProviderStatuses = useRefreshProviderStatusesNow();
+  const providerHealthSnapshotSettled =
+    providerStatuses.length > 0 || hasReceivedProviderStatusSnapshot(queryClient);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,
@@ -4077,7 +4081,10 @@ export default function ChatView({
         : "unknown";
   const modelReadinessPromptMode = deriveModelReadinessPromptMode({
     surfaceEligible: isCenteredEmptyLanding,
-    serverFactsReady: serverConfigQuery.isSuccess && !serverConfigQuery.isFetching,
+    serverFactsReady:
+      serverConfigQuery.isSuccess &&
+      !serverConfigQuery.isFetching &&
+      (passiveModelServicesState !== "empty" || providerHealthSnapshotSettled),
     hasUsableExactBinding: hasUsableProductModelBinding,
     modelServicesCapability,
     modelServicesTransport,
@@ -4131,7 +4138,6 @@ export default function ChatView({
     () => findProviderStatus(providerStatuses, "codex"),
     [providerStatuses],
   );
-  const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const activeProjectCwd = activeProject?.cwd ?? null;
   const activeThreadWorktreePath = isStudioContainer ? null : (activeThread?.worktreePath ?? null);
   const hasNativeUserMessages = useMemo(

@@ -7,6 +7,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import {
+  hasReceivedProviderStatusSnapshot,
   LOCAL_SERVERS_VISIBLE_REFETCH_INTERVAL_MS,
   reconcileServerProviderStatuses,
   refreshServerConfigAfterTransportOpen,
@@ -41,6 +42,15 @@ function makeServerConfig(providers: readonly ServerProviderStatus[]): ServerCon
 }
 
 describe("server provider status reconciliation", () => {
+  it("distinguishes an authoritative empty refresh from an unobserved startup cache", async () => {
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(serverQueryKeys.config(), makeServerConfig([]));
+
+    expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(false);
+    await reconcileServerProviderStatuses(queryClient, []);
+    expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(true);
+  });
+
   it("applies a missed live snapshot after the config projection hydrates", async () => {
     const queryClient = new QueryClient();
     let resolveConfig!: (config: ServerConfig) => void;

@@ -57,6 +57,10 @@ const latestProviderStatusSnapshotByQueryClient = new WeakMap<
   ProviderStatusSnapshot
 >();
 
+export function hasReceivedProviderStatusSnapshot(queryClient: QueryClient): boolean {
+  return latestProviderStatusSnapshotByQueryClient.has(queryClient);
+}
+
 function recordProviderStatusSnapshot(
   queryClient: QueryClient,
   providers: readonly ServerProviderStatus[],
