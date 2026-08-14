@@ -1794,8 +1794,10 @@ const make = Effect.gen(function* () {
       // before current adapters can emit. A generation-stamped row with no
       // binding is therefore orphaned (for example, an early row whose first
       // start later failed and was cleaned up). Generation-less legacy rows
-      // retain their compatibility path; when a binding exists they must still
-      // belong to that provider. A directory read failure is deliberately not
+      // retain their compatibility path only while a same-provider binding is
+      // itself explicitly legacy; they cannot seize a UUID generation, and
+      // absence is not authority to repaint a failed Thread. A directory read
+      // failure is deliberately not
       // caught here: journal retry is safer than silently dropping a
       // possibly-current provider event.
       const binding = Option.getOrUndefined(
@@ -1804,10 +1806,11 @@ const make = Effect.gen(function* () {
       const bindingRuntimePayload =
         binding === undefined ? undefined : asObject(binding.runtimePayload);
       if (
-        (binding === undefined && event.lifecycleGeneration !== undefined) ||
+        binding === undefined ||
         (binding !== undefined &&
           (bindingRuntimePayload?.lastRuntimeEvent === PROVIDER_REPLACEMENT_RESTORE_FAILED_EVENT ||
             binding.provider !== event.provider ||
+            (event.lifecycleGeneration === undefined && binding.lifecycleGeneration !== "legacy") ||
             (event.lifecycleGeneration !== undefined &&
               binding.lifecycleGeneration !== event.lifecycleGeneration)))
       ) {

@@ -71,6 +71,7 @@ type LegacyProviderRuntimeEvent = {
   readonly turnId?: string | undefined;
   readonly itemId?: string | undefined;
   readonly requestId?: string | undefined;
+  readonly lifecycleGeneration?: string | undefined;
   readonly payload?: unknown | undefined;
   readonly [key: string]: unknown;
 };
@@ -334,6 +335,18 @@ describe("ProviderRuntimeIngestion", () => {
       await startIngestion();
     }
     const drain = () => Effect.runPromise(ingestion.drain);
+    const bindLegacyRuntimeSource = (
+      providerKind: ProviderKind,
+      threadId: ThreadId = ThreadId.makeUnsafe("thread-1"),
+    ) =>
+      Effect.runPromise(
+        providerSessionDirectory.replace({
+          threadId,
+          provider: providerKind,
+          status: "running",
+          lifecycleGeneration: "legacy",
+        }),
+      );
 
     const createdAt = new Date().toISOString();
     await Effect.runPromise(
@@ -385,6 +398,17 @@ describe("ProviderRuntimeIngestion", () => {
         createdAt,
       }),
     );
+    // Most fixtures intentionally exercise the pre-generation journal shape.
+    // Give those rows the only authority production still accepts: an exact
+    // same-provider binding whose own generation is explicitly legacy.
+    await Effect.runPromise(
+      providerSessionDirectory.replace({
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
     provider.setSession({
       provider: "codex",
       status: "ready",
@@ -402,6 +426,7 @@ describe("ProviderRuntimeIngestion", () => {
       listSessionsObservedWithinRuntimeProjectionLease:
         provider.listSessionsObservedWithinRuntimeProjectionLease,
       drain,
+      bindLegacyRuntimeSource,
       startIngestion,
       runtimeEventRepository,
       providerSessionDirectory,
@@ -507,7 +532,7 @@ describe("ProviderRuntimeIngestion", () => {
       true,
     );
     expect(thread?.activities.some((activity) => activity.id === legacyRow.event.eventId)).toBe(
-      true,
+      false,
     );
     expect(
       thread?.activities.some((activity) => activity.id === delayedTargetStart.event.eventId),
@@ -518,6 +543,44 @@ describe("ProviderRuntimeIngestion", () => {
     expect(
       thread?.activities.some((activity) => activity.id === delayedTargetWarning.event.eventId),
     ).toBe(false);
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(legacyRow.sequence);
+  });
+
+  it("keeps a generation-less row only on an explicitly legacy same-provider binding", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
+    const legacyRow = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-current-legacy-runtime-warning"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:04.000Z",
+        payload: { message: "Current legacy runtime event" },
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.activities.some((activity) => activity.id === legacyRow.event.eventId)).toBe(
+      true,
+    );
     expect(
       await Effect.runPromise(
         harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
@@ -594,7 +657,7 @@ describe("ProviderRuntimeIngestion", () => {
     ).toBe(delayedRestoreStart.sequence);
   });
 
-  it("does not project an early runtime row after its first start binding was removed", async () => {
+  it("does not project early runtime rows after their first start binding was removed", async () => {
     const harness = await createHarness({ startIngestion: false });
     const threadId = asThreadId("thread-1");
     const failedAt = "2026-08-12T08:11:00.000Z";
@@ -628,6 +691,16 @@ describe("ProviderRuntimeIngestion", () => {
         payload: {},
       }),
     );
+    const orphanedLegacyStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-orphaned-legacy-first-start"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:10:59.500Z",
+        payload: {},
+      }),
+    );
 
     await harness.startIngestion();
     await harness.drain();
@@ -643,10 +716,13 @@ describe("ProviderRuntimeIngestion", () => {
       false,
     );
     expect(
+      thread?.activities.some((activity) => activity.id === orphanedLegacyStart.event.eventId),
+    ).toBe(false);
+    expect(
       await Effect.runPromise(
         harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
       ),
-    ).toBe(orphanedStart.sequence);
+    ).toBe(orphanedLegacyStart.sequence);
   });
 
   it("REL-01C gate: replays output persisted before subscription without duplicate acceptance", async () => {
@@ -724,6 +800,14 @@ describe("ProviderRuntimeIngestion", () => {
     };
     const collisionCommandId = CommandId.makeUnsafe(
       `provider:${collisionEvent.eventId}:thread-activity-append:${threadId}:runtime.warning:${collisionEvent.eventId}`,
+    );
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId,
+        provider: "cursor",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
     );
 
     // Model a crash/upgrade boundary: this event's command id was accepted
@@ -841,6 +925,22 @@ describe("ProviderRuntimeIngestion", () => {
       threadId: lateThreadId,
       payload: { message: "Warning for a rejected command" },
     };
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId,
+        provider: "cursor",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId: lateThreadId,
+        provider: "cursor",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
     const rejectedCommandId = CommandId.makeUnsafe(
       `provider:${rejectedEvent.eventId}:thread-activity-append:${lateThreadId}:runtime.warning:${rejectedEvent.eventId}`,
     );
@@ -1214,6 +1314,7 @@ describe("ProviderRuntimeIngestion", () => {
 
   it("clears active turn state when a provider session reports ready", async () => {
     const harness = await createHarness();
+    await harness.bindLegacyRuntimeSource("opencode");
 
     harness.emit({
       type: "turn.started",
@@ -1981,6 +2082,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("accepts claude turn lifecycle when seeded thread id is a synthetic placeholder", async () => {
     const harness = await createHarness();
     const seededAt = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -2199,6 +2301,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("does not project reasoning content deltas into transcript work rows", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "content.delta",
@@ -2318,6 +2421,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects narrated Antigravity planner steps as completed reasoning", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("antigravity");
     const detail = "I will inspect the current working directory before continuing.";
     const baseEvent = {
       provider: "antigravity" as const,
@@ -2463,6 +2567,7 @@ describe("ProviderRuntimeIngestion", () => {
     async (provider) => {
       const harness = await createHarness();
       const now = new Date().toISOString();
+      await harness.bindLegacyRuntimeSource(provider);
       const itemId = `${provider}-reasoning-buffered-1`;
       const baseEvent = {
         provider,
@@ -2815,6 +2920,7 @@ describe("ProviderRuntimeIngestion", () => {
 
   it("persists a compact per-model token breakdown on turn.completed activities", async () => {
     const harness = await createHarness();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.setProviderSession({
       threadId: asThreadId("thread-1"),
@@ -3087,6 +3193,8 @@ describe("ProviderRuntimeIngestion", () => {
       updatedAt: createdAt,
       activeTurnId: targetTurnId,
     });
+    await harness.bindLegacyRuntimeSource("codex", sourceThreadId);
+    await harness.bindLegacyRuntimeSource("codex", targetThreadId);
 
     harness.emit({
       type: "turn.proposed.completed",
@@ -3239,6 +3347,7 @@ describe("ProviderRuntimeIngestion", () => {
       updatedAt: createdAt,
       activeTurnId,
     });
+    await harness.bindLegacyRuntimeSource("codex", sourceThreadId);
 
     harness.emit({
       type: "turn.started",
@@ -3418,6 +3527,8 @@ describe("ProviderRuntimeIngestion", () => {
         createdAt,
       }),
     );
+    await harness.bindLegacyRuntimeSource("codex", sourceThreadId);
+    await harness.bindLegacyRuntimeSource("codex", targetThreadId);
 
     harness.emit({
       type: "turn.proposed.completed",
@@ -4085,6 +4196,7 @@ describe("ProviderRuntimeIngestion", () => {
         createdAt: now,
       }),
     );
+    await harness.bindLegacyRuntimeSource("codex", secondThreadId);
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -4897,6 +5009,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("preserves the assistant turn id when a late item.completed omits it", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "turn.started",
@@ -5002,6 +5115,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("keeps an existing assistant turn id when a late completion carries a newer turn id", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "turn.started",
@@ -5780,6 +5894,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("labels OpenCode retry warnings with a provider-specific summary and visible detail", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("opencode");
 
     harness.emit({
       type: "runtime.warning",
@@ -5832,6 +5947,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("labels Claude background moves as a background notice, not a runtime warning", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "runtime.warning",
@@ -6156,6 +6272,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("does not parse live diff files for providers without patch capability", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "turn.diff.updated",
@@ -6251,6 +6368,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("suppresses identical consecutive context window updates", async () => {
     const harness = await createHarness();
     const now = "2026-07-09T00:00:00.000Z";
+    await harness.bindLegacyRuntimeSource("claudeAgent");
     const makeUsageEvent = (eventId: string, usedTokens: number) => ({
       type: "thread.token-usage.updated" as const,
       eventId: asEventId(eventId),
@@ -6286,6 +6404,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects percent-only context window updates into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "thread.token-usage.updated",
@@ -6321,6 +6440,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects real zero-percent context window updates into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "thread.token-usage.updated",
@@ -6356,6 +6476,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects configured Claude context windows into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "session.configured",
@@ -6442,6 +6563,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects Claude usage snapshots with context window into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "thread.token-usage.updated",
@@ -6550,6 +6672,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects context compaction completion and failure into thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("grok");
 
     harness.emit({
       type: "item.completed",

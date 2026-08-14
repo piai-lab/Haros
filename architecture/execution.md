@@ -94,6 +94,8 @@ adapter contract 只保留 source 实际支持的操作，例如 start/stop/send
 
 Provider 切换沿用 stop-first replacement：当前 operation 结束或停止后才启动目标 Provider；目标失败时恢复上一 exact binding。Product transcript 不能替代 Provider native context。
 
+ProviderService 在任何当前 adapter 可发出 runtime event 之前，必须先持久化带 lifecycle generation 的 `starting` binding；journal row 只能投影到同 Thread、同 Provider、同 generation 的 durable binding。无 binding 的 row 一律只推进消费 cursor 并跳过 Product 投影；generation-less row 只能兼容仍明确标为 `legacy` 的同 Provider binding，不能进入 UUID generation，也不能由 Ingestion 猜测或补写为当前 generation。该兼容只处理既有诊断尾部，不授权 adapter、测试注入或新调用方省略 generation。
+
 ## OmniMind Agent 与 stock Pi
 
 OmniMind Agent runtime 拥有：
