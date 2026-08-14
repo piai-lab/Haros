@@ -281,6 +281,10 @@ describe("wsNativeApi", () => {
 
     const payload = {
       providers: defaultProviders,
+      passivePresence: {
+        state: "settled",
+        recoverableProviders: ["codex"],
+      },
     } as const;
     emitPush(WS_CHANNELS.serverProviderStatusesUpdated, payload);
 

@@ -1,4 +1,5 @@
 import type {
+  ProviderKind,
   ServerConfig,
   ServerGetUsageHistoryInput,
   ServerListProviderUsageInput,
@@ -50,6 +51,7 @@ export function serverConfigQueryOptions() {
 interface ProviderStatusSnapshot {
   readonly revision: number;
   readonly providers: readonly ServerProviderStatus[];
+  readonly passivePresence: ReadonlyArray<ProviderKind> | null;
 }
 
 const latestProviderStatusSnapshotByQueryClient = new WeakMap<
@@ -58,16 +60,27 @@ const latestProviderStatusSnapshotByQueryClient = new WeakMap<
 >();
 
 export function hasReceivedProviderStatusSnapshot(queryClient: QueryClient): boolean {
-  return latestProviderStatusSnapshotByQueryClient.has(queryClient);
+  return (
+    (latestProviderStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null) !== null
+  );
+}
+
+export function readPassiveProviderPresence(
+  queryClient: QueryClient,
+): ReadonlyArray<ProviderKind> | null {
+  return latestProviderStatusSnapshotByQueryClient.get(queryClient)?.passivePresence ?? null;
 }
 
 function recordProviderStatusSnapshot(
   queryClient: QueryClient,
   providers: readonly ServerProviderStatus[],
+  passivePresence?: ReadonlyArray<ProviderKind>,
 ): ProviderStatusSnapshot {
+  const previous = latestProviderStatusSnapshotByQueryClient.get(queryClient);
   const snapshot = {
-    revision: (latestProviderStatusSnapshotByQueryClient.get(queryClient)?.revision ?? 0) + 1,
+    revision: (previous?.revision ?? 0) + 1,
     providers,
+    passivePresence: passivePresence ?? previous?.passivePresence ?? null,
   };
   latestProviderStatusSnapshotByQueryClient.set(queryClient, snapshot);
   return snapshot;
@@ -83,9 +96,10 @@ export async function reconcileServerProviderStatuses(
   providers: readonly ServerProviderStatus[],
   options?: {
     readonly loadConfig?: () => Promise<ServerConfig>;
+    readonly passivePresence?: ReadonlyArray<ProviderKind>;
   },
 ): Promise<void> {
-  recordProviderStatusSnapshot(queryClient, providers);
+  recordProviderStatusSnapshot(queryClient, providers, options?.passivePresence);
 
   let applied = false;
   queryClient.setQueryData<ServerConfig>(serverQueryKeys.config(), (current) => {

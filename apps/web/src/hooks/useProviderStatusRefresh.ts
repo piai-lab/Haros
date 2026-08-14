@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
-import type { ServerProviderStatus } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus } from "@omnimind/contracts";
 import { toastManager } from "../components/ui/toast";
 import { readNativeApi } from "../nativeApi";
 import { reconcileServerProviderStatuses } from "../lib/serverReactQuery";
@@ -22,8 +22,11 @@ export type RefreshProviderStatusesNow = (
 function writeProviderStatusesToConfigCache(
   queryClient: QueryClient,
   providers: readonly ServerProviderStatus[],
+  passivePresence?: ReadonlyArray<ProviderKind>,
 ) {
-  return reconcileServerProviderStatuses(queryClient, providers);
+  return passivePresence
+    ? reconcileServerProviderStatuses(queryClient, providers, { passivePresence })
+    : reconcileServerProviderStatuses(queryClient, providers);
 }
 
 /**
@@ -37,7 +40,11 @@ export function useRefreshProviderStatusesNow(): RefreshProviderStatusesNow {
     if (!api) return null;
     try {
       const result = await api.server.refreshProviders();
-      await writeProviderStatusesToConfigCache(queryClient, result.providers);
+      await writeProviderStatusesToConfigCache(
+        queryClient,
+        result.providers,
+        result.passivePresence?.recoverableProviders,
+      );
       return result.providers;
     } catch (error) {
       if (!options?.silent) {
@@ -59,6 +66,7 @@ type ProviderStatusRefreshOptions = {
   readonly intervalMs?: number;
   readonly minIntervalMs?: number;
   readonly refreshOnFocus?: boolean;
+  readonly refreshOnFocusAfterLossOnly?: boolean;
   readonly onRefreshSuccess?: () => void;
 };
 
@@ -69,6 +77,7 @@ export function useProviderStatusRefresh(options: ProviderStatusRefreshOptions):
   const intervalMs = options.intervalMs;
   const minIntervalMs = options.minIntervalMs ?? 0;
   const refreshOnFocus = options.refreshOnFocus ?? false;
+  const refreshOnFocusAfterLossOnly = options.refreshOnFocusAfterLossOnly ?? false;
   const onRefreshSuccess = options.onRefreshSuccess;
 
   useEffect(() => {
@@ -109,7 +118,11 @@ export function useProviderStatusRefresh(options: ProviderStatusRefreshOptions):
           if (disposed) {
             return false;
           }
-          await writeProviderStatusesToConfigCache(queryClient, result.providers);
+          await writeProviderStatusesToConfigCache(
+            queryClient,
+            result.providers,
+            result.passivePresence?.recoverableProviders,
+          );
           if (!disposed) {
             hasSuccessfulRefresh = true;
             startupRefreshPending = false;
@@ -147,11 +160,23 @@ export function useProviderStatusRefresh(options: ProviderStatusRefreshOptions):
       typeof intervalMs === "number" && intervalMs > 0
         ? window.setInterval(() => void refreshProviderStatuses(), intervalMs)
         : null;
-    const refreshOnVisible = () =>
+    let focusRefreshArmed = refreshOnFocusAfterLossOnly && document.visibilityState !== "visible";
+    const armFocusRefresh = () => {
+      focusRefreshArmed = true;
+    };
+    const refreshOnVisible = () => {
+      if (document.visibilityState !== "visible") {
+        armFocusRefresh();
+        return;
+      }
+      if (refreshOnFocusAfterLossOnly && !focusRefreshArmed) return;
+      focusRefreshArmed = false;
       void refreshProviderStatuses({ ignoreMinInterval: startupRefreshPending });
+    };
 
     if (refreshOnFocus) {
       window.addEventListener("focus", refreshOnVisible);
+      window.addEventListener("blur", armFocusRefresh);
       document.addEventListener("visibilitychange", refreshOnVisible);
     }
 
@@ -165,6 +190,7 @@ export function useProviderStatusRefresh(options: ProviderStatusRefreshOptions):
       }
       if (refreshOnFocus) {
         window.removeEventListener("focus", refreshOnVisible);
+        window.removeEventListener("blur", armFocusRefresh);
         document.removeEventListener("visibilitychange", refreshOnVisible);
       }
     };
@@ -176,5 +202,6 @@ export function useProviderStatusRefresh(options: ProviderStatusRefreshOptions):
     onRefreshSuccess,
     queryClient,
     refreshOnFocus,
+    refreshOnFocusAfterLossOnly,
   ]);
 }

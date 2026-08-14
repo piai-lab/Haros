@@ -14,7 +14,6 @@ import {
   type ProjectId,
   type ProviderKind,
   type ProviderListModelsResult,
-  type NativeApi,
   type ServerConfig,
   ThreadId,
   TurnId,
@@ -113,6 +112,7 @@ interface WsRequestEnvelope {
 interface TestFixture {
   snapshot: OrchestrationReadModel;
   serverConfig: ServerConfig;
+  providerPassivePresence?: ReadonlyArray<ProviderKind>;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
   providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
@@ -1479,6 +1479,18 @@ const worker = setupWorker(
         });
         return;
       }
+      if (method === WS_METHODS.subscribeServerProviderStatuses) {
+        sendEffectRpcChunk(client, parsed.request.id, {
+          providers: fixture.serverConfig.providers,
+          passivePresence: {
+            state: "settled",
+            recoverableProviders:
+              fixture.providerPassivePresence ??
+              fixture.serverConfig.providers.map((status) => status.provider),
+          },
+        });
+        return;
+      }
       if (method === ORCHESTRATION_WS_METHODS.subscribeShell) {
         sendEffectRpcChunk(client, parsed.request.id, {
           kind: "snapshot",
@@ -1502,7 +1514,6 @@ const worker = setupWorker(
         return;
       }
       if (
-        method === WS_METHODS.subscribeServerProviderStatuses ||
         method === WS_METHODS.subscribeServerSettings ||
         method === WS_METHODS.subscribeTerminalEvents ||
         method === WS_METHODS.subscribeOrchestrationDomainEvents ||
@@ -6916,14 +6927,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
-    let resolveProviderRefresh!: (
-      result: Awaited<ReturnType<NativeApi["server"]["refreshProviders"]>>,
-    ) => void;
-    const providerRefresh =
-      new Promise<Awaited<ReturnType<NativeApi["server"]["refreshProviders"]>>>((resolve) => {
-        resolveProviderRefresh = resolve;
-      });
-    const refreshProviders = vi.fn(() => providerRefresh);
+    const refreshProviders = vi.fn(async () => ({ providers: [] }));
     const listModelServices = vi.fn(async () => ({
       state: "empty" as const,
       services: [] as const,
@@ -6960,10 +6964,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       const setupPrompt = page.getByTestId("model-readiness-prompt");
-      await expect.poll(() => refreshProviders).toHaveBeenCalledOnce();
-      await expect.element(setupPrompt).not.toBeInTheDocument();
-      resolveProviderRefresh({ providers: [] });
       await expect.element(setupPrompt).toBeInTheDocument();
+      expect(refreshProviders).not.toHaveBeenCalled();
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 320, height: 700 });
       expect(setupPrompt.element().scrollWidth).toBeLessThanOrEqual(
         setupPrompt.element().clientWidth,
@@ -6996,14 +6998,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("waits for the existing provider probe and suppresses setup when an Engine becomes usable", async () => {
+  it("suppresses setup when local passive presence proves an Engine is recoverable", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
-    const readyCodex = createBrowserTestServerConfig(NOW_ISO).providers.find(
-      (status) => status.provider === "codex",
-    )!;
-    const refreshProviders = vi.fn(async () => ({ providers: [readyCodex] }));
+    const refreshProviders = vi.fn(async () => ({ providers: [] }));
     const listModelServices = vi.fn(async () => ({
       state: "empty" as const,
       services: [] as const,
@@ -7030,6 +7029,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       snapshot: createDraftOnlySnapshot(),
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
+        nextFixture.providerPassivePresence = ["codex"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
           omnimind: { source: "browser.fixture", models: [] },
@@ -7039,12 +7039,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await expect.poll(() => refreshProviders).toHaveBeenCalledOnce();
-      await expect.poll(() => listModelServices).toHaveBeenCalled();
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
       await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
+      expect(refreshProviders).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

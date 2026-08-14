@@ -1,9 +1,12 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { ServerProviderStatus } from "./server";
+import { ServerProviderStatus, ServerProviderStatusesUpdatedPayload } from "./server";
 
 const decodeServerProviderStatus = Schema.decodeUnknownSync(ServerProviderStatus);
+const decodeProviderStatusesUpdated = Schema.decodeUnknownSync(
+  ServerProviderStatusesUpdatedPayload,
+);
 const BASE_STATUS = {
   provider: "cursor",
   status: "error",
@@ -37,5 +40,23 @@ describe("ServerProviderStatus", () => {
         unavailableReason: "version failed",
       }),
     ).toThrow();
+  });
+});
+
+describe("ServerProviderStatusesUpdatedPayload", () => {
+  it("distinguishes a passive settled empty result from an older status-only payload", () => {
+    expect(decodeProviderStatusesUpdated({ providers: [] }).passivePresence).toBeUndefined();
+    expect(
+      decodeProviderStatusesUpdated({
+        providers: [],
+        passivePresence: {
+          state: "settled",
+          recoverableProviders: [],
+        },
+      }).passivePresence,
+    ).toEqual({
+      state: "settled",
+      recoverableProviders: [],
+    });
   });
 });

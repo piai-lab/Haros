@@ -101,6 +101,7 @@ import {
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import {
   hasReceivedProviderStatusSnapshot,
+  readPassiveProviderPresence,
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
@@ -427,6 +428,7 @@ import {
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import {
   deriveModelReadinessPromptMode,
+  hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
   type PassiveModelServicesState,
 } from "./chat/modelReadinessPrompt.logic";
@@ -4037,17 +4039,23 @@ export default function ChatView({
     serverThread?.modelSelection,
     stickyModelSelectionByProvider,
   ]);
-  const hasUsableProductModelBinding = useMemo(
-    () =>
-      hasUsableExactModelBinding({
-        providerStatuses,
-        exactModelSelections: exactModelSelectionsByProvider,
-      }),
-    [exactModelSelectionsByProvider, providerStatuses],
-  );
+  const passiveProviderPresence = readPassiveProviderPresence(queryClient);
+  const hasUsableProductModelBinding = useMemo(() => {
+    const hasUsableBinding = hasUsableExactModelBinding({
+      providerStatuses,
+      exactModelSelections: exactModelSelectionsByProvider,
+    });
+    return (
+      hasUsableBinding ||
+      (passiveProviderPresence !== null &&
+        hasRecoverableExactModelBinding({
+          recoverableProviders: passiveProviderPresence,
+          exactModelSelections: exactModelSelectionsByProvider,
+        }))
+    );
+  }, [exactModelSelectionsByProvider, passiveProviderPresence, providerStatuses]);
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
-  const providerHealthSnapshotSettled =
-    providerStatuses.length > 0 || hasReceivedProviderStatusSnapshot(queryClient);
+  const providerHealthSnapshotSettled = hasReceivedProviderStatusSnapshot(queryClient);
   const modelServicesCapability = useSyncExternalStore(
     subscribeModelServicesCapability,
     readModelServicesCapability,

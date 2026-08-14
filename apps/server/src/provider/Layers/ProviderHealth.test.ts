@@ -42,6 +42,7 @@ import {
   ProviderHealthLive,
   projectProviderStatusesForSettings,
   readCodexConfigModelProvider,
+  resolvePassiveProviderPresence,
   stabilizeProviderStatusesAgainstTransientTimeouts,
 } from "./ProviderHealth";
 import {
@@ -217,6 +218,7 @@ function withTempCodexHome(configContent?: string) {
           CODEX_HOME: tmpDir,
           OMNIMIND_HOME: runtimeDir,
         };
+
         const restore: Record<string, string | undefined> = {};
         for (const [key, value] of Object.entries(overrides)) {
           restore[key] = process.env[key];
@@ -250,6 +252,37 @@ function withTempCodexHome(configContent?: string) {
     return { tmpDir, runtimeDir } as const;
   });
 }
+
+describe("passive provider presence", () => {
+  it("settles from local executable/config facts without running a provider command", () => {
+    const observedCommands: string[] = [];
+    const presence = resolvePassiveProviderPresence(DEFAULT_SERVER_SETTINGS, (command) => {
+      observedCommands.push(command);
+      return command === "codex" ? "/test/bin/codex" : null;
+    });
+
+    assert.deepStrictEqual(presence, ["omnimind", "codex", "pi"]);
+    assert.deepStrictEqual(observedCommands, [
+      "codex",
+      "claude",
+      "cursor-agent",
+      "agy",
+      "grok",
+      "droid",
+      "kilo",
+      "opencode",
+    ]);
+  });
+
+  it("keeps disabled providers out of the settled presence fact", () => {
+    const resolveCommand = vi.fn(() => "/unexpected");
+    assert.deepStrictEqual(
+      resolvePassiveProviderPresence(allProvidersDisabledServerSettings, resolveCommand),
+      [],
+    );
+    assert.strictEqual(resolveCommand.mock.calls.length, 0);
+  });
+});
 
 it.layer(NodeServices.layer)("ProviderHealth", (it) => {
   describe("provider update commands", () => {
@@ -667,9 +700,10 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         message: "OpenCode CLI is installed but failed to run. Timed out while running command.",
       } satisfies ServerProviderStatus;
 
-      assert.deepStrictEqual(stabilizeProviderStatusesAgainstTransientTimeouts([previous], [next]), [
-        next,
-      ]);
+      assert.deepStrictEqual(
+        stabilizeProviderStatusesAgainstTransientTimeouts([previous], [next]),
+        [next],
+      );
       assert.deepStrictEqual(
         stabilizeProviderStatusesAgainstTransientTimeouts(
           [previous],
@@ -678,10 +712,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         [{ ...previous, checkedAt: next.checkedAt }],
       );
       assert.deepStrictEqual(
-        stabilizeProviderStatusesAgainstTransientTimeouts(
-          [previousReadyOpenCode],
-          [next],
-        ),
+        stabilizeProviderStatusesAgainstTransientTimeouts([previousReadyOpenCode], [next]),
         [next],
       );
     });

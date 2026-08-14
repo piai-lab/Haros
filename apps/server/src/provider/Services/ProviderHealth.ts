@@ -27,6 +27,12 @@ export interface ProviderHealthShape {
   readonly refresh: Effect.Effect<ReadonlyArray<ServerProviderStatus>>;
 
   /**
+   * Read a bounded local-only presence projection for first-run eligibility.
+   * This must not spawn providers, load extensions, start sessions, or use the network.
+   */
+  readonly getPassivePresence: Effect.Effect<ReadonlyArray<ServerProviderStatus["provider"]>>;
+
+  /**
    * Run the allowlisted update command for a provider and publish the
    * resulting provider snapshots.
    */

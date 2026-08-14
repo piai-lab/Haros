@@ -75,19 +75,23 @@ describe("useProviderStatusRefresh", () => {
     vi.unstubAllGlobals();
   });
 
-  it("settles the auth-only startup path without waiting for a focus event", async () => {
-    installBrowserGlobals("visible");
+  it("does not turn the auth focus owner into a startup provider probe", async () => {
+    const { windowTarget } = installBrowserGlobals("visible");
     const refreshProviders = vi.fn().mockResolvedValue({ providers: [] });
     mocks.readNativeApi.mockReturnValue({ server: { refreshProviders } });
 
     useProviderAuthRefreshOnFocus({ enabled: true });
     await vi.advanceTimersByTimeAsync(0);
 
+    expect(refreshProviders).not.toHaveBeenCalled();
+    windowTarget.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refreshProviders).not.toHaveBeenCalled();
+    windowTarget.dispatchEvent(new Event("blur"));
+    windowTarget.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(0);
     expect(refreshProviders).toHaveBeenCalledOnce();
-    expect(mocks.reconcileServerProviderStatuses).toHaveBeenCalledWith(
-      mocks.queryClient,
-      [],
-    );
+    expect(mocks.reconcileServerProviderStatuses).toHaveBeenCalledWith(mocks.queryClient, []);
   });
 
   it("still runs the startup refresh after an early focus attempt fails", async () => {

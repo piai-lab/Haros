@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   deriveModelReadinessPromptMode,
+  hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
 } from "./modelReadinessPrompt.logic";
 
@@ -42,6 +43,21 @@ describe("model readiness prompt", () => {
         passiveModelServicesState: "empty",
       }),
     ).toBeNull();
+  });
+
+  it("treats a locally present Engine with an exact model as recoverable without calling it", () => {
+    expect(
+      hasRecoverableExactModelBinding({
+        recoverableProviders: ["codex"],
+        exactModelSelections: { codex: { provider: "codex", model: "gpt-5.5" } },
+      }),
+    ).toBe(true);
+    expect(
+      hasRecoverableExactModelBinding({
+        recoverableProviders: ["omnimind", "pi"],
+        exactModelSelections: {},
+      }),
+    ).toBe(false);
   });
 
   it("shows setup only after passive facts prove a truly empty product", () => {

@@ -24,6 +24,16 @@ export function hasUsableExactModelBinding(input: {
   });
 }
 
+export function hasRecoverableExactModelBinding(input: {
+  readonly recoverableProviders: readonly ProviderKind[];
+  readonly exactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
+}): boolean {
+  return input.recoverableProviders.some((provider) => {
+    const selection = input.exactModelSelections[provider];
+    return selection?.provider === provider && selection.model.trim().length > 0;
+  });
+}
+
 export function deriveModelReadinessPromptMode(input: {
   readonly surfaceEligible: boolean;
   readonly serverFactsReady: boolean;

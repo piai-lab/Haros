@@ -479,6 +479,12 @@ export type ServerConfigUpdatedPayload = typeof ServerConfigUpdatedPayload.Type;
 
 export const ServerProviderStatusesUpdatedPayload = Schema.Struct({
   providers: ServerProviderStatuses,
+  passivePresence: Schema.optionalKey(
+    Schema.Struct({
+      state: Schema.Literal("settled"),
+      recoverableProviders: Schema.Array(ProviderKind),
+    }),
+  ),
 });
 export type ServerProviderStatusesUpdatedPayload = typeof ServerProviderStatusesUpdatedPayload.Type;
 

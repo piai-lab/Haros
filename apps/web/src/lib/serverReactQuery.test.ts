@@ -10,6 +10,7 @@ import {
   hasReceivedProviderStatusSnapshot,
   LOCAL_SERVERS_VISIBLE_REFETCH_INTERVAL_MS,
   reconcileServerProviderStatuses,
+  readPassiveProviderPresence,
   refreshServerConfigAfterTransportOpen,
   serverAllProviderUsageQueryOptions,
   serverLocalServersQueryOptions,
@@ -48,7 +49,10 @@ describe("server provider status reconciliation", () => {
 
     expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(false);
     await reconcileServerProviderStatuses(queryClient, []);
+    expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(false);
+    await reconcileServerProviderStatuses(queryClient, [], { passivePresence: [] });
     expect(hasReceivedProviderStatusSnapshot(queryClient)).toBe(true);
+    expect(readPassiveProviderPresence(queryClient)).toEqual([]);
   });
 
   it("applies a missed live snapshot after the config projection hydrates", async () => {

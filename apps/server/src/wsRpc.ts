@@ -31,6 +31,7 @@ import {
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
+  type ServerProviderStatus,
 } from "@omnimind/contracts";
 import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Scope, Stream } from "effect";
@@ -673,6 +674,14 @@ const makeWsRpcHandlersLayer = () =>
           availableEditors: resolveAvailableEditors(),
         };
       });
+
+      const providerStatusPayload = (providers: ReadonlyArray<ServerProviderStatus>) =>
+        providerHealth.getPassivePresence.pipe(
+          Effect.map((recoverableProviders) => ({
+            providers,
+            passivePresence: { state: "settled" as const, recoverableProviders },
+          })),
+        );
 
       const refreshGitStatusAfter = <A, E, R>(cwd: string, effect: Effect.Effect<A, E, R>) =>
         effect.pipe(
@@ -1600,7 +1609,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(serverSettings.updateSettingsView(input), "Failed to update server settings"),
         [WS_METHODS.serverRefreshProviders]: () =>
           rpcEffect(
-            providerHealth.refresh.pipe(Effect.map((providers) => ({ providers }))),
+            providerHealth.refresh.pipe(Effect.flatMap(providerStatusPayload)),
             "Failed to refresh providers",
           ),
         [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateProvider(input),
@@ -1857,12 +1866,12 @@ const makeWsRpcHandlersLayer = () =>
             { key: "server.provider-statuses" },
             Stream.concat(
               Stream.fromEffect(
-                providerHealth.getStatuses.pipe(Effect.map((providers) => ({ providers }))),
+                providerHealth.getStatuses.pipe(Effect.flatMap(providerStatusPayload)),
               ),
               bufferLiveUiStream(providerHealth.streamChanges, {
                 label: "server.provider-statuses",
                 onDroppedEvents: failLiveUiStreamForSnapshotResync,
-              }).pipe(Stream.map((providers) => ({ providers }))),
+              }).pipe(Stream.mapEffect(providerStatusPayload)),
             ),
           ),
         [WS_METHODS.subscribeServerSettings]: (_, { clientId }) =>

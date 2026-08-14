@@ -43,6 +43,8 @@ import {
 } from "effect";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 
+import { resolveExecutable } from "../../executableLookup.ts";
+
 import {
   compareCodexCliVersions,
   formatCodexCliUpgradeMessage,
@@ -1909,9 +1911,7 @@ export const makeCheckCursorProviderStatus = (
       version: parsedVersion,
       checkedAt,
     } satisfies ServerProviderStatus;
-  }).pipe(
-    withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? DEFAULT_CURSOR_AGENT_BINARY),
-  );
+  }).pipe(withCheckedBinaryPath(nonEmptyTrimmed(binaryPath) ?? DEFAULT_CURSOR_AGENT_BINARY));
 
 export const checkCursorProviderStatus = makeCheckCursorProviderStatus();
 
@@ -2019,6 +2019,69 @@ export function isProviderEnabledForSettings(
   return (
     settings.providers[provider]?.enabled !== false && settings.providers[provider] !== undefined
   );
+}
+
+export function resolvePassiveProviderPresence(
+  settings: ServerSettings,
+  resolveCommand: (command: string) => string | null = resolveExecutable,
+): ReadonlyArray<ProviderKind> {
+  const recoverable: ProviderKind[] = [];
+  for (const provider of PROVIDERS) {
+    if (!isProviderEnabledForSettings(provider, settings)) continue;
+    if (provider === OMNIMIND_AGENT_PROVIDER || provider === PI_PROVIDER) {
+      recoverable.push(provider);
+      continue;
+    }
+    const isRecoverable = (() => {
+      switch (provider) {
+        case CODEX_PROVIDER:
+          return (
+            settings.providers.codex.customModels.length > 0 ||
+            resolveCommand(settings.providers.codex.binaryPath) !== null
+          );
+        case CLAUDE_AGENT_PROVIDER:
+          return (
+            settings.providers.claudeAgent.customModels.length > 0 ||
+            resolveCommand(settings.providers.claudeAgent.binaryPath) !== null
+          );
+        case CURSOR_PROVIDER:
+          return (
+            settings.providers.cursor.customModels.length > 0 ||
+            settings.providers.cursor.apiEndpoint.trim().length > 0 ||
+            resolveCommand(settings.providers.cursor.binaryPath) !== null
+          );
+        case ANTIGRAVITY_PROVIDER:
+          return (
+            settings.providers.antigravity.customModels.length > 0 ||
+            resolveCommand(settings.providers.antigravity.binaryPath) !== null
+          );
+        case GROK_PROVIDER:
+          return (
+            settings.providers.grok.customModels.length > 0 ||
+            resolveCommand(settings.providers.grok.binaryPath) !== null
+          );
+        case DROID_PROVIDER:
+          return (
+            settings.providers.droid.customModels.length > 0 ||
+            resolveCommand(settings.providers.droid.binaryPath) !== null
+          );
+        case KILO_PROVIDER:
+          return (
+            settings.providers.kilo.customModels.length > 0 ||
+            settings.providers.kilo.serverUrl.trim().length > 0 ||
+            resolveCommand(settings.providers.kilo.binaryPath) !== null
+          );
+        case OPENCODE_PROVIDER:
+          return (
+            settings.providers.opencode.customModels.length > 0 ||
+            settings.providers.opencode.serverUrl.trim().length > 0 ||
+            resolveCommand(settings.providers.opencode.binaryPath) !== null
+          );
+      }
+    })();
+    if (isRecoverable) recoverable.push(provider);
+  }
+  return recoverable;
 }
 
 export function makeDisabledProviderStatus(
@@ -2532,6 +2595,12 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         Effect.flatMap(Fiber.join),
       );
 
+      const getPassivePresence = serverSettings.ready.pipe(
+        Effect.flatMap(() => serverSettings.getSettings),
+        Effect.map((settings) => resolvePassiveProviderPresence(settings)),
+        Effect.catch(() => Effect.succeed(PROVIDERS)),
+      );
+
       const nowIso = Effect.map(DateTime.now, DateTime.formatIso);
 
       const makeUpdateState = (input: {
@@ -2757,6 +2826,7 @@ export function makeProviderHealthLive(options?: { readonly providerUpdateTimeou
         // Mirror upstream's behavior here: reads consume the latest stable
         // snapshot, while refreshes happen explicitly or from provider streams.
         getStatuses: Ref.get(statusesRef).pipe(Effect.flatMap(projectStatusesForCurrentSettings)),
+        getPassivePresence,
         refresh,
         updateProvider,
         get streamChanges() {
