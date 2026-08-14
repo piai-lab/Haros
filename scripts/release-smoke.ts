@@ -96,7 +96,9 @@ function verifyCanonicalIdentity(): void {
     readFileSync(resolve(repoRoot, "apps/server/package.json"), "utf8"),
   ) as { name?: string; bin?: Record<string, string> };
   if (serverPackage.name !== "@omnimind/server") {
-    throw new Error(`Expected CLI package @omnimind/server, got ${serverPackage.name ?? "<missing>"}.`);
+    throw new Error(
+      `Expected CLI package @omnimind/server, got ${serverPackage.name ?? "<missing>"}.`,
+    );
   }
   const expectedBinaries = {
     omnimind: "dist/index.mjs",
@@ -126,56 +128,90 @@ function verifyCanonicalIdentity(): void {
 }
 
 function verifyReleaseWorkflowSafety(): void {
+  const ciWorkflow = readFileSync(resolve(repoRoot, ".github/workflows/ci.yml"), "utf8");
+  assertContains(
+    ciWorkflow,
+    "group: ci-${{ github.event.pull_request.number || github.ref }}",
+    "Expected CI concurrency to be scoped to the pull request or ref.",
+  );
+  assertContains(
+    ciWorkflow,
+    "cancel-in-progress: true",
+    "Expected a newer commit on the same CI ref to cancel the old run.",
+  );
+  assertContains(
+    ciWorkflow,
+    "runs-on: ubuntu-24.04",
+    "Expected normal CI to use the Linux quality runner.",
+  );
+  assertNotContains(ciWorkflow, "windows-2022", "Normal CI must not spend Windows runner minutes.");
+  assertNotContains(ciWorkflow, "macos-", "Normal CI must not spend macOS runner minutes.");
+  assertContains(
+    ciWorkflow,
+    "node scripts/release-smoke.ts",
+    "Expected release control-plane checks to share the existing Linux quality job.",
+  );
+  assertNotContains(
+    ciWorkflow,
+    "release_smoke:",
+    "Release smoke must not regain a duplicate CI job.",
+  );
+
   const workflow = readFileSync(resolve(repoRoot, ".github/workflows/release.yml"), "utf8");
   assertContains(
     workflow,
-    "publish_release:\n        description:",
-    "Expected a manual publication opt-in input.",
+    "name: Desktop Build",
+    "Expected the cross-platform workflow to remain build-only.",
   );
   assertContains(
     workflow,
-    "default: false\n        type: boolean",
-    "Expected manual release runs to default to build-only mode.",
+    "workflow_dispatch:",
+    "Expected an explicit manual cross-platform build entry point.",
   );
   assertContains(
     workflow,
-    "publish_release: ${{ steps.release_mode.outputs.publish_release }}",
-    "Expected preflight to expose the resolved publication mode.",
+    'tags:\n      - "v*.*.*"',
+    "Expected formal version tags to run the build-only artifact workflow.",
   );
   assertContains(
     workflow,
-    "if: ${{ needs.preflight.outputs.publish_release == 'true' }}",
-    "Expected GitHub publication to require explicit publication mode.",
+    "permissions:\n  contents: read",
+    "Build-only jobs need repository read permission only.",
   );
   assertContains(
     workflow,
-    "needs.preflight.outputs.publish_release == 'true' && vars.OMNIMIND_PUBLISH_CLI == '1'",
-    "Expected CLI publication to require explicit publication mode.",
+    "group: desktop-build-${{ github.ref }}",
+    "Expected build concurrency to be scoped to the exact ref.",
   );
   assertContains(
     workflow,
-    "needs.preflight.outputs.publish_release == 'true' && vars.OMNIMIND_FINALIZE_RELEASE == '1'",
-    "Expected release finalization to require explicit publication mode.",
-  );
-  assertContains(
-    workflow,
-    "OMNIMIND_PUBLISH_RELEASE: ${{ needs.preflight.outputs.publish_release }}",
-    "Expected artifact signing admission to know whether artifacts will be published.",
-  );
-  assertContains(
-    workflow,
-    "Publishing macOS artifacts requires every signing and notarization secret.",
-    "Expected macOS publication to fail closed when signing is unavailable.",
-  );
-  assertContains(
-    workflow,
-    "Publishing Windows artifacts requires every Azure Trusted Signing secret.",
-    "Expected Windows publication to fail closed when signing is unavailable.",
+    "cancel-in-progress: true",
+    "Expected a newer build request for the same ref to cancel the old run.",
   );
   assertNotContains(
     workflow,
-    "Windows signing is optional",
-    "Windows publication must not retain the unsigned-installer fallback.",
+    "publish_release",
+    "Build-only workflow must not expose a publication switch.",
+  );
+  assertNotContains(
+    workflow,
+    "action-gh-release",
+    "Build-only workflow must not create GitHub Releases.",
+  );
+  assertNotContains(
+    workflow,
+    "prepare-release-update-feed",
+    "Build-only workflow must not mutate updater feed metadata.",
+  );
+  assertNotContains(
+    workflow,
+    "id-token: write",
+    "Build-only workflow must not request OIDC publication authority.",
+  );
+  assertNotContains(
+    workflow,
+    "contents: write",
+    "Build-only workflow must not request repository write authority.",
   );
   assertContains(
     workflow,
@@ -214,75 +250,53 @@ function verifyReleaseWorkflowSafety(): void {
   );
   assertContains(
     workflow,
-    'mv release-publish/latest-mac.yml "release-publish/latest-mac-${{ matrix.arch }}.yml"',
-    "Expected the x64 macOS matrix lane to preserve a distinct updater manifest for merging.",
-  );
-  assertContains(
-    workflow,
-    "APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}",
-    "Expected macOS signing admission to pin the post-build Team ID.",
-  );
-  assertContains(
-    workflow,
-    "AZURE_TRUSTED_SIGNING_SUBJECT_DN: ${{ secrets.AZURE_TRUSTED_SIGNING_SUBJECT_DN }}",
-    "Expected Windows signing admission to require the exact certificate subject DN.",
-  );
-  assertContains(
-    workflow,
-    '--expected-windows-subject-dn "$EXPECTED_WINDOWS_SUBJECT_DN"',
-    "Expected Windows artifact provenance to verify the exact certificate subject DN.",
-  );
-  assertContains(
-    workflow,
-    "AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_PUBLISHER_NAME }}",
-    "Expected the Windows build to receive the publisher identity that is pinned in the bundle.",
-  );
-  assertContains(
-    workflow,
     "node scripts/verify-packaged-desktop-startup.ts",
     "Expected every native payload to pass isolated packaged startup before upload.",
   );
-
-  const cliScript = readFileSync(resolve(repoRoot, "apps/server/scripts/cli.ts"), "utf8");
   assertContains(
-    cliScript,
-    "makeTempDirectoryScoped",
-    "Expected CLI publication to build an exclusively owned temporary package tree.",
+    workflow,
+    "retention-days: 5",
+    "Expected temporary cross-platform artifacts to expire after five days.",
   );
   assertContains(
-    cliScript,
-    "cwd: stagedPackageDir",
-    "Expected npm publication to run only from the isolated CLI stage.",
+    workflow,
+    "runner: macos-14",
+    "Expected the formal build path to retain macOS arm64 coverage.",
   );
   assertContains(
-    cliScript,
-    "Staged CLI bin target is missing its Node shebang",
-    "Expected staged CLI commands to remain executable npm bin entries.",
+    workflow,
+    "runner: ubuntu-24.04",
+    "Expected the formal build path to retain Linux x64 coverage.",
+  );
+  assertContains(
+    workflow,
+    "runner: windows-2022",
+    "Expected the formal build path to retain Windows x64 coverage.",
   );
   assertNotContains(
-    cliScript,
-    ".publish-bak",
-    "CLI publication must not mutate and restore source-tree assets.",
+    workflow,
+    "macos-15-intel",
+    "The build-only path must not restore the duplicate macOS x64 lane.",
   );
-
-  const desktopBuildConfig = readFileSync(
-    resolve(repoRoot, "apps/desktop/tsdown.config.mts"),
-    "utf8",
-  );
+  for (const actionReference of workflow.matchAll(/uses:\s+([^\s#]+)/g)) {
+    if (!/@[0-9a-f]{40}$/i.test(actionReference[1] ?? "")) {
+      throw new Error(`Expected a 40-character action SHA pin, got ${actionReference[1]}.`);
+    }
+  }
+  for (const actionReference of ciWorkflow.matchAll(/uses:\s+([^\s#]+)/g)) {
+    if (!/@[0-9a-f]{40}$/i.test(actionReference[1] ?? "")) {
+      throw new Error(`Expected a 40-character action SHA pin, got ${actionReference[1]}.`);
+    }
+  }
   assertContains(
-    desktopBuildConfig,
-    "__OMNIMIND_WINDOWS_UPDATER_PUBLISHER__",
-    "Expected the Windows updater publisher identity to be compiled into the main bundle.",
-  );
-
-  const updaterSecurity = readFileSync(
-    resolve(repoRoot, "apps/desktop/src/electronUpdaterSecurity.ts"),
-    "utf8",
+    workflow,
+    "--publication false",
+    "Expected artifact provenance to record that this workflow cannot publish.",
   );
   assertNotContains(
-    updaterSecurity,
-    "return feedPublisherNames",
-    "Runtime signature verification must not trust publisher names from mutable updater config.",
+    workflow,
+    "secrets.",
+    "Unsigned build-only workflow must not read signing or publication secrets.",
   );
 }
 
