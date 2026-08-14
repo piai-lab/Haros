@@ -26,6 +26,7 @@ export const OMNIMIND_MODEL_SERVICES_MAX_COUNT = 512;
 export const OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT = 4_096;
 export const OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT = 256;
 export const OMNIMIND_CUSTOM_MODEL_COST_TIERS_MAX_COUNT = 256;
+export const OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT = 64;
 
 const BoundedModelId = TrimmedNonEmptyString.check(
   Schema.isMaxLength(512),
@@ -145,7 +146,37 @@ const OmniMindCustomModelCompat = Schema.Struct({
   supportsToolReferences: Schema.optional(Schema.Boolean),
 });
 
-export const OmniMindCustomModelServiceModelInput = Schema.Struct({
+const BoundedHeaderName = TrimmedNonEmptyString.check(
+  Schema.isMaxLength(128),
+  Schema.isPattern(/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u),
+);
+const OmniMindCustomModelHeaderSource = Schema.Literals(["external", "environment", "command"]);
+export const OmniMindCustomModelHeaderMetadata = Schema.Struct({
+  name: BoundedHeaderName,
+  source: OmniMindCustomModelHeaderSource,
+});
+export type OmniMindCustomModelHeaderMetadata = typeof OmniMindCustomModelHeaderMetadata.Type;
+const BoundedHeaderMetadata = Schema.Array(OmniMindCustomModelHeaderMetadata).check(
+  Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT),
+);
+
+const HeaderEnvironmentVariableName = Schema.String.check(
+  Schema.isPattern(/^[A-Za-z_][A-Za-z0-9_]*$/u),
+);
+export const OmniMindCustomModelHeaderMutation = Schema.Union([
+  Schema.Struct({ name: BoundedHeaderName, type: Schema.Literal("clear") }),
+  Schema.Struct({
+    name: BoundedHeaderName,
+    type: Schema.Literal("environment"),
+    variableName: HeaderEnvironmentVariableName,
+  }),
+]);
+export type OmniMindCustomModelHeaderMutation = typeof OmniMindCustomModelHeaderMutation.Type;
+const BoundedHeaderMutations = Schema.Array(OmniMindCustomModelHeaderMutation).check(
+  Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_HEADERS_MAX_COUNT),
+);
+
+const OmniMindCustomModelServiceModelFields = {
   modelId: BoundedModelId,
   displayName: Schema.optional(BoundedDisplayName),
   api: Schema.optional(OmniMindCustomModelServiceApi),
@@ -161,8 +192,18 @@ export const OmniMindCustomModelServiceModelInput = Schema.Struct({
   compat: Schema.optional(OmniMindCustomModelCompat),
   contextWindow: Schema.optional(PositiveInt),
   maxTokens: Schema.optional(PositiveInt),
+} as const;
+
+export const OmniMindCustomModelServiceModelInput = Schema.Struct({
+  ...OmniMindCustomModelServiceModelFields,
+  headerMutations: Schema.optional(BoundedHeaderMutations),
 });
 export type OmniMindCustomModelServiceModelInput = typeof OmniMindCustomModelServiceModelInput.Type;
+
+const OmniMindCustomModelServiceModelConfig = Schema.Struct({
+  ...OmniMindCustomModelServiceModelFields,
+  configuredHeaders: Schema.optional(BoundedHeaderMetadata),
+});
 
 const BoundedCustomModels = Schema.Array(OmniMindCustomModelServiceModelInput)
   .check(Schema.isMinLength(1))
@@ -174,6 +215,7 @@ export const OmniMindCustomModelServiceConfigInput = Schema.Struct({
   api: OmniMindCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
   authHeader: Schema.optional(Schema.Boolean),
+  headerMutations: Schema.optional(BoundedHeaderMutations),
   models: BoundedCustomModels,
 });
 export type OmniMindCustomModelServiceConfigInput =
@@ -185,7 +227,10 @@ export const OmniMindCustomModelServiceConfig = Schema.Struct({
   api: OmniMindCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
   authHeader: Schema.optional(Schema.Boolean),
-  models: BoundedCustomModels,
+  configuredHeaders: Schema.optional(BoundedHeaderMetadata),
+  models: Schema.Array(OmniMindCustomModelServiceModelConfig)
+    .check(Schema.isMinLength(1))
+    .check(Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT)),
 });
 export type OmniMindCustomModelServiceConfig = typeof OmniMindCustomModelServiceConfig.Type;
 
@@ -508,6 +553,7 @@ export const OmniMindCustomModelServiceDiscoveryConfigInput = Schema.Struct({
   displayName: BoundedDisplayName,
   api: OmniMindCustomModelServiceApi,
   baseUrl: BoundedEndpointUrl,
+  headerMutations: Schema.optional(BoundedHeaderMutations),
 });
 export type OmniMindCustomModelServiceDiscoveryConfigInput =
   typeof OmniMindCustomModelServiceDiscoveryConfigInput.Type;

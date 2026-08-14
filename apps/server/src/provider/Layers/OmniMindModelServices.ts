@@ -286,6 +286,33 @@ function customProviderDiscoveryConfig(input: OmniMindCustomModelServiceDiscover
   } as const;
 }
 
+function headerReferencesForMutation(
+  input: OmniMindCustomModelServiceConfigInput | OmniMindCustomModelServiceDiscoveryConfigInput,
+): ReadonlyArray<import("@omnimind/pi-coding-agent").ModelConfigHeaderReferenceMutation> {
+  const providerReferences = (input.headerMutations ?? []).map((mutation) => ({
+    scope: { type: "provider" as const },
+    name: mutation.name,
+    reference:
+      mutation.type === "clear"
+        ? ({ type: "clear" } as const)
+        : ({ type: "environment", variableName: mutation.variableName } as const),
+  }));
+  if (!("models" in input)) return providerReferences;
+  return [
+    ...providerReferences,
+    ...input.models.flatMap((model) =>
+      (model.headerMutations ?? []).map((mutation) => ({
+        scope: { type: "model" as const, modelId: model.modelId },
+        name: mutation.name,
+        reference:
+          mutation.type === "clear"
+            ? ({ type: "clear" } as const)
+            : ({ type: "environment", variableName: mutation.variableName } as const),
+      })),
+    ),
+  ];
+}
+
 function credentialReferenceMutation(
   credential: OmniMindCustomModelServiceCredentialInput,
 ):
@@ -337,6 +364,9 @@ function projectCustomConfig(
   provider: ReturnType<
     OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProvider"]
   >,
+  headerMetadata: ReturnType<
+    OmniMindCodingAgentModule["ModelRuntime"]["prototype"]["getModelConfigProviderHeaderMetadata"]
+  >,
 ): OmniMindCustomModelServiceConfig | undefined {
   if (!provider?.baseUrl || !isCustomApiProtocol(provider.api) || !provider.models?.length) {
     return undefined;
@@ -349,6 +379,9 @@ function projectCustomConfig(
     return undefined;
   }
   const providerApi = provider.api;
+  const modelHeaders = new Map(
+    (headerMetadata?.models ?? []).map((entry) => [entry.modelId, entry.headers]),
+  );
   const models = provider.models.flatMap<OmniMindCustomModelServiceModelInput>((model) => {
     const modelId = safeModelId(model.id);
     if (!modelId) return [];
@@ -388,6 +421,9 @@ function projectCustomConfig(
             }
           : {}),
         ...(compat ? { compat } : {}),
+        ...(modelHeaders.get(modelId)?.length
+          ? { configuredHeaders: modelHeaders.get(modelId) }
+          : {}),
         ...(model.contextWindow !== undefined
           ? { contextWindow: Math.max(1, Math.trunc(model.contextWindow)) }
           : {}),
@@ -404,6 +440,7 @@ function projectCustomConfig(
     api: provider.api,
     baseUrl: normalizedCustomBaseUrl(provider.baseUrl),
     ...(provider.authHeader !== undefined ? { authHeader: provider.authHeader } : {}),
+    ...(headerMetadata?.provider.length ? { configuredHeaders: headerMetadata.provider } : {}),
     models,
   };
 }
@@ -941,6 +978,7 @@ async function projectModelServices(input: {
     const customConfig = projectCustomConfig(
       providerId,
       runtime.getModelConfigProvider(provider.id),
+      runtime.getModelConfigProviderHeaderMetadata(provider.id),
     );
     if (customConfig) customConfigsByServiceId.set(providerId, customConfig);
     const credentialInfo = credentials.info(provider.id);
@@ -1747,6 +1785,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 preview.providerId,
                 previewConfig,
                 preview.credentialReference,
+                headerReferencesForMutation(input.config),
               );
               const discovered = await preview.runtime.discoverModelConfigProviderModels(
                 preview.providerId,
@@ -1823,6 +1862,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 preview.providerId,
                 customProviderConfig(input.config),
                 preview.credentialReference,
+                headerReferencesForMutation(input.config),
               );
               const model = preview.runtime.getModel(preview.providerId, input.testModelId);
               if (!model) {
@@ -1957,6 +1997,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     providerId: serviceId,
                     provider: customProviderConfig(configForMutation),
                     ...(credentialReference ? { credentialReference } : {}),
+                    headerReferences: headerReferencesForMutation(input.config),
                   },
                   { signal },
                 );

@@ -1814,6 +1814,7 @@ describe("OmniMindModelServicesLive", () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
+    const commandSentinel = path.join(root, "header-command-ran");
     await mkdir(agentDir, { recursive: true });
     await writeFile(
       path.join(agentDir, "models.json"),
@@ -1824,6 +1825,12 @@ describe("OmniMindModelServicesLive", () => {
             api: "openai-completions",
             baseUrl: "https://redacted.example.test/v1",
             apiKey: "not-projected",
+            headers: {
+              "Bad Header": "hidden-invalid-header-secret",
+              "X-External": "literal-header-secret",
+              "X-Environment": "${PRIVATE_HEADER_REFERENCE}",
+              "X-Command": `!touch ${JSON.stringify(commandSentinel)}`,
+            },
             models: [
               {
                 id: "mimo",
@@ -1842,7 +1849,11 @@ describe("OmniMindModelServicesLive", () => {
                     },
                   ],
                 },
-                headers: { Authorization: "Bearer nested-secret" },
+                headers: {
+                  Authorization: "Bearer nested-secret",
+                  "Bad Model Header": "hidden-invalid-model-header-secret",
+                  "X-Model-Environment": "${PRIVATE_MODEL_HEADER_REFERENCE}",
+                },
               },
             ],
           },
@@ -1882,6 +1893,11 @@ describe("OmniMindModelServicesLive", () => {
         displayName: "小米代理",
         api: "openai-completions",
         baseUrl: "https://redacted.example.test/v1",
+        configuredHeaders: [
+          { name: "X-External", source: "external" },
+          { name: "X-Environment", source: "environment" },
+          { name: "X-Command", source: "command" },
+        ],
         models: [
           {
             modelId: "mimo",
@@ -1900,6 +1916,10 @@ describe("OmniMindModelServicesLive", () => {
                 },
               ],
             },
+            configuredHeaders: [
+              { name: "Authorization", source: "external" },
+              { name: "X-Model-Environment", source: "environment" },
+            ],
           },
         ],
       },
@@ -1911,6 +1931,182 @@ describe("OmniMindModelServicesLive", () => {
     });
     expect(JSON.stringify(result)).not.toContain("not-projected");
     expect(JSON.stringify(result)).not.toContain("nested-secret");
+    expect(JSON.stringify(result)).not.toContain("literal-header-secret");
+    expect(JSON.stringify(result)).not.toContain("Bad Header");
+    expect(JSON.stringify(result)).not.toContain("hidden-invalid-header-secret");
+    expect(JSON.stringify(result)).not.toContain("Bad Model Header");
+    expect(JSON.stringify(result)).not.toContain("hidden-invalid-model-header-secret");
+    expect(JSON.stringify(result)).not.toContain("PRIVATE_HEADER_REFERENCE");
+    expect(JSON.stringify(result)).not.toContain("PRIVATE_MODEL_HEADER_REFERENCE");
+    expect(JSON.stringify(result)).not.toContain(commandSentinel);
+    await expect(stat(commandSentinel)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("persists only targeted header references while preserving hidden header state", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    const commandSentinel = path.join(root, "header-command-ran");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          gateway: {
+            name: "Gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            apiKey: "configured-reference",
+            headers: {
+              Authorization: "Bearer legacy-secret",
+              "X-External": "literal-secret",
+              "X-Untouched": `!touch ${JSON.stringify(commandSentinel)}`,
+            },
+            models: [
+              {
+                id: "model-one",
+                headers: { "X-Old-Model": "old-secret", "X-Keep-Model": "keep-secret" },
+              },
+            ],
+            modelOverrides: {
+              "model-one": {
+                headers: { "x-model-route": "stale-secret", "X-Override-Keep": "keep" },
+              },
+            },
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.saveCustom({
+          config: {
+            serviceId: "gateway",
+            displayName: "Gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            headerMutations: [
+              { name: "X-Environment", type: "environment", variableName: "GATEWAY_HEADER" },
+              { name: "X-External", type: "clear" },
+              { name: "Authorization", type: "clear" },
+            ],
+            models: [
+              {
+                modelId: "model-one",
+                headerMutations: [
+                  { name: "X-Model-Route", type: "environment", variableName: "MODEL_ROUTE" },
+                  { name: "X-Old-Model", type: "clear" },
+                ],
+              },
+            ],
+          },
+          credential: { type: "preserve" },
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root }))),
+    );
+    const stored = JSON.parse(await readFile(path.join(agentDir, "models.json"), "utf8"));
+
+    expect(result).toMatchObject({ state: "complete", service: { serviceId: "gateway" } });
+    expect(stored.providers.gateway.headers).toEqual({
+      "X-Environment": "${GATEWAY_HEADER}",
+      "X-Untouched": `!touch ${JSON.stringify(commandSentinel)}`,
+    });
+    expect(stored.providers.gateway.models[0].headers).toEqual({
+      "X-Keep-Model": "keep-secret",
+      "X-Model-Route": "${MODEL_ROUTE}",
+    });
+    expect(stored.providers.gateway.modelOverrides["model-one"].headers).toEqual({
+      "X-Override-Keep": "keep",
+    });
+    expect(JSON.stringify(result)).not.toMatch(
+      /configured-reference|legacy-secret|literal-secret|keep-secret|stale-secret/u,
+    );
+    await expect(stat(commandSentinel)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("resolves environment header references only for explicit discovery and test requests", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    process.env.CATALOG_TENANT = "catalog-tenant-secret";
+    process.env.MODEL_ROUTE = "model-route-secret";
+    const requests: Array<{ catalog: string | null; model: string | null }> = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      const headers = new Headers(request instanceof Request ? request.headers : init?.headers);
+      requests.push({
+        catalog: headers.get("x-catalog-tenant"),
+        model: headers.get("x-model-route"),
+      });
+      if (requests.length === 1) {
+        return new Response(JSON.stringify({ data: [{ id: "model-one" }] }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response(
+        [
+          'data: {"id":"test","object":"chat.completion.chunk","created":1,"model":"model-one","choices":[{"index":0,"delta":{"role":"assistant","content":"OK"},"finish_reason":null}]}',
+          'data: {"id":"test","object":"chat.completion.chunk","created":1,"model":"model-one","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+    const layer = makeTestLayer({ root });
+
+    const discovered = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.discoverCustom({
+          config: {
+            serviceId: null,
+            displayName: "Header discovery",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            headerMutations: [
+              { name: "X-Catalog-Tenant", type: "environment", variableName: "CATALOG_TENANT" },
+            ],
+          },
+          credential: { type: "stored_key", apiKey: "preview-key" },
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+    const tested = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.testCustom({
+          config: {
+            serviceId: null,
+            displayName: "Header test",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            models: [
+              {
+                modelId: "model-one",
+                headerMutations: [
+                  { name: "X-Model-Route", type: "environment", variableName: "MODEL_ROUTE" },
+                ],
+              },
+            ],
+          },
+          credential: { type: "stored_key", apiKey: "preview-key" },
+          testModelId: "model-one",
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(discovered).toMatchObject({ state: "success" });
+    expect(tested).toMatchObject({ state: "success" });
+    expect(requests).toEqual([
+      { catalog: "catalog-tenant-secret", model: null },
+      { catalog: null, model: "model-route-secret" },
+    ]);
+    expect(JSON.stringify([discovered, tested])).not.toMatch(
+      /catalog-tenant-secret|model-route-secret|CATALOG_TENANT|MODEL_ROUTE/u,
+    );
   });
 
   it("tests a custom connection without persisting its process-local API key", async () => {

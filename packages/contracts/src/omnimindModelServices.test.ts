@@ -376,6 +376,104 @@ describe("OmniMind model-services contracts", () => {
     expect(JSON.stringify(decoded)).not.toContain("openRouterRouting");
   });
 
+  it("admits only write-only environment header mutations and public metadata", () => {
+    const decoded = Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+      config: {
+        serviceId: "custom",
+        displayName: "Custom",
+        api: "openai-completions",
+        baseUrl: "https://gateway.example.test/v1",
+        headerMutations: [
+          { name: "X-Tenant", type: "environment", variableName: "CUSTOM_TENANT" },
+          { name: "X-Legacy", type: "clear" },
+        ],
+        models: [
+          {
+            modelId: "model-one",
+            headerMutations: [
+              { name: "X-Model-Route", type: "environment", variableName: "MODEL_ROUTE" },
+            ],
+          },
+        ],
+      },
+      credential: { type: "preserve" },
+      testModelId: "model-one",
+    });
+    expect(decoded.config).toMatchObject({
+      headerMutations: [
+        { name: "X-Tenant", type: "environment", variableName: "CUSTOM_TENANT" },
+        { name: "X-Legacy", type: "clear" },
+      ],
+      models: [
+        {
+          headerMutations: [
+            { name: "X-Model-Route", type: "environment", variableName: "MODEL_ROUTE" },
+          ],
+        },
+      ],
+    });
+
+    const projected = Schema.decodeUnknownSync(OmniMindModelServicesGetResult)({
+      state: "ready",
+      service: { ...descriptor, serviceId: "custom", providerId: "custom", origin: "models_json" },
+      models: [],
+      customConfig: {
+        serviceId: "custom",
+        displayName: "Custom",
+        api: "openai-completions",
+        baseUrl: "https://gateway.example.test/v1",
+        configuredHeaders: [
+          {
+            name: "X-Tenant",
+            source: "environment",
+            variableName: "MUST_NOT_DECODE",
+            value: "MUST_NOT_DECODE",
+          },
+          { name: "X-Legacy", source: "command", command: "MUST_NOT_DECODE" },
+        ],
+        models: [
+          {
+            modelId: "model-one",
+            configuredHeaders: [
+              { name: "X-Model-Route", source: "external", value: "MUST_NOT_DECODE" },
+            ],
+          },
+        ],
+      },
+      errorCode: null,
+    });
+    expect(projected).toMatchObject({
+      state: "ready",
+      customConfig: {
+        configuredHeaders: [
+          { name: "X-Tenant", source: "environment" },
+          { name: "X-Legacy", source: "command" },
+        ],
+        models: [
+          {
+            configuredHeaders: [{ name: "X-Model-Route", source: "external" }],
+          },
+        ],
+      },
+    });
+    expect(JSON.stringify(projected)).not.toContain("MUST_NOT_DECODE");
+
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceTestInput)({
+        config: {
+          serviceId: "custom",
+          displayName: "Custom",
+          api: "openai-completions",
+          baseUrl: "https://gateway.example.test/v1",
+          headerMutations: [{ name: "X-Unsafe", type: "command", command: "printf private" }],
+          models: [{ modelId: "model-one" }],
+        },
+        credential: { type: "preserve" },
+        testModelId: "model-one",
+      }),
+    ).toThrow();
+  });
+
   it("keeps generic model discovery bounded and credential-blind", () => {
     expect(
       Schema.decodeUnknownSync(OmniMindCustomModelServiceDiscoverInput)({
