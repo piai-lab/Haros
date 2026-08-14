@@ -810,7 +810,8 @@ export function createWsNativeApi(): NativeApi {
         transport.request(WS_METHODS.omnimindEcosystemRemove, input, { timeoutMs: null }),
       setResourceEnabled: (input) =>
         transport.request(WS_METHODS.omnimindEcosystemSetResourceEnabled, input),
-      reload: () => transport.request(WS_METHODS.omnimindEcosystemReload, {}, { timeoutMs: null }),
+      reload: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemReload, input, { timeoutMs: null }),
     },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),

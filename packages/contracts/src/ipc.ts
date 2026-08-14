@@ -276,6 +276,7 @@ import type {
   OmniMindEcosystemListResourcesResult,
   OmniMindEcosystemMutationResult,
   OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadInput,
   OmniMindEcosystemReloadResult,
   OmniMindEcosystemResourceToggleInput,
   OmniMindEcosystemSnapshot,
@@ -868,7 +869,7 @@ export interface NativeApi {
     setResourceEnabled: (
       input: OmniMindEcosystemResourceToggleInput,
     ) => Promise<OmniMindEcosystemMutationResult>;
-    reload: () => Promise<OmniMindEcosystemReloadResult>;
+    reload: (input: OmniMindEcosystemReloadInput) => Promise<OmniMindEcosystemReloadResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

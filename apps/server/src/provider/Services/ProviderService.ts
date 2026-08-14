@@ -12,6 +12,8 @@
  * @module ProviderService
  */
 import type {
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemReloadResult,
   ProviderBackgroundTaskInput,
   ProviderForkThreadInput,
   ProviderForkThreadResult,
@@ -143,6 +145,11 @@ export interface ProviderServiceShape {
   readonly stopSession: (
     input: ProviderStopSessionInput,
   ) => Effect.Effect<void, ProviderServiceError>;
+
+  /** Reload resources only on the exact live OmniMind Agent session. */
+  readonly reloadSessionResources: (
+    input: OmniMindEcosystemReloadInput,
+  ) => Effect.Effect<OmniMindEcosystemReloadResult, ProviderServiceError>;
 
   /**
    * Stop only the live adapter process/session while preserving the persisted

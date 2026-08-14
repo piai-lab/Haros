@@ -217,6 +217,11 @@ function makeFakeCodexAdapter(
       }),
   );
 
+  const reloadSessionResources = vi.fn(
+    (threadId: ThreadId): Effect.Effect<"reloaded" | "no_active_session", ProviderAdapterError> =>
+      Effect.succeed(sessions.has(threadId) ? "reloaded" : "no_active_session"),
+  );
+
   const listSessions = vi.fn(
     (): Effect.Effect<ReadonlyArray<ProviderSession>> =>
       Effect.sync(() => Array.from(sessions.values())),
@@ -294,6 +299,7 @@ function makeFakeCodexAdapter(
     respondToRequest,
     respondToUserInput,
     stopSession,
+    reloadSessionResources,
     listSessions,
     hasSession,
     readThread,
@@ -340,6 +346,7 @@ function makeFakeCodexAdapter(
     respondToRequest,
     respondToUserInput,
     stopSession,
+    reloadSessionResources,
     listSessions,
     hasSession,
     readThread,
@@ -462,6 +469,9 @@ const routing = makeProviderServiceLayer();
 const modelServiceAdmission = makeProviderServiceLayer(undefined, {
   includeOmniMind: true,
 });
+const ecosystemReloadRouting = makeProviderServiceLayer(undefined, {
+  includeOmniMind: true,
+});
 const rotationRetryPersistAttempts = new Map<string, number>();
 const ROTATION_RETRY_FAILURE_EVENT_ID = "terminal-rotation-settlement-retry";
 const rotationRetry = makeProviderServiceLayer({
@@ -483,6 +493,66 @@ const restartRollbackRouting = makeProviderServiceLayer(undefined, {
 });
 const piInteractionRouting = makeProviderServiceLayer(undefined, {
   includePi: true,
+});
+
+ecosystemReloadRouting.layer("ProviderServiceLive active resource reload", (it) => {
+  it.effect("reloads only the exact live OmniMind Agent session", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-ecosystem-reload");
+      yield* provider.startSession(threadId, {
+        provider: "omnimind",
+        threadId,
+        modelSelection: { provider: "omnimind", model: "gateway/model-one" },
+        runtimeMode: "full-access",
+      });
+
+      assert.deepEqual(yield* provider.reloadSessionResources({ threadId }), {
+        state: "reloaded",
+      });
+      assert.equal(ecosystemReloadRouting.omnimind.reloadSessionResources.mock.calls.length, 1);
+    }),
+  );
+
+  it.effect("does not start or recover a runtime when no active session exists", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-ecosystem-no-session");
+      const startCount = ecosystemReloadRouting.omnimind.startSession.mock.calls.length;
+      const reloadCount = ecosystemReloadRouting.omnimind.reloadSessionResources.mock.calls.length;
+
+      assert.deepEqual(yield* provider.reloadSessionResources({ threadId }), {
+        state: "no_active_session",
+      });
+      assert.equal(ecosystemReloadRouting.omnimind.startSession.mock.calls.length, startCount);
+      assert.equal(
+        ecosystemReloadRouting.omnimind.reloadSessionResources.mock.calls.length,
+        reloadCount,
+      );
+    }),
+  );
+
+  it.effect("does not reload a live task owned by another Engine", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const threadId = asThreadId("thread-ecosystem-codex");
+      const reloadCount = ecosystemReloadRouting.codex.reloadSessionResources.mock.calls.length;
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        modelSelection: { provider: "codex", model: "gpt-5" },
+        runtimeMode: "full-access",
+      });
+
+      assert.deepEqual(yield* provider.reloadSessionResources({ threadId }), {
+        state: "different_engine",
+      });
+      assert.equal(
+        ecosystemReloadRouting.codex.reloadSessionResources.mock.calls.length,
+        reloadCount,
+      );
+    }),
+  );
 });
 
 it.effect("ProviderServiceLive keeps persisted resumable sessions on startup", () =>

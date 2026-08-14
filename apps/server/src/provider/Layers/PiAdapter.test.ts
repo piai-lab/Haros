@@ -471,8 +471,10 @@ describe("getPiDiscoverableModels", () => {
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
+            const reloaded = yield* adapter.reloadSessionResources!(threadId);
             yield* adapter.stopSession(threadId);
-            return { catalog, session };
+            const afterStop = yield* adapter.reloadSessionResources!(threadId);
+            return { afterStop, catalog, reloaded, session };
           }).pipe(Effect.provide(layer)),
         ),
       );
@@ -485,6 +487,8 @@ describe("getPiDiscoverableModels", () => {
         model: "local/safe-model",
         status: "ready",
       });
+      expect(result.reloaded).toBe("reloaded");
+      expect(result.afterStop).toBe("no_active_session");
     } finally {
       rmSync(serverRoot, { recursive: true, force: true });
     }
@@ -650,6 +654,7 @@ describe("getPiDiscoverableModels", () => {
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
             });
             yield* Effect.sleep("20 millis");
+            const reloadWhileActive = yield* adapter.reloadSessionResources!(threadId);
             yield* Effect.sync(() => {
               writeFileSync(
                 path.join(agentDir, "auth.json"),
@@ -675,13 +680,14 @@ describe("getPiDiscoverableModels", () => {
             });
             yield* Effect.sleep("50 millis");
             yield* adapter.stopSession(threadId);
-            return { first, overlapping, next };
+            return { first, overlapping, reloadWhileActive, next };
           }).pipe(Effect.provide(layer)),
         ),
       );
 
       expect(result.first.turnId).toBeDefined();
       expect(result.overlapping._tag).toBe("Failure");
+      expect(result.reloadWhileActive).toBe("busy");
       expect(result.next.turnId).toBeDefined();
       expect(authorizationHeaders).toEqual(["Bearer test-old-key", "Bearer test-new-key"]);
     } finally {

@@ -1957,9 +1957,9 @@ const makeWsRpcHandlersLayer = () =>
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.setResourceEnabled(input))),
             "Failed to change an OmniMind Agent package resource",
           ),
-        [WS_METHODS.omnimindEcosystemReload]: () =>
+        [WS_METHODS.omnimindEcosystemReload]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.reload())),
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.reload(input))),
             "Failed to reload OmniMind Agent resources",
           ),
         [WS_METHODS.omnimindModelServicesList]: (input) =>

@@ -933,10 +933,12 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
     const packageId = "a".repeat(64);
+    const threadId = ThreadId.makeUnsafe("thread-package-reload");
 
     await api.omnimindEcosystem.install({ source: "npm:@scope/package@1.2.3" });
     await api.omnimindEcosystem.listResources({ packageId });
     await api.omnimindEcosystem.update({ packageId });
+    await api.omnimindEcosystem.reload({ threadId });
 
     expect(requestMock).toHaveBeenNthCalledWith(
       1,
@@ -951,6 +953,12 @@ describe("wsNativeApi", () => {
       3,
       WS_METHODS.omnimindEcosystemUpdate,
       { packageId },
+      { timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      4,
+      WS_METHODS.omnimindEcosystemReload,
+      { threadId },
       { timeoutMs: null },
     );
   });

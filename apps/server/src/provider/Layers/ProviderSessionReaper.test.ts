@@ -80,6 +80,7 @@ describe("ProviderSessionReaperLive", () => {
     };
     const providerService: ProviderServiceShape = {
       startSession: () => unsupported(),
+      reloadSessionResources: () => unsupported(),
       sendTurn: () => unsupported(),
       steerTurn: () => unsupported(),
       startReview: () => unsupported(),
@@ -145,6 +146,7 @@ describe("ProviderSessionReaperLive", () => {
     };
     const providerService: ProviderServiceShape = {
       startSession: () => unsupported(),
+      reloadSessionResources: () => unsupported(),
       sendTurn: () => unsupported(),
       steerTurn: () => unsupported(),
       startReview: () => unsupported(),

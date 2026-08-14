@@ -8,6 +8,7 @@ import type {
   OmniMindEcosystemListResourcesResult,
   OmniMindEcosystemMutationResult,
   OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadInput,
   OmniMindEcosystemReloadResult,
   OmniMindEcosystemResourceToggleInput,
   OmniMindEcosystemSnapshot,
@@ -34,7 +35,9 @@ export interface OmniMindEcosystemShape {
   readonly setResourceEnabled: (
     input: OmniMindEcosystemResourceToggleInput,
   ) => Effect.Effect<OmniMindEcosystemMutationResult, Error>;
-  readonly reload: () => Effect.Effect<OmniMindEcosystemReloadResult, Error>;
+  readonly reload: (
+    input: OmniMindEcosystemReloadInput,
+  ) => Effect.Effect<OmniMindEcosystemReloadResult, Error>;
 }
 
 export class OmniMindEcosystem extends ServiceMap.Service<

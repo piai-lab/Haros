@@ -5,6 +5,7 @@
 
 import {
   PROVIDER_DISPLAY_NAMES,
+  type ThreadId,
   WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
   type OmniMindPackageDescriptor,
   type OmniMindPackageResourceDescriptor,
@@ -47,7 +48,11 @@ import {
   rankProviderDiscoveryItems,
   resolveProviderDiscoveryCwd,
 } from "~/lib/providerDiscovery";
-import { createFirstProjectSelector } from "~/storeSelectors";
+import {
+  createFirstProjectSelector,
+  createProjectSelector,
+  createThreadSelector,
+} from "~/storeSelectors";
 import {
   providerComposerCapabilitiesQueryOptions,
   providerPluginsQueryOptions,
@@ -111,7 +116,8 @@ type PackageMutation =
   | { type: "update"; packageId: string }
   | { type: "remove"; packageId: string }
   | { type: "toggle"; resource: OmniMindPackageResourceDescriptor; enabled: boolean }
-  | { type: "reload" };
+  | { type: "reload"; threadId: ThreadId };
+type PackageReloadState = "reloaded" | "no_active_session" | "different_engine" | "busy";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -577,7 +583,7 @@ function PackageResourceDialog({
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function PluginLibrary() {
+export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: ThreadId | null }) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
@@ -585,9 +591,19 @@ export function PluginLibrary() {
     useDesktopTopBarWindowControlsGutterClassName();
   const firstProject = useStore(useMemo(() => createFirstProjectSelector(), []));
   const { activeProject: focusedProject, activeThread, focusedThreadId } = useFocusedChatContext();
-  const activeProject = focusedProject ?? firstProject ?? null;
+  const sourceThread = useStore(
+    useMemo(() => createThreadSelector(sourceThreadId), [sourceThreadId]),
+  );
+  const sourceProject = useStore(
+    useMemo(
+      () => createProjectSelector(sourceThread?.projectId ?? null),
+      [sourceThread?.projectId],
+    ),
+  );
+  const contextThread = activeThread ?? sourceThread ?? null;
+  const activeProject = focusedProject ?? sourceProject ?? firstProject ?? null;
 
-  const preferredProvider = activeThread?.modelSelection.provider ?? "omnimind";
+  const preferredProvider = contextThread?.modelSelection.provider ?? "omnimind";
 
   const [selectedProvider, setSelectedProvider] = useState<ProviderKind>(preferredProvider);
   const [selectedTab, setSelectedTab] = useState<DiscoveryTab>("skills");
@@ -595,10 +611,19 @@ export function PluginLibrary() {
   const [skillSearch, setSkillSearch] = useState("");
   const [packageSource, setPackageSource] = useState("");
   const [managedPackageId, setManagedPackageId] = useState<string | null>(null);
+  const [pendingRemovalPackage, setPendingRemovalPackage] =
+    useState<OmniMindPackageDescriptor | null>(null);
   const [packageError, setPackageError] = useState(false);
+  const [packageReloadState, setPackageReloadState] = useState<PackageReloadState | null>(null);
   const deferredPluginSearch = useDeferredValue(pluginSearch);
   const deferredSkillSearch = useDeferredValue(skillSearch);
-  const providerThreadId = focusedThreadId;
+  const providerThreadId = focusedThreadId ?? sourceThreadId;
+  const reloadThreadId =
+    sourceThread?.session?.provider === "omnimind" &&
+    sourceThread.session.status !== "closed" &&
+    sourceThread.session.status !== "error"
+      ? sourceThread.id
+      : null;
   const ecosystemAvailable = useSyncExternalStore(
     subscribeToEcosystemCapability,
     readEcosystemCapability,
@@ -634,12 +659,19 @@ export function PluginLibrary() {
             enabled: action.enabled,
           });
         case "reload":
-          return ecosystem.reload();
+          return ecosystem.reload({ threadId: action.threadId });
       }
     },
-    onMutate: () => setPackageError(false),
-    onSuccess: async (_result, action) => {
+    onMutate: (action) => {
+      setPackageError(false);
+      if (action.type === "reload") setPackageReloadState(null);
+    },
+    onSuccess: async (result, action) => {
       if (action.type === "install") setPackageSource("");
+      if (action.type === "remove") setPendingRemovalPackage(null);
+      if (action.type === "reload" && "state" in result) {
+        setPackageReloadState(result.state);
+      }
       await queryClient.invalidateQueries({ queryKey: ecosystemQueryKey });
     },
     onError: () => setPackageError(true),
@@ -653,12 +685,6 @@ export function PluginLibrary() {
     } catch {
       setPackageError(true);
     }
-  };
-
-  const removePackage = async (item: OmniMindPackageDescriptor) => {
-    const confirmed = await ensureNativeApi().dialogs.confirm(t("library.removePackageConfirm"));
-    if (!confirmed) return;
-    ecosystemMutation.mutate({ type: "remove", packageId: item.packageId });
   };
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
@@ -723,7 +749,7 @@ export function PluginLibrary() {
   const effectiveProvider = selectedProvider;
 
   const discoveryCwd = resolveProviderDiscoveryCwd({
-    activeThreadWorktreePath: activeThread?.worktreePath ?? null,
+    activeThreadWorktreePath: contextThread?.worktreePath ?? null,
     activeProjectCwd: activeProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
@@ -919,10 +945,17 @@ export function PluginLibrary() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={ecosystemMutation.isPending}
-                  onClick={() => ecosystemMutation.mutate({ type: "reload" })}
+                  disabled={ecosystemMutation.isPending || reloadThreadId === null}
+                  title={
+                    reloadThreadId === null ? t("library.reloadRequiresActiveTask") : undefined
+                  }
+                  onClick={() => {
+                    if (reloadThreadId !== null) {
+                      ecosystemMutation.mutate({ type: "reload", threadId: reloadThreadId });
+                    }
+                  }}
                 >
-                  {t("library.reloadResources")}
+                  {t("library.reloadActiveTaskResources")}
                 </Button>
                 <Button
                   size="sm"
@@ -980,6 +1013,11 @@ export function PluginLibrary() {
                 {packageError ? (
                   <InlineWarning>{t("library.packageOperationFailed")}</InlineWarning>
                 ) : null}
+                {packageReloadState !== null ? (
+                  <div aria-live="polite" className="text-xs text-muted-foreground">
+                    {t(`library.reloadState.${packageReloadState}`)}
+                  </div>
+                ) : null}
                 {!ecosystemAvailable ? (
                   <EmptyPanel
                     title={t("library.packagesUnavailable")}
@@ -1005,7 +1043,7 @@ export function PluginLibrary() {
                       onUpdate={() =>
                         ecosystemMutation.mutate({ type: "update", packageId: item.packageId })
                       }
-                      onRemove={() => void removePackage(item)}
+                      onRemove={() => setPendingRemovalPackage(item)}
                     />
                   ))
                 )}
@@ -1101,6 +1139,42 @@ export function PluginLibrary() {
           ecosystemMutation.mutate({ type: "toggle", resource, enabled })
         }
       />
+      <Dialog
+        open={pendingRemovalPackage !== null}
+        onOpenChange={(open) => {
+          if (!open && !ecosystemMutation.isPending) setPendingRemovalPackage(null);
+        }}
+      >
+        <DialogPopup className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {t("library.removePackageTitle", {
+                package: pendingRemovalPackage?.displayName ?? "",
+              })}
+            </DialogTitle>
+            <DialogDescription>{t("library.removePackageDescription")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" autoFocus />}>
+              {t("common.cancel")}
+            </DialogClose>
+            <Button
+              variant="destructive"
+              disabled={ecosystemMutation.isPending || pendingRemovalPackage === null}
+              onClick={() => {
+                if (pendingRemovalPackage !== null) {
+                  ecosystemMutation.mutate({
+                    type: "remove",
+                    packageId: pendingRemovalPackage.packageId,
+                  });
+                }
+              }}
+            >
+              {t("common.remove")}
+            </Button>
+          </DialogFooter>
+        </DialogPopup>
+      </Dialog>
     </SidebarInset>
   );
 }

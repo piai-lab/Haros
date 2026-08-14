@@ -1,10 +1,12 @@
 import { Effect, Layer } from "effect";
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import { ThreadId } from "@omnimind/contracts";
 import { describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
 import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
 import { OmniMindEcosystem, type OmniMindEcosystemShape } from "../Services/OmniMindEcosystem.ts";
+import { ProviderService, type ProviderServiceShape } from "../Services/ProviderService.ts";
 import { makeOmniMindEcosystemLive } from "./OmniMindEcosystem.ts";
 
 function makeHarness() {
@@ -40,10 +42,7 @@ function makeHarness() {
   ]);
   const checkPublicPackageUpdates = vi.fn(async () => []);
   const setPublicPackageResourceEnabled = vi.fn(async () => true);
-  const invalidate = vi.fn();
-  const createAgentSessionServices = vi.fn(async () => ({
-    resourceLoader: { getExtensions: () => ({ runtime: { invalidate } }) },
-  }));
+  const reloadSessionResources = vi.fn(() => Effect.succeed({ state: "reloaded" as const }));
   const settingsManager = { flush };
   const sdk = {
     SettingsManager: { create: () => settingsManager },
@@ -56,11 +55,12 @@ function makeHarness() {
       updatePublicPackage = vi.fn(async () => undefined);
       removePublicPackage = vi.fn(async () => true);
     },
-    ModelRuntime: { create: vi.fn(async () => ({})) },
-    createAgentSessionServices,
   } as unknown as OmniMindCodingAgentModule;
   const layer = makeOmniMindEcosystemLive({ loadModule: async () => sdk }).pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), "/tmp/omnimind-ecosystem-test")),
+    Layer.provideMerge(
+      Layer.succeed(ProviderService, { reloadSessionResources } as unknown as ProviderServiceShape),
+    ),
     Layer.provideMerge(NodeServices.layer),
   );
   const run = <A>(operation: (service: OmniMindEcosystemShape) => Effect.Effect<A, Error>) =>
@@ -76,8 +76,7 @@ function makeHarness() {
     listPublicConfiguredPackageResources,
     checkPublicPackageUpdates,
     setPublicPackageResourceEnabled,
-    createAgentSessionServices,
-    invalidate,
+    reloadSessionResources,
     flush,
   };
 }
@@ -110,7 +109,7 @@ describe("OmniMindEcosystemLive", () => {
     expect(harness.listPublicConfiguredPackages).toHaveBeenCalledTimes(1);
     expect(harness.listPublicConfiguredPackageResources).not.toHaveBeenCalled();
     expect(harness.checkPublicPackageUpdates).not.toHaveBeenCalled();
-    expect(harness.createAgentSessionServices).not.toHaveBeenCalled();
+    expect(harness.reloadSessionResources).not.toHaveBeenCalled();
     expect(JSON.stringify(snapshot)).not.toContain("/private/");
   });
 
@@ -176,13 +175,13 @@ describe("OmniMindEcosystemLive", () => {
     expect(harness.flush).toHaveBeenCalledTimes(1);
   });
 
-  it("retires the task-local runtime after an explicit reload", async () => {
+  it("routes an explicit reload to the exact live thread owner", async () => {
     const harness = makeHarness();
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000041");
 
-    await expect(harness.run((service) => service.reload())).resolves.toEqual({
-      reloaded: true,
+    await expect(harness.run((service) => service.reload({ threadId }))).resolves.toEqual({
+      state: "reloaded",
     });
-    expect(harness.createAgentSessionServices).toHaveBeenCalledTimes(1);
-    expect(harness.invalidate).toHaveBeenCalledTimes(1);
+    expect(harness.reloadSessionResources).toHaveBeenCalledWith({ threadId });
   });
 });

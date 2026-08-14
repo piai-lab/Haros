@@ -65,6 +65,7 @@ export interface ProviderSteerSubagentPayload {
   readonly mentions?: ProviderSendTurnInput["mentions"];
 }
 export type ProviderConversationRollbackMode = "native" | "restart-session";
+export type ProviderSessionResourceReloadState = "reloaded" | "no_active_session" | "busy";
 
 export interface ProviderAdapterCapabilities {
   /**
@@ -187,6 +188,11 @@ export interface ProviderAdapterShape<TError> {
    * the persisted binding can outlive the adapter's in-memory session.
    */
   readonly stopSession: (threadId: ThreadId) => Effect.Effect<void, TError>;
+
+  /** Reload resources on an already-live session without starting or recovering one. */
+  readonly reloadSessionResources?: (
+    threadId: ThreadId,
+  ) => Effect.Effect<ProviderSessionResourceReloadState, TError>;
 
   /**
    * List currently active provider sessions for this adapter.

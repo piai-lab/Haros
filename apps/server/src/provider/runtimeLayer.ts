@@ -118,10 +118,11 @@ export function makeServerProviderLayer(
     const omniMindModelServicesLayer = OmniMindModelServicesLive.pipe(
       Layer.provide(providerServiceLayer),
     );
+    const omniMindEcosystemLayer = OmniMindEcosystemLive.pipe(Layer.provide(providerServiceLayer));
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
-      OmniMindEcosystemLive,
+      omniMindEcosystemLayer,
       omniMindModelServicesLayer,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,

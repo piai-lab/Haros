@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   OmniMindEcosystemInstallInput,
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemReloadResult,
   OmniMindEcosystemResourceToggleInput,
 } from "./omnimindEcosystem";
 
@@ -48,4 +50,14 @@ describe("OmniMind ecosystem contracts", () => {
       ).toThrow();
     },
   );
+
+  it("requires an exact thread and exposes bounded active-session reload states", () => {
+    expect(
+      Schema.decodeUnknownSync(OmniMindEcosystemReloadInput)({ threadId: "thread-active" }),
+    ).toEqual({ threadId: "thread-active" });
+    expect(() => Schema.decodeUnknownSync(OmniMindEcosystemReloadInput)({})).toThrow();
+    for (const state of ["reloaded", "no_active_session", "different_engine", "busy"] as const) {
+      expect(Schema.decodeUnknownSync(OmniMindEcosystemReloadResult)({ state })).toEqual({ state });
+    }
+  });
 });

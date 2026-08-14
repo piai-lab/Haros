@@ -3031,6 +3031,43 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     const hasLiveRuntimeTasks: NonNullable<ProviderServiceShape["hasLiveRuntimeTasks"]> = (input) =>
       Effect.sync(() => (liveRuntimeTaskIds.get(input.threadId)?.size ?? 0) > 0);
 
+    const reloadSessionResources: ProviderServiceShape["reloadSessionResources"] = (input) =>
+      lifecycle.runCurrent(input.threadId, () =>
+        Effect.gen(function* () {
+          const operation = "ProviderService.reloadSessionResources";
+          const binding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));
+          if (binding !== undefined) {
+            if (isReplacementRestoreFailedBinding(binding)) {
+              return yield* toValidationError(
+                operation,
+                `Cannot reload thread '${input.threadId}' because its provider ownership is not authoritative.`,
+              );
+            }
+          }
+          const adapter =
+            binding === undefined
+              ? yield* findLiveSessionAdapter(input.threadId, operation)
+              : yield* registry.getByProvider(binding.provider);
+          if (adapter === null) return { state: "no_active_session" as const };
+          if (adapter.provider !== "omnimind") {
+            return { state: "different_engine" as const };
+          }
+          if (!(yield* adapter.hasSession(input.threadId))) {
+            return { state: "no_active_session" as const };
+          }
+          if ((liveRuntimeTaskIds.get(input.threadId)?.size ?? 0) > 0) {
+            return { state: "busy" as const };
+          }
+          if (!adapter.reloadSessionResources) {
+            return yield* toValidationError(
+              operation,
+              "OmniMind Agent does not expose active-session resource reload.",
+            );
+          }
+          return { state: yield* adapter.reloadSessionResources(input.threadId) };
+        }),
+      );
+
     stopIdleRuntimeSession = (threadId, generation) => {
       const stopEffect = Effect.gen(function* () {
         const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
@@ -3399,6 +3436,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       respondToRequest,
       respondToUserInput,
       stopSession,
+      reloadSessionResources,
       stopRuntimeSession,
       hasLiveRuntimeTasks,
       clearSessionResumeCursor,

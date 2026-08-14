@@ -4,7 +4,7 @@
 
 import { Schema } from "effect";
 
-import { TrimmedNonEmptyString } from "./baseSchemas";
+import { ThreadId, TrimmedNonEmptyString } from "./baseSchemas";
 
 const NPM_PACKAGE_SOURCE =
   /^npm:(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*|[a-z0-9][a-z0-9._-]*)(?:@[a-z0-9*+._~^<>=|-]+)?$/iu;
@@ -108,8 +108,11 @@ export const OmniMindEcosystemMutationResult = Schema.Struct({
 });
 export type OmniMindEcosystemMutationResult = typeof OmniMindEcosystemMutationResult.Type;
 
-export const OmniMindEcosystemReloadInput = Schema.Struct({});
+export const OmniMindEcosystemReloadInput = Schema.Struct({
+  threadId: ThreadId,
+});
+export type OmniMindEcosystemReloadInput = typeof OmniMindEcosystemReloadInput.Type;
 export const OmniMindEcosystemReloadResult = Schema.Struct({
-  reloaded: Schema.Boolean,
+  state: Schema.Literals(["reloaded", "no_active_session", "different_engine", "busy"]),
 });
 export type OmniMindEcosystemReloadResult = typeof OmniMindEcosystemReloadResult.Type;

@@ -81,6 +81,7 @@ import {
 } from "../Services/ProviderAdapter.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
+import { makeKeyedLock } from "../keyedLock.ts";
 import { classifyPiTurnFailure } from "../piTurnFailure.ts";
 import {
   compactProviderRuntimeEventForIngress,
@@ -1372,6 +1373,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
     const sessions = new Map<ThreadId, PiSessionContext>();
+    const sessionResourceAdmission = makeKeyedLock<ThreadId>();
     const ownsNativeEventLogger = options?.nativeEventLogger === undefined;
     const nativeEventLogger =
       options?.nativeEventLogger ??
@@ -2596,186 +2598,157 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       });
 
     const sendTurn: PiAdapterShape["sendTurn"] = (input) =>
-      Effect.gen(function* () {
-        const context = yield* requireSession(input.threadId);
-        if (context.activeTurnId) {
-          return yield* new ProviderAdapterValidationError({
-            provider: provider,
-            operation: "sendTurn",
-            issue: `A ${displayName} turn is already active for this thread.`,
-          });
-        }
-        if (provider === "omnimind") {
-          const currentRevision = getOmniMindModelRuntimeMutationRevision(context.agentDir);
-          if (currentRevision > context.appliedModelRuntimeMutationRevision) {
-            yield* Effect.tryPromise({
-              try: async () => {
-                await context.runtime.services.modelRuntime.refresh({ allowNetwork: false });
-                const configurationError = context.runtime.services.modelRuntime.getError();
-                if (configurationError !== undefined) {
-                  throw new Error("OmniMind model-service state could not be reconciled.");
-                }
-                const piSdk = await family.loadModule();
-                context.modelRegistry = modelRegistryFacade(
-                  context.runtime.services.modelRuntime,
-                  piSdk,
-                );
-                context.appliedModelRuntimeMutationRevision = currentRevision;
-              },
-              catch: (cause) =>
-                new ProviderAdapterRequestError({
-                  provider,
-                  method: "model-services/reconcile",
-                  detail: "OmniMind model-service changes could not be applied to this session.",
-                  cause,
-                }),
-            });
-          }
-        }
-        if (input.modelSelection?.provider === provider) {
-          const model = findModelInRegistry(context.modelRegistry, input.modelSelection.model);
-          if (!model) {
-            return yield* new ProviderAdapterValidationError({
-              provider: provider,
-              operation: "model/set",
-              issue: `${displayName} model '${input.modelSelection.model}' is not available in the current runtime catalog. Choose a discovered model and try again.`,
-            });
-          }
-          // Pi's setModel rejects an unauthenticated model before the adapter's
-          // general send gate runs. Check the requested model first so the product
-          // reports a deliberate credential block instead of leaking an SDK stack.
-          if (!piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, model)) {
+      sessionResourceAdmission.withLock(
+        input.threadId,
+        Effect.gen(function* () {
+          const context = yield* requireSession(input.threadId);
+          if (context.activeTurnId) {
             return yield* new ProviderAdapterValidationError({
               provider: provider,
               operation: "sendTurn",
-              issue: `${displayName} cannot send with provider '${model.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`,
+              issue: `A ${displayName} turn is already active for this thread.`,
             });
           }
-          yield* Effect.tryPromise({
-            try: () => context.runtime.session.setModel(model),
-            catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider: provider,
-                method: "model/set",
-                detail: toMessage(cause, `Failed to set ${displayName} model.`),
-                cause,
-              }),
-          });
-          const thinkingLevel = normalizePiThinkingLevel(
-            input.modelSelection.options?.thinkingLevel,
-          );
-          if (thinkingLevel) {
-            context.runtime.session.setThinkingLevel(thinkingLevel);
-          }
-        }
-        const activeModel = context.runtime.session.model;
-        if (!piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, activeModel)) {
-          return yield* new ProviderAdapterValidationError({
-            provider: provider,
-            operation: "sendTurn",
-            issue: activeModel
-              ? `${displayName} cannot send with provider '${activeModel.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`
-              : `${displayName} cannot send because no model with configured credentials is selected.`,
-          });
-        }
-        const payload = yield* buildPromptPayload(input);
-        const turnId = TurnId.makeUnsafe(crypto.randomUUID());
-        context.activeTurnId = turnId;
-        context.turns.push({ id: turnId, items: [] });
-        context.session = makeSessionSnapshot(context, provider);
-        if (payload.images.length === 0 && isPiReloadCommand(payload.text)) {
-          offerRuntimeEvent({
-            ...makeEventBase(context),
-            type: "turn.started",
-            payload: {
-              ...(context.runtime.session.model
-                ? {
-                    model: `${context.runtime.session.model.provider}/${context.runtime.session.model.id}`,
+          if (provider === "omnimind") {
+            const currentRevision = getOmniMindModelRuntimeMutationRevision(context.agentDir);
+            if (currentRevision > context.appliedModelRuntimeMutationRevision) {
+              yield* Effect.tryPromise({
+                try: async () => {
+                  await context.runtime.services.modelRuntime.refresh({ allowNetwork: false });
+                  const configurationError = context.runtime.services.modelRuntime.getError();
+                  if (configurationError !== undefined) {
+                    throw new Error("OmniMind model-service state could not be reconciled.");
                   }
-                : {}),
-              effort: context.runtime.session.thinkingLevel,
-            },
-            raw: { source: "pi.sdk.event", method: "reload", payload: { command: payload.text } },
-          } satisfies ProviderRuntimeEvent);
-          yield* Effect.tryPromise({
-            try: () => context.runtime.session.reload(),
-            catch: (cause) =>
-              new ProviderAdapterRequestError({
+                  const piSdk = await family.loadModule();
+                  context.modelRegistry = modelRegistryFacade(
+                    context.runtime.services.modelRuntime,
+                    piSdk,
+                  );
+                  context.appliedModelRuntimeMutationRevision = currentRevision;
+                },
+                catch: (cause) =>
+                  new ProviderAdapterRequestError({
+                    provider,
+                    method: "model-services/reconcile",
+                    detail: "OmniMind model-service changes could not be applied to this session.",
+                    cause,
+                  }),
+              });
+            }
+          }
+          if (input.modelSelection?.provider === provider) {
+            const model = findModelInRegistry(context.modelRegistry, input.modelSelection.model);
+            if (!model) {
+              return yield* new ProviderAdapterValidationError({
                 provider: provider,
-                method: "session/reload",
-                detail: toMessage(cause, `Failed to reload ${displayName} resources.`),
-                cause,
-              }),
-          }).pipe(
-            Effect.catch((error) =>
-              Effect.gen(function* () {
-                const message = error.message;
-                offerRuntimeEvent({
-                  ...makeEventBase(context),
-                  type: "turn.completed",
-                  payload: { state: "failed", stopReason: "error", errorMessage: message },
-                  raw: { source: "pi.sdk.event", method: "reload", payload: error },
-                } satisfies ProviderRuntimeEvent);
-                offerRuntimeError(context, {
-                  message,
-                  method: "session/reload",
-                  cause: error,
-                });
-                yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
-                context.activeTurnId = undefined;
-                context.session = makeSessionSnapshot(context, provider);
-                return yield* Effect.fail(error);
-              }),
-            ),
-          );
-          offerRuntimeEvent({
-            ...makeEventBase(context),
-            type: "turn.completed",
-            payload: { state: "completed", stopReason: "reload" },
-            raw: { source: "pi.sdk.event", method: "reload", payload: { command: payload.text } },
-          } satisfies ProviderRuntimeEvent);
-          yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
-          context.activeTurnId = undefined;
-          context.session = makeSessionSnapshot(context, provider);
-          return {
-            threadId: input.threadId,
-            turnId,
-            resumeCursor: getSessionFile(context.runtime.session),
-          };
-        }
-        void context.runtime.session
-          .prompt(payload.text, payload.images.length > 0 ? { images: payload.images } : undefined)
-          .catch((cause) => {
-            completePromptRejection(context, turnId, cause);
-          });
-        return {
-          threadId: input.threadId,
-          turnId,
-          resumeCursor: getSessionFile(context.runtime.session),
-        };
-      });
-
-    const steerTurn: NonNullable<PiAdapterShape["steerTurn"]> = (input) =>
-      Effect.gen(function* () {
-        const context = yield* requireSession(input.threadId);
-        const payload = yield* buildPromptPayload(input);
-        const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
-        if (!context.activeTurnId) {
+                operation: "model/set",
+                issue: `${displayName} model '${input.modelSelection.model}' is not available in the current runtime catalog. Choose a discovered model and try again.`,
+              });
+            }
+            // Pi's setModel rejects an unauthenticated model before the adapter's
+            // general send gate runs. Check the requested model first so the product
+            // reports a deliberate credential block instead of leaking an SDK stack.
+            if (!piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, model)) {
+              return yield* new ProviderAdapterValidationError({
+                provider: provider,
+                operation: "sendTurn",
+                issue: `${displayName} cannot send with provider '${model.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`,
+              });
+            }
+            yield* Effect.tryPromise({
+              try: () => context.runtime.session.setModel(model),
+              catch: (cause) =>
+                new ProviderAdapterRequestError({
+                  provider: provider,
+                  method: "model/set",
+                  detail: toMessage(cause, `Failed to set ${displayName} model.`),
+                  cause,
+                }),
+            });
+            const thinkingLevel = normalizePiThinkingLevel(
+              input.modelSelection.options?.thinkingLevel,
+            );
+            if (thinkingLevel) {
+              context.runtime.session.setThinkingLevel(thinkingLevel);
+            }
+          }
+          const activeModel = context.runtime.session.model;
+          if (
+            !piModelHasConfiguredCredentials(context.runtime.services.modelRuntime, activeModel)
+          ) {
+            return yield* new ProviderAdapterValidationError({
+              provider: provider,
+              operation: "sendTurn",
+              issue: activeModel
+                ? `${displayName} cannot send with provider '${activeModel.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`
+                : `${displayName} cannot send because no model with configured credentials is selected.`,
+            });
+          }
+          const payload = yield* buildPromptPayload(input);
+          const turnId = TurnId.makeUnsafe(crypto.randomUUID());
           context.activeTurnId = turnId;
           context.turns.push({ id: turnId, items: [] });
-        }
-        if (context.runtime.session.isStreaming) {
-          yield* Effect.tryPromise({
-            try: () => context.runtime.session.steer(payload.text, payload.images),
-            catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider: provider,
-                method: "turn/steer",
-                detail: toMessage(cause, `Failed to steer ${displayName} turn.`),
-                cause,
-              }),
-          });
-        } else {
+          context.session = makeSessionSnapshot(context, provider);
+          if (payload.images.length === 0 && isPiReloadCommand(payload.text)) {
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              type: "turn.started",
+              payload: {
+                ...(context.runtime.session.model
+                  ? {
+                      model: `${context.runtime.session.model.provider}/${context.runtime.session.model.id}`,
+                    }
+                  : {}),
+                effort: context.runtime.session.thinkingLevel,
+              },
+              raw: { source: "pi.sdk.event", method: "reload", payload: { command: payload.text } },
+            } satisfies ProviderRuntimeEvent);
+            yield* Effect.tryPromise({
+              try: () => context.runtime.session.reload(),
+              catch: (cause) =>
+                new ProviderAdapterRequestError({
+                  provider: provider,
+                  method: "session/reload",
+                  detail: toMessage(cause, `Failed to reload ${displayName} resources.`),
+                  cause,
+                }),
+            }).pipe(
+              Effect.catch((error) =>
+                Effect.gen(function* () {
+                  const message = error.message;
+                  offerRuntimeEvent({
+                    ...makeEventBase(context),
+                    type: "turn.completed",
+                    payload: { state: "failed", stopReason: "error", errorMessage: message },
+                    raw: { source: "pi.sdk.event", method: "reload", payload: error },
+                  } satisfies ProviderRuntimeEvent);
+                  offerRuntimeError(context, {
+                    message,
+                    method: "session/reload",
+                    cause: error,
+                  });
+                  yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
+                  context.activeTurnId = undefined;
+                  context.session = makeSessionSnapshot(context, provider);
+                  return yield* Effect.fail(error);
+                }),
+              ),
+            );
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              type: "turn.completed",
+              payload: { state: "completed", stopReason: "reload" },
+              raw: { source: "pi.sdk.event", method: "reload", payload: { command: payload.text } },
+            } satisfies ProviderRuntimeEvent);
+            yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
+            context.activeTurnId = undefined;
+            context.session = makeSessionSnapshot(context, provider);
+            return {
+              threadId: input.threadId,
+              turnId,
+              resumeCursor: getSessionFile(context.runtime.session),
+            };
+          }
           void context.runtime.session
             .prompt(
               payload.text,
@@ -2784,13 +2757,53 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             .catch((cause) => {
               completePromptRejection(context, turnId, cause);
             });
-        }
-        return {
-          threadId: input.threadId,
-          turnId,
-          resumeCursor: getSessionFile(context.runtime.session),
-        };
-      });
+          return {
+            threadId: input.threadId,
+            turnId,
+            resumeCursor: getSessionFile(context.runtime.session),
+          };
+        }),
+      );
+
+    const steerTurn: NonNullable<PiAdapterShape["steerTurn"]> = (input) =>
+      sessionResourceAdmission.withLock(
+        input.threadId,
+        Effect.gen(function* () {
+          const context = yield* requireSession(input.threadId);
+          const payload = yield* buildPromptPayload(input);
+          const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
+          if (!context.activeTurnId) {
+            context.activeTurnId = turnId;
+            context.turns.push({ id: turnId, items: [] });
+          }
+          if (context.runtime.session.isStreaming) {
+            yield* Effect.tryPromise({
+              try: () => context.runtime.session.steer(payload.text, payload.images),
+              catch: (cause) =>
+                new ProviderAdapterRequestError({
+                  provider: provider,
+                  method: "turn/steer",
+                  detail: toMessage(cause, `Failed to steer ${displayName} turn.`),
+                  cause,
+                }),
+            });
+          } else {
+            void context.runtime.session
+              .prompt(
+                payload.text,
+                payload.images.length > 0 ? { images: payload.images } : undefined,
+              )
+              .catch((cause) => {
+                completePromptRejection(context, turnId, cause);
+              });
+          }
+          return {
+            threadId: input.threadId,
+            turnId,
+            resumeCursor: getSessionFile(context.runtime.session),
+          };
+        }),
+      );
 
     const interruptTurn: PiAdapterShape["interruptTurn"] = (threadId, turnId) =>
       Effect.gen(function* () {
@@ -2877,6 +2890,36 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           payload: { reason: "stopped", exitKind: "graceful" },
         } satisfies ProviderRuntimeEvent);
       });
+
+    const reloadSessionResources: NonNullable<PiAdapterShape["reloadSessionResources"]> = (
+      threadId,
+    ) =>
+      sessionResourceAdmission.withLock(
+        threadId,
+        Effect.gen(function* () {
+          const context = sessions.get(threadId);
+          if (!context || context.stopped) return "no_active_session" as const;
+          if (
+            context.activeTurnId !== undefined ||
+            context.runtime.session.isStreaming ||
+            context.activeToolItems.size > 0 ||
+            context.pendingUserInputs.size > 0
+          ) {
+            return "busy" as const;
+          }
+          yield* Effect.tryPromise({
+            try: () => context.runtime.session.reload(),
+            catch: (cause) =>
+              new ProviderAdapterRequestError({
+                provider,
+                method: "session/reload",
+                detail: toMessage(cause, `Failed to reload ${displayName} resources.`),
+                cause,
+              }),
+          });
+          return "reloaded" as const;
+        }),
+      );
 
     const listSessions: PiAdapterShape["listSessions"] = () =>
       Effect.sync(() =>
@@ -3172,6 +3215,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       respondToRequest: (threadId) => respondUnsupported(threadId, "request/respond"),
       respondToUserInput,
       stopSession,
+      reloadSessionResources,
       listSessions,
       hasSession,
       readThread,

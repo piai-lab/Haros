@@ -111,6 +111,7 @@ function createProviderServiceHarness(
       : Effect.succeed([] as ReadonlyArray<ProviderSession>);
   const service: ProviderServiceShape = {
     startSession: () => unsupported(),
+    reloadSessionResources: () => unsupported(),
     sendTurn: () => unsupported(),
     steerTurn: () => unsupported(),
     startReview: () => unsupported(),

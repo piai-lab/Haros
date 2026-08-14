@@ -2,8 +2,6 @@
 // Purpose: Bridges explicit OmniMind Agent ecosystem intents to its bundled Pi owners.
 // Layer: Server provider implementation
 
-import path from "node:path";
-
 import type {
   OmniMindEcosystemListResourcesResult,
   OmniMindEcosystemMutationResult,
@@ -13,12 +11,9 @@ import type {
 import { Effect, Layer } from "effect";
 
 import { ServerConfig } from "../../config.ts";
-import {
-  createOmniMindModelsConfigReader,
-  loadOmniMindCodingAgentModule,
-  resolveOmniMindAgentDir,
-} from "../omnimindAgentRuntime.ts";
+import { loadOmniMindCodingAgentModule, resolveOmniMindAgentDir } from "../omnimindAgentRuntime.ts";
 import { OmniMindEcosystem, type OmniMindEcosystemShape } from "../Services/OmniMindEcosystem.ts";
+import { ProviderService } from "../Services/ProviderService.ts";
 
 type OmniMindCodingAgentModule = Awaited<ReturnType<typeof loadOmniMindCodingAgentModule>>;
 
@@ -81,6 +76,7 @@ export function makeOmniMindEcosystemLive(options: OmniMindEcosystemLiveOptions 
     OmniMindEcosystem,
     Effect.gen(function* () {
       const config = yield* ServerConfig;
+      const providerService = yield* ProviderService;
       let mutationTail = Promise.resolve();
       const run = <A>(operation: () => Promise<A>) =>
         Effect.tryPromise({
@@ -159,34 +155,7 @@ export function makeOmniMindEcosystemLive(options: OmniMindEcosystemLiveOptions 
             if (changed) await settingsManager.flush();
             return mutationResult(changed);
           }),
-        reload: () =>
-          run(async () => {
-            const { sdk, agentDir, settingsManager } = await withOwners();
-            const modelRuntime = await sdk.ModelRuntime.create({
-              authPath: path.join(agentDir, "auth.json"),
-              modelsPath: null,
-              modelsConfigReader: createOmniMindModelsConfigReader(agentDir),
-              modelsStorePath: path.join(agentDir, "models-store.json"),
-              allowModelNetwork: false,
-            });
-            const services = await sdk.createAgentSessionServices({
-              cwd: agentDir,
-              agentDir,
-              settingsManager,
-              modelRuntime,
-              resourceLoaderReloadOptions: {
-                resolveProjectTrust: async () => false,
-                onMissingPackage: async () => "error",
-              },
-            });
-            try {
-              return { reloaded: true };
-            } finally {
-              services.resourceLoader
-                .getExtensions()
-                .runtime.invalidate("OmniMind Agent ecosystem reload completed");
-            }
-          }),
+        reload: (input) => providerService.reloadSessionResources(input),
       } satisfies OmniMindEcosystemShape;
     }),
   );

@@ -3,9 +3,28 @@
 // Layer: Route
 // Exports: Route
 
+import { ThreadId } from "@omnimind/contracts";
 import { createFileRoute } from "@tanstack/react-router";
 import { PluginLibrary } from "~/components/PluginLibrary";
 
+function parsePluginLibrarySearch(raw: Record<string, unknown>): { threadId?: string } {
+  const threadId = typeof raw.threadId === "string" ? raw.threadId : null;
+  return threadId !== null &&
+    threadId.length > 0 &&
+    threadId === threadId.trim() &&
+    threadId.length <= 512
+    ? { threadId }
+    : {};
+}
+
+function PluginLibraryRoute() {
+  const search = Route.useSearch();
+  return (
+    <PluginLibrary sourceThreadId={search.threadId ? ThreadId.makeUnsafe(search.threadId) : null} />
+  );
+}
+
 export const Route = createFileRoute("/_chat/plugins")({
-  component: PluginLibrary,
+  validateSearch: parsePluginLibrarySearch,
+  component: PluginLibraryRoute,
 });
