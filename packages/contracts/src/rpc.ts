@@ -142,6 +142,8 @@ import {
   OmniMindCustomModelServiceRemoveResult,
   OmniMindCustomModelServiceSaveInput,
   OmniMindCustomModelServiceSaveResult,
+  OmniMindCustomModelServiceDiscoverInput,
+  OmniMindCustomModelServiceDiscoverResult,
   OmniMindCustomModelServiceTestInput,
   OmniMindCustomModelServiceTestResult,
   OmniMindModelServiceAnswerLoginInput,
@@ -1215,6 +1217,14 @@ export const WsOmniMindModelServicesRefreshRpc = Rpc.make(WS_METHODS.omnimindMod
   success: OmniMindModelServiceRefreshResult,
   error: WsRpcError,
 });
+export const WsOmniMindModelServicesDiscoverCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesDiscoverCustom,
+  {
+    payload: OmniMindCustomModelServiceDiscoverInput,
+    success: OmniMindCustomModelServiceDiscoverResult,
+    error: WsRpcError,
+  },
+);
 export const WsOmniMindModelServicesTestCustomRpc = Rpc.make(
   WS_METHODS.omnimindModelServicesTestCustom,
   {
@@ -1468,6 +1478,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOmniMindModelServicesCancelLoginRpc,
   WsOmniMindModelServicesLogoutRpc,
   WsOmniMindModelServicesRefreshRpc,
+  WsOmniMindModelServicesDiscoverCustomRpc,
   WsOmniMindModelServicesTestCustomRpc,
   WsOmniMindModelServicesSaveCustomRpc,
   WsOmniMindModelServicesRemoveCustomRpc,

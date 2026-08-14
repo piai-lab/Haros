@@ -117,6 +117,7 @@ function makeTestLayer(input: {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
   readonly authRequestTimeoutMs?: number;
+  readonly customModelDiscoveryTimeoutMs?: number;
 }) {
   return makeOmniMindModelServicesLive({
     ...(input.loadModule ? { loadModule: input.loadModule } : {}),
@@ -124,6 +125,9 @@ function makeTestLayer(input: {
     ...(input.authRequestTimeoutMs === undefined
       ? {}
       : { authRequestTimeoutMs: input.authRequestTimeoutMs }),
+    ...(input.customModelDiscoveryTimeoutMs === undefined
+      ? {}
+      : { customModelDiscoveryTimeoutMs: input.customModelDiscoveryTimeoutMs }),
   }).pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), input.root)),
     Layer.provideMerge(NodeServices.layer),
@@ -1868,6 +1872,193 @@ describe("OmniMindModelServicesLive", () => {
     expect(authorization).toBe("Bearer test-only-custom-key");
     expect(await readFile(authPath, "utf8")).toBe(originalAuth);
     expect(JSON.stringify(result)).not.toContain("test-only-custom-key");
+  });
+
+  it("discovers generic provider models through Pi without persisting the preview credential", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    const before = await snapshotDirectory(agentDir);
+    let authorization: string | null = null;
+    let redirect: RequestInit["redirect"];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      authorization = new Headers(request instanceof Request ? request.headers : init?.headers).get(
+        "authorization",
+      );
+      redirect = init?.redirect;
+      return new Response(
+        JSON.stringify({
+          data: [{ id: "model-one", name: "Model One" }, { id: "model-two" }],
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.discoverCustom({
+          config: {
+            serviceId: null,
+            displayName: "Discovery gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+          },
+          apiKey: "discovery-only-key",
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root }))),
+    );
+
+    expect(result).toEqual({
+      state: "success",
+      models: [
+        { modelId: "model-one", displayName: "Model One" },
+        { modelId: "model-two", displayName: "model-two" },
+      ],
+      errorCode: null,
+    });
+    expect(authorization).toBe("Bearer discovery-only-key");
+    expect(redirect).toBe("error");
+    expect(await snapshotDirectory(agentDir)).toEqual(before);
+    expect(JSON.stringify(result)).not.toContain("discovery-only-key");
+  });
+
+  it("discovers through an existing connection without projecting its configured credential", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          retained: {
+            name: "Retained gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+            apiKey: "configured-reference",
+            models: [{ id: "old-model" }],
+          },
+        },
+      }),
+      { mode: 0o600 },
+    );
+    let authorization: string | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      authorization = new Headers(request instanceof Request ? request.headers : init?.headers).get(
+        "authorization",
+      );
+      return new Response(JSON.stringify({ data: [{ id: "fresh-model" }] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.discoverCustom({
+          config: {
+            serviceId: "retained",
+            displayName: "Retained gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+          },
+          apiKey: null,
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root }))),
+    );
+
+    expect(result).toEqual({
+      state: "success",
+      models: [{ modelId: "fresh-model", displayName: "fresh-model" }],
+      errorCode: null,
+    });
+    expect(authorization).toBe("Bearer configured-reference");
+    expect(JSON.stringify(result)).not.toContain("configured-reference");
+  });
+
+  it("maps Pi discovery failures without exposing endpoint or credential diagnostics", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const layer = makeTestLayer({ root });
+    const discover = (baseUrl = "https://secret-endpoint.example.test/v1") =>
+      Effect.runPromise(
+        Effect.gen(function* () {
+          const service = yield* OmniMindModelServices;
+          return yield* service.discoverCustom({
+            config: {
+              serviceId: null,
+              displayName: "Failure gateway",
+              api: "openai-completions",
+              baseUrl,
+            },
+            apiKey: "secret-discovery-key",
+          });
+        }).pipe(Effect.provide(layer)),
+      );
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(new Response(null, { status: 401 }));
+    const authenticationFailure = await discover();
+    expect(authenticationFailure).toMatchObject({
+      state: "failed",
+      models: [],
+      errorCode: "authentication_failed",
+    });
+
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    const catalogFailure = await discover();
+    expect(catalogFailure).toMatchObject({
+      state: "failed",
+      models: [],
+      errorCode: "catalog_unavailable",
+    });
+
+    const invalidConfiguration = await discover("https://user@example.test/v1");
+    expect(invalidConfiguration).toMatchObject({
+      state: "failed",
+      models: [],
+      errorCode: "invalid_configuration",
+    });
+    expect(
+      JSON.stringify([authenticationFailure, catalogFailure, invalidConfiguration]),
+    ).not.toMatch(/secret|user@example/iu);
+  });
+
+  it("bounds a discovery request that never resolves", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async (_request, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(init.signal?.reason), {
+            once: true,
+          });
+        }),
+    );
+    const startedAt = Date.now();
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        return yield* service.discoverCustom({
+          config: {
+            serviceId: null,
+            displayName: "Timeout gateway",
+            api: "openai-completions",
+            baseUrl: "https://gateway.example.test/v1",
+          },
+          apiKey: "timeout-key",
+        });
+      }).pipe(Effect.provide(makeTestLayer({ root, customModelDiscoveryTimeoutMs: 20 }))),
+    );
+    expect(result).toMatchObject({ state: "failed", errorCode: "connection_failed" });
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
   });
 
   it("retests an existing custom connection with its retained Pi-owned credential", async () => {

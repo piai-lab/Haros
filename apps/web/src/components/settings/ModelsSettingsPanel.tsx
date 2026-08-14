@@ -12,6 +12,7 @@ import {
   type OmniMindModelServiceModel,
   type OmniMindCustomModelServiceApi,
   type OmniMindCustomModelServiceConfigInput,
+  type OmniMindCustomModelServiceDiscoveredModel,
   type OmniMindCustomModelServiceModelInput,
 } from "@omnimind/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -108,6 +109,18 @@ interface CustomModelServiceEditorState {
   readonly testState: "idle" | "testing" | "success" | "failed";
 }
 
+interface CustomModelDiscoveryState {
+  readonly status: "idle" | "loading" | "success";
+  readonly models: ReadonlyArray<OmniMindCustomModelServiceDiscoveredModel>;
+  readonly selectedModelIds: ReadonlySet<string>;
+}
+
+const EMPTY_CUSTOM_MODEL_DISCOVERY: CustomModelDiscoveryState = {
+  status: "idle",
+  models: [],
+  selectedModelIds: new Set(),
+};
+
 const DEFAULT_CUSTOM_MODEL: OmniMindCustomModelServiceModelInput = {
   modelId: "",
   displayName: "",
@@ -146,6 +159,15 @@ function customModelServiceConfig(
       displayName: model.displayName.trim(),
     })),
   };
+}
+
+function customModelServiceDiscoveryConfig(editor: CustomModelServiceEditorState) {
+  return {
+    serviceId: editor.serviceId,
+    displayName: editor.displayName.trim(),
+    api: editor.api,
+    baseUrl: editor.baseUrl.trim(),
+  } as const;
 }
 
 function customModelServiceFingerprint(editor: CustomModelServiceEditorState): string {
@@ -216,6 +238,7 @@ function ActiveModelsSettingsPanel({
   const queryClient = useQueryClient();
   const authRequestControllerRef = useRef<AbortController | null>(null);
   const customTestControllerRef = useRef<AbortController | null>(null);
+  const customDiscoveryControllerRef = useRef<AbortController | null>(null);
   const authRequestIdRef = useRef<string | null>(null);
   const openedAuthUrlsRef = useRef(new Set<string>());
   const setupCompletionArmedRef = useRef(false);
@@ -255,9 +278,12 @@ function ActiveModelsSettingsPanel({
   const [customServiceEditor, setCustomServiceEditor] =
     useState<CustomModelServiceEditorState | null>(null);
   const [customServiceApiKeyVisible, setCustomServiceApiKeyVisible] = useState(false);
+  const [customModelDiscovery, setCustomModelDiscovery] = useState<CustomModelDiscoveryState>(
+    EMPTY_CUSTOM_MODEL_DISCOVERY,
+  );
   const [customServiceDiscardRequested, setCustomServiceDiscardRequested] = useState(false);
   const [pendingCustomServiceRiskAction, setPendingCustomServiceRiskAction] = useState<
-    "test" | "save" | null
+    "discover" | "test" | "save" | null
   >(null);
   const [confirmedCustomServiceEndpoint, setConfirmedCustomServiceEndpoint] = useState<
     string | null
@@ -363,6 +389,8 @@ function ActiveModelsSettingsPanel({
       void cancelCurrentAuthRequest();
       customTestControllerRef.current?.abort();
       customTestControllerRef.current = null;
+      customDiscoveryControllerRef.current?.abort();
+      customDiscoveryControllerRef.current = null;
     },
     [cancelCurrentAuthRequest],
   );
@@ -377,12 +405,15 @@ function ActiveModelsSettingsPanel({
     void cancelCurrentAuthRequest();
     customTestControllerRef.current?.abort();
     customTestControllerRef.current = null;
+    customDiscoveryControllerRef.current?.abort();
+    customDiscoveryControllerRef.current = null;
     setAuthDialog(null);
     setLogoutService(null);
     setRemoveCustomService(null);
     setCustomServiceEditor(null);
     customServiceEditorInitialFingerprintRef.current = null;
     setCustomServiceApiKeyVisible(false);
+    setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
     setCustomServiceDiscardRequested(false);
     setPendingCustomServiceRiskAction(null);
     setConfirmedCustomServiceEndpoint(null);
@@ -805,6 +836,9 @@ function ActiveModelsSettingsPanel({
         const next = update(current);
         return { ...next, testedFingerprint: null, testState: "idle" };
       });
+      customDiscoveryControllerRef.current?.abort();
+      customDiscoveryControllerRef.current = null;
+      setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
       setModelServiceNotice(null);
     },
     [],
@@ -826,9 +860,9 @@ function ActiveModelsSettingsPanel({
           }
         : createCustomModelServiceEditor();
       setModelServiceNotice(null);
-      customServiceEditorInitialFingerprintRef.current =
-        customModelServiceFingerprint(nextEditor);
+      customServiceEditorInitialFingerprintRef.current = customModelServiceFingerprint(nextEditor);
       setCustomServiceApiKeyVisible(false);
+      setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
       setCustomServiceDiscardRequested(false);
       setPendingCustomServiceRiskAction(null);
       setConfirmedCustomServiceEndpoint(null);
@@ -840,9 +874,12 @@ function ActiveModelsSettingsPanel({
   const closeCustomServiceEditor = useCallback(() => {
     customTestControllerRef.current?.abort();
     customTestControllerRef.current = null;
+    customDiscoveryControllerRef.current?.abort();
+    customDiscoveryControllerRef.current = null;
     customServiceEditorInitialFingerprintRef.current = null;
     setCustomServiceEditor(null);
     setCustomServiceApiKeyVisible(false);
+    setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
     setCustomServiceDiscardRequested(false);
     setPendingCustomServiceRiskAction(null);
     setConfirmedCustomServiceEndpoint(null);
@@ -912,6 +949,96 @@ function ActiveModelsSettingsPanel({
     }
   }, [customServiceEditor, t]);
 
+  const discoverCustomServiceModels = useCallback(async () => {
+    const editor = customServiceEditor;
+    if (!editor) return;
+    customDiscoveryControllerRef.current?.abort();
+    const controller = new AbortController();
+    customDiscoveryControllerRef.current = controller;
+    setCustomModelDiscovery({ status: "loading", models: [], selectedModelIds: new Set() });
+    setModelServiceNotice(null);
+    try {
+      const result = await ensureNativeApi().omnimindModelServices.discoverCustom(
+        {
+          config: customModelServiceDiscoveryConfig(editor),
+          apiKey: editor.apiKey || null,
+        },
+        { signal: controller.signal },
+      );
+      if (controller.signal.aborted) return;
+      if (result.state === "success") {
+        setCustomModelDiscovery({
+          status: "success",
+          models: result.models,
+          selectedModelIds: new Set(result.models.map((model) => model.modelId)),
+        });
+        setModelServiceNotice({
+          tone: "status",
+          text: t("settings.customApiDiscoverySucceeded", { count: result.models.length }),
+        });
+      } else if (result.state !== "cancelled") {
+        setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
+        setModelServiceNotice({
+          tone: "error",
+          text: t(`settings.customApiDiscoveryFailed.${result.errorCode}`),
+        });
+      } else {
+        setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
+      }
+    } catch {
+      if (controller.signal.aborted) return;
+      setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
+      setModelServiceNotice({
+        tone: "error",
+        text: t("settings.customApiDiscoveryFailed.connection_failed"),
+      });
+    } finally {
+      if (customDiscoveryControllerRef.current === controller) {
+        customDiscoveryControllerRef.current = null;
+      }
+    }
+  }, [customServiceEditor, t]);
+
+  const cancelCustomModelDiscovery = useCallback(() => {
+    customDiscoveryControllerRef.current?.abort();
+    customDiscoveryControllerRef.current = null;
+    setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
+    setModelServiceNotice(null);
+  }, []);
+
+  const addSelectedDiscoveredModels = useCallback(() => {
+    if (customModelDiscovery.status !== "success") return;
+    const selectedModels = customModelDiscovery.models.filter((model) =>
+      customModelDiscovery.selectedModelIds.has(model.modelId),
+    );
+    if (selectedModels.length === 0) return;
+    setCustomServiceEditor((current) => {
+      if (!current) return current;
+      const existingIds = new Set(current.models.map((model) => model.modelId));
+      const retainedModels =
+        current.models.length === 1 && current.models[0]?.modelId.trim() === ""
+          ? []
+          : current.models;
+      return {
+        ...current,
+        models: [
+          ...retainedModels,
+          ...selectedModels
+            .filter((model) => !existingIds.has(model.modelId))
+            .map((model) => ({
+              ...DEFAULT_CUSTOM_MODEL,
+              modelId: model.modelId,
+              displayName: model.displayName,
+            })),
+        ],
+        testedFingerprint: null,
+        testState: "idle",
+      };
+    });
+    setCustomModelDiscovery(EMPTY_CUSTOM_MODEL_DISCOVERY);
+    setModelServiceNotice(null);
+  }, [customModelDiscovery]);
+
   const saveCustomService = useCallback(async () => {
     const editor = customServiceEditor;
     if (!editor || editor.testedFingerprint !== customModelServiceFingerprint(editor)) return;
@@ -954,7 +1081,7 @@ function ActiveModelsSettingsPanel({
   ]);
 
   const requestCustomServiceAction = useCallback(
-    (action: "test" | "save") => {
+    (action: "discover" | "test" | "save") => {
       const editor = customServiceEditor;
       if (!editor) return;
       const endpointFingerprint = customModelServiceEndpointFingerprint(editor);
@@ -962,12 +1089,14 @@ function ActiveModelsSettingsPanel({
         setPendingCustomServiceRiskAction(action);
         return;
       }
-      if (action === "test") void testCustomService();
+      if (action === "discover") void discoverCustomServiceModels();
+      else if (action === "test") void testCustomService();
       else void saveCustomService();
     },
     [
       confirmedCustomServiceEndpoint,
       customServiceEditor,
+      discoverCustomServiceModels,
       saveCustomService,
       testCustomService,
     ],
@@ -979,9 +1108,16 @@ function ActiveModelsSettingsPanel({
     if (!action || !editor) return;
     setConfirmedCustomServiceEndpoint(customModelServiceEndpointFingerprint(editor));
     setPendingCustomServiceRiskAction(null);
-    if (action === "test") void testCustomService();
+    if (action === "discover") void discoverCustomServiceModels();
+    else if (action === "test") void testCustomService();
     else void saveCustomService();
-  }, [customServiceEditor, pendingCustomServiceRiskAction, saveCustomService, testCustomService]);
+  }, [
+    customServiceEditor,
+    discoverCustomServiceModels,
+    pendingCustomServiceRiskAction,
+    saveCustomService,
+    testCustomService,
+  ]);
 
   const cancelCustomServiceDiscard = useCallback(() => {
     setCustomServiceDiscardRequested(false);
@@ -1152,6 +1288,15 @@ function ActiveModelsSettingsPanel({
           model.contextWindow > 0 &&
           model.maxTokens > 0,
       ) &&
+      (customServiceEditor.mode === "edit" || customServiceEditor.apiKey.length > 0)
+    );
+  }, [customServiceEditor]);
+  const customServiceDiscoveryFormValid = useMemo(() => {
+    if (!customServiceEditor) return false;
+    const config = customModelServiceDiscoveryConfig(customServiceEditor);
+    return (
+      config.displayName.length > 0 &&
+      /^https?:\/\/\S+$/iu.test(config.baseUrl) &&
       (customServiceEditor.mode === "edit" || customServiceEditor.apiKey.length > 0)
     );
   }, [customServiceEditor]);
@@ -1539,9 +1684,7 @@ function ActiveModelsSettingsPanel({
                   </span>
                 </label>
                 <div className="space-y-1.5 text-xs font-medium text-foreground sm:col-span-2">
-                  <label htmlFor={customServiceApiKeyInputId}>
-                    {t("settings.customApiKey")}
-                  </label>
+                  <label htmlFor={customServiceApiKeyInputId}>{t("settings.customApiKey")}</label>
                   <div className="flex items-center gap-2">
                     <Input
                       id={customServiceApiKeyInputId}
@@ -1595,20 +1738,91 @@ function ActiveModelsSettingsPanel({
                       {t("settings.customApiModelsDescription")}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      updateCustomServiceEditor((current) => ({
-                        ...current,
-                        models: [...current.models, { ...DEFAULT_CUSTOM_MODEL }],
-                      }))
-                    }
-                  >
-                    <PlusIcon aria-hidden="true" />
-                    {t("settings.customApiAddModel")}
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {customModelDiscovery.status === "loading" ? (
+                      <Button size="sm" variant="outline" onClick={cancelCustomModelDiscovery}>
+                        {t("settings.customApiCancelDiscovery")}
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!customServiceDiscoveryFormValid}
+                        onClick={() => requestCustomServiceAction("discover")}
+                      >
+                        {t("settings.customApiDiscoverModels")}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() =>
+                        updateCustomServiceEditor((current) => ({
+                          ...current,
+                          models: [...current.models, { ...DEFAULT_CUSTOM_MODEL }],
+                        }))
+                      }
+                    >
+                      <PlusIcon aria-hidden="true" />
+                      {t("settings.customApiAddModel")}
+                    </Button>
+                  </div>
                 </div>
+
+                {customModelDiscovery.status === "loading" ? (
+                  <div role="status" className="text-xs text-muted-foreground">
+                    {t("settings.customApiDiscovering")}
+                  </div>
+                ) : customModelDiscovery.status === "success" ? (
+                  <div className="space-y-3 rounded-lg border border-border p-3">
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground">
+                        {t("settings.customApiDiscoveredModels")}
+                      </h4>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        {t("settings.customApiDiscoveryDescription")}
+                      </p>
+                    </div>
+                    <div className="max-h-52 space-y-1 overflow-y-auto pr-1">
+                      {customModelDiscovery.models.map((model) => (
+                        <label
+                          key={model.modelId}
+                          className="flex cursor-pointer items-start gap-2 rounded-md px-2 py-1.5 hover:bg-foreground/[0.04]"
+                        >
+                          <Checkbox
+                            checked={customModelDiscovery.selectedModelIds.has(model.modelId)}
+                            onCheckedChange={(checked) =>
+                              setCustomModelDiscovery((current) => {
+                                if (current.status !== "success") return current;
+                                const selectedModelIds = new Set(current.selectedModelIds);
+                                if (checked === true) selectedModelIds.add(model.modelId);
+                                else selectedModelIds.delete(model.modelId);
+                                return { ...current, selectedModelIds };
+                              })
+                            }
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-xs font-medium text-foreground">
+                              {model.displayName}
+                            </span>
+                            <span className="block break-all font-mono text-[11px] text-muted-foreground">
+                              {model.modelId}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        disabled={customModelDiscovery.selectedModelIds.size === 0}
+                        onClick={addSelectedDiscoveredModels}
+                      >
+                        {t("settings.customApiAddSelectedModels")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
 
                 {customServiceEditor.models.map((model, index) => (
                   <div
@@ -1757,6 +1971,7 @@ function ActiveModelsSettingsPanel({
                   disabled={
                     !customServiceFormValid ||
                     customServiceEditor.testState === "testing" ||
+                    customModelDiscovery.status === "loading" ||
                     modelServiceMutation !== null
                   }
                   onClick={() => requestCustomServiceAction("test")}
@@ -1769,6 +1984,7 @@ function ActiveModelsSettingsPanel({
                   disabled={
                     customServiceEditor.testedFingerprint !==
                       customModelServiceFingerprint(customServiceEditor) ||
+                    customModelDiscovery.status === "loading" ||
                     modelServiceMutation !== null
                   }
                   onClick={() => requestCustomServiceAction("save")}
@@ -2061,9 +2277,7 @@ function ActiveModelsSettingsPanel({
                             <span
                               className={cn(
                                 "font-medium",
-                                model.available
-                                  ? "text-primary"
-                                  : "text-muted-foreground",
+                                model.available ? "text-primary" : "text-muted-foreground",
                               )}
                             >
                               {model.available
@@ -2306,7 +2520,13 @@ function ActiveModelsSettingsPanel({
       >
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("settings.customApiRiskTitle")}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t(
+                pendingCustomServiceRiskAction === "discover"
+                  ? "settings.customApiDiscoveryRiskTitle"
+                  : "settings.customApiRiskTitle",
+              )}
+            </AlertDialogTitle>
             <AlertDialogDescription>
               {t("settings.customApiRiskDescription")}
             </AlertDialogDescription>
@@ -2318,16 +2538,16 @@ function ActiveModelsSettingsPanel({
             <Button size="sm" onClick={confirmCustomServiceRisk}>
               {pendingCustomServiceRiskAction === "save"
                 ? t("settings.customApiRiskContinueSave")
-                : t("settings.customApiRiskContinueTest")}
+                : pendingCustomServiceRiskAction === "discover"
+                  ? t("settings.customApiRiskContinueDiscover")
+                  : t("settings.customApiRiskContinueTest")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>
       </AlertDialog>
 
       <AlertDialog
-        open={
-          customServiceDiscardRequested || customServiceNavigationBlocker.status === "blocked"
-        }
+        open={customServiceDiscardRequested || customServiceNavigationBlocker.status === "blocked"}
         onOpenChange={(open) => !open && cancelCustomServiceDiscard()}
       >
         <AlertDialogPopup>

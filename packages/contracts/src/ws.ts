@@ -140,6 +140,7 @@ import {
 import { ProviderCompactThreadInput } from "./provider";
 import {
   OmniMindCustomModelServiceRemoveInput,
+  OmniMindCustomModelServiceDiscoverInput,
   OmniMindCustomModelServiceSaveInput,
   OmniMindCustomModelServiceTestInput,
   OmniMindModelServiceAnswerLoginInput,
@@ -301,6 +302,7 @@ export const WS_METHODS = {
   omnimindModelServicesCancelLogin: "omnimindModelServices.cancelLogin",
   omnimindModelServicesLogout: "omnimindModelServices.logout",
   omnimindModelServicesRefresh: "omnimindModelServices.refresh",
+  omnimindModelServicesDiscoverCustom: "omnimindModelServices.discoverCustom",
   omnimindModelServicesTestCustom: "omnimindModelServices.testCustom",
   omnimindModelServicesSaveCustom: "omnimindModelServices.saveCustom",
   omnimindModelServicesRemoveCustom: "omnimindModelServices.removeCustom",
@@ -524,6 +526,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.omnimindModelServicesCancelLogin, OmniMindModelServiceCancelLoginInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesLogout, OmniMindModelServiceLogoutInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesRefresh, OmniMindModelServiceRefreshInput),
+  tagRequestBody(
+    WS_METHODS.omnimindModelServicesDiscoverCustom,
+    OmniMindCustomModelServiceDiscoverInput,
+  ),
   tagRequestBody(WS_METHODS.omnimindModelServicesTestCustom, OmniMindCustomModelServiceTestInput),
   tagRequestBody(WS_METHODS.omnimindModelServicesSaveCustom, OmniMindCustomModelServiceSaveInput),
   tagRequestBody(

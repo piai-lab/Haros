@@ -61,6 +61,7 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.providerListAgents,
   WS_METHODS.omnimindModelServicesList,
   WS_METHODS.omnimindModelServicesGet,
+  WS_METHODS.omnimindModelServicesDiscoverCustom,
   WS_METHODS.omnimindModelServicesTestCustom,
 ]);
 

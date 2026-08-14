@@ -389,6 +389,61 @@ export const OmniMindCustomModelServiceTestInput = Schema.Struct({
 });
 export type OmniMindCustomModelServiceTestInput = typeof OmniMindCustomModelServiceTestInput.Type;
 
+export const OmniMindCustomModelServiceDiscoveryConfigInput = Schema.Struct({
+  serviceId: Schema.NullOr(BoundedIdentifier),
+  displayName: BoundedDisplayName,
+  api: OmniMindCustomModelServiceApi,
+  baseUrl: BoundedEndpointUrl,
+});
+export type OmniMindCustomModelServiceDiscoveryConfigInput =
+  typeof OmniMindCustomModelServiceDiscoveryConfigInput.Type;
+
+export const OmniMindCustomModelServiceDiscoveredModel = Schema.Struct({
+  modelId: BoundedModelId,
+  displayName: BoundedDisplayName,
+});
+export type OmniMindCustomModelServiceDiscoveredModel =
+  typeof OmniMindCustomModelServiceDiscoveredModel.Type;
+
+const BoundedDiscoveredModels = Schema.Array(OmniMindCustomModelServiceDiscoveredModel)
+  .check(Schema.isMinLength(1))
+  .check(Schema.isMaxLength(OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT));
+
+export const OmniMindCustomModelServiceDiscoverInput = Schema.Struct({
+  config: OmniMindCustomModelServiceDiscoveryConfigInput,
+  // Existing services may reuse their Pi-owned credential. The secret is
+  // required only for a new discovery intent and is never returned.
+  apiKey: Schema.NullOr(BoundedSecret),
+});
+export type OmniMindCustomModelServiceDiscoverInput =
+  typeof OmniMindCustomModelServiceDiscoverInput.Type;
+
+export const OmniMindCustomModelServiceDiscoverResult = Schema.Union([
+  Schema.Struct({
+    state: Schema.Literal("success"),
+    models: BoundedDiscoveredModels,
+    errorCode: Schema.Null,
+  }),
+  Schema.Struct({
+    state: Schema.Literal("failed"),
+    models: Schema.Tuple([]),
+    errorCode: Schema.Literals([
+      "invalid_configuration",
+      "authentication_failed",
+      "connection_failed",
+      "catalog_unavailable",
+      "response_too_large",
+    ]),
+  }),
+  Schema.Struct({
+    state: Schema.Literal("cancelled"),
+    models: Schema.Tuple([]),
+    errorCode: Schema.Literal("cancelled"),
+  }),
+]);
+export type OmniMindCustomModelServiceDiscoverResult =
+  typeof OmniMindCustomModelServiceDiscoverResult.Type;
+
 export const OmniMindCustomModelServiceTestResult = Schema.Union([
   Schema.Struct({
     state: Schema.Literal("success"),

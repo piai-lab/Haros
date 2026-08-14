@@ -75,6 +75,23 @@ describe("message catalogs", () => {
     );
   });
 
+  it("keeps custom model discovery actionable and honest in both languages", () => {
+    expect(translate("en", "settings.customApiDiscoverModels")).toBe("Get from service");
+    expect(translate("zh-CN", "settings.customApiDiscoverModels")).toBe("从供应商获取");
+    expect(translate("en", "settings.customApiDiscoverySucceeded", { count: 2 })).toBe(
+      "Found 2 models. Select the ones to add.",
+    );
+    expect(translate("zh-CN", "settings.customApiDiscoverySucceeded", { count: 2 })).toBe(
+      "发现 2 个模型，请选择要添加的项目。",
+    );
+    expect(EN_MESSAGES["settings.customApiDiscoveryFailed.catalog_unavailable"]).toContain(
+      "add a model manually",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiDiscoveryFailed.catalog_unavailable"]).toContain(
+      "手工添加",
+    );
+  });
+
   it("keeps engine update feedback concise and truthful in both supported languages", () => {
     expect(translate("en", "updater.updatingProvider", { provider: "Claude" })).toBe(
       "Updating Claude…",

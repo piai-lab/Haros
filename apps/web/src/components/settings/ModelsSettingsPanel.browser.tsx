@@ -98,6 +98,7 @@ function setNativeApi(input: {
   readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
   readonly logout?: NativeApi["omnimindModelServices"]["logout"];
   readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
+  readonly discoverCustom?: NativeApi["omnimindModelServices"]["discoverCustom"];
   readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
   readonly saveCustom?: NativeApi["omnimindModelServices"]["saveCustom"];
   readonly removeCustom?: NativeApi["omnimindModelServices"]["removeCustom"];
@@ -134,6 +135,18 @@ function setNativeApi(input: {
   );
   const refresh = vi.fn(
     input.refresh ?? (async () => ({ state: "success", service: service() }) as const),
+  );
+  const discoverCustom = vi.fn(
+    input.discoverCustom ??
+      (async () =>
+        ({
+          state: "success",
+          models: [
+            { modelId: "provider-model-a", displayName: "Provider Model A" },
+            { modelId: "provider-model-b", displayName: "Provider Model B" },
+          ],
+          errorCode: null,
+        }) as const),
   );
   const testCustom = vi.fn(
     input.testCustom ??
@@ -174,6 +187,7 @@ function setNativeApi(input: {
             cancelLogin,
             logout,
             refresh,
+            discoverCustom,
             testCustom,
             saveCustom,
             removeCustom,
@@ -190,6 +204,7 @@ function setNativeApi(input: {
     cancelLogin,
     logout,
     refresh,
+    discoverCustom,
     testCustom,
     saveCustom,
     removeCustom,
@@ -217,6 +232,7 @@ async function renderPanel(input: {
   readonly cancelLogin?: NativeApi["omnimindModelServices"]["cancelLogin"];
   readonly logout?: NativeApi["omnimindModelServices"]["logout"];
   readonly refresh?: NativeApi["omnimindModelServices"]["refresh"];
+  readonly discoverCustom?: NativeApi["omnimindModelServices"]["discoverCustom"];
   readonly testCustom?: NativeApi["omnimindModelServices"]["testCustom"];
   readonly saveCustom?: NativeApi["omnimindModelServices"]["saveCustom"];
   readonly removeCustom?: NativeApi["omnimindModelServices"]["removeCustom"];
@@ -270,15 +286,21 @@ async function openConnectableService(
 
 async function confirmCustomApiRisk(
   screen: Awaited<ReturnType<typeof renderPanel>>["screen"],
-  action: "test" | "save" = "test",
+  action: "discover" | "test" | "save" = "test",
 ) {
   await screen
-    .getByLabelText("settings.customApiRiskTitle")
+    .getByLabelText(
+      action === "discover"
+        ? "settings.customApiDiscoveryRiskTitle"
+        : "settings.customApiRiskTitle",
+    )
     .getByRole("button", {
       name:
         action === "save"
           ? "settings.customApiRiskContinueSave"
-          : "settings.customApiRiskContinueTest",
+          : action === "discover"
+            ? "settings.customApiRiskContinueDiscover"
+            : "settings.customApiRiskContinueTest",
     })
     .click();
 }
@@ -816,6 +838,150 @@ describe("ModelsSettingsPanel model services", () => {
         }),
       );
     expect(document.body.textContent).not.toContain("browser-secret");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("gets model identities from the provider without guessing their capabilities", async () => {
+    const discoverCustom = vi.fn(async () => ({
+      state: "success" as const,
+      models: [
+        { modelId: "provider-model-a", displayName: "Provider Model A" },
+        { modelId: "provider-model-b", displayName: "Provider Model B" },
+      ],
+      errorCode: null,
+    }));
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+      discoverCustom,
+    });
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    await mounted.screen.getByRole("button", { name: /settings\.connectByApiAddress/ }).click();
+    await mounted.screen.getByLabelText("settings.customApiConnectionName").fill("Custom Service");
+    await mounted.screen
+      .getByLabelText("settings.customApiEndpoint")
+      .fill("https://api.example.test/v1");
+    await mounted.screen.getByLabelText("settings.customApiKey").fill("browser-secret");
+
+    await mounted.screen.getByRole("button", { name: "settings.customApiDiscoverModels" }).click();
+    expect(discoverCustom).not.toHaveBeenCalled();
+    await mounted.screen
+      .getByLabelText("settings.customApiDiscoveryRiskTitle")
+      .getByRole("button", { name: "common.cancel" })
+      .click();
+    expect(discoverCustom).not.toHaveBeenCalled();
+
+    await mounted.screen.getByRole("button", { name: "settings.customApiDiscoverModels" }).click();
+    await confirmCustomApiRisk(mounted.screen, "discover");
+    await expect
+      .poll(() => discoverCustom)
+      .toHaveBeenCalledWith(
+        {
+          config: {
+            serviceId: null,
+            displayName: "Custom Service",
+            api: "openai-completions",
+            baseUrl: "https://api.example.test/v1",
+          },
+          apiKey: "browser-secret",
+        },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    expect(document.body.textContent).toContain("Provider Model A");
+    expect(document.body.textContent).toContain("Provider Model B");
+    expect(document.body.textContent).not.toContain("browser-secret");
+
+    await mounted.screen.getByRole("checkbox", { name: /Provider Model B/ }).click();
+    await mounted.screen
+      .getByRole("button", { name: "settings.customApiAddSelectedModels" })
+      .click();
+    expect(mounted.screen.getByLabelText("settings.customApiModelId")).toHaveValue(
+      "provider-model-a",
+    );
+    expect(mounted.screen.getByLabelText("settings.customApiModelName")).toHaveValue(
+      "Provider Model A",
+    );
+    expect(mounted.screen.getByLabelText("settings.customApiContextWindow")).toHaveValue(null);
+    expect(mounted.screen.getByLabelText("settings.customApiMaxTokens")).toHaveValue(null);
+    expect(
+      mounted.screen.getByRole("button", { name: "settings.customApiAddModel" }),
+    ).toBeVisible();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("cancels an in-flight model discovery without reporting an empty catalog", async () => {
+    let observedSignal: AbortSignal | undefined;
+    const discoverCustom = vi.fn(
+      (_input, options) =>
+        new Promise<{
+          state: "cancelled";
+          models: [];
+          errorCode: "cancelled";
+        }>((resolve) => {
+          observedSignal = options?.signal;
+          options?.signal?.addEventListener(
+            "abort",
+            () => resolve({ state: "cancelled", models: [], errorCode: "cancelled" }),
+            { once: true },
+          );
+        }),
+    );
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices: [],
+        customApiConfiguration: {
+          protocols: [
+            "openai-completions",
+            "openai-responses",
+            "anthropic-messages",
+            "google-generative-ai",
+          ],
+        },
+        errorCode: null,
+      }),
+      discoverCustom,
+    });
+
+    await mounted.screen.getByRole("button", { name: "settings.addModelService" }).click();
+    await mounted.screen.getByRole("button", { name: /settings\.connectByApiAddress/ }).click();
+    await mounted.screen.getByLabelText("settings.customApiConnectionName").fill("Custom Service");
+    await mounted.screen
+      .getByLabelText("settings.customApiEndpoint")
+      .fill("https://api.example.test/v1");
+    await mounted.screen.getByLabelText("settings.customApiKey").fill("browser-secret");
+    await mounted.screen.getByRole("button", { name: "settings.customApiDiscoverModels" }).click();
+    await confirmCustomApiRisk(mounted.screen, "discover");
+    await expect.poll(() => discoverCustom).toHaveBeenCalledTimes(1);
+    expect(observedSignal?.aborted).toBe(false);
+    expect(document.body.textContent).toContain("settings.customApiDiscovering");
+
+    await mounted.screen.getByRole("button", { name: "settings.customApiCancelDiscovery" }).click();
+    expect(observedSignal?.aborted).toBe(true);
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.customApiDiscoverModels");
+    expect(document.body.textContent).not.toContain(
+      "settings.customApiDiscoveryFailed.catalog_unavailable",
+    );
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

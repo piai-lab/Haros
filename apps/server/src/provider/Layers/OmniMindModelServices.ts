@@ -19,6 +19,8 @@ import type {
 } from "@earendil-works/pi-ai";
 import { InMemoryCredentialStore } from "@earendil-works/pi-ai";
 import type {
+  OmniMindCustomModelServiceDiscoveryConfigInput,
+  OmniMindCustomModelServiceDiscoverResult,
   OmniMindCustomModelServiceConfigInput,
   OmniMindCustomModelServiceConfig,
   OmniMindCustomModelServiceModelInput,
@@ -38,6 +40,7 @@ import type {
   OmniMindModelServicesProjectionIntent,
 } from "@omnimind/contracts";
 import {
+  OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT,
   OMNIMIND_MODEL_SERVICE_MODELS_MAX_COUNT,
   OMNIMIND_MODEL_SERVICES_MAX_COUNT,
 } from "@omnimind/contracts";
@@ -75,6 +78,7 @@ const CUSTOM_API_PROTOCOLS = [
   "google-generative-ai",
 ] as const;
 const CUSTOM_CONNECTION_TEST_PROMPT = "Reply with OK.";
+const CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS = 20_000;
 
 type ReadTextFile = (filePath: string, signal?: AbortSignal) => Promise<string>;
 
@@ -84,6 +88,7 @@ export interface OmniMindModelServicesLiveOptions {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: ReadTextFile;
   readonly authRequestTimeoutMs?: number;
+  readonly customModelDiscoveryTimeoutMs?: number;
 }
 
 function isMissingPathError(error: unknown): boolean {
@@ -155,6 +160,14 @@ function customProviderConfig(input: OmniMindCustomModelServiceConfigInput) {
       contextWindow: model.contextWindow,
       maxTokens: model.maxTokens,
     })),
+  } as const;
+}
+
+function customProviderDiscoveryConfig(input: OmniMindCustomModelServiceDiscoveryConfigInput) {
+  return {
+    name: input.displayName,
+    baseUrl: normalizedCustomBaseUrl(input.baseUrl),
+    api: input.api,
   } as const;
 }
 
@@ -1458,6 +1471,110 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
               ),
             ),
           ),
+        discoverCustom: (input) =>
+          Effect.promise(async (requestSignal) => {
+            if (input.config.serviceId === null && input.apiKey === null) {
+              return {
+                state: "failed",
+                models: [],
+                errorCode: "authentication_failed",
+              } satisfies OmniMindCustomModelServiceDiscoverResult;
+            }
+            const timeoutSignal = AbortSignal.timeout(
+              options.customModelDiscoveryTimeoutMs ?? CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS,
+            );
+            const signal = AbortSignal.any([requestSignal, timeoutSignal]);
+            let sdk: OmniMindCodingAgentModule | undefined;
+            try {
+              sdk = await (options.loadModule ?? loadOmniMindCodingAgentModule)();
+              signal.throwIfAborted();
+              const agentDir = resolveOmniMindAgentDir(config.baseDir);
+              const providerId = input.config.serviceId ?? "omnimind-custom-discovery-preview";
+              const credentials =
+                input.apiKey === null
+                  ? await StaticCredentialStore.create({
+                      authPath: path.join(agentDir, "auth.json"),
+                      readTextFile: (filePath, readSignal) =>
+                        readOmniMindPrivateTextFile({
+                          agentDir,
+                          filename: path.basename(filePath) as OmniMindPrivateRuntimeFilename,
+                          ...(readSignal ? { signal: readSignal } : {}),
+                        }),
+                      signal,
+                    })
+                  : new InMemoryCredentialStore();
+              if (input.apiKey !== null) {
+                await credentials.modify(
+                  providerId,
+                  async () => ({ type: "api_key", key: input.apiKey! }),
+                  { signal },
+                );
+              }
+              const runtime = await sdk.ModelRuntime.create({
+                credentials,
+                modelsPath: null,
+                ...(input.config.serviceId === null
+                  ? {}
+                  : { modelsConfigReader: createOmniMindModelsConfigReader(agentDir) }),
+                allowModelNetwork: false,
+                refreshOnCreate: false,
+                signal,
+              });
+              let previewConfig: ReturnType<typeof customProviderDiscoveryConfig>;
+              try {
+                previewConfig = customProviderDiscoveryConfig(input.config);
+              } catch {
+                return {
+                  state: "failed",
+                  models: [],
+                  errorCode: "invalid_configuration",
+                } satisfies OmniMindCustomModelServiceDiscoverResult;
+              }
+              runtime.registerModelConfigProviderPreview(providerId, previewConfig);
+              const discovered = await runtime.discoverModelConfigProviderModels(providerId, {
+                signal,
+              });
+              const models = discovered
+                .flatMap(({ id, name }) => {
+                  const modelId = safeModelId(id);
+                  if (!modelId) return [];
+                  return [{ modelId, displayName: safeDisplayName(name, modelId) }];
+                })
+                .slice(0, OMNIMIND_CUSTOM_MODEL_SERVICE_MODELS_MAX_COUNT);
+              if (models.length === 0) {
+                return {
+                  state: "failed",
+                  models: [],
+                  errorCode: "catalog_unavailable",
+                } satisfies OmniMindCustomModelServiceDiscoverResult;
+              }
+              return {
+                state: "success",
+                models,
+                errorCode: null,
+              } satisfies OmniMindCustomModelServiceDiscoverResult;
+            } catch (error) {
+              if (requestSignal.aborted) {
+                return {
+                  state: "cancelled",
+                  models: [],
+                  errorCode: "cancelled",
+                } satisfies OmniMindCustomModelServiceDiscoverResult;
+              }
+              if (sdk && error instanceof sdk.ModelConfigProviderDiscoveryError) {
+                return {
+                  state: "failed",
+                  models: [],
+                  errorCode: error.code === "request_failed" ? "connection_failed" : error.code,
+                } satisfies OmniMindCustomModelServiceDiscoverResult;
+              }
+              return {
+                state: "failed",
+                models: [],
+                errorCode: "connection_failed",
+              } satisfies OmniMindCustomModelServiceDiscoverResult;
+            }
+          }),
         testCustom: (input) =>
           Effect.promise(async (signal) => {
             try {

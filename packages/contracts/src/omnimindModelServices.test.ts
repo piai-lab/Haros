@@ -2,6 +2,8 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
+  OmniMindCustomModelServiceDiscoverInput,
+  OmniMindCustomModelServiceDiscoverResult,
   OmniMindCustomModelServiceSaveResult,
   OmniMindCustomModelServiceTestInput,
   OmniMindModelServiceAnswerLoginInput,
@@ -189,6 +191,46 @@ describe("OmniMind model-services contracts", () => {
         service: null,
       }),
     ).toEqual({ state: "config_saved_sync_failed", service: null });
+  });
+
+  it("keeps generic model discovery bounded and credential-blind", () => {
+    expect(
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceDiscoverInput)({
+        config: {
+          serviceId: null,
+          displayName: "Private gateway",
+          api: "openai-responses",
+          baseUrl: "https://gateway.example.test/v1",
+        },
+        apiKey: "discovery-only-secret",
+      }).config,
+    ).toEqual({
+      serviceId: null,
+      displayName: "Private gateway",
+      api: "openai-responses",
+      baseUrl: "https://gateway.example.test/v1",
+    });
+
+    const decoded = Schema.decodeUnknownSync(OmniMindCustomModelServiceDiscoverResult)({
+      state: "success",
+      models: [{ modelId: "model-one", displayName: "Model One" }],
+      errorCode: null,
+      apiKey: "must-not-decode",
+      headers: { Authorization: "must-not-decode" },
+    });
+    expect(decoded).toEqual({
+      state: "success",
+      models: [{ modelId: "model-one", displayName: "Model One" }],
+      errorCode: null,
+    });
+    expect(JSON.stringify(decoded)).not.toContain("must-not-decode");
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindCustomModelServiceDiscoverResult)({
+        state: "success",
+        models: [],
+        errorCode: null,
+      }),
+    ).toThrow();
   });
 
   it("rejects path-shaped get inputs and invalid counts", () => {

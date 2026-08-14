@@ -1999,6 +1999,11 @@ const makeWsRpcHandlersLayer = () =>
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.refresh(input))),
             "Failed to refresh an OmniMind model service",
           ),
+        [WS_METHODS.omnimindModelServicesDiscoverCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.discoverCustom(input))),
+            "Failed to discover models for an OmniMind custom model service",
+          ),
         [WS_METHODS.omnimindModelServicesTestCustom]: (input) =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.testCustom(input))),

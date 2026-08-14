@@ -2071,15 +2071,35 @@ export const EN_MESSAGES = {
   "settings.customApiRiskDescription":
     "The endpoint will receive the API key and the test request. Its operator may process or retain this data, and compatibility is not guaranteed. Continue only if you trust this service and its privacy practices.",
   "settings.customApiRiskContinueTest": "Continue and test",
+  "settings.customApiRiskContinueDiscover": "Continue and get models",
   "settings.customApiRiskContinueSave": "Continue and save",
+  "settings.customApiDiscoveryRiskTitle": "Get models from this endpoint?",
   "settings.customApiDiscardTitle": "Discard unsaved changes?",
-  "settings.customApiDiscardDescription":
-    "The changes to this API connection have not been saved.",
+  "settings.customApiDiscardDescription": "The changes to this API connection have not been saved.",
   "settings.customApiKeepEditing": "Keep editing",
   "settings.customApiDiscardConfirm": "Discard changes",
   "settings.customApiModels": "Models",
   "settings.customApiModelsDescription":
-    "Add the model identities and capabilities exposed by this endpoint.",
+    "Get model identities from the service or add one manually, then complete the capabilities you know.",
+  "settings.customApiDiscoverModels": "Get from service",
+  "settings.customApiDiscovering": "Getting models…",
+  "settings.customApiCancelDiscovery": "Stop getting models",
+  "settings.customApiDiscoveredModels": "Models found",
+  "settings.customApiDiscoveryDescription":
+    "Select the models to add. Discovery does not guess context limits, output limits, thinking, or image support; review those facts before testing.",
+  "settings.customApiDiscoverySucceeded": "Found {count} models. Select the ones to add.",
+  "settings.customApiDiscoveryFailed.invalid_configuration":
+    "Check the connection name, API format, and endpoint.",
+  "settings.customApiDiscoveryFailed.authentication_failed":
+    "Authentication failed. Check the API key or the saved credential for this connection.",
+  "settings.customApiDiscoveryFailed.connection_failed":
+    "The model service did not complete the model request.",
+  "settings.customApiDiscoveryFailed.catalog_unavailable":
+    "The model service returned no usable models. You can still add a model manually.",
+  "settings.customApiDiscoveryFailed.response_too_large":
+    "The model service returned too much model data. Add the models you need manually.",
+  "settings.customApiDiscoveryFailed.cancelled": "Getting models was cancelled.",
+  "settings.customApiAddSelectedModels": "Add selected",
   "settings.customApiAddModel": "Add model",
   "settings.customApiModelId": "Model ID",
   "settings.customApiModelIdPlaceholder": "model-id",
@@ -5038,13 +5058,34 @@ export const ZH_CN_MESSAGES = {
   "settings.customApiRiskDescription":
     "该地址将收到 API Key 和测试请求，其运营方可能处理或保留这些数据，且协议兼容性无法保证。请仅在信任该服务及其隐私做法时继续。",
   "settings.customApiRiskContinueTest": "继续并测试",
+  "settings.customApiRiskContinueDiscover": "继续并获取模型",
   "settings.customApiRiskContinueSave": "继续并保存",
+  "settings.customApiDiscoveryRiskTitle": "从这个 API 地址获取模型？",
   "settings.customApiDiscardTitle": "放弃未保存的更改？",
   "settings.customApiDiscardDescription": "对此 API 连接所做的更改尚未保存。",
   "settings.customApiKeepEditing": "继续编辑",
   "settings.customApiDiscardConfirm": "放弃更改",
   "settings.customApiModels": "模型",
-  "settings.customApiModelsDescription": "添加此地址实际提供的模型身份与能力。",
+  "settings.customApiModelsDescription":
+    "可以从供应商获取模型身份，也可以手工添加；随后补充你确认的模型能力。",
+  "settings.customApiDiscoverModels": "从供应商获取",
+  "settings.customApiDiscovering": "正在获取模型…",
+  "settings.customApiCancelDiscovery": "停止获取模型",
+  "settings.customApiDiscoveredModels": "发现的模型",
+  "settings.customApiDiscoveryDescription":
+    "选择要添加的模型。获取过程不会猜测上下文上限、输出上限、思考或图像能力；测试前请确认这些信息。",
+  "settings.customApiDiscoverySucceeded": "发现 {count} 个模型，请选择要添加的项目。",
+  "settings.customApiDiscoveryFailed.invalid_configuration":
+    "请检查连接名称、API 格式和 API 地址。",
+  "settings.customApiDiscoveryFailed.authentication_failed":
+    "认证失败，请检查 API Key 或此连接已保存的凭据。",
+  "settings.customApiDiscoveryFailed.connection_failed": "供应商未能完成模型请求。",
+  "settings.customApiDiscoveryFailed.catalog_unavailable":
+    "供应商没有返回可用模型，你仍可手工添加。",
+  "settings.customApiDiscoveryFailed.response_too_large":
+    "供应商返回的模型数据过多，请手工添加所需模型。",
+  "settings.customApiDiscoveryFailed.cancelled": "获取模型已取消。",
+  "settings.customApiAddSelectedModels": "添加所选模型",
   "settings.customApiAddModel": "添加模型",
   "settings.customApiModelId": "模型 ID",
   "settings.customApiModelIdPlaceholder": "model-id",

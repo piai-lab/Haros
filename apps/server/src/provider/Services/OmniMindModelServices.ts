@@ -5,6 +5,8 @@
 import type {
   OmniMindCustomModelServiceRemoveInput,
   OmniMindCustomModelServiceRemoveResult,
+  OmniMindCustomModelServiceDiscoverInput,
+  OmniMindCustomModelServiceDiscoverResult,
   OmniMindCustomModelServiceSaveInput,
   OmniMindCustomModelServiceSaveResult,
   OmniMindCustomModelServiceTestInput,
@@ -58,6 +60,9 @@ export interface OmniMindModelServicesShape {
   readonly testCustom: (
     input: OmniMindCustomModelServiceTestInput,
   ) => Effect.Effect<OmniMindCustomModelServiceTestResult>;
+  readonly discoverCustom: (
+    input: OmniMindCustomModelServiceDiscoverInput,
+  ) => Effect.Effect<OmniMindCustomModelServiceDiscoverResult>;
   readonly saveCustom: (
     input: OmniMindCustomModelServiceSaveInput,
   ) => Effect.Effect<OmniMindCustomModelServiceSaveResult>;
