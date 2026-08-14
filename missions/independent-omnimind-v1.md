@@ -112,7 +112,14 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 
 - Frozen product仍为 exact pushed `6e3e2ef3d00b00921062c483b6033c73646dd264`；本 addendum 不改产品 bytes，不将 producer 证据改写为 independent Exit。E7 addendum 记录的6/6 typecheck、Contracts/Server/Web/Chromium focused gates、exact DMG/ASAR hashes与fresh task-specific installed-App重开journey共同构成当前 cumulative source/packaged证据。
 - Live provider proof：授权清单权限为`0600`，凭据、完整endpoint与原始响应只在单次Bun进程内读取，没有写入argv、Git、日志、截图、artifact或证据文本。Pinned Pi OpenAI Completions stream对MiMo完成首轮与携带上一轮assistant message的continuation；两次均HTTP 200、`stop`、可见正文非空，并同时观察到thinking/text流事件与usage。请求使用硬timeout、禁止retry且在该两轮后停止；该证据只支持direct Pi stream/continuation，不伪装成packaged Model-services credential journey。
-- Stop boundary：E8仍未Exit。E5与E7 fresh independent completion audit、Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full V1 completion audit仍OPEN/blocked；当前App仍为ad-hoc且strict codesign失败，未创建Release、未改update feed。已丢失的CI/Release side work未被重造，其owner/维护者裁决前完整Run保持non-candidate。
+- Stop boundary：E8仍未Exit。E5与E7 independent audit结果见下方addendum；Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full V1 completion audit仍OPEN/blocked。当前App仍为ad-hoc且strict codesign失败，未创建Release、未改update feed。已丢失的CI/Release side work未被重造，其owner/维护者裁决前完整Run保持non-candidate。
+
+### E5/E7 independent completion and E8 delta audit addendum — 2026-08-14
+
+- Fresh Judge以exact git objects复核 product `6e3e2ef3d…` / evidence `82c5ad298…`，首轮唯一P1是`test/document-contract.test.mjs`的bundled Pi artifact负向fixture仍匹配旧digest，导致exact-SHA document contract `18/19`。Exact pushed `63a551b278be4de8951e8a974df5cab0f031a004`只将该fixture更新到README/validator/vendor已拥有的canonical archive digest；无shipped source、依赖、vendor、patch、构建或发行配置差异，因此不重建packaged artifact。Delta independent re-audit复跑document contract `19/19`、validator与diff-check通过，结论`CLEAN`。
+- Independent E5 verdict：允许Exit。Judge复核Server OAuth/cleanup/callback `51/51`、Contracts `29/29`、Web `59/59`，typed browser/device/manual-code、client/request绑定、cancel/timeout/disconnect cleanup、Pi login最终authority、四Provider request-scoped callback与logout/target refresh未发现P0/P1。
+- Independent E7 verdict：允许Exit。Judge复核Browser `25/25`、Web logic `86/86`、三域typecheck、244-component legal closure，并审查Extension intent/retire、被动zero-execute、Package opaque identity/action rematch、Git-writing persistence/search/deep-link；除已修复fixture外未发现P0/P1。
+- Independent E8 verdict：当前producer evidence表述诚实，仅允许保持candidate；不得升为完整V1 Exit/verified。Apple signing/notary、Windows Trusted Signing、Windows/Linux journey、full-V1 audit及丢失的CI/Release side work仍准确blocked/non-candidate。
 
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
