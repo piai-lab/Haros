@@ -6933,7 +6933,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       provider: "omnimind" as const,
       status: "ready" as const,
       available: true,
-      authStatus: "authenticated" as const,
+      authStatus: "unknown" as const,
       supportsAutoRuntimeMode: true,
       checkedAt: NOW_ISO,
     };
@@ -7061,10 +7061,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
       viewport: DEFAULT_VIEWPORT,
       snapshot: createDraftOnlySnapshot(),
       configureFixture: (nextFixture) => {
-        nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [readyOmniMindStatus],
+        };
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
-          omnimind: { source: "browser.fixture", models: [] },
+          // Bundled Pi can enumerate builtin models without any configured
+          // credential. That exact catalog row must not suppress first-run setup.
+          omnimind: {
+            source: "browser.fixture",
+            models: [
+              {
+                slug: "deepseek/deepseek-v4-flash",
+                name: "DeepSeek V4 Flash",
+                upstreamProviderId: "deepseek",
+                upstreamProviderName: "DeepSeek",
+                upstreamProviderOrigin: "builtin",
+              },
+            ],
+          },
           pi: { source: "browser.fixture", models: [] },
         };
       },

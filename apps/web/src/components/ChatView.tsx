@@ -432,6 +432,7 @@ import {
   deriveModelReadinessPromptMode,
   hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
+  hasUsableOmniMindModelServiceBinding,
   type PassiveModelServicesState,
 } from "./chat/modelReadinessPrompt.logic";
 import {
@@ -4065,7 +4066,7 @@ export default function ChatView({
     return result;
   }, [explicitExactModelSelectionsByProvider, providerStatuses, selectableModelOptionsByProvider]);
   const passiveProviderPresence = readPassiveProviderPresence(queryClient);
-  const hasUsableProductModelBinding = useMemo(
+  const hasUsableProviderModelBinding = useMemo(
     () =>
       hasUsableExactModelBinding({
         providerStatuses,
@@ -4090,6 +4091,15 @@ export default function ChatView({
         exactModelSelections: recoverableExactModelSelectionsByProvider,
       }),
     [passiveProviderPresence, recoverableExactModelSelectionsByProvider],
+  );
+  const hasRecoverableOmniMindModelBinding = useMemo(
+    () =>
+      passiveProviderPresence !== null &&
+      hasRecoverableExactModelBinding({
+        recoverableProviders: passiveProviderPresence.filter((provider) => provider === "omnimind"),
+        exactModelSelections: explicitExactModelSelectionsByProvider,
+      }),
+    [explicitExactModelSelectionsByProvider, passiveProviderPresence],
   );
   const usableProviderCatalogsSettled = useMemo(
     () =>
@@ -4116,7 +4126,7 @@ export default function ChatView({
       enabled:
         isCenteredEmptyLanding &&
         serverConfigQuery.isSuccess &&
-        !hasUsableProductModelBinding &&
+        !hasUsableProviderModelBinding &&
         (providerHealthSnapshotSettled || !hasRecoverableProductModelBinding) &&
         modelServicesCapability === true &&
         modelServicesTransport === "open",
@@ -4133,6 +4143,15 @@ export default function ChatView({
             ? "configured"
             : "error"
         : "unknown";
+  const hasUsableOmniMindServiceBinding =
+    passiveModelServicesQuery.data?.state === "ready" &&
+    hasUsableOmniMindModelServiceBinding({
+      selection: exactModelSelectionsByProvider.omnimind,
+      modelOptions: selectableModelOptionsByProvider.omnimind,
+      services: passiveModelServicesQuery.data.services,
+    });
+  const hasUsableProductModelBinding =
+    hasUsableProviderModelBinding || hasUsableOmniMindServiceBinding;
   const modelReadinessPromptMode = deriveModelReadinessPromptMode({
     surfaceEligible: isCenteredEmptyLanding,
     serverFactsReady:
@@ -4141,7 +4160,8 @@ export default function ChatView({
       usableProviderCatalogsSettled &&
       (passiveModelServicesState !== "empty" || providerHealthSnapshotSettled),
     hasUsableExactBinding: hasUsableProductModelBinding,
-    hasRecoverableExactBinding: hasRecoverableProductModelBinding,
+    hasRecoverableExactBinding:
+      hasRecoverableIndependentEngineModelBinding || hasRecoverableOmniMindModelBinding,
     modelServicesCapability,
     modelServicesTransport,
     passiveModelServicesState,

@@ -6,6 +6,7 @@ import {
   deriveModelReadinessPromptMode,
   hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
+  hasUsableOmniMindModelServiceBinding,
 } from "./modelReadinessPrompt.logic";
 
 function providerStatus(
@@ -60,6 +61,14 @@ describe("model readiness prompt", () => {
         exactModelSelections: {},
       }),
     ).toBe(false);
+    expect(
+      hasRecoverableExactModelBinding({
+        recoverableProviders: ["pi"],
+        exactModelSelections: {
+          pi: { provider: "pi", model: "anthropic/claude-sonnet-4" },
+        },
+      }),
+    ).toBe(true);
   });
 
   it("shows setup only after passive facts prove a truly empty product", () => {
@@ -97,7 +106,13 @@ describe("model readiness prompt", () => {
           providerStatus("omnimind", { authStatus: "unknown" }),
           providerStatus("pi", { authStatus: "unknown" }),
         ],
-        exactModelSelections: {},
+        exactModelSelections: {
+          omnimind: {
+            provider: "omnimind",
+            model: "deepseek/deepseek-v4-flash",
+          },
+          pi: { provider: "pi", model: "anthropic/claude-sonnet-4" },
+        },
       }),
     ).toBe(false);
     expect(
@@ -111,6 +126,51 @@ describe("model readiness prompt", () => {
         passiveModelServicesState: "empty",
       }),
     ).toBe("setup");
+  });
+
+  it("requires the exact OmniMind service origin to own the configured model", () => {
+    const selection = {
+      provider: "omnimind",
+      model: "gateway/model",
+    } satisfies ModelSelection;
+    const modelOptions = [
+      {
+        slug: "gateway/model",
+        name: "Model",
+        upstreamProviderId: "gateway",
+        upstreamProviderOrigin: "extension" as const,
+      },
+    ];
+    const configuredBuiltin = {
+      serviceId: "gateway",
+      providerId: "gateway",
+      displayName: "Gateway",
+      origin: "builtin" as const,
+      authMethods: [],
+      authState: "configured" as const,
+      authSource: "stored" as const,
+      storedCredentialType: "api_key" as const,
+      knownModelCount: 1,
+      availableModelCount: 1,
+      supportsNetworkRefresh: false,
+      catalogState: "ready" as const,
+      catalogErrorCode: null,
+    };
+
+    expect(
+      hasUsableOmniMindModelServiceBinding({
+        selection,
+        modelOptions,
+        services: [configuredBuiltin],
+      }),
+    ).toBe(false);
+    expect(
+      hasUsableOmniMindModelServiceBinding({
+        selection,
+        modelOptions,
+        services: [{ ...configuredBuiltin, origin: "extension" }],
+      }),
+    ).toBe(true);
   });
 
   it("routes configured but unavailable services to recovery instead of first-run setup", () => {
