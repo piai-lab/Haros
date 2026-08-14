@@ -7254,6 +7254,173 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("does not treat fresh auth-unknown Engine defaults as a usable product binding", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "codex",
+              status: "error",
+              available: true,
+              authStatus: "unauthenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "claudeAgent",
+              status: "error",
+              available: true,
+              authStatus: "unauthenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "opencode",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "pi",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = [
+          "codex",
+          "claudeAgent",
+          "omnimind",
+          "opencode",
+          "pi",
+        ];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          codex: { source: "browser.fixture", models: [] },
+          omnimind: { source: "browser.fixture", models: [] },
+          opencode: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
+        .not.toBeInTheDocument();
+      expect(listModelServices).toHaveBeenCalledTimes(1);
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("routes a stale OmniMind service selection back to Model services", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setStickyModelSelection({
+      provider: "omnimind",
+      model: "deleted-service/deleted-model",
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }).click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "A stale OmniMind service selection should open Model services recovery.",
+      );
+      expect(mounted.router.state.location.search).toMatchObject({ section: "models" });
+      expect(mounted.router.state.location.search).not.toHaveProperty("target");
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
   it("keeps an unrequested stock Pi catalog with a remembered exact model out of first-run setup", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setStickyModelSelection({

@@ -4000,7 +4000,7 @@ export default function ChatView({
         .flatMap((status) => (status ? [status] : [])),
     [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
   );
-  const rememberedExactModelSelectionsByProvider = useMemo(() => {
+  const explicitExactModelSelectionsByProvider = useMemo(() => {
     const result: Partial<Record<ProviderKind, ModelSelection>> = {};
     for (const provider of COMPOSER_PROVIDER_KINDS) {
       const candidates = [
@@ -4012,11 +4012,7 @@ export default function ChatView({
           : null,
         stickyModelSelectionByProvider[provider] ?? null,
       ];
-      let selection = candidates.find((candidate) => candidate !== null) ?? null;
-      if (!selection) {
-        const defaultModel = getDefaultModel(provider);
-        if (defaultModel) selection = buildModelSelection(provider, defaultModel);
-      }
+      const selection = candidates.find((candidate) => candidate !== null) ?? null;
       if (selection) result[provider] = selection;
     }
     return result;
@@ -4027,19 +4023,47 @@ export default function ChatView({
     serverThread?.modelSelection,
     stickyModelSelectionByProvider,
   ]);
+  const recoverableExactModelSelectionsByProvider = useMemo(() => {
+    const result = { ...explicitExactModelSelectionsByProvider };
+    for (const provider of COMPOSER_PROVIDER_KINDS) {
+      if (result[provider]) continue;
+      const defaultModel = getDefaultModel(provider);
+      if (defaultModel) result[provider] = buildModelSelection(provider, defaultModel);
+    }
+    return result;
+  }, [explicitExactModelSelectionsByProvider]);
   const exactModelSelectionsByProvider = useMemo(() => {
-    const result = { ...rememberedExactModelSelectionsByProvider };
+    const result = { ...explicitExactModelSelectionsByProvider };
+    for (const provider of COMPOSER_PROVIDER_KINDS) {
+      const status = findProviderStatus(providerStatuses, provider);
+      if (!result[provider] && status?.authStatus === "authenticated") {
+        const defaultModel = getDefaultModel(provider);
+        if (defaultModel) result[provider] = buildModelSelection(provider, defaultModel);
+      }
+      // `available + auth unknown` proves that an Engine can be invoked, not
+      // that a fresh profile owns a sendable model. Only a catalog-exact model
+      // may upgrade that ambiguous status from recoverable to usable.
+      if (
+        result[provider] &&
+        status?.authStatus === "unknown" &&
+        !selectableModelOptionsByProvider[provider].some(
+          (model) => model.slug === result[provider]?.model,
+        )
+      ) {
+        delete result[provider];
+      }
+    }
     // OmniMind and stock Pi are runtime-catalog-only. A remembered slug is a
     // recovery fact, not send authority: only the current catalog can validate it.
     for (const provider of ["omnimind", "pi"] as const) {
-      const remembered = rememberedExactModelSelectionsByProvider[provider];
+      const remembered = result[provider];
       const availableModels = selectableModelOptionsByProvider[provider] ?? [];
       if (!remembered || !availableModels.some((model) => model.slug === remembered.model)) {
         delete result[provider];
       }
     }
     return result;
-  }, [rememberedExactModelSelectionsByProvider, selectableModelOptionsByProvider]);
+  }, [explicitExactModelSelectionsByProvider, providerStatuses, selectableModelOptionsByProvider]);
   const passiveProviderPresence = readPassiveProviderPresence(queryClient);
   const hasUsableProductModelBinding = useMemo(
     () =>
@@ -4054,9 +4078,18 @@ export default function ChatView({
       passiveProviderPresence !== null &&
       hasRecoverableExactModelBinding({
         recoverableProviders: passiveProviderPresence,
-        exactModelSelections: rememberedExactModelSelectionsByProvider,
+        exactModelSelections: recoverableExactModelSelectionsByProvider,
       }),
-    [passiveProviderPresence, rememberedExactModelSelectionsByProvider],
+    [passiveProviderPresence, recoverableExactModelSelectionsByProvider],
+  );
+  const hasRecoverableIndependentEngineModelBinding = useMemo(
+    () =>
+      passiveProviderPresence !== null &&
+      hasRecoverableExactModelBinding({
+        recoverableProviders: passiveProviderPresence.filter((provider) => provider !== "omnimind"),
+        exactModelSelections: recoverableExactModelSelectionsByProvider,
+      }),
+    [passiveProviderPresence, recoverableExactModelSelectionsByProvider],
   );
   const usableProviderCatalogsSettled = useMemo(
     () =>
@@ -4117,7 +4150,7 @@ export default function ChatView({
     const recoversIndependentEngine =
       modelReadinessPromptMode === "recover" &&
       passiveModelServicesState === "empty" &&
-      hasRecoverableProductModelBinding;
+      hasRecoverableIndependentEngineModelBinding;
     void navigate({
       to: "/settings",
       search:
@@ -4145,7 +4178,7 @@ export default function ChatView({
     activeThread,
     composerDraft.activeProvider,
     composerDraft.modelSelectionByProvider,
-    hasRecoverableProductModelBinding,
+    hasRecoverableIndependentEngineModelBinding,
     modelReadinessPromptMode,
     navigate,
     passiveModelServicesState,
