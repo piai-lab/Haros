@@ -13,6 +13,7 @@ import {
   type OrchestrationEvent,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
   type ProviderMentionReference,
+  type ProviderInteractionMode,
   type ProviderRuntimeEvent,
   ProviderKind,
   type ProviderTurnStartFailureReason,
@@ -794,14 +795,22 @@ const make = Effect.gen(function* () {
   const setThreadSession = (input: {
     readonly threadId: ThreadId;
     readonly session: OrchestrationSession;
+    readonly binding?: {
+      readonly modelSelection: ModelSelection;
+      readonly runtimeMode: RuntimeMode;
+      readonly interactionMode: ProviderInteractionMode;
+    };
     readonly expectedSession?: Pick<OrchestrationSession, "status" | "updatedAt">;
     readonly createdAt: string;
   }) =>
     orchestrationEngine.dispatch({
       type: "thread.session.set",
-      commandId: serverCommandId("provider-session-set"),
+      commandId: serverCommandId(
+        input.binding === undefined ? "provider-session-set" : "provider-session-binding-commit",
+      ),
       threadId: input.threadId,
       session: input.session,
+      ...(input.binding !== undefined ? { binding: input.binding } : {}),
       ...(input.expectedSession !== undefined
         ? {
             expectedSessionStatus: input.expectedSession.status,
@@ -842,6 +851,11 @@ const make = Effect.gen(function* () {
     readonly threadId: ThreadId;
     readonly session: ProviderSession;
     readonly runtimeMode?: RuntimeMode;
+    readonly binding?: {
+      readonly modelSelection: ModelSelection;
+      readonly runtimeMode: RuntimeMode;
+      readonly interactionMode: ProviderInteractionMode;
+    };
     readonly activeTurnId?: TurnId | null;
     readonly createdAt: string;
   }) =>
@@ -864,6 +878,7 @@ const make = Effect.gen(function* () {
         lastError: input.session.lastError ?? null,
         updatedAt: input.session.updatedAt,
       },
+      ...(input.binding !== undefined ? { binding: input.binding } : {}),
       createdAt: input.createdAt,
     });
 
@@ -1225,6 +1240,8 @@ const make = Effect.gen(function* () {
       readonly modelSelection?: ModelSelection;
       readonly providerOptions?: ProviderStartOptions;
       readonly runtimeMode?: RuntimeMode;
+      readonly interactionMode?: ProviderInteractionMode;
+      readonly commitBinding?: boolean;
     },
   ) {
     const thread = yield* resolveThread(threadId);
@@ -1241,6 +1258,7 @@ const make = Effect.gen(function* () {
       !suppressContextBootstrapOnNextStartThreadIds.has(threadId);
 
     const desiredRuntimeMode = options?.runtimeMode ?? thread.runtimeMode;
+    const desiredInteractionMode = options?.interactionMode ?? thread.interactionMode;
     const projectedSessionProvider: ProviderKind | undefined = Schema.is(ProviderKind)(
       thread.session?.providerName,
     )
@@ -1296,6 +1314,15 @@ const make = Effect.gen(function* () {
         threadId,
         session,
         runtimeMode: desiredRuntimeMode,
+        ...(options?.commitBinding === true
+          ? {
+              binding: {
+                modelSelection: desiredModelSelection,
+                runtimeMode: desiredRuntimeMode,
+                interactionMode: desiredInteractionMode,
+              },
+            }
+          : {}),
         createdAt,
       });
 
@@ -1323,7 +1350,10 @@ const make = Effect.gen(function* () {
         activeModel: activeSessionBeforeEnsure?.model,
         currentModelSelection: thread.modelSelection,
         requestedModelSelection,
-        currentRuntimeMode: thread.session?.runtimeMode,
+        // The live Session is authoritative when the previous atomic Product
+        // binding write failed. Using the stale projected mode here would
+        // restart an already-started target runtime during safe retry.
+        currentRuntimeMode: activeSessionBeforeEnsure?.runtimeMode ?? thread.session?.runtimeMode,
         desiredRuntimeMode,
       });
 
@@ -1334,12 +1364,12 @@ const make = Effect.gen(function* () {
             : reusableSession.status === "closed"
               ? "stopped"
               : reusableSession.status;
-        if (
+        const requiresSessionProjection =
           reusableSession.status !== "running" &&
           (thread.session?.providerName !== reusableSession.provider ||
             thread.session?.runtimeMode !== desiredRuntimeMode ||
-            thread.session?.status !== projectedStatus)
-        ) {
+            thread.session?.status !== projectedStatus);
+        if (requiresSessionProjection) {
           // A durable-delivery retry can arrive after ProviderService already
           // started and bound the exact runtime but the first Session
           // projection write failed. Reconcile that authoritative live
@@ -1349,6 +1379,7 @@ const make = Effect.gen(function* () {
         return {
           activeSessionBeforeEnsure,
           activeSession: reusableSession,
+          bindingCommitted: requiresSessionProjection && options?.commitBinding === true,
         };
       }
 
@@ -1395,6 +1426,7 @@ const make = Effect.gen(function* () {
       return {
         activeSessionBeforeEnsure,
         activeSession: restartedSession,
+        bindingCommitted: options?.commitBinding === true,
       };
     }
 
@@ -1432,6 +1464,7 @@ const make = Effect.gen(function* () {
         return {
           activeSessionBeforeEnsure,
           activeSession: forkedSession,
+          bindingCommitted: options?.commitBinding === true,
         };
       }
       if (shouldRegisterContextBootstrap && !thread.sidechatSourceThreadId) {
@@ -1465,6 +1498,7 @@ const make = Effect.gen(function* () {
     return {
       activeSessionBeforeEnsure,
       activeSession: startedSession,
+      bindingCommitted: options?.commitBinding === true,
     };
   });
 
@@ -1605,59 +1639,42 @@ const make = Effect.gen(function* () {
         });
       }
     }
-    const { activeSessionBeforeEnsure, activeSession } = yield* ensureSessionForThread(
-      input.threadId,
-      input.createdAt,
-      {
+    const { activeSessionBeforeEnsure, activeSession, bindingCommitted } =
+      yield* ensureSessionForThread(input.threadId, input.createdAt, {
         ...(input.modelSelection !== undefined ? { modelSelection: input.modelSelection } : {}),
         ...(input.providerOptions !== undefined ? { providerOptions: input.providerOptions } : {}),
         ...(input.runtimeMode !== undefined ? { runtimeMode: input.runtimeMode } : {}),
-      },
-    );
+        ...(input.interactionMode !== undefined ? { interactionMode: input.interactionMode } : {}),
+        commitBinding: input.dispatchOrigin !== "automation",
+      });
     if (input.providerOptions !== undefined) {
       threadProviderOptions.set(input.threadId, input.providerOptions);
     }
     if (input.modelSelection !== undefined) {
       threadSessionModelSelections.set(input.threadId, input.modelSelection);
     }
-    const commitModelSelection =
-      input.modelSelection !== undefined &&
-      !Equal.equals(thread.modelSelection, input.modelSelection)
-        ? orchestrationEngine.dispatch({
-            type: "thread.meta.update",
-            commandId: serverCommandId("provider-session-model-commit"),
-            threadId: input.threadId,
-            modelSelection: input.modelSelection,
-          })
-        : Effect.void;
-    const commitRuntimeMode =
-      input.runtimeMode !== undefined && input.runtimeMode !== thread.runtimeMode
-        ? orchestrationEngine.dispatch({
-            type: "thread.runtime-mode.set",
-            commandId: serverCommandId("provider-session-runtime-mode-commit"),
-            threadId: input.threadId,
-            runtimeMode: input.runtimeMode,
-            createdAt: input.createdAt,
-          })
-        : Effect.void;
     if (input.dispatchOrigin !== "automation") {
-      // The command algebra commits model and runtime mode separately. Keep
-      // every intermediate state valid without duplicating capability rules:
-      // Auto must first adopt the target model; every non-Auto target first
-      // leaves Auto before adopting a model that may not support it.
-      if (input.runtimeMode === "auto") {
-        yield* commitModelSelection;
-        yield* commitRuntimeMode;
-      } else {
-        yield* commitRuntimeMode;
-        yield* commitModelSelection;
-      }
-      if (input.interactionMode !== undefined && input.interactionMode !== thread.interactionMode) {
-        yield* orchestrationEngine.dispatch({
-          type: "thread.interaction-mode.set",
-          commandId: serverCommandId("provider-session-interaction-mode-commit"),
+      const modelSelectionChanged =
+        input.modelSelection !== undefined &&
+        !Equal.equals(thread.modelSelection, input.modelSelection);
+      const runtimeModeChanged =
+        input.runtimeMode !== undefined && input.runtimeMode !== thread.runtimeMode;
+      const interactionModeChanged =
+        input.interactionMode !== undefined && input.interactionMode !== thread.interactionMode;
+      if (
+        !bindingCommitted &&
+        (modelSelectionChanged || runtimeModeChanged || interactionModeChanged)
+      ) {
+        // Reused runtimes still cross the same internal atomic owner: Session
+        // plus admitted metadata commit in one command/SQL transaction.
+        yield* setThreadSessionFromProviderSession({
           threadId: input.threadId,
-          interactionMode: input.interactionMode,
+          session: activeSession,
+          binding: {
+            modelSelection: input.modelSelection ?? thread.modelSelection,
+            runtimeMode: input.runtimeMode ?? thread.runtimeMode,
+            interactionMode: input.interactionMode ?? thread.interactionMode,
+          },
           createdAt: input.createdAt,
         });
       }

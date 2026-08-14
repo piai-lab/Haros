@@ -1506,6 +1506,13 @@ const ThreadSessionSetCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   session: OrchestrationSession,
+  binding: Schema.optional(
+    Schema.Struct({
+      modelSelection: ModelSelection,
+      runtimeMode: RuntimeMode,
+      interactionMode: ProviderInteractionMode,
+    }),
+  ),
   expectedSessionStatus: Schema.optional(OrchestrationSessionStatus),
   expectedSessionUpdatedAt: Schema.optional(IsoDateTime),
   createdAt: IsoDateTime,

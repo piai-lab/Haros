@@ -2012,7 +2012,26 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: `Thread '${command.threadId}' session changed before the conditional update.`,
         });
       }
-      return {
+      if (command.binding !== undefined) {
+        if (command.binding.modelSelection.provider !== command.session.providerName) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: "Committed model selection must match the provider Session.",
+          });
+        }
+        if (command.binding.runtimeMode !== command.session.runtimeMode) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: "Committed runtime mode must match the provider Session.",
+          });
+        }
+        yield* validateAutoRuntimeMode(
+          command,
+          command.binding.modelSelection,
+          command.binding.runtimeMode,
+        );
+      }
+      const sessionEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...withEventBase({
           aggregateKind: "thread",
           aggregateId: command.threadId,
@@ -2026,6 +2045,57 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           session: command.session,
         },
       };
+      if (command.binding === undefined) {
+        return sessionEvent;
+      }
+      return [
+        sessionEvent,
+        {
+          ...withEventBase({
+            aggregateKind: "thread",
+            aggregateId: command.threadId,
+            occurredAt: command.createdAt,
+            commandId: command.commandId,
+          }),
+          causationEventId: sessionEvent.eventId,
+          type: "thread.meta-updated",
+          payload: {
+            threadId: command.threadId,
+            modelSelection: command.binding.modelSelection,
+            updatedAt: command.createdAt,
+          },
+        },
+        {
+          ...withEventBase({
+            aggregateKind: "thread",
+            aggregateId: command.threadId,
+            occurredAt: command.createdAt,
+            commandId: command.commandId,
+          }),
+          causationEventId: sessionEvent.eventId,
+          type: "thread.runtime-mode-set",
+          payload: {
+            threadId: command.threadId,
+            runtimeMode: command.binding.runtimeMode,
+            updatedAt: command.createdAt,
+          },
+        },
+        {
+          ...withEventBase({
+            aggregateKind: "thread",
+            aggregateId: command.threadId,
+            occurredAt: command.createdAt,
+            commandId: command.commandId,
+          }),
+          causationEventId: sessionEvent.eventId,
+          type: "thread.interaction-mode-set",
+          payload: {
+            threadId: command.threadId,
+            interactionMode: command.binding.interactionMode,
+            updatedAt: command.createdAt,
+          },
+        },
+      ];
     }
 
     case "thread.messages.import": {

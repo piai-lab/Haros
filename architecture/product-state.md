@@ -53,6 +53,8 @@ Conversation/Thread 不是 Provider Session。一条可见 Thread 可以按 turn
 5. 跨 Provider 不复用 resume cursor，也不把可见历史伪装成 native continuation；
 6. unknown operation 不 replay、不 silent fallback。
 
+Provider runtime 启动成功后，Product 对该次接纳所拥有的 Session 投影、exact `ModelSelection`、runtime mode 与 interaction mode 必须由同一个 internal Orchestration command 在同一 SQLite transaction 中提交；不得先单独提交 Session 再以多个 command 补写 binding metadata。事务内任一 event/projection/receipt 失败时整组保持旧值，safe retry 可重新提交整组但不得重复启动 runtime 或发送 prompt。Provider native Session 的启动/恢复与 Product SQLite transaction 属于两个不同 authority，无法伪装成跨进程原子事务；若进程在两者之间退出，只能按既有 unknown/quarantine 与 no-replay 边界恢复，不能把 native 成功推断为 Product binding 已提交。
+
 OmniMind Agent 使用独立 `omnimind` Provider identity；stock Pi 保持 `pi` identity。二者可以共享经过证明同构的 Pi-family adapter core，但各自拥有 Session、version、configuration、state root、Package install state 与 diagnostics。OmniMind Agent 的全局和 project-local private state 都属于 `.omnimind`；stock Pi 的对应 native state 属于 `.pi`。任何 binding、resume cursor、native reference 或 filesystem state 都不能跨两者复用。
 
 ## Composer、Queue 与 receipt

@@ -1005,7 +1005,13 @@ describe("ProviderCommandReactor", () => {
     ]);
 
     await harness.startReactor();
-    await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
+    await waitFor(async () => {
+      const thread = await readHarnessThread(harness);
+      return (
+        thread?.session?.status === "error" &&
+        thread.activities.some((activity) => activity.kind === "provider.turn.start.failed")
+      );
+    });
     const thread = await readHarnessThread(harness);
     expect(thread?.session).toMatchObject({
       status: "error",
@@ -8696,20 +8702,24 @@ describe("ProviderCommandReactor", () => {
       provider: "claudeAgent",
       model: "claude-opus-4-6",
     };
-    let modelCommitAttempts = 0;
+    let bindingCommitAttempts = 0;
+    const bindingCommitCommands: Array<
+      Extract<OrchestrationCommand, { type: "thread.session.set" }>
+    > = [];
     harness.interceptEngineDispatch((command) => {
       if (
-        command.type !== "thread.meta.update" ||
-        command.modelSelection?.provider !== targetSelection.provider ||
-        command.modelSelection.model !== targetSelection.model
+        command.type !== "thread.session.set" ||
+        command.binding?.modelSelection.provider !== targetSelection.provider ||
+        command.binding.modelSelection.model !== targetSelection.model
       ) {
         return undefined;
       }
-      modelCommitAttempts += 1;
-      return modelCommitAttempts === 1
+      bindingCommitAttempts += 1;
+      bindingCommitCommands.push(command);
+      return bindingCommitAttempts === 1
         ? Effect.fail(
             new PersistenceSqlError({
-              operation: "provider-session-model-commit",
+              operation: "provider-session-binding-commit",
               detail: "injected transient target binding commit failure",
             }),
           )
@@ -8729,14 +8739,38 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         modelSelection: targetSelection,
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         interactionMode: "plan",
         createdAt: now,
       }),
     );
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
 
-    expect(modelCommitAttempts).toBe(2);
+    expect(bindingCommitAttempts).toBe(2);
+    expect(bindingCommitCommands).toEqual([
+      expect.objectContaining({
+        session: expect.objectContaining({
+          providerName: "claudeAgent",
+          runtimeMode: "full-access",
+        }),
+        binding: {
+          modelSelection: targetSelection,
+          runtimeMode: "full-access",
+          interactionMode: "plan",
+        },
+      }),
+      expect.objectContaining({
+        session: expect.objectContaining({
+          providerName: "claudeAgent",
+          runtimeMode: "full-access",
+        }),
+        binding: {
+          modelSelection: targetSelection,
+          runtimeMode: "full-access",
+          interactionMode: "plan",
+        },
+      }),
+    ]);
     expect(harness.startSession).toHaveBeenCalledTimes(1);
     expect(harness.sendTurn).toHaveBeenCalledTimes(1);
     expect(harness.sendTurn.mock.calls[0]?.[0]).toMatchObject({
@@ -8746,7 +8780,7 @@ describe("ProviderCommandReactor", () => {
     });
     const thread = await readHarnessThread(harness);
     expect(thread?.modelSelection).toEqual(targetSelection);
-    expect(thread?.runtimeMode).toBe("approval-required");
+    expect(thread?.runtimeMode).toBe("full-access");
     expect(thread?.interactionMode).toBe("plan");
     expect(
       thread?.activities.some((activity) => activity.kind === "provider.turn.start.failed"),
@@ -8762,6 +8796,28 @@ describe("ProviderCommandReactor", () => {
         event.type === "thread.turn-start-requested" && event.payload.messageId === messageId,
     );
     expect(requested).toBeDefined();
+    const committedBindingEvents = events.filter(
+      (event) =>
+        event.sequence > requested!.sequence &&
+        event.commandId !== null &&
+        event.commandId.includes("provider-session-binding-commit") &&
+        (event.type === "thread.session-set" ||
+          event.type === "thread.meta-updated" ||
+          event.type === "thread.runtime-mode-set" ||
+          event.type === "thread.interaction-mode-set"),
+    );
+    expect(committedBindingEvents.map((event) => event.type)).toEqual([
+      "thread.session-set",
+      "thread.meta-updated",
+      "thread.runtime-mode-set",
+      "thread.interaction-mode-set",
+    ]);
+    expect(committedBindingEvents).toMatchObject([
+      { payload: { session: { providerName: "claudeAgent", runtimeMode: "full-access" } } },
+      { payload: { modelSelection: targetSelection } },
+      { payload: { runtimeMode: "full-access" } },
+      { payload: { interactionMode: "plan" } },
+    ]);
     const delivery = await Effect.runPromise(
       harness.deliveryRepository.getDelivery({
         consumerName: PROVIDER_COMMAND_REACTOR_CONSUMER,
@@ -8772,6 +8828,92 @@ describe("ProviderCommandReactor", () => {
       state: "succeeded",
       attemptCount: 2,
     });
+  });
+
+  it("commits a reused Session and changed binding through the same atomic owner", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const baselineSelection: ModelSelection = { provider: "codex", model: "gpt-5-codex" };
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-reused-binding-baseline"),
+        threadId,
+        message: {
+          messageId: asMessageId("message-reused-binding-baseline"),
+          role: "user",
+          text: "baseline",
+          attachments: [],
+        },
+        modelSelection: baselineSelection,
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    harness.startSession.mockClear();
+    harness.sendTurn.mockClear();
+
+    const targetSelection: ModelSelection = {
+      provider: "codex",
+      model: "gpt-5-codex",
+      options: { reasoningEffort: "low" },
+    };
+    const messageId = asMessageId("message-reused-binding-target");
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-reused-binding-target"),
+        threadId,
+        message: {
+          messageId,
+          role: "user",
+          text: "reuse the live Session with a new exact binding",
+          attachments: [],
+        },
+        modelSelection: targetSelection,
+        runtimeMode: "approval-required",
+        interactionMode: "plan",
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+
+    expect(harness.startSession).not.toHaveBeenCalled();
+    const thread = await readHarnessThread(harness);
+    expect(thread).toMatchObject({
+      modelSelection: targetSelection,
+      runtimeMode: "approval-required",
+      interactionMode: "plan",
+      session: { providerName: "codex", runtimeMode: "approval-required" },
+    });
+
+    const events = await Effect.runPromise(
+      Stream.runCollect(harness.engine.readEvents(0)).pipe(
+        Effect.map((collected) => Array.from(collected)),
+      ),
+    );
+    const requested = events.find(
+      (event) =>
+        event.type === "thread.turn-start-requested" && event.payload.messageId === messageId,
+    );
+    expect(requested).toBeDefined();
+    expect(
+      events
+        .filter(
+          (event) =>
+            event.sequence > requested!.sequence &&
+            event.commandId?.includes("provider-session-binding-commit") === true,
+        )
+        .map((event) => event.type),
+    ).toEqual([
+      "thread.session-set",
+      "thread.meta-updated",
+      "thread.runtime-mode-set",
+      "thread.interaction-mode-set",
+    ]);
   });
 
   it("validates mandatory cross-provider transcript context before replacing the old runtime", async () => {
