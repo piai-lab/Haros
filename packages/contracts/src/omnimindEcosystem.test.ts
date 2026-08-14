@@ -15,18 +15,19 @@ describe("OmniMind ecosystem contracts", () => {
     });
   });
 
-  it("accepts credential-free public Git package identities", () => {
-    expect(
-      decodeInstallInput({ source: "git:https://github.com/example/public-package.git" }),
-    ).toEqual({ source: "git:https://github.com/example/public-package.git" });
-  });
-
   it.each([
+    "git:https://github.com/example/public-package.git",
+    "git:https://gitlab.com/example/public-package.git",
+    "git:https://codeberg.org/example/public-package.git",
     "git:ssh://token@example.invalid/owner/repo.git",
     "git:https://token@example.invalid/owner/repo.git",
     "git:https://example.invalid/owner/repo.git?token=secret",
+    "git:https://example.invalid/owner/repo.git#revision",
+    "git:https://127.0.0.1.nip.io/owner/repo.git",
+    "git:https://169.254.169.254.sslip.io/owner/repo.git",
     "git:https://localhost/owner/repo.git",
     "git:https://127.0.0.1/owner/repo.git",
+    "git:https://[::1]/owner/repo.git",
     "npm:file:///private/local-package",
     "npm:https://example.invalid/archive.tgz",
     "/private/local-package",

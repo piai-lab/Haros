@@ -264,14 +264,14 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "scripts/vendor-omnimind-pi-runtime.mjs",
     ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "4a737d2dabec93b515bbe9ad16936cda25d72161350a70d1dda96d1e2bae78e9",
+    archiveSha256: "194066464e3d6b981859751cba5755197b8b9fe11be1de7467949e7e34e5166d",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
     upstreamPackageIntegrity:
       "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
     patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-    patchSha256: "94ca6805b1cb76f15236186db1d5883ffd1315cc91311ae3f72258ecff1f25a7",
+    patchSha256: "05cff8561c3d6da27f9eb173484c2f35a44d9845ae3eb6d419a3493b3b5d7ad1",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
@@ -287,7 +287,7 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "explicit reader-mode models store path remains file-backed",
       "request-scoped missing-package policy for resource loading",
       "intent-scoped package resource listing and filtering",
-      "credential-blind public package identities and actions",
+      "credential-blind public npm package identities and actions",
     ],
   };
   const actual = record

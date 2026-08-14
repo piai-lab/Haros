@@ -1406,7 +1406,7 @@ index e221d2e7e3fa9fdfc55b1ba6d0cc8b68167e5214..4ac35979064ef727f0313d3f0836ebc6
 +
 +	async installPublicPackage(source: string): Promise<void> {
 +		const projection = this.projectPublicPackageSource(source);
-+		const canonicalInput = source.startsWith("npm:") || source.startsWith("git:https://");
++		const canonicalInput = source.startsWith("npm:");
 +		if (!projection.manageable || !canonicalInput) {
 +			throw new Error("Package source is not a supported public package identity");
 +		}
@@ -1525,7 +1525,7 @@ index e221d2e7e3fa9fdfc55b1ba6d0cc8b68167e5214..4ac35979064ef727f0313d3f0836ebc6
  	async install(source: string, options?: { local?: boolean }): Promise<void> {
  		const parsed = this.parseSource(source);
  		const scope: SourceScope = options?.local ? "project" : "user";
-@@ -1343,6 +1576,90 @@ export class DefaultPackageManager implements PackageManager {
+@@ -1343,6 +1576,70 @@ export class DefaultPackageManager implements PackageManager {
  		return typeof pkg === "string" ? pkg : pkg.source;
  	}
  
@@ -1567,27 +1567,7 @@ index e221d2e7e3fa9fdfc55b1ba6d0cc8b68167e5214..4ac35979064ef727f0313d3f0836ebc6
 +				};
 +			}
 +			if (parsed.type === "git") {
-+				let publicUrl: URL;
-+				try {
-+					publicUrl = new URL(parsed.repo);
-+				} catch {
-+					return { displayName: "Git package", kind: "git", manageable: false };
-+				}
-+				const safe =
-+					publicUrl.protocol === "https:" &&
-+					publicUrl.username === "" &&
-+					publicUrl.password === "" &&
-+					publicUrl.search === "" &&
-+					publicUrl.hash === "" &&
-+					publicUrl.port === "" &&
-+					publicUrl.hostname !== "localhost" &&
-+					!publicUrl.hostname.endsWith(".local") &&
-+					!/^\d+(?:\.\d+){3}$/u.test(publicUrl.hostname);
-+				return {
-+					displayName: safe ? `${parsed.host}/${parsed.path}` : "Git package",
-+					kind: "git",
-+					manageable: safe,
-+				};
++				return { displayName: "Git package", kind: "git", manageable: false };
 +			}
 +			return { displayName: "Local package", kind: "local", manageable: false };
 +		} catch {
@@ -3313,7 +3293,7 @@ diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/codin
 index 31c89faffce59deeac1e93ea482466e29609b31d..878b6922143e32c6520678a4ebb05237bd154974 100644
 --- a/packages/coding-agent/test/package-manager.test.ts
 +++ b/packages/coding-agent/test/package-manager.test.ts
-@@ -297,6 +297,156 @@ Content`,
+@@ -297,6 +297,179 @@ Content`,
  		});
  	});
  
@@ -3322,13 +3302,15 @@ index 31c89faffce59deeac1e93ea482466e29609b31d..878b6922143e32c6520678a4ebb05237
 +			const privateLocalPath = join(tempDir, "private", "local-package");
 +			settingsManager.setPackages([
 +				"npm:@scope/public-package@1.2.3",
++				"git:https://github.com/example/public-package.git",
++				"git:https://127.0.0.1.nip.io/example/public-package.git",
 +				"git:ssh://token@example.invalid/owner/repo.git",
 +				"git:https://example.invalid/owner/repo.git?token=secret",
 +				privateLocalPath,
 +			]);
 +
 +			const packages = packageManager.listPublicConfiguredPackages();
-+			expect(packages).toHaveLength(4);
++			expect(packages).toHaveLength(6);
 +			expect(JSON.stringify(packages)).not.toContain("token");
 +			expect(JSON.stringify(packages)).not.toContain(privateLocalPath);
 +			expect(packages[0]).toMatchObject({
@@ -3345,16 +3327,37 @@ index 31c89faffce59deeac1e93ea482466e29609b31d..878b6922143e32c6520678a4ebb05237
 +			for (const pkg of packages) expect(pkg.packageId).toMatch(/^[a-f0-9]{64}$/u);
 +		});
 +
-+		it("rejects credential-bearing public install inputs before invoking package commands", async () => {
++		it("rejects every Git public-install input before invoking package commands", async () => {
 +			const internals = packageManager as unknown as PackageManagerInternals;
 +			const runCommand = vi.spyOn(internals, "runCommand");
 +
++			await expect(
++				packageManager.installPublicPackage("git:https://github.com/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://gitlab.com/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://codeberg.org/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://127.0.0.1.nip.io/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
 +			await expect(
 +				packageManager.installPublicPackage("git:ssh://token@example.invalid/owner/repo.git"),
 +			).rejects.toThrow("supported public package identity");
 +			await expect(
 +				packageManager.installPublicPackage("git:https://example.invalid/owner/repo.git?token=secret"),
 +			).rejects.toThrow("supported public package identity");
++
++			settingsManager.setPackages(["git:https://github.com/example/public-package.git"]);
++			const [{ packageId }] = packageManager.listPublicConfiguredPackages();
++			await expect(packageManager.checkPublicPackageUpdates()).resolves.toEqual([]);
++			await expect(packageManager.updatePublicPackage({ packageId })).rejects.toThrow("publicly manageable");
++			await expect(packageManager.removePublicPackage({ packageId })).rejects.toThrow("publicly manageable");
++			await expect(packageManager.listPublicConfiguredPackageResources({ packageId })).rejects.toThrow(
++				"publicly manageable",
++			);
 +			expect(runCommand).not.toHaveBeenCalled();
 +		});
 +

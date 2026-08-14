@@ -10,25 +10,7 @@ const NPM_PACKAGE_SOURCE =
   /^npm:(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*|[a-z0-9][a-z0-9._-]*)(?:@[a-z0-9*+._~^<>=|-]+)?$/iu;
 
 function isPublicPackageSource(source: string): boolean {
-  if (NPM_PACKAGE_SOURCE.test(source)) return true;
-  if (!source.startsWith("git:https://")) return false;
-  try {
-    const url = new URL(source.slice("git:".length));
-    return (
-      url.protocol === "https:" &&
-      url.username === "" &&
-      url.password === "" &&
-      url.search === "" &&
-      url.hash === "" &&
-      url.port === "" &&
-      url.pathname.length > 1 &&
-      url.hostname !== "localhost" &&
-      !url.hostname.endsWith(".local") &&
-      !/^\d+(?:\.\d+){3}$/u.test(url.hostname)
-    );
-  } catch {
-    return false;
-  }
+  return NPM_PACKAGE_SOURCE.test(source);
 }
 
 const PackageInstallSource = TrimmedNonEmptyString.check(
