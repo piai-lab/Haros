@@ -6,6 +6,7 @@ import "../../index.css";
 
 import type {
   NativeApi,
+  ModelSelection,
   OmniMindCustomModelServiceModelInput,
   OmniMindModelServiceAuthResult,
   OmniMindModelServiceDescriptor,
@@ -215,7 +216,7 @@ function setNativeApi(input: {
 async function renderPanel(input: {
   readonly active?: boolean;
   readonly startInAddFlow?: boolean;
-  readonly onSetupReady?: () => void;
+  readonly onSetupReady?: (selection: ModelSelection) => void;
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
@@ -341,7 +342,25 @@ describe("ModelsSettingsPanel model services", () => {
               connectableServices: [setupService],
               errorCode: null,
             },
-      get: async () => ({ state: "ready", service: setupService, errorCode: null }),
+      get: async () =>
+        catalogProjected
+          ? {
+              state: "ready",
+              service: configuredService,
+              models: [
+                {
+                  modelId: "deepseek-v4-flash",
+                  displayName: "DeepSeek V4 Flash",
+                  available: true,
+                  reasoning: true,
+                  input: ["text"],
+                  contextWindow: 128_000,
+                  maxTokens: 16_384,
+                },
+              ],
+              errorCode: null,
+            }
+          : { state: "ready", service: setupService, errorCode: null },
       beginLogin: async () => ({
         state: "prompt",
         requestId,
@@ -375,6 +394,10 @@ describe("ModelsSettingsPanel model services", () => {
     await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
 
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
+    expect(onSetupReady).toHaveBeenCalledWith({
+      provider: "omnimind",
+      model: "deepseek/deepseek-v4-flash",
+    });
     expect(mounted.calls.list).toHaveBeenCalledWith(
       { intent: "add_service" },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
@@ -823,9 +846,7 @@ describe("ModelsSettingsPanel model services", () => {
     expect(apiKeyInput).toHaveAttribute("type", "password");
     await mounted.screen.getByLabelText("settings.customApiModelId").fill("custom-model");
     await mounted.screen.getByLabelText("settings.customApiModelName").fill("Custom Model");
-    await mounted.screen
-      .getByText("settings.customApiModelAdvanced", { exact: true })
-      .click();
+    await mounted.screen.getByText("settings.customApiModelAdvanced", { exact: true }).click();
     await mounted.screen.getByLabelText("settings.customApiContextWindow").fill("128000");
     await mounted.screen.getByLabelText("settings.customApiMaxTokens").fill("8192");
 
@@ -1069,9 +1090,7 @@ describe("ModelsSettingsPanel model services", () => {
       .getByLabelText("settings.customApiEndpoint")
       .fill("https://api.example.test/v1");
     await mounted.screen.getByLabelText("settings.customApiModelId").fill("command-model");
-    await mounted.screen
-      .getByText("settings.customApiCredentialAdvanced", { exact: true })
-      .click();
+    await mounted.screen.getByText("settings.customApiCredentialAdvanced", { exact: true }).click();
     await mounted.screen
       .getByRole("button", { name: "settings.customApiCredentialMethod.command" })
       .click();
@@ -2091,7 +2110,9 @@ describe("ModelsSettingsPanel model services", () => {
       }),
     });
 
-    await expect.poll(() => document.body.textContent).toContain("settings.modelServiceInstanceNamed");
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceInstanceNamed");
     expect(document.body.textContent).not.toContain("deepseek-primary");
     expect(document.body.textContent).not.toContain("deepseek-backup");
     expect(new Set(document.body.textContent?.match(/#[0-9A-F]{6}/gu) ?? []).size).toBe(2);

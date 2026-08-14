@@ -34,6 +34,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { render } from "vitest-browser-react";
 
 import { type ComposerImageAttachment, useComposerDraftStore } from "../composerDraftStore";
+import { appHistory } from "../appNavigation";
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
   AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
@@ -67,6 +68,7 @@ import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
+import { SETTINGS_TARGETS } from "../settingsNavigation";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
 // The router's auto-split route otherwise requests this module on first mount.
 import "./ChatView";
@@ -2316,7 +2318,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "header title",
       }),
     });
-
     try {
       const identity = await waitForElement(
         () => document.querySelector<HTMLElement>('[data-slot="chat-thread-identity"]'),
@@ -6927,13 +6928,117 @@ describe("ChatView timeline estimator parity (full app)", () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
-    const refreshProviders = vi.fn(async () => ({ providers: [] }));
-    const listModelServices = vi.fn(async () => ({
-      state: "empty" as const,
-      services: [] as const,
-      connectableServices: [] as const,
-      errorCode: null,
+    let catalogProjected = false;
+    const readyOmniMindStatus = {
+      provider: "omnimind" as const,
+      status: "ready" as const,
+      available: true,
+      authStatus: "authenticated" as const,
+      supportsAutoRuntimeMode: true,
+      checkedAt: NOW_ISO,
+    };
+    const refreshProviders = vi.fn(async () => ({
+      providers: catalogProjected ? [readyOmniMindStatus] : [],
     }));
+    const setupService = {
+      serviceId: "deepseek",
+      providerId: "deepseek",
+      displayName: "DeepSeek",
+      origin: "builtin" as const,
+      authMethods: [
+        {
+          type: "api_key" as const,
+          label: "DeepSeek API key",
+          canLogin: true,
+          subscription: false,
+        },
+      ],
+      authState: "setup_required" as const,
+      authSource: null,
+      storedCredentialType: null,
+      knownModelCount: 1,
+      availableModelCount: 0,
+      supportsNetworkRefresh: true,
+      catalogState: "ready" as const,
+      catalogErrorCode: null,
+    };
+    const configuredService = {
+      ...setupService,
+      authState: "configured" as const,
+      authSource: "stored" as const,
+      storedCredentialType: "api_key" as const,
+      availableModelCount: 1,
+    };
+    const listModelServices = vi.fn(async (input?: { readonly intent?: "add_service" }) =>
+      catalogProjected
+        ? {
+            state: "ready" as const,
+            services: [configuredService],
+            connectableServices: [] as const,
+            errorCode: null,
+          }
+        : {
+            state: "empty" as const,
+            services: [] as const,
+            connectableServices: input?.intent ? [setupService] : ([] as const),
+            errorCode: null,
+          },
+    );
+    const getModelService = vi.fn(async () =>
+      catalogProjected
+        ? {
+            state: "ready" as const,
+            service: configuredService,
+            models: [
+              {
+                modelId: "deepseek-v4-flash",
+                displayName: "DeepSeek V4 Flash",
+                available: true,
+                reasoning: true,
+                input: ["text" as const],
+                contextWindow: 128_000,
+                maxTokens: 16_384,
+              },
+            ],
+            errorCode: null,
+          }
+        : { state: "ready" as const, service: setupService, errorCode: null },
+    );
+    const beginLogin = vi.fn(async () => ({
+      state: "prompt" as const,
+      requestId: "00000000-0000-4000-8000-000000000081",
+      prompt: {
+        promptId: "00000000-0000-4000-8000-000000000082",
+        type: "secret" as const,
+        message: "Provider-owned instruction",
+      },
+      events: [],
+    }));
+    const answerLogin = vi.fn(async () => {
+      catalogProjected = true;
+      fixture.providerModelsByProvider.omnimind = {
+        source: "browser.fixture",
+        models: [
+          {
+            slug: "deepseek/deepseek-v4-flash",
+            name: "DeepSeek V4 Flash",
+            upstreamProviderId: "deepseek",
+            upstreamProviderName: "DeepSeek",
+            upstreamProviderOrigin: "builtin",
+          },
+        ],
+      };
+      fixture.serverConfig = {
+        ...fixture.serverConfig,
+        providers: [readyOmniMindStatus],
+      };
+      return {
+        state: "complete" as const,
+        requestId: "00000000-0000-4000-8000-000000000081",
+        service: configuredService,
+        events: [],
+      };
+    });
     Object.defineProperty(window, "nativeApi", {
       configurable: true,
       value: {
@@ -6945,6 +7050,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         omnimindModelServices: {
           ...nativeApi.omnimindModelServices,
           list: listModelServices,
+          get: getModelService,
+          beginLogin,
+          answerLogin,
         },
       },
     });
@@ -6961,6 +7069,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         };
       },
     });
+    const historyBack = vi
+      .spyOn(appHistory, "back")
+      .mockImplementation(() => void mounted.router.navigate({ to: "/" }));
 
     try {
       const setupPrompt = page.getByTestId("model-readiness-prompt");
@@ -6971,6 +7082,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
         setupPrompt.element().clientWidth,
       );
       await page.getByRole("textbox").fill("Keep this draft while I connect a model.");
+      const setupImage = createComposerImage({
+        id: "first-run-setup-image",
+        previewUrl: "blob:first-run-setup-image",
+        name: "first-run-setup.png",
+      });
+      useComposerDraftStore.getState().addImage(THREAD_ID, setupImage);
       const setupButton = page.getByRole("button", {
         name: EN_MESSAGES["composer.modelSetupAction"],
       });
@@ -6992,13 +7109,76 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { intent: "add_service" },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
+      await page
+        .getByRole("button", {
+          name: EN_MESSAGES["settings.connectModelServiceNamed"].replace("{name}", "DeepSeek"),
+        })
+        .click();
+      await page.getByRole("button", { name: EN_MESSAGES["settings.addApiKey"] }).click();
+      await page
+        .getByLabelText(EN_MESSAGES["settings.modelServicePromptSecret"])
+        .fill("test-secret");
+      useComposerDraftStore.getState().setStickyModelSelection({
+        provider: "codex",
+        model: "gpt-5.6-sol",
+      });
+      await page
+        .getByRole("button", { name: EN_MESSAGES["settings.modelServiceContinue"] })
+        .click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/",
+        "Completed setup should return to the original Chat.",
+      );
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
+          prompt: "Keep this draft while I connect a model.",
+          activeProvider: "omnimind",
+          modelSelectionByProvider: {
+            omnimind: { provider: "omnimind", model: "deepseek/deepseek-v4-flash" },
+          },
+        });
+      });
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.images).toEqual([
+        setupImage,
+      ]);
+      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toEqual({
+        provider: "codex",
+        model: "gpt-5.6-sol",
+      });
+      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.omnimind).toBe(
+        undefined,
+      );
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(
+        () => {
+          const turnStarts = wsRequests
+            .map(readDispatchedCommand)
+            .filter((command) => command?.type === "thread.turn.start");
+          expect(turnStarts).toHaveLength(1);
+          expect(turnStarts[0]).toMatchObject({
+            modelSelection: {
+              provider: "omnimind",
+              model: "deepseek/deepseek-v4-flash",
+            },
+            message: {
+              text: "Keep this draft while I connect a model.",
+              attachments: [expect.objectContaining({ name: "first-run-setup.png" })],
+            },
+          });
+        },
+        { timeout: 8_000, interval: 16 },
+      );
     } finally {
+      historyBack.mockRestore();
       await mounted.cleanup();
       restoreNativeApi();
     }
   });
 
-  it("suppresses setup when local passive presence proves an Engine is recoverable", async () => {
+  it("routes a settled installed-but-unavailable Engine to recovery", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
@@ -7028,7 +7208,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
       viewport: DEFAULT_VIEWPORT,
       snapshot: createDraftOnlySnapshot(),
       configureFixture: (nextFixture) => {
-        nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "codex",
+              status: "error",
+              available: false,
+              authStatus: "unauthenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
         nextFixture.providerPassivePresence = ["codex"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
@@ -7042,7 +7234,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
-      await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .toBeInTheDocument();
+      await page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }).click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "Independent Engine recovery should open Settings.",
+      );
+      expect(mounted.router.state.location.search).toMatchObject({
+        section: "providers",
+        target: SETTINGS_TARGETS.engineDetails,
+      });
       expect(refreshProviders).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();

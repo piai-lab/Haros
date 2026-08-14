@@ -118,6 +118,7 @@ import {
   skillMentionPrefix,
 } from "~/lib/composerMentions";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
+import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import {
   findProviderStatus,
   normalizeCustomBinaryPath,
@@ -427,6 +428,7 @@ import {
 } from "../lib/contextWindow";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import {
+  areUsableProviderCatalogsSettled,
   deriveModelReadinessPromptMode,
   hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
@@ -4040,20 +4042,31 @@ export default function ChatView({
     stickyModelSelectionByProvider,
   ]);
   const passiveProviderPresence = readPassiveProviderPresence(queryClient);
-  const hasUsableProductModelBinding = useMemo(() => {
-    const hasUsableBinding = hasUsableExactModelBinding({
-      providerStatuses,
-      exactModelSelections: exactModelSelectionsByProvider,
-    });
-    return (
-      hasUsableBinding ||
-      (passiveProviderPresence !== null &&
-        hasRecoverableExactModelBinding({
-          recoverableProviders: passiveProviderPresence,
-          exactModelSelections: exactModelSelectionsByProvider,
-        }))
-    );
-  }, [exactModelSelectionsByProvider, passiveProviderPresence, providerStatuses]);
+  const hasUsableProductModelBinding = useMemo(
+    () =>
+      hasUsableExactModelBinding({
+        providerStatuses,
+        exactModelSelections: exactModelSelectionsByProvider,
+      }),
+    [exactModelSelectionsByProvider, providerStatuses],
+  );
+  const hasRecoverableProductModelBinding = useMemo(
+    () =>
+      passiveProviderPresence !== null &&
+      hasRecoverableExactModelBinding({
+        recoverableProviders: passiveProviderPresence,
+        exactModelSelections: exactModelSelectionsByProvider,
+      }),
+    [exactModelSelectionsByProvider, passiveProviderPresence],
+  );
+  const usableProviderCatalogsSettled = useMemo(
+    () =>
+      areUsableProviderCatalogsSettled({
+        providerStatuses,
+        loadingModelProviders,
+      }),
+    [loadingModelProviders, providerStatuses],
+  );
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const providerHealthSnapshotSettled = hasReceivedProviderStatusSnapshot(queryClient);
   const modelServicesCapability = useSyncExternalStore(
@@ -4072,6 +4085,7 @@ export default function ChatView({
         isCenteredEmptyLanding &&
         serverConfigQuery.isSuccess &&
         !hasUsableProductModelBinding &&
+        (providerHealthSnapshotSettled || !hasRecoverableProductModelBinding) &&
         modelServicesCapability === true &&
         modelServicesTransport === "open",
     }),
@@ -4092,21 +4106,51 @@ export default function ChatView({
     serverFactsReady:
       serverConfigQuery.isSuccess &&
       !serverConfigQuery.isFetching &&
+      usableProviderCatalogsSettled &&
       (passiveModelServicesState !== "empty" || providerHealthSnapshotSettled),
     hasUsableExactBinding: hasUsableProductModelBinding,
+    hasRecoverableExactBinding: hasRecoverableProductModelBinding,
     modelServicesCapability,
     modelServicesTransport,
     passiveModelServicesState,
   });
   const openModelReadinessFlow = useCallback(() => {
+    const recoversIndependentEngine =
+      modelReadinessPromptMode === "recover" &&
+      passiveModelServicesState === "empty" &&
+      hasRecoverableProductModelBinding;
     void navigate({
       to: "/settings",
       search:
         modelReadinessPromptMode === "setup"
-          ? { section: "models", setup: "model-service" }
-          : { section: "models" },
+          ? {
+              section: "models",
+              setup: "model-service",
+              ...(activeThread
+                ? {
+                    setupThreadId: activeThread.id,
+                    setupDraftProvider: composerDraft.activeProvider ?? "",
+                    setupDraftModel:
+                      (composerDraft.activeProvider
+                        ? composerDraft.modelSelectionByProvider[composerDraft.activeProvider]
+                            ?.model
+                        : null) ?? "",
+                  }
+                : {}),
+            }
+          : recoversIndependentEngine
+            ? { section: "providers", target: SETTINGS_TARGETS.engineDetails }
+            : { section: "models" },
     });
-  }, [modelReadinessPromptMode, navigate]);
+  }, [
+    activeThread,
+    composerDraft.activeProvider,
+    composerDraft.modelSelectionByProvider,
+    hasRecoverableProductModelBinding,
+    modelReadinessPromptMode,
+    navigate,
+    passiveModelServicesState,
+  ]);
   const handoffBadgeLabel = useMemo(
     () => (activeThread ? resolveThreadHandoffBadgeLabel(activeThread) : null),
     [activeThread],

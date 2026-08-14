@@ -2,6 +2,7 @@ import type { ModelSelection, ServerProviderStatus } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
+  areUsableProviderCatalogsSettled,
   deriveModelReadinessPromptMode,
   hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
@@ -38,6 +39,7 @@ describe("model readiness prompt", () => {
         surfaceEligible: true,
         serverFactsReady: true,
         hasUsableExactBinding: true,
+        hasRecoverableExactBinding: false,
         modelServicesCapability: true,
         modelServicesTransport: "open",
         passiveModelServicesState: "empty",
@@ -65,6 +67,7 @@ describe("model readiness prompt", () => {
       surfaceEligible: true,
       serverFactsReady: true,
       hasUsableExactBinding: false,
+      hasRecoverableExactBinding: false,
       modelServicesCapability: true,
       modelServicesTransport: "open" as const,
     };
@@ -87,15 +90,53 @@ describe("model readiness prompt", () => {
     ).toBeNull();
   });
 
+  it("does not mistake bundled Engine health with unknown auth for configured user state", () => {
+    expect(
+      hasUsableExactModelBinding({
+        providerStatuses: [
+          providerStatus("omnimind", { authStatus: "unknown" }),
+          providerStatus("pi", { authStatus: "unknown" }),
+        ],
+        exactModelSelections: {},
+      }),
+    ).toBe(false);
+    expect(
+      deriveModelReadinessPromptMode({
+        surfaceEligible: true,
+        serverFactsReady: true,
+        hasUsableExactBinding: false,
+        hasRecoverableExactBinding: false,
+        modelServicesCapability: true,
+        modelServicesTransport: "open",
+        passiveModelServicesState: "empty",
+      }),
+    ).toBe("setup");
+  });
+
   it("routes configured but unavailable services to recovery instead of first-run setup", () => {
     expect(
       deriveModelReadinessPromptMode({
         surfaceEligible: true,
         serverFactsReady: true,
         hasUsableExactBinding: false,
+        hasRecoverableExactBinding: false,
         modelServicesCapability: true,
         modelServicesTransport: "open",
         passiveModelServicesState: "configured",
+      }),
+    ).toBe("recover");
+  });
+
+  it("routes a settled local Engine presence without usable auth to recovery", () => {
+    expect(
+      deriveModelReadinessPromptMode({
+        surfaceEligible: true,
+        serverFactsReady: true,
+        hasUsableExactBinding: false,
+        hasRecoverableExactBinding: true,
+        modelServicesCapability: true,
+        modelServicesTransport: "open",
+        passiveModelServicesState: "empty",
       }),
     ).toBe("recover");
   });
@@ -113,5 +154,28 @@ describe("model readiness prompt", () => {
         exactModelSelections: {},
       }),
     ).toBe(false);
+  });
+
+  it("waits for every usable Engine catalog that could still produce an exact binding", () => {
+    const statuses = [providerStatus("omnimind"), providerStatus("codex")];
+
+    expect(
+      areUsableProviderCatalogsSettled({
+        providerStatuses: statuses,
+        loadingModelProviders: { codex: true, omnimind: false },
+      }),
+    ).toBe(false);
+    expect(
+      areUsableProviderCatalogsSettled({
+        providerStatuses: statuses,
+        loadingModelProviders: { codex: false, omnimind: false },
+      }),
+    ).toBe(true);
+    expect(
+      areUsableProviderCatalogsSettled({
+        providerStatuses: [providerStatus("codex", { available: false })],
+        loadingModelProviders: { codex: true },
+      }),
+    ).toBe(true);
   });
 });

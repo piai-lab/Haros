@@ -34,10 +34,22 @@ export function hasRecoverableExactModelBinding(input: {
   });
 }
 
+export function areUsableProviderCatalogsSettled(input: {
+  readonly providerStatuses: readonly ServerProviderStatus[];
+  readonly loadingModelProviders: Partial<Record<ProviderKind, boolean>>;
+}): boolean {
+  return COMPOSER_PROVIDER_KINDS.every(
+    (provider) =>
+      !isProviderUsable(findProviderStatus(input.providerStatuses, provider)) ||
+      input.loadingModelProviders[provider] !== true,
+  );
+}
+
 export function deriveModelReadinessPromptMode(input: {
   readonly surfaceEligible: boolean;
   readonly serverFactsReady: boolean;
   readonly hasUsableExactBinding: boolean;
+  readonly hasRecoverableExactBinding: boolean;
   readonly modelServicesCapability: boolean | null;
   readonly modelServicesTransport:
     | "open"
@@ -58,7 +70,9 @@ export function deriveModelReadinessPromptMode(input: {
     return null;
   }
 
-  if (input.passiveModelServicesState === "empty") return "setup";
+  if (input.passiveModelServicesState === "empty") {
+    return input.hasRecoverableExactBinding ? "recover" : "setup";
+  }
   if (input.passiveModelServicesState === "configured") return "recover";
   return null;
 }

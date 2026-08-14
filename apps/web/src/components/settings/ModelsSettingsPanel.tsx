@@ -15,6 +15,7 @@ import {
   type OmniMindCustomModelServiceCredentialInput,
   type OmniMindCustomModelServiceDiscoveredModel,
   type OmniMindCustomModelServiceModelInput,
+  type ModelSelection,
 } from "@omnimind/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useBlocker } from "@tanstack/react-router";
@@ -284,7 +285,7 @@ export function ModelsSettingsPanel({
   readonly resetEpoch: number;
   readonly active: boolean;
   readonly startInAddFlow?: boolean;
-  readonly onSetupReady?: () => void;
+  readonly onSetupReady?: (selection: ModelSelection) => void;
 }) {
   if (!active) return null;
   return (
@@ -306,7 +307,7 @@ function ActiveModelsSettingsPanel({
   readonly resetEpoch: number;
   readonly active: boolean;
   readonly startInAddFlow: boolean;
-  readonly onSetupReady?: () => void;
+  readonly onSetupReady?: (selection: ModelSelection) => void;
 }) {
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
@@ -398,7 +399,7 @@ function ActiveModelsSettingsPanel({
     }),
   );
   const finishSetupIfReady = useCallback(
-    (service: OmniMindModelServiceDescriptor | null | undefined) => {
+    async (service: OmniMindModelServiceDescriptor | null | undefined) => {
       if (
         !setupCompletionArmedRef.current ||
         !service ||
@@ -408,9 +409,29 @@ function ActiveModelsSettingsPanel({
         return;
       }
       setupCompletionArmedRef.current = false;
-      onSetupReady();
+      try {
+        const detail = await queryClient.fetchQuery(
+          omniMindModelServiceDetailQueryOptions({
+            enabled: true,
+            serviceId: service.serviceId,
+            intent: "add_service",
+          }),
+        );
+        const model =
+          detail.state === "ready" ? detail.models?.find((entry) => entry.available) : null;
+        if (!model) {
+          setupCompletionArmedRef.current = true;
+          return;
+        }
+        onSetupReady({
+          provider: "omnimind",
+          model: `${service.serviceId}/${model.modelId}`,
+        });
+      } catch {
+        setupCompletionArmedRef.current = true;
+      }
     },
-    [onSetupReady],
+    [onSetupReady, queryClient],
   );
 
   useEffect(() => {
@@ -418,7 +439,7 @@ function ActiveModelsSettingsPanel({
       ...(modelServicesQuery.data?.services ?? []),
       ...(addModelServicesQuery.data?.services ?? []),
     ].find((service) => service.availableModelCount > 0);
-    finishSetupIfReady(readyService);
+    void finishSetupIfReady(readyService);
   }, [addModelServicesQuery.data?.services, finishSetupIfReady, modelServicesQuery.data?.services]);
 
   useEffect(() => {
@@ -698,7 +719,7 @@ function ActiveModelsSettingsPanel({
                 : t("settings.modelServiceAuthSaved"),
       });
       await invalidateModelServiceConsumers();
-      finishSetupIfReady(completedService);
+      await finishSetupIfReady(completedService);
     },
     [finishSetupIfReady, invalidateModelServiceConsumers, t],
   );
@@ -1183,7 +1204,7 @@ function ActiveModelsSettingsPanel({
             ? t("settings.customApiSaved")
             : t("settings.customApiSavedSyncWarning"),
       });
-      finishSetupIfReady(result.service);
+      await finishSetupIfReady(result.service);
     } catch {
       setModelServiceNotice({ tone: "error", text: t("settings.customApiSaveFailed") });
     } finally {
@@ -2837,7 +2858,7 @@ function ActiveModelsSettingsPanel({
                     ? "settings.customApiSaveRiskDescription"
                     : pendingCustomServiceRiskAction === "discover"
                       ? "settings.customApiDiscoveryRiskDescription"
-                    : "settings.customApiRiskDescription",
+                      : "settings.customApiRiskDescription",
                 )}
               </AlertDialogDescription>
             ) : null}
