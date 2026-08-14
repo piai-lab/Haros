@@ -23,33 +23,33 @@ describe("ModelServiceIcon", () => {
     expect(markup).toContain('data-model-service-icon="brand"');
     expect(markup).toContain('data-model-service-icon-render="mask"');
     expect(markup).toContain("bg-current");
-    expect(markup).toContain("%3ctitle%3eOpenAI%3c/title%3e");
+    expect(markup).toContain("openai.svg");
   });
 
   it("uses verified service assets without turning the icon table into identity authority", () => {
     const verifiedAssets = [
-      ["baseten", "Baseten"],
-      ["cloudflare-ai-gateway", "Cloudflare"],
-      ["cloudflare-workers-ai", "Cloudflare"],
-      ["kimi-coding", "Kimi"],
-      ["nvidia", "Nvidia"],
-      ["opencode", "opencode"],
-      ["opencode-go", "opencode"],
-      ["vercel-ai-gateway", "Vercel"],
-      ["xai", "Grok"],
-      ["zai", "Z.ai"],
-      ["zai-coding-cn", "Z.ai"],
+      ["baseten", "baseten.svg"],
+      ["cloudflare-ai-gateway", "cloudflare-color.svg"],
+      ["cloudflare-workers-ai", "cloudflare-color.svg"],
+      ["kimi-coding", "kimi-color.svg"],
+      ["nvidia", "nvidia-color.svg"],
+      ["opencode", "opencode.svg"],
+      ["opencode-go", "opencode.svg"],
+      ["vercel-ai-gateway", "vercel.svg"],
+      ["xai", "xai.svg"],
+      ["zai", "zai.svg"],
+      ["zai-coding-cn", "zai.svg"],
     ] as const;
 
-    for (const [serviceId, assetTitle] of verifiedAssets) {
+    for (const [serviceId, assetFile] of verifiedAssets) {
       const markup = renderToStaticMarkup(<ModelServiceIcon serviceId={serviceId} />);
       expect(markup).toContain('data-model-service-icon="brand"');
-      expect(decodeURIComponent(markup)).toContain(`<title>${assetTitle}</title>`);
+      expect(markup).toContain(assetFile);
     }
 
     expect(
       decodeURIComponent(renderToStaticMarkup(<ModelServiceIcon serviceId="baseten" />)),
-    ).not.toContain("<title>Hugging Face</title>");
+    ).not.toContain("huggingface-color.svg");
     expect(resolveModelServiceIcon({ serviceId: "NVIDIA" })).toEqual({
       kind: "generic",
       src: null,
@@ -114,6 +114,28 @@ describe("ModelServiceIcon", () => {
     ] as const) {
       expect(resolveModelSpecificIcon({ serviceId, modelId, origin: "builtin" })).not.toBeNull();
     }
+    const pinnedAggregateFamilies = [
+      ["amazon-bedrock", "us.anthropic.claude-sonnet-4-6", "claude-color.svg"],
+      ["amazon-bedrock", "us.deepseek.r1-v1:0", "deepseek-color.svg"],
+      ["amazon-bedrock", "qwen.qwen3-32b-v1:0", "qwen-color.svg"],
+      ["cloudflare-workers-ai", "@cf/meta/llama-3.3-70b-instruct", "meta-color.svg"],
+      ["cloudflare-workers-ai", "@cf/openai/gpt-oss-120b", "openai.svg"],
+      ["fireworks", "accounts/fireworks/models/deepseek-v4-flash", "deepseek-color.svg"],
+      ["fireworks", "accounts/fireworks/routers/kimi-k2p6-fast", "kimi-color.svg"],
+      ["huggingface", "Qwen/Qwen3-235B-A22B", "qwen-color.svg"],
+      ["huggingface", "MiniMaxAI/MiniMax-M2", "minimax-color.svg"],
+      ["huggingface", "XiaomiMiMo/MiMo-V2-Flash", "xiaomimimo.svg"],
+      ["azure-openai-responses", "o3-mini", "openai.svg"],
+      ["openai", "o3", "openai.svg"],
+      ["openrouter", "cohere/command-a", "cohere-color.svg"],
+    ] as const;
+    for (const [serviceId, modelId, assetFile] of pinnedAggregateFamilies) {
+      const markup = renderToStaticMarkup(
+        <ModelServiceIcon serviceId={serviceId} modelId={modelId} origin="builtin" />,
+      );
+      expect(markup).toContain('data-model-service-icon-level="model"');
+      expect(markup).toContain(assetFile);
+    }
     expect(
       resolveModelSpecificIcon({
         serviceId: "openrouter",
@@ -125,6 +147,13 @@ describe("ModelServiceIcon", () => {
       resolveModelSpecificIcon({
         serviceId: "openrouter",
         modelId: "vendor/gptish-5",
+        origin: "builtin",
+      }),
+    ).toBeNull();
+    expect(
+      resolveModelSpecificIcon({
+        serviceId: "nvidia",
+        modelId: "nvidia/llama-nemotron-super-49b-v1.5",
         origin: "builtin",
       }),
     ).toBeNull();
@@ -150,13 +179,13 @@ describe("ModelServiceIcon", () => {
       />,
     );
     expect(modelMarkup).toContain('data-model-service-icon-level="model"');
-    expect(decodeURIComponent(modelMarkup)).toContain("<title>Claude</title>");
+    expect(modelMarkup).toContain("claude-color.svg");
 
     const inheritedMarkup = renderToStaticMarkup(
       <ModelServiceIcon serviceId="google" modelId="gemmaish-4-31b-it" origin="builtin" />,
     );
     expect(inheritedMarkup).toContain('data-model-service-icon-level="service"');
-    expect(decodeURIComponent(inheritedMarkup)).toContain("<title>Google</title>");
+    expect(inheritedMarkup).toContain("google-color.svg");
   });
 
   it("uses origin-owned local fallbacks without changing the service identity", () => {
