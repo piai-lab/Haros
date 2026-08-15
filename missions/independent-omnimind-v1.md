@@ -6,7 +6,7 @@ Owner: maintainer
 
 Canonical path: `missions/independent-omnimind-v1.md`
 
-Updated: 2026-08-12
+Updated: 2026-08-15
 
 ## 1. Objective
 
@@ -198,6 +198,14 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Source proof：fresh generator `build:offline`及7 files/297 upstream tests、PiAdapter `31/31`、相邻Provider lifecycle/Ingestion `206/206`、全Server337 files/`3908` pass（16 skip）、Server typecheck、document contract `19/19`、两类patch digest、format与full-task diff-check均通过。真实product overflow compaction、retry success/exhaustion/backoff cancel、product command/input/mixed及stock `/noop`→下一普通turn均有focused反例；Fresh Judge对最终dirty delta结论`CLEAN`、P0/P1=0。
 - Current boundary：源码与source-adoption关注点已闭合并推送，任务仍保持ACTIVE，直到从exact `3e31b9aa1…`重建安装App、以任务隔离profile完成retry/compaction/no-Agent command packaged regression并由fresh judge复核。此前exact `dac46ac61…` 的fresh-empty A–D、双语/布局/键盘/AX与light/dark证据仍是真实历史基线，但不能证明当前shipped bytes包含本修复。
 
+### Pi settled lifecycle exact packaged candidate — 2026-08-15
+
+- Exact product/evidence：从不含共享工作树两条research修改的clean clone构建并安装exact pushed `c8bac8add6ce8cfef7d1964a6aa164020503dc64`。arm64 DMG为`244994790` bytes、SHA-256 `fcb6e608b21614376774566902460153415f4e17f00572a17bdab803d0c4d900`且`hdiutil verify`有效；installed ASAR SHA-256 `a42f8303dac751dfbbcb2671dca67c1ee6fc055987aa1c9f0cc4a51b7edcec8e`并内嵌同一exact commit。244-component staged legal inventory通过；未创建Release、未发布artifact、未改update feed。
+- Isolated installed journey：task root `/var/tmp/omnimind-c8-settled-profile.wXbyPn` 在每次窗口操作前证明Main、GPU Helper、Renderer与bundled Server的HOME、userData、`OMNIMIND_HOME`、Provider homes、XDG与TMP均指向同一task root。维护者授权后从进程内秘密来源保存DeepSeek API Key；login独立完成，automatic post-login refresh约15秒终态失败但authoritative last-good保持`2 known / 2 available`、mutation与按钮恢复。原Composer marker `FINAL_C8_SETTLED_OK`与附件保持，exact `DeepSeek V4 Flash`仅dispatch一次并约8.8秒终态成功；上游诚实说明该模型不支持图片，没有伪装图片已处理。
+- Typed prompt-outcome packaged proof：在task-owned `agent/extensions/noop.ts`加载最小`/noop`后，两次真实命令均经过Pi Extension command owner并立即回到ready。SQLite `provider_runtime_events`对turn `7d9c3033…`与`545173e0…`分别只有exact one `turn.started`与exact one `turn.completed`，没有item/content/usage事件；Pi native session没有新增user/assistant/tool消息，因此没有模型请求。随后`AFTER_NOOP_C8`普通DeepSeek turn独立产生stream、usage与exact one terminal，未继承前一命令。Host专用`/reload`结果不计为typed outcome证据；default retry/overflow-compaction仍只以source focused反例证明，不冒充可稳定触发的live fault。
+- Exit/reopen：两次完整退出均确认任务App进程为0；同一task root重开后四类进程再次全部通过隔离检查，原Thread、附件、exact model、凭据、命令记录与Provider回复恢复，首启surface未重复出现；`REOPEN_C8_OK`在重开后再次以DeepSeek完成。凭据、endpoint、账号与原始响应均未进入Git、argv、日志、截图、artifact或本Mission。
+- Boundary：该evidence关闭本次Pi settled lifecycle与handled command/input的exact installed regression；它不把普通成功回合扩写为auto-retry/overflow live fault injection，也不把安全Advanced子集写成完整raw Pi schema。Apple signing/notary、Windows Trusted Signing与Windows/Linux native journey由维护者交给工程部，属于out-of-scope handoff而不是已完成或verified。Campaign claims仍遵守producer只能提交candidate；fresh judge verdict另行记录。
+
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 4. Internal acceptance priority
@@ -227,8 +235,8 @@ F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 7. Blockers
 
-PiAdapter/Pi prompt的auto-retry、overflow-compaction与handled command/input源码P1已在exact pushed `3e31b9aa1…`闭合；当前唯一in-scope completion gate是从该exact SHA重建安装App、以任务隔离profile完成相关packaged regression并取得fresh judge。Apple signing/notary、Windows Trusted Signing与Windows/Linux原生install/open journey已由维护者明确交给工程部，属于external engineering handoff / out of current Model services + Composer scope；它们没有完成或verified，但不阻塞本次product candidate，当前会话不施工、不等待、不追问。现有普通Linux-only CI与same-ref cancellation保持；macOS/Windows仅manual/tag build-only，继续不创建Release、不发布、不改update feed、不恢复复杂矩阵或重复smoke。
+PiAdapter/Pi prompt的auto-retry、overflow-compaction与handled command/input源码P1已在exact pushed `3e31b9aa1…`闭合；exact installed regression已由`c8bac8add…`的隔离DeepSeek、typed `/noop`、普通next turn及两次退出/重开证据覆盖，当前只等待fresh judge对该exact candidate给出独立裁决。Apple signing/notary、Windows Trusted Signing与Windows/Linux原生install/open journey已由维护者明确交给工程部，属于external engineering handoff / out of current Model services + Composer scope；它们没有完成或verified，但不阻塞本次product candidate，当前会话不施工、不等待、不追问。现有普通Linux-only CI与same-ref cancellation保持；macOS/Windows仅manual/tag build-only，继续不创建Release、不发布、不改update feed、不恢复复杂矩阵或重复smoke。
 
 ## 8. Done
 
-Not done. Original Model services + Composer当前产品任务的Pi settled lifecycle与handled command/input source blocker已闭合，但exact `3e31b9aa1…`的安装产物、隔离packaged regression与fresh completion judge尚未完成；此前fresh UI/packaged证据保留但不能覆盖当前shipped bytes。
+Not done as a full V1 Campaign：required claims仍是candidate而非verified。Original Model services + Composer当前产品任务的source与exact installed regression已闭合到`c8bac8add…`，只待fresh judge独立裁决；外部三平台签名/原生journey已移交工程部且不再是本任务完成门。
