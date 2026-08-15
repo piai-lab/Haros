@@ -392,6 +392,7 @@ interface PiSessionContext {
   session: ProviderSession;
   turns: PiStoredTurn[];
   activeTurnId: TurnId | undefined;
+  startedTurnId: TurnId | undefined;
   activeAssistantItemId: RuntimeItemId | undefined;
   activeReasoningItemId: RuntimeItemId | undefined;
   activeToolItems: Map<string, PiTrackedToolCall>;
@@ -1792,6 +1793,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       }
       Effect.runFork(cancelAgentGatewayTurn(context.gatewaySessionLease, turnId));
       context.activeTurnId = undefined;
+      context.startedTurnId = undefined;
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
       context.activeToolItems.clear();
@@ -2005,6 +2007,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         );
       }
       context.activeTurnId = undefined;
+      context.startedTurnId = undefined;
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
       context.activeToolItems.clear();
@@ -2032,7 +2035,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
           } satisfies ProviderRuntimeEvent);
           return;
-        case "turn_start":
+        case "turn_start": {
+          if (!context.activeTurnId || context.startedTurnId === context.activeTurnId) return;
+          context.startedTurnId = context.activeTurnId;
           offerRuntimeEvent({
             ...makeEventBase(context),
             type: "turn.started",
@@ -2047,6 +2052,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
           } satisfies ProviderRuntimeEvent);
           return;
+        }
         case "message_update":
           handleMessageUpdate(context, event);
           return;
@@ -2523,6 +2529,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           session,
           turns: [],
           activeTurnId: undefined,
+          startedTurnId: undefined,
           activeAssistantItemId: undefined,
           activeReasoningItemId: undefined,
           activeToolItems: new Map(),
@@ -2769,6 +2776,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const payload = yield* buildPromptPayload(input);
           const turnId = TurnId.makeUnsafe(crypto.randomUUID());
           context.activeTurnId = turnId;
+          context.startedTurnId = undefined;
           context.turns.push({ id: turnId, items: [] });
           context.session = makeSessionSnapshot(context, provider);
           if (payload.images.length === 0 && isPiReloadCommand(payload.text)) {
@@ -2811,6 +2819,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   });
                   yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
                   context.activeTurnId = undefined;
+                  context.startedTurnId = undefined;
                   context.session = makeSessionSnapshot(context, provider);
                   return yield* Effect.fail(error);
                 }),
@@ -2824,6 +2833,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             } satisfies ProviderRuntimeEvent);
             yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
             context.activeTurnId = undefined;
+            context.startedTurnId = undefined;
             context.session = makeSessionSnapshot(context, provider);
             return {
               threadId: input.threadId,
@@ -2856,6 +2866,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const turnId = context.activeTurnId ?? TurnId.makeUnsafe(crypto.randomUUID());
           if (!context.activeTurnId) {
             context.activeTurnId = turnId;
+            context.startedTurnId = undefined;
             context.turns.push({ id: turnId, items: [] });
           }
           if (context.runtime.session.isStreaming) {

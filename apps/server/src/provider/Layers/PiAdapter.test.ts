@@ -860,6 +860,16 @@ describe("getPiDiscoverableModels", () => {
       expect(terminals).toHaveLength(2);
       expect(terminals.filter((event) => event.turnId === result.turn.turnId)).toHaveLength(1);
       expect(terminals.filter((event) => event.turnId === result.nextTurn.turnId)).toHaveLength(1);
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.turn.turnId,
+        ),
+      ).toHaveLength(1);
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.nextTurn.turnId,
+        ),
+      ).toHaveLength(1);
       expect(terminals).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
@@ -973,6 +983,11 @@ describe("getPiDiscoverableModels", () => {
         turnId: result.turn.turnId,
         payload: { state: "failed", stopReason: "error" },
       });
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.turn.turnId,
+        ),
+      ).toHaveLength(1);
       expect(result.sessions).toContainEqual(expect.objectContaining({ status: "ready" }));
       expect(result.sessions[0]).not.toHaveProperty("activeTurnId");
     } finally {
@@ -1072,6 +1087,11 @@ describe("getPiDiscoverableModels", () => {
         turnId: result.turn.turnId,
         payload: { state: "cancelled", stopReason: "cancelled" },
       });
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.turn.turnId,
+        ),
+      ).toHaveLength(1);
       expect(result.sessions).toContainEqual(expect.objectContaining({ status: "ready" }));
       expect(result.sessions[0]).not.toHaveProperty("activeTurnId");
     } finally {
