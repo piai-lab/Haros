@@ -106,25 +106,23 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 ## 10. 当前唯一下一动作
 
-维护者于 2026-08-12 明确暂停此前的 Usage Stage 3 切片；它不再构成当前准入，也不得阻塞 Agent Core/自动化体验的权威收口。当前唯一准入是一个可独立闭合的 **Full-access end-to-end truth repair**：让 Composer 中的任务运行模式真实贯穿 Engine adapter、Agent Gateway、Browser、Device 与 approval UI。
+维护者于 2026-08-15 已完成原 Model services + Composer 的 completion review、必要补缝与合并，并明确选择下一轮做 **Pi-native mature capability preservation and reachability**。下一会话必须从最新 merged `main` 重新读取 exact runtime、Host seam 与 sole owners；研究 SHA 只提供反例入口，不能成为实现基线或封闭需求清单。完整边界见 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md)，未来 Pi/生态来源的重新进入遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)。
 
-用户可观察 Outcome：当任务显示 `完全访问 / Full access` 时，普通文件、命令、测试、依赖、网络、Browser、Device 和任务内下载不再请求二次批准；不支持 approval 的 Engine 不显示虚假的 `需要时询问`；需要登录、2FA、系统原生授权或真正扩张到用户未表达的不可逆外部结果时，才准确要求人介入。
+用户可观察 Outcome：OmniMind Agent 不削弱锁定 Pi 已成熟的 Session、system prompt、动态工具、Extension、retry/compaction、usage/cost、fork/tree 与 package/resource 机制；真正影响用户工作、可恢复性或费用判断的 runtime truth 在现有 Product Thread、Composer、Timeline、Usage 与 Library owner 中可发现、可操作、可恢复。没有产品损失的能力只证明并保留，不因“Pi 有这个 API/TUI”复制一套 Desktop 控制台。
 
-实施必须从现有 owner 原位修复，不新增 permission broker、Host approval ledger 或第二 runtime-mode store：
+本轮沿 Pi 真实生命周期做差额审查，而不是机械执行功能清单：
 
-1. 以 `packages/contracts/src/orchestration.ts` 的 `RuntimeMode` 和 Product Thread 持久字段为唯一产品事实；沿当前 Provider dispatch 与 Agent Gateway caller context 传递，不复制 mode；
-2. 复验 Codex、Claude、OpenCode 的现有 mapping，保持其 native semantics；Pi-family 当前没有 approval request path 时，只提供能真实执行的 mode，不允许 UI 选择后运行时一律拒绝；
-3. 删除 Device Gateway “无 receipt 永远拒绝”的生产死路，使 mutation 继承 caller Thread mode；`full-access` 直接执行，其他 mode 只有在 exact bridge/reviewer 存在时才可用；
-4. 将 Browser download 的无条件 `BrowserDownloadApprovalRequired` 取消路径改为 mode-aware：`full-access` 落到当前 workspace 或 OmniMind managed artifact/download root 并产生真实 file/artifact result；OAuth/2FA 与系统选择器保持 human-presence flow；
-5. 修正 approval UI 的文案与持久语义：当前 `acceptForSession` 会把 Thread 切到 `full-access` 时显示“此任务始终允许 / Always allow for this task”，并把全部新增/修改文案接入唯一 zh-CN/en catalog；
-6. 更新 Harness policy，使模型看到的 Browser/Device 行为与运行时一致，不再要求用户去 Device pane 手工完成本可自动执行的操作。
+1. Project membership 本身表示 trusted；将既有 Project/Thread/cwd 事实准确传给 Pi Session，不新增 trust store、permission broker、弹窗或独立设置；
+2. 先证明 Pi system prompt rebuild 与动态 Extension tools 没被 Host 削弱，再按现有 Session owner投影 bounded `current / all / source` truth；activation、permission 与已接纳的 in-flight operation保持正交，active-set变化只影响下一 turn；
+3. 无 Product mapping 的 Extension `newSession / fork / navigateTree / switchSession` 不得返回 no-op success；能保持 canonical Product Thread/Session provenance才接窄桥，否则明确 unavailable；
+4. 将 Pi live `cacheWrite`、`cost` 与 reported/runtime-derived/estimated/unknown provenance 接入现有 usage/receipt owner；不建 Pi stats page、archive parser、cache service或第二 usage store；
+5. 保留 native retry与auto/manual compaction，只补准确的中英文状态、取消/结算和必要可见 truth；不建设第二 retry/context平台；
+6. 对 fork/tree/export、follow-up/Queue、Package/ResourceLoader与Extension UI逐项跑能区分“自然保留”和“真实能力丢失”的反例；只有真实损失成立才补 existing owner内的最窄 mapping，没有损失就记录证据并停止。
 
-进入门：当前 HEAD 复现并冻结三个 falsifier——`full-access` Device mutation 被 `DeviceApprovalRequired` 拒绝、Browser 下载被无条件取消、Pi-family UI 可选择底层无法响应的 approval mode；同时证明 Codex/Claude/OpenCode 的 full-access mapping 现状没有回归。
+进入门：最新 `main`、pinned Pi revision、product-owned patch与生成物身份一致；完整读取 Execution/Product State/Workbench owner、Pi-native research 与 intake；冻结 passive read、Extension execution、Project/private-home、secret、Session provenance和 exact model/tool identity边界。不得从旧 Agent Core分支、旧 worktree、聊天摘要或历史 package榜恢复实现假设。
 
-停止门：任何方案需要第二 permission/state owner、用 Provider 名称猜权限、把 `full-access` 降成工作区沙箱、让 `approval-required` 在无 bridge 时继续可选，或用无条件 allow 绕过 Thread mode/active-turn/target containment。登录、2FA、OS 授权与用户未表达的发布/付费/远端删除不属于本切片的自动批准范围。
+停止门：任何方案开始复制 Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，或新增 Router、模型池、child role default、Agent Core调度、第二 trust/permission/state owner时立即停止并回到现有owner。成熟机制可以被纳入；纳入的默认形式是 preservation、薄只读投影或有 provenance 的语义映射，不是 raw TUI parity。
 
-完成证据：focused contract/adapter/UI tests；Device normal/failure/abort、Browser download/cancel/OAuth、approval copy/persistence 与 child privilege inheritance；Codex/Claude/OpenCode/Pi-family capability matrix；zh-CN/en、keyboard/focus；从 exact pushed SHA 打包后以任务专用 `userData`、home 与 Provider private home 运行一次 `full-access` Browser + Device 真实 journey，并证明无普通 approval、无默认 profile I/O、无 late effect。只通过 source test 只能称 source candidate。
+完成证据按实际变更分层：focused source/contract falsifier之后，涉及 Provider/Model/Thinking、tool、usage、compaction、abort或恢复时用授权的 MiMo/DeepSeek资源做最小脱敏live journey；Desktop observable只从exact pushed SHA重建并使用任务专用 `userData`、home与Provider private home验证受影响路径。Apple signing/notary、Windows Trusted Signing与Windows/Linux原生安装旅程由工程团队统一承担，不属于本轮完成门，也不得写成已完成。
 
-该 slice 完成后停止。Settlement、usage/cache、Skill identity、Gateway MCP conflict、Delegate、Workflow、自动 Project Context（Memory/Knowledge）均按 [`research/omnimind-agent-core-execution-guide.md`](research/omnimind-agent-core-execution-guide.md) 的独立 Slice 重新取得本文准入；不得在本次 permission repair 中顺带实现。此前 Usage 设计和已冻结证据保留为暂停研究，不自动恢复 next action。
-
-Stage 4/F-18 的已冻结本地证据继续有效；Apple signing/notary、Windows Trusted Signing、Windows/Linux runner journey 与独立 fresh-context completion audit继续暂停。任何继续扩充 Product Truth semantic meter、平行 Product Control Plane、跨 Provider Package lifecycle、Remote 或 settings taxonomy 重写的工作都应停止。
+`codex/agent-core-ui-spec` 的 Full-access、bounded child与Workflow工作保持独立分支/owner；本轮不吸收、重做或静默合并它，也不让它阻塞Pi-native能力审查。Agent Core后续只消费本轮已有的exact provider/model/config/auth、Session/tool/usage事实，不复制这些authority。
