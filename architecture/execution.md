@@ -158,11 +158,11 @@ restart 优先使用 Provider native resume/session cursor。无法恢复时明�
 
 Product Thread 的 `runtimeMode` 是 Engine adapter 与 OmniMind Host capability 的共同输入，不是只约束 Provider command 的装饰标签。它由 Product state 持久化、由每次 dispatch 携带，并在子 Thread/child capability 创建时沿现有 privilege rule 继承；Browser、Device、Gateway 和 future Host tool 不能再各自发明一层默认拒绝或 approval ledger。
 
-| Mode | Engine adapter | OmniMind Host | UI truth |
-|---|---|---|---|
-| `full-access` | 映射到该 Engine 可证明的 unrestricted/no-ask 语义 | 当前任务已经表达的普通 Browser、Device、文件、命令、网络和下载直接执行 | 不出现普通操作 approval；成功只留必要结果 |
-| `auto` | 只在 exact Engine/model 有真实 reviewer/classifier 时提供 | 只在 Host 也有可验证的自动裁决路径时覆盖 Host mutation；否则该组合不可选 | 仅真实高风险分类结果可介入 |
-| `approval-required` | 只在 adapter 有 request/response path 时提供 | 只在 Host 有可完成的 approval bridge 时提供 | 显示 exact scope/consequence；没有 bridge 时不可选而不是运行时一律拒绝 |
+| Mode                | Engine adapter                                            | OmniMind Host                                                            | UI truth                                                               |
+| ------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `full-access`       | 映射到该 Engine 可证明的 unrestricted/no-ask 语义         | 当前任务已经表达的普通 Browser、Device、文件、命令、网络和下载直接执行   | 不出现普通操作 approval；成功只留必要结果                              |
+| `auto`              | 只在 exact Engine/model 有真实 reviewer/classifier 时提供 | 只在 Host 也有可验证的自动裁决路径时覆盖 Host mutation；否则该组合不可选 | 仅真实高风险分类结果可介入                                             |
+| `approval-required` | 只在 adapter 有 request/response path 时提供              | 只在 Host 有可完成的 approval bridge 时提供                              | 显示 exact scope/consequence；没有 bridge 时不可选而不是运行时一律拒绝 |
 
 登录、2FA、系统原生权限面板、物理设备到场以及用户没有表达过的发布、付费或远端删除，是“需要人完成或需要扩张任务意图”，不应伪装成普通工具权限。相反，测试、依赖安装、工作区写入、网页点击、模拟器输入和任务内下载不能因为底层换成 Host tool 就重新收费一次确认。
 
@@ -192,7 +192,7 @@ Package lifecycle 不跨 Provider归一：
 
 上述组合不产生 shared `PackageActivation`/current/LKG、generic plugin platform、permission broker 或跨 Engine durable state；PluginLibrary/Registry 只投影 native + additive 能力事实，不接管 Engine 私有运行时责任。
 
-这里禁止的是复制 Engine-native Session、resume、memory store 或 plugin lifecycle，不是禁止 OmniMind-owned workspace artifacts。OmniMind 可以把同一份、可审查的 project context 作为 additive capability 提供给不同 Engine，只要它不读取或镜像 Engine private home，且 writer、scope、provenance、删除与 JIT load 仍只有一个 OmniMind owner。
+这里禁止的是复制 Engine-native Session、resume、memory store 或 plugin lifecycle，不是禁止普通 OmniMind-owned workspace artifacts。下方 `omnimindWorkspaceArtifacts` 只表示当前 Files/Artifacts 等 additive、single-owner、按需读取的普通文件能力，不授权 automatic project context、Memory 或 Knowledge writer；后者必须经过本文件后述的独立 Gate。
 
 ```engine-capability-composition
 {
@@ -221,30 +221,22 @@ V1 只保留 inherited orchestration 对 Project/Thread/Space command/event/proj
 
 不得为不同 Provider 建平行 Product databases，也不得为了清理历史发布 destructive rebuild。Provider native state 可以不同，但 Project/Thread/Space/Timeline 只有 inherited 一份。
 
-## Project context：自动记忆与知识共用一个文件世界
+## Project context：first-public 使用普通文件，自动 Memory/Knowledge 延后
 
-Memory 与 Knowledge 不是两个数据库，也不属于 Engine-native resume。它们是 OmniMind-owned、workspace-scoped、可审查的 project context，作为 additive capability 对当前选定 Engine 可用：
+首次公开发行以用户 workspace files、`rg/read`、Product Thread 与 Engine-native session/compaction 作为上下文事实。当前没有已准入的 OmniMind automatic Memory/Knowledge writer；Thread Recap 仍只是 Web UI recap，不升级为 durable memory。
 
-```text
-source evidence / current workspace facts
-  → bounded post-settlement curation
-    → sparse project memory + linked derived knowledge + small index
-      → later JIT search/read from any compatible selected Engine
-```
+自动 Project Context 会新增长期 writer、scope、provenance、correction/forget、staleness、并发与恢复责任。只有代表性重复任务证明最小 source packet 或 derived Markdown 相对 raw files 在任务质量、token/latency/cost 或恢复上有明确净收益，且 `execution-brief.md` 将它作为独立 Slice 准入时，才能重开。
 
-唯一 owner 位于 OmniMind project-local state root；实际路径和格式由该 owner一次定义，不由每个 adapter、Skill、Pack 或 UI 分别选择。V1 不建数据库、向量库、graph、personal global vault 或常驻 daemon。当前 Thread 的 Recap 仍是 Web UI recap，不升级成该 owner。
+未来若准入，边界预先锁定为：
 
-默认行为是自动而安静：
+- Knowledge、Memory、Thread Recap 与 Engine-native resume/memory 保持不同语义；
+- 最多一个 project-local writer；无 personal/global vault、vector/graph DB、常驻 daemon 或第二 scheduler；
+- 只保存可审查的 project facts/evidence，不保存完整 transcript、raw reasoning、secret 或 subagent 中间猜测；
+- 不读取、迁移或镜像 `.codex`、`.claude`、`.pi` 等 Engine private home；
+- provenance、correction、forget、source deletion、conflict、stale 与 crash recovery 在默认自动开启前闭合；
+- 正文 JIT，不把 wiki/memory 塞进稳定大前缀。
 
-- 普通任务中实际使用、且判断为未来仍有价值的文件、链接或 workspace evidence，会在 root turn 真正 settled 后进入一个有界维护任务；用户不需要再发送“更新知识”；
-- Memory 只保留稀疏 preference、constraint、项目事实、昂贵上下文和恢复指针；Knowledge 保留 immutable evidence、关联页面、index、stale 与 contradiction；两者可以互相引用但不互相冒充；
-- 首次写入、普通增量更新和无冲突综合自动落盘，不弹确认框；版本、来源和原子写入让操作可追溯、可撤销、可修复；
-- 矛盾默认保留双方来源、标记当前判断并继续；只有它会实质改变当前任务结果且无法从 workspace/evidence 判定时才询问；
-- 外部内容始终作为 data 处理，不能覆盖 system/developer/user 当前指令；这属于事实正确性，不产生用户审批流程；
-- 写入、index、recall、cleanup 都是 event-driven bounded work，不创建 daemon 或第二 scheduler；失败不能阻塞已完成的主任务；
-- session 开始只暴露小 index/pointer，正文通过现有 `rg/read` 或 Engine 官方 Skill/MCP seam 按需读取，不把 wiki/memory 塞进稳定 prefix。
-
-Codex、Claude Code 等 native memory 继续拥有自己的私有目录、retention 和优化语义。OmniMind 不读取、迁移或镜像它们；OmniMind project context 只积累产品可审查的共享项目事实，因此二者可以并存而不是形成双写同一 state。
+在该独立 Gate 通过前，不预建路径、索引、设置、后台 job、图标、writer queue 或 UI pane。
 
 ## 本地系统能力
 
@@ -256,7 +248,7 @@ Device 的 discovery、screen、UI tree、screenshot 与 mutation 都通过现�
 
 Browser 的导航、点击、输入、上传和任务内下载使用同一 mode。`full-access` 下下载不弹二次批准：落到当前 project/workspace 或 OmniMind managed artifact/download root，结果以普通文件/artifact receipt 呈现；目标路径需要系统原生选择器、网站弹出 OAuth/2FA 或用户实际接管页面时，才进入 human-presence flow。现有 `BrowserDownloadApprovalRequired` 的无条件取消只能作为当前缺口，不能成为 V1 产品合同。
 
-不建设 observed-version 平台。只有现实可复现的静默覆盖风险才增加最小 precondition；外部工具或 Provider Tool 改写文件后重新观察并呈现即可。
+不建设第二 observed-version 平台。Agent structured mutation 必须复用现有 filesystem `expectedVersion`/atomic conflict truth；同一 Root delegation tree 内只允许 Root 或一个 foreground child 写，不同 Thread 与外部编辑器可以并存，但冲突必须 fail closed，不能静默覆盖。只有现实反例证明乐观冲突检测不足时才考虑更重 lease。
 
 Remote/SSH 不属于 V1；普通 Git remote、push/pull/PR 不受影响。
 

@@ -17,7 +17,7 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 | Conversation        | Synara Thread 的用户可见身份                                                                      | Provider Session 的复制品                               |
 | Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                     | 第二 Provider Registry 或跨 Provider Session            |
 | Extensions / Skills | 既有 PluginLibrary/Skills discovery；有原生 API 时显示 Provider-scoped lifecycle                  | 顶层 Package aggregate、跨 Provider lifecycle authority |
-| 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                  | Provider 外再叠一套 permission profile 或逐工具授权账本  |
+| 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                 | Provider 外再叠一套 permission profile 或逐工具授权账本 |
 
 命名映射只允许改变产品呈现，不改变底层唯一 owner。若现有 Synara 类型已经表达同一事实，OmniMind 必须直接复用或最小改名，不能再包装一层“更通用”的状态。
 
@@ -28,6 +28,8 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 Agent 是 folder-backed 工作方式：使用现有 Project、Thread、File/Viewer/Diff/Terminal/Git 与 per-thread Workbench state。文件写入发生在用户明确打开的 folder-backed Project 中，仍受 filesystem、Git 和当前 Provider 的真实能力约束。
 
 Agent 不是 durable entity。Provider 默认是 bundled OmniMind Agent，也可以选择 stock Pi、Codex、Claude、OpenCode 等；产品中的 “Agent” 顶层入口不等于 runtime 中的 Provider 或 Session。
+
+OmniMind Agent 可以在当前 Root turn 内创建 bounded child Session；Root 始终对最终任务负责。child identity、状态和结果通过既有 Provider runtime event/Thread projection进入产品，不形成第二 Agent/Run registry。child 默认继承 Root exact model，也可明确选择同一 `.omnimind` Model/Auth authority 中已配置的 exact provider/model；不可用时准确失败，不 silent fallback。App/Server crash 后 active child 只恢复为 `interrupted` truth，不自动 mid-flight replay。
 
 ### Chat
 
@@ -110,6 +112,7 @@ Product Orchestration 恢复 command/event/projection；Provider adapter 恢复 
 - Provider 已接受、settlement 未观察：等待 native reconciliation 或显示 unknown；
 - native Session 丢失：Thread 仍可读，新 Session 明确为 fresh/rebuilt；
 - cancel/interrupt request 只证明已请求，native acknowledgement/terminal event 才证明结果。
+- targeted child interrupt 必须引用 exact child identity；只停止目标 child，不能借已有 Root interrupt path 误杀 parent 或 sibling。Root stop-all 与 child stop 是两种不同语义。
 
 ## 权限真实性
 

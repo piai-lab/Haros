@@ -41,7 +41,9 @@ Pi post-tag head `936aff00918de1187f085f123c2812d8f2d67745` 只作 API/fix disco
 
 不创建第四类“以后可能有用”的 abstraction。没有真实第二消费者时，不提炼 common platform。
 
-## 5. 施工顺序
+## 5. V1 substrate 路线（历史基座与长期完成门）
+
+本节保留 V1 product substrate 的责任顺序与长期 final gate，不再定义当前 Agent Core 的代码准入。Stage 0–3 的 exact candidate/evidence 以 active Mission 为准，不因 Agent Core 重开而重做；Stage 4 仍是完整 V1 的发行门。**当前唯一下一动作只看第 10 节。**
 
 | 顺序 | 阶段                              | 默认复用                                                                                                  | 只做的差异                                                                                                                                                                                                                                                                                                                                        | 明确不做                                                                                                                                                            | 完成证据                                                                                                                                                                                       |
 | ---- | --------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -94,7 +96,9 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 - 无 donor identity、第二 control plane、跨 Provider loader/state、silent fallback、fake parity/permission/progress；
 - fresh-context completion audit 无 material finding。
 
-## 9. 交付诚实性
+## 9. 交付诚实性（历史阶段规则）
+
+本节记录 substrate 阶段形成时采用的证据纪律，不是“今天”的 current admission；当前状态与下一 Slice 只看第 10 节。
 
 “今天完成”必须按证据区分：
 
@@ -106,23 +110,23 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 ## 10. 当前唯一下一动作
 
-维护者于 2026-08-15 已完成原 Model services + Composer 的 completion review、必要补缝与合并，并明确选择下一轮做 **Pi-native mature capability preservation and reachability**。下一会话必须从最新 merged `main` 重新读取 exact runtime、Host seam 与 sole owners；研究 SHA 只提供反例入口，不能成为实现基线或封闭需求清单。完整边界见 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md)，未来 Pi/生态来源的重新进入遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)。
+当前精确状态：
 
-用户可观察 Outcome：OmniMind Agent 不削弱锁定 Pi 已成熟的 Session、system prompt、动态工具、Extension、retry/compaction、usage/cost、fork/tree 与 package/resource 机制；真正影响用户工作、可恢复性或费用判断的 runtime truth 在现有 Product Thread、Composer、Timeline、Usage 与 Library owner 中可发现、可操作、可恢复。没有产品损失的能力只证明并保留，不因“Pi 有这个 API/TUI”复制一套 Desktop 控制台。
+- latest `main` 已拥有 Model services + Composer、Pi ModelRuntime/AgentSession、Product Thread/runtimeMode、Workbench、Workspace/Git/Diff/Checkpoint 与 Engine-native Subagent projection；
+- `codex/agent-core-ui-spec` 的 B0–B5 是 donor/evidence branch，绝不整体合并；它证明 execution foundation 可行，但没有证明 first-public mature Agent；
+- latest `main` 尚无 gotgenes bounded-child Host，也没有 OmniMind Pi child 的精准 control/terminal 全链；
+- C0 只负责收敛文档与 owner，不授权任何 Agent Core 代码、依赖、lockfile、patch、test、vendor、build 或安装 App 写入。
 
-本轮沿 Pi 真实生命周期做差额审查，而不是机械执行功能清单：
+下一份可申请准入的唯一代码 Slice 是 **C1 Agent correctness**，但本段不自动授予 Gate B。维护者明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
 
-1. Project membership 本身表示 trusted；将既有 Project/Thread/cwd 事实准确传给 Pi Session，不新增 trust store、permission broker、弹窗或独立设置；
-2. 先证明 Pi system prompt rebuild 与动态 Extension tools 没被 Host 削弱，再按现有 Session owner投影 bounded `current / all / source` truth；activation、permission 与已接纳的 in-flight operation保持正交，active-set变化只影响下一 turn；
-3. 无 Product mapping 的 Extension `newSession / fork / navigateTree / switchSession` 不得返回 no-op success；能保持 canonical Product Thread/Session provenance才接窄桥，否则明确 unavailable；
-4. 将 Pi live `cacheWrite`、`cost` 与 reported/runtime-derived/estimated/unknown provenance 接入现有 usage/receipt owner；不建 Pi stats page、archive parser、cache service或第二 usage store；
-5. 保留 native retry与auto/manual compaction，只补准确的中英文状态、取消/结算和必要可见 truth；不建设第二 retry/context平台；
-6. 对 fork/tree/export、follow-up/Queue、Package/ResourceLoader与Extension UI逐项跑能区分“自然保留”和“真实能力丢失”的反例；只有真实损失成立才补 existing owner内的最窄 mapping，没有损失就记录证据并停止。
+1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
+2. targeted child control：stop A 不影响 sibling B 或 Root；parent stop-all、stale/terminal control、writer stop 与 crash/reopen各有准确语义；Pi 没有真实 message/steer 时 UI 不显示；
+3. 同一 Root delegation tree 内 Root 或一个 foreground child 写；跨 Thread/外部编辑复用现有 `WorkspaceFileSystem.expectedVersion`/atomic conflict truth，不能静默覆盖，不建全局 Writer DB；
+4. exact model 补齐“explicit → role default → inherit”，不可用准确失败；child ceiling 在 bind 后按 Root ∩ role ∩ per-call 收口；
+5. `completed / failed / cancelled / timed_out / crashed / interrupted` 从 Provider event 到 WorkLog、UI、SQLite、reopen一致，并同步闭合简中/英文与ARIA。
 
-进入门：最新 `main`、pinned Pi revision、product-owned patch与生成物身份一致；完整读取 Execution/Product State/Workbench owner、Pi-native research 与 intake；冻结 passive read、Extension execution、Project/private-home、secret、Session provenance和 exact model/tool identity边界。不得从旧 Agent Core分支、旧 worktree、聊天摘要或历史 package榜恢复实现假设。
+C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Knowledge、Workflow VM/graph、Team/Fleet/Mission、模型Router、三平台发行。后续顺序是：C2 request economics + Root-only/child paired outcome；C3 mature Root task loop；C4 search/context quality；C5同一frozen SHA三平台发行。完整进入/退出与stop-loss见 [`research/omnimind-agent-core-execution-guide.md`](research/omnimind-agent-core-execution-guide.md)。
 
-停止门：任何方案开始复制 Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，或新增 Router、模型池、child role default、Agent Core调度、第二 trust/permission/state owner时立即停止并回到现有owner。成熟机制可以被纳入；纳入的默认形式是 preservation、薄只读投影或有 provenance 的语义映射，不是 raw TUI parity。
+Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-完成证据按实际变更分层：focused source/contract falsifier之后，涉及 Provider/Model/Thinking、tool、usage、compaction、abort或恢复时用授权的 MiMo/DeepSeek资源做最小脱敏live journey；Desktop observable只从exact pushed SHA重建并使用任务专用 `userData`、home与Provider private home验证受影响路径。Apple signing/notary、Windows Trusted Signing与Windows/Linux原生安装旅程由工程团队统一承担，不属于本轮完成门，也不得写成已完成。
-
-`codex/agent-core-ui-spec` 的 Full-access、bounded child与Workflow工作保持独立分支/owner；本轮不吸收、重做或静默合并它，也不让它阻塞Pi-native能力审查。Agent Core后续只消费本轮已有的exact provider/model/config/auth、Session/tool/usage事实，不复制这些authority。
+STATE：**Agent execution foundation donor candidate exists；first-public mature Agent incomplete；C1 code not yet admitted；V1 release blocked。**

@@ -103,20 +103,18 @@ Child Agent、Todo、Question 继续使用 source 已有的最小产品语义；
 
 ### 自动能力的显示原则
 
-Goal、Agent 团队、动态工作流、记忆、知识库、会话恢复与 Computer Use 不是七个导航入口，也不是七张常驻卡。默认通过自然语言与运行条件自动触发，并只投影到已经存在的表面：
+Goal、bounded child、结果驱动执行、会话恢复与 Computer Use 不是新的导航入口或常驻卡。它们只在真实运行条件下投影到既有表面：
 
-| 能力语义      | 平时                                            | 运行时                                                                                                                                                                                     | 结果/异常                                                                                                                                                                                                                     |
-| ------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 目标          | 不显示独立 Goal 实体                            | 复用 task list；范围真正变化才问                                                                                                                                                           | 最终回答准确说明完成/未完成                                                                                                                                                                                                   |
-| Todo/当前步骤 | 无独立任务管理页                                | Composer 只保留一行真实进度；点击后在锚定 popover 展开步骤                                                                                                                                 | 完成后折叠或退场；不复制 task state                                                                                                                                                                                           |
-| Agent 团队    | 不显示 team builder                             | 活跃时复用 `ComposerSubagentStrip`；Environment 用稳定身份纹样簇显示数量，点击进入 right dock/child Thread                                                                                 | root 汇总来源；settled 成员只在有复查价值的详情中保留                                                                                                                                                                         |
-| 动态工作流    | 不显示通用 workflow editor                      | Timeline 保留有意义的阶段里程碑；Environment 保留一行可重新找到的索引；只有正在运行，或已暂停/失败/停止且存在即时恢复动作时，Composer 才显示一条薄控制行；三者都打开同一个 right-dock 详情 | 保留 Engine provenance，不把普通 tool sequence 画成 DAG；正常完成或无可行动恢复后 Composer 退场，Timeline 按现有 Thread/activity retention 保留；Environment 保留当前任务最近一次 terminal receipt，直到新 Run 替换或用户收起 |
-| 记忆          | 自动、安静、无每条确认                          | 通常零 UI；确实影响回答时可显示一条可展开来源                                                                                                                                              | 通过 Workbench 的现有 Environment card 按需管理，不建 Memory pane                                                                                                                                                             |
-| 知识库        | 用户正常提供/使用资料即可，不要求发起“知识更新” | 复用 File/Tool activity；后台维护不占 Composer                                                                                                                                             | Sources、Markdown、index、Diff 回到 Files/Changes；冲突只在影响结果时介入                                                                                                                                                     |
-| 会话恢复      | 正常重开直接恢复                                | native resume 安静继续                                                                                                                                                                     | degraded/ambiguous 才在 Composer 前显示一条恢复介入                                                                                                                                                                           |
-| Computer Use  | 无 capability card                              | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                                                                                     | 文件、截图、下载与结果进入现有 Artifact/File 表面                                                                                                                                                                             |
+| 能力语义      | 平时                       | 运行时                                                                                                                  | 结果/异常                                                              |
+| ------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| 目标          | 不显示独立 Goal 实体       | 复用 task list；范围真正变化才问                                                                                        | 最终回答准确说明完成/未完成                                            |
+| Todo/当前步骤 | 无独立任务管理页           | Composer 只保留一行真实进度；点击后在锚定 popover 展开步骤                                                              | 完成后折叠或退场；不复制 task state                                    |
+| bounded child | 不显示 team builder        | 活跃时复用 `ComposerSubagentStrip` 和现有 child Thread/detail；只有 adapter 真实支持的 stop/background/message 才显示   | Root 汇总来源并对最终结果负责；不建第二 Agent registry                 |
+| 结果驱动执行  | 不显示通用 workflow editor | 普通 tool/child loop 复用 Todo、Activity、Files/Diff；只有 Engine 已回报的结构化 phase 才显示低噪声里程碑和现有恢复动作 | 保留 Engine provenance，不把普通 sequence 画成 DAG；完成后运行控制退场 |
+| 会话恢复      | 正常重开直接恢复           | native resume 安静继续                                                                                                  | degraded/ambiguous 才在 Composer 前显示一条恢复介入                    |
+| Computer Use  | 无 capability card         | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                  | 文件、截图、下载与结果进入现有 Artifact/File 表面                      |
 
-UI 不展示 packaged、registered、context-loaded、cache breakpoint 或内部 candidate extraction。自然成功不 Toast；自动 Memory/Knowledge 的日常 write/recall 默认只进入可展开 Activity detail，不在 Timeline 为每次维护增加一行。用户主动打开 Workbench、查看来源、纠正、遗忘或诊断时，才加载完整详情。
+Memory/Knowledge 当前没有 first-public runtime owner，因此不预建入口、图标、设置、后台状态或 receipt。UI 也不展示 packaged、registered、context-loaded、cache breakpoint 或内部 candidate extraction；自然成功不 Toast。
 
 ## 5. 本地 Workbench
 
@@ -253,50 +251,19 @@ iOS Simulator 作为现有 right dock 的 `device` pane 呈现，不新增顶层
 
 先保全 Synara 当前 shell、panel geometry、Composer、Timeline、list density、theme、focus、motion 与 stream/scroll，再做一次完整 OmniMind 品牌和整体视觉校准。普通用户路径不得出现 Synara、Pi-derived、Native Host、adapter、donor 或 source-alignment 术语。拒绝重复 headers、胶囊泛滥、过度 cards、假 Activity 与模板化 AI 风。
 
-能力图标只在真实状态、详情入口或管理动作出现，不组成能力墙。图标分为三个不能混用的层级：
-
-1. **能力/集合图标**：表示“子智能体”“动态工作流”等 section 或 pane，跨入口保持统一；
-2. **实例身份纹样**：表示某一个真实 child Agent。它不是能力图标，必须按 canonical child identity 确定性生成，并在 Environment、right dock、Timeline chip、Composer strip 和重开后的同一 child 中保持同一颜色与几何纹样；同一 parent 下发生碰撞时确定性顺延到下一候选；
-3. **状态语义**：running、queued、completed、failed、blocked 由文字、tone 和必要的轻量 motion 表达，不能靠更换身份纹样或只靠颜色表达。
-
-`apps/web/src/lib/subagentPresentation.ts` 已经以 label seed 生成八色 `accentColor`，因此实例纹样应扩展这一 owner，增加稳定 `glyphVariant`/identity seed，而不是新建 avatar store。`agent` 只属于第一层：用于“子智能体”集合标题、tab 或入口，不能复制到每个 Agent 行。Skill、Plugin、MCP 与所有既有全局概念继续复用当前统一图标，不做 Engine-specific 变体。
-
-以下六项是维护者已锁定的能力/集合语义映射：
-
-| 语义       | 锁定资产        | 来源与使用限制                                                                                          |
-| ---------- | --------------- | ------------------------------------------------------------------------------------------------------- |
-| 目标       | `target-arrow`  | 现有 Central reversed asset；仅在目标状态确实可行动时出现                                               |
-| Agent 团队 | `agent`         | 现有 Central reversed asset；只用于 team/subagent 集合语义，不复制到每个 child，也不用于人类协作者      |
-| 动态工作流 | `agent-network` | 现有 Central reversed asset；只用于工作流集合/入口，不替代 Agent 团队、child 身份、Git 图或 Automations |
-| 知识库     | `books`         | 现有 Central reversed asset；经典书籍语义，只用于知识集合，不替代普通文件、文档或 Library navigation    |
-| 记忆       | `brain-2`       | 现有 Central reversed asset；计算脑形，只用于 OmniMind project memory，不替代模型服务设置所用的 `brain` |
-| 会话恢复   | `history`       | 现有 Central reversed asset；只用于已证明的 resume/recovery，不用于历史用量、Timeline 或 Automations    |
-
-子智能体身份纹样采用小尺寸、低填充密度的确定性候选池，而不是为每个 Agent 维护一份手工 SVG。首个 production 候选池应从现有 Central 资产中策展 **24 个在 16px 仍可辨的低密度几何纹样 × 8 个 restrained accent**，提供 192 个组合后再按同一 parent/workflow 内 collision rule 顺延；名称始终同时出现，因此纹样是视觉 join key，不是唯一身份凭证。以 canonical child/thread id 取 seed，同一 resumed child 保持连续。纹样不编码角色、模型、Engine 或状态；这些信息由旁边文字和 provenance 承担。若 24 个候选在 16/20/24px 的邻接复核中不可区分，应删除相似项并补充更清晰的 Central 资产，而不是靠加粗、填满或提高饱和度制造差别。
+能力图标只在真实状态、详情入口或管理动作出现，不组成能力墙。child identity、role、model 与 status 必须分别表达：identity 来自 canonical child/thread，role/model 使用文字，status 使用文字、tone 与必要的轻量 motion。先复用现有 `subagentPresentation.ts` 与产品图标；没有真实可读性问题时不新增 glyph pool、avatar registry 或能力专属资产。
 
 ### 运行摘要与右侧详情
 
-Codex 截图所体现的可复用原则是“稳定身份 + 极短事实 + 渐进披露”，不是增加卡片：
+稳定身份、极短事实和渐进披露继续由现有宿主完成：
 
-- Environment card 是当前 Thread 的低噪声目录，可显示 changes、Todo、子智能体、structured workflow 与 sources 的一行摘要；没有真实状态的 section 不占位；
-- Todo 默认行只显示 `第 x/n 步`、当前步骤和必要的 change totals；点击后用现有 popover/disclosure primitive 展开真实 task list，不创建 Todo pane；
-- 子智能体摘要显示最多三个稳定身份纹样和 running/completed 数量；点击打开既有 child detail/right dock，列表、Timeline chip 与来源引用必须复用同一纹样。当前 structured workflow 已投影的 `WorkflowRunState.taskIds` 必须从 generic background/subagent 摘要排除；同一 child 不能同时计入 Workflow 行与“子智能体”行；
-- structured workflow 在四个宿主中各只拥有一个互不竞争的角色：Timeline 记录已发生的里程碑；Composer 只在 running 或存在可立即执行的 pause/resume/recovery 时提供近手控制；Environment 是当前任务的持久索引；right dock 承担完整空间详情、筛选和 child 导航。所有投影从同一 Provider activities 与既有 bounded UI flags 经共享纯 selector 得到，不得各自复制 status、timer、agent list、paused/dismissed flags 或 optimistic command state；
-- Composer 的 workflow 控制行只显示名称、当前 phase、最短进度与 pause/stop/resume/open；正常完成或已无可行动恢复时立即退场，pausedByUser 或 failed/stopped 且 exact run 可 resume 时可暂留恢复动作。它不显示完整 Agent 列表、模型、token、最近工具或 phase map；这些属于 right dock。未来只有 exact contract 增加 waiting 状态后才允许按同一规则显示 waiting，不能从 `runningCount === 0` 猜测；
-- Timeline 只在 start、phase transition、重要失败/恢复和 terminal settlement 写一条用户可理解的 receipt；同一未稳定里程碑可原位更新，稳定后封存。不得为 poll、心跳、每个 Agent tick 或后台知识维护逐条刷 Timeline；
-- Environment 的 workflow 行显示名称、当前 frontier 或 terminal status、`done/total` 与最多三个身份纹样，超出显示 `+N`。它只保留当前任务的一个 latest index：running/paused/failed/stopped 时原位更新，completed 后冻结为一行 terminal receipt；新的同类 Run 明确替换它，用户也可收起。Timeline 继续拥有完整历史，因此 Environment 不复制里程碑列表、结果正文或多 Run history；
-- workflow pane 是只读空间解释与 terminal result surface，不是 editor。它使用四个不可再约的结构原语：**顺序、并行、选择、回环**。编排者—工作者是“顺序 + 并行 + 汇合”，评审—改写是“顺序 + 回环”，fallback 是“选择”，handoff 是控制权转移的 edge 语义而不是第五种拓扑。产品不向普通用户展示“模式选择器”；renderer 只根据 exact Engine/adapter 事实组合这些原语；
-- 当前 Claude `WorkflowRunState` 只有 phase order、Agent membership、状态、usage/provenance 与 child Thread，没有 dependency、route、iteration 或 handoff edge，因此只渲染 phase-order spine 与 containment，不得从时间顺序、文案或 tool activity 猜测 Agent 间连线。未来 Pi result-driven loop 或 Engine-native graph 只有在现有 Provider activity owner 持久化 stable node/group identity 与 explicit transition fact 后，才能增加并行 dispatch/join、selected route、retry loop 或 handoff；这些是 presentation projection，不建立通用 Workflow runtime；
-- terminal 不是“动画停止后消失”，而是同一图的稳定终态：运行 frontier 停止运动；已实际经过的 transition 变为实线；未选择分支只在 Engine 明确上报候选时弱化；loop 折叠成 iteration count；并行组折叠成完成/失败数量。pane 顶部只显示 terminal status、workflow 名称和一行结果摘要，下面保留 frozen topology 与可打开的失败节点/child/result references。当前 contract 的 `TaskCompletedPayload.summary`、status、Agent snapshots 与 usage 已足够提供第一版事实；`WorkflowRunState` builder 尚未透传 summary/usage 时应修现有 selector，不另建 outcome store；
-- lifecycle status 与结果含义分开：继续使用 running/paused/completed/failed/stopped 真值；若 overall completed 但某些 child 失败，只写“已完成 · 2 个 Agent 失败”，不得擅自升级成 `partial success`。只有 Engine 明确给出 conclusion 时才增加 conclusion projection。失败/停止必须指出 exact frontier 和可用的 resume/retry/open action；正常完成只保留“查看结果”，不制造 rerun；
-- 普通 tool calls、Todo 或无结构 Pi loop 不推断成 DAG。没有 provider structured workflow 时，不显示流程图入口；
-- 结构图使用同一套小型 visual grammar：group、step/Agent、transition、join/result 四类形状；transition 只有 next/dispatch/join/selected/retry/handoff 六种语义。active frontier 可有一条低频流动提示，node 状态变化可短暂过渡；后台/不可见、terminal 或 `prefers-reduced-motion` 时停止持续动画。图中默认只显示能改变判断的短标签；模型、effort、token、耗时、工具与说明只在选中、异常或 terminal summary 中出现。节点不得重复写“已完成”；status 仍必须通过 accessible name、tone 和非纯颜色形态被感知。
+- Todo复用现有task list；Composer只显示当前步骤和必要控制；
+- bounded child复用`ComposerSubagentStrip`与child Thread/detail；只有adapter真实支持的stop/background/message才显示；
+- Timeline只记录有意义的里程碑、失败/恢复与terminal settlement，不记录poll、tick或每个内部步骤；
+- Engine-native structured workflow保留其真实phase与provenance，但普通tool/child sequence不推断成DAG；
+- 完成后运行控制退场，结果回到Thread、Files、Diff、checks和既有receipt。
 
-right dock 是既有宿主；实现时只在现有 `RightDockPaneKind` owner 中增加 `workflow` 与指向真实 `workflowTaskId` 的 bounded identity，不新增 workflow route、store、database 或第二 runtime。当前 phase-only 数据先做两种同数据 fixture 的 focused bake-off：宿主 DOM/SVG 的 phase-map composition，以及 React Flow 的只读 grouped-node profile。出现任一事实就优先采用成熟 renderer：代表性 workflow 可达到 100+ Agent、需要 pan/zoom/fit、需要 visible-element rendering，或自写布局/键盘/viewport 责任开始增长。React Flow 必须关闭 drag/connect/delete/editor，只把 nodes/parent groups/phase-order edges 作为纯投影；X6 仅在 React Flow 的嵌套、路由或规模 proof 失败时升级；Mermaid 只作静态文档/导出。任何采用都必须 exact-version 复核 license、bundle、重复 Zustand runtime、keyboard/screen-reader、theme、offline packaged 与 continuous-update 性能，不能偷用 Pi transitive package，也不能因 renderer 存在而引入 workflow editor/runtime。证据与候选顺序由 [`research/omnimind-agent-capability-surface.md`](../research/omnimind-agent-capability-surface.md#34-renderer-intake先匹配真实数据再决定是否需要图引擎) 维护。
-
-focused proof 至少覆盖 4/20/120 Agent、3–8 groups、四种结构原语的单独与混合组合，以及 running/paused/completed/failed/stopped。100+ Agent 默认只渲染 group overview、current/selected group 的 bounded children 和搜索命中；其余 group 聚合为 `done/running/failed/total`，不把 120 个节点同时动画或塞进 Timeline/Environment。completed fixture 必须验证 Environment latest receipt 仍可重开、RightDock frozen result 可读、Composer 已退场；branch/loop/handoff 只有 explicit fact fixture 才画。不能用官网 demo 选美替代真实 fixture，也不能让研究原型成为 production component donor。
-
-2026-08-13 对当前 HEAD 的代码扫描确认：六个锁定资产都已存在于 `apps/web/public/central-icons-reversed`，且 `apps/web/src` 尚无产品调用，因此不需要新增或重画 SVG。近义现有占用必须保持分离：模型服务设置继续使用 `brain`，通用 Book wrapper 继续使用 `book-simple`，Automations 继续使用 `arrow-rotate-clockwise`；本表的 `brain-2`、`books`、`history` 不替换这些既有语义。正式接入仍须在当次 HEAD 重跑 usage/visual collision scan，并在 16/20/24px、light/dark、currentColor、1x/2x 与真实邻接环境下校验。不得再用 emoji、CSS 假图标、临时通用 glyph 或 custom 重画版本代替。`agent-network` 的语义租约只覆盖工作流集合/入口；它不得成为 Agent 团队、单个 child 身份、通用网络/集成或 Git branch/merge 的别名。
+首发不新增workflow right-dock pane、React Flow/X6、100+ Agent topology或专用identity glyph系统。只有真实dependency facts、规模和用户判断需求证明现有列表/详情不足时，才重开纯projection renderer；它仍不得拥有runtime、editor、store或layout database。
 
 性能以真实 journey/profile 验证：startup、Thread switch、continuous stream、long thread、large list/output、Viewer/Diff、Terminal、watcher storm、background work、memory growth 与 IME。不设任意 100k 字符门槛。
 
@@ -307,7 +274,7 @@ Settings 提供 `System / 简体中文 / English`，默认跟随 OS/browser；�
 双语以用户语义和内容 ownership 为边界，而不是逐词翻译：
 
 - `OmniMind`、`Agent`、`Chat` 保留产品身份；Agent 域使用“新建任务 / New Task”和“任务”，Chat 域使用“新建对话 / New Chat”和“对话”。`OmniMind Agent` 只在技术详情、runtime、诊断、About、Licenses 与来源语境中作为完整技术实体名。`Thread` 不进入普通用户语言，`Session` 只在真实认证、连接、恢复 ID 或诊断语境出现。
-- “Agent 团队 / Agent Team”是能力与研究语义；运行时集合标题使用更具体的“子智能体 / Subagents”，单个实例直接显示其 nickname/任务名，不把“团队”重复到每一行。`agent` 表示集合，实例身份纹样表示具体 child。
+- “Agent 团队 / Agent Team”是能力与研究语义；运行时集合标题使用更具体的“子智能体 / Subagents”，单个实例直接显示其 nickname/任务名，不把“团队”重复到每一行。集合图标不冒充 child identity；具体 child 以 canonical identity、名称和现有 presentation tone保持跨表面连续。
 - Codex、Pi、OpenCode 与 OmniMind 在普通界面称为“引擎”；OpenAI、MiMo、DeepSeek 等模型/API 来源称为“模型服务商”。`Provider` 只在内部 API 或主动展开的技术详情中保留。
 - Workbench、Library、Project、Group、Kanban、Terminal、Skill、Plugin、Repository、Branch、Commit、Push、Diff、Worktree、Pull Request 等采用自然中文产品词；`Git`、`MCP`、`API`、`CLI`、`JSON`、`URL`、`ID` 与 AI 计量单位 `token` 保留标准写法。命令、参数、环境变量、路径、文件名、模型名和品牌名保持原文。
 - 技能、插件、工具与 MCP 服务的真实名称始终保留来源原文。OmniMind-owned 资产的名称说明与操作文案完整双语；Engine-native 或第三方资产的原始简介保留 provenance，不由 Host 擅自翻译或运行时机翻。
@@ -343,8 +310,8 @@ V1 UI 候选至少证明：
 - macOS、Windows、Linux 安装后的核心 journey 通过；
 - 没有第二 Product Control Plane、Package state、silent fallback、fake parity、fake progress 或 fake permission；
 - `full-access` 从 Engine 到 Browser/Device/Gateway 的普通操作无二次确认，其他 mode 只在真实 supported 时出现；
-- 自动 Memory/Knowledge 不要求用户发起维护命令或逐条批准，默认 UI 安静，来源与管理按需可达；
-- 六个锁定能力图标只出现在真实语义位置，Skills/Plugins 等全局概念不发生图标分裂或冲突；
+- bounded child 的identity、status与control在Composer、child Thread、Timeline、SQLite/reopen全链一致；只显示adapter真实支持的动作；
+- Memory/Knowledge、workflow graph与专用Agent dashboard没有在独立outcome gate前进入first-public产品面；
 - 同状态人工视觉复核无 material finding。
 
 本文冻结 UI 结果，不自证当前代码已经满足。

@@ -166,6 +166,14 @@ metadata-only
 
 对每个 owner 给出 disposition：保留候选 owner、桥到 OmniMind 现有 owner、翻译机制，或拒绝。不得用“隐藏 UI”“关闭自动模式”误当 owner 已消失；必须证明 schema、state、listener、timer、writer、command 和 recovery path 都没有注册。
 
+每个采用结论必须分别记录三层事实，不能互相外推：
+
+- **source retained**：上游 ancestry、目录、作者测试和未激活源码保留了什么；
+- **shipped bytes/exports**：真实发行依赖包含、导出了什么；
+- **runtime activation**：OmniMind product code实际 import、注册和启动了哪些 tool/schema/listener/timer/process/owner。
+
+源码或发行包中存在 Mission/Fleet/Schedule/VM 不等于产品激活；反过来，仅隐藏入口也不能证明 runtime没有 ambient副作用。
+
 冰山审计必须同时覆盖用户看不见但会形成长期责任的表面：startup/bootstrap、ambient discovery、hooks、slash commands、schema registration、watcher/listener/timer、background queue、cache/index、session entry、restore/repair、child process、network callback、update/uninstall。配置项、UI 开关和 README 没出现这些表面，不等于它们不存在；必须沿 exact entrypoint 和 shutdown path 证明。
 
 ### 5.4 运行边界审计
@@ -268,8 +276,13 @@ Gate A 不应制造实施 plan、改依赖或更新 Campaign claim。
 
 - 首个 child 就使用 exact OmniMind launcher、model、auth、private home 与 cwd；
 - child 不扫描 Provider private home，不继承不需要的凭据；
-- foreground/background、abort、timeout、process group、orphan cleanup；
-- usage、result、provenance、stderr、partial output 与 settlement 只有一个真相；
+- child 继承 canonical Root effective instructions；若关闭 child 自行扫描 context files，必须证明 Root 的 `AGENTS.md`/project instructions、cwd 与适用 authority 已通过唯一 prompt owner 准确投影，不能让两条 instruction discovery 路径并存；
+- exact model 解析遵循“本次明确指定 → 已配置的角色默认 → inherit Root”，不可用时准确失败；不同 provider/model 只是 exact selection，不产生 Router、模型池或 silent fallback；
+- foreground/background、targeted child abort、parent stop-all、timeout、process group、orphan cleanup 与 late-result suppression；不得把 Root steer、child steer、内部 resume 和 App crash recovery混成一个“control 已支持”；
+- `completed / failed / cancelled / timed_out / crashed / interrupted` 等终态、usage、result、provenance、stderr、partial output 与 settlement 只有一个真相；未知不能伪装成失败或成功；
+- 同一 Root delegation tree 内只有 Root 或一个 foreground child 写；不同 Thread 与外部编辑器可以并存，但结构化写入必须复用现有 observed-version/atomic conflict truth，冲突时 fail closed，除非真实 falsifier 证明不足，不建立 workspace-global writer DB/lock service；
+- Root capability ceiling ∩ role ceiling ∩ per-call allowlist 在 Extension/Skill/MCP bind 后再次收口；角色名本身不是权限证明；
+- session-only secret 没有安全桥时准确 unavailable，不经 argv、日志或宽环境变量传给 child；
 - worktree、Gist/share、schedule、mission、Fleet、intercom 等副作用没有进入最小表面；
 - 项目目录没有写入硬编码 `.pi` 状态。
 
@@ -288,19 +301,19 @@ Gate A 不应制造实施 plan、改依赖或更新 Campaign claim。
 
 ### 8.3 Knowledge / Memory
 
-必须额外证明：
+Knowledge、Memory、Thread Recap 与 Engine-native resume/memory 是四种不同责任。首次公开发行默认继续使用 raw workspace files + `rg/read` + Product Thread + native session/compaction；自动 Project Context 不因“可以写 Markdown”而自动准入。
 
-- 先声明候选是在做 **Knowledge**、**Memory**、Thread Recap 还是 resume state；四者不得因都使用 Markdown/索引而混成一个 owner；
-- Knowledge 的 immutable evidence 与 derived knowledge 分离；provenance、scope、stale/deleted source、矛盾、版本与回滚可审计；外部来源永远是 data，不能升级为 instruction authority；这些是后台事实正确性，不应被实现成逐次用户审批；
-- Knowledge 默认可以自动：用户在普通任务中实际提供或使用、并被判断为未来仍有复用价值的来源，可在 root turn 真正 settled 后触发有界 evidence capture、关联页面/index 更新和 conflict/stale maintenance；不要求用户另发“更新知识”命令，也不要求首次写入 review；
-- 自动不等于 ambient 扫描：没有实际使用的 durable source 时不 bootstrap，不扫描 provider history/personal home，不 ingest 每个访问网页，不启动 daemon，不注入大段 prefix；触发器必须能追到当前 Product Thread 的真实 source use 或 workspace change；
-- Memory 可以是自动过程，但必须是 root turn 真正 settled 后的有界、稀疏 candidate extraction，而不是自动保存完整 transcript、网页、raw reasoning、secret、personal directory 或 subagent 中间猜测；
-- Memory 默认 project/workspace scope；日常写入与召回不要求逐条确认，也不要求每次生成 Timeline receipt，但必须可查看、纠正、遗忘、关闭并保留 provenance。提升到 personal/global 或冲突会改变当前任务且无法从现有证据裁决时才要求显式决定；
-- Engine-native memory 与 OmniMind project context 必须按责任分开：native memory 保留其原目录、格式、管理和 retention；OmniMind 不读取、镜像或合并它。OmniMind 可以拥有一份跨 Engine 可见的 project-scoped file-world，只保存产品可审查的共享项目事实/知识，并通过各 Engine 的官方 additive seam JIT 提供；这不是第二 native Memory DB；
-- 自动 Memory job 有 eligibility、budget、timeout、cancel、retry 上限与 shutdown，不能借“后台”引入常驻 daemon 或第二 scheduler；
-- OmniMind-owned Knowledge/Memory 共用同一个 project-context owner 和写入队列；有单 writer/锁/原子性/幂等/崩溃恢复，forget 后不因 cache/index/replay 复活。候选 package 若分别创建 vault、database、events authority 或 background writer，必须拆除或拒绝；
-- Knowledge 证明检索规模、遗漏、claim-level source support 与 compile/query break-even；Memory 另行证明跨任务复用收益、错误召回、scope 隔离与 write/recall token 成本；
-- 两者正文均 JIT，不把完整 wiki/memory 塞入稳定 prefix；UI 默认安静且无需维护命令，但“没显示”不能替代后台 owner、文件、进程、失败和恢复审计。
+只有代表性重复任务证明最小 source packet 或 derived Markdown 相对 raw files 明显改善任务质量、token/latency/cost 或恢复结果，且收益覆盖长期 writer 的维护责任时，才重开独立 Gate A。重开后必须额外证明：
+
+- provenance、scope、correction、forget、staleness、source deletion、矛盾、版本与崩溃恢复；
+- 外部来源始终是 data，不能升级为 instruction authority；
+- 最多一个 project-local writer；无 personal/global vault、vector/graph DB、常驻 daemon或第二 scheduler；
+- 不保存完整 transcript、raw reasoning、secret、personal directory 或 subagent 中间猜测；
+- 不读取、镜像或合并 Engine private home；native memory 继续拥有自己的目录、格式、retention 与 lifecycle；
+- 正文 JIT，不把 wiki/memory 塞入稳定 prefix；forget 后不会因 cache/index/replay 复活；
+- 自动默认开启前，必须在可用环境得到代表性 PASS，不能用“准确 unavailable”替代产品能力。
+
+在该 Gate 通过前，不预建 Memory/Knowledge path、index、setting、图标、后台 job、writer queue 或 UI pane。
 
 ### 8.4 Engine-native capability
 
@@ -308,7 +321,7 @@ Codex、Claude Code、OpenCode 等能力必须通过各自官方 seam 评估：
 
 - 先记录 OmniMind 当前真实 adapter、锁定的 Engine binary/SDK 版本与调用路径，再讨论新增 launcher 或配置入口；
 - 原生 auth/session/resume/permission/plugin 仍由 Engine 拥有；
-- OmniMind 只加法挂载兼容的 versioned capability pack；
+- OmniMind 只通过已证明的官方 seam 加法挂载兼容的普通 Skill、Prompt、Tool、MCP 或其他可替换 component；不建立 Capability Pack 产品、runtime、registry、安装单元或控制面；
 - `native`、`projected`、`unavailable` 逐项验真；
 - Engine-specific hooks、commands、subagents、permission 不伪装成跨 Engine 通用能力；
 - process-scoped seam 必须证明线程隔离或使用 dedicated process。
@@ -331,7 +344,7 @@ Codex、Claude Code、OpenCode 等能力必须通过各自官方 seam 评估：
 | 完成后留下什么       | 运行控制退场；durable result 回到文件、Thread、Activity 或已有索引；不靠常驻“已完成卡”证明能力存在                                                       |
 | 规模与维护如何证明   | 用真实最小/典型/压力 fixture 验证密度、搜索/筛选、键盘、双语、reduced motion、hidden/background 和 continuous update；不能只看作者 demo                  |
 
-对 subagent/workflow 类候选还要额外证明：集合图标与实例 identity 分离；同一 child 在 Timeline、Environment、详情和 child Thread 保持稳定 identity；100+ Agent 时使用分组、聚合、按需展开和搜索，不把所有节点同时渲染/动画。只有 source contract 真正提供 dependency edge 才画 Agent 因果边，不能从时间顺序、文案或 tool activity 猜 DAG。成熟 renderer 可以进入 focused bake-off，但它只拥有纯 projection，不得借机引入 editor、canvas document、第二 Workflow runtime 或 layout database。
+对 subagent/workflow 类候选还要额外证明：同一 child 在 Composer、Timeline、详情和 child Thread 保持稳定 identity；产品只显示真实可用的 stop/background/message 等动作。默认使用现有列表、child Thread、Timeline、Files/Diff 和低噪声摘要；只有真实规模与 dependency facts 证明列表无法完成判断时，才重开 renderer bake-off。不能从时间顺序、文案或 tool activity 猜 DAG，也不得借 renderer 引入 editor、canvas document、第二 Workflow runtime 或 layout database。
 
 名称与图标属于产品词汇 owner，而不是 package/Engine 私有皮肤：Skill、Plugin 以及同一 canonical asset 跨入口保持同名、同义、同一图标；`native / projected / unavailable / conflict` 可以准确显示来源差异，但不得把一个概念复制成多个用户对象。图标先审计并复用现有产品/Central 资产；只有没有语义可用、尺寸可读且不冲突的既有资产时，才允许提出 custom glyph，并且必须先证明新增资产比经典行业语义更清楚。任何新用户可见文案同时闭合简体中文和英文。
 
@@ -411,7 +424,7 @@ OmniMind 不静默轮询并采用上游变化。每次升级重新锁定 exact a
 
 代码证据必须记录仓库完整路径与稳定 symbol，不以 basename 或旧行号作为唯一定位。若 `Layers/` 与 `Services/` 存在同名文件，必须明确区分运行实现与接口/tag；若代码只是移动而 owner 不变，只更新 evidence 路由，不改写产品 architecture。外部 README、官方文档和类型声明只能证明候选能力；OmniMind 已接入与否仍必须由当前 adapter wiring、init/list/status 或真实 journey 证明。
 
-研究设计与执行指南不得保存施工阶段名、next action 或当日进度快照。新会话必须实时读取 `execution-brief.md` 并引用当时原文；本文只规定未被 sole owner 明确准入时不得实施。这样修改施工顺序时无需同步重写研究文档。
+研究设计与执行指南可以保存长期稳定的依赖层次、falsifier、proof protocol 与 stop-loss，但不得授予当前准入，也不得把证据快照冒充 current progress/next action。新会话必须实时读取 `execution-brief.md` 并引用当时原文；本文只规定未被 sole owner 明确准入时不得实施。这样修改当前施工顺序时，无需同步改写长期验证协议。
 
 ## 12. Stop conditions
 
