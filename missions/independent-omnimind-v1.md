@@ -186,7 +186,8 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Fresh-empty user journey：Chat在whole-product无sendable exact selection时直接显示克制的“配置模型后开始”surface；原Composer写入marker并附加`favicon-32.png`后进入Add。Add为搜索优先的单列紧凑列表，首屏明确分为推荐/其他服务，并保留弱一级可用的API地址入口；DeepSeek detail独立呈现认证与`2 known / 0 available`。维护者授权后从进程内秘密来源输入API Key，raw key未进入Git、argv、日志、截图、artifact或本Mission；login独立完成，自动dynamic catalog refresh在20秒bound内结算并得到`2 known / 2 available`，随后exact handoff回原Chat，marker与附件均保持，Composer选择`DeepSeek V4 Flash`。首条真实turn只dispatch一次，约21秒完成；上游诚实报告该模型不支持图片，但text与exact model均成功，未伪装图片已发送。
 - Full exit/reopen：全部任务App进程归零后，以同一显式task root和最小shell环境重开；再次证明Main、两类Helper、Renderer与bundled Server路径一致、Server仅loopback。原Conversation、marker、附件、exact `DeepSeek V4 Flash` selection与Provider回复均恢复，Settings仍为DeepSeek已配置、`2 known / 2 available`，首启surface不再重复出现；随后App再次完整退出且进程归零。
 - Final language/layout/a11y/visual review：安装App先在简中完成setup、auth、catalog、handoff与reopen，再切English核对Overview/Add/detail/auth/catalog主文案；正常Add行只显示本地化`API Key`/`Sign in`，没有raw Pi/runtime label。真实键盘路径证明Add搜索自动聚焦、Tab/Enter进入detail后Back获得焦点、返回恢复搜索与原服务焦点、Escape先清空搜索再退出Add并把焦点还给`Add model service`。AX tree中的service row、Back、search、attachment与icon-only controls均有稳定名称，行内decorative品牌图标未制造重复可访问名称。窗口缩到App允许的最小宽度后Overview与Add仍无横向溢出、卡片墙或隐藏主动作；Light与Dark实屏均确认DeepSeek与推荐服务图标大小/对齐正确，monochrome与彩色品牌在两种背景均可见。
-- Candidate boundary：该证据关闭本任务原始用户主线的final exact fresh-empty packaged journey与最终简中/英文、窄宽度、键盘/screen-reader、light/dark复核，等待fresh independent completion judge后裁决current product candidate。安全Advanced仍只承诺typed、credential-blind安全子集；Queue/automation不属于direct Composer自动回填，Chat synthetic空model仍是presentation debt，Provider native Session与Product SQLite不伪装成跨进程事务。Agent Core不属于本任务；两条用户拥有的research路径未stage、未覆盖。
+- Independent completion judge：fresh judge以exact product `dac46ac6114a674614b9c9c653cf533cfc9ef43b` / evidence `900a9c88e`独立核对SQLite exact binding、唯一user/assistant turn、claimed附件、隔离文件权限与退出状态，并顺序复跑Server `61/61`、packaged-owner browser `42/42`；最终 verdict `CLEAN`、P0/P1=0，允许original Model services + Composer当前完成门通过。
+- Candidate boundary：该证据关闭本任务原始用户主线的final exact fresh-empty packaged journey与最终简中/英文、窄宽度、键盘/screen-reader、light/dark复核。安全Advanced仍只承诺typed、credential-blind安全子集；Queue/automation不属于direct Composer自动回填，Chat synthetic空model仍是presentation debt，Provider native Session与Product SQLite不伪装成跨进程事务。Agent Core不属于本任务；两条用户拥有的research路径未stage、未覆盖。
 
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
@@ -217,8 +218,8 @@ F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 7. Blockers
 
-Apple signing/notary、Windows Trusted Signing与Windows/Linux原生install/open journey已由维护者明确交给工程部，属于external engineering handoff / out of current Model services + Composer scope；它们没有完成或verified，但不再阻塞本次product candidate，当前会话不施工、不等待、不追问。现有普通Linux-only CI与same-ref cancellation保持；macOS/Windows仅manual/tag build-only，继续不创建Release、不发布、不改update feed、不恢复复杂矩阵或重复smoke。当前唯一剩余完成门是上方final exact fresh-empty packaged证据的fresh independent completion judge。
+Apple signing/notary、Windows Trusted Signing与Windows/Linux原生install/open journey已由维护者明确交给工程部，属于external engineering handoff / out of current Model services + Composer scope；它们没有完成或verified，但不再阻塞本次product candidate，当前会话不施工、不等待、不追问。现有普通Linux-only CI与same-ref cancellation保持；macOS/Windows仅manual/tag build-only，继续不创建Release、不发布、不改update feed、不恢复复杂矩阵或重复smoke。上方final exact fresh-empty packaged证据已通过fresh independent completion judge，当前Model services + Composer任务无剩余P0/P1 blocker。
 
 ## 8. Done
 
-Not done. 当前不存在可发布 V1 candidate。
+Original Model services + Composer当前产品任务的candidate完成门已通过；这不等于公开发行或把整份V1 Campaign的其他claim改写成verified。Mission保持active，外部工程交接与本任务明确保留的安全/跨进程边界继续按各自owner处理。
