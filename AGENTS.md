@@ -36,6 +36,8 @@
 - 开始前核相关入口、`git status --short` 和一个可观察成功条件；只改任务允许的路径，保留未知修改。
 - 设计或接入任何产品能力前，必须先沿真实调用链盘点现状：从用户可见入口追到 route/command、配置与激活门、API/数据 owner、外部 authority 及失败/不可用行为，并明确区分“已存在、部分存在、缺失”。优先配置、接线或补齐现有链路；未完成该盘点时，不得仅凭页面、文档、命名或理想架构新增平行入口、接口、状态或发布管道。
 - 使用最小完整实现和现有模式；不创建平行架构真相、ledger、manifest、第二 Campaign 或无必要的兼容双轨。
+- 采用成熟上游时，默认追求**相对该上游的最小必要偏离**，不能因架构洁癖把成熟产品或组件降格为少数源码后重建其生命周期。裁决同时最小化上游语义/源码改动、重复产品 owner、默认 runtime/prompt/tool/state 激活面、用户认知和长期同步成本；优先配置、接线、公开 host seam 与 upstream patch。尽量保留 upstream ancestry、目录结构和作者测试，并明确区分“源码保留”“发行物导出”“运行时实际注册”；源码存在不等于产品必须激活，入口关闭也必须证明没有 ambient writer、listener、timer、进程或第二控制面。
+- 候选来源在产品哲学和唯一 owner 边界内由真实效果与风险相称的 harness 决胜，不能仅因 package 更小、接口更整齐或功能更多而采用。验证应同时保护作者已经覆盖的生命周期冰山与 OmniMind 的路径、模型、权限、隔离、成本和用户 journey，但不得演化成复制生产语义的永久验证平台。需要物理分包时按可独立替换的生命周期责任拆分并保持窄公共合同，不按 Goal、Review、Workflow 等功能名称预建 package 或抽象。
 - 任何新增或修改的 OmniMind-owned 用户可见功能必须默认在同一变更中完整交付简体中文与英文；两种已支持语言的 catalog key 必须一一对应，正常可达路径不得以硬编码或缺失 key 回退成中英混杂。原始 Provider 输出、资产身份、路径、命令与诊断等不属于产品文案的边界，以及未来语言的准入规则，唯一遵循 `architecture/workbench.md`。
 - 用户可见语言的复核不能止于“已经使用翻译 key”或中英文 catalog parity。凡触达正常产品表面，必须按 `architecture/workbench.md` 同时检查 message catalog 的实际值、运行时投影的 Provider prompt/event、空态、进度、Toast、错误与恢复文案；内部 source/runtime/authority 术语只能进入该 owner 允许的技术详情。不得为消除泄漏而全局改名真实内部 API、法定 identity 或用户明确选择的 stock Pi；若普通产品文案与技术原文共用一条呈现路径，应在既有 presentation owner 内分层，而不是伪造或删除底层事实。
 - 开发期运行最窄、能证伪当前结论的检查；候选冻结后才在同一 SHA 运行相关 final gate。局部绿色不得扩张为未覆盖结论。
