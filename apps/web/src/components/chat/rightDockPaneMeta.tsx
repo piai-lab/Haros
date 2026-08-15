@@ -6,6 +6,7 @@
 import type { ReactNode } from "react";
 
 import type { LucideIcon } from "~/lib/icons";
+import type { MessageKey } from "~/i18n";
 import {
   DeviceMobileIcon,
   DiffIcon,
@@ -62,6 +63,33 @@ const FALLBACK_RIGHT_DOCK_PANE_META: RightDockPaneMeta = {
 // directly, so an unknown kind degrades gracefully rather than throwing.
 export function getRightDockPaneMeta(kind: RightDockPaneKind): RightDockPaneMeta {
   return RIGHT_DOCK_PANE_META[kind] ?? FALLBACK_RIGHT_DOCK_PANE_META;
+}
+
+/** Catalog key for a pane's visible label; `fallback` preserves launcher-specific wording. */
+export function rightDockPaneLabelKey(
+  kind: RightDockPaneKind,
+  fallback: string,
+): MessageKey {
+  switch (kind) {
+    case "browser":
+      return "workbench.browser";
+    case "device":
+      return "workbench.device";
+    case "diff":
+      return fallback === "Review" ? "workbench.review" : "workbench.diff";
+    case "explorer":
+      return "workbench.files";
+    case "file":
+      return "workbench.file";
+    case "terminal":
+      return "workbench.terminal";
+    case "sidechat":
+      return "workbench.sideChats";
+    case "git":
+      return fallback === "Source control" ? "workbench.sourceControl" : "workbench.git";
+    case "pullRequest":
+      return "workbench.pullRequest";
+  }
 }
 
 // Add-menu / quick triggers follow the canonical kind order from the single

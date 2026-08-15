@@ -58,11 +58,11 @@ export function EnvironmentEditorSection({
   const ActiveIcon = activeOption?.Icon;
 
   return (
-    <EnvironmentLabeledSection label={t("workbench.editor")}>
+    <EnvironmentLabeledSection label={t("environment.editor")}>
       {onOpenEditorView ? (
         <EnvironmentRow
           icon={<LayoutSidebarIcon aria-hidden className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
-          label={t("workbench.editorView")}
+          label={t("environment.builtInEditor")}
           onClick={onOpenEditorView}
         />
       ) : null}
@@ -80,8 +80,8 @@ export function EnvironmentEditorSection({
               }
               label={
                 activeOption
-                  ? t("workbench.openIn", { editor: activeOption.label })
-                  : t("workbench.openInEditor")
+                  ? t("environment.openIn", { editor: activeOption.label })
+                  : t("environment.openInEditor")
               }
               trailing={<EnvironmentRowChevron />}
             />

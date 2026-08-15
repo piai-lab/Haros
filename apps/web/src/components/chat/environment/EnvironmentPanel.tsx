@@ -1,11 +1,9 @@
 // FILE: EnvironmentPanel.tsx
-// Purpose: Codex-style "Environment" panel. Consolidates the chat-header diff toggle,
+// Purpose: "Environment" inspector. Consolidates the chat-header diff toggle,
 //          the composer-footer env/branch pickers, the header git actions, and the
 //          "Open in editor" controls into one vertical list of full-width rows. Always
-//          rendered as the same rounded floating card; the only difference is whether it
-//          overlays pinned top-right of the chat column (p-3 gutters). Full-width single
-//          chat also reserves transcript/composer inset; split panes and an open right dock
-//          use floating overlay only. The card surface and content are identical either way.
+//          rendered as the same rounded floating card pinned top-right of the chat column.
+//          It never reserves transcript or Composer layout space.
 // Layer: Environment panel container
 
 import type {
@@ -66,25 +64,12 @@ import {
   EnvironmentSectionDivider,
 } from "./EnvironmentRow";
 
-// Horizontal space (px) the docked card reserves on the right edge of the chat area.
-// Mirrors the card footprint — w-72 (288px) plus the p-3 wrapper gutters — so insetting
-// the chat content by this amount clears the overlay while leaving the transcript's
-// scrollbar pinned to the viewport's far right.
-export const ENVIRONMENT_DOCKED_CONTENT_INSET_PX = 312;
-
 const ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME =
   "pointer-events-none absolute inset-y-0 right-0 z-20 flex flex-col p-3";
 
 export interface EnvironmentPanelProps {
   /** Drives the slide-in/out transition; the panel stays mounted so CSS can interpolate. */
   open: boolean;
-  /**
-   * Both variants render the same top-right overlay card inside the chat column.
-   * `docked` also reserves layout space via {@link ENVIRONMENT_DOCKED_CONTENT_INSET_PX};
-   * `floating` is used when the column is narrow (split chat or right dock open) — overlay
-   * only, no content inset.
-   */
-  variant: "docked" | "floating";
   gitCwd: string | null;
   openInTarget: string | null;
   githubRepository?: {
@@ -182,8 +167,9 @@ function EnvironmentRecapSection({
   recap: NonNullable<EnvironmentPanelProps["recap"]>;
   markdownCwd: string | undefined;
 }) {
+  const { t } = useI18n();
   return (
-    <EnvironmentCollapsibleSection label="Recap">
+    <EnvironmentCollapsibleSection label={t("environment.recap")}>
       <div className="flex flex-col gap-1.5 pb-1.5">
         {recap.text ? (
           <div className="px-2">
@@ -207,7 +193,6 @@ function EnvironmentRecapSection({
 
 export function EnvironmentPanel({
   open,
-  variant,
   gitCwd,
   openInTarget,
   githubRepository: githubRepositoryProp,
@@ -290,15 +275,15 @@ export function EnvironmentPanel({
       ) : null}
 
       <div className="flex items-center justify-between gap-2 px-2 pb-0.5 pt-0.5">
-        <EnvironmentPanelTitle>{t("workbench.environment")}</EnvironmentPanelTitle>
+        <EnvironmentPanelTitle>{t("environment.title")}</EnvironmentPanelTitle>
         {/*
           icon-xs centers the 14px gear inside a 28/24px box, insetting it ~7/5px from the
           content edge; pull it back so the glyph's right edge lines up with the rows' chevrons
           (which sit flush against the same px-2 gutter).
         */}
         <IconButton
-          label={t("workbench.panelSections")}
-          tooltip={t("workbench.panelSections")}
+          label={t("environment.panelSections")}
+          tooltip={t("environment.panelSections")}
           className="-mr-[7px] sm:-mr-[5px]"
           onClick={() =>
             void navigate({
@@ -333,11 +318,11 @@ export function EnvironmentPanel({
             void api.shell
               .showInFolder(studioFolderPath)
               .then(onClose)
-              .catch((error) => {
+              .catch(() => {
                 toastManager.add({
                   type: "error",
                   title: t("error.openFolder"),
-                  description: error instanceof Error ? error.message : t("error.unknown"),
+                  description: t("error.unknown"),
                 });
               });
           }}
@@ -347,7 +332,7 @@ export function EnvironmentPanel({
       {isGitRepo ? (
         <EnvironmentRow
           icon={<ChangesIcon className={ENVIRONMENT_ROW_ICON_CLASS_NAME} aria-hidden />}
-          label={t("workbench.changes")}
+          label={t("environment.changes")}
           trailing={
             hasChanges ? (
               <>
@@ -385,7 +370,7 @@ export function EnvironmentPanel({
       {settings.showEnvironmentUsage ? <EnvironmentUsageSection provider={activeProvider} /> : null}
 
       {settings.showEnvironmentRepository && githubRepository && onOpenGithubRepository ? (
-        <EnvironmentLabeledSection label={t("workbench.repository")}>
+        <EnvironmentLabeledSection label={t("environment.repository")}>
           <EnvironmentRow
             icon={<GitHubIcon className={ENVIRONMENT_ROW_ICON_CLASS_NAME} aria-hidden />}
             label={<span className="truncate">{githubRepository.nameWithOwner}</span>}
@@ -495,14 +480,14 @@ export function EnvironmentPanel({
     </div>
   );
 
-  // Top-right overlay pinned to the chat column with p-3 edge gutters (same footprint in
-  // split panes and when the right dock is open). Docked mode additionally insets transcript
-  // content; floating overlays only without stealing flex width from the narrow chat pane.
+  // Top-right overlay pinned to the chat column with p-3 edge gutters. The inspector never
+  // participates in Timeline or Composer layout, so opening it cannot move the main canvas.
   return (
     <div
       className={ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME}
-      data-environment-panel-variant={variant}
+      data-environment-panel-presentation="overlay"
       aria-hidden={!open}
+      inert={!open}
     >
       <div
         className={cn(

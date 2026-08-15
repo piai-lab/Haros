@@ -2125,15 +2125,15 @@ export default function GitActionsControl({
                 showPanelPullRow
                   ? t("git.action.options")
                   : shouldDimPanelCommitPushRow
-                    ? t("git.action.commitPushOpenMenu")
-                    : t("git.action.commitPush")
+                    ? t("git.action.commitOrPushOpenMenu")
+                    : t("git.action.commitOrPush")
               }
               title={
                 showPanelPullRow
                   ? t("git.action.more")
                   : shouldDimPanelCommitPushRow
-                    ? t("git.action.commitPushOpenMore")
-                    : t("git.action.commitPush")
+                    ? t("git.action.commitOrPushOpenMore")
+                    : t("git.action.commitOrPush")
               }
             />
           }
@@ -2143,7 +2143,7 @@ export default function GitActionsControl({
           ) : (
             <EnvironmentRowBody
               icon={<GitActionGlyph name="push" className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
-              label={t("git.action.commitPush")}
+              label={t("git.action.commitOrPush")}
               trailing={<EnvironmentRowChevron />}
             />
           )}

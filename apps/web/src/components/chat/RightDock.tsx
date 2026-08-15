@@ -6,6 +6,7 @@
 import {
   type CSSProperties,
   type ReactNode,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -45,6 +46,7 @@ import {
 } from "./chatHeaderControls";
 import {
   getRightDockPaneMeta,
+  rightDockPaneLabelKey,
   type RightDockLauncherItem,
   resolveRightDockPaneIcon,
 } from "./rightDockPaneMeta";
@@ -83,6 +85,9 @@ interface RightDockProps {
   onCollapse: () => void;
   onOpenChange: (open: boolean) => void;
   onAddPane: (kind: RightDockPaneKind) => void;
+  /** Width the primary surface must retain while this dock is split beside it. */
+  minimumPrimaryWidth?: number;
+  presentation?: "split" | "exclusive";
   motionKey?: string;
   activePaneRuntimeMode?: DockPaneRuntimeMode;
   renderPane: (
@@ -93,28 +98,8 @@ interface RightDockProps {
 
 function useRightDockLabel() {
   const { t } = useI18n();
-  return (kind: RightDockPaneKind, fallback: string): string => {
-    switch (kind) {
-      case "browser":
-        return t("workbench.browser");
-      case "device":
-        return t("workbench.device");
-      case "diff":
-        return fallback === "Review" ? t("workbench.review") : t("workbench.diff");
-      case "explorer":
-        return t("workbench.files");
-      case "file":
-        return t("workbench.file");
-      case "terminal":
-        return t("workbench.terminal");
-      case "sidechat":
-        return t("workbench.sideChats");
-      case "git":
-        return fallback === "Source control" ? t("workbench.sourceControl") : t("workbench.git");
-      case "pullRequest":
-        return t("workbench.pullRequest");
-    }
-  };
+  return (kind: RightDockPaneKind, fallback: string): string =>
+    t(rightDockPaneLabelKey(kind, fallback));
 }
 
 function RightDockLauncher(props: {
@@ -158,6 +143,7 @@ function RightDockTab(props: {
   onSelect?: (() => void) | undefined;
   onClose: () => void;
 }) {
+  const { t } = useI18n();
   return (
     <SurfaceTabChip
       active={props.active}
@@ -165,7 +151,7 @@ function RightDockTab(props: {
       label={props.label}
       labelClassName="max-w-[10rem]"
       icon={props.icon ?? resolveRightDockPaneIcon(props.pane)}
-      closeLabel={`Close ${props.label}`}
+      closeLabel={t("workbench.closePanel", { panel: props.label })}
       onSelect={props.onSelect}
       onClose={props.onClose}
     />
@@ -222,32 +208,102 @@ export function RightDock(props: RightDockProps) {
     useDesktopTopBarWindowControlsGutterClassName();
 
   const keepMountedPaneIds = useKeepMountedPaneIds(props.state.panes, activePane);
-  // The dock must open as an exact 50/50 split of the chat shell. The CSS
-  // default can only approximate half (it cannot observe the resizable left
-  // sidebar), so on every open we measure the shell row hosting chat + dock and
-  // pin the dock width to exactly half of it. Mid-session drags still resize
-  // freely; the next open re-centers the split.
+  // The dock opens at its authored balanced/natural width while preserving the
+  // primary surface floor. The local shell measurement includes the actual
+  // left-navigation state, and later manual drags remain proportional during
+  // this open session.
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const manualSplitRatioRef = useRef<number | null>(null);
+  const previousOpenRef = useRef(props.state.open);
   const minWidth = props.minWidth;
+  const minimumPrimaryWidth = props.minimumPrimaryWidth ?? 0;
   const activePaneKind = activePane?.kind ?? null;
-  useEffect(() => {
-    if (!props.state.open) {
-      return;
-    }
+  const applyResponsiveWidth = useCallback(() => {
     const wrapper = contentRef.current?.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
     const shell = wrapper?.parentElement;
-    if (!wrapper || !shell) {
+    if (!wrapper || !shell) return;
+    if (props.presentation === "exclusive") {
+      wrapper.style.setProperty("--sidebar-width", "100%");
       return;
     }
-    // A phone-shaped pane has a natural width: half the shell leaves the device
-    // stranded in empty space, so kinds that render a fixed-aspect object open
-    // at their own comfortable size instead of the even split.
-    const preferredWidth = activePaneKind ? RIGHT_DOCK_PREFERRED_WIDTH[activePaneKind] : undefined;
-    const openWidth = preferredWidth ?? Math.round(shell.getBoundingClientRect().width / 2);
-    if (openWidth > 0) {
-      wrapper.style.setProperty("--sidebar-width", `${Math.max(minWidth, openWidth)}px`);
+    if (!props.state.open) {
+      wrapper.style.removeProperty("--sidebar-width");
+      return;
     }
-  }, [props.state.open, minWidth, activePaneKind]);
+    const shellWidth = shell.getBoundingClientRect().width;
+    if (shellWidth <= 0) return;
+    const preferredWidth = activePaneKind ? RIGHT_DOCK_PREFERRED_WIDTH[activePaneKind] : undefined;
+    const authoredWidth =
+      manualSplitRatioRef.current === null
+        ? (preferredWidth ?? Math.round(shellWidth / 2))
+        : Math.round(shellWidth * manualSplitRatioRef.current);
+    const maximumWidth = Math.max(0, shellWidth - minimumPrimaryWidth);
+    const openWidth = Math.min(Math.max(minWidth, authoredWidth), maximumWidth);
+    wrapper.style.setProperty("--sidebar-width", `${openWidth}px`);
+  }, [activePaneKind, minimumPrimaryWidth, minWidth, props.presentation, props.state.open]);
+  useLayoutEffect(() => {
+    if (props.state.open && !previousOpenRef.current) {
+      // Preserve the existing contract: a fresh open starts from the authored balanced/natural
+      // width. Manual drag only owns subsequent resizes during this open session.
+      manualSplitRatioRef.current = null;
+    }
+    previousOpenRef.current = props.state.open;
+    applyResponsiveWidth();
+  }, [applyResponsiveWidth, props.state.open]);
+  useEffect(() => {
+    if (!props.state.open || props.presentation === "exclusive") return;
+    const wrapper = contentRef.current?.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
+    const shell = wrapper?.parentElement;
+    if (!wrapper || !shell) return;
+    let releaseMotionFrameId: number | null = null;
+    const transitionTargets = [
+      wrapper.querySelector<HTMLElement>("[data-slot='sidebar-gap']"),
+      wrapper.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
+    ].filter((element): element is HTMLElement => element !== null);
+    const observer = new ResizeObserver(() => {
+      // ResizeObserver is delivered after layout and before paint. Apply the local CSS width
+      // immediately: another rAF would expose one frame where the shell has resized but the
+      // dock still uses the previous budget. This mutates no React/manual-intent state.
+      if (releaseMotionFrameId !== null) {
+        window.cancelAnimationFrame(releaseMotionFrameId);
+      }
+      transitionTargets.forEach((element) => {
+        element.style.setProperty("transition-duration", "0ms");
+      });
+      applyResponsiveWidth();
+      releaseMotionFrameId = window.requestAnimationFrame(() => {
+        releaseMotionFrameId = null;
+        transitionTargets.forEach((element) => {
+          element.style.removeProperty("transition-duration");
+        });
+      });
+    });
+    observer.observe(shell);
+    return () => {
+      observer.disconnect();
+      if (releaseMotionFrameId !== null) window.cancelAnimationFrame(releaseMotionFrameId);
+      transitionTargets.forEach((element) => {
+        element.style.removeProperty("transition-duration");
+      });
+    };
+  }, [applyResponsiveWidth, props.presentation, props.state.open]);
+  const handleManualResize = useCallback((width: number) => {
+    const wrapper = contentRef.current?.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
+    const shellWidth = wrapper?.parentElement?.getBoundingClientRect().width ?? 0;
+    if (shellWidth > 0) {
+      manualSplitRatioRef.current = width / shellWidth;
+    }
+  }, []);
+  const handleResponsiveWidthAcceptance = useCallback(
+    (context: { nextWidth: number; wrapper: HTMLElement }) => {
+      const shellWidth = context.wrapper.parentElement?.getBoundingClientRect().width ?? 0;
+      if (shellWidth > 0 && context.nextWidth > shellWidth - minimumPrimaryWidth) {
+        return false;
+      }
+      return props.shouldAcceptWidth(context);
+    },
+    [minimumPrimaryWidth, props.shouldAcceptWidth],
+  );
   const renderedPanes = props.state.panes.filter(
     (pane) => pane.id === activePane?.id || keepMountedPaneIds.has(pane.id),
   );
@@ -255,21 +311,28 @@ export function RightDock(props: RightDockProps) {
   // remount) derives straight back to "suppressed" in that same render, and the
   // rAF below re-enables motion once the suppressed frame has painted. Mounting
   // with the dock open starts suppressed for the same reason.
+  // Responsive presentation changes must commit their final geometry before
+  // paint; they are not drawer open/close animations. Fold the presentation
+  // tier into the existing one-frame motion gate so no second motion owner is
+  // introduced.
+  const chromeMotionKey = `${props.motionKey ?? "default"}:${props.presentation ?? "split"}`;
   const [motionState, setMotionState] = useState<{
-    key: RightDockProps["motionKey"];
+    key: string;
     allow: boolean;
-  }>(() => ({ key: props.motionKey, allow: !props.state.open }));
-  const shouldSuppressChromeMotion = !(motionState.key === props.motionKey && motionState.allow);
+  }>(() => ({ key: chromeMotionKey, allow: !props.state.open }));
+  const shouldSuppressChromeMotion = !(
+    motionState.key === chromeMotionKey && motionState.allow
+  );
 
   useEffect(() => {
     if (!shouldSuppressChromeMotion) {
       return;
     }
     const frameId = window.requestAnimationFrame(() => {
-      setMotionState({ key: props.motionKey, allow: true });
+      setMotionState({ key: chromeMotionKey, allow: true });
     });
     return () => window.cancelAnimationFrame(frameId);
-  }, [props.motionKey, shouldSuppressChromeMotion]);
+  }, [chromeMotionKey, shouldSuppressChromeMotion]);
 
   // Smooth drawer-style easing for the open/close slide. `ease-linear` (the
   // sidebar default) reads as stepped/janky on the wide dock; this curve front-
@@ -278,14 +341,27 @@ export function RightDock(props: RightDockProps) {
   const chromeMotionClass = shouldSuppressChromeMotion
     ? SIDEBAR_OFFCANVAS_MOTION_SUPPRESSED_CLASS
     : SIDEBAR_OFFCANVAS_MOTION_CLASS;
+  const responsiveSplitMaxWidthClass =
+    props.presentation === "exclusive"
+      ? undefined
+      : "max-w-[calc(100cqw-var(--right-dock-primary-floor))]";
 
   return (
     <SidebarProvider
       defaultOpen={false}
       open={props.state.open}
       onOpenChange={props.onOpenChange}
-      className="w-auto min-h-0 flex-none bg-transparent"
-      style={{ "--sidebar-width": props.defaultWidth } as CSSProperties}
+      className={cn(
+        "w-auto min-h-0 flex-none bg-transparent",
+        props.presentation === "exclusive" && "absolute inset-0 z-20 w-full",
+      )}
+      data-right-dock-presentation={props.presentation ?? "split"}
+      style={
+        {
+          "--sidebar-width": props.presentation === "exclusive" ? "100%" : props.defaultWidth,
+          "--right-dock-primary-floor": `${minimumPrimaryWidth}px`,
+        } as CSSProperties
+      }
     >
       <Sidebar
         side="right"
@@ -293,14 +369,21 @@ export function RightDock(props: RightDockProps) {
         className={cn(
           "border-l border-[var(--app-surface-divider)] text-foreground",
           chromeMotionClass,
+          responsiveSplitMaxWidthClass,
+          props.presentation === "exclusive" && "absolute! inset-0! h-full! w-full!",
         )}
         innerClassName={CHAT_BACKGROUND_CLASS_NAME}
-        gapClassName={chromeMotionClass}
+        gapClassName={cn(chromeMotionClass, responsiveSplitMaxWidthClass)}
         transparentSurface
-        resizable={{
-          minWidth: props.minWidth,
-          shouldAcceptWidth: props.shouldAcceptWidth,
-        }}
+        resizable={
+          props.presentation === "exclusive"
+            ? false
+            : {
+                minWidth: props.minWidth,
+                onResize: handleManualResize,
+                shouldAcceptWidth: handleResponsiveWidthAcceptance,
+              }
+        }
       >
         <div
           ref={contentRef}
@@ -390,6 +473,10 @@ export function RightDock(props: RightDockProps) {
                   )}
                   aria-hidden={isVisible ? undefined : true}
                   inert={isVisible ? undefined : true}
+                  data-right-dock-pane-id={pane.id}
+                  data-right-dock-pane-kind={pane.kind}
+                  data-right-dock-pane-runtime={runtimeMode}
+                  data-right-dock-pane-visible={isVisible ? "true" : "false"}
                   data-native-browser-surface={
                     pane.kind === "browser" && isActive && runtimeMode === "live"
                       ? "true"

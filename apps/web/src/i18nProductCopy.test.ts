@@ -4,8 +4,14 @@ import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "./i18n";
+import {
+  localizeSettingsSearchEntryTitle,
+  rankSettingsSearchEntries,
+  SETTINGS_SEARCH_ENTRIES,
+} from "./settingsSearchIndex";
 
 const PRODUCT_COPY_SOURCES = [
+  "routes/_chat.tsx",
   "routes/_chat.settings.tsx",
   "routes/-automations.shared.tsx",
   "routes/_chat.automations.$automationId.tsx",
@@ -19,6 +25,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/ChatMarkdown.tsx",
   "components/BrowserPanel.tsx",
   "components/BranchToolbarBranchSelector.tsx",
+  "components/BranchToolbar.tsx",
   "components/DesktopWindowControls.tsx",
   "components/DiffPanel.tsx",
   "components/DiffPanelFileJumpMenu.tsx",
@@ -61,7 +68,10 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ComposerModelEffortPicker.tsx",
   "components/chat/ProviderModelPicker.tsx",
   "components/chat/ContextWindowMeter.tsx",
+  "components/chat/DockExplorerPane.tsx",
+  "components/chat/DockFilePane.tsx",
   "components/chat/GeneratedMarkdownImage.tsx",
+  "components/chat/GitPanel.tsx",
   "components/chat/ComposerPendingTerminalContexts.tsx",
   "components/chat/ComposerPendingUserInputPanel.tsx",
   "components/chat/ComposerSlashStatusDialog.tsx",
@@ -70,6 +80,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ProposedPlanCard.tsx",
   "components/chat/RateLimitBanner.tsx",
   "components/chat/RightDock.tsx",
+  "components/chat/SingleChatSurface.tsx",
   "components/chat/SplitChatSurface.tsx",
   "components/chat/WorkspaceFilePreviewHeader.tsx",
   "components/chat/ThreadDetailHydrationState.tsx",
@@ -79,7 +90,24 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ToolCallDetailsDialog.tsx",
   "components/chat/workspaceExplorer.tsx",
   "components/chat/environment/EnvironmentAutomationsSection.tsx",
+  "components/chat/environment/EnvironmentEditableChecklistRow.tsx",
+  "components/chat/environment/EnvironmentEditorSection.tsx",
+  "components/chat/environment/EnvironmentLocalServersSection.tsx",
+  "components/chat/environment/EnvironmentMarkersSection.tsx",
+  "components/chat/environment/EnvironmentNotesSection.tsx",
+  "components/chat/environment/EnvironmentPanel.tsx",
+  "components/chat/environment/EnvironmentPinnedSection.tsx",
+  "components/chat/environment/EnvironmentProjectInstructionsSection.tsx",
   "components/chat/environment/EnvironmentPullRequestSection.tsx",
+  "components/chat/environment/EnvironmentRow.tsx",
+  "components/chat/environment/EnvironmentStudioOutputsSection.tsx",
+  "components/chat/environment/EnvironmentToggle.tsx",
+  "components/chat/environment/EnvironmentUsageSection.tsx",
+  "components/chat/environment/usePinnedMessageActions.ts",
+  "components/chat/environment/EnvironmentPanel.logic.ts",
+  "components/chat/environment/environmentPanelStyles.ts",
+  "components/chat/environment/environmentPullRequest.logic.ts",
+  "components/chat/environment/useThreadNotesAutosave.ts",
   "components/kanban/KanbanCardView.tsx",
   "components/kanban/KanbanColumn.tsx",
   "components/kanban/KanbanNewTaskDialog.tsx",
@@ -142,6 +170,8 @@ const PRODUCT_COPY_SOURCES = [
   "hooks/useComposerCommandMenuItems.ts",
   "hooks/useHandleNewThread.ts",
   "lib/sidechatCreation.ts",
+  "lib/threadEnvironment.ts",
+  "settingsSearchIndex.ts",
   "shortcutsSheet.ts",
 ] as const;
 
@@ -154,6 +184,38 @@ const REQUIRED_SHELL_COPY_SOURCES = [
   "components/Sidebar.tsx",
   "components/chat/ChatHeader.tsx",
   "components/PluginLibrary.tsx",
+] as const;
+
+const REQUIRED_W1_COPY_SOURCES = [
+  "routes/_chat.tsx",
+  "components/BranchToolbar.tsx",
+  "components/GitActionsControl.tsx",
+  "components/chat/RightDock.tsx",
+  "components/chat/DockExplorerPane.tsx",
+  "components/chat/DockFilePane.tsx",
+  "components/chat/GitPanel.tsx",
+  "components/chat/SingleChatSurface.tsx",
+  "components/chat/environment/EnvironmentAutomationsSection.tsx",
+  "components/chat/environment/EnvironmentEditableChecklistRow.tsx",
+  "components/chat/environment/EnvironmentEditorSection.tsx",
+  "components/chat/environment/EnvironmentLocalServersSection.tsx",
+  "components/chat/environment/EnvironmentMarkersSection.tsx",
+  "components/chat/environment/EnvironmentNotesSection.tsx",
+  "components/chat/environment/EnvironmentPanel.logic.ts",
+  "components/chat/environment/EnvironmentPanel.tsx",
+  "components/chat/environment/environmentPanelStyles.ts",
+  "components/chat/environment/EnvironmentPinnedSection.tsx",
+  "components/chat/environment/EnvironmentProjectInstructionsSection.tsx",
+  "components/chat/environment/environmentPullRequest.logic.ts",
+  "components/chat/environment/EnvironmentPullRequestSection.tsx",
+  "components/chat/environment/EnvironmentRow.tsx",
+  "components/chat/environment/EnvironmentStudioOutputsSection.tsx",
+  "components/chat/environment/EnvironmentToggle.tsx",
+  "components/chat/environment/EnvironmentUsageSection.tsx",
+  "components/chat/environment/usePinnedMessageActions.ts",
+  "components/chat/environment/useThreadNotesAutosave.ts",
+  "lib/threadEnvironment.ts",
+  "settingsSearchIndex.ts",
 ] as const;
 
 const PRODUCT_COPY_PROPERTIES = new Set([
@@ -242,7 +304,7 @@ function sourceFindings(relativePath: (typeof PRODUCT_COPY_SOURCES)[number]): Fi
     sourceText,
     ts.ScriptTarget.Latest,
     true,
-    ts.ScriptKind.TSX,
+    relativePath.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
   const findings = new Map<string, Finding>();
 
@@ -280,7 +342,11 @@ function sourceFindings(relativePath: (typeof PRODUCT_COPY_SOURCES)[number]): Fi
       PRODUCT_COPY_PROPERTIES.has(node.name.getText(sourceFile)) &&
       (ts.isStringLiteral(node.initializer) || ts.isNoSubstitutionTemplateLiteral(node.initializer))
     ) {
-      record(node, "property", node.initializer.text);
+      // Settings search titles are stable English DOM-anchor records. Their visible projection
+      // is localized below for every entry and both supported catalogs.
+      if (!(relativePath === "settingsSearchIndex.ts" && node.name.getText(sourceFile) === "title")) {
+        record(node, "property", node.initializer.text);
+      }
     } else if (
       ts.isPropertyAssignment(node) &&
       PRODUCT_COPY_PROPERTIES.has(node.name.getText(sourceFile)) &&
@@ -333,6 +399,14 @@ describe("reachable OmniMind-owned product copy", () => {
     ).toEqual([]);
   });
 
+  it("keeps every W1 responsive-workbench owner inside the source-level gate", () => {
+    const scannedSources = new Set<string>(PRODUCT_COPY_SOURCES);
+    expect(
+      REQUIRED_W1_COPY_SOURCES.filter((source) => !scannedSources.has(source)),
+      "add every W1 copy owner to PRODUCT_COPY_SOURCES",
+    ).toEqual([]);
+  });
+
   it("routes reachable product copy through the sole message catalog", () => {
     const allFindings = PRODUCT_COPY_SOURCES.flatMap(sourceFindings);
     const allowlist = new Set<string>(RAW_FACT_ALLOWLIST);
@@ -348,6 +422,73 @@ describe("reachable OmniMind-owned product copy", () => {
       ),
       "translate product copy with useI18n(); allow only exact reviewed raw facts",
     ).toEqual([]);
+  });
+
+  it("projects every canonical Settings search record through both language catalogs", () => {
+    for (const entry of SETTINGS_SEARCH_ENTRIES) {
+      expect(localizeSettingsSearchEntryTitle(entry, (key) => EN_MESSAGES[key])).toBeTruthy();
+      expect(localizeSettingsSearchEntryTitle(entry, (key) => ZH_CN_MESSAGES[key])).toBeTruthy();
+    }
+
+    const expectedZhW1Titles = new Map([
+      ["Usage", "用量"],
+      ["Repository", "代码仓库"],
+      ["Recap", "摘要"],
+      ["Pinned messages", "置顶消息"],
+      ["Text markers", "文本标记"],
+      ["Project instructions", "项目指令"],
+      ["Notepad", "记事本"],
+    ]);
+    for (const [canonicalTitle, localizedTitle] of expectedZhW1Titles) {
+      const entry = SETTINGS_SEARCH_ENTRIES.find((candidate) => candidate.title === canonicalTitle);
+      expect(entry).toBeDefined();
+      expect(localizeSettingsSearchEntryTitle(entry!, (key) => ZH_CN_MESSAGES[key])).toBe(
+        localizedTitle,
+      );
+      expect(
+        rankSettingsSearchEntries(localizedTitle, 100, (key) => ZH_CN_MESSAGES[key]).some(
+          (candidate) => candidate.title === localizedTitle,
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("locks the W1 Environment, thread environment, Workbench, and Git taxonomy", () => {
+    const exact = [
+      ["environment.title", "Environment", "环境信息"],
+      ["environment.changes", "Changes", "变更"],
+      ["settings.environmentPanel", "Environment panel", "环境信息面板"],
+      ["environment.repository", "Repository", "代码仓库"],
+      ["environment.localServers", "Local servers", "本地服务"],
+      ["environment.editor", "Editor", "编辑器"],
+      ["environment.builtInEditor", "Built-in editor", "内置编辑器"],
+      ["environment.usage", "Usage", "用量"],
+      ["threadEnvironment.local", "Local", "本地"],
+      ["threadEnvironment.worktree", "Worktree", "工作树"],
+      ["threadEnvironment.newWorktree", "New worktree", "新建工作树"],
+      ["git.action.commitOrPush", "Commit or push", "提交或推送"],
+      ["git.action.commitPush", "Commit and push", "提交并推送"],
+      ["git.panel.changes", "Changes", "变更"],
+      ["workbench.sideChats", "Side chats", "侧边对话"],
+      ["environment.outputs", "Outputs", "产出"],
+      ["environment.recap", "Recap", "摘要"],
+      ["environment.pinnedMessages", "Pinned messages", "置顶消息"],
+      ["environment.textMarkers", "Text markers", "文本标记"],
+      ["environment.notepad", "Notepad", "记事本"],
+      [
+        "environment.notepadPlaceholder",
+        "Add notes for this task…",
+        "记录当前任务的临时信息…",
+      ],
+      ["environment.projectInstructions", "Project instructions", "项目指令"],
+      ["composer.command.subagents", "Subagents", "子智能体"],
+    ] as const;
+    for (const [key, en, zh] of exact) {
+      expect(EN_MESSAGES[key]).toBe(en);
+      expect(ZH_CN_MESSAGES[key]).toBe(zh);
+    }
+    expect("workbench.environment" in EN_MESSAGES).toBe(false);
+    expect("workbench.changes" in EN_MESSAGES).toBe(false);
   });
 
   it("keeps normal Model services copy in product language", () => {

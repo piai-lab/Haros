@@ -13,6 +13,7 @@ import {
 } from "@omnimind/shared/threadEnvironment";
 import { deriveAssociatedWorktreeMetadata } from "@omnimind/shared/threadWorkspace";
 import type { Thread } from "../types";
+import type { MessageKey } from "../i18n";
 
 export type ForkThreadTarget = "local" | "worktree";
 
@@ -35,10 +36,13 @@ export {
 export interface ThreadEnvironmentPresentation {
   mode: ThreadEnvironmentMode;
   workspaceState: ResolvedThreadWorkspaceState;
-  shortLabel: "Local" | "Worktree";
-  localOptionLabel: "Local project";
-  worktreeOptionLabel: "Worktree";
-  worktreeBadgeLabel: "Worktree" | "Worktree pending" | null;
+  shortLabelKey: "threadEnvironment.local" | "threadEnvironment.worktree";
+  localOptionLabelKey: "threadEnvironment.local";
+  worktreeOptionLabelKey: "threadEnvironment.worktree";
+  worktreeBadgeLabelKey:
+    | "threadEnvironment.worktree"
+    | "threadEnvironment.worktreePending"
+    | null;
 }
 
 export function resolveThreadEnvironmentPresentation(input: {
@@ -51,14 +55,15 @@ export function resolveThreadEnvironmentPresentation(input: {
   return {
     mode,
     workspaceState,
-    shortLabel: mode === "worktree" ? "Worktree" : "Local",
-    localOptionLabel: "Local project",
-    worktreeOptionLabel: "Worktree",
-    worktreeBadgeLabel:
+    shortLabelKey:
+      mode === "worktree" ? "threadEnvironment.worktree" : "threadEnvironment.local",
+    localOptionLabelKey: "threadEnvironment.local",
+    worktreeOptionLabelKey: "threadEnvironment.worktree",
+    worktreeBadgeLabelKey:
       workspaceState === "worktree-ready"
-        ? "Worktree"
+        ? "threadEnvironment.worktree"
         : workspaceState === "worktree-pending"
-          ? "Worktree pending"
+          ? "threadEnvironment.worktreePending"
           : null,
   };
 }
@@ -66,7 +71,7 @@ export function resolveThreadEnvironmentPresentation(input: {
 export interface DiffEnvironmentState {
   pending: boolean;
   cwd: string | null;
-  disabledReason: string | null;
+  disabledReasonKey: MessageKey | null;
 }
 
 // Diff surfaces stay disabled while a worktree-intended chat is still waiting for its path.
@@ -85,9 +90,7 @@ export function resolveDiffEnvironmentState(input: {
           envMode: input.envMode,
           worktreePath: input.worktreePath,
         }),
-    disabledReason: pending
-      ? "Diff and summary will be available once the worktree is ready for this chat."
-      : null,
+    disabledReasonKey: pending ? "threadEnvironment.diffPending" : null,
   };
 }
 

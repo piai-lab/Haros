@@ -9,6 +9,7 @@ import {
 } from "~/components/ProviderUsageMenuControl";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import { MenuTrigger } from "~/components/ui/menu";
+import { useI18n } from "~/i18n";
 
 import {
   ENVIRONMENT_ROW_CLASS_NAME,
@@ -19,6 +20,7 @@ import {
 } from "./EnvironmentRow";
 
 export function EnvironmentUsageSection({ provider }: { provider: ProviderKind }) {
+  const { t } = useI18n();
   const model = useProviderUsageMenuModel(provider);
 
   if (!model) {
@@ -26,7 +28,7 @@ export function EnvironmentUsageSection({ provider }: { provider: ProviderKind }
   }
 
   return (
-    <EnvironmentLabeledSection label="Usage">
+    <EnvironmentLabeledSection label={t("environment.usage")}>
       <ProviderUsageMenuPopup provider={provider} model={model} align="start">
         <MenuTrigger
           render={

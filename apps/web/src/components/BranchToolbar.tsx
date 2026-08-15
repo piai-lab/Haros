@@ -240,7 +240,11 @@ export function RuntimeUsageControls({
                   runtimeMode === "auto" && RUNTIME_AUTO_ACCENT_CLASS_NAME,
                   runtimeMode === "full-access" && RUNTIME_FULL_ACCESS_ACCENT_CLASS_NAME,
                 )}
-                title={`${runtimePresentation.label}: ${runtimePresentation.description}. ${t("composer.changePermissions")}.`}
+                title={t("threadEnvironment.runtimeSummary", {
+                  label: runtimePresentation.label,
+                  description: runtimePresentation.description,
+                  action: t("composer.changePermissions"),
+                })}
               />
             }
           >
@@ -320,6 +324,7 @@ export default function BranchToolbar({
   showBranchSelector: showBranchSelectorProp,
   fixedLocalWorkspaceCwd,
 }: BranchToolbarProps) {
+  const { t } = useI18n();
   const handoffBusy = handoffBusyProp ?? false;
   const variant = variantProp ?? "toolbar";
   const showBranchSelector = showBranchSelectorProp ?? true;
@@ -360,6 +365,7 @@ export default function BranchToolbar({
     envMode: effectiveEnvMode,
     worktreePath: activeWorktreePath,
   });
+  const environmentShortLabel = t(environmentPresentation.shortLabelKey);
 
   const setThreadWorkspace = useCallback(
     (patch: ThreadWorkspacePatch) => {
@@ -546,13 +552,13 @@ export default function BranchToolbar({
               {isPanel ? (
                 <EnvironmentRowBody
                   icon={envGlyph(ENVIRONMENT_ROW_ICON_CLASS_NAME)}
-                  label={environmentPresentation.shortLabel}
+                  label={environmentShortLabel}
                   trailing={<EnvironmentRowChevron />}
                 />
               ) : (
                 <>
                   {envGlyph("size-3.5")}
-                  {environmentPresentation.shortLabel}
+                  {environmentShortLabel}
                   <ChevronDownIcon className="size-3 opacity-60" />
                 </>
               )}
@@ -564,38 +570,38 @@ export default function BranchToolbar({
               className="w-60 min-w-60"
             >
               <MenuGroup>
-                <MenuGroupLabel>Continue in</MenuGroupLabel>
+                <MenuGroupLabel>{t("threadEnvironment.continueIn")}</MenuGroupLabel>
                 {environmentPresentation.mode === "local" ? (
                   <ContinueInMenuItem
                     icon={<CentralIcon name="macbook-air" className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label={environmentPresentation.localOptionLabel}
+                    label={t(environmentPresentation.localOptionLabelKey)}
                     selected
                   />
                 ) : (
                   <ContinueInMenuItem
                     icon={<CentralIcon name="macbook-air" className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label={environmentPresentation.localOptionLabel}
+                    label={t(environmentPresentation.localOptionLabelKey)}
                     onSelect={() => onEnvModeChange("local")}
                   />
                 )}
                 {canSwitchToWorktree ? (
                   <ContinueInMenuItem
                     icon={<WorktreeGlyph className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label="New worktree"
+                    label={t("threadEnvironment.newWorktree")}
                     onSelect={() => onEnvModeChange("worktree")}
                   />
                 ) : null}
                 {effectiveEnvMode === "worktree" && !canHandoffToLocal ? (
                   <ContinueInMenuItem
                     icon={<WorktreeGlyph className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label={environmentPresentation.worktreeOptionLabel}
+                    label={t(environmentPresentation.worktreeOptionLabelKey)}
                     selected
                   />
                 ) : null}
                 {canHandoffToWorktree && onHandoffToWorktree ? (
                   <ContinueInMenuItem
                     icon={<WorktreeGlyph className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label="Hand off to new worktree"
+                    label={t("threadEnvironment.handoffNewWorktree")}
                     disabled={handoffBusy}
                     onSelect={() => onHandoffToWorktree()}
                   />
@@ -603,7 +609,7 @@ export default function BranchToolbar({
                 {canHandoffToLocal && onHandoffToLocal ? (
                   <ContinueInMenuItem
                     icon={<HandoffIcon className={ENV_MENU_ICON_CLASS_NAME} />}
-                    label="Hand off to local"
+                    label={t("threadEnvironment.handoffLocal")}
                     disabled={handoffBusy}
                     onSelect={() => onHandoffToLocal()}
                   />
@@ -615,7 +621,9 @@ export default function BranchToolbar({
               <Collapsible open={rateLimitsOpen} onOpenChange={setRateLimitsOpen}>
                 <MenuItem closeOnClick={false} onClick={() => setRateLimitsOpen((open) => !open)}>
                   <CentralIcon name="clock" className="size-3.5 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">Rate limits remaining</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {t("threadEnvironment.rateLimitsRemaining")}
+                  </span>
                   <DisclosureChevron
                     open={rateLimitsOpen}
                     className="text-[var(--color-text-foreground-secondary)]"
@@ -641,13 +649,13 @@ export default function BranchToolbar({
           <div className={cn(ENVIRONMENT_ROW_CLASS_NAME, "cursor-default hover:bg-transparent")}>
             <EnvironmentRowBody
               icon={<WorktreeGlyph className={ENVIRONMENT_ROW_ICON_CLASS_NAME} />}
-              label={environmentPresentation.shortLabel}
+              label={environmentShortLabel}
             />
           </div>
         ) : (
           <span className="inline-flex items-center gap-2 px-1.5 text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)]">
             <WorktreeGlyph className="size-3.5" />
-            {environmentPresentation.shortLabel}
+            {environmentShortLabel}
           </span>
         )}
 

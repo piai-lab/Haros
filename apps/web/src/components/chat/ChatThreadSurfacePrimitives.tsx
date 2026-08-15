@@ -124,6 +124,7 @@ export function DeferredChatView(props: {
   onChangeThread?: () => void;
   onCloseThreadPane?: () => void;
   onMounted?: () => void;
+  onPlanSidebarOpenChange?: (open: boolean) => void;
 }) {
   const onMounted = props.onMounted ?? noopChatSurfaceAction;
   const mountKey = `${props.paneScopeId}:${props.threadId}`;
@@ -176,6 +177,9 @@ export function DeferredChatView(props: {
       {...(props.viewModeAction !== undefined ? { viewModeAction: props.viewModeAction } : {})}
       {...(props.onChangeThread ? { onChangeThreadInSplitPane: props.onChangeThread } : {})}
       {...(props.onCloseThreadPane ? { onCloseThreadPane: props.onCloseThreadPane } : {})}
+      {...(props.onPlanSidebarOpenChange
+        ? { onPlanSidebarOpenChange: props.onPlanSidebarOpenChange }
+        : {})}
     />
   );
 }

@@ -7,6 +7,7 @@ import { isThreadMarkerAvailable } from "@omnimind/shared/threadMarkers";
 
 import { cn } from "~/lib/utils";
 import { deriveThreadMarkerLabel } from "~/threadMarkers";
+import { useI18n } from "~/i18n";
 
 import { EnvironmentEditableChecklistRow } from "./EnvironmentEditableChecklistRow";
 import { EnvironmentCollapsibleSection } from "./EnvironmentRow";
@@ -35,11 +36,12 @@ export function EnvironmentMarkersSection({
   onRemove,
   onRename,
 }: EnvironmentMarkersSectionProps) {
+  const { t } = useI18n();
   if (markers.length === 0) {
     return null;
   }
   return (
-    <EnvironmentCollapsibleSection label="Markers">
+    <EnvironmentCollapsibleSection label={t("environment.textMarkers")}>
       <ul className="flex flex-col">
         {markers.map((marker) => (
           <MarkerRow
@@ -72,9 +74,12 @@ function MarkerRow({
   onRemove: (markerId: ThreadMarkerId) => void;
   onRename: (markerId: ThreadMarkerId, label: string | null) => void;
 }) {
+  const { t } = useI18n();
   const available = text !== undefined && isThreadMarkerAvailable(marker, text);
   const resolvedLabel = marker.label?.trim() || deriveThreadMarkerLabel(marker);
-  const displayLabel = available ? resolvedLabel : `${resolvedLabel} (unavailable)`;
+  const displayLabel = available
+    ? resolvedLabel
+    : t("environment.markerUnavailable", { label: resolvedLabel });
 
   return (
     <EnvironmentEditableChecklistRow
@@ -82,19 +87,21 @@ function MarkerRow({
       available={available}
       displayLabel={displayLabel}
       initialEditLabel={marker.label ?? resolvedLabel}
-      checkboxAriaLabel={marker.done ? "Mark not done" : "Mark done"}
+      checkboxAriaLabel={
+        marker.done ? t("environment.markNotDone") : t("environment.markDone")
+      }
       labelAriaLabel={
         available
-          ? "Jump to marker. Press F2 to rename."
-          : "Marker unavailable. Press Enter to rename."
+          ? t("environment.jumpMarkerAria")
+          : t("environment.markerUnavailableAria")
       }
       labelTitle={
         available
-          ? "Click to jump · double-click or press F2 to rename"
-          : "Source text changed or is unavailable"
+          ? t("environment.jumpMarkerTooltip")
+          : t("environment.markerUnavailableTooltip")
       }
-      removeLabel="Remove marker"
-      removeTooltip="Remove"
+      removeLabel={t("environment.removeMarker")}
+      removeTooltip={t("environment.remove")}
       leading={
         <span
           aria-hidden="true"

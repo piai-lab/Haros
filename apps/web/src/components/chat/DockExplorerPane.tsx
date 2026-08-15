@@ -12,6 +12,7 @@ import type { FileCommentSelection } from "~/lib/fileComments";
 import { WorkspaceFilePreview } from "../WorkspaceFilePreview";
 import { PanelStateMessage } from "./PanelStateMessage";
 import { WorkspaceExplorerSidebar } from "./workspaceExplorer";
+import { useI18n } from "~/i18n";
 
 // The dock lays out as a fixed horizontal row, so the shared sidebar takes a
 // full-height fixed-width column (the editor's responsive default would collapse
@@ -26,6 +27,7 @@ export const DockExplorerPane = function DockExplorerPane(props: {
   onAskWhyInChat?: ((reference: ChatFileReference) => void) | undefined;
   onCommentInChat?: ((comment: FileCommentSelection) => void) | undefined;
 }) {
+  const { t } = useI18n();
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [expandedDirectories, setExpandedDirectories] = useState<ReadonlySet<string>>(
     () => new Set<string>(),
@@ -68,7 +70,7 @@ export const DockExplorerPane = function DockExplorerPane(props: {
           editable
           emptyState={
             <PanelStateMessage density="compact" fill="flex">
-              <p>Select a file from the tree to view it.</p>
+              <p>{t("workbench.explorerPreviewEmpty")}</p>
             </PanelStateMessage>
           }
           onReferenceInChat={props.onReferenceInChat}

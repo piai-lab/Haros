@@ -1,7 +1,15 @@
 import type { ResolvedKeybindingsConfig } from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   goBackInAppHistory,
@@ -52,9 +60,17 @@ import {
 } from "~/components/ui/sidebar";
 import type { SidebarResizableOptions } from "~/components/ui/sidebar";
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
+import { getLocalStorageItem } from "~/hooks/useLocalStorage";
+import { Schema } from "effect";
+import {
+  resolveThreadSidebarAutoSuppressed,
+  resolveThreadSidebarPresentation,
+} from "~/lib/responsiveWorkbench";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_MIN_WIDTH = 13 * 16;
+const THREAD_SIDEBAR_DEFAULT_WIDTH = 23 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
 
 // Single source of truth for the thread sidebar resize behavior. Shared by <Sidebar>
@@ -67,10 +83,48 @@ const THREAD_SIDEBAR_RESIZABLE: SidebarResizableOptions = {
   storageKey: THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 };
 const MAINTENANCE_EVENT_STALE_MS = 5 * 60 * 1000;
+const SIDEBAR_FOCUSABLE_SELECTOR =
+  'button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 type MaintenanceToastId = ReturnType<typeof toastManager.add>;
 
+function readInitialThreadSidebarWidth(): number {
+  if (typeof window === "undefined") return THREAD_SIDEBAR_DEFAULT_WIDTH;
+  try {
+    return Math.max(
+      THREAD_SIDEBAR_MIN_WIDTH,
+      getLocalStorageItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, Schema.Finite) ??
+        THREAD_SIDEBAR_DEFAULT_WIDTH,
+    );
+  } catch {
+    return THREAD_SIDEBAR_DEFAULT_WIDTH;
+  }
+}
+
+function isElementVisibleInViewport(element: HTMLElement): boolean {
+  const rect = element.getBoundingClientRect();
+  return (
+    !element.hidden &&
+    element.getAttribute("aria-hidden") !== "true" &&
+    element.getClientRects().length > 0 &&
+    getComputedStyle(element).visibility !== "hidden" &&
+    rect.width > 0 &&
+    rect.height > 0 &&
+    rect.right > 0 &&
+    rect.bottom > 0 &&
+    rect.left < window.innerWidth &&
+    rect.top < window.innerHeight
+  );
+}
+
+function visibleSidebarFocusableElements(root: HTMLElement | null): HTMLElement[] {
+  return Array.from(root?.querySelectorAll<HTMLElement>(SIDEBAR_FOCUSABLE_SELECTOR) ?? []).filter(
+    isElementVisibleInViewport,
+  );
+}
+
 function ThreadRetentionMaintenanceToast() {
+  const { t } = useI18n();
   const toastIdRef = useRef<MaintenanceToastId | null>(null);
 
   useEffect(() => {
@@ -80,7 +134,7 @@ function ThreadRetentionMaintenanceToast() {
       }
 
       // `deletedCount` is the legacy wire name; retention now archives.
-      const { state, deletedCount: archivedCount, totalCount, error } = event.payload;
+      const { state, deletedCount: archivedCount, totalCount } = event.payload;
       const eventMs = Date.parse(event.payload.at);
       const isStaleEvent = Number.isFinite(eventMs)
         ? Date.now() - eventMs > MAINTENANCE_EVENT_STALE_MS
@@ -92,8 +146,8 @@ function ThreadRetentionMaintenanceToast() {
       if (state === "started") {
         toastIdRef.current = toastManager.add({
           type: "loading",
-          title: "Archiving old chats...",
-          description: "Preparing background maintenance.",
+          title: t("maintenance.archivingOldChats"),
+          description: t("maintenance.preparing"),
           timeout: 0,
           data: { allowCrossThreadVisibility: true },
         });
@@ -105,18 +159,21 @@ function ThreadRetentionMaintenanceToast() {
           toastIdRef.current ??
           toastManager.add({
             type: "loading",
-            title: "Archiving old chats...",
+            title: t("maintenance.archivingOldChats"),
             timeout: 0,
             data: { allowCrossThreadVisibility: true },
           });
         toastIdRef.current = toastId;
         toastManager.update(toastId, {
           type: "loading",
-          title: "Archiving old chats...",
+          title: t("maintenance.archivingOldChats"),
           description:
             totalCount && totalCount > 0
-              ? `${archivedCount ?? 0} of ${totalCount} chats archived.`
-              : `${archivedCount ?? 0} chats archived.`,
+              ? t("maintenance.archiveProgress", {
+                  archived: archivedCount ?? 0,
+                  total: totalCount,
+                })
+              : t("maintenance.archiveCount", { archived: archivedCount ?? 0 }),
           timeout: 0,
           data: { allowCrossThreadVisibility: true },
         });
@@ -129,8 +186,8 @@ function ThreadRetentionMaintenanceToast() {
         if (toastId) {
           toastManager.update(toastId, {
             type: "warning",
-            title: "Chat maintenance paused",
-            description: error ?? "Old chats will be retried later.",
+            title: t("maintenance.paused"),
+            description: t("maintenance.retryLater"),
             timeout: 6000,
             data: { allowCrossThreadVisibility: true },
           });
@@ -138,8 +195,8 @@ function ThreadRetentionMaintenanceToast() {
         }
         toastManager.add({
           type: "warning",
-          title: "Chat maintenance paused",
-          description: error ?? "Old chats will be retried later.",
+          title: t("maintenance.paused"),
+          description: t("maintenance.retryLater"),
           timeout: 6000,
           data: { allowCrossThreadVisibility: true },
         });
@@ -151,16 +208,16 @@ function ThreadRetentionMaintenanceToast() {
       if (!toastId) return;
       toastManager.update(toastId, {
         type: "success",
-        title: "Old chats archived",
+        title: t("maintenance.archived"),
         description:
           archivedCount && archivedCount > 0
-            ? `${archivedCount} old chats moved to Settings → Archived, where you can restore them.`
-            : "No old chats needed archiving.",
+            ? t("maintenance.archivedDescription", { archived: archivedCount })
+            : t("maintenance.noneArchived"),
         timeout: 3500,
         data: { allowCrossThreadVisibility: true },
       });
     });
-  }, []);
+  }, [t]);
 
   return null;
 }
@@ -546,11 +603,159 @@ const SIDEBAR_GAP_CLASS =
 const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
+  const { t } = useI18n();
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
+  const [sidebarWidth, setSidebarWidth] = useState(readInitialThreadSidebarWidth);
+  const [sidebarAutoSuppressed, setSidebarAutoSuppressed] = useState(() =>
+    typeof window === "undefined"
+      ? false
+      : resolveThreadSidebarAutoSuppressed({
+          availableWidth: window.innerWidth,
+          sidebarWidth: readInitialThreadSidebarWidth(),
+          previouslySuppressed: false,
+        }),
+  );
+  const [sidebarTemporaryReveal, setSidebarTemporaryReveal] = useState(false);
+  const temporaryRevealFocusReturnRequestedRef = useRef(false);
+  const sidebarOverlayRef = useRef<HTMLDivElement | null>(null);
+  const sidebarPresentationRootRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let frameId: number | null = null;
+    const update = () => {
+      frameId = null;
+      setSidebarAutoSuppressed((previouslySuppressed) =>
+        resolveThreadSidebarAutoSuppressed({
+          // Window width is independent of whether the Sidebar currently consumes a gap,
+          // so suppression cannot feed back into its own restore threshold.
+          availableWidth: window.innerWidth,
+          sidebarWidth,
+          previouslySuppressed,
+        }),
+      );
+    };
+    const onResize = () => {
+      if (frameId !== null) return;
+      frameId = window.requestAnimationFrame(update);
+    };
+    window.addEventListener("resize", onResize);
+    update();
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+    };
+  }, [sidebarWidth]);
+
+  useEffect(() => {
+    if (!sidebarAutoSuppressed) {
+      setSidebarTemporaryReveal(false);
+    }
+  }, [sidebarAutoSuppressed]);
+
+  const sidebarPresentation = resolveThreadSidebarPresentation({
+    manualOpen: sidebarOpen,
+    autoSuppressed: sidebarAutoSuppressed,
+    temporaryReveal: sidebarTemporaryReveal,
+    forceHidden: isEditorView,
+  });
+  const resolvedSidebarOpen = sidebarPresentation !== "hidden";
+  useLayoutEffect(() => {
+    if (sidebarPresentation !== "overlay") return;
+    sidebarOverlayRef.current?.focus({ preventScroll: true });
+  }, [sidebarPresentation]);
+  useEffect(() => {
+    if (sidebarPresentation !== "overlay") return;
+    const focusFirstVisibleControl = () => {
+      const root = sidebarOverlayRef.current;
+      if (root?.contains(document.activeElement) && document.activeElement !== root) return;
+      visibleSidebarFocusableElements(root)[0]?.focus();
+    };
+    let secondFrameId: number | null = null;
+    const firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(focusFirstVisibleControl);
+    });
+    // The Sidebar has a 300ms slide. The frame path covers reduced/no-motion modes;
+    // this fallback moves focus once the rendered surface is definitely on-screen.
+    const transitionFallbackId = window.setTimeout(focusFirstVisibleControl, 320);
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      if (secondFrameId !== null) window.cancelAnimationFrame(secondFrameId);
+      window.clearTimeout(transitionFallbackId);
+    };
+  }, [sidebarPresentation]);
+  useEffect(() => {
+    if (sidebarPresentation !== "hidden" || !temporaryRevealFocusReturnRequestedRef.current) return;
+    const focusStableHeaderTrigger = () => {
+      const root = sidebarPresentationRootRef.current;
+      const trigger = Array.from(
+        root?.querySelectorAll<HTMLElement>(
+          "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
+        ) ?? [],
+      ).find(isElementVisibleInViewport);
+      if (!trigger) return;
+      trigger.focus();
+      temporaryRevealFocusReturnRequestedRef.current = false;
+    };
+    let secondFrameId: number | null = null;
+    const firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(focusStableHeaderTrigger);
+    });
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      if (secondFrameId !== null) window.cancelAnimationFrame(secondFrameId);
+    };
+  }, [sidebarPresentation]);
+  const handleSidebarOpenChange = useCallback(
+    (open: boolean) => {
+      if (sidebarAutoSuppressed && !isEditorView) {
+        if (open) {
+          temporaryRevealFocusReturnRequestedRef.current = true;
+        }
+        setSidebarTemporaryReveal(open);
+        return false;
+      }
+      setSidebarTemporaryReveal(false);
+      setSidebarOpen(open);
+    },
+    [isEditorView, sidebarAutoSuppressed],
+  );
+  const handleSidebarOverlayKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        handleSidebarOpenChange(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = visibleSidebarFocusableElements(sidebarOverlayRef.current);
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+      if (document.activeElement === sidebarOverlayRef.current) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    },
+    [handleSidebarOpenChange],
+  );
+  const threadSidebarResizable = useMemo<SidebarResizableOptions>(
+    () => ({ ...THREAD_SIDEBAR_RESIZABLE, onResize: setSidebarWidth }),
+    [],
+  );
 
   // The thread sidebar always lives on the left; the right dock is a separate surface.
   const sidebarElement = (
@@ -559,11 +764,24 @@ function ChatRouteLayout() {
       collapsible="offcanvas"
       // Match the right dock's soft drawer slide (shared token) instead of the
       // shell's default `ease-linear`. Applied to the container + gap in lockstep.
-      className={cn("text-foreground", SIDEBAR_OFFCANVAS_MOTION_CLASS)}
-      gapClassName={cn(SIDEBAR_GAP_CLASS, SIDEBAR_OFFCANVAS_MOTION_CLASS)}
+      className={cn(
+        "text-foreground",
+        SIDEBAR_OFFCANVAS_MOTION_CLASS,
+        sidebarPresentation === "overlay" && "z-30 shadow-[16px_0_38px_rgba(0,0,0,0.12)]",
+      )}
+      gapClassName={cn(
+        SIDEBAR_GAP_CLASS,
+        SIDEBAR_OFFCANVAS_MOTION_CLASS,
+        sidebarPresentation === "overlay" && "w-0!",
+      )}
       innerClassName={SIDEBAR_INNER_CLASS}
       transparentSurface
-      resizable={THREAD_SIDEBAR_RESIZABLE}
+      resizable={threadSidebarResizable}
+      role={sidebarPresentation === "overlay" ? "dialog" : undefined}
+      aria-modal={sidebarPresentation === "overlay" ? true : undefined}
+      tabIndex={sidebarPresentation === "overlay" ? -1 : undefined}
+      ref={sidebarOverlayRef}
+      onKeyDown={sidebarPresentation === "overlay" ? handleSidebarOverlayKeyDown : undefined}
     >
       <ThreadSidebar />
     </Sidebar>
@@ -576,9 +794,13 @@ function ChatRouteLayout() {
   // would have gotten inside <Sidebar> (otherwise dragging to resize stops working).
   // `data-sidebar-side` on the provider selects the seam geometry.
   const mainContentShell = (
-    <div className="relative flex h-svh min-h-0 min-w-0 flex-1">
-      {isEditorView ? null : (
-        <SidebarInstanceProvider side="left" resizable={THREAD_SIDEBAR_RESIZABLE}>
+    <div
+      className="relative flex h-svh min-h-0 min-w-0 flex-1"
+      aria-hidden={sidebarPresentation === "overlay" ? true : undefined}
+      inert={sidebarPresentation === "overlay" ? true : undefined}
+    >
+      {isEditorView || sidebarPresentation !== "docked" ? null : (
+        <SidebarInstanceProvider side="left" resizable={threadSidebarResizable}>
           <SidebarRail placement="content-seam" />
         </SidebarInstanceProvider>
       )}
@@ -590,13 +812,23 @@ function ChatRouteLayout() {
     <SidebarProvider
       defaultOpen
       open={resolvedSidebarOpen}
-      onOpenChange={setSidebarOpen}
+      onOpenChange={handleSidebarOpenChange}
       className="bg-[var(--app-shell-background)]"
       data-sidebar-side="left"
+      data-thread-sidebar-presentation={sidebarPresentation}
+      ref={sidebarPresentationRootRef}
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
       {sidebarElement}
+      {sidebarPresentation === "overlay" ? (
+        <button
+          type="button"
+          aria-label={t("nav.closeSidebar")}
+          className="fixed inset-0 z-[29] hidden bg-black/10 md:block"
+          onClick={() => handleSidebarOpenChange(false)}
+        />
+      ) : null}
       {mainContentShell}
     </SidebarProvider>
   );

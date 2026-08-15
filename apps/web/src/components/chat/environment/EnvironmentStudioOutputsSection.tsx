@@ -17,6 +17,7 @@ import { studioThreadOutputsQueryOptions } from "~/lib/serverReactQuery";
 import { humanizeStudioOutputName } from "~/lib/studioOutputDisplay";
 import { useWorkspaceFileOpener } from "~/lib/workspaceFileOpener";
 import { readNativeApi } from "~/nativeApi";
+import { useI18n } from "~/i18n";
 
 import { FileEntryIcon } from "../FileEntryIcon";
 import { EnvironmentLabeledSection, EnvironmentRow } from "./EnvironmentRow";
@@ -33,6 +34,7 @@ export function EnvironmentStudioOutputsSection({
   threadId: ThreadId;
   enabled: boolean;
 }) {
+  const { t } = useI18n();
   const outputsQuery = useQuery(studioThreadOutputsQueryOptions({ threadId, enabled }));
   const fileOpener = useWorkspaceFileOpener();
 
@@ -50,7 +52,7 @@ export function EnvironmentStudioOutputsSection({
   }
 
   return (
-    <EnvironmentLabeledSection label="Output">
+    <EnvironmentLabeledSection label={t("environment.outputs")}>
       {entries.map((entry) => (
         <EnvironmentRow
           key={entry.fullPath}

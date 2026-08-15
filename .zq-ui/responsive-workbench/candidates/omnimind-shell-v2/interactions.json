@@ -1,0 +1,41 @@
+{
+  "scenarios": [
+    {
+      "id": "environment-invariance",
+      "steps": [
+        {"action": "click", "selector": "[data-action='environment']"},
+        {"action": "wait", "ms": 320},
+        {"action": "expect-hidden", "selector": "#environmentPanel"},
+        {"action": "expect-attribute", "selector": "#app", "name": "data-geometry-stable", "value": "true"},
+        {"action": "click", "selector": "[data-action='environment']"},
+        {"action": "expect-visible", "selector": "#environmentPanel"}
+      ]
+    },
+    {
+      "id": "workbench-wide-split",
+      "steps": [
+        {"action": "click", "selector": "[data-action='workbench']"},
+        {"action": "expect-visible", "selector": "#workbench"},
+        {"action": "expect-attribute", "selector": "#app", "name": "data-workbench", "value": "split"},
+        {"action": "click", "selector": "[data-action='close-workbench']"},
+        {"action": "expect-hidden", "selector": "#workbench"}
+      ]
+    },
+    {
+      "id": "compact-auto-priority",
+      "steps": [
+        {"action": "expect-visible", "selector": "#conversationColumn"},
+        {"action": "expect-visible", "selector": "#composer"}
+      ]
+    },
+    {
+      "id": "narrow-environment-sheet",
+      "steps": [
+        {"action": "click", "selector": "[data-action='environment']"},
+        {"action": "expect-hidden", "selector": "#environmentPanel"},
+        {"action": "click", "selector": "[data-action='environment']"},
+        {"action": "expect-visible", "selector": "#environmentPanel"}
+      ]
+    }
+  ]
+}

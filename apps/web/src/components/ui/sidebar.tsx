@@ -38,7 +38,8 @@ export const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 13 * 16;
  * (Sidebar `className`) and the layout `gapClassName` so they animate in lockstep.
  * Shared by the thread sidebar (left) and the right dock so the two slides match.
  */
-const SIDEBAR_OFFCANVAS_MOTION_CLASS = "duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]";
+const SIDEBAR_OFFCANVAS_MOTION_CLASS =
+  "duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
 /**
  * Suppresses the slide entirely — for first mount or a reposition/remount where
@@ -114,7 +115,8 @@ function SidebarProvider({
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean;
   open?: boolean;
-  onOpenChange?: (open: boolean) => void;
+  /** Return false for a transient presentation change that must not persist manual intent. */
+  onOpenChange?: (open: boolean) => void | false;
 }) {
   const defaultOpen = defaultOpenProp ?? true;
   const isMobile = useIsMobile();
@@ -127,19 +129,23 @@ function SidebarProvider({
   const setOpen = React.useCallback(
     async (value: boolean | ((value: boolean) => boolean)) => {
       const openState = typeof value === "function" ? value(open) : value;
+      let shouldPersist = true;
       if (setOpenProp) {
-        setOpenProp(openState);
+        shouldPersist = setOpenProp(openState) !== false;
       } else {
         _setOpen(openState);
       }
 
-      // This sets the cookie to keep the sidebar state.
-      await cookieStore.set({
-        expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
-        name: SIDEBAR_COOKIE_NAME,
-        path: "/",
-        value: String(openState),
-      });
+      if (shouldPersist) {
+        // Only manual state changes reach the cookie. Responsive presentation can use the same
+        // mounted surface without rewriting the user's intent.
+        await cookieStore.set({
+          expires: Date.now() + SIDEBAR_COOKIE_MAX_AGE * 1000,
+          name: SIDEBAR_COOKIE_NAME,
+          path: "/",
+          value: String(openState),
+        });
+      }
     },
     [setOpenProp, open],
   );

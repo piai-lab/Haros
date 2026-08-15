@@ -2,8 +2,7 @@
 // Purpose: The single chat-header "Environment" button that replaces the former
 //          Open-in-editor + git-actions + diff-toggle cluster. It toggles the Environment
 //          panel overlay, which is always pinned to the top-right of the chat column
-//          (with matching p-3 gutters). When the right dock is closed the overlay also
-//          reserves transcript/composer inset; when the dock is open it overlays only.
+//          (with matching p-3 gutters) without reserving Timeline or Composer space.
 // Layer: Chat header control
 
 import { WindowIcon } from "~/lib/icons";
@@ -35,7 +34,8 @@ export function EnvironmentToggle({ environment }: { environment: EnvironmentTog
             className={TOGGLE_CLASS_NAME}
             pressed={environment.open}
             onPressedChange={environment.onOpenChange}
-            aria-label={t("workbench.environment")}
+            aria-label={t("environment.title")}
+            data-environment-toggle
             variant="default"
             size="xs"
           >
@@ -43,7 +43,7 @@ export function EnvironmentToggle({ environment }: { environment: EnvironmentTog
           </Toggle>
         }
       />
-      <TooltipPopup side="bottom">{t("workbench.environment")}</TooltipPopup>
+      <TooltipPopup side="bottom">{t("environment.title")}</TooltipPopup>
     </Tooltip>
   );
 }

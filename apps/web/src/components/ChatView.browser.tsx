@@ -41,6 +41,7 @@ import {
   useComposerDraftStore,
 } from "../composerDraftStore";
 import { appHistory } from "../appNavigation";
+import { THREAD_SIDEBAR_WIDTH_STORAGE_KEY } from "../appearanceMigrations";
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
   AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
@@ -73,6 +74,8 @@ import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
+import { useRightDockStore } from "../rightDockStore";
+import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
@@ -128,6 +131,7 @@ interface TestFixture {
   providerPassivePresence?: ReadonlyArray<ProviderKind>;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
+  gitHasWorkingTreeChanges?: boolean;
   providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
 }
 
@@ -175,6 +179,7 @@ interface MountedChatView {
   measureUserRow: (targetMessageId: MessageId) => Promise<UserRowMeasurement>;
   setViewport: (viewport: ViewportSpec) => Promise<void>;
   router: ReturnType<typeof getRouter>;
+  host: HTMLElement;
 }
 
 interface ChatLayoutMeasurement {
@@ -241,6 +246,21 @@ function createTerminalContext(input: {
     lineEnd: input.lineEnd,
     text: input.text,
     createdAt: NOW_ISO,
+  };
+}
+
+function createRightDockPane(id: string, kind: RightDockPaneKind): RightDockPane {
+  return {
+    id,
+    kind,
+    threadId: null,
+    diffTurnId: null,
+    diffFilePath: null,
+    filePath: null,
+    pullRequestProjectId: null,
+    pullRequestRepository: null,
+    pullRequestNumber: null,
+    pullRequestInitialTab: null,
   };
 }
 
@@ -1393,13 +1413,16 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   if (tag === WS_METHODS.gitStatus) {
     const cwd = typeof body.cwd === "string" ? body.cwd : null;
     const branchName = cwd ? (fixture.gitBranchByCwd[cwd] ?? "main") : "main";
+    const hasWorkingTreeChanges = fixture.gitHasWorkingTreeChanges ?? false;
     return {
       branch: branchName,
-      hasWorkingTreeChanges: false,
+      hasWorkingTreeChanges,
       workingTree: {
-        files: [],
-        insertions: 0,
-        deletions: 0,
+        files: hasWorkingTreeChanges
+          ? [{ path: "src/responsive-workbench.tsx", insertions: 3, deletions: 1 }]
+          : [],
+        insertions: hasWorkingTreeChanges ? 3 : 0,
+        deletions: hasWorkingTreeChanges ? 1 : 0,
       },
       hasUpstream: true,
       aheadCount: 0,
@@ -2117,6 +2140,56 @@ async function measureChatLayout(host: HTMLElement): Promise<ChatLayoutMeasureme
   };
 }
 
+type HorizontalRect = { x: number; width: number };
+
+async function measureEnvironmentInvariant(host: HTMLElement): Promise<{
+  timeline: HorizontalRect;
+  conversation: HorizontalRect;
+  composerForm: HorizontalRect;
+  composerShell: HorizontalRect;
+}> {
+  const timeline = await waitForElement(
+    () => host.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
+    "Unable to find Timeline viewport.",
+  );
+  const conversation = await waitForElement(
+    () => host.querySelector<HTMLElement>("[data-timeline-row-kind]"),
+    "Unable to find the conversation frame.",
+  );
+  const composerForm = await waitForElement(
+    () => host.querySelector<HTMLElement>("[data-chat-composer-form='true']"),
+    "Unable to find Composer form.",
+  );
+  const composerShell = await waitForElement(
+    () => composerForm.querySelector<HTMLElement>(".chat-composer-shell"),
+    "Unable to find Composer shell.",
+  );
+  await waitForLayout();
+  const horizontal = (element: HTMLElement): HorizontalRect => {
+    const rect = element.getBoundingClientRect();
+    return { x: rect.x, width: rect.width };
+  };
+  return {
+    timeline: horizontal(timeline),
+    conversation: horizontal(conversation),
+    composerForm: horizontal(composerForm),
+    composerShell: horizontal(composerShell),
+  };
+}
+
+function expectHorizontalGeometryStable(
+  before: Awaited<ReturnType<typeof measureEnvironmentInvariant>>,
+  after: Awaited<ReturnType<typeof measureEnvironmentInvariant>>,
+): void {
+  for (const key of ["timeline", "conversation", "composerForm", "composerShell"] as const) {
+    expect(Math.abs(after[key].x - before[key].x), `${key}.x moved`).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(after[key].width - before[key].width),
+      `${key}.width changed`,
+    ).toBeLessThanOrEqual(1);
+  }
+}
+
 async function waitForMountedChatReady(options: {
   host: HTMLElement;
   snapshot: OrchestrationReadModel;
@@ -2214,6 +2287,7 @@ async function mountChatView(options: {
       await waitForProductionStyles();
     },
     router,
+    host,
   };
 }
 
@@ -2327,6 +2401,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       splitViewsById: {},
       splitViewIdBySourceThreadId: {},
     });
+    useRightDockStore.setState({ dockStateByThreadId: {} });
   });
 
   afterEach(async () => {
@@ -2334,6 +2409,1236 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await resetStudioProjectPrewarmStateForTests();
     resetRetainedThreadDetailSubscriptionsForTests();
     document.body.innerHTML = "";
+  });
+
+  it("auto-suppresses the default Sidebar at the rejected widths without persisting manual intent", async () => {
+    const cookieSet = vi.spyOn(cookieStore, "set");
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1280 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-responsive-sidebar" as MessageId,
+        targetText: "responsive sidebar",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          keybindings: [
+            {
+              command: "sidebar.toggle",
+              shortcut: {
+                key: "b",
+                metaKey: false,
+                ctrlKey: false,
+                shiftKey: false,
+                altKey: false,
+                modKey: true,
+              },
+            },
+          ],
+        };
+      },
+    });
+
+    const expectPresentation = async (presentation: "docked" | "hidden" | "overlay") => {
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+            ?.getAttribute("data-thread-sidebar-presentation"),
+        ).toBe(presentation);
+      });
+    };
+    const resizeTo = async (width: number) => {
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width });
+    };
+
+    try {
+      await waitForServerConfigToApply();
+      await expectPresentation("docked");
+      const sidebar = mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']");
+      expect(sidebar?.getBoundingClientRect().width).toBeCloseTo(368, 0);
+
+      for (const width of [1076, 1009, 1050, 1076, 1100, 1143, 1207]) {
+        await resizeTo(width);
+        await expectPresentation("hidden");
+      }
+
+      await resizeTo(1208);
+      await expectPresentation("docked");
+      for (const width of [1280, 1440, 1536]) {
+        await resizeTo(width);
+        await expectPresentation("docked");
+      }
+
+      expect(cookieSet).not.toHaveBeenCalled();
+
+      const useMetaForMod = isMacPlatform(navigator.platform);
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "b",
+          metaKey: useMetaForMod,
+          ctrlKey: !useMetaForMod,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      await expectPresentation("hidden");
+      await vi.waitFor(() => {
+        expect(cookieSet).toHaveBeenCalledTimes(1);
+        expect(cookieSet.mock.calls[0]?.[0]).toMatchObject({ value: "false" });
+      });
+
+      await resizeTo(1076);
+      await expectPresentation("hidden");
+      const pressuredHeaderTrigger = mounted.host.querySelector<HTMLButtonElement>(
+        "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
+      );
+      expect(pressuredHeaderTrigger).toBeTruthy();
+      pressuredHeaderTrigger?.focus();
+      pressuredHeaderTrigger?.click();
+      await Promise.resolve();
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+          ?.getAttribute("data-thread-sidebar-presentation"),
+      ).toBe("overlay");
+      const immediateDialog = mounted.host.querySelector<HTMLElement>(
+        "[role='dialog'][aria-modal='true']",
+      );
+      expect(immediateDialog).toBeTruthy();
+      expect(document.activeElement).toBe(immediateDialog);
+      immediateDialog?.dispatchEvent(
+        new KeyboardEvent("keydown", {
+          key: "Escape",
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      await expectPresentation("hidden");
+      await vi.waitFor(() => {
+        const activeElement = document.activeElement;
+        expect(activeElement?.getAttribute("data-slot")).toBe("sidebar-trigger");
+        expect(activeElement?.closest("[data-slot='chat-surface-header']")).toBeTruthy();
+      });
+      expect(cookieSet).toHaveBeenCalledTimes(1);
+
+      await resizeTo(1280);
+      await expectPresentation("hidden");
+      expect(cookieSet).toHaveBeenCalledTimes(1);
+
+      const headerTrigger = mounted.host.querySelector<HTMLButtonElement>(
+        "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
+      );
+      expect(headerTrigger).toBeTruthy();
+      await userEvent.click(headerTrigger!);
+      await expectPresentation("docked");
+      await vi.waitFor(() => {
+        expect(cookieSet).toHaveBeenCalledTimes(2);
+        expect(cookieSet.mock.calls[1]?.[0]).toMatchObject({ value: "true" });
+      });
+
+      await resizeTo(1076);
+      await expectPresentation("hidden");
+      await resizeTo(1280);
+      await expectPresentation("docked");
+      expect(cookieSet).toHaveBeenCalledTimes(2);
+    } finally {
+      await mounted.cleanup();
+      cookieSet.mockRestore();
+    }
+  });
+
+  it("uses the user's resized Sidebar width without feeding presentation back into the budget", async () => {
+    localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(208));
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1009 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-resized-sidebar" as MessageId,
+        targetText: "resized sidebar",
+      }),
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+            ?.getAttribute("data-thread-sidebar-presentation"),
+        ).toBe("docked");
+      });
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-slot='sidebar-container']")
+          ?.getBoundingClientRect().width,
+      ).toBeCloseTo(208, 0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps a temporary Sidebar overlay keyboard-contained and restores its trigger", async () => {
+    const cookieSet = vi.spyOn(cookieStore, "set");
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1076 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-sidebar-overlay" as MessageId,
+        targetText: "sidebar overlay",
+      }),
+    });
+
+    const presentationRoot = () =>
+      mounted.host.querySelector<HTMLElement>("[data-thread-sidebar-presentation]");
+    const waitForPresentation = async (presentation: "hidden" | "overlay") => {
+      await vi.waitFor(() => {
+        expect(presentationRoot()?.getAttribute("data-thread-sidebar-presentation")).toBe(
+          presentation,
+        );
+      });
+    };
+    const visibleHeaderTrigger = () =>
+      Array.from(
+        mounted.host.querySelectorAll<HTMLButtonElement>(
+          "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
+        ),
+      ).find((button) => {
+        const rect = button.getBoundingClientRect();
+        return (
+          button.getClientRects().length > 0 &&
+          rect.width > 0 &&
+          rect.height > 0 &&
+          rect.right > 0 &&
+          rect.bottom > 0 &&
+          rect.left < window.innerWidth &&
+          rect.top < window.innerHeight
+        );
+      });
+    const expectVisibleHeaderTriggerFocused = async () => {
+      await vi.waitFor(() => {
+        const activeElement = document.activeElement;
+        expect(activeElement?.getAttribute("data-slot")).toBe("sidebar-trigger");
+        expect(activeElement).toBe(visibleHeaderTrigger());
+      });
+    };
+
+    try {
+      await waitForPresentation("hidden");
+      const trigger = visibleHeaderTrigger();
+      expect(trigger).toBeTruthy();
+      trigger?.focus();
+      await userEvent.click(trigger!);
+
+      await waitForPresentation("overlay");
+      const dialog = mounted.host.querySelector<HTMLElement>("[role='dialog'][aria-modal='true']");
+      const mainContent = Array.from(presentationRoot()?.children ?? []).find(
+        (element) => element instanceof HTMLElement && element.hasAttribute("inert"),
+      );
+      await vi.waitFor(() => {
+        expect(dialog).toBeTruthy();
+        expect(dialog?.contains(document.activeElement)).toBe(true);
+        expect(mainContent).toBeTruthy();
+      });
+
+      await userEvent.tab({ shift: true });
+      expect(dialog?.contains(document.activeElement)).toBe(true);
+      await userEvent.tab();
+      expect(dialog?.contains(document.activeElement)).toBe(true);
+
+      await userEvent.keyboard("{Escape}");
+      await waitForPresentation("hidden");
+      await expectVisibleHeaderTriggerFocused();
+
+      await userEvent.click(visibleHeaderTrigger()!);
+      await waitForPresentation("overlay");
+      const scrim = mounted.host.querySelector<HTMLButtonElement>(
+        "button[aria-label='Close sidebar']",
+      );
+      expect(scrim).toBeTruthy();
+      await userEvent.click(scrim!);
+      await waitForPresentation("hidden");
+      await expectVisibleHeaderTriggerFocused();
+      expect(cookieSet).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+      cookieSet.mockRestore();
+    }
+  });
+
+  it.each([
+    { width: 840, settingsDefaultOpen: false },
+    { width: 840, settingsDefaultOpen: true },
+    { width: 1009, settingsDefaultOpen: false },
+    { width: 1009, settingsDefaultOpen: true },
+    { width: 1440, settingsDefaultOpen: false },
+    { width: 1440, settingsDefaultOpen: true },
+  ] as const)(
+    "keeps Environment out of main-canvas geometry at $width px with default-open=$settingsDefaultOpen",
+    async ({ width, settingsDefaultOpen }) => {
+      localStorage.setItem(
+        "omnimind:app-settings:v1",
+        JSON.stringify({ environmentPanelDefaultOpen: settingsDefaultOpen }),
+      );
+      const mounted = await mountChatView({
+        viewport: { ...DEFAULT_VIEWPORT, width },
+        snapshot: createSnapshotForTargetUser({
+          targetMessageId: `msg-user-environment-${width}-${settingsDefaultOpen}` as MessageId,
+          targetText: "environment geometry",
+        }),
+      });
+
+      const toggle = await waitForElement(
+        () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+        "Unable to find Environment toggle.",
+      );
+      const panel = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLElement>(
+            "[data-environment-panel-presentation='overlay']",
+          ),
+        "Unable to find Environment inspector.",
+      );
+      const expectOpen = async (open: boolean) => {
+        await vi.waitFor(() => {
+          expect(toggle.getAttribute("aria-pressed")).toBe(String(open));
+          expect(panel.getAttribute("aria-hidden")).toBe(String(!open));
+        });
+      };
+
+      try {
+        await expectOpen(settingsDefaultOpen);
+        const initial = await measureEnvironmentInvariant(mounted.host);
+
+        toggle.focus();
+        await userEvent.click(toggle);
+        await expectOpen(!settingsDefaultOpen);
+        expect(document.activeElement).toBe(toggle);
+        const toggled = await measureEnvironmentInvariant(mounted.host);
+        expectHorizontalGeometryStable(initial, toggled);
+
+        await userEvent.click(toggle);
+        await expectOpen(settingsDefaultOpen);
+        expect(document.activeElement).toBe(toggle);
+        const restored = await measureEnvironmentInvariant(mounted.host);
+        expectHorizontalGeometryStable(initial, restored);
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it("keeps the mounted Environment inspector outside the closed keyboard surface", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ environmentPanelDefaultOpen: false }),
+    );
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1009 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-environment-a11y" as MessageId,
+        targetText: "environment accessibility",
+      }),
+    });
+
+    try {
+      const toggle = await waitForElement(
+        () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+        "Unable to find Environment toggle.",
+      );
+      const panel = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLElement>(
+            "[data-environment-panel-presentation='overlay']",
+          ),
+        "Unable to find Environment inspector.",
+      );
+
+      expect(panel.getAttribute("aria-hidden")).toBe("true");
+      expect(panel.hasAttribute("inert")).toBe(true);
+      toggle.focus();
+      await userEvent.tab();
+      expect(panel.contains(document.activeElement)).toBe(false);
+
+      toggle.focus();
+      await userEvent.click(toggle);
+      expect(toggle.getAttribute("aria-pressed")).toBe("true");
+      expect(panel.hasAttribute("inert")).toBe(false);
+      expect(document.activeElement).toBe(toggle);
+
+      await userEvent.click(toggle);
+      expect(toggle.getAttribute("aria-pressed")).toBe("false");
+      expect(panel.hasAttribute("inert")).toBe(true);
+      expect(document.activeElement).toBe(toggle);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it.each([
+    { locale: "en", theme: "light" },
+    { locale: "en", theme: "dark" },
+    { locale: "zh-CN", theme: "light" },
+    { locale: "zh-CN", theme: "dark" },
+  ] as const)(
+    "keeps the constrained shell bounded at 840x620 in $locale $theme mode",
+    async ({ locale, theme }) => {
+      localStorage.setItem(
+        "omnimind:app-settings:v1",
+        JSON.stringify({ localePreference: locale, environmentPanelDefaultOpen: false }),
+      );
+      document.documentElement.classList.toggle("dark", theme === "dark");
+      const mounted = await mountChatView({
+        viewport: { ...DEFAULT_VIEWPORT, width: 840, height: 620 },
+        snapshot: createSnapshotForTargetUser({
+          targetMessageId: `msg-user-constrained-${locale}-${theme}` as MessageId,
+          targetText: "constrained responsive shell",
+        }),
+      });
+
+      try {
+        const messages = locale === "zh-CN" ? ZH_CN_MESSAGES : EN_MESSAGES;
+        const header = await waitForElement(
+          () => mounted.host.querySelector<HTMLElement>("[data-slot='chat-surface-header']"),
+          "Unable to find the Chat header.",
+        );
+        const transcript = await waitForElement(
+          () => mounted.host.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
+          "Unable to find the Timeline viewport.",
+        );
+        const composer = await waitForElement(
+          () => mounted.host.querySelector<HTMLFormElement>("[data-chat-composer-form='true']"),
+          "Unable to find the Composer form.",
+        );
+        const toggle = await waitForElement(
+          () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+          "Unable to find the Environment toggle.",
+        );
+        await userEvent.click(toggle);
+        const panel = await waitForElement(
+          () =>
+            mounted.host.querySelector<HTMLElement>(
+              "[data-environment-panel-presentation='overlay']",
+            ),
+          "Unable to find the Environment inspector.",
+        );
+        const panelSurface = panel.firstElementChild as HTMLElement | null;
+        const panelScroller = panelSurface?.firstElementChild as HTMLElement | null;
+        expect(panelSurface).toBeTruthy();
+        expect(panelScroller).toBeTruthy();
+        await waitForLayout();
+
+        const hostRect = mounted.host.getBoundingClientRect();
+        const headerRect = header.getBoundingClientRect();
+        const transcriptRect = transcript.getBoundingClientRect();
+        const composerRect = composer.getBoundingClientRect();
+        const panelRect = panelSurface!.getBoundingClientRect();
+        expect(mounted.host.scrollWidth).toBeLessThanOrEqual(mounted.host.clientWidth + 1);
+        expect(document.body.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+        expect(headerRect.top).toBeGreaterThanOrEqual(hostRect.top - 1);
+        expect(transcriptRect.top).toBeGreaterThanOrEqual(headerRect.bottom - 1);
+        expect(composerRect.top).toBeGreaterThanOrEqual(headerRect.bottom - 1);
+        expect(composerRect.bottom).toBeLessThanOrEqual(hostRect.bottom + 1);
+        expect(panelRect.top).toBeGreaterThanOrEqual(headerRect.bottom - 1);
+        expect(panelRect.right).toBeLessThanOrEqual(hostRect.right + 1);
+        expect(panelRect.bottom).toBeLessThanOrEqual(hostRect.bottom + 1);
+        expect(panelScroller!.clientHeight).toBeGreaterThan(0);
+        expect(panelScroller!.scrollWidth).toBeLessThanOrEqual(panelScroller!.clientWidth + 1);
+        expect(panel.textContent).toContain(messages["git.action.commitOrPush"]);
+        expect(panel.textContent).toContain(messages["environment.builtInEditor"]);
+        expect(toggle.getAttribute("aria-pressed")).toBe("true");
+        expect(panel.getAttribute("aria-hidden")).toBe("false");
+        expect(panel.hasAttribute("inert")).toBe(false);
+      } finally {
+        document.documentElement.classList.remove("dark");
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it.each([
+    { width: 1440, expectedPresentation: "split" },
+    { width: 1009, expectedPresentation: "exclusive" },
+  ] as const)(
+    "returns focus to a visible owner when an Environment action closes into $expectedPresentation at $width px",
+    async ({ width, expectedPresentation }) => {
+      localStorage.setItem(
+        "omnimind:app-settings:v1",
+        JSON.stringify({ environmentPanelDefaultOpen: false }),
+      );
+      const mounted = await mountChatView({
+        viewport: { ...DEFAULT_VIEWPORT, width },
+        snapshot: createSnapshotForTargetUser({
+          targetMessageId: `msg-user-environment-action-focus-${width}` as MessageId,
+          targetText: "environment action focus",
+        }),
+        configureFixture: (nextFixture) => {
+          nextFixture.gitHasWorkingTreeChanges = true;
+        },
+      });
+
+      try {
+        const toggle = await waitForElement(
+          () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+          "Unable to find the Environment toggle.",
+        );
+        await userEvent.click(toggle);
+        const panel = await waitForElement(
+          () =>
+            mounted.host.querySelector<HTMLElement>(
+              "[data-environment-panel-presentation='overlay']",
+            ),
+          "Unable to find the Environment inspector.",
+        );
+        await vi.waitFor(() => expect(panel.getAttribute("aria-hidden")).toBe("false"));
+        const changes = await waitForElement(
+          () =>
+            Array.from(panel.querySelectorAll<HTMLButtonElement>("button")).find(
+              (button) => button.textContent?.trim() === EN_MESSAGES["environment.changes"],
+            ) ?? null,
+          "Unable to find the enabled Changes action.",
+        );
+        expect(changes.disabled).toBe(false);
+        await userEvent.click(changes);
+
+        await vi.waitFor(() => {
+          expect(panel.getAttribute("aria-hidden")).toBe("true");
+          expect(panel.hasAttribute("inert")).toBe(true);
+          expect(
+            mounted.host
+              .querySelector<HTMLElement>("[data-workbench-presentation]")
+              ?.getAttribute("data-workbench-presentation"),
+          ).toBe(expectedPresentation);
+        });
+        expect(panel.contains(document.activeElement)).toBe(false);
+        if (expectedPresentation === "split") {
+          expect(document.activeElement).toBe(toggle);
+        } else {
+          const dock = mounted.host.querySelector<HTMLElement>("[data-right-dock-content]");
+          const chat = mounted.host.querySelector<HTMLElement>("[data-chat-primary-surface]");
+          expect(dock?.contains(document.activeElement)).toBe(true);
+          expect(chat?.contains(document.activeElement)).toBe(false);
+          expect(chat?.getAttribute("aria-hidden")).toBe("true");
+          expect(chat?.hasAttribute("inert")).toBe(true);
+        }
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it("keeps RightDock panes mounted and geometrically correct across split and exclusive resize", async () => {
+    const explorerPane = createRightDockPane("pane-explorer-responsive", "explorer");
+    const browserPane = createRightDockPane("pane-browser-responsive", "browser");
+    const nativeApi = readNativeApi();
+    if (!nativeApi) {
+      throw new Error("Expected browser NativeApi fixture.");
+    }
+    const previousNativeApi = window.nativeApi;
+    const seededBrowserState = await nativeApi.browser.open({
+      threadId: THREAD_ID,
+      initialUrl: "https://example.com/right-dock-responsive",
+    });
+    const nativeBrowserState = {
+      ...seededBrowserState,
+      tabs: seededBrowserState.tabs.map((tab) => ({ ...tab, runtimeSurface: "native" as const })),
+    };
+    const panelBoundsCalls: Array<Parameters<typeof nativeApi.browser.setPanelBounds>[0]> = [];
+    const hideCalls: Array<Parameters<typeof nativeApi.browser.hide>[0]> = [];
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        browser: {
+          ...nativeApi.browser,
+          open: async () => nativeBrowserState,
+          getState: async () => nativeBrowserState,
+          setPanelBounds: async (input: Parameters<typeof nativeApi.browser.setPanelBounds>[0]) => {
+            panelBoundsCalls.push(input);
+          },
+          hide: async (input: Parameters<typeof nativeApi.browser.hide>[0]) => {
+            hideCalls.push(input);
+          },
+        },
+      },
+    });
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [explorerPane, browserPane],
+          activePaneId: explorerPane.id,
+        },
+      },
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1440 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-right-dock-responsive" as MessageId,
+        targetText: "right dock responsive",
+      }),
+    });
+
+    const shell = () => mounted.host.querySelector<HTMLElement>("[data-workbench-presentation]");
+    const chat = () => mounted.host.querySelector<HTMLElement>("[data-chat-primary-surface]");
+    const dock = () => mounted.host.querySelector<HTMLElement>("[data-right-dock-content]");
+    const browserViewport = () =>
+      mounted.host.querySelector<HTMLElement>("[data-browser-panel-viewport]");
+    const waitForWorkbench = async (presentation: "closed" | "split" | "exclusive") => {
+      await vi.waitFor(() => {
+        expect(shell()?.getAttribute("data-workbench-presentation")).toBe(presentation);
+      });
+      await waitForLayout();
+    };
+    const expectSplitGeometry = () => {
+      const shellRect = shell()!.getBoundingClientRect();
+      const chatRect = chat()!.getBoundingClientRect();
+      const dockRect = dock()!.getBoundingClientRect();
+      const dockWrapper = dock()!.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
+      const dockGap = dockWrapper?.querySelector<HTMLElement>("[data-slot='sidebar-gap']");
+      const dockContainer = dockWrapper?.querySelector<HTMLElement>(
+        "[data-slot='sidebar-container']",
+      );
+      const geometryDiagnostic = JSON.stringify({
+        shell: shellRect.width,
+        chat: chatRect.width,
+        dock: dockRect.width,
+        authoredDockWidth: dockWrapper?.style.getPropertyValue("--sidebar-width"),
+        gapTransition: dockGap ? getComputedStyle(dockGap).transitionDuration : null,
+        containerTransition: dockContainer
+          ? getComputedStyle(dockContainer).transitionDuration
+          : null,
+      });
+      expect(chatRect.x).toBeCloseTo(shellRect.x, 0);
+      expect(chatRect.width, geometryDiagnostic).toBeGreaterThanOrEqual(639);
+      expect(dockRect.width).toBeGreaterThanOrEqual(415);
+      expect(dockRect.right).toBeCloseTo(shellRect.right, 0);
+      expect(Math.abs(chatRect.width + dockRect.width - shellRect.width)).toBeLessThanOrEqual(1);
+      return { shellRect, chatRect, dockRect };
+    };
+    const expectExclusiveGeometry = () => {
+      const shellRect = shell()!.getBoundingClientRect();
+      const dockRect = dock()!.getBoundingClientRect();
+      expect(Math.abs(dockRect.x - shellRect.x)).toBeLessThanOrEqual(1);
+      expect(Math.abs(dockRect.width - shellRect.width)).toBeLessThanOrEqual(1);
+      expect(Math.abs(dockRect.right - shellRect.right)).toBeLessThanOrEqual(1);
+    };
+    const expectNativeBrowserBounds = async () => {
+      const viewport = await waitForElement(
+        browserViewport,
+        "Unable to find the live BrowserPanel viewport.",
+      );
+      await vi.waitFor(() => {
+        const call = panelBoundsCalls.findLast(
+          (candidate) => candidate.surface === "native" && candidate.bounds !== null,
+        );
+        const bounds = call?.bounds;
+        const rect = viewport.getBoundingClientRect();
+        expect(bounds).not.toBeNull();
+        expect(Math.abs((bounds?.x ?? Number.NaN) - rect.x)).toBeLessThanOrEqual(1);
+        expect(Math.abs((bounds?.y ?? Number.NaN) - rect.y)).toBeLessThanOrEqual(1);
+        expect(Math.abs((bounds?.width ?? Number.NaN) - rect.width)).toBeLessThanOrEqual(1);
+        expect(Math.abs((bounds?.height ?? Number.NaN) - rect.height)).toBeLessThanOrEqual(1);
+      });
+    };
+
+    try {
+      await waitForWorkbench("split");
+      const at1440 = expectSplitGeometry();
+      const explorerNode = mounted.host.querySelector<HTMLElement>(
+        `[data-right-dock-pane-id='${explorerPane.id}']`,
+      );
+      expect(explorerNode).toBeTruthy();
+
+      useRightDockStore.getState().setActivePane(THREAD_ID, browserPane.id);
+      const browserNode = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLElement>(`[data-right-dock-pane-id='${browserPane.id}']`),
+        "Unable to find the activated Browser pane.",
+      );
+      await vi.waitFor(() => {
+        expect(mounted.host.querySelector(`[data-right-dock-pane-id='${explorerPane.id}']`)).toBe(
+          explorerNode,
+        );
+      });
+      await vi.waitFor(() => {
+        expect(browserNode?.getAttribute("data-right-dock-pane-runtime")).toBe("live");
+      });
+      await expectNativeBrowserBounds();
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1536 });
+      await waitForWorkbench("split");
+      const at1536 = expectSplitGeometry();
+      expect(at1536.dockRect.width).toBeGreaterThan(at1440.dockRect.width);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
+      await waitForWorkbench("split");
+      const restored1440 = expectSplitGeometry();
+      expect(restored1440.dockRect.width).toBeCloseTo(at1440.dockRect.width, 0);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1009 });
+      await waitForWorkbench("exclusive");
+      expectExclusiveGeometry();
+      await expectNativeBrowserBounds();
+      expect(mounted.host.querySelector(`[data-right-dock-pane-id='${browserPane.id}']`)).toBe(
+        browserNode,
+      );
+      expect(mounted.host.querySelector(`[data-right-dock-pane-id='${explorerPane.id}']`)).toBe(
+        explorerNode,
+      );
+
+      for (const width of [840, 900]) {
+        await mounted.setViewport({ ...DEFAULT_VIEWPORT, width });
+        await waitForWorkbench("exclusive");
+        expectExclusiveGeometry();
+      }
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
+      await waitForWorkbench("split");
+      expectSplitGeometry();
+      await expectNativeBrowserBounds();
+      expect(mounted.host.querySelector(`[data-right-dock-pane-id='${browserPane.id}']`)).toBe(
+        browserNode,
+      );
+      expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual([
+        explorerPane,
+        browserPane,
+      ]);
+
+      useRightDockStore.getState().setDockOpen(THREAD_ID, false);
+      await waitForWorkbench("closed");
+      await vi.waitFor(() => {
+        const closedExplorerNode = mounted.host.querySelector<HTMLElement>(
+          `[data-right-dock-pane-id='${explorerPane.id}']`,
+        );
+        // Explorer is an authored keep-mounted pane; Browser may tear down when the dock
+        // closes, while its store entry remains available for the next open.
+        expect(closedExplorerNode).toBe(explorerNode);
+        expect(closedExplorerNode?.getAttribute("data-right-dock-pane-visible")).toBe("false");
+        expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual([
+          explorerPane,
+          browserPane,
+        ]);
+        expect(panelBoundsCalls.at(-1)).toMatchObject({
+          threadId: THREAD_ID,
+          surface: "native",
+          bounds: null,
+        });
+        expect(hideCalls).toEqual([{ threadId: THREAD_ID }]);
+      });
+    } finally {
+      await mounted.cleanup();
+      if (previousNativeApi) {
+        Object.defineProperty(window, "nativeApi", {
+          configurable: true,
+          value: previousNativeApi,
+        });
+      } else {
+        Reflect.deleteProperty(window, "nativeApi");
+      }
+    }
+  });
+
+  it("keeps the responsive shell continuous through the authored hysteresis widths", async () => {
+    const explorerPane = createRightDockPane("pane-explorer-continuous-resize", "explorer");
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [explorerPane],
+          activePaneId: explorerPane.id,
+        },
+      },
+    });
+    const cookieSet = vi.spyOn(cookieStore, "set");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const windowErrors: string[] = [];
+    const handleWindowError = (event: ErrorEvent) => {
+      windowErrors.push(event.message);
+    };
+    window.addEventListener("error", handleWindowError);
+
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1536 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-continuous-responsive-shell" as MessageId,
+        targetText: "continuous responsive shell",
+      }),
+    });
+
+    const explorerNode = await waitForElement(
+      () =>
+        mounted.host.querySelector<HTMLElement>(
+          `[data-right-dock-pane-id='${explorerPane.id}']`,
+        ),
+      "Unable to find the keep-mounted Explorer pane.",
+    );
+    const assertResponsiveFrame = async (input: {
+      width: number;
+      sidebar: "docked" | "hidden";
+      workbench: "split" | "exclusive";
+    }) => {
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: input.width });
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+            ?.getAttribute("data-thread-sidebar-presentation"),
+        ).toBe(input.sidebar);
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-workbench-presentation]")
+            ?.getAttribute("data-workbench-presentation"),
+        ).toBe(input.workbench);
+      });
+      await waitForLayout();
+
+      const composerForm = mounted.host.querySelector<HTMLElement>(
+        "[data-chat-composer-form='true']",
+      );
+      const composerShell = composerForm?.querySelector<HTMLElement>(".chat-composer-shell");
+      const composerFooter = composerForm?.querySelector<HTMLElement>(
+        "[data-chat-composer-footer='true']",
+      );
+      expect(composerForm).toBeTruthy();
+      expect(composerShell).toBeTruthy();
+      expect(composerFooter).toBeTruthy();
+
+      for (const element of [composerForm!, composerShell!, composerFooter!]) {
+        const rect = element.getBoundingClientRect();
+        expect(rect.left).toBeGreaterThanOrEqual(-1);
+        expect(rect.right).toBeLessThanOrEqual(input.width + 1);
+        expect(element.scrollWidth).toBeLessThanOrEqual(element.clientWidth + 1);
+      }
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+        document.documentElement.clientWidth + 1,
+      );
+      expect(document.body.scrollWidth).toBeLessThanOrEqual(document.body.clientWidth + 1);
+      expect(
+        mounted.host.querySelector(`[data-right-dock-pane-id='${explorerPane.id}']`),
+      ).toBe(explorerNode);
+      expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual([
+        explorerPane,
+      ]);
+      expect(mounted.host.querySelector("[data-plan-sidebar]")).toBeNull();
+    };
+
+    const descending = [
+      { width: 1536, sidebar: "docked", workbench: "split" },
+      { width: 1280, sidebar: "docked", workbench: "exclusive" },
+      { width: 1208, sidebar: "docked", workbench: "exclusive" },
+      { width: 1207, sidebar: "docked", workbench: "exclusive" },
+      { width: 1144, sidebar: "docked", workbench: "exclusive" },
+      { width: 1143, sidebar: "hidden", workbench: "split" },
+      { width: 1076, sidebar: "hidden", workbench: "split" },
+      { width: 1050, sidebar: "hidden", workbench: "exclusive" },
+      { width: 1009, sidebar: "hidden", workbench: "exclusive" },
+      { width: 900, sidebar: "hidden", workbench: "exclusive" },
+      { width: 840, sidebar: "hidden", workbench: "exclusive" },
+    ] as const;
+    const ascending = [
+      { width: 900, sidebar: "hidden", workbench: "exclusive" },
+      { width: 1009, sidebar: "hidden", workbench: "exclusive" },
+      { width: 1050, sidebar: "hidden", workbench: "exclusive" },
+      { width: 1076, sidebar: "hidden", workbench: "exclusive" },
+      { width: 1143, sidebar: "hidden", workbench: "split" },
+      { width: 1144, sidebar: "hidden", workbench: "split" },
+      { width: 1207, sidebar: "hidden", workbench: "split" },
+      { width: 1208, sidebar: "docked", workbench: "exclusive" },
+      { width: 1280, sidebar: "docked", workbench: "exclusive" },
+      { width: 1536, sidebar: "docked", workbench: "split" },
+    ] as const;
+
+    try {
+      for (const frame of [...descending, ...ascending]) {
+        await assertResponsiveFrame(frame);
+      }
+      expect(cookieSet).not.toHaveBeenCalled();
+      expect(windowErrors).toEqual([]);
+      const relevantConsoleErrors = consoleError.mock.calls.filter(([value]) =>
+        /ResizeObserver|loop|overflow/i.test(String(value)),
+      );
+      expect(relevantConsoleErrors).toEqual([]);
+    } finally {
+      window.removeEventListener("error", handleWindowError);
+      await mounted.cleanup();
+      cookieSet.mockRestore();
+      consoleError.mockRestore();
+    }
+  });
+
+  it("preserves an in-progress Chinese composer draft across inspector and responsive tiers", async () => {
+    const explorerPane = createRightDockPane("pane-explorer-ime-continuity", "explorer");
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [explorerPane],
+          activePaneId: explorerPane.id,
+        },
+      },
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1536 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-ime-responsive-continuity" as MessageId,
+        targetText: "IME responsive continuity",
+      }),
+    });
+
+    const waitForWorkbench = async (presentation: "closed" | "split" | "exclusive") => {
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-workbench-presentation]")
+            ?.getAttribute("data-workbench-presentation"),
+        ).toBe(presentation);
+      });
+      await waitForLayout();
+    };
+    const assertDraft = (editorNode: HTMLElement, expected: string) => {
+      expect(mounted.host.querySelector("[data-testid='composer-editor']")).toBe(editorNode);
+      expect(editorNode.textContent).toContain(expected);
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(expected);
+    };
+
+    try {
+      await waitForWorkbench("split");
+      const editorLocator = page.getByTestId("composer-editor");
+      const draft = "正在输入的中文草稿";
+      await editorLocator.fill(draft);
+      const editorNode = await waitForComposerEditor();
+      editorNode.focus();
+      await vi.waitFor(() => {
+        expect(document.activeElement).toBe(editorNode);
+        assertDraft(editorNode, draft);
+      });
+
+      let compositionEndCount = 0;
+      editorNode.addEventListener("compositionend", () => {
+        compositionEndCount += 1;
+      });
+      editorNode.dispatchEvent(
+        new CompositionEvent("compositionstart", { bubbles: true, data: "正" }),
+      );
+      editorNode.dispatchEvent(
+        new CompositionEvent("compositionupdate", { bubbles: true, data: "正在" }),
+      );
+
+      const environmentToggle = await waitForElement(
+        () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+        "Unable to find Environment toggle.",
+      );
+      // HTMLElement.click() exercises the real route handler without synthesizing a pointer
+      // focus transfer, matching keyboard/command-driven inspector presentation changes.
+      environmentToggle.click();
+      await vi.waitFor(() => expect(environmentToggle.getAttribute("aria-pressed")).toBe("true"));
+      assertDraft(editorNode, draft);
+      expect(document.activeElement).toBe(editorNode);
+      environmentToggle.click();
+      await vi.waitFor(() => expect(environmentToggle.getAttribute("aria-pressed")).toBe("false"));
+      assertDraft(editorNode, draft);
+      expect(document.activeElement).toBe(editorNode);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1076 });
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+            ?.getAttribute("data-thread-sidebar-presentation"),
+        ).toBe("hidden");
+      });
+      // A direct jump first resolves the old docked-Sidebar budget. Once exclusive,
+      // Workbench keeps its 64px restore hysteresis even after navigation retreats.
+      await waitForWorkbench("exclusive");
+      assertDraft(editorNode, draft);
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-right-dock-content]")
+          ?.contains(document.activeElement),
+      ).toBe(true);
+      expect(compositionEndCount).toBe(0);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1143 });
+      await waitForWorkbench("split");
+      assertDraft(editorNode, draft);
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-right-dock-content]")
+          ?.contains(document.activeElement),
+      ).toBe(true);
+      expect(compositionEndCount).toBe(0);
+      useRightDockStore.getState().setDockOpen(THREAD_ID, false);
+      await waitForWorkbench("closed");
+      await vi.waitFor(() => expect(document.activeElement).toBe(editorNode));
+
+      editorNode.dispatchEvent(
+        new CompositionEvent("compositionend", { bubbles: true, data: "正在" }),
+      );
+      expect(compositionEndCount).toBe(1);
+      await editorLocator.fill(`${draft}，继续输入`);
+      await vi.waitFor(() => assertDraft(editorNode, `${draft}，继续输入`));
+      expect(document.activeElement).toBe(editorNode);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("clamps the Device pane's natural width without shrinking Chat below its floor", async () => {
+    const devicePane = createRightDockPane("pane-device-responsive", "device");
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [devicePane],
+          activePaneId: devicePane.id,
+        },
+      },
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1424 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-device-width" as MessageId,
+        targetText: "device width",
+      }),
+    });
+
+    const expectDeviceSplit = async () => {
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-workbench-presentation]")
+            ?.getAttribute("data-workbench-presentation"),
+        ).toBe("split");
+      });
+      await waitForLayout();
+      const shellRect = mounted.host
+        .querySelector<HTMLElement>("[data-workbench-presentation]")!
+        .getBoundingClientRect();
+      const chatRect = mounted.host
+        .querySelector<HTMLElement>("[data-chat-primary-surface]")!
+        .getBoundingClientRect();
+      const dockRect = mounted.host
+        .querySelector<HTMLElement>("[data-right-dock-content]")!
+        .getBoundingClientRect();
+      expect(chatRect.width).toBeGreaterThanOrEqual(639);
+      expect(Math.abs(dockRect.width - Math.min(608, shellRect.width - 640))).toBeLessThanOrEqual(
+        1,
+      );
+      return { shellRect, chatRect, dockRect };
+    };
+
+    try {
+      const boundary = await expectDeviceSplit();
+      expect(Math.abs(boundary.dockRect.width - 416)).toBeLessThanOrEqual(1);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1616 });
+      const natural = await expectDeviceSplit();
+      expect(Math.abs(natural.dockRect.width - 608)).toBeLessThanOrEqual(1);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1800 });
+      const roomy = await expectDeviceSplit();
+      expect(Math.abs(roomy.dockRect.width - 608)).toBeLessThanOrEqual(1);
+      expect(roomy.chatRect.width).toBeGreaterThan(640);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps the 340px Plan sidebar stable while Workbench changes presentation", async () => {
+    const diffPane = createRightDockPane("pane-diff-plan-pressure", "diff");
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [diffPane],
+          activePaneId: diffPane.id,
+        },
+      },
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1736 },
+      snapshot: createSnapshotWithSettledPlanAwaitingFollowUp(),
+    });
+
+    const workbench = () =>
+      mounted.host.querySelector<HTMLElement>("[data-workbench-presentation]");
+    const plan = () => mounted.host.querySelector<HTMLElement>("[data-plan-sidebar]");
+    const dock = () => mounted.host.querySelector<HTMLElement>("[data-right-dock-content]");
+    const chatPrimary = () =>
+      mounted.host.querySelector<HTMLElement>("[data-chat-primary-surface]");
+    const expectPresentation = async (presentation: "closed" | "split" | "exclusive") => {
+      await vi.waitFor(() => {
+        expect(workbench()?.getAttribute("data-workbench-presentation")).toBe(presentation);
+      });
+    };
+
+    try {
+      await expectPresentation("split");
+      const initialPanes = useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes;
+      const openPlanButton = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLButtonElement>(
+            'button[aria-label="Show plan details sidebar"]',
+          ),
+        "Unable to find the proposed-plan sidebar trigger.",
+      );
+
+      // The user event must synchronously commit Plan pressure through the layout-phase
+      // child report. A single microtask lets React finish the discrete event; waiting even
+      // one rAF here would hide the rejected split+Plan transient.
+      openPlanButton.click();
+      await Promise.resolve();
+      expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("exclusive");
+
+      const planNode = await waitForElement(plan, "Unable to find the open Plan sidebar.");
+      expect(planNode.getBoundingClientRect().width).toBeCloseTo(340, 0);
+      const chatColumn = planNode.previousElementSibling as HTMLElement | null;
+      expect(chatColumn).not.toBeNull();
+      expect(chatColumn!.getBoundingClientRect().width).toBeGreaterThanOrEqual(639);
+
+      const expandPlanButton = await waitForElement(
+        () =>
+          Array.from(planNode.querySelectorAll<HTMLButtonElement>("button")).find(
+            (button) => button.textContent?.trim() === "Proposed plan",
+          ) ?? null,
+        "Unable to find the Plan expansion control.",
+      );
+      expandPlanButton.click();
+      await vi.waitFor(() => {
+        expect(planNode.textContent).toContain("Step 3: add regression coverage");
+      });
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 2090 });
+      await expectPresentation("split");
+      expect(plan()).toBe(planNode);
+      expect(planNode.textContent).toContain("Step 3: add regression coverage");
+      const shellRect = workbench()!.getBoundingClientRect();
+      const dockRect = dock()!.getBoundingClientRect();
+      const chatPrimaryRect = chatPrimary()!.getBoundingClientRect();
+      expect(dockRect.width).toBeLessThanOrEqual(shellRect.width - 640 - 340 + 1);
+      expect(chatPrimaryRect.width - planNode.getBoundingClientRect().width).toBeGreaterThanOrEqual(
+        639,
+      );
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1736 });
+      await expectPresentation("exclusive");
+      expect(plan()).toBe(planNode);
+
+      useRightDockStore.getState().setDockOpen(THREAD_ID, false);
+      await expectPresentation("closed");
+      expect(plan()).toBe(planNode);
+      expect(planNode.textContent).toContain("Step 3: add regression coverage");
+      expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual(
+        initialPanes,
+      );
+      const closePlanButton = planNode.querySelector<HTMLButtonElement>(
+        'button[aria-label="Close plan sidebar"]',
+      );
+      expect(closePlanButton).not.toBeNull();
+      closePlanButton!.click();
+      await Promise.resolve();
+      expect(plan()).toBeNull();
+      expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("closed");
+
+      useRightDockStore.getState().setDockOpen(THREAD_ID, true);
+      await expectPresentation("split");
+      expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual(
+        initialPanes,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("preserves visible Chat focus and cancels stale exclusive focus transfers", async () => {
+    const diffPane = createRightDockPane("pane-diff-focus", "diff");
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [diffPane],
+          activePaneId: diffPane.id,
+        },
+      },
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1440 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-right-dock-focus" as MessageId,
+        targetText: "right dock focus",
+      }),
+    });
+
+    const waitForWorkbench = async (presentation: "closed" | "split" | "exclusive") => {
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-workbench-presentation]")
+            ?.getAttribute("data-workbench-presentation"),
+        ).toBe(presentation);
+      });
+    };
+    const headerToggle = () =>
+      mounted.host.querySelector<HTMLButtonElement>(
+        "[data-slot='chat-surface-header'] button[aria-label='Toggle right sidebar']",
+      );
+
+    try {
+      await waitForWorkbench("split");
+      const initialHeaderToggle = headerToggle();
+      expect(initialHeaderToggle).toBeTruthy();
+      initialHeaderToggle?.focus();
+      await userEvent.click(initialHeaderToggle!);
+      await waitForWorkbench("closed");
+      expect(document.activeElement).toBe(initialHeaderToggle);
+
+      await userEvent.click(initialHeaderToggle!);
+      await waitForWorkbench("split");
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1009 });
+      await waitForWorkbench("exclusive");
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-right-dock-content]")
+            ?.contains(document.activeElement),
+        ).toBe(true);
+      });
+
+      const collapseButton = mounted.host.querySelector<HTMLButtonElement>(
+        "[data-right-dock-content] button[aria-label='Collapse panel']",
+      );
+      expect(collapseButton).toBeTruthy();
+      await userEvent.click(collapseButton!);
+      await waitForWorkbench("closed");
+      await vi.waitFor(() => {
+        expect(headerToggle()?.contains(document.activeElement)).toBe(
+          document.activeElement === headerToggle(),
+        );
+        expect(document.activeElement).toBe(headerToggle());
+      });
+
+      const rapidToggle = headerToggle();
+      rapidToggle?.focus();
+      rapidToggle?.click();
+      useRightDockStore.getState().setDockOpen(THREAD_ID, false);
+      await waitForWorkbench("closed");
+      await waitForLayout();
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-right-dock-content]")
+          ?.contains(document.activeElement),
+      ).toBe(false);
+
+      await userEvent.click(headerToggle()!);
+      await waitForWorkbench("exclusive");
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
+      await waitForWorkbench("split");
+      const visibleChatToggle = headerToggle();
+      visibleChatToggle?.focus();
+      await userEvent.click(visibleChatToggle!);
+      await waitForWorkbench("closed");
+      expect(document.activeElement).toBe(visibleChatToggle);
+    } finally {
+      await mounted.cleanup();
+    }
   });
 
   it.each([
@@ -2911,6 +4216,239 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(mobileLayout.scrollHeightPx).toBeGreaterThan(mobileLayout.scrollClientHeightPx);
       expect(mobileLayout.composerBottomPx).toBeLessThanOrEqual(mobileLayout.hostHeightPx + 1);
     } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("preserves tail-follow and user-scroll ownership while a live message crosses tiers", async () => {
+    const explorerPane = createRightDockPane("pane-explorer-stream-continuity", "explorer");
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [explorerPane],
+          activePaneId: explorerPane.id,
+        },
+      },
+    });
+    const liveMessageId = MessageId.makeUnsafe("msg-assistant-responsive-stream");
+    const activeTurnId = TurnId.makeUnsafe("turn-responsive-stream");
+    let currentSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-responsive-stream" as MessageId,
+      targetText: "responsive stream continuity",
+    });
+    currentSnapshot = {
+      ...currentSnapshot,
+      threads: currentSnapshot.threads.map((thread) =>
+        thread.id === THREAD_ID
+          ? {
+              ...thread,
+              messages: [
+                ...Array.from({ length: 60 }, (_, index) =>
+                  index % 2 === 0
+                    ? createUserMessage({
+                        id: MessageId.makeUnsafe(`msg-responsive-stream-user-${index}`),
+                        text: `Earlier user message ${index}`,
+                        offsetSeconds: 1_300 + index,
+                      })
+                    : createAssistantMessage({
+                        id: MessageId.makeUnsafe(`msg-responsive-stream-assistant-${index}`),
+                        text: `Earlier assistant response ${index}`,
+                        offsetSeconds: 1_300 + index,
+                      }),
+                ),
+                {
+                  ...createAssistantMessage({
+                    id: liveMessageId,
+                    text: "live response line",
+                    offsetSeconds: 1_500,
+                  }),
+                  turnId: activeTurnId,
+                  streaming: true,
+                },
+              ],
+              latestTurn: {
+                turnId: activeTurnId,
+                state: "running" as const,
+                requestedAt: isoAt(1_499),
+                startedAt: isoAt(1_500),
+                completedAt: null,
+                assistantMessageId: liveMessageId,
+              },
+              session: thread.session
+                ? {
+                    ...thread.session,
+                    status: "running" as const,
+                    activeTurnId,
+                    updatedAt: isoAt(1_500),
+                  }
+                : null,
+            }
+          : thread,
+      ),
+    };
+    const resizeObserverErrors: string[] = [];
+    const handleResizeObserverError = (event: ErrorEvent) => {
+      if (/ResizeObserver loop/i.test(event.message)) {
+        resizeObserverErrors.push(event.message);
+      }
+    };
+    window.addEventListener("error", handleResizeObserverError);
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1536 },
+      snapshot: currentSnapshot,
+    });
+
+    const syncLiveText = (text: string, sequenceOffset: number) => {
+      currentSnapshot = {
+        ...currentSnapshot,
+        snapshotSequence: currentSnapshot.snapshotSequence + 1,
+        threads: currentSnapshot.threads.map((thread) =>
+          thread.id === THREAD_ID
+            ? {
+                ...thread,
+                messages: thread.messages.map((message) =>
+                  message.id === liveMessageId
+                    ? { ...message, text, updatedAt: isoAt(sequenceOffset) }
+                    : message,
+                ),
+                updatedAt: isoAt(sequenceOffset),
+              }
+            : thread,
+        ),
+        updatedAt: isoAt(sequenceOffset),
+      };
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+    };
+    const waitForWorkbench = async (presentation: "split" | "exclusive") => {
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-workbench-presentation]")
+            ?.getAttribute("data-workbench-presentation"),
+        ).toBe(presentation);
+      });
+      await waitForLayout();
+    };
+
+    try {
+      await waitForWorkbench("split");
+      const scrollContainer = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
+        "Unable to find the responsive stream scroll container.",
+      );
+      const liveRow = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLElement>(`[data-message-id='${liveMessageId}']`),
+        "Unable to find the live assistant message row.",
+      );
+      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      scrollContainer.dispatchEvent(new Event("scroll"));
+      await vi.waitFor(() => {
+        expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeLessThanOrEqual(
+          AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+        );
+      });
+
+      syncLiveText("live response line\n\nfirst streamed continuation", 1_501);
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1076 });
+      await waitForWorkbench("exclusive");
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1143 });
+      await waitForWorkbench("split");
+      await vi.waitFor(() => {
+        expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeLessThanOrEqual(
+          AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+        );
+      });
+      expect(mounted.host.querySelector("[data-chat-scroll-container='true']")).toBe(
+        scrollContainer,
+      );
+      expect(mounted.host.querySelector(`[data-message-id='${liveMessageId}']`)).toBe(liveRow);
+
+      const takeoverDistancePx = AUTO_SCROLL_BOTTOM_THRESHOLD_PX + 180;
+      scrollContainer.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: -180 }));
+      scrollContainer.scrollTop = Math.max(
+        0,
+        scrollContainer.scrollHeight - scrollContainer.clientHeight - takeoverDistancePx,
+      );
+      scrollContainer.dispatchEvent(new Event("scroll"));
+      await vi.waitFor(() => {
+        expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
+          AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+        );
+        expect(
+          mounted.host.querySelector(
+            "button[aria-label='Scroll to bottom'][aria-hidden='false']",
+          ),
+        ).toBeTruthy();
+      });
+      await waitForLayout();
+      expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
+        AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+      );
+      expect(
+        mounted.host.querySelector(
+          "button[aria-label='Scroll to bottom'][aria-hidden='false']",
+        ),
+      ).toBeTruthy();
+      syncLiveText(
+        "live response line\n\nfirst streamed continuation\n\nsecond streamed continuation",
+        1_502,
+      );
+      await waitForLayout();
+      expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
+        AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+      );
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1050 });
+      await waitForWorkbench("exclusive");
+      expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
+        AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+      );
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1143 });
+      await waitForWorkbench("split");
+      expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
+        AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+      );
+      expect(
+        mounted.host.querySelector(
+          "button[aria-label='Scroll to bottom'][aria-hidden='false']",
+        ),
+      ).toBeTruthy();
+      expect(mounted.host.querySelector("[data-chat-scroll-container='true']")).toBe(
+        scrollContainer,
+      );
+      expect(mounted.host.querySelector(`[data-message-id='${liveMessageId}']`)).toBe(liveRow);
+
+      const returnToTailButton = mounted.host.querySelector<HTMLButtonElement>(
+        "button[aria-label='Scroll to bottom'][aria-hidden='false']",
+      );
+      expect(returnToTailButton).toBeTruthy();
+      returnToTailButton!.click();
+      await vi.waitFor(() => {
+        expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeLessThanOrEqual(
+          AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+        );
+        expect(
+          mounted.host.querySelector(
+            "button[aria-label='Scroll to bottom'][aria-hidden='false']",
+          ),
+        ).toBeNull();
+      });
+      syncLiveText(
+        "live response line\n\nfirst streamed continuation\n\nsecond streamed continuation\n\nthird streamed continuation",
+        1_503,
+      );
+      await vi.waitFor(() => {
+        expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeLessThanOrEqual(
+          AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
+        );
+      });
+      expect(mounted.host.querySelector(`[data-message-id='${liveMessageId}']`)).toBe(liveRow);
+      await waitForLayout();
+      expect(resizeObserverErrors).toEqual([]);
+    } finally {
+      window.removeEventListener("error", handleResizeObserverError);
       await mounted.cleanup();
     }
   });

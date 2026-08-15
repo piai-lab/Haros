@@ -6,6 +6,7 @@
 
 import type { MessageId, PinnedMessage } from "@omnimind/contracts";
 import { displayLabelFor } from "~/pinnedMessages";
+import { useI18n } from "~/i18n";
 
 import { EnvironmentEditableChecklistRow } from "./EnvironmentEditableChecklistRow";
 import { EnvironmentCollapsibleSection } from "./EnvironmentRow";
@@ -28,11 +29,12 @@ export function EnvironmentPinnedSection({
   onUnpin,
   onRename,
 }: EnvironmentPinnedSectionProps) {
+  const { t } = useI18n();
   if (pins.length === 0) {
     return null;
   }
   return (
-    <EnvironmentCollapsibleSection label="Pinned">
+    <EnvironmentCollapsibleSection label={t("environment.pinnedMessages")}>
       <ul className="flex flex-col">
         {pins.map((pin) => (
           <PinnedMessageRow
@@ -65,9 +67,11 @@ const PinnedMessageRow = function PinnedMessageRow({
   onUnpin: (messageId: MessageId) => void;
   onRename: (messageId: MessageId, label: string | null) => void;
 }) {
+  const { t } = useI18n();
   const available = text !== undefined;
   const resolvedLabel = displayLabelFor(pin, text);
-  const displayLabel = resolvedLabel.length > 0 ? resolvedLabel : "(message unavailable)";
+  const displayLabel =
+    resolvedLabel.length > 0 ? resolvedLabel : t("environment.messageUnavailable");
 
   return (
     <EnvironmentEditableChecklistRow
@@ -75,20 +79,20 @@ const PinnedMessageRow = function PinnedMessageRow({
       available={available}
       displayLabel={displayLabel}
       initialEditLabel={resolvedLabel}
-      editPlaceholder={available ? "" : "Label"}
-      checkboxAriaLabel={pin.done ? "Mark not done" : "Mark done"}
+      editPlaceholder={available ? "" : t("environment.labelPlaceholder")}
+      checkboxAriaLabel={pin.done ? t("environment.markNotDone") : t("environment.markDone")}
       labelAriaLabel={
         available
-          ? "Jump to pinned message. Press F2 to rename."
-          : "Pinned message unavailable. Press Enter to rename."
+          ? t("environment.jumpPinnedAria")
+          : t("environment.pinnedUnavailableAria")
       }
       labelTitle={
         available
-          ? "Click to jump · double-click or press F2 to rename"
-          : "Click or press Enter to rename"
+          ? t("environment.jumpPinnedTooltip")
+          : t("environment.pinnedUnavailableTooltip")
       }
-      removeLabel="Unpin message"
-      removeTooltip="Unpin"
+      removeLabel={t("environment.unpinMessage")}
+      removeTooltip={t("environment.unpin")}
       className="group/pin"
       removeButtonClassName="group-hover/pin:opacity-100"
       onJump={() => onJump(pin.messageId)}

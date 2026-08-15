@@ -74,8 +74,10 @@ import {
   useSyncExternalStore,
   type MouseEvent,
   type ReactNode,
+  type WheelEvent,
 } from "react";
 import { GoTasklist } from "react-icons/go";
+import { flushSync } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Debouncer, useDebouncedValue } from "@tanstack/react-pacer";
 import { useNavigate } from "@tanstack/react-router";
@@ -464,11 +466,7 @@ import {
   mergeProjectInstructionsIntoThreadNotes,
   useProjectInstructionsStore,
 } from "~/projectInstructionsStore";
-import {
-  ENVIRONMENT_DOCKED_CONTENT_INSET_PX,
-  EnvironmentPanel,
-  type EnvironmentPanelProps,
-} from "./chat/environment/EnvironmentPanel";
+import { EnvironmentPanel, type EnvironmentPanelProps } from "./chat/environment/EnvironmentPanel";
 import { usePinnedMessageActions } from "./chat/environment/usePinnedMessageActions";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -568,7 +566,6 @@ import {
   CHAT_BACKGROUND_CLASS_NAME,
   CHAT_COLUMN_FRAME_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,
-  ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
 } from "./chat/composerPickerStyles";
 import { getComposerTraitSelection } from "./chat/composerTraits";
 import {
@@ -1284,6 +1281,7 @@ interface ChatViewProps {
   } | null;
   onChangeThreadInSplitPane?: () => void;
   onCloseThreadPane?: () => void;
+  onPlanSidebarOpenChange?: (open: boolean) => void;
 }
 
 function normalizeRestoredQueuedPrompt(value: string): string {
@@ -1345,6 +1343,7 @@ export default function ChatView({
   viewModeAction: viewModeActionProp,
   onChangeThreadInSplitPane,
   onCloseThreadPane,
+  onPlanSidebarOpenChange,
 }: ChatViewProps) {
   // Prop defaults are resolved here instead of in the destructuring pattern: an
   // AssignmentPattern in the parameter list makes React Compiler bail out (silently —
@@ -1628,6 +1627,9 @@ export default function ChatView({
   const [pendingUserInputQuestionIndexByRequestId, setPendingUserInputQuestionIndexByRequestId] =
     useState<Record<string, number>>({});
   const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
+  useLayoutEffect(() => {
+    onPlanSidebarOpenChange?.(planSidebarOpen);
+  }, [onPlanSidebarOpenChange, planSidebarOpen]);
   const [activeTaskListCompact, setActiveTaskListCompact] = useState(false);
   const [subagentStripCompact, setSubagentStripCompact] = useState(false);
   const [workflowRunCardCompact, setWorkflowRunCardCompact] = useState(false);
@@ -2266,7 +2268,9 @@ export default function ChatView({
     worktreePath: resolvedThreadWorktreePath,
   });
   const diffEnvironmentPending = diffEnvironmentState.pending;
-  const diffDisabledReason = diffEnvironmentState.disabledReason;
+  const diffDisabledReason = diffEnvironmentState.disabledReasonKey
+    ? t(diffEnvironmentState.disabledReasonKey)
+    : null;
   const repoDiffBadgeRefreshIntervalMs =
     isFocusedPane && latestTurnLive && !diffEnvironmentPending && !resolvedDiffOpen
       ? GIT_WORKING_TREE_DIFF_LIVE_REFETCH_INTERVAL_MS
@@ -4869,13 +4873,13 @@ export default function ChatView({
   // Environment panel + header controls. "Temporary" is purely a sidebar badge +
   // auto-delete-on-leave concern, never a stripped-down chat UI.
   const environmentEnabled = !isEditorRail;
-  const environmentUsesFloatingOverlay =
+  const environmentDefaultUsesConstrainedLayout =
     isTerminalEnvironmentContext || isMobileViewport || rightDockOpen || surfaceMode === "split";
   const environmentDefaultOpen = resolveDefaultEnvironmentPanelOpen({
     environmentEnabled,
     isCenteredEmptyLanding,
     isTerminalPrimarySurface,
-    isConstrainedChatLayout: environmentUsesFloatingOverlay,
+    isConstrainedChatLayout: environmentDefaultUsesConstrainedLayout,
     settingsDefaultOpen: settings.environmentPanelDefaultOpen,
   });
   // Every close (header toggle or panel action click) stores the cross-chat preference,
@@ -4902,7 +4906,32 @@ export default function ChatView({
     [updateEnvironmentPanelPreference],
   );
   const closeEnvironmentPanelAfterAction = useCallback(
-    () => updateEnvironmentPanelPreference(false, false),
+    () => {
+      const activeElement = document.activeElement;
+      const environmentPanel =
+        activeElement instanceof HTMLElement
+          ? activeElement.closest<HTMLElement>(
+              "[data-environment-panel-presentation='overlay']",
+            )
+          : null;
+      const environmentToggle =
+        environmentPanel
+          ?.closest("[data-chat-primary-surface]")
+          ?.querySelector<HTMLButtonElement>("[data-environment-toggle]") ?? null;
+
+      updateEnvironmentPanelPreference(false, false);
+      if (!environmentToggle) return;
+      window.requestAnimationFrame(() => {
+        if (
+          !environmentToggle.isConnected ||
+          environmentToggle.getClientRects().length === 0 ||
+          environmentToggle.closest("[inert], [aria-hidden='true']")
+        ) {
+          return;
+        }
+        environmentToggle.focus({ preventScroll: true });
+      });
+    },
     [updateEnvironmentPanelPreference],
   );
   const environmentPanelOpen = resolveEnvironmentPanelOpen({
@@ -5615,9 +5644,25 @@ export default function ChatView({
   const onMessagesTouchStartBase = useCallback(() => {
     clearTranscriptAutoFollow();
   }, [clearTranscriptAutoFollow]);
-  const onMessagesWheelBase = useCallback(() => {
-    clearTranscriptAutoFollow();
-  }, [clearTranscriptAutoFollow]);
+  const onMessagesWheelBase = useCallback(
+    (event: WheelEvent) => {
+      clearTranscriptAutoFollow();
+      if (event.deltaY < 0 && !showScrollToBottom) {
+        // A wheel gesture away from the live edge owns the viewport immediately. Reuse the
+        // existing scroll-button state to stop LegendList's already-queued maintain-at-end
+        // layout pass before the native scroll event arrives; onIsAtEndChange restores live
+        // following when the reader returns to the tail.
+        const scrollTarget = legendListRef.current;
+        if (scrollTarget) {
+          void stopTranscriptScrollAtCurrentOffset(scrollTarget);
+        }
+        isAtEndRef.current = false;
+        showScrollDebouncer.current.cancel();
+        flushSync(() => setShowScrollToBottom(true));
+      }
+    },
+    [clearTranscriptAutoFollow, showScrollToBottom],
+  );
   useLayoutEffect(() => {
     const shouldFollowPendingTurn =
       activeThread?.id !== undefined && autoFollowThreadIdRef.current === activeThread.id;
@@ -11796,7 +11841,7 @@ export default function ChatView({
 
   // Shared inputs for both Environment panel surfaces (the header Popover when the dock is
   // open, and the docked right column when it is closed) so the two never drift.
-  const environmentPanelProps: Omit<EnvironmentPanelProps, "open" | "variant"> = {
+  const environmentPanelProps: Omit<EnvironmentPanelProps, "open"> = {
     gitCwd: threadWorkspaceCwd,
     openInTarget: threadWorkspaceCwd,
     githubRepository: githubRepositoryQuery.data?.repository ?? null,
@@ -11841,11 +11886,6 @@ export default function ChatView({
     onClose: closeEnvironmentPanelAfterAction,
     onRegisterCommitAndPushTrigger,
   };
-  // Full-width single chat: overlay plus transcript/composer inset. Floating overlay when the
-  // column is already narrow — right dock open or a split pane (same as header compact mode).
-  // Terminal surfaces always float so opening Environment never resizes the terminal workspace.
-  const environmentAppliesContentInset = environmentPanelVisible && !environmentUsesFloatingOverlay;
-  const environmentOverlayVariant = environmentUsesFloatingOverlay ? "floating" : "docked";
   const environmentHeaderState = environmentEnabled
     ? {
         open: environmentPanelVisible,
@@ -12807,7 +12847,7 @@ export default function ChatView({
                     editableUserMessageId={editableUserMessageId}
                     isRevertingCheckpoint={isRevertingCheckpoint}
                     onExpandTimelineImage={onExpandTimelineImage}
-                    followLiveOutput={hasStreamingAssistantText}
+                    followLiveOutput={hasStreamingAssistantText && !showScrollToBottom}
                     onIsAtEndChange={onIsAtEndChange}
                     markdownCwd={threadWorkspaceCwd ?? undefined}
                     resolvedTheme={resolvedTheme}
@@ -12831,11 +12871,6 @@ export default function ChatView({
                     onCloseAgentActivityDetail={() => setOpenAgentActivityId(null)}
                     scrollButtonVisible={showScrollToBottom}
                     onScrollToBottom={onScrollToBottom}
-                    contentInsetRightPx={
-                      environmentAppliesContentInset
-                        ? ENVIRONMENT_DOCKED_CONTENT_INSET_PX
-                        : undefined
-                    }
                     contentInsetBottomPx={composerTranscriptInsetPx}
                     contentInsetBottomClearancePx={composerOverlayBottomClearancePx}
                   />
@@ -12850,16 +12885,8 @@ export default function ChatView({
                     ref={composerOverlayRef}
                     className={cn(
                       "pointer-events-none absolute inset-x-0 bottom-full w-full overflow-visible",
-                      ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
                       CHAT_COLUMN_GUTTER_CLASS_NAME,
                     )}
-                    // Match the transcript's right inset so the composer stays aligned with chat
-                    // content (and clear of the docked Environment overlay).
-                    style={
-                      environmentAppliesContentInset
-                        ? { paddingRight: ENVIRONMENT_DOCKED_CONTENT_INSET_PX }
-                        : undefined
-                    }
                   >
                     <div className="pointer-events-auto">{composerSection}</div>
                   </div>
@@ -12929,13 +12956,9 @@ export default function ChatView({
             </div>
           ) : null}
 
-          {/* Environment overlay — always mounted so open/close can transition in lockstep with inset. */}
+          {/* Environment overlay stays mounted so open/close can transition without rebuilding it. */}
           {environmentEnabled ? (
-            <EnvironmentPanel
-              {...environmentPanelProps}
-              open={environmentPanelVisible}
-              variant={environmentOverlayVariant}
-            />
+            <EnvironmentPanel {...environmentPanelProps} open={environmentPanelVisible} />
           ) : null}
         </div>
         {/* end chat column */}

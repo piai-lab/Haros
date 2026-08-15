@@ -8,7 +8,9 @@ import {
   type ReactNode,
   startTransition,
   Suspense,
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -72,6 +74,7 @@ import {
   useSplitViewStore,
 } from "../../splitViewStore";
 import { useStore } from "../../store";
+import { useI18n } from "../../i18n";
 import {
   createProjectSelector,
   createSidebarThreadSummariesSelector,
@@ -89,7 +92,11 @@ import {
 } from "./ChatThreadSurfacePrimitives";
 import { PanelStateMessage } from "./PanelStateMessage";
 import { RightDock } from "./RightDock";
-import { getRightDockPaneMeta, resolveRightDockLauncherItems } from "./rightDockPaneMeta";
+import {
+  getRightDockPaneMeta,
+  resolveRightDockLauncherItems,
+  rightDockPaneLabelKey,
+} from "./rightDockPaneMeta";
 import {
   CHAT_BACKGROUND_CLASS_NAME,
   CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
@@ -112,6 +119,12 @@ import {
   stripEditorViewSearchParams,
 } from "../../routes/-chatThreadRoute.logic";
 import { cn } from "~/lib/utils";
+import {
+  CHAT_CANVAS_MIN_WIDTH_PX,
+  PLAN_SIDEBAR_WIDTH_PX,
+  resolveWorkbenchAutoExclusive,
+  resolveWorkbenchPresentation,
+} from "~/lib/responsiveWorkbench";
 
 const PullRequestDockPane = lazy(() => import("../pullRequest/PullRequestDockPane"));
 const EditorWorkspaceView = lazy(() =>
@@ -166,7 +179,11 @@ function shouldAcceptDockWidth({
 
 function RightDockPanePlaceholder(props: { kind: RightDockPaneKind }) {
   const { label } = getRightDockPaneMeta(props.kind);
-  return <PanelStateMessage>{label} panel is coming soon.</PanelStateMessage>;
+  const { t } = useI18n();
+  const localizedLabel = t(rightDockPaneLabelKey(props.kind, label));
+  return (
+    <PanelStateMessage>{t("workbench.comingSoon", { panel: localizedLabel })}</PanelStateMessage>
+  );
 }
 
 // Embedded dock chats (side chats) manage their own panels through the dock, so the
@@ -184,12 +201,131 @@ export function SingleChatSurface(props: {
   search: DiffRouteSearch;
   projectId: ProjectId | null;
 }) {
+  const { t } = useI18n();
+  const responsiveShellRef = useRef<HTMLDivElement | null>(null);
+  const chatSurfaceRef = useRef<HTMLDivElement | null>(null);
+  const chatFocusReturnRef = useRef<HTMLElement | null>(null);
+  const previousWorkbenchPresentationRef = useRef<"closed" | "split" | "exclusive">("closed");
   const navigate = useNavigate();
   const createSplitView = useSplitViewStore((store) => store.createFromThread);
   const createSplitViewFromDrop = useSplitViewStore((store) => store.createFromDrop);
   const dockState = useRightDockStore(
     useMemo(() => selectRightDockState(props.threadId), [props.threadId]),
   );
+  const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
+  const [workbenchAutoExclusive, setWorkbenchAutoExclusive] = useState(false);
+  useEffect(() => {
+    const shell = responsiveShellRef.current;
+    if (!shell) return;
+    let frameId: number | null = null;
+    const update = () => {
+      frameId = null;
+      setWorkbenchAutoExclusive((previouslyExclusive) =>
+        resolveWorkbenchAutoExclusive({
+          // The outer shell width does not change when split/exclusive changes, so the
+          // observer cannot feed the presentation transition back into itself.
+          availableWidth: shell.getBoundingClientRect().width,
+          planSidebarOpen,
+          previouslyExclusive,
+        }),
+      );
+    };
+    const observer = new ResizeObserver(() => {
+      if (frameId !== null) return;
+      frameId = window.requestAnimationFrame(update);
+    });
+    observer.observe(shell);
+    update();
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+    };
+  }, [planSidebarOpen]);
+  const workbenchPresentation = resolveWorkbenchPresentation({
+    dockOpen: dockState.open,
+    autoExclusive: workbenchAutoExclusive,
+  });
+  const handlePlanSidebarOpenChange = useCallback((open: boolean) => {
+    setPlanSidebarOpen(open);
+    const shellWidth = responsiveShellRef.current?.getBoundingClientRect().width ?? 0;
+    if (shellWidth > 0) {
+      // ChatView reports in layout phase. Resolve the new pressure budget in the same
+      // pre-paint transaction so no frame can expose split Workbench + 340px Plan.
+      setWorkbenchAutoExclusive((previouslyExclusive) =>
+        resolveWorkbenchAutoExclusive({
+          availableWidth: shellWidth,
+          planSidebarOpen: open,
+          previouslyExclusive,
+        }),
+      );
+    }
+  }, []);
+  useLayoutEffect(() => {
+    const shell = responsiveShellRef.current;
+    const chatSurface = chatSurfaceRef.current;
+    if (!shell || !chatSurface) return;
+    const previous = previousWorkbenchPresentationRef.current;
+    previousWorkbenchPresentationRef.current = workbenchPresentation;
+
+    if (workbenchPresentation === "exclusive" && previous !== "exclusive") {
+      if (
+        document.activeElement instanceof HTMLElement &&
+        chatSurface.contains(document.activeElement)
+      ) {
+        chatFocusReturnRef.current = document.activeElement;
+      }
+      const frameId = window.requestAnimationFrame(() => {
+        if (previousWorkbenchPresentationRef.current !== "exclusive") return;
+        shell
+          .querySelector<HTMLElement>(
+            '[data-right-dock-content] button:not([disabled]), [data-right-dock-content] [tabindex]:not([tabindex="-1"])',
+          )
+          ?.focus();
+      });
+      return () => window.cancelAnimationFrame(frameId);
+    }
+
+    if (workbenchPresentation === "closed" && previous !== "closed") {
+      if (
+        document.activeElement instanceof HTMLElement &&
+        chatSurface.contains(document.activeElement) &&
+        document.activeElement.getClientRects().length > 0
+      ) {
+        // A Chat-header close already leaves focus on a visible Chat control. Do not replace
+        // the user's current target with a generic composer fallback.
+        chatFocusReturnRef.current = null;
+        return;
+      }
+      const returnTarget = chatFocusReturnRef.current;
+      chatFocusReturnRef.current = null;
+      const frameId = window.requestAnimationFrame(() => {
+        if (previousWorkbenchPresentationRef.current !== "closed") return;
+        if (
+          returnTarget?.isConnected &&
+          chatSurface.contains(returnTarget) &&
+          returnTarget.getClientRects().length > 0
+        ) {
+          returnTarget.focus();
+          return;
+        }
+        chatSurface
+          .querySelector<HTMLElement>(
+            'textarea:not([disabled]), [contenteditable="true"], button:not([disabled])',
+          )
+          ?.focus();
+      });
+      return () => window.cancelAnimationFrame(frameId);
+    }
+
+    if (
+      workbenchPresentation === "split" &&
+      previous === "exclusive" &&
+      document.activeElement instanceof HTMLElement &&
+      chatSurface.contains(document.activeElement)
+    ) {
+      chatFocusReturnRef.current = null;
+    }
+  }, [workbenchPresentation]);
   const openPane = useRightDockStore((store) => store.openPane);
   const toggleSingletonPane = useRightDockStore((store) => store.toggleSingletonPane);
   const closePane = useRightDockStore((store) => store.closePane);
@@ -695,11 +831,11 @@ export function SingleChatSurface(props: {
     );
   };
   const handleSelectEditorProject = (projectId: ProjectId) => {
-    void openEditorProject(projectId).catch((error: unknown) => {
+    void openEditorProject(projectId).catch(() => {
       toastManager.add({
         type: "error",
-        title: "Unable to open project",
-        description: error instanceof Error ? error.message : "The project could not be opened.",
+        title: t("workbench.unableOpenProject"),
+        description: t("workbench.projectOpenFailed"),
       });
     });
   };
@@ -744,21 +880,18 @@ export function SingleChatSurface(props: {
           if (!createSidechat) {
             toastManager.add({
               type: "warning",
-              title: "Side chat is unavailable",
-              description: "Open a server-backed main thread before starting a Side chat.",
+              title: t("workbench.sideChatUnavailableTitle"),
+              description: t("workbench.sideChatUnavailableDescription"),
             });
             return;
           }
           return createSidechat();
         })
-        .catch((error) => {
+        .catch(() => {
           toastManager.add({
             type: "error",
-            title: "Could not start Side chat",
-            description:
-              error instanceof Error
-                ? error.message
-                : "An error occurred while creating Side chat.",
+            title: t("workbench.sideChatStartFailed"),
+            description: t("workbench.sideChatStartFailedDescription"),
           });
         });
       return;
@@ -773,7 +906,7 @@ export function SingleChatSurface(props: {
     switch (pane.kind) {
       case "browser":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading browser...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingBrowser")}</PanelStateMessage>}>
             <LazyBrowserPanel
               mode="sidebar"
               threadId={props.threadId}
@@ -785,7 +918,7 @@ export function SingleChatSurface(props: {
         );
       case "device":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading simulator...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingSimulator")}</PanelStateMessage>}>
             <LazyDevicePanel
               mode="sidebar"
               threadId={props.threadId}
@@ -798,7 +931,7 @@ export function SingleChatSurface(props: {
         );
       case "pullRequest":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading pull request...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingPullRequest")}</PanelStateMessage>}>
             <PullRequestDockPane
               pane={pane}
               pollingEnabled={context.isVisible}
@@ -829,7 +962,7 @@ export function SingleChatSurface(props: {
         );
       case "terminal":
         if (context.runtimeMode === "preview") {
-          return <PanelStateMessage>Terminal is sleeping. Restoring shortly.</PanelStateMessage>;
+          return <PanelStateMessage>{t("workbench.terminalSleeping")}</PanelStateMessage>;
         }
         // Kept mounted across tab switches; visibility toggles the xterm runtime
         // instead of detaching/reattaching it (avoids the open-lag + fit flicker).
@@ -837,7 +970,7 @@ export function SingleChatSurface(props: {
         // mounted (offcanvas is CSS-only), so without this the off-screen terminal
         // would keep WebGL + resize observers alive for nothing.
         return (
-          <Suspense fallback={<PanelStateMessage>Loading terminal...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingTerminal")}</PanelStateMessage>}>
             <DockTerminalPane
               hostThreadId={props.threadId}
               projectId={props.projectId}
@@ -848,7 +981,7 @@ export function SingleChatSurface(props: {
         );
       case "git":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading Git...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingGit")}</PanelStateMessage>}>
             <GitPanel
               hostThreadId={props.threadId}
               projectId={props.projectId}
@@ -858,7 +991,7 @@ export function SingleChatSurface(props: {
         );
       case "explorer":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading explorer...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingExplorer")}</PanelStateMessage>}>
             <DockExplorerPane
               workspaceRoot={workspaceRoot}
               onReferenceInChat={handleReferenceInChat}
@@ -869,7 +1002,7 @@ export function SingleChatSurface(props: {
         );
       case "file":
         return (
-          <Suspense fallback={<PanelStateMessage>Loading file...</PanelStateMessage>}>
+          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingFile")}</PanelStateMessage>}>
             <DockFilePane
               workspaceRoot={workspaceRoot}
               filePath={pane.filePath}
@@ -884,7 +1017,7 @@ export function SingleChatSurface(props: {
           return <RightDockPanePlaceholder kind="sidechat" />;
         }
         if (!threadSummaries.some((thread) => thread.id === pane.threadId)) {
-          return <PanelStateMessage>Loading side chat...</PanelStateMessage>;
+          return <PanelStateMessage>{t("workbench.loadingSideChat")}</PanelStateMessage>;
         }
         if (context.runtimeMode === "preview") {
           return null;
@@ -1048,38 +1181,56 @@ export function SingleChatSurface(props: {
   return (
     <WorkspaceFileOpenerContext.Provider value={dockFileOpener}>
       <div
-        className={cn(CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME, CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME)}
+        ref={responsiveShellRef}
+        className={cn(
+          CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME,
+          CHAT_MAIN_CONTENT_SURFACE_CLASS_NAME,
+          "[container-type:inline-size]",
+        )}
+        data-workbench-presentation={workbenchPresentation}
       >
-        <ChatPaneDropOverlay
-          canDropInDirection={allowAnySplitDirection}
-          excludedThreadIds={excludedThreadIds}
-          onDrop={handleDropThread}
-          className="flex h-full min-h-0 min-w-0 flex-1"
+        <div
+          ref={chatSurfaceRef}
+          className={cn(
+            "flex h-full min-h-0 min-w-0 flex-1",
+            workbenchPresentation === "exclusive" && "invisible pointer-events-none",
+          )}
+          aria-hidden={workbenchPresentation === "exclusive" ? true : undefined}
+          inert={workbenchPresentation === "exclusive" ? true : undefined}
+          data-chat-primary-surface
         >
-          <RouteInsetSurface surfaceClassName={CHAT_BACKGROUND_CLASS_NAME}>
-            <DeferredChatView
-              threadId={props.threadId}
-              paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
-              deferMount={isBrandNewDraftThread}
-              surfaceMode="single"
-              isFocusedPane
-              panelState={chatPanelState}
-              onToggleDiff={handleToggleDiff}
-              onToggleRightDock={handleToggleRightDock}
-              onToggleBrowser={handleToggleBrowser}
-              onRevealBrowser={handleOpenBrowserUrl}
-              {...(hasDeviceSupport ? { onToggleDevice: handleToggleDevice } : {})}
-              onOpenBrowserUrl={handleOpenBrowserUrl}
-              onOpenTurnDiff={handleOpenTurnDiff}
-              onSplitSurface={handleSplitSurface}
-              viewModeAction={{
-                label: "Editor view",
-                active: false,
-                onClick: handleOpenEditorView,
-              }}
-            />
-          </RouteInsetSurface>
-        </ChatPaneDropOverlay>
+          <ChatPaneDropOverlay
+            canDropInDirection={allowAnySplitDirection}
+            excludedThreadIds={excludedThreadIds}
+            onDrop={handleDropThread}
+            className="flex h-full min-h-0 min-w-0 flex-1"
+          >
+            <RouteInsetSurface surfaceClassName={CHAT_BACKGROUND_CLASS_NAME}>
+              <DeferredChatView
+                threadId={props.threadId}
+                paneScopeId={SINGLE_CHAT_PANE_SCOPE_ID}
+                deferMount={isBrandNewDraftThread}
+                surfaceMode="single"
+                isFocusedPane
+                panelState={chatPanelState}
+                onToggleDiff={handleToggleDiff}
+                onToggleRightDock={handleToggleRightDock}
+                onToggleBrowser={handleToggleBrowser}
+                onRevealBrowser={handleOpenBrowserUrl}
+                {...(hasDeviceSupport ? { onToggleDevice: handleToggleDevice } : {})}
+                onOpenBrowserUrl={handleOpenBrowserUrl}
+                onOpenTurnDiff={handleOpenTurnDiff}
+                onSplitSurface={handleSplitSurface}
+                viewModeAction={{
+                  label: t("workbench.editorView"),
+                  active: false,
+                  onClick: handleOpenEditorView,
+                }}
+                onPlanSidebarOpenChange={handlePlanSidebarOpenChange}
+              />
+            </RouteInsetSurface>
+          </ChatPaneDropOverlay>
+        </div>
         <RightDock
           state={dockState}
           minWidth={SINGLE_PANEL_MIN_WIDTH}
@@ -1089,6 +1240,10 @@ export function SingleChatSurface(props: {
           launcherItems={dockLauncherItems}
           motionKey={props.threadId}
           activePaneRuntimeMode={activePaneRuntimeMode}
+          minimumPrimaryWidth={
+            CHAT_CANVAS_MIN_WIDTH_PX + (planSidebarOpen ? PLAN_SIDEBAR_WIDTH_PX : 0)
+          }
+          presentation={workbenchPresentation === "exclusive" ? "exclusive" : "split"}
           {...(paneLabelOverrides ? { paneLabelOverrides } : {})}
           {...(paneIconOverrides ? { paneIconOverrides } : {})}
           onSelectPane={handleSelectDockPane}

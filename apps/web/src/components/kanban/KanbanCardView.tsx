@@ -117,10 +117,11 @@ function KanbanCardViewComponent({
     card.cardId === kanbanThreadCardId(card.threadId);
 
   const isForked = Boolean(card.thread?.forkSourceThreadId && !card.thread.sidechatSourceThreadId);
-  const worktreeBadgeLabel = resolveThreadEnvironmentPresentation({
+  const worktreeBadgeLabelKey = resolveThreadEnvironmentPresentation({
     envMode: card.envMode,
     worktreePath: card.worktreePath,
-  }).worktreeBadgeLabel;
+  }).worktreeBadgeLabelKey;
+  const worktreeBadgeLabel = worktreeBadgeLabelKey ? t(worktreeBadgeLabelKey) : null;
   // An explicit null from the resolver means the persisted PR was ruled out (e.g. the
   // checkout moved on); rows the board root has not resolved yet get the same validation
   // without live status instead of the raw — possibly stale — persisted badge.

@@ -1,0 +1,8 @@
+{
+  "format_version": 1,
+  "decision_digest": "da5f544ea4fdd252ff010a5303e992d189af14f5299aff7d40279ce5b509eb38",
+  "message": "用户明确否决旧说明型版本、确认最新真实 OmniMind Shell 版本 OK，并要求严谨全面地沉淀 research 后用 zq-orchestrate 开始，直接在 main 施工。",
+  "scope": "W1 responsive Workbench production implementation on main only; selected omnimind-shell-v2; excludes adaptive-inspector, Project instructions behavior, Agent Core, Desktop minWidth reduction, Sidebar cross-start rehydrate, and release",
+  "approved_at": "2026-08-15T10:34:30+00:00",
+  "production_authorized": true
+}

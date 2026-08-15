@@ -449,13 +449,10 @@ export function rankSettingsSearchEntries(
     return [];
   }
   const entries = translate
-    ? SETTINGS_SEARCH_ENTRIES.map((entry) => {
-        const titleKey = SETTINGS_SEARCH_TITLE_KEY_BY_TITLE[entry.title];
-        if (!titleKey) {
-          throw new Error(`Missing localized Settings search title: ${entry.title}`);
-        }
-        return { ...entry, title: translate(titleKey) };
-      })
+    ? SETTINGS_SEARCH_ENTRIES.map((entry) => ({
+        ...entry,
+        title: localizeSettingsSearchEntryTitle(entry, translate),
+      }))
     : SETTINGS_SEARCH_ENTRIES;
   const ranked = rankProviderDiscoveryItems(entries, trimmed, (entry) => [
     { value: entry.title },
@@ -520,3 +517,15 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   Version: "settings.version",
   "Visible providers": "settings.visibleProviders",
 };
+
+/** Project a stable English anchor record into the active product language. */
+export function localizeSettingsSearchEntryTitle(
+  entry: SettingsSearchEntry,
+  translate: (key: MessageKey) => string,
+): string {
+  const titleKey = SETTINGS_SEARCH_TITLE_KEY_BY_TITLE[entry.title];
+  if (!titleKey) {
+    throw new Error(`Missing localized Settings search title: ${entry.title}`);
+  }
+  return translate(titleKey);
+}

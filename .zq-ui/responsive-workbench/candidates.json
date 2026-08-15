@@ -1,0 +1,59 @@
+{
+  "format_version": 1,
+  "candidates": [
+    {
+      "id": "adaptive-inspector",
+      "title": "已否决｜说明型交互故事板",
+      "hypothesis": "维护者已否决该说明型外壳；只保留为比较证据，禁止进入 production。",
+      "axes": [
+        "automatic-disclosure-vs-manual-preference",
+        "stable-canvas-vs-width-consuming-panels"
+      ],
+      "taste_relation": "aligned",
+      "states": [
+        "compact",
+        "environment-open",
+        "transition",
+        "wide",
+        "workbench-open"
+      ],
+      "scenarios": [
+        "compact-auto-priority",
+        "environment-invariance",
+        "narrow-environment-sheet",
+        "workbench-wide-split"
+      ],
+      "path": "candidates/adaptive-inspector",
+      "digest": "e03e504ded08350f5ffa40eb4de282202fe75e9ffd0de6608e3131f73cd96bba",
+      "registered_at": "2026-08-15T09:23:43+00:00",
+      "refreshed_at": "2026-08-15T09:24:50+00:00"
+    },
+    {
+      "id": "omnimind-shell-v2",
+      "title": "OmniMind 真实 Shell · 稳定主画布",
+      "hypothesis": "保留 OmniMind 当前真实 Shell 与密度，只修 Environment、Sidebar 与 Workbench 的空间角色和连续缩放。",
+      "axes": [
+        "authentic-shell-vs-explanatory-demo",
+        "stable-canvas-vs-width-consuming-panels"
+      ],
+      "taste_relation": "aligned",
+      "states": [
+        "compact",
+        "environment-open",
+        "transition",
+        "wide",
+        "workbench-open"
+      ],
+      "scenarios": [
+        "compact-auto-priority",
+        "environment-invariance",
+        "narrow-environment-sheet",
+        "workbench-wide-split"
+      ],
+      "path": "candidates/omnimind-shell-v2",
+      "digest": "32c65b1cbbfa26e9b6ac04e43cfa5333f98c81acce8653990568492e125c5e53",
+      "registered_at": "2026-08-15T10:26:00+00:00",
+      "refreshed_at": "2026-08-15T10:27:15+00:00"
+    }
+  ]
+}

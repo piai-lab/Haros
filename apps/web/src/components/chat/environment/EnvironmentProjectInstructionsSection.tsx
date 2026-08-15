@@ -9,6 +9,7 @@ import { THREAD_NOTES_MAX_CHARS, type ProjectId } from "@omnimind/contracts";
 import { Textarea } from "~/components/ui/textarea";
 import { Button } from "~/components/ui/button";
 import { CopyIcon } from "~/lib/icons";
+import { useI18n } from "~/i18n";
 
 import { EnvironmentCollapsibleSection } from "./EnvironmentRow";
 
@@ -143,16 +144,23 @@ export function EnvironmentProjectInstructionsSection({
   onInstructionsChange: (projectId: ProjectId, instructions: string) => void;
   onCopyToThreadNotes: () => void;
 }) {
+  const { t } = useI18n();
   const autosave = useProjectInstructionsAutosave({
     projectId,
     instructions,
     onChange: onInstructionsChange,
   });
   const hasInstructions = autosave.value.trim().length > 0;
-  const copyLabel = threadNotes.trim().length === 0 ? "Copy to notepad" : "Append to notepad";
+  const copyLabel =
+    threadNotes.trim().length === 0
+      ? t("environment.copyToNotepad")
+      : t("environment.appendToNotepad");
 
   return (
-    <EnvironmentCollapsibleSection label="Project instructions" defaultOpen={hasInstructions}>
+    <EnvironmentCollapsibleSection
+      label={t("environment.projectInstructions")}
+      defaultOpen={hasInstructions}
+    >
       <div className="flex flex-col gap-2 px-2 pb-1">
         <Textarea
           unstyled
@@ -161,7 +169,7 @@ export function EnvironmentProjectInstructionsSection({
           onChange={autosave.onChange}
           onFocus={autosave.onFocus}
           onBlur={autosave.onBlur}
-          placeholder="Architecture notes, conventions, repo links"
+          placeholder={t("environment.projectInstructionsPlaceholder")}
           maxLength={THREAD_NOTES_MAX_CHARS}
           disabled={!projectId}
         />

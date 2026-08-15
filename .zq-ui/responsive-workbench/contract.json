@@ -1,0 +1,90 @@
+{
+  "format_version": 1,
+  "surface": "responsive-workbench",
+  "lane": "design",
+  "truth_anchors": [
+    "architecture/workbench.md",
+    "apps/desktop/src/main.ts",
+    "apps/desktop/src/windowState.ts",
+    "apps/web/src/routes/_chat.tsx",
+    "apps/web/src/components/ui/sidebar.tsx",
+    "apps/web/src/components/ChatView.tsx",
+    "apps/web/src/components/chat/environment/EnvironmentPanel.tsx",
+    "apps/web/src/components/chat/RightDock.tsx",
+    "apps/web/src/components/chat/ChatHeader.tsx",
+    "User screenshots: OmniMind closed/open Environment and Codex continuously resized states"
+  ],
+  "preserve_capabilities": [
+    "Agent and Chat remain the only primary work modes",
+    "Timeline and Composer share one stable conversation column",
+    "Environment keeps repository, branch, recap, source, and notepad information",
+    "RightDock keeps Files, Diff, Terminal, Browser, Device, and mounted pane state",
+    "PlanSidebar keeps its current task, proposed plan, per-turn dismiss, and handoff intent without becoming a new responsive owner",
+    "Manual close preferences survive automatic responsive suppression",
+    "Streaming, scroll position, draft text, attachments, focus, and pane state survive layout changes",
+    "Simplified Chinese and English remain complete product paths"
+  ],
+  "allowed_rewrites": [
+    "Remove Environment's fixed 312px content inset and docked presentation",
+    "Make left navigation presentation responsive to actual available width",
+    "Switch RightDock from split to single-panel presentation at constrained widths",
+    "Replace fixed-width auxiliary presentation with floating or sheet presentation",
+    "Introduce local presentation-tier derivation by ResizeObserver without new persistent state"
+  ],
+  "forbidden_changes": [
+    "No production code changes before explicit storyboard approval",
+    "No Project Instructions changes",
+    "No new global layout store, database, migration, registry, or responsive control plane",
+    "No route-aware native minimum-width switching",
+    "Do not lower the Desktop minimum width before whole-app 480px verification",
+    "Do not replace existing Sidebar, Sheet, RightDock, or Composer state owners",
+    "Do not copy Codex visual branding"
+  ],
+  "required_states": [
+    "wide",
+    "transition",
+    "compact",
+    "environment-open",
+    "workbench-open"
+  ],
+  "required_scenarios": [
+    "environment-invariance",
+    "workbench-wide-split",
+    "compact-auto-priority",
+    "narrow-environment-sheet"
+  ],
+  "viewports": [
+    {
+      "name": "narrow-480",
+      "width": 480,
+      "height": 900
+    },
+    {
+      "name": "current-minimum-840",
+      "width": 840,
+      "height": 900
+    },
+    {
+      "name": "desktop-1100",
+      "width": 1100,
+      "height": 900
+    },
+    {
+      "name": "wide-1536",
+      "width": 1536,
+      "height": 960
+    }
+  ],
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "motion": [
+    "full",
+    "reduced"
+  ],
+  "direction_count": {
+    "min": 1,
+    "max": 2
+  }
+}

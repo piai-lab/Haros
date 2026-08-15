@@ -1,0 +1,43 @@
+{
+  "scenarios": [
+    {
+      "id": "environment-invariance",
+      "steps": [
+        {"action": "click", "selector": "[data-action='environment']"},
+        {"action": "expect-visible", "selector": "#environmentPanel"},
+        {"action": "expect-attribute", "selector": "[data-action='environment']", "name": "aria-expanded", "value": "true"},
+        {"action": "wait", "ms": 80},
+        {"action": "expect-text", "selector": "#geometryMetric", "value": "ΔX 0px · ΔW 0px"},
+        {"action": "click", "selector": "[data-action='close-environment']"},
+        {"action": "expect-hidden", "selector": "#environmentPanel"}
+      ]
+    },
+    {
+      "id": "workbench-wide-split",
+      "steps": [
+        {"action": "click", "selector": "[data-width='1536']"},
+        {"action": "click", "selector": "[data-action='workbench']"},
+        {"action": "expect-visible", "selector": "#rightDock"},
+        {"action": "expect-attribute", "selector": "#appFrame", "name": "data-workbench", "value": "split"}
+      ]
+    },
+    {
+      "id": "compact-auto-priority",
+      "steps": [
+        {"action": "click", "selector": "[data-width='840']"},
+        {"action": "expect-text", "selector": "#widthValue", "value": "840"},
+        {"action": "expect-attribute", "selector": "#appFrame", "name": "data-layout", "value": "compact"},
+        {"action": "expect-attribute", "selector": "#appFrame", "name": "data-nav", "value": "hidden"}
+      ]
+    },
+    {
+      "id": "narrow-environment-sheet",
+      "steps": [
+        {"action": "click", "selector": "[data-width='480']"},
+        {"action": "click", "selector": "[data-action='environment']"},
+        {"action": "expect-visible", "selector": "#environmentPanel"},
+        {"action": "expect-attribute", "selector": "#appFrame", "name": "data-environment", "value": "sheet"}
+      ]
+    }
+  ]
+}

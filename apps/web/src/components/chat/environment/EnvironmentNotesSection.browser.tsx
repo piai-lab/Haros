@@ -27,7 +27,7 @@ describe("EnvironmentNotesSection", () => {
       />,
     );
 
-    await page.getByPlaceholder("Type here").fill("saved plus final keystroke");
+    await page.getByPlaceholder("Add notes for this task…").fill("saved plus final keystroke");
     await screen.unmount();
 
     expect(onChange).toHaveBeenCalledTimes(1);
@@ -55,7 +55,7 @@ describe("EnvironmentNotesSection", () => {
       />,
     );
 
-    await page.getByPlaceholder("Type here").fill("unsaved draft");
+    await page.getByPlaceholder("Add notes for this task…").fill("unsaved draft");
     document.querySelector<HTMLTextAreaElement>("textarea")?.blur();
     await vi.waitFor(() => expect(onChange).toHaveBeenCalledTimes(1));
     rejectFirstSave(new Error("offline"));
@@ -81,7 +81,7 @@ describe("EnvironmentNotesSection", () => {
       />,
     );
 
-    await page.getByPlaceholder("Type here").fill("server new");
+    await page.getByPlaceholder("Add notes for this task…").fill("server new");
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenCalledWith(
         ThreadId.makeUnsafe("thread-notes-stale-echo"),
@@ -114,7 +114,7 @@ describe("EnvironmentNotesSection", () => {
 
     await render(<CompetingRemoteHarness />);
 
-    await page.getByPlaceholder("Type here").fill("server local");
+    await page.getByPlaceholder("Add notes for this task…").fill("server local");
     await vi.waitFor(() =>
       expect(onChange).toHaveBeenCalledWith(
         ThreadId.makeUnsafe("thread-notes-competing-remote"),

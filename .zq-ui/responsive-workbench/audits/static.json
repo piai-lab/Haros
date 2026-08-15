@@ -1,0 +1,22 @@
+{
+  "format_version": 1,
+  "kind": "static",
+  "generated_at": "2026-08-15T10:27:15+00:00",
+  "artifacts": [
+    {
+      "id": "adaptive-inspector",
+      "digest": "e03e504ded08350f5ffa40eb4de282202fe75e9ffd0de6608e3131f73cd96bba",
+      "blockers": []
+    },
+    {
+      "id": "omnimind-shell-v2",
+      "digest": "32c65b1cbbfa26e9b6ac04e43cfa5333f98c81acce8653990568492e125c5e53",
+      "blockers": []
+    },
+    {
+      "id": "storyboard",
+      "digest": "32c65b1cbbfa26e9b6ac04e43cfa5333f98c81acce8653990568492e125c5e53",
+      "blockers": []
+    }
+  ]
+}

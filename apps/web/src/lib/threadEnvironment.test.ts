@@ -1,7 +1,29 @@
 import { describe, expect, it } from "vitest";
-import { resolveDiffEnvironmentState, resolveForkThreadEnvironment } from "./threadEnvironment";
+import { translate } from "../i18n";
+import {
+  resolveDiffEnvironmentState,
+  resolveForkThreadEnvironment,
+  resolveThreadEnvironmentPresentation,
+} from "./threadEnvironment";
 
 describe("threadEnvironment", () => {
+  it("projects Local, Worktree, and pending state through both product locales", () => {
+    const local = resolveThreadEnvironmentPresentation({ envMode: "local", worktreePath: null });
+    const pending = resolveThreadEnvironmentPresentation({
+      envMode: "worktree",
+      worktreePath: null,
+    });
+
+    expect(translate("en", local.shortLabelKey)).toBe("Local");
+    expect(translate("zh-CN", local.shortLabelKey)).toBe("本地");
+    expect(translate("en", local.localOptionLabelKey)).toBe("Local");
+    expect(translate("zh-CN", local.localOptionLabelKey)).toBe("本地");
+    expect(translate("en", pending.shortLabelKey)).toBe("Worktree");
+    expect(translate("zh-CN", pending.shortLabelKey)).toBe("工作树");
+    expect(translate("en", pending.worktreeBadgeLabelKey!)).toBe("Worktree pending");
+    expect(translate("zh-CN", pending.worktreeBadgeLabelKey!)).toBe("工作树待就绪");
+  });
+
   it("keeps a worktree fork into local on the same worktree", () => {
     expect(
       resolveForkThreadEnvironment({
@@ -78,8 +100,7 @@ describe("threadEnvironment", () => {
     ).toEqual({
       pending: true,
       cwd: null,
-      disabledReason:
-        "Diff and summary will be available once the worktree is ready for this chat.",
+      disabledReasonKey: "threadEnvironment.diffPending",
     });
   });
 
@@ -93,7 +114,7 @@ describe("threadEnvironment", () => {
     ).toEqual({
       pending: false,
       cwd: "/repo/.worktrees/feature-x",
-      disabledReason: null,
+      disabledReasonKey: null,
     });
   });
 });

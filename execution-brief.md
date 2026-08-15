@@ -115,9 +115,69 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 - latest `main` 已拥有 Model services + Composer、Pi ModelRuntime/AgentSession、Product Thread/runtimeMode、Workbench、Workspace/Git/Diff/Checkpoint 与 Engine-native Subagent projection；
 - `codex/agent-core-ui-spec` 的 B0–B5 是 donor/evidence branch，绝不整体合并；它证明 execution foundation 可行，但没有证明 first-public mature Agent；
 - latest `main` 尚无 gotgenes bounded-child Host，也没有 OmniMind Pi child 的精准 control/terminal 全链；
-- C0 只负责收敛文档与 owner，不授权任何 Agent Core 代码、依赖、lockfile、patch、test、vendor、build 或安装 App 写入。
+- 维护者于 2026-08-15 明确否决 `.zq-ui/responsive-workbench` 早期说明型 `adaptive-inspector`，选择并验收后来更贴近当前产品 Shell 的 `omnimind-shell-v2`，随后授权从 UI 研究、唯一 owner 到 production 实现继续推进，并要求直接在 `main` 施工；该授权只覆盖下述 W1，不扩张到 Agent Core、Project instructions 语义或降低 Desktop 最小宽度；
+- C0 对 Agent Core 仍只负责收敛文档与 owner，不授权任何 Agent Core 代码、依赖、lockfile、patch、test、vendor、build 或安装 App 写入。
 
-下一份可申请准入的唯一代码 Slice 是 **C1 Agent correctness**，但本段不自动授予 Gate B。维护者明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
+当前唯一代码 Slice 是 **W1 Responsive Workbench presentation correctness**。它只闭合：
+
+1. Environment 作为 `Environment / 环境信息` 辅助检查器悬浮呈现；删除正常 desktop single-chat 的固定 `312px` Timeline/Composer inset，并以真实几何测量证明单独开关 Environment 时二者 `x/width` 变化不超过 `1px`；
+2. Sidebar 手动 intent 与空间自动压制分离：自动压制不调用手动 `setOpen`，不写回 cookie、Settings 或当前 mounted shell 的用户 intent；受压时可临时 overlay/sheet，空间恢复后只恢复原本手动打开的状态；W1 不新增当前源码不存在的 cookie rehydrate 或跨启动持久化；
+3. RightDock 继续作为 Files/Diff/Terminal/Browser/Device 等真实 `Workbench / 工作台`，保留 pane store、keep-mounted runtime 与 native occlusion；宽屏分栏，空间不足时进入 Chat/Workbench 单面板 presentation，不把 Composer 压成窄条；
+4. Environment、Thread environment、Workbench、Git 与 Settings/search 的可见命名、placeholder、loading/empty/error/recovery、tooltip、keyboard hint 和 ARIA 同步闭合 `en/zh-CN`；菜单入口使用 `Commit or push / 提交或推送`，真实连续动作继续使用 `Commit and push / 提交并推送`；
+5. focused pure/DOM/browser proof 覆盖 manual intent、auto suppression、hysteresis、Environment geometry、固定 `340px` PlanSidebar 的 open/auto-open/dismiss preservation、RightDock split/exclusive、stream/scroll/draft/focus、CJK/IME、a11y、light/dark 与 reduced motion；候选必须从精确 pushed SHA 重建并用 fresh、隔离 profile 完成 packaged Desktop 连续拖动、关闭与重开 journey。
+
+W1 明确不包含：Project instructions 的存储/Prompt/注入/复制语义变更、Electron `minWidth` 下调、移动端全产品重构、新全局 layout store/database/migration/registry、Settings taxonomy rewrite、Agent Core、Goal/Todo、Memory/Knowledge、Workflow graph 或发行。实现从现有 Sidebar/Sheet、ChatView、EnvironmentPanel、RightDock、Composer overflow probe 与 i18n owner 做最小手术；不得复制 Codex 皮肤。详细证据、允许 seam、验证矩阵与 stop-loss 见 [`research/omnimind-responsive-workbench-review.md`](research/omnimind-responsive-workbench-review.md)，稳定 contract 只看 [`architecture/workbench.md`](architecture/workbench.md#chat-shell环境信息与响应式-workbench)。
+
+### W1 orchestration registration
+
+本段只冻结本次 `$zq-orchestrate` 的 review identity 与执行边界；产品事实仍由上述 sole owner 持有，不建立第二 Campaign、ledger 或 layout authority。
+
+```text
+RUN: W1-RESPONSIVE-WORKBENCH-2026-08-15-01
+SPINE_REVISION: 1
+SPINE_ID: W1-RW-01@main-fce4cb89+ui-da5f544e
+EXPECTED_DELIVERY_BASE: main@fce4cb89f3f73f3f08d980de94d1ed6f95e20265
+ALLOWED_PREFLIGHT_DIFF: architecture/workbench.md; execution-brief.md; research/README.md; research/omnimind-responsive-workbench-review.md; .zq-ui/responsive-workbench/**
+CANDIDATE_TARGET: maintainer-authorized main descendant containing one closed W1 concern
+UI_DECISION: omnimind-shell-v2; decision da5f544ea4fdd252ff010a5303e992d189af14f5299aff7d40279ce5b509eb38
+DELIVERY_GATE: unavailable by maintainer's explicit main-direct decision
+ORCHESTRATION_MODE: advisory only
+ACCEPT_FINAL: forbidden
+SELF_PREFERENTIAL_BIAS_CLAIM: forbidden
+SENTINEL: /root/w1_sentinel; read-only live collaboration monitor; escalate executor stall/failure/authority drift to Main
+FINAL_PROOF_RUNNER: Executor authors and runs proof; Supervisor checks coverage; a fresh Judge performs advisory exact-candidate review
+```
+
+Acceptance IDs：
+
+- `W1-A01`：唯一 UI selection/approval 是 `omnimind-shell-v2`；旧 `adaptive-inspector` 明确被否决且不进入 production；
+- `W1-A02`：Environment toggle 前后 Timeline/Composer `x/width` 四项 delta 均不超过 `1px`；
+- `W1-A03`：Sidebar current-mounted-shell manual intent 与 auto suppression 分离，auto 路径不调用手动 `setOpen`、不写 cookie/Settings，也不新增跨启动 rehydrate；
+- `W1-A04`：RightDock/Workbench 宽屏 split、受限时 exclusive，pane store、Terminal/Browser/Device lifecycle 与 native occlusion 不丢；
+- `W1-A05`：固定 `340px` PlanSidebar 的 active task/proposed plan、auto-open、per-turn dismiss 与 handoff intent 保留，且不成为第五个响应式 owner；
+- `W1-A06`：Environment、Thread environment、Workbench、Git、Settings/search 的 `en/zh-CN` 标签、placeholder、loading/empty/error/recovery、tooltip、keyboard hint 与 ARIA 闭合，Project instructions 行为未改；
+- `W1-A07`：连续拖动无 threshold 抖动、横向 overflow、Composer clipping、stream/scroll/draft/focus/IME 回退；light/dark、full/reduced motion、keyboard/screen reader 通过；
+- `W1-A08`：同一 exact pushed SHA 完成 focused/browser checks，并重建、安装到任务专用 fresh profile，证明启动、真实 journey、关闭与重开；不把 source/HMR 当 packaged proof。
+
+Source coverage IDs：
+
+- `W1-S01`：当前 `main` 的 `_chat`、Sidebar primitive、ChatView、EnvironmentPanel、RightDock、SingleChatSurface、PlanSidebar、Composer/Timeline、i18n 与现有 tests；
+- `W1-S02`：维护者提供的 OmniMind Environment 关闭/打开与 Codex 连续缩放截图；截图只证明可见行为，不推断对方内部实现；
+- `W1-S03`：`.zq-ui/responsive-workbench` 的 latest真实 Shell storyboard、selection、approval、static/browser/axe audit；
+- `W1-S04`：官方 Codex 产品资料只验证 thread/worktree/diff/editor 的公开职责，不拥有 OmniMind 视觉或 breakpoint。
+
+Betrayal conditions：
+
+- `W1-B01`：Executor 使用被否决的说明型 candidate、复制 Codex 皮肤或重画一套假 OmniMind Shell；
+- `W1-B02`：新增全局 layout store/database/migration/registry、第二 Workbench state、第二 animation runtime 或无第二消费者的公共抽象；
+- `W1-B03`：改变 Project instructions 行为、Agent Core、Desktop `minWidth`、Settings taxonomy 或 release；
+- `W1-B04`：auto suppression 改写 manual intent，或 presentation tier 导致 draft/scroll/focus/pane/runtime state 丢失；
+- `W1-B05`：用 storyboard、unit、HMR 或未安装 build 冒充 packaged Desktop 完成；
+- `W1-B06`：因 main 直施工而输出 `ACCEPT_FINAL`，或宣称本次编排解决了 self-preferential bias。
+
+Supervisor、Executor 与 Sentinel 必须在每次状态更新中携带 `RUN / SPINE_REVISION / SPINE_ID`；revision 不一致、source coverage 未闭合或触发 betrayal 时立即停写并升级 Main。
+
+W1 完成 focused、browser、双语与 packaged proof 并形成精确 pushed candidate 后，当前施工入口才返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
 2. targeted child control：stop A 不影响 sibling B 或 Root；parent stop-all、stale/terminal control、writer stop 与 crash/reopen各有准确语义；Pi 没有真实 message/steer 时 UI 不显示；
@@ -129,4 +189,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**Agent execution foundation donor candidate exists；first-public mature Agent incomplete；C1 code not yet admitted；V1 release blocked。**
+STATE：**W1 Responsive Workbench production work admitted on `main`；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

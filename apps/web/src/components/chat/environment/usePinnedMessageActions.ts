@@ -12,6 +12,7 @@ import {
 import { useEffect, useRef } from "react";
 
 import { toastManager } from "~/components/ui/toast";
+import { useI18n } from "~/i18n";
 import {
   addPin,
   dispatchPinnedMessageAdd,
@@ -51,28 +52,12 @@ function matchesPinState(pin: PinnedMessage | undefined, expected: PinnedMessage
   );
 }
 
-function handlePinnedMessageDispatchError(error: unknown) {
-  toastManager.add({
-    type: "error",
-    title: "Failed to update pinned message",
-    description:
-      error instanceof Error ? error.message : "The pinned message change could not be saved.",
-  });
-}
-
-function handleThreadNotesDispatchError(error: unknown) {
-  toastManager.add({
-    type: "error",
-    title: "Failed to save notes",
-    description: error instanceof Error ? error.message : "The note change could not be saved.",
-  });
-}
-
 // Keeps rapid pin clicks based on the latest optimistic ref until server events reconcile the store.
 export function usePinnedMessageActions({
   activeThreadId,
   pinnedMessages,
 }: UsePinnedMessageActionsInput): UsePinnedMessageActionsResult {
+  const { t } = useI18n();
   const pinnedMessagesRef = useRef<readonly PinnedMessage[]>(pinnedMessages);
   const activePinnedThreadIdRef = useRef<ThreadId | null>(activeThreadId);
 
@@ -80,6 +65,22 @@ export function usePinnedMessageActions({
     pinnedMessagesRef.current = pinnedMessages;
     activePinnedThreadIdRef.current = activeThreadId;
   }, [activeThreadId, pinnedMessages]);
+
+  const handlePinnedMessageDispatchError = () => {
+    toastManager.add({
+      type: "error",
+      title: t("environment.pinnedUpdateFailed"),
+      description: t("environment.pinnedUpdateFailedDescription"),
+    });
+  };
+
+  const handleThreadNotesDispatchError = () => {
+    toastManager.add({
+      type: "error",
+      title: t("environment.notesSaveFailed"),
+      description: t("environment.notesSaveFailedDescription"),
+    });
+  };
 
   const handleTogglePinMessage = (messageId: MessageId) => {
     const threadId = activePinnedThreadIdRef.current;
@@ -99,15 +100,17 @@ export function usePinnedMessageActions({
             removedPinIndex,
           );
         }
-        handlePinnedMessageDispatchError(error);
+        handlePinnedMessageDispatchError();
       });
       return;
     }
     if (pins.length >= PINNED_MESSAGES_MAX_COUNT) {
       toastManager.add({
         type: "warning",
-        title: "Pinned message limit reached",
-        description: `You can keep up to ${PINNED_MESSAGES_MAX_COUNT} pinned messages in a thread.`,
+        title: t("environment.pinnedLimitReached"),
+        description: t("environment.pinnedLimitDescription", {
+          count: PINNED_MESSAGES_MAX_COUNT,
+        }),
       });
       return;
     }
@@ -121,7 +124,7 @@ export function usePinnedMessageActions({
       if (matchesPinState(currentPin, optimisticPin)) {
         pinnedMessagesRef.current = removePin(pinnedMessagesRef.current, messageId);
       }
-      handlePinnedMessageDispatchError(error);
+      handlePinnedMessageDispatchError();
     });
   };
 
@@ -144,7 +147,7 @@ export function usePinnedMessageActions({
       if (currentPin?.done === done) {
         pinnedMessagesRef.current = setPinDone(pinnedMessagesRef.current, messageId, previousDone);
       }
-      handlePinnedMessageDispatchError(error);
+      handlePinnedMessageDispatchError();
     });
   };
 
@@ -168,7 +171,7 @@ export function usePinnedMessageActions({
         removedPin,
         removedPinIndex,
       );
-      handlePinnedMessageDispatchError(error);
+      handlePinnedMessageDispatchError();
     });
   };
 
@@ -183,7 +186,7 @@ export function usePinnedMessageActions({
     const previousLabel = previousPin?.label ?? null;
     const nextLabel = normalizePinLabel(label);
     pinnedMessagesRef.current = setPinLabel(pinnedMessagesRef.current, messageId, label);
-    void dispatchPinnedMessageLabelSet(threadId, messageId, label).catch((error) => {
+    void dispatchPinnedMessageLabelSet(threadId, messageId, label).catch(() => {
       const currentPin = pinnedMessagesRef.current.find(
         (candidate) => candidate.messageId === messageId,
       );
@@ -194,7 +197,7 @@ export function usePinnedMessageActions({
           previousLabel,
         );
       }
-      handlePinnedMessageDispatchError(error);
+      handlePinnedMessageDispatchError();
     });
   };
 
@@ -202,7 +205,7 @@ export function usePinnedMessageActions({
     try {
       await dispatchThreadNotes(threadId, notes);
     } catch (error) {
-      handleThreadNotesDispatchError(error);
+      handleThreadNotesDispatchError();
       throw error;
     }
   };

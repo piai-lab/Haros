@@ -821,10 +821,17 @@ export function BrowserPanel({
       cancelled = true;
       window.clearTimeout(timeoutId);
       browserPanelHideScheduler.schedule(threadId, () => {
+        void api.browser
+          .setPanelBounds({
+            threadId,
+            bounds: null,
+            surface: usesNativeRuntime ? "native" : "renderer",
+          })
+          .catch(ignoreBrowserBoundsSyncError);
         void api.browser.hide({ threadId });
       });
     };
-  }, [api, isLiveRuntime, runBrowserAction, threadId, upsertThreadState]);
+  }, [api, isLiveRuntime, runBrowserAction, threadId, upsertThreadState, usesNativeRuntime]);
 
   useEffect(() => {
     const activeTabId = activeTab?.id ?? null;
@@ -1903,7 +1910,11 @@ export function BrowserPanel({
             </div>
           ) : null}
           {isLiveRuntime ? (
-            <div ref={browserViewportRef} className="absolute inset-0 bg-[#0d0d0d]" />
+            <div
+              ref={browserViewportRef}
+              className="absolute inset-0 bg-[#0d0d0d]"
+              data-browser-panel-viewport
+            />
           ) : null}
           {showLocalServersHome ? (
             <BrowserLocalServersHome
