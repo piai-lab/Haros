@@ -13,8 +13,8 @@ import path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import { ThreadId } from "@omnimind/contracts";
-import { Effect, Layer } from "effect";
+import { type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
+import { Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
@@ -261,6 +261,56 @@ function makePiModel(input: {
     reasoning: input.reasoning,
     ...(input.thinkingLevelMap !== undefined ? { thinkingLevelMap: input.thinkingLevelMap } : {}),
   };
+}
+
+async function waitForTestCondition(predicate: () => boolean, message: string, timeoutMs = 3_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error(message);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+function piOpenAiSuccessResponse(text = "ok") {
+  return new Response(
+    [
+      `data: ${JSON.stringify({
+        id: "chatcmpl-test",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [{ index: 0, delta: { role: "assistant", content: text }, finish_reason: null }],
+      })}`,
+      `data: ${JSON.stringify({
+        id: "chatcmpl-test",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+      })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n"),
+    { headers: { "content-type": "text/event-stream" } },
+  );
+}
+
+function piRetryableResponse() {
+  return Response.json(
+    { error: { message: "temporary rate limit", type: "rate_limit_error" } },
+    { status: 429 },
+  );
+}
+
+function isPiAutoRetryWarning(event: ProviderRuntimeEvent) {
+  if (event.type !== "runtime.warning") return false;
+  const detail = event.payload.detail;
+  return (
+    typeof detail === "object" &&
+    detail !== null &&
+    "source" in detail &&
+    detail.source === "pi-auto-retry"
+  );
 }
 
 describe("getPiDiscoverableModels", () => {
@@ -692,6 +742,339 @@ describe("getPiDiscoverableModels", () => {
       expect(authorizationHeaders).toEqual(["Bearer test-old-key", "Bearer test-new-key"]);
     } finally {
       releaseFirstRequest();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps one active turn across a retryable attempt and emits one terminal success", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-success-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000044");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: true, maxRetries: 1, baseDelayMs: 10 } }),
+    );
+    let requestCount = 0;
+    let releaseSuccessfulRetry!: () => void;
+    const successfulRetryGate = new Promise<void>((resolve) => {
+      releaseSuccessfulRetry = resolve;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      if (requestCount === 1) return piRetryableResponse();
+      await successfulRetryGate;
+      return piOpenAiSuccessResponse("recovered");
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "retry once",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some(isPiAutoRetryWarning),
+                "Pi auto-retry did not become observable.",
+              ),
+            );
+            const duringRetry = yield* adapter.listSessions();
+            const terminalsBeforeRetry = events.filter(
+              (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+            );
+            yield* Effect.sync(releaseSuccessfulRetry);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some((event) => event.type === "turn.completed"),
+                "Pi retry success did not settle.",
+              ),
+            );
+            const nextTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "next turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.filter((event) => event.type === "turn.completed").length === 2,
+                "The turn after a Pi retry did not settle independently.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { duringRetry, nextTurn, terminalsBeforeRetry, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const terminals = events.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(result.duringRetry).toContainEqual(
+        expect.objectContaining({ activeTurnId: result.turn.turnId, status: "running" }),
+      );
+      expect(result.terminalsBeforeRetry).toEqual([]);
+      expect(requestCount).toBe(3);
+      expect(terminals).toHaveLength(2);
+      expect(terminals.filter((event) => event.turnId === result.turn.turnId)).toHaveLength(1);
+      expect(terminals.filter((event) => event.turnId === result.nextTurn.turnId)).toHaveLength(1);
+      expect(terminals).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "turn.completed",
+            turnId: result.turn.turnId,
+            payload: expect.objectContaining({ state: "completed" }),
+          }),
+          expect.objectContaining({
+            type: "turn.completed",
+            turnId: result.nextTurn.turnId,
+            payload: expect.objectContaining({ state: "completed" }),
+          }),
+        ]),
+      );
+      expect(
+        events.filter(
+          (event) =>
+            event.type === "content.delta" &&
+            event.turnId !== result.turn.turnId &&
+            event.turnId !== result.nextTurn.turnId,
+        ),
+      ).toEqual([]);
+    } finally {
+      releaseSuccessfulRetry();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("emits one failed terminal only after Pi exhausts its retry budget", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-exhausted-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000045");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: true, maxRetries: 1, baseDelayMs: 10 } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return piRetryableResponse();
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "exhaust retry",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some((event) => event.type === "turn.completed"),
+                "Pi retry exhaustion did not settle.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            const sessions = yield* adapter.listSessions();
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { sessions, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const terminals = events.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(requestCount).toBe(2);
+      expect(terminals).toHaveLength(1);
+      expect(terminals[0]).toMatchObject({
+        type: "turn.completed",
+        turnId: result.turn.turnId,
+        payload: { state: "failed", stopReason: "error" },
+      });
+      expect(result.sessions).toContainEqual(expect.objectContaining({ status: "ready" }));
+      expect(result.sessions[0]).not.toHaveProperty("activeTurnId");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("settles once when a user aborts during Pi retry backoff", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-abort-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000046");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: true, maxRetries: 3, baseDelayMs: 10_000 } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return piRetryableResponse();
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "cancel retry",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some(isPiAutoRetryWarning),
+                "Pi retry backoff did not begin.",
+              ),
+            );
+            yield* adapter.interruptTurn(threadId, turn.turnId);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some((event) => event.type === "turn.completed"),
+                "Pi retry cancellation did not settle.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            const sessions = yield* adapter.listSessions();
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { sessions, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const terminals = events.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(requestCount).toBe(1);
+      expect(terminals).toHaveLength(1);
+      expect(terminals[0]).toMatchObject({
+        type: "turn.completed",
+        turnId: result.turn.turnId,
+        payload: { state: "cancelled", stopReason: "cancelled" },
+      });
+      expect(result.sessions).toContainEqual(expect.objectContaining({ status: "ready" }));
+      expect(result.sessions[0]).not.toHaveProperty("activeTurnId");
+    } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
     }

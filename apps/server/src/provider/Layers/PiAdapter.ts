@@ -1929,6 +1929,99 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       }
     };
 
+    const completePiAttemptItems = (
+      context: PiSessionContext,
+      event: AgentSessionEvent,
+      status: "completed" | "failed",
+    ) => {
+      if (context.activeAssistantItemId) {
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          itemId: context.activeAssistantItemId,
+          type: "item.completed",
+          payload: {
+            itemType: "assistant_message",
+            status,
+            title: "Assistant",
+          },
+          raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+        } satisfies ProviderRuntimeEvent);
+      }
+      if (context.activeReasoningItemId) {
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          itemId: context.activeReasoningItemId,
+          type: "item.completed",
+          payload: {
+            itemType: "reasoning",
+            status,
+            title: "Reasoning",
+          },
+          raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+        } satisfies ProviderRuntimeEvent);
+      }
+      context.activeAssistantItemId = undefined;
+      context.activeReasoningItemId = undefined;
+      for (const tracked of context.activeToolItems.values()) {
+        tracked.engineWebSurface?.unregister();
+      }
+      context.activeToolItems.clear();
+    };
+
+    const settlePiTurn = (
+      context: PiSessionContext,
+      event: AgentSessionEvent,
+      input: {
+        readonly state: "completed" | "failed" | "interrupted" | "cancelled";
+        readonly stopReason: string | null;
+        readonly usage: unknown;
+        readonly errorMessage?: string;
+      },
+    ) => {
+      const turnId = context.activeTurnId;
+      if (!turnId) return;
+      const completionBase = makeEventBase(context);
+      if (context.gatewaySessionLease && context.gatewayConnection) {
+        const outgoingLease = context.gatewaySessionLease;
+        const drainage = outgoingLease.retireTurn(turnId);
+        outgoingLease.release();
+        const replacementLease = acquireAgentGatewaySessionLease(
+          agentGatewayCredentials,
+          context.session.threadId,
+          provider,
+        );
+        if (replacementLease) {
+          context.gatewaySessionLease = replacementLease;
+          Object.assign(context.gatewayConnection, replacementLease.connection);
+        } else {
+          delete context.gatewaySessionLease;
+        }
+        Effect.runFork(
+          Effect.promise(() => drainage).pipe(
+            Effect.catchCause((cause) =>
+              Effect.logWarning("pi.agent_gateway.turn_retirement_failed", { turnId, cause }),
+            ),
+          ),
+        );
+      }
+      context.activeTurnId = undefined;
+      context.activeAssistantItemId = undefined;
+      context.activeReasoningItemId = undefined;
+      context.activeToolItems.clear();
+      context.session = makeSessionSnapshot(context, provider);
+      offerRuntimeEvent({
+        ...completionBase,
+        type: "turn.completed",
+        payload: {
+          state: input.state,
+          stopReason: input.stopReason,
+          usage: input.usage,
+          ...(input.errorMessage ? { errorMessage: input.errorMessage } : {}),
+        },
+        raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+      } satisfies ProviderRuntimeEvent);
+    };
+
     const handleSessionEvent = (context: PiSessionContext, event: AgentSessionEvent) => {
       switch (event.type) {
         case "agent_start":
@@ -2115,6 +2208,47 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           } satisfies ProviderRuntimeEvent);
           return;
         }
+        case "auto_retry_start": {
+          if (!context.activeTurnId) return;
+          offerRuntimeEvent({
+            ...makeEventBase(context),
+            type: "runtime.warning",
+            payload: {
+              message: "Retrying the model request after a temporary failure.",
+              detail: {
+                source: "pi-auto-retry",
+                subtype: "model_request_retrying",
+                attempt: event.attempt,
+                maxAttempts: event.maxAttempts,
+                delayMs: event.delayMs,
+              },
+            },
+            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+          } satisfies ProviderRuntimeEvent);
+          return;
+        }
+        case "auto_retry_end": {
+          if (event.success || !context.activeTurnId) return;
+          const stats = context.runtime.session.getSessionStats();
+          const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
+          context.lastKnownTokenUsage = usage;
+          if (usage) {
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              type: "thread.token-usage.updated",
+              payload: { usage },
+              raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            } satisfies ProviderRuntimeEvent);
+          }
+          const cancelled = event.finalError === "Retry cancelled";
+          settlePiTurn(context, event, {
+            state: cancelled ? "cancelled" : "failed",
+            stopReason: cancelled ? "cancelled" : "error",
+            usage: stats,
+            ...(event.finalError ? { errorMessage: event.finalError } : {}),
+          });
+          return;
+        }
         case "agent_end": {
           const stats = context.runtime.session.getSessionStats();
           const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
@@ -2127,32 +2261,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ? context.turns.find((candidate) => candidate.id === turnId)
             : undefined;
           if (turn) turn.leafId = leafId;
-          if (context.activeAssistantItemId) {
-            offerRuntimeEvent({
-              ...makeEventBase(context),
-              itemId: context.activeAssistantItemId,
-              type: "item.completed",
-              payload: {
-                itemType: "assistant_message",
-                status: errorMessage ? "failed" : "completed",
-                title: "Assistant",
-              },
-              raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
-            } satisfies ProviderRuntimeEvent);
-          }
-          if (context.activeReasoningItemId) {
-            offerRuntimeEvent({
-              ...makeEventBase(context),
-              itemId: context.activeReasoningItemId,
-              type: "item.completed",
-              payload: {
-                itemType: "reasoning",
-                status: errorMessage ? "failed" : "completed",
-                title: "Reasoning",
-              },
-              raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
-            } satisfies ProviderRuntimeEvent);
-          }
+          completePiAttemptItems(context, event, errorMessage ? "failed" : "completed");
           if (usage) {
             offerRuntimeEvent({
               ...makeEventBase(context),
@@ -2160,6 +2269,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               payload: { usage },
               raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
             } satisfies ProviderRuntimeEvent);
+          }
+          if (event.willRetry) {
+            context.session = makeSessionSnapshot(context, provider);
+            return;
           }
           if (errorMessage && failure?.state === "failed") {
             offerRuntimeError(context, {
@@ -2169,49 +2282,18 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               cause: event,
             });
           }
-          const completionBase = makeEventBase(context);
-          if (turnId && context.gatewaySessionLease && context.gatewayConnection) {
-            const outgoingLease = context.gatewaySessionLease;
-            const drainage = outgoingLease.retireTurn(turnId);
-            outgoingLease.release();
-            const replacementLease = acquireAgentGatewaySessionLease(
-              agentGatewayCredentials,
-              context.session.threadId,
-              provider,
-            );
-            if (replacementLease) {
-              context.gatewaySessionLease = replacementLease;
-              Object.assign(context.gatewayConnection, replacementLease.connection);
-            } else {
-              delete context.gatewaySessionLease;
-            }
-            Effect.runFork(
-              Effect.promise(() => drainage).pipe(
-                Effect.catchCause((cause) =>
-                  Effect.logWarning("pi.agent_gateway.turn_retirement_failed", { turnId, cause }),
-                ),
-              ),
-            );
-          }
-          context.activeTurnId = undefined;
-          context.activeAssistantItemId = undefined;
-          context.activeReasoningItemId = undefined;
-          context.activeToolItems.clear();
-          context.session = makeSessionSnapshot(context, provider);
-          offerRuntimeEvent({
-            ...completionBase,
-            type: "turn.completed",
-            payload:
-              errorMessage && failure
-                ? {
-                    state: failure.state,
-                    stopReason: failure.stopReason,
-                    errorMessage,
-                    usage: stats,
-                  }
-                : { state: "completed", stopReason: null, usage: stats },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
-          } satisfies ProviderRuntimeEvent);
+          settlePiTurn(
+            context,
+            event,
+            errorMessage && failure
+              ? {
+                  state: failure.state,
+                  stopReason: failure.stopReason,
+                  errorMessage,
+                  usage: stats,
+                }
+              : { state: "completed", stopReason: null, usage: stats },
+          );
           return;
         }
         default:
@@ -2818,14 +2900,17 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         const activeTurnId = turnId ?? context.activeTurnId;
         if (activeTurnId === undefined) return;
-        // AgentSession.abort() waits for provider I/O to become idle. Accept
-        // Stop synchronously here; ProviderService owns deterministic runtime
-        // teardown and the orchestration projection settlement.
+        // Cancel both Pi's retry backoff and any active provider I/O without
+        // awaiting AgentSession.abort(); ProviderService owns deterministic
+        // runtime teardown and the orchestration projection settlement.
         yield* withAgentGatewayTurnCancellation(
           context.gatewaySessionLease,
           activeTurnId,
           Effect.try({
-            try: () => context.runtime.session.agent.abort(),
+            try: () => {
+              context.runtime.session.abortRetry();
+              context.runtime.session.agent.abort();
+            },
             catch: (cause) =>
               new ProviderAdapterRequestError({
                 provider: provider,
@@ -3024,7 +3109,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ? "extension"
                   : configuredProviderIds.has(providerId)
                     ? "models_json"
-                    : family.provider === "omnimind" && services.modelRuntime.getProvider(providerId)
+                    : family.provider === "omnimind" &&
+                        services.modelRuntime.getProvider(providerId)
                       ? "builtin"
                       : "unknown",
             );

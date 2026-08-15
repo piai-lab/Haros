@@ -511,14 +511,20 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
           status: toolWorkEntryStatus(workEntry),
         })
       : rawPreview;
+  const localizedActivityText =
+    workEntry.nativeEventType === "model_request_retrying"
+      ? t("timeline.modelRequestRetrying")
+      : null;
   // One sentence per row, live or settled: the tool's own verb plus what it acted
   // on ("Searched for foo in src"). Lifecycle state is never spelled out here —
   // the verb already carries the tense and `liveActivityMetaText` covers the rest.
-  const displayText = webFetchUrl
-    ? describeLinkChip(webFetchUrl).label
-    : isReasoningUpdateWorkEntry(workEntry) && preview
-      ? preview
-      : combineWorkEntryDisplayText(heading, preview);
+  const displayText = localizedActivityText
+    ? localizedActivityText
+    : webFetchUrl
+      ? describeLinkChip(webFetchUrl).label
+      : isReasoningUpdateWorkEntry(workEntry) && preview
+        ? preview
+        : combineWorkEntryDisplayText(heading, preview);
   const showInlineAgentTaskPreview =
     workEntry.itemType === "collab_agent_tool_call" &&
     Boolean(preview) &&

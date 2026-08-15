@@ -614,6 +614,7 @@ export function projectProviderRuntimeActivities(
       // line ("Moved to background: <work>"), not as a runtime warning.
       const detailSubtype = asString(asObject(event.payload.detail)?.subtype);
       const isBackgroundMove = detailSubtype === "background_tasks_changed";
+      const isModelRequestRetry = detailSubtype === "model_request_retrying";
       const message = truncateDetail(event.payload.message);
       return [
         {
@@ -623,17 +624,19 @@ export function projectProviderRuntimeActivities(
           kind: "runtime.warning",
           summary: isBackgroundMove
             ? "Moved to background"
-            : (event.provider === "opencode" || event.provider === "kilo") &&
-                (nativeType === "session.next.retried" || nativeType === "session.status")
-              ? event.provider === "opencode"
-                ? "OpenCode retrying"
-                : "Kilo retrying"
-              : "Runtime warning",
+            : isModelRequestRetry
+              ? "Model request retrying"
+              : (event.provider === "opencode" || event.provider === "kilo") &&
+                  (nativeType === "session.next.retried" || nativeType === "session.status")
+                ? event.provider === "opencode"
+                  ? "OpenCode retrying"
+                  : "Kilo retrying"
+                : "Runtime warning",
           // Keep the user-visible message even when raw detail is structured.
           payload: toActivityPayload({
             message,
             detail: message,
-            ...(isBackgroundMove
+            ...(isBackgroundMove || isModelRequestRetry
               ? { nativeEventType: detailSubtype }
               : nativeType
                 ? { nativeEventType: nativeType }

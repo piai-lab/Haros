@@ -433,4 +433,9 @@ describe("reachable OmniMind-owned product copy", () => {
     expect(EN_MESSAGES["conversation.editRestartRequiredDescription"]).toContain("restart");
     expect(ZH_CN_MESSAGES["conversation.editRestartRequiredDescription"]).toContain("重新启动");
   });
+
+  it("localizes automatic model retry progress", () => {
+    expect(EN_MESSAGES["timeline.modelRequestRetrying"]).toBe("Retrying model request");
+    expect(ZH_CN_MESSAGES["timeline.modelRequestRetrying"]).toBe("正在重试模型请求");
+  });
 });
