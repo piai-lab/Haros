@@ -70,7 +70,11 @@ import {
 import { applySpaceMetadataProjection } from "../spaceMetadataProjection.ts";
 import { resolveStableMessageTurnId } from "../messageTurnId.ts";
 import { settleTurnStateFromSession } from "../turnLifecycle.ts";
-import { deriveTurnStartModelSelection, deriveTurnStartSession } from "../turnStartSession.ts";
+import {
+  deriveTurnStartModelSelection,
+  deriveTurnStartSession,
+  shouldDeferTurnStartBindingProjection,
+} from "../turnStartSession.ts";
 import {
   attachmentRelativePath,
   parseAttachmentIdFromRelativePath,
@@ -811,15 +815,28 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             existingRow.value.latestTurnId === null &&
             Option.isNone(session) &&
             messages.length <= 1;
-          const projectedModelSelection = deriveTurnStartModelSelection({
+          const deferBindingProjection = shouldDeferTurnStartBindingProjection({
             currentModelSelection: existingRow.value.modelSelection,
+            currentRuntimeMode: existingRow.value.runtimeMode,
+            currentInteractionMode: existingRow.value.interactionMode,
+            currentSession: Option.getOrNull(session),
             requestedModelSelection: event.payload.modelSelection,
+            requestedRuntimeMode: event.payload.runtimeMode,
+            requestedInteractionMode: event.payload.interactionMode,
             canAdoptRequestedProvider: canAdoptFirstTurnProvider,
           });
+          const projectedModelSelection = deferBindingProjection
+            ? existingRow.value.modelSelection
+            : deriveTurnStartModelSelection({
+                currentModelSelection: existingRow.value.modelSelection,
+                requestedModelSelection: event.payload.modelSelection,
+                canAdoptRequestedProvider: canAdoptFirstTurnProvider,
+              });
           // Automation-dispatched turns run with the automation's modes but must not
           // repaint the thread's persisted modes: on a heartbeat target thread the
           // user's own composer selection has to survive the automation turn.
-          const adoptTurnModes = event.payload.dispatchOrigin !== "automation";
+          const adoptTurnModes =
+            event.payload.dispatchOrigin !== "automation" && !deferBindingProjection;
           yield* projectionThreadRepository.upsert({
             ...existingRow.value,
             ...(projectedModelSelection !== existingRow.value.modelSelection

@@ -16,6 +16,8 @@ export * from "./terminal";
 export * from "./provider";
 export * from "./providerDiscovery";
 export * from "./providerRuntime";
+export * from "./omnimindModelServices";
+export * from "./omnimindEcosystem";
 export * from "./model";
 export * from "./agentMentions";
 export * from "./agentGateway";

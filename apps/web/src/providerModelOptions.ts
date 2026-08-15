@@ -36,6 +36,7 @@ export interface ProviderModelOption {
   description?: string;
   upstreamProviderId?: string;
   upstreamProviderName?: string;
+  upstreamProviderOrigin?: "builtin" | "models_json" | "extension" | "unknown";
 }
 
 export interface ProviderModelOptionGroup {
@@ -124,6 +125,7 @@ export function mergeDynamicModelOptions(input: {
     description?: string | null | undefined;
     upstreamProviderId?: string | null | undefined;
     upstreamProviderName?: string | null | undefined;
+    upstreamProviderOrigin?: "builtin" | "models_json" | "extension" | "unknown" | undefined;
   }>;
 }): ReadonlyArray<ProviderModelOption & { isCustom?: boolean }> {
   const staticNameBySlug = new Map(input.staticOptions.map((model) => [model.slug, model.name]));
@@ -166,6 +168,9 @@ export function mergeDynamicModelOptions(input: {
         : {}),
       ...(dynamicModel.upstreamProviderName?.trim()
         ? { upstreamProviderName: dynamicModel.upstreamProviderName.trim() }
+        : {}),
+      ...(dynamicModel.upstreamProviderOrigin
+        ? { upstreamProviderOrigin: dynamicModel.upstreamProviderOrigin }
         : {}),
     });
   }
@@ -223,9 +228,9 @@ export function groupProviderModelOptions(
         : upstreamProviderId && upstreamProviderId.length > 0
           ? upstreamProviderId
           : null;
-    const groupKey = groupLabel
-      ? `${(upstreamProviderId ?? groupLabel).trim().toLowerCase()}`
-      : "__ungrouped__";
+    // Pi provider ids are opaque and case-sensitive. Only presentation/search
+    // text may be folded; grouping must retain the exact service identity.
+    const groupKey = groupLabel ? (upstreamProviderId ?? groupLabel).trim() : "__ungrouped__";
     const existingIndex = groupIndexByKey.get(groupKey);
 
     if (existingIndex !== undefined) {
@@ -241,7 +246,17 @@ export function groupProviderModelOptions(
     });
   }
 
-  return groupedOptions;
+  const labelCounts = new Map<string, number>();
+  for (const group of groupedOptions) {
+    if (group.label === null) continue;
+    labelCounts.set(group.label, (labelCounts.get(group.label) ?? 0) + 1);
+  }
+
+  return groupedOptions.map((group) =>
+    group.label !== null && (labelCounts.get(group.label) ?? 0) > 1
+      ? { ...group, label: `${group.label} · ${group.key}` }
+      : group,
+  );
 }
 
 export function groupProviderModelOptionsWithFavorites(input: {

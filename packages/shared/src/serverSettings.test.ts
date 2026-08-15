@@ -1,9 +1,41 @@
 import { DEFAULT_SERVER_SETTINGS, ProviderSessionStartInput } from "@omnimind/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import { providerStartOptionsFromServerSettings } from "./serverSettings";
+import {
+  applyServerSettingsPatch,
+  providerStartOptionsFromServerSettings,
+  validateServerSettingsPatch,
+} from "./serverSettings";
 
 const decodeProviderSessionStartInput = Schema.decodeUnknownSync(ProviderSessionStartInput);
+
+describe("applyServerSettingsPatch", () => {
+  it("refuses a provider-only switch to a runtime-catalog-only provider", () => {
+    const patch = {
+      textGenerationModelSelection: { provider: "omnimind" as const },
+    };
+
+    expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toContain(
+      "requires an explicit model",
+    );
+    expect(applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch).textGenerationModelSelection)
+      .toEqual(DEFAULT_SERVER_SETTINGS.textGenerationModelSelection);
+  });
+
+  it("preserves an explicit runtime-catalog model selection exactly", () => {
+    const patch = {
+      textGenerationModelSelection: {
+        provider: "omnimind" as const,
+        model: "deepseek/deepseek-v4-pro",
+        options: { thinkingLevel: "high" },
+      },
+    };
+
+    expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toBeNull();
+    expect(applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch).textGenerationModelSelection)
+      .toEqual(patch.textGenerationModelSelection);
+  });
+});
 
 describe("providerStartOptionsFromServerSettings", () => {
   it("omits blank launch settings from provider session input", () => {

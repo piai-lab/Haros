@@ -90,9 +90,11 @@ Provider Registry 只做 `ProviderKind → ProviderAdapter` lookup；Provider Se
 
 V1 只向现有闭合 `ProviderKind` 增加一个 `omnimind` literal，并穷尽更新已有 descriptor、schema、settings、model discovery、usage、health 与 UI maps；不把 ProviderKind 改成动态插件系统。Pi-family implementation 只参数化真实变化的 provider ID、runtime entry、state/version/policy，不能复制整份 Pi adapter。
 
-adapter contract 只保留 source 实际支持的操作，例如 start/stop/send/interrupt、native resume、canonical event stream 与可选 discovery。optional 就是真 optional：未实现时隐藏或显示 unavailable，不模拟成功、不 silent fallback、不由另一 Provider 接管。
+adapter contract 只保留 source 实际支持的操作，例如 start/stop/send/interrupt、native resume、canonical event stream 与可选 discovery。optional 表示不同 Provider 可以不存在该能力；不表示 Host 可以省略当前 runtime 已暴露且属于 V1 产品面的能力。存在时必须由既有 adapter/provenance owner投影并保持用户可达，不存在时才隐藏或显示 unavailable；不模拟成功、不 silent fallback、不由另一 Provider 接管。
 
 Provider 切换沿用 stop-first replacement：当前 operation 结束或停止后才启动目标 Provider；目标失败时恢复上一 exact binding。Product transcript 不能替代 Provider native context。
+
+ProviderService 在任何当前 adapter 可发出 runtime event 之前，必须先持久化带 lifecycle generation 的 `starting` binding；journal row 只能投影到同 Thread、同 Provider、同 generation 的 durable binding。无 binding 的 row 一律只推进消费 cursor 并跳过 Product 投影；generation-less row 只能兼容仍明确标为 `legacy` 的同 Provider binding，不能进入 UUID generation，也不能由 Ingestion 猜测或补写为当前 generation。该兼容只处理既有诊断尾部，不授权 adapter、测试注入或新调用方省略 generation。
 
 ## OmniMind Agent 与 stock Pi
 
@@ -116,12 +118,19 @@ stock Pi 的“实际会话 runtime version”和“本机可选 `pi` CLI versio
 Server 通过 OmniMind-Agent-scoped typed surface 把 Pi 的 provider/auth/catalog capability 安全投影给 Web，authority 仍是锁定 Pi package 与 `.omnimind` 下的 Pi-compatible state：
 
 - provider、auth method/status、known/available model 与 network-refresh capability 来自 Pi ModelRuntime，不由 OmniMind 维护静态供应商/模型 capability 镜像；
+- Model-service discovery 的主入口只消费 Pi runtime 已暴露的 built-in/extension metadata；built-in 与经用户显式 intent、由 Pi 既有 ResourceLoader/Session owner 安全加载的 Extension provider 都是 V1 必达结果。被动页面不执行第三方 Extension，“通过 API 地址连接”只是低频 presentation 分支，Host 不为任何一条路径建立另一套 discovery、registry 或 catalog authority；
+- generic `models.json` 配置只允许 Pi 官方支持的 `openai-completions`、`openai-responses`、`anthropic-messages` 与 `google-generative-ai` 四种协议；其他 protocol/auth/discovery/stream/tool/usage 只能来自真实 Pi Extension，不能由 Host 按品牌或 URL 猜测；
 - 持久 API key 与 OAuth 走 Pi `login()`/`logout()` credential-store lifecycle；runtime API-key override 只用于明确的一次性/未保存操作，不得显示为已保存；
 - Pi `AuthInteraction` 的 text/secret/select/manual-code prompt 与 info/auth-url/device-code/progress event 通过短生命周期、可取消的 typed bridge 呈现，secret/token 不进入 Product state、query cache、Timeline 或日志；
 - provider-scoped network refresh、last-good catalog 与 cache 语义由 Pi models store/provider implementation 拥有；普通 model-list refetch 不得冒充网络刷新；
 - Settings operation 使用 task-local ModelRuntime，不能把一个全局可变 runtime 注入所有 Thread。credential/config/catalog mutation 不热切当前 turn；每个隔离 Session 在下一次 send admission 前按同一 agentDir 的 process-local mutation revision 刷新自身 runtime snapshot。该 revision 只做失效通知，不是第二持久化真相；
 - 同一商业供应商可用不同稳定 Pi provider id 表达多个服务实例，但只呈现 Pi config/extension 对该 identity 真实支持的 auth、catalog 与 stream 能力；不能按品牌名复制 built-in OAuth 或动态 fetcher；
-- custom provider 持久化优先等待/采用 Pi 公开的 provider-config mutation API。没有该 API 时不建立 `model-services.json`、Channel store 或 renderer 文件写入；若提前施工，必须有维护者对单一临时 models.json adapter 的明确授权，并保证 locked read-modify-write、unknown-field preservation、原子替换和 Pi reload validation，待上游 API adopted 后删除。
+- custom provider 持久化优先采用 Pi 公开的 provider-config mutation API。锁定版本尚无该 API，维护者已授权在既有 product-owned Pi ModelConfig/ModelRuntime owner 内增加窄、typed、可删除的 mutation seam；它必须保证 locked read-modify-write、unknown-field preservation、原子替换和 Pi reload validation，待上游 API adopted 后删除。该授权不允许建立 `model-services.json`、Channel store、renderer/Host 文件写入或第二 parser/schema authority。
+- OmniMind model identity 只来自 exact user selection 或当前 Pi runtime catalog。Project、Terminal、Kanban、Automation 与其他 direct consumer 在没有 exact selection 时必须保持 null/fail closed；不得用 `DEFAULT_MODEL_BY_PROVIDER`、供应商品牌或退役 slug 合成 OmniMind binding。
+
+被动 Settings 投影还有更窄的安全门：Server 必须解析并证明 `.omnimind` agent root 的物理 containment，也必须把存在的 stock `.pi` root 解析为物理路径并拒绝 candidate 与该 root 或其子树重合；只比较 lexical `~/.pi` 不能排除 symlink/junction alias。这个隔离检查只允许读取 root path metadata，不得枚举、打开或读取 `.pi` 内的 credential、config、catalog、package 或 Session。所有 `.omnimind` 本地 config/cache read 都由同一个 no-follow、hard byte bound、caller-cancellable reader 完成；字符串路径正确或先检查再让 runtime 重新打开文件都不构成证明。不得用含 credential/header 的临时副本或 OmniMind 自建 `models.json` parser/schema 绕开此门。锁定 Pi API 无法注入该 reader 时，受影响的 projection 必须 typed fail，不能偷偷降级或读取。被动 mount 不加载/执行 extension；`origin: extension` 只可来自已经由显式 intent scope 加载并提供 provenance 的 Pi runtime。
+
+Model-service projection 不拥有 Composer/Project reference。需要把被引用但未配置的 service 加入列表时，只接受 Product State owner 给出的 exact stable service id，不能从品牌、产品默认或 model slug 推导。离线观察到 OAuth access token 到期只能投影 `refresh_required`；只有 provider-owned login/refresh 的明确失败证据才能称 `sign_in_expired`。
 
 Model-service mutation 只能失效 OmniMind Agent 的 service/catalog projection 与相关 Session snapshot，不能改写 Conversation transcript、Project facts、其他 Engine state 或 stock Pi `.pi`。当前 selection 失效时要求用户重选，不 silent fallback 到另一 provider/Engine。
 
@@ -177,6 +186,8 @@ Package lifecycle 不跨 Provider归一：
 - 共同表面直接复用 Synara PluginLibrary、Skills 页面和 provider discovery，只负责导航、按 Provider 分组、来源/rights 展示和 diagnostics；
 - curated/preinstalled OmniMind Agent 资源使用发行时 manifest 记录 source、hash、license 与 ecosystem API compatibility，不成为运行时 state store。
 
+上述动作列表以每个 Provider 的真实 capability 为条件，但“有能力才显示”只控制逐 Provider 的 UI，不控制产品是否接线。OmniMind Agent 在锁定 Pi-compatible runtime 中已经存在的 manager/loader/settings/trust 与 lifecycle 操作必须进入共同表面；若某个动作因 native contract 不足而暂缓，必须记录精确安全反例和恢复条件，不能用 optional method 或 OPEN 标签无限期替代。
+
 不得新增 `PackageActivation`、current/LKG、generation lease、跨 Provider rollback 或第二 Marketplace。Package 更新对活跃 Session 的影响完全按原生 runtime 行为呈现；若原生 contract 不足以安全暴露某动作，就暂不提供该按钮。
 
 上述组合不产生 shared `PackageActivation`/current/LKG、generic plugin platform、permission broker 或跨 Engine durable state；PluginLibrary/Registry 只投影 native + additive 能力事实，不接管 Engine 私有运行时责任。
@@ -191,6 +202,7 @@ Package lifecycle 不跨 Provider归一：
     "omnimind-workbench"
   ],
   "nativeEcosystemDisposition": "preserve",
+  "nativeCapabilityReachability": "required-when-runtime-exposes",
   "omnimindAssetDelivery": "adapter-or-session-mount",
   "enginePrivateHomeMutation": "forbidden",
   "identityConflict": "explicit",

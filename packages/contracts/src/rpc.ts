@@ -138,6 +138,40 @@ import {
 } from "./orchestration";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  OmniMindCustomModelServiceRemoveInput,
+  OmniMindCustomModelServiceRemoveResult,
+  OmniMindCustomModelServiceSaveInput,
+  OmniMindCustomModelServiceSaveResult,
+  OmniMindCustomModelServiceDiscoverInput,
+  OmniMindCustomModelServiceDiscoverResult,
+  OmniMindCustomModelServiceTestInput,
+  OmniMindCustomModelServiceTestResult,
+  OmniMindModelServiceAnswerLoginInput,
+  OmniMindModelServiceAuthResult,
+  OmniMindModelServiceBeginLoginInput,
+  OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServicePollLoginInput,
+  OmniMindModelServiceLogoutInput,
+  OmniMindModelServiceLogoutResult,
+  OmniMindModelServiceRefreshInput,
+  OmniMindModelServiceRefreshResult,
+  OmniMindModelServicesGetInput,
+  OmniMindModelServicesGetResult,
+  OmniMindModelServicesListInput,
+  OmniMindModelServicesListResult,
+} from "./omnimindModelServices";
+import {
+  OmniMindEcosystemInstallInput,
+  OmniMindEcosystemListInput,
+  OmniMindEcosystemListResourcesResult,
+  OmniMindEcosystemMutationResult,
+  OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemReloadResult,
+  OmniMindEcosystemResourceToggleInput,
+  OmniMindEcosystemSnapshot,
+} from "./omnimindEcosystem";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -1129,6 +1163,135 @@ export const WsProviderListAgentsRpc = Rpc.make(WS_METHODS.providerListAgents, {
   error: WsRpcError,
 });
 
+export const WsOmniMindModelServicesListRpc = Rpc.make(WS_METHODS.omnimindModelServicesList, {
+  payload: OmniMindModelServicesListInput,
+  success: OmniMindModelServicesListResult,
+  error: WsRpcError,
+});
+
+export const WsOmniMindModelServicesGetRpc = Rpc.make(WS_METHODS.omnimindModelServicesGet, {
+  payload: OmniMindModelServicesGetInput,
+  success: OmniMindModelServicesGetResult,
+  error: WsRpcError,
+});
+
+export const WsOmniMindModelServicesBeginLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesBeginLogin,
+  {
+    payload: OmniMindModelServiceBeginLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesPollLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesPollLogin,
+  {
+    payload: OmniMindModelServicePollLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesAnswerLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesAnswerLogin,
+  {
+    payload: OmniMindModelServiceAnswerLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesCancelLoginRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesCancelLogin,
+  {
+    payload: OmniMindModelServiceCancelLoginInput,
+    success: OmniMindModelServiceAuthResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesLogoutRpc = Rpc.make(WS_METHODS.omnimindModelServicesLogout, {
+  payload: OmniMindModelServiceLogoutInput,
+  success: OmniMindModelServiceLogoutResult,
+  error: WsRpcError,
+});
+export const WsOmniMindModelServicesRefreshRpc = Rpc.make(WS_METHODS.omnimindModelServicesRefresh, {
+  payload: OmniMindModelServiceRefreshInput,
+  success: OmniMindModelServiceRefreshResult,
+  error: WsRpcError,
+});
+export const WsOmniMindModelServicesDiscoverCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesDiscoverCustom,
+  {
+    payload: OmniMindCustomModelServiceDiscoverInput,
+    success: OmniMindCustomModelServiceDiscoverResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesTestCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesTestCustom,
+  {
+    payload: OmniMindCustomModelServiceTestInput,
+    success: OmniMindCustomModelServiceTestResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesSaveCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesSaveCustom,
+  {
+    payload: OmniMindCustomModelServiceSaveInput,
+    success: OmniMindCustomModelServiceSaveResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindModelServicesRemoveCustomRpc = Rpc.make(
+  WS_METHODS.omnimindModelServicesRemoveCustom,
+  {
+    payload: OmniMindCustomModelServiceRemoveInput,
+    success: OmniMindCustomModelServiceRemoveResult,
+    error: WsRpcError,
+  },
+);
+
+export const WsOmniMindEcosystemListRpc = Rpc.make(WS_METHODS.omnimindEcosystemList, {
+  payload: OmniMindEcosystemListInput,
+  success: OmniMindEcosystemSnapshot,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemListResourcesRpc = Rpc.make(
+  WS_METHODS.omnimindEcosystemListResources,
+  {
+    payload: OmniMindEcosystemPackageInput,
+    success: OmniMindEcosystemListResourcesResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindEcosystemInstallRpc = Rpc.make(WS_METHODS.omnimindEcosystemInstall, {
+  payload: OmniMindEcosystemInstallInput,
+  success: OmniMindEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemUpdateRpc = Rpc.make(WS_METHODS.omnimindEcosystemUpdate, {
+  payload: OmniMindEcosystemPackageInput,
+  success: OmniMindEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemRemoveRpc = Rpc.make(WS_METHODS.omnimindEcosystemRemove, {
+  payload: OmniMindEcosystemPackageInput,
+  success: OmniMindEcosystemMutationResult,
+  error: WsRpcError,
+});
+export const WsOmniMindEcosystemSetResourceEnabledRpc = Rpc.make(
+  WS_METHODS.omnimindEcosystemSetResourceEnabled,
+  {
+    payload: OmniMindEcosystemResourceToggleInput,
+    success: OmniMindEcosystemMutationResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindEcosystemReloadRpc = Rpc.make(WS_METHODS.omnimindEcosystemReload, {
+  payload: OmniMindEcosystemReloadInput,
+  success: OmniMindEcosystemReloadResult,
+  error: WsRpcError,
+});
+
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
   success: AutomationListResult,
@@ -1307,6 +1470,25 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProviderReadPluginRpc,
   WsProviderListModelsRpc,
   WsProviderListAgentsRpc,
+  WsOmniMindModelServicesListRpc,
+  WsOmniMindModelServicesGetRpc,
+  WsOmniMindModelServicesBeginLoginRpc,
+  WsOmniMindModelServicesPollLoginRpc,
+  WsOmniMindModelServicesAnswerLoginRpc,
+  WsOmniMindModelServicesCancelLoginRpc,
+  WsOmniMindModelServicesLogoutRpc,
+  WsOmniMindModelServicesRefreshRpc,
+  WsOmniMindModelServicesDiscoverCustomRpc,
+  WsOmniMindModelServicesTestCustomRpc,
+  WsOmniMindModelServicesSaveCustomRpc,
+  WsOmniMindModelServicesRemoveCustomRpc,
+  WsOmniMindEcosystemListRpc,
+  WsOmniMindEcosystemListResourcesRpc,
+  WsOmniMindEcosystemInstallRpc,
+  WsOmniMindEcosystemUpdateRpc,
+  WsOmniMindEcosystemRemoveRpc,
+  WsOmniMindEcosystemSetResourceEnabledRpc,
+  WsOmniMindEcosystemReloadRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,

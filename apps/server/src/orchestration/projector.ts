@@ -54,7 +54,11 @@ import {
 } from "./Schemas.ts";
 import { resolveStableMessageTurnId } from "./messageTurnId.ts";
 import { settleTurnStateFromSession } from "./turnLifecycle.ts";
-import { deriveTurnStartModelSelection, deriveTurnStartSession } from "./turnStartSession.ts";
+import {
+  deriveTurnStartModelSelection,
+  deriveTurnStartSession,
+  shouldDeferTurnStartBindingProjection,
+} from "./turnStartSession.ts";
 
 type ThreadPatch = Partial<Omit<OrchestrationThread, "id" | "projectId">>;
 const MAX_THREAD_MESSAGES = 2_000;
@@ -880,11 +884,23 @@ export function projectEvent(
           }
           const canAdoptFirstTurnProvider =
             thread.latestTurn === null && thread.session === null && thread.messages.length <= 1;
-          const projectedModelSelection = deriveTurnStartModelSelection({
+          const deferBindingProjection = shouldDeferTurnStartBindingProjection({
             currentModelSelection: thread.modelSelection,
+            currentRuntimeMode: thread.runtimeMode,
+            currentInteractionMode: thread.interactionMode,
+            currentSession: thread.session,
             requestedModelSelection: payload.modelSelection,
+            requestedRuntimeMode: payload.runtimeMode,
+            requestedInteractionMode: payload.interactionMode,
             canAdoptRequestedProvider: canAdoptFirstTurnProvider,
           });
+          const projectedModelSelection = deferBindingProjection
+            ? thread.modelSelection
+            : deriveTurnStartModelSelection({
+                currentModelSelection: thread.modelSelection,
+                requestedModelSelection: payload.modelSelection,
+                canAdoptRequestedProvider: canAdoptFirstTurnProvider,
+              });
           const modelSelectionPatch =
             projectedModelSelection !== thread.modelSelection
               ? { modelSelection: projectedModelSelection }
@@ -896,13 +912,19 @@ export function projectEvent(
             requestedRuntimeMode: payload.runtimeMode,
             requestedAt: payload.createdAt,
           });
+          const adoptTurnSettings =
+            payload.dispatchOrigin !== "automation" && !deferBindingProjection;
           return {
             ...nextBase,
             threads: updateThread(nextBase.threads, payload.threadId, {
               ...modelSelectionPatch,
               ...(turnStartSession !== null ? { session: turnStartSession } : {}),
-              runtimeMode: payload.runtimeMode,
-              interactionMode: payload.interactionMode,
+              ...(adoptTurnSettings
+                ? {
+                    runtimeMode: payload.runtimeMode,
+                    interactionMode: payload.interactionMode,
+                  }
+                : {}),
               updatedAt: payload.createdAt,
             }),
           };

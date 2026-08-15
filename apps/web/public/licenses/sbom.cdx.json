@@ -29,7 +29,7 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "e8f7354083a4854c6d23db8f02f9be47437175897a41e620b753ccafb0e8ba37"
+        "value": "e98c738ab1948ed7f2096beee7ccb0d8d472a02d786ab36f1dac24e54545604c"
       }
     ]
   },
@@ -1620,7 +1620,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "fc8b90f4089c7f96541ff7dfa458f8551b0e9268cacc868f9d1f0c316aca588e"
+          "content": "9d3cab9471afb52ca9e45b8805ea87656f4aec930843ab8b35e5ac9806a243ba"
         }
       ],
       "author": "Mario Zechner",
@@ -5198,6 +5198,39 @@
     },
     {
       "type": "library",
+      "name": "jsonc-parser",
+      "version": "3.3.1",
+      "bom-ref": "pkg:npm/jsonc-parser@3.3.1",
+      "purl": "pkg:npm/jsonc-parser@3.3.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "cf6445756037684847a4fb57fad0847750d82a7573eb62e257ec1d78b73647b7"
+        }
+      ],
+      "author": "Microsoft Corporation",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/microsoft/node-jsonc-parser"
+        }
+      ],
+      "properties": [
+        {
+          "name": "omnimind:artifact-location",
+          "value": "node_modules/.bun/jsonc-parser@3.3.1/node_modules/jsonc-parser"
+        }
+      ]
+    },
+    {
+      "type": "library",
       "name": "jsonfile",
       "version": "6.2.0",
       "bom-ref": "pkg:npm/jsonfile@6.2.0",
@@ -8015,9 +8048,12 @@
         "pkg:npm/%40xterm/headless@6.0.0",
         "pkg:npm/effect@4.0.0-beta.25",
         "pkg:npm/electron-updater@6.8.3",
+        "pkg:npm/jsonc-parser@3.3.1",
         "pkg:npm/node-pty@1.1.0",
         "pkg:npm/open@10.2.0",
         "pkg:npm/tree-kill@1.2.2",
+        "pkg:npm/undici@7.24.4",
+        "pkg:npm/undici@8.9.0",
         "pkg:npm/ws@8.21.1"
       ]
     },
@@ -8476,6 +8512,7 @@
         "pkg:npm/hosted-git-info@9.0.3",
         "pkg:npm/ignore@7.0.5",
         "pkg:npm/jiti@2.7.0",
+        "pkg:npm/jsonc-parser@3.3.1",
         "pkg:npm/minimatch@10.2.5",
         "pkg:npm/proper-lockfile@4.1.2",
         "pkg:npm/semver@7.8.0",
@@ -9112,6 +9149,10 @@
         "pkg:npm/%40babel/runtime@7.28.6",
         "pkg:npm/ts-algebra@2.0.0"
       ]
+    },
+    {
+      "ref": "pkg:npm/jsonc-parser@3.3.1",
+      "dependsOn": []
     },
     {
       "ref": "pkg:npm/jsonfile@6.2.0",

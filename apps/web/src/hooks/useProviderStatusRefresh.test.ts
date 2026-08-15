@@ -30,6 +30,7 @@ vi.mock("../lib/serverReactQuery", () => ({
 }));
 
 import { useProviderStatusRefresh } from "./useProviderStatusRefresh";
+import { useProviderAuthRefreshOnFocus } from "./useProviderAuthRefreshOnFocus";
 
 function installBrowserGlobals(visibilityState: DocumentVisibilityState) {
   const windowTarget = new EventTarget();
@@ -72,6 +73,25 @@ describe("useProviderStatusRefresh", () => {
     mocks.cleanup?.();
     vi.useRealTimers();
     vi.unstubAllGlobals();
+  });
+
+  it("does not turn the auth focus owner into a startup provider probe", async () => {
+    const { windowTarget } = installBrowserGlobals("visible");
+    const refreshProviders = vi.fn().mockResolvedValue({ providers: [] });
+    mocks.readNativeApi.mockReturnValue({ server: { refreshProviders } });
+
+    useProviderAuthRefreshOnFocus({ enabled: true });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(refreshProviders).not.toHaveBeenCalled();
+    windowTarget.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refreshProviders).not.toHaveBeenCalled();
+    windowTarget.dispatchEvent(new Event("blur"));
+    windowTarget.dispatchEvent(new Event("focus"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(refreshProviders).toHaveBeenCalledOnce();
+    expect(mocks.reconcileServerProviderStatuses).toHaveBeenCalledWith(mocks.queryClient, []);
   });
 
   it("still runs the startup refresh after an early focus attempt fails", async () => {

@@ -211,7 +211,7 @@ test("bundled Pi runtime adoption cannot lose its exact artifact identity", asyn
   await replaceText(
     root,
     "README.md",
-    "16b3ae817e700684e58be750b2edb5a14bc4aac4ac318fcd949e1c9e9ba934a9",
+    "8b570c81e6d92fadfc7ae173319a10c6298ba23331075da45d9d655a7090f4ad",
     "0".repeat(64),
   );
 
@@ -282,6 +282,38 @@ test("generic Terminal titles remain localized presentation, not migrated state"
   assertFinding(
     await validateDocumentContract({ root }),
     "workbench.work-surface-ia",
+    "architecture/workbench.md",
+  );
+});
+
+test("Model services keeps API-address setup below runtime service discovery", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"secondaryPlacement": "list-tail-lower-emphasis"',
+    '"secondaryPlacement": "equal-primary-card"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.model-services-ia",
+    "architecture/workbench.md",
+  );
+});
+
+test("Model services cannot regain a static OmniMind model default", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"omnimindDefaultModel": "none-runtime-catalog-only"',
+    '"omnimindDefaultModel": "deepseek/deepseek-chat"',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.model-services-ia",
     "architecture/workbench.md",
   );
 });

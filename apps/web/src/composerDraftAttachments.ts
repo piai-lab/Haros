@@ -116,6 +116,15 @@ export function revokeQueuedTurnPreviewUrls(queuedTurn: QueuedComposerTurn): voi
   }
 }
 
+export function revokePendingDirectTurnRecoveryPreviewUrls(
+  recovery: ComposerThreadDraftState["pendingDirectTurnRecovery"],
+): void {
+  if (!recovery) return;
+  for (const image of recovery.queuedTurn.images) {
+    revokeObjectPreviewUrl(image.previewUrl);
+  }
+}
+
 export function revokePromptHistorySavedDraftPreviewUrls(
   savedDraft: ComposerPromptHistorySavedDraft | null | undefined,
 ): void {
@@ -137,6 +146,7 @@ export function revokeDraftPreviewUrls(draft: ComposerThreadDraftState | undefin
   for (const queuedTurn of draft.queuedTurns) {
     revokeQueuedTurnPreviewUrls(queuedTurn);
   }
+  revokePendingDirectTurnRecoveryPreviewUrls(draft.pendingDirectTurnRecovery);
   revokePromptHistorySavedDraftPreviewUrls(draft.promptHistorySavedDraft);
 }
 
@@ -149,6 +159,7 @@ export function revokeDraftComposerImagePreviewUrls(
   for (const image of draft.images) {
     revokeObjectPreviewUrl(image.previewUrl);
   }
+  revokePendingDirectTurnRecoveryPreviewUrls(draft.pendingDirectTurnRecovery);
   revokePromptHistorySavedDraftPreviewUrls(draft.promptHistorySavedDraft);
 }
 
@@ -164,6 +175,13 @@ export function isComposerImageBlobReferenced(
     }
     if (
       draft.promptHistorySavedDraft?.persistedAttachments.some(
+        (attachment) => attachment.blobKey === blobKey,
+      )
+    ) {
+      return true;
+    }
+    if (
+      draft.pendingDirectTurnRecovery?.persistedImageAttachments.some(
         (attachment) => attachment.blobKey === blobKey,
       )
     ) {
@@ -218,6 +236,12 @@ export function deleteDraftComposerImageBlobs(
   if (draft.promptHistorySavedDraft) {
     deletePersistedComposerImageBlobs(
       draft.promptHistorySavedDraft.persistedAttachments,
+      getDraftsByThreadId,
+    );
+  }
+  if (draft.pendingDirectTurnRecovery) {
+    deletePersistedComposerImageBlobs(
+      draft.pendingDirectTurnRecovery.persistedImageAttachments,
       getDraftsByThreadId,
     );
   }

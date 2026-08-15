@@ -64,6 +64,7 @@ describe("ProviderSessionReaperLive", () => {
     const stopSession = vi.fn<ProviderServiceShape["stopSession"]>(() => Effect.void);
     const directory: ProviderSessionDirectoryShape = {
       upsert: () => Effect.void,
+      replace: () => Effect.void,
       getProvider: () => unsupported(),
       getBinding: () => unsupported(),
       remove: () => Effect.void,
@@ -80,6 +81,7 @@ describe("ProviderSessionReaperLive", () => {
     };
     const providerService: ProviderServiceShape = {
       startSession: () => unsupported(),
+      reloadSessionResources: () => unsupported(),
       sendTurn: () => unsupported(),
       steerTurn: () => unsupported(),
       startReview: () => unsupported(),
@@ -91,6 +93,9 @@ describe("ProviderSessionReaperLive", () => {
       respondToUserInput: () => unsupported(),
       stopSession,
       listSessions: () => Effect.succeed([]),
+      listSessionsStrict: () => Effect.succeed([]),
+      withModelServiceMutationFence: (_serviceId, effect) => effect,
+      withRuntimeEventProjectionLease: (_threadId, effect) => effect,
       getCapabilities: () => unsupported(),
       rollbackConversation: () => unsupported(),
       compactThread: () => unsupported(),
@@ -127,6 +132,7 @@ describe("ProviderSessionReaperLive", () => {
     const stopSession = vi.fn<ProviderServiceShape["stopSession"]>(() => Effect.void);
     const directory: ProviderSessionDirectoryShape = {
       upsert: () => Effect.void,
+      replace: () => Effect.void,
       getProvider: () => unsupported(),
       getBinding: () => unsupported(),
       remove: () => Effect.void,
@@ -143,6 +149,7 @@ describe("ProviderSessionReaperLive", () => {
     };
     const providerService: ProviderServiceShape = {
       startSession: () => unsupported(),
+      reloadSessionResources: () => unsupported(),
       sendTurn: () => unsupported(),
       steerTurn: () => unsupported(),
       startReview: () => unsupported(),
@@ -154,6 +161,9 @@ describe("ProviderSessionReaperLive", () => {
       respondToUserInput: () => unsupported(),
       stopSession,
       listSessions: () => Effect.succeed([]),
+      listSessionsStrict: () => Effect.succeed([]),
+      withModelServiceMutationFence: (_serviceId, effect) => effect,
+      withRuntimeEventProjectionLease: (_threadId, effect) => effect,
       getCapabilities: () => unsupported(),
       rollbackConversation: () => unsupported(),
       compactThread: () => unsupported(),

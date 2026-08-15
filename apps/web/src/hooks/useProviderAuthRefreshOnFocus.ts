@@ -14,7 +14,10 @@ export const PROVIDER_AUTH_REFRESH_MIN_INTERVAL_MS = 15_000;
 export function useProviderAuthRefreshOnFocus(options?: { readonly enabled?: boolean }): void {
   useProviderStatusRefresh({
     ...(options?.enabled !== undefined ? { enabled: options.enabled } : {}),
+    // Startup eligibility is owned by ProviderHealth's local passive-presence
+    // projection. This hook only re-checks auth after a real focus/visibility event.
     minIntervalMs: PROVIDER_AUTH_REFRESH_MIN_INTERVAL_MS,
     refreshOnFocus: true,
+    refreshOnFocusAfterLossOnly: true,
   });
 }

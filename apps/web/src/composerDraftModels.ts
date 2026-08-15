@@ -20,10 +20,8 @@ import * as Schema from "effect/Schema";
 import {
   getDefaultModel,
   normalizeModelSlug,
-  resolveModelSlugForProvider,
   resolveSelectableModel,
 } from "@omnimind/shared/model";
-import { resolveAppModelSelection } from "./appSettings";
 import type { ComposerThreadDraftState } from "./composerDraftDomain";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
 
@@ -55,7 +53,7 @@ export type LegacyCodexFields = typeof LegacyCodexFields.Type;
 const ANTIGRAVITY_REASONING_EFFORT_SET = new Set(["low", "medium", "high", "thinking"]);
 
 export interface EffectiveComposerModelState {
-  selectedModel: ModelSlug;
+  selectedModel: ModelSlug | null;
   modelOptions: ProviderModelOptions | null;
 }
 
@@ -81,8 +79,10 @@ function deriveEffectiveComposerModelOptions(input: {
     | undefined;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
+  stickyModelSelection?: ModelSelection | null | undefined;
 }): ProviderModelOptions | null {
   const baseOptions = mergeProviderModelOptionsFromSelections(
+    input.stickyModelSelection,
     input.projectModelSelection,
     input.threadModelSelection,
   );
@@ -409,7 +409,8 @@ export function normalizeProviderModelOptions(
     omniMindCandidate?.thinkingLevel === "low" ||
     omniMindCandidate?.thinkingLevel === "medium" ||
     omniMindCandidate?.thinkingLevel === "high" ||
-    omniMindCandidate?.thinkingLevel === "xhigh"
+    omniMindCandidate?.thinkingLevel === "xhigh" ||
+    omniMindCandidate?.thinkingLevel === "max"
       ? omniMindCandidate.thinkingLevel
       : undefined;
   const omnimind =
@@ -702,6 +703,8 @@ export function deriveEffectiveComposerModelState(input: {
   selectedProvider: ProviderKind;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
+  stickyModelSelection?: ModelSelection | null | undefined;
+  runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
   customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
@@ -714,56 +717,48 @@ export function deriveEffectiveComposerModelState(input: {
     }
     return resolveSelectableModel(input.selectedProvider, candidate, availableOptions);
   };
-  const baseModel = resolveModelSlugForProvider(
-    input.selectedProvider,
-    (input.threadModelSelection?.provider === input.selectedProvider
-      ? input.threadModelSelection.model
-      : null) ??
-      (input.projectModelSelection?.provider === input.selectedProvider
-        ? input.projectModelSelection.model
-        : null) ??
-      getDefaultModel(input.selectedProvider),
-  );
-  const persistedThreadModel =
-    input.threadModelSelection?.provider === input.selectedProvider
-      ? (normalizeModelSlug(input.threadModelSelection.model, input.selectedProvider) ??
-        input.threadModelSelection.model)
-      : null;
-  const persistedProjectModel =
-    input.projectModelSelection?.provider === input.selectedProvider
-      ? (normalizeModelSlug(input.projectModelSelection.model, input.selectedProvider) ??
-        input.projectModelSelection.model)
-      : null;
   const activeSelection = input.draft?.modelSelectionByProvider?.[input.selectedProvider];
-  const selectedDraftModel = activeSelection?.model
-    ? resolveAppModelSelection(
-        input.selectedProvider,
-        input.customModelsByProvider,
-        activeSelection.model,
-      )
-    : null;
-  const unlistedDraftModel = input.selectedProvider === "pi" ? selectedDraftModel : null;
-  const selectedModel =
-    resolveAvailableModel(activeSelection?.model) ??
-    resolveAvailableModel(
-      input.threadModelSelection?.provider === input.selectedProvider
-        ? input.threadModelSelection.model
-        : null,
-    ) ??
-    resolveAvailableModel(
-      input.projectModelSelection?.provider === input.selectedProvider
-        ? input.projectModelSelection.model
-        : null,
-    ) ??
-    resolveAvailableModel(selectedDraftModel) ??
-    persistedThreadModel ??
-    persistedProjectModel ??
-    unlistedDraftModel ??
-    input.availableModelOptionsByProvider?.[input.selectedProvider]?.[0]?.slug ??
-    selectedDraftModel ??
-    baseModel ??
-    getDefaultModel("codex");
-  const modelOptions = deriveEffectiveComposerModelOptions(input);
+  const selectionCandidates = [
+    activeSelection,
+    input.threadModelSelection?.provider === input.selectedProvider
+      ? input.threadModelSelection
+      : null,
+    input.projectModelSelection?.provider === input.selectedProvider
+      ? input.projectModelSelection
+      : null,
+    input.stickyModelSelection?.provider === input.selectedProvider
+      ? input.stickyModelSelection
+      : null,
+  ] as const;
+  let selectedModel: ModelSlug | null = null;
+  let selectedSource: ModelSelection | null = null;
+  for (const candidate of selectionCandidates) {
+    const resolvedModel = resolveAvailableModel(candidate?.model);
+    if (!resolvedModel) continue;
+    selectedModel = resolvedModel;
+    selectedSource = candidate ?? null;
+    break;
+  }
+  const hasRememberedExactSelection = selectionCandidates.some(
+    (candidate) => candidate !== null && candidate !== undefined,
+  );
+  const requiresExactRuntimeCatalogSelection =
+    input.selectedProvider === "omnimind" || input.selectedProvider === "pi";
+  if (!(requiresExactRuntimeCatalogSelection && hasRememberedExactSelection)) {
+    selectedModel ??=
+      input.runtimeCatalogFallbackModel !== undefined
+        ? resolveAvailableModel(input.runtimeCatalogFallbackModel)
+        : (resolveAvailableModel(getDefaultModel(input.selectedProvider)) ??
+          input.availableModelOptionsByProvider?.[input.selectedProvider]?.[0]?.slug ??
+          null);
+  }
+
+  const inheritedModelOptions = deriveEffectiveComposerModelOptions(input);
+  const modelOptions = legacyReplaceProviderModelOptions(
+    inheritedModelOptions,
+    input.selectedProvider,
+    selectedSource?.options,
+  );
 
   return {
     selectedModel,
@@ -779,7 +774,7 @@ export function resolvePreferredComposerModelSelection(input: {
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
   defaultProvider?: ProviderKind | null | undefined;
-}): ModelSelection {
+}): ModelSelection | null {
   const draftProviderWithSelection =
     COMPOSER_PROVIDER_KINDS.find(
       (provider) => input.draft?.modelSelectionByProvider?.[provider] !== undefined,
@@ -799,9 +794,10 @@ export function resolvePreferredComposerModelSelection(input: {
       : null) ??
     (input.projectModelSelection?.provider === preferredProvider
       ? input.projectModelSelection
-      : null) ?? {
-      provider: preferredProvider === "pi" ? "codex" : preferredProvider,
-      model: getDefaultModel(preferredProvider === "pi" ? "codex" : preferredProvider),
-    }
+      : null) ??
+    (() => {
+      const model = getDefaultModel(preferredProvider);
+      return model ? { provider: preferredProvider, model } : null;
+    })()
   );
 }

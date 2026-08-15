@@ -39,6 +39,10 @@ export function emitWsTransportState(state: WsTransportState): void {
   );
 }
 
+export function readLatestWsTransportState(): WsTransportState | null {
+  return latestTransportState;
+}
+
 // Subscribes to the shared transport state event. Returns an idempotent cleanup.
 export function addWsTransportStateListener(
   listener: (state: WsTransportState) => void,

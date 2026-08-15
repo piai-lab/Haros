@@ -14,9 +14,9 @@ import { useMemo } from "react";
 
 import { getAppModelOptions, getCustomModelsByProvider, useAppSettings } from "../appSettings";
 import { resolveRuntimeModelDescriptor } from "../components/chat/runtimeModelCapabilities";
+import { COMPOSER_PROVIDER_KINDS } from "../composerDraftModels";
 import { collapseCursorModelVariants } from "../cursorModelVariants";
 import {
-  isInitialModelDiscoveryPending,
   providerAgentsQueryOptions,
   providerModelsQueryOptions,
 } from "../lib/providerDiscoveryReactQuery";
@@ -28,14 +28,13 @@ export interface ProviderModelCatalog {
     ProviderKind,
     ReadonlyArray<ProviderModelOption & { isCustom?: boolean }>
   >;
+  /** Catalog-authoritative candidates; provider health still owns send admission. */
+  selectableModelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
+  /** Distinguishes cold checks, truthful empty catalogs, last-good data, and hard failures. */
+  catalogStateByProvider: Record<ProviderKind, ProviderModelCatalogState>;
   /** Providers whose runtime model discovery is still pending (no usable list yet). */
-  loadingModelProviders: Partial<Record<ProviderKind, boolean>>;
-  /**
-   * Runtime-discovered model descriptors per provider. Composer-style trait
-   * controls (effort, fast mode, thinking, context window) are sourced from
-   * these for cursor/codex/etc., so any surface that wants the effort picker
-   * must feed them through (see {@link selectedRuntimeModel}).
-   */
+  loadingModelProviders: Record<ProviderKind, boolean>;
+  /** Runtime descriptors from the settled current query identity only. */
   runtimeModelsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>;
   /** The runtime descriptor matching `selectedProvider` + its selected-model hint. */
   selectedRuntimeModel: ProviderModelDescriptor | undefined;
@@ -47,7 +46,36 @@ export interface ProviderModelCatalog {
   selectedProviderRuntimeModelDiscoveryPending: boolean;
 }
 
+export type ProviderModelCatalogState = "idle" | "checking" | "ready" | "empty" | "stale" | "error";
+
 const EMPTY_PROVIDER_AGENTS: ReadonlyArray<ProviderAgentDescriptor> = [];
+
+function ownsIndependentCustomModelSlugs(provider: ProviderKind): boolean {
+  return (
+    provider === "codex" ||
+    provider === "claudeAgent" ||
+    provider === "cursor" ||
+    provider === "antigravity" ||
+    provider === "grok" ||
+    provider === "kilo" ||
+    provider === "opencode"
+  );
+}
+
+function deriveCatalogState(input: {
+  enabled: boolean;
+  hasSettledData: boolean;
+  isPending: boolean;
+  isPlaceholderData: boolean;
+  isError: boolean;
+  modelCount: number;
+}): ProviderModelCatalogState {
+  if (!input.enabled) return "idle";
+  if (input.isPlaceholderData) return "checking";
+  if (input.isError) return input.hasSettledData && input.modelCount > 0 ? "stale" : "error";
+  if (input.isPending) return "checking";
+  return input.modelCount > 0 ? "ready" : "empty";
+}
 
 export function useProviderModelCatalog(input: {
   selectedProvider: ProviderKind;
@@ -58,6 +86,12 @@ export function useProviderModelCatalog(input: {
    * its native state is only read after `piDiscoveryRequested` records explicit intent.
    */
   discoveryEnabled: boolean;
+  /**
+   * Allows a permanently mounted surface to stop even its selected-provider
+   * query while inactive. Chat/Composer callers omit this and keep the current
+   * Engine authoritative.
+   */
+  selectedProviderDiscoveryEnabled?: boolean;
   /** User explicitly opened the stock Pi provider submenu in the current picker session. */
   piDiscoveryRequested?: boolean;
   /** Effective cwd for providers whose model catalog can be extended by project resources. */
@@ -100,7 +134,7 @@ export function useProviderModelCatalog(input: {
       return false;
     }
     if (provider === selectedProvider) {
-      return true;
+      return input.selectedProviderDiscoveryEnabled ?? true;
     }
     if (!prefetchRequested) {
       return false;
@@ -239,59 +273,6 @@ export function useProviderModelCatalog(input: {
     [cursorDynamicModelsQuery.data?.models],
   );
 
-  const hasResolvedCursorModelDiscovery =
-    (cursorDynamicModelsQuery.data?.source === "cursor.cli" ||
-      cursorDynamicModelsQuery.data?.source === "cursor.acp") &&
-    (cursorDynamicModelsQuery.data.models.length ?? 0) > 0;
-  const cursorModelDiscoveryPending =
-    cursorModelDiscoveryEnabled &&
-    !hasResolvedCursorModelDiscovery &&
-    isInitialModelDiscoveryPending(cursorDynamicModelsQuery);
-  const hasResolvedDroidModelDiscovery =
-    droidDynamicModelsQuery.data?.source === "droid-acp" &&
-    (droidDynamicModelsQuery.data.models.length ?? 0) > 0;
-  const droidModelDiscoveryPending =
-    droidModelDiscoveryEnabled &&
-    !hasResolvedDroidModelDiscovery &&
-    isInitialModelDiscoveryPending(droidDynamicModelsQuery);
-  const hasResolvedKiloModelDiscovery =
-    (kiloDynamicModelsQuery.data?.source === "kilo-cli" ||
-      kiloDynamicModelsQuery.data?.source === "kilo") &&
-    (kiloDynamicModelsQuery.data.models.length ?? 0) > 0;
-  const kiloModelDiscoveryPending =
-    kiloModelDiscoveryEnabled &&
-    !hasResolvedKiloModelDiscovery &&
-    isInitialModelDiscoveryPending(kiloDynamicModelsQuery);
-  const hasResolvedOpenCodeModelDiscovery =
-    (openCodeDynamicModelsQuery.data?.source === "opencode-cli" ||
-      openCodeDynamicModelsQuery.data?.source === "opencode") &&
-    (openCodeDynamicModelsQuery.data.models.length ?? 0) > 0;
-  const openCodeModelDiscoveryPending =
-    openCodeModelDiscoveryEnabled &&
-    !hasResolvedOpenCodeModelDiscovery &&
-    isInitialModelDiscoveryPending(openCodeDynamicModelsQuery);
-  const hasResolvedPiModelDiscovery =
-    piDynamicModelsQuery.data?.source?.startsWith("pi.sdk") === true &&
-    (piDynamicModelsQuery.data.models.length ?? 0) > 0;
-  const piModelDiscoveryPending =
-    piModelDiscoveryEnabled &&
-    !hasResolvedPiModelDiscovery &&
-    isInitialModelDiscoveryPending(piDynamicModelsQuery);
-  const hasResolvedOmniMindModelDiscovery =
-    omniMindDynamicModelsQuery.data?.source?.startsWith("pi.sdk") === true &&
-    (omniMindDynamicModelsQuery.data.models.length ?? 0) > 0;
-  const omniMindModelDiscoveryPending =
-    omniMindModelDiscoveryEnabled &&
-    !hasResolvedOmniMindModelDiscovery &&
-    isInitialModelDiscoveryPending(omniMindDynamicModelsQuery);
-  const antigravityModelDiscoveryPending =
-    antigravityModelDiscoveryEnabled &&
-    !(
-      antigravityModelsQuery.data?.source === "antigravity.cli" &&
-      (antigravityModelsQuery.data.models.length ?? 0) > 0
-    ) &&
-    isInitialModelDiscoveryPending(antigravityModelsQuery);
-
   const modelOptionsByProvider = useMemo(() => {
     const staticOptions: Record<ProviderKind, ReturnType<typeof getAppModelOptions>> = {
       omnimind: getAppModelOptions(
@@ -382,28 +363,7 @@ export function useProviderModelCatalog(input: {
     piDynamicModelsQuery.data,
   ]);
 
-  const loadingModelProviders = useMemo<Partial<Record<ProviderKind, boolean>>>(
-    () => ({
-      omnimind: omniMindModelDiscoveryPending,
-      antigravity: antigravityModelDiscoveryPending,
-      cursor: cursorModelDiscoveryPending,
-      droid: droidModelDiscoveryPending,
-      kilo: kiloModelDiscoveryPending,
-      opencode: openCodeModelDiscoveryPending,
-      pi: piModelDiscoveryPending,
-    }),
-    [
-      antigravityModelDiscoveryPending,
-      cursorModelDiscoveryPending,
-      droidModelDiscoveryPending,
-      kiloModelDiscoveryPending,
-      openCodeModelDiscoveryPending,
-      omniMindModelDiscoveryPending,
-      piModelDiscoveryPending,
-    ],
-  );
-
-  const runtimeModelsByProvider = useMemo<
+  const discoveredRuntimeModelsByProvider = useMemo<
     Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>
   >(
     () => ({
@@ -432,6 +392,207 @@ export function useProviderModelCatalog(input: {
     ],
   );
 
+  const catalogStateByProvider = useMemo<Record<ProviderKind, ProviderModelCatalogState>>(
+    () => ({
+      omnimind: deriveCatalogState({
+        enabled: omniMindModelDiscoveryEnabled,
+        hasSettledData:
+          omniMindDynamicModelsQuery.data !== undefined &&
+          !omniMindDynamicModelsQuery.isPlaceholderData,
+        isPending: omniMindDynamicModelsQuery.isPending,
+        isPlaceholderData: omniMindDynamicModelsQuery.isPlaceholderData,
+        isError: omniMindDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.omnimind.length,
+      }),
+      codex: deriveCatalogState({
+        enabled: codexModelDiscoveryEnabled,
+        hasSettledData:
+          codexDynamicModelsQuery.data !== undefined && !codexDynamicModelsQuery.isPlaceholderData,
+        isPending: codexDynamicModelsQuery.isPending,
+        isPlaceholderData: codexDynamicModelsQuery.isPlaceholderData,
+        isError: codexDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.codex.length,
+      }),
+      claudeAgent: deriveCatalogState({
+        enabled: claudeModelDiscoveryEnabled,
+        hasSettledData:
+          claudeDynamicModelsQuery.data !== undefined &&
+          !claudeDynamicModelsQuery.isPlaceholderData,
+        isPending: claudeDynamicModelsQuery.isPending,
+        isPlaceholderData: claudeDynamicModelsQuery.isPlaceholderData,
+        isError: claudeDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.claudeAgent.length,
+      }),
+      cursor: deriveCatalogState({
+        enabled: cursorModelDiscoveryEnabled,
+        hasSettledData:
+          cursorDynamicModelsQuery.data !== undefined &&
+          !cursorDynamicModelsQuery.isPlaceholderData,
+        isPending: cursorDynamicModelsQuery.isPending,
+        isPlaceholderData: cursorDynamicModelsQuery.isPlaceholderData,
+        isError: cursorDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.cursor.length,
+      }),
+      antigravity: deriveCatalogState({
+        enabled: antigravityModelDiscoveryEnabled,
+        hasSettledData:
+          antigravityModelsQuery.data !== undefined && !antigravityModelsQuery.isPlaceholderData,
+        isPending: antigravityModelsQuery.isPending,
+        isPlaceholderData: antigravityModelsQuery.isPlaceholderData,
+        isError: antigravityModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.antigravity.length,
+      }),
+      grok: deriveCatalogState({
+        enabled: grokModelDiscoveryEnabled,
+        hasSettledData:
+          grokDynamicModelsQuery.data !== undefined && !grokDynamicModelsQuery.isPlaceholderData,
+        isPending: grokDynamicModelsQuery.isPending,
+        isPlaceholderData: grokDynamicModelsQuery.isPlaceholderData,
+        isError: grokDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.grok.length,
+      }),
+      droid: deriveCatalogState({
+        enabled: droidModelDiscoveryEnabled,
+        hasSettledData:
+          droidDynamicModelsQuery.data !== undefined && !droidDynamicModelsQuery.isPlaceholderData,
+        isPending: droidDynamicModelsQuery.isPending,
+        isPlaceholderData: droidDynamicModelsQuery.isPlaceholderData,
+        isError: droidDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.droid.length,
+      }),
+      kilo: deriveCatalogState({
+        enabled: kiloModelDiscoveryEnabled,
+        hasSettledData:
+          kiloDynamicModelsQuery.data !== undefined && !kiloDynamicModelsQuery.isPlaceholderData,
+        isPending: kiloDynamicModelsQuery.isPending,
+        isPlaceholderData: kiloDynamicModelsQuery.isPlaceholderData,
+        isError: kiloDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.kilo.length,
+      }),
+      opencode: deriveCatalogState({
+        enabled: openCodeModelDiscoveryEnabled,
+        hasSettledData:
+          openCodeDynamicModelsQuery.data !== undefined &&
+          !openCodeDynamicModelsQuery.isPlaceholderData,
+        isPending: openCodeDynamicModelsQuery.isPending,
+        isPlaceholderData: openCodeDynamicModelsQuery.isPlaceholderData,
+        isError: openCodeDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.opencode.length,
+      }),
+      pi: deriveCatalogState({
+        enabled: piModelDiscoveryEnabled,
+        hasSettledData:
+          piDynamicModelsQuery.data !== undefined && !piDynamicModelsQuery.isPlaceholderData,
+        isPending: piDynamicModelsQuery.isPending,
+        isPlaceholderData: piDynamicModelsQuery.isPlaceholderData,
+        isError: piDynamicModelsQuery.isError,
+        modelCount: discoveredRuntimeModelsByProvider.pi.length,
+      }),
+    }),
+    [
+      antigravityModelDiscoveryEnabled,
+      antigravityModelsQuery.isError,
+      antigravityModelsQuery.isPending,
+      antigravityModelsQuery.isPlaceholderData,
+      claudeDynamicModelsQuery.isError,
+      claudeDynamicModelsQuery.isPending,
+      claudeDynamicModelsQuery.isPlaceholderData,
+      claudeModelDiscoveryEnabled,
+      codexDynamicModelsQuery.isError,
+      codexDynamicModelsQuery.isPending,
+      codexDynamicModelsQuery.isPlaceholderData,
+      codexModelDiscoveryEnabled,
+      cursorDynamicModelsQuery.isError,
+      cursorDynamicModelsQuery.isPending,
+      cursorDynamicModelsQuery.isPlaceholderData,
+      cursorModelDiscoveryEnabled,
+      droidDynamicModelsQuery.isError,
+      droidDynamicModelsQuery.isPending,
+      droidDynamicModelsQuery.isPlaceholderData,
+      droidModelDiscoveryEnabled,
+      grokDynamicModelsQuery.isError,
+      grokDynamicModelsQuery.isPending,
+      grokDynamicModelsQuery.isPlaceholderData,
+      grokModelDiscoveryEnabled,
+      kiloDynamicModelsQuery.isError,
+      kiloDynamicModelsQuery.isPending,
+      kiloDynamicModelsQuery.isPlaceholderData,
+      kiloModelDiscoveryEnabled,
+      omniMindDynamicModelsQuery.isError,
+      omniMindDynamicModelsQuery.isPending,
+      omniMindDynamicModelsQuery.isPlaceholderData,
+      omniMindModelDiscoveryEnabled,
+      openCodeDynamicModelsQuery.isError,
+      openCodeDynamicModelsQuery.isPending,
+      openCodeDynamicModelsQuery.isPlaceholderData,
+      openCodeModelDiscoveryEnabled,
+      piDynamicModelsQuery.isError,
+      piDynamicModelsQuery.isPending,
+      piDynamicModelsQuery.isPlaceholderData,
+      piModelDiscoveryEnabled,
+      discoveredRuntimeModelsByProvider,
+    ],
+  );
+
+  const runtimeModelsByProvider = useMemo<
+    Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>
+  >(() => {
+    const result = {} as Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>;
+    for (const provider of COMPOSER_PROVIDER_KINDS) {
+      const state = catalogStateByProvider[provider];
+      result[provider] =
+        state === "ready" || state === "stale" ? discoveredRuntimeModelsByProvider[provider] : [];
+    }
+    return result;
+  }, [catalogStateByProvider, discoveredRuntimeModelsByProvider]);
+
+  const configuredCustomModelSlugsByProvider = useMemo(() => {
+    const result = {} as Record<ProviderKind, ReadonlySet<string>>;
+    for (const provider of COMPOSER_PROVIDER_KINDS) {
+      result[provider] = new Set(
+        getAppModelOptions(provider, customModelsByProvider[provider])
+          .filter((option) => option.isCustom)
+          .map((option) => option.slug),
+      );
+    }
+    return result;
+  }, [customModelsByProvider]);
+
+  const selectableModelOptionsByProvider = useMemo<
+    Record<ProviderKind, ReadonlyArray<ProviderModelOption>>
+  >(() => {
+    const result = {} as Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
+    for (const provider of COMPOSER_PROVIDER_KINDS) {
+      const runtimeModels = runtimeModelsByProvider[provider];
+      const catalogState = catalogStateByProvider[provider];
+      if (catalogState === "idle" || catalogState === "checking") {
+        result[provider] = [];
+        continue;
+      }
+      const displayOptions = mergeDynamicModelOptions({
+        provider,
+        staticOptions: modelOptionsByProvider[provider],
+        dynamicModels: runtimeModels,
+      });
+      result[provider] = displayOptions.filter((option) => {
+        if (
+          ownsIndependentCustomModelSlugs(provider) &&
+          configuredCustomModelSlugsByProvider[provider].has(option.slug)
+        ) {
+          return true;
+        }
+        return Boolean(
+          resolveRuntimeModelDescriptor({
+            provider,
+            model: option.slug,
+            runtimeModels,
+          }),
+        );
+      });
+    }
+    return result;
+  }, [configuredCustomModelSlugsByProvider, modelOptionsByProvider, runtimeModelsByProvider]);
+
   const selectedRuntimeModel = useMemo(
     () =>
       resolveRuntimeModelDescriptor({
@@ -442,14 +603,28 @@ export function useProviderModelCatalog(input: {
     [modelHintByProvider, runtimeModelsByProvider, selectedProvider],
   );
 
-  const selectedDynamicAgents =
+  const selectedAgentCatalog =
     selectedProvider === "claudeAgent"
-      ? (claudeDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
-      : selectedProvider === "kilo"
-        ? (kiloDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
-        : selectedProvider === "opencode"
-          ? (openCodeDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS)
-          : (codexDynamicAgentsQuery.data?.agents ?? EMPTY_PROVIDER_AGENTS);
+      ? {
+          enabled: shouldDiscoverProvider("claudeAgent", agentDiscoveryPolicy === "eager-core"),
+          query: claudeDynamicAgentsQuery,
+        }
+      : selectedProvider === "codex"
+        ? {
+            enabled: shouldDiscoverProvider("codex", agentDiscoveryPolicy === "eager-core"),
+            query: codexDynamicAgentsQuery,
+          }
+        : selectedProvider === "kilo"
+          ? { enabled: kiloModelDiscoveryEnabled, query: kiloDynamicAgentsQuery }
+          : selectedProvider === "opencode"
+            ? { enabled: openCodeModelDiscoveryEnabled, query: openCodeDynamicAgentsQuery }
+            : null;
+  const selectedDynamicAgents =
+    !selectedAgentCatalog?.enabled ||
+    selectedAgentCatalog.query.isPlaceholderData ||
+    selectedAgentCatalog.query.isPending
+      ? EMPTY_PROVIDER_AGENTS
+      : (selectedAgentCatalog.query.data?.agents ?? EMPTY_PROVIDER_AGENTS);
   const selectedRuntimeAgents = useMemo<ReadonlyArray<ProviderAgentDescriptor>>(
     () =>
       selectedDynamicAgents.map((agent) =>
@@ -460,39 +635,22 @@ export function useProviderModelCatalog(input: {
     [selectedDynamicAgents],
   );
 
-  const selectedProviderRuntimeModelDiscoveryPending =
-    loadingModelProviders[selectedProvider] ?? false;
-  const selectedProviderModelsQuery =
-    selectedProvider === "omnimind"
-      ? omniMindDynamicModelsQuery
-      : selectedProvider === "claudeAgent"
-      ? claudeDynamicModelsQuery
-      : selectedProvider === "codex"
-        ? codexDynamicModelsQuery
-        : selectedProvider === "cursor"
-          ? cursorDynamicModelsQuery
-          : selectedProvider === "antigravity"
-            ? antigravityModelsQuery
-            : selectedProvider === "grok"
-              ? grokDynamicModelsQuery
-              : selectedProvider === "droid"
-                ? droidDynamicModelsQuery
-                : selectedProvider === "kilo"
-                  ? kiloDynamicModelsQuery
-                  : selectedProvider === "opencode"
-                    ? openCodeDynamicModelsQuery
-                    : piDynamicModelsQuery;
-  const selectedProviderModelsLoading =
-    selectedProviderRuntimeModelDiscoveryPending ||
-    (loadingModelProviders[selectedProvider] === undefined &&
-      (selectedProviderModelsQuery.isLoading ||
-        (selectedProviderModelsQuery.isFetching &&
-          selectedProviderModelsQuery.data === undefined)));
+  const loadingModelProviders = useMemo<Record<ProviderKind, boolean>>(() => {
+    const result = {} as Record<ProviderKind, boolean>;
+    for (const provider of COMPOSER_PROVIDER_KINDS) {
+      result[provider] = catalogStateByProvider[provider] === "checking";
+    }
+    return result;
+  }, [catalogStateByProvider]);
+  const selectedProviderRuntimeModelDiscoveryPending = loadingModelProviders[selectedProvider];
+  const selectedProviderModelsLoading = selectedProviderRuntimeModelDiscoveryPending;
 
   return useMemo(
     () => ({
       customModelsByProvider,
       modelOptionsByProvider,
+      selectableModelOptionsByProvider,
+      catalogStateByProvider,
       loadingModelProviders,
       runtimeModelsByProvider,
       selectedRuntimeModel,
@@ -502,6 +660,7 @@ export function useProviderModelCatalog(input: {
     }),
     [
       customModelsByProvider,
+      catalogStateByProvider,
       loadingModelProviders,
       modelOptionsByProvider,
       runtimeModelsByProvider,
@@ -509,6 +668,7 @@ export function useProviderModelCatalog(input: {
       selectedProviderRuntimeModelDiscoveryPending,
       selectedRuntimeAgents,
       selectedRuntimeModel,
+      selectableModelOptionsByProvider,
     ],
   );
 }

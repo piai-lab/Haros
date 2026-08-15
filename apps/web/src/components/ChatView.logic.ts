@@ -3,10 +3,11 @@ import {
   ThreadId,
   type GitWorktreeSetupPhase,
   type GitWorktreeSetupProgressEvent,
+  type MessageId,
   type ModelSelection,
   type ModelSlug,
+  type OrchestrationThreadActivity,
   type ProviderApprovalDecision,
-  type ProviderKind,
   type ProviderRequestKind,
   type RuntimeMode,
   type ServerProviderAuthStatus,
@@ -20,6 +21,7 @@ import {
   type ChatMessage,
   type SessionPhase,
   type Thread,
+  type ThreadSession,
   type ThreadPrimarySurface,
   type TurnDiffSummary,
   type WorktreeSetupResolutionAction,
@@ -127,22 +129,6 @@ export function resolveRuntimeModeAfterApprovalDecision(
   return null;
 }
 
-export async function commitAfterRuntimeModePersistence(input: {
-  currentRuntimeMode: RuntimeMode;
-  nextRuntimeMode: RuntimeMode;
-  persistRuntimeMode: (mode: RuntimeMode) => Promise<boolean>;
-  commit: () => void;
-}): Promise<boolean> {
-  if (
-    input.nextRuntimeMode !== input.currentRuntimeMode &&
-    !(await input.persistRuntimeMode(input.nextRuntimeMode))
-  ) {
-    return false;
-  }
-  input.commit();
-  return true;
-}
-
 export interface RuntimeModePersistenceQueue {
   syncAcknowledgedMode: (mode: RuntimeMode) => void;
   persist: (
@@ -195,12 +181,106 @@ export function createRuntimeModePersistenceQueue(
 export function modelSelectionsEqual(left: ModelSelection, right: ModelSelection): boolean {
   return (
     left.provider === right.provider &&
-    left.model === right.model &&
+    (normalizeModelSlug(left.model, left.provider) ?? left.model) ===
+      (normalizeModelSlug(right.model, right.provider) ?? right.model) &&
     JSON.stringify(left.options ?? null) === JSON.stringify(right.options ?? null) &&
     (left.provider !== "claudeAgent" ||
       right.provider !== "claudeAgent" ||
       left.supportsAutoMode === right.supportsAutoMode)
   );
+}
+
+export type TurnStartRecoveryDisposition =
+  | "pending"
+  | "target-committed"
+  | "old-binding-restored"
+  | "terminal-unrecovered";
+
+/**
+ * A turn-start failure activity is correlated by its durable message id. The
+ * activity summary/detail is user-facing diagnostics, never an implicit
+ * protocol for Composer recovery.
+ */
+function hasExactProviderTurnStartFailure(
+  activities: ReadonlyArray<Pick<OrchestrationThreadActivity, "kind" | "payload">>,
+  messageId: MessageId,
+): boolean {
+  return activities.some((activity) => {
+    if (activity.kind !== "provider.turn.start.failed") {
+      return false;
+    }
+    const payload = activity.payload;
+    return (
+      typeof payload === "object" &&
+      payload !== null &&
+      !Array.isArray(payload) &&
+      "messageId" in payload &&
+      payload.messageId === messageId
+    );
+  });
+}
+
+/**
+ * Resolves only the canonical projection facts needed by the component-local
+ * exact-binding send snapshot. Target adoption wins over a later send error;
+ * old-binding recovery requires both an exact failure receipt and the restored
+ * ready Session, so a restore failure cannot be painted as recovered.
+ */
+export function resolveTurnStartRecoveryDisposition(input: {
+  readonly messageId: MessageId;
+  readonly previousModelSelection: ModelSelection;
+  readonly previousRuntimeMode: RuntimeMode;
+  readonly previousInteractionMode: "default" | "plan";
+  readonly targetModelSelection: ModelSelection;
+  readonly targetRuntimeMode: RuntimeMode;
+  readonly targetInteractionMode: "default" | "plan";
+  readonly threadModelSelection: ModelSelection;
+  readonly threadRuntimeMode: RuntimeMode;
+  readonly threadInteractionMode: "default" | "plan";
+  readonly session: Pick<ThreadSession, "provider" | "orchestrationStatus"> | null;
+  readonly activities: ReadonlyArray<Pick<OrchestrationThreadActivity, "kind" | "payload">>;
+}): TurnStartRecoveryDisposition {
+  if (
+    input.session?.provider === input.targetModelSelection.provider &&
+    modelSelectionsEqual(input.threadModelSelection, input.targetModelSelection) &&
+    input.threadRuntimeMode === input.targetRuntimeMode &&
+    input.threadInteractionMode === input.targetInteractionMode
+  ) {
+    return "target-committed";
+  }
+
+  if (!hasExactProviderTurnStartFailure(input.activities, input.messageId)) {
+    return "pending";
+  }
+
+  if (input.session?.orchestrationStatus === "error") {
+    return "terminal-unrecovered";
+  }
+
+  const oldBindingIsRestored =
+    input.session?.provider === input.previousModelSelection.provider &&
+    input.session.orchestrationStatus === "ready" &&
+    modelSelectionsEqual(input.threadModelSelection, input.previousModelSelection) &&
+    input.threadRuntimeMode === input.previousRuntimeMode &&
+    input.threadInteractionMode === input.previousInteractionMode;
+  return oldBindingIsRestored ? "old-binding-restored" : "pending";
+}
+
+/**
+ * A runtime-mode mutation may touch canonical Thread metadata only when no live
+ * Session exists and the desired binding still exactly matches the durable one.
+ * The current Session projection has no model/options generation, so a matching
+ * Provider or a newer timestamp cannot prove an exact active binding. Every live
+ * Session therefore fails closed to a Composer-draft-only update.
+ */
+export function desiredBindingCanPersistWithoutActiveSession(input: {
+  desiredModelSelection: ModelSelection | null;
+  serverModelSelection: ModelSelection | null;
+  activeSession: ThreadSession | null;
+}): boolean {
+  const { desiredModelSelection, serverModelSelection, activeSession } = input;
+  if (!desiredModelSelection || !serverModelSelection || activeSession !== null) return false;
+  return modelSelectionsEqual(desiredModelSelection, serverModelSelection);
 }
 
 /**
@@ -510,7 +590,7 @@ export function resolveDefaultEnvironmentPanelOpen(input: {
 // (stable user order), then remaining discovered options. Returns null when cycling is
 // a no-op (fewer than two selectable models).
 export function resolveCycledModelSlug(input: {
-  currentModel: string;
+  currentModel: string | null | undefined;
   options: ReadonlyArray<{ slug: string }>;
   favoriteSlugs?: ReadonlyArray<string>;
   direction: "next" | "previous";
@@ -534,12 +614,15 @@ export function resolveCycledModelSlug(input: {
   for (const option of input.options) {
     push(option.slug);
   }
-  if (ordered.length < 2) {
+  if (ordered.length === 0) {
     return null;
   }
-  const currentIndex = ordered.indexOf(input.currentModel.trim());
+  const currentIndex = ordered.indexOf(input.currentModel?.trim() ?? "");
   if (currentIndex < 0) {
     return input.direction === "next" ? (ordered[0] ?? null) : (ordered.at(-1) ?? null);
+  }
+  if (ordered.length < 2) {
+    return null;
   }
   const delta = input.direction === "next" ? 1 : -1;
   const nextIndex = (currentIndex + delta + ordered.length) % ordered.length;
@@ -699,7 +782,8 @@ export function buildLocalDraftThread(
     id: threadId,
     codexThreadId: null,
     projectId: draftThread.projectId,
-    title: draftThread.entryPoint === "terminal" ? "New terminal" : "New thread",
+    title:
+      draftThread.title ?? (draftThread.entryPoint === "terminal" ? "New terminal" : "New thread"),
     modelSelection: fallbackModelSelection,
     runtimeMode: draftThread.runtimeMode,
     interactionMode: draftThread.interactionMode,
@@ -875,54 +959,14 @@ export function deriveComposerVoiceState(input: {
   };
 }
 
-export function shouldShowComposerModelBootstrapSkeleton(input: {
-  selectedProvider: ProviderKind;
-  selectedModel: string | null | undefined;
-  persistedModelSelection: ModelSelection | null | undefined;
-  draftModelSelection: ModelSelection | null | undefined;
-  providerModelsLoading: boolean;
-  requiresDiscoveredModels?: boolean;
-}): boolean {
-  if (input.requiresDiscoveredModels === true && input.providerModelsLoading) {
-    return true;
-  }
-
-  const draftSelection = input.draftModelSelection;
-  if (draftSelection && draftSelection.provider === input.selectedProvider) {
-    return false;
-  }
-
-  const persistedSelection = input.persistedModelSelection;
-  if (!persistedSelection) {
-    return false;
-  }
-
-  if (persistedSelection.provider !== input.selectedProvider) {
-    return true;
-  }
-
-  if (!input.providerModelsLoading) {
-    return false;
-  }
-
-  const normalizedSelectedModel =
-    normalizeModelSlug(input.selectedModel, input.selectedProvider) ?? input.selectedModel;
-  const normalizedPersistedModel =
-    normalizeModelSlug(persistedSelection.model, persistedSelection.provider) ??
-    persistedSelection.model;
-
-  return normalizedSelectedModel !== normalizedPersistedModel;
-}
-
 export function resolveCommittedProviderModel(input: {
-  selectedModel: ModelSlug;
+  selectedModel: ModelSlug | null;
   availableOptions: ReadonlyArray<ProviderModelOption>;
-  fallback: () => string;
-}): string {
+}): ModelSlug | null {
   const directRuntimeOption = input.availableOptions.find(
     (option) => option.slug === input.selectedModel,
   );
-  return directRuntimeOption?.slug ?? input.fallback();
+  return directRuntimeOption?.slug ?? null;
 }
 
 // Lets a pending custom binary path re-check a session that was already observed ready.

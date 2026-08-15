@@ -65,6 +65,7 @@ export function useHandleNewThread() {
       }
       const defaultModel = getDefaultModel(options.provider);
       if (!defaultModel) {
+        useComposerDraftStore.getState().setActiveProviderAndSticky(threadId, options.provider);
         return;
       }
       setModelSelection(threadId, {
@@ -161,6 +162,9 @@ export function useHandleNewThread() {
       threadId: ThreadId,
       creationState: ReturnType<typeof resolveCreationState>,
     ): Promise<void> => {
+      if (!creationState.modelSelection) {
+        return;
+      }
       const api = readNativeApi();
       if (!api) {
         return;
@@ -171,7 +175,7 @@ export function useHandleNewThread() {
           commandId: newCommandId(),
           threadId,
           projectId,
-          title: "New terminal",
+          title: creationState.title,
           modelSelection: creationState.modelSelection,
           runtimeMode: creationState.runtimeMode,
           interactionMode: creationState.interactionMode,

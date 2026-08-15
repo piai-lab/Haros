@@ -54,6 +54,16 @@ describe("message catalogs", () => {
     expect(translate("zh-CN", "library.title", { provider: "Pi" })).toBe("Pi 能力库");
   });
 
+  it("localizes the reachable Fast command feedback", () => {
+    expect(translate("en", "composer.fastUnavailable")).toBe("Fast mode is unavailable");
+    expect(translate("zh-CN", "composer.fastUnavailable")).toBe("快速模式不可用");
+    expect(translate("en", "composer.fastStatus", { state: "on" })).toBe("Fast mode is on");
+    expect(translate("zh-CN", "composer.fastStatus", { state: "开启" })).toBe("快速模式当前为开启");
+    expect(translate("zh-CN", "composer.fastDiscoveryFailed")).toBe(
+      "Claude 命令检查失败，请重试。",
+    );
+  });
+
   it("localizes Markdown footnote navigation", () => {
     expect(translate("en", "markdown.footnotes.label")).toBe("Footnotes");
     expect(translate("en", "markdown.footnotes.backLabel", { reference: "2-2" })).toBe(
@@ -62,6 +72,37 @@ describe("message catalogs", () => {
     expect(translate("zh-CN", "markdown.footnotes.label")).toBe("脚注");
     expect(translate("zh-CN", "markdown.footnotes.backLabel", { reference: "2-2" })).toBe(
       "返回引用 2-2",
+    );
+  });
+
+  it("keeps custom model discovery actionable and honest in both languages", () => {
+    expect(translate("en", "settings.customApiDiscoverModels")).toBe("Get from service");
+    expect(translate("zh-CN", "settings.customApiDiscoverModels")).toBe("从供应商获取");
+    expect(translate("en", "settings.customApiDiscoverySucceeded", { count: 2 })).toBe(
+      "Found 2 models. Select the ones to add.",
+    );
+    expect(translate("zh-CN", "settings.customApiDiscoverySucceeded", { count: 2 })).toBe(
+      "发现 2 个模型，请选择要添加的项目。",
+    );
+    expect(EN_MESSAGES["settings.customApiDiscoveryFailed.catalog_unavailable"]).toContain(
+      "add a model manually",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiDiscoveryFailed.catalog_unavailable"]).toContain(
+      "手工添加",
+    );
+    expect(EN_MESSAGES["settings.customApiDiscoveryRiskDescription"]).toContain(
+      "model-catalog request",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiDiscoveryRiskDescription"]).toContain("模型目录请求");
+    expect(EN_MESSAGES["settings.customApiSaveRiskDescription"]).toContain(
+      "does not send a request now",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiSaveRiskDescription"]).toContain("现在不会发送请求");
+    expect(EN_MESSAGES["settings.customApiCredentialCommandDescription"]).toContain(
+      "future model requests will run it",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiCredentialCommandDescription"]).toContain(
+      "之后的模型请求会执行它",
     );
   });
 

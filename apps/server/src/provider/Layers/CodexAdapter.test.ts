@@ -165,6 +165,7 @@ class FakeCodexManager extends CodexAppServerManager {
 
 const providerSessionDirectoryTestLayer = Layer.succeed(ProviderSessionDirectory, {
   upsert: () => Effect.void,
+  replace: () => Effect.void,
   getProvider: () =>
     Effect.die(new Error("ProviderSessionDirectory.getProvider is not used in test")),
   getBinding: () => Effect.succeed(Option.none()),

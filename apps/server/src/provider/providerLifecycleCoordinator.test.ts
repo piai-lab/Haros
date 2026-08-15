@@ -129,6 +129,34 @@ describe("makeProviderLifecycleCoordinator", () => {
     );
   });
 
+  it("renews the generation for a replacement runtime inside the same lifecycle run", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const coordinator = makeProviderLifecycleCoordinator();
+        const original = yield* coordinator.run(threadId, (lease) =>
+          Effect.sync(() => {
+            lease.commit();
+            return lease.generation;
+          }),
+        );
+
+        const restored = yield* coordinator.run(threadId, (lease) =>
+          Effect.sync(() => {
+            const failedTarget = lease.generation;
+            const renewed = lease.renewGeneration();
+            expect(renewed).not.toBe(original);
+            expect(renewed).not.toBe(failedTarget);
+            expect(coordinator.currentGeneration(threadId)).toBe(renewed);
+            lease.commit();
+            return renewed;
+          }),
+        );
+
+        expect(coordinator.currentGeneration(threadId)).toBe(restored);
+      }),
+    );
+  });
+
   it("retires the generation for a stopped thread", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {

@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 
+import { useI18n } from "~/i18n";
 import { StarFilledIcon, StarIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import {
@@ -18,6 +19,7 @@ import {
 import type { ProviderKind } from "@omnimind/contracts";
 import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "../ui/collapsible";
 import { DisclosureChevron } from "../ui/DisclosureChevron";
+import { ModelServiceIcon } from "../ModelServiceIcon";
 import { MenuGroup, MenuGroupLabel, MenuRadioItem } from "../ui/menu";
 import {
   COMPOSER_PICKER_MODEL_GROUP_HEADER_CLASS_NAME,
@@ -49,6 +51,7 @@ function ProviderModelRadioItem(
     onAfterSelection?: () => void;
   }>,
 ) {
+  const { t } = useI18n();
   const {
     provider,
     modelOption,
@@ -61,29 +64,31 @@ function ProviderModelRadioItem(
   const supportsFavorites = favoriteProvider !== null;
   const costMultiplierLabel =
     provider === "droid" ? providerModelCostMultiplierLabel(modelOption.description) : null;
-  const preserveChildLayout = supportsFavorites || costMultiplierLabel !== null;
   const provenanceLabel = showProvenance
     ? providerModelOptionProvenanceLabel({ provider, option: modelOption })
     : null;
   const accessibleModelName = provenanceLabel
     ? `${modelOption.name} — ${provenanceLabel}`
-    : modelOption.name;
+    : costMultiplierLabel && modelOption.description
+      ? `${modelOption.name} ${modelOption.description}`
+      : modelOption.name;
 
   return (
     <MenuRadioItem
       key={`${provider}:${modelOption.slug}`}
       value={modelOption.slug}
-      {...(provenanceLabel ? { "aria-label": accessibleModelName } : {})}
-      preserveChildLayout={preserveChildLayout}
-      className={costMultiplierLabel ? "grid-cols-[minmax(0,1fr)_auto]" : undefined}
+      aria-label={accessibleModelName}
+      title={modelOption.name}
+      preserveChildLayout
+      className={supportsFavorites ? undefined : "grid-cols-[minmax(0,1fr)_auto]"}
       trailing={
         supportsFavorites ? (
           <button
             type="button"
             aria-label={
               isFavorite
-                ? `Remove ${accessibleModelName} from favourites`
-                : `Add ${accessibleModelName} to favourites`
+                ? t("composer.removeFavorite", { model: accessibleModelName })
+                : t("composer.addFavorite", { model: accessibleModelName })
             }
             className={cn(
               "inline-flex size-5 shrink-0 items-center justify-center text-muted-foreground/50 transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_5%,transparent)] hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring/60",
@@ -119,13 +124,23 @@ function ProviderModelRadioItem(
         onAfterSelection?.();
       }}
     >
-      {preserveChildLayout ? (
-        <span
-          className={cn(
-            "flex min-w-0 flex-col",
-            supportsFavorites && COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME,
-          )}
-        >
+      <span
+        className={cn(
+          "flex min-w-0 items-center gap-1.5",
+          supportsFavorites && COMPOSER_PICKER_MODEL_ROW_LABEL_INDENT_CLASS_NAME,
+        )}
+      >
+        {modelOption.upstreamProviderId ? (
+          <ModelServiceIcon
+            serviceId={modelOption.upstreamProviderId}
+            modelId={modelOption.slug}
+            {...(modelOption.upstreamProviderOrigin
+              ? { origin: modelOption.upstreamProviderOrigin }
+              : {})}
+            className="size-3.5"
+          />
+        ) : null}
+        <span className="flex min-w-0 flex-col">
           <span className="block min-w-0 truncate">{modelOption.name}</span>
           {provenanceLabel ? (
             <span
@@ -136,9 +151,7 @@ function ProviderModelRadioItem(
             </span>
           ) : null}
         </span>
-      ) : (
-        modelOption.name
-      )}
+      </span>
     </MenuRadioItem>
   );
 }
@@ -162,7 +175,18 @@ function CollapsibleModelGroup(
       >
         <DisclosureChevron open={open} className="col-start-1 size-3 shrink-0 opacity-50" />
         <span className="col-start-2 min-w-0 truncate normal-case tracking-normal">
-          {props.group.label}
+          <span className="flex min-w-0 items-center gap-1.5">
+            {props.group.key === "__favorites__" ? null : (
+              <ModelServiceIcon
+                serviceId={props.group.key}
+                {...(props.group.options[0]?.upstreamProviderOrigin
+                  ? { origin: props.group.options[0].upstreamProviderOrigin }
+                  : {})}
+                className="size-3.5"
+              />
+            )}
+            <span className="truncate">{props.group.label}</span>
+          </span>
         </span>
         <span className="col-start-3 shrink-0 justify-self-end rounded-full bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)] px-1.5 py-px text-[9px] font-normal tabular-nums normal-case tracking-normal text-muted-foreground/70">
           {props.group.options.length}
@@ -225,7 +249,18 @@ export function ProviderModelOptionGroupList(props: ProviderModelOptionGroupList
 
         return (
           <MenuGroup key={`${props.provider}:${group.key}`} className="flex flex-col gap-px px-0.5">
-            <MenuGroupLabel>{group.label}</MenuGroupLabel>
+            <MenuGroupLabel className="flex items-center gap-1.5">
+              {group.key === "__favorites__" ? null : (
+                <ModelServiceIcon
+                  serviceId={group.key}
+                  {...(group.options[0]?.upstreamProviderOrigin
+                    ? { origin: group.options[0].upstreamProviderOrigin }
+                    : {})}
+                  className="size-3.5"
+                />
+              )}
+              <span className="truncate">{group.label}</span>
+            </MenuGroupLabel>
             {groupItems}
           </MenuGroup>
         );

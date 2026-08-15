@@ -254,10 +254,11 @@ export const makeOrchestrationIntegrationHarness = (
     yield* initializeGitWorkspace(workspaceDir);
 
     const persistenceLayer = makeSqlitePersistenceLive(dbPath);
+    const eventStoreLayer = OrchestrationEventStoreLive;
     const orchestrationLayer = OrchestrationEngineLive.pipe(
       Layer.provide(OrchestrationProjectionSnapshotQueryLive),
       Layer.provide(OrchestrationProjectionPipelineLive),
-      Layer.provide(OrchestrationEventStoreLive),
+      Layer.provide(eventStoreLayer),
       Layer.provide(OrchestrationCommandReceiptRepositoryLive),
     );
     const providerSessionDirectoryLayer = ProviderSessionDirectoryLive.pipe(
@@ -294,6 +295,7 @@ export const makeOrchestrationIntegrationHarness = (
     const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(GitCoreLive));
     const runtimeServicesLayer = Layer.mergeAll(
       orchestrationLayer,
+      eventStoreLayer,
       OrchestrationProjectionSnapshotQueryLive,
       ProjectionCheckpointRepositoryLive,
       ProjectionPendingInteractionRepositoryLive,

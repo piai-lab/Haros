@@ -1,16 +1,32 @@
 import {
-  DEFAULT_MODEL_BY_PROVIDER,
   type ModelSelection,
   type ProviderStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
 } from "@omnimind/contracts";
 import { deepMerge, type DeepPartial } from "./Struct";
+import { getDefaultModel } from "./model";
 
 function shouldReplaceTextGenerationModelSelection(
   patch: ServerSettingsPatch["textGenerationModelSelection"] | undefined,
 ): boolean {
   return Boolean(patch && (patch.provider !== undefined || patch.model !== undefined));
+}
+
+export function validateServerSettingsPatch(
+  current: ServerSettings,
+  patch: ServerSettingsPatch,
+): string | null {
+  const selectionPatch = patch.textGenerationModelSelection;
+  if (
+    selectionPatch?.provider !== undefined &&
+    selectionPatch.provider !== current.textGenerationModelSelection.provider &&
+    getDefaultModel(selectionPatch.provider) === null &&
+    selectionPatch.model === undefined
+  ) {
+    return `text generation provider ${selectionPatch.provider} requires an explicit model when changing providers`;
+  }
+  return null;
 }
 
 export function applyServerSettingsPatch(
@@ -22,14 +38,23 @@ export function applyServerSettingsPatch(
   if (!selectionPatch) {
     return next;
   }
+  if (validateServerSettingsPatch(current, patch) !== null) {
+    return {
+      ...next,
+      textGenerationModelSelection: current.textGenerationModelSelection,
+    };
+  }
 
   const provider = selectionPatch.provider ?? current.textGenerationModelSelection.provider;
+  const providerDefaultModel = selectionPatch.provider
+    ? getDefaultModel(selectionPatch.provider)
+    : null;
   const model =
     selectionPatch.model ??
-    (selectionPatch.provider &&
-    selectionPatch.provider !== "pi" &&
+    (selectionPatch.provider !== undefined &&
+    providerDefaultModel !== null &&
     selectionPatch.provider !== current.textGenerationModelSelection.provider
-      ? DEFAULT_MODEL_BY_PROVIDER[selectionPatch.provider]
+      ? providerDefaultModel
       : current.textGenerationModelSelection.model);
   const options = shouldReplaceTextGenerationModelSelection(selectionPatch)
     ? selectionPatch.options

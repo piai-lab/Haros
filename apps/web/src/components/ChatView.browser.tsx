@@ -5,6 +5,7 @@ import {
   AutomationId,
   type AutomationCreateInput,
   type AutomationDefinition,
+  type ChatAttachment,
   CheckpointRef,
   EventId,
   MessageId,
@@ -12,6 +13,8 @@ import {
   ORCHESTRATION_WS_METHODS,
   type OrchestrationReadModel,
   type ProjectId,
+  type ProviderKind,
+  type ProviderListModelsResult,
   type ServerConfig,
   ThreadId,
   TurnId,
@@ -31,7 +34,13 @@ import { Profiler, type ProfilerOnRenderCallback } from "react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { type ComposerImageAttachment, useComposerDraftStore } from "../composerDraftStore";
+import {
+  partializeComposerDraftStoreState,
+  type ComposerFileAttachment,
+  type ComposerImageAttachment,
+  useComposerDraftStore,
+} from "../composerDraftStore";
+import { appHistory } from "../appNavigation";
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
   AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
@@ -65,6 +74,7 @@ import { useTerminalStateStore } from "../terminalStateStore";
 import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
+import { SETTINGS_TARGETS } from "../settingsNavigation";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
 // The router's auto-split route otherwise requests this module on first mount.
 import "./ChatView";
@@ -96,6 +106,11 @@ const NOW_ISO = "2026-03-04T12:00:00.000Z";
 const BASE_TIME_MS = Date.parse(NOW_ISO);
 const ATTACHMENT_SVG = "<svg xmlns='http://www.w3.org/2000/svg' width='120' height='300'></svg>";
 let attachmentResponseDelayMs = 0;
+const attachmentDownloadFixtures = new Map<
+  string,
+  { readonly bytes: Uint8Array; readonly mimeType: string }
+>();
+const attachmentDownloadRequestIds: string[] = [];
 let attachmentUploadSequence = 0;
 let attachmentUploadBarrier: Promise<void> | null = null;
 
@@ -110,8 +125,10 @@ interface WsRequestEnvelope {
 interface TestFixture {
   snapshot: OrchestrationReadModel;
   serverConfig: ServerConfig;
+  providerPassivePresence?: ReadonlyArray<ProviderKind>;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
+  providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
 }
 
 let fixture: TestFixture;
@@ -180,13 +197,7 @@ function createUserMessage(options: {
   id: MessageId;
   text: string;
   offsetSeconds: number;
-  attachments?: Array<{
-    type: "image";
-    id: string;
-    name: string;
-    mimeType: string;
-    sizeBytes: number;
-  }>;
+  attachments?: ChatAttachment[];
 }) {
   return {
     id: options.id,
@@ -254,6 +265,29 @@ function createComposerImage(input: {
     mimeType,
     sizeBytes: file.size,
     previewUrl: input.previewUrl,
+    file,
+  };
+}
+
+function createComposerFile(input: {
+  id: string;
+  name?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+}): ComposerFileAttachment {
+  const name = input.name ?? "notes.txt";
+  const mimeType = input.mimeType ?? "text/plain";
+  const sizeBytes = input.sizeBytes ?? 8;
+  const file = new File([new Uint8Array(sizeBytes).fill(2)], name, {
+    type: mimeType,
+    lastModified: BASE_TIME_MS,
+  });
+  return {
+    type: "file",
+    id: input.id,
+    name,
+    mimeType,
+    sizeBytes: file.size,
     file,
   };
 }
@@ -355,6 +389,118 @@ function createSnapshotForTargetUser(options: {
       },
     ],
     updatedAt: NOW_ISO,
+  };
+}
+
+function withTurnStartFailureRestoredToCodex(
+  snapshot: OrchestrationReadModel,
+  input: { messageId: MessageId; messageText: string; attachments?: ChatAttachment[] },
+): OrchestrationReadModel {
+  const failedAt = isoAt(2_000);
+  return {
+    ...snapshot,
+    snapshotSequence: snapshot.snapshotSequence + 1,
+    threads: snapshot.threads.map((thread) =>
+      thread.id === THREAD_ID
+        ? {
+            ...thread,
+            modelSelection: { provider: "codex", model: "gpt-5" },
+            runtimeMode: "full-access",
+            interactionMode: "default",
+            messages: [
+              ...thread.messages,
+              createUserMessage({
+                id: input.messageId,
+                text: input.messageText,
+                offsetSeconds: 1_999,
+                ...(input.attachments ? { attachments: input.attachments } : {}),
+              }),
+            ],
+            activities: [
+              ...thread.activities,
+              {
+                id: EventId.makeUnsafe(`activity-cross-provider-failure-${input.messageId}`),
+                createdAt: failedAt,
+                kind: "provider.turn.start.failed",
+                summary: "Provider turn start failed",
+                tone: "error" as const,
+                turnId: null,
+                payload: {
+                  messageId: input.messageId,
+                  detail: "Target provider failed to start.",
+                },
+              },
+            ],
+            session: thread.session
+              ? {
+                  ...thread.session,
+                  status: "ready" as const,
+                  providerName: "codex" as const,
+                  runtimeMode: "full-access" as const,
+                  activeTurnId: null,
+                  lastError: null,
+                  updatedAt: failedAt,
+                }
+              : null,
+            updatedAt: failedAt,
+          }
+        : thread,
+    ),
+    updatedAt: failedAt,
+  };
+}
+
+function withTurnStartFailureUnrecovered(
+  snapshot: OrchestrationReadModel,
+  input: { messageId: MessageId; messageText: string; attachments?: ChatAttachment[] },
+): OrchestrationReadModel {
+  const failedAt = isoAt(2_500);
+  return {
+    ...snapshot,
+    snapshotSequence: snapshot.snapshotSequence + 1,
+    threads: snapshot.threads.map((thread) =>
+      thread.id === THREAD_ID
+        ? {
+            ...thread,
+            messages: [
+              ...thread.messages,
+              createUserMessage({
+                id: input.messageId,
+                text: input.messageText,
+                offsetSeconds: 2_499,
+                ...(input.attachments ? { attachments: input.attachments } : {}),
+              }),
+            ],
+            activities: [
+              ...thread.activities,
+              {
+                id: EventId.makeUnsafe(`activity-unrecovered-failure-${input.messageId}`),
+                createdAt: failedAt,
+                kind: "provider.turn.start.failed",
+                summary: "Provider turn start failed",
+                tone: "error" as const,
+                turnId: null,
+                payload: {
+                  messageId: input.messageId,
+                  detail: "Target provider failed to start and the prior runtime did not recover.",
+                },
+              },
+            ],
+            session: thread.session
+              ? {
+                  ...thread.session,
+                  status: "error" as const,
+                  providerName: "claudeAgent" as const,
+                  activeTurnId: null,
+                  lastError: "Target provider failed to start.",
+                  updatedAt: failedAt,
+                }
+              : null,
+            updatedAt: failedAt,
+          }
+        : thread,
+    ),
+    updatedAt: failedAt,
   };
 }
 
@@ -494,6 +640,12 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
     snapshot,
     serverConfig: createBaseServerConfig(),
     gitBranchByCwd: {},
+    providerModelsByProvider: {
+      codex: {
+        source: "browser.fixture",
+        models: ["gpt-5.5", "gpt-5.4", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
+      },
+    },
     welcome: {
       cwd: "/repo/project",
       projectName: "Project",
@@ -1204,6 +1356,18 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
   }
+  if (tag === WS_METHODS.providerListModels) {
+    const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : null;
+    return provider
+      ? (fixture.providerModelsByProvider[provider] ?? {
+          source: "browser.fixture",
+          models: [],
+        })
+      : { source: "browser.fixture", models: [] };
+  }
+  if (tag === WS_METHODS.providerListAgents) {
+    return { source: "browser.fixture", agents: [] };
+  }
   if (tag === WS_METHODS.projectsListDevServers) {
     return { servers: [] };
   }
@@ -1400,6 +1564,18 @@ const worker = setupWorker(
         });
         return;
       }
+      if (method === WS_METHODS.subscribeServerProviderStatuses) {
+        sendEffectRpcChunk(client, parsed.request.id, {
+          providers: fixture.serverConfig.providers,
+          passivePresence: {
+            state: "settled",
+            recoverableProviders:
+              fixture.providerPassivePresence ??
+              fixture.serverConfig.providers.map((status) => status.provider),
+          },
+        });
+        return;
+      }
       if (method === ORCHESTRATION_WS_METHODS.subscribeShell) {
         sendEffectRpcChunk(client, parsed.request.id, {
           kind: "snapshot",
@@ -1423,7 +1599,6 @@ const worker = setupWorker(
         return;
       }
       if (
-        method === WS_METHODS.subscribeServerProviderStatuses ||
         method === WS_METHODS.subscribeServerSettings ||
         method === WS_METHODS.subscribeTerminalEvents ||
         method === WS_METHODS.subscribeOrchestrationDomainEvents ||
@@ -1459,10 +1634,20 @@ const worker = setupWorker(
   http.post(`*${ATTACHMENT_CANCEL_ROUTE_PATH}`, () =>
     HttpResponse.json({ cancelled: true }, { status: 200 }),
   ),
-  http.get("*/attachments/:attachmentId", async () => {
+  http.get("*/attachments/:attachmentId", async ({ params }) => {
+    attachmentDownloadRequestIds.push(String(params.attachmentId));
     if (attachmentResponseDelayMs > 0) {
       await new Promise<void>((resolve) => {
         globalThis.setTimeout(() => resolve(), attachmentResponseDelayMs);
+      });
+    }
+    const fixture = attachmentDownloadFixtures.get(String(params.attachmentId));
+    if (fixture) {
+      return new HttpResponse(fixture.bytes, {
+        headers: {
+          "Content-Length": String(fixture.bytes.byteLength),
+          "Content-Type": fixture.mimeType,
+        },
       });
     }
     return HttpResponse.text(ATTACHMENT_SVG, {
@@ -2090,6 +2275,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await resetStudioProjectPrewarmStateForTests();
     await setViewport(DEFAULT_VIEWPORT);
     attachmentResponseDelayMs = 0;
+    attachmentDownloadFixtures.clear();
+    attachmentDownloadRequestIds.length = 0;
     attachmentUploadSequence = 0;
     attachmentUploadBarrier = null;
     localStorage.clear();
@@ -2226,7 +2413,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "header title",
       }),
     });
-
     try {
       const identity = await waitForElement(
         () => document.querySelector<HTMLElement>('[data-slot="chat-thread-identity"]'),
@@ -2378,7 +2564,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     ).toBeLessThan(short.reactCommitTotalMs * 1.6);
   });
 
-  it("dispatches a rapid access-mode reversal while the server projection is stale", async () => {
+  it("keeps a rapid access-mode reversal draft-only while a Session is active", async () => {
     const baseSnapshot = createSnapshotForTargetUser({
       targetMessageId: "msg-user-runtime-reversal" as MessageId,
       targetText: "runtime reversal",
@@ -2430,16 +2616,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       supervisedOption.click();
 
-      await vi.waitFor(
-        () => {
-          const runtimeModes = wsRequests
-            .map(readDispatchedCommand)
-            .filter((command) => command?.type === "thread.runtime-mode.set")
-            .map((command) => command?.runtimeMode);
-          expect(runtimeModes).toEqual(["auto", "approval-required"]);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.runtimeMode).toBe(
+          "approval-required",
+        );
+      });
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.runtime-mode.set"),
+      ).toHaveLength(0);
     } finally {
       await mounted.cleanup();
     }
@@ -4468,7 +4654,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           const planButton = Array.from(
             document.querySelectorAll<HTMLButtonElement>("button"),
           ).find((button) => button.textContent?.trim() === "Plan");
-          expect(planButton?.title).toContain("return to normal build mode");
+          expect(planButton?.title).toContain("return to build mode");
         },
         { timeout: 8_000, interval: 16 },
       );
@@ -4488,6 +4674,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
         },
         { timeout: 8_000, interval: 16 },
       );
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.interaction-mode.set"),
+      ).toHaveLength(0);
     } finally {
       await mounted.cleanup();
     }
@@ -4550,6 +4741,765 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("does not inspect stock Pi until the user explicitly selects that Engine", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-pi-engine-intent" as MessageId,
+        targetText: "Pi Engine intent",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.pi = {
+          source: "browser.fixture",
+          models: [],
+        };
+      },
+    });
+
+    const countPiModelRequests = () =>
+      wsRequests.filter(
+        (request) => request._tag === WS_METHODS.providerListModels && request.provider === "pi",
+      ).length;
+
+    try {
+      await waitForServerConfigToApply();
+      await expect
+        .element(page.getByRole("button", { name: "Change engine. Current: Codex" }))
+        .toBeVisible();
+      expect(countPiModelRequests()).toBe(0);
+
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await expect.element(page.getByRole("menuitemradio", { name: /Pi/ })).toBeVisible();
+      expect(countPiModelRequests()).toBe(0);
+
+      await page.getByRole("menuitemradio", { name: /Pi/ }).click();
+      await vi.waitFor(() => {
+        expect(countPiModelRequests()).toBe(1);
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "pi",
+        );
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("only discovers models for the current Engine when Model/options opens", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-current-engine-model-discovery" as MessageId,
+        targetText: "Current Engine model discovery",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+      },
+    });
+
+    const requestedModelProviders = () =>
+      wsRequests.flatMap((request) =>
+        request._tag === WS_METHODS.providerListModels && typeof request.provider === "string"
+          ? [request.provider]
+          : [],
+      );
+
+    try {
+      await waitForServerConfigToApply();
+      await vi.waitFor(() => {
+        expect(requestedModelProviders()).toContain("codex");
+      });
+
+      await page.getByRole("button", { name: "Model and options" }).click();
+      await waitForComposerPickerSurfaceOpen();
+      expect(new Set(requestedModelProviders())).toEqual(new Set(["codex"]));
+
+      await userEvent.keyboard("{Escape}");
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "claudeAgent",
+        );
+        expect(requestedModelProviders()).toContain("claudeAgent");
+      });
+
+      await page.getByRole("button", { name: "Model and options" }).click();
+      await vi.waitFor(() => {
+        expect(new Set(requestedModelProviders())).toEqual(new Set(["codex", "claudeAgent"]));
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it.each(["empty", "started"] as const)(
+    "keeps the same Engine and Model/options controls in an %s Thread",
+    async (threadState) => {
+      const draftThreadId = ThreadId.makeUnsafe("thread-composer-control-parity");
+      if (threadState === "empty") {
+        seedLocalDraftThread({ threadId: draftThreadId, projectId: PROJECT_ID });
+      }
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot:
+          threadState === "empty"
+            ? createDraftOnlySnapshot()
+            : createSnapshotForTargetUser({
+                targetMessageId: "msg-user-composer-control-parity" as MessageId,
+                targetText: "composer control parity",
+              }),
+        ...(threadState === "empty" ? { initialEntry: `/${draftThreadId}` } : {}),
+      });
+
+      try {
+        const footer = await waitForElement(
+          () => document.querySelector<HTMLElement>('[data-chat-composer-footer="true"]'),
+          "Unable to find composer footer.",
+        );
+        const engineTrigger = footer.querySelector<HTMLButtonElement>(
+          'button[aria-label^="Change engine. Current:"]',
+        );
+        const modelOptionsTrigger = footer.querySelector<HTMLButtonElement>(
+          'button[aria-label="Model and options"]',
+        );
+
+        expect(engineTrigger).not.toBeNull();
+        expect(modelOptionsTrigger).not.toBeNull();
+        await expect
+          .element(page.getByRole("button", { name: /^Change engine\. Current:/ }))
+          .toBeVisible();
+        await expect.element(page.getByRole("button", { name: "Model and options" })).toBeVisible();
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it("keeps Engine and Send visible inside the narrow composer footer", async () => {
+    const mounted = await mountChatView({
+      viewport: {
+        ...DEFAULT_VIEWPORT,
+        name: "narrow-composer-controls",
+        width: 320,
+        height: 700,
+      },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-narrow-composer-controls" as MessageId,
+        targetText: "narrow composer controls",
+      }),
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      const footer = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-chat-composer-footer="true"]'),
+        "Unable to find composer footer.",
+      );
+      await vi.waitFor(() => {
+        const engineTrigger = footer.querySelector<HTMLButtonElement>(
+          'button[aria-label^="Change engine. Current:"]',
+        );
+        const sendButton = footer.querySelector<HTMLButtonElement>('button[type="submit"]');
+        expect(engineTrigger).not.toBeNull();
+        expect(sendButton).not.toBeNull();
+
+        const footerRect = footer.getBoundingClientRect();
+        const engineRect = engineTrigger!.getBoundingClientRect();
+        const sendRect = sendButton!.getBoundingClientRect();
+        expect(engineRect.left).toBeGreaterThanOrEqual(footerRect.left - 1);
+        expect(engineRect.right).toBeLessThanOrEqual(footerRect.right + 1);
+        expect(sendRect.left).toBeGreaterThanOrEqual(footerRect.left - 1);
+        expect(sendRect.right).toBeLessThanOrEqual(footerRect.right + 1);
+      });
+      await expect
+        .element(page.getByRole("button", { name: /^Change engine\. Current:/ }))
+        .toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Send" })).toBeVisible();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it.each(["ready", "running"] as const)(
+    "keeps manual access-mode changes draft-only after a %s Session switches desired Engine",
+    async (sessionStatus) => {
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot: createSnapshotForTargetUser({
+          targetMessageId: `msg-user-runtime-next-turn-${sessionStatus}` as MessageId,
+          targetText: `runtime next turn ${sessionStatus}`,
+          sessionStatus,
+        }),
+        configureFixture: (nextFixture) => {
+          nextFixture.providerModelsByProvider.pi = {
+            source: "browser.fixture",
+            models: [],
+          };
+        },
+      });
+
+      try {
+        await waitForServerConfigToApply();
+        await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+        await page.getByRole("menuitemradio", { name: /Pi/ }).click();
+        await vi.waitFor(() => {
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+            "pi",
+          );
+        });
+
+        const commandCountBeforeModeChange = wsRequests
+          .map(readDispatchedCommand)
+          .filter(
+            (command) =>
+              command?.type === "thread.meta.update" || command?.type === "thread.runtime-mode.set",
+          ).length;
+        const fullAccessTrigger = await waitForElement(
+          () => document.querySelector<HTMLButtonElement>('button[title^="Full access:"]'),
+          "Unable to find the Full access trigger after switching desired Engine.",
+        );
+        fullAccessTrigger.click();
+        const supervisedOption = await waitForElement(
+          () =>
+            Array.from(
+              document.querySelectorAll<HTMLElement>('[data-slot="menu-radio-item"]'),
+            ).find((item) => item.textContent?.trim().startsWith("Ask for approval")) ?? null,
+          "Unable to find the Ask for approval option.",
+        );
+        supervisedOption.click();
+
+        await vi.waitFor(() => {
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.runtimeMode).toBe(
+            "approval-required",
+          );
+        });
+        const commandsAfterModeChange = wsRequests
+          .map(readDispatchedCommand)
+          .filter(
+            (command) =>
+              command?.type === "thread.meta.update" || command?.type === "thread.runtime-mode.set",
+          );
+        expect(commandsAfterModeChange).toHaveLength(commandCountBeforeModeChange);
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
+  it("restores a cross-Engine send after the exact target-start failure rolls back", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    let currentSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-cross-provider-recovery" as MessageId,
+      targetText: "cross-provider recovery baseline",
+      sessionStatus: "ready",
+    });
+    const failedPrompt = "preserve this prompt when Claude fails to start";
+    const failedImage = createComposerImage({
+      id: "cross-provider-recovery-image",
+      previewUrl: "blob:cross-provider-recovery-image",
+      name: "cross-provider-recovery.png",
+    });
+    const failedFile = createComposerFile({
+      id: "cross-provider-recovery-file",
+      name: "cross-provider-recovery.txt",
+      sizeBytes: 11,
+    });
+    const configureClaudeFixture = (nextFixture: TestFixture) => {
+      nextFixture.providerModelsByProvider.claudeAgent = {
+        source: "browser.fixture",
+        models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+      };
+      nextFixture.serverConfig = {
+        ...nextFixture.serverConfig,
+        providers: [
+          ...nextFixture.serverConfig.providers,
+          {
+            provider: "claudeAgent",
+            status: "ready",
+            available: true,
+            authStatus: "authenticated",
+            supportsAutoRuntimeMode: false,
+            checkedAt: NOW_ISO,
+          },
+        ],
+      };
+    };
+    let mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: currentSnapshot,
+      configureFixture: configureClaudeFixture,
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "claudeAgent",
+        );
+        expect(
+          wsRequests.some(
+            (request) =>
+              request._tag === WS_METHODS.providerListModels && request.provider === "claudeAgent",
+          ),
+        ).toBe(true);
+        expect(
+          page.getByRole("button", { name: "Model and options" }).element().textContent,
+        ).toContain("Claude Sonnet 4.5");
+      });
+
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, failedPrompt);
+      useComposerDraftStore.getState().addImage(THREAD_ID, failedImage);
+      useComposerDraftStore.getState().addFiles(THREAD_ID, [failedFile]);
+      useComposerDraftStore.getState().addAssistantSelection(THREAD_ID, {
+        type: "assistant-selection",
+        id: "cross-provider-recovery-selection",
+        assistantMessageId: "msg-assistant-3",
+        text: "preserve this referenced answer",
+      });
+      await vi.waitFor(() => {
+        expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(
+          failedPrompt,
+        );
+      });
+      const firstSendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(firstSendButton.disabled).toBe(false));
+      firstSendButton.click();
+
+      let failedMessageId: MessageId | null = null;
+      let failedAttachments: ChatAttachment[] = [];
+      await vi.waitFor(
+        () => {
+          const turnStart = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) =>
+                command?.type === "thread.turn.start" &&
+                typeof command.message === "object" &&
+                command.message !== null &&
+                "text" in command.message &&
+                typeof command.message.text === "string" &&
+                command.message.text.includes(failedPrompt),
+            );
+          expect(turnStart).toBeDefined();
+          expect(turnStart?.modelSelection).toMatchObject({
+            provider: "claudeAgent",
+            model: "claude-sonnet-4-5",
+          });
+          const message = turnStart?.message as
+            | { messageId?: unknown; attachments?: ChatAttachment[] }
+            | undefined;
+          expect(typeof message?.messageId).toBe("string");
+          failedMessageId = MessageId.makeUnsafe(message!.messageId as string);
+          failedAttachments = message?.attachments ?? [];
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
+            prompt: "",
+            activeProvider: "claudeAgent",
+            pendingDirectTurnRecovery: {
+              messageId: failedMessageId,
+              contentSuperseded: false,
+              bindingSuperseded: false,
+            },
+          });
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      let failedFileAttachmentId: string | null = null;
+      let failedFileBytes: Uint8Array | null = null;
+      for (const attachment of failedAttachments) {
+        if (attachment.type !== "image" && attachment.type !== "file") continue;
+        const sourceFile =
+          attachment.name === failedImage.name ? failedImage.file : failedFile.file;
+        const sourceBytes = new Uint8Array(await sourceFile.arrayBuffer());
+        if (attachment.type === "file") {
+          failedFileAttachmentId = attachment.id;
+          failedFileBytes = sourceBytes;
+        }
+        attachmentDownloadFixtures.set(attachment.id, {
+          bytes:
+            attachment.type === "file"
+              ? new Uint8Array(sourceBytes.byteLength + 1).fill(9)
+              : sourceBytes,
+          mimeType: sourceFile.type,
+        });
+      }
+      const persistedDrafts = partializeComposerDraftStoreState(useComposerDraftStore.getState());
+      await mounted.cleanup();
+      const persistApi = useComposerDraftStore.persist as unknown as {
+        getOptions: () => {
+          merge: (
+            persistedState: unknown,
+            currentState: ReturnType<typeof useComposerDraftStore.getState>,
+          ) => ReturnType<typeof useComposerDraftStore.getState>;
+        };
+      };
+      const hydratedState = persistApi
+        .getOptions()
+        .merge(persistedDrafts, useComposerDraftStore.getInitialState());
+      useComposerDraftStore.setState({
+        draftsByThreadId: hydratedState.draftsByThreadId,
+        draftThreadsByThreadId: hydratedState.draftThreadsByThreadId,
+        projectDraftThreadIdByProjectId: hydratedState.projectDraftThreadIdByProjectId,
+        stickyModelSelectionByProvider: hydratedState.stickyModelSelectionByProvider,
+        stickyActiveProvider: hydratedState.stickyActiveProvider,
+      });
+      expect(
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.pendingDirectTurnRecovery,
+      ).toMatchObject({
+        messageId: failedMessageId,
+        queuedTurn: { images: [], files: [] },
+      });
+      mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot: currentSnapshot,
+        configureFixture: configureClaudeFixture,
+      });
+      await waitForServerConfigToApply();
+      expect(
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.pendingDirectTurnRecovery,
+      ).toMatchObject({
+        messageId: failedMessageId,
+        contentSuperseded: false,
+        bindingSuperseded: false,
+      });
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: failedMessageId!,
+        messageText: failedPrompt,
+        attachments: failedAttachments,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(() => {
+        expect(attachmentDownloadRequestIds).toContain(failedFileAttachmentId);
+        const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+        expect(draft?.prompt ?? "").toBe("");
+        expect(draft?.images).toEqual([]);
+        expect(draft?.files).toEqual([]);
+        expect(draft?.pendingDirectTurnRecovery?.messageId).toBe(failedMessageId);
+      });
+      expect(failedFileAttachmentId).not.toBeNull();
+      expect(failedFileBytes).not.toBeNull();
+      attachmentDownloadFixtures.set(failedFileAttachmentId!, {
+        bytes: failedFileBytes!,
+        mimeType: failedFile.file.type,
+      });
+      currentSnapshot = {
+        ...currentSnapshot,
+        snapshotSequence: currentSnapshot.snapshotSequence + 1,
+        threads: currentSnapshot.threads.map((thread) =>
+          thread.id === THREAD_ID ? { ...thread, updatedAt: isoAt(2_001) } : thread,
+        ),
+        updatedAt: isoAt(2_001),
+      };
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt).toBe(failedPrompt);
+          expect(draft?.activeProvider).toBe("codex");
+          expect(draft?.modelSelectionByProvider.codex).toMatchObject({
+            provider: "codex",
+            model: "gpt-5",
+          });
+          expect(draft?.runtimeMode).toBe("full-access");
+          expect(draft?.images.map((image) => image.name)).toEqual(["cross-provider-recovery.png"]);
+          expect(draft?.files.map((file) => file.name)).toEqual(["cross-provider-recovery.txt"]);
+          expect(draft?.assistantSelections).toEqual([
+            expect.objectContaining({
+              id: "cross-provider-recovery-selection",
+              text: "preserve this referenced answer",
+            }),
+          ]);
+          expect(
+            wsRequests
+              .map(readDispatchedCommand)
+              .filter((command) => command?.type === "thread.turn.start"),
+          ).toHaveLength(1);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      const secondFailedPrompt = "restore content without replacing my newer binding";
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, secondFailedPrompt);
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "claudeAgent",
+        );
+        expect(
+          page.getByRole("button", { name: "Model and options" }).element().textContent,
+        ).toContain("Claude Sonnet 4.5");
+        expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(
+          secondFailedPrompt,
+        );
+      });
+      const secondSendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(secondSendButton.disabled).toBe(false));
+      secondSendButton.click();
+
+      let secondFailedMessageId: MessageId | null = null;
+      let secondFailedAttachments: ChatAttachment[] = [];
+      await vi.waitFor(
+        () => {
+          const turnStart = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) =>
+                command?.type === "thread.turn.start" &&
+                typeof command.message === "object" &&
+                command.message !== null &&
+                "text" in command.message &&
+                typeof command.message.text === "string" &&
+                command.message.text.includes(secondFailedPrompt),
+            );
+          const message = turnStart?.message as
+            | { messageId?: unknown; attachments?: ChatAttachment[] }
+            | undefined;
+          expect(typeof message?.messageId).toBe("string");
+          secondFailedMessageId = MessageId.makeUnsafe(message!.messageId as string);
+          secondFailedAttachments = message?.attachments ?? [];
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe(
+            "",
+          );
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "codex",
+        model: "gpt-5.4",
+      });
+      useComposerDraftStore.getState().setRuntimeMode(THREAD_ID, "approval-required");
+      await vi.waitFor(() => {
+        const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+        expect(draft?.activeProvider).toBe("codex");
+        expect(draft?.modelSelectionByProvider.codex).toMatchObject({ model: "gpt-5.4" });
+        expect(draft?.runtimeMode).toBe("approval-required");
+      });
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: secondFailedMessageId!,
+        messageText: secondFailedPrompt,
+        attachments: secondFailedAttachments,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt).toBe(secondFailedPrompt);
+          expect(draft?.activeProvider).toBe("codex");
+          expect(draft?.modelSelectionByProvider.codex).toMatchObject({
+            provider: "codex",
+            model: "gpt-5.4",
+          });
+          expect(draft?.runtimeMode).toBe("approval-required");
+          expect(draft?.images.map((image) => image.name)).toEqual(["cross-provider-recovery.png"]);
+          expect(
+            wsRequests
+              .map(readDispatchedCommand)
+              .filter((command) => command?.type === "thread.turn.start"),
+          ).toHaveLength(2);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      const terminalPrompt = "restore content when neither runtime can recover";
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, terminalPrompt);
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      const terminalSendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(terminalSendButton.disabled).toBe(false));
+      terminalSendButton.click();
+      let terminalMessageId: MessageId | null = null;
+      let terminalAttachments: ChatAttachment[] = [];
+      await vi.waitFor(() => {
+        const turnStart = wsRequests
+          .map(readDispatchedCommand)
+          .find(
+            (command) =>
+              command?.type === "thread.turn.start" &&
+              typeof command.message === "object" &&
+              command.message !== null &&
+              "text" in command.message &&
+              typeof command.message.text === "string" &&
+              command.message.text.includes(terminalPrompt),
+          );
+        const message = turnStart?.message as
+          | { messageId?: unknown; attachments?: ChatAttachment[] }
+          | undefined;
+        expect(typeof message?.messageId).toBe("string");
+        terminalMessageId = MessageId.makeUnsafe(message!.messageId as string);
+        terminalAttachments = message?.attachments ?? [];
+      });
+      currentSnapshot = withTurnStartFailureUnrecovered(currentSnapshot, {
+        messageId: terminalMessageId!,
+        messageText: terminalPrompt,
+        attachments: terminalAttachments,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+      await vi.waitFor(() => {
+        const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+        expect(draft?.prompt).toBe(terminalPrompt);
+        expect(draft?.activeProvider).toBe("claudeAgent");
+        expect(draft?.pendingDirectTurnRecovery ?? null).toBeNull();
+        expect(
+          wsRequests
+            .map(readDispatchedCommand)
+            .filter((command) => command?.type === "thread.turn.start"),
+        ).toHaveLength(3);
+      });
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("restores a same-Engine exact binding unless a newer draft supersedes it", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    let currentSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-same-provider-recovery" as MessageId,
+      targetText: "same-provider recovery baseline",
+      sessionStatus: "ready",
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: currentSnapshot,
+    });
+
+    const selectTargetBinding = () => {
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "codex",
+        model: "gpt-5.4",
+        options: { reasoningEffort: "low" },
+      });
+      useComposerDraftStore.getState().setRuntimeMode(THREAD_ID, "approval-required");
+    };
+    const sendAndReadMessageId = async (prompt: string): Promise<MessageId> => {
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
+      await vi.waitFor(() => {
+        expect(
+          page
+            .getByRole("button", { name: "Model and options" })
+            .element()
+            .textContent?.toLowerCase(),
+        ).toContain("gpt-5.4");
+        expect(document.querySelector('[contenteditable="true"]')?.textContent).toContain(prompt);
+      });
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      let messageId: MessageId | null = null;
+      await vi.waitFor(
+        () => {
+          const turnStart = wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) =>
+                command?.type === "thread.turn.start" &&
+                typeof command.message === "object" &&
+                command.message !== null &&
+                "text" in command.message &&
+                command.message.text === prompt,
+            );
+          expect(turnStart?.modelSelection).toEqual({
+            provider: "codex",
+            model: "gpt-5.4",
+            options: { reasoningEffort: "low" },
+          });
+          expect(turnStart?.runtimeMode).toBe("approval-required");
+          const message = turnStart?.message as { messageId?: unknown } | undefined;
+          expect(typeof message?.messageId).toBe("string");
+          messageId = MessageId.makeUnsafe(message!.messageId as string);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      return messageId!;
+    };
+
+    try {
+      await waitForServerConfigToApply();
+      selectTargetBinding();
+      const firstPrompt = "restore my same-provider model restart";
+      const firstMessageId = await sendAndReadMessageId(firstPrompt);
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: firstMessageId,
+        messageText: firstPrompt,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt).toBe(firstPrompt);
+          expect(draft?.modelSelectionByProvider.codex).toEqual({
+            provider: "codex",
+            model: "gpt-5",
+          });
+          expect(draft?.runtimeMode).toBe("full-access");
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+
+      selectTargetBinding();
+      const secondPrompt = "do not revive this superseded prompt";
+      const secondMessageId = await sendAndReadMessageId(secondPrompt);
+      const editor = page.getByRole("textbox");
+      await editor.fill("newer draft intent");
+      await editor.fill("");
+      // A binding ABA is still newer intent: returning to the failed target
+      // must not make the old one-shot recovery snapshot authoritative again.
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      selectTargetBinding();
+
+      currentSnapshot = withTurnStartFailureRestoredToCodex(currentSnapshot, {
+        messageId: secondMessageId,
+        messageText: secondPrompt,
+      });
+      fixture = { ...fixture, snapshot: currentSnapshot };
+      useStore.getState().syncServerReadModel(currentSnapshot);
+
+      await vi.waitFor(
+        () => {
+          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
+          expect(draft?.prompt ?? "").toBe("");
+          expect(draft?.modelSelectionByProvider.codex).toEqual({
+            provider: "codex",
+            model: "gpt-5.4",
+            options: { reasoningEffort: "low" },
+          });
+          expect(draft?.runtimeMode).toBe("approval-required");
+          expect(
+            wsRequests
+              .map(readDispatchedCommand)
+              .filter((command) => command?.type === "thread.turn.start"),
+          ).toHaveLength(2);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
   it("cycles the active provider model without opening the picker", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -4569,11 +5519,43 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
             .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
+        ).toMatchObject({ provider: "codex", model: "gpt-5.4" });
       });
       expect(document.querySelector('[data-slot="menu-popup"]')).toBeNull();
 
       await dispatchModelCycleShortcutWhenReady(composerEditor, "[");
+      await vi.waitFor(() => {
+        expect(
+          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
+            .codex,
+        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("cycles only through authoritative selectable models", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-model-cycle-authoritative" as MessageId,
+        targetText: "model cycle authoritative",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.codex = {
+          source: "browser.fixture",
+          models: ["gpt-5.5", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
+        };
+      },
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      const composerEditor = await waitForComposerEditor();
+      composerEditor.focus();
+
+      await dispatchModelCycleShortcutWhenReady(composerEditor, "]");
       await vi.waitFor(() => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
@@ -5212,7 +6194,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("auto-dispatches a queued turn without wiping the live composer draft", async () => {
+  it("dispatches a queued binding unchanged while the current Engine has no model", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     const queuedPrompt = "queued prompt that should auto-send";
     const draftBeingTyped = "draft the user is still typing";
@@ -5226,11 +6208,45 @@ describe("ChatView timeline estimator parity (full app)", () => {
         // drains the queue, mirroring a turn that just finished.
         sessionStatus: "ready",
       }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.pi = {
+          source: "browser.fixture",
+          models: [],
+        };
+      },
     });
 
     try {
-      // The user is mid-draft in the composer while a turn-completion drain fires.
+      await waitForServerConfigToApply();
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Pi/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "pi",
+        );
+        expect(
+          Array.from(document.querySelectorAll<HTMLButtonElement>("button")).some((button) =>
+            button.textContent?.includes("No available model"),
+          ),
+        ).toBe(true);
+      });
+
+      // A normal submission is blocked before any command, but the draft stays editable.
       useComposerDraftStore.getState().setPrompt(THREAD_ID, draftBeingTyped);
+      const turnStartCountBeforeSubmit = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.turn.start").length;
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')
+        ?.requestSubmit();
+      await waitForLayout();
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.turn.start"),
+      ).toHaveLength(turnStartCountBeforeSubmit);
+
+      // A previously admitted queue item owns its exact binding and can still drain.
       useComposerDraftStore.getState().enqueueQueuedTurn(THREAD_ID, {
         id: "queued-turn-auto",
         kind: "chat",
@@ -5252,6 +6268,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         modelSelection: {
           provider: "codex",
           model: "gpt-5",
+          options: {
+            reasoningEffort: "xhigh",
+            fastMode: true,
+          },
         },
         runtimeMode: "full-access",
         interactionMode: "default",
@@ -5277,6 +6297,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
               request.command.message.text.includes(queuedPrompt),
           );
           expect(turnStartRequest).toBeTruthy();
+          expect(readDispatchedCommand(turnStartRequest!)?.modelSelection).toEqual({
+            provider: "codex",
+            model: "gpt-5",
+            options: {
+              reasoningEffort: "xhigh",
+              fastMode: true,
+            },
+          });
           // Queue drained...
           expect(document.querySelectorAll('[data-testid="queued-follow-up-row"]')).toHaveLength(0);
           // ...but the in-progress composer draft is left untouched.
@@ -6155,6 +7183,852 @@ describe("ChatView timeline estimator parity (full app)", () => {
       ).toBeLessThanOrEqual(1);
     } finally {
       await mounted.cleanup();
+    }
+  });
+
+  it("offers first-run model setup only for a truly empty product and preserves the Chat draft", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    let catalogProjected = false;
+    const readyOmniMindStatus = {
+      provider: "omnimind" as const,
+      status: "ready" as const,
+      available: true,
+      authStatus: "unknown" as const,
+      supportsAutoRuntimeMode: true,
+      checkedAt: NOW_ISO,
+    };
+    const readyPiStatus = {
+      provider: "pi" as const,
+      status: "ready" as const,
+      available: true,
+      authStatus: "unknown" as const,
+      supportsAutoRuntimeMode: false,
+      checkedAt: NOW_ISO,
+    };
+    const refreshProviders = vi.fn(async () => ({
+      providers: catalogProjected ? [readyOmniMindStatus] : [],
+    }));
+    const setupService = {
+      serviceId: "deepseek",
+      providerId: "deepseek",
+      displayName: "DeepSeek",
+      origin: "builtin" as const,
+      authMethods: [
+        {
+          type: "api_key" as const,
+          label: "DeepSeek API key",
+          canLogin: true,
+          subscription: false,
+        },
+      ],
+      authState: "setup_required" as const,
+      authSource: null,
+      storedCredentialType: null,
+      knownModelCount: 1,
+      availableModelCount: 0,
+      supportsNetworkRefresh: true,
+      catalogState: "ready" as const,
+      catalogErrorCode: null,
+    };
+    const configuredService = {
+      ...setupService,
+      authState: "configured" as const,
+      authSource: "stored" as const,
+      storedCredentialType: "api_key" as const,
+      availableModelCount: 1,
+    };
+    const listModelServices = vi.fn(async (input?: { readonly intent?: "add_service" }) =>
+      catalogProjected
+        ? {
+            state: "ready" as const,
+            services: [configuredService],
+            connectableServices: [] as const,
+            errorCode: null,
+          }
+        : {
+            state: "empty" as const,
+            services: [] as const,
+            connectableServices: input?.intent ? [setupService] : ([] as const),
+            errorCode: null,
+          },
+    );
+    const getModelService = vi.fn(async () =>
+      catalogProjected
+        ? {
+            state: "ready" as const,
+            service: configuredService,
+            models: [
+              {
+                modelId: "deepseek-v4-flash",
+                displayName: "DeepSeek V4 Flash",
+                available: true,
+                reasoning: true,
+                input: ["text" as const],
+                contextWindow: 128_000,
+                maxTokens: 16_384,
+              },
+            ],
+            errorCode: null,
+          }
+        : { state: "ready" as const, service: setupService, errorCode: null },
+    );
+    const beginLogin = vi.fn(async () => ({
+      state: "prompt" as const,
+      requestId: "00000000-0000-4000-8000-000000000081",
+      prompt: {
+        promptId: "00000000-0000-4000-8000-000000000082",
+        type: "secret" as const,
+        message: "Provider-owned instruction",
+      },
+      events: [],
+    }));
+    const answerLogin = vi.fn(async () => {
+      catalogProjected = true;
+      fixture.providerModelsByProvider.omnimind = {
+        source: "browser.fixture",
+        models: [
+          {
+            slug: "deepseek/deepseek-v4-flash",
+            name: "DeepSeek V4 Flash",
+            upstreamProviderId: "deepseek",
+            upstreamProviderName: "DeepSeek",
+            upstreamProviderOrigin: "builtin",
+          },
+        ],
+      };
+      fixture.serverConfig = {
+        ...fixture.serverConfig,
+        providers: [readyOmniMindStatus],
+      };
+      return {
+        state: "complete" as const,
+        requestId: "00000000-0000-4000-8000-000000000081",
+        service: configuredService,
+        events: [],
+      };
+    });
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        server: {
+          ...nativeApi.server,
+          refreshProviders,
+        },
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+          get: getModelService,
+          beginLogin,
+          answerLogin,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [readyOmniMindStatus, readyPiStatus],
+        };
+        nextFixture.providerPassivePresence = ["omnimind", "pi"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          // Bundled Pi can enumerate builtin models without any configured
+          // credential. That exact catalog row must not suppress first-run setup.
+          omnimind: {
+            source: "browser.fixture",
+            models: [
+              {
+                slug: "deepseek/deepseek-v4-flash",
+                name: "DeepSeek V4 Flash",
+                upstreamProviderId: "deepseek",
+                upstreamProviderName: "DeepSeek",
+                upstreamProviderOrigin: "builtin",
+              },
+            ],
+          },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+    const historyBack = vi
+      .spyOn(appHistory, "back")
+      .mockImplementation(() => void mounted.router.navigate({ to: "/" }));
+
+    try {
+      const setupPrompt = page.getByTestId("model-readiness-prompt");
+      await expect.element(setupPrompt).toBeInTheDocument();
+      expect(refreshProviders).not.toHaveBeenCalled();
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 320, height: 700 });
+      expect(setupPrompt.element().scrollWidth).toBeLessThanOrEqual(
+        setupPrompt.element().clientWidth,
+      );
+      await page.getByRole("textbox").fill("Keep this draft while I connect a model.");
+      const setupImage = createComposerImage({
+        id: "first-run-setup-image",
+        previewUrl: "blob:first-run-setup-image",
+        name: "first-run-setup.png",
+      });
+      useComposerDraftStore.getState().addImage(THREAD_ID, setupImage);
+      const setupButton = page.getByRole("button", {
+        name: EN_MESSAGES["composer.modelSetupAction"],
+      });
+      setupButton.element().focus();
+      await userEvent.keyboard("{Enter}");
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "Model setup should open the existing Settings route.",
+      );
+
+      await expect
+        .element(page.getByRole("textbox", { name: EN_MESSAGES["settings.searchModelServices"] }))
+        .toBeInTheDocument();
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+        "Keep this draft while I connect a model.",
+      );
+      expect(listModelServices).toHaveBeenCalledWith(
+        { intent: "add_service" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+      await page
+        .getByRole("button", {
+          name: EN_MESSAGES["settings.connectModelServiceNamed"].replace("{name}", "DeepSeek"),
+        })
+        .click();
+      await page.getByRole("button", { name: EN_MESSAGES["settings.addApiKey"] }).click();
+      await page
+        .getByLabelText(EN_MESSAGES["settings.modelServicePromptSecret"])
+        .fill("test-secret");
+      useComposerDraftStore.getState().setStickyModelSelection({
+        provider: "codex",
+        model: "gpt-5.6-sol",
+      });
+      await page
+        .getByRole("button", { name: EN_MESSAGES["settings.modelServiceContinue"] })
+        .click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/",
+        "Completed setup should return to the original Chat.",
+      );
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
+          prompt: "Keep this draft while I connect a model.",
+          activeProvider: "omnimind",
+          modelSelectionByProvider: {
+            omnimind: { provider: "omnimind", model: "deepseek/deepseek-v4-flash" },
+          },
+        });
+      });
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.images).toEqual([
+        setupImage,
+      ]);
+      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toEqual({
+        provider: "codex",
+        model: "gpt-5.6-sol",
+      });
+      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.omnimind).toBe(
+        undefined,
+      );
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(
+        () => {
+          const turnStarts = wsRequests
+            .map(readDispatchedCommand)
+            .filter((command) => command?.type === "thread.turn.start");
+          expect(turnStarts).toHaveLength(1);
+          expect(turnStarts[0]).toMatchObject({
+            modelSelection: {
+              provider: "omnimind",
+              model: "deepseek/deepseek-v4-flash",
+            },
+            message: {
+              text: "Keep this draft while I connect a model.",
+              attachments: [expect.objectContaining({ name: "first-run-setup.png" })],
+            },
+          });
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      historyBack.mockRestore();
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("accepts a configured OmniMind catalog fallback without a remembered selection", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "omnimind");
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const configuredService = {
+      serviceId: "deepseek",
+      providerId: "deepseek",
+      displayName: "DeepSeek",
+      origin: "builtin" as const,
+      authMethods: [] as const,
+      authState: "configured" as const,
+      authSource: "stored" as const,
+      storedCredentialType: "api_key" as const,
+      knownModelCount: 1,
+      availableModelCount: 1,
+      supportsNetworkRefresh: true,
+      catalogState: "ready" as const,
+      catalogErrorCode: null,
+    };
+    const listModelServices = vi.fn(async () => ({
+      state: "ready" as const,
+      services: [configuredService],
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: {
+            source: "browser.fixture",
+            models: [
+              {
+                slug: "unconfigured/local-model",
+                name: "Unconfigured Model",
+                upstreamProviderId: "unconfigured",
+                upstreamProviderName: "Unconfigured",
+                upstreamProviderOrigin: "builtin",
+              },
+              {
+                slug: "deepseek/deepseek-v4-flash",
+                name: "DeepSeek V4 Flash",
+                upstreamProviderId: "deepseek",
+                upstreamProviderName: "DeepSeek",
+                upstreamProviderOrigin: "builtin",
+              },
+            ],
+          },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await vi.waitFor(() => expect(listModelServices).toHaveBeenCalledTimes(1));
+      await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
+        .not.toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
+        .not.toBeInTheDocument();
+      await page.getByRole("textbox").fill("Use the configured service.");
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(() => {
+        const turnStarts = wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.turn.start");
+        expect(turnStarts).toHaveLength(1);
+        expect(turnStarts[0]).toMatchObject({
+          modelSelection: {
+            provider: "omnimind",
+            model: "deepseek/deepseek-v4-flash",
+          },
+        });
+      });
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("keeps an explicitly selected stored Extension model ready without passive execution", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setModelSelectionAndSticky(THREAD_ID, {
+      provider: "omnimind",
+      model: "extension-service/extension-model",
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "ready" as const,
+      services: [
+        {
+          serviceId: "extension-service",
+          providerId: "extension-service",
+          displayName: "extension-service",
+          origin: "unknown" as const,
+          authMethods: [] as const,
+          authState: "unavailable" as const,
+          authSource: "stored" as const,
+          storedCredentialType: "api_key" as const,
+          knownModelCount: 0,
+          availableModelCount: 0,
+          supportsNetworkRefresh: false,
+          catalogState: "error" as const,
+          catalogErrorCode: "catalog_unavailable" as const,
+        },
+      ],
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: {
+            source: "pi.sdk+extensions",
+            models: [
+              {
+                slug: "extension-service/extension-model",
+                name: "Extension Model",
+                upstreamProviderId: "extension-service",
+                upstreamProviderName: "Extension Service",
+                upstreamProviderOrigin: "extension",
+              },
+            ],
+          },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await vi.waitFor(() => expect(listModelServices).toHaveBeenCalledTimes(1));
+      await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
+      await page.getByRole("textbox").fill("Use the selected Extension model.");
+      const sendButton = await waitForSendButton();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(() => {
+        const turnStarts = wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.turn.start");
+        expect(turnStarts).toHaveLength(1);
+        expect(turnStarts[0]).toMatchObject({
+          modelSelection: {
+            provider: "omnimind",
+            model: "extension-service/extension-model",
+          },
+        });
+      });
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("routes a settled installed-but-unavailable Engine to recovery", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const refreshProviders = vi.fn(async () => ({ providers: [] }));
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        server: {
+          ...nativeApi.server,
+          refreshProviders,
+        },
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "codex",
+              status: "error",
+              available: false,
+              authStatus: "unauthenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["codex"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("heading", { name: EN_MESSAGES["composer.engineRecoveryTitle"] }))
+        .toBeInTheDocument();
+      await page
+        .getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] })
+        .click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "Independent Engine recovery should open Settings.",
+      );
+      expect(mounted.router.state.location.search).toMatchObject({
+        section: "providers",
+        target: SETTINGS_TARGETS.engineDetails,
+      });
+      expect(refreshProviders).not.toHaveBeenCalled();
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("does not treat fresh auth-unknown Engine defaults as a usable product binding", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    let modelServicesListAttempts = 0;
+    const listModelServices = vi.fn(async () => {
+      modelServicesListAttempts += 1;
+      if (modelServicesListAttempts === 1) {
+        throw {
+          _tag: "WsRpcError",
+          code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+          retryable: true,
+          retryAfterMs: 1,
+        };
+      }
+      return {
+        state: "empty" as const,
+        services: [] as const,
+        connectableServices: [] as const,
+        errorCode: null,
+      };
+    });
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "codex",
+              status: "error",
+              available: true,
+              authStatus: "unauthenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "claudeAgent",
+              status: "error",
+              available: true,
+              authStatus: "unauthenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "opencode",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "pi",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = [
+          "codex",
+          "claudeAgent",
+          "omnimind",
+          "opencode",
+          "pi",
+        ];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          codex: { source: "browser.fixture", models: [] },
+          omnimind: { source: "browser.fixture", models: [] },
+          opencode: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
+        .not.toBeInTheDocument();
+      expect(listModelServices).toHaveBeenCalledTimes(2);
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("routes a stale OmniMind service selection back to Model services", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setStickyModelSelection({
+      provider: "omnimind",
+      model: "deleted-service/deleted-model",
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["omnimind"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }).click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "A stale OmniMind service selection should open Model services recovery.",
+      );
+      expect(mounted.router.state.location.search).toMatchObject({ section: "models" });
+      expect(mounted.router.state.location.search).not.toHaveProperty("target");
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("keeps an unrequested stock Pi catalog with a remembered exact model out of first-run setup", async () => {
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setStickyModelSelection({
+      provider: "pi",
+      model: "pi/provider-model",
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "pi",
+              status: "ready",
+              available: true,
+              authStatus: "unknown",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["pi"];
+        nextFixture.providerModelsByProvider = {
+          ...nextFixture.providerModelsByProvider,
+          omnimind: { source: "browser.fixture", models: [] },
+          pi: { source: "browser.fixture", models: [] },
+        };
+      },
+    });
+
+    try {
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("heading", { name: EN_MESSAGES["composer.engineRecoveryTitle"] }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
+        .not.toBeInTheDocument();
+      expect(listModelServices).toHaveBeenCalledTimes(1);
+      await page
+        .getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] })
+        .click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "Remembered Pi recovery should open Agent engines.",
+      );
+      expect(mounted.router.state.location.search).toMatchObject({
+        section: "providers",
+        target: SETTINGS_TARGETS.engineDetails,
+      });
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
     }
   });
 
@@ -7086,6 +8960,73 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it.each(["omnimind", "pi"] as const)(
+    "keeps a no-model Pi terminal rename local when the app default is %s",
+    async (defaultProvider) => {
+      localStorage.setItem("omnimind:app-settings:v1", JSON.stringify({ defaultProvider }));
+      const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultProvider}`);
+      seedLocalDraftThread({
+        threadId: draftThreadId,
+        projectId: PROJECT_ID,
+        entryPoint: "terminal",
+      });
+      useComposerDraftStore.getState().setActiveProviderAndSticky(draftThreadId, "pi");
+
+      const mounted = await mountChatView({
+        viewport: DEFAULT_VIEWPORT,
+        snapshot: createDraftOnlySnapshot(),
+        initialEntry: `/${draftThreadId}`,
+        configureFixture: (nextFixture) => {
+          nextFixture.providerModelsByProvider.pi = {
+            source: "browser.fixture",
+            models: [],
+          };
+        },
+      });
+
+      try {
+        await vi.waitFor(() => {
+          expect(
+            page.getByRole("button", { name: "Change engine. Current: Pi" }).element(),
+          ).toBeTruthy();
+          expect(document.body.textContent).toContain("No available model");
+        });
+
+        const identity = await waitForElement(
+          () => document.querySelector<HTMLElement>('[data-slot="chat-thread-identity"]'),
+          "Unable to find the local terminal identity.",
+        );
+        const title = identity.querySelector<HTMLElement>('[data-slot="chat-thread-title"]');
+        expect(title?.textContent).toBe("New terminal");
+        title?.dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+
+        const renameInput = page.getByRole("textbox");
+        await renameInput.fill("Local Pi terminal");
+        await userEvent.keyboard("{Enter}");
+        await vi.waitFor(() => {
+          expect(
+            document.querySelector<HTMLElement>('[data-slot="chat-thread-title"]')?.textContent,
+          ).toBe("Local Pi terminal");
+        });
+
+        expect(hasDispatchedCommandType("thread.create")).toBe(false);
+        expect(hasDispatchedCommandType("thread.meta.update")).toBe(false);
+        expect(
+          useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId],
+        ).toBeDefined();
+        expect(
+          useComposerDraftStore.getState().draftsByThreadId[draftThreadId]?.activeProvider,
+        ).toBe("pi");
+        expect(useComposerDraftStore.getState().draftThreadsByThreadId[draftThreadId]?.title).toBe(
+          "Local Pi terminal",
+        );
+        expect(mounted.router.state.location.pathname).toBe(`/${draftThreadId}`);
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
+
   it("promotes a stored terminal draft using its saved context and model selection", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     const draftThreadId = ThreadId.makeUnsafe("thread-terminal-draft-reuse");
@@ -7123,6 +9064,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       draftThreadsByThreadId: {
         [draftThreadId]: {
           projectId: PROJECT_ID,
+          title: "Local terminal title",
           createdAt: NOW_ISO,
           runtimeMode: "approval-required",
           interactionMode: "default",
@@ -7197,6 +9139,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
           expect(createRequest).toBeTruthy();
           expect(createRequest?.command).toMatchObject({
+            title: "Local terminal title",
             branch: "feature/terminal-title",
             worktreePath: "/repo/project/.worktrees/terminal-title",
             runtimeMode: "approval-required",

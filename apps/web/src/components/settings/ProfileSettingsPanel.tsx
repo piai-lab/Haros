@@ -349,7 +349,7 @@ function formatPeakHourLabel(startHour: number | null, locale: "en" | "zh-CN"): 
 function formatProviderLabel(provider: ProviderKind): string {
   switch (provider) {
     case "omnimind":
-      return "OmniMind Agent";
+      return "OmniMind";
     case "codex":
       return "Codex";
     case "claudeAgent":

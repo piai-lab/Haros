@@ -5,10 +5,13 @@
 import {
   MAX_PINNED_PROJECTS,
   type KeybindingCommand,
+  type ModelSelection,
   type ProjectId,
+  type ProviderKind,
   type PullRequestReviewRequestCountResult,
   type ThreadId,
 } from "@omnimind/contracts";
+import { getDefaultModel } from "@omnimind/shared/model";
 import { pluralize } from "@omnimind/shared/text";
 import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
 import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
@@ -52,6 +55,13 @@ export type SidebarActionBadge = {
   readonly text: string;
   readonly accessibleLabel: string;
 };
+
+export function resolveNewProjectDefaultModelSelection(
+  provider: ProviderKind,
+): ModelSelection | null {
+  const model = getDefaultModel(provider);
+  return model ? { provider, model } : null;
+}
 
 export function isProjectsSidebarSurface(input: {
   readonly isOnSettings: boolean;

@@ -63,10 +63,10 @@ export function getModelOptions(provider: ProviderKind = "codex") {
 }
 
 function hasDefaultModel(provider: ProviderKind): provider is ProviderWithDefaultModel {
-  return provider !== "pi";
+  return provider !== "omnimind" && provider !== "pi";
 }
 
-export function getDefaultModel(provider: "pi"): null;
+export function getDefaultModel(provider: "omnimind" | "pi"): null;
 export function getDefaultModel(provider?: ProviderWithDefaultModel): ModelSlug;
 export function getDefaultModel(provider: ProviderKind): ModelSlug | null;
 export function getDefaultModel(provider: ProviderKind = "codex"): ModelSlug | null {
@@ -497,7 +497,7 @@ export function resolveModelSlug(
   provider: ProviderKind = "codex",
 ): ModelSlug | null {
   const normalized = normalizeModelSlug(model, provider);
-  if (provider === "pi") {
+  if (!hasDefaultModel(provider)) {
     return normalized;
   }
   if (!normalized) {

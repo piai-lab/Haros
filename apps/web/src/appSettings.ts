@@ -335,10 +335,10 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
     provider: "omnimind",
     settingsKey: "customOmniMindModels",
     defaultSettingsKey: "customOmniMindModels",
-    title: "OmniMind Agent",
-    description: "Save additional upstream model slugs for OmniMind Agent.",
+    title: "OmniMind",
+    description: "Save additional upstream model slugs for OmniMind.",
     placeholder: "provider/model",
-    example: "deepseek/deepseek-chat",
+    example: "provider/model",
   },
   codex: {
     provider: "codex",
@@ -425,10 +425,12 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
 
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
 
-// Droid's ACP catalog is authoritative and rejects unknown slugs. Preserve its
-// persisted config for compatibility, but do not offer an editor it cannot honor.
+// OmniMind and Pi take their selectable models from Pi's authoritative runtime catalog, while
+// Droid's ACP catalog rejects unknown slugs. Preserve their historical fields for compatibility,
+// but only advertise editors for engines that actually own independent custom model slugs.
 export const CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS = MODEL_PROVIDER_SETTINGS.filter(
-  (config) => config.provider !== "droid",
+  (config) =>
+    config.provider !== "omnimind" && config.provider !== "pi" && config.provider !== "droid",
 );
 
 export function normalizeCustomModelSlugs(
@@ -558,7 +560,11 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),
     terminalFontFamily: normalizeTerminalFontFamily(settings.terminalFontFamily),
     customCodexModels: normalizeCustomModelSlugs(settings.customCodexModels, "codex"),
-    customOmniMindModels: normalizeCustomModelSlugs(settings.customOmniMindModels, "omnimind"),
+    // Compatibility-only input from releases that allowed free-form OmniMind model hints.
+    // Keep every byte and position intact so the explicit Model services migration UI can
+    // convert or remove one exact entry at a time. Runtime catalog consumers normalize at
+    // getAppModelOptions instead; passive settings reads must never migrate this array.
+    customOmniMindModels: [...settings.customOmniMindModels],
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),
     customCursorModels: normalizeCustomModelSlugs(settings.customCursorModels, "cursor"),
     customAntigravityModels: normalizeCustomModelSlugs(
@@ -1043,12 +1049,10 @@ export function resolveAppModelSelection(
   provider: ProviderKind,
   customModels: Partial<Record<ProviderKind, readonly string[]>>,
   selectedModel: string | null | undefined,
-): string {
+): string | null {
   const customModelsForProvider = customModels[provider] ?? [];
   const options = getAppModelOptions(provider, customModelsForProvider, selectedModel);
-  return (
-    resolveSelectableModel(provider, selectedModel, options) ?? getDefaultModel(provider) ?? ""
-  );
+  return resolveSelectableModel(provider, selectedModel, options) ?? getDefaultModel(provider);
 }
 
 export function getCustomModelOptionsByProvider(

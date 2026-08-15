@@ -688,7 +688,11 @@ export function overviewVisibleKanbanCards(board: KanbanProjectBoard): {
   return { visibleCards, hiddenCount: cards.length - visibleCards.length };
 }
 
-export type KanbanDraftOpenThreadReason = "not-draft" | "empty" | "worktree-pending";
+export type KanbanDraftOpenThreadReason =
+  | "not-draft"
+  | "empty"
+  | "model-unavailable"
+  | "worktree-pending";
 export type KanbanDraftDropAction = "dispatch" | "open-thread";
 
 /** Explains why a draft card must fall back to the canonical chat composer flow. */

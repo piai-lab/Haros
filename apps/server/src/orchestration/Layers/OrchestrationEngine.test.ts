@@ -800,6 +800,7 @@ describe("OrchestrationEngine", () => {
 
   it("rolls back all events for a multi-event command when projection fails mid-dispatch", async () => {
     let shouldFailRequestedProjection = true;
+    let shouldFailBindingProjection = true;
     const flakyProjectionPipeline: OrchestrationProjectionPipelineShape = {
       bootstrap: Effect.void,
       projectMetadataEvent: () => Effect.void,
@@ -815,6 +816,19 @@ describe("OrchestrationEngine", () => {
             new PersistenceSqlError({
               operation: "test.projection",
               detail: "projection failed",
+            }),
+          );
+        }
+        if (
+          shouldFailBindingProjection &&
+          event.commandId === CommandId.makeUnsafe("cmd-session-binding-atomic") &&
+          event.type === "thread.runtime-mode-set"
+        ) {
+          shouldFailBindingProjection = false;
+          return Effect.fail(
+            new PersistenceSqlError({
+              operation: "test.binding-projection",
+              detail: "binding projection failed",
             }),
           );
         }
@@ -917,6 +931,74 @@ describe("OrchestrationEngine", () => {
     expect(
       eventsAfterRetry.filter((event) => event.commandId === turnStartCommand.commandId),
     ).toHaveLength(2);
+
+    const bindingCommand = {
+      type: "thread.session.set" as const,
+      commandId: CommandId.makeUnsafe("cmd-session-binding-atomic"),
+      threadId: ThreadId.makeUnsafe("thread-atomic"),
+      session: {
+        threadId: ThreadId.makeUnsafe("thread-atomic"),
+        status: "ready" as const,
+        providerName: "claudeAgent" as const,
+        runtimeMode: "full-access" as const,
+        activeTurnId: null,
+        lastError: null,
+        updatedAt: createdAt,
+      },
+      binding: {
+        modelSelection: { provider: "claudeAgent" as const, model: "claude-opus-4-6" },
+        runtimeMode: "full-access" as const,
+        interactionMode: "plan" as const,
+      },
+      createdAt,
+    };
+
+    await expect(runtime.runPromise(engine.dispatch(bindingCommand))).rejects.toThrow(
+      "failed unexpectedly",
+    );
+    expect(
+      (
+        await runtime.runPromise(
+          Stream.runCollect(engine.readEvents(0)).pipe(
+            Effect.map((chunk): OrchestrationEvent[] => Array.from(chunk)),
+          ),
+        )
+      ).filter((event) => event.commandId === bindingCommand.commandId),
+    ).toHaveLength(0);
+    expect(
+      (await runtime.runPromise(engine.getReadModel())).threads.find(
+        (thread) => thread.id === bindingCommand.threadId,
+      ),
+    ).toMatchObject({
+      modelSelection: { provider: "codex", model: "gpt-5-codex" },
+      runtimeMode: "approval-required",
+      interactionMode: "default",
+    });
+
+    expect((await runtime.runPromise(engine.dispatch(bindingCommand))).sequence).toBe(8);
+    const bindingEvents = (
+      await runtime.runPromise(
+        Stream.runCollect(engine.readEvents(0)).pipe(
+          Effect.map((chunk): OrchestrationEvent[] => Array.from(chunk)),
+        ),
+      )
+    ).filter((event) => event.commandId === bindingCommand.commandId);
+    expect(bindingEvents.map((event) => event.type)).toEqual([
+      "thread.session-set",
+      "thread.meta-updated",
+      "thread.runtime-mode-set",
+      "thread.interaction-mode-set",
+    ]);
+    expect(
+      (await runtime.runPromise(engine.getReadModel())).threads.find(
+        (thread) => thread.id === bindingCommand.threadId,
+      ),
+    ).toMatchObject({
+      modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+      runtimeMode: "full-access",
+      interactionMode: "plan",
+      session: { providerName: "claudeAgent", runtimeMode: "full-access" },
+    });
 
     await runtime.dispose();
   });

@@ -1,7 +1,11 @@
 import { ThreadId, type OrchestrationSession } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
-import { deriveTurnStartModelSelection, deriveTurnStartSession } from "./turnStartSession.ts";
+import {
+  deriveTurnStartModelSelection,
+  deriveTurnStartSession,
+  shouldDeferTurnStartBindingProjection,
+} from "./turnStartSession.ts";
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-turn-start-session");
 const REQUESTED_AT = "2026-07-21T00:00:00.000Z";
@@ -29,6 +33,80 @@ function derive(currentSession: OrchestrationSession | null) {
 }
 
 describe("deriveTurnStartSession", () => {
+  it("defers an established exact binding change until replacement succeeds", () => {
+    expect(
+      shouldDeferTurnStartBindingProjection({
+        currentModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        currentRuntimeMode: "approval-required",
+        currentInteractionMode: "default",
+        currentSession: makeSession("ready"),
+        requestedModelSelection: { provider: "pi", model: "openai/gpt-5" },
+        requestedRuntimeMode: "full-access",
+        requestedInteractionMode: "plan",
+        canAdoptRequestedProvider: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldDeferTurnStartBindingProjection({
+        currentModelSelection: {
+          provider: "codex",
+          model: "gpt-5-codex",
+          options: { reasoningEffort: "high" },
+        },
+        currentRuntimeMode: "approval-required",
+        currentInteractionMode: "default",
+        currentSession: makeSession("ready"),
+        requestedModelSelection: {
+          provider: "codex",
+          model: "gpt-5.1-codex",
+          options: { reasoningEffort: "low" },
+        },
+        requestedRuntimeMode: "approval-required",
+        requestedInteractionMode: "default",
+        canAdoptRequestedProvider: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldDeferTurnStartBindingProjection({
+        currentModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        currentRuntimeMode: "approval-required",
+        currentInteractionMode: "default",
+        currentSession: null,
+        requestedModelSelection: { provider: "pi", model: "openai/gpt-5" },
+        requestedRuntimeMode: "full-access",
+        requestedInteractionMode: "plan",
+        canAdoptRequestedProvider: true,
+      }),
+    ).toBe(false);
+  });
+
+  it("defers an established runtime or interaction mode change until start succeeds", () => {
+    expect(
+      shouldDeferTurnStartBindingProjection({
+        currentModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        currentRuntimeMode: "full-access",
+        currentInteractionMode: "default",
+        currentSession: makeSession("ready"),
+        requestedModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        requestedRuntimeMode: "approval-required",
+        requestedInteractionMode: "default",
+        canAdoptRequestedProvider: false,
+      }),
+    ).toBe(true);
+    expect(
+      shouldDeferTurnStartBindingProjection({
+        currentModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        currentRuntimeMode: "full-access",
+        currentInteractionMode: "default",
+        currentSession: makeSession("ready"),
+        requestedModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        requestedRuntimeMode: "full-access",
+        requestedInteractionMode: "plan",
+        canAdoptRequestedProvider: false,
+      }),
+    ).toBe(true);
+  });
+
   it("keeps an established provider when a later turn requests another provider", () => {
     expect(
       deriveTurnStartModelSelection({

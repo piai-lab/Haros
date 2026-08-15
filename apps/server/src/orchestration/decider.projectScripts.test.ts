@@ -5,6 +5,7 @@ import {
   MessageId,
   ProjectId,
   ThreadId,
+  TurnId,
 } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 import { Effect } from "effect";
@@ -439,6 +440,144 @@ describe("decider project scripts", () => {
         },
       },
       runtimeMode: "approval-required",
+    });
+
+    const omittedSelectionResult = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-turn-start-implicit-selection"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("message-user-implicit-selection"),
+            role: "user",
+            text: "freeze the current selection",
+            attachments: [],
+          },
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        },
+        readModel,
+      }),
+    );
+    const omittedSelectionEvents = Array.isArray(omittedSelectionResult)
+      ? omittedSelectionResult
+      : [omittedSelectionResult];
+    expect(omittedSelectionEvents[1]).toMatchObject({
+      type: "thread.turn-start-requested",
+      payload: {
+        modelSelection: {
+          provider: "codex",
+          model: "gpt-5-codex",
+        },
+      },
+    });
+
+    const runningReadModel = await Effect.runPromise(
+      projectEvent(readModel, {
+        sequence: 3,
+        eventId: asEventId("evt-thread-session-running"),
+        aggregateKind: "thread",
+        aggregateId: ThreadId.makeUnsafe("thread-1"),
+        type: "thread.session-set",
+        occurredAt: now,
+        commandId: CommandId.makeUnsafe("cmd-thread-session-running"),
+        causationEventId: null,
+        correlationId: CommandId.makeUnsafe("cmd-thread-session-running"),
+        metadata: {},
+        payload: {
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          session: {
+            threadId: ThreadId.makeUnsafe("thread-1"),
+            status: "running",
+            providerName: "codex",
+            runtimeMode: "approval-required",
+            activeTurnId: TurnId.makeUnsafe("turn-running"),
+            lastError: null,
+            updatedAt: now,
+          },
+        },
+      }),
+    );
+    const queuedResult = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-turn-queue-implicit-selection"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("message-user-queued-implicit-selection"),
+            role: "user",
+            text: "queue with a frozen selection",
+            attachments: [],
+          },
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        },
+        readModel: runningReadModel,
+      }),
+    );
+    const queuedEvents = Array.isArray(queuedResult) ? queuedResult : [queuedResult];
+    expect(queuedEvents[1]).toMatchObject({
+      type: "thread.turn-queued",
+      payload: {
+        modelSelection: {
+          provider: "codex",
+          model: "gpt-5-codex",
+        },
+      },
+    });
+
+    const promotedResult = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.turn.dispatch-queued",
+          commandId: CommandId.makeUnsafe("cmd-dispatch-frozen-queued-turn"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          messageId: asMessageId("message-user-queued-implicit-selection"),
+          modelSelection: {
+            provider: "claudeAgent",
+            model: "claude-sonnet-4-5",
+          },
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        },
+        readModel,
+      }),
+    );
+    expect(promotedResult).toMatchObject({
+      type: "thread.turn-start-requested",
+      payload: {
+        modelSelection: {
+          provider: "claudeAgent",
+          model: "claude-sonnet-4-5",
+        },
+      },
+    });
+
+    const missingFrozenSelectionError = await Effect.runPromise(
+      Effect.flip(
+        decideOrchestrationCommand({
+          command: {
+            type: "thread.turn.dispatch-queued",
+            commandId: CommandId.makeUnsafe("cmd-dispatch-legacy-queued-turn"),
+            threadId: ThreadId.makeUnsafe("thread-1"),
+            messageId: asMessageId("message-user-queued-legacy"),
+            interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+            runtimeMode: "approval-required",
+            createdAt: now,
+          },
+          readModel,
+        }),
+      ),
+    );
+    expect(missingFrozenSelectionError).toMatchObject({
+      _tag: "OrchestrationCommandInvariantError",
+      commandType: "thread.turn.dispatch-queued",
+      detail: "Queued turn promotion is missing its admission-time model selection.",
     });
   });
 

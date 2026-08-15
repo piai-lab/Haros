@@ -404,6 +404,15 @@ describe("checkpoint revert decider", () => {
       "thread.session-set",
       "thread.message-edit-resend-requested",
     ]);
+    expect(editEvents[1]).toMatchObject({
+      type: "thread.message-edit-resend-requested",
+      payload: {
+        modelSelection: {
+          provider: "codex",
+          model: "gpt-5-codex",
+        },
+      },
+    });
     for (const [index, event] of editEvents.entries()) {
       readModel = await Effect.runPromise(
         projectEvent(readModel, { ...event, sequence: index + 3 }),

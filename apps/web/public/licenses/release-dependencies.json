@@ -6,7 +6,7 @@
     "platform": "darwin",
     "arch": "arm64"
   },
-  "componentCount": 243,
+  "componentCount": 244,
   "roots": [
     "@agentclientprotocol/sdk",
     "@anthropic-ai/claude-agent-sdk",
@@ -22,9 +22,11 @@
     "@xterm/headless",
     "effect",
     "electron-updater",
+    "jsonc-parser",
     "node-pty",
     "open",
     "tree-kill",
+    "undici",
     "ws"
   ],
   "components": [
@@ -1624,7 +1626,7 @@
       "author": "Mario Zechner",
       "repository": "https://github.com/earendil-works/pi.git",
       "homepage": null,
-      "manifestSha256": "fc8b90f4089c7f96541ff7dfa458f8551b0e9268cacc868f9d1f0c316aca588e",
+      "manifestSha256": "9d3cab9471afb52ca9e45b8805ea87656f4aec930843ab8b35e5ac9806a243ba",
       "locations": [
         "node_modules/.bun/@omnimind+pi-coding-agent@..+..+vendor+omnimind-pi-coding-agent-0.84.1.tgz+bfb712a8fa2951a7/node_modules/@omnimind/pi-coding-agent"
       ],
@@ -1659,6 +1661,7 @@
         "hosted-git-info@9.0.3",
         "ignore@7.0.5",
         "jiti@2.7.0",
+        "jsonc-parser@3.3.1",
         "minimatch@10.2.5",
         "proper-lockfile@4.1.2",
         "semver@7.8.0",
@@ -4911,6 +4914,34 @@
         "@babel/runtime@7.28.6",
         "ts-algebra@2.0.0"
       ]
+    },
+    {
+      "name": "jsonc-parser",
+      "version": "3.3.1",
+      "id": "jsonc-parser@3.3.1",
+      "license": "MIT",
+      "author": "Microsoft Corporation",
+      "repository": "https://github.com/microsoft/node-jsonc-parser",
+      "homepage": null,
+      "manifestSha256": "cf6445756037684847a4fb57fad0847750d82a7573eb62e257ec1d78b73647b7",
+      "locations": [
+        "node_modules/.bun/jsonc-parser@3.3.1/node_modules/jsonc-parser"
+      ],
+      "licenseFiles": [
+        {
+          "name": "LICENSE.md",
+          "sha256": "59d4ecf670e758dc63133945108bb5d74f875e7dc1cab5a2b4dcb901e3fa3e36",
+          "text": "The MIT License (MIT)\n\nCopyright (c) Microsoft\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+          "provenance": {
+            "kind": "packaged",
+            "sourceUrl": null,
+            "revision": null,
+            "sourcePath": "LICENSE.md",
+            "upstreamLegalTextAbsent": false
+          }
+        }
+      ],
+      "dependencies": []
     },
     {
       "name": "jsonfile",

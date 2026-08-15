@@ -62,8 +62,7 @@ export function ComposerSlashStatusDialog(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedModel: string | null | undefined;
-  fastModeEnabled: boolean;
-  selectedPromptEffort: string | null;
+  nativeOptionsSummary: string;
   interactionMode: ProviderInteractionMode;
   envMode: DraftThreadEnvMode;
   envState: ResolvedThreadWorkspaceState;
@@ -79,8 +78,7 @@ export function ComposerSlashStatusDialog(props: {
     open,
     onOpenChange,
     selectedModel,
-    fastModeEnabled,
-    selectedPromptEffort,
+    nativeOptionsSummary,
     interactionMode,
     envMode,
     envState,
@@ -107,18 +105,12 @@ export function ComposerSlashStatusDialog(props: {
                 {selectedModel ?? t("taskStatus.unknown")}
               </p>
             </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">{t("taskStatus.fastMode")}</p>
-              <p className="font-medium text-foreground">
-                {fastModeEnabled ? t("common.on") : t("common.off")}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">{t("taskStatus.reasoning")}</p>
-              <p className="font-medium text-foreground">
-                {selectedPromptEffort ?? t("taskStatus.default")}
-              </p>
-            </div>
+            {nativeOptionsSummary ? (
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">{t("composer.options")}</p>
+                <p className="font-medium text-foreground">{nativeOptionsSummary}</p>
+              </div>
+            ) : null}
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">{t("taskStatus.mode")}</p>
               <p className="font-medium text-foreground">

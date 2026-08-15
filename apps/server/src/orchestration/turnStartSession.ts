@@ -1,9 +1,11 @@
 import type {
   ModelSelection,
   OrchestrationSession,
+  ProviderInteractionMode,
   RuntimeMode,
   ThreadId,
 } from "@omnimind/contracts";
+import { Equal } from "effect";
 
 export function deriveTurnStartModelSelection(input: {
   readonly currentModelSelection: ModelSelection;
@@ -16,6 +18,43 @@ export function deriveTurnStartModelSelection(input: {
       input.canAdoptRequestedProvider)
     ? requestedModelSelection
     : input.currentModelSelection;
+}
+
+export function shouldDeferTurnStartBindingProjection(input: {
+  readonly currentModelSelection: ModelSelection;
+  readonly currentRuntimeMode: RuntimeMode;
+  readonly currentInteractionMode: ProviderInteractionMode;
+  readonly currentSession: OrchestrationSession | null;
+  readonly requestedModelSelection: ModelSelection | undefined;
+  readonly requestedRuntimeMode: RuntimeMode;
+  readonly requestedInteractionMode: ProviderInteractionMode;
+  readonly canAdoptRequestedProvider: boolean;
+}): boolean {
+  if (input.canAdoptRequestedProvider || input.currentSession === null) {
+    return false;
+  }
+
+  return (
+    (input.requestedModelSelection !== undefined &&
+      !Equal.equals(input.requestedModelSelection, input.currentModelSelection)) ||
+    input.requestedRuntimeMode !== input.currentRuntimeMode ||
+    input.requestedInteractionMode !== input.currentInteractionMode
+  );
+}
+
+export function turnStartBindingMatchesCommitted(input: {
+  readonly currentModelSelection: ModelSelection;
+  readonly currentRuntimeMode: RuntimeMode;
+  readonly currentInteractionMode: ProviderInteractionMode;
+  readonly requestedModelSelection: ModelSelection;
+  readonly requestedRuntimeMode: RuntimeMode;
+  readonly requestedInteractionMode: ProviderInteractionMode;
+}): boolean {
+  return (
+    Equal.equals(input.currentModelSelection, input.requestedModelSelection) &&
+    input.currentRuntimeMode === input.requestedRuntimeMode &&
+    input.currentInteractionMode === input.requestedInteractionMode
+  );
 }
 
 export function deriveTurnStartSession(input: {

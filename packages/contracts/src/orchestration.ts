@@ -580,6 +580,9 @@ export const OrchestrationThreadActivityTone = Schema.Literals([
 ]);
 export type OrchestrationThreadActivityTone = typeof OrchestrationThreadActivityTone.Type;
 
+export const ProviderTurnStartFailureReason = Schema.Literals(["active-edit-requires-stop"]);
+export type ProviderTurnStartFailureReason = typeof ProviderTurnStartFailureReason.Type;
+
 export const OrchestrationThreadActivity = Schema.Struct({
   id: EventId,
   tone: OrchestrationThreadActivityTone,
@@ -1503,6 +1506,13 @@ const ThreadSessionSetCommand = Schema.Struct({
   commandId: CommandId,
   threadId: ThreadId,
   session: OrchestrationSession,
+  binding: Schema.optional(
+    Schema.Struct({
+      modelSelection: ModelSelection,
+      runtimeMode: RuntimeMode,
+      interactionMode: ProviderInteractionMode,
+    }),
+  ),
   expectedSessionStatus: Schema.optional(OrchestrationSessionStatus),
   expectedSessionUpdatedAt: Schema.optional(IsoDateTime),
   createdAt: IsoDateTime,

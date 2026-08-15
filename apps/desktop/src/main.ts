@@ -81,6 +81,7 @@ import {
   type BundleSignature,
 } from "./bundleSwapDetection";
 import { waitForBackendStartupReady } from "./backendStartupReadiness";
+import { resolveBackendProxyEnvironment } from "./backendProxyEnv";
 import { showDesktopConfirmDialog } from "./confirmDialog";
 import {
   desktopAppIconResourceName,
@@ -315,6 +316,7 @@ let desktopStatusItem: Tray | null = null;
 let backendProcess: ChildProcess.ChildProcess | null = null;
 let backendPort = 0;
 let backendAuthToken = "";
+let backendProxyEnvironment: NodeJS.ProcessEnv = {};
 let backendHttpUrl = "";
 let backendWsUrl = "";
 let backendReadinessAbortController: AbortController | null = null;
@@ -3157,6 +3159,7 @@ function backendEnv(): NodeJS.ProcessEnv {
       browserHostPipeServer ? OMNIMIND_BROWSER_HOST_PIPE_PATH : null,
       browserHostPipeServer ? DESKTOP_BROWSER_HOST_CAPABILITY_FD : null,
     ),
+    ...backendProxyEnvironment,
     // Point the backend's HTTP static route at the same swap-immune snapshot the
     // omnimind:// protocol serves, so both surfaces survive app.asar being replaced.
     ...(servedStaticRoot?.snapshotted ? { OMNIMIND_STATIC_DIR: servedStaticRoot.dir } : {}),
@@ -4406,6 +4409,14 @@ async function bootstrap(): Promise<void> {
 
   registerIpcHandlers();
   writeDesktopLogHeader("bootstrap ipc handlers registered");
+  try {
+    backendProxyEnvironment = await resolveBackendProxyEnvironment(process.env, (url) =>
+      session.defaultSession.resolveProxy(url),
+    );
+  } catch (error) {
+    backendProxyEnvironment = {};
+    console.warn("[desktop] Failed to resolve the operating-system proxy for the backend.", error);
+  }
   try {
     await ensureBrowserHostPipeServer();
   } catch (error) {

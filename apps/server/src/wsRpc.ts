@@ -31,6 +31,7 @@ import {
   type ServerConfigStreamEvent,
   type ServerDiagnosticsResult,
   type ServerLifecycleStreamEvent,
+  type ServerProviderStatus,
 } from "@omnimind/contracts";
 import { clamp } from "effect/Number";
 import { Effect, FileSystem, Layer, Option, Path, Queue, Schema, Scope, Stream } from "effect";
@@ -95,6 +96,8 @@ import { ProviderCommandReactor } from "./orchestration/Services/ProviderCommand
 import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnapshotQuery";
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
+import { OmniMindEcosystem } from "./provider/Services/OmniMindEcosystem";
+import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
 import { discoverSkillsCatalog, omnimindSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
@@ -335,6 +338,8 @@ const makeWsRpcHandlersLayer = () =>
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
+      const omniMindEcosystem = yield* OmniMindEcosystem;
+      const omniMindModelServices = yield* OmniMindModelServices;
       const providerHealth = yield* ProviderHealth;
       const providerService = yield* ProviderService;
       const lifecycleEvents = yield* ServerLifecycleEvents;
@@ -669,6 +674,14 @@ const makeWsRpcHandlersLayer = () =>
           availableEditors: resolveAvailableEditors(),
         };
       });
+
+      const providerStatusPayload = (providers: ReadonlyArray<ServerProviderStatus>) =>
+        providerHealth.getPassivePresence.pipe(
+          Effect.map((recoverableProviders) => ({
+            providers,
+            passivePresence: { state: "settled" as const, recoverableProviders },
+          })),
+        );
 
       const refreshGitStatusAfter = <A, E, R>(cwd: string, effect: Effect.Effect<A, E, R>) =>
         effect.pipe(
@@ -1596,7 +1609,7 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(serverSettings.updateSettingsView(input), "Failed to update server settings"),
         [WS_METHODS.serverRefreshProviders]: () =>
           rpcEffect(
-            providerHealth.refresh.pipe(Effect.map((providers) => ({ providers }))),
+            providerHealth.refresh.pipe(Effect.flatMap(providerStatusPayload)),
             "Failed to refresh providers",
           ),
         [WS_METHODS.serverUpdateProvider]: (input) => providerHealth.updateProvider(input),
@@ -1853,12 +1866,12 @@ const makeWsRpcHandlersLayer = () =>
             { key: "server.provider-statuses" },
             Stream.concat(
               Stream.fromEffect(
-                providerHealth.getStatuses.pipe(Effect.map((providers) => ({ providers }))),
+                providerHealth.getStatuses.pipe(Effect.flatMap(providerStatusPayload)),
               ),
               bufferLiveUiStream(providerHealth.streamChanges, {
                 label: "server.provider-statuses",
                 onDroppedEvents: failLiveUiStreamForSnapshotResync,
-              }).pipe(Stream.map((providers) => ({ providers }))),
+              }).pipe(Stream.mapEffect(providerStatusPayload)),
             ),
           ),
         [WS_METHODS.subscribeServerSettings]: (_, { clientId }) =>
@@ -1914,6 +1927,107 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(providerDiscoveryService.listModels(input), "Failed to list models"),
         [WS_METHODS.providerListAgents]: (input) =>
           rpcEffect(providerDiscoveryService.listAgents(input), "Failed to list agents"),
+        [WS_METHODS.omnimindEcosystemList]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.list(input))),
+            "Failed to list OmniMind Agent packages",
+          ),
+        [WS_METHODS.omnimindEcosystemListResources]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.listResources(input))),
+            "Failed to list OmniMind Agent package resources",
+          ),
+        [WS_METHODS.omnimindEcosystemInstall]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.install(input))),
+            "Failed to install an OmniMind Agent package",
+          ),
+        [WS_METHODS.omnimindEcosystemUpdate]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.update(input))),
+            "Failed to update an OmniMind Agent package",
+          ),
+        [WS_METHODS.omnimindEcosystemRemove]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.remove(input))),
+            "Failed to remove an OmniMind Agent package",
+          ),
+        [WS_METHODS.omnimindEcosystemSetResourceEnabled]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.setResourceEnabled(input))),
+            "Failed to change an OmniMind Agent package resource",
+          ),
+        [WS_METHODS.omnimindEcosystemReload]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.reload(input))),
+            "Failed to reload OmniMind Agent resources",
+          ),
+        [WS_METHODS.omnimindModelServicesList]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.list(input))),
+            "Failed to list OmniMind model services",
+          ),
+        [WS_METHODS.omnimindModelServicesGet]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.get(input))),
+            "Failed to read an OmniMind model service",
+          ),
+        [WS_METHODS.omnimindModelServicesBeginLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindModelServices.beginLogin(clientId, input)),
+            ),
+            "Failed to begin OmniMind model-service login",
+          ),
+        [WS_METHODS.omnimindModelServicesPollLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.pollLogin(clientId, input))),
+            "Failed to poll OmniMind model-service login",
+          ),
+        [WS_METHODS.omnimindModelServicesAnswerLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindModelServices.answerLogin(clientId, input)),
+            ),
+            "Failed to continue OmniMind model-service login",
+          ),
+        [WS_METHODS.omnimindModelServicesCancelLogin]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindModelServices.cancelLogin(clientId, input)),
+            ),
+            "Failed to cancel OmniMind model-service login",
+          ),
+        [WS_METHODS.omnimindModelServicesLogout]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.logout(input))),
+            "Failed to remove OmniMind model-service credentials",
+          ),
+        [WS_METHODS.omnimindModelServicesRefresh]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.refresh(input))),
+            "Failed to refresh an OmniMind model service",
+          ),
+        [WS_METHODS.omnimindModelServicesDiscoverCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.discoverCustom(input))),
+            "Failed to discover models for an OmniMind custom model service",
+          ),
+        [WS_METHODS.omnimindModelServicesTestCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.testCustom(input))),
+            "Failed to test an OmniMind custom model service",
+          ),
+        [WS_METHODS.omnimindModelServicesSaveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.saveCustom(input))),
+            "Failed to save an OmniMind custom model service",
+          ),
+        [WS_METHODS.omnimindModelServicesRemoveCustom]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindModelServices.removeCustom(input))),
+            "Failed to remove an OmniMind custom model service",
+          ),
         [WS_METHODS.automationList]: (input) =>
           rpcEffect(automationService.list(input), "Failed to list automations"),
         [WS_METHODS.automationGetMemory]: ({ automationId }) =>
@@ -2105,10 +2219,15 @@ export function makeWebsocketRpcRouteLayer<R>(
       // resolves it back into handler-scoped services on every request.
       const runWithConnectionSession = (
         request: HttpServerRequest.HttpServerRequest,
-        session: WsConnectionSession,
+        session: Omit<WsConnectionSession, "signal">,
       ) =>
         Effect.gen(function* () {
-          const sessionKey = yield* connectionSessions.register(session);
+          const controller = new AbortController();
+          yield* Effect.addFinalizer(() => Effect.sync(() => controller.abort()));
+          const sessionKey = yield* connectionSessions.register({
+            ...session,
+            signal: controller.signal,
+          });
           return yield* rpcWebSocketHttpEffect.pipe(
             Effect.provideService(
               HttpServerRequest.HttpServerRequest,

@@ -32,6 +32,7 @@ import { Effect } from "effect";
 
 import { OrchestrationCommandInvariantError } from "./Errors.ts";
 import { buildForkThreadTitle } from "./forkThreadTitle.ts";
+import { turnStartBindingMatchesCommitted } from "./turnStartSession.ts";
 import { hasNativeHandoffMessages } from "./handoff.ts";
 import { resolveStableMessageTurnId } from "./messageTurnId.ts";
 import {
@@ -1486,11 +1487,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       const sourceProposedPlan = command.sourceProposedPlan;
-      yield* validateAutoRuntimeMode(
-        command,
-        command.modelSelection ?? targetThread.modelSelection,
-        command.runtimeMode,
-      );
+      const admittedModelSelection = command.modelSelection ?? targetThread.modelSelection;
+      yield* validateAutoRuntimeMode(command, admittedModelSelection, command.runtimeMode);
       const sourceThread = sourceProposedPlan
         ? yield* requireThread({
             readModel,
@@ -1548,7 +1546,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const turnRequestPayload = {
         threadId: command.threadId,
         messageId: command.message.messageId,
-        ...(command.modelSelection !== undefined ? { modelSelection: command.modelSelection } : {}),
+        modelSelection: admittedModelSelection,
         ...(command.providerOptions !== undefined
           ? { providerOptions: command.providerOptions }
           : {}),
@@ -1565,6 +1563,14 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         targetThread.session?.providerName ?? targetThread.modelSelection.provider;
       const isThreadRunning =
         targetThread.session?.status === "running" && targetThread.session.activeTurnId !== null;
+      const admittedBindingMatchesCurrent = turnStartBindingMatchesCommitted({
+        currentModelSelection: targetThread.modelSelection,
+        currentRuntimeMode: targetThread.session?.runtimeMode ?? targetThread.runtimeMode,
+        currentInteractionMode: targetThread.interactionMode,
+        requestedModelSelection: admittedModelSelection,
+        requestedRuntimeMode: command.runtimeMode,
+        requestedInteractionMode: command.interactionMode,
+      });
       // Subagent threads never queue: their messages steer the running child task
       // through the parent session, so deferring until the turn settles would
       // deliver the message only after the subagent already finished.
@@ -1573,7 +1579,9 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const shouldQueue =
         targetThread.parentThreadId === null &&
         isThreadRunning &&
-        (dispatchMode === "queue" || !providerSupportsNativeTurnSteering(activeProvider));
+        (dispatchMode === "queue" ||
+          !admittedBindingMatchesCurrent ||
+          !providerSupportsNativeTurnSteering(activeProvider));
       const queuedEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...withEventBase({
           aggregateKind: "thread",
@@ -1621,11 +1629,13 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      yield* validateAutoRuntimeMode(
-        command,
-        command.modelSelection ?? thread.modelSelection,
-        command.runtimeMode,
-      );
+      if (command.modelSelection === undefined) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "Queued turn promotion is missing its admission-time model selection.",
+        });
+      }
+      yield* validateAutoRuntimeMode(command, command.modelSelection, command.runtimeMode);
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -1637,9 +1647,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         payload: {
           threadId: command.threadId,
           messageId: command.messageId,
-          ...(command.modelSelection !== undefined
-            ? { modelSelection: command.modelSelection }
-            : {}),
+          modelSelection: command.modelSelection,
           ...(command.providerOptions !== undefined
             ? { providerOptions: command.providerOptions }
             : {}),
@@ -1896,11 +1904,8 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: checkpointRevertInProgressDetail(command.threadId),
         });
       }
-      yield* validateAutoRuntimeMode(
-        command,
-        command.modelSelection ?? thread.modelSelection,
-        command.runtimeMode,
-      );
+      const admittedModelSelection = command.modelSelection ?? thread.modelSelection;
+      yield* validateAutoRuntimeMode(command, admittedModelSelection, command.runtimeMode);
       const editTarget = resolveTailUserMessageEditTarget({
         messages: thread.messages,
         messageId: command.messageId,
@@ -1927,9 +1932,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           text: command.text,
           rollbackTurnCount: editTarget.rollbackTurnCount,
           removedTurnIds: editTarget.removedTurnIds.map((turnId) => TurnId.makeUnsafe(turnId)),
-          ...(command.modelSelection !== undefined
-            ? { modelSelection: command.modelSelection }
-            : {}),
+          modelSelection: admittedModelSelection,
           ...(command.providerOptions !== undefined
             ? { providerOptions: command.providerOptions }
             : {}),
@@ -2009,7 +2012,26 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: `Thread '${command.threadId}' session changed before the conditional update.`,
         });
       }
-      return {
+      if (command.binding !== undefined) {
+        if (command.binding.modelSelection.provider !== command.session.providerName) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: "Committed model selection must match the provider Session.",
+          });
+        }
+        if (command.binding.runtimeMode !== command.session.runtimeMode) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail: "Committed runtime mode must match the provider Session.",
+          });
+        }
+        yield* validateAutoRuntimeMode(
+          command,
+          command.binding.modelSelection,
+          command.binding.runtimeMode,
+        );
+      }
+      const sessionEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...withEventBase({
           aggregateKind: "thread",
           aggregateId: command.threadId,
@@ -2023,6 +2045,57 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           session: command.session,
         },
       };
+      if (command.binding === undefined) {
+        return sessionEvent;
+      }
+      return [
+        sessionEvent,
+        {
+          ...withEventBase({
+            aggregateKind: "thread",
+            aggregateId: command.threadId,
+            occurredAt: command.createdAt,
+            commandId: command.commandId,
+          }),
+          causationEventId: sessionEvent.eventId,
+          type: "thread.meta-updated",
+          payload: {
+            threadId: command.threadId,
+            modelSelection: command.binding.modelSelection,
+            updatedAt: command.createdAt,
+          },
+        },
+        {
+          ...withEventBase({
+            aggregateKind: "thread",
+            aggregateId: command.threadId,
+            occurredAt: command.createdAt,
+            commandId: command.commandId,
+          }),
+          causationEventId: sessionEvent.eventId,
+          type: "thread.runtime-mode-set",
+          payload: {
+            threadId: command.threadId,
+            runtimeMode: command.binding.runtimeMode,
+            updatedAt: command.createdAt,
+          },
+        },
+        {
+          ...withEventBase({
+            aggregateKind: "thread",
+            aggregateId: command.threadId,
+            occurredAt: command.createdAt,
+            commandId: command.commandId,
+          }),
+          causationEventId: sessionEvent.eventId,
+          type: "thread.interaction-mode-set",
+          payload: {
+            threadId: command.threadId,
+            interactionMode: command.binding.interactionMode,
+            updatedAt: command.createdAt,
+          },
+        },
+      ];
     }
 
     case "thread.messages.import": {

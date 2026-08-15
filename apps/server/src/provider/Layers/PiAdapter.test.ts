@@ -6,16 +6,24 @@
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import * as NodeServices from "@effect/platform-node/NodeServices";
 import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import { describe, expect, it } from "vitest";
+import { type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
+import { Effect, Fiber, Layer, Stream } from "effect";
+import { describe, expect, it, vi } from "vitest";
+import { ServerConfig } from "../../config.ts";
+import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
+import { PiAdapter } from "../Services/PiAdapter.ts";
+import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
 import {
   createPiModelRuntime,
-  ensurePiAnthropicCatalogModels,
+  createOmniMindModelRuntime,
+  findModelInRegistry,
   getPiDiscoverableModels,
   getPiSupportedThinkingOptions,
   buildPiAgentGatewayCustomTools,
@@ -24,10 +32,12 @@ import {
   makePiHostSystemPrompt,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
+  makePiAdapterLive,
   piModelHasConfiguredCredentials,
   piToolTimelineDetail,
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
+  makeOmniMindAgentAdapterLive,
 } from "./PiAdapter";
 
 describe("Pi native resource projection", () => {
@@ -255,6 +265,69 @@ function makePiModel(input: {
   };
 }
 
+async function waitForTestCondition(predicate: () => boolean, message: string, timeoutMs = 3_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error(message);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+}
+
+function piOpenAiSuccessResponse(text = "ok") {
+  return new Response(
+    [
+      `data: ${JSON.stringify({
+        id: "chatcmpl-test",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [{ index: 0, delta: { role: "assistant", content: text }, finish_reason: null }],
+      })}`,
+      `data: ${JSON.stringify({
+        id: "chatcmpl-test",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+      })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n"),
+    { headers: { "content-type": "text/event-stream" } },
+  );
+}
+
+function piRetryableResponse() {
+  return Response.json(
+    { error: { message: "temporary rate limit", type: "rate_limit_error" } },
+    { status: 429 },
+  );
+}
+
+function piContextOverflowResponse() {
+  return Response.json(
+    {
+      error: {
+        message: "Input exceeds the context window of this model",
+        type: "invalid_request_error",
+        code: "context_length_exceeded",
+      },
+    },
+    { status: 400 },
+  );
+}
+
+function isPiAutoRetryWarning(event: ProviderRuntimeEvent) {
+  if (event.type !== "runtime.warning") return false;
+  const detail = event.payload.detail;
+  return (
+    typeof detail === "object" &&
+    detail !== null &&
+    "source" in detail &&
+    detail.source === "pi-auto-retry"
+  );
+}
+
 describe("getPiDiscoverableModels", () => {
   it("normalizes the malformed Pi extension model metadata before returning it through RPC", () => {
     const descriptor = toPiProviderModelDescriptor(
@@ -265,6 +338,7 @@ describe("getPiDiscoverableModels", () => {
         reasoning: false,
       } as Model<Api>,
       () => " OpenRouter ",
+      () => "extension",
     );
 
     expect(descriptor).toMatchObject({
@@ -272,6 +346,7 @@ describe("getPiDiscoverableModels", () => {
       name: "Google: Gemma 4 26B A4B",
       upstreamProviderId: "openrouter",
       upstreamProviderName: "OpenRouter",
+      upstreamProviderOrigin: "extension",
     });
   });
 
@@ -285,6 +360,7 @@ describe("getPiDiscoverableModels", () => {
           reasoning: false,
         } as Model<Api>,
         () => "OpenRouter",
+        () => "builtin",
       ),
     ).toBeNull();
     expect(
@@ -296,6 +372,7 @@ describe("getPiDiscoverableModels", () => {
           reasoning: false,
         } as Model<Api>,
         () => "OpenRouter",
+        () => "builtin",
       ),
     ).toBeNull();
   });
@@ -375,7 +452,1225 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("restores Fable 5 and Opus 4.8 after an extension replaces the Anthropic catalog", async () => {
+  it("uses the product safe reader for OmniMind create and refresh", async () => {
+    const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-agent-model-reader-"));
+    const modelsPath = path.join(agentDir, "models.json");
+    const authPath = path.join(agentDir, "auth.json");
+    const modelConfig = (provider: string, model: string) =>
+      JSON.stringify({
+        providers: {
+          [provider]: {
+            api: "openai-completions",
+            baseUrl: "https://example.test/v1",
+            models: [{ id: model }],
+          },
+        },
+      });
+
+    try {
+      writeFileSync(modelsPath, modelConfig("custom-one", "model-one"));
+      writeFileSync(
+        authPath,
+        JSON.stringify({ "custom-one": { type: "api_key", key: "test-key" } }),
+      );
+      const runtime = await createOmniMindModelRuntime(agentDir);
+
+      expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
+      expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
+
+      writeFileSync(modelsPath, modelConfig("custom-two", "model-two"));
+      await runtime.refresh({ allowNetwork: false });
+
+      expect(runtime.getModelConfigProviderIds()).toEqual(["custom-two"]);
+      expect(runtime.getModel("custom-one", "model-one")).toBeUndefined();
+      expect(runtime.getModel("custom-two", "model-two")).toBeDefined();
+
+      rmSync(modelsPath);
+      await runtime.refresh({ allowNetwork: false });
+
+      expect(runtime.getError()).toBeDefined();
+    } finally {
+      rmSync(agentDir, { recursive: true, force: true });
+    }
+  });
+
+  it("uses the accepted product catalog for discovery and Session creation", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-adapter-reader-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("omnimind-model-reader-thread");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+
+    try {
+      writeFileSync(
+        path.join(agentDir, "models.json"),
+        JSON.stringify({
+          providers: {
+            local: {
+              api: "openai-completions",
+              baseUrl: "https://example.test/v1",
+              models: [{ id: "safe-model" }],
+            },
+          },
+        }),
+      );
+      writeFileSync(
+        path.join(agentDir, "auth.json"),
+        JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+      );
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const catalog = yield* adapter.listModels!({ provider: "omnimind", cwd });
+            const session = yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const reloaded = yield* adapter.reloadSessionResources!(threadId);
+            yield* adapter.stopSession(threadId);
+            const afterStop = yield* adapter.reloadSessionResources!(threadId);
+            return { afterStop, catalog, reloaded, session };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.catalog.models).toContainEqual(
+        expect.objectContaining({ slug: "local/safe-model", upstreamProviderId: "local" }),
+      );
+      expect(result.session).toMatchObject({
+        provider: "omnimind",
+        model: "local/safe-model",
+        status: "ready",
+      });
+      expect(result.reloaded).toBe("reloaded");
+      expect(result.afterStop).toBe("no_active_session");
+    } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("reconciles an existing OmniMind Session on the next send after credential mutation", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-credential-reconcile-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("omnimind-credential-reconcile-thread");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    const requests: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request) => {
+      requests.push(request instanceof Request ? request.url : String(request));
+      return new Response(
+        [
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}',
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const before = yield* Effect.exit(
+              adapter.sendTurn({
+                threadId,
+                input: "before credential mutation",
+                attachments: [],
+                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              }),
+            );
+            yield* Effect.sync(() => {
+              writeFileSync(
+                path.join(agentDir, "auth.json"),
+                JSON.stringify({ local: { type: "api_key", key: "test-only-api-key" } }),
+              );
+              publishOmniMindModelRuntimeMutation(agentDir);
+            });
+            const after = yield* adapter.sendTurn({
+              threadId,
+              input: "after credential mutation",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            return { before, after };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.before._tag).toBe("Failure");
+      expect(result.after.turnId).toBeDefined();
+      expect(requests).toHaveLength(1);
+      expect(new URL(requests[0]!).pathname).toBe("/v1/chat/completions");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an active OmniMind turn on its original credentials and reconciles only the next send", async () => {
+    const serverRoot = mkdtempSync(
+      path.join(tmpdir(), "omnimind-agent-active-credential-reconcile-"),
+    );
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000043");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-old-key" } }),
+    );
+    const authorizationHeaders: Array<string | null> = [];
+    let releaseFirstRequest!: () => void;
+    const firstRequestGate = new Promise<void>((resolve) => {
+      releaseFirstRequest = resolve;
+    });
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestCount += 1;
+      authorizationHeaders.push(
+        new Headers(request instanceof Request ? request.headers : init?.headers).get(
+          "authorization",
+        ),
+      );
+      if (requestCount === 1) await firstRequestGate;
+      return new Response(
+        [
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{"role":"assistant","content":"ok"},"finish_reason":null}]}',
+          'data: {"id":"chatcmpl-test","object":"chat.completion.chunk","created":1,"model":"safe-model","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}',
+          "data: [DONE]",
+          "",
+        ].join("\n\n"),
+        { headers: { "content-type": "text/event-stream" } },
+      );
+    });
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const first = yield* adapter.sendTurn({
+              threadId,
+              input: "active turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.sleep("20 millis");
+            const reloadWhileActive = yield* adapter.reloadSessionResources!(threadId);
+            yield* Effect.sync(() => {
+              writeFileSync(
+                path.join(agentDir, "auth.json"),
+                JSON.stringify({ local: { type: "api_key", key: "test-new-key" } }),
+              );
+              publishOmniMindModelRuntimeMutation(agentDir);
+            });
+            const overlapping = yield* Effect.exit(
+              adapter.sendTurn({
+                threadId,
+                input: "must not hot-switch",
+                attachments: [],
+                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              }),
+            );
+            yield* Effect.sync(releaseFirstRequest);
+            yield* Effect.sleep("50 millis");
+            const next = yield* adapter.sendTurn({
+              threadId,
+              input: "next turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            return { first, overlapping, reloadWhileActive, next };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.first.turnId).toBeDefined();
+      expect(result.overlapping._tag).toBe("Failure");
+      expect(result.reloadWhileActive).toBe("busy");
+      expect(result.next.turnId).toBeDefined();
+      expect(authorizationHeaders).toEqual(["Bearer test-old-key", "Bearer test-new-key"]);
+    } finally {
+      releaseFirstRequest();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps one active turn across a retryable attempt and emits one terminal success", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-success-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000044");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: true, maxRetries: 1, baseDelayMs: 10 } }),
+    );
+    let requestCount = 0;
+    let releaseSuccessfulRetry!: () => void;
+    const successfulRetryGate = new Promise<void>((resolve) => {
+      releaseSuccessfulRetry = resolve;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      if (requestCount === 1) return piRetryableResponse();
+      await successfulRetryGate;
+      return piOpenAiSuccessResponse("recovered");
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "retry once",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some(isPiAutoRetryWarning),
+                "Pi auto-retry did not become observable.",
+              ),
+            );
+            const duringRetry = yield* adapter.listSessions();
+            const terminalsBeforeRetry = events.filter(
+              (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+            );
+            yield* Effect.sync(releaseSuccessfulRetry);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some((event) => event.type === "turn.completed"),
+                "Pi retry success did not settle.",
+              ),
+            );
+            const nextTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "next turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.filter((event) => event.type === "turn.completed").length === 2,
+                "The turn after a Pi retry did not settle independently.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { duringRetry, nextTurn, terminalsBeforeRetry, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const terminals = events.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(result.duringRetry).toContainEqual(
+        expect.objectContaining({ activeTurnId: result.turn.turnId, status: "running" }),
+      );
+      expect(result.terminalsBeforeRetry).toEqual([]);
+      expect(requestCount).toBe(3);
+      expect(terminals).toHaveLength(2);
+      expect(terminals.filter((event) => event.turnId === result.turn.turnId)).toHaveLength(1);
+      expect(terminals.filter((event) => event.turnId === result.nextTurn.turnId)).toHaveLength(1);
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.turn.turnId,
+        ),
+      ).toHaveLength(1);
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.nextTurn.turnId,
+        ),
+      ).toHaveLength(1);
+      expect(terminals).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "turn.completed",
+            turnId: result.turn.turnId,
+            payload: expect.objectContaining({ state: "completed" }),
+          }),
+          expect.objectContaining({
+            type: "turn.completed",
+            turnId: result.nextTurn.turnId,
+            payload: expect.objectContaining({ state: "completed" }),
+          }),
+        ]),
+      );
+      expect(
+        events.filter(
+          (event) =>
+            event.type === "content.delta" &&
+            event.turnId !== result.turn.turnId &&
+            event.turnId !== result.nextTurn.turnId,
+        ),
+      ).toEqual([]);
+    } finally {
+      releaseSuccessfulRetry();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("emits one failed terminal only after Pi exhausts its retry budget", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-exhausted-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000045");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: true, maxRetries: 1, baseDelayMs: 10 } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return piRetryableResponse();
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "exhaust retry",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some((event) => event.type === "turn.completed"),
+                "Pi retry exhaustion did not settle.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            const sessions = yield* adapter.listSessions();
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { sessions, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const terminals = events.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(requestCount).toBe(2);
+      expect(terminals).toHaveLength(1);
+      expect(terminals[0]).toMatchObject({
+        type: "turn.completed",
+        turnId: result.turn.turnId,
+        payload: { state: "failed", stopReason: "error" },
+      });
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.turn.turnId,
+        ),
+      ).toHaveLength(1);
+      expect(result.sessions).toContainEqual(expect.objectContaining({ status: "ready" }));
+      expect(result.sessions[0]).not.toHaveProperty("activeTurnId");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("settles once when a user aborts during Pi retry backoff", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-auto-retry-abort-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000046");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: true, maxRetries: 3, baseDelayMs: 10_000 } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return piRetryableResponse();
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "cancel retry",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some(isPiAutoRetryWarning),
+                "Pi retry backoff did not begin.",
+              ),
+            );
+            yield* adapter.interruptTurn(threadId, turn.turnId);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some((event) => event.type === "turn.completed"),
+                "Pi retry cancellation did not settle.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            const sessions = yield* adapter.listSessions();
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { sessions, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const terminals = events.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(requestCount).toBe(1);
+      expect(terminals).toHaveLength(1);
+      expect(terminals[0]).toMatchObject({
+        type: "turn.completed",
+        turnId: result.turn.turnId,
+        payload: { state: "cancelled", stopReason: "cancelled" },
+      });
+      expect(
+        events.filter(
+          (event) => event.type === "turn.started" && event.turnId === result.turn.turnId,
+        ),
+      ).toHaveLength(1);
+      expect(result.sessions).toContainEqual(expect.objectContaining({ status: "ready" }));
+      expect(result.sessions[0]).not.toHaveProperty("activeTurnId");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps one Product turn while Pi compacts an overflow and continues the prompt", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-overflow-compaction-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000047");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128, maxTokens: 32 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({
+        retry: { enabled: false },
+        compaction: { enabled: true, reserveTokens: 32, keepRecentTokens: 1 },
+      }),
+    );
+    let requestCount = 0;
+    let releasePostCompaction!: () => void;
+    const postCompactionGate = new Promise<void>((resolve) => {
+      releasePostCompaction = resolve;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      if (requestCount === 1) return piOpenAiSuccessResponse("seed response");
+      if (requestCount === 2) return piContextOverflowResponse();
+      if (requestCount === 4) {
+        await postCompactionGate;
+        return piOpenAiSuccessResponse("post-compaction success");
+      }
+      return piOpenAiSuccessResponse(`compaction summary ${requestCount}`);
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const seed = yield* adapter.sendTurn({
+              threadId,
+              input: "seed enough history for overflow recovery",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === seed.turnId,
+                  ),
+                "The seed turn did not settle.",
+              ),
+            );
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "recover this turn after context compaction",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "item.completed" &&
+                      event.turnId === turn.turnId &&
+                      event.payload.itemType === "context_compaction",
+                  ),
+                "Pi overflow compaction did not complete.",
+              ),
+            );
+            const duringCompactionContinuation = yield* adapter.listSessions();
+            const terminalsBeforeContinuation = events.filter(
+              (event) =>
+                (event.type === "turn.completed" || event.type === "turn.aborted") &&
+                event.turnId === turn.turnId,
+            );
+            yield* Effect.sync(releasePostCompaction);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+                  ),
+                "The post-compaction continuation did not settle.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { duringCompactionContinuation, terminalsBeforeContinuation, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const turnEvents = events.filter((event) => event.turnId === result.turn.turnId);
+      const terminals = turnEvents.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(requestCount).toBe(4);
+      expect(result.terminalsBeforeContinuation).toEqual([]);
+      expect(result.duringCompactionContinuation).toContainEqual(
+        expect.objectContaining({ activeTurnId: result.turn.turnId, status: "running" }),
+      );
+      expect(turnEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(terminals).toHaveLength(1);
+      expect(terminals[0]).toMatchObject({
+        type: "turn.completed",
+        turnId: result.turn.turnId,
+        payload: { state: "completed" },
+      });
+      expect(
+        turnEvents.filter(
+          (event) =>
+            event.type === "content.delta" &&
+            event.payload.streamKind === "assistant_text" &&
+            event.payload.delta.includes("post-compaction success"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      releasePostCompaction();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("settles loaded no-Agent extension command and input outcomes exactly once", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-command-outcome-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000048");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "extensions", "noop.ts"),
+      [
+        "export default function setup(pi) {",
+        '  pi.registerCommand("noop", {',
+        '    description: "No Agent command",',
+        "    handler: async () => {},",
+        "  });",
+        '  pi.registerCommand("fail", {',
+        '    description: "Failing no Agent command",',
+        '    handler: async () => { throw new Error("private extension diagnostic"); },',
+        "  });",
+        '  pi.registerCommand("agent", {',
+        '    description: "Agent command",',
+        '    handler: async () => { pi.sendUserMessage("from command"); },',
+        "  });",
+        '  pi.registerCommand("mixed", {',
+        '    description: "Agent command that then fails",',
+        "    handler: async () => {",
+        '      pi.sendUserMessage("from failing command");',
+        '      throw new Error("private mixed extension diagnostic");',
+        "    },",
+        "  });",
+        '  pi.on("input", async (event) =>',
+        '    event.text === "handled input" ? { action: "handled" } : { action: "continue" },',
+        "  );",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    let releaseCommandAgentResponse!: () => void;
+    const commandAgentResponseGate = new Promise<void>((resolve) => {
+      releaseCommandAgentResponse = resolve;
+    });
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      if (requestCount === 1) await commandAgentResponseGate;
+      return piOpenAiSuccessResponse("next turn response");
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const requestsAfterStart = requestCount;
+            const commandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/noop",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === commandTurn.turnId,
+                  ),
+                "The no-Agent extension command did not settle.",
+              ),
+            );
+            const requestsAfterCommand = requestCount;
+            const afterCommand = yield* adapter.listSessions();
+            const failedCommandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/fail",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === failedCommandTurn.turnId,
+                  ),
+                "The failed no-Agent extension command did not settle.",
+              ),
+            );
+            const handledInputTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "handled input",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === handledInputTurn.turnId,
+                  ),
+                "The handled input hook did not settle.",
+              ),
+            );
+            const agentCommandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/agent",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => requestCount === requestsAfterStart + 1,
+                "The Agent-triggering extension command did not start its request.",
+              ),
+            );
+            const duringAgentCommand = yield* adapter.listSessions();
+            const agentCommandTerminalsBeforeResponse = events.filter(
+              (event) =>
+                event.turnId === agentCommandTurn.turnId &&
+                (event.type === "turn.completed" || event.type === "turn.aborted"),
+            );
+            yield* Effect.sync(releaseCommandAgentResponse);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === agentCommandTurn.turnId,
+                  ),
+                "The Agent-triggering extension command did not settle.",
+              ),
+            );
+            const mixedCommandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/mixed",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === mixedCommandTurn.turnId,
+                  ),
+                "The mixed Agent/command failure did not settle.",
+              ),
+            );
+            const nextTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "ordinary next turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === nextTurn.turnId,
+                  ),
+                "The turn after the extension command did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return {
+              afterCommand,
+              agentCommandTerminalsBeforeResponse,
+              agentCommandTurn,
+              commandTurn,
+              duringAgentCommand,
+              failedCommandTurn,
+              handledInputTurn,
+              mixedCommandTurn,
+              nextTurn,
+              requestsAfterCommand,
+              requestsAfterStart,
+            };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const commandEvents = events.filter((event) => event.turnId === result.commandTurn.turnId);
+      const agentCommandEvents = events.filter(
+        (event) => event.turnId === result.agentCommandTurn.turnId,
+      );
+      const failedCommandEvents = events.filter(
+        (event) => event.turnId === result.failedCommandTurn.turnId,
+      );
+      const handledInputEvents = events.filter(
+        (event) => event.turnId === result.handledInputTurn.turnId,
+      );
+      const mixedCommandEvents = events.filter(
+        (event) => event.turnId === result.mixedCommandTurn.turnId,
+      );
+      const nextEvents = events.filter((event) => event.turnId === result.nextTurn.turnId);
+      expect(result.requestsAfterCommand).toBe(result.requestsAfterStart);
+      expect(requestCount).toBe(result.requestsAfterStart + 3);
+      expect(result.afterCommand).toContainEqual(expect.objectContaining({ status: "ready" }));
+      expect(commandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(commandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({ state: "completed", stopReason: "command" }),
+        }),
+      ]);
+      expect(failedCommandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(failedCommandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            errorMessage: "The extension action could not be completed.",
+            state: "failed",
+            stopReason: "error",
+          }),
+        }),
+      ]);
+      expect(JSON.stringify(failedCommandEvents)).not.toContain("private extension diagnostic");
+      expect(handledInputEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(handledInputEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({ state: "completed", stopReason: "command" }),
+        }),
+      ]);
+      expect(result.agentCommandTerminalsBeforeResponse).toEqual([]);
+      expect(result.duringAgentCommand).toContainEqual(
+        expect.objectContaining({
+          activeTurnId: result.agentCommandTurn.turnId,
+          status: "running",
+        }),
+      );
+      expect(agentCommandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(agentCommandEvents.filter((event) => event.type === "turn.completed")).toHaveLength(1);
+      expect(mixedCommandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(mixedCommandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            errorMessage: "The extension action could not be completed.",
+            state: "failed",
+            stopReason: "error",
+          }),
+        }),
+      ]);
+      expect(JSON.stringify(mixedCommandEvents)).not.toContain(
+        "private mixed extension diagnostic",
+      );
+      expect(nextEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(nextEvents.filter((event) => event.type === "turn.completed")).toHaveLength(1);
+    } finally {
+      releaseCommandAgentResponse();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("settles a stock Pi no-Agent extension command through the same typed outcome", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "stock-pi-command-outcome-"));
+    const agentDir = path.join(serverRoot, "pi-home");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000049");
+    mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "extensions", "noop.ts"),
+      [
+        "export default function setup(pi) {",
+        '  pi.registerCommand("noop", {',
+        '    description: "No Agent command",',
+        "    handler: async () => {},",
+        "  });",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return piOpenAiSuccessResponse("next stock Pi turn response");
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makePiAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* PiAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "pi",
+              threadId,
+              cwd,
+              providerOptions: { pi: { agentDir } },
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const commandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/noop",
+              attachments: [],
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === commandTurn.turnId,
+                  ),
+                "The stock Pi no-Agent command did not settle.",
+              ),
+            );
+            const nextTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "ordinary stock Pi turn",
+              attachments: [],
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === nextTurn.turnId,
+                  ),
+                "The stock Pi turn after the command did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { commandTurn, nextTurn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const commandEvents = events.filter((event) => event.turnId === result.commandTurn.turnId);
+      const nextEvents = events.filter((event) => event.turnId === result.nextTurn.turnId);
+      expect(requestCount).toBe(1);
+      expect(commandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(commandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({ state: "completed", stopReason: "command" }),
+        }),
+      ]);
+      expect(nextEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(nextEvents.filter((event) => event.type === "turn.completed")).toHaveLength(1);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves the exact extension catalog without synthesizing Anthropic models", async () => {
     const agentDir = mkdtempSync(path.join(tmpdir(), "omnimind-pi-anthropic-"));
     const modelsPath = path.join(agentDir, "models.json");
     const authPath = path.join(agentDir, "auth.json");
@@ -426,67 +1721,41 @@ describe("getPiDiscoverableModels", () => {
       const models = getPiDiscoverableModels(registry);
 
       expect(
-        models.some((model) => model.provider === "anthropic" && model.id === "claude-fable-5"),
-      ).toBe(true);
-      expect(
-        models.some((model) => model.provider === "anthropic" && model.id === "claude-opus-4-8"),
-      ).toBe(true);
+        models.filter((model) => model.provider === "anthropic").map((model) => model.id),
+      ).toEqual(["claude-opus-4-7"]);
     } finally {
       rmSync(agentDir, { recursive: true, force: true });
     }
   });
 });
 
-describe("ensurePiAnthropicCatalogModels", () => {
-  it("does not invent Anthropic models when Anthropic is unauthenticated", () => {
-    const models = ensurePiAnthropicCatalogModels([
-      {
-        id: "glm-5.2",
-        name: "GLM 5.2",
-        api: "openai-completions",
-        provider: "local",
-        baseUrl: "http://127.0.0.1:11434/v1",
-        reasoning: false,
-        input: ["text"],
-        cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-        contextWindow: 128_000,
-        maxTokens: 16_384,
-      },
-    ]);
+describe("findModelInRegistry", () => {
+  const makeModel = (provider: string, id: string) =>
+    ({ provider, id, name: id, api: "openai-completions" }) as Model<Api>;
 
-    expect(models.every((model) => model.provider !== "anthropic")).toBe(true);
+  it("accepts only exact qualified models and never fabricates provider peers", () => {
+    const existing = makeModel("openai", "gpt-existing");
+    const registry = {
+      find: (provider: string, id: string) =>
+        provider === existing.provider && id === existing.id ? existing : undefined,
+      getAll: () => [existing],
+      getAvailable: () => [existing],
+    };
+
+    expect(findModelInRegistry(registry, "openai/gpt-existing")).toBe(existing);
+    expect(findModelInRegistry(registry, "openai/made-up")).toBeUndefined();
   });
 
-  it("restores Fable 5 and Opus 4.8 when an oauth catalog omitted them", () => {
-    const peer = {
-      id: "claude-opus-4-7",
-      name: "Claude Opus 4.7",
-      api: "anthropic-messages" as const,
-      provider: "anthropic",
-      baseUrl: "https://api.anthropic.com",
-      reasoning: true,
-      input: ["text", "image"] as Array<"text" | "image">,
-      cost: { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 },
-      contextWindow: 1_000_000,
-      maxTokens: 128_000,
+  it("rejects an ambiguous legacy unqualified model id", () => {
+    const first = makeModel("provider-a", "shared-model");
+    const second = makeModel("provider-b", "shared-model");
+    const registry = {
+      find: () => undefined,
+      getAll: () => [first, second],
+      getAvailable: () => [first, second],
     };
-    const models = ensurePiAnthropicCatalogModels([peer], [peer]);
 
-    expect(models.map((model) => model.id)).toEqual([
-      "claude-opus-4-7",
-      "claude-fable-5",
-      "claude-opus-4-8",
-    ]);
-    expect(models.find((model) => model.id === "claude-fable-5")).toMatchObject({
-      provider: "anthropic",
-      name: "Claude Fable 5",
-      reasoning: true,
-    });
-    expect(models.find((model) => model.id === "claude-opus-4-8")).toMatchObject({
-      provider: "anthropic",
-      name: "Claude Opus 4.8",
-      reasoning: true,
-    });
+    expect(findModelInRegistry(registry, "shared-model")).toBeUndefined();
   });
 });
 

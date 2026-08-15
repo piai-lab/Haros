@@ -2,7 +2,12 @@
 // Purpose: Public Zustand facade for composer drafts, model choices, attachments, and persistence.
 // Exports: Stable composer draft API, hooks, and promotion helpers.
 
-import { type ModelSelection, type ProviderKind, type ThreadId } from "@omnimind/contracts";
+import {
+  type ModelSelection,
+  type ModelSlug,
+  type ProviderKind,
+  type ThreadId,
+} from "@omnimind/contracts";
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -10,6 +15,7 @@ import { createComposerDraftStoreState } from "./composerDraftActions";
 import {
   COMPOSER_DRAFT_STORAGE_KEY,
   COMPOSER_DRAFT_STORAGE_VERSION,
+  resolvePendingDirectTurnRecoveryMutation,
   selectComposerThreadDraft,
   type ComposerDraftStoreState,
   type ComposerThreadDraftState,
@@ -44,6 +50,7 @@ export {
 } from "./composerDraftDomain";
 export type {
   ComposerAssistantSelectionAttachment,
+  ComposerBindingSnapshot,
   ComposerAttachmentPersistenceResult,
   ComposerDraftStoreState,
   ComposerFileAttachment,
@@ -52,6 +59,7 @@ export type {
   ComposerThreadDraftState,
   DraftThreadEnvMode,
   DraftThreadState,
+  PendingDirectTurnRecovery,
   QueuedComposerChatTurn,
   QueuedComposerPlanFollowUp,
   QueuedComposerTurn,
@@ -113,6 +121,29 @@ export const useComposerDraftStore = create<ComposerDraftStoreState>()(
   ),
 );
 
+// Recovery supersession belongs to the persisted Composer owner rather than a
+// mounted ChatView. Only compare a marker that existed on both sides of the
+// mutation: arming, hydration, settlement, and replacement are owner actions,
+// not newer user intent.
+useComposerDraftStore.subscribe((state, previousState) => {
+  for (const [threadId, currentDraft] of Object.entries(state.draftsByThreadId)) {
+    const currentRecovery = currentDraft.pendingDirectTurnRecovery;
+    if (!currentRecovery) continue;
+    const previousDraft = previousState.draftsByThreadId[threadId as ThreadId];
+    if (previousDraft?.pendingDirectTurnRecovery?.recoveryId !== currentRecovery.recoveryId) {
+      continue;
+    }
+    const mutation = resolvePendingDirectTurnRecoveryMutation(previousDraft, currentDraft);
+    if (mutation !== "none") {
+      state.supersedePendingDirectTurnRecovery(
+        threadId as ThreadId,
+        currentRecovery.recoveryId,
+        mutation,
+      );
+    }
+  }
+});
+
 export function useComposerThreadDraft(threadId: ThreadId): ComposerThreadDraftState {
   return useComposerDraftStore((state) => selectComposerThreadDraft(state, threadId));
 }
@@ -122,17 +153,25 @@ export function useEffectiveComposerModelState(input: {
   selectedProvider: ProviderKind;
   threadModelSelection: ModelSelection | null | undefined;
   projectModelSelection: ModelSelection | null | undefined;
+  runtimeCatalogFallbackModel?: ModelSlug | null | undefined;
   customModelsByProvider: Partial<Record<ProviderKind, readonly string[]>>;
   availableModelOptionsByProvider?: Partial<
     Record<ProviderKind, ReadonlyArray<{ slug: string; name: string }>>
   >;
 }): EffectiveComposerModelState {
   const draft = useComposerThreadDraft(input.threadId);
+  const stickyModelSelection = useComposerDraftStore(
+    (state) => state.stickyModelSelectionByProvider[input.selectedProvider] ?? null,
+  );
   return deriveEffectiveComposerModelState({
     draft,
     selectedProvider: input.selectedProvider,
     threadModelSelection: input.threadModelSelection,
     projectModelSelection: input.projectModelSelection,
+    stickyModelSelection,
+    ...(input.runtimeCatalogFallbackModel !== undefined
+      ? { runtimeCatalogFallbackModel: input.runtimeCatalogFallbackModel }
+      : {}),
     customModelsByProvider: input.customModelsByProvider,
     ...(input.availableModelOptionsByProvider !== undefined
       ? { availableModelOptionsByProvider: input.availableModelOptionsByProvider }

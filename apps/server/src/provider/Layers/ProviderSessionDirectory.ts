@@ -121,6 +121,21 @@ const makeProviderSessionDirectory = Effect.gen(function* () {
       .pipe(Effect.mapError(toPersistenceError("ProviderSessionDirectory.upsert:upsert")));
   });
 
+  const replace: ProviderSessionDirectoryShape["replace"] = (binding) =>
+    repository
+      .upsert({
+        threadId: binding.threadId,
+        providerName: binding.provider,
+        adapterKey: binding.adapterKey ?? binding.provider,
+        runtimeMode: binding.runtimeMode ?? "full-access",
+        status: binding.status ?? "running",
+        lifecycleGeneration: binding.lifecycleGeneration ?? "legacy",
+        lastSeenAt: new Date().toISOString(),
+        resumeCursor: binding.resumeCursor ?? null,
+        runtimePayload: binding.runtimePayload ?? null,
+      })
+      .pipe(Effect.mapError(toPersistenceError("ProviderSessionDirectory.replace:upsert")));
+
   const getProvider: ProviderSessionDirectoryShape["getProvider"] = (threadId) =>
     getBinding(threadId).pipe(
       Effect.flatMap((binding) =>
@@ -184,6 +199,7 @@ const makeProviderSessionDirectory = Effect.gen(function* () {
 
   return {
     upsert,
+    replace,
     getProvider,
     getBinding,
     remove,

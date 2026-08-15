@@ -1020,10 +1020,9 @@ export type ModelOptionsByProvider = typeof MODEL_OPTIONS_BY_PROVIDER;
 type BuiltInModelSlug = (typeof MODEL_OPTIONS_BY_PROVIDER)[ProviderKind][number]["slug"];
 export type ModelSlug = BuiltInModelSlug | (string & {});
 
-export type ProviderWithDefaultModel = Exclude<ProviderKind, "pi">;
+export type ProviderWithDefaultModel = Exclude<ProviderKind, "omnimind" | "pi">;
 
 export const DEFAULT_MODEL_BY_PROVIDER: Record<ProviderWithDefaultModel, ModelSlug> = {
-  omnimind: "deepseek/deepseek-chat",
   codex: "gpt-5.5",
   claudeAgent: "claude-sonnet-5",
   cursor: "auto",
@@ -1195,7 +1194,7 @@ export const MODEL_CAPABILITIES_INDEX = Object.fromEntries(
 // ── Provider display names ────────────────────────────────────────────
 
 export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
-  omnimind: "OmniMind Agent",
+  omnimind: "OmniMind",
   codex: "Codex",
   claudeAgent: "Claude",
   cursor: "Cursor",

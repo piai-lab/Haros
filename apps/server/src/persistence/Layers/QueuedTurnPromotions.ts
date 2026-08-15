@@ -132,7 +132,7 @@ const make = Effect.gen(function* () {
       SET state = 'cancelled', claim_owner = NULL, claimed_at = NULL,
           claim_expires_at = NULL, updated_at = ${input.updatedAt}
       WHERE thread_id = ${input.threadId} AND message_id = ${input.messageId}
-        AND state = 'queued'
+        AND state IN ('queued', 'promoting')
       RETURNING queued_event_sequence AS sequence
     `.pipe(
       Effect.map((rows) => rows.length === 1),

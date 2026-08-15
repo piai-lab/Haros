@@ -14,6 +14,11 @@ export interface CommandResult {
   readonly code: number;
 }
 
+/** Preserves a confirmed shell-level command miss as structured probe evidence. */
+export function makeCommandMissingCause(command: string): Error & { readonly code: "ENOENT" } {
+  return Object.assign(new Error(`Could not start ${command}.`), { code: "ENOENT" as const });
+}
+
 export function nonEmptyTrimmed(value: string | undefined): string | undefined {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -21,9 +26,31 @@ export function nonEmptyTrimmed(value: string | undefined): string | undefined {
 }
 
 export function isCommandMissingCause(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const lower = error.message.toLowerCase();
-  return lower.includes("enoent") || lower.includes("notfound");
+  const pending: unknown[] = [error];
+  const visited = new Set<object>();
+
+  while (pending.length > 0) {
+    const candidate = pending.pop();
+    if (!candidate || typeof candidate !== "object" || visited.has(candidate)) continue;
+    visited.add(candidate);
+
+    const structured = candidate as {
+      readonly _tag?: unknown;
+      readonly reason?: unknown;
+      readonly code?: unknown;
+      readonly cause?: unknown;
+    };
+    if (
+      structured._tag === "NotFound" ||
+      structured.reason === "NotFound" ||
+      structured.code === "ENOENT"
+    ) {
+      return true;
+    }
+    pending.push(structured.reason, structured.cause);
+  }
+
+  return false;
 }
 
 export function detailFromResult(

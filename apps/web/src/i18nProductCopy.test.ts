@@ -3,6 +3,8 @@ import { basename, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
+import { EN_MESSAGES, ZH_CN_MESSAGES } from "./i18n";
+
 const PRODUCT_COPY_SOURCES = [
   "routes/_chat.settings.tsx",
   "routes/-automations.shared.tsx",
@@ -55,7 +57,9 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/ComposerCommandMenu.tsx",
   "components/chat/ComposerExtrasMenu.tsx",
   "components/chat/ComposerLocalDirectoryMenu.tsx",
+  "components/chat/ComposerEnginePicker.tsx",
   "components/chat/ComposerModelEffortPicker.tsx",
+  "components/chat/ProviderModelPicker.tsx",
   "components/chat/ContextWindowMeter.tsx",
   "components/chat/GeneratedMarkdownImage.tsx",
   "components/chat/ComposerPendingTerminalContexts.tsx",
@@ -215,7 +219,6 @@ const RAW_FACT_ALLOWLIST = [
   "useComposerCommandMenuItems.ts:property:`/${command.name}`",
   "useComposerCommandMenuItems.ts:property:`${providerLabel} · ${slug}`",
   // Persisted internal placeholder; ChatView maps it through the catalog at presentation time.
-  "useHandleNewThread.ts:property:New terminal",
   "TerminalSearch.tsx:text:Aa",
 ] as const satisfies readonly string[];
 
@@ -345,5 +348,94 @@ describe("reachable OmniMind-owned product copy", () => {
       ),
       "translate product copy with useI18n(); allow only exact reviewed raw facts",
     ).toEqual([]);
+  });
+
+  it("keeps normal Model services copy in product language", () => {
+    const forbidden = [
+      /\bPi\b/u,
+      /credential owner/iu,
+      /models\.json/iu,
+      /ModelRuntime/u,
+      /runtime projection/iu,
+      /local model snapshot/iu,
+      /凭据\s*owner/iu,
+      /本地模型快照/u,
+    ];
+    const catalogs = [EN_MESSAGES, ZH_CN_MESSAGES] as const;
+
+    for (const catalog of catalogs) {
+      const modelServiceCopy = Object.entries(catalog).filter(
+        ([key]) =>
+          key.startsWith("settings.modelService") ||
+          key.startsWith("settings.customApi") ||
+          key.startsWith("settings.legacyOmniMindModel"),
+      );
+      expect(
+        modelServiceCopy.flatMap(([key, message]) =>
+          forbidden.flatMap((pattern) => (pattern.test(message) ? [`${key}: ${message}`] : [])),
+        ),
+      ).toEqual([]);
+    }
+
+    expect(EN_MESSAGES["settings.customApiKeyDescription"]).toContain("saved on this device");
+    expect(ZH_CN_MESSAGES["settings.customApiKeyDescription"]).toContain("保存在这台设备上");
+    expect(EN_MESSAGES["settings.modelServiceOriginModelsJson"]).toBe(
+      "Connected with an API endpoint",
+    );
+    expect(ZH_CN_MESSAGES["settings.modelServiceOriginModelsJson"]).toBe("通过 API 地址连接");
+    expect(EN_MESSAGES["settings.noServiceModels"]).toContain("service");
+    expect(ZH_CN_MESSAGES["settings.noServiceModels"]).toContain("服务");
+    expect(EN_MESSAGES["settings.recommendedModelServices"]).toBe("Recommended");
+    expect(ZH_CN_MESSAGES["settings.recommendedModelServices"]).toBe("推荐");
+    expect(EN_MESSAGES["settings.otherModelServices"]).toBe("Other services");
+    expect(ZH_CN_MESSAGES["settings.otherModelServices"]).toBe("其他服务");
+    expect(EN_MESSAGES["settings.modelServiceAuthMethodApiKey"]).toBe("API Key");
+    expect(ZH_CN_MESSAGES["settings.modelServiceAuthMethodApiKey"]).toBe("API Key");
+    expect(EN_MESSAGES["settings.modelServiceAuthMethodSignIn"]).toBe("Sign in");
+    expect(ZH_CN_MESSAGES["settings.modelServiceAuthMethodSignIn"]).toBe("登录");
+    expect(EN_MESSAGES["settings.customApiCommandRiskTitle"]).toBe("Run a local command?");
+    expect(ZH_CN_MESSAGES["settings.customApiCommandRiskTitle"]).toBe("执行本机命令？");
+    expect(EN_MESSAGES["settings.customApiCredentialCommandExecutionWarning"]).toContain(
+      "provide a hidden value",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiCredentialCommandExecutionWarning"]).toContain(
+      "提供隐藏值",
+    );
+    expect(EN_MESSAGES["settings.customApiHeaderCommandDescription.provider"]).toContain(
+      "without another Settings confirmation",
+    );
+    expect(ZH_CN_MESSAGES["settings.customApiHeaderCommandDescription.provider"]).toContain(
+      "不会再次经过设置页确认",
+    );
+    expect(EN_MESSAGES["settings.legacyOmniMindModelsDescription"]).toContain(
+      "real API format, endpoint, and credential",
+    );
+    expect(ZH_CN_MESSAGES["settings.legacyOmniMindModelsDescription"]).toContain(
+      "真实的 API 格式、地址和凭据",
+    );
+    expect(EN_MESSAGES["settings.legacyOmniMindModelRemoveDescription"]).toContain(
+      "does not delete an API connection",
+    );
+    expect(ZH_CN_MESSAGES["settings.legacyOmniMindModelRemoveDescription"]).toContain(
+      "不会删除 API 连接",
+    );
+  });
+
+  it("distinguishes first-run setup from recovery in both supported languages", () => {
+    expect(EN_MESSAGES["composer.modelSetupTitle"]).toBe("Set up a model to get started");
+    expect(ZH_CN_MESSAGES["composer.modelSetupTitle"]).toBe("配置模型后开始");
+    expect(EN_MESSAGES["composer.modelSetupDescription"]).toContain("draft and attachments");
+    expect(ZH_CN_MESSAGES["composer.modelSetupDescription"]).toContain("草稿和附件");
+    expect(EN_MESSAGES["composer.modelRecoveryDescription"]).toContain("existing connection");
+    expect(ZH_CN_MESSAGES["composer.modelRecoveryDescription"]).toContain("现有连接");
+    expect(EN_MESSAGES["conversation.editRestartRequired"]).toContain("Stop");
+    expect(ZH_CN_MESSAGES["conversation.editRestartRequired"]).toContain("停止");
+    expect(EN_MESSAGES["conversation.editRestartRequiredDescription"]).toContain("restart");
+    expect(ZH_CN_MESSAGES["conversation.editRestartRequiredDescription"]).toContain("重新启动");
+  });
+
+  it("localizes automatic model retry progress", () => {
+    expect(EN_MESSAGES["timeline.modelRequestRetrying"]).toBe("Retrying model request");
+    expect(ZH_CN_MESSAGES["timeline.modelRequestRetrying"]).toBe("正在重试模型请求");
   });
 });

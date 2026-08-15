@@ -27,6 +27,7 @@ import { OrchestrationEventStoreLive } from "../../persistence/Layers/Orchestrat
 import { OrchestrationCommandReceiptRepositoryLive } from "../../persistence/Layers/OrchestrationCommandReceipts.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import { ProviderRuntimeEventRepositoryLive } from "../../persistence/Layers/ProviderRuntimeEvents.ts";
+import { ProviderSessionRuntimeRepositoryLive } from "../../persistence/Layers/ProviderSessionRuntime.ts";
 import {
   PROVIDER_RUNTIME_INGESTION_CONSUMER,
   ProviderRuntimeEventRepository,
@@ -35,6 +36,8 @@ import {
   ProviderService,
   type ProviderServiceShape,
 } from "../../provider/Services/ProviderService.ts";
+import { ProviderSessionDirectoryLive } from "../../provider/Layers/ProviderSessionDirectory.ts";
+import { ProviderSessionDirectory } from "../../provider/Services/ProviderSessionDirectory.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
 import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
@@ -68,6 +71,7 @@ type LegacyProviderRuntimeEvent = {
   readonly turnId?: string | undefined;
   readonly itemId?: string | undefined;
   readonly requestId?: string | undefined;
+  readonly lifecycleGeneration?: string | undefined;
   readonly payload?: unknown | undefined;
   readonly [key: string]: unknown;
 };
@@ -75,10 +79,14 @@ type LegacyProviderRuntimeEvent = {
 function createProviderServiceHarness() {
   const runtimeEventPubSub = Effect.runSync(PubSub.unbounded<ProviderRuntimeEvent>());
   const runtimeSessions: ProviderSession[] = [];
+  let runtimeProjectionLeaseDepth = 0;
+  let runtimeProjectionLeaseCalls = 0;
+  let listSessionsObservedWithinRuntimeProjectionLease = false;
 
   const unsupported = () => Effect.die(new Error("Unsupported provider call in test")) as never;
   const service: ProviderServiceShape = {
     startSession: () => unsupported(),
+    reloadSessionResources: () => unsupported(),
     sendTurn: () => unsupported(),
     steerTurn: () => unsupported(),
     startReview: () => unsupported(),
@@ -90,7 +98,27 @@ function createProviderServiceHarness() {
     respondToRequest: () => unsupported(),
     respondToUserInput: () => unsupported(),
     stopSession: () => unsupported(),
-    listSessions: () => Effect.succeed([...runtimeSessions]),
+    listSessions: () =>
+      Effect.sync(() => {
+        if (runtimeProjectionLeaseDepth > 0) {
+          listSessionsObservedWithinRuntimeProjectionLease = true;
+        }
+        return [...runtimeSessions];
+      }),
+    listSessionsStrict: () => Effect.succeed([...runtimeSessions]),
+    withModelServiceMutationFence: (_serviceId, effect) => effect,
+    withRuntimeEventProjectionLease: (_threadId, effect) =>
+      Effect.sync(() => {
+        runtimeProjectionLeaseCalls += 1;
+        runtimeProjectionLeaseDepth += 1;
+      }).pipe(
+        Effect.andThen(effect),
+        Effect.ensuring(
+          Effect.sync(() => {
+            runtimeProjectionLeaseDepth -= 1;
+          }),
+        ),
+      ),
     getCapabilities: (provider) =>
       Effect.succeed({
         sessionModelSwitch: "in-session",
@@ -150,6 +178,9 @@ function createProviderServiceHarness() {
     service,
     emit,
     setSession,
+    runtimeProjectionLeaseCalls: () => runtimeProjectionLeaseCalls,
+    listSessionsObservedWithinRuntimeProjectionLease: () =>
+      listSessionsObservedWithinRuntimeProjectionLease,
   };
 }
 
@@ -226,7 +257,10 @@ describe("ProviderRuntimeIngestion", () => {
   });
 
   let runtime: ManagedRuntime.ManagedRuntime<
-    OrchestrationEngineService | ProviderRuntimeIngestionService | ProviderRuntimeEventRepository,
+    | OrchestrationEngineService
+    | ProviderRuntimeIngestionService
+    | ProviderRuntimeEventRepository
+    | ProviderSessionDirectory,
     unknown
   > | null = null;
   let scope: Scope.Closeable | null = null;
@@ -265,11 +299,18 @@ describe("ProviderRuntimeIngestion", () => {
     const runtimeEventRepositoryLayer = ProviderRuntimeEventRepositoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
     );
+    const providerSessionRuntimeRepositoryLayer = ProviderSessionRuntimeRepositoryLive.pipe(
+      Layer.provide(SqlitePersistenceMemory),
+    );
+    const providerSessionDirectoryLayer = ProviderSessionDirectoryLive.pipe(
+      Layer.provide(providerSessionRuntimeRepositoryLayer),
+    );
     const layer = ProviderRuntimeIngestionLive.pipe(
       Layer.provideMerge(orchestrationLayer),
       Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(runtimeEventRepositoryLayer),
+      Layer.provideMerge(providerSessionDirectoryLayer),
       Layer.provideMerge(Layer.succeed(ProviderService, provider.service)),
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), process.cwd())),
       Layer.provideMerge(NodeServices.layer),
@@ -279,6 +320,9 @@ describe("ProviderRuntimeIngestion", () => {
     const ingestion = await runtime.runPromise(Effect.service(ProviderRuntimeIngestionService));
     const runtimeEventRepository = await runtime.runPromise(
       Effect.service(ProviderRuntimeEventRepository),
+    );
+    const providerSessionDirectory = await runtime.runPromise(
+      Effect.service(ProviderSessionDirectory),
     );
     scope = await Effect.runPromise(Scope.make("sequential"));
     let ingestionStarted = false;
@@ -291,6 +335,18 @@ describe("ProviderRuntimeIngestion", () => {
       await startIngestion();
     }
     const drain = () => Effect.runPromise(ingestion.drain);
+    const bindLegacyRuntimeSource = (
+      providerKind: ProviderKind,
+      threadId: ThreadId = ThreadId.makeUnsafe("thread-1"),
+    ) =>
+      Effect.runPromise(
+        providerSessionDirectory.replace({
+          threadId,
+          provider: providerKind,
+          status: "running",
+          lifecycleGeneration: "legacy",
+        }),
+      );
 
     const createdAt = new Date().toISOString();
     await Effect.runPromise(
@@ -342,6 +398,17 @@ describe("ProviderRuntimeIngestion", () => {
         createdAt,
       }),
     );
+    // Most fixtures intentionally exercise the pre-generation journal shape.
+    // Give those rows the only authority production still accepts: an exact
+    // same-provider binding whose own generation is explicitly legacy.
+    await Effect.runPromise(
+      providerSessionDirectory.replace({
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
     provider.setSession({
       provider: "codex",
       status: "ready",
@@ -355,11 +422,308 @@ describe("ProviderRuntimeIngestion", () => {
       engine,
       emit: provider.emit,
       setProviderSession: provider.setSession,
+      runtimeProjectionLeaseCalls: provider.runtimeProjectionLeaseCalls,
+      listSessionsObservedWithinRuntimeProjectionLease:
+        provider.listSessionsObservedWithinRuntimeProjectionLease,
       drain,
+      bindLegacyRuntimeSource,
       startIngestion,
       runtimeEventRepository,
+      providerSessionDirectory,
     };
   }
+
+  it("keeps binding validation and asynchronous runtime projection in one lifecycle lease", async () => {
+    const harness = await createHarness();
+
+    harness.emit({
+      type: "turn.started",
+      eventId: asEventId("evt-runtime-projection-lifecycle-lease"),
+      provider: "codex",
+      createdAt: "2026-08-14T08:00:00.000Z",
+      threadId: asThreadId("thread-1"),
+      turnId: asTurnId("turn-runtime-projection-lifecycle-lease"),
+    });
+    await harness.drain();
+
+    expect(harness.runtimeProjectionLeaseCalls()).toBeGreaterThan(0);
+    expect(harness.listSessionsObservedWithinRuntimeProjectionLease()).toBe(true);
+  });
+
+  it("fences delayed replacement rows against the restored provider binding", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const restoredGeneration = "generation-restored-codex";
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: restoredGeneration,
+      }),
+    );
+
+    const delayedTargetStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-delayed-target-session-started"),
+        provider: "claudeAgent",
+        threadId,
+        createdAt: "2026-08-12T08:00:00.000Z",
+        lifecycleGeneration: "generation-failed-target",
+        payload: {},
+      }),
+    );
+    const delayedOldExit = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.exited",
+        eventId: asEventId("evt-delayed-old-session-exited"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:01.000Z",
+        lifecycleGeneration: "generation-retired-codex",
+        payload: { reason: "late old runtime exit" },
+      }),
+    );
+    const delayedTargetWarning = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-delayed-target-runtime-warning"),
+        provider: "claudeAgent",
+        threadId,
+        createdAt: "2026-08-12T08:00:01.500Z",
+        lifecycleGeneration: "generation-failed-target",
+        payload: { message: "Stale target runtime" },
+      }),
+    );
+    const currentRow = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-current-restored-runtime-warning"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:02.000Z",
+        lifecycleGeneration: restoredGeneration,
+        payload: { message: "Current restored runtime" },
+      }),
+    );
+    const legacyRow = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-legacy-runtime-warning"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:03.000Z",
+        payload: { message: "Legacy runtime event" },
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.session).toMatchObject({
+      providerName: "codex",
+      status: "ready",
+    });
+    expect(thread?.activities.some((activity) => activity.id === currentRow.event.eventId)).toBe(
+      true,
+    );
+    expect(thread?.activities.some((activity) => activity.id === legacyRow.event.eventId)).toBe(
+      false,
+    );
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedTargetStart.event.eventId),
+    ).toBe(false);
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedOldExit.event.eventId),
+    ).toBe(false);
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedTargetWarning.event.eventId),
+    ).toBe(false);
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(legacyRow.sequence);
+  });
+
+  it("keeps a generation-less row only on an explicitly legacy same-provider binding", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
+    const legacyRow = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "runtime.warning",
+        eventId: asEventId("evt-current-legacy-runtime-warning"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:00:04.000Z",
+        payload: { message: "Current legacy runtime event" },
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.activities.some((activity) => activity.id === legacyRow.event.eventId)).toBe(
+      true,
+    );
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(legacyRow.sequence);
+  });
+
+  it("keeps matching delayed rows quarantined after replacement restore becomes uncertain", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const restoreGeneration = "generation-uncertain-restored-codex";
+    const failureAt = "2026-08-12T08:09:59.000Z";
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-uncertain-restore-session-error"),
+        threadId,
+        session: {
+          threadId,
+          status: "error",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId: null,
+          lastError: "Provider replacement restore is uncertain.",
+          updatedAt: failureAt,
+        },
+        createdAt: failureAt,
+      }),
+    );
+
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId,
+        provider: "codex",
+        status: "error",
+        lifecycleGeneration: restoreGeneration,
+        runtimePayload: {
+          lastRuntimeEvent: "provider.replacement.restore.failed",
+          lifecycleGeneration: restoreGeneration,
+        },
+      }),
+    );
+
+    const delayedRestoreStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-delayed-uncertain-restore-start"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:10:00.000Z",
+        lifecycleGeneration: restoreGeneration,
+        payload: {},
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.session).toMatchObject({
+      providerName: "codex",
+      status: "error",
+      lastError: "Provider replacement restore is uncertain.",
+    });
+    expect(
+      thread?.activities.some((activity) => activity.id === delayedRestoreStart.event.eventId),
+    ).toBe(false);
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(delayedRestoreStart.sequence);
+  });
+
+  it("does not project early runtime rows after their first start binding was removed", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const failedAt = "2026-08-12T08:11:00.000Z";
+
+    await Effect.runPromise(harness.providerSessionDirectory.remove(threadId));
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-first-start-failed-session-error"),
+        threadId,
+        session: {
+          threadId,
+          status: "error",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId: null,
+          lastError: "The provider failed to start.",
+          updatedAt: failedAt,
+        },
+        createdAt: failedAt,
+      }),
+    );
+    const orphanedStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-orphaned-first-start"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:10:59.000Z",
+        lifecycleGeneration: "generation-failed-first-start",
+        payload: {},
+      }),
+    );
+    const orphanedLegacyStart = await Effect.runPromise(
+      harness.runtimeEventRepository.append({
+        type: "session.started",
+        eventId: asEventId("evt-orphaned-legacy-first-start"),
+        provider: "codex",
+        threadId,
+        createdAt: "2026-08-12T08:10:59.500Z",
+        payload: {},
+      }),
+    );
+
+    await harness.startIngestion();
+    await harness.drain();
+
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === threadId);
+    expect(thread?.session).toMatchObject({
+      providerName: "codex",
+      status: "error",
+      lastError: "The provider failed to start.",
+    });
+    expect(thread?.activities.some((activity) => activity.id === orphanedStart.event.eventId)).toBe(
+      false,
+    );
+    expect(
+      thread?.activities.some((activity) => activity.id === orphanedLegacyStart.event.eventId),
+    ).toBe(false);
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBe(orphanedLegacyStart.sequence);
+  });
 
   it("REL-01C gate: replays output persisted before subscription without duplicate acceptance", async () => {
     const harness = await createHarness({ startIngestion: false });
@@ -436,6 +800,14 @@ describe("ProviderRuntimeIngestion", () => {
     };
     const collisionCommandId = CommandId.makeUnsafe(
       `provider:${collisionEvent.eventId}:thread-activity-append:${threadId}:runtime.warning:${collisionEvent.eventId}`,
+    );
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId,
+        provider: "cursor",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
     );
 
     // Model a crash/upgrade boundary: this event's command id was accepted
@@ -553,6 +925,22 @@ describe("ProviderRuntimeIngestion", () => {
       threadId: lateThreadId,
       payload: { message: "Warning for a rejected command" },
     };
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId,
+        provider: "cursor",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
+    await Effect.runPromise(
+      harness.providerSessionDirectory.replace({
+        threadId: lateThreadId,
+        provider: "cursor",
+        status: "running",
+        lifecycleGeneration: "legacy",
+      }),
+    );
     const rejectedCommandId = CommandId.makeUnsafe(
       `provider:${rejectedEvent.eventId}:thread-activity-append:${lateThreadId}:runtime.warning:${rejectedEvent.eventId}`,
     );
@@ -926,6 +1314,7 @@ describe("ProviderRuntimeIngestion", () => {
 
   it("clears active turn state when a provider session reports ready", async () => {
     const harness = await createHarness();
+    await harness.bindLegacyRuntimeSource("opencode");
 
     harness.emit({
       type: "turn.started",
@@ -1693,6 +2082,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("accepts claude turn lifecycle when seeded thread id is a synthetic placeholder", async () => {
     const harness = await createHarness();
     const seededAt = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -1911,6 +2301,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("does not project reasoning content deltas into transcript work rows", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "content.delta",
@@ -2030,6 +2421,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects narrated Antigravity planner steps as completed reasoning", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("antigravity");
     const detail = "I will inspect the current working directory before continuing.";
     const baseEvent = {
       provider: "antigravity" as const,
@@ -2175,6 +2567,7 @@ describe("ProviderRuntimeIngestion", () => {
     async (provider) => {
       const harness = await createHarness();
       const now = new Date().toISOString();
+      await harness.bindLegacyRuntimeSource(provider);
       const itemId = `${provider}-reasoning-buffered-1`;
       const baseEvent = {
         provider,
@@ -2527,6 +2920,7 @@ describe("ProviderRuntimeIngestion", () => {
 
   it("persists a compact per-model token breakdown on turn.completed activities", async () => {
     const harness = await createHarness();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.setProviderSession({
       threadId: asThreadId("thread-1"),
@@ -2799,6 +3193,8 @@ describe("ProviderRuntimeIngestion", () => {
       updatedAt: createdAt,
       activeTurnId: targetTurnId,
     });
+    await harness.bindLegacyRuntimeSource("codex", sourceThreadId);
+    await harness.bindLegacyRuntimeSource("codex", targetThreadId);
 
     harness.emit({
       type: "turn.proposed.completed",
@@ -2951,6 +3347,7 @@ describe("ProviderRuntimeIngestion", () => {
       updatedAt: createdAt,
       activeTurnId,
     });
+    await harness.bindLegacyRuntimeSource("codex", sourceThreadId);
 
     harness.emit({
       type: "turn.started",
@@ -3130,6 +3527,8 @@ describe("ProviderRuntimeIngestion", () => {
         createdAt,
       }),
     );
+    await harness.bindLegacyRuntimeSource("codex", sourceThreadId);
+    await harness.bindLegacyRuntimeSource("codex", targetThreadId);
 
     harness.emit({
       type: "turn.proposed.completed",
@@ -3686,6 +4085,7 @@ describe("ProviderRuntimeIngestion", () => {
         commandId: CommandId.makeUnsafe("cmd-dispatch-active-b"),
         threadId: asThreadId("thread-1"),
         messageId: asMessageId("message-active-b"),
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
         assistantDeliveryMode: "streaming",
         dispatchMode: "queue",
         runtimeMode: "approval-required",
@@ -3796,6 +4196,7 @@ describe("ProviderRuntimeIngestion", () => {
         createdAt: now,
       }),
     );
+    await harness.bindLegacyRuntimeSource("codex", secondThreadId);
 
     await Effect.runPromise(
       harness.engine.dispatch({
@@ -4608,6 +5009,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("preserves the assistant turn id when a late item.completed omits it", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "turn.started",
@@ -4713,6 +5115,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("keeps an existing assistant turn id when a late completion carries a newer turn id", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "turn.started",
@@ -5112,6 +5515,14 @@ describe("ProviderRuntimeIngestion", () => {
   it("maps canonical request events into approval activities with requestKind", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId: asThreadId("thread-1"),
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "approval-generation",
+      }),
+    );
 
     harness.emit({
       type: "request.opened",
@@ -5483,6 +5894,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("labels OpenCode retry warnings with a provider-specific summary and visible detail", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("opencode");
 
     harness.emit({
       type: "runtime.warning",
@@ -5535,6 +5947,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("labels Claude background moves as a background notice, not a runtime warning", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "runtime.warning",
@@ -5859,6 +6272,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("does not parse live diff files for providers without patch capability", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "turn.diff.updated",
@@ -5954,6 +6368,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("suppresses identical consecutive context window updates", async () => {
     const harness = await createHarness();
     const now = "2026-07-09T00:00:00.000Z";
+    await harness.bindLegacyRuntimeSource("claudeAgent");
     const makeUsageEvent = (eventId: string, usedTokens: number) => ({
       type: "thread.token-usage.updated" as const,
       eventId: asEventId(eventId),
@@ -5989,6 +6404,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects percent-only context window updates into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "thread.token-usage.updated",
@@ -6024,6 +6440,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects real zero-percent context window updates into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("cursor");
 
     harness.emit({
       type: "thread.token-usage.updated",
@@ -6059,6 +6476,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects configured Claude context windows into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "session.configured",
@@ -6145,6 +6563,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects Claude usage snapshots with context window into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("claudeAgent");
 
     harness.emit({
       type: "thread.token-usage.updated",
@@ -6253,6 +6672,7 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects context compaction completion and failure into thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await harness.bindLegacyRuntimeSource("grok");
 
     harness.emit({
       type: "item.completed",
@@ -6441,6 +6861,14 @@ describe("ProviderRuntimeIngestion", () => {
   it("projects structured user input request and resolution as thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId: asThreadId("thread-1"),
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "user-input-generation",
+      }),
+    );
 
     harness.emit({
       type: "user-input.requested",

@@ -47,18 +47,22 @@ Conversation/Thread 不是 Provider Session。一条可见 Thread 可以按 turn
 
 用户改变 Provider 时：
 
-1. 选择只作用于下一次发送，当前 native operation 不热换；
+1. Composer 保存的是下一次发送的 desired `ModelSelection`，它可以暂时不同于 active runtime binding；选择菜单本身不启动、停止或热切 native Session；
 2. draft、attachments 与尚未接纳的 Queue 保持原样；
-3. dispatch 使用继承的 stop-first replacement；
-4. 目标启动失败时恢复上一 exact Provider binding；
+3. 下一次发送被 Product Orchestration 接纳时，以该 Entry 携带的 exact Engine、Model 与 provider-private options 作为 replacement/dispatch binding，使用继承的 stop-first replacement；
+4. 目标启动失败时恢复上一 exact Provider binding，并把已经 commit 的 Composer/Footer selection 回滚到同一旧 binding；prompt、attachments 与未接纳 Queue 保持可恢复，绝不把该 prompt 自动发给旧 Provider；
 5. 跨 Provider 不复用 resume cursor，也不把可见历史伪装成 native continuation；
 6. unknown operation 不 replay、不 silent fallback。
+
+Provider runtime 启动成功后，Product 对该次接纳所拥有的 Session 投影、exact `ModelSelection`、runtime mode 与 interaction mode 必须由同一个 internal Orchestration command 在同一 SQLite transaction 中提交；不得先单独提交 Session 再以多个 command 补写 binding metadata。事务内任一 event/projection/receipt 失败时整组保持旧值，safe retry 可重新提交整组但不得重复启动 runtime 或发送 prompt。Provider native Session 的启动/恢复与 Product SQLite transaction 属于两个不同 authority，无法伪装成跨进程原子事务；若进程在两者之间退出，只能按既有 unknown/quarantine 与 no-replay 边界恢复，不能把 native 成功推断为 Product binding 已提交。
 
 OmniMind Agent 使用独立 `omnimind` Provider identity；stock Pi 保持 `pi` identity。二者可以共享经过证明同构的 Pi-family adapter core，但各自拥有 Session、version、configuration、state root、Package install state 与 diagnostics。OmniMind Agent 的全局和 project-local private state 都属于 `.omnimind`；stock Pi 的对应 native state 属于 `.pi`。任何 binding、resume cursor、native reference 或 filesystem state 都不能跨两者复用。
 
 ## Composer、Queue 与 receipt
 
-Composer draft/QueueItem 在 Product Orchestration 接纳前可编辑、删除和排序；接纳后沿用现有 command/event/receipt 与 Provider acceptance 路径。外层 receipt 只证明产品命令边界，native acceptance/settlement 仍由当前 adapter 证明。
+Composer draft/QueueItem 在 Product Orchestration 接纳前可编辑、删除和排序。Renderer 把用户消息加入本地 Queue 时，QueueItem 即冻结当时 effective `ModelSelection`；后续 Composer 改选 Engine、Model 或 options 不得重写既有 QueueItem。QueueItem 被发送到 Product Orchestration 时，admission command/event 必须再次携带并 durable 保存该 exact selection；非 Composer caller 若省略 selection，Orchestration 必须在 admission 当下解析 Thread 的 effective selection 并冻结，promotion/dispatch 不得重新读取届时可能已变化的 Thread metadata。
+
+接纳后沿用现有 command/event/receipt 与 Provider acceptance 路径，并保持原 Queue order。外层 receipt 只证明产品命令边界，native acceptance/settlement 仍由当前 adapter 证明。Queue 绑定不授权新增 Queue ledger、binding store、`pendingEngine` 或第二套 desired/runtime state。
 
 不能为了“更确定”再创建 Run ledger、outbox 或 receipt store。acceptance 不确定时保持 unknown，不退回 editable Queue、不自动换 Provider、不自动 replay。
 

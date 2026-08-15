@@ -281,6 +281,10 @@ describe("wsNativeApi", () => {
 
     const payload = {
       providers: defaultProviders,
+      passivePresence: {
+        state: "settled",
+        recoverableProviders: ["codex"],
+      },
     } as const;
     emitPush(WS_CHANNELS.serverProviderStatusesUpdated, payload);
 
@@ -891,6 +895,203 @@ describe("wsNativeApi", () => {
       outcome: "safe_retry",
       note: "The provider confirms it did not accept the command.",
     });
+  });
+
+  it("forwards credential-blind OmniMind model-service reads", async () => {
+    requestMock
+      .mockResolvedValueOnce({ state: "empty", services: [], errorCode: null })
+      .mockResolvedValueOnce({ state: "empty", service: null, errorCode: null });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    const listController = new AbortController();
+    const getController = new AbortController();
+    await api.omnimindModelServices.list({}, { signal: listController.signal });
+    await api.omnimindModelServices.get(
+      { serviceId: "deepseek" },
+      { signal: getController.signal },
+    );
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindModelServicesList,
+      {},
+      {
+        signal: listController.signal,
+      },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      WS_METHODS.omnimindModelServicesGet,
+      { serviceId: "deepseek" },
+      { signal: getController.signal },
+    );
+  });
+
+  it("forwards public package installs and opaque package actions", async () => {
+    requestMock.mockResolvedValue({ changed: true, snapshot: { packages: [] } });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const packageId = "a".repeat(64);
+    const threadId = ThreadId.makeUnsafe("thread-package-reload");
+
+    await api.omnimindEcosystem.install({ source: "npm:@scope/package@1.2.3" });
+    await api.omnimindEcosystem.listResources({ packageId });
+    await api.omnimindEcosystem.update({ packageId });
+    await api.omnimindEcosystem.reload({ threadId });
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindEcosystemInstall,
+      { source: "npm:@scope/package@1.2.3" },
+      { timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(2, WS_METHODS.omnimindEcosystemListResources, {
+      packageId,
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(
+      3,
+      WS_METHODS.omnimindEcosystemUpdate,
+      { packageId },
+      { timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      4,
+      WS_METHODS.omnimindEcosystemReload,
+      { threadId },
+      { timeoutMs: null },
+    );
+  });
+
+  it("forwards typed OmniMind model-service credential operations", async () => {
+    const requestId = "00000000-0000-4000-8000-000000000041";
+    const promptId = "00000000-0000-4000-8000-000000000042";
+    requestMock
+      .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
+      .mockResolvedValueOnce({ state: "pending", requestId, events: [] })
+      .mockResolvedValueOnce({ state: "failed", requestId, errorCode: "auth_failed", events: [] })
+      .mockResolvedValueOnce({ state: "cancelled", requestId, errorCode: "cancelled", events: [] })
+      .mockResolvedValueOnce({ state: "complete", service: {} })
+      .mockResolvedValueOnce({ state: "failed", service: {} });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+
+    await api.omnimindModelServices.beginLogin(
+      { serviceId: "deepseek", authType: "api_key" },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.pollLogin(
+      { requestId, afterEventCount: 0 },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.answerLogin(
+      { requestId, promptId, value: "test-secret" },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.cancelLogin({ requestId });
+    await api.omnimindModelServices.logout({ serviceId: "deepseek" });
+    await api.omnimindModelServices.refresh(
+      { serviceId: "deepseek" },
+      { signal: controller.signal },
+    );
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindModelServicesBeginLogin,
+      { serviceId: "deepseek", authType: "api_key" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      WS_METHODS.omnimindModelServicesPollLogin,
+      { requestId, afterEventCount: 0 },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      3,
+      WS_METHODS.omnimindModelServicesAnswerLogin,
+      { requestId, promptId, value: "test-secret" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(4, WS_METHODS.omnimindModelServicesCancelLogin, {
+      requestId,
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(5, WS_METHODS.omnimindModelServicesLogout, {
+      serviceId: "deepseek",
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(
+      6,
+      WS_METHODS.omnimindModelServicesRefresh,
+      { serviceId: "deepseek" },
+      { signal: controller.signal, timeoutMs: null },
+    );
+  });
+
+  it("forwards typed custom model-service test, save, and remove operations", async () => {
+    requestMock
+      .mockResolvedValueOnce({ state: "failed", models: [], errorCode: "connection_failed" })
+      .mockResolvedValueOnce({ state: "config_saved_sync_failed", service: null })
+      .mockResolvedValueOnce({ state: "complete", serviceId: "custom" });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+    const config = {
+      serviceId: null,
+      displayName: "Custom",
+      api: "openai-completions" as const,
+      baseUrl: "https://gateway.example.test/v1",
+      models: [
+        {
+          modelId: "model-one",
+          displayName: "Model One",
+          reasoning: false,
+          input: ["text" as const],
+          contextWindow: 32_000,
+          maxTokens: 4_096,
+        },
+      ],
+    };
+
+    await api.omnimindModelServices.testCustom(
+      {
+        config,
+        credential: { type: "stored_key", apiKey: "test-secret" },
+        testModelId: "model-one",
+      },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.saveCustom(
+      { config, credential: { type: "stored_key", apiKey: "test-secret" } },
+      { signal: controller.signal },
+    );
+    await api.omnimindModelServices.removeCustom(
+      { serviceId: "custom" },
+      { signal: controller.signal },
+    );
+
+    expect(requestMock).toHaveBeenNthCalledWith(
+      1,
+      WS_METHODS.omnimindModelServicesTestCustom,
+      {
+        config,
+        credential: { type: "stored_key", apiKey: "test-secret" },
+        testModelId: "model-one",
+      },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      WS_METHODS.omnimindModelServicesSaveCustom,
+      { config, credential: { type: "stored_key", apiKey: "test-secret" } },
+      { signal: controller.signal, timeoutMs: null },
+    );
+    expect(requestMock).toHaveBeenNthCalledWith(
+      3,
+      WS_METHODS.omnimindModelServicesRemoveCustom,
+      { serviceId: "custom" },
+      { signal: controller.signal, timeoutMs: null },
+    );
   });
 
   it("forwards browser webview detach requests to the desktop bridge", async () => {

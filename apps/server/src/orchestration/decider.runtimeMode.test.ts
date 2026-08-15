@@ -142,6 +142,48 @@ describe("decider Auto model compatibility", () => {
     expect("type" in event ? event.type : event[0]?.type).toBe("thread.meta-updated");
   });
 
+  it("commits the provider Session and complete binding tuple in one internal command", async () => {
+    const result = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.session.set",
+          commandId: CommandId.makeUnsafe("cmd-atomic-provider-binding"),
+          threadId: THREAD_ID,
+          session: {
+            threadId: THREAD_ID,
+            status: "ready",
+            providerName: "claudeAgent",
+            runtimeMode: "auto",
+            activeTurnId: null,
+            lastError: null,
+            updatedAt: NOW,
+          },
+          binding: {
+            modelSelection: {
+              provider: "claudeAgent",
+              model: "claude-fable-5",
+              supportsAutoMode: true,
+            },
+            runtimeMode: "auto",
+            interactionMode: "plan",
+          },
+          createdAt: NOW,
+        },
+        readModel: makeReadModel(true),
+      }),
+    );
+
+    expect(Array.isArray(result) ? result : [result]).toMatchObject([
+      { type: "thread.session-set", payload: { session: { providerName: "claudeAgent" } } },
+      {
+        type: "thread.meta-updated",
+        payload: { modelSelection: { provider: "claudeAgent", model: "claude-fable-5" } },
+      },
+      { type: "thread.runtime-mode-set", payload: { runtimeMode: "auto" } },
+      { type: "thread.interaction-mode-set", payload: { interactionMode: "plan" } },
+    ]);
+  });
+
   it("rejects a user-created Auto thread whose Claude model has no verified flag", async () => {
     const readModel = await makeProjectOnlyReadModel();
 

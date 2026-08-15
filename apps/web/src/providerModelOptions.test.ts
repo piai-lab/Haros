@@ -86,10 +86,16 @@ describe("mergeDynamicModelOptions", () => {
             name: "GLM 5.2",
             upstreamProviderId: "local",
             upstreamProviderName: "Local",
+            upstreamProviderOrigin: "models_json",
           },
         ],
-      }).map((option) => option.slug),
-    ).toEqual(["local/glm-5.2"]);
+      }),
+    ).toEqual([
+      expect.objectContaining({
+        slug: "local/glm-5.2",
+        upstreamProviderOrigin: "models_json",
+      }),
+    ]);
   });
 
   it("offers Pi Fable and Opus when authenticated discovery returns them", () => {
@@ -276,6 +282,55 @@ describe("groupProviderModelOptions", () => {
     const groupedOptions = groupProviderModelOptions(options);
 
     expect(groupedOptions.map((group) => group.label)).toEqual(["Anthropic", "OpenAI"]);
+  });
+
+  it("disambiguates two model-service instances with the same display name", () => {
+    const groupedOptions = groupProviderModelOptions([
+      {
+        slug: "gateway-primary/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "gateway-primary",
+        upstreamProviderName: "Team Gateway",
+      },
+      {
+        slug: "gateway-secondary/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "gateway-secondary",
+        upstreamProviderName: "Team Gateway",
+      },
+    ]);
+
+    expect(groupedOptions.map((group) => ({ key: group.key, label: group.label }))).toEqual([
+      { key: "gateway-primary", label: "Team Gateway · gateway-primary" },
+      { key: "gateway-secondary", label: "Team Gateway · gateway-secondary" },
+    ]);
+    expect(groupedOptions.flatMap((group) => group.options.map((option) => option.slug))).toEqual([
+      "gateway-primary/shared-model",
+      "gateway-secondary/shared-model",
+    ]);
+  });
+
+  it("keeps case-distinct opaque model-service ids in separate groups", () => {
+    const groupedOptions = groupProviderModelOptions([
+      {
+        slug: "Gateway/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "Gateway",
+        upstreamProviderName: "Team Gateway",
+      },
+      {
+        slug: "gateway/shared-model",
+        name: "Shared Model",
+        upstreamProviderId: "gateway",
+        upstreamProviderName: "Team Gateway",
+      },
+    ]);
+
+    expect(groupedOptions.map((group) => group.key)).toEqual(["Gateway", "gateway"]);
+    expect(groupedOptions.map((group) => group.label)).toEqual([
+      "Team Gateway · Gateway",
+      "Team Gateway · gateway",
+    ]);
   });
 });
 

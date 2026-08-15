@@ -1,7 +1,6 @@
 import {
   CLAUDE_CODE_EFFORT_OPTIONS,
   CODEX_REASONING_EFFORT_OPTIONS,
-  DEFAULT_MODEL_BY_PROVIDER,
   DROID_REASONING_EFFORT_OPTIONS,
   GROK_REASONING_EFFORT_OPTIONS,
   PI_THINKING_LEVEL_OPTIONS,
@@ -11,6 +10,7 @@ import {
   type ProviderModelDescriptor,
   type ServerProviderAuthStatus,
 } from "@omnimind/contracts";
+import { getDefaultModel } from "@omnimind/shared/model";
 import { Effect } from "effect";
 
 import type { ProviderDiscoveryServiceShape } from "../provider/Services/ProviderDiscoveryService.ts";
@@ -243,7 +243,7 @@ const PROVIDER_TARGET_OPTION_RULES = {
 } as const satisfies Record<ProviderKind, ProviderTargetOptionConfig>;
 
 function providerDefaultModel(provider: ProviderKind): string | null {
-  return provider === "pi" ? null : DEFAULT_MODEL_BY_PROVIDER[provider];
+  return getDefaultModel(provider);
 }
 
 export function loadAgentGatewayProviderCatalog(input: {

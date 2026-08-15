@@ -1,7 +1,9 @@
 import { Effect } from "effect";
+import * as PlatformError from "effect/PlatformError";
 import { describe, expect, it } from "vitest";
 
 import { probeProviderCliVersion } from "./providerCliVersionProbe";
+import { makeCommandMissingCause } from "./providerCliOutput";
 
 const success = { stdout: "1.2.3", stderr: "", code: 0 } as const;
 
@@ -18,15 +20,35 @@ describe("probeProviderCliVersion", () => {
   });
 
   it("distinguishes missing commands from other execution failures", async () => {
-    const missing = new Error("spawn provider ENOENT");
+    const missing = PlatformError.systemError({
+      _tag: "NotFound",
+      module: "ChildProcess",
+      method: "spawn",
+      description: "provider executable is absent",
+    });
     await expect(
       Effect.runPromise(probeProviderCliVersion(Effect.fail(missing), 100)),
     ).resolves.toEqual({ outcome: "missing", cause: missing });
 
-    const failure = new Error("permission denied");
+    const failure = PlatformError.systemError({
+      _tag: "PermissionDenied",
+      module: "ChildProcess",
+      method: "spawn",
+      description: "permission denied for /tools/notfound/provider",
+    });
     await expect(
       Effect.runPromise(probeProviderCliVersion(Effect.fail(failure), 100)),
     ).resolves.toEqual({ outcome: "failure", cause: failure });
+
+    const nodeMissing = Object.assign(new Error("spawn failed"), { code: "ENOENT" });
+    await expect(
+      Effect.runPromise(probeProviderCliVersion(Effect.fail(nodeMissing), 100)),
+    ).resolves.toEqual({ outcome: "missing", cause: nodeMissing });
+
+    const shellMissing = makeCommandMissingCause("provider-cli");
+    await expect(
+      Effect.runPromise(probeProviderCliVersion(Effect.fail(shellMissing), 100)),
+    ).resolves.toEqual({ outcome: "missing", cause: shellMissing });
   });
 
   it("classifies timeouts", async () => {

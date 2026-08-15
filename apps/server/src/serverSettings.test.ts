@@ -114,6 +114,56 @@ describe("ServerSettingsService", () => {
     });
   });
 
+  it("rejects provider-only runtime-catalog switches before persistence", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        yield* service.start;
+        const updateExit = yield* Effect.exit(
+          service.updateSettings({
+            textGenerationModelSelection: { provider: "omnimind" },
+          }),
+        );
+        return {
+          updateExit,
+          snapshot: yield* service.getSnapshot,
+        };
+      }),
+    );
+
+    expect(result.updateExit._tag).toBe("Failure");
+    expect(result.snapshot.revision).toBe(0);
+    expect(result.snapshot.settings.textGenerationModelSelection).toEqual({
+      provider: "codex",
+      model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+    });
+  });
+
+  it("persists an explicit runtime-catalog model selection exactly", async () => {
+    const selection = {
+      provider: "omnimind" as const,
+      model: "deepseek/deepseek-v4-pro",
+      options: { thinkingLevel: "high" as const },
+    };
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        yield* service.start;
+        const settings = yield* service.updateSettings({
+          textGenerationModelSelection: selection,
+        });
+        return {
+          settings,
+          snapshot: yield* service.getSnapshot,
+        };
+      }),
+    );
+
+    expect(result.settings.textGenerationModelSelection).toEqual(selection);
+    expect(result.snapshot.revision).toBe(1);
+    expect(result.snapshot.settings.textGenerationModelSelection).toEqual(selection);
+  });
+
   it("keeps provider passwords server-only and returns configured flags to clients", async () => {
     const result = await runWithSettings(
       Effect.gen(function* () {

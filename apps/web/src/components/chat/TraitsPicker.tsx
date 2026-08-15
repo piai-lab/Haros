@@ -17,6 +17,7 @@ import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import {
   Menu,
+  MenuCheckboxItem,
   MenuGroup,
   MenuGroupLabel,
   MenuRadioGroup,
@@ -87,6 +88,13 @@ export function resolveTraitsTriggerSummary(options: {
   modelOptions: ProviderOptions | null | undefined;
   runtimeModel?: ProviderModelDescriptor | undefined;
   runtimeAgents: ReadonlyArray<ProviderAgentDescriptor> | null | undefined;
+  labels?: {
+    readonly fast: string;
+    readonly default: string;
+    readonly ultrathink: string;
+    readonly thinkingOn: string;
+    readonly thinkingOff: string;
+  };
 }): {
   contextWindowLabel: string | null;
   primaryLabel: string | null;
@@ -118,21 +126,31 @@ export function resolveTraitsTriggerSummary(options: {
   // The shared status ladder (ultrathink → effort → thinking) covers every model
   // that exposes those controls; the fast-only fallback only applies when it does not.
   const primaryLabel =
-    resolveComposerTraitStatusLabel(selection) ??
-    (isFastOnlyControl ? (fastModeEnabled ? "Fast" : "Default") : null);
+    resolveComposerTraitStatusLabel(selection, options.labels) ??
+    (isFastOnlyControl
+      ? fastModeEnabled
+        ? (options.labels?.fast ?? "Fast")
+        : (options.labels?.default ?? "Default")
+      : null);
   // Only departures from the default context window earn a label.
   const contextWindowLabel =
     contextWindowOptions.length > 1 && contextWindow !== defaultContextWindow
       ? (contextWindowOptions.find((option) => option.value === contextWindow)?.label ?? null)
       : null;
   const agentOptions = getAgentOptions(options.provider, options.runtimeAgents);
+  const explicitAgent = (options.modelOptions as OpenCodeModelOptions | undefined)?.agent?.trim();
   const selectedAgent = getSelectedAgentValue(options.provider, options.modelOptions);
   const agentLabel = findAgentLabel(agentOptions, selectedAgent);
-  // Agent name stands in as the primary label for agent-driven providers
-  // (kilo/opencode) that expose no effort/thinking controls.
-  const resolvedPrimaryLabel = primaryLabel ?? agentLabel;
+  // An explicit Agent/Mode choice is more informative than a default Variant.
+  // Otherwise preserve the established primary-trait summary, falling back to
+  // the provider-owned default Agent/Mode when it is the only useful option.
+  const resolvedPrimaryLabel = explicitAgent ? agentLabel : (primaryLabel ?? agentLabel);
   const showsFastBadge = showsComposerFastModeBadge(selection) && !isFastOnlyControl;
-  const summaryText = [resolvedPrimaryLabel, showsFastBadge ? "Fast" : null, contextWindowLabel]
+  const summaryText = [
+    resolvedPrimaryLabel,
+    showsFastBadge ? (options.labels?.fast ?? "Fast") : null,
+    contextWindowLabel,
+  ]
     .filter((value): value is string => Boolean(value))
     .join(" · ");
 
@@ -142,40 +160,6 @@ export function resolveTraitsTriggerSummary(options: {
     showsFastBadge,
     summaryText,
   };
-}
-
-// Compact icon toggle for fast mode, docked at the far right of the Effort
-// section header. Outline zap (Central reversed set) = default speed, filled
-// zap (Central fill set) = fast mode on. Toggling keeps the menu open so the
-// state flip is visible in place.
-function FastModeToggle({ enabled, onToggle }: { enabled: boolean; onToggle: () => void }) {
-  const Icon = enabled ? FastModeIcon : FastModeOutlineIcon;
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            aria-label="Fast mode"
-            aria-pressed={enabled}
-            className="-my-1 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-md transition-colors hover:bg-[color-mix(in_srgb,var(--foreground)_6%,transparent)]"
-            onClick={onToggle}
-          />
-        }
-      >
-        <Icon
-          aria-hidden="true"
-          className={cn(
-            "size-3.5",
-            enabled ? "text-[hsl(var(--chart-4))]" : "text-muted-foreground/70",
-          )}
-        />
-      </TooltipTrigger>
-      <TooltipPopup side="top" variant="picker">
-        {enabled ? "Fast mode on" : "Fast mode off"}
-      </TooltipPopup>
-    </Tooltip>
-  );
 }
 
 interface TraitRadioOption {
@@ -192,7 +176,6 @@ interface TraitRadioOption {
 // `onValueChange` does not fire when the value is unchanged.
 function TraitRadioSection({
   label,
-  labelTrailing,
   note,
   value,
   options,
@@ -201,7 +184,6 @@ function TraitRadioSection({
   onSelectionComplete,
 }: {
   label: string;
-  labelTrailing?: ReactNode;
   note?: ReactNode;
   value: string;
   options: ReadonlyArray<TraitRadioOption>;
@@ -209,28 +191,26 @@ function TraitRadioSection({
   onValueChange: (value: string) => void;
   onSelectionComplete?: (() => void) | undefined;
 }) {
+  const { t } = useI18n();
   return (
     <MenuGroup>
-      {labelTrailing ? (
-        <MenuGroupLabel className="flex items-center justify-between gap-2">
-          {label}
-          {labelTrailing}
-        </MenuGroupLabel>
-      ) : (
-        <MenuGroupLabel>{label}</MenuGroupLabel>
-      )}
+      <MenuGroupLabel>{label}</MenuGroupLabel>
       {note}
       <MenuRadioGroup value={value} onValueChange={onValueChange}>
         {options.map((option) => {
+          const optionLabel = `${option.label}${option.isDefault ? t("composer.defaultSuffix") : ""}`;
           const item = (
             <MenuRadioItem
               key={option.value}
               value={option.value}
+              aria-label={optionLabel}
+              title={optionLabel}
+              preserveChildLayout
+              className="grid-cols-[minmax(0,1fr)_auto]"
               {...(disabled ? { disabled: true } : {})}
               onClick={() => onSelectionComplete?.()}
             >
-              {option.label}
-              {option.isDefault ? " (default)" : ""}
+              <span className="block min-w-0 truncate">{optionLabel}</span>
             </MenuRadioItem>
           );
           return option.description ? (
@@ -392,7 +372,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         <>
           {hasPriorContextWindowSection ? <MenuDivider /> : null}
           <TraitRadioSection
-            label={contextWindowDescriptor?.label ?? "Context"}
+            label={t("composer.context")}
             value={contextWindow ?? defaultContextWindow ?? ""}
             options={contextWindowOptions.map((option) => ({
               value: option.value,
@@ -408,21 +388,17 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         <>
           {hasPriorEffortSection ? <MenuDivider /> : null}
           <TraitRadioSection
-            label={provider === "kilo" || provider === "opencode" ? "Variant" : "Effort"}
-            labelTrailing={
-              showsFastModeEffortToggle ? (
-                <FastModeToggle
-                  enabled={fastModeEnabled}
-                  onToggle={() =>
-                    commitTrait({ fastMode: !fastModeEnabled }, { keepMenuOpen: true })
-                  }
-                />
-              ) : undefined
+            label={
+              provider === "kilo" || provider === "opencode"
+                ? t("composer.variant")
+                : provider === "pi" || provider === "omnimind"
+                  ? t("composer.thinkingLevel")
+                  : t("composer.effort")
             }
             note={
               ultrathinkPromptControlled ? (
                 <div className="px-2 pb-1.5 text-muted-foreground/80 text-xs">
-                  Remove Ultrathink from the prompt to change effort.
+                  {t("composer.removeUltrathinkToChangeEffort")}
                 </div>
               ) : undefined
             }
@@ -437,17 +413,41 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
             onValueChange={handleEffortChange}
             onSelectionComplete={onSelectionComplete}
           />
+          {showsFastModeEffortToggle ? (
+            <MenuCheckboxItem
+              checked={fastModeEnabled}
+              closeOnClick={false}
+              onCheckedChange={(checked) =>
+                commitTrait({ fastMode: checked === true }, { keepMenuOpen: true })
+              }
+            >
+              <span className="inline-flex min-w-0 items-center gap-2">
+                {fastModeEnabled ? (
+                  <FastModeIcon
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 text-[hsl(var(--chart-4))]"
+                  />
+                ) : (
+                  <FastModeOutlineIcon
+                    aria-hidden="true"
+                    className="size-3.5 shrink-0 text-muted-foreground/70"
+                  />
+                )}
+                <span className="truncate">{t("composer.fastMode")}</span>
+              </span>
+            </MenuCheckboxItem>
+          ) : null}
         </>
       ) : null}
       {includeFastMode && supportsFastModeControl && !showsFastModeEffortToggle ? (
         <>
           {hasPriorFastModeSection ? <MenuDivider /> : null}
           <TraitRadioSection
-            label="Speed"
+            label={t("composer.speed")}
             value={fastModeEnabled ? "on" : "off"}
             options={[
-              { value: "off", label: "Default" },
-              { value: "on", label: "Fast" },
+              { value: "off", label: t("composer.default") },
+              { value: "on", label: t("composer.fast") },
             ]}
             onValueChange={(value) => commitTrait({ fastMode: value === "on" })}
             onSelectionComplete={onSelectionComplete}
@@ -458,7 +458,7 @@ export const TraitsMenuContent = memo(function TraitsMenuContentImpl({
         <>
           {hasVisibleControls ? <MenuDivider /> : null}
           <TraitRadioSection
-            label={provider === "kilo" ? "Mode" : "Agent"}
+            label={provider === "kilo" ? t("composer.mode") : t("composer.agent")}
             value={selectedAgent ?? defaultAgent ?? ""}
             options={agentOptions.map((agent) => ({
               value: agent.name,
@@ -502,6 +502,7 @@ export const TraitsPicker = memo(function TraitsPicker({
   // summary moves to title/sr-only.
   hideLabel?: boolean;
 }) {
+  const { t } = useI18n();
   const includeFastMode = includeFastModeProp ?? true;
   const hideLabel = hideLabelProp ?? false;
   const [uncontrolledMenuOpen, setUncontrolledMenuOpen] = useState(false);
@@ -563,6 +564,13 @@ export const TraitsPicker = memo(function TraitsPicker({
     modelOptions,
     runtimeModel,
     runtimeAgents,
+    labels: {
+      fast: t("composer.fast"),
+      default: t("composer.default"),
+      ultrathink: t("composer.ultrathink"),
+      thinkingOn: t("composer.thinkingOn"),
+      thinkingOff: t("composer.thinkingOff"),
+    },
   });
 
   const isCodexStyle = provider === "codex";
@@ -572,7 +580,7 @@ export const TraitsPicker = memo(function TraitsPicker({
       size="sm"
       variant="chrome"
       className={`min-w-0 shrink-0 justify-start overflow-hidden whitespace-nowrap px-2 sm:px-2.5 [&_svg]:mx-0 ${COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME}`}
-      aria-label="Change effort, context, and speed"
+      aria-label={t("composer.changeNativeOptions")}
       {...(hideLabel && hiddenLabelTitle.length > 0 ? { title: hiddenLabelTitle } : {})}
     />
   );
@@ -589,14 +597,14 @@ export const TraitsPicker = memo(function TraitsPicker({
         {visiblePrimaryTriggerLabel ? (
           <span className="truncate">{visiblePrimaryTriggerLabel}</span>
         ) : (
-          <span className="truncate">Options</span>
+          <span className="truncate">{t("composer.options")}</span>
         )}
         {showsFastBadge ? (
           <>
             <span className="shrink-0 text-muted-foreground/45">·</span>
             <span className="inline-flex shrink-0 items-center gap-1">
               <FastModeIcon aria-hidden="true" className="size-3 text-[hsl(var(--chart-4))]" />
-              <span>Fast</span>
+              <span>{t("composer.fast")}</span>
             </span>
           </>
         ) : null}
@@ -614,13 +622,13 @@ export const TraitsPicker = memo(function TraitsPicker({
   ) : (
     <>
       <span className="inline-flex items-center gap-1.5">
-        <span>{visiblePrimaryTriggerLabel ?? "Options"}</span>
+        <span>{visiblePrimaryTriggerLabel ?? t("composer.options")}</span>
         {showsFastBadge ? (
           <>
             <span className="text-muted-foreground/45">·</span>
             <span className="inline-flex items-center gap-1">
               <FastModeIcon aria-hidden="true" className="size-3 text-[hsl(var(--chart-4))]" />
-              <span>Fast</span>
+              <span>{t("composer.fast")}</span>
             </span>
           </>
         ) : null}
@@ -652,7 +660,7 @@ export const TraitsPicker = memo(function TraitsPicker({
           {!isMenuOpen ? (
             <TooltipPopup side="top" sideOffset={6} variant="picker">
               <span className="inline-flex items-center gap-2 px-1 py-0.5">
-                <span>Change effort, context, and speed</span>
+                <span>{t("composer.changeNativeOptions")}</span>
                 <ShortcutKbd
                   shortcutLabel={shortcutLabel}
                   className="h-4 min-w-4 px-1 text-[length:var(--app-font-size-ui-2xs,9px)] text-muted-foreground"

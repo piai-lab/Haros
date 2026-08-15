@@ -117,8 +117,9 @@ export interface TerminalThreadCreationState {
   envMode: DraftThreadEnvMode;
   interactionMode: ProviderInteractionMode;
   lastKnownPr: OrchestrationThreadPullRequest | null;
-  modelSelection: ModelSelection;
+  modelSelection: ModelSelection | null;
   runtimeMode: RuntimeMode;
+  title: string;
   worktreePath: string | null;
   workingDirectory: string | null;
 }
@@ -302,6 +303,7 @@ export function resolveTerminalThreadCreationState(
           : undefined;
 
   return {
+    title: input.draftThread?.title ?? "New terminal",
     modelSelection: resolvePreferredComposerModelSelection({
       draft: input.draftComposerState,
       threadModelSelection:

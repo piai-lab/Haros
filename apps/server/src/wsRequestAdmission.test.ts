@@ -14,6 +14,11 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.repairState)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverGetUsageHistory)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.omnimindModelServicesList)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.omnimindModelServicesGet)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
+      "expensive-read",
+    );
     expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
   });
 

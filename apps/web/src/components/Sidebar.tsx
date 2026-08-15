@@ -306,6 +306,7 @@ import {
   runExclusiveProjectAddition,
   runProjectProvisionWithCancellationRecovery,
   resolvePullRequestReviewBadge,
+  resolveNewProjectDefaultModelSelection,
   resolveSidebarThreadListPaging,
   DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY,
   resolveProjectEmptyState,
@@ -364,7 +365,11 @@ import {
   ComposerPickerMenuPopup,
   ComposerPickerMenuSubPopup,
 } from "./chat/ComposerPickerMenuPopup";
-import { selectSplitView, useSplitViewStore } from "../splitViewStore";
+import {
+  resolveSplitViewFocusedPaneThreadId,
+  selectSplitView,
+  useSplitViewStore,
+} from "../splitViewStore";
 import { useRightDockStore } from "../rightDockStore";
 import { THREAD_DRAG_MIME } from "./chat-drop-overlay/ChatPaneDropOverlay";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
@@ -1432,6 +1437,9 @@ export default function Sidebar() {
   const activeSplitView = useSplitViewStore(
     useMemo(() => selectSplitView(routeSearch.splitViewId ?? null), [routeSearch.splitViewId]),
   );
+  const librarySourceThreadId = activeSplitView
+    ? resolveSplitViewFocusedPaneThreadId(activeSplitView)
+    : routeThreadId;
   const splitViewsById = useSplitViewStore((store) => store.splitViewsById);
 
   useEffect(() => {
@@ -2488,8 +2496,6 @@ export default function Sidebar() {
       // is unset. Nested function bodies are lowered separately and are unaffected, and the
       // catch below still sees every rejection. See Sidebar.compiler.test.ts.
       const runAddProject = async () => {
-        const defaultProvider =
-          appSettings.defaultProvider === "pi" ? "codex" : appSettings.defaultProvider;
         const existing = findWorkspaceRootMatch(projects, cwd, (project) => project.cwd);
         const existingRecovery = await recoverExistingAddProjectTarget({
           existingProjectId: existing?.id,
@@ -2509,10 +2515,9 @@ export default function Sidebar() {
         const creationResult = await createOrRecoverProjectFromPath({
           api,
           workspaceRoot: cwd,
-          defaultModelSelection: {
-            provider: defaultProvider,
-            model: getDefaultModel(defaultProvider),
-          },
+          defaultModelSelection: resolveNewProjectDefaultModelSelection(
+            appSettings.defaultProvider,
+          ),
           ...(options.createIfMissing === undefined
             ? {}
             : { createIfMissing: options.createIfMissing }),
@@ -3314,17 +3319,9 @@ export default function Sidebar() {
                     directoryName: value.directoryName,
                     commandId: newCommandId(),
                     projectId: requestedProjectId,
-                    defaultModelSelection: {
-                      provider:
-                        appSettings.defaultProvider === "pi"
-                          ? "codex"
-                          : appSettings.defaultProvider,
-                      model: getDefaultModel(
-                        appSettings.defaultProvider === "pi"
-                          ? "codex"
-                          : appSettings.defaultProvider,
-                      ),
-                    },
+                    defaultModelSelection: resolveNewProjectDefaultModelSelection(
+                      appSettings.defaultProvider,
+                    ),
                     createdAt: new Date().toISOString(),
                   },
                   { signal: options.signal },
@@ -5396,7 +5393,11 @@ export default function Sidebar() {
       label: t("nav.library"),
       description: t("search.libraryDescription"),
       keywords: ["library", "plugins", "skills", "mcp", "tools", "engine"],
-      run: () => void navigate({ to: "/plugins" }),
+      run: () =>
+        void navigate({
+          to: "/plugins",
+          search: librarySourceThreadId ? { threadId: librarySourceThreadId } : {},
+        }),
       icon: BookIcon,
     },
     {

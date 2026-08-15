@@ -34,6 +34,8 @@ export const WS_NEGOTIATE_QUERY = {
 } as const;
 
 export const WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY = "projects.github-provisioning";
+export const WS_OMNIMIND_MODEL_SERVICES_CAPABILITY = "omnimind.model-services";
+export const WS_OMNIMIND_ECOSYSTEM_CAPABILITY = "omnimind.ecosystem";
 
 // Capabilities the current client refuses to run without. Kept separate from
 // the advertised server list so a newer client can still negotiate with an
@@ -54,6 +56,8 @@ export const WS_SERVER_CAPABILITIES = [
   // Optional feature capability: older servers may omit it without making the
   // rest of a newer client unusable during a staggered rollout.
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
+  WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
   // Single-handshake connect: negotiation is available over plain HTTP at
   // WS_NEGOTIATE_HTTP_PATH, so a connect costs exactly one WebSocket upgrade.
   "transport.http-negotiate",

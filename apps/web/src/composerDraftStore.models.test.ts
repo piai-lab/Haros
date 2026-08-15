@@ -66,6 +66,34 @@ describe("resolvePreferredComposerModelSelection", () => {
       }),
     ).toEqual(cursorSelection);
   });
+
+  it("keeps an unbound Pi intent fail-closed instead of falling back to Codex", () => {
+    expect(
+      resolvePreferredComposerModelSelection({
+        draft: {
+          modelSelectionByProvider: {},
+          activeProvider: "pi",
+        },
+        threadModelSelection: modelSelection("codex", "gpt-5.5"),
+        projectModelSelection: null,
+        defaultProvider: "codex",
+      }),
+    ).toBeNull();
+  });
+
+  it("keeps an unbound OmniMind intent fail-closed until its runtime catalog provides a model", () => {
+    expect(
+      resolvePreferredComposerModelSelection({
+        draft: {
+          modelSelectionByProvider: {},
+          activeProvider: "omnimind",
+        },
+        threadModelSelection: null,
+        projectModelSelection: null,
+        defaultProvider: "codex",
+      }),
+    ).toBeNull();
+  });
 });
 
 describe("composerDraftStore modelSelection", () => {
@@ -374,7 +402,7 @@ describe("composerDraftStore modelSelection", () => {
     expect(state.selectedModel).toBe("opencode/gpt-5-nano");
   });
 
-  it("preserves the persisted OpenCode thread model when discovery omits it", () => {
+  it("falls back to the first live OpenCode model when discovery omits the persisted model", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
         modelSelectionByProvider: {},
@@ -402,7 +430,7 @@ describe("composerDraftStore modelSelection", () => {
       },
     });
 
-    expect(state.selectedModel).toBe("openai/gpt-5.4");
+    expect(state.selectedModel).toBe("openai/gpt-5-codex");
   });
 
   it("falls back to the first exposed OpenCode runtime model when the draft selection is stale", () => {
@@ -438,7 +466,7 @@ describe("composerDraftStore modelSelection", () => {
     expect(state.selectedModel).toBe("opencode/gpt-5-nano");
   });
 
-  it("preserves a selected Pi custom model when discovery omits it", () => {
+  it("keeps a remembered Pi model unavailable when the runtime catalog no longer contains it", () => {
     const state = deriveEffectiveComposerModelState({
       draft: {
         modelSelectionByProvider: {
@@ -468,7 +496,121 @@ describe("composerDraftStore modelSelection", () => {
       },
     });
 
-    expect(state.selectedModel).toBe("openai/gpt-5.5");
+    expect(state.selectedModel).toBeNull();
+  });
+
+  it("does not silently replace a removed OmniMind service with another service model", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: {
+        modelSelectionByProvider: {
+          omnimind: modelSelection("omnimind", "service-a/model-a"),
+        },
+        activeProvider: "omnimind",
+      },
+      selectedProvider: "omnimind",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        omnimind: [{ slug: "service-b/model-b", name: "Model B" }],
+      },
+    });
+
+    expect(state.selectedModel).toBeNull();
+  });
+
+  it("selects the first OmniMind catalog model only when no exact selection was remembered", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: { modelSelectionByProvider: {}, activeProvider: "omnimind" },
+      selectedProvider: "omnimind",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        omnimind: [{ slug: "service-b/model-b", name: "Model B" }],
+      },
+    });
+
+    expect(state.selectedModel).toBe("service-b/model-b");
+  });
+
+  it("uses an authority-selected OmniMind catalog fallback instead of the first catalog row", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: { modelSelectionByProvider: {}, activeProvider: "omnimind" },
+      selectedProvider: "omnimind",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      runtimeCatalogFallbackModel: "service-b/model-b",
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        omnimind: [
+          { slug: "service-a/model-a", name: "Model A" },
+          { slug: "service-b/model-b", name: "Model B" },
+        ],
+      },
+    });
+
+    expect(state.selectedModel).toBe("service-b/model-b");
+  });
+
+  it("returns no model when the selected Engine has no authoritative catalog", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: {
+        modelSelectionByProvider: {
+          omnimind: modelSelection("omnimind", "deepseek/deepseek-chat"),
+          codex: modelSelection("codex", "gpt-5.5"),
+        },
+        activeProvider: "omnimind",
+      },
+      selectedProvider: "omnimind",
+      threadModelSelection: modelSelection("codex", "gpt-5.4"),
+      projectModelSelection: modelSelection("codex", "gpt-5.5"),
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: { omnimind: [] },
+    });
+
+    expect(state.selectedModel).toBeNull();
+  });
+
+  it("restores a valid target-Engine sticky model before the declared default", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: { modelSelectionByProvider: {}, activeProvider: "claudeAgent" },
+      selectedProvider: "claudeAgent",
+      threadModelSelection: modelSelection("codex", "gpt-5.4"),
+      projectModelSelection: modelSelection("codex", "gpt-5.5"),
+      stickyModelSelection: modelSelection("claudeAgent", "claude-opus-4-8", {
+        effort: "max",
+      }),
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        claudeAgent: [
+          { slug: "claude-sonnet-5", name: "Claude Sonnet 5" },
+          { slug: "claude-opus-4-8", name: "Claude Opus 4.8" },
+        ],
+      },
+    });
+
+    expect(state.selectedModel).toBe("claude-opus-4-8");
+    expect(state.modelOptions?.claudeAgent).toEqual({ effort: "max" });
+  });
+
+  it("does not restore a target-Engine sticky model missing from the catalog", () => {
+    const state = deriveEffectiveComposerModelState({
+      draft: { modelSelectionByProvider: {}, activeProvider: "claudeAgent" },
+      selectedProvider: "claudeAgent",
+      threadModelSelection: null,
+      projectModelSelection: null,
+      stickyModelSelection: modelSelection("claudeAgent", "claude-opus-4-8", {
+        effort: "max",
+      }),
+      customModelsByProvider: {},
+      availableModelOptionsByProvider: {
+        claudeAgent: [{ slug: "claude-sonnet-5", name: "Claude Sonnet 5" }],
+      },
+    });
+
+    expect(state.selectedModel).toBe("claude-sonnet-5");
+    expect(state.modelOptions?.claudeAgent).toBeUndefined();
   });
 });
 
@@ -477,6 +619,21 @@ describe("composerDraftStore setModelSelection", () => {
 
   beforeEach(() => {
     resetComposerDraftStore();
+  });
+
+  it("switches the active Engine without fabricating a model selection", () => {
+    const store = useComposerDraftStore.getState();
+
+    store.setModelSelectionAndSticky(threadId, modelSelection("codex", "gpt-5.4"));
+    store.setActiveProviderAndSticky(threadId, "omnimind");
+
+    const state = useComposerDraftStore.getState();
+    expect(state.draftsByThreadId[threadId]?.activeProvider).toBe("omnimind");
+    expect(state.stickyActiveProvider).toBe("omnimind");
+    expect(state.draftsByThreadId[threadId]?.modelSelectionByProvider.omnimind).toBeUndefined();
+    expect(state.draftsByThreadId[threadId]?.modelSelectionByProvider.codex).toEqual(
+      modelSelection("codex", "gpt-5.4"),
+    );
   });
 
   it("keeps explicit model overrides instead of coercing to null", () => {
@@ -982,6 +1139,74 @@ describe("composerDraftStore provider-scoped option updates", () => {
       modelSelection("grok", "grok-build", {
         reasoningEffort: "high",
       }),
+    );
+  });
+
+  it("retains OmniMind max thinking level in provider-scoped options", () => {
+    const store = useComposerDraftStore.getState();
+
+    store.setProviderModelOptions(
+      threadId,
+      "omnimind",
+      { thinkingLevel: "max" },
+      { model: "deepseek/deepseek-reasoner" },
+    );
+
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.modelSelectionByProvider
+        .omnimind,
+    ).toEqual(
+      modelSelection("omnimind", "deepseek/deepseek-reasoner", {
+        thinkingLevel: "max",
+      }),
+    );
+  });
+
+  it("moves native options onto the authoritative fallback model instead of a stale saved model", () => {
+    const store = useComposerDraftStore.getState();
+    store.setModelSelection(
+      threadId,
+      modelSelection("pi", "legacy/missing-model", { thinkingLevel: "low" }),
+    );
+
+    store.setProviderModelOptions(
+      threadId,
+      "pi",
+      { thinkingLevel: "high" },
+      { model: "openai/live-model", persistSticky: true },
+    );
+
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.modelSelectionByProvider.pi,
+    ).toEqual(
+      modelSelection("pi", "openai/live-model", {
+        thinkingLevel: "high",
+      }),
+    );
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.pi).toEqual(
+      modelSelection("pi", "openai/live-model", {
+        thinkingLevel: "high",
+      }),
+    );
+  });
+
+  it("moves a cleared native option onto the authoritative fallback model", () => {
+    const store = useComposerDraftStore.getState();
+    store.setModelSelectionAndSticky(
+      threadId,
+      modelSelection("pi", "legacy/missing-model", { thinkingLevel: "low" }),
+    );
+
+    store.setProviderModelOptions(threadId, "pi", undefined, {
+      model: "openai/live-model",
+      persistSticky: true,
+    });
+
+    expect(
+      useComposerDraftStore.getState().draftsByThreadId[threadId]?.modelSelectionByProvider.pi,
+    ).toEqual(modelSelection("pi", "openai/live-model"));
+    expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.pi).toEqual(
+      modelSelection("pi", "openai/live-model"),
     );
   });
 });

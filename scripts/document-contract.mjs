@@ -81,6 +81,7 @@ const MACHINE_BLOCKS = [
     format: "json",
   },
   { path: "architecture/workbench.md", tag: "work-surface-ia", format: "json" },
+  { path: "architecture/workbench.md", tag: "model-services-ia", format: "json" },
 ];
 
 function normalize(value) {
@@ -234,6 +235,7 @@ function validateEngineCapabilityComposition(findings, documents) {
   if (
     JSON.stringify(policy.effectiveCapabilities) !== JSON.stringify(expectedCapabilities) ||
     policy.nativeEcosystemDisposition !== "preserve" ||
+    policy.nativeCapabilityReachability !== "required-when-runtime-exposes" ||
     policy.omnimindAssetDelivery !== "adapter-or-session-mount" ||
     policy.enginePrivateHomeMutation !== "forbidden" ||
     policy.identityConflict !== "explicit" ||
@@ -269,15 +271,41 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
   const expected = {
     url: "https://github.com/earendil-works/pi.git",
     revision: "53fa77ccd8a279eb87e92294ef3687b03ff80112",
-    paths: ["vendor/omnimind-pi-coding-agent-0.84.1.tgz"],
+    paths: [
+      "vendor/omnimind-pi-coding-agent-0.84.1.tgz",
+      "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
+      "patches/@earendil-works%2Fpi-coding-agent@0.84.1.patch",
+      "scripts/vendor-omnimind-pi-runtime.mjs",
+    ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "16b3ae817e700684e58be750b2edb5a14bc4aac4ac318fcd949e1c9e9ba934a9",
+    archiveSha256: "8b570c81e6d92fadfc7ae173319a10c6298ba23331075da45d9d655a7090f4ad",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
     upstreamPackageIntegrity:
       "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
-    sharedRuntimeBytes: "unchanged",
-    behavioralDifferences: ["package identity", "piConfig.configDir"],
+    sharedRuntimeBytes: "patched",
+    patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
+    patchSha256: "bf2cd48f10e7b5c161404251bf179e1b07ba806b4901418aef66c8599bf27a65",
+    stockPatchPath: "patches/@earendil-works%2Fpi-coding-agent@0.84.1.patch",
+    stockPatchSha256: "a2619190f6d54c654679ff44180aaa9046c5edb03aa6ab67d94b615984fbdc90",
+    generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
+    behavioralDifferences: [
+      "package identity",
+      "piConfig.configDir",
+      "injectable models.json content reader",
+      "accepted model-config provider provenance",
+      "credential-blind model-config projection",
+      "typed persistent model-config provider mutation with retained-model merge, preview and safe credential-reference intent",
+      "typed credential-blind model cost and tier editing",
+      "typed nested editing for a closed protocol-specific compat subset",
+      "write-only environment header-reference set/clear with value-blind metadata",
+      "explicit generic model discovery through the configured Pi protocol and credential",
+      "typed prompt outcomes for handled extension commands and input hooks, including current-session Agent work started through sendUserMessage or sendMessage triggerTurn",
+      "explicit reader-mode models store path remains file-backed",
+      "request-scoped missing-package policy for resource loading",
+      "intent-scoped package resource listing and filtering",
+      "credential-blind public npm package identities and actions",
+    ],
   };
   const actual = record
     ? {
@@ -290,6 +318,11 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
         upstreamPackageIntegrity: record.upstreamPackageIntegrity,
         licenseFiles: record.licenseFiles,
         sharedRuntimeBytes: record.generation?.sharedRuntimeBytes,
+        patchPath: record.generation?.patchPath,
+        patchSha256: record.generation?.patchSha256,
+        stockPatchPath: record.generation?.stockPatchPath,
+        stockPatchSha256: record.generation?.stockPatchSha256,
+        generatorPath: record.generation?.generatorPath,
         behavioralDifferences: record.generation?.behavioralDifferences,
       }
     : null;
@@ -299,6 +332,57 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "source-adoption.bundled-pi-runtime",
       documentPath,
       "bundled OmniMind Agent must retain its exact Pi source, artifact, generation, and legal identity",
+    );
+  }
+}
+
+function validatePiAiOAuthPageRendererAdoption(findings, documents) {
+  const documentPath = "README.md";
+  const blocks = blocksFor(documents.get(documentPath) ?? "", "source-adoptions");
+  if (blocks.length !== 1) return;
+
+  let record;
+  try {
+    const parsed = JSON.parse(blocks[0]);
+    record = parsed?.adopted?.find((entry) => entry?.id === "pi-ai-oauth-page-renderer");
+  } catch {
+    return;
+  }
+
+  const expected = {
+    url: "https://github.com/earendil-works/pi.git",
+    revision: "53fa77ccd8a279eb87e92294ef3687b03ff80112",
+    paths: ["patches/@earendil-works%2Fpi-ai@0.84.1.patch", "package.json", "bun.lock"],
+    sourcePaths: [
+      "packages/ai/src/auth/types.ts",
+      "packages/ai/src/auth/oauth/oauth-page.ts",
+      "packages/ai/src/auth/oauth/openai-codex.ts",
+      "packages/ai/src/auth/oauth/anthropic.ts",
+      "packages/ai/src/auth/oauth/openrouter.ts",
+      "packages/ai/src/auth/oauth/radius.ts",
+    ],
+    upstreamPackage: "@earendil-works/pi-ai@0.84.1",
+    upstreamPackageIntegrity:
+      "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==",
+    licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
+  };
+  const actual = record
+    ? {
+        url: record.url,
+        revision: record.revision,
+        paths: record.paths,
+        sourcePaths: record.sourcePaths,
+        upstreamPackage: record.upstreamPackage,
+        upstreamPackageIntegrity: record.upstreamPackageIntegrity,
+        licenseFiles: record.licenseFiles,
+      }
+    : null;
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+    addFinding(
+      findings,
+      "source-adoption.pi-ai-oauth-page-renderer",
+      documentPath,
+      "Pi AI OAuth page renderer must retain its exact source, package, patch, and legal identity",
     );
   }
 }
@@ -343,6 +427,48 @@ function validateWorkSurfaceInformationArchitecture(findings, documents) {
   }
 }
 
+function validateModelServicesInformationArchitecture(findings, documents) {
+  const documentPath = "architecture/workbench.md";
+  const blocks = blocksFor(documents.get(documentPath) ?? "", "model-services-ia");
+  if (blocks.length !== 1) return;
+
+  let policy;
+  try {
+    policy = JSON.parse(blocks[0]);
+  } catch {
+    return;
+  }
+  const expected = {
+    scope: ["connection", "authentication", "catalog", "models", "status-and-recovery"],
+    primaryAction: "select-runtime-model-service",
+    secondaryAction: "connect-by-api-address",
+    secondaryPlacement: "list-tail-lower-emphasis",
+    secondaryVisibility: "capability-gated-no-disabled-placeholder",
+    genericApiProtocols: [
+      "openai-completions",
+      "openai-responses",
+      "anthropic-messages",
+      "google-generative-ai",
+    ],
+    nonstandardApiOwner: "pi-extension",
+    extensionServiceOutcome: "required-intent-scoped-runtime-projection",
+    customMutationOwner: "pi-model-config",
+    customMutationOutcome: "test-save-reopen-edit-refresh-delete",
+    customMutationAuthorization: "maintainer-approved-narrow-pi-owned-seam",
+    gitWritingOwner: "calling-feature-settings",
+    omnimindDefaultModel: "none-runtime-catalog-only",
+    customMutationGate: "E6",
+  };
+  if (JSON.stringify(policy) !== JSON.stringify(expected)) {
+    addFinding(
+      findings,
+      "workbench.model-services-ia",
+      documentPath,
+      "Model services must keep runtime discovery primary, make API-address setup persistable, and keep mutation authority with Pi",
+    );
+  }
+}
+
 /**
  * Validate only the durable document graph and machine-readable owner blocks.
  * Product semantics remain in the sole owners and are reviewed as prose/design;
@@ -375,7 +501,9 @@ export async function validateDocumentContract({ root, read = readFile }) {
   validateCurrentState(findings, documents);
   validateEngineCapabilityComposition(findings, documents);
   validateBundledPiRuntimeAdoption(findings, documents);
+  validatePiAiOAuthPageRendererAdoption(findings, documents);
   validateWorkSurfaceInformationArchitecture(findings, documents);
+  validateModelServicesInformationArchitecture(findings, documents);
 
   return findings;
 }

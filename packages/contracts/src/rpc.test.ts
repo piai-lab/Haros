@@ -13,6 +13,7 @@ import {
   WsRpcGroup,
 } from "./rpc";
 import { ORCHESTRATION_WS_METHODS } from "./orchestration";
+import { WS_METHODS } from "./ws";
 
 describe("WS RPC contracts", () => {
   it("exports the additive Effect RPC group", () => {
@@ -25,6 +26,19 @@ describe("WS RPC contracts", () => {
     expect(WsFeatureRpcGroup.requests.has(ORCHESTRATION_WS_METHODS.reconcileProviderDelivery)).toBe(
       true,
     );
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesList)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesGet)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesBeginLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesAnswerLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesCancelLogin)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesLogout)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRefresh)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
+      true,
+    );
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesTestCustom)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesSaveCustom)).toBe(true);
+    expect(WsFeatureRpcGroup.requests.has(WS_METHODS.omnimindModelServicesRemoveCustom)).toBe(true);
   });
 
   it("uses a schema-backed transport error", () => {

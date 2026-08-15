@@ -30,6 +30,7 @@ import {
   makeCheckClaudeProviderStatus,
   makeCheckCodexProviderStatus,
   makeCheckCursorProviderStatus,
+  makeCheckDroidProviderStatus,
   makeCheckGrokProviderStatus,
   makeCheckKiloProviderStatus,
   makeCheckOpenCodeProviderStatus,
@@ -41,6 +42,7 @@ import {
   ProviderHealthLive,
   projectProviderStatusesForSettings,
   readCodexConfigModelProvider,
+  resolvePassiveProviderPresence,
   stabilizeProviderStatusesAgainstTransientTimeouts,
 } from "./ProviderHealth";
 import {
@@ -216,6 +218,7 @@ function withTempCodexHome(configContent?: string) {
           CODEX_HOME: tmpDir,
           OMNIMIND_HOME: runtimeDir,
         };
+
         const restore: Record<string, string | undefined> = {};
         for (const [key, value] of Object.entries(overrides)) {
           restore[key] = process.env[key];
@@ -249,6 +252,37 @@ function withTempCodexHome(configContent?: string) {
     return { tmpDir, runtimeDir } as const;
   });
 }
+
+describe("passive provider presence", () => {
+  it("settles from local executable/config facts without running a provider command", () => {
+    const observedCommands: string[] = [];
+    const presence = resolvePassiveProviderPresence(DEFAULT_SERVER_SETTINGS, (command) => {
+      observedCommands.push(command);
+      return command === "codex" ? "/test/bin/codex" : null;
+    });
+
+    assert.deepStrictEqual(presence, ["omnimind", "codex", "pi"]);
+    assert.deepStrictEqual(observedCommands, [
+      "codex",
+      "claude",
+      "cursor-agent",
+      "agy",
+      "grok",
+      "droid",
+      "kilo",
+      "opencode",
+    ]);
+  });
+
+  it("keeps disabled providers out of the settled presence fact", () => {
+    const resolveCommand = vi.fn(() => "/unexpected");
+    assert.deepStrictEqual(
+      resolvePassiveProviderPresence(allProvidersDisabledServerSettings, resolveCommand),
+      [],
+    );
+    assert.strictEqual(resolveCommand.mock.calls.length, 0);
+  });
+});
 
 it.layer(NodeServices.layer)("ProviderHealth", (it) => {
   describe("provider update commands", () => {
@@ -651,6 +685,38 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       ]);
     });
 
+    it("does not stabilize a timeout from a different checked binary", () => {
+      const previous = {
+        ...previousReadyOpenCode,
+        checkedBinaryPath: "/custom/bin/opencode-a",
+      } satisfies ServerProviderStatus;
+      const next = {
+        provider: "opencode",
+        status: "error",
+        available: false,
+        authStatus: "unknown",
+        checkedBinaryPath: "/custom/bin/opencode-b",
+        checkedAt: "2026-06-04T17:01:00.000Z",
+        message: "OpenCode CLI is installed but failed to run. Timed out while running command.",
+      } satisfies ServerProviderStatus;
+
+      assert.deepStrictEqual(
+        stabilizeProviderStatusesAgainstTransientTimeouts([previous], [next]),
+        [next],
+      );
+      assert.deepStrictEqual(
+        stabilizeProviderStatusesAgainstTransientTimeouts(
+          [previous],
+          [{ ...next, checkedBinaryPath: previous.checkedBinaryPath }],
+        ),
+        [{ ...previous, checkedAt: next.checkedAt }],
+      );
+      assert.deepStrictEqual(
+        stabilizeProviderStatusesAgainstTransientTimeouts([previousReadyOpenCode], [next]),
+        [next],
+      );
+    });
+
     it("drops a cached update advisory when a transient timeout prevents verification", () => {
       const previousWithUpdate = {
         ...previousReadyOpenCode,
@@ -855,6 +921,29 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         false,
       );
     });
+
+    it("detects a change in the observed unavailable reason", () => {
+      const unavailableCursor = {
+        ...readyCursor,
+        status: "error",
+        available: false,
+      } satisfies ServerProviderStatus;
+
+      assert.strictEqual(
+        providerStatusesEqual(
+          [unavailableCursor],
+          [{ ...unavailableCursor, unavailableReason: "not_installed" }],
+        ),
+        false,
+      );
+      assert.strictEqual(
+        providerStatusesEqual(
+          [{ ...unavailableCursor, checkedBinaryPath: "cursor-agent" }],
+          [{ ...unavailableCursor, checkedBinaryPath: "agent" }],
+        ),
+        false,
+      );
+    });
   });
 
   // ── checkCodexProviderStatus tests ────────────────────────────────
@@ -980,6 +1069,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.unavailableReason, "not_installed");
         assert.strictEqual(status.message, "Codex CLI (`codex`) is not installed or not on PATH.");
       }).pipe(Effect.provide(failingSpawnerLayer("spawn codex ENOENT"))),
     );
@@ -992,6 +1082,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.unavailableReason, undefined);
         assert.strictEqual(
           status.message,
           "Codex CLI v0.36.0 is too old for OmniMind. Upgrade to v0.37.0 or newer and restart OmniMind.",
@@ -1743,6 +1834,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.unavailableReason, "not_installed");
         assert.strictEqual(
           status.message,
           "Claude Agent CLI (`claude`) is not installed or not on PATH.",
@@ -1756,6 +1848,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.provider, "claudeAgent");
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
+        assert.strictEqual(status.unavailableReason, undefined);
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args) => {
@@ -1863,6 +1956,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       Effect.gen(function* () {
         const status = yield* makeCheckOpenCodeProviderStatus("/custom/bin/opencode");
         assert.strictEqual(status.status, "ready");
+        assert.strictEqual(status.checkedBinaryPath, "/custom/bin/opencode");
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args, command) => {
@@ -1882,6 +1976,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.unavailableReason, "not_installed");
         assert.strictEqual(
           status.message,
           "OpenCode CLI (`opencode`) is not installed or not on PATH.",
@@ -1895,6 +1990,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
       Effect.gen(function* () {
         const status = yield* makeCheckKiloProviderStatus("/custom/bin/kilo");
         assert.strictEqual(status.status, "ready");
+        assert.strictEqual(status.checkedBinaryPath, "/custom/bin/kilo");
       }).pipe(
         Effect.provide(
           mockSpawnerLayer((args, command) => {
@@ -1905,6 +2001,26 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           }),
         ),
       ),
+    );
+
+    it.effect("returns not-installed when Kilo CLI is missing", () =>
+      Effect.gen(function* () {
+        const status = yield* makeCheckKiloProviderStatus();
+        assert.strictEqual(status.provider, "kilo");
+        assert.strictEqual(status.available, false);
+        assert.strictEqual(status.unavailableReason, "not_installed");
+      }).pipe(Effect.provide(failingSpawnerLayer("spawn kilo ENOENT"))),
+    );
+  });
+
+  describe("checkDroidProviderStatus", () => {
+    it.effect("returns not-installed when Droid CLI is missing", () =>
+      Effect.gen(function* () {
+        const status = yield* makeCheckDroidProviderStatus();
+        assert.strictEqual(status.provider, "droid");
+        assert.strictEqual(status.available, false);
+        assert.strictEqual(status.unavailableReason, "not_installed");
+      }).pipe(Effect.provide(failingSpawnerLayer("spawn droid ENOENT"))),
     );
   });
 
@@ -1932,6 +2048,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.version, "1.0.11");
+        assert.strictEqual(status.unavailableReason, undefined);
         assert.strictEqual(
           status.message,
           "Antigravity CLI 1.0.11 is too old for OmniMind. Upgrade to 1.0.12 or newer.",
@@ -1947,6 +2064,15 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           }),
         ),
       ),
+    );
+
+    it.effect("returns not-installed when Antigravity CLI is missing", () =>
+      Effect.gen(function* () {
+        const status = yield* checkAntigravityProviderStatus();
+        assert.strictEqual(status.provider, "antigravity");
+        assert.strictEqual(status.available, false);
+        assert.strictEqual(status.unavailableReason, "not_installed");
+      }).pipe(Effect.provide(failingSpawnerLayer("spawn agy ENOENT"))),
     );
 
     it.effect("returns ready when Antigravity lists authenticated models", () =>
@@ -2091,6 +2217,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.unavailableReason, "not_installed");
         assert.strictEqual(status.message, "Grok CLI (`grok`) is not installed or not on PATH.");
       }).pipe(Effect.provide(failingSpawnerLayer("spawn grok ENOENT"))),
     );
@@ -2196,6 +2323,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
           );
           const status = yield* makeCheckCursorProviderStatus("/custom/bin/cursor");
           assert.strictEqual(status.status, "ready");
+          assert.strictEqual(status.checkedBinaryPath, "/custom/bin/cursor");
         }).pipe(
           Effect.provide(
             mockSpawnerLayer((args, command) => {
@@ -2223,6 +2351,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.unavailableReason, "not_installed");
         assert.strictEqual(
           status.message,
           "Cursor Agent CLI (`cursor-agent`) is not installed or not on PATH.",
@@ -2237,6 +2366,7 @@ it.layer(NodeServices.layer)("ProviderHealth", (it) => {
         assert.strictEqual(status.status, "error");
         assert.strictEqual(status.available, false);
         assert.strictEqual(status.authStatus, "unknown");
+        assert.strictEqual(status.unavailableReason, undefined);
         assert.strictEqual(
           status.message,
           "Cursor Agent CLI is installed but failed to run. version failed",

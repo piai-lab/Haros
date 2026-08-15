@@ -56,6 +56,33 @@ function expectSchemaValidActivities(event: ProviderRuntimeEvent): void {
 }
 
 describe("projected activities satisfy the orchestration command schema", () => {
+  it("marks Pi retry progress for localized product presentation", () => {
+    const [activity] = projectProviderRuntimeActivities(
+      runtimeEvent({
+        type: "runtime.warning",
+        eventId: "pi-model-request-retrying",
+        turnId: TURN_ID,
+        payload: {
+          message: "Retrying the model request after a temporary failure.",
+          detail: {
+            source: "pi-auto-retry",
+            subtype: "model_request_retrying",
+            attempt: 1,
+            maxAttempts: 3,
+          },
+        },
+      }),
+    );
+
+    expect(activity).toMatchObject({
+      kind: "runtime.warning",
+      summary: "Model request retrying",
+      payload: { nativeEventType: "model_request_retrying" },
+      turnId: TURN_ID,
+    });
+    expect(() => decodeActivityAppendCommand(activity!)).not.toThrow();
+  });
+
   it("omits an absent approval request id instead of emitting an explicit undefined", () => {
     expectSchemaValidActivities(
       runtimeEvent({

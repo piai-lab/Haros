@@ -21,7 +21,7 @@ export const GitHubProjectProvisionInput = Schema.Struct({
   directoryName: BoundedDirectoryName,
   commandId: CommandId,
   projectId: ProjectId,
-  defaultModelSelection: ModelSelection,
+  defaultModelSelection: Schema.NullOr(ModelSelection),
   createdAt: IsoDateTime,
 });
 export type GitHubProjectProvisionInput = typeof GitHubProjectProvisionInput.Type;

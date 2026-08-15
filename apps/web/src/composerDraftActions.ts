@@ -24,6 +24,7 @@ import {
   revokeDraftComposerImagePreviewUrls,
   revokeDraftPreviewUrls,
   revokeObjectPreviewUrl,
+  revokePendingDirectTurnRecoveryPreviewUrls,
   revokePromptHistorySavedDraftPreviewUrls,
   revokeQueuedTurnPreviewUrls,
   syncPersistedAttachmentsForSlot,
@@ -35,6 +36,7 @@ import {
   type ComposerThreadDraftState,
   type DraftThreadState,
   type PersistedComposerImageAttachment,
+  type PendingDirectTurnRecovery,
   assistantSelectionDedupKey,
   buildDraftThreadState,
   buildTransferredComposerDraft,
@@ -812,6 +814,36 @@ export const createComposerDraftStoreState =
         return { draftsByThreadId: nextDraftsByThreadId };
       });
     },
+    setActiveProviderAndSticky: (threadId, provider) => {
+      if (threadId.length === 0) {
+        return;
+      }
+      const normalizedProvider = normalizeProviderKind(provider);
+      if (!normalizedProvider) {
+        return;
+      }
+      set((state) => {
+        const existing = state.draftsByThreadId[threadId];
+        const base = existing ?? createEmptyThreadDraft();
+        if (
+          base.activeProvider === normalizedProvider &&
+          state.stickyActiveProvider === normalizedProvider
+        ) {
+          return state;
+        }
+        const nextDraft: ComposerThreadDraftState = {
+          ...base,
+          activeProvider: normalizedProvider,
+        };
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: nextDraft,
+          },
+          stickyActiveProvider: normalizedProvider,
+        };
+      });
+    },
     setModelSelectionAndSticky: (threadId, modelSelection) => {
       get().setModelSelection(threadId, modelSelection);
       const correctedSelection =
@@ -884,9 +916,8 @@ export const createComposerDraftStoreState =
         normalizedProvider,
       );
       const providerOpts = normalizedOpts?.[normalizedProvider];
-      const fallbackModel =
-        normalizeModelSlug(options?.model, normalizedProvider) ??
-        getDefaultModel(normalizedProvider);
+      const explicitModel = normalizeModelSlug(options?.model, normalizedProvider);
+      const fallbackModel = explicitModel ?? getDefaultModel(normalizedProvider);
 
       set((state) => {
         const existing = state.draftsByThreadId[threadId];
@@ -895,8 +926,12 @@ export const createComposerDraftStoreState =
         // Update the map entry for this provider
         const nextMap = { ...base.modelSelectionByProvider };
         const currentForProvider = nextMap[normalizedProvider];
+        const nextModel = explicitModel ?? currentForProvider?.model ?? fallbackModel;
+        const currentSupportsAutoMode =
+          currentForProvider?.provider === "claudeAgent" && currentForProvider.model === nextModel
+            ? currentForProvider.supportsAutoMode
+            : undefined;
         if (providerOpts) {
-          const nextModel = currentForProvider?.model ?? fallbackModel;
           if (!nextModel) {
             return state;
           }
@@ -904,18 +939,14 @@ export const createComposerDraftStoreState =
             normalizedProvider,
             nextModel,
             providerOpts,
-            currentForProvider?.provider === "claudeAgent"
-              ? currentForProvider.supportsAutoMode
-              : undefined,
+            currentSupportsAutoMode,
           );
-        } else if (currentForProvider?.options) {
+        } else if (nextModel && (explicitModel !== null || currentForProvider?.options)) {
           nextMap[normalizedProvider] = buildModelSelection(
             normalizedProvider,
-            currentForProvider.model,
+            nextModel,
             undefined,
-            currentForProvider.provider === "claudeAgent"
-              ? currentForProvider.supportsAutoMode
-              : undefined,
+            currentSupportsAutoMode,
           );
         }
 
@@ -924,10 +955,21 @@ export const createComposerDraftStoreState =
         let nextStickyActiveProvider = state.stickyActiveProvider;
         if (options?.persistSticky === true) {
           nextStickyMap = { ...state.stickyModelSelectionByProvider };
-          const stickyBase =
-            nextStickyMap[normalizedProvider] ??
-            base.modelSelectionByProvider[normalizedProvider] ??
-            (fallbackModel ? makeModelSelection(normalizedProvider, fallbackModel) : null);
+          const existingSticky = nextStickyMap[normalizedProvider];
+          const stickyCandidate =
+            existingSticky ?? base.modelSelectionByProvider[normalizedProvider];
+          const stickyBase = explicitModel
+            ? makeModelSelection(
+                normalizedProvider,
+                explicitModel,
+                undefined,
+                stickyCandidate?.provider === "claudeAgent" &&
+                  stickyCandidate.model === explicitModel
+                  ? stickyCandidate.supportsAutoMode
+                  : undefined,
+              )
+            : (stickyCandidate ??
+              (fallbackModel ? makeModelSelection(normalizedProvider, fallbackModel) : null));
           if (!stickyBase) {
             return state;
           }
@@ -940,7 +982,7 @@ export const createComposerDraftStoreState =
                 stickyBase.provider === "claudeAgent" ? stickyBase.supportsAutoMode : undefined,
               ),
             );
-          } else if (stickyBase.options) {
+          } else if (explicitModel !== null || stickyBase.options) {
             nextStickyMap[normalizedProvider] = buildModelSelection(
               normalizedProvider,
               stickyBase.model,
@@ -1893,6 +1935,138 @@ export const createComposerDraftStoreState =
         }
         return { draftsByThreadId: nextDraftsByThreadId };
       });
+    },
+    armPendingDirectTurnRecovery: (threadId, recovery) => {
+      if (threadId.length === 0) {
+        revokePendingDirectTurnRecoveryPreviewUrls(recovery);
+        return;
+      }
+      const previousDraft = get().draftsByThreadId[threadId];
+      if (previousDraft?.pendingDirectTurnRecovery) {
+        revokePendingDirectTurnRecoveryPreviewUrls(previousDraft.pendingDirectTurnRecovery);
+      }
+      // Blob cleanup is deferred until after the mutation; the recovery marker
+      // becomes the remaining reference for any AppSnap blobs transferred out
+      // of the visible Composer.
+      deleteDraftComposerImageBlobs(previousDraft, () => get().draftsByThreadId);
+      set((state) => {
+        const current = state.draftsByThreadId[threadId] ?? createEmptyThreadDraft();
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: {
+              ...current,
+              prompt: "",
+              promptHistorySavedDraft: null,
+              images: [],
+              files: [],
+              nonPersistedImageIds: [],
+              persistedAttachments: [],
+              assistantSelections: [],
+              browserAnnotations: [],
+              terminalContexts: [],
+              fileComments: [],
+              pastedTexts: [],
+              skills: [],
+              mentions: [],
+              restoredSourceProposedPlan: null,
+              pendingDirectTurnRecovery: recovery,
+            },
+          },
+        };
+      });
+      // The accepted command may outlive this renderer. Persist the one-shot
+      // marker before dispatch; malformed or never-admitted markers remain
+      // inert until the exact durable message and terminal projection exist.
+      flushPersistStorage();
+    },
+    clearPendingDirectTurnRecovery: (threadId, recoveryId, options) => {
+      let cleared = false;
+      let removedRecovery: ComposerThreadDraftState["pendingDirectTurnRecovery"] = null;
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        if (!current || current.pendingDirectTurnRecovery?.recoveryId !== recoveryId) {
+          return state;
+        }
+        removedRecovery = current.pendingDirectTurnRecovery;
+        const nextDraft: ComposerThreadDraftState = {
+          ...current,
+          pendingDirectTurnRecovery: null,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        cleared = true;
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+      const recoveryToRemove = removedRecovery as PendingDirectTurnRecovery | null;
+      if (recoveryToRemove) {
+        if (options?.preservePreviewUrls !== true) {
+          revokePendingDirectTurnRecoveryPreviewUrls(recoveryToRemove);
+        }
+        deletePersistedComposerImageBlobs(
+          recoveryToRemove.persistedImageAttachments,
+          () => get().draftsByThreadId,
+        );
+      }
+      if (cleared) flushPersistStorage();
+      return cleared;
+    },
+    supersedePendingDirectTurnRecovery: (threadId, recoveryId, mutation) => {
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        const recovery = current?.pendingDirectTurnRecovery;
+        if (!current || !recovery || recovery.recoveryId !== recoveryId) {
+          return state;
+        }
+        if (
+          (mutation === "content" && recovery.contentSuperseded) ||
+          (mutation === "binding" && recovery.bindingSuperseded)
+        ) {
+          return state;
+        }
+        return {
+          draftsByThreadId: {
+            ...state.draftsByThreadId,
+            [threadId]: {
+              ...current,
+              pendingDirectTurnRecovery: {
+                ...recovery,
+                ...(mutation === "content"
+                  ? { contentSuperseded: true }
+                  : { bindingSuperseded: true }),
+              },
+            },
+          },
+        };
+      });
+      flushPersistStorage();
+    },
+    takePendingDirectTurnRecovery: (threadId, recoveryId) => {
+      let taken: ComposerThreadDraftState["pendingDirectTurnRecovery"] = null;
+      set((state) => {
+        const current = state.draftsByThreadId[threadId];
+        if (!current || current.pendingDirectTurnRecovery?.recoveryId !== recoveryId) {
+          return state;
+        }
+        taken = current.pendingDirectTurnRecovery;
+        const nextDraft: ComposerThreadDraftState = {
+          ...current,
+          pendingDirectTurnRecovery: null,
+        };
+        const nextDraftsByThreadId = { ...state.draftsByThreadId };
+        if (shouldRemoveDraft(nextDraft)) {
+          delete nextDraftsByThreadId[threadId];
+        } else {
+          nextDraftsByThreadId[threadId] = nextDraft;
+        }
+        return { draftsByThreadId: nextDraftsByThreadId };
+      });
+      if (taken) flushPersistStorage();
+      return taken;
     },
     clearComposerContent: (threadId, options) => {
       if (threadId.length === 0) {

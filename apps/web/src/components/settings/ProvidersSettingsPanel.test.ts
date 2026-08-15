@@ -8,9 +8,29 @@ import {
   createProviderInstallResetPatch,
   isProviderInstallSettingsDirty,
   providerUpdateFailureMessage,
+  validateProviderCustomModelInput,
 } from "./ProvidersSettingsPanel";
 
 const defaults = AppSettingsSchema.makeUnsafe({});
+
+describe("validateProviderCustomModelInput", () => {
+  it("normalizes a new Engine-owned custom slug and rejects duplicates", () => {
+    expect(
+      validateProviderCustomModelInput({
+        provider: "codex",
+        value: "  custom/codex-next  ",
+        savedModels: [],
+      }),
+    ).toEqual({ model: "custom/codex-next" });
+    expect(
+      validateProviderCustomModelInput({
+        provider: "codex",
+        value: "custom/codex-next",
+        savedModels: ["custom/codex-next"],
+      }),
+    ).toEqual({ error: "That custom model is already saved." });
+  });
+});
 
 describe("isProviderInstallSettingsDirty", () => {
   it("covers every provider install text and boolean field", () => {

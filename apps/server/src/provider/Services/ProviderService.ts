@@ -12,6 +12,8 @@
  * @module ProviderService
  */
 import type {
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemReloadResult,
   ProviderBackgroundTaskInput,
   ProviderForkThreadInput,
   ProviderForkThreadResult,
@@ -144,6 +146,11 @@ export interface ProviderServiceShape {
     input: ProviderStopSessionInput,
   ) => Effect.Effect<void, ProviderServiceError>;
 
+  /** Reload resources only on the exact live OmniMind Agent session. */
+  readonly reloadSessionResources: (
+    input: OmniMindEcosystemReloadInput,
+  ) => Effect.Effect<OmniMindEcosystemReloadResult, ProviderServiceError>;
+
   /**
    * Stop only the live adapter process/session while preserving the persisted
    * provider binding and resume cursor for a subsequent restart.
@@ -171,11 +178,42 @@ export interface ProviderServiceShape {
   }) => Effect.Effect<void, ProviderServiceError>;
 
   /**
-   * List active provider sessions.
-   *
-   * Aggregates runtime session lists from all registered adapters.
+   * List authoritative active provider sessions. Persisted binding identity
+   * filters stale or duplicate physical sessions left by failed replacement.
    */
   readonly listSessions: () => Effect.Effect<ReadonlyArray<ProviderSession>>;
+
+  /**
+   * Read authoritative sessions without converting a directory read failure
+   * into an empty list. Destructive consumers must use this strict form so an
+   * unknown owner set cannot be mistaken for no live owner.
+   */
+  readonly listSessionsStrict: () => Effect.Effect<
+    ReadonlyArray<ProviderSession>,
+    ProviderServiceError
+  >;
+
+  /**
+   * Serialize destructive model-service mutation with admission of a runtime
+   * that selects that exact service. ProviderService owns this fence because
+   * it is the sole authority that can exclude new session starts while a
+   * destructive consumer rechecks live ownership.
+   */
+  readonly withModelServiceMutationFence: <A, E, R>(
+    serviceId: string,
+    effect: Effect.Effect<A, E, R>,
+  ) => Effect.Effect<A, E, R>;
+
+  /**
+   * Keep one runtime event's binding validation and Product projection inside
+   * the same per-thread lifecycle lease. A provider replacement cannot change
+   * the authoritative binding after ingestion validates an event but before
+   * its asynchronous projection finishes.
+   */
+  readonly withRuntimeEventProjectionLease: <A, E, R>(
+    threadId: ThreadId,
+    effect: Effect.Effect<A, E, R>,
+  ) => Effect.Effect<A, E, R>;
 
   /**
    * Read static capabilities for a provider adapter.

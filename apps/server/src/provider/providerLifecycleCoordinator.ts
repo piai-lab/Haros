@@ -19,6 +19,8 @@ export interface ProviderLifecycleLease {
   readonly commit: () => void;
   /** Takes lasting ownership of an existing generation instead of this run's. */
   readonly adopt: (generation: string) => void;
+  /** Mints a fresh generation for a new physical runtime started by this run. */
+  readonly renewGeneration: () => string;
   /** Takes lasting ownership of "this thread has no provider generation". */
   readonly retire: () => void;
 }
@@ -146,6 +148,15 @@ export function makeProviderLifecycleCoordinator(): ProviderLifecycleCoordinator
               currentGenerations.set(threadId, adoptedGeneration);
               owned = true;
             }
+          },
+          renewGeneration: () => {
+            if (!isCurrent()) {
+              return ownedGeneration;
+            }
+            ownedGeneration = randomUUID();
+            currentGenerations.set(threadId, ownedGeneration);
+            owned = false;
+            return ownedGeneration;
           },
           retire: () => {
             if (isCurrent()) {

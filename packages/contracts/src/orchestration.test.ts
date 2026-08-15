@@ -455,6 +455,41 @@ it.effect("decodes thread.turn.start defaults for provider, runtime mode, and di
   }),
 );
 
+it.effect("keeps atomic Session binding commits internal", () =>
+  Effect.gen(function* () {
+    const input = {
+      type: "thread.session.set",
+      commandId: "cmd-binding-update",
+      threadId: "thread-1",
+      session: {
+        threadId: "thread-1",
+        status: "ready",
+        providerName: "claudeAgent",
+        runtimeMode: "approval-required",
+        activeTurnId: null,
+        lastError: null,
+        updatedAt: "2026-01-01T00:00:00.000Z",
+      },
+      binding: {
+        modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+        runtimeMode: "approval-required",
+        interactionMode: "plan",
+      },
+      createdAt: "2026-01-01T00:00:00.000Z",
+    } as const;
+    const command = yield* decodeOrchestrationCommand(input);
+    assert.strictEqual(command.type, "thread.session.set");
+    if (command.type !== "thread.session.set") return;
+    assert.strictEqual(command.binding?.modelSelection.provider, "claudeAgent");
+    assert.strictEqual(command.binding?.runtimeMode, "approval-required");
+    assert.strictEqual(command.binding?.interactionMode, "plan");
+    assert.strictEqual(
+      (yield* Effect.exit(decodeClientOrchestrationCommand(input)))._tag,
+      "Failure",
+    );
+  }),
+);
+
 it.effect("bounds initial turn text while preserving attachment-only turns", () =>
   Effect.gen(function* () {
     const command = (text: string, attachments: ReadonlyArray<unknown> = []) => ({

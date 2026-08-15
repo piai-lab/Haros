@@ -60,6 +60,7 @@ function makeComposerDraftState(
     skills: [],
     mentions: [],
     queuedTurns: [],
+    pendingDirectTurnRecovery: null,
     modelSelectionByProvider: {
       claudeAgent: modelSelection("claudeAgent", "claude-opus-4-6", { effort: "max" }),
     },
@@ -296,6 +297,7 @@ describe("threadBootstrap", () => {
         projectId: PROJECT_ID,
       }),
     ).toEqual({
+      title: "New terminal",
       modelSelection: modelSelection("claudeAgent", "claude-opus-4-6", {
         effort: "max",
       }),
@@ -307,6 +309,29 @@ describe("threadBootstrap", () => {
       workingDirectory: null,
       lastKnownPr: null,
     });
+  });
+
+  it("keeps a no-model Pi terminal local instead of creating a Codex binding", () => {
+    expect(
+      resolveTerminalThreadCreationState({
+        activeDraftThread: null,
+        activeThread: {
+          projectId: PROJECT_ID,
+          modelSelection: modelSelection("codex", "gpt-5.5"),
+          runtimeMode: "full-access",
+          interactionMode: "default",
+        },
+        draftComposerState: {
+          ...makeComposerDraftState(),
+          activeProvider: "pi",
+          modelSelectionByProvider: {},
+        },
+        draftThread: makeDraftThread(),
+        options: undefined,
+        projectDefaultModelSelection: null,
+        projectId: PROJECT_ID,
+      }).modelSelection,
+    ).toBeNull();
   });
 
   it("does not inherit plan mode from the previously active thread for a fresh creation", () => {
@@ -345,6 +370,20 @@ describe("threadBootstrap", () => {
         projectId: PROJECT_ID,
       }).interactionMode,
     ).toBe("plan");
+  });
+
+  it("preserves a local terminal title when resolving its durable creation payload", () => {
+    expect(
+      resolveTerminalThreadCreationState({
+        activeDraftThread: null,
+        activeThread: null,
+        draftComposerState: makeComposerDraftState(),
+        draftThread: makeDraftThread({ title: "Local terminal title" }),
+        options: undefined,
+        projectDefaultModelSelection: null,
+        projectId: PROJECT_ID,
+      }).title,
+    ).toBe("Local terminal title");
   });
 
   it("clears inherited worktree state when an explicit local env override is requested", () => {

@@ -3,6 +3,8 @@
 // Exports: Internal domain primitives plus public facade types.
 
 import {
+  type CommandId,
+  type MessageId,
   type ModelSelection,
   type OrchestrationLatestTurn,
   type OrchestrationThreadPullRequest,
@@ -44,7 +46,7 @@ import {
 } from "./types";
 
 export const COMPOSER_DRAFT_STORAGE_KEY = "omnimind:composer-drafts:v1";
-export const COMPOSER_DRAFT_STORAGE_VERSION = 6;
+export const COMPOSER_DRAFT_STORAGE_VERSION = 7;
 export type DraftThreadEnvMode = "local" | "worktree";
 const TERMINAL_DRAFT_THREAD_MAPPING_SUFFIX = "::terminal";
 
@@ -160,6 +162,38 @@ export interface QueuedComposerPlanFollowUp {
 
 export type QueuedComposerTurn = QueuedComposerChatTurn | QueuedComposerPlanFollowUp;
 
+export interface ComposerBindingSnapshot {
+  readonly modelSelection: ModelSelection;
+  readonly runtimeMode: RuntimeMode;
+  readonly interactionMode: ProviderInteractionMode;
+}
+
+/**
+ * One accepted direct send whose target binding may still fail and roll back.
+ * Binary bytes remain owned by the accepted server message; this draft stores
+ * only the original structured Composer intent plus bounded attachment
+ * metadata so a renderer restart can reconstruct the draft without creating
+ * a second blob store.
+ */
+export interface PendingDirectTurnRecovery {
+  readonly recoveryId: CommandId;
+  readonly commandId: CommandId;
+  readonly messageId: MessageId;
+  readonly previousBinding: ComposerBindingSnapshot;
+  readonly targetBinding: ComposerBindingSnapshot;
+  readonly queuedTurn: QueuedComposerChatTurn;
+  readonly persistedImageAttachments: ReadonlyArray<PersistedComposerImageAttachment>;
+  readonly binaryAttachments: ReadonlyArray<{
+    readonly type: "image" | "file";
+    readonly name: string;
+    readonly mimeType: string;
+    readonly sizeBytes: number;
+    readonly source?: ComposerImageSource | undefined;
+  }>;
+  readonly contentSuperseded: boolean;
+  readonly bindingSuperseded: boolean;
+}
+
 export interface ComposerThreadDraftState {
   prompt: string;
   // Non-null only while composer prompt-history browsing is active: the user's
@@ -179,6 +213,7 @@ export interface ComposerThreadDraftState {
   skills: ProviderSkillReference[];
   mentions: ProviderMentionReference[];
   queuedTurns: QueuedComposerTurn[];
+  pendingDirectTurnRecovery?: PendingDirectTurnRecovery | null;
   restoredSourceProposedPlan?: RestoredComposerSourceProposedPlan | null;
   modelSelectionByProvider: Partial<Record<ProviderKind, ModelSelection>>;
   activeProvider: ProviderKind | null;
@@ -188,6 +223,7 @@ export interface ComposerThreadDraftState {
 
 export interface DraftThreadState {
   projectId: ProjectId;
+  title?: string;
   createdAt: string;
   runtimeMode: RuntimeMode;
   interactionMode: ProviderInteractionMode;
@@ -202,6 +238,7 @@ export interface DraftThreadState {
 }
 
 interface DraftThreadMutationOptions {
+  title?: string;
   branch?: string | null;
   worktreePath?: string | null;
   workingDirectory?: string | null;
@@ -299,6 +336,7 @@ export interface ComposerDraftStoreState {
     threadId: ThreadId,
     modelSelection: ModelSelection | null | undefined,
   ) => void;
+  setActiveProviderAndSticky: (threadId: ThreadId, provider: ProviderKind) => void;
   setModelSelectionAndSticky: (threadId: ThreadId, modelSelection: ModelSelection) => void;
   setModelOptions: (
     threadId: ThreadId,
@@ -322,6 +360,21 @@ export interface ComposerDraftStoreState {
   enqueueQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn) => void;
   insertQueuedTurn: (threadId: ThreadId, queuedTurn: QueuedComposerTurn, index: number) => void;
   removeQueuedTurn: (threadId: ThreadId, queuedTurnId: string) => void;
+  armPendingDirectTurnRecovery: (threadId: ThreadId, recovery: PendingDirectTurnRecovery) => void;
+  clearPendingDirectTurnRecovery: (
+    threadId: ThreadId,
+    recoveryId: CommandId,
+    options?: { readonly preservePreviewUrls?: boolean },
+  ) => boolean;
+  supersedePendingDirectTurnRecovery: (
+    threadId: ThreadId,
+    recoveryId: CommandId,
+    mutation: "content" | "binding",
+  ) => void;
+  takePendingDirectTurnRecovery: (
+    threadId: ThreadId,
+    recoveryId: CommandId,
+  ) => PendingDirectTurnRecovery | null;
   addImage: (threadId: ThreadId, image: ComposerImageAttachment) => boolean;
   addImages: (threadId: ThreadId, images: ComposerImageAttachment[]) => number;
   removeImage: (threadId: ThreadId, imageId: string) => void;
@@ -433,9 +486,14 @@ export function buildDraftThreadState(input: {
         ? false
         : existingThread?.isTemporary === true;
   const nextPromotedTo = existingThread?.promotedTo;
+  const nextTitle =
+    options?.title === undefined
+      ? existingThread?.title
+      : options.title.trim() || existingThread?.title;
 
   return {
     projectId: input.projectId,
+    ...(nextTitle ? { title: nextTitle } : {}),
     createdAt: resolveDraftThreadCreatedAt({
       createdAt: options?.createdAt,
       existingThread,
@@ -473,6 +531,7 @@ export function draftThreadStatesEqual(
 
   return (
     left.projectId === right.projectId &&
+    (left.title ?? null) === (right.title ?? null) &&
     left.createdAt === right.createdAt &&
     left.runtimeMode === right.runtimeMode &&
     left.interactionMode === right.interactionMode &&
@@ -520,6 +579,7 @@ export function createEmptyThreadDraft(): ComposerThreadDraftState {
     skills: [],
     mentions: [],
     queuedTurns: [],
+    pendingDirectTurnRecovery: null,
     restoredSourceProposedPlan: null,
     modelSelectionByProvider: {},
     activeProvider: null,
@@ -757,6 +817,7 @@ export function buildTransferredComposerDraft(input: {
     pastedTexts: normalizePastedTexts(sourceDraft.pastedTexts),
     skills: [...sourceDraft.skills],
     mentions: [...sourceDraft.mentions],
+    pendingDirectTurnRecovery: null,
     restoredSourceProposedPlan: null,
   };
 }
@@ -818,12 +879,51 @@ export function shouldRemoveDraft(draft: ComposerThreadDraftState): boolean {
     draft.skills.length === 0 &&
     draft.mentions.length === 0 &&
     draft.queuedTurns.length === 0 &&
+    draft.pendingDirectTurnRecovery == null &&
     draft.restoredSourceProposedPlan == null &&
     Object.keys(draft.modelSelectionByProvider).length === 0 &&
     draft.activeProvider === null &&
     draft.runtimeMode === null &&
     draft.interactionMode === null
   );
+}
+
+/**
+ * Classifies semantic mutations after a direct-send recovery marker was armed.
+ * Persistence bookkeeping is intentionally excluded; content and binding
+ * intent are monotonic even if the user later returns to the original value.
+ */
+export function resolvePendingDirectTurnRecoveryMutation(
+  previous: ComposerThreadDraftState | undefined,
+  current: ComposerThreadDraftState | undefined,
+): "none" | "content" | "binding" {
+  if (previous === current) return "none";
+  if (previous === undefined || current === undefined) return "content";
+
+  if (
+    previous.prompt !== current.prompt ||
+    !Equal.equals(previous.promptHistorySavedDraft, current.promptHistorySavedDraft) ||
+    !Equal.equals(previous.images, current.images) ||
+    !Equal.equals(previous.files, current.files) ||
+    !Equal.equals(previous.assistantSelections, current.assistantSelections) ||
+    !Equal.equals(previous.browserAnnotations, current.browserAnnotations) ||
+    !Equal.equals(previous.terminalContexts, current.terminalContexts) ||
+    !Equal.equals(previous.fileComments, current.fileComments) ||
+    !Equal.equals(previous.pastedTexts, current.pastedTexts) ||
+    !Equal.equals(previous.skills, current.skills) ||
+    !Equal.equals(previous.mentions, current.mentions)
+  ) {
+    return "content";
+  }
+  if (
+    !Equal.equals(previous.modelSelectionByProvider, current.modelSelectionByProvider) ||
+    previous.activeProvider !== current.activeProvider ||
+    previous.runtimeMode !== current.runtimeMode ||
+    previous.interactionMode !== current.interactionMode
+  ) {
+    return "binding";
+  }
+  return "none";
 }
 
 export function normalizeDraftThreadEntryPoint(
@@ -871,6 +971,7 @@ const EMPTY_THREAD_DRAFT = Object.freeze<ComposerThreadDraftState>({
   skills: EMPTY_SKILLS,
   mentions: EMPTY_MENTIONS,
   queuedTurns: EMPTY_QUEUED_TURNS,
+  pendingDirectTurnRecovery: null,
   restoredSourceProposedPlan: null,
   modelSelectionByProvider: EMPTY_MODEL_SELECTION_BY_PROVIDER,
   activeProvider: null,

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { ServerProviderStatus } from "@omnimind/contracts";
 import {
+  deriveProviderPickerAvailability,
   isProviderUsable,
   normalizeProviderStatusForLocalConfig,
   providerUnavailableReason,
@@ -30,6 +31,22 @@ describe("normalizeProviderStatusForLocalConfig", () => {
       normalizeProviderStatusForLocalConfig({
         provider: "antigravity",
         status: BASE_STATUS,
+        customBinaryPath: "/opt/homebrew/bin/agy",
+      }),
+    ).toEqual({
+      ...BASE_STATUS,
+      available: true,
+      status: "warning",
+      message:
+        "Antigravity uses a custom local binary path in this app. Availability will be confirmed when you start a session.",
+    });
+  });
+
+  it("drops a stale not-installed fact for an unprobed custom binary path", () => {
+    expect(
+      normalizeProviderStatusForLocalConfig({
+        provider: "antigravity",
+        status: { ...BASE_STATUS, unavailableReason: "not_installed" },
         customBinaryPath: "/opt/homebrew/bin/agy",
       }),
     ).toEqual({
@@ -157,6 +174,7 @@ describe("normalizeProviderStatusForLocalConfig", () => {
       authStatus: "authenticated",
       supportsAutoRuntimeMode: true,
       autoRuntimeModeBinaryPath: "/custom/bin/codex",
+      checkedBinaryPath: "/custom/bin/codex",
       checkedAt: BASE_STATUS.checkedAt,
     };
 
@@ -167,6 +185,100 @@ describe("normalizeProviderStatusForLocalConfig", () => {
         customBinaryPath: "/custom/bin/codex",
       }),
     ).toEqual(status);
+  });
+
+  it.each(["codex", "claudeAgent"] as const)(
+    "keeps an older Server's exact %s probe conservatively unavailable",
+    (provider) => {
+      const customBinaryPath = `/custom/bin/${provider}`;
+      const legacyStatus: ServerProviderStatus = {
+        ...BASE_STATUS,
+        provider,
+        autoRuntimeModeBinaryPath: customBinaryPath,
+      };
+
+      expect(
+        normalizeProviderStatusForLocalConfig({
+          provider,
+          status: legacyStatus,
+          customBinaryPath,
+        }),
+      ).toEqual(legacyStatus);
+      expect(
+        normalizeProviderStatusForLocalConfig({
+          provider,
+          status: legacyStatus,
+          customBinaryPath: `${customBinaryPath}-next`,
+        }),
+      ).toMatchObject({ available: true, status: "warning" });
+    },
+  );
+
+  it("preserves a non-Codex missing fact only for the exact checked custom binary", () => {
+    const checkedStatus: ServerProviderStatus = {
+      ...BASE_STATUS,
+      provider: "opencode",
+      unavailableReason: "not_installed",
+      checkedBinaryPath: "/custom/bin/opencode",
+    };
+
+    expect(
+      normalizeProviderStatusForLocalConfig({
+        provider: "opencode",
+        status: checkedStatus,
+        customBinaryPath: "/custom/bin/opencode",
+      }),
+    ).toEqual(checkedStatus);
+    expect(
+      normalizeProviderStatusForLocalConfig({
+        provider: "opencode",
+        status: checkedStatus,
+        customBinaryPath: "/custom/bin/opencode-next",
+      }),
+    ).toMatchObject({ available: true, status: "warning" });
+  });
+
+  it("does not reuse a ready fact from a different checked custom binary", () => {
+    const checkedStatus: ServerProviderStatus = {
+      ...READY_STATUS,
+      provider: "opencode",
+      checkedBinaryPath: "/custom/bin/opencode-old",
+    };
+
+    expect(
+      normalizeProviderStatusForLocalConfig({
+        provider: "opencode",
+        status: checkedStatus,
+        customBinaryPath: "/custom/bin/opencode-old",
+      }),
+    ).toEqual(checkedStatus);
+    expect(
+      normalizeProviderStatusForLocalConfig({
+        provider: "opencode",
+        status: checkedStatus,
+        customBinaryPath: "/custom/bin/opencode-next",
+      }),
+    ).toMatchObject({
+      provider: "opencode",
+      available: true,
+      status: "warning",
+      authStatus: "authenticated",
+    });
+  });
+});
+
+describe("deriveProviderPickerAvailability", () => {
+  it("distinguishes observed missing installation from other unavailable states", () => {
+    expect(
+      deriveProviderPickerAvailability({
+        ...BASE_STATUS,
+        unavailableReason: "not_installed",
+      }),
+    ).toEqual({ disabled: false, state: "not_installed" });
+    expect(deriveProviderPickerAvailability(BASE_STATUS)).toEqual({
+      disabled: false,
+      state: "unavailable",
+    });
   });
 });
 

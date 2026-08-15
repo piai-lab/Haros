@@ -248,6 +248,40 @@ import type {
 } from "./providerDiscovery";
 import type { ProviderCompactThreadInput } from "./provider";
 import type {
+  OmniMindCustomModelServiceRemoveInput,
+  OmniMindCustomModelServiceRemoveResult,
+  OmniMindCustomModelServiceDiscoverInput,
+  OmniMindCustomModelServiceDiscoverResult,
+  OmniMindCustomModelServiceSaveInput,
+  OmniMindCustomModelServiceSaveResult,
+  OmniMindCustomModelServiceTestInput,
+  OmniMindCustomModelServiceTestResult,
+  OmniMindModelServiceAnswerLoginInput,
+  OmniMindModelServiceAuthResult,
+  OmniMindModelServiceBeginLoginInput,
+  OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServicePollLoginInput,
+  OmniMindModelServiceLogoutInput,
+  OmniMindModelServiceLogoutResult,
+  OmniMindModelServiceRefreshInput,
+  OmniMindModelServiceRefreshResult,
+  OmniMindModelServicesGetInput,
+  OmniMindModelServicesGetResult,
+  OmniMindModelServicesListInput,
+  OmniMindModelServicesListResult,
+} from "./omnimindModelServices";
+import type {
+  OmniMindEcosystemInstallInput,
+  OmniMindEcosystemListInput,
+  OmniMindEcosystemListResourcesResult,
+  OmniMindEcosystemMutationResult,
+  OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemReloadResult,
+  OmniMindEcosystemResourceToggleInput,
+  OmniMindEcosystemSnapshot,
+} from "./omnimindEcosystem";
+import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
   StatsGetProfileTokenStatsInput,
@@ -777,6 +811,65 @@ export interface NativeApi {
     readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
     listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
     listAgents: (input: ProviderListAgentsInput) => Promise<ProviderListAgentsResult>;
+  };
+  omnimindModelServices: {
+    list: (
+      input?: OmniMindModelServicesListInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServicesListResult>;
+    get: (
+      input: OmniMindModelServicesGetInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServicesGetResult>;
+    beginLogin: (
+      input: OmniMindModelServiceBeginLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    pollLogin: (
+      input: OmniMindModelServicePollLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    answerLogin: (
+      input: OmniMindModelServiceAnswerLoginInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    cancelLogin: (
+      input: OmniMindModelServiceCancelLoginInput,
+    ) => Promise<OmniMindModelServiceAuthResult>;
+    logout: (input: OmniMindModelServiceLogoutInput) => Promise<OmniMindModelServiceLogoutResult>;
+    refresh: (
+      input: OmniMindModelServiceRefreshInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindModelServiceRefreshResult>;
+    testCustom: (
+      input: OmniMindCustomModelServiceTestInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindCustomModelServiceTestResult>;
+    discoverCustom: (
+      input: OmniMindCustomModelServiceDiscoverInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindCustomModelServiceDiscoverResult>;
+    saveCustom: (
+      input: OmniMindCustomModelServiceSaveInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindCustomModelServiceSaveResult>;
+    removeCustom: (
+      input: OmniMindCustomModelServiceRemoveInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindCustomModelServiceRemoveResult>;
+  };
+  omnimindEcosystem: {
+    list: (input?: OmniMindEcosystemListInput) => Promise<OmniMindEcosystemSnapshot>;
+    listResources: (
+      input: OmniMindEcosystemPackageInput,
+    ) => Promise<OmniMindEcosystemListResourcesResult>;
+    install: (input: OmniMindEcosystemInstallInput) => Promise<OmniMindEcosystemMutationResult>;
+    update: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
+    remove: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
+    setResourceEnabled: (
+      input: OmniMindEcosystemResourceToggleInput,
+    ) => Promise<OmniMindEcosystemMutationResult>;
+    reload: (input: OmniMindEcosystemReloadInput) => Promise<OmniMindEcosystemReloadResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

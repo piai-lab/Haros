@@ -1,0 +1,3681 @@
+diff --git a/package-lock.json b/package-lock.json
+index 48e638d..c17a5db 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -3601,0 +3602,6 @@
++		"node_modules/jsonc-parser": {
++			"version": "3.3.1",
++			"resolved": "https://registry.npmjs.org/jsonc-parser/-/jsonc-parser-3.3.1.tgz",
++			"integrity": "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==",
++			"license": "MIT"
++		},
+@@ -5557,0 +5564 @@
++				"jsonc-parser": "3.3.1",
+diff --git a/packages/coding-agent/package.json b/packages/coding-agent/package.json
+index f6fc21a..1e293a8 100644
+--- a/packages/coding-agent/package.json
++++ b/packages/coding-agent/package.json
+@@ -60,0 +61 @@
++		"jsonc-parser": "3.3.1",
+diff --git a/packages/coding-agent/src/core/agent-session-services.ts b/packages/coding-agent/src/core/agent-session-services.ts
+index 531f51d..4c720a4 100644
+--- a/packages/coding-agent/src/core/agent-session-services.ts
++++ b/packages/coding-agent/src/core/agent-session-services.ts
+@@ -154 +154,3 @@ export async function createAgentSessionServices(
+-	await resourceLoader.reload(options.resourceLoaderReloadOptions);
++	let completed = false;
++	try {
++		await resourceLoader.reload(options.resourceLoaderReloadOptions);
+@@ -156,11 +158,12 @@ export async function createAgentSessionServices(
+-	const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
+-	const extensionsResult = resourceLoader.getExtensions();
+-	for (const { name, config, extensionPath } of extensionsResult.runtime.pendingProviderRegistrations) {
+-		try {
+-			modelRuntime.registerProvider(name, config);
+-		} catch (error) {
+-			const message = error instanceof Error ? error.message : String(error);
+-			diagnostics.push({
+-				type: "error",
+-				message: `Extension "${extensionPath}" error: ${message}`,
+-			});
++		const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
++		const extensionsResult = resourceLoader.getExtensions();
++		for (const { name, config, extensionPath } of extensionsResult.runtime.pendingProviderRegistrations) {
++			try {
++				modelRuntime.registerProvider(name, config);
++			} catch (error) {
++				const message = error instanceof Error ? error.message : String(error);
++				diagnostics.push({
++					type: "error",
++					message: `Extension "${extensionPath}" error: ${message}`,
++				});
++			}
+@@ -168,11 +171,11 @@ export async function createAgentSessionServices(
+-	}
+-	extensionsResult.runtime.pendingProviderRegistrations = [];
+-	for (const { provider, extensionPath } of extensionsResult.runtime.pendingNativeProviderRegistrations) {
+-		try {
+-			modelRuntime.registerNativeProvider(provider);
+-		} catch (error) {
+-			const message = error instanceof Error ? error.message : String(error);
+-			diagnostics.push({
+-				type: "error",
+-				message: `Extension "${extensionPath}" error: ${message}`,
+-			});
++		extensionsResult.runtime.pendingProviderRegistrations = [];
++		for (const { provider, extensionPath } of extensionsResult.runtime.pendingNativeProviderRegistrations) {
++			try {
++				modelRuntime.registerNativeProvider(provider);
++			} catch (error) {
++				const message = error instanceof Error ? error.message : String(error);
++				diagnostics.push({
++					type: "error",
++					message: `Extension "${extensionPath}" error: ${message}`,
++				});
++			}
+@@ -180,4 +183,3 @@ export async function createAgentSessionServices(
+-	}
+-	extensionsResult.runtime.pendingNativeProviderRegistrations = [];
+-	await modelRuntime.refresh({ allowNetwork: false });
+-	diagnostics.push(...applyExtensionFlagValues(resourceLoader, options.extensionFlagValues));
++		extensionsResult.runtime.pendingNativeProviderRegistrations = [];
++		await modelRuntime.refresh({ allowNetwork: false });
++		diagnostics.push(...applyExtensionFlagValues(resourceLoader, options.extensionFlagValues));
+@@ -185,8 +187,15 @@ export async function createAgentSessionServices(
+-	return {
+-		cwd,
+-		agentDir,
+-		modelRuntime,
+-		settingsManager,
+-		resourceLoader,
+-		diagnostics,
+-	};
++		const services = {
++			cwd,
++			agentDir,
++			modelRuntime,
++			settingsManager,
++			resourceLoader,
++			diagnostics,
++		};
++		completed = true;
++		return services;
++	} finally {
++		if (!completed) {
++			resourceLoader.getExtensions().runtime.invalidate("Session service creation failed");
++		}
++	}
+diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
+index b210c5a..780705e 100644
+--- a/packages/coding-agent/src/core/agent-session.ts
++++ b/packages/coding-agent/src/core/agent-session.ts
+@@ -124,0 +125,6 @@ export interface ParsedSkillBlock {
++/** Typed result of submitting input through the session prompt owner. */
++export type PromptOutcome =
++	| { kind: "agent-run" }
++	| { kind: "handled-without-agent"; success: boolean }
++	| { kind: "queued" };
++
+@@ -362,0 +369 @@ export class AgentSession {
++	private _extensionPromptAgentTasks: Set<Promise<void>> | undefined;
+@@ -1116 +1123 @@ export class AgentSession {
+-	async prompt(text: string, options?: PromptOptions): Promise<void> {
++	async prompt(text: string, options?: PromptOptions): Promise<PromptOutcome> {
+@@ -1125,2 +1132,2 @@ export class AgentSession {
+-				const handled = await this._tryExecuteExtensionCommand(text);
+-				if (handled) {
++				const outcome = await this._tryExecuteExtensionCommand(text);
++				if (outcome) {
+@@ -1128,2 +1135,2 @@ export class AgentSession {
+-					preflightResult?.(true);
+-					return;
++					preflightResult?.(outcome.kind !== "handled-without-agent" || outcome.success);
++					return outcome;
+@@ -1143,6 +1150,14 @@ export class AgentSession {
+-				const inputResult = await this._extensionRunner.emitInput(
+-					currentText,
+-					currentImages,
+-					options?.source ?? "interactive",
+-					this.isStreaming ? options?.streamingBehavior : undefined,
+-				);
++				const previousTasks = this._extensionPromptAgentTasks;
++				const inputAgentTasks = new Set<Promise<void>>();
++				this._extensionPromptAgentTasks = inputAgentTasks;
++				let inputResult;
++				try {
++					inputResult = await this._extensionRunner.emitInput(
++						currentText,
++						currentImages,
++						options?.source ?? "interactive",
++						this.isStreaming ? options?.streamingBehavior : undefined,
++					);
++				} finally {
++					this._extensionPromptAgentTasks = previousTasks;
++				}
+@@ -1150,2 +1165,8 @@ export class AgentSession {
+-					preflightResult?.(true);
+-					return;
++					const agentResults = await Promise.allSettled(inputAgentTasks);
++					const success = !agentResults.some((result) => result.status === "rejected");
++					const outcome: PromptOutcome =
++						inputAgentTasks.size > 0 && success
++							? { kind: "agent-run" }
++							: { kind: "handled-without-agent", success };
++					preflightResult?.(outcome.kind !== "handled-without-agent" || outcome.success);
++					return outcome;
+@@ -1179 +1200 @@ export class AgentSession {
+-				return;
++				return { kind: "queued" };
+@@ -1268 +1289 @@ export class AgentSession {
+-			return;
++			return { kind: "handled-without-agent", success: true };
+@@ -1272,0 +1294 @@ export class AgentSession {
++		return { kind: "agent-run" };
+@@ -1276 +1298,3 @@ export class AgentSession {
+-	 * Try to execute an extension command. Returns true if command was found and executed.
++	 * Try to execute an extension command. Returns undefined when no command matches.
++	 * Agent work scheduled through the extension API is owned to completion before
++	 * the prompt outcome is returned, so callers never infer this from timing.
+@@ -1278 +1302 @@ export class AgentSession {
+-	private async _tryExecuteExtensionCommand(text: string): Promise<boolean> {
++	private async _tryExecuteExtensionCommand(text: string): Promise<PromptOutcome | undefined> {
+@@ -1285 +1309 @@ export class AgentSession {
+-		if (!command) return false;
++		if (!command) return undefined;
+@@ -1289,0 +1314,4 @@ export class AgentSession {
++		const previousTasks = this._extensionPromptAgentTasks;
++		const commandAgentTasks = new Set<Promise<void>>();
++		this._extensionPromptAgentTasks = commandAgentTasks;
++		let success = true;
+@@ -1292 +1319,0 @@ export class AgentSession {
+-			return true;
+@@ -1293,0 +1321 @@ export class AgentSession {
++			success = false;
+@@ -1300 +1328,2 @@ export class AgentSession {
+-			return true;
++		} finally {
++			this._extensionPromptAgentTasks = previousTasks;
+@@ -1301,0 +1331,5 @@ export class AgentSession {
++
++		const agentResults = await Promise.allSettled(commandAgentTasks);
++		if (agentResults.some((result) => result.status === "rejected")) success = false;
++		if (commandAgentTasks.size > 0 && success) return { kind: "agent-run" };
++		return { kind: "handled-without-agent", success };
+@@ -2365 +2399 @@ export class AgentSession {
+-		runner.bindCore(
++			runner.bindCore(
+@@ -2368 +2402,4 @@ export class AgentSession {
+-					this.sendCustomMessage(message, options).catch((err) => {
++					const promptAgentTasks = this._extensionPromptAgentTasks;
++					const task = this.sendCustomMessage(message, options);
++					if (options?.triggerTurn) promptAgentTasks?.add(task);
++					task.catch((err) => {
+@@ -2377 +2414,4 @@ export class AgentSession {
+-					this.sendUserMessage(content, options).catch((err) => {
++					const promptAgentTasks = this._extensionPromptAgentTasks;
++					const task = this.sendUserMessage(content, options);
++					promptAgentTasks?.add(task);
++					task.catch((err) => {
+diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
+index 7f679a4..d34a704 100644
+--- a/packages/coding-agent/src/core/model-config.ts
++++ b/packages/coding-agent/src/core/model-config.ts
+@@ -3 +3,6 @@
+-import { readFile } from "node:fs/promises";
++import { constants as fsConstants } from "node:fs";
++import { randomUUID } from "node:crypto";
++import { chmod, lstat, mkdir, open, readFile, realpath, rename, rm } from "node:fs/promises";
++import { basename, dirname, join } from "node:path";
++import { applyEdits, modify } from "jsonc-parser";
++import lockfile from "proper-lockfile";
+@@ -8,0 +14 @@ import { normalizePath } from "../utils/paths.ts";
++import { getConfigValueEnvVarNames, isCommandConfigValue } from "./resolve-config-value.ts";
+@@ -215,0 +222,390 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
++export interface ModelConfigReadOptions {
++	readonly signal?: AbortSignal;
++}
++
++export type ModelConfigReader = (options: ModelConfigReadOptions) => Promise<string | undefined>;
++
++export type ModelConfigCredentialReferenceMutation =
++	| { readonly type: "environment"; readonly variableName: string }
++	| { readonly type: "command"; readonly command: string }
++	| { readonly type: "clear" };
++
++export type ModelConfigHeaderReferenceSource = "external" | "environment" | "command";
++
++export type ModelConfigHeaderReferenceValueMutation =
++	| { readonly type: "environment"; readonly variableName: string }
++	| { readonly type: "clear" };
++
++export interface ModelConfigHeaderReferenceMetadata {
++	readonly name: string;
++	readonly source: ModelConfigHeaderReferenceSource;
++}
++
++export interface ModelConfigProviderHeaderMetadata {
++	readonly provider: readonly ModelConfigHeaderReferenceMetadata[];
++	readonly models: readonly {
++		readonly modelId: string;
++		readonly headers: readonly ModelConfigHeaderReferenceMetadata[];
++	}[];
++}
++
++export interface ModelConfigHeaderReferenceMutation {
++	readonly scope:
++		| { readonly type: "provider" }
++		| { readonly type: "model"; readonly modelId: string };
++	readonly name: string;
++	readonly reference: ModelConfigHeaderReferenceValueMutation;
++}
++
++export type ModelConfigProviderMutation =
++	| {
++			type: "upsert";
++			providerId: string;
++			provider: ModelsJsonProvider;
++			credentialReference?: ModelConfigCredentialReferenceMutation;
++			headerReferences?: readonly ModelConfigHeaderReferenceMutation[];
++	  }
++	| {
++			type: "remove";
++			providerId: string;
++	  };
++
++export interface ModelConfigMutationOptions {
++	readonly signal?: AbortSignal;
++}
++
++export interface ModelConfigFileMutationOptions extends ModelConfigMutationOptions {
++	readonly validateCandidate: (candidatePath: string, signal?: AbortSignal) => Promise<void>;
++}
++
++export interface ModelConfigMutationResult {
++	readonly changed: boolean;
++	readonly providerIds: readonly string[];
++}
++
++const MAX_MODELS_CONFIG_BYTES = 4 * 1024 * 1024;
++const MODELS_CONFIG_FILE_MODE = 0o600;
++const ENVIRONMENT_VARIABLE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/u;
++const MAX_CREDENTIAL_COMMAND_LENGTH = 4_096;
++const MAX_HEADER_REFERENCES = 64;
++const HEADER_NAME = /^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/u;
++const FORBIDDEN_HEADER_NAMES = new Set([
++	"authorization",
++	"connection",
++	"content-length",
++	"content-type",
++	"cookie",
++	"host",
++	"keep-alive",
++	"proxy-authenticate",
++	"proxy-authorization",
++	"set-cookie",
++	"te",
++	"trailer",
++	"transfer-encoding",
++	"upgrade",
++	"x-api-key",
++	"x-goog-api-key",
++]);
++const MODEL_CONFIG_PROVIDER_FIELDS = [
++	"name",
++	"baseUrl",
++	"apiKey",
++	"api",
++	"oauth",
++	"headers",
++	"compat",
++	"authHeader",
++	"models",
++	"modelOverrides",
++] as const satisfies readonly (keyof ModelsJsonProvider)[];
++const MODEL_CONFIG_EDITABLE_PROVIDER_FIELDS = ["authHeader"] as const satisfies readonly (
++	keyof ModelsJsonProvider
++)[];
++const MODEL_CONFIG_EDITABLE_MODEL_FIELDS = [
++	"name",
++	"api",
++	"baseUrl",
++	"reasoning",
++	"thinkingLevelMap",
++	"input",
++	"cost",
++	"contextWindow",
++	"maxTokens",
++] as const satisfies readonly (keyof ModelsJsonModel)[];
++const MODEL_CONFIG_EDITABLE_COMPAT_FIELDS = [
++	"supportsDeveloperRole",
++	"supportsReasoningEffort",
++	"supportsUsageInStreaming",
++	"maxTokensField",
++	"requiresToolResultName",
++	"requiresAssistantAfterToolResult",
++	"requiresThinkingAsText",
++	"requiresReasoningContentOnAssistantMessages",
++	"supportsOpenAIGrammarTools",
++	"supportsStrictMode",
++	"supportsToolSearch",
++	"supportsEagerToolInputStreaming",
++	"supportsCacheControlOnTools",
++	"supportsTemperature",
++	"forceAdaptiveThinking",
++	"allowEmptySignature",
++	"supportsStrictTools",
++	"supportsToolReferences",
++] as const;
++
++function deleteOmittedEditableFields<T extends object>(
++	merged: T,
++	edited: T,
++	fields: readonly (keyof T)[],
++): void {
++	for (const field of fields) {
++		if (!Object.prototype.hasOwnProperty.call(edited, field)) {
++			delete (merged as Partial<T>)[field];
++		}
++	}
++}
++
++function mergeEditedModels(
++	currentModels: readonly ModelsJsonModel[] | undefined,
++	editedModels: readonly ModelsJsonModel[],
++): ModelsJsonModel[] {
++	const currentById = new Map((currentModels ?? []).map((model) => [model.id, model]));
++	return editedModels.map((editedModel) => {
++		const currentModel = currentById.get(editedModel.id);
++		if (!currentModel) return structuredClone(editedModel);
++		const merged = {
++			...structuredClone(currentModel),
++			...structuredClone(editedModel),
++		} as ModelsJsonModel;
++		if (Object.prototype.hasOwnProperty.call(editedModel, "compat")) {
++			const currentCompat = structuredClone(currentModel.compat ?? {}) as Record<string, unknown>;
++			const editedCompat = structuredClone(editedModel.compat ?? {}) as Record<string, unknown>;
++			const mergedCompat = { ...currentCompat, ...editedCompat };
++			deleteOmittedEditableFields(
++				mergedCompat,
++				editedCompat,
++				MODEL_CONFIG_EDITABLE_COMPAT_FIELDS,
++			);
++			if (Object.keys(mergedCompat).length > 0) merged.compat = mergedCompat;
++			else delete merged.compat;
++		}
++		deleteOmittedEditableFields(merged, editedModel, MODEL_CONFIG_EDITABLE_MODEL_FIELDS);
++		return merged;
++	});
++}
++
++/** Merge one credential-blind edit while retaining Pi-owned fields on matching models. */
++export function mergeModelConfigProviderEdit(
++	currentProvider: ModelsJsonProvider | undefined,
++	editedProvider: ModelsJsonProvider,
++): ModelsJsonProvider {
++	const merged = {
++		...(currentProvider ? structuredClone(currentProvider) : {}),
++		...structuredClone(editedProvider),
++		...(editedProvider.models
++			? { models: mergeEditedModels(currentProvider?.models, editedProvider.models) }
++			: {}),
++	};
++	deleteOmittedEditableFields(merged, editedProvider, MODEL_CONFIG_EDITABLE_PROVIDER_FIELDS);
++	return merged;
++}
++
++function encodeCredentialReference(mutation: ModelConfigCredentialReferenceMutation): string | undefined {
++	if (mutation.type === "clear") return undefined;
++	if (mutation.type === "environment") {
++		if (!ENVIRONMENT_VARIABLE_NAME.test(mutation.variableName)) {
++			throw new Error("Credential environment variable name is invalid");
++		}
++		return `\${${mutation.variableName}}`;
++	}
++	if (
++		mutation.command.length === 0 ||
++		mutation.command.length > MAX_CREDENTIAL_COMMAND_LENGTH ||
++		mutation.command !== mutation.command.trim() ||
++		/[\u0000-\u001f\u007f-\u009f]/u.test(mutation.command)
++	) {
++		throw new Error("Credential command is invalid");
++	}
++	return `!${mutation.command}`;
++}
++
++function headerReferenceSource(value: string): ModelConfigHeaderReferenceSource {
++	if (isCommandConfigValue(value)) return "command";
++	return getConfigValueEnvVarNames(value).length > 0 ? "environment" : "external";
++}
++
++function headerMetadata(
++	headers: Readonly<Record<string, string>> | undefined,
++): ModelConfigHeaderReferenceMetadata[] {
++	if (!headers) return [];
++	const normalized = new Map<string, [string, string]>();
++	for (const [name, value] of Object.entries(headers)) {
++		if (name.length === 0 || name.length > 128 || !HEADER_NAME.test(name)) continue;
++		normalized.set(name.toLowerCase(), [name, value]);
++	}
++	const entries = [...normalized.values()].slice(0, MAX_HEADER_REFERENCES);
++	return entries.map(([name, value]) => ({ name, source: headerReferenceSource(value) }));
++}
++
++function validateHeaderReferenceName(
++	name: string,
++	referenceType: ModelConfigHeaderReferenceValueMutation["type"],
++): string {
++	if (name.length === 0 || name.length > 128 || !HEADER_NAME.test(name)) {
++		throw new Error("Header name is invalid");
++	}
++	const normalizedName = name.toLowerCase();
++	if (referenceType !== "clear" && FORBIDDEN_HEADER_NAMES.has(normalizedName)) {
++		throw new Error("Header name is reserved by the request or credential owner");
++	}
++	return normalizedName;
++}
++
++function applyHeaderReferenceMutations(
++	provider: ModelsJsonProvider,
++	mutations: readonly ModelConfigHeaderReferenceMutation[] | undefined,
++): ModelsJsonProvider {
++	if (!mutations?.length) return provider;
++	if (mutations.length > MAX_HEADER_REFERENCES) {
++		throw new Error("Too many header reference mutations");
++	}
++	const edited = structuredClone(provider);
++	const seen = new Set<string>();
++	for (const mutation of mutations) {
++		if (mutation.reference.type !== "environment" && mutation.reference.type !== "clear") {
++			throw new Error("Header reference type is not supported");
++		}
++		const normalizedName = validateHeaderReferenceName(mutation.name, mutation.reference.type);
++		const scopeKey =
++			mutation.scope.type === "provider"
++				? `provider\0${normalizedName}`
++				: `model\0${mutation.scope.modelId}\0${normalizedName}`;
++		if (seen.has(scopeKey)) throw new Error("Duplicate header reference mutation");
++		seen.add(scopeKey);
++		let target: ModelsJsonProvider | ModelsJsonModel;
++		if (mutation.scope.type === "provider") {
++			target = edited;
++		} else {
++			const modelId = mutation.scope.modelId;
++			if (!modelId.trim() || modelId !== modelId.trim()) {
++				throw new Error("Header model id is invalid");
++			}
++			const model = edited.models?.find((entry) => entry.id === modelId);
++			if (!model) throw new Error("Header model target is unavailable");
++			target = model;
++		}
++		const headers = { ...(target.headers ?? {}) };
++		for (const currentName of Object.keys(headers)) {
++			if (currentName.toLowerCase() === normalizedName) delete headers[currentName];
++		}
++		const value =
++			mutation.reference.type === "clear"
++				? undefined
++				: encodeCredentialReference(mutation.reference);
++		if (value !== undefined) headers[mutation.name] = value;
++		if (Object.keys(headers).length > MAX_HEADER_REFERENCES) {
++			throw new Error("Configured headers exceed the safe mutation boundary");
++		}
++		if (Object.keys(headers).length > 0) target.headers = headers;
++		else delete target.headers;
++		if (mutation.scope.type === "model") {
++			const override = edited.modelOverrides?.[mutation.scope.modelId];
++			if (override?.headers) {
++				const overrideHeaders = { ...override.headers };
++				for (const currentName of Object.keys(overrideHeaders)) {
++					if (currentName.toLowerCase() === normalizedName) delete overrideHeaders[currentName];
++				}
++				if (Object.keys(overrideHeaders).length > 0) override.headers = overrideHeaders;
++				else delete override.headers;
++			}
++		}
++	}
++	return edited;
++}
++
++function isMissingPathError(error: unknown): boolean {
++	return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
++}
++
++function formattingOptions(content: string): {
++	insertSpaces: boolean;
++	tabSize: number;
++	eol: string;
++} {
++	const indentation = content.match(/(?:^|\r?\n)([ \t]+)"providers"\s*:/)?.[1] ?? "\t";
++	return {
++		insertSpaces: !indentation.includes("\t"),
++		tabSize: indentation.includes("\t") ? 4 : Math.max(1, indentation.length),
++		eol: content.includes("\r\n") ? "\r\n" : "\n",
++	};
++}
++
++type ModelConfigFileSnapshot = {
++	readonly content: string | undefined;
++	readonly identity:
++		| {
++				readonly dev: number;
++				readonly ino: number;
++				readonly size: number;
++				readonly mtimeMs: number;
++		  }
++		| undefined;
++};
++
++async function readModelConfigFile(modelsJsonPath: string, signal?: AbortSignal): Promise<ModelConfigFileSnapshot> {
++	signal?.throwIfAborted();
++	const flags = fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0);
++	let handle: Awaited<ReturnType<typeof open>>;
++	try {
++		handle = await open(modelsJsonPath, flags);
++	} catch (error) {
++		if (isMissingPathError(error)) return { content: undefined, identity: undefined };
++		throw error;
++	}
++	try {
++		const metadata = await handle.stat();
++		if (!metadata.isFile() || metadata.nlink !== 1 || metadata.size > MAX_MODELS_CONFIG_BYTES) {
++			throw new Error("models.json is not a private regular file or exceeds the safe mutation boundary");
++		}
++		const bytes = await handle.readFile();
++		signal?.throwIfAborted();
++		return {
++			content: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
++			identity: {
++				dev: metadata.dev,
++				ino: metadata.ino,
++				size: metadata.size,
++				mtimeMs: metadata.mtimeMs,
++			},
++		};
++	} finally {
++		await handle.close();
++	}
++}
++
++async function assertModelConfigUnchanged(
++	modelsJsonPath: string,
++	identity: ModelConfigFileSnapshot["identity"],
++): Promise<void> {
++	try {
++		const current = await lstat(modelsJsonPath);
++		if (
++			!identity ||
++			current.isSymbolicLink() ||
++			!current.isFile() ||
++			current.nlink !== 1 ||
++			current.dev !== identity.dev ||
++			current.ino !== identity.ino ||
++			current.size !== identity.size ||
++			current.mtimeMs !== identity.mtimeMs
++		) {
++			throw new Error("models.json changed during the persistent mutation");
++		}
++	} catch (error) {
++		if (isMissingPathError(error) && !identity) return;
++		if (isMissingPathError(error)) throw new Error("models.json changed during the persistent mutation");
++		throw error;
++	}
++}
++
+@@ -245,14 +641 @@ export class ModelConfig {
+-	static async load(modelsJsonPath: string | undefined): Promise<ModelConfig> {
+-		if (!modelsJsonPath) return new ModelConfig(new Map());
+-		const path = normalizePath(modelsJsonPath);
+-		let content: string;
+-		try {
+-			content = await readFile(path, "utf-8");
+-		} catch (error) {
+-			if ((error as NodeJS.ErrnoException).code === "ENOENT") return new ModelConfig(new Map());
+-			return new ModelConfig(
+-				new Map(),
+-				`Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
+-			);
+-		}
+-
++	private static fromContent(content: string, sourceLabel?: string): ModelConfig {
+@@ -265 +648 @@ export class ModelConfig {
+-				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
++				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
+@@ -275 +658,4 @@ export class ModelConfig {
+-			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
++			return new ModelConfig(
++				new Map(),
++				`Invalid models.json schema:\n${errors}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
++			);
+@@ -285,0 +672,35 @@ export class ModelConfig {
++	static async load(
++		modelsJsonPath: string | undefined,
++		options: { reader?: ModelConfigReader; signal?: AbortSignal } = {},
++	): Promise<ModelConfig> {
++		options.signal?.throwIfAborted();
++		let content: string | undefined;
++		let normalizedPath: string | undefined;
++		if (options.reader) {
++			try {
++				content = await options.reader({ signal: options.signal });
++				options.signal?.throwIfAborted();
++			} catch {
++				options.signal?.throwIfAborted();
++				return new ModelConfig(new Map(), "Failed to load models.json from configured reader");
++			}
++		} else {
++			if (!modelsJsonPath) return new ModelConfig(new Map());
++			normalizedPath = normalizePath(modelsJsonPath);
++			try {
++				content = await readFile(normalizedPath, "utf-8");
++			} catch (error) {
++				if ((error as NodeJS.ErrnoException).code === "ENOENT") return new ModelConfig(new Map());
++				return new ModelConfig(
++					new Map(),
++					`Failed to load models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${normalizedPath}`,
++				);
++			}
++		}
++		if (content === undefined) return new ModelConfig(new Map());
++		options.signal?.throwIfAborted();
++
++		options.signal?.throwIfAborted();
++		return ModelConfig.fromContent(content, normalizedPath);
++	}
++
+@@ -289,0 +711,18 @@ export class ModelConfig {
++	withProviderEdit(
++		providerId: string,
++		provider: ModelsJsonProvider,
++		credentialReference?: ModelConfigCredentialReferenceMutation,
++		headerReferences?: readonly ModelConfigHeaderReferenceMutation[],
++	): ModelConfig {
++		const providers = new Map(this.providers);
++		let edited = mergeModelConfigProviderEdit(this.providers.get(providerId), provider);
++		if (credentialReference) {
++			const apiKey = encodeCredentialReference(credentialReference);
++			if (apiKey === undefined) delete edited.apiKey;
++			else edited.apiKey = apiKey;
++		}
++		edited = applyHeaderReferenceMutations(edited, headerReferences);
++		providers.set(providerId, deepFreeze(edited));
++		return new ModelConfig(providers, this.error);
++	}
++
+@@ -293,0 +733,15 @@ export class ModelConfig {
++	getProviderHeaderMetadata(providerId: string): ModelConfigProviderHeaderMetadata | undefined {
++		const provider = this.providers.get(providerId);
++		if (!provider) return undefined;
++		return {
++			provider: headerMetadata(provider.headers),
++			models: (provider.models ?? []).flatMap((model) => {
++				const headers = headerMetadata({
++					...(provider.modelOverrides?.[model.id]?.headers ?? {}),
++					...(model.headers ?? {}),
++				});
++				return headers.length > 0 ? [{ modelId: model.id, headers }] : [];
++			}),
++		};
++	}
++
+@@ -296,0 +751,154 @@ export class ModelConfig {
++
++	static validateContent(content: string): ModelConfig {
++		return ModelConfig.fromContent(content);
++	}
++}
++
++/**
++ * Persist one typed provider mutation while preserving unrelated JSONC bytes.
++ * The explicit file path is used only for this user-requested mutation; passive
++ * ModelRuntime reads continue to use the caller-owned content reader.
++ */
++export async function mutateModelConfigProviderFile(
++	modelsJsonPath: string,
++	mutation: ModelConfigProviderMutation,
++	options: ModelConfigFileMutationOptions,
++): Promise<ModelConfigMutationResult> {
++	options.signal?.throwIfAborted();
++	if (!mutation.providerId.trim() || mutation.providerId !== mutation.providerId.trim()) {
++		throw new Error("Model provider id must not be empty or padded");
++	}
++	const requestedPath = normalizePath(modelsJsonPath);
++	const parentDir = dirname(requestedPath);
++	await mkdir(parentDir, { recursive: true, mode: 0o700 });
++	const parentMetadata = await lstat(parentDir);
++	if (parentMetadata.isSymbolicLink() || !parentMetadata.isDirectory()) {
++		throw new Error("models.json parent is not a private directory");
++	}
++	const normalizedPath = join(await realpath(parentDir), basename(requestedPath));
++
++	let compromised: Error | undefined;
++	const release = await lockfile.lock(normalizedPath, {
++		realpath: false,
++		retries: { retries: 10, factor: 1.5, minTimeout: 10, maxTimeout: 100 },
++		stale: 30_000,
++		onCompromised: (error) => {
++			compromised = error;
++		},
++	});
++	let temporaryPath: string | undefined;
++	try {
++		options.signal?.throwIfAborted();
++		if (compromised) throw compromised;
++		const current = await readModelConfigFile(normalizedPath, options.signal);
++		const currentContent = current.content ?? '{\n\t"providers": {}\n}\n';
++		const currentConfig = ModelConfig.validateContent(currentContent);
++		if (currentConfig.getError()) throw new Error(currentConfig.getError());
++		if (mutation.type === "remove" && !currentConfig.getProvider(mutation.providerId)) {
++			return { changed: false, providerIds: currentConfig.getProviderIds() };
++		}
++
++		let nextContent = currentContent;
++		if (mutation.type === "remove") {
++			nextContent = applyEdits(
++				nextContent,
++				modify(nextContent, ["providers", mutation.providerId], undefined, {
++					formattingOptions: formattingOptions(nextContent),
++				}),
++			);
++		} else if (!currentConfig.getProvider(mutation.providerId)) {
++			const provider = mutation.headerReferences?.length
++				? applyHeaderReferenceMutations(
++						mergeModelConfigProviderEdit(undefined, mutation.provider),
++						mutation.headerReferences,
++					)
++				: mutation.provider;
++			nextContent = applyEdits(
++				nextContent,
++				modify(nextContent, ["providers", mutation.providerId], provider, {
++					formattingOptions: formattingOptions(nextContent),
++				}),
++			);
++		} else {
++			const currentProvider = currentConfig.getProvider(mutation.providerId);
++			const mergedProvider = applyHeaderReferenceMutations(
++				mergeModelConfigProviderEdit(currentProvider, mutation.provider),
++				mutation.headerReferences,
++			);
++			const editsProviderHeaders = mutation.headerReferences?.some(
++				(reference) => reference.scope.type === "provider",
++			);
++			const editsModelHeaders = mutation.headerReferences?.some(
++				(reference) => reference.scope.type === "model",
++			);
++			for (const field of MODEL_CONFIG_PROVIDER_FIELDS) {
++				const isEditableOmission = MODEL_CONFIG_EDITABLE_PROVIDER_FIELDS.some(
++					(editableField) => editableField === field,
++				);
++				if (
++					!Object.hasOwn(mutation.provider, field) &&
++					!isEditableOmission &&
++					!(field === "headers" && editsProviderHeaders) &&
++					!(field === "models" && editsModelHeaders) &&
++					!(field === "modelOverrides" && editsModelHeaders)
++				) {
++					continue;
++				}
++				nextContent = applyEdits(
++					nextContent,
++					modify(nextContent, ["providers", mutation.providerId, field], mergedProvider[field], {
++						formattingOptions: formattingOptions(nextContent),
++					}),
++				);
++			}
++		}
++		if (mutation.type === "upsert" && mutation.credentialReference) {
++			nextContent = applyEdits(
++				nextContent,
++				modify(
++					nextContent,
++					["providers", mutation.providerId, "apiKey"],
++					encodeCredentialReference(mutation.credentialReference),
++					{ formattingOptions: formattingOptions(nextContent) },
++				),
++			);
++		}
++		if (Buffer.byteLength(nextContent, "utf8") > MAX_MODELS_CONFIG_BYTES) {
++			throw new Error("models.json exceeds the safe mutation boundary");
++		}
++		const nextConfig = ModelConfig.validateContent(nextContent);
++		if (nextConfig.getError()) throw new Error(nextConfig.getError());
++		if (mutation.type === "upsert" && !nextConfig.getProvider(mutation.providerId)) {
++			throw new Error("Model provider mutation was not accepted by the official schema");
++		}
++		if (mutation.type === "remove" && nextConfig.getProvider(mutation.providerId)) {
++			throw new Error("Model provider removal was not accepted by the official schema");
++		}
++		if (nextContent === currentContent) {
++			return { changed: false, providerIds: nextConfig.getProviderIds() };
++		}
++
++		options.signal?.throwIfAborted();
++		if (compromised) throw compromised;
++		await assertModelConfigUnchanged(normalizedPath, current.identity);
++		temporaryPath = `${normalizedPath}.${randomUUID()}.tmp`;
++		const flags = fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_WRONLY | (fsConstants.O_NOFOLLOW ?? 0);
++		const handle = await open(temporaryPath, flags, MODELS_CONFIG_FILE_MODE);
++		try {
++			await handle.writeFile(nextContent, "utf8");
++			await handle.sync();
++		} finally {
++			await handle.close();
++		}
++		await options.validateCandidate(temporaryPath, options.signal);
++		options.signal?.throwIfAborted();
++		if (compromised) throw compromised;
++		await assertModelConfigUnchanged(normalizedPath, current.identity);
++		await rename(temporaryPath, normalizedPath);
++		temporaryPath = undefined;
++		await chmod(normalizedPath, MODELS_CONFIG_FILE_MODE);
++		return { changed: true, providerIds: nextConfig.getProviderIds() };
++	} finally {
++		if (temporaryPath) await rm(temporaryPath, { force: true });
++		await release().catch(() => undefined);
++	}
+diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
+index 6f4071b..b6b38b2 100644
+--- a/packages/coding-agent/src/core/model-runtime.ts
++++ b/packages/coding-agent/src/core/model-runtime.ts
+@@ -19,0 +20 @@ import {
++	InMemoryCredentialStore,
+@@ -43 +44,13 @@ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
+-import { ModelConfig } from "./model-config.ts";
++import {
++	ModelConfig,
++	type ModelConfigHeaderReferenceMutation,
++	type ModelConfigProviderHeaderMetadata,
++	type ModelConfigMutationOptions,
++	type ModelConfigMutationResult,
++	type ModelConfigCredentialReferenceMutation,
++	type ModelConfigProviderMutation,
++	type ModelConfigReader,
++	type ModelsJsonModel,
++	type ModelsJsonProvider,
++	mutateModelConfigProviderFile,
++} from "./model-config.ts";
+@@ -57,0 +71,29 @@ import { RuntimeCredentials } from "./runtime-credentials.ts";
++export type { ModelConfigReader, ModelConfigReadOptions } from "./model-config.ts";
++
++/**
++ * Persist one provider only after a fresh official runtime can reload and
++ * compose the complete candidate file. The candidate uses memory-only auth and
++ * catalog stores, so validation cannot read or mutate the user's credentials.
++ */
++export async function mutateModelConfigProvider(
++	modelsJsonPath: string,
++	mutation: ModelConfigProviderMutation,
++	options: ModelConfigMutationOptions = {},
++): Promise<ModelConfigMutationResult> {
++	return mutateModelConfigProviderFile(modelsJsonPath, mutation, {
++		...options,
++		validateCandidate: async (candidatePath, signal) => {
++			const runtime = await ModelRuntime.create({
++				credentials: new InMemoryCredentialStore(),
++				modelsPath: candidatePath,
++				modelsStore: new InMemoryCodingAgentModelsStore(),
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++				signal,
++			});
++			const error = runtime.getError();
++			if (error) throw new Error(error);
++		},
++	});
++}
++
+@@ -70,0 +113,2 @@ export interface CreateModelRuntimeOptions {
++	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
++	modelsConfigReader?: ModelConfigReader;
+@@ -92,0 +137,150 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
++export interface ModelConfigProviderDiscoveryOptions {
++	readonly signal?: AbortSignal;
++}
++
++export type ModelConfigProviderDiscoveryErrorCode =
++	| "invalid_configuration"
++	| "authentication_failed"
++	| "request_failed"
++	| "catalog_unavailable"
++	| "response_too_large";
++
++export class ModelConfigProviderDiscoveryError extends Error {
++	readonly code: ModelConfigProviderDiscoveryErrorCode;
++
++	constructor(code: ModelConfigProviderDiscoveryErrorCode, options?: ErrorOptions) {
++		super("Model discovery failed", options);
++		this.name = "ModelConfigProviderDiscoveryError";
++		this.code = code;
++	}
++}
++
++const MAX_DISCOVERED_MODEL_COUNT = 4_096;
++const MAX_DISCOVERY_RESPONSE_BYTES = 4 * 1024 * 1024;
++const DISCOVERABLE_MODEL_CONFIG_APIS = new Set([
++	"openai-completions",
++	"openai-responses",
++	"anthropic-messages",
++	"google-generative-ai",
++]);
++
++function appendDiscoveryPath(baseUrl: string, version: string): URL {
++	let url: URL;
++	try {
++		url = new URL(baseUrl);
++	} catch (cause) {
++		throw new ModelConfigProviderDiscoveryError("invalid_configuration", { cause });
++	}
++	if (
++		(url.protocol !== "https:" && url.protocol !== "http:") ||
++		url.username !== "" ||
++		url.password !== "" ||
++		url.hash !== ""
++	) {
++		throw new ModelConfigProviderDiscoveryError("invalid_configuration");
++	}
++	const normalizedPath = url.pathname.replace(/\/+$/u, "");
++	url.pathname = normalizedPath.endsWith(`/${version}`)
++		? `${normalizedPath}/models`
++		: `${normalizedPath}/${version}/models`;
++	url.search = "";
++	return url;
++}
++
++function setHeaderUnlessPresent(headers: Headers, name: string, value: string | undefined): void {
++	if (value && !headers.has(name)) headers.set(name, value);
++}
++
++function safeDiscoveredModelText(value: unknown, maxLength: number): string | undefined {
++	if (typeof value !== "string") return undefined;
++	const normalized = value.trim();
++	if (
++		!normalized ||
++		normalized.length > maxLength ||
++		/[\u0000-\u001f\u007f-\u009f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u.test(normalized)
++	) {
++		return undefined;
++	}
++	return normalized;
++}
++
++function discoveredModelsFromPayload(api: string, payload: unknown): ModelsJsonModel[] {
++	if (typeof payload !== "object" || payload === null) {
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	}
++	const record = payload as Record<string, unknown>;
++	const entries = api === "google-generative-ai" ? record.models : record.data;
++	if (!Array.isArray(entries)) {
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	}
++	if (entries.length > MAX_DISCOVERED_MODEL_COUNT) {
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	}
++	const models = new Map<string, ModelsJsonModel>();
++	for (const entry of entries) {
++		if (typeof entry !== "object" || entry === null) continue;
++		const item = entry as Record<string, unknown>;
++		const rawId = safeDiscoveredModelText(api === "google-generative-ai" ? item.name : item.id, 512);
++		if (!rawId) continue;
++		const id = api === "google-generative-ai" ? rawId.replace(/^models\//u, "") : rawId;
++		if (!id || models.has(id)) continue;
++		const name = safeDiscoveredModelText(
++			api === "google-generative-ai"
++				? item.displayName
++				: api === "anthropic-messages"
++					? item.display_name
++					: item.name,
++			256,
++		);
++		models.set(id, name ? { id, name } : { id });
++	}
++	if (models.size === 0) {
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	}
++	return [...models.values()];
++}
++
++async function readBoundedDiscoveryResponse(response: Response, signal?: AbortSignal): Promise<unknown> {
++	if (response.status === 401 || response.status === 403) {
++		throw new ModelConfigProviderDiscoveryError("authentication_failed");
++	}
++	if (!response.ok) throw new ModelConfigProviderDiscoveryError("request_failed");
++	const declaredLength = Number(response.headers.get("content-length"));
++	if (Number.isFinite(declaredLength) && declaredLength > MAX_DISCOVERY_RESPONSE_BYTES) {
++		throw new ModelConfigProviderDiscoveryError("response_too_large");
++	}
++	const reader = response.body?.getReader();
++	if (!reader) throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	const chunks: Uint8Array[] = [];
++	let totalBytes = 0;
++	const abortRead = () => void reader.cancel(signal?.reason).catch(() => undefined);
++	signal?.addEventListener("abort", abortRead, { once: true });
++	try {
++		while (true) {
++			signal?.throwIfAborted();
++			const { done, value } = await reader.read();
++			if (done) break;
++			totalBytes += value.byteLength;
++			if (totalBytes > MAX_DISCOVERY_RESPONSE_BYTES) {
++				await reader.cancel();
++				throw new ModelConfigProviderDiscoveryError("response_too_large");
++			}
++			chunks.push(value);
++		}
++	} finally {
++		signal?.removeEventListener("abort", abortRead);
++		reader.releaseLock();
++	}
++	const bytes = new Uint8Array(totalBytes);
++	let offset = 0;
++	for (const chunk of chunks) {
++		bytes.set(chunk, offset);
++		offset += chunk.byteLength;
++	}
++	try {
++		return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
++	} catch {
++		throw new ModelConfigProviderDiscoveryError("catalog_unavailable");
++	}
++}
++
+@@ -138,0 +333 @@ export class ModelRuntime implements Models {
++	private readonly modelsConfigReader: ModelConfigReader | undefined;
+@@ -157,0 +353 @@ export class ModelRuntime implements Models {
++		modelsConfigReader: ModelConfigReader | undefined,
+@@ -164,0 +361 @@ export class ModelRuntime implements Models {
++		this.modelsConfigReader = modelsConfigReader;
+@@ -172,0 +370,3 @@ export class ModelRuntime implements Models {
++		if (options.modelsConfigReader && options.modelsPath !== null) {
++			throw new Error("modelsConfigReader requires modelsPath: null");
++		}
+@@ -176 +376,4 @@ export class ModelRuntime implements Models {
+-		const config = await ModelConfig.load(modelsPath);
++		const config = await ModelConfig.load(modelsPath, {
++			reader: options.modelsConfigReader,
++			signal: options.signal,
++		});
+@@ -179,3 +382,5 @@ export class ModelRuntime implements Models {
+-			(modelsPath
+-				? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
+-				: new InMemoryCodingAgentModelsStore());
++			(options.modelsStorePath
++				? new FileModelsStore(options.modelsStorePath)
++				: modelsPath
++					? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
++					: new InMemoryCodingAgentModelsStore());
+@@ -193,0 +399 @@ export class ModelRuntime implements Models {
++			options.modelsConfigReader,
+@@ -572,0 +779,101 @@ export class ModelRuntime implements Models {
++	/** Provider IDs accepted from the current official models.json configuration snapshot. */
++	getModelConfigProviderIds(): readonly string[] {
++		return this.config.getProviderIds();
++	}
++
++	/** Credential-blind provider configuration accepted by ModelConfig. */
++	getModelConfigProvider(providerId: string): ModelsJsonProvider | undefined {
++		const provider = this.config.getProvider(providerId);
++		if (!provider) return undefined;
++		const credentialBlindClone = (value: unknown): unknown => {
++			if (Array.isArray(value)) return value.map(credentialBlindClone);
++			if (typeof value !== "object" || value === null) return value;
++			return Object.fromEntries(
++				Object.entries(value)
++					.filter(([key]) => key !== "apiKey" && key !== "headers")
++					.map(([key, child]) => [key, credentialBlindClone(child)]),
++			);
++		};
++		return credentialBlindClone(provider) as ModelsJsonProvider;
++	}
++
++	/** Header names and source kinds accepted from models.json, without values or resolution. */
++	getModelConfigProviderHeaderMetadata(
++		providerId: string,
++	): ModelConfigProviderHeaderMetadata | undefined {
++		return this.config.getProviderHeaderMetadata(providerId);
++	}
++
++	/** Apply one credential-blind edit to this disposable runtime without exposing retained secrets. */
++	registerModelConfigProviderPreview(
++		providerId: string,
++		provider: ModelsJsonProvider,
++		credentialReference?: ModelConfigCredentialReferenceMutation,
++		headerReferences?: readonly ModelConfigHeaderReferenceMutation[],
++	): void {
++		this.config = this.config.withProviderEdit(
++			providerId,
++			provider,
++			credentialReference,
++			headerReferences,
++		);
++		this.recomposeProvider(providerId);
++		this.updateModelSnapshot();
++	}
++
++	/**
++	 * Discover a generic models.json provider's model identities through its
++	 * configured Pi protocol and effective credential. This explicit operation
++	 * never mutates models.json or the catalog store.
++	 */
++	async discoverModelConfigProviderModels(
++		providerId: string,
++		options: ModelConfigProviderDiscoveryOptions = {},
++	): Promise<readonly ModelsJsonModel[]> {
++		const signal = operationSignal(options.signal);
++		signal.throwIfAborted();
++		const config = this.config.getProvider(providerId);
++		const api = config?.api;
++		if (!config?.baseUrl || !api || !DISCOVERABLE_MODEL_CONFIG_APIS.has(api)) {
++			throw new ModelConfigProviderDiscoveryError("invalid_configuration");
++		}
++		let auth: AuthResult | undefined;
++		try {
++			auth = await this.models.getAuth(providerId, { signal });
++		} catch (cause) {
++			signal.throwIfAborted();
++			throw new ModelConfigProviderDiscoveryError("authentication_failed", { cause });
++		}
++		if (!auth) throw new ModelConfigProviderDiscoveryError("authentication_failed");
++		const headers = new Headers();
++		for (const [name, value] of Object.entries(auth.auth.headers ?? {})) {
++			if (value !== null) headers.set(name, value);
++		}
++		headers.set("Accept", "application/json");
++		let endpoint: URL;
++		if (api === "google-generative-ai") {
++			endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1beta");
++			setHeaderUnlessPresent(headers, "x-goog-api-key", auth.auth.apiKey);
++		} else if (api === "anthropic-messages") {
++			endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1");
++			setHeaderUnlessPresent(headers, "x-api-key", auth.auth.apiKey);
++			setHeaderUnlessPresent(headers, "anthropic-version", "2023-06-01");
++		} else {
++			endpoint = appendDiscoveryPath(auth.auth.baseUrl ?? config.baseUrl, "v1");
++			setHeaderUnlessPresent(headers, "Authorization", auth.auth.apiKey ? `Bearer ${auth.auth.apiKey}` : undefined);
++		}
++		try {
++			const response = await fetch(endpoint, {
++				method: "GET",
++				headers,
++				redirect: "error",
++				signal,
++			});
++			return discoveredModelsFromPayload(api, await readBoundedDiscoveryResponse(response, signal));
++		} catch (cause) {
++			signal.throwIfAborted();
++			if (cause instanceof ModelConfigProviderDiscoveryError) throw cause;
++			throw new ModelConfigProviderDiscoveryError("request_failed", { cause });
++		}
++	}
++
+@@ -691 +998,4 @@ export class ModelRuntime implements Models {
+-		this.config = await ModelConfig.load(this.modelsPath);
++		this.config = await ModelConfig.load(this.modelsPath, {
++			reader: this.modelsConfigReader,
++			signal: options.signal,
++		});
+diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
+index e221d2e..d275855 100644
+--- a/packages/coding-agent/src/core/package-manager.ts
++++ b/packages/coding-agent/src/core/package-manager.ts
+@@ -2 +2 @@ import type { ChildProcess, ChildProcessByStdio } from "node:child_process";
+-import { createHash } from "node:crypto";
++import { createHash, createHmac, randomBytes } from "node:crypto";
+@@ -101,0 +102,41 @@ export interface ConfiguredPackage {
++export type PublicPackageKind = "npm" | "git" | "local" | "unsupported";
++
++export interface PublicConfiguredPackage {
++	packageId: string;
++	displayName: string;
++	kind: PublicPackageKind;
++	scope: "user" | "project";
++	filtered: boolean;
++	installed: boolean;
++	manageable: boolean;
++}
++
++export type PackageResourceType = "extensions" | "skills" | "prompts" | "themes";
++
++export interface PackageResourceIntent {
++	source: string;
++	scope: "user" | "project";
++}
++
++export interface PublicPackageIntent {
++	packageId: string;
++}
++
++export interface PublicPackageResourceSelection extends PublicPackageIntent {
++	resourceType: PackageResourceType;
++	resourcePath: string;
++}
++
++export interface PublicConfiguredPackageResource extends PublicPackageResourceSelection {
++	enabled: boolean;
++}
++
++export interface PackageResourceSelection extends PackageResourceIntent {
++	resourceType: PackageResourceType;
++	resourcePath: string;
++}
++
++export interface ConfiguredPackageResource extends PackageResourceSelection {
++	enabled: boolean;
++}
++
+@@ -109,0 +151,9 @@ export interface PackageManager {
++	listPublicConfiguredPackages(): PublicConfiguredPackage[];
++	checkPublicPackageUpdates(): Promise<string[]>;
++	listPublicConfiguredPackageResources(intent: PublicPackageIntent): Promise<PublicConfiguredPackageResource[]>;
++	installPublicPackage(source: string): Promise<void>;
++	updatePublicPackage(intent: PublicPackageIntent): Promise<void>;
++	removePublicPackage(intent: PublicPackageIntent): Promise<boolean>;
++	setPublicPackageResourceEnabled(selection: PublicPackageResourceSelection, enabled: boolean): Promise<boolean>;
++	listConfiguredPackageResources(intent: PackageResourceIntent): Promise<ConfiguredPackageResource[]>;
++	setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean>;
+@@ -143,0 +194,2 @@ type ParsedSource = NpmSource | GitSource | LocalSource;
++const PUBLIC_PACKAGE_ID_KEY = randomBytes(32);
++
+@@ -192 +244 @@ interface PackageFilter {
+-type ResourceType = "extensions" | "skills" | "prompts" | "themes";
++type ResourceType = PackageResourceType;
+@@ -977,0 +1030,181 @@ export class DefaultPackageManager implements PackageManager {
++	listPublicConfiguredPackages(): PublicConfiguredPackage[] {
++		return this.listRawConfiguredPackages().map((pkg) => {
++			const projection = this.projectPublicPackageSource(pkg.source);
++			let installed = false;
++			if (projection.manageable) {
++				try {
++					installed = this.getInstalledPath(pkg.source, pkg.scope) !== undefined;
++				} catch {
++					installed = false;
++				}
++			}
++			return {
++				packageId: this.getPublicPackageId(pkg.source, pkg.scope),
++				displayName: projection.displayName,
++				kind: projection.kind,
++				scope: pkg.scope,
++				filtered: pkg.filtered,
++				installed,
++				manageable: projection.manageable,
++			};
++		});
++	}
++
++	async checkPublicPackageUpdates(): Promise<string[]> {
++		if (isOfflineModeEnabled()) return [];
++		const checks = this.listRawConfiguredPackages()
++			.map((configured) => ({
++				...configured,
++				packageId: this.getPublicPackageId(configured.source, configured.scope),
++				projection: this.projectPublicPackageSource(configured.source),
++				installedPath: (() => {
++					try {
++						return this.getInstalledPath(configured.source, configured.scope);
++					} catch {
++						return undefined;
++					}
++				})(),
++			}))
++			.filter((configured) => configured.projection.manageable)
++			.map((configured) => async (): Promise<string | undefined> => {
++				const parsed = this.parseSource(configured.source);
++				if (parsed.type === "local" || parsed.pinned || !configured.installedPath) return undefined;
++				const hasUpdate =
++					parsed.type === "npm"
++						? await this.npmHasAvailableUpdate(parsed, configured.installedPath)
++						: await this.gitHasAvailableUpdate(configured.installedPath);
++				return hasUpdate ? configured.packageId : undefined;
++			});
++		return (await this.runWithConcurrency(checks, UPDATE_CHECK_CONCURRENCY)).filter(
++			(packageId): packageId is string => packageId !== undefined,
++		);
++	}
++
++	async listPublicConfiguredPackageResources(
++		intent: PublicPackageIntent,
++	): Promise<PublicConfiguredPackageResource[]> {
++		const current = this.requirePublicConfiguredPackage(intent.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		return (await this.listConfiguredPackageResources({ source: current.source, scope: current.scope })).map(
++			({ source: _source, scope: _scope, ...resource }) => ({ packageId: current.packageId, ...resource }),
++		);
++	}
++
++	async installPublicPackage(source: string): Promise<void> {
++		const projection = this.projectPublicPackageSource(source);
++		const canonicalInput = source.startsWith("npm:");
++		if (!projection.manageable || !canonicalInput) {
++			throw new Error("Package source is not a supported public package identity");
++		}
++		try {
++			await this.installAndPersist(source);
++		} catch {
++			throw new Error("Public package installation failed");
++		}
++	}
++
++	async updatePublicPackage(intent: PublicPackageIntent): Promise<void> {
++		const current = this.requirePublicConfiguredPackage(intent.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		try {
++			await this.update(current.source);
++		} catch {
++			throw new Error("Public package update failed");
++		}
++	}
++
++	async removePublicPackage(intent: PublicPackageIntent): Promise<boolean> {
++		const current = this.requirePublicConfiguredPackage(intent.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		try {
++			return await this.removeAndPersist(current.source);
++		} catch {
++			throw new Error("Public package removal failed");
++		}
++	}
++
++	async setPublicPackageResourceEnabled(
++		selection: PublicPackageResourceSelection,
++		enabled: boolean,
++	): Promise<boolean> {
++		const current = this.requirePublicConfiguredPackage(selection.packageId);
++		if (!current.projection.manageable) throw new Error("Configured package is not publicly manageable");
++		return this.setPackageResourceEnabled(
++			{
++				source: current.source,
++				scope: current.scope,
++				resourceType: selection.resourceType,
++				resourcePath: selection.resourcePath,
++			},
++			enabled,
++		);
++	}
++
++	async listConfiguredPackageResources(intent: PackageResourceIntent): Promise<ConfiguredPackageResource[]> {
++		this.assertProjectTrustedForScope(intent.scope);
++		const settings =
++			intent.scope === "project" ? this.settingsManager.getProjectSettings() : this.settingsManager.getGlobalSettings();
++		const configured = (settings.packages ?? []).filter((pkg) =>
++			this.packageSourcesMatch(pkg, intent.source, intent.scope),
++		);
++		if (configured.length !== 1) {
++			throw new Error(`Expected exactly one configured package; found ${configured.length}`);
++		}
++		const accumulator = this.createAccumulator();
++		await this.resolvePackageSources([{ pkg: configured[0], scope: intent.scope }], accumulator, async () => "error");
++		const resolved = this.toResolvedPaths(accumulator);
++		const resources: ConfiguredPackageResource[] = [];
++		for (const resourceType of RESOURCE_TYPES) {
++			for (const resource of resolved[resourceType]) {
++				if (resource.metadata.origin !== "package" || resource.metadata.scope === "temporary") continue;
++				const baseDir = resource.metadata.baseDir ?? dirname(resource.path);
++				resources.push({
++					source: resource.metadata.source,
++					scope: resource.metadata.scope,
++					resourceType,
++					resourcePath: toPosixPath(relative(baseDir, resource.path)),
++					enabled: resource.enabled,
++				});
++			}
++		}
++		return resources;
++	}
++
++	async setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean> {
++		this.assertProjectTrustedForScope(selection.scope);
++		const matches = (await this.listConfiguredPackageResources(selection)).filter(
++			(resource) =>
++				resource.resourceType === selection.resourceType && resource.resourcePath === selection.resourcePath,
++		);
++		if (matches.length !== 1) {
++			throw new Error(`Expected exactly one configured package resource; found ${matches.length}`);
++		}
++		if (matches[0].enabled === enabled) return false;
++
++		const settings =
++			selection.scope === "project"
++				? this.settingsManager.getProjectSettings()
++				: this.settingsManager.getGlobalSettings();
++		const packages = [...(settings.packages ?? [])];
++		const packageIndex = packages.findIndex((pkg) =>
++			this.packageSourcesMatch(pkg, selection.source, selection.scope),
++		);
++		if (packageIndex === -1) throw new Error("Configured package is no longer available");
++
++		const currentPackage = packages[packageIndex];
++		const packageConfig =
++			typeof currentPackage === "string" ? { source: currentPackage } : { ...currentPackage };
++		const currentPatterns = packageConfig[selection.resourceType] ?? [];
++		const nextPatterns = currentPatterns.filter((entry) => {
++			const target = entry.startsWith("!") || entry.startsWith("+") || entry.startsWith("-") ? entry.slice(1) : entry;
++			return target !== selection.resourcePath;
++		});
++		nextPatterns.push(`${enabled ? "+" : "-"}${selection.resourcePath}`);
++		packageConfig[selection.resourceType] = nextPatterns;
++		packages[packageIndex] = packageConfig;
++
++		if (selection.scope === "project") this.settingsManager.setProjectPackages(packages);
++		else this.settingsManager.setPackages(packages);
++		return true;
++	}
++
+@@ -1345,0 +1579,64 @@ export class DefaultPackageManager implements PackageManager {
++	private listRawConfiguredPackages(): Array<{
++		source: string;
++		scope: "user" | "project";
++		filtered: boolean;
++	}> {
++		const result: Array<{ source: string; scope: "user" | "project"; filtered: boolean }> = [];
++		for (const pkg of this.settingsManager.getGlobalSettings().packages ?? []) {
++			result.push({ source: this.getPackageSourceString(pkg), scope: "user", filtered: typeof pkg === "object" });
++		}
++		for (const pkg of this.settingsManager.getProjectSettings().packages ?? []) {
++			result.push({ source: this.getPackageSourceString(pkg), scope: "project", filtered: typeof pkg === "object" });
++		}
++		return result;
++	}
++
++	private getPublicPackageId(source: string, scope: "user" | "project"): string {
++		return createHmac("sha256", PUBLIC_PACKAGE_ID_KEY).update(`${scope}\0${source}`).digest("hex");
++	}
++
++	private projectPublicPackageSource(source: string): {
++		displayName: string;
++		kind: PublicPackageKind;
++		manageable: boolean;
++	} {
++		try {
++			const parsed = this.parseSource(source);
++			if (parsed.type === "npm") {
++				const safeName = /^(?:@[a-z0-9][a-z0-9._-]*\/[a-z0-9][a-z0-9._-]*|[a-z0-9][a-z0-9._-]*)$/iu.test(
++					parsed.name,
++				);
++				const safeVersion = parsed.version === undefined || /^[a-z0-9*+._~^<>=| -]+$/iu.test(parsed.version);
++				return {
++					displayName: safeName ? parsed.name : "npm package",
++					kind: "npm",
++					manageable: safeName && safeVersion,
++				};
++			}
++			if (parsed.type === "git") {
++				return { displayName: "Git package", kind: "git", manageable: false };
++			}
++			return { displayName: "Local package", kind: "local", manageable: false };
++		} catch {
++			return { displayName: "Package", kind: "unsupported", manageable: false };
++		}
++	}
++
++	private requirePublicConfiguredPackage(packageId: string): {
++		packageId: string;
++		source: string;
++		scope: "user" | "project";
++		projection: ReturnType<DefaultPackageManager["projectPublicPackageSource"]>;
++	} {
++		const matches = this.listRawConfiguredPackages()
++			.map((entry) => ({
++				packageId: this.getPublicPackageId(entry.source, entry.scope),
++				source: entry.source,
++				scope: entry.scope,
++				projection: this.projectPublicPackageSource(entry.source),
++			}))
++			.filter((entry) => entry.packageId === packageId);
++		if (matches.length !== 1) throw new Error("Configured package is no longer available");
++		return matches[0];
++	}
++
+diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
+index 1be7fcd..04b8931 100644
+--- a/packages/coding-agent/src/core/provider-composer.ts
++++ b/packages/coding-agent/src/core/provider-composer.ts
+@@ -447,2 +447,10 @@ export function composeModelProvider(
+-	// Validate eagerly so registration/reload reports structural errors immediately.
+-	getModels();
++	// Validate eagerly so registration/reload reports structural and execution
++	// protocol errors before a provider becomes persistent or selectable.
++	const initialModels = getModels();
++	for (const model of initialModels) {
++		const extensionOwnsApi = extension?.streamSimple !== undefined && model.api === extension.api;
++		const baseOwnsApi = base?.getModels().some((entry) => entry.api === model.api) ?? false;
++		if (!extensionOwnsApi && !baseOwnsApi && !getApiProvider(model.api)) {
++			throw new Error(`No API provider registered for api: ${model.api}`);
++		}
++	}
+diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
+index c24d0a2..1d1ba2a 100644
+--- a/packages/coding-agent/src/core/resource-loader.ts
++++ b/packages/coding-agent/src/core/resource-loader.ts
+@@ -20 +20,6 @@ import { findGitPaths } from "./footer-data-provider.ts";
+-import { DefaultPackageManager, type PathMetadata, type ResolvedResource } from "./package-manager.ts";
++import {
++	DefaultPackageManager,
++	type MissingSourceAction,
++	type PathMetadata,
++	type ResolvedResource,
++} from "./package-manager.ts";
+@@ -36,0 +42 @@ export interface ResourceLoaderReloadOptions {
++	onMissingPackage?: (source: string) => Promise<MissingSourceAction>;
+@@ -379 +385,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+-	async loadProjectTrustExtensions(): Promise<LoadExtensionsResult> {
++	async loadProjectTrustExtensions(
++		onMissingPackage?: (source: string) => Promise<MissingSourceAction>,
++	): Promise<LoadExtensionsResult> {
+@@ -384 +392 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		return this.loadCurrentExtensionSet({ includeInlineFactories: true });
++		return this.loadCurrentExtensionSet({ includeInlineFactories: true }, onMissingPackage);
+@@ -388,0 +397,6 @@ export class DefaultResourceLoader implements ResourceLoader {
++		let preTrustExtensions: LoadExtensionsResult | undefined;
++		let completed = false;
++		try {
++			if (this.loaded) {
++				clearExtensionCache();
++			}
+@@ -390,3 +404,5 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		if (this.loaded) {
+-			clearExtensionCache();
+-		}
++			if (options?.resolveProjectTrust) {
++				preTrustExtensions = await this.loadProjectTrustExtensions(options.onMissingPackage);
++				const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
++				this.settingsManager.setProjectTrusted(projectTrusted);
++			}
+@@ -394,6 +410,23 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		let preTrustExtensions: LoadExtensionsResult | undefined;
+-		if (options?.resolveProjectTrust) {
+-			preTrustExtensions = await this.loadProjectTrustExtensions();
+-			const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
+-			this.settingsManager.setProjectTrusted(projectTrusted);
+-		}
++			// reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
++			await this.settingsManager.reload();
++			const resolvedPaths = await this.packageManager.resolve(options?.onMissingPackage);
++			const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
++				temporary: true,
++			});
++			// Kept on the instance so post-reload passes (extendResources) can still resolve package metadata.
++			this.resourceMetadataByPath = new Map();
++			const metadataByPath = this.resourceMetadataByPath;
++
++			this.extensionSkillSourceInfos = new Map();
++			this.extensionPromptSourceInfos = new Map();
++			this.extensionThemeSourceInfos = new Map();
++
++			// Helper to extract enabled paths and store metadata
++			const getEnabledResources = (resources: ResolvedResource[]): ResolvedResource[] => {
++				for (const r of resources) {
++					if (!metadataByPath.has(r.path)) {
++						metadataByPath.set(r.path, r.metadata);
++					}
++				}
++				return resources.filter((r) => r.enabled);
++			};
+@@ -401,9 +434,6 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		// reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
+-		await this.settingsManager.reload();
+-		const resolvedPaths = await this.packageManager.resolve();
+-		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+-			temporary: true,
+-		});
+-		// Kept on the instance so post-reload passes (extendResources) can still resolve package metadata.
+-		this.resourceMetadataByPath = new Map();
+-		const metadataByPath = this.resourceMetadataByPath;
++			const getEnabledPaths = (resources: ResolvedResource[]): string[] =>
++				getEnabledResources(resources).map((r) => r.path);
++			const enabledExtensions = getEnabledPaths(resolvedPaths.extensions);
++			const enabledSkillResources = getEnabledResources(resolvedPaths.skills);
++			const enabledPrompts = getEnabledPaths(resolvedPaths.prompts);
++			const enabledThemes = getEnabledPaths(resolvedPaths.themes);
+@@ -411,3 +441 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		this.extensionSkillSourceInfos = new Map();
+-		this.extensionPromptSourceInfos = new Map();
+-		this.extensionThemeSourceInfos = new Map();
++			const enabledSkills = enabledSkillResources.map((resource) => this.mapSkillPath(resource, metadataByPath));
+@@ -415,3 +443,2 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		// Helper to extract enabled paths and store metadata
+-		const getEnabledResources = (resources: ResolvedResource[]): ResolvedResource[] => {
+-			for (const r of resources) {
++			// Add CLI paths metadata
++			for (const r of cliExtensionPaths.extensions) {
+@@ -419 +446 @@ export class DefaultResourceLoader implements ResourceLoader {
+-					metadataByPath.set(r.path, r.metadata);
++					metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
+@@ -422,21 +449,4 @@ export class DefaultResourceLoader implements ResourceLoader {
+-			return resources.filter((r) => r.enabled);
+-		};
+-
+-		const getEnabledPaths = (resources: ResolvedResource[]): string[] =>
+-			getEnabledResources(resources).map((r) => r.path);
+-		const enabledExtensions = getEnabledPaths(resolvedPaths.extensions);
+-		const enabledSkillResources = getEnabledResources(resolvedPaths.skills);
+-		const enabledPrompts = getEnabledPaths(resolvedPaths.prompts);
+-		const enabledThemes = getEnabledPaths(resolvedPaths.themes);
+-
+-		const enabledSkills = enabledSkillResources.map((resource) => this.mapSkillPath(resource, metadataByPath));
+-
+-		// Add CLI paths metadata
+-		for (const r of cliExtensionPaths.extensions) {
+-			if (!metadataByPath.has(r.path)) {
+-				metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
+-			}
+-		}
+-		for (const r of cliExtensionPaths.skills) {
+-			if (!metadataByPath.has(r.path)) {
+-				metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
++			for (const r of cliExtensionPaths.skills) {
++				if (!metadataByPath.has(r.path)) {
++					metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
++				}
+@@ -444,10 +453,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+-
+-		const cliEnabledExtensions = getEnabledPaths(cliExtensionPaths.extensions);
+-		const cliEnabledSkills = getEnabledPaths(cliExtensionPaths.skills);
+-		const cliEnabledPrompts = getEnabledPaths(cliExtensionPaths.prompts);
+-		const cliEnabledThemes = getEnabledPaths(cliExtensionPaths.themes);
+-
+-		const extensionPaths = this.noExtensions
+-			? cliEnabledExtensions
+-			: this.mergePaths(cliEnabledExtensions, enabledExtensions);
+@@ -455,6 +455,33 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const extensionsResult = await this.loadFinalExtensionSet(extensionPaths, preTrustExtensions);
+-		for (const p of this.additionalExtensionPaths) {
+-			if (isLocalPath(p)) {
+-				const resolved = this.resolveResourcePath(p);
+-				if (!existsSync(resolved)) {
+-					extensionsResult.errors.push({ path: resolved, error: `Extension path does not exist: ${resolved}` });
++			const cliEnabledExtensions = getEnabledPaths(cliExtensionPaths.extensions);
++			const cliEnabledSkills = getEnabledPaths(cliExtensionPaths.skills);
++			const cliEnabledPrompts = getEnabledPaths(cliExtensionPaths.prompts);
++			const cliEnabledThemes = getEnabledPaths(cliExtensionPaths.themes);
++
++			const extensionPaths = this.noExtensions
++				? cliEnabledExtensions
++				: this.mergePaths(cliEnabledExtensions, enabledExtensions);
++
++			const extensionsResult = await this.loadFinalExtensionSet(extensionPaths, preTrustExtensions);
++			for (const p of this.additionalExtensionPaths) {
++				if (isLocalPath(p)) {
++					const resolved = this.resolveResourcePath(p);
++					if (!existsSync(resolved)) {
++						extensionsResult.errors.push({ path: resolved, error: `Extension path does not exist: ${resolved}` });
++					}
++				}
++			}
++			this.extensionsResult = this.extensionsOverride ? this.extensionsOverride(extensionsResult) : extensionsResult;
++			this.applyExtensionSourceInfo(this.extensionsResult.extensions, metadataByPath);
++
++			const skillPaths = this.noSkills
++				? this.mergePaths(cliEnabledSkills, this.additionalSkillPaths)
++				: this.mergePaths([...cliEnabledSkills, ...enabledSkills], this.additionalSkillPaths);
++
++			this.lastSkillPaths = skillPaths;
++			this.updateSkillsFromPaths(skillPaths, metadataByPath);
++			for (const p of this.additionalSkillPaths) {
++				if (isLocalPath(p)) {
++					const resolved = this.resolveResourcePath(p);
++					if (!existsSync(resolved) && !this.skillDiagnostics.some((d) => d.path === resolved)) {
++						this.skillDiagnostics.push({ type: "error", message: "Skill path does not exist", path: resolved });
++					}
+@@ -463,7 +489,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+-		this.extensionsResult = this.extensionsOverride ? this.extensionsOverride(extensionsResult) : extensionsResult;
+-		this.applyExtensionSourceInfo(this.extensionsResult.extensions, metadataByPath);
+-
+-		const skillPaths = this.noSkills
+-			? this.mergePaths(cliEnabledSkills, this.additionalSkillPaths)
+-			: this.mergePaths([...cliEnabledSkills, ...enabledSkills], this.additionalSkillPaths);
+@@ -471,7 +491,16 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		this.lastSkillPaths = skillPaths;
+-		this.updateSkillsFromPaths(skillPaths, metadataByPath);
+-		for (const p of this.additionalSkillPaths) {
+-			if (isLocalPath(p)) {
+-				const resolved = this.resolveResourcePath(p);
+-				if (!existsSync(resolved) && !this.skillDiagnostics.some((d) => d.path === resolved)) {
+-					this.skillDiagnostics.push({ type: "error", message: "Skill path does not exist", path: resolved });
++			const promptPaths = this.noPromptTemplates
++				? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
++				: this.mergePaths([...cliEnabledPrompts, ...enabledPrompts], this.additionalPromptTemplatePaths);
++
++			this.lastPromptPaths = promptPaths;
++			this.updatePromptsFromPaths(promptPaths, metadataByPath);
++			for (const p of this.additionalPromptTemplatePaths) {
++				if (isLocalPath(p)) {
++					const resolved = this.resolveResourcePath(p);
++					if (!existsSync(resolved) && !this.promptDiagnostics.some((d) => d.path === resolved)) {
++						this.promptDiagnostics.push({
++							type: "error",
++							message: "Prompt template path does not exist",
++							path: resolved,
++						});
++					}
+@@ -480 +508,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+@@ -482,3 +510,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const promptPaths = this.noPromptTemplates
+-			? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
+-			: this.mergePaths([...cliEnabledPrompts, ...enabledPrompts], this.additionalPromptTemplatePaths);
++			const themePaths = this.noThemes
++				? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
++				: this.mergePaths([...cliEnabledThemes, ...enabledThemes], this.additionalThemePaths);
+@@ -486,4 +514,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		this.lastPromptPaths = promptPaths;
+-		this.updatePromptsFromPaths(promptPaths, metadataByPath);
+-		for (const p of this.additionalPromptTemplatePaths) {
+-			if (isLocalPath(p)) {
++			this.lastThemePaths = themePaths;
++			this.updateThemesFromPaths(themePaths, metadataByPath);
++			for (const p of this.additionalThemePaths) {
+@@ -491,6 +518,2 @@ export class DefaultResourceLoader implements ResourceLoader {
+-				if (!existsSync(resolved) && !this.promptDiagnostics.some((d) => d.path === resolved)) {
+-					this.promptDiagnostics.push({
+-						type: "error",
+-						message: "Prompt template path does not exist",
+-						path: resolved,
+-					});
++				if (!existsSync(resolved) && !this.themeDiagnostics.some((d) => d.path === resolved)) {
++					this.themeDiagnostics.push({ type: "error", message: "Theme path does not exist", path: resolved });
+@@ -499 +521,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		}
+@@ -501,10 +523,36 @@ export class DefaultResourceLoader implements ResourceLoader {
+-		const themePaths = this.noThemes
+-			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
+-			: this.mergePaths([...cliEnabledThemes, ...enabledThemes], this.additionalThemePaths);
+-
+-		this.lastThemePaths = themePaths;
+-		this.updateThemesFromPaths(themePaths, metadataByPath);
+-		for (const p of this.additionalThemePaths) {
+-			const resolved = this.resolveResourcePath(p);
+-			if (!existsSync(resolved) && !this.themeDiagnostics.some((d) => d.path === resolved)) {
+-				this.themeDiagnostics.push({ type: "error", message: "Theme path does not exist", path: resolved });
++			const agentsFiles = {
++				agentsFiles: this.noContextFiles
++					? []
++					: loadProjectContextFiles({
++							cwd: this.cwd,
++							agentDir: this.agentDir,
++						}),
++			};
++			const resolvedAgentsFiles = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
++			this.agentsFiles = resolvedAgentsFiles.agentsFiles;
++
++			const systemPromptSource = this.systemPromptSource ?? this.discoverSystemPromptFile();
++			const baseSystemPrompt = resolvePromptInput(systemPromptSource, "system prompt");
++			this.systemPrompt = this.systemPromptOverride ? this.systemPromptOverride(baseSystemPrompt) : baseSystemPrompt;
++			this.systemPromptSourcePath =
++				systemPromptSource && existsSync(systemPromptSource) ? resolvePath(systemPromptSource) : undefined;
++
++			let appendSources = this.appendSystemPromptSource;
++			if (!appendSources) {
++				const discoveredAppendSystemPromptFile = this.discoverAppendSystemPromptFile();
++				appendSources = discoveredAppendSystemPromptFile ? [discoveredAppendSystemPromptFile] : [];
++			}
++			const baseAppend = appendSources
++				.map((s) => resolvePromptInput(s, "append system prompt"))
++				.filter((s): s is string => s !== undefined);
++			this.appendSystemPrompt = this.appendSystemPromptOverride
++				? this.appendSystemPromptOverride(baseAppend)
++				: baseAppend;
++			this.appendSystemPromptSourcePaths = appendSources
++				.filter((source) => existsSync(source))
++				.map((source) => resolvePath(source));
++			this.loaded = true;
++			completed = true;
++		} finally {
++			if (!completed) {
++				preTrustExtensions?.runtime.invalidate("Resource reload failed");
+@@ -513,33 +560,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+-
+-		const agentsFiles = {
+-			agentsFiles: this.noContextFiles
+-				? []
+-				: loadProjectContextFiles({
+-						cwd: this.cwd,
+-						agentDir: this.agentDir,
+-					}),
+-		};
+-		const resolvedAgentsFiles = this.agentsFilesOverride ? this.agentsFilesOverride(agentsFiles) : agentsFiles;
+-		this.agentsFiles = resolvedAgentsFiles.agentsFiles;
+-
+-		const systemPromptSource = this.systemPromptSource ?? this.discoverSystemPromptFile();
+-		const baseSystemPrompt = resolvePromptInput(systemPromptSource, "system prompt");
+-		this.systemPrompt = this.systemPromptOverride ? this.systemPromptOverride(baseSystemPrompt) : baseSystemPrompt;
+-		this.systemPromptSourcePath =
+-			systemPromptSource && existsSync(systemPromptSource) ? resolvePath(systemPromptSource) : undefined;
+-
+-		let appendSources = this.appendSystemPromptSource;
+-		if (!appendSources) {
+-			const discoveredAppendSystemPromptFile = this.discoverAppendSystemPromptFile();
+-			appendSources = discoveredAppendSystemPromptFile ? [discoveredAppendSystemPromptFile] : [];
+-		}
+-		const baseAppend = appendSources
+-			.map((s) => resolvePromptInput(s, "append system prompt"))
+-			.filter((s): s is string => s !== undefined);
+-		this.appendSystemPrompt = this.appendSystemPromptOverride
+-			? this.appendSystemPromptOverride(baseAppend)
+-			: baseAppend;
+-		this.appendSystemPromptSourcePaths = appendSources
+-			.filter((source) => existsSync(source))
+-			.map((source) => resolvePath(source));
+-		this.loaded = true;
+@@ -548,2 +563,5 @@ export class DefaultResourceLoader implements ResourceLoader {
+-	private async loadCurrentExtensionSet(options: { includeInlineFactories: boolean }): Promise<LoadExtensionsResult> {
+-		const resolvedPaths = await this.packageManager.resolve();
++	private async loadCurrentExtensionSet(
++		options: { includeInlineFactories: boolean },
++		onMissingPackage?: (source: string) => Promise<MissingSourceAction>,
++	): Promise<LoadExtensionsResult> {
++		const resolvedPaths = await this.packageManager.resolve(onMissingPackage);
+diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
+index 3d05c2a..7c691a5 100644
+--- a/packages/coding-agent/src/index.ts
++++ b/packages/coding-agent/src/index.ts
+@@ -22,0 +23 @@ export {
++	type PromptOutcome,
+@@ -170,0 +172,14 @@ export { convertToLlm } from "./core/messages.ts";
++export type {
++	ModelConfigCredentialReferenceMutation,
++	ModelConfigHeaderReferenceMetadata,
++	ModelConfigHeaderReferenceMutation,
++	ModelConfigHeaderReferenceSource,
++	ModelConfigHeaderReferenceValueMutation,
++	ModelConfigMutationOptions,
++	ModelConfigMutationResult,
++	ModelConfigProviderHeaderMetadata,
++	ModelConfigProviderMutation,
++	ModelsJsonModel,
++	ModelsJsonModelOverride,
++	ModelsJsonProvider,
++} from "./core/model-config.ts";
+@@ -183,0 +199,5 @@ export {
++	type ModelConfigProviderDiscoveryOptions,
++	ModelConfigProviderDiscoveryError,
++	type ModelConfigProviderDiscoveryErrorCode,
++	type ModelConfigReader,
++	type ModelConfigReadOptions,
+@@ -185,0 +206 @@ export {
++	mutateModelConfigProvider,
+@@ -191,0 +213,5 @@ export type {
++	PublicConfiguredPackage,
++	PublicConfiguredPackageResource,
++	PublicPackageIntent,
++	PublicPackageKind,
++	PublicPackageResourceSelection,
+diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
+new file mode 100644
+index 0000000..c4504b3
+--- /dev/null
++++ b/packages/coding-agent/test/model-config-mutation.test.ts
+@@ -0,0 +1,756 @@
++import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { afterEach, describe, expect, it } from "vitest";
++import { ModelRuntime, mutateModelConfigProvider } from "../src/core/model-runtime.ts";
++
++const roots: string[] = [];
++
++async function createRoot(): Promise<string> {
++	const root = await mkdtemp(join(tmpdir(), "pi-model-config-mutation-"));
++	roots.push(root);
++	return root;
++}
++
++async function exists(path: string): Promise<boolean> {
++	try {
++		await lstat(path);
++		return true;
++	} catch {
++		return false;
++	}
++}
++
++function provider(name: string, modelId: string) {
++	return {
++		name,
++		baseUrl: "https://example.test/v1",
++		api: "openai-completions",
++		models: [{ id: modelId }],
++	};
++}
++
++afterEach(async () => {
++	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
++});
++
++describe("persistent ModelConfig provider mutation", () => {
++	it("upserts one provider while preserving comments and unrelated unknown fields", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const untouchedProvider = `"existing": {
++			// This comment and unknown field must survive byte-for-byte.
++			"baseUrl": "https://existing.test/v1",
++			"api": "openai-responses",
++			"futureProviderField": { "keep": true },
++			"models": [{ "id": "existing-model", "futureModelField": 7 }]
++		}`;
++		await writeFile(
++			modelsPath,
++			`{
++		// Root comments and future fields are not the mutation target.
++		"futureRootField": { "keep": true },
++		"providers": {
++			${untouchedProvider}
++		}
++	}\n`,
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		const result = await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "custom-one",
++			provider: provider("Custom One", "model-one"),
++		});
++		const content = await readFile(modelsPath, "utf8");
++
++		expect(result).toEqual({ changed: true, providerIds: ["existing", "custom-one"] });
++		expect(content).toContain("// Root comments and future fields are not the mutation target.");
++		expect(content).toContain('"futureRootField": { "keep": true }');
++		expect(content).toContain(untouchedProvider);
++		expect(content).toContain('"custom-one"');
++		expect((await lstat(modelsPath)).mode & 0o777).toBe(0o600);
++	});
++
++	it("serializes concurrent provider mutations without dropping either update", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++
++		await Promise.all([
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "custom-one",
++				provider: provider("Custom One", "model-one"),
++			}),
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "custom-two",
++				provider: provider("Custom Two", "model-two"),
++			}),
++		]);
++
++		const content = await readFile(modelsPath, "utf8");
++		expect(content).toContain('"custom-one"');
++		expect(content).toContain('"custom-two"');
++	});
++
++	it("replaces only an existing target provider", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Old Target", "old-model"),
++		});
++		const withFutureTargetField = (await readFile(modelsPath, "utf8")).replace(
++			'"name": "Old Target",',
++			'"name": "Old Target",\n\t\t"futureTargetField": { "keep": true },',
++		);
++		await writeFile(modelsPath, withFutureTargetField, { encoding: "utf8", mode: 0o600 });
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "untouched",
++			provider: provider("Untouched", "keep-model"),
++		});
++
++		const result = await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("New Target", "new-model"),
++		});
++		const content = await readFile(modelsPath, "utf8");
++
++		expect(result).toEqual({ changed: true, providerIds: ["target", "untouched"] });
++		expect(content).toContain('"New Target"');
++		expect(content).toContain('"new-model"');
++		expect(content).not.toContain('"Old Target"');
++		expect(content).not.toContain('"old-model"');
++		expect(content).toContain('"futureTargetField": { "keep": true }');
++		expect(content).toContain('"Untouched"');
++		expect(content).toContain('"keep-model"');
++	});
++
++	it("preserves existing credential and compatibility fields omitted by an edit", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({
++				providers: {
++					target: {
++						...provider("Old Target", "old-model"),
++						apiKey: "existing-safe-reference",
++						headers: { "X-Existing": "keep" },
++						compat: { supportsStore: false },
++					},
++				},
++			}),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("New Target", "new-model"),
++		});
++
++		const content = await readFile(modelsPath, "utf8");
++		expect(content).toContain('"New Target"');
++		expect(content).toContain('"new-model"');
++		const target = JSON.parse(content).providers.target;
++		expect(target.apiKey).toBe("existing-safe-reference");
++		expect(target.headers).toEqual({ "X-Existing": "keep" });
++		expect(target.compat).toEqual({ supportsStore: false });
++	});
++
++	it("encodes typed credential references while preserving or explicitly clearing the existing mode", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target", "model"),
++			credentialReference: { type: "environment", variableName: "PRIVATE_API_KEY" },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
++			"${PRIVATE_API_KEY}",
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: { ...provider("Target renamed", "model") },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
++			"${PRIVATE_API_KEY}",
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target renamed", "model"),
++			credentialReference: { type: "command", command: "security find-generic-password -w -s private" },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
++			"!security find-generic-password -w -s private",
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target renamed", "model"),
++			credentialReference: { type: "clear" },
++		});
++		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target).not.toHaveProperty(
++			"apiKey",
++		);
++	});
++
++	it("rejects invalid typed credential references without changing the file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target", "model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "target",
++				provider: provider("Target", "model"),
++				credentialReference: { type: "environment", variableName: "NOT VALID" },
++			}),
++		).rejects.toThrow("environment variable name");
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "target",
++				provider: provider("Target", "model"),
++				credentialReference: { type: "command", command: "echo first\necho second" },
++			}),
++		).rejects.toThrow("Credential command is invalid");
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("preserves hidden fields on retained models while explicitly removing omitted models", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({
++				providers: {
++					target: {
++						...provider("Target", "rich-model"),
++						models: [
++							{
++								id: "rich-model",
++								name: "Before",
++								cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
++								samplingParams: { temperature: 0.25 },
++								headers: { Authorization: "Bearer hidden" },
++								compat: {
++									supportsStore: false,
++									supportsDeveloperRole: true,
++									supportsUsageInStreaming: true,
++									openRouterRouting: { order: ["hidden"] },
++								},
++							},
++							{ id: "remove-me", samplingParams: { keep: false } },
++						],
++					},
++				},
++			}),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: {
++				name: "Target",
++				baseUrl: "https://example.test/v1",
++				api: "openai-completions",
++				models: [
++					{
++						id: "rich-model",
++						name: "After",
++						cost: {
++							input: 5,
++							output: 6,
++							cacheRead: 7,
++							cacheWrite: 8,
++							tiers: [
++								{
++									inputTokensAbove: 64_000,
++									input: 9,
++									output: 10,
++									cacheRead: 11,
++									cacheWrite: 12,
++								},
++							],
++						},
++						compat: { supportsDeveloperRole: false, supportsStrictMode: true },
++					},
++				],
++			},
++		});
++
++		const models = JSON.parse(await readFile(modelsPath, "utf8")).providers.target.models;
++		expect(models).toEqual([
++			{
++				id: "rich-model",
++				name: "After",
++				cost: {
++					input: 5,
++					output: 6,
++					cacheRead: 7,
++					cacheWrite: 8,
++					tiers: [
++						{
++							inputTokensAbove: 64_000,
++							input: 9,
++							output: 10,
++							cacheRead: 11,
++							cacheWrite: 12,
++						},
++					],
++				},
++				samplingParams: { temperature: 0.25 },
++				headers: { Authorization: "Bearer hidden" },
++				compat: {
++					supportsStore: false,
++					supportsDeveloperRole: false,
++					supportsStrictMode: true,
++					openRouterRouting: { order: ["hidden"] },
++				},
++			},
++		]);
++	});
++
++	it("clears omitted public edit fields while preserving hidden rich model fields", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({
++				providers: {
++					target: {
++						name: "Target",
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						authHeader: true,
++						models: [
++							{
++								id: "rich-model",
++								name: "Before",
++								api: "openai-responses",
++								baseUrl: "https://model.example.test/v1",
++								reasoning: false,
++								thinkingLevelMap: { high: "high-budget", max: null },
++								input: ["text"],
++								contextWindow: 65_536,
++								maxTokens: 8_192,
++								cost: {
++									input: 1,
++									output: 2,
++									cacheRead: 3,
++									cacheWrite: 4,
++									tiers: [
++										{
++											inputTokensAbove: 32_000,
++											input: 0.5,
++											output: 1,
++											cacheRead: 0.25,
++											cacheWrite: 0.75,
++										},
++									],
++								},
++								samplingParams: { temperature: 0.25 },
++								headers: { Authorization: "Bearer hidden" },
++								compat: { supportsStore: false, supportsStrictMode: true },
++							},
++						],
++					},
++				},
++			}),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: {
++				name: "Target renamed",
++				baseUrl: "https://example.test/v1",
++				api: "openai-completions",
++				models: [{ id: "rich-model", compat: {} }],
++			},
++		});
++
++		const target = JSON.parse(await readFile(modelsPath, "utf8")).providers.target;
++		expect(target).not.toHaveProperty("authHeader");
++		expect(target.models).toEqual([
++			{
++				id: "rich-model",
++				samplingParams: { temperature: 0.25 },
++				headers: { Authorization: "Bearer hidden" },
++				compat: { supportsStore: false },
++			},
++		]);
++
++		const runtime = await ModelRuntime.create({
++			modelsPath,
++			allowModelNetwork: false,
++			refreshOnCreate: false,
++		});
++		expect(runtime.getError()).toBeUndefined();
++		expect(runtime.getModelConfigProvider("target")).toMatchObject({
++			name: "Target renamed",
++			baseUrl: "https://example.test/v1",
++			api: "openai-completions",
++			models: [{ id: "rich-model" }],
++		});
++		expect(runtime.getModelConfigProvider("target")).not.toHaveProperty("authHeader");
++		expect(runtime.getModel("target", "rich-model")).toMatchObject({
++			name: "rich-model",
++			reasoning: false,
++			input: ["text"],
++			contextWindow: 128_000,
++			maxTokens: 16_384,
++		});
++	});
++
++	it("mutates provider and model header references without reading their values", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const commandSentinel = join(root, "header-command-ran");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({
++				providers: {
++					target: {
++						...provider("Target", "model"),
++						headers: {
++							Authorization: "Bearer imported-secret",
++							"Bad Header": "hidden-invalid-secret",
++							"X-External": "literal-canary",
++							"X-Command": `!touch ${commandSentinel}`,
++							"X-Env": "${OLD_PROVIDER_HEADER}",
++							"X-Scope": "${PROVIDER_SCOPE}",
++						},
++						models: [
++							{
++								id: "model",
++								headers: {
++									"Bad Model Header": "hidden-invalid-model-secret",
++									"x-scope": "${OLD_MODEL_HEADER}",
++									"X-Keep": "keep",
++								},
++							},
++						],
++						modelOverrides: {
++							model: {
++								headers: {
++									"X-SCOPE": `!touch ${commandSentinel}`,
++									"X-Override": "keep",
++								},
++							},
++						},
++					},
++				},
++			}),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++
++		const beforeRuntime = await ModelRuntime.create({
++			modelsPath,
++			allowModelNetwork: false,
++			refreshOnCreate: false,
++		});
++		expect(beforeRuntime.getModelConfigProviderHeaderMetadata("target")).toEqual({
++			provider: [
++				{ name: "Authorization", source: "external" },
++				{ name: "X-External", source: "external" },
++				{ name: "X-Command", source: "command" },
++				{ name: "X-Env", source: "environment" },
++				{ name: "X-Scope", source: "environment" },
++			],
++			models: [
++				{
++					modelId: "model",
++					headers: [
++						{ name: "x-scope", source: "environment" },
++						{ name: "X-Override", source: "external" },
++						{ name: "X-Keep", source: "external" },
++					],
++				},
++			],
++		});
++		expect(await exists(commandSentinel)).toBe(false);
++
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "target",
++			provider: provider("Target", "model"),
++			headerReferences: [
++				{
++					scope: { type: "provider" },
++					name: "x-env",
++					reference: { type: "environment", variableName: "NEW_PROVIDER_HEADER" },
++				},
++				{ scope: { type: "provider" }, name: "Authorization", reference: { type: "clear" } },
++				{ scope: { type: "provider" }, name: "X-External", reference: { type: "clear" } },
++				{
++					scope: { type: "model", modelId: "model" },
++					name: "X-Scope",
++					reference: { type: "environment", variableName: "NEW_MODEL_HEADER" },
++				},
++				{
++					scope: { type: "model", modelId: "model" },
++					name: "X-Keep",
++					reference: { type: "clear" },
++				},
++			],
++		});
++
++		const stored = JSON.parse(await readFile(modelsPath, "utf8")).providers.target;
++		expect(stored.headers).toEqual({
++			"Bad Header": "hidden-invalid-secret",
++			"X-Command": `!touch ${commandSentinel}`,
++			"X-Scope": "${PROVIDER_SCOPE}",
++			"x-env": "${NEW_PROVIDER_HEADER}",
++		});
++		expect(stored.models[0].headers).toEqual({
++			"Bad Model Header": "hidden-invalid-model-secret",
++			"X-Scope": "${NEW_MODEL_HEADER}",
++		});
++		expect(stored.modelOverrides.model.headers).toEqual({ "X-Override": "keep" });
++		expect(await exists(commandSentinel)).toBe(false);
++	});
++
++	it("rejects unsafe header reference mutations without changing models.json", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await writeFile(
++			modelsPath,
++			JSON.stringify({ providers: { target: provider("Target", "model") } }),
++			{ encoding: "utf8", mode: 0o600 },
++		);
++		const before = await readFile(modelsPath, "utf8");
++		const invalidMutations = [
++			[
++				{
++					scope: { type: "provider" },
++					name: "Authorization",
++					reference: { type: "environment", variableName: "TOKEN" },
++				},
++			],
++			[
++				{
++					scope: { type: "provider" },
++					name: "Bad Header",
++					reference: { type: "environment", variableName: "TOKEN" },
++				},
++			],
++			[
++				{ scope: { type: "provider" }, name: "X-Trace", reference: { type: "clear" } },
++				{ scope: { type: "provider" }, name: "x-trace", reference: { type: "clear" } },
++			],
++			[
++				{
++					scope: { type: "model", modelId: "missing" },
++					name: "X-Trace",
++					reference: { type: "clear" },
++				},
++			],
++			[
++				{
++					scope: { type: "provider" },
++					name: "X-Command",
++					reference: { type: "command", command: "echo forbidden" },
++				},
++			],
++		] as const;
++
++		for (const headerReferences of invalidMutations) {
++			await expect(
++				mutateModelConfigProvider(modelsPath, {
++					type: "upsert",
++					providerId: "target",
++					provider: provider("Target", "model"),
++					headerReferences: headerReferences as never,
++				}),
++			).rejects.toThrow();
++			expect(await readFile(modelsPath, "utf8")).toBe(before);
++		}
++	});
++
++	it("removes only the target provider and treats a missing target as an exact no-op", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "keep",
++			provider: provider("Keep", "keep-model"),
++		});
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "remove",
++			provider: provider("Remove", "remove-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		const removed = await mutateModelConfigProvider(modelsPath, {
++			type: "remove",
++			providerId: "remove",
++		});
++		const after = await readFile(modelsPath, "utf8");
++		expect(removed).toEqual({ changed: true, providerIds: ["keep"] });
++		expect(after).toContain('"keep"');
++		expect(after).not.toContain('"remove"');
++
++		const missing = await mutateModelConfigProvider(modelsPath, {
++			type: "remove",
++			providerId: "missing",
++		});
++		expect(missing).toEqual({ changed: false, providerIds: ["keep"] });
++		expect(await readFile(modelsPath, "utf8")).toBe(after);
++		expect(before).not.toBe(after);
++	});
++
++	it("rejects invalid typed content without changing the last valid file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "valid",
++			provider: provider("Valid", "valid-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "invalid",
++				provider: { models: "wrong" } as never,
++			}),
++		).rejects.toThrow("Invalid models.json schema");
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("rejects a schema-valid provider that a fresh runtime cannot compose", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "valid",
++			provider: provider("Valid", "valid-model"),
++		});
++		const before = await readFile(modelsPath, "utf8");
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "cannot-compose",
++				provider: {
++					...provider("Cannot Compose", "broken-model"),
++					api: "not-a-real-pi-api",
++				} as never,
++			}),
++		).rejects.toThrow();
++		expect(await readFile(modelsPath, "utf8")).toBe(before);
++	});
++
++	it("is exactly reloadable by a fresh official runtime after replacement", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		await mutateModelConfigProvider(modelsPath, {
++			type: "upsert",
++			providerId: "reloadable",
++			provider: provider("Reloadable", "reload-model"),
++		});
++
++		const runtime = await ModelRuntime.create({
++			modelsPath,
++			allowModelNetwork: false,
++			refreshOnCreate: false,
++		});
++		expect(runtime.getError()).toBeUndefined();
++		expect(runtime.getModelConfigProviderIds()).toContain("reloadable");
++		expect(runtime.getModel("reloadable", "reload-model")).toBeDefined();
++	});
++
++	it("rejects an invalid existing document without rewriting it", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const invalid = '{ "providers": { "broken": { "models": "wrong" } } }\n';
++		await writeFile(modelsPath, invalid, { encoding: "utf8", mode: 0o600 });
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow("Invalid models.json schema");
++		expect(await readFile(modelsPath, "utf8")).toBe(invalid);
++	});
++
++	it("rejects a linked models.json leaf instead of replacing it", async () => {
++		const root = await createRoot();
++		const outside = join(root, "outside.json");
++		const modelsPath = join(root, "models.json");
++		await writeFile(outside, '{ "providers": {} }', { mode: 0o600 });
++		await symlink(outside, modelsPath);
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow();
++		expect(await readFile(outside, "utf8")).toBe('{ "providers": {} }');
++	});
++
++	it("rejects a multiply linked models.json leaf", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const aliasPath = join(root, "models-alias.json");
++		const original = '{ "providers": {} }';
++		await writeFile(modelsPath, original, { mode: 0o600 });
++		await link(modelsPath, aliasPath);
++
++		await expect(
++			mutateModelConfigProvider(modelsPath, {
++				type: "upsert",
++				providerId: "blocked",
++				provider: provider("Blocked", "blocked-model"),
++			}),
++		).rejects.toThrow("private regular file");
++		expect(await readFile(aliasPath, "utf8")).toBe(original);
++	});
++
++	it("honors caller cancellation before creating or changing the file", async () => {
++		const root = await createRoot();
++		const modelsPath = join(root, "models.json");
++		const controller = new AbortController();
++		controller.abort();
++
++		await expect(
++			mutateModelConfigProvider(
++				modelsPath,
++				{
++					type: "upsert",
++					providerId: "cancelled",
++					provider: provider("Cancelled", "cancelled-model"),
++				},
++				{ signal: controller.signal },
++			),
++		).rejects.toMatchObject({ name: "AbortError" });
++		await expect(readFile(modelsPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
++	});
++});
+diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
+new file mode 100644
+index 0000000..39e4d88
+--- /dev/null
++++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
+@@ -0,0 +1,497 @@
++import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
++import { tmpdir } from "node:os";
++import { join } from "node:path";
++import { afterEach, describe, expect, it, vi } from "vitest";
++import { AuthStorage } from "../src/core/auth-storage.ts";
++import { ModelRegistry } from "../src/core/model-registry.ts";
++import { ModelConfigProviderDiscoveryError, ModelRuntime } from "../src/core/model-runtime.ts";
++import { InMemoryCodingAgentModelsStore } from "../src/core/models-store.ts";
++
++function modelsJson(provider: string, model: string): string {
++	return `{
++		// The product reader supplies bytes; Pi remains the parser and schema authority.
++		"providers": {
++			"${provider}": {
++				"baseUrl": "https://example.test/v1",
++				"api": "openai-completions",
++				"apiKey": "test-key",
++				"models": [{ "id": "${model}" }]
++			}
++		}
++	}`;
++}
++
++function createRuntime(
++	modelsConfigReader: NonNullable<Parameters<typeof ModelRuntime.create>[0]["modelsConfigReader"]>,
++) {
++	return ModelRuntime.create({
++		credentials: AuthStorage.inMemory(),
++		modelsPath: null,
++		modelsConfigReader,
++		modelsStore: new InMemoryCodingAgentModelsStore(),
++		allowModelNetwork: false,
++		refreshOnCreate: false,
++	});
++}
++
++afterEach(() => {
++	vi.unstubAllGlobals();
++});
++
++describe("ModelRuntime modelsConfigReader", () => {
++	it("uses one official parser snapshot for create and refresh provenance", async () => {
++		let content = modelsJson("custom-one", "model-one");
++		const reader = vi.fn(async () => content);
++		const runtime = await createRuntime(reader);
++
++		expect(reader).toHaveBeenCalledTimes(1);
++		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
++		expect(runtime.getModelConfigProvider("custom-one")).toMatchObject({
++			api: "openai-completions",
++			baseUrl: "https://example.test/v1",
++		});
++		expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
++
++		content = modelsJson("custom-two", "model-two");
++		await runtime.refresh({ allowNetwork: false });
++
++		expect(reader).toHaveBeenCalledTimes(2);
++		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-two"]);
++		expect(runtime.getModel("custom-one", "model-one")).toBeUndefined();
++		expect(runtime.getModel("custom-two", "model-two")).toBeDefined();
++	});
++
++	it("keeps provider, model, and override credentials out of the host projection", async () => {
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					private: {
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						apiKey: "provider-secret",
++						headers: { Authorization: "provider-header" },
++						models: [{ id: "model", headers: { Authorization: "model-header" } }],
++						modelOverrides: { model: { headers: { Authorization: "override-header" } } },
++					},
++				},
++			}),
++		);
++
++		const projected = runtime.getModelConfigProvider("private") as Record<string, unknown>;
++		expect(JSON.stringify(projected)).not.toContain("secret");
++		expect(JSON.stringify(projected)).not.toContain("header");
++		expect(projected).toMatchObject({
++			baseUrl: "https://example.test/v1",
++			models: [{ id: "model" }],
++			modelOverrides: { model: {} },
++		});
++	});
++
++	it("tests a credential-blind edit with the retained configured credential", async () => {
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					private: {
++						name: "Before",
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						apiKey: "configured-reference",
++						models: [{ id: "model", samplingParams: { temperature: 0.25 } }],
++					},
++				},
++			}),
++		);
++
++		runtime.registerModelConfigProviderPreview("private", {
++			name: "After",
++			baseUrl: "https://example.test/v1",
++			api: "openai-completions",
++			models: [{ id: "model", name: "Edited" }],
++		});
++
++		expect(runtime.getProviderAuthStatus("private").configured).toBe(true);
++		expect(runtime.getModel("private", "model")?.name).toBe("Edited");
++		expect(runtime.getModelConfigProvider("private")?.models?.[0]).toMatchObject({
++			id: "model",
++			samplingParams: { temperature: 0.25 },
++		});
++	});
++
++	it("keeps typed environment and command references passive until an explicit operation", async () => {
++		const root = await mkdtemp(join(tmpdir(), "pi-model-config-reference-"));
++		const marker = join(root, "command-ran");
++		try {
++			const runtime = await createRuntime(async () => '{"providers":{}}');
++			runtime.registerModelConfigProviderPreview(
++				"command-provider",
++				{
++					baseUrl: "https://example.test/v1",
++					api: "openai-completions",
++					models: [],
++				},
++				{ type: "command", command: `printf touched > '${marker}'; printf test-key` },
++			);
++			expect(runtime.getProviderAuthStatus("command-provider")).toMatchObject({
++				configured: true,
++				source: "models_json_command",
++			});
++			await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
++
++			vi.stubGlobal(
++				"fetch",
++				vi.fn(async () => new Response(JSON.stringify({ data: [{ id: "model" }] }), { status: 200 })),
++			);
++			await expect(runtime.discoverModelConfigProviderModels("command-provider")).resolves.toEqual([
++				{ id: "model" },
++			]);
++			expect(await readFile(marker, "utf8")).toBe("touched");
++
++			const missingEnvironmentRuntime = await createRuntime(async () => '{"providers":{}}');
++			missingEnvironmentRuntime.registerModelConfigProviderPreview(
++				"environment-provider",
++				{
++					baseUrl: "https://example.test/v1",
++					api: "openai-completions",
++					models: [],
++				},
++				{ type: "environment", variableName: "OMNIMIND_PI_TEST_MISSING_API_KEY_7B184" },
++			);
++			await expect(
++				missingEnvironmentRuntime.discoverModelConfigProviderModels("environment-provider"),
++			).rejects.toMatchObject({ code: "authentication_failed" });
++		} finally {
++			await rm(root, { recursive: true, force: true });
++		}
++	});
++
++	it.each([
++		{
++			api: "openai-completions",
++			baseUrl: "https://example.test/v1",
++			expectedUrl: "https://example.test/v1/models",
++			header: "authorization",
++			headerValue: "Bearer test-key",
++			payload: { data: [{ id: "model-one", name: "Model One" }] },
++			expected: [{ id: "model-one", name: "Model One" }],
++		},
++		{
++			api: "openai-responses",
++			baseUrl: "https://example.test",
++			expectedUrl: "https://example.test/v1/models",
++			header: "authorization",
++			headerValue: "Bearer test-key",
++			payload: { data: [{ id: "model-two" }] },
++			expected: [{ id: "model-two" }],
++		},
++		{
++			api: "anthropic-messages",
++			baseUrl: "https://example.test",
++			expectedUrl: "https://example.test/v1/models",
++			header: "x-api-key",
++			headerValue: "test-key",
++			payload: { data: [{ id: "model-three", display_name: "Model Three" }] },
++			expected: [{ id: "model-three", name: "Model Three" }],
++		},
++		{
++			api: "google-generative-ai",
++			baseUrl: "https://example.test/v1beta",
++			expectedUrl: "https://example.test/v1beta/models",
++			header: "x-goog-api-key",
++			headerValue: "test-key",
++			payload: { models: [{ name: "models/gemini-test", displayName: "Gemini Test" }] },
++			expected: [{ id: "gemini-test", name: "Gemini Test" }],
++		},
++	] as const)("discovers $api model identities without mutating the preview", async (testCase) => {
++		const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
++			expect(String(input)).toBe(testCase.expectedUrl);
++			expect(init?.redirect).toBe("error");
++			const headers = new Headers(init?.headers);
++			expect(headers.get(testCase.header)).toBe(testCase.headerValue);
++			if (testCase.api === "anthropic-messages") {
++				expect(headers.get("anthropic-version")).toBe("2023-06-01");
++			}
++			return new Response(JSON.stringify(testCase.payload), {
++				status: 200,
++				headers: { "content-type": "application/json" },
++			});
++		});
++		vi.stubGlobal("fetch", fetchMock);
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: testCase.baseUrl,
++						api: testCase.api,
++						apiKey: "test-key",
++						models: [],
++					},
++				},
++			}),
++		);
++
++		expect(await runtime.discoverModelConfigProviderModels("custom")).toEqual(testCase.expected);
++		expect(runtime.getModels("custom")).toEqual([]);
++		expect(fetchMock).toHaveBeenCalledTimes(1);
++	});
++
++	it("fails discovery closed before network on cancellation or unsupported config", async () => {
++		const fetchMock = vi.fn();
++		vi.stubGlobal("fetch", fetchMock);
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						apiKey: "test-key",
++						models: [],
++					},
++				},
++			}),
++		);
++		const controller = new AbortController();
++		controller.abort();
++		await expect(
++			runtime.discoverModelConfigProviderModels("custom", { signal: controller.signal }),
++		).rejects.toMatchObject({ name: "AbortError" });
++		await expect(runtime.discoverModelConfigProviderModels("missing")).rejects.toMatchObject({
++			name: "ModelConfigProviderDiscoveryError",
++			code: "invalid_configuration",
++		});
++		expect(fetchMock).not.toHaveBeenCalled();
++	});
++
++	it("returns bounded typed failures without endpoint or credential diagnostics", async () => {
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: "https://secret-endpoint.example.test/v1",
++						api: "openai-completions",
++						apiKey: "secret-key",
++						models: [],
++					},
++				},
++			}),
++		);
++		vi.stubGlobal(
++			"fetch",
++			vi.fn(async () => new Response(null, { status: 401 })),
++		);
++		const authenticationFailure = await runtime
++			.discoverModelConfigProviderModels("custom")
++			.catch((error: unknown) => error);
++		expect(authenticationFailure).toBeInstanceOf(ModelConfigProviderDiscoveryError);
++		expect(authenticationFailure).toMatchObject({ code: "authentication_failed" });
++		expect(String(authenticationFailure)).not.toContain("secret");
++
++		vi.stubGlobal(
++			"fetch",
++			vi.fn(
++				async () =>
++					new Response(JSON.stringify({ data: [] }), {
++						status: 200,
++						headers: { "content-type": "application/json" },
++					}),
++			),
++		);
++		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
++			code: "catalog_unavailable",
++		});
++
++		const invalidRuntime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: "not-a-url",
++						api: "openai-completions",
++						apiKey: "secret-key",
++					},
++				},
++			}),
++		);
++		await expect(invalidRuntime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
++			code: "invalid_configuration",
++		});
++	});
++
++	it("stops reading an unbounded chunked discovery response at the byte limit", async () => {
++		let pulls = 0;
++		let cancelled = false;
++		vi.stubGlobal(
++			"fetch",
++			vi.fn(
++				async () =>
++					new Response(
++						new ReadableStream<Uint8Array>({
++							pull(controller) {
++								pulls += 1;
++								controller.enqueue(new Uint8Array(1024 * 1024));
++							},
++							cancel() {
++								cancelled = true;
++							},
++						}),
++						{ status: 200 },
++					),
++			),
++		);
++		const runtime = await createRuntime(async () =>
++			JSON.stringify({
++				providers: {
++					custom: {
++						baseUrl: "https://example.test/v1",
++						api: "openai-completions",
++						apiKey: "test-key",
++						models: [],
++					},
++				},
++			}),
++		);
++
++		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
++			code: "response_too_large",
++		});
++		expect(pulls).toBeLessThanOrEqual(6);
++		expect(cancelled).toBe(true);
++	});
++
++	it("rejects path and reader dual authority", async () => {
++		const reader = async () => undefined;
++		await expect(ModelRuntime.create({ modelsConfigReader: reader })).rejects.toThrow(
++			"modelsConfigReader requires modelsPath: null",
++		);
++		await expect(ModelRuntime.create({ modelsPath: "/tmp/models.json", modelsConfigReader: reader })).rejects.toThrow(
++			"modelsConfigReader requires modelsPath: null",
++		);
++	});
++
++	it("propagates cancellation before and after the reader", async () => {
++		const before = new AbortController();
++		before.abort();
++		const unread = vi.fn(async () => modelsJson("unread", "unread"));
++		await expect(
++			ModelRuntime.create({ modelsPath: null, modelsConfigReader: unread, signal: before.signal }),
++		).rejects.toMatchObject({ name: "AbortError" });
++		expect(unread).not.toHaveBeenCalled();
++
++		const during = new AbortController();
++		await expect(
++			ModelRuntime.create({
++				modelsPath: null,
++				modelsConfigReader: async () => {
++					during.abort();
++					return modelsJson("cancelled", "cancelled");
++				},
++				signal: during.signal,
++			}),
++		).rejects.toMatchObject({ name: "AbortError" });
++	});
++
++	it("keeps reader failures private and invalid content under the official schema", async () => {
++		const failed = await createRuntime(async () => {
++			throw new Error("secret path and credential");
++		});
++		expect(failed.getError()).toBe("Failed to load models.json from configured reader");
++
++		const invalid = await createRuntime(async () => '{ "providers": { "broken": { "models": "wrong" } } }');
++		expect(invalid.getError()).toContain("Invalid models.json schema");
++		expect(invalid.getModelConfigProviderIds()).toEqual([]);
++	});
++
++	it("keeps an explicit file catalog store when models config comes from a reader", async () => {
++		const root = await mkdtemp(join(tmpdir(), "omnimind-model-reader-store-"));
++		const modelsStorePath = join(root, "models-store.json");
++		const providerId = "reader-store-provider";
++		const storedModel = {
++			id: "stored-model",
++			name: "Stored Model",
++			api: "openai-responses" as const,
++			provider: providerId,
++			baseUrl: "https://example.test/v1",
++			reasoning: false,
++			input: ["text"] as const,
++			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
++			contextWindow: 128_000,
++			maxTokens: 16_384,
++		};
++		const refreshedModel = { ...storedModel, id: "reopened-model", name: "Reopened Model" };
++		const observedStoredModelIds: string[][] = [];
++		const registerDynamicProvider = (runtime: ModelRuntime, publishRefreshed: boolean) => {
++			let models = [] as (typeof storedModel)[];
++			new ModelRegistry(runtime).registerProvider({
++				id: providerId,
++				name: "Reader Store Provider",
++				auth: {
++					apiKey: {
++						name: "Reader store key",
++						resolve: async () => ({ auth: { apiKey: "test-key" }, source: "test" }),
++					},
++				},
++				getModels: () => models,
++				refreshModels: async (context) => {
++					observedStoredModelIds.push(context.stored?.models.map((model) => model.id) ?? []);
++					if (context.stored) {
++						await context.publish({
++							update: () => {
++								models = [...context.stored!.models] as (typeof storedModel)[];
++							},
++						});
++					}
++					if (!publishRefreshed) return;
++					await context.publish({
++						persist: { models: [refreshedModel], checkedAt: Date.now() },
++						update: () => {
++							models = [refreshedModel];
++						},
++					});
++				},
++				stream: () => {
++					throw new Error("unused");
++				},
++				streamSimple: () => {
++					throw new Error("unused");
++				},
++			});
++		};
++
++		try {
++			await writeFile(
++				modelsStorePath,
++				JSON.stringify({
++					[providerId]: { models: [storedModel], checkedAt: 1 },
++				}),
++			);
++			const first = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				modelsConfigReader: async () => undefined,
++				modelsStorePath,
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++			});
++			registerDynamicProvider(first, true);
++			await first.refresh({ providers: [providerId], allowNetwork: false });
++			expect(observedStoredModelIds).toEqual([["stored-model"]]);
++			expect(first.getModel(providerId, "reopened-model")).toBeDefined();
++			const persisted = JSON.parse(await readFile(modelsStorePath, "utf8"));
++			expect(persisted[providerId].models.map((model: { id: string }) => model.id)).toEqual(["reopened-model"]);
++
++			const reopened = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				modelsConfigReader: async () => undefined,
++				modelsStorePath,
++				allowModelNetwork: false,
++				refreshOnCreate: false,
++			});
++			registerDynamicProvider(reopened, false);
++			await reopened.refresh({ providers: [providerId], allowNetwork: false });
++			expect(observedStoredModelIds).toEqual([["stored-model"], ["reopened-model"]]);
++			expect(reopened.getModel(providerId, "stored-model")).toBeUndefined();
++			expect(reopened.getModel(providerId, "reopened-model")).toBeDefined();
++		} finally {
++			await rm(root, { recursive: true, force: true });
++		}
++	});
++});
+diff --git a/packages/coding-agent/test/model-session-prompt-outcome.test.ts b/packages/coding-agent/test/model-session-prompt-outcome.test.ts
+new file mode 100644
+index 0000000..9e0c364
+--- /dev/null
++++ b/packages/coding-agent/test/model-session-prompt-outcome.test.ts
+@@ -0,0 +1,224 @@
++import { fauxAssistantMessage } from "@earendil-works/pi-ai";
++import { afterEach, describe, expect, it } from "vitest";
++import llamaExtension from "../src/extensions/llama/index.ts";
++import { createHarness, type Harness } from "./suite/harness.ts";
++
++describe("AgentSession prompt outcomes", () => {
++	const harnesses: Harness[] = [];
++
++	afterEach(() => {
++		while (harnesses.length > 0) harnesses.pop()?.cleanup();
++	});
++
++	it("reports a command handled without starting an agent run", async () => {
++		const harness = await createHarness({
++			extensionFactories: [
++				(pi) => {
++					pi.registerCommand("noop", {
++						description: "No-op command",
++						handler: async () => {},
++					});
++				},
++			],
++		});
++		harnesses.push(harness);
++		const events: string[] = [];
++		harness.session.subscribe((event) => events.push(event.type));
++
++		const outcome = await harness.session.prompt("/noop");
++
++		expect(outcome).toEqual({ kind: "handled-without-agent", success: true });
++		expect(events).not.toContain("agent_start");
++		expect(events).not.toContain("agent_settled");
++	});
++
++	it("settles the bundled /llama command without an agent run outside TUI mode", async () => {
++		const harness = await createHarness({ extensionFactories: [llamaExtension] });
++		harnesses.push(harness);
++
++		const outcome = await harness.session.prompt("/llama");
++
++		expect(outcome).toEqual({ kind: "handled-without-agent", success: true });
++		expect(harness.eventsOfType("agent_start")).toEqual([]);
++		expect(harness.eventsOfType("agent_settled")).toEqual([]);
++	});
++
++	it("reports a command failure without exposing it as an agent run", async () => {
++		const harness = await createHarness({
++			extensionFactories: [
++				(pi) => {
++					pi.registerCommand("fail", {
++						description: "Failing command",
++						handler: async () => {
++							throw new Error("command failed");
++						},
++					});
++				},
++			],
++		});
++		harnesses.push(harness);
++
++		await expect(harness.session.prompt("/fail")).resolves.toEqual({
++			kind: "handled-without-agent",
++			success: false,
++		});
++	});
++
++	it("reports an input hook handled without starting an agent run", async () => {
++		const harness = await createHarness({
++			extensionFactories: [
++				(pi) => {
++					pi.on("input", async () => ({ action: "handled" }));
++				},
++			],
++		});
++		harnesses.push(harness);
++		const events: string[] = [];
++		harness.session.subscribe((event) => events.push(event.type));
++
++		const outcome = await harness.session.prompt("handled by input hook");
++
++		expect(outcome).toEqual({ kind: "handled-without-agent", success: true });
++		expect(events).not.toContain("agent_start");
++		expect(events).not.toContain("agent_settled");
++	});
++
++	it("waits for an agent run dispatched by a fire-and-forget command action", async () => {
++		let releaseResponse!: () => void;
++		const responseGate = new Promise<void>((resolve) => {
++			releaseResponse = resolve;
++		});
++		const harness = await createHarness({
++			extensionFactories: [
++				(pi) => {
++					pi.registerCommand("agent", {
++						description: "Agent command",
++						handler: async () => {
++							pi.sendUserMessage("from command");
++						},
++					});
++				},
++			],
++		});
++		harnesses.push(harness);
++		harness.setResponses([
++			async () => {
++				await responseGate;
++				return fauxAssistantMessage("done");
++			},
++		]);
++		let settled = false;
++		harness.session.subscribe((event) => {
++			if (event.type === "agent_settled") settled = true;
++		});
++
++		const outcomePromise = harness.session.prompt("/agent");
++		await Promise.resolve();
++		expect(settled).toBe(false);
++		releaseResponse();
++
++		await expect(outcomePromise).resolves.toEqual({ kind: "agent-run" });
++		expect(settled).toBe(true);
++	});
++
++	it("reports command failure after Agent work scheduled by that command settles", async () => {
++		const harness = await createHarness({
++			extensionFactories: [
++				(pi) => {
++					pi.registerCommand("mixed-failure", {
++						description: "Schedules Agent work and then fails",
++						handler: async () => {
++							pi.sendUserMessage("from failing command");
++							throw new Error("command failed after scheduling");
++						},
++					});
++				},
++			],
++		});
++		harnesses.push(harness);
++		harness.setResponses([fauxAssistantMessage("agent response")]);
++
++		const outcome = await harness.session.prompt("/mixed-failure");
++
++		expect(outcome).toEqual({ kind: "handled-without-agent", success: false });
++		expect(harness.eventsOfType("agent_settled")).toHaveLength(1);
++	});
++
++	it("waits for an agent run dispatched by a trigger-turn custom message", async () => {
++		let releaseResponse!: () => void;
++		const responseGate = new Promise<void>((resolve) => {
++			releaseResponse = resolve;
++		});
++		const harness = await createHarness({
++			extensionFactories: [
++				(pi) => {
++					pi.registerCommand("custom-agent", {
++						description: "Agent custom message command",
++						handler: async () => {
++							pi.sendMessage(
++								{ customType: "test", content: "from command", display: true },
++								{ triggerTurn: true },
++							);
++						},
++					});
++				},
++			],
++		});
++		harnesses.push(harness);
++		harness.setResponses([
++			async () => {
++				await responseGate;
++				return fauxAssistantMessage("done");
++			},
++		]);
++
++		const outcomePromise = harness.session.prompt("/custom-agent");
++		let resolved = false;
++		void outcomePromise.then(() => {
++			resolved = true;
++		});
++		await Promise.resolve();
++		expect(resolved).toBe(false);
++		releaseResponse();
++
++		await expect(outcomePromise).resolves.toEqual({ kind: "agent-run" });
++		expect(harness.eventsOfType("agent_settled")).toHaveLength(1);
++	});
++
++	it("waits for an agent run dispatched by a handled input hook", async () => {
++		let releaseResponse!: () => void;
++		const responseGate = new Promise<void>((resolve) => {
++			releaseResponse = resolve;
++		});
++		const harness = await createHarness({
++			extensionFactories: [
++				(pi) => {
++					pi.on("input", async (event) => {
++						if (event.source !== "interactive") return { action: "continue" };
++						pi.sendUserMessage("from input hook");
++						return { action: "handled" };
++					});
++				},
++			],
++		});
++		harnesses.push(harness);
++		harness.setResponses([
++			async () => {
++				await responseGate;
++				return fauxAssistantMessage("done");
++			},
++		]);
++
++		const outcomePromise = harness.session.prompt("handled and dispatched");
++		let resolved = false;
++		void outcomePromise.then(() => {
++			resolved = true;
++		});
++		await Promise.resolve();
++		expect(resolved).toBe(false);
++		releaseResponse();
++
++		await expect(outcomePromise).resolves.toEqual({ kind: "agent-run" });
++		expect(harness.eventsOfType("agent_settled")).toHaveLength(1);
++	});
++});
+diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
+index 31c89fa..5ae403f 100644
+--- a/packages/coding-agent/test/package-manager.test.ts
++++ b/packages/coding-agent/test/package-manager.test.ts
+@@ -297,0 +298,173 @@ Content`,
++	});
++
++	describe("package resource lifecycle", () => {
++		it("projects opaque package identities without exposing private sources", async () => {
++			const privateLocalPath = join(tempDir, "private", "local-package");
++			settingsManager.setPackages([
++				"npm:@scope/public-package@1.2.3",
++				"git:https://github.com/example/public-package.git",
++				"git:https://127.0.0.1.nip.io/example/public-package.git",
++				"git:ssh://token@example.invalid/owner/repo.git",
++				"git:https://example.invalid/owner/repo.git?token=secret",
++				privateLocalPath,
++			]);
++
++			const packages = packageManager.listPublicConfiguredPackages();
++			expect(packages).toHaveLength(6);
++			expect(JSON.stringify(packages)).not.toContain("token");
++			expect(JSON.stringify(packages)).not.toContain(privateLocalPath);
++			expect(packages[0]).toMatchObject({
++				displayName: "@scope/public-package",
++				kind: "npm",
++				manageable: true,
++			});
++			expect(packages.slice(1)).toEqual(
++				expect.arrayContaining([
++					expect.objectContaining({ displayName: "Git package", manageable: false }),
++					expect.objectContaining({ displayName: "Local package", kind: "local", manageable: false }),
++				]),
++			);
++			for (const pkg of packages) expect(pkg.packageId).toMatch(/^[a-f0-9]{64}$/u);
++		});
++
++		it("rejects every Git public-install input before invoking package commands", async () => {
++			const internals = packageManager as unknown as PackageManagerInternals;
++			const runCommand = vi.spyOn(internals, "runCommand");
++
++			await expect(
++				packageManager.installPublicPackage("git:https://github.com/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://gitlab.com/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://codeberg.org/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://127.0.0.1.nip.io/example/public-package.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:ssh://token@example.invalid/owner/repo.git"),
++			).rejects.toThrow("supported public package identity");
++			await expect(
++				packageManager.installPublicPackage("git:https://example.invalid/owner/repo.git?token=secret"),
++			).rejects.toThrow("supported public package identity");
++
++			settingsManager.setPackages(["git:https://github.com/example/public-package.git"]);
++			const [{ packageId }] = packageManager.listPublicConfiguredPackages();
++			await expect(packageManager.checkPublicPackageUpdates()).resolves.toEqual([]);
++			await expect(packageManager.updatePublicPackage({ packageId })).rejects.toThrow("publicly manageable");
++			await expect(packageManager.removePublicPackage({ packageId })).rejects.toThrow("publicly manageable");
++			await expect(packageManager.listPublicConfiguredPackageResources({ packageId })).rejects.toThrow(
++				"publicly manageable",
++			);
++			expect(runCommand).not.toHaveBeenCalled();
++		});
++
++		it("accepts canonical scoped npm installs and rematches opaque actions against current settings", async () => {
++			const install = vi.spyOn(packageManager, "installAndPersist").mockResolvedValue(undefined);
++			await expect(packageManager.installPublicPackage("npm:@scope/public-package@1.2.3")).resolves.toBeUndefined();
++			expect(install).toHaveBeenCalledWith("npm:@scope/public-package@1.2.3");
++
++			settingsManager.setPackages(["npm:@scope/public-package@1.2.3"]);
++			const [{ packageId }] = packageManager.listPublicConfiguredPackages();
++			const update = vi.spyOn(packageManager, "update").mockResolvedValue(undefined);
++			await expect(packageManager.updatePublicPackage({ packageId })).resolves.toBeUndefined();
++			expect(update).toHaveBeenCalledWith("npm:@scope/public-package@1.2.3");
++
++			settingsManager.setPackages(["npm:replacement-package"]);
++			update.mockClear();
++			await expect(packageManager.updatePublicPackage({ packageId })).rejects.toThrow("no longer available");
++			expect(update).not.toHaveBeenCalled();
++		});
++
++		it("uses resolved package identities and preserves sibling filters", async () => {
++			const packageDir = join(tempDir, "local-package");
++			const extensionPath = join(packageDir, "extensions", "entry.ts");
++			const skillPath = join(packageDir, "skills", "helper", "SKILL.md");
++			mkdirSync(join(packageDir, "extensions"), { recursive: true });
++			mkdirSync(join(packageDir, "skills", "helper"), { recursive: true });
++			writeFileSync(extensionPath, "export default function() {}");
++			writeFileSync(skillPath, "---\nname: helper\ndescription: helper\n---\n");
++			writeFileSync(
++				join(packageDir, "package.json"),
++				JSON.stringify({
++					name: "local-package",
++					pi: { extensions: ["./extensions/entry.ts"], skills: ["./skills"] },
++				}),
++			);
++			settingsManager.setPackages([
++				{ source: packageDir, skills: ["+skills/helper/SKILL.md"] },
++				"npm:missing-unrelated-package",
++			]);
++
++			await expect(
++				packageManager.listConfiguredPackageResources({ source: packageDir, scope: "user" }),
++			).resolves.toEqual(
++				expect.arrayContaining([
++					{
++						source: packageDir,
++						scope: "user",
++						resourceType: "extensions",
++						resourcePath: "extensions/entry.ts",
++						enabled: true,
++					},
++					{
++						source: packageDir,
++						scope: "user",
++						resourceType: "skills",
++						resourcePath: "skills/helper/SKILL.md",
++						enabled: true,
++					},
++				]),
++			);
++
++			const selection = {
++				source: packageDir,
++				scope: "user" as const,
++				resourceType: "extensions" as const,
++				resourcePath: "extensions/entry.ts",
++			};
++			await expect(packageManager.setPackageResourceEnabled(selection, false)).resolves.toBe(true);
++			expect(settingsManager.getGlobalSettings().packages).toEqual([
++				{
++					source: packageDir,
++					skills: ["+skills/helper/SKILL.md"],
++					extensions: ["-extensions/entry.ts"],
++				},
++				"npm:missing-unrelated-package",
++			]);
++			const disabled = await packageManager.listConfiguredPackageResources({ source: packageDir, scope: "user" });
++			expect(
++				disabled.find(
++					(resource) => resource.resourceType === "extensions" && resource.resourcePath === "extensions/entry.ts",
++				)?.enabled,
++			).toBe(false);
++
++			await expect(packageManager.setPackageResourceEnabled(selection, true)).resolves.toBe(true);
++			const enabled = await packageManager.listConfiguredPackageResources({ source: packageDir, scope: "user" });
++			expect(
++				enabled.find(
++					(resource) => resource.resourceType === "extensions" && resource.resourcePath === "extensions/entry.ts",
++				)?.enabled,
++			).toBe(true);
++			await expect(packageManager.setPackageResourceEnabled(selection, true)).resolves.toBe(false);
++		});
++
++		it("rejects stale or forged resource identities without changing settings", async () => {
++			settingsManager.setPackages(["npm:missing-package"]);
++			const before = settingsManager.getGlobalSettings().packages;
++
++			await expect(
++				packageManager.setPackageResourceEnabled(
++					{
++						source: "npm:missing-package",
++						scope: "user",
++						resourceType: "extensions",
++						resourcePath: "../../outside.ts",
++					},
++					false,
++				),
++			).rejects.toThrow();
++			expect(settingsManager.getGlobalSettings().packages).toEqual(before);
++		});
+diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
+index 145eca3..066e627 100644
+--- a/packages/coding-agent/test/resource-loader.test.ts
++++ b/packages/coding-agent/test/resource-loader.test.ts
+@@ -6,0 +7 @@ import { AuthStorage } from "../src/core/auth-storage.ts";
++import { createAgentSessionServices } from "../src/core/agent-session-services.ts";
+@@ -7,0 +9 @@ import { ExtensionRunner } from "../src/core/extensions/runner.ts";
++import { ModelRuntime } from "../src/core/model-runtime.ts";
+@@ -237,0 +240,97 @@ export default function(pi) {
++		it("should apply the missing-package policy to both trust passes without installing", async () => {
++			vi.stubEnv("PI_OFFLINE", "");
++			const missingPackage = "npm:@example/missing-extension@1.0.0";
++			const onMissingPackage = vi.fn(async () => "skip" as const);
++			const loader = new DefaultResourceLoader({
++				cwd,
++				agentDir,
++				settingsManager: SettingsManager.inMemory({ packages: [missingPackage] }),
++			});
++
++			await loader.reload({
++				resolveProjectTrust: async () => false,
++				onMissingPackage,
++			});
++
++			expect(onMissingPackage).toHaveBeenCalledTimes(2);
++			expect(onMissingPackage).toHaveBeenNthCalledWith(1, missingPackage);
++			expect(onMissingPackage).toHaveBeenNthCalledWith(2, missingPackage);
++			expect(loader.getExtensions().extensions).toEqual([]);
++		});
++
++		it("should invalidate the pre-trust extension runtime when final package resolution fails", async () => {
++			vi.stubEnv("PI_OFFLINE", "");
++			const missingPackage = "npm:@example/missing-extension@1.0.0";
++			let preTrustRuntime: ReturnType<DefaultResourceLoader["getExtensions"]>["runtime"] | undefined;
++			let missingPass = 0;
++			const loader = new DefaultResourceLoader({
++				cwd,
++				agentDir,
++				settingsManager: SettingsManager.inMemory({ packages: [missingPackage] }),
++			});
++
++			await expect(
++				loader.reload({
++					resolveProjectTrust: async ({ extensionsResult }) => {
++						preTrustRuntime = extensionsResult.runtime;
++						return false;
++					},
++					onMissingPackage: async () => (++missingPass === 1 ? "skip" : "error"),
++				}),
++			).rejects.toThrow("Missing source");
++
++			expect(preTrustRuntime).toBeDefined();
++			expect(() => preTrustRuntime?.assertActive()).toThrow("Resource reload failed");
++		});
++
++		it("should invalidate loaded extensions when session service creation fails", async () => {
++			let extensionApi:
++				| Parameters<
++						NonNullable<ConstructorParameters<typeof DefaultResourceLoader>[0]["extensionFactories"]>[number]
++				  >[0]
++				| undefined;
++			const runtime = await ModelRuntime.create({
++				credentials: AuthStorage.inMemory(),
++				modelsPath: null,
++				allowModelNetwork: false,
++			});
++			const failingRuntime = new Proxy(runtime, {
++				get(target, property, receiver) {
++					if (property === "refresh")
++						return async () => {
++							throw new Error("refresh failed");
++						};
++					const value = Reflect.get(target, property, receiver);
++					return typeof value === "function" ? value.bind(target) : value;
++				},
++			});
++
++			await expect(
++				createAgentSessionServices({
++					cwd,
++					agentDir,
++					modelRuntime: failingRuntime,
++					resourceLoaderOptions: {
++						extensionFactories: [
++							(pi) => {
++								extensionApi = pi;
++							},
++						],
++						noSkills: true,
++						noPromptTemplates: true,
++						noThemes: true,
++						noContextFiles: true,
++					},
++				}),
++			).rejects.toThrow("refresh failed");
++
++			expect(extensionApi).toBeDefined();
++			expect(() =>
++				extensionApi?.registerProvider("stale", {
++					baseUrl: "https://example.test",
++					api: "openai-completions",
++					models: [],
++				}),
++			).toThrow("Session service creation failed");
++		});
++

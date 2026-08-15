@@ -187,9 +187,14 @@ export function resolveComposerTraitStatusLabel(
     ReturnType<typeof getComposerTraitSelection>,
     "effort" | "effortLevels" | "thinkingEnabled" | "ultrathinkPromptControlled"
   >,
+  labels?: {
+    readonly ultrathink: string;
+    readonly thinkingOn: string;
+    readonly thinkingOff: string;
+  },
 ): string | null {
   if (selection.ultrathinkPromptControlled) {
-    return "Ultrathink";
+    return labels?.ultrathink ?? "Ultrathink";
   }
   const effortLabel = selection.effort
     ? (selection.effortLevels.find((level) => level.value === selection.effort)?.label ??
@@ -199,7 +204,9 @@ export function resolveComposerTraitStatusLabel(
     return effortLabel;
   }
   return selection.thinkingEnabled !== null
-    ? `Thinking ${selection.thinkingEnabled ? "On" : "Off"}`
+    ? selection.thinkingEnabled
+      ? (labels?.thinkingOn ?? "Thinking On")
+      : (labels?.thinkingOff ?? "Thinking Off")
     : null;
 }
 

@@ -399,6 +399,7 @@ function ProviderStatusRefreshCoordinator() {
     intervalMs: PROVIDER_UPDATE_REFRESH_INTERVAL_MS,
     minIntervalMs: PROVIDER_AUTH_REFRESH_MIN_INTERVAL_MS,
     refreshOnFocus: true,
+    refreshOnFocusAfterLossOnly: true,
     onRefreshSuccess: markLiveVersionCheckCompleted,
   });
 
@@ -1989,7 +1990,13 @@ function EventRouter() {
         previousProviderDiscoveryFingerprint !== nextProviderDiscoveryFingerprint;
       providerDiscoveryInvalidationFingerprint = nextProviderDiscoveryFingerprint;
 
-      void reconcileServerProviderStatuses(queryClient, payload.providers).catch(() => undefined);
+      void reconcileServerProviderStatuses(
+        queryClient,
+        payload.providers,
+        payload.passivePresence
+          ? { passivePresence: payload.passivePresence.recoverableProviders }
+          : undefined,
+      ).catch(() => undefined);
       if (shouldInvalidateProviderDiscovery) {
         // Model and agent discovery can depend on auth, availability, and installed versions,
         // but not on every provider-status timestamp replay.

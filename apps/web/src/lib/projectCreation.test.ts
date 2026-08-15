@@ -87,6 +87,29 @@ describe("createOrRecoverProjectFromPath", () => {
     });
   });
 
+  it("preserves an unbound Project default without inventing an Engine", async () => {
+    let createdProjectId: ProjectId | null = null;
+    const dispatchCommand = vi.fn(async (command: { projectId?: ProjectId }) => {
+      createdProjectId = command.projectId ?? null;
+      return { sequence: 2 };
+    });
+
+    await createOrRecoverProjectFromPath({
+      api: makeApi(dispatchCommand),
+      workspaceRoot: WORKSPACE_ROOT,
+      defaultModelSelection: null,
+      loadSnapshot: async () =>
+        makeSnapshot(createdProjectId ? [makeProject(createdProjectId)] : []),
+    });
+
+    expect(dispatchCommand).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "project.create",
+        defaultModelSelection: null,
+      }),
+    );
+  });
+
   it("recovers the existing project when project.create reports a duplicate workspace root", async () => {
     const existingProject = makeProject("project-existing");
     const dispatchCommand = vi.fn(async () => {

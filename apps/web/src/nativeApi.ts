@@ -1,10 +1,20 @@
-import { WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY, type NativeApi } from "@omnimind/contracts";
+import {
+  WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
+  WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
+  type NativeApi,
+} from "@omnimind/contracts";
 
 import {
   createWsNativeApi,
   onWsServerCapabilitiesChange,
   readWsServerCapabilities,
 } from "./wsNativeApi";
+import {
+  addWsTransportStateListener,
+  readLatestWsTransportState,
+  type WsTransportState,
+} from "./wsTransportEvents";
 
 let cachedDesktopApi: NativeApi | undefined;
 
@@ -28,15 +38,32 @@ export function ensureNativeApi(): NativeApi {
   return api;
 }
 
-export function readNativeApiServerCapability(capability: string): boolean {
-  if (typeof window === "undefined") return false;
+export function readNativeApiServerCapabilityState(capability: string): boolean | null {
+  if (typeof window === "undefined") return null;
   if (window.nativeApi) {
-    return (
-      capability === WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY &&
-      typeof window.nativeApi.projects?.provisionFromGitHub === "function"
-    );
+    if (capability === WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY) {
+      return typeof window.nativeApi.projects?.provisionFromGitHub === "function";
+    }
+    if (capability === WS_OMNIMIND_MODEL_SERVICES_CAPABILITY) {
+      return (
+        typeof window.nativeApi.omnimindModelServices?.list === "function" &&
+        typeof window.nativeApi.omnimindModelServices?.get === "function"
+      );
+    }
+    if (capability === WS_OMNIMIND_ECOSYSTEM_CAPABILITY) {
+      return (
+        typeof window.nativeApi.omnimindEcosystem?.list === "function" &&
+        typeof window.nativeApi.omnimindEcosystem?.listResources === "function"
+      );
+    }
+    return false;
   }
-  return readWsServerCapabilities()?.includes(capability) === true;
+  const capabilities = readWsServerCapabilities();
+  return capabilities === null ? null : capabilities.includes(capability);
+}
+
+export function readNativeApiServerCapability(capability: string): boolean {
+  return readNativeApiServerCapabilityState(capability) === true;
 }
 
 export function onNativeApiServerCapabilitiesChange(
@@ -52,4 +79,25 @@ export function onNativeApiServerCapabilitiesChange(
     return () => undefined;
   }
   return onWsServerCapabilitiesChange(listener, options);
+}
+
+export function readNativeApiTransportState(): WsTransportState | null {
+  if (typeof window === "undefined") return null;
+  if (window.nativeApi) return "open";
+  return readLatestWsTransportState();
+}
+
+export function onNativeApiTransportStateChange(
+  listener: () => void,
+  options?: { readonly replayCurrent?: boolean },
+): () => void {
+  if (typeof window === "undefined") {
+    if (options?.replayCurrent) listener();
+    return () => undefined;
+  }
+  if (window.nativeApi) {
+    if (options?.replayCurrent) listener();
+    return () => undefined;
+  }
+  return addWsTransportStateListener(() => listener(), options);
 }

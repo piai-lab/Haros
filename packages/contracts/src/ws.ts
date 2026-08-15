@@ -139,6 +139,27 @@ import {
 } from "./providerDiscovery";
 import { ProviderCompactThreadInput } from "./provider";
 import {
+  OmniMindCustomModelServiceRemoveInput,
+  OmniMindCustomModelServiceDiscoverInput,
+  OmniMindCustomModelServiceSaveInput,
+  OmniMindCustomModelServiceTestInput,
+  OmniMindModelServiceAnswerLoginInput,
+  OmniMindModelServiceBeginLoginInput,
+  OmniMindModelServiceCancelLoginInput,
+  OmniMindModelServicePollLoginInput,
+  OmniMindModelServiceLogoutInput,
+  OmniMindModelServiceRefreshInput,
+  OmniMindModelServicesGetInput,
+  OmniMindModelServicesListInput,
+} from "./omnimindModelServices";
+import {
+  OmniMindEcosystemInstallInput,
+  OmniMindEcosystemListInput,
+  OmniMindEcosystemPackageInput,
+  OmniMindEcosystemReloadInput,
+  OmniMindEcosystemResourceToggleInput,
+} from "./omnimindEcosystem";
+import {
   PullRequestActionInput,
   PullRequestCommentInput,
   PullRequestDetailInput,
@@ -272,6 +293,27 @@ export const WS_METHODS = {
   providerListModels: "provider.listModels",
   providerListAgents: "provider.listAgents",
 
+  // OmniMind Agent model services
+  omnimindModelServicesList: "omnimindModelServices.list",
+  omnimindModelServicesGet: "omnimindModelServices.get",
+  omnimindModelServicesBeginLogin: "omnimindModelServices.beginLogin",
+  omnimindModelServicesPollLogin: "omnimindModelServices.pollLogin",
+  omnimindModelServicesAnswerLogin: "omnimindModelServices.answerLogin",
+  omnimindModelServicesCancelLogin: "omnimindModelServices.cancelLogin",
+  omnimindModelServicesLogout: "omnimindModelServices.logout",
+  omnimindModelServicesRefresh: "omnimindModelServices.refresh",
+  omnimindModelServicesDiscoverCustom: "omnimindModelServices.discoverCustom",
+  omnimindModelServicesTestCustom: "omnimindModelServices.testCustom",
+  omnimindModelServicesSaveCustom: "omnimindModelServices.saveCustom",
+  omnimindModelServicesRemoveCustom: "omnimindModelServices.removeCustom",
+  omnimindEcosystemList: "omnimindEcosystem.list",
+  omnimindEcosystemListResources: "omnimindEcosystem.listResources",
+  omnimindEcosystemInstall: "omnimindEcosystem.install",
+  omnimindEcosystemUpdate: "omnimindEcosystem.update",
+  omnimindEcosystemRemove: "omnimindEcosystem.remove",
+  omnimindEcosystemSetResourceEnabled: "omnimindEcosystem.setResourceEnabled",
+  omnimindEcosystemReload: "omnimindEcosystem.reload",
+
   // Automation methods
   automationList: "automation.list",
   automationGetMemory: "automation.getMemory",
@@ -320,6 +362,16 @@ const WebSocketRequestBody = Schema.Union([
     ORCHESTRATION_WS_METHODS.dispatchCommand,
     Schema.Struct({ command: ClientOrchestrationCommand }),
   ),
+  tagRequestBody(WS_METHODS.omnimindEcosystemList, OmniMindEcosystemListInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemListResources, OmniMindEcosystemPackageInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemInstall, OmniMindEcosystemInstallInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemUpdate, OmniMindEcosystemPackageInput),
+  tagRequestBody(WS_METHODS.omnimindEcosystemRemove, OmniMindEcosystemPackageInput),
+  tagRequestBody(
+    WS_METHODS.omnimindEcosystemSetResourceEnabled,
+    OmniMindEcosystemResourceToggleInput,
+  ),
+  tagRequestBody(WS_METHODS.omnimindEcosystemReload, OmniMindEcosystemReloadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getShellSnapshot, OrchestrationGetShellSnapshotInput),
@@ -466,6 +518,24 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.providerReadPlugin, ProviderReadPluginInput),
   tagRequestBody(WS_METHODS.providerListModels, ProviderListModelsInput),
   tagRequestBody(WS_METHODS.providerListAgents, ProviderListAgentsInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesList, OmniMindModelServicesListInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesGet, OmniMindModelServicesGetInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesBeginLogin, OmniMindModelServiceBeginLoginInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesPollLogin, OmniMindModelServicePollLoginInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesAnswerLogin, OmniMindModelServiceAnswerLoginInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesCancelLogin, OmniMindModelServiceCancelLoginInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesLogout, OmniMindModelServiceLogoutInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesRefresh, OmniMindModelServiceRefreshInput),
+  tagRequestBody(
+    WS_METHODS.omnimindModelServicesDiscoverCustom,
+    OmniMindCustomModelServiceDiscoverInput,
+  ),
+  tagRequestBody(WS_METHODS.omnimindModelServicesTestCustom, OmniMindCustomModelServiceTestInput),
+  tagRequestBody(WS_METHODS.omnimindModelServicesSaveCustom, OmniMindCustomModelServiceSaveInput),
+  tagRequestBody(
+    WS_METHODS.omnimindModelServicesRemoveCustom,
+    OmniMindCustomModelServiceRemoveInput,
+  ),
 
   // Automation methods
   tagRequestBody(WS_METHODS.automationList, AutomationListInput),

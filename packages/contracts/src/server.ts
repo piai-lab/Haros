@@ -46,11 +46,21 @@ export const ServerProviderAuthStatus = Schema.Literals([
 ]);
 export type ServerProviderAuthStatus = typeof ServerProviderAuthStatus.Type;
 
+// Optional so newer servers can add an observed installation fact without
+// making older server payloads incompatible. Absence means only "unavailable";
+// clients must not infer installation state from diagnostic copy.
+export const ServerProviderUnavailableReason = Schema.Literal("not_installed");
+export type ServerProviderUnavailableReason = typeof ServerProviderUnavailableReason.Type;
+
 export const ServerProviderStatus = Schema.Struct({
   provider: ProviderKind,
   status: ServerProviderStatusState,
   available: Schema.Boolean,
   authStatus: ServerProviderAuthStatus,
+  unavailableReason: Schema.optional(ServerProviderUnavailableReason),
+  // Exact configured CLI identity used to produce this status. Clients compare
+  // it with a local override before reusing installation or capability facts.
+  checkedBinaryPath: Schema.optional(TrimmedNonEmptyString),
   authType: Schema.optional(TrimmedNonEmptyString),
   authLabel: Schema.optional(TrimmedNonEmptyString),
   voiceTranscriptionAvailable: Schema.optional(Schema.Boolean),
@@ -469,6 +479,12 @@ export type ServerConfigUpdatedPayload = typeof ServerConfigUpdatedPayload.Type;
 
 export const ServerProviderStatusesUpdatedPayload = Schema.Struct({
   providers: ServerProviderStatuses,
+  passivePresence: Schema.optionalKey(
+    Schema.Struct({
+      state: Schema.Literal("settled"),
+      recoverableProviders: Schema.Array(ProviderKind),
+    }),
+  ),
 });
 export type ServerProviderStatusesUpdatedPayload = typeof ServerProviderStatusesUpdatedPayload.Type;
 

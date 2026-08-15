@@ -9,6 +9,7 @@ import type { MessageKey } from "~/i18n";
 import {
   settingRowAnchorId,
   SETTINGS_NAV_ITEMS,
+  SETTINGS_TARGETS,
   type SettingsSectionId,
 } from "./settingsNavigation";
 
@@ -85,6 +86,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "general",
     title: "Repository",
     keywords: "Show the GitHub repository link in the chat Environment panel. git changes worktree",
+  },
+  {
+    id: "general:git-writing-model",
+    section: "general",
+    title: "Git writing model",
+    keywords:
+      "Choose the model used to generate commit messages pull request titles and branch names.",
+    target: SETTINGS_TARGETS.gitWritingModel,
   },
   {
     id: "general:environment-pull-request",
@@ -315,16 +324,21 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
 
   // ── Models ────────────────────────────────────────────────────────────────────
   {
-    id: "models:git-writing-model",
+    id: "models:model-services",
     section: "models",
-    title: "Git writing model",
-    keywords: "Used for generated commit messages, PR titles, and branch names.",
+    title: "Model services",
+    keywords:
+      "Configure OmniMind model services credentials authentication available models catalog provider API key OAuth.",
+    target: null,
   },
+
+  // Independent Engine model controls live inside the existing Agent engines details.
   {
-    id: "models:saved-model-slugs",
-    section: "models",
-    title: "Saved model slugs",
-    keywords: "Add custom model slugs for supported providers. custom model",
+    id: "providers:independent-engine-models",
+    section: "providers",
+    title: "Independent engine models",
+    keywords: "Add remove reset custom model slugs managed by each engine.",
+    target: SETTINGS_TARGETS.engineDetails,
   },
 
   // ── Providers ─────────────────────────────────────────────────────────────────
@@ -351,8 +365,10 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "providers:installed-clis",
     section: "providers",
-    title: "Installed CLIs",
-    keywords: "Review provider versions and update tools. binary overrides path install",
+    title: "Engine details",
+    keywords:
+      "Review engine versions, paths, update tools, and custom model slugs. binary overrides install",
+    target: SETTINGS_TARGETS.engineDetails,
   },
 
   // ── Skills ────────────────────────────────────────────────────────────────────
@@ -470,9 +486,11 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",
   "Git writing model": "settings.gitWritingModel",
-  "Installed CLIs": "settings.installedClis",
+  "Engine details": "settings.installedClis",
+  "Independent engine models": "settings.independentEngineModels",
   Keybindings: "settings.keybindings",
   "Managed worktrees": "settings.worktrees",
+  "Model services": "settings.models",
   "New threads": "settings.newThreads",
   Notepad: "settings.notepad",
   "Open by default": "settings.openByDefault",
@@ -486,7 +504,6 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Recovery tools": "settings.recoveryTools",
   "Release history": "settings.releaseHistory",
   Repository: "settings.repositoryLabel",
-  "Saved model slugs": "settings.savedModelSlugs",
   Shortcut: "settings.shortcut",
   Skills: "settings.skills",
   "Terminal close confirmation": "settings.terminalCloseConfirmation",

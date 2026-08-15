@@ -31,7 +31,11 @@ export type SettingsNavGroupId = "personal" | "integrations" | "coding" | "syste
  */
 export const SETTINGS_TARGETS = {
   providerUpdates: "provider-updates",
+  // Keep the original Installed CLIs deep-link byte stable while the visible row broadens to
+  // Engine details. Existing shared URLs must not break when product copy changes.
+  engineDetails: "setting-installed-clis",
   environmentPanel: "environment-panel",
+  gitWritingModel: "setting-git-writing-model",
 } as const;
 
 export type SettingsNavItem = {
@@ -139,10 +143,10 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "models",
     group: "coding",
-    label: "Models & writing",
-    description: "Choose the model used for Git writing and add custom model slugs.",
+    label: "Model services",
+    description: "Configure the model services, credentials, and available models OmniMind uses.",
     icon: "brain",
-    eyebrow: "Model configuration",
+    eyebrow: "Model services",
   },
   {
     id: "skills",

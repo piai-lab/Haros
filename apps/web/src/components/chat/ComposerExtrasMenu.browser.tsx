@@ -11,23 +11,15 @@ import { render } from "vitest-browser-react";
 
 import { ComposerExtrasMenu } from "./ComposerExtrasMenu";
 
-async function mountMenu(props?: {
-  fastModeEnabled?: boolean;
-  interactionMode?: "default" | "plan";
-  supportsFastMode?: boolean;
-}) {
+async function mountMenu(props?: { interactionMode?: "default" | "plan" }) {
   const onAddAttachments = vi.fn();
-  const onToggleFastMode = vi.fn();
   const onSetPlanMode = vi.fn();
   const host = document.createElement("div");
   document.body.append(host);
   const screen = await render(
     <ComposerExtrasMenu
       interactionMode={props?.interactionMode ?? "default"}
-      supportsFastMode={props?.supportsFastMode ?? true}
-      fastModeEnabled={props?.fastModeEnabled ?? false}
       onAddAttachments={onAddAttachments}
-      onToggleFastMode={onToggleFastMode}
       onSetPlanMode={onSetPlanMode}
     />,
     { container: host },
@@ -42,7 +34,6 @@ async function mountMenu(props?: {
     [Symbol.asyncDispose]: cleanup,
     cleanup,
     onAddAttachments,
-    onToggleFastMode,
     onSetPlanMode,
   };
 }
@@ -76,7 +67,7 @@ describe("ComposerExtrasMenu", () => {
   });
 
   it("shows the attachment action in the menu", async () => {
-    await using _ = await mountMenu({ interactionMode: "plan", fastModeEnabled: true });
+    await using _ = await mountMenu({ interactionMode: "plan" });
 
     await page.getByLabelText("Message box options").click();
 
@@ -84,20 +75,18 @@ describe("ComposerExtrasMenu", () => {
       const text = document.body.textContent ?? "";
       expect(text).toContain("Add files");
       expect(text).toContain("Plan mode");
-      expect(text).toContain("Fast");
+      expect(text).not.toContain("Fast");
       expect(text).not.toContain("Plugins");
     });
   });
 
-  it("wires the plan and speed controls", async () => {
+  it("wires plan mode without duplicating Engine-native Fast", async () => {
     await using menu = await mountMenu();
 
     await page.getByLabelText("Message box options").click();
     await page.getByText("Plan mode").click();
-    await page.getByText("Fast").click();
-    await page.getByRole("menuitemradio", { name: "Fast" }).click();
 
     expect(menu.onSetPlanMode).toHaveBeenCalledWith(true);
-    expect(menu.onToggleFastMode).toHaveBeenCalledTimes(1);
+    expect(document.body.textContent).not.toContain("Fast");
   });
 });

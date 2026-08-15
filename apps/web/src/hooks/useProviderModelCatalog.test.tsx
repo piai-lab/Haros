@@ -42,7 +42,9 @@ interface QueryResultLike {
     readonly source?: string;
   };
   readonly isFetching: boolean;
+  readonly isError?: boolean;
   readonly isLoading: boolean;
+  readonly isPending?: boolean;
   readonly isPlaceholderData: boolean;
 }
 
@@ -140,6 +142,8 @@ describe("useProviderModelCatalog", () => {
     expect(second).toBe(first);
     expect(second?.customModelsByProvider).toBe(first?.customModelsByProvider);
     expect(second?.modelOptionsByProvider).toBe(first?.modelOptionsByProvider);
+    expect(second?.selectableModelOptionsByProvider).toBe(first?.selectableModelOptionsByProvider);
+    expect(second?.catalogStateByProvider).toBe(first?.catalogStateByProvider);
     expect(second?.loadingModelProviders).toBe(first?.loadingModelProviders);
     expect(second?.runtimeModelsByProvider).toBe(first?.runtimeModelsByProvider);
     expect(second?.selectedRuntimeAgents).toBe(first?.selectedRuntimeAgents);
@@ -225,6 +229,17 @@ describe("useProviderModelCatalog", () => {
     expect(readModelQueryEnabled("cursor")).toBe(true);
   });
 
+  it("lets a permanently mounted inactive surface stop its selected-provider query", () => {
+    readCatalogRenders({
+      selectedProvider: "codex",
+      discoveryEnabled: false,
+      selectedProviderDiscoveryEnabled: false,
+    });
+
+    expect(readModelQueryEnabled("codex")).toBe(false);
+    expect(readAgentQueryEnabled("codex")).toBe(false);
+  });
+
   it("does not discover a disabled provider even when it is selected", () => {
     mocks.useAppSettings.mockReturnValue({
       settings: SETTINGS,
@@ -285,7 +300,7 @@ describe("useProviderModelCatalog", () => {
     expect(readModelQueryEnabled("antigravity")).toBe(false);
   });
 
-  it("merges a settled runtime catalog with custom models without reporting loading", () => {
+  it("keeps placeholder models visible but non-selectable until the new catalog settles", () => {
     modelQueries.set("cursor", {
       data: {
         models: [{ slug: "composer-2", name: "Composer 2" }],
@@ -303,14 +318,180 @@ describe("useProviderModelCatalog", () => {
       modelHintByProvider: MODEL_HINTS,
     }).at(-1);
 
-    expect(catalog?.modelOptionsByProvider.cursor.map((model) => model.slug)).toEqual([
+    const displaySlugs = catalog?.modelOptionsByProvider.cursor.map((model) => model.slug);
+    expect(displaySlugs).toContain("composer-2");
+    expect(displaySlugs).toContain("cursor-custom");
+    expect(catalog?.loadingModelProviders.cursor).toBe(true);
+    expect(catalog?.selectedProviderModelsLoading).toBe(true);
+    expect(catalog?.runtimeModelsByProvider.cursor).toEqual([]);
+    expect(catalog?.selectableModelOptionsByProvider.cursor).toEqual([]);
+    expect(catalog?.selectedRuntimeModel).toBeUndefined();
+    expect(catalog?.catalogStateByProvider.cursor).toBe("checking");
+  });
+
+  it("keeps a configured custom model but rejects a mere selection hint after an empty catalog", () => {
+    modelQueries.set("cursor", {
+      data: { models: [], source: "cursor.cli", cached: false },
+      isFetching: false,
+      isLoading: false,
+      isPending: false,
+      isPlaceholderData: false,
+    });
+
+    const catalog = readCatalogRenders({
+      selectedProvider: "cursor",
+      discoveryEnabled: true,
+      modelHintByProvider: MODEL_HINTS,
+    }).at(-1);
+
+    const displaySlugs = catalog?.modelOptionsByProvider.cursor.map((model) => model.slug);
+    expect(displaySlugs).toContain("composer-2");
+    expect(displaySlugs).toContain("cursor-custom");
+    expect(catalog?.selectableModelOptionsByProvider.cursor.map((model) => model.slug)).toEqual([
+      "cursor-custom",
+    ]);
+    expect(catalog?.catalogStateByProvider.cursor).toBe("empty");
+  });
+
+  it("keeps a configured independent Engine custom model selectable when runtime omits it", () => {
+    mocks.useAppSettings.mockReturnValue({
+      settings: {
+        ...SETTINGS,
+        customAntigravityModels: ["custom/private-model"],
+      },
+      serverSettings: DEFAULT_SERVER_SETTINGS,
+    });
+    modelQueries.set("antigravity", {
+      data: {
+        models: [{ slug: "Gemini 4 Pro", name: "Gemini 4 Pro" }],
+        source: "antigravity.cli",
+        cached: false,
+      },
+      isFetching: false,
+      isLoading: false,
+      isPending: false,
+      isPlaceholderData: false,
+    });
+
+    const catalog = readCatalogRenders({
+      selectedProvider: "antigravity",
+      discoveryEnabled: true,
+    }).at(-1);
+
+    expect(
+      catalog?.selectableModelOptionsByProvider.antigravity.map((model) => model.slug),
+    ).toEqual(["Gemini 4 Pro", "custom/private-model"]);
+  });
+
+  it("does not treat an OmniMind legacy custom hint as a Pi runtime model definition", () => {
+    mocks.useAppSettings.mockReturnValue({
+      settings: {
+        ...SETTINGS,
+        customOmniMindModels: ["legacy/provider-model"],
+      },
+      serverSettings: DEFAULT_SERVER_SETTINGS,
+    });
+    modelQueries.set("omnimind", {
+      data: {
+        models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
+        source: "pi.sdk",
+        cached: false,
+      },
+      isFetching: false,
+      isLoading: false,
+      isPending: false,
+      isPlaceholderData: false,
+    });
+
+    const catalog = readCatalogRenders({
+      selectedProvider: "omnimind",
+      discoveryEnabled: true,
+      modelHintByProvider: { omnimind: "legacy/provider-model" },
+    }).at(-1);
+
+    expect(catalog?.modelOptionsByProvider.omnimind.map((model) => model.slug)).toContain(
+      "legacy/provider-model",
+    );
+    expect(catalog?.selectableModelOptionsByProvider.omnimind.map((model) => model.slug)).toEqual([
+      "deepseek/deepseek-chat",
+    ]);
+  });
+
+  it("distinguishes a cold catalog check from a failed refresh with last-good models", () => {
+    modelQueries.set("cursor", {
+      isFetching: true,
+      isLoading: true,
+      isPending: true,
+      isPlaceholderData: false,
+    });
+
+    let catalog = readCatalogRenders({
+      selectedProvider: "cursor",
+      discoveryEnabled: true,
+    }).at(-1);
+    expect(catalog?.catalogStateByProvider.cursor).toBe("checking");
+
+    modelQueries.set("cursor", {
+      data: {
+        models: [{ slug: "composer-2", name: "Composer 2" }],
+        source: "cursor.cli",
+        cached: true,
+      },
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      isPending: false,
+      isPlaceholderData: false,
+    });
+
+    catalog = readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: true }).at(-1);
+    expect(catalog?.catalogStateByProvider.cursor).toBe("stale");
+    expect(catalog?.selectableModelOptionsByProvider.cursor.map((model) => model.slug)).toEqual([
       "composer-2",
       "cursor-custom",
     ]);
-    expect(catalog?.loadingModelProviders.cursor).toBe(false);
-    expect(catalog?.selectedProviderModelsLoading).toBe(false);
-    expect(catalog?.runtimeModelsByProvider.cursor).toEqual([
-      { slug: "composer-2", name: "Composer 2" },
+  });
+
+  it("does not call a failed refresh stale when the last settled catalog was empty", () => {
+    modelQueries.set("cursor", {
+      data: { models: [], source: "cursor.cli", cached: true },
+      isError: true,
+      isFetching: false,
+      isLoading: false,
+      isPending: false,
+      isPlaceholderData: false,
+    });
+
+    const catalog = readCatalogRenders({
+      selectedProvider: "cursor",
+      discoveryEnabled: true,
+    }).at(-1);
+
+    expect(catalog?.catalogStateByProvider.cursor).toBe("error");
+    expect(catalog?.runtimeModelsByProvider.cursor).toEqual([]);
+    expect(catalog?.selectableModelOptionsByProvider.cursor.map((model) => model.slug)).toEqual([
+      "cursor-custom",
     ]);
+  });
+
+  it("does not expose placeholder agents from a previous cwd as current choices", () => {
+    agentQueries.set("opencode", {
+      data: {
+        agents: [{ name: "old-agent", displayName: "Old Agent" }],
+        source: "opencode",
+      },
+      isFetching: true,
+      isLoading: false,
+      isPending: false,
+      isPlaceholderData: true,
+    });
+
+    const catalog = readCatalogRenders({
+      selectedProvider: "opencode",
+      discoveryEnabled: true,
+      cwd: "/next-project",
+    }).at(-1);
+
+    expect(catalog?.selectedRuntimeAgents).toEqual([]);
   });
 });

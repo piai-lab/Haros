@@ -9,26 +9,13 @@ import { GoTasklist } from "react-icons/go";
 
 import { PaperclipIcon, PlusIcon } from "~/lib/icons";
 import { useI18n } from "~/i18n";
-import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
+import { ComposerPickerMenuPopup } from "./ComposerPickerMenuPopup";
 import { Button } from "../ui/button";
-import {
-  Menu,
-  MenuCheckboxItem,
-  MenuItem,
-  MenuRadioGroup,
-  MenuRadioItem,
-  MenuSeparator,
-  MenuSub,
-  MenuSubTrigger,
-  MenuTrigger,
-} from "../ui/menu";
+import { Menu, MenuCheckboxItem, MenuItem, MenuSeparator, MenuTrigger } from "../ui/menu";
 
 export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   interactionMode: ProviderInteractionMode;
-  supportsFastMode: boolean;
-  fastModeEnabled: boolean;
   onAddAttachments: (files: File[]) => void;
-  onToggleFastMode: () => void;
   onSetPlanMode: (enabled: boolean) => void;
 }) {
   const { t } = useI18n();
@@ -91,28 +78,6 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
               {t("composer.planMode")}
             </span>
           </MenuCheckboxItem>
-
-          {props.supportsFastMode ? (
-            <>
-              <MenuSeparator />
-              <MenuSub>
-                <MenuSubTrigger>{t("composer.fast")}</MenuSubTrigger>
-                <ComposerPickerMenuSubPopup>
-                  <MenuRadioGroup
-                    value={props.fastModeEnabled ? "fast" : "normal"}
-                    onValueChange={(value) => {
-                      const shouldEnableFast = value === "fast";
-                      if (shouldEnableFast === props.fastModeEnabled) return;
-                      props.onToggleFastMode();
-                    }}
-                  >
-                    <MenuRadioItem value="normal">{t("composer.default")}</MenuRadioItem>
-                    <MenuRadioItem value="fast">{t("composer.fast")}</MenuRadioItem>
-                  </MenuRadioGroup>
-                </ComposerPickerMenuSubPopup>
-              </MenuSub>
-            </>
-          ) : null}
         </ComposerPickerMenuPopup>
       </Menu>
     </>

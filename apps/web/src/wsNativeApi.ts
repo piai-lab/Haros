@@ -742,6 +742,77 @@ export function createWsNativeApi(): NativeApi {
       listModels: (input) => transport.request(WS_METHODS.providerListModels, input),
       listAgents: (input) => transport.request(WS_METHODS.providerListAgents, input),
     },
+    omnimindModelServices: {
+      list: (input = {}, options) =>
+        transport.request(
+          WS_METHODS.omnimindModelServicesList,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+      get: (input, options) =>
+        transport.request(
+          WS_METHODS.omnimindModelServicesGet,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+      beginLogin: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesBeginLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      pollLogin: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesPollLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      answerLogin: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesAnswerLogin, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      cancelLogin: (input) => transport.request(WS_METHODS.omnimindModelServicesCancelLogin, input),
+      logout: (input) => transport.request(WS_METHODS.omnimindModelServicesLogout, input),
+      refresh: (input, options) =>
+        transport.request(
+          WS_METHODS.omnimindModelServicesRefresh,
+          input,
+          options?.signal ? { signal: options.signal, timeoutMs: null } : { timeoutMs: null },
+        ),
+      discoverCustom: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesDiscoverCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      testCustom: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesTestCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      saveCustom: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesSaveCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      removeCustom: (input, options) =>
+        transport.request(WS_METHODS.omnimindModelServicesRemoveCustom, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+    },
+    omnimindEcosystem: {
+      list: (input = {}) => transport.request(WS_METHODS.omnimindEcosystemList, input),
+      listResources: (input) => transport.request(WS_METHODS.omnimindEcosystemListResources, input),
+      install: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemInstall, input, { timeoutMs: null }),
+      update: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemUpdate, input, { timeoutMs: null }),
+      remove: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemRemove, input, { timeoutMs: null }),
+      setResourceEnabled: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemSetResourceEnabled, input),
+      reload: (input) =>
+        transport.request(WS_METHODS.omnimindEcosystemReload, input, { timeoutMs: null }),
+    },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
       getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),

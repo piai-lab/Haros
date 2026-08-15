@@ -305,6 +305,11 @@ describe("resolveAppModelSelection", () => {
     ).toBe("gpt-5.5");
   });
 
+  it("keeps runtime-catalog-only providers unbound without an exact selection", () => {
+    expect(resolveAppModelSelection("omnimind", { omnimind: [] }, "")).toBeNull();
+    expect(resolveAppModelSelection("pi", { pi: [] }, "")).toBeNull();
+  });
+
   it("resolves display names through the shared resolver", () => {
     expect(
       resolveAppModelSelection(
@@ -639,10 +644,32 @@ describe("provider-indexed custom model settings", () => {
     ]);
   });
 
-  it("keeps Droid persistence compatible without advertising unsupported custom slugs", () => {
-    expect(CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider)).not.toContain(
-      "droid",
+  it("keeps runtime-catalog persistence compatible without advertising unsupported editors", () => {
+    expect(CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider)).toEqual([
+      "codex",
+      "claudeAgent",
+      "cursor",
+      "antigravity",
+      "grok",
+      "kilo",
+      "opencode",
+    ]);
+  });
+
+  it("preserves every legacy OmniMind model hint until the user explicitly handles it", () => {
+    const legacyHints = [
+      ...Array.from({ length: 33 }, (_, index) => `legacy/model-${index}`),
+      "legacy/model-0",
+      "deepseek/deepseek-v4-flash",
+      "  opaque legacy value  ",
+    ];
+
+    const normalized = normalizeStoredAppSettings(
+      AppSettingsSchema.makeUnsafe({ customOmniMindModels: legacyHints }),
     );
+
+    expect(normalized.customOmniMindModels).toEqual(legacyHints);
+    expect(normalized.customOmniMindModels).not.toBe(legacyHints);
   });
 
   it("reads custom models for each provider", () => {
