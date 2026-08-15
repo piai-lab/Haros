@@ -418,6 +418,7 @@ describe("OmniMindModelServicesLive", () => {
           name: "Extension Without Login",
           auth: {},
         });
+        await options.modelRuntime!.refresh({ allowNetwork: false });
         return {
           cwd: options.cwd,
           agentDir: options.agentDir!,
@@ -627,6 +628,7 @@ describe("OmniMindModelServicesLive", () => {
           refreshModels: async () =>
             extensionModels.map((model) => ({ ...model, input: [...model.input] })),
         });
+        await options.modelRuntime!.refresh({ allowNetwork: false });
         return {
           cwd: options.cwd,
           agentDir: options.agentDir!,
@@ -737,6 +739,7 @@ describe("OmniMindModelServicesLive", () => {
           "configured-extension",
           "configured-extension-key",
         );
+        await options.modelRuntime!.refresh({ allowNetwork: false });
         return {
           cwd: options.cwd,
           agentDir: options.agentDir!,
@@ -804,6 +807,7 @@ describe("OmniMindModelServicesLive", () => {
         if (!options.modelRuntime!.getRegisteredProviderIds().includes("deepseek")) {
           throw new Error("Extension overlay registration was not retained");
         }
+        await options.modelRuntime!.refresh({ allowNetwork: false });
         return {
           cwd: options.cwd,
           agentDir: options.agentDir!,
