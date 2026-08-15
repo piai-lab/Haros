@@ -12,16 +12,17 @@
 - 原 Model services 关注点已经通过的证据，除非当前 SHA 出现新的直接反例，不应因本文重新演整轮 E0–E8；
 - 当前 `codex/model-services-composer` 先完成原承诺的 completion review、必要补完、clean 与 merge；本文识别的扩展 Pi-native 目标不自动成为该分支的合并阻断；
 - 下一轮只从合并后的 `main` 启动，先重验 exact runtime/Host 差额，再按本文的纳入方式施工；不能把本文的已知条目误当封闭需求清单；
+- OmniMind 默认身份、Prompt 文件/模板的用户管理、当前错误的 localStorage Project instructions、Session reload/reopen 与 Settings 收敛由后续专项 [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) 从 merged `main` 复核；本文第 4 节继续提供其 Pi-native runtime 语义底座；
 - Apple 签名/notary、Windows Trusted Signing 与 Windows/Linux 原生安装旅程由后续工程交付统一负责，不属于本文发现的产品代码缺口。
 
 本文所有判断按证据等级分开，避免把历史 CLEAN、当前源码或产品偏好混成同一种事实：
 
-| 等级 | 含义 | 本文中的例子 |
-|---|---|---|
-| 产品裁决 | 维护者已经确认、后续 owner 与实现必须遵循 | Product Project membership 表示 trusted；不建立独立 Trust UI/store；外部签名与跨平台原生发行交给工程交付 |
-| 当前源码事实 | exact SHA 与 pinned Pi 可直接复现 | `PiAdapter` 未显式传 trust；Extension replacement 未绑定 `commandContextActions`；Pi 会重建 system prompt 与 active tools |
-| 有证据的推断 | 由当前调用链推出，但仍需用户 journey 或反例收口 | Product fork 可能只有 visible transcript bootstrap；Pi live usage 尚未完整进入 Product receipt |
-| 待证伪 | 不能直接开工或宣称缺失 | 是否需要人工 active-tool selector；哪些 tree/fork action 应成为 Desktop 产品动作 |
+| 等级         | 含义                                            | 本文中的例子                                                                                                              |
+| ------------ | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| 产品裁决     | 维护者已经确认、后续 owner 与实现必须遵循       | Product Project membership 表示 trusted；不建立独立 Trust UI/store；外部签名与跨平台原生发行交给工程交付                  |
+| 当前源码事实 | exact SHA 与 pinned Pi 可直接复现               | `PiAdapter` 未显式传 trust；Extension replacement 未绑定 `commandContextActions`；Pi 会重建 system prompt 与 active tools |
+| 有证据的推断 | 由当前调用链推出，但仍需用户 journey 或反例收口 | Product fork 可能只有 visible transcript bootstrap；Pi live usage 尚未完整进入 Product receipt                            |
+| 待证伪       | 不能直接开工或宣称缺失                          | 是否需要人工 active-tool selector；哪些 tree/fork action 应成为 Desktop 产品动作                                          |
 
 本文不使用“Pi 有这个 API”直接推出“Desktop 必须有同名按钮”，也不使用“Desktop 没有按钮”推出“Pi 能力已经丢失”。判据始终是用户结果、唯一 owner 与 exact runtime 行为。
 
@@ -104,12 +105,12 @@ Host bridge 可以翻译、投影和路由，但不能成为第二事实源。�
 
 “纳入 Pi”不是单一动作。所有成熟机制应先归入以下四类，避免把能力完整误解为 UI 数量：
 
-| 纳入方式 | 适用机制 | OmniMind 应做什么 | 不应做什么 |
-|---|---|---|---|
-| 自动保留 | system prompt rebuild、retry、auto-compaction、Extension tool registry | 让 Pi Session 继续拥有并正确结算，在 Timeline/Context 等既有表面显示必要状态 | 再建 Host prompt/retry/compaction engine |
-| 只读投影 | current/all tools、source、usage、cacheWrite、cost、package provenance | 投影当前 truth、来源和 unknown，供现有 Composer/Usage/Library 使用 | 第二 registry、stats DB、cache service |
-| 语义映射 | `newSession`、fork、tree navigation、export、部分 Extension UI | 只把能保持 Product Thread/Artifact provenance 的动作映射进现有 owner；不能映射就 fail honestly | 直接复刻 Pi TUI、返回 no-op success |
-| 明确不复刻 | 任意 terminal widget/footer/header、raw prompt/JSON、内部诊断布局 | 保留底层行为与技术诊断；真实产品任务出现时再增加有界 typed primitive | 通用 TUI renderer、技术仪表盘、任意内部配置编辑器 |
+| 纳入方式   | 适用机制                                                               | OmniMind 应做什么                                                                              | 不应做什么                                        |
+| ---------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| 自动保留   | system prompt rebuild、retry、auto-compaction、Extension tool registry | 让 Pi Session 继续拥有并正确结算，在 Timeline/Context 等既有表面显示必要状态                   | 再建 Host prompt/retry/compaction engine          |
+| 只读投影   | current/all tools、source、usage、cacheWrite、cost、package provenance | 投影当前 truth、来源和 unknown，供现有 Composer/Usage/Library 使用                             | 第二 registry、stats DB、cache service            |
+| 语义映射   | `newSession`、fork、tree navigation、export、部分 Extension UI         | 只把能保持 Product Thread/Artifact provenance 的动作映射进现有 owner；不能映射就 fail honestly | 直接复刻 Pi TUI、返回 no-op success               |
+| 明确不复刻 | 任意 terminal widget/footer/header、raw prompt/JSON、内部诊断布局      | 保留底层行为与技术诊断；真实产品任务出现时再增加有界 typed primitive                           | 通用 TUI renderer、技术仪表盘、任意内部配置编辑器 |
 
 这张表也是停止条件：一个机制已经在第一类自动完整工作时，缺少单独 Settings 开关不构成产品缺陷；一个用户动作落入第三类却返回假成功，则即使 UI 很少也属于真实缺陷。
 
@@ -163,6 +164,12 @@ Pi `createAgentSessionServices()` 在调用方未提供 `settingsManager` 时使
 下一轮执行会话若在 merged `main` 仍复现此差额，应在 existing Project/Thread/cwd → Provider Session owner 内最小闭合，不新增 trust store、permission broker 或第二 Project 身份。
 
 ## 4. System prompt 与动态工具
+
+### 4.0 与 OmniMind Prompt 管理专项的关系
+
+本节锁定 Pi 原生 Prompt rebuild、动态 Extension tools、activation/permission 与下一 turn mutation 的成熟 runtime 语义。它不回答 OmniMind 默认 Prompt 应使用什么身份、用户应在哪里管理追加指令、`AGENTS.md` 如何成为 Project rules、模板如何投影、reload/reopen 如何解释，或当前 localStorage `Project instructions` 是否是真实指令。
+
+这些产品与当前 `main` 差额已经在 [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) 继续复核。后续实现必须同时满足两篇研究：保留本节的 native dynamic mechanism，同时按专项 review 消除 Pi 产品身份泄漏和第二 Prompt 事实源；不能用新的 Settings textarea 冻结或复制 Pi prompt builder。
 
 ### 4.1 Pi system prompt 重建是优点
 
@@ -250,7 +257,7 @@ Pi Extension command context 支持 `newSession`、`fork`、`navigateTree` 与 `
 当前 `PiAdapter` 只执行：
 
 ```ts
-runtime.session.bindExtensions({ uiContext: makePiExtensionUIContext(context) })
+runtime.session.bindExtensions({ uiContext: makePiExtensionUIContext(context) });
 ```
 
 没有绑定 `commandContextActions`。因此某个 Extension command 可以收到“未取消”的返回结果，却没有发生 Session replacement。这是确定的产品真实性问题，不是“是否复刻 TUI”的偏好。
