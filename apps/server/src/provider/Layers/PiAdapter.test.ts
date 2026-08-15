@@ -18,6 +18,7 @@ import { Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
+import { PiAdapter } from "../Services/PiAdapter.ts";
 import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
 import {
   createPiModelRuntime,
@@ -31,6 +32,7 @@ import {
   makePiHostSystemPrompt,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
+  makePiAdapterLive,
   piModelHasConfiguredCredentials,
   piToolTimelineDetail,
   PLAIN_PI_EXTENSION_THEME,
@@ -299,6 +301,19 @@ function piRetryableResponse() {
   return Response.json(
     { error: { message: "temporary rate limit", type: "rate_limit_error" } },
     { status: 429 },
+  );
+}
+
+function piContextOverflowResponse() {
+  return Response.json(
+    {
+      error: {
+        message: "Input exceeds the context window of this model",
+        type: "invalid_request_error",
+        code: "context_length_exceeded",
+      },
+    },
+    { status: 400 },
   );
 }
 
@@ -1094,6 +1109,561 @@ describe("getPiDiscoverableModels", () => {
       ).toHaveLength(1);
       expect(result.sessions).toContainEqual(expect.objectContaining({ status: "ready" }));
       expect(result.sessions[0]).not.toHaveProperty("activeTurnId");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps one Product turn while Pi compacts an overflow and continues the prompt", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-overflow-compaction-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000047");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128, maxTokens: 32 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({
+        retry: { enabled: false },
+        compaction: { enabled: true, reserveTokens: 32, keepRecentTokens: 1 },
+      }),
+    );
+    let requestCount = 0;
+    let releasePostCompaction!: () => void;
+    const postCompactionGate = new Promise<void>((resolve) => {
+      releasePostCompaction = resolve;
+    });
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      if (requestCount === 1) return piOpenAiSuccessResponse("seed response");
+      if (requestCount === 2) return piContextOverflowResponse();
+      if (requestCount === 4) {
+        await postCompactionGate;
+        return piOpenAiSuccessResponse("post-compaction success");
+      }
+      return piOpenAiSuccessResponse(`compaction summary ${requestCount}`);
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const seed = yield* adapter.sendTurn({
+              threadId,
+              input: "seed enough history for overflow recovery",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === seed.turnId,
+                  ),
+                "The seed turn did not settle.",
+              ),
+            );
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "recover this turn after context compaction",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "item.completed" &&
+                      event.turnId === turn.turnId &&
+                      event.payload.itemType === "context_compaction",
+                  ),
+                "Pi overflow compaction did not complete.",
+              ),
+            );
+            const duringCompactionContinuation = yield* adapter.listSessions();
+            const terminalsBeforeContinuation = events.filter(
+              (event) =>
+                (event.type === "turn.completed" || event.type === "turn.aborted") &&
+                event.turnId === turn.turnId,
+            );
+            yield* Effect.sync(releasePostCompaction);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+                  ),
+                "The post-compaction continuation did not settle.",
+              ),
+            );
+            yield* Effect.sleep("50 millis");
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { duringCompactionContinuation, terminalsBeforeContinuation, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const turnEvents = events.filter((event) => event.turnId === result.turn.turnId);
+      const terminals = turnEvents.filter(
+        (event) => event.type === "turn.completed" || event.type === "turn.aborted",
+      );
+      expect(requestCount).toBe(4);
+      expect(result.terminalsBeforeContinuation).toEqual([]);
+      expect(result.duringCompactionContinuation).toContainEqual(
+        expect.objectContaining({ activeTurnId: result.turn.turnId, status: "running" }),
+      );
+      expect(turnEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(terminals).toHaveLength(1);
+      expect(terminals[0]).toMatchObject({
+        type: "turn.completed",
+        turnId: result.turn.turnId,
+        payload: { state: "completed" },
+      });
+      expect(
+        turnEvents.filter(
+          (event) =>
+            event.type === "content.delta" &&
+            event.payload.streamKind === "assistant_text" &&
+            event.payload.delta.includes("post-compaction success"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      releasePostCompaction();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("settles loaded no-Agent extension command and input outcomes exactly once", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-command-outcome-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000048");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "extensions", "noop.ts"),
+      [
+        "export default function setup(pi) {",
+        '  pi.registerCommand("noop", {',
+        '    description: "No Agent command",',
+        "    handler: async () => {},",
+        "  });",
+        '  pi.registerCommand("fail", {',
+        '    description: "Failing no Agent command",',
+        '    handler: async () => { throw new Error("private extension diagnostic"); },',
+        "  });",
+        '  pi.registerCommand("agent", {',
+        '    description: "Agent command",',
+        '    handler: async () => { pi.sendUserMessage("from command"); },',
+        "  });",
+        '  pi.registerCommand("mixed", {',
+        '    description: "Agent command that then fails",',
+        "    handler: async () => {",
+        '      pi.sendUserMessage("from failing command");',
+        '      throw new Error("private mixed extension diagnostic");',
+        "    },",
+        "  });",
+        '  pi.on("input", async (event) =>',
+        '    event.text === "handled input" ? { action: "handled" } : { action: "continue" },',
+        "  );",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    let releaseCommandAgentResponse!: () => void;
+    const commandAgentResponseGate = new Promise<void>((resolve) => {
+      releaseCommandAgentResponse = resolve;
+    });
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      if (requestCount === 1) await commandAgentResponseGate;
+      return piOpenAiSuccessResponse("next turn response");
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const requestsAfterStart = requestCount;
+            const commandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/noop",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === commandTurn.turnId,
+                  ),
+                "The no-Agent extension command did not settle.",
+              ),
+            );
+            const requestsAfterCommand = requestCount;
+            const afterCommand = yield* adapter.listSessions();
+            const failedCommandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/fail",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === failedCommandTurn.turnId,
+                  ),
+                "The failed no-Agent extension command did not settle.",
+              ),
+            );
+            const handledInputTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "handled input",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === handledInputTurn.turnId,
+                  ),
+                "The handled input hook did not settle.",
+              ),
+            );
+            const agentCommandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/agent",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => requestCount === requestsAfterStart + 1,
+                "The Agent-triggering extension command did not start its request.",
+              ),
+            );
+            const duringAgentCommand = yield* adapter.listSessions();
+            const agentCommandTerminalsBeforeResponse = events.filter(
+              (event) =>
+                event.turnId === agentCommandTurn.turnId &&
+                (event.type === "turn.completed" || event.type === "turn.aborted"),
+            );
+            yield* Effect.sync(releaseCommandAgentResponse);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === agentCommandTurn.turnId,
+                  ),
+                "The Agent-triggering extension command did not settle.",
+              ),
+            );
+            const mixedCommandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/mixed",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === mixedCommandTurn.turnId,
+                  ),
+                "The mixed Agent/command failure did not settle.",
+              ),
+            );
+            const nextTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "ordinary next turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === nextTurn.turnId,
+                  ),
+                "The turn after the extension command did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return {
+              afterCommand,
+              agentCommandTerminalsBeforeResponse,
+              agentCommandTurn,
+              commandTurn,
+              duringAgentCommand,
+              failedCommandTurn,
+              handledInputTurn,
+              mixedCommandTurn,
+              nextTurn,
+              requestsAfterCommand,
+              requestsAfterStart,
+            };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const commandEvents = events.filter((event) => event.turnId === result.commandTurn.turnId);
+      const agentCommandEvents = events.filter(
+        (event) => event.turnId === result.agentCommandTurn.turnId,
+      );
+      const failedCommandEvents = events.filter(
+        (event) => event.turnId === result.failedCommandTurn.turnId,
+      );
+      const handledInputEvents = events.filter(
+        (event) => event.turnId === result.handledInputTurn.turnId,
+      );
+      const mixedCommandEvents = events.filter(
+        (event) => event.turnId === result.mixedCommandTurn.turnId,
+      );
+      const nextEvents = events.filter((event) => event.turnId === result.nextTurn.turnId);
+      expect(result.requestsAfterCommand).toBe(result.requestsAfterStart);
+      expect(requestCount).toBe(result.requestsAfterStart + 3);
+      expect(result.afterCommand).toContainEqual(expect.objectContaining({ status: "ready" }));
+      expect(commandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(commandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({ state: "completed", stopReason: "command" }),
+        }),
+      ]);
+      expect(failedCommandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(failedCommandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            errorMessage: "The extension action could not be completed.",
+            state: "failed",
+            stopReason: "error",
+          }),
+        }),
+      ]);
+      expect(JSON.stringify(failedCommandEvents)).not.toContain("private extension diagnostic");
+      expect(handledInputEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(handledInputEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({ state: "completed", stopReason: "command" }),
+        }),
+      ]);
+      expect(result.agentCommandTerminalsBeforeResponse).toEqual([]);
+      expect(result.duringAgentCommand).toContainEqual(
+        expect.objectContaining({
+          activeTurnId: result.agentCommandTurn.turnId,
+          status: "running",
+        }),
+      );
+      expect(agentCommandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(agentCommandEvents.filter((event) => event.type === "turn.completed")).toHaveLength(1);
+      expect(mixedCommandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(mixedCommandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            errorMessage: "The extension action could not be completed.",
+            state: "failed",
+            stopReason: "error",
+          }),
+        }),
+      ]);
+      expect(JSON.stringify(mixedCommandEvents)).not.toContain(
+        "private mixed extension diagnostic",
+      );
+      expect(nextEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(nextEvents.filter((event) => event.type === "turn.completed")).toHaveLength(1);
+    } finally {
+      releaseCommandAgentResponse();
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("settles a stock Pi no-Agent extension command through the same typed outcome", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "stock-pi-command-outcome-"));
+    const agentDir = path.join(serverRoot, "pi-home");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000049");
+    mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "extensions", "noop.ts"),
+      [
+        "export default function setup(pi) {",
+        '  pi.registerCommand("noop", {',
+        '    description: "No Agent command",',
+        "    handler: async () => {},",
+        "  });",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return piOpenAiSuccessResponse("next stock Pi turn response");
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makePiAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* PiAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "pi",
+              threadId,
+              cwd,
+              providerOptions: { pi: { agentDir } },
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const commandTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "/noop",
+              attachments: [],
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === commandTurn.turnId,
+                  ),
+                "The stock Pi no-Agent command did not settle.",
+              ),
+            );
+            const nextTurn = yield* adapter.sendTurn({
+              threadId,
+              input: "ordinary stock Pi turn",
+              attachments: [],
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === nextTurn.turnId,
+                  ),
+                "The stock Pi turn after the command did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { commandTurn, nextTurn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const commandEvents = events.filter((event) => event.turnId === result.commandTurn.turnId);
+      const nextEvents = events.filter((event) => event.turnId === result.nextTurn.turnId);
+      expect(requestCount).toBe(1);
+      expect(commandEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(commandEvents.filter((event) => event.type === "turn.completed")).toEqual([
+        expect.objectContaining({
+          payload: expect.objectContaining({ state: "completed", stopReason: "command" }),
+        }),
+      ]);
+      expect(nextEvents.filter((event) => event.type === "turn.started")).toHaveLength(1);
+      expect(nextEvents.filter((event) => event.type === "turn.completed")).toHaveLength(1);
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });

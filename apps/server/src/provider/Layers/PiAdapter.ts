@@ -19,6 +19,7 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import type { AgentToolResult, ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
+import type { PromptOutcome as OmniMindPromptOutcome } from "@omnimind/pi-coding-agent";
 import {
   ApprovalRequestId,
   type ChatAttachment,
@@ -154,6 +155,28 @@ type PiCodingAgentModule = Pick<
 >;
 type PiAgentRuntime = Awaited<ReturnType<PiCodingAgentModule["createAgentSessionRuntime"]>>;
 type PiShellConfig = ReturnType<PiCodingAgentModule["getShellConfig"]>;
+type PiPromptSettlementEvent = {
+  readonly type: "prompt_handled";
+  readonly outcome: Extract<OmniMindPromptOutcome, { readonly kind: "handled-without-agent" }>;
+};
+type PiTurnSettlementInput = {
+  readonly state: "completed" | "failed" | "interrupted" | "cancelled";
+  readonly stopReason: string | null;
+  readonly usage: unknown;
+  readonly errorMessage?: string;
+};
+type PiTurnSettlement = {
+  readonly event: AgentSessionEvent | PiPromptSettlementEvent;
+  readonly input: PiTurnSettlementInput;
+  readonly runtimeError?: {
+    readonly message: string;
+    readonly method: string;
+  };
+};
+type PiPromptSubmission = {
+  readonly turnId: TurnId;
+  settlement?: PiTurnSettlement;
+};
 
 interface PiActiveProcess {
   readonly child: ChildProcess;
@@ -396,6 +419,7 @@ interface PiSessionContext {
   activeAssistantItemId: RuntimeItemId | undefined;
   activeReasoningItemId: RuntimeItemId | undefined;
   activeToolItems: Map<string, PiTrackedToolCall>;
+  pendingPromptSubmission: PiPromptSubmission | undefined;
   pendingUserInputs: Map<ApprovalRequestId, PiPendingUserInput>;
   stopped: boolean;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
@@ -1784,6 +1808,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       if (context.activeTurnId !== turnId) {
         return;
       }
+      if (context.pendingPromptSubmission?.turnId === turnId) {
+        context.pendingPromptSubmission = undefined;
+      }
 
       const message = toMessage(cause, `${displayName} turn failed.`);
       const failure = classifyPiTurnFailure(message);
@@ -1972,16 +1999,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
 
     const settlePiTurn = (
       context: PiSessionContext,
-      event: AgentSessionEvent,
-      input: {
-        readonly state: "completed" | "failed" | "interrupted" | "cancelled";
-        readonly stopReason: string | null;
-        readonly usage: unknown;
-        readonly errorMessage?: string;
-      },
+      event: AgentSessionEvent | PiPromptSettlementEvent,
+      input: PiTurnSettlementInput,
     ) => {
       const turnId = context.activeTurnId;
       if (!turnId) return;
+      if (context.pendingPromptSubmission?.turnId === turnId) {
+        context.pendingPromptSubmission = undefined;
+      }
       const completionBase = makeEventBase(context);
       if (context.gatewaySessionLease && context.gatewayConnection) {
         const outgoingLease = context.gatewaySessionLease;
@@ -2025,6 +2050,115 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       } satisfies ProviderRuntimeEvent);
     };
 
+    const finalizePiTurnSettlement = (context: PiSessionContext, settlement: PiTurnSettlement) => {
+      if (settlement.runtimeError) {
+        offerRuntimeError(context, {
+          message: settlement.runtimeError.message,
+          method: settlement.runtimeError.method,
+          messageType: settlement.event.type,
+          cause: settlement.event,
+        });
+      }
+      settlePiTurn(context, settlement.event, settlement.input);
+    };
+
+    const deferOrFinalizePiTurnSettlement = (
+      context: PiSessionContext,
+      settlement: PiTurnSettlement,
+    ) => {
+      const pending = context.pendingPromptSubmission;
+      if (pending && pending.turnId === context.activeTurnId) {
+        pending.settlement ??= settlement;
+        return;
+      }
+      finalizePiTurnSettlement(context, settlement);
+    };
+
+    const ensurePiTurnStarted = (
+      context: PiSessionContext,
+      event: AgentSessionEvent | PiPromptSettlementEvent,
+    ) => {
+      if (!context.activeTurnId || context.startedTurnId === context.activeTurnId) return;
+      context.startedTurnId = context.activeTurnId;
+      offerRuntimeEvent({
+        ...makeEventBase(context),
+        type: "turn.started",
+        payload: {
+          ...(context.runtime.session.model
+            ? {
+                model: `${context.runtime.session.model.provider}/${context.runtime.session.model.id}`,
+              }
+            : {}),
+          effort: context.runtime.session.thinkingLevel,
+        },
+        raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+      } satisfies ProviderRuntimeEvent);
+    };
+
+    const handlePromptOutcome = (
+      context: PiSessionContext,
+      turnId: TurnId,
+      outcome: OmniMindPromptOutcome | void,
+    ) => {
+      if (
+        context.activeTurnId !== turnId ||
+        outcome === undefined ||
+        outcome.kind !== "handled-without-agent"
+      ) {
+        return;
+      }
+      const event: PiPromptSettlementEvent = { type: "prompt_handled", outcome };
+      ensurePiTurnStarted(context, event);
+      const stats = context.runtime.session.getSessionStats();
+      if (!outcome.success) {
+        offerRuntimeError(context, {
+          message: "The extension action could not be completed.",
+          method: "prompt",
+          messageType: event.type,
+          cause: event,
+        });
+      }
+      settlePiTurn(context, event, {
+        state: outcome.success ? "completed" : "failed",
+        stopReason: outcome.success ? "command" : "error",
+        usage: stats,
+        ...(outcome.success
+          ? {}
+          : { errorMessage: "The extension action could not be completed." }),
+      });
+    };
+
+    const resolvePromptSubmission = (
+      context: PiSessionContext,
+      turnId: TurnId,
+      outcome: OmniMindPromptOutcome | void,
+    ) => {
+      const pending = context.pendingPromptSubmission;
+      if (!pending || pending.turnId !== turnId) return;
+      context.pendingPromptSubmission = undefined;
+      if (context.activeTurnId !== turnId) return;
+      if (outcome?.kind === "handled-without-agent") {
+        handlePromptOutcome(context, turnId, outcome);
+        return;
+      }
+      if (pending.settlement) {
+        finalizePiTurnSettlement(context, pending.settlement);
+      }
+    };
+
+    const submitPiPrompt = (
+      context: PiSessionContext,
+      turnId: TurnId,
+      text: string,
+      images: ReadonlyArray<ImageContent>,
+    ): Promise<OmniMindPromptOutcome | void> => {
+      context.pendingPromptSubmission = { turnId };
+      return context.runtime.session.prompt(
+        text,
+        images.length > 0 ? { images: [...images] } : undefined,
+      ) as Promise<OmniMindPromptOutcome | void>;
+    };
+
     const handleSessionEvent = (context: PiSessionContext, event: AgentSessionEvent) => {
       switch (event.type) {
         case "agent_start":
@@ -2036,21 +2170,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           } satisfies ProviderRuntimeEvent);
           return;
         case "turn_start": {
-          if (!context.activeTurnId || context.startedTurnId === context.activeTurnId) return;
-          context.startedTurnId = context.activeTurnId;
-          offerRuntimeEvent({
-            ...makeEventBase(context),
-            type: "turn.started",
-            payload: {
-              ...(context.runtime.session.model
-                ? {
-                    model: `${context.runtime.session.model.provider}/${context.runtime.session.model.id}`,
-                  }
-                : {}),
-              effort: context.runtime.session.thinkingLevel,
-            },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
-          } satisfies ProviderRuntimeEvent);
+          ensurePiTurnStarted(context, event);
           return;
         }
         case "message_update":
@@ -2235,23 +2355,17 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         case "auto_retry_end": {
           if (event.success || !context.activeTurnId) return;
-          const stats = context.runtime.session.getSessionStats();
-          const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
-          context.lastKnownTokenUsage = usage;
-          if (usage) {
-            offerRuntimeEvent({
-              ...makeEventBase(context),
-              type: "thread.token-usage.updated",
-              payload: { usage },
-              raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
-            } satisfies ProviderRuntimeEvent);
-          }
           const cancelled = event.finalError === "Retry cancelled";
-          settlePiTurn(context, event, {
-            state: cancelled ? "cancelled" : "failed",
-            stopReason: cancelled ? "cancelled" : "error",
-            usage: stats,
-            ...(event.finalError ? { errorMessage: event.finalError } : {}),
+          if (!cancelled) return;
+          const stats = context.runtime.session.getSessionStats();
+          deferOrFinalizePiTurnSettlement(context, {
+            event,
+            input: {
+              state: "cancelled",
+              stopReason: "cancelled",
+              usage: stats,
+              ...(event.finalError ? { errorMessage: event.finalError } : {}),
+            },
           });
           return;
         }
@@ -2261,7 +2375,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           context.lastKnownTokenUsage = usage;
           const turnId = context.activeTurnId;
           const errorMessage = context.runtime.session.agent.state.errorMessage;
-          const failure = errorMessage ? classifyPiTurnFailure(errorMessage) : undefined;
           const leafId = context.runtime.session.sessionManager.getLeafId();
           const turn = turnId
             ? context.turns.find((candidate) => candidate.id === turnId)
@@ -2276,30 +2389,31 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
             } satisfies ProviderRuntimeEvent);
           }
-          if (event.willRetry) {
-            context.session = makeSessionSnapshot(context, provider);
-            return;
-          }
-          if (errorMessage && failure?.state === "failed") {
-            offerRuntimeError(context, {
-              message: errorMessage,
-              method: "prompt",
-              messageType: event.type,
-              cause: event,
-            });
-          }
-          settlePiTurn(
-            context,
+          context.session = makeSessionSnapshot(context, provider);
+          return;
+        }
+        case "agent_settled": {
+          if (!context.activeTurnId) return;
+          const stats = context.runtime.session.getSessionStats();
+          const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
+          context.lastKnownTokenUsage = usage;
+          const errorMessage = context.runtime.session.agent.state.errorMessage;
+          const failure = errorMessage ? classifyPiTurnFailure(errorMessage) : undefined;
+          deferOrFinalizePiTurnSettlement(context, {
             event,
-            errorMessage && failure
-              ? {
-                  state: failure.state,
-                  stopReason: failure.stopReason,
-                  errorMessage,
-                  usage: stats,
-                }
-              : { state: "completed", stopReason: null, usage: stats },
-          );
+            input:
+              errorMessage && failure
+                ? {
+                    state: failure.state,
+                    stopReason: failure.stopReason,
+                    errorMessage,
+                    usage: stats,
+                  }
+                : { state: "completed", stopReason: null, usage: stats },
+            ...(errorMessage && failure?.state === "failed"
+              ? { runtimeError: { message: errorMessage, method: "prompt" } }
+              : {}),
+          });
           return;
         }
         default:
@@ -2533,6 +2647,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           activeAssistantItemId: undefined,
           activeReasoningItemId: undefined,
           activeToolItems: new Map(),
+          pendingPromptSubmission: undefined,
           pendingUserInputs: new Map(),
           stopped: false,
           lastKnownTokenUsage: undefined,
@@ -2841,11 +2956,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               resumeCursor: getSessionFile(context.runtime.session),
             };
           }
-          void context.runtime.session
-            .prompt(
-              payload.text,
-              payload.images.length > 0 ? { images: payload.images } : undefined,
-            )
+          void submitPiPrompt(context, turnId, payload.text, payload.images)
+            .then((outcome) => {
+              resolvePromptSubmission(context, turnId, outcome);
+            })
             .catch((cause) => {
               completePromptRejection(context, turnId, cause);
             });
@@ -2881,11 +2995,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 }),
             });
           } else {
-            void context.runtime.session
-              .prompt(
-                payload.text,
-                payload.images.length > 0 ? { images: payload.images } : undefined,
-              )
+            void submitPiPrompt(context, turnId, payload.text, payload.images)
+              .then((outcome) => {
+                resolvePromptSubmission(context, turnId, outcome);
+              })
               .catch((cause) => {
                 completePromptRejection(context, turnId, cause);
               });

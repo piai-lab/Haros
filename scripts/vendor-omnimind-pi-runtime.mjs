@@ -11,7 +11,8 @@ const PI_REVISION = "53fa77ccd8a279eb87e92294ef3687b03ff80112";
 const PI_VERSION = "0.84.1";
 const PI_AI_INTEGRITY =
   "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==";
-const PATCH_SHA256 = "05cff8561c3d6da27f9eb173484c2f35a44d9845ae3eb6d419a3493b3b5d7ad1";
+const PATCH_SHA256 = "bf2cd48f10e7b5c161404251bf179e1b07ba806b4901418aef66c8599bf27a65";
+const STOCK_PATCH_SHA256 = "a2619190f6d54c654679ff44180aaa9046c5edb03aa6ab67d94b615984fbdc90";
 const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -20,6 +21,11 @@ const PATCH_PATH = path.join(
   "patches",
   "pi-coding-agent",
   `${PI_VERSION}-model-config-reader.patch`,
+);
+const STOCK_PATCH_PATH = path.join(
+  REPOSITORY_ROOT,
+  "patches",
+  `@earendil-works%2Fpi-coding-agent@${PI_VERSION}.patch`,
 );
 
 function fail(message) {
@@ -73,6 +79,14 @@ export function assertPatchDigest(patchBytes) {
   const observed = sha256(patchBytes);
   if (observed !== PATCH_SHA256) {
     fail(`Pi source patch digest must be ${PATCH_SHA256}; observed ${observed}`);
+  }
+  return observed;
+}
+
+export function assertStockPatchDigest(patchBytes) {
+  const observed = sha256(patchBytes);
+  if (observed !== STOCK_PATCH_SHA256) {
+    fail(`Stock Pi dependency patch digest must be ${STOCK_PATCH_SHA256}; observed ${observed}`);
   }
   return observed;
 }
@@ -147,6 +161,7 @@ async function main() {
   const { source: requestedSource, output } = parseArguments(process.argv.slice(2));
   const patchBytes = await readFile(PATCH_PATH);
   const patchSha256 = assertPatchDigest(patchBytes);
+  assertStockPatchDigest(await readFile(STOCK_PATCH_PATH));
   const source = await realpath(requestedSource);
   const revision = run("git", ["rev-parse", "HEAD"], { cwd: source });
   if (revision !== PI_REVISION) {
@@ -175,6 +190,7 @@ async function main() {
         "test/model-runtime-config-reader.test.ts",
         "test/model-registry.test.ts",
         "test/model-runtime-modify-models-compat.test.ts",
+        "test/model-session-prompt-outcome.test.ts",
         "test/package-manager.test.ts",
         "test/resource-loader.test.ts",
       ],

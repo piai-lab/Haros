@@ -1,0 +1,196 @@
+diff --git a/dist/core/agent-session.d.ts b/dist/core/agent-session.d.ts
+index f37d1ccd41418199e1450f753de8d03b3205c83d..8eb08ef80e3096954dc44fe2e4ccd466c0fdb481 100644
+--- a/dist/core/agent-session.d.ts
++++ b/dist/core/agent-session.d.ts
+@@ -31,6 +31,15 @@ export interface ParsedSkillBlock {
+     content: string;
+     userMessage: string | undefined;
+ }
++/** Typed result of submitting input through the session prompt owner. */
++export type PromptOutcome = {
++    kind: "agent-run";
++} | {
++    kind: "handled-without-agent";
++    success: boolean;
++} | {
++    kind: "queued";
++};
+ /**
+  * Parse a skill block from message text.
+  * Returns null if the text doesn't contain a skill block.
+@@ -232,6 +241,7 @@ export declare class AgentSession {
+     private _extensionShutdownHandler?;
+     private _extensionErrorListener?;
+     private _extensionErrorUnsubscriber?;
++    private _extensionPromptAgentTasks;
+     private _modelRuntime;
+     private _toolRegistry;
+     private _toolDefinitions;
+@@ -352,7 +362,7 @@ export declare class AgentSession {
+      * @throws Error if streaming and no streamingBehavior specified
+      * @throws Error if no model selected or no API key available (when not streaming)
+      */
+-    prompt(text: string, options?: PromptOptions): Promise<void>;
++    prompt(text: string, options?: PromptOptions): Promise<PromptOutcome>;
+     private _tryExecuteExtensionCommand;
+     /**
+      * Expand skill commands (/skill:name args) to their full content.
+diff --git a/dist/core/agent-session.js b/dist/core/agent-session.js
+index ce8a9a2a613c08de483a6c94ef4f6341efff0457..2235be683f4164d890fd07c9cc20d7f1248fcd4f 100644
+--- a/dist/core/agent-session.js
++++ b/dist/core/agent-session.js
+@@ -125,6 +125,7 @@ export class AgentSession {
+     _extensionShutdownHandler;
+     _extensionErrorListener;
+     _extensionErrorUnsubscriber;
++    _extensionPromptAgentTasks;
+     _modelRuntime;
+     // Tool registry for extension getTools/setTools
+     _toolRegistry = new Map();
+@@ -797,11 +798,11 @@ export class AgentSession {
+             // Handle extension commands first (execute immediately, even during streaming)
+             // Extension commands manage their own LLM interaction via pi.sendMessage()
+             if (expandPromptTemplates && text.startsWith("/")) {
+-                const handled = await this._tryExecuteExtensionCommand(text);
+-                if (handled) {
++                const outcome = await this._tryExecuteExtensionCommand(text);
++                if (outcome) {
+                     // Extension command executed, no prompt to send
+-                    preflightResult?.(true);
+-                    return;
++                    preflightResult?.(outcome.kind !== "handled-without-agent" || outcome.success);
++                    return outcome;
+                 }
+             }
+             if (this._compactionAbortController !== undefined) {
+@@ -811,10 +812,24 @@ export class AgentSession {
+             let currentText = text;
+             let currentImages = options?.images;
+             if (this._extensionRunner.hasHandlers("input")) {
+-                const inputResult = await this._extensionRunner.emitInput(currentText, currentImages, options?.source ?? "interactive", this.isStreaming ? options?.streamingBehavior : undefined);
++                const previousTasks = this._extensionPromptAgentTasks;
++                const inputAgentTasks = new Set();
++                this._extensionPromptAgentTasks = inputAgentTasks;
++                let inputResult;
++                try {
++                    inputResult = await this._extensionRunner.emitInput(currentText, currentImages, options?.source ?? "interactive", this.isStreaming ? options?.streamingBehavior : undefined);
++                }
++                finally {
++                    this._extensionPromptAgentTasks = previousTasks;
++                }
+                 if (inputResult.action === "handled") {
+-                    preflightResult?.(true);
+-                    return;
++                    const agentResults = await Promise.allSettled(inputAgentTasks);
++                    const success = !agentResults.some((result) => result.status === "rejected");
++                    const outcome = inputAgentTasks.size > 0 && success
++                        ? { kind: "agent-run" }
++                        : { kind: "handled-without-agent", success };
++                    preflightResult?.(outcome.kind !== "handled-without-agent" || outcome.success);
++                    return outcome;
+                 }
+                 if (inputResult.action === "transform") {
+                     currentText = inputResult.text;
+@@ -839,7 +854,7 @@ export class AgentSession {
+                     await this._queueSteer(expandedText, currentImages);
+                 }
+                 preflightResult?.(true);
+-                return;
++                return { kind: "queued" };
+             }
+             // Flush any pending bash messages before the new prompt
+             this._flushPendingBashMessages();
+@@ -913,13 +928,16 @@ export class AgentSession {
+             throw error;
+         }
+         if (!messages) {
+-            return;
++            return { kind: "handled-without-agent", success: true };
+         }
+         preflightResult?.(true);
+         await this._runAgentPrompt(messages);
++        return { kind: "agent-run" };
+     }
+     /**
+-     * Try to execute an extension command. Returns true if command was found and executed.
++     * Try to execute an extension command. Returns undefined when no command matches.
++     * Agent work scheduled through the extension API is owned to completion before
++     * the prompt outcome is returned, so callers never infer this from timing.
+      */
+     async _tryExecuteExtensionCommand(text) {
+         // Parse command name and args
+@@ -928,22 +946,34 @@ export class AgentSession {
+         const args = spaceIndex === -1 ? "" : text.slice(spaceIndex + 1);
+         const command = this._extensionRunner.getCommand(commandName);
+         if (!command)
+-            return false;
++            return undefined;
+         // Get command context from extension runner (includes session control methods)
+         const ctx = this._extensionRunner.createCommandContext();
++        const previousTasks = this._extensionPromptAgentTasks;
++        const commandAgentTasks = new Set();
++        this._extensionPromptAgentTasks = commandAgentTasks;
++        let success = true;
+         try {
+             await command.handler(args, ctx);
+-            return true;
+         }
+         catch (err) {
++            success = false;
+             // Emit error via extension runner
+             this._extensionRunner.emitError({
+                 extensionPath: `command:${commandName}`,
+                 event: "command",
+                 error: err instanceof Error ? err.message : String(err),
+             });
+-            return true;
+         }
++        finally {
++            this._extensionPromptAgentTasks = previousTasks;
++        }
++        const agentResults = await Promise.allSettled(commandAgentTasks);
++        if (agentResults.some((result) => result.status === "rejected"))
++            success = false;
++        if (commandAgentTasks.size > 0 && success)
++            return { kind: "agent-run" };
++        return { kind: "handled-without-agent", success };
+     }
+     /**
+      * Expand skill commands (/skill:name args) to their full content.
+@@ -1844,7 +1874,11 @@ export class AgentSession {
+         };
+         runner.bindCore({
+             sendMessage: (message, options) => {
+-                this.sendCustomMessage(message, options).catch((err) => {
++                const promptAgentTasks = this._extensionPromptAgentTasks;
++                const task = this.sendCustomMessage(message, options);
++                if (options?.triggerTurn)
++                    promptAgentTasks?.add(task);
++                task.catch((err) => {
+                     runner.emitError({
+                         extensionPath: "<runtime>",
+                         event: "send_message",
+@@ -1853,7 +1887,10 @@ export class AgentSession {
+                 });
+             },
+             sendUserMessage: (content, options) => {
+-                this.sendUserMessage(content, options).catch((err) => {
++                const promptAgentTasks = this._extensionPromptAgentTasks;
++                const task = this.sendUserMessage(content, options);
++                promptAgentTasks?.add(task);
++                task.catch((err) => {
+                     runner.emitError({
+                         extensionPath: "<runtime>",
+                         event: "send_user_message",
+diff --git a/dist/index.d.ts b/dist/index.d.ts
+index 7d3e24ca0fa8a45cb1acc39ff1cbfddf593e9817..750a564a19a42fcf83c77a2733772461a6f14efb 100644
+--- a/dist/index.d.ts
++++ b/dist/index.d.ts
+@@ -1,6 +1,6 @@
+ export { type Args, parseArgs } from "./cli/args.ts";
+ export { CONFIG_DIR_NAME, getAgentDir, getDocsPath, getExamplesPath, getPackageDir, getReadmePath, VERSION, } from "./config.ts";
+-export { AgentSession, type AgentSessionConfig, type AgentSessionEvent, type AgentSessionEventListener, type ModelCycleResult, type ParsedSkillBlock, type PromptOptions, parseSkillBlock, type SessionStats, } from "./core/agent-session.ts";
++export { AgentSession, type AgentSessionConfig, type AgentSessionEvent, type AgentSessionEventListener, type ModelCycleResult, type ParsedSkillBlock, type PromptOptions, type PromptOutcome, parseSkillBlock, type SessionStats, } from "./core/agent-session.ts";
+ export { readStoredCredential } from "./core/auth-storage.ts";
+ export { type BranchPreparation, type BranchSummaryResult, type CollectEntriesResult, type CompactionResult, type CutPointResult, calculateContextTokens, collectEntriesForBranchSummary, compact, DEFAULT_COMPACTION_SETTINGS, estimateTokens, type FileOperations, findCutPoint, findTurnStartIndex, type GenerateBranchSummaryOptions, generateBranchSummary, generateSummary, generateSummaryWithUsage, getLastAssistantUsage, prepareBranchEntries, serializeConversation, shouldCompact, } from "./core/compaction/index.ts";
+ export { createEventBus, type EventBus, type EventBusController } from "./core/event-bus.ts";

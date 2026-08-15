@@ -101,6 +101,7 @@
   },
   "patchedDependencies": {
     "@effect/platform-node-shared@https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node-shared@8881a9b606d84a6f5eb6615279138322984f5368": "patches/@effect%2Fplatform-node-shared@8881a9b.patch",
-    "@earendil-works/pi-ai@0.84.1": "patches/@earendil-works%2Fpi-ai@0.84.1.patch"
+    "@earendil-works/pi-ai@0.84.1": "patches/@earendil-works%2Fpi-ai@0.84.1.patch",
+    "@earendil-works/pi-coding-agent@0.84.1": "patches/@earendil-works%2Fpi-coding-agent@0.84.1.patch"
   }
 }
