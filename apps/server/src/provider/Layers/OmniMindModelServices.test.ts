@@ -911,6 +911,62 @@ describe("OmniMindModelServicesLive", () => {
     await expect(stat(path.join(providerHome, ".pi"))).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("projects a prepared credential runtime without starting another full availability refresh", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    await mkdir(path.join(root, "agent"), { recursive: true });
+    const sdk = await import("@omnimind/pi-coding-agent");
+    const unexpectedRefresh = vi.fn(async () => {
+      throw new Error("prepared runtime projection must not refresh every provider");
+    });
+    const loadModule = async () =>
+      ({
+        ...sdk,
+        ModelRuntime: new Proxy(sdk.ModelRuntime, {
+          get(target, property, receiver) {
+            if (property !== "create") return Reflect.get(target, property, receiver);
+            return async (...args: Parameters<typeof sdk.ModelRuntime.create>) => {
+              const runtime = await sdk.ModelRuntime.create(...args);
+              return new Proxy(runtime, {
+                get(runtimeTarget, runtimeProperty, runtimeReceiver) {
+                  if (runtimeProperty === "refresh") return unexpectedRefresh;
+                  const value = Reflect.get(runtimeTarget, runtimeProperty, runtimeReceiver);
+                  return typeof value === "function" ? value.bind(runtimeTarget) : value;
+                },
+              });
+            };
+          },
+        }),
+      }) as OmniMindCodingAgentModule;
+    const layer = makeTestLayer({ root, loadModule });
+
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(71, {
+          serviceId: "deepseek",
+          authType: "api_key",
+        });
+        if (begin.state !== "prompt") throw new Error("Expected the Pi API-key prompt");
+        return yield* service.answerLogin(71, {
+          requestId: begin.requestId,
+          promptId: begin.prompt.promptId,
+          value: "test-only-api-key",
+        });
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(unexpectedRefresh).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      state: "complete",
+      service: {
+        serviceId: "deepseek",
+        authState: "configured",
+        availableModelCount: 2,
+      },
+    });
+  });
+
   it("exposes builtin OAuth without inventing API-key capability", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);

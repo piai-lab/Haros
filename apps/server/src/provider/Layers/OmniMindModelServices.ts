@@ -898,7 +898,15 @@ async function projectModelServices(input: {
   };
 
   let runtime = input.preparedRuntime ?? (await createProjectionRuntime());
-  let refresh = await refreshProjectionRuntime(runtime);
+  // A prepared runtime has already been refreshed or credential-synchronized by
+  // the mutation owner. Projection must stay read-only instead of starting a
+  // second all-provider availability pass while that mutation is still open.
+  let refresh = input.preparedRuntime
+    ? { aborted: false, errors: new Map<string, Error>() }
+    : await refreshProjectionRuntime(runtime);
+  if (input.preparedRuntime && runtime.getError() !== undefined) {
+    throw new Error("OmniMind model-services prepared runtime is unavailable");
+  }
   let extensionProjectionState = input.preparedExtensionProjectionState;
   if (input.intent === "add_service" && !input.preparedRuntime) {
     let extensionServices: OmniMindExtensionServices | undefined;
@@ -1427,7 +1435,15 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   return;
                 }
                 let catalogFailed = false;
-                if (runtime.getProvider(request.serviceId)?.refreshModels) {
+                // Credential synchronization already makes known static/last-good models
+                // available. Do not turn API-key or OAuth completion into an unrelated
+                // network catalog refresh when the service is ready to use; the explicit
+                // refresh action remains the owner of that request. A dynamic provider
+                // with no usable catalog still gets the one-click post-login refresh.
+                if (
+                  service.availableModelCount === 0 &&
+                  runtime.getProvider(request.serviceId)?.refreshModels
+                ) {
                   if (request.controller.signal.aborted) {
                     catalogFailed = true;
                   } else {
