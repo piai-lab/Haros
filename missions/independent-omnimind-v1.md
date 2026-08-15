@@ -180,6 +180,14 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Packaged/live candidate：任务隔离root `/var/tmp/omnimind-970d-profile.aZ6aEh` 在任何窗口操作前再次证明Main、GPU/Network Helper、Renderer与bundled Server均使用task-specific HOME、userData、`OMNIMIND_HOME`、XDG与TMP，Server仅监听`127.0.0.1`。维护者明确授权后，先在installed App删除隔离DeepSeek credential，再从进程内秘密来源重新输入；认证独立完成，同时自动目录刷新进入“正在刷新”，20秒hard bound内terminal为失败，mutation与按钮恢复可用，authoritative last-good始终保持`2 known / 2 available`。同一进程中Composer精确选择`DeepSeek V4 Flash`并完成真实`FINAL_DAC46_REFRESH_OK` turn（UI报告约`2.6s`）；全部App进程退出为零后，以同一隔离root重开，credential、exact model、Conversation与既有附件均恢复，Settings仍为`2/2`，随后验证实例再次完整退出。默认profile未作为输入；key、endpoint、账号或原始响应未进入聊天、Git、命令行、日志、截图或artifact。
 - Boundary：当前SHA闭合login与自动post-login catalog的独立状态、hard bound、last-good保留、同进程首发及同隔离root退出重开；它复用既有任务隔离profile完成删除/重连，不把该步骤冒充一次全新空profile的首启旅程。安全Advanced只承诺typed、credential-blind子集与受限write-only reference能力，不声称任意raw/command headers、任意compat/sampling或未来Pi字段均已暴露。artifact仍为ad-hoc；Apple signing/notary、Windows Trusted Signing、Windows/Linux native journey与full fresh completion audit继续blocked。
 
+### Final fresh-empty Model services + Composer packaged candidate — 2026-08-15
+
+- Exact product/evidence：installed App仍为exact pushed product `dac46ac6114a674614b9c9c653cf533cfc9ef43b`；branch evidence HEAD `0ce0633e75a4c5a58c45085e162fcd23c1f21ddd`只增加Mission记录，不改变shipped bytes。任务专用fresh root `/var/tmp/omnimind-dac-final-empty.dCFEvv`从真正无credential、无可用Engine/model事实启动；Main、GPU/Network Helper、Renderer与bundled Server在任何窗口操作前均被证明使用该root下的HOME、userData、`OMNIMIND_HOME`、XDG与TMP，Main/Server PATH固定为`/usr/bin:/bin:/usr/sbin:/sbin`，Server cwd为task HOME且只监听`127.0.0.1`。task HOME全程不存在`.pi`或`.omnimind`，凭据只进入product-owned `omnimind-home/agent/auth.json`且mode `0600`。
+- Fresh-empty user journey：Chat在whole-product无sendable exact selection时直接显示克制的“配置模型后开始”surface；原Composer写入marker并附加`favicon-32.png`后进入Add。Add为搜索优先的单列紧凑列表，首屏明确分为推荐/其他服务，并保留弱一级可用的API地址入口；DeepSeek detail独立呈现认证与`2 known / 0 available`。维护者授权后从进程内秘密来源输入API Key，raw key未进入Git、argv、日志、截图、artifact或本Mission；login独立完成，自动dynamic catalog refresh在20秒bound内结算并得到`2 known / 2 available`，随后exact handoff回原Chat，marker与附件均保持，Composer选择`DeepSeek V4 Flash`。首条真实turn只dispatch一次，约21秒完成；上游诚实报告该模型不支持图片，但text与exact model均成功，未伪装图片已发送。
+- Full exit/reopen：全部任务App进程归零后，以同一显式task root和最小shell环境重开；再次证明Main、两类Helper、Renderer与bundled Server路径一致、Server仅loopback。原Conversation、marker、附件、exact `DeepSeek V4 Flash` selection与Provider回复均恢复，Settings仍为DeepSeek已配置、`2 known / 2 available`，首启surface不再重复出现；随后App再次完整退出且进程归零。
+- Final language/layout/a11y/visual review：安装App先在简中完成setup、auth、catalog、handoff与reopen，再切English核对Overview/Add/detail/auth/catalog主文案；正常Add行只显示本地化`API Key`/`Sign in`，没有raw Pi/runtime label。真实键盘路径证明Add搜索自动聚焦、Tab/Enter进入detail后Back获得焦点、返回恢复搜索与原服务焦点、Escape先清空搜索再退出Add并把焦点还给`Add model service`。AX tree中的service row、Back、search、attachment与icon-only controls均有稳定名称，行内decorative品牌图标未制造重复可访问名称。窗口缩到App允许的最小宽度后Overview与Add仍无横向溢出、卡片墙或隐藏主动作；Light与Dark实屏均确认DeepSeek与推荐服务图标大小/对齐正确，monochrome与彩色品牌在两种背景均可见。
+- Candidate boundary：该证据关闭本任务原始用户主线的final exact fresh-empty packaged journey与最终简中/英文、窄宽度、键盘/screen-reader、light/dark复核，等待fresh independent completion judge后裁决current product candidate。安全Advanced仍只承诺typed、credential-blind安全子集；Queue/automation不属于direct Composer自动回填，Chat synthetic空model仍是presentation debt，Provider native Session与Product SQLite不伪装成跨进程事务。Agent Core不属于本任务；两条用户拥有的research路径未stage、未覆盖。
+
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 4. Internal acceptance priority
@@ -209,7 +217,7 @@ F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 7. Blockers
 
-F-18 保留以下由维护者明确暂停的外部门：Apple signing/notary、Windows Trusted Signing、Windows/Linux 原生 install/open journey，以及独立 fresh-context completion audit。当前只记录，不施工、不追问；恢复时优先走既有 GitHub Actions build-only runner，且不得把 Actions artifact 上传误记为公开发行。
+Apple signing/notary、Windows Trusted Signing与Windows/Linux原生install/open journey已由维护者明确交给工程部，属于external engineering handoff / out of current Model services + Composer scope；它们没有完成或verified，但不再阻塞本次product candidate，当前会话不施工、不等待、不追问。现有普通Linux-only CI与same-ref cancellation保持；macOS/Windows仅manual/tag build-only，继续不创建Release、不发布、不改update feed、不恢复复杂矩阵或重复smoke。当前唯一剩余完成门是上方final exact fresh-empty packaged证据的fresh independent completion judge。
 
 ## 8. Done
 
