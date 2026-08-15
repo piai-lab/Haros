@@ -189,6 +189,12 @@ V1 保留 `Agent | Chat`，但 Agent/Chat/Groups 直接复用 Projects/Threads/S
 - Superseded completion verdict：fresh judge曾以exact product `dac46ac6114a674614b9c9c653cf533cfc9ef43b` / evidence `900a9c88e`独立核对SQLite exact binding、唯一user/assistant turn、claimed附件、隔离文件权限与退出状态，并顺序复跑Server `61/61`、packaged-owner browser `42/42`，当时结论`CLEAN`。随后对pinned Pi默认Session surface的更深审计发现当前PiAdapter把`agent_end(willRetry:true)`错误映射为terminal completed/failed并提前清理active turn/lease，默认auto-retry随后继续输出时可造成双终态与孤儿stream；该P1不在此前UI journey与focused gates覆盖内，因此原completion verdict已被当前反例取代，不能继续作为本任务完成结论。
 - Current boundary：fresh-empty setup与最终简中/英文、窄宽度、键盘/screen-reader、light/dark证据仍真实保留，但current product candidate重新进入BLOCKED/ACTIVE，直到既有PiAdapter event owner闭合auto-retry的single-terminal语义、exact pushed/packaged回归与fresh judge通过。安全Advanced仍只承诺typed、credential-blind安全子集；Queue/automation不属于direct Composer自动回填，Chat synthetic空model仍是presentation debt，Provider native Session与Product SQLite不伪装成跨进程事务。Agent Core不属于本任务；两条用户拥有的research路径未stage、未覆盖。
 
+### Pi default auto-retry source candidate — 2026-08-15
+
+- Exact pushed product SHA `72149a2fd7ffe2d6270514a6af15a592d2592660`在既有PiAdapter event owner内识别pinned Pi `agent_end.willRetry`与`auto_retry_start/end`。可重试attempt只结束本次assistant/reasoning/tool items并保留同一active turn与gateway lease；成功和耗尽只由最终`agent_end(willRetry:false)`结算，backoff期间取消只由`auto_retry_end(finalError="Retry cancelled")`结算。没有新增retry store、registry、public contract或第二lifecycle owner。
+- Source proof：真实pinned Pi success/exhaustion/backoff-abort三条反例`3/3`，PiAdapter全文件`28/28`，runtime activity projection与schema `15/15`，ProviderRuntimeIngestion warning/terminal相邻反例`6/6`，Server/Web typecheck、en/zh actual-value、targeted format/lint与diff-check均通过。成功反例同时证明首个retryable `agent_end`后Session仍running且zero terminal、最终与下一turn各exact one terminal、content delta不跨turn；耗尽和取消各exact one terminal。Fresh Judge对dirty source delta独立复核结论`CLEAN`、未见P0/P1，但明确没有把该结论扩张为installed artifact。
+- Current boundary：原auto-retry源码P1已闭合，任务仍保持ACTIVE，直到从本exact pushed SHA重建安装App、以任务隔离profile完成相关packaged regression并由fresh judge复核。此前exact `dac46ac61…` 的fresh-empty A–D、双语/布局/键盘/AX与light/dark证据仍是真实历史基线，但不能证明当前shipped bytes包含本修复。
+
 F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 4. Internal acceptance priority
@@ -218,8 +224,8 @@ F-13 与 F-15 保留为历史 ID，不复用。Remote/SSH 继续 V2。
 
 ## 7. Blockers
 
-当前in-scope blocker为PiAdapter默认auto-retry生命周期：`agent_end(willRetry:true)`不得terminalize、release lease或清除active turn，最终成功、重试耗尽与backoff期间abort必须各自产生exact one terminal结果；修复后仍需exact pushed/packaged回归与fresh judge。Apple signing/notary、Windows Trusted Signing与Windows/Linux原生install/open journey已由维护者明确交给工程部，属于external engineering handoff / out of current Model services + Composer scope；它们没有完成或verified，但不阻塞本次product candidate，当前会话不施工、不等待、不追问。现有普通Linux-only CI与same-ref cancellation保持；macOS/Windows仅manual/tag build-only，继续不创建Release、不发布、不改update feed、不恢复复杂矩阵或重复smoke。
+PiAdapter默认auto-retry源码P1已在exact pushed `72149a2fd…`闭合；当前唯一in-scope completion gate是从该exact SHA重建安装App、以任务隔离profile完成相关packaged regression并取得fresh judge。Apple signing/notary、Windows Trusted Signing与Windows/Linux原生install/open journey已由维护者明确交给工程部，属于external engineering handoff / out of current Model services + Composer scope；它们没有完成或verified，但不阻塞本次product candidate，当前会话不施工、不等待、不追问。现有普通Linux-only CI与same-ref cancellation保持；macOS/Windows仅manual/tag build-only，继续不创建Release、不发布、不改update feed、不恢复复杂矩阵或重复smoke。
 
 ## 8. Done
 
-Not done. Original Model services + Composer当前产品任务因PiAdapter默认auto-retry single-terminal P1重新进入BLOCKED/ACTIVE；此前fresh UI/packaged证据保留但不能覆盖该未闭合Session语义。
+Not done. Original Model services + Composer当前产品任务的auto-retry source blocker已闭合，但exact `72149a2fd…`的安装产物、隔离packaged regression与fresh completion judge尚未完成；此前fresh UI/packaged证据保留但不能覆盖当前shipped bytes。
