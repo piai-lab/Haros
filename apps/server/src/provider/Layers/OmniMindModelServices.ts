@@ -85,6 +85,7 @@ const CUSTOM_API_PROTOCOLS = [
 const CUSTOM_CONNECTION_TEST_PROMPT = "Reply with OK.";
 const CUSTOM_CONNECTION_TEST_TIMEOUT_MS = 20_000;
 const CUSTOM_MODEL_DISCOVERY_TIMEOUT_MS = 20_000;
+const MODEL_SERVICE_REFRESH_TIMEOUT_MS = 20_000;
 const CUSTOM_MODEL_THINKING_LEVELS = [
   "off",
   "minimal",
@@ -117,6 +118,7 @@ export interface OmniMindModelServicesLiveOptions {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: ReadTextFile;
   readonly authRequestTimeoutMs?: number;
+  readonly modelServiceRefreshTimeoutMs?: number;
   readonly customConnectionTestTimeoutMs?: number;
   readonly customModelDiscoveryTimeoutMs?: number;
 }
@@ -1419,7 +1421,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 }
                 authenticationUpdated = true;
                 publishOmniMindModelRuntimeMutation(agentDir);
-                let service = await projectPreparedService({
+                const service = await projectPreparedService({
                   serviceId: request.serviceId,
                   runtime,
                   extensionLoaded,
@@ -1434,38 +1436,11 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   });
                   return;
                 }
-                let catalogFailed = false;
-                // Credential synchronization already makes known static/last-good models
-                // available. Do not turn API-key or OAuth completion into an unrelated
-                // network catalog refresh when the service is ready to use; the explicit
-                // refresh action remains the owner of that request. A dynamic provider
-                // with no usable catalog still gets the one-click post-login refresh.
-                if (
-                  service.availableModelCount === 0 &&
-                  runtime.getProvider(request.serviceId)?.refreshModels
-                ) {
-                  if (request.controller.signal.aborted) {
-                    catalogFailed = true;
-                  } else {
-                    const refreshed = await runtime.refresh({
-                      providers: [request.serviceId],
-                      allowNetwork: true,
-                      force: true,
-                      signal: request.controller.signal,
-                    });
-                    catalogFailed = refreshed.aborted || refreshed.errors.has(request.serviceId);
-                    if (!catalogFailed) {
-                      service = await projectPreparedService({
-                        serviceId: request.serviceId,
-                        runtime,
-                        extensionLoaded,
-                        signal: new AbortController().signal,
-                      });
-                    }
-                  }
-                }
+                // Login owns credential completion only. The Web immediately presents this
+                // result, then invokes the existing provider-scoped refresh mutation as a
+                // separate observable operation for dynamic catalogs.
                 finishRequest(request, {
-                  state: catalogFailed ? "auth_updated_catalog_failed" : "complete",
+                  state: "complete",
                   requestId: request.requestId,
                   service,
                   events: [...request.events],
@@ -1726,8 +1701,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
             ),
           ),
         refresh: (input) =>
-          Effect.promise((signal) =>
-            serializeMutation(() =>
+          Effect.promise((requestSignal) => {
+            const timeoutSignal = AbortSignal.timeout(
+              options.modelServiceRefreshTimeoutMs ?? MODEL_SERVICE_REFRESH_TIMEOUT_MS,
+            );
+            const signal = AbortSignal.any([requestSignal, timeoutSignal]);
+            return serializeMutation(() =>
               withMutationRuntimeForService(
                 input.serviceId,
                 input.origin,
@@ -1748,7 +1727,12 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                     force: true,
                     signal,
                   });
-                  if (refreshed.aborted) return { state: "cancelled", service: previous } as const;
+                  if (refreshed.aborted) {
+                    return {
+                      state: requestSignal.aborted ? "cancelled" : "failed",
+                      service: previous,
+                    } as const;
+                  }
                   if (refreshed.errors.has(input.serviceId)) {
                     return { state: "failed", service: previous } as const;
                   }
@@ -1764,8 +1748,8 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                   } as const;
                 },
               ),
-            ),
-          ),
+            );
+          }),
         discoverCustom: (input) =>
           Effect.promise(async (requestSignal) => {
             if (input.config.serviceId === null && input.credential.type === "preserve") {

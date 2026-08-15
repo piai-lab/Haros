@@ -2234,14 +2234,23 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("sends API-key prompts only to Pi and clears the secret after completion", async () => {
+  it("completes a static API-key service without starting a catalog refresh", async () => {
     const setupService = service({
+      serviceId: "static-provider",
+      providerId: "static-provider",
+      displayName: "Static Provider",
       authState: "setup_required",
       authSource: null,
       storedCredentialType: null,
       availableModelCount: 0,
+      supportsNetworkRefresh: false,
     });
-    const configuredService = service();
+    const configuredService = service({
+      serviceId: "static-provider",
+      providerId: "static-provider",
+      displayName: "Static Provider",
+      supportsNetworkRefresh: false,
+    });
     const requestId = "00000000-0000-4000-8000-000000000011";
     const promptId = "00000000-0000-4000-8000-000000000012";
     const beginLogin = vi.fn(async () => ({
@@ -2274,7 +2283,7 @@ describe("ModelsSettingsPanel model services", () => {
     });
 
     await mounted.screen
-      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"Static Provider"}' })
       .click();
     await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
     const secretInput = mounted.screen.getByLabelText("settings.modelServicePromptSecret");
@@ -2288,12 +2297,612 @@ describe("ModelsSettingsPanel model services", () => {
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
     expect(beginLogin).toHaveBeenCalledWith(
-      { serviceId: "deepseek", authType: "api_key" },
+      { serviceId: "static-provider", authType: "api_key" },
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     await expect.poll(() => document.body.textContent).toContain("settings.modelServiceAuthSaved");
+    expect(mounted.calls.refresh).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toContain("browser-test-secret");
     expect(document.querySelector('input[type="password"]')).toBeNull();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("presents saved authentication before refreshing a dynamic last-good catalog", async () => {
+    let currentService = service({
+      serviceId: "extension-catalog",
+      providerId: "extension-catalog",
+      displayName: "Extension Catalog",
+      origin: "extension",
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      knownModelCount: 2,
+      availableModelCount: 0,
+      supportsNetworkRefresh: true,
+    });
+    const configuredService = service({
+      serviceId: "extension-catalog",
+      providerId: "extension-catalog",
+      displayName: "Extension Catalog",
+      origin: "extension",
+      authState: "configured",
+      authSource: "stored",
+      storedCredentialType: "api_key",
+      knownModelCount: 2,
+      availableModelCount: 1,
+      supportsNetworkRefresh: true,
+    });
+    const requestId = "00000000-0000-4000-8000-000000000111";
+    const promptId = "00000000-0000-4000-8000-000000000112";
+    const beginLogin = vi.fn(async () => ({
+      state: "prompt" as const,
+      requestId,
+      prompt: { promptId, type: "secret" as const, message: "Enter API key" },
+      events: [],
+    }));
+    const answerLogin = vi.fn(async () => {
+      currentService = configuredService;
+      return { state: "complete" as const, requestId, service: configuredService, events: [] };
+    });
+    let finishRefresh!: (
+      result: Awaited<ReturnType<NativeApi["omnimindModelServices"]["refresh"]>>,
+    ) => void;
+    const refresh = vi.fn(
+      () =>
+        new Promise<Awaited<ReturnType<NativeApi["omnimindModelServices"]["refresh"]>>>(
+          (resolve) => {
+            finishRefresh = resolve;
+          },
+        ),
+    );
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services: [currentService],
+        connectableServices: [],
+        errorCode: null,
+      }),
+      get: async () => ({ state: "ready", service: currentService, errorCode: null }),
+      beginLogin,
+      answerLogin,
+      refresh,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"Extension Catalog"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+    await mounted.screen
+      .getByLabelText("settings.modelServicePromptSecret")
+      .fill("browser-test-secret");
+    await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+
+    await expect.poll(() => document.body.textContent).toContain("settings.modelServiceAuthSaved");
+    expect(beginLogin).toHaveBeenCalledWith(
+      { serviceId: "extension-catalog", authType: "api_key", origin: "extension" },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    await expect
+      .poll(() => refresh)
+      .toHaveBeenCalledWith(
+        { serviceId: "extension-catalog", origin: "extension" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
+    expect(document.body.textContent).toContain("settings.modelServiceRefreshing");
+    expect(document.body.textContent).toContain(
+      'settings.modelServiceModelCounts:{"known":2,"available":1}',
+    );
+    finishRefresh({ state: "failed", service: configuredService });
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceRefreshFailed");
+    expect(document.body.textContent).toContain(
+      'settings.modelServiceModelCounts:{"known":2,"available":1}',
+    );
+    expect(document.body.textContent).not.toContain("browser-test-secret");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it.each([0, 1])(
+    "uses authoritative last-good models after a failed automatic refresh (available=%s)",
+    async (availableModelCount) => {
+      const setupService = service({
+        authState: "setup_required",
+        authSource: null,
+        storedCredentialType: null,
+        availableModelCount: 0,
+        supportsNetworkRefresh: true,
+      });
+      const configuredService = service({
+        authState: "configured",
+        availableModelCount,
+        supportsNetworkRefresh: true,
+      });
+      let currentService = setupService;
+      const requestId = availableModelCount
+        ? "00000000-0000-4000-8000-000000000151"
+        : "00000000-0000-4000-8000-000000000152";
+      const promptId = availableModelCount
+        ? "00000000-0000-4000-8000-000000000153"
+        : "00000000-0000-4000-8000-000000000154";
+      const onSetupReady = vi.fn();
+      const mounted = await renderPanel({
+        startInAddFlow: true,
+        onSetupReady,
+        list: async (input) => {
+          if (input?.intent || currentService === configuredService) {
+            return {
+              state: "ready",
+              services: currentService === configuredService ? [configuredService] : [],
+              connectableServices: currentService === setupService ? [setupService] : [],
+              errorCode: null,
+            } as const;
+          }
+          return {
+            state: "empty",
+            services: [],
+            connectableServices: [setupService],
+            errorCode: null,
+          } as const;
+        },
+        get: async () => ({
+          state: "ready",
+          service: currentService,
+          ...(currentService === configuredService && availableModelCount > 0
+            ? {
+                models: [
+                  {
+                    modelId: "deepseek-v4-flash",
+                    displayName: "DeepSeek V4 Flash",
+                    available: true,
+                    reasoning: true,
+                    input: ["text"],
+                    contextWindow: 128_000,
+                    maxTokens: 16_384,
+                  },
+                ],
+              }
+            : {}),
+          errorCode: null,
+        }),
+        beginLogin: async () => ({
+          state: "prompt",
+          requestId,
+          prompt: { promptId, type: "secret", message: "Enter API key" },
+          events: [],
+        }),
+        answerLogin: async () => {
+          currentService = configuredService;
+          return {
+            state: "complete",
+            requestId,
+            service: configuredService,
+            events: [],
+          } as const;
+        },
+        refresh: async () => ({ state: "failed", service: configuredService }),
+      });
+
+      await mounted.screen
+        .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
+        .click();
+      await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+      await mounted.screen.getByLabelText("settings.modelServicePromptSecret").fill("test-secret");
+      await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+      await expect
+        .poll(() => document.body.textContent)
+        .toContain("settings.modelServiceRefreshFailed");
+
+      if (availableModelCount > 0) {
+        await expect
+          .poll(() => onSetupReady)
+          .toHaveBeenCalledWith({
+            provider: "omnimind",
+            model: "deepseek/deepseek-v4-flash",
+          });
+      } else {
+        expect(onSetupReady).not.toHaveBeenCalled();
+      }
+
+      await mounted.screen.unmount();
+      mounted.queryClient.clear();
+    },
+  );
+
+  it("cancels a post-login refresh and never hands off after Model services is deactivated", async () => {
+    const setupService = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+      supportsNetworkRefresh: true,
+    });
+    const configuredService = service({ availableModelCount: 1, supportsNetworkRefresh: true });
+    let currentService = setupService;
+    const requestId = "00000000-0000-4000-8000-000000000121";
+    const promptId = "00000000-0000-4000-8000-000000000122";
+    const onSetupReady = vi.fn();
+    let refreshSignal: AbortSignal | undefined;
+    let finishRefresh!: (
+      result: Awaited<ReturnType<NativeApi["omnimindModelServices"]["refresh"]>>,
+    ) => void;
+    const refresh: NativeApi["omnimindModelServices"]["refresh"] = (_input, options) => {
+      refreshSignal = options?.signal;
+      return new Promise((resolve) => {
+        finishRefresh = resolve;
+      });
+    };
+    const mounted = await renderPanel({
+      startInAddFlow: true,
+      onSetupReady,
+      list: async (input) => ({
+        state: input?.intent ? "ready" : "empty",
+        services: [],
+        connectableServices: [setupService],
+        errorCode: null,
+      }),
+      get: async () => ({
+        state: "ready",
+        service: currentService,
+        ...(currentService === configuredService
+          ? {
+              models: [
+                {
+                  modelId: "deepseek-v4-flash",
+                  displayName: "DeepSeek V4 Flash",
+                  available: true,
+                  reasoning: true,
+                  input: ["text"],
+                  contextWindow: 128_000,
+                  maxTokens: 16_384,
+                },
+              ],
+            }
+          : {}),
+        errorCode: null,
+      }),
+      beginLogin: async () => ({
+        state: "prompt",
+        requestId,
+        prompt: { promptId, type: "secret", message: "Enter API key" },
+        events: [],
+      }),
+      answerLogin: async () => {
+        currentService = configuredService;
+        return {
+          state: "complete",
+          requestId,
+          service: configuredService,
+          events: [],
+        } as const;
+      },
+      refresh,
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+    await mounted.screen.getByLabelText("settings.modelServicePromptSecret").fill("test-secret");
+    await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+    await expect.poll(() => refreshSignal).toBeInstanceOf(AbortSignal);
+
+    await mounted.rerenderActive(false);
+    expect(refreshSignal?.aborted).toBe(true);
+    finishRefresh({ state: "success", service: configuredService });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSetupReady).not.toHaveBeenCalled();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("never hands off when setup closes during post-refresh query reconciliation", async () => {
+    const setupService = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+      supportsNetworkRefresh: true,
+    });
+    const configuredService = service({ availableModelCount: 1, supportsNetworkRefresh: true });
+    const requestId = "00000000-0000-4000-8000-000000000131";
+    const promptId = "00000000-0000-4000-8000-000000000132";
+    const onSetupReady = vi.fn();
+    let currentService = setupService;
+    let reconcileStarted = false;
+    let releaseReconcile!: () => void;
+    const reconcileGate = new Promise<void>((resolve) => {
+      releaseReconcile = resolve;
+    });
+    let blockReconcile = false;
+    let refreshSignal: AbortSignal | undefined;
+    const waitForReconcile = async () => {
+      if (!blockReconcile) return;
+      reconcileStarted = true;
+      await reconcileGate;
+    };
+    const mounted = await renderPanel({
+      startInAddFlow: true,
+      onSetupReady,
+      list: async (input) => {
+        await waitForReconcile();
+        if (input?.intent || currentService === configuredService) {
+          return {
+            state: "ready",
+            services: currentService === configuredService ? [configuredService] : [],
+            connectableServices: currentService === setupService ? [setupService] : [],
+            errorCode: null,
+          } as const;
+        }
+        return {
+          state: "empty",
+          services: [],
+          connectableServices: [setupService],
+          errorCode: null,
+        } as const;
+      },
+      get: async () => {
+        await waitForReconcile();
+        return {
+          state: "ready",
+          service: currentService,
+          ...(currentService === configuredService
+            ? {
+                models: [
+                  {
+                    modelId: "deepseek-v4-flash",
+                    displayName: "DeepSeek V4 Flash",
+                    available: true,
+                    reasoning: true,
+                    input: ["text"],
+                    contextWindow: 128_000,
+                    maxTokens: 16_384,
+                  },
+                ],
+              }
+            : {}),
+          errorCode: null,
+        };
+      },
+      beginLogin: async () => ({
+        state: "prompt",
+        requestId,
+        prompt: { promptId, type: "secret", message: "Enter API key" },
+        events: [],
+      }),
+      answerLogin: async () => {
+        currentService = configuredService;
+        return {
+          state: "complete",
+          requestId,
+          service: configuredService,
+          events: [],
+        } as const;
+      },
+      refresh: async (_input, options) => {
+        refreshSignal = options?.signal;
+        blockReconcile = true;
+        return { state: "success", service: configuredService } as const;
+      },
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+    await mounted.screen.getByLabelText("settings.modelServicePromptSecret").fill("test-secret");
+    await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+    await expect.poll(() => reconcileStarted).toBe(true);
+
+    await mounted.rerenderActive(false);
+    expect(refreshSignal?.aborted).toBe(true);
+    releaseReconcile();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(onSetupReady).not.toHaveBeenCalled();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it.each([false, true])(
+    "stops terminal login completion during its first reconciliation (dynamic=%s)",
+    async (supportsNetworkRefresh) => {
+      const setupService = service({
+        authState: "setup_required",
+        authSource: null,
+        storedCredentialType: null,
+        availableModelCount: 0,
+        supportsNetworkRefresh,
+      });
+      const configuredService = service({ availableModelCount: 1, supportsNetworkRefresh });
+      const requestId = supportsNetworkRefresh
+        ? "00000000-0000-4000-8000-000000000141"
+        : "00000000-0000-4000-8000-000000000142";
+      const promptId = supportsNetworkRefresh
+        ? "00000000-0000-4000-8000-000000000143"
+        : "00000000-0000-4000-8000-000000000144";
+      const onSetupReady = vi.fn();
+      const refresh = vi.fn(async () => ({
+        state: "success" as const,
+        service: configuredService,
+      }));
+      let currentService = setupService;
+      let reconcileStarted = false;
+      let releaseReconcile!: () => void;
+      const reconcileGate = new Promise<void>((resolve) => {
+        releaseReconcile = resolve;
+      });
+      let blockReconcile = false;
+      const waitForReconcile = async () => {
+        if (!blockReconcile) return;
+        reconcileStarted = true;
+        await reconcileGate;
+      };
+      const mounted = await renderPanel({
+        startInAddFlow: true,
+        onSetupReady,
+        list: async (input) => {
+          await waitForReconcile();
+          if (input?.intent || currentService === configuredService) {
+            return {
+              state: "ready",
+              services: currentService === configuredService ? [configuredService] : [],
+              connectableServices: currentService === setupService ? [setupService] : [],
+              errorCode: null,
+            } as const;
+          }
+          return {
+            state: "empty",
+            services: [],
+            connectableServices: [setupService],
+            errorCode: null,
+          } as const;
+        },
+        get: async () => {
+          await waitForReconcile();
+          return { state: "ready", service: currentService, errorCode: null } as const;
+        },
+        beginLogin: async () => ({
+          state: "prompt",
+          requestId,
+          prompt: { promptId, type: "secret", message: "Enter API key" },
+          events: [],
+        }),
+        answerLogin: async () => {
+          currentService = configuredService;
+          blockReconcile = true;
+          return {
+            state: "complete",
+            requestId,
+            service: configuredService,
+            events: [],
+          } as const;
+        },
+        refresh,
+      });
+
+      await mounted.screen
+        .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
+        .click();
+      await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+      await mounted.screen.getByLabelText("settings.modelServicePromptSecret").fill("test-secret");
+      await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+      await expect.poll(() => reconcileStarted).toBe(true);
+
+      await mounted.rerenderActive(false);
+      releaseReconcile();
+      await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(refresh).not.toHaveBeenCalled();
+      expect(onSetupReady).not.toHaveBeenCalled();
+
+      await mounted.screen.unmount();
+      mounted.queryClient.clear();
+    },
+  );
+
+  it("stops terminal login completion while the final exact-model detail is pending", async () => {
+    const setupService = service({
+      authState: "setup_required",
+      authSource: null,
+      storedCredentialType: null,
+      availableModelCount: 0,
+      supportsNetworkRefresh: false,
+    });
+    const configuredService = service({
+      availableModelCount: 1,
+      supportsNetworkRefresh: false,
+    });
+    const requestId = "00000000-0000-4000-8000-000000000161";
+    const promptId = "00000000-0000-4000-8000-000000000162";
+    const onSetupReady = vi.fn();
+    let currentService = setupService;
+    let failNextConfiguredDetail = false;
+    let finalDetailStarted = false;
+    let releaseFinalDetail!: () => void;
+    const finalDetailGate = new Promise<void>((resolve) => {
+      releaseFinalDetail = resolve;
+    });
+    const mounted = await renderPanel({
+      startInAddFlow: true,
+      onSetupReady,
+      list: async (input) => {
+        if (input?.intent || currentService === configuredService) {
+          return {
+            state: "ready",
+            services: currentService === configuredService ? [configuredService] : [],
+            connectableServices: currentService === setupService ? [setupService] : [],
+            errorCode: null,
+          } as const;
+        }
+        return {
+          state: "empty",
+          services: [],
+          connectableServices: [setupService],
+          errorCode: null,
+        } as const;
+      },
+      get: async () => {
+        if (currentService === configuredService) {
+          if (failNextConfiguredDetail) {
+            failNextConfiguredDetail = false;
+            throw new Error("Force the final intent detail to refetch");
+          }
+          finalDetailStarted = true;
+          await finalDetailGate;
+          return {
+            state: "ready",
+            service: configuredService,
+            models: [
+              {
+                modelId: "deepseek-v4-flash",
+                displayName: "DeepSeek V4 Flash",
+                available: true,
+                reasoning: true,
+                input: ["text"],
+                contextWindow: 128_000,
+                maxTokens: 16_384,
+              },
+            ],
+            errorCode: null,
+          } as const;
+        }
+        return { state: "ready", service: setupService, errorCode: null } as const;
+      },
+      beginLogin: async () => ({
+        state: "prompt",
+        requestId,
+        prompt: { promptId, type: "secret", message: "Enter API key" },
+        events: [],
+      }),
+      answerLogin: async () => {
+        currentService = configuredService;
+        failNextConfiguredDetail = true;
+        return {
+          state: "complete",
+          requestId,
+          service: configuredService,
+          events: [],
+        } as const;
+      },
+    });
+
+    await mounted.screen
+      .getByRole("button", { name: 'settings.connectModelServiceNamed:{"name":"DeepSeek"}' })
+      .click();
+    await mounted.screen.getByRole("button", { name: "settings.addApiKey" }).click();
+    await mounted.screen.getByLabelText("settings.modelServicePromptSecret").fill("test-secret");
+    await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
+    await expect.poll(() => finalDetailStarted).toBe(true);
+
+    await mounted.rerenderActive(false);
+    releaseFinalDetail();
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(onSetupReady).not.toHaveBeenCalled();
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();
@@ -2528,7 +3137,13 @@ describe("ModelsSettingsPanel model services", () => {
         { requestId, promptId, value: "browser-test-code" },
         expect.objectContaining({ signal: expect.any(AbortSignal) }),
       );
-    await expect.poll(() => document.body.textContent).toContain("settings.modelServiceOAuthSaved");
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceRefreshComplete");
+    expect(mounted.calls.refresh).toHaveBeenCalledWith(
+      { serviceId: "openai-codex" },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(document.body.textContent).not.toContain("browser-test-code");
 
     await mounted.screen.unmount();
@@ -2609,7 +3224,13 @@ describe("ModelsSettingsPanel model services", () => {
       events: [],
     });
 
-    await expect.poll(() => document.body.textContent).toContain("settings.modelServiceOAuthSaved");
+    await expect
+      .poll(() => document.body.textContent)
+      .toContain("settings.modelServiceRefreshComplete");
+    expect(mounted.calls.refresh).toHaveBeenCalledWith(
+      { serviceId: "openai-codex" },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(mounted.calls.answerLogin).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toContain("settings.modelServiceAuthExpired");
 
@@ -2763,7 +3384,12 @@ describe("ModelsSettingsPanel model services", () => {
       .getByRole("button", { name: 'settings.viewDetailsNamed:{"name":"DeepSeek"}' })
       .click();
     await mounted.screen.getByRole("button", { name: "settings.refreshModelCatalog" }).click();
-    await expect.poll(() => refresh).toHaveBeenCalledWith({ serviceId: "deepseek" });
+    await expect
+      .poll(() => refresh)
+      .toHaveBeenCalledWith(
+        { serviceId: "deepseek" },
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      );
     await expect
       .poll(() => document.body.textContent)
       .toContain("settings.modelServiceRefreshComplete");

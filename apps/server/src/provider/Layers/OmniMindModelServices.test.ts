@@ -164,6 +164,7 @@ function makeTestLayer(input: {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
   readonly readTextFile?: (filePath: string, signal?: AbortSignal) => Promise<string>;
   readonly authRequestTimeoutMs?: number;
+  readonly modelServiceRefreshTimeoutMs?: number;
   readonly customConnectionTestTimeoutMs?: number;
   readonly customModelDiscoveryTimeoutMs?: number;
   readonly providerSessions?: ReadonlyArray<ProviderSession>;
@@ -176,6 +177,9 @@ function makeTestLayer(input: {
     ...(input.authRequestTimeoutMs === undefined
       ? {}
       : { authRequestTimeoutMs: input.authRequestTimeoutMs }),
+    ...(input.modelServiceRefreshTimeoutMs === undefined
+      ? {}
+      : { modelServiceRefreshTimeoutMs: input.modelServiceRefreshTimeoutMs }),
     ...(input.customConnectionTestTimeoutMs === undefined
       ? {}
       : { customConnectionTestTimeoutMs: input.customConnectionTestTimeoutMs }),
@@ -1462,7 +1466,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(result.secondCancelled).toMatchObject({ state: "cancelled" });
   });
 
-  it("refreshes only the requested Pi provider and persists its last-good catalog", async () => {
+  it("completes login before the requested Pi provider refresh persists its catalog", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
@@ -1509,16 +1513,13 @@ describe("OmniMindModelServicesLive", () => {
 
     expect(result.login).toMatchObject({
       state: "complete",
-      service: { serviceId: "radius", knownModelCount: 1, catalogState: "ready" },
+      service: { serviceId: "radius", knownModelCount: 0, catalogState: "empty" },
     });
     expect(result.refreshed).toMatchObject({
       state: "success",
       service: { serviceId: "radius", knownModelCount: 1, catalogState: "ready" },
     });
-    expect(requests).toEqual([
-      { path: "/v1/config", authenticated: true },
-      { path: "/v1/config", authenticated: true },
-    ]);
+    expect(requests).toEqual([{ path: "/v1/config", authenticated: true }]);
     const storedCatalog = JSON.parse(
       await readFile(path.join(agentDir, "models-store.json"), "utf8"),
     );
@@ -1526,7 +1527,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(JSON.stringify(storedCatalog)).not.toContain("test-only-radius-key");
   });
 
-  it("reports authentication as saved when cancellation arrives during the post-login refresh", async () => {
+  it("returns saved authentication before a separate dynamic catalog refresh settles", async () => {
     const root = await makeRoot();
     await isolateProviderEnvironment(root);
     const agentDir = path.join(root, "agent");
@@ -1564,32 +1565,77 @@ describe("OmniMindModelServicesLive", () => {
             authType: "api_key",
           });
           if (begin.state !== "prompt") throw new Error("Expected the Pi API-key prompt");
-          const answerPromise = Effect.runPromise(
-            service.answerLogin(31, {
-              requestId: begin.requestId,
-              promptId: begin.prompt.promptId,
-              value: "test-only-radius-key",
-            }),
-          );
+          const answered = yield* service.answerLogin(31, {
+            requestId: begin.requestId,
+            promptId: begin.prompt.promptId,
+            value: "test-only-radius-key",
+          });
+          expect(refreshStarted).toBe(false);
+          const refreshPromise = Effect.runPromise(service.refresh({ serviceId: "radius" }));
           while (!refreshStarted) yield* Effect.sleep("5 millis");
-          const cancelPromise = Effect.runPromise(
-            service.cancelLogin(31, { requestId: begin.requestId }),
-          );
-          yield* Effect.sleep("5 millis");
           yield* Effect.sync(releaseRefresh);
-          const [cancelled, answered] = yield* Effect.promise(() =>
-            Promise.all([cancelPromise, answerPromise]),
-          );
-          return { cancelled, answered };
+          const refreshed = yield* Effect.promise(() => refreshPromise);
+          return { answered, refreshed };
         }).pipe(Effect.provide(layer)),
       ),
     );
 
-    expect(result.cancelled).toMatchObject({
-      state: "auth_updated_catalog_failed",
+    expect(result.answered).toMatchObject({
+      state: "complete",
       service: { serviceId: "radius", authState: "configured" },
     });
-    expect(result.answered).toEqual(result.cancelled);
+    expect(result.refreshed).toMatchObject({
+      state: "success",
+      service: { serviceId: "radius", knownModelCount: 1, catalogState: "ready" },
+    });
+    const stored = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
+    expect(stored.radius).toMatchObject({ type: "api_key" });
+    expect(JSON.stringify(result)).not.toContain("test-only-radius-key");
+  });
+
+  it("bounds a dynamic catalog refresh without changing saved authentication", async () => {
+    const root = await makeRoot();
+    await isolateProviderEnvironment(root);
+    const agentDir = path.join(root, "agent");
+    await mkdir(agentDir, { recursive: true });
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (request, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = request instanceof Request ? request.signal : init?.signal;
+          const rejectAbort = () => reject(new DOMException("Aborted", "AbortError"));
+          if (signal?.aborted) rejectAbort();
+          else signal?.addEventListener("abort", rejectAbort, { once: true });
+        }),
+    );
+    const layer = makeTestLayer({ root, modelServiceRefreshTimeoutMs: 20 });
+    const startedAt = Date.now();
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* OmniMindModelServices;
+        const begin = yield* service.beginLogin(32, {
+          serviceId: "radius",
+          authType: "api_key",
+        });
+        if (begin.state !== "prompt") throw new Error("Expected the Pi API-key prompt");
+        const answered = yield* service.answerLogin(32, {
+          requestId: begin.requestId,
+          promptId: begin.prompt.promptId,
+          value: "test-only-radius-key",
+        });
+        const refreshed = yield* service.refresh({ serviceId: "radius" });
+        return { answered, refreshed };
+      }).pipe(Effect.provide(layer)),
+    );
+
+    expect(Date.now() - startedAt).toBeLessThan(1_000);
+    expect(result.answered).toMatchObject({
+      state: "complete",
+      service: { serviceId: "radius", authState: "configured" },
+    });
+    expect(result.refreshed).toMatchObject({
+      state: "failed",
+      service: { serviceId: "radius", authState: "configured", knownModelCount: 0 },
+    });
     const stored = JSON.parse(await readFile(path.join(agentDir, "auth.json"), "utf8"));
     expect(stored.radius).toMatchObject({ type: "api_key" });
     expect(JSON.stringify(result)).not.toContain("test-only-radius-key");

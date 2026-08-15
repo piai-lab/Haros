@@ -834,6 +834,8 @@ function ActiveModelsSettingsPanel({
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
   const authRequestControllerRef = useRef<AbortController | null>(null);
+  const modelServicePostLoginControllerRef = useRef<AbortController | null>(null);
+  const modelServiceRefreshControllerRef = useRef<AbortController | null>(null);
   const customTestControllerRef = useRef<AbortController | null>(null);
   const customDiscoveryControllerRef = useRef<AbortController | null>(null);
   const authRequestIdRef = useRef<string | null>(null);
@@ -952,8 +954,16 @@ function ActiveModelsSettingsPanel({
     };
   }, [modelServiceDetailReturnView, queryClient, selectedModelServiceId]);
   const finishSetupIfReady = useCallback(
-    async (service: OmniMindModelServiceDescriptor | null | undefined) => {
+    async (
+      service: OmniMindModelServiceDescriptor | null | undefined,
+      completionController?: AbortController,
+    ) => {
+      const completionIsCurrent = () =>
+        completionController === undefined ||
+        (!completionController.signal.aborted &&
+          modelServicePostLoginControllerRef.current === completionController);
       if (
+        !completionIsCurrent() ||
         !setupCompletionArmedRef.current ||
         !service ||
         service.availableModelCount <= 0 ||
@@ -970,12 +980,14 @@ function ActiveModelsSettingsPanel({
             intent: "add_service",
           }),
         );
+        if (!completionIsCurrent()) return false;
         const model =
           detail.state === "ready" ? detail.models?.find((entry) => entry.available) : null;
         if (!model) {
           setupCompletionArmedRef.current = true;
           return false;
         }
+        if (!completionIsCurrent()) return false;
         setupTargetServiceIdRef.current = null;
         onSetupReady({
           provider: "omnimind",
@@ -983,6 +995,7 @@ function ActiveModelsSettingsPanel({
         });
         return true;
       } catch {
+        if (!completionIsCurrent()) return false;
         setupCompletionArmedRef.current = true;
         return false;
       }
@@ -1043,6 +1056,8 @@ function ActiveModelsSettingsPanel({
   useEffect(
     () => () => {
       void cancelCurrentAuthRequest();
+      modelServicePostLoginControllerRef.current?.abort();
+      modelServiceRefreshControllerRef.current?.abort();
       customTestControllerRef.current?.abort();
       customTestControllerRef.current = null;
       customDiscoveryControllerRef.current?.abort();
@@ -1060,6 +1075,8 @@ function ActiveModelsSettingsPanel({
     setModelServiceModelSearch("");
     setModelServiceDetailReturnView("overview");
     void cancelCurrentAuthRequest();
+    modelServicePostLoginControllerRef.current?.abort();
+    modelServiceRefreshControllerRef.current?.abort();
     customTestControllerRef.current?.abort();
     customTestControllerRef.current = null;
     customDiscoveryControllerRef.current?.abort();
@@ -1187,6 +1204,67 @@ function ActiveModelsSettingsPanel({
     ]);
   }, [queryClient]);
 
+  const refreshModelService = useCallback(
+    async (
+      service: OmniMindModelServiceDescriptor,
+      options?: { readonly preserveNotice?: boolean },
+    ) => {
+      modelServiceRefreshControllerRef.current?.abort();
+      const controller = new AbortController();
+      modelServiceRefreshControllerRef.current = controller;
+      setModelServiceMutation(`refresh:${service.serviceId}`);
+      if (!options?.preserveNotice) setModelServiceNotice(null);
+      try {
+        const result = await ensureNativeApi().omnimindModelServices.refresh(
+          {
+            serviceId: service.serviceId,
+            ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
+          },
+          { signal: controller.signal },
+        );
+        if (controller.signal.aborted || modelServiceRefreshControllerRef.current !== controller) {
+          return { state: "cancelled", service } as const;
+        }
+        setModelServiceNotice({
+          tone: result.state === "success" ? "status" : "error",
+          text:
+            result.state === "success"
+              ? t("settings.modelServiceRefreshComplete")
+              : result.state === "unsupported"
+                ? t("settings.modelServiceRefreshUnsupported")
+                : result.state === "cancelled"
+                  ? t("settings.modelServiceRefreshCancelled")
+                  : t("settings.modelServiceRefreshFailed"),
+        });
+        if (result.state === "success") {
+          await invalidateModelServiceConsumers();
+          if (
+            controller.signal.aborted ||
+            modelServiceRefreshControllerRef.current !== controller
+          ) {
+            return { state: "cancelled", service } as const;
+          }
+        }
+        return result;
+      } catch {
+        if (controller.signal.aborted || modelServiceRefreshControllerRef.current !== controller) {
+          return { state: "cancelled", service } as const;
+        }
+        setModelServiceNotice({
+          tone: "error",
+          text: t("settings.modelServiceRefreshFailed"),
+        });
+        return { state: "failed", service } as const;
+      } finally {
+        if (modelServiceRefreshControllerRef.current === controller) {
+          modelServiceRefreshControllerRef.current = null;
+          setModelServiceMutation(null);
+        }
+      }
+    },
+    [invalidateModelServiceConsumers, t],
+  );
+
   const applyAuthResult = useCallback(
     async (result: OmniMindModelServiceAuthResult, authType: "api_key" | "oauth") => {
       let authUrlOpenFailed = false;
@@ -1263,11 +1341,10 @@ function ActiveModelsSettingsPanel({
 
       if (!("service" in result)) return;
       const completedService = result.service;
+      modelServicePostLoginControllerRef.current?.abort();
+      const completionController = new AbortController();
+      modelServicePostLoginControllerRef.current = completionController;
       setAuthDialog(null);
-      if (result.state === "complete") {
-        setupCompletionArmedRef.current = true;
-        setupTargetServiceIdRef.current = completedService.serviceId;
-      }
       setModelServiceNotice({
         tone: result.state === "complete" ? "status" : "error",
         text:
@@ -1284,9 +1361,38 @@ function ActiveModelsSettingsPanel({
                 : t("settings.modelServiceAuthSaved"),
       });
       await invalidateModelServiceConsumers();
-      await finishSetupIfReady(completedService);
+      if (
+        completionController.signal.aborted ||
+        modelServicePostLoginControllerRef.current !== completionController
+      ) {
+        return;
+      }
+      const refreshResult =
+        result.state === "complete" && completedService.supportsNetworkRefresh
+          ? await refreshModelService(completedService, { preserveNotice: true })
+          : null;
+      if (
+        completionController.signal.aborted ||
+        modelServicePostLoginControllerRef.current !== completionController
+      ) {
+        return;
+      }
+      if (
+        result.state === "complete" &&
+        (refreshResult === null ||
+          refreshResult.state === "success" ||
+          refreshResult.state === "failed" ||
+          refreshResult.state === "unsupported")
+      ) {
+        setupCompletionArmedRef.current = true;
+        setupTargetServiceIdRef.current = completedService.serviceId;
+        await finishSetupIfReady(refreshResult?.service ?? completedService, completionController);
+      }
+      if (modelServicePostLoginControllerRef.current === completionController) {
+        modelServicePostLoginControllerRef.current = null;
+      }
     },
-    [finishSetupIfReady, invalidateModelServiceConsumers, t],
+    [finishSetupIfReady, invalidateModelServiceConsumers, refreshModelService, t],
   );
 
   const consumeAuthResult = useCallback(
@@ -1422,39 +1528,6 @@ function ActiveModelsSettingsPanel({
       }
     });
   }, [applyAuthResult, authDialog?.authType, cancelCurrentAuthRequest]);
-
-  const refreshModelService = useCallback(
-    async (service: OmniMindModelServiceDescriptor) => {
-      setModelServiceMutation(`refresh:${service.serviceId}`);
-      setModelServiceNotice(null);
-      try {
-        const result = await ensureNativeApi().omnimindModelServices.refresh({
-          serviceId: service.serviceId,
-          ...(service.origin === "extension" ? { origin: "extension" as const } : {}),
-        });
-        setModelServiceNotice({
-          tone: result.state === "success" ? "status" : "error",
-          text:
-            result.state === "success"
-              ? t("settings.modelServiceRefreshComplete")
-              : result.state === "unsupported"
-                ? t("settings.modelServiceRefreshUnsupported")
-                : result.state === "cancelled"
-                  ? t("settings.modelServiceRefreshCancelled")
-                  : t("settings.modelServiceRefreshFailed"),
-        });
-        if (result.state === "success") await invalidateModelServiceConsumers();
-      } catch {
-        setModelServiceNotice({
-          tone: "error",
-          text: t("settings.modelServiceRefreshFailed"),
-        });
-      } finally {
-        setModelServiceMutation(null);
-      }
-    },
-    [invalidateModelServiceConsumers, t],
-  );
 
   const logoutModelService = useCallback(async () => {
     const service = logoutService;
@@ -2079,6 +2152,10 @@ function ActiveModelsSettingsPanel({
   }, []);
 
   const closeModelServiceBrowser = useCallback(() => {
+    setupCompletionArmedRef.current = false;
+    setupTargetServiceIdRef.current = null;
+    modelServicePostLoginControllerRef.current?.abort();
+    modelServiceRefreshControllerRef.current?.abort();
     setModelServiceBrowserOpen(false);
     requestAnimationFrame(() => addModelServiceButtonRef.current?.focus());
   }, []);
