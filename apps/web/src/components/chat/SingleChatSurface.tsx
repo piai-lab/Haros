@@ -831,11 +831,14 @@ export function SingleChatSurface(props: {
     );
   };
   const handleSelectEditorProject = (projectId: ProjectId) => {
-    void openEditorProject(projectId).catch(() => {
+    void openEditorProject(projectId).catch((error) => {
+      const detail = error instanceof Error && error.message.trim().length > 0 ? error.message : "";
+      const summary = t("workbench.projectOpenFailed");
       toastManager.add({
         type: "error",
         title: t("workbench.unableOpenProject"),
-        description: t("workbench.projectOpenFailed"),
+        description: detail ? `${summary} ${detail}` : summary,
+        ...(detail ? { data: { copyText: detail } } : {}),
       });
     });
   };
@@ -887,11 +890,15 @@ export function SingleChatSurface(props: {
           }
           return createSidechat();
         })
-        .catch(() => {
+        .catch((error) => {
+          const detail =
+            error instanceof Error && error.message.trim().length > 0 ? error.message : "";
+          const summary = t("workbench.sideChatStartFailedDescription");
           toastManager.add({
             type: "error",
             title: t("workbench.sideChatStartFailed"),
-            description: t("workbench.sideChatStartFailedDescription"),
+            description: detail ? `${summary} ${detail}` : summary,
+            ...(detail ? { data: { copyText: detail } } : {}),
           });
         });
       return;
@@ -906,7 +913,9 @@ export function SingleChatSurface(props: {
     switch (pane.kind) {
       case "browser":
         return (
-          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingBrowser")}</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{t("workbench.loadingBrowser")}</PanelStateMessage>}
+          >
             <LazyBrowserPanel
               mode="sidebar"
               threadId={props.threadId}
@@ -918,7 +927,9 @@ export function SingleChatSurface(props: {
         );
       case "device":
         return (
-          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingSimulator")}</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{t("workbench.loadingSimulator")}</PanelStateMessage>}
+          >
             <LazyDevicePanel
               mode="sidebar"
               threadId={props.threadId}
@@ -931,7 +942,9 @@ export function SingleChatSurface(props: {
         );
       case "pullRequest":
         return (
-          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingPullRequest")}</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{t("workbench.loadingPullRequest")}</PanelStateMessage>}
+          >
             <PullRequestDockPane
               pane={pane}
               pollingEnabled={context.isVisible}
@@ -970,7 +983,9 @@ export function SingleChatSurface(props: {
         // mounted (offcanvas is CSS-only), so without this the off-screen terminal
         // would keep WebGL + resize observers alive for nothing.
         return (
-          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingTerminal")}</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{t("workbench.loadingTerminal")}</PanelStateMessage>}
+          >
             <DockTerminalPane
               hostThreadId={props.threadId}
               projectId={props.projectId}
@@ -991,7 +1006,9 @@ export function SingleChatSurface(props: {
         );
       case "explorer":
         return (
-          <Suspense fallback={<PanelStateMessage>{t("workbench.loadingExplorer")}</PanelStateMessage>}>
+          <Suspense
+            fallback={<PanelStateMessage>{t("workbench.loadingExplorer")}</PanelStateMessage>}
+          >
             <DockExplorerPane
               workspaceRoot={workspaceRoot}
               onReferenceInChat={handleReferenceInChat}

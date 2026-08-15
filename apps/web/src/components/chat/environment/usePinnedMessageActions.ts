@@ -66,19 +66,25 @@ export function usePinnedMessageActions({
     activePinnedThreadIdRef.current = activeThreadId;
   }, [activeThreadId, pinnedMessages]);
 
-  const handlePinnedMessageDispatchError = () => {
+  const handlePinnedMessageDispatchError = (error: unknown) => {
+    const detail = error instanceof Error && error.message.trim().length > 0 ? error.message : "";
+    const summary = t("environment.pinnedUpdateFailedDescription");
     toastManager.add({
       type: "error",
       title: t("environment.pinnedUpdateFailed"),
-      description: t("environment.pinnedUpdateFailedDescription"),
+      description: detail ? `${summary} ${detail}` : summary,
+      ...(detail ? { data: { copyText: detail } } : {}),
     });
   };
 
-  const handleThreadNotesDispatchError = () => {
+  const handleThreadNotesDispatchError = (error: unknown) => {
+    const detail = error instanceof Error && error.message.trim().length > 0 ? error.message : "";
+    const summary = t("environment.notesSaveFailedDescription");
     toastManager.add({
       type: "error",
       title: t("environment.notesSaveFailed"),
-      description: t("environment.notesSaveFailedDescription"),
+      description: detail ? `${summary} ${detail}` : summary,
+      ...(detail ? { data: { copyText: detail } } : {}),
     });
   };
 
@@ -100,7 +106,7 @@ export function usePinnedMessageActions({
             removedPinIndex,
           );
         }
-        handlePinnedMessageDispatchError();
+        handlePinnedMessageDispatchError(error);
       });
       return;
     }
@@ -124,7 +130,7 @@ export function usePinnedMessageActions({
       if (matchesPinState(currentPin, optimisticPin)) {
         pinnedMessagesRef.current = removePin(pinnedMessagesRef.current, messageId);
       }
-      handlePinnedMessageDispatchError();
+      handlePinnedMessageDispatchError(error);
     });
   };
 
@@ -147,7 +153,7 @@ export function usePinnedMessageActions({
       if (currentPin?.done === done) {
         pinnedMessagesRef.current = setPinDone(pinnedMessagesRef.current, messageId, previousDone);
       }
-      handlePinnedMessageDispatchError();
+      handlePinnedMessageDispatchError(error);
     });
   };
 
@@ -171,7 +177,7 @@ export function usePinnedMessageActions({
         removedPin,
         removedPinIndex,
       );
-      handlePinnedMessageDispatchError();
+      handlePinnedMessageDispatchError(error);
     });
   };
 
@@ -186,7 +192,7 @@ export function usePinnedMessageActions({
     const previousLabel = previousPin?.label ?? null;
     const nextLabel = normalizePinLabel(label);
     pinnedMessagesRef.current = setPinLabel(pinnedMessagesRef.current, messageId, label);
-    void dispatchPinnedMessageLabelSet(threadId, messageId, label).catch(() => {
+    void dispatchPinnedMessageLabelSet(threadId, messageId, label).catch((error) => {
       const currentPin = pinnedMessagesRef.current.find(
         (candidate) => candidate.messageId === messageId,
       );
@@ -197,7 +203,7 @@ export function usePinnedMessageActions({
           previousLabel,
         );
       }
-      handlePinnedMessageDispatchError();
+      handlePinnedMessageDispatchError(error);
     });
   };
 
@@ -205,7 +211,7 @@ export function usePinnedMessageActions({
     try {
       await dispatchThreadNotes(threadId, notes);
     } catch (error) {
-      handleThreadNotesDispatchError();
+      handleThreadNotesDispatchError(error);
       throw error;
     }
   };

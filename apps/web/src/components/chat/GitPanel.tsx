@@ -53,6 +53,11 @@ interface SelectedFile {
   path: string;
 }
 
+function nonEmptyErrorMessage(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+  return error.message.trim().length > 0 ? error.message : null;
+}
+
 function parsePatchToSortedFiles(
   patch: string | undefined,
   cacheScope: string,
@@ -273,6 +278,8 @@ export function GitPanel(props: {
 
   const isLoading = stagedQuery.isLoading || unstagedQuery.isLoading;
   const hasError = stagedQuery.isError || unstagedQuery.isError;
+  const errorDetail =
+    nonEmptyErrorMessage(stagedQuery.error) ?? nonEmptyErrorMessage(unstagedQuery.error);
   const hasChanges = stagedFiles.length > 0 || unstagedFiles.length > 0;
 
   if (!cwd) {
@@ -302,7 +309,14 @@ export function GitPanel(props: {
       <div className="flex max-h-[48%] min-h-0 shrink-0 flex-col gap-2 overflow-auto px-1.5 py-2">
         {hasError ? (
           <Alert variant="error" size="sm" className="text-destructive">
-            {t("git.panel.loadFailed")}
+            <span className="flex flex-col gap-1">
+              <span>{t("git.panel.loadFailed")}</span>
+              {errorDetail ? (
+                <span className="break-words text-[11px] font-normal text-destructive/80">
+                  {errorDetail}
+                </span>
+              ) : null}
+            </span>
           </Alert>
         ) : null}
         {!hasError && isLoading && !hasChanges ? (
@@ -353,9 +367,7 @@ export function GitPanel(props: {
         {selectedFileDiff ? (
           <SelectedFileDiff fileDiff={selectedFileDiff} theme={theme} />
         ) : (
-          <PanelStateMessage density="compact">
-            {t("git.panel.selectFileDiff")}
-          </PanelStateMessage>
+          <PanelStateMessage density="compact">{t("git.panel.selectFileDiff")}</PanelStateMessage>
         )}
       </div>
     </div>

@@ -105,10 +105,12 @@ function LocalServersPlaceholder({
   icon,
   title,
   subtitle,
+  detail,
 }: {
   icon: ReactNode;
   title: string;
   subtitle?: string;
+  detail?: string;
 }) {
   return (
     <div className="flex flex-col items-center gap-1 px-3 py-3 text-center">
@@ -119,6 +121,11 @@ function LocalServersPlaceholder({
       {subtitle ? (
         <span className="text-[length:var(--app-font-size-ui-xs,10px)] text-muted-foreground/60">
           {subtitle}
+        </span>
+      ) : null}
+      {detail ? (
+        <span className="break-words text-[length:var(--app-font-size-ui-xs,10px)] text-destructive/80">
+          {detail}
         </span>
       ) : null}
     </div>
@@ -137,6 +144,10 @@ export function EnvironmentLocalServersSection({ enabled }: { enabled: boolean }
   const serverCount = servers.length;
   const isBusy = localServersQuery.isFetching || stopLocalServerMutation.isPending;
   const activeStoppingPid = stopLocalServerMutation.variables?.pid ?? null;
+  const scanErrorDetail =
+    localServersQuery.error instanceof Error && localServersQuery.error.message.trim().length > 0
+      ? localServersQuery.error.message
+      : null;
 
   const trailing = (
     <>
@@ -192,6 +203,7 @@ export function EnvironmentLocalServersSection({ enabled }: { enabled: boolean }
             icon={<GlobeIcon className="size-4" />}
             title={t("environment.scanLocalPortsFailed")}
             subtitle={t("environment.scanLocalPortsFailedDescription")}
+            {...(scanErrorDetail ? { detail: scanErrorDetail } : {})}
           />
         ) : serverCount === 0 ? (
           <LocalServersPlaceholder

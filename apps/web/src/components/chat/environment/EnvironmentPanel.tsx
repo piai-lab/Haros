@@ -318,11 +318,15 @@ export function EnvironmentPanel({
             void api.shell
               .showInFolder(studioFolderPath)
               .then(onClose)
-              .catch(() => {
+              .catch((error) => {
+                const detail =
+                  error instanceof Error && error.message.trim().length > 0 ? error.message : "";
+                const summary = t("error.unknown");
                 toastManager.add({
                   type: "error",
                   title: t("error.openFolder"),
-                  description: t("error.unknown"),
+                  description: detail ? `${summary} ${detail}` : summary,
+                  ...(detail ? { data: { copyText: detail } } : {}),
                 });
               });
           }}
