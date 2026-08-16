@@ -334,6 +334,8 @@ function Sidebar({
     );
   }
 
+  const offcanvasHidden = state === "collapsed" && collapsible === "offcanvas";
+
   return (
     <SidebarInstanceContext.Provider value={instanceContextValue}>
       <div
@@ -376,6 +378,8 @@ function Sidebar({
           )}
           data-slot="sidebar-container"
           {...props}
+          aria-hidden={offcanvasHidden ? true : undefined}
+          inert={offcanvasHidden ? true : undefined}
         >
           {/* The inner surface is the safe place for visual skinning. The outer shell owns
               fixed positioning, width transitions, and the resize rail hit area. */}

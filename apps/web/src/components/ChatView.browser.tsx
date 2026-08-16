@@ -2466,10 +2466,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       for (const width of [687, 640, 564, 480, 564, 640, 687, 751]) {
         await resizeTo(width);
         await expectPresentation("hidden");
+        expect(sidebar?.getAttribute("aria-hidden")).toBe("true");
+        expect(sidebar?.hasAttribute("inert")).toBe(true);
       }
 
       await resizeTo(752);
       await expectPresentation("docked");
+      expect(sidebar?.hasAttribute("aria-hidden")).toBe(false);
+      expect(sidebar?.hasAttribute("inert")).toBe(false);
       for (const width of [1280, 1440, 1536]) {
         await resizeTo(width);
         await expectPresentation("docked");
