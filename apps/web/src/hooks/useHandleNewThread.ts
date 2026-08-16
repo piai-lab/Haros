@@ -248,9 +248,9 @@ export function useHandleNewThread() {
           setDraftThreadContext(bootstrapPlan.threadId, draftContextPatch);
           resolvedStoredDraftThread = getDraftThread(bootstrapPlan.threadId);
         }
-        applyProviderOverride(bootstrapPlan.threadId);
         setProjectDraftThreadId(projectId, bootstrapPlan.threadId, { entryPoint });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
+        applyProviderOverride(bootstrapPlan.threadId);
         activateThreadEntryPoint(bootstrapPlan.threadId);
         if (focusedThreadId === bootstrapPlan.threadId) {
           if (entryPoint === "terminal") {
@@ -271,6 +271,7 @@ export function useHandleNewThread() {
           ...(navigation?.search ? { search: navigation.search } : {}),
         });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
+        applyProviderOverride(bootstrapPlan.threadId);
         if (entryPoint === "terminal") {
           await createTerminalThread(
             bootstrapPlan.threadId,
@@ -298,9 +299,9 @@ export function useHandleNewThread() {
           setDraftThreadContext(bootstrapPlan.threadId, draftContextPatch);
           resolvedActiveDraftThread = getDraftThread(bootstrapPlan.threadId);
         }
-        applyProviderOverride(bootstrapPlan.threadId);
         setProjectDraftThreadId(projectId, bootstrapPlan.threadId, { entryPoint });
         restoreComposerDraft(bootstrapPlan.threadId, preservedComposerDraft);
+        applyProviderOverride(bootstrapPlan.threadId);
         activateThreadEntryPoint(bootstrapPlan.threadId);
         if (entryPoint === "terminal") {
           await createTerminalThread(

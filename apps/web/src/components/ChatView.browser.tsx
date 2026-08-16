@@ -677,6 +677,44 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
   };
 }
 
+function configureClaudeNewThreadShortcut(nextFixture: TestFixture): void {
+  nextFixture.providerModelsByProvider.claudeAgent = {
+    source: "browser.fixture",
+    models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+  };
+  nextFixture.serverConfig = {
+    ...nextFixture.serverConfig,
+    providers: [
+      ...nextFixture.serverConfig.providers,
+      {
+        provider: "claudeAgent",
+        status: "ready",
+        available: true,
+        authStatus: "authenticated",
+        supportsAutoRuntimeMode: false,
+        checkedAt: NOW_ISO,
+      },
+    ],
+    keybindings: [
+      {
+        command: "chat.newClaude",
+        shortcut: {
+          key: "c",
+          metaKey: false,
+          ctrlKey: false,
+          shiftKey: false,
+          altKey: true,
+          modKey: true,
+        },
+        whenAst: {
+          type: "not",
+          node: { type: "identifier", name: "terminalFocus" },
+        },
+      },
+    ],
+  };
+}
+
 function findThreadDetailFromFixtureSnapshot(
   threadId: ThreadId,
 ): OrchestrationReadModel["threads"][number] | null {
@@ -8527,8 +8565,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   it("warms only the exact selected Engine after explicit new-thread intent", async () => {
     const targetDraftThreadId = ThreadId.makeUnsafe("thread-selected-prefetch-target-draft");
+    const preservedImage = createComposerImage({
+      id: "selected-prefetch-preserved-image",
+      previewUrl: "blob:selected-prefetch-preserved-image",
+      name: "selected-prefetch-preserved.png",
+    });
     seedLocalDraftThread({ threadId: targetDraftThreadId, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setActiveProviderAndSticky(targetDraftThreadId, "droid");
+    useComposerDraftStore.getState().setPrompt(targetDraftThreadId, "preserve selected draft");
+    useComposerDraftStore.getState().addImage(targetDraftThreadId, preservedImage);
     // The target draft is more specific than the remembered next-thread Engine.
     useComposerDraftStore.setState({ stickyActiveProvider: "pi" });
     const mounted = await mountChatView({
@@ -8577,6 +8622,103 @@ describe("ChatView timeline estimator parity (full app)", () => {
         (request) => request._tag === WS_METHODS.providerListModels,
       );
       expect(droidRequest).toMatchObject({ provider: "droid", cwd: "/repo/project" });
+      expect(useComposerDraftStore.getState().draftsByThreadId[targetDraftThreadId]).toMatchObject({
+        activeProvider: "droid",
+        prompt: "preserve selected draft",
+        images: [{ id: preservedImage.id, name: preservedImage.name }],
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps a Claude shortcut override authoritative after restoring a stored draft", async () => {
+    const targetDraftThreadId = ThreadId.makeUnsafe("thread-claude-override-stored-draft");
+    const preservedImage = createComposerImage({
+      id: "claude-override-stored-image",
+      previewUrl: "blob:claude-override-stored-image",
+      name: "claude-override-stored.png",
+    });
+    seedLocalDraftThread({ threadId: targetDraftThreadId, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(targetDraftThreadId, "cursor");
+    useComposerDraftStore.getState().setPrompt(targetDraftThreadId, "stored draft prompt");
+    useComposerDraftStore.getState().addImage(targetDraftThreadId, preservedImage);
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-claude-override-stored" as MessageId,
+        targetText: "Claude override stored draft",
+      }),
+      configureFixture: configureClaudeNewThreadShortcut,
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      const composerEditor = await waitForComposerEditor();
+      wsRequests.length = 0;
+      dispatchConfiguredShortcut(composerEditor, { key: "c", altKey: true });
+
+      await waitForURL(
+        mounted.router,
+        (path) => path === `/${targetDraftThreadId}`,
+        "Claude shortcut should reuse the stored draft route.",
+      );
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.filter((request) => request._tag === WS_METHODS.providerListModels),
+        ).toEqual([expect.objectContaining({ provider: "claudeAgent" })]);
+        expect(
+          useComposerDraftStore.getState().draftsByThreadId[targetDraftThreadId],
+        ).toMatchObject({
+          activeProvider: "claudeAgent",
+          prompt: "stored draft prompt",
+          images: [{ id: preservedImage.id, name: preservedImage.name }],
+        });
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps a Claude shortcut override authoritative on the current draft route", async () => {
+    const routeDraftThreadId = ThreadId.makeUnsafe("thread-claude-override-current-route");
+    const preservedImage = createComposerImage({
+      id: "claude-override-route-image",
+      previewUrl: "blob:claude-override-route-image",
+      name: "claude-override-route.png",
+    });
+    seedLocalDraftThread({ threadId: routeDraftThreadId, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(routeDraftThreadId, "cursor");
+    useComposerDraftStore.getState().setPrompt(routeDraftThreadId, "route draft prompt");
+    useComposerDraftStore.getState().addImage(routeDraftThreadId, preservedImage);
+
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createDraftOnlySnapshot(),
+      initialEntry: `/${routeDraftThreadId}`,
+      configureFixture: configureClaudeNewThreadShortcut,
+    });
+
+    try {
+      await waitForServerConfigToApply();
+      const composerEditor = await waitForComposerEditor();
+      wsRequests.length = 0;
+      dispatchConfiguredShortcut(composerEditor, { key: "c", altKey: true });
+
+      await vi.waitFor(() => {
+        expect(mounted.router.state.location.pathname).toBe(`/${routeDraftThreadId}`);
+        expect(
+          wsRequests.filter((request) => request._tag === WS_METHODS.providerListModels),
+        ).toEqual([expect.objectContaining({ provider: "claudeAgent" })]);
+        expect(useComposerDraftStore.getState().draftsByThreadId[routeDraftThreadId]).toMatchObject(
+          {
+            activeProvider: "claudeAgent",
+            prompt: "route draft prompt",
+            images: [{ id: preservedImage.id, name: preservedImage.name }],
+          },
+        );
+      });
     } finally {
       await mounted.cleanup();
     }

@@ -285,6 +285,8 @@ S1 当前只准入 **R9 selected-only new-thread provider discovery**：Sidebar 
 
 R9 source candidate 已把预热收回真实 chat new-thread handler，并在既有 bootstrap plan 决定 target draft 后只启动 exact selected Engine；Sidebar mount/hover/focus、fresh W4 与普通 picker browse不再形成 Pi/Droid/OmniMind ambient discovery。query key继续复用 provider React Query owner，Claude binary、cwd precedence、disabled selected 与同 intent in-flight dedupe均有 focused unit/browser 证据；First-run 的 OmniMind eligibility只读取 credential-blind Model-services 投影。仓库 typecheck 6/6、R9 focused browser 4/4、partial-DOM 1/1通过。Web unit 全量为 306/307 files、3991/3993 tests通过；唯一 React Compiler guard 的 3 个 ChatView try/catch throw 与 1 个 `useComposerSlashCommands` memo bailout 已用 exact pre-R9 `2378481e` blob复现。Browser 全量为 75/77 files、454 tests通过；并发运行中的 Logo animation timing 与 Sidebar overlay click为首因，随后同一 ChatView runner出现级联，两个首因分别独立复跑均通过。该证据不被写成全绿，也不扩张到 package/install/live。
 
+R9 override follow-up 修正了 stored/current-route draft 恢复与显式 Engine override 的最终次序：任何旧 Composer 恢复完成后再次应用同一个 override，最终 active Provider 与已预热的 exact Provider 保持一致；无 override 时仍是纯 no-op，prompt、attachments 与原 draft/sticky/project/app 裁决不变。author-equivalent `chat.newClaude` browser journey 同时覆盖 stored draft 与 current-route draft，均证明只请求 Claude catalog、最终 active Provider 为 Claude 且草稿内容未丢失。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
