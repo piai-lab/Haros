@@ -10,6 +10,7 @@ import {
   type OrchestrationEvent,
 } from "@omnimind/contracts";
 import { Effect, Layer, ManagedRuntime, Option, Queue, Stream } from "effect";
+import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { describe, expect, it, vi } from "vitest";
 
 import { PersistenceSqlError } from "../../persistence/Errors.ts";
@@ -22,7 +23,10 @@ import {
 } from "../../persistence/Services/OrchestrationEventStore.ts";
 import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
 import { OrchestrationEngineLive } from "./OrchestrationEngine.ts";
-import { OrchestrationProjectionPipelineLive } from "./ProjectionPipeline.ts";
+import {
+  ORCHESTRATION_PROJECTOR_NAMES,
+  OrchestrationProjectionPipelineLive,
+} from "./ProjectionPipeline.ts";
 import { OrchestrationProjectionSnapshotQueryLive } from "./ProjectionSnapshotQuery.ts";
 import { OrchestrationEngineService } from "../Services/OrchestrationEngine.ts";
 import {
@@ -1272,42 +1276,66 @@ describe("OrchestrationEngine", () => {
       resolveRecoveryBootstrap = resolve;
     });
 
-    const flakyProjectionPipeline: OrchestrationProjectionPipelineShape = {
-      bootstrap: Effect.suspend(() => {
-        bootstrapCalls += 1;
-        if (bootstrapCalls === 2 || bootstrapCalls === 3) {
-          return Effect.fail(
-            new PersistenceSqlError({
-              operation: "test.deferredProjectionBootstrap",
-              detail: "deferred projection bootstrap failed transiently",
-            }),
-          );
-        }
-        if (bootstrapCalls === 4) {
-          resolveRecoveryBootstrap?.();
-        }
-        return Effect.void;
+    const flakyProjectionPipelineLayer = Layer.effect(
+      OrchestrationProjectionPipeline,
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        return {
+          bootstrap: Effect.suspend(() => {
+            bootstrapCalls += 1;
+            if (bootstrapCalls === 2 || bootstrapCalls === 3) {
+              return Effect.fail(
+                new PersistenceSqlError({
+                  operation: "test.deferredProjectionBootstrap",
+                  detail: "deferred projection bootstrap failed transiently",
+                }),
+              );
+            }
+            if (bootstrapCalls === 4) {
+              return sql`
+                INSERT INTO projection_state (projector, last_applied_sequence, updated_at)
+                VALUES
+                  (${ORCHESTRATION_PROJECTOR_NAMES.hot}, 4, '2026-08-16T00:00:00.000Z'),
+                  (${ORCHESTRATION_PROJECTOR_NAMES.threadShellSummaries}, 4, '2026-08-16T00:00:00.000Z')
+                ON CONFLICT(projector) DO UPDATE SET
+                  last_applied_sequence = excluded.last_applied_sequence,
+                  updated_at = excluded.updated_at
+              `.pipe(
+                Effect.asVoid,
+                Effect.mapError(
+                  () =>
+                    new PersistenceSqlError({
+                      operation: "test.deferredProjectionBootstrap.cursorRepair",
+                      detail: "failed to repair test projection cursors",
+                    }),
+                ),
+                Effect.tap(() => Effect.sync(() => resolveRecoveryBootstrap?.())),
+              );
+            }
+            return Effect.void;
+          }),
+          projectMetadataEvent: () => Effect.void,
+          projectEvent: () => Effect.void,
+          projectHotEventInCurrentTransaction: () => Effect.void,
+          projectDeferredEvent: () => {
+            deferredCalls += 1;
+            if (deferredCalls === 1) {
+              return Effect.fail(
+                new PersistenceSqlError({
+                  operation: "test.deferredProjection",
+                  detail: "deferred projection failed",
+                }),
+              );
+            }
+            return Effect.void;
+          },
+        } satisfies OrchestrationProjectionPipelineShape;
       }),
-      projectMetadataEvent: () => Effect.void,
-      projectEvent: () => Effect.void,
-      projectHotEventInCurrentTransaction: () => Effect.void,
-      projectDeferredEvent: () => {
-        deferredCalls += 1;
-        if (deferredCalls === 1) {
-          return Effect.fail(
-            new PersistenceSqlError({
-              operation: "test.deferredProjection",
-              detail: "deferred projection failed",
-            }),
-          );
-        }
-        return Effect.void;
-      },
-    };
+    );
 
     const runtime = ManagedRuntime.make(
       OrchestrationEngineLive.pipe(
-        Layer.provide(Layer.succeed(OrchestrationProjectionPipeline, flakyProjectionPipeline)),
+        Layer.provide(flakyProjectionPipelineLayer),
         Layer.provide(OrchestrationProjectionSnapshotQueryLive),
         Layer.provide(OrchestrationEventStoreLive),
         Layer.provide(OrchestrationCommandReceiptRepositoryLive),
@@ -1380,7 +1408,61 @@ describe("OrchestrationEngine", () => {
         inFlight: false,
         retryAttempts: 0,
         lastFailure: null,
+        highWaterSequence: 4,
+        lagByProjector: {},
+        missingProjectors: [],
       });
+    });
+
+    await runtime.dispose();
+  });
+
+  it("reports required projectors missing when durable events exist without cursors", async () => {
+    const nonAdvancingProjectionPipeline: OrchestrationProjectionPipelineShape = {
+      bootstrap: Effect.void,
+      projectMetadataEvent: () => Effect.void,
+      projectEvent: () => Effect.void,
+      projectHotEventInCurrentTransaction: () => Effect.void,
+      projectDeferredEvent: () => Effect.void,
+    };
+    const runtime = ManagedRuntime.make(
+      OrchestrationEngineLive.pipe(
+        Layer.provide(
+          Layer.succeed(OrchestrationProjectionPipeline, nonAdvancingProjectionPipeline),
+        ),
+        Layer.provide(OrchestrationProjectionSnapshotQueryLive),
+        Layer.provide(OrchestrationEventStoreLive),
+        Layer.provide(OrchestrationCommandReceiptRepositoryLive),
+        Layer.provide(SqlitePersistenceMemory),
+        Layer.provideMerge(TestServerConfigLayer),
+        Layer.provideMerge(NodeServices.layer),
+      ),
+    );
+    const engine = await runtime.runPromise(Effect.service(OrchestrationEngineService));
+
+    await runtime.runPromise(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-project-missing-cursors"),
+        projectId: asProjectId("project-missing-cursors"),
+        title: "Missing cursors",
+        workspaceRoot: "/tmp/project-missing-cursors",
+        defaultModelSelection: null,
+        createdAt: now(),
+      }),
+    );
+
+    await expect(runtime.runPromise(engine.getProjectionCatchUpStatus)).resolves.toEqual({
+      state: "degraded",
+      inFlight: false,
+      retryAttempts: 0,
+      lastFailure: null,
+      highWaterSequence: 1,
+      lagByProjector: {},
+      missingProjectors: [
+        ORCHESTRATION_PROJECTOR_NAMES.hot,
+        ORCHESTRATION_PROJECTOR_NAMES.threadShellSummaries,
+      ],
     });
 
     await runtime.dispose();

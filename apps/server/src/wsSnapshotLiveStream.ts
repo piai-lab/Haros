@@ -7,6 +7,41 @@ export type SnapshotLiveStreamItem<Snapshot> =
   | { readonly kind: "snapshot"; readonly snapshot: Snapshot }
   | { readonly kind: "event"; readonly event: OrchestrationEvent };
 
+export interface ResnapshotReport {
+  readonly snapshotSequence: number;
+  readonly highWaterSequence: number;
+  readonly replayCount: number;
+  readonly replayLimit: number;
+}
+
+/**
+ * Per-subscriber loop guard for resnapshot demands. A repeated non-advancing
+ * fence cannot be healed by another identical restart, while an advancing
+ * fence is legitimate catch-up and remains retryable.
+ */
+export function makeResnapshotEscalationTracker(): {
+  readonly shouldEscalate: (streamKey: string, report: ResnapshotReport) => boolean;
+  readonly recordHealthyStart: (streamKey: string) => void;
+} {
+  const lastDemandedFenceByStreamKey = new Map<string, number>();
+  const MAX_TRACKED_STREAM_KEYS = 4_096;
+  return {
+    shouldEscalate: (streamKey, report) => {
+      const previousFence = lastDemandedFenceByStreamKey.get(streamKey);
+      lastDemandedFenceByStreamKey.delete(streamKey);
+      if (lastDemandedFenceByStreamKey.size >= MAX_TRACKED_STREAM_KEYS) {
+        const oldestKey = lastDemandedFenceByStreamKey.keys().next().value;
+        if (oldestKey !== undefined) lastDemandedFenceByStreamKey.delete(oldestKey);
+      }
+      lastDemandedFenceByStreamKey.set(streamKey, report.snapshotSequence);
+      return previousFence !== undefined && report.snapshotSequence <= previousFence;
+    },
+    recordHealthyStart: (streamKey) => {
+      lastDemandedFenceByStreamKey.delete(streamKey);
+    },
+  };
+}
+
 /**
  * Attach live delivery first, capture a snapshot and durable high-water fence,
  * replay the exact gap, then continue with strictly newer live events.
@@ -34,12 +69,11 @@ export function makeCursorSafeSnapshotLiveStream<Snapshot, E>(input: {
    * and stream an empty replay forever instead of surfacing the deletion.
    */
   readonly resumeSubjectExists?: Effect.Effect<boolean, E>;
-  readonly onResnapshotRequired?: (report: {
-    readonly snapshotSequence: number;
-    readonly highWaterSequence: number;
-    readonly replayCount: number;
-    readonly replayLimit: number;
-  }) => Effect.Effect<void, never>;
+  readonly onResnapshotRequired?: (report: ResnapshotReport) => Effect.Effect<void, never>;
+  readonly resnapshotEscalation?: {
+    readonly streamKey: string;
+    readonly tracker: ReturnType<typeof makeResnapshotEscalationTracker>;
+  };
 }): Stream.Stream<SnapshotLiveStreamItem<Snapshot>, E | WsRpcError> {
   return Stream.unwrap(
     Effect.gen(function* () {
@@ -68,6 +102,9 @@ export function makeCursorSafeSnapshotLiveStream<Snapshot, E>(input: {
         const subjectExists =
           input.resumeSubjectExists === undefined ? true : yield* input.resumeSubjectExists;
         if (subjectExists && resumeGap >= 0 && resumeGap <= ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT) {
+          input.resnapshotEscalation?.tracker.recordHealthyStart(
+            input.resnapshotEscalation.streamKey,
+          );
           const replay = input.replay(resumeFromSequence, highWaterSequence).pipe(
             Stream.filter(
               (event) => event.sequence > resumeFromSequence && event.sequence <= highWaterSequence,
@@ -86,12 +123,27 @@ export function makeCursorSafeSnapshotLiveStream<Snapshot, E>(input: {
       const highWaterSequence = yield* input.getHighWaterSequence;
       const replayCount = Math.max(0, highWaterSequence - snapshotSequence);
       if (replayCount > ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT) {
+        const report: ResnapshotReport = {
+          snapshotSequence,
+          highWaterSequence,
+          replayCount,
+          replayLimit: ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT,
+        };
         if (input.onResnapshotRequired) {
-          yield* input.onResnapshotRequired({
-            snapshotSequence,
-            highWaterSequence,
-            replayCount,
-            replayLimit: ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT,
+          yield* input.onResnapshotRequired(report);
+        }
+        if (
+          input.resnapshotEscalation?.tracker.shouldEscalate(
+            input.resnapshotEscalation.streamKey,
+            report,
+          ) === true
+        ) {
+          return yield* new WsRpcError({
+            message:
+              `Orchestration snapshot is still ${replayCount} events behind after a restart; ` +
+              "the snapshot fence is not advancing. Restart OmniMind or repair local state.",
+            code: "ORCHESTRATION_SNAPSHOT_STALLED",
+            retryable: false,
           });
         }
         return yield* new WsRpcError({
@@ -100,6 +152,7 @@ export function makeCursorSafeSnapshotLiveStream<Snapshot, E>(input: {
           retryable: true,
         });
       }
+      input.resnapshotEscalation?.tracker.recordHealthyStart(input.resnapshotEscalation.streamKey);
 
       const replay = input.replay(snapshotSequence, highWaterSequence).pipe(
         Stream.filter(

@@ -30,10 +30,13 @@ export interface OrchestrationDispatchContext {
 }
 
 export interface OrchestrationProjectionCatchUpStatus {
-  readonly state: "healthy" | "degraded";
+  readonly state: "healthy" | "degraded" | "unknown";
   readonly inFlight: boolean;
   readonly retryAttempts: number;
   readonly lastFailure: string | null;
+  readonly highWaterSequence: number;
+  readonly lagByProjector: Readonly<Record<string, number>>;
+  readonly missingProjectors: ReadonlyArray<string>;
 }
 
 /**

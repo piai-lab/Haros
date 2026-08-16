@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   makeCursorSafeSnapshotLiveStream,
+  makeResnapshotEscalationTracker,
   ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT,
 } from "./wsSnapshotLiveStream";
 
@@ -319,5 +320,95 @@ describe("makeCursorSafeSnapshotLiveStream", () => {
         replayLimit: ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT,
       },
     ]);
+  });
+
+  it("escalates a repeated non-advancing resnapshot fence", async () => {
+    const tracker = makeResnapshotEscalationTracker();
+    const start = () =>
+      Effect.runPromise(
+        Effect.scoped(
+          makeCursorSafeSnapshotLiveStream({
+            resnapshotEscalation: { streamKey: "client-1:orchestration.shell", tracker },
+            subscribeLive: Effect.succeed(Stream.empty),
+            snapshot: Effect.succeed({ snapshotSequence: 1 }),
+            snapshotSequence: (snapshot) => snapshot.snapshotSequence,
+            getHighWaterSequence: Effect.succeed(ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT + 2),
+            replay: () => Stream.empty,
+          }).pipe(Stream.runDrain),
+        ),
+      );
+
+    await expect(start()).rejects.toMatchObject({
+      code: "ORCHESTRATION_RESNAPSHOT_REQUIRED",
+      retryable: true,
+    });
+    await expect(start()).rejects.toMatchObject({
+      code: "ORCHESTRATION_SNAPSHOT_STALLED",
+      retryable: false,
+    });
+  });
+
+  it("keeps concurrent subscribers and advancing fences independent", async () => {
+    const tracker = makeResnapshotEscalationTracker();
+    const highWaterSequence = ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT * 3;
+    const start = (streamKey: string, snapshotSequence: number) =>
+      Effect.runPromise(
+        Effect.scoped(
+          makeCursorSafeSnapshotLiveStream({
+            resnapshotEscalation: { streamKey, tracker },
+            subscribeLive: Effect.succeed(Stream.empty),
+            snapshot: Effect.succeed({ snapshotSequence }),
+            snapshotSequence: (snapshot) => snapshot.snapshotSequence,
+            getHighWaterSequence: Effect.succeed(highWaterSequence),
+            replay: () => Stream.empty,
+          }).pipe(Stream.runDrain),
+        ),
+      );
+
+    await expect(start("client-1:orchestration.shell", 1)).rejects.toMatchObject({
+      code: "ORCHESTRATION_RESNAPSHOT_REQUIRED",
+    });
+    await expect(start("client-2:orchestration.shell", 1)).rejects.toMatchObject({
+      code: "ORCHESTRATION_RESNAPSHOT_REQUIRED",
+    });
+    await expect(
+      start("client-1:orchestration.shell", ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT),
+    ).rejects.toMatchObject({ code: "ORCHESTRATION_RESNAPSHOT_REQUIRED", retryable: true });
+  });
+
+  it("clears escalation history after a healthy start", async () => {
+    const tracker = makeResnapshotEscalationTracker();
+    const streamKey = "client-1:orchestration.shell";
+    const stale = () =>
+      Effect.runPromise(
+        Effect.scoped(
+          makeCursorSafeSnapshotLiveStream({
+            resnapshotEscalation: { streamKey, tracker },
+            subscribeLive: Effect.succeed(Stream.empty),
+            snapshot: Effect.succeed({ snapshotSequence: 1 }),
+            snapshotSequence: (snapshot) => snapshot.snapshotSequence,
+            getHighWaterSequence: Effect.succeed(ORCHESTRATION_SNAPSHOT_REPLAY_LIMIT + 2),
+            replay: () => Stream.empty,
+          }).pipe(Stream.runDrain),
+        ),
+      );
+
+    await expect(stale()).rejects.toMatchObject({ code: "ORCHESTRATION_RESNAPSHOT_REQUIRED" });
+    await Effect.runPromise(
+      Effect.scoped(
+        makeCursorSafeSnapshotLiveStream({
+          resnapshotEscalation: { streamKey, tracker },
+          subscribeLive: Effect.succeed(Stream.empty),
+          snapshot: Effect.succeed({ snapshotSequence: 5 }),
+          snapshotSequence: (snapshot) => snapshot.snapshotSequence,
+          getHighWaterSequence: Effect.succeed(5),
+          replay: () => Stream.empty,
+        }).pipe(Stream.take(1), Stream.runDrain),
+      ),
+    );
+    await expect(stale()).rejects.toMatchObject({
+      code: "ORCHESTRATION_RESNAPSHOT_REQUIRED",
+      retryable: true,
+    });
   });
 });

@@ -66,6 +66,7 @@ import { APP_VERSION } from "./branding";
 import { useDeviceStateStore } from "./deviceStateStore";
 import {
   buildThreadSubscribeInput,
+  clearThreadDetailResumeCursor,
   resetThreadDetailResumeCursors,
 } from "./threadDetailResumeCursors";
 import type { WsTransportState } from "./wsTransportEvents";
@@ -316,7 +317,31 @@ const STREAM_ADMISSION_ERROR_CODES = new Set([
   "WS_NEGOTIATION_REQUIRED",
   "WS_PROTOCOL_INCOMPATIBLE",
   "WS_CAPABILITIES_INCOMPATIBLE",
+  "ORCHESTRATION_RESNAPSHOT_REQUIRED",
+  "ORCHESTRATION_SNAPSHOT_STALLED",
+  "ORCHESTRATION_PROJECTION_STATE_INCOMPLETE",
 ]);
+
+const RESNAPSHOT_REQUIRED_ERROR_CODE = "ORCHESTRATION_RESNAPSHOT_REQUIRED";
+const SNAPSHOT_FAULT_ERROR_CODES = new Set([
+  "ORCHESTRATION_SNAPSHOT_STALLED",
+  "ORCHESTRATION_PROJECTION_STATE_INCOMPLETE",
+  RESNAPSHOT_REQUIRED_ERROR_CODE,
+]);
+export const SNAPSHOT_FAULT_RETRY_MS = 30_000;
+
+export function getSnapshotFaultRetryDelayMs(cause: Cause.Cause<unknown>): number | null {
+  for (const reason of cause.reasons) {
+    if (!Cause.isFailReason(reason)) continue;
+    const error = reason.error;
+    if (!error || typeof error !== "object") continue;
+    const code = "code" in error ? error.code : undefined;
+    if (typeof code === "string" && SNAPSHOT_FAULT_ERROR_CODES.has(code)) {
+      return SNAPSHOT_FAULT_RETRY_MS;
+    }
+  }
+  return null;
+}
 const TERMINAL_COMPATIBILITY_ERROR_CODES = new Set([
   "WS_NEGOTIATION_REQUIRED",
   "WS_PROTOCOL_INCOMPATIBLE",
@@ -471,16 +496,38 @@ export function getThreadSnapshotBootstrapRetryDelayMs(
   return null;
 }
 
+const DEFAULT_RESNAPSHOT_RETRY_MS = 250;
+export const MAX_RESNAPSHOT_RETRY_ATTEMPTS = 2;
+
+export function getResnapshotRetryDelayMs(
+  cause: Cause.Cause<unknown>,
+  previousAttempts: number,
+): number | null {
+  if (previousAttempts >= MAX_RESNAPSHOT_RETRY_ATTEMPTS) return null;
+  for (const reason of cause.reasons) {
+    if (!Cause.isFailReason(reason)) continue;
+    const error = reason.error;
+    if (!error || typeof error !== "object") continue;
+    const code = "code" in error ? error.code : undefined;
+    if (code !== RESNAPSHOT_REQUIRED_ERROR_CODE) continue;
+    if ("retryable" in error && error.retryable === false) continue;
+    return DEFAULT_RESNAPSHOT_RETRY_MS;
+  }
+  return null;
+}
+
 export type StreamAdmissionRetry =
   | { readonly kind: "capacity"; readonly attempt: number; readonly delayMs: number }
   | { readonly kind: "duplicate"; readonly attempt: number; readonly delayMs: number }
-  | { readonly kind: "thread-bootstrap"; readonly attempt: number; readonly delayMs: number };
+  | { readonly kind: "thread-bootstrap"; readonly attempt: number; readonly delayMs: number }
+  | { readonly kind: "resnapshot"; readonly attempt: number; readonly delayMs: number };
 
 export function resolveStreamAdmissionRetry(
   cause: Cause.Cause<unknown>,
   capacityAttempts: number,
   duplicateAttempts: number,
   threadBootstrapAttempts = 0,
+  resnapshotAttempts = 0,
 ): StreamAdmissionRetry | null {
   const capacityDelayMs = getStreamCapacityRetryDelayMs(cause);
   if (capacityDelayMs !== null) {
@@ -502,12 +549,17 @@ export function resolveStreamAdmissionRetry(
     cause,
     threadBootstrapAttempts,
   );
-  if (threadBootstrapDelayMs === null) return null;
-  return {
-    kind: "thread-bootstrap",
-    attempt: threadBootstrapAttempts + 1,
-    delayMs: threadBootstrapDelayMs,
-  };
+  if (threadBootstrapDelayMs !== null) {
+    return {
+      kind: "thread-bootstrap",
+      attempt: threadBootstrapAttempts + 1,
+      delayMs: threadBootstrapDelayMs,
+    };
+  }
+  const resnapshotDelayMs = getResnapshotRetryDelayMs(cause, resnapshotAttempts);
+  return resnapshotDelayMs === null
+    ? null
+    : { kind: "resnapshot", attempt: resnapshotAttempts + 1, delayMs: resnapshotDelayMs };
 }
 
 export function getStreamFailureCode(cause: Cause.Cause<unknown>): string | null {
@@ -608,6 +660,7 @@ export class WsTransport {
   private readonly streamCapacityRetries = new Map<string, number>();
   private readonly streamDuplicateRetries = new Map<string, number>();
   private readonly streamThreadBootstrapRetries = new Map<string, number>();
+  private readonly streamResnapshotRetries = new Map<string, number>();
   private readonly streamCapacityRetryTimers = new Map<string, number>();
   private readonly streamCompletionRetries = new Map<string, number>();
   private readonly streamCompletionRetryTimers = new Map<string, number>();
@@ -1088,6 +1141,7 @@ export class WsTransport {
     this.streamCapacityRetries.delete(key);
     this.streamDuplicateRetries.delete(key);
     this.streamThreadBootstrapRetries.delete(key);
+    this.streamResnapshotRetries.delete(key);
   }
 
   private resetAllStreamCapacityRetries(): void {
@@ -1098,6 +1152,7 @@ export class WsTransport {
     this.streamCapacityRetries.clear();
     this.streamDuplicateRetries.clear();
     this.streamThreadBootstrapRetries.clear();
+    this.streamResnapshotRetries.clear();
   }
 
   private clearStreamCompletionRetryTimer(key: string): void {
@@ -1527,6 +1582,9 @@ export class WsTransport {
           if (this.streamThreadBootstrapRetries.has(key)) {
             this.streamThreadBootstrapRetries.delete(key);
           }
+          if (this.streamResnapshotRetries.has(key)) {
+            this.streamResnapshotRetries.delete(key);
+          }
           listener(event);
         }),
       ),
@@ -1562,6 +1620,7 @@ export class WsTransport {
               this.streamCapacityRetries.get(key) ?? 0,
               this.streamDuplicateRetries.get(key) ?? 0,
               this.streamThreadBootstrapRetries.get(key) ?? 0,
+              this.streamResnapshotRetries.get(key) ?? 0,
             );
             if (admissionRetry !== null) {
               const retries =
@@ -1569,8 +1628,16 @@ export class WsTransport {
                   ? this.streamCapacityRetries
                   : admissionRetry.kind === "duplicate"
                     ? this.streamDuplicateRetries
-                    : this.streamThreadBootstrapRetries;
+                    : admissionRetry.kind === "thread-bootstrap"
+                      ? this.streamThreadBootstrapRetries
+                      : this.streamResnapshotRetries;
               retries.set(key, admissionRetry.attempt);
+              if (admissionRetry.kind === "resnapshot") {
+                const threadId = threadIdFromStreamKey(key);
+                if (threadId !== null) {
+                  clearThreadDetailResumeCursor(ThreadId.makeUnsafe(threadId));
+                }
+              }
               this.clearStreamCapacityRetryTimer(key);
               const timeoutId = window.setTimeout(
                 () => {
@@ -1617,6 +1684,18 @@ export class WsTransport {
                 error,
               });
             }
+            // Snapshot faults are local to one projection stream. Keep a slow
+            // in-place retry armed so it converges after server recovery without
+            // reconnecting unrelated RPCs or hammering a stalled projector.
+            if (restart && getSnapshotFaultRetryDelayMs(exit.cause) !== null) {
+              this.clearStreamCapacityRetryTimer(key);
+              const timeoutId = window.setTimeout(() => {
+                if (this.streamCapacityRetryTimers.get(key) !== timeoutId) return;
+                this.streamCapacityRetryTimers.delete(key);
+                if (!this.disposed && !this.streamCleanups.has(key)) restart();
+              }, SNAPSHOT_FAULT_RETRY_MS);
+              this.streamCapacityRetryTimers.set(key, timeoutId);
+            }
           }
         },
       },
@@ -1635,6 +1714,7 @@ export class WsTransport {
       this.streamCapacityRetries.delete(key);
       this.streamDuplicateRetries.delete(key);
       this.streamThreadBootstrapRetries.delete(key);
+      this.streamResnapshotRetries.delete(key);
     }
     this.streamCompletionRetries.delete(key);
     this.activeThreadStreamInputs.delete(key);

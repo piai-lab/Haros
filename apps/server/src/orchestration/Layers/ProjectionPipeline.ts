@@ -2083,10 +2083,22 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
         .filter((projector) => projector.phase === "hot")
         .map((projector) => projector.name),
     );
-    const sourceRows = (yield* projectionStateRepository.listAll()).filter((row) =>
+    const stateRows = yield* projectionStateRepository.listAll();
+    const sourceRows = stateRows.filter((row) =>
       hotProjectorNames.has(row.projector as ProjectorName),
     );
     if (sourceRows.length === 0) {
+      // An empty table is a fresh database and already has the exact fence 0.
+      // A non-empty table with no hot-phase rows is an interrupted rebuild;
+      // bootstrap has replayed every projector by this point, so recreate the
+      // required hot fence instead of leaving snapshots underivable.
+      if (stateRows.length > 0) {
+        yield* projectionStateRepository.upsert({
+          projector: ORCHESTRATION_PROJECTOR_NAMES.hot,
+          lastAppliedSequence: 0,
+          updatedAt: new Date().toISOString(),
+        });
+      }
       return;
     }
 
@@ -2137,15 +2149,67 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
     );
   });
 
-  const advanceProjectorStateToEvent = (
+  const BOOTSTRAP_REPLAY_BATCH_SIZE = 500;
+
+  /**
+   * Apply one bootstrap page and its tail cursor atomically. A crash can replay
+   * at most one idempotent batch; it can never commit a cursor ahead of rows.
+   * Live projection retains its existing one-event transaction boundary.
+   */
+  const applyBootstrapReplayBatch = (
     projector: ProjectorDefinition,
-    event: OrchestrationEvent,
+    events: ReadonlyArray<OrchestrationEvent>,
   ) =>
-    projectionStateRepository.upsert({
-      projector: projector.name,
-      lastAppliedSequence: event.sequence,
-      updatedAt: event.occurredAt,
-    });
+    Effect.gen(function* () {
+      const lastEvent = events[events.length - 1];
+      if (lastEvent === undefined) return;
+
+      const attachmentSideEffects: AttachmentSideEffects = {
+        deletedThreadIds: new Set<string>(),
+        prunedThreadRelativePaths: new Map<string, Set<string>>(),
+      };
+      yield* sql.withTransaction(
+        Effect.gen(function* () {
+          for (const event of events) {
+            if (projector.shouldApply?.(event) ?? true) {
+              yield* projector.apply(event, attachmentSideEffects);
+            }
+          }
+          // The tail advances even when it did not match this projector. This
+          // subsumes the old trailing-skipped-event cursor write.
+          yield* projectionStateRepository.upsert({
+            projector: projector.name,
+            lastAppliedSequence: lastEvent.sequence,
+            updatedAt: lastEvent.occurredAt,
+          });
+          for (const threadId of attachmentSideEffects.deletedThreadIds) {
+            yield* managedAttachments.markCleanupByThread({
+              ownerThreadId: threadId,
+              reason: "thread-deleted",
+              requestedAt: lastEvent.occurredAt,
+            });
+          }
+          for (const [threadId, relativePaths] of attachmentSideEffects.prunedThreadRelativePaths) {
+            yield* managedAttachments.markUnreferencedClaimedForCleanup({
+              ownerThreadId: threadId,
+              retainedAttachmentIds: [...relativePaths]
+                .map(parseAttachmentIdFromRelativePath)
+                .filter(
+                  (attachmentId): attachmentId is string =>
+                    attachmentId?.startsWith("att_v2_") === true,
+                ),
+              reason: "projection-pruned",
+              requestedAt: lastEvent.occurredAt,
+            });
+          }
+        }),
+      );
+      yield* runProjectorAttachmentSideEffects([projector], lastEvent, attachmentSideEffects);
+    }).pipe(
+      Effect.provideService(FileSystem.FileSystem, fileSystem),
+      Effect.provideService(Path.Path, path),
+      Effect.provideService(ServerConfig, serverConfig),
+    );
 
   const bootstrapProjector = (projector: ProjectorDefinition, highWaterSequence: number) =>
     projectionStateRepository
@@ -2154,11 +2218,9 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
       })
       .pipe(
         Effect.flatMap((stateRow) =>
-          Effect.gen(function* () {
-            let pendingSkippedEvent: OrchestrationEvent | null = null;
-
-            yield* Stream.runForEach(
-              eventStore.readFromSequence(
+          Stream.runForEach(
+            eventStore
+              .readFromSequence(
                 Option.isSome(stateRow) ? stateRow.value.lastAppliedSequence : 0,
                 Number.MAX_SAFE_INTEGER,
                 highWaterSequence,
@@ -2166,24 +2228,10 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
                   ...projector.replayFilter,
                   includeBoundaryEvent: true,
                 },
-              ),
-              (event) => {
-                if (!(projector.shouldApply?.(event) ?? true)) {
-                  pendingSkippedEvent = event;
-                  return Effect.void;
-                }
-
-                pendingSkippedEvent = null;
-                return runProjectorsForEvent([projector], event);
-              },
-            );
-
-            // Preserve the replay cursor across trailing non-matching events without paying the
-            // full projector transaction/apply cost for bootstrap no-ops.
-            if (pendingSkippedEvent) {
-              yield* advanceProjectorStateToEvent(projector, pendingSkippedEvent);
-            }
-          }),
+              )
+              .pipe(Stream.grouped(BOOTSTRAP_REPLAY_BATCH_SIZE)),
+            (events) => applyBootstrapReplayBatch(projector, events),
+          ),
         ),
       );
 

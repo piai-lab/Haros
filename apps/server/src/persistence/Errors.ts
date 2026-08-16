@@ -79,8 +79,31 @@ export function toPersistenceDecodeCauseError(operation: string) {
     });
 }
 
+/**
+ * A non-empty cursor table is missing a projector required to derive the
+ * snapshot fence. Returning an invented fence would either serve stale state
+ * as current or trap clients in an unsatisfiable resnapshot loop.
+ */
+export class ProjectionStateIncompleteError extends Schema.TaggedErrorClass<ProjectionStateIncompleteError>()(
+  "ProjectionStateIncompleteError",
+  {
+    missingProjectors: Schema.Array(Schema.String),
+    knownProjectors: Schema.Array(Schema.String),
+  },
+) {
+  override get message(): string {
+    return (
+      `Projection state is incomplete: missing cursor rows for ${this.missingProjectors.join(", ")} ` +
+      `(present: ${this.knownProjectors.join(", ") || "none"}). ` +
+      "Restart OmniMind so projection bootstrap can rebuild the missing cursors, or repair local state."
+    );
+  }
+}
+
 export const isPersistenceError = (u: unknown) =>
-  Schema.is(PersistenceSqlError)(u) || Schema.is(PersistenceDecodeError)(u);
+  Schema.is(PersistenceSqlError)(u) ||
+  Schema.is(PersistenceDecodeError)(u) ||
+  Schema.is(ProjectionStateIncompleteError)(u);
 
 export class MigrationLineageError extends Schema.TaggedErrorClass<MigrationLineageError>()(
   "MigrationLineageError",
@@ -157,7 +180,10 @@ export type OrchestrationCommandReceiptRepositoryError =
 
 export type ProviderSessionRuntimeRepositoryError = PersistenceSqlError | PersistenceDecodeError;
 
-export type ProjectionRepositoryError = PersistenceSqlError | PersistenceDecodeError;
+export type ProjectionRepositoryError =
+  | PersistenceSqlError
+  | PersistenceDecodeError
+  | ProjectionStateIncompleteError;
 
 export type AuthPairingLinkRepositoryError = PersistenceSqlError | PersistenceDecodeError;
 

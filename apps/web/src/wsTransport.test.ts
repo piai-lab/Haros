@@ -25,6 +25,8 @@ import {
   getStreamCapacityRetryDelayMs,
   getStreamDuplicateRetryDelayMs,
   getStreamFailureCode,
+  getResnapshotRetryDelayMs,
+  getSnapshotFaultRetryDelayMs,
   getThreadSnapshotBootstrapRetryDelayMs,
   getTerminalCompatibilityError,
   isTerminalCompatibilityFailure,
@@ -34,7 +36,9 @@ import {
   negotiateOverHttp,
   serverIdentityChanged,
   MAX_STREAM_DUPLICATE_RETRY_ATTEMPTS,
+  MAX_RESNAPSHOT_RETRY_ATTEMPTS,
   MAX_THREAD_SNAPSHOT_BOOTSTRAP_RETRY_ATTEMPTS,
+  SNAPSHOT_FAULT_RETRY_MS,
   resolveStreamAdmissionRetry,
   shouldReconnectAfterStreamFailure,
   threadStreamInputsEqual,
@@ -133,6 +137,7 @@ interface WsTransportInternals {
   readonly streamCapacityRetries: Map<string, number>;
   readonly streamDuplicateRetries: Map<string, number>;
   readonly streamThreadBootstrapRetries: Map<string, number>;
+  readonly streamResnapshotRetries: Map<string, number>;
   readonly streamCapacityRetryTimers: Map<string, number>;
   readonly streamCompletionRetries: Map<string, number>;
   readonly streamCompletionRetryTimers: Map<string, number>;
@@ -174,6 +179,7 @@ function makeBareTransport(): {
     streamCapacityRetries: new Map(),
     streamDuplicateRetries: new Map(),
     streamThreadBootstrapRetries: new Map(),
+    streamResnapshotRetries: new Map(),
     streamCapacityRetryTimers: new Map(),
     streamCompletionRetries: new Map(),
     streamCompletionRetryTimers: new Map(),
@@ -367,6 +373,16 @@ describe("WsTransport", () => {
     expect(
       shouldReconnectAfterStreamFailure(
         Cause.fail({ code: "THREAD_SNAPSHOT_NOT_FOUND", retryable: false }),
+      ),
+    ).toBe(false);
+    expect(
+      shouldReconnectAfterStreamFailure(
+        Cause.fail({ code: "ORCHESTRATION_SNAPSHOT_STALLED", retryable: false }),
+      ),
+    ).toBe(false);
+    expect(
+      shouldReconnectAfterStreamFailure(
+        Cause.fail({ code: "ORCHESTRATION_PROJECTION_STATE_INCOMPLETE", retryable: false }),
       ),
     ).toBe(false);
     expect(shouldReconnectAfterStreamFailure(Cause.fail(new Error("transient")))).toBe(true);
@@ -580,6 +596,91 @@ describe("WsTransport", () => {
         MAX_THREAD_SNAPSHOT_BOOTSTRAP_RETRY_ATTEMPTS,
       ),
     ).toBeNull();
+  });
+
+  it("bounds fast resnapshot retries then classifies snapshot faults for slow recovery", () => {
+    const resnapshot = Cause.fail({
+      code: "ORCHESTRATION_RESNAPSHOT_REQUIRED",
+      retryable: true,
+    });
+
+    expect(getResnapshotRetryDelayMs(resnapshot, 0)).toBe(250);
+    expect(getResnapshotRetryDelayMs(resnapshot, MAX_RESNAPSHOT_RETRY_ATTEMPTS)).toBeNull();
+    expect(resolveStreamAdmissionRetry(resnapshot, 0, 0, 0, 0)).toEqual({
+      kind: "resnapshot",
+      attempt: 1,
+      delayMs: 250,
+    });
+    expect(
+      getSnapshotFaultRetryDelayMs(
+        Cause.fail({ code: "ORCHESTRATION_SNAPSHOT_STALLED", retryable: false }),
+      ),
+    ).toBe(SNAPSHOT_FAULT_RETRY_MS);
+    expect(
+      getSnapshotFaultRetryDelayMs(
+        Cause.fail({ code: "ORCHESTRATION_PROJECTION_STATE_INCOMPLETE", retryable: false }),
+      ),
+    ).toBe(SNAPSHOT_FAULT_RETRY_MS);
+    expect(getSnapshotFaultRetryDelayMs(resnapshot)).toBe(SNAPSHOT_FAULT_RETRY_MS);
+    expect(getSnapshotFaultRetryDelayMs(Cause.fail(new Error("transient")))).toBeNull();
+  });
+
+  it("slow-retries a stalled snapshot stream without reconnecting the socket", async () => {
+    vi.useFakeTimers();
+    bindWindowTimersToCurrentGlobals();
+    try {
+      const { internals } = makeBareTransport();
+      const restart = vi.fn();
+      const reconnect = vi.mocked(internals.reconnect);
+
+      internals.startStream(
+        {},
+        "orchestration.shell",
+        Stream.fail({ code: "ORCHESTRATION_SNAPSHOT_STALLED", retryable: false }),
+        () => undefined,
+        restart,
+      );
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(SNAPSHOT_FAULT_RETRY_MS - 1);
+      expect(restart).not.toHaveBeenCalled();
+      expect(reconnect).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(restart).toHaveBeenCalledTimes(1);
+      expect(reconnect).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("slow-retries an exhausted advancing resnapshot and cancels on stop", async () => {
+    vi.useFakeTimers();
+    bindWindowTimersToCurrentGlobals();
+    try {
+      const { internals } = makeBareTransport();
+      const key = "orchestration.shell";
+      internals.streamResnapshotRetries.set(key, MAX_RESNAPSHOT_RETRY_ATTEMPTS);
+      const restart = vi.fn();
+      const reconnect = vi.mocked(internals.reconnect);
+
+      internals.startStream(
+        {},
+        key,
+        Stream.fail({ code: "ORCHESTRATION_RESNAPSHOT_REQUIRED", retryable: true }),
+        () => undefined,
+        restart,
+      );
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(0);
+      await internals.stopStream(key);
+      await vi.advanceTimersByTimeAsync(SNAPSHOT_FAULT_RETRY_MS * 2);
+
+      expect(restart).not.toHaveBeenCalled();
+      expect(reconnect).not.toHaveBeenCalled();
+      expect(internals.streamResnapshotRetries.has(key)).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("extracts the typed failure code used for thread stream failure reporting", () => {

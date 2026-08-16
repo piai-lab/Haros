@@ -118,7 +118,7 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 - 维护者于 2026-08-15 明确否决 `.zq-ui/responsive-workbench` 早期说明型 `adaptive-inspector`，选择并验收后来更贴近当前产品 Shell 的 `omnimind-shell-v2`，随后授权从 UI 研究、唯一 owner 到 production 实现继续推进，并要求直接在 `main` 施工；该授权只覆盖下述 W1，不扩张到 Agent Core、Project instructions 语义或降低 Desktop 最小宽度；
 - C0 对 Agent Core 仍只负责收敛文档与 owner，不授权任何 Agent Core 代码、依赖、lockfile、patch、test、vendor、build 或安装 App 写入。
 
-当前唯一代码 Slice 是 **W1 Responsive Workbench presentation correctness**。它只闭合：
+W1 当时的唯一代码 Slice 是 **Responsive Workbench presentation correctness**，现已完成；它只闭合：
 
 1. Environment 作为 `Environment / 环境信息` 辅助检查器悬浮呈现；删除正常 desktop single-chat 的固定 `312px` Timeline/Composer inset，并以真实几何测量证明单独开关 Environment 时二者 `x/width` 变化不超过 `1px`；
 2. Sidebar 手动 intent 与空间自动压制分离：自动压制不调用手动 `setOpen`，不写回 cookie、Settings 或当前 mounted shell 的用户 intent；受压时可临时 overlay/sheet，空间恢复后只恢复原本手动打开的状态；W1 不新增当前源码不存在的 cookie rehydrate 或跨启动持久化；
@@ -221,7 +221,7 @@ W3 只闭合：
 
 W3 只复用 `_chat`、Sidebar primitive、现有 Sidebar surface/off-canvas token 与当前 hover presentation owner。不得新增全局 layout/focus store、第二 Sidebar DOM、第二动画 runtime、Project instructions/Settings taxonomy、Agent Core、Provider 或 release；不得复制 Codex 视觉皮肤。实现与证据边界见 [`architecture/workbench.md`](architecture/workbench.md#chat-shell环境信息与响应式-workbench) 和 [`research/omnimind-responsive-workbench-review.md`](research/omnimind-responsive-workbench-review.md)。W3 完成前 C1 继续 deferred。
 
-W3 已在 exact pushed `a5bae33aef7c068e0ee8700605ac58cb40e157b5` 完成 rail 连续 resize→dismiss、反向拖回、pointercancel、非模态 edge peek、显式 toggle 提升为常驻、`208px` 合法最小持久宽度、Environment 冷启动默认关闭及 fresh isolated packaged 证据。维护者随后明确授权首次启动纠偏，因此当前唯一代码 Slice 改为下述 **W4 First-run three-step readiness**；C1 继续 deferred。
+W3 已在 exact pushed `a5bae33aef7c068e0ee8700605ac58cb40e157b5` 完成 rail 连续 resize→dismiss、反向拖回、pointercancel、非模态 edge peek、显式 toggle 提升为常驻、`208px` 合法最小持久宽度、Environment 冷启动默认关闭及 fresh isolated packaged 证据。维护者随后明确授权首次启动纠偏，因此当时的下一代码 Slice 是下述 **W4 First-run three-step readiness**；C1 继续 deferred。
 
 ### W4 First-run three-step readiness（已完成）
 
@@ -250,6 +250,8 @@ S1 的第一个有界关注点只闭合四个底层、解释唯一的缺口：
 4. 超限 Provider runtime event 先按 UTF-8 边界递归收缩 canonical payload 的 string leaves，再以 OmniMind identity 压缩 raw diagnostics；raw 与 raw-less 两条路径都保留 canonical event identity，仍无法安全收口的非字符串洪泛继续 fail closed。
 
 本关注点必须补 query-plan、pragma、原始空白、partial DOM、UTF-8、raw/no-raw 与不可收缩 payload 回归测试，并通过相关 focused test、typecheck、format 与 diff check 后独立 commit/push。它不准入 projection recovery、text-segment migration、Automation、Workspace/UI/Git/PR/model picker/streaming 或 release/feed，也不提前更新 README 的 adopted Synara head。其余 v0.7.2 disposition 只有在本关注点形成 pushed candidate 且经过独立复核后才能继续。
+
+上述第一个关注点已在 exact pushed `85889edb57d31c03b3032b3e93a25cd22973638b` 闭合。S1 当前仅准入随后独立复核确认的 projection reliability 关注点：由 server durable truth 判定空 Project shell 是否需要一次修复，保护真正 fresh `[]/[]` onboarding；projector bootstrap 以有界 batch 原子推进 tail cursor；snapshot fence 对缺失/停滞状态提供 typed fault、按 subscriber 有界升级与不中断整条 socket 的慢速重试；健康端点只暴露 snapshot-fence 范围内的 lag/missing 与 `hasFailure`，不暴露原始 failure。该关注点仍不准入 text-segment migration、Automation 产品语义、Workspace/UI/Git/PR/model picker、其他 streaming 改造、package/install 或 release/feed；README adopted Synara head 继续等待完整 source slice 闭合后更新。
 
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
