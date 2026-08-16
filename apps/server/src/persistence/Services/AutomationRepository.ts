@@ -195,6 +195,21 @@ export interface MarkAutomationRunFailedResult {
   readonly transitioned: boolean;
   readonly consecutiveFailureCount: number | null;
   readonly autoDisabled: boolean;
+  readonly transitionedOwnerRun: DeferredOneShotOwnerTransition | null;
+}
+
+export type DeferredOneShotOwnerTransitionReason =
+  | "definition-superseded"
+  | "failure-threshold-reached";
+
+export interface DeferredOneShotOwnerTransition {
+  readonly run: AutomationRun;
+  readonly reason: DeferredOneShotOwnerTransitionReason;
+}
+
+export interface AutomationDefinitionMutationResult<A> {
+  readonly value: A;
+  readonly transitionedOwnerRun: DeferredOneShotOwnerTransition | null;
 }
 
 export const MarkAutomationRunSkippedInput = Schema.Struct({
@@ -334,10 +349,13 @@ export interface AutomationRepositoryShape {
     readonly definition: AutomationDefinition;
     readonly expectedDefinitionRevision: number;
     readonly supersedeDeferredOneShotOwner?: boolean;
-  }) => Effect.Effect<Option.Option<AutomationDefinition>, AutomationRepositoryError>;
+  }) => Effect.Effect<
+    AutomationDefinitionMutationResult<Option.Option<AutomationDefinition>>,
+    AutomationRepositoryError
+  >;
   readonly resolvePendingProposal: (
     input: ResolvePendingAutomationProposalInput,
-  ) => Effect.Effect<boolean, AutomationRepositoryError>;
+  ) => Effect.Effect<AutomationDefinitionMutationResult<boolean>, AutomationRepositoryError>;
   readonly getDefinitionById: (
     input: GetAutomationDefinitionInput,
   ) => Effect.Effect<Option.Option<AutomationDefinition>, AutomationRepositoryError>;
@@ -357,7 +375,7 @@ export interface AutomationRepositoryShape {
   ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly archiveDefinition: (
     input: ArchiveAutomationDefinitionInput,
-  ) => Effect.Effect<boolean, AutomationRepositoryError>;
+  ) => Effect.Effect<AutomationDefinitionMutationResult<boolean>, AutomationRepositoryError>;
   readonly list: (
     input?: AutomationListInput,
   ) => Effect.Effect<AutomationListResult, AutomationRepositoryError>;
@@ -484,16 +502,16 @@ export interface AutomationRepositoryShape {
   readonly getOrCreateInstallSalt: () => Effect.Effect<string, AutomationRepositoryError>;
   readonly disableDefinition: (
     input: DisableAutomationDefinitionInput,
-  ) => Effect.Effect<boolean, AutomationRepositoryError>;
+  ) => Effect.Effect<AutomationDefinitionMutationResult<boolean>, AutomationRepositoryError>;
   readonly disableDefinitionIfUnchanged: (
     input: DisableAutomationDefinitionIfUnchangedInput,
-  ) => Effect.Effect<boolean, AutomationRepositoryError>;
+  ) => Effect.Effect<AutomationDefinitionMutationResult<boolean>, AutomationRepositoryError>;
   readonly incrementDefinitionIterationCount: (
     input: IncrementAutomationIterationInput,
   ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly restartDefinitionLoop: (
     input: RestartAutomationDefinitionLoopInput,
-  ) => Effect.Effect<boolean, AutomationRepositoryError>;
+  ) => Effect.Effect<AutomationDefinitionMutationResult<boolean>, AutomationRepositoryError>;
   readonly tryAcquireSchedulerLease: (
     input: AcquireAutomationSchedulerLeaseInput,
   ) => Effect.Effect<boolean, AutomationRepositoryError>;

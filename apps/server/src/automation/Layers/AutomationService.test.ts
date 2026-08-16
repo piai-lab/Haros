@@ -11,6 +11,7 @@ import {
   TurnId,
   type AutomationCreateInput,
   type AutomationRun,
+  type AutomationStreamEvent,
   type GitCreateDetachedWorktreeInput,
   type GitRemoveWorktreeInput,
   type OrchestrationCommand,
@@ -2386,6 +2387,7 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
       const targetThreadId = ThreadId.makeUnsafe("heartbeat-stop-thread");
       const automationTurnId = TurnId.makeUnsafe("turn-stop-matched");
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
@@ -2397,11 +2399,59 @@ layer("AutomationService", (it) => {
 
       const created = yield* service.create({
         ...createInput("local"),
+        schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
         completionPolicy: aiCompletionPolicy("the PR is ready to merge"),
       });
       const { run } = yield* service.runNow({ automationId: created.id });
+      const ownerDefinition = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: created.id }),
+      );
+      const ownerRunId = AutomationRunId.makeUnsafe("run-completion-owner-stream");
+      assert.isTrue(
+        Option.isSome(
+          yield* repository.createRunAndIncrementDefinition(
+            {
+              id: ownerRunId,
+              automationId: created.id,
+              projectId: created.projectId,
+              threadId: null,
+              trigger: { type: "scheduled" },
+              scheduledFor: "2026-08-17T10:00:00.000Z",
+              deferredUntil: "2026-08-17T10:00:15.000Z",
+              permissionSnapshot: {
+                provider: "codex",
+                modelSelection: created.modelSelection,
+                runtimeMode: created.runtimeMode,
+                interactionMode: created.interactionMode,
+                worktreeMode: created.worktreeMode,
+                allowedCapabilities: ["send-turn"],
+                createdAt: "2026-08-17T10:00:00.000Z",
+              },
+              now: "2026-08-17T10:00:00.000Z",
+            },
+            {
+              expectedDefinitionRevision: ownerDefinition.definitionRevision,
+              consumeIteration: true,
+              claimDeferredOneShotOwner: true,
+              scheduleAdvance: { nextRunAt: null, disable: false },
+            },
+          ),
+        ),
+      );
+      const ownerEvents: AutomationStreamEvent[] = [];
+      yield* service.streamEvents.pipe(
+        Stream.runForEach((event) =>
+          Effect.sync(() => {
+            if (event.type === "run-upserted" && event.run.id === ownerRunId) {
+              ownerEvents.push(event);
+            }
+          }),
+        ),
+        Effect.forkScoped,
+      );
+      yield* Effect.yieldNow;
       yield* completeAutomationRun({
         run,
         threadId: targetThreadId,
@@ -2422,6 +2472,7 @@ layer("AutomationService", (it) => {
       const updatedDefinition = listed.definitions.find((entry) => entry.id === created.id);
       const updatedRun = listed.runs.find((entry) => entry.id === run.id);
       assert.strictEqual(updatedDefinition?.enabled, false);
+      assert.lengthOf(ownerEvents, 1);
       assert.strictEqual(updatedDefinition?.disabledReason, "completion");
       assert.isNotNull(updatedDefinition?.disabledAt ?? null);
       assert.strictEqual(updatedRun?.result?.completionEvaluation?.stopMatched, true);
@@ -2688,6 +2739,7 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
       const targetThreadId = ThreadId.makeUnsafe("heartbeat-stop-max-iterations");
       const automationTurnId = TurnId.makeUnsafe("turn-stop-max-iterations");
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
@@ -2700,12 +2752,60 @@ layer("AutomationService", (it) => {
 
       const created = yield* service.create({
         ...createInput("local"),
+        schedule: { type: "once", runAt: "2026-08-17T11:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
         maxIterations: 1,
         completionPolicy: aiCompletionPolicy("the PR is ready"),
       });
       const { run } = yield* service.runNow({ automationId: created.id });
+      const ownerDefinition = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: created.id }),
+      );
+      const ownerRunId = AutomationRunId.makeUnsafe("run-max-owner-stream");
+      assert.isTrue(
+        Option.isSome(
+          yield* repository.createRunAndIncrementDefinition(
+            {
+              id: ownerRunId,
+              automationId: created.id,
+              projectId: created.projectId,
+              threadId: null,
+              trigger: { type: "scheduled" },
+              scheduledFor: "2026-08-17T11:00:00.000Z",
+              deferredUntil: "2026-08-17T11:00:15.000Z",
+              permissionSnapshot: {
+                provider: "codex",
+                modelSelection: created.modelSelection,
+                runtimeMode: created.runtimeMode,
+                interactionMode: created.interactionMode,
+                worktreeMode: created.worktreeMode,
+                allowedCapabilities: ["send-turn"],
+                createdAt: "2026-08-17T11:00:00.000Z",
+              },
+              now: "2026-08-17T11:00:00.000Z",
+            },
+            {
+              expectedDefinitionRevision: ownerDefinition.definitionRevision,
+              consumeIteration: false,
+              claimDeferredOneShotOwner: true,
+              scheduleAdvance: { nextRunAt: null, disable: false },
+            },
+          ),
+        ),
+      );
+      const ownerEvents: AutomationStreamEvent[] = [];
+      yield* service.streamEvents.pipe(
+        Stream.runForEach((event) =>
+          Effect.sync(() => {
+            if (event.type === "run-upserted" && event.run.id === ownerRunId) {
+              ownerEvents.push(event);
+            }
+          }),
+        ),
+        Effect.forkScoped,
+      );
+      yield* Effect.yieldNow;
       yield* completeAutomationRun({
         run,
         threadId: targetThreadId,
@@ -2725,6 +2825,7 @@ layer("AutomationService", (it) => {
       assert.strictEqual(started, "not-started");
       assert.strictEqual(updatedDefinition?.enabled, false);
       assert.strictEqual(updatedDefinition?.disabledReason, "max-iterations");
+      assert.lengthOf(ownerEvents, 1);
       assert.isNotNull(updatedDefinition?.disabledAt ?? null);
       assert.isUndefined(updatedRun?.result?.completionEvaluation);
       assert.strictEqual(completionEvaluationInputs.length, 0);
@@ -4516,6 +4617,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create({
         ...createInput("local"),
         name: "Paused deferred heartbeat",
+        schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
       });
@@ -4545,6 +4647,53 @@ layer("AutomationService", (it) => {
       );
       assert.strictEqual(reloaded?.status, "pending");
       assert.isNotNull(reloaded?.deferredUntil ?? null);
+    }),
+  );
+
+  it.effect("dispatches a deferred manual run under a current one-shot definition", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const targetThreadId = ThreadId.makeUnsafe("manual-once-deferred-target");
+      threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
+      const created = yield* service.create({
+        ...createInput("local"),
+        name: "Manual under one-shot",
+        schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
+        mode: "heartbeat",
+        targetThreadId,
+        heartbeatCooldownSeconds: 0,
+      });
+      const first = (yield* service.runNow({ automationId: created.id })).run;
+      const deferred = (yield* service.runNow({ automationId: created.id })).run;
+      assert.strictEqual(deferred.trigger.type, "manual");
+      assert.isNotNull(deferred.deferredUntil);
+
+      yield* completeAutomationRun({
+        run: first,
+        threadId: targetThreadId,
+        turnId: TurnId.makeUnsafe("manual-once-first-turn"),
+      });
+      yield* service.reconcileThread({ threadId: targetThreadId });
+      const beforeRetryDispatches = dispatchedCommands.filter(
+        (command) => command.type === "thread.turn.start",
+      ).length;
+      yield* service.runDueOnce({
+        now: deferred.deferredUntil!,
+        limit: 3,
+        leaseOwnerId: "test-scheduler",
+      });
+
+      const listed = yield* service.list({ projectId });
+      const retried = listed.runs.find((run) => run.id === deferred.id);
+      const definition = listed.definitions.find((entry) => entry.id === created.id);
+      assert.strictEqual(retried?.status, "running");
+      assert.isNull(retried?.deferredUntil ?? null);
+      assert.isTrue(definition?.enabled ?? false);
+      assert.strictEqual(
+        dispatchedCommands.filter((command) => command.type === "thread.turn.start").length,
+        beforeRetryDispatches + 1,
+      );
     }),
   );
 
@@ -5270,20 +5419,71 @@ layer("AutomationService", (it) => {
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
 
-      const created = yield* service.create(createInput("local"));
+      const created = yield* service.create({
+        ...createInput("local"),
+        schedule: { type: "once", runAt: "2026-08-17T19:00:00.000Z" },
+      });
       const { run } = yield* service.runNow({ automationId: created.id });
       const threadId = run.threadId!;
+      const beforeOwner = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: created.id }),
+      );
+      const ownerRunId = AutomationRunId.makeUnsafe("run-delete-owner-stream");
+      yield* repository.createRunAndIncrementDefinition(
+        {
+          id: ownerRunId,
+          automationId: created.id,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "scheduled" },
+          scheduledFor: "2026-08-17T19:00:00.000Z",
+          deferredUntil: "2026-08-17T19:00:15.000Z",
+          permissionSnapshot: {
+            provider: "codex",
+            modelSelection: created.modelSelection,
+            runtimeMode: created.runtimeMode,
+            interactionMode: created.interactionMode,
+            worktreeMode: created.worktreeMode,
+            allowedCapabilities: ["send-turn"],
+            createdAt: "2026-08-17T19:00:00.000Z",
+          },
+          now: "2026-08-17T19:00:00.000Z",
+        },
+        {
+          expectedDefinitionRevision: beforeOwner.definitionRevision,
+          consumeIteration: true,
+          claimDeferredOneShotOwner: true,
+          scheduleAdvance: { nextRunAt: null, disable: false },
+        },
+      );
+      const ownerDefinition = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: created.id }),
+      );
+      const ownerEvents: AutomationStreamEvent[] = [];
+      yield* service.streamEvents.pipe(
+        Stream.runForEach((event) =>
+          Effect.sync(() => {
+            if (event.type === "run-upserted" && event.run.id === ownerRunId) {
+              ownerEvents.push(event);
+            }
+          }),
+        ),
+        Effect.forkScoped,
+      );
+      yield* Effect.yieldNow;
 
       yield* service.delete({
         id: created.id,
-        expectedDefinitionRevision: created.definitionRevision + 1,
+        expectedDefinitionRevision: ownerDefinition.definitionRevision,
       });
 
       const reloaded = yield* service.list({ projectId, includeArchived: true });
       const definition = reloaded.definitions.find((entry) => entry.id === created.id);
       assert.isNotNull(definition?.archivedAt ?? null);
       assert.strictEqual(reloaded.runs.find((entry) => entry.id === run.id)?.status, "cancelled");
+      assert.lengthOf(ownerEvents, 1);
       assert.isDefined(
         dispatchedCommands.find(
           (command) => command.type === "thread.turn.interrupt" && command.threadId === threadId,
@@ -5612,6 +5812,258 @@ layer("AutomationService", (it) => {
       });
       assert.strictEqual(
         Option.getOrThrow(yield* repository.getRunById({ id: scheduleCase.runId })).status,
+        "skipped",
+      );
+    }),
+  );
+
+  it.effect("publishes a prompt-superseded deferred owner exactly once across a stale retry", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+      const targetThreadId = ThreadId.makeUnsafe("prompt-supersede-stream-target");
+      threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
+      const created = yield* service.create({
+        ...createInput("local"),
+        name: "Prompt supersede stream",
+        schedule: { type: "once", runAt: "2026-08-17T16:00:00.000Z" },
+        mode: "heartbeat",
+        targetThreadId,
+      });
+      const runId = AutomationRunId.makeUnsafe("run-prompt-supersede-stream");
+      const claimed = yield* repository.createRunAndIncrementDefinition(
+        {
+          id: runId,
+          automationId: created.id,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "scheduled" },
+          scheduledFor: "2026-08-17T16:00:00.000Z",
+          deferredUntil: "2026-08-17T16:00:15.000Z",
+          permissionSnapshot: {
+            provider: "codex",
+            modelSelection: created.modelSelection,
+            runtimeMode: created.runtimeMode,
+            interactionMode: created.interactionMode,
+            worktreeMode: created.worktreeMode,
+            allowedCapabilities: ["send-turn"],
+            createdAt: "2026-08-17T16:00:00.000Z",
+          },
+          now: "2026-08-17T16:00:00.000Z",
+        },
+        {
+          expectedDefinitionRevision: created.definitionRevision,
+          consumeIteration: true,
+          claimDeferredOneShotOwner: true,
+          scheduleAdvance: { nextRunAt: null, disable: false },
+        },
+      );
+      assert.isTrue(Option.isSome(claimed));
+      const ownerDefinition = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: created.id }),
+      );
+      const events: AutomationStreamEvent[] = [];
+      yield* service.streamEvents.pipe(
+        Stream.runForEach((event) => Effect.sync(() => events.push(event))),
+        Effect.forkScoped,
+      );
+      yield* Effect.yieldNow;
+
+      const competingUpdates = yield* Effect.all(
+        ["Use the new prompt.", "Use the competing prompt."].map((prompt) =>
+          service
+            .update({
+              id: created.id,
+              expectedDefinitionRevision: ownerDefinition.definitionRevision,
+              prompt,
+            })
+            .pipe(
+              Effect.as(true),
+              Effect.catch(() => Effect.succeed(false)),
+            ),
+        ),
+        { concurrency: "unbounded" },
+      );
+      assert.strictEqual(competingUpdates.filter(Boolean).length, 1);
+      yield* service
+        .update({
+          id: created.id,
+          expectedDefinitionRevision: ownerDefinition.definitionRevision,
+          prompt: "Retry the same stale mutation.",
+        })
+        .pipe(Effect.flip);
+      yield* Effect.yieldNow;
+
+      const ownerEvents = events.filter(
+        (event) => event.type === "run-upserted" && event.run.id === runId,
+      );
+      assert.lengthOf(ownerEvents, 1);
+      assert.strictEqual(ownerEvents[0]?.type, "run-upserted");
+      if (ownerEvents[0]?.type === "run-upserted") {
+        assert.strictEqual(ownerEvents[0].run.status, "skipped");
+      }
+    }),
+  );
+
+  it.effect("publishes a failure-disabled deferred owner exactly once", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+      const targetThreadId = ThreadId.makeUnsafe("failure-owner-stream-target");
+      threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
+      const created = yield* service.create({
+        ...createInput("local"),
+        name: "Failure owner stream",
+        schedule: { type: "once", runAt: "2026-08-17T17:00:00.000Z" },
+        mode: "heartbeat",
+        targetThreadId,
+        stopAfterConsecutiveFailures: 1,
+      });
+      const ownerRunId = AutomationRunId.makeUnsafe("run-failure-owner-stream");
+      const claimed = yield* repository.createRunAndIncrementDefinition(
+        {
+          id: ownerRunId,
+          automationId: created.id,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "scheduled" },
+          scheduledFor: "2026-08-17T17:00:00.000Z",
+          deferredUntil: "2026-08-17T17:00:15.000Z",
+          permissionSnapshot: {
+            provider: "codex",
+            modelSelection: created.modelSelection,
+            runtimeMode: created.runtimeMode,
+            interactionMode: created.interactionMode,
+            worktreeMode: created.worktreeMode,
+            allowedCapabilities: ["send-turn"],
+            createdAt: "2026-08-17T17:00:00.000Z",
+          },
+          now: "2026-08-17T17:00:00.000Z",
+        },
+        {
+          expectedDefinitionRevision: created.definitionRevision,
+          consumeIteration: true,
+          claimDeferredOneShotOwner: true,
+          scheduleAdvance: { nextRunAt: null, disable: false },
+        },
+      );
+      assert.isTrue(Option.isSome(claimed));
+      const events: AutomationStreamEvent[] = [];
+      yield* service.streamEvents.pipe(
+        Stream.runForEach((event) => Effect.sync(() => events.push(event))),
+        Effect.forkScoped,
+      );
+      yield* Effect.yieldNow;
+      failDispatchType = "thread.turn.start";
+
+      yield* service.runNow({ automationId: created.id }).pipe(Effect.flip);
+      yield* Effect.yieldNow;
+
+      const ownerEvents = events.filter(
+        (event) => event.type === "run-upserted" && event.run.id === ownerRunId,
+      );
+      const definition = (yield* service.list({ projectId })).definitions.find(
+        (entry) => entry.id === created.id,
+      );
+      assert.lengthOf(ownerEvents, 1);
+      assert.strictEqual(definition?.enabled, false);
+      assert.strictEqual(definition?.disabledReason, "failures");
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: ownerRunId })).status,
+        "skipped",
+      );
+    }),
+  );
+
+  it.effect("immediately failure-disables when a lowered threshold is already reached", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+      const targetThreadId = ThreadId.makeUnsafe("lowered-threshold-target");
+      threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
+      const created = yield* service.create({
+        ...createInput("local"),
+        name: "Lowered threshold",
+        schedule: { type: "once", runAt: "2026-08-17T18:00:00.000Z" },
+        mode: "heartbeat",
+        targetThreadId,
+        stopAfterConsecutiveFailures: 3,
+      });
+      for (const index of [1, 2]) {
+        const run = yield* repository.createRun({
+          id: AutomationRunId.makeUnsafe(`run-lowered-threshold-failure-${index}`),
+          automationId: created.id,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "manual" },
+          scheduledFor: `2026-08-17T17:0${index}:00.000Z`,
+          permissionSnapshot: {
+            provider: "codex",
+            modelSelection: created.modelSelection,
+            runtimeMode: created.runtimeMode,
+            interactionMode: created.interactionMode,
+            worktreeMode: created.worktreeMode,
+            allowedCapabilities: ["send-turn"],
+            createdAt: `2026-08-17T17:0${index}:00.000Z`,
+          },
+          now: `2026-08-17T17:0${index}:00.000Z`,
+        });
+        yield* repository.markRunFailed({
+          id: run.id,
+          error: "fixture failure",
+          finishedAt: `2026-08-17T17:0${index}:01.000Z`,
+        });
+      }
+      const beforeOwner = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: created.id }),
+      );
+      const ownerRunId = AutomationRunId.makeUnsafe("run-lowered-threshold-owner");
+      yield* repository.createRunAndIncrementDefinition(
+        {
+          id: ownerRunId,
+          automationId: created.id,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "scheduled" },
+          scheduledFor: "2026-08-17T18:00:00.000Z",
+          deferredUntil: "2026-08-17T18:00:15.000Z",
+          permissionSnapshot: {
+            provider: "codex",
+            modelSelection: created.modelSelection,
+            runtimeMode: created.runtimeMode,
+            interactionMode: created.interactionMode,
+            worktreeMode: created.worktreeMode,
+            allowedCapabilities: ["send-turn"],
+            createdAt: "2026-08-17T18:00:00.000Z",
+          },
+          now: "2026-08-17T18:00:00.000Z",
+        },
+        {
+          expectedDefinitionRevision: beforeOwner.definitionRevision,
+          consumeIteration: true,
+          claimDeferredOneShotOwner: true,
+          scheduleAdvance: { nextRunAt: null, disable: false },
+        },
+      );
+      const ownerDefinition = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: created.id }),
+      );
+
+      const updated = yield* service.update({
+        id: created.id,
+        expectedDefinitionRevision: ownerDefinition.definitionRevision,
+        stopAfterConsecutiveFailures: 2,
+      });
+
+      assert.isFalse(updated.enabled);
+      assert.strictEqual(updated.disabledReason, "failures");
+      assert.strictEqual(updated.consecutiveFailureCount, 2);
+      assert.strictEqual(updated.iterationCount, ownerDefinition.iterationCount);
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: ownerRunId })).status,
         "skipped",
       );
     }),

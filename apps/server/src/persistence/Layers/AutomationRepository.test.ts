@@ -599,7 +599,7 @@ layer("AutomationRepository", (it) => {
         { concurrency: "unbounded" },
       );
 
-      assert.strictEqual(resolutions.filter(Boolean).length, 1);
+      assert.strictEqual(resolutions.filter((resolution) => resolution.value).length, 1);
     }),
   );
 
@@ -1873,10 +1873,10 @@ layer("AutomationRepository", (it) => {
           definition: { ...created, prompt: "stale overwrite", updatedAt: created.updatedAt },
           expectedDefinitionRevision: created.definitionRevision,
         });
-        assert.isTrue(Option.isSome(firstSave));
-        assert.isTrue(Option.isNone(staleSave));
+        assert.isTrue(Option.isSome(firstSave.value));
+        assert.isTrue(Option.isNone(staleSave.value));
         assert.isAbove(
-          Date.parse(Option.getOrThrow(firstSave).updatedAt),
+          Date.parse(Option.getOrThrow(firstSave.value).updatedAt),
           Date.parse(created.updatedAt),
         );
 
@@ -1920,7 +1920,7 @@ layer("AutomationRepository", (it) => {
         });
         const afterNarrowConflicts = Option.getOrThrow(yield* repository.getDefinitionById({ id }));
         assert.isFalse(staleAttach);
-        assert.isFalse(staleArchive);
+        assert.isFalse(staleArchive.value);
         assert.isNull(afterNarrowConflicts.targetThreadId);
         assert.isNull(afterNarrowConflicts.archivedAt);
         assert.strictEqual(afterNarrowConflicts.name, "newer");
@@ -1938,7 +1938,7 @@ layer("AutomationRepository", (it) => {
           definition: { ...proposal, name: "richer proposal" },
           expectedDefinitionRevision: proposal.definitionRevision,
         });
-        assert.isTrue(Option.isSome(proposalSave));
+        assert.isTrue(Option.isSome(proposalSave.value));
         const staleResolve = yield* repository.resolvePendingProposal({
           id: proposal.id,
           resolution: "accepted",
@@ -1950,7 +1950,7 @@ layer("AutomationRepository", (it) => {
         const afterProposalConflict = Option.getOrThrow(
           yield* repository.getDefinitionById({ id: proposal.id }),
         );
-        assert.isFalse(staleResolve);
+        assert.isFalse(staleResolve.value);
         assert.strictEqual(afterProposalConflict.proposalState, "pending");
         assert.strictEqual(afterProposalConflict.name, "richer proposal");
 
@@ -1964,14 +1964,14 @@ layer("AutomationRepository", (it) => {
           now: created.updatedAt,
         });
         assert.isTrue(
-          yield* repository.resolvePendingProposal({
+          (yield* repository.resolvePendingProposal({
             id: sameMillisecondProposal.id,
             resolution: "accepted",
             nextRunAt: null,
             updatedAt: sameMillisecondProposal.updatedAt,
             archivedAt: null,
             expectedDefinitionRevision: sameMillisecondProposal.definitionRevision,
-          }),
+          })).value,
         );
         const resolvedSameMillisecond = Option.getOrThrow(
           yield* repository.getDefinitionById({ id: sameMillisecondProposal.id }),
@@ -2068,7 +2068,7 @@ layer("AutomationRepository", (it) => {
         },
         expectedDefinitionRevision: afterIteration.definitionRevision,
       });
-      assert.isTrue(Option.isSome(nameOnly));
+      assert.isTrue(Option.isSome(nameOnly.value));
       assert.deepStrictEqual(
         yield* sql<{ readonly owner: string | null }>`
           SELECT deferred_one_shot_owner_run_id AS owner
@@ -2186,38 +2186,38 @@ layer("AutomationRepository", (it) => {
         expectedDefinitionRevision: current.definitionRevision - 1,
         supersedeDeferredOneShotOwner: true,
       });
-      assert.isTrue(Option.isNone(stale));
+      assert.isTrue(Option.isNone(stale.value));
       assert.isFalse(
-        yield* repository.disableDefinition({
+        (yield* repository.disableDefinition({
           id: automationId,
           now: "2026-08-17T11:00:15.600Z",
           reason: "user",
           expectedDefinitionRevision: current.definitionRevision - 1,
-        }),
+        })).value,
       );
       assert.isFalse(
-        yield* repository.disableDefinitionIfUnchanged({
+        (yield* repository.disableDefinitionIfUnchanged({
           id: automationId,
           now: "2026-08-17T11:00:15.700Z",
           reason: "max-iterations",
           expectedDefinitionRevision: current.definitionRevision - 1,
-        }),
+        })).value,
       );
       assert.isFalse(
-        yield* repository.archiveDefinition({
+        (yield* repository.archiveDefinition({
           id: automationId,
           archivedAt: "2026-08-17T11:00:15.800Z",
           expectedDefinitionRevision: current.definitionRevision - 1,
-        }),
+        })).value,
       );
       assert.isFalse(
-        yield* repository.restartDefinitionLoop({
+        (yield* repository.restartDefinitionLoop({
           id: automationId,
           enabled: true,
           nextRunAt: null,
           updatedAt: "2026-08-17T11:00:15.900Z",
           expectedDefinitionRevision: current.definitionRevision - 1,
-        }),
+        })).value,
       );
       const afterStale = Option.getOrThrow(yield* repository.getRunById({ id: runId }));
       assert.strictEqual(afterStale.status, "pending");
@@ -2231,7 +2231,8 @@ layer("AutomationRepository", (it) => {
         expectedDefinitionRevision: current.definitionRevision,
         supersedeDeferredOneShotOwner: true,
       });
-      assert.isTrue(Option.isSome(saved));
+      assert.isTrue(Option.isSome(saved.value));
+      assert.strictEqual(saved.transitionedOwnerRun?.run.id, runId);
       const supersededRun = Option.getOrThrow(yield* repository.getRunById({ id: runId }));
       assert.strictEqual(supersededRun.status, "skipped");
       assert.isNull(supersededRun.deferredUntil);
@@ -2246,65 +2247,275 @@ layer("AutomationRepository", (it) => {
     }),
   );
 
-  it.effect("terminalizes an existing active misfire occurrence while advancing its schedule", () =>
+  it.effect("rejects non-scheduled or non-deferred one-shot owner claims in SQL", () =>
     Effect.gen(function* () {
       const repository = yield* AutomationRepository;
+      const sql = yield* SqlClient.SqlClient;
       yield* runMigrations();
-      const automationId = AutomationId.makeUnsafe("automation-existing-misfire");
-      const existingRunId = AutomationRunId.makeUnsafe("run-existing-misfire");
+
+      for (const candidate of [
+        { suffix: "manual", trigger: { type: "manual" } as const, deferred: true },
+        { suffix: "not-deferred", trigger: { type: "scheduled" } as const, deferred: false },
+      ]) {
+        const automationId = AutomationId.makeUnsafe(`automation-owner-fence-${candidate.suffix}`);
+        const runId = AutomationRunId.makeUnsafe(`run-owner-fence-${candidate.suffix}`);
+        const definition = yield* repository.createDefinition({
+          id: automationId,
+          input: {
+            ...createInputForProject(`project-owner-fence-${candidate.suffix}`),
+            schedule: { type: "once", runAt: "2026-08-17T11:30:00.000Z" },
+          },
+          now: "2026-08-17T11:00:00.000Z",
+          nextRunAt: "2026-08-17T11:30:00.000Z",
+        });
+        const claimed = yield* repository.createRunAndIncrementDefinition(
+          {
+            id: runId,
+            automationId,
+            projectId: definition.projectId,
+            threadId: null,
+            trigger: candidate.trigger,
+            scheduledFor: "2026-08-17T11:30:00.000Z",
+            deferredUntil: candidate.deferred ? "2026-08-17T11:30:15.000Z" : null,
+            permissionSnapshot,
+            now: "2026-08-17T11:30:00.000Z",
+          },
+          {
+            expectedDefinitionRevision: definition.definitionRevision,
+            consumeIteration: true,
+            claimDeferredOneShotOwner: true,
+            scheduleAdvance: { nextRunAt: null, disable: false },
+          },
+        );
+        assert.isTrue(Option.isNone(claimed));
+        assert.isTrue(Option.isNone(yield* repository.getRunById({ id: runId })));
+        assert.deepStrictEqual(
+          yield* sql<{ readonly owner: string | null; readonly revision: number }>`
+            SELECT deferred_one_shot_owner_run_id AS owner,
+                   definition_revision AS revision
+            FROM automation_definitions
+            WHERE automation_id = ${automationId}
+          `,
+          [{ owner: null, revision: definition.definitionRevision }],
+        );
+      }
+    }),
+  );
+
+  it.effect("terminalizes and clears an owner whenever a full save ends disabled", () =>
+    Effect.gen(function* () {
+      const repository = yield* AutomationRepository;
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations();
+      const automationId = AutomationId.makeUnsafe("automation-disabled-owner-invariant");
+      const runId = AutomationRunId.makeUnsafe("run-disabled-owner-invariant");
       const definition = yield* repository.createDefinition({
         id: automationId,
         input: {
-          ...createInputForProject("project-existing-misfire"),
-          schedule: { type: "interval", everySeconds: 300 },
-          misfirePolicy: "skip",
+          ...createInputForProject("project-disabled-owner-invariant"),
+          schedule: { type: "once", runAt: "2026-08-17T11:45:00.000Z" },
         },
-        now: "2026-08-17T12:00:00.000Z",
-        nextRunAt: "2026-08-17T12:05:00.000Z",
+        now: "2026-08-17T11:00:00.000Z",
+        nextRunAt: "2026-08-17T11:45:00.000Z",
       });
-      yield* repository.createRun({
-        id: existingRunId,
-        automationId,
-        projectId: definition.projectId,
-        threadId: null,
-        trigger: { type: "scheduled" },
-        scheduledFor: "2026-08-17T12:05:00.000Z",
-        permissionSnapshot,
-        now: "2026-08-17T12:05:00.000Z",
-      });
-
-      const recovered = yield* repository.createRunAndIncrementDefinition(
+      const claimed = yield* repository.createRunAndIncrementDefinition(
         {
-          id: AutomationRunId.makeUnsafe("run-duplicate-misfire"),
+          id: runId,
+          automationId,
+          projectId: definition.projectId,
+          threadId: null,
+          trigger: { type: "scheduled" },
+          scheduledFor: "2026-08-17T11:45:00.000Z",
+          deferredUntil: "2026-08-17T11:45:15.000Z",
+          permissionSnapshot,
+          now: "2026-08-17T11:45:00.000Z",
+        },
+        {
+          expectedDefinitionRevision: definition.definitionRevision,
+          consumeIteration: true,
+          claimDeferredOneShotOwner: true,
+          scheduleAdvance: { nextRunAt: null, disable: false },
+        },
+      );
+      const current = Option.getOrThrow(claimed);
+      const ownerDefinition = Option.getOrThrow(
+        yield* repository.getDefinitionById({ id: automationId }),
+      );
+      const saved = yield* repository.saveDefinition({
+        definition: {
+          ...ownerDefinition,
+          enabled: false,
+          nextRunAt: null,
+          disabledReason: "user",
+          disabledAt: "2026-08-17T11:45:10.000Z",
+          updatedAt: "2026-08-17T11:45:10.000Z",
+        },
+        expectedDefinitionRevision: ownerDefinition.definitionRevision,
+        supersedeDeferredOneShotOwner: false,
+      });
+      assert.isTrue(Option.isSome(saved.value));
+      assert.strictEqual(saved.transitionedOwnerRun?.run.id, current.id);
+      assert.strictEqual(saved.transitionedOwnerRun?.reason, "definition-superseded");
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: runId })).status,
+        "skipped",
+      );
+      assert.deepStrictEqual(
+        yield* sql<{ readonly enabled: number; readonly owner: string | null }>`
+          SELECT enabled, deferred_one_shot_owner_run_id AS owner
+          FROM automation_definitions
+          WHERE automation_id = ${automationId}
+        `,
+        [{ enabled: 0, owner: null }],
+      );
+    }),
+  );
+
+  it.effect(
+    "terminalizes an existing pending misfire occurrence while advancing its schedule",
+    () =>
+      Effect.gen(function* () {
+        const repository = yield* AutomationRepository;
+        yield* runMigrations();
+        const automationId = AutomationId.makeUnsafe("automation-existing-misfire");
+        const existingRunId = AutomationRunId.makeUnsafe("run-existing-misfire");
+        const definition = yield* repository.createDefinition({
+          id: automationId,
+          input: {
+            ...createInputForProject("project-existing-misfire"),
+            schedule: { type: "interval", everySeconds: 300 },
+            misfirePolicy: "skip",
+          },
+          now: "2026-08-17T12:00:00.000Z",
+          nextRunAt: "2026-08-17T12:05:00.000Z",
+        });
+        yield* repository.createRun({
+          id: existingRunId,
           automationId,
           projectId: definition.projectId,
           threadId: null,
           trigger: { type: "scheduled" },
           scheduledFor: "2026-08-17T12:05:00.000Z",
           permissionSnapshot,
-          now: "2026-08-17T12:20:00.000Z",
-        },
-        {
-          expectedDefinitionRevision: definition.definitionRevision,
-          consumeIteration: false,
-          scheduleAdvance: { nextRunAt: "2026-08-17T12:25:00.000Z", disable: false },
-          terminalSkip: {
-            reason: "Scheduled occurrence was missed.",
-            finishedAt: "2026-08-17T12:20:00.000Z",
-            result: {
-              outcome: "unknown",
-              summary: "Scheduled occurrence was missed.",
-              unread: true,
-              archivedAt: null,
+          now: "2026-08-17T12:05:00.000Z",
+        });
+
+        const recovered = yield* repository.createRunAndIncrementDefinition(
+          {
+            id: AutomationRunId.makeUnsafe("run-duplicate-misfire"),
+            automationId,
+            projectId: definition.projectId,
+            threadId: null,
+            trigger: { type: "scheduled" },
+            scheduledFor: "2026-08-17T12:05:00.000Z",
+            permissionSnapshot,
+            now: "2026-08-17T12:20:00.000Z",
+          },
+          {
+            expectedDefinitionRevision: definition.definitionRevision,
+            consumeIteration: false,
+            scheduleAdvance: { nextRunAt: "2026-08-17T12:25:00.000Z", disable: false },
+            terminalSkip: {
+              reason: "Scheduled occurrence was missed.",
+              finishedAt: "2026-08-17T12:20:00.000Z",
+              result: {
+                outcome: "unknown",
+                summary: "Scheduled occurrence was missed.",
+                unread: true,
+                archivedAt: null,
+              },
             },
           },
-        },
-      );
-      assert.isTrue(Option.isSome(recovered));
-      assert.strictEqual(Option.getOrThrow(recovered).id, existingRunId);
-      assert.strictEqual(Option.getOrThrow(recovered).status, "skipped");
-      const advanced = Option.getOrThrow(yield* repository.getDefinitionById({ id: automationId }));
-      assert.strictEqual(advanced.nextRunAt, "2026-08-17T12:25:00.000Z");
+        );
+        assert.isTrue(Option.isSome(recovered));
+        assert.strictEqual(Option.getOrThrow(recovered).id, existingRunId);
+        assert.strictEqual(Option.getOrThrow(recovered).status, "skipped");
+        const advanced = Option.getOrThrow(
+          yield* repository.getDefinitionById({ id: automationId }),
+        );
+        assert.strictEqual(advanced.nextRunAt, "2026-08-17T12:25:00.000Z");
+      }),
+  );
+
+  it.effect("does not advance a misfire schedule across a non-pending occurrence owner", () =>
+    Effect.gen(function* () {
+      const repository = yield* AutomationRepository;
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations();
+
+      for (const status of ["claimed", "running", "waiting-for-approval"] as const) {
+        const automationId = AutomationId.makeUnsafe(`automation-misfire-${status}`);
+        const existingRunId = AutomationRunId.makeUnsafe(`run-misfire-${status}`);
+        const nextRunAt = "2026-08-17T12:35:00.000Z";
+        const definition = yield* repository.createDefinition({
+          id: automationId,
+          input: {
+            ...createInputForProject(`project-misfire-${status}`),
+            schedule: { type: "interval", everySeconds: 300 },
+            misfirePolicy: "skip",
+          },
+          now: "2026-08-17T12:30:00.000Z",
+          nextRunAt,
+        });
+        yield* repository.createRun({
+          id: existingRunId,
+          automationId,
+          projectId: definition.projectId,
+          threadId: null,
+          trigger: { type: "scheduled" },
+          scheduledFor: nextRunAt,
+          permissionSnapshot,
+          now: nextRunAt,
+        });
+        yield* sql`
+          UPDATE automation_runs
+          SET status = ${status},
+              claimed_by = 'existing-owner',
+              claimed_at = ${nextRunAt},
+              lease_expires_at = '2026-08-17T12:40:00.000Z',
+              thread_id = 'thread-existing-misfire',
+              started_at = CASE WHEN ${status} = 'claimed' THEN NULL ELSE ${nextRunAt} END
+          WHERE run_id = ${existingRunId}
+        `;
+
+        const rejected = yield* repository.createRunAndIncrementDefinition(
+          {
+            id: AutomationRunId.makeUnsafe(`run-duplicate-misfire-${status}`),
+            automationId,
+            projectId: definition.projectId,
+            threadId: null,
+            trigger: { type: "scheduled" },
+            scheduledFor: nextRunAt,
+            permissionSnapshot,
+            now: "2026-08-17T12:50:00.000Z",
+          },
+          {
+            expectedDefinitionRevision: definition.definitionRevision,
+            consumeIteration: false,
+            scheduleAdvance: { nextRunAt: "2026-08-17T12:55:00.000Z", disable: false },
+            terminalSkip: {
+              reason: "Scheduled occurrence was missed.",
+              finishedAt: "2026-08-17T12:50:00.000Z",
+              result: {
+                outcome: "unknown",
+                summary: "Scheduled occurrence was missed.",
+                unread: true,
+                archivedAt: null,
+              },
+            },
+          },
+        );
+
+        assert.isTrue(Option.isNone(rejected));
+        const persistedRun = Option.getOrThrow(yield* repository.getRunById({ id: existingRunId }));
+        const persistedDefinition = Option.getOrThrow(
+          yield* repository.getDefinitionById({ id: automationId }),
+        );
+        assert.strictEqual(persistedRun.status, status);
+        assert.strictEqual(persistedRun.claimedBy, "existing-owner");
+        assert.strictEqual(persistedDefinition.nextRunAt, nextRunAt);
+        assert.strictEqual(persistedDefinition.definitionRevision, definition.definitionRevision);
+      }
     }),
   );
 
@@ -2347,7 +2558,7 @@ layer("AutomationRepository", (it) => {
         expectedDefinitionRevision: afterClaim.definitionRevision,
         supersedeDeferredOneShotOwner: true,
       });
-      assert.isTrue(Option.isSome(changedMode));
+      assert.isTrue(Option.isSome(changedMode.value));
       assert.isFalse(
         yield* repository.attachDefinitionThread({
           id: automationId,

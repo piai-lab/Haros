@@ -36,6 +36,8 @@ import {
   CountPendingCompletionEvaluationsByThreadInput,
   DisableAutomationDefinitionInput,
   DisableAutomationDefinitionIfUnchangedInput,
+  type DeferredOneShotOwnerTransition,
+  type DeferredOneShotOwnerTransitionReason,
   GetEarliestAutomationNextRunAtInput,
   GetAutomationMemoryInput,
   GetAutomationDefinitionInput,
@@ -153,6 +155,7 @@ const MAX_RUN_LIST_ROWS = 500;
 
 class AutomationRunClaimRejected extends Error {}
 class AutomationDefinitionMutationRejected extends Error {}
+class AutomationMisfireTransitionRejected extends Error {}
 
 const UpdateAutomationDefinitionDbRequest = Schema.Struct({
   definition: AutomationDefinitionDbRow,
@@ -631,6 +634,7 @@ const makeAutomationRepository = Effect.gen(function* () {
           FROM automation_definitions
           WHERE automation_id = ${id}
         )
+          AND trigger_type = 'scheduled'
           AND deferred_until IS NOT NULL
           AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
         RETURNING run_id AS "id"
@@ -841,6 +845,8 @@ const makeAutomationRepository = Effect.gen(function* () {
           AND (
             (definitions.enabled = 1 AND definitions.archived_at IS NULL)
             OR (
+              runs.trigger_type = 'scheduled'
+              AND
               definitions.deferred_one_shot_owner_run_id IS NULL
               AND json_extract(definitions.schedule_json, '$.type') = 'once'
             )
@@ -1057,6 +1063,12 @@ const makeAutomationRepository = Effect.gen(function* () {
             definition_revision = definition_revision + 1
         WHERE deferred_one_shot_owner_run_id = ${id}
           AND json_extract(schedule_json, '$.type') = 'once'
+          AND EXISTS (
+            SELECT 1
+            FROM automation_runs owner_run
+            WHERE owner_run.run_id = ${id}
+              AND owner_run.trigger_type = 'scheduled'
+          )
           AND archived_at IS NULL
         RETURNING automation_id AS "id"
       `,
@@ -1121,6 +1133,7 @@ const makeAutomationRepository = Effect.gen(function* () {
             updated_at = ${reservedAt}
         WHERE run_id = ${id}
           AND status = 'pending'
+          AND trigger_type = 'scheduled'
           AND deferred_until IS NOT NULL
           AND EXISTS (
             SELECT 1
@@ -1163,6 +1176,12 @@ const makeAutomationRepository = Effect.gen(function* () {
             definition_revision = definition_revision + 1
         WHERE deferred_one_shot_owner_run_id = ${id}
           AND json_extract(schedule_json, '$.type') = 'once'
+          AND EXISTS (
+            SELECT 1
+            FROM automation_runs owner_run
+            WHERE owner_run.run_id = ${id}
+              AND owner_run.trigger_type = 'scheduled'
+          )
           AND enabled = 1
           AND archived_at IS NULL
         RETURNING automation_id AS "id"
@@ -1202,6 +1221,7 @@ const makeAutomationRepository = Effect.gen(function* () {
             claimed_by = NULL
         WHERE run_id = ${id}
           AND status = 'pending'
+          AND trigger_type = 'scheduled'
           AND deferred_until IS NOT NULL
           AND EXISTS (
             SELECT 1
@@ -1268,8 +1288,9 @@ const makeAutomationRepository = Effect.gen(function* () {
             claimed_by = NULL
             ${result === undefined ? sql`` : sql`, result_json = ${JSON.stringify(result)}`}
         WHERE run_id = ${id}
-          AND status IN ('pending', 'claimed')
+          AND status = 'pending'
           AND deferred_until IS NOT NULL
+          AND trigger_type = 'scheduled'
           AND EXISTS (
             SELECT 1
             FROM automation_definitions definitions
@@ -1297,7 +1318,7 @@ const makeAutomationRepository = Effect.gen(function* () {
             claimed_by = NULL,
             result_json = ${result === undefined ? null : JSON.stringify(result)}
         WHERE run_id = ${id}
-          AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
+          AND status = 'pending'
         RETURNING run_id AS "id"
       `,
   });
@@ -1691,7 +1712,9 @@ const makeAutomationRepository = Effect.gen(function* () {
             AND runs.deferred_until IS NOT NULL
             AND (
               (definitions.enabled = 1 AND definitions.archived_at IS NULL)
-              OR (
+            OR (
+                runs.trigger_type = 'scheduled'
+                AND
                 definitions.deferred_one_shot_owner_run_id IS NULL
                 AND json_extract(definitions.schedule_json, '$.type') = 'once'
               )
@@ -1811,6 +1834,15 @@ const makeAutomationRepository = Effect.gen(function* () {
             OR (
               deferred_one_shot_owner_run_id IS NULL
               AND json_extract(schedule_json, '$.type') = 'once'
+              AND EXISTS (
+                SELECT 1
+                FROM automation_runs owner_run
+                WHERE owner_run.run_id = ${deferredOneShotOwnerRunId}
+                  AND owner_run.automation_id = automation_definitions.automation_id
+                  AND owner_run.trigger_type = 'scheduled'
+                  AND owner_run.status = 'pending'
+                  AND owner_run.deferred_until IS NOT NULL
+              )
             )
           )
           AND (
@@ -1948,43 +1980,89 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
   };
 
+  const terminalizeDeferredOneShotOwner = (input: {
+    readonly id: AutomationDefinition["id"];
+    readonly now: string;
+    readonly reason: DeferredOneShotOwnerTransitionReason;
+  }) =>
+    Effect.gen(function* () {
+      const rows = yield* terminalizeDeferredOneShotOwnerRow(input);
+      const transitionedId = rows[0]?.id;
+      if (!transitionedId) {
+        return null;
+      }
+      const row = yield* getRunRowById({ id: transitionedId });
+      return yield* Option.match(row, {
+        onNone: () =>
+          Effect.fail(
+            toPersistenceDecodeCauseError(
+              "AutomationRepository.terminalizeDeferredOneShotOwner:missingRow",
+            )(new Error("Deferred one-shot owner disappeared after transition.")),
+          ),
+        onSome: (persisted) =>
+          toRun(persisted).pipe(
+            Effect.map(
+              (run): DeferredOneShotOwnerTransition => ({
+                run,
+                reason: input.reason,
+              }),
+            ),
+          ),
+      });
+    });
+
   const runDefinitionMutation = <A, B, E, R>(input: {
     readonly id: AutomationDefinition["id"];
     readonly now: string;
     readonly operation: string;
     readonly supersedeDeferredOneShotOwner: boolean;
+    readonly transitionReason?: DeferredOneShotOwnerTransitionReason;
     readonly mutation: Effect.Effect<A, E, R>;
     readonly select: (result: A) => Option.Option<B>;
   }) =>
     sql
       .withTransaction(
         Effect.gen(function* () {
+          let transitionedOwnerRun: DeferredOneShotOwnerTransition | null = null;
           if (input.supersedeDeferredOneShotOwner) {
-            yield* terminalizeDeferredOneShotOwnerRow({ id: input.id, now: input.now });
+            transitionedOwnerRun = yield* terminalizeDeferredOneShotOwner({
+              id: input.id,
+              now: input.now,
+              reason: input.transitionReason ?? "definition-superseded",
+            });
           }
           const result = yield* input.mutation;
           return yield* Option.match(input.select(result), {
             onNone: () => Effect.fail(new AutomationDefinitionMutationRejected()),
-            onSome: (selected) => Effect.succeed(Option.some(selected)),
+            onSome: (selected) =>
+              Effect.succeed({ value: Option.some(selected), transitionedOwnerRun }),
           });
         }),
       )
       .pipe(
         Effect.catch((error) =>
           error instanceof AutomationDefinitionMutationRejected
-            ? Effect.succeed(Option.none<B>())
+            ? Effect.succeed({
+                value: Option.none<B>(),
+                transitionedOwnerRun: null,
+              })
             : Effect.fail(error),
         ),
         Effect.mapError(toPersistenceSqlError(input.operation)),
       );
 
   const saveDefinition: AutomationRepositoryShape["saveDefinition"] = (input) => {
-    const supersedeDeferredOneShotOwner = input.supersedeDeferredOneShotOwner ?? false;
+    const supersedeDeferredOneShotOwner =
+      (input.supersedeDeferredOneShotOwner ?? false) || !input.definition.enabled;
     return runDefinitionMutation({
       id: input.definition.id,
       now: input.definition.updatedAt,
       operation: "AutomationRepository.saveDefinition:update",
       supersedeDeferredOneShotOwner,
+      transitionReason:
+        !input.definition.enabled && input.definition.disabledReason === "failures"
+          ? "failure-threshold-reached"
+          : "definition-superseded",
       mutation: updateDefinitionRow({
         definition: {
           ...input.definition,
@@ -2001,13 +2079,14 @@ const makeAutomationRepository = Effect.gen(function* () {
       }),
       select: (updated) => updated,
     }).pipe(
-      Effect.map(
-        Option.map((row) => ({
+      Effect.map((result) => ({
+        ...result,
+        value: Option.map(result.value, (row) => ({
           ...input.definition,
           updatedAt: row.updatedAt,
           definitionRevision: row.definitionRevision,
         })),
-      ),
+      })),
     );
   };
 
@@ -2019,7 +2098,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       supersedeDeferredOneShotOwner: true,
       mutation: resolvePendingProposalRow(input),
       select: (updated) => updated,
-    }).pipe(Effect.map(Option.isSome));
+    }).pipe(Effect.map((result) => ({ ...result, value: Option.isSome(result.value) })));
 
   const getDefinitionById: AutomationRepositoryShape["getDefinitionById"] = (input) =>
     getDefinitionRow(input).pipe(
@@ -2058,7 +2137,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       supersedeDeferredOneShotOwner: true,
       mutation: archiveDefinitionRow(input),
       select: (rows) => Option.fromNullishOr(rows[0]),
-    }).pipe(Effect.map(Option.isSome));
+    }).pipe(Effect.map((result) => ({ ...result, value: Option.isSome(result.value) })));
 
   const list: AutomationRepositoryShape["list"] = (input = {}) => {
     const normalized = {
@@ -2162,6 +2241,9 @@ const makeAutomationRepository = Effect.gen(function* () {
             const run = yield* createRun(input);
             const inserted = run.id === input.id;
             const scheduleAdvance = definitionMutation.scheduleAdvance;
+            if (definitionMutation.terminalSkip && run.status !== "pending") {
+              return yield* Effect.fail(new AutomationMisfireTransitionRejected());
+            }
             if (inserted || scheduleAdvance) {
               const updated = yield* claimDefinitionForRunRow({
                 id: input.automationId,
@@ -2187,7 +2269,7 @@ const makeAutomationRepository = Effect.gen(function* () {
                 ...definitionMutation.terminalSkip,
               });
               if (skippedRows.length === 0) {
-                return Option.none<AutomationRun>();
+                return yield* Effect.fail(new AutomationMisfireTransitionRejected());
               }
               const skipped = yield* requireRunById(
                 run.id,
@@ -2200,7 +2282,8 @@ const makeAutomationRepository = Effect.gen(function* () {
         )
         .pipe(
           Effect.catch((error) =>
-            error instanceof AutomationRunClaimRejected
+            error instanceof AutomationRunClaimRejected ||
+            error instanceof AutomationMisfireTransitionRejected
               ? Effect.succeed(Option.none<AutomationRun>())
               : Effect.fail(error),
           ),
@@ -2370,16 +2453,19 @@ const makeAutomationRepository = Effect.gen(function* () {
               transitioned: false,
               consecutiveFailureCount: null,
               autoDisabled: false,
+              transitionedOwnerRun: null,
             };
           }
           const accounting = yield* recordDefinitionRunFailureRow({
             id: run.automationId,
             now: input.finishedAt,
           });
+          let transitionedOwnerRun: DeferredOneShotOwnerTransition | null = null;
           if (Option.isSome(accounting) && accounting.value.autoDisabled === 1) {
-            yield* terminalizeDeferredOneShotOwnerRow({
+            transitionedOwnerRun = yield* terminalizeDeferredOneShotOwner({
               id: run.automationId,
               now: input.finishedAt,
+              reason: "failure-threshold-reached",
             });
             yield* clearDeferredOneShotOwnerRow({ id: run.automationId });
           }
@@ -2389,12 +2475,14 @@ const makeAutomationRepository = Effect.gen(function* () {
               transitioned: true,
               consecutiveFailureCount: null,
               autoDisabled: false,
+              transitionedOwnerRun,
             }),
             onSome: (row) => ({
               run,
               transitioned: true,
               consecutiveFailureCount: row.consecutiveFailureCount ?? null,
               autoDisabled: row.autoDisabled === 1,
+              transitionedOwnerRun,
             }),
           });
         }),
@@ -2660,7 +2748,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       supersedeDeferredOneShotOwner: true,
       mutation: disableDefinitionRow(input),
       select: (rows) => Option.fromNullishOr(rows[0]),
-    }).pipe(Effect.map(Option.isSome));
+    }).pipe(Effect.map((result) => ({ ...result, value: Option.isSome(result.value) })));
 
   const disableDefinitionIfUnchanged: AutomationRepositoryShape["disableDefinitionIfUnchanged"] = (
     input,
@@ -2672,7 +2760,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       supersedeDeferredOneShotOwner: true,
       mutation: disableDefinitionIfUnchangedRow(input),
       select: (rows) => Option.fromNullishOr(rows[0]),
-    }).pipe(Effect.map(Option.isSome));
+    }).pipe(Effect.map((result) => ({ ...result, value: Option.isSome(result.value) })));
 
   const incrementDefinitionIterationCount: AutomationRepositoryShape["incrementDefinitionIterationCount"] =
     (input) =>
@@ -2691,7 +2779,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       supersedeDeferredOneShotOwner: true,
       mutation: restartDefinitionLoopRow(input),
       select: (rows) => Option.fromNullishOr(rows[0]),
-    }).pipe(Effect.map(Option.isSome));
+    }).pipe(Effect.map((result) => ({ ...result, value: Option.isSome(result.value) })));
 
   const tryAcquireSchedulerLease: AutomationRepositoryShape["tryAcquireSchedulerLease"] = (input) =>
     acquireLease(input).pipe(
