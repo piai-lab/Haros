@@ -960,6 +960,16 @@ describe("ProviderRuntimeIngestion", () => {
       threadId: otherThreadId,
       payload: { message: "belongs elsewhere" },
     });
+    await push({
+      type: "content.delta",
+      eventId: asEventId("evt-segment-text-after-other-thread-row"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: "Other thread stays separate. " },
+    });
     const tool = await push({
       type: "item.started",
       eventId: asEventId("evt-segment-tool"),
@@ -1050,9 +1060,11 @@ describe("ProviderRuntimeIngestion", () => {
     );
     const toolActivity = thread.activities.find((activity) => activity.id === tool.event.eventId);
 
-    expect(message?.text).toBe("Plan first. Still planning. Then explain. More detail. Final.");
+    expect(message?.text).toBe(
+      "Plan first. Still planning. Other thread stays separate. Then explain. More detail. Final.",
+    );
     expect(message?.textSegments?.map((segment) => [segment.sequence, segment.text])).toEqual([
-      [first.sequence, "Plan first. Still planning. "],
+      [first.sequence, "Plan first. Still planning. Other thread stays separate. "],
       [second.sequence, "Then explain."],
       [third.sequence, " More detail."],
       [fourth.sequence, " Final."],
@@ -5168,6 +5180,31 @@ describe("ProviderRuntimeIngestion", () => {
         createdAt,
       });
       const itemId = asItemId(`item-${suffix}`);
+      const prelude = await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "content.delta",
+          eventId: asEventId(`evt-${suffix}-prelude`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { streamKind: "assistant_text", delta: "before boundary " },
+        }),
+      );
+      await harness.drain();
+      await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "runtime.warning",
+          eventId: asEventId(`evt-${suffix}-boundary`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          payload: { message: "visible boundary" },
+        }),
+      );
+      await harness.drain();
       const target = await Effect.runPromise(
         harness.runtimeEventRepository.append({
           type: "content.delta",
@@ -5177,7 +5214,7 @@ describe("ProviderRuntimeIngestion", () => {
           threadId: asThreadId("thread-1"),
           turnId,
           itemId,
-          payload: { streamKind: "assistant_text", delta: "stream exactly once" },
+          payload: { streamKind: "assistant_text", delta: "after boundary" },
         }),
       );
 
@@ -5214,10 +5251,13 @@ describe("ProviderRuntimeIngestion", () => {
         (entry) => entry.id === `assistant:${itemId}` && entry.role === "assistant",
       );
       expect(message).toMatchObject({
-        text: "stream exactly once",
+        text: "before boundary after boundary",
         streaming: false,
       });
-      expect(message?.textSegments).toBeUndefined();
+      expect(message?.textSegments?.map((segment) => [segment.sequence, segment.text])).toEqual([
+        [prelude.sequence, "before boundary "],
+        [target.sequence, "after boundary"],
+      ]);
       expect(thread?.activities.some((activity) => activity.id === sentinel.event.eventId)).toBe(
         true,
       );

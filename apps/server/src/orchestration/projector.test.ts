@@ -1572,6 +1572,156 @@ describe("orchestration projector", () => {
     ]);
   });
 
+  it("preserves retained text segments while pruning rolled-back messages in memory", async () => {
+    const createdAt = "2026-02-26T13:00:00.000Z";
+    const afterCreate = await Effect.runPromise(
+      projectEvent(
+        createEmptyReadModel(createdAt),
+        makeEvent({
+          sequence: 1,
+          type: "thread.created",
+          aggregateKind: "thread",
+          aggregateId: "thread-rollback-segments",
+          occurredAt: createdAt,
+          commandId: "cmd-create-rollback-segments",
+          payload: {
+            threadId: "thread-rollback-segments",
+            projectId: "project-1",
+            title: "rollback segments",
+            modelSelection: { provider: "codex", model: "gpt-5.3-codex" },
+            runtimeMode: "full-access",
+            branch: null,
+            worktreePath: null,
+            createdAt,
+            updatedAt: createdAt,
+          },
+        }),
+      ),
+    );
+    const messageEvents: ReadonlyArray<OrchestrationEvent> = [
+      makeEvent({
+        sequence: 2,
+        type: "thread.message-sent",
+        aggregateKind: "thread",
+        aggregateId: "thread-rollback-segments",
+        occurredAt: "2026-02-26T13:00:01.000Z",
+        commandId: "cmd-rollback-segments-keep",
+        payload: {
+          threadId: "thread-rollback-segments",
+          messageId: "assistant-keep",
+          role: "assistant",
+          text: "kept",
+          turnId: "turn-keep",
+          streaming: false,
+          createdAt: "2026-02-26T13:00:01.000Z",
+          updatedAt: "2026-02-26T13:00:01.000Z",
+        },
+      }),
+      makeEvent({
+        sequence: 3,
+        type: "thread.message-sent",
+        aggregateKind: "thread",
+        aggregateId: "thread-rollback-segments",
+        occurredAt: "2026-02-26T13:00:02.000Z",
+        commandId: "cmd-rollback-segments-user-remove",
+        payload: {
+          threadId: "thread-rollback-segments",
+          messageId: "user-remove",
+          role: "user",
+          text: "remove from here",
+          turnId: "turn-remove",
+          streaming: false,
+          createdAt: "2026-02-26T13:00:02.000Z",
+          updatedAt: "2026-02-26T13:00:02.000Z",
+        },
+      }),
+      makeEvent({
+        sequence: 4,
+        type: "thread.message-sent",
+        aggregateKind: "thread",
+        aggregateId: "thread-rollback-segments",
+        occurredAt: "2026-02-26T13:00:03.000Z",
+        commandId: "cmd-rollback-segments-assistant-remove",
+        payload: {
+          threadId: "thread-rollback-segments",
+          messageId: "assistant-remove",
+          role: "assistant",
+          text: "removed",
+          turnId: "turn-remove",
+          streaming: false,
+          createdAt: "2026-02-26T13:00:03.000Z",
+          updatedAt: "2026-02-26T13:00:03.000Z",
+        },
+      }),
+    ];
+    const beforeRollback = await messageEvents.reduce<Promise<typeof afterCreate>>(
+      (statePromise, event) =>
+        statePromise.then((state) => Effect.runPromise(projectEvent(state, event))),
+      Promise.resolve(afterCreate),
+    );
+    const modelWithSegments = structuredClone(beforeRollback);
+    const messages = modelWithSegments.threads[0]!.messages;
+    Object.assign(messages.find((message) => message.id === "assistant-keep")!, {
+      textSegments: [
+        {
+          sequence: 10,
+          startedAt: "2026-02-26T13:00:01.000Z",
+          endedAt: "2026-02-26T13:00:01.000Z",
+          text: "kept",
+        },
+      ],
+    });
+    Object.assign(messages.find((message) => message.id === "assistant-remove")!, {
+      textSegments: [
+        {
+          sequence: 30,
+          startedAt: "2026-02-26T13:00:03.000Z",
+          endedAt: "2026-02-26T13:00:03.000Z",
+          text: "removed",
+        },
+      ],
+    });
+
+    const afterRollback = await Effect.runPromise(
+      projectEvent(
+        modelWithSegments,
+        makeEvent({
+          sequence: 5,
+          type: "thread.conversation-rolled-back",
+          aggregateKind: "thread",
+          aggregateId: "thread-rollback-segments",
+          occurredAt: "2026-02-26T13:00:04.000Z",
+          commandId: "cmd-rollback-segments",
+          payload: {
+            threadId: "thread-rollback-segments",
+            messageId: "user-remove",
+            numTurns: 1,
+            removedTurnIds: ["turn-remove"],
+          },
+        }),
+      ),
+    );
+
+    expect(
+      afterRollback.threads[0]?.messages.map((message) => ({
+        id: message.id,
+        textSegments: message.textSegments,
+      })),
+    ).toEqual([
+      {
+        id: "assistant-keep",
+        textSegments: [
+          {
+            sequence: 10,
+            startedAt: "2026-02-26T13:00:01.000Z",
+            endedAt: "2026-02-26T13:00:01.000Z",
+            text: "kept",
+          },
+        ],
+      },
+    ]);
+  });
+
   it("keeps activity order while appending and replacing without a full sort", async () => {
     const createdAt = "2026-07-09T00:00:00.000Z";
     const afterCreate = await Effect.runPromise(
