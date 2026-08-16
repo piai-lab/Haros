@@ -1,5 +1,6 @@
 import {
   isToolLifecycleItemType,
+  MessageId,
   STUDIO_OUTPUTS_ACTIVITY_KIND,
   type OrchestrationLatestTurnState,
   type OrchestrationThreadActivity,
@@ -51,6 +52,7 @@ const CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND = "checkpoint.revert.failed";
 export interface WorkLogEntry {
   id: string;
   createdAt: string;
+  sequence?: number;
   turnId?: TurnId | null;
   label: string;
   detail?: string;
@@ -188,7 +190,9 @@ export type TimelineEntry =
       id: string;
       kind: "message";
       createdAt: string;
+      sequence?: number;
       message: ChatMessage;
+      assistantCopyText?: string;
     }
   | {
       id: string;
@@ -200,6 +204,7 @@ export type TimelineEntry =
       id: string;
       kind: "work";
       createdAt: string;
+      sequence?: number;
       entry: WorkLogEntry;
     };
 
@@ -461,6 +466,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   const entry: DerivedWorkLogEntry = {
     id: activity.id,
     createdAt: activity.createdAt,
+    ...(activity.sequence !== undefined ? { sequence: activity.sequence } : {}),
     ...(activity.turnId !== null ? { turnId: activity.turnId } : {}),
     label: activity.summary,
     tone: activity.tone === "approval" ? "info" : activity.tone,
@@ -2102,6 +2108,15 @@ function compareActivityLifecycleRank(kind: string): number {
 }
 
 function compareTimelineEntries(left: TimelineEntry, right: TimelineEntry): number {
+  if (
+    "sequence" in left &&
+    "sequence" in right &&
+    left.sequence !== undefined &&
+    right.sequence !== undefined &&
+    left.sequence !== right.sequence
+  ) {
+    return left.sequence - right.sequence;
+  }
   return left.createdAt.localeCompare(right.createdAt);
 }
 
@@ -2162,7 +2177,7 @@ export function deriveTimelineEntries(
   const proposedPlanTurnIds = new Set(
     proposedPlans.flatMap((proposedPlan) => (proposedPlan.turnId ? [proposedPlan.turnId] : [])),
   );
-  const messageRows: TimelineEntry[] = messages.flatMap((message) => {
+  const messageRows: TimelineEntry[] = messages.flatMap((message): TimelineEntry[] => {
     const displayMessage =
       message.role === "assistant" && message.turnId && proposedPlanTurnIds.has(message.turnId)
         ? { ...message, text: stripProposedPlanBlocksFromText(message.text) }
@@ -2174,6 +2189,37 @@ export function deriveTimelineEntries(
       proposedPlanTurnIds.has(displayMessage.turnId)
     ) {
       return [];
+    }
+    const textSegments = displayMessage.textSegments;
+    if (
+      displayMessage.role === "assistant" &&
+      !displayMessage.streaming &&
+      textSegments !== undefined &&
+      textSegments.length > 1
+    ) {
+      const { textSegments: _textSegments, ...messageWithoutSegments } = displayMessage;
+      const segmentRows: TimelineEntry[] = [];
+      for (const [segmentIndex, segment] of textSegments.entries()) {
+        const isTerminalSegment = segmentIndex === textSegments.length - 1;
+        const segmentId = isTerminalSegment
+          ? displayMessage.id
+          : MessageId.makeUnsafe(`${displayMessage.id}#segment:${segmentIndex}`);
+        segmentRows.push({
+          id: segmentId,
+          kind: "message",
+          createdAt: segment.startedAt,
+          sequence: segment.sequence,
+          message: {
+            ...messageWithoutSegments,
+            id: segmentId,
+            text: stripProposedPlanBlocksFromText(segment.text),
+            createdAt: segment.startedAt,
+            completedAt: segment.endedAt,
+          },
+          ...(isTerminalSegment ? { assistantCopyText: displayMessage.text } : {}),
+        });
+      }
+      return segmentRows;
     }
     return [
       {
@@ -2194,6 +2240,7 @@ export function deriveTimelineEntries(
     id: entry.id,
     kind: "work",
     createdAt: entry.createdAt,
+    ...(entry.sequence !== undefined ? { sequence: entry.sequence } : {}),
     entry,
   }));
 

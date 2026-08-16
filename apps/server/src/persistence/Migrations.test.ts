@@ -295,10 +295,11 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         [89, "RecoverRetentionHiddenThreads"],
         [90, "ProjectionThreadGroups"],
         [91, "UsageHistoryIndex"],
+        [92, "ProjectionThreadMessageTextSegments"],
       ]);
 
       const tracker = yield* trackerRows(sql);
-      assert.deepStrictEqual(tracker.slice(-38), [
+      assert.deepStrictEqual(tracker.slice(-39), [
         { migration_id: 54, name: "DurableProviderCommandDelivery" },
         { migration_id: 55, name: "ManagedAttachments" },
         { migration_id: 56, name: "CommandReceiptFingerprints" },
@@ -337,6 +338,7 @@ managedAttachmentsLegacyLayer("managed attachment migration after private migrat
         { migration_id: 89, name: "RecoverRetentionHiddenThreads" },
         { migration_id: 90, name: "ProjectionThreadGroups" },
         { migration_id: 91, name: "UsageHistoryIndex" },
+        { migration_id: 92, name: "ProjectionThreadMessageTextSegments" },
       ]);
       const preserved = yield* sql<{ readonly count: number }>`
         SELECT COUNT(*) AS count FROM orchestration_consumer_state
@@ -420,6 +422,7 @@ agentGatewayRetentionLegacyLayer(
           [89, "RecoverRetentionHiddenThreads"],
           [90, "ProjectionThreadGroups"],
           [91, "UsageHistoryIndex"],
+          [92, "ProjectionThreadMessageTextSegments"],
         ]);
 
         const columns = yield* sql<{ readonly name: string }>`
@@ -506,11 +509,12 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [89, "RecoverRetentionHiddenThreads"],
         [90, "ProjectionThreadGroups"],
         [91, "UsageHistoryIndex"],
+        [92, "ProjectionThreadMessageTextSegments"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-22).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-23).map((row) => [row.migration_id, row.name]),
         [
           [70, "AgentGatewayOperations"],
           [71, "ProjectionThreadsGatewayProvenance"],
@@ -534,6 +538,7 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [89, "RecoverRetentionHiddenThreads"],
           [90, "ProjectionThreadGroups"],
           [91, "UsageHistoryIndex"],
+          [92, "ProjectionThreadMessageTextSegments"],
         ],
       );
 
@@ -615,11 +620,12 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
         [89, "RecoverRetentionHiddenThreads"],
         [90, "ProjectionThreadGroups"],
         [91, "UsageHistoryIndex"],
+        [92, "ProjectionThreadMessageTextSegments"],
       ]);
 
       const tracker = yield* trackerRows(sql);
       assert.deepStrictEqual(
-        tracker.slice(-18).map((row) => [row.migration_id, row.name]),
+        tracker.slice(-19).map((row) => [row.migration_id, row.name]),
         [
           [74, "ExternalMcpIntegrations"],
           [75, "ExternalMcpActiveCapacity"],
@@ -639,6 +645,7 @@ spacesMigrationCollisionLayer("Spaces migration after the private migration 70 c
           [89, "RecoverRetentionHiddenThreads"],
           [90, "ProjectionThreadGroups"],
           [91, "UsageHistoryIndex"],
+          [92, "ProjectionThreadMessageTextSegments"],
         ],
       );
       const preservedSpaces = yield* sql<{ readonly spaceId: string }>`
@@ -794,6 +801,36 @@ managedAttachmentsIdempotencyLayer("managed attachment migration idempotency", (
       yield* runMigrations();
       const executed = yield* runMigrations();
       assert.lengthOf(executed, 0);
+    }),
+  );
+});
+
+const messageTextSegmentsMigrationLayer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
+
+messageTextSegmentsMigrationLayer("message text segment migration", (it) => {
+  it.effect("upgrades an existing database from migration 91 to 92 idempotently", () =>
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations({ toMigrationInclusive: 91 });
+
+      const before = yield* sql<{ readonly count: number }>`
+        SELECT COUNT(*) AS count
+        FROM sqlite_master
+        WHERE type = 'table' AND name = 'message_text_segments'
+      `;
+      assert.deepStrictEqual(before, [{ count: 0 }]);
+
+      const executed = yield* runMigrations();
+      assert.deepStrictEqual(executed, [[92, "ProjectionThreadMessageTextSegments"]]);
+
+      const columns = yield* sql<{ readonly name: string }>`
+        SELECT name FROM pragma_table_info('message_text_segments') ORDER BY cid ASC
+      `;
+      assert.deepStrictEqual(
+        columns.map((row) => row.name),
+        ["thread_id", "message_id", "sequence", "started_at", "ended_at", "text"],
+      );
+      assert.lengthOf(yield* runMigrations(), 0);
     }),
   );
 });

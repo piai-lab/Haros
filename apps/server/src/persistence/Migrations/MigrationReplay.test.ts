@@ -80,6 +80,14 @@ const seedDurableState = Effect.gen(function* () {
       '2026-07-24T10:00:01.000Z', '2026-07-24T10:00:01.000Z'
     )
   `;
+  yield* sql`
+    INSERT INTO message_text_segments (
+      thread_id, message_id, sequence, started_at, ended_at, text
+    ) VALUES (
+      'replay-thread', 'replay-message', 4242,
+      '2026-07-24T10:00:01.000Z', '2026-07-24T10:00:01.000Z', 'hello'
+    )
+  `;
   // Only representable after migration 62 consolidated approvals and user input.
   yield* sql`
     INSERT INTO projection_pending_interactions (
@@ -114,6 +122,13 @@ schemaLayer("migration replay schema stability", (it) => {
 
       assert.deepStrictEqual(replayed, replayedEntries);
       assert.deepStrictEqual(yield* schemaObjects(sql), schemaBefore);
+      assert.deepStrictEqual(
+        yield* sql<{ readonly text: string }>`
+          SELECT text FROM message_text_segments
+          WHERE thread_id = 'replay-thread' AND message_id = 'replay-message'
+        `,
+        [{ text: "hello" }],
+      );
     }),
   );
 });

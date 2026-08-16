@@ -3393,6 +3393,98 @@ describe("deriveTimelineEntries", () => {
 
     expect(entries.map((entry) => entry.kind)).toEqual(["proposed-plan"]);
   });
+
+  it("interleaves completed assistant segments with equal-timestamp work by causal sequence", () => {
+    const messageId = MessageId.makeUnsafe("assistant-segmented");
+    const fullText = "Plan first.Then explain.";
+    const entries = deriveTimelineEntries(
+      [
+        {
+          id: messageId,
+          role: "assistant",
+          text: fullText,
+          textSegments: [
+            {
+              sequence: 10,
+              startedAt: "2026-02-23T00:00:01.000Z",
+              endedAt: "2026-02-23T00:00:01.000Z",
+              text: "Plan first.",
+            },
+            {
+              sequence: 30,
+              startedAt: "2026-02-23T00:00:01.000Z",
+              endedAt: "2026-02-23T00:00:01.000Z",
+              text: "Then explain.",
+            },
+          ],
+          turnId: TurnId.makeUnsafe("turn-segmented"),
+          createdAt: "2026-02-23T00:00:01.000Z",
+          streaming: false,
+        },
+      ],
+      [],
+      [
+        {
+          id: "work-between",
+          createdAt: "2026-02-23T00:00:01.000Z",
+          sequence: 20,
+          label: "fd",
+          tone: "tool",
+        },
+        {
+          id: "work-after",
+          createdAt: "2026-02-23T00:00:01.000Z",
+          sequence: 40,
+          label: "wc",
+          tone: "tool",
+        },
+      ],
+    );
+
+    expect(entries.map((entry) => entry.id)).toEqual([
+      `${messageId}#segment:0`,
+      "work-between",
+      messageId,
+      "work-after",
+    ]);
+    expect(entries[0]).toMatchObject({ kind: "message", message: { text: "Plan first." } });
+    expect(entries[2]).toMatchObject({
+      kind: "message",
+      assistantCopyText: fullText,
+      message: { id: messageId, text: "Then explain." },
+    });
+  });
+
+  it("keeps segmented streaming output as one live message row", () => {
+    const messageId = MessageId.makeUnsafe("assistant-streaming-segmented");
+    const entries = deriveTimelineEntries(
+      [
+        {
+          id: messageId,
+          role: "assistant",
+          text: "partial",
+          textSegments: [
+            {
+              sequence: 10,
+              startedAt: "2026-02-23T00:00:01.000Z",
+              endedAt: "2026-02-23T00:00:01.000Z",
+              text: "partial",
+            },
+          ],
+          createdAt: "2026-02-23T00:00:01.000Z",
+          streaming: true,
+        },
+      ],
+      [],
+      [],
+    );
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      kind: "message",
+      message: { id: messageId, text: "partial", streaming: true },
+    });
+  });
 });
 
 describe("deriveWorkLogEntries context window handling", () => {

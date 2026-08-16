@@ -1705,7 +1705,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             row.inlineWorkGroupId ?? null,
           );
           const assistantCopyState = resolveAssistantMessageCopyState({
-            text: row.message.text ?? null,
+            text: row.assistantCopyText ?? row.message.text ?? null,
             showCopyButton: row.showAssistantCopyButton,
             streaming: row.assistantCopyStreaming,
           });

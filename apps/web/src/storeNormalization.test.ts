@@ -1,17 +1,132 @@
 // FILE: storeNormalization.test.ts
 // Purpose: Pins the incremental activity accumulator to the `normalizeActivities` fold it replaces.
 
+import { MessageId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
   createThreadActivityAccumulator,
+  mergeReadModelThreadDetailWithLiveHotPath,
+  normalizeChatMessage,
   normalizeActivities,
   type ThreadActivityAccumulator,
 } from "./storeNormalization";
-import { makeActivity } from "./storeTestFixtures";
+import { makeActivity, makeReadModelThread, makeThread } from "./storeTestFixtures";
 import type { Thread } from "./types";
 
 type ThreadActivity = Thread["activities"][number];
+
+describe("normalizeChatMessage text segments", () => {
+  it("preserves identity for equal segments and replaces it for a changed boundary", () => {
+    const incoming = {
+      id: MessageId.makeUnsafe("assistant-segment-normalization"),
+      role: "assistant" as const,
+      text: "beforeafter",
+      textSegments: [
+        {
+          sequence: 10,
+          startedAt: "2026-08-16T00:00:00.000Z",
+          endedAt: "2026-08-16T00:00:01.000Z",
+          text: "before",
+        },
+        {
+          sequence: 30,
+          startedAt: "2026-08-16T00:00:01.000Z",
+          endedAt: "2026-08-16T00:00:02.000Z",
+          text: "after",
+        },
+      ],
+      turnId: null,
+      streaming: false,
+      source: "native" as const,
+      createdAt: "2026-08-16T00:00:00.000Z",
+      updatedAt: "2026-08-16T00:00:02.000Z",
+    };
+    const first = normalizeChatMessage(incoming, undefined);
+    const equalReplay = normalizeChatMessage(
+      { ...incoming, textSegments: incoming.textSegments.map((segment) => ({ ...segment })) },
+      first,
+    );
+    expect(equalReplay).toBe(first);
+
+    const changed = normalizeChatMessage(
+      {
+        ...incoming,
+        textSegments: [incoming.textSegments[0]!, { ...incoming.textSegments[1]!, text: "after!" }],
+      },
+      first,
+    );
+    expect(changed).not.toBe(first);
+    expect(changed.textSegments?.[1]?.text).toBe("after!");
+  });
+
+  it("keeps a newer live segmented message without resurrecting boundaries cleared by a snapshot", () => {
+    const messageId = MessageId.makeUnsafe("assistant-segment-merge");
+    const textSegments = [
+      {
+        sequence: 10,
+        startedAt: "2026-08-16T00:00:00.000Z",
+        endedAt: "2026-08-16T00:00:01.000Z",
+        text: "before",
+      },
+      {
+        sequence: 30,
+        startedAt: "2026-08-16T00:00:01.000Z",
+        endedAt: "2026-08-16T00:00:02.000Z",
+        text: "after",
+      },
+    ];
+    const previous = makeThread({
+      messages: [
+        {
+          id: messageId,
+          role: "assistant",
+          text: "beforeafter",
+          textSegments,
+          turnId: null,
+          createdAt: "2026-08-16T00:00:00.000Z",
+          completedAt: "2026-08-16T00:00:02.000Z",
+          streaming: false,
+          source: "native",
+        },
+      ],
+    });
+    const olderSnapshot = makeReadModelThread({
+      messages: [
+        {
+          id: messageId,
+          role: "assistant",
+          text: "before",
+          turnId: null,
+          streaming: true,
+          source: "native",
+          createdAt: "2026-08-16T00:00:00.000Z",
+          updatedAt: "2026-08-16T00:00:01.000Z",
+        },
+      ],
+    });
+    const merged = mergeReadModelThreadDetailWithLiveHotPath(olderSnapshot, previous);
+    expect(merged.messages[0]?.text).toBe("beforeafter");
+    expect(merged.messages[0]?.textSegments).toBe(textSegments);
+
+    const editedSnapshot = makeReadModelThread({
+      messages: [
+        {
+          id: messageId,
+          role: "assistant",
+          text: "beforeafter",
+          turnId: null,
+          streaming: false,
+          source: "native",
+          createdAt: "2026-08-16T00:00:00.000Z",
+          updatedAt: "2026-08-16T00:00:03.000Z",
+        },
+      ],
+    });
+    const edited = mergeReadModelThreadDetailWithLiveHotPath(editedSnapshot, previous);
+    expect(edited.messages[0]?.textSegments).toBeUndefined();
+  });
+});
 
 interface FoldStep {
   readonly changed: boolean;

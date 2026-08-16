@@ -484,10 +484,19 @@ export type OrchestrationProjectShell = typeof OrchestrationProjectShell.Type;
 export const OrchestrationMessageRole = Schema.Literals(["user", "assistant", "system"]);
 export type OrchestrationMessageRole = typeof OrchestrationMessageRole.Type;
 
+export const OrchestrationMessageTextSegment = Schema.Struct({
+  sequence: NonNegativeInt,
+  startedAt: IsoDateTime,
+  endedAt: IsoDateTime,
+  text: Schema.String,
+});
+export type OrchestrationMessageTextSegment = typeof OrchestrationMessageTextSegment.Type;
+
 export const OrchestrationMessage = Schema.Struct({
   id: MessageId,
   role: OrchestrationMessageRole,
   text: Schema.String,
+  textSegments: Schema.optional(Schema.Array(OrchestrationMessageTextSegment)),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
   skills: Schema.optional(Schema.Array(ProviderSkillReference)),
   mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
@@ -1534,6 +1543,8 @@ const ThreadMessageAssistantDeltaCommand = Schema.Struct({
   messageId: MessageId,
   delta: Schema.String,
   turnId: Schema.optional(TurnId),
+  segmentStartedAt: Schema.optional(IsoDateTime),
+  segmentSequence: Schema.optional(NonNegativeInt),
   createdAt: IsoDateTime,
 });
 
@@ -1891,6 +1902,8 @@ export const ThreadMessageSentPayload = Schema.Struct({
   messageId: MessageId,
   role: OrchestrationMessageRole,
   text: Schema.String,
+  segmentStartedAt: Schema.optional(IsoDateTime),
+  segmentSequence: Schema.optional(NonNegativeInt),
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
   skills: Schema.optional(Schema.Array(ProviderSkillReference)),
   mentions: Schema.optional(Schema.Array(ProviderMentionReference)),

@@ -6,6 +6,7 @@ import type {
   ModelSelection,
   MessageDispatchOrigin,
   OrchestrationMessageSource,
+  OrchestrationMessageTextSegment,
   OrchestrationPendingInteraction,
   TurnDispatchMode,
   OrchestrationLatestTurn,
@@ -106,6 +107,7 @@ export interface ChatMessage {
   id: MessageId;
   role: "user" | "assistant" | "system";
   text: string;
+  textSegments?: OrchestrationMessageTextSegment[];
   attachments?: ChatAttachment[];
   skills?: ProviderSkillReference[];
   mentions?: ProviderMentionReference[];

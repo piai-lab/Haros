@@ -4,6 +4,7 @@ import {
   OrchestrationMessage,
   OrchestrationSession,
   OrchestrationThread,
+  type OrchestrationMessageTextSegment,
 } from "@omnimind/contracts";
 import {
   addPinnedMessage,
@@ -304,6 +305,56 @@ export function createEmptyReadModel(nowIso: string): OrchestrationReadModel {
     threads: [],
     updatedAt: nowIso,
   };
+}
+
+function deriveNextMessageTextSegments(
+  previous: ReadonlyArray<OrchestrationMessageTextSegment> | undefined,
+  input: {
+    readonly text: string;
+    readonly streaming: boolean;
+    readonly segmentStartedAt: string | undefined;
+    readonly sequence: number;
+    readonly createdAt: string;
+    readonly updatedAt: string;
+  },
+): ReadonlyArray<OrchestrationMessageTextSegment> | undefined {
+  if (input.streaming) {
+    if (input.segmentStartedAt) {
+      return [
+        ...(previous ?? []),
+        {
+          sequence: input.sequence,
+          startedAt: input.segmentStartedAt,
+          endedAt: input.updatedAt,
+          text: input.text,
+        },
+      ];
+    }
+    if (previous && previous.length > 0) {
+      const tail = previous[previous.length - 1]!;
+      return [
+        ...previous.slice(0, -1),
+        { ...tail, text: `${tail.text}${input.text}`, endedAt: input.updatedAt },
+      ];
+    }
+    return [
+      {
+        sequence: input.sequence,
+        startedAt: input.createdAt,
+        endedAt: input.updatedAt,
+        text: input.text,
+      },
+    ];
+  }
+
+  if (previous && previous.length > 1) {
+    const collatedSegmentText = previous.map((segment) => segment.text).join("");
+    if (collatedSegmentText === input.text || input.text.length === 0) {
+      const tail = previous[previous.length - 1]!;
+      return [...previous.slice(0, -1), { ...tail, endedAt: input.updatedAt }];
+    }
+  }
+  return undefined;
 }
 
 export function projectEvent(
@@ -970,14 +1021,29 @@ export function projectEvent(
         let cappedMessages: ReadonlyArray<OrchestrationMessage>;
         if (existingIndex >= 0) {
           const entry = thread.messages[existingIndex]!;
+          const resolvedText = message.streaming
+            ? `${entry.text}${message.text}`
+            : message.text.length > 0
+              ? message.text
+              : entry.text;
+          const nextSegments =
+            message.role === "assistant"
+              ? deriveNextMessageTextSegments(entry.textSegments, {
+                  text: message.streaming ? message.text : resolvedText,
+                  streaming: message.streaming,
+                  segmentStartedAt: payload.segmentStartedAt,
+                  sequence: payload.segmentSequence ?? event.sequence,
+                  createdAt: payload.createdAt,
+                  updatedAt: payload.updatedAt,
+                })
+              : undefined;
           const nextMessages = thread.messages.slice();
+          const entryWithoutTextSegments = { ...entry };
+          delete entryWithoutTextSegments.textSegments;
           nextMessages[existingIndex] = {
-            ...entry,
-            text: message.streaming
-              ? `${entry.text}${message.text}`
-              : message.text.length > 0
-                ? message.text
-                : entry.text,
+            ...entryWithoutTextSegments,
+            text: resolvedText,
+            ...(nextSegments !== undefined ? { textSegments: nextSegments } : {}),
             streaming: message.streaming,
             source: message.source,
             updatedAt: message.updatedAt,
@@ -991,13 +1057,28 @@ export function projectEvent(
           };
           cappedMessages = nextMessages;
         } else {
+          const nextSegments =
+            message.role === "assistant"
+              ? deriveNextMessageTextSegments(undefined, {
+                  text: message.text,
+                  streaming: message.streaming,
+                  segmentStartedAt: payload.segmentStartedAt,
+                  sequence: payload.segmentSequence ?? event.sequence,
+                  createdAt: payload.createdAt,
+                  updatedAt: payload.updatedAt,
+                })
+              : undefined;
+          const nextMessage = {
+            ...message,
+            ...(nextSegments !== undefined ? { textSegments: nextSegments } : {}),
+          };
           cappedMessages =
             thread.messages.length >= MAX_THREAD_MESSAGES
               ? [
                   ...thread.messages.slice(thread.messages.length - MAX_THREAD_MESSAGES + 1),
-                  message,
+                  nextMessage,
                 ]
-              : [...thread.messages, message];
+              : [...thread.messages, nextMessage];
         }
 
         return {
@@ -1313,7 +1394,7 @@ export function projectEvent(
 
           const activities = upsertThreadActivity(thread.activities, {
             ...payload.activity,
-            sequence: event.sequence,
+            sequence: payload.activity.sequence ?? event.sequence,
           });
 
           return {

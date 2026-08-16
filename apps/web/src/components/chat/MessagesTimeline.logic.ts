@@ -234,6 +234,7 @@ export type MessagesTimelineRow =
       durationStart: string;
       showAssistantCopyButton: boolean;
       assistantCopyStreaming: boolean;
+      assistantCopyText?: string;
       assistantTurnDiffSummary?: TurnDiffSummary | undefined;
       // True while this row's turn is still running. The end-of-turn changes
       // card (Undo / Review) is held back until the turn settles so it cannot
@@ -606,6 +607,9 @@ export function deriveMessagesTimelineRows(input: {
       showAssistantCopyButton:
         message.role === "assistant" && terminalAssistantMessageIds.has(message.id),
       assistantCopyStreaming: message.streaming || assistantTurnStillInProgress,
+      ...(timelineEntry.assistantCopyText !== undefined
+        ? { assistantCopyText: timelineEntry.assistantCopyText }
+        : {}),
       assistantTurnInProgress: assistantTurnStillInProgress,
       assistantTurnDiffSummary:
         message.role === "assistant"
@@ -1001,6 +1005,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
   return (
     a.id === b.id &&
     a.createdAt === b.createdAt &&
+    a.sequence === b.sequence &&
     a.turnId === b.turnId &&
     a.label === b.label &&
     a.detail === b.detail &&
@@ -1099,6 +1104,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.durationStart === bm.durationStart &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&
+        a.assistantCopyText === bm.assistantCopyText &&
         a.assistantTurnInProgress === bm.assistantTurnInProgress &&
         a.assistantTurnDiffSummary === bm.assistantTurnDiffSummary &&
         a.revertTurnCount === bm.revertTurnCount

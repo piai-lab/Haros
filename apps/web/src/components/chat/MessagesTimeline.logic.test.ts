@@ -874,11 +874,18 @@ describe("deriveMessagesTimelineRows", () => {
   const assistantEntry = (
     id: string,
     createdAt: string,
-    opts: { turnId?: string; text?: string; streaming?: boolean; completedAt?: string },
+    opts: {
+      turnId?: string;
+      text?: string;
+      streaming?: boolean;
+      completedAt?: string;
+      assistantCopyText?: string;
+    },
   ): TimelineEntry => ({
     id: `entry-${id}`,
     kind: "message",
     createdAt,
+    ...(opts.assistantCopyText !== undefined ? { assistantCopyText: opts.assistantCopyText } : {}),
     message: {
       id: MessageId.makeUnsafe(id),
       role: "assistant",
@@ -968,6 +975,35 @@ describe("deriveMessagesTimelineRows", () => {
     // Timed from the user message, not from the last intermediate narration.
     expect(terminal!.collapsedWorkElapsed).toBe("6.0s");
     expect(rows.some((row) => row.kind === "work")).toBe(false);
+  });
+
+  it("keeps interleaved assistant segments inside the existing settled-turn collapse", () => {
+    const rows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries: [
+        userEntry("u-segmented", "2026-01-01T00:00:00Z"),
+        assistantEntry("a-segmented#segment:0", "2026-01-01T00:00:01Z", {
+          turnId: "t-segmented",
+          text: "Plan first.",
+          completedAt: "2026-01-01T00:00:01Z",
+        }),
+        workEntry("w-segmented", "2026-01-01T00:00:01Z", "fd"),
+        assistantEntry("a-segmented", "2026-01-01T00:00:01Z", {
+          turnId: "t-segmented",
+          text: "Then explain.",
+          assistantCopyText: "Plan first.Then explain.",
+          completedAt: "2026-01-01T00:00:02Z",
+        }),
+      ],
+    });
+
+    const terminal = messageRow(rows, "a-segmented");
+    expect(terminal?.message.text).toBe("Then explain.");
+    expect(terminal?.assistantCopyText).toBe("Plan first.Then explain.");
+    expect(collapsedSignature(terminal!)).toEqual([
+      "narration:a-segmented#segment:0",
+      "work:w-segmented",
+    ]);
   });
 
   it("folds settled reasoning traces into the terminal turn disclosure", () => {

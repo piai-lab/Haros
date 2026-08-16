@@ -107,6 +107,7 @@ import Migration0088 from "./Migrations/088_ProjectionThreadsSettledAt.ts";
 import Migration0089 from "./Migrations/089_RecoverRetentionHiddenThreads.ts";
 import Migration0090 from "./Migrations/090_ProjectionThreadGroups.ts";
 import Migration0091 from "./Migrations/091_UsageHistoryIndex.ts";
+import Migration0092 from "./Migrations/092_ProjectionThreadMessageTextSegments.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -213,6 +214,7 @@ export const migrationEntries = [
   [89, "RecoverRetentionHiddenThreads", Migration0089],
   [90, "ProjectionThreadGroups", Migration0090],
   [91, "UsageHistoryIndex", Migration0091],
+  [92, "ProjectionThreadMessageTextSegments", Migration0092],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

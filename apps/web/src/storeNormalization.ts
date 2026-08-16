@@ -213,6 +213,23 @@ export function arraysShallowEqual<T>(
   return true;
 }
 
+export function textSegmentArraysEqual(
+  left: ReadonlyArray<NonNullable<ChatMessage["textSegments"]>[number]> | undefined,
+  right: ReadonlyArray<NonNullable<ChatMessage["textSegments"]>[number]> | undefined,
+): boolean {
+  if (left === right) return true;
+  if (!left || !right || left.length !== right.length) return false;
+  return left.every((segment, index) => {
+    const other = right[index]!;
+    return (
+      segment.sequence === other.sequence &&
+      segment.startedAt === other.startedAt &&
+      segment.endedAt === other.endedAt &&
+      segment.text === other.text
+    );
+  });
+}
+
 export function providerReferenceArraysEqual(
   left:
     | ReadonlyArray<Pick<NonNullable<ChatMessage["mentions"]>[number], "name" | "path">>
@@ -495,6 +512,7 @@ export function normalizeChatMessage(
     previous.source === incoming.source &&
     previous.completedAt === completedAt &&
     previous.attachments === attachments &&
+    textSegmentArraysEqual(previous.textSegments, incoming.textSegments) &&
     providerReferenceArraysEqual(previousSkills, skills) &&
     providerReferenceArraysEqual(previousMentions, mentions)
   ) {
@@ -505,6 +523,9 @@ export function normalizeChatMessage(
     id: incoming.id,
     role: incoming.role,
     text: incoming.text,
+    ...(incoming.textSegments && incoming.textSegments.length > 0
+      ? { textSegments: [...incoming.textSegments] }
+      : {}),
     ...(incoming.dispatchMode ? { dispatchMode: incoming.dispatchMode } : {}),
     ...(incoming.dispatchOrigin ? { dispatchOrigin: incoming.dispatchOrigin } : {}),
     turnId: incoming.turnId,
@@ -566,6 +587,9 @@ function readModelMessageFromChatMessage(
     id: message.id,
     role: message.role,
     text: message.text,
+    ...(message.textSegments && message.textSegments.length > 0
+      ? { textSegments: message.textSegments }
+      : {}),
     ...(message.dispatchMode ? { dispatchMode: message.dispatchMode } : {}),
     ...(message.dispatchOrigin ? { dispatchOrigin: message.dispatchOrigin } : {}),
     turnId: message.turnId ?? null,
@@ -691,6 +715,9 @@ function mergeReadModelMessagesWithLiveHotPath(
     mergedById.set(incomingMessage.id, {
       ...incomingMessage,
       text: previousMessage.text,
+      ...(previousMessage.textSegments && previousMessage.textSegments.length > 0
+        ? { textSegments: previousMessage.textSegments }
+        : {}),
       dispatchMode: previousMessage.dispatchMode ?? incomingMessage.dispatchMode,
       dispatchOrigin: incomingMessage.dispatchOrigin ?? previousMessage.dispatchOrigin,
       turnId: previousMessage.turnId ?? incomingMessage.turnId ?? null,

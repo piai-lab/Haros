@@ -216,6 +216,19 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
           )
       `;
       yield* sql`
+        INSERT INTO message_text_segments (
+          thread_id, message_id, sequence, started_at, ended_at, text
+        ) VALUES
+          (
+            'thread-1', 'message-1', 10,
+            '2026-02-24T00:00:04.000Z', '2026-02-24T00:00:04.500Z', 'hello '
+          ),
+          (
+            'thread-1', 'message-1', 30,
+            '2026-02-24T00:00:04.500Z', '2026-02-24T00:00:05.000Z', 'from projection'
+          )
+      `;
+      yield* sql`
         INSERT INTO projection_thread_proposed_plans (
           plan_id,
           thread_id,
@@ -476,6 +489,20 @@ projectionSnapshotLayer("ProjectionSnapshotQuery", (it) => {
               id: asMessageId("message-1"),
               role: "assistant",
               text: "hello from projection",
+              textSegments: [
+                {
+                  sequence: 10,
+                  startedAt: "2026-02-24T00:00:04.000Z",
+                  endedAt: "2026-02-24T00:00:04.500Z",
+                  text: "hello ",
+                },
+                {
+                  sequence: 30,
+                  startedAt: "2026-02-24T00:00:04.500Z",
+                  endedAt: "2026-02-24T00:00:05.000Z",
+                  text: "from projection",
+                },
+              ],
               turnId: asTurnId("turn-1"),
               streaming: false,
               source: "native",

@@ -856,6 +856,168 @@ it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-message-i
   },
 );
 
+it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-text-segment-scope-")))(
+  "OrchestrationProjectionPipeline",
+  (it) => {
+    it.effect("keeps causal text segments through completion and deterministic rebuild", () =>
+      Effect.gen(function* () {
+        const eventStore = yield* OrchestrationEventStore;
+        const projectionPipeline = yield* OrchestrationProjectionPipeline;
+        const sql = yield* SqlClient.SqlClient;
+        const threadId = ThreadId.makeUnsafe("thread-text-segments");
+        const messageId = MessageId.makeUnsafe("assistant-text-segments");
+
+        const appendMessage = (input: {
+          readonly suffix: string;
+          readonly text: string;
+          readonly streaming: boolean;
+          readonly occurredAt: string;
+          readonly segmentSequence?: number;
+        }) =>
+          eventStore.append({
+            type: "thread.message-sent",
+            eventId: EventId.makeUnsafe(`evt-text-segments-${input.suffix}`),
+            aggregateKind: "thread",
+            aggregateId: threadId,
+            occurredAt: input.occurredAt,
+            commandId: CommandId.makeUnsafe(`cmd-text-segments-${input.suffix}`),
+            causationEventId: null,
+            correlationId: CorrelationId.makeUnsafe(`cmd-text-segments-${input.suffix}`),
+            metadata: {},
+            payload: {
+              threadId,
+              messageId,
+              role: "assistant" as const,
+              text: input.text,
+              ...(input.segmentSequence !== undefined
+                ? {
+                    segmentStartedAt: input.occurredAt,
+                    segmentSequence: input.segmentSequence,
+                  }
+                : {}),
+              turnId: null,
+              streaming: input.streaming,
+              createdAt: input.occurredAt,
+              updatedAt: input.occurredAt,
+            },
+          });
+
+        yield* appendMessage({
+          suffix: "1",
+          text: "Plan: ",
+          streaming: true,
+          occurredAt: "2026-07-14T10:00:00.000Z",
+          segmentSequence: 10,
+        });
+        yield* appendMessage({
+          suffix: "2",
+          text: "scan files.",
+          streaming: true,
+          occurredAt: "2026-07-14T10:00:01.000Z",
+        });
+        yield* appendMessage({
+          suffix: "3",
+          text: "Found it.",
+          streaming: true,
+          occurredAt: "2026-07-14T10:00:00.000Z",
+          segmentSequence: 30,
+        });
+        yield* appendMessage({
+          suffix: "complete",
+          text: "Plan: scan files.Found it.",
+          streaming: false,
+          occurredAt: "2026-07-14T10:00:03.000Z",
+        });
+
+        const readSegments = () =>
+          sql<{
+            readonly sequence: number;
+            readonly startedAt: string;
+            readonly endedAt: string;
+            readonly text: string;
+          }>`
+            SELECT sequence, started_at AS "startedAt", ended_at AS "endedAt", text
+            FROM message_text_segments
+            WHERE thread_id = ${threadId} AND message_id = ${messageId}
+            ORDER BY sequence ASC
+          `;
+        const expectedSegments = [
+          {
+            sequence: 10,
+            startedAt: "2026-07-14T10:00:00.000Z",
+            endedAt: "2026-07-14T10:00:01.000Z",
+            text: "Plan: scan files.",
+          },
+          {
+            sequence: 30,
+            startedAt: "2026-07-14T10:00:00.000Z",
+            endedAt: "2026-07-14T10:00:03.000Z",
+            text: "Found it.",
+          },
+        ];
+
+        yield* projectionPipeline.bootstrap;
+        assert.deepEqual(yield* readSegments(), expectedSegments);
+
+        yield* sql`DELETE FROM message_text_segments WHERE thread_id = ${threadId}`;
+        yield* sql`DELETE FROM projection_thread_messages WHERE thread_id = ${threadId}`;
+        yield* sql`
+          DELETE FROM projection_state
+          WHERE projector = ${ORCHESTRATION_PROJECTOR_NAMES.threadMessages}
+        `;
+        yield* projectionPipeline.bootstrap;
+        assert.deepEqual(yield* readSegments(), expectedSegments);
+        yield* projectionPipeline.bootstrap;
+        assert.deepEqual(yield* readSegments(), expectedSegments);
+
+        yield* appendMessage({
+          suffix: "edit",
+          text: "Edited final text.",
+          streaming: false,
+          occurredAt: "2026-07-14T10:00:04.000Z",
+        });
+        yield* projectionPipeline.bootstrap;
+        assert.deepEqual(yield* readSegments(), []);
+
+        const uninterruptedMessageId = MessageId.makeUnsafe("assistant-uninterrupted");
+        for (const [suffix, text, streaming] of [
+          ["continuous-1", "One ", true],
+          ["continuous-2", "run.", true],
+          ["continuous-complete", "One run.", false],
+        ] as const) {
+          yield* eventStore.append({
+            type: "thread.message-sent",
+            eventId: EventId.makeUnsafe(`evt-${suffix}`),
+            aggregateKind: "thread",
+            aggregateId: threadId,
+            occurredAt: "2026-07-14T10:01:00.000Z",
+            commandId: CommandId.makeUnsafe(`cmd-${suffix}`),
+            causationEventId: null,
+            correlationId: CorrelationId.makeUnsafe(`cmd-${suffix}`),
+            metadata: {},
+            payload: {
+              threadId,
+              messageId: uninterruptedMessageId,
+              role: "assistant",
+              text,
+              turnId: null,
+              streaming,
+              createdAt: "2026-07-14T10:01:00.000Z",
+              updatedAt: "2026-07-14T10:01:00.000Z",
+            },
+          });
+        }
+        yield* projectionPipeline.bootstrap;
+        const uninterruptedSegments = yield* sql<{ readonly count: number }>`
+          SELECT COUNT(*) AS count FROM message_text_segments
+          WHERE thread_id = ${threadId} AND message_id = ${uninterruptedMessageId}
+        `;
+        assert.deepEqual(uninterruptedSegments, [{ count: 0 }]);
+      }),
+    );
+  },
+);
+
 it.layer(Layer.fresh(makeProjectionPipelinePrefixedTestLayer("omnimind-approval-identity-scope-")))(
   "OrchestrationProjectionPipeline",
   (it) => {
@@ -4204,6 +4366,15 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
         },
       });
 
+      yield* sql`
+        INSERT INTO message_text_segments (
+          thread_id, message_id, sequence, started_at, ended_at, text
+        ) VALUES
+          ('thread-revert', 'assistant-keep', 10, '2026-02-26T12:00:02.100Z', '2026-02-26T12:00:02.100Z', 'ke'),
+          ('thread-revert', 'assistant-keep', 20, '2026-02-26T12:00:02.100Z', '2026-02-26T12:00:02.100Z', 'pt'),
+          ('thread-revert', 'assistant-remove', 30, '2026-02-26T12:00:03.100Z', '2026-02-26T12:00:03.100Z', 'removed')
+      `;
+
       yield* appendAndProject({
         type: "thread.reverted",
         eventId: EventId.makeUnsafe("evt-revert-8"),
@@ -4240,6 +4411,12 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           role: "assistant",
         },
       ]);
+      const segmentRows = yield* sql<{ readonly count: number }>`
+        SELECT COUNT(*) AS count
+        FROM message_text_segments
+        WHERE thread_id = 'thread-revert'
+      `;
+      assert.deepEqual(segmentRows, [{ count: 0 }]);
     }),
   );
 });
@@ -4260,6 +4437,7 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
     const threadId = ThreadId.makeUnsafe("thread-restart");
     const turnId = TurnId.makeUnsafe("turn-restart");
     const messageId = MessageId.makeUnsafe("message-restart");
+    const assistantMessageId = MessageId.makeUnsafe("assistant-restart");
     const sourcePlanThreadId = ThreadId.makeUnsafe("thread-plan-source");
     const sourcePlanId = "plan-source";
     const turnStartedAt = "2026-02-26T14:00:00.000Z";
@@ -4268,6 +4446,7 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
     yield* Effect.gen(function* () {
       const eventStore = yield* OrchestrationEventStore;
       const projectionPipeline = yield* OrchestrationProjectionPipeline;
+      const sql = yield* SqlClient.SqlClient;
 
       yield* eventStore.append({
         type: "thread.turn-start-requested",
@@ -4291,10 +4470,52 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
         },
       });
 
+      for (const [suffix, text, streaming, segmentSequence] of [
+        ["text-1", "Before ", true, 10],
+        ["text-2", "tool.", true, undefined],
+        ["text-3", "After.", true, 30],
+        ["text-complete", "Before tool.After.", false, undefined],
+      ] as const) {
+        yield* eventStore.append({
+          type: "thread.message-sent",
+          eventId: EventId.makeUnsafe(`evt-restart-${suffix}`),
+          aggregateKind: "thread",
+          aggregateId: threadId,
+          occurredAt: turnStartedAt,
+          commandId: CommandId.makeUnsafe(`cmd-restart-${suffix}`),
+          causationEventId: null,
+          correlationId: CorrelationId.makeUnsafe(`cmd-restart-${suffix}`),
+          metadata: {},
+          payload: {
+            threadId,
+            messageId: assistantMessageId,
+            role: "assistant",
+            text,
+            ...(segmentSequence !== undefined
+              ? { segmentStartedAt: turnStartedAt, segmentSequence }
+              : {}),
+            turnId: null,
+            streaming,
+            createdAt: turnStartedAt,
+            updatedAt: turnStartedAt,
+          },
+        });
+      }
+
       yield* projectionPipeline.bootstrap;
+      const segmentRows = yield* sql<{ readonly sequence: number; readonly text: string }>`
+        SELECT sequence, text
+        FROM message_text_segments
+        WHERE thread_id = ${threadId} AND message_id = ${assistantMessageId}
+        ORDER BY sequence ASC
+      `;
+      assert.deepEqual(segmentRows, [
+        { sequence: 10, text: "Before tool." },
+        { sequence: 30, text: "After." },
+      ]);
     }).pipe(Effect.provide(firstProjectionLayer));
 
-    const turnRows = yield* Effect.gen(function* () {
+    const restartRows = yield* Effect.gen(function* () {
       const eventStore = yield* OrchestrationEventStore;
       const projectionPipeline = yield* OrchestrationProjectionPipeline;
       const sql = yield* SqlClient.SqlClient;
@@ -4334,7 +4555,7 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
       `;
       assert.deepEqual(pendingRows, []);
 
-      return yield* sql<{
+      const turnRows = yield* sql<{
         readonly turnId: string;
         readonly userMessageId: string | null;
         readonly sourceProposedPlanThreadId: string | null;
@@ -4352,9 +4573,16 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
         FROM projection_turns
         WHERE turn_id = ${turnId}
       `;
+      const segmentRows = yield* sql<{ readonly sequence: number; readonly text: string }>`
+        SELECT sequence, text
+        FROM message_text_segments
+        WHERE thread_id = ${threadId} AND message_id = ${assistantMessageId}
+        ORDER BY sequence ASC
+      `;
+      return { turnRows, segmentRows };
     }).pipe(Effect.provide(secondProjectionLayer));
 
-    assert.deepEqual(turnRows, [
+    assert.deepEqual(restartRows.turnRows, [
       {
         turnId: "turn-restart",
         userMessageId: "message-restart",
@@ -4363,6 +4591,10 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
         requestedAt: turnStartedAt,
         startedAt: sessionSetAt,
       },
+    ]);
+    assert.deepEqual(restartRows.segmentRows, [
+      { sequence: 10, text: "Before tool." },
+      { sequence: 30, text: "After." },
     ]);
   }).pipe(
     Effect.provide(
@@ -5143,6 +5375,13 @@ it.layer(
           removedTurnIds: [],
         },
       });
+      yield* sql`
+        INSERT INTO message_text_segments (
+          thread_id, message_id, sequence, started_at, ended_at, text
+        ) VALUES
+          (${threadId}, ${retainedMessageId}, 10, ${createdAt}, ${createdAt}, 'retained'),
+          (${threadId}, ${prunedMessageId}, 20, ${createdAt}, ${createdAt}, 'pruned')
+      `;
 
       const retainedManagedPath = path.join(
         attachmentsDir,
@@ -5177,6 +5416,10 @@ it.layer(
         ORDER BY sequence ASC
       `;
       assert.deepStrictEqual(messages, [{ messageId: retainedMessageId }]);
+      const remainingSegments = yield* sql<{ readonly count: number }>`
+        SELECT COUNT(*) AS count FROM message_text_segments WHERE thread_id = ${threadId}
+      `;
+      assert.deepStrictEqual(remainingSegments, [{ count: 0 }]);
 
       const blobs = yield* sql<{ readonly attachmentId: string; readonly state: string }>`
         SELECT attachment_id AS "attachmentId", state

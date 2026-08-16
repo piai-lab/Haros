@@ -141,6 +141,13 @@ const seedTwoThreadsWithActivity = Effect.gen(function* () {
         0, 'native', 'agent', '2026-06-14T10:05:00.000Z', '2026-06-14T10:05:00.000Z'
       )
   `;
+  yield* sql`
+    INSERT INTO message_text_segments (
+      thread_id, message_id, sequence, started_at, ended_at, text
+    ) VALUES
+      ('thread-keep', 'message-keep-1', 1, '2026-06-13T08:05:00.000Z', '2026-06-13T08:05:00.000Z', 'keep one'),
+      ('thread-purge', 'message-purge-1', 2, '2026-06-13T09:05:00.000Z', '2026-06-13T09:05:00.000Z', 'purge one')
+  `;
 
   yield* sql`
     INSERT INTO orchestration_events (
@@ -452,6 +459,7 @@ describe("ProfileStatsArchive", () => {
         const remaining = yield* sql<{
           readonly threads: number;
           readonly messages: number;
+          readonly segments: number;
           readonly turns: number;
         }>`
           SELECT
@@ -461,9 +469,14 @@ describe("ProfileStatsArchive", () => {
               FROM projection_thread_messages
               WHERE thread_id = 'thread-purge'
             ) AS messages,
+            (
+              SELECT COUNT(*)
+              FROM message_text_segments
+              WHERE thread_id = 'thread-purge'
+            ) AS segments,
             (SELECT COUNT(*) FROM projection_turns WHERE thread_id = 'thread-purge') AS turns
         `;
-        expect(remaining[0]).toMatchObject({ threads: 0, messages: 0, turns: 0 });
+        expect(remaining[0]).toMatchObject({ threads: 0, messages: 0, segments: 0, turns: 0 });
         expect(
           yield* sql<{ readonly status: string; readonly activeClaims: number }>`
             SELECT

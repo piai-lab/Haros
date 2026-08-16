@@ -17,6 +17,7 @@ import {
   type ProviderKind,
   type ProviderRuntimeEvent,
   type RuntimeMode,
+  isToolLifecycleItemType,
 } from "@omnimind/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
 import * as Semaphore from "effect/Semaphore";
@@ -307,6 +308,37 @@ export function appendCappedBufferedText(existing: string, delta: string, limit:
     0,
     normalizedLimit - BUFFERED_TEXT_TRUNCATION_MARKER.length,
   )}${BUFFERED_TEXT_TRUNCATION_MARKER}`;
+}
+
+function isRowMakingProviderRuntimeEvent(event: ProviderRuntimeEvent): boolean {
+  switch (event.type) {
+    case "item.started":
+    case "item.updated":
+    case "item.completed":
+      return (
+        isToolLifecycleItemType(event.payload.itemType) ||
+        (event.payload.itemType === "context_compaction" && event.type !== "item.started")
+      );
+    case "runtime.warning":
+    case "user-input.requested":
+    case "user-input.resolved":
+    case "tool.progress":
+      return true;
+    case "request.opened":
+    case "request.resolved":
+      return event.payload.requestType !== "tool_user_input";
+    case "content.delta":
+      return (
+        event.payload.streamKind === "command_output" ||
+        event.payload.streamKind === "file_change_output"
+      );
+    default:
+      return false;
+  }
+}
+
+function assistantMessageSegmentKey(threadId: ThreadId, messageId: MessageId): string {
+  return JSON.stringify([threadId, messageId]);
 }
 
 function reasoningSummaryBufferKey(
@@ -1052,8 +1084,8 @@ const make = Effect.gen(function* () {
       ),
     );
 
-  const takeBufferedAssistantText = (messageId: MessageId) =>
-    takeCached(bufferedAssistantTextByMessageId, messageId).pipe(
+  const getBufferedAssistantText = (messageId: MessageId) =>
+    Cache.getOption(bufferedAssistantTextByMessageId, messageId).pipe(
       Effect.map(Option.getOrElse(() => "")),
     );
 
@@ -1137,6 +1169,7 @@ const make = Effect.gen(function* () {
   const settleBufferedReasoningSummaries = (
     threadId: ThreadId,
     terminalEvent: ProviderRuntimeEvent,
+    runtimeSequence: number,
     turnId?: TurnId,
   ) => {
     const prefix = turnId ? `${threadId}:${turnId}:` : `${threadId}:`;
@@ -1173,7 +1206,7 @@ const make = Effect.gen(function* () {
                   },
                 };
                 return Effect.forEach(
-                  projectProviderRuntimeActivities(completionEvent),
+                  projectProviderRuntimeActivities(completionEvent, runtimeSequence),
                   (activity) => dispatchActivityUpdate(completionEvent, threadId, activity),
                 ).pipe(Effect.asVoid);
               }),
@@ -1183,8 +1216,16 @@ const make = Effect.gen(function* () {
     );
   };
 
-  const clearAssistantMessageState = (messageId: MessageId) =>
-    Cache.invalidate(bufferedAssistantTextByMessageId, messageId);
+  const clearAssistantMessageState = (threadId: ThreadId, messageId: MessageId) =>
+    Effect.gen(function* () {
+      const segmentKey = assistantMessageSegmentKey(threadId, messageId);
+      bufferedTextSegmentsByMessageKey.delete(segmentKey);
+      bufferedTextSpilledByMessageKey.delete(segmentKey);
+      const statesForThread = segmentStateByThreadId.get(threadId);
+      statesForThread?.delete(messageId);
+      if (statesForThread?.size === 0) segmentStateByThreadId.delete(threadId);
+      yield* Cache.invalidate(bufferedAssistantTextByMessageId, messageId);
+    });
 
   const resolveAssistantCompletionMessageId = (input: {
     event: ProviderRuntimeEvent;
@@ -1246,6 +1287,58 @@ const make = Effect.gen(function* () {
       return MessageId.makeUnsafe(`assistant:${input.event.eventId}`);
     });
 
+  const dispatchFinalAssistantTextSegments = (input: {
+    event: ProviderRuntimeEvent;
+    threadId: ThreadId;
+    messageId: MessageId;
+    turnId?: TurnId;
+    createdAt: string;
+    tagBase: string;
+    text: string;
+  }) =>
+    Effect.gen(function* () {
+      const segmentKey = assistantMessageSegmentKey(input.threadId, input.messageId);
+      const segments = bufferedTextSegmentsByMessageKey.get(segmentKey) ?? [];
+      const spilled = bufferedTextSpilledByMessageKey.has(segmentKey);
+      if (segments.length > 1 && !spilled) {
+        for (const [segmentIndex, segment] of segments.entries()) {
+          yield* orchestrationEngine.dispatch({
+            type: "thread.message.assistant.delta",
+            commandId: providerCommandId(
+              input.event,
+              `${input.tagBase}-segment-${segmentIndex}`,
+              input.messageId,
+            ),
+            threadId: input.threadId,
+            messageId: input.messageId,
+            delta: segment.text,
+            ...(input.turnId ? { turnId: input.turnId } : {}),
+            segmentStartedAt: segment.startedAt,
+            segmentSequence: segment.sequence,
+            createdAt: input.createdAt,
+          });
+        }
+        bufferedTextSegmentsByMessageKey.delete(segmentKey);
+        bufferedTextSpilledByMessageKey.delete(segmentKey);
+        return;
+      }
+      const segment = spilled ? undefined : segments[0];
+      yield* orchestrationEngine.dispatch({
+        type: "thread.message.assistant.delta",
+        commandId: providerCommandId(input.event, input.tagBase, input.messageId),
+        threadId: input.threadId,
+        messageId: input.messageId,
+        delta: input.text,
+        ...(input.turnId ? { turnId: input.turnId } : {}),
+        ...(segment
+          ? { segmentStartedAt: segment.startedAt, segmentSequence: segment.sequence }
+          : {}),
+        createdAt: input.createdAt,
+      });
+      bufferedTextSegmentsByMessageKey.delete(segmentKey);
+      bufferedTextSpilledByMessageKey.delete(segmentKey);
+    });
+
   const flushBufferedAssistantMessageDelta = (input: {
     event: ProviderRuntimeEvent;
     threadId: ThreadId;
@@ -1255,20 +1348,24 @@ const make = Effect.gen(function* () {
     commandTag: string;
   }) =>
     Effect.gen(function* () {
-      const bufferedText = yield* takeBufferedAssistantText(input.messageId);
+      const bufferedText = yield* getBufferedAssistantText(input.messageId);
       if (!hasRenderableAssistantText(bufferedText)) {
+        const segmentKey = assistantMessageSegmentKey(input.threadId, input.messageId);
+        bufferedTextSegmentsByMessageKey.delete(segmentKey);
+        bufferedTextSpilledByMessageKey.delete(segmentKey);
         return false;
       }
 
-      yield* orchestrationEngine.dispatch({
-        type: "thread.message.assistant.delta",
-        commandId: providerCommandId(input.event, input.commandTag, input.messageId),
+      yield* dispatchFinalAssistantTextSegments({
+        event: input.event,
         threadId: input.threadId,
         messageId: input.messageId,
-        delta: bufferedText,
         ...(input.turnId ? { turnId: input.turnId } : {}),
         createdAt: input.createdAt,
+        tagBase: input.commandTag,
+        text: bufferedText,
       });
+      yield* Cache.invalidate(bufferedAssistantTextByMessageId, input.messageId);
       return true;
     });
 
@@ -1334,7 +1431,7 @@ const make = Effect.gen(function* () {
     fallbackText?: string;
   }) =>
     Effect.gen(function* () {
-      const bufferedText = yield* takeBufferedAssistantText(input.messageId);
+      const bufferedText = yield* getBufferedAssistantText(input.messageId);
       const text =
         bufferedText.length > 0
           ? bufferedText
@@ -1343,15 +1440,19 @@ const make = Effect.gen(function* () {
             : "";
 
       if (hasRenderableAssistantText(text)) {
-        yield* orchestrationEngine.dispatch({
-          type: "thread.message.assistant.delta",
-          commandId: providerCommandId(input.event, input.finalDeltaCommandTag, input.messageId),
+        yield* dispatchFinalAssistantTextSegments({
+          event: input.event,
           threadId: input.threadId,
           messageId: input.messageId,
-          delta: text,
           ...(input.turnId ? { turnId: input.turnId } : {}),
           createdAt: input.createdAt,
+          tagBase: input.finalDeltaCommandTag,
+          text,
         });
+      } else {
+        const segmentKey = assistantMessageSegmentKey(input.threadId, input.messageId);
+        bufferedTextSegmentsByMessageKey.delete(segmentKey);
+        bufferedTextSpilledByMessageKey.delete(segmentKey);
       }
 
       yield* orchestrationEngine.dispatch({
@@ -1362,7 +1463,7 @@ const make = Effect.gen(function* () {
         ...(input.turnId ? { turnId: input.turnId } : {}),
         createdAt: input.createdAt,
       });
-      yield* clearAssistantMessageState(input.messageId);
+      yield* clearAssistantMessageState(input.threadId, input.messageId);
     });
 
   /**
@@ -1645,7 +1746,9 @@ const make = Effect.gen(function* () {
 
           const messageIds = yield* Cache.getOption(turnMessageIdsByTurnKey, key);
           if (Option.isSome(messageIds)) {
-            yield* Effect.forEach(messageIds.value, clearAssistantMessageState);
+            yield* Effect.forEach(messageIds.value, (messageId) =>
+              clearAssistantMessageState(threadId, messageId),
+            );
           }
 
           yield* Cache.invalidate(turnMessageIdsByTurnKey, key);
@@ -1780,7 +1883,26 @@ const make = Effect.gen(function* () {
       }
     });
 
-  const processRuntimeEventWithinLease = (event: ProviderRuntimeEvent) =>
+  const segmentStateByThreadId = new Map<
+    ThreadId,
+    Map<MessageId, { hasText: boolean; splitPending: boolean }>
+  >();
+  const bufferedTextSegmentsByMessageKey = new Map<
+    string,
+    ReadonlyArray<{ readonly sequence: number; readonly startedAt: string; readonly text: string }>
+  >();
+  const bufferedTextSpilledByMessageKey = new Set<string>();
+  const clearAssistantTextSegmentStateForThread = (threadId: ThreadId) => {
+    const states = segmentStateByThreadId.get(threadId);
+    for (const messageId of states?.keys() ?? []) {
+      const key = assistantMessageSegmentKey(threadId, messageId);
+      bufferedTextSegmentsByMessageKey.delete(key);
+      bufferedTextSpilledByMessageKey.delete(key);
+    }
+    segmentStateByThreadId.delete(threadId);
+  };
+
+  const processRuntimeEventWithinLease = (event: ProviderRuntimeEvent, runtimeSequence: number) =>
     Effect.gen(function* () {
       // ProviderService fences adapter events before journaling, but an event
       // accepted while a replacement generation was current can remain in the
@@ -2051,6 +2173,11 @@ const make = Effect.gen(function* () {
         return;
       }
       const thread = targetThreadResolution.thread;
+      if (isRowMakingProviderRuntimeEvent(event)) {
+        for (const state of segmentStateByThreadId.get(thread.id)?.values() ?? []) {
+          if (state.hasText) state.splitPending = true;
+        }
+      }
       const activeTurnId = thread.session?.activeTurnId ?? null;
       const isTerminalTurnEvent = event.type === "turn.completed" || event.type === "turn.aborted";
       const rawEventTurnId = toTurnId(event.turnId);
@@ -2265,9 +2392,46 @@ const make = Effect.gen(function* () {
           thread.id,
           turnId ?? activeTurnId ?? undefined,
         );
+        const statesForThread = segmentStateByThreadId.get(thread.id) ?? new Map();
+        segmentStateByThreadId.set(thread.id, statesForThread);
+        const segmentState = statesForThread.get(assistantMessageId) ?? {
+          hasText: false,
+          splitPending: false,
+        };
+        statesForThread.set(assistantMessageId, segmentState);
+        const startsNewSegment = !segmentState.hasText || segmentState.splitPending;
+        const segmentStartedAt = startsNewSegment ? now : undefined;
+        segmentState.hasText = true;
+        segmentState.splitPending = false;
+        const bufferedSegmentKey = assistantMessageSegmentKey(thread.id, assistantMessageId);
         if (assistantDeliveryMode === "buffered") {
+          if (!bufferedTextSpilledByMessageKey.has(bufferedSegmentKey)) {
+            const existingSegments = bufferedTextSegmentsByMessageKey.get(bufferedSegmentKey);
+            const tail = existingSegments?.[existingSegments.length - 1];
+            if (segmentStartedAt === undefined && tail !== undefined) {
+              bufferedTextSegmentsByMessageKey.set(bufferedSegmentKey, [
+                ...existingSegments!.slice(0, -1),
+                {
+                  sequence: tail.sequence,
+                  startedAt: tail.startedAt,
+                  text: `${tail.text}${assistantDelta}`,
+                },
+              ]);
+            } else {
+              bufferedTextSegmentsByMessageKey.set(bufferedSegmentKey, [
+                ...(existingSegments ?? []),
+                {
+                  sequence: runtimeSequence,
+                  startedAt: segmentStartedAt ?? now,
+                  text: assistantDelta,
+                },
+              ]);
+            }
+          }
           const spillChunk = yield* appendBufferedAssistantText(assistantMessageId, assistantDelta);
           if (spillChunk.length > 0) {
+            bufferedTextSegmentsByMessageKey.delete(bufferedSegmentKey);
+            bufferedTextSpilledByMessageKey.add(bufferedSegmentKey);
             yield* orchestrationEngine.dispatch({
               type: "thread.message.assistant.delta",
               commandId: providerCommandId(
@@ -2290,6 +2454,7 @@ const make = Effect.gen(function* () {
             messageId: assistantMessageId,
             delta: assistantDelta,
             ...(turnId ? { turnId } : {}),
+            ...(segmentStartedAt ? { segmentStartedAt, segmentSequence: runtimeSequence } : {}),
             createdAt: now,
           });
         }
@@ -2612,18 +2777,25 @@ const make = Effect.gen(function* () {
             : event.type === "item.updated" && toolOutputKey
               ? withBufferedToolOutputData(event, yield* getBufferedToolOutput(toolOutputKey))
               : event;
-      yield* Effect.forEach(projectProviderRuntimeActivities(activityEvent), (activity) =>
-        dispatchActivityUpdate(activityEvent, thread.id, activity),
+      yield* Effect.forEach(
+        projectProviderRuntimeActivities(activityEvent, runtimeSequence),
+        (activity) => dispatchActivityUpdate(activityEvent, thread.id, activity),
       );
 
       if (isTerminalTurnEvent) {
-        yield* settleBufferedReasoningSummaries(thread.id, event, toTurnId(event.turnId));
+        yield* settleBufferedReasoningSummaries(
+          thread.id,
+          event,
+          runtimeSequence,
+          toTurnId(event.turnId),
+        );
       } else if (event.type === "session.exited") {
-        yield* settleBufferedReasoningSummaries(thread.id, event);
+        yield* settleBufferedReasoningSummaries(thread.id, event, runtimeSequence);
       } else if (event.type === "runtime.error") {
         yield* settleBufferedReasoningSummaries(
           thread.id,
           event,
+          runtimeSequence,
           eventTurnId ?? activeTurnId ?? undefined,
         );
       }
@@ -2637,15 +2809,16 @@ const make = Effect.gen(function* () {
       }
     });
 
-  const processRuntimeEvent = (event: ProviderRuntimeEvent) =>
+  const processRuntimeEvent = (event: ProviderRuntimeEvent, runtimeSequence: number) =>
     providerService.withRuntimeEventProjectionLease(
       event.threadId,
-      processRuntimeEventWithinLease(event),
+      processRuntimeEventWithinLease(event, runtimeSequence),
     );
 
   const processDomainEvent = (event: RuntimeIngestionDomainEvent) =>
     Effect.gen(function* () {
       if (event.type === "thread.reverted" || event.type === "thread.conversation-rolled-back") {
+        clearAssistantTextSegmentStateForThread(event.payload.threadId);
         yield* clearActivityUpdateFingerprints(event.payload.threadId);
         yield* clearAssistantDeliveryModeBindingsForThread(event.payload.threadId);
         yield* clearOutstandingTurns(event.payload.threadId);
@@ -2712,7 +2885,7 @@ const make = Effect.gen(function* () {
 
   const processInput = (input: RuntimeIngestionInput) =>
     input.source === "runtime"
-      ? processRuntimeEvent(input.event).pipe(
+      ? processRuntimeEvent(input.event, input.sequence).pipe(
           Effect.andThen(
             runtimeEvents.advanceConsumerCursor({
               consumerName: PROVIDER_RUNTIME_INGESTION_CONSUMER,
@@ -2988,9 +3161,9 @@ const make = Effect.gen(function* () {
   // rejection, a decode failure) must degrade this thread's caches rather than
   // make the backend unbootable: the state is rebuildable, the boot loop is not
   // recoverable without deleting user data.
-  const rebuildAcceptedOpenTurnStateForEvent = (event: ProviderRuntimeEvent) =>
+  const rebuildAcceptedOpenTurnStateForEvent = (event: ProviderRuntimeEvent, sequence: number) =>
     prepareAcceptedRuntimeEventReplay(event).pipe(
-      Effect.andThen(processRuntimeEvent(event)),
+      Effect.andThen(processRuntimeEvent(event, sequence)),
       Effect.catchCause((cause) =>
         Cause.hasInterruptsOnly(cause)
           ? Effect.failCause(cause)
@@ -3016,7 +3189,7 @@ const make = Effect.gen(function* () {
       });
       if (page.length === 0) return;
       for (const entry of page) {
-        yield* rebuildAcceptedOpenTurnStateForEvent(entry.event);
+        yield* rebuildAcceptedOpenTurnStateForEvent(entry.event, entry.sequence);
         sequence = entry.sequence;
       }
       if (page.length < PROVIDER_RUNTIME_REPLAY_PAGE_SIZE) return;

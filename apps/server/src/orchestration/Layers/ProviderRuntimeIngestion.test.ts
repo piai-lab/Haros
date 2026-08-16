@@ -785,6 +785,100 @@ describe("ProviderRuntimeIngestion", () => {
     ).toBe(persisted.sequence);
   });
 
+  it("orders buffered assistant segments around equal-timestamp tool rows by journal sequence", async () => {
+    const harness = await createHarness();
+    const threadId = asThreadId("thread-1");
+    const turnId = asTurnId("turn-segment-interleave");
+    const assistantItemId = asItemId("item-segment-interleave");
+    const createdAt = "2026-07-14T00:10:00.000Z";
+    const push = (event: ProviderRuntimeEvent) =>
+      Effect.runPromise(harness.runtimeEventRepository.append(event));
+
+    const first = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-segment-text-before"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: "Plan first. " },
+    });
+    const hiddenCompactionStart = await push({
+      type: "item.started",
+      eventId: asEventId("evt-segment-hidden-compaction-start"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: asItemId("compaction-segment-interleave"),
+      payload: { itemType: "context_compaction", status: "inProgress" },
+    });
+    await push({
+      type: "content.delta",
+      eventId: asEventId("evt-segment-text-after-hidden-start"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: "Still planning. " },
+    });
+    const tool = await push({
+      type: "item.started",
+      eventId: asEventId("evt-segment-tool"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: asItemId("tool-segment-interleave"),
+      payload: { itemType: "command_execution", status: "inProgress", title: "fd" },
+    });
+    const second = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-segment-text-after"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: "Then explain." },
+    });
+    await push({
+      type: "item.completed",
+      eventId: asEventId("evt-segment-assistant-complete"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { itemType: "assistant_message", status: "completed" },
+    });
+    await harness.drain();
+
+    const thread = await waitForThread(harness.engine, (entry) =>
+      entry.messages.some(
+        (message) => message.id === "assistant:item-segment-interleave" && !message.streaming,
+      ),
+    );
+    const message = thread.messages.find(
+      (entry) => entry.id === "assistant:item-segment-interleave",
+    );
+    const toolActivity = thread.activities.find((activity) => activity.id === tool.event.eventId);
+
+    expect(message?.text).toBe("Plan first. Still planning. Then explain.");
+    expect(message?.textSegments?.map((segment) => [segment.sequence, segment.text])).toEqual([
+      [first.sequence, "Plan first. Still planning. "],
+      [second.sequence, "Then explain."],
+    ]);
+    expect(
+      thread.activities.some((activity) => activity.id === hiddenCompactionStart.event.eventId),
+    ).toBe(false);
+    expect(toolActivity?.sequence).toBe(tool.sequence);
+    expect(message?.textSegments?.[0]?.sequence).toBeLessThan(toolActivity?.sequence ?? -1);
+    expect(toolActivity?.sequence).toBeLessThan(message?.textSegments?.[1]?.sequence ?? -1);
+  });
+
   it("quarantines a command identity collision without blocking later assistant output", async () => {
     const harness = await createHarness({ startIngestion: false });
     const threadId = asThreadId("thread-1");
@@ -4859,6 +4953,7 @@ describe("ProviderRuntimeIngestion", () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
     const oversizedText = "x".repeat(40_000);
+    const tailText = "still exact after the spill";
 
     harness.emit({
       type: "turn.started",
@@ -4889,6 +4984,25 @@ describe("ProviderRuntimeIngestion", () => {
       },
     });
     harness.emit({
+      type: "runtime.warning",
+      eventId: asEventId("evt-warning-after-buffer-spill"),
+      provider: "codex",
+      createdAt: now,
+      threadId: asThreadId("thread-1"),
+      turnId: asTurnId("turn-buffer-spill"),
+      payload: { message: "row between spilled chunks" },
+    });
+    harness.emit({
+      type: "content.delta",
+      eventId: asEventId("evt-message-delta-after-buffer-spill"),
+      provider: "codex",
+      createdAt: now,
+      threadId: asThreadId("thread-1"),
+      turnId: asTurnId("turn-buffer-spill"),
+      itemId: asItemId("item-buffer-spill"),
+      payload: { streamKind: "assistant_text", delta: tailText },
+    });
+    harness.emit({
       type: "item.completed",
       eventId: asEventId("evt-message-completed-buffer-spill"),
       provider: "codex",
@@ -4911,9 +5025,10 @@ describe("ProviderRuntimeIngestion", () => {
     const message = thread.messages.find(
       (entry: ProviderRuntimeTestMessage) => entry.id === "assistant:item-buffer-spill",
     );
-    expect(message?.text.length).toBe(oversizedText.length);
-    expect(message?.text).toBe(oversizedText);
+    expect(message?.text.length).toBe(oversizedText.length + tailText.length);
+    expect(message?.text).toBe(`${oversizedText}${tailText}`);
     expect(message?.streaming).toBe(false);
+    expect(message?.textSegments).toBeUndefined();
   });
 
   it("does not duplicate assistant completion when item.completed is followed by turn.completed", async () => {

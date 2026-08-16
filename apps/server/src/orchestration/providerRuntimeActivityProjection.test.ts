@@ -176,15 +176,16 @@ describe("projected activities satisfy the orchestration command schema", () => 
   });
 
   it("drops a fractional runtime sequence rather than emitting a non-integer", () => {
-    expectSchemaValidActivities(
-      runtimeEvent({
-        type: "turn.steered",
-        eventId: "turn-steered-fractional-sequence",
-        turnId: TURN_ID,
-        sessionSequence: 12.5,
-        payload: { message: "keep going" },
-      }),
-    );
+    const event = runtimeEvent({
+      type: "turn.steered",
+      eventId: "turn-steered-fractional-sequence",
+      turnId: TURN_ID,
+      payload: { message: "keep going", target: "subagent" },
+    });
+    const activities = projectProviderRuntimeActivities(event, 12.5);
+    expectSchemaValidActivities(event);
+    expect(activities[0]?.sequence).toBeUndefined();
+    expect(projectProviderRuntimeActivities(event, 12)[0]?.sequence).toBe(12);
   });
 
   it("projects a subagent steer but not a steer of the thread's own turn", () => {

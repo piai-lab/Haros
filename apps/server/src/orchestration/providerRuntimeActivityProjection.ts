@@ -464,15 +464,12 @@ function sessionApprovalAvailable(
 
 export function projectProviderRuntimeActivities(
   event: ProviderRuntimeEvent,
+  runtimeSequence?: number,
 ): ReadonlyArray<OrchestrationThreadActivity> {
-  const maybeSequence = (() => {
-    const sequence = (event as ProviderRuntimeEvent & { sessionSequence?: number }).sessionSequence;
-    // Activity `sequence` is a NonNegativeInt. A fractional or negative runtime
-    // counter has to be dropped: carrying it invalidates the whole command.
-    return typeof sequence === "number" && Number.isInteger(sequence) && sequence >= 0
-      ? { sequence }
+  const maybeSequence =
+    typeof runtimeSequence === "number" && Number.isInteger(runtimeSequence) && runtimeSequence >= 0
+      ? { sequence: runtimeSequence }
       : {};
-  })();
   // Providers whose runtime supplies readable reasoning text only render the completed item.
   // Empty starts/completions are private/encrypted reasoning boundaries, not
   // transcript rows. Waiting for the authoritative completion also avoids
