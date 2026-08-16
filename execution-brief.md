@@ -205,7 +205,22 @@ P1 只闭合：
 
 P1 stop conditions：patch 进入上游 executor/session terminal/recovery state machine；stock Pi 与 OmniMind Agent 隔离无法保持；typed prompt outcome、OAuth default path 或 safe ModelConfig owner不能语义重放；真实 Provider或packaged journey出现无法归因的P0/P1。命中后停止升级并保留 `v0.84.1`，不加兼容双轨。
 
-P1 已在 exact pushed product `d88edd3dbfb88bb4dd1791bb0f7994b52740898f` 完成 source、MiMo/DeepSeek 与 fresh installed-App 证据。当前施工入口返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
+P1 已在 exact pushed product `d88edd3dbfb88bb4dd1791bb0f7994b52740898f` 完成 source、MiMo/DeepSeek 与 fresh installed-App 证据。维护者随后提供 OmniMind/Codex Sidebar rail 对照录屏并于 2026-08-16 明确授权继续施工，因此当前施工入口改为下述 **W3 Sidebar gesture continuity**；本段仍不自动授予 C1 Gate B。
+
+### W3 Sidebar gesture continuity（当前唯一代码 Slice）
+
+W3 只闭合：
+
+1. Sidebar rail 从正常 resize 连续进入越阈值 off-canvas dismissal，反向拖回与 `pointercancel` 可逆；热路径不逐像素 React render/持久化，最终收起不覆盖最后有效展开宽度；
+2. 手动关闭且空间允许时，窗口左缘 pointer hot zone 可临时展示同一 Sidebar；进入面板保持、移出自动收回，且不修改 manual intent、width storage、cookie 或 Settings；
+3. pointer peek 明确为非模态，不抢焦点、不 inert 主画布、无 scrim/focus trap；header/键盘显式 compact overlay 继续沿既有 modal、Escape、focus return owner；
+4. Sidebar drag/retreat/peek 期间 Timeline 与 Composer 保持稳定锚点，row hover card、tooltip 与行操作浮层静默；stream/scroll/draft/IME/focus、RightDock/Plan/Environment lifecycle 不退化；
+5. Environment 每次 App 冷启动默认关闭；本轮不得把 session 手动打开或自动 presentation 写成跨启动偏好；
+6. focused route/browser proof 覆盖 resize→dismiss、reverse、cancel、重复 peek、focus/inert、cookie/storage、主画布 geometry、EN/ZH、light/dark、full/reduced motion；候选从 exact pushed SHA 重建并以 fresh 隔离 profile完成真实 rail 拖动、hover、关闭与重开。
+
+W3 只复用 `_chat`、Sidebar primitive、现有 Sidebar surface/off-canvas token 与当前 hover presentation owner。不得新增全局 layout/focus store、第二 Sidebar DOM、第二动画 runtime、Project instructions/Settings taxonomy、Agent Core、Provider 或 release；不得复制 Codex 视觉皮肤。实现与证据边界见 [`architecture/workbench.md`](architecture/workbench.md#chat-shell环境信息与响应式-workbench) 和 [`research/omnimind-responsive-workbench-review.md`](research/omnimind-responsive-workbench-review.md)。W3 完成前 C1 继续 deferred。
+
+W3 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
 2. targeted child control：stop A 不影响 sibling B 或 Root；parent stop-all、stale/terminal control、writer stop 与 crash/reopen各有准确语义；Pi 没有真实 message/steer 时 UI 不显示；
@@ -217,4 +232,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity active；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

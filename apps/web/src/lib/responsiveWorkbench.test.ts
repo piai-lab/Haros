@@ -67,6 +67,33 @@ describe("responsive Workbench presentation", () => {
     ).toBe("hidden");
   });
 
+  it("keeps passive edge peek distinct from modal temporary reveal", () => {
+    expect(
+      resolveThreadSidebarPresentation({
+        manualOpen: false,
+        autoSuppressed: false,
+        temporaryReveal: false,
+        pointerPeek: true,
+      }),
+    ).toBe("peek");
+    expect(
+      resolveThreadSidebarPresentation({
+        manualOpen: false,
+        autoSuppressed: true,
+        temporaryReveal: true,
+        pointerPeek: true,
+      }),
+    ).toBe("overlay");
+    expect(
+      resolveThreadSidebarPresentation({
+        manualOpen: false,
+        autoSuppressed: true,
+        temporaryReveal: false,
+        pointerPeek: true,
+      }),
+    ).toBe("hidden");
+  });
+
   it("lets an explicitly requested pressured reveal overlay a manually closed Sidebar", () => {
     expect(
       resolveThreadSidebarPresentation({

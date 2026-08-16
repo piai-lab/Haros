@@ -1209,7 +1209,7 @@ export function SingleChatSurface(props: {
         <div
           ref={chatSurfaceRef}
           className={cn(
-            "flex h-full min-h-0 min-w-0 flex-1",
+            "flex h-full min-h-0 min-w-0 flex-1 [container-type:inline-size]",
             workbenchPresentation === "exclusive" && "invisible pointer-events-none",
           )}
           aria-hidden={workbenchPresentation === "exclusive" ? true : undefined}

@@ -2582,6 +2582,183 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("turns a Sidebar rail retreat into a stable non-modal edge peek without rewriting width", async () => {
+    localStorage.removeItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY);
+    const cookieSet = vi.spyOn(cookieStore, "set");
+    const mounted = await mountChatView({
+      // Match the user's 1894px OmniMind capture: this is the range where the
+      // 46rem reading column can remain globally anchored while the rail moves.
+      viewport: { ...DEFAULT_VIEWPORT, width: 1894 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-sidebar-gesture-continuity" as MessageId,
+        targetText: "sidebar gesture continuity",
+      }),
+    });
+    const presentation = () =>
+      mounted.host
+        .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+        ?.getAttribute("data-thread-sidebar-presentation");
+    const expectPresentation = async (
+      expected: "docked" | "hidden" | "peek",
+      phase: string = expected,
+    ) => {
+      await vi.waitFor(() => expect(presentation(), phase).toBe(expected));
+    };
+    const expectReadingAnchorStable = (
+      before: Awaited<ReturnType<typeof measureEnvironmentInvariant>>,
+      after: Awaited<ReturnType<typeof measureEnvironmentInvariant>>,
+    ) => {
+      // The card seam/scroll viewport follows the direct-manipulation rail. The
+      // centered conversation and composer are the stable reading anchors seen
+      // in the Codex reference journey.
+      for (const key of ["conversation", "composerShell"] as const) {
+        expect(Math.abs(after[key].x - before[key].x), `${key}.x moved`).toBeLessThanOrEqual(1);
+        expect(
+          Math.abs(after[key].width - before[key].width),
+          `${key}.width changed`,
+        ).toBeLessThanOrEqual(1);
+      }
+    };
+    const dispatchRailPointer = (
+      rail: HTMLButtonElement,
+      type: "pointerdown" | "pointermove" | "pointerup" | "pointercancel",
+      clientX: number,
+      pointerId: number,
+    ) => {
+      rail.dispatchEvent(
+        new PointerEvent(type, {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          buttons: type === "pointerup" || type === "pointercancel" ? 0 : 1,
+          clientX,
+          isPrimary: true,
+          pointerId,
+          pointerType: "mouse",
+        }),
+      );
+    };
+
+    try {
+      await expectPresentation("docked");
+      const sidebar = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
+        "Unable to find Sidebar container.",
+      );
+      const rail = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLButtonElement>(
+            "[data-slot='sidebar-rail'][data-placement='content-seam']",
+          ),
+        "Unable to find Sidebar resize rail.",
+      );
+      const initialGeometry = await measureEnvironmentInvariant(mounted.host);
+      const initialWidth = sidebar.getBoundingClientRect().width;
+      const initialRailX = rail.getBoundingClientRect().x + rail.getBoundingClientRect().width / 2;
+      vi.spyOn(rail, "setPointerCapture").mockImplementation(() => undefined);
+      vi.spyOn(rail, "hasPointerCapture").mockReturnValue(true);
+      vi.spyOn(rail, "releasePointerCapture").mockImplementation(() => undefined);
+
+      // A cancelled resize is a preview only: direct manipulation remains stable and
+      // neither the committed width nor its storage changes.
+      dispatchRailPointer(rail, "pointerdown", initialRailX, 41);
+      dispatchRailPointer(rail, "pointermove", initialRailX + 152, 41);
+      await nextFrame();
+      expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth + 152, 0);
+      expectReadingAnchorStable(initialGeometry, await measureEnvironmentInvariant(mounted.host));
+      dispatchRailPointer(rail, "pointercancel", initialRailX + 152, 41);
+      await vi.waitFor(() =>
+        expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth, 0),
+      );
+      expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
+
+      // Pulling the seam nearly to the window edge commits manual closed intent,
+      // while the last valid expanded width remains untouched.
+      const restoredRailX = rail.getBoundingClientRect().x + rail.getBoundingClientRect().width / 2;
+      dispatchRailPointer(rail, "pointerdown", restoredRailX, 42);
+      dispatchRailPointer(rail, "pointermove", 24, 42);
+      await nextFrame();
+      dispatchRailPointer(rail, "pointerup", 24, 42);
+      await expectPresentation("hidden", "drag dismissal");
+      expect(sidebar).toBe(
+        mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
+      );
+      expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
+      await vi.waitFor(() => {
+        expect(cookieSet).toHaveBeenCalledTimes(1);
+        expect(cookieSet.mock.calls[0]?.[0]).toMatchObject({ value: "false" });
+      });
+
+      const editor = await waitForComposerEditor();
+      editor.focus();
+      const focusBeforePeek = document.activeElement;
+      const edgeZone = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-sidebar-edge-peek-zone]"),
+        "Unable to find Sidebar edge peek zone.",
+      );
+      edgeZone.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
+      await vi.waitFor(() => expect(presentation()).toBe("peek"), { timeout: 500 });
+
+      expect(document.activeElement).toBe(focusBeforePeek);
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-thread-sidebar-main]")
+          ?.hasAttribute("inert"),
+      ).toBe(false);
+      expect(sidebar.getAttribute("role")).toBeNull();
+      expect(sidebar.getAttribute("aria-modal")).toBeNull();
+      expect(mounted.host.querySelector("[data-sidebar-overlay-scrim]")).toBeNull();
+      expect(sidebar).toBe(
+        mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
+      );
+      expectReadingAnchorStable(initialGeometry, await measureEnvironmentInvariant(mounted.host));
+      expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
+      expect(cookieSet).toHaveBeenCalledTimes(1);
+
+      // Crossing from the edge corridor into the panel keeps the preview alive;
+      // leaving both surfaces dismisses it, and the gesture can repeat.
+      edgeZone.dispatchEvent(
+        new PointerEvent("pointerout", { bubbles: true, relatedTarget: sidebar }),
+      );
+      sidebar.dispatchEvent(
+        new PointerEvent("pointerover", { bubbles: true, relatedTarget: edgeZone }),
+      );
+      await new Promise((resolve) => window.setTimeout(resolve, 180));
+      expect(presentation()).toBe("peek");
+      sidebar.dispatchEvent(new PointerEvent("pointerout", { bubbles: true }));
+      await vi.waitFor(() => expect(presentation(), "first peek leave").toBe("hidden"), {
+        timeout: 500,
+      });
+
+      const repeatedEdgeZone = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-sidebar-edge-peek-zone]"),
+        "Unable to find restored Sidebar edge peek zone.",
+      );
+      await userEvent.hover(repeatedEdgeZone);
+      await vi.waitFor(() => expect(presentation()).toBe("peek"), { timeout: 500 });
+      await userEvent.hover(sidebar);
+      await userEvent.hover(document.body);
+      await expectPresentation("hidden", "repeated peek leave");
+      expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
+      expect(cookieSet).toHaveBeenCalledTimes(1);
+
+      const headerTrigger = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLButtonElement>(
+            "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
+          ),
+        "Unable to find Sidebar header trigger.",
+      );
+      await userEvent.click(headerTrigger);
+      await expectPresentation("docked");
+      expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth, 0);
+      await vi.waitFor(() => expect(cookieSet).toHaveBeenCalledTimes(2));
+    } finally {
+      await mounted.cleanup();
+      cookieSet.mockRestore();
+    }
+  });
+
   it("uses the user's resized Sidebar width without feeding presentation back into the budget", async () => {
     localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(208));
     const mounted = await mountChatView({

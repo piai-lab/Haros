@@ -24,7 +24,7 @@ export const WORKBENCH_SPLIT_SUPPRESS_WIDTH_PX =
   CHAT_CANVAS_MIN_WIDTH_PX + WORKBENCH_PANE_MIN_WIDTH_PX;
 export const WORKBENCH_SPLIT_RESTORE_WIDTH_PX = WORKBENCH_SPLIT_SUPPRESS_WIDTH_PX + 64;
 
-export type ThreadSidebarPresentation = "docked" | "hidden" | "overlay";
+export type ThreadSidebarPresentation = "docked" | "hidden" | "overlay" | "peek";
 export type EnvironmentPresentation = "hidden" | "floating" | "overlay";
 export type WorkbenchPresentation = "closed" | "split" | "exclusive";
 export type PlanSidebarPresentation = "side-by-side" | "exclusive";
@@ -45,6 +45,7 @@ export function resolveThreadSidebarPresentation(input: {
   readonly manualOpen: boolean;
   readonly autoSuppressed: boolean;
   readonly temporaryReveal: boolean;
+  readonly pointerPeek?: boolean;
   readonly forceHidden?: boolean;
 }): ThreadSidebarPresentation {
   if (input.forceHidden) {
@@ -53,7 +54,10 @@ export function resolveThreadSidebarPresentation(input: {
   if (input.autoSuppressed) {
     return input.temporaryReveal ? "overlay" : "hidden";
   }
-  return input.manualOpen ? "docked" : "hidden";
+  if (input.manualOpen) {
+    return "docked";
+  }
+  return input.pointerPeek ? "peek" : "hidden";
 }
 
 export function resolveEnvironmentAutoSuppressed(input: {

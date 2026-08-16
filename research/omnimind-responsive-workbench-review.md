@@ -200,6 +200,21 @@ threshold = sidebarWidth + 776 + (previouslySuppressed ? 64 : 0);
 
 默认 `368px` Sidebar 因而在下降到 `1143px` 就隐藏，直到 `1208px` 才恢复。两段录屏和维护者对“最新版本 OK”的确认共同反证了这个方向：约 `1000–1100px` 仍应保留导航，只有 Sidebar 会把 Chat 压到约 `320px` 以下时才退场。W2 应替换预算常量与证据矩阵，保留 W1 已闭合的 manual intent、temporary overlay、cookie 和 focus 生命周期。
 
+#### 5.4.1 2026-08-16 Sidebar rail 对照录屏
+
+维护者随后提供两段同日录屏：OmniMind `录屏2026-08-16 11.20.55.mov` 与 Codex `录屏2026-08-16 11.21.15.mov`。两段动作都是拖动左侧 Sidebar 分隔线，不是拖窗口。逐帧对照得到：
+
+- OmniMind 把 rail 限制在约 `208px` 最小宽度，继续向左拖不会进入 off-canvas；每帧写入真实布局宽度使 Timeline 与 Composer 随 Sidebar 宽度显著漂移，拖动结束后 row hover card 仍可弹出并制造视觉噪声；
+- Codex 的 rail 在展开区与指针直接同步，向左越过临界区后整块 Sidebar 连续退场，不继续压扁行文本；主 Timeline 与 Composer 只发生很小的空间校正，没有随 Sidebar 宽度做等量重排；
+- Codex 隐藏后存在独立的窗口左缘 hover hot zone：进入后同一 Sidebar 临时滑出，指针移入 Sidebar 时保持，离开 Sidebar 与热区后自动滑走；该循环在录屏中重复发生，并非 header toggle；
+- pointer hover peek 是非模态预览：不能复用当前显式按钮 overlay 的 scrim、`inert`、自动聚焦与 focus trap。显式按钮/键盘打开仍使用原有 modal 生命周期；
+- hover peek 不改写手动 open/closed intent、最后有效 Sidebar width、cookie、localStorage 或 Settings；拖拽明确收起可更新手动 closed intent，但不能持久化临界压缩宽度；
+- drag 热路径只允许 CSS 变量/DOM presentation 直接更新；React 只在开始、有限 tier 变化与最终提交更新。反向拖动、快速跨阈值与 `pointercancel` 必须可逆，拖动期间 row hover card、tooltip 与行操作浮层必须静默；
+- 左缘进入使用短 intent delay，退出使用更短且可中断的 grace period，避免指针从热区横穿到面板时闪退；这些时间与热区宽度是局部可校准参数，不进入持久产品事实；
+- `prefers-reduced-motion` 只移除空间过渡，不改变 docked/dragging/hidden/peek 的状态语义。
+
+当前生产调用链与缺口已经唯一：`apps/web/src/components/ui/sidebar.tsx` 的 `SidebarRail` 把宽度 clamp 到最小值并在每个 animation frame 写 `--sidebar-width`；`apps/web/src/routes/_chat.tsx` 只拥有 header 触发的 modal temporary overlay，没有 drag-dismiss 或 passive edge peek。最小修复应继续使用同一 Sidebar DOM、现有 off-canvas motion 与 route manual intent，不新建第二导航 surface、全局 focus manager、layout store 或动画 runtime。
+
 ### 5.5 RightDock 当前布局
 
 `apps/web/src/components/chat/RightDock.tsx`：
@@ -421,6 +436,8 @@ Local servers 状态：
 
 - 自动 suppression 后，header 中仍有可发现的导航入口；
 - 临时 overlay 使用 modal/sheet 语义与 scrim；
+- pointer hover peek 使用非模态语义，不抢焦点、不 inert 主画布、不显示 scrim；hidden 状态与退出后均不可 tab；
+- resize rail 越阈值收起保留最后有效宽度，反向拖回与 `pointercancel` 可逆；拖动期间不出现 row hover card、tooltip 或行操作浮层；
 - 自动隐藏不能写 cookie/Settings；手动 toggle 继续写现有 owner；
 - route/thread 切换时不产生意外 reopen。
 

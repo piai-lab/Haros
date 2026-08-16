@@ -72,11 +72,16 @@ const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const THREAD_SIDEBAR_MIN_WIDTH = 13 * 16;
 const THREAD_SIDEBAR_DEFAULT_WIDTH = 23 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
+const THREAD_SIDEBAR_DRAG_DISMISS_THRESHOLD = 3 * 16;
+const THREAD_SIDEBAR_PEEK_ENTER_DELAY_MS = 140;
+const THREAD_SIDEBAR_PEEK_LEAVE_DELAY_MS = 90;
+const THREAD_SIDEBAR_PEEK_EXIT_MOTION_MS = 300;
 
 // Single source of truth for the thread sidebar resize behavior. Shared by <Sidebar>
 // and the detached content-seam <SidebarRail> (via SidebarInstanceProvider) so the
 // drag handle keeps working even though the rail lives outside <Sidebar> (above the card).
 const THREAD_SIDEBAR_RESIZABLE: SidebarResizableOptions = {
+  dragDismissThreshold: THREAD_SIDEBAR_DRAG_DISMISS_THRESHOLD,
   minWidth: THREAD_SIDEBAR_MIN_WIDTH,
   shouldAcceptWidth: ({ nextWidth, wrapper }) =>
     wrapper.clientWidth - nextWidth >= THREAD_MAIN_CONTENT_MIN_WIDTH,
@@ -622,6 +627,11 @@ function ChatRouteLayout() {
         }),
   );
   const [sidebarTemporaryReveal, setSidebarTemporaryReveal] = useState(false);
+  const [sidebarPointerPeek, setSidebarPointerPeek] = useState(false);
+  const [sidebarPointerPeekLayerActive, setSidebarPointerPeekLayerActive] = useState(false);
+  const sidebarPeekEnterTimerRef = useRef<number | null>(null);
+  const sidebarPeekLeaveTimerRef = useRef<number | null>(null);
+  const sidebarPeekExitTimerRef = useRef<number | null>(null);
   const temporaryRevealFocusReturnRequestedRef = useRef(false);
   const sidebarOverlayRef = useRef<HTMLDivElement | null>(null);
   const sidebarPresentationRootRef = useRef<HTMLDivElement | null>(null);
@@ -658,10 +668,87 @@ function ChatRouteLayout() {
     }
   }, [sidebarAutoSuppressed]);
 
+  const clearSidebarPeekEnterTimer = useCallback(() => {
+    if (sidebarPeekEnterTimerRef.current === null) return;
+    window.clearTimeout(sidebarPeekEnterTimerRef.current);
+    sidebarPeekEnterTimerRef.current = null;
+  }, []);
+  const clearSidebarPeekLeaveTimer = useCallback(() => {
+    if (sidebarPeekLeaveTimerRef.current === null) return;
+    window.clearTimeout(sidebarPeekLeaveTimerRef.current);
+    sidebarPeekLeaveTimerRef.current = null;
+  }, []);
+  const clearSidebarPeekExitTimer = useCallback(() => {
+    if (sidebarPeekExitTimerRef.current === null) return;
+    window.clearTimeout(sidebarPeekExitTimerRef.current);
+    sidebarPeekExitTimerRef.current = null;
+  }, []);
+  const closeSidebarPointerPeek = useCallback(
+    (animateExit: boolean) => {
+      clearSidebarPeekExitTimer();
+      setSidebarPointerPeek(false);
+      if (!animateExit) {
+        setSidebarPointerPeekLayerActive(false);
+        return;
+      }
+      sidebarPeekExitTimerRef.current = window.setTimeout(() => {
+        sidebarPeekExitTimerRef.current = null;
+        setSidebarPointerPeekLayerActive(false);
+      }, THREAD_SIDEBAR_PEEK_EXIT_MOTION_MS);
+    },
+    [clearSidebarPeekExitTimer],
+  );
+  const canPointerPeek = !sidebarOpen && !sidebarAutoSuppressed && !isEditorView;
+  const scheduleSidebarPointerPeek = useCallback(() => {
+    if (!canPointerPeek) return;
+    clearSidebarPeekLeaveTimer();
+    clearSidebarPeekEnterTimer();
+    sidebarPeekEnterTimerRef.current = window.setTimeout(() => {
+      sidebarPeekEnterTimerRef.current = null;
+      clearSidebarPeekExitTimer();
+      setSidebarPointerPeekLayerActive(true);
+      setSidebarPointerPeek(true);
+    }, THREAD_SIDEBAR_PEEK_ENTER_DELAY_MS);
+  }, [
+    canPointerPeek,
+    clearSidebarPeekEnterTimer,
+    clearSidebarPeekExitTimer,
+    clearSidebarPeekLeaveTimer,
+  ]);
+  const scheduleSidebarPointerPeekClose = useCallback(() => {
+    clearSidebarPeekEnterTimer();
+    clearSidebarPeekLeaveTimer();
+    sidebarPeekLeaveTimerRef.current = window.setTimeout(() => {
+      sidebarPeekLeaveTimerRef.current = null;
+      if (sidebarOverlayRef.current?.contains(document.activeElement)) return;
+      closeSidebarPointerPeek(true);
+    }, THREAD_SIDEBAR_PEEK_LEAVE_DELAY_MS);
+  }, [clearSidebarPeekEnterTimer, clearSidebarPeekLeaveTimer, closeSidebarPointerPeek]);
+  useEffect(() => {
+    if (canPointerPeek) return;
+    clearSidebarPeekEnterTimer();
+    clearSidebarPeekLeaveTimer();
+    closeSidebarPointerPeek(false);
+  }, [
+    canPointerPeek,
+    clearSidebarPeekEnterTimer,
+    clearSidebarPeekLeaveTimer,
+    closeSidebarPointerPeek,
+  ]);
+  useEffect(
+    () => () => {
+      clearSidebarPeekEnterTimer();
+      clearSidebarPeekExitTimer();
+      clearSidebarPeekLeaveTimer();
+    },
+    [clearSidebarPeekEnterTimer, clearSidebarPeekExitTimer, clearSidebarPeekLeaveTimer],
+  );
+
   const sidebarPresentation = resolveThreadSidebarPresentation({
     manualOpen: sidebarOpen,
     autoSuppressed: sidebarAutoSuppressed,
     temporaryReveal: sidebarTemporaryReveal,
+    pointerPeek: sidebarPointerPeek,
     forceHidden: isEditorView,
   });
   const resolvedSidebarOpen = sidebarPresentation !== "hidden";
@@ -669,11 +756,15 @@ function ChatRouteLayout() {
   useLayoutEffect(() => {
     if (previousRoutePathnameRef.current === routePathname) return;
     previousRoutePathnameRef.current = routePathname;
+    if (sidebarPresentation === "peek") {
+      closeSidebarPointerPeek(true);
+      return;
+    }
     if (sidebarPresentation !== "overlay") return;
     // A compact temporary navigator is a route picker, not persistent chrome. Once the
     // destination changes, dismiss only its transient presentation and preserve manual intent.
     setSidebarTemporaryReveal(false);
-  }, [routePathname, sidebarPresentation]);
+  }, [closeSidebarPointerPeek, routePathname, sidebarPresentation]);
   useLayoutEffect(() => {
     if (sidebarPresentation !== "overlay") return;
     sidebarOverlayRef.current?.focus({ preventScroll: true });
@@ -723,6 +814,10 @@ function ChatRouteLayout() {
   }, [sidebarPresentation]);
   const handleSidebarOpenChange = useCallback(
     (open: boolean) => {
+      if (sidebarPointerPeek) {
+        closeSidebarPointerPeek(true);
+        if (!open) return false;
+      }
       if (sidebarAutoSuppressed && !isEditorView) {
         if (open) {
           temporaryRevealFocusReturnRequestedRef.current = true;
@@ -733,7 +828,7 @@ function ChatRouteLayout() {
       setSidebarTemporaryReveal(false);
       setSidebarOpen(open);
     },
-    [isEditorView, sidebarAutoSuppressed],
+    [closeSidebarPointerPeek, isEditorView, sidebarAutoSuppressed, sidebarPointerPeek],
   );
   const handleSidebarOverlayKeyDown = useCallback(
     (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -780,6 +875,9 @@ function ChatRouteLayout() {
     () => ({ ...THREAD_SIDEBAR_RESIZABLE, onResize: setSidebarWidth }),
     [],
   );
+  const sidebarFloatsOverCanvas =
+    sidebarPresentation === "overlay" || sidebarPresentation === "peek";
+  const sidebarUsesRaisedLayer = sidebarPresentation === "overlay" || sidebarPointerPeekLayerActive;
 
   // The thread sidebar always lives on the left; the right dock is a separate surface.
   const sidebarElement = (
@@ -791,12 +889,12 @@ function ChatRouteLayout() {
       className={cn(
         "text-foreground",
         SIDEBAR_OFFCANVAS_MOTION_CLASS,
-        sidebarPresentation === "overlay" && "z-30 shadow-[16px_0_38px_rgba(0,0,0,0.12)]",
+        sidebarUsesRaisedLayer && "z-30 shadow-[16px_0_38px_rgba(0,0,0,0.12)]",
       )}
       gapClassName={cn(
         SIDEBAR_GAP_CLASS,
         SIDEBAR_OFFCANVAS_MOTION_CLASS,
-        sidebarPresentation === "overlay" && "w-0!",
+        sidebarFloatsOverCanvas && "w-0!",
       )}
       innerClassName={SIDEBAR_INNER_CLASS}
       transparentSurface
@@ -806,6 +904,22 @@ function ChatRouteLayout() {
       tabIndex={sidebarPresentation === "overlay" ? -1 : undefined}
       ref={sidebarOverlayRef}
       onKeyDown={sidebarPresentation === "overlay" ? handleSidebarOverlayKeyDown : undefined}
+      onPointerEnter={sidebarPresentation === "peek" ? clearSidebarPeekLeaveTimer : undefined}
+      onPointerLeave={sidebarPresentation === "peek" ? scheduleSidebarPointerPeekClose : undefined}
+      onFocusCapture={sidebarPresentation === "peek" ? clearSidebarPeekLeaveTimer : undefined}
+      onBlurCapture={
+        sidebarPresentation === "peek"
+          ? (event) => {
+              if (
+                event.relatedTarget instanceof Node &&
+                event.currentTarget.contains(event.relatedTarget)
+              ) {
+                return;
+              }
+              scheduleSidebarPointerPeekClose();
+            }
+          : undefined
+      }
     >
       <ThreadSidebar />
     </Sidebar>
@@ -842,16 +956,27 @@ function ChatRouteLayout() {
       className="bg-[var(--app-shell-background)]"
       data-sidebar-side="left"
       data-thread-sidebar-presentation={sidebarPresentation}
+      data-sidebar-peek-layer-active={sidebarPointerPeekLayerActive ? "true" : undefined}
       ref={sidebarPresentationRootRef}
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
       {sidebarElement}
+      {canPointerPeek && sidebarPresentation === "hidden" ? (
+        <div
+          aria-hidden="true"
+          className="fixed inset-y-0 left-0 z-[28] w-2"
+          data-sidebar-edge-peek-zone
+          onPointerEnter={scheduleSidebarPointerPeek}
+          onPointerLeave={clearSidebarPeekEnterTimer}
+        />
+      ) : null}
       {sidebarPresentation === "overlay" ? (
         <button
           type="button"
           aria-label={t("nav.closeSidebar")}
           className="fixed inset-0 z-[29] block bg-black/10"
+          data-sidebar-overlay-scrim
           onClick={() => handleSidebarOpenChange(false)}
         />
       ) : null}

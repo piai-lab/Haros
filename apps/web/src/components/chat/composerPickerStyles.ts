@@ -104,7 +104,7 @@ export const CHAT_MAIN_VIEWPORT_SHELL_CLASS_NAME =
 export const CHAT_COLUMN_GUTTER_CLASS_NAME =
   "px-[var(--app-density-chat-gutter-x,0.75rem)] sm:px-[var(--app-density-chat-gutter-x-lg,1.25rem)]";
 /** Centers the chat column and applies the shared max width. */
-export const CHAT_COLUMN_FRAME_CLASS_NAME = `mx-auto w-full min-w-0 ${COMPOSER_MAX_WIDTH_CLASS_NAME}`;
+export const CHAT_COLUMN_FRAME_CLASS_NAME = `chat-column-frame mx-auto w-full min-w-0 ${COMPOSER_MAX_WIDTH_CLASS_NAME}`;
 
 /** Max width for the composer shell only; outer wrappers stay full width for shadow bleed. */
 export const COMPOSER_COLUMN_FRAME_CLASS_NAME = CHAT_COLUMN_FRAME_CLASS_NAME;
