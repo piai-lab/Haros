@@ -458,6 +458,7 @@ describe("wsNativeApi", () => {
     });
     await api.automation.resolveProposal({
       automationId: AutomationId.makeUnsafe("automation-1"),
+      expectedDefinitionRevision: 0,
       resolution: "accepted",
     });
 
@@ -491,6 +492,7 @@ describe("wsNativeApi", () => {
     });
     expect(requestMock).toHaveBeenCalledWith(WS_METHODS.automationResolveProposal, {
       automationId: "automation-1",
+      expectedDefinitionRevision: 0,
       resolution: "accepted",
     });
     expect(onAutomationEvent).toHaveBeenCalledTimes(1);

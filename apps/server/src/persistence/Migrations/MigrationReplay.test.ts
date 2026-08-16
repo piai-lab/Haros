@@ -105,6 +105,24 @@ const seedDurableState = Effect.gen(function* () {
       1, 'a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90'
     )
   `;
+  yield* sql`
+    INSERT INTO automation_definitions (
+      automation_id, project_id, name, prompt, schedule_json, enabled, next_run_at,
+      model_selection_json, runtime_mode, interaction_mode, worktree_mode, mode,
+      target_thread_id, max_iterations, stop_on_error, stop_after_consecutive_failures,
+      consecutive_failure_count, disabled_reason, disabled_at, definition_revision,
+      completion_policy_json, completion_policy_version, minimum_interval_seconds,
+      max_runtime_seconds, retry_policy_json, misfire_policy, acknowledged_risks_json,
+      iteration_count, created_at, updated_at, archived_at
+    ) VALUES (
+      'replay-automation', 'replay-project', 'Replay automation', 'Keep state.',
+      '{"type":"manual"}', 0, NULL, '{"provider":"codex","model":"gpt-5"}',
+      'approval-required', 'default', 'auto', 'standalone', NULL, 5, 1, 4, 3,
+      'failures', '2026-07-24T10:00:04.000Z', 9, '{"type":"none"}', 1, 60, 3600,
+      '{"type":"none"}', 'coalesce', '[]', 4,
+      '2026-07-24T10:00:04.000Z', '2026-07-24T10:00:04.000Z', NULL
+    )
+  `;
 });
 
 const schemaLayer = it.layer(Layer.mergeAll(NodeSqliteClient.layerMemory()));
@@ -179,6 +197,23 @@ dataLayer("migration replay data preservation", (it) => {
         FROM orchestration_command_receipts
       `;
       assert.deepStrictEqual(receipts, [{ commandId: "replay-command", fingerprintVersion: 1 }]);
+
+      const automations = yield* sql<{
+        readonly threshold: number | null;
+        readonly count: number;
+        readonly reason: string | null;
+        readonly revision: number;
+      }>`
+        SELECT stop_after_consecutive_failures AS threshold,
+               consecutive_failure_count AS count,
+               disabled_reason AS reason,
+               definition_revision AS revision
+        FROM automation_definitions
+        WHERE automation_id = 'replay-automation'
+      `;
+      assert.deepStrictEqual(automations, [
+        { threshold: 4, count: 3, reason: "failures", revision: 9 },
+      ]);
 
       const retiredApprovals = yield* sql<{ readonly count: number }>`
         SELECT COUNT(*) AS count

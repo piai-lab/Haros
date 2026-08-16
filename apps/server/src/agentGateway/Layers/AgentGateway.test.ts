@@ -202,7 +202,12 @@ function makeAutomationDefinition(
     mode: "heartbeat",
     targetThreadId: ThreadId.makeUnsafe("thread-parent"),
     maxIterations: 50,
+    stopAfterConsecutiveFailures: 1,
     stopOnError: true,
+    consecutiveFailureCount: 0,
+    disabledReason: null,
+    disabledAt: null,
+    definitionRevision: 0,
     completionPolicyVersion: 0,
     completionPolicyUpdatedAt: NOW,
     minimumIntervalSeconds: 60,
@@ -4438,7 +4443,7 @@ describe("AgentGateway", () => {
       const missing = yield* harness.callTool({
         token: "token-parent",
         name: "omnimind_update_automation_memory",
-        args: { automationId: "automation-1" },
+        args: { automationId: "automation-1", expectedDefinitionRevision: 0 },
       });
 
       assert.isFalse(isToolError(implicit.result), toolErrorText(implicit.result));
@@ -4519,11 +4524,15 @@ describe("AgentGateway", () => {
       const response = yield* harness.callTool({
         token: "token-parent",
         name: "omnimind_cancel_automation",
-        args: { automationId: "automation-1" },
+        args: { automationId: "automation-1", expectedDefinitionRevision: 0 },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
       assert.deepEqual(harness.automationUpdates, [
-        { id: AutomationId.makeUnsafe("automation-1"), enabled: false },
+        {
+          id: AutomationId.makeUnsafe("automation-1"),
+          enabled: false,
+          expectedDefinitionRevision: 0,
+        },
       ]);
     }).pipe(Effect.provide(gatewayLayer));
   });
@@ -4554,11 +4563,15 @@ describe("AgentGateway", () => {
       const response = yield* harness.callTool({
         token: "token-parent",
         name: "omnimind_cancel_automation",
-        args: { automationId: "automation-standalone" },
+        args: { automationId: "automation-standalone", expectedDefinitionRevision: 0 },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
       assert.deepEqual(harness.automationUpdates, [
-        { id: AutomationId.makeUnsafe("automation-standalone"), enabled: false },
+        {
+          id: AutomationId.makeUnsafe("automation-standalone"),
+          enabled: false,
+          expectedDefinitionRevision: 0,
+        },
       ]);
     }).pipe(Effect.provide(gatewayLayer));
   });
@@ -4642,7 +4655,7 @@ describe("AgentGateway", () => {
       const response = yield* harness.callTool({
         token: "token-parent",
         name: "omnimind_cancel_automation",
-        args: { automationId: "automation-elevated" },
+        args: { automationId: "automation-elevated", expectedDefinitionRevision: 0 },
       });
       assert.isTrue(isToolError(response.result));
       assert.include(toolErrorText(response.result), "full-access");
@@ -4662,6 +4675,7 @@ describe("AgentGateway", () => {
         name: "omnimind_update_automation",
         args: {
           automationId: "automation-1",
+          expectedDefinitionRevision: 0,
           name: "Only a name",
         },
       });
@@ -4682,6 +4696,7 @@ describe("AgentGateway", () => {
         name: "omnimind_update_automation",
         args: {
           automationId: "automation-1",
+          expectedDefinitionRevision: 0,
           name: "Updated monitor",
           prompt: "Check the children carefully.",
           schedule: { type: "interval", everySeconds: 600 },
@@ -4695,6 +4710,7 @@ describe("AgentGateway", () => {
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
       assert.deepEqual(harness.automationUpdates[0], {
         id: AutomationId.makeUnsafe("automation-1"),
+        expectedDefinitionRevision: 0,
         name: "Updated monitor",
         prompt: "Check the children carefully.",
         schedule: { type: "interval", everySeconds: 600 },

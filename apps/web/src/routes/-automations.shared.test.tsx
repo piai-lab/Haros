@@ -48,6 +48,7 @@ import {
   scheduleFromForm,
   updateWeeklyScheduleDay,
   updateWeeklyScheduleTime,
+  updateInputFromForm,
   unresolvedTriageRuns,
 } from "./-automations.shared";
 
@@ -99,6 +100,15 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
       },
       runtimeMode: "approval-required",
     });
+  });
+});
+
+describe("automation update revision capture", () => {
+  it("carries the definition revision captured when the form opened", () => {
+    const opened = { ...baseDefinition, definitionRevision: 7 };
+    const input = updateInputFromForm(opened, formFromDefinition(opened, opened.projectId));
+
+    expect(input.expectedDefinitionRevision).toBe(7);
   });
 });
 
@@ -155,7 +165,12 @@ const baseDefinition: AutomationDefinition = {
   mode: "standalone",
   targetThreadId: null,
   maxIterations: null,
+  stopAfterConsecutiveFailures: 1,
   stopOnError: true,
+  consecutiveFailureCount: 0,
+  disabledReason: null,
+  disabledAt: null,
+  definitionRevision: 0,
   completionPolicy: { type: "none" },
   completionPolicyVersion: 1,
   completionPolicyUpdatedAt: "2026-06-19T10:00:00.000Z",
@@ -824,6 +839,28 @@ describe("automation shared route helpers", () => {
       afterLateLiveEvent.definitions.find((definition) => definition.id === newerDefinition.id)
         ?.name,
     ).toBe("New name");
+  });
+
+  it("uses definition revision instead of equal-millisecond timestamps for cache ordering", () => {
+    const newerDefinition = definitionWith({
+      id: automationId("automation-revision-cache-race"),
+      name: "New name",
+      definitionRevision: 2,
+      updatedAt: "2026-06-19T10:02:00.000Z",
+    });
+    const staleDefinition = definitionWith({
+      ...newerDefinition,
+      name: "Stale name",
+      definitionRevision: 1,
+    });
+
+    const afterLateEvent = applyAutomationEvent(
+      { definitions: [newerDefinition], runs: [] },
+      { type: "definition-upserted", definition: staleDefinition },
+    );
+
+    expect(afterLateEvent.definitions[0]?.name).toBe("New name");
+    expect(afterLateEvent.definitions[0]?.definitionRevision).toBe(2);
   });
 
   it("keeps cached definition state when an equal-timestamp snapshot arrives later", () => {

@@ -18,6 +18,8 @@ import { Effect, Layer, Option, Schema } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import * as SqlSchema from "effect/unstable/sql/SqlSchema";
 
+import { resolveAutomationStopAfterConsecutiveFailures } from "../../automation/stopPolicy.ts";
+
 import {
   toPersistenceDecodeCauseError,
   toPersistenceDecodeError,
@@ -84,6 +86,11 @@ const AutomationDefinitionDbRow = Schema.Struct({
   heartbeatCooldownSeconds: AutomationDefinition.fields.heartbeatCooldownSeconds,
   maxIterations: AutomationDefinition.fields.maxIterations,
   stopOnError: Schema.Number,
+  stopAfterConsecutiveFailures: AutomationDefinition.fields.stopAfterConsecutiveFailures,
+  consecutiveFailureCount: AutomationDefinition.fields.consecutiveFailureCount,
+  disabledReason: AutomationDefinition.fields.disabledReason,
+  disabledAt: AutomationDefinition.fields.disabledAt,
+  definitionRevision: AutomationDefinition.fields.definitionRevision,
   completionPolicy: Schema.fromJsonString(AutomationCompletionPolicy),
   completionPolicyVersion: AutomationDefinition.fields.completionPolicyVersion,
   completionPolicyUpdatedAt: AutomationDefinition.fields.completionPolicyUpdatedAt,
@@ -146,11 +153,28 @@ const MAX_RUN_LIST_ROWS = 500;
 
 class AutomationRunClaimRejected extends Error {}
 
+const ClaimAutomationDefinitionInput = Schema.Struct({
+  id: AutomationDefinition.fields.id,
+  now: Schema.String,
+  expectedDefinitionRevision: AutomationDefinition.fields.definitionRevision,
+  consumeIteration: Schema.Boolean,
+  requireEnabled: Schema.Boolean,
+  hasScheduleAdvance: Schema.Boolean,
+  nextRunAt: Schema.NullOr(Schema.String),
+  disableForSchedule: Schema.Boolean,
+});
+
+const AccountAutomationDefinitionInput = Schema.Struct({
+  id: AutomationDefinition.fields.id,
+  now: Schema.String,
+});
+
 function toDefinition(row: AutomationDefinitionDbRow) {
   return decodeDefinition({
     ...row,
     enabled: row.enabled === 1,
-    stopOnError: row.stopOnError === 1,
+    // The explicit threshold is authoritative. Keep the boolean only as a compatibility mirror.
+    stopOnError: row.stopAfterConsecutiveFailures !== null,
     providerOptions: row.providerOptions ?? undefined,
   }).pipe(Effect.mapError(toPersistenceDecodeError("AutomationRepository.definitionRowToDomain")));
 }
@@ -191,6 +215,11 @@ const makeAutomationRepository = Effect.gen(function* () {
           heartbeat_cooldown_seconds,
           max_iterations,
           stop_on_error,
+          stop_after_consecutive_failures,
+          consecutive_failure_count,
+          disabled_reason,
+          disabled_at,
+          definition_revision,
           completion_policy_json,
           completion_policy_version,
           completion_policy_updated_at,
@@ -225,6 +254,11 @@ const makeAutomationRepository = Effect.gen(function* () {
           ${definition.heartbeatCooldownSeconds ?? 60},
           ${definition.maxIterations},
           ${definition.stopOnError},
+          ${definition.stopAfterConsecutiveFailures},
+          ${definition.consecutiveFailureCount},
+          ${definition.disabledReason},
+          ${definition.disabledAt},
+          ${definition.definitionRevision},
           ${definition.completionPolicy},
           ${definition.completionPolicyVersion},
           ${definition.completionPolicyUpdatedAt},
@@ -267,6 +301,11 @@ const makeAutomationRepository = Effect.gen(function* () {
           COALESCE(heartbeat_cooldown_seconds, 60) AS "heartbeatCooldownSeconds",
           max_iterations AS "maxIterations",
           stop_on_error AS "stopOnError",
+          stop_after_consecutive_failures AS "stopAfterConsecutiveFailures",
+          consecutive_failure_count AS "consecutiveFailureCount",
+          disabled_reason AS "disabledReason",
+          disabled_at AS "disabledAt",
+          definition_revision AS "definitionRevision",
           completion_policy_json AS "completionPolicy",
           completion_policy_version AS "completionPolicyVersion",
           COALESCE(
@@ -289,8 +328,9 @@ const makeAutomationRepository = Effect.gen(function* () {
       `,
   });
 
-  const updateDefinitionRow = SqlSchema.void({
+  const updateDefinitionRow = SqlSchema.findOneOption({
     Request: AutomationDefinitionDbRow,
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
     execute: (definition) =>
       sql`
         UPDATE automation_definitions
@@ -315,6 +355,10 @@ const makeAutomationRepository = Effect.gen(function* () {
             heartbeat_cooldown_seconds = ${definition.heartbeatCooldownSeconds ?? 60},
             max_iterations = ${definition.maxIterations},
             stop_on_error = ${definition.stopOnError},
+            stop_after_consecutive_failures = ${definition.stopAfterConsecutiveFailures},
+            consecutive_failure_count = ${definition.consecutiveFailureCount},
+            disabled_reason = ${definition.disabledReason},
+            disabled_at = ${definition.disabledAt},
             completion_policy_json = ${definition.completionPolicy},
             completion_policy_version = ${definition.completionPolicyVersion},
             completion_policy_updated_at = ${definition.completionPolicyUpdatedAt},
@@ -324,24 +368,31 @@ const makeAutomationRepository = Effect.gen(function* () {
             misfire_policy = ${definition.misfirePolicy},
             acknowledged_risks_json = ${definition.acknowledgedRisks},
             updated_at = ${definition.updatedAt},
+            definition_revision = definition_revision + 1,
             archived_at = ${definition.archivedAt}
         WHERE automation_id = ${definition.id}
+          AND definition_revision = ${definition.definitionRevision}
+        RETURNING automation_id AS "id"
       `,
   });
 
   const resolvePendingProposalRow = SqlSchema.findOneOption({
     Request: ResolvePendingAutomationProposalInput,
     Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
-    execute: ({ id, resolution, nextRunAt, updatedAt, archivedAt }) =>
+    execute: ({ id, resolution, nextRunAt, updatedAt, archivedAt, expectedDefinitionRevision }) =>
       sql`
         UPDATE automation_definitions
         SET enabled = ${resolution === "accepted" ? 1 : 0},
             next_run_at = ${nextRunAt},
             proposal_state = ${resolution},
+            disabled_reason = ${resolution === "accepted" ? null : "user"},
+            disabled_at = ${resolution === "accepted" ? null : updatedAt},
             updated_at = ${updatedAt},
+            definition_revision = definition_revision + 1,
             archived_at = ${archivedAt}
         WHERE automation_id = ${id}
           AND proposal_state = 'pending'
+          AND definition_revision = ${expectedDefinitionRevision}
         RETURNING automation_id AS "id"
       `,
   });
@@ -375,6 +426,11 @@ const makeAutomationRepository = Effect.gen(function* () {
           COALESCE(heartbeat_cooldown_seconds, 60) AS "heartbeatCooldownSeconds",
           max_iterations AS "maxIterations",
           stop_on_error AS "stopOnError",
+          stop_after_consecutive_failures AS "stopAfterConsecutiveFailures",
+          consecutive_failure_count AS "consecutiveFailureCount",
+          disabled_reason AS "disabledReason",
+          disabled_at AS "disabledAt",
+          definition_revision AS "definitionRevision",
           completion_policy_json AS "completionPolicy",
           completion_policy_version AS "completionPolicyVersion",
           COALESCE(
@@ -425,6 +481,11 @@ const makeAutomationRepository = Effect.gen(function* () {
           COALESCE(definitions.heartbeat_cooldown_seconds, 60) AS "heartbeatCooldownSeconds",
           definitions.max_iterations AS "maxIterations",
           definitions.stop_on_error AS "stopOnError",
+          definitions.stop_after_consecutive_failures AS "stopAfterConsecutiveFailures",
+          definitions.consecutive_failure_count AS "consecutiveFailureCount",
+          definitions.disabled_reason AS "disabledReason",
+          definitions.disabled_at AS "disabledAt",
+          definitions.definition_revision AS "definitionRevision",
           definitions.completion_policy_json AS "completionPolicy",
           definitions.completion_policy_version AS "completionPolicyVersion",
           COALESCE(
@@ -463,38 +524,62 @@ const makeAutomationRepository = Effect.gen(function* () {
       `,
   });
 
-  const setDefinitionNextRunAtRow = SqlSchema.void({
+  const setDefinitionNextRunAtRow = SqlSchema.findAll({
     Request: SetAutomationDefinitionNextRunAtInput,
-    execute: ({ id, nextRunAt, updatedAt }) =>
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id, nextRunAt, updatedAt, expectedDefinitionRevision }) =>
       sql`
         UPDATE automation_definitions
         SET next_run_at = ${nextRunAt},
-            updated_at = ${updatedAt}
+            updated_at = CASE
+              WHEN updated_at < ${updatedAt} THEN ${updatedAt}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
+          AND definition_revision = ${expectedDefinitionRevision}
+        RETURNING automation_id AS "id"
       `,
   });
 
   const attachDefinitionThreadRow = SqlSchema.findAll({
     Request: AttachAutomationDefinitionThreadInput,
     Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
-    execute: ({ id, threadId, updatedAt }) =>
+    execute: ({ id, threadId, updatedAt, expectedDefinitionRevision }) =>
       sql`
         UPDATE automation_definitions
         SET target_thread_id = ${threadId},
-            updated_at = ${updatedAt}
+            updated_at = CASE
+              WHEN updated_at < ${updatedAt} THEN ${updatedAt}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
           AND target_thread_id IS NULL
+          AND definition_revision = ${expectedDefinitionRevision}
         RETURNING automation_id AS "id"
       `,
   });
 
-  const archiveDefinitionRow = SqlSchema.void({
+  const archiveDefinitionRow = SqlSchema.findAll({
     Request: ArchiveAutomationDefinitionInput,
-    execute: ({ id, archivedAt }) =>
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id, archivedAt, expectedDefinitionRevision }) =>
       sql`
         UPDATE automation_definitions
-        SET archived_at = ${archivedAt}, updated_at = ${archivedAt}, enabled = 0
+        SET archived_at = ${archivedAt},
+            updated_at = CASE
+              WHEN updated_at < ${archivedAt} THEN ${archivedAt}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            enabled = 0,
+            next_run_at = NULL,
+            disabled_reason = 'user',
+            disabled_at = ${archivedAt},
+            definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
+          AND definition_revision = ${expectedDefinitionRevision}
+        RETURNING automation_id AS "id"
       `,
   });
 
@@ -938,8 +1023,9 @@ const makeAutomationRepository = Effect.gen(function* () {
       `,
   });
 
-  const markRunFailedRow = SqlSchema.void({
+  const markRunFailedRow = SqlSchema.findAll({
     Request: MarkAutomationRunFailedInput,
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
     execute: ({ id, error, finishedAt }) =>
       sql`
         UPDATE automation_runs
@@ -951,13 +1037,14 @@ const makeAutomationRepository = Effect.gen(function* () {
             lease_expires_at = NULL,
             claimed_by = NULL
         WHERE run_id = ${id}
-          AND status NOT IN ('succeeded', 'failed', 'cancelled', 'interrupted')
+          AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
+        RETURNING run_id AS "id"
       `,
   });
 
   const markRunSkippedRow = SqlSchema.void({
     Request: MarkAutomationRunSkippedInput,
-    execute: ({ id, reason, finishedAt }) =>
+    execute: ({ id, reason, finishedAt, result }) =>
       sql`
         UPDATE automation_runs
         SET status = 'skipped',
@@ -967,13 +1054,15 @@ const makeAutomationRepository = Effect.gen(function* () {
             deferred_until = NULL,
             lease_expires_at = NULL,
             claimed_by = NULL
+            ${result === undefined ? sql`` : sql`, result_json = ${JSON.stringify(result)}`}
         WHERE run_id = ${id}
           AND status IN ('pending', 'claimed')
       `,
   });
 
-  const markRunSucceededRow = SqlSchema.void({
+  const markRunSucceededRow = SqlSchema.findAll({
     Request: MarkAutomationRunSucceededInput,
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
     execute: ({ id, turnId, result, finishedAt }) =>
       sql`
         UPDATE automation_runs
@@ -986,7 +1075,67 @@ const makeAutomationRepository = Effect.gen(function* () {
             lease_expires_at = NULL,
             claimed_by = NULL
         WHERE run_id = ${id}
-          AND status NOT IN ('succeeded', 'failed', 'cancelled', 'interrupted')
+          AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
+        RETURNING run_id AS "id"
+      `,
+  });
+
+  const recordDefinitionRunFailureRow = SqlSchema.findOneOption({
+    Request: AccountAutomationDefinitionInput,
+    Result: Schema.Struct({
+      consecutiveFailureCount: AutomationDefinition.fields.consecutiveFailureCount,
+      autoDisabled: Schema.Number,
+    }),
+    execute: ({ id, now }) =>
+      sql`
+        UPDATE automation_definitions
+        SET consecutive_failure_count = consecutive_failure_count + 1,
+            enabled = CASE
+              WHEN stop_after_consecutive_failures IS NOT NULL
+                AND consecutive_failure_count + 1 >= stop_after_consecutive_failures
+              THEN 0 ELSE enabled END,
+            next_run_at = CASE
+              WHEN stop_after_consecutive_failures IS NOT NULL
+                AND consecutive_failure_count + 1 >= stop_after_consecutive_failures
+              THEN NULL ELSE next_run_at END,
+            disabled_reason = CASE
+              WHEN stop_after_consecutive_failures IS NOT NULL
+                AND consecutive_failure_count + 1 >= stop_after_consecutive_failures
+              THEN 'failures' ELSE disabled_reason END,
+            disabled_at = CASE
+              WHEN stop_after_consecutive_failures IS NOT NULL
+                AND consecutive_failure_count + 1 >= stop_after_consecutive_failures
+              THEN ${now} ELSE disabled_at END,
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
+        WHERE automation_id = ${id}
+          AND enabled = 1
+          AND archived_at IS NULL
+        RETURNING consecutive_failure_count AS "consecutiveFailureCount",
+          CASE WHEN enabled = 0 THEN 1 ELSE 0 END AS "autoDisabled"
+      `,
+  });
+
+  const resetDefinitionFailureCountRow = SqlSchema.findAll({
+    Request: AccountAutomationDefinitionInput,
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id, now }) =>
+      sql`
+        UPDATE automation_definitions
+        SET consecutive_failure_count = 0,
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
+        WHERE automation_id = ${id}
+          AND enabled = 1
+          AND archived_at IS NULL
+          AND consecutive_failure_count <> 0
+        RETURNING automation_id AS "id"
       `,
   });
 
@@ -1057,7 +1206,7 @@ const makeAutomationRepository = Effect.gen(function* () {
             lease_expires_at = NULL,
             claimed_by = NULL
         WHERE run_id = ${id}
-          AND status NOT IN ('succeeded', 'failed', 'cancelled', 'interrupted')
+          AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
       `,
   });
 
@@ -1306,65 +1455,133 @@ const makeAutomationRepository = Effect.gen(function* () {
       `,
   });
 
-  const disableDefinitionRow = SqlSchema.void({
+  const disableDefinitionRow = SqlSchema.findAll({
     Request: DisableAutomationDefinitionInput,
-    execute: ({ id, now }) =>
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id, now, reason, expectedDefinitionRevision }) =>
       sql`
         UPDATE automation_definitions
-        SET enabled = 0, next_run_at = NULL, updated_at = ${now}
+        SET enabled = 0,
+            next_run_at = NULL,
+            disabled_reason = ${reason},
+            disabled_at = ${now},
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
+          AND enabled = 1
+          AND archived_at IS NULL
+          AND definition_revision = ${expectedDefinitionRevision}
+        RETURNING automation_id AS "id"
       `,
   });
 
   const disableDefinitionIfUnchangedRow = SqlSchema.findAll({
     Request: DisableAutomationDefinitionIfUnchangedInput,
     Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
-    execute: ({ id, expectedUpdatedAt, now }) =>
+    execute: ({ id, expectedDefinitionRevision, now, reason }) =>
       sql`
         UPDATE automation_definitions
-        SET enabled = 0, next_run_at = NULL, updated_at = ${now}
+        SET enabled = 0,
+            next_run_at = NULL,
+            disabled_reason = ${reason},
+            disabled_at = ${now},
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
           AND enabled = 1
           AND archived_at IS NULL
-          AND updated_at = ${expectedUpdatedAt}
+          AND definition_revision = ${expectedDefinitionRevision}
         RETURNING automation_id AS "id"
       `,
   });
 
-  const incrementIterationRow = SqlSchema.void({
-    Request: IncrementAutomationIterationInput,
-    execute: ({ id, now }) =>
-      sql`
-        UPDATE automation_definitions
-        SET iteration_count = iteration_count + 1, updated_at = ${now}
-        WHERE automation_id = ${id}
-      `,
-  });
-
-  const incrementIterationIfRunnableRow = SqlSchema.findAll({
+  const incrementIterationRow = SqlSchema.findAll({
     Request: IncrementAutomationIterationInput,
     Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
-    execute: ({ id, now }) =>
+    execute: ({ id, now, expectedDefinitionRevision }) =>
       sql`
         UPDATE automation_definitions
-        SET iteration_count = iteration_count + 1, updated_at = ${now}
+        SET iteration_count = iteration_count + 1,
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
-          AND archived_at IS NULL
-          AND (max_iterations IS NULL OR iteration_count < max_iterations)
+          AND definition_revision = ${expectedDefinitionRevision}
         RETURNING automation_id AS "id"
       `,
   });
 
-  const restartDefinitionLoopRow = SqlSchema.void({
+  const claimDefinitionForRunRow = SqlSchema.findAll({
+    Request: ClaimAutomationDefinitionInput,
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({
+      id,
+      now,
+      expectedDefinitionRevision,
+      consumeIteration,
+      requireEnabled,
+      hasScheduleAdvance,
+      nextRunAt,
+      disableForSchedule,
+    }) =>
+      sql`
+        UPDATE automation_definitions
+        SET iteration_count = iteration_count + ${consumeIteration ? 1 : 0},
+            next_run_at = CASE WHEN ${hasScheduleAdvance ? 1 : 0} = 1
+              THEN ${nextRunAt} ELSE next_run_at END,
+            enabled = CASE WHEN ${disableForSchedule ? 1 : 0} = 1 THEN 0 ELSE enabled END,
+            disabled_reason = CASE WHEN ${disableForSchedule ? 1 : 0} = 1
+              THEN 'schedule' ELSE disabled_reason END,
+            disabled_at = CASE WHEN ${disableForSchedule ? 1 : 0} = 1
+              THEN ${now} ELSE disabled_at END,
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
+        WHERE automation_id = ${id}
+          AND archived_at IS NULL
+          AND definition_revision = ${expectedDefinitionRevision}
+          AND (${requireEnabled ? 1 : 0} = 0 OR enabled = 1)
+          AND (
+            ${consumeIteration ? 1 : 0} = 0
+            OR max_iterations IS NULL
+            OR iteration_count < max_iterations
+          )
+        RETURNING automation_id AS "id"
+      `,
+  });
+
+  const restartDefinitionLoopRow = SqlSchema.findAll({
     Request: RestartAutomationDefinitionLoopInput,
-    execute: ({ id, enabled, nextRunAt, updatedAt }) =>
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id, enabled, nextRunAt, updatedAt, expectedDefinitionRevision }) =>
       sql`
         UPDATE automation_definitions
         SET enabled = ${enabled ? 1 : 0},
             iteration_count = 0,
             next_run_at = ${nextRunAt},
-            updated_at = ${updatedAt}
+            consecutive_failure_count = CASE WHEN ${enabled ? 1 : 0} = 1 THEN 0
+              ELSE consecutive_failure_count END,
+            disabled_reason = CASE WHEN ${enabled ? 1 : 0} = 1 THEN NULL
+              ELSE disabled_reason END,
+            disabled_at = CASE WHEN ${enabled ? 1 : 0} = 1 THEN NULL ELSE disabled_at END,
+            updated_at = CASE
+              WHEN updated_at < ${updatedAt} THEN ${updatedAt}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
+          AND definition_revision = ${expectedDefinitionRevision}
+        RETURNING automation_id AS "id"
       `,
   });
 
@@ -1402,6 +1619,10 @@ const makeAutomationRepository = Effect.gen(function* () {
         : now;
     const mode = input.mode ?? "standalone";
     const completionPolicy = input.completionPolicy ?? { type: "none" as const };
+    const stopAfterConsecutiveFailures = resolveAutomationStopAfterConsecutiveFailures({
+      stopAfterConsecutiveFailures: input.stopAfterConsecutiveFailures,
+      stopOnError: input.stopOnError,
+    });
     const definition: AutomationDefinition = {
       id,
       projectId: input.projectId,
@@ -1424,7 +1645,12 @@ const makeAutomationRepository = Effect.gen(function* () {
       notificationPolicy: input.notificationPolicy ?? "all",
       heartbeatCooldownSeconds: input.heartbeatCooldownSeconds ?? 60,
       maxIterations: input.maxIterations ?? null,
-      stopOnError: input.stopOnError ?? true,
+      stopAfterConsecutiveFailures,
+      stopOnError: stopAfterConsecutiveFailures !== null,
+      consecutiveFailureCount: 0,
+      disabledReason: null,
+      disabledAt: null,
+      definitionRevision: 0,
       completionPolicy,
       completionPolicyVersion: 1,
       completionPolicyUpdatedAt: now,
@@ -1452,19 +1678,27 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
   };
 
-  const saveDefinition: AutomationRepositoryShape["saveDefinition"] = (definition) =>
-    updateDefinitionRow({
-      ...definition,
-      enabled: definition.enabled ? 1 : 0,
-      stopOnError: definition.stopOnError ? 1 : 0,
-      providerOptions: definition.providerOptions ?? null,
-      completionPolicy: definition.completionPolicy ?? { type: "none" },
-      completionPolicyVersion: definition.completionPolicyVersion ?? 1,
-      completionPolicyUpdatedAt: definition.completionPolicyUpdatedAt ?? definition.createdAt,
+  const saveDefinition: AutomationRepositoryShape["saveDefinition"] = (input) => {
+    return updateDefinitionRow({
+      ...input.definition,
+      definitionRevision: input.expectedDefinitionRevision,
+      enabled: input.definition.enabled ? 1 : 0,
+      stopOnError: input.definition.stopAfterConsecutiveFailures !== null ? 1 : 0,
+      providerOptions: input.definition.providerOptions ?? null,
+      completionPolicy: input.definition.completionPolicy ?? { type: "none" },
+      completionPolicyVersion: input.definition.completionPolicyVersion ?? 1,
+      completionPolicyUpdatedAt:
+        input.definition.completionPolicyUpdatedAt ?? input.definition.createdAt,
     }).pipe(
       Effect.mapError(toPersistenceSqlError("AutomationRepository.saveDefinition:update")),
-      Effect.as(definition),
+      Effect.map(
+        Option.map(() => ({
+          ...input.definition,
+          definitionRevision: input.expectedDefinitionRevision + 1,
+        })),
+      ),
     );
+  };
 
   const resolvePendingProposal: AutomationRepositoryShape["resolvePendingProposal"] = (input) =>
     resolvePendingProposalRow(input).pipe(
@@ -1492,6 +1726,7 @@ const makeAutomationRepository = Effect.gen(function* () {
   const setDefinitionNextRunAt: AutomationRepositoryShape["setDefinitionNextRunAt"] = (input) =>
     setDefinitionNextRunAtRow(input).pipe(
       Effect.mapError(toPersistenceSqlError("AutomationRepository.setDefinitionNextRunAt:update")),
+      Effect.map((rows) => rows.length > 0),
     );
 
   const attachDefinitionThread: AutomationRepositoryShape["attachDefinitionThread"] = (input) =>
@@ -1503,6 +1738,7 @@ const makeAutomationRepository = Effect.gen(function* () {
   const archiveDefinition: AutomationRepositoryShape["archiveDefinition"] = (input) =>
     archiveDefinitionRow(input).pipe(
       Effect.mapError(toPersistenceSqlError("AutomationRepository.archiveDefinition:query")),
+      Effect.map((rows) => rows.length > 0),
     );
 
   const list: AutomationRepositoryShape["list"] = (input = {}) => {
@@ -1600,29 +1836,40 @@ const makeAutomationRepository = Effect.gen(function* () {
   };
 
   const createRunAndIncrementDefinition: AutomationRepositoryShape["createRunAndIncrementDefinition"] =
-    (input, scheduleAdvance) =>
+    (input, definitionMutation) =>
       sql
         .withTransaction(
           Effect.gen(function* () {
             const run = yield* createRun(input);
             const inserted = run.id === input.id;
-            if (inserted) {
-              const updated = yield* incrementIterationIfRunnableRow({
+            const scheduleAdvance = definitionMutation.scheduleAdvance;
+            if (inserted || scheduleAdvance) {
+              const updated = yield* claimDefinitionForRunRow({
                 id: input.automationId,
                 now: input.now,
+                expectedDefinitionRevision: definitionMutation.expectedDefinitionRevision,
+                // A durable row for this occurrence means its iteration was already owned by
+                // the prior process. Recovery may advance the schedule, but never count it twice.
+                consumeIteration: inserted ? definitionMutation.consumeIteration : false,
+                requireEnabled: input.trigger.type === "scheduled",
+                hasScheduleAdvance: scheduleAdvance !== undefined,
+                nextRunAt: scheduleAdvance?.nextRunAt ?? null,
+                disableForSchedule: scheduleAdvance?.disable ?? false,
               });
               if (updated.length === 0) {
                 return yield* Effect.fail(new AutomationRunClaimRejected());
               }
             }
-            if (scheduleAdvance) {
-              yield* scheduleAdvance.disable
-                ? disableDefinitionRow({ id: input.automationId, now: input.now })
-                : setDefinitionNextRunAtRow({
-                    id: input.automationId,
-                    nextRunAt: scheduleAdvance.nextRunAt,
-                    updatedAt: input.now,
-                  });
+            if (inserted && definitionMutation.terminalSkip) {
+              yield* markRunSkippedRow({
+                id: run.id,
+                ...definitionMutation.terminalSkip,
+              });
+              const skipped = yield* requireRunById(
+                run.id,
+                "AutomationRepository.createRunAndIncrementDefinition:skipped",
+              );
+              return Option.some(skipped);
             }
             return inserted ? Option.some(run) : Option.none<AutomationRun>();
           }),
@@ -1724,10 +1971,40 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
 
   const markRunFailed: AutomationRepositoryShape["markRunFailed"] = (input) =>
-    markRunFailedRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.markRunFailed:update")),
-      Effect.flatMap(() => requireRunById(input.id, "AutomationRepository.markRunFailed")),
-    );
+    sql
+      .withTransaction(
+        Effect.gen(function* () {
+          const rows = yield* markRunFailedRow(input);
+          const run = yield* requireRunById(input.id, "AutomationRepository.markRunFailed");
+          if (rows.length === 0) {
+            return {
+              run,
+              transitioned: false,
+              consecutiveFailureCount: null,
+              autoDisabled: false,
+            };
+          }
+          const accounting = yield* recordDefinitionRunFailureRow({
+            id: run.automationId,
+            now: input.finishedAt,
+          });
+          return Option.match(accounting, {
+            onNone: () => ({
+              run,
+              transitioned: true,
+              consecutiveFailureCount: null,
+              autoDisabled: false,
+            }),
+            onSome: (row) => ({
+              run,
+              transitioned: true,
+              consecutiveFailureCount: row.consecutiveFailureCount ?? null,
+              autoDisabled: row.autoDisabled === 1,
+            }),
+          });
+        }),
+      )
+      .pipe(Effect.mapError(toPersistenceSqlError("AutomationRepository.markRunFailed:update")));
 
   const markRunSkipped: AutomationRepositoryShape["markRunSkipped"] = (input) =>
     markRunSkippedRow(input).pipe(
@@ -1736,10 +2013,22 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
 
   const markRunSucceeded: AutomationRepositoryShape["markRunSucceeded"] = (input) =>
-    markRunSucceededRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.markRunSucceeded:update")),
-      Effect.flatMap(() => requireRunById(input.id, "AutomationRepository.markRunSucceeded")),
-    );
+    sql
+      .withTransaction(
+        Effect.gen(function* () {
+          const rows = yield* markRunSucceededRow(input);
+          const run = yield* requireRunById(input.id, "AutomationRepository.markRunSucceeded");
+          if (rows.length === 0) {
+            return { run, transitioned: false, failureCountReset: false };
+          }
+          const resetRows = yield* resetDefinitionFailureCountRow({
+            id: run.automationId,
+            now: input.accountedAt ?? input.finishedAt,
+          });
+          return { run, transitioned: true, failureCountReset: resetRows.length > 0 };
+        }),
+      )
+      .pipe(Effect.mapError(toPersistenceSqlError("AutomationRepository.markRunSucceeded:update")));
 
   const markRunResult: AutomationRepositoryShape["markRunResult"] = (input) =>
     markRunResultRow(input).pipe(
@@ -1925,6 +2214,7 @@ const makeAutomationRepository = Effect.gen(function* () {
   const disableDefinition: AutomationRepositoryShape["disableDefinition"] = (input) =>
     disableDefinitionRow(input).pipe(
       Effect.mapError(toPersistenceSqlError("AutomationRepository.disableDefinition:update")),
+      Effect.map((rows) => rows.length > 0),
     );
 
   const disableDefinitionIfUnchanged: AutomationRepositoryShape["disableDefinitionIfUnchanged"] = (
@@ -1943,11 +2233,13 @@ const makeAutomationRepository = Effect.gen(function* () {
         Effect.mapError(
           toPersistenceSqlError("AutomationRepository.incrementDefinitionIterationCount:update"),
         ),
+        Effect.map((rows) => rows.length > 0),
       );
 
   const restartDefinitionLoop: AutomationRepositoryShape["restartDefinitionLoop"] = (input) =>
     restartDefinitionLoopRow(input).pipe(
       Effect.mapError(toPersistenceSqlError("AutomationRepository.restartDefinitionLoop:update")),
+      Effect.map((rows) => rows.length > 0),
     );
 
   const tryAcquireSchedulerLease: AutomationRepositoryShape["tryAcquireSchedulerLease"] = (input) =>

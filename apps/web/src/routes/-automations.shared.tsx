@@ -568,7 +568,9 @@ function mergeDefinitionsByUpdatedAt(
     const previousDefinition = previousById.get(snapshotDefinition.id);
     definitions.push(
       previousDefinition &&
-        isSameOrNewerTimestamp(previousDefinition.updatedAt, snapshotDefinition.updatedAt)
+        (previousDefinition.definitionRevision > snapshotDefinition.definitionRevision ||
+          (previousDefinition.definitionRevision === snapshotDefinition.definitionRevision &&
+            isSameOrNewerTimestamp(previousDefinition.updatedAt, snapshotDefinition.updatedAt)))
         ? previousDefinition
         : snapshotDefinition,
     );
@@ -581,7 +583,12 @@ function upsertDefinitionByUpdatedAt(
   incoming: AutomationDefinition,
 ): AutomationDefinition[] {
   const existing = definitions.find((definition) => definition.id === incoming.id);
-  if (existing && isNewerTimestamp(existing.updatedAt, incoming.updatedAt)) {
+  if (
+    existing &&
+    (existing.definitionRevision > incoming.definitionRevision ||
+      (existing.definitionRevision === incoming.definitionRevision &&
+        isNewerTimestamp(existing.updatedAt, incoming.updatedAt)))
+  ) {
     return [...definitions];
   }
   return existing
@@ -726,12 +733,24 @@ export function applyAutomationEvent(
 export function useAutomations(onRunStarted?: (threadId: ThreadId) => void) {
   const queryClient = useQueryClient();
   const { t } = useI18n();
-  const showMutationError = (title: MessageKey, error: Error) =>
+  const showMutationError = (title: MessageKey, error: Error, description = error.message) =>
     toastManager.add({
       type: "error",
       title: t(title),
-      description: error.message,
+      description,
     });
+  const showDefinitionMutationError = (fallbackTitle: MessageKey, error: Error) => {
+    if ("code" in error && error.code === "AUTOMATION_DEFINITION_CONFLICT") {
+      void queryClient.invalidateQueries({ queryKey: automationQueryKey });
+      showMutationError(
+        "automation.definitionConflictTitle",
+        error,
+        t("automation.definitionConflict"),
+      );
+      return;
+    }
+    showMutationError(fallbackTitle, error);
+  };
 
   const automationsQuery = useQuery({
     queryKey: automationQueryKey,
@@ -749,13 +768,14 @@ export function useAutomations(onRunStarted?: (threadId: ThreadId) => void) {
     // Optimistically merge the patch so inline edits on the detail page feel instant; the
     // server's authoritative definition (with recomputed nextRunAt) arrives via the stream.
     onMutate: (input) => {
+      const { expectedDefinitionRevision: _expectedDefinitionRevision, ...patch } = input;
       const previous = queryClient.getQueryData<AutomationListResult>(automationQueryKey);
       queryClient.setQueryData<AutomationListResult>(automationQueryKey, (prev) => {
         const base = prev ?? EMPTY_AUTOMATION_LIST;
         return {
           definitions: base.definitions.map((definition) =>
             definition.id === input.id
-              ? ({ ...definition, ...input } as AutomationDefinition)
+              ? ({ ...definition, ...patch } as AutomationDefinition)
               : definition,
           ),
           runs: base.runs,
@@ -771,14 +791,17 @@ export function useAutomations(onRunStarted?: (threadId: ThreadId) => void) {
       if (context?.previous) {
         queryClient.setQueryData<AutomationListResult>(automationQueryKey, context.previous);
       }
-      showMutationError("automation.updateFailed", error);
+      showDefinitionMutationError("automation.updateFailed", error);
     },
   });
   const deleteMutation = useMutation({
     mutationFn: (definition: AutomationDefinition) =>
-      ensureNativeApi().automation.delete({ id: definition.id }),
+      ensureNativeApi().automation.delete({
+        id: definition.id,
+        expectedDefinitionRevision: definition.definitionRevision,
+      }),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: automationQueryKey }),
-    onError: (error) => showMutationError("automation.deleteFailed", error),
+    onError: (error) => showDefinitionMutationError("automation.deleteFailed", error),
   });
   const runNowMutation = useMutation({
     mutationFn: (definition: AutomationDefinition) =>

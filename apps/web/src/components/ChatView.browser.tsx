@@ -731,6 +731,12 @@ function createAutomationDefinitionFromCreateRequest(
   body: WsRequestEnvelope["body"],
 ): AutomationDefinition {
   const input = body as unknown as AutomationCreateInput;
+  const stopAfterConsecutiveFailures =
+    input.stopAfterConsecutiveFailures !== undefined
+      ? input.stopAfterConsecutiveFailures
+      : input.stopOnError === false
+        ? null
+        : 1;
   const definition: AutomationDefinition = {
     id: AutomationId.makeUnsafe(`automation-${wsRequests.length}`),
     projectId: input.projectId,
@@ -747,7 +753,12 @@ function createAutomationDefinitionFromCreateRequest(
     mode: input.mode ?? "standalone",
     targetThreadId: input.targetThreadId ?? null,
     maxIterations: input.maxIterations ?? null,
-    stopOnError: input.stopOnError ?? true,
+    stopAfterConsecutiveFailures,
+    stopOnError: stopAfterConsecutiveFailures !== null,
+    consecutiveFailureCount: 0,
+    disabledReason: null,
+    disabledAt: null,
+    definitionRevision: 0,
     completionPolicy: input.completionPolicy ?? { type: "none" },
     completionPolicyVersion: 1,
     completionPolicyUpdatedAt: NOW_ISO,

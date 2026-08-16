@@ -644,9 +644,11 @@ export function updateInputFromForm(
   form: AutomationFormState,
   providerOptions?: ProviderStartOptions,
   acknowledgedRisks?: AutomationCreateInput["acknowledgedRisks"],
+  expectedDefinitionRevision = definition.definitionRevision,
 ): AutomationUpdateInput {
   return {
     id: definition.id,
+    expectedDefinitionRevision,
     ...createInputFromForm(form, providerOptions, acknowledgedRisks),
   };
 }

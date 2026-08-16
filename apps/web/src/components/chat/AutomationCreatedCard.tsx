@@ -53,6 +53,10 @@ export function AutomationCreatedCard({
     }
   }, [automationId, proposalListQuery.data]);
 
+  const proposalDefinition = proposalListQuery.data?.definitions.find(
+    (definition) => definition.id === automationId,
+  );
+
   return (
     <div className="flex items-center gap-3 rounded-xl border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] px-3 py-2.5">
       <span className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-secondary)] text-[var(--color-text-foreground)]">
@@ -78,9 +82,10 @@ export function AutomationCreatedCard({
           </p>
         ) : null}
       </div>
-      {currentProposalState === "pending" ? (
+      {currentProposalState === "pending" && proposalDefinition ? (
         <AutomationProposalActions
           automationId={automationId}
+          expectedDefinitionRevision={proposalDefinition.definitionRevision}
           onResolved={setCurrentProposalState}
         />
       ) : null}

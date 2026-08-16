@@ -286,6 +286,19 @@ function readDescendantProcesses(rootPid: number): Promise<ProcessTableRow[]> {
 
 function toWsRpcError(cause: unknown, fallbackMessage: string) {
   if (Schema.is(WsRpcError)(cause)) return cause;
+  if (
+    cause &&
+    typeof cause === "object" &&
+    "code" in cause &&
+    cause.code === "AUTOMATION_DEFINITION_CONFLICT"
+  ) {
+    return new WsRpcError({
+      message: cause instanceof Error ? cause.message : fallbackMessage,
+      code: "AUTOMATION_DEFINITION_CONFLICT",
+      retryable: false,
+      cause,
+    });
+  }
   if (Schema.is(ProjectionStateIncompleteError)(cause)) {
     return new WsRpcError({
       message: cause.message,

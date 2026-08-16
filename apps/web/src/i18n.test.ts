@@ -54,6 +54,17 @@ describe("message catalogs", () => {
     expect(translate("zh-CN", "library.title", { provider: "Pi" })).toBe("Pi 能力库");
   });
 
+  it("gives revision conflicts actionable copy in both supported languages", () => {
+    expect(translate("en", "automation.definitionConflictTitle")).toBe("Automation changed");
+    expect(translate("en", "automation.definitionConflict")).toBe(
+      "Automation changed elsewhere. Reload and review before saving.",
+    );
+    expect(translate("zh-CN", "automation.definitionConflictTitle")).toBe("自动化已更新");
+    expect(translate("zh-CN", "automation.definitionConflict")).toBe(
+      "自动化已在其他位置发生变化，请刷新并确认后再保存。",
+    );
+  });
+
   it("localizes the reachable Fast command feedback", () => {
     expect(translate("en", "composer.fastUnavailable")).toBe("Fast mode is unavailable");
     expect(translate("zh-CN", "composer.fastUnavailable")).toBe("快速模式不可用");

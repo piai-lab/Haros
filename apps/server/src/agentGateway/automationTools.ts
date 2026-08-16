@@ -195,6 +195,23 @@ function readNullablePositiveInteger(
   return value;
 }
 
+function readNonNegativeInteger(
+  args: Record<string, unknown>,
+  name: string,
+  options?: { readonly required?: boolean },
+): number | undefined {
+  const raw = args[name];
+  if (raw === undefined) {
+    if (options?.required) throw new ToolInputError(`Missing required argument "${name}".`);
+    return undefined;
+  }
+  const value = readNumberArg(args, name)!;
+  if (!Number.isInteger(value) || value < 0) {
+    throw new ToolInputError(`Argument "${name}" must be a non-negative integer.`);
+  }
+  return value;
+}
+
 function readNotificationPolicy(
   args: Record<string, unknown>,
   required = false,
@@ -619,11 +636,12 @@ export function makeAgentGatewayAutomationTools(
     requiresActiveTurn: true,
     definition: {
       name: "omnimind_update_automation",
-      description: `Fully replace an automation's mutable configuration. ${AUTOMATION_AUTHORING_GUIDANCE} You MUST call omnimind_view_automation first, then resend name, prompt, schedule, enabled, maxIterations, notificationPolicy, and completionPolicy, including every unchanged field. Partial updates are rejected.`,
+      description: `Fully replace an automation's mutable configuration. ${AUTOMATION_AUTHORING_GUIDANCE} You MUST call omnimind_view_automation first, then resend definition.definitionRevision as expectedDefinitionRevision plus name, prompt, schedule, enabled, maxIterations, notificationPolicy, and completionPolicy, including every unchanged field. Stale revisions and partial updates are rejected.`,
       inputSchema: {
         type: "object",
         properties: {
           automationId: { type: "string" },
+          expectedDefinitionRevision: { type: "number", minimum: 0 },
           name: { type: "string", description: AUTOMATION_NAME_AUTHORING_GUIDANCE },
           prompt: { type: "string", description: AUTOMATION_PROMPT_AUTHORING_GUIDANCE },
           schedule: SCHEDULE_INPUT_SCHEMA,
@@ -639,6 +657,7 @@ export function makeAgentGatewayAutomationTools(
         },
         required: [
           "automationId",
+          "expectedDefinitionRevision",
           "name",
           "prompt",
           "schedule",
@@ -694,6 +713,9 @@ export function makeAgentGatewayAutomationTools(
         const updated = yield* automationService
           .update({
             id: AutomationId.makeUnsafe(automationId),
+            expectedDefinitionRevision: readNonNegativeInteger(args, "expectedDefinitionRevision", {
+              required: true,
+            })!,
             name: readStringArg(args, "name", { required: true })!,
             prompt: readStringArg(args, "prompt", { required: true })!,
             schedule,
@@ -714,14 +736,15 @@ export function makeAgentGatewayAutomationTools(
     definition: {
       name: "omnimind_cancel_automation",
       description:
-        'Stop a OmniMind automation. mode "disable" (default) pauses it and keeps history; "delete" archives it. An automation-dispatched run may always stop its own automation, whatever its mode. Prefer a completionPolicy stop clause for conditions known when the automation is created.',
+        'Stop a OmniMind automation using the definition revision returned by omnimind_view_automation. mode "disable" (default) pauses it and keeps history; "delete" archives it. An automation-dispatched run may always stop its own automation, whatever its mode. Prefer a completionPolicy stop clause for conditions known when the automation is created.',
       inputSchema: {
         type: "object",
         properties: {
           automationId: { type: "string", description: "Automation to stop." },
+          expectedDefinitionRevision: { type: "number", minimum: 0 },
           mode: { type: "string", enum: ["disable", "delete"], description: "Stop mode." },
         },
-        required: ["automationId"],
+        required: ["automationId", "expectedDefinitionRevision"],
         additionalProperties: false,
       },
       annotations: { title: "Stop a OmniMind automation", ...WRITE_TOOL_ANNOTATIONS },
@@ -734,16 +757,21 @@ export function makeAgentGatewayAutomationTools(
           throw new ToolInputError('Argument "mode" must be "disable" or "delete".');
         }
         const id = AutomationId.makeUnsafe(automationId);
+        const expectedDefinitionRevision = readNonNegativeInteger(
+          args,
+          "expectedDefinitionRevision",
+          { required: true },
+        )!;
         const caller = yield* requireThreadShell(context.callerThreadId);
         const { definition } = yield* requireAutomationDefinition(automationId);
         yield* assertCallerMayManageAutomation(caller, definition, context);
         if (modeArg === "delete") {
           yield* automationService
-            .delete({ id })
+            .delete({ id, expectedDefinitionRevision })
             .pipe(Effect.mapError((error) => new ToolInputError(errorText(error))));
         } else {
           yield* automationService
-            .update({ id, enabled: false })
+            .update({ id, enabled: false, expectedDefinitionRevision })
             .pipe(Effect.mapError((error) => new ToolInputError(errorText(error))));
         }
         return mcpToolResultJson({ automationId, stopped: true, mode: modeArg });

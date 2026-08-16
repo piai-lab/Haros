@@ -96,6 +96,18 @@ export type AutomationNotificationPolicy = typeof AutomationNotificationPolicy.T
 
 export const DEFAULT_AUTOMATION_NOTIFICATION_POLICY: AutomationNotificationPolicy = "all";
 export const DEFAULT_AUTOMATION_HEARTBEAT_COOLDOWN_SECONDS = 60;
+// Preserve the legacy stop_on_error=true contract: existing automations stop on the
+// first consecutive failure unless a caller explicitly chooses a larger threshold.
+export const DEFAULT_AUTOMATION_STOP_AFTER_CONSECUTIVE_FAILURES = 1;
+
+export const AutomationDisabledReason = Schema.Literals([
+  "failures",
+  "max-iterations",
+  "completion",
+  "schedule",
+  "user",
+]);
+export type AutomationDisabledReason = typeof AutomationDisabledReason.Type;
 
 export const AutomationTrigger = Schema.Union([
   Schema.Struct({ type: Schema.Literal("manual") }),
@@ -239,8 +251,19 @@ export const AutomationDefinition = Schema.Struct({
   ),
   /** Hard cap on total runs before the automation auto-disables. Null = unbounded. */
   maxIterations: Schema.NullOr(PositiveInt),
-  /** When true, a failed run disables the automation (stops a runaway loop). */
+  /** Consecutive failed runs required before auto-disable. Null disables failure stopping. */
+  stopAfterConsecutiveFailures: Schema.NullOr(PositiveInt).pipe(
+    Schema.withDecodingDefault(() => DEFAULT_AUTOMATION_STOP_AFTER_CONSECUTIVE_FAILURES),
+  ),
+  /** @deprecated Compatibility mirror derived from stopAfterConsecutiveFailures. */
   stopOnError: Schema.Boolean,
+  consecutiveFailureCount: NonNegativeInt.pipe(Schema.withDecodingDefault(() => 0)),
+  disabledReason: Schema.NullOr(AutomationDisabledReason).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
+  disabledAt: Schema.NullOr(AutomationIsoDateTime).pipe(Schema.withDecodingDefault(() => null)),
+  /** Monotonic optimistic-concurrency token; timestamps are display metadata only. */
+  definitionRevision: NonNegativeInt.pipe(Schema.withDecodingDefault(() => 0)),
   /** Natural language stop condition, evaluated in every mode. */
   completionPolicy: Schema.optional(AutomationCompletionPolicy).pipe(
     Schema.withDecodingDefault(() => DEFAULT_AUTOMATION_COMPLETION_POLICY),
@@ -306,6 +329,8 @@ const AutomationDefinitionConfig = Schema.Struct({
   maxIterations: Schema.optional(Schema.NullOr(PositiveInt)).pipe(
     Schema.withDecodingDefault(() => null),
   ),
+  stopAfterConsecutiveFailures: Schema.optional(Schema.NullOr(PositiveInt)),
+  /** @deprecated Use stopAfterConsecutiveFailures. */
   stopOnError: Schema.optional(Schema.Boolean).pipe(Schema.withDecodingDefault(() => true)),
   completionPolicy: Schema.optional(AutomationCompletionPolicy).pipe(
     Schema.withDecodingDefault(() => DEFAULT_AUTOMATION_COMPLETION_POLICY),
@@ -332,6 +357,7 @@ export type AutomationCreateInput = typeof AutomationCreateInput.Type;
 
 export const AutomationUpdateInput = Schema.Struct({
   id: AutomationId,
+  expectedDefinitionRevision: NonNegativeInt,
   projectId: Schema.optional(ProjectId),
   sourceThreadId: Schema.optional(Schema.NullOr(ThreadId)),
   name: Schema.optional(TrimmedNonEmptyString.check(Schema.isMaxLength(160))),
@@ -349,6 +375,8 @@ export const AutomationUpdateInput = Schema.Struct({
   notificationPolicy: Schema.optional(AutomationNotificationPolicy),
   heartbeatCooldownSeconds: Schema.optional(NonNegativeInt),
   maxIterations: Schema.optional(Schema.NullOr(PositiveInt)),
+  stopAfterConsecutiveFailures: Schema.optional(Schema.NullOr(PositiveInt)),
+  /** @deprecated Use stopAfterConsecutiveFailures. */
   stopOnError: Schema.optional(Schema.Boolean),
   completionPolicy: Schema.optional(AutomationCompletionPolicy),
   minimumIntervalSeconds: Schema.optional(PositiveInt),
@@ -363,11 +391,13 @@ export type AutomationUpdateInput = typeof AutomationUpdateInput.Type;
 
 export const AutomationDeleteInput = Schema.Struct({
   id: AutomationId,
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type AutomationDeleteInput = typeof AutomationDeleteInput.Type;
 
 export const AutomationResolveProposalInput = Schema.Struct({
   automationId: AutomationId,
+  expectedDefinitionRevision: NonNegativeInt,
   resolution: Schema.Literals(["accepted", "dismissed"]),
 });
 export type AutomationResolveProposalInput = typeof AutomationResolveProposalInput.Type;

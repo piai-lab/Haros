@@ -191,6 +191,7 @@ function AutomationDetailView() {
   const projects = useStore((state) => state.projects);
   const threads = useStore(selectAllThreads);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDefinitionRevision, setEditDefinitionRevision] = useState<number | null>(null);
   const [form, setForm] = useState<AutomationFormState | null>(null);
   const [dialogWarnings, setDialogWarnings] = useState<readonly AutomationDraftWarning[]>([]);
   const [acknowledgedWarningIds, setAcknowledgedWarningIds] = useState<
@@ -295,8 +296,12 @@ function AutomationDetailView() {
   const stopWhen = stopWhenFromCompletionPolicy(definition.completionPolicy ?? { type: "none" });
   const pendingProposal = definition.proposalState === "pending";
 
-  const patch = (input: Omit<AutomationUpdateInput, "id">) =>
-    updateMutation.mutate({ id: definition.id, ...input });
+  const patch = (input: Omit<AutomationUpdateInput, "id" | "expectedDefinitionRevision">) =>
+    updateMutation.mutate({
+      id: definition.id,
+      expectedDefinitionRevision: definition.definitionRevision,
+      ...input,
+    });
 
   // One-time risk approval surfaced at the top of the panel when an already-created
   // automation still needs it (e.g. created via the API). Persists on the automation.
@@ -315,6 +320,7 @@ function AutomationDetailView() {
     // approving never silently re-enables an automation the user deliberately paused.
     updateMutation.mutateAsync({
       id: definition.id,
+      expectedDefinitionRevision: definition.definitionRevision,
       acknowledgedRisks: approvalGaps.acknowledgedRisks,
       ...(approvalGaps.maxIterations !== undefined
         ? { maxIterations: approvalGaps.maxIterations }
@@ -352,6 +358,7 @@ function AutomationDetailView() {
     setForm(nextForm);
     setDialogWarnings(buildAutomationFormWarnings(nextForm));
     setAcknowledgedWarningIds(warningIdsForAcknowledgedRisks(definition.acknowledgedRisks));
+    setEditDefinitionRevision(definition.definitionRevision);
     setDialogOpen(true);
   };
 
@@ -379,6 +386,7 @@ function AutomationDetailView() {
         form,
         providerOptionsForAutomationEdit(definition, form, providerOptionsForDispatch),
         acknowledgedRisks,
+        editDefinitionRevision ?? definition.definitionRevision,
       ),
       {
         onSuccess: () => setDialogOpen(false),
@@ -387,7 +395,11 @@ function AutomationDetailView() {
   };
 
   const togglePause = () => {
-    updateMutation.mutate({ id: definition.id, enabled: !definition.enabled });
+    updateMutation.mutate({
+      id: definition.id,
+      expectedDefinitionRevision: definition.definitionRevision,
+      enabled: !definition.enabled,
+    });
   };
 
   const deleteDefinition = async () => {
@@ -459,6 +471,7 @@ function AutomationDetailView() {
                   </div>
                   <AutomationProposalActions
                     automationId={definition.id}
+                    expectedDefinitionRevision={definition.definitionRevision}
                     onResolved={(resolution) => {
                       if (resolution === "dismissed") {
                         void navigate({ to: "/automations" });

@@ -263,6 +263,8 @@ layer("AutomationRepository", (it) => {
       yield* repository.disableDefinition({
         id: automationId,
         now: "2026-06-16T10:00:15.000Z",
+        reason: "user",
+        expectedDefinitionRevision: 0,
       });
       assert.lengthOf(
         yield* repository.listDueDeferredRuns({
@@ -529,6 +531,7 @@ layer("AutomationRepository", (it) => {
         id: notDue.id,
         nextRunAt: "2026-06-16T10:10:00.000Z",
         updatedAt: "2026-06-16T10:00:00.000Z",
+        expectedDefinitionRevision: notDue.definitionRevision,
       });
       yield* repository.createDefinition({
         id: AutomationId.makeUnsafe("automation-4-pending"),
@@ -576,6 +579,7 @@ layer("AutomationRepository", (it) => {
             nextRunAt: "2026-06-16T10:05:00.000Z",
             updatedAt: "2026-06-16T10:01:00.000Z",
             archivedAt: null,
+            expectedDefinitionRevision: 0,
           }),
           repository.resolvePendingProposal({
             id,
@@ -583,6 +587,7 @@ layer("AutomationRepository", (it) => {
             nextRunAt: null,
             updatedAt: "2026-06-16T10:01:00.000Z",
             archivedAt: "2026-06-16T10:01:00.000Z",
+            expectedDefinitionRevision: 0,
           }),
         ],
         { concurrency: "unbounded" },
@@ -622,9 +627,9 @@ layer("AutomationRepository", (it) => {
         result: null,
         finishedAt: "2026-06-16T10:10:00.000Z",
       });
-      assert.strictEqual(succeeded.status, "succeeded");
-      assert.strictEqual(succeeded.turnId, TurnId.makeUnsafe("turn-succeeded"));
-      assert.strictEqual(succeeded.finishedAt, "2026-06-16T10:10:00.000Z");
+      assert.strictEqual(succeeded.run.status, "succeeded");
+      assert.strictEqual(succeeded.run.turnId, TurnId.makeUnsafe("turn-succeeded"));
+      assert.strictEqual(succeeded.run.finishedAt, "2026-06-16T10:10:00.000Z");
 
       yield* seedRun("interrupted");
       const interrupted = yield* repository.markRunInterrupted({
@@ -662,12 +667,12 @@ layer("AutomationRepository", (it) => {
         error: "boom",
         finishedAt: "2026-06-16T10:13:00.000Z",
       });
-      assert.strictEqual(failed.status, "failed");
-      assert.strictEqual(failed.error, "boom");
-      assert.strictEqual(failed.finishedAt, "2026-06-16T10:13:00.000Z");
+      assert.strictEqual(failed.run.status, "failed");
+      assert.strictEqual(failed.run.error, "boom");
+      assert.strictEqual(failed.run.finishedAt, "2026-06-16T10:13:00.000Z");
       // The lease is released so the run is no longer claimed by anyone.
-      assert.strictEqual(failed.claimedBy, null);
-      assert.strictEqual(failed.leaseExpiresAt, null);
+      assert.strictEqual(failed.run.claimedBy, null);
+      assert.strictEqual(failed.run.leaseExpiresAt, null);
     }),
   );
 
@@ -814,6 +819,8 @@ layer("AutomationRepository", (it) => {
       yield* repository.disableDefinition({
         id: AutomationId.makeUnsafe("automation-disable"),
         now: "2026-06-16T10:30:00.000Z",
+        reason: "user",
+        expectedDefinitionRevision: 0,
       });
 
       const reloaded = yield* repository.getDefinitionById({
@@ -839,10 +846,12 @@ layer("AutomationRepository", (it) => {
       yield* repository.incrementDefinitionIterationCount({
         id: AutomationId.makeUnsafe("automation-iteration"),
         now: "2026-06-16T10:01:00.000Z",
+        expectedDefinitionRevision: 0,
       });
       yield* repository.incrementDefinitionIterationCount({
         id: AutomationId.makeUnsafe("automation-iteration"),
         now: "2026-06-16T10:02:00.000Z",
+        expectedDefinitionRevision: 1,
       });
 
       const reloaded = yield* repository.getDefinitionById({
@@ -1020,12 +1029,14 @@ layer("AutomationRepository", (it) => {
         id,
         threadId: firstThreadId,
         updatedAt: "2026-06-16T10:05:00.000Z",
+        expectedDefinitionRevision: created.definitionRevision,
       });
       // A concurrent first run must not repoint the automation at the loser's thread.
       const reattached = yield* repository.attachDefinitionThread({
         id,
         threadId: secondThreadId,
         updatedAt: "2026-06-16T10:05:01.000Z",
+        expectedDefinitionRevision: created.definitionRevision + 1,
       });
 
       const reloaded = Option.getOrThrow(yield* repository.getDefinitionById({ id }));
@@ -1151,15 +1162,18 @@ layer("AutomationRepository", (it) => {
         startedAt: "2026-06-16T10:01:40.000Z",
       });
       yield* repository.saveDefinition({
-        ...definition,
-        completionPolicy: {
-          type: "ai-evaluated",
-          stopWhen: "the PR is ready",
-          confidenceThreshold: DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
+        definition: {
+          ...definition,
+          completionPolicy: {
+            type: "ai-evaluated",
+            stopWhen: "the PR is ready",
+            confidenceThreshold: DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
+          },
+          completionPolicyVersion: (definition.completionPolicyVersion ?? 1) + 1,
+          completionPolicyUpdatedAt: "2026-06-16T10:02:00.000Z",
+          updatedAt: "2026-06-16T10:02:00.000Z",
         },
-        completionPolicyVersion: (definition.completionPolicyVersion ?? 1) + 1,
-        completionPolicyUpdatedAt: "2026-06-16T10:02:00.000Z",
-        updatedAt: "2026-06-16T10:02:00.000Z",
+        expectedDefinitionRevision: definition.definitionRevision,
       });
       yield* repository.markRunSucceeded({
         id: inFlightBeforePolicyRun.id,
@@ -1443,11 +1457,13 @@ layer("AutomationRepository", (it) => {
         id: AutomationId.makeUnsafe("automation-earliest-late"),
         nextRunAt: "2030-01-01T10:10:00.000Z",
         updatedAt: "2030-01-01T10:00:00.000Z",
+        expectedDefinitionRevision: 0,
       });
       yield* repository.setDefinitionNextRunAt({
         id: AutomationId.makeUnsafe("automation-earliest-soon"),
         nextRunAt: "2030-01-01T10:05:00.000Z",
         updatedAt: "2030-01-01T10:00:00.000Z",
+        expectedDefinitionRevision: 0,
       });
 
       const earliest = yield* repository.getEarliestNextRunAt({
@@ -1489,6 +1505,7 @@ layer("AutomationRepository", (it) => {
         id: automationId,
         nextRunAt: "2020-01-01T10:00:30.000Z",
         updatedAt: "2020-01-01T10:00:00.000Z",
+        expectedDefinitionRevision: 0,
       });
       yield* repository.createRun({
         id: runId,
@@ -1583,6 +1600,7 @@ layer("AutomationRepository", (it) => {
             id: automationId,
             nextRunAt,
             updatedAt: "2019-06-16T10:00:00.000Z",
+            expectedDefinitionRevision: 0,
           });
           yield* repository.createRun({
             id: runId,
@@ -1632,6 +1650,7 @@ layer("AutomationRepository", (it) => {
         id: AutomationId.makeUnsafe("automation-due-ready"),
         nextRunAt: "2019-06-16T10:00:30.000Z",
         updatedAt: "2019-06-16T10:00:00.000Z",
+        expectedDefinitionRevision: 0,
       });
 
       const due = yield* repository.listDueDefinitions({
@@ -1727,5 +1746,187 @@ layer("AutomationRepository", (it) => {
       assert.strictEqual(cancelled.status, "succeeded");
       assert.strictEqual(cancelled.finishedAt, "2026-06-16T10:01:00.000Z");
     }),
+  );
+
+  it.effect(
+    "accounts one terminal failure exactly once and gives failure policy max precedence",
+    () =>
+      Effect.gen(function* () {
+        const repository = yield* AutomationRepository;
+        yield* runMigrations();
+        const automationId = AutomationId.makeUnsafe("automation-failure-precedence");
+        const runId = AutomationRunId.makeUnsafe("run-failure-precedence");
+        const created = yield* repository.createDefinition({
+          id: automationId,
+          input: {
+            ...createInputForProject("project-failure-precedence"),
+            maxIterations: 1,
+            stopAfterConsecutiveFailures: 1,
+          },
+          now: "2026-08-16T10:00:00.000Z",
+        });
+        const claimed = yield* repository.createRunAndIncrementDefinition(
+          {
+            id: runId,
+            automationId,
+            projectId: created.projectId,
+            threadId: null,
+            trigger: { type: "manual" },
+            scheduledFor: "2026-08-16T10:00:00.000Z",
+            permissionSnapshot,
+            now: "2026-08-16T10:00:00.000Z",
+          },
+          {
+            expectedDefinitionRevision: created.definitionRevision,
+            consumeIteration: true,
+          },
+        );
+        assert.isTrue(Option.isSome(claimed));
+        const concurrentSuccess = yield* repository.createRun({
+          id: AutomationRunId.makeUnsafe("run-late-success"),
+          automationId,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "manual" },
+          scheduledFor: "2026-08-16T10:00:00.500Z",
+          permissionSnapshot,
+          now: "2026-08-16T10:00:00.500Z",
+        });
+
+        const first = yield* repository.markRunFailed({
+          id: runId,
+          error: "first failure",
+          finishedAt: "2026-08-16T10:01:00.000Z",
+        });
+        const duplicate = yield* repository.markRunFailed({
+          id: runId,
+          error: "late duplicate",
+          finishedAt: "2026-08-16T10:02:00.000Z",
+        });
+        const duplicateTerminal = yield* repository.markRunSucceeded({
+          id: runId,
+          turnId: null,
+          result: null,
+          finishedAt: "2026-08-16T10:03:00.000Z",
+        });
+        const lateSuccess = yield* repository.markRunSucceeded({
+          id: concurrentSuccess.id,
+          turnId: null,
+          result: null,
+          finishedAt: "2026-08-16T10:04:00.000Z",
+        });
+        const definition = Option.getOrThrow(
+          yield* repository.getDefinitionById({ id: automationId }),
+        );
+
+        assert.isTrue(first.transitioned);
+        assert.isTrue(first.autoDisabled);
+        assert.isFalse(duplicate.transitioned);
+        assert.isFalse(duplicateTerminal.transitioned);
+        assert.isTrue(lateSuccess.transitioned);
+        assert.isFalse(lateSuccess.failureCountReset);
+        assert.strictEqual(definition.consecutiveFailureCount, 1);
+        assert.strictEqual(definition.disabledReason, "failures");
+        assert.isFalse(definition.enabled);
+      }),
+  );
+
+  it.effect(
+    "treats skipped as terminal and rejects stale same-millisecond definition writers",
+    () =>
+      Effect.gen(function* () {
+        const repository = yield* AutomationRepository;
+        yield* runMigrations();
+        const id = AutomationId.makeUnsafe("automation-revision-aba");
+        const created = yield* repository.createDefinition({
+          id,
+          input: createInputForProject("project-revision-aba"),
+          now: "2026-08-16T11:00:00.000Z",
+        });
+        const firstSave = yield* repository.saveDefinition({
+          definition: { ...created, name: "newer", updatedAt: created.updatedAt },
+          expectedDefinitionRevision: created.definitionRevision,
+        });
+        const staleSave = yield* repository.saveDefinition({
+          definition: { ...created, prompt: "stale overwrite", updatedAt: created.updatedAt },
+          expectedDefinitionRevision: created.definitionRevision,
+        });
+        assert.isTrue(Option.isSome(firstSave));
+        assert.isTrue(Option.isNone(staleSave));
+
+        const run = yield* repository.createRun({
+          id: AutomationRunId.makeUnsafe("run-skipped-terminal"),
+          automationId: id,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "scheduled" },
+          scheduledFor: "2026-08-16T11:00:00.000Z",
+          permissionSnapshot,
+          now: "2026-08-16T11:00:00.000Z",
+        });
+        yield* repository.markRunSkipped({
+          id: run.id,
+          reason: "missed",
+          finishedAt: "2026-08-16T11:01:00.000Z",
+        });
+        const failed = yield* repository.markRunFailed({
+          id: run.id,
+          error: "late failure",
+          finishedAt: "2026-08-16T11:02:00.000Z",
+        });
+        const reloaded = Option.getOrThrow(yield* repository.getDefinitionById({ id }));
+        assert.isFalse(failed.transitioned);
+        assert.strictEqual(failed.run.status, "skipped");
+        assert.strictEqual(reloaded.name, "newer");
+        assert.strictEqual(reloaded.prompt, created.prompt);
+        assert.strictEqual(reloaded.definitionRevision, created.definitionRevision + 1);
+
+        const staleAttach = yield* repository.attachDefinitionThread({
+          id,
+          threadId: ThreadId.makeUnsafe("stale-thread"),
+          updatedAt: created.updatedAt,
+          expectedDefinitionRevision: created.definitionRevision,
+        });
+        const staleArchive = yield* repository.archiveDefinition({
+          id,
+          archivedAt: created.updatedAt,
+          expectedDefinitionRevision: created.definitionRevision,
+        });
+        const afterNarrowConflicts = Option.getOrThrow(yield* repository.getDefinitionById({ id }));
+        assert.isFalse(staleAttach);
+        assert.isFalse(staleArchive);
+        assert.isNull(afterNarrowConflicts.targetThreadId);
+        assert.isNull(afterNarrowConflicts.archivedAt);
+        assert.strictEqual(afterNarrowConflicts.name, "newer");
+
+        const proposal = yield* repository.createDefinition({
+          id: AutomationId.makeUnsafe("automation-stale-proposal"),
+          input: {
+            ...createInputForProject("project-stale-proposal"),
+            enabled: false,
+            proposalState: "pending",
+          },
+          now: created.updatedAt,
+        });
+        const proposalSave = yield* repository.saveDefinition({
+          definition: { ...proposal, name: "richer proposal" },
+          expectedDefinitionRevision: proposal.definitionRevision,
+        });
+        assert.isTrue(Option.isSome(proposalSave));
+        const staleResolve = yield* repository.resolvePendingProposal({
+          id: proposal.id,
+          resolution: "accepted",
+          nextRunAt: null,
+          updatedAt: proposal.updatedAt,
+          archivedAt: null,
+          expectedDefinitionRevision: proposal.definitionRevision,
+        });
+        const afterProposalConflict = Option.getOrThrow(
+          yield* repository.getDefinitionById({ id: proposal.id }),
+        );
+        assert.isFalse(staleResolve);
+        assert.strictEqual(afterProposalConflict.proposalState, "pending");
+        assert.strictEqual(afterProposalConflict.name, "richer proposal");
+      }),
   );
 });

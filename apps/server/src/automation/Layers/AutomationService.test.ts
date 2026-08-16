@@ -31,7 +31,10 @@ import type { ProjectionSnapshotQueryShape } from "../../orchestration/Services/
 import { AutomationRepositoryLive } from "../../persistence/Layers/AutomationRepository.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
-import { AutomationRepository } from "../../persistence/Services/AutomationRepository.ts";
+import {
+  AutomationRepository,
+  type AutomationRepositoryShape,
+} from "../../persistence/Services/AutomationRepository.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { automationProposalActivityId } from "../proposalActivity.ts";
@@ -338,6 +341,37 @@ const createInput = (
   acknowledgedRisks: worktreeMode === "local" ? ["local-checkout"] : [],
 });
 
+const disableDefinitionAtCurrentRevision = (
+  repository: AutomationRepositoryShape,
+  id: AutomationId,
+  now: string,
+) =>
+  Effect.gen(function* () {
+    const definition = yield* repository.getDefinitionById({ id });
+    if (Option.isNone(definition)) return false;
+    return yield* repository.disableDefinition({
+      id,
+      now,
+      reason: "user",
+      expectedDefinitionRevision: definition.value.definitionRevision,
+    });
+  });
+
+const incrementDefinitionAtCurrentRevision = (
+  repository: AutomationRepositoryShape,
+  id: AutomationId,
+  now: string,
+) =>
+  Effect.gen(function* () {
+    const definition = yield* repository.getDefinitionById({ id });
+    if (Option.isNone(definition)) return false;
+    return yield* repository.incrementDefinitionIterationCount({
+      id,
+      now,
+      expectedDefinitionRevision: definition.value.definitionRevision,
+    });
+  });
+
 const orchestrationEngine = {
   quiesce: Effect.void,
   drain: Effect.void,
@@ -563,6 +597,7 @@ layer("AutomationService", (it) => {
       const updateError = yield* service
         .update({
           id: definition.id,
+          expectedDefinitionRevision: definition.definitionRevision,
           modelSelection: unsupportedModelSelection,
         })
         .pipe(Effect.flip);
@@ -590,10 +625,12 @@ layer("AutomationService", (it) => {
 
       const accepted = yield* service.resolveProposal({
         automationId: acceptedProposal.id,
+        expectedDefinitionRevision: acceptedProposal.definitionRevision,
         resolution: "accepted",
       });
       const dismissed = yield* service.resolveProposal({
         automationId: dismissedProposal.id,
+        expectedDefinitionRevision: dismissedProposal.definitionRevision,
         resolution: "dismissed",
       });
 
@@ -602,6 +639,8 @@ layer("AutomationService", (it) => {
       assert.strictEqual(dismissed.definition.proposalState, "dismissed");
       assert.isFalse(dismissed.definition.enabled);
       assert.isNotNull(dismissed.definition.archivedAt);
+      assert.strictEqual(dismissed.definition.disabledReason, "user");
+      assert.isNotNull(dismissed.definition.disabledAt);
       const proposalActivities = dispatchedCommands.filter(
         (command) => command.type === "thread.activity.append",
       );
@@ -650,6 +689,7 @@ layer("AutomationService", (it) => {
       const updateError = yield* service
         .update({
           id: definition.id,
+          expectedDefinitionRevision: definition.definitionRevision,
           proposalState: "pending",
         })
         .pipe(Effect.flip);
@@ -671,7 +711,11 @@ layer("AutomationService", (it) => {
       });
 
       const updateError = yield* service
-        .update({ id: pending.id, name: "Bypass" })
+        .update({
+          id: pending.id,
+          expectedDefinitionRevision: pending.definitionRevision,
+          name: "Bypass",
+        })
         .pipe(Effect.flip);
       const runError = yield* service.runNow({ automationId: pending.id }).pipe(Effect.flip);
 
@@ -1413,7 +1457,11 @@ layer("AutomationService", (it) => {
       assert.strictEqual(definition?.nextRunAt, "2026-06-16T10:15:00.000Z");
       assert.strictEqual(runs.length, 1);
       assert.strictEqual(runs[0]?.status, "skipped");
-      yield* repository.disableDefinition({ id: automationId, now: "2026-06-16T10:11:00.000Z" });
+      yield* disableDefinitionAtCurrentRevision(
+        repository,
+        automationId,
+        "2026-06-16T10:11:00.000Z",
+      );
     }),
   );
 
@@ -1445,7 +1493,11 @@ layer("AutomationService", (it) => {
       const listed = yield* service.list({ projectId });
       const definition = listed.definitions.find((entry) => entry.id === automationId);
       assert.strictEqual(definition?.nextRunAt, "2026-06-16T10:16:00.000Z");
-      yield* repository.disableDefinition({ id: automationId, now: "2026-06-16T10:11:00.000Z" });
+      yield* disableDefinitionAtCurrentRevision(
+        repository,
+        automationId,
+        "2026-06-16T10:11:00.000Z",
+      );
     }),
   );
 
@@ -1482,6 +1534,8 @@ layer("AutomationService", (it) => {
       const definition = listed.definitions.find((entry) => entry.id === automationId);
       assert.strictEqual(definition?.enabled, false);
       assert.strictEqual(definition?.nextRunAt, null);
+      assert.strictEqual(definition?.disabledReason, "schedule");
+      assert.isNotNull(definition?.disabledAt ?? null);
       assert.strictEqual(
         listed.runs.filter((entry) => entry.automationId === automationId).length,
         1,
@@ -2368,6 +2422,8 @@ layer("AutomationService", (it) => {
       const updatedDefinition = listed.definitions.find((entry) => entry.id === created.id);
       const updatedRun = listed.runs.find((entry) => entry.id === run.id);
       assert.strictEqual(updatedDefinition?.enabled, false);
+      assert.strictEqual(updatedDefinition?.disabledReason, "completion");
+      assert.isNotNull(updatedDefinition?.disabledAt ?? null);
       assert.strictEqual(updatedRun?.result?.completionEvaluation?.stopMatched, true);
       assert.include(updatedRun?.result?.summary ?? "", "Stopped:");
     }),
@@ -2434,6 +2490,7 @@ layer("AutomationService", (it) => {
       });
       const updated = yield* service.update({
         id: created.id,
+        expectedDefinitionRevision: created.definitionRevision,
         mode: "standalone",
         targetThreadId: null,
       });
@@ -2545,7 +2602,11 @@ layer("AutomationService", (it) => {
       });
 
       // The user clears the completion policy while the provider call is still hung.
-      yield* service.update({ id: created.id, completionPolicy: { type: "none" } });
+      yield* service.update({
+        id: created.id,
+        expectedDefinitionRevision: created.definitionRevision + 1,
+        completionPolicy: { type: "none" },
+      });
       // When the 30s timeout fires it must record the stale-check result, not a live
       // "timed out" warning for a policy the user already removed.
       yield* TestClock.adjust(Duration.seconds(31));
@@ -2663,6 +2724,8 @@ layer("AutomationService", (it) => {
       const updatedRun = listed.runs.find((entry) => entry.id === run.id);
       assert.strictEqual(started, "not-started");
       assert.strictEqual(updatedDefinition?.enabled, false);
+      assert.strictEqual(updatedDefinition?.disabledReason, "max-iterations");
+      assert.isNotNull(updatedDefinition?.disabledAt ?? null);
       assert.isUndefined(updatedRun?.result?.completionEvaluation);
       assert.strictEqual(completionEvaluationInputs.length, 0);
     }),
@@ -2763,7 +2826,11 @@ layer("AutomationService", (it) => {
         timeoutMs: 1_000,
         description: "stale-policy stop evaluation to start",
       });
-      yield* service.update({ id: created.id, completionPolicy: { type: "none" } });
+      yield* service.update({
+        id: created.id,
+        expectedDefinitionRevision: created.definitionRevision + 1,
+        completionPolicy: { type: "none" },
+      });
       evaluationGate.release();
 
       const listed = yield* waitForAutomationList({
@@ -2821,12 +2888,15 @@ layer("AutomationService", (it) => {
       yield* realDelay(5);
       let edited = yield* service.update({
         id: created.id,
+        expectedDefinitionRevision:
+          queuedDefinition?.definitionRevision ?? created.definitionRevision,
         name: "Retitled heartbeat monitor",
       });
       if (edited.updatedAt === queuedDefinition?.updatedAt) {
         yield* realDelay(5);
         edited = yield* service.update({
           id: created.id,
+          expectedDefinitionRevision: edited.definitionRevision,
           name: "Retitled heartbeat monitor again",
         });
       }
@@ -3076,6 +3146,7 @@ layer("AutomationService", (it) => {
       const { run } = yield* service.runNow({ automationId: created.id });
       yield* service.update({
         id: created.id,
+        expectedDefinitionRevision: created.definitionRevision + 1,
         completionPolicy: aiCompletionPolicy("the PR is ready"),
       });
       yield* completeAutomationRun({
@@ -3353,7 +3424,11 @@ layer("AutomationService", (it) => {
       const created = yield* service.create(createInput("local"));
 
       const error = yield* service
-        .update({ id: created.id, projectId: ProjectId.makeUnsafe("missing-project") })
+        .update({
+          id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
+          projectId: ProjectId.makeUnsafe("missing-project"),
+        })
         .pipe(Effect.flip);
 
       assert.match(error.message, /project was not found/);
@@ -3373,7 +3448,11 @@ layer("AutomationService", (it) => {
         targetThreadId,
       });
       const exit = yield* service
-        .update({ id: created.id, projectId: ProjectId.makeUnsafe("other-project") })
+        .update({
+          id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
+          projectId: ProjectId.makeUnsafe("other-project"),
+        })
         .pipe(Effect.exit);
 
       assert.isTrue(exit._tag === "Failure");
@@ -3386,7 +3465,13 @@ layer("AutomationService", (it) => {
       const service = yield* AutomationService;
       const created = yield* service.create(createInput("local"));
 
-      const exit = yield* service.update({ id: created.id, mode: "heartbeat" }).pipe(Effect.exit);
+      const exit = yield* service
+        .update({
+          id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
+          mode: "heartbeat",
+        })
+        .pipe(Effect.exit);
       assert.isTrue(exit._tag === "Failure");
     }),
   );
@@ -3406,6 +3491,7 @@ layer("AutomationService", (it) => {
       });
       const updated = yield* service.update({
         id: created.id,
+        expectedDefinitionRevision: created.definitionRevision,
         mode: "standalone",
         targetThreadId: null,
       });
@@ -3415,6 +3501,7 @@ layer("AutomationService", (it) => {
 
       const cleared = yield* service.update({
         id: created.id,
+        expectedDefinitionRevision: updated.definitionRevision,
         maxIterations: null,
       });
       assert.strictEqual(cleared.maxIterations, null);
@@ -3525,7 +3612,11 @@ layer("AutomationService", (it) => {
       });
 
       const error = yield* service
-        .update({ id: created.id, maxIterations: null })
+        .update({
+          id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
+          maxIterations: null,
+        })
         .pipe(Effect.flip);
 
       assert.match(error.message, /max iterations.*10 runs or fewer/);
@@ -3543,15 +3634,26 @@ layer("AutomationService", (it) => {
         maxIterations: 3,
         acknowledgedRisks: ["fast-interval", "local-checkout"],
       });
-      yield* repository.saveDefinition({ ...created, maxIterations: null });
+      yield* repository.saveDefinition({
+        definition: { ...created, maxIterations: null },
+        expectedDefinitionRevision: created.definitionRevision,
+      });
 
-      const paused = yield* service.update({ id: created.id, enabled: false });
+      const paused = yield* service.update({
+        id: created.id,
+        expectedDefinitionRevision: created.definitionRevision + 1,
+        enabled: false,
+      });
 
       assert.strictEqual(paused.enabled, false);
       assert.strictEqual(paused.maxIterations, null);
 
       const reenableError = yield* service
-        .update({ id: created.id, enabled: true })
+        .update({
+          id: created.id,
+          expectedDefinitionRevision: paused.definitionRevision,
+          enabled: true,
+        })
         .pipe(Effect.flip);
       assert.match(reenableError.message, /max iterations.*10 runs or fewer/);
     }),
@@ -3614,6 +3716,7 @@ layer("AutomationService", (it) => {
       const error = yield* service
         .update({
           id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
           worktreeMode: "local",
         })
         .pipe(Effect.flip);
@@ -3663,6 +3766,7 @@ layer("AutomationService", (it) => {
       const error = yield* service
         .update({
           id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
           retryPolicy: { type: "fixed", maxAttempts: 3, delaySeconds: 30 },
         })
         .pipe(Effect.flip);
@@ -3688,10 +3792,11 @@ layer("AutomationService", (it) => {
         now: "2026-06-16T10:00:00.000Z",
       });
       // Push iterationCount up to the cap so the next due run must stop.
-      yield* repository.incrementDefinitionIterationCount({
-        id: automationId,
-        now: "2026-06-16T10:00:00.000Z",
-      });
+      yield* incrementDefinitionAtCurrentRevision(
+        repository,
+        automationId,
+        "2026-06-16T10:00:00.000Z",
+      );
 
       const results = yield* service.runDueOnce({
         now: "2026-06-16T10:00:00.000Z",
@@ -3772,11 +3877,7 @@ layer("AutomationService", (it) => {
       );
       yield* Effect.forEach(
         listed.definitions.filter((definition) => definition.id.startsWith("automation-parallel-")),
-        (definition) =>
-          repository.disableDefinition({
-            id: definition.id,
-            now: scheduledAt,
-          }),
+        (definition) => disableDefinitionAtCurrentRevision(repository, definition.id, scheduledAt),
         { discard: true },
       );
     }),
@@ -3835,10 +3936,11 @@ layer("AutomationService", (it) => {
       yield* Effect.forEach(
         [0, 1, 2],
         (index) =>
-          repository.disableDefinition({
-            id: AutomationId.makeUnsafe(`automation-isolated-${index}`),
-            now: scheduledAt,
-          }),
+          disableDefinitionAtCurrentRevision(
+            repository,
+            AutomationId.makeUnsafe(`automation-isolated-${index}`),
+            scheduledAt,
+          ),
         { discard: true },
       );
     }),
@@ -3869,16 +3971,18 @@ layer("AutomationService", (it) => {
       yield* Effect.forEach(
         [0, 1, 2],
         () =>
-          repository.incrementDefinitionIterationCount({
-            id: automationId,
-            now: "2026-06-16T10:00:00.000Z",
-          }),
+          incrementDefinitionAtCurrentRevision(
+            repository,
+            automationId,
+            "2026-06-16T10:00:00.000Z",
+          ),
         { discard: true },
       );
-      yield* repository.disableDefinition({
-        id: automationId,
-        now: "2026-06-16T10:01:00.000Z",
-      });
+      yield* disableDefinitionAtCurrentRevision(
+        repository,
+        automationId,
+        "2026-06-16T10:01:00.000Z",
+      );
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
 
       const result = yield* service.runNow({ automationId });
@@ -3901,10 +4005,7 @@ layer("AutomationService", (it) => {
       assert.strictEqual(definition?.maxIterations, 3);
       assert.isNotNull(definition?.nextRunAt ?? null);
       yield* service.cancelRun({ runId: result.run.id });
-      yield* repository.disableDefinition({
-        id: automationId,
-        now: new Date().toISOString(),
-      });
+      yield* disableDefinitionAtCurrentRevision(repository, automationId, new Date().toISOString());
     }),
   );
 
@@ -3921,20 +4022,25 @@ layer("AutomationService", (it) => {
         acknowledgedRisks: ["fast-interval", "local-checkout"],
       });
       const automationId = created.id;
-      yield* repository.saveDefinition({ ...created, maxIterations: 25 });
+      yield* repository.saveDefinition({
+        definition: { ...created, maxIterations: 25 },
+        expectedDefinitionRevision: created.definitionRevision,
+      });
       yield* Effect.forEach(
         Array.from({ length: 25 }),
         () =>
-          repository.incrementDefinitionIterationCount({
-            id: automationId,
-            now: "2026-06-16T10:00:00.000Z",
-          }),
+          incrementDefinitionAtCurrentRevision(
+            repository,
+            automationId,
+            "2026-06-16T10:00:00.000Z",
+          ),
         { discard: true },
       );
-      yield* repository.disableDefinition({
-        id: automationId,
-        now: "2026-06-16T10:01:00.000Z",
-      });
+      yield* disableDefinitionAtCurrentRevision(
+        repository,
+        automationId,
+        "2026-06-16T10:01:00.000Z",
+      );
 
       const result = yield* service.runNow({ automationId });
       const listed = yield* service.list({ projectId });
@@ -4084,10 +4190,11 @@ layer("AutomationService", (it) => {
         0,
       );
       yield* service.cancelRun({ runId: deferredRun.id });
-      yield* repository.disableDefinition({
-        id: automationId,
-        now: "2026-06-16T10:05:00.000Z",
-      });
+      yield* disableDefinitionAtCurrentRevision(
+        repository,
+        automationId,
+        "2026-06-16T10:05:00.000Z",
+      );
     }),
   );
 
@@ -4337,7 +4444,11 @@ layer("AutomationService", (it) => {
         targetThreadId,
       });
       const deferred = (yield* service.runNow({ automationId: created.id })).run;
-      yield* service.update({ id: created.id, enabled: false });
+      yield* service.update({
+        id: created.id,
+        expectedDefinitionRevision: created.definitionRevision + 1,
+        enabled: false,
+      });
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
 
       const retried = yield* service.runDueOnce({
@@ -5088,7 +5199,10 @@ layer("AutomationService", (it) => {
       const { run } = yield* service.runNow({ automationId: created.id });
       const threadId = run.threadId!;
 
-      yield* service.delete({ id: created.id });
+      yield* service.delete({
+        id: created.id,
+        expectedDefinitionRevision: created.definitionRevision + 1,
+      });
 
       const reloaded = yield* service.list({ projectId, includeArchived: true });
       const definition = reloaded.definitions.find((entry) => entry.id === created.id);
@@ -5146,6 +5260,134 @@ layer("AutomationService", (it) => {
       assert.strictEqual(first.run.status, "running");
       assert.strictEqual(second.run.status, "running");
       assert.notStrictEqual(first.run.id, second.run.id);
+    }),
+  );
+
+  it.effect(
+    "preserves an explicit failure threshold and clears only failure state on re-enable",
+    () =>
+      Effect.gen(function* () {
+        resetHarness();
+        const service = yield* AutomationService;
+        const repository = yield* AutomationRepository;
+        const created = yield* service.create({
+          ...createInput("local"),
+          maxIterations: 5,
+          stopAfterConsecutiveFailures: 3,
+        });
+        const compatibilitySave = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
+          stopOnError: true,
+        });
+        assert.strictEqual(compatibilitySave.stopAfterConsecutiveFailures, 3);
+
+        const runId = AutomationRunId.makeUnsafe("run-reenable-failure-state");
+        const claimed = yield* repository.createRunAndIncrementDefinition(
+          {
+            id: runId,
+            automationId: created.id,
+            projectId: created.projectId,
+            threadId: null,
+            trigger: { type: "manual" },
+            scheduledFor: now,
+            permissionSnapshot: {
+              provider: "codex",
+              modelSelection: { provider: "codex", model: "gpt-5-codex" },
+              runtimeMode: "approval-required",
+              interactionMode: "default",
+              worktreeMode: "local",
+              allowedCapabilities: ["send-turn"],
+              createdAt: now,
+            },
+            now,
+          },
+          {
+            expectedDefinitionRevision: compatibilitySave.definitionRevision,
+            consumeIteration: true,
+          },
+        );
+        assert.isTrue(Option.isSome(claimed));
+        yield* repository.markRunFailed({ id: runId, error: "boom", finishedAt: now });
+        const afterFailure = (yield* service.list({ projectId })).definitions.find(
+          (definition) => definition.id === created.id,
+        )!;
+        assert.strictEqual(afterFailure.consecutiveFailureCount, 1);
+        assert.isTrue(afterFailure.enabled);
+
+        const paused = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: afterFailure.definitionRevision,
+          enabled: false,
+        });
+        assert.strictEqual(paused.disabledReason, "user");
+        assert.isNotNull(paused.disabledAt);
+        const resumed = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: paused.definitionRevision,
+          enabled: true,
+        });
+        assert.strictEqual(resumed.stopAfterConsecutiveFailures, 3);
+        assert.strictEqual(resumed.consecutiveFailureCount, 0);
+        assert.strictEqual(resumed.disabledReason, null);
+        assert.strictEqual(resumed.disabledAt, null);
+        assert.strictEqual(resumed.iterationCount, 1);
+      }),
+  );
+
+  it.effect("rejects a stale full-form save after terminal auto-disable", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+      const created = yield* service.create({
+        ...createInput("local"),
+        stopAfterConsecutiveFailures: 1,
+      });
+      const runId = AutomationRunId.makeUnsafe("run-stale-full-form");
+      yield* repository.createRunAndIncrementDefinition(
+        {
+          id: runId,
+          automationId: created.id,
+          projectId: created.projectId,
+          threadId: null,
+          trigger: { type: "manual" },
+          scheduledFor: now,
+          permissionSnapshot: {
+            provider: "codex",
+            modelSelection: { provider: "codex", model: "gpt-5-codex" },
+            runtimeMode: "approval-required",
+            interactionMode: "default",
+            worktreeMode: "local",
+            allowedCapabilities: ["send-turn"],
+            createdAt: now,
+          },
+          now,
+        },
+        { expectedDefinitionRevision: created.definitionRevision, consumeIteration: true },
+      );
+      yield* repository.markRunFailed({ id: runId, error: "boom", finishedAt: now });
+
+      const conflict = yield* service
+        .update({
+          id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
+          name: created.name,
+          prompt: created.prompt,
+          schedule: created.schedule,
+          enabled: true,
+          maxIterations: created.maxIterations,
+          notificationPolicy: created.notificationPolicy,
+          completionPolicy: created.completionPolicy,
+        })
+        .pipe(Effect.flip);
+      const current = (yield* service.list({ projectId })).definitions.find(
+        (definition) => definition.id === created.id,
+      )!;
+      assert.strictEqual(conflict.code, "AUTOMATION_DEFINITION_CONFLICT");
+      assert.isFalse(current.enabled);
+      assert.strictEqual(current.disabledReason, "failures");
+      assert.strictEqual(current.consecutiveFailureCount, 1);
     }),
   );
 });

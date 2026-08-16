@@ -10,9 +10,11 @@ export const automationProposalListQueryKey = ["automation-proposals", "include-
 
 export function AutomationProposalActions({
   automationId,
+  expectedDefinitionRevision,
   onResolved,
 }: {
   readonly automationId: string;
+  readonly expectedDefinitionRevision: number;
   readonly onResolved?: (resolution: Exclude<AutomationProposalState, "pending">) => void;
 }) {
   const { t } = useI18n();
@@ -21,6 +23,7 @@ export function AutomationProposalActions({
     mutationFn: (resolution: Exclude<AutomationProposalState, "pending">) =>
       ensureNativeApi().automation.resolveProposal({
         automationId: AutomationId.makeUnsafe(automationId),
+        expectedDefinitionRevision,
         resolution,
       }),
     onSuccess: (result, resolution) => {
@@ -28,12 +31,24 @@ export function AutomationProposalActions({
       void queryClient.invalidateQueries({ queryKey: ["automations"] });
       void queryClient.invalidateQueries({ queryKey: automationProposalListQueryKey });
     },
-    onError: (error) =>
+    onError: (error) => {
+      const isConflict = "code" in error && error.code === "AUTOMATION_DEFINITION_CONFLICT";
+      if (isConflict) {
+        void queryClient.invalidateQueries({ queryKey: ["automations"] });
+        void queryClient.invalidateQueries({ queryKey: automationProposalListQueryKey });
+      }
       toastManager.add({
         type: "error",
-        title: t("automation.proposalUpdateFailed"),
-        description: error instanceof Error ? error.message : String(error),
-      }),
+        title: t(
+          isConflict ? "automation.definitionConflictTitle" : "automation.proposalUpdateFailed",
+        ),
+        description: isConflict
+          ? t("automation.definitionConflict")
+          : error instanceof Error
+            ? error.message
+            : String(error),
+      });
+    },
   });
 
   return (

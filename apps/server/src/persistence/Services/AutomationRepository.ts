@@ -13,12 +13,15 @@ import {
   AutomationRunResult,
   AutomationRunId,
   AutomationTrigger,
+  AutomationDisabledReason,
   CommandId,
   MessageId,
+  NonNegativeInt,
   ProjectId,
   ThreadId,
   TurnId,
 } from "@omnimind/contracts";
+import type { AutomationRunResult as AutomationRunResultType } from "@omnimind/contracts";
 import { Option, Schema, ServiceMap } from "effect";
 import type { Effect } from "effect";
 
@@ -47,6 +50,7 @@ export const SetAutomationDefinitionNextRunAtInput = Schema.Struct({
   id: AutomationId,
   nextRunAt: Schema.NullOr(Schema.String),
   updatedAt: Schema.String,
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type SetAutomationDefinitionNextRunAtInput =
   typeof SetAutomationDefinitionNextRunAtInput.Type;
@@ -55,6 +59,7 @@ export const AttachAutomationDefinitionThreadInput = Schema.Struct({
   id: AutomationId,
   threadId: ThreadId,
   updatedAt: Schema.String,
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type AttachAutomationDefinitionThreadInput =
   typeof AttachAutomationDefinitionThreadInput.Type;
@@ -64,12 +69,14 @@ export const RestartAutomationDefinitionLoopInput = Schema.Struct({
   enabled: Schema.Boolean,
   nextRunAt: Schema.NullOr(Schema.String),
   updatedAt: Schema.String,
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type RestartAutomationDefinitionLoopInput = typeof RestartAutomationDefinitionLoopInput.Type;
 
 export const ArchiveAutomationDefinitionInput = Schema.Struct({
   id: AutomationId,
   archivedAt: Schema.String,
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type ArchiveAutomationDefinitionInput = typeof ArchiveAutomationDefinitionInput.Type;
 
@@ -79,6 +86,7 @@ export const ResolvePendingAutomationProposalInput = Schema.Struct({
   nextRunAt: Schema.NullOr(Schema.String),
   updatedAt: Schema.String,
   archivedAt: Schema.NullOr(Schema.String),
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type ResolvePendingAutomationProposalInput =
   typeof ResolvePendingAutomationProposalInput.Type;
@@ -175,10 +183,18 @@ export const MarkAutomationRunFailedInput = Schema.Struct({
 });
 export type MarkAutomationRunFailedInput = typeof MarkAutomationRunFailedInput.Type;
 
+export interface MarkAutomationRunFailedResult {
+  readonly run: AutomationRun;
+  readonly transitioned: boolean;
+  readonly consecutiveFailureCount: number | null;
+  readonly autoDisabled: boolean;
+}
+
 export const MarkAutomationRunSkippedInput = Schema.Struct({
   id: AutomationRunId,
   reason: Schema.String,
   finishedAt: Schema.String,
+  result: Schema.optional(AutomationRunResult),
 });
 export type MarkAutomationRunSkippedInput = typeof MarkAutomationRunSkippedInput.Type;
 
@@ -187,8 +203,15 @@ export const MarkAutomationRunSucceededInput = Schema.Struct({
   turnId: Schema.NullOr(TurnId),
   result: Schema.NullOr(AutomationRunResult),
   finishedAt: Schema.String,
+  accountedAt: Schema.optional(Schema.String),
 });
 export type MarkAutomationRunSucceededInput = typeof MarkAutomationRunSucceededInput.Type;
+
+export interface MarkAutomationRunSucceededResult {
+  readonly run: AutomationRun;
+  readonly transitioned: boolean;
+  readonly failureCountReset: boolean;
+}
 
 export const MarkAutomationRunResultInput = Schema.Struct({
   id: AutomationRunId,
@@ -261,13 +284,16 @@ export type GetEarliestAutomationNextRunAtInput = typeof GetEarliestAutomationNe
 export const DisableAutomationDefinitionInput = Schema.Struct({
   id: AutomationId,
   now: Schema.String,
+  reason: AutomationDisabledReason,
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type DisableAutomationDefinitionInput = typeof DisableAutomationDefinitionInput.Type;
 
 export const DisableAutomationDefinitionIfUnchangedInput = Schema.Struct({
   id: AutomationId,
-  expectedUpdatedAt: Schema.String,
+  expectedDefinitionRevision: NonNegativeInt,
   now: Schema.String,
+  reason: AutomationDisabledReason,
 });
 export type DisableAutomationDefinitionIfUnchangedInput =
   typeof DisableAutomationDefinitionIfUnchangedInput.Type;
@@ -275,6 +301,7 @@ export type DisableAutomationDefinitionIfUnchangedInput =
 export const IncrementAutomationIterationInput = Schema.Struct({
   id: AutomationId,
   now: Schema.String,
+  expectedDefinitionRevision: NonNegativeInt,
 });
 export type IncrementAutomationIterationInput = typeof IncrementAutomationIterationInput.Type;
 
@@ -290,9 +317,10 @@ export interface AutomationRepositoryShape {
   readonly createDefinition: (
     input: CreateAutomationDefinitionInput,
   ) => Effect.Effect<AutomationDefinition, AutomationRepositoryError>;
-  readonly saveDefinition: (
-    input: AutomationDefinition,
-  ) => Effect.Effect<AutomationDefinition, AutomationRepositoryError>;
+  readonly saveDefinition: (input: {
+    readonly definition: AutomationDefinition;
+    readonly expectedDefinitionRevision: number;
+  }) => Effect.Effect<Option.Option<AutomationDefinition>, AutomationRepositoryError>;
   readonly resolvePendingProposal: (
     input: ResolvePendingAutomationProposalInput,
   ) => Effect.Effect<boolean, AutomationRepositoryError>;
@@ -304,7 +332,7 @@ export interface AutomationRepositoryShape {
   ) => Effect.Effect<ReadonlyArray<AutomationDefinition>, AutomationRepositoryError>;
   readonly setDefinitionNextRunAt: (
     input: SetAutomationDefinitionNextRunAtInput,
-  ) => Effect.Effect<void, AutomationRepositoryError>;
+  ) => Effect.Effect<boolean, AutomationRepositoryError>;
   /**
    * Claim the thread a dedicated automation owns from now on. Succeeds only while the
    * definition still has no continuation thread, so two concurrent first runs can never
@@ -315,7 +343,7 @@ export interface AutomationRepositoryShape {
   ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly archiveDefinition: (
     input: ArchiveAutomationDefinitionInput,
-  ) => Effect.Effect<void, AutomationRepositoryError>;
+  ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly list: (
     input?: AutomationListInput,
   ) => Effect.Effect<AutomationListResult, AutomationRepositoryError>;
@@ -325,9 +353,18 @@ export interface AutomationRepositoryShape {
   /** Atomically inserts a fresh run and consumes one definition iteration. */
   readonly createRunAndIncrementDefinition: (
     input: CreateAutomationRunInput,
-    scheduleAdvance?: {
-      readonly nextRunAt: string | null;
-      readonly disable: boolean;
+    definitionMutation: {
+      readonly expectedDefinitionRevision: number;
+      readonly consumeIteration: boolean;
+      readonly scheduleAdvance?: {
+        readonly nextRunAt: string | null;
+        readonly disable: boolean;
+      };
+      readonly terminalSkip?: {
+        readonly reason: string;
+        readonly finishedAt: string;
+        readonly result: AutomationRunResultType;
+      };
     },
   ) => Effect.Effect<Option.Option<AutomationRun>, AutomationRepositoryError>;
   readonly getRunById: (
@@ -360,13 +397,13 @@ export interface AutomationRepositoryShape {
   ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly markRunFailed: (
     input: MarkAutomationRunFailedInput,
-  ) => Effect.Effect<AutomationRun, AutomationRepositoryError>;
+  ) => Effect.Effect<MarkAutomationRunFailedResult, AutomationRepositoryError>;
   readonly markRunSkipped: (
     input: MarkAutomationRunSkippedInput,
   ) => Effect.Effect<AutomationRun, AutomationRepositoryError>;
   readonly markRunSucceeded: (
     input: MarkAutomationRunSucceededInput,
-  ) => Effect.Effect<AutomationRun, AutomationRepositoryError>;
+  ) => Effect.Effect<MarkAutomationRunSucceededResult, AutomationRepositoryError>;
   readonly markRunResult: (
     input: MarkAutomationRunResultInput,
   ) => Effect.Effect<AutomationRun, AutomationRepositoryError>;
@@ -428,16 +465,16 @@ export interface AutomationRepositoryShape {
   readonly getOrCreateInstallSalt: () => Effect.Effect<string, AutomationRepositoryError>;
   readonly disableDefinition: (
     input: DisableAutomationDefinitionInput,
-  ) => Effect.Effect<void, AutomationRepositoryError>;
+  ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly disableDefinitionIfUnchanged: (
     input: DisableAutomationDefinitionIfUnchangedInput,
   ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly incrementDefinitionIterationCount: (
     input: IncrementAutomationIterationInput,
-  ) => Effect.Effect<void, AutomationRepositoryError>;
+  ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly restartDefinitionLoop: (
     input: RestartAutomationDefinitionLoopInput,
-  ) => Effect.Effect<void, AutomationRepositoryError>;
+  ) => Effect.Effect<boolean, AutomationRepositoryError>;
   readonly tryAcquireSchedulerLease: (
     input: AcquireAutomationSchedulerLeaseInput,
   ) => Effect.Effect<boolean, AutomationRepositoryError>;

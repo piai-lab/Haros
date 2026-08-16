@@ -90,6 +90,11 @@ it.effect("decodes legacy automation definitions without completion policies", (
     assert.isNull(parsed.proposalState);
     assert.strictEqual(parsed.notificationPolicy, "all");
     assert.strictEqual(parsed.heartbeatCooldownSeconds, 60);
+    assert.strictEqual(parsed.stopAfterConsecutiveFailures, 1);
+    assert.strictEqual(parsed.consecutiveFailureCount, 0);
+    assert.isNull(parsed.disabledReason);
+    assert.isNull(parsed.disabledAt);
+    assert.strictEqual(parsed.definitionRevision, 0);
   }),
 );
 
