@@ -217,6 +217,7 @@ export function RightDock(props: RightDockProps) {
   const previousOpenRef = useRef(props.state.open);
   const minWidth = props.minWidth;
   const minimumPrimaryWidth = props.minimumPrimaryWidth ?? 0;
+  const shouldAcceptWidth = props.shouldAcceptWidth;
   const activePaneKind = activePane?.kind ?? null;
   const applyResponsiveWidth = useCallback(() => {
     const wrapper = contentRef.current?.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
@@ -300,9 +301,9 @@ export function RightDock(props: RightDockProps) {
       if (shellWidth > 0 && context.nextWidth > shellWidth - minimumPrimaryWidth) {
         return false;
       }
-      return props.shouldAcceptWidth(context);
+      return shouldAcceptWidth(context);
     },
-    [minimumPrimaryWidth, props.shouldAcceptWidth],
+    [minimumPrimaryWidth, shouldAcceptWidth],
   );
   const renderedPanes = props.state.panes.filter(
     (pane) => pane.id === activePane?.id || keepMountedPaneIds.has(pane.id),
@@ -320,9 +321,7 @@ export function RightDock(props: RightDockProps) {
     key: string;
     allow: boolean;
   }>(() => ({ key: chromeMotionKey, allow: !props.state.open }));
-  const shouldSuppressChromeMotion = !(
-    motionState.key === chromeMotionKey && motionState.allow
-  );
+  const shouldSuppressChromeMotion = !(motionState.key === chromeMotionKey && motionState.allow);
 
   useEffect(() => {
     if (!shouldSuppressChromeMotion) {
@@ -349,6 +348,7 @@ export function RightDock(props: RightDockProps) {
   return (
     <SidebarProvider
       defaultOpen={false}
+      desktopPresentation
       open={props.state.open}
       onOpenChange={props.onOpenChange}
       className={cn(

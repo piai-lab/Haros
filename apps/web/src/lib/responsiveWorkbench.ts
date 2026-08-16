@@ -1,19 +1,33 @@
-// The authored chat column is 46rem (736px) and its desktop gutter is 1.25rem (20px)
-// per side. Keeping this full 776px reading/composer frame visible is the observable
-// comfort floor; the 640px route min-width remains a survivability floor, not the point
-// at which the user's navigation should keep consuming space.
-export const CHAT_CANVAS_COMFORTABLE_WIDTH_PX = 46 * 16 + 2 * 20;
+// Codex's current resize journey keeps navigation present well below the authored
+// 46rem reading width. Sidebar yields only when its measured width would leave less
+// than a compact, still-operable Chat surface; comfortable whitespace is not worth
+// removing navigation at 1000–1100px.
+export const CHAT_CANVAS_COMPACT_WIDTH_PX = 320;
 export const THREAD_SIDEBAR_HYSTERESIS_PX = 64;
+
+export const ENVIRONMENT_PANEL_WIDTH_PX = 18 * 16;
+export const ENVIRONMENT_PANEL_EDGE_GUTTER_PX = 2 * 12;
+export const ENVIRONMENT_CHAT_CANVAS_MIN_WIDTH_PX = 640;
+export const ENVIRONMENT_SUPPRESS_WIDTH_PX =
+  ENVIRONMENT_CHAT_CANVAS_MIN_WIDTH_PX +
+  ENVIRONMENT_PANEL_WIDTH_PX +
+  ENVIRONMENT_PANEL_EDGE_GUTTER_PX;
+export const ENVIRONMENT_HYSTERESIS_PX = 64;
 
 export const WORKBENCH_PANE_MIN_WIDTH_PX = 416;
 export const CHAT_CANVAS_MIN_WIDTH_PX = 640;
 export const PLAN_SIDEBAR_WIDTH_PX = 340;
+export const PLAN_CHAT_CANVAS_COMPACT_WIDTH_PX = 320;
+export const PLAN_SIDEBAR_EXCLUSIVE_WIDTH_PX =
+  PLAN_SIDEBAR_WIDTH_PX + PLAN_CHAT_CANVAS_COMPACT_WIDTH_PX;
 export const WORKBENCH_SPLIT_SUPPRESS_WIDTH_PX =
   CHAT_CANVAS_MIN_WIDTH_PX + WORKBENCH_PANE_MIN_WIDTH_PX;
 export const WORKBENCH_SPLIT_RESTORE_WIDTH_PX = WORKBENCH_SPLIT_SUPPRESS_WIDTH_PX + 64;
 
 export type ThreadSidebarPresentation = "docked" | "hidden" | "overlay";
+export type EnvironmentPresentation = "hidden" | "floating" | "overlay";
 export type WorkbenchPresentation = "closed" | "split" | "exclusive";
+export type PlanSidebarPresentation = "side-by-side" | "exclusive";
 
 export function resolveThreadSidebarAutoSuppressed(input: {
   readonly availableWidth: number;
@@ -22,7 +36,7 @@ export function resolveThreadSidebarAutoSuppressed(input: {
 }): boolean {
   const threshold =
     input.sidebarWidth +
-    CHAT_CANVAS_COMFORTABLE_WIDTH_PX +
+    CHAT_CANVAS_COMPACT_WIDTH_PX +
     (input.previouslySuppressed ? THREAD_SIDEBAR_HYSTERESIS_PX : 0);
   return input.availableWidth < threshold;
 }
@@ -40,6 +54,26 @@ export function resolveThreadSidebarPresentation(input: {
     return input.temporaryReveal ? "overlay" : "hidden";
   }
   return input.manualOpen ? "docked" : "hidden";
+}
+
+export function resolveEnvironmentAutoSuppressed(input: {
+  readonly availableWidth: number;
+  readonly previouslySuppressed: boolean;
+}): boolean {
+  const threshold =
+    ENVIRONMENT_SUPPRESS_WIDTH_PX + (input.previouslySuppressed ? ENVIRONMENT_HYSTERESIS_PX : 0);
+  return input.availableWidth < threshold;
+}
+
+export function resolveEnvironmentPresentation(input: {
+  readonly manualOpen: boolean;
+  readonly autoSuppressed: boolean;
+  readonly temporaryReveal: boolean;
+}): EnvironmentPresentation {
+  if (input.autoSuppressed) {
+    return input.temporaryReveal ? "overlay" : "hidden";
+  }
+  return input.manualOpen ? "floating" : "hidden";
 }
 
 export function resolveWorkbenchAutoExclusive(input: {
@@ -62,4 +96,10 @@ export function resolveWorkbenchPresentation(input: {
     return "closed";
   }
   return input.autoExclusive ? "exclusive" : "split";
+}
+
+export function resolvePlanSidebarPresentation(input: {
+  readonly availableWidth: number;
+}): PlanSidebarPresentation {
+  return input.availableWidth < PLAN_SIDEBAR_EXCLUSIVE_WIDTH_PX ? "exclusive" : "side-by-side";
 }

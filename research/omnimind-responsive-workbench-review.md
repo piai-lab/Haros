@@ -35,10 +35,10 @@
 - 当前 HTML storyboard 对目标方向的验证能力；
 - production 候选的最小代码 seam、验证矩阵、停止条件与回退边界。
 
-### 1.2 明确隔离
+### 1.2 明确隔离与 2026-08-16 重开边界
 
 - 不改变 Project instructions 的存储、自动保存、Prompt 注入、复制到记事本或产品语义；
-- 不借本轮降低 Electron `minWidth: 840`；`480px` 只作为未来全产品压力测试，不是当前发布承诺；
+- W1 不降低 Electron `minWidth: 840`；维护者在 W1 之后提供两段当前 Codex 连续缩放录屏并明确要求 follow，W2 因而只重新打开 `480px` 原生下界与全产品压力验证。单页 Web 可渲染、旧 storyboard 或截图仍不足以授权交付，必须以全路由与 exact packaged journey 决胜；
 - 不重写 Settings IA，不创建新 WorkbenchLayout aggregate；
 - 不把 Codex 的品牌、皮肤、尺寸或某个版本的断点复制成 OmniMind 规范；
 - 不改变 Files、Diff、Terminal、Browser、Device、Git、stream、scroll、draft、pane keep-mounted state 的事实 owner；
@@ -46,14 +46,15 @@
 
 ### 1.3 证据类型
 
-| 类型                | 本轮材料                                                                                            | 能证明什么                                                   | 不能证明什么                                           |
-| ------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
-| 用户截图            | OmniMind Environment 关闭/打开；Codex 宽、中、窄窗口                                                | 可见几何变化、信息层级、连续缩放后的呈现结果                 | 对方内部实现、精确断点、状态 owner                     |
-| 当前源码            | `ChatView`、`EnvironmentPanel`、`RightDock`、`SingleChatSurface`、`_chat`、`sidebar`、i18n 与 tests | OmniMind 当前真实决策链、常量、状态与测试缺口                | 安装 App 已获得未来修复                                |
-| 当前原型            | `.zq-ui/responsive-workbench/`                                                                      | 单一方向的可交互几何、响应优先级与视觉 taste                 | production runtime、长会话、真实 Electron/webview 行为 |
-| 当前 Codex App 资源 | 本机已安装 App 的中英文资源与用户截图                                                               | 词义已在成熟桌面产品中真实使用                               | OmniMind 必须机械照抄                                  |
-| 官方公开资料        | [Introducing the Codex app](https://openai.com/index/introducing-the-codex-app/)                    | 线程、worktree、diff/editor 与多任务的产品职责是正式产品事实 | Environment 面板的内部布局算法                         |
-| 推论                | 由以上证据共同推出的目标状态机                                                                      | 可形成可证伪候选                                             | 未经 production proof 的完成状态                       |
+| 类型                | 本轮材料                                                                                            | 能证明什么                                                       | 不能证明什么                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------ |
+| 用户截图            | OmniMind Environment 关闭/打开；Codex 宽、中、窄窗口                                                | 可见几何变化、信息层级、连续缩放后的呈现结果                     | 对方内部实现、精确断点、状态 owner                     |
+| 用户录屏            | `录屏2026-08-16 07.46.23.mov`、`录屏2026-08-16 07.50.00.mov`                                        | 每帧窗口宽度、表面退场顺序、同宽度手动开关、过渡时长与往返连续性 | Codex 内部 store、源代码或可机械照搬的常量             |
+| 当前源码            | `ChatView`、`EnvironmentPanel`、`RightDock`、`SingleChatSurface`、`_chat`、`sidebar`、i18n 与 tests | OmniMind 当前真实决策链、常量、状态与测试缺口                    | 安装 App 已获得未来修复                                |
+| 当前原型            | `.zq-ui/responsive-workbench/`                                                                      | 单一方向的可交互几何、响应优先级与视觉 taste                     | production runtime、长会话、真实 Electron/webview 行为 |
+| 当前 Codex App 资源 | 本机已安装 App 的中英文资源与用户截图                                                               | 词义已在成熟桌面产品中真实使用                                   | OmniMind 必须机械照抄                                  |
+| 官方公开资料        | [Introducing the Codex app](https://openai.com/index/introducing-the-codex-app/)                    | 线程、worktree、diff/editor 与多任务的产品职责是正式产品事实     | Environment 面板的内部布局算法                         |
+| 推论                | 由以上证据共同推出的目标状态机                                                                      | 可形成可证伪候选                                                 | 未经 production proof 的完成状态                       |
 
 ## 2. 用户问题与 taste 约束
 
@@ -107,17 +108,36 @@
 - 面板标题“工作台”与真实 RightDock/Editor 工作面板角色冲突；
 - 中英文混杂削弱了完成度和产品可信度。
 
-### 4.3 Codex 参考行为
+### 4.3 早期截图假设（已被连续录屏校正）
+
+以下判断来自静态截图，只能说明若干离散窗口状态，不能证明真实退场顺序。维护者随后提供的两段约 `60fps` 连续录屏构成更强证据；凡与 4.4 冲突，以 4.4 的连续时间序列为准。
 
 用户提供的 Codex 截图只用于行为观察：
 
 - 宽窗口：Sidebar、稳定主对话、右侧环境信息可以同时存在；
-- 约 `1009px`：Sidebar 自动退场，主对话仍保留舒适宽度，Environment 继续悬浮；
+- 早期约 `1009px` 截图曾被解释为 Sidebar 自动退场、Environment 继续悬浮；连续录屏已反证这一顺序，当前目标是 Environment 先退、Sidebar 延后到紧凑压力区；
 - 更窄窗口：Environment 自动退场，主对话和 Composer 继续占据主视图；
 - 打开 Environment 时，主内容没有因检查器开关而整体横跳；
 - 拖动窗口时，退让顺序表现为连续的角色优先级，而不是多个固定宽度同时争抢空间。
 
 不能从截图推断 Codex 的精确断点、内部 store 或算法；可学习的是“主画布稳定、辅助表面按职责退场”的机制。
+
+### 4.4 两段 60fps 录屏的逐帧复核
+
+维护者提供的两段当前 Codex App 录屏不是新的视觉皮肤来源，而是连续行为证据：
+
+- `录屏2026-08-16 07.46.23.mov`：`1858×1072`、约 `60fps`、`19.38s`。窗口左边缘固定，右边缘被连续拖动；可见窗口宽度从 `1748` 经过 `1592/1500/1284/1040/842/784/684/564` 到 `480–482`，随后恢复到约 `1496`。这些只是录屏像素中的可见宽度，不被提升为产品 breakpoint。
+- `录屏2026-08-16 07.50.00.mov`：`1608×1072`、约 `60fps`、`27.16s`。窗口宽度大体稳定或只移动边缘，Sidebar 在同一宽度被多次手动开关，因此能把 motion 与 resize 本身分离观察。
+
+逐帧可确认的动作：
+
+1. Environment 在宽态悬浮于右上角，不推动 Timeline、正文或 Composer；第一段缩到约 `1284` 可见宽度后，它在主画布不横移的前提下向右滑出并淡出，恢复到更宽状态后按原手动 intent 回来。
+2. 默认宽度 Sidebar 没有在约 `1000–1100` 提前消失；窗口到 `684` 时仍在，进入 `564` 压力区后才开始离场，最终 `480` 是单一 Chat。由此可否定 W1 用 `368 + 776` 舒适阅读宽度作为导航退场条件的实现：它把 Sidebar 的导航价值过早让给了空白舒适度。
+3. 第二段的同宽度手动开关显示 Sidebar container、gap 与 Chat flex width 同步插值；从第一次可见位移到稳定约 `300ms`，曲线与现有 `cubic-bezier(0.32,0.72,0,1)` token 相容。问题不需要新动画库，核心是给既有 token 正确的 presentation 状态。
+4. resize 的每个中间宽度主要由原生 flex/grid 直接跟手；只在 Environment/Sidebar 跨 tier 时出现一次 drawer transform/opacity。没有证据支持逐像素 React 动画、弹簧模拟或统一 Layout Engine。
+5. 往返时表面按原本手动 intent 恢复；录屏没有显示系统把自动退场写成新的用户偏好。极窄态也没有重画第二套 Chat，标题栏、Timeline、Composer 与消息内容仍是同一产品表面。
+
+由录屏能推出的是预算关系而非硬编码宽度：Environment 的退场预算应由当前 Chat surface 是否还能同时承载 `640px` 主阅读生存宽度、`288px` inspector 与边缘 gutter 推导；Sidebar 的退场预算应由其真实宽度加约 `320px` 紧凑 Chat 生存宽度推导。两者都使用小幅 hysteresis，具体常量继续由 production route 与 packaged drag 证伪。
 
 ## 5. 当前源码责任链
 
@@ -127,9 +147,9 @@
 
 当前 `ChatView` 只保留一个 session-local boolean，并通过 `resolveEnvironmentPanelVisible` 叠加 `environmentEnabled`。这消除了“临时打开一次却在以后每次启动自动出现”的隐式持久化，也删除了 landing first-send、constrained default-open 与 Settings 写回的平行分支。
 
-### 5.2 Environment 为什么让主内容左移
+### 5.2 Environment 的旧左移根因与当前基线
 
-`apps/web/src/components/ChatView.tsx` 当前规则：
+W1 以前的 `apps/web/src/components/ChatView.tsx` 使用：
 
 ```ts
 environmentUsesFloatingOverlay =
@@ -150,7 +170,7 @@ environmentAppliesContentInset = environmentPanelVisible && !environmentUsesFloa
 ENVIRONMENT_DOCKED_CONTENT_INSET_PX = 312;
 ```
 
-它由 `w-72`（`288px`）加外围 `p-3` 推导。由此可知，截图中的左移是明确的产品策略，不是随机 CSS 回归。
+它由 `w-72`（`288px`）加外围 `p-3` 推导。由此可知，早期截图中的左移是明确的产品策略，不是随机 CSS 回归。W1 已删除该 inset/variant，当前 `EnvironmentPanel` 始终 mounted 为 absolute overlay，打开或关闭时 Timeline/Composer 的 `x/width` 实测 delta 为 `0–1px`。W2 不重做这部分，只在同一 overlay owner 上增加空间自动压制与临时 reveal。
 
 ### 5.3 Environment 表面与动作
 
@@ -170,16 +190,15 @@ ENVIRONMENT_DOCKED_CONTENT_INSET_PX = 312;
 
 因此它不是“假面板”；它是已有任务上下文聚合器。错误是角色命名和 presentation，不应借 UI 修复删除其功能。
 
-### 5.4 Sidebar 当前响应逻辑
+### 5.4 Sidebar 当前响应逻辑与录屏反证
 
-`apps/web/src/hooks/useMediaQuery.ts` 的 `useIsMobile()` 只匹配 `<768px`。`apps/web/src/components/ui/sidebar.tsx` 在 mobile 时切成 Sheet，否则使用 desktop offcanvas。`apps/web/src/routes/_chat.tsx` 只维护一个 `sidebarOpen`：
+W1 已在 `apps/web/src/routes/_chat.tsx` 分离 `sidebarOpen`、`sidebarAutoSuppressed` 与 `sidebarTemporaryReveal`，并保持同一 mounted Sidebar、overlay focus trap、Escape/focus return 与自动路径不写 cookie。当前问题是预算，不是 owner 缺失：
 
 ```ts
-const [sidebarOpen, setSidebarOpen] = useState(true);
-const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
+threshold = sidebarWidth + 776 + (previouslySuppressed ? 64 : 0);
 ```
 
-当前没有“用户偏好”和“空间自动压制”两个维度。Electron 当前 `minWidth` 是 `840px`，所以用户在真实 App 可达到的 `840–1100px` 桌面区间仍会保留至少 `208px`、默认 `368px` 的 Sidebar，与主画布和右侧表面争抢空间。
+默认 `368px` Sidebar 因而在下降到 `1143px` 就隐藏，直到 `1208px` 才恢复。两段录屏和维护者对“最新版本 OK”的确认共同反证了这个方向：约 `1000–1100px` 仍应保留导航，只有 Sidebar 会把 Chat 压到约 `320px` 以下时才退场。W2 应替换预算常量与证据矩阵，保留 W1 已闭合的 manual intent、temporary overlay、cookie 和 focus 生命周期。
 
 ### 5.5 RightDock 当前布局
 
@@ -192,25 +211,27 @@ const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
 - 使用与 Sidebar 相同的 `300ms cubic-bezier(0.32,0.72,0,1)` drawer motion；
 - keep-mounted pane 只隐藏不卸载，保护 Terminal/Browser 等生命周期。
 
-这些能力应该保留。缺口是当 Chat + Workbench 无法同时舒适存在时，当前只有“阻止继续拖窄”，没有“转成单面板 presentation”。
+W1 已补齐 split/exclusive presentation、同 tier ResizeObserver 宽度同步、Chat `640px` floor、Plan `340px` 压力、真实 Browser bounds/native hide 与 Terminal lifecycle；这些能力在 W2 必须原样保留。W2 新增的 `480px` 下界只扩大压力矩阵，不再重定义 RightDock owner。
 
 ### 5.6 Desktop 最小宽度
 
-`apps/desktop/src/main.ts` 与 `windowState.test.ts` 共同固定 `minWidth: 840`、`minHeight: 620`。本轮可以在 Web 层验证 `480px` 的结构压力，但不能据此降低原生最小宽度；降低必须覆盖全部 route、Settings、PR、Editor、Browser/Device、dialog 与 packaged journey。
+W1 candidate 的 `apps/desktop/src/main.ts` 与 `windowState.test.ts` 共同固定 `minWidth: 840`、`minHeight: 620`，所以已实现的 Sidebar suppression 在真实 App 中根本到不了 Codex 录屏里的最后一段窄宽旅程。W2 目标下界是 `480×620`；降低仍必须覆盖全部 route、Settings、PR、Editor、Browser/Device、Plan、dialog、IME/a11y 与 packaged journey，不能把 ChatView browser harness 单独当成交付证据。
 
 ## 6. 根因矩阵
 
-| 表象                       | 直接原因                               | 更深 owner 问题                              | 最小修复                                                    |
-| -------------------------- | -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
-| Environment 打开后对话左移 | Timeline/Composer 固定加 `312px` inset | inspector 被当作半 docked layout participant | Environment 一律不改变主画布几何                            |
-| 面板像浮层却挤压内容       | absolute card + docked inset 混用      | 视觉语义与布局语义冲突                       | 保留单一 overlay/sheet presentation                         |
-| 约 1000px 窗口显得拥挤     | Sidebar 仍 desktop 常驻                | mobile breakpoint 被误当空间适配策略         | 增加 local auto-suppression，不改手动偏好                   |
-| RightDock 可把 Chat 压窄   | 打开固定约 50/50、pane floor 416px     | 缺少 split→single presentation               | 受限宽度进入 Chat/Workbench 互斥单面板                      |
-| 拖动不丝滑                 | 三套局部状态各自响应                   | 没有统一优先级和滞回                         | 派生有限 tier，并在阈值两侧使用 hysteresis                  |
-| “工作台”概念混乱           | `workbench.environment` 用于 inspector | namespace/产品角色同名                       | 新增 `environment.*`；`workbench.*` 留给操作区              |
-| 中文仍夹英文               | Environment 多数组件硬编码             | i18n scan 覆盖面不足                         | catalog parity + 扩大 hardcode source scan                  |
-| Git 行语义不准             | 菜单入口复用 `Commit and push`         | 动作与入口未区分                             | 菜单用 `Commit or push`；真实连续动作保留 `Commit and push` |
-| 测试绿色但截图仍错         | logic test 只测开关，不测几何/组合     | shell-level regression 缺口                  | 增加真实 shell 组合与 geometry tests                        |
+| 表象                       | 直接原因                                 | 更深 owner 问题                              | 最小修复                                                    |
+| -------------------------- | ---------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| Environment 打开后对话左移 | Timeline/Composer 固定加 `312px` inset   | inspector 被当作半 docked layout participant | Environment 一律不改变主画布几何                            |
+| 面板像浮层却挤压内容       | absolute card + docked inset 混用        | 视觉语义与布局语义冲突                       | 保留单一 overlay/sheet presentation                         |
+| 约 1000px 导航过早消失     | Sidebar 预算使用 `776px` 舒适阅读宽度    | 把舒适空白优先于仍有价值的导航               | 改用真实 Sidebar + `320px` 紧凑 Chat 生存预算               |
+| Environment 不随拖动退场   | 当前只叠加 enabled + manual open         | 缺少 manual intent 与空间 presentation 分离  | 在 Chat surface owner 派生 suppression/temporary reveal     |
+| 真实 App 到不了极窄态      | Electron `minWidth: 840`                 | Web 压力证据未进入原生交付门                 | 全路由闭合后下调到 `480`，再跑 exact packaged drag          |
+| RightDock 受压             | W1 已有 split/exclusive 与 `640px` floor | W2 可能破坏既有生命周期                      | 扩大到 `480px` 回归，不另造状态                             |
+| 拖动仍不像 Codex           | tier 顺序错误而非 easing 缺失            | Environment/Sidebar 的预算与角色顺序错位     | 保留现有 motion token，只校正有限 tier 与 hysteresis        |
+| “工作台”概念混乱           | `workbench.environment` 用于 inspector   | namespace/产品角色同名                       | 新增 `environment.*`；`workbench.*` 留给操作区              |
+| 中文仍夹英文               | Environment 多数组件硬编码               | i18n scan 覆盖面不足                         | catalog parity + 扩大 hardcode source scan                  |
+| Git 行语义不准             | 菜单入口复用 `Commit and push`           | 动作与入口未区分                             | 菜单用 `Commit or push`；真实连续动作保留 `Commit and push` |
+| 测试绿色但截图仍错         | logic test 只测开关，不测几何/组合       | shell-level regression 缺口                  | 增加真实 shell 组合与 geometry tests                        |
 
 ## 7. 最小目标状态机
 
@@ -236,22 +257,26 @@ presentation：visible / overlay / split / exclusive / hidden
 
 ### 7.2 退让优先级
 
-| 空间状态 | Sidebar                    | Timeline + Composer | Environment              | Workbench                                 |
-| -------- | -------------------------- | ------------------- | ------------------------ | ----------------------------------------- |
-| 宽       | 按手动偏好常驻             | 稳定                | 按手动偏好悬浮           | 打开时可 split                            |
-| 压力     | 先自动压制，可临时 overlay | 稳定                | 仍可悬浮，不改几何       | 若已打开，按可读性决定 split 或 exclusive |
-| 紧凑     | 默认压制，可临时 sheet     | 唯一主画布          | 自动压制；用户临时 sheet | 打开时 exclusive                          |
+| 空间状态 | Sidebar                                    | Timeline + Composer | Environment                    | Workbench                                 |
+| -------- | ------------------------------------------ | ------------------- | ------------------------------ | ----------------------------------------- |
+| 宽       | 按手动偏好常驻                             | 稳定                | 按手动偏好悬浮                 | 打开时可 split                            |
+| 压力     | 继续常驻                                   | 原生布局跟手        | 先自动压制；用户可临时 overlay | 若已打开，按可读性决定 split 或 exclusive |
+| 紧凑     | 仅在 Chat 低于生存宽度时压制，可临时 sheet | 唯一主画布          | 自动压制；用户临时 sheet       | 打开时 exclusive                          |
+
+PlanSidebar 继续是 Chat 内的详情投影：当前 Chat surface 低于 `340px Plan + 320px 紧凑 Chat` 时，同一 Plan DOM 临时 exclusive，不能把 Composer 留成约 `140px` 的视觉窄条。
 
 Environment 与 Workbench 不应同时争夺紧凑视图。打开 Workbench 可以临时关闭 Environment presentation，但不能抹掉用户长期偏好。
 
 ### 7.3 阈值不是产品 contract
 
-storyboard 用 `1100/1180`、`760/840` 做可视化 hysteresis，证明机制而非冻结生产常量。production 应按现有最小职责推导：
+旧 storyboard 用 `1100/1180`、`760/840` 做机制演示，2026-08-16 录屏已证明它的具体退场顺序与维护者要 follow 的当前 Codex 不一致，因此这些数值不再是 production 候选。production 应按现有最小职责推导：
 
 - Sidebar 当前最小 `208px`；
-- 主内容 contract 当前最小 `640px`；
+- Sidebar 常驻时的紧凑 Chat 生存宽度约 `320px`；
+- Workbench split 时的 Chat floor 继续是 `640px`；
 - Workbench pane 最小 `416px`；
-- Environment 卡片 `288px`，但作为 overlay 不进入主画布宽度预算；
+- Environment 卡片 `288px`，自动退场判断使用当前 Chat surface 的 `640px` 阅读生存宽度加 panel/gutter，但单独开关仍不进入主画布布局；
+- PlanSidebar 固定详情宽度 `340px`；当前 Chat surface 低于 `660px` 时使用同一 mounted Plan 的 exclusive presentation；
 - Composer 必须通过真实 overflow probe。
 
 若实现只需少量可解释 breakpoint，可使用 media/container query；只有真实 shell 宽度、Sidebar 用户 resize 或 RightDock 动态宽度使 CSS 无法唯一判断时，才使用 ResizeObserver。Observer 只在 tier 改变时 set state，不逐像素驱动 React 重渲染。
@@ -451,32 +476,31 @@ composer:     x=136.5, width=736
 Environment toggle 前后四项 delta 均为 0
 ```
 
-连续宽度序列 `1440 → 1009 → 840 → 695 → 465 → 1009 → 1440` 验证了：
+连续宽度序列 `1440 → 1009 → 840 → 695 → 465 → 1009 → 1440` 当时只验证了旧 storyboard 自己的机制：
 
-- Sidebar 在压力区自动退场，放宽后按原偏好恢复；
-- Environment 在更窄区自动压制，放宽后按原偏好恢复；
+- Sidebar 与 Environment 各自能自动退场并在放宽后恢复原 intent；
+- 但旧 storyboard 让 Sidebar 比 Environment 更早退场，这个具体顺序已被两段新录屏反证；
 - 手动关闭状态不会被自动恢复覆盖；
 - Workbench 在宽屏 split、受限区 exclusive；
 - console 无 error，页面无横向 overflow。
 
-这些是 design proof，不是 production proof。原型中的 `1100/1180/760/840` 是候选参数，必须由真实 Shell/Composer/RightDock 测量校准。
+这些是旧 design proof，不是 production proof。原型中 `1100/1180/760/840` 的具体参数已被新录屏反证；`omnimind-shell-v2` 仍拥有 OmniMind 视觉与角色方向，但 W2 的 Sidebar/Environment tier 必须以录屏预算、真实 route 和 packaged drag 重新校准。
 
 ## 15. 最小生产 seam
 
 ### 15.1 必须修改
 
-1. `ChatView` / Environment presentation：去除正常 desktop single-chat 的固定 content inset，使 Environment open/close 不改变 Timeline/Composer 几何；
-2. `_chat` / Sidebar presentation：在现有手动 `sidebarOpen` 外派生 auto-suppressed 与临时 overlay，不写回用户偏好；
-3. `SingleChatSurface` / RightDock presentation：保留 pane store 和 mounted lifecycle，在空间不足时从 split 转为 exclusive；
-4. i18n：按角色拆 key，闭合 Environment/Thread environment/Git menu/Settings/search/ARIA/placeholder/error/recovery；
-5. tests：补 pure state resolution、geometry、shell combinations、locale parity/hardcode scan、focus/reduced-motion；
-6. packaged proof：从精确 pushed SHA 重建并以 fresh profile 验证连续拖动、toggle、split/exclusive、reload/reopen。
+1. `ChatView` / Environment presentation：在 W1 已稳定的 mounted overlay 上分离 session manual intent、surface auto suppression 与 temporary reveal；
+2. `_chat` / Sidebar presentation：把退场预算从 `368 + 776` 改为真实 Sidebar width + 紧凑 Chat 生存宽度，保留既有 manual/cookie/focus 语义；
+3. Desktop window owner：把原生 minimum 调整到 `480×620`，并让 saved bounds 使用同一常量；
+4. `SingleChatSurface` / RightDock / Plan：不改 owner，只补 `480px` 压力回归与必要的同表面紧凑 presentation；
+5. tests：更新 pure state resolution，补 Environment auto/temporary、`480px` 全 route、geometry、focus/reduced-motion、stream/IME/native surface；
+6. packaged proof：从精确 pushed SHA 重建并以 fresh profile 验证录屏同序列连续拖动、toggle、split/exclusive、reload/reopen。
 
 ### 15.2 应优先删除或复用
 
-- 删除 `ENVIRONMENT_DOCKED_CONTENT_INSET_PX` 及其 transcript/composer padding 责任；
-- `EnvironmentPanel` 若不再需要两种相同 surface，可把 `docked|floating` 收敛为真实 presentation 名，而非保留伪差异；
-- 复用 `useMediaQuery`、现有 Sidebar Sheet/offcanvas、RightDock pane store、`canComposerHandlePanelWidth`、motion token；
+- W1 已删除 `ENVIRONMENT_DOCKED_CONTENT_INSET_PX` 与伪 docked/floating 差异，W2 不恢复；
+- 复用现有 Sidebar offcanvas、RightDock pane store、`canComposerHandlePanelWidth` 与 motion token；Desktop 紧凑宽度仍保持同一个 offcanvas DOM，不跨到会重挂内容的 mobile Sheet 分支；
 - presentation resolver 优先写成 pure function 并 focused test，不创建全局 store。
 
 ### 15.3 只有出现证据才允许增加
@@ -484,7 +508,7 @@ Environment toggle 前后四项 delta 均为 0
 - 若 CSS/media query 无法观察用户 resized Sidebar + dynamic RightDock 的真实剩余宽度，可在最靠近 shell 的 owner 使用一个 ResizeObserver；
 - 若临界区真实抖动，再加入局部 hysteresis；
 - 若 exclusive 需要保留 Chat DOM 才能维持 stream/scroll，使用现有 inert/visibility/activation seam；
-- 若 840px 仍无法容纳必要控制，优先收敛 header/secondary action disclosure，不降低 Composer 可读性。
+- 若 `480px` 的现有表面无法容纳必要控制，优先复用同 mounted surface 的 overlay/exclusive/纵向 disclosure，不建立 mobile-only owner。
 
 ## 16. 验收矩阵
 
@@ -503,10 +527,10 @@ Environment toggle 前后四项 delta 均为 0
 
 ### 16.2 Viewport
 
-- production minimum `840×620`；
-- `1009/1050/1100` 问题区；
+- production minimum `480×620`；
+- `480/564/684/752/840` 紧凑与 Sidebar hysteresis 区；
+- `1009/1050/1100/1280` Environment 与 Workbench 压力区；
 - `1280/1440/1536` 宽屏；
-- `480` 仅作为 Web 压力测试，不作为降低 BrowserWindow minWidth 的证据；
 - 高度受限状态，确保 Environment/menus/composer 不越界。
 
 ### 16.3 语言与辅助模式
@@ -552,7 +576,7 @@ Environment toggle 前后四项 delta 均为 0
 - 以 storyboard 的 breakpoint 代替 production 测量；
 - 为本轮翻译全局改名内部 API 或 Project instructions 行为；
 - 只跑 logic/unit 后宣称真实 Desktop 已完成；
-- 480px Web 能渲染就直接降低 Electron `minWidth`；
+- 只凭 `480px` Chat/Web 能渲染就宣称全产品或安装 App 已闭合；
 - hardcoded 产品文案、placeholder、tooltip、ARIA、empty/error/recovery 仍在正常中英路径泄漏。
 
 ## 18. 不做与未来重开条件
@@ -571,7 +595,7 @@ Environment toggle 前后四项 delta 均为 0
 
 - 真实多 pane 组合证明 breakpoints 无法覆盖，需要 container-measured solver；
 - 多 route 对同一 presentation state 有第二真实消费者，才考虑共享 resolver；
-- 480px 下全部 route、dialog、webview、IME、a11y 与 packaged journey 通过，才讨论降低原生最小宽度；
+- `480px` 下若出现全局 route 都真实需要的第二 presentation 消费者，才讨论抽取共享 compact resolver；
 - Environment 内容规模/任务证明 288px inspector 不足，才讨论可 resize；
 - 用户研究证明 split/exclusive 切换难理解，才增加更明显的 panel switcher，而不是预先加导航层。
 

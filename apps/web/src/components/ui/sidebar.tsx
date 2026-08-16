@@ -108,6 +108,7 @@ function SidebarProvider({
   defaultOpen: defaultOpenProp,
   open: openProp,
   onOpenChange: setOpenProp,
+  desktopPresentation: desktopPresentationProp,
   className,
   style,
   children,
@@ -115,11 +116,14 @@ function SidebarProvider({
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean;
   open?: boolean;
+  /** Keep the same desktop surface mounted through compact native-window widths. */
+  desktopPresentation?: boolean;
   /** Return false for a transient presentation change that must not persist manual intent. */
   onOpenChange?: (open: boolean) => void | false;
 }) {
   const defaultOpen = defaultOpenProp ?? true;
-  const isMobile = useIsMobile();
+  const detectedMobile = useIsMobile();
+  const isMobile = desktopPresentationProp ? false : detectedMobile;
   const [openMobile, setOpenMobile] = React.useState(false);
 
   // This is the internal state of the sidebar.
@@ -333,7 +337,7 @@ function Sidebar({
   return (
     <SidebarInstanceContext.Provider value={instanceContextValue}>
       <div
-        className="group peer hidden text-sidebar-foreground md:block"
+        className="group peer block text-sidebar-foreground"
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-side={side}
         data-slot="sidebar"
@@ -355,7 +359,7 @@ function Sidebar({
         />
         <div
           className={cn(
-            "fixed inset-y-0 z-0 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
+            "fixed inset-y-0 z-0 flex h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",

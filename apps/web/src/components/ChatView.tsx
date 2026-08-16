@@ -392,6 +392,12 @@ import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
 import { appendComposerPromptText } from "../lib/chatReferences";
 import {
+  PLAN_SIDEBAR_WIDTH_PX,
+  resolveEnvironmentAutoSuppressed,
+  resolveEnvironmentPresentation,
+  resolvePlanSidebarPresentation,
+} from "../lib/responsiveWorkbench";
+import {
   appendOriginalComposerPromptBlocks,
   appendTerminalContextsToPrompt,
   IMAGE_ONLY_BOOTSTRAP_PROMPT,
@@ -4867,8 +4873,104 @@ export default function ChatView({
   // Environment is an on-demand inspector, not startup chrome. Opening it is intentionally
   // session-only: every App launch starts closed, regardless of an older stored setting.
   const [environmentPanelPreferenceOpen, setEnvironmentPanelPreferenceOpen] = useState(false);
+  const [environmentPanelAutoSuppressed, setEnvironmentPanelAutoSuppressed] = useState(false);
+  const [environmentPanelTemporaryReveal, setEnvironmentPanelTemporaryReveal] = useState(false);
+  const responsiveContentRootRef = useRef<HTMLDivElement | null>(null);
+  const environmentObservedWidthRef = useRef<number | null>(null);
+  const environmentTemporaryFocusReturnRef = useRef<HTMLElement | null>(null);
+  const [planSidebarPresentation, setPlanSidebarPresentation] = useState(() =>
+    resolvePlanSidebarPresentation({
+      availableWidth: typeof window === "undefined" ? Number.POSITIVE_INFINITY : window.innerWidth,
+    }),
+  );
+  useLayoutEffect(() => {
+    const root = responsiveContentRootRef.current;
+    if (!root) return;
+    let frameId: number | null = null;
+    let nextWidth = root.getBoundingClientRect().width;
+    const update = () => {
+      frameId = null;
+      const previousWidth = environmentObservedWidthRef.current;
+      environmentObservedWidthRef.current = nextWidth;
+      if (planSidebarOpen) {
+        setPlanSidebarPresentation((previousPresentation) => {
+          const nextPresentation = resolvePlanSidebarPresentation({ availableWidth: nextWidth });
+          return nextPresentation === previousPresentation
+            ? previousPresentation
+            : nextPresentation;
+        });
+      } else {
+        setPlanSidebarPresentation((previousPresentation) =>
+          previousPresentation === "side-by-side" ? previousPresentation : "side-by-side",
+        );
+      }
+      if (previousWidth !== null && Math.abs(previousWidth - nextWidth) >= 1) {
+        setEnvironmentPanelTemporaryReveal(false);
+      }
+      const environmentAvailableWidth = Math.max(
+        0,
+        nextWidth - (planSidebarOpen ? PLAN_SIDEBAR_WIDTH_PX : 0),
+      );
+      if (environmentEnabled) {
+        setEnvironmentPanelAutoSuppressed((previouslySuppressed) =>
+          resolveEnvironmentAutoSuppressed({
+            availableWidth: environmentAvailableWidth,
+            previouslySuppressed,
+          }),
+        );
+      }
+    };
+    const observer = new ResizeObserver((entries) => {
+      nextWidth = entries[0]?.contentRect.width ?? root.getBoundingClientRect().width;
+      if (frameId !== null) return;
+      frameId = window.requestAnimationFrame(update);
+    });
+    observer.observe(root);
+    update();
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+      environmentObservedWidthRef.current = null;
+    };
+  }, [environmentEnabled, planSidebarOpen]);
   const setEnvironmentPanelOpenPreference = useCallback(
-    (open: boolean) => setEnvironmentPanelPreferenceOpen(open),
+    (open: boolean) => {
+      if (environmentPanelAutoSuppressed) {
+        if (open && document.activeElement instanceof HTMLElement) {
+          environmentTemporaryFocusReturnRef.current = document.activeElement;
+        }
+        setEnvironmentPanelTemporaryReveal(open);
+        return;
+      }
+      setEnvironmentPanelTemporaryReveal(false);
+      setEnvironmentPanelPreferenceOpen(open);
+    },
+    [environmentPanelAutoSuppressed],
+  );
+  const focusEnvironmentToggleAfterClose = useCallback(
+    (environmentPanel: HTMLElement | null, preferredTarget: HTMLElement | null = null) => {
+      const environmentToggle =
+        environmentPanel
+          ?.closest("[data-chat-primary-surface]")
+          ?.querySelector<HTMLButtonElement>("[data-environment-toggle]") ?? null;
+      const focusTarget =
+        preferredTarget?.isConnected &&
+        preferredTarget.getClientRects().length > 0 &&
+        !preferredTarget.closest("[inert], [aria-hidden='true']")
+          ? preferredTarget
+          : environmentToggle;
+      if (!focusTarget) return;
+      window.requestAnimationFrame(() => {
+        if (
+          !focusTarget.isConnected ||
+          focusTarget.getClientRects().length === 0 ||
+          focusTarget.closest("[inert], [aria-hidden='true']")
+        ) {
+          return;
+        }
+        focusTarget.focus({ preventScroll: true });
+      });
+    },
     [],
   );
   const closeEnvironmentPanelAfterAction = useCallback(() => {
@@ -4877,29 +4979,43 @@ export default function ChatView({
       activeElement instanceof HTMLElement
         ? activeElement.closest<HTMLElement>("[data-environment-panel-presentation='overlay']")
         : null;
-    const environmentToggle =
-      environmentPanel
-        ?.closest("[data-chat-primary-surface]")
-        ?.querySelector<HTMLButtonElement>("[data-environment-toggle]") ?? null;
-
+    setEnvironmentPanelTemporaryReveal(false);
     setEnvironmentPanelPreferenceOpen(false);
-    if (!environmentToggle) return;
-    window.requestAnimationFrame(() => {
-      if (
-        !environmentToggle.isConnected ||
-        environmentToggle.getClientRects().length === 0 ||
-        environmentToggle.closest("[inert], [aria-hidden='true']")
-      ) {
-        return;
-      }
-      environmentToggle.focus({ preventScroll: true });
-    });
+    focusEnvironmentToggleAfterClose(environmentPanel);
+  }, [focusEnvironmentToggleAfterClose]);
+  const dismissEnvironmentTemporaryReveal = useCallback((_environmentPanel: HTMLElement | null) => {
+    setEnvironmentPanelTemporaryReveal(false);
   }, []);
   const environmentPanelOpen = environmentPanelPreferenceOpen;
+  const environmentPanelPresentation = resolveEnvironmentPresentation({
+    manualOpen: environmentPanelOpen,
+    autoSuppressed: environmentPanelAutoSuppressed,
+    temporaryReveal: environmentPanelTemporaryReveal,
+  });
   const environmentPanelVisible = resolveEnvironmentPanelVisible({
     environmentEnabled,
-    environmentPanelOpen,
+    environmentPanelOpen: environmentPanelPresentation !== "hidden",
   });
+  const planSidebarExclusive = planSidebarOpen && planSidebarPresentation === "exclusive";
+  const previousEnvironmentPanelPresentationRef = useRef(environmentPanelPresentation);
+  useLayoutEffect(() => {
+    const previousPresentation = previousEnvironmentPanelPresentationRef.current;
+    previousEnvironmentPanelPresentationRef.current = environmentPanelPresentation;
+    if (previousPresentation === "hidden" || environmentPanelPresentation !== "hidden") return;
+    const activeElement = document.activeElement;
+    const environmentPanel = responsiveContentRootRef.current?.querySelector<HTMLElement>(
+      "[data-environment-panel-presentation='overlay']",
+    );
+    const preferredTarget = environmentTemporaryFocusReturnRef.current;
+    environmentTemporaryFocusReturnRef.current = null;
+    if (
+      environmentPanel &&
+      (preferredTarget ||
+        (activeElement instanceof HTMLElement && environmentPanel.contains(activeElement)))
+    ) {
+      focusEnvironmentToggleAfterClose(environmentPanel, preferredTarget);
+    }
+  }, [environmentPanelPresentation, focusEnvironmentToggleAfterClose]);
   const githubRepositoryQuery = useQuery(
     gitGithubRepositoryQueryOptions(gitBranchSourceCwd, environmentPanelVisible),
   );
@@ -12607,9 +12723,19 @@ export default function ChatView({
         />
       ) : null}
       {/* Main content area with optional plan sidebar */}
-      <div className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden">
+      <div
+        ref={responsiveContentRootRef}
+        className="relative flex min-h-0 min-w-0 flex-1 overflow-hidden"
+      >
         {/* Chat column */}
-        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div
+          aria-hidden={planSidebarExclusive ? true : undefined}
+          className={cn(
+            "relative flex min-h-0 min-w-0 flex-1 flex-col",
+            planSidebarExclusive && "invisible pointer-events-none",
+          )}
+          inert={planSidebarExclusive ? true : undefined}
+        >
           <div
             aria-hidden={terminalWorkspaceTerminalTabActive}
             className={cn(
@@ -12904,7 +13030,12 @@ export default function ChatView({
 
           {/* Environment overlay stays mounted so open/close can transition without rebuilding it. */}
           {environmentEnabled ? (
-            <EnvironmentPanel {...environmentPanelProps} open={environmentPanelVisible} />
+            <EnvironmentPanel
+              {...environmentPanelProps}
+              open={environmentPanelVisible}
+              modal={environmentPanelPresentation === "overlay"}
+              onDismissTemporary={dismissEnvironmentTemporaryReveal}
+            />
           ) : null}
         </div>
         {/* end chat column */}
@@ -12917,8 +13048,12 @@ export default function ChatView({
             markdownCwd={threadWorkspaceCwd ?? undefined}
             workspaceRoot={threadArtifactWorkspaceRoot ?? undefined}
             timestampFormat={timestampFormat}
+            presentation={planSidebarPresentation}
             onClose={() => {
               setPlanSidebarOpen(false);
+              if (planSidebarExclusive) {
+                window.requestAnimationFrame(scheduleComposerFocus);
+              }
               // Track that the user explicitly dismissed for this turn so auto-open won't fight them.
               const turnKey = activeTaskList?.turnId ?? sidebarProposedPlan?.turnId ?? null;
               if (turnKey) {

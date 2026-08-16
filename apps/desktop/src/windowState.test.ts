@@ -5,6 +5,8 @@ import * as Path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  DESKTOP_MINIMUM_WINDOW_HEIGHT,
+  DESKTOP_MINIMUM_WINDOW_WIDTH,
   parseDesktopWindowState,
   readDesktopWindowState,
   resolveVisibleWindowBounds,
@@ -62,10 +64,26 @@ describe("desktop window state", () => {
       resolveVisibleWindowBounds({
         savedBounds: { x: 100, y: 90, width: 1200, height: 800 },
         displayWorkAreas: [workArea],
-        minimumWidth: 840,
-        minimumHeight: 620,
+        minimumWidth: DESKTOP_MINIMUM_WINDOW_WIDTH,
+        minimumHeight: DESKTOP_MINIMUM_WINDOW_HEIGHT,
       }),
     ).toEqual({ x: 100, y: 90, width: 1200, height: 800 });
+  });
+
+  it("restores visible bounds at the compact Desktop minimum", () => {
+    expect(
+      resolveVisibleWindowBounds({
+        savedBounds: { x: 100, y: 90, width: 320, height: 500 },
+        displayWorkAreas: [workArea],
+        minimumWidth: DESKTOP_MINIMUM_WINDOW_WIDTH,
+        minimumHeight: DESKTOP_MINIMUM_WINDOW_HEIGHT,
+      }),
+    ).toEqual({
+      x: 100,
+      y: 90,
+      width: DESKTOP_MINIMUM_WINDOW_WIDTH,
+      height: DESKTOP_MINIMUM_WINDOW_HEIGHT,
+    });
   });
 
   it("centers off-screen bounds on the primary display and clamps their size", () => {
@@ -73,8 +91,8 @@ describe("desktop window state", () => {
       resolveVisibleWindowBounds({
         savedBounds: { x: 4000, y: 3000, width: 2400, height: 1600 },
         displayWorkAreas: [workArea],
-        minimumWidth: 840,
-        minimumHeight: 620,
+        minimumWidth: DESKTOP_MINIMUM_WINDOW_WIDTH,
+        minimumHeight: DESKTOP_MINIMUM_WINDOW_HEIGHT,
       }),
     ).toEqual({ x: 0, y: 0, width: 1920, height: 1040 });
   });
@@ -84,8 +102,8 @@ describe("desktop window state", () => {
       resolveVisibleWindowBounds({
         savedBounds: { x: 2100, y: 100, width: 1000, height: 700 },
         displayWorkAreas: [workArea, { x: 1920, y: 0, width: 1920, height: 1040 }],
-        minimumWidth: 840,
-        minimumHeight: 620,
+        minimumWidth: DESKTOP_MINIMUM_WINDOW_WIDTH,
+        minimumHeight: DESKTOP_MINIMUM_WINDOW_HEIGHT,
       }),
     ).toEqual({ x: 2100, y: 100, width: 1000, height: 700 });
   });

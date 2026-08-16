@@ -177,7 +177,20 @@ Betrayal conditions：
 
 Supervisor、Executor 与 Sentinel 必须在每次状态更新中携带 `RUN / SPINE_REVISION / SPINE_ID`；revision 不一致、source coverage 未闭合或触发 betrayal 时立即停写并升级 Main。
 
-W1 完成 focused、browser、双语与 packaged proof 并形成精确 pushed candidate 后，当前施工入口才返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
+### W2 Codex resize continuity calibration（当前 UI follow-up）
+
+W1 已完成主画布、Sidebar/Workbench presentation、i18n 与 packaged 基线。维护者随后于 2026-08-16 提供两段当前 Codex App 连续缩放/开关录屏，并明确要求 OmniMind 实际 follow 其空间连续性；这项新授权重新打开 W1 当时明确隔离的 Desktop 最小宽度与 Environment 自动退场，但不重开 Codex 皮肤复制、移动端重构或第二布局 authority。
+
+W2 只闭合：
+
+1. Environment 每次启动仍默认关闭；用户本次运行中手动打开后，Chat surface 受压时自动退场、恢复空间后恢复，受压主动查看走临时 overlay，且不改写手动 intent；
+2. 默认宽度 Sidebar 在 `1000–1100px` 继续常驻，只有会把 Chat 压到紧凑生存宽度以下时才退场；缩窄/恢复保留 hysteresis、同一 mounted surface 与既有 `300ms cubic-bezier(0.32,0.72,0,1)` motion token；
+3. Electron 最小窗口宽度从 `840` 下调到 `480`，但只有 Chat、Settings、PR、Editor、RightDock/Browser/Device、Plan、dialog、CJK/IME、focus、stream/scroll 与 light/dark/reduced-motion 的真实 route 矩阵闭合后才可形成 candidate；
+4. 从精确 pushed SHA 重建安装包，以 fresh 隔离 profile 真实连续拖动 `1536→1280→840→684→564→480→…→1536`，验证退场顺序、几何、状态、关闭与重开。
+
+W2 不新增全局 layout store/database/migration/registry、第二动画 runtime、移动端导航、Project instructions 语义、Settings taxonomy、Agent Core、Provider、release 或任何 Codex 品牌视觉。阈值只存在于既有 local resolver/route/surface owner；若 `480px` 的全路由或 packaged native surface 不能闭合，必须 fail-loud 并保留旧原生下界，不能用 Chat 单页或 storyboard 假绿。
+
+W2 完成后，当前施工入口才返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
 2. targeted child control：stop A 不影响 sibling B 或 Root；parent stop-all、stale/terminal control、writer stop 与 crash/reopen各有准确语义；Pi 没有真实 message/steer 时 UI 不显示；

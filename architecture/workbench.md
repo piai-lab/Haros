@@ -139,22 +139,24 @@ Chat shell 只有一个稳定主画布：Timeline 与 Composer。Environment 打
 
 四类表面的职责固定如下：
 
-- `Environment / 环境信息` 是当前任务的辅助检查器，承载仓库、工作树、分支、变更、Git 入口、本地服务、来源、编辑器、摘要、置顶消息、文本标记、项目指令与记事本等上下文。它在每次 App 启动时默认关闭，用户从聊天标题栏打开只影响当前运行中的 shell，不写成跨启动偏好。普通桌面态使用右上角悬浮 inspector；空间极窄且用户主动查看时可进入带 focus trap、Escape 与 focus return 的临时 sheet。它不拥有 Files、Diff、Terminal、Browser 或 Device 的工作面板角色。
+- `Environment / 环境信息` 是当前任务的辅助检查器，承载仓库、工作树、分支、变更、Git 入口、本地服务、来源、编辑器、摘要、置顶消息、文本标记、项目指令与记事本等上下文。它在每次 App 启动时默认关闭，用户从聊天标题栏打开只影响当前运行中的 shell，不写成跨启动偏好。普通桌面态使用右上角悬浮 inspector；当当前 Chat surface 无法同时容纳主阅读画布与 inspector 时，系统只临时压制 presentation，不改写用户本次运行中的手动 intent，空间恢复后可恢复原本手动打开的 inspector。受压时用户仍可主动临时查看，且必须具备 focus trap、Escape 与 focus return。它不拥有 Files、Diff、Terminal、Browser 或 Device 的工作面板角色。
 - `Workbench / 工作台` 是 Files、Viewer、Diff、Terminal、Browser、Device、Source Control 与 Side Chat 等真实操作区，继续复用现有 RightDock、Editor workspace、pane state 与 keep-mounted lifecycle。宽屏可与 Chat 分栏；空间不足时进入 Chat/Workbench 单面板切换，不能把 Composer 压成不可读窄条。
-- Sidebar 是 Agent/Chat、Project/Thread 与全局入口的导航。用户手动开关继续由当前 route/Sidebar owner 管理；W1 只保证同一 mounted shell 内的手动 intent 不被空间自动压制改写，不新增当前源码并不存在的 cookie rehydrate 或跨启动持久化语义。空间不足造成的自动压制只属于可推导 presentation，不调用现有手动 `setOpen`，因而不写回 cookie、Settings 或导航偏好。空间恢复时只恢复原本手动打开的 Sidebar；用户手动关闭的 Sidebar 不得被系统自动复活。受压时用户仍可从 header 临时以 overlay/sheet 查看导航。
+- Sidebar 是 Agent/Chat、Project/Thread 与全局入口的导航。用户手动开关继续由当前 route/Sidebar owner 管理；同一 mounted shell 内的手动 intent 不被空间自动压制改写，不新增当前源码并不存在的 cookie rehydrate 或跨启动持久化语义。Sidebar 是主画布之外最后退场的辅助表面：Environment 先退，Sidebar 只有在其真实宽度会把可见 Chat 压到紧凑生存宽度以下时才自动压制，不能为了维持宽屏阅读舒适度而在约 `1000–1100px` 过早消失。空间不足造成的自动压制只属于可推导 presentation，不调用现有手动 `setOpen`，因而不写回 cookie、Settings 或导航偏好。空间恢复时只恢复原本手动打开的 Sidebar；用户手动关闭的 Sidebar 不得被系统自动复活。受压时用户仍可从 header 临时以 overlay/sheet 查看导航。
 - Timeline 与 Composer 始终优先保留。Environment、Sidebar 与 Workbench 按上述职责退让，不能各自用无关 fixed width 同时争夺主画布。
 
-现有 `PlanSidebar` 是当前 task list/proposed plan 的详情投影，不是第五个全局响应式 owner，也不并入 Environment 或 RightDock state。它的 `340px` 固定宽度必须作为真实空间消费者进入 W1 的压力回归：打开时不得恢复被自动压制的 Sidebar、不得让 Environment 重新占位、不得与 Workbench split 共同把 Composer 压出可读宽度；其既有 active task/proposed plan、自动打开、按 turn dismiss 与跨 thread handoff intent 不因 W1 丢失。若现有 Chat/Workbench exclusive presentation 已能隔离冲突，优先复用，不为 PlanSidebar 新建持久状态或另一套 breakpoint。
+现有 `PlanSidebar` 是当前 task list/proposed plan 的详情投影，不是第五个全局响应式 owner，也不并入 Environment 或 RightDock state。它的 `340px` 固定宽度必须作为真实空间消费者进入压力回归：打开时不得恢复被自动压制的 Sidebar、不得让 Environment 重新占位、不得与 Workbench split 共同把 Composer 压出可读宽度；其既有 active task/proposed plan、自动打开、按 turn dismiss 与跨 thread handoff intent 不因响应式变化丢失。当当前 Chat surface 连 `340px Plan + 320px 紧凑 Chat` 都无法容纳时，同一个 Plan DOM 进入临时 exclusive presentation，Chat 只在该 presentation 下 `inert/aria-hidden`，关闭后恢复同一 Composer；不为 PlanSidebar 新建持久状态或第二 owner。
 
 响应状态只描述 presentation，不创建新的产品事实或持久状态。实现优先使用现有 CSS layout、media/container query、Sidebar/Sheet、RightDock 与 Composer overflow probe；只有用户调整后的 Sidebar、动态 RightDock 或真实 container 宽度使 CSS 不能唯一判断时，才允许在最靠近 shell 的 owner 使用一个局部 ResizeObserver。Observer 只在有限 presentation tier 改变时更新，不逐像素驱动 React render；缩窄与恢复使用克制的 hysteresis 或等价稳定策略，避免临界点抖动。阈值是可校准实现参数，不是新的产品 contract、数据库字段或全局 Layout Engine。
 
 连续拖动期间，尺寸变化由浏览器原生布局直接跟手；只在 Sidebar 常驻/覆盖、Environment 悬浮/侧页、Workbench 分栏/单面板等 tier 跨越时使用一次克制的 transform/opacity 过渡。继续复用现有 drawer motion token、首帧 motion suppression 与 `prefers-reduced-motion`，不得为本能力引入第二动画 runtime。stream、tail anchor、scroll、draft、attachments、IME composition、focus、PlanSidebar turn/dismiss intent、active pane、open files、Terminal/Browser/Device lifecycle 与 native occlusion 必须跨 tier 保持准确。
 
+Desktop 原生窗口当前支持连续缩窄到 `480×620`。这个下界只表示同一窗口可进入紧凑 Chat/单工作面板 presentation，不把 OmniMind 改造成移动端产品，也不授权为窄屏另建 route、store 或第二套 Shell。Chat、Settings、PR、Editor、Workbench、dialog 与 native Browser/Device surface 都必须在该下界无横向页面 overflow、不可达关键操作或状态重挂；若某个既有表面无法分栏，优先使用同一 mounted surface 的单面板/纵向/临时 overlay presentation。
+
 可见命名按产品角色闭合：Environment/环境信息、Environment panel/环境信息面板、Workbench/工作台、Changes/变更、Local/本地、Worktree/工作树、New worktree/新建工作树、Compare branch/比较分支、Repository/代码仓库、Local servers/本地服务、Editor/编辑器、Built-in editor/内置编辑器、Usage/用量、Outputs/产出、Recap/摘要、Pinned messages/置顶消息、Text markers/文本标记、Sources/来源、Subagents/子智能体、Notepad/记事本、Project instructions/项目指令。打开含多种 Git 动作的菜单使用 `Commit or push / 提交或推送`；只有真实连续执行 commit 与 push 的动作使用 `Commit and push / 提交并推送`。`Changes / 变更` 只用于面板或集合名词，不能机械替换句子中的一般“更改”。
 
 Environment、Thread environment、Workbench 与 Git 使用各自稳定 catalog domain；Settings、search、placeholder、loading/empty/error/recovery、tooltip、keyboard hint 与 ARIA 与正常标签在同一变更中闭合 `en/zh-CN`。branch、仓库名、路径、URL、命令、Cursor、Engine/model 与原始诊断保持事实原文。Project instructions 本轮只允许规范可见文案，不据此删除、迁移、重定义其存储、自动保存、复制到记事本或 Prompt 行为。
 
-完整证据、当前源码反例、storyboard 测量、验证矩阵、stop-loss 与复验触发器见 [`research/omnimind-responsive-workbench-review.md`](../research/omnimind-responsive-workbench-review.md)。研究原型中的具体 breakpoint 不反向拥有 production contract，也不能作为降低 Desktop `minWidth` 的依据。
+完整证据、当前源码反例、两段 2026-08-16 Codex 连续缩放录屏的逐帧测量、storyboard、验证矩阵、stop-loss 与复验触发器见 [`research/omnimind-responsive-workbench-review.md`](../research/omnimind-responsive-workbench-review.md)。研究材料中的具体 breakpoint 不反向拥有 production contract；`480px` 下界由全路由与 exact packaged journey 共同约束，不能只由原型或单张截图推出。
 
 ## 6. Settings
 

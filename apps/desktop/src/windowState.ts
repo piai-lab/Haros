@@ -5,6 +5,9 @@
 import * as FS from "node:fs";
 import * as Path from "node:path";
 
+export const DESKTOP_MINIMUM_WINDOW_WIDTH = 480;
+export const DESKTOP_MINIMUM_WINDOW_HEIGHT = 620;
+
 export interface DesktopWindowBounds {
   readonly x: number;
   readonly y: number;

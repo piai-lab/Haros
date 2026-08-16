@@ -2,8 +2,9 @@
 // Purpose: "Environment" inspector. Consolidates the chat-header diff toggle,
 //          the composer-footer env/branch pickers, the header git actions, and the
 //          "Open in editor" controls into one vertical list of full-width rows. Always
-//          rendered as the same rounded floating card pinned top-right of the chat column.
-//          It never reserves transcript or Composer layout space.
+//          rendered as the same rounded card: floating at the chat column's top-right on wide
+//          surfaces and temporarily modal under pressure. It never reserves transcript or
+//          Composer layout space.
 // Layer: Environment panel container
 
 import type {
@@ -19,6 +20,13 @@ import type {
   ThreadMarkerId,
 } from "@omnimind/contracts";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 
 import { useAppSettings } from "~/appSettings";
 import { useI18n } from "~/i18n";
@@ -66,10 +74,31 @@ import {
 
 const ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME =
   "pointer-events-none absolute inset-y-0 right-0 z-20 flex flex-col p-3";
+const ENVIRONMENT_FOCUSABLE_SELECTOR =
+  "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
+
+function visibleEnvironmentFocusableElements(root: HTMLElement | null): HTMLElement[] {
+  return Array.from(
+    root?.querySelectorAll<HTMLElement>(ENVIRONMENT_FOCUSABLE_SELECTOR) ?? [],
+  ).filter((element) => {
+    const rect = element.getBoundingClientRect();
+    return (
+      element.getClientRects().length > 0 &&
+      rect.width > 0 &&
+      rect.height > 0 &&
+      rect.right > 0 &&
+      rect.bottom > 0 &&
+      rect.left < window.innerWidth &&
+      rect.top < window.innerHeight
+    );
+  });
+}
 
 export interface EnvironmentPanelProps {
   /** Drives the slide-in/out transition; the panel stays mounted so CSS can interpolate. */
   open: boolean;
+  /** Pressured explicit reveal behaves as a temporary modal overlay without changing intent. */
+  modal?: boolean;
   gitCwd: string | null;
   openInTarget: string | null;
   githubRepository?: {
@@ -156,6 +185,8 @@ export interface EnvironmentPanelProps {
   onOpenEditorView?: (() => void) | null;
   /** Dismiss the panel overlay — invoked after actions that open the dock. */
   onClose: () => void;
+  /** Dismiss only the pressured temporary reveal and preserve the underlying manual intent. */
+  onDismissTemporary?: (panel: HTMLElement | null) => void;
   /** Registers the panel's "Commit and Push" row as the target for the global shortcut. */
   onRegisterCommitAndPushTrigger?: (trigger: (() => void) | null) => void;
 }
@@ -193,6 +224,7 @@ function EnvironmentRecapSection({
 
 export function EnvironmentPanel({
   open,
+  modal: modalProp,
   gitCwd,
   openInTarget,
   githubRepository: githubRepositoryProp,
@@ -235,6 +267,7 @@ export function EnvironmentPanel({
   onNotesChange,
   onOpenEditorView: onOpenEditorViewProp,
   onClose,
+  onDismissTemporary,
   onRegisterCommitAndPushTrigger,
 }: EnvironmentPanelProps) {
   const githubRepository = githubRepositoryProp ?? null;
@@ -247,6 +280,77 @@ export function EnvironmentPanel({
   const { settings } = useAppSettings();
   const { t } = useI18n();
   const { additions, deletions, hasChanges } = diffTotals;
+  const modal = modalProp === true;
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const modalActive = open && modal;
+  useLayoutEffect(() => {
+    if (!modalActive) return;
+    panelRef.current?.focus({ preventScroll: true });
+  }, [modalActive]);
+  useEffect(() => {
+    if (!modalActive) return;
+    const focusFirstVisibleControl = () => {
+      const panel = panelRef.current;
+      if (panel?.contains(document.activeElement) && document.activeElement !== panel) return;
+      visibleEnvironmentFocusableElements(panel)[0]?.focus({ preventScroll: true });
+    };
+    let secondFrameId: number | null = null;
+    const firstFrameId = window.requestAnimationFrame(() => {
+      secondFrameId = window.requestAnimationFrame(focusFirstVisibleControl);
+    });
+    const transitionFallbackId = window.setTimeout(focusFirstVisibleControl, 320);
+    return () => {
+      window.cancelAnimationFrame(firstFrameId);
+      if (secondFrameId !== null) window.cancelAnimationFrame(secondFrameId);
+      window.clearTimeout(transitionFallbackId);
+    };
+  }, [modalActive]);
+  const dismissTemporary = useCallback(() => {
+    if (onDismissTemporary) {
+      onDismissTemporary(panelRef.current);
+      return;
+    }
+    onClose();
+  }, [onClose, onDismissTemporary]);
+  const handlePanelKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (!modalActive) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      dismissTemporary();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = visibleEnvironmentFocusableElements(panelRef.current);
+    if (focusable.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+    if (document.activeElement === panelRef.current) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+  useEffect(() => {
+    if (!modalActive) return;
+    const handleModalEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      dismissTemporary();
+    };
+    window.addEventListener("keydown", handleModalEscape, { capture: true });
+    return () => window.removeEventListener("keydown", handleModalEscape, { capture: true });
+  }, [dismissTemporary, modalActive]);
 
   // Disable the Changes row only when the diff cannot be opened *and* is not already open
   // (so an open diff stays toggleable closed even when there are no pending changes).
@@ -487,24 +591,41 @@ export function EnvironmentPanel({
   // Top-right overlay pinned to the chat column with p-3 edge gutters. The inspector never
   // participates in Timeline or Composer layout, so opening it cannot move the main canvas.
   return (
-    <div
-      className={ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME}
-      data-environment-panel-presentation="overlay"
-      aria-hidden={!open}
-      inert={!open}
-    >
+    <>
+      {modalActive ? (
+        <button
+          type="button"
+          aria-label={t("environment.close")}
+          className="absolute inset-0 z-[19] bg-black/10"
+          onClick={dismissTemporary}
+        />
+      ) : null}
       <div
-        className={cn(
-          ENVIRONMENT_PANEL_SURFACE_CLASS_NAME,
-          ENVIRONMENT_PANEL_MOTION_CLASS,
-          "flex max-h-full w-72 flex-col",
-          open
-            ? "pointer-events-auto translate-x-0 opacity-100"
-            : "pointer-events-none translate-x-full opacity-0",
-        )}
+        className={ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME}
+        data-environment-panel-presentation="overlay"
+        data-environment-panel-mode={modalActive ? "modal" : "floating"}
+        aria-hidden={!open}
+        inert={!open}
       >
-        <div className="min-h-0 overflow-y-auto">{content}</div>
+        <div
+          ref={panelRef}
+          role={modalActive ? "dialog" : undefined}
+          aria-modal={modalActive ? true : undefined}
+          aria-label={modalActive ? t("environment.title") : undefined}
+          tabIndex={modalActive ? -1 : undefined}
+          onKeyDown={modalActive ? handlePanelKeyDown : undefined}
+          className={cn(
+            ENVIRONMENT_PANEL_SURFACE_CLASS_NAME,
+            ENVIRONMENT_PANEL_MOTION_CLASS,
+            "flex max-h-full w-72 flex-col",
+            open
+              ? "pointer-events-auto translate-x-0 opacity-100"
+              : "pointer-events-none translate-x-full opacity-0",
+          )}
+        >
+          <div className="min-h-0 overflow-y-auto">{content}</div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

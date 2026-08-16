@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { type TimestampFormat } from "../appSettings";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -17,6 +17,7 @@ import type { LatestProposedPlanState } from "../session-logic";
 import { formatTimestamp } from "../timestampFormat";
 import { proposedPlanTitle, stripDisplayedPlanMarkdown } from "../proposedPlan";
 import { ProposedPlanActions } from "./chat/ProposedPlanActions";
+import type { PlanSidebarPresentation } from "../lib/responsiveWorkbench";
 
 function stepStatusIcon(status: string): React.ReactNode {
   if (status === "completed") {
@@ -47,6 +48,7 @@ interface PlanSidebarProps {
   workspaceRoot: string | undefined;
   timestampFormat: TimestampFormat;
   onClose: () => void;
+  presentation?: PlanSidebarPresentation;
 }
 
 const PlanSidebar = function PlanSidebar({
@@ -56,16 +58,30 @@ const PlanSidebar = function PlanSidebar({
   workspaceRoot,
   timestampFormat,
   onClose,
+  presentation = "side-by-side",
 }: PlanSidebarProps) {
   const [proposedPlanExpanded, setProposedPlanExpanded] = useState(false);
   const planMarkdown = activeProposedPlan?.planMarkdown ?? null;
   const displayedPlanMarkdown = planMarkdown ? stripDisplayedPlanMarkdown(planMarkdown) : null;
   const planTitle = planMarkdown ? proposedPlanTitle(planMarkdown) : null;
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    if (presentation !== "exclusive") return;
+    rootRef.current?.focus({ preventScroll: true });
+  }, [presentation]);
 
   return (
     <div
-      className="flex h-full w-[340px] shrink-0 flex-col border-l border-border/70 bg-card/50"
+      ref={rootRef}
+      className={cn(
+        "flex h-full shrink-0 flex-col bg-card/50",
+        presentation === "exclusive"
+          ? "absolute inset-0 z-10 w-full"
+          : "w-[340px] border-l border-border/70",
+      )}
       data-plan-sidebar
+      data-plan-sidebar-presentation={presentation}
+      tabIndex={presentation === "exclusive" ? -1 : undefined}
     >
       {/* Header */}
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/60 px-3">

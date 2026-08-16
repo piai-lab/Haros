@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  resolveEnvironmentAutoSuppressed,
+  resolveEnvironmentPresentation,
+  resolvePlanSidebarPresentation,
   resolveThreadSidebarAutoSuppressed,
   resolveThreadSidebarPresentation,
   resolveWorkbenchAutoExclusive,
   resolveWorkbenchPresentation,
-  CHAT_CANVAS_COMFORTABLE_WIDTH_PX,
+  CHAT_CANVAS_COMPACT_WIDTH_PX,
+  ENVIRONMENT_HYSTERESIS_PX,
+  ENVIRONMENT_SUPPRESS_WIDTH_PX,
   THREAD_SIDEBAR_HYSTERESIS_PX,
   WORKBENCH_SPLIT_RESTORE_WIDTH_PX,
   WORKBENCH_SPLIT_SUPPRESS_WIDTH_PX,
@@ -16,7 +21,7 @@ describe("responsive Workbench presentation", () => {
 
   it("restores a manually open Sidebar after temporary spatial suppression", () => {
     const suppressed = resolveThreadSidebarAutoSuppressed({
-      availableWidth: defaultSidebarWidth + CHAT_CANVAS_COMFORTABLE_WIDTH_PX - 1,
+      availableWidth: defaultSidebarWidth + CHAT_CANVAS_COMPACT_WIDTH_PX - 1,
       sidebarWidth: defaultSidebarWidth,
       previouslySuppressed: false,
     });
@@ -31,7 +36,7 @@ describe("responsive Workbench presentation", () => {
 
     const restored = resolveThreadSidebarAutoSuppressed({
       availableWidth:
-        defaultSidebarWidth + CHAT_CANVAS_COMFORTABLE_WIDTH_PX + THREAD_SIDEBAR_HYSTERESIS_PX,
+        defaultSidebarWidth + CHAT_CANVAS_COMPACT_WIDTH_PX + THREAD_SIDEBAR_HYSTERESIS_PX,
       sidebarWidth: defaultSidebarWidth,
       previouslySuppressed: suppressed,
     });
@@ -98,7 +103,7 @@ describe("responsive Workbench presentation", () => {
 
   it("uses hysteresis instead of oscillating at the Sidebar boundary", () => {
     let suppressed = false;
-    for (const width of [1076, 1100, 1143, 1160, 1207]) {
+    for (const width of [687, 700, 720, 751]) {
       suppressed = resolveThreadSidebarAutoSuppressed({
         availableWidth: width,
         sidebarWidth: defaultSidebarWidth,
@@ -107,15 +112,15 @@ describe("responsive Workbench presentation", () => {
       expect(suppressed).toBe(true);
     }
     suppressed = resolveThreadSidebarAutoSuppressed({
-      availableWidth: 1208,
+      availableWidth: 752,
       sidebarWidth: defaultSidebarWidth,
       previouslySuppressed: suppressed,
     });
     expect(suppressed).toBe(false);
   });
 
-  it.each([1009, 1050, 1076])(
-    "suppresses the rejected default-width Sidebar at %ipx",
+  it.each([480, 564, 640, 687])(
+    "suppresses the default-width Sidebar only in the compact pressure range at %ipx",
     (availableWidth) => {
       expect(
         resolveThreadSidebarAutoSuppressed({
@@ -127,8 +132,8 @@ describe("responsive Workbench presentation", () => {
     },
   );
 
-  it.each([1280, 1440, 1536])(
-    "keeps the default-width Sidebar docked at %ipx",
+  it.each([688, 840, 1009, 1076, 1280, 1440, 1536])(
+    "keeps the default-width Sidebar docked through the Codex-like navigation range at %ipx",
     (availableWidth) => {
       expect(
         resolveThreadSidebarAutoSuppressed({
@@ -143,11 +148,62 @@ describe("responsive Workbench presentation", () => {
   it("uses an explicitly resized Sidebar width in the same shell budget", () => {
     expect(
       resolveThreadSidebarAutoSuppressed({
-        availableWidth: 1009,
+        availableWidth: 528,
         sidebarWidth: 208,
         previouslySuppressed: false,
       }),
     ).toBe(false);
+  });
+
+  it("suppresses Environment before Sidebar and restores it with hysteresis", () => {
+    let suppressed = resolveEnvironmentAutoSuppressed({
+      availableWidth: ENVIRONMENT_SUPPRESS_WIDTH_PX - 1,
+      previouslySuppressed: false,
+    });
+    expect(suppressed).toBe(true);
+    expect(
+      resolveEnvironmentPresentation({
+        manualOpen: true,
+        autoSuppressed: suppressed,
+        temporaryReveal: false,
+      }),
+    ).toBe("hidden");
+
+    suppressed = resolveEnvironmentAutoSuppressed({
+      availableWidth: ENVIRONMENT_SUPPRESS_WIDTH_PX + ENVIRONMENT_HYSTERESIS_PX - 1,
+      previouslySuppressed: suppressed,
+    });
+    expect(suppressed).toBe(true);
+
+    suppressed = resolveEnvironmentAutoSuppressed({
+      availableWidth: ENVIRONMENT_SUPPRESS_WIDTH_PX + ENVIRONMENT_HYSTERESIS_PX,
+      previouslySuppressed: suppressed,
+    });
+    expect(suppressed).toBe(false);
+    expect(
+      resolveEnvironmentPresentation({
+        manualOpen: true,
+        autoSuppressed: suppressed,
+        temporaryReveal: false,
+      }),
+    ).toBe("floating");
+  });
+
+  it("lets Environment temporarily overlay under pressure without requiring or rewriting intent", () => {
+    expect(
+      resolveEnvironmentPresentation({
+        manualOpen: true,
+        autoSuppressed: true,
+        temporaryReveal: true,
+      }),
+    ).toBe("overlay");
+    expect(
+      resolveEnvironmentPresentation({
+        manualOpen: false,
+        autoSuppressed: true,
+        temporaryReveal: true,
+      }),
+    ).toBe("overlay");
   });
 
   it("uses split on wide shells and exclusive presentation under pressure", () => {
@@ -201,6 +257,11 @@ describe("responsive Workbench presentation", () => {
         previouslyExclusive: false,
       }),
     ).toBe(true);
+  });
+
+  it("gives a pressured Plan the existing Chat surface instead of squeezing both below usability", () => {
+    expect(resolvePlanSidebarPresentation({ availableWidth: 659 })).toBe("exclusive");
+    expect(resolvePlanSidebarPresentation({ availableWidth: 660 })).toBe("side-by-side");
   });
 
   it("does not flap Workbench split/exclusive around the threshold", () => {

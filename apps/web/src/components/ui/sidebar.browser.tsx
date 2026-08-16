@@ -5,7 +5,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { SidebarProvider, SidebarTrigger } from "./sidebar";
+import { Sidebar, SidebarProvider, SidebarTrigger } from "./sidebar";
 
 function ControlledSidebar({ transient }: { readonly transient: boolean }) {
   const [open, setOpen] = useState(true);
@@ -54,6 +54,28 @@ describe("SidebarProvider persistence boundary", () => {
         path: "/",
         value: "false",
       });
+    });
+    await screen.unmount();
+  });
+
+  it("keeps one desktop Sidebar surface mounted through the compact native-window range", async () => {
+    await page.viewport(480, 620);
+    const screen = await render(
+      <SidebarProvider desktopPresentation open>
+        <Sidebar>
+          <button type="button">Navigation</button>
+        </Sidebar>
+      </SidebarProvider>,
+    );
+
+    const sidebar = screen.container.querySelector<HTMLElement>("[data-slot='sidebar-container']");
+    expect(sidebar).toBeTruthy();
+    expect(getComputedStyle(sidebar!).display).toBe("flex");
+    expect(screen.container.querySelector("[data-mobile='true']")).toBeNull();
+
+    await page.viewport(840, 620);
+    await vi.waitFor(() => {
+      expect(screen.container.querySelector("[data-slot='sidebar-container']")).toBe(sidebar);
     });
     await screen.unmount();
   });

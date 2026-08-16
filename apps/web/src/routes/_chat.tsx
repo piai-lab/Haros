@@ -671,7 +671,8 @@ function ChatRouteLayout() {
     const focusFirstVisibleControl = () => {
       const root = sidebarOverlayRef.current;
       if (root?.contains(document.activeElement) && document.activeElement !== root) return;
-      visibleSidebarFocusableElements(root)[0]?.focus();
+      root?.focus({ preventScroll: true });
+      visibleSidebarFocusableElements(root)[0]?.focus({ preventScroll: true });
     };
     let secondFrameId: number | null = null;
     const firstFrameId = window.requestAnimationFrame(() => {
@@ -752,6 +753,17 @@ function ChatRouteLayout() {
     },
     [handleSidebarOpenChange],
   );
+  useEffect(() => {
+    if (sidebarPresentation !== "overlay") return;
+    const handleOverlayEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      handleSidebarOpenChange(false);
+    };
+    window.addEventListener("keydown", handleOverlayEscape, { capture: true });
+    return () => window.removeEventListener("keydown", handleOverlayEscape, { capture: true });
+  }, [handleSidebarOpenChange, sidebarPresentation]);
   const threadSidebarResizable = useMemo<SidebarResizableOptions>(
     () => ({ ...THREAD_SIDEBAR_RESIZABLE, onResize: setSidebarWidth }),
     [],
@@ -811,6 +823,7 @@ function ChatRouteLayout() {
   return (
     <SidebarProvider
       defaultOpen
+      desktopPresentation
       open={resolvedSidebarOpen}
       onOpenChange={handleSidebarOpenChange}
       className="bg-[var(--app-shell-background)]"
@@ -825,7 +838,7 @@ function ChatRouteLayout() {
         <button
           type="button"
           aria-label={t("nav.closeSidebar")}
-          className="fixed inset-0 z-[29] hidden bg-black/10 md:block"
+          className="fixed inset-0 z-[29] block bg-black/10"
           onClick={() => handleSidebarOpenChange(false)}
         />
       ) : null}

@@ -210,6 +210,8 @@ import { resolveDesktopAppDataBase, resolveDesktopUserDataPath } from "./desktop
 import { isBrokenPipeError } from "./desktopProcessErrors";
 import { createDesktopStaticProtocolResolver } from "./desktopStaticProtocol";
 import {
+  DESKTOP_MINIMUM_WINDOW_HEIGHT,
+  DESKTOP_MINIMUM_WINDOW_WIDTH,
   readDesktopWindowState,
   resolveVisibleWindowBounds,
   writeDesktopWindowState,
@@ -4042,14 +4044,14 @@ function createWindow(): BrowserWindow {
             .filter((display) => display.id !== primaryDisplay.id)
             .map((display) => display.workArea),
         ],
-        minimumWidth: 840,
-        minimumHeight: 620,
+        minimumWidth: DESKTOP_MINIMUM_WINDOW_WIDTH,
+        minimumHeight: DESKTOP_MINIMUM_WINDOW_HEIGHT,
       })
     : { width: 1100, height: 780 };
   const window = new BrowserWindow({
     ...restoredBounds,
-    minWidth: 840,
-    minHeight: 620,
+    minWidth: DESKTOP_MINIMUM_WINDOW_WIDTH,
+    minHeight: DESKTOP_MINIMUM_WINDOW_HEIGHT,
     show: false,
     autoHideMenuBar: true,
     ...getIconOption(),

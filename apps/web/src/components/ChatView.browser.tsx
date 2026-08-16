@@ -2411,7 +2411,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     document.body.innerHTML = "";
   });
 
-  it("auto-suppresses the default Sidebar at the rejected widths without persisting manual intent", async () => {
+  it("keeps Sidebar through the reading range and only suppresses it under compact pressure", async () => {
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1280 },
@@ -2458,12 +2458,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const sidebar = mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']");
       expect(sidebar?.getBoundingClientRect().width).toBeCloseTo(368, 0);
 
-      for (const width of [1076, 1009, 1050, 1076, 1100, 1143, 1207]) {
+      for (const width of [1076, 1009, 840, 752, 688]) {
+        await resizeTo(width);
+        await expectPresentation("docked");
+      }
+
+      for (const width of [687, 640, 564, 480, 564, 640, 687, 751]) {
         await resizeTo(width);
         await expectPresentation("hidden");
       }
 
-      await resizeTo(1208);
+      await resizeTo(752);
       await expectPresentation("docked");
       for (const width of [1280, 1440, 1536]) {
         await resizeTo(width);
@@ -2488,7 +2493,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(cookieSet.mock.calls[0]?.[0]).toMatchObject({ value: "false" });
       });
 
-      await resizeTo(1076);
+      await resizeTo(640);
       await expectPresentation("hidden");
       const pressuredHeaderTrigger = mounted.host.querySelector<HTMLButtonElement>(
         "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
@@ -2506,7 +2511,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "[role='dialog'][aria-modal='true']",
       );
       expect(immediateDialog).toBeTruthy();
-      expect(document.activeElement).toBe(immediateDialog);
+      await vi.waitFor(() => expect(immediateDialog?.contains(document.activeElement)).toBe(true));
       immediateDialog?.dispatchEvent(
         new KeyboardEvent("keydown", {
           key: "Escape",
@@ -2537,9 +2542,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(cookieSet.mock.calls[1]?.[0]).toMatchObject({ value: "true" });
       });
 
-      await resizeTo(1076);
+      await resizeTo(640);
       await expectPresentation("hidden");
-      await resizeTo(1280);
+      await resizeTo(752);
       await expectPresentation("docked");
       expect(cookieSet).toHaveBeenCalledTimes(2);
     } finally {
@@ -2551,7 +2556,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it("uses the user's resized Sidebar width without feeding presentation back into the budget", async () => {
     localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(208));
     const mounted = await mountChatView({
-      viewport: { ...DEFAULT_VIEWPORT, width: 1009 },
+      viewport: { ...DEFAULT_VIEWPORT, width: 528 },
       snapshot: createSnapshotForTargetUser({
         targetMessageId: "msg-user-resized-sidebar" as MessageId,
         targetText: "resized sidebar",
@@ -2571,6 +2576,22 @@ describe("ChatView timeline estimator parity (full app)", () => {
           .querySelector<HTMLElement>("[data-slot='sidebar-container']")
           ?.getBoundingClientRect().width,
       ).toBeCloseTo(208, 0);
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 527 });
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+            ?.getAttribute("data-thread-sidebar-presentation"),
+        ).toBe("hidden");
+      });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 592 });
+      await vi.waitFor(() => {
+        expect(
+          mounted.host
+            .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+            ?.getAttribute("data-thread-sidebar-presentation"),
+        ).toBe("docked");
+      });
     } finally {
       await mounted.cleanup();
     }
@@ -2579,7 +2600,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it("keeps a temporary Sidebar overlay keyboard-contained and restores its trigger", async () => {
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
-      viewport: { ...DEFAULT_VIEWPORT, width: 1076 },
+      viewport: { ...DEFAULT_VIEWPORT, width: 640 },
       snapshot: createSnapshotForTargetUser({
         targetMessageId: "msg-user-sidebar-overlay" as MessageId,
         targetText: "sidebar overlay",
@@ -2664,6 +2685,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it.each([
+    { width: 480, storedLegacyDefaultOpen: false },
+    { width: 480, storedLegacyDefaultOpen: true },
     { width: 840, storedLegacyDefaultOpen: false },
     { width: 840, storedLegacyDefaultOpen: true },
     { width: 1009, storedLegacyDefaultOpen: false },
@@ -2710,13 +2733,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
         toggle.focus();
         await userEvent.click(toggle);
         await expectOpen(true);
-        expect(document.activeElement).toBe(toggle);
+        if (width === 1440) {
+          expect(document.activeElement).toBe(toggle);
+          expect(panel.getAttribute("data-environment-panel-mode")).toBe("floating");
+        } else {
+          expect(panel.getAttribute("data-environment-panel-mode")).toBe("modal");
+          await vi.waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
+        }
         const toggled = await measureEnvironmentInvariant(mounted.host);
         expectHorizontalGeometryStable(initial, toggled);
 
-        await userEvent.click(toggle);
+        toggle.click();
         await expectOpen(false);
-        expect(document.activeElement).toBe(toggle);
+        await vi.waitFor(() => expect(document.activeElement).toBe(toggle));
         const restored = await measureEnvironmentInvariant(mounted.host);
         expectHorizontalGeometryStable(initial, restored);
       } finally {
@@ -2725,7 +2754,77 @@ describe("ChatView timeline estimator parity (full app)", () => {
     },
   );
 
-  it("keeps the mounted Environment inspector outside the closed keyboard surface", async () => {
+  it("lets Environment yield before Sidebar and restores its manual intent after pressure", async () => {
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1440 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-environment-responsive-order" as MessageId,
+        targetText: "environment responsive order",
+      }),
+    });
+
+    const sidebarPresentation = () =>
+      mounted.host
+        .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+        ?.getAttribute("data-thread-sidebar-presentation");
+    const toggle = await waitForElement(
+      () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+      "Unable to find Environment toggle.",
+    );
+    const panel = await waitForElement(
+      () =>
+        mounted.host.querySelector<HTMLElement>("[data-environment-panel-presentation='overlay']"),
+      "Unable to find Environment inspector.",
+    );
+    const expectPanel = async (input: {
+      open: boolean;
+      mode?: "floating" | "modal";
+      stage: string;
+    }) => {
+      await vi.waitFor(() => {
+        expect(panel.getAttribute("aria-hidden"), input.stage).toBe(String(!input.open));
+        if (input.mode) {
+          expect(panel.getAttribute("data-environment-panel-mode"), input.stage).toBe(input.mode);
+        }
+      });
+    };
+
+    try {
+      await userEvent.click(toggle);
+      await expectPanel({ open: true, mode: "floating", stage: "wide manual open" });
+      const wideGeometry = await measureEnvironmentInvariant(mounted.host);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1280 });
+      await expectPanel({ open: false, stage: "first pressured hide" });
+      expect(sidebarPresentation()).toBe("docked");
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
+      await expectPanel({ open: true, mode: "floating", stage: "manual intent restore" });
+      expectHorizontalGeometryStable(wideGeometry, await measureEnvironmentInvariant(mounted.host));
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1280 });
+      await expectPanel({ open: false, stage: "second pressured hide" });
+      toggle.focus();
+      toggle.click();
+      await expectPanel({ open: true, mode: "modal", stage: "temporary reveal" });
+      await vi.waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
+      await userEvent.tab({ shift: true });
+      expect(panel.contains(document.activeElement)).toBe(true);
+      await userEvent.tab();
+      expect(panel.contains(document.activeElement)).toBe(true);
+      await userEvent.keyboard("{Escape}");
+      await expectPanel({ open: false, stage: "temporary dismiss" });
+      await vi.waitFor(() => expect(document.activeElement).toBe(toggle));
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
+      await expectPanel({ open: true, mode: "floating", stage: "second intent restore" });
+      expect(sidebarPresentation()).toBe("docked");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps the mounted Environment inspector outside the closed keyboard surface and traps its pressured reveal", async () => {
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1009 },
       snapshot: createSnapshotForTargetUser({
@@ -2757,12 +2856,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await userEvent.click(toggle);
       expect(toggle.getAttribute("aria-pressed")).toBe("true");
       expect(panel.hasAttribute("inert")).toBe(false);
-      expect(document.activeElement).toBe(toggle);
+      expect(panel.getAttribute("data-environment-panel-mode")).toBe("modal");
+      await vi.waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
+      await userEvent.tab({ shift: true });
+      expect(panel.contains(document.activeElement)).toBe(true);
+      await userEvent.tab();
+      expect(panel.contains(document.activeElement)).toBe(true);
 
-      await userEvent.click(toggle);
-      expect(toggle.getAttribute("aria-pressed")).toBe("false");
-      expect(panel.hasAttribute("inert")).toBe(true);
-      expect(document.activeElement).toBe(toggle);
+      toggle.click();
+      await vi.waitFor(() => {
+        expect(toggle.getAttribute("aria-pressed")).toBe("false");
+        expect(panel.hasAttribute("inert")).toBe(true);
+      });
+      await vi.waitFor(() => expect(document.activeElement).toBe(toggle));
     } finally {
       await mounted.cleanup();
     }
@@ -2774,7 +2880,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     { locale: "zh-CN", theme: "light" },
     { locale: "zh-CN", theme: "dark" },
   ] as const)(
-    "keeps the constrained shell bounded at 840x620 in $locale $theme mode",
+    "keeps the constrained shell bounded at 480x620 in $locale $theme mode",
     async ({ locale, theme }) => {
       localStorage.setItem(
         "omnimind:app-settings:v1",
@@ -2782,7 +2888,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       document.documentElement.classList.toggle("dark", theme === "dark");
       const mounted = await mountChatView({
-        viewport: { ...DEFAULT_VIEWPORT, width: 840, height: 620 },
+        viewport: { ...DEFAULT_VIEWPORT, width: 480, height: 620 },
         snapshot: createSnapshotForTargetUser({
           targetMessageId: `msg-user-constrained-${locale}-${theme}` as MessageId,
           targetText: "constrained responsive shell",
@@ -2828,6 +2934,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         const panelRect = panelSurface!.getBoundingClientRect();
         expect(mounted.host.scrollWidth).toBeLessThanOrEqual(mounted.host.clientWidth + 1);
         expect(document.body.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+        expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth + 1);
+        expect(composer.scrollWidth).toBeLessThanOrEqual(composer.clientWidth + 1);
         expect(headerRect.top).toBeGreaterThanOrEqual(hostRect.top - 1);
         expect(transcriptRect.top).toBeGreaterThanOrEqual(headerRect.bottom - 1);
         expect(composerRect.top).toBeGreaterThanOrEqual(headerRect.bottom - 1);
@@ -3083,6 +3191,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       }
 
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
+      await waitForWorkbench("exclusive");
+      expectExclusiveGeometry();
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1536 });
       await waitForWorkbench("split");
       expectSplitGeometry();
       await expectNativeBrowserBounds();
@@ -3213,25 +3324,25 @@ describe("ChatView timeline estimator parity (full app)", () => {
     const descending = [
       { width: 1536, sidebar: "docked", workbench: "split" },
       { width: 1280, sidebar: "docked", workbench: "exclusive" },
-      { width: 1208, sidebar: "docked", workbench: "exclusive" },
-      { width: 1207, sidebar: "docked", workbench: "exclusive" },
-      { width: 1144, sidebar: "docked", workbench: "exclusive" },
-      { width: 1143, sidebar: "hidden", workbench: "split" },
-      { width: 1076, sidebar: "hidden", workbench: "split" },
-      { width: 1050, sidebar: "hidden", workbench: "exclusive" },
-      { width: 1009, sidebar: "hidden", workbench: "exclusive" },
-      { width: 900, sidebar: "hidden", workbench: "exclusive" },
-      { width: 840, sidebar: "hidden", workbench: "exclusive" },
+      { width: 1076, sidebar: "docked", workbench: "exclusive" },
+      { width: 1009, sidebar: "docked", workbench: "exclusive" },
+      { width: 840, sidebar: "docked", workbench: "exclusive" },
+      { width: 752, sidebar: "docked", workbench: "exclusive" },
+      { width: 688, sidebar: "docked", workbench: "exclusive" },
+      { width: 687, sidebar: "hidden", workbench: "exclusive" },
+      { width: 640, sidebar: "hidden", workbench: "exclusive" },
+      { width: 564, sidebar: "hidden", workbench: "exclusive" },
+      { width: 480, sidebar: "hidden", workbench: "exclusive" },
     ] as const;
     const ascending = [
-      { width: 900, sidebar: "hidden", workbench: "exclusive" },
-      { width: 1009, sidebar: "hidden", workbench: "exclusive" },
-      { width: 1050, sidebar: "hidden", workbench: "exclusive" },
-      { width: 1076, sidebar: "hidden", workbench: "exclusive" },
-      { width: 1143, sidebar: "hidden", workbench: "split" },
-      { width: 1144, sidebar: "hidden", workbench: "split" },
-      { width: 1207, sidebar: "hidden", workbench: "split" },
-      { width: 1208, sidebar: "docked", workbench: "exclusive" },
+      { width: 564, sidebar: "hidden", workbench: "exclusive" },
+      { width: 640, sidebar: "hidden", workbench: "exclusive" },
+      { width: 687, sidebar: "hidden", workbench: "exclusive" },
+      { width: 751, sidebar: "hidden", workbench: "exclusive" },
+      { width: 752, sidebar: "docked", workbench: "exclusive" },
+      { width: 840, sidebar: "docked", workbench: "exclusive" },
+      { width: 1009, sidebar: "docked", workbench: "exclusive" },
+      { width: 1076, sidebar: "docked", workbench: "exclusive" },
       { width: 1280, sidebar: "docked", workbench: "exclusive" },
       { width: 1536, sidebar: "docked", workbench: "split" },
     ] as const;
@@ -3321,13 +3432,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
       environmentToggle.click();
       await vi.waitFor(() => expect(environmentToggle.getAttribute("aria-pressed")).toBe("true"));
       assertDraft(editorNode, draft);
-      expect(document.activeElement).toBe(editorNode);
+      const environmentDialog = mounted.host.querySelector<HTMLElement>(
+        "[data-environment-panel-mode='modal'] [role='dialog']",
+      );
+      expect(environmentDialog).toBeTruthy();
+      await vi.waitFor(() =>
+        expect(environmentDialog?.contains(document.activeElement)).toBe(true),
+      );
       environmentToggle.click();
       await vi.waitFor(() => expect(environmentToggle.getAttribute("aria-pressed")).toBe("false"));
       assertDraft(editorNode, draft);
-      expect(document.activeElement).toBe(editorNode);
+      await vi.waitFor(() => expect(document.activeElement).toBe(editorNode));
 
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1076 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 640 });
       await vi.waitFor(() => {
         expect(
           mounted.host
@@ -3335,8 +3452,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
             ?.getAttribute("data-thread-sidebar-presentation"),
         ).toBe("hidden");
       });
-      // A direct jump first resolves the old docked-Sidebar budget. Once exclusive,
-      // Workbench keeps its 64px restore hysteresis even after navigation retreats.
+      // Under compact pressure navigation retreats, while Workbench keeps the same
+      // mounted pane and switches to exclusive presentation.
       await waitForWorkbench("exclusive");
       assertDraft(editorNode, draft);
       expect(
@@ -3346,7 +3463,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       ).toBe(true);
       expect(compositionEndCount).toBe(0);
 
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1143 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1536 });
       await waitForWorkbench("split");
       assertDraft(editorNode, draft);
       expect(
@@ -3519,15 +3636,28 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual(
         initialPanes,
       );
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 480 });
+      await vi.waitFor(() => {
+        expect(plan()).toBe(planNode);
+        expect(planNode.getAttribute("data-plan-sidebar-presentation")).toBe("exclusive");
+        expect(planNode.getBoundingClientRect().width).toBeCloseTo(480, 0);
+        expect(chatColumn?.hasAttribute("inert")).toBe(true);
+        expect(planNode.contains(document.activeElement)).toBe(true);
+      });
       const closePlanButton = planNode.querySelector<HTMLButtonElement>(
         'button[aria-label="Close plan sidebar"]',
       );
       expect(closePlanButton).not.toBeNull();
       closePlanButton!.click();
-      await Promise.resolve();
-      expect(plan()).toBeNull();
-      expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("closed");
+      await vi.waitFor(() => {
+        expect(plan()).toBeNull();
+        expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("closed");
+        expect(mounted.host.querySelector("[data-testid='composer-editor']")).toBe(
+          document.activeElement,
+        );
+      });
 
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 2090 });
       useRightDockStore.getState().setDockOpen(THREAD_ID, true);
       await expectPresentation("split");
       expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual(
@@ -3619,7 +3749,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       await userEvent.click(headerToggle()!);
       await waitForWorkbench("exclusive");
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1536 });
       await waitForWorkbench("split");
       const visibleChatToggle = headerToggle();
       visibleChatToggle?.focus();
@@ -4341,9 +4471,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       });
 
       syncLiveText("live response line\n\nfirst streamed continuation", 1_501);
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1076 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1280 });
       await waitForWorkbench("exclusive");
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1143 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1536 });
       await waitForWorkbench("split");
       await vi.waitFor(() => {
         expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeLessThanOrEqual(
@@ -4385,12 +4515,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
         AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
       );
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1050 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1280 });
       await waitForWorkbench("exclusive");
       expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
         AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
       );
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1143 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1536 });
       await waitForWorkbench("split");
       expect(getScrollContainerDistanceFromBottom(scrollContainer)).toBeGreaterThan(
         AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
