@@ -125,10 +125,17 @@ function asRuntimePayloadRecord(value: unknown): Record<string, unknown> {
 
 function makeFakeCodexAdapter(
   provider: ProviderKind = "codex",
-  options?: { readonly conversationRollback?: "native" | "restart-session" },
+  options?: {
+    readonly conversationRollback?: "native" | "restart-session";
+    readonly runtimeEventCapacity?: number;
+  },
 ) {
   const sessions = new Map<ThreadId, ProviderSession>();
-  const runtimeEventPubSub = Effect.runSync(PubSub.unbounded<ProviderRuntimeEvent>());
+  const runtimeEventPubSub = Effect.runSync(
+    options?.runtimeEventCapacity === undefined
+      ? PubSub.unbounded<ProviderRuntimeEvent>()
+      : PubSub.bounded<ProviderRuntimeEvent>(options.runtimeEventCapacity),
+  );
 
   const startSession = vi.fn(
     (input: ProviderSessionStartInput): Effect.Effect<ProviderSession, ProviderAdapterError> =>
@@ -316,6 +323,10 @@ function makeFakeCodexAdapter(
   const emit = (event: LegacyProviderRuntimeEvent): void => {
     Effect.runSync(PubSub.publish(runtimeEventPubSub, event as unknown as ProviderRuntimeEvent));
   };
+  const emitEffect = (event: LegacyProviderRuntimeEvent): Effect.Effect<void> =>
+    PubSub.publish(runtimeEventPubSub, event as unknown as ProviderRuntimeEvent).pipe(
+      Effect.asVoid,
+    );
 
   const waitForRuntimeSubscribers = (count = 1): Effect.Effect<void> =>
     waitUntil(
@@ -339,6 +350,7 @@ function makeFakeCodexAdapter(
   return {
     adapter,
     emit,
+    emitEffect,
     waitForRuntimeSubscribers,
     updateSession,
     startSession,
@@ -403,9 +415,15 @@ function makeProviderServiceLayer(
     readonly includeRestartRollbackDroid?: boolean;
     readonly includePi?: boolean;
     readonly includeOmniMind?: boolean;
+    readonly runtimeEventCapacity?: number;
   },
 ) {
-  const codex = makeFakeCodexAdapter();
+  const codex = makeFakeCodexAdapter(
+    "codex",
+    providers?.runtimeEventCapacity === undefined
+      ? undefined
+      : { runtimeEventCapacity: providers.runtimeEventCapacity },
+  );
   const claude = makeFakeCodexAdapter("claudeAgent");
   const antigravity = makeFakeCodexAdapter("antigravity");
   const droid = makeFakeCodexAdapter("droid", {
@@ -507,6 +525,36 @@ const staleSettlementRouting = makeProviderServiceLayer({
   runtimeEventRetryBaseDelayMs: 1,
   runtimeEventRetryMaxDelayMs: 1,
 });
+const lockCorrectionPersistedEvents = new Map<string, ProviderRuntimeEvent>();
+const lockCorrectionRouting = makeProviderServiceLayer(
+  {
+    persistRuntimeEvent: (event) =>
+      Effect.sync(() => {
+        lockCorrectionPersistedEvents.set(String(event.eventId), event);
+        return { sequence: lockCorrectionPersistedEvents.size, event };
+      }),
+    runtimeEventBufferCapacity: 1,
+    runtimeEventRetryBaseDelayMs: 1,
+    runtimeEventRetryMaxDelayMs: 1,
+  },
+  { runtimeEventCapacity: 1 },
+);
+const bindingRetryAppendAttempts = new Map<string, number>();
+const bindingRetryUniqueEvents = new Map<string, ProviderRuntimeEvent>();
+const bindingRetryRouting = makeProviderServiceLayer({
+  persistRuntimeEvent: (event) =>
+    Effect.sync(() => {
+      const eventId = String(event.eventId);
+      bindingRetryAppendAttempts.set(eventId, (bindingRetryAppendAttempts.get(eventId) ?? 0) + 1);
+      bindingRetryUniqueEvents.set(eventId, event);
+      return {
+        sequence: Array.from(bindingRetryUniqueEvents.keys()).indexOf(eventId) + 1,
+        event,
+      };
+    }),
+  runtimeEventRetryBaseDelayMs: 1,
+  runtimeEventRetryMaxDelayMs: 1,
+});
 
 staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlement", (it) => {
   it.effect("keeps current stream deltas on the binding-free fast path", () =>
@@ -596,6 +644,139 @@ staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlemen
         );
         yield* provider.stopSession({ threadId });
       }),
+  );
+
+  it.effect("reads the current generation inside the binding-event lock", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-generation-flips-before-binding-read");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const originalBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const oldGeneration = originalBinding?.lifecycleGeneration;
+      assert.equal(typeof oldGeneration, "string");
+
+      const bindingReadEntered = yield* Deferred.make<void>();
+      const releaseBindingRead = yield* Deferred.make<void>();
+      const originalGetBinding = directory.getBinding;
+      const getBindingSpy = vi
+        .spyOn(directory, "getBinding")
+        .mockImplementationOnce((candidateThreadId) =>
+          Deferred.succeed(bindingReadEntered, undefined).pipe(
+            Effect.andThen(Deferred.await(releaseBindingRead)),
+            Effect.andThen(originalGetBinding(candidateThreadId)),
+          ),
+        );
+
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      staleSettlementRouting.codex.emit({
+        type: "session.started",
+        eventId: asEventId("old-start-after-generation-flip"),
+        provider: "codex",
+        threadId,
+        lifecycleGeneration: String(oldGeneration),
+        createdAt: "2026-08-16T08:05:10.000Z",
+        payload: {},
+      });
+      yield* Deferred.await(bindingReadEntered);
+
+      const replacementStopEntered = yield* Deferred.make<void>();
+      const releaseReplacementStop = yield* Deferred.make<void>();
+      const defaultStop = staleSettlementRouting.codex.stopSession.getMockImplementation();
+      if (!defaultStop) assert.fail("Expected fake adapter stop implementation");
+      staleSettlementRouting.codex.stopSession.mockImplementationOnce((stoppedThreadId) =>
+        Deferred.succeed(replacementStopEntered, undefined).pipe(
+          Effect.andThen(Deferred.await(releaseReplacementStop)),
+          Effect.andThen(defaultStop(stoppedThreadId)),
+        ),
+      );
+      const replacementFiber = yield* provider
+        .startSession(threadId, {
+          provider: "codex",
+          threadId,
+          runtimeMode: "full-access",
+        })
+        .pipe(Effect.forkChild);
+      yield* Deferred.await(replacementStopEntered);
+
+      yield* Deferred.succeed(releaseBindingRead, undefined);
+      yield* sleep(30);
+      assert.equal(staleSettlementPersistedEvents.has("old-start-after-generation-flip"), false);
+
+      yield* Deferred.succeed(releaseReplacementStop, undefined);
+      yield* Fiber.join(replacementFiber);
+      getBindingSpy.mockRestore();
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
+  it.effect("orders a queued fork event after target binding registration", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const sourceThreadId = asThreadId("thread-fork-order-source");
+      const targetThreadId = asThreadId("thread-fork-order-target");
+      yield* provider.startSession(sourceThreadId, {
+        provider: "codex",
+        threadId: sourceThreadId,
+        runtimeMode: "full-access",
+      });
+
+      const targetUpsertEntered = yield* Deferred.make<string>();
+      const releaseTargetUpsert = yield* Deferred.make<void>();
+      const originalUpsert = directory.upsert;
+      const upsertSpy = vi
+        .spyOn(directory, "upsert")
+        .mockImplementation((binding) =>
+          binding.threadId !== targetThreadId
+            ? originalUpsert(binding)
+            : Deferred.succeed(targetUpsertEntered, String(binding.lifecycleGeneration)).pipe(
+                Effect.andThen(Deferred.await(releaseTargetUpsert)),
+                Effect.andThen(originalUpsert(binding)),
+              ),
+        );
+
+      const forkFiber = yield* provider.forkThread!({
+        sourceThreadId,
+        threadId: targetThreadId,
+        runtimeMode: "full-access",
+      }).pipe(Effect.forkChild);
+      const targetGeneration = yield* Deferred.await(targetUpsertEntered);
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      staleSettlementRouting.codex.emit({
+        type: "session.started",
+        eventId: asEventId("fork-target-queued-session-started"),
+        provider: "codex",
+        threadId: targetThreadId,
+        lifecycleGeneration: targetGeneration,
+        createdAt: "2026-08-16T08:05:20.000Z",
+        payload: {},
+      });
+      yield* sleep(25);
+      assert.equal(staleSettlementPersistedEvents.has("fork-target-queued-session-started"), false);
+
+      yield* Deferred.succeed(releaseTargetUpsert, undefined);
+      assert.notEqual(yield* Fiber.join(forkFiber), null);
+      yield* waitUntil(
+        () => staleSettlementPersistedEvents.has("fork-target-queued-session-started"),
+        500,
+        10,
+        "queued fork target event persistence",
+      );
+      const targetBinding = Option.getOrUndefined(yield* directory.getBinding(targetThreadId));
+      assert.equal(
+        asRuntimePayloadRecord(targetBinding?.runtimePayload).lastRuntimeEvent,
+        "session.started",
+      );
+      upsertSpy.mockRestore();
+      yield* provider.stopSession({ threadId: sourceThreadId });
+      yield* provider.stopSession({ threadId: targetThreadId });
+    }),
   );
 
   it.effect("settles an exact old turn after its lifecycle generation is retired", () =>
@@ -992,6 +1173,254 @@ staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlemen
       const settled = Option.getOrUndefined(yield* directory.getBinding(threadId));
       assert.equal(settled?.status, "stopped");
       assert.equal(asRuntimePayloadRecord(settled?.runtimePayload).activeTurnId, null);
+    }),
+  );
+});
+
+lockCorrectionRouting.layer("ProviderServiceLive binding-event lock correction", (it) => {
+  it.effect("drains two bounded terminal offers while adapter stop holds lifecycle authority", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-bounded-terminal-stop");
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const generation = String(binding?.lifecycleGeneration);
+      const received = yield* Ref.make<Array<string>>([]);
+      const consumer = yield* Stream.take(provider.streamEvents, 2).pipe(
+        Stream.runForEach((event) =>
+          Ref.update(received, (current) => [...current, String(event.eventId)]),
+        ),
+        Effect.forkChild,
+      );
+      yield* sleep(20);
+
+      const defaultStop = lockCorrectionRouting.codex.stopSession.getMockImplementation();
+      if (!defaultStop) assert.fail("Expected fake adapter stop implementation");
+      lockCorrectionRouting.codex.stopSession.mockImplementationOnce((stoppedThreadId) =>
+        Effect.gen(function* () {
+          yield* lockCorrectionRouting.codex.emitEffect({
+            type: "session.exited",
+            eventId: asEventId("bounded-stop-session-exited"),
+            provider: "codex",
+            threadId: stoppedThreadId,
+            lifecycleGeneration: generation,
+            createdAt: "2026-08-16T08:06:00.000Z",
+            payload: { reason: "adapter stopping" },
+          });
+          yield* lockCorrectionRouting.codex.emitEffect({
+            type: "runtime.error",
+            eventId: asEventId("bounded-stop-runtime-error"),
+            provider: "codex",
+            threadId: stoppedThreadId,
+            lifecycleGeneration: generation,
+            createdAt: "2026-08-16T08:06:01.000Z",
+            payload: {
+              message: "terminal after exit",
+              class: "transport_error",
+            },
+          });
+          yield* waitUntil(
+            () =>
+              lockCorrectionPersistedEvents.has("bounded-stop-session-exited") &&
+              lockCorrectionPersistedEvents.has("bounded-stop-runtime-error"),
+            1000,
+            10,
+            "two terminal settlements during lifecycle-held stop",
+          );
+          yield* defaultStop(stoppedThreadId);
+        }),
+      );
+
+      const stopped = yield* provider
+        .stopSession({ threadId })
+        .pipe(Effect.timeoutOption("2 seconds"));
+      assert.equal(Option.isSome(stopped), true);
+      yield* Fiber.join(consumer);
+      assert.deepEqual(yield* Ref.get(received), [
+        "bounded-stop-session-exited",
+        "bounded-stop-runtime-error",
+      ]);
+    }),
+  );
+
+  it.effect("merges delayed stop terminals before committing a cleared cursor", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-clear-cursor-delayed-terminals");
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const initial = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const generation = String(initial?.lifecycleGeneration);
+      const consumer = yield* Stream.take(provider.streamEvents, 2).pipe(
+        Stream.runDrain,
+        Effect.forkChild,
+      );
+      yield* sleep(20);
+
+      const defaultStop = lockCorrectionRouting.codex.stopSession.getMockImplementation();
+      if (!defaultStop) assert.fail("Expected fake adapter stop implementation");
+      lockCorrectionRouting.codex.stopSession.mockImplementationOnce((stoppedThreadId) =>
+        Effect.gen(function* () {
+          yield* lockCorrectionRouting.codex.emitEffect({
+            type: "session.exited",
+            eventId: asEventId("clear-cursor-session-exited"),
+            provider: "codex",
+            threadId: stoppedThreadId,
+            lifecycleGeneration: generation,
+            createdAt: "2026-08-16T08:07:00.000Z",
+            payload: { reason: "cursor reset stop" },
+          });
+          yield* lockCorrectionRouting.codex.emitEffect({
+            type: "runtime.error",
+            eventId: asEventId("clear-cursor-second-terminal"),
+            provider: "codex",
+            threadId: stoppedThreadId,
+            lifecycleGeneration: generation,
+            createdAt: "2026-08-16T08:07:01.000Z",
+            payload: {
+              message: "late terminal detail",
+              class: "transport_error",
+            },
+          });
+          yield* waitUntil(
+            () =>
+              lockCorrectionPersistedEvents.has("clear-cursor-session-exited") &&
+              lockCorrectionPersistedEvents.has("clear-cursor-second-terminal"),
+            1000,
+            10,
+            "delayed cursor-clear terminals",
+          );
+          yield* defaultStop(stoppedThreadId);
+        }),
+      );
+
+      assert.equal(typeof provider.clearSessionResumeCursor, "function");
+      yield* provider.clearSessionResumeCursor!({ threadId }).pipe(
+        Effect.timeoutOption("2 seconds"),
+        Effect.flatMap(
+          Option.match({
+            onNone: () => Effect.die("cursor clear timed out"),
+            onSome: () => Effect.void,
+          }),
+        ),
+      );
+      yield* Fiber.join(consumer);
+      const cleared = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(cleared?.resumeCursor, null);
+      assert.notEqual(cleared?.lifecycleGeneration, generation);
+      assert.equal(cleared?.status, "error");
+      assert.equal(
+        asRuntimePayloadRecord(cleared?.runtimePayload).lastRuntimeEvent,
+        "runtime.error",
+      );
+      assert.equal(
+        asRuntimePayloadRecord(cleared?.runtimePayload).lastError,
+        "late terminal detail",
+      );
+    }),
+  );
+});
+
+bindingRetryRouting.layer("ProviderServiceLive binding settlement retry", (it) => {
+  it.effect("retries an idempotent append after binding update failure and publishes once", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-binding-update-retry");
+      const eventId = "binding-update-retry-event";
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const generation = String(binding?.lifecycleGeneration);
+      const failure = new ProviderSessionDirectoryPersistenceError({
+        operation: "upsert",
+        detail: "injected first runtime binding update failure",
+      });
+      const originalUpsert = directory.upsert;
+      let injectedBindingFailures = 0;
+      const upsertSpy = vi.spyOn(directory, "upsert").mockImplementation((nextBinding) => {
+        if (
+          injectedBindingFailures === 0 &&
+          nextBinding.threadId === threadId &&
+          asRuntimePayloadRecord(nextBinding.runtimePayload).lastRuntimeEvent ===
+            "session.state.changed"
+        ) {
+          injectedBindingFailures += 1;
+          return Effect.fail(failure);
+        }
+        return originalUpsert(nextBinding);
+      });
+      const published = yield* Ref.make<Array<string>>([]);
+      const consumer = yield* Stream.runForEach(provider.streamEvents, (event) =>
+        String(event.eventId) === eventId
+          ? Ref.update(published, (current) => [...current, String(event.eventId)])
+          : Effect.void,
+      ).pipe(Effect.forkChild);
+      yield* sleep(20);
+
+      yield* bindingRetryRouting.codex.waitForRuntimeSubscribers();
+      bindingRetryRouting.codex.emit({
+        type: "session.state.changed",
+        eventId: asEventId(eventId),
+        provider: "codex",
+        threadId,
+        lifecycleGeneration: generation,
+        createdAt: "2026-08-16T08:08:00.000Z",
+        payload: { state: "ready" },
+      });
+      yield* waitUntilEffect(
+        () =>
+          provider.getRuntimeEventPumpHealth!().pipe(
+            Effect.map((health) => health.some((entry) => entry.status === "recovering")),
+          ),
+        1000,
+        10,
+        "binding update retry scheduling",
+      );
+      yield* TestClock.adjust("2 millis");
+      yield* waitUntil(
+        () => (bindingRetryAppendAttempts.get(eventId) ?? 0) >= 2,
+        1000,
+        10,
+        "binding event retry after directory failure",
+      );
+      yield* waitUntilEffect(
+        () =>
+          directory.getBinding(threadId).pipe(
+            Effect.map(
+              Option.match({
+                onNone: () => false,
+                onSome: (current) =>
+                  asRuntimePayloadRecord(current.runtimePayload).lastRuntimeEvent ===
+                  "session.state.changed",
+              }),
+            ),
+          ),
+        1000,
+        10,
+        "retried binding update",
+      );
+      yield* sleep(40);
+      assert.equal(bindingRetryAppendAttempts.get(eventId), 2);
+      assert.equal(bindingRetryUniqueEvents.has(eventId), true);
+      assert.equal(bindingRetryUniqueEvents.size, 1);
+      assert.equal(injectedBindingFailures, 1);
+      assert.deepEqual(yield* Ref.get(published), [eventId]);
+      upsertSpy.mockRestore();
+      yield* Fiber.interrupt(consumer);
+      yield* provider.stopSession({ threadId });
     }),
   );
 });
