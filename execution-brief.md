@@ -177,7 +177,7 @@ Betrayal conditions：
 
 Supervisor、Executor 与 Sentinel 必须在每次状态更新中携带 `RUN / SPINE_REVISION / SPINE_ID`；revision 不一致、source coverage 未闭合或触发 betrayal 时立即停写并升级 Main。
 
-### W2 Codex resize continuity calibration（当前 UI follow-up）
+### W2 Codex resize continuity calibration（已完成）
 
 W1 已完成主画布、Sidebar/Workbench presentation、i18n 与 packaged 基线。维护者随后于 2026-08-16 提供两段当前 Codex App 连续缩放/开关录屏，并明确要求 OmniMind 实际 follow 其空间连续性；这项新授权重新打开 W1 当时明确隔离的 Desktop 最小宽度与 Environment 自动退场，但不重开 Codex 皮肤复制、移动端重构或第二布局 authority。
 
@@ -190,7 +190,22 @@ W2 只闭合：
 
 W2 不新增全局 layout store/database/migration/registry、第二动画 runtime、移动端导航、Project instructions 语义、Settings taxonomy、Agent Core、Provider、release 或任何 Codex 品牌视觉。阈值只存在于既有 local resolver/route/surface owner；若 `480px` 的全路由或 packaged native surface 不能闭合，必须 fail-loud 并保留旧原生下界，不能用 Chat 单页或 storyboard 假绿。
 
-W2 完成后，当前施工入口才返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
+W2 已在 exact pushed `0eec65ac93615bb752a3e2f68e45da0b4a30b943` 完成 focused、安装 App、480px route matrix、退出与重开证据。维护者随后明确要求在 W2 收口后直接更新 Pi 内核；该决定只准入下述独立 **P1 Pi stable baseline refresh**，不自动授予 C1 Gate B。
+
+### P1 Pi stable baseline refresh（当前唯一代码 Slice）
+
+本轮 exact source set 只包含 Pi stable `v0.84.2`、commit `914cf1472e715297caa30db4b9535d534a9eb718` 及其 exact `0.84.2` Pi-family npm artifacts；post-tag `main` 与其他 Pi ecosystem package 不进入 production。当前 `v0.84.1` 产品 patch 只允许按相同 owner 语义重放或在 upstream 已提供等价 seam 时删除，不得借升级扩大 Host、Agent Core、UI 或 package lifecycle。
+
+P1 只闭合：
+
+1. stock Pi 与 bundled OmniMind Agent 的 Pi-family closure、lockfile、vendor archive、source/compiled patches、generator digest、legal/provenance 与 adoption facts 一致升级到 exact `0.84.2`；
+2. 逐项复核并语义 rebase 当前 ModelConfig reader/mutation/package-resource/prompt-outcome 与 OAuth callback renderer patch；旧 patch 不能按偏移机械套用，冲突或 digest 漂移必须 fail-loud；
+3. 保留 `pi` / `omnimind` identity、`.pi` / `.omnimind`、Session、catalog、Package state 与 diagnostics 隔离；不激活新的 SQLite Session backend、Agent Harness、TUI surface 或第二 owner；
+4. focused source/package/adapter/lifecycle/legal gates通过后，优先以 MiMo 与 DeepSeek 做最小真实 Provider 反例；从 exact pushed SHA 重建、安装，并以 fresh 任务 profile 完成启动、首轮/continuation、tool/stream、退出与重开验证。
+
+P1 stop conditions：patch 进入上游 executor/session terminal/recovery state machine；stock Pi 与 OmniMind Agent 隔离无法保持；typed prompt outcome、OAuth default path 或 safe ModelConfig owner不能语义重放；真实 Provider或packaged journey出现无法归因的P0/P1。命中后停止升级并保留 `v0.84.1`，不加兼容双轨。
+
+P1 完成后，当前施工入口返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
 2. targeted child control：stop A 不影响 sibling B 或 Root；parent stop-all、stale/terminal control、writer stop 与 crash/reopen各有准确语义；Pi 没有真实 message/steer 时 UI 不显示；
@@ -202,4 +217,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W1 Responsive Workbench production work admitted on `main`；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh admitted on `main`；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
