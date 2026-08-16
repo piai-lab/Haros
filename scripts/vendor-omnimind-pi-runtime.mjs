@@ -7,12 +7,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
-const PI_REVISION = "53fa77ccd8a279eb87e92294ef3687b03ff80112";
-const PI_VERSION = "0.84.1";
+const PI_REVISION = "914cf1472e715297caa30db4b9535d534a9eb718";
+const PI_VERSION = "0.84.2";
 const PI_AI_INTEGRITY =
-  "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==";
-const PATCH_SHA256 = "bf2cd48f10e7b5c161404251bf179e1b07ba806b4901418aef66c8599bf27a65";
-const STOCK_PATCH_SHA256 = "a2619190f6d54c654679ff44180aaa9046c5edb03aa6ab67d94b615984fbdc90";
+  "sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==";
+const PATCH_SHA256 = "c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f";
+const STOCK_PATCH_SHA256 = "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77";
 const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPOSITORY_ROOT = path.resolve(SCRIPT_DIR, "..");
@@ -99,7 +99,12 @@ async function prepareGeneratedModelData(worktree, temporaryRoot) {
   const archiveName = run(
     "npm",
     ["pack", `@earendil-works/pi-ai@${PI_VERSION}`, "--pack-destination", artifacts, "--silent"],
-    { cwd: worktree },
+    {
+      cwd: worktree,
+      // The exact artifact is already revision/integrity pinned by this generator.
+      // Do not let the upstream checkout's floating release-age policy hide it.
+      env: { npm_config_min_release_age: "0" },
+    },
   )
     .split("\n")
     .at(-1);
@@ -176,8 +181,8 @@ async function main() {
   try {
     run("git", ["clone", "--quiet", "--no-hardlinks", source, worktree]);
     run("git", ["checkout", "--quiet", PI_REVISION], { cwd: worktree });
-    run("git", ["apply", "--unidiff-zero", "--check", PATCH_PATH], { cwd: worktree });
-    run("git", ["apply", "--unidiff-zero", PATCH_PATH], { cwd: worktree });
+    run("git", ["apply", "--check", PATCH_PATH], { cwd: worktree });
+    run("git", ["apply", PATCH_PATH], { cwd: worktree });
     run("npm", ["ci", "--ignore-scripts"], { cwd: worktree, capture: false });
     await prepareGeneratedModelData(worktree, temporaryRoot);
     run("npm", ["run", "build:offline"], { cwd: worktree, capture: false });
@@ -191,6 +196,7 @@ async function main() {
         "test/model-registry.test.ts",
         "test/model-runtime-modify-models-compat.test.ts",
         "test/model-session-prompt-outcome.test.ts",
+        "test/suite/agent-session-prompt.test.ts",
         "test/package-manager.test.ts",
         "test/resource-loader.test.ts",
       ],

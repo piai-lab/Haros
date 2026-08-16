@@ -270,24 +270,24 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
 
   const expected = {
     url: "https://github.com/earendil-works/pi.git",
-    revision: "53fa77ccd8a279eb87e92294ef3687b03ff80112",
+    revision: "914cf1472e715297caa30db4b9535d534a9eb718",
     paths: [
-      "vendor/omnimind-pi-coding-agent-0.84.1.tgz",
-      "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-      "patches/@earendil-works%2Fpi-coding-agent@0.84.1.patch",
+      "vendor/omnimind-pi-coding-agent-0.84.2.tgz",
+      "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
+      "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
       "scripts/vendor-omnimind-pi-runtime.mjs",
     ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "8b570c81e6d92fadfc7ae173319a10c6298ba23331075da45d9d655a7090f4ad",
-    upstreamPackage: "@earendil-works/pi-coding-agent@0.84.1",
+    archiveSha256: "a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514",
+    upstreamPackage: "@earendil-works/pi-coding-agent@0.84.2",
     upstreamPackageIntegrity:
-      "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
+      "sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
-    patchPath: "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-    patchSha256: "bf2cd48f10e7b5c161404251bf179e1b07ba806b4901418aef66c8599bf27a65",
-    stockPatchPath: "patches/@earendil-works%2Fpi-coding-agent@0.84.1.patch",
-    stockPatchSha256: "a2619190f6d54c654679ff44180aaa9046c5edb03aa6ab67d94b615984fbdc90",
+    patchPath: "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
+    patchSha256: "c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f",
+    stockPatchPath: "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
+    stockPatchSha256: "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
@@ -351,8 +351,8 @@ function validatePiAiOAuthPageRendererAdoption(findings, documents) {
 
   const expected = {
     url: "https://github.com/earendil-works/pi.git",
-    revision: "53fa77ccd8a279eb87e92294ef3687b03ff80112",
-    paths: ["patches/@earendil-works%2Fpi-ai@0.84.1.patch", "package.json", "bun.lock"],
+    revision: "914cf1472e715297caa30db4b9535d534a9eb718",
+    paths: ["patches/@earendil-works%2Fpi-ai@0.84.2.patch", "package.json", "bun.lock"],
     sourcePaths: [
       "packages/ai/src/auth/types.ts",
       "packages/ai/src/auth/oauth/oauth-page.ts",
@@ -361,9 +361,9 @@ function validatePiAiOAuthPageRendererAdoption(findings, documents) {
       "packages/ai/src/auth/oauth/openrouter.ts",
       "packages/ai/src/auth/oauth/radius.ts",
     ],
-    upstreamPackage: "@earendil-works/pi-ai@0.84.1",
+    upstreamPackage: "@earendil-works/pi-ai@0.84.2",
     upstreamPackageIntegrity:
-      "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==",
+      "sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
   };
   const actual = record

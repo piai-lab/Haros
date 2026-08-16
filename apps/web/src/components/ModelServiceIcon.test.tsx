@@ -150,7 +150,7 @@ describe("ModelServiceIcon", () => {
     ] as const) {
       expect(resolveModelSpecificIcon({ serviceId, modelId, origin: "builtin" })).not.toBeNull();
     }
-    // Representative exact IDs from the pinned Pi 0.84.1 catalog. A Pi revision intake must
+    // Representative exact IDs from the pinned Pi 0.84.2 catalog. A Pi revision intake must
     // re-run these namespace fences; this is intentionally not a copied model catalog.
     const pinnedAggregateFamilies = [
       ["amazon-bedrock", "us.anthropic.claude-sonnet-4-6", "Claude"],

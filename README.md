@@ -65,7 +65,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 
 这四条规定产品结果。`omnimind` 与 `pi` 是两个真实 Provider identity，但仍服从同一个 inherited orchestration；这与重建通用多 Engine 平台不同。
 
-OmniMind Agent 的首个技术 lineage/生态兼容基准是 Pi stable `v0.84.1`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。Synara production adoption 已从初始 responsibility baseline `02c8a6cb9948eba0afc828492764e7236965c61f` 经维护者批准的 intake 更新到 exact reviewed head `712d88f98b9afed9a4617b78dc62a8f342d93177`；选择性边界见下方唯一 adoption record。
+OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。Synara production adoption 已从初始 responsibility baseline `02c8a6cb9948eba0afc828492764e7236965c61f` 经维护者批准的 intake 更新到 exact reviewed head `712d88f98b9afed9a4617b78dc62a8f342d93177`；选择性边界见下方唯一 adoption record。
 
 ## 4. 来源、身份与结构
 
@@ -129,21 +129,21 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
     {
       "id": "bundled-omnimind-agent-runtime",
       "url": "https://github.com/earendil-works/pi.git",
-      "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
-      "paths": ["vendor/omnimind-pi-coding-agent-0.84.1.tgz", "patches/pi-coding-agent/0.84.1-model-config-reader.patch", "patches/@earendil-works%2Fpi-coding-agent@0.84.1.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
+      "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
+      "paths": ["vendor/omnimind-pi-coding-agent-0.84.2.tgz", "patches/pi-coding-agent/0.84.2-model-config-reader.patch", "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
       "sourcePaths": ["packages/coding-agent"],
-      "archiveSha256": "8b570c81e6d92fadfc7ae173319a10c6298ba23331075da45d9d655a7090f4ad",
-      "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.1",
-      "upstreamPackageIntegrity": "sha512-ncAqFrG+iybuPGOhMiZoEHkEzTpJgz3guYD32pD+M7ucc0WeHmauP6wa7qwP8V/KWvsZDVNa5XGsdZ7fkC7w7A==",
+      "archiveSha256": "a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514",
+      "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.2",
+      "upstreamPackageIntegrity": "sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==",
       "generation": {
         "sharedRuntimeBytes": "patched",
-        "patchPath": "patches/pi-coding-agent/0.84.1-model-config-reader.patch",
-        "patchSha256": "bf2cd48f10e7b5c161404251bf179e1b07ba806b4901418aef66c8599bf27a65",
-        "stockPatchPath": "patches/@earendil-works%2Fpi-coding-agent@0.84.1.patch",
-        "stockPatchSha256": "a2619190f6d54c654679ff44180aaa9046c5edb03aa6ab67d94b615984fbdc90",
+        "patchPath": "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
+        "patchSha256": "c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f",
+        "stockPatchPath": "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
+        "stockPatchSha256": "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77",
         "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
         "behavioralDifferences": ["package identity", "piConfig.configDir", "injectable models.json content reader", "accepted model-config provider provenance", "credential-blind model-config projection", "typed persistent model-config provider mutation with retained-model merge, preview and safe credential-reference intent", "typed credential-blind model cost and tier editing", "typed nested editing for a closed protocol-specific compat subset", "write-only environment header-reference set/clear with value-blind metadata", "explicit generic model discovery through the configured Pi protocol and credential", "typed prompt outcomes for handled extension commands and input hooks, including current-session Agent work started through sendUserMessage or sendMessage triggerTurn", "explicit reader-mode models store path remains file-backed", "request-scoped missing-package policy for resource loading", "intent-scoped package resource listing and filtering", "credential-blind public npm package identities and actions"],
-        "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.1 source with the single committed ModelConfig reader/provenance/mutation/package-resource/prompt-outcome patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. The stock Pi dependency receives only the same compiled typed prompt-outcome behavior through the separately hashed Bun patch; its package identity, config, state and catalog remain stock. Pi remains the sole parser, schema, provider-composition, persistent provider-mutation and package-resource filtering authority; neither patch adds a registry, package state store or second persisted configuration."
+        "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.2 source with the single committed ModelConfig reader/provenance/mutation/package-resource/prompt-outcome patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. The stock Pi dependency receives only the same compiled typed prompt-outcome behavior through the separately hashed Bun patch; its package identity, config, state and catalog remain stock. Pi remains the sole parser, schema, provider-composition, persistent provider-mutation and package-resource filtering authority; neither patch adds a registry, package state store or second persisted configuration."
       },
       "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE, and the exact root redistribution text is LICENSES/pi-coding-agent-MIT.txt.",
       "mode": "adapt",
@@ -154,15 +154,15 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
     {
       "id": "pi-ai-oauth-page-renderer",
       "url": "https://github.com/earendil-works/pi.git",
-      "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
-      "paths": ["patches/@earendil-works%2Fpi-ai@0.84.1.patch", "package.json", "bun.lock"],
+      "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
+      "paths": ["patches/@earendil-works%2Fpi-ai@0.84.2.patch", "package.json", "bun.lock"],
       "sourcePaths": ["packages/ai/src/auth/types.ts", "packages/ai/src/auth/oauth/oauth-page.ts", "packages/ai/src/auth/oauth/openai-codex.ts", "packages/ai/src/auth/oauth/anthropic.ts", "packages/ai/src/auth/oauth/openrouter.ts", "packages/ai/src/auth/oauth/radius.ts"],
-      "upstreamPackage": "@earendil-works/pi-ai@0.84.1",
-      "upstreamPackageIntegrity": "sha512-wMsAdJMxuNri08vLqTyYVI201DQQezGhPSTkzYsHdw5dYX3rCNwEmSvpaAwhi7ELKI/2tE/CEgSWg/6iRxSgdQ==",
+      "upstreamPackage": "@earendil-works/pi-ai@0.84.2",
+      "upstreamPackageIntegrity": "sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==",
       "rights": "The fixed Pi AI source and patched dependency remain MIT-licensed under the retained Pi redistribution text. No OAuth protocol, credential store or Provider identity is adopted as OmniMind product authority.",
       "mode": "adapt",
       "changes": "A per-login optional AuthInteraction renderer may replace only the browser loopback completion/error HTML. It receives only the safe authorization-received/error state, never Provider messages, diagnostics, codes or token-exchange results. OpenAI Codex, Anthropic, OpenRouter and Radius pass the same request-scoped renderer through their existing callback servers; absent or failing renderers retain the stock Pi page. Provider authorization, state validation, token exchange, cancellation and device-code flows remain unchanged.",
-      "updatePolicy": "Pinned package integrity plus Bun patchedDependencies. Every install applies the committed patch or fails on conflict; remove it when upstream exposes an equivalent request-scoped renderer. A Pi update must re-check all four browser callback providers and prove the stock default and device-code paths remain unchanged before changing the pinned package or patch. The current provider-default automation is valid only because every select prompt in pinned Pi 0.84.1 marks its first option as default/recommended; source intake must re-prove that property or fail closed to an explicit user choice rather than treating array order as a permanent API.",
+      "updatePolicy": "Pinned package integrity plus Bun patchedDependencies. Every install applies the committed patch or fails on conflict; remove it when upstream exposes an equivalent request-scoped renderer. A Pi update must re-check all four browser callback providers and prove the stock default and device-code paths remain unchanged before changing the pinned package or patch. The current provider-default automation is valid only because each OAuth select prompt it can consume in pinned Pi 0.84.2 marks its first option as default/recommended; source intake must re-prove that property or fail closed to an explicit user choice rather than treating array order as a permanent API.",
       "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
     },
     {

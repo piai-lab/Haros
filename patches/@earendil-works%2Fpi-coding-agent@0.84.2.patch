@@ -1,5 +1,5 @@
 diff --git a/dist/core/agent-session.d.ts b/dist/core/agent-session.d.ts
-index f37d1ccd41418199e1450f753de8d03b3205c83d..8eb08ef80e3096954dc44fe2e4ccd466c0fdb481 100644
+index e5d84dd53528c14618bfb9956f3b4a0c10c59bfd..408b9779f393924358ea03509d314c10b5b07fce 100644
 --- a/dist/core/agent-session.d.ts
 +++ b/dist/core/agent-session.d.ts
 @@ -31,6 +31,15 @@ export interface ParsedSkillBlock {
@@ -36,7 +36,7 @@ index f37d1ccd41418199e1450f753de8d03b3205c83d..8eb08ef80e3096954dc44fe2e4ccd466
      /**
       * Expand skill commands (/skill:name args) to their full content.
 diff --git a/dist/core/agent-session.js b/dist/core/agent-session.js
-index ce8a9a2a613c08de483a6c94ef4f6341efff0457..2235be683f4164d890fd07c9cc20d7f1248fcd4f 100644
+index 4bcf0d4b823d1cc847d1fa26a86a850761758194..6dbd786ed6696768fc5271a5415cfb661a9dc722 100644
 --- a/dist/core/agent-session.js
 +++ b/dist/core/agent-session.js
 @@ -125,6 +125,7 @@ export class AgentSession {
@@ -183,7 +183,7 @@ index ce8a9a2a613c08de483a6c94ef4f6341efff0457..2235be683f4164d890fd07c9cc20d7f1
                          extensionPath: "<runtime>",
                          event: "send_user_message",
 diff --git a/dist/index.d.ts b/dist/index.d.ts
-index 7d3e24ca0fa8a45cb1acc39ff1cbfddf593e9817..750a564a19a42fcf83c77a2733772461a6f14efb 100644
+index f43bc9620f36d198d75abeeb5c84e171de0d5ffe..8850295cfa0512f1c041bb3afa96355629e1d6c7 100644
 --- a/dist/index.d.ts
 +++ b/dist/index.d.ts
 @@ -1,6 +1,6 @@
@@ -194,3 +194,10 @@ index 7d3e24ca0fa8a45cb1acc39ff1cbfddf593e9817..750a564a19a42fcf83c77a2733772461
  export { readStoredCredential } from "./core/auth-storage.ts";
  export { type BranchPreparation, type BranchSummaryResult, type CollectEntriesResult, type CompactionResult, type CutPointResult, calculateContextTokens, collectEntriesForBranchSummary, compact, DEFAULT_COMPACTION_SETTINGS, estimateTokens, type FileOperations, findCutPoint, findTurnStartIndex, type GenerateBranchSummaryOptions, generateBranchSummary, generateSummary, generateSummaryWithUsage, getLastAssistantUsage, prepareBranchEntries, serializeConversation, shouldCompact, } from "./core/compaction/index.ts";
  export { createEventBus, type EventBus, type EventBusController } from "./core/event-bus.ts";
+@@ -32,4 +32,4 @@ export { parseFrontmatter, stripFrontmatter } from "./utils/frontmatter.ts";
+ export { convertToPng } from "./utils/image-convert.ts";
+ export { formatDimensionNote, type ResizedImage, resizeImage } from "./utils/image-resize.ts";
+ export { getShellConfig } from "./utils/shell.ts";
+-//# sourceMappingURL=index.d.ts.map
+\ No newline at end of file
++//# sourceMappingURL=index.d.ts.map

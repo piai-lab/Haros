@@ -1,5 +1,5 @@
 diff --git a/dist/auth/oauth/anthropic.js b/dist/auth/oauth/anthropic.js
-index 8692e906caa2609396bdccae98d4d593e024ecf6..94f0ddefc84863e178d088d81f923f0d8bf2606f 100644
+index 8692e906caa2609396bdccae98d4d593e024ecf6..61d398187abce77a4eec03c2927211aa62330fb2 100644
 --- a/dist/auth/oauth/anthropic.js
 +++ b/dist/auth/oauth/anthropic.js
 @@ -77,7 +77,7 @@ function formatErrorDetails(error) {
@@ -56,18 +56,19 @@ index 8692e906caa2609396bdccae98d4d593e024ecf6..94f0ddefc84863e178d088d81f923f0d
      const onAbort = () => server.cancelWait();
      interaction.signal.addEventListener("abort", onAbort, { once: true });
 diff --git a/dist/auth/oauth/oauth-page.d.ts b/dist/auth/oauth/oauth-page.d.ts
-index 2fe1a29d9f2d69bfcbe39ee80f4f1f1668cffb3f..da87e84678d3c856a3c103db4f5a85399935f082 100644
+index 2fe1a29d9f2d69bfcbe39ee80f4f1f1668cffb3f..60d0b5e703678c16ce878cd861ddad30838dc6b1 100644
 --- a/dist/auth/oauth/oauth-page.d.ts
 +++ b/dist/auth/oauth/oauth-page.d.ts
 @@ -1,3 +1,4 @@
 -export declare function oauthSuccessHtml(message: string): string;
 -export declare function oauthErrorHtml(message: string, details?: string): string;
-+import type { OAuthPageRenderer } from "../types.js";
++import type { OAuthPageRenderer } from "../types.ts";
 +export declare function oauthSuccessHtml(message: string, renderer?: OAuthPageRenderer): string;
 +export declare function oauthErrorHtml(message: string, details?: string, renderer?: OAuthPageRenderer): string;
  //# sourceMappingURL=oauth-page.d.ts.map
+\ No newline at end of file
 diff --git a/dist/auth/oauth/oauth-page.js b/dist/auth/oauth/oauth-page.js
-index 101153587266e9ef2e7864f8aab9b5fd485a6aa1..e1545c3940cfbb5fbbb8e3933109dcc380c6310a 100644
+index 101153587266e9ef2e7864f8aab9b5fd485a6aa1..6d05b27195c1b085f3ea6bb03696f015431ac9eb 100644
 --- a/dist/auth/oauth/oauth-page.js
 +++ b/dist/auth/oauth/oauth-page.js
 @@ -87,19 +87,34 @@ function renderPage(options) {
@@ -111,8 +112,9 @@ index 101153587266e9ef2e7864f8aab9b5fd485a6aa1..e1545c3940cfbb5fbbb8e3933109dcc3
 +    }, renderer);
  }
  //# sourceMappingURL=oauth-page.js.map
+\ No newline at end of file
 diff --git a/dist/auth/oauth/openai-codex.js b/dist/auth/oauth/openai-codex.js
-index 04813e44dde0d5cd2a828aa0a2fbc0ed1dfc2df9..59245888ba236029a860930b159633589b4421a8 100644
+index 04813e44dde0d5cd2a828aa0a2fbc0ed1dfc2df9..75c2881ba8cc79b5a79d3b71db211023de5acecc 100644
 --- a/dist/auth/oauth/openai-codex.js
 +++ b/dist/auth/oauth/openai-codex.js
 @@ -242,7 +242,7 @@ async function createAuthorizationFlow(originator = "pi") {
@@ -171,7 +173,7 @@ index 04813e44dde0d5cd2a828aa0a2fbc0ed1dfc2df9..59245888ba236029a860930b15963358
      const onAbort = () => server.cancelWait();
      interaction.signal.addEventListener("abort", onAbort, { once: true });
 diff --git a/dist/auth/oauth/openrouter.js b/dist/auth/oauth/openrouter.js
-index 865bb5a6758ba27cd92f00fa61d0f0153185082b..e1685f5bd4f3bbcfea07815f90e5d2d3a84d3a96 100644
+index 865bb5a6758ba27cd92f00fa61d0f0153185082b..99cd42868b4d4df71dcb353316ae0f6cfa45ff6d 100644
 --- a/dist/auth/oauth/openrouter.js
 +++ b/dist/auth/oauth/openrouter.js
 @@ -107,7 +107,7 @@ async function exchangeAuthorizationCode(code, verifier, signal) {
@@ -234,7 +236,7 @@ index 865bb5a6758ba27cd92f00fa61d0f0153185082b..e1685f5bd4f3bbcfea07815f90e5d2d3
      let manualInput;
      let manualError;
 diff --git a/dist/auth/oauth/radius.js b/dist/auth/oauth/radius.js
-index f66d637e858e49d876cd52aae35916488229c04d..6730ae97cdd68af879e3d106187678ca8aa2dedb 100644
+index f66d637e858e49d876cd52aae35916488229c04d..dae73ff8b8a60485576eab81b41f30250323d8f8 100644
 --- a/dist/auth/oauth/radius.js
 +++ b/dist/auth/oauth/radius.js
 @@ -101,7 +101,7 @@ async function requestOAuthToken(gateway, body, signal) {
@@ -287,7 +289,7 @@ index f66d637e858e49d876cd52aae35916488229c04d..6730ae97cdd68af879e3d106187678ca
      interaction.notify({
          type: "auth_url",
 diff --git a/dist/auth/types.d.ts b/dist/auth/types.d.ts
-index 4183f993631b48627c6803bf73e2882e62353455..654b0a4c46c9f61f79de174f0e5dfc7e0a9d0b2f 100644
+index 4183f993631b48627c6803bf73e2882e62353455..ad99efff524a0d42e9aa7ff725103c398c39dea3 100644
 --- a/dist/auth/types.d.ts
 +++ b/dist/auth/types.d.ts
 @@ -147,6 +147,11 @@ export type AuthEvent = {

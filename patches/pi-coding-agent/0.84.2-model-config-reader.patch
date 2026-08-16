@@ -1,32 +1,53 @@
 diff --git a/package-lock.json b/package-lock.json
-index 48e638d..c17a5db 100644
+index 1f77aa69a44915990ba2e4f41573cb2b7005b0ca..513d7c02564c45e0331cf2302f713d5ed2510034 100644
 --- a/package-lock.json
 +++ b/package-lock.json
-@@ -3601,0 +3602,6 @@
+@@ -3570,6 +3570,12 @@
+ 				"node": ">=16"
+ 			}
+ 		},
 +		"node_modules/jsonc-parser": {
 +			"version": "3.3.1",
 +			"resolved": "https://registry.npmjs.org/jsonc-parser/-/jsonc-parser-3.3.1.tgz",
 +			"integrity": "sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==",
 +			"license": "MIT"
 +		},
-@@ -5557,0 +5564 @@
+ 		"node_modules/jwa": {
+ 			"version": "2.0.1",
+ 			"resolved": "https://registry.npmjs.org/jwa/-/jwa-2.0.1.tgz",
+@@ -5513,6 +5519,7 @@
+ 				"hosted-git-info": "9.0.3",
+ 				"ignore": "7.0.5",
+ 				"jiti": "2.7.0",
 +				"jsonc-parser": "3.3.1",
+ 				"minimatch": "10.2.5",
+ 				"proper-lockfile": "4.1.2",
+ 				"semver": "7.8.0",
 diff --git a/packages/coding-agent/package.json b/packages/coding-agent/package.json
-index f6fc21a..1e293a8 100644
+index 58d9dd64d57ce37477fd0376904513a3d470e109..199b569124c01ae2335b38ab541c716f889248e0 100644
 --- a/packages/coding-agent/package.json
 +++ b/packages/coding-agent/package.json
-@@ -60,0 +61 @@
+@@ -58,6 +58,7 @@
+ 		"hosted-git-info": "9.0.3",
+ 		"ignore": "7.0.5",
+ 		"jiti": "2.7.0",
 +		"jsonc-parser": "3.3.1",
+ 		"minimatch": "10.2.5",
+ 		"proper-lockfile": "4.1.2",
+ 		"semver": "7.8.0",
 diff --git a/packages/coding-agent/src/core/agent-session-services.ts b/packages/coding-agent/src/core/agent-session-services.ts
-index 531f51d..4c720a4 100644
+index 531f51d61b8767d9e6ee3406ddac5f3cdcb8ad23..4c720a4754d444cf381b19cce3ed66654de09d7a 100644
 --- a/packages/coding-agent/src/core/agent-session-services.ts
 +++ b/packages/coding-agent/src/core/agent-session-services.ts
-@@ -154 +154,3 @@ export async function createAgentSessionServices(
+@@ -151,45 +151,54 @@ export async function createAgentSessionServices(
+ 		agentDir,
+ 		settingsManager,
+ 	});
 -	await resourceLoader.reload(options.resourceLoaderReloadOptions);
 +	let completed = false;
 +	try {
 +		await resourceLoader.reload(options.resourceLoaderReloadOptions);
-@@ -156,11 +158,12 @@ export async function createAgentSessionServices(
+ 
 -	const diagnostics: AgentSessionRuntimeDiagnostic[] = [];
 -	const extensionsResult = resourceLoader.getExtensions();
 -	for (const { name, config, extensionPath } of extensionsResult.runtime.pendingProviderRegistrations) {
@@ -50,7 +71,7 @@ index 531f51d..4c720a4 100644
 +					message: `Extension "${extensionPath}" error: ${message}`,
 +				});
 +			}
-@@ -168,11 +171,11 @@ export async function createAgentSessionServices(
+ 		}
 -	}
 -	extensionsResult.runtime.pendingProviderRegistrations = [];
 -	for (const { provider, extensionPath } of extensionsResult.runtime.pendingNativeProviderRegistrations) {
@@ -73,7 +94,7 @@ index 531f51d..4c720a4 100644
 +					message: `Extension "${extensionPath}" error: ${message}`,
 +				});
 +			}
-@@ -180,4 +183,3 @@ export async function createAgentSessionServices(
+ 		}
 -	}
 -	extensionsResult.runtime.pendingNativeProviderRegistrations = [];
 -	await modelRuntime.refresh({ allowNetwork: false });
@@ -81,7 +102,7 @@ index 531f51d..4c720a4 100644
 +		extensionsResult.runtime.pendingNativeProviderRegistrations = [];
 +		await modelRuntime.refresh({ allowNetwork: false });
 +		diagnostics.push(...applyExtensionFlagValues(resourceLoader, options.extensionFlagValues));
-@@ -185,8 +187,15 @@ export async function createAgentSessionServices(
+ 
 -	return {
 -		cwd,
 -		agentDir,
@@ -105,33 +126,63 @@ index 531f51d..4c720a4 100644
 +			resourceLoader.getExtensions().runtime.invalidate("Session service creation failed");
 +		}
 +	}
+ }
+ 
+ /**
 diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
-index b210c5a..780705e 100644
+index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..739ffe8c094f57d78622d0f8bfe85673b64708d9 100644
 --- a/packages/coding-agent/src/core/agent-session.ts
 +++ b/packages/coding-agent/src/core/agent-session.ts
-@@ -124,0 +125,6 @@ export interface ParsedSkillBlock {
+@@ -122,6 +122,12 @@ export interface ParsedSkillBlock {
+ 	userMessage: string | undefined;
+ }
+ 
 +/** Typed result of submitting input through the session prompt owner. */
 +export type PromptOutcome =
 +	| { kind: "agent-run" }
 +	| { kind: "handled-without-agent"; success: boolean }
 +	| { kind: "queued" };
 +
-@@ -362,0 +369 @@ export class AgentSession {
+ /**
+  * Parse a skill block from message text.
+  * Returns null if the text doesn't contain a skill block.
+@@ -360,6 +366,7 @@ export class AgentSession {
+ 	private _extensionShutdownHandler?: ShutdownHandler;
+ 	private _extensionErrorListener?: ExtensionErrorListener;
+ 	private _extensionErrorUnsubscriber?: () => void;
 +	private _extensionPromptAgentTasks: Set<Promise<void>> | undefined;
-@@ -1116 +1123 @@ export class AgentSession {
+ 
+ 	private _modelRuntime: ModelRuntime;
+ 
+@@ -1113,7 +1120,7 @@ export class AgentSession {
+ 	 * @throws Error if streaming and no streamingBehavior specified
+ 	 * @throws Error if no model selected or no API key available (when not streaming)
+ 	 */
 -	async prompt(text: string, options?: PromptOptions): Promise<void> {
 +	async prompt(text: string, options?: PromptOptions): Promise<PromptOutcome> {
-@@ -1125,2 +1132,2 @@ export class AgentSession {
+ 		const expandPromptTemplates = options?.expandPromptTemplates ?? true;
+ 		const preflightResult = options?.preflightResult;
+ 		let messages: AgentMessage[] | undefined;
+@@ -1122,11 +1129,11 @@ export class AgentSession {
+ 			// Handle extension commands first (execute immediately, even during streaming)
+ 			// Extension commands manage their own LLM interaction via pi.sendMessage()
+ 			if (expandPromptTemplates && text.startsWith("/")) {
 -				const handled = await this._tryExecuteExtensionCommand(text);
 -				if (handled) {
 +				const outcome = await this._tryExecuteExtensionCommand(text);
 +				if (outcome) {
-@@ -1128,2 +1135,2 @@ export class AgentSession {
+ 					// Extension command executed, no prompt to send
 -					preflightResult?.(true);
 -					return;
 +					preflightResult?.(outcome.kind !== "handled-without-agent" || outcome.success);
 +					return outcome;
-@@ -1143,6 +1150,14 @@ export class AgentSession {
+ 				}
+ 			}
+ 
+@@ -1140,15 +1147,29 @@ export class AgentSession {
+ 			let currentText = text;
+ 			let currentImages = options?.images;
+ 			if (this._extensionRunner.hasHandlers("input")) {
 -				const inputResult = await this._extensionRunner.emitInput(
 -					currentText,
 -					currentImages,
@@ -152,7 +203,7 @@ index b210c5a..780705e 100644
 +				} finally {
 +					this._extensionPromptAgentTasks = previousTasks;
 +				}
-@@ -1150,2 +1165,8 @@ export class AgentSession {
+ 				if (inputResult.action === "handled") {
 -					preflightResult?.(true);
 -					return;
 +					const agentResults = await Promise.allSettled(inputAgentTasks);
@@ -163,64 +214,113 @@ index b210c5a..780705e 100644
 +							: { kind: "handled-without-agent", success };
 +					preflightResult?.(outcome.kind !== "handled-without-agent" || outcome.success);
 +					return outcome;
-@@ -1179 +1200 @@ export class AgentSession {
+ 				}
+ 				if (inputResult.action === "transform") {
+ 					currentText = inputResult.text;
+@@ -1176,7 +1197,7 @@ export class AgentSession {
+ 					await this._queueSteer(expandedText, currentImages);
+ 				}
+ 				preflightResult?.(true);
 -				return;
 +				return { kind: "queued" };
-@@ -1268 +1289 @@ export class AgentSession {
+ 			}
+ 
+ 			// Flush any pending bash messages before the new prompt
+@@ -1265,40 +1286,53 @@ export class AgentSession {
+ 		}
+ 
+ 		if (!messages) {
 -			return;
 +			return { kind: "handled-without-agent", success: true };
-@@ -1272,0 +1294 @@ export class AgentSession {
+ 		}
+ 
+ 		preflightResult?.(true);
+ 		await this._runAgentPrompt(messages);
 +		return { kind: "agent-run" };
-@@ -1276 +1298,3 @@ export class AgentSession {
+ 	}
+ 
+ 	/**
 -	 * Try to execute an extension command. Returns true if command was found and executed.
 +	 * Try to execute an extension command. Returns undefined when no command matches.
 +	 * Agent work scheduled through the extension API is owned to completion before
 +	 * the prompt outcome is returned, so callers never infer this from timing.
-@@ -1278 +1302 @@ export class AgentSession {
+ 	 */
 -	private async _tryExecuteExtensionCommand(text: string): Promise<boolean> {
 +	private async _tryExecuteExtensionCommand(text: string): Promise<PromptOutcome | undefined> {
-@@ -1285 +1309 @@ export class AgentSession {
+ 		// Parse command name and args
+ 		const spaceIndex = text.indexOf(" ");
+ 		const commandName = spaceIndex === -1 ? text.slice(1) : text.slice(1, spaceIndex);
+ 		const args = spaceIndex === -1 ? "" : text.slice(spaceIndex + 1);
+ 
+ 		const command = this._extensionRunner.getCommand(commandName);
 -		if (!command) return false;
 +		if (!command) return undefined;
-@@ -1289,0 +1314,4 @@ export class AgentSession {
+ 
+ 		// Get command context from extension runner (includes session control methods)
+ 		const ctx = this._extensionRunner.createCommandContext();
+ 
 +		const previousTasks = this._extensionPromptAgentTasks;
 +		const commandAgentTasks = new Set<Promise<void>>();
 +		this._extensionPromptAgentTasks = commandAgentTasks;
 +		let success = true;
-@@ -1292 +1319,0 @@ export class AgentSession {
+ 		try {
+ 			await command.handler(args, ctx);
 -			return true;
-@@ -1293,0 +1321 @@ export class AgentSession {
+ 		} catch (err) {
 +			success = false;
-@@ -1300 +1328,2 @@ export class AgentSession {
+ 			// Emit error via extension runner
+ 			this._extensionRunner.emitError({
+ 				extensionPath: `command:${commandName}`,
+ 				event: "command",
+ 				error: err instanceof Error ? err.message : String(err),
+ 			});
 -			return true;
 +		} finally {
 +			this._extensionPromptAgentTasks = previousTasks;
-@@ -1301,0 +1331,5 @@ export class AgentSession {
+ 		}
 +
 +		const agentResults = await Promise.allSettled(commandAgentTasks);
 +		if (agentResults.some((result) => result.status === "rejected")) success = false;
 +		if (commandAgentTasks.size > 0 && success) return { kind: "agent-run" };
 +		return { kind: "handled-without-agent", success };
-@@ -2365 +2399 @@ export class AgentSession {
+ 	}
+ 
+ 	/**
+@@ -2362,10 +2396,13 @@ export class AgentSession {
+ 			return [...extensionCommands, ...templates, ...skills];
+ 		};
+ 
 -		runner.bindCore(
 +			runner.bindCore(
-@@ -2368 +2402,4 @@ export class AgentSession {
+ 			{
+ 				sendMessage: (message, options) => {
 -					this.sendCustomMessage(message, options).catch((err) => {
 +					const promptAgentTasks = this._extensionPromptAgentTasks;
 +					const task = this.sendCustomMessage(message, options);
 +					if (options?.triggerTurn) promptAgentTasks?.add(task);
 +					task.catch((err) => {
-@@ -2377 +2414,4 @@ export class AgentSession {
+ 						runner.emitError({
+ 							extensionPath: "<runtime>",
+ 							event: "send_message",
+@@ -2374,7 +2411,10 @@ export class AgentSession {
+ 					});
+ 				},
+ 				sendUserMessage: (content, options) => {
 -					this.sendUserMessage(content, options).catch((err) => {
 +					const promptAgentTasks = this._extensionPromptAgentTasks;
 +					const task = this.sendUserMessage(content, options);
 +					promptAgentTasks?.add(task);
 +					task.catch((err) => {
+ 						runner.emitError({
+ 							extensionPath: "<runtime>",
+ 							event: "send_user_message",
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7f679a4..d34a704 100644
+index 7ea12cbebdd914aa6ef480272162036c35ded2d9..21853d1d64af3f8aa9ea7348b59299b8c2307edd 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
-@@ -3 +3,6 @@
+@@ -1,11 +1,17 @@
+ /** Immutable, credential-blind models.json snapshot. */
+ 
 -import { readFile } from "node:fs/promises";
 +import { constants as fsConstants } from "node:fs";
 +import { randomUUID } from "node:crypto";
@@ -228,9 +328,19 @@ index 7f679a4..d34a704 100644
 +import { basename, dirname, join } from "node:path";
 +import { applyEdits, modify } from "jsonc-parser";
 +import lockfile from "proper-lockfile";
-@@ -8,0 +14 @@ import { normalizePath } from "../utils/paths.ts";
+ import { type Static, Type } from "typebox";
+ import { Compile } from "typebox/compile";
+ import type { TLocalizedValidationError } from "typebox/error";
+ import { stripJsonComments } from "../utils/json.ts";
+ import { normalizePath } from "../utils/paths.ts";
 +import { getConfigValueEnvVarNames, isCommandConfigValue } from "./resolve-config-value.ts";
-@@ -215,0 +222,390 @@ type ModelsJson = Static<typeof ModelsConfigSchema>;
+ 
+ const PercentileCutoffsSchema = Type.Object({
+ 	p50: Type.Optional(Type.Number()),
+@@ -214,6 +220,396 @@ export type ModelsJsonModelOverride = Static<typeof ModelOverrideSchema>;
+ export type ModelsJsonProvider = Static<typeof ProviderConfigSchema>;
+ type ModelsJson = Static<typeof ModelsConfigSchema>;
+ 
 +export interface ModelConfigReadOptions {
 +	readonly signal?: AbortSignal;
 +}
@@ -621,7 +731,13 @@ index 7f679a4..d34a704 100644
 +	}
 +}
 +
-@@ -245,14 +641 @@ export class ModelConfig {
+ function formatValidationPath(error: TLocalizedValidationError): string {
+ 	if (error.keyword === "required") {
+ 		const requiredProperties = (error.params as { requiredProperties?: string[] }).requiredProperties;
+@@ -243,27 +639,14 @@ export class ModelConfig {
+ 		this.error = error;
+ 	}
+ 
 -	static async load(modelsJsonPath: string | undefined): Promise<ModelConfig> {
 -		if (!modelsJsonPath) return new ModelConfig(new Map());
 -		const path = normalizePath(modelsJsonPath);
@@ -637,16 +753,33 @@ index 7f679a4..d34a704 100644
 -		}
 -
 +	private static fromContent(content: string, sourceLabel?: string): ModelConfig {
-@@ -265 +648 @@ export class ModelConfig {
+ 		let parsed: unknown;
+ 		try {
+ 			parsed = JSON.parse(stripJsonComments(content));
+ 		} catch (error) {
+ 			return new ModelConfig(
+ 				new Map(),
 -				`Failed to parse models.json: ${error instanceof Error ? error.message : error}\n\nFile: ${path}`,
 +				`Failed to parse models.json: ${error instanceof Error ? error.message : error}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
-@@ -275 +658,4 @@ export class ModelConfig {
+ 			);
+ 		}
+ 
+@@ -273,7 +656,10 @@ export class ModelConfig {
+ 					.Errors(parsed)
+ 					.map((error) => `  - ${formatValidationPath(error)}: ${error.message}`)
+ 					.join("\n") || "Unknown schema error";
 -			return new ModelConfig(new Map(), `Invalid models.json schema:\n${errors}\n\nFile: ${path}`);
 +			return new ModelConfig(
 +				new Map(),
 +				`Invalid models.json schema:\n${errors}${sourceLabel ? `\n\nFile: ${sourceLabel}` : ""}`,
 +			);
-@@ -285,0 +672,35 @@ export class ModelConfig {
+ 		}
+ 
+ 		const config = parsed as ModelsJson;
+@@ -284,15 +670,237 @@ export class ModelConfig {
+ 		return new ModelConfig(providers);
+ 	}
+ 
 +	static async load(
 +		modelsJsonPath: string | undefined,
 +		options: { reader?: ModelConfigReader; signal?: AbortSignal } = {},
@@ -682,7 +815,10 @@ index 7f679a4..d34a704 100644
 +		return ModelConfig.fromContent(content, normalizedPath);
 +	}
 +
-@@ -289,0 +711,18 @@ export class ModelConfig {
+ 	getProvider(providerId: string): ModelsJsonProvider | undefined {
+ 		return this.providers.get(providerId);
+ 	}
+ 
 +	withProviderEdit(
 +		providerId: string,
 +		provider: ModelsJsonProvider,
@@ -701,7 +837,10 @@ index 7f679a4..d34a704 100644
 +		return new ModelConfig(providers, this.error);
 +	}
 +
-@@ -293,0 +733,15 @@ export class ModelConfig {
+ 	getProviderIds(): readonly string[] {
+ 		return [...this.providers.keys()];
+ 	}
+ 
 +	getProviderHeaderMetadata(providerId: string): ModelConfigProviderHeaderMetadata | undefined {
 +		const provider = this.providers.get(providerId);
 +		if (!provider) return undefined;
@@ -717,7 +856,9 @@ index 7f679a4..d34a704 100644
 +		};
 +	}
 +
-@@ -296,0 +751,154 @@ export class ModelConfig {
+ 	getError(): string | undefined {
+ 		return this.error;
+ 	}
 +
 +	static validateContent(content: string): ModelConfig {
 +		return ModelConfig.fromContent(content);
@@ -872,13 +1013,23 @@ index 7f679a4..d34a704 100644
 +		if (temporaryPath) await rm(temporaryPath, { force: true });
 +		await release().catch(() => undefined);
 +	}
+ }
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b..b6b38b2 100644
+index 6f4071b60b3bf6ab58d6174d38b090f62dc6dbce..b6b38b258384ed03e99b5199a4954ba820eb530f 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
-@@ -19,0 +20 @@ import {
+@@ -17,6 +17,7 @@ import {
+ 	type DeferredCancelOptions,
+ 	type DeferredFetchOptions,
+ 	type DeferredHandle,
 +	InMemoryCredentialStore,
-@@ -43 +44,13 @@ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
+ 	lazyStream,
+ 	type Model,
+ 	type Models,
+@@ -40,7 +41,19 @@ import * as builtinProviderCatalog from "@earendil-works/pi-ai/providers/all";
+ import { getAgentDir } from "../config.ts";
+ import { operationSignal, raceWithAbortSignal } from "../utils/abort.ts";
+ import { AuthStorage as DefaultAuthStorage } from "./auth-storage.ts";
 -import { ModelConfig } from "./model-config.ts";
 +import {
 +	ModelConfig,
@@ -893,7 +1044,13 @@ index 6f4071b..b6b38b2 100644
 +	type ModelsJsonProvider,
 +	mutateModelConfigProviderFile,
 +} from "./model-config.ts";
-@@ -57,0 +71,29 @@ import { RuntimeCredentials } from "./runtime-credentials.ts";
+ import { FileModelsStore, InMemoryCodingAgentModelsStore } from "./models-store.ts";
+ import {
+ 	type AuthStatus,
+@@ -55,6 +68,35 @@ import {
+ import { withRemoteCatalog } from "./remote-catalog-provider.ts";
+ import { RuntimeCredentials } from "./runtime-credentials.ts";
+ 
 +export type { ModelConfigReader, ModelConfigReadOptions } from "./model-config.ts";
 +
 +/**
@@ -923,10 +1080,22 @@ index 6f4071b..b6b38b2 100644
 +	});
 +}
 +
-@@ -70,0 +113,2 @@ export interface CreateModelRuntimeOptions {
+ interface ModelRuntimeSnapshot {
+ 	all: readonly Model<Api>[];
+ 	available: readonly Model<Api>[];
+@@ -68,6 +110,8 @@ export interface CreateModelRuntimeOptions {
+ 	credentials?: CredentialStore;
+ 	authPath?: string;
+ 	modelsPath?: string | null;
 +	/** Read models.json content through a caller-owned safety boundary. Requires modelsPath: null. */
 +	modelsConfigReader?: ModelConfigReader;
-@@ -92,0 +137,150 @@ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntim
+ 	modelsStore?: ModelsStore;
+ 	modelsStorePath?: string;
+ 	/** Allow create() to refresh model catalogs over the network. Defaults to false. */
+@@ -90,6 +134,156 @@ export interface ModelRuntimeAuthOverrides extends AuthOperationOptions {
+ 
+ export type CredentialSynchronizationOperation = "login" | "logout" | "setRuntimeApiKey" | "removeRuntimeApiKey";
+ 
 +export interface ModelConfigProviderDiscoveryOptions {
 +	readonly signal?: AbortSignal;
 +}
@@ -1077,23 +1246,50 @@ index 6f4071b..b6b38b2 100644
 +	}
 +}
 +
-@@ -138,0 +333 @@ export class ModelRuntime implements Models {
+ /** Credentials changed successfully, but the local model/auth snapshot could not be synchronized. */
+ export class CredentialSynchronizationError extends Error {
+ 	readonly providerId: string;
+@@ -136,6 +330,7 @@ export class ModelRuntime implements Models {
+ 	private readonly extensionProviders = new Map<string, ProviderConfigInput>();
+ 	private readonly compositionErrors = new Map<string, string>();
+ 	private readonly modelsPath: string | undefined;
 +	private readonly modelsConfigReader: ModelConfigReader | undefined;
-@@ -157,0 +353 @@ export class ModelRuntime implements Models {
+ 	private readonly modelNetworkEnabled: boolean;
+ 	private config: ModelConfig;
+ 	private snapshot: ModelRuntimeSnapshot = {
+@@ -155,6 +350,7 @@ export class ModelRuntime implements Models {
+ 		credentials: RuntimeCredentials,
+ 		config: ModelConfig,
+ 		modelsPath: string | undefined,
 +		modelsConfigReader: ModelConfigReader | undefined,
-@@ -164,0 +361 @@ export class ModelRuntime implements Models {
+ 		modelsStore: ModelsStore,
+ 		providers: readonly Provider[],
+ 		modelNetworkEnabled: boolean,
+@@ -162,6 +358,7 @@ export class ModelRuntime implements Models {
+ 		this.credentials = credentials;
+ 		this.config = config;
+ 		this.modelsPath = modelsPath;
 +		this.modelsConfigReader = modelsConfigReader;
-@@ -172,0 +370,3 @@ export class ModelRuntime implements Models {
+ 		this.modelNetworkEnabled = modelNetworkEnabled;
+ 		this.defaultBuiltins = new Map(providers.map((provider) => [provider.id, provider]));
+ 		for (const [providerId, provider] of this.defaultBuiltins) this.builtins.set(providerId, provider);
+@@ -170,15 +367,23 @@ export class ModelRuntime implements Models {
+ 	}
+ 
+ 	static async create(options: CreateModelRuntimeOptions = {}): Promise<ModelRuntime> {
 +		if (options.modelsConfigReader && options.modelsPath !== null) {
 +			throw new Error("modelsConfigReader requires modelsPath: null");
 +		}
-@@ -176 +376,4 @@ export class ModelRuntime implements Models {
+ 		const credentials = new RuntimeCredentials(options.credentials ?? DefaultAuthStorage.create(options.authPath));
+ 		const modelsPath =
+ 			options.modelsPath === null ? undefined : (options.modelsPath ?? join(getAgentDir(), "models.json"));
 -		const config = await ModelConfig.load(modelsPath);
 +		const config = await ModelConfig.load(modelsPath, {
 +			reader: options.modelsConfigReader,
 +			signal: options.signal,
 +		});
-@@ -179,3 +382,5 @@ export class ModelRuntime implements Models {
+ 		const modelsStore =
+ 			options.modelsStore ??
 -			(modelsPath
 -				? new FileModelsStore(options.modelsStorePath ?? join(dirname(modelsPath), "models-store.json"))
 -				: new InMemoryCodingAgentModelsStore());
@@ -1102,9 +1298,21 @@ index 6f4071b..b6b38b2 100644
 +				: modelsPath
 +					? new FileModelsStore(join(dirname(modelsPath), "models-store.json"))
 +					: new InMemoryCodingAgentModelsStore());
-@@ -193,0 +399 @@ export class ModelRuntime implements Models {
+ 		const builtinModelDataGeneratedAt = builtinProviderCatalog.getBuiltinModelDataGeneratedAt();
+ 		const providers = builtinProviderCatalog
+ 			.builtinProviders()
+@@ -191,6 +396,7 @@ export class ModelRuntime implements Models {
+ 			credentials,
+ 			config,
+ 			modelsPath,
 +			options.modelsConfigReader,
-@@ -572,0 +779,101 @@ export class ModelRuntime implements Models {
+ 			modelsStore,
+ 			providers,
+ 			process.env.PI_OFFLINE === undefined,
+@@ -570,6 +776,107 @@ export class ModelRuntime implements Models {
+ 		return check ? { configured: true, source: "environment", label: check.source } : { configured: false };
+ 	}
+ 
 +	/** Provider IDs accepted from the current official models.json configuration snapshot. */
 +	getModelConfigProviderIds(): readonly string[] {
 +		return this.config.getProviderIds();
@@ -1206,20 +1414,36 @@ index 6f4071b..b6b38b2 100644
 +		}
 +	}
 +
-@@ -691 +998,4 @@ export class ModelRuntime implements Models {
+ 	private async prepareRequest<TOptions extends ProviderRequestOptions & ModelsRequestTransforms>(
+ 		model: Model<Api>,
+ 		options: TOptions | undefined,
+@@ -688,7 +995,10 @@ export class ModelRuntime implements Models {
+ 	}
+ 
+ 	async refresh(options: ModelsRefreshOptions = {}): Promise<ModelsRefreshResult> {
 -		this.config = await ModelConfig.load(this.modelsPath);
 +		this.config = await ModelConfig.load(this.modelsPath, {
 +			reader: this.modelsConfigReader,
 +			signal: options.signal,
 +		});
+ 		this.configureRadiusProviders();
+ 		if (options.providers) {
+ 			for (const providerId of new Set(options.providers)) this.recomposeProvider(providerId);
 diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
-index e221d2e..d275855 100644
+index e221d2e7e3fa9fdfc55b1ba6d0cc8b68167e5214..d27585503c656991a9257ed1bcd279ddda8851c2 100644
 --- a/packages/coding-agent/src/core/package-manager.ts
 +++ b/packages/coding-agent/src/core/package-manager.ts
-@@ -2 +2 @@ import type { ChildProcess, ChildProcessByStdio } from "node:child_process";
+@@ -1,5 +1,5 @@
+ import type { ChildProcess, ChildProcessByStdio } from "node:child_process";
 -import { createHash } from "node:crypto";
 +import { createHash, createHmac, randomBytes } from "node:crypto";
-@@ -101,0 +102,41 @@ export interface ConfiguredPackage {
+ import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+ import { homedir } from "node:os";
+ 
+@@ -99,6 +99,47 @@ export interface ConfiguredPackage {
+ 	installedPath?: string;
+ }
+ 
 +export type PublicPackageKind = "npm" | "git" | "local" | "unsupported";
 +
 +export interface PublicConfiguredPackage {
@@ -1261,7 +1485,13 @@ index e221d2e..d275855 100644
 +	enabled: boolean;
 +}
 +
-@@ -109,0 +151,9 @@ export interface PackageManager {
+ export interface PackageManager {
+ 	resolve(onMissing?: (source: string) => Promise<MissingSourceAction>): Promise<ResolvedPaths>;
+ 	install(source: string, options?: { local?: boolean }): Promise<void>;
+@@ -107,6 +148,15 @@ export interface PackageManager {
+ 	removeAndPersist(source: string, options?: { local?: boolean }): Promise<boolean>;
+ 	update(source?: string): Promise<void>;
+ 	listConfiguredPackages(): ConfiguredPackage[];
 +	listPublicConfiguredPackages(): PublicConfiguredPackage[];
 +	checkPublicPackageUpdates(): Promise<string[]>;
 +	listPublicConfiguredPackageResources(intent: PublicPackageIntent): Promise<PublicConfiguredPackageResource[]>;
@@ -1271,13 +1501,31 @@ index e221d2e..d275855 100644
 +	setPublicPackageResourceEnabled(selection: PublicPackageResourceSelection, enabled: boolean): Promise<boolean>;
 +	listConfiguredPackageResources(intent: PackageResourceIntent): Promise<ConfiguredPackageResource[]>;
 +	setPackageResourceEnabled(selection: PackageResourceSelection, enabled: boolean): Promise<boolean>;
-@@ -143,0 +194,2 @@ type ParsedSource = NpmSource | GitSource | LocalSource;
+ 	resolveExtensionSources(
+ 		sources: string[],
+ 		options?: { local?: boolean; temporary?: boolean },
+@@ -141,6 +191,8 @@ type LocalSource = {
+ 
+ type ParsedSource = NpmSource | GitSource | LocalSource;
+ 
 +const PUBLIC_PACKAGE_ID_KEY = randomBytes(32);
 +
-@@ -192 +244 @@ interface PackageFilter {
+ type InstalledSourceScope = Exclude<SourceScope, "temporary">;
+ 
+ interface ConfiguredUpdateSource {
+@@ -189,7 +241,7 @@ interface PackageFilter {
+ 	themes?: string[];
+ }
+ 
 -type ResourceType = "extensions" | "skills" | "prompts" | "themes";
 +type ResourceType = PackageResourceType;
-@@ -977,0 +1030,181 @@ export class DefaultPackageManager implements PackageManager {
+ 
+ const RESOURCE_TYPES: ResourceType[] = ["extensions", "skills", "prompts", "themes"];
+ 
+@@ -975,6 +1027,187 @@ export class DefaultPackageManager implements PackageManager {
+ 		return configuredPackages;
+ 	}
+ 
 +	listPublicConfiguredPackages(): PublicConfiguredPackage[] {
 +		return this.listRawConfiguredPackages().map((pkg) => {
 +			const projection = this.projectPublicPackageSource(pkg.source);
@@ -1459,7 +1707,13 @@ index e221d2e..d275855 100644
 +		return true;
 +	}
 +
-@@ -1345,0 +1579,64 @@ export class DefaultPackageManager implements PackageManager {
+ 	async install(source: string, options?: { local?: boolean }): Promise<void> {
+ 		const parsed = this.parseSource(source);
+ 		const scope: SourceScope = options?.local ? "project" : "user";
+@@ -1343,6 +1576,70 @@ export class DefaultPackageManager implements PackageManager {
+ 		return typeof pkg === "string" ? pkg : pkg.source;
+ 	}
+ 
 +	private listRawConfiguredPackages(): Array<{
 +		source: string;
 +		scope: "user" | "project";
@@ -1524,11 +1778,17 @@ index e221d2e..d275855 100644
 +		return matches[0];
 +	}
 +
+ 	private getSourceMatchKeyForInput(source: string): string {
+ 		const parsed = this.parseSource(source);
+ 		if (parsed.type === "npm") {
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 1be7fcd..04b8931 100644
+index 1be7fcdb50e214db1afbd96bc147b6f3847d4f16..04b8931c2a248cf81a9c6301734832fb4bcae0a3 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
-@@ -447,2 +447,10 @@ export function composeModelProvider(
+@@ -444,8 +444,16 @@ export function composeModelProvider(
+ 			return override ? applyModelOverride(model, override) : model;
+ 		});
+ 	};
 -	// Validate eagerly so registration/reload reports structural errors immediately.
 -	getModels();
 +	// Validate eagerly so registration/reload reports structural and execution
@@ -1541,11 +1801,17 @@ index 1be7fcd..04b8931 100644
 +			throw new Error(`No API provider registered for api: ${model.api}`);
 +		}
 +	}
+ 	const apiKey = composeApiKeyAuth(providerId, base, config, extension);
+ 	const oauth = composeOAuthAuth(providerId, base, config, extension);
+ 	if (!apiKey && !oauth) throw new Error(`Provider ${providerId}: no authentication method configured.`);
 diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
-index c24d0a2..1d1ba2a 100644
+index c24d0a2104771064015e149ebd5894f83dc102bd..1d1ba2afb56f820acde64a289065c89cb373b127 100644
 --- a/packages/coding-agent/src/core/resource-loader.ts
 +++ b/packages/coding-agent/src/core/resource-loader.ts
-@@ -20 +20,6 @@ import { findGitPaths } from "./footer-data-provider.ts";
+@@ -17,7 +17,12 @@ import {
+ } from "./extensions/loader.ts";
+ import type { Extension, ExtensionRuntime, InlineExtension, LoadExtensionsResult } from "./extensions/types.ts";
+ import { findGitPaths } from "./footer-data-provider.ts";
 -import { DefaultPackageManager, type PathMetadata, type ResolvedResource } from "./package-manager.ts";
 +import {
 +	DefaultPackageManager,
@@ -1553,39 +1819,76 @@ index c24d0a2..1d1ba2a 100644
 +	type PathMetadata,
 +	type ResolvedResource,
 +} from "./package-manager.ts";
-@@ -36,0 +42 @@ export interface ResourceLoaderReloadOptions {
+ import type { PromptTemplate } from "./prompt-templates.ts";
+ import { loadPromptTemplates } from "./prompt-templates.ts";
+ import { SettingsManager } from "./settings-manager.ts";
+@@ -34,6 +39,7 @@ export interface ResourceExtensionPaths {
+ 
+ export interface ResourceLoaderReloadOptions {
+ 	resolveProjectTrust?: (input: { extensionsResult: LoadExtensionsResult }) => Promise<boolean>;
 +	onMissingPackage?: (source: string) => Promise<MissingSourceAction>;
-@@ -379 +385,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+ }
+ 
+ export interface ResourceLoader {
+@@ -376,177 +382,189 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 		}
+ 	}
+ 
 -	async loadProjectTrustExtensions(): Promise<LoadExtensionsResult> {
 +	async loadProjectTrustExtensions(
 +		onMissingPackage?: (source: string) => Promise<MissingSourceAction>,
 +	): Promise<LoadExtensionsResult> {
-@@ -384 +392 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 		// Force untrusted project settings for the bootstrap pass. This keeps project-local
+ 		// extensions/packages out while still loading user/global and temporary CLI extensions.
+ 		this.settingsManager.setProjectTrusted(false);
+ 		await this.settingsManager.reload();
 -		return this.loadCurrentExtensionSet({ includeInlineFactories: true });
 +		return this.loadCurrentExtensionSet({ includeInlineFactories: true }, onMissingPackage);
-@@ -388,0 +397,6 @@ export class DefaultResourceLoader implements ResourceLoader {
-+		let preTrustExtensions: LoadExtensionsResult | undefined;
-+		let completed = false;
-+		try {
-+			if (this.loaded) {
-+				clearExtensionCache();
-+			}
-@@ -390,3 +404,5 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 	}
+ 
+ 	async reload(options?: ResourceLoaderReloadOptions): Promise<void> {
+ 		resetTimings("extensions");
+-
 -		if (this.loaded) {
 -			clearExtensionCache();
 -		}
-+			if (options?.resolveProjectTrust) {
-+				preTrustExtensions = await this.loadProjectTrustExtensions(options.onMissingPackage);
-+				const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
-+				this.settingsManager.setProjectTrusted(projectTrusted);
-+			}
-@@ -394,6 +410,23 @@ export class DefaultResourceLoader implements ResourceLoader {
--		let preTrustExtensions: LoadExtensionsResult | undefined;
+-
+ 		let preTrustExtensions: LoadExtensionsResult | undefined;
 -		if (options?.resolveProjectTrust) {
 -			preTrustExtensions = await this.loadProjectTrustExtensions();
 -			const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
 -			this.settingsManager.setProjectTrusted(projectTrusted);
 -		}
+-
+-		// reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
+-		await this.settingsManager.reload();
+-		const resolvedPaths = await this.packageManager.resolve();
+-		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+-			temporary: true,
+-		});
+-		// Kept on the instance so post-reload passes (extendResources) can still resolve package metadata.
+-		this.resourceMetadataByPath = new Map();
+-		const metadataByPath = this.resourceMetadataByPath;
++		let completed = false;
++		try {
++			if (this.loaded) {
++				clearExtensionCache();
++			}
+ 
+-		this.extensionSkillSourceInfos = new Map();
+-		this.extensionPromptSourceInfos = new Map();
+-		this.extensionThemeSourceInfos = new Map();
++			if (options?.resolveProjectTrust) {
++				preTrustExtensions = await this.loadProjectTrustExtensions(options.onMissingPackage);
++				const projectTrusted = await options.resolveProjectTrust({ extensionsResult: preTrustExtensions });
++				this.settingsManager.setProjectTrusted(projectTrusted);
++			}
+ 
+-		// Helper to extract enabled paths and store metadata
+-		const getEnabledResources = (resources: ResolvedResource[]): ResolvedResource[] => {
+-			for (const r of resources) {
+-				if (!metadataByPath.has(r.path)) {
+-					metadataByPath.set(r.path, r.metadata);
 +			// reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
 +			await this.settingsManager.reload();
 +			const resolvedPaths = await this.packageManager.resolve(options?.onMissingPackage);
@@ -1606,57 +1909,39 @@ index c24d0a2..1d1ba2a 100644
 +					if (!metadataByPath.has(r.path)) {
 +						metadataByPath.set(r.path, r.metadata);
 +					}
-+				}
-+				return resources.filter((r) => r.enabled);
-+			};
-@@ -401,9 +434,6 @@ export class DefaultResourceLoader implements ResourceLoader {
--		// reload() preserves SettingsManager.projectTrusted and reloads settings for that trust state.
--		await this.settingsManager.reload();
--		const resolvedPaths = await this.packageManager.resolve();
--		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
--			temporary: true,
--		});
--		// Kept on the instance so post-reload passes (extendResources) can still resolve package metadata.
--		this.resourceMetadataByPath = new Map();
--		const metadataByPath = this.resourceMetadataByPath;
-+			const getEnabledPaths = (resources: ResolvedResource[]): string[] =>
-+				getEnabledResources(resources).map((r) => r.path);
-+			const enabledExtensions = getEnabledPaths(resolvedPaths.extensions);
-+			const enabledSkillResources = getEnabledResources(resolvedPaths.skills);
-+			const enabledPrompts = getEnabledPaths(resolvedPaths.prompts);
-+			const enabledThemes = getEnabledPaths(resolvedPaths.themes);
-@@ -411,3 +441 @@ export class DefaultResourceLoader implements ResourceLoader {
--		this.extensionSkillSourceInfos = new Map();
--		this.extensionPromptSourceInfos = new Map();
--		this.extensionThemeSourceInfos = new Map();
-+			const enabledSkills = enabledSkillResources.map((resource) => this.mapSkillPath(resource, metadataByPath));
-@@ -415,3 +443,2 @@ export class DefaultResourceLoader implements ResourceLoader {
--		// Helper to extract enabled paths and store metadata
--		const getEnabledResources = (resources: ResolvedResource[]): ResolvedResource[] => {
--			for (const r of resources) {
-+			// Add CLI paths metadata
-+			for (const r of cliExtensionPaths.extensions) {
-@@ -419 +446 @@ export class DefaultResourceLoader implements ResourceLoader {
--					metadataByPath.set(r.path, r.metadata);
-+					metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
-@@ -422,21 +449,4 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 				}
+-			}
 -			return resources.filter((r) => r.enabled);
 -		};
--
++				return resources.filter((r) => r.enabled);
++			};
+ 
 -		const getEnabledPaths = (resources: ResolvedResource[]): string[] =>
 -			getEnabledResources(resources).map((r) => r.path);
 -		const enabledExtensions = getEnabledPaths(resolvedPaths.extensions);
 -		const enabledSkillResources = getEnabledResources(resolvedPaths.skills);
 -		const enabledPrompts = getEnabledPaths(resolvedPaths.prompts);
 -		const enabledThemes = getEnabledPaths(resolvedPaths.themes);
--
++			const getEnabledPaths = (resources: ResolvedResource[]): string[] =>
++				getEnabledResources(resources).map((r) => r.path);
++			const enabledExtensions = getEnabledPaths(resolvedPaths.extensions);
++			const enabledSkillResources = getEnabledResources(resolvedPaths.skills);
++			const enabledPrompts = getEnabledPaths(resolvedPaths.prompts);
++			const enabledThemes = getEnabledPaths(resolvedPaths.themes);
+ 
 -		const enabledSkills = enabledSkillResources.map((resource) => this.mapSkillPath(resource, metadataByPath));
--
++			const enabledSkills = enabledSkillResources.map((resource) => this.mapSkillPath(resource, metadataByPath));
+ 
 -		// Add CLI paths metadata
 -		for (const r of cliExtensionPaths.extensions) {
 -			if (!metadataByPath.has(r.path)) {
 -				metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
--			}
++			// Add CLI paths metadata
++			for (const r of cliExtensionPaths.extensions) {
++				if (!metadataByPath.has(r.path)) {
++					metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
++				}
+ 			}
 -		}
 -		for (const r of cliExtensionPaths.skills) {
 -			if (!metadataByPath.has(r.path)) {
@@ -1665,7 +1950,7 @@ index c24d0a2..1d1ba2a 100644
 +				if (!metadataByPath.has(r.path)) {
 +					metadataByPath.set(r.path, { source: "cli", scope: "temporary", origin: "top-level" });
 +				}
-@@ -444,10 +453,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 			}
 -		}
 -
 -		const cliEnabledExtensions = getEnabledPaths(cliExtensionPaths.extensions);
@@ -1676,7 +1961,7 @@ index c24d0a2..1d1ba2a 100644
 -		const extensionPaths = this.noExtensions
 -			? cliEnabledExtensions
 -			: this.mergePaths(cliEnabledExtensions, enabledExtensions);
-@@ -455,6 +455,33 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
 -		const extensionsResult = await this.loadFinalExtensionSet(extensionPaths, preTrustExtensions);
 -		for (const p of this.additionalExtensionPaths) {
 -			if (isLocalPath(p)) {
@@ -1716,7 +2001,8 @@ index c24d0a2..1d1ba2a 100644
 +					if (!existsSync(resolved) && !this.skillDiagnostics.some((d) => d.path === resolved)) {
 +						this.skillDiagnostics.push({ type: "error", message: "Skill path does not exist", path: resolved });
 +					}
-@@ -463,7 +489,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 				}
+ 			}
 -		}
 -		this.extensionsResult = this.extensionsOverride ? this.extensionsOverride(extensionsResult) : extensionsResult;
 -		this.applyExtensionSourceInfo(this.extensionsResult.extensions, metadataByPath);
@@ -1724,7 +2010,7 @@ index c24d0a2..1d1ba2a 100644
 -		const skillPaths = this.noSkills
 -			? this.mergePaths(cliEnabledSkills, this.additionalSkillPaths)
 -			: this.mergePaths([...cliEnabledSkills, ...enabledSkills], this.additionalSkillPaths);
-@@ -471,7 +491,16 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
 -		this.lastSkillPaths = skillPaths;
 -		this.updateSkillsFromPaths(skillPaths, metadataByPath);
 -		for (const p of this.additionalSkillPaths) {
@@ -1748,16 +2034,17 @@ index c24d0a2..1d1ba2a 100644
 +							path: resolved,
 +						});
 +					}
-@@ -480 +508,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 				}
+ 			}
 -		}
-@@ -482,3 +510,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
 -		const promptPaths = this.noPromptTemplates
 -			? this.mergePaths(cliEnabledPrompts, this.additionalPromptTemplatePaths)
 -			: this.mergePaths([...cliEnabledPrompts, ...enabledPrompts], this.additionalPromptTemplatePaths);
 +			const themePaths = this.noThemes
 +				? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
 +				: this.mergePaths([...cliEnabledThemes, ...enabledThemes], this.additionalThemePaths);
-@@ -486,4 +514,3 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 
 -		this.lastPromptPaths = promptPaths;
 -		this.updatePromptsFromPaths(promptPaths, metadataByPath);
 -		for (const p of this.additionalPromptTemplatePaths) {
@@ -1765,7 +2052,7 @@ index c24d0a2..1d1ba2a 100644
 +			this.lastThemePaths = themePaths;
 +			this.updateThemesFromPaths(themePaths, metadataByPath);
 +			for (const p of this.additionalThemePaths) {
-@@ -491,6 +518,2 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 				const resolved = this.resolveResourcePath(p);
 -				if (!existsSync(resolved) && !this.promptDiagnostics.some((d) => d.path === resolved)) {
 -					this.promptDiagnostics.push({
 -						type: "error",
@@ -1774,13 +2061,14 @@ index c24d0a2..1d1ba2a 100644
 -					});
 +				if (!existsSync(resolved) && !this.themeDiagnostics.some((d) => d.path === resolved)) {
 +					this.themeDiagnostics.push({ type: "error", message: "Theme path does not exist", path: resolved });
-@@ -499 +521,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 				}
+ 			}
 -		}
-@@ -501,10 +523,36 @@ export class DefaultResourceLoader implements ResourceLoader {
+-
 -		const themePaths = this.noThemes
 -			? this.mergePaths(cliEnabledThemes, this.additionalThemePaths)
 -			: this.mergePaths([...cliEnabledThemes, ...enabledThemes], this.additionalThemePaths);
--
+ 
 -		this.lastThemePaths = themePaths;
 -		this.updateThemesFromPaths(themePaths, metadataByPath);
 -		for (const p of this.additionalThemePaths) {
@@ -1823,7 +2111,8 @@ index c24d0a2..1d1ba2a 100644
 +		} finally {
 +			if (!completed) {
 +				preTrustExtensions?.runtime.invalidate("Resource reload failed");
-@@ -513,33 +560,0 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 			}
+ 		}
 -
 -		const agentsFiles = {
 -			agentsFiles: this.noContextFiles
@@ -1857,7 +2146,8 @@ index c24d0a2..1d1ba2a 100644
 -			.filter((source) => existsSync(source))
 -			.map((source) => resolvePath(source));
 -		this.loaded = true;
-@@ -548,2 +563,5 @@ export class DefaultResourceLoader implements ResourceLoader {
+ 	}
+ 
 -	private async loadCurrentExtensionSet(options: { includeInlineFactories: boolean }): Promise<LoadExtensionsResult> {
 -		const resolvedPaths = await this.packageManager.resolve();
 +	private async loadCurrentExtensionSet(
@@ -1865,13 +2155,25 @@ index c24d0a2..1d1ba2a 100644
 +		onMissingPackage?: (source: string) => Promise<MissingSourceAction>,
 +	): Promise<LoadExtensionsResult> {
 +		const resolvedPaths = await this.packageManager.resolve(onMissingPackage);
+ 		const cliExtensionPaths = await this.packageManager.resolveExtensionSources(this.additionalExtensionPaths, {
+ 			temporary: true,
+ 		});
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 3d05c2a..7c691a5 100644
+index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2d23f97b9 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
-@@ -22,0 +23 @@ export {
+@@ -20,6 +20,7 @@ export {
+ 	type ModelCycleResult,
+ 	type ParsedSkillBlock,
+ 	type PromptOptions,
 +	type PromptOutcome,
-@@ -170,0 +172,14 @@ export { convertToLlm } from "./core/messages.ts";
+ 	parseSkillBlock,
+ 	type SessionStats,
+ } from "./core/agent-session.ts";
+@@ -168,6 +169,20 @@ export {
+ // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
+ export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.ts";
+ export { convertToLlm } from "./core/messages.ts";
 +export type {
 +	ModelConfigCredentialReferenceMutation,
 +	ModelConfigHeaderReferenceMetadata,
@@ -1886,23 +2188,38 @@ index 3d05c2a..7c691a5 100644
 +	ModelsJsonModelOverride,
 +	ModelsJsonProvider,
 +} from "./core/model-config.ts";
-@@ -183,0 +199,5 @@ export {
+ export { ModelRegistry } from "./core/model-registry.ts";
+ export {
+ 	type ModelScopeDiagnostic,
+@@ -181,14 +196,25 @@ export {
+ 	type CreateModelRuntimeOptions,
+ 	CredentialSynchronizationError,
+ 	type CredentialSynchronizationOperation,
 +	type ModelConfigProviderDiscoveryOptions,
 +	ModelConfigProviderDiscoveryError,
 +	type ModelConfigProviderDiscoveryErrorCode,
 +	type ModelConfigReader,
 +	type ModelConfigReadOptions,
-@@ -185,0 +206 @@ export {
+ 	ModelRuntime,
+ 	type ModelRuntimeAuthOverrides,
 +	mutateModelConfigProvider,
-@@ -191,0 +213,5 @@ export type {
+ } from "./core/model-runtime.ts";
+ export type {
+ 	PackageManager,
+ 	PathMetadata,
+ 	ProgressCallback,
+ 	ProgressEvent,
 +	PublicConfiguredPackage,
 +	PublicConfiguredPackageResource,
 +	PublicPackageIntent,
 +	PublicPackageKind,
 +	PublicPackageResourceSelection,
+ 	ResolvedPaths,
+ 	ResolvedResource,
+ } from "./core/package-manager.ts";
 diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
 new file mode 100644
-index 0000000..c4504b3
+index 0000000000000000000000000000000000000000..c4504b3c23df08764eff36a9b74e5c712dd897e3
 --- /dev/null
 +++ b/packages/coding-agent/test/model-config-mutation.test.ts
 @@ -0,0 +1,756 @@
@@ -2664,7 +2981,7 @@ index 0000000..c4504b3
 +});
 diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 new file mode 100644
-index 0000000..39e4d88
+index 0000000000000000000000000000000000000000..39e4d88ebaeb5467ffe077ca2574cae739657d69
 --- /dev/null
 +++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
 @@ -0,0 +1,497 @@
@@ -3167,7 +3484,7 @@ index 0000000..39e4d88
 +});
 diff --git a/packages/coding-agent/test/model-session-prompt-outcome.test.ts b/packages/coding-agent/test/model-session-prompt-outcome.test.ts
 new file mode 100644
-index 0000000..9e0c364
+index 0000000000000000000000000000000000000000..9e0c36498a6cd43eaafb4fc9c77331c71a778387
 --- /dev/null
 +++ b/packages/coding-agent/test/model-session-prompt-outcome.test.ts
 @@ -0,0 +1,224 @@
@@ -3396,12 +3713,13 @@ index 0000000..9e0c364
 +	});
 +});
 diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
-index 31c89fa..5ae403f 100644
+index 31c89faffce59deeac1e93ea482466e29609b31d..5ae403fb40dd2f10c62d047b2c885d2def90a545 100644
 --- a/packages/coding-agent/test/package-manager.test.ts
 +++ b/packages/coding-agent/test/package-manager.test.ts
-@@ -297,0 +298,173 @@ Content`,
-+	});
-+
+@@ -297,6 +297,179 @@ Content`,
+ 		});
+ 	});
+ 
 +	describe("package resource lifecycle", () => {
 +		it("projects opaque package identities without exposing private sources", async () => {
 +			const privateLocalPath = join(tempDir, "private", "local-package");
@@ -3573,15 +3891,29 @@ index 31c89fa..5ae403f 100644
 +			).rejects.toThrow();
 +			expect(settingsManager.getGlobalSettings().packages).toEqual(before);
 +		});
++	});
++
+ 	describe("auto-discovered skill metadata", () => {
+ 		it("should use the agent dir as baseDir for user .pi/agent skills", async () => {
+ 			const skillPath = join(agentDir, "skills", "user-pi", "SKILL.md");
 diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
-index 145eca3..066e627 100644
+index 145eca3b2510dd24d49cb85134ed0cee37fb0999..066e627d07dfd70ee133f751e124c3fbe59cc4aa 100644
 --- a/packages/coding-agent/test/resource-loader.test.ts
 +++ b/packages/coding-agent/test/resource-loader.test.ts
-@@ -6,0 +7 @@ import { AuthStorage } from "../src/core/auth-storage.ts";
+@@ -4,7 +4,9 @@ import { join } from "node:path";
+ import { pathToFileURL } from "node:url";
+ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+ import { AuthStorage } from "../src/core/auth-storage.ts";
 +import { createAgentSessionServices } from "../src/core/agent-session-services.ts";
-@@ -7,0 +9 @@ import { ExtensionRunner } from "../src/core/extensions/runner.ts";
+ import { ExtensionRunner } from "../src/core/extensions/runner.ts";
 +import { ModelRuntime } from "../src/core/model-runtime.ts";
-@@ -237,0 +240,97 @@ export default function(pi) {
+ import { DefaultResourceLoader, loadProjectContextFiles } from "../src/core/resource-loader.ts";
+ import { SessionManager } from "../src/core/session-manager.ts";
+ import { SettingsManager } from "../src/core/settings-manager.ts";
+@@ -235,6 +237,103 @@ export default function(pi) {
+ 			expect(globalState[loadCountKey]).toBe(1);
+ 		});
+ 
 +		it("should apply the missing-package policy to both trust passes without installing", async () => {
 +			vi.stubEnv("PI_OFFLINE", "");
 +			const missingPackage = "npm:@example/missing-extension@1.0.0";
@@ -3679,3 +4011,6 @@ index 145eca3..066e627 100644
 +			).toThrow("Session service creation failed");
 +		});
 +
+ 		it("should keep both extensions loaded when command names collide", async () => {
+ 			const userExtDir = join(agentDir, "extensions");
+ 			const projectExtDir = join(cwd, ".pi", "extensions");

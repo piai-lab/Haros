@@ -37,8 +37,8 @@ describe("Pi runtime physical isolation", () => {
     const productAgentDir = path.join(root, "product-agent");
     mkdirSync(cwd, { recursive: true });
 
-    expect(stock.VERSION).toBe("0.84.1");
-    expect(product.VERSION).toBe("0.84.1");
+    expect(stock.VERSION).toBe("0.84.2");
+    expect(product.VERSION).toBe("0.84.2");
     expect(stock.CONFIG_DIR_NAME).toBe(".pi");
     expect(product.CONFIG_DIR_NAME).toBe(".omnimind");
     expect(stock.SessionManager).not.toBe(product.SessionManager);

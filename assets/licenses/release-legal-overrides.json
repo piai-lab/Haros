@@ -17,30 +17,30 @@
     },
     {
       "packageIds": [
-        "@earendil-works/pi-agent-core@0.84.1",
-        "@earendil-works/pi-ai@0.84.1",
-        "@earendil-works/pi-client@0.84.1",
-        "@earendil-works/pi-coding-agent@0.84.1",
-        "@earendil-works/pi-protocol@0.84.1",
-        "@earendil-works/pi-telemetry@0.84.1",
-        "@earendil-works/pi-tui@0.84.1"
+        "@earendil-works/pi-agent-core@0.84.2",
+        "@earendil-works/pi-ai@0.84.2",
+        "@earendil-works/pi-client@0.84.2",
+        "@earendil-works/pi-coding-agent@0.84.2",
+        "@earendil-works/pi-protocol@0.84.2",
+        "@earendil-works/pi-telemetry@0.84.2",
+        "@earendil-works/pi-tui@0.84.2"
       ],
       "license": "MIT",
       "kind": "exact-upstream",
       "assetPath": "assets/licenses/pi-MIT.txt",
       "sha256": "0457f5bcec3b3b211605dfb5d1a49042fd638f3686a410fe099c24a25af13c48",
       "manifestSha256ByPackageId": {
-        "@earendil-works/pi-agent-core@0.84.1": "457a24a34000da4837274246688c0b64b32f6600830010d14be2b2e6fcfc258e",
-        "@earendil-works/pi-ai@0.84.1": "c69acef56f6b9510ef0b3db2d35fb1f22c240bd0b11fd588c3e860042ed98b04",
-        "@earendil-works/pi-client@0.84.1": "df5b12e20a7e2f4b86c4478236d4ee0a6cce1fa57e1e2a2f41ad53b7d5f32b7b",
-        "@earendil-works/pi-coding-agent@0.84.1": "f9aaa275eac3292508bd9a1325d705a41c2d24c9a34da2b690e400d5a761a985",
-        "@earendil-works/pi-protocol@0.84.1": "d5935385d0c9f8092a626ce633341bfb44357f361fac4d44389e1a8d41d9ba67",
-        "@earendil-works/pi-telemetry@0.84.1": "9e22a0330d738a63daa050304eb7dd911febd22d8fba4b6adceac559fc00fa14",
-        "@earendil-works/pi-tui@0.84.1": "f7f8f42f7cfa8c53c4f00bdc12c14cb035aa62d9fb73555661ce08b68da61290"
+        "@earendil-works/pi-agent-core@0.84.2": "ac5e13d2a2aa0d6c78394417b59e18cb0fe92f482d2b075b39bf165312db6c06",
+        "@earendil-works/pi-ai@0.84.2": "9575365ce609dca8e1fd4fa72471d55006e1e0f81310c0808f93abc4bc14bbf9",
+        "@earendil-works/pi-client@0.84.2": "beeb2fb7e577c83b372e7549362a58db8e24b03d50342cea7123cbc7407e9813",
+        "@earendil-works/pi-coding-agent@0.84.2": "820f4adc6d61f2cefbc29ce17e9dfd9aa482248d54be5d0dfa2a868ca000c7b0",
+        "@earendil-works/pi-protocol@0.84.2": "194ed3896da44fabe3cffef3b2abf28a41a4cc7c2e52375c630836274f54a6d7",
+        "@earendil-works/pi-telemetry@0.84.2": "ba3e45a83f94a06a0f311b9412f99e73c760d3eb0adee5909e4f2a356f109958",
+        "@earendil-works/pi-tui@0.84.2": "2c19fb7e3d1e83a461b6f020b2ffc118b435dcd78a07af8c8def72864cd09e6e"
       },
-      "revision": "53fa77ccd8a279eb87e92294ef3687b03ff80112",
+      "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
       "sourcePath": "LICENSE",
-      "sourceUrl": "https://github.com/earendil-works/pi/blob/53fa77ccd8a279eb87e92294ef3687b03ff80112/LICENSE",
+      "sourceUrl": "https://github.com/earendil-works/pi/blob/914cf1472e715297caa30db4b9535d534a9eb718/LICENSE",
       "upstreamLegalTextAbsent": false
     },
     {

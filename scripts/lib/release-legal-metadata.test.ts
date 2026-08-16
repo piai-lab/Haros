@@ -41,7 +41,7 @@ function fixture(
   ];
   let targetManifest = "";
   for (const name of piNames) {
-    const manifest = `${JSON.stringify({ name, version: "0.84.1", license: "MIT" }, null, 2)}\n`;
+    const manifest = `${JSON.stringify({ name, version: "0.84.2", license: "MIT" }, null, 2)}\n`;
     const packageDirectory = join(root, "node_modules", ...name.split("/"));
     write(join(packageDirectory, "package.json"), manifest);
     if (name === piNames[0]) targetManifest = manifest;
@@ -59,13 +59,13 @@ function fixture(
             ? []
             : [
                 {
-                  packageIds: [`${piNames[0]}@0.84.1`],
+                  packageIds: [`${piNames[0]}@0.84.2`],
                   license: "MIT",
                   kind: "exact-upstream",
                   assetPath: "assets/licenses/exact.txt",
                   sha256: options.assetDigest ?? sha256(legalText),
                   manifestSha256ByPackageId: {
-                    [`${piNames[0]}@0.84.1`]: options.manifestDigest ?? sha256(targetManifest),
+                    [`${piNames[0]}@0.84.2`]: options.manifestDigest ?? sha256(targetManifest),
                   },
                   revision,
                   sourcePath: "LICENSE",
@@ -98,7 +98,7 @@ describe("release legal metadata", () => {
       join(root, "apps/server/package.json"),
       JSON.stringify({
         dependencies: {
-          "@earendil-works/pi-agent-core": "0.84.1",
+          "@earendil-works/pi-agent-core": "0.84.2",
           "@omnimind/contracts": "workspace:*",
           effect: "1.0.0",
         },
@@ -177,7 +177,7 @@ describe("release legal metadata", () => {
       `${JSON.stringify(
         {
           name: "@earendil-works/pi-tui",
-          version: "0.84.1",
+          version: "0.84.2",
           license: "MIT",
           peerDependencies: { "peer-only": "1.0.0" },
         },

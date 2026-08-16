@@ -402,3 +402,49 @@ Focused source proof is now owned by `apps/server/src/usageHistory/indexerProces
 `apps/server/src/usageHistory/UsageHistory.test.ts`,
 `apps/server/src/providerUsage/index.test.ts`, `apps/web/src/hooks/useAccountCapacity.test.tsx`
 and `apps/desktop/src/backendSupervisionPolicy.test.ts`.
+
+## 13. Pi stable `v0.84.2` intake and candidate
+
+The accepted source set is Pi stable tag `v0.84.2`, exact revision
+`914cf1472e715297caa30db4b9535d534a9eb718`, and the exact `0.84.2` Pi-family npm
+artifacts. The official coding-agent and AI package metadata points back to the same Git revision;
+the coding-agent integrity is
+`sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==`
+and the AI integrity is
+`sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==`.
+The exact family closure remains MIT-licensed and is locked at `0.84.2`. Post-tag revision
+`086c32e74530564922d011ade23ff582c9d63116` was reviewed only for discovery and is excluded
+from production bytes.
+
+The relevant upstream delta preserves the existing public AgentSession lifecycle while fixing
+programmatic prompt-template expansion, `sendMessage(..., { triggerTurn: false })`, custom system
+prompt/current-working-directory handling, Provider retry and several Provider-specific stream/tool
+edges. OmniMind adopts those stable fixes directly. The new SQLite Session backend, Agent Harness,
+TUI surface and any new package or product control plane remain inactive and outside this slice.
+
+The three existing OmniMind differences were semantically rebased without widening their owners:
+
+- the generated product runtime keeps its isolated package identity/config directory and the bounded
+  ModelConfig reader, mutation, package-resource and typed prompt-outcome seams;
+- stock Pi keeps only the exact compiled typed prompt-outcome seam required by the shared adapter;
+- Pi AI keeps only the request-scoped safe OAuth callback page renderer for OpenAI Codex,
+  Anthropic, OpenRouter and Radius. The only OAuth select prompts consumed automatically are OpenAI
+  Codex and Radius, and both still explicitly mark the first choice as default/recommended.
+
+The strongest counterevidence was patch mechanics, not a product API conflict: the former
+zero-context source patch could silently land across a shifted upstream lockfile, while the compiled
+OAuth patch conflicted after upstream output moved. Both were replaced by contextual, source-matched
+semantic rebases. The product archive is reproducible at SHA-256
+`a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514`; the source,
+stock and OAuth patch SHA-256 values are respectively
+`c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f`,
+`7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77` and
+`ade36ccb1486d21504fd32cccdddc06810a179958fb4b0b32343a2708f6f4240`.
+Clean-source generation, upstream lifecycle tests, frozen dependency installation, adapter/isolation,
+OAuth, document and legal checks form the source/package candidate. Packaged-App and real-provider
+evidence must still come from the exact pushed candidate before this section can claim product-level
+proof.
+
+Rollback remains a single hard pin to `v0.84.1` if lifecycle, isolation, real-provider or packaged
+evidence exposes a material regression. No compatibility dual track is authorized or needed, and no
+maintainer choice remains open for this exact source set.

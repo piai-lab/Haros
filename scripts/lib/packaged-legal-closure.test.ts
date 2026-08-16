@@ -32,10 +32,10 @@ async function archiveFixture(extraPackage = false): Promise<string> {
   for (const name of extraPackage ? [...packages, "undisclosed"] : packages) {
     write(
       join(source, "node_modules", ...name.split("/"), "package.json"),
-      JSON.stringify({ name, version: name === "undisclosed" ? "1.0.0" : "0.84.1" }),
+      JSON.stringify({ name, version: name === "undisclosed" ? "1.0.0" : "0.84.2" }),
     );
   }
-  const components = packages.map((name) => ({ id: `${name}@0.84.1` }));
+  const components = packages.map((name) => ({ id: `${name}@0.84.2` }));
   write(
     join(source, "apps/server/dist/client/licenses/release-dependencies.json"),
     JSON.stringify({
