@@ -275,6 +275,10 @@ S1 当前只准入 **R8 branch/draft/worktree continuity**：settled local Threa
 
 R8 的 source gate 由 branch sync 纯判定、late-create 与 durable-before-physical cleanup 次序、project+chat draft/blob 隔离、Home/Studio caller 分流以及实际中英文 notice 回归共同证明；browser falsifier另外覆盖 settled mismatch 的长 branch 布局、attempted `thread.turn.start` reject 零 delete/detach/remove 且保留 draft/blob、promoted delete happens-before remove、remove reject 不显示完成，并复跑既有 Composer focus/IME/geometry/tail 与 partial-DOM persistence。上述证据只形成 source candidate；package/install/live 仍明确未准入。
 
+R8 的首个 source candidate 已在 exact pushed `feba68da0ac017ac1922cae61b2e9639518cc3c6` 进入 `main`：branch selector、Home draft mapping、detached notice 与 pre-turn durable-before-physical cleanup 已落入既有 Web owners。该 SHA 不把 local-draft promotion 的 ACK ambiguity、后续 metadata failure cleanup 或 Work locally remove failure 的完成呈现改写为闭合。
+
+R8 当前 follow-up 只闭合上述 promotion/cleanup ownership：`thread.create` 只在 exact command receipt/replay 证明后取得 delete authority，pre-existing Thread 与 transport-unknown 均 fail closed；exact-owned draft 的后续 metadata failure以同一 delete command bounded replay，确认 durable absence 后才允许物理 remove。Work locally 只在 exact detach receipt 后进入物理 remove，remove failure保留 setup/error、不得开始 turn；空 Thread 的 active setup 不切回 centered landing。不得新增 server ledger、字符串 not-found 判定、第二 draft owner或 package/install/live。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

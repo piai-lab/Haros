@@ -62,6 +62,7 @@ import {
   sanitizeVoiceErrorMessage,
   buildExpiredTerminalContextToastCopy,
   cleanupPreparedWorktreeBeforeTurn,
+  dispatchExactCommandWithOneReplay,
   shouldAutoDeleteTerminalThreadOnLastClose,
   shouldConsumePendingCustomBinaryConfirmation,
   shouldEnableComposerPastedTextCollapse,
@@ -2113,6 +2114,25 @@ describe("cleanupPreparedWorktreeBeforeTurn", () => {
     expect(test.calls).toEqual(["detach", "remove", "local"]);
   });
 
+  it("removes an unowned worktree without mutating any Thread", async () => {
+    const calls: string[] = [];
+    await cleanupPreparedWorktreeBeforeTurn({
+      turnStartAttempted: false,
+      ownership: "unowned",
+      deletePromotedThread: async () => {
+        calls.push("delete");
+      },
+      detachExistingThread: async () => {
+        calls.push("detach");
+      },
+      removeWorktree: async () => {
+        calls.push("remove");
+      },
+      commitLocalDetach: () => calls.push("local"),
+    });
+    expect(calls).toEqual(["remove", "local"]);
+  });
+
   it("never removes when durable ownership cleanup is rejected", async () => {
     const calls: string[] = [];
     await expect(
@@ -2172,6 +2192,26 @@ describe("cleanupPreparedWorktreeBeforeTurn", () => {
       }),
     ).resolves.toBe("projection-owned");
     expect(calls).toEqual([]);
+  });
+});
+
+describe("dispatchExactCommandWithOneReplay", () => {
+  it("replays an ACK failure once without changing caller-owned identity", async () => {
+    const command = { commandId: "same-command" };
+    const seen: unknown[] = [];
+    const dispatch = vi.fn(async () => {
+      seen.push(command);
+      if (seen.length === 1) throw new Error("ack lost");
+    });
+
+    await dispatchExactCommandWithOneReplay(dispatch);
+    expect(seen).toEqual([command, command]);
+  });
+
+  it("remains bounded when both attempts fail", async () => {
+    const dispatch = vi.fn().mockRejectedValue(new Error("still unavailable"));
+    await expect(dispatchExactCommandWithOneReplay(dispatch)).rejects.toThrow("still unavailable");
+    expect(dispatch).toHaveBeenCalledTimes(2);
   });
 });
 

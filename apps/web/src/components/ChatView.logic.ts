@@ -1143,7 +1143,7 @@ export async function runWorktreeCreationFlow<Result extends { worktree: { path:
 
 export async function cleanupPreparedWorktreeBeforeTurn(input: {
   turnStartAttempted: boolean;
-  ownership: "promoted" | "existing";
+  ownership: "promoted" | "existing" | "unowned";
   deletePromotedThread: () => Promise<void>;
   detachExistingThread: () => Promise<void>;
   removeWorktree: () => Promise<void>;
@@ -1154,12 +1154,23 @@ export async function cleanupPreparedWorktreeBeforeTurn(input: {
   }
   if (input.ownership === "promoted") {
     await input.deletePromotedThread();
-  } else {
+  } else if (input.ownership === "existing") {
     await input.detachExistingThread();
   }
   await input.removeWorktree();
   input.commitLocalDetach();
   return "cleaned";
+}
+
+/** Replays one command with the same caller-owned identity after an ACK failure. */
+export async function dispatchExactCommandWithOneReplay(
+  dispatch: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await dispatch();
+  } catch {
+    await dispatch();
+  }
 }
 
 // Once the turn RPC has resolved the server provably owns the turn; the

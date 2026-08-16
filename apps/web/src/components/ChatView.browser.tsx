@@ -1514,12 +1514,19 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
 function installDeterministicSendNativeApi(options?: {
   rejectTurnStart?: Error;
   rejectRemoveWorktree?: Error;
+  rejectProjectMeta?: Error;
+  rejectThreadCreateAttempts?: number;
+  rejectThreadDeleteAttempts?: number;
+  rejectThreadMetaAttempts?: number;
 }): () => void {
   const previousNativeApi = window.nativeApi;
   const wsNativeApi = readNativeApi();
   if (!wsNativeApi) {
     throw new Error("Expected browser native API fixture.");
   }
+  let remainingThreadCreateRejects = options?.rejectThreadCreateAttempts ?? 0;
+  let remainingThreadDeleteRejects = options?.rejectThreadDeleteAttempts ?? 0;
+  let remainingThreadMetaRejects = options?.rejectThreadMetaAttempts ?? 0;
 
   Object.defineProperty(window, "nativeApi", {
     configurable: true,
@@ -1577,6 +1584,21 @@ function installDeterministicSendNativeApi(options?: {
           });
           if (options?.rejectTurnStart && command.type === "thread.turn.start") {
             throw options.rejectTurnStart;
+          }
+          if (options?.rejectProjectMeta && command.type === "project.meta.update") {
+            throw options.rejectProjectMeta;
+          }
+          if (command.type === "thread.create" && remainingThreadCreateRejects > 0) {
+            remainingThreadCreateRejects -= 1;
+            throw new Error("thread.create acknowledgement unavailable");
+          }
+          if (command.type === "thread.delete" && remainingThreadDeleteRejects > 0) {
+            remainingThreadDeleteRejects -= 1;
+            throw new Error("thread.delete acknowledgement unavailable");
+          }
+          if (command.type === "thread.meta.update" && remainingThreadMetaRejects > 0) {
+            remainingThreadMetaRejects -= 1;
+            throw new Error("thread.meta.update acknowledgement unavailable");
           }
           return { sequence: fixture.snapshot.snapshotSequence + 1 };
         },
@@ -8690,7 +8712,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
+      const newThreadButton = page.getByLabelText("Create a new task in Project");
       await expect.element(newThreadButton).toBeInTheDocument();
       await newThreadButton.click();
 
@@ -8985,7 +9007,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
+      const newThreadButton = page.getByTestId("new-thread-button");
       await expect.element(newThreadButton).toBeInTheDocument();
       await newThreadButton.click();
 
@@ -10626,6 +10648,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Route should have changed to a new draft thread UUID.",
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
+      useComposerDraftStore.getState().setModelSelection(newThreadId, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
 
       await vi.waitFor(
         () => {
@@ -10663,7 +10689,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
 
       const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false), {
+        timeout: 8_000,
+        interval: 16,
+      });
       await sendButton.click();
 
       await vi.waitFor(
@@ -10779,6 +10808,323 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(document.body.textContent).toContain("keep ambiguous send intact");
       expect(document.querySelector('img[src="blob:attempted-reject-image"]')).not.toBeNull();
     } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("deletes an exactly-owned promoted thread when later project metadata fails", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectProjectMeta: new Error("project metadata failed"),
+      rejectThreadCreateAttempts: 1,
+      rejectThreadDeleteAttempts: 1,
+    });
+    const newThreadId = "home-chat-promotion-cleanup" as ThreadId;
+    seedLocalDraftThread({ threadId: newThreadId, projectId: HOME_PROJECT_ID });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: withHomeChatProject(createDraftOnlySnapshot()),
+      initialEntry: `/${newThreadId}`,
+      configureFixture: (nextFixture) => {
+        nextFixture.welcome = {
+          ...nextFixture.welcome,
+          homeDir: "/Users/tester",
+          chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
+        };
+      },
+    });
+
+    try {
+      useComposerDraftStore.getState().setModelSelection(newThreadId, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      useComposerDraftStore.getState().setPrompt(newThreadId, "clean failed promotion");
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(
+        () => expect(composerEditor.textContent).toContain("clean failed promotion"),
+        { timeout: 8_000, interval: 16 },
+      );
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')!
+        .requestSubmit();
+
+      await vi.waitFor(
+        () => {
+          expect(document.body.textContent).toContain("project metadata failed");
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      const commands = wsRequests.flatMap((candidate) => {
+        const command = readDispatchedCommand(candidate);
+        return command ? [command] : [];
+      });
+      const creates = commands.filter((command) => command.type === "thread.create");
+      const deletes = commands.filter((command) => command.type === "thread.delete");
+      expect(creates).toHaveLength(2);
+      expect(new Set(creates.map((command) => command.commandId)).size).toBe(1);
+      expect(deletes).toHaveLength(2);
+      expect(new Set(deletes.map((command) => command.commandId)).size).toBe(1);
+      const projectMetaIndex = wsRequests.findIndex(
+        (candidate) => readDispatchedCommand(candidate)?.type === "project.meta.update",
+      );
+      const deleteSettledIndex = wsRequests.findLastIndex(
+        (candidate) => readDispatchedCommand(candidate)?.type === "thread.delete",
+      );
+      expect(projectMetaIndex).toBeGreaterThanOrEqual(0);
+      expect(deleteSettledIndex).toBeGreaterThan(projectMetaIndex);
+      expect(commands.some((command) => command.type === "thread.meta.update")).toBe(false);
+      expect(commands.some((command) => command.type === "thread.turn.start")).toBe(false);
+      expect(wsRequests.some((candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree)).toBe(
+        false,
+      );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("retains an ambiguously promoted worktree when exact create replay is still unknown", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectThreadCreateAttempts: 2,
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-promotion-unknown" as MessageId,
+        targetText: "promotion unknown",
+      }),
+    });
+
+    try {
+      await page.getByTestId("new-thread-button").click();
+      const newThreadPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path),
+        "Route should have changed to a new draft thread UUID.",
+      );
+      const newThreadId = newThreadPath.slice(1) as ThreadId;
+      useComposerDraftStore.getState().setModelSelection(newThreadId, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      const envPickerTrigger = await waitForEnvironmentModeButton("Local");
+      envPickerTrigger.click();
+      await page.getByText("New worktree").click();
+      useComposerDraftStore.getState().setPrompt(newThreadId, "retain unknown workspace");
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(
+        () => expect(composerEditor.textContent).toContain("retain unknown workspace"),
+        { timeout: 8_000, interval: 16 },
+      );
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')!
+        .requestSubmit();
+
+      await vi.waitFor(
+        () =>
+          expect(document.body.textContent).toContain("thread.create acknowledgement unavailable"),
+        { timeout: 8_000, interval: 16 },
+      );
+      const commands = wsRequests.flatMap((candidate) => {
+        const command = readDispatchedCommand(candidate);
+        return command ? [command] : [];
+      });
+      const creates = commands.filter((command) => command.type === "thread.create");
+      expect(creates).toHaveLength(2);
+      expect(new Set(creates.map((command) => command.commandId)).size).toBe(1);
+      expect(commands.some((command) => command.type === "thread.delete")).toBe(false);
+      expect(commands.some((command) => command.type === "thread.meta.update")).toBe(false);
+      expect(commands.some((command) => command.type === "thread.turn.start")).toBe(false);
+      expect(wsRequests.some((candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree)).toBe(
+        false,
+      );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("settles Work locally detach before awaited removal and turn start", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectThreadMetaAttempts: 1,
+    });
+    let releaseAttachmentUpload = () => {};
+    attachmentUploadBarrier = new Promise<void>((resolve) => {
+      releaseAttachmentUpload = resolve;
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-work-locally-order" as MessageId,
+        targetText: "work locally order",
+      }),
+    });
+
+    try {
+      await page.getByTestId("new-thread-button").click();
+      const newThreadPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path),
+        "Route should have changed to a new draft thread UUID.",
+      );
+      const newThreadId = newThreadPath.slice(1) as ThreadId;
+      useComposerDraftStore.getState().setModelSelection(newThreadId, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      const envPickerTrigger = await waitForEnvironmentModeButton("Local");
+      envPickerTrigger.click();
+      await page.getByText("New worktree").click();
+      useComposerDraftStore.getState().setPrompt(newThreadId, "switch and send locally");
+      useComposerDraftStore.getState().addImage(
+        newThreadId,
+        createComposerImage({
+          id: "work-locally-order-image",
+          previewUrl: "blob:work-locally-order-image",
+        }),
+      );
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')!
+        .requestSubmit();
+
+      await expect
+        .poll(
+          () =>
+            document.querySelector<HTMLElement>('[data-timeline-row-kind="worktree-setup"]')
+              ?.textContent,
+        )
+        .toContain("Linking thread workspace");
+      await page.getByRole("button", { name: "Work locally" }).click();
+      releaseAttachmentUpload();
+      attachmentUploadBarrier = null;
+
+      await vi.waitFor(
+        () => {
+          expect(
+            wsRequests.some(
+              (candidate) => readDispatchedCommand(candidate)?.type === "thread.turn.start",
+            ),
+          ).toBe(true);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      const detachRequests = wsRequests.filter(
+        (candidate) => readDispatchedCommand(candidate)?.type === "thread.meta.update",
+      );
+      expect(detachRequests).toHaveLength(2);
+      expect(
+        new Set(detachRequests.map((candidate) => readDispatchedCommand(candidate)?.commandId))
+          .size,
+      ).toBe(1);
+      const detachSettledIndex = wsRequests.findLastIndex(
+        (candidate) => readDispatchedCommand(candidate)?.type === "thread.meta.update",
+      );
+      const removeIndex = wsRequests.findIndex(
+        (candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree,
+      );
+      const turnIndex = wsRequests.findIndex(
+        (candidate) => readDispatchedCommand(candidate)?.type === "thread.turn.start",
+      );
+      expect(removeIndex).toBeGreaterThan(detachSettledIndex);
+      expect(turnIndex).toBeGreaterThan(removeIndex);
+    } finally {
+      releaseAttachmentUpload();
+      attachmentUploadBarrier = null;
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("keeps Work locally failed and never starts a turn when physical removal stays rejected", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectRemoveWorktree: new Error("work locally removal failed"),
+    });
+    let releaseAttachmentUpload = () => {};
+    attachmentUploadBarrier = new Promise<void>((resolve) => {
+      releaseAttachmentUpload = resolve;
+    });
+    const populatedSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-work-locally-remove-fail" as MessageId,
+      targetText: "work locally remove fail",
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: {
+        ...populatedSnapshot,
+        threads: populatedSnapshot.threads.map((thread) => ({
+          ...thread,
+          envMode: "worktree" as const,
+          branch: "main",
+          worktreePath: null,
+          messages: [],
+          activities: [],
+          latestTurn: null,
+        })),
+      },
+    });
+
+    try {
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, "do not send after remove failure");
+      useComposerDraftStore.getState().addImage(
+        THREAD_ID,
+        createComposerImage({
+          id: "work-locally-remove-fail-image",
+          previewUrl: "blob:work-locally-remove-fail-image",
+        }),
+      );
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(
+        () => expect(composerEditor.textContent).toContain("do not send after remove failure"),
+        { timeout: 8_000, interval: 16 },
+      );
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')!
+        .requestSubmit();
+
+      await expect
+        .poll(
+          () =>
+            document.querySelector<HTMLElement>('[data-timeline-row-kind="worktree-setup"]')
+              ?.textContent,
+        )
+        .toContain("Linking thread workspace");
+      await page.getByRole("button", { name: "Work locally" }).click();
+      releaseAttachmentUpload();
+      attachmentUploadBarrier = null;
+
+      await vi.waitFor(
+        () => {
+          expect(document.body.textContent).toContain("work locally removal failed");
+          expect(
+            document.querySelector<HTMLElement>('[data-timeline-row-kind="worktree-setup"]')
+              ?.textContent ?? "",
+          ).toContain("failed");
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      expect(
+        wsRequests.filter((candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree),
+      ).toHaveLength(2);
+      expect(
+        wsRequests.some(
+          (candidate) => readDispatchedCommand(candidate)?.type === "thread.turn.start",
+        ),
+      ).toBe(false);
+      const detachIndex = wsRequests.findIndex(
+        (candidate) => readDispatchedCommand(candidate)?.type === "thread.meta.update",
+      );
+      const firstRemoveIndex = wsRequests.findIndex(
+        (candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree,
+      );
+      expect(firstRemoveIndex).toBeGreaterThan(detachIndex);
+    } finally {
+      releaseAttachmentUpload();
+      attachmentUploadBarrier = null;
       await mounted.cleanup();
       restoreNativeApi();
     }

@@ -342,7 +342,12 @@ import {
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
 import { readNativeApi } from "~/nativeApi";
-import { promoteThreadCreate } from "~/lib/threadCreatePromotion";
+import {
+  deletePromotedThreadForCleanup,
+  promoteThreadCreate,
+  resolveLocalDraftPromotion,
+  type LocalDraftPromotionOwnership,
+} from "~/lib/threadCreatePromotion";
 import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
 import {
   getCustomBinaryPathForProvider,
@@ -571,6 +576,7 @@ import {
   DismissedProviderHealthBannersSchema,
   collectUserMessageBlobPreviewUrls,
   deriveComposerSendState,
+  dispatchExactCommandWithOneReplay,
   failWorktreeSetupSnapshot,
   filterSidechatTranscriptMessages,
   hasLiveTurnTakenOver,
@@ -3661,6 +3667,7 @@ export default function ChatView({
   // while project-scoped drafts reuse the same centered layout with folder-specific copy.
   const isCenteredEmptyLanding =
     timelineEntries.length === 0 &&
+    activeWorktreeSetup === null &&
     !activeThread?.parentThreadId &&
     !isEditorRail &&
     threadDetailHydration === "ready";
@@ -6160,6 +6167,12 @@ export default function ChatView({
     worktreePath: resolvedThreadWorktreePath,
   });
 
+  const localDispatchStartedAtRef = useRef<string | null>(localDispatch?.startedAt ?? null);
+  // The setup resolution can reject in the browser task immediately after the
+  // row commits, before passive effects run. Keep this mirror current during
+  // render so failure admission never observes the previous dispatch.
+  localDispatchStartedAtRef.current = localDispatch?.startedAt ?? null;
+
   const beginLocalDispatch = useCallback(
     (options?: WorktreeSetupDispatchOptions) => {
       setLocalDispatch((current) => {
@@ -6176,8 +6189,18 @@ export default function ChatView({
   );
 
   const failLocalDispatchWorktreeSetup = useCallback(() => {
+    const failedDispatchStartedAt = localDispatchStartedAtRef.current;
+    if (failedDispatchStartedAt !== null) {
+      // Thread errors are external-store updates and can render before this
+      // component state update. Mark the failure synchronously so the takeover
+      // effect cannot clear the still-active setup row in that interim render.
+      failedWorktreeSetupDispatchStartedAtRef.current = failedDispatchStartedAt;
+    }
     setLocalDispatch((current) => {
       if (!current?.worktreeSetup) {
+        if (failedWorktreeSetupDispatchStartedAtRef.current === failedDispatchStartedAt) {
+          failedWorktreeSetupDispatchStartedAtRef.current = null;
+        }
         return current;
       }
       const failed = failWorktreeSetupSnapshot(current.worktreeSetup);
@@ -6217,10 +6240,6 @@ export default function ChatView({
   // already-acknowledged dispatch is left alone — the send spinner has
   // released, and the awaiting-turn bridge legitimately keeps `localDispatch`
   // alive until takeover or its own fail-open bound.
-  const localDispatchStartedAtRef = useRef<string | null>(null);
-  useEffect(() => {
-    localDispatchStartedAtRef.current = localDispatch?.startedAt ?? null;
-  }, [localDispatch]);
   const serverAcknowledgedLocalDispatchRef = useRef(serverAcknowledgedLocalDispatch);
   useEffect(() => {
     serverAcknowledgedLocalDispatchRef.current = serverAcknowledgedLocalDispatch;
@@ -6287,10 +6306,16 @@ export default function ChatView({
     if (!turnTakenOver) {
       return;
     }
+    const setupFailurePending =
+      localDispatch?.startedAt !== undefined &&
+      failedWorktreeSetupDispatchStartedAtRef.current === localDispatch.startedAt;
     // A failed worktree setup would otherwise reset in the same commit that
     // painted the error (thread errors count as takeover), so hold the
     // row briefly before letting it animate out.
-    if (localDispatchWorktreeSetupFailed) {
+    if (localDispatchWorktreeSetupFailed || setupFailurePending) {
+      if (!localDispatchWorktreeSetupFailed) {
+        return;
+      }
       const failedDispatchStartedAt = localDispatch?.startedAt;
       if (!failedDispatchStartedAt) {
         return;
@@ -8720,9 +8745,12 @@ export default function ChatView({
       // draft reset so rapid follow-up typing lands in the composer.
       scheduleComposerFocus();
     }
-    let createdServerThreadForLocalDraft = false;
+    let localDraftPromotionOwnership: LocalDraftPromotionOwnership = "absent";
+    let hasDurableServerThreadForLocalDraft = false;
     let createdWorktreeForSendPath: string | null = null;
     let switchedToLocalCheckout = false;
+    let workLocallyResolutionStarted = false;
+    let worktreeDurablyDetached = false;
     let turnStartSucceeded = false;
     let turnStartAttempted = false;
     let preTurnCleanupFailed = false;
@@ -8732,6 +8760,7 @@ export default function ChatView({
       // checkout. Awaited before the turn dispatch so the session resolves the
       // local cwd instead of the abandoned worktree.
       const applyWorkLocallySwitch = async () => {
+        workLocallyResolutionStarted = true;
         switchedToLocalCheckout = true;
         nextThreadEnvMode = "local";
         nextThreadBranch = null;
@@ -8740,8 +8769,8 @@ export default function ChatView({
         nextAssociatedWorktreeBranch = null;
         nextAssociatedWorktreeRef = null;
         const worktreePathToRemove = createdWorktreeForSendPath;
-        if (isServerThread || createdServerThreadForLocalDraft) {
-          await api.orchestration.dispatchCommand({
+        if (isServerThread || hasDurableServerThreadForLocalDraft) {
+          const detachCommand = {
             type: "thread.meta.update",
             commandId: newCommandId(),
             threadId: threadIdForSend,
@@ -8751,7 +8780,11 @@ export default function ChatView({
             associatedWorktreePath: null,
             associatedWorktreeBranch: null,
             associatedWorktreeRef: null,
-          });
+          } as const;
+          await dispatchExactCommandWithOneReplay(() =>
+            api.orchestration.dispatchCommand(detachCommand),
+          );
+          worktreeDurablyDetached = true;
           setStoreThreadWorkspace(threadIdForSend, {
             envMode: "local",
             branch: null,
@@ -8760,20 +8793,19 @@ export default function ChatView({
             associatedWorktreeBranch: null,
             associatedWorktreeRef: null,
           });
+        } else {
+          // A local draft has no durable Thread pointer until promotion.
+          worktreeDurablyDetached = true;
+        }
+        if (worktreePathToRemove) {
+          await api.git.removeWorktree({
+            cwd: targetProjectCwdForSend,
+            path: worktreePathToRemove,
+            force: true,
+            reclaimTemporaryBranch: true,
+          });
         }
         createdWorktreeForSendPath = null;
-        if (worktreePathToRemove) {
-          // Durable owners are detached first. A failed physical cleanup then
-          // leaves only an inert, reclaimable worktree rather than a dangling path.
-          void api.git
-            .removeWorktree({
-              cwd: targetProjectCwdForSend,
-              path: worktreePathToRemove,
-              force: true,
-              reclaimTemporaryBranch: true,
-            })
-            .catch(() => undefined);
-        }
         clearLocalDispatchWorktreeSetup();
       };
 
@@ -8876,28 +8908,35 @@ export default function ChatView({
           threadNotes,
           projectInstructions: inheritedProjectInstructions,
         });
-        await promoteThreadCreate(
-          {
-            type: "thread.create",
-            commandId: newCommandId(),
-            threadId: threadIdForSend,
-            projectId: targetProjectIdForSend,
-            title,
-            modelSelection: threadCreateModelSelection,
-            runtimeMode: nextRuntimeModeForSend,
-            interactionMode: interactionModeForSend,
-            envMode: nextThreadEnvMode,
-            branch: nextThreadBranch,
-            worktreePath: nextThreadWorktreePath,
-            workingDirectory: nextThreadWorkingDirectory,
-            associatedWorktreePath: nextAssociatedWorktreePath,
-            associatedWorktreeBranch: nextAssociatedWorktreeBranch,
-            associatedWorktreeRef: nextAssociatedWorktreeRef,
-            lastKnownPr: activeThread.lastKnownPr ?? null,
-            createdAt: activeThread.createdAt,
-          },
-          api,
-        );
+        const promotionCommand = {
+          type: "thread.create",
+          commandId: newCommandId(),
+          threadId: threadIdForSend,
+          projectId: targetProjectIdForSend,
+          title,
+          modelSelection: threadCreateModelSelection,
+          runtimeMode: nextRuntimeModeForSend,
+          interactionMode: interactionModeForSend,
+          envMode: nextThreadEnvMode,
+          branch: nextThreadBranch,
+          worktreePath: nextThreadWorktreePath,
+          workingDirectory: nextThreadWorkingDirectory,
+          associatedWorktreePath: nextAssociatedWorktreePath,
+          associatedWorktreeBranch: nextAssociatedWorktreeBranch,
+          associatedWorktreeRef: nextAssociatedWorktreeRef,
+          lastKnownPr: activeThread.lastKnownPr ?? null,
+          createdAt: activeThread.createdAt,
+        } as const;
+        const promotion = await resolveLocalDraftPromotion(promotionCommand, api);
+        // Record durable existence and exact cleanup ownership before any later
+        // best-effort metadata or container-title write can fail.
+        localDraftPromotionOwnership = promotion.ownership;
+        hasDurableServerThreadForLocalDraft =
+          promotion.ownership === "exact-owned" ||
+          (promotion.ownership === "confirmed-existing" && promotion.failure === undefined);
+        if (promotion.failure !== undefined) {
+          throw promotion.failure;
+        }
         // `thread.create` does not carry notes, so seed the freshly created
         // server thread's notepad with the inherited project instructions via a
         // dedicated meta update. Best-effort: a failure here must not abort the turn.
@@ -8917,7 +8956,6 @@ export default function ChatView({
             title,
           });
         }
-        createdServerThreadForLocalDraft = true;
       }
 
       const setupScript = switchedToLocalCheckout ? null : setupScriptForWorktree;
@@ -8926,7 +8964,7 @@ export default function ChatView({
         if (isServerThread) {
           shouldRunSetupScript = true;
         } else {
-          if (createdServerThreadForLocalDraft) {
+          if (hasDurableServerThreadForLocalDraft) {
             shouldRunSetupScript = true;
           }
         }
@@ -9057,21 +9095,46 @@ export default function ChatView({
           () => undefined,
         );
       }
+      const workLocallyPhysicalCleanupFailed =
+        workLocallyResolutionStarted &&
+        worktreeDurablyDetached &&
+        createdWorktreeForSendPath !== null;
       try {
         if (createdWorktreeForSendPath) {
           const worktreePathToCleanup = createdWorktreeForSendPath;
+          if (workLocallyResolutionStarted && !worktreeDurablyDetached) {
+            throw err;
+          }
+          const cleanupOwnership = workLocallyResolutionStarted
+            ? "unowned"
+            : isServerThread
+              ? "existing"
+              : localDraftPromotionOwnership === "exact-owned"
+                ? "promoted"
+                : localDraftPromotionOwnership === "absent"
+                  ? "unowned"
+                  : null;
+          if (cleanupOwnership === null) {
+            throw err;
+          }
           await cleanupPreparedWorktreeBeforeTurn({
             turnStartAttempted,
-            ownership: createdServerThreadForLocalDraft ? "promoted" : "existing",
+            ownership: cleanupOwnership,
             deletePromotedThread: async () => {
-              await api.orchestration.dispatchCommand({
-                type: "thread.delete",
-                commandId: newCommandId(),
-                threadId: threadIdForSend,
-              });
+              const deletion = await deletePromotedThreadForCleanup(
+                {
+                  type: "thread.delete",
+                  commandId: newCommandId(),
+                  threadId: threadIdForSend,
+                },
+                api,
+              );
+              if (!deletion.settled) {
+                throw deletion.failure ?? new Error("Promoted Thread cleanup is unresolved.");
+              }
             },
             detachExistingThread: async () => {
-              await api.orchestration.dispatchCommand({
+              const detachCommand = {
                 type: "thread.meta.update",
                 commandId: newCommandId(),
                 threadId: threadIdForSend,
@@ -9081,7 +9144,10 @@ export default function ChatView({
                 associatedWorktreePath: null,
                 associatedWorktreeBranch: null,
                 associatedWorktreeRef: null,
-              });
+              } as const;
+              await dispatchExactCommandWithOneReplay(() =>
+                api.orchestration.dispatchCommand(detachCommand),
+              );
             },
             removeWorktree: () =>
               api.git.removeWorktree({
@@ -9091,7 +9157,7 @@ export default function ChatView({
                 reclaimTemporaryBranch: true,
               }),
             commitLocalDetach: () => {
-              if (!createdServerThreadForLocalDraft && isServerThread) {
+              if (isServerThread) {
                 setStoreThreadWorkspace(threadIdForSend, {
                   envMode: "local",
                   branch: null,
@@ -9103,15 +9169,26 @@ export default function ChatView({
               }
             },
           });
-        } else if (createdServerThreadForLocalDraft && !turnStartAttempted) {
-          await api.orchestration.dispatchCommand({
-            type: "thread.delete",
-            commandId: newCommandId(),
-            threadId: threadIdForSend,
-          });
+        } else if (localDraftPromotionOwnership === "exact-owned" && !turnStartAttempted) {
+          const deletion = await deletePromotedThreadForCleanup(
+            {
+              type: "thread.delete",
+              commandId: newCommandId(),
+              threadId: threadIdForSend,
+            },
+            api,
+          );
+          if (!deletion.settled) {
+            throw deletion.failure ?? new Error("Promoted Thread cleanup is unresolved.");
+          }
         }
       } catch (cleanupError) {
         cleanupFailure = cleanupError;
+        preTurnCleanupFailed = true;
+      }
+      if (workLocallyPhysicalCleanupFailed) {
+        // A bounded cleanup retry may recover the physical removal, but the
+        // original action still failed and must not be presented as completed.
         preTurnCleanupFailed = true;
       }
       const cancelledAndCleaned = setupCancelled && cleanupFailure === null;

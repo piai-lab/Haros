@@ -3,13 +3,20 @@
 // Layer: Web orchestration helper
 // Exports: promoteThreadCreate, isDuplicateThreadCreateError
 
-import type { ClientOrchestrationCommand, NativeApi, ThreadId } from "@omnimind/contracts";
+import {
+  WsRpcError,
+  type ClientOrchestrationCommand,
+  type NativeApi,
+  type ThreadId,
+} from "@omnimind/contracts";
+import { Schema } from "effect";
 import { markPromotedDraftThreads } from "../composerDraftStore";
 import { readNativeApi } from "../nativeApi";
 import { useStore } from "../store";
 import { getThreadFromState } from "../threadDerivation";
 
 type ThreadCreateCommand = Extract<ClientOrchestrationCommand, { type: "thread.create" }>;
+type ThreadDeleteCommand = Extract<ClientOrchestrationCommand, { type: "thread.delete" }>;
 
 type PromoteThreadCreateResult = "created" | "exists" | "unavailable";
 interface PromoteThreadCreateOptions {
@@ -18,6 +25,22 @@ interface PromoteThreadCreateOptions {
 }
 
 const inFlightThreadCreateById = new Map<ThreadId, Promise<PromoteThreadCreateResult>>();
+
+export type LocalDraftPromotionOwnership =
+  | "absent"
+  | "exact-owned"
+  | "confirmed-existing"
+  | "unknown";
+
+export interface LocalDraftPromotionResolution {
+  readonly ownership: LocalDraftPromotionOwnership;
+  readonly failure?: unknown;
+}
+
+export interface PromotedThreadDeleteResolution {
+  readonly settled: boolean;
+  readonly failure?: unknown;
+}
 
 export function isDuplicateThreadCreateError(error: unknown, threadId: ThreadId): boolean {
   const message =
@@ -41,7 +64,7 @@ async function recoverPromotedThreadFromShellSnapshot(
   const snapshot = await api.orchestration.getShellSnapshot();
   useStore.getState().syncServerShellSnapshot(snapshot);
   markPromotedDraftThreads(new Set(snapshot.threads.map((thread) => thread.id)));
-  return getThreadFromState(useStore.getState(), threadId) !== null;
+  return snapshot.threads.some((thread) => thread.id === threadId);
 }
 
 async function dispatchPromoteThreadCreate(
@@ -92,4 +115,79 @@ export async function promoteThreadCreate(
   });
   inFlightThreadCreateById.set(command.threadId, promise);
   return promise;
+}
+
+/**
+ * Resolves draft promotion ownership across an ambiguous RPC acknowledgement.
+ * The replay bypasses the helper's local/in-flight short-circuits so the exact
+ * command receipt, rather than a coincidentally-present Thread, proves ownership.
+ */
+export async function resolveLocalDraftPromotion(
+  command: ThreadCreateCommand,
+  api: NativeApi,
+): Promise<LocalDraftPromotionResolution> {
+  try {
+    const result = await promoteThreadCreate(command, api);
+    if (result === "created") {
+      return { ownership: "exact-owned" };
+    }
+    if (result === "exists") {
+      return { ownership: "confirmed-existing" };
+    }
+    return {
+      ownership: "unknown",
+      failure: new Error("Native orchestration API was unavailable during Thread promotion."),
+    };
+  } catch {
+    try {
+      // Same command id + fingerprint: an accepted receipt resolves success;
+      // a different command that happened to create this Thread cannot.
+      await api.orchestration.dispatchCommand(command);
+      markPromotedDraftThreads(new Set([command.threadId]));
+      return { ownership: "exact-owned" };
+    } catch (replayFailure) {
+      if (!Schema.is(WsRpcError)(replayFailure)) {
+        return { ownership: "unknown", failure: replayFailure };
+      }
+      try {
+        const exists = await recoverPromotedThreadFromShellSnapshot(api, command.threadId);
+        return {
+          ownership: exists ? "confirmed-existing" : "absent",
+          failure: replayFailure,
+        };
+      } catch {
+        return { ownership: "unknown", failure: replayFailure };
+      }
+    }
+  }
+}
+
+/**
+ * Deletes a Thread owned by this exact promotion before physical worktree
+ * cleanup. One same-command replay resolves an ACK loss via the durable receipt.
+ * A server rejection may count as settled only when a fresh shell proves absence.
+ */
+export async function deletePromotedThreadForCleanup(
+  command: ThreadDeleteCommand,
+  api: NativeApi,
+): Promise<PromotedThreadDeleteResolution> {
+  let failure: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await api.orchestration.dispatchCommand(command);
+      return { settled: true };
+    } catch (error) {
+      failure = error;
+    }
+  }
+
+  if (!Schema.is(WsRpcError)(failure)) {
+    return { settled: false, failure };
+  }
+  try {
+    const exists = await recoverPromotedThreadFromShellSnapshot(api, command.threadId);
+    return exists ? { settled: false, failure } : { settled: true };
+  } catch {
+    return { settled: false, failure };
+  }
 }
