@@ -104,7 +104,6 @@ import {
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import {
   hasReceivedProviderStatusSnapshot,
-  readPassiveProviderPresence,
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
@@ -441,13 +440,14 @@ import { useComposerVoiceController } from "./chat/useComposerVoiceController";
 import {
   areUsableProviderCatalogsSettled,
   deriveModelReadinessPromptMode,
-  hasRecoverableExactModelBinding,
   hasUsableExactModelBinding,
   hasUsableOmniMindModelServiceBinding,
   isSettledPassiveModelServicesQueryState,
   resolveUsableOmniMindModelServiceSelection,
   type PassiveModelServicesState,
 } from "./chat/modelReadinessPrompt.logic";
+import { hasRememberedExactModelBinding } from "./onboarding/firstRunReadiness.logic";
+import { readFirstRunReadinessPreference } from "./onboarding/firstRunReadinessPreference";
 import {
   composerFooterPlanForTier,
   resolveNextComposerFooterTier,
@@ -4184,15 +4184,25 @@ export default function ChatView({
     serverThread?.modelSelection,
     stickyModelSelectionByProvider,
   ]);
-  const recoverableExactModelSelectionsByProvider = useMemo(() => {
-    const result = { ...explicitExactModelSelectionsByProvider };
+  const rememberedExactModelSelectionsByProvider = useMemo(() => {
+    const result: Partial<Record<ProviderKind, ModelSelection>> = {};
     for (const provider of COMPOSER_PROVIDER_KINDS) {
-      if (result[provider]) continue;
-      const defaultModel = getDefaultModel(provider);
-      if (defaultModel) result[provider] = buildModelSelection(provider, defaultModel);
+      const candidates = [
+        serverThread?.modelSelection.provider === provider ? serverThread.modelSelection : null,
+        activeProject?.defaultModelSelection?.provider === provider
+          ? activeProject.defaultModelSelection
+          : null,
+        stickyModelSelectionByProvider[provider] ?? null,
+      ];
+      const selection = candidates.find((candidate) => candidate !== null) ?? null;
+      if (selection) result[provider] = selection;
     }
     return result;
-  }, [explicitExactModelSelectionsByProvider]);
+  }, [
+    activeProject?.defaultModelSelection,
+    serverThread?.modelSelection,
+    stickyModelSelectionByProvider,
+  ]);
   const exactModelSelectionsByProvider = useMemo(() => {
     const result = { ...explicitExactModelSelectionsByProvider };
     for (const provider of COMPOSER_PROVIDER_KINDS) {
@@ -4225,7 +4235,6 @@ export default function ChatView({
     }
     return result;
   }, [explicitExactModelSelectionsByProvider, providerStatuses, selectableModelOptionsByProvider]);
-  const passiveProviderPresence = readPassiveProviderPresence(queryClient);
   const hasUsableProviderModelBinding = useMemo(
     () =>
       hasUsableExactModelBinding({
@@ -4234,32 +4243,29 @@ export default function ChatView({
       }),
     [exactModelSelectionsByProvider, providerStatuses],
   );
-  const hasRecoverableProductModelBinding = useMemo(
+  const hasRememberedProductModelBinding = useMemo(
     () =>
-      passiveProviderPresence !== null &&
-      hasRecoverableExactModelBinding({
-        recoverableProviders: passiveProviderPresence,
-        exactModelSelections: recoverableExactModelSelectionsByProvider,
+      hasRememberedExactModelBinding({
+        providers: COMPOSER_PROVIDER_KINDS,
+        explicitExactModelSelections: rememberedExactModelSelectionsByProvider,
       }),
-    [passiveProviderPresence, recoverableExactModelSelectionsByProvider],
+    [rememberedExactModelSelectionsByProvider],
   );
-  const hasRecoverableIndependentEngineModelBinding = useMemo(
+  const hasRememberedIndependentEngineModelBinding = useMemo(
     () =>
-      passiveProviderPresence !== null &&
-      hasRecoverableExactModelBinding({
-        recoverableProviders: passiveProviderPresence.filter((provider) => provider !== "omnimind"),
-        exactModelSelections: recoverableExactModelSelectionsByProvider,
+      hasRememberedExactModelBinding({
+        providers: COMPOSER_PROVIDER_KINDS.filter((provider) => provider !== "omnimind"),
+        explicitExactModelSelections: rememberedExactModelSelectionsByProvider,
       }),
-    [passiveProviderPresence, recoverableExactModelSelectionsByProvider],
+    [rememberedExactModelSelectionsByProvider],
   );
-  const hasRecoverableOmniMindModelBinding = useMemo(
+  const hasRememberedOmniMindModelBinding = useMemo(
     () =>
-      passiveProviderPresence !== null &&
-      hasRecoverableExactModelBinding({
-        recoverableProviders: passiveProviderPresence.filter((provider) => provider === "omnimind"),
-        exactModelSelections: explicitExactModelSelectionsByProvider,
+      hasRememberedExactModelBinding({
+        providers: ["omnimind"],
+        explicitExactModelSelections: rememberedExactModelSelectionsByProvider,
       }),
-    [explicitExactModelSelectionsByProvider, passiveProviderPresence],
+    [rememberedExactModelSelectionsByProvider],
   );
   const usableProviderCatalogsSettled = useMemo(
     () =>
@@ -4287,7 +4293,7 @@ export default function ChatView({
         isCenteredEmptyLanding &&
         serverConfigQuery.isSuccess &&
         !hasUsableProviderModelBinding &&
-        (providerHealthSnapshotSettled || !hasRecoverableProductModelBinding) &&
+        (providerHealthSnapshotSettled || !hasRememberedProductModelBinding) &&
         modelServicesCapability === true &&
         modelServicesTransport === "open",
     }),
@@ -4325,15 +4331,16 @@ export default function ChatView({
       (passiveModelServicesState !== "empty" || providerHealthSnapshotSettled),
     hasUsableExactBinding: hasUsableProductModelBinding,
     hasRecoverableExactBinding:
-      hasRecoverableIndependentEngineModelBinding || hasRecoverableOmniMindModelBinding,
+      hasRememberedIndependentEngineModelBinding || hasRememberedOmniMindModelBinding,
     modelServicesCapability,
     modelServicesTransport,
     passiveModelServicesState,
+    deferred: readFirstRunReadinessPreference()?.disposition === "deferred",
   });
   const modelReadinessRecoversIndependentEngine =
     modelReadinessPromptMode === "recover" &&
     passiveModelServicesState === "empty" &&
-    hasRecoverableIndependentEngineModelBinding;
+    hasRememberedIndependentEngineModelBinding;
   const openModelReadinessFlow = useCallback(() => {
     void navigate({
       to: "/settings",

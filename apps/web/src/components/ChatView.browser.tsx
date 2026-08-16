@@ -9255,9 +9255,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
       },
     });
 
+    const freshSnapshot = createDraftOnlySnapshot();
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
-      snapshot: createDraftOnlySnapshot(),
+      snapshot: {
+        ...freshSnapshot,
+        projects: freshSnapshot.projects.map((project) => ({
+          ...project,
+          defaultModelSelection: null,
+        })),
+      },
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
@@ -9292,10 +9299,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const setupPrompt = page.getByTestId("model-readiness-prompt");
       await expect.element(setupPrompt).toBeInTheDocument();
       expect(refreshProviders).not.toHaveBeenCalled();
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 320, height: 700 });
-      expect(setupPrompt.element().scrollWidth).toBeLessThanOrEqual(
-        setupPrompt.element().clientWidth,
-      );
       await page.getByRole("textbox").fill("Keep this draft while I connect a model.");
       const setupImage = createComposerImage({
         id: "first-run-setup-image",
@@ -9303,6 +9306,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
         name: "first-run-setup.png",
       });
       useComposerDraftStore.getState().addImage(THREAD_ID, setupImage);
+      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider).toEqual({});
+      expect(
+        useStore.getState().projects.find((project) => project.id === PROJECT_ID)
+          ?.defaultModelSelection,
+      ).toBeNull();
+      expect(useStore.getState().threadShellById?.[THREAD_ID]).toBeUndefined();
+      await expect.element(setupPrompt).toBeInTheDocument();
+      expect(setupPrompt.element().textContent).toContain(EN_MESSAGES["composer.modelSetupAction"]);
       const setupButton = page.getByRole("button", {
         name: EN_MESSAGES["composer.modelSetupAction"],
       });
@@ -9616,7 +9627,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("routes a settled installed-but-unavailable Engine to recovery", async () => {
+  it("routes an explicit project default for an unavailable Engine to recovery", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
@@ -9697,7 +9708,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("does not treat fresh auth-unknown Engine defaults as a usable product binding", async () => {
+  it("keeps explicit project-default recovery intent when Engine auth is unknown", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;

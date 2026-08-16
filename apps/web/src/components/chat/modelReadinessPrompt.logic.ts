@@ -9,8 +9,12 @@ import { COMPOSER_PROVIDER_KINDS } from "~/composerDraftModels";
 import type { ProviderModelCatalogState } from "~/hooks/useProviderModelCatalog";
 import { findProviderStatus, isProviderUsable } from "~/lib/providerAvailability";
 import type { ProviderModelOption } from "~/providerModelOptions";
+import {
+  deriveFirstRunReadinessState,
+  type PassiveModelServicesState,
+} from "../onboarding/firstRunReadiness.logic";
 
-export type PassiveModelServicesState = "unknown" | "empty" | "configured" | "error";
+export type { PassiveModelServicesState } from "../onboarding/firstRunReadiness.logic";
 export type ModelReadinessPromptMode = "setup" | "recover" | null;
 
 export function isSettledPassiveModelServicesQueryState(input: {
@@ -41,16 +45,6 @@ export function hasUsableExactModelBinding(input: {
       selection.model.trim().length > 0 &&
       isProviderUsable(status)
     );
-  });
-}
-
-export function hasRecoverableExactModelBinding(input: {
-  readonly recoverableProviders: readonly ProviderKind[];
-  readonly exactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
-}): boolean {
-  return input.recoverableProviders.some((provider) => {
-    const selection = input.exactModelSelections[provider];
-    return selection?.provider === provider && selection.model.trim().length > 0;
   });
 }
 
@@ -134,20 +128,20 @@ export function deriveModelReadinessPromptMode(input: {
     | "disposed"
     | null;
   readonly passiveModelServicesState: PassiveModelServicesState;
+  readonly deferred?: boolean;
 }): ModelReadinessPromptMode {
-  if (
-    !input.surfaceEligible ||
-    !input.serverFactsReady ||
-    input.hasUsableExactBinding ||
-    input.modelServicesCapability !== true ||
-    input.modelServicesTransport !== "open"
-  ) {
-    return null;
-  }
-
-  if (input.passiveModelServicesState === "empty") {
-    return input.hasRecoverableExactBinding ? "recover" : "setup";
-  }
-  if (input.passiveModelServicesState === "configured") return "recover";
+  if (!input.surfaceEligible) return null;
+  const readiness = deriveFirstRunReadinessState({
+    factsSettled: input.serverFactsReady,
+    hasUsableExactBinding: input.hasUsableExactBinding,
+    hasRememberedIndependentEngineBinding: input.hasRecoverableExactBinding,
+    hasRememberedOmniMindBinding: false,
+    modelServicesCapability: input.modelServicesCapability,
+    modelServicesTransport: input.modelServicesTransport,
+    passiveModelServicesState: input.passiveModelServicesState,
+    deferred: input.deferred ?? false,
+  });
+  if (readiness === "first-run") return "setup";
+  if (readiness === "recover-engine" || readiness === "recover-model-service") return "recover";
   return null;
 }
