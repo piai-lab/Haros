@@ -62,6 +62,17 @@ describe("SQLite persistence", () => {
         expect(lockingMode?.locking_mode).toBe("exclusive");
         expect(journalMode?.journal_mode).toBe("wal");
 
+        const [cacheSize] = yield* sql<{ readonly cache_size: number }>`
+          PRAGMA cache_size;
+        `;
+        const [mmapSize] = yield* sql<{ readonly mmap_size: number }>`
+          PRAGMA mmap_size;
+        `;
+        expect(cacheSize?.cache_size).toBe(-262144);
+        // SQLite/runtime builds may cap the requested 1 GiB window; requiring a
+        // positive value proves that file-backed mapping was actually enabled.
+        expect(mmapSize?.mmap_size).toBeGreaterThan(0);
+
         yield* sql`CREATE TABLE ownership_probe(value TEXT NOT NULL)`;
         yield* sql`INSERT INTO ownership_probe(value) VALUES ('owned-by-omnimind')`;
         yield* Effect.promise(async () => {

@@ -1,5 +1,6 @@
 import {
   EventId,
+  RuntimeItemId,
   RuntimeTaskId,
   ThreadId,
   TurnId,
@@ -15,7 +16,10 @@ import {
   PROVIDER_RUNTIME_INGESTION_CONSUMER,
   ProviderRuntimeEventRepository,
 } from "../Services/ProviderRuntimeEvents.ts";
-import { ProviderRuntimeEventRepositoryLive } from "./ProviderRuntimeEvents.ts";
+import {
+  ProviderRuntimeEventRepositoryLive,
+  truncateUtf8ToBytes,
+} from "./ProviderRuntimeEvents.ts";
 import { SqlitePersistenceMemory } from "./Sqlite.ts";
 import { assignDerivedProviderRuntimeEventIds } from "../../provider/providerRuntimeEventIdentity.ts";
 
@@ -253,6 +257,103 @@ layer("ProviderRuntimeEventRepository", (it) => {
       assert.isNumber(compactedRaw?.originalBytes);
     }),
   );
+
+  it.effect("shrinks oversized canonical string leaves before compacting raw diagnostics", () =>
+    Effect.gen(function* () {
+      const repository = yield* ProviderRuntimeEventRepository;
+      const oversizedResult = "x".repeat(PROVIDER_RUNTIME_EVENT_MAX_BYTES * 2);
+      const oversizedEvent = {
+        type: "item.completed",
+        eventId: EventId.makeUnsafe("runtime-event-oversized-pi"),
+        provider: "pi",
+        createdAt: "2026-07-14T00:03:00.000Z",
+        threadId: ThreadId.makeUnsafe("thread-runtime-journal"),
+        turnId: TurnId.makeUnsafe("turn-runtime-journal"),
+        itemId: RuntimeItemId.makeUnsafe("item-oversized-pi"),
+        payload: {
+          itemType: "command_execution",
+          status: "completed",
+          title: "Run bash",
+          detail: oversizedResult,
+          data: { toolCallId: "call-1", result: oversizedResult },
+        },
+        raw: {
+          source: "pi.sdk.event",
+          messageType: "tool_result",
+          payload: { result: oversizedResult },
+        },
+      } satisfies ProviderRuntimeEvent;
+
+      const persisted = yield* repository.append(oversizedEvent);
+      assert.strictEqual(persisted.event.eventId, oversizedEvent.eventId);
+      if (persisted.event.type !== "item.completed") {
+        return assert.fail("expected item.completed");
+      }
+      assert.isString(persisted.event.payload.detail);
+      assert.isBelow(persisted.event.payload.detail?.length ?? 0, oversizedResult.length);
+      const data = persisted.event.payload.data as { readonly result?: string } | undefined;
+      assert.isBelow(data?.result?.length ?? 0, oversizedResult.length);
+      assert.deepInclude(persisted.event.raw?.payload as Record<string, unknown>, {
+        omnimindTruncated: true,
+      });
+
+      const rows = yield* repository.readAfter({
+        sequenceExclusive: persisted.sequence - 1,
+        throughSequenceInclusive: persisted.sequence,
+        limit: 1,
+      });
+      assert.strictEqual(rows[0]?.event.eventId, oversizedEvent.eventId);
+      assert.strictEqual((yield* repository.append(oversizedEvent)).sequence, persisted.sequence);
+    }),
+  );
+
+  it.effect("shrinks an oversized raw-less payload without losing its event", () =>
+    Effect.gen(function* () {
+      const repository = yield* ProviderRuntimeEventRepository;
+      const oversizedDelta = "y".repeat(PROVIDER_RUNTIME_EVENT_MAX_BYTES * 2);
+      const oversizedEvent = runtimeEvent("runtime-event-oversized-payload", oversizedDelta);
+
+      const persisted = yield* repository.append(oversizedEvent);
+      assert.strictEqual(persisted.event.eventId, oversizedEvent.eventId);
+      assert.strictEqual(persisted.event.raw, undefined);
+      if (persisted.event.type !== "content.delta") {
+        return assert.fail("expected content.delta");
+      }
+      assert.isBelow(persisted.event.payload.delta.length, oversizedDelta.length);
+    }),
+  );
+
+  it.effect("still rejects oversized payloads with no safely shrinkable bulk", () =>
+    Effect.gen(function* () {
+      const repository = yield* ProviderRuntimeEventRepository;
+      const oversizedEvent = {
+        type: "item.completed",
+        eventId: EventId.makeUnsafe("runtime-event-oversized-numbers"),
+        provider: "pi",
+        createdAt: "2026-07-14T00:04:00.000Z",
+        threadId: ThreadId.makeUnsafe("thread-runtime-journal"),
+        turnId: TurnId.makeUnsafe("turn-runtime-journal"),
+        payload: {
+          itemType: "command_execution",
+          status: "completed",
+          title: "Number flood",
+          data: {
+            values: Array.from({ length: PROVIDER_RUNTIME_EVENT_MAX_BYTES / 5 }, (_, i) => i),
+          },
+        },
+      } satisfies ProviderRuntimeEvent;
+
+      const failure = yield* Effect.flip(repository.append(oversizedEvent));
+      assert.strictEqual(failure._tag, "PersistenceDecodeError");
+    }),
+  );
+
+  it("truncates UTF-8 strings without splitting a code point", () => {
+    const truncated = truncateUtf8ToBytes("🙂".repeat(10_000), 999);
+    assert.isBelow(Buffer.byteLength(truncated, "utf8"), 1_000);
+    assert.notInclude(truncated, "\uFFFD");
+    assert.strictEqual(Buffer.from(truncated, "utf8").toString("utf8"), truncated);
+  });
 
   it.effect("journals every canonical event derived from one provider notification", () =>
     Effect.gen(function* () {

@@ -223,7 +223,7 @@ W3 只复用 `_chat`、Sidebar primitive、现有 Sidebar surface/off-canvas tok
 
 W3 已在 exact pushed `a5bae33aef7c068e0ee8700605ac58cb40e157b5` 完成 rail 连续 resize→dismiss、反向拖回、pointercancel、非模态 edge peek、显式 toggle 提升为常驻、`208px` 合法最小持久宽度、Environment 冷启动默认关闭及 fresh isolated packaged 证据。维护者随后明确授权首次启动纠偏，因此当前唯一代码 Slice 改为下述 **W4 First-run three-step readiness**；C1 继续 deferred。
 
-### W4 First-run three-step readiness（当前唯一代码 Slice）
+### W4 First-run three-step readiness（已完成）
 
 W4 只闭合：
 
@@ -235,6 +235,21 @@ W4 只闭合：
 6. 候选从 exact pushed SHA 重建并替换本机 App，用 fresh、任务专用 HOME/userData/`OMNIMIND_HOME`/Provider homes 证明隔离后，完成首次、延期→重开→继续、已有其他 Engine、恢复、真实 MiMo/DeepSeek、退出与重开 journey。
 
 W4 的施工顺序严格为：先纠正 Workbench/research/本 brief 的 sole owner；再写纯 classifier 与 table-driven falsifiers；先 characterization Settings Model services 后只提取必要 seam；再挂载三步 Dialog、删除旧 banner、闭合视觉与 packaged 证据。若实现需要第二套持久化/auth/catalog owner、复制 Pi schema/credential lifecycle、静态猜默认模型或破坏 W3，立即停止。详细执行清单由维护者确认的 `omnimind-first-run-three-step-wizard-execution-plan.md` 提供，但稳定产品合同只看 [`architecture/workbench.md`](architecture/workbench.md)。
+
+W4 已在 exact pushed `bde90d56e0d515bb39e5f4891779dadf6c8d0f0a` 闭合：三步 first-run readiness、Model services seam、首次/延期/恢复入口、完整中英文 catalog 与 fresh isolated packaged journey 均已进入 `main`。这项完成证据不授予 C1，也不把当前 installed macOS candidate 扩张成 V1 release。
+
+### S1 Synara v0.7.2 source alignment（当前唯一代码 Slice）
+
+维护者在 W4 完成后明确授权从 latest clean `main` 继续吸收 Synara 更新。当前入口绑定 `RUN SYNARA-072-INTAKE-2026-08-16-01`、`SPINE_REVISION=1`、`SPINE_ID=SYNARA-072@main-bde90d56+upstream-18ff9985`；source set 固定为 adopted `712d88f98b9afed9a4617b78dc62a8f342d93177` 到 tag `v0.7.2` exact `18ff99857d5b84adab2019c2839fa4f6df761b7c`。Spine 只负责本次运行的目标、边界和验收，不成为第二 Campaign、adoption record 或产品事实 owner。
+
+S1 的第一个有界关注点只闭合四个底层、解释唯一的缺口：
+
+1. projector replay 始终保留 `orchestration_events` integer primary-key range scan，并为 file-backed SQLite 设置有界 page cache 与 mmap window；不启用可能把历史量级 temp b-tree 搬进无界 native RSS 的 `temp_store=MEMORY`；
+2. Provider `item.*` lifecycle 的 `detail` 接受原始首尾空白，避免合法多行 tool output 在 durable journal encode 时被隔离；title、ID 与其他产品字符串的 trimmed contract 不放宽；
+3. deferred storage flush 在 partial DOM/SSR target 缺少 `addEventListener` 时安全 no-op，不新增第二 persistence owner；
+4. 超限 Provider runtime event 先按 UTF-8 边界递归收缩 canonical payload 的 string leaves，再以 OmniMind identity 压缩 raw diagnostics；raw 与 raw-less 两条路径都保留 canonical event identity，仍无法安全收口的非字符串洪泛继续 fail closed。
+
+本关注点必须补 query-plan、pragma、原始空白、partial DOM、UTF-8、raw/no-raw 与不可收缩 payload 回归测试，并通过相关 focused test、typecheck、format 与 diff check 后独立 commit/push。它不准入 projection recovery、text-segment migration、Automation、Workspace/UI/Git/PR/model picker/streaming 或 release/feed，也不提前更新 README 的 adopted Synara head。其余 v0.7.2 disposition 只有在本关注点形成 pushed candidate 且经过独立复核后才能继续。
 
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
@@ -248,4 +263,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness active；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；S1 Synara v0.7.2 source alignment active under the exact Spine above；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

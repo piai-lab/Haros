@@ -420,7 +420,10 @@ export const ItemLifecyclePayload = Schema.Struct({
   itemType: CanonicalItemType,
   status: Schema.optional(RuntimeItemStatus),
   title: Schema.optional(TrimmedNonEmptyStringSchema),
-  detail: Schema.optional(TrimmedNonEmptyStringSchema),
+  // Provider tool output is a free-form body and legitimately carries leading
+  // or trailing whitespace. Trimming is a presentation concern; rejecting it
+  // here would quarantine an otherwise valid durable runtime event.
+  detail: Schema.optional(Schema.String),
   data: Schema.optional(Schema.Unknown),
 });
 export type ItemLifecyclePayload = typeof ItemLifecyclePayload.Type;

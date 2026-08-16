@@ -94,7 +94,17 @@ const makeSetup = (dbPath?: string, pendingRecovery: MigrationRecoveryMarker | n
       // power loss is acceptable.
       yield* sql`PRAGMA synchronous = NORMAL;`;
       yield* sql`PRAGMA foreign_keys = ON;`;
+      // The event log can grow beyond a gigabyte. A bounded 256 MiB page-cache
+      // ceiling keeps hot b-tree pages resident during replay without allocating
+      // that memory up front. Keep temp_store at SQLite's default: snapshot
+      // queries may build history-sized temp b-trees, which must be allowed to
+      // spill instead of becoming unbounded native RSS.
+      yield* sql`PRAGMA cache_size = -262144;`;
       if (dbPath) {
+        // File-backed replay and backups can use the OS page cache without a
+        // second full SQLite heap copy. The exclusive lifecycle lock prevents
+        // another process from truncating the mapped database underneath us.
+        yield* sql`PRAGMA mmap_size = 1073741824;`;
         // Setting locking_mode changes connection policy; this transaction
         // actually acquires and retains the database lock before startup
         // continues, closing the window where another client could attach.
