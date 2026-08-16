@@ -138,11 +138,6 @@ import {
   pullRequestQueryKeys,
   pullRequestReviewRequestCountQueryOptions,
 } from "../lib/pullRequestReactQuery";
-import {
-  prefetchProviderModelsForNewThread,
-  resolveNewThreadModelPrefetchCwd,
-  resolveNewThreadModelPrefetchProvider,
-} from "../lib/providerModelPrefetch";
 import { serverConfigQueryOptions, serverSettingsQueryOptions } from "../lib/serverReactQuery";
 import {
   onNativeApiServerCapabilitiesChange,
@@ -1523,11 +1518,6 @@ export default function Sidebar() {
     select: (config) => config.keybindings,
   });
   const keybindings = keybindingsQuery.data ?? EMPTY_KEYBINDINGS;
-  const serverCwdQuery = useQuery({
-    ...serverConfigQueryOptions(),
-    select: (config) => config.cwd ?? null,
-  });
-  const serverCwd = serverCwdQuery.data ?? null;
   const providerStatuses = useProviderStatusesForLocalConfig();
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   // Declared next to `keybindings` (rather than further down) because the project-row render
@@ -2604,63 +2594,8 @@ export default function Sidebar() {
     [currentProjectShortcutTargetId, latestUsableProjectId],
   );
 
-  // Warm model discovery before ChatView mounts so new-thread composers skip
-  // the "Loading models" skeleton when React Query already has a fresh cache hit.
-  const prefetchModelsForProjectNewThread = useCallback(
-    (projectId: ProjectId, options?: { includeDroid?: boolean }) => {
-      const project = projects.find((candidate) => candidate.id === projectId);
-      if (!project) {
-        return;
-      }
-
-      const draftStore = useComposerDraftStore.getState();
-      const draftThread = draftStore.getDraftThreadByProjectId(projectId, "chat");
-      const draftComposer = draftThread
-        ? (draftStore.draftsByThreadId[draftThread.threadId] ?? null)
-        : null;
-      const provider = resolveNewThreadModelPrefetchProvider({
-        draftActiveProvider: draftComposer?.activeProvider ?? null,
-        stickyActiveProvider: draftStore.stickyActiveProvider,
-        projectDefaultProvider: project.defaultModelSelection?.provider ?? null,
-        defaultProvider: appSettings.defaultProvider,
-      });
-      // Droid discovery spins a disposable ACP session per model — only warm it
-      // from explicit new-thread intent (hover/click), not idle project focus.
-      if (provider === "droid" && options?.includeDroid !== true) {
-        return;
-      }
-      const cwd = resolveNewThreadModelPrefetchCwd({
-        draftWorktreePath: draftThread?.worktreePath ?? null,
-        projectCwd: project.cwd,
-        serverCwd,
-      });
-
-      prefetchProviderModelsForNewThread(queryClient, {
-        provider,
-        settings: appSettings,
-        cwd,
-      });
-    },
-    [appSettings, projects, queryClient, serverCwd],
-  );
-
-  const prefetchModelsForPrimaryNewThread = useCallback(() => {
-    if (!primaryNewThreadTarget) {
-      return;
-    }
-    prefetchModelsForProjectNewThread(primaryNewThreadTarget.projectId, { includeDroid: true });
-  }, [prefetchModelsForProjectNewThread, primaryNewThreadTarget]);
-
-  useEffect(() => {
-    if (!primaryNewThreadTarget) {
-      return;
-    }
-    prefetchModelsForProjectNewThread(primaryNewThreadTarget.projectId);
-  }, [prefetchModelsForProjectNewThread, primaryNewThreadTarget]);
-
   const handlePrimaryNewThread = useCallback(() => {
     if (primaryNewThreadTarget) {
-      prefetchModelsForProjectNewThread(primaryNewThreadTarget.projectId, { includeDroid: true });
       void handleNewThread(primaryNewThreadTarget.projectId, {
         envMode: resolveSidebarNewThreadEnvMode({
           defaultEnvMode: appSettings.defaultThreadEnvMode,
@@ -2679,7 +2614,6 @@ export default function Sidebar() {
     appSettings.defaultThreadEnvMode,
     handleNewThread,
     handleStartAddProject,
-    prefetchModelsForProjectNewThread,
     primaryNewThreadTarget,
     threadsHydrated,
   ]);
@@ -4885,16 +4819,9 @@ export default function Sidebar() {
                 }
                 tooltipSide="top"
                 data-testid="new-thread-button"
-                onMouseEnter={() => {
-                  prefetchModelsForProjectNewThread(project.id, { includeDroid: true });
-                }}
-                onFocus={() => {
-                  prefetchModelsForProjectNewThread(project.id, { includeDroid: true });
-                }}
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  prefetchModelsForProjectNewThread(project.id, { includeDroid: true });
                   void handleNewThread(project.id, {
                     envMode: resolveSidebarNewThreadEnvMode({
                       defaultEnvMode: appSettings.defaultThreadEnvMode,
@@ -5827,8 +5754,6 @@ export default function Sidebar() {
                         iconClassName="size-3.5"
                         label={t("nav.newAgent")}
                         onClick={handlePrimaryNewThread}
-                        onMouseEnter={prefetchModelsForPrimaryNewThread}
-                        onFocus={prefetchModelsForPrimaryNewThread}
                       />
                       <SidebarPrimaryAction
                         icon={KanbanIcon}

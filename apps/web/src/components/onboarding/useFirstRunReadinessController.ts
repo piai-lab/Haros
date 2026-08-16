@@ -106,7 +106,10 @@ export function useFirstRunReadinessController(
   const catalog = useProviderModelCatalog({
     selectedProvider,
     discoveryEnabled: false,
-    selectedProviderDiscoveryEnabled: true,
+    // First-run classification is passive. OmniMind's provider catalog loads
+    // Pi Extensions, so readiness must rely on the credential-blind Model
+    // services projection until the user explicitly opens model discovery.
+    selectedProviderDiscoveryEnabled: selectedProvider !== "omnimind",
     piDiscoveryRequested: selectedProvider === "pi",
     cwd: focusedContext.activeProject?.cwd ?? serverConfigQuery.data?.cwd ?? null,
     modelHintByProvider: { [selectedProvider]: selectedModelHint },

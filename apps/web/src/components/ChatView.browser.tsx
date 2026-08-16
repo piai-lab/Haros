@@ -6849,6 +6849,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         targetText: "Current Engine model discovery",
       }),
       configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.codex = {
+          source: "browser.fixture",
+          models: [{ slug: "gpt-5", name: "GPT-5" }],
+        };
         nextFixture.providerModelsByProvider.claudeAgent = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
@@ -8521,6 +8525,63 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("warms only the exact selected Engine after explicit new-thread intent", async () => {
+    const targetDraftThreadId = ThreadId.makeUnsafe("thread-selected-prefetch-target-draft");
+    seedLocalDraftThread({ threadId: targetDraftThreadId, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(targetDraftThreadId, "droid");
+    // The target draft is more specific than the remembered next-thread Engine.
+    useComposerDraftStore.setState({ stickyActiveProvider: "pi" });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-selected-prefetch" as MessageId,
+        targetText: "selected prefetch test",
+      }),
+    });
+
+    try {
+      const newThreadButton = page.getByTestId("new-thread-button").first();
+      await expect.element(newThreadButton).toBeInTheDocument();
+      await waitForComposerEditor();
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+
+      const listedProviders = () =>
+        wsRequests.flatMap((request) =>
+          request._tag === WS_METHODS.providerListModels && typeof request.provider === "string"
+            ? [request.provider]
+            : [],
+        );
+      const passivelySensitiveProviders = () =>
+        listedProviders().filter(
+          (provider) => provider === "pi" || provider === "droid" || provider === "omnimind",
+        );
+      // Sidebar mount is passive even when the remembered next-thread Engine is Droid.
+      expect(passivelySensitiveProviders()).toEqual([]);
+
+      const button = document.querySelector<HTMLButtonElement>(
+        'button[data-testid="new-thread-button"]',
+      )!;
+      button.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+      button.focus();
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      expect(passivelySensitiveProviders()).toEqual([]);
+
+      wsRequests.length = 0;
+      await newThreadButton.click();
+      await vi.waitFor(() => expect(listedProviders()).toEqual(["droid"]));
+      const droidRequest = wsRequests.find(
+        (request) => request._tag === WS_METHODS.providerListModels,
+      );
+      expect(droidRequest).toMatchObject({ provider: "droid", cwd: "/repo/project" });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("uses the latest ordinary project from Home when the global New thread button is clicked", async () => {
     useLatestProjectStore.setState({ latestProjectId: PROJECT_ID });
     const mounted = await mountChatView({
@@ -9444,6 +9505,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       const setupDialog = page.getByTestId("first-run-readiness-dialog");
       await expect.element(setupDialog).toBeInTheDocument();
+      expect(
+        wsRequests.filter(
+          (request) =>
+            request._tag === WS_METHODS.providerListModels &&
+            (request.provider === "omnimind" ||
+              request.provider === "pi" ||
+              request.provider === "droid"),
+        ),
+      ).toHaveLength(0);
       const setupDialogNode = document.querySelector<HTMLElement>(
         '[data-testid="first-run-readiness-dialog"]',
       )!;

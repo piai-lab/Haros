@@ -3,7 +3,7 @@
 //          the same React Query keys ChatView uses for listModels.
 // Layer: Web lib tests
 
-import type { ProviderKind } from "@omnimind/contracts";
+import type { NativeApi, ProviderKind } from "@omnimind/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +15,7 @@ import {
   type ProviderModelPrefetchSettings,
 } from "./providerModelPrefetch";
 import { providerDiscoveryQueryKeys } from "./providerDiscoveryReactQuery";
+import * as nativeApi from "../nativeApi";
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -25,6 +26,7 @@ function makeSettings(
 ): ProviderModelPrefetchSettings {
   return {
     defaultProvider: "codex",
+    claudeBinaryPath: "",
     cursorBinaryPath: "",
     cursorApiEndpoint: "",
     antigravityBinaryPath: "",
@@ -39,7 +41,17 @@ function makeSettings(
 }
 
 describe("resolveNewThreadModelPrefetchProvider", () => {
-  it("prefers draft, then sticky, then project default, then app default", () => {
+  it("prefers the explicit override, then draft, sticky, project, and app defaults", () => {
+    expect(
+      resolveNewThreadModelPrefetchProvider({
+        providerOverride: "droid",
+        draftActiveProvider: "cursor",
+        stickyActiveProvider: "pi",
+        projectDefaultProvider: "opencode",
+        defaultProvider: "codex",
+      }),
+    ).toBe("droid");
+
     expect(
       resolveNewThreadModelPrefetchProvider({
         draftActiveProvider: "cursor",
@@ -100,11 +112,44 @@ describe("resolveNewThreadModelPrefetchCwd", () => {
       }),
     ).toBe("/tmp/server");
   });
+
+  it("mirrors thread bootstrap precedence for explicit, fresh, temporary, and local intents", () => {
+    const base = {
+      draftWorktreePath: "/tmp/draft-worktree",
+      projectCwd: "/tmp/project",
+      serverCwd: "/tmp/server",
+    } as const;
+
+    expect(
+      resolveNewThreadModelPrefetchCwd({
+        ...base,
+        worktreePath: "/tmp/explicit-worktree",
+        hasExplicitWorktreePath: true,
+        fresh: true,
+        temporary: true,
+        envMode: "local",
+      }),
+    ).toBe("/tmp/explicit-worktree");
+    expect(
+      resolveNewThreadModelPrefetchCwd({
+        ...base,
+        worktreePath: null,
+        hasExplicitWorktreePath: true,
+      }),
+    ).toBe("/tmp/project");
+    expect(resolveNewThreadModelPrefetchCwd({ ...base, fresh: true })).toBe("/tmp/project");
+    expect(resolveNewThreadModelPrefetchCwd({ ...base, temporary: true })).toBe("/tmp/project");
+    expect(resolveNewThreadModelPrefetchCwd({ ...base, envMode: "local" })).toBe("/tmp/project");
+    expect(resolveNewThreadModelPrefetchCwd({ ...base, envMode: "worktree" })).toBe(
+      "/tmp/draft-worktree",
+    );
+  });
 });
 
 describe("providerModelsPrefetchQueryOptions", () => {
   it("matches ChatView cache keys for cwd-scoped and binary-scoped providers", () => {
     const settings = makeSettings({
+      claudeBinaryPath: "/bin/claude",
       cursorBinaryPath: "/bin/agent",
       cursorApiEndpoint: "https://api.example",
       antigravityBinaryPath: "/bin/antigravity",
@@ -119,6 +164,14 @@ describe("providerModelsPrefetchQueryOptions", () => {
     });
     expect(cursorOptions.queryKey).toEqual(
       providerDiscoveryQueryKeys.models("cursor", "/bin/agent", "https://api.example", null, null),
+    );
+
+    const claudeOptions = providerModelsPrefetchQueryOptions({
+      provider: "claudeAgent",
+      settings,
+    });
+    expect(claudeOptions.queryKey).toEqual(
+      providerDiscoveryQueryKeys.models("claudeAgent", "/bin/claude", null, null, null),
     );
 
     const openCodeOptions = providerModelsPrefetchQueryOptions({
@@ -205,5 +258,53 @@ describe("prefetchProviderModelsForNewThread", () => {
     expect(prefetchQuery.mock.calls[1]?.[0].queryKey).toEqual(
       providerDiscoveryQueryKeys.composerCapabilities("cursor"),
     );
+  });
+
+  it("does not issue any discovery call when the exact selected provider is disabled", () => {
+    const queryClient = new QueryClient();
+    const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
+
+    prefetchProviderModelsForNewThread(queryClient, {
+      provider: "omnimind",
+      settings: makeSettings({ defaultProvider: "omnimind" }),
+      cwd: "/tmp/project",
+      enabled: false,
+    });
+
+    expect(prefetchQuery).not.toHaveBeenCalled();
+  });
+
+  it("shares one in-flight React Query request for the same selected Engine intent", async () => {
+    const listModels = vi.fn(async () => ({
+      source: "test",
+      models: [{ slug: "droid-model", name: "Droid Model" }],
+    }));
+    const getComposerCapabilities = vi.fn(async () => ({
+      supportsImages: false,
+      supportsFiles: false,
+      supportsMentions: false,
+    }));
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listModels, getComposerCapabilities },
+    } as unknown as NativeApi);
+    const queryClient = new QueryClient();
+    const input = {
+      provider: "droid" as const,
+      settings: makeSettings({ droidBinaryPath: "/bin/droid" }),
+      cwd: "/tmp/project",
+    };
+
+    prefetchProviderModelsForNewThread(queryClient, input);
+    prefetchProviderModelsForNewThread(queryClient, input);
+
+    await vi.waitFor(() => {
+      expect(listModels).toHaveBeenCalledTimes(1);
+      expect(getComposerCapabilities).toHaveBeenCalledTimes(1);
+    });
+    expect(listModels).toHaveBeenCalledWith({
+      provider: "droid",
+      binaryPath: "/bin/droid",
+      cwd: "/tmp/project",
+    });
   });
 });

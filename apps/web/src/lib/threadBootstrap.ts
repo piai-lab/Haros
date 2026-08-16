@@ -41,6 +41,25 @@ export interface InheritedThreadContext {
   envMode: DraftThreadEnvMode;
 }
 
+export function resolveNewThreadDiscoveryWorktreePath(input: {
+  readonly options:
+    | Pick<NewThreadOptions, "worktreePath" | "fresh" | "temporary" | "envMode">
+    | undefined;
+  readonly draftWorktreePath: string | null | undefined;
+}): string | null {
+  if (input.options?.worktreePath !== undefined) {
+    return input.options.worktreePath ?? null;
+  }
+  if (
+    input.options?.fresh === true ||
+    input.options?.temporary === true ||
+    input.options?.envMode === "local"
+  ) {
+    return null;
+  }
+  return input.draftWorktreePath ?? null;
+}
+
 // Carry the active surface's branch/worktree/env into a new thread bootstrap.
 // A pending draft wins outright; otherwise we derive the env mode from the
 // active thread's worktree so a fresh thread inherits the same workspace shape.

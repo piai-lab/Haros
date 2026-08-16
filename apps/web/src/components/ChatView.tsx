@@ -2442,6 +2442,10 @@ export default function ChatView({
   } = useProviderModelCatalog({
     selectedProvider,
     discoveryEnabled: false,
+    selectedProviderDiscoveryEnabled:
+      selectedProvider !== "omnimind" ||
+      isModelPickerOpen ||
+      composerModelHintByProvider.omnimind !== null,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: composerModelHintByProvider,

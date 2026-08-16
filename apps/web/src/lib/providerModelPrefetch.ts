@@ -11,6 +11,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import type { AppSettings } from "../appSettings";
 import { resolveProviderDiscoveryCwd } from "./providerDiscovery";
+import { resolveNewThreadDiscoveryWorktreePath } from "./threadBootstrap";
 import {
   providerAgentsQueryOptions,
   providerComposerCapabilitiesQueryOptions,
@@ -20,6 +21,7 @@ import {
 export type ProviderModelPrefetchSettings = Pick<
   AppSettings,
   | "defaultProvider"
+  | "claudeBinaryPath"
   | "cursorBinaryPath"
   | "cursorApiEndpoint"
   | "antigravityBinaryPath"
@@ -32,27 +34,44 @@ export type ProviderModelPrefetchSettings = Pick<
 >;
 
 export function resolveNewThreadModelPrefetchProvider(input: {
+  providerOverride?: ProviderKind | null | undefined;
   draftActiveProvider?: ProviderKind | null | undefined;
   stickyActiveProvider?: ProviderKind | null | undefined;
   projectDefaultProvider?: ProviderKind | null | undefined;
   defaultProvider: ProviderKind;
 }): ProviderKind {
   return (
+    input.providerOverride ??
     input.draftActiveProvider ??
     input.stickyActiveProvider ??
     input.projectDefaultProvider ??
-    input.defaultProvider ??
-    "codex"
+    input.defaultProvider
   );
 }
 
 export function resolveNewThreadModelPrefetchCwd(input: {
+  worktreePath?: string | null | undefined;
+  hasExplicitWorktreePath?: boolean;
+  fresh?: boolean;
+  temporary?: boolean;
+  envMode?: "local" | "worktree" | null | undefined;
   draftWorktreePath?: string | null | undefined;
   projectCwd?: string | null | undefined;
   serverCwd?: string | null | undefined;
 }): string | null {
+  const worktreePath = resolveNewThreadDiscoveryWorktreePath({
+    options: {
+      ...(input.hasExplicitWorktreePath === true
+        ? { worktreePath: input.worktreePath ?? null }
+        : {}),
+      ...(input.fresh === true ? { fresh: true } : {}),
+      ...(input.temporary === true ? { temporary: true } : {}),
+      ...(input.envMode ? { envMode: input.envMode } : {}),
+    },
+    draftWorktreePath: input.draftWorktreePath,
+  });
   return resolveProviderDiscoveryCwd({
-    activeThreadWorktreePath: input.draftWorktreePath ?? null,
+    activeThreadWorktreePath: worktreePath,
     activeProjectCwd: input.projectCwd ?? null,
     serverCwd: input.serverCwd ?? null,
   });
@@ -74,7 +93,10 @@ export function providerModelsPrefetchQueryOptions(input: {
     case "omnimind":
       return providerModelsQueryOptions({ provider: "omnimind", cwd });
     case "claudeAgent":
-      return providerModelsQueryOptions({ provider: "claudeAgent" });
+      return providerModelsQueryOptions({
+        provider: "claudeAgent",
+        binaryPath: settings.claudeBinaryPath || null,
+      });
     case "codex":
       return providerModelsQueryOptions({ provider: "codex" });
     case "cursor":
@@ -158,8 +180,12 @@ export function prefetchProviderModelsForNewThread(
     provider: ProviderKind;
     settings: ProviderModelPrefetchSettings;
     cwd?: string | null;
+    enabled?: boolean;
   },
 ): void {
+  if (input.enabled === false) {
+    return;
+  }
   const cwd = input.cwd ?? null;
   void queryClient.prefetchQuery(
     providerModelsPrefetchQueryOptions({

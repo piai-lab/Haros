@@ -1,5 +1,6 @@
 import { type ProjectId, ThreadId } from "@omnimind/contracts";
 import { getDefaultModel } from "@omnimind/shared/model";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { startTransition } from "react";
 import { useAppSettings } from "../appSettings";
@@ -18,6 +19,12 @@ import {
   type NewThreadOptions,
 } from "../lib/threadBootstrap";
 import { promoteThreadCreate } from "../lib/threadCreatePromotion";
+import {
+  prefetchProviderModelsForNewThread,
+  resolveNewThreadModelPrefetchCwd,
+  resolveNewThreadModelPrefetchProvider,
+} from "../lib/providerModelPrefetch";
+import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import {
   draftNavigationSlotKey,
   runDraftNavigationOnce,
@@ -41,7 +48,9 @@ export interface NewThreadNavigationOptions {
 
 export function useHandleNewThread() {
   const projects = useStore((store) => store.projects);
-  const { settings } = useAppSettings();
+  const { settings, serverSettings } = useAppSettings();
+  const queryClient = useQueryClient();
+  const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const navigate = useNavigate();
   const router = useRouter();
   const { activeDraftThread, activeProjectId, activeThread, focusedThreadId, routeThreadId } =
@@ -134,6 +143,38 @@ export function useHandleNewThread() {
       projectId,
       routeThreadId: focusedThreadId,
     });
+    if (entryPoint === "chat") {
+      const draftStore = useComposerDraftStore.getState();
+      const targetDraft = bootstrapPlan.kind === "fresh" ? null : bootstrapPlan.draftThread;
+      const targetComposer =
+        bootstrapPlan.kind === "fresh"
+          ? null
+          : (draftStore.draftsByThreadId[bootstrapPlan.threadId] ?? null);
+      const project = useStore.getState().projects.find((candidate) => candidate.id === projectId);
+      const provider = resolveNewThreadModelPrefetchProvider({
+        providerOverride: options?.provider ?? null,
+        draftActiveProvider: targetComposer?.activeProvider ?? null,
+        stickyActiveProvider: draftStore.stickyActiveProvider,
+        projectDefaultProvider: project?.defaultModelSelection?.provider ?? null,
+        defaultProvider: settings.defaultProvider,
+      });
+      const cwd = resolveNewThreadModelPrefetchCwd({
+        worktreePath: options?.worktreePath ?? null,
+        hasExplicitWorktreePath: options?.worktreePath !== undefined,
+        fresh: options?.fresh === true,
+        temporary: wantsTemporaryThread,
+        envMode: options?.envMode ?? null,
+        draftWorktreePath: targetDraft?.worktreePath ?? null,
+        projectCwd: project?.cwd ?? null,
+        serverCwd: serverConfigQuery.data?.cwd ?? null,
+      });
+      prefetchProviderModelsForNewThread(queryClient, {
+        provider,
+        settings,
+        cwd,
+        enabled: serverSettings?.providers[provider]?.enabled !== false,
+      });
+    }
     // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.
     const projectDefaultModelSelection =
       useStore.getState().projects.find((project) => project.id === projectId)
