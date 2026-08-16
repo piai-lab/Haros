@@ -441,9 +441,12 @@ stock and OAuth patch SHA-256 values are respectively
 `7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77` and
 `ade36ccb1486d21504fd32cccdddc06810a179958fb4b0b32343a2708f6f4240`.
 Clean-source generation, upstream lifecycle tests, frozen dependency installation, adapter/isolation,
-OAuth, document and legal checks form the source/package candidate. Packaged-App and real-provider
-evidence must still come from the exact pushed candidate before this section can claim product-level
-proof.
+OAuth, document and legal checks form the source/package candidate. Exact pushed product
+`d88edd3dbfb88bb4dd1791bb0f7994b52740898f` subsequently passed direct Pi MiMo first-turn and
+continuation plus DeepSeek first-turn probes, then produced and installed an arm64 App whose embedded
+revision and four Pi package manifests report the same candidate and `0.84.2`. A fresh isolated
+profile showed stock Pi `v0.84.2`, accurate zero-model-service setup, complete exit and same-profile
+reopen. This is now product-level candidate evidence, not Campaign verification or release evidence.
 
 Rollback remains a single hard pin to `v0.84.1` if lifecycle, isolation, real-provider or packaged
 evidence exposes a material regression. No compatibility dual track is authorized or needed, and no

@@ -192,7 +192,7 @@ W2 不新增全局 layout store/database/migration/registry、第二动画 runti
 
 W2 已在 exact pushed `0eec65ac93615bb752a3e2f68e45da0b4a30b943` 完成 focused、安装 App、480px route matrix、退出与重开证据。维护者随后明确要求在 W2 收口后直接更新 Pi 内核；该决定只准入下述独立 **P1 Pi stable baseline refresh**，不自动授予 C1 Gate B。
 
-### P1 Pi stable baseline refresh（当前唯一代码 Slice）
+### P1 Pi stable baseline refresh（已完成）
 
 本轮 exact source set 只包含 Pi stable `v0.84.2`、commit `914cf1472e715297caa30db4b9535d534a9eb718` 及其 exact `0.84.2` Pi-family npm artifacts；post-tag `main` 与其他 Pi ecosystem package 不进入 production。当前 `v0.84.1` 产品 patch 只允许按相同 owner 语义重放或在 upstream 已提供等价 seam 时删除，不得借升级扩大 Host、Agent Core、UI 或 package lifecycle。
 
@@ -205,7 +205,7 @@ P1 只闭合：
 
 P1 stop conditions：patch 进入上游 executor/session terminal/recovery state machine；stock Pi 与 OmniMind Agent 隔离无法保持；typed prompt outcome、OAuth default path 或 safe ModelConfig owner不能语义重放；真实 Provider或packaged journey出现无法归因的P0/P1。命中后停止升级并保留 `v0.84.1`，不加兼容双轨。
 
-P1 完成后，当前施工入口返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
+P1 已在 exact pushed product `d88edd3dbfb88bb4dd1791bb0f7994b52740898f` 完成 source、MiMo/DeepSeek 与 fresh installed-App 证据。当前施工入口返回 **C1 Agent correctness**；本段仍不自动授予 C1 Gate B。维护者届时明确授权 C1 后，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
 2. targeted child control：stop A 不影响 sibling B 或 Root；parent stop-all、stale/terminal control、writer stop 与 crash/reopen各有准确语义；Pi 没有真实 message/steer 时 UI 不显示；
@@ -217,4 +217,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh admitted on `main`；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
