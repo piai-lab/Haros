@@ -6,6 +6,7 @@ import {
   resolvePlanSidebarPresentation,
   resolveThreadSidebarAutoSuppressed,
   resolveThreadSidebarPresentation,
+  resolveThreadSidebarToggleOpen,
   resolveWorkbenchAutoExclusive,
   resolveWorkbenchPresentation,
   CHAT_CANVAS_COMPACT_WIDTH_PX,
@@ -92,6 +93,13 @@ describe("responsive Workbench presentation", () => {
         pointerPeek: true,
       }),
     ).toBe("hidden");
+  });
+
+  it("promotes a passive peek when the user explicitly toggles the Sidebar", () => {
+    expect(resolveThreadSidebarToggleOpen("hidden")).toBe(true);
+    expect(resolveThreadSidebarToggleOpen("peek")).toBe(true);
+    expect(resolveThreadSidebarToggleOpen("docked")).toBe(false);
+    expect(resolveThreadSidebarToggleOpen("overlay")).toBe(false);
   });
 
   it("lets an explicitly requested pressured reveal overlay a manually closed Sidebar", () => {

@@ -60,6 +60,15 @@ export function resolveThreadSidebarPresentation(input: {
   return input.pointerPeek ? "peek" : "hidden";
 }
 
+/**
+ * Explicit toggle intent is not the inverse of visual visibility. A passive
+ * pointer peek is visually open while manual intent remains closed, so a button
+ * or keyboard toggle promotes it to docked instead of dismissing it.
+ */
+export function resolveThreadSidebarToggleOpen(presentation: ThreadSidebarPresentation): boolean {
+  return presentation === "hidden" || presentation === "peek";
+}
+
 export function resolveEnvironmentAutoSuppressed(input: {
   readonly availableWidth: number;
   readonly previouslySuppressed: boolean;

@@ -12,14 +12,13 @@ import {
 
 export const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
 export const DEFAULT_THREAD_SIDEBAR_WIDTH_PX = 23 * 16;
-// Below 18rem the desktop navigation stops behaving like a navigation surface:
-// project/thread titles truncate into noise and the open/close motion reads as a
-// thin strip. Widths in that legacy compressed range are repaired to the authored
-// 23rem default; legitimate custom widths at or above this floor remain untouched.
-export const THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX = 18 * 16;
+// The compact docked width remains a real, user-controlled Sidebar state. Only
+// corrupt/out-of-range values below the physical resize floor are repaired; a
+// narrow but usable preference must never be expanded back to the authored default.
+export const THREAD_SIDEBAR_MIN_WIDTH_PX = 13 * 16;
 
 const TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:typography-defaults-migrated:v2";
-const SIDEBAR_WIDTH_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:sidebar-width-defaults-migrated:v2";
+const SIDEBAR_WIDTH_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:sidebar-width-defaults-migrated:v3";
 
 export type AppearanceMigrationDisposition = "already-complete" | "migrated" | "preserved";
 
@@ -79,7 +78,7 @@ function migratePersistedTypographyDefaults(
 }
 
 export function resolveMigratedThreadSidebarWidth(width: number): number {
-  return width < THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX ? DEFAULT_THREAD_SIDEBAR_WIDTH_PX : width;
+  return Math.max(THREAD_SIDEBAR_MIN_WIDTH_PX, width);
 }
 
 function migratePersistedSidebarWidth(storage: Storage): AppearanceMigrationDisposition {

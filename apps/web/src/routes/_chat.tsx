@@ -52,7 +52,7 @@ import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import {
   resolveMigratedThreadSidebarWidth,
-  THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX,
+  THREAD_SIDEBAR_MIN_WIDTH_PX,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "~/appearanceMigrations";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
@@ -74,10 +74,11 @@ import { Schema } from "effect";
 import {
   resolveThreadSidebarAutoSuppressed,
   resolveThreadSidebarPresentation,
+  resolveThreadSidebarToggleOpen,
 } from "~/lib/responsiveWorkbench";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
-const THREAD_SIDEBAR_MIN_WIDTH = THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX;
+const THREAD_SIDEBAR_MIN_WIDTH = THREAD_SIDEBAR_MIN_WIDTH_PX;
 const THREAD_SIDEBAR_DEFAULT_WIDTH = 23 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
 const THREAD_SIDEBAR_DRAG_DISMISS_THRESHOLD = 3 * 16;
@@ -977,6 +978,7 @@ function ChatRouteLayout() {
       desktopPresentation
       open={resolvedSidebarOpen}
       onOpenChange={handleSidebarOpenChange}
+      resolveToggleOpen={() => resolveThreadSidebarToggleOpen(sidebarPresentation)}
       toggleShortcutLabel={sidebarToggleShortcutLabel}
       className="bg-[var(--app-shell-background)]"
       data-sidebar-side="left"

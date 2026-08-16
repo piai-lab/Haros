@@ -2679,6 +2679,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
       vi.spyOn(rail, "hasPointerCapture").mockReturnValue(true);
       vi.spyOn(rail, "releasePointerCapture").mockImplementation(() => undefined);
 
+      // Compact docked navigation is a valid width, not a forced reset to a wide
+      // authored default. The rail remains pointer-causal all the way to 13rem.
+      dispatchRailPointer(rail, "pointerdown", initialRailX, 40);
+      dispatchRailPointer(rail, "pointermove", initialRailX - (initialWidth - 208), 40);
+      await nextFrame();
+      expect(sidebar.getBoundingClientRect().width).toBeCloseTo(208, 0);
+      dispatchRailPointer(rail, "pointercancel", initialRailX - (initialWidth - 208), 40);
+      await vi.waitFor(() =>
+        expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth, 0),
+      );
+
       // A cancelled resize is a preview only: direct manipulation remains stable and
       // neither the committed width nor its storage changes.
       dispatchRailPointer(rail, "pointerdown", initialRailX, 41);
@@ -2788,32 +2799,39 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await userEvent.hover(repeatedEdgeZone);
       await vi.waitFor(() => expect(presentation()).toBe("peek"), { timeout: 500 });
       await userEvent.hover(sidebar);
-      await userEvent.hover(document.body);
-      await expectPresentation("hidden", "repeated peek leave");
-      expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
-      expect(cookieSet).toHaveBeenCalledTimes(1);
-
-      const headerTrigger = await waitForElement(
+      const peekToggle = await waitForElement(
         () =>
-          mounted.host.querySelector<HTMLButtonElement>(
-            "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
-          ),
-        "Unable to find Sidebar header trigger.",
+          Array.from(
+            sidebar.querySelectorAll<HTMLButtonElement>("[data-slot='sidebar-trigger']"),
+          ).find((element) => {
+            const rect = element.getBoundingClientRect();
+            return (
+              rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.left < window.innerWidth
+            );
+          }) ?? null,
+        "Unable to find the visible Sidebar toggle inside the pointer peek.",
       );
-      await userEvent.click(headerTrigger);
-      await expectPresentation("docked");
+      await userEvent.click(peekToggle);
+      await expectPresentation("docked", "explicit toggle should pin the pointer peek open");
+      await userEvent.hover(document.body);
+      await new Promise((resolve) => window.setTimeout(resolve, 260));
+      expect(presentation()).toBe("docked");
       expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth, 0);
-      await vi.waitFor(() => expect(cookieSet).toHaveBeenCalledTimes(2));
+      expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
+      await vi.waitFor(() => {
+        expect(cookieSet).toHaveBeenCalledTimes(2);
+        expect(cookieSet.mock.calls[1]?.[0]).toMatchObject({ value: "true" });
+      });
     } finally {
       await mounted.cleanup();
       cookieSet.mockRestore();
     }
   });
 
-  it("uses a comfortable custom Sidebar width without feeding presentation back into the budget", async () => {
-    localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(304));
+  it("uses a compact custom Sidebar width without feeding presentation back into the budget", async () => {
+    localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(208));
     const mounted = await mountChatView({
-      viewport: { ...DEFAULT_VIEWPORT, width: 624 },
+      viewport: { ...DEFAULT_VIEWPORT, width: 528 },
       snapshot: createSnapshotForTargetUser({
         targetMessageId: "msg-user-resized-sidebar" as MessageId,
         targetText: "resized sidebar",
@@ -2832,8 +2850,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         mounted.host
           .querySelector<HTMLElement>("[data-slot='sidebar-container']")
           ?.getBoundingClientRect().width,
-      ).toBeCloseTo(304, 0);
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 623 });
+      ).toBeCloseTo(208, 0);
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 527 });
       await vi.waitFor(() => {
         expect(
           mounted.host
@@ -2841,7 +2859,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             ?.getAttribute("data-thread-sidebar-presentation"),
         ).toBe("hidden");
       });
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 688 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 592 });
       await vi.waitFor(() => {
         expect(
           mounted.host

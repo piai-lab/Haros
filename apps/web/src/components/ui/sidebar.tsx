@@ -113,6 +113,7 @@ function SidebarProvider({
   defaultOpen: defaultOpenProp,
   open: openProp,
   onOpenChange: setOpenProp,
+  resolveToggleOpen: resolveToggleOpenProp,
   toggleShortcutLabel: toggleShortcutLabelProp,
   desktopPresentation: desktopPresentationProp,
   className,
@@ -128,6 +129,12 @@ function SidebarProvider({
   toggleShortcutLabel?: string | null;
   /** Return false for a transient presentation change that must not persist manual intent. */
   onOpenChange?: (open: boolean) => void | false;
+  /**
+   * Resolves an explicit toggle against the host's semantic presentation. This is
+   * needed when a passive preview is visually open but the user's manual intent is
+   * still closed: the explicit toggle must promote the preview instead of hiding it.
+   */
+  resolveToggleOpen?: (presentationOpen: boolean) => boolean;
 }) {
   const defaultOpen = defaultOpenProp ?? true;
   const detectedMobile = useIsMobile();
@@ -164,8 +171,10 @@ function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen]);
+    return isMobile
+      ? setOpenMobile((open) => !open)
+      : setOpen(resolveToggleOpenProp?.(open) ?? !open);
+  }, [isMobile, open, resolveToggleOpenProp, setOpen]);
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.

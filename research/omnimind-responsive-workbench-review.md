@@ -230,7 +230,19 @@ threshold = sidebarWidth + 776 + (previouslySuppressed ? 64 : 0);
 - OmniMind 使用 `300ms` 纯空间位移，窄面板与边缘阴影使它像一面追赶指针的墙；Codex 的可观察动作更短，面板内容与位移协同淡入，退出比进入更利落。主 Timeline/Composer 在本轮录屏中已基本保持锚定，因此不应再改主画布 owner；
 - 现有 passive hot zone 只有 `8px`，进入 delay `140ms`、离开 grace `90ms`，且退出仍等待完整 `300ms`。这使指针触边、面板出现、横穿到面板、移出收回之间存在可感知空档。热区扩大到 `12px`，进入/离开分别校准为 `90/60ms`，常规 drawer 为 `240ms`，pointer exit 为 `180ms`；drag 热路径仍保持零 tween，`prefers-reduced-motion` 仍只移除空间 motion。
 
-因此 W3 的最小修复不是复制 Codex 皮肤，而是在既有 owner 内闭合：v2 appearance migration 将小于 `18rem` 的旧压缩宽度恢复为 `23rem`，保留达到下界的自定义宽度；Sidebar toggle tooltip 从真实 keybinding 投影；同一个 Sidebar DOM 使用 transform/opacity 过渡与较轻 raised shadow；pointer peek 保持非模态、无 focus/inert/persistence 副作用。显式 compact overlay 的 modal 生命周期不变。
+因此当时形成的 W3 候选在既有 owner 内加入了 v2 appearance migration，把小于 `18rem` 的宽度恢复为 `23rem`；同时补了真实 keybinding tooltip、transform/opacity、较轻 raised shadow 与非模态 pointer peek。tooltip、peek 语义与 motion 仍有证据，但“窄宽度都是历史损坏”的推断随后被 14:06 真实录屏直接推翻；该 v2 宽度裁决已 superseded，不能继续作为产品 contract。
+
+#### 5.4.4 2026-08-16 14:06 installed 宽度与 toggle 反证
+
+维护者在前述候选安装后提供 `录屏2026-08-16 14.06.04.mov`，并指出三个可复现问题：Sidebar 被固定在过宽下界、消失后点击上方 toggle 反而再次收回、默认最小宽度显著宽于 Codex。逐帧回看当前 OmniMind 与 `录屏2026-08-16 13.16.19.mov` 的 Codex 参考后，新的事实是：
+
+- Codex 的窄 Sidebar 仍是有效 docked 状态，rail 可继续跟随指针缩窄；只有再越过 dismissal 临界区，整块面板才退场。OmniMind 把 `18rem` 做成硬 clamp，并把 `208–287.99px` 强制迁回 `23rem`，把正常直接操纵错误解释成了损坏数据；
+- OmniMind 的 pointer peek 让 Sidebar 在视觉上处于 open，但 manual intent 仍是 closed。共享 toggle 直接对 visual `open` 取反，导致用户在 peek 中点击上方 toggle 时得到 close；Codex 的同一显式动作是 pin/open，离开热区后仍保持常驻；
+- 正确边界是：`23rem` 仅为 authored default，`13rem` 是当前既有物理 resize floor；该区间内所有整数与 fractional 持久宽度都必须保留。低于物理 floor 的无效值只 clamp 到 floor，不迁回 default；
+- toggle 的 target 必须由 presentation 语义决定：`hidden/peek → open`，`docked/overlay → close`。pointer peek 被 toggle 提升后应写入正常 manual-open owner，而 hover enter/leave 本身仍不写 intent、width 或 cookie；
+- 这项纠正不推翻 `12px` hot zone、`90/60ms` intent/grace、`240/180ms` enter/exit、tooltip 与 nonmodal peek 结论，也不授权新 store、第二 Sidebar DOM 或第二 motion runtime。
+
+这次反证说明“更宽看起来更完整”不能替代直接操纵的用户事实。未来再校准宽度时必须先保留可逆 resize 区间，再从 drag-dismiss 阈值裁决退场；不得用外观偏好编写数据迁移。
 
 ### 5.5 RightDock 当前布局
 

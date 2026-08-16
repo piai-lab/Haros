@@ -217,7 +217,7 @@ W3 只闭合：
 4. Sidebar drag/retreat/peek 期间 Timeline 与 Composer 保持稳定锚点，row hover card、tooltip 与行操作浮层静默；stream/scroll/draft/IME/focus、RightDock/Plan/Environment lifecycle 不退化；
 5. Environment 每次 App 冷启动默认关闭；本轮不得把 session 手动打开或自动 presentation 写成跨启动偏好；
 6. focused route/browser proof 覆盖 resize→dismiss、reverse、cancel、重复 peek、focus/inert、cookie/storage、主画布 geometry、EN/ZH、light/dark、full/reduced motion；候选从 exact pushed SHA 重建并以 fresh 隔离 profile完成真实 rail 拖动、hover、关闭与重开。
-7. 维护者对 2026-08-16 13:15/13:16 两段 installed OmniMind/Codex 录屏的再次复核，追加锁定：桌面 Sidebar 舒适下界 `18rem`，旧 `208–287.99px` 压缩宽度迁移到 `23rem`，合法较宽自定义值保留；toggle hover 显示动作与当前真实快捷键；左缘热区 `12px`，pointer peek 进入意图延迟 `90ms`、离开 grace `60ms`，常规进入使用 `240ms cubic-bezier(0.32,0.72,0,1)`，pointer exit 使用可中断的 `180ms` 收回并保持 reduced-motion 语义。上述数值属于 W3 当前交互校准，不成为新 database/layout owner。
+7. 维护者对 2026-08-16 14:06 installed 录屏的复核推翻了此前 `18rem` 舒适硬下界：`23rem` 只作 authored default，Sidebar 可连续缩窄到既有 `13rem` 物理下界，`208–287.99px` 的合法持久宽度必须保留，不再强制迁回默认值；pointer peek 可见时，toggle/真实快捷键的显式动作必须提升为常驻展开，不能再次收回。toggle hover 继续显示动作与当前真实快捷键；左缘热区 `12px`，pointer peek 进入意图延迟 `90ms`、离开 grace `60ms`，常规进入使用 `240ms cubic-bezier(0.32,0.72,0,1)`，pointer exit 使用可中断的 `180ms` 收回并保持 reduced-motion 语义。上述数值属于 W3 当前交互校准，不成为新 database/layout owner。
 
 W3 只复用 `_chat`、Sidebar primitive、现有 Sidebar surface/off-canvas token 与当前 hover presentation owner。不得新增全局 layout/focus store、第二 Sidebar DOM、第二动画 runtime、Project instructions/Settings taxonomy、Agent Core、Provider 或 release；不得复制 Codex 视觉皮肤。实现与证据边界见 [`architecture/workbench.md`](architecture/workbench.md#chat-shell环境信息与响应式-workbench) 和 [`research/omnimind-responsive-workbench-review.md`](research/omnimind-responsive-workbench-review.md)。W3 完成前 C1 继续 deferred。
 
