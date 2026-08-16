@@ -51,6 +51,7 @@ import {
   resolveCycledModelSlug,
   resolveEnvironmentPanelVisible,
   resolveGitRepoUiState,
+  resolveSettledThreadBranchMismatch,
   resolveProjectScriptTerminalTarget,
   resolveQueuedSteerGateTransition,
   resolveRuntimeModeAfterApprovalDecision,
@@ -60,6 +61,7 @@ import {
   QUEUED_STEER_GATE_TIMEOUT_MS,
   sanitizeVoiceErrorMessage,
   buildExpiredTerminalContextToastCopy,
+  cleanupPreparedWorktreeBeforeTurn,
   shouldAutoDeleteTerminalThreadOnLastClose,
   shouldConsumePendingCustomBinaryConfirmation,
   shouldEnableComposerPastedTextCollapse,
@@ -71,6 +73,29 @@ import {
   worktreeSetupHasError,
 } from "./ChatView.logic";
 import { resolvePendingDirectTurnRecoveryMutation } from "../composerDraftDomain";
+
+describe("settled thread branch mismatch", () => {
+  it("only describes a settled local thread on a different concrete branch", () => {
+    expect(
+      resolveSettledThreadBranchMismatch({
+        isSettled: true,
+        isLocalWorkspace: true,
+        threadBranch: "feature/finished",
+        currentBranch: "main",
+      }),
+    ).toEqual({ threadBranch: "feature/finished", currentBranch: "main" });
+
+    for (const input of [
+      { isSettled: false, isLocalWorkspace: true, threadBranch: "old", currentBranch: "main" },
+      { isSettled: true, isLocalWorkspace: false, threadBranch: "old", currentBranch: "main" },
+      { isSettled: true, isLocalWorkspace: true, threadBranch: "main", currentBranch: "main" },
+      { isSettled: true, isLocalWorkspace: true, threadBranch: null, currentBranch: "main" },
+      { isSettled: true, isLocalWorkspace: true, threadBranch: "old", currentBranch: null },
+    ]) {
+      expect(resolveSettledThreadBranchMismatch(input)).toBeNull();
+    }
+  });
+});
 
 describe("resolvePendingDirectTurnRecoveryMutation", () => {
   it("is monotonic for content and exact-binding intent changes", () => {
@@ -2003,6 +2028,7 @@ describe("runWorktreeCreationFlow", () => {
     harness.emit({ progressId: "progress-1", kind: "phase_started", phase: "worktree" });
 
     expect(harness.steps).toEqual(["create-branch"]);
+    harness.settleCreation("/resolved-worktree");
     await expect(harness.flow).resolves.toEqual({ outcome: "resolved" });
   });
 
@@ -2010,13 +2036,35 @@ describe("runWorktreeCreationFlow", () => {
     const harness = startFlowHarness();
 
     harness.resolution.resolve("work-locally");
-    await expect(harness.flow).resolves.toEqual({ outcome: "resolved" });
-    expect(harness.unsubscribeCount()).toBe(1);
+    let settled = false;
+    void harness.flow.finally(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
     expect(harness.removedPaths).toEqual([]);
 
     harness.settleCreation("/late-worktree");
-    await Promise.resolve();
+    await expect(harness.flow).resolves.toEqual({ outcome: "resolved" });
     expect(harness.removedPaths).toEqual(["/late-worktree"]);
+    expect(harness.unsubscribeCount()).toBe(1);
+  });
+
+  it("does not report a resolved setup when late physical cleanup fails", async () => {
+    const resolution = createWorktreeSetupResolution();
+    resolution.resolve("cancel");
+    const flow = runWorktreeCreationFlow({
+      progressId: "progress-fail-remove",
+      subscribeToProgress: () => () => undefined,
+      startCreation: async () => ({ worktree: { path: "/late-worktree" } }),
+      resolution,
+      onCreationStep: () => undefined,
+      removeWorktree: async () => {
+        throw new Error("remove failed");
+      },
+    });
+
+    await expect(flow).rejects.toThrow("remove failed");
   });
 
   it("unsubscribes and rethrows when creation fails", async () => {
@@ -2027,6 +2075,103 @@ describe("runWorktreeCreationFlow", () => {
     await expect(harness.flow).rejects.toThrow("worktree add failed");
     expect(harness.unsubscribeCount()).toBe(1);
     expect(harness.removedPaths).toEqual([]);
+  });
+});
+
+describe("cleanupPreparedWorktreeBeforeTurn", () => {
+  function harness(ownership: "promoted" | "existing") {
+    const calls: string[] = [];
+    return {
+      calls,
+      run: () =>
+        cleanupPreparedWorktreeBeforeTurn({
+          turnStartAttempted: false,
+          ownership,
+          deletePromotedThread: async () => {
+            calls.push("delete");
+          },
+          detachExistingThread: async () => {
+            calls.push("detach");
+          },
+          removeWorktree: async () => {
+            calls.push("remove");
+          },
+          commitLocalDetach: () => calls.push("local"),
+        }),
+    };
+  }
+
+  it("durably deletes a promoted thread before removing its worktree", async () => {
+    const test = harness("promoted");
+    await test.run();
+    expect(test.calls).toEqual(["delete", "remove", "local"]);
+  });
+
+  it("durably detaches an existing thread before removing its worktree", async () => {
+    const test = harness("existing");
+    await test.run();
+    expect(test.calls).toEqual(["detach", "remove", "local"]);
+  });
+
+  it("never removes when durable ownership cleanup is rejected", async () => {
+    const calls: string[] = [];
+    await expect(
+      cleanupPreparedWorktreeBeforeTurn({
+        turnStartAttempted: false,
+        ownership: "existing",
+        deletePromotedThread: async () => undefined,
+        detachExistingThread: async () => {
+          calls.push("detach");
+          throw new Error("durable reject");
+        },
+        removeWorktree: async () => {
+          calls.push("remove");
+        },
+        commitLocalDetach: () => calls.push("local"),
+      }),
+    ).rejects.toThrow("durable reject");
+    expect(calls).toEqual(["detach"]);
+  });
+
+  it("does not commit local completion when physical removal fails", async () => {
+    const calls: string[] = [];
+    await expect(
+      cleanupPreparedWorktreeBeforeTurn({
+        turnStartAttempted: false,
+        ownership: "existing",
+        deletePromotedThread: async () => undefined,
+        detachExistingThread: async () => {
+          calls.push("detach");
+        },
+        removeWorktree: async () => {
+          calls.push("remove");
+          throw new Error("remove reject");
+        },
+        commitLocalDetach: () => calls.push("local"),
+      }),
+    ).rejects.toThrow("remove reject");
+    expect(calls).toEqual(["detach", "remove"]);
+  });
+
+  it("leaves an attempted turn entirely to the exact server projection", async () => {
+    const calls: string[] = [];
+    await expect(
+      cleanupPreparedWorktreeBeforeTurn({
+        turnStartAttempted: true,
+        ownership: "promoted",
+        deletePromotedThread: async () => {
+          calls.push("delete");
+        },
+        detachExistingThread: async () => {
+          calls.push("detach");
+        },
+        removeWorktree: async () => {
+          calls.push("remove");
+        },
+        commitLocalDetach: () => calls.push("local"),
+      }),
+    ).resolves.toBe("projection-owned");
+    expect(calls).toEqual([]);
   });
 });
 

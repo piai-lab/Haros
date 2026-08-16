@@ -251,6 +251,33 @@ describe("composerDraftStore project draft thread mapping", () => {
     );
   });
 
+  it("keeps prompt and blob-backed attachments isolated by project draft mapping", () => {
+    const store = useComposerDraftStore.getState();
+    store.setProjectDraftThreadId(projectId, threadId, { entryPoint: "chat" });
+    store.setProjectDraftThreadId(otherProjectId, otherThreadId, { entryPoint: "chat" });
+    store.setPrompt(threadId, "project A draft");
+    store.setPrompt(otherThreadId, "project B draft");
+    store.addImage(threadId, makeImage({ id: "image-a", previewUrl: "blob:project-a" }));
+    store.addImage(otherThreadId, makeImage({ id: "image-b", previewUrl: "blob:project-b" }));
+
+    const projectAThread = useComposerDraftStore
+      .getState()
+      .getDraftThreadByProjectId(projectId, "chat")?.threadId;
+    const projectBThread = useComposerDraftStore
+      .getState()
+      .getDraftThreadByProjectId(otherProjectId, "chat")?.threadId;
+    expect(projectAThread).toBe(threadId);
+    expect(projectBThread).toBe(otherThreadId);
+    expect(useComposerDraftStore.getState().draftsByThreadId[projectAThread!]).toMatchObject({
+      prompt: "project A draft",
+      images: [{ id: "image-a", previewUrl: "blob:project-a" }],
+    });
+    expect(useComposerDraftStore.getState().draftsByThreadId[projectBThread!]).toMatchObject({
+      prompt: "project B draft",
+      images: [{ id: "image-b", previewUrl: "blob:project-b" }],
+    });
+  });
+
   it("clears only matching project draft mapping entries", () => {
     const store = useComposerDraftStore.getState();
     store.setProjectDraftThreadId(projectId, threadId);

@@ -1,5 +1,5 @@
 // FILE: _chat.index.tsx
-// Purpose: Restores the last chat route on app launch, falling back to a fresh home-chat draft.
+// Purpose: Restores the last chat route on app launch, falling back to the project's home draft.
 // Layer: Routing
 // Depends on: the shared restore/create route surface plus the home-chat new-chat handler.
 
@@ -28,12 +28,12 @@ function ChatIndexRouteView() {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
-  const createFreshChat = () => handleNewChat({ fresh: true });
+  const createFreshChat = () => handleNewChat();
 
   const workspacePaths = { homeDir, chatWorkspaceRoot, studioWorkspaceRoot };
   // Home chats restore the last visited route, except Studio threads — those belong to the
   // /studio surface, and restoring one from "/" would silently switch the user into the Studio
-  // segment. A Studio lastThreadRoute falls through to a fresh home-chat draft instead.
+  // segment. A Studio lastThreadRoute falls through to the matching home-chat draft instead.
   const studioProjectIds = collectStudioProjectIds(projects, workspacePaths);
   // Only plain, still-unsent chat drafts qualify as restore targets: a non-"chat" entry point
   // isn't a home-chat draft, and `promotedTo` means the draft already became a real thread, so

@@ -625,6 +625,30 @@ export function resolveGitRepoUiState(input: {
   return input.queriedIsRepo ?? !input.isStudioContainer;
 }
 
+export interface SettledThreadBranchMismatch {
+  readonly threadBranch: string;
+  readonly currentBranch: string;
+}
+
+export function resolveSettledThreadBranchMismatch(input: {
+  isSettled: boolean;
+  isLocalWorkspace: boolean;
+  threadBranch: string | null | undefined;
+  currentBranch: string | null | undefined;
+}): SettledThreadBranchMismatch | null {
+  if (!input.isSettled || !input.isLocalWorkspace) {
+    return null;
+  }
+
+  const threadBranch = input.threadBranch?.trim() ?? "";
+  const currentBranch = input.currentBranch?.trim() ?? "";
+  if (!threadBranch || !currentBranch || threadBranch === currentBranch) {
+    return null;
+  }
+
+  return { threadBranch, currentBranch };
+}
+
 // The composer live strip prefers the turn's computed diff (the
 // `thread.turn-diff-completed` event) so it can show real per-file +/- stats.
 // Before that lands, it falls back to mid-turn file-edit work-log activity so
@@ -1107,15 +1131,35 @@ export async function runWorktreeCreationFlow<Result extends { worktree: { path:
     // wait instead of only taking effect once the creation finishes.
     await Promise.race([creation, deps.resolution.promise]);
     if (deps.resolution.action !== null) {
-      void creation
-        .then((result) => deps.removeWorktree(result.worktree.path))
-        .catch(() => undefined);
+      const result = await creation;
+      await deps.removeWorktree(result.worktree.path);
       return { outcome: "resolved" };
     }
     return { outcome: "created", result: await creation };
   } finally {
     unsubscribe();
   }
+}
+
+export async function cleanupPreparedWorktreeBeforeTurn(input: {
+  turnStartAttempted: boolean;
+  ownership: "promoted" | "existing";
+  deletePromotedThread: () => Promise<void>;
+  detachExistingThread: () => Promise<void>;
+  removeWorktree: () => Promise<void>;
+  commitLocalDetach: () => void;
+}): Promise<"cleaned" | "projection-owned"> {
+  if (input.turnStartAttempted) {
+    return "projection-owned";
+  }
+  if (input.ownership === "promoted") {
+    await input.deletePromotedThread();
+  } else {
+    await input.detachExistingThread();
+  }
+  await input.removeWorktree();
+  input.commitLocalDetach();
+  return "cleaned";
 }
 
 // Once the turn RPC has resolved the server provably owns the turn; the

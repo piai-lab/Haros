@@ -14,7 +14,7 @@ export type StartContainerChatResult =
   | { ok: true; threadId: ThreadId | null }
   | { ok: false; error: string };
 
-type StartFreshContainerChat = (options: { fresh: true }) => Promise<StartContainerChatResult>;
+type StartContainerSurfaceChat = (options?: { fresh: true }) => Promise<StartContainerChatResult>;
 
 /**
  * Starts a fresh chat in the surface that owns the active project. Thread routes are shared by
@@ -24,14 +24,13 @@ export function startFreshChatForActiveSurface(input: {
   readonly activeProject: Pick<Project, "cwd" | "kind"> | null;
   readonly isStudioRoute: boolean;
   readonly paths: ServerWorkspacePaths;
-  readonly handleNewChat: StartFreshContainerChat;
-  readonly handleNewStudioChat: StartFreshContainerChat;
+  readonly handleNewChat: StartContainerSurfaceChat;
+  readonly handleNewStudioChat: StartContainerSurfaceChat;
 }): Promise<StartContainerChatResult> {
-  const handler =
-    input.isStudioRoute || isStudioContainerProject(input.activeProject, input.paths)
-      ? input.handleNewStudioChat
-      : input.handleNewChat;
-  return handler({ fresh: true });
+  if (input.isStudioRoute || isStudioContainerProject(input.activeProject, input.paths)) {
+    return input.handleNewStudioChat({ fresh: true });
+  }
+  return input.handleNewChat();
 }
 
 /**

@@ -85,6 +85,7 @@ import {
   gitCreateDetachedWorktreeMutationOptions,
   gitGithubRepositoryQueryOptions,
   gitBranchesQueryOptions,
+  gitStatusQueryOptions,
 } from "~/lib/gitReactQuery";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import {
@@ -178,6 +179,7 @@ import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import {
   buildThreadBreadcrumbs,
   buildTranscriptAutoFollowSignal,
+  cleanupPreparedWorktreeBeforeTurn,
   createRuntimeModePersistenceQueue,
   derivePromptHistoryFromMessages,
   desiredBindingCanPersistWithoutActiveSession,
@@ -195,6 +197,7 @@ import {
   resolveCycledModelSlug,
   resolveEnvironmentPanelVisible,
   resolveGitRepoUiState,
+  resolveSettledThreadBranchMismatch,
   resolveProjectScriptTerminalTarget,
   resolvePromptHistoryNavigation,
   resolveTurnStartRecoveryDisposition,
@@ -494,6 +497,7 @@ import { ComposerPendingApprovalPanel } from "./chat/ComposerPendingApprovalPane
 import { ComposerExtrasMenu } from "./chat/ComposerExtrasMenu";
 import { ContextWindowMeter } from "./chat/ContextWindowMeter";
 import { ComposerInputBanners } from "./chat/ComposerInputBanners";
+import { ComposerBranchMismatchNotice } from "./chat/ComposerBranchMismatchNotice";
 import { ComposerPendingUserInputPanel } from "./chat/ComposerPendingUserInputPanel";
 import { ComposerVoiceButton } from "./chat/ComposerVoiceButton";
 import { ComposerVoiceRecorderBar } from "./chat/ComposerVoiceRecorderBar";
@@ -2120,7 +2124,7 @@ export default function ChatView({
             return;
           }
         }
-        await handleNewChat({ fresh: true });
+        await handleNewChat();
       };
 
       try {
@@ -3746,6 +3750,7 @@ export default function ChatView({
   const isMentionTrigger = composerTriggerKind === "mention";
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
   const branchesQuery = useQuery(gitBranchesQueryOptions(gitBranchSourceCwd));
+  const gitStatusQuery = useQuery(gitStatusQueryOptions(gitBranchSourceCwd));
   const localFolderBrowseRootPath = getLocalFolderBrowseRootPath(
     serverConfigQuery.data?.homeDir ?? null,
     isMacPlatform(platform),
@@ -3839,6 +3844,13 @@ export default function ChatView({
       }),
     [activeProject?.cwd, activeThread?.branch, branchesQuery.data?.branches],
   );
+  const currentActiveGitBranch = gitStatusQuery.data?.branch ?? activeRootBranch;
+  const settledThreadBranchMismatch = resolveSettledThreadBranchMismatch({
+    isSettled: activeThread?.settledAt != null && threadDetailHydration === "ready",
+    isLocalWorkspace: !isStudioContainer && resolvedThreadWorktreePath === null,
+    threadBranch: activeThread?.branch,
+    currentBranch: currentActiveGitBranch,
+  });
   // Keep plugin suggestions referentially stable so prompt-sync effects do not loop on rerender.
   const providerPlugins = useMemo(
     () =>
@@ -8330,6 +8342,11 @@ export default function ChatView({
     let nextAssociatedWorktreeRef = isStudioContainer
       ? null
       : (activeThread.associatedWorktreeRef ?? null);
+    const shouldResumeSettledLocalThread =
+      isServerThread &&
+      activeThread.settledAt != null &&
+      nextThreadEnvMode === "local" &&
+      nextThreadWorktreePath === null;
 
     if (isFirstMessage && isContainerLandingProject && firstSendTarget.kind !== "current") {
       if (firstSendTarget.kind === "create-project") {
@@ -8411,6 +8428,22 @@ export default function ChatView({
       !nextThreadBranch
     ) {
       nextThreadBranch = activeRootBranch ?? null;
+    }
+
+    if (shouldResumeSettledLocalThread) {
+      if (!gitBranchSourceCwd) {
+        setStoreThreadError(threadIdForSend, t("git.branch.statusUnavailable"));
+        return false;
+      }
+      try {
+        await queryClient.fetchQuery({
+          ...gitStatusQueryOptions(gitBranchSourceCwd),
+          staleTime: 0,
+        });
+      } catch {
+        setStoreThreadError(threadIdForSend, t("git.branch.statusUnavailable"));
+        return false;
+      }
     }
 
     const baseBranchForWorktree =
@@ -8691,6 +8724,8 @@ export default function ChatView({
     let createdWorktreeForSendPath: string | null = null;
     let switchedToLocalCheckout = false;
     let turnStartSucceeded = false;
+    let turnStartAttempted = false;
+    let preTurnCleanupFailed = false;
     await (async () => {
       // "Work locally" from the setup card: drop any prepared worktree and
       // point the send (and the thread's metadata) back at the project
@@ -8705,18 +8740,6 @@ export default function ChatView({
         nextAssociatedWorktreeBranch = null;
         nextAssociatedWorktreeRef = null;
         const worktreePathToRemove = createdWorktreeForSendPath;
-        createdWorktreeForSendPath = null;
-        if (worktreePathToRemove) {
-          // Best-effort: a leftover worktree is inert and reclaimable later.
-          void api.git
-            .removeWorktree({
-              cwd: targetProjectCwdForSend,
-              path: worktreePathToRemove,
-              force: true,
-              reclaimTemporaryBranch: true,
-            })
-            .catch(() => undefined);
-        }
         if (isServerThread || createdServerThreadForLocalDraft) {
           await api.orchestration.dispatchCommand({
             type: "thread.meta.update",
@@ -8737,6 +8760,19 @@ export default function ChatView({
             associatedWorktreeBranch: null,
             associatedWorktreeRef: null,
           });
+        }
+        createdWorktreeForSendPath = null;
+        if (worktreePathToRemove) {
+          // Durable owners are detached first. A failed physical cleanup then
+          // leaves only an inert, reclaimable worktree rather than a dangling path.
+          void api.git
+            .removeWorktree({
+              cwd: targetProjectCwdForSend,
+              path: worktreePathToRemove,
+              force: true,
+              reclaimTemporaryBranch: true,
+            })
+            .catch(() => undefined);
         }
         clearLocalDispatchWorktreeSetup();
       };
@@ -8953,33 +8989,33 @@ export default function ChatView({
         provider: selectedModelSelectionForSend.provider,
         providerOptions: providerOptionsForDispatchForSend,
       });
-      await stagedTurnAttachments.runWithDispatch((turnAttachments) =>
-        api.orchestration.dispatchCommand({
-          type: "thread.turn.start",
-          commandId: turnStartCommandId,
-          threadId: threadIdForSend,
-          message: {
-            messageId: messageIdForSend,
-            role: "user",
-            text: outgoingMessageText,
-            attachments: turnAttachments,
-            ...(mentionedSkillsForSend.length > 0 ? { skills: mentionedSkillsForSend } : {}),
-            ...(mentionedPluginMentionsForSend.length > 0
-              ? { mentions: mentionedPluginMentionsForSend }
-              : {}),
-          },
-          modelSelection: selectedModelSelectionForSend,
-          ...(providerOptionsForDispatchForSend
-            ? { providerOptions: providerOptionsForDispatchForSend }
+      turnStartAttempted = true;
+      await api.orchestration.dispatchCommand({
+        type: "thread.turn.start",
+        commandId: turnStartCommandId,
+        threadId: threadIdForSend,
+        message: {
+          messageId: messageIdForSend,
+          role: "user",
+          text: outgoingMessageText,
+          attachments: stagedTurnAttachments.attachments,
+          ...(mentionedSkillsForSend.length > 0 ? { skills: mentionedSkillsForSend } : {}),
+          ...(mentionedPluginMentionsForSend.length > 0
+            ? { mentions: mentionedPluginMentionsForSend }
             : {}),
-          assistantDeliveryMode,
-          dispatchMode,
-          runtimeMode: nextRuntimeModeForSend,
-          interactionMode: interactionModeForSend,
-          ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
-          createdAt: messageCreatedAt,
-        }),
-      );
+        },
+        modelSelection: selectedModelSelectionForSend,
+        ...(providerOptionsForDispatchForSend
+          ? { providerOptions: providerOptionsForDispatchForSend }
+          : {}),
+        assistantDeliveryMode,
+        dispatchMode,
+        runtimeMode: nextRuntimeModeForSend,
+        interactionMode: interactionModeForSend,
+        ...(sourceProposedPlanForSend ? { sourceProposedPlan: sourceProposedPlanForSend } : {}),
+        createdAt: messageCreatedAt,
+      });
+      stagedTurnAttachments.commit();
       turnStartSucceeded = true;
       armLocalDispatchAckFallback(threadIdForSend);
       // Steers on providers without native mid-turn steering interrupt the live
@@ -9010,20 +9046,83 @@ export default function ChatView({
       // A user-cancelled worktree setup unwinds through this same rollback,
       // but silently: no error styling on the step row, no thread error.
       const setupCancelled = err instanceof WorktreeSetupCancelledError;
+      let cleanupFailure: unknown = null;
       // Uploads start in parallel with workspace/session preparation. If any
-      // earlier step fails, settle that promise and release every staged blob.
-      await turnAttachmentsPromise.then(
-        (staged) => staged.cleanup(),
-        () => undefined,
-      );
+      // earlier step fails, settle that promise and release every staged blob. Once
+      // turn.start was attempted, a rejected acknowledgement is ambiguous: the exact
+      // projection/recovery owner must decide, so neither blobs nor workspace are undone.
+      if (!turnStartAttempted) {
+        await turnAttachmentsPromise.then(
+          (staged) => staged.cleanup(),
+          () => undefined,
+        );
+      }
+      try {
+        if (createdWorktreeForSendPath) {
+          const worktreePathToCleanup = createdWorktreeForSendPath;
+          await cleanupPreparedWorktreeBeforeTurn({
+            turnStartAttempted,
+            ownership: createdServerThreadForLocalDraft ? "promoted" : "existing",
+            deletePromotedThread: async () => {
+              await api.orchestration.dispatchCommand({
+                type: "thread.delete",
+                commandId: newCommandId(),
+                threadId: threadIdForSend,
+              });
+            },
+            detachExistingThread: async () => {
+              await api.orchestration.dispatchCommand({
+                type: "thread.meta.update",
+                commandId: newCommandId(),
+                threadId: threadIdForSend,
+                envMode: "local",
+                branch: null,
+                worktreePath: null,
+                associatedWorktreePath: null,
+                associatedWorktreeBranch: null,
+                associatedWorktreeRef: null,
+              });
+            },
+            removeWorktree: () =>
+              api.git.removeWorktree({
+                cwd: targetProjectCwdForSend,
+                path: worktreePathToCleanup,
+                force: true,
+                reclaimTemporaryBranch: true,
+              }),
+            commitLocalDetach: () => {
+              if (!createdServerThreadForLocalDraft && isServerThread) {
+                setStoreThreadWorkspace(threadIdForSend, {
+                  envMode: "local",
+                  branch: null,
+                  worktreePath: null,
+                  associatedWorktreePath: null,
+                  associatedWorktreeBranch: null,
+                  associatedWorktreeRef: null,
+                });
+              }
+            },
+          });
+        } else if (createdServerThreadForLocalDraft && !turnStartAttempted) {
+          await api.orchestration.dispatchCommand({
+            type: "thread.delete",
+            commandId: newCommandId(),
+            threadId: threadIdForSend,
+          });
+        }
+      } catch (cleanupError) {
+        cleanupFailure = cleanupError;
+        preTurnCleanupFailed = true;
+      }
+      const cancelledAndCleaned = setupCancelled && cleanupFailure === null;
       // Surface the failure on whichever setup step was active (no-op for
       // sends without a worktree setup in flight).
-      if (!setupCancelled) {
+      if (!cancelledAndCleaned) {
         failLocalDispatchWorktreeSetup();
       }
-      if (!turnStartSucceeded) {
-        // The turn RPC never resolved, so no server turn exists for the
-        // watchdog to recover — drop the marker armed when the dispatch began.
+      if (!turnStartAttempted) {
+        // No turn command crossed the authority boundary, so the watchdog has
+        // nothing to recover and the local marker can be removed exactly.
         clearPendingTurnDispatch(threadIdForSend);
         const pendingRecovery =
           useComposerDraftStore.getState().draftsByThreadId[threadIdForSend]
@@ -9032,57 +9131,9 @@ export default function ChatView({
           clearPendingDirectTurnRecovery(threadIdForSend, pendingRecovery.recoveryId);
         }
       }
-      if (createdServerThreadForLocalDraft && !turnStartSucceeded) {
-        // This rollback cleans up a retryable draft promotion; do not tombstone the draft id.
-        await api.orchestration
-          .dispatchCommand({
-            type: "thread.delete",
-            commandId: newCommandId(),
-            threadId: threadIdForSend,
-          })
-          .catch(() => undefined);
-      }
-      if (createdWorktreeForSendPath && !turnStartSucceeded) {
-        const removed = await api.git
-          .removeWorktree({
-            cwd: targetProjectCwdForSend,
-            path: createdWorktreeForSendPath,
-            force: true,
-            reclaimTemporaryBranch: true,
-          })
-          .then(
-            () => true,
-            () => false,
-          );
-        if (removed && isServerThread) {
-          await api.orchestration
-            .dispatchCommand({
-              type: "thread.meta.update",
-              commandId: newCommandId(),
-              threadId: threadIdForSend,
-              envMode: "local",
-              branch: null,
-              worktreePath: null,
-              associatedWorktreePath: null,
-              associatedWorktreeBranch: null,
-              associatedWorktreeRef: null,
-            })
-            .then(
-              () =>
-                setStoreThreadWorkspace(threadIdForSend, {
-                  branch: null,
-                  worktreePath: null,
-                  associatedWorktreePath: null,
-                  associatedWorktreeBranch: null,
-                  associatedWorktreeRef: null,
-                }),
-              () => undefined,
-            );
-        }
-      }
       if (
         queuedChatTurn === null &&
-        !turnStartSucceeded &&
+        !turnStartAttempted &&
         promptRef.current.length === 0 &&
         composerImagesRef.current.length === 0 &&
         composerFilesRef.current.length === 0 &&
@@ -9125,17 +9176,21 @@ export default function ChatView({
         updateSelectedComposerMentions(composerMentionsSnapshot);
         setComposerTrigger(detectComposerTrigger(promptForSend, promptForSend.length));
       }
-      if (!setupCancelled) {
+      if (!cancelledAndCleaned) {
+        const failure = cleanupFailure ?? err;
         setThreadError(
           threadIdForSend,
-          err instanceof Error ? err.message : "Failed to send message.",
+          failure instanceof Error ? failure.message : "Failed to send message.",
         );
       }
     });
     sendInFlightRef.current = false;
     worktreeSetupResolutionRef.current = null;
-    if (!turnStartSucceeded) {
-      if (baseBranchForWorktree && (worktreeSetupResolution?.action ?? null) === null) {
+    if (!turnStartAttempted) {
+      if (
+        preTurnCleanupFailed ||
+        (baseBranchForWorktree && (worktreeSetupResolution?.action ?? null) === null)
+      ) {
         scheduleFailedWorktreeSetupDispatchReset();
       } else {
         // A resolved setup (cancelled, or switched to local and then failed)
@@ -11536,6 +11591,7 @@ export default function ChatView({
     threadId: activeThread.id,
     onEnvModeChange,
     envLocked,
+    threadDetailReady: threadDetailHydration === "ready",
     onHandoffToWorktree,
     onHandoffToLocal,
     handoffBusy,
@@ -11829,6 +11885,11 @@ export default function ChatView({
                   showComposerSubagentStrip
                 }
               />
+              {settledThreadBranchMismatch ? (
+                <div className="pb-2">
+                  <ComposerBranchMismatchNotice {...settledThreadBranchMismatch} />
+                </div>
+              ) : null}
               {/* Pending approvals and AskUserQuestion prompts both render as a detached
                   card floating just above the composer (padding gives the measured gap),
                   instead of a banner fused into the composer surface. An approval takes

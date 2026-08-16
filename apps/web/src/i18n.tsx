@@ -214,6 +214,11 @@ export const EN_MESSAGES = {
     "Uncommitted changes in {files}. Commit or stash them before switching.",
   "git.branch.dirtyMoreDescription":
     "{files} and {count} other files have uncommitted changes. Commit or stash them before switching.",
+  "git.branch.resumeNotice": "Sending will continue this task on the current branch",
+  "git.branch.savedLabel": "Saved branch: {branch}",
+  "git.branch.currentLabel": "Current branch: {branch}",
+  "git.branch.statusUnavailable":
+    "Unable to confirm the current branch. Refresh Git status and try again.",
   "git.branch.stashNotReapplied": "Changes saved, but not reapplied.",
   "git.branch.stashNotReappliedDescription":
     "OmniMind switched branches and kept your changes in a stash because they could not be restored cleanly.",
@@ -3628,6 +3633,10 @@ export const ZH_CN_MESSAGES = {
   "git.branch.dirtyDescription": "{files} 有未提交更改，请先提交或保存到 stash。",
   "git.branch.dirtyMoreDescription":
     "{files} 以及另外 {count} 个文件有未提交更改，请先提交或保存到 stash。",
+  "git.branch.resumeNotice": "发送后，此任务将在当前分支继续",
+  "git.branch.savedLabel": "任务保存的分支：{branch}",
+  "git.branch.currentLabel": "当前分支：{branch}",
+  "git.branch.statusUnavailable": "无法确认当前分支，请刷新 Git 状态后重试。",
   "git.branch.stashNotReapplied": "更改已保存，但未能重新应用。",
   "git.branch.stashNotReappliedDescription":
     "OmniMind 已切换分支，并将更改保留在 stash 中，因为这些更改无法干净地恢复。",

@@ -3,7 +3,12 @@
 // Depends on: git React Query helpers, native API mutations, and toolbar selection rules.
 // Note: the "Create branch" footer row uses raw <button> because it is a
 // menu-item-style affordance inside a ComboboxPopup, not a generic action.
-import type { GitBranch, GitStashInfoResult, GitStatusResult, NativeApi } from "@omnimind/contracts";
+import type {
+  GitBranch,
+  GitStashInfoResult,
+  GitStatusResult,
+  NativeApi,
+} from "@omnimind/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ChevronDownIcon, PlusIcon } from "~/lib/icons";
@@ -84,6 +89,7 @@ interface BranchToolbarBranchSelectorProps {
   effectiveEnvMode: EnvMode;
   envLocked: boolean;
   hasServerThread: boolean;
+  isThreadSettled: boolean;
   onSetThreadWorkspace: (patch: ThreadWorkspacePatch) => void;
   onCheckoutPullRequestRequest?: (reference: string) => void;
   onComposerFocusRequest?: () => void;
@@ -382,6 +388,7 @@ export function BranchToolbarBranchSelector({
   effectiveEnvMode,
   envLocked,
   hasServerThread,
+  isThreadSettled,
   onSetThreadWorkspace,
   onCheckoutPullRequestRequest,
   onComposerFocusRequest,
@@ -462,6 +469,7 @@ export function BranchToolbarBranchSelector({
         activeThreadBranch,
         currentGitBranch,
         hasServerThread,
+        isThreadSettled,
         isBranchActionPending,
       })
     ) {
@@ -475,6 +483,7 @@ export function BranchToolbarBranchSelector({
     currentGitBranch,
     effectiveEnvMode,
     hasServerThread,
+    isThreadSettled,
     isBranchActionPending,
     onSetThreadWorkspace,
   ]);
@@ -499,35 +508,40 @@ export function BranchToolbarBranchSelector({
     setIsCreateBranchDialogOpen(true);
   }, [canPrefillCreateBranch, hasExactBranchMatch, trimmedBranchQuery]);
 
-  const openStashDiscardDialog = useCallback((input: { cwd: string }) => {
-    const api = readNativeApi();
-    setStashDiscardDialog({
-      cwd: input.cwd,
-      error: api ? null : t("git.branch.nativeUnavailable"),
-      info: null,
-      loading: Boolean(api),
-    });
-    if (!api) return;
-    void api.git.stashInfo({ cwd: input.cwd }).then(
-      (info) => {
-        setStashDiscardDialog((current) =>
-          current?.cwd === input.cwd ? { ...current, error: null, info, loading: false } : current,
-        );
-      },
-      (error) => {
-        setStashDiscardDialog((current) =>
-          current?.cwd === input.cwd
-            ? {
-                ...current,
-                error: toBranchActionErrorMessage(error, locale),
-                info: null,
-                loading: false,
-              }
-            : current,
-        );
-      },
-    );
-  }, [locale, t]);
+  const openStashDiscardDialog = useCallback(
+    (input: { cwd: string }) => {
+      const api = readNativeApi();
+      setStashDiscardDialog({
+        cwd: input.cwd,
+        error: api ? null : t("git.branch.nativeUnavailable"),
+        info: null,
+        loading: Boolean(api),
+      });
+      if (!api) return;
+      void api.git.stashInfo({ cwd: input.cwd }).then(
+        (info) => {
+          setStashDiscardDialog((current) =>
+            current?.cwd === input.cwd
+              ? { ...current, error: null, info, loading: false }
+              : current,
+          );
+        },
+        (error) => {
+          setStashDiscardDialog((current) =>
+            current?.cwd === input.cwd
+              ? {
+                  ...current,
+                  error: toBranchActionErrorMessage(error, locale),
+                  info: null,
+                  loading: false,
+                }
+              : current,
+          );
+        },
+      );
+    },
+    [locale, t],
+  );
 
   const discardStashFromDialog = useCallback(() => {
     const dialog = stashDiscardDialog;
@@ -1045,7 +1059,9 @@ export function BranchToolbarBranchSelector({
                       {t("git.pr.branch")}
                     </span>
                     <span className="min-w-0 truncate font-medium">
-                      {stashDiscardDialog.info.branch ?? currentGitBranch ?? t("git.pr.detachedHead")}
+                      {stashDiscardDialog.info.branch ??
+                        currentGitBranch ??
+                        t("git.pr.detachedHead")}
                     </span>
                   </div>
                   <div className="flex min-w-0 gap-2">

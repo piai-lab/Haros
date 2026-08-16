@@ -143,6 +143,7 @@ describe("shouldSyncLocalThreadBranch", () => {
         activeThreadBranch: "omnimind/pi",
         currentGitBranch: "main",
         hasServerThread: true,
+        isThreadSettled: false,
         isBranchActionPending: false,
       }),
     ).toBe(true);
@@ -156,6 +157,7 @@ describe("shouldSyncLocalThreadBranch", () => {
         activeThreadBranch: "omnimind/pi",
         currentGitBranch: "main",
         hasServerThread: true,
+        isThreadSettled: false,
         isBranchActionPending: true,
       }),
     ).toBe(false);
@@ -169,6 +171,7 @@ describe("shouldSyncLocalThreadBranch", () => {
         activeThreadBranch: null,
         currentGitBranch: "main",
         hasServerThread: false,
+        isThreadSettled: false,
         isBranchActionPending: false,
       }),
     ).toBe(false);
@@ -182,6 +185,7 @@ describe("shouldSyncLocalThreadBranch", () => {
         activeThreadBranch: null,
         currentGitBranch: "main",
         hasServerThread: true,
+        isThreadSettled: false,
         isBranchActionPending: false,
       }),
     ).toBe(true);
@@ -195,6 +199,21 @@ describe("shouldSyncLocalThreadBranch", () => {
         activeThreadBranch: "feature/base",
         currentGitBranch: "main",
         hasServerThread: true,
+        isThreadSettled: false,
+        isBranchActionPending: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps a settled or detail-pending thread on its saved branch", () => {
+    expect(
+      shouldSyncLocalThreadBranch({
+        envMode: "local",
+        activeWorktreePath: null,
+        activeThreadBranch: "feature/finished",
+        currentGitBranch: "main",
+        hasServerThread: true,
+        isThreadSettled: true,
         isBranchActionPending: false,
       }),
     ).toBe(false);

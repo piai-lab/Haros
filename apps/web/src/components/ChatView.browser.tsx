@@ -117,6 +117,7 @@ const attachmentDownloadFixtures = new Map<
 const attachmentDownloadRequestIds: string[] = [];
 let attachmentUploadSequence = 0;
 let attachmentUploadBarrier: Promise<void> | null = null;
+let attachmentCancelRequestCount = 0;
 
 interface WsRequestEnvelope {
   id: string;
@@ -724,6 +725,25 @@ function addThreadToSnapshot(
         },
       },
     ],
+  };
+}
+
+function withSettledThreadBranch(
+  snapshot: OrchestrationReadModel,
+  branch: string,
+): OrchestrationReadModel {
+  return {
+    ...snapshot,
+    threads: snapshot.threads.map((thread) =>
+      thread.id === THREAD_ID
+        ? {
+            ...thread,
+            branch,
+            settledAt: NOW_ISO,
+            modelSelection: { provider: "codex", model: "gpt-5.5" },
+          }
+        : thread,
+    ),
   };
 }
 
@@ -1437,6 +1457,7 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
         deletions: hasWorkingTreeChanges ? 1 : 0,
       },
       hasUpstream: true,
+      upstreamBranch: null,
       aheadCount: 0,
       behindCount: 0,
       pr: null,
@@ -1490,7 +1511,10 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   return {};
 }
 
-function installDeterministicSendNativeApi(): () => void {
+function installDeterministicSendNativeApi(options?: {
+  rejectTurnStart?: Error;
+  rejectRemoveWorktree?: Error;
+}): () => void {
   const previousNativeApi = window.nativeApi;
   const wsNativeApi = readNativeApi();
   if (!wsNativeApi) {
@@ -1514,6 +1538,15 @@ function installDeterministicSendNativeApi(): () => void {
           return resolveWsRpc(request) as Awaited<
             ReturnType<typeof wsNativeApi.git.createDetachedWorktree>
           >;
+        },
+        removeWorktree: async (input: Parameters<typeof wsNativeApi.git.removeWorktree>[0]) => {
+          wsRequests.push({
+            _tag: WS_METHODS.gitRemoveWorktree,
+            ...input,
+          });
+          if (options?.rejectRemoveWorktree) {
+            throw options.rejectRemoveWorktree;
+          }
         },
       },
       terminal: {
@@ -1542,6 +1575,9 @@ function installDeterministicSendNativeApi(): () => void {
             _tag: ORCHESTRATION_WS_METHODS.dispatchCommand,
             command,
           });
+          if (options?.rejectTurnStart && command.type === "thread.turn.start") {
+            throw options.rejectTurnStart;
+          }
           return { sequence: fixture.snapshot.snapshotSequence + 1 };
         },
       },
@@ -1666,9 +1702,10 @@ const worker = setupWorker(
       { status: 201 },
     );
   }),
-  http.post(`*${ATTACHMENT_CANCEL_ROUTE_PATH}`, () =>
-    HttpResponse.json({ cancelled: true }, { status: 200 }),
-  ),
+  http.post(`*${ATTACHMENT_CANCEL_ROUTE_PATH}`, () => {
+    attachmentCancelRequestCount += 1;
+    return HttpResponse.json({ cancelled: true }, { status: 200 });
+  }),
   http.get("*/attachments/:attachmentId", async ({ params }) => {
     attachmentDownloadRequestIds.push(String(params.attachmentId));
     if (attachmentResponseDelayMs > 0) {
@@ -2365,6 +2402,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     attachmentDownloadRequestIds.length = 0;
     attachmentUploadSequence = 0;
     attachmentUploadBarrier = null;
+    attachmentCancelRequestCount = 0;
     localStorage.clear();
     useLatestProjectStore.setState({ latestProjectId: null });
     useWorkspacePathsStore.setState({
@@ -6398,6 +6436,67 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expect.element(page.getByText("What should we do in")).toBeInTheDocument();
       await expect.element(page.getByRole("button", { name: "Local" })).toBeInTheDocument();
       expect(document.body.textContent).toContain("main");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps a settled local branch until exact projection while fresh-reading the checkout", async () => {
+    const savedBranch = "feature/a-very-long-finished-task-branch-that-must-not-break-layout";
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: withSettledThreadBranch(
+        createSnapshotForTargetUser({
+          targetMessageId: "msg-user-settled-branch" as MessageId,
+          targetText: "settled branch",
+        }),
+        savedBranch,
+      ),
+      configureFixture: (nextFixture) => {
+        nextFixture.gitBranchByCwd["/repo/project"] =
+          "feature/a-very-long-current-checkout-branch-that-must-not-break-layout";
+      },
+    });
+
+    try {
+      const notice = await waitForElement(
+        () =>
+          document.querySelector<HTMLElement>('[data-testid="composer-branch-mismatch-notice"]'),
+        "Unable to find settled branch notice.",
+      );
+      expect(notice.scrollWidth).toBeLessThanOrEqual(notice.clientWidth + 1);
+      expect(notice.textContent).toContain(savedBranch);
+      expect(notice.textContent).toContain("feature/a-very-long-current-checkout-branch");
+
+      fixture.gitBranchByCwd["/repo/project"] = "feature/latest-at-send";
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, "resume on current checkout");
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(
+        () => expect(composerEditor.textContent).toContain("resume on current checkout"),
+        { timeout: 8_000, interval: 16 },
+      );
+      wsRequests.length = 0;
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')!
+        .requestSubmit();
+
+      await vi.waitFor(
+        () => {
+          expect(
+            wsRequests.some(
+              (request) => readDispatchedCommand(request)?.type === "thread.turn.start",
+            ),
+          ).toBe(true);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      expect(
+        wsRequests.some((request) => readDispatchedCommand(request)?.type === "thread.meta.update"),
+      ).toBe(false);
+      expect(wsRequests.some((request) => request._tag === WS_METHODS.gitStatus)).toBe(true);
+      expect(document.querySelector('[data-testid="composer-branch-mismatch-notice"]')).toBe(
+        notice,
+      );
     } finally {
       await mounted.cleanup();
     }
@@ -10609,6 +10708,82 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("leaves an attempted turn rejection to projection without deleting its workspace or blobs", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectTurnStart: new Error("turn acknowledgement lost"),
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-attempted-turn-reject" as MessageId,
+        targetText: "attempted turn reject",
+      }),
+    });
+
+    try {
+      await page.getByTestId("new-thread-button").click();
+      const newThreadPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path),
+        "Route should have changed to a new draft thread UUID.",
+      );
+      const newThreadId = newThreadPath.slice(1) as ThreadId;
+      useComposerDraftStore.getState().setModelSelection(newThreadId, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      const envPickerTrigger = await waitForEnvironmentModeButton("Local");
+      envPickerTrigger.click();
+      await page.getByText("New worktree").click();
+
+      useComposerDraftStore.getState().setPrompt(newThreadId, "keep ambiguous send intact");
+      useComposerDraftStore.getState().addImage(
+        newThreadId,
+        createComposerImage({
+          id: "attempted-reject-image",
+          previewUrl: "blob:attempted-reject-image",
+        }),
+      );
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(
+        () => expect(composerEditor.textContent).toContain("keep ambiguous send intact"),
+        { timeout: 8_000, interval: 16 },
+      );
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')!
+        .requestSubmit();
+
+      await vi.waitFor(
+        () => {
+          expect(
+            wsRequests.some(
+              (candidate) => readDispatchedCommand(candidate)?.type === "thread.turn.start",
+            ),
+          ).toBe(true);
+          expect(document.body.textContent).toContain("turn acknowledgement lost");
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      expect(
+        wsRequests.some((candidate) => readDispatchedCommand(candidate)?.type === "thread.delete"),
+      ).toBe(false);
+      expect(
+        wsRequests.some(
+          (candidate) => readDispatchedCommand(candidate)?.type === "thread.meta.update",
+        ),
+      ).toBe(false);
+      expect(wsRequests.some((candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree)).toBe(
+        false,
+      );
+      expect(attachmentCancelRequestCount).toBe(0);
+      expect(document.body.textContent).toContain("keep ambiguous send intact");
+      expect(document.querySelector('img[src="blob:attempted-reject-image"]')).not.toBeNull();
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
   it("keeps worktree setup resolvable while attachments upload", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     let releaseAttachmentUpload = () => {};
@@ -10631,6 +10806,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Route should have changed to a new draft thread UUID.",
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
+      useComposerDraftStore.getState().setModelSelection(newThreadId, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
 
       const envPickerTrigger = await waitForEnvironmentModeButton("Local");
       envPickerTrigger.click();
@@ -10643,6 +10822,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
           id: "new-worktree-cancel-upload-image",
           previewUrl: "blob:new-worktree-cancel-upload-image",
         }),
+      );
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(
+        () => expect(composerEditor.textContent).toContain("Cancel before upload finishes"),
+        { timeout: 8_000, interval: 16 },
       );
       const composerForm = document.querySelector<HTMLFormElement>(
         'form[data-chat-composer-form="true"]',
@@ -10678,6 +10862,103 @@ describe("ChatView timeline estimator parity (full app)", () => {
               (candidate) => readDispatchedCommand(candidate)?.type === "thread.turn.start",
             ),
           ).toBe(false);
+          const deleteIndex = wsRequests.findIndex(
+            (candidate) => readDispatchedCommand(candidate)?.type === "thread.delete",
+          );
+          const removeIndex = wsRequests.findIndex(
+            (candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree,
+          );
+          expect(deleteIndex).toBeGreaterThanOrEqual(0);
+          expect(removeIndex).toBeGreaterThan(deleteIndex);
+          expect(wsRequests[removeIndex]).toMatchObject({
+            path: "/repo/.codex/worktrees/generated/omnimind",
+            force: true,
+            reclaimTemporaryBranch: true,
+          });
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+    } finally {
+      releaseAttachmentUpload();
+      attachmentUploadBarrier = null;
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("keeps cancellation visibly failed when physical worktree removal rejects", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectRemoveWorktree: new Error("worktree removal failed"),
+    });
+    let releaseAttachmentUpload = () => {};
+    attachmentUploadBarrier = new Promise<void>((resolve) => {
+      releaseAttachmentUpload = resolve;
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-worktree-remove-reject" as MessageId,
+        targetText: "worktree remove reject",
+      }),
+    });
+
+    try {
+      await page.getByTestId("new-thread-button").click();
+      const newThreadPath = await waitForURL(
+        mounted.router,
+        (path) => UUID_ROUTE_RE.test(path),
+        "Route should have changed to a new draft thread UUID.",
+      );
+      const newThreadId = newThreadPath.slice(1) as ThreadId;
+      useComposerDraftStore.getState().setModelSelection(newThreadId, {
+        provider: "codex",
+        model: "gpt-5.5",
+      });
+      const envPickerTrigger = await waitForEnvironmentModeButton("Local");
+      envPickerTrigger.click();
+      await page.getByText("New worktree").click();
+      useComposerDraftStore.getState().setPrompt(newThreadId, "cancel and keep failure visible");
+      useComposerDraftStore.getState().addImage(
+        newThreadId,
+        createComposerImage({
+          id: "remove-reject-image",
+          previewUrl: "blob:remove-reject-image",
+        }),
+      );
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(
+        () => expect(composerEditor.textContent).toContain("cancel and keep failure visible"),
+        { timeout: 8_000, interval: 16 },
+      );
+      document
+        .querySelector<HTMLFormElement>('form[data-chat-composer-form="true"]')!
+        .requestSubmit();
+
+      await expect
+        .poll(
+          () =>
+            document.querySelector<HTMLElement>('[data-timeline-row-kind="worktree-setup"]')
+              ?.textContent,
+        )
+        .toContain("Linking thread workspace");
+      await page.getByRole("button", { name: "Cancel" }).click();
+      releaseAttachmentUpload();
+      attachmentUploadBarrier = null;
+
+      await vi.waitFor(
+        () => {
+          const deleteIndex = wsRequests.findIndex(
+            (candidate) => readDispatchedCommand(candidate)?.type === "thread.delete",
+          );
+          const removeIndex = wsRequests.findIndex(
+            (candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree,
+          );
+          expect(deleteIndex).toBeGreaterThanOrEqual(0);
+          expect(removeIndex).toBeGreaterThan(deleteIndex);
+          expect(document.body.textContent).toContain("worktree removal failed");
+          expect(
+            wsRequests.filter((candidate) => candidate._tag === WS_METHODS.gitRemoveWorktree),
+          ).toHaveLength(1);
         },
         { timeout: 8_000, interval: 16 },
       );

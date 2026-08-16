@@ -2430,7 +2430,7 @@ export default function Sidebar() {
         return;
       }
 
-      void handleNewChat({ fresh: true });
+      void handleNewChat();
     },
     [
       handleNewChat,
@@ -2472,7 +2472,7 @@ export default function Sidebar() {
   // Opens a fresh home-chat draft directly on the draft thread route so the first send
   // does not need a second route swap from "/" to "/$threadId".
   const handleCreateHomeChat = useCallback(async () => {
-    await handleNewChat({ fresh: true });
+    await handleNewChat();
   }, [handleNewChat]);
   const handleCreateStudioChat = useCallback(async () => {
     await handleNewStudioChat({ fresh: true });

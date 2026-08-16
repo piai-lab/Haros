@@ -499,7 +499,7 @@ describe("useSidebarThreadActions", () => {
     expect(navigation.search()).toEqual({ splitViewId: "split-actions" });
   });
 
-  it("opens a fresh chat when deleting the last pane leaves no fallback", async () => {
+  it("reopens the project chat draft when deleting the last pane leaves no fallback", async () => {
     sidebarThreads = [makeThread(THREAD_ID)];
     harness.resolveSplitViewPaneIdForThread.mockReturnValue("pane-only");
     harness.resolveSplitViewFocusedThreadId.mockReturnValue(null);
@@ -511,6 +511,6 @@ describe("useSidebarThreadActions", () => {
     }).deleteThread(THREAD_ID);
 
     expect(harness.navigate).not.toHaveBeenCalled();
-    expect(harness.handleNewChat).toHaveBeenCalledWith({ fresh: true });
+    expect(harness.handleNewChat).toHaveBeenCalledWith();
   });
 });

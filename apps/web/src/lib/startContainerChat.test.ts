@@ -71,7 +71,7 @@ describe("startFreshChatForActiveSurface", () => {
       });
 
       expect(handleNewChat).toHaveBeenCalledOnce();
-      expect(handleNewChat).toHaveBeenCalledWith({ fresh: true });
+      expect(handleNewChat).toHaveBeenCalledWith();
       expect(handleNewStudioChat).not.toHaveBeenCalled();
     }
   });

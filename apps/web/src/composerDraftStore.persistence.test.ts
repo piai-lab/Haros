@@ -5,7 +5,7 @@ import {
   ProjectId,
   ThreadId,
 } from "@omnimind/contracts";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   partializeComposerDraftStoreState,
   useComposerDraftStore,
@@ -26,6 +26,28 @@ import {
   INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
   insertInlineTerminalContextPlaceholder,
 } from "./lib/terminalContext";
+
+const localStorageFixture = vi.hoisted(() => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (name: string) => values.get(name) ?? null,
+      setItem: (name: string, value: string) => values.set(name, value),
+      removeItem: (name: string) => values.delete(name),
+    },
+  });
+  return { original };
+});
+
+afterAll(() => {
+  if (localStorageFixture.original === undefined) {
+    Reflect.deleteProperty(globalThis, "localStorage");
+  } else {
+    Object.defineProperty(globalThis, "localStorage", localStorageFixture.original);
+  }
+});
 
 function makePendingDirectTurnRecovery(
   id: string,
