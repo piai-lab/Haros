@@ -304,6 +304,61 @@ function hasResumeCursor(value: unknown): boolean {
   return value !== null && value !== undefined;
 }
 
+function isTerminalRuntimeEvent(event: ProviderRuntimeEvent): boolean {
+  return (
+    event.type === "turn.completed" ||
+    event.type === "turn.aborted" ||
+    event.type === "session.exited" ||
+    event.type === "runtime.error"
+  );
+}
+
+function updatesSessionBindingFromRuntimeEvent(event: ProviderRuntimeEvent): boolean {
+  switch (event.type) {
+    case "session.started":
+    case "session.state.changed":
+    case "thread.started":
+    case "thread.state.changed":
+    case "turn.started":
+    case "turn.tasks.updated":
+    case "model.rerouted":
+    case "turn.completed":
+    case "turn.aborted":
+    case "session.exited":
+    case "runtime.error":
+      return true;
+    default:
+      return false;
+  }
+}
+
+interface AcceptedRuntimeEvent {
+  readonly accepted: true;
+  readonly binding: ProviderRuntimeBinding | undefined;
+  readonly updatesThreadBinding: boolean;
+  readonly resolvedTerminalTurnId?: string;
+}
+interface RejectedRuntimeEvent {
+  readonly accepted: false;
+  readonly reason:
+    | "ownership-mismatch"
+    | "current-terminal-conflict"
+    | "ambiguous-current-terminal";
+  readonly rejectedTurnId?: string;
+}
+type RuntimeEventDecision = AcceptedRuntimeEvent | RejectedRuntimeEvent;
+
+function rejectRuntimeEvent(
+  reason: RejectedRuntimeEvent["reason"] = "ownership-mismatch",
+  rejectedTurnId?: string,
+): RejectedRuntimeEvent {
+  return {
+    accepted: false,
+    reason,
+    ...(rejectedTurnId === undefined ? {} : { rejectedTurnId }),
+  };
+}
+
 function runtimeStatusForEvent(
   event: ProviderRuntimeEvent,
   activeTurnId?: unknown,
@@ -386,10 +441,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     ): Effect.Effect<A, E, R> =>
       [...new Set(keys.filter((key): key is string => key !== undefined))]
         .toSorted()
-        .reduceRight(
-          (current, key) => modelServiceAdmissionLock.withLock(key, current),
-          effect,
-        );
+        .reduceRight((current, key) => modelServiceAdmissionLock.withLock(key, current), effect);
     for (const binding of yield* directory.listBindings()) {
       if (
         binding.lifecycleGeneration !== undefined &&
@@ -995,10 +1047,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           );
           const nextServiceId = modelServiceIdFromSelection(input.modelSelection);
           const outcome = yield* withModelServiceAdmissionLocks(
-            [
-              previousServiceId ?? unboundModelServiceAdmissionKey(input.threadId),
-              nextServiceId,
-            ],
+            [previousServiceId ?? unboundModelServiceAdmissionKey(input.threadId), nextServiceId],
             Effect.gen(function* () {
               const currentBinding = Option.getOrUndefined(
                 yield* directory.getBinding(input.threadId),
@@ -1079,168 +1128,190 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       }
     };
 
+    const acceptRuntimeEvent = (
+      event: ProviderRuntimeEvent,
+      currentGeneration: string | undefined,
+      binding: ProviderRuntimeBinding | undefined,
+    ): RuntimeEventDecision => {
+      const isStaleGeneration =
+        event.lifecycleGeneration !== undefined && event.lifecycleGeneration !== currentGeneration;
+
+      if (binding === undefined) {
+        return isStaleGeneration
+          ? rejectRuntimeEvent()
+          : { accepted: true, binding: undefined, updatesThreadBinding: false };
+      }
+      if (binding.provider !== event.provider || isReplacementRestoreFailedBinding(binding)) {
+        return rejectRuntimeEvent();
+      }
+      if (
+        event.lifecycleGeneration !== undefined &&
+        binding.lifecycleGeneration !== event.lifecycleGeneration
+      ) {
+        return rejectRuntimeEvent();
+      }
+
+      // Child events use the parent thread id only as their transport route.
+      // A stale child cannot prove durable child ownership from the parent row.
+      if (event.providerRefs?.providerParentThreadId !== undefined) {
+        return isStaleGeneration
+          ? rejectRuntimeEvent()
+          : { accepted: true, binding, updatesThreadBinding: false };
+      }
+
+      const activeTurnId = runtimeActiveTurnId(binding.runtimePayload);
+      if (isStaleGeneration) {
+        // runCurrent has waited out every coherent lifecycle mutation. A
+        // different surviving generation is therefore a newer owner, even if
+        // the directory row is temporarily inconsistent; never let the old
+        // runtime journal through that boundary.
+        if (currentGeneration !== undefined || !isTerminalRuntimeEvent(event)) {
+          return rejectRuntimeEvent();
+        }
+        if (event.type === "turn.completed" || event.type === "turn.aborted") {
+          const eventTurnId = event.turnId === undefined ? undefined : String(event.turnId);
+          return eventTurnId !== undefined && eventTurnId === activeTurnId
+            ? {
+                accepted: true,
+                binding,
+                updatesThreadBinding: true,
+                resolvedTerminalTurnId: eventTurnId,
+              }
+            : rejectRuntimeEvent();
+        }
+        if (event.turnId !== undefined && String(event.turnId) !== activeTurnId) {
+          return rejectRuntimeEvent();
+        }
+        return { accepted: true, binding, updatesThreadBinding: true };
+      }
+
+      if (
+        event.type === "turn.started" &&
+        !isStartedTurnApplicable({
+          activeTurnId,
+          eventTurnId: event.turnId === undefined ? undefined : String(event.turnId),
+        })
+      ) {
+        return rejectRuntimeEvent();
+      }
+      if (event.type === "turn.completed" || event.type === "turn.aborted") {
+        const applicability = classifyTerminalTurnApplicability({
+          activeTurnId,
+          eventTurnId: event.turnId === undefined ? undefined : String(event.turnId),
+          hasAmbiguousTurns: hasAmbiguousTerminalTurn(event.threadId),
+        });
+        if (!applicability.applicable) {
+          return rejectRuntimeEvent(
+            applicability.reason === "ambiguous-missing-turn-id"
+              ? "ambiguous-current-terminal"
+              : "current-terminal-conflict",
+            applicability.resolvedTurnId,
+          );
+        }
+        return {
+          accepted: true,
+          binding,
+          updatesThreadBinding: true,
+          ...(applicability.resolvedTurnId === undefined
+            ? {}
+            : { resolvedTerminalTurnId: applicability.resolvedTurnId }),
+        };
+      }
+      return { accepted: true, binding, updatesThreadBinding: true };
+    };
+
     const updateSessionBindingFromRuntimeEvent = (
       event: ProviderRuntimeEvent,
-    ): Effect.Effect<void> => {
-      // Subagent-scoped events carry the parent thread id with the child
-      // identity in providerRefs. Their turn/session lifecycle belongs to the
-      // child thread and must not touch the parent binding — a stopped
-      // subagent would otherwise clear the parent's active turn and break
-      // main-thread interrupts for the rest of the turn.
-      if (event.providerRefs?.providerParentThreadId !== undefined) {
+      accepted: AcceptedRuntimeEvent,
+    ): Effect.Effect<void, unknown> => {
+      if (!accepted.updatesThreadBinding) {
+        if (accepted.binding === undefined) {
+          recordRuntimeEventDispatchState(event);
+          reconcileRuntimeIdleTimer(event);
+        }
         return Effect.void;
       }
-      switch (event.type) {
-        case "session.started":
-        case "session.state.changed":
-        case "thread.started":
-        case "thread.state.changed":
-        case "turn.started":
-        case "turn.tasks.updated":
-        case "model.rerouted":
-        case "turn.completed":
-        case "turn.aborted":
-        case "session.exited":
-        case "runtime.error":
-          break;
-        default:
-          return Effect.sync(() => reconcileRuntimeIdleTimer(event));
+
+      const binding = accepted.binding;
+      if (binding === undefined) {
+        return Effect.void;
       }
+      return Effect.gen(function* () {
+        recordRuntimeEventDispatchState(event);
 
-      return withBindingWriteLock(
-        event.threadId,
-        Effect.gen(function* () {
-          const binding = Option.getOrUndefined(yield* directory.getBinding(event.threadId));
-          if (!binding) {
-            // A dispatch may settle before sendTurn persists the first binding.
-            // Preserve that live-fallback marker, but do not project runtime
-            // ownership without the generation-scoped directory row.
-            recordRuntimeEventDispatchState(event);
-            reconcileRuntimeIdleTimer(event);
-            return;
+        const currentActiveTurnId = runtimeActiveTurnId(binding.runtimePayload);
+        if (event.type === "turn.completed" || event.type === "turn.aborted") {
+          if (event.turnId === undefined && accepted.resolvedTerminalTurnId !== undefined) {
+            recordRecentlyCompletedTurn(event.threadId, accepted.resolvedTerminalTurnId);
           }
-          if (binding.provider !== event.provider) {
-            return;
-          }
-          if (
-            event.lifecycleGeneration !== undefined &&
-            binding.lifecycleGeneration !== event.lifecycleGeneration
-          ) {
-            return;
-          }
-          // A restore-failed binding is an ownership quarantine, not a live
-          // runtime snapshot. Generation-less legacy events cannot prove they
-          // belong to either of the suspected physical runtimes, so none of
-          // them may replace the durable quarantine marker. Explicit cleanup
-          // or a fresh lifecycle start is the only way out of this state.
-          if (isReplacementRestoreFailedBinding(binding)) {
-            return;
-          }
-          recordRuntimeEventDispatchState(event);
-
-          const currentActiveTurnId = runtimeActiveTurnId(binding.runtimePayload);
-          if (
-            event.type === "turn.started" &&
-            !isStartedTurnApplicable({
-              activeTurnId: currentActiveTurnId,
-              eventTurnId: event.turnId === undefined ? undefined : String(event.turnId),
-            })
-          ) {
-            return;
-          }
-          if (event.type === "turn.completed" || event.type === "turn.aborted") {
-            const applicability = classifyTerminalTurnApplicability({
-              activeTurnId: currentActiveTurnId,
-              eventTurnId: event.turnId === undefined ? undefined : String(event.turnId),
-              hasAmbiguousTurns: hasAmbiguousTerminalTurn(event.threadId),
-            });
-            if (!applicability.applicable) {
-              if (event.turnId !== undefined) {
-                dispatchStateByThread
-                  .get(event.threadId)
-                  ?.outstandingTurnIds.delete(String(event.turnId));
-                cleanupDispatchState(event.threadId);
-              }
-              if (applicability.reason === "ambiguous-missing-turn-id") {
-                yield* Effect.logWarning("provider.session.ambiguous_terminal_event_ignored", {
-                  threadId: event.threadId,
-                  eventType: event.type,
-                });
-              }
-              return;
-            }
-            if (event.turnId === undefined && applicability.resolvedTurnId !== undefined) {
-              recordRecentlyCompletedTurn(event.threadId, applicability.resolvedTurnId);
-            }
-            if (applicability.resolvedTurnId !== undefined) {
-              dispatchStateByThread
-                .get(event.threadId)
-                ?.outstandingTurnIds.delete(applicability.resolvedTurnId);
-              cleanupDispatchState(event.threadId);
-            }
-          }
-          const activeTurnId =
-            event.type === "turn.started"
-              ? (event.turnId ?? null)
-              : event.type === "thread.state.changed" && event.payload.state === "compacted"
-                ? (event.turnId ?? currentActiveTurnId)
-                : event.type === "turn.completed" ||
-                    event.type === "turn.aborted" ||
-                    (event.type === "thread.state.changed" &&
-                      (event.payload.state === "archived" ||
-                        event.payload.state === "closed" ||
-                        event.payload.state === "error")) ||
-                    event.type === "session.exited" ||
-                    event.type === "runtime.error" ||
-                    (event.type === "session.state.changed" &&
-                      (event.payload.state === "ready" ||
-                        event.payload.state === "stopped" ||
-                        event.payload.state === "error"))
-                  ? null
-                  : currentActiveTurnId;
-          const lastError = runtimeLastErrorForEvent(event);
-          const resumeCursor = yield* refreshResumeCursorFromActiveSession(event, binding);
-
-          yield* directory.upsert({
-            threadId: event.threadId,
-            provider: binding.provider,
-            ...(binding.adapterKey !== undefined ? { adapterKey: binding.adapterKey } : {}),
-            ...(binding.runtimeMode !== undefined ? { runtimeMode: binding.runtimeMode } : {}),
-            status: runtimeStatusForEvent(event, activeTurnId),
-            ...(resumeCursor !== undefined ? { resumeCursor } : {}),
-            runtimePayload: {
-              activeTurnId,
-              lastRuntimeEvent: event.type,
-              lastRuntimeEventAt: event.createdAt,
-              ...(lastError !== undefined ? { lastError } : {}),
-              ...(runtimeEventRetiredGatewayTurnAuthority(event)
-                ? { [AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED]: true }
-                : {}),
-            },
-          });
-          if (event.type === "session.exited") {
-            const dispatchState = dispatchStateByThread.get(event.threadId);
-            if (dispatchState) {
-              // Invalidate adapter calls that were already in flight when the
-              // session exited, then retain only the generations needed for
-              // their eventual settlement/cleanup.
-              dispatchState.latestGeneration = dispatchState.nextGeneration + 1;
-              dispatchState.nextGeneration = dispatchState.latestGeneration;
-              dispatchState.outstandingTurnIds.clear();
-              dispatchState.successfulResults.clear();
-            }
-            recentlyCompletedTurnsByThread.delete(event.threadId);
+          if (accepted.resolvedTerminalTurnId !== undefined) {
+            dispatchStateByThread
+              .get(event.threadId)
+              ?.outstandingTurnIds.delete(accepted.resolvedTerminalTurnId);
             cleanupDispatchState(event.threadId);
           }
-          reconcileRuntimeIdleTimer(event);
-        }),
-      ).pipe(
+        }
+        const activeTurnId =
+          event.type === "turn.started"
+            ? (event.turnId ?? null)
+            : event.type === "thread.state.changed" && event.payload.state === "compacted"
+              ? (event.turnId ?? currentActiveTurnId)
+              : event.type === "turn.completed" ||
+                  event.type === "turn.aborted" ||
+                  (event.type === "thread.state.changed" &&
+                    (event.payload.state === "archived" ||
+                      event.payload.state === "closed" ||
+                      event.payload.state === "error")) ||
+                  event.type === "session.exited" ||
+                  event.type === "runtime.error" ||
+                  (event.type === "session.state.changed" &&
+                    (event.payload.state === "ready" ||
+                      event.payload.state === "stopped" ||
+                      event.payload.state === "error"))
+                ? null
+                : currentActiveTurnId;
+        const lastError = runtimeLastErrorForEvent(event);
+        const resumeCursor = yield* refreshResumeCursorFromActiveSession(event, binding);
+
+        yield* directory.upsert({
+          threadId: event.threadId,
+          provider: binding.provider,
+          ...(binding.adapterKey !== undefined ? { adapterKey: binding.adapterKey } : {}),
+          ...(binding.runtimeMode !== undefined ? { runtimeMode: binding.runtimeMode } : {}),
+          status: runtimeStatusForEvent(event, activeTurnId),
+          ...(resumeCursor !== undefined ? { resumeCursor } : {}),
+          runtimePayload: {
+            activeTurnId,
+            lastRuntimeEvent: event.type,
+            lastRuntimeEventAt: event.createdAt,
+            ...(lastError !== undefined ? { lastError } : {}),
+            ...(runtimeEventRetiredGatewayTurnAuthority(event)
+              ? { [AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED]: true }
+              : {}),
+          },
+        });
+        if (event.type === "session.exited") {
+          const dispatchState = dispatchStateByThread.get(event.threadId);
+          if (dispatchState) {
+            // Invalidate adapter calls that were already in flight when the
+            // session exited, then retain only the generations needed for
+            // their eventual settlement/cleanup.
+            dispatchState.latestGeneration = dispatchState.nextGeneration + 1;
+            dispatchState.nextGeneration = dispatchState.latestGeneration;
+            dispatchState.outstandingTurnIds.clear();
+            dispatchState.successfulResults.clear();
+          }
+          recentlyCompletedTurnsByThread.delete(event.threadId);
+          cleanupDispatchState(event.threadId);
+        }
+        reconcileRuntimeIdleTimer(event);
+      }).pipe(
         Effect.catchCause((cause) =>
           Effect.logWarning("provider.session.runtime_binding_update_failed", {
             threadId: event.threadId,
             eventType: event.type,
             cause: Cause.pretty(cause),
-          }),
+          }).pipe(Effect.andThen(Effect.failCause(cause))),
         ),
       );
     };
@@ -1399,38 +1470,139 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     let scheduleRetiredGatewaySessionRecovery = (
       _event: ProviderRuntimeEvent,
     ): Effect.Effect<void> => Effect.void;
+    const rejectRuntimeEventEffect = (
+      event: ProviderRuntimeEvent,
+      decision: RejectedRuntimeEvent,
+      currentGeneration: string | undefined,
+      binding: ProviderRuntimeBinding | undefined,
+    ) =>
+      Effect.gen(function* () {
+        if (
+          decision.reason === "current-terminal-conflict" ||
+          decision.reason === "ambiguous-current-terminal"
+        ) {
+          recordRuntimeEventDispatchState(event);
+          if (decision.rejectedTurnId !== undefined) {
+            dispatchStateByThread
+              .get(event.threadId)
+              ?.outstandingTurnIds.delete(decision.rejectedTurnId);
+            cleanupDispatchState(event.threadId);
+          }
+          if (decision.reason === "ambiguous-current-terminal") {
+            yield* Effect.logWarning("provider.session.ambiguous_terminal_event_ignored", {
+              threadId: event.threadId,
+              eventType: event.type,
+            });
+          }
+        }
+        yield* Effect.logWarning("provider.session.runtime_event_ignored", {
+          threadId: event.threadId,
+          provider: event.provider,
+          eventType: event.type,
+          eventLifecycleGeneration: event.lifecycleGeneration,
+          currentLifecycleGeneration: currentGeneration,
+          bindingLifecycleGeneration: binding?.lifecycleGeneration,
+        });
+      });
+
+    const persistBindingRuntimeEvent = (
+      event: ProviderRuntimeEvent,
+      currentGeneration: string | undefined,
+      requireExactStartingOwner: boolean,
+    ) =>
+      withBindingWriteLock(
+        event.threadId,
+        Effect.gen(function* () {
+          const binding = Option.getOrUndefined(yield* directory.getBinding(event.threadId));
+          if (
+            requireExactStartingOwner &&
+            !(
+              event.type === "session.started" &&
+              event.lifecycleGeneration !== undefined &&
+              binding?.status === "starting" &&
+              binding.provider === event.provider &&
+              binding.lifecycleGeneration === event.lifecycleGeneration &&
+              currentGeneration === event.lifecycleGeneration &&
+              !isReplacementRestoreFailedBinding(binding)
+            )
+          ) {
+            return { handled: false } as const;
+          }
+
+          const decision = acceptRuntimeEvent(event, currentGeneration, binding);
+          if (!decision.accepted) {
+            yield* rejectRuntimeEventEffect(event, decision, currentGeneration, binding);
+            return { handled: true, accepted: false } as const;
+          }
+
+          // Journal and binding settlement share the same lifecycle decision
+          // and binding lock. Update failure is retried before live fan-out.
+          const persisted = yield* persistCanonicalRuntimeEvent(event);
+          yield* updateSessionBindingFromRuntimeEvent(event, decision);
+          return { handled: true, accepted: true, persisted } as const;
+        }),
+      );
+
     const processRuntimeEvent = (event: ProviderRuntimeEvent): Effect.Effect<void, unknown> =>
       Effect.uninterruptible(
         Effect.suspend(() => {
-          if (
-            event.lifecycleGeneration !== undefined &&
-            lifecycle.currentGeneration(event.threadId) !== event.lifecycleGeneration
-          ) {
-            return Effect.logWarning("provider.session.stale_generation_event_ignored", {
-              threadId: event.threadId,
-              provider: event.provider,
-              eventType: event.type,
-              eventLifecycleGeneration: event.lifecycleGeneration,
-              currentLifecycleGeneration: lifecycle.currentGeneration(event.threadId),
-            });
+          if (!updatesSessionBindingFromRuntimeEvent(event)) {
+            const currentGeneration = lifecycle.currentGeneration(event.threadId);
+            if (
+              event.lifecycleGeneration !== undefined &&
+              event.lifecycleGeneration !== currentGeneration
+            ) {
+              return Effect.logWarning("provider.session.stale_generation_event_ignored", {
+                threadId: event.threadId,
+                provider: event.provider,
+                eventType: event.type,
+                eventLifecycleGeneration: event.lifecycleGeneration,
+                currentLifecycleGeneration: currentGeneration,
+              });
+            }
+            return persistCanonicalRuntimeEvent(event).pipe(
+              Effect.tap(() => Effect.sync(() => reconcileRuntimeIdleTimer(event))),
+              Effect.flatMap((persisted) => publishRuntimeEvent(event, persisted)),
+            );
           }
-          const canonicalEvent = event;
-          // Journal before mutating lifecycle/task state. If durable persistence
-          // fails, the supervised pump retries the same event while its source
-          // generation is still current and no recovery waiter has been released.
-          return persistCanonicalRuntimeEvent(canonicalEvent).pipe(
-            Effect.flatMap((persisted) =>
-              Effect.sync(() => {
-                if (canonicalEvent.type === "turn.started") {
-                  reconcileRuntimeIdleTimer(canonicalEvent);
-                }
-              }).pipe(
-                Effect.andThen(updateSessionBindingFromRuntimeEvent(canonicalEvent)),
-                Effect.andThen(publishRuntimeEvent(canonicalEvent, persisted)),
-                Effect.andThen(scheduleRetiredGatewaySessionRecovery(canonicalEvent)),
+
+          if (event.type === "session.started" && event.lifecycleGeneration !== undefined) {
+            const provisional = persistBindingRuntimeEvent(
+              event,
+              lifecycle.currentGeneration(event.threadId),
+              true,
+            );
+            return provisional.pipe(
+              Effect.flatMap((result) =>
+                !result.handled
+                  ? lifecycle.runCurrent(event.threadId, (currentGeneration) =>
+                      persistBindingRuntimeEvent(event, currentGeneration, false),
+                    )
+                  : Effect.succeed(result),
               ),
-            ),
-          );
+              Effect.flatMap((result) =>
+                !result.handled || !result.accepted
+                  ? Effect.void
+                  : publishRuntimeEvent(event, result.persisted).pipe(
+                      Effect.andThen(scheduleRetiredGatewaySessionRecovery(event)),
+                    ),
+              ),
+            );
+          }
+
+          return lifecycle
+            .runCurrent(event.threadId, (currentGeneration) =>
+              persistBindingRuntimeEvent(event, currentGeneration, false),
+            )
+            .pipe(
+              Effect.flatMap((result) =>
+                !result.handled || !result.accepted
+                  ? Effect.void
+                  : publishRuntimeEvent(event, result.persisted).pipe(
+                      Effect.andThen(scheduleRetiredGatewaySessionRecovery(event)),
+                    ),
+              ),
+            );
         }),
       );
 
@@ -1747,7 +1919,13 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           runtimePayloadRecord(binding.runtimePayload)[
             AGENT_GATEWAY_CREDENTIAL_ROTATION_REQUIRED
           ] === true;
-        if (hasActiveSession && (!input.allowRecovery || !requiresCredentialRotation)) {
+        const bindingGenerationIsCurrent =
+          binding.lifecycleGeneration === undefined ||
+          binding.lifecycleGeneration === lifecycle.currentGeneration(input.threadId);
+        if (
+          hasActiveSession &&
+          (!input.allowRecovery || (bindingGenerationIsCurrent && !requiresCredentialRotation))
+        ) {
           return {
             adapter,
             isActive: true,
@@ -2286,9 +2464,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           const outcome = yield* withModelServiceAdmissionLocks(
             [previousServiceId ?? unboundModelServiceAdmissionKey(threadId), targetServiceId],
             Effect.gen(function* () {
-              const currentBinding = Option.getOrUndefined(
-                yield* directory.getBinding(threadId),
-              );
+              const currentBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
               const currentServiceId = modelServiceIdFromSelection(
                 currentBinding === undefined
                   ? undefined

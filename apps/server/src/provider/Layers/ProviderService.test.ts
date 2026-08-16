@@ -497,6 +497,504 @@ const restartRollbackRouting = makeProviderServiceLayer(undefined, {
 const piInteractionRouting = makeProviderServiceLayer(undefined, {
   includePi: true,
 });
+const staleSettlementPersistedEvents = new Map<string, ProviderRuntimeEvent>();
+const staleSettlementRouting = makeProviderServiceLayer({
+  persistRuntimeEvent: (event) =>
+    Effect.sync(() => {
+      staleSettlementPersistedEvents.set(String(event.eventId), event);
+      return { sequence: staleSettlementPersistedEvents.size, event };
+    }),
+  runtimeEventRetryBaseDelayMs: 1,
+  runtimeEventRetryMaxDelayMs: 1,
+});
+
+staleSettlementRouting.layer("ProviderServiceLive exact stale-terminal settlement", (it) => {
+  it.effect("keeps current stream deltas on the binding-free fast path", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-current-delta-fast-path");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const generation = binding?.lifecycleGeneration;
+      assert.equal(typeof generation, "string");
+      const directoryRead = vi.spyOn(directory, "getBinding");
+      directoryRead.mockClear();
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      staleSettlementRouting.codex.emit({
+        type: "content.delta",
+        eventId: asEventId("current-delta-fast-path"),
+        provider: "codex",
+        threadId,
+        lifecycleGeneration: String(generation),
+        createdAt: "2026-08-16T07:58:00.000Z",
+        payload: { streamKind: "assistant_text", delta: "fast" },
+      });
+      yield* waitUntil(
+        () => staleSettlementPersistedEvents.has("current-delta-fast-path"),
+        500,
+        10,
+        "current delta fast-path persistence",
+      );
+      assert.equal(directoryRead.mock.calls.length, 0);
+      directoryRead.mockRestore();
+    }),
+  );
+
+  it.effect(
+    "rejects a provisional session start whose generation misses the exact starting owner",
+    () =>
+      Effect.gen(function* () {
+        const provider = yield* ProviderService;
+        const threadId = asThreadId("thread-provisional-start-generation-mismatch");
+        const defaultStart = staleSettlementRouting.codex.startSession.getMockImplementation();
+        if (!defaultStart) assert.fail("Expected fake adapter start implementation");
+        const startEntered = yield* Deferred.make<ProviderSessionStartInput>();
+        const releaseStart = yield* Deferred.make<void>();
+        staleSettlementRouting.codex.startSession.mockImplementationOnce((input) =>
+          Deferred.succeed(startEntered, input).pipe(
+            Effect.andThen(Deferred.await(releaseStart)),
+            Effect.andThen(defaultStart(input)),
+          ),
+        );
+
+        const startFiber = yield* provider
+          .startSession(threadId, {
+            provider: "codex",
+            threadId,
+            runtimeMode: "full-access",
+          })
+          .pipe(Effect.forkChild);
+        yield* Deferred.await(startEntered);
+        yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+        staleSettlementRouting.codex.emit({
+          type: "session.started",
+          eventId: asEventId("provisional-start-wrong-generation"),
+          provider: "codex",
+          threadId,
+          lifecycleGeneration: "wrong-provisional-generation",
+          createdAt: "2026-08-16T07:59:00.000Z",
+          payload: {},
+        });
+        yield* sleep(25);
+        assert.equal(
+          staleSettlementPersistedEvents.has("provisional-start-wrong-generation"),
+          false,
+        );
+
+        yield* Deferred.succeed(releaseStart, undefined);
+        yield* Fiber.join(startFiber);
+        yield* sleep(25);
+        assert.equal(
+          staleSettlementPersistedEvents.has("provisional-start-wrong-generation"),
+          false,
+        );
+        yield* provider.stopSession({ threadId });
+      }),
+  );
+
+  it.effect("settles an exact old turn after its lifecycle generation is retired", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-retired-exact-turn-terminal");
+      const turnId = asTurnId("turn-retired-exact");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      staleSettlementRouting.codex.sendTurn.mockImplementationOnce((input) =>
+        Effect.succeed({ threadId: input.threadId, turnId }),
+      );
+      yield* provider.sendTurn({ threadId, input: "before retirement", attachments: [] });
+      const activeBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const oldGeneration = activeBinding?.lifecycleGeneration;
+      assert.equal(typeof oldGeneration, "string");
+
+      yield* provider.stopSession({ threadId });
+      yield* directory.upsert({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: String(oldGeneration),
+        runtimePayload: { activeTurnId: turnId },
+      });
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      staleSettlementRouting.codex.emit({
+        type: "content.delta",
+        eventId: asEventId("retired-stale-nonterminal"),
+        provider: "codex",
+        threadId,
+        turnId,
+        lifecycleGeneration: String(oldGeneration),
+        createdAt: "2026-08-16T08:00:00.000Z",
+        payload: { streamKind: "assistant_text", delta: "must stay invisible" },
+      });
+      staleSettlementRouting.codex.emit({
+        type: "turn.aborted",
+        eventId: asEventId("retired-exact-terminal"),
+        provider: "codex",
+        threadId,
+        turnId,
+        lifecycleGeneration: String(oldGeneration),
+        createdAt: "2026-08-16T08:00:01.000Z",
+        payload: { reason: "runtime retired while stopping" },
+      });
+
+      yield* waitUntil(
+        () => staleSettlementPersistedEvents.has("retired-exact-terminal"),
+        500,
+        10,
+        "exact retired terminal persistence",
+      );
+      assert.equal(staleSettlementPersistedEvents.has("retired-stale-nonterminal"), false);
+      const settled = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(settled?.status, "stopped");
+      assert.equal(asRuntimePayloadRecord(settled?.runtimePayload).activeTurnId, null);
+      assert.equal(
+        asRuntimePayloadRecord(settled?.runtimePayload).lastRuntimeEvent,
+        "turn.aborted",
+      );
+    }),
+  );
+
+  it.effect("settles an exact retired runtime error without a turn id", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-retired-runtime-error");
+      const turnId = asTurnId("turn-retired-runtime-error");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const generation = binding?.lifecycleGeneration;
+      assert.equal(typeof generation, "string");
+      yield* provider.stopSession({ threadId });
+      yield* directory.upsert({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: String(generation),
+        runtimePayload: { activeTurnId: turnId },
+      });
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      staleSettlementRouting.codex.emit({
+        type: "runtime.error",
+        eventId: asEventId("retired-exact-runtime-error"),
+        provider: "codex",
+        threadId,
+        lifecycleGeneration: String(generation),
+        createdAt: "2026-08-16T08:01:00.000Z",
+        payload: { message: "OpenCode runtime exited unexpectedly", class: "transport_error" },
+      });
+
+      yield* waitUntil(
+        () => staleSettlementPersistedEvents.has("retired-exact-runtime-error"),
+        500,
+        10,
+        "exact retired runtime error persistence",
+      );
+      const settled = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(settled?.status, "error");
+      assert.equal(asRuntimePayloadRecord(settled?.runtimePayload).activeTurnId, null);
+      assert.equal(
+        asRuntimePayloadRecord(settled?.runtimePayload).lastError,
+        "OpenCode runtime exited unexpectedly",
+      );
+    }),
+  );
+
+  it.effect("drops stale terminals that cannot prove exact durable ownership", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-stale-terminal-negative-matrix");
+      const activeTurnId = asTurnId("turn-stale-terminal-active");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const generation = binding?.lifecycleGeneration;
+      assert.equal(typeof generation, "string");
+      yield* provider.stopSession({ threadId });
+      yield* directory.upsert({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: String(generation),
+        runtimePayload: { activeTurnId },
+      });
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      for (const event of [
+        {
+          type: "turn.aborted",
+          eventId: asEventId("stale-terminal-wrong-turn"),
+          provider: "codex",
+          threadId,
+          turnId: asTurnId("turn-stale-terminal-other"),
+          lifecycleGeneration: String(generation),
+          createdAt: "2026-08-16T08:02:00.000Z",
+          payload: { reason: "wrong turn" },
+        },
+        {
+          type: "turn.aborted",
+          eventId: asEventId("stale-terminal-wrong-provider"),
+          provider: "claudeAgent",
+          threadId,
+          turnId: activeTurnId,
+          lifecycleGeneration: String(generation),
+          createdAt: "2026-08-16T08:02:01.000Z",
+          payload: { reason: "wrong provider" },
+        },
+        {
+          type: "turn.aborted",
+          eventId: asEventId("stale-terminal-wrong-generation"),
+          provider: "codex",
+          threadId,
+          turnId: activeTurnId,
+          lifecycleGeneration: "different-generation",
+          createdAt: "2026-08-16T08:02:02.000Z",
+          payload: { reason: "wrong generation" },
+        },
+        {
+          type: "session.exited",
+          eventId: asEventId("stale-session-wrong-generation"),
+          provider: "codex",
+          threadId,
+          lifecycleGeneration: "different-generation",
+          createdAt: "2026-08-16T08:02:03.000Z",
+          payload: { reason: "wrong session generation" },
+        },
+      ] satisfies LegacyProviderRuntimeEvent[]) {
+        staleSettlementRouting.codex.emit(event);
+      }
+      yield* sleep(50);
+
+      for (const eventId of [
+        "stale-terminal-wrong-turn",
+        "stale-terminal-wrong-provider",
+        "stale-terminal-wrong-generation",
+        "stale-session-wrong-generation",
+      ]) {
+        assert.equal(staleSettlementPersistedEvents.has(eventId), false);
+      }
+      const unchanged = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(unchanged?.status, "running");
+      assert.equal(asRuntimePayloadRecord(unchanged?.runtimePayload).activeTurnId, activeTurnId);
+    }),
+  );
+
+  it.effect("never lets an old terminal clear a newer generation and turn", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-old-terminal-new-owner");
+      const oldTurnId = asTurnId("turn-old-owner");
+      const newTurnId = asTurnId("turn-new-owner");
+
+      staleSettlementRouting.codex.sendTurn
+        .mockImplementationOnce((input) =>
+          Effect.succeed({ threadId: input.threadId, turnId: oldTurnId }),
+        )
+        .mockImplementationOnce((input) =>
+          Effect.succeed({ threadId: input.threadId, turnId: newTurnId }),
+        );
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      yield* provider.sendTurn({ threadId, input: "old", attachments: [] });
+      const oldBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const oldGeneration = oldBinding?.lifecycleGeneration;
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      yield* provider.sendTurn({ threadId, input: "new", attachments: [] });
+      const newBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.notEqual(newBinding?.lifecycleGeneration, oldGeneration);
+
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      staleSettlementRouting.codex.emit({
+        type: "turn.aborted",
+        eventId: asEventId("old-terminal-after-new-owner"),
+        provider: "codex",
+        threadId,
+        turnId: oldTurnId,
+        lifecycleGeneration: String(oldGeneration),
+        createdAt: "2026-08-16T08:03:00.000Z",
+        payload: { reason: "late old terminal" },
+      });
+      yield* sleep(50);
+
+      assert.equal(staleSettlementPersistedEvents.has("old-terminal-after-new-owner"), false);
+      const unchanged = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(unchanged?.status, "running");
+      assert.equal(asRuntimePayloadRecord(unchanged?.runtimePayload).activeTurnId, newTurnId);
+    }),
+  );
+
+  it.effect("re-adopts a stale live binding before routing a recovery-capable send", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-generation-mismatch-live-send");
+      const oldGeneration = "zombie-generation";
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      assert.equal(typeof provider.stopRuntimeSession, "function");
+      if (!provider.stopRuntimeSession) assert.fail("Expected stopRuntimeSession");
+      yield* provider.stopRuntimeSession({ threadId });
+      yield* directory.upsert({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: oldGeneration,
+        resumeCursor: { opaque: "zombie-resume" },
+        runtimePayload: { activeTurnId: null },
+      });
+      yield* staleSettlementRouting.codex.startSession({
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+
+      const sendCount = staleSettlementRouting.codex.sendTurn.mock.calls.length;
+      yield* provider.sendTurn({ threadId, input: "recover before send", attachments: [] });
+      assert.equal(staleSettlementRouting.codex.sendTurn.mock.calls.length, sendCount + 1);
+      staleSettlementRouting.codex.emit({
+        type: "content.delta",
+        eventId: asEventId("re-adopted-generation-delta"),
+        provider: "codex",
+        threadId,
+        lifecycleGeneration: oldGeneration,
+        createdAt: "2026-08-16T08:04:00.000Z",
+        payload: { streamKind: "assistant_text", delta: "visible" },
+      });
+      yield* waitUntil(
+        () => staleSettlementPersistedEvents.has("re-adopted-generation-delta"),
+        500,
+        10,
+        "re-adopted generation event persistence",
+      );
+      const recovered = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(recovered?.lifecycleGeneration, oldGeneration);
+    }),
+  );
+
+  it.effect("stops a generation-mismatch zombie through the cleanup control plane", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-generation-mismatch-stop");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      assert.equal(typeof provider.stopRuntimeSession, "function");
+      if (!provider.stopRuntimeSession) assert.fail("Expected stopRuntimeSession");
+      yield* provider.stopRuntimeSession({ threadId });
+      yield* directory.upsert({
+        threadId,
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration: "zombie-stop-generation",
+        runtimePayload: { activeTurnId: asTurnId("turn-zombie-stop") },
+      });
+      yield* staleSettlementRouting.codex.startSession({
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const stopCount = staleSettlementRouting.codex.stopSession.mock.calls.length;
+
+      yield* provider.stopSession({ threadId });
+
+      assert.equal(staleSettlementRouting.codex.stopSession.mock.calls.length, stopCount + 1);
+      assert.equal(Option.isNone(yield* directory.getBinding(threadId)), true);
+    }),
+  );
+
+  it.effect("keeps current dispatch cleanup when a conflicting terminal is rejected", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-current-terminal-cleanup");
+      const firstTurnId = asTurnId("turn-current-cleanup-first");
+      const secondTurnId = asTurnId("turn-current-cleanup-second");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        runtimeMode: "full-access",
+      });
+      const binding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      const generation = String(binding?.lifecycleGeneration);
+      staleSettlementRouting.codex.sendTurn
+        .mockImplementationOnce((input) =>
+          Effect.succeed({ threadId: input.threadId, turnId: firstTurnId }),
+        )
+        .mockImplementationOnce((input) =>
+          Effect.succeed({ threadId: input.threadId, turnId: secondTurnId }),
+        );
+      yield* provider.sendTurn({ threadId, input: "first", attachments: [] });
+      yield* provider.sendTurn({ threadId, input: "second", attachments: [] });
+      yield* staleSettlementRouting.codex.waitForRuntimeSubscribers();
+      staleSettlementRouting.codex.emit({
+        type: "turn.completed",
+        eventId: asEventId("current-conflicting-first-terminal"),
+        provider: "codex",
+        threadId,
+        turnId: firstTurnId,
+        lifecycleGeneration: generation,
+        createdAt: "2026-08-16T08:05:00.000Z",
+        payload: { state: "completed" },
+      });
+      staleSettlementRouting.codex.emit({
+        type: "turn.completed",
+        eventId: asEventId("current-unscoped-second-terminal"),
+        provider: "codex",
+        threadId,
+        lifecycleGeneration: generation,
+        createdAt: "2026-08-16T08:05:01.000Z",
+        payload: { state: "completed" },
+      });
+
+      yield* waitUntil(
+        () => staleSettlementPersistedEvents.has("current-unscoped-second-terminal"),
+        500,
+        10,
+        "unscoped terminal after rejected-turn cleanup",
+      );
+      assert.equal(staleSettlementPersistedEvents.has("current-conflicting-first-terminal"), false);
+      const settled = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(settled?.status, "stopped");
+      assert.equal(asRuntimePayloadRecord(settled?.runtimePayload).activeTurnId, null);
+    }),
+  );
+});
 
 ecosystemReloadRouting.layer("ProviderServiceLive active resource reload", (it) => {
   it.effect("reloads only the exact live OmniMind Agent session", () =>
@@ -981,10 +1479,7 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
 
         const mutationEntered = yield* Deferred.make<void>();
         const mutationFiber = yield* provider
-          .withModelServiceMutationFence(
-            "gateway-a",
-            Deferred.succeed(mutationEntered, undefined),
-          )
+          .withModelServiceMutationFence("gateway-a", Deferred.succeed(mutationEntered, undefined))
           .pipe(Effect.forkChild);
         yield* sleep(25);
         assert.equal(yield* Deferred.isDone(mutationEntered), false);
@@ -1048,10 +1543,7 @@ modelServiceAdmission.layer("ProviderServiceLive model-service admission fence",
 
       const startOwnsOldFence = yield* Deferred.make<void>();
       const fenceProbe = yield* provider
-        .withModelServiceMutationFence(
-          "gateway-a",
-          Deferred.succeed(startOwnsOldFence, undefined),
-        )
+        .withModelServiceMutationFence("gateway-a", Deferred.succeed(startOwnsOldFence, undefined))
         .pipe(Effect.forkChild);
       yield* sleep(25);
       assert.equal(yield* Deferred.isDone(startOwnsOldFence), false);
@@ -1768,82 +2260,80 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
-  it.effect(
-    "keeps ownership unknown when a half-started replacement cannot be retired",
-    () =>
-      Effect.gen(function* () {
-        const provider = yield* ProviderService;
-        const directory = yield* ProviderSessionDirectory;
-        const threadId = asThreadId("thread-replacement-target-retire-failure");
-        yield* provider.startSession(threadId, {
-          provider: "codex",
+  it.effect("keeps ownership unknown when a half-started replacement cannot be retired", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-replacement-target-retire-failure");
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        cwd: "/tmp/replacement-target-retire-failure",
+        runtimeMode: "full-access",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+      });
+
+      const defaultClaudeStart = routing.claude.startSession.getMockImplementation();
+      if (!defaultClaudeStart) assert.fail("Expected the fake Claude start implementation");
+      const targetStartFailure = new ProviderAdapterSessionNotFoundError({
+        provider: "claudeAgent",
+        threadId,
+      });
+      const targetStopFailure = new ProviderAdapterSessionNotFoundError({
+        provider: "claudeAgent",
+        threadId,
+      });
+      const codexStartCount = routing.codex.startSession.mock.calls.length;
+      const claudeStopCount = routing.claude.stopSession.mock.calls.length;
+      const codexSendCount = routing.codex.sendTurn.mock.calls.length;
+      const claudeSendCount = routing.claude.sendTurn.mock.calls.length;
+      routing.claude.startSession.mockImplementationOnce((input) =>
+        defaultClaudeStart(input).pipe(Effect.andThen(Effect.fail(targetStartFailure))),
+      );
+      routing.claude.stopSession.mockImplementationOnce(() => Effect.fail(targetStopFailure));
+
+      const replacement = yield* Effect.exit(
+        provider.startSession(threadId, {
+          provider: "claudeAgent",
           threadId,
           cwd: "/tmp/replacement-target-retire-failure",
-          runtimeMode: "full-access",
-          modelSelection: { provider: "codex", model: "gpt-5-codex" },
-        });
+          runtimeMode: "approval-required",
+          modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
+        }),
+      );
 
-        const defaultClaudeStart = routing.claude.startSession.getMockImplementation();
-        if (!defaultClaudeStart) assert.fail("Expected the fake Claude start implementation");
-        const targetStartFailure = new ProviderAdapterSessionNotFoundError({
-          provider: "claudeAgent",
+      assert.equal(Exit.isFailure(replacement), true);
+      assert.equal(routing.claude.stopSession.mock.calls.length, claudeStopCount + 1);
+      assert.equal(routing.codex.startSession.mock.calls.length, codexStartCount);
+      assert.equal(yield* routing.codex.hasSession(threadId), false);
+      assert.equal(yield* routing.claude.hasSession(threadId), true);
+      const uncertainBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(uncertainBinding?.provider, "codex");
+      assert.equal(uncertainBinding?.status, "error");
+      assert.equal(
+        asRuntimePayloadRecord(uncertainBinding?.runtimePayload).lastRuntimeEvent,
+        "provider.replacement.restore.failed",
+      );
+      assert.equal(
+        asRuntimePayloadRecord(uncertainBinding?.runtimePayload).replacementTargetProvider,
+        "claudeAgent",
+      );
+
+      const send = yield* Effect.exit(
+        provider.sendTurn({
           threadId,
-        });
-        const targetStopFailure = new ProviderAdapterSessionNotFoundError({
-          provider: "claudeAgent",
-          threadId,
-        });
-        const codexStartCount = routing.codex.startSession.mock.calls.length;
-        const claudeStopCount = routing.claude.stopSession.mock.calls.length;
-        const codexSendCount = routing.codex.sendTurn.mock.calls.length;
-        const claudeSendCount = routing.claude.sendTurn.mock.calls.length;
-        routing.claude.startSession.mockImplementationOnce((input) =>
-          defaultClaudeStart(input).pipe(Effect.andThen(Effect.fail(targetStartFailure))),
-        );
-        routing.claude.stopSession.mockImplementationOnce(() => Effect.fail(targetStopFailure));
+          input: "must not reach either uncertain runtime",
+          attachments: [],
+        }),
+      );
+      assert.equal(Exit.isFailure(send), true);
+      assert.equal(routing.codex.sendTurn.mock.calls.length, codexSendCount);
+      assert.equal(routing.claude.sendTurn.mock.calls.length, claudeSendCount);
 
-        const replacement = yield* Effect.exit(
-          provider.startSession(threadId, {
-            provider: "claudeAgent",
-            threadId,
-            cwd: "/tmp/replacement-target-retire-failure",
-            runtimeMode: "approval-required",
-            modelSelection: { provider: "claudeAgent", model: "claude-opus-4-6" },
-          }),
-        );
-
-        assert.equal(Exit.isFailure(replacement), true);
-        assert.equal(routing.claude.stopSession.mock.calls.length, claudeStopCount + 1);
-        assert.equal(routing.codex.startSession.mock.calls.length, codexStartCount);
-        assert.equal(yield* routing.codex.hasSession(threadId), false);
-        assert.equal(yield* routing.claude.hasSession(threadId), true);
-        const uncertainBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
-        assert.equal(uncertainBinding?.provider, "codex");
-        assert.equal(uncertainBinding?.status, "error");
-        assert.equal(
-          asRuntimePayloadRecord(uncertainBinding?.runtimePayload).lastRuntimeEvent,
-          "provider.replacement.restore.failed",
-        );
-        assert.equal(
-          asRuntimePayloadRecord(uncertainBinding?.runtimePayload).replacementTargetProvider,
-          "claudeAgent",
-        );
-
-        const send = yield* Effect.exit(
-          provider.sendTurn({
-            threadId,
-            input: "must not reach either uncertain runtime",
-            attachments: [],
-          }),
-        );
-        assert.equal(Exit.isFailure(send), true);
-        assert.equal(routing.codex.sendTurn.mock.calls.length, codexSendCount);
-        assert.equal(routing.claude.sendTurn.mock.calls.length, claudeSendCount);
-
-        yield* provider.stopSession({ threadId });
-        assert.equal(yield* routing.codex.hasSession(threadId), false);
-        assert.equal(yield* routing.claude.hasSession(threadId), false);
-      }),
+      yield* provider.stopSession({ threadId });
+      assert.equal(yield* routing.codex.hasSession(threadId), false);
+      assert.equal(yield* routing.claude.hasSession(threadId), false);
+    }),
   );
 
   it.effect("retires a half-spawned initial runtime before exposing the start failure", () =>
