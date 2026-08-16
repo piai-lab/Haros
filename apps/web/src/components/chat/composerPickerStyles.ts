@@ -201,7 +201,7 @@ export const COMPOSER_COMMAND_MENU_SURFACE_CLASS_NAME =
 /** Opaque Environment panel card — same rationale as the command menu (overlays transcript). */
 export const ENVIRONMENT_PANEL_SURFACE_CLASS_NAME = `relative overflow-hidden rounded-2xl border border-border bg-popover text-popover-foreground ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
 
-/** Slide + inset timing matched to `SIDEBAR_OFFCANVAS_MOTION_CLASS` (right dock / thread sidebar). */
+/** Environment uses the same soft drawer curve as Sidebar/RightDock, with its own inspector timing. */
 export const ENVIRONMENT_PANEL_MOTION_CLASS =
   "transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
 

@@ -17,6 +17,7 @@ import {
 } from "~/components/ui/sheet";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "~/components/ui/tooltip";
+import { ShortcutKbd } from "~/components/ui/shortcut-kbd";
 import { useIsMobile } from "~/hooks/useMediaQuery";
 import { getLocalStorageItem, setLocalStorageItem } from "~/hooks/useLocalStorage";
 import { useI18n } from "~/i18n";
@@ -39,7 +40,7 @@ export const SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH = 13 * 16;
  * Shared by the thread sidebar (left) and the right dock so the two slides match.
  */
 const SIDEBAR_OFFCANVAS_MOTION_CLASS =
-  "duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none motion-reduce:duration-0";
+  "duration-[240ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none motion-reduce:duration-0";
 
 /**
  * Suppresses the slide entirely — for first mount or a reposition/remount where
@@ -54,6 +55,7 @@ type SidebarContextProps = {
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
+  toggleShortcutLabel: string | null;
   toggleSidebar: () => void;
 };
 
@@ -111,6 +113,7 @@ function SidebarProvider({
   defaultOpen: defaultOpenProp,
   open: openProp,
   onOpenChange: setOpenProp,
+  toggleShortcutLabel: toggleShortcutLabelProp,
   desktopPresentation: desktopPresentationProp,
   className,
   style,
@@ -121,6 +124,8 @@ function SidebarProvider({
   open?: boolean;
   /** Keep the same desktop surface mounted through compact native-window widths. */
   desktopPresentation?: boolean;
+  /** Resolved user keybinding shown beside the toggle label; null hides the hint. */
+  toggleShortcutLabel?: string | null;
   /** Return false for a transient presentation change that must not persist manual intent. */
   onOpenChange?: (open: boolean) => void | false;
 }) {
@@ -174,9 +179,10 @@ function SidebarProvider({
       setOpen,
       setOpenMobile,
       state,
+      toggleShortcutLabel: toggleShortcutLabelProp ?? null,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, toggleShortcutLabelProp, toggleSidebar],
   );
 
   return (
@@ -405,25 +411,48 @@ function Sidebar({
 }
 
 function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<typeof Button>) {
-  const { toggleSidebar } = useSidebar();
+  const { toggleShortcutLabel, toggleSidebar } = useSidebar();
   const { t } = useI18n();
 
   return (
-    <Button
-      className={cn("size-7", className)}
-      data-sidebar="trigger"
-      data-slot="sidebar-trigger"
-      onClick={(event) => {
-        onClick?.(event);
-        toggleSidebar();
-      }}
-      size="icon-xs"
-      variant="ghost"
-      {...props}
-    >
-      <CentralIcon name="sidebar-hidden-left-wide" />
-      <span className="sr-only">{t("nav.toggleSidebar")}</span>
-    </Button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            className={cn("size-8 rounded-lg", className)}
+            data-sidebar="trigger"
+            data-slot="sidebar-trigger"
+            onClick={(event) => {
+              onClick?.(event);
+              toggleSidebar();
+            }}
+            size="icon-xs"
+            variant="ghost"
+            {...props}
+          />
+        }
+      >
+        <CentralIcon name="sidebar-hidden-left-wide" />
+        <span className="sr-only">{t("nav.toggleSidebar")}</span>
+      </TooltipTrigger>
+      <TooltipPopup
+        align="start"
+        side="bottom"
+        sideOffset={7}
+        className="border-transparent bg-[rgba(28,28,30,0.96)] text-white before:hidden shadow-[0_8px_24px_rgba(0,0,0,0.24)]"
+      >
+        <span className="inline-flex items-center gap-2 whitespace-nowrap px-0.5 py-0.5 text-xs font-medium">
+          <span>{t("nav.toggleSidebar")}</span>
+          {toggleShortcutLabel ? (
+            <ShortcutKbd
+              shortcutLabel={toggleShortcutLabel}
+              groupClassName="gap-0.5"
+              className="h-4 min-w-4 rounded bg-white/12 px-1 text-[10px] text-white/80"
+            />
+          ) : null}
+        </span>
+      </TooltipPopup>
+    </Tooltip>
   );
 }
 

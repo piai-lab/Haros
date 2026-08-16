@@ -9,6 +9,7 @@ import {
   DEFAULT_THREAD_SIDEBAR_WIDTH_PX,
   migratePersistedAppearanceDefaults,
   resolveMigratedThreadSidebarWidth,
+  THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "./appearanceMigrations";
 
@@ -60,13 +61,29 @@ describe("appearance migrations", () => {
     expect(storage.getItem("omnimind:typography-defaults-migrated:v2")).toBeNull();
   });
 
-  it("upgrades only the former sidebar floor/default band", () => {
+  it("repairs the legacy compressed band without rewriting comfortable custom widths", () => {
     expect(resolveMigratedThreadSidebarWidth(208)).toBe(DEFAULT_THREAD_SIDEBAR_WIDTH_PX);
     expect(resolveMigratedThreadSidebarWidth(256)).toBe(DEFAULT_THREAD_SIDEBAR_WIDTH_PX);
-    expect(resolveMigratedThreadSidebarWidth(258.0078125)).toBe(258.0078125);
-    expect(resolveMigratedThreadSidebarWidth(263.7890625)).toBe(263.7890625);
+    expect(resolveMigratedThreadSidebarWidth(213.57421875)).toBe(DEFAULT_THREAD_SIDEBAR_WIDTH_PX);
+    expect(resolveMigratedThreadSidebarWidth(287.99)).toBe(DEFAULT_THREAD_SIDEBAR_WIDTH_PX);
+    expect(resolveMigratedThreadSidebarWidth(THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX)).toBe(
+      THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX,
+    );
     expect(resolveMigratedThreadSidebarWidth(300)).toBe(300);
     expect(resolveMigratedThreadSidebarWidth(338.30859375)).toBe(338.30859375);
+  });
+
+  it("repairs a fractional compressed width even after the earlier migration ran", () => {
+    const storage = createMemoryStorage({
+      [THREAD_SIDEBAR_WIDTH_STORAGE_KEY]: JSON.stringify(213.57421875),
+      "omnimind:sidebar-width-defaults-migrated:v1": "1",
+    });
+
+    expect(migratePersistedAppearanceDefaults(storage, "MacIntel").sidebarWidth).toBe("migrated");
+    expect(JSON.parse(storage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY) ?? "null")).toBe(
+      DEFAULT_THREAD_SIDEBAR_WIDTH_PX,
+    );
+    expect(storage.getItem("omnimind:sidebar-width-defaults-migrated:v2")).toBe("1");
   });
 
   it("preserves a legitimate custom sidebar width and records the decision", () => {
@@ -78,6 +95,6 @@ describe("appearance migrations", () => {
     expect(JSON.parse(storage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY) ?? "null")).toBe(
       338.30859375,
     );
-    expect(storage.getItem("omnimind:sidebar-width-defaults-migrated:v1")).toBe("1");
+    expect(storage.getItem("omnimind:sidebar-width-defaults-migrated:v2")).toBe("1");
   });
 });

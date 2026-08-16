@@ -38,7 +38,11 @@ import { isTerminalFocused } from "../lib/terminalFocus";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { startFreshChatForActiveSurface } from "../lib/startContainerChat";
 import { isFolderBackedProject } from "../lib/projectClassification";
-import { isKeyboardShortcutsHelpShortcut, resolveShortcutCommand } from "../keybindings";
+import {
+  isKeyboardShortcutsHelpShortcut,
+  resolveShortcutCommand,
+  shortcutLabelForCommand,
+} from "../keybindings";
 import { useStore } from "../store";
 import { createProjectLastActivityAtSelector } from "../storeSelectors";
 import { selectThreadTerminalState, useTerminalStateStore } from "../terminalStateStore";
@@ -46,7 +50,11 @@ import { useThreadSelectionStore } from "../threadSelectionStore";
 import { onServerMaintenanceUpdated } from "../wsNativeApi";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
-import { THREAD_SIDEBAR_WIDTH_STORAGE_KEY } from "~/appearanceMigrations";
+import {
+  resolveMigratedThreadSidebarWidth,
+  THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX,
+  THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
+} from "~/appearanceMigrations";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
 import { toastManager } from "~/components/ui/toast";
@@ -69,13 +77,13 @@ import {
 } from "~/lib/responsiveWorkbench";
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
-const THREAD_SIDEBAR_MIN_WIDTH = 13 * 16;
+const THREAD_SIDEBAR_MIN_WIDTH = THREAD_SIDEBAR_COMFORTABLE_MIN_WIDTH_PX;
 const THREAD_SIDEBAR_DEFAULT_WIDTH = 23 * 16;
 const THREAD_MAIN_CONTENT_MIN_WIDTH = 40 * 16;
 const THREAD_SIDEBAR_DRAG_DISMISS_THRESHOLD = 3 * 16;
-const THREAD_SIDEBAR_PEEK_ENTER_DELAY_MS = 140;
-const THREAD_SIDEBAR_PEEK_LEAVE_DELAY_MS = 90;
-const THREAD_SIDEBAR_PEEK_EXIT_MOTION_MS = 300;
+const THREAD_SIDEBAR_PEEK_ENTER_DELAY_MS = 90;
+const THREAD_SIDEBAR_PEEK_LEAVE_DELAY_MS = 60;
+const THREAD_SIDEBAR_PEEK_EXIT_MOTION_MS = 180;
 
 // Single source of truth for the thread sidebar resize behavior. Shared by <Sidebar>
 // and the detached content-seam <SidebarRail> (via SidebarInstanceProvider) so the
@@ -96,8 +104,7 @@ type MaintenanceToastId = ReturnType<typeof toastManager.add>;
 function readInitialThreadSidebarWidth(): number {
   if (typeof window === "undefined") return THREAD_SIDEBAR_DEFAULT_WIDTH;
   try {
-    return Math.max(
-      THREAD_SIDEBAR_MIN_WIDTH,
+    return resolveMigratedThreadSidebarWidth(
       getLocalStorageItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, Schema.Finite) ??
         THREAD_SIDEBAR_DEFAULT_WIDTH,
     );
@@ -609,6 +616,14 @@ const SIDEBAR_INNER_CLASS = "app-sidebar-surface";
 
 function ChatRouteLayout() {
   const { t } = useI18n();
+  const serverConfigQuery = useQuery(serverConfigQueryOptions());
+  const keybindings = serverConfigQuery.data?.keybindings ?? EMPTY_KEYBINDINGS;
+  const platform = typeof navigator === "undefined" ? "" : navigator.platform;
+  const sidebarToggleShortcutLabel = shortcutLabelForCommand(
+    keybindings,
+    "sidebar.toggle",
+    platform,
+  );
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });
@@ -687,7 +702,10 @@ function ChatRouteLayout() {
     (animateExit: boolean) => {
       clearSidebarPeekExitTimer();
       setSidebarPointerPeek(false);
-      if (!animateExit) {
+      if (
+        !animateExit ||
+        window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true
+      ) {
         setSidebarPointerPeekLayerActive(false);
         return;
       }
@@ -781,9 +799,9 @@ function ChatRouteLayout() {
     const firstFrameId = window.requestAnimationFrame(() => {
       secondFrameId = window.requestAnimationFrame(focusFirstVisibleControl);
     });
-    // The Sidebar has a 300ms slide. The frame path covers reduced/no-motion modes;
+    // The Sidebar has a 240ms slide. The frame path covers reduced/no-motion modes;
     // this fallback moves focus once the rendered surface is definitely on-screen.
-    const transitionFallbackId = window.setTimeout(focusFirstVisibleControl, 320);
+    const transitionFallbackId = window.setTimeout(focusFirstVisibleControl, 260);
     return () => {
       window.cancelAnimationFrame(firstFrameId);
       if (secondFrameId !== null) window.cancelAnimationFrame(secondFrameId);
@@ -878,6 +896,7 @@ function ChatRouteLayout() {
   const sidebarFloatsOverCanvas =
     sidebarPresentation === "overlay" || sidebarPresentation === "peek";
   const sidebarUsesRaisedLayer = sidebarPresentation === "overlay" || sidebarPointerPeekLayerActive;
+  const sidebarPeekIsExiting = sidebarPointerPeekLayerActive && !sidebarPointerPeek;
 
   // The thread sidebar always lives on the left; the right dock is a separate surface.
   const sidebarElement = (
@@ -887,13 +906,18 @@ function ChatRouteLayout() {
       // Match the right dock's soft drawer slide (shared token) instead of the
       // shell's default `ease-linear`. Applied to the container + gap in lockstep.
       className={cn(
-        "text-foreground",
+        "text-foreground transition-[left,right,width,opacity] group-data-[collapsible=offcanvas]:opacity-0",
         SIDEBAR_OFFCANVAS_MOTION_CLASS,
-        sidebarUsesRaisedLayer && "z-30 shadow-[16px_0_38px_rgba(0,0,0,0.12)]",
+        sidebarPeekIsExiting &&
+          "duration-[180ms]! ease-[cubic-bezier(0.4,0,1,1)]! motion-reduce:transition-none! motion-reduce:duration-0!",
+        sidebarUsesRaisedLayer &&
+          "z-30 will-change-[left,opacity] shadow-[12px_0_28px_-18px_rgba(0,0,0,0.24)]",
       )}
       gapClassName={cn(
         SIDEBAR_GAP_CLASS,
         SIDEBAR_OFFCANVAS_MOTION_CLASS,
+        sidebarPeekIsExiting &&
+          "duration-[180ms]! ease-[cubic-bezier(0.4,0,1,1)]! motion-reduce:transition-none! motion-reduce:duration-0!",
         sidebarFloatsOverCanvas && "w-0!",
       )}
       innerClassName={SIDEBAR_INNER_CLASS}
@@ -953,6 +977,7 @@ function ChatRouteLayout() {
       desktopPresentation
       open={resolvedSidebarOpen}
       onOpenChange={handleSidebarOpenChange}
+      toggleShortcutLabel={sidebarToggleShortcutLabel}
       className="bg-[var(--app-shell-background)]"
       data-sidebar-side="left"
       data-thread-sidebar-presentation={sidebarPresentation}
@@ -965,7 +990,7 @@ function ChatRouteLayout() {
       {canPointerPeek && sidebarPresentation === "hidden" ? (
         <div
           aria-hidden="true"
-          className="fixed inset-y-0 left-0 z-[28] w-2"
+          className="fixed inset-y-0 left-0 z-[28] w-3"
           data-sidebar-edge-peek-zone
           onPointerEnter={scheduleSidebarPointerPeek}
           onPointerLeave={clearSidebarPeekEnterTimer}

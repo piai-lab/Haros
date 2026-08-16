@@ -221,6 +221,17 @@ threshold = sidebarWidth + 776 + (previouslySuppressed ? 64 : 0);
 
 根因在 `SidebarRail` 的 settle lifecycle：commit 先把 resize ref 清空并安排 `320ms` style cleanup；presentation 改变又使 detached content-seam rail 先卸载，effect cleanup 取消 timer，却因 resize ref 已空而无法清除原 container/gap/wrapper styles。原 browser proof 只检查 presentation、DOM identity、主画布与 persistence，没有量 Sidebar 最终 `x` 与 inline residue，因此是假绿。纠正证据必须同时锁定：dismiss 后 inline drag styles 为空；再次 peek/dock 后 Sidebar `x=0`、width 等于最后有效展开宽度；真实 installed App 中不再出现半截面板。
 
+#### 5.4.3 2026-08-16 installed hover/motion 二次对照
+
+维护者继续提供最新 installed OmniMind `录屏2026-08-16 13.15.55.mov` 与 Codex `录屏2026-08-16 13.16.19.mov`，明确指出整体丝滑度仍不足且 hover 问题最显著。按相同时间轴逐帧裁切 titlebar 与 Sidebar 边缘后，差异不是单一 duration，而是四个连续反馈共同失配：
+
+- OmniMind 从历史 profile 恢复约 `213.57px` 的压缩宽度，展开后只形成一条窄灰带；Codex 同一动作呈现约 `360px` 的完整导航面。此前只迁移精确 `208px/256px` 签名，无法修复 drag 产生的 fractional legacy width；
+- Codex toggle hover 有明确高对比 tooltip，显示“切换边栏”与 `⌘B`；OmniMind 只有按钮底色变化。该缺口让 hover 缺少“现在可做什么”的确认，也把按钮 hover 与左缘 passive peek 混成一个模糊反馈；
+- OmniMind 使用 `300ms` 纯空间位移，窄面板与边缘阴影使它像一面追赶指针的墙；Codex 的可观察动作更短，面板内容与位移协同淡入，退出比进入更利落。主 Timeline/Composer 在本轮录屏中已基本保持锚定，因此不应再改主画布 owner；
+- 现有 passive hot zone 只有 `8px`，进入 delay `140ms`、离开 grace `90ms`，且退出仍等待完整 `300ms`。这使指针触边、面板出现、横穿到面板、移出收回之间存在可感知空档。热区扩大到 `12px`，进入/离开分别校准为 `90/60ms`，常规 drawer 为 `240ms`，pointer exit 为 `180ms`；drag 热路径仍保持零 tween，`prefers-reduced-motion` 仍只移除空间 motion。
+
+因此 W3 的最小修复不是复制 Codex 皮肤，而是在既有 owner 内闭合：v2 appearance migration 将小于 `18rem` 的旧压缩宽度恢复为 `23rem`，保留达到下界的自定义宽度；Sidebar toggle tooltip 从真实 keybinding 投影；同一个 Sidebar DOM 使用 transform/opacity 过渡与较轻 raised shadow；pointer peek 保持非模态、无 focus/inert/persistence 副作用。显式 compact overlay 的 modal 生命周期不变。
+
 ### 5.5 RightDock 当前布局
 
 `apps/web/src/components/chat/RightDock.tsx`：

@@ -218,7 +218,7 @@
      lockstep with the drawer, while direct rail manipulation disables its tween. */
   [data-thread-sidebar-presentation] {
     --sidebar-effective-width: 0px;
-    transition: --sidebar-effective-width 300ms cubic-bezier(0.32, 0.72, 0, 1);
+    transition: --sidebar-effective-width 240ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   [data-thread-sidebar-presentation="docked"] {

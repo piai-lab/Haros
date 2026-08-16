@@ -43,7 +43,7 @@ export function SidebarLeadingControls({ className }: { className?: string }) {
     <div className={cn("flex shrink-0 items-center gap-0.5", className)}>
       {isElectron ? <SidebarProductMark /> : null}
       <SidebarTrigger
-        className="size-7 shrink-0 text-muted-foreground/75 hover:text-foreground"
+        className="size-8 shrink-0 text-muted-foreground/75 hover:text-foreground"
         aria-label={t("nav.toggleSidebar")}
       />
       <AppNavigationButtons className="ms-0" />

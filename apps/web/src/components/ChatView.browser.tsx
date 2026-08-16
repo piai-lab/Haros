@@ -2457,6 +2457,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expectPresentation("docked");
       const sidebar = mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']");
       expect(sidebar?.getBoundingClientRect().width).toBeCloseTo(368, 0);
+      const presentationRoot = mounted.host.querySelector<HTMLElement>(
+        "[data-thread-sidebar-presentation]",
+      );
+      expect(getComputedStyle(sidebar!).transitionDuration.split(",")).toContain("0.24s");
+      expect(getComputedStyle(presentationRoot!).transitionDuration.split(",")).toContain("0.24s");
+      const visibleToggle = Array.from(
+        mounted.host.querySelectorAll<HTMLElement>("[data-slot='sidebar-trigger']"),
+      ).find((element) => element.getClientRects().length > 0);
+      expect(visibleToggle).toBeTruthy();
+      const focusBeforeToggleHover = document.activeElement;
+      await userEvent.hover(visibleToggle!);
+      await vi.waitFor(() => {
+        const tooltip = Array.from(
+          document.querySelectorAll<HTMLElement>("[data-slot='tooltip-popup']"),
+        ).find((popup) => popup.textContent?.includes("Toggle sidebar"));
+        expect(tooltip?.textContent).toContain("Toggle sidebar");
+        expect(tooltip?.textContent).toContain(isMacPlatform(navigator.platform) ? "⌘B" : "Ctrl+B");
+      });
+      expect(document.activeElement).toBe(focusBeforeToggleHover);
+      await userEvent.hover(document.body);
 
       for (const width of [1076, 1009, 840, 752, 688]) {
         await resizeTo(width);
@@ -2704,6 +2724,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => mounted.host.querySelector<HTMLElement>("[data-sidebar-edge-peek-zone]"),
         "Unable to find Sidebar edge peek zone.",
       );
+      expect(edgeZone.getBoundingClientRect().width).toBeCloseTo(12, 0);
       edgeZone.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
       await vi.waitFor(() => expect(presentation()).toBe("peek"), { timeout: 500 });
       await vi.waitFor(() => {
@@ -2716,6 +2737,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           0,
         );
       });
+      expect(getComputedStyle(sidebar).transitionDuration.split(",")).toContain("0.24s");
 
       expect(document.activeElement).toBe(focusBeforePeek);
       expect(
@@ -2747,6 +2769,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => expect(presentation(), "first peek leave").toBe("hidden"), {
         timeout: 500,
       });
+      expect(getComputedStyle(sidebar).transitionDuration.split(",")).toContain("0.18s");
+      await vi.waitFor(
+        () => {
+          expect(
+            mounted.host
+              .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+              ?.hasAttribute("data-sidebar-peek-layer-active"),
+          ).toBe(false);
+        },
+        { timeout: 500 },
+      );
 
       const repeatedEdgeZone = await waitForElement(
         () => mounted.host.querySelector<HTMLElement>("[data-sidebar-edge-peek-zone]"),
@@ -2777,10 +2810,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("uses the user's resized Sidebar width without feeding presentation back into the budget", async () => {
-    localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(208));
+  it("uses a comfortable custom Sidebar width without feeding presentation back into the budget", async () => {
+    localStorage.setItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY, JSON.stringify(304));
     const mounted = await mountChatView({
-      viewport: { ...DEFAULT_VIEWPORT, width: 528 },
+      viewport: { ...DEFAULT_VIEWPORT, width: 624 },
       snapshot: createSnapshotForTargetUser({
         targetMessageId: "msg-user-resized-sidebar" as MessageId,
         targetText: "resized sidebar",
@@ -2799,8 +2832,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         mounted.host
           .querySelector<HTMLElement>("[data-slot='sidebar-container']")
           ?.getBoundingClientRect().width,
-      ).toBeCloseTo(208, 0);
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 527 });
+      ).toBeCloseTo(304, 0);
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 623 });
       await vi.waitFor(() => {
         expect(
           mounted.host
@@ -2808,7 +2841,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
             ?.getAttribute("data-thread-sidebar-presentation"),
         ).toBe("hidden");
       });
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 592 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 688 });
       await vi.waitFor(() => {
         expect(
           mounted.host

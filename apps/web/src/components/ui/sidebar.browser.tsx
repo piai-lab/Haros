@@ -13,6 +13,7 @@ function ControlledSidebar({ transient }: { readonly transient: boolean }) {
   return (
     <SidebarProvider
       open={open}
+      toggleShortcutLabel={/Mac/i.test(navigator.platform) ? "⌘B" : "Ctrl+B"}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
         return transient ? false : undefined;
@@ -86,6 +87,24 @@ describe("SidebarProvider persistence boundary", () => {
         value: "false",
       });
     });
+    await screen.unmount();
+  });
+
+  it("explains the Sidebar toggle with the platform shortcut on hover", async () => {
+    await page.viewport(1280, 720);
+    const screen = await render(<ControlledSidebar transient={false} />);
+    const trigger = screen.container.querySelector<HTMLElement>("[data-slot='sidebar-trigger']");
+    expect(trigger).toBeTruthy();
+
+    await userEvent.hover(trigger!);
+    await vi.waitFor(() => {
+      const popup = document.querySelector<HTMLElement>("[data-slot='tooltip-popup']");
+      expect(popup?.textContent).toContain("Toggle sidebar");
+      expect(popup?.textContent).toMatch(/⌘B|Ctrl\+B/);
+      expect(getComputedStyle(popup!).backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+    });
+
+    expect(document.activeElement).not.toBe(trigger);
     await screen.unmount();
   });
 
