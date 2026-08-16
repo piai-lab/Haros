@@ -885,8 +885,6 @@ function ActiveModelsSettingsPanel({
   const [selectedModelServiceId, setSelectedModelServiceId] = useState<string | null>(null);
   const [modelServiceBrowserOpen, setModelServiceBrowserOpen] = useState(startInAddFlow);
   const [modelServiceSearch, setModelServiceSearch] = useState("");
-  const [modelServiceCatalogExpanded, setModelServiceCatalogExpanded] = useState(false);
-  const modelServiceCatalogDragStartRef = useRef<number | null>(null);
   const [modelServiceModelSearch, setModelServiceModelSearch] = useState("");
   const [modelServiceDetailReturnView, setModelServiceDetailReturnView] = useState<
     "overview" | "browser"
@@ -2110,10 +2108,6 @@ function ActiveModelsSettingsPanel({
     () => [...preferredConnectableModelServices, ...otherConnectableModelServices],
     [otherConnectableModelServices, preferredConnectableModelServices],
   );
-  const visibleFirstRunModelServices =
-    modelServiceSearchActive || modelServiceCatalogExpanded
-      ? orderedConnectableModelServices
-      : orderedConnectableModelServices.slice(0, 6);
   const modelServiceAuthMethodsLabel = useCallback(
     (service: OmniMindModelServiceDescriptor) => {
       const labels = [
@@ -2172,7 +2166,6 @@ function ActiveModelsSettingsPanel({
   const openModelServiceBrowser = useCallback(() => {
     modelServiceBrowserRestoreRef.current = null;
     setModelServiceSearch("");
-    setModelServiceCatalogExpanded(false);
     setModelServiceBrowserOpen(true);
   }, []);
 
@@ -2182,7 +2175,6 @@ function ActiveModelsSettingsPanel({
     modelServicePostLoginControllerRef.current?.abort();
     modelServiceRefreshControllerRef.current?.abort();
     setModelServiceBrowserOpen(false);
-    setModelServiceCatalogExpanded(false);
     requestAnimationFrame(() => addModelServiceButtonRef.current?.focus());
   }, []);
 
@@ -2482,10 +2474,7 @@ function ActiveModelsSettingsPanel({
                   ref={modelServiceSearchInputRef}
                   autoFocus
                   value={modelServiceSearch}
-                  onChange={(event) => {
-                    setModelServiceSearch(event.target.value);
-                    if (event.target.value.trim()) setModelServiceCatalogExpanded(true);
-                  }}
+                  onChange={(event) => setModelServiceSearch(event.target.value)}
                   placeholder={t("settings.searchModelServices")}
                   aria-label={t("settings.searchModelServices")}
                   spellCheck={false}
@@ -2546,14 +2535,12 @@ function ActiveModelsSettingsPanel({
                     <div
                       ref={modelServiceBrowserListRef}
                       data-model-service-results="first-run-grid"
-                      className={cn(
-                        "grid grid-cols-2 gap-2 overflow-y-auto pr-0.5 transition-[max-height] duration-200 motion-reduce:transition-none",
-                        modelServiceCatalogExpanded || modelServiceSearchActive
-                          ? "max-h-[min(344px,calc(100vh-22rem))]"
-                          : "max-h-[184px]",
-                      )}
+                      role="region"
+                      aria-label={t("settings.connectableModelServices")}
+                      tabIndex={0}
+                      className="grid max-h-[min(184px,calc(100vh-22rem))] grid-cols-2 gap-2 overflow-y-auto overscroll-contain pr-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring/60"
                     >
-                      {visibleFirstRunModelServices.map((service) => {
+                      {orderedConnectableModelServices.map((service) => {
                         const instanceLabel = modelServiceInstanceLabel(service);
                         return (
                           <button
@@ -2579,10 +2566,10 @@ function ActiveModelsSettingsPanel({
                               />
                             </span>
                             <span className="min-w-0 flex-1">
-                              <span className="block truncate text-[12.5px] font-medium text-foreground">
+                              <span className="block truncate text-[length:var(--app-font-size-ui-sm,13px)] font-medium text-foreground">
                                 {instanceLabel}
                               </span>
-                              <span className="mt-0.5 block truncate text-[10.5px] text-muted-foreground">
+                              <span className="mt-0.5 block truncate text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground">
                                 {modelServiceAuthMethodsLabel(service)}
                               </span>
                             </span>
@@ -2591,39 +2578,6 @@ function ActiveModelsSettingsPanel({
                         );
                       })}
                     </div>
-                    {!modelServiceSearchActive && orderedConnectableModelServices.length > 6 ? (
-                      <button
-                        type="button"
-                        className="grid h-[35px] w-full touch-none place-items-center pt-1 text-[11.5px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
-                        aria-expanded={modelServiceCatalogExpanded}
-                        onClick={() => setModelServiceCatalogExpanded((expanded) => !expanded)}
-                        onPointerDown={(event) => {
-                          modelServiceCatalogDragStartRef.current = event.clientY;
-                          event.currentTarget.setPointerCapture(event.pointerId);
-                        }}
-                        onPointerMove={(event) => {
-                          const start = modelServiceCatalogDragStartRef.current;
-                          if (start !== null && start - event.clientY > 24) {
-                            setModelServiceCatalogExpanded(true);
-                          }
-                        }}
-                        onPointerUp={() => {
-                          modelServiceCatalogDragStartRef.current = null;
-                        }}
-                        onPointerCancel={() => {
-                          modelServiceCatalogDragStartRef.current = null;
-                        }}
-                      >
-                        <span className="mb-0.5 block h-1 w-[42px] rounded-full bg-border" />
-                        <span>
-                          {modelServiceCatalogExpanded
-                            ? t("onboarding.firstRun.servicesCollapse")
-                            : t("onboarding.firstRun.servicesExpand", {
-                                count: orderedConnectableModelServices.length,
-                              })}
-                        </span>
-                      </button>
-                    ) : null}
                   </div>
                 ) : (
                   <div

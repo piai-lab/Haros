@@ -953,7 +953,7 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("presents the first six runtime services in the onboarding grid before expanding", async () => {
+  it("renders the complete runtime service catalog in one naturally scrollable onboarding grid", async () => {
     const connectableServices = Array.from({ length: 8 }, (_, index) =>
       service({
         serviceId: index === 0 ? "deepseek" : `service-${index}`,
@@ -984,20 +984,14 @@ describe("ModelsSettingsPanel model services", () => {
     const firstRunGrid = document.querySelector<HTMLElement>(
       '[data-model-service-results="first-run-grid"]',
     )!;
-    expect(firstRunGrid.querySelectorAll("button")).toHaveLength(6);
-    expect(document.body.textContent).toContain('onboarding.firstRun.serviceCount:{"count":8}');
-
-    await mounted.screen
-      .getByRole("button", {
-        name: 'onboarding.firstRun.servicesExpand:{"count":8}',
-      })
-      .click();
     expect(firstRunGrid.querySelectorAll("button")).toHaveLength(8);
-    expect(
-      mounted.screen.getByRole("button", {
-        name: "onboarding.firstRun.servicesCollapse",
-      }),
-    ).toHaveAttribute("aria-expanded", "true");
+    expect(document.body.textContent).toContain('onboarding.firstRun.serviceCount:{"count":8}');
+    expect(firstRunGrid.scrollHeight).toBeGreaterThan(firstRunGrid.clientHeight);
+    firstRunGrid.scrollTop = firstRunGrid.scrollHeight;
+    firstRunGrid.dispatchEvent(new Event("scroll"));
+    expect(firstRunGrid.scrollTop).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toContain("onboarding.firstRun.servicesExpand");
+    expect(document.body.textContent).not.toContain("onboarding.firstRun.servicesCollapse");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

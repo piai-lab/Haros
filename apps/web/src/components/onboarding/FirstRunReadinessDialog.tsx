@@ -35,10 +35,14 @@ import { useFirstRunReadinessController } from "./useFirstRunReadinessController
 
 type WizardStep = "engine" | "prepare" | "model" | "ready";
 
-const INDEPENDENT_ENGINE_OPTIONS = ["codex", "claudeAgent", "cursor", "pi"] as const;
+const INDEPENDENT_ENGINE_OPTIONS = PROVIDER_OPTIONS.filter((option) => option.value !== "omnimind");
 const PROVIDER_LABEL_BY_KIND = Object.fromEntries(
   PROVIDER_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<ProviderKind, string>;
+
+type OnboardingEngineAvailabilityState =
+  | ReturnType<typeof deriveProviderPickerAvailability>["state"]
+  | "coming_soon";
 
 const ENGINE_STATUS_KEY_BY_STATE = {
   checking: "composer.engineChecking",
@@ -47,10 +51,8 @@ const ENGINE_STATUS_KEY_BY_STATE = {
   sign_in: "composer.engineSignIn",
   not_installed: "composer.engineNotInstalled",
   unavailable: "composer.engineUnavailable",
-} as const satisfies Record<
-  ReturnType<typeof deriveProviderPickerAvailability>["state"],
-  MessageKey
->;
+  coming_soon: "composer.engineComingSoon",
+} as const satisfies Record<OnboardingEngineAvailabilityState, MessageKey>;
 
 function readSelectionIntentFingerprint(threadId: ThreadId): string {
   const composerState = useComposerDraftStore.getState();
@@ -260,9 +262,11 @@ export function FirstRunReadinessDialog() {
         showCloseButton={false}
         data-testid="first-run-readiness-dialog"
       >
-        <DialogHeader className="h-[70px] shrink-0 flex-row items-center border-b border-border/60 px-7 py-0">
+        <DialogHeader className="h-[70px] shrink-0 flex-row items-center border-b border-border/60 px-7 py-0 font-system-ui">
           <ProviderIcon provider="omnimind" className="size-[34px]" />
-          <span className="text-[15px] font-semibold">{t("onboarding.firstRun.header")}</span>
+          <span className="text-[length:var(--app-font-size-ui-lg,15px)] font-semibold">
+            {t("onboarding.firstRun.header")}
+          </span>
           <div
             className="ms-auto flex items-center gap-2"
             role="group"
@@ -289,16 +293,19 @@ export function FirstRunReadinessDialog() {
           </button>
         </DialogHeader>
 
-        <DialogPanel className="flex min-h-0 flex-1 flex-col px-[34px] pt-[30px] pb-3 max-lg:px-7 max-lg:pt-6">
+        <DialogPanel className="flex min-h-0 flex-1 flex-col overflow-hidden px-[34px] pt-[30px] pb-3 font-system-ui max-lg:px-7 max-lg:pt-6">
           {step === "engine" ? (
-            <section className="first-run-step" data-first-run-step="engine">
+            <section
+              className="first-run-step min-h-0 flex-1 overflow-y-auto pe-1 pb-1"
+              data-first-run-step="engine"
+            >
               <p className="mb-1.5 text-xs font-semibold text-primary">
                 {t("onboarding.firstRun.step", { current: 1, total: 3 })}
               </p>
-              <DialogTitle className="text-[25px] tracking-[-0.035em]">
+              <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.6667)] tracking-[-0.035em]">
                 {t("onboarding.firstRun.engineTitle")}
               </DialogTitle>
-              <DialogDescription className="mt-1.5 max-w-[610px] leading-relaxed">
+              <DialogDescription className="mt-1.5 max-w-[610px] text-[length:var(--app-font-size-ui,14px)] leading-relaxed">
                 {t("onboarding.firstRun.engineDescription")}
               </DialogDescription>
               <button
@@ -314,12 +321,14 @@ export function FirstRunReadinessDialog() {
               >
                 <ProviderIcon provider="omnimind" className="size-12" />
                 <span className="min-w-0 flex-1">
-                  <strong className="block text-base">{PROVIDER_LABEL_BY_KIND.omnimind}</strong>
-                  <span className="mt-1 block text-xs text-muted-foreground">
+                  <strong className="block text-[length:var(--app-font-size-ui-lg,15px)]">
+                    {PROVIDER_LABEL_BY_KIND.omnimind}
+                  </strong>
+                  <span className="mt-1 block text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
                     {t("onboarding.firstRun.omnimindDescription")}
                   </span>
                 </span>
-                <span className="rounded-full bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                <span className="rounded-full bg-primary/10 px-2 py-1 text-[length:var(--app-font-size-ui-2xs,11px)] font-semibold text-primary">
                   {t("onboarding.firstRun.recommended")}
                 </span>
                 {selectedProvider === "omnimind" ? (
@@ -332,19 +341,23 @@ export function FirstRunReadinessDialog() {
                 {t("onboarding.firstRun.otherEngines")}
               </div>
               <div className="grid grid-cols-4 gap-2.5 max-lg:grid-cols-2">
-                {INDEPENDENT_ENGINE_OPTIONS.map((provider) => {
+                {INDEPENDENT_ENGINE_OPTIONS.map((option) => {
+                  const provider = option.value;
                   const status = controller.providerStatuses.find(
                     (candidate) => candidate.provider === provider,
                   );
-                  const availability = deriveProviderPickerAvailability(status);
+                  const availability = option.available
+                    ? deriveProviderPickerAvailability(status)
+                    : { disabled: true, state: "coming_soon" as const };
                   const selected = selectedProvider === provider;
                   return (
                     <button
                       key={provider}
                       type="button"
                       aria-pressed={selected}
+                      disabled={!option.available}
                       className={cn(
-                        "flex min-w-0 items-center gap-2 rounded-[13px] border px-2.5 py-3 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/60 motion-reduce:transition-none",
+                        "flex min-w-0 items-center gap-2 rounded-[13px] border px-2.5 py-3 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-default disabled:opacity-55 motion-reduce:transition-none",
                         selected && "border-primary/45 bg-primary/[0.05]",
                       )}
                       onClick={() => setSelectedProvider(provider)}
@@ -353,10 +366,10 @@ export function FirstRunReadinessDialog() {
                         <ProviderIcon provider={provider} className="size-[21px]" />
                       </span>
                       <span className="min-w-0">
-                        <strong className="block truncate text-xs">
-                          {PROVIDER_LABEL_BY_KIND[provider]}
+                        <strong className="block truncate text-[length:var(--app-font-size-ui-sm,13px)]">
+                          {option.label}
                         </strong>
-                        <span className="block truncate text-[10.5px] text-muted-foreground">
+                        <span className="block truncate text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground">
                           {t(ENGINE_STATUS_KEY_BY_STATE[availability.state])}
                         </span>
                       </span>
@@ -378,10 +391,10 @@ export function FirstRunReadinessDialog() {
                       engine: selectedProviderLabel,
                     })}
                   </p>
-                  <DialogTitle className="text-[25px] tracking-[-0.035em]">
+                  <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.6667)] tracking-[-0.035em]">
                     {t("onboarding.firstRun.serviceTitle")}
                   </DialogTitle>
-                  <DialogDescription className="mt-1.5 mb-3 max-w-[610px] leading-relaxed">
+                  <DialogDescription className="mt-1.5 mb-3 max-w-[610px] text-[length:var(--app-font-size-ui,14px)] leading-relaxed">
                     {t("onboarding.firstRun.serviceDescription")}
                   </DialogDescription>
                   <ModelsSettingsPanel
@@ -404,12 +417,12 @@ export function FirstRunReadinessDialog() {
                       engine: selectedProviderLabel,
                     })}
                   </p>
-                  <DialogTitle className="text-[25px] tracking-[-0.035em]">
+                  <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.6667)] tracking-[-0.035em]">
                     {t("onboarding.firstRun.prepareEngineTitle", {
                       engine: selectedProviderLabel,
                     })}
                   </DialogTitle>
-                  <DialogDescription className="mt-1.5 max-w-[610px] leading-relaxed">
+                  <DialogDescription className="mt-1.5 max-w-[610px] text-[length:var(--app-font-size-ui,14px)] leading-relaxed">
                     {t("onboarding.firstRun.prepareEngineDescription")}
                   </DialogDescription>
                   <div className="mt-7 flex items-center gap-4 rounded-2xl border border-border p-5">
@@ -417,8 +430,10 @@ export function FirstRunReadinessDialog() {
                       <ProviderIcon provider={selectedProvider} className="size-8" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <strong className="text-base">{selectedProviderLabel}</strong>
-                      <p className="mt-1 text-sm text-muted-foreground">
+                      <strong className="text-[length:var(--app-font-size-ui-lg,15px)]">
+                        {selectedProviderLabel}
+                      </strong>
+                      <p className="mt-1 text-[length:var(--app-font-size-ui,14px)] text-muted-foreground">
                         {selectedProviderModelsReady && selectedProviderPrepared
                           ? t("onboarding.firstRun.enginePrepared")
                           : t("onboarding.firstRun.engineNeedsSetup")}
@@ -448,10 +463,10 @@ export function FirstRunReadinessDialog() {
                   engine: selectedProviderLabel,
                 })}
               </p>
-              <DialogTitle className="text-[25px] tracking-[-0.035em]">
+              <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.6667)] tracking-[-0.035em]">
                 {t("onboarding.firstRun.modelTitle")}
               </DialogTitle>
-              <DialogDescription className="mt-1.5 max-w-[610px] leading-relaxed">
+              <DialogDescription className="mt-1.5 max-w-[610px] text-[length:var(--app-font-size-ui,14px)] leading-relaxed">
                 {t("onboarding.firstRun.modelDescription")}
               </DialogDescription>
               <div className="mt-6 grid gap-2.5" role="radiogroup">
@@ -479,8 +494,10 @@ export function FirstRunReadinessDialog() {
                         {selected ? <span className="size-2 rounded-full bg-primary" /> : null}
                       </span>
                       <span className="min-w-0">
-                        <strong className="block truncate text-[13px]">{model.name}</strong>
-                        <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                        <strong className="block truncate text-[length:var(--app-font-size-ui-sm,13px)]">
+                          {model.name}
+                        </strong>
+                        <span className="mt-0.5 block truncate text-[length:var(--app-font-size-ui-xs,12px)] text-muted-foreground">
                           {model.description}
                         </span>
                       </span>
@@ -500,13 +517,13 @@ export function FirstRunReadinessDialog() {
                 <span className="mx-auto mb-5 grid size-[66px] place-items-center rounded-[21px] bg-emerald-500/10 text-emerald-600">
                   <ProviderIcon provider={selectedProvider} className="size-[42px]" />
                 </span>
-                <DialogTitle className="text-[26px] tracking-[-0.035em]">
+                <DialogTitle className="text-[length:calc(var(--app-font-size-ui-lg,15px)*1.7333)] tracking-[-0.035em]">
                   {t("onboarding.firstRun.readyTitle")}
                 </DialogTitle>
-                <DialogDescription className="mt-2">
+                <DialogDescription className="mt-2 text-[length:var(--app-font-size-ui,14px)]">
                   {t("onboarding.firstRun.readyDescription")}
                 </DialogDescription>
-                <div className="mx-auto mt-6 flex justify-center gap-8 rounded-xl bg-muted/55 px-5 py-3 text-left text-xs">
+                <div className="mx-auto mt-6 flex justify-center gap-8 rounded-xl bg-muted/55 px-5 py-3 text-left text-[length:var(--app-font-size-ui-xs,12px)]">
                   <span>
                     <span className="block text-muted-foreground">{t("term.engine")}</span>
                     <strong>{selectedProviderLabel}</strong>
@@ -523,17 +540,17 @@ export function FirstRunReadinessDialog() {
           ) : null}
         </DialogPanel>
 
-        <DialogFooter className="h-[76px] shrink-0 flex-row items-center border-t border-border/60 px-7 py-0">
+        <DialogFooter className="h-[76px] shrink-0 flex-row items-center border-t border-border/60 px-7 py-0 font-system-ui">
           {step === "engine" ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="text-sm text-muted-foreground hover:text-foreground"
+                className="text-[length:var(--app-font-size-ui,14px)] text-muted-foreground hover:text-foreground"
                 onClick={deferFlow}
               >
                 {t("onboarding.firstRun.later")}
               </button>
-              <span className="text-[11px] text-muted-foreground/65">
+              <span className="text-[length:var(--app-font-size-ui-2xs,11px)] text-muted-foreground/65">
                 {t("onboarding.firstRun.settingsHint")}
               </span>
             </div>

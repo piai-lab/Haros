@@ -174,6 +174,8 @@ Model services 使用同一 Settings pane 内互斥的 **概览 → 添加 → �
 
 三步固定为：**1. 选择工作引擎；2. 准备所选引擎；3. 明确选择 authoritative exact model**。OmniMind 在第 1 步预选并标记推荐；其第 2 步复用现有 Model services 的服务目录、认证、OAuth、API Key、自定义 API、刷新和失败恢复，其他 Engine 只调用各自现有的安装、登录或恢复动作；第 3 步只消费所选 Engine 当前 authoritative runtime catalog，不合成静态默认、空 model 或跨 Engine fallback。“OmniMind 已准备好”是三步后的完成摘要，不是第 4 步。服务配置按原 owner 即时 durable；Engine/exact model selection 只在用户点击“开始使用”时一次提交回原 Composer draft，且迟到完成不得覆盖更新的用户 intent。
 
+第 1 步的独立 Engine 集合、显示名、图标和可用状态必须直接投影 Composer 使用的 canonical Provider descriptors 与实时 health；不得在 onboarding 内另写 Codex/Claude/Cursor/Pi 等固定子集。新增或下线 Engine 时，只修改原 Provider owner，首次向导随同一集合自动变化。第 2 步的模型服务目录直接渲染 runtime 当前返回的完整有序结果，并在同一列表内自然滚动；不得先截成六项，再用“向上拉”文案或必须点击的伪手势解锁其余服务。搜索、键盘导航、详情返回时的 scroll/focus 恢复继续由既有 Model services owner 负责。
+
 关闭或“稍后设置”只允许写一个 versioned、schema-validated 的本地 presentation preference，表示本 profile 暂不自动阻塞；它不保存 complete、step、Engine、service、model、credential 或用户内容，也不改变 send gate。ready 始终由真实可发送 exact binding 派生，禁止持久化 completed boolean。延期后冷启动不重复强制打开，Composer 上方也不得出现 setup、recovery、继续设置卡片或横条；用户只从现有 Composer Engine/model 控件或 Settings 继续。打开、关闭、认证往返和最终提交都必须保留原 Thread、route、Composer 草稿、附件、focus 与返回位置。
 
 Settings 的 **概览 → 添加 → 详情** 仍是 Model services 管理 IA；首次向导中的 **引擎 → 准备引擎 → 精确模型** 是一次性任务流程。二者复用同一 Provider Registry/health、Pi ModelRuntime、typed auth/custom API、catalog/query/mutation 与 draft selection owner，但不互相替代，也不得新增 onboarding backend、数据库、Registry、credential store、静态 service/model mirror、全局默认模型或第二套 auth/catalog 状态机。被动首次资格判断不得加载 Extension、启动 Provider Session或触发网络 refresh。

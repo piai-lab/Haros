@@ -76,6 +76,7 @@ import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailS
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { useRightDockStore } from "../rightDockStore";
 import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
+import { PROVIDER_OPTIONS } from "../session-logic";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { FIRST_RUN_READINESS_PREFERENCE_KEY } from "./onboarding/firstRunReadinessPreference";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
@@ -9323,6 +9324,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const engineGrid = setupDialogNode.querySelector<HTMLElement>(
         '[data-first-run-step="engine"] .grid.grid-cols-4',
       )!;
+      const engineStep = setupDialogNode.querySelector<HTMLElement>(
+        '[data-first-run-step="engine"]',
+      )!;
+      const independentEngineOptions = PROVIDER_OPTIONS.filter(
+        (option) => option.value !== "omnimind",
+      );
+      expect(engineGrid.querySelectorAll("button")).toHaveLength(independentEngineOptions.length);
+      for (const option of independentEngineOptions) {
+        expect(engineGrid.textContent).toContain(option.label);
+      }
       await Promise.all(setupDialogNode.getAnimations().map((animation) => animation.finished));
       for (const viewport of [
         { ...DEFAULT_VIEWPORT, name: "oracle-desktop", width: 1440, height: 900 },
@@ -9347,6 +9358,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         if (viewport.width === 480) expect(rect.width).toBeLessThanOrEqual(448 + 1);
         const columnCount = getComputedStyle(engineGrid).gridTemplateColumns.split(" ").length;
         expect(columnCount).toBe(viewport.width > 1050 ? 4 : 2);
+        if (viewport.width === 480) {
+          expect(getComputedStyle(engineStep).overflowY).toBe("auto");
+        }
         expect(document.querySelector('[data-testid="first-run-readiness-dialog"]')).toBe(
           setupDialogNode,
         );

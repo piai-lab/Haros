@@ -1691,8 +1691,6 @@ export const EN_MESSAGES = {
     "Choose a service OmniMind currently supports. After connecting, we’ll read the models it actually makes available.",
   "onboarding.firstRun.servicesAvailable": "Currently available",
   "onboarding.firstRun.serviceCount": "{count} services",
-  "onboarding.firstRun.servicesExpand": "Pull up to view all {count} model services ↑",
-  "onboarding.firstRun.servicesCollapse": "Expanded · Scroll to browse all services ↓",
   "onboarding.firstRun.modelTitle": "Choose an exact model",
   "onboarding.firstRun.modelDescription":
     "Choose one model from the current catalog. OmniMind will not guess a default for you.",
@@ -5045,8 +5043,6 @@ export const ZH_CN_MESSAGES = {
     "选择 OmniMind 当前支持的服务；连接后，我们会读取它实际可用的模型。",
   "onboarding.firstRun.servicesAvailable": "当前提供",
   "onboarding.firstRun.serviceCount": "{count} 个服务",
-  "onboarding.firstRun.servicesExpand": "向上拉，查看全部 {count} 个模型服务 ↑",
-  "onboarding.firstRun.servicesCollapse": "已展开 · 滚动浏览全部服务 ↓",
   "onboarding.firstRun.modelTitle": "选择一个精确模型",
   "onboarding.firstRun.modelDescription":
     "请从当前目录中明确选择一个模型；OmniMind 不会替你猜测默认模型。",

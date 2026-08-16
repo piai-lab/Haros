@@ -2169,4 +2169,6 @@ fresh launch
 
 关闭和“稍后设置”只保存 versioned local presentation preference，不保存完成态。延期后冷启动不重复 modal，Composer 上方保持零 setup/recovery banner；继续入口复用现有 Engine/model 控件和 Settings。ready 仍完全由可发送 exact binding 派生。原型中的 deferred Composer card 因后续维护者裁决被排除，只保留 modal 的几何、密度、步骤层级、资产与 motion 作为视觉 oracle。
 
+2026-08-16 的 installed App 复核又暴露了两处不应进入长期产品的 authored subset。第一，向导第 1 步只手写 Codex、Claude、Cursor、Pi，会漏掉当前已采用的 Antigravity、Grok、Droid、Kilo、OpenCode，也会让未来 Engine 必须在第二份列表补登记；正确边界是直接消费 Composer 已使用的 canonical Provider descriptors、`ProviderIcon` 与 live status。第二，第 2 步虽然写着“向上拉”，实际只渲染前六项，必须点击提示行才把其余 runtime 服务放进 DOM；这不是自然手势。正确行为是完整有序结果从一开始就在同一个有限高度滚动区中，滚轮、触控板、触摸与键盘无需解锁即可浏览，搜索和详情返回继续复用 Model services 原 owner。两项都属于 presentation/registry 投影修正，不新增 catalog、gesture state 或第二个 Engine owner。
+
 复验触发器新增：首次资格 classifier、Composer draft/exact selection owner、Model services passive facts、Provider health/auth、shell Dialog mount、local preference schema、Settings setup seam、Composer readiness banner 或 `focus-flow` oracle 任一变化。复验必须同时证明 fresh、deferred、ready、recover、unknown，且不得用 dev/HMR 或 authored static service snapshot代替 exact installed App。
