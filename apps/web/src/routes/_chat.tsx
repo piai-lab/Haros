@@ -69,6 +69,7 @@ import {
 import type { SidebarResizableOptions } from "~/components/ui/sidebar";
 import { cn } from "~/lib/utils";
 import { useI18n } from "~/i18n";
+import { FirstRunReadinessDialog } from "~/components/onboarding/FirstRunReadinessDialog";
 import { getLocalStorageItem } from "~/hooks/useLocalStorage";
 import { Schema } from "effect";
 import {
@@ -988,6 +989,7 @@ function ChatRouteLayout() {
     >
       <ThreadRetentionMaintenanceToast />
       <ChatRouteGlobalShortcuts />
+      <FirstRunReadinessDialog />
       {sidebarElement}
       {canPointerPeek && sidebarPresentation === "hidden" ? (
         <div

@@ -78,6 +78,7 @@ import { useRightDockStore } from "../rightDockStore";
 import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { SETTINGS_TARGETS } from "../settingsNavigation";
+import { FIRST_RUN_READINESS_PREFERENCE_KEY } from "./onboarding/firstRunReadinessPreference";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
 // The router's auto-split route otherwise requests this module on first mount.
 import "./ChatView";
@@ -9116,6 +9117,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
       JSON.stringify({ defaultProvider: "omnimind" }),
     );
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const setupImage = createComposerImage({
+      id: "first-run-setup-image",
+      previewUrl: "blob:first-run-setup-image",
+      name: "first-run-setup.png",
+    });
+    useComposerDraftStore
+      .getState()
+      .setPrompt(THREAD_ID, "Keep this draft while I connect a model.");
+    useComposerDraftStore.getState().addImage(THREAD_ID, setupImage);
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     let catalogProjected = false;
@@ -9291,40 +9301,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
         };
       },
     });
-    const historyBack = vi
-      .spyOn(appHistory, "back")
-      .mockImplementation(() => void mounted.router.navigate({ to: "/" }));
-
     try {
-      const setupPrompt = page.getByTestId("model-readiness-prompt");
-      await expect.element(setupPrompt).toBeInTheDocument();
+      const setupDialog = page.getByTestId("first-run-readiness-dialog");
+      await expect.element(setupDialog).toBeInTheDocument();
       expect(refreshProviders).not.toHaveBeenCalled();
-      await page.getByRole("textbox").fill("Keep this draft while I connect a model.");
-      const setupImage = createComposerImage({
-        id: "first-run-setup-image",
-        previewUrl: "blob:first-run-setup-image",
-        name: "first-run-setup.png",
-      });
-      useComposerDraftStore.getState().addImage(THREAD_ID, setupImage);
       expect(useComposerDraftStore.getState().stickyModelSelectionByProvider).toEqual({});
       expect(
         useStore.getState().projects.find((project) => project.id === PROJECT_ID)
           ?.defaultModelSelection,
       ).toBeNull();
       expect(useStore.getState().threadShellById?.[THREAD_ID]).toBeUndefined();
-      await expect.element(setupPrompt).toBeInTheDocument();
-      expect(setupPrompt.element().textContent).toContain(EN_MESSAGES["composer.modelSetupAction"]);
-      const setupButton = page.getByRole("button", {
-        name: EN_MESSAGES["composer.modelSetupAction"],
-      });
-      setupButton.element().focus();
-      await userEvent.keyboard("{Enter}");
-      await waitForURL(
-        mounted.router,
-        (path) => path === "/settings",
-        "Model setup should open the existing Settings route.",
-      );
-
+      await setupDialog.getByRole("button", { name: EN_MESSAGES["common.forward"] }).click();
       await expect
         .element(page.getByRole("textbox", { name: EN_MESSAGES["settings.searchModelServices"] }))
         .toBeInTheDocument();
@@ -9344,18 +9331,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await page
         .getByLabelText(EN_MESSAGES["settings.modelServicePromptSecret"])
         .fill("test-secret");
-      useComposerDraftStore.getState().setStickyModelSelection({
-        provider: "codex",
-        model: "gpt-5.6-sol",
-      });
       await page
         .getByRole("button", { name: EN_MESSAGES["settings.modelServiceContinue"] })
         .click();
-      await waitForURL(
-        mounted.router,
-        (path) => path === "/",
-        "Completed setup should return to the original Chat.",
-      );
+      const exactModel = page.getByRole("radio", { name: /DeepSeek V4 Flash/u });
+      await expect.element(exactModel).toBeInTheDocument();
+      await exactModel.click();
+      await setupDialog
+        .getByRole("button", { name: EN_MESSAGES["onboarding.firstRun.complete"] })
+        .click();
+      await expect
+        .element(
+          setupDialog.getByRole("heading", {
+            name: EN_MESSAGES["onboarding.firstRun.readyTitle"],
+          }),
+        )
+        .toBeInTheDocument();
+      await setupDialog
+        .getByRole("button", { name: EN_MESSAGES["onboarding.firstRun.startUsing"] })
+        .click();
+      await expect.element(setupDialog).not.toBeInTheDocument();
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
           prompt: "Keep this draft while I connect a model.",
@@ -9368,13 +9363,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.images).toEqual([
         setupImage,
       ]);
-      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toEqual({
-        provider: "codex",
-        model: "gpt-5.6-sol",
+      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.omnimind).toEqual({
+        provider: "omnimind",
+        model: "deepseek/deepseek-v4-flash",
       });
-      expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.omnimind).toBe(
-        undefined,
-      );
       const sendButton = await waitForSendButton();
       await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
       sendButton.click();
@@ -9398,7 +9390,204 @@ describe("ChatView timeline estimator parity (full app)", () => {
         { timeout: 8_000, interval: 16 },
       );
     } finally {
-      historyBack.mockRestore();
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("persists a first-run defer choice without reopening on a cold mount", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setPrompt(THREAD_ID, "Keep this deferred draft.");
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    const installEmptyProductNativeApi = () => {
+      const restore = installDeterministicSendNativeApi();
+      const nativeApi = window.nativeApi!;
+      Object.defineProperty(window, "nativeApi", {
+        configurable: true,
+        value: {
+          ...nativeApi,
+          omnimindModelServices: {
+            ...nativeApi.omnimindModelServices,
+            list: listModelServices,
+          },
+        },
+      });
+      return restore;
+    };
+    let restoreNativeApi = installEmptyProductNativeApi();
+    const createFreshSnapshot = () => {
+      const snapshot = createDraftOnlySnapshot();
+      return {
+        ...snapshot,
+        projects: snapshot.projects.map((project) => ({
+          ...project,
+          defaultModelSelection: null,
+        })),
+      };
+    };
+    const configureEmptyProduct = (nextFixture: TestFixture) => {
+      nextFixture.serverConfig = { ...nextFixture.serverConfig, providers: [] };
+      nextFixture.providerPassivePresence = [];
+      nextFixture.providerModelsByProvider = {
+        omnimind: { source: "browser.fixture", models: [] },
+        pi: { source: "browser.fixture", models: [] },
+      };
+    };
+
+    let mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createFreshSnapshot(),
+      configureFixture: configureEmptyProduct,
+    });
+    try {
+      const setupDialog = page.getByTestId("first-run-readiness-dialog");
+      await expect.element(setupDialog).toBeInTheDocument();
+      expect(document.querySelectorAll('[data-testid="first-run-readiness-dialog"]')).toHaveLength(
+        1,
+      );
+      await setupDialog
+        .getByRole("button", {
+          name: EN_MESSAGES["onboarding.firstRun.later"],
+          exact: true,
+        })
+        .click();
+      await expect.element(setupDialog).not.toBeInTheDocument();
+      expect(localStorage.getItem(FIRST_RUN_READINESS_PREFERENCE_KEY)).toBe(
+        JSON.stringify({ disposition: "deferred" }),
+      );
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+        "Keep this deferred draft.",
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+
+    restoreNativeApi();
+    await resetWsNativeApiForTest();
+    restoreNativeApi = installEmptyProductNativeApi();
+    mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createFreshSnapshot(),
+      configureFixture: configureEmptyProduct,
+    });
+    try {
+      await vi.waitFor(() => expect(listModelServices.mock.calls.length).toBeGreaterThan(0));
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      });
+      await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+        "Keep this deferred draft.",
+      );
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("does not overwrite a newer Composer model intent when first-run setup finishes late", async () => {
+    localStorage.setItem(
+      "omnimind:app-settings:v1",
+      JSON.stringify({ defaultProvider: "omnimind" }),
+    );
+    seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    const restoreNativeApi = installDeterministicSendNativeApi();
+    const nativeApi = window.nativeApi!;
+    const listModelServices = vi.fn(async () => ({
+      state: "empty" as const,
+      services: [] as const,
+      connectableServices: [] as const,
+      errorCode: null,
+    }));
+    Object.defineProperty(window, "nativeApi", {
+      configurable: true,
+      value: {
+        ...nativeApi,
+        omnimindModelServices: {
+          ...nativeApi.omnimindModelServices,
+          list: listModelServices,
+        },
+      },
+    });
+    const snapshot = createDraftOnlySnapshot();
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: {
+        ...snapshot,
+        projects: snapshot.projects.map((project) => ({
+          ...project,
+          defaultModelSelection: null,
+        })),
+      },
+      configureFixture: (nextFixture) => {
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            {
+              provider: "codex",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              supportsAutoRuntimeMode: true,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerPassivePresence = ["codex"];
+      },
+    });
+    try {
+      const setupDialog = page.getByTestId("first-run-readiness-dialog");
+      await expect.element(setupDialog).toBeInTheDocument();
+      const codexEngineButton = await waitForElement(
+        () =>
+          Array.from(
+            document.querySelectorAll<HTMLButtonElement>('[data-first-run-step="engine"] button'),
+          ).find((button) => button.textContent?.includes("Codex")) ?? null,
+        "Unable to find the Codex Engine card.",
+      );
+      codexEngineButton.click();
+      await setupDialog.getByRole("button", { name: EN_MESSAGES["common.forward"] }).click();
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-first-run-step="prepare"]')?.textContent).toContain(
+          "Codex",
+        );
+      });
+      await setupDialog.getByRole("button", { name: EN_MESSAGES["common.forward"] }).click();
+      const exactModel = page.getByRole("radio", { name: /gpt-5\.5/u });
+      await expect.element(exactModel).toBeInTheDocument();
+      await exactModel.click();
+      await setupDialog
+        .getByRole("button", { name: EN_MESSAGES["onboarding.firstRun.complete"] })
+        .click();
+      useComposerDraftStore.getState().setModelSelectionAndSticky(THREAD_ID, {
+        provider: "claudeAgent",
+        model: "claude-sonnet-4",
+      });
+      await setupDialog
+        .getByRole("button", { name: EN_MESSAGES["onboarding.firstRun.startUsing"] })
+        .click();
+      await expect.element(setupDialog).not.toBeInTheDocument();
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toMatchObject({
+        activeProvider: "claudeAgent",
+        modelSelectionByProvider: {
+          claudeAgent: { provider: "claudeAgent", model: "claude-sonnet-4" },
+        },
+      });
+      expect(
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
+          .codex,
+      ).toBeUndefined();
+    } finally {
       await mounted.cleanup();
       restoreNativeApi();
     }
