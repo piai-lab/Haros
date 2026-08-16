@@ -226,6 +226,7 @@ export function useFirstRunReadinessController(
   const catalogsSettled = areUsableProviderCatalogsSettled({
     providerStatuses,
     catalogStateByProvider: catalog.catalogStateByProvider,
+    explicitExactModelSelections: rememberedSelections,
   });
   const factsSettled =
     threadsHydrated &&

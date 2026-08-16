@@ -216,25 +216,36 @@ describe("model readiness facts", () => {
     ).toBe(false);
   });
 
-  it("waits for every usable Engine catalog that could still produce an exact binding", () => {
+  it("waits only for a usable Engine catalog that has remembered exact user intent", () => {
     const statuses = [providerStatus("omnimind"), providerStatus("codex")];
+    const codexSelection = { codex: { provider: "codex", model: "gpt-5.5" } } as const;
 
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: statuses,
         catalogStateByProvider: { codex: "checking", omnimind: "empty" },
+        explicitExactModelSelections: codexSelection,
       }),
     ).toBe(false);
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: statuses,
         catalogStateByProvider: { codex: "ready", omnimind: "empty" },
+        explicitExactModelSelections: codexSelection,
       }),
     ).toBe(true);
     expect(
       areUsableProviderCatalogsSettled({
         providerStatuses: [providerStatus("codex", { available: false })],
         catalogStateByProvider: { codex: "checking" },
+        explicitExactModelSelections: codexSelection,
+      }),
+    ).toBe(true);
+    expect(
+      areUsableProviderCatalogsSettled({
+        providerStatuses: statuses,
+        catalogStateByProvider: { codex: "checking", omnimind: "checking" },
+        explicitExactModelSelections: {},
       }),
     ).toBe(true);
   });

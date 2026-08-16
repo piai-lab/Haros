@@ -9144,6 +9144,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       supportsAutoRuntimeMode: false,
       checkedAt: NOW_ISO,
     };
+    const readyUnselectedOpenCodeStatus = {
+      provider: "opencode" as const,
+      status: "ready" as const,
+      available: true,
+      authStatus: "unknown" as const,
+      supportsAutoRuntimeMode: false,
+      checkedAt: NOW_ISO,
+    };
     const refreshProviders = vi.fn(async () => ({
       providers: catalogProjected ? [readyOmniMindStatus] : [],
     }));
@@ -9277,9 +9285,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       configureFixture: (nextFixture) => {
         nextFixture.serverConfig = {
           ...nextFixture.serverConfig,
-          providers: [readyOmniMindStatus, readyPiStatus],
+          providers: [readyOmniMindStatus, readyPiStatus, readyUnselectedOpenCodeStatus],
         };
-        nextFixture.providerPassivePresence = ["omnimind", "pi"];
+        nextFixture.providerPassivePresence = ["omnimind", "pi", "opencode"];
         nextFixture.providerModelsByProvider = {
           ...nextFixture.providerModelsByProvider,
           // Bundled Pi can enumerate builtin models without any configured

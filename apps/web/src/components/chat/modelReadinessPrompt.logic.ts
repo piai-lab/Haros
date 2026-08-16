@@ -81,9 +81,11 @@ export function hasUsableOmniMindModelServiceBinding(input: {
 export function areUsableProviderCatalogsSettled(input: {
   readonly providerStatuses: readonly ServerProviderStatus[];
   readonly catalogStateByProvider: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
+  readonly explicitExactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
 }): boolean {
   return COMPOSER_PROVIDER_KINDS.every(
     (provider) =>
+      input.explicitExactModelSelections[provider] === undefined ||
       !isProviderUsable(findProviderStatus(input.providerStatuses, provider)) ||
       input.catalogStateByProvider[provider] !== "checking",
   );
