@@ -539,6 +539,33 @@ const lockCorrectionRouting = makeProviderServiceLayer(
   },
   { runtimeEventCapacity: 1 },
 );
+let cursorClearPersistBarrier:
+  | {
+      readonly eventId: string;
+      readonly entered: Deferred.Deferred<void>;
+      readonly release: Deferred.Deferred<void>;
+    }
+  | undefined;
+const cursorClearPersistedEvents = new Map<string, ProviderRuntimeEvent>();
+const cursorClearRaceRouting = makeProviderServiceLayer({
+  persistRuntimeEvent: (event) =>
+    Effect.suspend(() => {
+      const persist = Effect.sync(() => {
+        cursorClearPersistedEvents.set(String(event.eventId), event);
+        return { sequence: cursorClearPersistedEvents.size, event };
+      });
+      const barrier = cursorClearPersistBarrier;
+      return barrier?.eventId === String(event.eventId)
+        ? Deferred.succeed(barrier.entered, undefined).pipe(
+            Effect.andThen(Deferred.await(barrier.release)),
+            Effect.andThen(persist),
+          )
+        : persist;
+    }),
+  runtimeEventBufferCapacity: 1,
+  runtimeEventRetryBaseDelayMs: 1,
+  runtimeEventRetryMaxDelayMs: 1,
+});
 const bindingRetryAppendAttempts = new Map<string, number>();
 const bindingRetryUniqueEvents = new Map<string, ProviderRuntimeEvent>();
 const bindingRetryRouting = makeProviderServiceLayer({
@@ -1247,85 +1274,119 @@ lockCorrectionRouting.layer("ProviderServiceLive binding-event lock correction",
       ]);
     }),
   );
+});
 
-  it.effect("merges delayed stop terminals before committing a cleared cursor", () =>
+cursorClearRaceRouting.layer("ProviderServiceLive cursor-clear terminal drain race", (it) => {
+  it.effect("keeps terminal authority when adapter stop returns before the pump drains", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
       const directory = yield* ProviderSessionDirectory;
-      const threadId = asThreadId("thread-clear-cursor-delayed-terminals");
+      const threadId = asThreadId("thread-clear-cursor-undrained-terminals");
+      const turnId = asTurnId("turn-clear-cursor-undrained");
+      cursorClearRaceRouting.codex.sendTurn.mockImplementationOnce((input) =>
+        Effect.succeed({ threadId: input.threadId, turnId }),
+      );
       yield* provider.startSession(threadId, {
         provider: "codex",
         threadId,
         runtimeMode: "full-access",
       });
+      yield* provider.sendTurn({ threadId, input: "hold terminal authority", attachments: [] });
       const initial = Option.getOrUndefined(yield* directory.getBinding(threadId));
       const generation = String(initial?.lifecycleGeneration);
-      const consumer = yield* Stream.take(provider.streamEvents, 2).pipe(
+      assert.equal(asRuntimePayloadRecord(initial?.runtimePayload).activeTurnId, turnId);
+
+      const sentinelEntered = yield* Deferred.make<void>();
+      const releaseSentinel = yield* Deferred.make<void>();
+      cursorClearPersistBarrier = {
+        eventId: "cursor-clear-pump-sentinel",
+        entered: sentinelEntered,
+        release: releaseSentinel,
+      };
+      const consumer = yield* Stream.take(provider.streamEvents, 4).pipe(
         Stream.runDrain,
         Effect.forkChild,
       );
       yield* sleep(20);
+      yield* cursorClearRaceRouting.codex.waitForRuntimeSubscribers();
+      cursorClearRaceRouting.codex.emit({
+        type: "content.delta",
+        eventId: asEventId("cursor-clear-pump-sentinel"),
+        provider: "codex",
+        threadId,
+        turnId,
+        lifecycleGeneration: generation,
+        createdAt: "2026-08-16T08:07:00.000Z",
+        payload: { streamKind: "assistant_text", delta: "hold pump" },
+      });
+      yield* Deferred.await(sentinelEntered);
 
-      const defaultStop = lockCorrectionRouting.codex.stopSession.getMockImplementation();
+      const defaultStop = cursorClearRaceRouting.codex.stopSession.getMockImplementation();
       if (!defaultStop) assert.fail("Expected fake adapter stop implementation");
-      lockCorrectionRouting.codex.stopSession.mockImplementationOnce((stoppedThreadId) =>
-        Effect.gen(function* () {
-          yield* lockCorrectionRouting.codex.emitEffect({
-            type: "session.exited",
-            eventId: asEventId("clear-cursor-session-exited"),
+      cursorClearRaceRouting.codex.stopSession.mockImplementationOnce((stoppedThreadId) =>
+        Effect.sync(() => {
+          cursorClearRaceRouting.codex.emit({
+            type: "turn.aborted",
+            eventId: asEventId("cursor-clear-queued-turn-aborted"),
             provider: "codex",
             threadId: stoppedThreadId,
-            lifecycleGeneration: generation,
-            createdAt: "2026-08-16T08:07:00.000Z",
-            payload: { reason: "cursor reset stop" },
-          });
-          yield* lockCorrectionRouting.codex.emitEffect({
-            type: "runtime.error",
-            eventId: asEventId("clear-cursor-second-terminal"),
-            provider: "codex",
-            threadId: stoppedThreadId,
+            turnId,
             lifecycleGeneration: generation,
             createdAt: "2026-08-16T08:07:01.000Z",
-            payload: {
-              message: "late terminal detail",
-              class: "transport_error",
-            },
+            payload: { reason: "cursor reset stop" },
           });
-          yield* waitUntil(
-            () =>
-              lockCorrectionPersistedEvents.has("clear-cursor-session-exited") &&
-              lockCorrectionPersistedEvents.has("clear-cursor-second-terminal"),
-            1000,
-            10,
-            "delayed cursor-clear terminals",
-          );
-          yield* defaultStop(stoppedThreadId);
-        }),
+          cursorClearRaceRouting.codex.emit({
+            type: "session.exited",
+            eventId: asEventId("cursor-clear-queued-session-exited"),
+            provider: "codex",
+            threadId: stoppedThreadId,
+            lifecycleGeneration: generation,
+            createdAt: "2026-08-16T08:07:02.000Z",
+            payload: { reason: "cursor reset stop" },
+          });
+          cursorClearRaceRouting.codex.emit({
+            type: "runtime.error",
+            eventId: asEventId("cursor-clear-queued-runtime-error"),
+            provider: "codex",
+            threadId: stoppedThreadId,
+            lifecycleGeneration: generation,
+            createdAt: "2026-08-16T08:07:03.000Z",
+            payload: { message: "late terminal detail", class: "transport_error" },
+          });
+        }).pipe(Effect.andThen(defaultStop(stoppedThreadId))),
       );
 
       assert.equal(typeof provider.clearSessionResumeCursor, "function");
-      yield* provider.clearSessionResumeCursor!({ threadId }).pipe(
+      const clearedBeforeDrain = yield* provider.clearSessionResumeCursor!({ threadId }).pipe(
         Effect.timeoutOption("2 seconds"),
-        Effect.flatMap(
-          Option.match({
-            onNone: () => Effect.die("cursor clear timed out"),
-            onSome: () => Effect.void,
-          }),
-        ),
       );
+      assert.equal(Option.isSome(clearedBeforeDrain), true);
+      const undrained = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(undrained?.resumeCursor, null);
+      assert.equal(undrained?.status, "stopped");
+      assert.equal(undrained?.lifecycleGeneration, generation);
+      assert.equal(asRuntimePayloadRecord(undrained?.runtimePayload).activeTurnId, turnId);
+      assert.equal(cursorClearPersistedEvents.has("cursor-clear-queued-turn-aborted"), false);
+
+      yield* Deferred.succeed(releaseSentinel, undefined);
       yield* Fiber.join(consumer);
-      const cleared = Option.getOrUndefined(yield* directory.getBinding(threadId));
-      assert.equal(cleared?.resumeCursor, null);
-      assert.notEqual(cleared?.lifecycleGeneration, generation);
-      assert.equal(cleared?.status, "error");
+      const settled = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(settled?.resumeCursor, null);
+      assert.equal(settled?.lifecycleGeneration, generation);
+      assert.equal(settled?.status, "error");
+      assert.equal(asRuntimePayloadRecord(settled?.runtimePayload).activeTurnId, null);
       assert.equal(
-        asRuntimePayloadRecord(cleared?.runtimePayload).lastRuntimeEvent,
+        asRuntimePayloadRecord(settled?.runtimePayload).lastRuntimeEvent,
         "runtime.error",
       );
       assert.equal(
-        asRuntimePayloadRecord(cleared?.runtimePayload).lastError,
+        asRuntimePayloadRecord(settled?.runtimePayload).lastError,
         "late terminal detail",
       );
+      assert.equal(cursorClearPersistedEvents.has("cursor-clear-queued-turn-aborted"), true);
+      assert.equal(cursorClearPersistedEvents.has("cursor-clear-queued-session-exited"), true);
+      assert.equal(cursorClearPersistedEvents.has("cursor-clear-queued-runtime-error"), true);
+      cursorClearPersistBarrier = undefined;
     }),
   );
 });

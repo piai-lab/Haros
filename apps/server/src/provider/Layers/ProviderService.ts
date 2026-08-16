@@ -313,16 +313,6 @@ function isTerminalRuntimeEvent(event: ProviderRuntimeEvent): boolean {
   );
 }
 
-function bindingHasTerminalRuntimeEvent(binding: ProviderRuntimeBinding): boolean {
-  const lastRuntimeEvent = runtimePayloadRecord(binding.runtimePayload).lastRuntimeEvent;
-  return (
-    lastRuntimeEvent === "turn.completed" ||
-    lastRuntimeEvent === "turn.aborted" ||
-    lastRuntimeEvent === "session.exited" ||
-    lastRuntimeEvent === "runtime.error"
-  );
-}
-
 function updatesSessionBindingFromRuntimeEvent(event: ProviderRuntimeEvent): boolean {
   switch (event.type) {
     case "session.started":
@@ -3404,12 +3394,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   );
                 }
 
-                // A preserved runtime keeps stamping its original generation.
-                // A stopped runtime adopts the lifecycle lease only after all
-                // delayed terminal facts have settled into the latest row.
-                const effectiveGeneration = preserveActive
-                  ? (latestBinding.lifecycleGeneration ?? lease.generation)
-                  : lease.generation;
+                // Adapter stop returning is not a runtime-event pump drain
+                // acknowledgement. Keep the exact physical generation and
+                // unresolved turn facts so already queued terminal events can
+                // still prove durable ownership and settle this row.
+                const effectiveGeneration = latestBinding.lifecycleGeneration ?? lease.generation;
                 yield* directory.upsert({
                   threadId: input.threadId,
                   provider: latestBinding.provider,
@@ -3419,16 +3408,11 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   ...(latestBinding.runtimeMode !== undefined
                     ? { runtimeMode: latestBinding.runtimeMode }
                     : {}),
-                  status: preserveActive
-                    ? (latestBinding.status ?? "running")
-                    : bindingHasTerminalRuntimeEvent(latestBinding)
-                      ? (latestBinding.status ?? "stopped")
-                      : "stopped",
+                  status: preserveActive ? (latestBinding.status ?? "running") : "stopped",
                   lifecycleGeneration: effectiveGeneration,
                   resumeCursor: null,
                   runtimePayload: {
                     ...runtimePayloadRecord(latestBinding.runtimePayload),
-                    ...(preserveActive ? {} : { activeTurnId: null }),
                     lifecycleGeneration: effectiveGeneration,
                   },
                 });
