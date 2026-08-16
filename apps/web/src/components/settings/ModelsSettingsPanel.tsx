@@ -108,6 +108,11 @@ interface ModelServiceNotice {
   readonly text: string;
 }
 
+export interface PreparedModelService {
+  readonly service: OmniMindModelServiceDescriptor;
+  readonly models: ReadonlyArray<OmniMindModelServiceModel>;
+}
+
 interface CustomHeaderEditorEntry {
   readonly name: string;
   readonly existingSource: OmniMindCustomModelHeaderMetadata["source"] | null;
@@ -799,12 +804,14 @@ function authEventExternalHost(event: OmniMindModelServiceAuthEvent): string | n
 export function ModelsSettingsPanel({
   active,
   startInAddFlow = false,
+  onServicePrepared,
   onSetupReady,
   ...binding
 }: AppSettingsBinding & {
   readonly resetEpoch: number;
   readonly active: boolean;
   readonly startInAddFlow?: boolean;
+  readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: ModelSelection) => void;
 }) {
   if (!active) return null;
@@ -812,6 +819,7 @@ export function ModelsSettingsPanel({
     <ActiveModelsSettingsPanel
       active
       startInAddFlow={startInAddFlow}
+      {...(onServicePrepared ? { onServicePrepared } : {})}
       {...(onSetupReady ? { onSetupReady } : {})}
       {...binding}
     />
@@ -822,6 +830,7 @@ function ActiveModelsSettingsPanel({
   resetEpoch,
   active,
   startInAddFlow,
+  onServicePrepared,
   onSetupReady,
   settings,
   updateSettings,
@@ -829,6 +838,7 @@ function ActiveModelsSettingsPanel({
   readonly resetEpoch: number;
   readonly active: boolean;
   readonly startInAddFlow: boolean;
+  readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: ModelSelection) => void;
 }) {
   const { locale, t } = useI18n();
@@ -967,7 +977,7 @@ function ActiveModelsSettingsPanel({
         !setupCompletionArmedRef.current ||
         !service ||
         service.availableModelCount <= 0 ||
-        !onSetupReady
+        (!onServicePrepared && !onSetupReady)
       ) {
         return false;
       }
@@ -981,18 +991,17 @@ function ActiveModelsSettingsPanel({
           }),
         );
         if (!completionIsCurrent()) return false;
-        const model =
-          detail.state === "ready" ? detail.models?.find((entry) => entry.available) : null;
-        if (!model) {
+        const availableModels =
+          detail.state === "ready" ? (detail.models?.filter((entry) => entry.available) ?? []) : [];
+        const model = availableModels[0] ?? null;
+        if (detail.state !== "ready" || !model) {
           setupCompletionArmedRef.current = true;
           return false;
         }
         if (!completionIsCurrent()) return false;
         setupTargetServiceIdRef.current = null;
-        onSetupReady({
-          provider: "omnimind",
-          model: `${service.serviceId}/${model.modelId}`,
-        });
+        onServicePrepared?.({ service: detail.service, models: availableModels });
+        onSetupReady?.({ provider: "omnimind", model: `${service.serviceId}/${model.modelId}` });
         return true;
       } catch {
         if (!completionIsCurrent()) return false;
@@ -1000,7 +1009,7 @@ function ActiveModelsSettingsPanel({
         return false;
       }
     },
-    [onSetupReady, queryClient],
+    [onServicePrepared, onSetupReady, queryClient],
   );
 
   useEffect(() => {

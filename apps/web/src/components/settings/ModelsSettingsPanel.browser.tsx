@@ -46,7 +46,7 @@ vi.mock("~/i18n", () => ({
   }),
 }));
 
-import { ModelsSettingsPanel } from "./ModelsSettingsPanel";
+import { ModelsSettingsPanel, type PreparedModelService } from "./ModelsSettingsPanel";
 
 const checkedAt = "2026-08-12T00:00:00.000Z";
 const settings = AppSettingsSchema.makeUnsafe({});
@@ -219,6 +219,7 @@ function setNativeApi(input: {
 async function renderPanel(input: {
   readonly active?: boolean;
   readonly startInAddFlow?: boolean;
+  readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: ModelSelection) => void;
   readonly settings?: AppSettings;
   readonly updateSettings?: (patch: Partial<AppSettings>) => void;
@@ -263,6 +264,7 @@ async function renderPanel(input: {
           defaults={settings}
           updateSettings={input.updateSettings ?? (() => {})}
           startInAddFlow={input.startInAddFlow ?? false}
+          {...(input.onServicePrepared ? { onServicePrepared: input.onServicePrepared } : {})}
           {...(input.onSetupReady ? { onSetupReady: input.onSetupReady } : {})}
         />
       </QueryClientProvider>
@@ -338,9 +340,11 @@ describe("ModelsSettingsPanel model services", () => {
     let catalogProjected = false;
     const requestId = "00000000-0000-4000-8000-000000000071";
     const promptId = "00000000-0000-4000-8000-000000000072";
+    const onServicePrepared = vi.fn();
     const onSetupReady = vi.fn();
     const mounted = await renderPanel({
       startInAddFlow: true,
+      onServicePrepared,
       onSetupReady,
       list: async (input) => {
         if (input?.intent) {
@@ -397,6 +401,15 @@ describe("ModelsSettingsPanel model services", () => {
                     contextWindow: 128_000,
                     maxTokens: 16_384,
                   },
+                  {
+                    modelId: "deepseek-retired",
+                    displayName: "DeepSeek Retired",
+                    available: false,
+                    reasoning: false,
+                    input: ["text"],
+                    contextWindow: 32_000,
+                    maxTokens: 4_096,
+                  },
                 ],
                 errorCode: null,
               }
@@ -433,6 +446,21 @@ describe("ModelsSettingsPanel model services", () => {
     await mounted.screen.getByLabelText("settings.modelServicePromptSecret").fill("test-secret");
     await mounted.screen.getByRole("button", { name: "settings.modelServiceContinue" }).click();
 
+    await expect.poll(() => onServicePrepared).toHaveBeenCalledTimes(1);
+    expect(onServicePrepared).toHaveBeenCalledWith({
+      service: configuredService,
+      models: [
+        {
+          modelId: "deepseek-v4-flash",
+          displayName: "DeepSeek V4 Flash",
+          available: true,
+          reasoning: true,
+          input: ["text"],
+          contextWindow: 128_000,
+          maxTokens: 16_384,
+        },
+      ],
+    });
     await expect.poll(() => onSetupReady).toHaveBeenCalledTimes(1);
     expect(onSetupReady).toHaveBeenCalledWith({
       provider: "omnimind",
