@@ -3,11 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   areUsableProviderCatalogsSettled,
-  deriveModelReadinessPromptMode,
   hasUsableExactModelBinding,
   hasUsableOmniMindModelServiceBinding,
   isSettledPassiveModelServicesQueryState,
-  resolveUsableOmniMindModelServiceSelection,
 } from "./modelReadinessPrompt.logic";
 
 function providerStatus(
@@ -24,7 +22,7 @@ function providerStatus(
   };
 }
 
-describe("model readiness prompt", () => {
+describe("model readiness facts", () => {
   it("does not reuse stale model-service data while authority is invalidated or refetching", () => {
     expect(
       isSettledPassiveModelServicesQueryState({
@@ -56,7 +54,7 @@ describe("model readiness prompt", () => {
     ).toBe(false);
   });
 
-  it("suppresses setup when any Engine has a usable exact model binding", () => {
+  it("accepts a usable exact independent Engine binding", () => {
     const exactModelSelections = {
       codex: { provider: "codex", model: "gpt-5.5" },
     } satisfies Partial<Record<ModelSelection["provider"], ModelSelection>>;
@@ -67,45 +65,6 @@ describe("model readiness prompt", () => {
         exactModelSelections,
       }),
     ).toBe(true);
-    expect(
-      deriveModelReadinessPromptMode({
-        surfaceEligible: true,
-        serverFactsReady: true,
-        hasUsableExactBinding: true,
-        hasRecoverableExactBinding: false,
-        modelServicesCapability: true,
-        modelServicesTransport: "open",
-        passiveModelServicesState: "empty",
-      }),
-    ).toBeNull();
-  });
-
-  it("shows setup only after passive facts prove a truly empty product", () => {
-    const base = {
-      surfaceEligible: true,
-      serverFactsReady: true,
-      hasUsableExactBinding: false,
-      hasRecoverableExactBinding: false,
-      modelServicesCapability: true,
-      modelServicesTransport: "open" as const,
-    };
-
-    expect(deriveModelReadinessPromptMode({ ...base, passiveModelServicesState: "empty" })).toBe(
-      "setup",
-    );
-    expect(
-      deriveModelReadinessPromptMode({ ...base, passiveModelServicesState: "unknown" }),
-    ).toBeNull();
-    expect(
-      deriveModelReadinessPromptMode({ ...base, passiveModelServicesState: "error" }),
-    ).toBeNull();
-    expect(
-      deriveModelReadinessPromptMode({
-        ...base,
-        modelServicesTransport: "closed",
-        passiveModelServicesState: "empty",
-      }),
-    ).toBeNull();
   });
 
   it("does not mistake bundled Engine health with unknown auth for configured user state", () => {
@@ -124,17 +83,6 @@ describe("model readiness prompt", () => {
         },
       }),
     ).toBe(false);
-    expect(
-      deriveModelReadinessPromptMode({
-        surfaceEligible: true,
-        serverFactsReady: true,
-        hasUsableExactBinding: false,
-        hasRecoverableExactBinding: false,
-        modelServicesCapability: true,
-        modelServicesTransport: "open",
-        passiveModelServicesState: "empty",
-      }),
-    ).toBe("setup");
   });
 
   it("requires the exact OmniMind service origin to own the configured model", () => {
@@ -251,74 +199,6 @@ describe("model readiness prompt", () => {
         services: [storedOrphan],
       }),
     ).toBe(false);
-  });
-
-  it("selects the first catalog model owned by a configured exact service", () => {
-    const selection = resolveUsableOmniMindModelServiceSelection({
-      modelOptions: [
-        {
-          slug: "unconfigured/local-model",
-          name: "Local Model",
-          upstreamProviderId: "unconfigured",
-          upstreamProviderName: "Unconfigured",
-          upstreamProviderOrigin: "builtin",
-        },
-        {
-          slug: "configured/model-y",
-          name: "Model Y",
-          upstreamProviderId: "configured",
-          upstreamProviderName: "Configured",
-          upstreamProviderOrigin: "builtin",
-        },
-      ],
-      services: [
-        {
-          serviceId: "configured",
-          providerId: "configured",
-          displayName: "Configured",
-          origin: "builtin",
-          authMethods: [],
-          authState: "configured",
-          authSource: "stored",
-          storedCredentialType: "api_key",
-          knownModelCount: 1,
-          availableModelCount: 1,
-          supportsNetworkRefresh: false,
-          catalogState: "ready",
-          catalogErrorCode: null,
-        },
-      ],
-    });
-
-    expect(selection).toEqual({ provider: "omnimind", model: "configured/model-y" });
-  });
-
-  it("routes configured but unavailable services to recovery instead of first-run setup", () => {
-    expect(
-      deriveModelReadinessPromptMode({
-        surfaceEligible: true,
-        serverFactsReady: true,
-        hasUsableExactBinding: false,
-        hasRecoverableExactBinding: false,
-        modelServicesCapability: true,
-        modelServicesTransport: "open",
-        passiveModelServicesState: "configured",
-      }),
-    ).toBe("recover");
-  });
-
-  it("routes a remembered exact Engine binding without usable auth to recovery", () => {
-    expect(
-      deriveModelReadinessPromptMode({
-        surfaceEligible: true,
-        serverFactsReady: true,
-        hasUsableExactBinding: false,
-        hasRecoverableExactBinding: true,
-        modelServicesCapability: true,
-        modelServicesTransport: "open",
-        passiveModelServicesState: "empty",
-      }),
-    ).toBe("recover");
   });
 
   it("does not count an unavailable or model-less Engine as sendable", () => {

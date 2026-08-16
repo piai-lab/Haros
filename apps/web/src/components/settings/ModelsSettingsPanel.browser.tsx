@@ -219,6 +219,7 @@ function setNativeApi(input: {
 async function renderPanel(input: {
   readonly active?: boolean;
   readonly startInAddFlow?: boolean;
+  readonly presentation?: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: ModelSelection) => void;
   readonly settings?: AppSettings;
@@ -264,6 +265,7 @@ async function renderPanel(input: {
           defaults={settings}
           updateSettings={input.updateSettings ?? (() => {})}
           startInAddFlow={input.startInAddFlow ?? false}
+          presentation={input.presentation ?? "settings"}
           {...(input.onServicePrepared ? { onServicePrepared: input.onServicePrepared } : {})}
           {...(input.onSetupReady ? { onSetupReady: input.onSetupReady } : {})}
         />
@@ -946,6 +948,56 @@ describe("ModelsSettingsPanel model services", () => {
     const addButton = mounted.screen.getByRole("button", { name: "settings.addModelService" });
     await expect.poll(() => document.activeElement).toBe(addButton.element());
     expect(document.body.textContent).not.toContain("Service 39");
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("presents the first six runtime services in the onboarding grid before expanding", async () => {
+    const connectableServices = Array.from({ length: 8 }, (_, index) =>
+      service({
+        serviceId: index === 0 ? "deepseek" : `service-${index}`,
+        providerId: index === 0 ? "deepseek" : `service-${index}`,
+        displayName: index === 0 ? "DeepSeek" : `Service ${index}`,
+        authState: "setup_required",
+        authSource: null,
+        storedCredentialType: null,
+        availableModelCount: 0,
+        catalogState: "empty",
+      }),
+    );
+    const mounted = await renderPanel({
+      startInAddFlow: true,
+      presentation: "first-run",
+      list: async () => ({
+        state: "empty",
+        services: [],
+        connectableServices,
+        errorCode: null,
+      }),
+    });
+
+    const grid = await expect
+      .poll(() => document.querySelector('[data-model-service-results="first-run-grid"]'))
+      .not.toBeNull();
+    void grid;
+    const firstRunGrid = document.querySelector<HTMLElement>(
+      '[data-model-service-results="first-run-grid"]',
+    )!;
+    expect(firstRunGrid.querySelectorAll("button")).toHaveLength(6);
+    expect(document.body.textContent).toContain('onboarding.firstRun.serviceCount:{"count":8}');
+
+    await mounted.screen
+      .getByRole("button", {
+        name: 'onboarding.firstRun.servicesExpand:{"count":8}',
+      })
+      .click();
+    expect(firstRunGrid.querySelectorAll("button")).toHaveLength(8);
+    expect(
+      mounted.screen.getByRole("button", {
+        name: "onboarding.firstRun.servicesCollapse",
+      }),
+    ).toHaveAttribute("aria-expanded", "true");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

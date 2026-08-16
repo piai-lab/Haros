@@ -804,6 +804,7 @@ function authEventExternalHost(event: OmniMindModelServiceAuthEvent): string | n
 export function ModelsSettingsPanel({
   active,
   startInAddFlow = false,
+  presentation = "settings",
   onServicePrepared,
   onSetupReady,
   ...binding
@@ -811,6 +812,7 @@ export function ModelsSettingsPanel({
   readonly resetEpoch: number;
   readonly active: boolean;
   readonly startInAddFlow?: boolean;
+  readonly presentation?: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: ModelSelection) => void;
 }) {
@@ -819,6 +821,7 @@ export function ModelsSettingsPanel({
     <ActiveModelsSettingsPanel
       active
       startInAddFlow={startInAddFlow}
+      presentation={presentation}
       {...(onServicePrepared ? { onServicePrepared } : {})}
       {...(onSetupReady ? { onSetupReady } : {})}
       {...binding}
@@ -830,6 +833,7 @@ function ActiveModelsSettingsPanel({
   resetEpoch,
   active,
   startInAddFlow,
+  presentation,
   onServicePrepared,
   onSetupReady,
   settings,
@@ -838,6 +842,7 @@ function ActiveModelsSettingsPanel({
   readonly resetEpoch: number;
   readonly active: boolean;
   readonly startInAddFlow: boolean;
+  readonly presentation: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: ModelSelection) => void;
 }) {
@@ -880,6 +885,8 @@ function ActiveModelsSettingsPanel({
   const [selectedModelServiceId, setSelectedModelServiceId] = useState<string | null>(null);
   const [modelServiceBrowserOpen, setModelServiceBrowserOpen] = useState(startInAddFlow);
   const [modelServiceSearch, setModelServiceSearch] = useState("");
+  const [modelServiceCatalogExpanded, setModelServiceCatalogExpanded] = useState(false);
+  const modelServiceCatalogDragStartRef = useRef<number | null>(null);
   const [modelServiceModelSearch, setModelServiceModelSearch] = useState("");
   const [modelServiceDetailReturnView, setModelServiceDetailReturnView] = useState<
     "overview" | "browser"
@@ -2099,6 +2106,14 @@ function ActiveModelsSettingsPanel({
           ),
     [filteredConnectableModelServices, modelServiceSearchActive],
   );
+  const orderedConnectableModelServices = useMemo(
+    () => [...preferredConnectableModelServices, ...otherConnectableModelServices],
+    [otherConnectableModelServices, preferredConnectableModelServices],
+  );
+  const visibleFirstRunModelServices =
+    modelServiceSearchActive || modelServiceCatalogExpanded
+      ? orderedConnectableModelServices
+      : orderedConnectableModelServices.slice(0, 6);
   const modelServiceAuthMethodsLabel = useCallback(
     (service: OmniMindModelServiceDescriptor) => {
       const labels = [
@@ -2157,6 +2172,7 @@ function ActiveModelsSettingsPanel({
   const openModelServiceBrowser = useCallback(() => {
     modelServiceBrowserRestoreRef.current = null;
     setModelServiceSearch("");
+    setModelServiceCatalogExpanded(false);
     setModelServiceBrowserOpen(true);
   }, []);
 
@@ -2166,6 +2182,7 @@ function ActiveModelsSettingsPanel({
     modelServicePostLoginControllerRef.current?.abort();
     modelServiceRefreshControllerRef.current?.abort();
     setModelServiceBrowserOpen(false);
+    setModelServiceCatalogExpanded(false);
     requestAnimationFrame(() => addModelServiceButtonRef.current?.focus());
   }, []);
 
@@ -2432,191 +2449,302 @@ function ActiveModelsSettingsPanel({
       ) : null}
 
       {!selectedModelServiceId && modelServiceBrowserOpen && !customServiceEditor ? (
-        <SettingsSectionShell
-          title={t("settings.addModelService")}
-          action={
-            <Button size="sm" variant="ghost" onClick={closeModelServiceBrowser}>
-              <ArrowLeftIcon aria-hidden="true" />
-              {t("common.back")}
-            </Button>
-          }
-        >
-          <div
-            className="space-y-4"
-            onKeyDown={(event) => {
-              if (event.key !== "Escape" || event.defaultPrevented) return;
-              event.preventDefault();
-              if (modelServiceSearch.length > 0) {
-                setModelServiceSearch("");
-                modelServiceSearchInputRef.current?.focus();
-                return;
-              }
-              closeModelServiceBrowser();
-            }}
+        <div data-model-service-presentation={presentation}>
+          <SettingsSectionShell
+            title={t("settings.addModelService")}
+            action={
+              presentation === "settings" ? (
+                <Button size="sm" variant="ghost" onClick={closeModelServiceBrowser}>
+                  <ArrowLeftIcon aria-hidden="true" />
+                  {t("common.back")}
+                </Button>
+              ) : null
+            }
           >
-            <div>
-              <p className="mb-3 text-sm text-muted-foreground">
-                {t("settings.chooseModelServiceDescription")}
-              </p>
-              <SearchInput
-                ref={modelServiceSearchInputRef}
-                autoFocus
-                value={modelServiceSearch}
-                onChange={(event) => setModelServiceSearch(event.target.value)}
-                placeholder={t("settings.searchModelServices")}
-                aria-label={t("settings.searchModelServices")}
-                spellCheck={false}
-              />
-            </div>
-            {addModelServicesQuery.isPending ? (
-              <div role="status" className="text-sm text-muted-foreground">
-                {t("settings.modelServiceSourcesChecking")}
+            <div
+              className="space-y-4"
+              onKeyDown={(event) => {
+                if (event.key !== "Escape" || event.defaultPrevented) return;
+                event.preventDefault();
+                if (modelServiceSearch.length > 0) {
+                  setModelServiceSearch("");
+                  modelServiceSearchInputRef.current?.focus();
+                  return;
+                }
+                closeModelServiceBrowser();
+              }}
+            >
+              <div>
+                <p className="mb-3 text-sm text-muted-foreground">
+                  {t("settings.chooseModelServiceDescription")}
+                </p>
+                <SearchInput
+                  ref={modelServiceSearchInputRef}
+                  autoFocus
+                  value={modelServiceSearch}
+                  onChange={(event) => {
+                    setModelServiceSearch(event.target.value);
+                    if (event.target.value.trim()) setModelServiceCatalogExpanded(true);
+                  }}
+                  placeholder={t("settings.searchModelServices")}
+                  aria-label={t("settings.searchModelServices")}
+                  spellCheck={false}
+                />
               </div>
-            ) : addModelServicesQuery.isError ? (
-              <div
-                role="alert"
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
-              >
-                <span>{t("settings.modelServiceSourcesUnavailable")}</span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void addModelServicesQuery.refetch()}
+              {addModelServicesQuery.isPending ? (
+                <div role="status" className="text-sm text-muted-foreground">
+                  {t("settings.modelServiceSourcesChecking")}
+                </div>
+              ) : addModelServicesQuery.isError ? (
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
                 >
-                  {t("common.tryAgain")}
-                </Button>
-              </div>
-            ) : addModelServicesQuery.data?.state !== "error" &&
-              (addModelServicesQuery.data?.extensionProjectionState === "partial" ||
-                addModelServicesQuery.data?.extensionProjectionState === "unavailable") ? (
-              <div
-                role="alert"
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
-              >
-                <span>
-                  {addModelServicesQuery.data?.extensionProjectionState === "partial"
-                    ? t("settings.modelServiceSourcesPartial")
-                    : t("settings.modelServiceSourcesUnavailable")}
-                </span>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => void addModelServicesQuery.refetch()}
+                  <span>{t("settings.modelServiceSourcesUnavailable")}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void addModelServicesQuery.refetch()}
+                  >
+                    {t("common.tryAgain")}
+                  </Button>
+                </div>
+              ) : addModelServicesQuery.data?.state !== "error" &&
+                (addModelServicesQuery.data?.extensionProjectionState === "partial" ||
+                  addModelServicesQuery.data?.extensionProjectionState === "unavailable") ? (
+                <div
+                  role="alert"
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground"
                 >
-                  {t("common.tryAgain")}
-                </Button>
-              </div>
-            ) : null}
-            {filteredConnectableModelServices.length > 0 ? (
-              <div
-                ref={modelServiceBrowserListRef}
-                data-model-service-results="compact-list"
-                className="max-h-[min(24rem,calc(100vh-18rem))] overflow-y-auto rounded-xl border border-border bg-background"
-              >
-                {[
-                  ...(preferredConnectableModelServices.length > 0
-                    ? [
-                        {
-                          key: "recommended",
-                          label: t("settings.recommendedModelServices"),
-                          services: preferredConnectableModelServices,
-                        },
-                      ]
-                    : []),
-                  ...(otherConnectableModelServices.length > 0
-                    ? [
-                        {
-                          key: modelServiceSearchActive ? "results" : "other",
-                          label: modelServiceSearchActive ? null : t("settings.otherModelServices"),
-                          services: otherConnectableModelServices,
-                        },
-                      ]
-                    : []),
-                ].map((group) => (
-                  <section key={group.key} aria-label={group.label ?? undefined}>
-                    {group.label ? (
-                      <h3 className="border-b border-border/70 bg-muted/35 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                        {group.label}
-                      </h3>
-                    ) : null}
-                    <ul className="list-none divide-y divide-border/70">
-                      {group.services.map((service) => {
+                  <span>
+                    {addModelServicesQuery.data?.extensionProjectionState === "partial"
+                      ? t("settings.modelServiceSourcesPartial")
+                      : t("settings.modelServiceSourcesUnavailable")}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void addModelServicesQuery.refetch()}
+                  >
+                    {t("common.tryAgain")}
+                  </Button>
+                </div>
+              ) : null}
+              {filteredConnectableModelServices.length > 0 ? (
+                presentation === "first-run" ? (
+                  <div>
+                    <div className="mb-2 flex items-center justify-between px-0.5 text-[11px] text-muted-foreground">
+                      <strong className="font-semibold text-foreground/70">
+                        {t("onboarding.firstRun.servicesAvailable")}
+                      </strong>
+                      <span>
+                        {t("onboarding.firstRun.serviceCount", {
+                          count: filteredConnectableModelServices.length,
+                        })}
+                      </span>
+                    </div>
+                    <div
+                      ref={modelServiceBrowserListRef}
+                      data-model-service-results="first-run-grid"
+                      className={cn(
+                        "grid grid-cols-2 gap-2 overflow-y-auto pr-0.5 transition-[max-height] duration-200 motion-reduce:transition-none",
+                        modelServiceCatalogExpanded || modelServiceSearchActive
+                          ? "max-h-[min(344px,calc(100vh-22rem))]"
+                          : "max-h-[184px]",
+                      )}
+                    >
+                      {visibleFirstRunModelServices.map((service) => {
                         const instanceLabel = modelServiceInstanceLabel(service);
                         return (
-                          <li key={service.serviceId}>
-                            <button
-                              ref={(node) => {
-                                if (node)
-                                  modelServiceBrowserItemRefs.current.set(service.serviceId, node);
-                                else modelServiceBrowserItemRefs.current.delete(service.serviceId);
-                              }}
-                              type="button"
-                              className={cn(
-                                "group flex min-h-14 w-full items-center gap-3 px-3 py-2.5 text-left outline-none transition-colors",
-                                "hover:bg-foreground/[0.04]",
-                                "focus-visible:bg-foreground/[0.045] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
-                              )}
-                              data-model-service-result={service.serviceId}
-                              aria-label={t("settings.connectModelServiceNamed", {
-                                name: instanceLabel,
-                              })}
-                              onClick={() => openModelServiceDetails(service.serviceId, "browser")}
-                            >
+                          <button
+                            key={service.serviceId}
+                            ref={(node) => {
+                              if (node)
+                                modelServiceBrowserItemRefs.current.set(service.serviceId, node);
+                              else modelServiceBrowserItemRefs.current.delete(service.serviceId);
+                            }}
+                            type="button"
+                            className="group flex min-h-[54px] min-w-0 items-center gap-2.5 rounded-[13px] border border-border bg-background px-3 py-2.5 text-left outline-none transition-colors hover:border-foreground/25 hover:bg-muted/35 focus-visible:ring-2 focus-visible:ring-ring/60 motion-reduce:transition-none"
+                            data-model-service-result={service.serviceId}
+                            aria-label={t("settings.connectModelServiceNamed", {
+                              name: instanceLabel,
+                            })}
+                            onClick={() => openModelServiceDetails(service.serviceId, "browser")}
+                          >
+                            <span className="grid size-[34px] shrink-0 place-items-center rounded-[9px] border border-border/70 bg-muted/30">
                               <ModelServiceIcon
                                 serviceId={service.serviceId}
                                 origin={service.origin}
-                                className="size-6"
+                                className="size-[21px]"
                               />
-                              <span className="min-w-0 flex-1">
-                                <span className="block truncate text-sm font-medium text-foreground">
-                                  {instanceLabel}
-                                </span>
-                                <span className="mt-0.5 block truncate text-xs text-muted-foreground">
-                                  {modelServiceAuthMethodsLabel(service)}
-                                </span>
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[12.5px] font-medium text-foreground">
+                                {instanceLabel}
                               </span>
-                              <ChevronRightIcon
-                                aria-hidden="true"
-                                className="size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground/70"
-                              />
-                            </button>
-                          </li>
+                              <span className="mt-0.5 block truncate text-[10.5px] text-muted-foreground">
+                                {modelServiceAuthMethodsLabel(service)}
+                              </span>
+                            </span>
+                            <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground/55" />
+                          </button>
                         );
                       })}
-                    </ul>
-                  </section>
-                ))}
-              </div>
-            ) : (
-              <SettingsEmptyState>{t("settings.noMatchingModelServices")}</SettingsEmptyState>
-            )}
-            {customApiCapability ? (
-              <div className="border-t border-border/70 pt-4">
-                <button
-                  type="button"
-                  className="group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.035] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring/60"
-                  onClick={() => openCustomServiceEditor()}
-                >
-                  <ModelServiceIcon
-                    serviceId="custom-api"
-                    origin="models_json"
-                    className="size-4"
-                  />
-                  <span className="min-w-0 flex-1">
-                    {t("settings.customApiNotFoundPrompt")}{" "}
-                    <span className="font-medium text-foreground">
-                      {t("settings.connectByApiAddress")}
+                    </div>
+                    {!modelServiceSearchActive && orderedConnectableModelServices.length > 6 ? (
+                      <button
+                        type="button"
+                        className="grid h-[35px] w-full touch-none place-items-center pt-1 text-[11.5px] text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/60"
+                        aria-expanded={modelServiceCatalogExpanded}
+                        onClick={() => setModelServiceCatalogExpanded((expanded) => !expanded)}
+                        onPointerDown={(event) => {
+                          modelServiceCatalogDragStartRef.current = event.clientY;
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                        }}
+                        onPointerMove={(event) => {
+                          const start = modelServiceCatalogDragStartRef.current;
+                          if (start !== null && start - event.clientY > 24) {
+                            setModelServiceCatalogExpanded(true);
+                          }
+                        }}
+                        onPointerUp={() => {
+                          modelServiceCatalogDragStartRef.current = null;
+                        }}
+                        onPointerCancel={() => {
+                          modelServiceCatalogDragStartRef.current = null;
+                        }}
+                      >
+                        <span className="mb-0.5 block h-1 w-[42px] rounded-full bg-border" />
+                        <span>
+                          {modelServiceCatalogExpanded
+                            ? t("onboarding.firstRun.servicesCollapse")
+                            : t("onboarding.firstRun.servicesExpand", {
+                                count: orderedConnectableModelServices.length,
+                              })}
+                        </span>
+                      </button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div
+                    ref={modelServiceBrowserListRef}
+                    data-model-service-results="compact-list"
+                    className="max-h-[min(24rem,calc(100vh-18rem))] overflow-y-auto rounded-xl border border-border bg-background"
+                  >
+                    {[
+                      ...(preferredConnectableModelServices.length > 0
+                        ? [
+                            {
+                              key: "recommended",
+                              label: t("settings.recommendedModelServices"),
+                              services: preferredConnectableModelServices,
+                            },
+                          ]
+                        : []),
+                      ...(otherConnectableModelServices.length > 0
+                        ? [
+                            {
+                              key: modelServiceSearchActive ? "results" : "other",
+                              label: modelServiceSearchActive
+                                ? null
+                                : t("settings.otherModelServices"),
+                              services: otherConnectableModelServices,
+                            },
+                          ]
+                        : []),
+                    ].map((group) => (
+                      <section key={group.key} aria-label={group.label ?? undefined}>
+                        {group.label ? (
+                          <h3 className="border-b border-border/70 bg-muted/35 px-3 py-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                            {group.label}
+                          </h3>
+                        ) : null}
+                        <ul className="list-none divide-y divide-border/70">
+                          {group.services.map((service) => {
+                            const instanceLabel = modelServiceInstanceLabel(service);
+                            return (
+                              <li key={service.serviceId}>
+                                <button
+                                  ref={(node) => {
+                                    if (node)
+                                      modelServiceBrowserItemRefs.current.set(
+                                        service.serviceId,
+                                        node,
+                                      );
+                                    else
+                                      modelServiceBrowserItemRefs.current.delete(service.serviceId);
+                                  }}
+                                  type="button"
+                                  className={cn(
+                                    "group flex min-h-14 w-full items-center gap-3 px-3 py-2.5 text-left outline-none transition-colors",
+                                    "hover:bg-foreground/[0.04]",
+                                    "focus-visible:bg-foreground/[0.045] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/60",
+                                  )}
+                                  data-model-service-result={service.serviceId}
+                                  aria-label={t("settings.connectModelServiceNamed", {
+                                    name: instanceLabel,
+                                  })}
+                                  onClick={() =>
+                                    openModelServiceDetails(service.serviceId, "browser")
+                                  }
+                                >
+                                  <ModelServiceIcon
+                                    serviceId={service.serviceId}
+                                    origin={service.origin}
+                                    className="size-6"
+                                  />
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm font-medium text-foreground">
+                                      {instanceLabel}
+                                    </span>
+                                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                                      {modelServiceAuthMethodsLabel(service)}
+                                    </span>
+                                  </span>
+                                  <ChevronRightIcon
+                                    aria-hidden="true"
+                                    className="size-4 shrink-0 text-muted-foreground/50 transition-transform group-hover:translate-x-0.5 group-hover:text-foreground/70"
+                                  />
+                                </button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
+                )
+              ) : (
+                <SettingsEmptyState>{t("settings.noMatchingModelServices")}</SettingsEmptyState>
+              )}
+              {customApiCapability ? (
+                <div className="border-t border-border/70 pt-4">
+                  <button
+                    type="button"
+                    className="group flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground outline-none transition-colors hover:bg-foreground/[0.035] hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring/60"
+                    onClick={() => openCustomServiceEditor()}
+                  >
+                    <ModelServiceIcon
+                      serviceId="custom-api"
+                      origin="models_json"
+                      className="size-4"
+                    />
+                    <span className="min-w-0 flex-1">
+                      {t("settings.customApiNotFoundPrompt")}{" "}
+                      <span className="font-medium text-foreground">
+                        {t("settings.connectByApiAddress")}
+                      </span>
                     </span>
-                  </span>
-                  <ChevronRightIcon
-                    aria-hidden="true"
-                    className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
-                  />
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </SettingsSectionShell>
+                    <ChevronRightIcon
+                      aria-hidden="true"
+                      className="size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    />
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          </SettingsSectionShell>
+        </div>
       ) : null}
 
       {customServiceEditor ? (

@@ -6,17 +6,13 @@
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   PROVIDER_DISPLAY_NAMES,
-  ThreadId,
-  type ModelSelection,
   type ProviderKind,
 } from "@omnimind/contracts";
 import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-import { goBackInAppHistory } from "~/appNavigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   type AppSettings,
   type FollowUpBehavior,
@@ -107,9 +103,6 @@ import {
   settingRowAnchorId,
 } from "../settingsNavigation";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
-import { useComposerDraftStore } from "../composerDraftStore";
-import { useStore } from "../store";
-import { getThreadFromState } from "../threadDerivation";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
@@ -172,23 +165,6 @@ function SettingsRouteView() {
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
-  const modelServiceSetupFlow = routeSearch.setup === "model-service";
-  const setupThreadId =
-    modelServiceSetupFlow &&
-    typeof routeSearch.setupThreadId === "string" &&
-    routeSearch.setupThreadId.trim() === routeSearch.setupThreadId &&
-    routeSearch.setupThreadId.length > 0
-      ? ThreadId.makeUnsafe(routeSearch.setupThreadId)
-      : null;
-  const setupDraftProvider =
-    modelServiceSetupFlow && typeof routeSearch.setupDraftProvider === "string"
-      ? routeSearch.setupDraftProvider
-      : null;
-  const setupDraftModel =
-    modelServiceSetupFlow && typeof routeSearch.setupDraftModel === "string"
-      ? routeSearch.setupDraftModel
-      : null;
-  const setupSelectionSupersededRef = useRef(false);
   const {
     isDefaultActiveTheme,
     resetAllThemes,
@@ -200,44 +176,6 @@ function SettingsRouteView() {
   } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const { t } = useI18n();
-  const setupSelectionStillCurrent = useCallback(() => {
-    if (setupThreadId === null || setupDraftProvider === null || setupDraftModel === null) {
-      return false;
-    }
-    const composerState = useComposerDraftStore.getState();
-    const draft = composerState.draftsByThreadId[setupThreadId];
-    const threadStillExists =
-      composerState.draftThreadsByThreadId[setupThreadId] !== undefined ||
-      getThreadFromState(useStore.getState(), setupThreadId) !== undefined;
-    if (!threadStillExists) return false;
-    const activeProvider = draft?.activeProvider ?? "";
-    const model = draft?.activeProvider
-      ? (draft.modelSelectionByProvider[draft.activeProvider]?.model ?? "")
-      : "";
-    return activeProvider === setupDraftProvider && model === setupDraftModel;
-  }, [setupDraftModel, setupDraftProvider, setupThreadId]);
-  useEffect(() => {
-    setupSelectionSupersededRef.current = !setupSelectionStillCurrent();
-    return useComposerDraftStore.subscribe(() => {
-      if (!setupSelectionStillCurrent()) setupSelectionSupersededRef.current = true;
-    });
-  }, [setupSelectionStillCurrent]);
-  const completeModelServiceSetup = useCallback(
-    (selection: ModelSelection) => {
-      if (
-        setupThreadId !== null &&
-        !setupSelectionSupersededRef.current &&
-        setupSelectionStillCurrent()
-      ) {
-        // Setup only repairs the Chat that launched it. A user may have selected a
-        // different Engine in another Chat while authentication was pending; do
-        // not let this late completion overwrite that newer global sticky intent.
-        useComposerDraftStore.getState().setModelSelection(setupThreadId, selection);
-      }
-      goBackInAppHistory();
-    },
-    [setupSelectionStillCurrent, setupThreadId],
-  );
   const currentGitTextGenerationProvider = settings.textGenerationProvider ?? "codex";
   const currentGitTextGenerationModel =
     settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
@@ -1342,8 +1280,6 @@ function SettingsRouteView() {
                   defaults={defaults}
                   updateSettings={updateSettings}
                   resetEpoch={resetEpoch}
-                  startInAddFlow={modelServiceSetupFlow}
-                  {...(modelServiceSetupFlow ? { onSetupReady: completeModelServiceSetup } : {})}
                 />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}

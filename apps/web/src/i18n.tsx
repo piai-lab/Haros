@@ -1667,18 +1667,6 @@ export const EN_MESSAGES = {
   "composer.openModelServices": "Open Model services",
   "composer.openEngineSettings": "Open engine settings",
   "composer.modelRequiredToSend": "Choose an available model before sending.",
-  "composer.modelSetupTitle": "Set up a model to get started",
-  "composer.modelSetupDescription":
-    "Connect a model service to start. Your draft and attachments will stay here.",
-  "composer.modelSetupAction": "Add model service",
-  "composer.modelRecoveryTitle": "Your model service needs attention",
-  "composer.modelRecoveryDescription":
-    "Review the existing connection to sign in again, retry, or reload its model catalog.",
-  "composer.modelRecoveryAction": "Review model services",
-  "composer.engineRecoveryTitle": "Your Agent engine needs attention",
-  "composer.engineRecoveryDescription":
-    "Review the installed engine to sign in again, retry, or reload its model catalog.",
-  "composer.engineRecoveryAction": "Review Agent engines",
   "onboarding.firstRun.header": "First-time setup",
   "onboarding.firstRun.progress": "Setup progress",
   "onboarding.firstRun.deferClose": "Close and set up later",
@@ -1698,6 +1686,13 @@ export const EN_MESSAGES = {
   "onboarding.firstRun.enginePrepared": "This engine is ready and its model catalog is available.",
   "onboarding.firstRun.engineNeedsSetup":
     "Finish installing or signing in to this engine before choosing a model.",
+  "onboarding.firstRun.serviceTitle": "Connect a model service",
+  "onboarding.firstRun.serviceDescription":
+    "Choose a service OmniMind currently supports. After connecting, we’ll read the models it actually makes available.",
+  "onboarding.firstRun.servicesAvailable": "Currently available",
+  "onboarding.firstRun.serviceCount": "{count} services",
+  "onboarding.firstRun.servicesExpand": "Pull up to view all {count} model services ↑",
+  "onboarding.firstRun.servicesCollapse": "Expanded · Scroll to browse all services ↓",
   "onboarding.firstRun.modelTitle": "Choose an exact model",
   "onboarding.firstRun.modelDescription":
     "Choose one model from the current catalog. OmniMind will not guess a default for you.",
@@ -1707,6 +1702,7 @@ export const EN_MESSAGES = {
   "onboarding.firstRun.readyDescription":
     "Your engine and exact model are ready for the task you were composing.",
   "onboarding.firstRun.later": "Set up later",
+  "onboarding.firstRun.settingsHint": "You can also finish in Settings",
   "onboarding.firstRun.complete": "Complete setup",
   "onboarding.firstRun.startUsing": "Start using",
   "timeline.thinking": "Thinking",
@@ -5027,15 +5023,6 @@ export const ZH_CN_MESSAGES = {
   "composer.openModelServices": "打开模型服务",
   "composer.openEngineSettings": "打开引擎设置",
   "composer.modelRequiredToSend": "发送前请选择一个可用模型。",
-  "composer.modelSetupTitle": "配置模型后开始",
-  "composer.modelSetupDescription": "连接一个模型服务即可开始；当前草稿和附件会保留在这里。",
-  "composer.modelSetupAction": "添加模型服务",
-  "composer.modelRecoveryTitle": "模型服务需要处理",
-  "composer.modelRecoveryDescription": "请检查现有连接，并重新登录、重试或重新加载模型目录。",
-  "composer.modelRecoveryAction": "查看模型服务",
-  "composer.engineRecoveryTitle": "Agent 引擎需要处理",
-  "composer.engineRecoveryDescription": "请检查已安装的引擎，并重新登录、重试或重新加载模型目录。",
-  "composer.engineRecoveryAction": "查看 Agent 引擎",
   "onboarding.firstRun.header": "首次设置",
   "onboarding.firstRun.progress": "设置进度",
   "onboarding.firstRun.deferClose": "关闭并稍后设置",
@@ -5053,6 +5040,13 @@ export const ZH_CN_MESSAGES = {
     "沿用此引擎现有的安装和登录流程。准备完成后，OmniMind 会读取它当前可用的模型目录。",
   "onboarding.firstRun.enginePrepared": "此引擎已准备好，模型目录可以使用。",
   "onboarding.firstRun.engineNeedsSetup": "请先完成此引擎的安装或登录，再选择模型。",
+  "onboarding.firstRun.serviceTitle": "连接一个模型服务",
+  "onboarding.firstRun.serviceDescription":
+    "选择 OmniMind 当前支持的服务；连接后，我们会读取它实际可用的模型。",
+  "onboarding.firstRun.servicesAvailable": "当前提供",
+  "onboarding.firstRun.serviceCount": "{count} 个服务",
+  "onboarding.firstRun.servicesExpand": "向上拉，查看全部 {count} 个模型服务 ↑",
+  "onboarding.firstRun.servicesCollapse": "已展开 · 滚动浏览全部服务 ↓",
   "onboarding.firstRun.modelTitle": "选择一个精确模型",
   "onboarding.firstRun.modelDescription":
     "请从当前目录中明确选择一个模型；OmniMind 不会替你猜测默认模型。",
@@ -5061,6 +5055,7 @@ export const ZH_CN_MESSAGES = {
   "onboarding.firstRun.readyTitle": "OmniMind 已准备好",
   "onboarding.firstRun.readyDescription": "引擎和精确模型已准备好，可用于你正在编辑的任务。",
   "onboarding.firstRun.later": "稍后设置",
+  "onboarding.firstRun.settingsHint": "也可从设置中完成",
   "onboarding.firstRun.complete": "完成设置",
   "onboarding.firstRun.startUsing": "开始使用",
   "timeline.thinking": "正在思考",

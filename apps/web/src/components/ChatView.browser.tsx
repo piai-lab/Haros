@@ -77,7 +77,6 @@ import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { useRightDockStore } from "../rightDockStore";
 import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
-import { SETTINGS_TARGETS } from "../settingsNavigation";
 import { FIRST_RUN_READINESS_PREFERENCE_KEY } from "./onboarding/firstRunReadinessPreference";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
 // The router's auto-split route otherwise requests this module on first mount.
@@ -9304,6 +9303,47 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       const setupDialog = page.getByTestId("first-run-readiness-dialog");
       await expect.element(setupDialog).toBeInTheDocument();
+      const setupDialogNode = document.querySelector<HTMLElement>(
+        '[data-testid="first-run-readiness-dialog"]',
+      )!;
+      const dialogHeader = setupDialogNode.querySelector<HTMLElement>(
+        '[data-slot="dialog-header"]',
+      )!;
+      const dialogFooter = setupDialogNode.querySelector<HTMLElement>(
+        '[data-slot="dialog-footer"]',
+      )!;
+      const engineGrid = setupDialogNode.querySelector<HTMLElement>(
+        '[data-first-run-step="engine"] .grid.grid-cols-4',
+      )!;
+      await Promise.all(setupDialogNode.getAnimations().map((animation) => animation.finished));
+      for (const viewport of [
+        { ...DEFAULT_VIEWPORT, name: "oracle-desktop", width: 1440, height: 900 },
+        { ...DEFAULT_VIEWPORT, name: "oracle-compact", width: 960, height: 720 },
+        { ...DEFAULT_VIEWPORT, name: "oracle-mobile", width: 480, height: 620 },
+      ]) {
+        await mounted.setViewport(viewport);
+        await new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        });
+        const rect = setupDialogNode.getBoundingClientRect();
+        expect(rect.left).toBeGreaterThanOrEqual(0);
+        expect(rect.top).toBeGreaterThanOrEqual(0);
+        expect(rect.right).toBeLessThanOrEqual(viewport.width + 1);
+        expect(rect.bottom).toBeLessThanOrEqual(viewport.height + 1);
+        expect(Math.abs(dialogHeader.getBoundingClientRect().height - 70)).toBeLessThanOrEqual(1);
+        expect(Math.abs(dialogFooter.getBoundingClientRect().height - 76)).toBeLessThanOrEqual(1);
+        expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(viewport.width);
+        expect(document.body.scrollWidth).toBeLessThanOrEqual(viewport.width);
+        if (viewport.width === 1440) expect(Math.abs(rect.width - 736)).toBeLessThanOrEqual(1);
+        if (viewport.width === 960) expect(Math.abs(rect.width - 680)).toBeLessThanOrEqual(1);
+        if (viewport.width === 480) expect(rect.width).toBeLessThanOrEqual(448 + 1);
+        const columnCount = getComputedStyle(engineGrid).gridTemplateColumns.split(" ").length;
+        expect(columnCount).toBe(viewport.width > 1050 ? 4 : 2);
+        expect(document.querySelector('[data-testid="first-run-readiness-dialog"]')).toBe(
+          setupDialogNode,
+        );
+      }
+      await mounted.setViewport(DEFAULT_VIEWPORT);
       expect(refreshProviders).not.toHaveBeenCalled();
       expect(useComposerDraftStore.getState().stickyModelSelectionByProvider).toEqual({});
       expect(
@@ -9467,6 +9507,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
         "Keep this deferred draft.",
       );
+      expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
     } finally {
       await mounted.cleanup();
     }
@@ -9488,6 +9529,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
         "Keep this deferred draft.",
       );
+      expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
+      const deferredModelTrigger = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+            (button) =>
+              button.getClientRects().length > 0 &&
+              button.textContent?.includes(EN_MESSAGES["composer.noAvailableModel"]),
+          ) ?? null,
+        "Unable to find the deferred Composer model trigger.",
+      );
+      deferredModelTrigger.click();
+      await expect.element(page.getByTestId("first-run-readiness-dialog")).toBeInTheDocument();
+      expect(localStorage.getItem(FIRST_RUN_READINESS_PREFERENCE_KEY)).toBeNull();
     } finally {
       await mounted.cleanup();
       restoreNativeApi();
@@ -9593,7 +9647,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("accepts a configured OmniMind catalog fallback without a remembered selection", async () => {
+  it("requires an explicit model choice instead of sending with a configured catalog fallback", async () => {
     localStorage.setItem(
       "omnimind:app-settings:v1",
       JSON.stringify({ defaultProvider: "omnimind" }),
@@ -9680,29 +9734,39 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       await vi.waitFor(() => expect(listModelServices).toHaveBeenCalledTimes(1));
-      await expect.element(page.getByTestId("model-readiness-prompt")).not.toBeInTheDocument();
-      await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
-        .not.toBeInTheDocument();
-      await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }))
-        .not.toBeInTheDocument();
+      expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
+      await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
       await page.getByRole("textbox").fill("Use the configured service.");
       const sendButton = await waitForSendButton();
-      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
-      sendButton.click();
-      await vi.waitFor(() => {
-        const turnStarts = wsRequests
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(true));
+      const composerEditor = await waitForComposerEditor();
+      composerEditor.focus();
+      dispatchComposerPickerShortcut(composerEditor, "m");
+      await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-slot="menu-popup"]'),
+        "The configured-service Composer model picker did not open.",
+      );
+      const openModelServices = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+            (item) =>
+              item.getClientRects().length > 0 &&
+              item.textContent?.includes(EN_MESSAGES["composer.openModelServices"]),
+          ) ?? null,
+        "Unable to find the configured-service recovery action.",
+      );
+      openModelServices.click();
+      await waitForURL(
+        mounted.router,
+        (path) => path === "/settings",
+        "A configured service without an exact selection should open Model services.",
+      );
+      expect(mounted.router.state.location.search).toMatchObject({ section: "models" });
+      expect(
+        wsRequests
           .map(readDispatchedCommand)
-          .filter((command) => command?.type === "thread.turn.start");
-        expect(turnStarts).toHaveLength(1);
-        expect(turnStarts[0]).toMatchObject({
-          modelSelection: {
-            provider: "omnimind",
-            model: "deepseek/deepseek-v4-flash",
-          },
-        });
-      });
+          .filter((command) => command?.type === "thread.turn.start"),
+      ).toHaveLength(0);
     } finally {
       await mounted.cleanup();
       restoreNativeApi();
@@ -9816,7 +9880,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("routes an explicit project default for an unavailable Engine to recovery", async () => {
+  it("keeps unavailable Engine recovery in the existing Composer controls", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
@@ -9872,24 +9936,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
-      await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
-        .toBeInTheDocument();
-      await expect
-        .element(page.getByRole("heading", { name: EN_MESSAGES["composer.engineRecoveryTitle"] }))
-        .toBeInTheDocument();
-      await page
-        .getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] })
-        .click();
-      await waitForURL(
-        mounted.router,
-        (path) => path === "/settings",
-        "Independent Engine recovery should open Settings.",
-      );
-      expect(mounted.router.state.location.search).toMatchObject({
-        section: "providers",
-        target: SETTINGS_TARGETS.engineDetails,
+      expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
+      await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
+      const engineTrigger = page.getByRole("button", {
+        name: "Change engine. Current: Codex",
       });
+      await expect.element(engineTrigger).toBeInTheDocument();
+      await engineTrigger.click();
+      await expect.element(page.getByRole("menu")).toBeInTheDocument();
       expect(refreshProviders).not.toHaveBeenCalled();
     } finally {
       await mounted.cleanup();
@@ -9997,12 +10051,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
+      expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
+      await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
       await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
+        .element(page.getByRole("button", { name: "Change engine. Current: Codex" }))
         .toBeInTheDocument();
-      await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
-        .not.toBeInTheDocument();
       expect(listModelServices).toHaveBeenCalledTimes(2);
     } finally {
       await mounted.cleanup();
@@ -10016,6 +10069,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       provider: "omnimind",
       model: "deleted-service/deleted-model",
     });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "omnimind");
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const listModelServices = vi.fn(async () => ({
@@ -10062,7 +10116,25 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await page.getByRole("button", { name: EN_MESSAGES["composer.modelRecoveryAction"] }).click();
+      expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
+      await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
+      const composerEditor = await waitForComposerEditor();
+      composerEditor.focus();
+      dispatchComposerPickerShortcut(composerEditor, "m");
+      await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-slot="menu-popup"]'),
+        "The stale-service Composer model picker did not open.",
+      );
+      const openModelServices = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
+            (item) =>
+              item.getClientRects().length > 0 &&
+              item.textContent?.includes(EN_MESSAGES["composer.openModelServices"]),
+          ) ?? null,
+        "Unable to find the stale-service recovery action.",
+      );
+      openModelServices.click();
       await waitForURL(
         mounted.router,
         (path) => path === "/settings",
@@ -10082,6 +10154,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       provider: "pi",
       model: "pi/provider-model",
     });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "pi");
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const listModelServices = vi.fn(async () => ({
@@ -10128,28 +10201,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] }))
-        .toBeInTheDocument();
-      await expect
-        .element(page.getByRole("heading", { name: EN_MESSAGES["composer.engineRecoveryTitle"] }))
-        .toBeInTheDocument();
-      await expect
-        .element(page.getByRole("button", { name: EN_MESSAGES["composer.modelSetupAction"] }))
-        .not.toBeInTheDocument();
+      expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
+      await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
       expect(listModelServices).toHaveBeenCalledTimes(1);
-      await page
-        .getByRole("button", { name: EN_MESSAGES["composer.engineRecoveryAction"] })
-        .click();
-      await waitForURL(
-        mounted.router,
-        (path) => path === "/settings",
-        "Remembered Pi recovery should open Agent engines.",
-      );
-      expect(mounted.router.state.location.search).toMatchObject({
-        section: "providers",
-        target: SETTINGS_TARGETS.engineDetails,
-      });
+      const engineTrigger = page.getByRole("button", { name: "Change engine. Current: Pi" });
+      await expect.element(engineTrigger).toBeInTheDocument();
+      await engineTrigger.click();
+      await expect.element(page.getByRole("menu")).toBeInTheDocument();
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

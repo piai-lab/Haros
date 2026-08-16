@@ -22,6 +22,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/CreateGitHubProjectFields.tsx",
   "components/CreateProjectDialog.tsx",
   "components/ChatView.tsx",
+  "components/onboarding/FirstRunReadinessDialog.tsx",
   "components/ChatMarkdown.tsx",
   "components/BrowserPanel.tsx",
   "components/BranchToolbarBranchSelector.tsx",
@@ -344,7 +345,9 @@ function sourceFindings(relativePath: (typeof PRODUCT_COPY_SOURCES)[number]): Fi
     ) {
       // Settings search titles are stable English DOM-anchor records. Their visible projection
       // is localized below for every entry and both supported catalogs.
-      if (!(relativePath === "settingsSearchIndex.ts" && node.name.getText(sourceFile) === "title")) {
+      if (
+        !(relativePath === "settingsSearchIndex.ts" && node.name.getText(sourceFile) === "title")
+      ) {
         record(node, "property", node.initializer.text);
       }
     } else if (
@@ -475,11 +478,7 @@ describe("reachable OmniMind-owned product copy", () => {
       ["environment.pinnedMessages", "Pinned messages", "置顶消息"],
       ["environment.textMarkers", "Text markers", "文本标记"],
       ["environment.notepad", "Notepad", "记事本"],
-      [
-        "environment.notepadPlaceholder",
-        "Add notes for this task…",
-        "记录当前任务的临时信息…",
-      ],
+      ["environment.notepadPlaceholder", "Add notes for this task…", "记录当前任务的临时信息…"],
       ["environment.projectInstructions", "Project instructions", "项目指令"],
       ["composer.command.subagents", "Subagents", "子智能体"],
     ] as const;
@@ -562,13 +561,29 @@ describe("reachable OmniMind-owned product copy", () => {
     );
   });
 
-  it("distinguishes first-run setup from recovery in both supported languages", () => {
-    expect(EN_MESSAGES["composer.modelSetupTitle"]).toBe("Set up a model to get started");
-    expect(ZH_CN_MESSAGES["composer.modelSetupTitle"]).toBe("配置模型后开始");
-    expect(EN_MESSAGES["composer.modelSetupDescription"]).toContain("draft and attachments");
-    expect(ZH_CN_MESSAGES["composer.modelSetupDescription"]).toContain("草稿和附件");
-    expect(EN_MESSAGES["composer.modelRecoveryDescription"]).toContain("existing connection");
-    expect(ZH_CN_MESSAGES["composer.modelRecoveryDescription"]).toContain("现有连接");
+  it("locks the bilingual first-run focus-flow copy without internal runtime vocabulary", () => {
+    const exact = [
+      ["onboarding.firstRun.engineTitle", "Choose your work engine", "选择你的工作引擎"],
+      ["onboarding.firstRun.serviceTitle", "Connect a model service", "连接一个模型服务"],
+      ["onboarding.firstRun.modelTitle", "Choose an exact model", "选择一个精确模型"],
+      ["onboarding.firstRun.readyTitle", "OmniMind is ready", "OmniMind 已准备好"],
+      ["onboarding.firstRun.later", "Set up later", "稍后设置"],
+      ["onboarding.firstRun.startUsing", "Start using", "开始使用"],
+    ] as const;
+
+    for (const [key, en, zh] of exact) {
+      expect(EN_MESSAGES[key]).toBe(en);
+      expect(ZH_CN_MESSAGES[key]).toBe(zh);
+    }
+
+    const firstRunCopy = Object.entries(EN_MESSAGES)
+      .filter(([key]) => key.startsWith("onboarding.firstRun."))
+      .map(([, value]) => value)
+      .join(" ");
+    expect(firstRunCopy).not.toMatch(/\b(?:Pi-derived|ModelRuntime|runtime projection)\b/u);
+  });
+
+  it("keeps interruption recovery localized in both supported languages", () => {
     expect(EN_MESSAGES["conversation.editRestartRequired"]).toContain("Stop");
     expect(ZH_CN_MESSAGES["conversation.editRestartRequired"]).toContain("停止");
     expect(EN_MESSAGES["conversation.editRestartRequiredDescription"]).toContain("restart");

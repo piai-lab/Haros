@@ -9,13 +9,7 @@ import { COMPOSER_PROVIDER_KINDS } from "~/composerDraftModels";
 import type { ProviderModelCatalogState } from "~/hooks/useProviderModelCatalog";
 import { findProviderStatus, isProviderUsable } from "~/lib/providerAvailability";
 import type { ProviderModelOption } from "~/providerModelOptions";
-import {
-  deriveFirstRunReadinessState,
-  type PassiveModelServicesState,
-} from "../onboarding/firstRunReadiness.logic";
-
 export type { PassiveModelServicesState } from "../onboarding/firstRunReadiness.logic";
-export type ModelReadinessPromptMode = "setup" | "recover" | null;
 
 export function isSettledPassiveModelServicesQueryState(input: {
   readonly status: "pending" | "error" | "success";
@@ -84,25 +78,6 @@ export function hasUsableOmniMindModelServiceBinding(input: {
   );
 }
 
-export function resolveUsableOmniMindModelServiceSelection(input: {
-  readonly modelOptions: ReadonlyArray<ProviderModelOption>;
-  readonly services: ReadonlyArray<OmniMindModelServiceDescriptor>;
-}): ModelSelection | null {
-  const model = input.modelOptions.find(
-    (option) =>
-      option.upstreamProviderId !== undefined &&
-      option.upstreamProviderOrigin !== undefined &&
-      input.services.some(
-        (service) =>
-          service.serviceId === option.upstreamProviderId &&
-          service.origin === option.upstreamProviderOrigin &&
-          service.authState === "configured" &&
-          service.availableModelCount > 0,
-      ),
-  );
-  return model ? { provider: "omnimind", model: model.slug } : null;
-}
-
 export function areUsableProviderCatalogsSettled(input: {
   readonly providerStatuses: readonly ServerProviderStatus[];
   readonly catalogStateByProvider: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
@@ -112,36 +87,4 @@ export function areUsableProviderCatalogsSettled(input: {
       !isProviderUsable(findProviderStatus(input.providerStatuses, provider)) ||
       input.catalogStateByProvider[provider] !== "checking",
   );
-}
-
-export function deriveModelReadinessPromptMode(input: {
-  readonly surfaceEligible: boolean;
-  readonly serverFactsReady: boolean;
-  readonly hasUsableExactBinding: boolean;
-  readonly hasRecoverableExactBinding: boolean;
-  readonly modelServicesCapability: boolean | null;
-  readonly modelServicesTransport:
-    | "open"
-    | "closed"
-    | "connecting"
-    | "incompatible"
-    | "disposed"
-    | null;
-  readonly passiveModelServicesState: PassiveModelServicesState;
-  readonly deferred?: boolean;
-}): ModelReadinessPromptMode {
-  if (!input.surfaceEligible) return null;
-  const readiness = deriveFirstRunReadinessState({
-    factsSettled: input.serverFactsReady,
-    hasUsableExactBinding: input.hasUsableExactBinding,
-    hasRememberedIndependentEngineBinding: input.hasRecoverableExactBinding,
-    hasRememberedOmniMindBinding: false,
-    modelServicesCapability: input.modelServicesCapability,
-    modelServicesTransport: input.modelServicesTransport,
-    passiveModelServicesState: input.passiveModelServicesState,
-    deferred: input.deferred ?? false,
-  });
-  if (readiness === "first-run") return "setup";
-  if (readiness === "recover-engine" || readiness === "recover-model-service") return "recover";
-  return null;
 }

@@ -5,7 +5,6 @@ import {
   EventId,
   MessageId,
   type ModelSelection,
-  type OmniMindModelServicesListResult,
   type NativeApi,
   type OrchestrationShellSnapshot,
   type ProjectScript,
@@ -37,7 +36,6 @@ import {
   OrchestrationThreadActivity,
   ProviderInteractionMode,
   RuntimeMode,
-  WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
 import { respondingInteractionReclaimAt } from "@omnimind/shared/pendingInteractions";
@@ -71,7 +69,6 @@ import {
   useMemo,
   useRef,
   useState,
-  useSyncExternalStore,
   type MouseEvent,
   type ReactNode,
   type WheelEvent,
@@ -103,7 +100,6 @@ import {
 } from "~/lib/providerDiscoveryReactQuery";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import {
-  hasReceivedProviderStatusSnapshot,
   serverConfigQueryOptions,
   serverQueryKeys,
   serverSettingsQueryOptions,
@@ -120,17 +116,12 @@ import {
   skillMentionPrefix,
 } from "~/lib/composerMentions";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
-import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import {
   findProviderStatus,
   normalizeCustomBinaryPath,
   normalizeProviderStatusForLocalConfig,
   resolveProviderSendAvailabilityWithRefresh,
 } from "~/lib/providerAvailability";
-import {
-  omniMindModelServicesListQueryOptions,
-  omniMindModelServicesQueryKeys,
-} from "~/lib/omnimindModelServicesReactQuery";
 import {
   loadConfirmedCustomBinaryPaths,
   saveConfirmedCustomBinaryPaths,
@@ -347,13 +338,7 @@ import {
 } from "~/projectScripts";
 import { runProjectCommandInTerminal } from "~/projectTerminalRunner";
 import { newCommandId, newMessageId, newProjectId, newThreadId } from "~/lib/utils";
-import {
-  onNativeApiServerCapabilitiesChange,
-  onNativeApiTransportStateChange,
-  readNativeApi,
-  readNativeApiServerCapabilityState,
-  readNativeApiTransportState,
-} from "~/nativeApi";
+import { readNativeApi } from "~/nativeApi";
 import { promoteThreadCreate } from "~/lib/threadCreatePromotion";
 import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
 import {
@@ -385,7 +370,6 @@ import {
   useEffectiveComposerModelState,
 } from "../composerDraftStore";
 import { resolveWsHttpUrl } from "../lib/wsHttpUrl";
-import { COMPOSER_PROVIDER_KINDS } from "../composerDraftModels";
 import { useTemporaryThreadStore } from "../temporaryThreadStore";
 import { useComposerFocusRequestStore } from "../composerFocusRequestStore";
 import { useWorkflowRunUiStore, useWorkflowRunUiThreadState } from "../workflowRunUiStore";
@@ -437,17 +421,8 @@ import {
   deriveSelectedContextWindowSnapshot,
 } from "../lib/contextWindow";
 import { useComposerVoiceController } from "./chat/useComposerVoiceController";
-import {
-  areUsableProviderCatalogsSettled,
-  deriveModelReadinessPromptMode,
-  hasUsableExactModelBinding,
-  hasUsableOmniMindModelServiceBinding,
-  isSettledPassiveModelServicesQueryState,
-  resolveUsableOmniMindModelServiceSelection,
-  type PassiveModelServicesState,
-} from "./chat/modelReadinessPrompt.logic";
-import { hasRememberedExactModelBinding } from "./onboarding/firstRunReadiness.logic";
 import { readFirstRunReadinessPreference } from "./onboarding/firstRunReadinessPreference";
+import { requestFirstRunReadinessResume } from "./onboarding/FirstRunReadinessDialog";
 import {
   composerFooterPlanForTier,
   resolveNextComposerFooterTier,
@@ -1064,15 +1039,6 @@ function canHandleComposerPickerShortcut(
 }
 const EMPTY_AVAILABLE_EDITORS: EditorId[] = [];
 const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
-const subscribeModelServicesCapability = (listener: () => void) =>
-  onNativeApiServerCapabilitiesChange(listener);
-const readModelServicesCapability = () =>
-  readNativeApiServerCapabilityState(WS_OMNIMIND_MODEL_SERVICES_CAPABILITY);
-const readServerModelServicesCapability = () => null;
-const subscribeModelServicesTransport = (listener: () => void) =>
-  onNativeApiTransportStateChange(listener);
-const readModelServicesTransport = () => readNativeApiTransportState();
-const readServerModelServicesTransport = () => null;
 const EMPTY_PENDING_USER_INPUT_ANSWERS: Record<string, PendingUserInputDraftAnswer> = {};
 const EMPTY_TERMINAL_RUNTIME_ENV: Record<string, string> = {};
 const MAX_DISMISSED_PROVIDER_HEALTH_BANNERS = 50;
@@ -1526,9 +1492,6 @@ export default function ChatView({
   );
   const draftThread = useComposerDraftStore(
     (store) => store.draftThreadsByThreadId[threadId] ?? null,
-  );
-  const stickyModelSelectionByProvider = useComposerDraftStore(
-    (store) => store.stickyModelSelectionByProvider,
   );
   const hasTemporaryThreadMarker = useTemporaryThreadStore((store) =>
     threadId ? store.temporaryThreadIds[threadId] === true : false,
@@ -2474,29 +2437,15 @@ export default function ChatView({
     modelHintByProvider: composerModelHintByProvider,
     agentDiscoveryPolicy: "eager-core",
   });
-  const passiveModelServicesQueryState = queryClient.getQueryState<OmniMindModelServicesListResult>(
-    omniMindModelServicesQueryKeys.list(),
-  );
-  const cachedPassiveModelServices =
-    passiveModelServicesQueryState &&
-    isSettledPassiveModelServicesQueryState(passiveModelServicesQueryState)
-      ? passiveModelServicesQueryState.data
-      : undefined;
-  const runtimeCatalogFallbackModel =
-    selectedProvider === "omnimind"
-      ? cachedPassiveModelServices?.state === "ready"
-        ? (resolveUsableOmniMindModelServiceSelection({
-            modelOptions: selectableModelOptionsByProvider.omnimind,
-            services: cachedPassiveModelServices.services,
-          })?.model ?? null)
-        : null
-      : undefined;
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
     selectedProvider,
     threadModelSelection: serverThread?.modelSelection,
     projectModelSelection: activeProject?.defaultModelSelection,
-    runtimeCatalogFallbackModel,
+    // The Composer may inherit an exact draft/thread/project/sticky selection,
+    // but must never synthesize a send target from a static default or the first
+    // catalog row. First-run and recovery both require an explicit user choice.
+    runtimeCatalogFallbackModel: null,
     customModelsByProvider,
     availableModelOptionsByProvider: selectableModelOptionsByProvider,
   });
@@ -4163,217 +4112,7 @@ export default function ChatView({
         .flatMap((status) => (status ? [status] : [])),
     [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
   );
-  const explicitExactModelSelectionsByProvider = useMemo(() => {
-    const result: Partial<Record<ProviderKind, ModelSelection>> = {};
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
-      const candidates = [
-        composerDraft.modelSelectionByProvider[provider] ?? null,
-        serverThread?.modelSelection.provider === provider ? serverThread.modelSelection : null,
-        activeProject?.defaultModelSelection?.provider === provider
-          ? activeProject.defaultModelSelection
-          : null,
-        stickyModelSelectionByProvider[provider] ?? null,
-      ];
-      const selection = candidates.find((candidate) => candidate !== null) ?? null;
-      if (selection) result[provider] = selection;
-    }
-    return result;
-  }, [
-    activeProject?.defaultModelSelection,
-    composerDraft.modelSelectionByProvider,
-    serverThread?.modelSelection,
-    stickyModelSelectionByProvider,
-  ]);
-  const rememberedExactModelSelectionsByProvider = useMemo(() => {
-    const result: Partial<Record<ProviderKind, ModelSelection>> = {};
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
-      const candidates = [
-        serverThread?.modelSelection.provider === provider ? serverThread.modelSelection : null,
-        activeProject?.defaultModelSelection?.provider === provider
-          ? activeProject.defaultModelSelection
-          : null,
-        stickyModelSelectionByProvider[provider] ?? null,
-      ];
-      const selection = candidates.find((candidate) => candidate !== null) ?? null;
-      if (selection) result[provider] = selection;
-    }
-    return result;
-  }, [
-    activeProject?.defaultModelSelection,
-    serverThread?.modelSelection,
-    stickyModelSelectionByProvider,
-  ]);
-  const exactModelSelectionsByProvider = useMemo(() => {
-    const result = { ...explicitExactModelSelectionsByProvider };
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
-      const status = findProviderStatus(providerStatuses, provider);
-      if (!result[provider] && status?.authStatus === "authenticated") {
-        const defaultModel = getDefaultModel(provider);
-        if (defaultModel) result[provider] = buildModelSelection(provider, defaultModel);
-      }
-      // `available + auth unknown` proves that an Engine can be invoked, not
-      // that a fresh profile owns a sendable model. Only a catalog-exact model
-      // may upgrade that ambiguous status from recoverable to usable.
-      if (
-        result[provider] &&
-        status?.authStatus === "unknown" &&
-        !selectableModelOptionsByProvider[provider].some(
-          (model) => model.slug === result[provider]?.model,
-        )
-      ) {
-        delete result[provider];
-      }
-    }
-    // OmniMind and stock Pi are runtime-catalog-only. A remembered slug is a
-    // recovery fact, not send authority: only the current catalog can validate it.
-    for (const provider of ["omnimind", "pi"] as const) {
-      const remembered = result[provider];
-      const availableModels = selectableModelOptionsByProvider[provider] ?? [];
-      if (!remembered || !availableModels.some((model) => model.slug === remembered.model)) {
-        delete result[provider];
-      }
-    }
-    return result;
-  }, [explicitExactModelSelectionsByProvider, providerStatuses, selectableModelOptionsByProvider]);
-  const hasUsableProviderModelBinding = useMemo(
-    () =>
-      hasUsableExactModelBinding({
-        providerStatuses,
-        exactModelSelections: exactModelSelectionsByProvider,
-      }),
-    [exactModelSelectionsByProvider, providerStatuses],
-  );
-  const hasRememberedProductModelBinding = useMemo(
-    () =>
-      hasRememberedExactModelBinding({
-        providers: COMPOSER_PROVIDER_KINDS,
-        explicitExactModelSelections: rememberedExactModelSelectionsByProvider,
-      }),
-    [rememberedExactModelSelectionsByProvider],
-  );
-  const hasRememberedIndependentEngineModelBinding = useMemo(
-    () =>
-      hasRememberedExactModelBinding({
-        providers: COMPOSER_PROVIDER_KINDS.filter((provider) => provider !== "omnimind"),
-        explicitExactModelSelections: rememberedExactModelSelectionsByProvider,
-      }),
-    [rememberedExactModelSelectionsByProvider],
-  );
-  const hasRememberedOmniMindModelBinding = useMemo(
-    () =>
-      hasRememberedExactModelBinding({
-        providers: ["omnimind"],
-        explicitExactModelSelections: rememberedExactModelSelectionsByProvider,
-      }),
-    [rememberedExactModelSelectionsByProvider],
-  );
-  const usableProviderCatalogsSettled = useMemo(
-    () =>
-      areUsableProviderCatalogsSettled({
-        providerStatuses,
-        catalogStateByProvider,
-      }),
-    [catalogStateByProvider, providerStatuses],
-  );
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
-  const providerHealthSnapshotSettled = hasReceivedProviderStatusSnapshot(queryClient);
-  const modelServicesCapability = useSyncExternalStore(
-    subscribeModelServicesCapability,
-    readModelServicesCapability,
-    readServerModelServicesCapability,
-  );
-  const modelServicesTransport = useSyncExternalStore(
-    subscribeModelServicesTransport,
-    readModelServicesTransport,
-    readServerModelServicesTransport,
-  );
-  const passiveModelServicesQuery = useQuery(
-    omniMindModelServicesListQueryOptions({
-      enabled:
-        isCenteredEmptyLanding &&
-        serverConfigQuery.isSuccess &&
-        !hasUsableProviderModelBinding &&
-        (providerHealthSnapshotSettled || !hasRememberedProductModelBinding) &&
-        modelServicesCapability === true &&
-        modelServicesTransport === "open",
-    }),
-  );
-  const passiveModelServicesState: PassiveModelServicesState = passiveModelServicesQuery.isFetching
-    ? "unknown"
-    : passiveModelServicesQuery.isError
-      ? "error"
-      : passiveModelServicesQuery.isSuccess
-        ? passiveModelServicesQuery.data.state === "empty"
-          ? "empty"
-          : passiveModelServicesQuery.data.state === "ready"
-            ? "configured"
-            : "error"
-        : "unknown";
-  const hasUsableOmniMindServiceBinding =
-    cachedPassiveModelServices?.state === "ready" &&
-    hasUsableOmniMindModelServiceBinding({
-      selection:
-        exactModelSelectionsByProvider.omnimind ??
-        (selectedModelSelection?.provider === "omnimind" ? selectedModelSelection : undefined),
-      selectionIsExplicit: explicitExactModelSelectionsByProvider.omnimind !== undefined,
-      catalogState: catalogStateByProvider.omnimind,
-      modelOptions: selectableModelOptionsByProvider.omnimind,
-      services: cachedPassiveModelServices.services,
-    });
-  const hasUsableProductModelBinding =
-    hasUsableProviderModelBinding || hasUsableOmniMindServiceBinding;
-  const modelReadinessPromptMode = deriveModelReadinessPromptMode({
-    surfaceEligible: isCenteredEmptyLanding,
-    serverFactsReady:
-      serverConfigQuery.isSuccess &&
-      !serverConfigQuery.isFetching &&
-      usableProviderCatalogsSettled &&
-      (passiveModelServicesState !== "empty" || providerHealthSnapshotSettled),
-    hasUsableExactBinding: hasUsableProductModelBinding,
-    hasRecoverableExactBinding:
-      hasRememberedIndependentEngineModelBinding || hasRememberedOmniMindModelBinding,
-    modelServicesCapability,
-    modelServicesTransport,
-    passiveModelServicesState,
-    deferred: readFirstRunReadinessPreference()?.disposition === "deferred",
-  });
-  const modelReadinessRecoversIndependentEngine =
-    modelReadinessPromptMode === "recover" &&
-    passiveModelServicesState === "empty" &&
-    hasRememberedIndependentEngineModelBinding;
-  const openModelReadinessFlow = useCallback(() => {
-    void navigate({
-      to: "/settings",
-      search:
-        modelReadinessPromptMode === "setup"
-          ? {
-              section: "models",
-              setup: "model-service",
-              ...(activeThread
-                ? {
-                    setupThreadId: activeThread.id,
-                    setupDraftProvider: composerDraft.activeProvider ?? "",
-                    setupDraftModel:
-                      (composerDraft.activeProvider
-                        ? composerDraft.modelSelectionByProvider[composerDraft.activeProvider]
-                            ?.model
-                        : null) ?? "",
-                  }
-                : {}),
-            }
-          : modelReadinessRecoversIndependentEngine
-            ? { section: "providers", target: SETTINGS_TARGETS.engineDetails }
-            : { section: "models" },
-    });
-  }, [
-    activeThread,
-    composerDraft.activeProvider,
-    composerDraft.modelSelectionByProvider,
-    modelReadinessRecoversIndependentEngine,
-    modelReadinessPromptMode,
-    navigate,
-    passiveModelServicesState,
-  ]);
   const handoffBadgeLabel = useMemo(
     () => (activeThread ? resolveThreadHandoffBadgeLabel(activeThread) : null),
     [activeThread],
@@ -4711,16 +4450,31 @@ export default function ChatView({
     };
   }, [focusComposer, secondaryChromeReady, secondaryChromeThreadId]);
   // Keep the two composer picker menus mutually exclusive so shortcuts always open one surface.
-  const handleModelPickerOpenChange = useCallback((open: boolean) => {
-    setIsModelPickerOpen(open);
-    if (!open) {
-      setPiDiscoveryRequested(false);
-    }
-    if (open) {
-      setIsTraitsPickerOpen(false);
-      setIsEnginePickerOpen(false);
-    }
-  }, []);
+  const handleModelPickerOpenChange = useCallback(
+    (open: boolean) => {
+      if (
+        open &&
+        selectedModel === null &&
+        readFirstRunReadinessPreference()?.disposition === "deferred"
+      ) {
+        setIsModelPickerOpen(false);
+        setIsTraitsPickerOpen(false);
+        setIsEnginePickerOpen(false);
+        setPiDiscoveryRequested(false);
+        requestFirstRunReadinessResume();
+        return;
+      }
+      setIsModelPickerOpen(open);
+      if (!open) {
+        setPiDiscoveryRequested(false);
+      }
+      if (open) {
+        setIsTraitsPickerOpen(false);
+        setIsEnginePickerOpen(false);
+      }
+    },
+    [selectedModel],
+  );
   const handleProviderBrowse = useCallback((provider: ProviderKind) => {
     if (provider === "pi") {
       setPiDiscoveryRequested(true);
@@ -4736,14 +4490,29 @@ export default function ChatView({
     },
     [handleModelPickerOpenChange],
   );
-  const handleEnginePickerOpenChange = useCallback((open: boolean) => {
-    setIsEnginePickerOpen(open);
-    if (open) {
-      setIsModelPickerOpen(false);
-      setIsTraitsPickerOpen(false);
-      setPiDiscoveryRequested(false);
-    }
-  }, []);
+  const handleEnginePickerOpenChange = useCallback(
+    (open: boolean) => {
+      if (
+        open &&
+        selectedModel === null &&
+        readFirstRunReadinessPreference()?.disposition === "deferred"
+      ) {
+        setIsEnginePickerOpen(false);
+        setIsModelPickerOpen(false);
+        setIsTraitsPickerOpen(false);
+        setPiDiscoveryRequested(false);
+        requestFirstRunReadinessResume();
+        return;
+      }
+      setIsEnginePickerOpen(open);
+      if (open) {
+        setIsModelPickerOpen(false);
+        setIsTraitsPickerOpen(false);
+        setPiDiscoveryRequested(false);
+      }
+    },
+    [selectedModel],
+  );
   const appendVoiceTranscriptToComposer = useCallback(
     (transcript: string) => {
       const nextPrompt = appendVoiceTranscriptToPrompt(promptRef.current, transcript);
@@ -12816,52 +12585,6 @@ export default function ChatView({
                       )}
                     </h2>
                   </div>
-                  {modelReadinessPromptMode ? (
-                    <section
-                      aria-label={
-                        modelReadinessPromptMode === "setup"
-                          ? t("composer.modelSetupTitle")
-                          : modelReadinessRecoversIndependentEngine
-                            ? t("composer.engineRecoveryTitle")
-                            : t("composer.modelRecoveryTitle")
-                      }
-                      className={cn(
-                        "mx-auto mb-5 flex w-full items-center justify-between gap-4 px-6",
-                        "max-sm:flex-col max-sm:items-stretch max-sm:text-center",
-                        CHAT_COLUMN_FRAME_CLASS_NAME,
-                      )}
-                      data-testid="model-readiness-prompt"
-                    >
-                      <div className="min-w-0">
-                        <h3 className="text-sm font-medium text-foreground">
-                          {modelReadinessPromptMode === "setup"
-                            ? t("composer.modelSetupTitle")
-                            : modelReadinessRecoversIndependentEngine
-                              ? t("composer.engineRecoveryTitle")
-                              : t("composer.modelRecoveryTitle")}
-                        </h3>
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                          {modelReadinessPromptMode === "setup"
-                            ? t("composer.modelSetupDescription")
-                            : modelReadinessRecoversIndependentEngine
-                              ? t("composer.engineRecoveryDescription")
-                              : t("composer.modelRecoveryDescription")}
-                        </p>
-                      </div>
-                      <Button
-                        className="shrink-0 max-sm:w-full"
-                        size="sm"
-                        variant={modelReadinessPromptMode === "setup" ? "default" : "outline"}
-                        onClick={openModelReadinessFlow}
-                      >
-                        {modelReadinessPromptMode === "setup"
-                          ? t("composer.modelSetupAction")
-                          : modelReadinessRecoversIndependentEngine
-                            ? t("composer.engineRecoveryAction")
-                            : t("composer.modelRecoveryAction")}
-                      </Button>
-                    </section>
-                  ) : null}
                   {composerSection}
                   {(isGitRepo && !environmentEnabled && !isCenteredEmptyLanding) ||
                   relocateComposerLeadingControls ? (

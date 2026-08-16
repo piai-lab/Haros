@@ -255,12 +255,12 @@ export function FirstRunReadinessDialog() {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogPopup
-        className="h-[min(720px,92vh)] min-h-[620px] max-w-[736px] overflow-hidden rounded-[24px]"
+        className="first-run-readiness-popup h-[min(720px,92vh)] min-h-0 max-w-[736px] overflow-hidden rounded-[24px] max-lg:h-[min(700px,94vh)] max-lg:max-w-[680px] lg:min-h-[620px]"
         bottomStickOnMobile={false}
         showCloseButton={false}
         data-testid="first-run-readiness-dialog"
       >
-        <DialogHeader className="h-[70px] flex-row items-center border-b border-border/60 px-7 py-0">
+        <DialogHeader className="h-[70px] shrink-0 flex-row items-center border-b border-border/60 px-7 py-0">
           <ProviderIcon provider="omnimind" className="size-[34px]" />
           <span className="text-[15px] font-semibold">{t("onboarding.firstRun.header")}</span>
           <div
@@ -289,7 +289,7 @@ export function FirstRunReadinessDialog() {
           </button>
         </DialogHeader>
 
-        <DialogPanel className="flex min-h-0 flex-1 flex-col px-[34px] pt-[30px] pb-3">
+        <DialogPanel className="flex min-h-0 flex-1 flex-col px-[34px] pt-[30px] pb-3 max-lg:px-7 max-lg:pt-6">
           {step === "engine" ? (
             <section className="first-run-step" data-first-run-step="engine">
               <p className="mb-1.5 text-xs font-semibold text-primary">
@@ -314,7 +314,7 @@ export function FirstRunReadinessDialog() {
               >
                 <ProviderIcon provider="omnimind" className="size-12" />
                 <span className="min-w-0 flex-1">
-                  <strong className="block text-base">OmniMind</strong>
+                  <strong className="block text-base">{PROVIDER_LABEL_BY_KIND.omnimind}</strong>
                   <span className="mt-1 block text-xs text-muted-foreground">
                     {t("onboarding.firstRun.omnimindDescription")}
                   </span>
@@ -331,7 +331,7 @@ export function FirstRunReadinessDialog() {
               <div className="my-5 flex items-center gap-2 text-xs text-muted-foreground after:h-px after:flex-1 after:bg-border/70">
                 {t("onboarding.firstRun.otherEngines")}
               </div>
-              <div className="grid grid-cols-4 gap-2.5 max-sm:grid-cols-2">
+              <div className="grid grid-cols-4 gap-2.5 max-lg:grid-cols-2">
                 {INDEPENDENT_ENGINE_OPTIONS.map((provider) => {
                   const status = controller.providerStatuses.find(
                     (candidate) => candidate.provider === provider,
@@ -370,15 +370,31 @@ export function FirstRunReadinessDialog() {
           {step === "prepare" ? (
             <section className="first-run-step min-h-0 flex-1" data-first-run-step="prepare">
               {selectedProvider === "omnimind" ? (
-                <ModelsSettingsPanel
-                  active
-                  resetEpoch={0}
-                  settings={settings}
-                  defaults={defaults}
-                  updateSettings={updateSettings}
-                  startInAddFlow
-                  onServicePrepared={handleServicePrepared}
-                />
+                <div data-first-run-model-services>
+                  <p className="mb-1.5 text-xs font-semibold text-primary">
+                    {t("onboarding.firstRun.stepWithEngine", {
+                      current: 2,
+                      total: 3,
+                      engine: selectedProviderLabel,
+                    })}
+                  </p>
+                  <DialogTitle className="text-[25px] tracking-[-0.035em]">
+                    {t("onboarding.firstRun.serviceTitle")}
+                  </DialogTitle>
+                  <DialogDescription className="mt-1.5 mb-3 max-w-[610px] leading-relaxed">
+                    {t("onboarding.firstRun.serviceDescription")}
+                  </DialogDescription>
+                  <ModelsSettingsPanel
+                    active
+                    resetEpoch={0}
+                    settings={settings}
+                    defaults={defaults}
+                    updateSettings={updateSettings}
+                    startInAddFlow
+                    presentation="first-run"
+                    onServicePrepared={handleServicePrepared}
+                  />
+                </div>
               ) : (
                 <div>
                   <p className="mb-1.5 text-xs font-semibold text-primary">
@@ -507,15 +523,20 @@ export function FirstRunReadinessDialog() {
           ) : null}
         </DialogPanel>
 
-        <DialogFooter className="h-[76px] flex-row items-center border-t border-border/60 px-7 py-0">
+        <DialogFooter className="h-[76px] shrink-0 flex-row items-center border-t border-border/60 px-7 py-0">
           {step === "engine" ? (
-            <button
-              type="button"
-              className="text-sm text-muted-foreground hover:text-foreground"
-              onClick={deferFlow}
-            >
-              {t("onboarding.firstRun.later")}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="text-sm text-muted-foreground hover:text-foreground"
+                onClick={deferFlow}
+              >
+                {t("onboarding.firstRun.later")}
+              </button>
+              <span className="text-[11px] text-muted-foreground/65">
+                {t("onboarding.firstRun.settingsHint")}
+              </span>
+            </div>
           ) : (
             <Button
               variant="outline"
@@ -527,12 +548,15 @@ export function FirstRunReadinessDialog() {
             </Button>
           )}
           {step === "engine" ? (
-            <Button className="ms-auto" onClick={() => setStep("prepare")}>
+            <Button
+              className="ms-auto bg-foreground text-background hover:bg-foreground/90"
+              onClick={() => setStep("prepare")}
+            >
               {t("common.forward")}
             </Button>
           ) : step === "prepare" && selectedProvider !== "omnimind" ? (
             <Button
-              className="ms-auto"
+              className="ms-auto bg-foreground text-background hover:bg-foreground/90"
               disabled={!selectedProviderModelsReady || !selectedProviderPrepared}
               onClick={advanceFromPrepare}
             >
@@ -541,11 +565,18 @@ export function FirstRunReadinessDialog() {
                 : t("common.forward")}
             </Button>
           ) : step === "model" ? (
-            <Button className="ms-auto" disabled={!selectedModel} onClick={completeSelection}>
+            <Button
+              className="ms-auto bg-foreground text-background hover:bg-foreground/90"
+              disabled={!selectedModel}
+              onClick={completeSelection}
+            >
               {t("onboarding.firstRun.complete")}
             </Button>
           ) : step === "ready" ? (
-            <Button className="ms-auto" onClick={startUsing}>
+            <Button
+              className="ms-auto bg-foreground text-background hover:bg-foreground/90"
+              onClick={startUsing}
+            >
               {t("onboarding.firstRun.startUsing")}
             </Button>
           ) : null}
