@@ -2551,6 +2551,31 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await resizeTo(752);
       await expectPresentation("docked");
       expect(cookieSet).toHaveBeenCalledTimes(2);
+
+      await resizeTo(640);
+      await expectPresentation("hidden");
+      const compactRouteTrigger = mounted.host.querySelector<HTMLButtonElement>(
+        "[data-slot='chat-surface-header'] [data-slot='sidebar-trigger']",
+      );
+      compactRouteTrigger?.click();
+      await expectPresentation("overlay");
+      const pullRequestsControl = Array.from(
+        mounted.host.querySelectorAll<HTMLElement>("button, a[href]"),
+      ).find((element) => element.textContent?.trim() === "Pull requests");
+      expect(pullRequestsControl).toBeTruthy();
+      pullRequestsControl?.click();
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === "/pull-requests",
+        "Compact Sidebar navigation did not reach Pull requests.",
+      );
+      await expectPresentation("hidden");
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-thread-sidebar-main]")
+          ?.hasAttribute("inert"),
+      ).toBe(false);
+      expect(cookieSet).toHaveBeenCalledTimes(2);
     } finally {
       await mounted.cleanup();
       cookieSet.mockRestore();

@@ -607,6 +607,9 @@ function ChatRouteLayout() {
   const isEditorView = useLocation({
     select: (location) => (location.search as { view?: unknown }).view === "editor",
   });
+  const routePathname = useLocation({
+    select: (location) => location.pathname,
+  });
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(readInitialThreadSidebarWidth);
   const [sidebarAutoSuppressed, setSidebarAutoSuppressed] = useState(() =>
@@ -662,6 +665,15 @@ function ChatRouteLayout() {
     forceHidden: isEditorView,
   });
   const resolvedSidebarOpen = sidebarPresentation !== "hidden";
+  const previousRoutePathnameRef = useRef(routePathname);
+  useLayoutEffect(() => {
+    if (previousRoutePathnameRef.current === routePathname) return;
+    previousRoutePathnameRef.current = routePathname;
+    if (sidebarPresentation !== "overlay") return;
+    // A compact temporary navigator is a route picker, not persistent chrome. Once the
+    // destination changes, dismiss only its transient presentation and preserve manual intent.
+    setSidebarTemporaryReveal(false);
+  }, [routePathname, sidebarPresentation]);
   useLayoutEffect(() => {
     if (sidebarPresentation !== "overlay") return;
     sidebarOverlayRef.current?.focus({ preventScroll: true });
@@ -808,6 +820,7 @@ function ChatRouteLayout() {
   const mainContentShell = (
     <div
       className="relative flex h-svh min-h-0 min-w-0 flex-1"
+      data-thread-sidebar-main
       aria-hidden={sidebarPresentation === "overlay" ? true : undefined}
       inert={sidebarPresentation === "overlay" ? true : undefined}
     >
