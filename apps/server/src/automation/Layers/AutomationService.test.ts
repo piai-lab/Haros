@@ -5628,6 +5628,74 @@ layer("AutomationService", (it) => {
       }),
   );
 
+  it.effect("keeps recurring cursors null while paused and resumes from the current time", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+
+      for (const [suffix, schedule] of [
+        ["interval", { type: "interval", everySeconds: 300 }],
+        ["cron", { type: "cron", expression: "* * * * *", timezone: "UTC" }],
+      ] as const) {
+        const created = yield* service.create({
+          ...createInput("local"),
+          name: `Cursor ${suffix}`,
+          schedule,
+        });
+        const paused = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: created.definitionRevision,
+          enabled: false,
+        });
+        assert.strictEqual(paused.nextRunAt, null);
+
+        const directSave = yield* repository.saveDefinition({
+          definition: {
+            ...paused,
+            nextRunAt: "2020-01-01T00:00:00.000Z",
+            updatedAt: new Date(Date.parse(paused.updatedAt) + 1).toISOString(),
+          },
+          expectedDefinitionRevision: paused.definitionRevision,
+        });
+        const clamped = Option.getOrThrow(directSave.value);
+        assert.strictEqual(clamped.nextRunAt, null);
+
+        const renamed = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: clamped.definitionRevision,
+          name: `Paused ${suffix}`,
+        });
+        assert.strictEqual(renamed.nextRunAt, null);
+        const notified = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: renamed.definitionRevision,
+          notificationPolicy: "failed-runs-only",
+        });
+        assert.strictEqual(notified.nextRunAt, null);
+
+        const resumeStartedAt = Date.now();
+        const resumed = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: notified.definitionRevision,
+          enabled: true,
+        });
+        const resumedAt = Date.parse(resumed.nextRunAt ?? "");
+        assert.isTrue(resumed.enabled);
+        assert.isAbove(resumedAt, resumeStartedAt);
+        assert.isAtMost(resumedAt, Date.now() + 6 * 60_000);
+        assert.notStrictEqual(resumed.nextRunAt, "2020-01-01T00:00:00.000Z");
+
+        const immediate = yield* service.runDueOnce({
+          now: new Date(resumeStartedAt).toISOString(),
+          limit: 10,
+          leaseOwnerId: "test-scheduler",
+        });
+        assert.isUndefined(immediate.find((result) => result.run.automationId === created.id));
+      }
+    }),
+  );
+
   it.effect("rejects a stale full-form save after terminal auto-disable", () =>
     Effect.gen(function* () {
       resetHarness();

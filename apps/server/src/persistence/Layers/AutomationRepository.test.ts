@@ -2371,6 +2371,46 @@ layer("AutomationRepository", (it) => {
     }),
   );
 
+  it.effect("clamps a disabled full-save cursor in both its result and persisted row", () =>
+    Effect.gen(function* () {
+      const repository = yield* AutomationRepository;
+      const sql = yield* SqlClient.SqlClient;
+      yield* runMigrations();
+      const automationId = AutomationId.makeUnsafe("automation-disabled-cursor-invariant");
+      const definition = yield* repository.createDefinition({
+        id: automationId,
+        input: {
+          ...createInputForProject("project-disabled-cursor-invariant"),
+          schedule: { type: "interval", everySeconds: 300 },
+        },
+        now: "2026-08-17T12:00:00.000Z",
+        nextRunAt: "2026-08-17T12:05:00.000Z",
+      });
+
+      const saved = yield* repository.saveDefinition({
+        definition: {
+          ...definition,
+          enabled: false,
+          nextRunAt: "2020-01-01T00:00:00.000Z",
+          disabledReason: "user",
+          disabledAt: "2026-08-17T12:01:00.000Z",
+          updatedAt: "2026-08-17T12:01:00.000Z",
+        },
+        expectedDefinitionRevision: definition.definitionRevision,
+      });
+
+      assert.strictEqual(Option.getOrThrow(saved.value).nextRunAt, null);
+      assert.deepStrictEqual(
+        yield* sql<{ readonly nextRunAt: string | null }>`
+          SELECT next_run_at AS "nextRunAt"
+          FROM automation_definitions
+          WHERE automation_id = ${automationId}
+        `,
+        [{ nextRunAt: null }],
+      );
+    }),
+  );
+
   it.effect(
     "terminalizes an existing pending misfire occurrence while advancing its schedule",
     () =>

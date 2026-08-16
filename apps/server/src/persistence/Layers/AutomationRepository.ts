@@ -354,7 +354,10 @@ const makeAutomationRepository = Effect.gen(function* () {
             prompt = ${definition.prompt},
             schedule_json = ${definition.schedule},
             enabled = ${definition.enabled},
-            next_run_at = ${definition.nextRunAt},
+            next_run_at = CASE
+              WHEN ${definition.enabled} = 1 THEN ${definition.nextRunAt}
+              ELSE NULL
+            END,
             model_selection_json = ${definition.modelSelection},
             provider_options_json = ${definition.providerOptions},
             runtime_mode = ${definition.runtimeMode},
@@ -2052,20 +2055,23 @@ const makeAutomationRepository = Effect.gen(function* () {
       );
 
   const saveDefinition: AutomationRepositoryShape["saveDefinition"] = (input) => {
+    const definition = input.definition.enabled
+      ? input.definition
+      : { ...input.definition, nextRunAt: null };
     const supersedeDeferredOneShotOwner =
-      (input.supersedeDeferredOneShotOwner ?? false) || !input.definition.enabled;
+      (input.supersedeDeferredOneShotOwner ?? false) || !definition.enabled;
     return runDefinitionMutation({
-      id: input.definition.id,
-      now: input.definition.updatedAt,
+      id: definition.id,
+      now: definition.updatedAt,
       operation: "AutomationRepository.saveDefinition:update",
       supersedeDeferredOneShotOwner,
       transitionReason:
-        !input.definition.enabled && input.definition.disabledReason === "failures"
+        !definition.enabled && definition.disabledReason === "failures"
           ? "failure-threshold-reached"
           : "definition-superseded",
       mutation: updateDefinitionRow({
         definition: {
-          ...input.definition,
+          ...definition,
           definitionRevision: input.expectedDefinitionRevision,
           enabled: input.definition.enabled ? 1 : 0,
           stopOnError: input.definition.stopAfterConsecutiveFailures !== null ? 1 : 0,
@@ -2082,7 +2088,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       Effect.map((result) => ({
         ...result,
         value: Option.map(result.value, (row) => ({
-          ...input.definition,
+          ...definition,
           updatedAt: row.updatedAt,
           definitionRevision: row.definitionRevision,
         })),

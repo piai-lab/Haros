@@ -269,6 +269,8 @@ S1 当前仅准入同一 R7 follow-up：Migration `094` 只增加 nullable `defe
 
 R7 final follow-up 继续只闭合同一 durability owner：legacy one-shot cleanup 与 pointer claim 必须以 DB 内 scheduled+deferred run 为事实，manual deferred 保持既有 dispatch/pause 语义；misfire 只能 terminalize pending occurrence，其他 live owner 不得推进 schedule。任何事务内隐式 terminalize 的 deferred owner 都须通过既有 `run-upserted` 单次发布，最终 disabled definition 不得遗留 pointer，且把 threshold 降到已累计 failure count 时须在同次事务明确以 `failures` disable。该 follow-up 不新增 migration、公共 event、UI 文案或第二状态 owner。
 
+R7 disabled-cursor follow-up 仍只修同一 definition durability invariant：任何 full save 的最终 `enabled=false` 都必须把 `next_run_at` 归零，暂停期间的窄字段保存不得重新生成 cursor；重新启用 interval/cron 时只从当次 resume time 与当前 schedule 计算未来 occurrence，不复用暂停前或异常注入的旧 cursor。持久化 terminal reason 继续留在后续，不在此处扩 schema、公共 contract 或 UI。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

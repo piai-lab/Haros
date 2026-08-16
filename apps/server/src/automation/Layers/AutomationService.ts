@@ -549,12 +549,6 @@ function mergeDefinitionUpdate(
   jitterContext: AutomationScheduleJitterContext,
 ): AutomationDefinition {
   const schedule = input.schedule ?? current.schedule;
-  const nextRunAt =
-    schedule.type === "manual"
-      ? null
-      : input.schedule
-        ? safeComputeNextRunAt(schedule, now, current.nextRunAt, jitterContext)
-        : (current.nextRunAt ?? safeComputeNextRunAt(schedule, now, null, jitterContext));
   const providerOptions = input.providerOptions ?? current.providerOptions;
   const mode = input.mode ?? current.mode;
   const currentCompletionPolicy = completionPolicyForDefinition(current);
@@ -597,6 +591,15 @@ function mergeDefinitionUpdate(
     requestedEnabled &&
     stopAfterConsecutiveFailures !== null &&
     nextFailureCount >= stopAfterConsecutiveFailures;
+  const finalEnabled = requestedEnabled && !failureThresholdReached;
+  const nextRunAt =
+    !finalEnabled || schedule.type === "manual"
+      ? null
+      : explicitlyEnabled
+        ? safeComputeNextRunAt(schedule, now, null, jitterContext)
+        : input.schedule
+          ? safeComputeNextRunAt(schedule, now, current.nextRunAt, jitterContext)
+          : (current.nextRunAt ?? safeComputeNextRunAt(schedule, now, null, jitterContext));
   const resetExhaustedIteration =
     explicitlyEnabled && maxIterations !== null && current.iterationCount >= maxIterations;
   const nextDefinition: AutomationDefinition = {
@@ -608,8 +611,8 @@ function mergeDefinitionUpdate(
     name: input.name ?? current.name,
     prompt: input.prompt ?? current.prompt,
     schedule,
-    enabled: failureThresholdReached ? false : requestedEnabled,
-    nextRunAt: explicitlyDisabled || failureThresholdReached ? null : nextRunAt,
+    enabled: finalEnabled,
+    nextRunAt,
     modelSelection: input.modelSelection ?? current.modelSelection,
     runtimeMode: input.runtimeMode ?? current.runtimeMode,
     interactionMode: input.interactionMode ?? current.interactionMode,
