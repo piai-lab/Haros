@@ -173,8 +173,15 @@ export const ReserveDeferredAutomationRunInput = Schema.Struct({
   id: AutomationRunId,
   threadId: ThreadId,
   reservedAt: Schema.String,
+  settleDeferredOneShot: Schema.Boolean,
 });
 export type ReserveDeferredAutomationRunInput = typeof ReserveDeferredAutomationRunInput.Type;
+
+export interface ReserveDeferredAutomationRunResult {
+  readonly run: AutomationRun;
+  readonly state: "reserved" | "skipped" | "unchanged";
+  readonly definitionDisabled: boolean;
+}
 
 export const MarkAutomationRunFailedInput = Schema.Struct({
   id: AutomationRunId,
@@ -197,6 +204,12 @@ export const MarkAutomationRunSkippedInput = Schema.Struct({
   result: Schema.optional(AutomationRunResult),
 });
 export type MarkAutomationRunSkippedInput = typeof MarkAutomationRunSkippedInput.Type;
+
+export interface MarkAutomationRunSkippedResult {
+  readonly run: AutomationRun;
+  readonly transitioned: boolean;
+  readonly definitionDisabled: boolean;
+}
 
 export const MarkAutomationRunSucceededInput = Schema.Struct({
   id: AutomationRunId,
@@ -320,6 +333,7 @@ export interface AutomationRepositoryShape {
   readonly saveDefinition: (input: {
     readonly definition: AutomationDefinition;
     readonly expectedDefinitionRevision: number;
+    readonly supersedeDeferredOneShotOwner?: boolean;
   }) => Effect.Effect<Option.Option<AutomationDefinition>, AutomationRepositoryError>;
   readonly resolvePendingProposal: (
     input: ResolvePendingAutomationProposalInput,
@@ -356,6 +370,7 @@ export interface AutomationRepositoryShape {
     definitionMutation: {
       readonly expectedDefinitionRevision: number;
       readonly consumeIteration: boolean;
+      readonly claimDeferredOneShotOwner?: boolean;
       readonly scheduleAdvance?: {
         readonly nextRunAt: string | null;
         readonly disable: boolean;
@@ -394,13 +409,17 @@ export interface AutomationRepositoryShape {
    */
   readonly reserveDeferredRun: (
     input: ReserveDeferredAutomationRunInput,
-  ) => Effect.Effect<boolean, AutomationRepositoryError>;
+  ) => Effect.Effect<ReserveDeferredAutomationRunResult, AutomationRepositoryError>;
+  readonly cleanupUnownedDeferredOneShot: (input: {
+    readonly id: AutomationRunId;
+    readonly finishedAt: string;
+  }) => Effect.Effect<MarkAutomationRunSkippedResult, AutomationRepositoryError>;
   readonly markRunFailed: (
     input: MarkAutomationRunFailedInput,
   ) => Effect.Effect<MarkAutomationRunFailedResult, AutomationRepositoryError>;
   readonly markRunSkipped: (
-    input: MarkAutomationRunSkippedInput,
-  ) => Effect.Effect<AutomationRun, AutomationRepositoryError>;
+    input: MarkAutomationRunSkippedInput & { readonly settleDeferredOneShot?: boolean },
+  ) => Effect.Effect<MarkAutomationRunSkippedResult, AutomationRepositoryError>;
   readonly markRunSucceeded: (
     input: MarkAutomationRunSucceededInput,
   ) => Effect.Effect<MarkAutomationRunSucceededResult, AutomationRepositoryError>;

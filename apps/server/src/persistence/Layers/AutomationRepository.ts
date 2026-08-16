@@ -152,6 +152,12 @@ const decodeRun = Schema.decodeUnknownEffect(AutomationRun);
 const MAX_RUN_LIST_ROWS = 500;
 
 class AutomationRunClaimRejected extends Error {}
+class AutomationDefinitionMutationRejected extends Error {}
+
+const UpdateAutomationDefinitionDbRequest = Schema.Struct({
+  definition: AutomationDefinitionDbRow,
+  supersedeDeferredOneShotOwner: Schema.Boolean,
+});
 
 const ClaimAutomationDefinitionInput = Schema.Struct({
   id: AutomationDefinition.fields.id,
@@ -162,6 +168,7 @@ const ClaimAutomationDefinitionInput = Schema.Struct({
   hasScheduleAdvance: Schema.Boolean,
   nextRunAt: Schema.NullOr(Schema.String),
   disableForSchedule: Schema.Boolean,
+  deferredOneShotOwnerRunId: Schema.NullOr(AutomationRun.fields.id),
 });
 
 const AccountAutomationDefinitionInput = Schema.Struct({
@@ -329,9 +336,13 @@ const makeAutomationRepository = Effect.gen(function* () {
   });
 
   const updateDefinitionRow = SqlSchema.findOneOption({
-    Request: AutomationDefinitionDbRow,
-    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
-    execute: (definition) =>
+    Request: UpdateAutomationDefinitionDbRequest,
+    Result: Schema.Struct({
+      id: AutomationDefinition.fields.id,
+      updatedAt: AutomationDefinition.fields.updatedAt,
+      definitionRevision: AutomationDefinition.fields.definitionRevision,
+    }),
+    execute: ({ definition, supersedeDeferredOneShotOwner }) =>
       sql`
         UPDATE automation_definitions
         SET project_id = ${definition.projectId},
@@ -367,12 +378,21 @@ const makeAutomationRepository = Effect.gen(function* () {
             retry_policy_json = ${definition.retryPolicy},
             misfire_policy = ${definition.misfirePolicy},
             acknowledged_risks_json = ${definition.acknowledgedRisks},
-            updated_at = ${definition.updatedAt},
+            updated_at = CASE
+              WHEN updated_at < ${definition.updatedAt} THEN ${definition.updatedAt}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
             definition_revision = definition_revision + 1,
+            deferred_one_shot_owner_run_id = CASE
+              WHEN ${supersedeDeferredOneShotOwner ? 1 : 0} = 1 THEN NULL
+              ELSE deferred_one_shot_owner_run_id
+            END,
             archived_at = ${definition.archivedAt}
         WHERE automation_id = ${definition.id}
           AND definition_revision = ${definition.definitionRevision}
-        RETURNING automation_id AS "id"
+        RETURNING automation_id AS "id",
+          updated_at AS "updatedAt",
+          definition_revision AS "definitionRevision"
       `,
   });
 
@@ -387,8 +407,12 @@ const makeAutomationRepository = Effect.gen(function* () {
             proposal_state = ${resolution},
             disabled_reason = ${resolution === "accepted" ? null : "user"},
             disabled_at = ${resolution === "accepted" ? null : updatedAt},
-            updated_at = ${updatedAt},
+            updated_at = CASE
+              WHEN updated_at < ${updatedAt} THEN ${updatedAt}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
             definition_revision = definition_revision + 1,
+            deferred_one_shot_owner_run_id = NULL,
             archived_at = ${archivedAt}
         WHERE automation_id = ${id}
           AND proposal_state = 'pending'
@@ -556,6 +580,8 @@ const makeAutomationRepository = Effect.gen(function* () {
             definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
           AND target_thread_id IS NULL
+          AND mode = 'dedicated'
+          AND archived_at IS NULL
           AND definition_revision = ${expectedDefinitionRevision}
         RETURNING automation_id AS "id"
       `,
@@ -576,10 +602,38 @@ const makeAutomationRepository = Effect.gen(function* () {
             next_run_at = NULL,
             disabled_reason = 'user',
             disabled_at = ${archivedAt},
+            deferred_one_shot_owner_run_id = NULL,
             definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
           AND definition_revision = ${expectedDefinitionRevision}
         RETURNING automation_id AS "id"
+      `,
+  });
+
+  const terminalizeDeferredOneShotOwnerRow = SqlSchema.findAll({
+    Request: Schema.Struct({
+      id: AutomationDefinition.fields.id,
+      now: Schema.String,
+    }),
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
+    execute: ({ id, now }) =>
+      sql`
+        UPDATE automation_runs
+        SET status = 'skipped',
+            error = NULL,
+            finished_at = ${now},
+            updated_at = ${now},
+            deferred_until = NULL,
+            lease_expires_at = NULL,
+            claimed_by = NULL
+        WHERE run_id = (
+          SELECT deferred_one_shot_owner_run_id
+          FROM automation_definitions
+          WHERE automation_id = ${id}
+        )
+          AND deferred_until IS NOT NULL
+          AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
+        RETURNING run_id AS "id"
       `,
   });
 
@@ -784,8 +838,13 @@ const makeAutomationRepository = Effect.gen(function* () {
         WHERE runs.status = 'pending'
           AND runs.deferred_until IS NOT NULL
           AND runs.deferred_until <= ${now}
-          AND definitions.enabled = 1
-          AND definitions.archived_at IS NULL
+          AND (
+            (definitions.enabled = 1 AND definitions.archived_at IS NULL)
+            OR (
+              definitions.deferred_one_shot_owner_run_id IS NULL
+              AND json_extract(definitions.schedule_json, '$.type') = 'once'
+            )
+          )
         ORDER BY runs.deferred_until ASC, runs.created_at ASC, runs.run_id ASC
         LIMIT ${limit}
       `,
@@ -956,11 +1015,12 @@ const makeAutomationRepository = Effect.gen(function* () {
       `,
   });
 
-  const cancelRunRow = SqlSchema.void({
+  const cancelRunRow = SqlSchema.findAll({
     Request: Schema.Struct({
       id: GetAutomationRunInput.fields.id,
       now: Schema.String,
     }),
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
     execute: ({ id, now }) =>
       sql`
         UPDATE automation_runs
@@ -972,6 +1032,33 @@ const makeAutomationRepository = Effect.gen(function* () {
             claimed_by = NULL
         WHERE run_id = ${id}
           AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
+        RETURNING run_id AS "id"
+      `,
+  });
+
+  const disableCancelledDeferredOneShotOwnerRow = SqlSchema.findAll({
+    Request: Schema.Struct({
+      id: AutomationRun.fields.id,
+      now: Schema.String,
+    }),
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id, now }) =>
+      sql`
+        UPDATE automation_definitions
+        SET enabled = 0,
+            next_run_at = NULL,
+            disabled_reason = 'user',
+            disabled_at = ${now},
+            deferred_one_shot_owner_run_id = NULL,
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
+        WHERE deferred_one_shot_owner_run_id = ${id}
+          AND json_extract(schedule_json, '$.type') = 'once'
+          AND archived_at IS NULL
+        RETURNING automation_id AS "id"
       `,
   });
 
@@ -1023,6 +1110,110 @@ const makeAutomationRepository = Effect.gen(function* () {
       `,
   });
 
+  const reserveDeferredOneShotOwnerRow = SqlSchema.findAll({
+    Request: ReserveDeferredAutomationRunInput,
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
+    execute: ({ id, threadId, reservedAt }) =>
+      sql`
+        UPDATE automation_runs
+        SET thread_id = ${threadId},
+            deferred_until = NULL,
+            updated_at = ${reservedAt}
+        WHERE run_id = ${id}
+          AND status = 'pending'
+          AND deferred_until IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM automation_definitions definitions
+            WHERE definitions.automation_id = automation_runs.automation_id
+              AND definitions.deferred_one_shot_owner_run_id = automation_runs.run_id
+              AND json_extract(definitions.schedule_json, '$.type') = 'once'
+              AND definitions.enabled = 1
+              AND definitions.archived_at IS NULL
+          )
+          AND NOT EXISTS (
+            SELECT 1
+            FROM automation_runs active_runs
+            WHERE active_runs.thread_id = ${threadId}
+              AND active_runs.run_id <> ${id}
+              AND active_runs.status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
+          )
+        RETURNING run_id AS "id"
+      `,
+  });
+
+  const disableDeferredOneShotOwnerRow = SqlSchema.findAll({
+    Request: Schema.Struct({
+      id: AutomationRun.fields.id,
+      now: Schema.String,
+    }),
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id, now }) =>
+      sql`
+        UPDATE automation_definitions
+        SET enabled = 0,
+            next_run_at = NULL,
+            disabled_reason = 'schedule',
+            disabled_at = ${now},
+            deferred_one_shot_owner_run_id = NULL,
+            updated_at = CASE
+              WHEN updated_at < ${now} THEN ${now}
+              ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
+            END,
+            definition_revision = definition_revision + 1
+        WHERE deferred_one_shot_owner_run_id = ${id}
+          AND json_extract(schedule_json, '$.type') = 'once'
+          AND enabled = 1
+          AND archived_at IS NULL
+        RETURNING automation_id AS "id"
+      `,
+  });
+
+  const clearDeferredOneShotOwnerRow = SqlSchema.findAll({
+    Request: Schema.Struct({
+      id: AutomationDefinition.fields.id,
+    }),
+    Result: Schema.Struct({ id: AutomationDefinition.fields.id }),
+    execute: ({ id }) =>
+      sql`
+        UPDATE automation_definitions
+        SET deferred_one_shot_owner_run_id = NULL
+        WHERE automation_id = ${id}
+          AND deferred_one_shot_owner_run_id IS NOT NULL
+        RETURNING automation_id AS "id"
+      `,
+  });
+
+  const cleanupUnownedDeferredOneShotRow = SqlSchema.findAll({
+    Request: Schema.Struct({
+      id: AutomationRun.fields.id,
+      finishedAt: Schema.String,
+    }),
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
+    execute: ({ id, finishedAt }) =>
+      sql`
+        UPDATE automation_runs
+        SET status = 'skipped',
+            error = NULL,
+            finished_at = ${finishedAt},
+            updated_at = ${finishedAt},
+            deferred_until = NULL,
+            lease_expires_at = NULL,
+            claimed_by = NULL
+        WHERE run_id = ${id}
+          AND status = 'pending'
+          AND deferred_until IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM automation_definitions definitions
+            WHERE definitions.automation_id = automation_runs.automation_id
+              AND definitions.deferred_one_shot_owner_run_id IS NULL
+              AND json_extract(definitions.schedule_json, '$.type') = 'once'
+          )
+        RETURNING run_id AS "id"
+      `,
+  });
+
   const markRunFailedRow = SqlSchema.findAll({
     Request: MarkAutomationRunFailedInput,
     Result: Schema.Struct({ id: AutomationRun.fields.id }),
@@ -1042,8 +1233,9 @@ const makeAutomationRepository = Effect.gen(function* () {
       `,
   });
 
-  const markRunSkippedRow = SqlSchema.void({
+  const markRunSkippedRow = SqlSchema.findAll({
     Request: MarkAutomationRunSkippedInput,
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
     execute: ({ id, reason, finishedAt, result }) =>
       sql`
         UPDATE automation_runs
@@ -1057,6 +1249,56 @@ const makeAutomationRepository = Effect.gen(function* () {
             ${result === undefined ? sql`` : sql`, result_json = ${JSON.stringify(result)}`}
         WHERE run_id = ${id}
           AND status IN ('pending', 'claimed')
+        RETURNING run_id AS "id"
+      `,
+  });
+
+  const markDeferredOneShotOwnerSkippedRow = SqlSchema.findAll({
+    Request: MarkAutomationRunSkippedInput,
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
+    execute: ({ id, reason, finishedAt, result }) =>
+      sql`
+        UPDATE automation_runs
+        SET status = 'skipped',
+            error = ${reason},
+            finished_at = ${finishedAt},
+            updated_at = ${finishedAt},
+            deferred_until = NULL,
+            lease_expires_at = NULL,
+            claimed_by = NULL
+            ${result === undefined ? sql`` : sql`, result_json = ${JSON.stringify(result)}`}
+        WHERE run_id = ${id}
+          AND status IN ('pending', 'claimed')
+          AND deferred_until IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM automation_definitions definitions
+            WHERE definitions.deferred_one_shot_owner_run_id = automation_runs.run_id
+              AND json_extract(definitions.schedule_json, '$.type') = 'once'
+              AND definitions.enabled = 1
+              AND definitions.archived_at IS NULL
+          )
+        RETURNING run_id AS "id"
+      `,
+  });
+
+  const markActiveMisfireRunSkippedRow = SqlSchema.findAll({
+    Request: MarkAutomationRunSkippedInput,
+    Result: Schema.Struct({ id: AutomationRun.fields.id }),
+    execute: ({ id, reason, finishedAt, result }) =>
+      sql`
+        UPDATE automation_runs
+        SET status = 'skipped',
+            error = ${reason},
+            finished_at = ${finishedAt},
+            updated_at = ${finishedAt},
+            deferred_until = NULL,
+            lease_expires_at = NULL,
+            claimed_by = NULL,
+            result_json = ${result === undefined ? null : JSON.stringify(result)}
+        WHERE run_id = ${id}
+          AND status IN ('pending', 'claimed', 'running', 'waiting-for-approval')
+        RETURNING run_id AS "id"
       `,
   });
 
@@ -1447,8 +1689,13 @@ const makeAutomationRepository = Effect.gen(function* () {
             ON definitions.automation_id = runs.automation_id
           WHERE runs.status = 'pending'
             AND runs.deferred_until IS NOT NULL
-            AND definitions.enabled = 1
-            AND definitions.archived_at IS NULL
+            AND (
+              (definitions.enabled = 1 AND definitions.archived_at IS NULL)
+              OR (
+                definitions.deferred_one_shot_owner_run_id IS NULL
+                AND json_extract(definitions.schedule_json, '$.type') = 'once'
+              )
+            )
         ) candidates
         ORDER BY candidates.next_run_at ASC
         LIMIT 1
@@ -1465,6 +1712,7 @@ const makeAutomationRepository = Effect.gen(function* () {
             next_run_at = NULL,
             disabled_reason = ${reason},
             disabled_at = ${now},
+            deferred_one_shot_owner_run_id = NULL,
             updated_at = CASE
               WHEN updated_at < ${now} THEN ${now}
               ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
@@ -1488,6 +1736,7 @@ const makeAutomationRepository = Effect.gen(function* () {
             next_run_at = NULL,
             disabled_reason = ${reason},
             disabled_at = ${now},
+            deferred_one_shot_owner_run_id = NULL,
             updated_at = CASE
               WHEN updated_at < ${now} THEN ${now}
               ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
@@ -1531,6 +1780,7 @@ const makeAutomationRepository = Effect.gen(function* () {
       hasScheduleAdvance,
       nextRunAt,
       disableForSchedule,
+      deferredOneShotOwnerRunId,
     }) =>
       sql`
         UPDATE automation_definitions
@@ -1542,6 +1792,11 @@ const makeAutomationRepository = Effect.gen(function* () {
               THEN 'schedule' ELSE disabled_reason END,
             disabled_at = CASE WHEN ${disableForSchedule ? 1 : 0} = 1
               THEN ${now} ELSE disabled_at END,
+            deferred_one_shot_owner_run_id = CASE
+              WHEN ${disableForSchedule ? 1 : 0} = 1 THEN NULL
+              WHEN ${deferredOneShotOwnerRunId} IS NOT NULL THEN ${deferredOneShotOwnerRunId}
+              ELSE deferred_one_shot_owner_run_id
+            END,
             updated_at = CASE
               WHEN updated_at < ${now} THEN ${now}
               ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
@@ -1551,6 +1806,17 @@ const makeAutomationRepository = Effect.gen(function* () {
           AND archived_at IS NULL
           AND definition_revision = ${expectedDefinitionRevision}
           AND (${requireEnabled ? 1 : 0} = 0 OR enabled = 1)
+          AND (
+            ${deferredOneShotOwnerRunId} IS NULL
+            OR (
+              deferred_one_shot_owner_run_id IS NULL
+              AND json_extract(schedule_json, '$.type') = 'once'
+            )
+          )
+          AND (
+            ${disableForSchedule ? 1 : 0} = 0
+            OR deferred_one_shot_owner_run_id IS NULL
+          )
           AND (
             ${consumeIteration ? 1 : 0} = 0
             OR max_iterations IS NULL
@@ -1574,12 +1840,16 @@ const makeAutomationRepository = Effect.gen(function* () {
             disabled_reason = CASE WHEN ${enabled ? 1 : 0} = 1 THEN NULL
               ELSE disabled_reason END,
             disabled_at = CASE WHEN ${enabled ? 1 : 0} = 1 THEN NULL ELSE disabled_at END,
+            deferred_one_shot_owner_run_id = NULL,
             updated_at = CASE
               WHEN updated_at < ${updatedAt} THEN ${updatedAt}
               ELSE strftime('%Y-%m-%dT%H:%M:%fZ', updated_at, '+0.001 seconds')
             END,
             definition_revision = definition_revision + 1
         WHERE automation_id = ${id}
+          AND archived_at IS NULL
+          AND enabled = 0
+          AND disabled_reason = 'max-iterations'
           AND definition_revision = ${expectedDefinitionRevision}
         RETURNING automation_id AS "id"
       `,
@@ -1678,33 +1948,78 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
   };
 
+  const runDefinitionMutation = <A, B, E, R>(input: {
+    readonly id: AutomationDefinition["id"];
+    readonly now: string;
+    readonly operation: string;
+    readonly supersedeDeferredOneShotOwner: boolean;
+    readonly mutation: Effect.Effect<A, E, R>;
+    readonly select: (result: A) => Option.Option<B>;
+  }) =>
+    sql
+      .withTransaction(
+        Effect.gen(function* () {
+          if (input.supersedeDeferredOneShotOwner) {
+            yield* terminalizeDeferredOneShotOwnerRow({ id: input.id, now: input.now });
+          }
+          const result = yield* input.mutation;
+          return yield* Option.match(input.select(result), {
+            onNone: () => Effect.fail(new AutomationDefinitionMutationRejected()),
+            onSome: (selected) => Effect.succeed(Option.some(selected)),
+          });
+        }),
+      )
+      .pipe(
+        Effect.catch((error) =>
+          error instanceof AutomationDefinitionMutationRejected
+            ? Effect.succeed(Option.none<B>())
+            : Effect.fail(error),
+        ),
+        Effect.mapError(toPersistenceSqlError(input.operation)),
+      );
+
   const saveDefinition: AutomationRepositoryShape["saveDefinition"] = (input) => {
-    return updateDefinitionRow({
-      ...input.definition,
-      definitionRevision: input.expectedDefinitionRevision,
-      enabled: input.definition.enabled ? 1 : 0,
-      stopOnError: input.definition.stopAfterConsecutiveFailures !== null ? 1 : 0,
-      providerOptions: input.definition.providerOptions ?? null,
-      completionPolicy: input.definition.completionPolicy ?? { type: "none" },
-      completionPolicyVersion: input.definition.completionPolicyVersion ?? 1,
-      completionPolicyUpdatedAt:
-        input.definition.completionPolicyUpdatedAt ?? input.definition.createdAt,
-    }).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.saveDefinition:update")),
-      Effect.map(
-        Option.map(() => ({
+    const supersedeDeferredOneShotOwner = input.supersedeDeferredOneShotOwner ?? false;
+    return runDefinitionMutation({
+      id: input.definition.id,
+      now: input.definition.updatedAt,
+      operation: "AutomationRepository.saveDefinition:update",
+      supersedeDeferredOneShotOwner,
+      mutation: updateDefinitionRow({
+        definition: {
           ...input.definition,
-          definitionRevision: input.expectedDefinitionRevision + 1,
+          definitionRevision: input.expectedDefinitionRevision,
+          enabled: input.definition.enabled ? 1 : 0,
+          stopOnError: input.definition.stopAfterConsecutiveFailures !== null ? 1 : 0,
+          providerOptions: input.definition.providerOptions ?? null,
+          completionPolicy: input.definition.completionPolicy ?? { type: "none" },
+          completionPolicyVersion: input.definition.completionPolicyVersion ?? 1,
+          completionPolicyUpdatedAt:
+            input.definition.completionPolicyUpdatedAt ?? input.definition.createdAt,
+        },
+        supersedeDeferredOneShotOwner,
+      }),
+      select: (updated) => updated,
+    }).pipe(
+      Effect.map(
+        Option.map((row) => ({
+          ...input.definition,
+          updatedAt: row.updatedAt,
+          definitionRevision: row.definitionRevision,
         })),
       ),
     );
   };
 
   const resolvePendingProposal: AutomationRepositoryShape["resolvePendingProposal"] = (input) =>
-    resolvePendingProposalRow(input).pipe(
-      Effect.map(Option.isSome),
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.resolvePendingProposal:update")),
-    );
+    runDefinitionMutation({
+      id: input.id,
+      now: input.updatedAt,
+      operation: "AutomationRepository.resolvePendingProposal:update",
+      supersedeDeferredOneShotOwner: true,
+      mutation: resolvePendingProposalRow(input),
+      select: (updated) => updated,
+    }).pipe(Effect.map(Option.isSome));
 
   const getDefinitionById: AutomationRepositoryShape["getDefinitionById"] = (input) =>
     getDefinitionRow(input).pipe(
@@ -1736,10 +2051,14 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
 
   const archiveDefinition: AutomationRepositoryShape["archiveDefinition"] = (input) =>
-    archiveDefinitionRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.archiveDefinition:query")),
-      Effect.map((rows) => rows.length > 0),
-    );
+    runDefinitionMutation({
+      id: input.id,
+      now: input.archivedAt,
+      operation: "AutomationRepository.archiveDefinition:query",
+      supersedeDeferredOneShotOwner: true,
+      mutation: archiveDefinitionRow(input),
+      select: (rows) => Option.fromNullishOr(rows[0]),
+    }).pipe(Effect.map(Option.isSome));
 
   const list: AutomationRepositoryShape["list"] = (input = {}) => {
     const normalized = {
@@ -1855,16 +2174,21 @@ const makeAutomationRepository = Effect.gen(function* () {
                 hasScheduleAdvance: scheduleAdvance !== undefined,
                 nextRunAt: scheduleAdvance?.nextRunAt ?? null,
                 disableForSchedule: scheduleAdvance?.disable ?? false,
+                deferredOneShotOwnerRunId:
+                  inserted && definitionMutation.claimDeferredOneShotOwner ? run.id : null,
               });
               if (updated.length === 0) {
                 return yield* Effect.fail(new AutomationRunClaimRejected());
               }
             }
-            if (inserted && definitionMutation.terminalSkip) {
-              yield* markRunSkippedRow({
+            if (definitionMutation.terminalSkip) {
+              const skippedRows = yield* markActiveMisfireRunSkippedRow({
                 id: run.id,
                 ...definitionMutation.terminalSkip,
               });
+              if (skippedRows.length === 0) {
+                return Option.none<AutomationRun>();
+              }
               const skipped = yield* requireRunById(
                 run.id,
                 "AutomationRepository.createRunAndIncrementDefinition:skipped",
@@ -1959,10 +2283,74 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
 
   const reserveDeferredRun: AutomationRepositoryShape["reserveDeferredRun"] = (input) =>
-    reserveDeferredRunRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.reserveDeferredRun:update")),
-      Effect.map((rows) => rows.length > 0),
-    );
+    sql
+      .withTransaction(
+        Effect.gen(function* () {
+          if (!input.settleDeferredOneShot) {
+            const rows = yield* reserveDeferredRunRow(input);
+            const run = yield* requireRunById(input.id, "AutomationRepository.reserveDeferredRun");
+            return {
+              run,
+              state: rows.length > 0 ? ("reserved" as const) : ("unchanged" as const),
+              definitionDisabled: false,
+            };
+          }
+          const reserved = yield* reserveDeferredOneShotOwnerRow(input);
+          if (reserved.length > 0) {
+            const disabled = yield* disableDeferredOneShotOwnerRow({
+              id: input.id,
+              now: input.reservedAt,
+            });
+            if (disabled.length === 0) {
+              return yield* Effect.fail(new AutomationDefinitionMutationRejected());
+            }
+            const run = yield* requireRunById(
+              input.id,
+              "AutomationRepository.reserveDeferredRun:oneShot",
+            );
+            return { run, state: "reserved" as const, definitionDisabled: true };
+          }
+          const skipped = yield* cleanupUnownedDeferredOneShotRow({
+            id: input.id,
+            finishedAt: input.reservedAt,
+          });
+          const run = yield* requireRunById(
+            input.id,
+            "AutomationRepository.reserveDeferredRun:ownerLost",
+          );
+          return {
+            run,
+            state: skipped.length > 0 ? ("skipped" as const) : ("unchanged" as const),
+            definitionDisabled: false,
+          };
+        }),
+      )
+      .pipe(
+        Effect.mapError(toPersistenceSqlError("AutomationRepository.reserveDeferredRun:update")),
+      );
+
+  const cleanupUnownedDeferredOneShot: AutomationRepositoryShape["cleanupUnownedDeferredOneShot"] =
+    (input) =>
+      sql
+        .withTransaction(
+          Effect.gen(function* () {
+            const rows = yield* cleanupUnownedDeferredOneShotRow(input);
+            const run = yield* requireRunById(
+              input.id,
+              "AutomationRepository.cleanupUnownedDeferredOneShot",
+            );
+            return {
+              run,
+              transitioned: rows.length > 0,
+              definitionDisabled: false,
+            };
+          }),
+        )
+        .pipe(
+          Effect.mapError(
+            toPersistenceSqlError("AutomationRepository.cleanupUnownedDeferredOneShot:update"),
+          ),
+        );
 
   const setRunDeferred: AutomationRepositoryShape["setRunDeferred"] = (input) =>
     setRunDeferredRow(input).pipe(
@@ -1988,6 +2376,13 @@ const makeAutomationRepository = Effect.gen(function* () {
             id: run.automationId,
             now: input.finishedAt,
           });
+          if (Option.isSome(accounting) && accounting.value.autoDisabled === 1) {
+            yield* terminalizeDeferredOneShotOwnerRow({
+              id: run.automationId,
+              now: input.finishedAt,
+            });
+            yield* clearDeferredOneShotOwnerRow({ id: run.automationId });
+          }
           return Option.match(accounting, {
             onNone: () => ({
               run,
@@ -2007,10 +2402,49 @@ const makeAutomationRepository = Effect.gen(function* () {
       .pipe(Effect.mapError(toPersistenceSqlError("AutomationRepository.markRunFailed:update")));
 
   const markRunSkipped: AutomationRepositoryShape["markRunSkipped"] = (input) =>
-    markRunSkippedRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.markRunSkipped:update")),
-      Effect.flatMap(() => requireRunById(input.id, "AutomationRepository.markRunSkipped")),
-    );
+    sql
+      .withTransaction(
+        Effect.gen(function* () {
+          if (input.settleDeferredOneShot) {
+            const rows = yield* markDeferredOneShotOwnerSkippedRow(input);
+            if (rows.length > 0) {
+              const disabled = yield* disableDeferredOneShotOwnerRow({
+                id: input.id,
+                now: input.finishedAt,
+              });
+              if (disabled.length === 0) {
+                return yield* Effect.fail(new AutomationDefinitionMutationRejected());
+              }
+              const run = yield* requireRunById(
+                input.id,
+                "AutomationRepository.markRunSkipped:oneShot",
+              );
+              return { run, transitioned: true, definitionDisabled: true };
+            }
+            const cleanupRows = yield* cleanupUnownedDeferredOneShotRow({
+              id: input.id,
+              finishedAt: input.finishedAt,
+            });
+            const run = yield* requireRunById(
+              input.id,
+              "AutomationRepository.markRunSkipped:ownerLost",
+            );
+            return {
+              run,
+              transitioned: cleanupRows.length > 0,
+              definitionDisabled: false,
+            };
+          }
+          const rows = yield* markRunSkippedRow(input);
+          const run = yield* requireRunById(input.id, "AutomationRepository.markRunSkipped");
+          return {
+            run,
+            transitioned: rows.length > 0,
+            definitionDisabled: false,
+          };
+        }),
+      )
+      .pipe(Effect.mapError(toPersistenceSqlError("AutomationRepository.markRunSkipped:update")));
 
   const markRunSucceeded: AutomationRepositoryShape["markRunSucceeded"] = (input) =>
     sql
@@ -2063,10 +2497,17 @@ const makeAutomationRepository = Effect.gen(function* () {
     );
 
   const cancelRun: AutomationRepositoryShape["cancelRun"] = ({ runId, now }) =>
-    cancelRunRow({ id: runId, now }).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.cancelRun:update")),
-      Effect.flatMap(() => requireRunById(runId, "AutomationRepository.cancelRun")),
-    );
+    sql
+      .withTransaction(
+        Effect.gen(function* () {
+          const rows = yield* cancelRunRow({ id: runId, now });
+          if (rows.length > 0) {
+            yield* disableCancelledDeferredOneShotOwnerRow({ id: runId, now });
+          }
+          return yield* requireRunById(runId, "AutomationRepository.cancelRun");
+        }),
+      )
+      .pipe(Effect.mapError(toPersistenceSqlError("AutomationRepository.cancelRun:update")));
 
   const getRunByThreadId: AutomationRepositoryShape["getRunByThreadId"] = (input) =>
     getRunRowByThread(input).pipe(
@@ -2212,20 +2653,26 @@ const makeAutomationRepository = Effect.gen(function* () {
   };
 
   const disableDefinition: AutomationRepositoryShape["disableDefinition"] = (input) =>
-    disableDefinitionRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.disableDefinition:update")),
-      Effect.map((rows) => rows.length > 0),
-    );
+    runDefinitionMutation({
+      id: input.id,
+      now: input.now,
+      operation: "AutomationRepository.disableDefinition:update",
+      supersedeDeferredOneShotOwner: true,
+      mutation: disableDefinitionRow(input),
+      select: (rows) => Option.fromNullishOr(rows[0]),
+    }).pipe(Effect.map(Option.isSome));
 
   const disableDefinitionIfUnchanged: AutomationRepositoryShape["disableDefinitionIfUnchanged"] = (
     input,
   ) =>
-    disableDefinitionIfUnchangedRow(input).pipe(
-      Effect.mapError(
-        toPersistenceSqlError("AutomationRepository.disableDefinitionIfUnchanged:update"),
-      ),
-      Effect.map((rows) => rows.length > 0),
-    );
+    runDefinitionMutation({
+      id: input.id,
+      now: input.now,
+      operation: "AutomationRepository.disableDefinitionIfUnchanged:update",
+      supersedeDeferredOneShotOwner: true,
+      mutation: disableDefinitionIfUnchangedRow(input),
+      select: (rows) => Option.fromNullishOr(rows[0]),
+    }).pipe(Effect.map(Option.isSome));
 
   const incrementDefinitionIterationCount: AutomationRepositoryShape["incrementDefinitionIterationCount"] =
     (input) =>
@@ -2237,10 +2684,14 @@ const makeAutomationRepository = Effect.gen(function* () {
       );
 
   const restartDefinitionLoop: AutomationRepositoryShape["restartDefinitionLoop"] = (input) =>
-    restartDefinitionLoopRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("AutomationRepository.restartDefinitionLoop:update")),
-      Effect.map((rows) => rows.length > 0),
-    );
+    runDefinitionMutation({
+      id: input.id,
+      now: input.updatedAt,
+      operation: "AutomationRepository.restartDefinitionLoop:update",
+      supersedeDeferredOneShotOwner: true,
+      mutation: restartDefinitionLoopRow(input),
+      select: (rows) => Option.fromNullishOr(rows[0]),
+    }).pipe(Effect.map(Option.isSome));
 
   const tryAcquireSchedulerLease: AutomationRepositoryShape["tryAcquireSchedulerLease"] = (input) =>
     acquireLease(input).pipe(
@@ -2268,6 +2719,7 @@ const makeAutomationRepository = Effect.gen(function* () {
     setRunDeferred,
     markRunStarted,
     reserveDeferredRun,
+    cleanupUnownedDeferredOneShot,
     markRunFailed,
     markRunSkipped,
     markRunSucceeded,

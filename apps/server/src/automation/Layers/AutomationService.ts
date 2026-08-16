@@ -153,6 +153,39 @@ function touchedDefinitionFieldsUnchanged(
   return true;
 }
 
+const DEFERRED_ONE_SHOT_SUPERSESSION_FIELDS = [
+  "projectId",
+  "sourceThreadId",
+  "prompt",
+  "schedule",
+  "enabled",
+  "modelSelection",
+  "providerOptions",
+  "runtimeMode",
+  "interactionMode",
+  "worktreeMode",
+  "mode",
+  "targetThreadId",
+  "heartbeatCooldownSeconds",
+  "maxIterations",
+  "stopAfterConsecutiveFailures",
+  "completionPolicy",
+  "minimumIntervalSeconds",
+  "maxRuntimeSeconds",
+  "retryPolicy",
+  "misfirePolicy",
+  "acknowledgedRisks",
+] as const satisfies ReadonlyArray<keyof AutomationDefinition>;
+
+function updateSupersedesDeferredOneShotOwner(
+  current: AutomationDefinition,
+  updated: AutomationDefinition,
+): boolean {
+  return DEFERRED_ONE_SHOT_SUPERSESSION_FIELDS.some(
+    (field) => !sameDefinitionField(current[field], updated[field]),
+  );
+}
+
 function makeAutomationId(): AutomationId {
   return AutomationId.makeUnsafe(`automation:${randomUUID()}`);
 }
@@ -552,8 +585,8 @@ function mergeDefinitionUpdate(
     ...(input.stopOnError !== undefined ? { stopOnError: input.stopOnError } : {}),
     current: current.stopAfterConsecutiveFailures,
   });
-  const explicitlyEnabled = input.enabled === true;
-  const explicitlyDisabled = input.enabled === false;
+  const explicitlyEnabled = !current.enabled && input.enabled === true;
+  const explicitlyDisabled = current.enabled && input.enabled === false;
   const resetExhaustedIteration =
     explicitlyEnabled && maxIterations !== null && current.iterationCount >= maxIterations;
   const nextDefinition: AutomationDefinition = {
@@ -1241,17 +1274,32 @@ export const AutomationServiceLive = Layer.effect(
         // Claim the thread before the turn starts, so a run dispatched while this one is
         // still working already sees the thread and continues it instead of opening another.
         if (automationOwnsItsThread(definition.mode)) {
-          const currentDefinition = yield* requireDefinition(definition.id);
           const attached = yield* automationRepository
             .attachDefinitionThread({
               id: definition.id,
               threadId: plannedThreadId,
               updatedAt: now,
-              expectedDefinitionRevision: currentDefinition.definitionRevision,
+              expectedDefinitionRevision: definition.definitionRevision + 1,
             })
             .pipe(Effect.mapError(toServiceError("Failed to attach the automation thread.")));
           if (attached) {
             yield* publishDefinition(definition.id);
+          } else {
+            return yield* cleanupUnattachedWorktree({
+              definition,
+              run,
+              project,
+              environment,
+              reason: "dedicated-thread-owner-changed",
+            }).pipe(
+              Effect.flatMap(() =>
+                Effect.fail(
+                  new AutomationServiceError({
+                    message: "Automation ownership changed before its dedicated thread attached.",
+                  }),
+                ),
+              ),
+            );
           }
         }
 
@@ -1434,6 +1482,10 @@ export const AutomationServiceLive = Layer.effect(
           {
             expectedDefinitionRevision: definition.definitionRevision,
             consumeIteration: true,
+            claimDeferredOneShotOwner:
+              trigger.type === "scheduled" &&
+              definition.schedule.type === "once" &&
+              deferredUntil != null,
             ...(scheduleAdvance ? { scheduleAdvance } : {}),
           },
         );
@@ -2600,6 +2652,7 @@ export const AutomationServiceLive = Layer.effect(
             .saveDefinition({
               definition: updated,
               expectedDefinitionRevision: current.definitionRevision,
+              supersedeDeferredOneShotOwner: updateSupersedesDeferredOneShotOwner(current, updated),
             })
             .pipe(Effect.mapError(toServiceError("Failed to update automation.")));
           if (Option.isSome(saved)) {
@@ -2671,13 +2724,25 @@ export const AutomationServiceLive = Layer.effect(
             }),
           );
         }
-        yield* publishProposalActivity(definition, input.resolution, now);
+        const persisted = yield* automationRepository.getDefinitionById({ id: definition.id }).pipe(
+          Effect.mapError(toServiceError("Failed to load resolved automation proposal.")),
+          Effect.flatMap(
+            Option.match({
+              onNone: () =>
+                Effect.fail(
+                  new AutomationServiceError({ message: "Automation proposal no longer exists." }),
+                ),
+              onSome: Effect.succeed,
+            }),
+          ),
+        );
+        yield* publishProposalActivity(persisted, input.resolution, now);
         yield* publish(
           accepted
-            ? { type: "definition-upserted", definition }
-            : { type: "definition-deleted", automationId: definition.id },
+            ? { type: "definition-upserted", definition: persisted }
+            : { type: "definition-deleted", automationId: persisted.id },
         );
-        return { definition };
+        return { definition: persisted };
       });
 
     const interruptRunBestEffort = (run: AutomationRun, now: string) => {
@@ -2714,7 +2779,7 @@ export const AutomationServiceLive = Layer.effect(
           yield* publish({ type: "run-upserted", run });
           return run;
         }
-        return yield* publishRunResult(
+        const cancelled = yield* publishRunResult(
           run,
           "cancelled",
           now,
@@ -2722,6 +2787,8 @@ export const AutomationServiceLive = Layer.effect(
           false,
           true,
         );
+        yield* publishDefinition(run.automationId);
+        return cancelled;
       });
 
     const deleteAutomation: AutomationServiceShape["delete"] = (input) =>
@@ -2849,6 +2916,9 @@ export const AutomationServiceLive = Layer.effect(
     const restartExhaustedBoundedDefinition = (definition: AutomationDefinition, now: string) =>
       Effect.gen(function* () {
         if (
+          definition.archivedAt !== null ||
+          definition.enabled ||
+          definition.disabledReason !== "max-iterations" ||
           definition.maxIterations === null ||
           definition.iterationCount < definition.maxIterations
         ) {
@@ -2912,6 +2982,13 @@ export const AutomationServiceLive = Layer.effect(
     const runNow: AutomationServiceShape["runNow"] = (input) =>
       Effect.gen(function* () {
         const definition = yield* requireDefinition(input.automationId);
+        if (definition.archivedAt !== null || definition.disabledReason === "failures") {
+          return yield* Effect.fail(
+            new AutomationServiceError({
+              message: "This automation is disabled and cannot be run manually.",
+            }),
+          );
+        }
         if (definition.proposalState === "pending") {
           return yield* Effect.fail(
             new AutomationServiceError({
@@ -2999,42 +3076,32 @@ export const AutomationServiceLive = Layer.effect(
         Effect.map((run) => ({ run })),
       );
 
-    const markScheduledRunSkipped = (run: AutomationRun, reason: string, now: string) =>
+    const markScheduledRunSkipped = (
+      run: AutomationRun,
+      reason: string,
+      now: string,
+      settleDeferredOneShot = false,
+    ) =>
       Effect.gen(function* () {
-        const skipped = yield* automationRepository
+        const skippedResult = yield* automationRepository
           .markRunSkipped({
             id: run.id,
             reason,
             finishedAt: now,
             result: resultForRunStatus("skipped", { summary: reason, now })!,
+            settleDeferredOneShot,
           })
           .pipe(Effect.mapError(toServiceError("Failed to skip automation run.")));
+        const skipped = skippedResult.run;
         yield* publish({ type: "run-upserted", run: skipped });
-        if (skipped.status === "skipped" && skipped.finishedAt === now) {
+        if (skippedResult.definitionDisabled) {
+          yield* publishDefinition(skipped.automationId);
+        }
+        if (skippedResult.transitioned) {
           yield* maybeStopLoop(skipped, "skipped", now);
         }
         return skipped;
       });
-
-    const completeDeferredOneShotDefinition = (definition: AutomationDefinition, now: string) =>
-      definition.schedule.type !== "once"
-        ? Effect.void
-        : Effect.gen(function* () {
-            const current = yield* requireDefinition(definition.id);
-            const disabled = yield* automationRepository
-              .disableDefinition({
-                id: current.id,
-                now,
-                reason: "schedule",
-                expectedDefinitionRevision: current.definitionRevision,
-              })
-              .pipe(
-                Effect.mapError(toServiceError("Failed to complete deferred one-shot automation.")),
-              );
-            if (disabled) {
-              yield* publishDefinition(definition.id);
-            }
-          });
 
     // Run one due definition: enforce the iteration cap, apply misfire policy, skip when a
     // prior heartbeat run is still in flight, then dispatch. The run row is durable before
@@ -3104,7 +3171,7 @@ export const AutomationServiceLive = Layer.effect(
                 // or terminally skipped.
                 disable: false,
               },
-              deferState.expired ? null : deferState.deferredUntil,
+              deferState.deferredUntil,
               null,
             );
             yield* publishDefinition(definition.id);
@@ -3116,8 +3183,8 @@ export const AutomationServiceLive = Layer.effect(
                 deferredRun.value,
                 "Target thread has a pending automation stop evaluation.",
                 now,
+                definition.schedule.type === "once",
               );
-              yield* completeDeferredOneShotDefinition(definition, now);
               return Option.none<AutomationRunNowResult>();
             }
             return Option.some({ run: deferredRun.value });
@@ -3133,7 +3200,7 @@ export const AutomationServiceLive = Layer.effect(
                 nextRunAt,
                 disable: false,
               },
-              deferState.expired ? null : deferState.deferredUntil,
+              deferState.deferredUntil,
               null,
             );
             yield* publishDefinition(definition.id);
@@ -3145,8 +3212,8 @@ export const AutomationServiceLive = Layer.effect(
                 deferredRun.value,
                 "Target thread has an active automation run.",
                 now,
+                definition.schedule.type === "once",
               );
-              yield* completeDeferredOneShotDefinition(definition, now);
               return Option.none<AutomationRunNowResult>();
             }
             return Option.some({ run: deferredRun.value });
@@ -3163,15 +3230,19 @@ export const AutomationServiceLive = Layer.effect(
                 nextRunAt,
                 disable: false,
               },
-              deferState.expired ? null : deferState.deferredUntil,
+              deferState.deferredUntil,
             );
             yield* publishDefinition(definition.id);
             if (Option.isNone(deferredRun)) {
               return Option.none<AutomationRunNowResult>();
             }
             if (deferState.expired) {
-              yield* markScheduledRunSkipped(deferredRun.value, eligibility.reason, now);
-              yield* completeDeferredOneShotDefinition(definition, now);
+              yield* markScheduledRunSkipped(
+                deferredRun.value,
+                eligibility.reason,
+                now,
+                definition.schedule.type === "once",
+              );
               return Option.none<AutomationRunNowResult>();
             }
             return Option.some({ run: deferredRun.value });
@@ -3216,6 +3287,14 @@ export const AutomationServiceLive = Layer.effect(
 
     const retryDeferredRun = (run: AutomationRun, now: string) =>
       Effect.gen(function* () {
+        const legacyCleanup = yield* automationRepository
+          .cleanupUnownedDeferredOneShot({ id: run.id, finishedAt: now })
+          .pipe(Effect.mapError(toServiceError("Failed to clean up deferred automation run.")));
+        if (legacyCleanup.transitioned) {
+          yield* publish({ type: "run-upserted", run: legacyCleanup.run });
+          yield* maybeStopLoop(legacyCleanup.run, "skipped", now);
+          return Option.none<AutomationRunNowResult>();
+        }
         const definition = yield* requireDefinition(run.automationId);
         if (!definition.enabled) {
           return Option.none<AutomationRunNowResult>();
@@ -3246,8 +3325,12 @@ export const AutomationServiceLive = Layer.effect(
               : yield* continuationEligibility(definition, now);
         if (!eligibility.eligible) {
           if (deferState.expired) {
-            yield* markScheduledRunSkipped(run, eligibility.reason, now);
-            yield* completeDeferredOneShotDefinition(definition, now);
+            yield* markScheduledRunSkipped(
+              run,
+              eligibility.reason,
+              now,
+              definition.schedule.type === "once",
+            );
             return Option.none<AutomationRunNowResult>();
           }
           const deferred = yield* automationRepository
@@ -3261,8 +3344,12 @@ export const AutomationServiceLive = Layer.effect(
           return Option.none<AutomationRunNowResult>();
         }
         if (!continuationThreadId) {
-          yield* markScheduledRunSkipped(run, "Heartbeat target thread was not found.", now);
-          yield* completeDeferredOneShotDefinition(definition, now);
+          yield* markScheduledRunSkipped(
+            run,
+            "Heartbeat target thread was not found.",
+            now,
+            definition.schedule.type === "once",
+          );
           return Option.none<AutomationRunNowResult>();
         }
         const reserved = yield* automationRepository
@@ -3270,9 +3357,21 @@ export const AutomationServiceLive = Layer.effect(
             id: run.id,
             threadId: continuationThreadId,
             reservedAt: now,
+            settleDeferredOneShot: definition.schedule.type === "once",
           })
           .pipe(Effect.mapError(toServiceError("Failed to reserve deferred automation run.")));
-        if (!reserved) {
+        if (reserved.definitionDisabled) {
+          yield* publishDefinition(definition.id);
+        }
+        if (reserved.state === "skipped") {
+          yield* publish({ type: "run-upserted", run: reserved.run });
+          yield* maybeStopLoop(reserved.run, "skipped", now);
+          return Option.none<AutomationRunNowResult>();
+        }
+        if (reserved.state === "unchanged") {
+          if (definition.schedule.type === "once") {
+            return Option.none<AutomationRunNowResult>();
+          }
           const deferred = yield* automationRepository
             .setRunDeferred({
               id: run.id,
@@ -3283,8 +3382,7 @@ export const AutomationServiceLive = Layer.effect(
           yield* publish({ type: "run-upserted", run: deferred });
           return Option.none<AutomationRunNowResult>();
         }
-        yield* completeDeferredOneShotDefinition(definition, now);
-        const result = yield* dispatchRun(definition, run, now).pipe(
+        const result = yield* dispatchRun(definition, reserved.run, now).pipe(
           Effect.catch(() =>
             automationRepository.getRunById({ id: run.id }).pipe(
               Effect.mapError(toServiceError("Failed to load automation run.")),

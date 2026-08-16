@@ -15,7 +15,8 @@ import {
   type AutomationRun,
   type ProviderStartOptions,
 } from "@omnimind/contracts";
-import { describe, expect, it } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   applyScheduleToForm,
@@ -46,6 +47,7 @@ import {
   runStatusLabel,
   scheduleKindFromSchedule,
   scheduleFromForm,
+  settleAutomationUpdateFailure,
   updateWeeklyScheduleDay,
   updateWeeklyScheduleTime,
   updateInputFromForm,
@@ -1010,5 +1012,69 @@ describe("automation shared route helpers", () => {
     );
 
     expect(updated.memories).toEqual([memory]);
+  });
+
+  it("settles conflict invalidation without rolling back a newer stream revision", async () => {
+    const queryClient = new QueryClient();
+    const previous = { definitions: [baseDefinition], runs: [], memories: [] };
+    const optimistic = {
+      ...previous,
+      definitions: [{ ...baseDefinition, name: "Optimistic" }],
+    };
+    const newer = {
+      ...previous,
+      definitions: [{ ...baseDefinition, name: "Server revision", definitionRevision: 2 }],
+    };
+    queryClient.setQueryData(["automations"], previous);
+    const previousSnapshot = queryClient.getQueryData<typeof previous>(["automations"])!;
+    const optimisticSnapshot = queryClient.setQueryData<typeof previous>(
+      ["automations"],
+      optimistic,
+    )!;
+    const newerSnapshot = queryClient.setQueryData<typeof previous>(["automations"], newer)!;
+    let releaseInvalidation!: () => void;
+    const invalidated = new Promise<void>((resolve) => {
+      releaseInvalidation = resolve;
+    });
+    vi.spyOn(queryClient, "invalidateQueries").mockImplementation(() => invalidated);
+
+    let settled = false;
+    const settlement = settleAutomationUpdateFailure(queryClient, {
+      previous: previousSnapshot,
+      optimistic: optimisticSnapshot,
+      conflict: true,
+    }).then(() => {
+      settled = true;
+    });
+    await Promise.resolve();
+    expect(settled).toBe(false);
+    expect(queryClient.getQueryData(["automations"])).toBe(newerSnapshot);
+
+    releaseInvalidation();
+    await settlement;
+    expect(settled).toBe(true);
+  });
+
+  it("rolls back only the still-current optimistic automation snapshot", async () => {
+    const queryClient = new QueryClient();
+    const previous = { definitions: [baseDefinition], runs: [], memories: [] };
+    const optimistic = {
+      ...previous,
+      definitions: [{ ...baseDefinition, name: "Optimistic" }],
+    };
+    queryClient.setQueryData(["automations"], previous);
+    const previousSnapshot = queryClient.getQueryData<typeof previous>(["automations"])!;
+    const optimisticSnapshot = queryClient.setQueryData<typeof previous>(
+      ["automations"],
+      optimistic,
+    )!;
+
+    await settleAutomationUpdateFailure(queryClient, {
+      previous: previousSnapshot,
+      optimistic: optimisticSnapshot,
+      conflict: false,
+    });
+
+    expect(queryClient.getQueryData(["automations"])).toStrictEqual(previousSnapshot);
   });
 });

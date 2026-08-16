@@ -31,11 +31,13 @@ export function AutomationProposalActions({
       void queryClient.invalidateQueries({ queryKey: ["automations"] });
       void queryClient.invalidateQueries({ queryKey: automationProposalListQueryKey });
     },
-    onError: (error) => {
+    onError: async (error) => {
       const isConflict = "code" in error && error.code === "AUTOMATION_DEFINITION_CONFLICT";
       if (isConflict) {
-        void queryClient.invalidateQueries({ queryKey: ["automations"] });
-        void queryClient.invalidateQueries({ queryKey: automationProposalListQueryKey });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["automations"] }),
+          queryClient.invalidateQueries({ queryKey: automationProposalListQueryKey }),
+        ]);
       }
       toastManager.add({
         type: "error",

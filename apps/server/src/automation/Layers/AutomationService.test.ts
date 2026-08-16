@@ -18,7 +18,7 @@ import {
   type OrchestrationThreadShell,
 } from "@omnimind/contracts";
 import { isTemporaryWorktreeBranch } from "@omnimind/shared/git";
-import { Duration, Effect, Layer, Option, Stream } from "effect";
+import { Deferred, Duration, Effect, Fiber, Layer, Option, Stream } from "effect";
 import { TestClock } from "effect/testing";
 
 import { GitCore, type GitCoreShape } from "../../git/Services/GitCore.ts";
@@ -345,6 +345,7 @@ const disableDefinitionAtCurrentRevision = (
   repository: AutomationRepositoryShape,
   id: AutomationId,
   now: string,
+  reason: "user" | "max-iterations" = "user",
 ) =>
   Effect.gen(function* () {
     const definition = yield* repository.getDefinitionById({ id });
@@ -352,7 +353,7 @@ const disableDefinitionAtCurrentRevision = (
     return yield* repository.disableDefinition({
       id,
       now,
-      reason: "user",
+      reason,
       expectedDefinitionRevision: definition.value.definitionRevision,
     });
   });
@@ -1566,19 +1567,18 @@ layer("AutomationService", (it) => {
         limit: 10,
         leaseOwnerId: "test-scheduler",
       });
-      const manual = yield* service.runNow({ automationId });
+      const manualFailure = yield* service.runNow({ automationId }).pipe(Effect.flip);
       const listed = yield* service.list({ projectId });
       const definition = listed.definitions.find((entry) => entry.id === automationId);
 
       assert.strictEqual(scheduled.length, 1);
-      assert.strictEqual(manual.run.status, "running");
-      assert.strictEqual(manual.run.trigger.type, "manual");
+      assert.match(manualFailure.message, /capacity|iteration limit/i);
       assert.strictEqual(definition?.enabled, false);
       assert.strictEqual(definition?.nextRunAt, null);
       assert.strictEqual(definition?.iterationCount, 1);
       assert.strictEqual(
         listed.runs.filter((entry) => entry.automationId === automationId).length,
-        2,
+        1,
       );
     }),
   );
@@ -3982,6 +3982,7 @@ layer("AutomationService", (it) => {
         repository,
         automationId,
         "2026-06-16T10:01:00.000Z",
+        "max-iterations",
       );
       threadShell = Option.some(makeThreadShell({ id: targetThreadId }));
 
@@ -4042,15 +4043,14 @@ layer("AutomationService", (it) => {
         "2026-06-16T10:01:00.000Z",
       );
 
-      const result = yield* service.runNow({ automationId });
+      const failure = yield* service.runNow({ automationId }).pipe(Effect.flip);
       const listed = yield* service.list({ projectId });
       const definition = listed.definitions.find((entry) => entry.id === automationId);
 
-      assert.strictEqual(result.run.status, "running");
-      assert.strictEqual(result.run.trigger.type, "manual");
+      assert.match(failure.message, /capacity|iteration limit/i);
       assert.strictEqual(definition?.enabled, false);
       assert.strictEqual(definition?.nextRunAt, null);
-      assert.strictEqual(definition?.iterationCount, 1);
+      assert.strictEqual(definition?.iterationCount, 25);
       assert.strictEqual(definition?.maxIterations, 25);
     }),
   );
@@ -4256,6 +4256,82 @@ layer("AutomationService", (it) => {
         (definition) => definition.id === automationId,
       );
       assert.strictEqual(completedDefinition?.enabled, false);
+
+      const expiredId = AutomationId.makeUnsafe("automation-once-deferred-expired");
+      threadShell = Option.some(
+        makeThreadShell({
+          id: targetThreadId,
+          latestTurn: makeLatestTurn("running", TurnId.makeUnsafe("turn-once-expired-blocking")),
+        }),
+      );
+      yield* repository.createDefinition({
+        id: expiredId,
+        input: {
+          ...createInput("local"),
+          schedule: { type: "once", runAt: "2026-06-16T11:00:00.000Z" },
+          mode: "heartbeat",
+          targetThreadId,
+        },
+        now: "2026-06-16T10:59:00.000Z",
+      });
+      const expiredInitial = yield* service.runDueOnce({
+        now: "2026-06-16T11:00:00.000Z",
+        limit: 10,
+        leaseOwnerId: "test-scheduler",
+      });
+      const expiringRun = expiredInitial.find((entry) => entry.run.automationId === expiredId)!.run;
+      yield* service.runDueOnce({
+        now: "2026-06-16T11:10:00.000Z",
+        limit: 10,
+        leaseOwnerId: "test-scheduler",
+      });
+      const expiredState = yield* service.list({ projectId });
+      assert.strictEqual(
+        expiredState.runs.find((run) => run.id === expiringRun.id)?.status,
+        "skipped",
+      );
+      const expiredDefinition = expiredState.definitions.find(
+        (definition) => definition.id === expiredId,
+      );
+      assert.isFalse(expiredDefinition?.enabled ?? true);
+      assert.strictEqual(expiredDefinition?.disabledReason, "schedule");
+
+      const cancelledId = AutomationId.makeUnsafe("automation-once-deferred-cancelled");
+      threadShell = Option.some(
+        makeThreadShell({
+          id: targetThreadId,
+          latestTurn: makeLatestTurn("running", TurnId.makeUnsafe("turn-once-cancel-blocking")),
+        }),
+      );
+      yield* repository.createDefinition({
+        id: cancelledId,
+        input: {
+          ...createInput("local"),
+          schedule: { type: "once", runAt: "2026-06-16T12:00:00.000Z" },
+          mode: "heartbeat",
+          targetThreadId,
+        },
+        now: "2026-06-16T11:59:00.000Z",
+      });
+      const cancelledInitial = yield* service.runDueOnce({
+        now: "2026-06-16T12:00:00.000Z",
+        limit: 10,
+        leaseOwnerId: "test-scheduler",
+      });
+      const cancellable = cancelledInitial.find(
+        (entry) => entry.run.automationId === cancelledId,
+      )!.run;
+      yield* service.cancelRun({ runId: cancellable.id });
+      const cancelledState = yield* service.list({ projectId });
+      assert.strictEqual(
+        cancelledState.runs.find((run) => run.id === cancellable.id)?.status,
+        "cancelled",
+      );
+      const cancelledDefinition = cancelledState.definitions.find(
+        (definition) => definition.id === cancelledId,
+      );
+      assert.isFalse(cancelledDefinition?.enabled ?? true);
+      assert.strictEqual(cancelledDefinition?.disabledReason, "user");
     }),
   );
 
@@ -5315,16 +5391,33 @@ layer("AutomationService", (it) => {
         assert.strictEqual(afterFailure.consecutiveFailureCount, 1);
         assert.isTrue(afterFailure.enabled);
 
-        const paused = yield* service.update({
+        const alreadyEnabled = yield* service.update({
           id: created.id,
           expectedDefinitionRevision: afterFailure.definitionRevision,
+          enabled: true,
+        });
+        assert.strictEqual(alreadyEnabled.consecutiveFailureCount, 1);
+        assert.strictEqual(alreadyEnabled.disabledReason, null);
+
+        const paused = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: alreadyEnabled.definitionRevision,
           enabled: false,
         });
         assert.strictEqual(paused.disabledReason, "user");
         assert.isNotNull(paused.disabledAt);
-        const resumed = yield* service.update({
+        const stillPaused = yield* service.update({
           id: created.id,
           expectedDefinitionRevision: paused.definitionRevision,
+          enabled: false,
+          name: "Paused rename",
+        });
+        assert.strictEqual(stillPaused.disabledReason, "user");
+        assert.strictEqual(stillPaused.disabledAt, paused.disabledAt);
+        assert.strictEqual(stillPaused.consecutiveFailureCount, 1);
+        const resumed = yield* service.update({
+          id: created.id,
+          expectedDefinitionRevision: stillPaused.definitionRevision,
           enabled: true,
         });
         assert.strictEqual(resumed.stopAfterConsecutiveFailures, 3);
@@ -5367,6 +5460,24 @@ layer("AutomationService", (it) => {
         { expectedDefinitionRevision: created.definitionRevision, consumeIteration: true },
       );
       yield* repository.markRunFailed({ id: runId, error: "boom", finishedAt: now });
+      const beforeRunNow = (yield* service.list({ projectId })).definitions.find(
+        (definition) => definition.id === created.id,
+      )!;
+      const runCountBefore = (yield* service.list({ projectId })).runs.filter(
+        (run) => run.automationId === created.id,
+      ).length;
+      const runNowFailure = yield* service.runNow({ automationId: created.id }).pipe(Effect.flip);
+      const afterRunNow = (yield* service.list({ projectId })).definitions.find(
+        (definition) => definition.id === created.id,
+      )!;
+      assert.match(runNowFailure.message, /disabled/i);
+      assert.strictEqual(afterRunNow.definitionRevision, beforeRunNow.definitionRevision);
+      assert.strictEqual(afterRunNow.iterationCount, beforeRunNow.iterationCount);
+      assert.strictEqual(
+        (yield* service.list({ projectId })).runs.filter((run) => run.automationId === created.id)
+          .length,
+        runCountBefore,
+      );
 
       const conflict = yield* service
         .update({
@@ -5388,6 +5499,188 @@ layer("AutomationService", (it) => {
       assert.isFalse(current.enabled);
       assert.strictEqual(current.disabledReason, "failures");
       assert.strictEqual(current.consecutiveFailureCount, 1);
+    }),
+  );
+
+  it.effect("preserves name-only deferred ownership and supersedes execution fields", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+      const makeOwnedDeferredOneShot = (suffix: string) =>
+        Effect.gen(function* () {
+          const automationId = AutomationId.makeUnsafe(`automation-owned-once-${suffix}`);
+          const runId = AutomationRunId.makeUnsafe(`run-owned-once-${suffix}`);
+          const definition = yield* repository.createDefinition({
+            id: automationId,
+            input: {
+              ...createInput("local"),
+              name: `Owned ${suffix}`,
+              schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
+              mode: "heartbeat",
+              targetThreadId: ThreadId.makeUnsafe(`thread-owned-once-${suffix}`),
+            },
+            now: "2026-08-17T09:00:00.000Z",
+            nextRunAt: "2026-08-17T10:00:00.000Z",
+          });
+          const claimed = yield* repository.createRunAndIncrementDefinition(
+            {
+              id: runId,
+              automationId,
+              projectId: definition.projectId,
+              threadId: null,
+              trigger: { type: "scheduled" },
+              scheduledFor: "2026-08-17T10:00:00.000Z",
+              deferredUntil: "2026-08-17T10:00:15.000Z",
+              permissionSnapshot: {
+                provider: "codex",
+                modelSelection: definition.modelSelection,
+                runtimeMode: definition.runtimeMode,
+                interactionMode: definition.interactionMode,
+                worktreeMode: definition.worktreeMode,
+                allowedCapabilities: ["send-turn"],
+                createdAt: "2026-08-17T10:00:00.000Z",
+              },
+              now: "2026-08-17T10:00:00.000Z",
+            },
+            {
+              expectedDefinitionRevision: definition.definitionRevision,
+              consumeIteration: true,
+              claimDeferredOneShotOwner: true,
+              scheduleAdvance: { nextRunAt: null, disable: false },
+            },
+          );
+          assert.isTrue(Option.isSome(claimed));
+          return {
+            definition: Option.getOrThrow(
+              yield* repository.getDefinitionById({ id: automationId }),
+            ),
+            runId,
+          };
+        });
+
+      const nameCase = yield* makeOwnedDeferredOneShot("name-prompt");
+      threadShell = Option.some(makeThreadShell({ id: nameCase.definition.targetThreadId! }));
+      const renamed = yield* service.update({
+        id: nameCase.definition.id,
+        expectedDefinitionRevision: nameCase.definition.definitionRevision,
+        name: "Name only",
+      });
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: nameCase.runId })).status,
+        "pending",
+      );
+      yield* service.update({
+        id: renamed.id,
+        expectedDefinitionRevision: renamed.definitionRevision,
+        prompt: "Changed execution prompt.",
+      });
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: nameCase.runId })).status,
+        "skipped",
+      );
+
+      const providerCase = yield* makeOwnedDeferredOneShot("provider");
+      threadShell = Option.some(makeThreadShell({ id: providerCase.definition.targetThreadId! }));
+      yield* service.update({
+        id: providerCase.definition.id,
+        expectedDefinitionRevision: providerCase.definition.definitionRevision,
+        modelSelection: { provider: "codex", model: "gpt-5" },
+      });
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: providerCase.runId })).status,
+        "skipped",
+      );
+
+      const modeCase = yield* makeOwnedDeferredOneShot("mode");
+      yield* service.update({
+        id: modeCase.definition.id,
+        expectedDefinitionRevision: modeCase.definition.definitionRevision,
+        mode: "standalone",
+      });
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: modeCase.runId })).status,
+        "skipped",
+      );
+
+      const scheduleCase = yield* makeOwnedDeferredOneShot("schedule");
+      threadShell = Option.some(makeThreadShell({ id: scheduleCase.definition.targetThreadId! }));
+      yield* service.update({
+        id: scheduleCase.definition.id,
+        expectedDefinitionRevision: scheduleCase.definition.definitionRevision,
+        schedule: { type: "interval", everySeconds: 300 },
+      });
+      assert.strictEqual(
+        Option.getOrThrow(yield* repository.getRunById({ id: scheduleCase.runId })).status,
+        "skipped",
+      );
+    }),
+  );
+
+  it.effect("rejects archived run-now without creating or mutating a run", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+      const created = yield* service.create(createInput("local"));
+      yield* service.delete({
+        id: created.id,
+        expectedDefinitionRevision: created.definitionRevision,
+      });
+      const archived = Option.getOrThrow(yield* repository.getDefinitionById({ id: created.id }));
+
+      yield* service.runNow({ automationId: created.id }).pipe(Effect.flip);
+
+      const after = Option.getOrThrow(yield* repository.getDefinitionById({ id: created.id }));
+      assert.strictEqual(after.definitionRevision, archived.definitionRevision);
+      assert.strictEqual(after.iterationCount, archived.iterationCount);
+      assert.lengthOf(
+        yield* repository.listRunsForDefinition({ automationId: created.id, limit: 5 }),
+        0,
+      );
+    }),
+  );
+
+  it.effect("does not dispatch a dedicated turn after its exact owner changes mode", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      const service = yield* AutomationService;
+      const repository = yield* AutomationRepository;
+      const threadCreateEntered = yield* Deferred.make<void>();
+      const releaseThreadCreate = yield* Deferred.make<void>();
+      dispatchHook = (command) =>
+        command.type === "thread.create"
+          ? Deferred.succeed(threadCreateEntered, undefined).pipe(
+              Effect.flatMap(() => Deferred.await(releaseThreadCreate)),
+            )
+          : Effect.void;
+      const created = yield* service.create({
+        ...createInput("local"),
+        mode: "dedicated",
+      });
+      const runFiber = yield* service.runNow({ automationId: created.id }).pipe(Effect.forkChild);
+      yield* Deferred.await(threadCreateEntered);
+      const claimed = Option.getOrThrow(yield* repository.getDefinitionById({ id: created.id }));
+      yield* service.update({
+        id: created.id,
+        expectedDefinitionRevision: claimed.definitionRevision,
+        mode: "standalone",
+      });
+      yield* Deferred.succeed(releaseThreadCreate, undefined);
+      yield* Fiber.join(runFiber).pipe(Effect.flip);
+
+      assert.isUndefined(
+        dispatchedCommands.find((command) => command.type === "thread.turn.start"),
+      );
+      const runs = yield* repository.listRunsForDefinition({
+        automationId: created.id,
+        limit: 5,
+      });
+      assert.strictEqual(runs.length, 1);
+      assert.strictEqual(runs[0]?.status, "failed");
+      assert.isNull(
+        Option.getOrThrow(yield* repository.getDefinitionById({ id: created.id })).targetThreadId,
+      );
     }),
   );
 });

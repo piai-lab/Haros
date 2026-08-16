@@ -17,7 +17,7 @@ import {
   type ThreadId,
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
 import { useAppSettings } from "~/appSettings";
@@ -114,6 +114,26 @@ export const EMPTY_AUTOMATION_LIST: AutomationListResult = {
   runs: [],
   memories: [],
 };
+
+export async function settleAutomationUpdateFailure(
+  queryClient: QueryClient,
+  input: {
+    readonly previous: AutomationListResult | undefined;
+    readonly optimistic: AutomationListResult | undefined;
+    readonly conflict: boolean;
+  },
+): Promise<void> {
+  if (
+    input.previous !== undefined &&
+    input.optimistic !== undefined &&
+    queryClient.getQueryData<AutomationListResult>(automationQueryKey) === input.optimistic
+  ) {
+    queryClient.setQueryData(automationQueryKey, input.previous);
+  }
+  if (input.conflict) {
+    await queryClient.invalidateQueries({ queryKey: automationQueryKey });
+  }
+}
 
 function automationWarningPresentation(
   warning: AutomationDraftWarning,
@@ -739,9 +759,9 @@ export function useAutomations(onRunStarted?: (threadId: ThreadId) => void) {
       title: t(title),
       description,
     });
-  const showDefinitionMutationError = (fallbackTitle: MessageKey, error: Error) => {
+  const showDefinitionMutationError = async (fallbackTitle: MessageKey, error: Error) => {
     if ("code" in error && error.code === "AUTOMATION_DEFINITION_CONFLICT") {
-      void queryClient.invalidateQueries({ queryKey: automationQueryKey });
+      await queryClient.invalidateQueries({ queryKey: automationQueryKey });
       showMutationError(
         "automation.definitionConflictTitle",
         error,
@@ -770,28 +790,40 @@ export function useAutomations(onRunStarted?: (threadId: ThreadId) => void) {
     onMutate: (input) => {
       const { expectedDefinitionRevision: _expectedDefinitionRevision, ...patch } = input;
       const previous = queryClient.getQueryData<AutomationListResult>(automationQueryKey);
-      queryClient.setQueryData<AutomationListResult>(automationQueryKey, (prev) => {
-        const base = prev ?? EMPTY_AUTOMATION_LIST;
-        return {
-          definitions: base.definitions.map((definition) =>
-            definition.id === input.id
-              ? ({ ...definition, ...patch } as AutomationDefinition)
-              : definition,
-          ),
-          runs: base.runs,
-          memories: base.memories ?? [],
-        };
-      });
-      return { previous };
+      const optimistic = queryClient.setQueryData<AutomationListResult>(
+        automationQueryKey,
+        (prev) => {
+          const base = prev ?? EMPTY_AUTOMATION_LIST;
+          return {
+            definitions: base.definitions.map((definition) =>
+              definition.id === input.id
+                ? ({ ...definition, ...patch } as AutomationDefinition)
+                : definition,
+            ),
+            runs: base.runs,
+            memories: base.memories ?? [],
+          };
+        },
+      );
+      return { previous, optimistic };
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: automationQueryKey }),
-    onError: (error, _input, context) => {
-      // A failed update would otherwise leave the incomplete optimistic merge in the cache
-      // until the next stream tick; restore the pre-edit snapshot so the UI reflects reality.
-      if (context?.previous) {
-        queryClient.setQueryData<AutomationListResult>(automationQueryKey, context.previous);
+    onError: async (error, _input, context) => {
+      const conflict = "code" in error && error.code === "AUTOMATION_DEFINITION_CONFLICT";
+      if (context) {
+        await settleAutomationUpdateFailure(queryClient, { ...context, conflict });
+      } else if (conflict) {
+        await queryClient.invalidateQueries({ queryKey: automationQueryKey });
       }
-      showDefinitionMutationError("automation.updateFailed", error);
+      if (conflict) {
+        showMutationError(
+          "automation.definitionConflictTitle",
+          error,
+          t("automation.definitionConflict"),
+        );
+      } else {
+        showMutationError("automation.updateFailed", error);
+      }
     },
   });
   const deleteMutation = useMutation({
