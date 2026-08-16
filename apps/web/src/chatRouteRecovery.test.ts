@@ -21,10 +21,12 @@ import { refreshEmptyRouteRestoreSnapshot } from "./chatRouteRecovery";
 function shellSnapshot(input: {
   projects?: unknown[];
   threads?: unknown[];
+  requiresEmptyProjectShellRepair?: boolean | undefined;
 }): OrchestrationShellSnapshot {
   return {
     projects: input.projects ?? [],
     threads: input.threads ?? [],
+    requiresEmptyProjectShellRepair: input.requiresEmptyProjectShellRepair,
   } as unknown as OrchestrationShellSnapshot;
 }
 
@@ -74,6 +76,45 @@ describe("refreshEmptyRouteRestoreSnapshot", () => {
     expect(storeMocks.syncServerShellSnapshot).toHaveBeenCalledWith(shell);
     expect(storeMocks.syncServerReadModel).toHaveBeenNthCalledWith(1, snapshot);
     expect(storeMocks.syncServerReadModel).toHaveBeenNthCalledWith(2, repaired);
+  });
+
+  it.each([
+    ["fresh", undefined],
+    ["deleted-project", false],
+  ] as const)(
+    "does not repair a %s empty snapshot during remembered-route recovery with 0 threads",
+    async (_state, requiresEmptyProjectShellRepair) => {
+      const shell = shellSnapshot({ requiresEmptyProjectShellRepair });
+      const snapshot = readModel({});
+      const repaired = readModel({
+        projects: [{ id: "project-1" }],
+        threads: [{ id: "thread-1" }],
+      });
+      const { api, orchestration } = makeApi({ shell, snapshot, repaired });
+
+      await expect(refreshEmptyRouteRestoreSnapshot(api)).resolves.toBe(false);
+
+      expect(orchestration.getSnapshot).not.toHaveBeenCalled();
+      expect(orchestration.repairState).not.toHaveBeenCalled();
+      expect(storeMocks.syncServerReadModel).not.toHaveBeenCalled();
+    },
+  );
+
+  it("repairs an empty remembered-route snapshot exactly once when the server proves an active durable project", async () => {
+    const shell = shellSnapshot({ requiresEmptyProjectShellRepair: true });
+    const snapshot = readModel({});
+    const repaired = readModel({
+      projects: [{ id: "project-1" }],
+      threads: [{ id: "thread-1" }],
+    });
+    const { api, orchestration } = makeApi({ shell, snapshot, repaired });
+
+    await expect(refreshEmptyRouteRestoreSnapshot(api)).resolves.toBe(true);
+
+    expect(orchestration.getSnapshot).toHaveBeenCalledTimes(1);
+    expect(orchestration.repairState).toHaveBeenCalledTimes(1);
+    expect(storeMocks.syncServerReadModel).toHaveBeenCalledTimes(1);
+    expect(storeMocks.syncServerReadModel).toHaveBeenCalledWith(repaired);
   });
 
   it("stops at the shell snapshot when it already has threads", async () => {

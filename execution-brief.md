@@ -205,7 +205,7 @@ P1 只闭合：
 
 P1 stop conditions：patch 进入上游 executor/session terminal/recovery state machine；stock Pi 与 OmniMind Agent 隔离无法保持；typed prompt outcome、OAuth default path 或 safe ModelConfig owner不能语义重放；真实 Provider或packaged journey出现无法归因的P0/P1。命中后停止升级并保留 `v0.84.1`，不加兼容双轨。
 
-P1 已在 exact pushed product `d88edd3dbfb88bb4dd1791bb0f7994b52740898f` 完成 source、MiMo/DeepSeek 与 fresh installed-App 证据。维护者随后提供 OmniMind/Codex Sidebar rail 对照录屏并于 2026-08-16 明确授权继续施工，因此当前施工入口改为下述 **W3 Sidebar gesture continuity**；本段仍不自动授予 C1 Gate B。
+P1 已在 exact pushed product `d88edd3dbfb88bb4dd1791bb0f7994b52740898f` 完成 source、MiMo/DeepSeek 与 fresh installed-App 证据。维护者随后提供 OmniMind/Codex Sidebar rail 对照录屏并于 2026-08-16 明确授权继续施工，因此当时施工入口改为下述 **W3 Sidebar gesture continuity**；本段仍不自动授予 C1 Gate B。
 
 ### W3 Sidebar gesture continuity（已完成）
 

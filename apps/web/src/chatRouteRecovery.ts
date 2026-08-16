@@ -44,13 +44,22 @@ export async function refreshEmptyRouteRestoreSnapshot(
   }
 
   const shellSnapshot = await api.orchestration.getShellSnapshot();
-  if (shellSnapshotHasProjectsOrThreads(shellSnapshot)) {
+  const shellHasProjectsOrThreads = shellSnapshotHasProjectsOrThreads(shellSnapshot);
+  const requiresEmptyProjectShellRepair =
+    !shellHasProjectsOrThreads && shellSnapshot.requiresEmptyProjectShellRepair === true;
+  if (shellHasProjectsOrThreads) {
     useStore.getState().syncServerShellSnapshot(shellSnapshot);
     if (shellSnapshotHasThreads(shellSnapshot)) {
       return true;
     }
     // Project-only shell snapshots do not prove route recovery is done; thread
     // projections may still need the full snapshot or repair path below.
+  }
+
+  // An authoritative empty shell also fences off a potentially stale full
+  // projection after deletion. Only the server's durable-active flag may pass.
+  if (!shellHasProjectsOrThreads && !requiresEmptyProjectShellRepair) {
+    return false;
   }
 
   const readModel = await api.orchestration.getSnapshot();
