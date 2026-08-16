@@ -69,13 +69,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Show the Chat tab in the Agent | Chat switcher. sidebar section content outbox studio",
   },
   {
-    id: "general:environment-default-open",
-    section: "general",
-    title: "Open by default",
-    keywords:
-      "Open the chat Environment panel automatically on normal threads. default closed open environment panel preference",
-  },
-  {
     id: "general:environment-usage",
     section: "general",
     title: "Usage",
@@ -490,7 +483,6 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Model services": "settings.models",
   "New threads": "settings.newThreads",
   Notepad: "settings.notepad",
-  "Open by default": "settings.openByDefault",
   "Permission status": "settings.permissionStatus",
   "Pinned messages": "settings.pinnedMessages",
   "Project instructions": "settings.projectInstructions",

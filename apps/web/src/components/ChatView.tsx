@@ -203,10 +203,6 @@ import {
   resolveCommittedProviderModel,
   resolveComposerStripWorkLogEntries,
   resolveCycledModelSlug,
-  resolveDefaultEnvironmentPanelOpen,
-  resolveEnvironmentPanelOpen,
-  resolveEnvironmentPanelPreferenceAfterFirstSend,
-  resolveEnvironmentPanelPreferenceUpdate,
   resolveEnvironmentPanelVisible,
   resolveGitRepoUiState,
   resolveProjectScriptTerminalTarget,
@@ -484,7 +480,6 @@ import {
 import { useNowMs } from "~/hooks/useNowMs";
 import { useThreadRecap } from "~/hooks/useThreadRecap";
 import { useRepoDiffTotals } from "~/hooks/useRepoDiffTotals";
-import { useIsMobile } from "~/hooks/useMediaQuery";
 import { useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
 import {
   acknowledgedRiskIdsForFormWarnings,
@@ -4569,9 +4564,6 @@ export default function ChatView({
     (activeThread.messages.length > 0 ||
       (activeThread.session !== null && activeThread.session.status !== "closed")),
   );
-  const isTerminalPrimarySurface = terminalState.entryPoint === "terminal";
-  const isTerminalEnvironmentContext =
-    isTerminalPrimarySurface || terminalWorkspaceTerminalTabActive;
   const shouldShowProviderHealthBanner = shouldRenderProviderHealthBanner({
     threadEntryPoint: terminalState.entryPoint,
     terminalWorkspaceTerminalTabActive,
@@ -4868,76 +4860,42 @@ export default function ChatView({
   // The terminal's panel toggle mirrors the right dock's collapse control: it shows
   // or hides the side panel only when this thread already has a pane to show.
   const rightDockOpen = useRightDockStore((store) => selectRightDockState(threadId)(store).open);
-  const isMobileViewport = useIsMobile();
   // Temporary threads are visually identical to regular chats — they use the same
   // Environment panel + header controls. "Temporary" is purely a sidebar badge +
   // auto-delete-on-leave concern, never a stripped-down chat UI.
   const environmentEnabled = !isEditorRail;
-  const environmentDefaultUsesConstrainedLayout =
-    isTerminalEnvironmentContext || isMobileViewport || rightDockOpen || surfaceMode === "split";
-  const environmentDefaultOpen = resolveDefaultEnvironmentPanelOpen({
-    environmentEnabled,
-    isCenteredEmptyLanding,
-    isTerminalPrimarySurface,
-    isConstrainedChatLayout: environmentDefaultUsesConstrainedLayout,
-    settingsDefaultOpen: settings.environmentPanelDefaultOpen,
-  });
-  // Every close (header toggle or panel action click) stores the cross-chat preference,
-  // so a dismissed panel stays closed when switching threads until it is toggled back on.
-  // The same toggle also persists to settings so the preference survives reloads.
-  const [environmentPanelPreferenceOpen, setEnvironmentPanelPreferenceOpen] = useState<
-    boolean | null
-  >(null);
-  const updateEnvironmentPanelPreference = useCallback(
-    (open: boolean, persist: boolean) => {
-      const update = resolveEnvironmentPanelPreferenceUpdate({ open, persist });
-      setEnvironmentPanelPreferenceOpen(update.userPreferenceOpen);
-      if (update.settingsDefaultOpen !== null) {
-        updateSettings({ environmentPanelDefaultOpen: update.settingsDefaultOpen });
-      }
-    },
-    // The state setter is stable, so listing it changes nothing at runtime — but React
-    // Compiler infers it as a dependency here and refuses to compile the component when the
-    // hand-written array omits it.
-    [setEnvironmentPanelPreferenceOpen, updateSettings],
-  );
+  // Environment is an on-demand inspector, not startup chrome. Opening it is intentionally
+  // session-only: every App launch starts closed, regardless of an older stored setting.
+  const [environmentPanelPreferenceOpen, setEnvironmentPanelPreferenceOpen] = useState(false);
   const setEnvironmentPanelOpenPreference = useCallback(
-    (open: boolean) => updateEnvironmentPanelPreference(open, true),
-    [updateEnvironmentPanelPreference],
+    (open: boolean) => setEnvironmentPanelPreferenceOpen(open),
+    [],
   );
-  const closeEnvironmentPanelAfterAction = useCallback(
-    () => {
-      const activeElement = document.activeElement;
-      const environmentPanel =
-        activeElement instanceof HTMLElement
-          ? activeElement.closest<HTMLElement>(
-              "[data-environment-panel-presentation='overlay']",
-            )
-          : null;
-      const environmentToggle =
-        environmentPanel
-          ?.closest("[data-chat-primary-surface]")
-          ?.querySelector<HTMLButtonElement>("[data-environment-toggle]") ?? null;
+  const closeEnvironmentPanelAfterAction = useCallback(() => {
+    const activeElement = document.activeElement;
+    const environmentPanel =
+      activeElement instanceof HTMLElement
+        ? activeElement.closest<HTMLElement>("[data-environment-panel-presentation='overlay']")
+        : null;
+    const environmentToggle =
+      environmentPanel
+        ?.closest("[data-chat-primary-surface]")
+        ?.querySelector<HTMLButtonElement>("[data-environment-toggle]") ?? null;
 
-      updateEnvironmentPanelPreference(false, false);
-      if (!environmentToggle) return;
-      window.requestAnimationFrame(() => {
-        if (
-          !environmentToggle.isConnected ||
-          environmentToggle.getClientRects().length === 0 ||
-          environmentToggle.closest("[inert], [aria-hidden='true']")
-        ) {
-          return;
-        }
-        environmentToggle.focus({ preventScroll: true });
-      });
-    },
-    [updateEnvironmentPanelPreference],
-  );
-  const environmentPanelOpen = resolveEnvironmentPanelOpen({
-    defaultOpen: environmentDefaultOpen,
-    userPreferenceOpen: environmentPanelPreferenceOpen,
-  });
+    setEnvironmentPanelPreferenceOpen(false);
+    if (!environmentToggle) return;
+    window.requestAnimationFrame(() => {
+      if (
+        !environmentToggle.isConnected ||
+        environmentToggle.getClientRects().length === 0 ||
+        environmentToggle.closest("[inert], [aria-hidden='true']")
+      ) {
+        return;
+      }
+      environmentToggle.focus({ preventScroll: true });
+    });
+  }, []);
+  const environmentPanelOpen = environmentPanelPreferenceOpen;
   const environmentPanelVisible = resolveEnvironmentPanelVisible({
     environmentEnabled,
     environmentPanelOpen,
@@ -8778,18 +8736,6 @@ export default function ChatView({
         sizeBytes: file.sizeBytes,
       })),
     ];
-    // Sending the first message flips the centered empty landing into a normal
-    // transcript. Clear session-only landing overrides when default-open is enabled;
-    // otherwise keep the transition closed.
-    if (isCenteredEmptyLanding) {
-      setEnvironmentPanelPreferenceOpen(
-        resolveEnvironmentPanelPreferenceAfterFirstSend({
-          isCenteredEmptyLanding,
-          settingsDefaultOpen: settings.environmentPanelDefaultOpen,
-          currentPreferenceOpen: environmentPanelPreferenceOpen,
-        }),
-      );
-    }
     setOptimisticUserMessages((existing) => [
       ...existing,
       {

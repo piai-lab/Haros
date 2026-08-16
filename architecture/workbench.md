@@ -139,7 +139,7 @@ Chat shell 只有一个稳定主画布：Timeline 与 Composer。Environment 打
 
 四类表面的职责固定如下：
 
-- `Environment / 环境信息` 是当前任务的辅助检查器，承载仓库、工作树、分支、变更、Git 入口、本地服务、来源、编辑器、摘要、置顶消息、文本标记、项目指令与记事本等上下文。普通桌面态使用右上角悬浮 inspector；空间极窄且用户主动查看时可进入带 focus trap、Escape 与 focus return 的临时 sheet。它不拥有 Files、Diff、Terminal、Browser 或 Device 的工作面板角色。
+- `Environment / 环境信息` 是当前任务的辅助检查器，承载仓库、工作树、分支、变更、Git 入口、本地服务、来源、编辑器、摘要、置顶消息、文本标记、项目指令与记事本等上下文。它在每次 App 启动时默认关闭，用户从聊天标题栏打开只影响当前运行中的 shell，不写成跨启动偏好。普通桌面态使用右上角悬浮 inspector；空间极窄且用户主动查看时可进入带 focus trap、Escape 与 focus return 的临时 sheet。它不拥有 Files、Diff、Terminal、Browser 或 Device 的工作面板角色。
 - `Workbench / 工作台` 是 Files、Viewer、Diff、Terminal、Browser、Device、Source Control 与 Side Chat 等真实操作区，继续复用现有 RightDock、Editor workspace、pane state 与 keep-mounted lifecycle。宽屏可与 Chat 分栏；空间不足时进入 Chat/Workbench 单面板切换，不能把 Composer 压成不可读窄条。
 - Sidebar 是 Agent/Chat、Project/Thread 与全局入口的导航。用户手动开关继续由当前 route/Sidebar owner 管理；W1 只保证同一 mounted shell 内的手动 intent 不被空间自动压制改写，不新增当前源码并不存在的 cookie rehydrate 或跨启动持久化语义。空间不足造成的自动压制只属于可推导 presentation，不调用现有手动 `setOpen`，因而不写回 cookie、Settings 或导航偏好。空间恢复时只恢复原本手动打开的 Sidebar；用户手动关闭的 Sidebar 不得被系统自动复活。受压时用户仍可从 header 临时以 overlay/sheet 查看导航。
 - Timeline 与 Composer 始终优先保留。Environment、Sidebar 与 Workbench 按上述职责退让，不能各自用无关 fixed width 同时争夺主画布。

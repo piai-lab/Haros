@@ -249,8 +249,7 @@ export const EN_MESSAGES = {
   "git.action.commitPush": "Commit and push",
   "git.action.commitOrPush": "Commit or push",
   "git.action.commitOrPushOpenMenu": "Commit or push unavailable; open the Git actions menu",
-  "git.action.commitOrPushOpenMore":
-    "Commit or push is unavailable. Open for more Git actions.",
+  "git.action.commitOrPushOpenMore": "Commit or push is unavailable. Open for more Git actions.",
   "git.panel.unavailable": "Source control is unavailable for this task.",
   "git.panel.close": "Close source control",
   "git.panel.refreshChanges": "Refresh changes",
@@ -1751,8 +1750,7 @@ export const EN_MESSAGES = {
   "environment.jumpMarkerTooltip": "Click to jump · double-click or press F2 to rename",
   "environment.markerUnavailableTooltip": "Source text changed or is unavailable",
   "environment.jumpPinnedAria": "Jump to pinned message. Press F2 to rename.",
-  "environment.pinnedUnavailableAria":
-    "Pinned message unavailable. Press Enter to rename.",
+  "environment.pinnedUnavailableAria": "Pinned message unavailable. Press Enter to rename.",
   "environment.jumpPinnedTooltip": "Click to jump · double-click or press F2 to rename",
   "environment.pinnedUnavailableTooltip": "Click or press Enter to rename",
   "environment.pinnedUpdateFailed": "Failed to update pinned message",
@@ -1760,8 +1758,7 @@ export const EN_MESSAGES = {
   "environment.notesSaveFailed": "Failed to save notes",
   "environment.notesSaveFailedDescription": "The note change could not be saved.",
   "environment.pinnedLimitReached": "Pinned message limit reached",
-  "environment.pinnedLimitDescription":
-    "You can keep up to {count} pinned messages in a task.",
+  "environment.pinnedLimitDescription": "You can keep up to {count} pinned messages in a task.",
   "threadEnvironment.local": "Local",
   "threadEnvironment.worktree": "Worktree",
   "threadEnvironment.worktreePending": "Worktree pending",
@@ -2000,9 +1997,6 @@ export const EN_MESSAGES = {
   "settings.newestFirst": "Newest first",
   "settings.sidebarSections": "Sidebar sections",
   "settings.environmentPanel": "Environment panel",
-  "settings.openByDefault": "Open by default",
-  "settings.openByDefaultDescription":
-    "Open the Environment panel automatically on normal tasks. When off, it stays closed until you open it; the last open or closed state also updates this preference.",
   "settings.codeAndStatus": "Code and status",
   "settings.usageLabel": "Usage",
   "settings.usageDescription": "Show engine usage in the Environment panel.",
@@ -2018,7 +2012,8 @@ export const EN_MESSAGES = {
   "settings.recap": "Recap",
   "settings.recapDescription": "Show the auto-generated Chat recap in the Environment panel.",
   "settings.pinnedMessages": "Pinned messages",
-  "settings.pinnedMessagesDescription": "Show the pinned-message checklist in the Environment panel.",
+  "settings.pinnedMessagesDescription":
+    "Show the pinned-message checklist in the Environment panel.",
   "settings.textMarkers": "Text markers",
   "settings.textMarkersDescription":
     "Show highlighted and underlined transcript text in the Environment panel.",
@@ -5045,8 +5040,7 @@ export const ZH_CN_MESSAGES = {
   "environment.serversRunning": "{count} 个服务正在运行",
   "environment.scanningLocalPorts": "正在扫描本地端口…",
   "environment.scanLocalPortsFailed": "无法扫描本地端口",
-  "environment.scanLocalPortsFailedDescription":
-    "请确认 OmniMind 服务可以检查本地端口，然后重试。",
+  "environment.scanLocalPortsFailedDescription": "请确认 OmniMind 服务可以检查本地端口，然后重试。",
   "environment.noServersRunning": "没有正在运行的本地服务",
   "environment.localServersEmptyDescription": "正在运行的本地开发服务会显示在这里。",
   "environment.stopLocalServer": "停止 {server}",
@@ -5318,9 +5312,6 @@ export const ZH_CN_MESSAGES = {
   "settings.newestFirst": "最新优先",
   "settings.sidebarSections": "侧栏分区",
   "settings.environmentPanel": "环境信息面板",
-  "settings.openByDefault": "默认打开",
-  "settings.openByDefaultDescription":
-    "在普通任务中自动打开环境信息面板；关闭后仅在你主动打开时显示，最后一次开关状态也会更新此偏好。",
   "settings.codeAndStatus": "代码与状态",
   "settings.usageLabel": "用量",
   "settings.usageDescription": "在环境信息面板中显示引擎用量。",

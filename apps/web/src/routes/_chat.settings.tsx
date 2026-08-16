@@ -697,16 +697,6 @@ function SettingsRouteView() {
       </SettingsSection>
 
       <div id={SETTINGS_TARGETS.environmentPanel} className="space-y-6">
-        <SettingsSection title={t("settings.environmentPanel")}>
-          {renderBooleanSettingRow({
-            settingKey: "environmentPanelDefaultOpen",
-            title: t("settings.openByDefault"),
-            description: t("settings.openByDefaultDescription"),
-            resetLabel: t("settings.openByDefault"),
-            ariaLabel: t("settings.openByDefaultDescription"),
-          })}
-        </SettingsSection>
-
         <SettingsSection title={t("settings.codeAndStatus")}>
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentUsage",

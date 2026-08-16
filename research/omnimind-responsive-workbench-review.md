@@ -46,14 +46,14 @@
 
 ### 1.3 证据类型
 
-| 类型 | 本轮材料 | 能证明什么 | 不能证明什么 |
-| --- | --- | --- | --- |
-| 用户截图 | OmniMind Environment 关闭/打开；Codex 宽、中、窄窗口 | 可见几何变化、信息层级、连续缩放后的呈现结果 | 对方内部实现、精确断点、状态 owner |
-| 当前源码 | `ChatView`、`EnvironmentPanel`、`RightDock`、`SingleChatSurface`、`_chat`、`sidebar`、i18n 与 tests | OmniMind 当前真实决策链、常量、状态与测试缺口 | 安装 App 已获得未来修复 |
-| 当前原型 | `.zq-ui/responsive-workbench/` | 单一方向的可交互几何、响应优先级与视觉 taste | production runtime、长会话、真实 Electron/webview 行为 |
-| 当前 Codex App 资源 | 本机已安装 App 的中英文资源与用户截图 | 词义已在成熟桌面产品中真实使用 | OmniMind 必须机械照抄 |
-| 官方公开资料 | [Introducing the Codex app](https://openai.com/index/introducing-the-codex-app/) | 线程、worktree、diff/editor 与多任务的产品职责是正式产品事实 | Environment 面板的内部布局算法 |
-| 推论 | 由以上证据共同推出的目标状态机 | 可形成可证伪候选 | 未经 production proof 的完成状态 |
+| 类型                | 本轮材料                                                                                            | 能证明什么                                                   | 不能证明什么                                           |
+| ------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------ |
+| 用户截图            | OmniMind Environment 关闭/打开；Codex 宽、中、窄窗口                                                | 可见几何变化、信息层级、连续缩放后的呈现结果                 | 对方内部实现、精确断点、状态 owner                     |
+| 当前源码            | `ChatView`、`EnvironmentPanel`、`RightDock`、`SingleChatSurface`、`_chat`、`sidebar`、i18n 与 tests | OmniMind 当前真实决策链、常量、状态与测试缺口                | 安装 App 已获得未来修复                                |
+| 当前原型            | `.zq-ui/responsive-workbench/`                                                                      | 单一方向的可交互几何、响应优先级与视觉 taste                 | production runtime、长会话、真实 Electron/webview 行为 |
+| 当前 Codex App 资源 | 本机已安装 App 的中英文资源与用户截图                                                               | 词义已在成熟桌面产品中真实使用                               | OmniMind 必须机械照抄                                  |
+| 官方公开资料        | [Introducing the Codex app](https://openai.com/index/introducing-the-codex-app/)                    | 线程、worktree、diff/editor 与多任务的产品职责是正式产品事实 | Environment 面板的内部布局算法                         |
+| 推论                | 由以上证据共同推出的目标状态机                                                                      | 可形成可证伪候选                                             | 未经 production proof 的完成状态                       |
 
 ## 2. 用户问题与 taste 约束
 
@@ -81,12 +81,12 @@
 
 ## 3. 四个产品角色必须拆开
 
-| 角色 | 用户任务 | 当前真实 owner | 正确呈现 | 不应承担 |
-| --- | --- | --- | --- | --- |
-| Timeline + Composer | 阅读、输入、继续、监督任务 | `ChatView` / `MessagesTimeline` / Composer stack | 稳定居中主画布 | 为辅助检查器永久让出固定宽度 |
-| Environment / 环境信息 | 快速检查仓库、分支、变更、来源、摘要、记事等上下文 | `EnvironmentPanel` + Branch/Git/notes/recap sections | 桌面悬浮 inspector；极窄时临时侧页 | Files/Diff/Terminal 的操作工作台；改变主画布几何 |
-| Workbench / 工作台 | 实际操作 Files、Diff、Terminal、Browser、Device、Git 等 | `RightDock` / panes / Editor workspace | 宽屏并列；空间不足时与 Chat 单面板切换 | 冒充 Environment；在不足宽度把 Chat 压成窄条 |
-| Sidebar / 全局导航 | 切换 Agent/Chat、项目、任务、全局入口 | `_chat` + `ui/sidebar` + `Sidebar` | 宽屏常驻；压力时自动压制并可临时覆盖 | 把自动压制写回用户手动偏好 |
+| 角色                   | 用户任务                                                | 当前真实 owner                                       | 正确呈现                               | 不应承担                                         |
+| ---------------------- | ------------------------------------------------------- | ---------------------------------------------------- | -------------------------------------- | ------------------------------------------------ |
+| Timeline + Composer    | 阅读、输入、继续、监督任务                              | `ChatView` / `MessagesTimeline` / Composer stack     | 稳定居中主画布                         | 为辅助检查器永久让出固定宽度                     |
+| Environment / 环境信息 | 快速检查仓库、分支、变更、来源、摘要、记事等上下文      | `EnvironmentPanel` + Branch/Git/notes/recap sections | 桌面悬浮 inspector；极窄时临时侧页     | Files/Diff/Terminal 的操作工作台；改变主画布几何 |
+| Workbench / 工作台     | 实际操作 Files、Diff、Terminal、Browser、Device、Git 等 | `RightDock` / panes / Editor workspace               | 宽屏并列；空间不足时与 Chat 单面板切换 | 冒充 Environment；在不足宽度把 Chat 压成窄条     |
+| Sidebar / 全局导航     | 切换 Agent/Chat、项目、任务、全局入口                   | `_chat` + `ui/sidebar` + `Sidebar`                   | 宽屏常驻；压力时自动压制并可临时覆盖   | 把自动压制写回用户手动偏好                       |
 
 这不是术语美容。角色一旦混合，布局就无法回答“谁先退、谁覆盖、谁必须保留宽度、谁拥有持久状态”。
 
@@ -123,14 +123,9 @@
 
 ### 5.1 Environment 可见性与偏好
 
-`apps/web/src/components/ChatView.logic.ts` 当前分为：
+2026-08-16 的维护者裁决进一步收窄了 open/close 语义：Environment 是按需检查器，每次 App 启动必须关闭；聊天标题栏的手动 toggle 只影响当前运行中的 shell，不写成跨启动偏好。旧的 `environmentPanelDefaultOpen` 配置不再进入 schema、Settings、搜索或渲染决策。
 
-- `resolveDefaultEnvironmentPanelOpen`：普通 Thread 根据 Settings 默认值决定；landing、Terminal primary、constrained layout 默认关闭；
-- `resolveEnvironmentPanelOpen`：session 中的手动偏好覆盖默认值；
-- `resolveEnvironmentPanelPreferenceUpdate`：显式 toggle 可写回 Settings；action-driven close 可只保留 session；
-- `resolveEnvironmentPanelVisible`：enabled 且 open 才显示。
-
-这套 open/close owner 基本可复用。问题不在“是否有状态”，而在 constrained/presentation 的派生语义与几何副作用。
+当前 `ChatView` 只保留一个 session-local boolean，并通过 `resolveEnvironmentPanelVisible` 叠加 `environmentEnabled`。这消除了“临时打开一次却在以后每次启动自动出现”的隐式持久化，也删除了 landing first-send、constrained default-open 与 Settings 写回的平行分支。
 
 ### 5.2 Environment 为什么让主内容左移
 
@@ -140,8 +135,7 @@
 environmentUsesFloatingOverlay =
   isTerminalEnvironmentContext || isMobileViewport || rightDockOpen || surfaceMode === "split";
 
-environmentAppliesContentInset =
-  environmentPanelVisible && !environmentUsesFloatingOverlay;
+environmentAppliesContentInset = environmentPanelVisible && !environmentUsesFloatingOverlay;
 ```
 
 正常 desktop single-chat 恰好不满足 floating 条件，因此进入 `docked`。随后：
@@ -206,17 +200,17 @@ const resolvedSidebarOpen = isEditorView ? false : sidebarOpen;
 
 ## 6. 根因矩阵
 
-| 表象 | 直接原因 | 更深 owner 问题 | 最小修复 |
-| --- | --- | --- | --- |
-| Environment 打开后对话左移 | Timeline/Composer 固定加 `312px` inset | inspector 被当作半 docked layout participant | Environment 一律不改变主画布几何 |
-| 面板像浮层却挤压内容 | absolute card + docked inset 混用 | 视觉语义与布局语义冲突 | 保留单一 overlay/sheet presentation |
-| 约 1000px 窗口显得拥挤 | Sidebar 仍 desktop 常驻 | mobile breakpoint 被误当空间适配策略 | 增加 local auto-suppression，不改手动偏好 |
-| RightDock 可把 Chat 压窄 | 打开固定约 50/50、pane floor 416px | 缺少 split→single presentation | 受限宽度进入 Chat/Workbench 互斥单面板 |
-| 拖动不丝滑 | 三套局部状态各自响应 | 没有统一优先级和滞回 | 派生有限 tier，并在阈值两侧使用 hysteresis |
-| “工作台”概念混乱 | `workbench.environment` 用于 inspector | namespace/产品角色同名 | 新增 `environment.*`；`workbench.*` 留给操作区 |
-| 中文仍夹英文 | Environment 多数组件硬编码 | i18n scan 覆盖面不足 | catalog parity + 扩大 hardcode source scan |
-| Git 行语义不准 | 菜单入口复用 `Commit and push` | 动作与入口未区分 | 菜单用 `Commit or push`；真实连续动作保留 `Commit and push` |
-| 测试绿色但截图仍错 | logic test 只测开关，不测几何/组合 | shell-level regression 缺口 | 增加真实 shell 组合与 geometry tests |
+| 表象                       | 直接原因                               | 更深 owner 问题                              | 最小修复                                                    |
+| -------------------------- | -------------------------------------- | -------------------------------------------- | ----------------------------------------------------------- |
+| Environment 打开后对话左移 | Timeline/Composer 固定加 `312px` inset | inspector 被当作半 docked layout participant | Environment 一律不改变主画布几何                            |
+| 面板像浮层却挤压内容       | absolute card + docked inset 混用      | 视觉语义与布局语义冲突                       | 保留单一 overlay/sheet presentation                         |
+| 约 1000px 窗口显得拥挤     | Sidebar 仍 desktop 常驻                | mobile breakpoint 被误当空间适配策略         | 增加 local auto-suppression，不改手动偏好                   |
+| RightDock 可把 Chat 压窄   | 打开固定约 50/50、pane floor 416px     | 缺少 split→single presentation               | 受限宽度进入 Chat/Workbench 互斥单面板                      |
+| 拖动不丝滑                 | 三套局部状态各自响应                   | 没有统一优先级和滞回                         | 派生有限 tier，并在阈值两侧使用 hysteresis                  |
+| “工作台”概念混乱           | `workbench.environment` 用于 inspector | namespace/产品角色同名                       | 新增 `environment.*`；`workbench.*` 留给操作区              |
+| 中文仍夹英文               | Environment 多数组件硬编码             | i18n scan 覆盖面不足                         | catalog parity + 扩大 hardcode source scan                  |
+| Git 行语义不准             | 菜单入口复用 `Commit and push`         | 动作与入口未区分                             | 菜单用 `Commit or push`；真实连续动作保留 `Commit and push` |
+| 测试绿色但截图仍错         | logic test 只测开关，不测几何/组合     | shell-level regression 缺口                  | 增加真实 shell 组合与 geometry tests                        |
 
 ## 7. 最小目标状态机
 
@@ -242,11 +236,11 @@ presentation：visible / overlay / split / exclusive / hidden
 
 ### 7.2 退让优先级
 
-| 空间状态 | Sidebar | Timeline + Composer | Environment | Workbench |
-| --- | --- | --- | --- | --- |
-| 宽 | 按手动偏好常驻 | 稳定 | 按手动偏好悬浮 | 打开时可 split |
-| 压力 | 先自动压制，可临时 overlay | 稳定 | 仍可悬浮，不改几何 | 若已打开，按可读性决定 split 或 exclusive |
-| 紧凑 | 默认压制，可临时 sheet | 唯一主画布 | 自动压制；用户临时 sheet | 打开时 exclusive |
+| 空间状态 | Sidebar                    | Timeline + Composer | Environment              | Workbench                                 |
+| -------- | -------------------------- | ------------------- | ------------------------ | ----------------------------------------- |
+| 宽       | 按手动偏好常驻             | 稳定                | 按手动偏好悬浮           | 打开时可 split                            |
+| 压力     | 先自动压制，可临时 overlay | 稳定                | 仍可悬浮，不改几何       | 若已打开，按可读性决定 split 或 exclusive |
+| 紧凑     | 默认压制，可临时 sheet     | 唯一主画布          | 自动压制；用户临时 sheet | 打开时 exclusive                          |
 
 Environment 与 Workbench 不应同时争夺紧凑视图。打开 Workbench 可以临时关闭 Environment presentation，但不能抹掉用户长期偏好。
 
@@ -309,32 +303,32 @@ abs(Composer.width_after - Composer.width_before) <= 1px
 
 ### 10.1 目标词义
 
-| English | 简体中文 | 角色说明 |
-| --- | --- | --- |
-| Environment | 环境信息 | 辅助检查器标题 |
-| Environment panel | 环境信息面板 | Settings 中的表面名称 |
-| Workbench | 工作台 | Files/Diff/Terminal/Browser/Device 等操作区 |
-| Changes | 变更 | 面板/集合名词；句子中的一般动作仍可用“更改” |
-| Local | 本地 | 环境模式 |
-| Worktree | 工作树 | Git worktree 模式 |
-| New worktree | 新建工作树 | 创建动作 |
-| Commit or push | 提交或推送 | 打开包含多种 Git 动作的菜单入口 |
-| Commit and push | 提交并推送 | 真实连续执行 commit+push 的动作 |
-| Compare branch | 比较分支 | 分支比较入口 |
-| Repository | 代码仓库 | 仓库信息 |
-| Local servers | 本地服务 | 当前本机开发服务 |
-| Editor | 编辑器 | section 标题 |
-| Built-in editor | 内置编辑器 | OmniMind 内部编辑器 |
-| Open in Cursor | 在 Cursor 中打开 | 品牌保留原文 |
-| Usage | 用量 | Engine/provider 用量 |
-| Outputs | 产出 | Studio/任务产出 |
-| Recap | 摘要 | 自动生成的任务摘要 |
-| Pinned messages | 置顶消息 | checklist |
-| Text markers | 文本标记 | 高亮/下划线标记 |
-| Sources | 来源 | 任务来源 |
-| Subagents | 子智能体 | 运行中的 child 集合 |
-| Notepad | 记事本 | 当前任务临时笔记 |
-| Project instructions | 项目指令 | 保留现有功能，仅规范可见文案 |
+| English              | 简体中文         | 角色说明                                    |
+| -------------------- | ---------------- | ------------------------------------------- |
+| Environment          | 环境信息         | 辅助检查器标题                              |
+| Environment panel    | 环境信息面板     | Settings 中的表面名称                       |
+| Workbench            | 工作台           | Files/Diff/Terminal/Browser/Device 等操作区 |
+| Changes              | 变更             | 面板/集合名词；句子中的一般动作仍可用“更改” |
+| Local                | 本地             | 环境模式                                    |
+| Worktree             | 工作树           | Git worktree 模式                           |
+| New worktree         | 新建工作树       | 创建动作                                    |
+| Commit or push       | 提交或推送       | 打开包含多种 Git 动作的菜单入口             |
+| Commit and push      | 提交并推送       | 真实连续执行 commit+push 的动作             |
+| Compare branch       | 比较分支         | 分支比较入口                                |
+| Repository           | 代码仓库         | 仓库信息                                    |
+| Local servers        | 本地服务         | 当前本机开发服务                            |
+| Editor               | 编辑器           | section 标题                                |
+| Built-in editor      | 内置编辑器       | OmniMind 内部编辑器                         |
+| Open in Cursor       | 在 Cursor 中打开 | 品牌保留原文                                |
+| Usage                | 用量             | Engine/provider 用量                        |
+| Outputs              | 产出             | Studio/任务产出                             |
+| Recap                | 摘要             | 自动生成的任务摘要                          |
+| Pinned messages      | 置顶消息         | checklist                                   |
+| Text markers         | 文本标记         | 高亮/下划线标记                             |
+| Sources              | 来源             | 任务来源                                    |
+| Subagents            | 子智能体         | 运行中的 child 集合                         |
+| Notepad              | 记事本           | 当前任务临时笔记                            |
+| Project instructions | 项目指令         | 保留现有功能，仅规范可见文案                |
 
 Notepad placeholder：
 
@@ -499,7 +493,7 @@ Environment toggle 前后四项 delta 均为 0
 至少覆盖：
 
 - Sidebar manual open/closed × auto allowed/suppressed × temporary overlay；
-- Environment default open/closed × manual toggle × action-close × auto suppressed × temporary reveal；
+- Environment startup closed × session manual toggle × action-close × auto suppressed × temporary reveal；
 - RightDock closed/split/exclusive × pane kind Files/Diff/Terminal/Browser/Device；
 - PlanSidebar closed/open/auto-open/dismissed-for-turn × Environment/Workbench presentation；
 - Chat single/split/editor/terminal-primary；
@@ -542,7 +536,7 @@ Environment toggle 前后四项 delta 均为 0
 3. 用任务专用 `userData`、home、Provider private home 启动；
 4. 从主进程、Helper、bundled Server 参数证明隔离；
 5. 完成 Environment toggle、连续窗口拖动、Sidebar temporary overlay、PlanSidebar open/dismiss、Workbench split/exclusive、Terminal/Browser keep-state、language/reduced-motion journey；
-6. 关闭并重开，核对 Environment Settings 与现有 pane state；Sidebar 的跨启动 rehydrate 不在 W1 contract，不能把当前不存在的行为写成通过条件；
+6. 关闭并重开，核对 Environment 恢复为关闭且现有 pane state 不退化；Sidebar 的跨启动 rehydrate 不在 W1 contract，不能把当前不存在的行为写成通过条件；
 7. 不读取、迁移或改写真实用户 `.pi`、`.omnimind`。
 
 ## 17. 反证与 stop-loss
@@ -589,7 +583,7 @@ Environment toggle 前后四项 delta 均为 0
 - Sidebar width/default/min、mobile breakpoint、Sheet/offcanvas primitive 改动；
 - RightDock min/default/preferred width、pane activation/keep-mounted 改动；
 - Electron `minWidth/minHeight` 改动；
-- Environment Settings/default-open/persistence 改动；
+- Environment startup/session-only open 语义改动；
 - i18n catalog、Environment components 或 product-copy scan 改动；
 - Browser/Device/Terminal native surface visibility/occlusion 改动；
 - upstream Synara shell/layout intake；

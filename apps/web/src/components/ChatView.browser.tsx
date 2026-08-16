@@ -2664,23 +2664,23 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it.each([
-    { width: 840, settingsDefaultOpen: false },
-    { width: 840, settingsDefaultOpen: true },
-    { width: 1009, settingsDefaultOpen: false },
-    { width: 1009, settingsDefaultOpen: true },
-    { width: 1440, settingsDefaultOpen: false },
-    { width: 1440, settingsDefaultOpen: true },
+    { width: 840, storedLegacyDefaultOpen: false },
+    { width: 840, storedLegacyDefaultOpen: true },
+    { width: 1009, storedLegacyDefaultOpen: false },
+    { width: 1009, storedLegacyDefaultOpen: true },
+    { width: 1440, storedLegacyDefaultOpen: false },
+    { width: 1440, storedLegacyDefaultOpen: true },
   ] as const)(
-    "keeps Environment out of main-canvas geometry at $width px with default-open=$settingsDefaultOpen",
-    async ({ width, settingsDefaultOpen }) => {
+    "starts Environment closed and keeps it out of geometry at $width px with legacy default=$storedLegacyDefaultOpen",
+    async ({ width, storedLegacyDefaultOpen }) => {
       localStorage.setItem(
         "omnimind:app-settings:v1",
-        JSON.stringify({ environmentPanelDefaultOpen: settingsDefaultOpen }),
+        JSON.stringify({ environmentPanelDefaultOpen: storedLegacyDefaultOpen }),
       );
       const mounted = await mountChatView({
         viewport: { ...DEFAULT_VIEWPORT, width },
         snapshot: createSnapshotForTargetUser({
-          targetMessageId: `msg-user-environment-${width}-${settingsDefaultOpen}` as MessageId,
+          targetMessageId: `msg-user-environment-${width}-${storedLegacyDefaultOpen}` as MessageId,
           targetText: "environment geometry",
         }),
       });
@@ -2704,18 +2704,18 @@ describe("ChatView timeline estimator parity (full app)", () => {
       };
 
       try {
-        await expectOpen(settingsDefaultOpen);
+        await expectOpen(false);
         const initial = await measureEnvironmentInvariant(mounted.host);
 
         toggle.focus();
         await userEvent.click(toggle);
-        await expectOpen(!settingsDefaultOpen);
+        await expectOpen(true);
         expect(document.activeElement).toBe(toggle);
         const toggled = await measureEnvironmentInvariant(mounted.host);
         expectHorizontalGeometryStable(initial, toggled);
 
         await userEvent.click(toggle);
-        await expectOpen(settingsDefaultOpen);
+        await expectOpen(false);
         expect(document.activeElement).toBe(toggle);
         const restored = await measureEnvironmentInvariant(mounted.host);
         expectHorizontalGeometryStable(initial, restored);
@@ -2726,10 +2726,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   );
 
   it("keeps the mounted Environment inspector outside the closed keyboard surface", async () => {
-    localStorage.setItem(
-      "omnimind:app-settings:v1",
-      JSON.stringify({ environmentPanelDefaultOpen: false }),
-    );
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1009 },
       snapshot: createSnapshotForTargetUser({
@@ -2782,7 +2778,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     async ({ locale, theme }) => {
       localStorage.setItem(
         "omnimind:app-settings:v1",
-        JSON.stringify({ localePreference: locale, environmentPanelDefaultOpen: false }),
+        JSON.stringify({ localePreference: locale }),
       );
       document.documentElement.classList.toggle("dark", theme === "dark");
       const mounted = await mountChatView({
@@ -2859,10 +2855,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   ] as const)(
     "returns focus to a visible owner when an Environment action closes into $expectedPresentation at $width px",
     async ({ width, expectedPresentation }) => {
-      localStorage.setItem(
-        "omnimind:app-settings:v1",
-        JSON.stringify({ environmentPanelDefaultOpen: false }),
-      );
       const mounted = await mountChatView({
         viewport: { ...DEFAULT_VIEWPORT, width },
         snapshot: createSnapshotForTargetUser({
@@ -3165,9 +3157,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     const explorerNode = await waitForElement(
       () =>
-        mounted.host.querySelector<HTMLElement>(
-          `[data-right-dock-pane-id='${explorerPane.id}']`,
-        ),
+        mounted.host.querySelector<HTMLElement>(`[data-right-dock-pane-id='${explorerPane.id}']`),
       "Unable to find the keep-mounted Explorer pane.",
     );
     const assertResponsiveFrame = async (input: {
@@ -3211,9 +3201,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         document.documentElement.clientWidth + 1,
       );
       expect(document.body.scrollWidth).toBeLessThanOrEqual(document.body.clientWidth + 1);
-      expect(
-        mounted.host.querySelector(`[data-right-dock-pane-id='${explorerPane.id}']`),
-      ).toBe(explorerNode);
+      expect(mounted.host.querySelector(`[data-right-dock-pane-id='${explorerPane.id}']`)).toBe(
+        explorerNode,
+      );
       expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual([
         explorerPane,
       ]);
@@ -4339,8 +4329,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Unable to find the responsive stream scroll container.",
       );
       const liveRow = await waitForElement(
-        () =>
-          mounted.host.querySelector<HTMLElement>(`[data-message-id='${liveMessageId}']`),
+        () => mounted.host.querySelector<HTMLElement>(`[data-message-id='${liveMessageId}']`),
         "Unable to find the live assistant message row.",
       );
       scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -4378,9 +4367,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
         );
         expect(
-          mounted.host.querySelector(
-            "button[aria-label='Scroll to bottom'][aria-hidden='false']",
-          ),
+          mounted.host.querySelector("button[aria-label='Scroll to bottom'][aria-hidden='false']"),
         ).toBeTruthy();
       });
       await waitForLayout();
@@ -4388,9 +4375,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
       );
       expect(
-        mounted.host.querySelector(
-          "button[aria-label='Scroll to bottom'][aria-hidden='false']",
-        ),
+        mounted.host.querySelector("button[aria-label='Scroll to bottom'][aria-hidden='false']"),
       ).toBeTruthy();
       syncLiveText(
         "live response line\n\nfirst streamed continuation\n\nsecond streamed continuation",
@@ -4411,9 +4396,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
       );
       expect(
-        mounted.host.querySelector(
-          "button[aria-label='Scroll to bottom'][aria-hidden='false']",
-        ),
+        mounted.host.querySelector("button[aria-label='Scroll to bottom'][aria-hidden='false']"),
       ).toBeTruthy();
       expect(mounted.host.querySelector("[data-chat-scroll-container='true']")).toBe(
         scrollContainer,
@@ -4430,9 +4413,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           AUTO_SCROLL_BOTTOM_THRESHOLD_PX,
         );
         expect(
-          mounted.host.querySelector(
-            "button[aria-label='Scroll to bottom'][aria-hidden='false']",
-          ),
+          mounted.host.querySelector("button[aria-label='Scroll to bottom'][aria-hidden='false']"),
         ).toBeNull();
       });
       syncLiveText(

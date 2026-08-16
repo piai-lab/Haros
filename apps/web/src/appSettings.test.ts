@@ -914,15 +914,6 @@ describe("AppSettingsSchema", () => {
     expect(normalizeStoredAppSettings(decoded)).not.toHaveProperty("customGeminiModels");
   });
 
-  it("defaults the Environment panel closed and preserves an explicit open preference", () => {
-    const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
-
-    expect(decode("{}").environmentPanelDefaultOpen).toBe(false);
-    expect(
-      decode(JSON.stringify({ environmentPanelDefaultOpen: true })).environmentPanelDefaultOpen,
-    ).toBe(true);
-  });
-
   it("fills decoding defaults for persisted settings that predate newer keys", () => {
     const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
 

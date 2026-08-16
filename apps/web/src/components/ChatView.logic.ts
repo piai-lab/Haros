@@ -566,26 +566,6 @@ export function resolvePromptHistoryNavigation(input: {
   };
 }
 
-// Default-open policy for the Environment panel; render-time visibility is resolved separately.
-// `settingsDefaultOpen` is the user preference (Settings → Environment panel). Landing,
-// terminal-primary, and constrained layouts always start closed regardless of that setting.
-export function resolveDefaultEnvironmentPanelOpen(input: {
-  environmentEnabled: boolean;
-  isCenteredEmptyLanding: boolean;
-  isTerminalPrimarySurface: boolean;
-  isConstrainedChatLayout: boolean;
-  settingsDefaultOpen?: boolean;
-}): boolean {
-  const settingsDefaultOpen = input.settingsDefaultOpen ?? false;
-  return (
-    input.environmentEnabled &&
-    settingsDefaultOpen &&
-    !input.isCenteredEmptyLanding &&
-    !input.isTerminalPrimarySurface &&
-    !input.isConstrainedChatLayout
-  );
-}
-
 // Build the ordered model list used by model.next / model.previous: favorites first
 // (stable user order), then remaining discovered options. Returns null when cycling is
 // a no-op (fewer than two selectable models).
@@ -627,37 +607,6 @@ export function resolveCycledModelSlug(input: {
   const delta = input.direction === "next" ? 1 : -1;
   const nextIndex = (currentIndex + delta + ordered.length) % ordered.length;
   return ordered[nextIndex] ?? null;
-}
-
-export function resolveEnvironmentPanelOpen(input: {
-  defaultOpen: boolean;
-  userPreferenceOpen: boolean | null;
-}): boolean {
-  return input.userPreferenceOpen ?? input.defaultOpen;
-}
-
-export function resolveEnvironmentPanelPreferenceUpdate(input: {
-  open: boolean;
-  persist: boolean;
-}): {
-  userPreferenceOpen: boolean;
-  settingsDefaultOpen: boolean | null;
-} {
-  return {
-    userPreferenceOpen: input.open,
-    settingsDefaultOpen: input.persist ? input.open : null,
-  };
-}
-
-export function resolveEnvironmentPanelPreferenceAfterFirstSend(input: {
-  isCenteredEmptyLanding: boolean;
-  settingsDefaultOpen: boolean;
-  currentPreferenceOpen: boolean | null;
-}): boolean | null {
-  if (!input.isCenteredEmptyLanding) {
-    return input.currentPreferenceOpen;
-  }
-  return input.settingsDefaultOpen ? null : false;
 }
 
 export function resolveEnvironmentPanelVisible(input: {

@@ -228,10 +228,8 @@ export const AppSettingsSchema = Schema.Struct({
   showStudioSection: Schema.Boolean.pipe(withDefaults(() => true)),
   // Local-only UI preferences: which optional sections of the chat Environment panel are
   // shown. The git block (Changes/Worktree/branch/Commit and Push) is always visible; these
-  // toggle the sections beneath it via the panel header's gear menu.
-  // When false (default), normal chats start with the Environment panel closed. User toggles
-  // also write back here so the last explicit open/close survives reloads.
-  environmentPanelDefaultOpen: Schema.Boolean.pipe(withDefaults(() => false)),
+  // toggle the sections beneath it via the panel header's gear menu. Environment itself is
+  // an on-demand inspector and always starts closed.
   showEnvironmentUsage: Schema.Boolean.pipe(withDefaults(() => true)),
   showEnvironmentRepository: Schema.Boolean.pipe(withDefaults(() => true)),
   showEnvironmentPullRequest: Schema.Boolean.pipe(withDefaults(() => true)),
