@@ -471,6 +471,7 @@ function SidebarRail({
   const isContentSeam = placement === "content-seam";
   const railRef = React.useRef<HTMLButtonElement | null>(null);
   const suppressClickRef = React.useRef(false);
+  const settleCleanupRef = React.useRef<(() => void) | null>(null);
   const settleTimeoutRef = React.useRef<number | null>(null);
   const resizeStateRef = React.useRef<{
     container: HTMLElement;
@@ -599,12 +600,18 @@ function SidebarRail({
       document.body.style.removeProperty("user-select");
 
       if (dismiss || restorePreview) {
-        settleTimeoutRef.current = window.setTimeout(() => {
+        const finishSettling = () => {
+          if (settleTimeoutRef.current !== null) {
+            window.clearTimeout(settleTimeoutRef.current);
+            settleTimeoutRef.current = null;
+          }
           resizeState.gap.style.removeProperty("width");
           resizeState.container.style.removeProperty("transform");
           resizeState.wrapper.style.removeProperty("--sidebar-effective-width");
-          settleTimeoutRef.current = null;
-        }, 320);
+          settleCleanupRef.current = null;
+        };
+        settleCleanupRef.current = finishSettling;
+        settleTimeoutRef.current = window.setTimeout(finishSettling, 320);
       } else {
         resizeState.wrapper.style.removeProperty("--sidebar-effective-width");
       }
@@ -639,8 +646,7 @@ function SidebarRail({
       const sidebarGap = sidebarRoot.querySelector<HTMLElement>("[data-slot='sidebar-gap']");
       if (!sidebarGap) return;
       if (settleTimeoutRef.current !== null) {
-        window.clearTimeout(settleTimeoutRef.current);
-        settleTimeoutRef.current = null;
+        settleCleanupRef.current?.();
       }
       const transitionTargets = [sidebarGap, sidebarContainer];
       transitionTargets.forEach((element) => {
@@ -763,7 +769,7 @@ function SidebarRail({
   React.useEffect(() => {
     return () => {
       if (settleTimeoutRef.current !== null) {
-        window.clearTimeout(settleTimeoutRef.current);
+        settleCleanupRef.current?.();
       }
       const resizeState = resizeStateRef.current;
       if (resizeState?.rafId != null) {

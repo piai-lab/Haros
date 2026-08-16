@@ -2680,6 +2680,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await nextFrame();
       dispatchRailPointer(rail, "pointerup", 24, 42);
       await expectPresentation("hidden", "drag dismissal");
+      await nextFrame();
+      expect(sidebar.style.transform, "dismiss left a stale drag transform").toBe("");
+      expect(
+        mounted.host
+          .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
+          ?.style.getPropertyValue("--sidebar-effective-width"),
+        "dismiss left a stale effective width",
+      ).toBe("");
       expect(sidebar).toBe(
         mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
       );
@@ -2698,6 +2706,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       edgeZone.dispatchEvent(new PointerEvent("pointerover", { bubbles: true }));
       await vi.waitFor(() => expect(presentation()).toBe("peek"), { timeout: 500 });
+      await vi.waitFor(() => {
+        expect(sidebar.getBoundingClientRect().x, "peek remained partially off-canvas").toBeCloseTo(
+          0,
+          0,
+        );
+        expect(sidebar.getBoundingClientRect().width, "peek lost the committed width").toBeCloseTo(
+          initialWidth,
+          0,
+        );
+      });
 
       expect(document.activeElement).toBe(focusBeforePeek);
       expect(

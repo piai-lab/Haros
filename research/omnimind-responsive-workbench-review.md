@@ -215,6 +215,12 @@ threshold = sidebarWidth + 776 + (previouslySuppressed ? 64 : 0);
 
 当前生产调用链与缺口已经唯一：`apps/web/src/components/ui/sidebar.tsx` 的 `SidebarRail` 把宽度 clamp 到最小值并在每个 animation frame 写 `--sidebar-width`；`apps/web/src/routes/_chat.tsx` 只拥有 header 触发的 modal temporary overlay，没有 drag-dismiss 或 passive edge peek。最小修复应继续使用同一 Sidebar DOM、现有 off-canvas motion 与 route manual intent，不新建第二导航 surface、全局 focus manager、layout store 或动画 runtime。
 
+#### 5.4.2 2026-08-16 installed candidate 反证
+
+维护者在真实安装候选上录制 `录屏2026-08-16 13.03.04.mov`，直接否决首个 W3 candidate。逐帧可见 Sidebar 的状态已经切到 docked/peek，但面板只露出右侧残片，左侧文字长期停在窗口外；它不是主观 easing 偏好，而是 drag preview 的 inline transform 没有被清除。对同一 installed renderer 的只读量测给出：presentation=`docked`、Sidebar width=`368px`，但 container rect `x=-191.695px`，DOM 仍残留 `transform: translate3d(-191.695px, 0, 0)`，root 仍残留 `--sidebar-effective-width: 0px`。
+
+根因在 `SidebarRail` 的 settle lifecycle：commit 先把 resize ref 清空并安排 `320ms` style cleanup；presentation 改变又使 detached content-seam rail 先卸载，effect cleanup 取消 timer，却因 resize ref 已空而无法清除原 container/gap/wrapper styles。原 browser proof 只检查 presentation、DOM identity、主画布与 persistence，没有量 Sidebar 最终 `x` 与 inline residue，因此是假绿。纠正证据必须同时锁定：dismiss 后 inline drag styles 为空；再次 peek/dock 后 Sidebar `x=0`、width 等于最后有效展开宽度；真实 installed App 中不再出现半截面板。
+
 ### 5.5 RightDock 当前布局
 
 `apps/web/src/components/chat/RightDock.tsx`：
