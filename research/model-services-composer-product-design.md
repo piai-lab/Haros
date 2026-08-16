@@ -2158,3 +2158,15 @@ fresh launch
 ## 22. 一句话交接
 
 不要给 OmniMind 再造一套模型体系：**Model services 用 Pi ModelRuntime 管理 OmniMind Agent 的服务、认证与目录；Agent engines 保留 Codex/Claude/OpenCode 等原生配置；Composer 用一个 Engine icon 决定“谁执行”，用一个组合 picker 决定“该 Engine 用哪个模型以及它真实支持什么”；发送边界负责 stop-first、exact binding、failure restore 和 provenance。**
+
+## 23. 2026-08-16 首次可用性纠偏：锁定三步聚焦向导
+
+维护者在 2026-08-13 已明确只选择 `focus-flow`：`我肯定要那个三步向导式，其他两个就不考虑了`。选择证据为本机 `.zq-ui/first-run-readiness/selection.json`，视觉基准为 `onboarding/directions/focus-flow/index.html` 与 `onboarding/focus-flow.png`。`readiness-studio` 和 `composer-launchpad` 均不是实现输入。后续把全新 profile 写成 Composer 上方的“克制就地 setup surface”，并实现“Agent 引擎需要处理 / 查看 Agent 引擎 / 模型设置”横条，没有更新的人类裁决支持，属于 sole-owner 同步和交接漂移。
+
+纠偏后的产品合同由 [`../architecture/workbench.md`](../architecture/workbench.md#6-settings) 唯一持有：真正零配置且 authority facts 已稳定时，shell 只挂载一个可延期的三步向导——选择 Engine、准备 Engine、选择 authoritative exact model。OmniMind 的第 2 步直接复用本文已经闭合的 Model services overview/add/detail、typed auth、custom API、refresh 与 catalog owner；独立 Engine 复用各自真实 setup owner。Settings 的 `概览 → 添加 → 详情` 仍是长期管理 IA，不是 onboarding 的三个步骤，也不因向导存在而重排。
+
+资格判断必须先区分事实：任意可发送 exact binding 表示 ready；真实 durable 配置或明确选择当前不可用表示 recovery；loading、unknown、transport 与 passive read error fail closed；只有全产品无 binding、无 durable 配置/记忆、被动投影明确为空且 facts settled 才是 first-run。仅安装存在、auth unknown、runtime 内置目录或由 `getDefaultModel()` 合成的候选都不是恢复 intent，也不是可发送 authority。
+
+关闭和“稍后设置”只保存 versioned local presentation preference，不保存完成态。延期后冷启动不重复 modal，Composer 上方保持零 setup/recovery banner；继续入口复用现有 Engine/model 控件和 Settings。ready 仍完全由可发送 exact binding 派生。原型中的 deferred Composer card 因后续维护者裁决被排除，只保留 modal 的几何、密度、步骤层级、资产与 motion 作为视觉 oracle。
+
+复验触发器新增：首次资格 classifier、Composer draft/exact selection owner、Model services passive facts、Provider health/auth、shell Dialog mount、local preference schema、Settings setup seam、Composer readiness banner 或 `focus-flow` oracle 任一变化。复验必须同时证明 fresh、deferred、ready、recover、unknown，且不得用 dev/HMR 或 authored static service snapshot代替 exact installed App。

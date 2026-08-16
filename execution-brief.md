@@ -207,7 +207,7 @@ P1 stop conditions：patch 进入上游 executor/session terminal/recovery state
 
 P1 已在 exact pushed product `d88edd3dbfb88bb4dd1791bb0f7994b52740898f` 完成 source、MiMo/DeepSeek 与 fresh installed-App 证据。维护者随后提供 OmniMind/Codex Sidebar rail 对照录屏并于 2026-08-16 明确授权继续施工，因此当前施工入口改为下述 **W3 Sidebar gesture continuity**；本段仍不自动授予 C1 Gate B。
 
-### W3 Sidebar gesture continuity（当前唯一代码 Slice）
+### W3 Sidebar gesture continuity（已完成）
 
 W3 只闭合：
 
@@ -221,7 +221,22 @@ W3 只闭合：
 
 W3 只复用 `_chat`、Sidebar primitive、现有 Sidebar surface/off-canvas token 与当前 hover presentation owner。不得新增全局 layout/focus store、第二 Sidebar DOM、第二动画 runtime、Project instructions/Settings taxonomy、Agent Core、Provider 或 release；不得复制 Codex 视觉皮肤。实现与证据边界见 [`architecture/workbench.md`](architecture/workbench.md#chat-shell环境信息与响应式-workbench) 和 [`research/omnimind-responsive-workbench-review.md`](research/omnimind-responsive-workbench-review.md)。W3 完成前 C1 继续 deferred。
 
-W3 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
+W3 已在 exact pushed `a5bae33aef7c068e0ee8700605ac58cb40e157b5` 完成 rail 连续 resize→dismiss、反向拖回、pointercancel、非模态 edge peek、显式 toggle 提升为常驻、`208px` 合法最小持久宽度、Environment 冷启动默认关闭及 fresh isolated packaged 证据。维护者随后明确授权首次启动纠偏，因此当前唯一代码 Slice 改为下述 **W4 First-run three-step readiness**；C1 继续 deferred。
+
+### W4 First-run three-step readiness（当前唯一代码 Slice）
+
+W4 只闭合：
+
+1. 真正零配置、全产品无可发送 exact Engine/model binding 且 authoritative facts 已 settled 时，shell 级单例自动打开已选 `focus-flow` 三步向导；loading/unknown/transport/read failure 不伪装首次，真实既有配置或选择失效进入 recovery；
+2. 三步固定为选择 Engine、准备 Engine、选择 authoritative exact model。OmniMind 第 2 步复用现有 Model services/auth/custom API；其他 Engine 复用原生 setup owner；完成摘要不是第 4 步；
+3. 删除 Composer 上方 `Agent 引擎需要处理 / 查看 Agent 引擎 / 模型设置` setup/recovery 横条及布局占位。延期只写 versioned local presentation preference，冷启动不重复 modal，继续入口复用 Composer 控件与 Settings；
+4. Settings `概览 → 添加 → 详情`、Provider Registry/health、Pi ModelRuntime、typed bridge、credential/catalog、Composer draft 与 Dialog 继续是唯一 owner；不新增 backend、DB、Registry、credential store、静态 service/model mirror、全局默认或平行状态机；
+5. `960×720`、`1440×900` 按已选 oracle 精确复核，`480×620` 使用同一 Dialog DOM 收缩；简中/英文、light/dark、full/reduced motion、keyboard/focus/ARIA、draft/附件/Thread/route 与 W3 Sidebar 连续性全部闭合；
+6. 候选从 exact pushed SHA 重建并替换本机 App，用 fresh、任务专用 HOME/userData/`OMNIMIND_HOME`/Provider homes 证明隔离后，完成首次、延期→重开→继续、已有其他 Engine、恢复、真实 MiMo/DeepSeek、退出与重开 journey。
+
+W4 的施工顺序严格为：先纠正 Workbench/research/本 brief 的 sole owner；再写纯 classifier 与 table-driven falsifiers；先 characterization Settings Model services 后只提取必要 seam；再挂载三步 Dialog、删除旧 banner、闭合视觉与 packaged 证据。若实现需要第二套持久化/auth/catalog owner、复制 Pi schema/credential lifecycle、静态猜默认模型或破坏 W3，立即停止。详细执行清单由维护者确认的 `omnimind-first-run-three-step-wizard-execution-plan.md` 提供，但稳定产品合同只看 [`architecture/workbench.md`](architecture/workbench.md)。
+
+W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
 2. targeted child control：stop A 不影响 sibling B 或 Root；parent stop-all、stale/terminal control、writer stop 与 crash/reopen各有准确语义；Pi 没有真实 message/steer 时 UI 不显示；
@@ -233,4 +248,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity active；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness active；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
