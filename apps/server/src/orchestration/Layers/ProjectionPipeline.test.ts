@@ -4411,12 +4411,36 @@ it.layer(BaseTestLayer)("OrchestrationProjectionPipeline", (it) => {
           role: "assistant",
         },
       ]);
-      const segmentRows = yield* sql<{ readonly count: number }>`
-        SELECT COUNT(*) AS count
+      const segmentRows = yield* sql<{
+        readonly messageId: string;
+        readonly sequence: number;
+        readonly startedAt: string;
+        readonly endedAt: string;
+        readonly text: string;
+      }>`
+        SELECT
+          message_id AS "messageId", sequence,
+          started_at AS "startedAt", ended_at AS "endedAt", text
         FROM message_text_segments
         WHERE thread_id = 'thread-revert'
+        ORDER BY sequence ASC
       `;
-      assert.deepEqual(segmentRows, [{ count: 0 }]);
+      assert.deepEqual(segmentRows, [
+        {
+          messageId: "assistant-keep",
+          sequence: 10,
+          startedAt: "2026-02-26T12:00:02.100Z",
+          endedAt: "2026-02-26T12:00:02.100Z",
+          text: "ke",
+        },
+        {
+          messageId: "assistant-keep",
+          sequence: 20,
+          startedAt: "2026-02-26T12:00:02.100Z",
+          endedAt: "2026-02-26T12:00:02.100Z",
+          text: "pt",
+        },
+      ]);
     }),
   );
 });
@@ -4430,6 +4454,10 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
       Layer.provideMerge(persistenceLayer),
     );
     const secondProjectionLayer = OrchestrationProjectionPipelineLive.pipe(
+      Layer.provideMerge(OrchestrationEventStoreLive),
+      Layer.provideMerge(persistenceLayer),
+    );
+    const thirdProjectionLayer = OrchestrationProjectionPipelineLive.pipe(
       Layer.provideMerge(OrchestrationEventStoreLive),
       Layer.provideMerge(persistenceLayer),
     );
@@ -4543,6 +4571,44 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
           },
         },
       });
+      yield* eventStore.append({
+        type: "thread.message-sent",
+        eventId: EventId.makeUnsafe("evt-restart-pruned-message"),
+        aggregateKind: "thread",
+        aggregateId: threadId,
+        occurredAt: sessionSetAt,
+        commandId: CommandId.makeUnsafe("cmd-restart-pruned-message"),
+        causationEventId: null,
+        correlationId: CorrelationId.makeUnsafe("cmd-restart-pruned-message"),
+        metadata: {},
+        payload: {
+          threadId,
+          messageId: MessageId.makeUnsafe("message-restart-pruned"),
+          role: "user",
+          text: "prune me",
+          turnId: null,
+          streaming: false,
+          createdAt: sessionSetAt,
+          updatedAt: sessionSetAt,
+        },
+      });
+      yield* eventStore.append({
+        type: "thread.conversation-rolled-back",
+        eventId: EventId.makeUnsafe("evt-restart-rollback"),
+        aggregateKind: "thread",
+        aggregateId: threadId,
+        occurredAt: sessionSetAt,
+        commandId: CommandId.makeUnsafe("cmd-restart-rollback"),
+        causationEventId: null,
+        correlationId: CorrelationId.makeUnsafe("cmd-restart-rollback"),
+        metadata: {},
+        payload: {
+          threadId,
+          messageId: MessageId.makeUnsafe("message-restart-pruned"),
+          numTurns: 1,
+          removedTurnIds: [],
+        },
+      });
 
       yield* projectionPipeline.bootstrap;
 
@@ -4596,6 +4662,18 @@ it.effect("restores pending turn-start metadata across projection pipeline resta
       { sequence: 10, text: "Before tool." },
       { sequence: 30, text: "After." },
     ]);
+    const reopenedSegmentRows = yield* Effect.gen(function* () {
+      const projectionPipeline = yield* OrchestrationProjectionPipeline;
+      const sql = yield* SqlClient.SqlClient;
+      yield* projectionPipeline.bootstrap;
+      return yield* sql<{ readonly sequence: number; readonly text: string }>`
+        SELECT sequence, text
+        FROM message_text_segments
+        WHERE thread_id = ${threadId} AND message_id = ${assistantMessageId}
+        ORDER BY sequence ASC
+      `;
+    }).pipe(Effect.provide(thirdProjectionLayer));
+    assert.deepEqual(reopenedSegmentRows, restartRows.segmentRows);
   }).pipe(
     Effect.provide(
       Layer.provideMerge(
@@ -5416,10 +5494,19 @@ it.layer(
         ORDER BY sequence ASC
       `;
       assert.deepStrictEqual(messages, [{ messageId: retainedMessageId }]);
-      const remainingSegments = yield* sql<{ readonly count: number }>`
-        SELECT COUNT(*) AS count FROM message_text_segments WHERE thread_id = ${threadId}
+      const remainingSegments = yield* sql<{
+        readonly messageId: string;
+        readonly sequence: number;
+        readonly text: string;
+      }>`
+        SELECT message_id AS "messageId", sequence, text
+        FROM message_text_segments
+        WHERE thread_id = ${threadId}
+        ORDER BY sequence ASC
       `;
-      assert.deepStrictEqual(remainingSegments, [{ count: 0 }]);
+      assert.deepStrictEqual(remainingSegments, [
+        { messageId: retainedMessageId, sequence: 10, text: "retained" },
+      ]);
 
       const blobs = yield* sql<{ readonly attachmentId: string; readonly state: string }>`
         SELECT attachment_id AS "attachmentId", state

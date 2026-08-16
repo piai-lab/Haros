@@ -128,6 +128,10 @@
       "types": "./src/threadSummary.ts",
       "import": "./src/threadSummary.ts"
     },
+    "./providerActivityVisibility": {
+      "types": "./src/providerActivityVisibility.ts",
+      "import": "./src/providerActivityVisibility.ts"
+    },
     "./pendingInteractions": {
       "types": "./src/pendingInteractions.ts",
       "import": "./src/pendingInteractions.ts"

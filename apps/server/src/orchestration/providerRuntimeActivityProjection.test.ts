@@ -10,6 +10,7 @@ import {
 } from "@omnimind/contracts";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
+import { isPotentiallyVisibleProviderRuntimeActivity } from "@omnimind/shared/providerActivityVisibility";
 
 import {
   projectProviderRuntimeActivities,
@@ -56,6 +57,102 @@ function expectSchemaValidActivities(event: ProviderRuntimeEvent): void {
 }
 
 describe("projected activities satisfy the orchestration command schema", () => {
+  it("classifies only activities that can enter the existing WorkLog timeline as boundaries", () => {
+    const visibleEvents = [
+      runtimeEvent({
+        type: "item.completed",
+        eventId: "visible-reasoning",
+        itemId: RuntimeItemId.makeUnsafe("reasoning-visible"),
+        payload: { itemType: "reasoning", status: "completed", detail: "Reasoned" },
+      }),
+      runtimeEvent({
+        type: "model.rerouted",
+        eventId: "visible-model-rerouted",
+        payload: { fromModel: "a", toModel: "b", reason: "fallback" },
+      }),
+      runtimeEvent({
+        type: "runtime.error",
+        eventId: "visible-runtime-error",
+        payload: { message: "failed" },
+      }),
+      runtimeEvent({
+        type: "turn.tasks.updated",
+        eventId: "visible-turn-tasks",
+        payload: { tasks: [] },
+      }),
+      runtimeEvent({
+        type: "item.updated",
+        eventId: "visible-compaction",
+        payload: { itemType: "context_compaction", status: "inProgress" },
+      }),
+      runtimeEvent({
+        type: "turn.steered",
+        eventId: "visible-subagent-steer",
+        payload: { target: "subagent", message: "continue" },
+      }),
+      runtimeEvent({
+        type: "account.rate-limits.updated",
+        eventId: "visible-rate-limit-warning",
+        payload: { rateLimits: { status: "allowed_warning", utilization: 0.9 } },
+      }),
+    ];
+    for (const event of visibleEvents) {
+      expect(
+        projectProviderRuntimeActivities(event).some(isPotentiallyVisibleProviderRuntimeActivity),
+        event.eventId,
+      ).toBe(true);
+    }
+
+    const hiddenEvents = [
+      runtimeEvent({
+        type: "item.started",
+        eventId: "hidden-compaction-start",
+        payload: { itemType: "context_compaction", status: "inProgress" },
+      }),
+      runtimeEvent({
+        type: "content.delta",
+        eventId: "hidden-command-output-delta",
+        payload: { streamKind: "command_output", delta: "partial" },
+      }),
+      runtimeEvent({
+        type: "session.configured",
+        eventId: "hidden-context-configured",
+        payload: { config: { contextWindow: "200k" } },
+      }),
+      runtimeEvent({
+        type: "turn.completed",
+        eventId: "hidden-successful-turn-terminal",
+        payload: { state: "completed" },
+      }),
+      runtimeEvent({
+        type: "task.started",
+        eventId: "hidden-task-lifecycle",
+        payload: { taskId: "task-1" },
+      }),
+      runtimeEvent({
+        type: "account.rate-limits.updated",
+        eventId: "hidden-rate-limit-snapshot",
+        payload: { rateLimits: { status: "allowed", utilization: 0.1 } },
+      }),
+      runtimeEvent({
+        type: "item.completed",
+        eventId: "hidden-plan-boundary-tool",
+        itemId: RuntimeItemId.makeUnsafe("plan-boundary-tool"),
+        payload: {
+          itemType: "tool_call",
+          status: "completed",
+          detail: "ExitPlanMode: {}",
+        },
+      }),
+    ];
+    for (const event of hiddenEvents) {
+      expect(
+        projectProviderRuntimeActivities(event).some(isPotentiallyVisibleProviderRuntimeActivity),
+        event.eventId,
+      ).toBe(false);
+    }
+  });
+
   it("marks Pi retry progress for localized product presentation", () => {
     const [activity] = projectProviderRuntimeActivities(
       runtimeEvent({

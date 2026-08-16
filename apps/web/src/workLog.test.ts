@@ -3455,6 +3455,115 @@ describe("deriveTimelineEntries", () => {
     });
   });
 
+  it("uses one deterministic order for same-time user, plan, segment, and work rows", () => {
+    const createdAt = "2026-02-23T00:00:01.000Z";
+    const messageId = MessageId.makeUnsafe("assistant-total-order");
+    const messages = [
+      {
+        id: messageId,
+        role: "assistant" as const,
+        text: "beforeafter",
+        textSegments: [
+          { sequence: 10, startedAt: createdAt, endedAt: createdAt, text: "before" },
+          { sequence: 30, startedAt: createdAt, endedAt: createdAt, text: "after" },
+        ],
+        turnId: TurnId.makeUnsafe("turn-total-order"),
+        createdAt,
+        streaming: false,
+      },
+      {
+        id: MessageId.makeUnsafe("user-total-order"),
+        role: "user" as const,
+        text: "question",
+        turnId: null,
+        createdAt,
+        streaming: false,
+      },
+    ];
+    const plans = [
+      {
+        id: "plan-total-order",
+        turnId: null,
+        planMarkdown: "plan",
+        implementedAt: null,
+        implementationThreadId: null,
+        createdAt,
+        updatedAt: createdAt,
+      },
+    ];
+    const work = [
+      { id: "work-total-order", createdAt, sequence: 20, label: "tool", tone: "tool" as const },
+    ];
+
+    const first = deriveTimelineEntries(messages, plans, work).map((entry) => entry.id);
+    const second = deriveTimelineEntries(messages.toReversed(), plans, work).map(
+      (entry) => entry.id,
+    );
+    expect(first).toEqual([
+      "user-total-order",
+      `${messageId}#segment:0`,
+      "plan-total-order",
+      "work-total-order",
+      messageId,
+    ]);
+    expect(second).toEqual(first);
+  });
+
+  it("preserves causal order when legacy timestamps form the old comparator cycle", () => {
+    const messageId = MessageId.makeUnsafe("assistant-cycle-order");
+    const entries = deriveTimelineEntries(
+      [
+        {
+          id: MessageId.makeUnsafe("user-cycle-order"),
+          role: "user",
+          text: "legacy middle",
+          turnId: null,
+          createdAt: "2026-02-23T00:00:02.000Z",
+          streaming: false,
+        },
+        {
+          id: messageId,
+          role: "assistant",
+          text: "causal-firstcausal-second",
+          textSegments: [
+            {
+              sequence: 10,
+              startedAt: "2026-02-23T00:00:03.000Z",
+              endedAt: "2026-02-23T00:00:03.000Z",
+              text: "causal-first",
+            },
+            {
+              sequence: 30,
+              startedAt: "2026-02-23T00:00:03.000Z",
+              endedAt: "2026-02-23T00:00:03.000Z",
+              text: "causal-second",
+            },
+          ],
+          turnId: null,
+          createdAt: "2026-02-23T00:00:03.000Z",
+          streaming: false,
+        },
+      ],
+      [],
+      [
+        {
+          id: "work-cycle-order",
+          createdAt: "2026-02-23T00:00:01.000Z",
+          sequence: 20,
+          label: "tool",
+          tone: "tool",
+        },
+      ],
+    );
+
+    expect(entries.map((entry) => entry.id)).toEqual([
+      "user-cycle-order",
+      `${messageId}#segment:0`,
+      "work-cycle-order",
+      messageId,
+    ]);
+  });
+
   it("keeps segmented streaming output as one live message row", () => {
     const messageId = MessageId.makeUnsafe("assistant-streaming-segmented");
     const entries = deriveTimelineEntries(

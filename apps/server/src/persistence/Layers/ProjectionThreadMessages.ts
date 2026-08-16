@@ -21,6 +21,7 @@ import {
   ProjectionThreadMessage,
   ProjectionThreadMessageSegmentDbRow,
   type ProjectionThreadMessageTextSegment,
+  type ReplaceProjectionThreadMessagesInput,
 } from "../Services/ProjectionThreadMessages.ts";
 
 const LatestUserMessageAtRowSchema = Schema.Struct({
@@ -239,6 +240,24 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
       `,
   });
 
+  const insertMessageTextSegmentRow = (input: {
+    readonly threadId: string;
+    readonly messageId: string;
+    readonly segment: ProjectionThreadMessageTextSegment;
+  }) =>
+    sql`
+      INSERT INTO message_text_segments (
+        thread_id, message_id, sequence, started_at, ended_at, text
+      ) VALUES (
+        ${input.threadId}, ${input.messageId}, ${input.segment.sequence},
+        ${input.segment.startedAt}, ${input.segment.endedAt}, ${input.segment.text}
+      )
+    `.pipe(
+      Effect.mapError(
+        toPersistenceSqlError("ProjectionThreadMessageRepository.insertTextSegment:query"),
+      ),
+    );
+
   const listMessageTextSegmentRows = (
     input: ListProjectionThreadMessagesInput,
   ): Effect.Effect<ReadonlyArray<ProjectionThreadMessageSegmentDbRow>, ProjectionRepositoryError> =>
@@ -337,12 +356,35 @@ const makeProjectionThreadMessageRepository = Effect.gen(function* () {
       ),
     );
 
+  const replaceByThreadId: ProjectionThreadMessageRepositoryShape["replaceByThreadId"] = (
+    input: ReplaceProjectionThreadMessagesInput,
+  ) =>
+    Effect.gen(function* () {
+      yield* deleteMessageTextSegmentRows({ threadId: input.threadId });
+      yield* deleteProjectionThreadMessageRows({ threadId: input.threadId });
+      for (const message of input.messages) {
+        yield* upsertProjectionThreadMessageRow(message);
+        for (const segment of message.textSegments ?? []) {
+          yield* insertMessageTextSegmentRow({
+            threadId: message.threadId,
+            messageId: message.messageId,
+            segment,
+          });
+        }
+      }
+    }).pipe(
+      Effect.mapError(
+        toPersistenceSqlError("ProjectionThreadMessageRepository.replaceByThreadId:query"),
+      ),
+    );
+
   return {
     upsert,
     getByThreadAndMessageId,
     listByThreadId,
     getLatestUserMessageAt,
     deleteByThreadId,
+    replaceByThreadId,
   } satisfies ProjectionThreadMessageRepositoryShape;
 });
 

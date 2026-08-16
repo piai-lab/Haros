@@ -1256,10 +1256,10 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             keptRows = rollback.keptRows;
           }
 
-          yield* projectionThreadMessageRepository.deleteByThreadId({
+          yield* projectionThreadMessageRepository.replaceByThreadId({
             threadId: event.payload.threadId,
+            messages: keptRows,
           });
-          yield* Effect.forEach(keptRows, projectionThreadMessageRepository.upsert);
           if (event.type === "thread.reverted" || event.payload.skipAttachmentPrune !== true) {
             attachmentSideEffects.prunedThreadRelativePaths.set(
               event.payload.threadId,

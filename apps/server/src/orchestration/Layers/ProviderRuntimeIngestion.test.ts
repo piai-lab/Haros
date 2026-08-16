@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import type {
+  OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationReadModel,
   ProviderKind,
@@ -213,6 +214,15 @@ type ProviderRuntimeTestProposedPlan = ProviderRuntimeTestThread["proposedPlans"
 type ProviderRuntimeTestActivity = ProviderRuntimeTestThread["activities"][number];
 type ProviderRuntimeTestCheckpoint = ProviderRuntimeTestThread["checkpoints"][number];
 
+type DispatchFault = {
+  readonly mode: "before-commit" | "ambiguous-after-commit";
+  readonly matches: (command: OrchestrationCommand) => boolean;
+  readonly observes?: (command: OrchestrationCommand) => boolean;
+  readonly observed?: OrchestrationCommand[];
+  readonly attempts: OrchestrationCommand[];
+  injected: boolean;
+};
+
 describe("ProviderRuntimeIngestion", () => {
   it("backs off idle journal safety polls and returns to the fast recovery cadence", () => {
     let delayMs = 250;
@@ -286,7 +296,10 @@ describe("ProviderRuntimeIngestion", () => {
     }
   });
 
-  async function createHarness(options?: { readonly startIngestion?: boolean }) {
+  async function createHarness(options?: {
+    readonly startIngestion?: boolean;
+    readonly dispatchFault?: DispatchFault;
+  }) {
     const workspaceRoot = makeTempDir("omnimind-provider-project-");
     fs.mkdirSync(path.join(workspaceRoot, ".git"));
     const provider = createProviderServiceHarness();
@@ -296,6 +309,41 @@ describe("ProviderRuntimeIngestion", () => {
       Layer.provide(OrchestrationEventStoreLive),
       Layer.provide(OrchestrationCommandReceiptRepositoryLive),
     );
+    const ingestionOrchestrationLayer = options?.dispatchFault
+      ? Layer.effect(
+          OrchestrationEngineService,
+          Effect.gen(function* () {
+            const live = yield* OrchestrationEngineService;
+            const fault = options.dispatchFault!;
+            return {
+              ...live,
+              dispatch: (command, context) => {
+                if (fault.observes?.(command)) {
+                  fault.observed?.push(command);
+                }
+                if (!fault.matches(command)) {
+                  return live.dispatch(command, context);
+                }
+                fault.attempts.push(command);
+                if (fault.injected) {
+                  return live.dispatch(command, context);
+                }
+                fault.injected = true;
+                if (fault.mode === "before-commit") {
+                  return Effect.die(new Error("injected dispatch failure before commit"));
+                }
+                return live
+                  .dispatch(command, context)
+                  .pipe(
+                    Effect.flatMap(() =>
+                      Effect.die(new Error("injected dispatch failure after commit")),
+                    ),
+                  );
+              },
+            } satisfies OrchestrationEngineShape;
+          }),
+        ).pipe(Layer.provide(orchestrationLayer))
+      : orchestrationLayer;
     const runtimeEventRepositoryLayer = ProviderRuntimeEventRepositoryLive.pipe(
       Layer.provideMerge(SqlitePersistenceMemory),
     );
@@ -306,7 +354,7 @@ describe("ProviderRuntimeIngestion", () => {
       Layer.provide(providerSessionRuntimeRepositoryLayer),
     );
     const layer = ProviderRuntimeIngestionLive.pipe(
-      Layer.provideMerge(orchestrationLayer),
+      Layer.provideMerge(ingestionOrchestrationLayer),
       Layer.provideMerge(OrchestrationProjectionSnapshotQueryLive),
       Layer.provideMerge(SqlitePersistenceMemory),
       Layer.provideMerge(runtimeEventRepositoryLayer),
@@ -431,6 +479,69 @@ describe("ProviderRuntimeIngestion", () => {
       runtimeEventRepository,
       providerSessionDirectory,
     };
+  }
+
+  type TestHarness = Awaited<ReturnType<typeof createHarness>>;
+
+  async function beginAssistantTurn(
+    harness: TestHarness,
+    input: {
+      readonly suffix: string;
+      readonly deliveryMode: "buffered" | "streaming";
+      readonly createdAt: string;
+    },
+  ) {
+    const turnId = asTurnId(`turn-${input.suffix}`);
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe(`cmd-turn-start-${input.suffix}`),
+        threadId: asThreadId("thread-1"),
+        message: {
+          messageId: asMessageId(`message-${input.suffix}`),
+          role: "user",
+          text: `start ${input.suffix}`,
+          attachments: [],
+        },
+        assistantDeliveryMode: input.deliveryMode,
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        createdAt: input.createdAt,
+      }),
+    );
+    await harness.drain();
+    harness.emit({
+      type: "turn.started",
+      eventId: asEventId(`evt-turn-started-${input.suffix}`),
+      provider: "codex",
+      createdAt: input.createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId,
+    });
+    await waitForThread(
+      harness.engine,
+      (thread) => thread.session?.status === "running" && thread.session.activeTurnId === turnId,
+    );
+    return turnId;
+  }
+
+  async function retryInjectedRuntimeRow(
+    harness: TestHarness,
+    fault: DispatchFault,
+    targetSequence: number,
+  ) {
+    await expect(harness.drain()).rejects.toThrow("before drain fence");
+    expect(
+      await Effect.runPromise(
+        harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+      ),
+    ).toBeLessThan(targetSequence);
+
+    await harness.drain();
+
+    expect(fault.injected).toBe(true);
+    expect(fault.attempts).toHaveLength(2);
+    expect(fault.attempts[1]).toEqual(fault.attempts[0]);
   }
 
   it("keeps binding validation and asynchronous runtime projection in one lifecycle lease", async () => {
@@ -791,8 +902,25 @@ describe("ProviderRuntimeIngestion", () => {
     const turnId = asTurnId("turn-segment-interleave");
     const assistantItemId = asItemId("item-segment-interleave");
     const createdAt = "2026-07-14T00:10:00.000Z";
+    const otherThreadId = asThreadId("thread-segment-other");
     const push = (event: ProviderRuntimeEvent) =>
       Effect.runPromise(harness.runtimeEventRepository.append(event));
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-segment-other-thread-create"),
+        threadId: otherThreadId,
+        projectId: asProjectId("project-1"),
+        title: "Other thread",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        branch: null,
+        worktreePath: null,
+        createdAt,
+      }),
+    );
+    await harness.bindLegacyRuntimeSource("codex", otherThreadId);
 
     const first = await push({
       type: "content.delta",
@@ -824,6 +952,14 @@ describe("ProviderRuntimeIngestion", () => {
       itemId: assistantItemId,
       payload: { streamKind: "assistant_text", delta: "Still planning. " },
     });
+    const otherThreadWarning = await push({
+      type: "runtime.warning",
+      eventId: asEventId("evt-segment-other-thread-warning"),
+      provider: "codex",
+      createdAt,
+      threadId: otherThreadId,
+      payload: { message: "belongs elsewhere" },
+    });
     const tool = await push({
       type: "item.started",
       eventId: asEventId("evt-segment-tool"),
@@ -843,6 +979,54 @@ describe("ProviderRuntimeIngestion", () => {
       turnId,
       itemId: assistantItemId,
       payload: { streamKind: "assistant_text", delta: "Then explain." },
+    });
+    const modelRerouted = await push({
+      type: "model.rerouted",
+      eventId: asEventId("evt-segment-model-rerouted"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      payload: { fromModel: "model-a", toModel: "model-b", reason: "fallback" },
+    });
+    await push({
+      type: "turn.tasks.updated",
+      eventId: asEventId("evt-segment-tasks-updated"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      payload: { tasks: [] },
+    });
+    const third = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-segment-text-after-lifecycle"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: " More detail." },
+    });
+    const reasoning = await push({
+      type: "item.completed",
+      eventId: asEventId("evt-segment-reasoning-complete"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: asItemId("reasoning-segment-interleave"),
+      payload: { itemType: "reasoning", status: "completed", detail: "Reasoned" },
+    });
+    const fourth = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-segment-text-after-reasoning"),
+      provider: "codex",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: " Final." },
     });
     await push({
       type: "item.completed",
@@ -866,10 +1050,12 @@ describe("ProviderRuntimeIngestion", () => {
     );
     const toolActivity = thread.activities.find((activity) => activity.id === tool.event.eventId);
 
-    expect(message?.text).toBe("Plan first. Still planning. Then explain.");
+    expect(message?.text).toBe("Plan first. Still planning. Then explain. More detail. Final.");
     expect(message?.textSegments?.map((segment) => [segment.sequence, segment.text])).toEqual([
       [first.sequence, "Plan first. Still planning. "],
       [second.sequence, "Then explain."],
+      [third.sequence, " More detail."],
+      [fourth.sequence, " Final."],
     ]);
     expect(
       thread.activities.some((activity) => activity.id === hiddenCompactionStart.event.eventId),
@@ -877,6 +1063,18 @@ describe("ProviderRuntimeIngestion", () => {
     expect(toolActivity?.sequence).toBe(tool.sequence);
     expect(message?.textSegments?.[0]?.sequence).toBeLessThan(toolActivity?.sequence ?? -1);
     expect(toolActivity?.sequence).toBeLessThan(message?.textSegments?.[1]?.sequence ?? -1);
+    expect(message?.textSegments?.[1]?.sequence).toBeLessThan(modelRerouted.sequence);
+    expect(modelRerouted.sequence).toBeLessThan(message?.textSegments?.[2]?.sequence ?? -1);
+    expect(message?.textSegments?.[2]?.sequence).toBeLessThan(reasoning.sequence);
+    expect(reasoning.sequence).toBeLessThan(message?.textSegments?.[3]?.sequence ?? -1);
+    const otherThread = await waitForThread(
+      harness.engine,
+      (entry) =>
+        entry.activities.some((activity) => activity.id === otherThreadWarning.event.eventId),
+      2_000,
+      otherThreadId,
+    );
+    expect(otherThread.activities).toHaveLength(1);
   });
 
   it("quarantines a command identity collision without blocking later assistant output", async () => {
@@ -4948,6 +5146,292 @@ describe("ProviderRuntimeIngestion", () => {
     expect(message?.streaming).toBe(false);
     expect(thread.session?.status).toBe("error");
   });
+
+  it.each(["before-commit", "ambiguous-after-commit"] as const)(
+    "retries a %s streaming assistant delta with one stable receipt payload",
+    async (mode) => {
+      const suffix = `retry-streaming-${mode}`;
+      const targetEventId = asEventId(`evt-${suffix}`);
+      const fault: DispatchFault = {
+        mode,
+        matches: (command) =>
+          command.type === "thread.message.assistant.delta" &&
+          String(command.commandId).startsWith(`provider:${targetEventId}:assistant-delta:`),
+        attempts: [],
+        injected: false,
+      };
+      const harness = await createHarness({ dispatchFault: fault });
+      const createdAt = "2026-08-16T08:00:00.000Z";
+      const turnId = await beginAssistantTurn(harness, {
+        suffix,
+        deliveryMode: "streaming",
+        createdAt,
+      });
+      const itemId = asItemId(`item-${suffix}`);
+      const target = await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "content.delta",
+          eventId: targetEventId,
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { streamKind: "assistant_text", delta: "stream exactly once" },
+        }),
+      );
+
+      await retryInjectedRuntimeRow(harness, fault, target.sequence);
+
+      await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "item.completed",
+          eventId: asEventId(`evt-${suffix}-completed`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { itemType: "assistant_message", status: "completed" },
+        }),
+      );
+      const sentinel = await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "runtime.warning",
+          eventId: asEventId(`evt-${suffix}-sentinel`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          payload: { message: "retry sentinel" },
+        }),
+      );
+      await harness.drain();
+
+      const readModel = await Effect.runPromise(harness.engine.getReadModel());
+      const thread = readModel.threads.find((entry) => entry.id === asThreadId("thread-1"));
+      const message = thread?.messages.find(
+        (entry) => entry.id === `assistant:${itemId}` && entry.role === "assistant",
+      );
+      expect(message).toMatchObject({
+        text: "stream exactly once",
+        streaming: false,
+      });
+      expect(message?.textSegments).toBeUndefined();
+      expect(thread?.activities.some((activity) => activity.id === sentinel.event.eventId)).toBe(
+        true,
+      );
+      expect(
+        await Effect.runPromise(
+          harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+        ),
+      ).toBe(sentinel.sequence);
+    },
+  );
+
+  it.each(["before-commit", "ambiguous-after-commit"] as const)(
+    "retries a %s buffered multi-segment completion without changing suffixed commands",
+    async (mode) => {
+      const suffix = `retry-buffered-completion-${mode}`;
+      const completionEventId = asEventId(`evt-${suffix}-completed`);
+      const fault: DispatchFault = {
+        mode,
+        matches: (command) =>
+          command.type === "thread.message.assistant.complete" &&
+          String(command.commandId).startsWith(`provider:${completionEventId}:assistant-complete:`),
+        observes: (command) =>
+          String(command.commandId).startsWith(`provider:${completionEventId}:`),
+        observed: [],
+        attempts: [],
+        injected: false,
+      };
+      const harness = await createHarness({ dispatchFault: fault });
+      const createdAt = "2026-08-16T08:01:00.000Z";
+      const turnId = await beginAssistantTurn(harness, {
+        suffix,
+        deliveryMode: "buffered",
+        createdAt,
+      });
+      const itemId = asItemId(`item-${suffix}`);
+      await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "content.delta",
+          eventId: asEventId(`evt-${suffix}-first`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { streamKind: "assistant_text", delta: "alpha" },
+        }),
+      );
+      await harness.drain();
+      await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "runtime.warning",
+          eventId: asEventId(`evt-${suffix}-boundary`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          payload: { message: "visible boundary" },
+        }),
+      );
+      await harness.drain();
+      await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "content.delta",
+          eventId: asEventId(`evt-${suffix}-second`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { streamKind: "assistant_text", delta: "omega" },
+        }),
+      );
+      await harness.drain();
+      const target = await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "item.completed",
+          eventId: completionEventId,
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { itemType: "assistant_message", status: "completed" },
+        }),
+      );
+
+      await retryInjectedRuntimeRow(harness, fault, target.sequence);
+      expect(fault.observed).toHaveLength(6);
+      expect(fault.observed?.slice(3)).toEqual(fault.observed?.slice(0, 3));
+      expect(fault.observed?.slice(0, 2).map((command) => String(command.commandId))).toEqual([
+        expect.stringContaining(":assistant-delta-finalize-segment-0:"),
+        expect.stringContaining(":assistant-delta-finalize-segment-1:"),
+      ]);
+
+      const sentinel = await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "runtime.warning",
+          eventId: asEventId(`evt-${suffix}-sentinel`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          payload: { message: "retry sentinel" },
+        }),
+      );
+      await harness.drain();
+
+      const readModel = await Effect.runPromise(harness.engine.getReadModel());
+      const thread = readModel.threads.find((entry) => entry.id === asThreadId("thread-1"));
+      const message = thread?.messages.find((entry) => entry.id === `assistant:${itemId}`);
+      expect(message).toMatchObject({ text: "alphaomega", streaming: false });
+      expect(message?.textSegments?.map((segment) => segment.text)).toEqual(["alpha", "omega"]);
+      expect(thread?.activities.some((activity) => activity.id === sentinel.event.eventId)).toBe(
+        true,
+      );
+      expect(
+        await Effect.runPromise(
+          harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+        ),
+      ).toBe(sentinel.sequence);
+    },
+  );
+
+  it.each(["before-commit", "ambiguous-after-commit"] as const)(
+    "retries a %s buffered spill before invalidating process-local text",
+    async (mode) => {
+      const suffix = `retry-buffer-spill-${mode}`;
+      const targetEventId = asEventId(`evt-${suffix}`);
+      const fault: DispatchFault = {
+        mode,
+        matches: (command) =>
+          command.type === "thread.message.assistant.delta" &&
+          String(command.commandId).includes(
+            `provider:${targetEventId}:assistant-delta-buffer-spill:`,
+          ),
+        attempts: [],
+        injected: false,
+      };
+      const harness = await createHarness({ dispatchFault: fault });
+      const createdAt = "2026-08-16T08:02:00.000Z";
+      const turnId = await beginAssistantTurn(harness, {
+        suffix,
+        deliveryMode: "buffered",
+        createdAt,
+      });
+      const itemId = asItemId(`item-${suffix}`);
+      const oversizedText = "x".repeat(40_000);
+      const target = await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "content.delta",
+          eventId: targetEventId,
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { streamKind: "assistant_text", delta: oversizedText },
+        }),
+      );
+
+      await retryInjectedRuntimeRow(harness, fault, target.sequence);
+
+      await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "content.delta",
+          eventId: asEventId(`evt-${suffix}-tail`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { streamKind: "assistant_text", delta: "tail" },
+        }),
+      );
+      await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "item.completed",
+          eventId: asEventId(`evt-${suffix}-completed`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          itemId,
+          payload: { itemType: "assistant_message", status: "completed" },
+        }),
+      );
+      const sentinel = await Effect.runPromise(
+        harness.runtimeEventRepository.append({
+          type: "runtime.warning",
+          eventId: asEventId(`evt-${suffix}-sentinel`),
+          provider: "codex",
+          createdAt,
+          threadId: asThreadId("thread-1"),
+          turnId,
+          payload: { message: "retry sentinel" },
+        }),
+      );
+      await harness.drain();
+
+      const readModel = await Effect.runPromise(harness.engine.getReadModel());
+      const thread = readModel.threads.find((entry) => entry.id === asThreadId("thread-1"));
+      const message = thread?.messages.find((entry) => entry.id === `assistant:${itemId}`);
+      expect(message).toMatchObject({ text: `${oversizedText}tail`, streaming: false });
+      expect(message?.textSegments).toBeUndefined();
+      expect(thread?.activities.some((activity) => activity.id === sentinel.event.eventId)).toBe(
+        true,
+      );
+      expect(
+        await Effect.runPromise(
+          harness.runtimeEventRepository.getConsumerCursor(PROVIDER_RUNTIME_INGESTION_CONSUMER),
+        ),
+      ).toBe(sentinel.sequence);
+    },
+  );
 
   it("spills oversized buffered deltas and still finalizes full assistant text", async () => {
     const harness = await createHarness();

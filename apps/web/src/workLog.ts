@@ -1,7 +1,6 @@
 import {
   isToolLifecycleItemType,
   MessageId,
-  STUDIO_OUTPUTS_ACTIVITY_KIND,
   type OrchestrationLatestTurnState,
   type OrchestrationThreadActivity,
   ProviderTurnStartFailureReason,
@@ -10,6 +9,7 @@ import {
   type ToolLifecycleItemType,
   type TurnId,
 } from "@omnimind/contracts";
+import { isPotentiallyVisibleProviderRuntimeActivity } from "@omnimind/shared/providerActivityVisibility";
 import { Schema } from "effect";
 import {
   decodeSubagentAgentStates,
@@ -32,7 +32,6 @@ import {
   normalizeToolTextForComparison,
   type OmniMindMcpToolStatus,
 } from "./lib/toolCallLabel";
-import { toolArgumentSummaryToolName } from "./lib/toolArgumentSummary";
 import {
   deriveWorkLogToolDetails,
   mergeWorkLogToolDetails,
@@ -273,22 +272,7 @@ export function deriveWorkLogEntries(
   const ordered = orderedActivities(activities);
   const entries = ordered
     .filter((activity) => shouldKeepActivityForWorkLog(activity, latestTurnId, visibleTurnIds))
-    .filter(
-      (activity) =>
-        activity.kind !== "task.started" &&
-        activity.kind !== "task.updated" &&
-        activity.kind !== "task.completed",
-    )
-    .filter((activity) => !isQuietTurnLifecycleActivity(activity))
-    .filter((activity) => activity.kind !== "account.rate-limits.updated")
-    .filter(
-      (activity) =>
-        activity.kind !== "context-window.updated" && activity.kind !== "context-window.configured",
-    )
-    .filter((activity) => activity.summary !== "Checkpoint captured")
-    // Server-side Studio output attribution is environment-panel data, not transcript work.
-    .filter((activity) => activity.kind !== STUDIO_OUTPUTS_ACTIVITY_KIND)
-    .filter((activity) => !isPlanBoundaryToolActivity(activity))
+    .filter(isPotentiallyVisibleProviderRuntimeActivity)
     .map(toDerivedWorkLogEntry);
   // Strip the derivation-only helpers that exist solely on DerivedWorkLogEntry.
   // `toolName` and `activityKind` are intentionally kept: they are public
@@ -350,31 +334,8 @@ function shouldKeepActivityForWorkLog(
   return latestTurnId ? activity.turnId === latestTurnId : true;
 }
 
-function isQuietTurnLifecycleActivity(activity: OrchestrationThreadActivity): boolean {
-  if (activity.kind !== "turn.completed" && activity.kind !== "turn.aborted") {
-    return false;
-  }
-  // Provider lifecycle rows close internal state; assistant/result text is rendered from messages.
-  return activity.tone !== "error";
-}
-
 function isUninformativeCommandStartEntry(entry: DerivedWorkLogEntry): boolean {
   return entry.activityKind === "tool.started" && entry.suppressStandaloneCommandStart === true;
-}
-
-function isPlanBoundaryToolActivity(activity: OrchestrationThreadActivity): boolean {
-  if (activity.kind !== "tool.updated" && activity.kind !== "tool.completed") {
-    return false;
-  }
-
-  const payload =
-    activity.payload && typeof activity.payload === "object"
-      ? (activity.payload as Record<string, unknown>)
-      : null;
-  return (
-    typeof payload?.detail === "string" &&
-    toolArgumentSummaryToolName(payload.detail) === "ExitPlanMode"
-  );
 }
 
 function extractWorkLogAutomation(
@@ -2107,64 +2068,62 @@ function compareActivityLifecycleRank(kind: string): number {
   return 1;
 }
 
-function compareTimelineEntries(left: TimelineEntry, right: TimelineEntry): number {
-  if (
-    "sequence" in left &&
-    "sequence" in right &&
-    left.sequence !== undefined &&
-    right.sequence !== undefined &&
-    left.sequence !== right.sequence
-  ) {
-    return left.sequence - right.sequence;
+function timelineEntrySourceRank(entry: TimelineEntry): number {
+  if (entry.kind === "message") {
+    return entry.message.role === "user" ? 0 : 1;
   }
-  return left.createdAt.localeCompare(right.createdAt);
+  return entry.kind === "proposed-plan" ? 2 : 3;
 }
 
-function areTimelineEntriesOrdered(entries: ReadonlyArray<TimelineEntry>): boolean {
-  for (let index = 1; index < entries.length; index += 1) {
-    if (compareTimelineEntries(entries[index - 1]!, entries[index]!) > 0) {
-      return false;
-    }
-  }
-  return true;
+function compareTimelineEntryTie(left: TimelineEntry, right: TimelineEntry): number {
+  return (
+    timelineEntrySourceRank(left) - timelineEntrySourceRank(right) ||
+    left.id.localeCompare(right.id)
+  );
 }
 
-function sortedTimelineEntries(entries: TimelineEntry[]): TimelineEntry[] {
-  return areTimelineEntriesOrdered(entries) ? entries : entries.toSorted(compareTimelineEntries);
-}
-
-function mergeTimelineEntries(
-  left: ReadonlyArray<TimelineEntry>,
-  right: ReadonlyArray<TimelineEntry>,
-): TimelineEntry[] {
-  if (left.length === 0) {
-    return [...right];
-  }
-  if (right.length === 0) {
-    return [...left];
-  }
-
+function orderTimelineEntries(entries: ReadonlyArray<TimelineEntry>): TimelineEntry[] {
+  const causal = entries
+    .filter(
+      (entry): entry is TimelineEntry & { readonly sequence: number } =>
+        "sequence" in entry && entry.sequence !== undefined,
+    )
+    .toSorted(
+      (left, right) =>
+        left.sequence! - right.sequence! ||
+        left.createdAt.localeCompare(right.createdAt) ||
+        compareTimelineEntryTie(left, right),
+    );
+  const legacy = entries
+    .filter((entry) => !("sequence" in entry) || entry.sequence === undefined)
+    .toSorted(
+      (left, right) =>
+        left.createdAt.localeCompare(right.createdAt) || compareTimelineEntryTie(left, right),
+    );
   const merged: TimelineEntry[] = [];
-  let leftIndex = 0;
-  let rightIndex = 0;
-  while (leftIndex < left.length && rightIndex < right.length) {
-    const leftEntry = left[leftIndex]!;
-    const rightEntry = right[rightIndex]!;
-    if (compareTimelineEntries(leftEntry, rightEntry) <= 0) {
-      merged.push(leftEntry);
-      leftIndex += 1;
+  let causalIndex = 0;
+  let legacyIndex = 0;
+  while (causalIndex < causal.length && legacyIndex < legacy.length) {
+    const causalEntry = causal[causalIndex]!;
+    const legacyEntry = legacy[legacyIndex]!;
+    const headOrder =
+      causalEntry.createdAt.localeCompare(legacyEntry.createdAt) ||
+      compareTimelineEntryTie(causalEntry, legacyEntry);
+    if (headOrder <= 0) {
+      merged.push(causalEntry);
+      causalIndex += 1;
     } else {
-      merged.push(rightEntry);
-      rightIndex += 1;
+      merged.push(legacyEntry);
+      legacyIndex += 1;
     }
   }
-  while (leftIndex < left.length) {
-    merged.push(left[leftIndex]!);
-    leftIndex += 1;
+  while (causalIndex < causal.length) {
+    merged.push(causal[causalIndex]!);
+    causalIndex += 1;
   }
-  while (rightIndex < right.length) {
-    merged.push(right[rightIndex]!);
-    rightIndex += 1;
+  while (legacyIndex < legacy.length) {
+    merged.push(legacy[legacyIndex]!);
+    legacyIndex += 1;
   }
   return merged;
 }
@@ -2244,11 +2203,5 @@ export function deriveTimelineEntries(
     entry,
   }));
 
-  return mergeTimelineEntries(
-    mergeTimelineEntries(
-      sortedTimelineEntries(messageRows),
-      sortedTimelineEntries(proposedPlanRows),
-    ),
-    sortedTimelineEntries(workRows),
-  );
+  return orderTimelineEntries([...messageRows, ...proposedPlanRows, ...workRows]);
 }

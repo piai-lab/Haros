@@ -1522,11 +1522,30 @@ describe("orchestration projector", () => {
       }),
     ];
 
-    const afterRevert = await events.reduce<Promise<ReturnType<typeof createEmptyReadModel>>>(
-      (statePromise, event) =>
-        statePromise.then((state) => Effect.runPromise(projectEvent(state, event))),
-      Promise.resolve(afterCreate),
-    );
+    const beforeRevert = await events
+      .slice(0, -1)
+      .reduce<Promise<ReturnType<typeof createEmptyReadModel>>>(
+        (statePromise, event) =>
+          statePromise.then((state) => Effect.runPromise(projectEvent(state, event))),
+        Promise.resolve(afterCreate),
+      );
+    const modelWithSegments = structuredClone(beforeRevert);
+    for (const thread of modelWithSegments.threads) {
+      for (const message of thread.messages) {
+        if (message.role !== "assistant") continue;
+        Object.assign(message, {
+          textSegments: [
+            {
+              sequence: message.id === "assistant-keep" ? 10 : 30,
+              startedAt: message.createdAt,
+              endedAt: message.updatedAt,
+              text: message.text,
+            },
+          ],
+        });
+      }
+    }
+    const afterRevert = await Effect.runPromise(projectEvent(modelWithSegments, events.at(-1)!));
 
     const thread = afterRevert.threads[0];
     expect(
@@ -1534,8 +1553,23 @@ describe("orchestration projector", () => {
         id: message.id,
         role: message.role,
         turnId: message.turnId,
+        textSegments: message.textSegments,
       })),
-    ).toEqual([{ id: "assistant-keep", role: "assistant", turnId: "turn-1" }]);
+    ).toEqual([
+      {
+        id: "assistant-keep",
+        role: "assistant",
+        turnId: "turn-1",
+        textSegments: [
+          {
+            sequence: 10,
+            startedAt: "2026-02-26T12:00:01.100Z",
+            endedAt: "2026-02-26T12:00:01.100Z",
+            text: "kept",
+          },
+        ],
+      },
+    ]);
   });
 
   it("keeps activity order while appending and replacing without a full sort", async () => {

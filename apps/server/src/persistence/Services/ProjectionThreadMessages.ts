@@ -80,6 +80,11 @@ export const DeleteProjectionThreadMessagesInput = Schema.Struct({
 });
 export type DeleteProjectionThreadMessagesInput = typeof DeleteProjectionThreadMessagesInput.Type;
 
+export interface ReplaceProjectionThreadMessagesInput {
+  readonly threadId: ThreadId;
+  readonly messages: ReadonlyArray<ProjectionThreadMessage>;
+}
+
 /**
  * ProjectionThreadMessageRepositoryShape - Service API for projected thread messages.
  */
@@ -120,6 +125,15 @@ export interface ProjectionThreadMessageRepositoryShape {
    */
   readonly deleteByThreadId: (
     input: DeleteProjectionThreadMessagesInput,
+  ) => Effect.Effect<void, ProjectionRepositoryError>;
+
+  /**
+   * Replace one thread's projected messages and their derived text segments.
+   *
+   * Projection replay/revert invokes this inside its existing SQLite transaction.
+   */
+  readonly replaceByThreadId: (
+    input: ReplaceProjectionThreadMessagesInput,
   ) => Effect.Effect<void, ProjectionRepositoryError>;
 }
 
