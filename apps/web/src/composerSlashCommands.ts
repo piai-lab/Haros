@@ -94,12 +94,15 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
   command: ComposerSlashCommand,
 ): boolean {
   return (
+    command === "debug" ||
+    command === "default" ||
     command === "automation" ||
     command === "export" ||
     command === "feedback" ||
     // /fork always uses OmniMind's thread fork lifecycle. A provider-native
     // command with the same spelling must not replace that product action.
     command === "fork" ||
+    command === "goal" ||
     (providerUsesAppOwnedReviewSlashCommand(provider) && command === "review")
   );
 }
@@ -115,9 +118,12 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
     normalizedCommand === "mobile" ||
     normalizedCommand === "remote-control" ||
     normalizedCommand === "automation" ||
+    normalizedCommand === "debug" ||
+    normalizedCommand === "default" ||
     (normalizedCommand === "export" && appCommandIsAvailable) ||
     (normalizedCommand === "feedback" && appCommandIsAvailable) ||
     (normalizedCommand === "fork" && appCommandIsAvailable) ||
+    (normalizedCommand === "goal" && appCommandIsAvailable) ||
     (providerUsesAppOwnedReviewSlashCommand(provider) && normalizedCommand === "review")
   );
 }
@@ -261,7 +267,7 @@ export function parseComposerSlashInvocationForCommands(
   text: string,
   commands: ReadonlyArray<ComposerSlashCommand>,
 ): ComposerSlashInvocation | null {
-  const match = /^\/([a-z-]+)(?:\s+(.*))?$/i.exec(text.trim());
+  const match = /^\/([a-z-]+)(?:\s+([\s\S]*))?$/i.exec(text.trim());
   if (!match) {
     return null;
   }
@@ -446,6 +452,7 @@ export function getAvailableComposerSlashCommands(input: {
           "model",
           ...(input.supportsFastSlashCommand ? (["fast"] as const) : []),
           "plan",
+          "debug",
           "default",
           ...(input.canOfferReviewCommand ? (["review"] as const) : []),
           ...(input.canOfferForkCommand ? (["fork"] as const) : []),
@@ -453,6 +460,7 @@ export function getAvailableComposerSlashCommands(input: {
           "status",
           "subagents",
           ...(input.canOfferExportCommand ? (["export"] as const) : []),
+          "goal",
           "feedback",
           "automation",
         ]
@@ -466,6 +474,9 @@ export function getAvailableComposerSlashCommands(input: {
           ...(input.canOfferForkCommand ? (["fork"] as const) : []),
           ...(input.canOfferSideCommand ? (["side"] as const) : []),
           ...(input.canOfferExportCommand ? (["export"] as const) : []),
+          "goal",
+          "debug",
+          "default",
           "feedback",
           "automation",
         ];

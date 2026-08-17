@@ -1,6 +1,6 @@
 # OmniMind 当前执行简报
 
-Updated: 2026-08-17
+Updated: 2026-08-18
 
 本文件只拥有当前目标、范围、真实冲突/阻塞与下一动作。历史 Slice、构建日志、测试计数和 artifact 证据属于 Git、`research/` 与 active Mission，不在这里追加。它不能推翻维护者对完整 source decision surface 的明确采用决定。
 
@@ -8,7 +8,7 @@ Updated: 2026-08-17
 
 以 Synara exact `8f9f60045ea652db7d4a6822e2f723dde073f40a` 为当前产品母体完成一次事实闭合的 intake：
 
-1. 保留已经进入 `main` 的 runtime/security/recovery 更新；
+1. 保留已有 runtime/security/recovery 更新；
 2. 把 Goal 与 Todo 重新分开；
 3. 完整吸收 Synara ThreadGoal、Debug、bounded raw events、width/icon、Profile local export、perf harness，并闭合 Group 与不同名 owner parity；
 4. 同时完成 commit-range、whole-tree path/behavior 与作者测试 accounting；
@@ -16,29 +16,19 @@ Updated: 2026-08-17
 
 ## 当前事实
 
-- OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前分支 `main`。
+- OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前 adoption 分支 `codex/synara-8f9f600-adoption`；exact pushed product SHA 为 `58f76446d3d7061b7fe18e140fe56676269497c3`。
+- `origin/main` 与 `origin/codex/synara-8f9f600-adoption` 已于 2026-08-18 非强制 fast-forward 到同一 authority closure `72eaf86219e369ea8227639f71a5a1b634667d25`；该纯文档 SHA 不冒充安装产品字节。
 - Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`，等于 `origin/main`。
-- README 的 production-adopted Synara revision 仍为 `18ff99857d5b84adab2019c2839fa4f6df761b7c`；在完整 decision surface 确认和 adoption set 闭合前不得倒推成 `8f9f600…` 已完整 adopted。
-- `main` 已推送 `22bbd70a6` 与 `d86d5766b`，实现 `18ff998…8f9f600` 范围内 61 个 security/runtime/recovery 语义责任；它们是当前代码事实，但此前没有同步关闭 README/research，因此 intake 尚未闭合。
-- `e0ee9cfe2` 只为 bundled OmniMind Agent 增加逐回合 `omnimind_update_tasks` Todo/task-list 投影与提示政策。它不是 Synara Goal persistence/control lifecycle，也不能作为 Goal 已吸收的证据。
-- 当前未提交工作树已加入 `ThreadGoal` contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export 与 perf harness；它们仍是本地 candidate，不能冒充 pushed/adopted。
+- `58f76446d` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归；其最后一轮改动只关闭 Automation 测试时钟/隔离和 Web compiler 回归，没有增加平行产品 owner。
+- `e0ee9cfe2` 的逐回合 `omnimind_update_tasks` Todo/task-list 投影仍与持久 Goal 分离；Todo 不是 Goal 的缩水替代。
 - Synara Goal 与 Todo 是两条独立责任。ThreadGoal 位于 OmniMind 已继承的同一 Product Orchestration/Thread authority 内，不是第二产品控制面。
 - 历史 C0–C5 / C1–C3 阶段门已被维护者撤销；它们不能再阻挡母体能力采用。`research/omnimind-agent-core-execution-guide.md` 只保留验证参考。
 - Goal 文件从未进入过 OmniMind 历史，准确状态是“此前未移植/错误延期”，不是“移植后删除”。
-- baseline 全树为 129 Synara-only、1,580 同路径分叉、4,785 byte-identical 与 154 OmniMind-only；当前工作树诊断为 96 仍缺路径、1,595 同路径分叉。raw count 不是 parity，必须按行为 owner 与作者测试闭合。
+- baseline 全树为 129 Synara-only、1,580 同路径分叉、4,785 byte-identical 与 154 OmniMind-only；exact `58f76446d` 对 exact Synara `8f9f600…` 为 94 Synara-only、1,602 同路径分叉、4,798 byte-identical 与 167 OmniMind-only。相对 `056f2835e`，最后的 Web compiler/cleanup 修正使 5 个原本相同的 shared blobs 成为有意分叉；路径集合未变。此前的 168 统计发生在删除无消费者的 `ComposerGoalBanner.tsx` 之前。最终树用 NUL-safe Git tree map 独立复核；普通 locale 下直接 `comm/join` 会把排序误报为 505/578，不得采用。剩余差异已按行为 owner、固定 divergence 与作者测试分组闭合，不用逐路径 ledger 取代行为审计。
 
 ## 当前工作范围
 
-正在进行：
-
-- 收口 Goal/Debug/raw events/width/icon/Profile export candidate 的失败恢复与 packaged journey；
-- 把已经完成的 Group/PR browser、真实 perf workload、全仓 typecheck/build 与 MiMo/DeepSeek 最小 live falsifier写入一致证据；
-- 同步 96 个仍缺 source path 与 1,595 个同路径分叉的责任 disposition、权威文档与最终 adoption 状态。
-
-当前 adoption head 前移前仍未闭合：
-
-- pushed-SHA packaged fresh-profile Goal/debug/width/icon/Profile journey；
-- authority closure 与 adopted-head 前移。
+已完成：Synara exact `8f9f600…` 的产品代码、commit-range 与 whole-tree disposition、作者等价测试、final gates、exact pushed-SHA packaged fresh-profile journey、README/Source Review/Mission/brief truth-convergence，以及 adoption set 进入 `main`。当前没有仍属于本轮的 Synara 产品施工。
 
 ## 保留边界
 
@@ -50,13 +40,11 @@ Updated: 2026-08-17
 
 ## 当前阻塞
 
-当前没有待裁决的产品阻塞。维护者已确认永久排除 Synara/DP Code legacy storage migration；Automation 采用母体的连续失败策略，默认 `3`，并提供 `1`/`3`/`5`/持续运行选项。剩余阻塞只来自提交、推送与 exact pushed-SHA packaged fresh-profile 证据尚未完成。
+当前没有待裁决的产品阻塞。维护者已确认永久排除 Synara/DP Code legacy storage migration；Automation 采用连续失败策略，默认 `3`，并提供 `1`/`3`/`5`/持续运行选项。维护者也明确将签名、公证、Windows/Linux artifact/journey、GitHub Release 与 update feed 排除出本轮；本机产物只如实称为 macOS arm64 ad-hoc candidate。
 
 ## 下一动作
 
-1. 形成并推送代码+README+research+Mission 一致的 adoption set；
-2. 从最终 exact pushed SHA 重建、安装并用 fresh 隔离 profile验证 Goal、Debug、width/icon、Profile export、失败/reopen 与 Todo 独立性；
-3. 只有前述闭合后才前移 README adopted head，并在隔离分支验证 Git ancestry 恢复方案。
+本轮无剩余动作。若维护者另行要求，可在隔离分支验证 Git ancestry baseline；该实验不得改写已闭合的 adopted-head 证据，也不得在未验证下一次 upstream 三方合并前宣称恢复了真实 ancestry。
 
 ## 证据入口
 

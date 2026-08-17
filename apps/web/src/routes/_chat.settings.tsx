@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   type AppSettings,
   type FollowUpBehavior,
+  DEFAULT_CHAT_WIDTH,
   DEFAULT_UI_DENSITY,
   type UiDensity,
   MAX_CHAT_FONT_SIZE_PX,
@@ -89,6 +90,7 @@ import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktop
 import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
 import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
+import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
 import { isElectron } from "../env";
 import { useI18n, type MessageKey } from "../i18n";
 import { RotateCcwIcon } from "../lib/icons";
@@ -241,6 +243,15 @@ function SettingsRouteView() {
       ] as const satisfies ReadonlyArray<{ value: UiDensity; label: string }>,
     [t],
   );
+  const chatWidthOptions = useMemo(
+    () =>
+      [
+        { value: "standard", label: t("settings.chatWidthStandard") },
+        { value: "wide", label: t("settings.chatWidthWide") },
+        { value: "full", label: t("settings.chatWidthFull") },
+      ] as const satisfies ReadonlyArray<{ value: ChatWidthMode; label: string }>,
+    [t],
+  );
   const followUpBehaviorOptions = useMemo(
     () =>
       [
@@ -323,6 +334,7 @@ function SettingsRouteView() {
     ...(settings.uiDensity !== defaults.uiDensity
       ? [t("settings.uiDensity")]
       : []),
+    ...(settings.chatWidth !== defaults.chatWidth ? [t("settings.chatWidth")] : []),
     ...(settings.desktopAppIcon !== defaults.desktopAppIcon
       ? [t("settings.appIcon")]
       : []),
@@ -954,6 +966,32 @@ function SettingsRouteView() {
               }}
               ariaLabel={t("settings.uiDensity")}
               options={uiDensityOptions}
+            />
+          }
+        />
+
+        <SettingsRow
+          title={t("settings.chatWidth")}
+          description={t("settings.chatWidthDescription")}
+          resetAction={
+            settings.chatWidth !== defaults.chatWidth ? (
+              <SettingResetButton
+                label={t("settings.chatWidth")}
+                onClick={() => updateSettings({ chatWidth: DEFAULT_CHAT_WIDTH })}
+              />
+            ) : null
+          }
+          control={
+            <SettingsSegmentedControl
+              value={settings.chatWidth}
+              onValueChange={(value) => {
+                if (!isChatWidthMode(value)) {
+                  return;
+                }
+                updateSettings({ chatWidth: value });
+              }}
+              ariaLabel={t("settings.chatWidth")}
+              options={chatWidthOptions}
             />
           }
         />

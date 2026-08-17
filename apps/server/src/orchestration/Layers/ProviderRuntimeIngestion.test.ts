@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -347,7 +348,7 @@ describe("ProviderRuntimeIngestion", () => {
     readonly dispatchFault?: DispatchFault;
   }) {
     const workspaceRoot = makeTempDir("omnimind-provider-project-");
-    fs.mkdirSync(path.join(workspaceRoot, ".git"));
+    execFileSync("git", ["init", "--quiet", workspaceRoot], { stdio: "ignore" });
     const provider = createProviderServiceHarness();
     const orchestrationLayer = OrchestrationEngineLive.pipe(
       Layer.provide(OrchestrationProjectionPipelineLive),

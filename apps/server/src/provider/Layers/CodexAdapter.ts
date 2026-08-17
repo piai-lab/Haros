@@ -905,7 +905,7 @@ function mapUnmappedCodexEvent(
     raw: {
       source: eventRawSource(event),
       method: nativeType,
-      payload: { synaraSanitized: true },
+      payload: { omnimindSanitized: true },
     },
     type: "event.unmapped",
     payload: {

@@ -3117,8 +3117,8 @@ describe("MessagesTimeline", () => {
     // "Worked for..." disclosure; the recap is an additional final artifact.
     expect(markup).toContain("Worked for");
     expect(markup).toContain('data-omnimind-thread-creation-card="true"');
-    expect(markup).toContain("2 threads created");
-    expect(markup).toContain("2/2 requested threads created");
+    expect(markup).toContain("2 tasks created");
+    expect(markup).toContain("2/2 requested tasks created");
     expect(markup).toContain("Explain the repository with Terra");
     expect(markup).toContain("Explain the repository with Claude");
     expect(markup).toContain("GPT-5.6 Terra");

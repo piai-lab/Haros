@@ -42,6 +42,7 @@ import {
   useComposerDraftStore,
 } from "../composerDraftStore";
 import { appHistory } from "../appNavigation";
+import { APP_SETTINGS_STORAGE_KEY } from "../appSettings";
 import { THREAD_SIDEBAR_WIDTH_STORAGE_KEY } from "../appearanceMigrations";
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
@@ -7434,6 +7435,137 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("keeps the persistent Goal header wired to edit, pause, and delete actions", async () => {
+    const baseSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-goal-header-wiring" as MessageId,
+      targetText: "goal header wiring",
+    });
+    const snapshot: OrchestrationReadModel = {
+      ...baseSnapshot,
+      threads: baseSnapshot.threads.map((thread) =>
+        thread.id === THREAD_ID
+          ? {
+              ...thread,
+              goal: "Ship the complete upstream adoption",
+              goalStartedAt: NOW_ISO,
+              goalPausedAt: null,
+              goalAchievements: [],
+            }
+          : thread,
+      ),
+    };
+    const mounted = await mountChatView({ viewport: DEFAULT_VIEWPORT, snapshot });
+
+    try {
+      await expect.element(page.getByTestId("composer-goal-header")).toBeInTheDocument();
+      await expect
+        .element(page.getByTestId("composer-goal-preview"))
+        .toHaveTextContent("Ship the complete upstream adoption");
+
+      wsRequests.length = 0;
+      await page.getByLabelText("Pause goal").click();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests
+            .map(readDispatchedCommand)
+            .find(
+              (command) => command?.type === "thread.meta.update" && command.goalPaused === true,
+            ),
+        ).toBeTruthy();
+      });
+
+      await page.getByLabelText("Edit goal").click();
+      const composerEditor = await waitForComposerEditor();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+          "/goal Ship the complete upstream adoption",
+        );
+        expect(composerEditor.textContent ?? "").toContain(
+          "Goal Ship the complete upstream adoption",
+        );
+      });
+
+      wsRequests.length = 0;
+      await page.getByLabelText("Delete goal").click();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests
+            .map(readDispatchedCommand)
+            .find((command) => command?.type === "thread.meta.update" && command.goal === ""),
+        ).toBeTruthy();
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("applies the selected chat width to the transcript column", async () => {
+    localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-chat-width-test" as MessageId,
+        targetText: "chat width test",
+      }),
+    });
+
+    try {
+      await vi.waitFor(() => {
+        expect(document.documentElement.style.getPropertyValue("--app-chat-max-width")).toBe(
+          "72rem",
+        );
+      });
+
+      await vi.waitFor(() => {
+        const row = document.querySelector(
+          "[data-timeline-row-kind='message'][data-message-role='assistant']",
+        ) as HTMLElement | null;
+        expect(row).not.toBeNull();
+        expect(row?.className ?? "").toContain("max-w-[var(--app-chat-max-width,46rem)]");
+        expect(getComputedStyle(row!).maxWidth).toBe("1152px");
+      });
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("activates Debug with /debug and returns to Default from the badge and /default", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-debug-mode-test" as MessageId,
+        targetText: "debug mode test",
+      }),
+    });
+
+    try {
+      const readInteractionMode = () =>
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.interactionMode ?? "default";
+      const runSlashCommand = async (command: string) => {
+        useComposerDraftStore.getState().setPrompt(THREAD_ID, command);
+        const composerEditor = await waitForComposerEditor();
+        await vi.waitFor(() => expect(composerEditor.textContent ?? "").toContain(command));
+        const sendButton = await waitForSendButton();
+        expect(sendButton.disabled).toBe(false);
+        sendButton.click();
+      };
+
+      await runSlashCommand("/debug");
+      await vi.waitFor(() => expect(readInteractionMode()).toBe("debug"));
+      const debugBadge = page.getByTitle(EN_MESSAGES["conversation.debugModeExit"]);
+      await expect.element(debugBadge).toBeInTheDocument();
+      await debugBadge.click();
+      await vi.waitFor(() => expect(readInteractionMode()).toBe("default"));
+
+      await runSlashCommand("/debug");
+      await vi.waitFor(() => expect(readInteractionMode()).toBe("debug"));
+      await runSlashCommand("/default");
+      await vi.waitFor(() => expect(readInteractionMode()).toBe("default"));
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("toggles composer focus with Cmd+L", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -10771,27 +10903,31 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => document.querySelector<HTMLElement>('[data-slot="menu-popup"]'),
         "The configured-service Composer model picker did not open.",
       );
-      const openModelServices = await waitForElement(
-        () =>
-          Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
-            (item) =>
-              item.getClientRects().length > 0 &&
-              item.textContent?.includes(EN_MESSAGES["composer.openModelServices"]),
-          ) ?? null,
-        "Unable to find the configured-service recovery action.",
-      );
-      openModelServices.click();
-      await waitForURL(
-        mounted.router,
-        (path) => path === "/settings",
-        "A configured service without an exact selection should open Model services.",
-      );
-      expect(mounted.router.state.location.search).toMatchObject({ section: "models" });
-      expect(
-        wsRequests
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.filter(
+            (request) =>
+              request._tag === WS_METHODS.providerListModels && request.provider === "omnimind",
+          ).length,
+        ).toBeGreaterThan(0);
+      });
+      const exactModel = page.getByRole("menuitemradio", { name: /DeepSeek V4 Flash/u });
+      await expect.element(exactModel).toBeVisible();
+      await exactModel.click();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(() => {
+        const turnStarts = wsRequests
           .map(readDispatchedCommand)
-          .filter((command) => command?.type === "thread.turn.start"),
-      ).toHaveLength(0);
+          .filter((command) => command?.type === "thread.turn.start");
+        expect(turnStarts).toHaveLength(1);
+        expect(turnStarts[0]).toMatchObject({
+          modelSelection: {
+            provider: "omnimind",
+            model: "deepseek/deepseek-v4-flash",
+          },
+        });
+      });
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

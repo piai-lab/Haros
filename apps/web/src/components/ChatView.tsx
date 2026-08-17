@@ -315,6 +315,7 @@ import {
 import PlanSidebar from "./PlanSidebar";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
 import {
+  BugIcon,
   ChevronDownIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
@@ -1305,6 +1306,10 @@ function makeAutomationSetupBubble(role: "user" | "assistant", text: string): Ch
   };
 }
 
+function raisePreTurnCleanupFailure(error: unknown): never {
+  throw error;
+}
+
 export default function ChatView({
   threadId,
   paneScopeId: paneScopeIdProp,
@@ -1706,6 +1711,7 @@ export default function ChatView({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [isEnginePickerOpen, setIsEnginePickerOpen] = useState(false);
+  const [omniMindModelDiscoveryRequested, setOmniMindModelDiscoveryRequested] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
@@ -2448,7 +2454,7 @@ export default function ChatView({
     discoveryEnabled: false,
     selectedProviderDiscoveryEnabled:
       selectedProvider !== "omnimind" ||
-      isModelPickerOpen ||
+      omniMindModelDiscoveryRequested ||
       composerModelHintByProvider.omnimind !== null,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
@@ -4492,6 +4498,12 @@ export default function ChatView({
         requestFirstRunReadinessResume();
         return;
       }
+      if (open && selectedProvider === "omnimind" && !omniMindModelDiscoveryRequested) {
+        setOmniMindModelDiscoveryRequested(true);
+        void queryClient.invalidateQueries({
+          queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+        });
+      }
       setIsModelPickerOpen(open);
       if (!open) {
         setPiDiscoveryRequested(false);
@@ -4501,7 +4513,7 @@ export default function ChatView({
         setIsEnginePickerOpen(false);
       }
     },
-    [selectedModel],
+    [omniMindModelDiscoveryRequested, queryClient, selectedModel, selectedProvider],
   );
   const handleProviderBrowse = useCallback((provider: ProviderKind) => {
     if (provider === "pi") {
@@ -9103,7 +9115,7 @@ export default function ChatView({
         if (createdWorktreeForSendPath) {
           const worktreePathToCleanup = createdWorktreeForSendPath;
           if (workLocallyResolutionStarted && !worktreeDurablyDetached) {
-            throw err;
+            raisePreTurnCleanupFailure(err);
           }
           const cleanupOwnership = workLocallyResolutionStarted
             ? "unowned"
@@ -9115,7 +9127,7 @@ export default function ChatView({
                   ? "unowned"
                   : null;
           if (cleanupOwnership === null) {
-            throw err;
+            raisePreTurnCleanupFailure(err);
           }
           await cleanupPreparedWorktreeBeforeTurn({
             turnStartAttempted,
@@ -9179,7 +9191,9 @@ export default function ChatView({
             api,
           );
           if (!deletion.settled) {
-            throw deletion.failure ?? new Error("Promoted Thread cleanup is unresolved.");
+            raisePreTurnCleanupFailure(
+              deletion.failure ?? new Error("Promoted Thread cleanup is unresolved."),
+            );
           }
         }
       } catch (cleanupError) {
@@ -12247,17 +12261,27 @@ export default function ChatView({
 
                       {!isVoiceRecording && !isVoiceTranscribing ? (
                         <>
-                          {interactionMode === "plan" ? (
+                          {interactionMode !== "default" ? (
                             <Button
                               variant="ghost"
                               className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
                               size="sm"
                               type="button"
-                              onClick={toggleInteractionMode}
-                              title={t("conversation.planModeExit")}
+                              onClick={() => handleInteractionModeChange("default")}
+                              title={t(
+                                interactionMode === "plan"
+                                  ? "conversation.planModeExit"
+                                  : "conversation.debugModeExit",
+                              )}
                             >
-                              <GoTasklist className="size-3.5" />
-                              <span className="sr-only sm:not-sr-only">{t("plan.badge")}</span>
+                              {interactionMode === "plan" ? (
+                                <GoTasklist className="size-3.5" />
+                              ) : (
+                                <BugIcon className="size-3.5" />
+                              )}
+                              <span className="sr-only sm:not-sr-only">
+                                {t(interactionMode === "plan" ? "plan.badge" : "debug.badge")}
+                              </span>
                             </Button>
                           ) : null}
 

@@ -1,3 +1,4 @@
+import { THREAD_GOAL_MAX_CHARS } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -14,6 +15,7 @@ import {
   parseComposerSlashInvocationForCommands,
   parseFastSlashCommandAction,
   parseForkSlashCommandArgs,
+  parseGoalSlashCommandArgs,
   providerSupportsTextNativeReviewCommand,
   shouldHideProviderNativeCommandFromComposerMenu,
 } from "./composerSlashCommands";
@@ -25,6 +27,8 @@ describe("composerSlashCommands", () => {
     expect(isBuiltInComposerSlashCommand("automation")).toBe(true);
     expect(isBuiltInComposerSlashCommand("export")).toBe(true);
     expect(isBuiltInComposerSlashCommand("feedback")).toBe(true);
+    expect(isBuiltInComposerSlashCommand("debug")).toBe(true);
+    expect(isBuiltInComposerSlashCommand("goal")).toBe(true);
     expect(isBuiltInComposerSlashCommand("unknown")).toBe(false);
   });
 
@@ -35,6 +39,7 @@ describe("composerSlashCommands", () => {
       "automation",
     ]);
     expect(filterComposerSlashCommands("feed").map((entry) => entry.command)).toEqual(["feedback"]);
+    expect(filterComposerSlashCommands("debug").map((entry) => entry.command)).toEqual(["debug"]);
   });
 
   it("ranks slash command name matches before description-only matches", () => {
@@ -65,6 +70,14 @@ describe("composerSlashCommands", () => {
     expect(parseComposerSlashInvocation("/feedback")).toEqual({
       command: "feedback",
       args: "",
+    });
+    expect(parseComposerSlashInvocation("/debug")).toEqual({
+      command: "debug",
+      args: "",
+    });
+    expect(parseComposerSlashInvocation("/goal first line\nsecond line")).toEqual({
+      command: "goal",
+      args: "first line\nsecond line",
     });
     expect(parseComposerSlashInvocation("review")).toBeNull();
   });
@@ -106,6 +119,21 @@ describe("composerSlashCommands", () => {
     expect(parseForkSlashCommandArgs("local continue here")).toEqual({
       target: null,
       invalid: true,
+    });
+  });
+
+  it("parses /goal controls, set, and length-limit actions", () => {
+    expect(parseGoalSlashCommandArgs("")).toEqual({ action: "show" });
+    expect(parseGoalSlashCommandArgs("  CLEAR  ")).toEqual({ action: "clear" });
+    expect(parseGoalSlashCommandArgs("pause")).toEqual({ action: "pause" });
+    expect(parseGoalSlashCommandArgs("RESUME")).toEqual({ action: "resume" });
+    expect(parseGoalSlashCommandArgs(" edit ")).toEqual({ action: "edit" });
+    expect(parseGoalSlashCommandArgs("Ship the release safely")).toEqual({
+      action: "set",
+      goal: "Ship the release safely",
+    });
+    expect(parseGoalSlashCommandArgs("x".repeat(THREAD_GOAL_MAX_CHARS + 1))).toEqual({
+      action: "too-long",
     });
   });
 
@@ -306,7 +334,7 @@ describe("composerSlashCommands", () => {
         canOfferSideCommand: true,
         canOfferExportCommand: true,
       }),
-    ).toEqual(["fork", "side", "export", "feedback", "automation"]);
+    ).toEqual(["fork", "side", "export", "goal", "debug", "default", "feedback", "automation"]);
   });
 
   it("omits app-level /fork for claude when the composer cannot offer it", () => {
@@ -424,6 +452,7 @@ describe("composerSlashCommands", () => {
       "clear",
       "model",
       "plan",
+      "debug",
       "default",
       "review",
       "fork",
@@ -431,6 +460,7 @@ describe("composerSlashCommands", () => {
       "status",
       "subagents",
       "export",
+      "goal",
       "feedback",
       "automation",
     ]);
