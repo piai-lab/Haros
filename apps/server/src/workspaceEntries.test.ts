@@ -49,8 +49,8 @@ describe("searchWorkspaceEntries", () => {
     writeFile(cwd, "src/components/Composer.tsx");
     writeFile(cwd, "src/index.ts");
     writeFile(cwd, "README.md");
-    writeFile(cwd, ".git/HEAD");
     writeFile(cwd, "node_modules/pkg/index.js");
+    runGit(cwd, ["init"]);
 
     const result = await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
     const paths = result.entries.map((entry) => entry.path);
@@ -174,6 +174,7 @@ describe("searchWorkspaceEntries", () => {
 
   it("disables fsmonitor and untracked cache helpers during git workspace indexing", async () => {
     const cwd = makeTempDir("omnimind-workspace-hardened-git-");
+    fs.mkdirSync(path.join(cwd, ".git"));
 
     const runProcessSpy = vi.spyOn(ProcessRunner, "runProcess");
     runProcessSpy.mockImplementation(async (command, args) => {
@@ -702,6 +703,37 @@ describe("searchWorkspaceContent", () => {
     ]);
   });
 
+  it("keeps a confirmed non-git workspace searchable when the git executable is unavailable", async () => {
+    const cwd = makeTempDir("omnimind-content-search-no-git-binary-");
+    writeFile(cwd, "safe.ts", "safe needle\n");
+    const runProcessSpy = vi
+      .spyOn(ProcessRunner, "runProcess")
+      .mockRejectedValue(new Error("git unavailable"));
+
+    await expect(searchWorkspaceContent({ cwd, query: "needle" })).resolves.toMatchObject({
+      matches: [{ path: "safe.ts", lineNumber: 1, lineText: "safe needle" }],
+    });
+    expect(runProcessSpy).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when a recorded git workspace loses policy execution", async () => {
+    const cwd = makeTempDir("omnimind-content-search-git-policy-unavailable-");
+    writeFile(cwd, "secret.ts", "private needle\n");
+    runGit(cwd, ["init"]);
+    runGit(cwd, ["add", "secret.ts"]);
+    await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+    const runProcessSpy = vi
+      .spyOn(ProcessRunner, "runProcess")
+      .mockRejectedValue(new Error("git unavailable"));
+    const openSpy = vi.spyOn(fsPromises, "open");
+
+    await expect(searchWorkspaceContent({ cwd, query: "needle" })).rejects.toThrow(
+      "Workspace ignore policy could not be verified",
+    );
+    expect(runProcessSpy).toHaveBeenCalledTimes(1);
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
   it.skipIf(process.platform === "win32")(
     "allows indexed in-root symlinks but rejects external, hidden, and ignored targets",
     async () => {
@@ -742,55 +774,71 @@ describe("searchWorkspaceContent", () => {
       const cwd = makeTempDir("omnimind-content-search-current-gitignore-");
       writeFile(cwd, "root-secret.ts", "root needle\n");
       writeFile(cwd, "nested/secret.ts", "nested needle\n");
+      writeFile(cwd, "alias-target.ts", "alias target needle\n");
       writeFile(cwd, "safe.ts", "safe needle\n");
       fs.symlinkSync(path.join(cwd, "nested/secret.ts"), path.join(cwd, "visible-link.ts"));
+      fs.symlinkSync(path.join(cwd, "alias-target.ts"), path.join(cwd, "root-alias.ts"));
+      fs.symlinkSync(path.join(cwd, "alias-target.ts"), path.join(cwd, "nested/alias.ts"));
       runGit(cwd, ["init"]);
-      runGit(cwd, ["add", "root-secret.ts", "nested/secret.ts", "safe.ts", "visible-link.ts"]);
+      runGit(cwd, [
+        "add",
+        "root-secret.ts",
+        "nested/secret.ts",
+        "alias-target.ts",
+        "safe.ts",
+        "visible-link.ts",
+        "root-alias.ts",
+        "nested/alias.ts",
+      ]);
       await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
 
-      writeFile(cwd, ".gitignore", "/root-secret.ts\n");
-      writeFile(cwd, "nested/.gitignore", "secret.ts\n");
+      writeFile(cwd, ".gitignore", "/root-secret.ts\n/root-alias.ts\n");
+      writeFile(cwd, "nested/.gitignore", "secret.ts\nalias.ts\n");
       const result = await searchWorkspaceContent({ cwd, query: "needle" });
 
-      expect(result.matches.map((match) => match.path)).toEqual(["safe.ts"]);
+      expect(result.matches.map((match) => match.path)).toEqual(["alias-target.ts", "safe.ts"]);
     },
   );
 
-  it("rechecks current gitignore policy after reading matched files", async () => {
-    const cwd = makeTempDir("omnimind-content-search-gitignore-race-");
-    writeFile(cwd, "secret.ts", "policy race needle\n");
-    runGit(cwd, ["init"]);
-    runGit(cwd, ["add", "secret.ts"]);
-    await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+  it.skipIf(process.platform === "win32")(
+    "rechecks alias-specific gitignore policy after reading matched files",
+    async () => {
+      const cwd = makeTempDir("omnimind-content-search-gitignore-race-");
+      writeFile(cwd, "target.ts", "policy race needle\n");
+      fs.symlinkSync(path.join(cwd, "target.ts"), path.join(cwd, "alias.ts"));
+      runGit(cwd, ["init"]);
+      runGit(cwd, ["add", "target.ts", "alias.ts"]);
+      await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
 
-    const originalRunProcess = ProcessRunner.runProcess.bind(ProcessRunner);
-    const checkIgnoreResults: Array<{ code: number | null; stdout: string }> = [];
-    vi.spyOn(ProcessRunner, "runProcess").mockImplementation(async (command, args, options) => {
-      const result = await originalRunProcess(command, args, options);
-      if (command === "git" && args.includes("check-ignore")) {
-        checkIgnoreResults.push({ code: result.code, stdout: result.stdout });
-      }
-      return result;
-    });
-    const originalOpen = fsPromises.open.bind(fsPromises);
-    let policyChanged = false;
-    vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
-      const handle = await originalOpen(...args);
-      if (!policyChanged && String(args[0]).endsWith(`${path.sep}secret.ts`)) {
-        policyChanged = true;
-        writeFile(cwd, ".gitignore", "secret.ts\n");
-      }
-      return handle;
-    });
+      const originalRunProcess = ProcessRunner.runProcess.bind(ProcessRunner);
+      const checkIgnoreResults: Array<{ code: number | null; stdout: string }> = [];
+      vi.spyOn(ProcessRunner, "runProcess").mockImplementation(async (command, args, options) => {
+        const result = await originalRunProcess(command, args, options);
+        if (command === "git" && args.includes("check-ignore")) {
+          checkIgnoreResults.push({ code: result.code, stdout: result.stdout });
+        }
+        return result;
+      });
+      const originalOpen = fsPromises.open.bind(fsPromises);
+      let policyChanged = false;
+      vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+        const handle = await originalOpen(...args);
+        if (!policyChanged && String(args[0]).endsWith(`${path.sep}target.ts`)) {
+          policyChanged = true;
+          writeFile(cwd, ".gitignore", "alias.ts\n");
+        }
+        return handle;
+      });
 
-    const result = await searchWorkspaceContent({ cwd, query: "needle" });
-    expect(policyChanged).toBe(true);
-    expect(checkIgnoreResults).toEqual([
-      { code: 1, stdout: "" },
-      { code: 0, stdout: "secret.ts\0" },
-    ]);
-    expect(result.matches).toEqual([]);
-  });
+      const result = await searchWorkspaceContent({ cwd, query: "needle" });
+      expect(policyChanged).toBe(true);
+      expect(checkIgnoreResults).toEqual([
+        { code: 1, stdout: "" },
+        { code: 0, stdout: "alias.ts\0" },
+      ]);
+      expect(result.matches.map((match) => match.path)).toEqual(["target.ts"]);
+    },
+  );
 
   it("fails closed without returning matched content when a current policy recheck fails", async () => {
     const cwd = makeTempDir("omnimind-content-search-gitignore-error-");

@@ -59,9 +59,11 @@ interface WorkspaceIndex {
   entries: SearchableWorkspaceEntry[];
   truncated: boolean;
   rootIdentity: WorkspaceRootIdentity;
+  policyMode: WorkspacePolicyMode;
 }
 
 type WorkspaceIndexBuildResult = Omit<WorkspaceIndex, "rootIdentity">;
+type WorkspacePolicyMode = "default" | "git";
 
 interface WorkspaceRootIdentity {
   readonly realPath: string;
@@ -79,6 +81,11 @@ interface InFlightWorkspaceIndexBuild {
 class WorkspaceIndexDeadlineExceeded extends Error {}
 class WorkspaceIndexRootChanged extends Error {}
 class WorkspaceIndexBuildInvalidated extends Error {}
+class WorkspacePolicyUnavailable extends Error {
+  constructor() {
+    super("Workspace ignore policy could not be verified.");
+  }
+}
 
 interface SearchableWorkspaceEntry extends ProjectEntry {
   normalizedPath: string;
@@ -493,6 +500,41 @@ function sameWorkspaceRootIdentity(
   return left.realPath === right.realPath && left.dev === right.dev && left.ino === right.ino;
 }
 
+function isMissingFilesystemPath(cause: unknown): boolean {
+  const code =
+    cause && typeof cause === "object" && "code" in cause
+      ? (cause as { readonly code?: unknown }).code
+      : null;
+  return code === "ENOENT" || code === "ENOTDIR";
+}
+
+async function queryGitMetadataAtOrAbove(
+  realRoot: string,
+  options?: { readonly signal?: AbortSignal; readonly deadline?: number },
+): Promise<boolean | null> {
+  let currentPath = realRoot;
+  while (true) {
+    options?.signal?.throwIfAborted();
+    if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+      throw new WorkspaceIndexDeadlineExceeded();
+    }
+    try {
+      await fs.lstat(path.join(currentPath, ".git"));
+      return true;
+    } catch (cause) {
+      options?.signal?.throwIfAborted();
+      if (!isMissingFilesystemPath(cause)) {
+        return null;
+      }
+    }
+    const parentPath = path.dirname(currentPath);
+    if (parentPath === currentPath) {
+      return false;
+    }
+    currentPath = parentPath;
+  }
+}
+
 async function queryGitWorkTreeState(
   cwd: string,
   options?: { readonly signal?: AbortSignal; readonly deadline?: number },
@@ -527,8 +569,32 @@ async function queryGitWorkTreeState(
   return insideWorkTree.code === 0 && insideWorkTree.stdout.trim() === "true";
 }
 
-async function isInsideGitWorkTree(cwd: string, signal?: AbortSignal): Promise<boolean> {
-  return Boolean(await queryGitWorkTreeState(cwd, signal ? { signal } : undefined));
+async function resolveWorkspacePolicyMode(input: {
+  cwd: string;
+  realRoot: string;
+  builtMode?: WorkspacePolicyMode;
+  deadline?: number;
+  signal?: AbortSignal;
+}): Promise<WorkspacePolicyMode> {
+  const options = {
+    ...(input.deadline === undefined ? {} : { deadline: input.deadline }),
+    ...(input.signal ? { signal: input.signal } : {}),
+  };
+  const hasGitMetadata = await queryGitMetadataAtOrAbove(input.realRoot, options);
+  if (hasGitMetadata === null) {
+    throw new WorkspacePolicyUnavailable();
+  }
+  if (!hasGitMetadata && input.builtMode !== "git") {
+    return "default";
+  }
+  const gitWorkTree = await queryGitWorkTreeState(input.cwd, options);
+  if (gitWorkTree === true) {
+    return "git";
+  }
+  if (gitWorkTree === null || hasGitMetadata) {
+    throw new WorkspacePolicyUnavailable();
+  }
+  return "default";
 }
 
 async function queryGitIgnoredPaths(
@@ -635,32 +701,10 @@ async function queryGitIgnoredPaths(
   return ignoredPaths;
 }
 
-async function filterGitIgnoredPaths(
-  cwd: string,
-  relativePaths: string[],
-  signal?: AbortSignal,
-): Promise<string[]> {
-  const ignoredPaths = await queryGitIgnoredPaths(
-    cwd,
-    relativePaths,
-    signal ? { signal } : undefined,
-  );
-
-  if (!ignoredPaths || ignoredPaths.size === 0) {
-    return relativePaths;
-  }
-
-  return relativePaths.filter((relativePath) => !ignoredPaths.has(relativePath));
-}
-
 async function buildWorkspaceIndexFromGit(
   cwd: string,
   signal: AbortSignal,
-): Promise<WorkspaceIndexBuildResult | null> {
-  if (!(await isInsideGitWorkTree(cwd, signal))) {
-    return null;
-  }
-
+): Promise<WorkspaceIndexBuildResult> {
   const listedFiles = await runProcess(
     "git",
     [
@@ -684,8 +728,8 @@ async function buildWorkspaceIndexFromGit(
     return null;
   });
   signal.throwIfAborted();
-  if (!listedFiles || listedFiles.code !== 0) {
-    return null;
+  if (!listedFiles || listedFiles.timedOut || listedFiles.code !== 0) {
+    throw new WorkspacePolicyUnavailable();
   }
 
   const listedPaths = splitNullSeparatedPaths(
@@ -694,7 +738,14 @@ async function buildWorkspaceIndexFromGit(
   )
     .map((entry) => toPosixPath(entry))
     .filter((entry) => entry.length > 0 && !isPathInIgnoredDirectory(entry));
-  const filePaths = await filterGitIgnoredPaths(cwd, listedPaths, signal);
+  const ignoredPaths = await queryGitIgnoredPaths(cwd, listedPaths, {
+    signal,
+    requireCompleteOutput: true,
+  });
+  if (!ignoredPaths) {
+    throw new WorkspacePolicyUnavailable();
+  }
+  const filePaths = listedPaths.filter((relativePath) => !ignoredPaths.has(relativePath));
 
   const directorySet = new Set<string>();
   for (const filePath of filePaths) {
@@ -732,6 +783,7 @@ async function buildWorkspaceIndexFromGit(
     scannedAt: Date.now(),
     entries: entries.slice(0, WORKSPACE_INDEX_MAX_ENTRIES),
     truncated: Boolean(listedFiles.stdoutTruncated) || entries.length > WORKSPACE_INDEX_MAX_ENTRIES,
+    policyMode: "git",
   };
 }
 
@@ -775,11 +827,14 @@ async function buildWorkspaceIndexEntries(
   rootIdentity: WorkspaceRootIdentity,
   signal: AbortSignal,
 ): Promise<WorkspaceIndexBuildResult> {
-  const gitIndexed = await buildWorkspaceIndexFromGit(cwd, signal);
-  if (gitIndexed) {
-    return gitIndexed;
+  const policyMode = await resolveWorkspacePolicyMode({
+    cwd,
+    realRoot: rootIdentity.realPath,
+    signal,
+  });
+  if (policyMode === "git") {
+    return buildWorkspaceIndexFromGit(cwd, signal);
   }
-  const shouldFilterWithGitIgnore = await isInsideGitWorkTree(cwd, signal);
 
   let pendingDirectories: string[] = [""];
   const entries: SearchableWorkspaceEntry[] = [];
@@ -876,23 +931,12 @@ async function buildWorkspaceIndexEntries(
       }),
     );
 
-    const candidatePaths = resolvedCandidateEntriesByDirectory.flatMap((candidateEntries) =>
-      candidateEntries.map((entry) => entry.relativePath),
-    );
-    const allowedPathSet = shouldFilterWithGitIgnore
-      ? new Set(await filterGitIgnoredPaths(cwd, candidatePaths, signal))
-      : null;
-
     for (const candidateEntries of resolvedCandidateEntriesByDirectory) {
       for (const candidate of candidateEntries) {
         signal.throwIfAborted();
         if (candidate.kind === "symlink") {
           continue;
         }
-        if (allowedPathSet && !allowedPathSet.has(candidate.relativePath)) {
-          continue;
-        }
-
         const entry = toSearchableWorkspaceEntry({
           path: candidate.relativePath,
           kind: candidate.kind,
@@ -920,6 +964,7 @@ async function buildWorkspaceIndexEntries(
     scannedAt: Date.now(),
     entries,
     truncated,
+    policyMode: "default",
   };
 }
 
@@ -1172,15 +1217,14 @@ const CONTENT_SEARCH_MAX_LINE_LENGTH = 1024;
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 class ContentSearchDeadlineExceeded extends Error {}
-class ContentSearchPolicyUnavailable extends Error {
-  constructor() {
-    super("Workspace ignore policy could not be verified.");
-  }
-}
 
 interface ContentSearchCandidate {
   readonly relativePath: string;
   readonly canonicalRelativePath: string;
+}
+
+function contentSearchCandidateKey(candidate: ContentSearchCandidate): string {
+  return `${candidate.relativePath}\0${candidate.canonicalRelativePath}`;
 }
 
 function assertContentSearchBudget(deadline: number, signal?: AbortSignal): void {
@@ -1267,33 +1311,44 @@ async function resolveContentSearchCandidates(input: {
 
 async function filterCurrentContentSearchPolicy(input: {
   cwd: string;
+  realRoot: string;
+  builtMode: WorkspacePolicyMode;
   candidates: readonly ContentSearchCandidate[];
   deadline: number;
   signal?: AbortSignal;
 }): Promise<ContentSearchCandidate[]> {
   if (input.candidates.length === 0) return [];
-  const gitWorkTree = await queryGitWorkTreeState(input.cwd, {
+  const policyMode = await resolveWorkspacePolicyMode({
+    cwd: input.cwd,
+    realRoot: input.realRoot,
+    builtMode: input.builtMode,
     deadline: input.deadline,
     ...(input.signal ? { signal: input.signal } : {}),
   });
-  if (gitWorkTree === null) {
-    throw new ContentSearchPolicyUnavailable();
-  }
-  if (!gitWorkTree) {
+  if (policyMode === "default") {
     return [...input.candidates];
   }
-  const canonicalPaths = [
-    ...new Set(input.candidates.map((candidate) => candidate.canonicalRelativePath)),
+  const policyPaths = [
+    ...new Set(
+      input.candidates.flatMap((candidate) => [
+        candidate.relativePath,
+        candidate.canonicalRelativePath,
+      ]),
+    ),
   ];
-  const ignoredPaths = await queryGitIgnoredPaths(input.cwd, canonicalPaths, {
+  const ignoredPaths = await queryGitIgnoredPaths(input.cwd, policyPaths, {
     deadline: input.deadline,
     requireCompleteOutput: true,
     ...(input.signal ? { signal: input.signal } : {}),
   });
   if (!ignoredPaths) {
-    throw new ContentSearchPolicyUnavailable();
+    throw new WorkspacePolicyUnavailable();
   }
-  return input.candidates.filter((candidate) => !ignoredPaths.has(candidate.canonicalRelativePath));
+  return input.candidates.filter(
+    (candidate) =>
+      !ignoredPaths.has(candidate.relativePath) &&
+      !ignoredPaths.has(candidate.canonicalRelativePath),
+  );
 }
 
 async function assertContentSearchRootIdentity(input: {
@@ -1533,6 +1588,8 @@ export async function searchWorkspaceContent(
   try {
     candidates = await filterCurrentContentSearchPolicy({
       cwd: input.cwd,
+      realRoot: index.rootIdentity.realPath,
+      builtMode: index.policyMode,
       candidates: await resolveContentSearchCandidates({
         cwd: input.cwd,
         rootIdentity: index.rootIdentity,
@@ -1613,6 +1670,8 @@ export async function searchWorkspaceContent(
     try {
       const currentMatchedCandidates = await filterCurrentContentSearchPolicy({
         cwd: input.cwd,
+        realRoot: index.rootIdentity.realPath,
+        builtMode: index.policyMode,
         candidates: collected.map((match) => ({
           relativePath: match.path,
           canonicalRelativePath: match.canonicalRelativePath,
@@ -1620,11 +1679,14 @@ export async function searchWorkspaceContent(
         deadline,
         ...(signal ? { signal } : {}),
       });
-      const allowedCanonicalPaths = new Set(
-        currentMatchedCandidates.map((candidate) => candidate.canonicalRelativePath),
-      );
+      const allowedCandidateKeys = new Set(currentMatchedCandidates.map(contentSearchCandidateKey));
       currentMatches = collected.filter((match) =>
-        allowedCanonicalPaths.has(match.canonicalRelativePath),
+        allowedCandidateKeys.has(
+          contentSearchCandidateKey({
+            relativePath: match.path,
+            canonicalRelativePath: match.canonicalRelativePath,
+          }),
+        ),
       );
     } catch (cause) {
       if (signal?.aborted) throw cause;
