@@ -612,6 +612,7 @@ import { useFeatureFlags } from "../featureFlags";
 import { useHandleNewThread } from "../hooks/useHandleNewThread";
 import {
   canCreateThreadHandoff,
+  deriveHistoryOnlyForkableAssistantMessageIds,
   resolveAvailableHandoffTargetProviders,
   resolveThreadHandoffBadgeLabel,
 } from "../lib/threadHandoff";
@@ -10847,6 +10848,7 @@ export default function ChatView({
   );
 
   const {
+    createForkThreadFromMessage,
     handleForkTargetSelection,
     handleReviewTargetSelection,
     isSlashStatusDialogOpen,
@@ -10904,6 +10906,24 @@ export default function ChatView({
     setComposerDraftProviderModelOptions,
     editorActions: slashEditorActions,
   });
+
+  const historyOnlyForkableAssistantMessageIds = useMemo(
+    () =>
+      isServerThread && activeThread && selectedModelSelection
+        ? deriveHistoryOnlyForkableAssistantMessageIds(activeThread)
+        : new Set<MessageId>(),
+    [activeThread, isServerThread, selectedModelSelection],
+  );
+  const canForkMessage = useCallback(
+    (messageId: MessageId) => historyOnlyForkableAssistantMessageIds.has(messageId),
+    [historyOnlyForkableAssistantMessageIds],
+  );
+  const handleForkMessage = useCallback(
+    (messageId: MessageId) => {
+      void createForkThreadFromMessage(messageId);
+    },
+    [createForkThreadFromMessage],
+  );
 
   // Refreshed on every commit, in a layout effect rather than a passive one: the queued
   // dispatcher can run from the same commit's follow-up work, so there must be no window
@@ -12760,6 +12780,8 @@ export default function ChatView({
                     pinnedMessageIds={pinnedMessageIds}
                     canPinMessage={canPinMessage}
                     onTogglePinMessage={handleTogglePinMessageGuarded}
+                    canForkMessage={canForkMessage}
+                    onForkMessage={handleForkMessage}
                     threadMarkers={threadMarkers}
                     enteringUserMessageIds={enteringUserMessageIds}
                     tailAnchorMessageId={

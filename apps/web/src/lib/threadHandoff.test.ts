@@ -11,6 +11,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildThreadHandoffImportedActivities,
   buildThreadHandoffImportedMessages,
+  buildHistoryOnlyForkPayload,
+  deriveHistoryOnlyForkableAssistantMessageIds,
   resolveAvailableHandoffTargetProviders,
   resolveThreadHandoffTitle,
   resolveThreadHandoffModelSelection,
@@ -67,6 +69,115 @@ describe("threadHandoff", () => {
     expect(imported!.text).not.toContain("<browser_annotations>");
     expect(imported!.text).not.toContain("annotation-1");
     expect(imported!.text).not.toContain("<assistant_selection>");
+  });
+
+  it("builds an exact source-identified prefix only through a middle assistant", () => {
+    const sourceUserId = MessageId.makeUnsafe("source-user");
+    const cutoffId = MessageId.makeUnsafe("source-assistant-cutoff");
+    const suffixId = MessageId.makeUnsafe("source-user-suffix");
+    const messages = [
+      {
+        id: sourceUserId,
+        role: "user" as const,
+        text: "Question",
+        createdAt: "2026-08-17T00:00:01.000Z",
+        streaming: false,
+        source: "native" as const,
+      },
+      {
+        id: cutoffId,
+        role: "assistant" as const,
+        text: "Selected answer",
+        createdAt: "2026-08-17T00:00:02.000Z",
+        completedAt: "2026-08-17T00:00:03.000Z",
+        streaming: false,
+        source: "native" as const,
+      },
+      {
+        id: suffixId,
+        role: "user" as const,
+        text: "SECRET_SUFFIX",
+        createdAt: "2026-08-17T00:00:04.000Z",
+        streaming: false,
+        source: "native" as const,
+      },
+    ];
+
+    const payload = buildHistoryOnlyForkPayload({ messages }, cutoffId);
+    expect(payload?.forkScope).toEqual({
+      kind: "history-only",
+      sourceMessageId: cutoffId,
+      sourceMessageUpdatedAt: "2026-08-17T00:00:03.000Z",
+      bootstrapStatus: "pending",
+    });
+    expect(payload?.importedMessages.map((message) => message.sourceMessageId)).toEqual([
+      sourceUserId,
+      cutoffId,
+    ]);
+    expect(payload?.importedMessages.map((message) => message.text)).not.toContain("SECRET_SUFFIX");
+    expect(deriveHistoryOnlyForkableAssistantMessageIds({ messages })).toEqual(new Set([cutoffId]));
+  });
+
+  it("fails closed for a missing or terminal assistant cutoff", () => {
+    const assistantId = MessageId.makeUnsafe("terminal-assistant");
+    const messages = [
+      {
+        id: assistantId,
+        role: "assistant" as const,
+        text: "Latest answer",
+        createdAt: "2026-08-17T00:00:01.000Z",
+        completedAt: "2026-08-17T00:00:02.000Z",
+        streaming: false,
+        source: "native" as const,
+      },
+    ];
+
+    expect(buildHistoryOnlyForkPayload({ messages }, MessageId.makeUnsafe("missing"))).toBeNull();
+    expect(buildHistoryOnlyForkPayload({ messages }, assistantId)).toBeNull();
+    expect(deriveHistoryOnlyForkableAssistantMessageIds({ messages })).toEqual(new Set());
+  });
+
+  it("hides cutoffs whose exact prefix contains an attachment", () => {
+    const assistantId = MessageId.makeUnsafe("assistant-after-attachment");
+    const messages = [
+      {
+        id: MessageId.makeUnsafe("user-with-attachment"),
+        role: "user" as const,
+        text: "See the attached file",
+        attachments: [
+          {
+            type: "file" as const,
+            id: "attachment-1",
+            name: "context.txt",
+            mimeType: "text/plain",
+            sizeBytes: 7,
+          },
+        ],
+        createdAt: "2026-08-17T00:00:01.000Z",
+        streaming: false,
+        source: "native" as const,
+      },
+      {
+        id: assistantId,
+        role: "assistant" as const,
+        text: "Read it",
+        createdAt: "2026-08-17T00:00:02.000Z",
+        completedAt: "2026-08-17T00:00:03.000Z",
+        streaming: false,
+        source: "native" as const,
+      },
+      {
+        id: MessageId.makeUnsafe("suffix-user"),
+        role: "user" as const,
+        text: "Continue",
+        createdAt: "2026-08-17T00:00:04.000Z",
+        streaming: false,
+        source: "native" as const,
+      },
+    ];
+
+    expect(buildHistoryOnlyForkPayload({ messages }, assistantId)).toBeNull();
+    expect(deriveHistoryOnlyForkableAssistantMessageIds({ messages })).toEqual(new Set());
   });
 
   it("does not import a source provider's configured context window", () => {

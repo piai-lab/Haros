@@ -105,6 +105,7 @@ function toThreadShell(thread: Thread | ThreadShell): ThreadShell {
     subagentNickname: thread.subagentNickname ?? null,
     subagentRole: thread.subagentRole ?? null,
     forkSourceThreadId: thread.forkSourceThreadId ?? null,
+    forkScope: thread.forkScope ?? null,
     sidechatSourceThreadId: thread.sidechatSourceThreadId ?? null,
     lastKnownPr: thread.lastKnownPr ?? null,
     handoff: thread.handoff ?? null,

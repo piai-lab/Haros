@@ -13,6 +13,7 @@ import {
   type ServerProviderStatus,
   type ServerSettingsView,
   type ThreadHandoffImportedMessage,
+  type ThreadForkScope,
 } from "@omnimind/contracts";
 import { getDefaultModel } from "@omnimind/shared/model";
 import { type Thread } from "../types";
@@ -84,54 +85,114 @@ export function resolveThreadHandoffTitle(thread: Pick<Thread, "title">): string
   return title.length > 0 ? title : "Handoff";
 }
 
+function buildImportedThreadMessage(
+  message: Thread["messages"][number] & { role: "user" | "assistant" },
+  includeSourceIdentity: boolean,
+): ThreadHandoffImportedMessage {
+  const importedMessageId = MessageId.makeUnsafe(randomUUID());
+  let importedText = message.text;
+  if (!includeSourceIdentity && message.role === "user") {
+    const extractedBrowserAnnotations = extractTrailingBrowserAnnotations(message.text, message.id);
+    const visibleAndContextText = stripEmbeddedAssistantSelections(
+      extractedBrowserAnnotations.promptText,
+    );
+    // Browser annotation ids and tab ids are scoped to the source thread's
+    // live browser session. Carrying them into a handoff would advertise an
+    // exact-page navigation target that the destination thread cannot
+    // resolve, so import only the visible user/context text.
+    importedText = visibleAndContextText;
+  }
+  const importedMessage: ThreadHandoffImportedMessage = {
+    messageId: importedMessageId,
+    ...(includeSourceIdentity
+      ? {
+          sourceMessageId: message.id,
+          sourceMessageUpdatedAt: message.completedAt ?? message.createdAt,
+        }
+      : {}),
+    role: message.role,
+    text: importedText,
+    createdAt: message.createdAt,
+    updatedAt: message.completedAt ?? message.createdAt,
+  };
+  const attachments =
+    message.attachments && message.attachments.length > 0
+      ? message.attachments.map((attachment) =>
+          attachment.type === "assistant-selection"
+            ? {
+                type: attachment.type,
+                id: attachment.id,
+                assistantMessageId: attachment.assistantMessageId,
+                text: attachment.text,
+              }
+            : {
+                type: attachment.type,
+                id: attachment.id,
+                name: attachment.name,
+                mimeType: attachment.mimeType,
+                sizeBytes: attachment.sizeBytes,
+              },
+        )
+      : null;
+  return attachments ? Object.assign(importedMessage, { attachments }) : importedMessage;
+}
+
 export function buildThreadHandoffImportedMessages(
   thread: Pick<Thread, "messages">,
 ): ReadonlyArray<ThreadHandoffImportedMessage> {
-  return thread.messages.filter(isImportableThreadMessage).map((message) => {
-    const importedMessageId = MessageId.makeUnsafe(randomUUID());
-    let importedText = message.text;
-    if (message.role === "user") {
-      const extractedBrowserAnnotations = extractTrailingBrowserAnnotations(
-        message.text,
-        message.id,
-      );
-      const visibleAndContextText = stripEmbeddedAssistantSelections(
-        extractedBrowserAnnotations.promptText,
-      );
-      // Browser annotation ids and tab ids are scoped to the source thread's
-      // live browser session. Carrying them into a handoff would advertise an
-      // exact-page navigation target that the destination thread cannot
-      // resolve, so import only the visible user/context text.
-      importedText = visibleAndContextText;
+  return thread.messages
+    .filter(isImportableThreadMessage)
+    .map((message) => buildImportedThreadMessage(message, false));
+}
+
+export interface HistoryOnlyForkPayload {
+  readonly forkScope: ThreadForkScope;
+  readonly importedMessages: ReadonlyArray<ThreadHandoffImportedMessage>;
+}
+
+export function buildHistoryOnlyForkPayload(
+  thread: Pick<Thread, "messages">,
+  sourceMessageId: MessageId,
+): HistoryOnlyForkPayload | null {
+  const importableMessages = thread.messages.filter(isImportableThreadMessage);
+  const cutoffIndex = importableMessages.findIndex((message) => message.id === sourceMessageId);
+  const cutoffMessage = importableMessages[cutoffIndex];
+  if (
+    cutoffMessage === undefined ||
+    cutoffMessage.role !== "assistant" ||
+    cutoffIndex === importableMessages.length - 1
+  ) {
+    return null;
+  }
+  const sourcePrefix = importableMessages.slice(0, cutoffIndex + 1);
+  if (sourcePrefix.some((message) => (message.attachments?.length ?? 0) > 0)) {
+    return null;
+  }
+  const sourceMessageUpdatedAt = cutoffMessage.completedAt ?? cutoffMessage.createdAt;
+  return {
+    forkScope: {
+      kind: "history-only",
+      sourceMessageId,
+      sourceMessageUpdatedAt,
+      bootstrapStatus: "pending",
+    },
+    importedMessages: sourcePrefix.map((message) => buildImportedThreadMessage(message, true)),
+  };
+}
+
+export function deriveHistoryOnlyForkableAssistantMessageIds(
+  thread: Pick<Thread, "messages">,
+): ReadonlySet<MessageId> {
+  const importableMessages = thread.messages.filter(isImportableThreadMessage);
+  const forkableIds = new Set<MessageId>();
+  let prefixHasAttachments = false;
+  importableMessages.slice(0, -1).forEach((message) => {
+    prefixHasAttachments ||= (message.attachments?.length ?? 0) > 0;
+    if (!prefixHasAttachments && message.role === "assistant") {
+      forkableIds.add(message.id);
     }
-    const importedMessage: ThreadHandoffImportedMessage = {
-      messageId: importedMessageId,
-      role: message.role,
-      text: importedText,
-      createdAt: message.createdAt,
-      updatedAt: message.completedAt ?? message.createdAt,
-    };
-    const attachments =
-      message.attachments && message.attachments.length > 0
-        ? message.attachments.map((attachment) =>
-            attachment.type === "assistant-selection"
-              ? {
-                  type: attachment.type,
-                  id: attachment.id,
-                  assistantMessageId: attachment.assistantMessageId,
-                  text: attachment.text,
-                }
-              : {
-                  type: attachment.type,
-                  id: attachment.id,
-                  name: attachment.name,
-                  mimeType: attachment.mimeType,
-                  sizeBytes: attachment.sizeBytes,
-                },
-          )
-        : null;
-    return attachments ? Object.assign(importedMessage, { attachments }) : importedMessage;
   });
+  return forkableIds;
 }
 
 export function buildThreadHandoffImportedActivities(

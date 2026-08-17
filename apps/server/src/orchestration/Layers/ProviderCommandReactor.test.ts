@@ -867,6 +867,108 @@ describe("ProviderCommandReactor", () => {
     return readModel.threads.find((thread) => thread.id === threadId);
   }
 
+  async function createHistoryOnlyForkSource(
+    harness: Awaited<ReturnType<typeof createHarness>>,
+    now: string,
+    prefixUserText = "Visible prefix question",
+  ) {
+    const userAt = new Date(Date.parse(now) - 3_000).toISOString();
+    const assistantAt = new Date(Date.parse(now) - 2_000).toISOString();
+    const suffixAt = new Date(Date.parse(now) - 1_000).toISOString();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.messages.import",
+        commandId: CommandId.makeUnsafe("command-history-fork-source-import"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        messages: [
+          {
+            messageId: asMessageId("history-fork-source-user"),
+            role: "user",
+            text: prefixUserText,
+            createdAt: userAt,
+            updatedAt: userAt,
+          },
+          {
+            messageId: asMessageId("history-fork-source-assistant"),
+            role: "assistant",
+            text: "Visible prefix answer",
+            createdAt: assistantAt,
+            updatedAt: assistantAt,
+          },
+          {
+            messageId: asMessageId("history-fork-source-suffix"),
+            role: "user",
+            text: "SECRET_SUFFIX_MUST_NOT_CROSS",
+            createdAt: suffixAt,
+            updatedAt: suffixAt,
+          },
+        ],
+        createdAt: now,
+      }),
+    );
+    return { userAt, assistantAt, prefixUserText };
+  }
+
+  async function createHistoryOnlyForkThread(
+    harness: Awaited<ReturnType<typeof createHarness>>,
+    input: { readonly threadId: ThreadId; readonly now: string; readonly prefixUserText?: string },
+  ) {
+    const { userAt, assistantAt, prefixUserText } = await createHistoryOnlyForkSource(
+      harness,
+      input.now,
+      input.prefixUserText,
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.fork.create",
+        commandId: CommandId.makeUnsafe(`command-history-only-fork-create-${input.threadId}`),
+        threadId: input.threadId,
+        sourceThreadId: ThreadId.makeUnsafe("thread-1"),
+        projectId: asProjectId("project-1"),
+        title: "History-only fork",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        envMode: "local",
+        branch: null,
+        worktreePath: null,
+        workingDirectory: null,
+        associatedWorktreePath: null,
+        associatedWorktreeBranch: null,
+        associatedWorktreeRef: null,
+        createBranchFlowCompleted: false,
+        sidechatSourceThreadId: null,
+        forkScope: {
+          kind: "history-only",
+          sourceMessageId: asMessageId("history-fork-source-assistant"),
+          sourceMessageUpdatedAt: assistantAt,
+          bootstrapStatus: "pending",
+        },
+        importedMessages: [
+          {
+            messageId: asMessageId("history-fork-imported-user"),
+            sourceMessageId: asMessageId("history-fork-source-user"),
+            sourceMessageUpdatedAt: userAt,
+            role: "user",
+            text: prefixUserText,
+            createdAt: userAt,
+            updatedAt: userAt,
+          },
+          {
+            messageId: asMessageId("history-fork-imported-assistant"),
+            sourceMessageId: asMessageId("history-fork-source-assistant"),
+            sourceMessageUpdatedAt: assistantAt,
+            role: "assistant",
+            text: "Visible prefix answer",
+            createdAt: assistantAt,
+            updatedAt: assistantAt,
+          },
+        ],
+        createdAt: input.now,
+      }),
+    );
+  }
+
   it("REL-01B gate: delivers intents committed before the reactor subscribes", async () => {
     const harness = await createHarness({ startReactor: false });
     const now = new Date().toISOString();
@@ -2363,6 +2465,172 @@ describe("ProviderCommandReactor", () => {
       return promotion.pipe(Option.getOrThrow).state === "cancelled";
     });
     expect(harness.sendTurn.mock.calls.length).toBe(0);
+  });
+
+  it("keeps a history-only fork fresh and durably bootstraps only its exact prefix", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-history-only-fork");
+    const harness = await createHarness({
+      startReactor: false,
+      forkThreadResult: {
+        threadId,
+        resumeCursor: { sessionId: "native-fork-must-not-run" },
+      },
+    });
+    const now = new Date().toISOString();
+    await createHistoryOnlyForkThread(harness, { threadId, now });
+
+    expect((await readHarnessThread(harness, threadId))?.forkScope?.bootstrapStatus).toBe(
+      "pending",
+    );
+    await harness.startReactor();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("command-history-only-fork-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("history-only-fork-user"),
+          role: "user",
+          text: "Continue from the selected answer",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.forkThread).not.toHaveBeenCalled();
+    expect(harness.startSession).toHaveBeenCalledTimes(1);
+    const firstInput = harness.sendTurn.mock.calls[0]?.[0] as { input?: string } | undefined;
+    expect(firstInput?.input).toContain("<thread_context>");
+    expect(firstInput?.input).toContain("Visible prefix question");
+    expect(firstInput?.input).toContain("Visible prefix answer");
+    expect(firstInput?.input).not.toContain("SECRET_SUFFIX_MUST_NOT_CROSS");
+    await waitFor(
+      async () =>
+        (await readHarnessThread(harness, threadId))?.forkScope?.bootstrapStatus === "completed",
+    );
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("command-history-only-fork-second-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("history-only-fork-second-user"),
+          role: "user",
+          text: "Continue again",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 2);
+    const secondInput = harness.sendTurn.mock.calls[1]?.[0] as { input?: string } | undefined;
+    expect(secondInput?.input).toBe("Continue again");
+    expect(harness.forkThread).not.toHaveBeenCalled();
+  });
+
+  it("keeps an oversized exact-prefix bootstrap pending without sending the provider turn", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-history-only-fork-oversized");
+    const harness = await createHarness({ startReactor: false });
+    const now = new Date().toISOString();
+    await createHistoryOnlyForkThread(harness, {
+      threadId,
+      now,
+      prefixUserText: `OVERSIZED-EXACT-PREFIX-${"x".repeat(33_000)}`,
+    });
+
+    await harness.startReactor();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("command-history-only-fork-oversized-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("history-only-fork-oversized-user"),
+          role: "user",
+          text: "Continue without dropping any prefix message",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(async () => {
+      const thread = await readHarnessThread(harness, threadId);
+      return Boolean(
+        thread?.activities.some((activity) => {
+          const payload = activity.payload;
+          const detail =
+            payload !== null &&
+            typeof payload === "object" &&
+            !Array.isArray(payload) &&
+            "detail" in payload
+              ? String(payload.detail)
+              : "";
+          return (
+            activity.kind === "provider.turn.start.failed" &&
+            detail.includes("history-only fork context")
+          );
+        }),
+      );
+    });
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    expect((await readHarnessThread(harness, threadId))?.forkScope?.bootstrapStatus).toBe(
+      "pending",
+    );
+  });
+
+  it("preserves provider-native forking for an ordinary full fork", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-full-native-fork");
+    const harness = await createHarness({
+      forkThreadResult: { threadId, resumeCursor: { sessionId: "native-full-fork" } },
+    });
+    const now = new Date().toISOString();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.fork.create",
+        commandId: CommandId.makeUnsafe("command-full-native-fork-create"),
+        threadId,
+        sourceThreadId: ThreadId.makeUnsafe("thread-1"),
+        projectId: asProjectId("project-1"),
+        title: "Full fork",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        envMode: "local",
+        branch: null,
+        worktreePath: null,
+        importedMessages: [],
+        createdAt: now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("command-full-native-fork-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("full-native-fork-user"),
+          role: "user",
+          text: "Continue the full fork",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.forkThread).toHaveBeenCalledTimes(1);
   });
 
   it("bootstraps sidechat context when the provider cannot fork natively", async () => {

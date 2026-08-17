@@ -1,5 +1,6 @@
 import {
   type ModelSelection,
+  type MessageId,
   type OrchestrationShellSnapshot,
   type ProviderInteractionMode,
   type ProviderKind,
@@ -25,7 +26,10 @@ import {
   parseForkSlashCommandArgs,
   type ForkSlashCommandTarget,
 } from "../composerSlashCommands";
-import { buildThreadHandoffImportedMessages } from "../lib/threadHandoff";
+import {
+  buildHistoryOnlyForkPayload,
+  buildThreadHandoffImportedMessages,
+} from "../lib/threadHandoff";
 import { toastManager } from "../components/ui/toast";
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
 import { buildNextProviderOptions } from "../providerModelOptions";
@@ -51,6 +55,8 @@ type ComposerSnapshot = {
 };
 
 type SlashCommandItem = Extract<ComposerCommandItem, { type: "slash-command" }>;
+
+class HistoryOnlyForkUnavailableError extends Error {}
 
 function wasPromptReplacementApplied(result: number | false): boolean {
   return result !== false;
@@ -261,7 +267,7 @@ export function useComposerSlashCommands(input: {
   );
 
   const createForkThreadFromSlashCommand = useCallback(
-    async (inputOptions?: { target?: ForkSlashCommandTarget }) => {
+    async (inputOptions?: { target?: ForkSlashCommandTarget; sourceMessageId?: MessageId }) => {
       if (!selectedModelSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return true;
@@ -270,26 +276,34 @@ export function useComposerSlashCommands(input: {
       if (!api || !activeProject || !activeThread || !isServerThread) {
         toastManager.add({
           type: "warning",
-          title: "Fork is unavailable",
-          description: "Only existing server-backed threads can be forked right now.",
+          title: t("conversation.forkUnavailable"),
+          description: t("conversation.forkUnavailableDescription"),
         });
         return true;
       }
 
-      const importedMessages = buildThreadHandoffImportedMessages(activeThread);
+      const historyOnlyPayload = inputOptions?.sourceMessageId
+        ? buildHistoryOnlyForkPayload(activeThread, inputOptions.sourceMessageId)
+        : null;
+      if (inputOptions?.sourceMessageId && historyOnlyPayload === null) {
+        throw new HistoryOnlyForkUnavailableError();
+      }
+      const importedMessages =
+        historyOnlyPayload?.importedMessages ?? buildThreadHandoffImportedMessages(activeThread);
 
       const nextThreadId = newThreadId();
       const createdAt = new Date().toISOString();
       // Fork first, then let the normal first-send worktree bootstrap create the cwd if needed.
       const resolvedTarget = resolveForkThreadEnvironment({
-        target: inputOptions?.target ?? "local",
+        target: historyOnlyPayload ? "local" : (inputOptions?.target ?? "local"),
         activeRootBranch,
         sourceThread: activeThread,
       });
 
-      await api.orchestration.dispatchCommand({
-        type: "thread.fork.create",
-        commandId: newCommandId(),
+      const commandId = newCommandId();
+      const command = {
+        type: "thread.fork.create" as const,
+        commandId,
         threadId: nextThreadId,
         sourceThreadId: activeThread.id,
         projectId: activeProject.id,
@@ -304,10 +318,32 @@ export function useComposerSlashCommands(input: {
         associatedWorktreePath: resolvedTarget.associatedWorktreePath,
         associatedWorktreeBranch: resolvedTarget.associatedWorktreeBranch,
         associatedWorktreeRef: resolvedTarget.associatedWorktreeRef,
+        ...(historyOnlyPayload
+          ? {
+              createBranchFlowCompleted: activeThread.createBranchFlowCompleted ?? false,
+              sidechatSourceThreadId: null,
+              forkScope: historyOnlyPayload.forkScope,
+            }
+          : {}),
         importedMessages: [...importedMessages],
         createdAt,
-      });
-      const snapshot = await api.orchestration.getShellSnapshot();
+      };
+      let snapshot: OrchestrationShellSnapshot;
+      if (!historyOnlyPayload) {
+        await api.orchestration.dispatchCommand(command);
+        snapshot = await api.orchestration.getShellSnapshot();
+      } else {
+        try {
+          await api.orchestration.dispatchCommand(command);
+          snapshot = await api.orchestration.getShellSnapshot();
+        } catch (error) {
+          const recoveredSnapshot = await api.orchestration.getShellSnapshot().catch(() => null);
+          if (!recoveredSnapshot?.threads.some((thread) => thread.id === nextThreadId)) {
+            throw error;
+          }
+          snapshot = recoveredSnapshot;
+        }
+      }
       syncServerShellSnapshot(snapshot);
       await navigateToThread(nextThreadId);
       return true;
@@ -324,6 +360,39 @@ export function useComposerSlashCommands(input: {
       syncServerShellSnapshot,
       t,
     ],
+  );
+
+  const historyOnlyForkFlightsRef = useRef(new Map<string, Promise<boolean>>());
+  const createForkThreadFromMessage = useCallback(
+    (sourceMessageId: MessageId): Promise<boolean> => {
+      const flightKey = `${activeThread?.id ?? "missing"}:${sourceMessageId}`;
+      const existing = historyOnlyForkFlightsRef.current.get(flightKey);
+      if (existing) {
+        return existing;
+      }
+      const attempt = createForkThreadFromSlashCommand({
+        target: "local",
+        sourceMessageId,
+      }).catch((error) => {
+        toastManager.add({
+          type: "error",
+          title: t("timeline.forkMessageFailed"),
+          description:
+            error instanceof HistoryOnlyForkUnavailableError
+              ? t("timeline.forkMessageUnavailableDescription")
+              : t("timeline.forkMessageFailedDescription"),
+        });
+        return false;
+      });
+      historyOnlyForkFlightsRef.current.set(flightKey, attempt);
+      void attempt.finally(() => {
+        if (historyOnlyForkFlightsRef.current.get(flightKey) === attempt) {
+          historyOnlyForkFlightsRef.current.delete(flightKey);
+        }
+      });
+      return attempt;
+    },
+    [activeThread?.id, createForkThreadFromSlashCommand, t],
   );
 
   const sidechatCreationBySourceThreadIdRef = useRef(new Map<ThreadId, SidechatCreationFlight>());
@@ -1049,6 +1118,7 @@ export function useComposerSlashCommands(input: {
   );
 
   return {
+    createForkThreadFromMessage,
     handleForkTargetSelection,
     handleReviewTargetSelection,
     isSlashStatusDialogOpen,

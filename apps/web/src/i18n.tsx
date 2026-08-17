@@ -1745,6 +1745,15 @@ export const EN_MESSAGES = {
   "timeline.details": "Details",
   "timeline.workedFor": "Worked for {duration}",
   "timeline.copyMessage": "Copy message",
+  "timeline.forkMessage": "Fork from this message",
+  "timeline.forkMessageUnavailableDescription":
+    "This message is no longer an eligible fork point. Refresh the task and try again.",
+  "timeline.forkMessageFailed": "Could not fork from this message",
+  "timeline.forkMessageFailedDescription":
+    "An error occurred while creating the history-only fork.",
+  "conversation.forkUnavailable": "Fork is unavailable",
+  "conversation.forkUnavailableDescription":
+    "Only existing server-backed tasks can be forked right now.",
   "timeline.copyClipboard": "Copy to clipboard",
   "timeline.copied": "Copied!",
   "timeline.copyFailed": "Failed to copy",
@@ -5134,6 +5143,13 @@ export const ZH_CN_MESSAGES = {
   "timeline.details": "详情",
   "timeline.workedFor": "工作了 {duration}",
   "timeline.copyMessage": "复制消息",
+  "timeline.forkMessage": "从此消息派生",
+  "timeline.forkMessageUnavailableDescription":
+    "这条消息已不再是可用的派生节点。请刷新任务后重试。",
+  "timeline.forkMessageFailed": "无法从此消息派生",
+  "timeline.forkMessageFailedDescription": "创建仅保留此前历史的派生任务时发生错误。",
+  "conversation.forkUnavailable": "暂时无法派生",
+  "conversation.forkUnavailableDescription": "目前只能从已保存到服务器的任务派生。",
   "timeline.copyClipboard": "复制到剪贴板",
   "timeline.copied": "已复制",
   "timeline.copyFailed": "复制失败",

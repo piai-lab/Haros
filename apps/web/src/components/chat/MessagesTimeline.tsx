@@ -49,6 +49,7 @@ import {
   CircleAlertIcon,
   CircleCheckIcon,
   ClockIcon,
+  GitBranchIcon,
   LoaderIcon,
   type LucideIcon,
   NewThreadIcon,
@@ -421,6 +422,10 @@ interface MessagesTimelineProps {
   canPinMessage?: (messageId: MessageId) => boolean;
   /** Toggle a message's pinned state from the assistant footer. */
   onTogglePinMessage?: (messageId: MessageId) => void;
+  /** True only for persisted, settled assistant messages before the transcript tail. */
+  canForkMessage?: (messageId: MessageId) => boolean;
+  /** Create a history-only fork through the selected assistant message. */
+  onForkMessage?: (messageId: MessageId) => void;
   /** Text markers for assistant messages in the active thread. */
   threadMarkers?: readonly ThreadMarker[];
   /** User messages inserted locally by send actions, eligible for the subtle enter affordance. */
@@ -517,6 +522,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   pinnedMessageIds,
   canPinMessage,
   onTogglePinMessage,
+  canForkMessage,
+  onForkMessage,
   threadMarkers: threadMarkersProp,
   enteringUserMessageIds: enteringUserMessageIdsProp,
   tailAnchorMessageId: tailAnchorMessageIdProp,
@@ -1741,6 +1748,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             messageCanPin &&
             Boolean(onTogglePinMessage) &&
             (assistantCopyState.visible || messagePinned);
+          const showForkAction =
+            assistantCopyState.visible &&
+            Boolean(onForkMessage) &&
+            (canForkMessage?.(row.message.id) ?? false);
           const turnSummary = row.assistantTurnDiffSummary;
           const fileDiffStatByPath = new Map(
             (turnSummary?.files ?? []).map((file) => [
@@ -2307,7 +2318,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </div>
                   );
                 })()}
-                {(showPinToggle || assistantCopyState.visible || assistantMeta.length > 0) && (
+                {(showPinToggle ||
+                  showForkAction ||
+                  assistantCopyState.visible ||
+                  assistantMeta.length > 0) && (
                   <div
                     className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.3125em]"
                     style={chatMessageFooterStyle}
@@ -2329,6 +2343,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         onClick={() => onTogglePinMessage?.(row.message.id)}
                       >
                         <PinIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
+                      </MessageActionButton>
+                    ) : null}
+                    {showForkAction ? (
+                      <MessageActionButton
+                        label={t("timeline.forkMessage")}
+                        tooltip={t("timeline.forkMessage")}
+                        className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
+                        onClick={() => onForkMessage?.(row.message.id)}
+                      >
+                        <GitBranchIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
                       </MessageActionButton>
                     ) : null}
                     {assistantCopyState.visible ? (

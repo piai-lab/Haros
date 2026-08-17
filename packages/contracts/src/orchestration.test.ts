@@ -572,6 +572,55 @@ it.effect("decodes thread.created runtime mode for historical events", () =>
 
     assert.strictEqual(parsed.runtimeMode, DEFAULT_RUNTIME_MODE);
     assert.strictEqual(parsed.modelSelection.provider, "codex");
+    assert.strictEqual(parsed.forkScope, null);
+  }),
+);
+
+it.effect("decodes the exact durable scope for a history-only fork", () =>
+  Effect.gen(function* () {
+    const command = yield* decodeClientOrchestrationCommand({
+      type: "thread.fork.create",
+      commandId: "cmd-fork-1",
+      threadId: "thread-target",
+      sourceThreadId: "thread-source",
+      projectId: "project-1",
+      title: "Forked thread",
+      modelSelection: { provider: "codex", model: "gpt-5.4" },
+      runtimeMode: "full-access",
+      interactionMode: "default",
+      envMode: "local",
+      branch: "main",
+      worktreePath: null,
+      workingDirectory: "/workspace",
+      sidechatSourceThreadId: null,
+      forkScope: {
+        kind: "history-only",
+        sourceMessageId: "message-cutoff",
+        sourceMessageUpdatedAt: "2026-08-17T00:00:02.000Z",
+        bootstrapStatus: "pending",
+      },
+      importedMessages: [
+        {
+          messageId: "message-imported",
+          sourceMessageId: "message-cutoff",
+          sourceMessageUpdatedAt: "2026-08-17T00:00:02.000Z",
+          role: "assistant",
+          text: "Answer",
+          createdAt: "2026-08-17T00:00:01.000Z",
+          updatedAt: "2026-08-17T00:00:02.000Z",
+        },
+      ],
+      createdAt: "2026-08-17T00:00:03.000Z",
+    });
+
+    assert.strictEqual(command.type, "thread.fork.create");
+    assert.deepStrictEqual(command.forkScope, {
+      kind: "history-only",
+      sourceMessageId: "message-cutoff",
+      sourceMessageUpdatedAt: "2026-08-17T00:00:02.000Z",
+      bootstrapStatus: "pending",
+    });
+    assert.strictEqual(command.importedMessages[0]?.sourceMessageId, "message-cutoff");
   }),
 );
 

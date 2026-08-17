@@ -172,6 +172,7 @@ export function threadShellsEqual(left: ThreadShell | undefined, right: ThreadSh
     (left.subagentNickname ?? null) === (right.subagentNickname ?? null) &&
     (left.subagentRole ?? null) === (right.subagentRole ?? null) &&
     (left.forkSourceThreadId ?? null) === (right.forkSourceThreadId ?? null) &&
+    deepEqualJson(left.forkScope ?? null, right.forkScope ?? null) &&
     (left.sidechatSourceThreadId ?? null) === (right.sidechatSourceThreadId ?? null) &&
     deepEqualJson(left.lastKnownPr ?? null, right.lastKnownPr ?? null) &&
     (left.handoff ?? null) === (right.handoff ?? null) &&
@@ -1482,6 +1483,12 @@ export function normalizeThreadFromReadModel(
     previous?.handoff && incoming.handoff && deepEqualJson(previous.handoff, incoming.handoff)
       ? previous.handoff
       : (incoming.handoff ?? null);
+  const forkScope =
+    previous?.forkScope &&
+    incoming.forkScope &&
+    deepEqualJson(previous.forkScope, incoming.forkScope)
+      ? previous.forkScope
+      : (incoming.forkScope ?? null);
   const lastKnownPr =
     previous?.lastKnownPr &&
     incoming.lastKnownPr &&
@@ -1593,6 +1600,7 @@ export function normalizeThreadFromReadModel(
     previous.hasPendingUserInput === resolvedHasPendingUserInput &&
     previous.hasActionableProposedPlan === resolvedHasActionableProposedPlan &&
     (previous.forkSourceThreadId ?? null) === (incoming.forkSourceThreadId ?? null) &&
+    previous.forkScope === forkScope &&
     (previous.sidechatSourceThreadId ?? null) === (incoming.sidechatSourceThreadId ?? null) &&
     deepEqualJson(previous.lastKnownPr ?? null, lastKnownPr) &&
     (previous.handoff ?? null) === handoff &&
@@ -1642,6 +1650,7 @@ export function normalizeThreadFromReadModel(
     associatedWorktreeRef: nextAssociatedWorktreeRef,
     createBranchFlowCompleted: resolvedCreateBranchFlowCompleted,
     forkSourceThreadId: incoming.forkSourceThreadId ?? null,
+    forkScope,
     sidechatSourceThreadId: incoming.sidechatSourceThreadId ?? null,
     lastKnownPr,
     handoff,
@@ -1686,6 +1695,12 @@ export function normalizeThreadShellSnapshot(
     previous?.handoff && incoming.handoff && deepEqualJson(previous.handoff, incoming.handoff)
       ? previous.handoff
       : (incoming.handoff ?? null);
+  const forkScope =
+    previous?.forkScope &&
+    incoming.forkScope &&
+    deepEqualJson(previous.forkScope, incoming.forkScope)
+      ? previous.forkScope
+      : (incoming.forkScope ?? null);
   const lastKnownPr =
     previous?.lastKnownPr &&
     incoming.lastKnownPr &&
@@ -1747,6 +1762,7 @@ export function normalizeThreadShellSnapshot(
     subagentNickname: incoming.subagentNickname ?? null,
     subagentRole: incoming.subagentRole ?? null,
     forkSourceThreadId: incoming.forkSourceThreadId ?? null,
+    forkScope,
     sidechatSourceThreadId: incoming.sidechatSourceThreadId ?? null,
     lastKnownPr,
     handoff,

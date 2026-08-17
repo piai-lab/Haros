@@ -1,4 +1,5 @@
 import type {
+  ChatAttachment,
   OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationReadModel,
@@ -319,6 +320,168 @@ function resolveCreatedThreadWorkspaceMetadata(
         : {}),
     }),
   };
+}
+
+function nullableWorkspacePathsEqual(left: string | null, right: string | null): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+  return workspaceRootsEqual(left, right);
+}
+
+function chatAttachmentsEqual(
+  left: ReadonlyArray<ChatAttachment> | undefined,
+  right: ReadonlyArray<ChatAttachment> | undefined,
+): boolean {
+  const leftAttachments = left ?? [];
+  const rightAttachments = right ?? [];
+  return (
+    leftAttachments.length === rightAttachments.length &&
+    leftAttachments.every((attachment, index) => {
+      const candidate = rightAttachments[index];
+      if (!candidate || attachment.type !== candidate.type || attachment.id !== candidate.id) {
+        return false;
+      }
+      if (attachment.type === "assistant-selection") {
+        return (
+          candidate.type === "assistant-selection" &&
+          attachment.assistantMessageId === candidate.assistantMessageId &&
+          attachment.text === candidate.text
+        );
+      }
+      return (
+        candidate.type !== "assistant-selection" &&
+        attachment.name === candidate.name &&
+        attachment.mimeType === candidate.mimeType &&
+        attachment.sizeBytes === candidate.sizeBytes
+      );
+    })
+  );
+}
+
+function validateHistoryOnlyFork(input: {
+  readonly command: Extract<OrchestrationCommand, { type: "thread.fork.create" }>;
+  readonly projectKind: ProjectKind | undefined;
+  readonly sourceThread: OrchestrationThread;
+}) {
+  const { command, projectKind, sourceThread } = input;
+  const forkScope = command.forkScope ?? null;
+  if (forkScope === null) {
+    return Effect.void;
+  }
+
+  if (command.sidechatSourceThreadId !== null) {
+    return Effect.fail(
+      new OrchestrationCommandInvariantError({
+        commandType: command.type,
+        detail: "A history-only fork cannot also be a Side conversation.",
+      }),
+    );
+  }
+  if (forkScope.bootstrapStatus !== "pending") {
+    return Effect.fail(
+      new OrchestrationCommandInvariantError({
+        commandType: command.type,
+        detail: "A history-only fork must start with a pending transcript bootstrap.",
+      }),
+    );
+  }
+
+  const importableMessages = sourceThread.messages.filter(
+    (message) =>
+      (message.role === "user" || message.role === "assistant") && message.streaming === false,
+  );
+  const cutoffIndex = importableMessages.findIndex(
+    (message) => message.id === forkScope.sourceMessageId,
+  );
+  const cutoffMessage = importableMessages[cutoffIndex];
+  if (
+    cutoffMessage === undefined ||
+    cutoffMessage.role !== "assistant" ||
+    cutoffMessage.updatedAt !== forkScope.sourceMessageUpdatedAt
+  ) {
+    return Effect.fail(
+      new OrchestrationCommandInvariantError({
+        commandType: command.type,
+        detail:
+          "The history-only fork cutoff is missing, stale, streaming, or not an assistant message.",
+      }),
+    );
+  }
+  if (cutoffIndex === importableMessages.length - 1) {
+    return Effect.fail(
+      new OrchestrationCommandInvariantError({
+        commandType: command.type,
+        detail:
+          "Only a persisted assistant message before the end of the conversation can be forked.",
+      }),
+    );
+  }
+
+  const sourcePrefix = importableMessages.slice(0, cutoffIndex + 1);
+  if (sourcePrefix.some((message) => (message.attachments?.length ?? 0) > 0)) {
+    return Effect.fail(
+      new OrchestrationCommandInvariantError({
+        commandType: command.type,
+        detail:
+          "A history-only fork cannot replay source attachments through the exact text bootstrap.",
+      }),
+    );
+  }
+  const sourceMessageIds = new Set(sourcePrefix.map((message) => message.id));
+  const importedMessageIds = new Set(command.importedMessages.map((message) => message.messageId));
+  const importedPrefixMatches =
+    command.importedMessages.length === sourcePrefix.length &&
+    importedMessageIds.size === command.importedMessages.length &&
+    command.importedMessages.every((message, index) => {
+      const sourceMessage = sourcePrefix[index];
+      return (
+        sourceMessage !== undefined &&
+        !sourceMessageIds.has(message.messageId) &&
+        message.sourceMessageId === sourceMessage.id &&
+        message.sourceMessageUpdatedAt === sourceMessage.updatedAt &&
+        message.role === sourceMessage.role &&
+        message.text === sourceMessage.text &&
+        chatAttachmentsEqual(message.attachments, sourceMessage.attachments) &&
+        message.createdAt === sourceMessage.createdAt &&
+        message.updatedAt === sourceMessage.updatedAt
+      );
+    });
+  if (!importedPrefixMatches) {
+    return Effect.fail(
+      new OrchestrationCommandInvariantError({
+        commandType: command.type,
+        detail: "History-only fork messages must be the exact persisted prefix through the cutoff.",
+      }),
+    );
+  }
+
+  const targetWorkspace = resolveCreatedThreadWorkspaceMetadata(projectKind, command);
+  const workspaceMatches =
+    targetWorkspace.envMode === sourceThread.envMode &&
+    targetWorkspace.branch === sourceThread.branch &&
+    nullableWorkspacePathsEqual(targetWorkspace.worktreePath, sourceThread.worktreePath) &&
+    nullableWorkspacePathsEqual(
+      targetWorkspace.workingDirectory ?? null,
+      sourceThread.workingDirectory ?? null,
+    ) &&
+    nullableWorkspacePathsEqual(
+      targetWorkspace.associatedWorktreePath,
+      sourceThread.associatedWorktreePath ?? null,
+    ) &&
+    targetWorkspace.associatedWorktreeBranch === (sourceThread.associatedWorktreeBranch ?? null) &&
+    targetWorkspace.associatedWorktreeRef === (sourceThread.associatedWorktreeRef ?? null) &&
+    command.createBranchFlowCompleted === sourceThread.createBranchFlowCompleted;
+  if (!workspaceMatches) {
+    return Effect.fail(
+      new OrchestrationCommandInvariantError({
+        commandType: command.type,
+        detail: "A history-only fork must stay in the source conversation's exact environment.",
+      }),
+    );
+  }
+
+  return Effect.void;
 }
 
 function resolveThreadWorkspaceMetadataPatch(
@@ -806,6 +969,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           subagentNickname: command.subagentNickname,
           subagentRole: command.subagentRole,
           forkSourceThreadId: null,
+          forkScope: null,
           lastKnownPr: command.lastKnownPr,
           handoff: null,
           createdAt: command.createdAt,
@@ -874,6 +1038,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           subagentNickname: null,
           subagentRole: null,
           forkSourceThreadId: null,
+          forkScope: null,
           handoff: {
             sourceThreadId: command.sourceThreadId,
             sourceProvider: sourceThread.modelSelection.provider,
@@ -945,6 +1110,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: `Source thread '${command.sourceThreadId}' belongs to a different project.`,
         });
       }
+      yield* validateHistoryOnlyFork({
+        command,
+        projectKind: project.kind,
+        sourceThread,
+      });
 
       const createdEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...withEventBase({
@@ -975,6 +1145,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           subagentNickname: null,
           subagentRole: null,
           forkSourceThreadId: command.sourceThreadId,
+          forkScope: command.forkScope ?? null,
           sidechatSourceThreadId: command.sidechatSourceThreadId,
           handoff: null,
           createdAt: command.createdAt,
@@ -1109,6 +1280,32 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         threadId: command.threadId,
       });
       const project = readModel.projects.find((candidate) => candidate.id === thread.projectId);
+      if (command.forkScope !== undefined) {
+        const currentScope = thread.forkScope ?? null;
+        const nextScope = command.forkScope ?? null;
+        const sameCutoff =
+          currentScope !== null &&
+          nextScope !== null &&
+          currentScope.kind === nextScope.kind &&
+          currentScope.sourceMessageId === nextScope.sourceMessageId &&
+          currentScope.sourceMessageUpdatedAt === nextScope.sourceMessageUpdatedAt;
+        const validStatusTransition =
+          currentScope !== null &&
+          nextScope !== null &&
+          ((currentScope.bootstrapStatus === "pending" &&
+            nextScope.bootstrapStatus === "completed") ||
+            (currentScope.bootstrapStatus === "completed" &&
+              nextScope.bootstrapStatus === "completed"));
+        if (!sameCutoff || !validStatusTransition) {
+          return yield* Effect.fail(
+            new OrchestrationCommandInvariantError({
+              commandType: command.type,
+              detail:
+                "A history-only fork scope is immutable except for its pending-to-completed bootstrap transition.",
+            }),
+          );
+        }
+      }
       if (command.groupIds !== undefined) {
         if (!project || (project.kind ?? "project") !== "project") {
           return yield* Effect.fail(
@@ -1168,6 +1365,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             : {}),
           ...(command.subagentRole !== undefined ? { subagentRole: command.subagentRole } : {}),
           ...(command.handoff !== undefined ? { handoff: command.handoff } : {}),
+          ...(command.forkScope !== undefined ? { forkScope: command.forkScope } : {}),
           ...(command.lastKnownPr !== undefined ? { lastKnownPr: command.lastKnownPr } : {}),
           ...(command.pinnedMessages !== undefined
             ? { pinnedMessages: command.pinnedMessages }

@@ -5,14 +5,15 @@
 import "../../index.css";
 
 import { MessageId } from "@omnimind/contracts";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { userEvent } from "vitest/browser";
 
 import { MessagesTimeline } from "./MessagesTimeline";
 
 const VIEWPORT_WIDTHS = [480, 960, 1440] as const;
 
-function SettledAssistantTimeline() {
+function SettledAssistantTimeline({ onFork = () => {} }: { onFork?: () => void }) {
   return (
     <MessagesTimeline
       hasMessages
@@ -35,6 +36,8 @@ function SettledAssistantTimeline() {
         },
       ]}
       turnDiffSummaryByAssistantMessageId={new Map()}
+      canForkMessage={() => true}
+      onForkMessage={onFork}
       nowIso="2026-03-17T19:12:30.000Z"
       expandedWorkGroups={{}}
       onToggleWorkGroup={() => {}}
@@ -83,20 +86,20 @@ describe("MessagesTimeline settled assistant footer", () => {
           '[data-message-id="message-footer-alignment"]',
         );
         const messageText = row?.querySelector<HTMLElement>(".chat-markdown p");
-        const copyButton = row?.querySelector<HTMLButtonElement>(
-          'button[aria-label="Copy message"]',
+        const forkButton = row?.querySelector<HTMLButtonElement>(
+          'button[aria-label="Fork from this message"]',
         );
-        const copyGlyph = copyButton?.querySelector<HTMLElement>('[data-slot="central-icon"]');
+        const forkGlyph = forkButton?.querySelector<HTMLElement>('[data-slot="central-icon"]');
         expect(row).not.toBeNull();
         expect(messageText).not.toBeNull();
-        expect(copyButton).not.toBeNull();
-        expect(copyGlyph).not.toBeNull();
-        if (!row || !messageText || !copyButton || !copyGlyph) return;
+        expect(forkButton).not.toBeNull();
+        expect(forkGlyph).not.toBeNull();
+        if (!row || !messageText || !forkButton || !forkGlyph) return;
 
         const messageRect = messageText.getBoundingClientRect();
-        const buttonRect = copyButton.getBoundingClientRect();
-        const glyphRect = copyGlyph.getBoundingClientRect();
-        const buttonFontSize = Number.parseFloat(getComputedStyle(copyButton).fontSize);
+        const buttonRect = forkButton.getBoundingClientRect();
+        const glyphRect = forkGlyph.getBoundingClientRect();
+        const buttonFontSize = Number.parseFloat(getComputedStyle(forkButton).fontSize);
 
         expect(Math.abs(glyphRect.left - messageRect.left)).toBeLessThanOrEqual(0.5);
         expect(Math.abs(buttonRect.width - buttonFontSize * 1.75)).toBeLessThanOrEqual(0.5);
@@ -105,18 +108,45 @@ describe("MessagesTimeline settled assistant footer", () => {
           host.getBoundingClientRect().right + 0.5,
         );
 
-        expect(getComputedStyle(copyButton).opacity).toBe("0");
-        expect(copyButton.className).toContain("group-hover:opacity-100");
-        expect(copyButton.className).toContain("group-focus-within:opacity-100");
+        expect(getComputedStyle(forkButton).opacity).toBe("0");
+        expect(forkButton.className).toContain("group-hover:opacity-100");
+        expect(forkButton.className).toContain("group-focus-within:opacity-100");
 
-        expect(copyButton.tabIndex).toBe(0);
-        copyButton.focus();
-        expect(document.activeElement).toBe(copyButton);
-        await expect.poll(() => getComputedStyle(copyButton).opacity).toBe("1");
+        expect(forkButton.tabIndex).toBe(0);
+        forkButton.focus();
+        expect(document.activeElement).toBe(forkButton);
+        await expect.poll(() => getComputedStyle(forkButton).opacity).toBe("1");
       } finally {
         screen.unmount();
         host.remove();
       }
     },
   );
+
+  it("keeps the history-only action keyboard reachable without disturbing focus", async () => {
+    const onFork = vi.fn();
+    const host = createTimelineHost(960);
+    const screen = await render(<SettledAssistantTimeline onFork={onFork} />, {
+      container: host,
+    });
+
+    try {
+      const forkButton = document.querySelector<HTMLButtonElement>(
+        'button[aria-label="Fork from this message"]',
+      );
+      expect(forkButton).not.toBeNull();
+      if (!forkButton) return;
+      forkButton.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(onFork).toHaveBeenCalledTimes(1);
+      expect(document.activeElement?.getAttribute("aria-label")).toBe("Fork from this message");
+
+      await userEvent.keyboard(" ");
+      expect(onFork).toHaveBeenCalledTimes(2);
+      expect(document.activeElement?.getAttribute("aria-label")).toBe("Fork from this message");
+    } finally {
+      screen.unmount();
+      host.remove();
+    }
+  });
 });

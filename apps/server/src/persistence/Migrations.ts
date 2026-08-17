@@ -110,6 +110,7 @@ import Migration0091 from "./Migrations/091_UsageHistoryIndex.ts";
 import Migration0092 from "./Migrations/092_ProjectionThreadMessageTextSegments.ts";
 import Migration0093 from "./Migrations/093_AutomationDurability.ts";
 import Migration0094 from "./Migrations/094_AutomationDeferredOneShotOwner.ts";
+import Migration0095 from "./Migrations/095_ProjectionThreadsForkScope.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -219,6 +220,7 @@ export const migrationEntries = [
   [92, "ProjectionThreadMessageTextSegments", Migration0092],
   [93, "AutomationDurability", Migration0093],
   [94, "AutomationDeferredOneShotOwner", Migration0094],
+  [95, "ProjectionThreadsForkScope", Migration0095],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

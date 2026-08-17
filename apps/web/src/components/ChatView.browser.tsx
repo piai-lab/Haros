@@ -1581,6 +1581,8 @@ function installDeterministicSendNativeApi(options?: {
   rejectTurnStart?: Error;
   rejectRemoveWorktree?: Error;
   rejectProjectMeta?: Error;
+  forkCreateBarrier?: Promise<void>;
+  recoverRejectedForkCreateInShell?: boolean;
   rejectThreadCreateAttempts?: number;
   rejectThreadDeleteAttempts?: number;
   rejectThreadMetaAttempts?: number;
@@ -1653,6 +1655,22 @@ function installDeterministicSendNativeApi(options?: {
           }
           if (options?.rejectProjectMeta && command.type === "project.meta.update") {
             throw options.rejectProjectMeta;
+          }
+          if (command.type === "thread.fork.create") {
+            await options?.forkCreateBarrier;
+            if (options?.recoverRejectedForkCreateInShell) {
+              fixture = {
+                ...fixture,
+                snapshot: addThreadToSnapshot(fixture.snapshot, command.threadId),
+              };
+              throw new Error("thread.fork.create acknowledgement unavailable");
+            }
+            if (options?.forkCreateBarrier) {
+              fixture = {
+                ...fixture,
+                snapshot: addThreadToSnapshot(fixture.snapshot, command.threadId),
+              };
+            }
           }
           if (command.type === "thread.create" && remainingThreadCreateRejects > 0) {
             remainingThreadCreateRejects -= 1;
@@ -6365,6 +6383,132 @@ describe("ChatView timeline estimator parity (full app)", () => {
       ).not.toBeInTheDocument();
     } finally {
       await mounted.cleanup();
+    }
+  });
+
+  it("forks an exact persisted prefix once across a rapid double activation", async () => {
+    let releaseForkCreate!: () => void;
+    const forkCreateBarrier = new Promise<void>((resolve) => {
+      releaseForkCreate = resolve;
+    });
+    const restoreNativeApi = installDeterministicSendNativeApi({ forkCreateBarrier });
+    const snapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-history-only-fork" as MessageId,
+      targetText: "history-only fork target",
+    });
+    const mounted = await mountChatView({ viewport: DEFAULT_VIEWPORT, snapshot });
+
+    try {
+      const sourceMessageId = MessageId.makeUnsafe("msg-assistant-20");
+      const sourceRow = await waitForElement(
+        () => document.querySelector<HTMLElement>(`[data-message-id="${sourceMessageId}"]`),
+        "Unable to find the middle assistant message.",
+      );
+      const forkButton = sourceRow.querySelector<HTMLButtonElement>(
+        'button[aria-label="Fork from this message"]',
+      );
+      expect(forkButton).not.toBeNull();
+      if (!forkButton) return;
+      const latestRow = document.querySelector<HTMLElement>('[data-message-id="msg-assistant-21"]');
+      expect(
+        latestRow?.querySelector('button[aria-label="Fork from this message"]') ?? null,
+      ).toBeNull();
+
+      wsRequests.length = 0;
+      forkButton.click();
+      forkButton.click();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests
+            .map(readDispatchedCommand)
+            .filter((command) => command?.type === "thread.fork.create"),
+        ).toHaveLength(1);
+      });
+
+      const command = wsRequests
+        .map(readDispatchedCommand)
+        .find((candidate) => candidate?.type === "thread.fork.create");
+      expect(command).toMatchObject({
+        sourceThreadId: THREAD_ID,
+        envMode: "local",
+        branch: "main",
+        worktreePath: null,
+        sidechatSourceThreadId: null,
+        forkScope: {
+          kind: "history-only",
+          sourceMessageId,
+          sourceMessageUpdatedAt: isoAt(124),
+          bootstrapStatus: "pending",
+        },
+      });
+      const importedMessages = command?.importedMessages;
+      expect(Array.isArray(importedMessages)).toBe(true);
+      if (!Array.isArray(importedMessages)) return;
+      expect(importedMessages).toHaveLength(42);
+      expect(importedMessages[0]).toMatchObject({ sourceMessageId: "msg-user-0" });
+      expect(importedMessages.at(-1)).toMatchObject({ sourceMessageId });
+      expect(importedMessages).not.toContainEqual(
+        expect.objectContaining({ sourceMessageId: "msg-user-21" }),
+      );
+
+      releaseForkCreate();
+      const targetThreadId = String(command?.threadId ?? "");
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${targetThreadId}`,
+        "History-only fork should navigate to its single created thread.",
+      );
+    } finally {
+      releaseForkCreate();
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("recovers an acknowledged history-only fork from the authoritative shell", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      recoverRejectedForkCreateInShell: true,
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-history-only-fork-recovery" as MessageId,
+        targetText: "history-only fork recovery target",
+      }),
+    });
+
+    try {
+      const sourceRow = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-message-id="msg-assistant-20"]'),
+        "Unable to find the recoverable middle assistant message.",
+      );
+      const forkButton = sourceRow.querySelector<HTMLButtonElement>(
+        'button[aria-label="Fork from this message"]',
+      );
+      expect(forkButton).not.toBeNull();
+      if (!forkButton) return;
+
+      wsRequests.length = 0;
+      forkButton.click();
+      const command = await vi.waitFor(() => {
+        const dispatched = wsRequests
+          .map(readDispatchedCommand)
+          .find((candidate) => candidate?.type === "thread.fork.create");
+        expect(dispatched).toBeDefined();
+        return dispatched;
+      });
+      const targetThreadId = String(command?.threadId ?? "");
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${targetThreadId}`,
+        "The shell receipt should recover navigation after an ambiguous acknowledgement.",
+      );
+      expect(
+        page.getByText(EN_MESSAGES["timeline.forkMessageFailed"], { exact: true }).query(),
+      ).not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
     }
   });
 

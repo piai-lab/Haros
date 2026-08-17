@@ -417,6 +417,16 @@ S1 当前唯一代码 Slice 是 **R11-6 settled Timeline closure**：按当前 O
 
 R11-6 的 pre-commit source-candidate 证据为：day-aware formatter与Timeline DOM owner focused `2 files / 68 tests`，真实Chromium footer geometry与row-overlap `2 files / 4 tests`、既有tail-anchor `1 file / 5 tests`通过；monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path format/lint与diff check通过，root lint为`0 errors / 478 warnings`。本 Slice不改变i18n catalog、server、message fork、Composer或发行面，按准入不做package/install/live/README，因此只主张source-only candidate。
 
+R11-6 已在 exact pushed `2affc04a348b3ebaae81a7c15ca2f8e750078143` 闭合；上述 settled Timeline closure不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **R11-7 persisted message history-only fork**：吸收 Synara `bd68de265c04f714dd84fce4b087bb47097d3ef5` 的 message-level fork用户语义与 `2c72393a` 的 fork glyph，但 durable truth只由现有 Omni orchestration owner表达。`thread.fork.create`携带不可猜测的 history-only scope、exact source assistant message id/version与完整prefix；server在发出任何target event前验证source message确属同一project、已持久化、settled、非latest，prefix成员/顺序/版本、text与source cwd/environment/worktree完全一致。missing、stale、streaming、latest、reorder、extra、内容漂移或workspace drift均fail closed且zero event；无法经当前Provider text bootstrap真实重放的attachment prefix同时由Web隐藏、server拒绝，绝不静默丢附件。Migration `095`只新增nullable scope，不从legacy fork字段猜语义。
+
+scoped fork永久绕过Provider native whole-session fork，只把durable imported exact prefix作为fresh session的一次pending bootstrap；不得复用handoff的summary/truncate路径，prefix或latest message无法完整进入Provider输入预算时保持pending并以zero provider send失败。成功后在同一thread meta owner推进为completed，reopen时pending继续、completed不重放。普通Composer `/fork`、Sidechat、handoff与full native fork路径保持不变。Web仅在server-backed detail中为 persisted settled middle assistant展示现有低噪footer action，复用`1.75em` hitbox、hover/focus与R11-6 ordering/optical geometry；latest、streaming、draft与非server row零入口。rapid double activation复用同一command/promise，dispatch acknowledgement不确定时只以authoritative shell中同一target receipt恢复。
+
+本 Slice 不新增第二store、route、Dialog、ledger、Provider state或message projection owner，不修改package/README，也不执行live或packaged App。source gate必须覆盖contracts/migration/repository/projection、server prefix/cwd/version与zero-event反例、Reactor pending/reopen/completed/native exclusion、Web exact handoff、double-activation、ambiguous receipt、英中actual、键盘及`480/960/1440` footer几何，并通过相关typecheck、format/lint/document/diff。
+
+R11-7 的 pre-commit source-candidate 证据为：contracts exact scope/legacy decode `1 file / 42 tests`，server decider、byte-preserving bootstrap、Reactor、Migration与repository `5 files / 164 tests`，Web payload/attachment fail-close与英中catalog `2 files / 21 tests`；真实Chromium覆盖message action exact command/double activation/authoritative shell recovery、既有app/native `/fork`回归与footer `480/960/1440` geometry/keyboard，共`2 files / 8 tests`。monorepo typecheck `6/6 packages`、document contract、changed-path format与diff check通过；changed-path lint为`0 errors / 62 warnings`，added hunks与新增文件无warning，输出均来自这些大owner中未触碰的既有行。本 Slice按准入不做package/install/live/README，因此只主张source-only candidate。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -429,4 +439,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-6 settled Timeline closure as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-7 persisted message history-only fork as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

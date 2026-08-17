@@ -17,6 +17,7 @@ import type {
   OrchestrationSessionStatus,
   OrchestrationThreadActivity,
   ThreadHandoff,
+  ThreadForkScope,
   ProjectScript as ContractProjectScript,
   ThreadId,
   ProjectId,
@@ -256,6 +257,7 @@ export interface Thread extends ThreadWorkspaceState {
   subagentNickname?: string | null;
   subagentRole?: string | null;
   forkSourceThreadId?: ThreadId | null;
+  forkScope?: ThreadForkScope | null;
   sidechatSourceThreadId?: ThreadId | null;
   handoff?: ThreadHandoff | null;
   lastKnownPr?: OrchestrationThreadPullRequest | null;
@@ -297,6 +299,7 @@ export interface ThreadShell extends ThreadWorkspaceState {
   subagentNickname?: string | null;
   subagentRole?: string | null;
   forkSourceThreadId?: ThreadId | null;
+  forkScope?: ThreadForkScope | null;
   sidechatSourceThreadId?: ThreadId | null;
   handoff?: ThreadHandoff | null;
   lastKnownPr?: OrchestrationThreadPullRequest | null;

@@ -225,3 +225,20 @@ export function buildForkBootstrapText(
     maxChars,
   });
 }
+
+export function buildHistoryOnlyForkBootstrapText(
+  thread: Pick<OrchestrationThread, "title" | "branch" | "worktreePath" | "forkScope" | "messages">,
+  maxChars = BOOTSTRAP_TRANSCRIPT_CHAR_BUDGET,
+): string | null {
+  const importedMessages = listImportedForkMessages(thread);
+  if (importedMessages.length === 0 || thread.forkScope?.kind !== "history-only") {
+    return null;
+  }
+  const exactTranscript = [
+    "This conversation was forked from the exact history through an earlier assistant message. Continue only from this imported history.",
+    "Imported history (oldest to newest):",
+    ...importedMessages.map((message) => `${roleLabel(message)}:\n${message.text}`),
+  ].join("\n\n");
+  const boundedMaxChars = Math.min(Math.max(0, maxChars), BOOTSTRAP_TRANSCRIPT_CHAR_BUDGET);
+  return exactTranscript.length <= boundedMaxChars ? exactTranscript : null;
+}

@@ -518,6 +518,14 @@ export const ThreadHandoff = Schema.Struct({
 });
 export type ThreadHandoff = typeof ThreadHandoff.Type;
 
+export const ThreadForkScope = Schema.Struct({
+  kind: Schema.Literal("history-only"),
+  sourceMessageId: MessageId,
+  sourceMessageUpdatedAt: IsoDateTime,
+  bootstrapStatus: ThreadHandoffBootstrapStatus,
+});
+export type ThreadForkScope = typeof ThreadForkScope.Type;
+
 export const OrchestrationProposedPlanId = TrimmedNonEmptyString;
 export type OrchestrationProposedPlanId = typeof OrchestrationProposedPlanId.Type;
 
@@ -784,6 +792,9 @@ export const OrchestrationThread = Schema.Struct({
   forkSourceThreadId: Schema.optional(Schema.NullOr(ThreadId)).pipe(
     Schema.withDecodingDefault(() => null),
   ),
+  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   sidechatSourceThreadId: SidechatSourceThreadId,
   lastKnownPr: Schema.optional(Schema.NullOr(OrchestrationThreadPullRequest)).pipe(
     Schema.withDecodingDefault(() => null),
@@ -870,6 +881,9 @@ export const OrchestrationThreadShell = Schema.Struct({
     Schema.withDecodingDefault(() => null),
   ),
   forkSourceThreadId: Schema.optional(Schema.NullOr(ThreadId)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
+  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)).pipe(
     Schema.withDecodingDefault(() => null),
   ),
   sidechatSourceThreadId: SidechatSourceThreadId,
@@ -1075,6 +1089,8 @@ const ThreadCreateCommand = Schema.Struct({
 
 export const ThreadHandoffImportedMessage = Schema.Struct({
   messageId: MessageId,
+  sourceMessageId: Schema.optional(MessageId),
+  sourceMessageUpdatedAt: Schema.optional(IsoDateTime),
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
@@ -1132,6 +1148,9 @@ const ThreadForkCreateCommand = Schema.Struct({
     Schema.withDecodingDefault(() => false),
   ),
   sidechatSourceThreadId: SidechatSourceThreadId,
+  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   importedMessages: Schema.Array(ThreadHandoffImportedMessage),
   createdAt: IsoDateTime,
 });
@@ -1177,6 +1196,7 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   subagentNickname: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   subagentRole: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   handoff: Schema.optional(Schema.NullOr(ThreadHandoff)),
+  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)),
   lastKnownPr: Schema.optional(Schema.NullOr(OrchestrationThreadPullRequest)),
   pinnedMessages: Schema.optional(ThreadPinnedMessages),
   threadMarkers: Schema.optional(ThreadMarkers),
@@ -1775,6 +1795,9 @@ export const ThreadCreatedPayload = Schema.Struct({
   forkSourceThreadId: Schema.optional(Schema.NullOr(ThreadId)).pipe(
     Schema.withDecodingDefault(() => null),
   ),
+  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   sidechatSourceThreadId: SidechatSourceThreadId,
   lastKnownPr: Schema.optional(Schema.NullOr(OrchestrationThreadPullRequest)).pipe(
     Schema.withDecodingDefault(() => null),
@@ -1824,6 +1847,7 @@ export const ThreadMetaUpdatedPayload = Schema.Struct({
   subagentNickname: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   subagentRole: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   handoff: Schema.optional(Schema.NullOr(ThreadHandoff)),
+  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)),
   lastKnownPr: Schema.optional(Schema.NullOr(OrchestrationThreadPullRequest)),
   pinnedMessages: Schema.optional(ThreadPinnedMessages),
   threadMarkers: Schema.optional(ThreadMarkers),

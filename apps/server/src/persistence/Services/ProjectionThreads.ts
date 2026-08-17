@@ -15,6 +15,7 @@ import {
   ThreadPinnedMessages,
   ThreadMarkers,
   ThreadHandoff,
+  ThreadForkScope,
   ProjectId,
   ProviderInteractionMode,
   RuntimeMode,
@@ -65,6 +66,9 @@ export const ProjectionThread = Schema.Struct({
   subagentNickname: Schema.optional(Schema.NullOr(Schema.String)),
   subagentRole: Schema.optional(Schema.NullOr(Schema.String)),
   forkSourceThreadId: Schema.optional(Schema.NullOr(ThreadId)),
+  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
   sidechatSourceThreadId: Schema.optional(Schema.NullOr(ThreadId)),
   lastKnownPr: Schema.NullOr(OrchestrationThreadPullRequest),
   latestTurnId: Schema.NullOr(TurnId),

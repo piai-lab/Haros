@@ -6,7 +6,7 @@
 import { MessageId, type OrchestrationMessage } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
-import { buildPriorTranscriptBootstrapText } from "./handoff.ts";
+import { buildHistoryOnlyForkBootstrapText, buildPriorTranscriptBootstrapText } from "./handoff.ts";
 
 const message = (
   index: number,
@@ -134,5 +134,46 @@ describe("buildPriorTranscriptBootstrapText", () => {
     expect(text).toMatch(/\(\d{3,} older messages omitted to fit the context budget\):/);
     expect(text).toContain("NEWEST-START");
     expect(text).toContain("NEWEST-END-UNIQUE-MARKER");
+  });
+});
+
+describe("buildHistoryOnlyForkBootstrapText", () => {
+  const scopedThread = (messages: ReadonlyArray<OrchestrationMessage>) => ({
+    ...thread(messages),
+    forkScope: {
+      kind: "history-only" as const,
+      sourceMessageId: MessageId.makeUnsafe("message-cutoff"),
+      sourceMessageUpdatedAt: "2026-07-08T00:00:00.000Z",
+      bootstrapStatus: "pending" as const,
+    },
+  });
+
+  it("preserves every imported message byte without summarizing or truncating", () => {
+    const messages = Array.from({ length: 9 }, (_, index) => ({
+      ...message(
+        index,
+        index % 2 === 0 ? "user" : "assistant",
+        `MARKER-${index}  leading and trailing bytes  \nsecond line`,
+      ),
+      source: "fork-import" as const,
+    }));
+    const text = buildHistoryOnlyForkBootstrapText(scopedThread(messages), 32_000);
+
+    expect(text).not.toBeNull();
+    for (const sourceMessage of messages) {
+      expect(text).toContain(sourceMessage.text);
+    }
+    expect(text).not.toContain("omitted to fit the context budget");
+    expect(text).not.toContain("...");
+  });
+
+  it("fails closed when the exact prefix cannot fit", () => {
+    const messages = [
+      {
+        ...message(0, "assistant", `EXACT-PREFIX-${"x".repeat(1_000)}`),
+        source: "fork-import" as const,
+      },
+    ];
+    expect(buildHistoryOnlyForkBootstrapText(scopedThread(messages), 200)).toBeNull();
   });
 });

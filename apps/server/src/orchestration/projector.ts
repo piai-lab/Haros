@@ -573,6 +573,7 @@ export function projectEvent(
             subagentNickname: payload.subagentNickname,
             subagentRole: payload.subagentRole,
             forkSourceThreadId: payload.forkSourceThreadId,
+            forkScope: payload.forkScope,
             sidechatSourceThreadId: payload.sidechatSourceThreadId,
             lastKnownPr: payload.lastKnownPr ?? null,
             latestTurn: null,
@@ -720,6 +721,7 @@ export function projectEvent(
               ...(payload.subagentRole !== undefined ? { subagentRole: payload.subagentRole } : {}),
               ...(payload.lastKnownPr !== undefined ? { lastKnownPr: payload.lastKnownPr } : {}),
               ...(payload.handoff !== undefined ? { handoff: payload.handoff } : {}),
+              ...(payload.forkScope !== undefined ? { forkScope: payload.forkScope } : {}),
               ...(payload.pinnedMessages !== undefined
                 ? { pinnedMessages: payload.pinnedMessages }
                 : {}),

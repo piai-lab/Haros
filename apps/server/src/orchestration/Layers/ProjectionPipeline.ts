@@ -588,6 +588,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             subagentNickname: event.payload.subagentNickname ?? null,
             subagentRole: event.payload.subagentRole ?? null,
             forkSourceThreadId: event.payload.forkSourceThreadId,
+            forkScope: event.payload.forkScope,
             sidechatSourceThreadId: event.payload.sidechatSourceThreadId,
             lastKnownPr: event.payload.lastKnownPr ?? null,
             latestTurnId: null,
@@ -696,6 +697,9 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
                 ? { lastKnownPr: event.payload.lastKnownPr }
                 : {}),
               ...(event.payload.handoff !== undefined ? { handoff: event.payload.handoff } : {}),
+              ...(event.payload.forkScope !== undefined
+                ? { forkScope: event.payload.forkScope }
+                : {}),
               ...(event.payload.pinnedMessages !== undefined
                 ? { pinnedMessages: event.payload.pinnedMessages }
                 : {}),

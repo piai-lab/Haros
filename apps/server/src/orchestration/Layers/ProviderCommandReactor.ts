@@ -110,6 +110,7 @@ import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
   buildForkBootstrapText,
+  buildHistoryOnlyForkBootstrapText,
   buildHandoffBootstrapText,
   hasNativeAssistantMessagesBefore,
   listImportedForkMessages,
@@ -1430,7 +1431,11 @@ const make = Effect.gen(function* () {
       };
     }
 
-    if (providerService.forkThread && thread.forkSourceThreadId) {
+    if (
+      providerService.forkThread &&
+      thread.forkSourceThreadId &&
+      (thread.forkScope ?? null) === null
+    ) {
       const forked = yield* providerService.forkThread({
         ...providerSessionOptions,
         sourceThreadId: thread.forkSourceThreadId,
@@ -1705,6 +1710,34 @@ const make = Effect.gen(function* () {
       threadSessionModelSelections.get(input.threadId)?.provider ??
       thread.session?.providerName ??
       thread.modelSelection.provider;
+    const historyOnlyForkScope = thread.forkScope ?? null;
+    const shouldBootstrapHistoryOnlyFork =
+      historyOnlyForkScope?.kind === "history-only" &&
+      historyOnlyForkScope.bootstrapStatus === "pending" &&
+      !hasNativeAssistantMessagesBefore(thread, input.messageId);
+    const historyOnlyForkBootstrapAvailableChars = availableProviderContextChars({
+      tag: "thread_context",
+      messageText: bootstrapBudgetMessageText,
+      wrapLatestUserMessage: true,
+    });
+    const historyOnlyForkBootstrapText =
+      shouldBootstrapHistoryOnlyFork && historyOnlyForkBootstrapAvailableChars > 0
+        ? buildHistoryOnlyForkBootstrapText(thread, historyOnlyForkBootstrapAvailableChars)
+        : null;
+    const hasHistoryOnlyForkBootstrapContent =
+      shouldBootstrapHistoryOnlyFork && listImportedForkMessages(thread).length > 0;
+    if (
+      input.reviewTarget === undefined &&
+      hasHistoryOnlyForkBootstrapContent &&
+      historyOnlyForkBootstrapText === null
+    ) {
+      return yield* new ProviderAdapterValidationError({
+        provider: selectedProvider as ProviderKind,
+        operation: "thread.turn.start",
+        issue:
+          "The latest message is too long to include the history-only fork context required by this provider session. Shorten the message and retry.",
+      });
+    }
     const hasPendingPriorTranscriptBootstrap =
       freshSessionContextBootstrapThreadIds.has(input.threadId) ||
       rollbackContextBootstrapThreadIds.has(input.threadId);
@@ -1713,6 +1746,7 @@ const make = Effect.gen(function* () {
       sidechatContextBootstrapThreadIds.has(input.threadId) &&
       !hasNativeAssistantMessagesBefore(thread, input.messageId) &&
       !shouldBootstrapHandoff &&
+      !shouldBootstrapHistoryOnlyFork &&
       !hasPendingPriorTranscriptBootstrap;
     const sidechatBootstrapAvailableChars = availableProviderContextChars({
       tag: "sidechat_context",
@@ -1742,6 +1776,7 @@ const make = Effect.gen(function* () {
         activeSessionBeforeEnsure === undefined) ||
         hasPendingPriorTranscriptBootstrap) &&
       !shouldBootstrapHandoff &&
+      !shouldBootstrapHistoryOnlyFork &&
       !shouldBootstrapSidechatContext;
     const hasPriorTranscriptBootstrapContent =
       shouldBootstrapPriorTranscriptContext &&
@@ -1773,24 +1808,30 @@ const make = Effect.gen(function* () {
             priorTranscriptBootstrapAvailableChars,
           )
         : null;
-    // The guards above make the three bootstrap flavors mutually exclusive, so
+    // The guards above make the bootstrap flavors mutually exclusive, so
     // a turn carries at most one context block.
     const selectedBootstrapContext: BootstrapContextSelection | null =
       handoffBootstrapText !== null
         ? { tag: "handoff_context", contextText: handoffBootstrapText, wrapLatestUserMessage: true }
-        : sidechatBootstrapText !== null
+        : historyOnlyForkBootstrapText !== null
           ? {
-              tag: "sidechat_context",
-              contextText: sidechatBootstrapText,
-              wrapLatestUserMessage: false,
+              tag: "thread_context",
+              contextText: historyOnlyForkBootstrapText,
+              wrapLatestUserMessage: true,
             }
-          : priorTranscriptBootstrapText !== null
+          : sidechatBootstrapText !== null
             ? {
-                tag: "thread_context",
-                contextText: priorTranscriptBootstrapText,
-                wrapLatestUserMessage: true,
+                tag: "sidechat_context",
+                contextText: sidechatBootstrapText,
+                wrapLatestUserMessage: false,
               }
-            : null;
+            : priorTranscriptBootstrapText !== null
+              ? {
+                  tag: "thread_context",
+                  contextText: priorTranscriptBootstrapText,
+                  wrapLatestUserMessage: true,
+                }
+              : null;
     const composeProviderInput = (bootstrap: BootstrapContextSelection | null): string =>
       bootstrap
         ? wrapProviderContext({ ...bootstrap, messageText: boundaryMessageText })
@@ -2096,6 +2137,21 @@ const make = Effect.gen(function* () {
         threadId: input.threadId,
         handoff: {
           ...thread.handoff,
+          bootstrapStatus: "completed",
+        },
+      });
+    }
+    if (
+      historyOnlyForkBootstrapText &&
+      historyOnlyForkScope !== null &&
+      input.reviewTarget === undefined
+    ) {
+      yield* orchestrationEngine.dispatch({
+        type: "thread.meta.update",
+        commandId: serverCommandId("history-only-fork-bootstrap-complete"),
+        threadId: input.threadId,
+        forkScope: {
+          ...historyOnlyForkScope,
           bootstrapStatus: "completed",
         },
       });

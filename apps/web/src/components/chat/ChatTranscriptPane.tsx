@@ -59,6 +59,8 @@ interface ChatTranscriptPaneProps {
   pinnedMessageIds?: ReadonlySet<MessageId>;
   canPinMessage?: (messageId: MessageId) => boolean;
   onTogglePinMessage?: (messageId: MessageId) => void;
+  canForkMessage?: ComponentProps<typeof MessagesTimeline>["canForkMessage"];
+  onForkMessage?: ComponentProps<typeof MessagesTimeline>["onForkMessage"];
   threadMarkers?: readonly ThreadMarker[];
   enteringUserMessageIds?: ComponentProps<typeof MessagesTimeline>["enteringUserMessageIds"];
   tailAnchorMessageId?: ComponentProps<typeof MessagesTimeline>["tailAnchorMessageId"];
@@ -131,6 +133,8 @@ export function ChatTranscriptPane({
   pinnedMessageIds,
   canPinMessage,
   onTogglePinMessage,
+  canForkMessage,
+  onForkMessage,
   threadMarkers,
   enteringUserMessageIds,
   tailAnchorMessageId,
@@ -238,6 +242,8 @@ export function ChatTranscriptPane({
             {...(pinnedMessageIds ? { pinnedMessageIds } : {})}
             {...(canPinMessage ? { canPinMessage } : {})}
             {...(onTogglePinMessage ? { onTogglePinMessage } : {})}
+            {...(canForkMessage ? { canForkMessage } : {})}
+            {...(onForkMessage ? { onForkMessage } : {})}
             {...(threadMarkers ? { threadMarkers } : {})}
             {...(enteringUserMessageIds ? { enteringUserMessageIds } : {})}
             tailAnchorMessageId={tailAnchorMessageId ?? null}
