@@ -52,7 +52,7 @@ import {
   useSplitViewStore,
 } from "../../splitViewStore";
 import { useStore } from "../../store";
-import { createAllThreadsSelector } from "../../storeSelectors";
+import { createThreadShellsSelector } from "../../storeSelectors";
 import {
   normalizeSingleSearchFromPane,
   resolveSplitPaneCloseDecision,
@@ -587,12 +587,13 @@ function SplitPaneSurface(props: {
   );
 }
 
+const selectThreadShells = createThreadShellsSelector();
+
 export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadId: ThreadId }) {
   const { t } = useI18n();
   const navigate = useNavigate();
   const { handleNewChat } = useHandleNewChat();
-  const selectAllThreads = createAllThreadsSelector();
-  const threads = useStore(selectAllThreads);
+  const threads = useStore(selectThreadShells);
   const projects = useStore((store) => store.projects);
   const splitView = useSplitViewStore(
     useMemo(() => selectSplitView(props.splitViewId), [props.splitViewId]),
@@ -902,9 +903,14 @@ export function SplitChatSurface(props: { splitViewId: SplitViewId; routeThreadI
     });
   };
 
-  const selectableThreads = threads.toSorted(
-    (left, right) =>
-      Date.parse(right.updatedAt ?? right.createdAt) - Date.parse(left.updatedAt ?? left.createdAt),
+  const selectableThreads = useMemo(
+    () =>
+      threads.toSorted(
+        (left, right) =>
+          Date.parse(right.updatedAt ?? right.createdAt) -
+          Date.parse(left.updatedAt ?? left.createdAt),
+      ),
+    [threads],
   );
   const splitThreadIds = new Set(activeSplitView ? resolveSplitViewThreadIds(activeSplitView) : []);
 

@@ -1453,6 +1453,92 @@ describe("store event reducer", () => {
     expect(threadsOf(batched)[0]?.updatedAt).toBe("2026-07-09T00:00:02.000Z");
   });
 
+  it("keeps turn-aligned and pending-interaction activities on the full reducer path", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const turnActivity = makeActivity({
+      id: "activity-turn",
+      turnId: "turn-1",
+      kind: "task.progress",
+      payload: { status: "inProgress" },
+    });
+    const turnCompleted = makeActivity({
+      id: "activity-turn",
+      turnId: "turn-1",
+      kind: "task.progress",
+      payload: { status: "completed", detail: "finished" },
+    });
+    const turnState = makeState(makeThread({ activities: [turnActivity] }));
+    const turnNext = applyOrchestrationEventsHotPath(turnState, [
+      makeDomainEvent(
+        "thread.activity-appended",
+        { threadId, activity: turnCompleted },
+        { sequence: 2 },
+      ),
+    ]);
+    expect(turnNext.activityIdsByThreadId?.[threadId]).toEqual(["activity-turn"]);
+    expect(turnNext.activityByThreadId?.[threadId]?.["activity-turn"]?.payload).toMatchObject({
+      status: "completed",
+      detail: "finished",
+    });
+
+    const pendingState = makeState(
+      makeThread({
+        pendingInteractions: [
+          {
+            interactionKind: "approval",
+            requestId: ApprovalRequestId.makeUnsafe("approval-1"),
+            threadId,
+            turnId: null,
+            lifecycleGeneration: null,
+            status: "pending",
+            decision: null,
+            responseCommandId: null,
+            responseRequestedAt: null,
+            createdAt: "2026-02-27T00:00:00.000Z",
+            resolvedAt: null,
+          },
+        ],
+      }),
+    );
+    const pendingNext = applyOrchestrationEventsHotPath(pendingState, [
+      makeDomainEvent("thread.activity-appended", {
+        threadId,
+        activity: makeActivity({ id: "activity-during-pending" }),
+      }),
+    ]);
+    expect(threadsOf(pendingNext)[0]?.pendingInteractions).toEqual(
+      threadsOf(pendingState)[0]?.pendingInteractions,
+    );
+    expect(pendingNext.activityIdsByThreadId?.[threadId]).toEqual(["activity-during-pending"]);
+  });
+
+  it("falls back when the caller requests an activity sidebar-summary refresh", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const initialState = syncServerReadModel(
+      makeState(makeThread()),
+      makeReadModel(
+        makeReadModelThread({
+          updatedAt: "2026-02-27T00:00:00.000Z",
+        }),
+      ),
+    );
+    const next = applyOrchestrationEventsHotPath(
+      initialState,
+      [
+        makeDomainEvent("thread.activity-appended", {
+          threadId,
+          activity: makeActivity({
+            id: "activity-sidebar-refresh",
+            createdAt: "2026-02-27T00:00:10.000Z",
+          }),
+        }),
+      ],
+      { updateSidebarSummary: true },
+    );
+
+    expect(next.sidebarThreadSummaryById[threadId]?.updatedAt).toBe("2026-02-27T00:00:10.000Z");
+  });
+
   it("replaces provider-local activity sequences with durable orchestration sequences", () => {
     const threadId = ThreadId.makeUnsafe("thread-1");
     const events = [
@@ -2182,5 +2268,74 @@ describe("store event reducer", () => {
     expect(next.messageIdsByThreadId?.[threadId]).toBe(
       initialState.messageIdsByThreadId?.[threadId],
     );
+  });
+
+  it("isolates 250 rapid tail deltas across a synthetic 10k history", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const messages = Array.from({ length: 10_000 }, (_, index) => ({
+      id: MessageId.makeUnsafe(`message-${index}`),
+      role: (index === 9_999 ? "assistant" : "user") as "assistant" | "user",
+      text: index === 9_999 ? "seed" : `prompt ${index}`,
+      turnId: null,
+      createdAt: "2026-02-27T00:01:00.000Z",
+      updatedAt: "2026-02-27T00:01:00.000Z",
+      streaming: index === 9_999,
+      source: "native" as const,
+    }));
+    const streamingId = messages.at(-1)!.id;
+    const unaffectedId = messages[5_000]!.id;
+    const initialState = syncServerReadModel(
+      makeState(makeThread({ messages })),
+      makeReadModel(makeReadModelThread({ messages })),
+    );
+    const stableIds = initialState.messageIdsByThreadId?.[threadId];
+    const stableUnaffected = initialState.messageByThreadId?.[threadId]?.[unaffectedId];
+    const stableProjects = initialState.projects;
+    const stableActivities = initialState.activityByThreadId;
+    const stableSummary = initialState.sidebarThreadSummaryById;
+    let state = initialState;
+    let streamedMessageNotifications = 0;
+    let unaffectedMessageNotifications = 0;
+    let messageIdNotifications = 0;
+    let projectNotifications = 0;
+    let previousStreamed = state.messageByThreadId?.[threadId]?.[streamingId];
+
+    for (let index = 0; index < 250; index += 1) {
+      const next = applyOrchestrationEventsHotPath(state, [
+        makeDomainEvent(
+          "thread.message-sent",
+          {
+            threadId,
+            messageId: streamingId,
+            role: "assistant",
+            text: "x",
+            turnId: null,
+            streaming: true,
+            createdAt: "2026-02-27T00:01:00.000Z",
+            updatedAt: `2026-02-27T00:01:${String(index % 60).padStart(2, "0")}.000Z`,
+            attachments: [],
+            source: "native",
+          },
+          { sequence: index + 1 },
+        ),
+      ]);
+      const nextStreamed = next.messageByThreadId?.[threadId]?.[streamingId];
+      if (nextStreamed !== previousStreamed) streamedMessageNotifications += 1;
+      if (next.messageByThreadId?.[threadId]?.[unaffectedId] !== stableUnaffected) {
+        unaffectedMessageNotifications += 1;
+      }
+      if (next.messageIdsByThreadId?.[threadId] !== stableIds) messageIdNotifications += 1;
+      if (next.projects !== stableProjects) projectNotifications += 1;
+      previousStreamed = nextStreamed;
+      state = next;
+    }
+
+    expect(state.messageByThreadId?.[threadId]?.[streamingId]?.text).toBe(`seed${"x".repeat(250)}`);
+    expect(streamedMessageNotifications).toBe(250);
+    expect(unaffectedMessageNotifications).toBe(0);
+    expect(messageIdNotifications).toBe(0);
+    expect(projectNotifications).toBe(0);
+    expect(state.activityByThreadId).toBe(stableActivities);
+    expect(state.sidebarThreadSummaryById).toBe(stableSummary);
   });
 });

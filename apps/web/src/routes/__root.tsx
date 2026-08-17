@@ -141,6 +141,8 @@ const SHELL_SNAPSHOT_BOOTSTRAP_FALLBACK_DELAY_MS = 1_500;
 const THREAD_DETAIL_CATCHUP_INTERVAL_MS = 1_500;
 const THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS = 4_500;
 const THREAD_DETAIL_PROJECTION_RECONCILE_MAX_CONCURRENCY = 2;
+const THREAD_DETAIL_REPLAY_MAX_NOOP_STREAK = 2;
+const THREAD_DETAIL_PROJECTION_RECONCILE_MAX_NOOP_STREAK = 2;
 const PENDING_SHELL_EVENT_BUFFER_LIMIT = 1_024;
 const PENDING_THREAD_EVENT_BUFFER_LIMIT = 512;
 const IMMEDIATE_ASSISTANT_FLUSH_ID_LIMIT = 512;
@@ -1182,6 +1184,60 @@ function EventRouter() {
       );
     };
 
+    interface ThreadCatchupBackoff {
+      turnId: string | null;
+      replayNoopStreak: number;
+      nextReplayAt: number;
+      reconcileNoopStreak: number;
+    }
+    const threadCatchupBackoffById = new Map<ThreadId, ThreadCatchupBackoff>();
+    const resolveThreadCatchupBackoff = (threadId: ThreadId): ThreadCatchupBackoff => {
+      const turnId = getThreadFromState(useStore.getState(), threadId)?.latestTurn?.turnId ?? null;
+      let entry = threadCatchupBackoffById.get(threadId);
+      if (entry === undefined || entry.turnId !== turnId) {
+        entry = { turnId, replayNoopStreak: 0, nextReplayAt: 0, reconcileNoopStreak: 0 };
+        threadCatchupBackoffById.set(threadId, entry);
+      }
+      return entry;
+    };
+    const noteThreadReplayResult = (threadId: ThreadId, appliedEventCount: number): void => {
+      const entry = resolveThreadCatchupBackoff(threadId);
+      if (appliedEventCount > 0) {
+        entry.replayNoopStreak = 0;
+        entry.nextReplayAt = 0;
+        return;
+      }
+      entry.replayNoopStreak = Math.min(
+        entry.replayNoopStreak + 1,
+        THREAD_DETAIL_REPLAY_MAX_NOOP_STREAK,
+      );
+      entry.nextReplayAt =
+        Date.now() + THREAD_DETAIL_CATCHUP_INTERVAL_MS * 2 ** entry.replayNoopStreak;
+    };
+    const noteThreadReconcileResult = (threadId: ThreadId, wasNoop: boolean): void => {
+      const entry = resolveThreadCatchupBackoff(threadId);
+      entry.reconcileNoopStreak = wasNoop
+        ? Math.min(
+            entry.reconcileNoopStreak + 1,
+            THREAD_DETAIL_PROJECTION_RECONCILE_MAX_NOOP_STREAK,
+          )
+        : 0;
+    };
+    const nextThreadProjectionReconcileDelayMs = (threadId: ThreadId): number => {
+      if (
+        threadProjectionTerminalFencePending.has(threadId) ||
+        isDraftThreadAwaitingProjection(threadId) ||
+        hasPendingTurnDispatch(threadId)
+      ) {
+        resolveThreadCatchupBackoff(threadId).reconcileNoopStreak = 0;
+        return THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS;
+      }
+      return (
+        THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS *
+        2 ** resolveThreadCatchupBackoff(threadId).reconcileNoopStreak
+      );
+    };
+
     const beginThreadSubscription = (threadId: ThreadId) => {
       // Cursor resume delivers no snapshot: the stream replays only the gap on
       // top of the cached detail. Seed the live cursor so gap/live events apply
@@ -1200,6 +1256,7 @@ function EventRouter() {
       threadSnapshotNotFoundRetryAttempted.delete(threadId);
       threadProjectionReconcileInFlight.delete(threadId);
       threadProjectionTerminalFencePending.delete(threadId);
+      threadCatchupBackoffById.delete(threadId);
       nextThreadSubscriptionGeneration += 1;
       threadSubscriptionGenerationById.set(threadId, nextThreadSubscriptionGeneration);
       nextThreadProjectionReconcileAtById.set(
@@ -1228,6 +1285,11 @@ function EventRouter() {
       threadSnapshotSequenceById.set(threadId, event.sequence);
       advanceThreadDetailResumeCursor(threadId, event.sequence);
       queueDomainEvent(event);
+      const backoff = threadCatchupBackoffById.get(threadId);
+      if (backoff !== undefined) {
+        backoff.replayNoopStreak = 0;
+        backoff.nextReplayAt = 0;
+      }
       return true;
     };
 
@@ -1275,6 +1337,7 @@ function EventRouter() {
         threadProjectionTerminalFencePending.delete(threadId);
         threadSubscriptionGenerationById.delete(threadId);
         nextThreadProjectionReconcileAtById.delete(threadId);
+        threadCatchupBackoffById.delete(threadId);
         subscribedThreadIds.delete(threadId);
       }
       // A retention eviction can refresh a thread whose lease is dropping in the
@@ -1416,6 +1479,7 @@ function EventRouter() {
           threadProjectionTerminalFencePending.clear();
           threadSubscriptionGenerationById.clear();
           nextThreadProjectionReconcileAtById.clear();
+          threadCatchupBackoffById.clear();
           const previousThreadIds = [...subscribedThreadIds];
           subscribedThreadIds.clear();
           // Reconnect drops every lease at once, so the reconcile below sees no
@@ -1559,23 +1623,24 @@ function EventRouter() {
     const replayThreadEvents = async (
       threadId: ThreadId,
       targetSequence?: number,
-    ): Promise<void> => {
+    ): Promise<number | null> => {
       if (disposed || threadReplayRequestInFlight.has(threadId)) {
-        return;
+        return null;
       }
       const fromSequence = threadSnapshotSequenceById.get(threadId);
       if (
         fromSequence === undefined ||
         (targetSequence !== undefined && fromSequence >= targetSequence)
       ) {
-        return;
+        return null;
       }
       threadReplayRequestInFlight.add(threadId);
       // Promise chain keeps the run-always cleanup (finally) and lets a replay
       // rejection propagate to callers exactly as the try/finally did.
-      await api.orchestration
+      return await api.orchestration
         .replayEvents(fromSequence, threadId)
         .then((replayedEvents) => {
+          let appliedEventCount = 0;
           for (const event of replayedEvents
             .filter((candidate) => isThreadDetailEventForThread(candidate, threadId))
             .filter(
@@ -1589,7 +1654,14 @@ function EventRouter() {
             if (!applyFencedThreadEvent(threadId, event)) {
               break;
             }
+            appliedEventCount += 1;
           }
+          if (appliedEventCount === 0) {
+            const cursorAdvancedDuringReplay =
+              (threadSnapshotSequenceById.get(threadId) ?? fromSequence) > fromSequence;
+            return cursorAdvancedDuringReplay ? null : 0;
+          }
+          return appliedEventCount;
         })
         .finally(() => {
           threadReplayRequestInFlight.delete(threadId);
@@ -1608,6 +1680,7 @@ function EventRouter() {
       }
       threadProjectionReconcileInFlight.set(threadId, subscriptionGeneration);
       let projectionConfirmed = false;
+      let projectionAttemptFailed = false;
       try {
         const snapshot = await api.orchestration.getThreadDetailSnapshot({ threadId });
         if (
@@ -1642,10 +1715,16 @@ function EventRouter() {
         // Apply even when the cursor did not advance. The projection is
         // authoritative and can repair a client that advanced its cursor while
         // dropping or failing to reduce one of the corresponding live events.
+        const stateBeforeProjectionApply = useStore.getState();
         syncServerThreadDetailHotPath(snapshot.thread);
         reconcilePromotedDraftFromThreadDetail(snapshot.thread);
         flushThreadBuffer(threadId, snapshot.snapshotSequence);
         projectionConfirmed = true;
+        noteThreadReconcileResult(
+          threadId,
+          snapshot.snapshotSequence <= currentSequence &&
+            useStore.getState() === stateBeforeProjectionApply,
+        );
         if (projectionSettlesCurrentTurn || projectionRepairsTerminalFence) {
           // Mirror terminal-event invalidation when recovery came from the
           // projection rather than the live stream.
@@ -1654,11 +1733,17 @@ function EventRouter() {
           pendingStudioOutputInvalidationThreadIds.add(threadId);
           domainEventFlushThrottler.maybeExecute();
         }
+      } catch (error) {
+        projectionAttemptFailed = true;
+        throw error;
       } finally {
         if (threadProjectionReconcileInFlight.get(threadId) === subscriptionGeneration) {
           threadProjectionReconcileInFlight.delete(threadId);
         }
         if (threadSubscriptionGenerationById.get(threadId) === subscriptionGeneration) {
+          if (projectionAttemptFailed) {
+            resolveThreadCatchupBackoff(threadId).reconcileNoopStreak = 0;
+          }
           if (projectionConfirmed) {
             threadProjectionTerminalFencePending.delete(threadId);
           }
@@ -1669,7 +1754,7 @@ function EventRouter() {
           ) {
             nextThreadProjectionReconcileAtById.set(
               threadId,
-              Date.now() + THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS,
+              Date.now() + nextThreadProjectionReconcileDelayMs(threadId),
             );
           } else {
             nextThreadProjectionReconcileAtById.delete(threadId);
@@ -2050,8 +2135,21 @@ function EventRouter() {
         if (shouldPollThreadDetailCatchup(threadId)) {
           if (!threadSnapshotSequenceById.has(threadId)) {
             void reconcileThreadProjection(threadId).catch(() => undefined);
-          } else {
-            void replayThreadEvents(threadId).catch(() => undefined);
+          } else if (
+            hasPendingTurnDispatch(threadId) ||
+            now >= resolveThreadCatchupBackoff(threadId).nextReplayAt
+          ) {
+            const replaySubscriptionGeneration = threadSubscriptionGenerationById.get(threadId);
+            void replayThreadEvents(threadId)
+              .then((appliedEventCount) => {
+                if (
+                  appliedEventCount !== null &&
+                  threadSubscriptionGenerationById.get(threadId) === replaySubscriptionGeneration
+                ) {
+                  noteThreadReplayResult(threadId, appliedEventCount);
+                }
+              })
+              .catch(() => undefined);
           }
         }
         if (
@@ -2087,6 +2185,7 @@ function EventRouter() {
       threadProjectionTerminalFencePending.clear();
       threadSubscriptionGenerationById.clear();
       nextThreadProjectionReconcileAtById.clear();
+      threadCatchupBackoffById.clear();
       domainEventFlushThrottler.cancel();
       reconcileThreadSubscriptionsRef.current = null;
       void api.orchestration.unsubscribeShell().catch(() => undefined);

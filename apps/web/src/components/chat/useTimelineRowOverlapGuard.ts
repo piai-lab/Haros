@@ -55,24 +55,64 @@ export function useTimelineRowOverlapGuard(): (element: HTMLElement | null) => (
   const observerRef = useRef<ResizeObserver | null>(null);
   const observedRowsRef = useRef(new Set<HTMLElement>());
 
-  const closeOverlaps = useCallback(() => {
-    const containers = new Set<HTMLElement>();
+  const closeOverlaps = useCallback((entries?: readonly ResizeObserverEntry[]) => {
+    const containerTops = new Map<HTMLElement, number>();
     for (const row of observedRowsRef.current) {
       if (!row.isConnected) {
         continue;
       }
       const container = resolvePositionedContainer(row);
-      if (container) {
-        containers.add(container);
+      if (!container || containerTops.has(container)) {
+        continue;
       }
-    }
-
-    const placed: { container: HTMLElement; top: number; height: number }[] = [];
-    for (const container of containers) {
       const top = Number.parseFloat(container.style.top);
       if (!Number.isFinite(top) || top < OUT_OF_VIEW_THRESHOLD_PX) {
         continue;
       }
+      containerTops.set(container, top);
+    }
+    if (containerTops.size < 2) return;
+
+    // A resize confined to the unique bottom-most placed row cannot overlap a row below it.
+    // Any ambiguity or any other changed row falls through to the full measurement guard.
+    if (entries !== undefined) {
+      let maxTop = Number.NEGATIVE_INFINITY;
+      let maxTopCount = 0;
+      for (const top of containerTops.values()) {
+        if (top > maxTop) {
+          maxTop = top;
+          maxTopCount = 1;
+        } else if (top === maxTop) {
+          maxTopCount += 1;
+        }
+      }
+      if (maxTopCount === 1) {
+        let onlyBottomMostResized = true;
+        let matchedBottomMostEntry = false;
+        for (const entry of entries) {
+          const target = entry.target;
+          if (!(target instanceof HTMLElement) || !target.isConnected) {
+            onlyBottomMostResized = false;
+            break;
+          }
+          const container = resolvePositionedContainer(target);
+          if (!container) {
+            onlyBottomMostResized = false;
+            break;
+          }
+          const top = containerTops.get(container);
+          if (top !== maxTop) {
+            onlyBottomMostResized = false;
+            break;
+          }
+          matchedBottomMostEntry = true;
+        }
+        if (onlyBottomMostResized && matchedBottomMostEntry) return;
+      }
+    }
+
+    const placed: { container: HTMLElement; top: number; height: number }[] = [];
+    for (const [container, top] of containerTops) {
       const height = container.getBoundingClientRect().height;
       if (height <= 0) {
         continue;

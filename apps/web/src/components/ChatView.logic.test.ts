@@ -19,6 +19,7 @@ import {
   appendVoiceTranscriptToPrompt,
   buildComposerMenuSelectionKey,
   buildTranscriptAutoFollowSignal,
+  buildTranscriptTailKey,
   createRuntimeModePersistenceQueue,
   desiredBindingCanPersistWithoutActiveSession,
   persistModelSelectionBeforeRuntimeMode,
@@ -387,17 +388,43 @@ describe("transcript auto-follow signal", () => {
     ).not.toBe(streaming);
   });
 
-  it("changes as the streaming assistant tail grows", () => {
+  it("stays stable while the streaming assistant tail only grows", () => {
     const firstChunk = buildTranscriptAutoFollowSignal({
       messageCount: 3,
-      tailKey: "assistant-3:assistant:streaming:content:120",
+      tailKey: "assistant-3:assistant:streaming:content:",
     });
     const nextChunk = buildTranscriptAutoFollowSignal({
       messageCount: 3,
-      tailKey: "assistant-3:assistant:streaming:content:240",
+      tailKey: "assistant-3:assistant:streaming:content:",
     });
 
-    expect(nextChunk).not.toBe(firstChunk);
+    expect(nextChunk).toBe(firstChunk);
+  });
+});
+
+describe("transcript tail key", () => {
+  const streamingTail = {
+    id: "assistant-3",
+    role: "assistant",
+    streaming: true,
+    text: "hello",
+    completedAt: null,
+  };
+
+  it("covers empty, first content, new tail, settle, completion, and settled repair", () => {
+    expect(buildTranscriptTailKey(null)).toBe("empty");
+    const streaming = buildTranscriptTailKey(streamingTail);
+    expect(buildTranscriptTailKey({ ...streamingTail, text: "hello world" })).toBe(streaming);
+    expect(buildTranscriptTailKey({ ...streamingTail, text: "" })).not.toBe(streaming);
+    expect(buildTranscriptTailKey({ ...streamingTail, id: "assistant-4" })).not.toBe(streaming);
+    const settled = { ...streamingTail, streaming: false };
+    expect(buildTranscriptTailKey(settled)).not.toBe(streaming);
+    expect(
+      buildTranscriptTailKey({ ...settled, completedAt: "2026-01-01T00:00:00.000Z" }),
+    ).not.toBe(buildTranscriptTailKey(settled));
+    expect(buildTranscriptTailKey({ ...settled, text: "hello repaired" })).not.toBe(
+      buildTranscriptTailKey(settled),
+    );
   });
 });
 

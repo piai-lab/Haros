@@ -357,6 +357,34 @@ export function buildTranscriptAutoFollowSignal(input: {
   return `${input.messageCount}\u001f${input.tailKey}`;
 }
 
+/**
+ * Keeps the explicit tail re-stick stable while one streaming row only grows.
+ * LegendList owns continuous bottom following; this key only moves for lifecycle
+ * transitions that need an explicit snap, including settled projection repairs.
+ */
+export function buildTranscriptTailKey(
+  tailMessage: {
+    readonly id: string;
+    readonly role: string;
+    readonly streaming?: boolean;
+    readonly text: string;
+    readonly completedAt?: string | null | undefined;
+  } | null,
+): string {
+  if (tailMessage === null) return "empty";
+  return [
+    tailMessage.id,
+    tailMessage.role,
+    tailMessage.streaming ? "streaming" : "settled",
+    tailMessage.streaming
+      ? tailMessage.text.length > 0
+        ? "content"
+        : "empty"
+      : String(tailMessage.text.length),
+    tailMessage.completedAt ?? "",
+  ].join(":");
+}
+
 export function resolveThreadArtifactWorkspaceRoot(input: {
   readonly isStudioContainer: boolean;
   readonly projectCwd: string | null;

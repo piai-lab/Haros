@@ -72,6 +72,9 @@ interface HarnessHandle {
   finishTurn: () => void;
   clearAnchor: () => void;
   listRef: React.RefObject<LegendListRef | null>;
+  atEndStates: boolean[];
+  trailEmissionCount: () => number;
+  scrollCallbackOrder: string[];
 }
 
 function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle | null } }) {
@@ -81,6 +84,9 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
   const [followLiveOutput, setFollowLiveOutput] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [activeTurnStartedAt, setActiveTurnStartedAt] = useState<string | null>(null);
+  const atEndStatesRef = useRef<boolean[]>([]);
+  const trailEmissionCountRef = useRef(0);
+  const scrollCallbackOrderRef = useRef<string[]>([]);
 
   handleRef.current = {
     listRef,
@@ -125,6 +131,9 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
     clearAnchor: () => {
       setTailAnchorMessageId(null);
     },
+    atEndStates: atEndStatesRef.current,
+    trailEmissionCount: () => trailEmissionCountRef.current,
+    scrollCallbackOrder: scrollCallbackOrderRef.current,
   };
 
   return (
@@ -147,6 +156,14 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         onRevertUserMessage={() => {}}
         isRevertingCheckpoint={false}
         onImageExpand={() => {}}
+        onIsAtEndChange={(isAtEnd) => {
+          atEndStatesRef.current.push(isAtEnd);
+          scrollCallbackOrderRef.current.push("at-end");
+        }}
+        onTrailHighlightsChange={() => {
+          trailEmissionCountRef.current += 1;
+          scrollCallbackOrderRef.current.push("trail");
+        }}
         markdownCwd={undefined}
         resolvedTheme="dark"
         timestampFormat="locale"
@@ -204,6 +221,48 @@ async function settleFrames(count: number): Promise<void> {
 describe("MessagesTimeline tail anchor", () => {
   afterEach(() => {
     document.body.innerHTML = "";
+  });
+
+  it("reports at-end before the animation-frame trail highlight", async () => {
+    const handleRef: { current: HarnessHandle | null } = { current: null };
+    const screen = await render(<TailAnchorTimeline handleRef={handleRef} />);
+
+    try {
+      const handle = () => {
+        if (!handleRef.current) throw new Error("harness not mounted");
+        return handleRef.current;
+      };
+      await expect.poll(() => handle().listRef.current?.getScrollableNode?.() != null).toBe(true);
+      await settleFrames(3);
+      void handle().listRef.current?.scrollToEnd?.({ animated: false });
+      await expect
+        .poll(() => distanceFromBottomPx(handle()), { timeout: 5_000 })
+        .toBeLessThanOrEqual(AUTO_FOLLOW_TOLERANCE_PX);
+      await settleFrames(2);
+
+      const scrollContainer = getScrollContainer(handle());
+      scrollContainer.scrollTop = 0;
+      await expect.poll(() => handle().atEndStates.at(-1)).toBe(false);
+      await settleFrames(2);
+
+      handle().atEndStates.length = 0;
+      handle().scrollCallbackOrder.length = 0;
+      const trailBaseline = handle().trailEmissionCount();
+      const maxScrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+      scrollContainer.scrollTop = maxScrollTop / 3;
+      scrollContainer.scrollTop = (maxScrollTop * 2) / 3;
+      scrollContainer.scrollTop = maxScrollTop;
+      await expect.poll(() => handle().atEndStates.at(-1)).toBe(true);
+      await expect.poll(() => handle().trailEmissionCount() - trailBaseline).toBeGreaterThan(0);
+      // LegendList can independently emit one viewability update; the scroll
+      // path itself contributes at most one additional highlight for the frame.
+      expect(handle().trailEmissionCount() - trailBaseline).toBeLessThanOrEqual(2);
+      const atEndIndex = handle().scrollCallbackOrder.indexOf("at-end");
+      expect(atEndIndex).toBeGreaterThanOrEqual(0);
+      expect(handle().scrollCallbackOrder.slice(atEndIndex + 1)).toContain("trail");
+    } finally {
+      await screen.unmount();
+    }
   });
 
   it("anchors a sent message below the top inset, pins it while streaming, keeps the reserve at turn end, follows overflow, and collapses only when cleared", async () => {

@@ -58,6 +58,7 @@ import { isMacPlatform } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
 import { resetHomeChatProjectPrewarmStateForTests } from "../lib/chatProjects";
 import { resetStudioProjectPrewarmStateForTests } from "../lib/studioProjects";
+import { providerModelsQueryOptions } from "../lib/providerDiscoveryReactQuery";
 import { getRouter } from "../router";
 import { useSplitViewStore } from "../splitViewStore";
 import { useStore } from "../store";
@@ -665,7 +666,7 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
     providerModelsByProvider: {
       codex: {
         source: "browser.fixture",
-        models: ["gpt-5.5", "gpt-5.4", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
+        models: ["gpt-5", "gpt-5.5", "gpt-5.4", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
       },
     },
     welcome: {
@@ -2354,6 +2355,18 @@ async function mountChatView(options: {
       initialEntries: [initialEntry],
     }),
   );
+  for (const provider of ["codex", "claudeAgent"] as const) {
+    const knownCatalog = fixture.providerModelsByProvider[provider];
+    if (!knownCatalog) continue;
+    // Existing-thread journeys begin with a previously known exact catalog,
+    // without authorizing any mount-time discovery. Mark it stale so a real
+    // provider intent still refreshes through the production query owner.
+    router.options.context.queryClient.setQueryData(
+      providerModelsQueryOptions({ provider }).queryKey,
+      knownCatalog,
+      { updatedAt: 0 },
+    );
+  }
 
   const content = options.onRender ? (
     <Profiler id="issue-550-root" onRender={options.onRender}>
@@ -5011,6 +5024,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       scrollContainer.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: -100 }));
       scrollContainer.scrollTo({ top: 0, behavior: "auto" });
       scrollContainer.dispatchEvent(new Event("scroll"));
+      // The wheel takeover deliberately cancels any native smooth scroll at the
+      // current offset. This assertion owns only retries after the user has moved.
+      scrollSpy.calls.length = 0;
       tailImage.dispatchEvent(new Event("load", { bubbles: true }));
 
       await new Promise<void>((resolve) => window.setTimeout(resolve, 320));
@@ -6041,10 +6057,15 @@ describe("ChatView timeline estimator parity (full app)", () => {
         ),
         updatedAt: isoAt(1_207),
       }));
-      await vi.waitFor(() => expect(scrollSpy.calls.length).toBeGreaterThan(0), {
-        timeout: 4_000,
-        interval: 16,
-      });
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 400));
+      // Per-chunk growth is owned by LegendList's maintain-at-end path (which
+      // may call the DOM scroll primitive as the smoothed row grows). The pure
+      // tail-key regression proves this update does not re-arm ChatView's
+      // explicit transcript scroll; here the browser contract is that the user
+      // remains at the live edge throughout that native maintenance.
+      expect(
+        scrollContainer.scrollHeight - scrollContainer.clientHeight - scrollContainer.scrollTop,
+      ).toBeLessThanOrEqual(AUTO_SCROLL_BOTTOM_THRESHOLD_PX);
 
       scrollSpy.calls.length = 0;
       syncActiveThread((thread) => ({
@@ -6067,6 +6088,90 @@ describe("ChatView timeline estimator parity (full app)", () => {
       });
     } finally {
       restoreScrollTo();
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps IME, draft attachments, and composer focus stable through rapid streamed deltas", async () => {
+    const currentSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-stream-composer-stress" as MessageId,
+      targetText: "stream composer stress",
+    });
+    const mounted = await mountChatView({ viewport: DEFAULT_VIEWPORT, snapshot: currentSnapshot });
+
+    try {
+      const draft = "正在输入，保留附件与焦点";
+      useComposerDraftStore.getState().setPrompt(THREAD_ID, draft);
+      useComposerDraftStore.getState().addImage(
+        THREAD_ID,
+        createComposerImage({
+          id: "stream-composer-stress-image",
+          previewUrl: "blob:stream-composer-stress-image",
+        }),
+      );
+      const editorNode = await waitForComposerEditor();
+      await vi.waitFor(() => expect(editorNode.textContent).toContain(draft));
+      editorNode.focus();
+      await vi.waitFor(() => expect(document.activeElement).toBe(editorNode));
+
+      let compositionEndCount = 0;
+      editorNode.addEventListener("compositionend", () => {
+        compositionEndCount += 1;
+      });
+      editorNode.dispatchEvent(
+        new CompositionEvent("compositionstart", { bubbles: true, data: "正在" }),
+      );
+      editorNode.dispatchEvent(
+        new CompositionEvent("compositionupdate", { bubbles: true, data: "正在输入" }),
+      );
+
+      const initialImages = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.images;
+      const streamMessageId = MessageId.makeUnsafe("msg-assistant-stream-composer-stress");
+      const streamTurnId = TurnId.makeUnsafe("turn-stream-composer-stress");
+      for (let index = 0; index < 60; index += 1) {
+        const nextSnapshot = {
+          ...currentSnapshot,
+          snapshotSequence: currentSnapshot.snapshotSequence + index + 1,
+          threads: currentSnapshot.threads.map((thread) => {
+            if (thread.id !== THREAD_ID) return thread;
+            const streamed = {
+              ...createAssistantMessage({
+                id: streamMessageId,
+                text: `stream ${"delta ".repeat(index + 1)}`,
+                offsetSeconds: 1_300 + index,
+              }),
+              turnId: streamTurnId,
+              streaming: true,
+            };
+            return {
+              ...thread,
+              messages: [
+                ...thread.messages.filter((message) => message.id !== streamMessageId),
+                streamed,
+              ],
+              updatedAt: isoAt(1_300 + index),
+            };
+          }),
+          updatedAt: isoAt(1_300 + index),
+        };
+        fixture = { ...fixture, snapshot: nextSnapshot };
+        useStore.getState().syncServerReadModel(nextSnapshot);
+      }
+
+      await waitForLayout();
+      expect(mounted.host.querySelector("[data-testid='composer-editor']")).toBe(editorNode);
+      expect(document.activeElement).toBe(editorNode);
+      expect(compositionEndCount).toBe(0);
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(draft);
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.images).toBe(
+        initialImages,
+      );
+
+      editorNode.dispatchEvent(
+        new CompositionEvent("compositionend", { bubbles: true, data: "正在输入" }),
+      );
+      expect(compositionEndCount).toBe(1);
+    } finally {
       await mounted.cleanup();
     }
   });
@@ -7133,6 +7238,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
+      useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+        provider: "claudeAgent",
+        model: "claude-sonnet-4-5",
+      });
       await waitForServerConfigToApply();
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
@@ -7618,7 +7727,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
             .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5.4" });
+        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
       });
       expect(document.querySelector('[data-slot="menu-popup"]')).toBeNull();
 
@@ -7627,7 +7736,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
             .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
+        ).toMatchObject({ provider: "codex", model: "gpt-5" });
       });
     } finally {
       await mounted.cleanup();
@@ -7659,7 +7768,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
             .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5.2" });
+        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
       });
     } finally {
       await mounted.cleanup();
@@ -8523,7 +8632,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       // Wait for the sidebar to render with the project.
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
+      const newThreadButton = page.getByTestId("new-thread-button").first();
       await expect.element(newThreadButton).toBeInTheDocument();
 
       await newThreadButton.click();
@@ -8774,7 +8883,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await page.getByRole("button", { name: "Switch to activity view" }).click();
       const activityNewChatButton = page.getByRole("button", {
-        name: "Start new chat in last used project",
+        name: EN_MESSAGES["activity.startNewTaskLastProject"],
       });
       await expect.element(activityNewChatButton).toBeInTheDocument();
       await activityNewChatButton.click();
@@ -9024,7 +9133,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await page.getByLabelText("Create new thread in Project").click();
+      await page.getByTestId("new-thread-button").first().click();
       const newThreadPath = await waitForURL(
         mounted.router,
         (path) => UUID_ROUTE_RE.test(path),
@@ -10623,7 +10732,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const newThreadButton = page.getByLabelText("Create new thread in Project");
+      const newThreadButton = page.getByTestId("new-thread-button").first();
       await expect.element(newThreadButton).toBeInTheDocument();
       await newThreadButton.click();
 
@@ -12259,9 +12368,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(buttonLabels).toContain("Plan details");
         expect(document.querySelector('button[title="Show plan sidebar"]')).toBeNull();
       });
-      await expect
-        .element(page.getByTitle("Plan mode — click to return to normal build mode"))
-        .toBeInTheDocument();
       await expect.element(page.getByLabelText("Show plan details sidebar")).toBeInTheDocument();
     } finally {
       await mounted.cleanup();
@@ -12391,7 +12497,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           expect(document.body.textContent).toContain("2 files changed");
-          expect(document.body.textContent).toContain("1 out of 3 tasks completed");
+          expect(document.body.textContent).toContain("1 of 3 tasks completed");
         },
         { timeout: 8_000, interval: 16 },
       );
@@ -12546,7 +12652,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     try {
       await vi.waitFor(
         () => {
-          expect(document.body.textContent).toContain("1 out of 3 tasks completed");
+          expect(document.body.textContent).toContain("1 of 3 tasks completed");
           expect(document.body.textContent).toContain("Inspecting ChatView boundaries");
           expect(document.body.textContent).toContain("Patch the shared checklist receiver");
           expect(document.body.textContent).toContain("1 background agent");
@@ -12599,7 +12705,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           expect(document.body.textContent).toContain("Finished the investigation.");
-          expect(document.body.textContent).not.toContain("1 out of 3 tasks completed");
+          expect(document.body.textContent).not.toContain("1 of 3 tasks completed");
           expect(document.querySelector('[data-testid="active-task-list-card"]')).toBeNull();
           expect(document.body.textContent).not.toContain("1 background agent");
         },

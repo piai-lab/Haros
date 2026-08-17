@@ -41,6 +41,7 @@ import {
   withOrchestrationEventSequence,
 } from "./storeNormalization";
 import {
+  appendUniqueThreadActivitiesBelowCap,
   applySpaceOrder,
   applyThreadUpdate,
   removeSpace,
@@ -662,9 +663,14 @@ function mergeStreamingMessage(
 
 function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEvent): Thread {
   const payload = event.payload;
-  // Single scan: the previous implementation ran `find` and `findIndex` with the same predicate
-  // over the (up to MAX_THREAD_MESSAGES) message list for every streaming delta.
-  const existingIndex = thread.messages.findIndex((message) => message.id === payload.messageId);
+  // Streaming deltas target the newest message, so scan the bounded history from the tail.
+  let existingIndex = -1;
+  for (let index = thread.messages.length - 1; index >= 0; index -= 1) {
+    if (thread.messages[index]!.id === payload.messageId) {
+      existingIndex = index;
+      break;
+    }
+  }
   const existingMessage = existingIndex >= 0 ? thread.messages[existingIndex] : undefined;
   const incomingMessage = normalizeChatMessage(
     {
@@ -1627,6 +1633,23 @@ function applyThreadActivityEventBatch(
     return state;
   }
   const updatesSummary = events.some(threadActivityUpdatesSummary);
+  const currentShell = state.threadShellById?.[firstEvent.payload.threadId];
+  const canUseAppendOnlyFastPath =
+    !updatesSummary &&
+    options.updateSidebarSummary !== true &&
+    events.every((event) => event.payload.activity.turnId === null) &&
+    (currentShell?.pendingInteractions?.length ?? 0) === 0;
+  if (canUseAppendOnlyFastPath) {
+    const appendedActivities = events.map((event) =>
+      withOrchestrationEventSequence(event.payload.activity, event.sequence),
+    );
+    const fastState = appendUniqueThreadActivitiesBelowCap(
+      state,
+      firstEvent.payload.threadId,
+      appendedActivities,
+    );
+    if (fastState !== null) return fastState;
+  }
   return applyThreadUpdate(
     state,
     firstEvent.payload.threadId,

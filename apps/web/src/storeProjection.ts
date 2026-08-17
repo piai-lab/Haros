@@ -24,6 +24,7 @@ import {
   capThreadActivities,
   dedupeActivitiesById,
   deepEqualJson,
+  MAX_THREAD_ACTIVITIES,
   mapProjects,
   mapSpaces,
   mergeReadModelThreadDetailWithLiveHotPath,
@@ -73,7 +74,7 @@ import type {
 type ReadModelThread = OrchestrationReadModel["threads"][number];
 export type ProjectMatchPolicy = "id-only" | "id-or-cwd";
 
-function toThreadShell(thread: Thread): ThreadShell {
+function toThreadShell(thread: Thread | ThreadShell): ThreadShell {
   return {
     id: thread.id,
     codexThreadId: thread.codexThreadId,
@@ -1163,18 +1164,20 @@ function commitThreadProjection(
     updateSidebarSummary?: boolean;
   },
 ): AppState {
+  const shouldUpdateSidebarSummary = options?.updateSidebarSummary ?? true;
+  const previousSummary = state.sidebarThreadSummaryById[threadId];
+  // writeThreadState already committed detail slices before this function is called.
+  // When the summary is intentionally pinned, avoid reconstructing the whole thread.
+  if (!shouldUpdateSidebarSummary && previousSummary !== undefined) {
+    return state;
+  }
+
   const nextThread = getThreadFromState(state, threadId);
   if (!nextThread) {
     return state;
   }
 
-  const shouldUpdateSidebarSummary = options?.updateSidebarSummary ?? true;
-
-  const previousSummary = state.sidebarThreadSummaryById[threadId];
-  const nextSummary =
-    shouldUpdateSidebarSummary || previousSummary === undefined
-      ? buildSidebarThreadSummary(nextThread, previousSummary)
-      : previousSummary;
+  const nextSummary = buildSidebarThreadSummary(nextThread, previousSummary);
 
   if (nextSummary === previousSummary) {
     return state;
@@ -1261,6 +1264,65 @@ export function applyThreadUpdate(
   return commitThreadProjection(writeThreadState(state, updatedThread, currentThread), threadId, {
     updateSidebarSummary: options?.updateSidebarSummary ?? true,
   });
+}
+
+/**
+ * Append-only activity fast path for the normalized store.
+ *
+ * Returning null means the caller must use applyThreadUpdate so duplicate/richer
+ * replacement, cap retention, pending interactions, and summary signals keep
+ * their complete normalization semantics.
+ */
+export function appendUniqueThreadActivitiesBelowCap(
+  state: AppState,
+  threadId: ThreadId,
+  activities: ReadonlyArray<Thread["activities"][number]>,
+): AppState | null {
+  if (activities.length === 0) return state;
+  const currentIds = state.activityIdsByThreadId?.[threadId];
+  const currentById = state.activityByThreadId?.[threadId];
+  const currentShell = state.threadShellById?.[threadId];
+  if (!currentIds || !currentById || !currentShell) return null;
+  if (currentIds.length + activities.length > MAX_THREAD_ACTIVITIES) return null;
+
+  const appendedIds: string[] = [];
+  const appendedById: Record<string, Thread["activities"][number]> = {};
+  for (const activity of activities) {
+    if (currentById[activity.id] !== undefined || appendedById[activity.id] !== undefined) {
+      return null;
+    }
+    appendedIds.push(activity.id);
+    appendedById[activity.id] = activity;
+  }
+
+  let updatedAt = currentShell.updatedAt ?? currentShell.createdAt;
+  for (const activity of activities) {
+    if (activity.createdAt > updatedAt) updatedAt = activity.createdAt;
+  }
+  const normalizedShell = toThreadShell({ ...currentShell, updatedAt });
+  const nextShell = threadShellsEqual(currentShell, normalizedShell)
+    ? currentShell
+    : normalizedShell;
+
+  return {
+    ...state,
+    ...(nextShell === currentShell
+      ? {}
+      : {
+          threadShellById: {
+            ...(state.threadShellById ?? EMPTY_THREAD_SHELL_BY_ID),
+            [threadId]: nextShell,
+          },
+        }),
+    activityIdsByThreadId: {
+      ...(state.activityIdsByThreadId ?? EMPTY_ACTIVITY_IDS_BY_THREAD),
+      [threadId]: [...currentIds, ...appendedIds],
+    },
+    activityByThreadId: {
+      ...(state.activityByThreadId ?? EMPTY_ACTIVITY_BY_THREAD),
+      [threadId]: { ...currentById, ...appendedById },
+    },
+  };
 }
 
 export function syncServerShellSnapshot(

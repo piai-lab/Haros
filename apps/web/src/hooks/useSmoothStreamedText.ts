@@ -2,7 +2,7 @@
 // Purpose: Reveal streamed assistant text at a steady, adaptive cadence so tokens appear
 //          fluidly instead of in the ~100ms network clumps that land in the store.
 // Layer: Web UI streaming primitive
-// Exports: useSmoothStreamedText
+// Exports: useSmoothStreamedText, stepSmoothReveal (pure stepper, unit-tested)
 // Why: The transport coalesces deltas into one store update per ~100ms
 //      (apps/web/src/routes/__root.tsx Throttler), so rendering each clump verbatim looks
 //      choppy. This hook drains the already-delivered buffer on requestAnimationFrame at a
@@ -11,7 +11,7 @@
 //      same text ChatMarkdown already defers, so the markdown re-parse stays coalesced by
 //      useDeferredValue: this hook governs *cadence*, not parse cost.
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMediaQuery } from "./useMediaQuery";
 
 // Drain the current backlog over this window. Kept above the ~100ms network flush so a
@@ -26,6 +26,78 @@ const VELOCITY_LERP = 0.15;
 // Clamp per-frame delta so returning from a backgrounded tab (rAF paused) does not dump
 // the whole backlog in a single frame.
 const MAX_FRAME_SECONDS = 0.05;
+// Minimum spacing between React commits. The reveal float still advances every frame at
+// the smoothed velocity; this only batches how often the grown prefix is pushed to state.
+export const MIN_EMIT_INTERVAL_MS = 40;
+
+export interface SmoothRevealState {
+  shown: number;
+  velocity: number;
+  lastFrameAt: number;
+  lastEmitAt: number;
+}
+
+export function createSmoothRevealState(shown: number): SmoothRevealState {
+  return { shown, velocity: 0, lastFrameAt: 0, lastEmitAt: 0 };
+}
+
+export interface SmoothRevealStep {
+  emitCount: number | null;
+  done: boolean;
+}
+
+export function stepSmoothReveal(
+  state: SmoothRevealState,
+  nowMs: number,
+  targetLength: number,
+  emittedCount: number,
+): SmoothRevealStep {
+  const previousFrameAt = state.lastFrameAt;
+  const dt = previousFrameAt ? Math.min((nowMs - previousFrameAt) / 1000, MAX_FRAME_SECONDS) : 0;
+  state.lastFrameAt = nowMs;
+
+  if (state.shown > targetLength) state.shown = targetLength;
+
+  const backlog = targetLength - state.shown;
+  if (backlog <= 0) {
+    state.velocity = 0;
+    state.lastFrameAt = 0;
+    return { emitCount: null, done: true };
+  }
+
+  const targetVelocity = Math.min(MAX_CHARS_PER_SECOND, backlog / DRAIN_WINDOW_SECONDS);
+  state.velocity += (targetVelocity - state.velocity) * VELOCITY_LERP;
+  state.shown = Math.min(targetLength, state.shown + state.velocity * dt);
+
+  const nextCount = Math.floor(state.shown);
+  const caughtUp = nextCount >= targetLength;
+  const emitDue =
+    nextCount !== emittedCount &&
+    (caughtUp || state.lastEmitAt === 0 || nowMs - state.lastEmitAt >= MIN_EMIT_INTERVAL_MS);
+  if (emitDue) {
+    state.lastEmitAt = nowMs;
+  }
+
+  const done = targetLength - state.shown <= 0;
+  if (done) {
+    state.velocity = 0;
+    state.lastFrameAt = 0;
+  }
+  return { emitCount: emitDue ? nextCount : null, done };
+}
+
+/** Never return a prefix ending between a UTF-16 surrogate pair. */
+export function clampSmoothRevealPrefixLength(text: string, count: number): number {
+  const bounded = Math.max(0, Math.min(count, text.length));
+  if (bounded === 0 || bounded >= text.length) {
+    return bounded;
+  }
+  const previous = text.charCodeAt(bounded - 1);
+  const next = text.charCodeAt(bounded);
+  const splitsSurrogatePair =
+    previous >= 0xd800 && previous <= 0xdbff && next >= 0xdc00 && next <= 0xdfff;
+  return splitsSurrogatePair ? bounded - 1 : bounded;
+}
 
 /**
  * Smoothly reveal `text` while `isStreaming` is true.
@@ -45,24 +117,21 @@ export function useSmoothStreamedText(text: string, isStreaming: boolean): strin
   // Latest full text, mirrored post-commit so the rAF loop always reads the current value
   // without re-subscribing the animation effect on every ~100ms delta.
   const targetRef = useRef(text);
-  // Revealed character count, accumulated as a float across frames.
-  const shownRef = useRef(text.length);
+  const stateRef = useRef<SmoothRevealState>(createSmoothRevealState(text.length));
   // Character count last pushed to React state — guards against redundant setState when the
   // floored count has not advanced.
   const emittedRef = useRef(text.length);
-  const velocityRef = useRef(0);
   const rafRef = useRef<number | null>(null);
   const tickRef = useRef<(now: number) => void>(() => undefined);
-  const lastFrameRef = useRef(0);
 
-  const cancelFrame = () => {
+  const cancelFrame = useCallback(() => {
     if (rafRef.current != null) {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-  };
+  }, []);
 
-  const scheduleFrame = () => {
+  const scheduleFrame = useCallback(() => {
     if (rafRef.current != null) {
       return;
     }
@@ -70,44 +139,24 @@ export function useSmoothStreamedText(text: string, isStreaming: boolean): strin
       rafRef.current = null;
       tickRef.current(now);
     });
-  };
+  }, []);
 
   // Installed in an effect (not during render — that write would make the
   // whole hook ineligible for React Compiler). The tick reads everything
   // through refs, so a mount-time install stays permanently fresh.
   useEffect(() => {
     tickRef.current = (now: number) => {
-      const previous = lastFrameRef.current;
-      const dt = previous ? Math.min((now - previous) / 1000, MAX_FRAME_SECONDS) : 0;
-      lastFrameRef.current = now;
-
       const target = targetRef.current;
-      const len = target.length;
-      if (shownRef.current > len) shownRef.current = len;
-
-      const backlog = len - shownRef.current;
-      if (backlog <= 0) {
-        // Sleep while caught up; the text-update effect wakes the loop on the next flush.
-        velocityRef.current = 0;
-        lastFrameRef.current = 0;
-        return;
+      const step = stepSmoothReveal(stateRef.current, now, target.length, emittedRef.current);
+      if (step.emitCount !== null) {
+        const safeCount = clampSmoothRevealPrefixLength(target, step.emitCount);
+        if (safeCount !== emittedRef.current) {
+          emittedRef.current = safeCount;
+          setRevealed(safeCount >= target.length ? target : target.slice(0, safeCount));
+        }
       }
-
-      const targetVelocity = Math.min(MAX_CHARS_PER_SECOND, backlog / DRAIN_WINDOW_SECONDS);
-      velocityRef.current += (targetVelocity - velocityRef.current) * VELOCITY_LERP;
-      shownRef.current = Math.min(len, shownRef.current + velocityRef.current * dt);
-
-      const nextCount = Math.floor(shownRef.current);
-      if (nextCount !== emittedRef.current) {
-        emittedRef.current = nextCount;
-        setRevealed(nextCount >= len ? target : target.slice(0, nextCount));
-      }
-
-      if (len - shownRef.current > 0) {
+      if (!step.done) {
         scheduleFrame();
-      } else {
-        velocityRef.current = 0;
-        lastFrameRef.current = 0;
       }
     };
   }, [scheduleFrame]);
@@ -119,15 +168,13 @@ export function useSmoothStreamedText(text: string, isStreaming: boolean): strin
 
     if (!animate || !isAppendOnly) {
       cancelFrame();
-      shownRef.current = text.length;
+      stateRef.current = createSmoothRevealState(text.length);
       emittedRef.current = text.length;
-      velocityRef.current = 0;
-      lastFrameRef.current = 0;
       setRevealed(text);
       return;
     }
 
-    if (text.length > shownRef.current) {
+    if (text.length > stateRef.current.shown) {
       scheduleFrame();
     }
   }, [animate, cancelFrame, scheduleFrame, text]);

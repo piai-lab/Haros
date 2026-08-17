@@ -9,13 +9,14 @@
 //          never pull a container up when a row shrinks.
 // Layer: Vitest browser tests
 
-import { useRef, useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { useTimelineRowOverlapGuard } from "./useTimelineRowOverlapGuard";
 
 const INITIAL_ROW_HEIGHT_PX = 40;
+const ROW_IDS = ["first", "middle", "last"] as const;
 
 interface HarnessHandle {
   setRowHeight: (index: number, heightPx: number) => void;
@@ -44,7 +45,7 @@ function StaleContainers({ handleRef }: { handleRef: { current: HarnessHandle | 
     <div style={{ position: "relative", height: 400, width: 300 }}>
       {rowHeights.map((height, index) => (
         <div
-          key={index}
+          key={ROW_IDS[index]}
           data-overlap-container={index}
           style={{
             position: "absolute",
@@ -119,6 +120,40 @@ describe("useTimelineRowOverlapGuard", () => {
       expect(containerTop(1)).toBe(INITIAL_ROW_HEIGHT_PX);
       expect(containerTop(2)).toBe(INITIAL_ROW_HEIGHT_PX * 2);
     } finally {
+      await screen.unmount();
+    }
+  });
+
+  it("skips layout measurement only when the unique bottom-most row grows", async () => {
+    const original = HTMLElement.prototype.getBoundingClientRect;
+    let placedContainerMeasurements = 0;
+    const spy = vi
+      .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.hasAttribute("data-overlap-container")) {
+          placedContainerMeasurements += 1;
+        }
+        return original.call(this);
+      });
+    const handleRef: { current: HarnessHandle | null } = { current: null };
+    const screen = await render(<StaleContainers handleRef={handleRef} />);
+
+    try {
+      await expect.poll(() => handleRef.current != null).toBe(true);
+      await nextFrame();
+      await nextFrame();
+      placedContainerMeasurements = 0;
+
+      handleRef.current!.setRowHeight(2, 100);
+      await nextFrame();
+      await nextFrame();
+
+      expect(placedContainerMeasurements).toBe(0);
+      expect(containerTop(0)).toBe(0);
+      expect(containerTop(1)).toBe(INITIAL_ROW_HEIGHT_PX);
+      expect(containerTop(2)).toBe(INITIAL_ROW_HEIGHT_PX * 2);
+    } finally {
+      spy.mockRestore();
       await screen.unmount();
     }
   });

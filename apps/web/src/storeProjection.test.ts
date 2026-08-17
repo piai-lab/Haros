@@ -16,6 +16,7 @@ import {
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  appendUniqueThreadActivitiesBelowCap,
   applyShellEvent,
   clearThreadDetailSyncFailureInClientState,
   evictThreadDetailFromClientState,
@@ -47,6 +48,62 @@ import {
 import { DEFAULT_INTERACTION_MODE, DEFAULT_RUNTIME_MODE, type Thread } from "./types";
 
 describe("store projection", () => {
+  it("append-only activity fast path preserves unrelated normalized references", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const previous = Array.from({ length: 1_600 }, (_, index) =>
+      makeActivity({
+        id: `activity-${index}`,
+        sequence: index,
+        createdAt: "2026-02-27T00:00:00.000Z",
+      }),
+    );
+    const state = makeState(makeThread({ activities: previous }));
+    const appended = Array.from({ length: 12 }, (_, index) =>
+      makeActivity({
+        id: `activity-live-${index}`,
+        sequence: 1_600 + index,
+        createdAt: `2026-02-27T00:00:${String(index + 1).padStart(2, "0")}.000Z`,
+      }),
+    );
+
+    const next = appendUniqueThreadActivitiesBelowCap(state, threadId, appended);
+
+    expect(next).not.toBeNull();
+    expect(next?.activityIdsByThreadId?.[threadId]).toHaveLength(1_612);
+    expect(next?.activityByThreadId?.[threadId]?.["activity-800"]).toBe(previous[800]);
+    expect(next?.messageIdsByThreadId).toBe(state.messageIdsByThreadId);
+    expect(next?.messageByThreadId).toBe(state.messageByThreadId);
+    expect(next?.projects).toBe(state.projects);
+    expect(next?.sidebarThreadSummaryById).toBe(state.sidebarThreadSummaryById);
+    expect(next?.threadSessionById).toBe(state.threadSessionById);
+    expect(next?.threadTurnStateById).toBe(state.threadTurnStateById);
+  });
+
+  it("declines duplicate and cap-crossing activity batches for the full normalizer", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const duplicateState = makeState(
+      makeThread({ activities: [makeActivity({ id: "activity-existing" })] }),
+    );
+    expect(
+      appendUniqueThreadActivitiesBelowCap(duplicateState, threadId, [
+        makeActivity({ id: "activity-existing", payload: { detail: "richer" } }),
+      ]),
+    ).toBeNull();
+
+    const cappedState = makeState(
+      makeThread({
+        activities: Array.from({ length: 2_000 }, (_, index) =>
+          makeActivity({ id: `activity-cap-${index}`, sequence: index }),
+        ),
+      }),
+    );
+    expect(
+      appendUniqueThreadActivitiesBelowCap(cappedState, threadId, [
+        makeActivity({ id: "activity-over-cap", sequence: 2_000 }),
+      ]),
+    ).toBeNull();
+  });
+
   it("preserves a semantic branch when a temp worktree branch arrives from the read model", () => {
     const initialThread = makeThread({
       branch: "feature/semantic-branch",
@@ -1637,6 +1694,54 @@ describe("store projection", () => {
     expect(next.threadTurnStateById).toBe(hydratedState.threadTurnStateById);
     expect(next.sidebarThreadSummaryById).toBe(hydratedState.sidebarThreadSummaryById);
     expect(threadsOf(next)[0]).toBe(thread);
+  });
+
+  it("lands detail text segments before returning a pinned sidebar summary", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const messageId = MessageId.makeUnsafe("assistant-segmented");
+    const hydrated = syncServerReadModel(
+      makeState(makeThread()),
+      makeReadModel(makeReadModelThread({ title: "Pinned summary" })),
+    );
+    const previousSummary = hydrated.sidebarThreadSummaryById[threadId];
+    const next = syncServerThreadDetailHotPath(
+      hydrated,
+      makeReadModelThread({
+        title: "Pinned summary",
+        messages: [
+          {
+            id: messageId,
+            role: "assistant",
+            text: "beforeafter",
+            textSegments: [
+              {
+                sequence: 10,
+                startedAt: "2026-02-27T00:00:01.000Z",
+                endedAt: "2026-02-27T00:00:01.000Z",
+                text: "before",
+              },
+              {
+                sequence: 30,
+                startedAt: "2026-02-27T00:00:03.000Z",
+                endedAt: "2026-02-27T00:00:03.000Z",
+                text: "after",
+              },
+            ],
+            turnId: TurnId.makeUnsafe("turn-segmented"),
+            streaming: false,
+            source: "native",
+            createdAt: "2026-02-27T00:00:01.000Z",
+            updatedAt: "2026-02-27T00:00:03.000Z",
+            attachments: [],
+          },
+        ],
+      }),
+    );
+
+    expect(next.sidebarThreadSummaryById[threadId]).toBe(previousSummary);
+    expect(
+      next.messageByThreadId?.[threadId]?.[messageId]?.textSegments?.map((segment) => segment.text),
+    ).toEqual(["before", "after"]);
   });
 });
 

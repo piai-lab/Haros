@@ -55,7 +55,7 @@ export type ProjectNormalizationInput = Pick<
 export const MAX_THREAD_MESSAGES = 2_000;
 // Matches the server-side activity retention budget: a smaller client cap would
 // silently drop work the server still serves in its snapshots.
-const MAX_THREAD_ACTIVITIES = 2_000;
+export const MAX_THREAD_ACTIVITIES = 2_000;
 const LOCAL_USER_MESSAGE_RETENTION_MS = 10_000;
 const PENDING_INTERACTION_REQUEST_KINDS = new Set(["approval.requested", "user-input.requested"]);
 

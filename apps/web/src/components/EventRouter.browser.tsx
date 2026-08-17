@@ -60,6 +60,7 @@ import {
 import { createBrowserTestServerConfig, createFullscreenTestHost } from "../test/browserHarness";
 import { getThreadFromState } from "../threadDerivation";
 import { resetThreadDetailResumeCursorsForTests } from "../threadDetailResumeCursors";
+import { resetRetainedThreadDetailSubscriptionsForTests } from "../threadDetailSubscriptionRetention";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 
@@ -85,7 +86,14 @@ const subscribeThreadRequestCountById = new Map<ThreadId, number>();
 let subscribeThreadRequests: ThreadId[] = [];
 let replayEvents: OrchestrationEvent[] = [];
 let replayRequestCursors: number[] = [];
+let delayNextReplayResponse = false;
+let pendingReplayResponse: {
+  readonly client: EffectRpcWebSocketClient;
+  readonly requestId: string;
+  readonly result: unknown;
+} | null = null;
 let getThreadDetailSnapshotRequestCount = 0;
+let failNextThreadDetailSnapshotResponse = false;
 let delayNextThreadDetailSnapshotResponse = false;
 let pendingThreadDetailSnapshotResponse: {
   readonly client: EffectRpcWebSocketClient;
@@ -167,6 +175,30 @@ function createSnapshot(overrides?: Partial<OrchestrationReadModel["threads"][nu
     ],
     updatedAt: NOW_ISO,
   } satisfies OrchestrationReadModel;
+}
+
+function createRunningSnapshot(turnId: TurnId): OrchestrationReadModel {
+  const startedAt = "2026-03-04T12:00:04.000Z";
+  return createSnapshot({
+    latestTurn: {
+      turnId,
+      state: "running",
+      requestedAt: startedAt,
+      startedAt,
+      completedAt: null,
+      assistantMessageId: null,
+    },
+    session: {
+      threadId: THREAD_ID,
+      status: "running",
+      providerName: "codex",
+      runtimeMode: "full-access",
+      activeTurnId: turnId,
+      lastError: null,
+      updatedAt: startedAt,
+    },
+    updatedAt: startedAt,
+  });
 }
 
 function buildFixture(): TestFixture {
@@ -333,10 +365,36 @@ const worker = setupWorker(
       const result = resolveWsRpc(method, requestBody);
       if (
         method === ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot &&
+        failNextThreadDetailSnapshotResponse
+      ) {
+        failNextThreadDetailSnapshotResponse = false;
+        client.send(
+          JSON.stringify({
+            _tag: "Exit",
+            requestId: request.id,
+            exit: {
+              _tag: "Failure",
+              cause: [{ _tag: "Die", defect: "intentional browser-test projection failure" }],
+            },
+          }),
+        );
+        return;
+      }
+      if (
+        method === ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot &&
         delayNextThreadDetailSnapshotResponse
       ) {
         delayNextThreadDetailSnapshotResponse = false;
         pendingThreadDetailSnapshotResponse = {
+          client,
+          requestId: request.id,
+          result,
+        };
+        return;
+      }
+      if (method === ORCHESTRATION_WS_METHODS.replayEvents && delayNextReplayResponse) {
+        delayNextReplayResponse = false;
+        pendingReplayResponse = {
           client,
           requestId: request.id,
           result,
@@ -353,7 +411,7 @@ const worker = setupWorker(
 async function mountApp(options?: {
   routeThreadId?: ThreadId;
   waitForThreadId?: ThreadId | null;
-}): Promise<{ cleanup: () => Promise<void> }> {
+}): Promise<{ cleanup: () => Promise<void>; router: ReturnType<typeof getRouter> }> {
   const host = createFullscreenTestHost();
 
   const routeThreadId = options?.routeThreadId ?? THREAD_ID;
@@ -391,6 +449,7 @@ async function mountApp(options?: {
   let cleanedUp = false;
 
   return {
+    router,
     cleanup: async () => {
       if (cleanedUp) return;
       cleanedUp = true;
@@ -434,6 +493,15 @@ function sendPendingThreadDetailSnapshotResponse() {
     throw new Error("No delayed thread-detail snapshot response is pending");
   }
   pendingThreadDetailSnapshotResponse = null;
+  sendEffectRpcExit(pending.client, pending.requestId, pending.result);
+}
+
+function sendPendingReplayResponse() {
+  const pending = pendingReplayResponse;
+  if (pending === null) {
+    throw new Error("No delayed replay response is pending");
+  }
+  pendingReplayResponse = null;
   sendEffectRpcExit(pending.client, pending.requestId, pending.result);
 }
 
@@ -502,13 +570,18 @@ describe("EventRouter scoped orchestration sync", () => {
     subscribeThreadRequests = [];
     replayEvents = [];
     replayRequestCursors = [];
+    delayNextReplayResponse = false;
+    pendingReplayResponse = null;
     getThreadDetailSnapshotRequestCount = 0;
+    failNextThreadDetailSnapshotResponse = false;
     delayNextThreadDetailSnapshotResponse = false;
     pendingThreadDetailSnapshotResponse = null;
     resetThreadDetailResumeCursorsForTests();
+    resetRetainedThreadDetailSubscriptionsForTests();
   });
 
   afterEach(() => {
+    resetRetainedThreadDetailSubscriptionsForTests();
     document.body.innerHTML = "";
   });
 
@@ -1234,6 +1307,184 @@ describe("EventRouter scoped orchestration sync", () => {
       expect(thread?.session?.orchestrationStatus).toBe("ready");
       expect(thread?.session?.activeTurnId).toBeUndefined();
     } finally {
+      fixture = buildFixture();
+      await mounted.cleanup();
+    }
+  }, 60_000);
+
+  it("preserves projection backoff when a stale snapshot is superseded by a live event", async () => {
+    const turnId = TurnId.makeUnsafe("turn-superseded-projection-backoff");
+    fixture = { ...fixture, snapshot: createRunningSnapshot(turnId) };
+    let logicalNow = Date.now();
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => logicalNow);
+    const mounted = await mountApp();
+
+    try {
+      logicalNow += 4_500;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(1), {
+        timeout: 4_000,
+        interval: 16,
+      });
+
+      delayNextThreadDetailSnapshotResponse = true;
+      logicalNow += 9_000;
+      await vi.waitFor(
+        () => {
+          expect(getThreadDetailSnapshotRequestCount).toBe(2);
+          expect(pendingThreadDetailSnapshotResponse).not.toBeNull();
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+
+      sendThreadEventPush({
+        sequence: 2,
+        eventId: EventId.makeUnsafe("event-superseding-live-delta"),
+        aggregateKind: "thread",
+        aggregateId: THREAD_ID,
+        occurredAt: "2026-03-04T12:00:05.000Z",
+        commandId: null,
+        causationEventId: null,
+        correlationId: null,
+        metadata: {},
+        type: "thread.message-sent",
+        payload: {
+          threadId: THREAD_ID,
+          messageId: MessageId.makeUnsafe("msg-superseding-live-delta"),
+          role: "assistant",
+          text: "live delta",
+          turnId,
+          source: "native",
+          streaming: true,
+          createdAt: "2026-03-04T12:00:05.000Z",
+          updatedAt: "2026-03-04T12:00:05.000Z",
+        },
+      });
+      await vi.waitFor(() => {
+        expect(
+          getThreadFromState(useStore.getState(), THREAD_ID)?.messages.some(
+            (message) => message.id === MessageId.makeUnsafe("msg-superseding-live-delta"),
+          ),
+        ).toBe(true);
+      });
+
+      sendPendingThreadDetailSnapshotResponse();
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
+
+      // The first confirmed no-op produced a 9s logical delay. A superseded
+      // snapshot is not a failure and must keep that streak instead of resetting
+      // to the 4.5s base cadence.
+      logicalNow += 4_500;
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 3_200));
+      expect(getThreadDetailSnapshotRequestCount).toBe(2);
+
+      logicalNow += 4_500;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(3), {
+        timeout: 4_000,
+        interval: 16,
+      });
+    } finally {
+      nowSpy.mockRestore();
+      fixture = buildFixture();
+      await mounted.cleanup();
+    }
+  }, 60_000);
+
+  it("resets projection backoff after a thrown projection request", async () => {
+    const turnId = TurnId.makeUnsafe("turn-failed-projection-backoff");
+    fixture = { ...fixture, snapshot: createRunningSnapshot(turnId) };
+    let logicalNow = Date.now();
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => logicalNow);
+    const mounted = await mountApp();
+
+    try {
+      logicalNow += 4_500;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(1), {
+        timeout: 4_000,
+        interval: 16,
+      });
+
+      failNextThreadDetailSnapshotResponse = true;
+      logicalNow += 9_000;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(2), {
+        timeout: 4_000,
+        interval: 16,
+      });
+
+      // A thrown read is not evidence of a healthy quiet stream. Its next
+      // reconcile is due at the base 4.5s, not the inherited 9s no-op delay.
+      logicalNow += 4_500;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(3), {
+        timeout: 4_000,
+        interval: 16,
+      });
+    } finally {
+      nowSpy.mockRestore();
+      fixture = buildFixture();
+      await mounted.cleanup();
+    }
+  }, 60_000);
+
+  it("fences a delayed replay across release and resubscribe generations", async () => {
+    const turnId = TurnId.makeUnsafe("turn-replay-generation-fence");
+    const runningSnapshot = createRunningSnapshot(turnId);
+    const rootThread = runningSnapshot.threads[0]!;
+    const otherThread = {
+      ...rootThread,
+      id: OTHER_THREAD_ID,
+      title: "Other thread",
+      latestTurn: null,
+      messages: rootThread.messages.map((message) => ({
+        ...message,
+        id: MessageId.makeUnsafe(`other-${message.id}`),
+      })),
+      session: {
+        ...rootThread.session!,
+        threadId: OTHER_THREAD_ID,
+        status: "ready" as const,
+        activeTurnId: null,
+      },
+    } satisfies OrchestrationReadModel["threads"][number];
+    fixture = {
+      ...fixture,
+      snapshot: { ...runningSnapshot, threads: [rootThread, otherThread] },
+    };
+    const fixedNow = Date.now();
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNow);
+    delayNextReplayResponse = true;
+    const mounted = await mountApp();
+
+    try {
+      await vi.waitFor(() => expect(pendingReplayResponse).not.toBeNull(), {
+        timeout: 4_000,
+        interval: 16,
+      });
+
+      await mounted.router.navigate({
+        to: "/$threadId",
+        params: { threadId: OTHER_THREAD_ID },
+      });
+      await vi.waitFor(
+        () => expect(subscribeThreadRequestCountById.get(OTHER_THREAD_ID)).toBeGreaterThan(0),
+        { timeout: 4_000, interval: 16 },
+      );
+      await mounted.router.navigate({
+        to: "/$threadId",
+        params: { threadId: THREAD_ID },
+      });
+      await vi.waitFor(
+        () => expect(subscribeThreadRequestCountById.get(THREAD_ID)).toBeGreaterThanOrEqual(2),
+        { timeout: 4_000, interval: 16 },
+      );
+
+      sendPendingReplayResponse();
+      const replayCountAfterOldGenerationSettles = replayRequestCursors.length;
+      await vi.waitFor(
+        () =>
+          expect(replayRequestCursors.length).toBeGreaterThan(replayCountAfterOldGenerationSettles),
+        { timeout: 5_000, interval: 16 },
+      );
+    } finally {
+      nowSpy.mockRestore();
       fixture = buildFixture();
       await mounted.cleanup();
     }
