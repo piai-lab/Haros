@@ -33,8 +33,8 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 | 稳定职责、产品事实、完整 UI 与进程边界                         | [`architecture/`](architecture/README.md) 的专题 owner                       |
 | canonical public origin、公共出口、激活与独立 trust boundaries | [`architecture/public-surface.md`](architecture/public-surface.md)           |
 | 固定来源事实、失败、反例与复验触发器                           | [`research/`](research/README.md)                                            |
-| Synara 持续 source intake 方法与人工确认边界                    | [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)                                      |
-| Pi Core、Pi ecosystem 与 Agent Core 外部来源的持续 intake 方法  | [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)                          |
+| Synara 持续 source intake 方法与人工确认边界                   | [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)                                       |
+| Pi Core、Pi ecosystem 与 Agent Core 外部来源的持续 intake 方法 | [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)                           |
 | 施工顺序、进入/停止条件与阶段 proof                            | [`execution-brief.md`](execution-brief.md)                                   |
 | Campaign claim 状态与证据指针                                  | [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) |
 
@@ -65,7 +65,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 
 这四条规定产品结果。`omnimind` 与 `pi` 是两个真实 Provider identity，但仍服从同一个 inherited orchestration；这与重建通用多 Engine 平台不同。
 
-OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。Synara production adoption 已从初始 responsibility baseline `02c8a6cb9948eba0afc828492764e7236965c61f` 经维护者批准的 intake 更新到 exact reviewed head `712d88f98b9afed9a4617b78dc62a8f342d93177`；选择性边界见下方唯一 adoption record。
+OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。Synara production adoption 已从初始 responsibility baseline `02c8a6cb9948eba0afc828492764e7236965c61f` 经维护者批准的 intake 更新到 exact reviewed head `18ff99857d5b84adab2019c2839fa4f6df761b7c`；这是逐责任的选择性语义采用，不表示 whole-source merge、Synara release 继承或 OmniMind official release，边界见下方唯一 adoption record。
 
 ## 4. 来源、身份与结构
 
@@ -86,7 +86,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
     {
       "id": "ui-mother",
       "url": "https://github.com/Emanuele-web04/synara.git",
-      "revision": "712d88f98b9afed9a4617b78dc62a8f342d93177",
+      "revision": "18ff99857d5b84adab2019c2839fa4f6df761b7c",
       "paths": [
         ".github",
         ".gitattributes",
@@ -110,7 +110,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       ],
       "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed code. Former product identity assets, release identity and release history are not adopted.",
       "mode": "adapt",
-      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted from 02c8a6c, then the maintainer-approved 02c8a6c..712d88f intake was adopted by reviewed responsibility. Accepted mechanisms include appearance persistence/polish, reliability and scroll fixes, Pi max/model isolation, native provider forks and source context, Luna/high defaults, and the iOS Simulator Device pane. OmniMind retains its product authority, bilingual catalog, package/app/protocol/updater/profile/storage/artifact namespace and brand; excludes donor icons, version/changelog/release identity, forced settings migration and any competing approval or control plane. The inherited per-invocation fail-closed Device guard is retained only as current source behavior, not as the target permission contract; Device and Browser mutations must use the single Thread runtimeMode path defined by architecture/execution.md before production activation.",
+      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted from 02c8a6c, then the maintainer-approved 02c8a6c..712d88f intake was adopted by reviewed responsibility. The later 712d88f..18ff998 intake was also resolved by responsibility: 45 accepted non-merge commits are present as direct or OmniMind-native semantic implementations in the existing owners, while 35 other non-merge commits are declined, deferred, no-code, or already exceeded by current OmniMind behavior; 16 merge commits carry no independent product responsibility. This revision records the reviewed adoption boundary, not a whole-source merge or Synara release inheritance. Accepted mechanisms include runtime and projection safety, branch/draft continuity, causal Timeline ordering and performance, bounded Workspace search, Git/stacked-PR workflows, task/rate presentation, app-owned and persisted history-only forks, and focused Desktop/UI lifecycle fixes. OmniMind retains its product authority, bilingual catalog, package/app/protocol/updater/profile/storage/artifact namespace and brand; excludes donor release identity, Goal control plane, donor/debug control surfaces, forced settings migration and any competing approval or control plane. Where OmniMind already has stronger authority, safety, recovery, accessibility or geometry semantics, those stronger semantics remain authoritative. The inherited per-invocation fail-closed Device guard is retained only as current source behavior, not as the target permission contract; Device and Browser mutations must use the single Thread runtimeMode path defined by architecture/execution.md before production activation.",
       "updatePolicy": "Pinned revision; source updates begin only after a maintainer-requested read-only intake and explicit approval of that intake set.",
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
     },
@@ -212,13 +212,15 @@ omni-harness
 }
 ```
 
-当前 adopted UI mother 是 exact reviewed Synara head `712d88f…` 的选择性单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`，实际接受与排除边界由上方 adoption record 拥有。`apps/service`、`apps/native-host`、donor profile/storage migration 与旧 Product Control Plane 不再属于生产拓扑。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
+当前 adopted UI mother 是 exact reviewed Synara head `18ff998…` 的选择性单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`，实际接受与排除边界由上方 adoption record 拥有。`apps/service`、`apps/native-host`、donor profile/storage migration 与旧 Product Control Plane 不再属于生产拓扑。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
 
 未来每轮 Synara 审查、辩证吸收、`$converge` 提问、实施授权与 exact-SHA 交付统一遵循根 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)；该手册不自动轮询上游，也不取代本 README 的 production adoption authority。
 
 ## 5. 已有证据与当前下一步
 
 Source Review 已记录 fixed source 的 exact comparison及其局限；当前 production bytes、focused/final gates 与真实 App journey 只在 active Campaign 记录 candidate evidence。局部绿色不证明视觉等价、Windows/Linux、签名 packaging 或 OmniMind V1。
+
+当前本机安装与 macOS arm64 ad-hoc candidate 均来自 exact pushed product `05782e94923242e2176a215ea74b2eee129584ae`。它是本地候选，不是 official signed/notarized release，也没有创建 GitHub Release 或修改 update feed；本次 adoption/evidence 文档闭合不进入 staged Desktop app、`app.asar` 或其他 shipped bytes，因此安装产品身份继续保持 `05782e…`，不因后续 docs-only commit 改写。
 
 旧 isolated Native Host、平行 Product Control Plane 与 Product Truth checkpoint 只作可追溯历史，不再定义生产 topology 或下一步。
 
