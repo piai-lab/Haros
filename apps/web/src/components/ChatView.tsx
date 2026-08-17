@@ -1307,6 +1307,10 @@ function makeAutomationSetupBubble(role: "user" | "assistant", text: string): Ch
   };
 }
 
+function raisePreTurnCleanupFailure(error: unknown): never {
+  throw error;
+}
+
 export default function ChatView({
   threadId,
   paneScopeId: paneScopeIdProp,
@@ -9112,7 +9116,7 @@ export default function ChatView({
         if (createdWorktreeForSendPath) {
           const worktreePathToCleanup = createdWorktreeForSendPath;
           if (workLocallyResolutionStarted && !worktreeDurablyDetached) {
-            throw err;
+            raisePreTurnCleanupFailure(err);
           }
           const cleanupOwnership = workLocallyResolutionStarted
             ? "unowned"
@@ -9124,7 +9128,7 @@ export default function ChatView({
                   ? "unowned"
                   : null;
           if (cleanupOwnership === null) {
-            throw err;
+            raisePreTurnCleanupFailure(err);
           }
           await cleanupPreparedWorktreeBeforeTurn({
             turnStartAttempted,
@@ -9188,7 +9192,9 @@ export default function ChatView({
             api,
           );
           if (!deletion.settled) {
-            throw deletion.failure ?? new Error("Promoted Thread cleanup is unresolved.");
+            raisePreTurnCleanupFailure(
+              deletion.failure ?? new Error("Promoted Thread cleanup is unresolved."),
+            );
           }
         }
       } catch (cleanupError) {

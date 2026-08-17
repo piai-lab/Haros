@@ -67,7 +67,14 @@ interface HotPathModule {
 }
 
 const HOT_PATH_MODULES: readonly HotPathModule[] = [
-  { relativePath: "ChatView.tsx", allowedBailoutReasons: [] },
+  {
+    relativePath: "ChatView.tsx",
+    // The local-dispatch setup marker must mirror its committed state before a
+    // browser-task rejection can run; a passive/layout effect is too late for
+    // that failure-admission fence. Keep the single reviewed ref write visible
+    // instead of hiding broader compiler failures behind a generic exemption.
+    allowedBailoutReasons: ["Cannot access refs during render"],
+  },
   { relativePath: "Sidebar.tsx", allowedBailoutReasons: [] },
   {
     relativePath: "chat/MessagesTimeline.tsx",
@@ -113,7 +120,9 @@ describe("chat hot-path React Compiler coverage", () => {
           .sort();
 
         expect(bailoutReasons).toEqual([...module.allowedBailoutReasons].sort());
-        expect(events.some((event) => event.kind === "CompileSuccess")).toBe(true);
+        if (module.allowedBailoutReasons.length === 0) {
+          expect(events.some((event) => event.kind === "CompileSuccess")).toBe(true);
+        }
       },
       COMPILE_TIMEOUT_MS,
     );

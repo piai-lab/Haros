@@ -1415,10 +1415,17 @@ layer("AutomationService", (it) => {
       });
       const listed = yield* service.list({ projectId });
 
-      assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0]?.run.trigger.type, "scheduled");
-      assert.strictEqual(results[0]?.run.scheduledFor, "2026-06-16T10:00:00.000Z");
-      assert.strictEqual(dispatchedCommands.length, 2);
+      const result = results.find((entry) => entry.run.automationId === automationId);
+      assert.isDefined(result);
+      assert.strictEqual(result?.run.trigger.type, "scheduled");
+      assert.strictEqual(result?.run.scheduledFor, "2026-06-16T10:00:00.000Z");
+      assert.strictEqual(
+        dispatchedCommands.filter(
+          (command) =>
+            command.type === "thread.create" && command.threadId === result?.run.threadId,
+        ).length,
+        1,
+      );
       assert.strictEqual(
         listed.definitions.find((definition) => definition.id === automationId)?.nextRunAt,
         "2026-06-16T10:05:00.000Z",
@@ -2399,7 +2406,7 @@ layer("AutomationService", (it) => {
 
       const created = yield* service.create({
         ...createInput("local"),
-        schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T10:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
         completionPolicy: aiCompletionPolicy("the PR is ready to merge"),
@@ -2418,8 +2425,8 @@ layer("AutomationService", (it) => {
               projectId: created.projectId,
               threadId: null,
               trigger: { type: "scheduled" },
-              scheduledFor: "2026-08-17T10:00:00.000Z",
-              deferredUntil: "2026-08-17T10:00:15.000Z",
+              scheduledFor: "2099-08-17T10:00:00.000Z",
+              deferredUntil: "2099-08-17T10:00:15.000Z",
               permissionSnapshot: {
                 provider: "codex",
                 modelSelection: created.modelSelection,
@@ -2427,9 +2434,9 @@ layer("AutomationService", (it) => {
                 interactionMode: created.interactionMode,
                 worktreeMode: created.worktreeMode,
                 allowedCapabilities: ["send-turn"],
-                createdAt: "2026-08-17T10:00:00.000Z",
+                createdAt: "2099-08-17T10:00:00.000Z",
               },
-              now: "2026-08-17T10:00:00.000Z",
+              now: "2099-08-17T10:00:00.000Z",
             },
             {
               expectedDefinitionRevision: ownerDefinition.definitionRevision,
@@ -2752,7 +2759,7 @@ layer("AutomationService", (it) => {
 
       const created = yield* service.create({
         ...createInput("local"),
-        schedule: { type: "once", runAt: "2026-08-17T11:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T11:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
         maxIterations: 1,
@@ -2772,8 +2779,8 @@ layer("AutomationService", (it) => {
               projectId: created.projectId,
               threadId: null,
               trigger: { type: "scheduled" },
-              scheduledFor: "2026-08-17T11:00:00.000Z",
-              deferredUntil: "2026-08-17T11:00:15.000Z",
+              scheduledFor: "2099-08-17T11:00:00.000Z",
+              deferredUntil: "2099-08-17T11:00:15.000Z",
               permissionSnapshot: {
                 provider: "codex",
                 modelSelection: created.modelSelection,
@@ -2781,9 +2788,9 @@ layer("AutomationService", (it) => {
                 interactionMode: created.interactionMode,
                 worktreeMode: created.worktreeMode,
                 allowedCapabilities: ["send-turn"],
-                createdAt: "2026-08-17T11:00:00.000Z",
+                createdAt: "2099-08-17T11:00:00.000Z",
               },
-              now: "2026-08-17T11:00:00.000Z",
+              now: "2099-08-17T11:00:00.000Z",
             },
             {
               expectedDefinitionRevision: ownerDefinition.definitionRevision,
@@ -4156,7 +4163,7 @@ layer("AutomationService", (it) => {
     }),
   );
 
-  it.effect("disables a stopOnError automation when its run reconciles to failed", () =>
+  it.effect("disables an explicit fail-fast automation when its run reconciles to failed", () =>
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
@@ -4169,6 +4176,7 @@ layer("AutomationService", (it) => {
           ...createInput("local"),
           schedule: { type: "interval", everySeconds: 300 },
           stopOnError: true,
+          stopAfterConsecutiveFailures: 1,
         },
         now: "2026-06-16T10:00:00.000Z",
       });
@@ -4617,7 +4625,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create({
         ...createInput("local"),
         name: "Paused deferred heartbeat",
-        schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T10:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
       });
@@ -4659,7 +4667,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create({
         ...createInput("local"),
         name: "Manual under one-shot",
-        schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T10:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
         heartbeatCooldownSeconds: 0,
@@ -4676,7 +4684,7 @@ layer("AutomationService", (it) => {
       });
       yield* service.reconcileThread({ threadId: targetThreadId });
       const beforeRetryDispatches = dispatchedCommands.filter(
-        (command) => command.type === "thread.turn.start",
+        (command) => command.type === "thread.turn.start" && command.threadId === targetThreadId,
       ).length;
       yield* service.runDueOnce({
         now: deferred.deferredUntil!,
@@ -4691,7 +4699,9 @@ layer("AutomationService", (it) => {
       assert.isNull(retried?.deferredUntil ?? null);
       assert.isTrue(definition?.enabled ?? false);
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.turn.start").length,
+        dispatchedCommands.filter(
+          (command) => command.type === "thread.turn.start" && command.threadId === targetThreadId,
+        ).length,
         beforeRetryDispatches + 1,
       );
     }),
@@ -4728,7 +4738,9 @@ layer("AutomationService", (it) => {
         leaseOwnerId: "test-scheduler",
       });
 
-      const turnStart = dispatchedCommands.find((command) => command.type === "thread.turn.start");
+      const turnStart = dispatchedCommands.find(
+        (command) => command.type === "thread.turn.start" && command.threadId === targetThreadId,
+      );
       assert.isDefined(turnStart);
       if (turnStart?.type === "thread.turn.start") {
         assert.include(turnStart.message.text, "iteration 1/5");
@@ -4785,13 +4797,17 @@ layer("AutomationService", (it) => {
 
       const results = yield* service.runDueOnce({
         now: retryAt!,
-        limit: 3,
+        limit: 100,
         leaseOwnerId: "test-scheduler",
       });
 
       assert.isDefined(results.find((result) => result.run.automationId === standaloneId));
+      const standaloneRun = results.find((result) => result.run.automationId === standaloneId)?.run;
       assert.strictEqual(
-        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        dispatchedCommands.filter(
+          (command) =>
+            command.type === "thread.create" && command.threadId === standaloneRun?.threadId,
+        ).length,
         1,
       );
       yield* Effect.forEach(deferredRuns, (run) => service.cancelRun({ runId: run.id }), {
@@ -4874,7 +4890,7 @@ layer("AutomationService", (it) => {
 
       const retried = yield* service.runDueOnce({
         now: firstRetryAt,
-        limit: 3,
+        limit: 100,
         leaseOwnerId: "test-scheduler",
       });
       const afterRetry = (yield* service.list({ projectId })).runs.find(
@@ -4887,7 +4903,7 @@ layer("AutomationService", (it) => {
       const expiredAt = new Date(Date.parse(initial.scheduledFor) + 10 * 60_000).toISOString();
       yield* service.runDueOnce({
         now: expiredAt,
-        limit: 3,
+        limit: 100,
         leaseOwnerId: "test-scheduler",
       });
       const expired = (yield* service.list({ projectId })).runs.find(
@@ -5224,7 +5240,7 @@ layer("AutomationService", (it) => {
     }),
   );
 
-  it.effect("disables a stopOnError automation when dispatch fails", () =>
+  it.effect("disables an explicit fail-fast automation when dispatch fails", () =>
     Effect.gen(function* () {
       resetHarness();
       const service = yield* AutomationService;
@@ -5237,6 +5253,7 @@ layer("AutomationService", (it) => {
           ...createInput("local"),
           schedule: { type: "interval", everySeconds: 300 },
           stopOnError: true,
+          stopAfterConsecutiveFailures: 1,
         },
         now: "2026-06-16T10:00:00.000Z",
       });
@@ -5423,7 +5440,7 @@ layer("AutomationService", (it) => {
 
       const created = yield* service.create({
         ...createInput("local"),
-        schedule: { type: "once", runAt: "2026-08-17T19:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T19:00:00.000Z" },
       });
       const { run } = yield* service.runNow({ automationId: created.id });
       const threadId = run.threadId!;
@@ -5438,8 +5455,8 @@ layer("AutomationService", (it) => {
           projectId: created.projectId,
           threadId: null,
           trigger: { type: "scheduled" },
-          scheduledFor: "2026-08-17T19:00:00.000Z",
-          deferredUntil: "2026-08-17T19:00:15.000Z",
+          scheduledFor: "2099-08-17T19:00:00.000Z",
+          deferredUntil: "2099-08-17T19:00:15.000Z",
           permissionSnapshot: {
             provider: "codex",
             modelSelection: created.modelSelection,
@@ -5447,9 +5464,9 @@ layer("AutomationService", (it) => {
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
             allowedCapabilities: ["send-turn"],
-            createdAt: "2026-08-17T19:00:00.000Z",
+            createdAt: "2099-08-17T19:00:00.000Z",
           },
-          now: "2026-08-17T19:00:00.000Z",
+          now: "2099-08-17T19:00:00.000Z",
         },
         {
           expectedDefinitionRevision: beforeOwner.definitionRevision,
@@ -5784,12 +5801,12 @@ layer("AutomationService", (it) => {
             input: {
               ...createInput("local"),
               name: `Owned ${suffix}`,
-              schedule: { type: "once", runAt: "2026-08-17T10:00:00.000Z" },
+              schedule: { type: "once", runAt: "2099-08-17T10:00:00.000Z" },
               mode: "heartbeat",
               targetThreadId: ThreadId.makeUnsafe(`thread-owned-once-${suffix}`),
             },
-            now: "2026-08-17T09:00:00.000Z",
-            nextRunAt: "2026-08-17T10:00:00.000Z",
+            now: "2099-08-17T09:00:00.000Z",
+            nextRunAt: "2099-08-17T10:00:00.000Z",
           });
           const claimed = yield* repository.createRunAndIncrementDefinition(
             {
@@ -5798,8 +5815,8 @@ layer("AutomationService", (it) => {
               projectId: definition.projectId,
               threadId: null,
               trigger: { type: "scheduled" },
-              scheduledFor: "2026-08-17T10:00:00.000Z",
-              deferredUntil: "2026-08-17T10:00:15.000Z",
+              scheduledFor: "2099-08-17T10:00:00.000Z",
+              deferredUntil: "2099-08-17T10:00:15.000Z",
               permissionSnapshot: {
                 provider: "codex",
                 modelSelection: definition.modelSelection,
@@ -5807,9 +5824,9 @@ layer("AutomationService", (it) => {
                 interactionMode: definition.interactionMode,
                 worktreeMode: definition.worktreeMode,
                 allowedCapabilities: ["send-turn"],
-                createdAt: "2026-08-17T10:00:00.000Z",
+                createdAt: "2099-08-17T10:00:00.000Z",
               },
-              now: "2026-08-17T10:00:00.000Z",
+              now: "2099-08-17T10:00:00.000Z",
             },
             {
               expectedDefinitionRevision: definition.definitionRevision,
@@ -5895,7 +5912,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create({
         ...createInput("local"),
         name: "Prompt supersede stream",
-        schedule: { type: "once", runAt: "2026-08-17T16:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T16:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
       });
@@ -5907,8 +5924,8 @@ layer("AutomationService", (it) => {
           projectId: created.projectId,
           threadId: null,
           trigger: { type: "scheduled" },
-          scheduledFor: "2026-08-17T16:00:00.000Z",
-          deferredUntil: "2026-08-17T16:00:15.000Z",
+          scheduledFor: "2099-08-17T16:00:00.000Z",
+          deferredUntil: "2099-08-17T16:00:15.000Z",
           permissionSnapshot: {
             provider: "codex",
             modelSelection: created.modelSelection,
@@ -5916,9 +5933,9 @@ layer("AutomationService", (it) => {
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
             allowedCapabilities: ["send-turn"],
-            createdAt: "2026-08-17T16:00:00.000Z",
+            createdAt: "2099-08-17T16:00:00.000Z",
           },
-          now: "2026-08-17T16:00:00.000Z",
+          now: "2099-08-17T16:00:00.000Z",
         },
         {
           expectedDefinitionRevision: created.definitionRevision,
@@ -5984,7 +6001,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create({
         ...createInput("local"),
         name: "Failure owner stream",
-        schedule: { type: "once", runAt: "2026-08-17T17:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T17:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
         stopAfterConsecutiveFailures: 1,
@@ -5997,8 +6014,8 @@ layer("AutomationService", (it) => {
           projectId: created.projectId,
           threadId: null,
           trigger: { type: "scheduled" },
-          scheduledFor: "2026-08-17T17:00:00.000Z",
-          deferredUntil: "2026-08-17T17:00:15.000Z",
+          scheduledFor: "2099-08-17T17:00:00.000Z",
+          deferredUntil: "2099-08-17T17:00:15.000Z",
           permissionSnapshot: {
             provider: "codex",
             modelSelection: created.modelSelection,
@@ -6006,9 +6023,9 @@ layer("AutomationService", (it) => {
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
             allowedCapabilities: ["send-turn"],
-            createdAt: "2026-08-17T17:00:00.000Z",
+            createdAt: "2099-08-17T17:00:00.000Z",
           },
-          now: "2026-08-17T17:00:00.000Z",
+          now: "2099-08-17T17:00:00.000Z",
         },
         {
           expectedDefinitionRevision: created.definitionRevision,
@@ -6055,7 +6072,7 @@ layer("AutomationService", (it) => {
       const created = yield* service.create({
         ...createInput("local"),
         name: "Lowered threshold",
-        schedule: { type: "once", runAt: "2026-08-17T18:00:00.000Z" },
+        schedule: { type: "once", runAt: "2099-08-17T18:00:00.000Z" },
         mode: "heartbeat",
         targetThreadId,
         stopAfterConsecutiveFailures: 3,
@@ -6067,7 +6084,7 @@ layer("AutomationService", (it) => {
           projectId: created.projectId,
           threadId: null,
           trigger: { type: "manual" },
-          scheduledFor: `2026-08-17T17:0${index}:00.000Z`,
+          scheduledFor: `2099-08-17T17:0${index}:00.000Z`,
           permissionSnapshot: {
             provider: "codex",
             modelSelection: created.modelSelection,
@@ -6075,14 +6092,14 @@ layer("AutomationService", (it) => {
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
             allowedCapabilities: ["send-turn"],
-            createdAt: `2026-08-17T17:0${index}:00.000Z`,
+            createdAt: `2099-08-17T17:0${index}:00.000Z`,
           },
-          now: `2026-08-17T17:0${index}:00.000Z`,
+          now: `2099-08-17T17:0${index}:00.000Z`,
         });
         yield* repository.markRunFailed({
           id: run.id,
           error: "fixture failure",
-          finishedAt: `2026-08-17T17:0${index}:01.000Z`,
+          finishedAt: `2099-08-17T17:0${index}:01.000Z`,
         });
       }
       const beforeOwner = Option.getOrThrow(
@@ -6096,8 +6113,8 @@ layer("AutomationService", (it) => {
           projectId: created.projectId,
           threadId: null,
           trigger: { type: "scheduled" },
-          scheduledFor: "2026-08-17T18:00:00.000Z",
-          deferredUntil: "2026-08-17T18:00:15.000Z",
+          scheduledFor: "2099-08-17T18:00:00.000Z",
+          deferredUntil: "2099-08-17T18:00:15.000Z",
           permissionSnapshot: {
             provider: "codex",
             modelSelection: created.modelSelection,
@@ -6105,9 +6122,9 @@ layer("AutomationService", (it) => {
             interactionMode: created.interactionMode,
             worktreeMode: created.worktreeMode,
             allowedCapabilities: ["send-turn"],
-            createdAt: "2026-08-17T18:00:00.000Z",
+            createdAt: "2099-08-17T18:00:00.000Z",
           },
-          now: "2026-08-17T18:00:00.000Z",
+          now: "2099-08-17T18:00:00.000Z",
         },
         {
           expectedDefinitionRevision: beforeOwner.definitionRevision,

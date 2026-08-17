@@ -277,7 +277,7 @@ export function useComposerSlashCommands(input: {
     },
     [
       currentProviderModelOptions,
-      selectedModelSelection?.model,
+      selectedModelSelection,
       selectedProvider,
       setComposerDraftProviderModelOptions,
       threadId,
