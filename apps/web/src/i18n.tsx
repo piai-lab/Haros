@@ -3160,6 +3160,11 @@ export const EN_MESSAGES = {
   "settings.visibleProviders": "Visible engines",
   "settings.visibleProvidersDescription":
     "Drag engines into your preferred picker order and hide the ones you don't use. The engine used by the current task always stays visible.",
+  "settings.engineAvailable": "Available",
+  "settings.engineStatusChecking": "Checking engine status",
+  "settings.enginesAvailable": "{count} available",
+  "settings.enginesAvailableWithHidden": "{available} available · {hidden} hidden",
+  "settings.enginesAvailableCustomOrder": "{count} available · custom order",
   "settings.providersHidden": "{count} engines hidden",
   "settings.customOrder": "Custom order",
   "settings.allProvidersVisible": "All engines visible",
@@ -6548,6 +6553,11 @@ export const ZH_CN_MESSAGES = {
   "settings.visibleProviders": "可见引擎",
   "settings.visibleProvidersDescription":
     "拖动引擎调整选择器顺序，并隐藏不使用的项；当前任务使用的引擎始终可见。",
+  "settings.engineAvailable": "可用",
+  "settings.engineStatusChecking": "正在检查引擎状态",
+  "settings.enginesAvailable": "{count} 个可用",
+  "settings.enginesAvailableWithHidden": "{available} 个可用 · 已隐藏 {hidden} 个",
+  "settings.enginesAvailableCustomOrder": "{count} 个可用 · 自定义顺序",
   "settings.providersHidden": "已隐藏 {count} 个引擎",
   "settings.customOrder": "自定义顺序",
   "settings.allProvidersVisible": "所有引擎均可见",

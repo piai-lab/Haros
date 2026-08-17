@@ -14,7 +14,8 @@ import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { AppSettingsSchema } from "~/appSettings";
+import { APP_SETTINGS_STORAGE_KEY, AppSettingsSchema } from "~/appSettings";
+import { I18nProvider } from "~/i18n";
 import { serverQueryKeys } from "~/lib/serverReactQuery";
 import { SETTINGS_TARGETS, type SettingsSectionId } from "~/settingsNavigation";
 import { createBrowserTestServerConfig } from "~/test/browserHarness";
@@ -81,7 +82,133 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     toastManager.close();
     delete window.nativeApi;
     document.body.innerHTML = "";
+    document.documentElement.classList.remove("dark");
+    localStorage.removeItem(APP_SETTINGS_STORAGE_KEY);
     vi.restoreAllMocks();
+  });
+
+  it.each([
+    {
+      locale: "en" as const,
+      theme: "light" as const,
+      reorderCodex: "Reorder Codex",
+      showAntigravity: "Show Antigravity in the engine picker",
+      available: "Available",
+      signIn: "Sign in",
+      limited: "Limited",
+      notInstalled: "Not installed",
+      unavailable: "Unavailable",
+      summary: "3 available",
+    },
+    {
+      locale: "zh-CN" as const,
+      theme: "dark" as const,
+      reorderCodex: "调整 Codex 顺序",
+      showAntigravity: "在引擎选择器中显示 Antigravity",
+      available: "可用",
+      signIn: "登录",
+      limited: "受限",
+      notInstalled: "未安装",
+      unavailable: "不可用",
+      summary: "3 个可用",
+    },
+  ])("shows Engine identity and truthful readiness in $locale $theme", async (testCase) => {
+    localStorage.setItem(
+      APP_SETTINGS_STORAGE_KEY,
+      JSON.stringify({ localePreference: testCase.locale }),
+    );
+    document.documentElement.classList.toggle("dark", testCase.theme === "dark");
+    const config = {
+      ...createBrowserTestServerConfig(checkedAt),
+      providers: [
+        outdatedCodex(),
+        {
+          provider: "claudeAgent" as const,
+          status: "ready" as const,
+          available: true,
+          authStatus: "unauthenticated" as const,
+          checkedAt,
+        },
+        {
+          provider: "cursor" as const,
+          status: "warning" as const,
+          available: true,
+          authStatus: "authenticated" as const,
+          checkedAt,
+        },
+        {
+          provider: "antigravity" as const,
+          status: "error" as const,
+          available: false,
+          authStatus: "unknown" as const,
+          unavailableReason: "not_installed" as const,
+          checkedAt,
+        },
+        {
+          provider: "grok" as const,
+          status: "error" as const,
+          available: false,
+          authStatus: "unknown" as const,
+          checkedAt,
+        },
+      ],
+    };
+    window.nativeApi = {
+      server: {
+        getConfig: vi.fn().mockResolvedValue(config),
+        getSettings: vi.fn().mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW),
+      },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(serverQueryKeys.config(), config);
+    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
+    const settings = AppSettingsSchema.makeUnsafe({ localePreference: testCase.locale });
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <div style={{ width: 480 }}>
+          <I18nProvider>
+            <ProvidersSettingsPanel
+              active
+              resetEpoch={0}
+              settings={settings}
+              defaults={settings}
+              updateSettings={() => {}}
+            />
+          </I18nProvider>
+        </div>
+      </QueryClientProvider>,
+    );
+
+    const rowText = (reorderName: string) =>
+      screen.getByRole("button", { name: reorderName }).element().parentElement?.textContent ?? "";
+    const codexHandle = screen.getByRole("button", { name: testCase.reorderCodex }).element();
+    const codexIcon = codexHandle.nextElementSibling;
+    const codexRow = codexHandle.parentElement?.parentElement;
+    expect(codexIcon?.getAttribute("aria-hidden")).toBe("true");
+    expect(getComputedStyle(codexIcon!).width).toBe("16px");
+    expect(codexRow?.scrollWidth).toBeLessThanOrEqual(codexRow?.clientWidth ?? 0);
+    expect(rowText(testCase.reorderCodex)).toContain(testCase.available);
+    expect(rowText(testCase.locale === "en" ? "Reorder Claude" : "调整 Claude 顺序")).toContain(
+      testCase.signIn,
+    );
+    expect(rowText(testCase.locale === "en" ? "Reorder Cursor" : "调整 Cursor 顺序")).toContain(
+      testCase.limited,
+    );
+    expect(
+      rowText(testCase.locale === "en" ? "Reorder Antigravity" : "调整 Antigravity 顺序"),
+    ).toContain(testCase.notInstalled);
+    expect(rowText(testCase.locale === "en" ? "Reorder Grok" : "调整 Grok 顺序")).toContain(
+      testCase.unavailable,
+    );
+    await expect.element(screen.getByText(testCase.summary)).toBeVisible();
+    await expect
+      .element(screen.getByRole("switch", { name: testCase.showAntigravity }))
+      .toBeEnabled();
+
+    await screen.unmount();
+    queryClient.clear();
   });
 
   it("moves a single Engine update from loading to success", async () => {

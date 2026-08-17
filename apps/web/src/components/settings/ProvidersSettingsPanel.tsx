@@ -32,11 +32,17 @@ import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
   MAX_CUSTOM_MODEL_LENGTH,
   getCustomModelsForProvider,
+  getCustomBinaryPathForProvider,
   getDefaultCustomModelsForProvider,
   patchCustomModels,
   type AppSettings,
   type AppSettingsBinding,
 } from "~/appSettings";
+import {
+  deriveProviderPickerAvailability,
+  normalizeProviderStatusForLocalConfig,
+  type ProviderPickerAvailabilityState,
+} from "~/lib/providerAvailability";
 import { getModelOptions, normalizeModelSlug } from "@omnimind/shared/model";
 import { CentralIcon } from "~/lib/central-icons";
 import { DownloadIcon, ExternalLinkIcon, Loader2Icon, PlusIcon, XIcon } from "~/lib/icons";
@@ -76,6 +82,7 @@ import { DisclosureChevron } from "../ui/DisclosureChevron";
 import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
+import { ProviderIcon } from "../ProviderIcon";
 import { DebouncedSettingTextInput } from "./DebouncedSettingTextInput";
 import { SettingResetButton, useSettingsRestoreSignal } from "./SettingControls";
 import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
@@ -482,8 +489,30 @@ function setProviderHidden(
   return hidden ? [...withoutTarget, provider] : withoutTarget;
 }
 
+function providerVisibilityStatusLabel(
+  state: ProviderPickerAvailabilityState,
+  t: SettingsTranslator,
+): string {
+  switch (state) {
+    case "checking":
+      return t("composer.engineChecking");
+    case "ready":
+      return t("settings.engineAvailable");
+    case "sign_in":
+      return t("composer.engineSignIn");
+    case "limited":
+      return t("composer.engineLimited");
+    case "not_installed":
+      return t("composer.engineNotInstalled");
+    case "unavailable":
+      return t("composer.engineUnavailable");
+  }
+}
+
 function SortableProviderVisibilityRow(props: {
   option: { provider: ProviderKind; title: string };
+  providerStatus: ServerProviderStatus | undefined;
+  statusPending: boolean;
   isHidden: boolean;
   onHiddenChange: (hidden: boolean) => void;
 }) {
@@ -497,6 +526,11 @@ function SortableProviderVisibilityRow(props: {
     transition,
     isDragging,
   } = useSortable({ id: props.option.provider });
+  const availability = props.statusPending
+    ? ({ disabled: false, state: "checking" } as const)
+    : props.providerStatus
+      ? deriveProviderPickerAvailability(props.providerStatus)
+      : ({ disabled: false, state: "unavailable" } as const);
 
   return (
     <div
@@ -523,11 +557,17 @@ function SortableProviderVisibilityRow(props: {
         >
           <CentralIcon name="dot-grid-2x3" className="size-4" />
         </button>
-        <span className="min-w-0 text-sm text-foreground">{props.option.title}</span>
+        <ProviderIcon provider={props.option.provider} className="size-4 shrink-0" />
+        <span className="min-w-0">
+          <span className="block truncate text-sm text-foreground">{props.option.title}</span>
+          <span className="block text-[11px] text-muted-foreground">
+            {providerVisibilityStatusLabel(availability.state, t)}
+          </span>
+        </span>
       </div>
       <Switch
         checked={!props.isHidden}
-        onCheckedChange={(checked) => props.onHiddenChange(!Boolean(checked))}
+        onCheckedChange={(checked) => props.onHiddenChange(!checked)}
         aria-label={t("settings.showProvider", { provider: props.option.title })}
       />
     </div>
@@ -1005,6 +1045,23 @@ export function ProvidersSettingsPanel({
       new Map((serverConfigQuery.data?.providers ?? []).map((status) => [status.provider, status])),
     [serverConfigQuery.data?.providers],
   );
+  const providerPickerStatusByProvider = useMemo(
+    () =>
+      new Map(
+        (serverConfigQuery.data?.providers ?? []).flatMap((status) => {
+          const normalized = normalizeProviderStatusForLocalConfig({
+            provider: status.provider,
+            status,
+            customBinaryPath: getCustomBinaryPathForProvider(settings, status.provider),
+          });
+          return normalized ? ([[normalized.provider, normalized]] as const) : [];
+        }),
+      ),
+    [serverConfigQuery.data?.providers, settings],
+  );
+  const availableProviderCount = orderedProviderVisibilityOptions.filter(
+    (option) => providerPickerStatusByProvider.get(option.provider)?.available === true,
+  ).length;
   const providerUpdateServerSettings = useMemo(
     () =>
       serverSettingsQuery.data
@@ -1234,11 +1291,18 @@ export function ProvidersSettingsPanel({
           title={t("settings.visibleProviders")}
           description={t("settings.visibleProvidersDescription")}
           status={
-            hiddenProviderCount > 0
-              ? t("settings.providersHidden", { count: hiddenProviderCount })
-              : isProviderOrderDirty
-                ? t("settings.customOrder")
-                : t("settings.allProvidersVisible")
+            serverConfigQuery.isPending
+              ? t("settings.engineStatusChecking")
+              : hiddenProviderCount > 0
+                ? t("settings.enginesAvailableWithHidden", {
+                    available: availableProviderCount,
+                    hidden: hiddenProviderCount,
+                  })
+                : isProviderOrderDirty
+                  ? t("settings.enginesAvailableCustomOrder", {
+                      count: availableProviderCount,
+                    })
+                  : t("settings.enginesAvailable", { count: availableProviderCount })
           }
           resetAction={
             hiddenProviderCount > 0 || isProviderOrderDirty ? (
@@ -1269,6 +1333,8 @@ export function ProvidersSettingsPanel({
                   <SortableProviderVisibilityRow
                     key={option.provider}
                     option={option}
+                    providerStatus={providerPickerStatusByProvider.get(option.provider)}
+                    statusPending={serverConfigQuery.isPending}
                     isHidden={hiddenProviderSet.has(option.provider)}
                     onHiddenChange={(hidden) =>
                       updateSettings({
