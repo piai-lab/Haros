@@ -13,7 +13,7 @@
 
 ## 索引
 
-- [source-review.md](source-review.md)：固定 UI 母体及其原生 Engine 接入的源码、权利、构建和兼容事实；§14保存Synara exact `712d88f…18ff998` 96-commit intake的逐SHA实现证据、proposed disposition与复验触发器，并明确标记尚待维护者重新确认的非采用决定。
+- [source-review.md](source-review.md)：固定 UI 母体及其原生 Engine 接入的源码、权利、构建和兼容事实；§14保存Synara exact `712d88f…18ff998` 96-commit intake的逐SHA实现证据与重新打开的非采用决定，§15保存latest local `18ff998…8f9f600` 101-commit只读intake及待维护者确认的完整decision surface。
 - [../SYNARA-INTAKE.md](../SYNARA-INTAKE.md)：未来每轮 Synara 审查、辩证吸收、`$converge` 提问、实施授权与 exact-SHA 交付的唯一操作手册。
 - [../PI-ECOSYSTEM-INTAKE.md](../PI-ECOSYSTEM-INTAKE.md)：未来每轮 Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP、OmniMind Agent Core 外部来源与必要 fork 的发现、exact-source 复核、两门授权、最小接入、验证和重新进入手册；不保存当前版本榜、安装状态或第二 package registry。
 - [source-update-intake.md](source-update-intake.md)：2026-08-11 已完成 intake 的历史协议兼容入口；仅供旧链接与研究上下文引用，不拥有未来操作规则。

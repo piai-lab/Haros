@@ -594,3 +594,73 @@ source-closed but its real Explorer/taskbar packaged journey remains externally 
 Re-run only the affected rows when the exact Synara head changes, rights/security facts change, an
 explicit trigger above fires, or a focused current-product journey disproves the claimed implementation.
 Do not turn this table into a cherry-pick backlog or infer acceptance from ancestry alone.
+
+## 15. Proposed Synara `18ff998…8f9f600` intake — pending maintainer decision
+
+### 15.1 Exact boundary and count closure
+
+The read-only source is the maintainer-provided local checkout
+`/Users/liuzaoqu/Desktop/Develop/πCode/synara`. On 2026-08-17 it is clean and detached at
+`8f9f60045ea652db7d4a6822e2f723dde073f40a`, exactly equal to `origin/main`; its local `main` ref is the
+older `661908cfde5e5d4ff9ccdc2c88f1c0e904f92983`. The current OmniMind implemented boundary
+`18ff99857d5b84adab2019c2839fa4f6df761b7c` is an ancestor of the candidate head.
+
+The range contains 101 commits: 78 non-merge commits in 23 PR/responsibility groups and 23 merge
+carriers. It changes 63 files by `+4686/-438`. The proposed accounting is `61 semantic-adopt + 2
+current-stronger + 5 decline-exact/retain-insight + 10 donor-doc/no-code + 23 merge-carrier = 101`.
+Nothing in this section is approved or authorized for implementation until the maintainer confirms the
+complete decision surface.
+
+### 15.2 Recommended semantic adoption — 61 non-merge commits
+
+| Synara group | Count | Current OmniMind gap and proposed destination |
+| --- | ---: | --- |
+| `#709` restricted OpenAI credentials | 1 | Restricted Provider children can still inherit unclassified `OPENAI_API_KEY`/Docker auth or later-registered credential names. Semantically adopt into the existing child-process classification and credential owner. |
+| `#712` duplicate Origin headers | 1 | Trusted-origin parsing currently accepts the first duplicated value. Adopt fail-closed duplicate rejection in the existing origin gate. |
+| `#715` malformed Claude auth JSON | 2 | Malformed JSON can be recorded as “not attempted” and fall through when the subprocess exits zero. Adopt fail-closed auth classification and regression tests. |
+| `#716` Codex prerelease hyphens | 2 | `split("-", 2)` drops later prerelease components. Adopt full prerelease preservation in the existing version parser. |
+| `#705` UTF-8 stream truncation | 1 | Byte truncation can cut a multibyte code point and emit replacement characters. Adopt boundary-safe truncation. |
+| `#708` multi-dot attachments | 2 | Current extension extraction rejects names with multiple dots. Adopt the bounded filename fix and MIME regression. |
+| `#710` process-output UTF-8 boundaries | 1 | Decoding each process chunk independently can corrupt split code points. Adopt one streaming decoder in the existing process runner. |
+| `#711` Windows path casing | 3 | Current normalization only lowercases a drive letter; later Windows/UNC segments can compare case-sensitively. Adopt platform-bounded case-insensitive comparison without weakening POSIX behavior. |
+| `#697` route-restore sequence fence | 1 | Shell/full/repaired snapshots can bypass EventRouter sequence fencing. Adopt a coordinator through the existing router while preserving OmniMind's `requiresEmptyProjectShellRepair` semantics. |
+| `#700` Provider adapter conformance | 1 | Current adapters lack one shared capability-contract regression. Adopt a narrow conformance helper/test, not a second Provider registry. |
+| `#704` server status CLI and runtime proof | 6 | Current `/health` does not give operators a failure-safe, identity-verified local runtime proof. Adapt as an OmniMind-branded status command using existing health/private runtime owners; do not widen public authority. |
+| `#707` private scratch workspaces | 11 | Current scratch directories are plain OS-temp recursive directories without the donor's ownership, no-follow, reuse and mode checks. Adopt the security mechanism into OmniMind private state. Do not read or silently migrate donor-branded legacy paths and do not delete unknown old data. |
+| `#706` secret env-assignment redaction | 12 | Current argument redaction covers only a small set of flags/Bearer/token patterns and can leak shell/env assignments, encodings or substitutions. Adopt bounded, fail-closed redaction in the existing diagnostics owner. |
+| `#713` Provider env diagnostic redaction | 16 | Structured/raw/truncated/nested Provider diagnostics still lack the latest bounded traversal and URL-authority protections. Adopt the hardening without logging raw secrets or copying donor fixtures into artifacts. |
+| `#692` OpenCode raw text deltas | 1 | The current suffix-prefix overlap heuristic can discard legitimate repeated streamed text. Adopt explicit snapshot/delta state tracking in the existing adapter. |
+
+These are recommended because the current gaps are observable correctness, security or operator-proof
+defects and every change has an existing OmniMind owner. Final implementation still requires focused
+fixtures; credential/Provider behavior also requires the smallest matching live probe under the local
+secret-resource rules.
+
+### 15.3 Recommended non-exact adoption — 40 commits, explicitly pending confirmation
+
+| Synara group | Count | Recommendation | Value not entering current code | Evidence that changes the recommendation |
+| --- | ---: | --- | --- | --- |
+| `#714` normalized command-not-found | 2 | `already covered / keep current stronger` | No donor code is copied. OmniMind already walks structured `_tag`, `reason`, `code` and `cause` values and recognizes `ENOENT`/`NotFound`; Synara's latest string-marker patch is narrower. | A real normalized failure bypasses current structured matching; then add the smallest regression without replacing the stronger classifier. |
+| `#698` sanitized Provider event fixtures | 5 | `decline exact harness, retain sanitizer/test design` | OmniMind does not gain Synara's roughly 800-line permanent fixture parser/sanitizer corpus. Today it has no production consumer for that parallel fixture format, so exact adoption adds a second durable test-data authority. | A current Provider adapter incident cannot be reproduced safely with focused fixtures, or two adapters need the same stable sanitized corpus; then admit one OmniMind-owned format and migration policy. |
+| `#701/#702/#703/#696/#693/#699` donor docs | 10 | `no-code, retain verified facts only` | Synara's workspace, quick-start, packaging, CI, Provider and runtime prose is not copied verbatim. OmniMind's architecture and execution owners are already more specific and copying would create a second truth. | A verified source fact is absent or false in the corresponding OmniMind owner; update that sole owner rather than import donor documentation structure. |
+| 23 merge commits | 23 | `merge carriers, no independent code` | No separately attributable product behavior is implemented from merge topology alone. | A parent/tree comparison exposes conflict-resolution bytes with independent behavior; reclassify that exact merge responsibility. |
+
+### 15.4 Reopened `712d88f…18ff998` product choices — current recommendation
+
+The prior 51-row map in §14.3 remains the exact audit record, but its material choices require a new
+maintainer decision. The current recommendation is:
+
+| Reopened choice | Current recommendation | What is intentionally not adopted |
+| --- | --- | --- |
+| Synara Goal lifecycle (15 material commits plus dependent follow-ups) | Adopt the user value semantically through OmniMind's single Task/C3 authority and current task-list projection; do not transplant a second Synara Goal schema, migrations, prompt injection, ambient continuation or retry control plane. This changes the old blanket defer into a proposed OmniMind-native admission and requires the C1→C3 construction order to be explicitly admitted. | Donor durable Goal identity and its competing timers, MCP/public surface, continuation and retry authority. |
+| Raw unmapped Provider events | Keep raw payloads out of the normal Timeline; absorb recoverability through typed, bounded and redacted diagnostics, including the proposed `#713` hardening. | A generic raw-event product surface. Loss: users cannot inspect arbitrary donor payloads directly in the Timeline. |
+| Broad debug mode | Do not transplant the donor's cross-owner debug toggle; absorb evidence-first diagnostic value into existing receipts, Provider diagnostics and task-scoped proof. | One global debug control spanning commands, drafts, runtime and UI. Loss: no single switch exposes all internals. |
+| `480/960/1440` chat-width presets | Keep responsive Workbench geometry until a real reading-width defect proves the need for a persisted preference. | Manual fixed-width density choices. Loss: users cannot force one of the donor's three widths. |
+| Dark icon autoswitch | Keep the existing OmniMind icon owner; only add appearance switching after an authorized OmniMind dark asset and packaged journey exist. | Donor dark assets/identity and immediate automatic Dock icon switching. |
+| Global icon swaps | Keep current low-noise Workbench glyphs absent focused usability/AX evidence. | Synara's broad icon-style change. This is a taste/recognition tradeoff, not a technical impossibility. |
+| Synara release/version/changelog identity | Explicitly exclude donor identity bytes. Product mechanisms in mixed commits remain independently eligible. | Synara version, changelog, What's New, release metadata and publication identity; these cannot truthfully become OmniMind release facts. |
+| Remaining current-covered/no-code/merge rows | Confirm them as evidence-based non-duplication, with their existing revalidation triggers; do not infer approval merely because current code is stronger or the commit is a merge/test-format carrier. | Duplicate/weaker code or topology-only bytes, while preserving regression insights. |
+
+This is the Gate A proposal, not a settled policy. A maintainer confirmation must cover both §15.2–15.3
+and every reopened choice in §15.4. Any requested change to one row produces a revised decision surface
+before Gate B; execution-location, speed or orchestration instructions do not approve the remaining rows.
