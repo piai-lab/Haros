@@ -27,6 +27,7 @@ import {
   type ServerProviderStatus,
   ThreadId,
   ThreadMarkerId,
+  type ThreadGoalAchievement,
   type ThreadMarker,
   type ThreadMarkerColor,
   type ThreadMarkerStyle,
@@ -636,6 +637,7 @@ const EMPTY_ACTIVITIES: OrchestrationThreadActivity[] = [];
 const EMPTY_MESSAGES: ChatMessage[] = [];
 const EMPTY_PINNED_MESSAGES: readonly PinnedMessage[] = [];
 const EMPTY_THREAD_MARKERS: readonly ThreadMarker[] = [];
+const EMPTY_GOAL_ACHIEVEMENTS: readonly ThreadGoalAchievement[] = [];
 const EMPTY_PINNED_TEXT: ReadonlyMap<MessageId, string> = new Map();
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];
 const EMPTY_PROJECT_ENTRIES: ProjectEntry[] = [];
@@ -3503,6 +3505,7 @@ export default function ChatView({
   // --- Pinned messages & notes (per-thread, server-synced through sidepanel commands) ---
   const pinnedMessages = activeThread?.pinnedMessages ?? EMPTY_PINNED_MESSAGES;
   const threadMarkers = activeThread?.threadMarkers ?? EMPTY_THREAD_MARKERS;
+  const goalAchievements = activeThread?.goalAchievements ?? EMPTY_GOAL_ACHIEVEMENTS;
   const threadNotes = activeThread?.notes ?? "";
   const pinnedMessageIds = useMemo(
     () => new Set(pinnedMessages.map((pin) => pin.messageId)),
@@ -10855,6 +10858,7 @@ export default function ChatView({
     setIsSlashStatusDialogOpen,
     handleStandaloneSlashCommand,
     handleSlashCommandSelection,
+    clearThreadGoal,
   } = useComposerSlashCommands({
     activeProject,
     activeThread,
@@ -12783,6 +12787,7 @@ export default function ChatView({
                     canForkMessage={canForkMessage}
                     onForkMessage={handleForkMessage}
                     threadMarkers={threadMarkers}
+                    goalAchievements={goalAchievements}
                     enteringUserMessageIds={enteringUserMessageIds}
                     tailAnchorMessageId={
                       tailAnchor !== null && tailAnchor.threadId === activeThread.id

@@ -65,6 +65,21 @@ const input = {
   number: 42,
 } as const;
 
+function stackEntry(position: number, number: number) {
+  return {
+    position,
+    number,
+    title: `Layer ${position}`,
+    url: `https://github.com/acme/widgets/pull/${number}`,
+    headBranch: `layer-${position}`,
+    baseBranch: position === 1 ? "main" : `layer-${position - 1}`,
+    state: "open" as const,
+    isDraft: false,
+    mergeability: "mergeable" as const,
+    mergeStateStatus: "CLEAN",
+  };
+}
+
 function detail(overrides: Partial<PullRequestDetail> = {}): PullRequestDetail {
   return {
     ...input,
@@ -104,9 +119,9 @@ function detail(overrides: Partial<PullRequestDetail> = {}): PullRequestDetail {
       position: 2,
       baseBranch: "main",
       entries: [
-        { position: 1, number: 41 },
-        { position: 2, number: 42 },
-        { position: 3, number: 43 },
+        stackEntry(1, 41),
+        stackEntry(2, 42),
+        stackEntry(3, 43),
       ],
     },
     stackMetadataIncomplete: false,
@@ -150,9 +165,9 @@ describe("PullRequestDetailPanel merge confirmation", () => {
         position: 2,
         baseBranch: "release",
         entries: [
-          { position: 1, number: 40 },
-          { position: 2, number: 42 },
-          { position: 3, number: 43 },
+          stackEntry(1, 40),
+          stackEntry(2, 42),
+          stackEntry(3, 43),
         ],
       },
     });
@@ -208,6 +223,36 @@ describe("PullRequestDetailPanel merge confirmation", () => {
     expect(confirm).toHaveAttribute("aria-disabled", "true");
     confirm.element().focus();
     await userEvent.keyboard(" ");
+    expect(harness.action).not.toHaveBeenCalled();
+  });
+
+  it("blocks a selected merge when an earlier stack member is still a draft", async () => {
+    harness.detail = detail({
+      stack: {
+        number: 8,
+        size: 3,
+        position: 2,
+        baseBranch: "main",
+        entries: [
+          { ...stackEntry(1, 41), isDraft: true },
+          stackEntry(2, 42),
+          stackEntry(3, 43),
+        ],
+      },
+    });
+    const queryClient = makeQueryClient();
+    await render(
+      <QueryClientProvider client={queryClient}>
+        <PullRequestDetailPanel input={input} pollingEnabled={false} />
+      </QueryClientProvider>,
+    );
+
+    const merge = page.getByRole("button", { name: "Merge", exact: true });
+    await vi.waitFor(() => expect(merge).toHaveAttribute("aria-disabled", "true"));
+    await merge.hover();
+    await vi.waitFor(() => expect(page.getByText("PR #41 is still a draft.")).toBeVisible());
+    merge.element().focus();
+    await userEvent.keyboard("{Enter}");
     expect(harness.action).not.toHaveBeenCalled();
   });
 

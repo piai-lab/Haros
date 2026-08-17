@@ -161,6 +161,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Control spacing in the sidebar, composer, chat gutters, and settings rows without changing font size. compact comfortable",
   },
   {
+    id: "appearance:chat-width",
+    section: "appearance",
+    title: "Chat width",
+    keywords:
+      "Control how wide the chat column grows so tables and wide content get more room. standard wide full",
+  },
+  {
     id: "appearance:base-font-size",
     section: "appearance",
     title: "Base font size",
@@ -463,6 +470,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Assistant output": "settings.assistantOutput",
   "Automatic CLI update checks": "settings.automaticCliUpdates",
   "Base font size": "settings.baseFontSize",
+  "Chat width": "settings.chatWidth",
   "Capture sound": "settings.captureSound",
   Chat: "nav.chat",
   "Default provider": "settings.defaultProvider",

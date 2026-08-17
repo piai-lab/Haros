@@ -62,6 +62,7 @@ interface ChatTranscriptPaneProps {
   canForkMessage?: ComponentProps<typeof MessagesTimeline>["canForkMessage"];
   onForkMessage?: ComponentProps<typeof MessagesTimeline>["onForkMessage"];
   threadMarkers?: readonly ThreadMarker[];
+  goalAchievements?: ComponentProps<typeof MessagesTimeline>["goalAchievements"];
   enteringUserMessageIds?: ComponentProps<typeof MessagesTimeline>["enteringUserMessageIds"];
   tailAnchorMessageId?: ComponentProps<typeof MessagesTimeline>["tailAnchorMessageId"];
   tailAnchorScrollInFlightRef?: ComponentProps<
@@ -136,6 +137,7 @@ export function ChatTranscriptPane({
   canForkMessage,
   onForkMessage,
   threadMarkers,
+  goalAchievements,
   enteringUserMessageIds,
   tailAnchorMessageId,
   tailAnchorScrollInFlightRef,
@@ -245,6 +247,7 @@ export function ChatTranscriptPane({
             {...(canForkMessage ? { canForkMessage } : {})}
             {...(onForkMessage ? { onForkMessage } : {})}
             {...(threadMarkers ? { threadMarkers } : {})}
+            {...(goalAchievements ? { goalAchievements } : {})}
             {...(enteringUserMessageIds ? { enteringUserMessageIds } : {})}
             tailAnchorMessageId={tailAnchorMessageId ?? null}
             {...(tailAnchorScrollInFlightRef ? { tailAnchorScrollInFlightRef } : {})}

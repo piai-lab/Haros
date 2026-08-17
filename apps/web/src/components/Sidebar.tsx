@@ -31,7 +31,7 @@ import {
   WorktreeIcon,
   XIcon,
 } from "~/lib/icons";
-import { createCentralIconComponent } from "~/lib/central-icons";
+import { CentralIcon, createCentralIconComponent } from "~/lib/central-icons";
 import {
   PR_STATE_PRESENTATION_ICONS,
   resolvePrStatePresentation,
@@ -396,7 +396,6 @@ import {
 import { GroupEditorDialog } from "./GroupEditorDialog";
 import {
   ConversationGroupPickerDialog,
-  conversationGroupColor,
   type ConversationGroupPickerTarget,
 } from "./ConversationGroupPickerDialog";
 import {
@@ -408,7 +407,8 @@ import {
 import {
   createConversationGroup,
   deleteConversationGroup,
-  renameConversationGroup,
+  reorderConversationGroups,
+  updateConversationGroup,
 } from "../lib/conversationGroups";
 
 // Central glyphs for the sidebar section-header buttons (expand/collapse, sort, add).
@@ -1553,8 +1553,12 @@ export default function Sidebar() {
   const [renameProjectDialogId, setRenameProjectDialogId] = useState<ProjectId | null>(null);
   const [projectContextMenuState, setProjectContextMenuState] =
     useState<ProjectContextMenuState | null>(null);
-  const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(false);
-  const [expandedGroupIds, setExpandedGroupIds] = useState<ReadonlySet<SpaceId>>(() => new Set());
+  const [groupsSectionExpanded, setGroupsSectionExpanded] = useState(
+    () => readSidebarUiState().groupsSectionExpanded,
+  );
+  const [expandedGroupIds, setExpandedGroupIds] = useState<ReadonlySet<SpaceId>>(
+    () => new Set(readSidebarUiState().expandedGroupIds.map((id) => SpaceId.makeUnsafe(id))),
+  );
   const [groupEditorTarget, setGroupEditorTarget] = useState<GroupEditorTarget | null>(null);
   const [groupPickerTarget, setGroupPickerTarget] = useState<ConversationGroupPickerTarget | null>(
     null,
@@ -1596,6 +1600,10 @@ export default function Sidebar() {
         setDismissedThreadStatusKeyByThreadId(state.dismissedThreadStatusKeyByThreadId);
         setLastThreadRoute(state.lastThreadRoute);
         setActivityViewEnabled(state.activityViewEnabled);
+        setGroupsSectionExpanded(state.groupsSectionExpanded);
+        setExpandedGroupIds(
+          new Set(state.expandedGroupIds.map((id) => SpaceId.makeUnsafe(id))),
+        );
       }),
     [],
   );
@@ -3188,9 +3196,17 @@ export default function Sidebar() {
         dismissedThreadStatusKeyByThreadId,
         lastThreadRoute: nextLastThreadRoute,
         activityViewEnabled,
+        groupsSectionExpanded,
+        expandedGroupIds: [...expandedGroupIds],
       });
     },
-    [activityViewEnabled, dismissedThreadStatusKeyByThreadId, threadListExtraPagesByProjectCwd],
+    [
+      activityViewEnabled,
+      dismissedThreadStatusKeyByThreadId,
+      expandedGroupIds,
+      groupsSectionExpanded,
+      threadListExtraPagesByProjectCwd,
+    ],
   );
   const { activateThreadFromSidebarIntent } = useThreadActivationController({
     activeSplitView,
@@ -3652,16 +3668,21 @@ export default function Sidebar() {
     [spaces, t],
   );
   const handleGroupEditorSubmit = useCallback(
-    async (name: string) => {
+    async (value: { readonly name: string; readonly icon: Space["icon"] }) => {
       const api = readNativeApi();
       if (!api || !groupEditorTarget) throw new Error(t("groups.saveGroupFailed"));
       if (groupEditorTarget.mode === "create") {
-        await createConversationGroup({ api, name });
+        await createConversationGroup({ api, name: value.name, icon: value.icon });
         return;
       }
       const current = spaces.find((group) => group.id === groupEditorTarget.groupId);
-      if (!current || current.name === name) return;
-      await renameConversationGroup({ api, groupId: current.id, name });
+      if (!current || (current.name === value.name && current.icon === value.icon)) return;
+      await updateConversationGroup({
+        api,
+        groupId: current.id,
+        ...(current.name !== value.name ? { name: value.name } : {}),
+        ...(current.icon !== value.icon ? { icon: value.icon } : {}),
+      });
     },
     [groupEditorTarget, spaces, t],
   );
@@ -3687,9 +3708,22 @@ export default function Sidebar() {
     async (group: Space, position: { x: number; y: number }) => {
       const api = readNativeApi();
       if (!api) return;
+      const index = spaces.findIndex((candidate) => candidate.id === group.id);
       const clicked = await api.contextMenu.show(
         [
           { id: "add-conversations", label: t("groups.addConversations") },
+          ...(index > 0
+            ? [{ id: "move-up", label: t("groups.moveUp"), separatorBefore: true }]
+            : []),
+          ...(index >= 0 && index < spaces.length - 1
+            ? [
+                {
+                  id: "move-down",
+                  label: t("groups.moveDown"),
+                  separatorBefore: index <= 0,
+                },
+              ]
+            : []),
           { id: "rename", label: t("groups.rename"), separatorBefore: true },
           { id: "delete", label: t("groups.delete"), destructive: true },
         ],
@@ -3697,13 +3731,30 @@ export default function Sidebar() {
       );
       if (clicked === "add-conversations") {
         setGroupPickerTarget({ kind: "group", group });
+      } else if (clicked === "move-up" || clicked === "move-down") {
+        const targetIndex = clicked === "move-up" ? index - 1 : index + 1;
+        if (index < 0 || targetIndex < 0 || targetIndex >= spaces.length) return;
+        const orderedGroupIds = spaces.map((candidate) => candidate.id);
+        [orderedGroupIds[index], orderedGroupIds[targetIndex]] = [
+          orderedGroupIds[targetIndex]!,
+          orderedGroupIds[index]!,
+        ];
+        try {
+          await reorderConversationGroups({ api, movedGroupId: group.id, orderedGroupIds });
+        } catch (cause) {
+          toastManager.add({
+            type: "error",
+            title: t("groups.reorderFailed"),
+            description: cause instanceof Error ? cause.message : t("groups.saveFailed"),
+          });
+        }
       } else if (clicked === "rename") {
         setGroupEditorTarget({ mode: "edit", groupId: group.id });
       } else if (clicked === "delete") {
         await handleDeleteGroup(group);
       }
     },
-    [handleDeleteGroup, setGroupEditorTarget, setGroupPickerTarget, t],
+    [handleDeleteGroup, setGroupEditorTarget, setGroupPickerTarget, spaces, t],
   );
   const standardProjectSidebarDataById = useMemo<ReadonlyMap<ProjectId, SidebarDerivedProjectData>>(
     () =>
@@ -3809,10 +3860,14 @@ export default function Sidebar() {
       dismissedThreadStatusKeyByThreadId,
       lastThreadRoute,
       activityViewEnabled,
+      groupsSectionExpanded,
+      expandedGroupIds: [...expandedGroupIds],
     });
   }, [
     activityViewEnabled,
     dismissedThreadStatusKeyByThreadId,
+    expandedGroupIds,
+    groupsSectionExpanded,
     threadListExtraPagesByProjectCwd,
     lastThreadRoute,
   ]);
@@ -6023,9 +6078,7 @@ export default function Sidebar() {
                                     }}
                                   >
                                     <SidebarLeadingIcon size="sm">
-                                      <TagIcon
-                                        className={cn("size-4", conversationGroupColor(group.id))}
-                                      />
+                                      <CentralIcon name={group.icon} className="size-4" />
                                     </SidebarLeadingIcon>
                                     <span className="min-w-0 flex-1 truncate">{group.name}</span>
                                     <span className="text-[length:var(--app-font-size-ui-xs,10px)] tabular-nums text-muted-foreground/55">
@@ -6145,6 +6198,7 @@ export default function Sidebar() {
       <GroupEditorDialog
         open={groupEditorTarget !== null}
         {...(editedGroup ? { initialName: editedGroup.name } : {})}
+        {...(editedGroup ? { initialIcon: editedGroup.icon } : {})}
         existingNames={spaces
           .filter((group) => group.id !== editedGroup?.id)
           .map((group) => group.name)}

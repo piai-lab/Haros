@@ -18,14 +18,23 @@ function readTopLeftAlpha(image: HTMLImageElement): number {
   return context?.getImageData(0, 0, 1, 1).data[3] ?? -1;
 }
 
-it("uses the official light and dark app-icon variants and selects the alternate", async () => {
+it("uses the OmniMind icon variants and selects the alternate", async () => {
   const onValueChange = vi.fn();
-  const mounted = await render(<AppIconPicker value="default" onValueChange={onValueChange} />);
+  const mounted = await render(
+    <AppIconPicker
+      platform="MacIntel"
+      value="default"
+      onValueChange={onValueChange}
+    />,
+  );
 
-  await expect.element(mounted.getByRole("button", { name: "Default icon" })).toBeVisible();
+  await expect
+    .element(mounted.getByRole("button", { name: "Default icon" }))
+    .toBeVisible();
   const iconButton = mounted.getByRole("button", { name: "Icon", exact: true });
   const artwork = iconButton.element().querySelector("img");
-  if (!(artwork instanceof HTMLImageElement)) throw new Error("Icon artwork is missing");
+  if (!(artwork instanceof HTMLImageElement))
+    throw new Error("Icon artwork is missing");
   await vi.waitFor(() => expect(artwork.complete).toBe(true));
   const buttonRect = iconButton.element().getBoundingClientRect();
   const artworkRect = artwork.getBoundingClientRect();
@@ -40,4 +49,26 @@ it("uses the official light and dark app-icon variants and selects the alternate
   await iconButton.click();
 
   expect(onValueChange).toHaveBeenCalledWith("icon");
+});
+
+it("offers the dark artwork only on macOS", async () => {
+  const mac = await render(
+    <AppIconPicker platform="MacIntel" value="dark" onValueChange={vi.fn()} />,
+  );
+  await expect
+    .element(mac.getByRole("button", { name: "Dark icon" }))
+    .toBeVisible();
+  expect(
+    mac
+      .getByRole("button", { name: "Dark icon" })
+      .element()
+      .querySelector("img")
+      ?.getAttribute("src"),
+  ).toBe("/app-icons/dark.png");
+  mac.unmount();
+
+  const windows = await render(
+    <AppIconPicker platform="Win32" value="default" onValueChange={vi.fn()} />,
+  );
+  expect(windows.getByRole("button", { name: "Dark icon" }).query()).toBeNull();
 });

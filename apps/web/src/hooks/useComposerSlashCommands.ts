@@ -9,6 +9,7 @@ import {
   type ProviderNativeCommandDescriptor,
   type ProviderModelOptions,
   type RuntimeMode,
+  THREAD_GOAL_MAX_CHARS,
   type ThreadId,
   WsRpcError,
 } from "@omnimind/contracts";
@@ -28,6 +29,7 @@ import {
   parseComposerSlashInvocationForCommands,
   parseFastSlashCommandAction,
   parseForkSlashCommandArgs,
+  parseGoalSlashCommandArgs,
   type ForkSlashCommandTarget,
 } from "../composerSlashCommands";
 import {
@@ -45,6 +47,8 @@ import { downloadUrlAsBlob } from "../lib/browserDownload";
 import { resolveWsHttpUrl } from "../lib/wsHttpUrl";
 import { useFeedbackDialogStore } from "../feedbackDialogStore";
 import { useI18n } from "../i18n";
+import { useComposerDraftStore } from "../composerDraftStore";
+import { dispatchThreadGoal, dispatchThreadGoalPaused } from "../threadGoal";
 import {
   createOrJoinSidechat,
   createSidechatThread,
@@ -142,7 +146,7 @@ export function useComposerSlashCommands(input: {
   syncServerShellSnapshot: (snapshot: OrchestrationShellSnapshot) => void;
   navigateToThread: (threadId: ThreadId, options?: { splitViewId?: SplitViewId }) => Promise<void>;
   handleClearConversation: () => Promise<void> | void;
-  handleInteractionModeChange: (mode: "default" | "plan") => Promise<void> | void;
+  handleInteractionModeChange: (mode: ProviderInteractionMode) => Promise<void> | void;
   openForkTargetPicker: () => void;
   openReviewTargetPicker: () => void;
   setComposerDraftProviderModelOptions: (
@@ -320,6 +324,100 @@ export function useComposerSlashCommands(input: {
       return true;
     },
     [fastModeEnabled, supportsFastSlashCommand, setFastModeFromSlashCommand, t],
+  );
+
+  const persistThreadGoal = useCallback(
+    async (goal: string): Promise<boolean> => {
+      if (!isServerThread && activeThread) {
+        const draftStore = useComposerDraftStore.getState();
+        if (draftStore.getDraftThread(activeThread.id)) {
+          draftStore.setDraftThreadContext(activeThread.id, { goal });
+          return true;
+        }
+      }
+      if (!isServerThread || !activeThread) {
+        toastManager.add({
+          type: "warning",
+          title: t("composer.goalUnavailable"),
+          description: t("composer.goalUnavailableDescription"),
+        });
+        return false;
+      }
+      try {
+        await dispatchThreadGoal(activeThread.id, goal);
+        return true;
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: t("composer.goalUpdateFailed"),
+          description: error instanceof Error ? error.message : t("composer.goalUpdateFailedDescription"),
+        });
+        return false;
+      }
+    },
+    [activeThread, isServerThread, t],
+  );
+
+  const clearThreadGoal = useCallback(async () => {
+    if (await persistThreadGoal("")) {
+      toastManager.add({ type: "success", title: t("composer.goalCleared") });
+    }
+  }, [persistThreadGoal, t]);
+
+  const setThreadGoalPaused = useCallback(
+    async (paused: boolean): Promise<boolean> => {
+      if (!isServerThread || !activeThread) return false;
+      try {
+        await dispatchThreadGoalPaused(activeThread.id, paused);
+        return true;
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: t(paused ? "composer.goalPauseFailed" : "composer.goalResumeFailed"),
+          description: error instanceof Error ? error.message : t("composer.goalUpdateFailedDescription"),
+        });
+        return false;
+      }
+    },
+    [activeThread, isServerThread, t],
+  );
+
+  const runGoalSlashCommand = useCallback(
+    async (args: string) => {
+      const action = parseGoalSlashCommandArgs(args);
+      if (action.action === "show") {
+        const currentGoal = activeThread?.goal?.trim();
+        toastManager.add(currentGoal
+          ? { type: "info", title: t("composer.goalTitle"), description: currentGoal }
+          : { type: "info", title: t("composer.goalNotSet") });
+        return;
+      }
+      if (action.action === "too-long") {
+        toastManager.add({
+          type: "warning",
+          title: t("composer.goalTooLong"),
+          description: t("composer.goalTooLongDescription", { count: THREAD_GOAL_MAX_CHARS.toLocaleString() }),
+        });
+        return;
+      }
+      if (action.action === "clear") return void (await clearThreadGoal());
+      if (action.action === "pause" || action.action === "resume") {
+        const paused = action.action === "pause";
+        if (await setThreadGoalPaused(paused)) {
+          toastManager.add({ type: "success", title: t(paused ? "composer.goalPaused" : "composer.goalResumed") });
+        }
+        return;
+      }
+      if (action.action === "edit") {
+        editorActions.setComposerPromptValue(`/goal ${activeThread?.goal?.trim() ?? ""}`);
+        editorActions.scheduleComposerFocus();
+        return;
+      }
+      if (await persistThreadGoal(action.goal)) {
+        toastManager.add({ type: "success", title: t("composer.goalUpdated") });
+      }
+    },
+    [activeThread?.goal, clearThreadGoal, editorActions, persistThreadGoal, setThreadGoalPaused, t],
   );
 
   const createForkThreadFromSlashCommand = useCallback(
@@ -869,14 +967,23 @@ export function useComposerSlashCommands(input: {
         await compactProviderThread();
         return true;
       }
-      if (slashInvocation.command === "plan" || slashInvocation.command === "default") {
-        await handleInteractionModeChange(slashInvocation.command === "plan" ? "plan" : "default");
+      if (
+        slashInvocation.command === "plan" ||
+        slashInvocation.command === "debug" ||
+        slashInvocation.command === "default"
+      ) {
+        await handleInteractionModeChange(slashInvocation.command);
         editorActions.clearComposerSlashDraft();
         return true;
       }
       if (slashInvocation.command === "status") {
         editorActions.clearComposerSlashDraft();
         setIsSlashStatusDialogOpen(true);
+        return true;
+      }
+      if (slashInvocation.command === "goal") {
+        editorActions.clearComposerSlashDraft();
+        await runGoalSlashCommand(slashInvocation.args);
         return true;
       }
       if (slashInvocation.command === "subagents") {
@@ -1005,6 +1112,7 @@ export function useComposerSlashCommands(input: {
       runCodexReviewStart,
       runExportSlashCommand,
       runFastSlashCommand,
+      runGoalSlashCommand,
     ],
   );
 
@@ -1015,8 +1123,8 @@ export function useComposerSlashCommands(input: {
         return;
       }
 
-      if (item.command === "model") {
-        const replacement = "/model ";
+      if (item.command === "model" || item.command === "goal") {
+        const replacement = `/${item.command} `;
         const replacementRangeEnd = extendReplacementRangeForTrailingSpace(
           snapshot.value,
           trigger.rangeEnd,
@@ -1079,8 +1187,8 @@ export function useComposerSlashCommands(input: {
         return;
       }
 
-      if (item.command === "plan" || item.command === "default") {
-        void handleInteractionModeChange(item.command === "plan" ? "plan" : "default");
+      if (item.command === "plan" || item.command === "debug" || item.command === "default") {
+        void handleInteractionModeChange(item.command);
         const applied = clearSlashCommandFromComposer();
         if (wasPromptReplacementApplied(applied)) {
           editorActions.setComposerHighlightedItemId(null);
@@ -1234,5 +1342,7 @@ export function useComposerSlashCommands(input: {
     setIsSlashStatusDialogOpen,
     handleStandaloneSlashCommand,
     handleSlashCommandSelection,
+    clearThreadGoal,
+    setThreadGoalPaused,
   };
 }

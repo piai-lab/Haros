@@ -10,12 +10,7 @@ import type { WorkLogOmniMindThreadCreation } from "../../session-logic";
 import { ProviderIcon } from "../ProviderIcon";
 import { OmniMindLogo } from "../OmniMindLogo";
 import { Button } from "../ui/button";
-
-function threadMeta(thread: WorkLogOmniMindThreadCreation["threads"][number]): string {
-  const model = formatModelDisplayName(thread.model) ?? thread.model;
-  const environment = thread.environment === "worktree" ? "Worktree" : "Local";
-  return `${PROVIDER_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
-}
+import { useI18n } from "../../i18n";
 
 export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCard({
   creation,
@@ -24,11 +19,26 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
   readonly creation: WorkLogOmniMindThreadCreation;
   readonly onOpenThread?: (threadId: string) => void;
 }) {
+  const { t } = useI18n();
+  const threadMeta = (thread: WorkLogOmniMindThreadCreation["threads"][number]): string => {
+    const model = formatModelDisplayName(thread.model) ?? thread.model;
+    const environment = t(
+      thread.environment === "worktree"
+        ? "threadCreation.environmentWorktree"
+        : "threadCreation.environmentLocal",
+    );
+    return `${PROVIDER_DISPLAY_NAMES[thread.provider]} · ${model} · ${environment}`;
+  };
   const singleThread = creation.threads.length === 1 ? creation.threads[0] : undefined;
-  const title = singleThread ? "Thread created" : `${creation.createdCount} threads created`;
+  const title = singleThread
+    ? t("threadCreation.singleTitle")
+    : t("threadCreation.multipleTitle", { count: creation.createdCount });
   const summary = singleThread
     ? singleThread.title
-    : `${creation.createdCount}/${creation.requestedCount} requested threads created`;
+    : t("threadCreation.multipleSummary", {
+        created: creation.createdCount,
+        requested: creation.requestedCount,
+      });
 
   return (
     <div
@@ -61,7 +71,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
             className="shrink-0"
             onClick={() => onOpenThread(singleThread.threadId)}
           >
-            Open thread
+            {t("threadCreation.openThread")}
           </Button>
         ) : null}
       </div>
@@ -90,7 +100,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
                   className="shrink-0"
                   onClick={() => onOpenThread(thread.threadId)}
                 >
-                  Open
+                  {t("common.open")}
                 </Button>
               ) : null}
             </div>

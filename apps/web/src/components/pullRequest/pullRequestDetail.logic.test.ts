@@ -20,11 +20,18 @@ import {
   stripHtmlComments,
 } from "./pullRequestDetail.logic";
 
-const stackEntries = [
-  { position: 1, number: 41 },
-  { position: 2, number: 42 },
-  { position: 3, number: 43 },
-];
+const stackEntries = [1, 2, 3].map((position) => ({
+  position,
+  number: 40 + position,
+  title: `Layer ${position}`,
+  url: `https://github.com/acme/app/pull/${40 + position}`,
+  headBranch: `layer-${position}`,
+  baseBranch: position === 1 ? "main" : `layer-${position - 1}`,
+  state: "open" as const,
+  isDraft: false,
+  mergeability: "mergeable" as const,
+  mergeStateStatus: "CLEAN",
+}));
 
 function makeCommit(overrides: Partial<PullRequestCommit> = {}): PullRequestCommit {
   return {

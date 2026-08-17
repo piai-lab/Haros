@@ -414,6 +414,8 @@ export function useComposerCommandMenuItems(input: {
               model: "composer.command.modelDescription",
               plan: "composer.command.planDescription",
               default: "composer.command.defaultDescription",
+              debug: "composer.command.debugDescription",
+              goal: "composer.command.goalDescription",
               review: "composer.command.reviewDescription",
               fork: "composer.command.forkDescription",
               side: "composer.command.sideDescription",

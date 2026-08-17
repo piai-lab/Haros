@@ -279,7 +279,7 @@ export function buildComposerAutomationDraft(input: {
           : "",
       maxIterations:
         automationIntent.maxIterations === null ? "" : String(automationIntent.maxIterations),
-      stopOnError: true,
+      stopAfterFailures: baseForm.stopAfterFailures,
       // Stop clauses are mode-independent: a standalone or dedicated automation retires
       // itself on the same condition a heartbeat would.
       stopWhen: automationStopWhen,

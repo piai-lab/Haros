@@ -1,4 +1,9 @@
-import type { GitBranch, ProviderKind } from "@omnimind/contracts";
+import {
+  THREAD_GOAL_MAX_CHARS,
+  type GitBranch,
+  type ProviderInteractionMode,
+  type ProviderKind,
+} from "@omnimind/contracts";
 import {
   BUILT_IN_COMPOSER_SLASH_COMMANDS,
   isBuiltInComposerSlashCommandName,
@@ -25,6 +30,14 @@ export interface ComposerSlashInvocation {
 
 export type FastSlashCommandAction = "toggle" | "on" | "off" | "status" | "invalid";
 export type ForkSlashCommandTarget = "local" | "worktree";
+export type GoalSlashCommandAction =
+  | { readonly action: "show" }
+  | { readonly action: "clear" }
+  | { readonly action: "pause" }
+  | { readonly action: "resume" }
+  | { readonly action: "edit" }
+  | { readonly action: "set"; readonly goal: string }
+  | { readonly action: "too-long" };
 
 const CLAUDE_NATIVE_COMMAND_ALIASES: Record<string, readonly string[]> = {
   clear: ["reset", "new"],
@@ -168,6 +181,12 @@ const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
     description: "Switch this thread back to normal chat mode",
     source: "app",
   },
+  debug: {
+    command: "debug",
+    label: "/debug",
+    description: "Switch this thread into evidence-first debug mode",
+    source: "app",
+  },
   review: {
     command: "review",
     label: "/review",
@@ -190,6 +209,12 @@ const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
     command: "status",
     label: "/status",
     description: "Show context usage and rate-limit status",
+    source: "app",
+  },
+  goal: {
+    command: "goal",
+    label: "/goal",
+    description: "Set, edit, pause, resume, or clear this thread's persistent goal",
     source: "app",
   },
   subagents: {
@@ -276,7 +301,7 @@ export function canOfferForkSlashCommand(input: {
   terminalContextCount: number;
   selectedSkillCount: number;
   selectedMentionCount: number;
-  interactionMode: "default" | "plan";
+  interactionMode: ProviderInteractionMode;
 }): boolean {
   return (
     !hasMeaningfulComposerText(input.prompt) &&
@@ -294,7 +319,7 @@ export function canOfferSideSlashCommand(input: {
   terminalContextCount: number;
   selectedSkillCount: number;
   selectedMentionCount: number;
-  interactionMode: "default" | "plan";
+  interactionMode: ProviderInteractionMode;
   isSidechat: boolean;
 }): boolean {
   return (
@@ -359,6 +384,18 @@ export function parseFastSlashCommandAction(text: string): FastSlashCommandActio
     return "status";
   }
   return "invalid";
+}
+
+export function parseGoalSlashCommandArgs(args: string): GoalSlashCommandAction {
+  const goal = args.trim();
+  if (!goal) return { action: "show" };
+  const control = goal.toLowerCase();
+  if (control === "clear") return { action: "clear" };
+  if (control === "pause" || control === "resume" || control === "edit") {
+    return { action: control };
+  }
+  if (goal.length > THREAD_GOAL_MAX_CHARS) return { action: "too-long" };
+  return { action: "set", goal };
 }
 
 export function resolveComposerSlashRootBranch(input: {

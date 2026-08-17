@@ -33,6 +33,7 @@ import { useProfileName } from "../profile/useProfileName";
 import { useProfileAvatarColor } from "../profile/useProfileAvatarColor";
 import { useProfileAvatarImage } from "../profile/useProfileAvatarImage";
 import { ProfileAvatar } from "../profile/ProfileAvatar";
+import { ShareDialog } from "../profile/ShareDialog";
 import { useI18n } from "~/i18n";
 import {
   formatCompact,
@@ -80,6 +81,7 @@ function ProfileContent({
 }) {
   const { locale, t } = useI18n();
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const defaultName = toDisplayName(stats.identity.homeDirBasename);
   const { name, setName } = useProfileName(defaultName);
@@ -117,6 +119,10 @@ function ProfileContent({
     <div className="flex min-w-0 flex-col gap-7">
       {/* Action row */}
       <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => setShareOpen(true)}>
+          <CentralIcon name="share" />
+          {t("settings.exportProfileActivityAction")}
+        </Button>
         <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
           <CentralIcon name="pencil" />
           {t("settings.edit")}
@@ -307,6 +313,16 @@ function ProfileContent({
           setAvatarColor(nextColor);
           setAvatarImage(nextImage);
         }}
+      />
+      <ShareDialog
+        stats={stats}
+        tokenStats={tokenStats}
+        displayName={name}
+        handle={handle}
+        avatarColor={avatarColor}
+        avatarImage={avatarImage}
+        open={shareOpen}
+        onOpenChange={setShareOpen}
       />
     </div>
   );

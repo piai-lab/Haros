@@ -91,6 +91,7 @@ import {
   pullRequestMergeExpectationsEqual,
   pullRequestStackNavigation,
 } from "./pullRequestDetail.logic";
+import { assessPullRequestStack, pullRequestMergeBlocker } from "./pullRequestStack.logic";
 
 type DetailTab = "summary" | "timeline" | "code";
 type MergeConfirmationSnapshot = {
@@ -370,8 +371,31 @@ export function PullRequestDetailPanel({
     { value: "code", label: t("pullRequest.tabCode") },
   ];
   const stackNavigation = detail ? pullRequestStackNavigation(detail) : null;
+  const stackAssessment = detail?.stack ? assessPullRequestStack(detail.stack) : null;
+  const mergeBlocker = detail ? pullRequestMergeBlocker(detail, stackAssessment) : null;
+  // Preserve the existing fail-closed confirmation journey for unavailable metadata: it remains
+  // keyboard reachable and explains how to recover, but cannot dispatch. Verified lifecycle
+  // blockers inside a complete stack stay inert at the primary button.
+  const actionMergeBlocker =
+    mergeBlocker?.kind === "metadata-incomplete" ? null : mergeBlocker;
+  const mergeBlockerText = (() => {
+    if (!mergeBlocker) return null;
+    if (mergeBlocker.kind === "metadata-incomplete") {
+      return t("pullRequest.mergeMetadataUnavailable");
+    }
+    if (mergeBlocker.kind === "conflicting") return t("pullRequest.resolveBeforeMerge");
+    if (mergeBlocker.kind === "closed") {
+      return t("pullRequest.stackMemberClosed", { number: mergeBlocker.number });
+    }
+    if (mergeBlocker.kind === "draft") {
+      return t("pullRequest.stackMemberDraft", { number: mergeBlocker.number });
+    }
+    return mergeBlocker.number > 0
+      ? t("pullRequest.stackMemberNotReady", { number: mergeBlocker.number })
+      : t("pullRequest.stackNotReady");
+  })();
   const currentMergeExpectation =
-    detail && !detailQuery.isError ? pullRequestMergeExpectation(detail) : null;
+    detail && !detailQuery.isError && !actionMergeBlocker ? pullRequestMergeExpectation(detail) : null;
   const mergeConfirmation = isCurrentPanelState ? panelState.mergeConfirmation : null;
   const mergeConfirmationStale =
     confirmAction === "merge" &&
@@ -510,7 +534,7 @@ export function PullRequestDetailPanel({
                       "Ready for review". Hidden while conflicting — every method would fail. */}
                   {detail.state === "open" &&
                   !detail.isDraft &&
-                  detail.mergeability !== "conflicting" &&
+                  !actionMergeBlocker &&
                   allowedMethods.length > 0 ? (
                     <>
                       <MenuRadioGroup
@@ -581,7 +605,7 @@ export function PullRequestDetailPanel({
                 >
                   {t("pullRequest.readyForReview")}
                 </Button>
-              ) : detail.state === "open" && detail.mergeability === "conflicting" ? (
+              ) : detail.state === "open" && actionMergeBlocker ? (
                 // Non-draft only (a draft's next step is "Ready for review"). The header keeps
                 // saying Merge — the action the PR is heading for — but the pill is inert until
                 // the branch is reconciled, and hovering it says why. No method chevron: there
@@ -606,7 +630,7 @@ export function PullRequestDetailPanel({
                   >
                     {t("pullRequest.merge")}
                   </TooltipTrigger>
-                  <TooltipPopup side="bottom">{t("pullRequest.resolveBeforeMerge")}</TooltipPopup>
+                  <TooltipPopup side="bottom">{mergeBlockerText}</TooltipPopup>
                 </Tooltip>
               ) : detail.state === "open" && !detail.isDraft && allowedMethods.length > 0 ? (
                 // One pill, no method chevron beside it: a split button's label can never sit

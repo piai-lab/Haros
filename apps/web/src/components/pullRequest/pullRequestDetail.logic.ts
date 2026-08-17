@@ -18,6 +18,7 @@ import type {
 import type { RightDockPane } from "~/rightDockStore.logic";
 
 import { pullRequestMarkdownPreview } from "./pullRequestMarkdown.logic";
+import { pullRequestStackTargetEntries } from "./pullRequestStack.logic";
 import type { AppLocale } from "~/locale";
 
 export type PullRequestStackNavigation = {
@@ -60,9 +61,7 @@ export function pullRequestMergeExpectation(
   const stack = detail.stack;
   if (!stack) return { kind: "standalone", baseBranch: detail.baseBranch };
   if (!pullRequestStackNavigation(detail)) return null;
-  const targetPullRequestNumbers = stack.entries
-    .slice(0, stack.position)
-    .map((entry) => entry.number);
+  const targetPullRequestNumbers = pullRequestStackTargetEntries(stack).map((entry) => entry.number);
   if (targetPullRequestNumbers.at(-1) !== detail.number) return null;
   return {
     kind: "stack",

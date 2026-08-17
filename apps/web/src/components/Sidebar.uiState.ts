@@ -14,6 +14,9 @@ export type SidebarUiState = {
   lastThreadRoute: LastThreadRoute | null;
   /** Swaps the Projects surface for the flat task-feed Activity view. */
   activityViewEnabled: boolean;
+  /** Keeps the Thread Group affordance stable across route remounts without adding a Group store. */
+  groupsSectionExpanded: boolean;
+  expandedGroupIds: readonly string[];
 };
 
 const DEFAULT_SIDEBAR_UI_STATE: SidebarUiState = {
@@ -21,6 +24,8 @@ const DEFAULT_SIDEBAR_UI_STATE: SidebarUiState = {
   dismissedThreadStatusKeyByThreadId: {},
   lastThreadRoute: null,
   activityViewEnabled: false,
+  groupsSectionExpanded: false,
+  expandedGroupIds: [],
 };
 
 // Persisted paging is a request, not a promise: render-time clamping trims it to the real
@@ -78,6 +83,8 @@ export function readSidebarUiState(): SidebarUiState {
         splitViewId?: unknown;
       } | null;
       activityViewEnabled?: boolean;
+      groupsSectionExpanded?: boolean;
+      expandedGroupIds?: unknown[];
     };
 
     const lastThreadRoute =
@@ -121,6 +128,14 @@ export function readSidebarUiState(): SidebarUiState {
       ),
       lastThreadRoute,
       activityViewEnabled: parsed.activityViewEnabled === true,
+      groupsSectionExpanded: parsed.groupsSectionExpanded === true,
+      expandedGroupIds: [
+        ...new Set(
+          (parsed.expandedGroupIds ?? []).filter(
+            (groupId): groupId is string => typeof groupId === "string" && groupId.length > 0,
+          ),
+        ),
+      ],
     };
   } catch {
     return DEFAULT_SIDEBAR_UI_STATE;
@@ -171,6 +186,8 @@ export function persistSidebarUiState(input: SidebarUiState): void {
             }
           : null,
         activityViewEnabled: input.activityViewEnabled,
+        groupsSectionExpanded: input.groupsSectionExpanded,
+        expandedGroupIds: [...new Set(input.expandedGroupIds.filter((groupId) => groupId.length > 0))],
       }),
     );
   } catch {

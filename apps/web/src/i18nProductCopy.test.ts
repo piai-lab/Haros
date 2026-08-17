@@ -256,6 +256,8 @@ const RAW_FACT_ALLOWLIST = [
   "ProjectSourceSegmentedPicker.tsx:text:GitHub",
   "PullRequestThreadDialog.tsx:attribute:https://github.com/owner/repo/pull/42 or #42",
   "ThreadWorktreeHandoffDialog.tsx:attribute:omnimind/feature-name",
+  "workspaceExplorer.tsx:attribute:`${match.path}, ${lineLabel}: ${match.lineText}`",
+  "workspaceExplorer.tsx:attribute:`${match.path}:${match.lineNumber}`",
   "PullRequestRow.tsx:attribute:`${entry.headBranch} → ${entry.baseBranch}`",
   "-automations.shared.tsx:attribute:Europe/Rome",
   "PdfViewerToolbar.tsx:text:PDF",

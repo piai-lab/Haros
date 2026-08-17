@@ -25,7 +25,7 @@ describe("Sidebar module", () => {
   it("uses the same section-label tone for Projects and Groups", () => {
     const source = readFileSync(new URL("./Sidebar.tsx", import.meta.url), "utf8");
     const groupsHeader = source.match(
-      /aria-expanded=\{groupsSectionExpanded\}[\s\S]*?onClick=\{\(\) => setGroupsSectionExpanded/,
+      /aria-expanded=\{groupsSectionExpanded\}[\s\S]*?onClick=\{\(\)\s*=>\s*setGroupsSectionExpanded/,
     )?.[0];
 
     expect(groupsHeader).toContain("SIDEBAR_SECTION_LABEL_CLASS_NAME");
@@ -72,6 +72,6 @@ describe("Sidebar module", () => {
     expect(chatListEnd).toBeGreaterThan(chatListStart);
     expect(source).not.toMatch(/renderListSectionHeader\(\s*t\("nav\.chat"\)/);
     expect(chatList).not.toContain('label={t("nav.newChat")}');
-    expect(chatList).toContain("<SidebarMenu ref={attachProjectListAutoAnimateRef}");
+    expect(chatList).toMatch(/<SidebarMenu\s+ref=\{attachProjectListAutoAnimateRef\}/);
   });
 });

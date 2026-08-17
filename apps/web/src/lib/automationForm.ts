@@ -32,6 +32,11 @@ import {
 } from "@omnimind/shared/automationMode";
 import type { AppLocale } from "../locale";
 import {
+  automationFailurePolicyValue,
+  stopAfterConsecutiveFailuresFromPolicyValue,
+  type AutomationFailurePolicyValue,
+} from "./automationFailurePolicy";
+import {
   acknowledgedRiskIdsForDraft,
   buildAutomationDraftWarnings,
   type AutomationDraftWarning,
@@ -93,7 +98,7 @@ export type AutomationFormState = {
   readonly notificationPolicy: AutomationNotificationPolicy;
   readonly targetThreadId: string;
   readonly maxIterations: string;
-  readonly stopOnError: boolean;
+  readonly stopAfterFailures: AutomationFailurePolicyValue;
   readonly stopWhen: string;
 };
 
@@ -457,7 +462,9 @@ export function formFromDefinition(
     notificationPolicy: definition?.notificationPolicy ?? "all",
     targetThreadId: definition?.targetThreadId ?? "",
     maxIterations: definition?.maxIterations != null ? String(definition.maxIterations) : "",
-    stopOnError: definition?.stopOnError ?? true,
+    stopAfterFailures: automationFailurePolicyValue(
+      definition?.stopAfterConsecutiveFailures,
+    ),
     stopWhen: definition
       ? stopWhenFromCompletionPolicy(definition.completionPolicy ?? { type: "none" })
       : "",
@@ -633,7 +640,9 @@ export function createInputFromForm(
       ? (form.targetThreadId as ThreadId)
       : null,
     maxIterations,
-    stopOnError: form.stopOnError,
+    stopAfterConsecutiveFailures: stopAfterConsecutiveFailuresFromPolicyValue(
+      form.stopAfterFailures,
+    ),
     completionPolicy: completionPolicyFromStopWhen(stopWhen),
     ...(acknowledgedRisks ? { acknowledgedRisks } : {}),
   };

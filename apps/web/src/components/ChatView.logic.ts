@@ -8,6 +8,7 @@ import {
   type ModelSlug,
   type OrchestrationThreadActivity,
   type ProviderApprovalDecision,
+  type ProviderInteractionMode,
   type ProviderRequestKind,
   type RuntimeMode,
   type ServerProviderAuthStatus,
@@ -230,13 +231,13 @@ export function resolveTurnStartRecoveryDisposition(input: {
   readonly messageId: MessageId;
   readonly previousModelSelection: ModelSelection;
   readonly previousRuntimeMode: RuntimeMode;
-  readonly previousInteractionMode: "default" | "plan";
+  readonly previousInteractionMode: ProviderInteractionMode;
   readonly targetModelSelection: ModelSelection;
   readonly targetRuntimeMode: RuntimeMode;
-  readonly targetInteractionMode: "default" | "plan";
+  readonly targetInteractionMode: ProviderInteractionMode;
   readonly threadModelSelection: ModelSelection;
   readonly threadRuntimeMode: RuntimeMode;
-  readonly threadInteractionMode: "default" | "plan";
+  readonly threadInteractionMode: ProviderInteractionMode;
   readonly session: Pick<ThreadSession, "provider" | "orchestrationStatus"> | null;
   readonly activities: ReadonlyArray<Pick<OrchestrationThreadActivity, "kind" | "payload">>;
 }): TurnStartRecoveryDisposition {
@@ -814,6 +815,7 @@ export function buildLocalDraftThread(
     turnDiffSummaries: [],
     activities: [],
     proposedPlans: [],
+    ...(draftThread.goal ? { goal: draftThread.goal } : {}),
   };
 }
 

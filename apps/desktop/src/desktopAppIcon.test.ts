@@ -13,7 +13,10 @@ interface FakeWindowState {
   visible?: boolean;
 }
 
-function makeWindow({ destroyed = false, visible = true }: FakeWindowState = {}) {
+function makeWindow({
+  destroyed = false,
+  visible = true,
+}: FakeWindowState = {}) {
   return {
     isDestroyed: vi.fn(() => destroyed),
     isVisible: vi.fn(() => visible),
@@ -33,18 +36,34 @@ describe("desktop app icons", () => {
   it("accepts only supported preferences", () => {
     expect(isDesktopAppIcon("default")).toBe(true);
     expect(isDesktopAppIcon("icon")).toBe(true);
+    expect(isDesktopAppIcon("dark")).toBe(true);
     expect(isDesktopAppIcon("unknown")).toBe(false);
   });
 
   it("selects the alternate native asset on every desktop platform", () => {
     expect(
-      desktopAppIconResourceName({ icon: "icon", platform: "darwin", useLegacyMacDefault: false }),
+      desktopAppIconResourceName({
+        icon: "icon",
+        platform: "darwin",
+        useLegacyMacDefault: false,
+        isDarkAppearance: false,
+      }),
     ).toBe("app-icon-macos.png");
     expect(
-      desktopAppIconResourceName({ icon: "icon", platform: "win32", useLegacyMacDefault: false }),
+      desktopAppIconResourceName({
+        icon: "icon",
+        platform: "win32",
+        useLegacyMacDefault: false,
+        isDarkAppearance: false,
+      }),
     ).toBe("app-icon-windows.ico");
     expect(
-      desktopAppIconResourceName({ icon: "icon", platform: "linux", useLegacyMacDefault: false }),
+      desktopAppIconResourceName({
+        icon: "icon",
+        platform: "linux",
+        useLegacyMacDefault: false,
+        isDarkAppearance: false,
+      }),
     ).toBe("app-icon-linux.png");
   });
 
@@ -54,6 +73,7 @@ describe("desktop app icons", () => {
         icon: "default",
         platform: "darwin",
         useLegacyMacDefault: true,
+        isDarkAppearance: false,
       }),
     ).toBe("dock-icon.png");
     expect(
@@ -61,8 +81,47 @@ describe("desktop app icons", () => {
         icon: "default",
         platform: "darwin",
         useLegacyMacDefault: false,
+        isDarkAppearance: false,
       }),
     ).toBe("icon.icns");
+  });
+
+  it("uses OmniMind dark artwork for macOS dark appearance and explicit preference", () => {
+    expect(
+      desktopAppIconResourceName({
+        icon: "default",
+        platform: "darwin",
+        useLegacyMacDefault: false,
+        isDarkAppearance: true,
+      }),
+    ).toBe("dock-icon-dark.png");
+    expect(
+      desktopAppIconResourceName({
+        icon: "dark",
+        platform: "darwin",
+        useLegacyMacDefault: false,
+        isDarkAppearance: false,
+      }),
+    ).toBe("dock-icon-dark.png");
+  });
+
+  it("falls back to each platform default for the mac-only dark preference", () => {
+    expect(
+      desktopAppIconResourceName({
+        icon: "dark",
+        platform: "linux",
+        useLegacyMacDefault: false,
+        isDarkAppearance: false,
+      }),
+    ).toBe("icon.png");
+    expect(
+      desktopAppIconResourceName({
+        icon: "dark",
+        platform: "win32",
+        useLegacyMacDefault: false,
+        isDarkAppearance: false,
+      }),
+    ).toBe("icon.ico");
   });
 
   it("does not reapply the icon when renderer hydration matches native state", () => {
@@ -70,6 +129,8 @@ describe("desktop app icons", () => {
     expect(shouldUpdateDesktopAppIcon("icon", "icon")).toBe(false);
     expect(shouldUpdateDesktopAppIcon("default", "icon")).toBe(true);
     expect(shouldUpdateDesktopAppIcon("icon", "default")).toBe(true);
+    expect(shouldUpdateDesktopAppIcon("dark", "dark")).toBe(false);
+    expect(shouldUpdateDesktopAppIcon("default", "dark")).toBe(true);
   });
 
   it("detaches a visible Windows taskbar button and re-registers it after 250ms", () => {
@@ -117,15 +178,18 @@ describe("desktop app icons", () => {
     expect(schedule).not.toHaveBeenCalled();
   });
 
-  it.each(["darwin", "linux"] as const)("does not touch the taskbar on %s", (platform) => {
-    const window = makeWindow();
-    const { schedule } = makeSchedule();
+  it.each(["darwin", "linux"] as const)(
+    "does not touch the taskbar on %s",
+    (platform) => {
+      const window = makeWindow();
+      const { schedule } = makeSchedule();
 
-    refreshWindowsTaskbarIcon({ platform, window, schedule });
+      refreshWindowsTaskbarIcon({ platform, window, schedule });
 
-    expect(window.setSkipTaskbar).not.toHaveBeenCalled();
-    expect(schedule).not.toHaveBeenCalled();
-  });
+      expect(window.setSkipTaskbar).not.toHaveBeenCalled();
+      expect(schedule).not.toHaveBeenCalled();
+    },
+  );
 
   it("never re-registers a window destroyed before the delay elapses", () => {
     const window = makeWindow();

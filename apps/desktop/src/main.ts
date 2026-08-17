@@ -1981,6 +1981,7 @@ function applyDesktopAppIcon(icon: DesktopAppIcon): void {
     icon,
     platform: process.platform,
     useLegacyMacDefault: usesLegacyMacDockIcon(),
+    isDarkAppearance: process.platform === "darwin" && nativeTheme.shouldUseDarkColors,
   });
   const iconPath = resolveResourcePath(resourceName);
   if (!iconPath) return;
@@ -2001,10 +2002,17 @@ function applyInitialMacDockIcon(): void {
     return;
   }
   const icon = readDesktopAppIcon();
-  if (icon === "default" && !usesLegacyMacDockIcon()) {
+  if (icon === "default" && !usesLegacyMacDockIcon() && !nativeTheme.shouldUseDarkColors) {
     return;
   }
   applyDesktopAppIcon(icon);
+}
+
+function registerMacAppearanceIconSync(): void {
+  if (process.platform !== "darwin") return;
+  nativeTheme.on("updated", () => {
+    applyDesktopAppIcon(readDesktopAppIcon());
+  });
 }
 
 function readLaunchVersionRecordContents(): string | null {
@@ -3988,6 +3996,7 @@ function getIconOption(): { icon: string } | Record<string, never> {
     icon: readDesktopAppIcon(),
     platform: process.platform,
     useLegacyMacDefault: false,
+    isDarkAppearance: false,
   });
   const iconPath = resolveResourcePath(resourceName);
   return iconPath ? { icon: iconPath } : {};
@@ -4522,6 +4531,7 @@ if (hasSingleInstanceLock) {
       writeDesktopLogHeader("app ready");
       configureAppIdentity();
       applyInitialMacDockIcon();
+      registerMacAppearanceIconSync();
       refreshMacIconCacheOnVersionChange();
       configureMediaPermissions();
       initializeDesktopAppSnap();

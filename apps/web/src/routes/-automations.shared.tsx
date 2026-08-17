@@ -33,7 +33,6 @@ import { Button } from "~/components/ui/button";
 import { Dialog, DialogPopup, DialogTitle } from "~/components/ui/dialog";
 import {
   Menu,
-  MenuCheckboxItem,
   MenuGroup,
   MenuGroupLabel,
   MenuItem,
@@ -51,6 +50,10 @@ import {
   type AutomationDraftWarning,
   type AutomationDraftWarningId,
 } from "~/lib/automationDraft";
+import {
+  AUTOMATION_FAILURE_POLICY_NEVER,
+  automationFailurePolicyOptions,
+} from "~/lib/automationFailurePolicy";
 import {
   acknowledgedRiskIdsForFormWarnings,
   applyScheduleToForm,
@@ -1581,12 +1584,23 @@ export function AutomationDialog({
                   </div>
                 </MenuGroup>
                 <MenuSeparator />
-                <MenuCheckboxItem
-                  checked={form.stopOnError}
-                  onCheckedChange={(checked) => setField("stopOnError", checked)}
-                >
-                  {t("automation.stopOnError")}
-                </MenuCheckboxItem>
+                <MenuGroup>
+                  <MenuGroupLabel>{t("automation.failurePolicy")}</MenuGroupLabel>
+                  <MenuRadioGroup
+                    value={form.stopAfterFailures}
+                    onValueChange={(value) => setField("stopAfterFailures", value)}
+                  >
+                    {automationFailurePolicyOptions(form.stopAfterFailures).map((option) => (
+                      <MenuRadioItem key={option.value} value={option.value}>
+                        {option.value === AUTOMATION_FAILURE_POLICY_NEVER
+                          ? t("automation.failureKeepRunning")
+                          : option.value === "1"
+                            ? t("automation.failureStopAfterOne")
+                            : t("automation.failureStopAfterCount", { count: option.value })}
+                      </MenuRadioItem>
+                    ))}
+                  </MenuRadioGroup>
+                </MenuGroup>
                 <MenuSeparator />
                 <MenuGroup>
                   <MenuGroupLabel>{t("automation.maxIterations")}</MenuGroupLabel>
