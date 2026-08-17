@@ -86,6 +86,7 @@ import { showDesktopConfirmDialog } from "./confirmDialog";
 import {
   desktopAppIconResourceName,
   isDesktopAppIcon,
+  refreshWindowsTaskbarIcon,
   shouldUpdateDesktopAppIcon,
 } from "./desktopAppIcon";
 import { desktopStatusItemResourceName, revealDesktopStatusItemWindow } from "./desktopStatusItem";
@@ -1992,6 +1993,7 @@ function applyDesktopAppIcon(icon: DesktopAppIcon): void {
     return;
   }
   mainWindow?.setIcon(image);
+  refreshWindowsTaskbarIcon({ platform: process.platform, window: mainWindow });
 }
 
 function applyInitialMacDockIcon(): void {

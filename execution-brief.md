@@ -401,6 +401,14 @@ S1 当前唯一代码 Slice 是 **R11-4 provider rate-limit window labels**：�
 
 R11-4 的 pre-commit source-candidate 证据为：rate normalization 与 catalog parity focused unit `2 files / 18 tests`，真实 Chromium 英中 ordered visible label、raw snake_case exclusion与 matching progressbar accessible name `1 file / 2 tests`，monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path format/lint与 diff check通过；root lint为`0 errors / 478 warnings`。全局 product-copy scanner 仍命中未触碰的 `workspaceExplorer.tsx:475/477` 两条既有动态 search-result ARIA 字符串，本 Slice 不把该 baseline 改写为绿色。未改变 Desktop shipped bytes，package/install/live/README均未运行，因此只主张 source-only candidate。
 
+R11-4 已在 exact pushed `0e0ee9ca118e9b4bf81b01aaa1e2ea9de5fc5d72` 闭合；上述 rate-limit window label投影不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **R11-5 Windows runtime taskbar icon refresh**：语义吸收 Synara `6fbed3a9e1f08a46a42967d5dbc39c8c1439248d` 的 Explorer taskbar icon cache刷新机制，并加强连续更新的generation守恒。现有 `desktopAppIcon` owner在valid resource已由BrowserWindow `setIcon`应用后，只对Windows可见、未销毁main window恰好detach taskbar一次，250ms后仅由latest generation reattach一次；null、destroyed、hidden、macOS与Linux均不得产生taskbar churn，timer到期前window销毁或后续generation到达时旧timer不得reattach。
+
+本 Slice 只允许修改现有Desktop icon owner、`main.ts`现有apply路径、author-equivalent tests与brief；不改变初始BrowserWindow icon、durable preference、hydration去重、IPC/preload/contracts、assets、Web picker、macOS dock/cache或Linux语义，不新增timer registry、window owner、持久化、文案或日志。source proof必须覆盖author normal/null/destroyed/hidden/destroy-before-delay、rapid `true,true,false`与旧timer零`false`、non-Windows零schedule、Desktop typecheck、format/lint/document/diff。macOS上的注入式source tests不能证明Windows Explorer真实重读taskbar icon；exact pushed SHA的Windows packaged fresh-profile可见窗口切换、退出重开仍是明确pending evidence，本 Slice不得虚报该平台journey。
+
+R11-5 的 pre-commit source-candidate 证据为：现有Desktop icon owner focused `1 file / 12 tests`覆盖author五类生命周期、darwin/linux零taskbar churn与rapid latest-generation fence；Desktop typecheck、document contract `21/21`、changed-path lint `0 warnings / 0 errors`、format与diff check通过。该证据只证明注入式调度与平台分支，不证明Explorer实际刷新；本轮按准入不做package/install/Windows live/README，因此Windows packaged journey继续pending且只主张source-only candidate。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -413,4 +421,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-4 provider rate-limit window labels as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-5 Windows runtime taskbar icon refresh as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
