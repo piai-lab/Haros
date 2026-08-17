@@ -194,6 +194,7 @@ it.effect("accepts automation proposal resolution requests", () =>
       body: {
         _tag: WS_METHODS.automationResolveProposal,
         automationId: "automation-1",
+        expectedDefinitionRevision: 0,
         resolution: "accepted",
       },
     });

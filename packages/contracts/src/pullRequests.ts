@@ -95,6 +95,14 @@ export type PullRequestMergeCapabilities = typeof PullRequestMergeCapabilities.T
 export const PullRequestStackEntry = Schema.Struct({
   position: PositiveInt,
   number: PositiveInt,
+  title: TrimmedNonEmptyString,
+  url: TrimmedNonEmptyString,
+  headBranch: TrimmedNonEmptyString,
+  baseBranch: TrimmedNonEmptyString,
+  state: PullRequestState,
+  isDraft: Schema.Boolean,
+  mergeability: GitPullRequestMergeability,
+  mergeStateStatus: Schema.NullOr(Schema.String),
 });
 export type PullRequestStackEntry = typeof PullRequestStackEntry.Type;
 

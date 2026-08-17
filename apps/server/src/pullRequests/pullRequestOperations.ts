@@ -58,7 +58,10 @@ function assertMergeExpectation(input: {
   const stack = input.stack;
   if (!stack) return conflict();
   const expected = input.expectation;
-  const targetNumbers = stack.entries.slice(0, stack.position).map((entry) => entry.number);
+  const targetEntries = stack.entries.filter(
+    (entry) => entry.position <= stack.position && entry.state !== "merged",
+  );
+  const targetNumbers = targetEntries.map((entry) => entry.number);
   if (
     stack.number !== expected.stackNumber ||
     stack.size !== expected.stackSize ||
@@ -66,6 +69,13 @@ function assertMergeExpectation(input: {
     stack.baseBranch !== expected.baseBranch ||
     stack.entries.length !== stack.size ||
     stack.entries[stack.position - 1]?.number !== input.number ||
+    targetEntries.some(
+      (entry) =>
+        entry.state !== "open" ||
+        entry.isDraft ||
+        entry.mergeability === "conflicting" ||
+        ["BLOCKED", "DIRTY", "DRAFT"].includes(entry.mergeStateStatus ?? ""),
+    ) ||
     targetNumbers.length !== expected.targetPullRequestNumbers.length ||
     targetNumbers.some((number, index) => number !== expected.targetPullRequestNumbers[index])
   ) {

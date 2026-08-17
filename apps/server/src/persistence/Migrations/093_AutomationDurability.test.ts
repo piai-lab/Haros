@@ -64,7 +64,7 @@ it.effect("093 upgrades a through-92 database without inventing disable causes",
       },
       {
         id: "legacy-stop",
-        threshold: 1,
+        threshold: 3,
         count: 0,
         reason: null,
         disabledAt: null,

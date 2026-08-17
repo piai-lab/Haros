@@ -60,6 +60,21 @@ const detail: GitHubPullRequestDetailData = {
   commits: [],
 };
 
+function stackEntry(position: number, number: number) {
+  return {
+    position,
+    number,
+    title: `Layer ${position}`,
+    url: `https://github.com/acme/widgets/pull/${number}`,
+    headBranch: `layer-${position}`,
+    baseBranch: position === 1 ? "main" : `layer-${position - 1}`,
+    state: "open" as const,
+    isDraft: false,
+    mergeability: "mergeable" as const,
+    mergeStateStatus: "CLEAN",
+  };
+}
+
 describe("makePullRequestOperations", () => {
   it("starts detail, merge-capability, review-comment, and stack reads together", async () => {
     await Effect.runPromise(
@@ -135,8 +150,8 @@ describe("makePullRequestOperations", () => {
       position: 2,
       baseBranch: "main",
       entries: [
-        { position: 1, number: 41 },
-        { position: 2, number: 42 },
+        stackEntry(1, 41),
+        stackEntry(2, 42),
       ],
     };
     const makeOperations = (pullRequestStack: PullRequestStack | null, fail = false) => {
@@ -198,9 +213,9 @@ describe("makePullRequestOperations", () => {
       position: 2,
       baseBranch: "main",
       entries: [
-        { position: 1, number: 41 },
-        { position: 2, number: 42 },
-        { position: 3, number: 43 },
+        stackEntry(1, 41),
+        stackEntry(2, 42),
+        stackEntry(3, 43),
       ],
     };
     const expectation: PullRequestMergeExpectation = {
@@ -266,7 +281,19 @@ describe("makePullRequestOperations", () => {
       { ...stack, position: 1 },
       { ...stack, baseBranch: "release" },
       { ...stack, entries: [stack.entries[1]!, stack.entries[0]!, stack.entries[2]!] },
-      { ...stack, entries: [stack.entries[0]!, { position: 2, number: 99 }, stack.entries[2]!] },
+      { ...stack, entries: [stack.entries[0]!, stackEntry(2, 99), stack.entries[2]!] },
+      {
+        ...stack,
+        entries: [{ ...stack.entries[0]!, isDraft: true }, stack.entries[1]!, stack.entries[2]!],
+      },
+      {
+        ...stack,
+        entries: [
+          { ...stack.entries[0]!, mergeability: "conflicting" as const },
+          stack.entries[1]!,
+          stack.entries[2]!,
+        ],
+      },
     ]) {
       runAction.mockClear();
       const error = await Effect.runPromise(

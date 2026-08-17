@@ -742,6 +742,7 @@ describe("decider project scripts", () => {
       type: "thread.interaction-mode-set",
       payload: {
         threadId: ThreadId.makeUnsafe("thread-1"),
+        previousInteractionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         interactionMode: "plan",
       },
     });

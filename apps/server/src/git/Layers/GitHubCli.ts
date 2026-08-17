@@ -334,6 +334,15 @@ const PULL_REQUEST_STACK_QUERY = `query($owner: String!, $repo: String!, $number
             position
             pullRequest {
               number
+              title
+              url
+              headRefName
+              baseRefName
+              state
+              isDraft
+              mergedAt
+              mergeable
+              mergeStateStatus
             }
           }
           pageInfo {
@@ -439,6 +448,15 @@ const RawPullRequestStackEntrySchema = Schema.Struct({
     Schema.NullOr(
       Schema.Struct({
         number: PositiveInt,
+        title: TrimmedNonEmptyString,
+        url: TrimmedNonEmptyString,
+        headRefName: TrimmedNonEmptyString,
+        baseRefName: TrimmedNonEmptyString,
+        state: Schema.optional(Schema.NullOr(Schema.String)),
+        isDraft: Schema.optional(Schema.NullOr(Schema.Boolean)),
+        mergedAt: Schema.optional(Schema.NullOr(Schema.String)),
+        mergeable: Schema.optional(Schema.NullOr(Schema.String)),
+        mergeStateStatus: Schema.optional(Schema.NullOr(Schema.String)),
       }),
     ),
   ),
@@ -903,6 +921,14 @@ function normalizePullRequestStack(
         {
           position: entry.position,
           number: member.number,
+          title: member.title,
+          url: member.url,
+          headBranch: member.headRefName,
+          baseBranch: member.baseRefName,
+          state: normalizePullRequestState(member),
+          isDraft: member.isDraft === true,
+          mergeability: normalizePullRequestMergeability(member.mergeable),
+          mergeStateStatus: member.mergeStateStatus?.trim() || null,
         },
       ];
     })

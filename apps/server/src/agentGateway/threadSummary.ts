@@ -49,6 +49,7 @@ export interface AgentThreadListItem {
   readonly threadId: string;
   readonly projectId: string;
   readonly title: string;
+  readonly goal: string | null;
   readonly provider: string;
   readonly model: string;
   readonly status: AgentThreadStatus;
@@ -70,6 +71,7 @@ export function summarizeThreadShell(
     threadId: thread.id,
     projectId: thread.projectId,
     title: thread.title,
+    goal: thread.goal?.trim() || null,
     provider: thread.modelSelection.provider,
     model: thread.modelSelection.model,
     status: deriveAgentThreadStatus(thread),

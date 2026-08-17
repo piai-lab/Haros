@@ -20,7 +20,21 @@ afterEach(() => {
 });
 
 function stackEntry(position: number, number: number) {
-  return { position, pullRequest: { number } };
+  return {
+    position,
+    pullRequest: {
+      number,
+      title: `Layer ${position}`,
+      url: `https://github.com/acme/app/pull/${number}`,
+      headRefName: `layer-${position}`,
+      baseRefName: position === 1 ? "main" : `layer-${position - 1}`,
+      state: "OPEN",
+      isDraft: false,
+      mergedAt: null,
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "CLEAN",
+    },
+  };
 }
 
 function processResult(stdout: string, stderr = "", code = 0): ProcessRunResult {
@@ -1127,8 +1141,30 @@ layer("GitHubCliLive", (it) => {
         position: 2,
         baseBranch: "main",
         entries: [
-          { position: 1, number: 11 },
-          { position: 2, number: 12 },
+          {
+            position: 1,
+            number: 11,
+            title: "Layer 1",
+            url: "https://github.com/acme/app/pull/11",
+            headBranch: "layer-1",
+            baseBranch: "main",
+            state: "open",
+            isDraft: false,
+            mergeability: "mergeable",
+            mergeStateStatus: "CLEAN",
+          },
+          {
+            position: 2,
+            number: 12,
+            title: "Layer 2",
+            url: "https://github.com/acme/app/pull/12",
+            headBranch: "layer-2",
+            baseBranch: "layer-1",
+            state: "open",
+            isDraft: false,
+            mergeability: "mergeable",
+            mergeStateStatus: "CLEAN",
+          },
         ],
       });
       expect(mockedRunProcess.mock.calls[0]?.[1]).toEqual(

@@ -56,6 +56,7 @@ layer("ProjectionThreadRepository fork scope", (it) => {
         pinnedMessages: null,
         threadMarkers: null,
         notes: null,
+        goal: null,
         latestUserMessageAt: null,
         pendingApprovalCount: 0,
         pendingUserInputCount: 0,

@@ -37,7 +37,9 @@ const ProjectionThreadDbRow = ProjectionThread.mapFields(
     groupIds: Schema.fromJsonString(Schema.Array(SpaceId)),
     handoff: Schema.NullOr(Schema.fromJsonString(ThreadHandoff)),
     forkScope: Schema.NullOr(Schema.fromJsonString(ThreadForkScope)),
-    lastKnownPr: Schema.NullOr(Schema.fromJsonString(OrchestrationThreadPullRequest)),
+    lastKnownPr: Schema.NullOr(
+      Schema.fromJsonString(OrchestrationThreadPullRequest),
+    ),
     pinnedMessages: Schema.NullOr(Schema.fromJsonString(ThreadPinnedMessages)),
     threadMarkers: Schema.NullOr(Schema.fromJsonString(ThreadMarkers)),
     modelSelection: Schema.fromJsonString(ModelSelection),
@@ -87,6 +89,9 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pinned_messages_json,
           thread_markers_json,
           notes,
+          goal,
+          goal_started_at,
+          goal_paused_at,
           latest_user_message_at,
           pending_approval_count,
           pending_user_input_count,
@@ -124,7 +129,7 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           ${row.subagentNickname ?? null},
           ${row.subagentRole ?? null},
           ${row.forkSourceThreadId ?? null},
-          ${row.forkScope === null ? null : JSON.stringify(row.forkScope)},
+          ${row.forkScope == null ? null : JSON.stringify(row.forkScope)},
           ${row.sidechatSourceThreadId ?? null},
           ${row.lastKnownPr === null ? null : JSON.stringify(row.lastKnownPr)},
           ${row.latestTurnId},
@@ -132,6 +137,9 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           ${row.pinnedMessages === null ? null : JSON.stringify(row.pinnedMessages)},
           ${row.threadMarkers === null ? null : JSON.stringify(row.threadMarkers)},
           ${row.notes},
+          ${row.goal},
+          ${row.goalStartedAt ?? null},
+          ${row.goalPausedAt ?? null},
           ${row.latestUserMessageAt},
           ${row.pendingApprovalCount},
           ${row.pendingUserInputCount},
@@ -177,6 +185,9 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pinned_messages_json = excluded.pinned_messages_json,
           thread_markers_json = excluded.thread_markers_json,
           notes = excluded.notes,
+          goal = excluded.goal,
+          goal_started_at = excluded.goal_started_at,
+          goal_paused_at = excluded.goal_paused_at,
           latest_user_message_at = excluded.latest_user_message_at,
           pending_approval_count = excluded.pending_approval_count,
           pending_user_input_count = excluded.pending_user_input_count,
@@ -229,6 +240,9 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pinned_messages_json AS "pinnedMessages",
           thread_markers_json AS "threadMarkers",
           notes,
+          goal,
+          goal_started_at AS "goalStartedAt",
+          goal_paused_at AS "goalPausedAt",
           latest_user_message_at AS "latestUserMessageAt",
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
@@ -283,6 +297,9 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
           pinned_messages_json AS "pinnedMessages",
           thread_markers_json AS "threadMarkers",
           notes,
+          goal,
+          goal_started_at AS "goalStartedAt",
+          goal_paused_at AS "goalPausedAt",
           latest_user_message_at AS "latestUserMessageAt",
           pending_approval_count AS "pendingApprovalCount",
           pending_user_input_count AS "pendingUserInputCount",
@@ -331,27 +348,41 @@ const makeProjectionThreadRepository = Effect.gen(function* () {
 
   const upsert: ProjectionThreadRepositoryShape["upsert"] = (row) =>
     upsertProjectionThreadRow(row).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.upsert:query")),
+      Effect.mapError(
+        toPersistenceSqlError("ProjectionThreadRepository.upsert:query"),
+      ),
     );
 
   const getById: ProjectionThreadRepositoryShape["getById"] = (input) =>
     getProjectionThreadRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.getById:query")),
+      Effect.mapError(
+        toPersistenceSqlError("ProjectionThreadRepository.getById:query"),
+      ),
     );
 
-  const listByProjectId: ProjectionThreadRepositoryShape["listByProjectId"] = (input) =>
+  const listByProjectId: ProjectionThreadRepositoryShape["listByProjectId"] = (
+    input,
+  ) =>
     listProjectionThreadRows(input).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.listByProjectId:query")),
+      Effect.mapError(
+        toPersistenceSqlError(
+          "ProjectionThreadRepository.listByProjectId:query",
+        ),
+      ),
     );
 
   const deleteById: ProjectionThreadRepositoryShape["deleteById"] = (input) =>
     deleteProjectionThreadRow(input).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.deleteById:query")),
+      Effect.mapError(
+        toPersistenceSqlError("ProjectionThreadRepository.deleteById:query"),
+      ),
     );
 
   const removeGroup: ProjectionThreadRepositoryShape["removeGroup"] = (input) =>
     removeProjectionThreadGroup(input).pipe(
-      Effect.mapError(toPersistenceSqlError("ProjectionThreadRepository.removeGroup:query")),
+      Effect.mapError(
+        toPersistenceSqlError("ProjectionThreadRepository.removeGroup:query"),
+      ),
     );
 
   return {

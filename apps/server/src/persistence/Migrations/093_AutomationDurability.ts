@@ -18,10 +18,11 @@ export default Effect.gen(function* () {
         OR stop_after_consecutive_failures >= 1
       )
     `;
-    // Preserve the exact legacy safety behavior: true stopped at the first failure.
+    // OmniMind is pre-public: translate the legacy boolean to the product default instead of
+    // preserving a one-failure compatibility policy for users that do not exist.
     yield* sql`
       UPDATE automation_definitions
-      SET stop_after_consecutive_failures = CASE stop_on_error WHEN 1 THEN 1 ELSE NULL END
+      SET stop_after_consecutive_failures = CASE stop_on_error WHEN 1 THEN 3 ELSE NULL END
     `;
   }
 

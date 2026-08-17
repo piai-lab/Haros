@@ -43,7 +43,18 @@ function listEntry() {
 }
 
 function stackContractEntry(position: number, number: number) {
-  return { position, number };
+  return {
+    position,
+    number,
+    title: `Stack PR ${number}`,
+    url: `https://github.com/acme/widgets/pull/${number}`,
+    headBranch: number === 41 ? "feature/base" : "feature/top",
+    baseBranch: number === 41 ? "main" : "feature/base",
+    state: "open",
+    isDraft: false,
+    mergeability: "mergeable",
+    mergeStateStatus: "CLEAN",
+  };
 }
 
 describe("PullRequestListEntry", () => {

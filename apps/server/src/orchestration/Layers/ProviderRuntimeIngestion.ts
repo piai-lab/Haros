@@ -46,6 +46,7 @@ import { ProviderSessionRuntimeRepositoryLive } from "../../persistence/Layers/P
 import { ProviderSessionDirectoryLive } from "../../provider/Layers/ProviderSessionDirectory.ts";
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { ProviderSessionDirectory } from "../../provider/Services/ProviderSessionDirectory.ts";
+import { activeThreadGoal } from "../../provider/goalMode.ts";
 import {
   classifyTerminalTurnApplicability,
   isStartedTurnApplicable,
@@ -2360,6 +2361,43 @@ const make = Effect.gen(function* () {
             },
             createdAt: now,
           });
+
+          if (isTerminalTurnEvent) {
+            // Goal tools update the command read model synchronously. Re-read it
+            // here so a fast terminal event cannot overtake achieved/paused state.
+            const settledThread = (yield* orchestrationEngine.getReadModel()).threads.find(
+              (candidate) => candidate.id === thread.id,
+            );
+            if (
+              settledThread &&
+              settledThread.deletedAt == null &&
+              settledThread.archivedAt == null &&
+              settledThread.parentThreadId == null &&
+              Boolean(activeThreadGoal(settledThread)?.trim()) &&
+              settledThread.goalPausedAt == null
+            ) {
+              if (event.type === "turn.completed" && runtimeTurnState(event) === "completed") {
+                yield* orchestrationEngine.dispatch({
+                  type: "thread.goal.continue",
+                  commandId: providerCommandId(event, "goal-continue", thread.id),
+                  threadId: thread.id,
+                  goalStartedAt: settledThread.goalStartedAt ?? null,
+                  trigger: "turn-completed",
+                  ...(eventTurnId !== undefined ? { sourceTurnId: eventTurnId } : {}),
+                  createdAt: now,
+                });
+              } else {
+                // Failed/interrupted work must not autonomously resurrect until
+                // the user explicitly resumes the same persistent goal.
+                yield* orchestrationEngine.dispatch({
+                  type: "thread.meta.update",
+                  commandId: providerCommandId(event, "goal-auto-pause", thread.id),
+                  threadId: thread.id,
+                  goalPaused: true,
+                });
+              }
+            }
+          }
         }
       }
 

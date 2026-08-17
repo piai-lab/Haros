@@ -111,6 +111,11 @@ import Migration0092 from "./Migrations/092_ProjectionThreadMessageTextSegments.
 import Migration0093 from "./Migrations/093_AutomationDurability.ts";
 import Migration0094 from "./Migrations/094_AutomationDeferredOneShotOwner.ts";
 import Migration0095 from "./Migrations/095_ProjectionThreadsForkScope.ts";
+import Migration0096 from "./Migrations/096_ProjectionThreadsGoal.ts";
+import Migration0097 from "./Migrations/097_ProjectionThreadsGoalTiming.ts";
+import Migration0098 from "./Migrations/098_ProjectionThreadsGoalAchievements.ts";
+import Migration0099 from "./Migrations/099_BackfillAutomationRunThreadSource.ts";
+import Migration0100 from "./Migrations/100_BackfillMaxIterationsDisabledReason.ts";
 
 /**
  * Migration loader with all migrations defined inline.
@@ -221,6 +226,11 @@ export const migrationEntries = [
   [93, "AutomationDurability", Migration0093],
   [94, "AutomationDeferredOneShotOwner", Migration0094],
   [95, "ProjectionThreadsForkScope", Migration0095],
+  [96, "ProjectionThreadsGoal", Migration0096],
+  [97, "ProjectionThreadsGoalTiming", Migration0097],
+  [98, "ProjectionThreadsGoalAchievements", Migration0098],
+  [99, "BackfillAutomationRunThreadSource", Migration0099],
+  [100, "BackfillMaxIterationsDisabledReason", Migration0100],
 ] as const;
 
 export const makeMigrationLoader = (throughId?: number) =>

@@ -130,7 +130,10 @@ import type {
   ProjectWriteFileInput,
   ProjectWriteFileResult,
 } from "./project";
-import type { FilesystemBrowseInput, FilesystemBrowseResult } from "./filesystem";
+import type {
+  FilesystemBrowseInput,
+  FilesystemBrowseResult,
+} from "./filesystem";
 import type {
   DeviceAttachInput,
   DeviceBootInput,
@@ -163,7 +166,10 @@ import type {
   DeviceTypeTextInput,
   ThreadDeviceState,
 } from "./device";
-import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
+import type {
+  StudioListThreadOutputsInput,
+  StudioListThreadOutputsResult,
+} from "./studio";
 import type {
   ServerConfig,
   ServerDiagnosticsResult,
@@ -430,11 +436,7 @@ export interface BrowserCaptureScreenshotResult {
 
 export type DesktopAppSnapPlatform = "macos" | "windows" | "linux" | "other";
 export type DesktopAppSnapPermission =
-  | "granted"
-  | "denied"
-  | "not-determined"
-  | "restricted"
-  | "unknown";
+  "granted" | "denied" | "not-determined" | "restricted" | "unknown";
 export type DesktopAppSnapStatus =
   | "unsupported"
   | "disabled"
@@ -443,7 +445,8 @@ export type DesktopAppSnapStatus =
   | "ready"
   | "error";
 
-export type DesktopAppSnapShortcutModifier = "command" | "control" | "option" | "shift";
+export type DesktopAppSnapShortcutModifier =
+  "command" | "control" | "option" | "shift";
 
 export interface DesktopAppSnapKeyChord {
   kind: "key-chord";
@@ -452,7 +455,8 @@ export interface DesktopAppSnapKeyChord {
   key: string;
 }
 
-export type DesktopAppSnapShortcut = { kind: "both-option-keys" } | DesktopAppSnapKeyChord;
+export type DesktopAppSnapShortcut =
+  { kind: "both-option-keys" } | DesktopAppSnapKeyChord;
 
 export interface DesktopAppSnapShortcutAvailability {
   available: boolean;
@@ -514,11 +518,15 @@ interface BrowserControlMethods {
   hide: (input: BrowserThreadInput) => Promise<void>;
   getState: (input: BrowserThreadInput) => Promise<ThreadBrowserState>;
   setPanelBounds: (input: BrowserSetPanelBoundsInput) => Promise<void>;
-  attachWebview: (input: BrowserAttachWebviewInput) => Promise<ThreadBrowserState>;
+  attachWebview: (
+    input: BrowserAttachWebviewInput,
+  ) => Promise<ThreadBrowserState>;
   detachWebview: (input: BrowserDetachWebviewInput) => Promise<void>;
   copyLink: (input: BrowserTabInput) => Promise<void>;
   copyScreenshotToClipboard: (input: BrowserTabInput) => Promise<void>;
-  captureScreenshot: (input: BrowserTabInput) => Promise<BrowserCaptureScreenshotResult>;
+  captureScreenshot: (
+    input: BrowserTabInput,
+  ) => Promise<BrowserCaptureScreenshotResult>;
   navigate: (input: BrowserNavigateInput) => Promise<ThreadBrowserState>;
   reload: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
   goBack: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
@@ -543,7 +551,7 @@ export interface DesktopWindowState {
   isFullscreen: boolean;
 }
 
-export const DesktopAppIcon = Schema.Literals(["default", "icon"]);
+export const DesktopAppIcon = Schema.Literals(["default", "icon", "dark"]);
 export type DesktopAppIcon = typeof DesktopAppIcon.Type;
 
 export interface DesktopBridge {
@@ -557,7 +565,10 @@ export interface DesktopBridge {
   saveFile?: (input: {
     defaultFilename: string;
     contents: string;
-    filters?: ReadonlyArray<{ name: string; extensions: ReadonlyArray<string> }>;
+    filters?: ReadonlyArray<{
+      name: string;
+      extensions: ReadonlyArray<string>;
+    }>;
   }) => Promise<string | null>;
   confirm: (message: string) => Promise<boolean>;
   setTheme: (theme: DesktopTheme) => Promise<void>;
@@ -601,12 +612,18 @@ export interface DesktopBridge {
     checkShortcut: (
       shortcut: DesktopAppSnapShortcut,
     ) => Promise<DesktopAppSnapShortcutAvailability>;
-    setShortcut: (shortcut: DesktopAppSnapShortcut) => Promise<DesktopAppSnapShortcutUpdateResult>;
+    setShortcut: (
+      shortcut: DesktopAppSnapShortcut,
+    ) => Promise<DesktopAppSnapShortcutUpdateResult>;
     requestPermissions: () => Promise<DesktopAppSnapState>;
     listPendingCaptures: () => Promise<DesktopAppSnapCapture[]>;
     acknowledgeCapture: (captureId: string) => Promise<void>;
-    onCaptured: (listener: (capture: DesktopAppSnapCapture) => void) => () => void;
-    onError: (listener: (error: DesktopAppSnapErrorEvent) => void) => () => void;
+    onCaptured: (
+      listener: (capture: DesktopAppSnapCapture) => void,
+    ) => () => void;
+    onError: (
+      listener: (error: DesktopAppSnapErrorEvent) => void,
+    ) => () => void;
     onState: (listener: (state: DesktopAppSnapState) => void) => () => void;
   };
   server?: {
@@ -619,7 +636,9 @@ export interface DesktopBridge {
     onBrowserUseOpenPanelRequest: (
       listener: (request: BrowserUseOpenPanelRequest) => void,
     ) => () => void;
-    onBrowserCopyLink: (listener: (event: BrowserCopyLinkEvent) => void) => () => void;
+    onBrowserCopyLink: (
+      listener: (event: BrowserCopyLinkEvent) => void,
+    ) => () => void;
   };
 }
 
@@ -629,7 +648,10 @@ export interface NativeApi {
     saveFile?: (input: {
       defaultFilename: string;
       contents: string;
-      filters?: ReadonlyArray<{ name: string; extensions: ReadonlyArray<string> }>;
+      filters?: ReadonlyArray<{
+        name: string;
+        extensions: ReadonlyArray<string>;
+      }>;
     }) => Promise<string | null>;
     confirm: (message: string) => Promise<boolean>;
   };
@@ -644,9 +666,15 @@ export interface NativeApi {
     onEvent: (callback: (event: TerminalEvent) => void) => () => void;
   };
   projects: {
-    discoverScripts: (input: ProjectDiscoverScriptsInput) => Promise<ProjectDiscoverScriptsResult>;
-    listDirectories: (input: ProjectListDirectoriesInput) => Promise<ProjectListDirectoriesResult>;
-    searchEntries: (input: ProjectSearchEntriesInput) => Promise<ProjectSearchEntriesResult>;
+    discoverScripts: (
+      input: ProjectDiscoverScriptsInput,
+    ) => Promise<ProjectDiscoverScriptsResult>;
+    listDirectories: (
+      input: ProjectListDirectoriesInput,
+    ) => Promise<ProjectListDirectoriesResult>;
+    searchEntries: (
+      input: ProjectSearchEntriesInput,
+    ) => Promise<ProjectSearchEntriesResult>;
     searchContent: (
       input: ProjectSearchContentInput,
       options?: { readonly signal?: AbortSignal },
@@ -661,11 +689,19 @@ export interface NativeApi {
     createLocalFilePreviewGrant: (
       input: ProjectCreateLocalFilePreviewGrantInput,
     ) => Promise<ProjectCreateLocalFilePreviewGrantResult>;
-    writeFile: (input: ProjectWriteFileInput) => Promise<ProjectWriteFileResult>;
-    runDevServer: (input: ProjectRunDevServerInput) => Promise<ProjectRunDevServerResult>;
-    stopDevServer: (input: ProjectStopDevServerInput) => Promise<ProjectStopDevServerResult>;
+    writeFile: (
+      input: ProjectWriteFileInput,
+    ) => Promise<ProjectWriteFileResult>;
+    runDevServer: (
+      input: ProjectRunDevServerInput,
+    ) => Promise<ProjectRunDevServerResult>;
+    stopDevServer: (
+      input: ProjectStopDevServerInput,
+    ) => Promise<ProjectStopDevServerResult>;
     listDevServers: () => Promise<ProjectListDevServersResult>;
-    onDevServerEvent: (callback: (event: ProjectDevServerEvent) => void) => () => void;
+    onDevServerEvent: (
+      callback: (event: ProjectDevServerEvent) => void,
+    ) => () => void;
     provisionFromGitHub: (
       input: GitHubProjectProvisionInput,
       options?: { readonly signal?: AbortSignal },
@@ -689,9 +725,15 @@ export interface NativeApi {
   };
   git: {
     // Existing branch/worktree API
-    githubRepository: (input: GitHubRepositoryInput) => Promise<GitHubRepositoryResult>;
-    listBranches: (input: GitListBranchesInput) => Promise<GitListBranchesResult>;
-    createWorktree: (input: GitCreateWorktreeInput) => Promise<GitCreateWorktreeResult>;
+    githubRepository: (
+      input: GitHubRepositoryInput,
+    ) => Promise<GitHubRepositoryResult>;
+    listBranches: (
+      input: GitListBranchesInput,
+    ) => Promise<GitListBranchesResult>;
+    createWorktree: (
+      input: GitCreateWorktreeInput,
+    ) => Promise<GitCreateWorktreeResult>;
     createDetachedWorktree: (
       input: GitCreateDetachedWorktreeInput,
     ) => Promise<GitCreateDetachedWorktreeResult>;
@@ -704,9 +746,15 @@ export interface NativeApi {
     removeIndexLock: (input: GitRemoveIndexLockInput) => Promise<void>;
     init: (input: GitInitInput) => Promise<void>;
     stageFiles: (input: GitStageFilesInput) => Promise<GitStageFilesResult>;
-    unstageFiles: (input: GitUnstageFilesInput) => Promise<GitUnstageFilesResult>;
-    handoffThread: (input: GitHandoffThreadInput) => Promise<GitHandoffThreadResult>;
-    resolvePullRequest: (input: GitPullRequestRefInput) => Promise<GitResolvePullRequestResult>;
+    unstageFiles: (
+      input: GitUnstageFilesInput,
+    ) => Promise<GitUnstageFilesResult>;
+    handoffThread: (
+      input: GitHandoffThreadInput,
+    ) => Promise<GitHandoffThreadResult>;
+    resolvePullRequest: (
+      input: GitPullRequestRefInput,
+    ) => Promise<GitResolvePullRequestResult>;
     pullRequestSnapshot: (
       input: GitPullRequestSnapshotInput,
     ) => Promise<GitPullRequestSnapshotResult>;
@@ -722,9 +770,15 @@ export interface NativeApi {
     workingTreeDiffStats: (
       input: GitReadWorkingTreeDiffInput,
     ) => Promise<GitWorkingTreeDiffStatsResult>;
-    summarizeDiff: (input: GitSummarizeDiffInput) => Promise<GitSummarizeDiffResult>;
-    runStackedAction: (input: GitRunStackedActionInput) => Promise<GitRunStackedActionResult>;
-    onActionProgress: (callback: (event: GitActionProgressEvent) => void) => () => void;
+    summarizeDiff: (
+      input: GitSummarizeDiffInput,
+    ) => Promise<GitSummarizeDiffResult>;
+    runStackedAction: (
+      input: GitRunStackedActionInput,
+    ) => Promise<GitRunStackedActionResult>;
+    onActionProgress: (
+      callback: (event: GitActionProgressEvent) => void,
+    ) => () => void;
     onWorktreeSetupProgress: (
       callback: (event: GitWorktreeSetupProgressEvent) => void,
     ) => () => void;
@@ -737,8 +791,12 @@ export interface NativeApi {
     detail: (input: PullRequestDetailInput) => Promise<PullRequestDetail>;
     diff: (input: PullRequestDetailInput) => Promise<PullRequestDiffResult>;
     action: (input: PullRequestActionInput) => Promise<PullRequestActionResult>;
-    comment: (input: PullRequestCommentInput) => Promise<PullRequestActionResult>;
-    setPinned: (input: PullRequestSetPinnedInput) => Promise<PullRequestSetPinnedResult>;
+    comment: (
+      input: PullRequestCommentInput,
+    ) => Promise<PullRequestActionResult>;
+    setPinned: (
+      input: PullRequestSetPinnedInput,
+    ) => Promise<PullRequestSetPinnedResult>;
   };
   contextMenu: {
     show: <T extends string>(
@@ -750,21 +808,31 @@ export interface NativeApi {
     getConfig: () => Promise<ServerConfig>;
     getEnvironment: () => Promise<ServerGetEnvironmentResult>;
     getSettings: () => Promise<ServerGetSettingsResult>;
-    updateSettings: (input: ServerUpdateSettingsInput) => Promise<ServerUpdateSettingsResult>;
+    updateSettings: (
+      input: ServerUpdateSettingsInput,
+    ) => Promise<ServerUpdateSettingsResult>;
     getAuthSession: () => Promise<AuthSessionState>;
     bootstrapAuth: (input: AuthBootstrapInput) => Promise<AuthBootstrapResult>;
-    bootstrapBearerAuth: (input: AuthBootstrapInput) => Promise<AuthBearerBootstrapResult>;
+    bootstrapBearerAuth: (
+      input: AuthBootstrapInput,
+    ) => Promise<AuthBearerBootstrapResult>;
     issueAuthWebSocketToken: () => Promise<AuthWebSocketTokenResult>;
     createAuthPairingToken: (
       input?: AuthCreatePairingCredentialInput,
     ) => Promise<AuthPairingCredentialResult>;
     listAuthPairingLinks: () => Promise<ReadonlyArray<AuthPairingLink>>;
-    revokeAuthPairingLink: (input: AuthRevokePairingLinkInput) => Promise<{ revoked: boolean }>;
+    revokeAuthPairingLink: (
+      input: AuthRevokePairingLinkInput,
+    ) => Promise<{ revoked: boolean }>;
     listAuthClients: () => Promise<ReadonlyArray<AuthClientSession>>;
-    revokeAuthClient: (input: AuthRevokeClientSessionInput) => Promise<{ revoked: boolean }>;
+    revokeAuthClient: (
+      input: AuthRevokeClientSessionInput,
+    ) => Promise<{ revoked: boolean }>;
     revokeOtherAuthClients: () => Promise<{ revokedCount: number }>;
     logoutAuthSession: () => Promise<AuthLogoutResult>;
-    listExternalMcpIntegrations: () => Promise<ReadonlyArray<ExternalMcpIntegration>>;
+    listExternalMcpIntegrations: () => Promise<
+      ReadonlyArray<ExternalMcpIntegration>
+    >;
     createExternalMcpIntegration: (
       input: ExternalMcpCreateIntegrationInput,
     ) => Promise<ExternalMcpCreateIntegrationResult>;
@@ -775,14 +843,20 @@ export interface NativeApi {
       input: ExternalMcpRefreshPairingInput,
     ) => Promise<ExternalMcpCreateIntegrationResult>;
     refreshProviders: () => Promise<ServerRefreshProvidersResult>;
-    updateProvider: (input: ServerProviderUpdateInput) => Promise<ServerProviderUpdateResult>;
+    updateProvider: (
+      input: ServerProviderUpdateInput,
+    ) => Promise<ServerProviderUpdateResult>;
     listWorktrees: () => Promise<ServerListWorktreesResult>;
     listLocalServers: () => Promise<ServerListLocalServersResult>;
-    stopLocalServer: (input: ServerStopLocalServerInput) => Promise<ServerStopLocalServerResult>;
+    stopLocalServer: (
+      input: ServerStopLocalServerInput,
+    ) => Promise<ServerStopLocalServerResult>;
     listProviderUsage: (
       input: ServerListProviderUsageInput,
     ) => Promise<ServerListProviderUsageResult>;
-    getUsageHistory: (input: ServerGetUsageHistoryInput) => Promise<ServerGetUsageHistoryResult>;
+    getUsageHistory: (
+      input: ServerGetUsageHistoryInput,
+    ) => Promise<ServerGetUsageHistoryResult>;
     commandUsageHistory: (
       input: ServerCommandUsageHistoryInput,
     ) => Promise<ServerCommandUsageHistoryResult>;
@@ -793,14 +867,20 @@ export interface NativeApi {
     generateAutomationIntent: (
       input: ServerGenerateAutomationIntentInput,
     ) => Promise<ServerGenerateAutomationIntentResult>;
-    prewarmVoice?: (input: ServerVoicePrewarmInput) => Promise<ServerVoicePrewarmResult>;
+    prewarmVoice?: (
+      input: ServerVoicePrewarmInput,
+    ) => Promise<ServerVoicePrewarmResult>;
     transcribeVoice: (
       input: ServerVoiceTranscriptionInput,
     ) => Promise<ServerVoiceTranscriptionResult>;
-    upsertKeybinding: (input: ServerUpsertKeybindingInput) => Promise<ServerUpsertKeybindingResult>;
+    upsertKeybinding: (
+      input: ServerUpsertKeybindingInput,
+    ) => Promise<ServerUpsertKeybindingResult>;
   };
   stats: {
-    getProfileStats: (input: StatsGetProfileStatsInput) => Promise<StatsGetProfileStatsResult>;
+    getProfileStats: (
+      input: StatsGetProfileStatsInput,
+    ) => Promise<StatsGetProfileStatsResult>;
     getProfileTokenStats: (
       input: StatsGetProfileTokenStatsInput,
     ) => Promise<StatsGetProfileTokenStatsResult>;
@@ -810,13 +890,27 @@ export interface NativeApi {
       input: ProviderGetComposerCapabilitiesInput,
     ) => Promise<ProviderComposerCapabilities>;
     compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
-    listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
-    listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
-    listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
-    listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
-    readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
-    listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
-    listAgents: (input: ProviderListAgentsInput) => Promise<ProviderListAgentsResult>;
+    listCommands: (
+      input: ProviderListCommandsInput,
+    ) => Promise<ProviderListCommandsResult>;
+    listSkills: (
+      input: ProviderListSkillsInput,
+    ) => Promise<ProviderListSkillsResult>;
+    listSkillsCatalog: (
+      input: ProviderSkillsCatalogInput,
+    ) => Promise<ProviderSkillsCatalogResult>;
+    listPlugins: (
+      input: ProviderListPluginsInput,
+    ) => Promise<ProviderListPluginsResult>;
+    readPlugin: (
+      input: ProviderReadPluginInput,
+    ) => Promise<ProviderReadPluginResult>;
+    listModels: (
+      input: ProviderListModelsInput,
+    ) => Promise<ProviderListModelsResult>;
+    listAgents: (
+      input: ProviderListAgentsInput,
+    ) => Promise<ProviderListAgentsResult>;
   };
   omnimindModelServices: {
     list: (
@@ -842,7 +936,9 @@ export interface NativeApi {
     cancelLogin: (
       input: OmniMindModelServiceCancelLoginInput,
     ) => Promise<OmniMindModelServiceAuthResult>;
-    logout: (input: OmniMindModelServiceLogoutInput) => Promise<OmniMindModelServiceLogoutResult>;
+    logout: (
+      input: OmniMindModelServiceLogoutInput,
+    ) => Promise<OmniMindModelServiceLogoutResult>;
     refresh: (
       input: OmniMindModelServiceRefreshInput,
       options?: { readonly signal?: AbortSignal },
@@ -865,17 +961,27 @@ export interface NativeApi {
     ) => Promise<OmniMindCustomModelServiceRemoveResult>;
   };
   omnimindEcosystem: {
-    list: (input?: OmniMindEcosystemListInput) => Promise<OmniMindEcosystemSnapshot>;
+    list: (
+      input?: OmniMindEcosystemListInput,
+    ) => Promise<OmniMindEcosystemSnapshot>;
     listResources: (
       input: OmniMindEcosystemPackageInput,
     ) => Promise<OmniMindEcosystemListResourcesResult>;
-    install: (input: OmniMindEcosystemInstallInput) => Promise<OmniMindEcosystemMutationResult>;
-    update: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
-    remove: (input: OmniMindEcosystemPackageInput) => Promise<OmniMindEcosystemMutationResult>;
+    install: (
+      input: OmniMindEcosystemInstallInput,
+    ) => Promise<OmniMindEcosystemMutationResult>;
+    update: (
+      input: OmniMindEcosystemPackageInput,
+    ) => Promise<OmniMindEcosystemMutationResult>;
+    remove: (
+      input: OmniMindEcosystemPackageInput,
+    ) => Promise<OmniMindEcosystemMutationResult>;
     setResourceEnabled: (
       input: OmniMindEcosystemResourceToggleInput,
     ) => Promise<OmniMindEcosystemMutationResult>;
-    reload: (input: OmniMindEcosystemReloadInput) => Promise<OmniMindEcosystemReloadResult>;
+    reload: (
+      input: OmniMindEcosystemReloadInput,
+    ) => Promise<OmniMindEcosystemReloadResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;
@@ -883,12 +989,16 @@ export interface NativeApi {
     getThreadDetailSnapshot: (
       input: OrchestrationGetThreadDetailSnapshotInput,
     ) => Promise<OrchestrationGetThreadDetailSnapshotResult>;
-    dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
+    dispatchCommand: (
+      command: ClientOrchestrationCommand,
+    ) => Promise<{ sequence: number }>;
     importThread: (
       input: OrchestrationImportThreadInput,
     ) => Promise<OrchestrationImportThreadResult>;
     repairState: () => Promise<OrchestrationReadModel>;
-    getTurnDiff: (input: OrchestrationGetTurnDiffInput) => Promise<OrchestrationGetTurnDiffResult>;
+    getTurnDiff: (
+      input: OrchestrationGetTurnDiffInput,
+    ) => Promise<OrchestrationGetTurnDiffResult>;
     getFullThreadDiff: (
       input: OrchestrationGetFullThreadDiffInput,
     ) => Promise<OrchestrationGetFullThreadDiffResult>;
@@ -904,22 +1014,40 @@ export interface NativeApi {
     ) => Promise<OrchestrationReconcileProviderDeliveryResult>;
     subscribeShell: () => Promise<void>;
     unsubscribeShell: () => Promise<void>;
-    subscribeThread: (input: OrchestrationSubscribeThreadInput) => Promise<void>;
-    unsubscribeThread: (input: OrchestrationUnsubscribeThreadInput) => Promise<void>;
-    onDomainEvent: (callback: (event: OrchestrationEvent) => void) => () => void;
-    onShellEvent: (callback: (event: OrchestrationShellStreamItem) => void) => () => void;
-    onThreadEvent: (callback: (event: OrchestrationThreadStreamItem) => void) => () => void;
+    subscribeThread: (
+      input: OrchestrationSubscribeThreadInput,
+    ) => Promise<void>;
+    unsubscribeThread: (
+      input: OrchestrationUnsubscribeThreadInput,
+    ) => Promise<void>;
+    onDomainEvent: (
+      callback: (event: OrchestrationEvent) => void,
+    ) => () => void;
+    onShellEvent: (
+      callback: (event: OrchestrationShellStreamItem) => void,
+    ) => () => void;
+    onThreadEvent: (
+      callback: (event: OrchestrationThreadStreamItem) => void,
+    ) => () => void;
   };
   automation: {
     list: (input?: AutomationListInput) => Promise<AutomationListResult>;
-    getMemory: (input: AutomationGetMemoryInput) => Promise<AutomationMemory | null>;
+    getMemory: (
+      input: AutomationGetMemoryInput,
+    ) => Promise<AutomationMemory | null>;
     create: (input: AutomationCreateInput) => Promise<AutomationDefinition>;
     update: (input: AutomationUpdateInput) => Promise<AutomationDefinition>;
     delete: (input: AutomationDeleteInput) => Promise<void>;
     runNow: (input: AutomationRunNowInput) => Promise<AutomationRunNowResult>;
-    cancelRun: (input: AutomationCancelRunInput) => Promise<AutomationCancelRunResult>;
-    markRunRead: (input: AutomationMarkRunReadInput) => Promise<AutomationRunActionResult>;
-    archiveRun: (input: AutomationArchiveRunInput) => Promise<AutomationRunActionResult>;
+    cancelRun: (
+      input: AutomationCancelRunInput,
+    ) => Promise<AutomationCancelRunResult>;
+    markRunRead: (
+      input: AutomationMarkRunReadInput,
+    ) => Promise<AutomationRunActionResult>;
+    archiveRun: (
+      input: AutomationArchiveRunInput,
+    ) => Promise<AutomationRunActionResult>;
     resolveProposal: (
       input: AutomationResolveProposalInput,
     ) => Promise<AutomationResolveProposalResult>;
@@ -944,14 +1072,26 @@ export interface NativeApi {
     typeText: (input: DeviceTypeTextInput) => Promise<void>;
     keyEvent: (input: DeviceKeyEventInput) => Promise<void>;
     pressButton: (input: DevicePressButtonInput) => Promise<void>;
-    installApp: (input: DeviceInstallAppInput) => Promise<DeviceInstallAppResult>;
+    installApp: (
+      input: DeviceInstallAppInput,
+    ) => Promise<DeviceInstallAppResult>;
     launchApp: (input: DeviceLaunchAppInput) => Promise<DeviceLaunchAppResult>;
     openUrl: (input: DeviceOpenUrlInput) => Promise<void>;
-    screenshot: (input: DeviceScreenshotInput) => Promise<DeviceScreenshotResult>;
-    startRecording: (input: DeviceStartRecordingInput) => Promise<DeviceStartRecordingResult>;
-    stopRecording: (input: DeviceStopRecordingInput) => Promise<DeviceStopRecordingResult>;
-    describeUi: (input: DeviceDescribeUiInput) => Promise<DeviceDescribeUiResult>;
-    scrollToElement: (input: DeviceScrollToElementInput) => Promise<DeviceScrollToElementResult>;
+    screenshot: (
+      input: DeviceScreenshotInput,
+    ) => Promise<DeviceScreenshotResult>;
+    startRecording: (
+      input: DeviceStartRecordingInput,
+    ) => Promise<DeviceStartRecordingResult>;
+    stopRecording: (
+      input: DeviceStopRecordingInput,
+    ) => Promise<DeviceStopRecordingResult>;
+    describeUi: (
+      input: DeviceDescribeUiInput,
+    ) => Promise<DeviceDescribeUiResult>;
+    scrollToElement: (
+      input: DeviceScrollToElementInput,
+    ) => Promise<DeviceScrollToElementResult>;
     onEvent: (callback: (event: DeviceEvent) => void) => () => void;
   };
 }

@@ -47,6 +47,16 @@ export function isCommandMissingCause(error: unknown): boolean {
     ) {
       return true;
     }
+    if (candidate instanceof Error) {
+      const message = candidate.message.trim();
+      if (
+        /^Command not found:\s+\S+$/iu.test(message) ||
+        /^NotFound:\s+\S+$/iu.test(message) ||
+        /\bspawn\s+\S+\s+ENOENT\b/iu.test(message)
+      ) {
+        return true;
+      }
+    }
     pending.push(structured.reason, structured.cause);
   }
 
