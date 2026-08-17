@@ -324,6 +324,7 @@ import {
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
+import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { Button } from "./ui/button";
 import { Menu, MenuItem, MenuTrigger } from "./ui/menu";
@@ -10859,6 +10860,7 @@ export default function ChatView({
     handleStandaloneSlashCommand,
     handleSlashCommandSelection,
     clearThreadGoal,
+    setThreadGoalPaused,
   } = useComposerSlashCommands({
     activeProject,
     activeThread,
@@ -10910,6 +10912,22 @@ export default function ChatView({
     setComposerDraftProviderModelOptions,
     editorActions: slashEditorActions,
   });
+
+  // Goal editing intentionally reuses the same /goal path as creation so the
+  // composer has one parser and one persistence owner for both operations.
+  const editThreadGoalInComposer = useCallback(() => {
+    const currentGoal = activeThread?.goal?.trim();
+    if (!activeThread || !currentGoal) {
+      return;
+    }
+    const nextPrompt = `/goal ${currentGoal}`;
+    promptRef.current = nextPrompt;
+    clearComposerDraftContent(activeThread.id);
+    setComposerDraftPrompt(activeThread.id, nextPrompt);
+    setComposerCursor(collapseExpandedComposerCursor(nextPrompt, nextPrompt.length));
+    setComposerTrigger(detectComposerTrigger(nextPrompt, nextPrompt.length));
+    scheduleComposerFocus();
+  }, [activeThread, clearComposerDraftContent, scheduleComposerFocus, setComposerDraftPrompt]);
 
   const historyOnlyForkableAssistantMessageIds = useMemo(
     () =>
@@ -11889,6 +11907,8 @@ export default function ChatView({
   const showComposerActiveTaskListCard = Boolean(activeTaskList && !planSidebarOpen);
   const showComposerWorkflowRunCard = workflowRunState !== null;
   const showComposerSubagentStrip = composerSubagentStripItems.length > 0;
+  const activeThreadGoalText = activeThread?.goal?.trim() ?? "";
+  const showComposerGoalHeader = activeThreadGoalText.length > 0;
   // The workflow card already lists its run and member agents, so the generic
   // "N background agents" footer only counts tasks outside the workflow.
   const composerBackgroundTaskCount = workflowRunState
@@ -11983,6 +12003,26 @@ export default function ChatView({
                   showComposerSubagentStrip
                 }
               />
+              {showComposerGoalHeader && activeThread ? (
+                <ComposerGoalHeader
+                  goal={activeThreadGoalText}
+                  goalStartedAt={activeThread.goalStartedAt}
+                  goalPausedAt={activeThread.goalPausedAt}
+                  canPause={isServerThread}
+                  onEdit={editThreadGoalInComposer}
+                  onSetPaused={async (paused) => {
+                    await setThreadGoalPaused(paused);
+                  }}
+                  onClear={clearThreadGoal}
+                  attachedToPrevious={
+                    showComposerLiveChangesHeader ||
+                    showComposerActiveTaskListCard ||
+                    showComposerWorkflowRunCard ||
+                    showComposerSubagentStrip ||
+                    queuedComposerTurns.length > 0
+                  }
+                />
+              ) : null}
               {settledThreadBranchMismatch ? (
                 <div className="pb-2">
                   <ComposerBranchMismatchNotice {...settledThreadBranchMismatch} />
