@@ -33,10 +33,12 @@ import {
   type ProviderRuntimeEvent,
   type ProviderSession,
   type ProviderUserInputAnswers,
+  type RuntimeTaskListItem,
   RuntimeItemId,
   RuntimeRequestId,
   ThreadId,
   type ThreadTokenUsageSnapshot,
+  type TurnTasksUpdatedPayload,
   TurnId,
   type UserInputQuestion,
 } from "@omnimind/contracts";
@@ -81,6 +83,7 @@ import {
   type ProviderThreadSnapshot,
 } from "../Services/ProviderAdapter.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
+import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { makeKeyedLock } from "../keyedLock.ts";
 import { classifyPiTurnFailure } from "../piTurnFailure.ts";
@@ -113,6 +116,16 @@ import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntime
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
+const OMNIMIND_TASK_LIST_TOOL_NAME = "omnimind_update_tasks";
+const OMNIMIND_TASK_LIST_MAX_ITEMS = 50;
+const OMNIMIND_TASK_TEXT_MAX_LENGTH = 1_000;
+const OMNIMIND_TASK_EXPLANATION_MAX_LENGTH = 2_000;
+const OMNIMIND_AGENT_TASK_POLICY = [
+  "For a non-trivial request with multiple steps, use omnimind_update_tasks to maintain one current task list. This task list is the progress projection for the user's objective, not a second Goal authority.",
+  "Absorb requested work into the current task list whenever it can be completed safely and within scope. Keep statuses current as work advances, with at most one task in progress.",
+  "Before finishing, reconcile every requested part against the task list. Do not silently omit, defer, or narrow requested work: if something remains unfinished or you recommend not doing it, tell the user why and obtain confirmation before treating it as out of scope.",
+  "Do not create background continuation, retry loops, timers, or a separate durable Goal record. A settled turn is the completion boundary; if blocked, leave the relevant task unfinished and state the exact blocker.",
+].join("\n");
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
   readonly label: string;
@@ -525,6 +538,125 @@ function piGatewayToolResult(result: unknown): AgentToolResult<unknown> {
         : [{ type: "text", text: JSON.stringify(result ?? null) } satisfies TextContent],
     details: result,
   };
+}
+
+function boundedTrimmedString(value: unknown, maxLength: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : undefined;
+}
+
+/**
+ * Decode the OmniMind Agent's progress projection without creating a second
+ * durable Goal model. The canonical runtime task-list contract remains the
+ * sole owner consumed by ProviderService and the Workbench.
+ */
+export function decodeOmniMindTaskListUpdate(args: unknown): TurnTasksUpdatedPayload | null {
+  const record = toolRecord(args);
+  const rawTasks = record?.tasks;
+  if (
+    !Array.isArray(rawTasks) ||
+    rawTasks.length === 0 ||
+    rawTasks.length > OMNIMIND_TASK_LIST_MAX_ITEMS
+  ) {
+    return null;
+  }
+
+  const tasks: RuntimeTaskListItem[] = [];
+  let inProgressCount = 0;
+  for (const rawTask of rawTasks) {
+    const taskRecord = toolRecord(rawTask);
+    const task = boundedTrimmedString(taskRecord?.task, OMNIMIND_TASK_TEXT_MAX_LENGTH);
+    const status = taskRecord?.status;
+    if (
+      task === undefined ||
+      (status !== "pending" &&
+        status !== "in_progress" &&
+        status !== "inProgress" &&
+        status !== "completed")
+    ) {
+      return null;
+    }
+    const item = makeRuntimeTaskListItem(task, status);
+    if (!item) return null;
+    if (item.status === "inProgress") inProgressCount += 1;
+    tasks.push(item);
+  }
+  if (inProgressCount > 1) return null;
+
+  const rawExplanation = record?.explanation;
+  if (rawExplanation !== undefined && typeof rawExplanation !== "string") return null;
+  const explanation = boundedTrimmedString(rawExplanation, OMNIMIND_TASK_EXPLANATION_MAX_LENGTH);
+  if (typeof rawExplanation === "string" && rawExplanation.trim().length > 0 && !explanation) {
+    return null;
+  }
+  return {
+    ...(explanation ? { explanation } : {}),
+    tasks,
+  };
+}
+
+export function buildOmniMindTaskListTool(input: {
+  readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
+}): ToolDefinition {
+  return input.defineTool({
+    name: OMNIMIND_TASK_LIST_TOOL_NAME,
+    label: "Update OmniMind tasks",
+    description:
+      "Replace the current OmniMind task list for this turn. Use for non-trivial multi-step work, keep every requested part represented, and keep at most one task in progress. Mark every task completed before claiming the objective is complete; if a task remains or should be omitted, explain it to the user instead of silently dropping it.",
+    promptSnippet: "Maintain the current task list for non-trivial multi-step work",
+    promptGuidelines: [
+      "Treat tasks as the live progress projection of the user's objective, not as a separate durable Goal.",
+      "Send the full current list on every update and keep at most one task in progress.",
+    ],
+    parameters: {
+      type: "object",
+      properties: {
+        explanation: {
+          type: "string",
+          maxLength: OMNIMIND_TASK_EXPLANATION_MAX_LENGTH,
+          description: "Optional concise reason for the task-list update.",
+        },
+        tasks: {
+          type: "array",
+          minItems: 1,
+          maxItems: OMNIMIND_TASK_LIST_MAX_ITEMS,
+          items: {
+            type: "object",
+            properties: {
+              task: { type: "string", minLength: 1, maxLength: OMNIMIND_TASK_TEXT_MAX_LENGTH },
+              status: {
+                type: "string",
+                enum: ["pending", "in_progress", "completed"],
+              },
+            },
+            required: ["task", "status"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["tasks"],
+      additionalProperties: false,
+    } as ToolDefinition["parameters"],
+    executionMode: "sequential",
+    execute: async (_toolCallId, params) => {
+      const payload = decodeOmniMindTaskListUpdate(params);
+      if (!payload) {
+        throw new Error(
+          "Invalid OmniMind task list: provide 1-50 non-empty tasks and at most one in-progress task.",
+        );
+      }
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Updated the current OmniMind task list (${payload.tasks.length} tasks).`,
+          },
+        ],
+        details: payload,
+      };
+    },
+  });
 }
 
 /**
@@ -961,6 +1093,13 @@ export function makePiHostSystemPrompt(input: {
         scopedGatewayConnectionAvailable: input.gatewayControlAvailable,
       }),
     }),
+    ...(input.provider === "omnimind"
+      ? [
+          "<omnimind_agent_task_policy>",
+          OMNIMIND_AGENT_TASK_POLICY,
+          "</omnimind_agent_task_policy>",
+        ]
+      : []),
     "</omnimind_host_context>",
   ].join("\n");
 }
@@ -2270,6 +2409,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             extractPiCuratorWebSurfaceUrl(event.toolName, event.result);
           const safeResult = sanitizeEngineWebSurfacePayload(event.result, surfaceUrl);
           const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
+          const taskListPayload = event.isError
+            ? null
+            : provider === "omnimind" && event.toolName === OMNIMIND_TASK_LIST_TOOL_NAME
+              ? decodeOmniMindTaskListUpdate(tracked.args)
+              : null;
           context.activeToolItems.delete(event.toolCallId);
           tracked.engineWebSurface?.unregister();
           const detail = piToolTimelineDetail(safeResult);
@@ -2301,6 +2445,18 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             },
             raw: { source: "pi.sdk.event", messageType: event.type, payload: safeEvent },
           } satisfies ProviderRuntimeEvent);
+          if (taskListPayload) {
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              type: "turn.tasks.updated",
+              payload: taskListPayload,
+              raw: {
+                source: "pi.sdk.event",
+                messageType: OMNIMIND_TASK_LIST_TOOL_NAME,
+                payload: { toolCallId: event.toolCallId },
+              },
+            } satisfies ProviderRuntimeEvent);
+          }
           return;
         }
         case "compaction_start": {
@@ -2472,6 +2628,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ...(shellPath === undefined ? {} : { shellPath }),
                 }),
               ),
+              ...(provider === "omnimind"
+                ? [
+                    buildOmniMindTaskListTool({
+                      defineTool: (tool) => input.sdk.defineTool(tool),
+                    }),
+                  ]
+                : []),
               ...(input.gatewayTools ?? []),
             ],
           })),

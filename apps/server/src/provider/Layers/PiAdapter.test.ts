@@ -27,6 +27,8 @@ import {
   getPiDiscoverableModels,
   getPiSupportedThinkingOptions,
   buildPiAgentGatewayCustomTools,
+  buildOmniMindTaskListTool,
+  decodeOmniMindTaskListUpdate,
   makePiBashProcessSupervisor,
   makePiGatewayLoadWarning,
   makePiHostSystemPrompt,
@@ -57,6 +59,65 @@ describe("Pi native resource projection", () => {
       message:
         "OmniMind MCP tools could not be loaded for this OmniMind Agent session. Engine-native tools remain available; OmniMind MCP actions are unavailable.",
       detail: { source: "omnimind-mcp", availability: "failed" },
+    });
+  });
+
+  it("adds the task reconciliation policy only to the bundled OmniMind Agent", () => {
+    const omniMindPrompt = makePiHostSystemPrompt({
+      provider: "omnimind",
+      gatewayControlAvailable: true,
+    });
+    const stockPiPrompt = makePiHostSystemPrompt({
+      provider: "pi",
+      gatewayControlAvailable: true,
+    });
+
+    expect(omniMindPrompt).toContain("<omnimind_agent_task_policy>");
+    expect(omniMindPrompt).toContain("Do not silently omit, defer, or narrow requested work");
+    expect(omniMindPrompt).toContain("obtain confirmation before treating it as out of scope");
+    expect(stockPiPrompt).not.toContain("<omnimind_agent_task_policy>");
+    expect(stockPiPrompt).not.toContain("omnimind_update_tasks");
+  });
+
+  it("normalizes one bounded OmniMind task projection and rejects competing current tasks", async () => {
+    expect(
+      decodeOmniMindTaskListUpdate({
+        explanation: "  Intake reconciled  ",
+        tasks: [
+          { task: "  Inspect source  ", status: "completed" },
+          { task: "Implement candidate", status: "in_progress" },
+          { task: "Verify result", status: "pending" },
+        ],
+      }),
+    ).toEqual({
+      explanation: "Intake reconciled",
+      tasks: [
+        { task: "Inspect source", status: "completed" },
+        { task: "Implement candidate", status: "inProgress" },
+        { task: "Verify result", status: "pending" },
+      ],
+    });
+    expect(
+      decodeOmniMindTaskListUpdate({
+        tasks: [
+          { task: "First", status: "in_progress" },
+          { task: "Second", status: "in_progress" },
+        ],
+      }),
+    ).toBeNull();
+
+    const tool = buildOmniMindTaskListTool({ defineTool: (definition) => definition });
+    expect(tool.name).toBe("omnimind_update_tasks");
+    await expect(
+      tool.execute(
+        "task-call",
+        { tasks: [{ task: "Finish", status: "completed" }] },
+        undefined,
+        undefined,
+        {} as never,
+      ),
+    ).resolves.toMatchObject({
+      details: { tasks: [{ task: "Finish", status: "completed" }] },
     });
   });
 
@@ -289,6 +350,55 @@ function piOpenAiSuccessResponse(text = "ok") {
         created: 1,
         model: "safe-model",
         choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+      })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n"),
+    { headers: { "content-type": "text/event-stream" } },
+  );
+}
+
+function piOpenAiTaskToolCallResponse() {
+  return new Response(
+    [
+      `data: ${JSON.stringify({
+        id: "chatcmpl-task",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [
+          {
+            index: 0,
+            delta: {
+              role: "assistant",
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call-task-list",
+                  type: "function",
+                  function: {
+                    name: "omnimind_update_tasks",
+                    arguments: JSON.stringify({
+                      explanation: "Tracking the requested work",
+                      tasks: [
+                        { task: "Inspect the source", status: "completed" },
+                        { task: "Verify the result", status: "in_progress" },
+                      ],
+                    }),
+                  },
+                },
+              ],
+            },
+            finish_reason: null,
+          },
+        ],
+      })}`,
+      `data: ${JSON.stringify({
+        id: "chatcmpl-task",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
       })}`,
       "data: [DONE]",
       "",
@@ -555,6 +665,108 @@ describe("getPiDiscoverableModels", () => {
       expect(result.reloaded).toBe("reloaded");
       expect(result.afterStop).toBe("no_active_session");
     } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("projects the bundled OmniMind task tool into the canonical turn task list", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-task-projection-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000051");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model" }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return requestCount === 1
+        ? piOpenAiTaskToolCallResponse()
+        : piOpenAiSuccessResponse("All requested work is reconciled.");
+    });
+
+    try {
+      const events: Array<ProviderRuntimeEvent> = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const turn = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const sent = yield* adapter.sendTurn({
+              threadId,
+              input: "Do the multi-step request and keep every part visible.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === sent.turnId,
+                  ),
+                "The task-list turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return sent;
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const taskEventIndex = events.findIndex(
+        (event) => event.type === "turn.tasks.updated" && event.turnId === turn.turnId,
+      );
+      const terminalIndex = events.findIndex(
+        (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+      );
+      expect(requestCount).toBe(2);
+      expect(taskEventIndex).toBeGreaterThanOrEqual(0);
+      expect(taskEventIndex).toBeLessThan(terminalIndex);
+      expect(events[taskEventIndex]).toMatchObject({
+        type: "turn.tasks.updated",
+        payload: {
+          explanation: "Tracking the requested work",
+          tasks: [
+            { task: "Inspect the source", status: "completed" },
+            { task: "Verify the result", status: "inProgress" },
+          ],
+        },
+      });
+    } finally {
+      vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
     }
   });
