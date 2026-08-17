@@ -3070,6 +3070,25 @@ describe("MessagesTimeline", () => {
         {...baseProps}
         isWorking={false}
         activeTurnInProgress={false}
+        turnDiffSummaryByAssistantMessageId={
+          new Map([
+            [
+              assistantMessageId,
+              {
+                turnId: TurnId.makeUnsafe("turn-omnimind-recap"),
+                checkpointTurnCount: 1,
+                checkpointTurnCounts: [1],
+                checkpointRef: CheckpointRef.makeUnsafe(
+                  "refs/omnimind/checkpoints/thread/turn/recap",
+                ),
+                status: "ready",
+                completedAt: "2026-03-17T19:12:31.000Z",
+                assistantMessageId,
+                files: [{ path: "apps/web/src/recap.ts", additions: 2, deletions: 1 }],
+              },
+            ],
+          ])
+        }
         timelineEntries={[
           ...workEntries,
           {
@@ -3102,6 +3121,13 @@ describe("MessagesTimeline", () => {
     expect(markup.indexOf("Both threads are running.")).toBeLessThan(
       markup.indexOf('data-omnimind-thread-creation-card="true"'),
     );
+    expect(markup.indexOf('data-omnimind-thread-creation-card="true"')).toBeLessThan(
+      markup.indexOf("Edited 1 file"),
+    );
+    expect(markup.indexOf("Edited 1 file")).toBeLessThan(
+      markup.indexOf('aria-label="Copy message"'),
+    );
+    expect(markup.match(/aria-label="Copy message"/g)).toHaveLength(1);
   });
 
   it("anchors the changed-files summary at the end of a collapsed file-change turn", async () => {
@@ -3345,5 +3371,8 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain('aria-expanded="true"');
     expect(markup).toContain("font-system-ui truncate font-normal");
     expect(markup).toContain("apps/web/src/components/Sidebar.tsx");
+    expect(markup.indexOf("Edited 1 file")).toBeLessThan(
+      markup.indexOf('aria-label="Copy message"'),
+    );
   });
 });

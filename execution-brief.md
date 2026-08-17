@@ -409,6 +409,14 @@ S1 当前唯一代码 Slice 是 **R11-5 Windows runtime taskbar icon refresh**�
 
 R11-5 的 pre-commit source-candidate 证据为：现有Desktop icon owner focused `1 file / 12 tests`覆盖author五类生命周期、darwin/linux零taskbar churn与rapid latest-generation fence；Desktop typecheck、document contract `21/21`、changed-path lint `0 warnings / 0 errors`、format与diff check通过。该证据只证明注入式调度与平台分支，不证明Explorer实际刷新；本轮按准入不做package/install/Windows live/README，因此Windows packaged journey继续pending且只主张source-only candidate。
 
+R11-5 已在 exact pushed `a55b2cab7bebf27df46f3aef05855de304d40715` 闭合；上述 Windows runtime taskbar icon source机制不再是当前准入，Windows packaged真实证据仍按原裁决pending。
+
+S1 当前唯一代码 Slice 是 **R11-6 settled Timeline closure**：按当前 Omni Timeline owner吸收 Synara `76b2925b`、`e3538b98`、`558baee5` 与 `f8841ee6` 中相互依赖的 footer ordering、day-aware timestamp和首action glyph光学校正语义。settled assistant block必须保持 message → OmniMind recap → settled turn changes → 单一footer；live turn changes继续只由Composer surface拥有，Timeline不得提前或重复投影。user与terminal assistant timestamp按本地calendar day显示：同日仅time，过去1–6日weekday，7日及以上date，跨年带year，future不得伪装为recent weekday；12/24/locale time继续复用现有formatter。
+
+本 Slice 只在现有 `MessagesTimeline` 与 `timestampFormat` owner内收口。当前footer button为`1.75em`、glyph为`1.125em`，因此只把assistant footer首button向左校正`0.3125em`以对齐正文glyph，不改变button hit box、全局action primitive、低噪hover/focus、tail/scroll或虚拟row owner。不得照搬donor的`2em`、`-0.4375em`、persistent chrome、message-level fork/goal行为、server formatting hunk或新增clock/store/i18n owner。source proof必须覆盖pure timestamp matrix、SSR settled DOM ordering与单footer、真实Chromium `480/960/1440` glyph geometry/hover/focus/hitbox，以及既有tail-anchor与row-overlap回归；不做package/install/live/README。
+
+R11-6 的 pre-commit source-candidate 证据为：day-aware formatter与Timeline DOM owner focused `2 files / 68 tests`，真实Chromium footer geometry与row-overlap `2 files / 4 tests`、既有tail-anchor `1 file / 5 tests`通过；monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path format/lint与diff check通过，root lint为`0 errors / 478 warnings`。本 Slice不改变i18n catalog、server、message fork、Composer或发行面，按准入不做package/install/live/README，因此只主张source-only candidate。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -421,4 +429,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-5 Windows runtime taskbar icon refresh as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-6 settled Timeline closure as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

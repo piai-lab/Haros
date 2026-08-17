@@ -124,7 +124,7 @@ import {
   CHAT_COLUMN_GUTTER_CLASS_NAME,
   ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
 } from "./composerPickerStyles";
-import { formatShortTimestamp } from "../../timestampFormat";
+import { formatDayAwareTimestamp } from "../../timestampFormat";
 import {
   buildInlineTerminalContextText,
   textContainsInlineTerminalContextLabels,
@@ -578,6 +578,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   const tailAnchorMessageId = tailAnchorMessageIdProp ?? null;
   const forkSource = forkSourceProp ?? null;
   const isTemporaryThread = isTemporaryThreadProp ?? false;
+  // Resolve one wall-clock reference per render so every visible row makes the
+  // same calendar-day decision, including a render that lands at midnight.
+  const timestampNow = nowIso ? new Date(nowIso) : new Date();
   const userMessageBubbleBorderClass = userMessageBubbleBorderClassName(isTemporaryThread);
   // The timeline remounts per thread (and when the agent-activity detail view
   // closes), but the anchor lives above it and survives those remounts. An
@@ -1624,7 +1627,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       style={chatMessageFooterStyle}
                     >
                       <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
-                        {formatShortTimestamp(row.message.createdAt, timestampFormat)}
+                        {formatDayAwareTimestamp(
+                          row.message.createdAt,
+                          timestampFormat,
+                          timestampNow,
+                        )}
                       </p>
                       <div className="flex items-center gap-2">
                         {displayedUserMessage.copyText && (
@@ -1759,7 +1766,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             row.showAssistantCopyButton && !row.assistantTurnInProgress;
           const assistantMeta = [
             isTerminalAssistantMessage
-              ? formatShortTimestamp(row.message.createdAt, timestampFormat)
+              ? formatDayAwareTimestamp(row.message.createdAt, timestampFormat, timestampNow)
               : null,
           ]
             .filter((value): value is string => Boolean(value))
@@ -2101,46 +2108,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     ))}
                   </div>
                 )}
-                {(showPinToggle || assistantCopyState.visible || assistantMeta.length > 0) && (
-                  <div
-                    className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-muted-foreground/45"
-                    style={chatMessageFooterStyle}
-                  >
-                    {showPinToggle ? (
-                      // Pin sits at the left edge of the footer, before the copy action. It stays
-                      // visible when pinned so it reads as a persistent "this is pinned" marker; an
-                      // unpinned message only reveals it on hover, like the other footer actions.
-                      // Same Central pin glyph in both states — persistence signals the pinned state.
-                      <MessageActionButton
-                        label={pinActionLabel("message", messagePinned)}
-                        tooltip={messagePinned ? "Unpin from panel" : "Pin to panel"}
-                        aria-pressed={messagePinned}
-                        className={
-                          messagePinned
-                            ? "text-muted-foreground/80"
-                            : MESSAGE_HOVER_REVEAL_CLASS_NAME
-                        }
-                        onClick={() => onTogglePinMessage?.(row.message.id)}
-                      >
-                        <PinIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
-                      </MessageActionButton>
-                    ) : null}
-                    {assistantCopyState.visible ? (
-                      <MessageCopyButton
-                        text={assistantCopyState.text ?? ""}
-                        className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
-                      />
-                    ) : null}
-                    {assistantMeta.length > 0 ? (
-                      <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
-                        {assistantMeta}
-                      </p>
-                    ) : null}
-                  </div>
-                )}
                 {!row.assistantTurnInProgress && row.showAssistantCopyButton
                   ? omnimindThreadCreationRecaps.map((creation) => (
-                      <div key={creation.operationId} className="mt-2 mb-4">
+                      <div key={creation.operationId} className="mt-2 mb-1">
                         <OmniMindThreadCreationCard
                           creation={creation}
                           {...(onOpenThread
@@ -2233,7 +2203,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     );
                   };
                   return (
-                    <div className="mt-1 mb-4 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]">
+                    <div className="mt-2 mb-1 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]">
                       <div
                         className={cn(
                           "flex items-center justify-between gap-3 bg-[color:color-mix(in_srgb,var(--app-user-message-background)_40%,transparent)] px-3 py-1.5",
@@ -2337,6 +2307,43 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     </div>
                   );
                 })()}
+                {(showPinToggle || assistantCopyState.visible || assistantMeta.length > 0) && (
+                  <div
+                    className="mt-0.5 flex items-center gap-2 font-system-ui font-normal text-muted-foreground/45 [&>button:first-child]:-ml-[0.3125em]"
+                    style={chatMessageFooterStyle}
+                  >
+                    {showPinToggle ? (
+                      // Pin sits at the left edge of the footer, before the copy action. It stays
+                      // visible when pinned so it reads as a persistent "this is pinned" marker; an
+                      // unpinned message only reveals it on hover, like the other footer actions.
+                      // Same Central pin glyph in both states — persistence signals the pinned state.
+                      <MessageActionButton
+                        label={pinActionLabel("message", messagePinned)}
+                        tooltip={messagePinned ? "Unpin from panel" : "Pin to panel"}
+                        aria-pressed={messagePinned}
+                        className={
+                          messagePinned
+                            ? "text-muted-foreground/80"
+                            : MESSAGE_HOVER_REVEAL_CLASS_NAME
+                        }
+                        onClick={() => onTogglePinMessage?.(row.message.id)}
+                      >
+                        <PinIcon className={MESSAGE_ACTION_ICON_CLASS_NAME} />
+                      </MessageActionButton>
+                    ) : null}
+                    {assistantCopyState.visible ? (
+                      <MessageCopyButton
+                        text={assistantCopyState.text ?? ""}
+                        className={MESSAGE_HOVER_REVEAL_CLASS_NAME}
+                      />
+                    ) : null}
+                    {assistantMeta.length > 0 ? (
+                      <p className={cn("tabular-nums", MESSAGE_HOVER_REVEAL_CLASS_NAME)}>
+                        {assistantMeta}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </div>
             </>
           );
