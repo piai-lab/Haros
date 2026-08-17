@@ -35,10 +35,21 @@ export interface VisibleRateLimitRow {
 const WINDOW_ORDER = new Map([
   ["5h", 0],
   ["Weekly", 1],
-  ["Sonnet", 2],
-  ["Opus", 3],
-  ["Current", 4],
+  ["Weekly (overage)", 2],
+  ["Sonnet", 3],
+  ["Opus", 4],
+  ["Current", 5],
 ]);
+
+function humanizeRateLimitLabel(label: string): string {
+  return label
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1).toLowerCase()}`)
+    .join(" ");
+}
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
@@ -89,14 +100,24 @@ export function normalizeRateLimitLabel(
   label: string | undefined,
   windowDurationMins?: number,
 ): string {
-  const durationLabel = windowLabelFromDuration(windowDurationMins);
-  if (durationLabel) return durationLabel;
-  if (!label) return "Current";
-
-  const normalized = label
-    .trim()
+  const normalizedInput = label
+    ?.trim()
     .toLowerCase()
     .replace(/[_\s-]+/g, "_");
+  if (
+    normalizedInput === "seven_day_overage_included" ||
+    normalizedInput === "weekly_overage_included" ||
+    normalizedInput === "weekly_overage" ||
+    normalizedInput === "overage"
+  ) {
+    return "Weekly (overage)";
+  }
+
+  const durationLabel = windowLabelFromDuration(windowDurationMins);
+  if (durationLabel) return durationLabel;
+  if (!label || label.trim().length === 0) return "Current";
+
+  const normalized = normalizedInput ?? "";
   if (normalized === "session" || normalized === "five_hour" || normalized === "5h") {
     return "5h";
   }
@@ -113,11 +134,13 @@ export function normalizeRateLimitLabel(
   if (normalized === "seven_day_opus" || normalized === "weekly_opus" || normalized === "opus") {
     return "Opus";
   }
-  return label;
+  return humanizeRateLimitLabel(label);
 }
 
 function compareWindowLabels(a: string, b: string): number {
-  return (WINDOW_ORDER.get(a) ?? 99) - (WINDOW_ORDER.get(b) ?? 99);
+  const rankDifference = (WINDOW_ORDER.get(a) ?? 99) - (WINDOW_ORDER.get(b) ?? 99);
+  if (rankDifference !== 0) return rankDifference;
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 function normalizeLimitWindow(

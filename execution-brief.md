@@ -393,6 +393,14 @@ S1 当前唯一代码 Slice 是 **R11-3 per-turn task snapshot row**：只吸收
 
 本 Slice 只改现有 `workLog`、`session-logic`、`TimelineWorkEntryRow`及相关tests/brief，不新增Goal/Todo/store/route/contract、第二parser或折叠状态，不改变R5排序、Timeline collapse/scroll/focus与布局。focused proof必须覆盖多snapshot、invalid/empty守恒、首个有效sequence锚点、跨turn边界、complete heading、中英actual与现有Composer parser consumer；候选只做source unit/browser、typecheck、i18n parity、format/lint/document/diff，不做package/live/README。
 
+R11-3 已在 exact pushed `66745de284d429b975d72be56b43ffb14286fc2a` 闭合；上述 task snapshot 投影历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **R11-4 provider rate-limit window labels**：只吸收 Synara `8868394c47d9e8ab2557afe07c6f36a8556c0026` 的窗口命名语义，在现有 `rateLimits` normalization 与共享 `ProviderUsageLimitRows` presentation owner 内将 `seven_day_overage_included` 等同义值收为稳定 `Weekly (overage)` identity，并固定紧随 `Weekly`；未知窗口先确定性人类化，再由共享行投影为英中产品级 generic label，不能泄漏 raw snake_case，也不能因 generic copy 破坏 distinct id、dedupe 或排序。
+
+本 Slice 复用现有 Settings/popover 行、catalog 与 `UsageProgressTrack`，同步本地化可见 label 与 progressbar accessible name；不得新增 usage owner、组件、store或数据源，不改变 Provider capacity、pacing、reset 与百分比语义。focused proof必须覆盖 overage alias/order、未知窗口 humanization/distinct/dedupe/stable sort、英中 actual visible/ARIA、catalog parity、monorepo typecheck、format/lint/document/diff；仅交付 source candidate，不做 package/live/README。
+
+R11-4 的 pre-commit source-candidate 证据为：rate normalization 与 catalog parity focused unit `2 files / 18 tests`，真实 Chromium 英中 ordered visible label、raw snake_case exclusion与 matching progressbar accessible name `1 file / 2 tests`，monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path format/lint与 diff check通过；root lint为`0 errors / 478 warnings`。全局 product-copy scanner 仍命中未触碰的 `workspaceExplorer.tsx:475/477` 两条既有动态 search-result ARIA 字符串，本 Slice 不把该 baseline 改写为绿色。未改变 Desktop shipped bytes，package/install/live/README均未运行，因此只主张 source-only candidate。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -405,4 +413,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-3 per-turn task snapshot row as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-4 provider rate-limit window labels as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

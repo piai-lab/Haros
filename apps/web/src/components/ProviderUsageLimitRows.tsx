@@ -8,10 +8,19 @@ import {
   type ProviderUsageDisplayRow,
 } from "~/lib/providerUsageDisplay";
 import { cn } from "~/lib/utils";
+import { useI18n } from "~/i18n";
 
 import { UsageProgressTrack } from "./UsageProgressTrack";
 
 export type ProviderUsageLimitRowsSurface = "settings" | "popover";
+
+const STANDARD_PROVIDER_USAGE_WINDOW_LABELS = new Set([
+  "5h",
+  "Weekly",
+  "Sonnet",
+  "Opus",
+  "Current",
+]);
 
 function ProviderUsagePaceLine({
   row,
@@ -51,35 +60,46 @@ function ProviderUsagePaceLine({
 function ProviderUsageTrack({
   row,
   surface,
+  ariaLabel,
 }: {
   row: ProviderUsageDisplayRow;
   surface: ProviderUsageLimitRowsSurface;
+  ariaLabel: string;
 }) {
   const trackProps = providerUsageProgressTrackProps(row);
 
   return (
     <UsageProgressTrack
       {...trackProps}
+      label={ariaLabel}
       className={surface === "popover" ? "h-1.5 bg-muted/80" : undefined}
       markerGapClassName={surface === "popover" ? "bg-popover" : undefined}
     />
   );
 }
 
-function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
+function SettingsUsageLimitRow({
+  row,
+  displayLabel,
+  ariaLabel,
+}: {
+  row: ProviderUsageDisplayRow;
+  displayLabel: string;
+  ariaLabel: string;
+}) {
   const trackProps = providerUsageProgressTrackProps(row);
 
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-1.5">
-        <span className="text-xs font-medium text-foreground">{row.label}</span>
+        <span className="text-xs font-medium text-foreground">{displayLabel}</span>
         <span
           className={cn("size-1.5 shrink-0 rounded-full", trackProps.markerClassName)}
           title={row.pace ? `Usage pace: ${row.pace.status}` : undefined}
           aria-hidden
         />
       </div>
-      <ProviderUsageTrack row={row} surface="settings" />
+      <ProviderUsageTrack row={row} surface="settings" ariaLabel={ariaLabel} />
       <div className="flex items-center justify-between text-[11px] tabular-nums text-muted-foreground">
         <span>{row.leftText}</span>
         {row.resetText ? <span>{row.resetText}</span> : null}
@@ -89,19 +109,27 @@ function SettingsUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
   );
 }
 
-function PopoverUsageLimitRow({ row }: { row: ProviderUsageDisplayRow }) {
+function PopoverUsageLimitRow({
+  row,
+  displayLabel,
+  ariaLabel,
+}: {
+  row: ProviderUsageDisplayRow;
+  displayLabel: string;
+  ariaLabel: string;
+}) {
   return (
     <div className="space-y-1 text-[length:var(--app-font-size-chat-meta,10px)] leading-tight">
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-baseline gap-x-3">
         <div className="flex min-w-0 items-baseline gap-1.5">
-          <span className="shrink-0 text-[11px] font-medium text-foreground">{row.label}</span>
+          <span className="shrink-0 text-[11px] font-medium text-foreground">{displayLabel}</span>
           <span className="min-w-0 truncate tabular-nums text-foreground">{row.leftText}</span>
         </div>
         <div className="min-w-0 text-right text-muted-foreground">
           {row.resetText ? <div className="truncate tabular-nums">{row.resetText}</div> : null}
         </div>
       </div>
-      <ProviderUsageTrack row={row} surface="popover" />
+      <ProviderUsageTrack row={row} surface="popover" ariaLabel={ariaLabel} />
       <ProviderUsagePaceLine row={row} surface="popover" />
     </div>
   );
@@ -114,17 +142,37 @@ export function ProviderUsageLimitRows({
   rows: ReadonlyArray<ProviderUsageDisplayRow>;
   surface: ProviderUsageLimitRowsSurface;
 }) {
+  const { t } = useI18n();
+
   if (rows.length === 0) return null;
 
   return (
     <div className={surface === "settings" ? "space-y-3" : "space-y-1.5"}>
-      {rows.map((row) =>
-        surface === "settings" ? (
-          <SettingsUsageLimitRow key={row.id} row={row} />
+      {rows.map((row) => {
+        const displayLabel =
+          row.label === "Weekly (overage)"
+            ? t("providerUsage.window.weeklyOverage")
+            : STANDARD_PROVIDER_USAGE_WINDOW_LABELS.has(row.label)
+              ? row.label
+              : t("providerUsage.window.other", { label: row.label });
+        const ariaLabel = t("providerUsage.window.remaining", { label: displayLabel });
+
+        return surface === "settings" ? (
+          <SettingsUsageLimitRow
+            key={row.id}
+            row={row}
+            displayLabel={displayLabel}
+            ariaLabel={ariaLabel}
+          />
         ) : (
-          <PopoverUsageLimitRow key={row.id} row={row} />
-        ),
-      )}
+          <PopoverUsageLimitRow
+            key={row.id}
+            row={row}
+            displayLabel={displayLabel}
+            ariaLabel={ariaLabel}
+          />
+        );
+      })}
     </div>
   );
 }

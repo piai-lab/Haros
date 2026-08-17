@@ -228,4 +228,71 @@ describe("RateLimitsPanel helpers", () => {
       },
     ]);
   });
+
+  it("projects the included-overage telemetry window immediately after Weekly", () => {
+    const rateLimits = deriveAccountRateLimits([
+      {
+        activities: [
+          makeActivity("activity-overage", "account.rate-limits.updated", {
+            provider: "claudeAgent",
+            rate_limit_info: {
+              status: "allowed",
+              rateLimitType: "seven_day_overage_included",
+              utilization: 0.25,
+              resetsAt: 4_079_880_000,
+            },
+          }),
+        ],
+      },
+    ]);
+
+    expect(deriveVisibleRateLimitRows(rateLimits)).toEqual([
+      {
+        id: "claudeAgent-Weekly (overage)",
+        label: "Weekly (overage)",
+        remainingPercent: 75,
+        resetsAt: "2099-04-14T20:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("humanizes unknown windows without collapsing their identity or sort order", () => {
+    const rows = deriveVisibleRateLimitRows([
+      {
+        provider: "codex",
+        updatedAt: "2099-04-08T18:00:00.000Z",
+        limits: [
+          { window: "new_provider_window", usedPercent: 10 },
+          { window: "Weekly", usedPercent: 5 },
+          { window: "another-provider-window", usedPercent: 20 },
+          { window: "weekly_overage", usedPercent: 15, windowDurationMins: 10_080 },
+          { window: "new-provider-window", usedPercent: 30 },
+          { window: "Sonnet", usedPercent: 25 },
+        ],
+      },
+    ]);
+
+    expect(
+      rows.map(({ id, label, remainingPercent }) => ({ id, label, remainingPercent })),
+    ).toEqual([
+      { id: "codex-Weekly", label: "Weekly", remainingPercent: 95 },
+      {
+        id: "codex-Weekly (overage)",
+        label: "Weekly (overage)",
+        remainingPercent: 85,
+      },
+      { id: "codex-Sonnet", label: "Sonnet", remainingPercent: 75 },
+      {
+        id: "codex-Another Provider Window",
+        label: "Another Provider Window",
+        remainingPercent: 80,
+      },
+      {
+        id: "codex-New Provider Window",
+        label: "New Provider Window",
+        remainingPercent: 70,
+      },
+    ]);
+    expect(JSON.stringify(rows)).not.toContain("new_provider_window");
+  });
 });

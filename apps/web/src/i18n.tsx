@@ -2063,6 +2063,9 @@ export const EN_MESSAGES = {
   "settings.codeAndStatus": "Code and status",
   "settings.usageLabel": "Usage",
   "settings.usageDescription": "Show engine usage in the Environment panel.",
+  "providerUsage.window.weeklyOverage": "Weekly (overage)",
+  "providerUsage.window.other": "Other limit · {label}",
+  "providerUsage.window.remaining": "{label} remaining",
   "settings.repositoryLabel": "Repository",
   "settings.repositoryDescription":
     "Show the GitHub repository link in the Environment panel. Git changes, worktree, branch, commit, and push stay available.",
@@ -5438,6 +5441,9 @@ export const ZH_CN_MESSAGES = {
   "settings.codeAndStatus": "代码与状态",
   "settings.usageLabel": "用量",
   "settings.usageDescription": "在环境信息面板中显示引擎用量。",
+  "providerUsage.window.weeklyOverage": "每周（超额用量）",
+  "providerUsage.window.other": "其他限额 · {label}",
+  "providerUsage.window.remaining": "{label} 剩余量",
   "settings.repositoryLabel": "代码仓库",
   "settings.repositoryDescription":
     "在环境信息面板中显示 GitHub 仓库链接；Git 变更、工作树、分支、提交与推送始终可用。",
