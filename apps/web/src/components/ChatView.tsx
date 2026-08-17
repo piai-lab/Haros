@@ -315,6 +315,7 @@ import {
 import PlanSidebar from "./PlanSidebar";
 import TerminalWorkspaceTabs from "./TerminalWorkspaceTabs";
 import {
+  BugIcon,
   ChevronDownIcon,
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
@@ -12248,17 +12249,27 @@ export default function ChatView({
 
                       {!isVoiceRecording && !isVoiceTranscribing ? (
                         <>
-                          {interactionMode === "plan" ? (
+                          {interactionMode !== "default" ? (
                             <Button
                               variant="ghost"
                               className="shrink-0 whitespace-nowrap px-2 text-[length:var(--app-font-size-ui-sm,11px)] sm:text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground)] sm:px-3"
                               size="sm"
                               type="button"
-                              onClick={toggleInteractionMode}
-                              title={t("conversation.planModeExit")}
+                              onClick={() => handleInteractionModeChange("default")}
+                              title={t(
+                                interactionMode === "plan"
+                                  ? "conversation.planModeExit"
+                                  : "conversation.debugModeExit",
+                              )}
                             >
-                              <GoTasklist className="size-3.5" />
-                              <span className="sr-only sm:not-sr-only">{t("plan.badge")}</span>
+                              {interactionMode === "plan" ? (
+                                <GoTasklist className="size-3.5" />
+                              ) : (
+                                <BugIcon className="size-3.5" />
+                              )}
+                              <span className="sr-only sm:not-sr-only">
+                                {t(interactionMode === "plan" ? "plan.badge" : "debug.badge")}
+                              </span>
                             </Button>
                           ) : null}
 
