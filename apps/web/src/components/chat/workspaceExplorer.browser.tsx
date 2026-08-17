@@ -21,11 +21,15 @@ vi.mock("~/appSettings", async (importOriginal) => ({
 }));
 
 import { I18nProvider } from "~/i18n";
+import { projectQueryKeys } from "~/lib/projectReactQuery";
 import { WorkspaceSearchSidebar } from "./workspaceExplorer";
 
 function installNativeApi(api: NativeApi): () => void {
   const previousDescriptor = Object.getOwnPropertyDescriptor(window, "nativeApi");
-  Object.defineProperty(window, "nativeApi", { configurable: true, value: api });
+  Object.defineProperty(window, "nativeApi", {
+    configurable: true,
+    value: api,
+  });
   return () => {
     if (previousDescriptor) Object.defineProperty(window, "nativeApi", previousDescriptor);
     else Reflect.deleteProperty(window, "nativeApi");
@@ -68,11 +72,12 @@ function makeNativeApi(overrides?: {
   } as unknown as NativeApi;
 }
 
-function SearchHarness(props: { onSelectFile: (path: string) => void }) {
+function SearchHarness(props: { onSelectFile: (path: string) => void; queryClient?: QueryClient }) {
   const [query, setQuery] = useState("");
-  const [queryClient] = useState(
+  const [ownedQueryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
   );
+  const queryClient = props.queryClient ?? ownedQueryClient;
   return (
     <I18nProvider>
       <QueryClientProvider client={queryClient}>
@@ -141,7 +146,11 @@ describe("workspace search", () => {
     let firstSignal: AbortSignal | undefined;
     let resolveFirst:
       | ((value: {
-          matches: Array<{ path: string; lineNumber: number; lineText: string }>;
+          matches: Array<{
+            path: string;
+            lineNumber: number;
+            lineText: string;
+          }>;
           truncated: false;
         }) => void)
       | undefined;
@@ -150,14 +159,24 @@ describe("workspace search", () => {
         if (input.query === "first") {
           firstSignal = options?.signal;
           return new Promise<{
-            matches: Array<{ path: string; lineNumber: number; lineText: string }>;
+            matches: Array<{
+              path: string;
+              lineNumber: number;
+              lineText: string;
+            }>;
             truncated: false;
           }>((resolve) => {
             resolveFirst = resolve;
           });
         }
         return Promise.resolve({
-          matches: [{ path: "src/current.ts", lineNumber: 3, lineText: "second current result" }],
+          matches: [
+            {
+              path: "src/current.ts",
+              lineNumber: 3,
+              lineText: "second current result",
+            },
+          ],
           truncated: false,
         });
       },
@@ -176,7 +195,13 @@ describe("workspace search", () => {
       await vi.waitFor(() => expect(document.body.textContent).toContain("second current result"));
 
       resolveFirst?.({
-        matches: [{ path: "src/stale.ts", lineNumber: 1, lineText: "first stale result" }],
+        matches: [
+          {
+            path: "src/stale.ts",
+            lineNumber: 1,
+            lineText: "first stale result",
+          },
+        ],
         truncated: false,
       });
       await Promise.resolve();
@@ -186,9 +211,91 @@ describe("workspace search", () => {
     }
   });
 
+  it("keeps cached rows non-activatable while their current query is refetching", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    let contentCalls = 0;
+    let resolveRefresh:
+      | ((value: {
+          matches: Array<{
+            path: string;
+            lineNumber: number;
+            lineText: string;
+          }>;
+          truncated: false;
+        }) => void)
+      | undefined;
+    const searchContent = vi.fn(() => {
+      contentCalls += 1;
+      if (contentCalls === 1) {
+        return Promise.resolve({
+          matches: [
+            {
+              path: "src/old.ts",
+              lineNumber: 1,
+              lineText: "old cached result",
+            },
+          ],
+          truncated: false as const,
+        });
+      }
+      return new Promise<{
+        matches: Array<{ path: string; lineNumber: number; lineText: string }>;
+        truncated: false;
+      }>((resolve) => {
+        resolveRefresh = resolve;
+      });
+    });
+    const restoreApi = installNativeApi(
+      makeNativeApi({
+        searchEntries: vi.fn(async () => ({ entries: [], truncated: false })),
+        searchContent,
+      }),
+    );
+    const onSelectFile = vi.fn();
+    try {
+      await render(<SearchHarness queryClient={queryClient} onSelectFile={onSelectFile} />);
+      const input = page.getByRole("textbox", { name: "Search workspace" });
+      await userEvent.type(input, "refresh");
+      await vi.waitFor(() => expect(document.body.textContent).toContain("old cached result"));
+
+      const invalidation = queryClient.invalidateQueries({
+        queryKey: projectQueryKeys.searchContent("/repo", "refresh", 80),
+      });
+      await vi.waitFor(() => expect(searchContent).toHaveBeenCalledTimes(2));
+      await vi.waitFor(() => {
+        expect(document.querySelector('[aria-busy="true"]')).not.toBeNull();
+        expect(document.body.textContent).not.toContain("old cached result");
+      });
+      input.element().focus();
+      await userEvent.keyboard("{Enter}");
+      expect(onSelectFile).not.toHaveBeenCalled();
+
+      resolveRefresh?.({
+        matches: [{ path: "src/new.ts", lineNumber: 2, lineText: "new current result" }],
+        truncated: false,
+      });
+      await invalidation;
+      await vi.waitFor(() => expect(document.body.textContent).toContain("new current result"));
+      input.element().focus();
+      await userEvent.keyboard("{Enter}");
+      expect(onSelectFile).toHaveBeenCalledWith("src/new.ts");
+    } finally {
+      restoreApi();
+      queryClient.clear();
+    }
+  });
+
   it("keeps one-character filename search, starts content at two characters, and preserves IME focus", async () => {
-    const searchEntries = vi.fn(async () => ({ entries: [], truncated: false }));
-    const searchContent = vi.fn(async () => ({ matches: [], truncated: false }));
+    const searchEntries = vi.fn(async () => ({
+      entries: [],
+      truncated: false,
+    }));
+    const searchContent = vi.fn(async () => ({
+      matches: [],
+      truncated: false,
+    }));
     const restoreApi = installNativeApi(makeNativeApi({ searchEntries, searchContent }));
     try {
       await render(<SearchHarness onSelectFile={vi.fn()} />);
@@ -215,9 +322,15 @@ describe("workspace search", () => {
 
   it("renders incomplete and error states instead of misreporting them as empty", async () => {
     const emptyEntries = vi.fn(async () => ({ entries: [], truncated: false }));
-    const incompleteContent = vi.fn(async () => ({ matches: [], truncated: true }));
+    const incompleteContent = vi.fn(async () => ({
+      matches: [],
+      truncated: true,
+    }));
     let restoreApi = installNativeApi(
-      makeNativeApi({ searchEntries: emptyEntries, searchContent: incompleteContent }),
+      makeNativeApi({
+        searchEntries: emptyEntries,
+        searchContent: incompleteContent,
+      }),
     );
     try {
       await render(<SearchHarness onSelectFile={vi.fn()} />);

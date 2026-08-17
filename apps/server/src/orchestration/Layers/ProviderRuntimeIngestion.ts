@@ -40,6 +40,7 @@ import {
   isCodexGeneratedImageArtifact,
 } from "../../codexGeneratedImages.ts";
 import { copyAndAttributeStudioGeneratedImage } from "../../studioGeneratedImages.ts";
+import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import { parseCheckpointFilesFromUnifiedDiff } from "../../checkpointing/Diffs.ts";
 import { ProviderSessionRuntimeRepositoryLive } from "../../persistence/Layers/ProviderSessionRuntime.ts";
 import { ProviderSessionDirectoryLive } from "../../provider/Layers/ProviderSessionDirectory.ts";
@@ -134,6 +135,15 @@ const MAX_BUFFERED_REASONING_SUMMARY_PARTS = 24;
 const BUFFERED_TEXT_TRUNCATION_MARKER = "... [truncated]";
 const STRICT_PROVIDER_LIFECYCLE_GUARD =
   process.env.OMNIMIND_STRICT_PROVIDER_LIFECYCLE_GUARD !== "0";
+
+function isCanonicalWorkspaceFileChangeEvent(event: ProviderRuntimeEvent): boolean {
+  return (
+    (event.type === "item.started" ||
+      event.type === "item.updated" ||
+      event.type === "item.completed") &&
+    event.payload.itemType === "file_change"
+  );
+}
 
 /**
  * Back off the durable-journal safety poll while the live persisted-event
@@ -957,6 +967,23 @@ const make = Effect.gen(function* () {
     );
   });
 
+  const invalidateWorkspaceIndexForFileChange = Effect.fnUntraced(function* (
+    event: ProviderRuntimeEvent,
+    threadId: ThreadId,
+  ) {
+    if (!isCanonicalWorkspaceFileChangeEvent(event)) {
+      return;
+    }
+    const thread = yield* getThreadShellDetail(threadId);
+    if (!thread) return;
+    const project = yield* getProjectShell(thread);
+    if (!project) return;
+    const cwd = resolveThreadWorkspaceCwd({ thread, projects: [project] });
+    if (cwd) {
+      clearWorkspaceIndexCache(cwd);
+    }
+  });
+
   const isGitRepoForThread = Effect.fnUntraced(function* (threadId: ThreadId) {
     const thread = yield* getThreadDetail(threadId);
     if (!thread) {
@@ -1304,7 +1331,10 @@ const make = Effect.gen(function* () {
         delta: input.text,
         ...(input.turnId ? { turnId: input.turnId } : {}),
         ...(segment
-          ? { segmentStartedAt: segment.startedAt, segmentSequence: segment.sequence }
+          ? {
+              segmentStartedAt: segment.startedAt,
+              segmentSequence: segment.sequence,
+            }
           : {}),
         createdAt: input.createdAt,
       });
@@ -1850,11 +1880,22 @@ const make = Effect.gen(function* () {
 
   const segmentStateByThreadId = new Map<
     ThreadId,
-    Map<MessageId, { hasText: boolean; splitPending: boolean; lastAppliedRuntimeSequence?: number }>
+    Map<
+      MessageId,
+      {
+        hasText: boolean;
+        splitPending: boolean;
+        lastAppliedRuntimeSequence?: number;
+      }
+    >
   >();
   const bufferedTextSegmentsByMessageKey = new Map<
     string,
-    ReadonlyArray<{ readonly sequence: number; readonly startedAt: string; readonly text: string }>
+    ReadonlyArray<{
+      readonly sequence: number;
+      readonly startedAt: string;
+      readonly text: string;
+    }>
   >();
   const bufferedTextSpilledByMessageKey = new Set<string>();
   const markAssistantTextBoundaryForThread = (threadId: ThreadId) => {
@@ -1871,9 +1912,15 @@ const make = Effect.gen(function* () {
     threadId: ThreadId,
     activities: ReadonlyArray<OrchestrationThreadActivity>,
   ) =>
-    Effect.forEach(activities, (activity) =>
-      dispatchActivityUpdate(event, threadId, activity),
-    ).pipe(
+    invalidateWorkspaceIndexForFileChange(event, threadId).pipe(
+      Effect.catchCause(() =>
+        Effect.logWarning("workspace index invalidation failed for provider file change", {
+          threadId,
+        }),
+      ),
+      Effect.andThen(
+        Effect.forEach(activities, (activity) => dispatchActivityUpdate(event, threadId, activity)),
+      ),
       Effect.tap(() =>
         activities.some(isPotentiallyVisibleProviderRuntimeActivity)
           ? Effect.sync(() => markAssistantTextBoundaryForThread(threadId))

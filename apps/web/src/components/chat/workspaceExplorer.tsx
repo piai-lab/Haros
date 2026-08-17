@@ -325,7 +325,11 @@ function useTreeEntryContextMenu(
   onReferenceInChat: ((reference: ChatFileReference) => void) | undefined,
 ) {
   return (entry: ProjectFileSystemEntry, position: { x: number; y: number }) => {
-    void showFileReferenceContextMenu({ path: entry.path, position, onReferenceInChat });
+    void showFileReferenceContextMenu({
+      path: entry.path,
+      position,
+      onReferenceInChat,
+    });
   };
 }
 
@@ -498,8 +502,16 @@ function WorkspaceContentSearchResultRow(props: {
 }
 
 type WorkspaceSearchMatch =
-  | { readonly type: "file"; readonly path: string; readonly entry: ProjectEntry }
-  | { readonly type: "content"; readonly path: string; readonly match: ProjectContentMatch };
+  | {
+      readonly type: "file";
+      readonly path: string;
+      readonly entry: ProjectEntry;
+    }
+  | {
+      readonly type: "content";
+      readonly path: string;
+      readonly match: ProjectContentMatch;
+    };
 
 const EMPTY_WORKSPACE_SEARCH_MATCHES: ReadonlyArray<WorkspaceSearchMatch> = [];
 
@@ -542,8 +554,10 @@ function useWorkspaceSearch(workspaceRoot: string | null, query: string): Worksp
   );
   // Results are tied to the debounced query. While the user is ahead of that
   // query, keep old results non-selectable so Enter cannot open a stale match.
+  const isFetching = entriesQuery.isFetching || (contentSearchEnabled && contentQuery.isFetching);
   const searchResultsPending =
     inputQuery !== trimmedQuery ||
+    isFetching ||
     (entriesQuery.isPlaceholderData && !entriesQuery.error) ||
     (contentSearchEnabled && contentQuery.isPlaceholderData && !contentQuery.error);
   const searchResultsCurrent = !searchResultsPending;
@@ -554,10 +568,18 @@ function useWorkspaceSearch(workspaceRoot: string | null, query: string): Worksp
     searchResultsCurrent && !currentError
       ? [
           ...(entriesQuery.data?.entries ?? []).map(
-            (entry): WorkspaceSearchMatch => ({ type: "file", path: entry.path, entry }),
+            (entry): WorkspaceSearchMatch => ({
+              type: "file",
+              path: entry.path,
+              entry,
+            }),
           ),
           ...(contentSearchEnabled ? (contentQuery.data?.matches ?? []) : []).map(
-            (match): WorkspaceSearchMatch => ({ type: "content", path: match.path, match }),
+            (match): WorkspaceSearchMatch => ({
+              type: "content",
+              path: match.path,
+              match,
+            }),
           ),
         ]
       : [];
@@ -569,7 +591,7 @@ function useWorkspaceSearch(workspaceRoot: string | null, query: string): Worksp
     matches,
     searchResultsPending,
     searchResultsCurrent,
-    isFetching: entriesQuery.isFetching || (contentSearchEnabled && contentQuery.isFetching),
+    isFetching,
     error: currentError,
     truncated:
       searchResultsCurrent &&

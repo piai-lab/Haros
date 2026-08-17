@@ -54,6 +54,7 @@ import {
 } from "../Services/OrchestrationEngine.ts";
 import { ProviderRuntimeIngestionService } from "../Services/ProviderRuntimeIngestion.ts";
 import { ServerConfig } from "../../config.ts";
+import { clearWorkspaceIndexCache, searchWorkspaceEntries } from "../../workspaceEntries.ts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 
 const asProjectId = (value: string): ProjectId => ProjectId.makeUnsafe(value);
@@ -234,6 +235,51 @@ describe("ProviderRuntimeIngestion", () => {
 
     expect(idleDelays).toEqual([500, 1_000, 2_000, 4_000, 5_000, 5_000]);
     expect(nextRuntimeJournalSafetyPollDelayMs(delayMs, true)).toBe(250);
+  });
+
+  it("clears the exact server workspace index before projecting a canonical file change", async () => {
+    const harness = await createHarness();
+    fs.writeFileSync(path.join(harness.workspaceRoot, "old.ts"), "old\n");
+    await searchWorkspaceEntries({
+      cwd: harness.workspaceRoot,
+      query: "",
+      limit: 100,
+    });
+    fs.writeFileSync(path.join(harness.workspaceRoot, "new.ts"), "new\n");
+    await expect(
+      searchWorkspaceEntries({
+        cwd: harness.workspaceRoot,
+        query: "new",
+        limit: 100,
+      }),
+    ).resolves.toMatchObject({ entries: [] });
+
+    harness.emit({
+      type: "item.completed",
+      eventId: asEventId("evt-workspace-index-file-change"),
+      provider: "codex",
+      createdAt: new Date().toISOString(),
+      threadId: asThreadId("thread-1"),
+      itemId: asItemId("item-workspace-index-file-change"),
+      payload: {
+        itemType: "file_change",
+        status: "completed",
+        title: "Created new.ts",
+        data: { changes: [{ path: "new.ts", kind: "create" }] },
+      },
+    });
+    await harness.drain();
+
+    await expect(
+      searchWorkspaceEntries({
+        cwd: harness.workspaceRoot,
+        query: "new",
+        limit: 100,
+      }),
+    ).resolves.toMatchObject({
+      entries: [expect.objectContaining({ path: "new.ts" })],
+    });
+    clearWorkspaceIndexCache(harness.workspaceRoot);
   });
 
   it("uses an already-persisted runtime stream without appending the event again", async () => {
@@ -478,6 +524,7 @@ describe("ProviderRuntimeIngestion", () => {
       startIngestion,
       runtimeEventRepository,
       providerSessionDirectory,
+      workspaceRoot,
     };
   }
 
@@ -968,7 +1015,10 @@ describe("ProviderRuntimeIngestion", () => {
       threadId,
       turnId,
       itemId: assistantItemId,
-      payload: { streamKind: "assistant_text", delta: "Other thread stays separate. " },
+      payload: {
+        streamKind: "assistant_text",
+        delta: "Other thread stays separate. ",
+      },
     });
     const tool = await push({
       type: "item.started",
@@ -978,7 +1028,11 @@ describe("ProviderRuntimeIngestion", () => {
       threadId,
       turnId,
       itemId: asItemId("tool-segment-interleave"),
-      payload: { itemType: "command_execution", status: "inProgress", title: "fd" },
+      payload: {
+        itemType: "command_execution",
+        status: "inProgress",
+        title: "fd",
+      },
     });
     const second = await push({
       type: "content.delta",
@@ -1026,7 +1080,11 @@ describe("ProviderRuntimeIngestion", () => {
       threadId,
       turnId,
       itemId: asItemId("reasoning-segment-interleave"),
-      payload: { itemType: "reasoning", status: "completed", detail: "Reasoned" },
+      payload: {
+        itemType: "reasoning",
+        status: "completed",
+        detail: "Reasoned",
+      },
     });
     const fourth = await push({
       type: "content.delta",
@@ -1205,7 +1263,10 @@ describe("ProviderRuntimeIngestion", () => {
     expect(
       thread.activities.find((activity) => activity.id === collisionEvent.eventId)?.summary,
     ).toBe("Legacy warning shape");
-    expect(thread.session).toMatchObject({ status: "ready", activeTurnId: null });
+    expect(thread.session).toMatchObject({
+      status: "ready",
+      activeTurnId: null,
+    });
     expect(thread.latestTurn).toMatchObject({ turnId, state: "completed" });
     expect(
       await Effect.runPromise(
@@ -1996,7 +2057,10 @@ describe("ProviderRuntimeIngestion", () => {
       threadId: asThreadId("thread-1"),
       turnId,
       itemId: asItemId("image-view-answer"),
-      payload: { streamKind: "assistant_text", delta: "I inspected the input image." },
+      payload: {
+        streamKind: "assistant_text",
+        delta: "I inspected the input image.",
+      },
     });
     harness.emit({
       type: "item.completed",
@@ -2075,7 +2139,10 @@ describe("ProviderRuntimeIngestion", () => {
           payload: {
             itemType: "image_generation",
             status: "completed",
-            data: { kind: "codex.generated_image", path: "/codex/generated.png" },
+            data: {
+              kind: "codex.generated_image",
+              path: "/codex/generated.png",
+            },
           },
         },
       ]),
@@ -2224,7 +2291,11 @@ describe("ProviderRuntimeIngestion", () => {
         status: "completed",
         title: "Generated image",
         detail: imagePath,
-        data: { kind: "codex.generated_image", path: imagePath, callId: "image-call" },
+        data: {
+          kind: "codex.generated_image",
+          path: imagePath,
+          callId: "image-call",
+        },
       },
     });
     // The empty final item: no deltas, no fallback detail — mirrors the real trace.
@@ -2323,7 +2394,11 @@ describe("ProviderRuntimeIngestion", () => {
         status: "completed",
         title: "Generated image",
         detail: imagePath,
-        data: { kind: "codex.generated_image", path: imagePath, callId: "call-replay" },
+        data: {
+          kind: "codex.generated_image",
+          path: imagePath,
+          callId: "call-replay",
+        },
       },
     };
 
@@ -3283,7 +3358,11 @@ describe("ProviderRuntimeIngestion", () => {
       payload: {
         state: "completed",
         modelUsage: {
-          "claude-fable-5": { inputTokens: 960, outputTokens: 40, totalTokens: 1000 },
+          "claude-fable-5": {
+            inputTokens: 960,
+            outputTokens: 40,
+            totalTokens: 1000,
+          },
         },
       },
     });
@@ -4659,7 +4738,10 @@ describe("ProviderRuntimeIngestion", () => {
       threadId: secondThreadId,
       turnId: asTurnId("turn-overlap-buffered"),
       itemId: asItemId("item-late-overlap-buffered"),
-      payload: { streamKind: "assistant_text", delta: "late but still buffered" },
+      payload: {
+        streamKind: "assistant_text",
+        delta: "late but still buffered",
+      },
     });
     harness.emit({
       type: "content.delta",
@@ -5460,7 +5542,10 @@ describe("ProviderRuntimeIngestion", () => {
       const readModel = await Effect.runPromise(harness.engine.getReadModel());
       const thread = readModel.threads.find((entry) => entry.id === asThreadId("thread-1"));
       const message = thread?.messages.find((entry) => entry.id === `assistant:${itemId}`);
-      expect(message).toMatchObject({ text: `${oversizedText}tail`, streaming: false });
+      expect(message).toMatchObject({
+        text: `${oversizedText}tail`,
+        streaming: false,
+      });
       expect(message?.textSegments).toBeUndefined();
       expect(thread?.activities.some((activity) => activity.id === sentinel.event.eventId)).toBe(
         true,
@@ -6600,7 +6685,13 @@ describe("ProviderRuntimeIngestion", () => {
         detail: {
           type: "system",
           subtype: "background_tasks_changed",
-          tasks: [{ task_id: "bg-1", task_type: "local_bash", description: "sleep 120" }],
+          tasks: [
+            {
+              task_id: "bg-1",
+              task_type: "local_bash",
+              description: "sleep 120",
+            },
+          ],
         },
       },
     });

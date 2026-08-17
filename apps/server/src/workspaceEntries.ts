@@ -58,7 +58,27 @@ interface WorkspaceIndex {
   scannedAt: number;
   entries: SearchableWorkspaceEntry[];
   truncated: boolean;
+  rootIdentity: WorkspaceRootIdentity;
 }
+
+type WorkspaceIndexBuildResult = Omit<WorkspaceIndex, "rootIdentity">;
+
+interface WorkspaceRootIdentity {
+  readonly realPath: string;
+  readonly dev: bigint;
+  readonly ino: bigint;
+}
+
+interface InFlightWorkspaceIndexBuild {
+  readonly controller: AbortController;
+  promise: Promise<WorkspaceIndex>;
+  leases: number;
+  settled: boolean;
+}
+
+class WorkspaceIndexDeadlineExceeded extends Error {}
+class WorkspaceIndexRootChanged extends Error {}
+class WorkspaceIndexBuildInvalidated extends Error {}
 
 interface SearchableWorkspaceEntry extends ProjectEntry {
   normalizedPath: string;
@@ -71,7 +91,7 @@ interface RankedWorkspaceEntry {
 }
 
 const workspaceIndexCache = new Map<string, WorkspaceIndex>();
-const inFlightWorkspaceIndexBuilds = new Map<string, Promise<WorkspaceIndex>>();
+const inFlightWorkspaceIndexBuilds = new Map<string, InFlightWorkspaceIndexBuild>();
 
 function toPosixPath(input: string): string {
   return input.split(path.sep).join("/");
@@ -280,9 +300,11 @@ async function collectPackageJsonCandidates(
   maxDepth: number,
 ): Promise<Array<{ absoluteDir: string; relativePath: string }>> {
   const candidates: Array<{ absoluteDir: string; relativePath: string }> = [];
-  let pendingDirectories: Array<{ absoluteDir: string; relativePath: string; depth: number }> = [
-    { absoluteDir: cwd, relativePath: "", depth: 0 },
-  ];
+  let pendingDirectories: Array<{
+    absoluteDir: string;
+    relativePath: string;
+    depth: number;
+  }> = [{ absoluteDir: cwd, relativePath: "", depth: 0 }];
 
   while (pendingDirectories.length > 0 && candidates.length < PROJECT_PACKAGE_SCAN_MAX_TARGETS) {
     const currentDirectories = pendingDirectories;
@@ -293,7 +315,9 @@ async function collectPackageJsonCandidates(
       PROJECT_PACKAGE_SCAN_READDIR_CONCURRENCY,
       async (directory) => {
         try {
-          const dirents = await fs.readdir(directory.absoluteDir, { withFileTypes: true });
+          const dirents = await fs.readdir(directory.absoluteDir, {
+            withFileTypes: true,
+          });
           return { directory, dirents };
         } catch {
           return { directory, dirents: null };
@@ -447,19 +471,50 @@ async function mapWithConcurrency<TInput, TOutput>(
   return results;
 }
 
-async function isInsideGitWorkTree(cwd: string): Promise<boolean> {
+async function readWorkspaceRootIdentity(
+  cwd: string,
+  signal?: AbortSignal,
+): Promise<WorkspaceRootIdentity> {
+  signal?.throwIfAborted();
+  const realPath = await fs.realpath(cwd);
+  signal?.throwIfAborted();
+  const stat = await fs.stat(realPath, { bigint: true });
+  signal?.throwIfAborted();
+  if (!stat.isDirectory()) {
+    throw new Error(`Workspace root is not a directory: ${cwd}`);
+  }
+  return { realPath, dev: stat.dev, ino: stat.ino };
+}
+
+function sameWorkspaceRootIdentity(
+  left: WorkspaceRootIdentity,
+  right: WorkspaceRootIdentity,
+): boolean {
+  return left.realPath === right.realPath && left.dev === right.dev && left.ino === right.ino;
+}
+
+async function isInsideGitWorkTree(cwd: string, signal?: AbortSignal): Promise<boolean> {
   const insideWorkTree = await runProcess("git", ["rev-parse", "--is-inside-work-tree"], {
     cwd,
+    ...(signal ? { signal } : {}),
     allowNonZeroExit: true,
     timeoutMs: 5_000,
     maxBufferBytes: 4_096,
-  }).catch(() => null);
+  }).catch(() => {
+    signal?.throwIfAborted();
+    return null;
+  });
+  signal?.throwIfAborted();
   return Boolean(
     insideWorkTree && insideWorkTree.code === 0 && insideWorkTree.stdout.trim() === "true",
   );
 }
 
-async function filterGitIgnoredPaths(cwd: string, relativePaths: string[]): Promise<string[]> {
+async function filterGitIgnoredPaths(
+  cwd: string,
+  relativePaths: string[],
+  signal?: AbortSignal,
+): Promise<string[]> {
   if (relativePaths.length === 0) {
     return relativePaths;
   }
@@ -469,6 +524,7 @@ async function filterGitIgnoredPaths(cwd: string, relativePaths: string[]): Prom
   let chunkBytes = 0;
 
   const flushChunk = async (): Promise<boolean> => {
+    signal?.throwIfAborted();
     if (chunk.length === 0) {
       return true;
     }
@@ -478,13 +534,18 @@ async function filterGitIgnoredPaths(cwd: string, relativePaths: string[]): Prom
       [...WORKSPACE_GIT_HARDENED_CONFIG_ARGS, "check-ignore", "--no-index", "-z", "--stdin"],
       {
         cwd,
+        ...(signal ? { signal } : {}),
         allowNonZeroExit: true,
         timeoutMs: 20_000,
         maxBufferBytes: 16 * 1024 * 1024,
         outputMode: "truncate",
         stdin: `${chunk.join("\0")}\0`,
       },
-    ).catch(() => null);
+    ).catch(() => {
+      signal?.throwIfAborted();
+      return null;
+    });
+    signal?.throwIfAborted();
     chunk = [];
     chunkBytes = 0;
 
@@ -508,6 +569,7 @@ async function filterGitIgnoredPaths(cwd: string, relativePaths: string[]): Prom
   };
 
   for (const relativePath of relativePaths) {
+    signal?.throwIfAborted();
     const relativePathBytes = Buffer.byteLength(relativePath) + 1;
     if (
       chunk.length > 0 &&
@@ -536,8 +598,11 @@ async function filterGitIgnoredPaths(cwd: string, relativePaths: string[]): Prom
   return relativePaths.filter((relativePath) => !ignoredPaths.has(relativePath));
 }
 
-async function buildWorkspaceIndexFromGit(cwd: string): Promise<WorkspaceIndex | null> {
-  if (!(await isInsideGitWorkTree(cwd))) {
+async function buildWorkspaceIndexFromGit(
+  cwd: string,
+  signal: AbortSignal,
+): Promise<WorkspaceIndexBuildResult | null> {
+  if (!(await isInsideGitWorkTree(cwd, signal))) {
     return null;
   }
 
@@ -553,12 +618,17 @@ async function buildWorkspaceIndexFromGit(cwd: string): Promise<WorkspaceIndex |
     ],
     {
       cwd,
+      signal,
       allowNonZeroExit: true,
       timeoutMs: 20_000,
       maxBufferBytes: 16 * 1024 * 1024,
       outputMode: "truncate",
     },
-  ).catch(() => null);
+  ).catch(() => {
+    signal.throwIfAborted();
+    return null;
+  });
+  signal.throwIfAborted();
   if (!listedFiles || listedFiles.code !== 0) {
     return null;
   }
@@ -569,10 +639,11 @@ async function buildWorkspaceIndexFromGit(cwd: string): Promise<WorkspaceIndex |
   )
     .map((entry) => toPosixPath(entry))
     .filter((entry) => entry.length > 0 && !isPathInIgnoredDirectory(entry));
-  const filePaths = await filterGitIgnoredPaths(cwd, listedPaths);
+  const filePaths = await filterGitIgnoredPaths(cwd, listedPaths, signal);
 
   const directorySet = new Set<string>();
   for (const filePath of filePaths) {
+    signal.throwIfAborted();
     for (const directoryPath of directoryAncestorsOf(filePath)) {
       if (!isPathInIgnoredDirectory(directoryPath)) {
         directorySet.add(directoryPath);
@@ -609,29 +680,74 @@ async function buildWorkspaceIndexFromGit(cwd: string): Promise<WorkspaceIndex |
   };
 }
 
-async function buildWorkspaceIndex(cwd: string): Promise<WorkspaceIndex> {
-  const gitIndexed = await buildWorkspaceIndexFromGit(cwd);
+type WorkspaceScanCandidate = {
+  readonly relativePath: string;
+  readonly kind: "directory" | "file" | "symlink";
+};
+
+async function resolveNonGitSymlinkCandidate(input: {
+  cwd: string;
+  realRoot: string;
+  candidate: WorkspaceScanCandidate;
+  signal: AbortSignal;
+}): Promise<WorkspaceScanCandidate | null> {
+  input.signal.throwIfAborted();
+  const absolutePath = path.join(input.cwd, input.candidate.relativePath);
+  try {
+    const linkStat = await fs.lstat(absolutePath);
+    input.signal.throwIfAborted();
+    if (!linkStat.isSymbolicLink()) {
+      return null;
+    }
+    const realTarget = await fs.realpath(absolutePath);
+    input.signal.throwIfAborted();
+    if (!isContainedPath(input.realRoot, realTarget)) {
+      return null;
+    }
+    const targetStat = await fs.stat(realTarget);
+    input.signal.throwIfAborted();
+    return targetStat.isFile()
+      ? { relativePath: input.candidate.relativePath, kind: "file" }
+      : null;
+  } catch {
+    input.signal.throwIfAborted();
+    return null;
+  }
+}
+
+async function buildWorkspaceIndexEntries(
+  cwd: string,
+  rootIdentity: WorkspaceRootIdentity,
+  signal: AbortSignal,
+): Promise<WorkspaceIndexBuildResult> {
+  const gitIndexed = await buildWorkspaceIndexFromGit(cwd, signal);
   if (gitIndexed) {
     return gitIndexed;
   }
-  const shouldFilterWithGitIgnore = await isInsideGitWorkTree(cwd);
+  const shouldFilterWithGitIgnore = await isInsideGitWorkTree(cwd, signal);
 
   let pendingDirectories: string[] = [""];
   const entries: SearchableWorkspaceEntry[] = [];
   let truncated = false;
 
   while (pendingDirectories.length > 0 && !truncated) {
+    signal.throwIfAborted();
     const currentDirectories = pendingDirectories;
     pendingDirectories = [];
     const directoryEntries = await mapWithConcurrency(
       currentDirectories,
       WORKSPACE_SCAN_READDIR_CONCURRENCY,
       async (relativeDir) => {
+        signal.throwIfAborted();
         const absoluteDir = relativeDir ? path.join(cwd, relativeDir) : cwd;
         try {
-          const dirents = await fs.readdir(absoluteDir, { withFileTypes: true });
+          const dirents = await fs.readdir(absoluteDir, {
+            withFileTypes: true,
+          });
+          signal.throwIfAborted();
           return { relativeDir, dirents };
         } catch (error) {
+          signal.throwIfAborted();
           if (!relativeDir) {
             throw new Error(
               `Unable to scan workspace entries at '${cwd}': ${error instanceof Error ? error.message : "unknown error"}`,
@@ -645,10 +761,10 @@ async function buildWorkspaceIndex(cwd: string): Promise<WorkspaceIndex> {
 
     const candidateEntriesByDirectory = directoryEntries.map((directoryEntry) => {
       const { relativeDir, dirents } = directoryEntry;
-      if (!dirents) return [] as Array<{ dirent: Dirent; relativePath: string }>;
+      if (!dirents) return [] as WorkspaceScanCandidate[];
 
       dirents.sort((left, right) => left.name.localeCompare(right.name));
-      const candidates: Array<{ dirent: Dirent; relativePath: string }> = [];
+      const candidates: WorkspaceScanCandidate[] = [];
       for (const dirent of dirents) {
         if (!dirent.name || dirent.name === "." || dirent.name === "..") {
           continue;
@@ -656,7 +772,14 @@ async function buildWorkspaceIndex(cwd: string): Promise<WorkspaceIndex> {
         if (dirent.isDirectory() && IGNORED_DIRECTORY_NAMES.has(dirent.name)) {
           continue;
         }
-        if (!dirent.isDirectory() && !dirent.isFile()) {
+        const kind = dirent.isDirectory()
+          ? ("directory" as const)
+          : dirent.isFile()
+            ? ("file" as const)
+            : dirent.isSymbolicLink()
+              ? ("symlink" as const)
+              : null;
+        if (!kind) {
           continue;
         }
 
@@ -666,32 +789,63 @@ async function buildWorkspaceIndex(cwd: string): Promise<WorkspaceIndex> {
         if (isPathInIgnoredDirectory(relativePath)) {
           continue;
         }
-        candidates.push({ dirent, relativePath });
+        candidates.push({ kind, relativePath });
       }
       return candidates;
     });
 
-    const candidatePaths = candidateEntriesByDirectory.flatMap((candidateEntries) =>
+    const symlinkCandidates = candidateEntriesByDirectory
+      .flat()
+      .filter((candidate) => candidate.kind === "symlink");
+    const resolvedSymlinks = await mapWithConcurrency(
+      symlinkCandidates,
+      WORKSPACE_SCAN_READDIR_CONCURRENCY,
+      (candidate) =>
+        resolveNonGitSymlinkCandidate({
+          cwd,
+          realRoot: rootIdentity.realPath,
+          candidate,
+          signal,
+        }),
+    );
+    const resolvedSymlinkByPath = new Map(
+      resolvedSymlinks
+        .filter((candidate): candidate is WorkspaceScanCandidate => candidate !== null)
+        .map((candidate) => [candidate.relativePath, candidate] as const),
+    );
+    const resolvedCandidateEntriesByDirectory = candidateEntriesByDirectory.map((candidates) =>
+      candidates.flatMap((candidate) => {
+        if (candidate.kind !== "symlink") return [candidate];
+        const resolved = resolvedSymlinkByPath.get(candidate.relativePath);
+        return resolved ? [resolved] : [];
+      }),
+    );
+
+    const candidatePaths = resolvedCandidateEntriesByDirectory.flatMap((candidateEntries) =>
       candidateEntries.map((entry) => entry.relativePath),
     );
     const allowedPathSet = shouldFilterWithGitIgnore
-      ? new Set(await filterGitIgnoredPaths(cwd, candidatePaths))
+      ? new Set(await filterGitIgnoredPaths(cwd, candidatePaths, signal))
       : null;
 
-    for (const candidateEntries of candidateEntriesByDirectory) {
+    for (const candidateEntries of resolvedCandidateEntriesByDirectory) {
       for (const candidate of candidateEntries) {
+        signal.throwIfAborted();
+        if (candidate.kind === "symlink") {
+          continue;
+        }
         if (allowedPathSet && !allowedPathSet.has(candidate.relativePath)) {
           continue;
         }
 
         const entry = toSearchableWorkspaceEntry({
           path: candidate.relativePath,
-          kind: candidate.dirent.isDirectory() ? "directory" : "file",
+          kind: candidate.kind,
           parentPath: parentPathOf(candidate.relativePath),
         });
         entries.push(entry);
 
-        if (candidate.dirent.isDirectory()) {
+        if (candidate.kind === "directory") {
           pendingDirectories.push(candidate.relativePath);
         }
 
@@ -714,19 +868,30 @@ async function buildWorkspaceIndex(cwd: string): Promise<WorkspaceIndex> {
   };
 }
 
-async function getWorkspaceIndex(cwd: string): Promise<WorkspaceIndex> {
-  const cached = workspaceIndexCache.get(cwd);
-  if (cached && Date.now() - cached.scannedAt < WORKSPACE_CACHE_TTL_MS) {
-    return cached;
+async function buildWorkspaceIndex(cwd: string, signal: AbortSignal): Promise<WorkspaceIndex> {
+  const rootIdentity = await readWorkspaceRootIdentity(cwd, signal);
+  const result = await buildWorkspaceIndexEntries(cwd, rootIdentity, signal);
+  const finalRootIdentity = await readWorkspaceRootIdentity(cwd, signal);
+  if (!sameWorkspaceRootIdentity(rootIdentity, finalRootIdentity)) {
+    throw new WorkspaceIndexRootChanged();
   }
+  return { ...result, rootIdentity };
+}
 
-  const inFlight = inFlightWorkspaceIndexBuilds.get(cwd);
-  if (inFlight) {
-    return inFlight;
-  }
-
-  const nextPromise = buildWorkspaceIndex(cwd)
+function startWorkspaceIndexBuild(cwd: string): InFlightWorkspaceIndexBuild {
+  const controller = new AbortController();
+  const rawPromise = buildWorkspaceIndex(cwd, controller.signal);
+  const build: InFlightWorkspaceIndexBuild = {
+    controller,
+    promise: rawPromise,
+    leases: 0,
+    settled: false,
+  };
+  build.promise = rawPromise
     .then((next) => {
+      if (controller.signal.aborted || inFlightWorkspaceIndexBuilds.get(cwd) !== build) {
+        throw new WorkspaceIndexBuildInvalidated();
+      }
       workspaceIndexCache.set(cwd, next);
       while (workspaceIndexCache.size > WORKSPACE_CACHE_MAX_KEYS) {
         const oldestKey = workspaceIndexCache.keys().next().value;
@@ -736,15 +901,123 @@ async function getWorkspaceIndex(cwd: string): Promise<WorkspaceIndex> {
       return next;
     })
     .finally(() => {
-      inFlightWorkspaceIndexBuilds.delete(cwd);
+      build.settled = true;
+      if (inFlightWorkspaceIndexBuilds.get(cwd) === build) {
+        inFlightWorkspaceIndexBuilds.delete(cwd);
+      }
     });
-  inFlightWorkspaceIndexBuilds.set(cwd, nextPromise);
-  return nextPromise;
+  inFlightWorkspaceIndexBuilds.set(cwd, build);
+  return build;
+}
+
+function waitForWorkspaceIndexBuild(
+  build: InFlightWorkspaceIndexBuild,
+  options?: { readonly signal?: AbortSignal; readonly deadline?: number },
+): Promise<WorkspaceIndex> {
+  options?.signal?.throwIfAborted();
+  if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+    throw new WorkspaceIndexDeadlineExceeded();
+  }
+
+  build.leases += 1;
+  return new Promise<WorkspaceIndex>((resolve, reject) => {
+    let completed = false;
+    let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
+    const finish = (complete: () => void) => {
+      if (completed) return;
+      completed = true;
+      if (deadlineTimer) clearTimeout(deadlineTimer);
+      options?.signal?.removeEventListener("abort", onAbort);
+      build.controller.signal.removeEventListener("abort", onBuildAbort);
+      complete();
+    };
+    const onAbort = () => {
+      try {
+        options?.signal?.throwIfAborted();
+      } catch (cause) {
+        finish(() => reject(cause));
+      }
+    };
+    const onBuildAbort = () => finish(() => reject(new WorkspaceIndexBuildInvalidated()));
+
+    build.promise.then(
+      (index) => finish(() => resolve(index)),
+      (cause) => finish(() => reject(cause)),
+    );
+    options?.signal?.addEventListener("abort", onAbort, { once: true });
+    build.controller.signal.addEventListener("abort", onBuildAbort, {
+      once: true,
+    });
+    if (options?.signal?.aborted) {
+      onAbort();
+      return;
+    }
+    if (build.controller.signal.aborted) {
+      onBuildAbort();
+      return;
+    }
+    if (options?.deadline !== undefined) {
+      deadlineTimer = setTimeout(
+        () => finish(() => reject(new WorkspaceIndexDeadlineExceeded())),
+        Math.max(0, options.deadline - Date.now()),
+      );
+    }
+  }).finally(() => {
+    build.leases -= 1;
+    if (build.leases === 0 && !build.settled) {
+      build.controller.abort();
+    }
+  });
+}
+
+async function getWorkspaceIndex(
+  cwd: string,
+  options?: { readonly signal?: AbortSignal; readonly deadline?: number },
+): Promise<WorkspaceIndex> {
+  while (true) {
+    options?.signal?.throwIfAborted();
+    if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+      throw new WorkspaceIndexDeadlineExceeded();
+    }
+    const cached = workspaceIndexCache.get(cwd);
+    if (cached && Date.now() - cached.scannedAt < WORKSPACE_CACHE_TTL_MS) {
+      return cached;
+    }
+
+    let build = inFlightWorkspaceIndexBuilds.get(cwd);
+    if (build?.controller.signal.aborted) {
+      if (inFlightWorkspaceIndexBuilds.get(cwd) === build) {
+        inFlightWorkspaceIndexBuilds.delete(cwd);
+      }
+      build = undefined;
+    }
+    build ??= startWorkspaceIndexBuild(cwd);
+
+    try {
+      return await waitForWorkspaceIndexBuild(build, options);
+    } catch (cause) {
+      options?.signal?.throwIfAborted();
+      if (
+        cause instanceof WorkspaceIndexDeadlineExceeded ||
+        cause instanceof WorkspaceIndexRootChanged
+      ) {
+        throw cause;
+      }
+      if (cause instanceof WorkspaceIndexBuildInvalidated || build.controller.signal.aborted) {
+        continue;
+      }
+      throw cause;
+    }
+  }
 }
 
 export function clearWorkspaceIndexCache(cwd: string): void {
   workspaceIndexCache.delete(cwd);
-  inFlightWorkspaceIndexBuilds.delete(cwd);
+  const build = inFlightWorkspaceIndexBuilds.get(cwd);
+  if (build) {
+    inFlightWorkspaceIndexBuilds.delete(cwd);
+    build.controller.abort();
+  }
 }
 
 function expandHomePath(input: string): string {
@@ -871,6 +1144,42 @@ function sameContentFileState(left: BigIntStats, right: BigIntStats): boolean {
   );
 }
 
+function isCanonicalContentSearchPathAllowed(
+  realRoot: string,
+  realTarget: string,
+  indexedFilePaths: ReadonlySet<string>,
+): boolean {
+  if (!isContainedPath(realRoot, realTarget)) {
+    return false;
+  }
+  const canonicalRelativePath = toPosixPath(path.relative(realRoot, realTarget));
+  return (
+    canonicalRelativePath.length > 0 &&
+    isContentSearchablePath(canonicalRelativePath) &&
+    indexedFilePaths.has(canonicalRelativePath)
+  );
+}
+
+async function assertContentSearchRootIdentity(input: {
+  cwd: string;
+  rootIdentity: WorkspaceRootIdentity;
+  deadline: number;
+  signal?: AbortSignal;
+}): Promise<void> {
+  assertContentSearchBudget(input.deadline, input.signal);
+  let currentIdentity: WorkspaceRootIdentity;
+  try {
+    currentIdentity = await readWorkspaceRootIdentity(input.cwd, input.signal);
+  } catch (cause) {
+    if (input.signal?.aborted) throw cause;
+    throw new WorkspaceIndexRootChanged();
+  }
+  assertContentSearchBudget(input.deadline, input.signal);
+  if (!sameWorkspaceRootIdentity(input.rootIdentity, currentIdentity)) {
+    throw new WorkspaceIndexRootChanged();
+  }
+}
+
 function buildContentLineText(line: string): string {
   const trimmed = line.trimEnd();
   if (trimmed.length <= CONTENT_SEARCH_MAX_LINE_LENGTH) {
@@ -886,19 +1195,29 @@ function buildContentLineText(line: string): string {
 
 async function searchWorkspaceFileContent(input: {
   cwd: string;
-  realRoot: string;
-  rootStat: BigIntStats;
+  rootIdentity: WorkspaceRootIdentity;
+  indexedFilePaths: ReadonlySet<string>;
   relativePath: string;
   normalizedQuery: string;
   deadline: number;
   signal?: AbortSignal;
 }): Promise<{ matches: ProjectContentMatch[]; truncated: boolean } | null> {
   assertContentSearchBudget(input.deadline, input.signal);
+  await assertContentSearchRootIdentity(input);
   const lexicalPath = path.join(input.cwd, input.relativePath);
-  const initialRealPath = await resolveRealPathWithinRoot(input.realRoot, lexicalPath).catch(
-    () => null,
-  );
-  if (!initialRealPath) {
+  const initialRealPath = await resolveRealPathWithinRoot(
+    input.rootIdentity.realPath,
+    lexicalPath,
+  ).catch(() => null);
+  assertContentSearchBudget(input.deadline, input.signal);
+  if (
+    !initialRealPath ||
+    !isCanonicalContentSearchPathAllowed(
+      input.rootIdentity.realPath,
+      initialRealPath,
+      input.indexedFilePaths,
+    )
+  ) {
     return null;
   }
 
@@ -912,15 +1231,15 @@ async function searchWorkspaceFileContent(input: {
   try {
     assertContentSearchBudget(input.deadline, input.signal);
     const beforeReadStat = await handle.stat({ bigint: true });
-    const [currentRealRoot, currentRootStat, currentRealPath] = await Promise.all([
-      fs.realpath(input.cwd),
-      fs.stat(input.realRoot, { bigint: true }),
-      fs.realpath(lexicalPath),
-    ]);
+    await assertContentSearchRootIdentity(input);
+    const currentRealPath = await fs.realpath(lexicalPath).catch(() => null);
     if (
-      currentRealRoot !== input.realRoot ||
-      !sameContentFileState(input.rootStat, currentRootStat) ||
-      !isContainedPath(currentRealRoot, currentRealPath)
+      !currentRealPath ||
+      !isCanonicalContentSearchPathAllowed(
+        input.rootIdentity.realPath,
+        currentRealPath,
+        input.indexedFilePaths,
+      )
     ) {
       return null;
     }
@@ -945,15 +1264,17 @@ async function searchWorkspaceFileContent(input: {
     }
     assertContentSearchBudget(input.deadline, input.signal);
 
-    const [afterReadStat, finalRealRoot, finalRealPath] = await Promise.all([
-      handle.stat({ bigint: true }),
-      fs.realpath(input.cwd),
-      fs.realpath(lexicalPath),
-    ]);
+    const afterReadStat = await handle.stat({ bigint: true });
+    await assertContentSearchRootIdentity(input);
+    const finalRealPath = await fs.realpath(lexicalPath).catch(() => null);
     if (
       offset !== byteLength ||
-      finalRealRoot !== input.realRoot ||
-      !isContainedPath(finalRealRoot, finalRealPath) ||
+      !finalRealPath ||
+      !isCanonicalContentSearchPathAllowed(
+        input.rootIdentity.realPath,
+        finalRealPath,
+        input.indexedFilePaths,
+      ) ||
       !sameContentFileState(beforeReadStat, afterReadStat)
     ) {
       return null;
@@ -995,7 +1316,11 @@ async function searchWorkspaceFileContent(input: {
     }
     return { matches, truncated };
   } catch (cause) {
-    if (cause instanceof ContentSearchDeadlineExceeded || input.signal?.aborted) {
+    if (
+      cause instanceof ContentSearchDeadlineExceeded ||
+      cause instanceof WorkspaceIndexRootChanged ||
+      input.signal?.aborted
+    ) {
       throw cause;
     }
     return null;
@@ -1015,39 +1340,71 @@ export async function searchWorkspaceContent(
 
   const deadline = Date.now() + CONTENT_SEARCH_TIME_BUDGET_MS;
   signal?.throwIfAborted();
-  const [index, realRoot] = await Promise.all([
-    getWorkspaceIndex(input.cwd),
-    fs.realpath(input.cwd),
-  ]);
+  let index: WorkspaceIndex;
+  try {
+    index = await getWorkspaceIndex(input.cwd, {
+      deadline,
+      ...(signal ? { signal } : {}),
+    });
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
+    if (
+      cause instanceof WorkspaceIndexDeadlineExceeded ||
+      cause instanceof WorkspaceIndexRootChanged
+    ) {
+      return { matches: [], truncated: true };
+    }
+    throw cause;
+  }
   signal?.throwIfAborted();
   if (Date.now() >= deadline) {
     return { matches: [], truncated: true };
   }
-  const rootStat = await fs.stat(realRoot, { bigint: true });
+  try {
+    await assertContentSearchRootIdentity({
+      cwd: input.cwd,
+      rootIdentity: index.rootIdentity,
+      deadline,
+      ...(signal ? { signal } : {}),
+    });
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
+    if (
+      cause instanceof WorkspaceIndexRootChanged ||
+      cause instanceof ContentSearchDeadlineExceeded
+    ) {
+      return { matches: [], truncated: true };
+    }
+    throw cause;
+  }
   const limit = Math.max(
     1,
     Math.min(input.limit ?? CONTENT_SEARCH_DEFAULT_LIMIT, CONTENT_SEARCH_MAX_LIMIT),
   );
-  const allFilePaths = index.entries
-    .filter((entry) => entry.kind === "file" && isContentSearchablePath(entry.path))
-    .map((entry) => entry.path);
+  const indexedFilePaths = new Set(
+    index.entries.filter((entry) => entry.kind === "file").map((entry) => entry.path),
+  );
+  const allFilePaths = [...indexedFilePaths].filter(isContentSearchablePath);
   const filePaths = allFilePaths.slice(0, CONTENT_SEARCH_MAX_FILES_SCANNED);
   const collected: ProjectContentMatch[] = [];
   let nextIndex = 0;
   let scannedFiles = 0;
+  let rootChanged = false;
   let truncated = index.truncated || filePaths.length < allFilePaths.length;
 
   const workers = Array.from(
-    { length: Math.max(1, Math.min(CONTENT_SEARCH_READ_CONCURRENCY, filePaths.length)) },
+    {
+      length: Math.max(1, Math.min(CONTENT_SEARCH_READ_CONCURRENCY, filePaths.length)),
+    },
     async () => {
-      while (nextIndex < filePaths.length) {
+      while (!rootChanged && nextIndex < filePaths.length) {
         const currentIndex = nextIndex;
         nextIndex += 1;
         try {
           const fileMatches = await searchWorkspaceFileContent({
             cwd: input.cwd,
-            realRoot,
-            rootStat,
+            rootIdentity: index.rootIdentity,
+            indexedFilePaths,
             relativePath: filePaths[currentIndex]!,
             normalizedQuery,
             deadline,
@@ -1060,6 +1417,11 @@ export async function searchWorkspaceContent(
           }
         } catch (cause) {
           if (cause instanceof ContentSearchDeadlineExceeded) {
+            truncated = true;
+            return;
+          }
+          if (cause instanceof WorkspaceIndexRootChanged) {
+            rootChanged = true;
             truncated = true;
             return;
           }
@@ -1393,7 +1755,10 @@ export async function searchLocalEntries(
           }
 
           if (isDirectory && depth + 1 < LOCAL_SEARCH_MAX_DEPTH) {
-            nextLevel.push({ absolutePath: childAbsolutePath, depth: depth + 1 });
+            nextLevel.push({
+              absolutePath: childAbsolutePath,
+              depth: depth + 1,
+            });
           }
         }
       },

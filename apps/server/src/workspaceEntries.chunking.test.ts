@@ -51,7 +51,10 @@ describe("searchWorkspaceEntries git-ignore chunking", () => {
       }
 
       if (args.includes("ls-files")) {
-        return processResult({ code: 0, stdout: `${listedPaths.join("\0")}\0` });
+        return processResult({
+          code: 0,
+          stdout: `${listedPaths.join("\0")}\0`,
+        });
       }
 
       if (args.includes("check-ignore")) {
@@ -69,7 +72,7 @@ describe("searchWorkspaceEntries git-ignore chunking", () => {
 
     const { searchWorkspaceEntries } = await import("./workspaceEntries");
     const result = await searchWorkspaceEntries({
-      cwd: "/virtual/workspace",
+      cwd: process.cwd(),
       query: "",
       limit: 100,
     });

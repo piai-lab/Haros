@@ -8,6 +8,7 @@ import { afterEach, assert, describe, expect, it, vi } from "vitest";
 
 import * as ProcessRunner from "./processRunner";
 import {
+  clearWorkspaceIndexCache,
   discoverProjectScripts,
   listWorkspaceDirectories,
   searchWorkspaceContent,
@@ -69,7 +70,11 @@ describe("searchWorkspaceEntries", () => {
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/composition.md");
 
-    const result = await searchWorkspaceEntries({ cwd, query: "compo", limit: 5 });
+    const result = await searchWorkspaceEntries({
+      cwd,
+      query: "compo",
+      limit: 5,
+    });
 
     assert.isAbove(result.entries.length, 0);
     assert.isTrue(result.entries.some((entry) => entry.path === "src/components"));
@@ -82,7 +87,12 @@ describe("searchWorkspaceEntries", () => {
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/components/guide.md");
 
-    const result = await searchWorkspaceEntries({ cwd, query: "compo", kind: "file", limit: 10 });
+    const result = await searchWorkspaceEntries({
+      cwd,
+      query: "compo",
+      kind: "file",
+      limit: 10,
+    });
 
     assert.isAbove(result.entries.length, 0);
     assert.isTrue(result.entries.every((entry) => entry.kind === "file"));
@@ -99,7 +109,11 @@ describe("searchWorkspaceEntries", () => {
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/composition.md");
 
-    const result = await searchWorkspaceEntries({ cwd, query: "cmp", limit: 10 });
+    const result = await searchWorkspaceEntries({
+      cwd,
+      query: "cmp",
+      limit: 10,
+    });
     const paths = result.entries.map((entry) => entry.path);
 
     assert.isAbove(result.entries.length, 0);
@@ -113,7 +127,11 @@ describe("searchWorkspaceEntries", () => {
     writeFile(cwd, "src/components/composePrompt.ts");
     writeFile(cwd, "docs/composition.md");
 
-    const result = await searchWorkspaceEntries({ cwd, query: "cmp", limit: 1 });
+    const result = await searchWorkspaceEntries({
+      cwd,
+      query: "cmp",
+      limit: 1,
+    });
 
     assert.lengthOf(result.entries, 1);
     assert.isTrue(result.truncated);
@@ -268,6 +286,99 @@ describe("searchWorkspaceEntries", () => {
     assert.equal(rootReadCount, 1);
   });
 
+  it("keeps a shared index build alive while a filename-search lease still needs it", async () => {
+    const cwd = makeTempDir("omnimind-workspace-shared-build-lease-");
+    writeFile(cwd, "src/keep.ts", "needle\n");
+    let releaseRootRead!: () => void;
+    const rootReadReleased = new Promise<void>((resolve) => {
+      releaseRootRead = resolve;
+    });
+    let markRootReadStarted!: () => void;
+    const rootReadStarted = new Promise<void>((resolve) => {
+      markRootReadStarted = resolve;
+    });
+    let rootReadCount = 0;
+    const originalReaddir = fsPromises.readdir.bind(fsPromises);
+    vi.spyOn(fsPromises, "readdir").mockImplementation((async (
+      ...args: Parameters<typeof fsPromises.readdir>
+    ) => {
+      const result = await originalReaddir(...args);
+      if (args[0] === cwd) {
+        rootReadCount += 1;
+        markRootReadStarted();
+        await rootReadReleased;
+      }
+      return result;
+    }) as typeof fsPromises.readdir);
+
+    const filenameSearch = searchWorkspaceEntries({
+      cwd,
+      query: "keep",
+      limit: 10,
+    });
+    await rootReadStarted;
+    const controller = new AbortController();
+    const contentSearch = searchWorkspaceContent({ cwd, query: "needle" }, controller.signal);
+    controller.abort();
+
+    await expect(contentSearch).rejects.toMatchObject({ name: "AbortError" });
+    releaseRootRead();
+    await expect(filenameSearch).resolves.toMatchObject({
+      entries: [expect.objectContaining({ path: "src/keep.ts" })],
+    });
+    expect(rootReadCount).toBe(1);
+  });
+
+  it("does not let a cleared late build refill the cache or delete its replacement", async () => {
+    const cwd = makeTempDir("omnimind-workspace-cleared-build-");
+    writeFile(cwd, "old.ts", "old\n");
+    let releaseFirstRead!: () => void;
+    const firstReadReleased = new Promise<void>((resolve) => {
+      releaseFirstRead = resolve;
+    });
+    let markFirstReadStarted!: () => void;
+    const firstReadStarted = new Promise<void>((resolve) => {
+      markFirstReadStarted = resolve;
+    });
+    let rootReadCount = 0;
+    const originalReaddir = fsPromises.readdir.bind(fsPromises);
+    vi.spyOn(fsPromises, "readdir").mockImplementation((async (
+      ...args: Parameters<typeof fsPromises.readdir>
+    ) => {
+      const result = await originalReaddir(...args);
+      if (args[0] === cwd) {
+        rootReadCount += 1;
+        if (rootReadCount === 1) {
+          markFirstReadStarted();
+          await firstReadReleased;
+        }
+      }
+      return result;
+    }) as typeof fsPromises.readdir);
+
+    const firstSearch = searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+    await firstReadStarted;
+    clearWorkspaceIndexCache(cwd);
+    writeFile(cwd, "new.ts", "new\n");
+    const replacementSearch = searchWorkspaceEntries({
+      cwd,
+      query: "new",
+      limit: 100,
+    });
+
+    await expect(replacementSearch).resolves.toMatchObject({
+      entries: [expect.objectContaining({ path: "new.ts" })],
+    });
+    releaseFirstRead();
+    await expect(firstSearch).resolves.toMatchObject({
+      entries: expect.arrayContaining([expect.objectContaining({ path: "new.ts" })]),
+    });
+    await expect(searchWorkspaceEntries({ cwd, query: "new", limit: 100 })).resolves.toMatchObject({
+      entries: [expect.objectContaining({ path: "new.ts" })],
+    });
+    expect(rootReadCount).toBe(2);
+  });
+
   it("limits concurrent directory reads while walking the filesystem", async () => {
     const cwd = makeTempDir("omnimind-workspace-read-concurrency-");
     for (let index = 0; index < 80; index += 1) {
@@ -298,6 +409,43 @@ describe("searchWorkspaceEntries", () => {
 
     assert.isAtMost(peakReads, 32);
   });
+
+  it.skipIf(process.platform === "win32")(
+    "bounds non-git file-symlink identity resolution",
+    async () => {
+      const cwd = makeTempDir("omnimind-workspace-symlink-concurrency-");
+      writeFile(cwd, "target.ts", "export {};\n");
+      for (let index = 0; index < 80; index += 1) {
+        fs.symlinkSync(path.join(cwd, "target.ts"), path.join(cwd, `link-${index}.ts`));
+      }
+      let activeResolutions = 0;
+      let peakResolutions = 0;
+      const originalLstat = fsPromises.lstat.bind(fsPromises);
+      vi.spyOn(fsPromises, "lstat").mockImplementation(async (...args) => {
+        const target = args[0];
+        if (typeof target === "string" && target.startsWith(path.join(cwd, "link-"))) {
+          activeResolutions += 1;
+          peakResolutions = Math.max(peakResolutions, activeResolutions);
+          await new Promise((resolve) => setTimeout(resolve, 4));
+          try {
+            return await originalLstat(...args);
+          } finally {
+            activeResolutions -= 1;
+          }
+        }
+        return originalLstat(...args);
+      });
+
+      const result = await searchWorkspaceEntries({
+        cwd,
+        query: "link",
+        limit: 100,
+      });
+
+      expect(result.entries).toHaveLength(80);
+      expect(peakResolutions).toBeLessThanOrEqual(32);
+    },
+  );
 });
 
 describe("listWorkspaceDirectories", () => {
@@ -348,7 +496,11 @@ describe("listWorkspaceDirectories", () => {
     fs.symlinkSync(outside, path.join(cwd, "innocent"));
 
     await expect(
-      listWorkspaceDirectories({ cwd, includeFiles: true, relativePath: "innocent" }),
+      listWorkspaceDirectories({
+        cwd,
+        includeFiles: true,
+        relativePath: "innocent",
+      }),
     ).rejects.toThrow("outside the workspace root");
 
     // A symlink that resolves inside the root is still allowed.
@@ -376,7 +528,10 @@ describe("discoverProjectScripts", () => {
     writeFile(
       cwd,
       "package.json",
-      JSON.stringify({ name: "root-app", scripts: { dev: "vite", start: "vite --host" } }),
+      JSON.stringify({
+        name: "root-app",
+        scripts: { dev: "vite", start: "vite --host" },
+      }),
     );
     writeFile(cwd, "bun.lock", "");
 
@@ -477,8 +632,16 @@ describe("searchWorkspaceContent", () => {
 
     expect(result).toEqual({
       matches: [
-        { path: "src/index.ts", lineNumber: 2, lineText: "export function FindMe() {" },
-        { path: "src/other.ts", lineNumber: 1, lineText: "const FINDME = 'x';" },
+        {
+          path: "src/index.ts",
+          lineNumber: 2,
+          lineText: "export function FindMe() {",
+        },
+        {
+          path: "src/other.ts",
+          lineNumber: 1,
+          lineText: "const FINDME = 'x';",
+        },
       ],
       truncated: false,
     });
@@ -540,16 +703,51 @@ describe("searchWorkspaceContent", () => {
   });
 
   it.skipIf(process.platform === "win32")(
-    "allows in-root symlinks but never reads tracked external symlinks",
+    "allows indexed in-root symlinks but rejects external, hidden, and ignored targets",
     async () => {
       const cwd = makeTempDir("omnimind-content-search-symlink-");
       const outside = makeTempDir("omnimind-content-search-outside-");
       writeFile(cwd, "docs/inside.txt", "inside needle\n");
+      writeFile(cwd, ".omnimind/secret.txt", "hidden needle\n");
+      writeFile(cwd, "private/secret.txt", "ignored needle\n");
+      writeFile(cwd, ".gitignore", "private/**\n");
       writeFile(outside, "secret.txt", "outside needle\n");
       fs.symlinkSync(path.join(cwd, "docs/inside.txt"), path.join(cwd, "inside-link.txt"));
       fs.symlinkSync(path.join(outside, "secret.txt"), path.join(cwd, "outside-link.txt"));
+      fs.symlinkSync(path.join(cwd, ".omnimind/secret.txt"), path.join(cwd, "hidden-link.txt"));
+      fs.symlinkSync(path.join(cwd, "private/secret.txt"), path.join(cwd, "ignored-link.txt"));
       runGit(cwd, ["init"]);
-      runGit(cwd, ["add", "docs/inside.txt", "inside-link.txt", "outside-link.txt"]);
+      runGit(cwd, [
+        "add",
+        ".gitignore",
+        "docs/inside.txt",
+        "inside-link.txt",
+        "outside-link.txt",
+        "hidden-link.txt",
+        "ignored-link.txt",
+      ]);
+
+      const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+      expect(result.matches.map((match) => match.path)).toEqual([
+        "docs/inside.txt",
+        "inside-link.txt",
+      ]);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "indexes only regular in-root file symlinks outside git workspaces",
+    async () => {
+      const cwd = makeTempDir("omnimind-content-search-non-git-symlink-");
+      const outside = makeTempDir("omnimind-content-search-non-git-outside-");
+      writeFile(cwd, "docs/inside.txt", "inside needle\n");
+      writeFile(outside, "secret.txt", "outside needle\n");
+      fs.symlinkSync(path.join(cwd, "docs/inside.txt"), path.join(cwd, "inside-link.txt"));
+      fs.symlinkSync(path.join(outside, "secret.txt"), path.join(cwd, "outside-link.txt"));
+      fs.symlinkSync(path.join(cwd, "docs"), path.join(cwd, "directory-link"));
+      fs.symlinkSync(path.join(cwd, "cycle-b"), path.join(cwd, "cycle-a"));
+      fs.symlinkSync(path.join(cwd, "cycle-a"), path.join(cwd, "cycle-b"));
 
       const result = await searchWorkspaceContent({ cwd, query: "needle" });
 
@@ -587,6 +785,82 @@ describe("searchWorkspaceContent", () => {
     },
   );
 
+  it.skipIf(process.platform === "win32")(
+    "revalidates the canonical target after reading and rejects a hidden swap",
+    async () => {
+      const cwd = makeTempDir("omnimind-content-search-hidden-swap-");
+      const linkPath = path.join(cwd, "visible-link.txt");
+      writeFile(cwd, "safe.txt", "safe needle\n");
+      writeFile(cwd, ".omnimind/secret.txt", "hidden needle\n");
+      fs.symlinkSync(path.join(cwd, "safe.txt"), linkPath);
+      await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+      const originalRealpath = fsPromises.realpath.bind(fsPromises);
+      let linkRealpathCalls = 0;
+      vi.spyOn(fsPromises, "realpath").mockImplementation((async (...args) => {
+        if (args[0] === linkPath) {
+          linkRealpathCalls += 1;
+          if (linkRealpathCalls === 2) {
+            fs.unlinkSync(linkPath);
+            fs.symlinkSync(path.join(cwd, ".omnimind/secret.txt"), linkPath);
+          }
+        }
+        return originalRealpath(args[0]);
+      }) as typeof fsPromises.realpath);
+
+      const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+      expect(linkRealpathCalls).toBe(2);
+      expect(result.matches.map((match) => match.path)).toEqual(["safe.txt"]);
+    },
+  );
+
+  it("does not treat ordinary workspace directory metadata changes as a root replacement", async () => {
+    const cwd = makeTempDir("omnimind-content-search-root-mtime-");
+    writeFile(cwd, "target.txt", "needle\n");
+    await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+    const originalOpen = fsPromises.open.bind(fsPromises);
+    let changedRootMetadata = false;
+    vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      const handle = await originalOpen(...args);
+      if (!changedRootMetadata) {
+        changedRootMetadata = true;
+        writeFile(cwd, "created-during-search.txt", "unindexed\n");
+      }
+      return handle;
+    });
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+    expect(changedRootMetadata).toBe(true);
+    expect(result.matches.map((match) => match.path)).toEqual(["target.txt"]);
+    expect(result.truncated).toBe(false);
+  });
+
+  it("reports an incomplete result when the workspace root inode is replaced mid-read", async () => {
+    const parent = makeTempDir("omnimind-content-search-root-replaced-");
+    const cwd = path.join(parent, "workspace");
+    fs.mkdirSync(cwd);
+    writeFile(cwd, "target.txt", "old needle\n");
+    await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+    const originalOpen = fsPromises.open.bind(fsPromises);
+    let replaced = false;
+    vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      const handle = await originalOpen(...args);
+      if (!replaced) {
+        replaced = true;
+        fs.renameSync(cwd, path.join(parent, "old-workspace"));
+        fs.mkdirSync(cwd);
+        writeFile(cwd, "target.txt", "replacement needle\n");
+      }
+      return handle;
+    });
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+    expect(replaced).toBe(true);
+    expect(result).toEqual({ matches: [], truncated: true });
+  });
+
   it("caps hot files and reports global truncation", async () => {
     const cwd = makeTempDir("omnimind-content-search-limits-");
     writeFile(cwd, "hot.ts", Array.from({ length: 10 }, () => "hot needle\n").join(""));
@@ -600,7 +874,11 @@ describe("searchWorkspaceContent", () => {
     expect(result.matches.some((match) => match.path.startsWith("src/"))).toBe(true);
     expect(result.truncated).toBe(true);
 
-    const limitedResult = await searchWorkspaceContent({ cwd, query: "needle", limit: 5 });
+    const limitedResult = await searchWorkspaceContent({
+      cwd,
+      query: "needle",
+      limit: 5,
+    });
 
     expect(limitedResult.matches).toHaveLength(5);
     expect(limitedResult.truncated).toBe(true);
@@ -627,7 +905,11 @@ describe("searchWorkspaceContent", () => {
       .spyOn(fsPromises, "open")
       .mockImplementation((...args) => originalOpen(...args));
 
-    const result = await searchWorkspaceContent({ cwd, query: "needle", limit: 1 });
+    const result = await searchWorkspaceContent({
+      cwd,
+      query: "needle",
+      limit: 1,
+    });
 
     expect(openSpy.mock.calls.length).toBeLessThanOrEqual(2_000);
     expect(result.truncated).toBe(true);
@@ -646,6 +928,54 @@ describe("searchWorkspaceContent", () => {
     expect(openSpy).not.toHaveBeenCalled();
   });
 
+  it("aborts an active index build without letting its stale snapshot fill the cache", async () => {
+    const cwd = makeTempDir("omnimind-content-search-index-abort-");
+    writeFile(cwd, "src/old.ts", "old needle\n");
+    let releaseRootRead!: () => void;
+    const rootReadReleased = new Promise<void>((resolve) => {
+      releaseRootRead = resolve;
+    });
+    let markRootReadStarted!: () => void;
+    const rootReadStarted = new Promise<void>((resolve) => {
+      markRootReadStarted = resolve;
+    });
+    let rootReadCount = 0;
+    let childReadCount = 0;
+    const originalReaddir = fsPromises.readdir.bind(fsPromises);
+    vi.spyOn(fsPromises, "readdir").mockImplementation((async (
+      ...args: Parameters<typeof fsPromises.readdir>
+    ) => {
+      const result = await originalReaddir(...args);
+      if (args[0] === cwd) {
+        rootReadCount += 1;
+        if (rootReadCount === 1) {
+          markRootReadStarted();
+          await rootReadReleased;
+        }
+      } else if (args[0] === path.join(cwd, "src")) {
+        childReadCount += 1;
+      }
+      return result;
+    }) as typeof fsPromises.readdir);
+    const controller = new AbortController();
+    const search = searchWorkspaceContent({ cwd, query: "needle" }, controller.signal);
+    await rootReadStarted;
+
+    controller.abort();
+    await expect(search).rejects.toMatchObject({ name: "AbortError" });
+    expect(rootReadCount).toBe(1);
+    writeFile(cwd, "new.ts", "new needle\n");
+    releaseRootRead();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(childReadCount).toBe(0);
+
+    await expect(searchWorkspaceEntries({ cwd, query: "new", limit: 100 })).resolves.toMatchObject({
+      entries: [expect.objectContaining({ path: "new.ts" })],
+    });
+    expect(rootReadCount).toBe(2);
+    expect(childReadCount).toBe(1);
+  });
+
   it("stops an active scan when its request signal is cancelled", async () => {
     const cwd = makeTempDir("omnimind-content-search-active-abort-");
     for (let index = 0; index < 20; index += 1) {
@@ -653,8 +983,16 @@ describe("searchWorkspaceContent", () => {
     }
     const controller = new AbortController();
     const originalOpen = fsPromises.open.bind(fsPromises);
+    let openedHandles = 0;
+    let closedHandles = 0;
     const openSpy = vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
       const handle = await originalOpen(...args);
+      openedHandles += 1;
+      const originalClose = handle.close.bind(handle);
+      vi.spyOn(handle, "close").mockImplementation(async () => {
+        closedHandles += 1;
+        return originalClose();
+      });
       if (!controller.signal.aborted) controller.abort();
       return handle;
     });
@@ -665,18 +1003,29 @@ describe("searchWorkspaceContent", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(openSpy.mock.calls.length).toBeLessThanOrEqual(8);
+    expect(closedHandles).toBe(openedHandles);
   });
 
-  it("counts index acquisition inside the bounded search budget", async () => {
+  it("counts index acquisition inside the bounded search budget without caching late work", async () => {
     const cwd = makeTempDir("omnimind-content-search-timeout-");
     writeFile(cwd, "a.ts", "needle\n");
     const openSpy = vi.spyOn(fsPromises, "open");
-    vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValue(4_000);
+    const nowSpy = vi
+      .spyOn(Date, "now")
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0)
+      .mockReturnValue(4_000);
 
     await expect(searchWorkspaceContent({ cwd, query: "needle" })).resolves.toEqual({
       matches: [],
       truncated: true,
     });
     expect(openSpy).not.toHaveBeenCalled();
+    nowSpy.mockRestore();
+    writeFile(cwd, "new.ts", "new needle\n");
+    await expect(searchWorkspaceEntries({ cwd, query: "new", limit: 100 })).resolves.toMatchObject({
+      entries: [expect.objectContaining({ path: "new.ts" })],
+    });
   });
 });
