@@ -567,7 +567,8 @@ export function resolveCommitDialogActions(input: {
     hasOriginRemote,
     defaultBranchName,
   });
-  const pushCommits = pushItem?.dialogAction !== "push";
+  const pushAction = pushItem?.dialogAction === "push" ? "push" : "commit_push";
+  const pushCommits = pushAction === "commit_push" && gitStatus?.hasWorkingTreeChanges === true;
   const prCommits = prExecution.kind === "run_action" && prExecution.action === "commit_push_pr";
   const prSelectionBlocked = prCommits && !input.hasFileSelection;
 
@@ -592,7 +593,7 @@ export function resolveCommitDialogActions(input: {
       id: "commit_push",
       label: pushItem?.label ?? "Commit & push",
       icon: "push",
-      action: pushItem?.dialogAction === "push" ? "push" : "commit_push",
+      action: pushAction,
       featureBranch: false,
       ...resolveRowState(pushItem, pushCommits),
     },

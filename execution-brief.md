@@ -349,6 +349,8 @@ S1 当前唯一代码 Slice 是 **Phase-9c Git Commit dialog action matrix A3**�
 
 Phase-9c Git A3 的 pre-commit source-candidate 证据为：Git action/availability logic与英中 catalog `2 files / 146 tests`、真实 Chromium Commit action matrix `1 file / 5 tests`、A2 thin Pull Chromium回归 `1 file / 9 tests`、monorepo typecheck `6/6 packages`与document contract `21/21`通过；changed-path lint为`0 warnings / 0 errors`，root lint为`0 errors / 478 warnings`，changed-path format与diff check通过。全局 product-copy guard仍有`workspaceExplorer.tsx`两条未触碰path/line raw-fact attribute的既有`1`个失败，本Slice不扩修该owner，也不把catalog parity扩张为全局copy全绿。按准入未运行package/install/live/README，故只主张source-only candidate。
 
+A3 Judge HOLD P1 follow-up 只修正 default branch clean-ahead 的 `id=push / dialogAction=commit_push` 不代表真实会生成 commit：selection gate与Commit-dialog authoring handoff现在同时以当前 working-tree changes为准；clean-ahead 保持既有 `commit_push` action和default-branch confirmation，但不携带commit message/file paths，dirty counterpart仍在零选择时fail closed并在有选择时保留authoring。focused logic为`1 file / 138 tests`、真实Chromium matrix为`1 file / 6 tests`通过；不改变A2、PR、server/contracts、dialog chrome、layout或其他owner。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

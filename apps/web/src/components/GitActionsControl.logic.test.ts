@@ -201,6 +201,43 @@ describe("resolveCommitDialogActions", () => {
     });
   });
 
+  it("keeps clean default-branch commit_push enabled without selection but gates its dirty twin", () => {
+    const context = {
+      isBusy: false,
+      isDefaultBranch: true,
+      hasOriginRemote: true,
+      defaultBranchName: "main",
+    };
+    const cleanActions = resolveCommitDialogActions({
+      context: {
+        ...context,
+        gitStatus: status({ branch: "main", upstreamBranch: "main", aheadCount: 2 }),
+      },
+      hasFileSelection: false,
+    });
+    const dirtyActions = resolveCommitDialogActions({
+      context: {
+        ...context,
+        gitStatus: dirtyStatus({ branch: "main", upstreamBranch: "main", aheadCount: 2 }),
+      },
+      hasFileSelection: false,
+    });
+
+    assert.deepInclude(cleanActions[2], {
+      id: "commit_push",
+      label: "Commit & push",
+      action: "commit_push",
+      disabled: false,
+      disabledReason: null,
+    });
+    assert.deepInclude(dirtyActions[2], {
+      id: "commit_push",
+      action: "commit_push",
+      disabled: true,
+      disabledReason: "Select at least one file to commit.",
+    });
+  });
+
   it("keeps Commit available but explains blocked push and PR on a behind branch", () => {
     const actions = resolveCommitDialogActions({
       context: {

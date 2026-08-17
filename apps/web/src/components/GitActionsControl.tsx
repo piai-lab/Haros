@@ -1431,7 +1431,10 @@ export default function GitActionsControl({
         return;
       }
 
-      const commits = dialogAction.action !== "push";
+      const commits =
+        dialogAction.action === "commit" ||
+        (dialogAction.action === "commit_push" &&
+          gitStatusForActions?.hasWorkingTreeChanges === true);
       void runGitActionWithToast({
         action: dialogAction.action,
         ...(commits && commitMessage ? { commitMessage } : {}),
@@ -1445,6 +1448,7 @@ export default function GitActionsControl({
       allSelected,
       closeCommitDialog,
       dialogCommitMessage,
+      gitStatusForActions?.hasWorkingTreeChanges,
       isCommitDialogOpen,
       openCreatePrDialog,
       runGitActionWithToast,

@@ -262,6 +262,45 @@ describe("GitActionsControl Commit action matrix", () => {
     });
   });
 
+  it("runs clean default-branch commit_push without commit authoring after confirmation", async () => {
+    harness.status = status({ branch: "main", upstreamBranch: "main" });
+    const mounted = await render(control());
+    await openCommitDialog();
+    await excludeSecondFileAndTypeMessage("  must not reach clean push  ");
+    await userEvent.click(page.getByRole("checkbox").elements()[1]!);
+
+    const actionRow = page.getByRole("button", { name: "Commit and push", exact: true });
+    const dirtyActionElement = actionRow.element();
+    expect(dirtyActionElement).toBeInstanceOf(HTMLButtonElement);
+    expect(dirtyActionElement.getAttribute("aria-disabled")).toBe("true");
+    if (!(dirtyActionElement instanceof HTMLButtonElement)) return;
+    dirtyActionElement.click();
+    expect(harness.runStackedAction).not.toHaveBeenCalled();
+    await expect.element(page.getByRole("dialog")).toBeVisible();
+
+    harness.status = status({
+      branch: "main",
+      hasWorkingTreeChanges: false,
+      workingTree: { files: [], insertions: 0, deletions: 0 },
+      upstreamBranch: "main",
+      aheadCount: 2,
+    });
+    await mounted.rerender(control());
+    await vi.waitFor(() => expect(actionRow.element().getAttribute("aria-disabled")).toBeNull());
+    await actionRow.click();
+
+    const continuePush = page.getByRole("button", { name: "Push to main", exact: true });
+    await expect.element(continuePush).toBeVisible();
+    expect(harness.runStackedAction).not.toHaveBeenCalled();
+    await continuePush.click();
+
+    await vi.waitFor(() => expect(harness.runStackedAction).toHaveBeenCalledTimes(1));
+    const input = harness.runStackedAction.mock.calls[0]?.[0] ?? {};
+    expect(input).toMatchObject({ action: "commit_push" });
+    expect(input).not.toHaveProperty("commitMessage");
+    expect(input).not.toHaveProperty("filePaths");
+  });
+
   it("drops the Commit-dialog handoff when Create PR excludes local changes", async () => {
     harness.status = status({ aheadCount: 1 });
     await render(control());
