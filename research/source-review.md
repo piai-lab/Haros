@@ -614,7 +614,7 @@ The range contains 101 commits: 78 non-merge commits in 23 PR/responsibility gro
 carriers. It changes 63 files by `+4686/-438`. The previous accounting was `61 semantic-adopt + 2
 current-stronger + 5 decline-exact/retain-insight + 10 donor-doc/no-code + 23 merge-carrier = 101`.
 The 61 semantic responsibilities first entered through `22bbd70a6` and `d86d5766b`. The later atomic
-adoption set through pushed product `056f2835e0e0520f1a78103c9a6a80425e5adc01` closes the remaining
+adoption set through pushed product `58f76446d3d7061b7fe18e140fe56676269497c3` closes the remaining
 product mechanisms, whole-tree responsibility surface, author-equivalent tests and packaged journey;
 the README adopted head therefore advances only with this authority closure.
 
@@ -720,11 +720,16 @@ adoption set and do not wait for another execution-brief admission.
 
 The baseline head-to-head inventory is 129 Synara-only paths, 1,580 modified shared paths, 4,785
 byte-identical shared paths and 154 OmniMind-only paths. The exact pushed product
-`056f2835e0e0520f1a78103c9a6a80425e5adc01` against exact Synara `8f9f600…` has 94 Synara-only paths,
-1,597 modified shared paths, 4,803 byte-identical shared paths and 168 OmniMind-only paths. Raw count
+`58f76446d3d7061b7fe18e140fe56676269497c3` against exact Synara `8f9f600…` has 94 Synara-only paths,
+1,602 modified shared paths, 4,798 byte-identical shared paths and 167 OmniMind-only paths. The path
+sets remain the same as the prior product candidate; the final compiler/cleanup closure turns five
+formerly identical shared blobs into reviewed downstream modifications. The earlier 168 count
+preceded removal of the unconsumed `ComposerGoalBanner.tsx`. A NUL-safe Git tree map reproduces the
+final counts; a locale-mismatched plain `comm/join` probe falsely reports 505/578 unique paths and is
+not evidence. Raw count
 is diagnostic only: namespace, bilingual copy and valid downstream owners can increase the diff.
 Closure therefore uses the grouped product owner, behavior and author-test evidence below rather than
-a 1,597-row parallel ledger.
+a 1,602-row parallel ledger.
 
 | Responsibility/path group                                                                                          | Current disposition                                                                                               | Required closure                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -746,23 +751,32 @@ The 94 Synara-only paths close under the responsibility groups above: identity/m
 facts remain confirmed divergences; legacy-identity migrations are permanently excluded by the
 maintainer; migrations that carry product semantics are renumbered/translated; Space paths map to
 Thread Groups; usage, Git, search, automation, branch mismatch, PR stack and creation behavior reuse
-their existing OmniMind owners; author tests are retained or equivalently adapted. The 1,597
+their existing OmniMind owners; author tests are retained or equivalently adapted. The 1,602
 same-path differences group under Web/Workbench, Server Provider/Orchestration/Persistence,
 AgentGateway, contracts/shared, Desktop integration and the fixed downstream divergence categories.
 For each group the table points to the behavioral owner and author-equivalent evidence; absence is no
 longer treated as silent non-adoption or closed merely by a matching filename.
 
-Final validation on exact pushed product `056f2835e` passed all six package typechecks and all four
-package builds; lint completed with zero errors; the document contract passed 20/20; targeted Goal
-server coverage passed 15/15; migration/backup/replay passed 48/48; slash/Goal-header units passed
-37/37; Goal/width/debug browser integration passed 3/3 in addition to the earlier focused
-Group/PR/icon and perf suites. A newly built macOS arm64 DMG has SHA-256
-`9f32130d1258c98017c18b47fccb54d9656651fbab4c333023d27b1c8608991a`; its ad-hoc installed App used
-a fresh task profile and isolated HOME, OmniMind home and Provider private home. The packaged journey
-proved real DeepSeek Goal continuation, a distinct 2/2 Todo projection, interrupt auto-pause, close/
-reopen/resume, `/debug`/`/default`, full-width and dark-icon persistence, Profile PNG copy/save,
-Automation default 3 with 1/3/5/keep-running choices and local Thread Group creation. Migrations
-1–100 succeeded, and log scan found no `THREAD_SNAPSHOT_NOT_FOUND`, goal-continuation, fatal or
-unhandled errors. Earlier bounded live probes also returned valid 2xx response shapes from MiMo and
-DeepSeek. These jointly satisfy the adopted-head invariant for exact Synara `8f9f600…`; they do not
-claim an official signed/notarized release.
+Final validation on exact pushed product `58f76446d` passed the complete repository test graph (Server
+4,207 passed/16 skipped across 358 passed/3 skipped files; Web 4,107 passed across 320 files, with the
+remaining packages green), all six package typechecks and all four package builds. The final closure
+also preserves the earlier document-contract 20/20, Goal, migration/backup/replay, slash/browser,
+Group/PR/icon and streaming-performance evidence. A newly built macOS arm64 DMG has SHA-256
+`fbaa5500be5db54436ae8e40406c9a80f89075b31829146723546612d3006a0a`; `app.asar` embeds the full
+product SHA. Its ad-hoc installed App used fresh profile `/tmp/omnimind-final-58f76446d` with isolated
+HOME, XDG roots, OmniMind home and Provider private home, and runtime process arguments proved that
+the main process, Helpers and bundled Server all used those roots.
+
+The final packaged journey proved a real DeepSeek `/debug` turn, Goal set→automatic continuation,
+manual pause/resume, a separate two-item Todo projection while Goal was paused, running-turn interrupt
+auto-pause, persistence across close/reopen, and a deliberately induced recoverable credential-read
+failure that left Goal paused before the credential permission was restored to `0600`; the following
+reopen rediscovered DeepSeek without fallback. It also proved wide `72rem` CSS projection, durable
+dark-icon selection, local Profile PNG rendering/copy and local Thread Group creation. The previous
+exact candidate had already proved the unchanged `/default` and Profile native-save path (1720×880
+PNG); author-equivalent tests retain save/copy failure feedback and Automation default 3 with explicit
+1/3/5/keep-running choices. Migrations 1–100 succeeded; the only packaged error was the intentional
+credential-unavailable failure, which surfaced honestly and recovered without touching real user
+state. Earlier bounded live probes also returned valid 2xx response shapes from MiMo and DeepSeek.
+These jointly satisfy the adopted-head invariant for exact Synara `8f9f600…`; they do not claim an
+official signed/notarized release.

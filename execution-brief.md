@@ -16,14 +16,14 @@ Updated: 2026-08-18
 
 ## 当前事实
 
-- OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前分支 `codex/synara-8f9f600-adoption`；exact pushed product SHA 为 `056f2835e0e0520f1a78103c9a6a80425e5adc01`。
+- OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前 adoption 分支 `codex/synara-8f9f600-adoption`；exact pushed product SHA 为 `58f76446d3d7061b7fe18e140fe56676269497c3`。
 - Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`，等于 `origin/main`。
-- `056f2835e` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归。
+- `58f76446d` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归；其最后一轮改动只关闭 Automation 测试时钟/隔离和 Web compiler 回归，没有增加平行产品 owner。
 - `e0ee9cfe2` 的逐回合 `omnimind_update_tasks` Todo/task-list 投影仍与持久 Goal 分离；Todo 不是 Goal 的缩水替代。
 - Synara Goal 与 Todo 是两条独立责任。ThreadGoal 位于 OmniMind 已继承的同一 Product Orchestration/Thread authority 内，不是第二产品控制面。
 - 历史 C0–C5 / C1–C3 阶段门已被维护者撤销；它们不能再阻挡母体能力采用。`research/omnimind-agent-core-execution-guide.md` 只保留验证参考。
 - Goal 文件从未进入过 OmniMind 历史，准确状态是“此前未移植/错误延期”，不是“移植后删除”。
-- baseline 全树为 129 Synara-only、1,580 同路径分叉、4,785 byte-identical 与 154 OmniMind-only；exact `056f2835e` 对 exact Synara `8f9f600…` 为 94 Synara-only、1,597 同路径分叉、4,803 byte-identical 与 168 OmniMind-only。剩余差异已按行为 owner、固定 divergence 与作者测试分组闭合，不用逐路径 ledger 取代行为审计。
+- baseline 全树为 129 Synara-only、1,580 同路径分叉、4,785 byte-identical 与 154 OmniMind-only；exact `58f76446d` 对 exact Synara `8f9f600…` 为 94 Synara-only、1,602 同路径分叉、4,798 byte-identical 与 167 OmniMind-only。相对 `056f2835e`，最后的 Web compiler/cleanup 修正使 5 个原本相同的 shared blobs 成为有意分叉；路径集合未变。此前的 168 统计发生在删除无消费者的 `ComposerGoalBanner.tsx` 之前。最终树用 NUL-safe Git tree map 独立复核；普通 locale 下直接 `comm/join` 会把排序误报为 505/578，不得采用。剩余差异已按行为 owner、固定 divergence 与作者测试分组闭合，不用逐路径 ledger 取代行为审计。
 
 ## 当前工作范围
 
