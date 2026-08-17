@@ -842,6 +842,7 @@ uniqueness, index parity and the 40-character English bound. Re-run the affected
 revision, catalog digest, canvas engine, Chromium baseline, theme owner, DPR behavior, motion policy,
 Timeline virtualization or stream/tail anchoring changes.
 
-This branch remains a source candidate until focused Timeline/browser checks, repository gates and the
-required exact pushed-SHA packaged fresh-profile Desktop journey close. No claim in §15 is advanced by
-the visual candidate alone.
+Focused Timeline/browser checks, all-package typecheck/build gates, the complete Web unit suite, and an
+exact pushed-SHA macOS arm64 packaged build with isolated fresh-state startup are closed at integration
+commit `0c0b22960`. This visual adoption does not by itself revalidate or advance the separate Synara
+claims in §15, and it does not claim a signed/notarized public release.
