@@ -329,6 +329,12 @@ S1 当前唯一代码 Slice 是 **Phase-9b legacy compacted reasoning anchor**�
 
 该 Slice 的 pre-commit source-candidate 证据：agent activity compaction与最终 Timeline排序 owner `2 files / 107 tests`、monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与 diff check通过；Judge follow-up以reasoning `sequence 10/30`、assistant text segment `20/21`与tool `40`证明display row同时保留first sequence/createdAt且不越过assistant，latest status/native/detail等字段继续保留。本 Slice 不新增 surface、dependency或长期 owner，未重建安装 App，只主张上述 source-level legacy排序修复。
 
+Phase-9b legacy compacted reasoning anchor及其sequence Judge follow-up已在 exact pushed `646094d6808d3a612825cb62d3db0c928dc24538` 进入 `main`；上述 reasoning 历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **Phase-9c Git selected diff render identity A1**：只吸收 Synara `00ff2f45442c365c1fc96671b4546065ebf4f9bb` 的单一 author 语义，在既有 `GitPanel` selected diff seam复用 `buildFileDiffRenderKey(selectedFileDiff) + theme` 作为React identity。staged/unstaged同形patch的A→B切换、同文件内容刷新与light/dark切换必须remount并显示当前diff，同时不得改变selection owner、stage/unstage mutation、Pull/Commit/PR/stack、server/contracts/catalog、W3/W4 geometry、focus或keyboard语义。
+
+该 Slice 的 pre-commit source-candidate 证据：现有 diff identity owner `1 file / 23 tests`与真实 Chromium GitPanel `2 files / 5 tests`通过，其中mount-time harness `1 file / 3 tests`覆盖staged→unstaged同形patch、same-path内容刷新、light→dark及file-row focus连续性；monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与diff check通过。本 Slice不改变用户文案、layout、query/mutation或外部Git authority，按准入不做package/install/live/README。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

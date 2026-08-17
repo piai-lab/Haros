@@ -17,6 +17,19 @@ import {
   summarizePatchTotals,
 } from "./diffRendering";
 
+function samePathPatch(nextValue: string): string {
+  return [
+    "diff --git a/src/refresh.ts b/src/refresh.ts",
+    "index 1111111..2222222 100644",
+    "--- a/src/refresh.ts",
+    "+++ b/src/refresh.ts",
+    "@@ -1,1 +1,1 @@",
+    "-const value = 'before';",
+    `+const value = '${nextValue}';`,
+    "",
+  ].join("\n");
+}
+
 describe("buildPatchCacheKey", () => {
   it("returns a stable cache key for identical content", () => {
     const patch = "diff --git a/a.ts b/a.ts\n+console.log('hello')";
@@ -126,6 +139,19 @@ describe("file diff identity helpers", () => {
     const reparsed = getRenderablePatch(twoFilePatch, "git-pane:test");
     if (reparsed?.kind !== "files") return;
     expect(reparsed.files.map((file) => buildFileDiffRenderKey(file))).toEqual(keys);
+  });
+
+  it("changes the render key when the same file path receives new diff content", () => {
+    const first = getRenderablePatch(samePathPatch("first"), "git-pane:refresh");
+    const second = getRenderablePatch(samePathPatch("second"), "git-pane:refresh");
+    expect(first?.kind).toBe("files");
+    expect(second?.kind).toBe("files");
+    if (first?.kind !== "files" || second?.kind !== "files") return;
+
+    expect(resolveFileDiffPath(first.files[0]!)).toBe(resolveFileDiffPath(second.files[0]!));
+    expect(buildFileDiffRenderKey(first.files[0]!)).not.toBe(
+      buildFileDiffRenderKey(second.files[0]!),
+    );
   });
 
   it("keeps binary image diffs as renderable file rows", () => {
