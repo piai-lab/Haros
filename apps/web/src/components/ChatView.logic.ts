@@ -1356,15 +1356,8 @@ export function hasServerAcknowledgedLocalDispatch(input: {
   return false;
 }
 
-/** Fail-open bound for the post-ack "awaiting turn start" Thinking bridge. */
+/** Fail-open bound for the post-ack awaiting-turn-start status bridge. */
 export const LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS = 60_000;
-
-export function resolveWorkingLabel(input: {
-  isSendBusy: boolean;
-  turnTakenOver: boolean;
-}): "Loading" | "Thinking" {
-  return input.isSendBusy && !input.turnTakenOver ? "Loading" : "Thinking";
-}
 
 /**
  * True once a locally dispatched turn is observably live, finished, or blocked
@@ -1404,7 +1397,7 @@ export function hasLiveTurnTakenOver(input: {
     return true;
   }
 
-  // Fail-open so Thinking cannot stick forever when a turn is requested but
+  // Fail-open so the live status cannot stick forever when a turn is requested but
   // never becomes live and never surfaces an error. Worktree setup has its own
   // lifecycle and must not be cut short by this bound.
   if (!input.localDispatch.worktreeSetup && input.now !== undefined) {

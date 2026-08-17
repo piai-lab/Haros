@@ -757,3 +757,68 @@ real pipeline workload (19 streaming batches, exact final text, no page errors o
 Credential-blind minimal OpenAI-chat probes also returned valid 2xx response shapes from both MiMo
 and DeepSeek. These are candidate falsifiers, not pushed-SHA packaged proof and not permission to
 advance the adopted head.
+
+## 16. OmniMind live-status visual adoption
+
+### 16.1 Fixed sources and rights
+
+The maintainer selected two bounded MIT sources for one existing Timeline presentation owner:
+
+- `thinking-orbs@0.3.1`, npm `gitHead` / Git revision
+  `bd204b73c9b6660fad7210b1ad48d9dc2adbb89d`, registry integrity
+  `sha512-3BG1aeB1RUTxItCml/BBuIz5JRM4kZqGuyx+vouv0fXTtcR9ZNoKjWGneHPx94y74GxgArwJZ1qbJR5dt54kSw==`
+  and tarball SHA-256 `f561ab192d0f80a367c2cf56d9fd409f3dc0570521c08300c3bbf232ede79296`;
+- BitFun historical motion commit `f9aebc102b21d6d4ac3ffd4088defebf7f4baff1`, with the later catalog
+  reference snapshot `142d7e38729b3d646ae305c162e6848d0d44fff9` and maintainer-supplied final
+  inputs SHA-256 `54faf372…598b3` (English) / `f5249bbd…6b9d1135` (Chinese).
+
+The exact upstream legal texts are retained as `LICENSES/thinking-orbs-MIT.txt` and
+`LICENSES/bitfun-MIT.txt`. The root README machine record owns production adoption; this section
+records only the review evidence and bounded disposition.
+
+### 16.2 Existing owner and selected result
+
+The real call chain is unchanged: `ChatView` derives `isWorking` from local dispatch, connecting,
+turn and recovery facts; `ChatTranscriptPane` forwards it; `MessagesTimeline.logic.ts` creates the
+single transient `working` row and lets worktree setup temporarily replace it; `MessagesTimeline.tsx`
+renders that row inside the existing LegendList/tail-anchor lifecycle. Provider reasoning, tool work,
+approval, error and terminal settlement remain separate canonical rows. No new state or event owner is
+needed.
+
+The selected visual result is the official Thinking Orbs **Composing/Ribbon 20px preset at its original
+density**, BitFun's historical 400ms entry plus 1.6s strong text breathe, the maintainer-approved
+five-second keyed hint replacement, and OmniMind's symmetric three-dot tide shifted upward. The
+user explicitly selected the original Composing density after direct prototype comparison; density
+retuning is therefore not an open implementation choice.
+
+### 16.3 Copied-adapted boundary
+
+Installing the complete `thinking-orbs` package would make OmniMind own eight unused states, a 64px
+design family, state/mode registries and a general React API for one fixed consumer. The accepted
+boundary instead resolves only the official Composing 20px preset into a local painter and retains the
+minimal runtime obligations: depth projection/ink, DPR cap, requestAnimationFrame, hidden/offscreen
+pause, reduced-motion static frame and the existing OmniMind light/dark owner. The frame contains the
+same 8 ghost dots plus 10×20 ribbon marks as upstream. Direct comparison against the package engine at
+times `0`, `0.6`, `1.872` and `4.25` produced 208 marks and maximum numeric difference `0` at every
+time. The other states, 64px profiles, registry, package dependency and unused options are excluded.
+
+The BitFun adaptation retains only the selected timing and catalog lineage. OmniMind deliberately does
+not adopt BitFun's separate runtime-status store, footer slot, one-second blank delay or dot-matrix icon:
+the existing Timeline row already owns immediate feedback, and the selected Composing orb fills that
+role. The 338 Chinese and 338 English hints remain index-aligned and unique; the first index is random,
+later replacements advance every five seconds, locale switches preserve the aligned index, and trailing
+static ellipses are removed before the animated symmetric dots. Hints are atmosphere only and never
+become transcript, reasoning or progress evidence.
+
+### 16.4 Revalidation and current evidence
+
+Fixed geometry SHA-256 baselines cover the reduced-motion frame and a moving frame. A Chromium 2×
+40×40 pixel-buffer baseline covers the dark and light static frame; browser coverage also checks the
+three-element DOM, five-second replacement and reduced-motion freeze. i18n coverage fixes count,
+uniqueness, index parity and the 40-character English bound. Re-run the affected evidence when source
+revision, catalog digest, canvas engine, Chromium baseline, theme owner, DPR behavior, motion policy,
+Timeline virtualization or stream/tail anchoring changes.
+
+This branch remains a source candidate until focused Timeline/browser checks, repository gates and the
+required exact pushed-SHA packaged fresh-profile Desktop journey close. No claim in §15 is advanced by
+the visual candidate alone.

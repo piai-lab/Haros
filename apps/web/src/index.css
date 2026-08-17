@@ -2504,6 +2504,127 @@ label:has(> select#reasoning-effort) select {
   }
 }
 
+/* Live-status choreography. The hint entry/breathe timing is copied-adapted
+   from BitFun commit f9aebc102b21d6d4ac3ffd4088defebf7f4baff1
+   (ProcessingIndicator.scss, MIT). The symmetric tide is OmniMind-owned.
+   Source and rights: LICENSES/bitfun-MIT.txt. */
+.omnimind-thinking-status {
+  width: 100%;
+  height: 24px;
+  min-height: 24px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.omnimind-thinking-status__visual {
+  display: inline-flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 24px;
+  align-items: center;
+  gap: 8px;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.omnimind-thinking-status__hint-shell {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.omnimind-thinking-status__hint {
+  display: inline-block;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: top;
+  animation:
+    omnimind-thinking-hint-enter 400ms ease forwards,
+    omnimind-thinking-hint-breathe 1.6s ease-in-out 400ms infinite;
+  will-change: opacity, transform;
+}
+
+.omnimind-thinking-status__dots {
+  display: inline-flex;
+  width: 14px;
+  height: 10px;
+  margin-left: 3px;
+  flex: 0 0 14px;
+  align-items: center;
+  justify-content: space-between;
+  transform: translateY(-1px);
+  vertical-align: middle;
+}
+
+.omnimind-thinking-status__dots i {
+  display: block;
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.42;
+  animation: omnimind-thinking-dot-symmetric 1.7s ease-in-out infinite;
+  will-change: opacity, transform;
+}
+
+.omnimind-thinking-status__dots i:nth-child(1),
+.omnimind-thinking-status__dots i:nth-child(3) {
+  animation-delay: 0s;
+}
+
+.omnimind-thinking-status__dots i:nth-child(2) {
+  animation-delay: 850ms;
+}
+
+@keyframes omnimind-thinking-hint-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes omnimind-thinking-hint-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes omnimind-thinking-dot-symmetric {
+  0%,
+  100% {
+    opacity: 0.42;
+    transform: translateY(1.25px) scale(0.82);
+  }
+  50% {
+    opacity: 0.92;
+    transform: translateY(-1.75px) scale(1.08);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .omnimind-thinking-status__hint,
+  .omnimind-thinking-status__dots i {
+    animation: none;
+    transform: none;
+    will-change: auto;
+  }
+}
+
 .chat-generated-image__overlay {
   position: absolute;
   inset: 0;

@@ -176,6 +176,35 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. Its V1 runtime proof must be redone against the isolated OmniMind Agent rather than inherited from the retired host.",
       "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires the explicit Gate A/Gate B process in PI-ECOSYSTEM-INTAKE.md and affected revalidation before activation.",
       "licenseFiles": ["LICENSES/pi-todo-MIT.txt"]
+    },
+    {
+      "id": "thinking-orbs-composing-20px",
+      "url": "https://github.com/Jakubantalik/thinking-orbs.git",
+      "revision": "bd204b73c9b6660fad7210b1ad48d9dc2adbb89d",
+      "paths": ["apps/web/src/components/chat/ComposingOrb.tsx", "apps/web/src/components/chat/composingOrbPainter.ts", "apps/web/src/components/chat/composingOrbPainter.test.ts", "apps/web/src/components/chat/ThinkingStatus.browser.tsx"],
+      "sourcePaths": ["src/ThinkingOrb.tsx", "src/theme.ts", "src/presets.ts", "src/engine/core.ts", "src/engine/profiles.ts", "src/engine/ribbon.ts"],
+      "upstreamPackage": "thinking-orbs@0.3.1",
+      "upstreamPackageIntegrity": "sha512-3BG1aeB1RUTxItCml/BBuIz5JRM4kZqGuyx+vouv0fXTtcR9ZNoKjWGneHPx94y74GxgArwJZ1qbJR5dt54kSw==",
+      "upstreamTarballSha256": "f561ab192d0f80a367c2cf56d9fd409f3dc0570521c08300c3bbf232ede79296",
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. Adoption is limited to the Composing/Ribbon 20px painter and the runtime guards needed by OmniMind's single live-status consumer; no package binary or unrelated state is shipped.",
+      "mode": "copied-adapted",
+      "changes": "The official Composing 20px preset is resolved to one fixed local painter with the exact 208-mark geometry, projection, depth ink, dot sizing and speed. A product-local canvas wrapper retains DPR cap 2, requestAnimationFrame, offscreen and hidden-document pause, reduced-motion static frame and the existing OmniMind theme authority. The other eight states, 64px presets, registries, generic React API, package dependency and unused configuration were deliberately removed. Fixed geometry and Chromium pixel baselines prevent drift.",
+      "updatePolicy": "Pinned package version, Git revision, npm integrity and tarball SHA-256. Do not tune or rewrite the painter from memory. Any source, preset, rights or lifecycle change requires exact upstream comparison plus affected geometry, pixel, theme, visibility and reduced-motion revalidation before replacement.",
+      "licenseFiles": ["LICENSES/thinking-orbs-MIT.txt"]
+    },
+    {
+      "id": "bitfun-thinking-hints-motion",
+      "url": "https://github.com/GCWing/BitFun.git",
+      "revision": "f9aebc102b21d6d4ac3ffd4088defebf7f4baff1",
+      "catalogReferenceRevision": "142d7e38729b3d646ae305c162e6848d0d44fff9",
+      "paths": ["apps/web/src/components/chat/ThinkingStatus.tsx", "apps/web/src/components/chat/ThinkingStatus.browser.tsx", "apps/web/src/i18n/thinking-hints.en-US.json", "apps/web/src/i18n/thinking-hints.zh-CN.json", "apps/web/src/i18n/thinkingHints.ts", "apps/web/src/index.css"],
+      "sourcePaths": ["src/web-ui/src/flow_chat/components/modern/ProcessingIndicator.tsx", "src/web-ui/src/flow_chat/components/modern/ProcessingIndicator.scss", "src/web-ui/src/locales/en-US/flow-chat/processing-hints.json", "src/web-ui/src/locales/zh-CN/flow-chat/processing-hints.json"],
+      "catalogInputSha256": {"en-US": "54faf3727ef54e1d3a4dea4e3ef1002cfb596a28683ae73d319701476dd598b3", "zh-CN": "f5249bbd0b49f20c038a0be2d4839ed18c8c96aa48cd139bf99d201c4b9d1135"},
+      "rights": "The selected historical motion and upstream catalog lineage are MIT-licensed under the retained BitFun legal text. The maintainer supplied and approved the final index-aligned 338-item Chinese and English catalog inputs for OmniMind.",
+      "mode": "copied-adapted",
+      "changes": "OmniMind retains the reviewed 400ms -4px entry, 1.6s opacity 1-to-.25 breathe and five-second keyed replacement. The initial hint is randomized, later hints advance without changing on ordinary renders, trailing static ellipses are replaced by the approved three-dot symmetric tide, and reduced-motion freezes all decorative motion. The presentation stays inside OmniMind's existing transient Timeline row; it creates no runtime-status store, transcript item, reasoning claim or progress authority. The original one-second blank delay and BitFun dot-matrix icon are not adopted because OmniMind preserves immediate feedback with its selected Composing orb.",
+      "updatePolicy": "Pinned historical motion revision, catalog reference revision, exact catalog-input digests and retained legal text. Catalog edits must preserve bilingual count/index parity and uniqueness; motion edits require focused Timeline, reduced-motion, truncation, stream/scroll and pixel review.",
+      "licenseFiles": ["LICENSES/bitfun-MIT.txt"]
     }
   ]
 }

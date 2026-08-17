@@ -5558,7 +5558,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("shows Loading until ack, then keeps Thinking through the post-ack gap", async () => {
+  it("keeps one live status from local send through the post-ack gap", async () => {
     const restoreNativeApi = installDeterministicSendNativeApi();
     let currentSnapshot = createSnapshotForTargetUser({
       targetMessageId: "msg-user-thinking-bridge" as MessageId,
@@ -5596,8 +5596,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           expect(document.body.textContent).toContain(prompt);
-          expect(document.body.textContent).toContain("Loading");
-          expect(document.body.textContent).not.toContain("Thinking");
+          expect(document.querySelector('[data-testid="thinking-status"]')).not.toBeNull();
         },
         { timeout: 8_000, interval: 16 },
       );
@@ -5624,7 +5623,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
 
       // Server ack: durable user message + turn requested, but session still ready
-      // (provider session not live yet). Thinking must survive this gap.
+      // (provider session not live yet). The same status row must survive this gap.
       const requestedTurnId = TurnId.makeUnsafe("turn-thinking-bridge");
       syncActiveThread((thread) => ({
         ...thread,
@@ -5663,8 +5662,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           expect(document.body.textContent).toContain(prompt);
-          expect(document.body.textContent).toContain("Thinking");
-          expect(document.body.textContent).not.toContain("Loading");
+          expect(document.querySelector('[data-testid="thinking-status"]')).not.toBeNull();
           expect(document.body.textContent).not.toContain("Working for");
         },
         { timeout: 4_000, interval: 16 },
@@ -5675,8 +5673,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await new Promise<void>((resolve) => {
         window.setTimeout(resolve, 400);
       });
-      expect(document.body.textContent).toContain("Thinking");
-      expect(document.body.textContent).not.toContain("Loading");
+      expect(document.querySelector('[data-testid="thinking-status"]')).not.toBeNull();
       expect(document.body.textContent).not.toContain("Working for");
 
       syncActiveThread((thread) => ({
@@ -5700,7 +5697,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       await vi.waitFor(
         () => {
-          expect(document.body.textContent).toContain("Thinking");
+          expect(document.querySelector('[data-testid="thinking-status"]')).not.toBeNull();
           expect(document.body.textContent).toContain("Working for");
         },
         { timeout: 4_000, interval: 16 },
@@ -5713,7 +5710,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
   // Regression: the sent message must reach its anchored coordinate in one
   // motion and then stay there for the rest of the turn. The failure this guards
-  // is the message visibly jumping up and down through send → Thinking →
+  // is the message visibly jumping up and down through send → live status →
   // "Working for" → streaming, which is what a fixed-target scroll produces once
   // the coordinate moves under it (reserve sizing, rows above being remeasured).
   it("moves a sent message to its anchor once and holds it across the turn lifecycle", async () => {
@@ -5791,7 +5788,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const activeTurnId = TurnId.makeUnsafe("turn-jitter");
       const streamingId = MessageId.makeUnsafe("msg-assistant-jitter-stream");
 
-      // Server ack: durable user row + running turn (Thinking appears).
+      // Server ack: durable user row + running turn (the live status appears).
       at(140, () => {
         const sentMessageId = findSentRow()?.dataset.messageId;
         if (!sentMessageId) return;
@@ -5829,7 +5826,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           updatedAt: isoAt(1_301),
         }));
       });
-      // Turn actually starts: the "Working for" header replaces Thinking.
+      // Turn actually starts: the "Working for" header joins the live status.
       at(420, () => {
         syncActiveThread((thread) => ({
           ...thread,

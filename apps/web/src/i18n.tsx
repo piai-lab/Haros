@@ -10,6 +10,7 @@ import {
 
 import { useAppSettings } from "./appSettings";
 import { resolveAppLocale, type AppLocale } from "./locale";
+import { THINKING_HINT_CATALOGS } from "./i18n/thinkingHints";
 
 export const EN_MESSAGES = {
   "common.system": "System",
@@ -1745,7 +1746,7 @@ export const EN_MESSAGES = {
   "onboarding.firstRun.settingsHint": "You can also finish in Settings",
   "onboarding.firstRun.complete": "Complete setup",
   "onboarding.firstRun.startUsing": "Start using",
-  "timeline.thinking": "Thinking",
+  "timeline.workingStatus": "Working on your response",
   "timeline.details": "Details",
   "timeline.workedFor": "Worked for {duration}",
   "timeline.copyMessage": "Copy message",
@@ -3489,7 +3490,8 @@ export const EN_MESSAGES = {
   "threadCreation.environmentLocal": "Local",
   "threadCreation.openThread": "Open task",
   "composer.command.debugDescription": "Switch this task into evidence-first debug mode",
-  "composer.command.goalDescription": "Set, edit, pause, resume, or clear this task's persistent goal",
+  "composer.command.goalDescription":
+    "Set, edit, pause, resume, or clear this task's persistent goal",
   "composer.goalTitle": "Task goal",
   "composer.goalUnavailable": "Task goal is unavailable",
   "composer.goalUnavailableDescription": "Open a task before setting a goal.",
@@ -5219,7 +5221,7 @@ export const ZH_CN_MESSAGES = {
   "onboarding.firstRun.settingsHint": "也可从设置中完成",
   "onboarding.firstRun.complete": "完成设置",
   "onboarding.firstRun.startUsing": "开始使用",
-  "timeline.thinking": "正在思考",
+  "timeline.workingStatus": "正在准备回复",
   "timeline.details": "详情",
   "timeline.workedFor": "工作了 {duration}",
   "timeline.copyMessage": "复制消息",
@@ -6923,11 +6925,13 @@ export function translate(locale: AppLocale, key: MessageKey, params?: MessagePa
 type I18nContextValue = {
   readonly locale: AppLocale;
   readonly t: (key: MessageKey, params?: MessageParams) => string;
+  readonly thinkingHints: readonly string[];
 };
 
 const DEFAULT_I18N_CONTEXT: I18nContextValue = {
   locale: "en",
   t: (key, params) => translate("en", key, params),
+  thinkingHints: THINKING_HINT_CATALOGS.en,
 };
 
 const I18nContext = createContext<I18nContextValue>(DEFAULT_I18N_CONTEXT);
@@ -6949,7 +6953,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     (key: MessageKey, params?: MessageParams) => translate(locale, key, params),
     [locale],
   );
-  const value = useMemo<I18nContextValue>(() => ({ locale, t }), [locale, t]);
+  const thinkingHints = THINKING_HINT_CATALOGS[locale];
+  const value = useMemo<I18nContextValue>(
+    () => ({ locale, t, thinkingHints }),
+    [locale, t, thinkingHints],
+  );
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
 
