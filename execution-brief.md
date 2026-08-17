@@ -359,6 +359,8 @@ B1 只复用既有 PR list/detail contracts、PullRequestService、wsNativeApi/T
 
 B1 的 pre-commit source-candidate 证据为：contracts、GitHub GraphQL、PullRequestService、详情 fail-close 与 web projection logic focused unit `7 files / 127 tests`，英中 actual catalog focused `1 file / 10 tests`，真实 Chromium list badge + detail keyboard/focus/ARIA/`480/960/1440` `2 files / 15 tests`，monorepo typecheck `6/6 packages`与document contract `21/21`、changed-path format与diff check通过。changed-path lint为`0 errors / 4 warnings`，均是未触碰旧行的i18n test `sort()`与route `selectedInput` exhaustive-deps；root lint为`0 errors / 478 warnings`。该 Slice 不改变任何 GitHub mutation、merge/Commit owner或发行面，按准入只主张 source-only candidate。
 
+B1 Judge HOLD focus follow-up 只收窄详情导航的焦点交接条件：初次详情挂载或鼠标从列表打开、没有明确 `preferredFocus` 时，导航组件不设置任何 `autoFocus` target，外部/PR 行触发器焦点保持不变；只有 previous/next 选择造成的详情 remount 才优先恢复同方向控制，若该方向到达 stack 边界则退到另一仍可用控制。真实 Chromium stack focused `1 file / 3 tests`、与既有 PR 行合跑 `2 files / 16 tests`，同时覆盖初次挂载零抢焦点、双向同方向恢复、双侧边界 fallback 与既有窄视口 geometry；monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path lint `0 warnings / 0 errors`、format 与 diff check通过。不改变 server、contracts、route、query/data 或其他 Git owner。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

@@ -36,6 +36,35 @@ function StackNavigationHarness() {
 }
 
 describe("PullRequestStackNavigation", () => {
+  it("preserves external row-trigger focus when initially mounted without navigation intent", async () => {
+    const mounted = await render(
+      <>
+        <button key="row" type="button">
+          Pull request row #42
+        </button>
+      </>,
+    );
+    const rowTrigger = page.getByRole("button", { name: "Pull request row #42" }).element();
+    rowTrigger.focus();
+
+    await mounted.rerender(
+      <>
+        <button key="row" type="button">
+          Pull request row #42
+        </button>
+        <PullRequestStackNavigation
+          stack={{ ...stack, position: 2 }}
+          previousNumber={41}
+          nextNumber={43}
+          onSelectPullRequest={vi.fn()}
+        />
+      </>,
+    );
+
+    expect(page.getByRole("group", { name: "Pull request stack navigation" })).toBeVisible();
+    expect(document.activeElement).toBe(rowTrigger);
+  });
+
   it("announces stack position and preserves a usable focus target across keyboard selection", async () => {
     await render(<StackNavigationHarness />);
 
@@ -55,6 +84,22 @@ describe("PullRequestStackNavigation", () => {
     await vi.waitFor(() => {
       expect(page.getByLabelText("Pull request 2 of 3 in stack")).toBeVisible();
       expect(document.activeElement?.getAttribute("aria-label")).toBe("Next pull request in stack");
+    });
+
+    await userEvent.keyboard(" ");
+    await vi.waitFor(() => {
+      expect(page.getByLabelText("Pull request 3 of 3 in stack")).toBeVisible();
+      expect(document.activeElement?.getAttribute("aria-label")).toBe(
+        "Previous pull request in stack",
+      );
+    });
+
+    await userEvent.keyboard(" ");
+    await vi.waitFor(() => {
+      expect(page.getByLabelText("Pull request 2 of 3 in stack")).toBeVisible();
+      expect(document.activeElement?.getAttribute("aria-label")).toBe(
+        "Previous pull request in stack",
+      );
     });
   });
 

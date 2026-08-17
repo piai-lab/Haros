@@ -67,14 +67,18 @@ export function PullRequestStackNavigation({
 }) {
   const { t } = useI18n();
   const focusTarget =
-    preferredFocus === "previous" && previousNumber !== null
-      ? "previous"
-      : preferredFocus === "next" && nextNumber !== null
-        ? "next"
-        : previousNumber !== null
+    preferredFocus == null
+      ? null
+      : preferredFocus === "previous"
+        ? previousNumber !== null
           ? "previous"
           : nextNumber !== null
             ? "next"
+            : null
+        : nextNumber !== null
+          ? "next"
+          : previousNumber !== null
+            ? "previous"
             : null;
   return (
     <div
