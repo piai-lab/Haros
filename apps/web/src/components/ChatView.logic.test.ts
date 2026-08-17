@@ -425,6 +425,9 @@ describe("transcript tail key", () => {
     expect(buildTranscriptTailKey({ ...settled, text: "hello repaired" })).not.toBe(
       buildTranscriptTailKey(settled),
     );
+    expect(buildTranscriptTailKey({ ...settled, text: "a b" })).not.toBe(
+      buildTranscriptTailKey({ ...settled, text: "a\nb" }),
+    );
   });
 });
 

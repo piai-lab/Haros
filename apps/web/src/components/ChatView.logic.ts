@@ -372,15 +372,26 @@ export function buildTranscriptTailKey(
   } | null,
 ): string {
   if (tailMessage === null) return "empty";
+  let settledContentFingerprint = "";
+  if (!tailMessage.streaming) {
+    // Exact full-content pass with two independent 32-bit lanes. This stays a
+    // small render signal without caching a second content truth, while making
+    // equal-length repairs (including whitespace-only repairs) observable.
+    let primary = 0x811c9dc5;
+    let secondary = 0x9e3779b9;
+    for (let index = 0; index < tailMessage.text.length; index += 1) {
+      const code = tailMessage.text.charCodeAt(index);
+      primary = Math.imul(primary ^ code, 0x01000193) >>> 0;
+      secondary = Math.imul(secondary ^ code, 0x85ebca6b) >>> 0;
+    }
+    settledContentFingerprint = `${tailMessage.text.length}.${primary.toString(36)}.${secondary.toString(36)}`;
+  }
   return [
     tailMessage.id,
     tailMessage.role,
     tailMessage.streaming ? "streaming" : "settled",
-    tailMessage.streaming
-      ? tailMessage.text.length > 0
-        ? "content"
-        : "empty"
-      : String(tailMessage.text.length),
+    tailMessage.streaming ? (tailMessage.text.length > 0 ? "content" : "empty") : "content",
+    settledContentFingerprint,
     tailMessage.completedAt ?? "",
   ].join(":");
 }

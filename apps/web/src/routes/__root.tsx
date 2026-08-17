@@ -1166,7 +1166,7 @@ function EventRouter() {
     const threadSnapshotRequestInFlight = new Set<ThreadId>();
     const threadSnapshotRefreshPending = new Set<ThreadId>();
     const threadSnapshotNotFoundRetryAttempted = new Set<ThreadId>();
-    const threadReplayRequestInFlight = new Set<ThreadId>();
+    const threadReplayRequestInFlight = new Map<ThreadId, number>();
     const threadProjectionReconcileInFlight = new Map<ThreadId, number>();
     const threadProjectionTerminalFencePending = new Set<ThreadId>();
     const threadSubscriptionGenerationById = new Map<ThreadId, number>();
@@ -1238,6 +1238,55 @@ function EventRouter() {
       );
     };
 
+    const resetThreadCatchupBackoffForObservedTurn = (
+      threadId: ThreadId,
+      observedTurnId: string | null,
+    ): void => {
+      if (observedTurnId === null) return;
+      const entry = threadCatchupBackoffById.get(threadId);
+      if (entry === undefined || entry.turnId === observedTurnId) return;
+      threadCatchupBackoffById.set(threadId, {
+        turnId: observedTurnId,
+        replayNoopStreak: 0,
+        nextReplayAt: 0,
+        reconcileNoopStreak: 0,
+      });
+      nextThreadProjectionReconcileAtById.set(
+        threadId,
+        Date.now() + THREAD_DETAIL_PROJECTION_RECONCILE_INTERVAL_MS,
+      );
+    };
+
+    const observeTurnFromThreadEvent = (event: OrchestrationEvent): void => {
+      const threadId = ThreadId.makeUnsafe(String(event.aggregateId));
+      if (event.type === "thread.session-set") {
+        resetThreadCatchupBackoffForObservedTurn(
+          threadId,
+          event.payload.session.activeTurnId ?? null,
+        );
+        return;
+      }
+      if (event.type === "thread.message-sent") {
+        resetThreadCatchupBackoffForObservedTurn(threadId, event.payload.turnId);
+        return;
+      }
+      if (event.type === "thread.activity-appended") {
+        resetThreadCatchupBackoffForObservedTurn(threadId, event.payload.activity.turnId);
+      }
+    };
+
+    const observeTurnsFromShellThreads = (
+      threads: ReadonlyArray<OrchestrationShellSnapshot["threads"][number]>,
+    ): void => {
+      for (const thread of threads) {
+        if (!subscribedThreadIds.has(thread.id)) continue;
+        resetThreadCatchupBackoffForObservedTurn(
+          thread.id,
+          thread.latestTurn?.turnId ?? thread.session?.activeTurnId ?? null,
+        );
+      }
+    };
+
     const beginThreadSubscription = (threadId: ThreadId) => {
       // Cursor resume delivers no snapshot: the stream replays only the gap on
       // top of the cached detail. Seed the live cursor so gap/live events apply
@@ -1284,6 +1333,7 @@ function EventRouter() {
       }
       threadSnapshotSequenceById.set(threadId, event.sequence);
       advanceThreadDetailResumeCursor(threadId, event.sequence);
+      observeTurnFromThreadEvent(event);
       queueDomainEvent(event);
       const backoff = threadCatchupBackoffById.get(threadId);
       if (backoff !== undefined) {
@@ -1454,6 +1504,7 @@ function EventRouter() {
       const promotedDraftThreadIds = collectSubscribedDraftsInShell(snapshot.threads);
       shellSnapshotSequence = snapshot.snapshotSequence;
       syncServerShellSnapshot(snapshot);
+      observeTurnsFromShellThreads(snapshot.threads);
       reconcilePromotedDraftsFromShellThreads(snapshot.threads);
       removeOrphanedTerminalsForCurrentState();
       flushShellBuffer(snapshot.snapshotSequence);
@@ -1624,7 +1675,13 @@ function EventRouter() {
       threadId: ThreadId,
       targetSequence?: number,
     ): Promise<number | null> => {
-      if (disposed || threadReplayRequestInFlight.has(threadId)) {
+      const subscriptionGeneration = threadSubscriptionGenerationById.get(threadId);
+      if (
+        disposed ||
+        !subscribedThreadIds.has(threadId) ||
+        subscriptionGeneration === undefined ||
+        threadReplayRequestInFlight.has(threadId)
+      ) {
         return null;
       }
       const fromSequence = threadSnapshotSequenceById.get(threadId);
@@ -1634,12 +1691,20 @@ function EventRouter() {
       ) {
         return null;
       }
-      threadReplayRequestInFlight.add(threadId);
+      threadReplayRequestInFlight.set(threadId, subscriptionGeneration);
       // Promise chain keeps the run-always cleanup (finally) and lets a replay
       // rejection propagate to callers exactly as the try/finally did.
       return await api.orchestration
         .replayEvents(fromSequence, threadId)
         .then((replayedEvents) => {
+          if (
+            disposed ||
+            !subscribedThreadIds.has(threadId) ||
+            threadSubscriptionGenerationById.get(threadId) !== subscriptionGeneration ||
+            threadReplayRequestInFlight.get(threadId) !== subscriptionGeneration
+          ) {
+            return null;
+          }
           let appliedEventCount = 0;
           for (const event of replayedEvents
             .filter((candidate) => isThreadDetailEventForThread(candidate, threadId))
@@ -1664,7 +1729,9 @@ function EventRouter() {
           return appliedEventCount;
         })
         .finally(() => {
-          threadReplayRequestInFlight.delete(threadId);
+          if (threadReplayRequestInFlight.get(threadId) === subscriptionGeneration) {
+            threadReplayRequestInFlight.delete(threadId);
+          }
         });
     };
 
@@ -1782,6 +1849,7 @@ function EventRouter() {
         const promotedDraftThreadIds = collectSubscribedDraftsInShell(item.snapshot.threads);
         shellSnapshotSequence = item.snapshot.snapshotSequence;
         syncServerShellSnapshot(item.snapshot);
+        observeTurnsFromShellThreads(item.snapshot.threads);
         reconcilePromotedDraftsFromShellThreads(item.snapshot.threads);
         removeOrphanedTerminalsForCurrentState();
         flushShellBuffer(item.snapshot.snapshotSequence);
@@ -1799,6 +1867,7 @@ function EventRouter() {
       shellSnapshotSequence = item.sequence;
       applyShellEvent(item);
       if (item.kind === "thread-upserted") {
+        observeTurnsFromShellThreads([item.thread]);
         reconcilePromotedDraftsFromShellThreads([item.thread]);
       }
       if (

@@ -78,6 +78,8 @@ interface TestFixture {
 let fixture: TestFixture;
 let shellStreamRequestId: string | null = null;
 let shellStreamClient: EffectRpcWebSocketClient | null = null;
+let serverLifecycleStreamRequestId: string | null = null;
+let serverLifecycleStreamClient: EffectRpcWebSocketClient | null = null;
 const threadStreamRequestIdByThreadId = new Map<ThreadId, string>();
 const threadStreamClientByThreadId = new Map<ThreadId, EffectRpcWebSocketClient>();
 let delayNextThreadSnapshot = false;
@@ -201,6 +203,37 @@ function createRunningSnapshot(turnId: TurnId): OrchestrationReadModel {
   });
 }
 
+function createReplayMessage(input: {
+  id: MessageId;
+  sequence: number;
+  text: string;
+  turnId: TurnId;
+}): Extract<OrchestrationEvent, { type: "thread.message-sent" }> {
+  return {
+    sequence: input.sequence,
+    eventId: EventId.makeUnsafe(`event-${input.id}`),
+    aggregateKind: "thread",
+    aggregateId: THREAD_ID,
+    occurredAt: "2026-03-04T12:00:05.000Z",
+    commandId: null,
+    causationEventId: null,
+    correlationId: null,
+    metadata: {},
+    type: "thread.message-sent",
+    payload: {
+      threadId: THREAD_ID,
+      messageId: input.id,
+      role: "assistant",
+      text: input.text,
+      turnId: input.turnId,
+      source: "native",
+      streaming: true,
+      createdAt: "2026-03-04T12:00:05.000Z",
+      updatedAt: "2026-03-04T12:00:05.000Z",
+    },
+  };
+}
+
 function buildFixture(): TestFixture {
   return {
     snapshot: createSnapshot(),
@@ -308,6 +341,8 @@ const worker = setupWorker(
         return;
       }
       if (method === WS_METHODS.subscribeServerLifecycle) {
+        serverLifecycleStreamRequestId = request.id;
+        serverLifecycleStreamClient = client;
         sendEffectRpcChunk(client, request.id, {
           type: "welcome",
           payload: fixture.welcome,
@@ -512,6 +547,16 @@ function sendShellEventPush(event: OrchestrationShellStreamItem) {
   sendEffectRpcChunk(shellStreamClient, shellStreamRequestId, event);
 }
 
+function sendServerWelcomePush() {
+  if (!serverLifecycleStreamRequestId || !serverLifecycleStreamClient) {
+    throw new Error("Server lifecycle stream is not connected");
+  }
+  sendEffectRpcChunk(serverLifecycleStreamClient, serverLifecycleStreamRequestId, {
+    type: "welcome",
+    payload: fixture.welcome,
+  });
+}
+
 describe("EventRouter scoped orchestration sync", () => {
   beforeAll(async () => {
     fixture = buildFixture();
@@ -534,6 +579,8 @@ describe("EventRouter scoped orchestration sync", () => {
     document.body.innerHTML = "";
     shellStreamRequestId = null;
     shellStreamClient = null;
+    serverLifecycleStreamRequestId = null;
+    serverLifecycleStreamClient = null;
     threadStreamRequestIdByThreadId.clear();
     threadStreamClientByThreadId.clear();
     delayNextThreadSnapshot = false;
@@ -1424,6 +1471,58 @@ describe("EventRouter scoped orchestration sync", () => {
     }
   }, 60_000);
 
+  it("resets projection backoff at base cadence when the shell observes a new turn", async () => {
+    const firstTurnId = TurnId.makeUnsafe("turn-first-projection-backoff");
+    fixture = { ...fixture, snapshot: createRunningSnapshot(firstTurnId) };
+    let logicalNow = Date.now();
+    const nowSpy = vi.spyOn(Date, "now").mockImplementation(() => logicalNow);
+    const mounted = await mountApp();
+
+    try {
+      logicalNow += 4_500;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(1), {
+        timeout: 4_000,
+        interval: 16,
+      });
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+
+      const nextTurnId = TurnId.makeUnsafe("turn-next-projection-backoff");
+      fixture = { ...fixture, snapshot: createRunningSnapshot(nextTurnId) };
+      sendShellEventPush({
+        kind: "thread-upserted",
+        sequence: 2,
+        thread: createShellSnapshotFromReadModel(fixture.snapshot).threads[0]!,
+      });
+      await vi.waitFor(
+        () =>
+          expect(getThreadFromState(useStore.getState(), THREAD_ID)?.latestTurn?.turnId).toBe(
+            nextTurnId,
+          ),
+        { timeout: 4_000, interval: 16 },
+      );
+
+      // The old turn's confirmed no-op scheduled 9s. The new shell turn must
+      // reset both that streak and the gate, making the next read due at 4.5s.
+      logicalNow += 4_500;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(2), {
+        timeout: 4_000,
+        interval: 16,
+      });
+
+      // The new turn's first confirmed no-op starts its own streak at 9s; an
+      // inherited streak would defer this read to 18s instead.
+      logicalNow += 9_000;
+      await vi.waitFor(() => expect(getThreadDetailSnapshotRequestCount).toBe(3), {
+        timeout: 4_000,
+        interval: 16,
+      });
+    } finally {
+      nowSpy.mockRestore();
+      fixture = buildFixture();
+      await mounted.cleanup();
+    }
+  }, 60_000);
+
   it("fences a delayed replay across release and resubscribe generations", async () => {
     const turnId = TurnId.makeUnsafe("turn-replay-generation-fence");
     const runningSnapshot = createRunningSnapshot(turnId);
@@ -1448,6 +1547,11 @@ describe("EventRouter scoped orchestration sync", () => {
       ...fixture,
       snapshot: { ...runningSnapshot, threads: [rootThread, otherThread] },
     };
+    const staleMessageId = MessageId.makeUnsafe("msg-stale-release-replay");
+    const freshMessageId = MessageId.makeUnsafe("msg-fresh-release-replay");
+    replayEvents = [
+      createReplayMessage({ id: staleMessageId, sequence: 2, text: "stale lease", turnId }),
+    ];
     const fixedNow = Date.now();
     const nowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNow);
     delayNextReplayResponse = true;
@@ -1467,6 +1571,9 @@ describe("EventRouter scoped orchestration sync", () => {
         () => expect(subscribeThreadRequestCountById.get(OTHER_THREAD_ID)).toBeGreaterThan(0),
         { timeout: 4_000, interval: 16 },
       );
+      replayEvents = [
+        createReplayMessage({ id: freshMessageId, sequence: 3, text: "fresh lease", turnId }),
+      ];
       await mounted.router.navigate({
         to: "/$threadId",
         params: { threadId: THREAD_ID },
@@ -1476,15 +1583,67 @@ describe("EventRouter scoped orchestration sync", () => {
         { timeout: 4_000, interval: 16 },
       );
 
-      sendPendingReplayResponse();
-      const replayCountAfterOldGenerationSettles = replayRequestCursors.length;
       await vi.waitFor(
-        () =>
-          expect(replayRequestCursors.length).toBeGreaterThan(replayCountAfterOldGenerationSettles),
+        () => {
+          const thread = getThreadFromState(useStore.getState(), THREAD_ID);
+          expect(thread?.messages.some((message) => message.id === freshMessageId)).toBe(true);
+          expect(thread?.messages.some((message) => message.id === staleMessageId)).toBe(false);
+        },
         { timeout: 5_000, interval: 16 },
       );
+
+      sendPendingReplayResponse();
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+      const thread = getThreadFromState(useStore.getState(), THREAD_ID);
+      expect(thread?.messages.some((message) => message.id === staleMessageId)).toBe(false);
+      expect(thread?.messages.some((message) => message.id === freshMessageId)).toBe(true);
     } finally {
       nowSpy.mockRestore();
+      fixture = buildFixture();
+      await mounted.cleanup();
+    }
+  }, 60_000);
+
+  it("fences a delayed replay across reconnect generations", async () => {
+    const turnId = TurnId.makeUnsafe("turn-replay-reconnect-fence");
+    fixture = { ...fixture, snapshot: createRunningSnapshot(turnId) };
+    const staleMessageId = MessageId.makeUnsafe("msg-stale-reconnect-replay");
+    const freshMessageId = MessageId.makeUnsafe("msg-fresh-reconnect-replay");
+    replayEvents = [
+      createReplayMessage({ id: staleMessageId, sequence: 2, text: "stale reconnect", turnId }),
+    ];
+    delayNextReplayResponse = true;
+    const mounted = await mountApp();
+
+    try {
+      await vi.waitFor(() => expect(pendingReplayResponse).not.toBeNull(), {
+        timeout: 4_000,
+        interval: 16,
+      });
+
+      replayEvents = [
+        createReplayMessage({ id: freshMessageId, sequence: 3, text: "fresh reconnect", turnId }),
+      ];
+      sendServerWelcomePush();
+      await vi.waitFor(
+        () => expect(subscribeThreadRequestCountById.get(THREAD_ID)).toBeGreaterThanOrEqual(2),
+        { timeout: 5_000, interval: 16 },
+      );
+      await vi.waitFor(
+        () => {
+          const thread = getThreadFromState(useStore.getState(), THREAD_ID);
+          expect(thread?.messages.some((message) => message.id === freshMessageId)).toBe(true);
+          expect(thread?.messages.some((message) => message.id === staleMessageId)).toBe(false);
+        },
+        { timeout: 5_000, interval: 16 },
+      );
+
+      sendPendingReplayResponse();
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 150));
+      const thread = getThreadFromState(useStore.getState(), THREAD_ID);
+      expect(thread?.messages.some((message) => message.id === staleMessageId)).toBe(false);
+      expect(thread?.messages.some((message) => message.id === freshMessageId)).toBe(true);
+    } finally {
       fixture = buildFixture();
       await mounted.cleanup();
     }
