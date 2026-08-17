@@ -385,6 +385,8 @@ S1 当前唯一代码 Slice 是 **R11-2 app-owned `/fork` collision policy**：�
 
 本 Slice 复用现有 command menu、keyboard selection、fork target picker与执行 owner，不新增 command store、route、Dialog、contract或 message-level fork入口；不改变布局。focused proof必须覆盖 Provider matrix、native collision、app-unavailable fallback与真实键盘选择进入现有 fork target picker；现有英中 catalog actual values保持。候选只以相关 unit/browser、monorepo typecheck、changed-path format/lint、document contract与diff check证明，不做 package/install/live/README。
 
+R11-2 的首个 candidate `f6b9f2dcaf9ae15436683c7df81cd235ed30ada1` 已建立 menu collision policy，但 ChatView 的真实 `canOfferForkCommand` 尚未贯通 standalone command availability：app fork不可用时，literal provider `/fork` 虽能出现在菜单，提交仍会被 app handler误消费。当前窄 follow-up 只沿既有 ChatView → `useComposerSlashCommands` → Provider turn链传递同一availability，证明native fallback真实提交且不打开fork target picker，同时保持app available collision仍唯一进入picker；不扩张上述边界。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

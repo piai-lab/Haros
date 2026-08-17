@@ -6276,6 +6276,98 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("submits provider-native /fork when the app fork action is unavailable", async () => {
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+      provider: "claudeAgent",
+      model: "claude-sonnet-4-5",
+    });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claudeAgent");
+    useComposerDraftStore.getState().setInteractionMode(THREAD_ID, "plan");
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-native-fork-fallback" as MessageId,
+        targetText: "native fork fallback target",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            ...nextFixture.serverConfig.providers,
+            {
+              provider: "claudeAgent",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerCommandsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          commands: [{ name: "fork", description: "Provider-native fork" }],
+        };
+      },
+    });
+
+    try {
+      const composerEditor = await waitForComposerEditor();
+      composerEditor.focus();
+      await userEvent.keyboard("/fork");
+
+      await expect.element(page.getByText("Provider-native fork", { exact: true })).toBeVisible();
+      expect(
+        Array.from(document.querySelectorAll<HTMLElement>('[data-slot="command-item"]')).filter(
+          (item) => item.textContent?.includes("/fork"),
+        ),
+      ).toHaveLength(1);
+
+      await userEvent.keyboard("{ArrowDown}{Enter}");
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt.trim()).toBe(
+          "/fork",
+        );
+      });
+      expect(
+        page.getByText(EN_MESSAGES["conversation.forkIntoWorktree"], { exact: true }).query(),
+      ).not.toBeInTheDocument();
+
+      wsRequests.length = 0;
+      const sendButton = await waitForSendButton();
+      expect(sendButton.disabled).toBe(false);
+      sendButton.click();
+
+      await vi.waitFor(
+        () => {
+          const turnStart = wsRequests.map(readDispatchedCommand).find((command) => {
+            if (command?.type !== "thread.turn.start") return false;
+            const message = command.message;
+            return (
+              typeof message === "object" &&
+              message !== null &&
+              "text" in message &&
+              typeof message.text === "string" &&
+              message.text.trim() === "/fork"
+            );
+          });
+          expect(turnStart).toBeDefined();
+          expect(turnStart?.interactionMode).toBe("plan");
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      expect(
+        page.getByText(EN_MESSAGES["conversation.forkIntoWorktree"], { exact: true }).query(),
+      ).not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("sends unmarked automation questions as normal chat messages", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,

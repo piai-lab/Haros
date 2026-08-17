@@ -63,6 +63,7 @@ export function useComposerSlashCommands(input: {
   isServerThread: boolean;
   supportsFastSlashCommand: boolean;
   canOfferCompactCommand: boolean;
+  canOfferForkCommand: boolean;
   canOfferSideCommand: boolean;
   canOfferExportCommand: boolean;
   supportsTextNativeReviewCommand: boolean;
@@ -115,6 +116,7 @@ export function useComposerSlashCommands(input: {
     isServerThread,
     supportsFastSlashCommand,
     canOfferCompactCommand,
+    canOfferForkCommand,
     canOfferSideCommand,
     canOfferExportCommand,
     supportsTextNativeReviewCommand,
@@ -143,7 +145,7 @@ export function useComposerSlashCommands(input: {
     supportsFastSlashCommand,
     canOfferCompactCommand,
     canOfferReviewCommand: true,
-    canOfferForkCommand: true,
+    canOfferForkCommand,
     canOfferSideCommand: true,
     canOfferExportCommand,
     providerNativeCommandNames,

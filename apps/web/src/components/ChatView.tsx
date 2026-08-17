@@ -10860,6 +10860,7 @@ export default function ChatView({
     isServerThread,
     supportsFastSlashCommand,
     canOfferCompactCommand: isServerThread && canCompactActiveSession,
+    canOfferForkCommand,
     canOfferSideCommand,
     canOfferExportCommand,
     supportsTextNativeReviewCommand,
