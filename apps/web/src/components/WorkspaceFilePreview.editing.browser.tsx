@@ -63,6 +63,51 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+it("preserves the existing whole-file reference action through the localized shared menu", async () => {
+  const readFile = vi.fn().mockResolvedValue(loadedFile());
+  const showContextMenu = vi.fn().mockResolvedValue("reference-in-chat");
+  const onReferenceInChat = vi.fn();
+  const restoreNativeApi = installNativeApi({
+    projects: { readFile },
+    contextMenu: { show: showContextMenu },
+  } as unknown as NativeApi);
+
+  try {
+    await render(
+      <QueryClientProvider client={makeQueryClient()}>
+        <WorkspaceFilePreview
+          workspaceRoot={WORKSPACE_ROOT}
+          filePath={FILE_PATH}
+          onReferenceInChat={onReferenceInChat}
+        />
+      </QueryClientProvider>,
+    );
+    await vi.waitFor(() => expect(document.body.textContent).toContain("export const value = 1"));
+    const viewer = document.querySelector<HTMLElement>(".editor-file-viewer");
+    expect(viewer).not.toBeNull();
+    viewer!.dispatchEvent(
+      new MouseEvent("contextmenu", {
+        bubbles: true,
+        cancelable: true,
+        clientX: 30,
+        clientY: 50,
+      }),
+    );
+
+    await vi.waitFor(() => expect(showContextMenu).toHaveBeenCalledOnce());
+    expect(showContextMenu).toHaveBeenCalledWith(
+      [
+        { id: "reference-in-chat", label: "Reference in Chat" },
+        { id: "copy-path", label: "Copy path" },
+      ],
+      { x: 30, y: 50 },
+    );
+    await vi.waitFor(() => expect(onReferenceInChat).toHaveBeenCalledWith({ path: FILE_PATH }));
+  } finally {
+    restoreNativeApi();
+  }
+});
+
 it("tracks dirty state and saves the loaded version with Ctrl+S", async () => {
   const readFile = vi.fn().mockResolvedValue(loadedFile());
   const writeFile = vi.fn().mockResolvedValue({ relativePath: FILE_PATH, version: SAVED_VERSION });

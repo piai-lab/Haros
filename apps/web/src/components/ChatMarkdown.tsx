@@ -5,6 +5,7 @@
 
 import { CheckIcon, CopyIcon, TextWrapIcon, TriangleAlertIcon } from "~/lib/icons";
 import type { ProviderMentionReference, ThreadMarker } from "@omnimind/contracts";
+import { isLocalAbsolutePath } from "@omnimind/shared/path";
 import "katex/dist/katex.min.css";
 import React, {
   Children,
@@ -35,6 +36,10 @@ import { getFileIconName, pathLooksLikeKnownFile } from "../file-icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { isLocalImageMarkdownSrc } from "../lib/localImageUrls";
 import { repairMarkdownTableDelimiters } from "../lib/markdownTableRepair";
+import {
+  getFileContextMenuPosition,
+  showFileReferenceContextMenu,
+} from "../lib/fileReferenceContextMenu";
 import {
   connectMarkdownTableOverflow,
   refreshMarkdownTableOverflow,
@@ -865,8 +870,10 @@ function OpenableFileChip(props: {
   label?: ReactNode;
   href?: string;
 }) {
+  const { t } = useI18n();
   const opener = useWorkspaceFileOpener();
   const chipPath = props.targetPath.replace(MARKDOWN_LINK_POSITION_SUFFIX_PATTERN, "");
+  const revealPath = isLocalAbsolutePath(chipPath) ? chipPath : undefined;
   return (
     <InlineMentionChip
       path={chipPath}
@@ -877,6 +884,17 @@ function OpenableFileChip(props: {
         event.stopPropagation();
         const forceExternalEditor = event.metaKey || event.ctrlKey;
         openWorkspaceFileReference(forceExternalEditor ? null : opener, props.targetPath);
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        void showFileReferenceContextMenu({
+          path: chipPath,
+          ...(revealPath ? { revealPath } : {}),
+          position: getFileContextMenuPosition(event),
+          onReferenceInChat: undefined,
+          t,
+        });
       }}
       {...(opener?.prefetchFile
         ? { onHoverPrefetch: () => opener.prefetchFile?.(props.targetPath) }

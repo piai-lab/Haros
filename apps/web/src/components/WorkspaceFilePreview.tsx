@@ -40,7 +40,10 @@ import { useI18n } from "~/i18n";
 import { getSelectionWithin, type ChatFileReference } from "~/lib/chatReferences";
 import { resolveDiffThemeName, type DiffThemeName } from "~/lib/diffRendering";
 import { type FileCommentSelection } from "~/lib/fileComments";
-import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
+import {
+  getFileContextMenuPosition,
+  showFileReferenceContextMenu,
+} from "~/lib/fileReferenceContextMenu";
 import { PlusIcon } from "~/lib/icons";
 import { toggleMarkdownTaskMarker } from "~/lib/markdownTaskList";
 import {
@@ -692,10 +695,11 @@ export function WorkspaceFilePreview(props: WorkspaceFilePreviewProps) {
     const selection = container ? readPreviewSelection(container) : null;
     void showFileReferenceContextMenu({
       path: filePath,
-      position: { x: event.clientX, y: event.clientY },
+      position: getFileContextMenuPosition(event),
       selection,
       onReferenceInChat,
       onAskWhyInChat,
+      t,
     });
   };
   // Clicking a task checkbox in the markdown preview persists the toggle to

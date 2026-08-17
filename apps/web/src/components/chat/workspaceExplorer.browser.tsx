@@ -21,6 +21,7 @@ vi.mock("~/appSettings", async (importOriginal) => ({
 }));
 
 import { I18nProvider } from "~/i18n";
+import type { ChatFileReference } from "~/lib/chatReferences";
 import { projectQueryKeys } from "~/lib/projectReactQuery";
 import { WorkspaceSearchSidebar } from "./workspaceExplorer";
 
@@ -39,8 +40,12 @@ function installNativeApi(api: NativeApi): () => void {
 function makeNativeApi(overrides?: {
   searchEntries?: NativeApi["projects"]["searchEntries"];
   searchContent?: NativeApi["projects"]["searchContent"];
+  showContextMenu?: NativeApi["contextMenu"]["show"];
 }): NativeApi {
   return {
+    contextMenu: {
+      show: overrides?.showContextMenu ?? vi.fn(async () => null),
+    },
     projects: {
       searchEntries:
         overrides?.searchEntries ??
@@ -72,7 +77,11 @@ function makeNativeApi(overrides?: {
   } as unknown as NativeApi;
 }
 
-function SearchHarness(props: { onSelectFile: (path: string) => void; queryClient?: QueryClient }) {
+function SearchHarness(props: {
+  onSelectFile: (path: string) => void;
+  onReferenceInChat?: (reference: ChatFileReference) => void;
+  queryClient?: QueryClient;
+}) {
   const [query, setQuery] = useState("");
   const [ownedQueryClient] = useState(
     () => new QueryClient({ defaultOptions: { queries: { retry: false } } }),
@@ -87,7 +96,7 @@ function SearchHarness(props: { onSelectFile: (path: string) => void; queryClien
           onQueryChange={setQuery}
           selectedFilePath={null}
           onSelectFile={props.onSelectFile}
-          onReferenceInChat={undefined}
+          onReferenceInChat={props.onReferenceInChat}
         />
       </QueryClientProvider>
     </I18nProvider>
@@ -101,6 +110,62 @@ afterEach(() => {
 });
 
 describe("workspace search", () => {
+  it("keeps the localized reference action keyboard-accessible on existing rows", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const showContextMenu = vi.fn(async () => "reference-in-chat");
+    const restoreApi = installNativeApi(
+      makeNativeApi({
+        showContextMenu: showContextMenu as unknown as NativeApi["contextMenu"]["show"],
+      }),
+    );
+    const onReferenceInChat = vi.fn();
+    try {
+      await render(<SearchHarness onSelectFile={vi.fn()} onReferenceInChat={onReferenceInChat} />);
+      const input = page.getByRole("textbox", { name: "搜索工作区" });
+      await userEvent.type(input, "needle");
+      await vi.waitFor(() =>
+        expect(document.querySelector('[title="src/needle.ts"]')).not.toBeNull(),
+      );
+      const row = document.querySelector<HTMLButtonElement>('[title="src/needle.ts"]')!;
+      vi.spyOn(row, "getBoundingClientRect").mockReturnValue({
+        left: 24,
+        right: 184,
+        top: 40,
+        bottom: 68,
+        width: 160,
+        height: 28,
+        x: 24,
+        y: 40,
+        toJSON: () => ({}),
+      });
+      row.focus();
+
+      row.dispatchEvent(
+        new MouseEvent("contextmenu", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 0,
+          clientY: 0,
+        }),
+      );
+
+      await vi.waitFor(() => expect(showContextMenu).toHaveBeenCalledOnce());
+      expect(showContextMenu).toHaveBeenCalledWith(
+        [
+          { id: "reference-in-chat", label: "在 Chat 中引用" },
+          { id: "copy-path", label: "复制路径" },
+        ],
+        { x: 36, y: 68 },
+      );
+      await vi.waitFor(() =>
+        expect(onReferenceInChat).toHaveBeenCalledWith({ path: "src/needle.ts" }),
+      );
+      expect(document.activeElement).toBe(row);
+    } finally {
+      restoreApi();
+    }
+  });
+
   it("renders one filename/content list and preserves keyboard focus semantics", async () => {
     const restoreApi = installNativeApi(makeNativeApi());
     const onSelectFile = vi.fn();

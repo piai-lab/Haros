@@ -299,7 +299,7 @@ ChatView browser 不能写成全绿：首轮为 `113 passed / 30 failed / 12 ski
 
 R10 source candidate 已在 exact pushed `bf9a8eb4d4fb360ab822cf0b23c7fb6bd379931c` 进入 `main`；generation/lease replay fence、settled-tail 等长内容 identity 与 new-turn projection backoff reset 的 Judge follow-up 随后在 exact pushed `c59d544269f93f9702ffbd0033e76a02738413cb` 闭合。上述 R10 历史不再是当前准入。
 
-S1 当前唯一代码 Slice 是 **Phase-9a Workspace filename + content search**：现有 `WorkspaceSearchSidebar` / `WorkspaceExplorerSidebar` 仍是唯一入口与结果面，filename 继续使用既有 Workspace index/ranking，content 只在同一输入达到两字符后并行检索，并以 filename rank在前、content path/line在后的单一扁平列表投影；snippet 只打开文件，不宣称行定位。不得新增 command palette、快捷键、全局 store、第二 index/cache、ripgrep/runtime dependency 或 W3 layout owner。
+S1 随后准入并完成 **Phase-9a Workspace filename + content search**：现有 `WorkspaceSearchSidebar` / `WorkspaceExplorerSidebar` 仍是唯一入口与结果面，filename 继续使用既有 Workspace index/ranking，content 只在同一输入达到两字符后并行检索，并以 filename rank在前、content path/line在后的单一扁平列表投影；snippet 只打开文件，不宣称行定位。不得新增 command palette、快捷键、全局 store、第二 index/cache、ripgrep/runtime dependency 或 W3 layout owner。
 
 Phase-9a 的 server 路径只扩现有 `WorkspaceEntries`：复用 git-aware index，content scan 必须跳过 hidden/ignored、binary、非法 UTF-8 与超过 `512KiB` 的文件；每文件最多 `5` 条、最多 `2000` 文件、server contract最多 `100` 条、UI最多 `80` 条、并发 `8`、总 budget `4s`。workspace/candidate 必须 physical realpath containment；打开后在读取前后以 handle/path/root identity与 `dev/ino` 再验，外部或置换 symlink为零内容、root内 symlink保留。TanStack query signal必须穿过 NativeApi/WebSocket/Effect，Web RPC以 `5s` ceiling fail loud；file-change同时 invalidates filename/content query，新旧 query不得交叉投影。
 
@@ -316,6 +316,12 @@ Judge HOLD follow-up 的同一 pre-commit tree 证据为：Workspace index/conte
 同一 Judge 的 candidate-pair/source-mode follow-up 从 exact pushed `e70bf0e4f6ad6d1bb22d525c35486524a5b7ebbd` 继续：Workspace index record只携带本次 build 已裁定的 `git/default` policy mode，不新增 cache truth。build与current gate均先用 physical root向上查找 `.git` directory/file metadata；确认为无 metadata的 true non-Git直接沿 default policy，Git executable缺失也不执行 subprocess；存在 metadata或已记录 Git mode时，Git policy无法执行必须 fail closed，不能降级为 non-Git。两阶段 batch gate都以 `(lexical relativePath, canonicalRelativePath)` candidate pair为单位，任一侧被当前 policy ignore只移除该 alias；post gate继续按完整 pair identity过滤，不把 allowed canonical target错误扩张给ignored alias。warm root/nested alias ignore、mid-scan alias-only policy change、no-Git/no-binary与recorded-Git policy unavailable均由 focused Workspace `2 files / 45 tests`覆盖；不新增 index、watcher、cache或per-file subprocess。
 
 最终 one-condition follow-up 从 exact pushed `3875bca24f307368e49908b04f2a3bea7fe91bc6` 只把 recorded Git mode 的 current `false/null` 固定为 fail closed、zero open；仅显式 clear 后的 fresh build 可重新裁定 true non-Git/default，focused Workspace `2 files / 46 tests`通过。
+
+Phase-9a 的最终 source candidate 已在 exact pushed `c4e8e7bcaf85b2c60da46dd3f878a587a65530de` 进入 `main`；上述 Workspace search/current-policy 历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **Phase-9b Chat file-link context menu**：只吸收 Synara `bf07024a` 的真实 author 语义，让 assistant/openable file link 复用既有 `fileReferenceContextMenu`；position-free absolute local path在 Desktop提供平台原生 Reveal，relative path或 browser只保留 Copy，assistant link明确不提供 `Reference in Chat`。共享菜单既有 Reference/Ask与新增 Reveal/Copy、失败 toast全部使用同一简中/英文 catalog；`Shift+F10`/Menu key 的零坐标按 focused target rect定位并保持焦点。不得新增 `readFile` purpose、内容附件、draft/persistence、turn contract、Provider prompt、surface、store或 schema；`c4a82e0e` reasoning timestamp anchor必须留给下一独立 commit。
+
+Phase-9b pre-commit source-candidate 证据：shared-menu helper与现有 caller focused unit `3 files / 54 tests`、Chromium assistant/Workspace/Preview `3 files / 15 tests`、monorepo typecheck `6/6`、document contract `21/21`、changed-path format与 diff check通过；全仓 lint `0 errors / 478 warnings`，本轮路径 `0 errors / 4` 条未改旧行 warning。此次按 menu-only Gate 未重建或安装 packaged App，因此只主张 source-only candidate，不主张已安装产品验证。
 
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 

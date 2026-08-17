@@ -28,7 +28,10 @@ import {
 } from "~/lib/chatReferences";
 import { useI18n } from "~/i18n";
 import { splitRepoRelativePath } from "~/lib/diffRendering";
-import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
+import {
+  getFileContextMenuPosition,
+  showFileReferenceContextMenu,
+} from "~/lib/fileReferenceContextMenu";
 import {
   projectListDirectoriesQueryOptions,
   projectReadFileQueryOptions,
@@ -162,7 +165,7 @@ const ExplorerRow = forwardRef<
   };
   const handleContextMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    onEntryContextMenu(entry, { x: event.clientX, y: event.clientY });
+    onEntryContextMenu(entry, getFileContextMenuPosition(event));
   };
   const handleDragStart = (event: ReactDragEvent<HTMLButtonElement>) => {
     setFileReferenceDragData(event.dataTransfer, entry.path);
@@ -324,11 +327,13 @@ function WorkspaceDirectory(props: {
 function useTreeEntryContextMenu(
   onReferenceInChat: ((reference: ChatFileReference) => void) | undefined,
 ) {
+  const { t } = useI18n();
   return (entry: ProjectFileSystemEntry, position: { x: number; y: number }) => {
     void showFileReferenceContextMenu({
       path: entry.path,
       position,
       onReferenceInChat,
+      t,
     });
   };
 }
@@ -336,8 +341,9 @@ function useTreeEntryContextMenu(
 function useResultEntryContextMenu(
   onReferenceInChat: ((reference: ChatFileReference) => void) | undefined,
 ) {
+  const { t } = useI18n();
   return (path: string, position: { x: number; y: number }) => {
-    void showFileReferenceContextMenu({ path, position, onReferenceInChat });
+    void showFileReferenceContextMenu({ path, position, onReferenceInChat, t });
   };
 }
 
@@ -435,7 +441,7 @@ function WorkspaceSearchResultRow(props: {
       onFocus={handlePrefetch}
       onContextMenu={(event) => {
         event.preventDefault();
-        onEntryContextMenu(entry.path, { x: event.clientX, y: event.clientY });
+        onEntryContextMenu(entry.path, getFileContextMenuPosition(event));
       }}
     >
       <FileEntryIcon pathValue={entry.path} kind="file" className="size-3.5 shrink-0 opacity-75" />
@@ -478,7 +484,7 @@ function WorkspaceContentSearchResultRow(props: {
       onFocus={handlePrefetch}
       onContextMenu={(event) => {
         event.preventDefault();
-        onEntryContextMenu(match.path, { x: event.clientX, y: event.clientY });
+        onEntryContextMenu(match.path, getFileContextMenuPosition(event));
       }}
     >
       <FileEntryIcon

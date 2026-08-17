@@ -34,7 +34,10 @@ import {
   splitRepoRelativePath,
   summarizeFileDiffStats,
 } from "~/lib/diffRendering";
-import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
+import {
+  getFileContextMenuPosition,
+  showFileReferenceContextMenu,
+} from "~/lib/fileReferenceContextMenu";
 import type { ChatFileReference } from "~/lib/chatReferences";
 import type { FileCommentSelection } from "~/lib/fileComments";
 import { cn } from "~/lib/utils";
@@ -193,7 +196,7 @@ function DiffFileRow(props: {
       onClick={() => props.onSelectFile(filePath)}
       onContextMenu={(event) => {
         event.preventDefault();
-        props.onFileContextMenu(filePath, { x: event.clientX, y: event.clientY });
+        props.onFileContextMenu(filePath, getFileContextMenuPosition(event));
       }}
     >
       <FileEntryIcon
@@ -262,6 +265,7 @@ function DiffFilesSidebar(props: {
       position,
       onReferenceInChat,
       onAskWhyInChat,
+      t,
     });
   };
 
