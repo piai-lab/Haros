@@ -103,6 +103,7 @@ export const PullRequestStack = Schema.Struct({
   number: PositiveInt,
   size: PositiveInt,
   position: PositiveInt,
+  baseBranch: TrimmedNonEmptyString,
   entries: Schema.Array(PullRequestStackEntry),
 });
 export type PullRequestStack = typeof PullRequestStack.Type;
@@ -261,13 +262,42 @@ export const PullRequestDiffResult = Schema.Struct({
 });
 export type PullRequestDiffResult = typeof PullRequestDiffResult.Type;
 
-export const PullRequestActionInput = Schema.Struct({
+const PullRequestActionIdentity = {
   projectId: ProjectId,
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
-  action: PullRequestAction,
+} as const;
+
+export const PullRequestMergeExpectation = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("standalone"),
+    baseBranch: TrimmedNonEmptyString,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("stack"),
+    stackNumber: PositiveInt,
+    stackSize: PositiveInt,
+    selectedPosition: PositiveInt,
+    baseBranch: TrimmedNonEmptyString,
+    targetPullRequestNumbers: Schema.Array(PositiveInt).check(Schema.isMinLength(1)),
+  }),
+]);
+export type PullRequestMergeExpectation = typeof PullRequestMergeExpectation.Type;
+
+export const PullRequestMergeActionInput = Schema.Struct({
+  ...PullRequestActionIdentity,
+  action: Schema.Literal("merge"),
   mergeMethod: Schema.optional(PullRequestMergeMethod),
+  expectation: PullRequestMergeExpectation,
 });
+export const PullRequestNonMergeActionInput = Schema.Struct({
+  ...PullRequestActionIdentity,
+  action: Schema.Literals(["ready", "draft", "close", "reopen"]),
+});
+export const PullRequestActionInput = Schema.Union([
+  PullRequestMergeActionInput,
+  PullRequestNonMergeActionInput,
+]);
 export type PullRequestActionInput = typeof PullRequestActionInput.Type;
 
 export const PullRequestCommentInput = Schema.Struct({
@@ -303,6 +333,9 @@ export const PullRequestActionResult = Schema.Struct({
   repository: TrimmedNonEmptyString,
   number: PositiveInt,
   workspaceRoot: TrimmedNonEmptyString,
+  mergeOutcome: Schema.optional(Schema.NullOr(Schema.Literals(["merged", "enqueued"]))).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
 });
 export type PullRequestActionResult = typeof PullRequestActionResult.Type;
 

@@ -207,6 +207,14 @@ describe("pullRequestActionMutationOptions", () => {
       repository: "acme/widgets",
       number: 42,
       action: "merge",
+      expectation: {
+        kind: "stack",
+        stackNumber: 8,
+        stackSize: 3,
+        selectedPosition: 2,
+        baseBranch: "main",
+        targetPullRequestNumbers: [41, 42],
+      },
     } as const;
     const openKey = pullRequestQueryKeys.list({ state: "open", projectId });
     const mergedKey = pullRequestQueryKeys.list({ state: "merged", projectId });
@@ -216,16 +224,33 @@ describe("pullRequestActionMutationOptions", () => {
       state: "merged",
       projectId,
     });
+    const firstTargetDetailKey = pullRequestQueryKeys.detail({
+      projectId,
+      repository: "acme/widgets",
+      number: 41,
+    });
+    const selectedTargetDetailKey = pullRequestQueryKeys.detail(input);
+    const outsideRangeDetailKey = pullRequestQueryKeys.detail({
+      projectId,
+      repository: "acme/widgets",
+      number: 43,
+    });
     queryClient.setQueryData(openKey, {
       entries: [{ ...input, state: "open", isDraft: false, isPinned: false }],
     });
     queryClient.setQueryData(mergedKey, { entries: [] });
     queryClient.setQueryData(allProjectsMergedKey, { entries: [] });
     queryClient.setQueryData(mergedExactKey, { entries: [] });
+    queryClient.setQueryData(firstTargetDetailKey, {});
+    queryClient.setQueryData(selectedTargetDetailKey, {});
+    queryClient.setQueryData(outsideRangeDetailKey, {});
     const options = pullRequestActionMutationOptions(queryClient);
     if (!options.onMutate || !options.onSuccess) throw new Error("Action hooks are missing.");
 
     const context = await Reflect.apply(options.onMutate, undefined, [input, undefined]);
+    expect(queryClient.getQueryData(openKey)).toMatchObject({
+      entries: [{ number: 42, state: "open" }],
+    });
     await Reflect.apply(options.onSuccess, undefined, [
       { workspaceRoot: "/repo" },
       input,
@@ -237,6 +262,9 @@ describe("pullRequestActionMutationOptions", () => {
     expect(queryClient.getQueryState(mergedKey)?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(allProjectsMergedKey)?.isInvalidated).toBe(true);
     expect(queryClient.getQueryState(mergedExactKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(firstTargetDetailKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(selectedTargetDetailKey)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(outsideRangeDetailKey)?.isInvalidated).toBe(false);
   });
 
   it("rolls list-owned fields back even when no detail cache exists", async () => {

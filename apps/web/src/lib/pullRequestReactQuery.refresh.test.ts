@@ -63,6 +63,7 @@ describe("pullRequestsForceRefreshMutationOptions", () => {
       repository: "acme/widgets",
       number: 42,
       action: "merge",
+      expectation: { kind: "standalone", baseBranch: "main" },
     });
     await vi.waitFor(() => expect(action).toHaveBeenCalledOnce());
 

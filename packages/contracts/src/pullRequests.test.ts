@@ -3,6 +3,7 @@ import { Schema } from "effect";
 
 import {
   PullRequestCommentInput,
+  PullRequestActionInput,
   PullRequestDetail,
   PullRequestListEntry,
   PullRequestReviewRequestCountResult,
@@ -12,6 +13,7 @@ import {
 const decodeListEntry = Schema.decodeUnknownSync(PullRequestListEntry);
 const decodeDetail = Schema.decodeUnknownSync(PullRequestDetail);
 const decodeCommentInput = Schema.decodeUnknownSync(PullRequestCommentInput);
+const decodeActionInput = Schema.decodeUnknownSync(PullRequestActionInput);
 const decodeSetPinnedInput = Schema.decodeUnknownSync(PullRequestSetPinnedInput);
 const decodeReviewRequestCountResult = Schema.decodeUnknownSync(
   PullRequestReviewRequestCountResult,
@@ -160,12 +162,58 @@ describe("PullRequestDetail", () => {
         number: 8,
         size: 2,
         position: 2,
+        baseBranch: "main",
         entries: [stackContractEntry(1, 41), stackContractEntry(2, 42)],
       },
       stackMetadataIncomplete: false,
     });
 
     expect(decoded.stack?.entries.map((member) => member.number)).toEqual([41, 42]);
+  });
+});
+
+describe("PullRequestActionInput", () => {
+  const identity = { projectId: "project-1", repository: "acme/widgets", number: 42 } as const;
+
+  it("requires a standalone or exact-stack expectation for merge actions", () => {
+    expect(() => decodeActionInput({ ...identity, action: "merge" })).toThrow();
+    expect(
+      decodeActionInput({
+        ...identity,
+        action: "merge",
+        expectation: { kind: "standalone", baseBranch: "main" },
+      }),
+    ).toMatchObject({ expectation: { kind: "standalone", baseBranch: "main" } });
+    expect(
+      decodeActionInput({
+        ...identity,
+        action: "merge",
+        expectation: {
+          kind: "stack",
+          stackNumber: 8,
+          stackSize: 3,
+          selectedPosition: 2,
+          baseBranch: "main",
+          targetPullRequestNumbers: [41, 42],
+        },
+      }),
+    ).toMatchObject({
+      expectation: { kind: "stack", targetPullRequestNumbers: [41, 42] },
+    });
+    expect(() =>
+      decodeActionInput({
+        ...identity,
+        action: "merge",
+        expectation: {
+          kind: "stack",
+          stackNumber: 8,
+          stackSize: 3,
+          selectedPosition: 2,
+          baseBranch: "main",
+          targetPullRequestNumbers: [],
+        },
+      }),
+    ).toThrow();
   });
 });
 

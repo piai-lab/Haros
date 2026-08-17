@@ -727,6 +727,7 @@ export const EN_MESSAGES = {
   "pullRequest.preparingWorktree": "Preparing worktree…",
   "pullRequest.worktree": "Dedicated worktree",
   "pullRequest.actionMerged": "Pull request merged",
+  "pullRequest.actionMergeEnqueued": "Pull request merge queued",
   "pullRequest.actionReady": "Marked ready for review",
   "pullRequest.actionDraft": "Converted to draft",
   "pullRequest.actionClosed": "Pull request closed",
@@ -764,7 +765,16 @@ export const EN_MESSAGES = {
   "pullRequest.detailRefreshFailed": "Could not refresh pull request details. Showing saved data.",
   "pullRequest.confirmMergeTitle": "Merge pull request?",
   "pullRequest.confirmCloseTitle": "Close pull request?",
-  "pullRequest.confirmMergeDescription": "This will merge #{number} using {method}.",
+  "pullRequest.confirmMergeDescription":
+    "Merge #{number} into {base} using {method}. GitHub will merge this pull request only.",
+  "pullRequest.confirmStackMergeDescription":
+    "Merge {numbers} into {base} using {method}. GitHub will process this exact stack range.",
+  "pullRequest.mergeMetadataUnavailable":
+    "Current pull request or stack details are unavailable. Refresh before confirming a merge.",
+  "pullRequest.mergeConfirmationStale":
+    "Pull request details changed or were refreshed. Close this dialog and confirm the merge again.",
+  "pullRequest.mergeExpectationConflict":
+    "Pull request or stack details changed. Refresh and confirm the merge again.",
   "pullRequest.confirmCloseDescription": "This will close #{number} without merging it.",
   "pullRequest.selectToOpen": "Select a pull request to open it here.",
   "pullRequest.branch": "Branch",
@@ -4156,6 +4166,7 @@ export const ZH_CN_MESSAGES = {
   "pullRequest.preparingWorktree": "正在准备独立工作树…",
   "pullRequest.worktree": "独立工作树",
   "pullRequest.actionMerged": "拉取请求已合并",
+  "pullRequest.actionMergeEnqueued": "拉取请求合并已进入队列",
   "pullRequest.actionReady": "已标为可评审",
   "pullRequest.actionDraft": "已转为草稿",
   "pullRequest.actionClosed": "拉取请求已关闭",
@@ -4193,7 +4204,13 @@ export const ZH_CN_MESSAGES = {
   "pullRequest.detailRefreshFailed": "拉取请求详情刷新失败，当前显示已保存的数据。",
   "pullRequest.confirmMergeTitle": "合并此拉取请求？",
   "pullRequest.confirmCloseTitle": "关闭此拉取请求？",
-  "pullRequest.confirmMergeDescription": "将使用 {method} 合并 #{number}。",
+  "pullRequest.confirmMergeDescription":
+    "将使用 {method} 把 #{number} 合并到 {base}。GitHub 只会合并此拉取请求。",
+  "pullRequest.confirmStackMergeDescription":
+    "将使用 {method} 把 {numbers} 合并到 {base}。GitHub 将处理这一精确堆叠范围。",
+  "pullRequest.mergeMetadataUnavailable": "当前拉取请求或堆叠详情不可用。请刷新后再确认合并。",
+  "pullRequest.mergeConfirmationStale": "拉取请求详情已变化或刷新。请关闭此对话框并重新确认合并。",
+  "pullRequest.mergeExpectationConflict": "拉取请求或堆叠详情已变化。请刷新后重新确认合并。",
   "pullRequest.confirmCloseDescription": "将关闭 #{number}，但不会合并。",
   "pullRequest.selectToOpen": "选择一个拉取请求后在此处打开。",
   "pullRequest.branch": "分支",

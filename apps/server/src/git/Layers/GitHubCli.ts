@@ -11,6 +11,7 @@ import {
   type PullRequestCommit,
   type PullRequestLabel,
   type PullRequestMergeCapabilities,
+  type PullRequestMergeExpectation,
   type PullRequestStack,
   type PullRequestStackSummary,
 } from "@omnimind/contracts";
@@ -35,6 +36,8 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 30_000;
 const PULL_REQUEST_DIFF_MAX_BYTES = 8 * 1024 * 1024;
+const PULL_REQUEST_ASYNC_MERGE_POLL_LIMIT = 300;
+const PULL_REQUEST_ASYNC_MERGE_API_VERSION = "2026-03-10";
 const GITHUB_HOST = "github.com";
 
 export const PULL_REQUEST_LIST_JSON_FIELDS =
@@ -322,6 +325,7 @@ const PULL_REQUEST_STACK_QUERY = `query($owner: String!, $repo: String!, $number
       stack {
         number
         size
+        baseRefName
         entries(first: $first, after: $after) {
           totalCount
           nodes {
@@ -457,6 +461,7 @@ const RawPullRequestStackResponseSchema = Schema.Struct({
                         Schema.Struct({
                           number: PositiveInt,
                           size: PositiveInt,
+                          baseRefName: TrimmedNonEmptyString,
                           entries: Schema.Struct({
                             totalCount: PositiveInt,
                             nodes: Schema.optional(
@@ -500,6 +505,18 @@ const RawPullRequestStackSummarySchema = Schema.Struct({
       }),
     ),
   ),
+});
+
+const RawAsyncMergeResultSchema = Schema.Struct({
+  status: Schema.Literals(["pending", "merged", "enqueued", "failed"]),
+  details: Schema.Struct({
+    message: Schema.optional(Schema.NullOr(Schema.String)),
+    uuid: Schema.optional(Schema.NullOr(Schema.String)),
+    merge_method: Schema.optional(Schema.NullOr(Schema.Literals(["merge", "squash", "rebase"]))),
+    merge_action: Schema.optional(
+      Schema.NullOr(Schema.Literals(["default", "direct_merge", "merge_queue"])),
+    ),
+  }),
 });
 
 const RawPullRequestStackSummariesResponseSchema = Schema.Struct({
@@ -910,6 +927,7 @@ function normalizePullRequestStack(
     number: stack.number,
     size: stack.size,
     position: selectedEntry.position,
+    baseBranch: stack.baseRefName,
     entries,
   });
 }
@@ -991,7 +1009,8 @@ function decodeGitHubJson<S extends Schema.Top>(
     | "getPullRequestDetail"
     | "getPullRequestListItem"
     | "listReviewRequestedPullRequestNumbers"
-    | "getRepositoryMergeCapabilities",
+    | "getRepositoryMergeCapabilities"
+    | "runPullRequestAction",
   invalidDetail: string,
 ): Effect.Effect<S["Type"], GitHubCliError, S["DecodingServices"]> {
   return Schema.decodeEffect(Schema.fromJsonString(schema))(raw).pipe(
@@ -1054,6 +1073,9 @@ const makeGitHubCli = Effect.sync(() => {
           env: { ...process.env, ...input.env, GH_HOST: GITHUB_HOST },
           ...(input.maxBufferBytes !== undefined ? { maxBufferBytes: input.maxBufferBytes } : {}),
           ...(input.outputMode !== undefined ? { outputMode: input.outputMode } : {}),
+          ...(input.allowNonZeroExit !== undefined
+            ? { allowNonZeroExit: input.allowNonZeroExit }
+            : {}),
           ...(input.stdin !== undefined ? { stdin: input.stdin } : {}),
           ...(input.onStdoutChunk !== undefined ? { onStdoutChunk: input.onStdoutChunk } : {}),
           ...(input.onStderrChunk !== undefined ? { onStderrChunk: input.onStderrChunk } : {}),
@@ -1322,6 +1344,147 @@ const makeGitHubCli = Effect.sync(() => {
     }).pipe(
       Effect.flatMap((result) => decodePullRequestListJson(result.stdout, options.operation)),
     );
+
+  const decodeAsyncMergeResult = (result: Awaited<ReturnType<typeof runProcess>>) => {
+    if (result.timedOut || !result.stdout.trim()) {
+      return Effect.fail(
+        new GitHubCliError({
+          operation: "runPullRequestAction",
+          detail: result.timedOut
+            ? "GitHub's asynchronous merge request timed out."
+            : result.stderr.trim() || "GitHub returned an empty asynchronous merge response.",
+          reason: "other",
+        }),
+      );
+    }
+    return decodeGitHubJson(
+      result.stdout.trim(),
+      RawAsyncMergeResultSchema,
+      "runPullRequestAction",
+      "GitHub returned an invalid asynchronous merge response.",
+    );
+  };
+
+  const runAsyncPullRequestMerge = (input: {
+    readonly cwd: string;
+    readonly repository: string;
+    readonly number: number;
+    readonly mergeMethod: "merge" | "squash" | "rebase";
+  }): Effect.Effect<"merged" | "enqueued" | "unavailable", GitHubCliError> =>
+    Effect.gen(function* () {
+      const endpoint = `repos/${input.repository}/pulls/${input.number}/merge-async`;
+      const submission = yield* execute({
+        cwd: input.cwd,
+        args: [
+          "api",
+          "--hostname",
+          GITHUB_HOST,
+          "--method",
+          "PUT",
+          "-H",
+          `X-GitHub-Api-Version: ${PULL_REQUEST_ASYNC_MERGE_API_VERSION}`,
+          endpoint,
+          "--input",
+          "-",
+        ],
+        stdin: JSON.stringify({ merge_method: input.mergeMethod, merge_action: "default" }),
+        allowNonZeroExit: true,
+      });
+      if (
+        submission.code !== 0 &&
+        /\bHTTP\s+404\b/i.test(`${submission.stdout}\n${submission.stderr}`)
+      ) {
+        return "unavailable";
+      }
+
+      let result = yield* decodeAsyncMergeResult(submission);
+      for (let pollCount = 0; pollCount <= PULL_REQUEST_ASYNC_MERGE_POLL_LIMIT; pollCount += 1) {
+        switch (result.status) {
+          case "merged":
+            return "merged";
+          case "enqueued":
+            return "enqueued";
+          case "failed":
+            return yield* Effect.fail(
+              new GitHubCliError({
+                operation: "runPullRequestAction",
+                detail:
+                  result.details.message?.trim() || "GitHub could not merge the pull request.",
+                reason: "other",
+              }),
+            );
+          case "pending": {
+            const uuid = result.details.uuid?.trim();
+            if (
+              !uuid ||
+              result.details.merge_method !== input.mergeMethod ||
+              result.details.merge_action !== "default"
+            ) {
+              return yield* Effect.fail(
+                new GitHubCliError({
+                  operation: "runPullRequestAction",
+                  detail:
+                    "GitHub returned a pending merge request with missing or different confirmed options.",
+                  reason: "other",
+                }),
+              );
+            }
+            if (pollCount === PULL_REQUEST_ASYNC_MERGE_POLL_LIMIT) break;
+            yield* Effect.sleep("1 second");
+            result = yield* execute({
+              cwd: input.cwd,
+              args: [
+                "api",
+                "--hostname",
+                GITHUB_HOST,
+                "-H",
+                `X-GitHub-Api-Version: ${PULL_REQUEST_ASYNC_MERGE_API_VERSION}`,
+                `${endpoint}/${uuid}`,
+              ],
+            }).pipe(Effect.flatMap(decodeAsyncMergeResult));
+            break;
+          }
+        }
+      }
+
+      return yield* Effect.fail(
+        new GitHubCliError({
+          operation: "runPullRequestAction",
+          detail: "GitHub's asynchronous merge did not finish within five minutes.",
+          reason: "other",
+        }),
+      );
+    });
+
+  const runLegacyStackMerge = (input: {
+    readonly cwd: string;
+    readonly repository: string;
+    readonly expectation: Extract<PullRequestMergeExpectation, { kind: "stack" }>;
+    readonly mergeMethod: "merge" | "squash" | "rebase";
+  }): Effect.Effect<"merged", GitHubCliError> =>
+    Effect.gen(function* () {
+      const repoArgs = ["--repo", repositorySelector(input.repository)];
+      for (const number of input.expectation.targetPullRequestNumbers) {
+        yield* execute({
+          cwd: input.cwd,
+          args: ["pr", "merge", String(number), ...repoArgs, `--${input.mergeMethod}`],
+        });
+        const verification = yield* execute({
+          cwd: input.cwd,
+          args: ["pr", "view", String(number), ...repoArgs, "--json", "state", "--jq", ".state"],
+        });
+        if (verification.stdout.trim().toUpperCase() !== "MERGED") {
+          return yield* Effect.fail(
+            new GitHubCliError({
+              operation: "runPullRequestAction",
+              detail: `GitHub did not confirm that pull request #${number} was merged.`,
+              reason: "other",
+            }),
+          );
+        }
+      }
+      return "merged" as const;
+    });
 
   const service = {
     execute,
@@ -1640,25 +1803,72 @@ const makeGitHubCli = Effect.sync(() => {
       ),
     runPullRequestAction: (input) =>
       validateRepository(input.repository, "runPullRequestAction").pipe(
-        Effect.flatMap((repository) => {
-          const reference = String(input.number);
-          const repoArgs = ["--repo", repositorySelector(repository)];
-          const args = (() => {
-            switch (input.action) {
-              case "merge":
-                return ["pr", "merge", reference, ...repoArgs, `--${input.mergeMethod ?? "merge"}`];
-              case "ready":
-                return ["pr", "ready", reference, ...repoArgs];
-              case "draft":
-                return ["pr", "ready", reference, ...repoArgs, "--undo"];
-              case "close":
-                return ["pr", "close", reference, ...repoArgs];
-              case "reopen":
-                return ["pr", "reopen", reference, ...repoArgs];
+        Effect.flatMap(
+          (
+            repository,
+          ): Effect.Effect<
+            { readonly mergeOutcome: "merged" | "enqueued" | null },
+            GitHubCliError
+          > => {
+            const reference = String(input.number);
+            const repoArgs = ["--repo", repositorySelector(repository)];
+            if (input.action === "merge") {
+              const expectation = input.mergeExpectation;
+              if (!expectation) {
+                return Effect.fail(
+                  new GitHubCliError({
+                    operation: "runPullRequestAction",
+                    detail: "A confirmed pull request merge expectation is required.",
+                    reason: "other",
+                  }),
+                );
+              }
+              const mergeMethod = input.mergeMethod ?? "merge";
+              if (expectation.kind === "standalone") {
+                return execute({
+                  cwd: input.cwd,
+                  args: ["pr", "merge", reference, ...repoArgs, `--${mergeMethod}`],
+                }).pipe(Effect.as({ mergeOutcome: "merged" as const }));
+              }
+              return runAsyncPullRequestMerge({
+                cwd: input.cwd,
+                repository,
+                number: input.number,
+                mergeMethod,
+              }).pipe(
+                Effect.flatMap((outcome) =>
+                  outcome === "unavailable"
+                    ? runLegacyStackMerge({
+                        cwd: input.cwd,
+                        repository,
+                        expectation,
+                        mergeMethod,
+                      })
+                    : Effect.succeed(outcome),
+                ),
+                Effect.map((mergeOutcome) => ({ mergeOutcome })),
+              );
             }
-          })();
-          return execute({ cwd: input.cwd, args }).pipe(Effect.asVoid);
-        }),
+            let args: string[];
+            switch (input.action) {
+              case "ready":
+                args = ["pr", "ready", reference, ...repoArgs];
+                break;
+              case "draft":
+                args = ["pr", "ready", reference, ...repoArgs, "--undo"];
+                break;
+              case "close":
+                args = ["pr", "close", reference, ...repoArgs];
+                break;
+              case "reopen":
+                args = ["pr", "reopen", reference, ...repoArgs];
+                break;
+            }
+            return execute({ cwd: input.cwd, args }).pipe(
+              Effect.as({ mergeOutcome: null } as const),
+            );
+          },
+        ),
       ),
     commentOnPullRequest: (input) =>
       validateRepository(input.repository, "commentOnPullRequest").pipe(

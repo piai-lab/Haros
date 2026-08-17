@@ -50,6 +50,10 @@ import {
 import { SessionCredentialService } from "./auth/Services/SessionCredentialService";
 import { CheckpointDiffQuery } from "./checkpointing/Services/CheckpointDiffQuery";
 import { resolveThreadWorkspaceCwd } from "./checkpointing/Utils";
+import {
+  PULL_REQUEST_MERGE_EXPECTATION_CONFLICT_CODE,
+  PullRequestMergeExpectationConflictError,
+} from "./pullRequests/pullRequestOperations";
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
@@ -497,6 +501,14 @@ const makeWsRpcHandlersLayer = () =>
           return new PullRequestsUnavailableError({
             reason: cause.reason === "not-installed" ? "gh-not-installed" : "gh-not-authenticated",
             message: cause.detail,
+          });
+        }
+        if (cause instanceof PullRequestMergeExpectationConflictError) {
+          return new WsRpcError({
+            message: cause.message,
+            code: PULL_REQUEST_MERGE_EXPECTATION_CONFLICT_CODE,
+            retryable: false,
+            cause,
           });
         }
         return toWsRpcError(cause, fallbackMessage);

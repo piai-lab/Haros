@@ -11,6 +11,7 @@
 import type {
   PullRequestDetail,
   PullRequestDetailInput,
+  PullRequestMergeExpectation,
   PullRequestState,
 } from "@omnimind/contracts";
 
@@ -50,6 +51,45 @@ export function pullRequestStackNavigation(
     previousNumber: stack.entries[stack.position - 2]?.number ?? null,
     nextNumber: stack.entries[stack.position]?.number ?? null,
   };
+}
+
+export function pullRequestMergeExpectation(
+  detail: Pick<PullRequestDetail, "number" | "baseBranch" | "stack" | "stackMetadataIncomplete">,
+): PullRequestMergeExpectation | null {
+  if (detail.stackMetadataIncomplete) return null;
+  const stack = detail.stack;
+  if (!stack) return { kind: "standalone", baseBranch: detail.baseBranch };
+  if (!pullRequestStackNavigation(detail)) return null;
+  const targetPullRequestNumbers = stack.entries
+    .slice(0, stack.position)
+    .map((entry) => entry.number);
+  if (targetPullRequestNumbers.at(-1) !== detail.number) return null;
+  return {
+    kind: "stack",
+    stackNumber: stack.number,
+    stackSize: stack.size,
+    selectedPosition: stack.position,
+    baseBranch: stack.baseBranch,
+    targetPullRequestNumbers,
+  };
+}
+
+export function pullRequestMergeExpectationsEqual(
+  left: PullRequestMergeExpectation | null,
+  right: PullRequestMergeExpectation | null,
+): boolean {
+  if (left === null || right === null) return left === right;
+  if (left.kind !== right.kind || left.baseBranch !== right.baseBranch) return false;
+  if (left.kind === "standalone" || right.kind === "standalone") return true;
+  return (
+    left.stackNumber === right.stackNumber &&
+    left.stackSize === right.stackSize &&
+    left.selectedPosition === right.selectedPosition &&
+    left.targetPullRequestNumbers.length === right.targetPullRequestNumbers.length &&
+    left.targetPullRequestNumbers.every(
+      (number, index) => number === right.targetPullRequestNumbers[index],
+    )
+  );
 }
 
 /** Canonical identity for one detail surface — used as the React key so switching the

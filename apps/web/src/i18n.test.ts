@@ -97,6 +97,27 @@ describe("message catalogs", () => {
     expect(translate("zh-CN", "pullRequest.nextInStack")).toBe("堆叠中的下一个拉取请求");
   });
 
+  it("localizes exact merge expectations and stale-conflict recovery", () => {
+    expect(
+      translate("en", "pullRequest.confirmStackMergeDescription", {
+        numbers: "#41, #42",
+        base: "main",
+        method: "squash",
+      }),
+    ).toBe("Merge #41, #42 into main using squash. GitHub will process this exact stack range.");
+    expect(
+      translate("zh-CN", "pullRequest.confirmStackMergeDescription", {
+        numbers: "#41、#42",
+        base: "main",
+        method: "squash",
+      }),
+    ).toBe("将使用 squash 把 #41、#42 合并到 main。GitHub 将处理这一精确堆叠范围。");
+    expect(translate("en", "pullRequest.mergeExpectationConflict")).toContain(
+      "Refresh and confirm",
+    );
+    expect(translate("zh-CN", "pullRequest.mergeConfirmationStale")).toContain("重新确认");
+  });
+
   it("keeps custom model discovery actionable and honest in both languages", () => {
     expect(translate("en", "settings.customApiDiscoverModels")).toBe("Get from service");
     expect(translate("zh-CN", "settings.customApiDiscoverModels")).toBe("从供应商获取");

@@ -17,6 +17,7 @@ import type {
   PullRequestInvolvement,
   PullRequestLabel,
   PullRequestMergeCapabilities,
+  PullRequestMergeExpectation,
   PullRequestMergeMethod,
   PullRequestStack,
   PullRequestStackSummary,
@@ -135,6 +136,7 @@ export interface GitHubCliShape {
     readonly timeoutMs?: number;
     readonly maxBufferBytes?: number;
     readonly outputMode?: "error" | "truncate";
+    readonly allowNonZeroExit?: boolean;
     /** Piped to the child's stdin — for payloads that must never appear in argv. */
     readonly stdin?: string;
     readonly env?: NodeJS.ProcessEnv;
@@ -207,7 +209,8 @@ export interface GitHubCliShape {
     readonly number: number;
     readonly action: "merge" | "ready" | "draft" | "close" | "reopen";
     readonly mergeMethod?: PullRequestMergeMethod;
-  }) => Effect.Effect<void, GitHubCliError>;
+    readonly mergeExpectation?: PullRequestMergeExpectation;
+  }) => Effect.Effect<{ readonly mergeOutcome: "merged" | "enqueued" | null }, GitHubCliError>;
 
   /**
    * Post an issue comment on a pull request as the authenticated gh user.

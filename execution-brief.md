@@ -361,6 +361,16 @@ B1 的 pre-commit source-candidate 证据为：contracts、GitHub GraphQL、Pull
 
 B1 Judge HOLD focus follow-up 只收窄详情导航的焦点交接条件：初次详情挂载或鼠标从列表打开、没有明确 `preferredFocus` 时，导航组件不设置任何 `autoFocus` target，外部/PR 行触发器焦点保持不变；只有 previous/next 选择造成的详情 remount 才优先恢复同方向控制，若该方向到达 stack 边界则退到另一仍可用控制。真实 Chromium stack focused `1 file / 3 tests`、与既有 PR 行合跑 `2 files / 16 tests`，同时覆盖初次挂载零抢焦点、双向同方向恢复、双侧边界 fallback 与既有窄视口 geometry；monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path lint `0 warnings / 0 errors`、format 与 diff check通过。不改变 server、contracts、route、query/data 或其他 Git owner。
 
+Phase-9c Git B1 及其 focus follow-up 已在 exact pushed `968b54126f311bf820ba1561ddc69d1ad7b7313b` 进入 `main`；上述 stacked pull request 只读投影历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **Phase-9c Git stacked pull request merge safety B2**：merge action 必须携带由 fresh complete详情确认的 standalone expectation，或 stack number、size、selected position、ultimate base 与本次实际 merge 范围内 exact ordered PR numbers。既有详情 Dialog 明示 merge method、base 与 exact targets；stack metadata incomplete、详情刷新或 stack expectation变化时确认键保持可聚焦并以 `aria-disabled` 与英中原因 fail closed，必须关闭后重新确认。
+
+server 在同一 mutation owner 内串行化 merge，并在每次 mutation 前 fresh读取详情与 authoritative GitHub stack projection；任何读取失败、null/stack形态、number、size、position、base、member/order/selected target不一致均返回 typed conflict、零 mutation。已确认 standalone 继续单次 `gh pr merge`；stack优先使用 GitHub documented asynchronous merge endpoint，JSON只经 stdin 传递。只有 endpoint明确 HTTP 404 unavailable 时才进入既有逐 target fallback，且每一项都必须 fresh确认 `MERGED`，任何 unknown/partial result均失败且不得投影 merged success。成功或失败后的 detail cache按 exact target set收敛，不扩张到 stack范围外成员。
+
+B2 不新增第二 store、dialog、route、local topology推断或产品数据库，不做真实 GitHub write probe、package/install/live/README；它只允许在现有 contracts、GitHubCli、PullRequestService、ws RPC、TanStack mutation与详情 presentation owner内最小扩展。source gate必须覆盖 expectation decode、fresh conflict矩阵、double-confirm race、async stdin、404/non-404、legacy partial unknown、all-target invalidation、Dialog stale/incomplete keyboard语义、英中 actual values、typecheck、lint、format、document contract与diff check。
+
+B2 的 pre-commit source-candidate 证据为：contracts expectation decode `1 file / 8 tests`，server GitHub async/legacy、fresh preflight、conflict与mutation serial owner `3 files / 61 tests`，web expectation/cache/英中 actual unit `4 files / 46 tests`，真实 Chromium stale/incomplete/cached-error confirmation `1 file / 3 tests`，monorepo typecheck `6/6 packages`与document contract `21/21`通过；root lint为`0 errors / 478 warnings`，changed-path lint为`0 errors / 3 warnings`且三条均是未触碰的 i18n test `sort()`旧行。GitHub async endpoint与 response status/UUID/poll schema只以 2026-03-10 official API docs和 author-equivalent fixtures证明，本轮明确不执行真实 GitHub写入；changed-path format与diff check通过，package/install/live/README均未运行，因此只主张 source-only candidate。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -373,4 +383,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9c Git stacked pull request read-only B1 as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9c Git stacked pull request merge safety B2 as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

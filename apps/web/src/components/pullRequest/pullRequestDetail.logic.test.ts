@@ -14,6 +14,8 @@ import {
   pullRequestDetailInputFromPane,
   pullRequestDetailInputKey,
   pullRequestPaneTabLabel,
+  pullRequestMergeExpectation,
+  pullRequestMergeExpectationsEqual,
   pullRequestStackNavigation,
   stripHtmlComments,
 } from "./pullRequestDetail.logic";
@@ -86,6 +88,7 @@ describe("pullRequestStackNavigation", () => {
       number: 8,
       size: 3,
       position: 2,
+      baseBranch: "main",
       entries: stackEntries,
     },
   };
@@ -117,6 +120,54 @@ describe("pullRequestStackNavigation", () => {
       }),
     ).toBeNull();
     expect(pullRequestStackNavigation({ ...detail, number: 99 })).toBeNull();
+  });
+});
+
+describe("pullRequestMergeExpectation", () => {
+  const standalone = {
+    number: 42,
+    baseBranch: "main",
+    stack: null,
+    stackMetadataIncomplete: false,
+  } as const;
+
+  it("distinguishes confirmed standalone detail from incomplete stack metadata", () => {
+    expect(pullRequestMergeExpectation(standalone)).toEqual({
+      kind: "standalone",
+      baseBranch: "main",
+    });
+    expect(
+      pullRequestMergeExpectation({ ...standalone, stackMetadataIncomplete: true }),
+    ).toBeNull();
+  });
+
+  it("projects only the exact bottom-to-selected stack targets", () => {
+    const expectation = pullRequestMergeExpectation({
+      ...standalone,
+      stack: {
+        number: 8,
+        size: 3,
+        position: 2,
+        baseBranch: "main",
+        entries: stackEntries,
+      },
+    });
+    expect(expectation).toEqual({
+      kind: "stack",
+      stackNumber: 8,
+      stackSize: 3,
+      selectedPosition: 2,
+      baseBranch: "main",
+      targetPullRequestNumbers: [41, 42],
+    });
+    if (!expectation || expectation.kind !== "stack") throw new Error("Expected stack merge");
+    expect(pullRequestMergeExpectationsEqual(expectation, expectation)).toBe(true);
+    expect(
+      pullRequestMergeExpectationsEqual(expectation, {
+        ...expectation,
+        targetPullRequestNumbers: [42, 41],
+      }),
+    ).toBe(false);
   });
 });
 

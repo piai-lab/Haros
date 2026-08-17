@@ -334,7 +334,11 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
         ghCalls.push(
           `pr action ${input.action} ${input.number} --repo ${input.repository}${input.mergeMethod ? ` --${input.mergeMethod}` : ""}`,
         );
-        return scenario.failWith ? Effect.fail(scenario.failWith) : Effect.void;
+        return scenario.failWith
+          ? Effect.fail(scenario.failWith)
+          : Effect.succeed({
+              mergeOutcome: input.action === "merge" ? ("merged" as const) : null,
+            });
       },
       getPullRequestListItem: (input) => {
         ghCalls.push(`pr view ${input.number} --repo ${input.repository} (list-item)`);

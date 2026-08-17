@@ -127,8 +127,11 @@ export const makePullRequestService = (
     // bounded across requests and cache keys, while mutations bypass this queue so user actions do
     // not wait behind background list warming.
     const githubReadSlots = yield* Semaphore.make(6);
+    const mergeMutationSlot = yield* Semaphore.make(1);
     const withGitHubRead = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
       githubReadSlots.withPermits(1)(effect);
+    const withMergeMutation = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
+      mergeMutationSlot.withPermits(1)(effect);
     const repositoryCache = yield* makeKeyedSingleFlightCache<GitHubRepositoryInventory, unknown>({
       maxEntries: GITHUB_REPOSITORY_CACHE_MAX_ENTRIES,
       ttlMs: 30_000,
@@ -156,7 +159,7 @@ export const makePullRequestService = (
 
     const pullRequestMutationCacheFinalizer = (
       repository: string,
-      number: number,
+      numbers: ReadonlyArray<number>,
       options: { readonly invalidateReviewMatches: boolean },
     ) =>
       Effect.uninterruptible(
@@ -172,9 +175,11 @@ export const makePullRequestService = (
                   ),
                 ]
               : []),
-            itemCache.invalidate(repositoryPullRequestIdentityKey({ repository, number })),
+            ...numbers.map((number) =>
+              itemCache.invalidate(repositoryPullRequestIdentityKey({ repository, number })),
+            ),
           ],
-          { concurrency: 3, discard: true },
+          { concurrency: 6, discard: true },
         ),
       );
 
@@ -567,6 +572,7 @@ export const makePullRequestService = (
       validateProjectRepository: validateProjectPullRequestRepository,
       loadMergeCapabilities,
       withGitHubRead,
+      withMergeMutation,
       finalizeMutationCaches: pullRequestMutationCacheFinalizer,
     });
 

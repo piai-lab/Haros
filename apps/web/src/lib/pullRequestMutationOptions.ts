@@ -128,6 +128,18 @@ function pullRequestActionTargetState(
   }
 }
 
+function pullRequestActionDetailInputs(input: PullRequestActionInput) {
+  const numbers =
+    input.action === "merge" && input.expectation.kind === "stack"
+      ? input.expectation.targetPullRequestNumbers
+      : [input.number];
+  return numbers.map((number) => ({
+    projectId: input.projectId,
+    repository: input.repository,
+    number,
+  }));
+}
+
 export function pullRequestActionMutationOptions(queryClient: QueryClient) {
   return mutationOptions({
     mutationKey: pullRequestMutationKeys.action,
@@ -136,7 +148,10 @@ export function pullRequestActionMutationOptions(queryClient: QueryClient) {
     networkMode: "always",
     mutationFn: (input: PullRequestActionInput) => ensureNativeApi().pullRequests.action(input),
     onMutate: async (input): Promise<ActionMutationContext> => {
-      const patch = optimisticPullRequestActionPatch(input.action) ?? {};
+      const patch =
+        input.action === "merge" && input.expectation.kind === "stack"
+          ? {}
+          : (optimisticPullRequestActionPatch(input.action) ?? {});
       const optimisticListPatch = {
         ...(patch.state !== undefined ? { state: patch.state } : {}),
         ...(patch.isDraft !== undefined ? { isDraft: patch.isDraft } : {}),
@@ -144,13 +159,19 @@ export function pullRequestActionMutationOptions(queryClient: QueryClient) {
       const protection = beginPullRequestActionProtection(queryClient, input, optimisticListPatch);
       try {
         const detailKey = pullRequestQueryKeys.detail(input);
+        const affectedDetailInputs = pullRequestActionDetailInputs(input);
         const affectedScopes = actionListScopes(
           queryClient,
           input,
           pullRequestActionTargetState(input.action),
         );
         await Promise.all([
-          queryClient.cancelQueries({ queryKey: detailKey, exact: true }),
+          ...affectedDetailInputs.map((detailInput) =>
+            queryClient.cancelQueries({
+              queryKey: pullRequestQueryKeys.detail(detailInput),
+              exact: true,
+            }),
+          ),
           cancelPullRequestListScopes(queryClient, affectedScopes),
         ]);
         const previousDetail = queryClient.getQueryData<
@@ -205,20 +226,24 @@ export function pullRequestActionMutationOptions(queryClient: QueryClient) {
         context
           ? invalidatePullRequestListScopes(queryClient, context.affectedScopes)
           : Promise.resolve(),
-        queryClient.invalidateQueries({
-          queryKey: pullRequestQueryKeys.detail(input),
-          exact: true,
-        }),
+        ...pullRequestActionDetailInputs(input).map((detailInput) =>
+          queryClient.invalidateQueries({
+            queryKey: pullRequestQueryKeys.detail(detailInput),
+            exact: true,
+          }),
+        ),
       ]);
       refreshPullRequestReviewRequestCounts(queryClient);
     },
     onSuccess: async (result, input, context) => {
       await Promise.all([
         invalidatePullRequestListScopes(queryClient, context.affectedScopes),
-        queryClient.invalidateQueries({
-          queryKey: pullRequestQueryKeys.detail(input),
-          exact: true,
-        }),
+        ...pullRequestActionDetailInputs(input).map((detailInput) =>
+          queryClient.invalidateQueries({
+            queryKey: pullRequestQueryKeys.detail(detailInput),
+            exact: true,
+          }),
+        ),
         queryClient.invalidateQueries({
           queryKey: gitQueryKeys.pullRequest(result.workspaceRoot),
         }),

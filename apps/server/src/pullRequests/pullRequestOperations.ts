@@ -1,4 +1,9 @@
-import type { OrchestrationProject, PullRequestDetail } from "@omnimind/contracts";
+import type {
+  OrchestrationProject,
+  PullRequestDetail,
+  PullRequestMergeExpectation,
+  PullRequestStack,
+} from "@omnimind/contracts";
 import { githubAvatarUrlForLogin } from "@omnimind/shared/githubAvatar";
 import { Effect } from "effect";
 
@@ -11,6 +16,62 @@ type PullRequestOperations = Pick<
   PullRequestServiceShape,
   "detail" | "diff" | "action" | "comment" | "setPinned"
 >;
+
+export const PULL_REQUEST_MERGE_EXPECTATION_CONFLICT_CODE =
+  "PULL_REQUEST_MERGE_EXPECTATION_CONFLICT";
+
+export class PullRequestMergeExpectationConflictError extends Error {
+  readonly code = PULL_REQUEST_MERGE_EXPECTATION_CONFLICT_CODE;
+
+  constructor() {
+    super("Pull request merge details changed. Refresh and confirm the merge again.");
+    this.name = "PullRequestMergeExpectationConflictError";
+  }
+}
+
+function assertMergeExpectation(input: {
+  readonly number: number;
+  readonly expectation: PullRequestMergeExpectation;
+  readonly detail: {
+    readonly number: number;
+    readonly state: string;
+    readonly isDraft: boolean;
+    readonly baseBranch: string;
+  };
+  readonly stack: PullRequestStack | null;
+}): void {
+  const conflict = (): never => {
+    throw new PullRequestMergeExpectationConflictError();
+  };
+  if (
+    input.detail.number !== input.number ||
+    input.detail.state !== "open" ||
+    input.detail.isDraft
+  ) {
+    conflict();
+  }
+  if (input.expectation.kind === "standalone") {
+    if (input.stack !== null || input.detail.baseBranch !== input.expectation.baseBranch)
+      conflict();
+    return;
+  }
+  const stack = input.stack;
+  if (!stack) return conflict();
+  const expected = input.expectation;
+  const targetNumbers = stack.entries.slice(0, stack.position).map((entry) => entry.number);
+  if (
+    stack.number !== expected.stackNumber ||
+    stack.size !== expected.stackSize ||
+    stack.position !== expected.selectedPosition ||
+    stack.baseBranch !== expected.baseBranch ||
+    stack.entries.length !== stack.size ||
+    stack.entries[stack.position - 1]?.number !== input.number ||
+    targetNumbers.length !== expected.targetPullRequestNumbers.length ||
+    targetNumbers.some((number, index) => number !== expected.targetPullRequestNumbers[index])
+  ) {
+    conflict();
+  }
+}
 
 export function makePullRequestOperations(dependencies: {
   github: GitHubCliShape;
@@ -28,9 +89,10 @@ export function makePullRequestOperations(dependencies: {
     repository: string,
   ) => Effect.Effect<PullRequestDetail["mergeCapabilities"], unknown>;
   withGitHubRead: <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
+  withMergeMutation: <A, E, R>(effect: Effect.Effect<A, E, R>) => Effect.Effect<A, E, R>;
   finalizeMutationCaches: (
     repository: string,
-    number: number,
+    numbers: ReadonlyArray<number>,
     options: { readonly invalidateReviewMatches: boolean },
   ) => Effect.Effect<void, never>;
 }): PullRequestOperations {
@@ -138,16 +200,74 @@ export function makePullRequestOperations(dependencies: {
       const project = yield* dependencies.findProject(input.projectId);
       const repository = yield* dependencies.validateProjectRepository(project, input.repository);
       if (input.action === "merge") {
-        const mergeMethod = input.mergeMethod ?? "merge";
-        const capabilities = yield* dependencies.loadMergeCapabilities(
-          project.workspaceRoot,
-          repository,
-        );
-        if (!isPullRequestMergeMethodAllowed(capabilities, mergeMethod)) {
-          return yield* Effect.fail(
-            new Error(`The repository does not allow the ${mergeMethod} merge method.`),
+        const targetNumbers =
+          input.expectation.kind === "stack"
+            ? input.expectation.targetPullRequestNumbers
+            : [input.number];
+        const mergeOutcome = yield* dependencies
+          .withMergeMutation(
+            Effect.gen(function* () {
+              const fresh = yield* Effect.all(
+                [
+                  dependencies.github.getPullRequestDetail({
+                    cwd: project.workspaceRoot,
+                    repository,
+                    number: input.number,
+                  }),
+                  dependencies.github.getPullRequestStack({
+                    cwd: project.workspaceRoot,
+                    repository,
+                    number: input.number,
+                  }),
+                ],
+                { concurrency: 2 },
+              ).pipe(
+                Effect.catch(() => Effect.fail(new PullRequestMergeExpectationConflictError())),
+              );
+              yield* Effect.try({
+                try: () =>
+                  assertMergeExpectation({
+                    number: input.number,
+                    expectation: input.expectation,
+                    detail: fresh[0],
+                    stack: fresh[1],
+                  }),
+                catch: () => new PullRequestMergeExpectationConflictError(),
+              });
+              const mergeMethod = input.mergeMethod ?? "merge";
+              const capabilities = yield* dependencies.loadMergeCapabilities(
+                project.workspaceRoot,
+                repository,
+              );
+              if (!isPullRequestMergeMethodAllowed(capabilities, mergeMethod)) {
+                return yield* Effect.fail(
+                  new Error(`The repository does not allow the ${mergeMethod} merge method.`),
+                );
+              }
+              return yield* dependencies.github.runPullRequestAction({
+                cwd: project.workspaceRoot,
+                repository,
+                number: input.number,
+                action: "merge",
+                ...(input.mergeMethod ? { mergeMethod: input.mergeMethod } : {}),
+                mergeExpectation: input.expectation,
+              });
+            }),
+          )
+          .pipe(
+            Effect.ensuring(
+              dependencies.finalizeMutationCaches(repository, targetNumbers, {
+                invalidateReviewMatches: true,
+              }),
+            ),
           );
-        }
+        return {
+          projectId: project.id,
+          repository,
+          number: input.number,
+          workspaceRoot: project.workspaceRoot,
+          mergeOutcome: mergeOutcome.mergeOutcome,
+        };
       }
       yield* dependencies.github
         .runPullRequestAction({
@@ -155,11 +275,10 @@ export function makePullRequestOperations(dependencies: {
           repository,
           number: input.number,
           action: input.action,
-          ...(input.mergeMethod ? { mergeMethod: input.mergeMethod } : {}),
         })
         .pipe(
           Effect.ensuring(
-            dependencies.finalizeMutationCaches(repository, input.number, {
+            dependencies.finalizeMutationCaches(repository, [input.number], {
               invalidateReviewMatches: true,
             }),
           ),
@@ -169,6 +288,7 @@ export function makePullRequestOperations(dependencies: {
         repository,
         number: input.number,
         workspaceRoot: project.workspaceRoot,
+        mergeOutcome: null,
       };
     });
 
@@ -185,7 +305,7 @@ export function makePullRequestOperations(dependencies: {
         })
         .pipe(
           Effect.ensuring(
-            dependencies.finalizeMutationCaches(repository, input.number, {
+            dependencies.finalizeMutationCaches(repository, [input.number], {
               invalidateReviewMatches: false,
             }),
           ),

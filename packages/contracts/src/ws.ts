@@ -161,7 +161,8 @@ import {
   OmniMindEcosystemResourceToggleInput,
 } from "./omnimindEcosystem";
 import {
-  PullRequestActionInput,
+  PullRequestMergeActionInput,
+  PullRequestNonMergeActionInput,
   PullRequestCommentInput,
   PullRequestDetailInput,
   PullRequestReviewRequestCountInput,
@@ -474,7 +475,10 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.pullRequestsReviewRequestCount, PullRequestReviewRequestCountInput),
   tagRequestBody(WS_METHODS.pullRequestsDetail, PullRequestDetailInput),
   tagRequestBody(WS_METHODS.pullRequestsDiff, PullRequestDetailInput),
-  tagRequestBody(WS_METHODS.pullRequestsAction, PullRequestActionInput),
+  Schema.Union([
+    tagRequestBody(WS_METHODS.pullRequestsAction, PullRequestMergeActionInput),
+    tagRequestBody(WS_METHODS.pullRequestsAction, PullRequestNonMergeActionInput),
+  ]),
   tagRequestBody(WS_METHODS.pullRequestsComment, PullRequestCommentInput),
   tagRequestBody(WS_METHODS.pullRequestsSetPinned, PullRequestSetPinnedInput),
 

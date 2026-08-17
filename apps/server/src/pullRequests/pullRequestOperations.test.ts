@@ -1,12 +1,20 @@
-import { ProjectId, type OrchestrationProject, type PullRequestStack } from "@omnimind/contracts";
-import { Deferred, Effect, Fiber } from "effect";
-import { describe, expect, it } from "vitest";
+import {
+  ProjectId,
+  type OrchestrationProject,
+  type PullRequestMergeExpectation,
+  type PullRequestStack,
+} from "@omnimind/contracts";
+import { Deferred, Effect, Fiber, Semaphore } from "effect";
+import { describe, expect, it, vi } from "vitest";
 
 import type { GitHubPullRequestDetailData } from "../git/Services/GitHubCli";
 import { GitHubCliError } from "../git/Errors";
 import { createGitHubCliWithFakeGh } from "../git/testing/fakeGitHubCli";
 import type { ProjectPullRequestPinsShape } from "../persistence/Services/ProjectPullRequestPins";
-import { makePullRequestOperations } from "./pullRequestOperations";
+import {
+  PullRequestMergeExpectationConflictError,
+  makePullRequestOperations,
+} from "./pullRequestOperations";
 
 const now = "2026-07-15T00:00:00.000Z";
 
@@ -93,6 +101,7 @@ describe("makePullRequestOperations", () => {
                 deleteBranchOnMerge: false,
               }),
             withGitHubRead: (effect) => effect,
+            withMergeMutation: (effect) => effect,
             finalizeMutationCaches: () => Effect.void,
           });
 
@@ -124,6 +133,7 @@ describe("makePullRequestOperations", () => {
       number: 8,
       size: 2,
       position: 2,
+      baseBranch: "main",
       entries: [
         { position: 1, number: 41 },
         { position: 2, number: 42 },
@@ -154,6 +164,7 @@ describe("makePullRequestOperations", () => {
         loadMergeCapabilities: () =>
           Effect.succeed({ merge: true, squash: true, rebase: true, deleteBranchOnMerge: false }),
         withGitHubRead: (effect) => effect,
+        withMergeMutation: (effect) => effect,
         finalizeMutationCaches: () => Effect.void,
       });
     };
@@ -178,5 +189,193 @@ describe("makePullRequestOperations", () => {
     expect(incomplete.number).toBe(42);
     expect(incomplete.stack).toBeNull();
     expect(incomplete.stackMetadataIncomplete).toBe(true);
+  });
+
+  it("requires a fresh exact standalone or stack expectation before mutation", async () => {
+    const stack: PullRequestStack = {
+      number: 8,
+      size: 3,
+      position: 2,
+      baseBranch: "main",
+      entries: [
+        { position: 1, number: 41 },
+        { position: 2, number: 42 },
+        { position: 3, number: 43 },
+      ],
+    };
+    const expectation: PullRequestMergeExpectation = {
+      kind: "stack",
+      stackNumber: 8,
+      stackSize: 3,
+      selectedPosition: 2,
+      baseBranch: "main",
+      targetPullRequestNumbers: [41, 42],
+    };
+    const runAction = vi.fn(() => Effect.succeed({ mergeOutcome: "merged" as const }));
+    const finalized: number[][] = [];
+    const makeOperations = (freshStack: PullRequestStack | null) => {
+      const base = createGitHubCliWithFakeGh({ pullRequestDetail: detail }).service;
+      return makePullRequestOperations({
+        github: {
+          ...base,
+          getPullRequestStack: () => Effect.succeed(freshStack),
+          runPullRequestAction: runAction,
+        },
+        pins: { listByProjectIds: () => Effect.succeed([]), setPinned: () => Effect.void },
+        findProject: () => Effect.succeed(project),
+        validateRepository: (repository) => Effect.succeed(repository),
+        validateProjectRepository: (_project, repository) => Effect.succeed(repository),
+        loadMergeCapabilities: () =>
+          Effect.succeed({ merge: true, squash: true, rebase: true, deleteBranchOnMerge: false }),
+        withGitHubRead: (effect) => effect,
+        withMergeMutation: (effect) => effect,
+        finalizeMutationCaches: (_repository, numbers) =>
+          Effect.sync(() => finalized.push([...numbers])),
+      });
+    };
+
+    const result = await Effect.runPromise(
+      makeOperations(stack).action({
+        projectId: project.id,
+        repository: "acme/widgets",
+        number: 42,
+        action: "merge",
+        expectation,
+      }),
+    );
+    expect(result.mergeOutcome).toBe("merged");
+    expect(finalized).toEqual([[41, 42]]);
+    expect(runAction).toHaveBeenCalledOnce();
+
+    runAction.mockClear();
+    const standalone = await Effect.runPromise(
+      makeOperations(null).action({
+        projectId: project.id,
+        repository: "acme/widgets",
+        number: 42,
+        action: "merge",
+        expectation: { kind: "standalone", baseBranch: "main" },
+      }),
+    );
+    expect(standalone.mergeOutcome).toBe("merged");
+    expect(runAction).toHaveBeenCalledOnce();
+
+    for (const changed of [
+      { ...stack, number: 9 },
+      { ...stack, size: 4 },
+      { ...stack, position: 1 },
+      { ...stack, baseBranch: "release" },
+      { ...stack, entries: [stack.entries[1]!, stack.entries[0]!, stack.entries[2]!] },
+      { ...stack, entries: [stack.entries[0]!, { position: 2, number: 99 }, stack.entries[2]!] },
+    ]) {
+      runAction.mockClear();
+      const error = await Effect.runPromise(
+        makeOperations(changed)
+          .action({
+            projectId: project.id,
+            repository: "acme/widgets",
+            number: 42,
+            action: "merge",
+            expectation,
+          })
+          .pipe(Effect.flip),
+      );
+      expect(error).toBeInstanceOf(PullRequestMergeExpectationConflictError);
+      expect(runAction).not.toHaveBeenCalled();
+    }
+
+    runAction.mockClear();
+    const nullVsStack = await Effect.runPromise(
+      makeOperations(null)
+        .action({
+          projectId: project.id,
+          repository: "acme/widgets",
+          number: 42,
+          action: "merge",
+          expectation,
+        })
+        .pipe(Effect.flip),
+    );
+    expect(nullVsStack).toBeInstanceOf(PullRequestMergeExpectationConflictError);
+    expect(runAction).not.toHaveBeenCalled();
+
+    const base = createGitHubCliWithFakeGh({ pullRequestDetail: detail }).service;
+    const readFailure = makePullRequestOperations({
+      github: {
+        ...base,
+        getPullRequestStack: () =>
+          Effect.fail(
+            new GitHubCliError({ operation: "get pull request stack", detail: "unavailable" }),
+          ),
+        runPullRequestAction: runAction,
+      },
+      pins: { listByProjectIds: () => Effect.succeed([]), setPinned: () => Effect.void },
+      findProject: () => Effect.succeed(project),
+      validateRepository: (repository) => Effect.succeed(repository),
+      validateProjectRepository: (_project, repository) => Effect.succeed(repository),
+      loadMergeCapabilities: () =>
+        Effect.succeed({ merge: true, squash: true, rebase: true, deleteBranchOnMerge: false }),
+      withGitHubRead: (effect) => effect,
+      withMergeMutation: (effect) => effect,
+      finalizeMutationCaches: () => Effect.void,
+    });
+    runAction.mockClear();
+    const readError = await Effect.runPromise(
+      readFailure
+        .action({
+          projectId: project.id,
+          repository: "acme/widgets",
+          number: 42,
+          action: "merge",
+          expectation,
+        })
+        .pipe(Effect.flip),
+    );
+    expect(readError).toBeInstanceOf(PullRequestMergeExpectationConflictError);
+    expect(runAction).not.toHaveBeenCalled();
+  });
+
+  it("serializes double merge confirmation so the second preflight sees fresh state", async () => {
+    const slot = await Effect.runPromise(Semaphore.make(1));
+    let state: GitHubPullRequestDetailData["state"] = "open";
+    let mutations = 0;
+    const base = createGitHubCliWithFakeGh().service;
+    const operations = makePullRequestOperations({
+      github: {
+        ...base,
+        getPullRequestDetail: () => Effect.sync(() => ({ ...detail, state })),
+        getPullRequestStack: () => Effect.succeed(null),
+        runPullRequestAction: () =>
+          Effect.sync(() => {
+            mutations += 1;
+            state = "merged";
+            return { mergeOutcome: "merged" as const };
+          }),
+      },
+      pins: { listByProjectIds: () => Effect.succeed([]), setPinned: () => Effect.void },
+      findProject: () => Effect.succeed(project),
+      validateRepository: (repository) => Effect.succeed(repository),
+      validateProjectRepository: (_project, repository) => Effect.succeed(repository),
+      loadMergeCapabilities: () =>
+        Effect.succeed({ merge: true, squash: true, rebase: true, deleteBranchOnMerge: false }),
+      withGitHubRead: (effect) => effect,
+      withMergeMutation: (effect) => slot.withPermits(1)(effect),
+      finalizeMutationCaches: () => Effect.void,
+    });
+    const input = {
+      projectId: project.id,
+      repository: "acme/widgets",
+      number: 42,
+      action: "merge" as const,
+      expectation: { kind: "standalone" as const, baseBranch: "main" },
+    };
+
+    const results = await Promise.allSettled([
+      Effect.runPromise(operations.action(input)),
+      Effect.runPromise(operations.action(input)),
+    ]);
+    expect(mutations).toBe(1);
+    expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+    expect(results.filter((result) => result.status === "rejected")).toHaveLength(1);
   });
 });

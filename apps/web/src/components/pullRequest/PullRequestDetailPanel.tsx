@@ -8,7 +8,9 @@
 
 import type {
   PullRequestAction,
+  PullRequestActionInput,
   PullRequestDetailInput,
+  PullRequestMergeExpectation,
   PullRequestMergeMethod,
 } from "@omnimind/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -84,9 +86,17 @@ import { PullRequestTimelineTab } from "./PullRequestTimelineTab";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
 import { useI18n } from "~/i18n";
-import { pullRequestStackNavigation } from "./pullRequestDetail.logic";
+import {
+  pullRequestMergeExpectation,
+  pullRequestMergeExpectationsEqual,
+  pullRequestStackNavigation,
+} from "./pullRequestDetail.logic";
 
 type DetailTab = "summary" | "timeline" | "code";
+type MergeConfirmationSnapshot = {
+  readonly expectation: PullRequestMergeExpectation | null;
+  readonly detailUpdatedAt: number;
+};
 
 // Header icon controls follow the chat-header recipe (chrome variant + fixed 28px square +
 // full-strength glyph) so they sit level with the Merge pill and the dock chips.
@@ -135,7 +145,7 @@ export function PullRequestDetailPanel({
   stackNavigationFocus?: StackNavigationDirection;
   pollingEnabled?: boolean;
 }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const initialTab = initialTabProp ?? "summary";
   const pollingEnabled = pollingEnabledProp ?? true;
   const queryClient = useQueryClient();
@@ -149,6 +159,7 @@ export function PullRequestDetailPanel({
     tab: DetailTab;
     mergeMethod: PullRequestMergeMethod;
     confirmAction: "merge" | "close" | null;
+    mergeConfirmation: MergeConfirmationSnapshot | null;
   } | null>(null);
   const isCurrentPanelState = panelState !== null && panelState.key === panelKey;
   const tab = isCurrentPanelState ? panelState.tab : initialTab;
@@ -158,16 +169,24 @@ export function PullRequestDetailPanel({
     tab?: DetailTab;
     mergeMethod?: PullRequestMergeMethod;
     confirmAction?: "merge" | "close" | null;
+    mergeConfirmation?: MergeConfirmationSnapshot | null;
   }) =>
     setPanelState((current) =>
       current !== null && current.key === panelKey
         ? { ...current, ...patch }
-        : { key: panelKey, tab: initialTab, mergeMethod: "merge", confirmAction: null, ...patch },
+        : {
+            key: panelKey,
+            tab: initialTab,
+            mergeMethod: "merge",
+            confirmAction: null,
+            mergeConfirmation: null,
+            ...patch,
+          },
     );
   const setTab = (next: DetailTab) => patchPanelState({ tab: next });
   const setMergeMethod = (next: PullRequestMergeMethod) => patchPanelState({ mergeMethod: next });
-  const setConfirmAction = (next: "merge" | "close" | null) =>
-    patchPanelState({ confirmAction: next });
+  const setConfirmAction = (next: "close" | null) =>
+    patchPanelState({ confirmAction: next, mergeConfirmation: null });
   const [preparingThread, setPreparingThread] = useState<"findings" | "conflicts" | null>(null);
   const actionInFlightRef = useRef(false);
   const detailQuery = useQuery(pullRequestDetailQueryOptions(input, { pollingEnabled }));
@@ -186,18 +205,36 @@ export function PullRequestDetailPanel({
   // Promise chains instead of async/try-finally in the two runners below:
   // React Compiler does not yet support try/finally and would skip this
   // component entirely.
-  const runAction = (action: PullRequestAction, method?: PullRequestMergeMethod) => {
+  const runAction = (
+    action: PullRequestAction,
+    method?: PullRequestMergeMethod,
+    mergeExpectation?: PullRequestMergeExpectation,
+  ) => {
     if (actionInFlightRef.current) return;
     actionInFlightRef.current = true;
-    void actionMutation
-      .mutateAsync({
+    let mutationInput: PullRequestActionInput;
+    if (action === "merge") {
+      if (!mergeExpectation) {
+        actionInFlightRef.current = false;
+        return;
+      }
+      mutationInput = {
         ...input,
         action,
         ...(method ? { mergeMethod: method } : {}),
-      })
-      .then(() => {
+        expectation: mergeExpectation,
+      };
+    } else {
+      mutationInput = { ...input, action };
+    }
+    void actionMutation
+      .mutateAsync(mutationInput)
+      .then((result) => {
         const successTitle = {
-          merge: t("pullRequest.actionMerged"),
+          merge:
+            result.mergeOutcome === "enqueued"
+              ? t("pullRequest.actionMergeEnqueued")
+              : t("pullRequest.actionMerged"),
           ready: t("pullRequest.actionReady"),
           draft: t("pullRequest.actionDraft"),
           close: t("pullRequest.actionClosed"),
@@ -206,10 +243,19 @@ export function PullRequestDetailPanel({
         toastManager.add({ type: "success", title: successTitle });
       })
       .catch((error: unknown) => {
+        const expectationConflict =
+          error !== null &&
+          typeof error === "object" &&
+          "code" in error &&
+          error.code === "PULL_REQUEST_MERGE_EXPECTATION_CONFLICT";
         toastManager.add({
           type: "error",
           title: t("pullRequest.actionFailed"),
-          description: error instanceof Error ? error.message : t("pullRequest.githubActionFailed"),
+          description: expectationConflict
+            ? t("pullRequest.mergeExpectationConflict")
+            : error instanceof Error
+              ? error.message
+              : t("pullRequest.githubActionFailed"),
         });
       })
       .finally(() => {
@@ -324,6 +370,50 @@ export function PullRequestDetailPanel({
     { value: "code", label: t("pullRequest.tabCode") },
   ];
   const stackNavigation = detail ? pullRequestStackNavigation(detail) : null;
+  const currentMergeExpectation =
+    detail && !detailQuery.isError ? pullRequestMergeExpectation(detail) : null;
+  const mergeConfirmation = isCurrentPanelState ? panelState.mergeConfirmation : null;
+  const mergeConfirmationStale =
+    confirmAction === "merge" &&
+    mergeConfirmation !== null &&
+    (mergeConfirmation.detailUpdatedAt !== detailQuery.dataUpdatedAt ||
+      !pullRequestMergeExpectationsEqual(mergeConfirmation.expectation, currentMergeExpectation));
+  const mergeConfirmationBlocked =
+    confirmAction === "merge" &&
+    (mergeConfirmation?.expectation === null || mergeConfirmationStale);
+  const openMergeConfirmation = () =>
+    patchPanelState({
+      confirmAction: "merge",
+      mergeConfirmation: {
+        expectation: currentMergeExpectation,
+        detailUpdatedAt: detailQuery.dataUpdatedAt,
+      },
+    });
+  const mergeConfirmationDescription = (() => {
+    if (confirmAction !== "merge") {
+      return t("pullRequest.confirmCloseDescription", { number: input.number });
+    }
+    if (mergeConfirmation?.expectation === null) {
+      return t("pullRequest.mergeMetadataUnavailable");
+    }
+    if (mergeConfirmationStale || !mergeConfirmation) {
+      return t("pullRequest.mergeConfirmationStale");
+    }
+    const expectation = mergeConfirmation.expectation;
+    return expectation.kind === "stack"
+      ? t("pullRequest.confirmStackMergeDescription", {
+          method: selectedMergeMethod,
+          numbers: expectation.targetPullRequestNumbers
+            .map((number) => `#${number}`)
+            .join(locale === "zh-CN" ? "、" : ", "),
+          base: expectation.baseBranch,
+        })
+      : t("pullRequest.confirmMergeDescription", {
+          number: input.number,
+          method: selectedMergeMethod,
+          base: expectation.baseBranch,
+        });
+  })();
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-[var(--color-background-surface)] text-foreground">
@@ -528,7 +618,7 @@ export function PullRequestDetailPanel({
                   size="xs"
                   className={PR_HEADER_ACTION_BUTTON_CLASS_NAME}
                   disabled={actionPending}
-                  onClick={() => setConfirmAction("merge")}
+                  onClick={openMergeConfirmation}
                 >
                   {pendingAction === "merge" ? (
                     <>
@@ -604,13 +694,8 @@ export function PullRequestDetailPanel({
                 ? t("pullRequest.confirmMergeTitle")
                 : t("pullRequest.confirmCloseTitle")}
             </AlertDialogTitle>
-            <AlertDialogDescription>
-              {confirmAction === "merge"
-                ? t("pullRequest.confirmMergeDescription", {
-                    number: input.number,
-                    method: selectedMergeMethod,
-                  })
-                : t("pullRequest.confirmCloseDescription", { number: input.number })}
+            <AlertDialogDescription id="pull-request-confirmation-description">
+              {mergeConfirmationDescription}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -621,11 +706,18 @@ export function PullRequestDetailPanel({
               size="sm"
               variant={confirmAction === "close" ? "destructive" : "default"}
               disabled={actionPending}
+              aria-disabled={mergeConfirmationBlocked || undefined}
+              aria-describedby="pull-request-confirmation-description"
               onClick={() => {
                 const action = confirmAction;
-                setConfirmAction(null);
-                if (action === "merge") void runAction("merge", selectedMergeMethod);
+                if (action === "merge") {
+                  const expectation = mergeConfirmation?.expectation ?? null;
+                  if (mergeConfirmationBlocked || !expectation) return;
+                  setConfirmAction(null);
+                  void runAction("merge", selectedMergeMethod, expectation);
+                }
                 if (action === "close") void runAction("close");
+                if (action === "close") setConfirmAction(null);
               }}
             >
               {confirmAction === "merge" ? t("pullRequest.merge") : t("common.close")}

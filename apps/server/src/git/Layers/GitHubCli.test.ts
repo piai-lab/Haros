@@ -1,12 +1,13 @@
 import { assert, it } from "@effect/vitest";
-import { Effect } from "effect";
+import { Effect, Fiber } from "effect";
+import { TestClock } from "effect/testing";
 import { afterEach, expect, vi } from "vitest";
 
 vi.mock("../../processRunner", () => ({
   runProcess: vi.fn(),
 }));
 
-import { runProcess } from "../../processRunner";
+import { runProcess, type ProcessRunResult } from "../../processRunner";
 import { GitHubCli, PULL_REQUEST_SUMMARY_JSON_FIELDS } from "../Services/GitHubCli.ts";
 import { GitHubCliLive } from "./GitHubCli.ts";
 
@@ -20,6 +21,10 @@ afterEach(() => {
 
 function stackEntry(position: number, number: number) {
   return { position, pullRequest: { number } };
+}
+
+function processResult(stdout: string, stderr = "", code = 0): ProcessRunResult {
+  return { stdout, stderr, code, signal: null, timedOut: false };
 }
 
 function stackResponse(input: {
@@ -38,6 +43,7 @@ function stackResponse(input: {
           stack: {
             number: 17,
             size,
+            baseRefName: "main",
             entries: {
               totalCount: input.totalCount ?? size,
               nodes: input.nodes ?? [stackEntry(1, 11), stackEntry(2, 12)],
@@ -1119,7 +1125,11 @@ layer("GitHubCliLive", (it) => {
         number: 17,
         size: 2,
         position: 2,
-        entries: result?.entries,
+        baseBranch: "main",
+        entries: [
+          { position: 1, number: 11 },
+          { position: 2, number: 12 },
+        ],
       });
       expect(mockedRunProcess.mock.calls[0]?.[1]).toEqual(
         expect.arrayContaining(["api", "graphql", "-F", "number=12", "-F", "first=100"]),
@@ -1280,6 +1290,7 @@ layer("GitHubCliLive", (it) => {
         number: 9,
         action: "merge",
         mergeMethod: "squash",
+        mergeExpectation: { kind: "standalone", baseBranch: "main" },
       });
 
       assert.equal(diff.truncated, true);
@@ -1294,6 +1305,213 @@ layer("GitHubCliLive", (it) => {
         "github.com/acme/app",
         "--squash",
       ]);
+    }),
+  );
+
+  it.effect("submits stack merges asynchronously with JSON only on stdin", () =>
+    Effect.gen(function* () {
+      mockedRunProcess.mockResolvedValueOnce({
+        stdout: JSON.stringify({ status: "merged", details: { message: "done" } }),
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+      const gh = yield* GitHubCli;
+      const result = yield* gh.runPullRequestAction({
+        cwd: "/repo",
+        repository: "acme/app",
+        number: 12,
+        action: "merge",
+        mergeMethod: "squash",
+        mergeExpectation: {
+          kind: "stack",
+          stackNumber: 17,
+          stackSize: 2,
+          selectedPosition: 2,
+          baseBranch: "main",
+          targetPullRequestNumbers: [11, 12],
+        },
+      });
+
+      expect(result).toEqual({ mergeOutcome: "merged" });
+      const [, args, options] = mockedRunProcess.mock.calls[0]!;
+      expect(args).toEqual([
+        "api",
+        "--hostname",
+        "github.com",
+        "--method",
+        "PUT",
+        "-H",
+        "X-GitHub-Api-Version: 2026-03-10",
+        "repos/acme/app/pulls/12/merge-async",
+        "--input",
+        "-",
+      ]);
+      expect(args.join(" ")).not.toContain("merge_method");
+      expect(options?.stdin).toBe(
+        JSON.stringify({ merge_method: "squash", merge_action: "default" }),
+      );
+    }),
+  );
+
+  it.effect("polls the exact accepted async request and preserves an enqueued outcome", () =>
+    Effect.gen(function* () {
+      mockedRunProcess
+        .mockResolvedValueOnce(
+          processResult(
+            JSON.stringify({
+              status: "pending",
+              details: {
+                message: "accepted",
+                uuid: "request-123",
+                merge_method: "squash",
+                merge_action: "default",
+              },
+            }),
+          ),
+        )
+        .mockResolvedValueOnce(
+          processResult(JSON.stringify({ status: "enqueued", details: { message: "queued" } })),
+        );
+      const gh = yield* GitHubCli;
+      const mergeFiber = yield* gh
+        .runPullRequestAction({
+          cwd: "/repo",
+          repository: "acme/app",
+          number: 12,
+          action: "merge",
+          mergeMethod: "squash",
+          mergeExpectation: {
+            kind: "stack",
+            stackNumber: 17,
+            stackSize: 2,
+            selectedPosition: 2,
+            baseBranch: "main",
+            targetPullRequestNumbers: [11, 12],
+          },
+        })
+        .pipe(Effect.forkChild({ startImmediately: true }));
+      yield* TestClock.adjust("1 second");
+      const result = yield* Fiber.join(mergeFiber);
+
+      expect(result).toEqual({ mergeOutcome: "enqueued" });
+      expect(mockedRunProcess.mock.calls[1]?.[1]).toEqual([
+        "api",
+        "--hostname",
+        "github.com",
+        "-H",
+        "X-GitHub-Api-Version: 2026-03-10",
+        "repos/acme/app/pulls/12/merge-async/request-123",
+      ]);
+    }),
+  );
+
+  it.effect("uses verified per-target legacy fallback only for an explicit async 404", () =>
+    Effect.gen(function* () {
+      mockedRunProcess
+        .mockResolvedValueOnce(processResult("", "gh: HTTP 404: Not Found", 1))
+        .mockResolvedValueOnce(processResult(""))
+        .mockResolvedValueOnce(processResult("MERGED\n"))
+        .mockResolvedValueOnce(processResult(""))
+        .mockResolvedValueOnce(processResult("MERGED\n"));
+      const gh = yield* GitHubCli;
+      const result = yield* gh.runPullRequestAction({
+        cwd: "/repo",
+        repository: "acme/app",
+        number: 12,
+        action: "merge",
+        mergeExpectation: {
+          kind: "stack",
+          stackNumber: 17,
+          stackSize: 2,
+          selectedPosition: 2,
+          baseBranch: "main",
+          targetPullRequestNumbers: [11, 12],
+        },
+      });
+
+      expect(result).toEqual({ mergeOutcome: "merged" });
+      const calls = mockedRunProcess.mock.calls.map((call) => call[1]);
+      expect(calls[0]).toContain("repos/acme/app/pulls/12/merge-async");
+      expect(calls.slice(1)).toEqual([
+        expect.arrayContaining(["pr", "merge", "11"]),
+        expect.arrayContaining(["pr", "view", "11"]),
+        expect.arrayContaining(["pr", "merge", "12"]),
+        expect.arrayContaining(["pr", "view", "12"]),
+      ]);
+    }),
+  );
+
+  it.effect("does not fallback on non-404 async errors or report partial legacy results", () =>
+    Effect.gen(function* () {
+      const expectation = {
+        kind: "stack" as const,
+        stackNumber: 17,
+        stackSize: 2,
+        selectedPosition: 2,
+        baseBranch: "main",
+        targetPullRequestNumbers: [11, 12],
+      };
+      mockedRunProcess.mockResolvedValueOnce(processResult("", "gh: HTTP 403: Forbidden", 1));
+      const gh = yield* GitHubCli;
+      yield* gh
+        .runPullRequestAction({
+          cwd: "/repo",
+          repository: "acme/app",
+          number: 12,
+          action: "merge",
+          mergeExpectation: expectation,
+        })
+        .pipe(Effect.flip);
+      expect(mockedRunProcess).toHaveBeenCalledTimes(1);
+
+      mockedRunProcess.mockReset();
+      mockedRunProcess.mockResolvedValueOnce(
+        processResult(
+          JSON.stringify({
+            status: "pending",
+            details: {
+              message: "already pending",
+              uuid: "existing-request",
+              merge_method: "rebase",
+              merge_action: "default",
+            },
+          }),
+          "gh: HTTP 409: Conflict",
+          1,
+        ),
+      );
+      const optionMismatch = yield* gh
+        .runPullRequestAction({
+          cwd: "/repo",
+          repository: "acme/app",
+          number: 12,
+          action: "merge",
+          mergeMethod: "merge",
+          mergeExpectation: expectation,
+        })
+        .pipe(Effect.flip);
+      assert.equal(optionMismatch.detail.includes("different confirmed options"), true);
+      expect(mockedRunProcess).toHaveBeenCalledTimes(1);
+
+      mockedRunProcess.mockReset();
+      mockedRunProcess
+        .mockResolvedValueOnce(processResult("", "gh: HTTP 404: Not Found", 1))
+        .mockResolvedValueOnce(processResult(""))
+        .mockResolvedValueOnce(processResult("MERGED\n"))
+        .mockResolvedValueOnce(processResult(""))
+        .mockResolvedValueOnce(processResult("OPEN\n"));
+      const partial = yield* gh
+        .runPullRequestAction({
+          cwd: "/repo",
+          repository: "acme/app",
+          number: 12,
+          action: "merge",
+          mergeExpectation: expectation,
+        })
+        .pipe(Effect.flip);
+      assert.equal(partial.detail.includes("did not confirm"), true);
     }),
   );
 
