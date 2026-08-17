@@ -26,10 +26,10 @@ OmniMind Agent 是 Pi-derived 独立 runtime，随 App 开箱发行；它可以�
 
 | Source | Exact baseline                                               | Role                                                                                                  |
 | ------ | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Synara | `18ff99857d5b84adab2019c2839fa4f6df761b7c`                   | 当前唯一 reviewed/adopted head；`02c8a6c…` 与 `712d88f…` 仅是已完成 intake 的历史边界，不形成第二基线 |
+| Synara | `18ff99857d5b84adab2019c2839fa4f6df761b7c`                   | 当前唯一 reviewed/implemented head；该轮非采用 disposition 已重新待确认，`02c8a6c…` 与 `712d88f…` 不形成第二基线 |
 | Pi     | stable `v0.84.2`, `914cf1472e715297caa30db4b9535d534a9eb718` | OmniMind Agent 当前技术 lineage / ecosystem compatibility baseline；不是长期产品 identity             |
 
-Pi post-tag head `086c32e74530564922d011ade23ff582c9d63116` 只作 API/fix discovery，不进入 production。Synara exact head只按 [`research/source-review.md`](research/source-review.md#14-maintainer-approved-synara-712d88f18ff998-intake-closure) 的逐责任 disposition进入README production adoption；`18ff998…` 不表示 whole-source merge、donor release identity或第二基线。
+Pi post-tag head `086c32e74530564922d011ade23ff582c9d63116` 只作 API/fix discovery，不进入 production。Synara exact head的实现证据与proposed disposition见 [`research/source-review.md`](research/source-review.md#14-implemented-synara-712d88f18ff998-intake-non-adoption-decisions-reopened)；`18ff998…` 不表示 whole-source merge、donor release identity或第二基线，且该轮非采用决定在维护者重新确认前不拥有施工权。
 
 ## 4. Occam 比较规则
 
@@ -112,7 +112,7 @@ OmniMind Agent 是内部最深验收路线。stock Pi 与其他 shipped Provider
 
 当前精确状态：
 
-- 当前没有已准入的代码 Slice；Synara `712d88f…18ff998…` 的 45 项 accepted semantic responsibilities 已在 exact product `05782e94923242e2176a215ea74b2eee129584ae` 全部闭合，51 项其余 disposition 已固定，S1 只保留为历史证据；
+- 当前没有已准入的代码 Slice；Synara `712d88f…18ff998…` 的 45 项 accepted semantic responsibilities 已在 exact product `05782e94923242e2176a215ea74b2eee129584ae` 全部闭合，但 51 项其余 proposed disposition 因缺少有效的维护者整表确认而重新打开，不能作为已固定施工前提；
 - latest `main` 已拥有 Model services + Composer、Pi ModelRuntime/AgentSession、Product Thread/runtimeMode、Workbench、Workspace/Git/Diff/Checkpoint 与 Engine-native Subagent projection；
 - `codex/agent-core-ui-spec` 的 B0–B5 是 donor/evidence branch，绝不整体合并；它证明 execution foundation 可行，但没有证明 first-public mature Agent；
 - latest `main` 尚无 gotgenes bounded-child Host，也没有 OmniMind Pi child 的精准 control/terminal 全链；
@@ -239,9 +239,9 @@ W4 的施工顺序严格为：先纠正 Workbench/research/本 brief 的 sole ow
 
 W4 已在 exact pushed `bde90d56e0d515bb39e5f4891779dadf6c8d0f0a` 闭合：三步 first-run readiness、Model services seam、首次/延期/恢复入口、完整中英文 catalog 与 fresh isolated packaged journey 均已进入 `main`。这项完成证据不授予 C1，也不把当前 installed macOS candidate 扩张成 V1 release。
 
-### S1 Synara v0.7.2 source alignment（已完成历史）
+### S1 Synara v0.7.2 source implementation（代码已完成；非采用决定重新待确认）
 
-维护者在 W4 完成后明确授权从当时的 clean `main` 继续吸收 Synara 更新。历史入口绑定 `RUN SYNARA-072-INTAKE-2026-08-16-01`、`SPINE_REVISION=1`、`SPINE_ID=SYNARA-072@main-bde90d56+upstream-18ff9985`；source set 固定为 adopted `712d88f98b9afed9a4617b78dc62a8f342d93177` 到 tag `v0.7.2` exact `18ff99857d5b84adab2019c2839fa4f6df761b7c`。Spine 只负责该次运行的目标、边界和验收，不成为第二 Campaign、adoption record 或产品事实 owner。
+维护者在 W4 完成后授权等待另一任务结束并直接在 clean `main` 施工，但没有明确批准重新审查后形成的完整 disposition；该执行授权当时被错误解释为 Gate A 通过。历史入口绑定 `RUN SYNARA-072-INTAKE-2026-08-16-01`、`SPINE_REVISION=1`、`SPINE_ID=SYNARA-072@main-bde90d56+upstream-18ff9985`；source set 固定为 `712d88f98b9afed9a4617b78dc62a8f342d93177` 到 tag `v0.7.2` exact `18ff99857d5b84adab2019c2839fa4f6df761b7c`。已实现责任保持事实，非采用决定重新等待维护者确认；Spine 不成为第二 Campaign、adoption record 或产品事实 owner。
 
 S1 的第一个有界关注点只闭合四个底层、解释唯一的缺口：
 
@@ -434,7 +434,7 @@ R11-7 的首个 source candidate 已在 exact pushed `47613073877c733d2585865e9a
 
 上述 safety follow-up 已在 exact pushed `28bafbfd84712200e2e8cf389364f25218035168` 进入 `main`。其最终 receipt retention 窄修只扩充既有 Web single-flight 的删除条件：一旦 exact fork dispatch 已接受，后续shell sync、route preload或navigation任一失败都保留原command/thread identity；再次操作只重新读取authoritative shell并导航，零第二次create。真实Chromium注入dispatch与shell成功、sync已落地但首次navigation reject，证明第二次点击复用同一IDs、总计一次`thread.fork.create`并成功进入原target；并与delayed exact receipt、accepted-shell hydration回归合计`1 file / 3 tests`通过。pre-accept definitive failure仍按原owner清理。本窄修不改变server、contracts、catalog、布局或其他fork路径；monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path format与diff check通过，changed-path lint为`0 errors / 36 warnings`且均来自未触碰既有行。不做package/install/live/README。
 
-R11-7 最终 receipt retention 已在 exact pushed product `05782e94923242e2176a215ea74b2eee129584ae` 闭合；S1 至此 `45/45` accepted semantic responsibilities 全部完成，不再有 current code Slice。其 source、owner、immutable evidence与其余51项 disposition 的唯一研究记录见 [`research/source-review.md`](research/source-review.md#14-maintainer-approved-synara-712d88f18ff998-intake-closure)。
+R11-7 最终 receipt retention 已在 exact pushed product `05782e94923242e2176a215ea74b2eee129584ae` 闭合；S1 的 `45/45` implemented semantic responsibilities 全部完成，不再有该历史实现 Slice。其 source、owner、immutable evidence与其余51项proposed disposition见 [`research/source-review.md`](research/source-review.md#14-implemented-synara-712d88f18ff998-intake-non-adoption-decisions-reopened)；后者在维护者重新确认前不拥有施工权。
 
 同一 exact product 的 final macOS arm64 evidence为：DMG `/var/tmp/omnimind-s1-05782e.KIBHIE/OmniMind-0.1.0-alpha.0-arm64.dmg`，`242571261` bytes，SHA-256 `d1b5fb1a06a1908a36e8a219a1be4b5b49b94e10ba2d7d57afd71c6d04f9ed23`，`hdiutil verify`有效；installed `/Applications/OmniMind.app` 的 ASAR SHA-256为`fab1e326190c2f2beb5f3cf08e548427941e372392ac5222be07d14baa92126a`并内嵌 exact product与lock identity，240-component legal/SBOM closure通过。前一安装备份保存在`/var/tmp/OmniMind-before-05782e-20260817-1924.app`，其 ASAR SHA-256为`73eff401d2b7bc572cce70adebb296649a21f72aedf208a2a5d5177d77c26a92`。该候选仅ad-hoc签名、不是official signed/notarized release，未创建Release或修改feed。
 
@@ -452,4 +452,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment complete at product `05782e…` with source responsibilities `45/45` closed and no current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 implemented responsibilities `45/45` closed at product `05782e…`，但51项非采用proposed disposition已重新等待维护者确认；当前无获准代码Slice；first-public mature Agent incomplete；V1 release blocked。**

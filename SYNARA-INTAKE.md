@@ -37,6 +37,7 @@ Synara 是 OmniMind 已采用的高质量产品母体，不是普通补丁来源
 - 不因为远端出现新 commit 就自行修改 OmniMind；
 - 每一轮 intake 由维护者明确发起；
 - 每一轮先完成只读研究和共同决策，再实施；
+- 分支、worktree、直接在 `main` 施工、等待并发任务结束、加快执行、继续已有工作或使用某个执行 Skill 的授权，只决定**在哪里/何时/如何施工**，不等于维护者批准“吸收什么、暂缓什么、拒绝什么”；
 - 维护者对当次明确更新集的批准只覆盖该更新集，不自动扩张到更新后的新 commit；
 - 后续新 commit 重新从当时 README 记录的 exact adopted head 开始；
 - “尽量全部吸收”是默认决策倾向，不是绕过安全、法律、产品权威和人工确认的许可证。
@@ -88,14 +89,28 @@ Gate A 必须完成：
 8. 检查依赖、lockfile、构建、发行、IPC/preload、native、网络、auth、权限、凭据、存储、迁移、rollback、telemetry、资产和法律文本；
 9. 将每个 commit 和重要 changed path 放入明确 disposition；
 10. 用 `$converge` 消除所有会影响范围、产品结果、安全、权利或验证方式的不确定性；
-11. 向维护者展示完整而紧凑的 decision surface；
-12. 等待维护者对当次明确更新集再次确认。
+11. 向维护者展示完整而紧凑的 decision surface；其中必须同时包含建议吸收项与建议不吸收项，并对每个 material defer/decline/already-covered/exclusion 说明“不纳入会失去什么、为什么仍不建议纳入、什么证据会改变建议”；
+12. 明确询问维护者是否同意**整张 decision surface（包括所有未纳入项）**，并等待维护者再次确认。
 
 Gate A 完成前必须停在讨论，不得用以往“都可以吸收”的偏好替代当次确认。
 
+#### Gate A 确认的对象与有效表达
+
+Gate A 的确认对象不是“开始写代码”，而是当次 exact source range 的完整 disposition。以下规则没有例外：
+
+- `adopt directly`、`translate semantically`、`already covered`、`defer`、`decline` 与 identity/release/legal exclusion 都属于维护者要确认的同一决策面；Agent 不能只让维护者批准 accepted subset，再自行冻结其余项；
+- 任何 material change 只要建议不进入当前产品，即使理由是施工顺序、现有 owner、更强覆盖、产品品味、复杂度或安全边界，也必须先把建议和损失明确告诉维护者并获得确认；安全或权限风险可以阻止实施，但不能被写成维护者已同意的产品取舍；
+- “继续”“开始吧”“尽量快些”“直接在 main 干”“等某任务结束后施工”“可以使用某 Skill/Agent/编排”以及其他只回答进度、位置、时机或执行方式的话，**不构成 Gate A disposition 批准**；只有在完整 decision surface 展示之后，维护者明确指向该决策面并表示“按这张表实施 / 包括这些未纳入项也同意”或同等无歧义表达才有效；
+- 候选 head、OmniMind base、相关 owner、真实调用链或建议 disposition 在确认前后发生 material 变化时，旧确认不覆盖变化行。Agent 必须展示差异并只对变化部分重新确认，不能把“重新 review”后的新硬排除塞进旧授权；
+- 沉默、未反对、催进度、允许写入、允许 push、允许编排或历史总体偏好都不是确认。存在合理歧义时必须判定为“未确认”，而不是推定授权；
+- Agent 不得在维护者确认前使用“硬性排除”“disposition 已固定”“maintainer-approved”“intake complete”或意思等价的状态。研究建议只能标为 `proposed / pending maintainer decision`；
+- 既有记录若找不到对应的明确确认，必须准确标记为“历史实现/记录存在，但 disposition 未获有效确认并已重新打开”，停止继续扩大该结果，并通过 `$converge` 重新提交决策面。不得用已经写入、测试、打包或推送的事实倒推批准。
+
+确认结果写入既有 `research/source-review.md` 的当轮证据段即可：记录 exact range、被确认的 decision surface 与明确决定；不创建第二 approval ledger，也不依赖未来 Agent 猜测历史聊天。
+
 ### Gate B：实施、验证、交付与权威收口
 
-只有维护者明确说“按这个来”“可以”“实施”或等价表达后才能进入 Gate B。若实施中发现的新事实会实质改变已批准范围、产品行为、安全边界、迁移策略或排除项，只将变化部分退回 `$converge`，其余已确定工作无需重问。
+只有完整 decision surface 已展示，且维护者明确说“按这张表来（包括列出的未纳入项）”“按该完整更新集实施”或同等无歧义表达后才能进入 Gate B。单独的“可以”“继续”“实施”若可能只指施工位置、进度或已接受部分，均不足以过门。若实施中发现的新事实会实质改变已批准范围、产品行为、安全边界、迁移策略或排除项，只将变化部分退回 `$converge`，其余已确定工作无需重问。
 
 Gate B 必须：
 
@@ -162,13 +177,19 @@ range 中的全部 commits
 
 当前 OmniMind 已有等价或更强保证。必须给出真实代码与测试证据，不能凭名称相似判断。若上游带来更好的 regression test、错误文案或边界说明，仍应吸收这些价值。
 
+`Already covered` 仍是“不再移植该上游实现”的 disposition，必须作为未纳入项交给维护者确认；不能把“当前更强”当作 Agent 单方面跳过的许可证。
+
 ### Defer with trigger
 
 价值成立，但缺少当前 prerequisite、平台资源、provider contract、权限 receipt、rights 或验证环境。必须写出重新打开决定的精确触发条件；defer 不是永久 backlog，也不能被记成 adopted。
 
+Defer 只是一项建议，维护者确认前不得固化为施工顺序或后续 intake 的既定前提。
+
 ### Decline code, retain insight
 
 直接或翻译实现会造成可证明的产品、安全、法律或长期复杂度损害。必须保留问题陈述、上游测试思想或设计教训，并说明什么新证据会改变决定。
+
+除非实施本身越过安全、权限或法律硬边界，decline 仍须维护者明确确认；Agent 必须先说明具体损失与自己的推荐，不能静默替维护者做产品取舍。
 
 ### Explicitly exclude identity/release bytes
 
@@ -326,7 +347,7 @@ OmniMind 是 Synara 的语义后代，不是长期 merge branch。按下列顺�
 - range 内全部 commit 和风险文件计数闭合；
 - 每个 material change 已理解代码、机制和产品判断；
 - 所有高影响不确定性已通过研究和 `$converge` 收敛；
-- 维护者明确确认当次更新集；
+- 维护者明确确认当次完整更新集，包括每项 material already-covered、defer、decline 与 exclusion；
 - 所有 accepted mechanisms 已直接或语义实现；
 - exclusions/defer/decline 均有具体理由和触发器；
 - tests、rights、owner、identity 与 packaging 适配完成；

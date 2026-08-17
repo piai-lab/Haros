@@ -452,7 +452,7 @@ Rollback remains a single hard pin to `v0.84.1` if lifecycle, isolation, real-pr
 evidence exposes a material regression. No compatibility dual track is authorized or needed, and no
 maintainer choice remains open for this exact source set.
 
-## 14. Maintainer-approved Synara `712d88f…18ff998` intake closure
+## 14. Implemented Synara `712d88f…18ff998` intake; non-adoption decisions reopened
 
 ### 14.1 Exact boundary and counting rule
 
@@ -464,12 +464,14 @@ MIT text has the same SHA-256 at both endpoints,
 `305724dd050ca7ded99c662de813d755bc4ec3887c4543a37159c6662ca36d1b`; no new rights exception or
 release identity is inferred.
 
-The maintainer approved this exact intake set after the read-only review. Disposition is by stable
-responsibility, not patch similarity: 45 non-merge commits are accepted and closed in current OmniMind
-owners; the other 35 non-merge commits are current-covered, deferred, declined, or no-code; all 16
-merge commits are topology carriers with no additional product responsibility. `18ff998…` is therefore
-the reviewed production-adoption boundary, not a claim that its whole tree, brand, version or release
-bytes were merged.
+A 2026-08-17 audit of Codex task `01a00869-0192-7083-a024-919ff2b085b3` found no explicit maintainer
+confirmation of the revised full decision surface. The maintainer authorized later direct work on
+`main`, but that execution-location authorization did not approve the proposed defer/decline/covered
+set. The 45 accepted non-merge commits were nevertheless implemented and remain factual current-code
+evidence; the other 35 non-merge dispositions below and the treatment of 16 merge carriers are reopened
+as proposals pending maintainer confirmation. `18ff998…` remains the exact reviewed and implemented
+source boundary, not a claim that its whole tree, brand, version or release bytes were merged or that
+all non-adoption decisions were approved.
 
 ### 14.2 Accepted responsibility map — 45/45 closed
 
@@ -583,12 +585,11 @@ stronger OmniMind evidence intentionally closes them together.
 
 ### 14.4 Closure and revalidation
 
-This intake has no remaining accepted semantic responsibility: `45/45` are closed in current product
-`05782e…`; `51/51` other commits have an explicit disposition and trigger. The Windows runtime icon
-mechanism is source-closed but its real Explorer/taskbar packaged journey remains externally pending.
-Synara Goal work remains deferred to the already-deferred Agent Core C1/C3 order rather than becoming a
-second durable Goal owner. Release commits remain declined because the current macOS artifact is local,
-ad-hoc and non-official.
+The 45 implemented semantic responsibilities are closed in current product `05782e…`; the 51 other
+commits have documented proposed dispositions and triggers but are not maintainer-confirmed. In
+particular, Goal, debug, width, raw-event, icon and release/identity decisions must be presented again as
+one explicit decision surface before they can govern future work. The Windows runtime icon mechanism is
+source-closed but its real Explorer/taskbar packaged journey remains externally pending.
 
 Re-run only the affected rows when the exact Synara head changes, rights/security facts change, an
 explicit trigger above fires, or a focused current-product journey disproves the claimed implementation.
