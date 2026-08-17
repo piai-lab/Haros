@@ -14,6 +14,7 @@ import {
   type OrchestrationReadModel,
   type ProjectId,
   type ProviderKind,
+  type ProviderListCommandsResult,
   type ProviderListModelsResult,
   type ServerConfig,
   ThreadId,
@@ -135,6 +136,7 @@ interface TestFixture {
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
   gitHasWorkingTreeChanges?: boolean;
+  providerCommandsByProvider: Partial<Record<ProviderKind, ProviderListCommandsResult>>;
   providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
 }
 
@@ -663,6 +665,7 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
     snapshot,
     serverConfig: createBaseServerConfig(),
     gitBranchByCwd: {},
+    providerCommandsByProvider: {},
     providerModelsByProvider: {
       codex: {
         source: "browser.fixture",
@@ -1455,6 +1458,30 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
           models: [],
         })
       : { source: "browser.fixture", models: [] };
+  }
+  if (tag === WS_METHODS.providerGetComposerCapabilities) {
+    const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : "codex";
+    return {
+      provider,
+      supportsSkillMentions: false,
+      supportsSkillDiscovery: false,
+      supportsNativeSlashCommandDiscovery:
+        fixture.providerCommandsByProvider[provider] !== undefined,
+      supportsPluginMentions: false,
+      supportsPluginDiscovery: false,
+      supportsRuntimeModelList: false,
+      supportsThreadCompaction: false,
+      supportsThreadImport: false,
+    };
+  }
+  if (tag === WS_METHODS.providerListCommands) {
+    const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : null;
+    return provider
+      ? (fixture.providerCommandsByProvider[provider] ?? {
+          source: "browser.fixture",
+          commands: [],
+        })
+      : { source: "browser.fixture", commands: [] };
   }
   if (tag === WS_METHODS.providerListAgents) {
     return { source: "browser.fixture", agents: [] };
@@ -6171,6 +6198,79 @@ describe("ChatView timeline estimator parity (full app)", () => {
         new CompositionEvent("compositionend", { bubbles: true, data: "正在输入" }),
       );
       expect(compositionEndCount).toBe(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keyboard-selects the unique app /fork when Claude also advertises native fork", async () => {
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+      provider: "claudeAgent",
+      model: "claude-sonnet-4-5",
+    });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "claudeAgent");
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-app-fork-collision" as MessageId,
+        targetText: "app fork collision target",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            ...nextFixture.serverConfig.providers,
+            {
+              provider: "claudeAgent",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              supportsAutoRuntimeMode: false,
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+        nextFixture.providerCommandsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          commands: [
+            { name: "fork", description: "Provider-native fork" },
+            { name: "branch", description: "Provider-native branch" },
+          ],
+        };
+      },
+    });
+
+    try {
+      const composerEditor = await waitForComposerEditor();
+      composerEditor.focus();
+      await userEvent.keyboard("/fork");
+
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.some(
+            (request) =>
+              request._tag === WS_METHODS.providerListCommands &&
+              request.provider === "claudeAgent",
+          ),
+        ).toBe(true);
+        const visibleForkItems = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-slot="command-item"]'),
+        ).filter((item) => item.textContent?.includes("/fork"));
+        expect(visibleForkItems).toHaveLength(1);
+      });
+
+      await userEvent.keyboard("{ArrowDown}{Enter}");
+      await expect
+        .element(page.getByText(EN_MESSAGES["conversation.forkIntoWorktree"], { exact: true }))
+        .toBeInTheDocument();
+      await expect
+        .element(page.getByText(EN_MESSAGES["conversation.forkIntoLocal"], { exact: true }))
+        .toBeInTheDocument();
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt ?? "").toBe("");
     } finally {
       await mounted.cleanup();
     }

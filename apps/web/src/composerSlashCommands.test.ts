@@ -306,7 +306,21 @@ describe("composerSlashCommands", () => {
         canOfferSideCommand: true,
         canOfferExportCommand: true,
       }),
-    ).toEqual(["side", "export", "feedback", "automation"]);
+    ).toEqual(["fork", "side", "export", "feedback", "automation"]);
+  });
+
+  it("omits app-level /fork for claude when the composer cannot offer it", () => {
+    expect(
+      getAvailableComposerSlashCommands({
+        provider: "claudeAgent",
+        supportsFastSlashCommand: true,
+        canOfferCompactCommand: true,
+        canOfferReviewCommand: true,
+        canOfferForkCommand: false,
+        canOfferSideCommand: true,
+        canOfferExportCommand: true,
+      }),
+    ).not.toContain("fork");
   });
 
   it("offers the app-level /export command on every provider", () => {
@@ -422,8 +436,60 @@ describe("composerSlashCommands", () => {
     ]);
   });
 
-  it("treats claude aliases like /fork as provider-native collisions", () => {
-    expect(hasProviderNativeSlashCommand("claudeAgent", ["branch", "model"], "fork")).toBe(true);
+  it("treats real claude aliases like /reset as provider-native collisions", () => {
     expect(hasProviderNativeSlashCommand("claudeAgent", ["clear"], "reset")).toBe(true);
   });
+
+  it.each(["claudeAgent", "codex", "opencode"] as const)(
+    "keeps app /fork unique for %s despite provider-native fork and branch commands",
+    (provider) => {
+      const availableCommands = getAvailableComposerSlashCommands({
+        provider,
+        supportsFastSlashCommand: true,
+        canOfferCompactCommand: true,
+        canOfferReviewCommand: true,
+        canOfferForkCommand: true,
+        canOfferSideCommand: true,
+        canOfferExportCommand: true,
+        providerNativeCommandNames: ["fork", "branch"],
+      });
+      const visibleAppCommands = new Set(availableCommands);
+
+      expect(availableCommands.filter((command) => command === "fork")).toEqual(["fork"]);
+      expect(
+        shouldHideProviderNativeCommandFromComposerMenu(provider, "fork", {
+          availableAppCommands: visibleAppCommands,
+        }),
+      ).toBe(true);
+      expect(
+        shouldHideProviderNativeCommandFromComposerMenu(provider, "branch", {
+          availableAppCommands: visibleAppCommands,
+        }),
+      ).toBe(false);
+      expect(hasProviderNativeSlashCommand(provider, ["branch"], "fork")).toBe(false);
+    },
+  );
+
+  it.each(["claudeAgent", "codex", "opencode"] as const)(
+    "keeps provider-native /fork visible for %s when app /fork is unavailable",
+    (provider) => {
+      const availableCommands = getAvailableComposerSlashCommands({
+        provider,
+        supportsFastSlashCommand: true,
+        canOfferCompactCommand: true,
+        canOfferReviewCommand: true,
+        canOfferForkCommand: false,
+        canOfferSideCommand: true,
+        canOfferExportCommand: true,
+        providerNativeCommandNames: ["fork"],
+      });
+
+      expect(availableCommands).not.toContain("fork");
+      expect(
+        shouldHideProviderNativeCommandFromComposerMenu(provider, "fork", {
+          availableAppCommands: new Set(availableCommands),
+        }),
+      ).toBe(false);
+    },
+  );
 });

@@ -379,6 +379,12 @@ S1 当前唯一代码 Slice 是 **R11-1 OpenCode running tool title normalizatio
 
 本 Slice 只补 OpenCode adapter/lifecycle author-equivalent tests，证明换行 title 精确 trim、纯空白 fallback、completed title语义与后续 consumer连续性、untrimmed tool detail byte preservation；不得改变 contracts、journal schema、其他 Provider、UI、package/install/live、README或建立第二 normalization owner。候选只以最窄 focused owner、monorepo typecheck、changed-path format/lint、document contract与 diff check证明。
 
+R11-1 OpenCode running tool title normalization 已在 exact pushed `ef83481cf2ed8cc9c06a713859ce8e58cca3a439` 进入 `main`；上述 title durability 历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **R11-2 app-owned `/fork` collision policy**：只吸收 Synara `08da8c3ac2e555c43459750a408a6ee4e781b29f` 的单一 author 语义，沿现有 Composer slash-command discovery、filter与execute链保证 OmniMind `/fork` 在 Claude、Codex、OpenCode 等 Provider 同时暴露 native `fork` 或 `branch` 时仍唯一显示并执行现有 Product fork handler。Claude native `/branch` 保留自身语义，不再 alias为 `/fork`；只有当前 surface 确实提供 app `/fork` 时才隐藏 literal native `/fork`，app action不可用时不得误藏 provider fallback。
+
+本 Slice 复用现有 command menu、keyboard selection、fork target picker与执行 owner，不新增 command store、route、Dialog、contract或 message-level fork入口；不改变布局。focused proof必须覆盖 Provider matrix、native collision、app-unavailable fallback与真实键盘选择进入现有 fork target picker；现有英中 catalog actual values保持。候选只以相关 unit/browser、monorepo typecheck、changed-path format/lint、document contract与diff check证明，不做 package/install/live/README。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -391,4 +397,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-1 OpenCode running tool title normalization as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-2 app-owned `/fork` collision policy as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

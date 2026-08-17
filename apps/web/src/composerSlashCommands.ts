@@ -32,7 +32,6 @@ const CLAUDE_NATIVE_COMMAND_ALIASES: Record<string, readonly string[]> = {
   desktop: ["app"],
   exit: ["quit"],
   feedback: ["bug"],
-  branch: ["fork"],
   mobile: ["ios", "android"],
   permissions: ["allowed-tools"],
   "remote-control": ["rc"],
@@ -85,6 +84,9 @@ function shouldKeepBuiltInSlashCommandDespiteNativeCollision(
     command === "automation" ||
     command === "export" ||
     command === "feedback" ||
+    // /fork always uses OmniMind's thread fork lifecycle. A provider-native
+    // command with the same spelling must not replace that product action.
+    command === "fork" ||
     (providerUsesAppOwnedReviewSlashCommand(provider) && command === "review")
   );
 }
@@ -102,6 +104,7 @@ export function shouldHideProviderNativeCommandFromComposerMenu(
     normalizedCommand === "automation" ||
     (normalizedCommand === "export" && appCommandIsAvailable) ||
     (normalizedCommand === "feedback" && appCommandIsAvailable) ||
+    (normalizedCommand === "fork" && appCommandIsAvailable) ||
     (providerUsesAppOwnedReviewSlashCommand(provider) && normalizedCommand === "review")
   );
 }
@@ -419,8 +422,11 @@ export function getAvailableComposerSlashCommands(input: {
       : [
           // Claude owns most slash-command UX natively; sidechat remains app-level because it
           // creates a OmniMind split/context clone before the provider sees the first turn.
+          // Fork is app-level for the same reason: it creates a Product thread with durable
+          // fork lineage rather than forwarding provider-native command text.
           // /export is app-level too — OmniMind owns the thread transcript, so the download
           // happens in the app rather than being forwarded to Claude's native /export.
+          ...(input.canOfferForkCommand ? (["fork"] as const) : []),
           ...(input.canOfferSideCommand ? (["side"] as const) : []),
           ...(input.canOfferExportCommand ? (["export"] as const) : []),
           "feedback",
