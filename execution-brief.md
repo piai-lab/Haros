@@ -315,6 +315,8 @@ Judge HOLD follow-up 的同一 pre-commit tree 证据为：Workspace index/conte
 
 同一 Judge 的 candidate-pair/source-mode follow-up 从 exact pushed `e70bf0e4f6ad6d1bb22d525c35486524a5b7ebbd` 继续：Workspace index record只携带本次 build 已裁定的 `git/default` policy mode，不新增 cache truth。build与current gate均先用 physical root向上查找 `.git` directory/file metadata；确认为无 metadata的 true non-Git直接沿 default policy，Git executable缺失也不执行 subprocess；存在 metadata或已记录 Git mode时，Git policy无法执行必须 fail closed，不能降级为 non-Git。两阶段 batch gate都以 `(lexical relativePath, canonicalRelativePath)` candidate pair为单位，任一侧被当前 policy ignore只移除该 alias；post gate继续按完整 pair identity过滤，不把 allowed canonical target错误扩张给ignored alias。warm root/nested alias ignore、mid-scan alias-only policy change、no-Git/no-binary与recorded-Git policy unavailable均由 focused Workspace `2 files / 45 tests`覆盖；不新增 index、watcher、cache或per-file subprocess。
 
+最终 one-condition follow-up 从 exact pushed `3875bca24f307368e49908b04f2a3bea7fe91bc6` 只把 recorded Git mode 的 current `false/null` 固定为 fail closed、zero open；仅显式 clear 后的 fresh build 可重新裁定 true non-Git/default，focused Workspace `2 files / 46 tests`通过。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

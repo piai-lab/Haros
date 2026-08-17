@@ -591,7 +591,7 @@ async function resolveWorkspacePolicyMode(input: {
   if (gitWorkTree === true) {
     return "git";
   }
-  if (gitWorkTree === null || hasGitMetadata) {
+  if (input.builtMode === "git" || gitWorkTree === null || hasGitMetadata) {
     throw new WorkspacePolicyUnavailable();
   }
   return "default";

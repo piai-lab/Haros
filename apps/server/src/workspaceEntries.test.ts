@@ -734,6 +734,28 @@ describe("searchWorkspaceContent", () => {
     expect(openSpy).not.toHaveBeenCalled();
   });
 
+  it("requires a cleared rebuild before a recorded git workspace can become non-git", async () => {
+    const cwd = makeTempDir("omnimind-content-search-git-policy-transition-");
+    writeFile(cwd, "safe.ts", "safe needle\n");
+    runGit(cwd, ["init"]);
+    runGit(cwd, ["add", "safe.ts"]);
+    await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+    fs.renameSync(path.join(cwd, ".git"), path.join(cwd, ".git-removed"));
+    const openSpy = vi.spyOn(fsPromises, "open");
+
+    await expect(searchWorkspaceContent({ cwd, query: "needle" })).rejects.toThrow(
+      "Workspace ignore policy could not be verified",
+    );
+    expect(openSpy).not.toHaveBeenCalled();
+
+    clearWorkspaceIndexCache(cwd);
+    openSpy.mockClear();
+    await expect(searchWorkspaceContent({ cwd, query: "needle" })).resolves.toMatchObject({
+      matches: [{ path: "safe.ts", lineNumber: 1, lineText: "safe needle" }],
+    });
+    expect(openSpy).toHaveBeenCalledTimes(1);
+  });
+
   it.skipIf(process.platform === "win32")(
     "allows indexed in-root symlinks but rejects external, hidden, and ignored targets",
     async () => {
