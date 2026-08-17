@@ -10906,27 +10906,31 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => document.querySelector<HTMLElement>('[data-slot="menu-popup"]'),
         "The configured-service Composer model picker did not open.",
       );
-      const openModelServices = await waitForElement(
-        () =>
-          Array.from(document.querySelectorAll<HTMLElement>('[role="menuitem"]')).find(
-            (item) =>
-              item.getClientRects().length > 0 &&
-              item.textContent?.includes(EN_MESSAGES["composer.openModelServices"]),
-          ) ?? null,
-        "Unable to find the configured-service recovery action.",
-      );
-      openModelServices.click();
-      await waitForURL(
-        mounted.router,
-        (path) => path === "/settings",
-        "A configured service without an exact selection should open Model services.",
-      );
-      expect(mounted.router.state.location.search).toMatchObject({ section: "models" });
-      expect(
-        wsRequests
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.filter(
+            (request) =>
+              request._tag === WS_METHODS.providerListModels && request.provider === "omnimind",
+          ).length,
+        ).toBeGreaterThan(0);
+      });
+      const exactModel = page.getByRole("menuitemradio", { name: /DeepSeek V4 Flash/u });
+      await expect.element(exactModel).toBeVisible();
+      await exactModel.click();
+      await vi.waitFor(() => expect(sendButton.disabled).toBe(false));
+      sendButton.click();
+      await vi.waitFor(() => {
+        const turnStarts = wsRequests
           .map(readDispatchedCommand)
-          .filter((command) => command?.type === "thread.turn.start"),
-      ).toHaveLength(0);
+          .filter((command) => command?.type === "thread.turn.start");
+        expect(turnStarts).toHaveLength(1);
+        expect(turnStarts[0]).toMatchObject({
+          modelSelection: {
+            provider: "omnimind",
+            model: "deepseek/deepseek-v4-flash",
+          },
+        });
+      });
     } finally {
       await mounted.cleanup();
       restoreNativeApi();

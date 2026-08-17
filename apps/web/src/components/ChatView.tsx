@@ -1708,6 +1708,7 @@ export default function ChatView({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [isEnginePickerOpen, setIsEnginePickerOpen] = useState(false);
+  const [omniMindModelDiscoveryRequested, setOmniMindModelDiscoveryRequested] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
   const timelineControllerRef = useRef<MessagesTimelineController | null>(null);
@@ -2450,7 +2451,7 @@ export default function ChatView({
     discoveryEnabled: false,
     selectedProviderDiscoveryEnabled:
       selectedProvider !== "omnimind" ||
-      isModelPickerOpen ||
+      omniMindModelDiscoveryRequested ||
       composerModelHintByProvider.omnimind !== null,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
@@ -4494,6 +4495,12 @@ export default function ChatView({
         requestFirstRunReadinessResume();
         return;
       }
+      if (open && selectedProvider === "omnimind" && !omniMindModelDiscoveryRequested) {
+        setOmniMindModelDiscoveryRequested(true);
+        void queryClient.invalidateQueries({
+          queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+        });
+      }
       setIsModelPickerOpen(open);
       if (!open) {
         setPiDiscoveryRequested(false);
@@ -4503,7 +4510,7 @@ export default function ChatView({
         setIsEnginePickerOpen(false);
       }
     },
-    [selectedModel],
+    [omniMindModelDiscoveryRequested, queryClient, selectedModel, selectedProvider],
   );
   const handleProviderBrowse = useCallback((provider: ProviderKind) => {
     if (provider === "pi") {

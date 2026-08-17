@@ -95,6 +95,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   const catalogIsIdle = props.catalogState === "idle";
   const catalogIsStale = props.catalogState === "stale";
   const catalogIsError = props.catalogState === "error";
+  const hasSelectableModels = props.modelOptionsByProvider[props.provider].length > 0;
   const closeAndRefocus = () => {
     setMenuOpen(false);
     props.onSelectionCommitted?.();
@@ -299,6 +300,18 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
               />
             )}
           </>
+        ) : hasSelectableModels ? (
+          <ProviderModelMenuItems
+            provider={props.provider}
+            model={null}
+            lockedProvider={props.provider}
+            modelOptionsByProvider={props.modelOptionsByProvider}
+            {...(props.loadingModelProviders
+              ? { loadingModelProviders: props.loadingModelProviders }
+              : {})}
+            onProviderModelChange={props.onProviderModelChange}
+            onAfterSelection={closeAndRefocus}
+          />
         ) : (
           <>
             <div className="px-2 py-2" role="status">
