@@ -235,10 +235,7 @@ function localizeGitCopy(value: string | null | undefined, t: GitTranslate): str
   return pushTarget ? t("git.action.pushingTo", { target: pushTarget }) : null;
 }
 
-function formatElapsedDescription(
-  startedAtMs: number | null,
-  t: GitTranslate,
-): string | undefined {
+function formatElapsedDescription(startedAtMs: number | null, t: GitTranslate): string | undefined {
   if (startedAtMs === null) {
     return undefined;
   }
@@ -470,6 +467,53 @@ function GitPickerMenuRow({ item }: { item: GitPickerMenuItem }) {
   );
 }
 
+/** Shared mutation and presentation owner for every explicit Pull affordance. */
+export function useGitPullAction(input: {
+  gitCwd: string | null;
+  activeThreadId: ThreadId | null;
+}): { isPullRunning: boolean; runPull: () => void } {
+  const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const pullMutation = useMutation(gitPullMutationOptions({ cwd: input.gitCwd, queryClient }));
+  const isPullRunning = useIsMutating({ mutationKey: gitMutationKeys.pull(input.gitCwd) }) > 0;
+  const threadToastData = useMemo(
+    () => (input.activeThreadId ? { threadId: input.activeThreadId } : undefined),
+    [input.activeThreadId],
+  );
+  const runPull = useCallback(() => {
+    const promise = pullMutation.mutateAsync();
+    const syncToastData = (threadToastData ?? {}) as NonNullable<
+      Parameters<typeof toastManager.add>[0]["data"]
+    >;
+    toastManager.promise(promise, {
+      loading: { title: t("git.action.syncing"), data: syncToastData },
+      success: (result) => ({
+        title:
+          result.status === "pulled" ? t("git.action.remoteSynced") : t("git.action.remoteCurrent"),
+        description:
+          result.status === "pulled"
+            ? t("git.action.updatedFrom", {
+                branch: result.branch,
+                upstream: result.upstreamBranch ?? t("git.action.upstream"),
+              })
+            : t("git.action.branchSynchronized", { branch: result.branch }),
+        data: syncToastData,
+      }),
+      error: (error) => ({
+        title: t("git.action.syncFailed"),
+        description: t("git.action.errorDetails"),
+        data: {
+          ...syncToastData,
+          copyText: error instanceof Error ? error.message : t("git.action.errorDetails"),
+        },
+      }),
+    });
+    void promise.catch(() => undefined);
+  }, [pullMutation, t, threadToastData]);
+
+  return { isPullRunning, runPull };
+}
+
 export default function GitActionsControl({
   gitCwd,
   activeThreadId,
@@ -500,6 +544,10 @@ export default function GitActionsControl({
     [activeThreadId],
   );
   const queryClient = useQueryClient();
+  const { isPullRunning, runPull: runSyncWithRemote } = useGitPullAction({
+    gitCwd,
+    activeThreadId,
+  });
   const [isCommitDialogOpen, setIsCommitDialogOpen] = useState(false);
   const [dialogCommitMessage, setDialogCommitMessage] = useState("");
   const [excludedFiles, setExcludedFiles] = useState<ReadonlySet<string>>(new Set());
@@ -580,7 +628,6 @@ export default function GitActionsControl({
       ...(providerOptions ? { providerOptions } : {}),
     }),
   );
-  const pullMutation = useMutation(gitPullMutationOptions({ cwd: gitCwd, queryClient }));
   const persistThreadPr = useCallback(
     async (pr: {
       number: number;
@@ -614,7 +661,6 @@ export default function GitActionsControl({
 
   const isRunStackedActionRunning =
     useIsMutating({ mutationKey: gitMutationKeys.runStackedAction(gitCwd) }) > 0;
-  const isPullRunning = useIsMutating({ mutationKey: gitMutationKeys.pull(gitCwd) }) > 0;
   const isGitActionRunning = isRunStackedActionRunning || isPullRunning;
   const isDefaultBranch = useMemo(() => {
     const branchName = gitStatusForActions?.branch;
@@ -892,39 +938,6 @@ export default function GitActionsControl({
     [gitCwd, t, threadToastData],
   );
 
-  const runSyncWithRemote = useCallback(() => {
-    const promise = pullMutation.mutateAsync();
-    const syncToastData = (threadToastData ?? {}) as NonNullable<
-      Parameters<typeof toastManager.add>[0]["data"]
-    >;
-    toastManager.promise(promise, {
-      loading: { title: t("git.action.syncing"), data: syncToastData },
-      success: (result) => ({
-        title:
-          result.status === "pulled"
-            ? t("git.action.remoteSynced")
-            : t("git.action.remoteCurrent"),
-        description:
-          result.status === "pulled"
-            ? t("git.action.updatedFrom", {
-                branch: result.branch,
-                upstream: result.upstreamBranch ?? t("git.action.upstream"),
-              })
-            : t("git.action.branchSynchronized", { branch: result.branch }),
-        data: syncToastData,
-      }),
-      error: (err) => ({
-        title: t("git.action.syncFailed"),
-        description: t("git.action.errorDetails"),
-        data: {
-          ...syncToastData,
-          copyText: err instanceof Error ? err.message : t("git.action.errorDetails"),
-        },
-      }),
-    });
-    void promise.catch(() => undefined);
-  }, [pullMutation, t, threadToastData]);
-
   const runGitActionWithToast = useCallback(
     async function runGitActionWithToast({
       action,
@@ -985,8 +998,7 @@ export default function GitActionsControl({
           toastManager.add({
             type: "info",
             title: t("git.pr.unavailableTitle"),
-            description:
-              localizeGitCopy(createPrAvailability.hint, t) ?? t("git.pr.noChanges"),
+            description: localizeGitCopy(createPrAvailability.hint, t) ?? t("git.pr.noChanges"),
             data: threadToastData,
           });
           return;
@@ -1761,23 +1773,17 @@ export default function GitActionsControl({
         isGitStatusOutOfSync ||
         gitStatusError) && <MenuSeparator className="mx-3 mt-2" />}
       {gitStatusForActions?.branch === null && (
-        <p className="px-3 py-1.5 text-xs text-warning">
-          {t("git.action.detachedMenuHint")}
-        </p>
+        <p className="px-3 py-1.5 text-xs text-warning">{t("git.action.detachedMenuHint")}</p>
       )}
       {gitStatusForActions &&
         gitStatusForActions.branch !== null &&
         !gitStatusForActions.hasWorkingTreeChanges &&
         gitStatusForActions.behindCount > 0 &&
         gitStatusForActions.aheadCount === 0 && (
-          <p className="px-3 py-1.5 text-xs text-warning">
-            {t("git.action.behindMenuHint")}
-          </p>
+          <p className="px-3 py-1.5 text-xs text-warning">{t("git.action.behindMenuHint")}</p>
         )}
       {isGitStatusOutOfSync && (
-        <p className="px-3 py-1.5 text-xs text-muted-foreground">
-          {t("git.action.refreshing")}
-        </p>
+        <p className="px-3 py-1.5 text-xs text-muted-foreground">{t("git.action.refreshing")}</p>
       )}
       {isGitStatusRefreshDelayed && !isGitStatusOutOfSync && (
         <p className="px-3 py-1.5 text-xs text-muted-foreground">
@@ -1856,10 +1862,12 @@ export default function GitActionsControl({
                     <span className="text-muted-foreground">{t("term.files")}</span>
                     {!allSelected && !isEditingFiles && (
                       <span className="text-muted-foreground">
-                        ({t("git.action.selectedOf", {
+                        (
+                        {t("git.action.selectedOf", {
                           selected: selectedFiles.length,
                           total: allFiles.length,
-                        })})
+                        })}
+                        )
                       </span>
                     )}
                   </div>

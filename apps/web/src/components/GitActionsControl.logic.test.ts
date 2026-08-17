@@ -20,6 +20,7 @@ import {
   resolveQuickAction,
   shouldOfferCreateBranchPrompt,
   shouldShowEnvironmentPanelPullRow,
+  shouldShowHeaderPullAction,
   summarizeGitResult,
 } from "./GitActionsControl.logic";
 
@@ -472,6 +473,81 @@ describe("when: branch is behind upstream", () => {
     assert.equal(
       shouldShowEnvironmentPanelPullRow({
         quickAction: busyQuickAction,
+        isPullRunning: true,
+      }),
+      true,
+    );
+  });
+
+  it("shows the thin header Pull only for an exact fast-forwardable upstream", () => {
+    const gitStatus = status({ behindCount: 2 });
+    assert.equal(
+      shouldShowHeaderPullAction({
+        gitStatus,
+        repoAvailable: true,
+        statusAvailable: true,
+        isPullRunning: false,
+      }),
+      true,
+    );
+  });
+
+  it.each([
+    ["up to date", status({ behindCount: 0 })],
+    ["ahead only", status({ aheadCount: 1, behindCount: 0 })],
+    ["diverged", status({ aheadCount: 1, behindCount: 1 })],
+    ["no upstream", status({ hasUpstream: false, upstreamBranch: null, behindCount: 1 })],
+    ["unknown upstream", status({ upstreamBranch: null, behindCount: 1 })],
+    ["detached", status({ branch: null, behindCount: 1 })],
+  ] as const)("hides the thin header Pull when the branch is %s", (_label, gitStatus) => {
+    assert.equal(
+      shouldShowHeaderPullAction({
+        gitStatus,
+        repoAvailable: true,
+        statusAvailable: true,
+        isPullRunning: false,
+      }),
+      false,
+    );
+  });
+
+  it("hides for non-repo, loading, error, and absent status", () => {
+    const gitStatus = status({ behindCount: 1 });
+    assert.equal(
+      shouldShowHeaderPullAction({
+        gitStatus,
+        repoAvailable: false,
+        statusAvailable: true,
+        isPullRunning: false,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldShowHeaderPullAction({
+        gitStatus,
+        repoAvailable: true,
+        statusAvailable: false,
+        isPullRunning: false,
+      }),
+      false,
+    );
+    assert.equal(
+      shouldShowHeaderPullAction({
+        gitStatus: null,
+        repoAvailable: true,
+        statusAvailable: true,
+        isPullRunning: false,
+      }),
+      false,
+    );
+  });
+
+  it("keeps the exact cwd control visible while its pull mutation is running", () => {
+    assert.equal(
+      shouldShowHeaderPullAction({
+        gitStatus: null,
+        repoAvailable: false,
+        statusAvailable: false,
         isPullRunning: true,
       }),
       true,

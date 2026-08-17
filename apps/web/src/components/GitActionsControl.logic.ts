@@ -654,6 +654,31 @@ export function shouldShowEnvironmentPanelPullRow(input: {
   );
 }
 
+/**
+ * Environment mode hides the full Git control from the header. Surface only the
+ * fast-forward Pull intent there, and keep that exact cwd's control mounted while
+ * its mutation is running even if status refreshes in the background.
+ */
+export function shouldShowHeaderPullAction(input: {
+  gitStatus: GitStatusResult | null;
+  repoAvailable: boolean;
+  statusAvailable: boolean;
+  isPullRunning: boolean;
+}): boolean {
+  if (input.isPullRunning) return true;
+  const status = input.gitStatus;
+  return (
+    input.repoAvailable &&
+    input.statusAvailable &&
+    status !== null &&
+    status.branch !== null &&
+    status.hasUpstream &&
+    status.upstreamBranch !== null &&
+    status.aheadCount === 0 &&
+    status.behindCount > 0
+  );
+}
+
 export function shouldOfferCreateBranchPrompt(input: {
   activeWorktreePath: string | null;
   gitStatus: Pick<GitStatusResult, "branch" | "hasUpstream"> | null;

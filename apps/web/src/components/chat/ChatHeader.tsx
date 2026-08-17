@@ -12,15 +12,18 @@ import {
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@omnimind/contracts";
+import { useQuery } from "@tanstack/react-query";
 import React, { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
 import { FiGitBranch } from "react-icons/fi";
 import { HiMiniArrowsPointingOut } from "react-icons/hi2";
 import { TbExchange } from "react-icons/tb";
 import type { ThreadPrimarySurface } from "../../types";
-import GitActionsControl from "../GitActionsControl";
+import GitActionsControl, { useGitPullAction } from "../GitActionsControl";
+import { shouldShowHeaderPullAction } from "../GitActionsControl.logic";
 import {
   ArrowRightIcon,
   CheckIcon,
+  CloudSyncIcon,
   HandoffIcon,
   HistoryIcon,
   MessageCircleIcon,
@@ -29,6 +32,7 @@ import {
   TerminalIcon,
   XIcon,
 } from "~/lib/icons";
+import { gitBranchesQueryOptions, gitStatusQueryOptions } from "~/lib/gitReactQuery";
 import { formatRelativeTime } from "~/lib/relativeTime";
 import {
   CHAT_HEADER_TOGGLE_CLASS_NAME,
@@ -70,6 +74,51 @@ import { EnvironmentToggle, type EnvironmentToggleState } from "./environment/En
  * for any layout that narrows the chat column (split chat, right dock, small window).
  */
 const HEADER_COMPACT_BREAKPOINT = 700;
+
+export function ChatHeaderPullControl(props: {
+  activeThreadId: ThreadId;
+  compact: boolean;
+  enabled: boolean;
+  gitCwd: string | null;
+}) {
+  const { t } = useI18n();
+  const effectiveCwd = props.enabled ? props.gitCwd : null;
+  const branchesQuery = useQuery(gitBranchesQueryOptions(effectiveCwd));
+  const repoAvailable =
+    branchesQuery.isSuccess && !branchesQuery.isError && branchesQuery.data.isRepo;
+  const statusQuery = useQuery(gitStatusQueryOptions(effectiveCwd, repoAvailable));
+  const { isPullRunning, runPull } = useGitPullAction({
+    gitCwd: effectiveCwd,
+    activeThreadId: props.activeThreadId,
+  });
+  const visible =
+    effectiveCwd !== null &&
+    shouldShowHeaderPullAction({
+      gitStatus: statusQuery.data ?? null,
+      repoAvailable,
+      statusAvailable: statusQuery.isSuccess && !statusQuery.isError,
+      isPullRunning,
+    });
+  if (!visible) return null;
+
+  const label = isPullRunning ? t("git.action.pulling") : t("git.action.pull");
+  return (
+    <ChatHeaderButton
+      type="button"
+      tone="outline"
+      className={props.compact ? "gap-1" : "gap-1.5"}
+      aria-busy={isPullRunning}
+      aria-label={label}
+      title={label}
+      disabled={isPullRunning}
+      data-chat-header-pull="true"
+      onClick={runPull}
+    >
+      <CloudSyncIcon aria-hidden className="size-[1em] shrink-0 opacity-80" />
+      {!props.compact ? <span className="truncate font-normal">{label}</span> : null}
+    </ChatHeaderButton>
+  );
+}
 
 interface ChatHeaderProps {
   activeThreadId: ThreadId;
@@ -884,6 +933,12 @@ export function ChatHeader({
             Falls back to the legacy controls when no environment is resolved. */}
         {environment ? (
           <>
+            <ChatHeaderPullControl
+              activeThreadId={activeThreadId}
+              compact={compact}
+              enabled={showGitActions}
+              gitCwd={gitCwd}
+            />
             <EnvironmentToggle environment={environment} />
             {rightPanelToggleControl}
           </>

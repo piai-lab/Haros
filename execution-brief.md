@@ -335,6 +335,12 @@ S1 当前唯一代码 Slice 是 **Phase-9c Git selected diff render identity A1*
 
 该 Slice 的 pre-commit source-candidate 证据：现有 diff identity owner `1 file / 23 tests`与真实 Chromium GitPanel `2 files / 5 tests`通过，其中mount-time harness `1 file / 3 tests`覆盖staged→unstaged同形patch及其exact clicked-row focus、same-path内容刷新与light→dark remount/render；refresh/theme路径不扩张声称焦点连续性。monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与diff check通过。本 Slice不改变用户文案、layout、query/mutation或外部Git authority，按准入不做package/install/live/README。
 
+Phase-9c Git A1及其证据边界follow-up已在 exact pushed `e3afdc56b7cd7176942379616838cefc7c7542cd` 进入 `main`；上述selected diff历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **Phase-9c Git behind-only header Pull A2**：只吸收 Synara `bcf7f1f1c90c4e8a3f5346b89f9fda3ee8dcc0e0` 的用户语义，按当前 Omni owner在Environment模式Header新增一个thin Pull control。它复用既有branches/status query、exact-cwd pull mutation与success/failure toast presentation；只有repo/status可用、branch与upstream明确、`behindCount > 0 && aheadCount === 0`时显示，non-repo、loading/error、up-to-date、ahead、diverged、no/unknown-upstream、detached均为零，运行中的exact cwd例外保持本地化Pulling并禁用。不得挂第二个完整`GitActionsControl`、dialog、commit shortcut、store、server/contracts、Commit/PR/stack或layout owner。
+
+该 Slice 的 pre-commit source-candidate 证据：Git availability/既有action与Header owner `2 files / 132 tests`，真实Chromium thin control `1 file / 9 tests`覆盖root checkout/managed worktree exact cwd、无dialog/menu、running、键盘/focus/ARIA、现有英中`git.action.pull/pulling` actual values及`480/960/1440`横向geometry；既有ChatView Environment geometry `1 file / 8 tests`、monorepo typecheck `6/6`、format与diff check通过。changed-path lint为`0 errors / 1 warning`，唯一warning是exact base已存在的`renderProviderIcon` function-scoping行，本Slice不扩修。按准入不做package/install/live/README。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
