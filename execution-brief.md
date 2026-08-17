@@ -387,6 +387,12 @@ S1 当前唯一代码 Slice 是 **R11-2 app-owned `/fork` collision policy**：�
 
 R11-2 的首个 candidate `f6b9f2dcaf9ae15436683c7df81cd235ed30ada1` 已建立 menu collision policy，但 ChatView 的真实 `canOfferForkCommand` 尚未贯通 standalone command availability：app fork不可用时，literal provider `/fork` 虽能出现在菜单，提交仍会被 app handler误消费。当前窄 follow-up 只沿既有 ChatView → `useComposerSlashCommands` → Provider turn链传递同一availability，证明native fallback真实提交且不打开fork target picker，同时保持app available collision仍唯一进入picker；不扩张上述边界。
 
+R11-2 已在 exact pushed `94d7442cfa6bfc97e53540441f9257782fe1e80f` 闭合；上述 slash-command collision不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **R11-3 per-turn task snapshot row**：只吸收 Synara `aa551a90962096287f7053cb5a3a704218ed73cc` 的成熟 task-snapshot投影语义，并按当前R5 causal ordering与中英文产品文案加强。现有 `turn.tasks.updated` 全量快照在同一turn折为一行：id、createdAt、sequence锚定首个有效snapshot，计数与in-progress detail取最新有效snapshot；空或不可读snapshot不得抹去已知进度，下一turn与turnless未知边界保持独立。Composer task card与Timeline复用 `workLog` 唯一parser，Timeline复用现有 `taskList.progress`英中catalog，并绕过只适用于tool lifecycle suffix的heading normalizer。
+
+本 Slice 只改现有 `workLog`、`session-logic`、`TimelineWorkEntryRow`及相关tests/brief，不新增Goal/Todo/store/route/contract、第二parser或折叠状态，不改变R5排序、Timeline collapse/scroll/focus与布局。focused proof必须覆盖多snapshot、invalid/empty守恒、首个有效sequence锚点、跨turn边界、complete heading、中英actual与现有Composer parser consumer；候选只做source unit/browser、typecheck、i18n parity、format/lint/document/diff，不做package/live/README。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -399,4 +405,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-2 app-owned `/fork` collision policy as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-3 per-turn task snapshot row as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

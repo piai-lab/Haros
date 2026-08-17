@@ -85,6 +85,10 @@ export interface WorkLogEntry {
   // Provider-native event type carried through the activity payload (e.g.
   // "background_tasks_changed") so the timeline can pick a specific icon.
   nativeEventType?: string;
+  taskListProgress?: {
+    completed: number;
+    total: number;
+  };
 }
 
 export type WorkLogLiveActivityState =
@@ -166,6 +170,7 @@ interface DerivedWorkLogEntry extends WorkLogEntry {
   runtimeWarningRepeatCount?: number;
   runtimeWarningMessage?: string;
   suppressStandaloneCommandStart?: boolean;
+  taskListSnapshotValid?: boolean;
 }
 
 export function isFileChangeWorkLogEntry(
@@ -295,6 +300,7 @@ export function deriveWorkLogEntries(
         runtimeWarningMessage: _runtimeWarningMessage,
         runtimeWarningRepeatCount: _runtimeWarningRepeatCount,
         suppressStandaloneCommandStart: _suppressStandaloneCommandStart,
+        taskListSnapshotValid: _taskListSnapshotValid,
         ...entry
       }) => entry,
     );
@@ -411,6 +417,37 @@ function extractWorkLogOmniMindThreadCreation(
   return { operationId, requestedCount, createdCount, threads };
 }
 
+export interface TaskListTaskSnapshot {
+  task: string;
+  status: "pending" | "inProgress" | "completed";
+}
+
+// One parser owns both the composer task card and transcript snapshot rows.
+// An explicit empty array is distinct from an unreadable payload, but neither
+// is a usable progress snapshot that may replace an earlier valid checklist.
+export function parseTaskListTasks(payload: unknown): TaskListTaskSnapshot[] | null {
+  const record = asRecord(payload);
+  const rawTasks = record?.tasks;
+  if (!Array.isArray(rawTasks)) {
+    return null;
+  }
+  const tasks = rawTasks
+    .map((value): TaskListTaskSnapshot | null => {
+      const task = asRecord(value);
+      if (typeof task?.task !== "string") {
+        return null;
+      }
+      const status =
+        task.status === "completed" || task.status === "inProgress" ? task.status : "pending";
+      return { task: task.task, status };
+    })
+    .filter((task): task is TaskListTaskSnapshot => task !== null);
+  if (rawTasks.length > 0 && tasks.length === 0) {
+    return null;
+  }
+  return tasks;
+}
+
 function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWorkLogEntry {
   const payload =
     activity.payload && typeof activity.payload === "object"
@@ -472,6 +509,27 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   if (runtimeWarningMessage) {
     entry.detail = runtimeWarningMessage;
     entry.runtimeWarningMessage = runtimeWarningMessage;
+  }
+  if (activity.kind === "turn.tasks.updated") {
+    const tasks = parseTaskListTasks(payload);
+    if (tasks && tasks.length > 0) {
+      entry.taskListSnapshotValid = true;
+      entry.taskListProgress = {
+        completed: tasks.filter((task) => task.status === "completed").length,
+        total: tasks.length,
+      };
+      const inProgressTask = tasks.find((task) => task.status === "inProgress");
+      if (inProgressTask) {
+        entry.detail = inProgressTask.task;
+      } else {
+        delete entry.detail;
+      }
+    }
+    // Full snapshots supersede one another only inside a known turn. Turnless
+    // rows cannot prove a boundary and therefore remain independent.
+    if (activity.turnId !== null) {
+      entry.collapseKey = `task-list:${activity.turnId}`;
+    }
   }
   if (commandPreview.command) {
     entry.command = commandPreview.command;
@@ -538,7 +596,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
       payload,
       isRunning: activity.kind !== "tool.completed",
     });
-  if (readableTitle) {
+  if (readableTitle && activity.kind !== "turn.tasks.updated") {
     entry.toolTitle = readableTitle;
   }
   const liveActivity = deriveWorkLogLiveActivity(activity, payload, entry);
@@ -837,6 +895,7 @@ function collapseDerivedWorkLogEntries(
   // converged. Preserve the first row for each semantic repair and hide only
   // exact repeats; different turns/actions remain independently visible.
   const seenRuntimeReconciliationKeys = new Set<string>();
+  const taskListIndexByKey = new Map<string, number>();
   for (const entry of entries) {
     const runtimeReconciliationKey = entry.collapseKey?.startsWith("provider-runtime-reconcile:")
       ? entry.collapseKey
@@ -846,6 +905,17 @@ function collapseDerivedWorkLogEntries(
         continue;
       }
       seenRuntimeReconciliationKeys.add(runtimeReconciliationKey);
+    }
+    const taskListKey = entry.collapseKey?.startsWith("task-list:") ? entry.collapseKey : undefined;
+    if (taskListKey !== undefined) {
+      const existingIndex = taskListIndexByKey.get(taskListKey);
+      if (existingIndex !== undefined) {
+        collapsed[existingIndex] = mergeTaskListEntries(collapsed[existingIndex]!, entry);
+        continue;
+      }
+      taskListIndexByKey.set(taskListKey, collapsed.length);
+      collapsed.push(entry);
+      continue;
     }
     const previous = collapsed.at(-1);
     if (previous && shouldCollapseRuntimeWarningEntries(previous, entry)) {
@@ -927,6 +997,29 @@ function mergeRuntimeWarningEntries(
     detail: repeatPreview,
     preview: repeatPreview,
   };
+}
+
+function mergeTaskListEntries(
+  previous: DerivedWorkLogEntry,
+  next: DerivedWorkLogEntry,
+): DerivedWorkLogEntry {
+  if (!next.taskListSnapshotValid) {
+    return previous;
+  }
+  if (!previous.taskListSnapshotValid) {
+    return next;
+  }
+  const merged = {
+    ...next,
+    id: previous.id,
+    createdAt: previous.createdAt,
+  };
+  if (previous.sequence === undefined) {
+    delete merged.sequence;
+  } else {
+    merged.sequence = previous.sequence;
+  }
+  return merged;
 }
 
 // Ingestion emits compaction progress ("Compacting conversation...") and its

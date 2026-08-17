@@ -108,6 +108,181 @@ describe("deriveWorkLogEntries", () => {
     expect(entries.map((entry) => entry.id)).toEqual(["task-progress"]);
   });
 
+  it("collapses valid task snapshots per turn with first-anchor and latest-progress semantics", () => {
+    const activities: OrchestrationThreadActivity[] = [
+      makeActivity({
+        id: "tasks-empty-before",
+        createdAt: "2026-02-23T00:00:00.000Z",
+        sequence: 5,
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        turnId: "turn-1",
+        payload: { tasks: [] },
+      }),
+      makeActivity({
+        id: "tasks-first-valid",
+        createdAt: "2026-02-23T00:00:01.000Z",
+        sequence: 10,
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        turnId: "turn-1",
+        payload: {
+          tasks: [
+            { task: "Implement snapshot row", status: "inProgress" },
+            { task: "Verify ordering", status: "pending" },
+          ],
+        },
+      }),
+      makeActivity({
+        id: "tool-between",
+        createdAt: "2026-02-23T00:00:02.000Z",
+        sequence: 20,
+        kind: "tool.started",
+        summary: "Inspecting code",
+        tone: "tool",
+        turnId: "turn-1",
+      }),
+      makeActivity({
+        id: "tasks-latest-valid",
+        createdAt: "2026-02-23T00:00:03.000Z",
+        sequence: 30,
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        turnId: "turn-1",
+        payload: {
+          tasks: [
+            { task: "Implement snapshot row", status: "completed" },
+            { task: "Verify ordering", status: "inProgress" },
+          ],
+        },
+      }),
+      makeActivity({
+        id: "tasks-empty-after",
+        createdAt: "2026-02-23T00:00:03.500Z",
+        sequence: 35,
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        turnId: "turn-1",
+        payload: { tasks: [] },
+      }),
+      makeActivity({
+        id: "tasks-malformed-after",
+        createdAt: "2026-02-23T00:00:04.000Z",
+        sequence: 40,
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        turnId: "turn-1",
+        payload: { tasks: [{ status: "completed" }] },
+      }),
+    ];
+
+    const entries = deriveWorkLogEntries(activities, TurnId.makeUnsafe("turn-1"));
+    const taskEntry = entries.find((entry) => entry.activityKind === "turn.tasks.updated");
+    expect(entries).toHaveLength(2);
+    expect(taskEntry).toMatchObject({
+      id: "tasks-first-valid",
+      createdAt: "2026-02-23T00:00:01.000Z",
+      sequence: 10,
+      detail: "Verify ordering",
+      taskListProgress: { completed: 1, total: 2 },
+    });
+    expect(deriveTimelineEntries([], [], entries).map((entry) => entry.id)).toEqual([
+      "tasks-first-valid",
+      "tool-between",
+    ]);
+  });
+
+  it("uses the next valid snapshot as the anchor after unreadable task updates", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "tasks-unreadable",
+          createdAt: "2026-02-23T00:00:01.000Z",
+          sequence: 10,
+          kind: "turn.tasks.updated",
+          summary: "Tasks updated",
+          tone: "info",
+          turnId: "turn-1",
+          payload: { tasks: [{ task: 42, status: "pending" }] },
+        }),
+        makeActivity({
+          id: "tasks-valid",
+          createdAt: "2026-02-23T00:00:02.000Z",
+          sequence: 20,
+          kind: "turn.tasks.updated",
+          summary: "Tasks updated",
+          tone: "info",
+          turnId: "turn-1",
+          payload: { tasks: [{ task: "Ship", status: "completed" }] },
+        }),
+      ],
+      TurnId.makeUnsafe("turn-1"),
+    );
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      id: "tasks-valid",
+      createdAt: "2026-02-23T00:00:02.000Z",
+      sequence: 20,
+      taskListProgress: { completed: 1, total: 1 },
+    });
+  });
+
+  it("keeps task snapshot rows independent across turns and unknown turn boundaries", () => {
+    const activities: OrchestrationThreadActivity[] = [
+      makeActivity({
+        id: "tasks-turn-1",
+        createdAt: "2026-02-23T00:00:01.000Z",
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        turnId: "turn-1",
+        payload: { tasks: [{ task: "First turn", status: "completed" }] },
+      }),
+      makeActivity({
+        id: "tasks-turn-2",
+        createdAt: "2026-02-23T00:00:02.000Z",
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        turnId: "turn-2",
+        payload: { tasks: [{ task: "Second turn", status: "inProgress" }] },
+      }),
+      makeActivity({
+        id: "tasks-turnless-1",
+        createdAt: "2026-02-23T00:00:03.000Z",
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        payload: { tasks: [{ task: "Unknown boundary A", status: "completed" }] },
+      }),
+      makeActivity({
+        id: "tasks-turnless-2",
+        createdAt: "2026-02-23T00:00:04.000Z",
+        kind: "turn.tasks.updated",
+        summary: "Tasks updated",
+        tone: "info",
+        payload: { tasks: [{ task: "Unknown boundary B", status: "inProgress" }] },
+      }),
+    ];
+
+    const entries = deriveWorkLogEntries(activities, undefined, {
+      visibleTurnIds: new Set([TurnId.makeUnsafe("turn-1"), TurnId.makeUnsafe("turn-2")]),
+    });
+    expect(entries.map((entry) => entry.id)).toEqual(["tasks-turn-1", "tasks-turn-2"]);
+
+    const turnlessEntries = deriveWorkLogEntries(activities.slice(2), undefined);
+    expect(turnlessEntries.map((entry) => entry.id)).toEqual([
+      "tasks-turnless-1",
+      "tasks-turnless-2",
+    ]);
+  });
+
   it("omits quiet turn lifecycle entries while keeping failed turn state visible", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
