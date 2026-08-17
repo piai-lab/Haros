@@ -468,10 +468,11 @@ A 2026-08-17 audit of Codex task `01a00869-0192-7083-a024-919ff2b085b3` found no
 confirmation of the revised full decision surface. The maintainer authorized later direct work on
 `main`, but that execution-location authorization did not approve the proposed defer/decline/covered
 set. The 45 accepted non-merge commits were nevertheless implemented and remain factual current-code
-evidence; the other 35 non-merge dispositions below and the treatment of 16 merge carriers are reopened
-as proposals pending maintainer confirmation. `18ff998…` remains the exact reviewed and implemented
-source boundary, not a claim that its whole tree, brand, version or release bytes were merged or that
-all non-adoption decisions were approved.
+evidence; the other 35 non-merge dispositions below and the treatment of 16 merge carriers were
+reopened as proposals pending maintainer confirmation at that audit point. Section 15 records their
+later corrected disposition and confirmation. `18ff998…` was the exact reviewed and implemented
+source boundary at this historical checkpoint, not a claim that its whole tree, brand, version or
+release bytes were merged or that all non-adoption decisions were then approved.
 
 ### 14.2 Accepted responsibility map — 45/45 closed
 
@@ -599,22 +600,23 @@ Re-run only the affected rows when the exact Synara head changes, rights/securit
 explicit trigger above fires, or a focused current-product journey disproves the claimed implementation.
 Do not turn this table into a cherry-pick backlog or infer acceptance from ancestry alone.
 
-## 15. Synara `18ff998…8f9f600` partial implementation; full upstream closure pending
+## 15. Synara `18ff998…8f9f600` adoption closure
 
 ### 15.1 Exact boundary and count closure
 
 The read-only source is the maintainer-provided local checkout
 `/Users/liuzaoqu/Desktop/Develop/πCode/synara`. On 2026-08-17 it is clean and detached at
 `8f9f60045ea652db7d4a6822e2f723dde073f40a`, exactly equal to `origin/main`; its local `main` ref is the
-older `661908cfde5e5d4ff9ccdc2c88f1c0e904f92983`. The current OmniMind implemented boundary
-`18ff99857d5b84adab2019c2839fa4f6df761b7c` is an ancestor of the candidate head.
+older `661908cfde5e5d4ff9ccdc2c88f1c0e904f92983`. The prior OmniMind adopted boundary
+`18ff99857d5b84adab2019c2839fa4f6df761b7c` is an ancestor of this exact reviewed head.
 
 The range contains 101 commits: 78 non-merge commits in 23 PR/responsibility groups and 23 merge
 carriers. It changes 63 files by `+4686/-438`. The previous accounting was `61 semantic-adopt + 2
 current-stronger + 5 decline-exact/retain-insight + 10 donor-doc/no-code + 23 merge-carrier = 101`.
-The 61 semantic responsibilities have since entered `main` through `22bbd70a6` and `d86d5766b`;
-that implementation fact does not retroactively approve the remaining dispositions or advance the
-README adopted head.
+The 61 semantic responsibilities first entered through `22bbd70a6` and `d86d5766b`. The later atomic
+adoption set through pushed product `056f2835e0e0520f1a78103c9a6a80425e5adc01` closes the remaining
+product mechanisms, whole-tree responsibility surface, author-equivalent tests and packaged journey;
+the README adopted head therefore advances only with this authority closure.
 
 A whole-tree comparison changes the governing interpretation. Across `apps/**` and `packages/**`,
 OmniMind and exact Synara `8f9f600…` have 6,365 common paths: 4,785 are byte-identical blobs and
@@ -663,14 +665,14 @@ These 61 responsibilities are implemented on `main` by `22bbd70a6` and `d86d5766
 tests and bounded live/runtime evidence close the listed defects at source level; they do not close the
 whole `8f9f600…` upstream sync, advance README adoption truth or authorize the non-adoption rows below.
 
-### 15.3 Remaining responsibilities in `18ff998…8f9f600`
+### 15.3 Disposition of the remaining responsibilities in `18ff998…8f9f600`
 
 | Synara group                                  | Count | Standing-default disposition                                             | Remaining work or deliberate difference                                                                                                                                                                          |
 | --------------------------------------------- | ----: | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#714` normalized command-not-found           |     2 | `current stronger — confirmation required`                               | Keep OmniMind's structured `_tag`/`reason`/`code`/`cause` walk and import the upstream regression case; do not replace it with the narrower string-marker implementation. Loss: exact code parity, not behavior. |
-| `#698` sanitized Provider event fixtures      |     5 | `adopt`                                                                  | Preserve the author sanitizer/fixture lifecycle, adapting only namespace and secret-safe artifact boundaries. This is an upstream test authority, not a second product owner.                                    |
-| `#701/#702/#703/#696/#693/#699` upstream docs |    10 | `translate into sole owners — identity divergence requires confirmation` | Carry verified mechanism, build and runtime facts into OmniMind's existing owners. Do not copy Synara product name, release/account/public-origin claims or parallel instruction structure verbatim.             |
-| 23 merge commits                              |    23 | `no independent product implementation — confirmation required`          | Parent/tree comparison found no separately attributable behavior. Their topology remains unavailable until the later ancestry experiment; any conflict-resolution bytes discovered there must be reclassified.   |
+| `#714` normalized command-not-found           |     2 | `confirmed current-stronger`                                              | OmniMind keeps the structured `_tag`/`reason`/`code`/`cause` walk and imports the upstream regression case rather than replacing it with narrower string matching. Loss is exact code parity, not behavior.          |
+| `#698` sanitized Provider event fixtures      |     5 | `adopted`                                                                 | The author sanitizer/fixture lifecycle is retained with namespace and secret-safe artifact adaptation. It remains a test authority, not a second product owner.                                                     |
+| `#701/#702/#703/#696/#693/#699` upstream docs |    10 | `translated into sole owners`                                             | Verified mechanism, build and runtime facts enter OmniMind owners; Synara product name, release/account/public-origin claims and parallel instruction structure do not become OmniMind facts.                       |
+| 23 merge commits                              |    23 | `confirmed no independent implementation`                                | Parent/tree comparison found no separately attributable behavior. The later ancestry experiment must reclassify any independent conflict-resolution bytes it exposes.                                             |
 
 ### 15.4 Reopened `712d88f…18ff998` product choices — corrected disposition
 
@@ -717,43 +719,50 @@ adoption set and do not wait for another execution-brief admission.
 ### 15.6 Whole-tree path/behavior closure surface
 
 The baseline head-to-head inventory is 129 Synara-only paths, 1,580 modified shared paths, 4,785
-byte-identical shared paths and 154 OmniMind-only paths. A working-tree recomputation after the current
-candidate changes reports 96 still-absent Synara paths and 1,595 differing shared paths. Those latter
-numbers are diagnostic only: namespace, bilingual copy and valid downstream owners can increase the
-raw diff, so they do not by themselves prove regression or parity. The adopted head remains unchanged
-until every group below has behavior and author-test evidence.
+byte-identical shared paths and 154 OmniMind-only paths. The exact pushed product
+`056f2835e0e0520f1a78103c9a6a80425e5adc01` against exact Synara `8f9f600…` has 94 Synara-only paths,
+1,597 modified shared paths, 4,803 byte-identical shared paths and 168 OmniMind-only paths. Raw count
+is diagnostic only: namespace, bilingual copy and valid downstream owners can increase the diff.
+Closure therefore uses the grouped product owner, behavior and author-test evidence below rather than
+a 1,597-row parallel ledger.
 
 | Responsibility/path group                                                                                          | Current disposition                                                                                               | Required closure                                                                                                                                                                                                                                              |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ThreadGoal, `/goal`, Composer Goal UI, prompt/MCP, continuation/recovery/race fences                               | Candidate semantic adoption in the inherited Thread/Orchestration owner; these files were never previously ported | Full author-equivalent unit/projection/reactor tests, bilingual browser journey, failure/interrupt/reopen and pushed-SHA packaged proof; Todo remains separate                                                                                                |
-| Debug mode, bounded raw Provider events, 480/960/1440 width, global/dark icon behavior                             | Candidate adoption with OmniMind namespace/catalog/assets and existing security/settings owners                   | Author tests, negative redaction checks, platform fallback and packaged appearance switch                                                                                                                                                                     |
-| Profile `ShareCard`/`ShareDialog`/`shareCardExport`                                                                | Adopt local deterministic PNG render/copy/save only                                                               | Local render/clipboard/download tests plus bilingual UI; no Synara social handles/domain/X/LinkedIn/Reddit links                                                                                                                                              |
+| ThreadGoal, `/goal`, Composer Goal UI, prompt/MCP, continuation/recovery/race fences                               | Adopted in the inherited Thread/Orchestration owner; these files were never previously ported                     | Unit/projection/reactor and browser regressions plus fresh packaged DeepSeek Goal→continuation→interrupt auto-pause→reopen→resume; Todo remains a separate 2/2 projection                                                                                    |
+| Debug mode, bounded raw Provider events, 480/960/1440 width, global/dark icon behavior                             | Adopted with OmniMind namespace/catalog/assets and existing security/settings owners                              | Sanitizer/negative regressions and author-equivalent browser cases pass; fresh packaged `/debug`→badge→`/default`, full-width and dark-icon settings persist across reopen                                                                                     |
+| Profile `ShareCard`/`ShareDialog`/`shareCardExport`                                                                | Adopted local deterministic PNG render/copy/save only                                                              | Bilingual local card copied successfully and saved as a verified 1720×880 PNG; no Synara social handles/domain/X/LinkedIn/Reddit links                                                                                                                        |
 | External social sharing/public origin                                                                              | Confirmed identity/public-surface divergence: not activated                                                       | Loss: no one-click social posting. Reason: OmniMind has no truthful public origin/handle evidence; re-open only with real OmniMind identity and explicit high-risk confirmation                                                                               |
-| Web streaming `perf/**` harness                                                                                    | Candidate direct adoption under OmniMind namespace; no runtime owner added; metrics/build/real pipeline workload passed locally | Preserve the real event→reducer→store→selector→timeline harness; final adoption still follows the atomic pushed-SHA closure                                                                                                                          |
-| Space UI/controllers and `spacesUiStore.ts` family                                                                 | Candidate semantic translation into existing Thread Groups; no second Space store                                 | Icon suggestion/editor, order, sidebar expansion/route restore, search/bulk selection and empty states now use existing Group/Sidebar owners. Retain author-equivalent tests; never add `space.projects.assign` because membership is Thread `groupIds`.       |
-| PR stack, workspace search, Git dialogs, automation risk/draft/edit, branch mismatch and Thread creation           | Different-name owner parity audited; demonstrated PR-stack and bilingual creation-card gaps are candidate-filled; focused browser tests passed locally | Keep upstream outcomes in `PullRequestStackNavigation`, explorer/`SidebarSearchPalette`, `GitActionsControl`, current automation owners and `ComposerBranchMismatchNotice`; packaged/failure closure remains required.                              |
-| Provider fixture and missing-command regressions                                                                   | Fixture candidate adopted; current stronger classifier retained per confirmed divergence                          | Preserve sanitized fixture author tests and import the upstream missing-command case without replacing the stronger classifier                                                                                                                                |
+| Web streaming `perf/**` harness                                                                                    | Adopted under OmniMind namespace with no production runtime owner added                                             | Real event→reducer→store→selector→timeline workload passes 19 streaming batches with exact final text, no page error and no long task                                                                                                                         |
+| Space UI/controllers and `spacesUiStore.ts` family                                                                 | Semantically translated into existing Thread Groups; no second Space store                                         | Icon editor, order, sidebar expansion/route restore, search/bulk selection and empty states use Group/Sidebar owners; focused tests plus fresh packaged Group creation prove the path. `space.projects.assign` is intentionally translated to Thread `groupIds` |
+| PR stack, workspace search, Git dialogs, automation risk/draft/edit, branch mismatch and Thread creation           | Different-name owner parity audited and adopted in existing owners                                                 | Outcomes remain in `PullRequestStackNavigation`, explorer/`SidebarSearchPalette`, `GitActionsControl`, automation owners and `ComposerBranchMismatchNotice`; focused browser and author-equivalent regressions pass                                              |
+| Provider fixture and missing-command regressions                                                                   | Fixture adopted; confirmed stronger classifier retained                                                            | Sanitized fixture author tests and the upstream missing-command case pass without replacing the stronger classifier                                                                                                                                          |
 | Release history / What's New                                                                                       | Generic mechanism may be adapted, activation remains identity-gated                                               | Loss: current Release history stays unavailable. Activate only from real OmniMind version/changelog/publication evidence; never copy Synara entries                                                                                                           |
 | Synara/DP Code storage-origin and desktop-storage migrations                                                       | Confirmed non-adoption                                                                                             | Loss: OmniMind will not migrate data from Synara/DP Code legacy homes. The maintainer confirmed there is no predecessor user population; those identities are unrelated to OmniMind's first-public namespace, so running them could only risk reading or rewriting unrelated data. |
 | Automation consecutive-failure policy                                                                              | Confirmed semantic adoption: default `3`, with explicit `1`/`3`/`5`/keep-running choices                          | A three-failure threshold can permit two more attempts than fail-fast, so side-effect-sensitive automations can explicitly choose `1`. Any success resets the consecutive-failure count; contract, migration, bilingual UI and author-equivalent tests share the same policy. |
 | Synara marketing/assets/logo/handle/domain/release/account/signing/publication bytes                               | Confirmed identity divergence                                                                                     | Keep truthful OmniMind assets, bilingual copy and distribution evidence; mixed commits must still contribute their product mechanisms                                                                                                                         |
 | Existing stronger Provider picker, indexed Codex usage, missing-command classifier and macOS build traversal guard | Confirmed current-stronger divergence                                                                             | Retain each upstream regression test or show it inapplicable; Windows/browser workarounds enter only after reproduction                                                                                                                                       |
 
-The 96 still-absent paths have a complete responsibility disposition: 22 identity/marketing assets,
-4 legacy-identity migrations, 11 renumbered or semantically translated migrations, 21 Space-to-Group
-paths, 6 current usage-owner paths, 4 Git-owner paths, 1 workspace-search path, 8 automation-owner
-paths, 2 branch-mismatch paths, 3 PR-stack paths, 9 release/What's-New paths, 2 Windows-icon paths,
-2 adapted author-test paths and 1 test-only helper. Path absence therefore no longer means silent
-omission, but every candidate group still needs the behavior/test evidence stated above. The 1,595
-same-path differences are concentrated in Web components/libs, Server provider/orchestration/
-persistence, AgentGateway, contracts/shared and Desktop integration. This table is the responsibility
-routing surface, not a substitute for path review; open groups remain `pending`, and therefore the
-README revision cannot advance.
+The 94 Synara-only paths close under the responsibility groups above: identity/marketing and release
+facts remain confirmed divergences; legacy-identity migrations are permanently excluded by the
+maintainer; migrations that carry product semantics are renumbered/translated; Space paths map to
+Thread Groups; usage, Git, search, automation, branch mismatch, PR stack and creation behavior reuse
+their existing OmniMind owners; author tests are retained or equivalently adapted. The 1,597
+same-path differences group under Web/Workbench, Server Provider/Orchestration/Persistence,
+AgentGateway, contracts/shared, Desktop integration and the fixed downstream divergence categories.
+For each group the table points to the behavioral owner and author-equivalent evidence; absence is no
+longer treated as silent non-adoption or closed merely by a matching filename.
 
-Local candidate validation on 2026-08-17 passed all six package typechecks and all four package
-builds, the document contract (20/20), focused Goal terminal-continuation/auto-pause coverage, 20
-Goal/Profile/width/Group/PR unit tests, eight focused Group/PR/icon browser cases, perf metrics and a
-real pipeline workload (19 streaming batches, exact final text, no page errors or long tasks).
-Credential-blind minimal OpenAI-chat probes also returned valid 2xx response shapes from both MiMo
-and DeepSeek. These are candidate falsifiers, not pushed-SHA packaged proof and not permission to
-advance the adopted head.
+Final validation on exact pushed product `056f2835e` passed all six package typechecks and all four
+package builds; lint completed with zero errors; the document contract passed 20/20; targeted Goal
+server coverage passed 15/15; migration/backup/replay passed 48/48; slash/Goal-header units passed
+37/37; Goal/width/debug browser integration passed 3/3 in addition to the earlier focused
+Group/PR/icon and perf suites. A newly built macOS arm64 DMG has SHA-256
+`9f32130d1258c98017c18b47fccb54d9656651fbab4c333023d27b1c8608991a`; its ad-hoc installed App used
+a fresh task profile and isolated HOME, OmniMind home and Provider private home. The packaged journey
+proved real DeepSeek Goal continuation, a distinct 2/2 Todo projection, interrupt auto-pause, close/
+reopen/resume, `/debug`/`/default`, full-width and dark-icon persistence, Profile PNG copy/save,
+Automation default 3 with 1/3/5/keep-running choices and local Thread Group creation. Migrations
+1–100 succeeded, and log scan found no `THREAD_SNAPSHOT_NOT_FOUND`, goal-continuation, fatal or
+unhandled errors. Earlier bounded live probes also returned valid 2xx response shapes from MiMo and
+DeepSeek. These jointly satisfy the adopted-head invariant for exact Synara `8f9f600…`; they do not
+claim an official signed/notarized release.
