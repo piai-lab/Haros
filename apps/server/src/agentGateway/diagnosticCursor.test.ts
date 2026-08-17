@@ -7,6 +7,7 @@ import {
   encodeDiagnosticCursor,
 } from "./diagnosticCursor.ts";
 import { sanitizeDiagnosticValue } from "./diagnosticSanitizer.ts";
+import { registerProviderCredentialKey } from "../providerChildEnvironment.ts";
 import { shapeDiagnosticEvents } from "./threadDiagnosticSummary.ts";
 
 describe("diagnostic cursor", () => {
@@ -110,6 +111,49 @@ describe("diagnostic sanitizer", () => {
       callback:
         "https://[redacted]@example.test/callback?token=[redacted]&api_key=[redacted]&safe=visible",
       header: "Authorization: [redacted] Cookie=[redacted]",
+    });
+  });
+
+  it("redacts typed environment maps, tuples, and name/value records", () => {
+    registerProviderCredentialKey("ACME-LICENSE");
+    expect(
+      sanitizeDiagnosticValue({
+        env: {
+          OPENAI_API_KEY: "openai-secret",
+          "ACME-LICENSE": "custom-secret",
+          SAFE_ENV: "visible",
+        },
+        tuples: [
+          ["GITHUB_TOKEN", "tuple-secret"],
+          ["SAFE_ENV", "visible"],
+        ],
+        named: { name: "AWS_ACCESS_KEY_ID", value: "named-secret", source: "process" },
+      }),
+    ).toEqual({
+      env: {
+        OPENAI_API_KEY: "[redacted]",
+        "ACME-LICENSE": "[redacted]",
+        SAFE_ENV: "visible",
+      },
+      tuples: [
+        ["GITHUB_TOKEN", "[redacted]"],
+        ["SAFE_ENV", "visible"],
+      ],
+      named: { name: "AWS_ACCESS_KEY_ID", value: "[redacted]", source: "process" },
+    });
+  });
+
+  it("keeps ordinary public and request keys visible", () => {
+    expect(
+      sanitizeDiagnosticValue({
+        public_key: "public-material",
+        request_key: "request-correlation",
+        cacheKey: "cache-entry",
+      }),
+    ).toEqual({
+      public_key: "public-material",
+      request_key: "request-correlation",
+      cacheKey: "cache-entry",
     });
   });
 });
