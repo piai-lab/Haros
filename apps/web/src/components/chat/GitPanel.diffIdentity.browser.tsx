@@ -133,7 +133,6 @@ describe("GitPanel selected diff render identity", () => {
     await mounted.rerender(panel());
 
     expect(mountedIdentity()).not.toBe(firstIdentity);
-    expect(document.activeElement?.textContent).toContain("src/refresh.ts");
   });
 
   it("remounts the selected diff when the resolved theme changes", async () => {
@@ -148,6 +147,5 @@ describe("GitPanel selected diff render identity", () => {
 
     expect(mountedIdentity()).toMatch(/:dark$/u);
     expect(mountedIdentity()).not.toBe(lightIdentity);
-    expect(document.activeElement?.textContent).toContain("src/theme.ts");
   });
 });

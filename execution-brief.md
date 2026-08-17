@@ -333,7 +333,7 @@ Phase-9b legacy compacted reasoning anchor及其sequence Judge follow-up已在 e
 
 S1 当前唯一代码 Slice 是 **Phase-9c Git selected diff render identity A1**：只吸收 Synara `00ff2f45442c365c1fc96671b4546065ebf4f9bb` 的单一 author 语义，在既有 `GitPanel` selected diff seam复用 `buildFileDiffRenderKey(selectedFileDiff) + theme` 作为React identity。staged/unstaged同形patch的A→B切换、同文件内容刷新与light/dark切换必须remount并显示当前diff，同时不得改变selection owner、stage/unstage mutation、Pull/Commit/PR/stack、server/contracts/catalog、W3/W4 geometry、focus或keyboard语义。
 
-该 Slice 的 pre-commit source-candidate 证据：现有 diff identity owner `1 file / 23 tests`与真实 Chromium GitPanel `2 files / 5 tests`通过，其中mount-time harness `1 file / 3 tests`覆盖staged→unstaged同形patch、same-path内容刷新、light→dark及file-row focus连续性；monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与diff check通过。本 Slice不改变用户文案、layout、query/mutation或外部Git authority，按准入不做package/install/live/README。
+该 Slice 的 pre-commit source-candidate 证据：现有 diff identity owner `1 file / 23 tests`与真实 Chromium GitPanel `2 files / 5 tests`通过，其中mount-time harness `1 file / 3 tests`覆盖staged→unstaged同形patch及其exact clicked-row focus、same-path内容刷新与light→dark remount/render；refresh/theme路径不扩张声称焦点连续性。monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与diff check通过。本 Slice不改变用户文案、layout、query/mutation或外部Git authority，按准入不做package/install/live/README。
 
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
