@@ -614,7 +614,7 @@ The range contains 101 commits: 78 non-merge commits in 23 PR/responsibility gro
 carriers. It changes 63 files by `+4686/-438`. The previous accounting was `61 semantic-adopt + 2
 current-stronger + 5 decline-exact/retain-insight + 10 donor-doc/no-code + 23 merge-carrier = 101`.
 The 61 semantic responsibilities first entered through `22bbd70a6` and `d86d5766b`. The later atomic
-adoption set through pushed product `58f76446d3d7061b7fe18e140fe56676269497c3` closes the remaining
+adoption set through pushed product `3077bf253` closes the remaining
 product mechanisms, whole-tree responsibility surface, author-equivalent tests and packaged journey;
 the README adopted head therefore advances only with this authority closure.
 
@@ -720,13 +720,11 @@ adoption set and do not wait for another execution-brief admission.
 
 The baseline head-to-head inventory is 129 Synara-only paths, 1,580 modified shared paths, 4,785
 byte-identical shared paths and 154 OmniMind-only paths. The exact pushed product
-`58f76446d3d7061b7fe18e140fe56676269497c3` against exact Synara `8f9f600…` has 94 Synara-only paths,
-1,602 modified shared paths, 4,798 byte-identical shared paths and 167 OmniMind-only paths. The path
-sets remain the same as the prior product candidate; the final compiler/cleanup closure turns five
-formerly identical shared blobs into reviewed downstream modifications. The earlier 168 count
-preceded removal of the unconsumed `ComposerGoalBanner.tsx`. A NUL-safe Git tree map reproduces the
-final counts; a locale-mismatched plain `comm/join` probe falsely reports 505/578 unique paths and is
-not evidence. Raw count
+`3077bf253` against exact Synara `8f9f600…` has 94 Synara-only paths, 1,602 modified shared paths,
+4,798 byte-identical shared paths and 176 OmniMind-only paths. Relative to `58f76446d`, the integrated
+Thinking-status work and Engine picker regression add nine OmniMind-only paths without changing the
+Synara-only, modified-shared or byte-identical counts. A NUL-safe Git tree map reproduces the final
+counts; a locale-mismatched plain `comm/join` probe is not evidence. Raw count
 is diagnostic only: namespace, bilingual copy and valid downstream owners can increase the diff.
 Closure therefore uses the grouped product owner, behavior and author-test evidence below rather than
 a 1,602-row parallel ledger.
@@ -741,7 +739,7 @@ a 1,602-row parallel ledger.
 | Space UI/controllers and `spacesUiStore.ts` family                                                                 | Semantically translated into existing Thread Groups; no second Space store                                         | Icon editor, order, sidebar expansion/route restore, search/bulk selection and empty states use Group/Sidebar owners; focused tests plus fresh packaged Group creation prove the path. `space.projects.assign` is intentionally translated to Thread `groupIds` |
 | PR stack, workspace search, Git dialogs, automation risk/draft/edit, branch mismatch and Thread creation           | Different-name owner parity audited and adopted in existing owners                                                 | Outcomes remain in `PullRequestStackNavigation`, explorer/`SidebarSearchPalette`, `GitActionsControl`, automation owners and `ComposerBranchMismatchNotice`; focused browser and author-equivalent regressions pass                                              |
 | Provider fixture and missing-command regressions                                                                   | Fixture adopted; confirmed stronger classifier retained                                                            | Sanitized fixture author tests and the upstream missing-command case pass without replacing the stronger classifier                                                                                                                                          |
-| Provider picker identity and readiness                                                                             | Semantically adopted in the existing Settings/Composer availability owners; the previous blanket `current-stronger` classification incorrectly swallowed the compatible icon and status behavior | `3077bf253` directly reuses `ProviderIcon`, local-config-normalized Server health and existing availability states; bilingual Chromium coverage proves available/sign-in/limited/not-installed/unavailable states, 480px containment and continued setup reachability for an uninstalled Engine |
+| Provider picker identity and readiness                                                                             | Semantically adopted in the existing Settings/Composer availability owners; the previous blanket `current-stronger` classification incorrectly swallowed the compatible icon and status behavior | `3077bf253` directly reuses `ProviderIcon`, local-config-normalized Server health and existing availability states; bilingual Chromium coverage proves available/sign-in/limited/not-installed/unavailable states, 480px containment and continued setup reachability for an uninstalled Engine. The exact pushed product was rebuilt, installed and reopened with a fresh isolated profile; the real Settings surface retained all ten icons, localized statuses, the availability summary and enabled setup reachability. |
 | Release history / What's New                                                                                       | Generic mechanism may be adapted, activation remains identity-gated                                               | Loss: current Release history stays unavailable. Activate only from real OmniMind version/changelog/publication evidence; never copy Synara entries                                                                                                           |
 | Synara/DP Code storage-origin and desktop-storage migrations                                                       | Confirmed non-adoption                                                                                             | Loss: OmniMind will not migrate data from Synara/DP Code legacy homes. The maintainer confirmed there is no predecessor user population; those identities are unrelated to OmniMind's first-public namespace, so running them could only risk reading or rewriting unrelated data. |
 | Automation consecutive-failure policy                                                                              | Confirmed semantic adoption: default `3`, with explicit `1`/`3`/`5`/keep-running choices                          | A three-failure threshold can permit two more attempts than fail-fast, so side-effect-sensitive automations can explicitly choose `1`. Any success resets the consecutive-failure count; contract, migration, bilingual UI and author-equivalent tests share the same policy. |
@@ -758,7 +756,7 @@ AgentGateway, contracts/shared, Desktop integration and the fixed downstream div
 For each group the table points to the behavioral owner and author-equivalent evidence; absence is no
 longer treated as silent non-adoption or closed merely by a matching filename.
 
-Final validation on exact pushed product `58f76446d` passed the complete repository test graph (Server
+Full adoption validation on exact pushed ancestor `58f76446d` passed the complete repository test graph (Server
 4,207 passed/16 skipped across 358 passed/3 skipped files; Web 4,107 passed across 320 files, with the
 remaining packages green), all six package typechecks and all four package builds. The final closure
 also preserves the earlier document-contract 20/20, Goal, migration/backup/replay, slash/browser,
@@ -779,8 +777,15 @@ PNG); author-equivalent tests retain save/copy failure feedback and Automation d
 1/3/5/keep-running choices. Migrations 1–100 succeeded; the only packaged error was the intentional
 credential-unavailable failure, which surfaced honestly and recovered without touching real user
 state. Earlier bounded live probes also returned valid 2xx response shapes from MiMo and DeepSeek.
-These jointly satisfy the adopted-head invariant for exact Synara `8f9f600…`; they do not claim an
-official signed/notarized release.
+
+The current exact pushed product `3077bf253` additionally passed the focused Provider picker unit and
+bilingual Chromium graph (47 unit tests plus six browser cases), Web typecheck, touched-file lint,
+production Web build and document contract. Its arm64 ad-hoc DMG has SHA-256
+`fae7e7a6b42907f36aa0f1e235eddef7f14d3d0ddbdb1a9cecf47f3d4d7950ea`; a new fresh profile proved
+main/Helper/bundled-Server isolation, all ten Engine icons, localized readiness, availability summary,
+continued uninstalled-Engine setup reachability and close/reopen. Together with the unchanged ancestor
+journeys above, these satisfy the adopted-head invariant for exact Synara `8f9f600…`; they do not claim
+an official signed/notarized release.
 
 ## 16. OmniMind live-status visual adoption
 

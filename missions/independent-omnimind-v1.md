@@ -24,14 +24,14 @@ Updated: 2026-08-18
 | --- | --- | --- | --- |
 | F-01 | sole owners、source re-entry 与文档合同无执行矛盾 | candidate | `AGENTS.md`; `README.md`; `architecture/`; document contract |
 | F-02 | 只有一个 Product Orchestration、Provider Registry 与 Project/Thread/Space product truth；无平行 ProductControlPlane/Run/outbox | candidate | `architecture/product-state.md`; `architecture/execution.md`; source tree |
-| F-03 | Synara exact source、rights、逐责任采用与 OmniMind differences 可追踪 | candidate | README `source-adoptions`; `research/source-review.md` §14–15；exact Synara `8f9f600…`、whole-tree grouped disposition、固定 divergence 与 pushed `58f76446d` product evidence 已闭合 |
-| F-04 | source alignment 只有一个 exact adopted head，不维护 `stable + patches` 双轨 | candidate | README `source-adoptions`; `research/source-review.md` §15；adopted head 已前移为 exact `8f9f600…`，Goal/Todo 与 packaged fresh-profile journey 由 pushed `58f76446d` 证明 |
+| F-03 | Synara exact source、rights、逐责任采用与 OmniMind differences 可追踪 | candidate | README `source-adoptions`; `research/source-review.md` §14–15；exact Synara `8f9f600…`、whole-tree grouped disposition、固定 divergence 与 pushed/packaged `3077bf253` product evidence 已闭合 |
+| F-04 | source alignment 只有一个 exact adopted head，不维护 `stable + patches` 双轨 | candidate | README `source-adoptions`; `research/source-review.md` §15；adopted head 已前移为 exact `8f9f600…`；完整 Goal/Todo journey 由祖先 `58f76446d` 证明，当前安装产品 `3077bf253` 另有 Engine picker fresh-profile/reopen 复验 |
 | F-05 | Agent｜Chat、Projects/Groups、Kanban 与标题/Terminal 映射使用 inherited substrate | candidate | `93f979c4f`; `architecture/workbench.md` |
 | F-06 | Provider Registry/Session binding 唯一路由到 native adapters；切换 stop-first、失败恢复 exact binding | candidate | `de869f3ab`; Provider journey evidence in Git/research |
 | F-07 | `omnimind` 与 stock `pi` identity/state/session 隔离；Pi lineage 为 stable `v0.84.2` | candidate | `d88edd3db`; `README.md`; Pi intake evidence |
 | F-08 | admission、native acceptance、interrupt、settlement 与 unknown 准确，无跨 Provider replay/fallback | candidate | `de869f3ab`; `c8bac8add`; runtime recovery tests |
 | F-09 | stream、reasoning、tool、structured request、usage/error 进入现有 Timeline 并保留 provenance | candidate | `3556f5118`; Provider runtime tests/journeys |
-| F-10 | Workbench、Settings、File/Viewer/Diff/Terminal/Git、stream/scroll、a11y/perf 无 material regression | candidate | `dda13f957`; Workbench research/e2e |
+| F-10 | Workbench、Settings、File/Viewer/Diff/Terminal/Git、stream/scroll、a11y/perf 无 material regression | candidate | `dda13f957`; `3077bf253` Engine picker bilingual browser + packaged/reopen evidence；Workbench research/e2e |
 | F-11 | representative Pi Package/Extension/Skill/Prompt/Tool/MCP 在 OmniMind Agent 中运行 | candidate | `9ce368fbd`; ecosystem journey evidence |
 | F-12 | PluginLibrary/Skills/provider discovery 与 native + compatible OmniMind assets 组合真实，无 shared PackageActivation | candidate | `f4f7acc40`; `architecture/execution.md` |
 | F-14 | Chat workspace/artifact、外部文件只读与 Send to Agent 边界真实；文件/Git 不静默覆盖 | candidate | `9ce368fbd`; filesystem/Git journeys |
