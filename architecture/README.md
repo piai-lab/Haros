@@ -9,7 +9,7 @@
 | 产品身份、战略不变量与 production adoption | 根 [`README.md`](../README.md)                                                  | 架构只实现其边界，不复制来源清单 |
 | 稳定职责、产品事实、进程边界与完整 UI 契约 | 本目录的专题 owner                                                              | 根与施工文件只摘要并链接         |
 | 固定来源事实、失败、反例与复验触发器       | [`research/`](../research/README.md)                                            | 证据不直接变成当前设计           |
-| 施工顺序、进入/停止条件与阶段 proof        | [`execution-brief.md`](../execution-brief.md)                                   | 消费架构，不发明 topology 或对象 |
+| 当前工作目标、并发协调、真实阻塞与下一动作 | [`execution-brief.md`](../execution-brief.md)                                   | 消费架构，不发明 topology 或对象 |
 | Campaign claim 状态与证据指针              | [`missions/independent-omnimind-v1.md`](../missions/independent-omnimind-v1.md) | 状态不定义需求或施工计划         |
 
 架构文件只描述当前有效设计，不保存 `open / candidate / verified`。若新证据命中复验条件并推翻设计，应在一次获授权变更中修复 sole owner 和所有路由；不得追加兼容叙事制造双重真相。

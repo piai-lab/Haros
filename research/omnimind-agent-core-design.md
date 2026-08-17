@@ -3,7 +3,7 @@
 > 证据日期：2026-08-15
 >
 > 文档角色：Agent Core 的研究设计、来源处置与反证地图。
-> 权威边界：产品事实属于 `architecture/*`，当前准入属于 `execution-brief.md`，Campaign 状态属于 active Mission。本文不授权施工。
+> 权威边界：产品事实属于 `architecture/*`，维护者决定 source adoption 与新增产品责任，`execution-brief.md` 只协调当前工作、并发与真实阻塞，Campaign 状态属于 active Mission。本文不授权施工。
 
 ## 0. 总体裁决
 

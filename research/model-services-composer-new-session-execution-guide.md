@@ -1,14 +1,16 @@
-# Model services 与 Composer 新会话实施执行指南
+# Model services 与 Composer 历史实现分解与验证参考
 
 Observed: 2026-08-12
 
 Source snapshot: `a9adf9fb9a30f6b0a9fb43fc3349c8d2fdfd5a9d`
 
-Status: new-session implementation guide；不是架构 sole owner、全局施工顺序、Campaign 状态、Pi source adoption 或完成证明
+Status: historical implementation evidence；不是新会话入口、架构 sole owner、准入门、施工顺序、Campaign 状态、Pi source adoption 或完成证明
+
+> **已退休执行入口（2026-08-17）**：本文绑定旧 source snapshot，只保存当时的责任分解、反例、验证方法与 stop-loss。不得从本文选择今天的切片、推断当前缺口或开始施工；新任务只按根 `AGENTS.md`、当前 sole owner、维护者已确认的 decision surface、当前代码与 `execution-brief.md` 中的真实并发/阻塞决定路径。`execution-brief.md` 不授予或撤销维护者授权。
 
 ## 0. 这份文档解决什么
 
-本文件面向一个**没有历史聊天记忆的新会话**。它不再解释产品设计，而是回答：
+本文件记录当时为一个**没有历史聊天记忆的新会话**准备的实现分解。以下问题保留为历史证据结构，不是今天的开工指令：
 
 ```text
 新会话从哪里开始？
@@ -23,11 +25,11 @@ Status: new-session implementation guide；不是架构 sole owner、全局施�
 产品设计、代码观察、ASCII、状态机、失败语义和完整验收矩阵见
 [`model-services-composer-product-design.md`](model-services-composer-product-design.md)，下文简称“设计说明”。本文件使用 `设计说明 §N` 引用它，不复制其全部论证。
 
-本指南不是 ledger。实施会话不得在这里记录 `open/candidate/verified`、临时 SHA、测试流水或个人进度；Claim 状态只进入 active Campaign，稳定需求只进入 architecture sole owner。
+本文不是 ledger，也不接受后续实施状态更新。不得在这里记录 `open/candidate/verified`、临时 SHA、测试流水或个人进度；Claim 状态只进入 active Campaign，稳定需求只进入 architecture sole owner。
 
-## 1. 权威顺序与冲突处理
+## 1. 历史材料的读取边界与冲突处理
 
-新会话必须按仓库根 `AGENTS.md` 的顺序读取：
+需要复核本文历史结论时，先按仓库根 `AGENTS.md` 读取当前权威：
 
 1. [`../README.md`](../README.md)；
 2. [`../architecture/README.md`](../architecture/README.md)；
@@ -35,7 +37,7 @@ Status: new-session implementation guide；不是架构 sole owner、全局施�
 4. [`../execution-brief.md`](../execution-brief.md)；
 5. status 为 active 时读取 [`../missions/independent-omnimind-v1.md`](../missions/independent-omnimind-v1.md)；
 6. 读取设计说明；
-7. 最后回到本指南选择当前可进入的最小切片。
+7. 最后只用本文定位可能相关的历史反例和验证方法；不得从本文选择当前切片或取得施工准入。
 
 权威关系：
 
@@ -45,7 +47,7 @@ Status: new-session implementation guide；不是架构 sole owner、全局施�
 | Composer、Settings、普通展示名、双语、a11y                | `architecture/workbench.md`     | 决定用户结果                 |
 | draft、Thread、Queue、receipt、恢复                       | `architecture/product-state.md` | 决定绑定和恢复语义           |
 | Registry、adapter、Session、ModelRuntime、`.omnimind/.pi` | `architecture/execution.md`     | 决定执行 topology            |
-| 仓库全局施工顺序和阶段门                                  | `execution-brief.md`            | 决定本任务能否进入           |
+| 当前目标、真实并发、依赖与阻塞                            | `execution-brief.md`            | 只消费当前事实，不决定授权或准入 |
 | Claim 状态和证据指针                                      | active Campaign                 | 只由授权 reviewer 更新       |
 | 设计依据和 source observation                             | 设计说明                        | 用于定位和证伪，不凌驾 owner |
 
@@ -56,7 +58,7 @@ Status: new-session implementation guide；不是架构 sole owner、全局施�
 3. 在当前授权覆盖时先修 sole owner，再同步设计说明和本指南引用；
 4. 授权不覆盖时报告精确冲突，不凭更新时间或本文细节选边。
 
-## 2. 当前任务的可观察结果
+## 2. 当时目标的可观察结果
 
 完整纵向结果是：
 
@@ -75,9 +77,9 @@ Status: new-session implementation guide；不是架构 sole owner、全局施�
 Timeline 保留每个 turn 的 Engine/Model provenance。
 ```
 
-执行顺序不要求一次提交完成全部结果。每个切片必须闭合一个可观察纵向结果，再进入下一切片。
+下文切片顺序只记录当时如何把结果拆成可证伪的纵向关注点，不是今天的依赖图或施工顺序。
 
-## 3. 已锁定决定：不要在新会话重新发明
+## 3. 当时已锁定的决定（当前仍以现行 owner 为准）
 
 ### 3.1 用户语言与身份
 
@@ -155,7 +157,7 @@ Agent engines
 - 不复制供应商 enum、默认 URL、静态模型镜像、`/models` fetcher 或 Proma Channel store；
 - “比 Pi 更好”指更清楚、更安全、更可恢复、更适合桌面与多 Engine，不等于维护更多模型体系。
 
-## 4. 新会话启动：15 分钟内完成的 preflight
+## 4. 当时使用的 preflight（历史参考）
 
 ### 4.1 精确工作区和 dirty state
 
@@ -230,7 +232,7 @@ bun test apps/web/src/components/ProviderIcon.test.tsx
 bun run --cwd apps/web typecheck
 ```
 
-然后按当前准备进入的切片运行最窄 baseline。旧测试可能锁定旧产品行为，例如 started Thread 禁止换 Engine；这类绿色只证明现状可复现，实施前必须先改测试意图。
+若当前任务独立选择复验其中某项，只运行能证伪该项的最窄 baseline。旧测试可能锁定旧产品行为，例如 started Thread 禁止换 Engine；这类绿色只证明旧现状可复现，不能自动决定今天的测试意图。
 
 ## 5. 实施总图与依赖
 
@@ -251,7 +253,7 @@ E2 + E3 + E4 + E5/E6 required scope
              └── E8  live + packaged exact-SHA proof
 ```
 
-默认优先闭合 `E1 -> E2`，再完成 `E3 -> E4`；这是优先级，不是把依赖图改写成数字串行。某一 slice 命中 stop 后，只能进入依赖图中不依赖它的边；因此 E1 stop 不允许 E2，但不阻塞 `E0 -> E3 -> E4`。原因见设计说明 §12：默认 OmniMind 没有可用模型服务时，漂亮的 Composer selector 仍是空壳。
+历史候选当时优先闭合 `E1 -> E2`，再完成 `E3 -> E4`；这只解释旧依赖关系，不能在当前代码上自动恢复 E0–E8 路线。原因见设计说明 §12：当时默认 OmniMind 没有可用模型服务时，漂亮的 Composer selector 仍是空壳。
 
 每个切片单独满足：
 
@@ -833,7 +835,7 @@ bun run --cwd apps/server typecheck
 bun run --cwd packages/contracts typecheck
 ```
 
-新增 Model services contract 后同步 contracts/Web/Server schema tests。候选冻结后再按 `execution-brief.md` 和 Campaign 跑相关 full gate。
+新增 Model services contract 后同步 contracts/Web/Server schema tests。当前任务是否需要 area/full gate，只由实际变更、现行 owner、Campaign claim 和风险决定；本文与 `execution-brief.md` 都不另设验证准入。
 
 ### 14.2 Live provider
 
@@ -917,7 +919,7 @@ fresh launch
 
 不要把 `PROVIDER_DISPLAY_NAMES.omnimind = "OmniMind"` 机械扩张到 Server technical `displayName`；先按 consumer 语境区分普通 UI 与 runtime diagnostics。
 
-## 16. Commit 与交付边界
+## 16. 当时使用的 Commit 与交付边界
 
 遵循仓库 `AGENTS.md`：
 
@@ -929,7 +931,7 @@ fresh launch
 - 用户可见代码必须从 exact pushed SHA 做 packaged proof；
 - 文档-only 改动不重复打包。
 
-建议关注点边界：
+以下仅保存当时建议的关注点边界：
 
 ```text
 1. owner/naming/document routes
@@ -972,9 +974,9 @@ fresh launch
 - `SIMPLIFY`：删除重复层、回到既有 owner；
 - `RE-SCOPE`：返回 sole owner 或维护者裁决。
 
-## 18. 新会话第一次输出应是什么
+## 18. 历史交接模板（不得作为今天的开工入口）
 
-新会话读完 owner、设计说明和本指南后，不应先写一篇新方案。第一次实质输出应简洁说明：
+当时的新会话交接曾使用以下模板。它可以帮助核对证据完整性，但不能指定当前 E0–E8 切片、覆盖维护者决定或授权施工：
 
 ```text
 Current snapshot: <HEAD / dirty paths / Pi baseline>
@@ -985,11 +987,11 @@ Proof: <focused tests / live / packaged 中本切片需要哪些>
 Stop condition: <本切片最可能触发的真实门>
 ```
 
-然后直接从当前切片施工。不要重新讨论已经锁定的 Engine/Model/options 心智模型、图标颜色、Settings taxonomy 或 Pi 跟随原则。
+今天是否施工、修改什么以及哪些旧结论仍成立，必须从当前代码、现行 owner、维护者决定与真实阻塞重新推出，不能从本模板直接启动。
 
-## 19. 最终完成判定
+## 19. 历史候选验收矩阵
 
-本任务完整 candidate 必须同时满足设计说明 §15 的完成定义，并且：
+以下条目保存当时完整 candidate 的验收面；当前任务只能复用仍与实际变更相关的条目，不能用这张旧矩阵扩大范围或判定今天整体完成：
 
 - 普通 UI 使用 `OmniMind`，技术语境保留 `OmniMind Agent`；
 - 所有 Engine 复用唯一 icon registry；

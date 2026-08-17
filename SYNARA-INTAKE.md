@@ -6,7 +6,7 @@ OmniMind 会持续吸收 Synara。这里的“持续”表示长期保持 source
 
 ## 1. 核心立场
 
-Synara 是 OmniMind 已采用的高质量产品母体，不是普通补丁来源或截图灵感库。每次 intake 都必须同时理解三层内容：
+Synara 是 upstream product platform；OmniMind 是它的 downstream distribution，而不是面对陌生 donor 的补丁集合。OmniMind 负责品牌与双语、OmniMind Agent/Provider 增强、stock Pi 隔离、发行/account/public identity，以及有证据的更强安全差异。除这些固定 divergence 外，Synara 成熟且适用的产品机制默认进入 downstream。每次 intake 都必须同时理解三层内容：
 
 1. 上游代码在 Synara 当前架构中的具体实现；
 2. 实现携带的机制、不变量、失败模型和测试；
@@ -25,6 +25,10 @@ Synara 是 OmniMind 已采用的高质量产品母体，不是普通补丁来源
 
 最终目标不是让 OmniMind 的 Git diff 看起来像 Synara，而是让 Synara 最强的产品判断和工程保证以 OmniMind-native 的方式真实存在。
 
+长期 invariant：**默认完整继承母体；增强必须窄、可证伪、复用既有 owner，且不得增加第二权威或不成比例的长期同步责任。**“比母体更好”只能由更顺的用户 journey、更可靠的恢复、更清楚的诊断、更完整的双语、更自然的 OmniMind Agent/Provider/Group 集成，或可证明的安全/性能提升来说明；文件、抽象、设置和 wrapper 更多不算提升。若收益不足以覆盖新增长期责任，保持上游机制。
+
+“唯一 owner”必须按真实继承关系判断。Synara 已经位于 OmniMind 继承的同一 Product Orchestration、Thread、command/event/projection 与 Workbench 内时，其成熟字段和生命周期是母体产品能力，不因名称是 Goal、Todo、Queue 或 Scheduler 就自动成为“第二控制面”。只有候选另建并行数据库、writer、command path、timer/recovery authority 或用户事实时，才构成第二 owner。不得先把母体能力切碎，再以避免第二 owner 为由重建较弱版本。
+
 ## 2. 触发与长期授权边界
 
 以下维护者表达都触发本文件：审查、看看更新、比较、借鉴、吸收、同步、跟进、移植、更新 Synara，或意思等价的指令。
@@ -39,8 +43,9 @@ Synara 是 OmniMind 已采用的高质量产品母体，不是普通补丁来源
 - 每一轮先完成只读研究和共同决策，再实施；
 - 分支、worktree、直接在 `main` 施工、等待并发任务结束、加快执行、继续已有工作或使用某个执行 Skill 的授权，只决定**在哪里/何时/如何施工**，不等于维护者批准“吸收什么、暂缓什么、拒绝什么”；
 - 维护者对当次明确更新集的批准只覆盖该更新集，不自动扩张到更新后的新 commit；
+- `execution-brief.md` 只协调真实并发、依赖、阻塞和下一动作，不能在维护者确认完整 decision surface 后另设阶段门或否决已确认采用；
 - 后续新 commit 重新从当时 README 记录的 exact adopted head 开始；
-- “尽量全部吸收”是默认决策倾向，不是绕过安全、法律、产品权威和人工确认的许可证。
+- “尽量全部吸收”是 standing default：母体内可安全吸收、没有越过固定 divergence 或新增真实高风险的机制默认进入当前 adoption set，不需要逐个 accepted patch 再等口令；Agent 必须把每个建议不吸收、延期、已有覆盖或新增高风险变化的损失和理由列给维护者确认。
 
 ## 3. 唯一权威与必读顺序
 
@@ -52,7 +57,7 @@ Synara 是 OmniMind 已采用的高质量产品母体，不是普通补丁来源
 | 持续 intake 的方法、判断原则、提问门与交付要求                                 | 本文件                                                                                       |
 | 固定源事实、逐轮 commit disposition、失败、反例、权利与复验触发器              | [`research/source-review.md`](research/source-review.md)                                     |
 | UI、产品状态、公共出口、执行 topology 等稳定约束                               | [`architecture/`](architecture/README.md) 对应专题 owner                                     |
-| 当前施工顺序、进入和停止条件                                                   | [`execution-brief.md`](execution-brief.md)                                                   |
+| 当前工作目标、并发协调、真实阻塞和下一动作                                     | [`execution-brief.md`](execution-brief.md)                                                   |
 | Claim 状态与 exact-SHA evidence pointer                                        | active [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) Campaign |
 | 法定文本                                                                       | [`LICENSES/`](LICENSES) 及必须随 artifact 保留的对应位置                                     |
 
@@ -88,9 +93,11 @@ Gate A 必须完成：
 7. 识别跨 commit 相互作用，防止分别合理的补丁组合后恢复竞争 authority；
 8. 检查依赖、lockfile、构建、发行、IPC/preload、native、网络、auth、权限、凭据、存储、迁移、rollback、telemetry、资产和法律文本；
 9. 将每个 commit 和重要 changed path 放入明确 disposition；
-10. 用 `$converge` 消除所有会影响范围、产品结果、安全、权利或验证方式的不确定性；
-11. 向维护者展示完整而紧凑的 decision surface；其中必须同时包含建议吸收项与建议不吸收项，并对每个 material defer/decline/already-covered/exclusion 说明“不纳入会失去什么、为什么仍不建议纳入、什么证据会改变建议”；
-12. 明确询问维护者是否同意**整张 decision surface（包括所有未纳入项）**，并等待维护者再次确认。
+10. 对 candidate 全树同时完成 path/behavior accounting：至少覆盖 upstream-only、downstream-only 与所有同路径分叉，不能用 commit range 代替；
+11. 对作者 tests/harness 做 retention/adaptation accounting；只要能力适用，其作者回归默认随能力进入，除非证明不适用并作为未纳入项确认；
+12. 用 `$converge` 消除所有会影响范围、产品结果、安全、权利或验证方式的不确定性；
+13. 向维护者展示完整而紧凑的 decision surface：默认吸收项可以按稳定责任分组说明；每个 material defer/decline/already-covered/exclusion 必须逐项说明“不纳入会失去什么、为什么仍不建议纳入、什么证据会改变建议”；
+14. 明确询问维护者是否同意**全部建议未纳入项与高风险偏离**，并等待维护者确认。没有建议未纳入项或新增高风险分叉时，Gate A 可在报告“无待确认偏离”后直接进入 Gate B。
 
 Gate A 完成前必须停在讨论，不得用以往“都可以吸收”的偏好替代当次确认。
 
@@ -98,9 +105,9 @@ Gate A 完成前必须停在讨论，不得用以往“都可以吸收”的偏�
 
 Gate A 的确认对象不是“开始写代码”，而是当次 exact source range 的完整 disposition。以下规则没有例外：
 
-- `adopt directly`、`translate semantically`、`already covered`、`defer`、`decline` 与 identity/release/legal exclusion 都属于维护者要确认的同一决策面；Agent 不能只让维护者批准 accepted subset，再自行冻结其余项；
-- 任何 material change 只要建议不进入当前产品，即使理由是施工顺序、现有 owner、更强覆盖、产品品味、复杂度或安全边界，也必须先把建议和损失明确告诉维护者并获得确认；安全或权限风险可以阻止实施，但不能被写成维护者已同意的产品取舍；
-- “继续”“开始吧”“尽量快些”“直接在 main 干”“等某任务结束后施工”“可以使用某 Skill/Agent/编排”以及其他只回答进度、位置、时机或执行方式的话，**不构成 Gate A disposition 批准**；只有在完整 decision surface 展示之后，维护者明确指向该决策面并表示“按这张表实施 / 包括这些未纳入项也同意”或同等无歧义表达才有效；
+- `adopt directly` 与 `translate semantically` 在 standing default 和固定 divergence 内自动进入；`already covered`、`defer`、`decline`、identity/release/legal exclusion 的新增或变化，以及任何高风险变化属于维护者必须确认的偏离面。Agent 不能只汇报 accepted subset，再自行冻结其余项；
+- 任何 material change 只要建议不进入当前产品，即使理由是施工顺序、现有 owner、更强覆盖、产品品味、复杂度或安全边界，也必须先把建议和损失明确告诉维护者并获得确认；安全或权限风险可以阻止实施，但不能被写成维护者已同意的产品取舍；默认吸收项不需要逐项批准；
+- Agent 必须先明确问清“是否同意刚展示的全部未纳入项与高风险偏离”。维护者紧接该问题作出的肯定答复——包括“可以”“继续”“开始吧”“OK，你干吧”等自然表达——只要语境唯一指向这些偏离，就构成有效批准，不要求背诵固定口令。只有 Agent 未问清、期间出现新的 material 变化，或回答可能只指进度、位置、时机或执行方式时，才必须重问；
 - 候选 head、OmniMind base、相关 owner、真实调用链或建议 disposition 在确认前后发生 material 变化时，旧确认不覆盖变化行。Agent 必须展示差异并只对变化部分重新确认，不能把“重新 review”后的新硬排除塞进旧授权；
 - 沉默、未反对、催进度、允许写入、允许 push、允许编排或历史总体偏好都不是确认。存在合理歧义时必须判定为“未确认”，而不是推定授权；
 - Agent 不得在维护者确认前使用“硬性排除”“disposition 已固定”“maintainer-approved”“intake complete”或意思等价的状态。研究建议只能标为 `proposed / pending maintainer decision`；
@@ -110,7 +117,7 @@ Gate A 的确认对象不是“开始写代码”，而是当次 exact source ra
 
 ### Gate B：实施、验证、交付与权威收口
 
-只有完整 decision surface 已展示，且维护者明确说“按这张表来（包括列出的未纳入项）”“按该完整更新集实施”或同等无歧义表达后才能进入 Gate B。单独的“可以”“继续”“实施”若可能只指施工位置、进度或已接受部分，均不足以过门。若实施中发现的新事实会实质改变已批准范围、产品行为、安全边界、迁移策略或排除项，只将变化部分退回 `$converge`，其余已确定工作无需重问。
+完整 decision surface 展示后，standing-default 的可吸收项直接进入 Gate B；存在建议未纳入项或高风险偏离时，Agent 必须先明确询问并在维护者于唯一语境下肯定答复后进入。确认按上下文判断，不依赖魔法措辞。若实施中发现的新事实会实质改变已批准偏离、产品行为、安全边界、迁移策略或排除项，只将变化部分退回 `$converge`，其余已确定工作无需重问。
 
 Gate B 必须：
 
@@ -122,7 +129,7 @@ Gate B 必须：
 6. 运行最窄的 falsifier，再按风险扩展到相关 unit、browser、typecheck、lint、build、native、live 或 recovery proof；
 7. 对用户可观察 Desktop 行为，从最终 exact pushed SHA 重建、安装，并用任务专用 fresh profile 完成真实 journey、关闭和重开；
 8. 更新唯一权威和证据引用，不建立平行 manifest、ledger、wiki 或第二 Campaign；
-9. 一个关注点一个 commit，只 stage 本轮路径，正常情况下推送当前任务分支；
+9. 一个关注点一个 commit，只 stage 本轮路径；代码、README adoption、research disposition 与当前状态可以形成一组有序 commits，但必须作为一个事实闭合的 adoption set 推送，不能把已实现与仍 pending 的权威冲突留在共享分支；
 10. 明确报告已证明、未证明、阻塞和触发后续复验的条件。
 
 Gate B 的完成不等于自动发布、合并受保护分支、更新 feed、签名或创建 Release。这些动作继续遵循各自授权。
@@ -142,6 +149,19 @@ range 中的全部 commits
 ```
 
 左右计数必须相等。任何未归类 commit、revert、binary asset、lockfile 变化或 generated/release 文件都使 intake 未完成。
+
+Commit accounting 只是第一张表；同一轮还必须闭合：
+
+```text
+candidate apps/packages 全树路径
+= byte-identical inherited
++ direct/semantic adoption
++ confirmed current-stronger divergence
++ confirmed identity/release/legacy-migration exclusion
++ confirmed defer/decline
+```
+
+每一组都必须能回到精确路径、行为 owner 和作者测试。相同文件名不证明行为相同，不同文件名也不证明未覆盖。历史状态必须区分“从未移植”“移植后删除”“语义覆盖”“延期”“拒绝”，禁止用含混的“移除/删除”掩盖事实。
 
 每个 material change 至少回答：
 
@@ -220,6 +240,8 @@ donor icon、品牌、version、Changelog、What’s New、release metadata、�
 
 新增持久化、迁移、兼容层、公共 abstraction、跨进程 owner、第二 writer 或长期双轨时，必须先证明最小接线或 owner 内翻译不能解决。需要时按根 `AGENTS.md` 路由 `$zq-dev-rules`；Synara intake 本身不豁免复杂度和 stop-loss 规则。
 
+不得为同步预建通用 framework、兼容双轨、ledger/manifest、新 package、逐 commit wrapper 或复制生产语义的永久测试平台。不同命名的现有 owner 必须先按用户结果和作者测试验证 parity，不能再建一套并行 UI/store/API。
+
 ## 8. `$converge` 不确定性门
 
 维护者已经明确要求：存在会改变 intake 结果的不确定性时，必须使用 `$converge`，直到理解和决定足够确定后才全面实施。
@@ -273,7 +295,7 @@ Generic typecheck 或 happy-path 单测不能关闭上述专门风险。
 
 ## 10. 实施方法
 
-OmniMind 是 Synara 的语义后代，不是长期 merge branch。按下列顺序选择实现方式：
+OmniMind 是 Synara 的 downstream fork。当前缺少可用共同 Git ancestry，因此本轮仍按责任安全接线；完整 parity/disposition 闭合后，才可在隔离分支实验恢复真实 ancestry。按下列顺序选择实现方式：
 
 1. owner 完全匹配时直接移植；
 2. owner 不同但保证可保留时测试先行做语义翻译；
@@ -320,10 +342,12 @@ OmniMind 是 Synara 的语义后代，不是长期 merge branch。按下列顺�
 
 ### 11.3 状态真实性
 
-- producer 只能把受影响 Campaign claim 更新为 `candidate`；
-- 独立审查和所需 final gate 完成前不能自证 `verified`；
+- 普通、focused、可逆的母体同步可由执行者在 owner、测试、adoption authority 与交付证据闭合后关闭对应 claim；
+- 发行、签名、安全、迁移、权限、秘密及其他高风险 claim 仍须独立裁决和所需 final gate，实施者不能自证 `verified`；
 - adopted head、实现状态、packaged evidence 和 public release 是四个不同事实；
 - 局部绿色不能外推到未运行的平台、native helper、签名、notary 或 update feed。
+
+宣称 adopted head 必须同时闭合 exact source、commit-range accounting、whole-tree path/behavior accounting、作者测试/必要适配、OmniMind focused gates，以及 shipped behavior 的 pushed-SHA packaged/live journey。缺一项只能称 `candidate/pending`。
 
 ## 12. 每轮必须更新的现有 owner
 
@@ -332,7 +356,7 @@ OmniMind 是 Synara 的语义后代，不是长期 merge branch。按下列顺�
 1. 根 README `source-adoptions`：candidate 成为真实 production adoption 时更新 exact revision、paths、mode、changes、rights、exclusions 与 update policy；
 2. `research/source-review.md`：保存本轮 exact range、逐责任 disposition、风险、外部来源和复验触发器；
 3. architecture owner：只有稳定产品约束确实改变时更新；
-4. `execution-brief.md`：只有施工顺序、进入/停止条件或 proof 发生变化时更新；
+4. `execution-brief.md`：只有当前目标、并发、真实阻塞或下一动作发生变化时更新；
 5. active Campaign：只更新受影响 claim 的 candidate evidence 与 exact SHA；
 6. `LICENSES/` 和 packaged notice：存在新的采用字节或法律义务时更新；
 7. 本文件：只有长期 intake 方法本身变化时更新，不能为每轮结果追加日志。
@@ -345,9 +369,11 @@ OmniMind 是 Synara 的语义后代，不是长期 merge branch。按下列顺�
 
 - adopted head 与 candidate head 精确、ancestry 已验证；
 - range 内全部 commit 和风险文件计数闭合；
+- upstream-only、downstream-only 与同路径分叉的全树 path/behavior disposition 闭合；
+- 作者 tests/harness 已保留、适配，或其不适用结论已按未纳入项确认；
 - 每个 material change 已理解代码、机制和产品判断；
 - 所有高影响不确定性已通过研究和 `$converge` 收敛；
-- 维护者明确确认当次完整更新集，包括每项 material already-covered、defer、decline 与 exclusion；
+- 维护者明确确认当次每项 material already-covered、defer、decline、exclusion 与新增高风险偏离；默认吸收项不要求逐项口令；
 - 所有 accepted mechanisms 已直接或语义实现；
 - exclusions/defer/decline 均有具体理由和触发器；
 - tests、rights、owner、identity 与 packaging 适配完成；

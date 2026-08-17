@@ -158,22 +158,6 @@ test("historical decision cannot silently regain authority", async (t) => {
   );
 });
 
-test("authority reset remains before production source reset", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "execution-brief.md",
-    "| 0    | Authority reset",
-    "| 7    | Authority reset",
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "execution.stage-order",
-    "execution-brief.md",
-  );
-});
-
 test("Engine native ecosystem cannot be redefined as replaced", async (t) => {
   const root = await createFixture(t);
   await replaceText(

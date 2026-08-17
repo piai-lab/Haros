@@ -2,7 +2,7 @@
 
 ## 0. 文档角色
 
-本文记录 2026-08-15 对 `codex/model-services-composer@29b306f16ad56925381c7534bf002e63a4fc767c` 与锁定 Pi `v0.84.1` 的只读源码复核，以及维护者在本轮讨论中确认的产品裁决。该 SHA 是研究证据入口，不是下一轮施工基线；下一轮必须从已合并的 `main` 重新验证所有当前源码事实。
+本文记录 2026-08-15 对 `codex/model-services-composer@29b306f16ad56925381c7534bf002e63a4fc767c` 与锁定 Pi `v0.84.1` 的只读源码复核，以及维护者在本轮讨论中确认的产品裁决。该 SHA 只是真实历史证据，不是当前施工基线；任何后续使用都必须从当前代码重新验证相关源码事实。
 
 它只拥有可推翻的 source fact、反例、推断、被否决路线和复验条件：
 
@@ -10,8 +10,8 @@
 - 不保存 Campaign 状态，不把 research 判断冒充已实现；
 - 主会话采用本文裁决时，必须先更新冲突的 sole owner，再修改产品；
 - 原 Model services 关注点已经通过的证据，除非当前 SHA 出现新的直接反例，不应因本文重新演整轮 E0–E8；
-- 当前 `codex/model-services-composer` 先完成原承诺的 completion review、必要补完、clean 与 merge；本文识别的扩展 Pi-native 目标不自动成为该分支的合并阻断；
-- 下一轮只从合并后的 `main` 启动，先重验 exact runtime/Host 差额，再按本文的纳入方式施工；不能把本文的已知条目误当封闭需求清单；
+- 在本文绑定的 2026-08-15 快照中，`codex/model-services-composer` 先完成原承诺的 completion review、必要补完、clean 与 merge；这只记录当时的分支关系，不约束今天的准入、分支或施工顺序，本文识别的扩展 Pi-native 目标也不自动成为其他关注点的阻断；
+- 当时建议后续从合并后的 `main` 重验 exact runtime/Host 差额；今天是否仍需以及按何顺序施工，必须从当前代码、现行 owner、维护者决定与真实阻塞重新推出，不能把本文条目当封闭需求清单或固定路线；
 - OmniMind 默认身份、Prompt 文件/模板的用户管理、当前错误的 localStorage Project instructions、Session reload/reopen 与 Settings 收敛由后续专项 [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) 从 merged `main` 复核；本文第 4 节继续提供其 Pi-native runtime 语义底座；
 - Apple 签名/notary、Windows Trusted Signing 与 Windows/Linux 原生安装旅程由后续工程交付统一负责，不属于本文发现的产品代码缺口。
 
@@ -53,13 +53,13 @@ OmniMind 不应追求“Pi TUI 的每个按钮都在 Desktop 重画一遍”，�
 本研究不改变当前分支的交付顺序：
 
 1. **原分支收尾**：对 Model services + Composer 的原始承诺做 evidence-backed completion review；只修 current exact SHA 能复现、且属于原范围的缺口；随后 clean 并合并 `main`。
-2. **下一轮 Pi-native integration**：从 merged `main` 新开关注点，重新读取 sole owners 与锁定 Pi，再处理 system prompt、动态工具、usage、compaction、fork/tree/package 等成熟机制。
+2. **当时建议后续独立复核的 Pi-native integration**：在旧分支关系下从 merged `main` 新开关注点，重新读取 sole owners 与锁定 Pi，再处理 system prompt、动态工具、usage、compaction、fork/tree/package 等成熟机制；这不是今天的施工指令。
 
-不能用旧 CLEAN 逃避第一阶段的最终复核，也不能把第二阶段的研究发现倒灌成第一阶段的无限合并门。Project trust、Extension replacement、tool truth 等议题只有在能直接证伪原 Model services + Composer completion claim 时，才回到第一阶段；否则属于下一轮。
+在当时快照中，不能用旧 CLEAN 逃避原关注点的最终复核，也不能把后续研究发现倒灌成无限合并门。这里的“原关注点/后续关注点”只解释旧分支范围；当前任务边界由今天的代码、owner、维护者决定与真实冲突确定。
 
 ### 1.2 已知入口不是封闭清单
 
-下一轮不能只实现本文已经点名的六七个功能。正确 intake 是沿锁定 Pi 的真实生命周期逐层核对：
+后续若重新审查这一来源，不能只实现本文已经点名的六七个功能。正确 intake 是沿当次锁定 Pi 的真实生命周期逐层核对：
 
 ```text
 public/native capability
@@ -161,7 +161,7 @@ Pi `createAgentSessionServices()` 在调用方未提供 `settingsManager` 时使
 
 现有 Product turn-start 调用链会从 canonical Thread/Project投影workspace cwd，Home Chat也有“不把容器workspace root传给Provider”的反例，因此本文**不**把问题夸张成“任意renderer cwd已经可提权”。真正缺的是把这个已有Product authority变成Pi调用的显式、可测试语义，并保证其他skills/commands/discovery入口不绕过它。
 
-下一轮执行会话若在 merged `main` 仍复现此差额，应在 existing Project/Thread/cwd → Provider Session owner 内最小闭合，不新增 trust store、permission broker 或第二 Project 身份。
+当前任务若在最新 `main` 仍复现此差额，应在 existing Project/Thread/cwd → Provider Session owner 内最小闭合，不新增 trust store、permission broker 或第二 Project 身份。
 
 ## 4. System prompt 与动态工具
 
@@ -284,7 +284,7 @@ Pi 的 branch/tree/fork/Session stats/export 是成熟能力，但它们分属�
 - export 是输出能力，若接入应进入既有 Artifact/Output owner，不建 Pi Export 页面；
 - 在没有反例前，不因 UI 缺少 tree selector 就宣称 native fork 已丢失；先用 exact journey 检查 Product fork 是否保留 Pi compaction、custom entries、Extension state 与 native context。
 
-研究 SHA 的 `PiAdapter` Product fork path 未明确提供 native `forkThread`，Product Reactor 可能落到 transcript bootstrap。下一轮执行会话应先在 merged `main` 建立一个能区分 native continuation 与 visible transcript bootstrap 的 falsifier，再决定是否补桥；不能从方法名推断一定丢失，也不能用可见文本相同冒充 native context 完整。
+研究 SHA 的 `PiAdapter` Product fork path 未明确提供 native `forkThread`，Product Reactor 可能落到 transcript bootstrap。后续任务只有在当前代码仍涉及该差额时，才建立一个能区分 native continuation 与 visible transcript bootstrap 的 falsifier，再决定是否补桥；不能从方法名推断一定丢失，也不能用可见文本相同冒充 native context 完整。
 
 ## 7. Retry、compaction、follow-up 与 Queue
 
@@ -373,7 +373,7 @@ Pi TUI Extension API 中 `select/confirm/input/notify/status` 等语义原语可
 
 因此，主会话可以把本文提供的 exact seam 与残余缺口交给后续 Agent Core 消费，但本分支不应实现 Agent Core 责任。
 
-## 12. 研究快照与阶段边界
+## 12. 研究快照内的历史分解
 
 ### 12.1 原关注点中已闭合、默认不重开
 
@@ -391,14 +391,14 @@ Pi TUI Extension API 中 `select/confirm/input/notify/status` 等语义原语可
 
 这只表示原纵向关注点可以保持 CLEAN，不表示下面的新 Pi-native 产品目标已经完成。
 
-### 12.2 下一轮已知根项，不自动阻断当前原分支合并
+### 12.2 当时识别的后续根项，不自动阻断其他关注点
 
-以下是在研究 SHA 上可复核的下一轮入口。进入 merged `main` 后必须重新证伪；它们不应仅因出现在本文就重开已闭合的 Model services E0–E8，也不自动阻断当前原分支合并：
+以下只是研究 SHA 上可复核的历史候选。它们若与当前任务相关，必须先在最新 `main` 重新证伪；不能仅因出现在本文就重开已闭合结果或阻断其他关注点：
 
 1. **Project membership trust 未显式接线**：当前 Product Thread 主路径看起来只把project-derived cwd交给adapter，因此现有用户行为可能恰好符合裁决；但PiAdapter仍依赖SDK default true，没有显式membership输入、添加披露和default变化反例。这是owner/长期语义问题，不应夸张成已证明的任意目录提权漏洞。
 2. **Extension Session replacement false-success**：缺 `commandContextActions` 时 `newSession/fork/navigateTree/switchSession` 可返回未取消但什么也没发生。这是可直接复现的当前产品真实性P1。
 
-这两项意味着不能把当前候选扩张成“Pi 成熟机制已完整纳入”。当前分支仍应先按原承诺 completion review；下一轮再从 merged `main` 处理它们，除非最新源码证明其中某项已经直接破坏原范围用户旅程。
+在当时快照中，这两项意味着不能把候选扩张成“Pi 成熟机制已完整纳入”，但也不构成原关注点的无限阻断。今天是否处理，只看最新源码是否仍存在与当前范围相关的真实损失。
 
 ### 12.3 required reachability 缺口
 
@@ -429,9 +429,9 @@ Pi TUI Extension API 中 `select/confirm/input/notify/status` 等语义原语可
 - 为“覆盖所有模型”维护静态 model slug/icon registry；
 - 本轮执行 Apple signing/notary、Windows Trusted Signing 或 Windows/Linux 原生安装旅程。
 
-## 13. 下一轮从 merged `main` 的最小研究与施工顺序
+## 13. 当时建议的验证次序（非当前施工顺序）
 
-本文不拥有施工状态；以下只适用于原 Model services + Composer 已完成 review、clean 并合并后的新关注点。下一轮开始时先重验 exact SHA、Pi revision 与 owner，不能机械执行旧研究结论。
+本文不拥有施工状态、准入或当前顺序。以下只解释当时为什么这样排列验证；当前任务只能复用仍相关的 falsifier，并须先重验 exact SHA、Pi revision 与 owner，不能机械执行旧研究结论或用它阻断维护者已确认的工作。
 
 1. **先做 capability intake**：按 1.2 的生命周期路径建立 Pi baseline、Host bridge 与 Product outcome 差额；已自然保留的机制明确停止，不为全面而造 UI。
 2. **再修 sole owner**：只把维护者已确认、且 current source 仍需要的裁决写入 Workbench/Product State/Execution；research 不直接拥有产品 contract。
@@ -498,7 +498,7 @@ Pi TUI Extension API 中 `select/confirm/input/notify/status` 等语义原语可
 
 ### 已确认
 
-- 当前分支先做原 Model services + Composer completion review、必要补完、clean 与 merge；扩展 Pi-native 只在 merged `main` 的下一轮施工。
+- 当时分支先做原 Model services + Composer completion review、必要补完、clean 与 merge；扩展 Pi-native 后续独立复核。该分支顺序现为历史事实，不约束当前施工。
 - Project membership 本身表示 trusted；没有独立 Project Trust 功能或状态。
 - Pi system prompt 重建与动态 Extension tools 是应保留的成熟机制。
 - 当前 operation 不热切；active set变化作用于下一 agent turn。

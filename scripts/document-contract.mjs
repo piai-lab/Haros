@@ -203,17 +203,6 @@ function validateCurrentState(findings, documents) {
     );
   }
 
-  const brief = documents.get("execution-brief.md") ?? "";
-  const stageZero = brief.indexOf("| 0    | Authority reset");
-  const stageOne = brief.indexOf("| 1    | Exact-source responsibility reset");
-  if (stageZero === -1 || stageOne === -1 || stageZero >= stageOne) {
-    addFinding(
-      findings,
-      "execution.stage-order",
-      "execution-brief.md",
-      "Authority reset must precede exact-source responsibility reset",
-    );
-  }
 }
 
 function validateEngineCapabilityComposition(findings, documents) {

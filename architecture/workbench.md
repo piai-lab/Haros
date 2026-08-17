@@ -99,20 +99,20 @@ Timeline 长期显示用户输入、Assistant 可见结果、结构化请求、�
 
 wire noise、逐 token event、重复系统消息与不应展示的 reasoning 不进入 Timeline。同一 stream item 原位归并；自然成功不额外 Toast。只有失败、结果未知、隐藏副作用或需要用户处理时升级提示。
 
-Child Agent、Todo、Question 继续使用 source 已有的最小产品语义；不得借此创建第二 task system 或 Run hierarchy。
+Child Agent、Goal、Todo、Question 继续使用 source 已有的产品语义；不得借此创建第二 task system 或 Run hierarchy。
 
 ### 自动能力的显示原则
 
 Goal、bounded child、结果驱动执行、会话恢复与 Computer Use 不是新的导航入口或常驻卡。它们只在真实运行条件下投影到既有表面：
 
-| 能力语义      | 平时                       | 运行时                                                                                                                  | 结果/异常                                                              |
-| ------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| 目标          | 不显示独立 Goal 实体       | 复用 task list；范围真正变化才问                                                                                        | 最终回答准确说明完成/未完成                                            |
-| Todo/当前步骤 | 无独立任务管理页           | Composer 只保留一行真实进度；点击后在锚定 popover 展开步骤                                                              | 完成后折叠或退场；不复制 task state                                    |
-| bounded child | 不显示 team builder        | 活跃时复用 `ComposerSubagentStrip` 和现有 child Thread/detail；只有 adapter 真实支持的 stop/background/message 才显示   | Root 汇总来源并对最终结果负责；不建第二 Agent registry                 |
-| 结果驱动执行  | 不显示通用 workflow editor | 普通 tool/child loop 复用 Todo、Activity、Files/Diff；只有 Engine 已回报的结构化 phase 才显示低噪声里程碑和现有恢复动作 | 保留 Engine provenance，不把普通 sequence 画成 DAG；完成后运行控制退场 |
-| 会话恢复      | 正常重开直接恢复           | native resume 安静继续                                                                                                  | degraded/ambiguous 才在 Composer 前显示一条恢复介入                    |
-| Computer Use  | 无 capability card         | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                  | 文件、截图、下载与结果进入现有 Artifact/File 表面                      |
+| 能力语义      | 平时                                                               | 运行时                                                                                                                                                        | 结果/异常                                                                                     |
+| ------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Goal          | 没有 active Goal 时不显示常驻入口；可由 `/goal` 或明确产品动作设置 | active Goal 使用 Composer stacked panel，显示完整 objective、运行/暂停状态、计时及 edit/pause/resume/clear；恢复与自动 continuation 使用同一 Thread authority | achievement 锚定真实 terminal turn；失败、取消、interrupt 或重复 blocker 准确暂停，不静默继续 |
+| Todo/当前步骤 | 无独立任务管理页                                                   | 逐回合 task snapshot 在 Composer 显示当前步骤并可展开完整列表；它不拥有 Goal 生命周期                                                                         | 当前 turn 完成后折叠或退场；不复制 task state，不替代 Goal achievement                        |
+| bounded child | 不显示 team builder                                                | 活跃时复用 `ComposerSubagentStrip` 和现有 child Thread/detail；只有 adapter 真实支持的 stop/background/message 才显示                                         | Root 汇总来源并对最终结果负责；不建第二 Agent registry                                        |
+| 结果驱动执行  | 不显示通用 workflow editor                                         | 普通 tool/child loop 复用 Todo、Activity、Files/Diff；只有 Engine 已回报的结构化 phase 才显示低噪声里程碑和现有恢复动作                                       | 保留 Engine provenance，不把普通 sequence 画成 DAG；完成后运行控制退场                        |
+| 会话恢复      | 正常重开直接恢复                                                   | native resume 安静继续                                                                                                                                        | degraded/ambiguous 才在 Composer 前显示一条恢复介入                                           |
+| Computer Use  | 无 capability card                                                 | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                                                        | 文件、截图、下载与结果进入现有 Artifact/File 表面                                             |
 
 Memory/Knowledge 当前没有 first-public runtime owner，因此不预建入口、图标、设置、后台状态或 receipt。UI 也不展示 packaged、registered、context-loaded、cache breakpoint 或内部 candidate extraction；自然成功不 Toast。
 
@@ -126,6 +126,10 @@ V1 直接保全 Synara 已有能力：
 - real PTY Terminal 与 per-thread terminal state；
 - Git、commit、push、Pull Request、Kanban、Automations；
 - Browser、Source Control、Side Chat、Subagents 和 Studio outputs；Engine 临时 Web UI 的 Host presentation policy 只由 [`architecture/execution.md`](execution.md#扩展与生态) 定义，Workbench 继续复用当前 Thread 的右侧非模态 Browser。
+
+同一母体基线还包括持久 Goal、evidence-first Debug、480/960/1440 chat width、暗色 Dock icon 自动切换、本地 Profile activity PNG 导出，以及 Space→Group 的完整交互结果。它们必须复用现有 Composer/Thread、interaction mode、Settings、Desktop icon、Profile 与 Group owners，并在简体中文和英文中同时完整；不能因历史漏移植而降格成 Todo、提示词或另一套 store/API。
+
+Profile 分享首版只提供设备本地、确定性的 render/copy/save，不包含 Synara 社交 handle、domain 或外部发帖链接。Release history/What's New 可以保留通用 UI 机制，但只有存在真实 OmniMind version、changelog 与 publication evidence 才能激活；未满足时准确显示不可用，不复制 Synara release identity。
 
 每个 Thread 恢复其 tabs、open files、layout、viewer refs 与 terminal state。具体 state 直接复用 source 实现，不新增 WorkbenchLayout aggregate。
 

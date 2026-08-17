@@ -225,7 +225,7 @@ V1 只保留 inherited orchestration 对 Project/Thread/Space command/event/proj
 
 首次公开发行以用户 workspace files、`rg/read`、Product Thread 与 Engine-native session/compaction 作为上下文事实。当前没有已准入的 OmniMind automatic Memory/Knowledge writer；Thread Recap 仍只是 Web UI recap，不升级为 durable memory。
 
-自动 Project Context 会新增长期 writer、scope、provenance、correction/forget、staleness、并发与恢复责任。只有代表性重复任务证明最小 source packet 或 derived Markdown 相对 raw files 在任务质量、token/latency/cost 或恢复上有明确净收益，且 `execution-brief.md` 将它作为独立 Slice 准入时，才能重开。
+自动 Project Context 会新增长期 writer、scope、provenance、correction/forget、staleness、并发与恢复责任。只有代表性重复任务证明最小 source packet 或 derived Markdown 相对 raw files 在任务质量、token/latency/cost 或恢复上有明确净收益，并由维护者确认这项新增持久责任时，才能重开；`execution-brief.md` 只记录当前是否正在施工及真实冲突，不能单独授予或否决。
 
 未来若准入，边界预先锁定为：
 

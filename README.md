@@ -1,6 +1,6 @@
 # OmniMind
 
-OmniMind 是一个本地优先、多 Provider 的桌面 Agent 产品。普通用户面对的是完整的 **OmniMind** 产品与默认内置的 **OmniMind Agent**；Synara 和 Pi lineage 只作为实现、兼容与法定来源存在，不成为日常产品语言。只有用户主动打开 Provider 选择或技术详情时，独立的 stock Pi 才以 `Pi` 显示，其他真实 Provider 同理。所有 Provider 共用一套继承的 Product Orchestration 与 Registry，但各自保留真实的 identity、版本、配置、Session、私有 state 与生态能力。
+OmniMind 是一个本地优先、多 Provider 的桌面 Agent 产品，也是 Synara upstream product platform 的 downstream distribution。普通用户面对的是完整的 **OmniMind** 产品与默认内置的 **OmniMind Agent**；Synara 和 Pi lineage 只作为实现、兼容与法定来源存在，不成为日常产品语言。只有用户主动打开 Provider 选择或技术详情时，独立的 stock Pi 才以 `Pi` 显示，其他真实 Provider 同理。所有 Provider 共用一套继承的 Product Orchestration 与 Registry，但各自保留真实的 identity、版本、配置、Session、私有 state 与生态能力。
 
 > **OmniMind-native by default. Pi-ecosystem compatible. Provider-honest. Source-first.**
 
@@ -8,6 +8,7 @@ OmniMind 是一个本地优先、多 Provider 的桌面 Agent 产品。普通用
 - **Pi-ecosystem compatible**：OmniMind Agent 保留可维护的 Pi Package/Extension/Skill/Prompt/Tool/MCP compatibility；Pi 技术 lineage 在 About、Licenses 与源码归属中准确披露。
 - **Provider-honest**：Codex、Claude、OpenCode、Pi 等 inherited integrations 各自保留原生协议、能力和限制；共同 UI 不伪造功能齐平、跨 Provider continuation 或静默 fallback。
 - **Source-first**：优先无损承接 Synara 的成熟产品能力和 Pi-compatible 生态表面，只补经真实 journey 证明的 OmniMind 差异，不把上游已解决的问题重新平台化。
+- **Better without bloat**：默认完整继承母体；增强必须窄、可证伪、复用既有 owner，并用用户结果、安全或性能证据说明收益，不新增第二权威或不成比例的同步责任。
 
 ## 1. 产品状态与战略
 
@@ -35,7 +36,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 | 固定来源事实、失败、反例与复验触发器                           | [`research/`](research/README.md)                                            |
 | Synara 持续 source intake 方法与人工确认边界                   | [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)                                       |
 | Pi Core、Pi ecosystem 与 Agent Core 外部来源的持续 intake 方法 | [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)                           |
-| 施工顺序、进入/停止条件与阶段 proof                            | [`execution-brief.md`](execution-brief.md)                                   |
+| 当前工作目标、并发协调、真实阻塞与下一动作                     | [`execution-brief.md`](execution-brief.md)                                   |
 | Campaign claim 状态与证据指针                                  | [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) |
 
 专题 owner 必须完整读取：
@@ -65,7 +66,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 
 这四条规定产品结果。`omnimind` 与 `pi` 是两个真实 Provider identity，但仍服从同一个 inherited orchestration；这与重建通用多 Engine 平台不同。
 
-OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。Synara source implementation 已从初始 responsibility baseline `02c8a6cb9948eba0afc828492764e7236965c61f` 前进到 exact reviewed head `18ff99857d5b84adab2019c2839fa4f6df761b7c`；其中 45 项接受责任已实现，但该轮非采用 disposition 因缺少有效的维护者整表确认而重新打开。这是逐责任的选择性语义实现，不表示 whole-source merge、Synara release 继承或 OmniMind official release，边界见下方唯一 adoption record 与研究审计。
+OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。README 记录的 production-adopted Synara head 仍是 `18ff99857d5b84adab2019c2839fa4f6df761b7c`。当前 `main` 另有 `22bbd70a6`/`d86d5766b` 对 candidate `8f9f60045ea652db7d4a6822e2f723dde073f40a` 的 61 项 security/runtime/recovery 语义实现，以及 `e0ee9cfe2` 的 OmniMind Agent 逐回合 Todo 投影；当前工作树正在完成 Goal 与其余 standing-default mechanisms，但尚未形成 pushed adoption set。只有 exact source、commit range、全树 path/behavior、作者测试、focused gates 与 pushed-SHA packaged/live journey 同时闭合，adopted head 才能前移。Todo 不是 Synara 的持久 Goal 生命周期。
 
 ## 4. 来源、身份与结构
 
@@ -110,8 +111,8 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       ],
       "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed code. Former product identity assets, release identity and release history are not adopted.",
       "mode": "adapt",
-      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted from 02c8a6c, then the maintainer-approved 02c8a6c..712d88f intake was adopted by reviewed responsibility. The later 712d88f..18ff998 intake produced 45 implemented non-merge responsibilities in existing owners; 35 other non-merge commits received proposed decline, defer, no-code or current-covered dispositions, and 16 merge commits were classified as topology carriers. A 2026-08-17 audit found that the revised full decision surface was not explicitly confirmed by the maintainer, so those non-adoption dispositions are reopened and cannot govern future work until confirmed. This revision records the exact reviewed and implemented source boundary, not a whole-source merge or Synara release inheritance. Implemented mechanisms include runtime and projection safety, branch/draft continuity, causal Timeline ordering and performance, bounded Workspace search, Git/stacked-PR workflows, task/rate presentation, app-owned and persisted history-only forks, and focused Desktop/UI lifecycle fixes. OmniMind retains its product authority, bilingual catalog, package/app/protocol/updater/profile/storage/artifact namespace and brand. Current code does not include donor release identity, the Synara Goal control plane, donor/debug control surfaces, forced settings migration or any competing approval/control plane, but those material non-adoptions remain pending maintainer confirmation rather than silently fixed policy. Where OmniMind already has stronger authority, safety, recovery, accessibility or geometry semantics, those stronger semantics remain authoritative. The inherited per-invocation fail-closed Device guard is retained only as current source behavior, not as the target permission contract; Device and Browser mutations must use the single Thread runtimeMode path defined by architecture/execution.md before production activation.",
-      "updatePolicy": "Pinned revision; source updates begin only after a maintainer-requested read-only intake and explicit approval of that intake set.",
+      "changes": "The exact physical Desktop, Web, Server, contracts, shared, patch, build and release substrate was transplanted from 02c8a6c, then the maintainer-approved 02c8a6c..712d88f intake was adopted by reviewed responsibility. The later 712d88f..18ff998 intake produced 45 implemented responsibilities, while its old non-adoption dispositions were reopened and corrected. Current main additionally contains 61 security, runtime and recovery responsibilities from candidate 18ff998..8f9f600 through 22bbd70a6 and d86d5766b, plus the e0ee9cfe2 per-turn OmniMind Agent Todo projection. The maintainer has confirmed Synara as upstream product platform, OmniMind as downstream distribution, and the five narrow current-stronger/identity/topology divergences in research/source-review.md section 15. The current working adoption set is adding the persistent ThreadGoal lifecycle, bounded unmapped-event diagnostics, debug mode, width preferences, appearance switching, OmniMind icon treatment, local profile PNG export and author harnesses. These unpushed candidate facts do not advance the production-adopted revision; whole-tree Group/different-name-owner parity, author tests and packaged/live proof remain open. OmniMind owns truthful bilingual branding, package/app/protocol/updater/profile/storage/artifact namespace, stock-Pi isolation and its distribution authorities; Synara release/account/public identity bytes remain outside OmniMind facts. The maintainer confirmed that no predecessor user population exists, so Synara/DP Code legacy storage migrations are permanently excluded rather than allowed to inspect unrelated identity paths. Automation follows the upstream consecutive-failure policy with a default of three and explicit one/three/five/keep-running choices.",
+      "updatePolicy": "Pinned production revision. Each maintainer-triggered update begins with an exact read-only intake; safe mother mechanisms enter by standing default, while every proposed non-adoption, defer, current-stronger disposition, identity divergence or new high-risk change must state its loss and receive contextual maintainer confirmation before the fact-closed adoption set is pushed.",
       "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
     },
     {
@@ -212,7 +213,7 @@ omni-harness
 }
 ```
 
-当前 adopted UI mother 是 exact reviewed Synara head `18ff998…` 的选择性单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`，实际接受与排除边界由上方 adoption record 拥有。`apps/service`、`apps/native-host`、donor profile/storage migration 与旧 Product Control Plane 不再属于生产拓扑。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
+当前 production-adopted baseline 是 exact reviewed Synara head `18ff998…` 的单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`。产品关系是 Synara upstream platform → OmniMind downstream distribution，不是 selective donor 拼装；上方 adoption record 仍只描述已经完成证据闭合的 revision 与固定 divergence。`apps/service`、`apps/native-host` 与旧 Product Control Plane 不属于生产拓扑；维护者已确认不存在前代用户，Synara/DP Code legacy profile/storage migration 因 first-public identity safety 永久排除，不读取或改写这些无关身份路径。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
 
 未来每轮 Synara 审查、辩证吸收、`$converge` 提问、实施授权与 exact-SHA 交付统一遵循根 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)；该手册不自动轮询上游，也不取代本 README 的 production adoption authority。
 
@@ -220,12 +221,10 @@ omni-harness
 
 Source Review 已记录 fixed source 的 exact comparison及其局限；当前 production bytes、focused/final gates 与真实 App journey 只在 active Campaign 记录 candidate evidence。局部绿色不证明视觉等价、Windows/Linux、签名 packaging 或 OmniMind V1。
 
-当前本机安装与 macOS arm64 ad-hoc candidate 均来自 exact pushed product `05782e94923242e2176a215ea74b2eee129584ae`。它是本地候选，不是 official signed/notarized release，也没有创建 GitHub Release 或修改 update feed；本次 adoption/evidence 文档闭合不进入 staged Desktop app、`app.asar` 或其他 shipped bytes，因此安装产品身份继续保持 `05782e…`，不因后续 docs-only commit 改写。
+当前本机安装与 macOS arm64 ad-hoc candidate 均来自 exact pushed product `e0ee9cfe2d3815a0cac6656b59927aa7c2956c27`。它包含 OmniMind Agent 的逐回合 Todo 投影，但不包含完整 Synara ThreadGoal；它是本地候选，不是 official signed/notarized release，也没有创建 GitHub Release 或修改 update feed。当前未提交的 intake/authority 文档不进入 staged Desktop app、`app.asar` 或其他 shipped bytes，因此不会把文档 SHA 冒充已安装产品身份。
 
 旧 isolated Native Host、平行 Product Control Plane 与 Product Truth checkpoint 只作可追溯历史，不再定义生产 topology 或下一步。
 
 首个真实 headless Pi Package checkpoint 位于 commit `16f14d188e38134f6f45c46bfcb57ff36c1e8565`。它证明 exact `todo.ts` 是可复用的 Pi-ecosystem regression input，也证明跨 Provider staged activation/lease/LKG 路线过重。V1 要证明该类 Package 能在 OmniMind Agent 的独立 Pi-compatible runtime 中运行，同时保持 stock Pi state 隔离。
 
-当前以 exact Synara responsibility reset、Pi stable alignment、Agent/Chat mapping、原生生态、Workbench 质量和三平台发行的顺序闭合剩余证据；这不删除 Synara 已有的 OpenCode 或其他 Provider adapter。精确进入、停止和 proof 条件只见 [`execution-brief.md`](execution-brief.md)。
-
-具体进入条件、停止条件和 proof gate 只见 [`execution-brief.md`](execution-brief.md)；当前 claim 状态只见 active Campaign。
+当前剩余工作、并发、真实阻塞与下一动作只见 [`execution-brief.md`](execution-brief.md)；这不删除 Synara 已有的 OpenCode 或其他 Provider adapter。当前 claim 状态与 evidence pointer 只见 active Campaign，历史路线不得形成新的施工准入门。

@@ -22,11 +22,12 @@
 - canonical public origin、公共出口、激活门、反馈数据边界或发行/更新 authority separation：`architecture/public-surface.md`。
 - Workspace、Conversation、Entry、Run、Queue、权限、receipt、恢复或产品事实：`architecture/product-state.md`。
 - 进程、Provider Registry/adapters、runtime/Session、系统能力或 execution topology：`architecture/execution.md`。
-- 当前施工顺序、进入/停止条件和阶段 proof：`execution-brief.md`。
+- 当前工作目标、冲突协调、阻塞和下一动作：`execution-brief.md`。它不能推翻维护者对完整 source decision surface 的明确决定，也不能以历史阶段或 stale Slice 形成第二准入门。
 - Claim 状态与已有证据指针：active Campaign。
 - 固定来源、版本、权利、构建/运行观察或结构性反证：`research/README.md` 路由的对应 evidence owner。
-- 用户主动要求审查、借鉴、吸收、同步或更新 Synara：必须完整遵循根 `SYNARA-INTAKE.md`。长期默认是尽量吸收，但不自动轮询或静默实施；每轮先完成只读研究，并用 `$converge` 消除会影响范围、产品结果、安全、权利或验证方式的不确定性，只有用户对当次明确更新集再次确认后才能修改产品。
-- 用户主动要求审查、比较、跟进、吸收、同步、升级或 fork Pi Core、Pi ecosystem 或 OmniMind Agent Core 外部来源：必须完整遵循根 `PI-ECOSYSTEM-INTAKE.md`。package 热度只决定研究优先级，不替代 exact source 与真实 journey；每轮先完成 Gate A 只读 intake，只有维护者确认当次 exact source set 且当前施工顺序准入后才能进入 Gate B。
+- 用户主动要求审查、借鉴、吸收、同步或更新 Synara：必须完整遵循根 `SYNARA-INTAKE.md`。长期默认是尽量吸收，但不自动轮询或静默实施；每轮先完成只读研究，并用 `$converge` 消除会影响范围、产品结果、安全、权利或验证方式的不确定性。母体内可安全吸收且不越过固定 divergence 的机制按 standing default 进入；只有建议不吸收/延期/已有覆盖、高风险变化或固定 divergence 的变化需要再次向用户说明损失并确认。
+- 用户主动要求审查、比较、跟进、吸收、同步、升级或 fork Pi Core、Pi ecosystem 或 OmniMind Agent Core 外部来源：必须完整遵循根 `PI-ECOSYSTEM-INTAKE.md`。package 热度只决定研究优先级，不替代 exact source 与真实 journey；每轮先完成 Gate A 只读 intake，维护者确认当次完整 decision surface 后即可进入 Gate B。`execution-brief.md` 只协调真实并发、依赖和阻塞，不能再次否决该决定。
+- exact source 是 Synara commit 时，即使 diff 内含 Pi adapter、Tool、MCP 或 Agent 行为，也只走专用 `SYNARA-INTAKE.md`；只有 exact source 本身来自 Pi Core/package/extension/skill/prompt/tool/MCP 或其他 Agent Engine donor 时才走 `PI-ECOSYSTEM-INTAKE.md`，不得对同一 Synara source set 叠两次 Gate。
 - 其他 adopted source 的更新继续先完成只读研究与人类讨论；没有对应专门手册时，参照 `SYNARA-INTAKE.md` 的两门、证据与授权边界，但不得把 Synara 的默认采用倾向自动扩张到其他来源。
 
 新会话不能用历史聊天、自动摘要或旧 handoff 补齐权威文档缺口。实现意图仍不能唯一推出时，先修 owner；当前任务未授权该修复时，停止并指出精确冲突。
@@ -37,17 +38,18 @@
 - 设计或接入任何产品能力前，必须先沿真实调用链盘点现状：从用户可见入口追到 route/command、配置与激活门、API/数据 owner、外部 authority 及失败/不可用行为，并明确区分“已存在、部分存在、缺失”。优先配置、接线或补齐现有链路；未完成该盘点时，不得仅凭页面、文档、命名或理想架构新增平行入口、接口、状态或发布管道。
 - 使用最小完整实现和现有模式；不创建平行架构真相、ledger、manifest、第二 Campaign 或无必要的兼容双轨。
 - 采用成熟上游时，默认追求**相对该上游的最小必要偏离**，不能因架构洁癖把成熟产品或组件降格为少数源码后重建其生命周期。裁决同时最小化上游语义/源码改动、重复产品 owner、默认 runtime/prompt/tool/state 激活面、用户认知和长期同步成本；优先配置、接线、公开 host seam 与 upstream patch。尽量保留 upstream ancestry、目录结构和作者测试，并明确区分“源码保留”“发行物导出”“运行时实际注册”；源码存在不等于产品必须激活，入口关闭也必须证明没有 ambient writer、listener、timer、进程或第二控制面。
+- 对 Synara 的默认规则是完整继承母体；任何 OmniMind 增强必须窄、可证伪、复用既有 owner，并用具体用户结果或风险证据说明收益及新增长期责任。不得借同步新增第二 Goal/Todo/control plane、通用同步 framework、兼容双轨、ledger/manifest、新 package、并行 UI/store/API 或逐 commit wrapper。
 - 候选来源在产品哲学和唯一 owner 边界内由真实效果与风险相称的 harness 决胜，不能仅因 package 更小、接口更整齐或功能更多而采用。验证应同时保护作者已经覆盖的生命周期冰山与 OmniMind 的路径、模型、权限、隔离、成本和用户 journey，但不得演化成复制生产语义的永久验证平台。需要物理分包时按可独立替换的生命周期责任拆分并保持窄公共合同，不按 Goal、Review、Workflow 等功能名称预建 package 或抽象。
 - 任何新增或修改的 OmniMind-owned 用户可见功能必须默认在同一变更中完整交付简体中文与英文；两种已支持语言的 catalog key 必须一一对应，正常可达路径不得以硬编码或缺失 key 回退成中英混杂。原始 Provider 输出、资产身份、路径、命令与诊断等不属于产品文案的边界，以及未来语言的准入规则，唯一遵循 `architecture/workbench.md`。
 - 用户可见语言的复核不能止于“已经使用翻译 key”或中英文 catalog parity。凡触达正常产品表面，必须按 `architecture/workbench.md` 同时检查 message catalog 的实际值、运行时投影的 Provider prompt/event、空态、进度、Toast、错误与恢复文案；内部 source/runtime/authority 术语只能进入该 owner 允许的技术详情。不得为消除泄漏而全局改名真实内部 API、法定 identity 或用户明确选择的 stock Pi；若普通产品文案与技术原文共用一条呈现路径，应在既有 presentation owner 内分层，而不是伪造或删除底层事实。
 - 开发期运行最窄、能证伪当前结论的检查；候选冻结后才在同一 SHA 运行相关 final gate。局部绿色不得扩张为未覆盖结论。
-- 一个真实闭合的关注点完成 focused 验证后，默认提交并推送当前任务分支到 GitHub；push 只同步该分支，不等于公开发行、创建 Release、修改 update feed 或合并受保护分支。用户明确暂停 push、权限不足或外部策略阻止时，必须准确标为仅本地 candidate，不能把未同步状态写成交付完成。
+- 一个真实闭合的关注点完成 focused 验证后，默认提交并推送当前任务分支到 GitHub；push 只同步该分支，不等于公开发行、创建 Release、修改 update feed 或合并受保护分支。source intake 的闭合关注点至少同时包含对应代码、adoption authority、research disposition 与当前状态，允许用一组有序 commits 实现，但不得把相互冲突的“代码已进 main / 权威仍称 pending”状态当成交付边界推送。用户明确暂停 push、权限不足或外部策略阻止时，必须准确标为仅本地 candidate，不能把未同步状态写成交付完成。
 - 任何改变 Desktop 用户可观察行为的代码改动，交付链必须继续从该精确 pushed SHA 重建产物、安装或替换本机 OmniMind App，并使用 fresh、任务专用 profile 完成启动、真实 journey、关闭和重开验证；源码、focused test、HMR 或 dev Electron 单独通过都不能证明当前安装 App 已获得修复。纯文档、测试或不进入 shipped bytes 的变更不重复打包；构建、安装或真实 App 复验被明确暂停或阻塞时，必须标为 source-only candidate，不能宣称用户已拿到修复。安装验证不得读取、迁移或改写真实用户 `.pi`、`.omnimind` 或其他 Provider private home。
 - macOS packaged journey 在任何会按 bundle id 自动启动 App 的 UI 控制器介入前，必须先停止所有现存 OmniMind 实例，显式以任务专用 `userData`、home 与 Provider private home 启动，并从主进程、Helper 和 bundled Server 的进程参数或等价 runtime 证据核验隔离路径；未完成该证明时不得操作窗口，也不得把默认 profile 的启动视为候选证据。
 - `/Users/liuzaoqu/Desktop/本机AI-API资源盘点.md` 是维护者为 OmniMind 真实验证专门准备并持续投入的授权资源入口。涉及当前 Provider/Model/Thinking、Pi 行为、兼容协议、stream、tool、usage、取消、故障归因或恢复语义时，live probe 不是最后手段：在 focused fixture 建立可诊断基线后，应主动用匹配的真实资源证伪结论；不得仅因节省 token、调用费用或担心真实服务不稳定而用 mock 代替关键产品证据。
 - Xiaomi MiMo 与 DeepSeek 是当前优先 real-provider 验收锚点。关键 Pi/Host/Provider 改动和 production candidate 应在资源状态、协议与待测行为匹配时优先覆盖二者，并区分直连、OpenAI-compatible endpoint 与代理转换的 wire 事实。两者用于验证跨 Provider 的真实产品行为和默认体验，不用于维护静态能力镜像，也不得把单个渠道的偶然行为写成通用补偿逻辑。
 - live 验证应覆盖足以推翻产品声明的最小完整 journey；对 OmniMind Agent candidate，优先证明 discovery/auth、Chat 首轮与 continuation、folder-backed Agent、Thinking/stream/tool、abort/timeout、断连恢复及 packaged Electron 全链。资源预算充足不等于无界跑分：请求仍需有明确假设、硬超时、费用边界、脱敏结果和停止条件。
-- Campaign producer 只能把受影响 claim 提交为 `candidate`，不能自证 `verified` 或整体完成；状态变更必须有对应授权和证据。
+- 普通、focused、可逆的 source adoption 可由执行者在 owner、测试与交付证据闭合后关闭对应 claim；发行、签名、安全、迁移、权限、秘密或其他高风险 claim 仍需要独立裁决后才能标为 `verified`。任何角色都不得用自己的实施事实替代缺失的高风险证据或把局部完成扩写成整体完成。
 - 若 owner 缺失、证据触发条件未满足或现有失败没有新假设，不重复相同 probe，也不把旧证据改写为新结论。
 
 ## 操作安全

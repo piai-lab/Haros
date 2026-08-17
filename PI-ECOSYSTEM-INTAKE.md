@@ -12,13 +12,15 @@ OmniMind 选择 Pi 作为默认 Agent 内核，不等于从零重写 Pi 已经�
 2. 优先复用公开、稳定、可隔离的原语；
 3. 只把用户结果所需的最小表面接入现有 owner；
 4. 用真实 journey、运行时证据和维护成本决定采用，而不是用 star、README 或功能数量决定；
-5. 配置和窄桥能解决时不 fork，翻译机制能解决时不引入第二控制面；
+5. 配置和窄桥能解决时不 fork；候选已经属于 OmniMind 明确继承的同一 Product Orchestration/Thread 生命周期时，优先保留母体 owner，不把它误判为第二控制面；
 6. 无法证明净收益时拒绝采用。
 
 本文要防止两种同样昂贵的错误：
 
 - **重复造轮子**：忽略 Pi/Engine 已有的 session、tool loop、compaction、skill、extension 等原语；
-- **生态绑架产品**：为采用一个 package，引入第二份 Goal、Run、Scheduler、Memory、权限、UI、private home 或生命周期 owner。
+- **生态绑架产品**：为采用一个 package，引入与既有产品事实并行的第二份 Goal、Run、Scheduler、Memory、权限、UI、private home 或生命周期 owner。成熟母体已在同一 Orchestration 内拥有的字段和生命周期不属于这一类。
+
+专用手册优先：exact source 是 Synara commit 时，即使变更触及 Pi adapter、Tool、MCP 或 Agent 行为，也只按 `SYNARA-INTAKE.md` 完成一次 intake；本文只适用于 exact source 本身来自 Pi Core/package/extension/skill/prompt/tool/MCP 或其他 Agent Engine donor 的情况。
 
 ## 2. 权威边界与必读顺序
 
@@ -27,7 +29,7 @@ OmniMind 选择 Pi 作为默认 Agent 内核，不等于从零重写 Pi 已经�
 1. [`README.md`](README.md)：产品定义、承诺与总入口；
 2. 本文 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)：intake 方法与授权边界；
 3. [`architecture/README.md`](architecture/README.md) 及任务涉及的专题 owner：唯一产品事实；
-4. [`execution-brief.md`](execution-brief.md)：当前唯一施工顺序与准入门；
+4. [`execution-brief.md`](execution-brief.md)：当前工作目标、并发协调、真实阻塞与下一动作；
 5. [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md)：仅在 active 时读取状态与证据指针；
 6. [`research/README.md`](research/README.md) 路由的相关 evidence owner；
 7. Agent Core 相关任务再完整读取：
@@ -37,7 +39,7 @@ OmniMind 选择 Pi 作为默认 Agent 内核，不等于从零重写 Pi 已经�
 权威关系不可倒置：
 
 - `architecture/*` 决定“产品是什么”；
-- `execution-brief.md` 决定“现在能做什么”；
+- `execution-brief.md` 协调“现在正在做什么、有哪些真实冲突或依赖”；维护者对完整 decision surface 的明确确认拥有采用决定，brief 不能再设第二否决权；
 - active Campaign 记录 claim 状态与证据；
 - `research/*` 保存来源、观察、反证、候选裁决和未来施工参考；
 - 本文决定“如何审查来源”，不决定采用。
@@ -57,7 +59,7 @@ OmniMind 选择 Pi 作为默认 Agent 内核，不等于从零重写 Pi 已经�
 每轮分为两个独立授权门：
 
 - **Gate A：只读 intake。** 可检索、下载到临时隔离目录、解包、审计、运行无产品写入的 focused probe，并形成 disposition。不得修改产品、owner 文档、依赖锁或发行配置。
-- **Gate B：实施候选。** 只有维护者确认本轮 exact source set，且 `execution-brief.md` 明确准入该切片后才可进入。
+- **Gate B：实施候选。** 维护者确认本轮 exact source set 的完整 decision surface，且没有未解决的真实 owner/并发/安全冲突后即可进入。`execution-brief.md` 负责记录和协调这些事实，不另行授予或撤销维护者授权。
 
 “长期默认尽量吸收生态”“可以重构一切”不是 Gate B 授权。它们要求更严谨地比较，不授权跳过来源身份、隔离、产品 owner 或交付门。
 
@@ -354,7 +356,7 @@ Codex、Claude Code、OpenCode 等能力必须通过各自官方 seam 评估：
 
 1. Gate A exact source set 已闭合；
 2. 维护者确认本轮 disposition；
-3. `execution-brief.md` 已准入该独立切片；
+3. 当前工作区、并发与 owner 没有未解决的真实冲突，`execution-brief.md` 已准确反映本轮目标；
 4. owner、成功条件、失败条件和回滚明确；
 5. 没有未解决的产品权威冲突。
 
@@ -366,7 +368,7 @@ Codex、Claude Code、OpenCode 等能力必须通过各自官方 seam 评估：
 - 不修改 Provider private home；
 - 新用户可见文案同时交付简体中文和英文；
 - 新状态必须证明现有 owner 无法表达；
-- 候选只能提交为 candidate，不能自证 Campaign `verified`。
+- 普通、focused、可逆的采用可在 owner、测试和交付证据闭合后关闭对应 claim；发行、签名、安全、迁移、权限、秘密及其他高风险 claim 仍需独立裁决，不能由实施者用局部绿色自证。
 
 验证从窄到宽：
 
@@ -416,7 +418,7 @@ OmniMind 不静默轮询并采用上游变化。每次升级重新锁定 exact a
 
 - 固定版本、权利、构建/运行观察写入 `research/*` 对应 evidence owner；
 - 产品事实只更新 `architecture/*` 的 sole owner；
-- 当前顺序只更新 `execution-brief.md`；
+- 当前目标、并发、阻塞与下一动作只更新 `execution-brief.md`；
 - claim 状态只更新 active Campaign；
 - 本文只在 intake 方法本身变化时更新。
 
@@ -424,7 +426,7 @@ OmniMind 不静默轮询并采用上游变化。每次升级重新锁定 exact a
 
 代码证据必须记录仓库完整路径与稳定 symbol，不以 basename 或旧行号作为唯一定位。若 `Layers/` 与 `Services/` 存在同名文件，必须明确区分运行实现与接口/tag；若代码只是移动而 owner 不变，只更新 evidence 路由，不改写产品 architecture。外部 README、官方文档和类型声明只能证明候选能力；OmniMind 已接入与否仍必须由当前 adapter wiring、init/list/status 或真实 journey 证明。
 
-研究设计与执行指南可以保存长期稳定的依赖层次、falsifier、proof protocol 与 stop-loss，但不得授予当前准入，也不得把证据快照冒充 current progress/next action。新会话必须实时读取 `execution-brief.md` 并引用当时原文；本文只规定未被 sole owner 明确准入时不得实施。这样修改当前施工顺序时，无需同步改写长期验证协议。
+研究设计与执行指南可以保存长期稳定的 falsifier、proof protocol 与 stop-loss，但不得保存固定阶段门、授予当前准入或把证据快照冒充 current progress/next action。新会话实时读取 `execution-brief.md` 只为识别当前目标与真实冲突；维护者确认过的完整 decision surface 不需要再由 brief 或研究指南二次批准。
 
 ## 12. Stop conditions
 
@@ -433,13 +435,13 @@ OmniMind 不静默轮询并采用上游变化。每次升级重新锁定 exact a
 - exact artifact 与 source 无法对应；
 - license、provenance 或 dependency closure 不清；
 - 需要读取/写入真实 Provider private home 才能工作；
-- 需要第二份 Product Thread、Goal、Run、Queue、Scheduler、Memory、权限或更新 owner；
+- 需要与 OmniMind 当前 sole owner 并行的第二份 Product Thread、Goal、Run、Queue、Scheduler、Memory、权限或更新 owner；继承母体在同一 Orchestration 内的既有 owner 不触发本条；
 - 关闭配置只隐藏 UI，实际 writer/listener/schema 仍存在；
 - secret 可能进入 argv、日志、cache、child env 或模型上下文；
 - abort/timeout/retry/settlement 不能给出唯一 terminal truth；
 - packaged journey 无法隔离、回滚或重现；
 - 候选不优于更简单基线，或收益不足以覆盖长期维护；
-- 当前 `execution-brief.md` 未准入；
+- `execution-brief.md` 暴露尚未解决的同文件并发、owner 冲突、安全阻断或外部依赖；仅有历史阶段/顺序不构成阻断；
 - 相同失败在没有新假设时重复出现。
 
 停止不等于研究失败。应保留可独立复用的机制、测试与反证，并删除运行时责任。
@@ -451,7 +453,7 @@ OmniMind 不静默轮询并采用上游变化。每次升级重新锁定 exact a
 ```text
 Workspace / branch / HEAD / dirty paths:
 Applicable authority owners:
-Current execution-brief admission:
+Current execution goal / real conflicts:
 Candidate exact artifact/source/dependencies:
 Exact OmniMind integration path/symbol: existing | absent/proposed owner
 User journey and simplest baseline:

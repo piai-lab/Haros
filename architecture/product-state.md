@@ -8,18 +8,22 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 
 ## 产品语言到既有事实的映射
 
-| 用户语言            | 直接复用的事实                                                                                    | 明确不新增                                              |
-| ------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| Agent               | folder-backed Synara Project + Thread + Workbench                                                 | `AgentWorkspace`、第二 Conversation/Run store           |
-| Chat                | Synara Home/Studio managed Project + Thread + managed workspace/outbox                            | 用户 Primary Folder、平行 Chat database                 |
-| Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                  | 新 `Group` aggregate、Project 标签或 membership ledger  |
-| Send to Agent       | 创建或打开普通 folder-backed Project Thread，并带入用户选择的 prompt、attachment 与 artifact refs | Handoff protocol、跨对象 replay、隐藏 cwd 切换          |
-| Conversation        | Synara Thread 的用户可见身份                                                                      | Provider Session 的复制品                               |
-| Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                     | 第二 Provider Registry 或跨 Provider Session            |
-| Extensions / Skills | 既有 PluginLibrary/Skills discovery；有原生 API 时显示 Provider-scoped lifecycle                  | 顶层 Package aggregate、跨 Provider lifecycle authority |
-| 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                 | Provider 外再叠一套 permission profile 或逐工具授权账本 |
+| 用户语言            | 直接复用的事实                                                                                      | 明确不新增                                              |
+| ------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Agent               | folder-backed Synara Project + Thread + Workbench                                                   | `AgentWorkspace`、第二 Conversation/Run store           |
+| Chat                | Synara Home/Studio managed Project + Thread + managed workspace/outbox                              | 用户 Primary Folder、平行 Chat database                 |
+| Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                    | 新 `Group` aggregate、Project 标签或 membership ledger  |
+| Send to Agent       | 创建或打开普通 folder-backed Project Thread，并带入用户选择的 prompt、attachment 与 artifact refs   | Handoff protocol、跨对象 replay、隐藏 cwd 切换          |
+| Conversation        | Synara Thread 的用户可见身份                                                                        | Provider Session 的复制品                               |
+| Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                       | 第二 Provider Registry 或跨 Provider Session            |
+| Extensions / Skills | 既有 PluginLibrary/Skills discovery；有原生 API 时显示 Provider-scoped lifecycle                    | 顶层 Package aggregate、跨 Provider lifecycle authority |
+| 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                   | Provider 外再叠一套 permission profile 或逐工具授权账本 |
+| Goal                | Synara Thread 内的持久 objective、计时/暂停/achievement、prompt injection 与 continuation lifecycle | 用逐回合 task list 代替 Goal、另建 Goal DB/daemon       |
+| Todo / 当前步骤     | Provider runtime 的逐回合 `turn.tasks.updated` 全量快照与现有 Composer/Timeline 投影                | 持久 Goal、第二 Todo store 或跨回合成功 authority       |
 
 命名映射只允许改变产品呈现，不改变底层唯一 owner。若现有 Synara 类型已经表达同一事实，OmniMind 必须直接复用或最小改名，不能再包装一层“更通用”的状态。
+
+Goal 与 Todo 是两条互补事实。Goal 保存用户明确设定、可跨 turn 继续追求的完整 objective；Todo 只解释当前 turn 内正在做什么。Todo 完成不能自行清除 Goal，Goal 继续也不能伪造 Todo 已完成。Synara ThreadGoal 已在本产品继承的同一 Orchestration 内，不是竞争控制面；OmniMind 只做品牌、双语、Provider 与安全适配，并保留作者的持久化、恢复和竞态语义。
 
 ## Agent 与 Chat
 
@@ -40,6 +44,8 @@ Chat 复用 Synara 的 managed Home/Studio container。它没有用户选择的 
 ### Groups
 
 产品把 Synara Space 收窄呈现为 Group：Space 继续拥有 identity、name、order 与 lifecycle；membership 则是既有 Thread 上的去重 `groupIds` metadata。一条 Thread 可以属于多个 Group，未分组用空数组表达，并且只在 Projects 完整列表中出现；Project 自身没有 Group membership。
+
+上游以 Project membership 表达的 `space.projects.assign` 不能原样复制。OmniMind 必须把相同用户结果翻译为 Thread `groupIds` 的既有 command/event/projection path；icon suggestion、switch/order/route restore、search/bulk selection 与 empty/void states 也在现有 Group UI owners 中证明，不新增 `spacesUiStore` 平行真相。
 
 删除 Group 时，所有 Thread 对该 identity 的 membership 一并移除，但 Thread、Project、Folder、Provider Session、Run、permission、File 与 Git 均不删除、不移动。这个最小字段属于既有 Thread command/event/projection authority，不授权 join-table ledger、`Group` aggregate、Project-space 双轨或第二恢复状态。
 

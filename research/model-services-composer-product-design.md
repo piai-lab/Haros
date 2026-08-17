@@ -26,19 +26,19 @@ Status: local source observation + maintainer-confirmed product direction + impl
 - 最小、可维护的施工依据；
 - 每个行为应由什么证据验收。
 
-新会话的实际施工入口是 [`model-services-composer-new-session-execution-guide.md`](model-services-composer-new-session-execution-guide.md)。该执行指南 map/ref 本文的设计章节，但不复制本文，也不获得第二套架构、状态或验收 authority。
+当时的实现分解与验证方法保存在 [`model-services-composer-new-session-execution-guide.md`](model-services-composer-new-session-execution-guide.md)。该文件现已退休为历史参考，不是新会话入口，不决定当前切片、准入、施工顺序或完成状态。
 
 本文不拥有稳定产品事实。发生冲突时，按以下 sole owner 裁决：
 
 - Composer、Chat、Workbench、可访问性、响应式和双语：[`../architecture/workbench.md`](../architecture/workbench.md)；
 - Conversation、Thread、Entry、Run、Queue、draft、receipt、恢复和 Provider 切换事实：[`../architecture/product-state.md`](../architecture/product-state.md)；
 - Product Orchestration、Provider Registry、adapter、Session 和执行拓扑：[`../architecture/execution.md`](../architecture/execution.md)；
-- 当前施工顺序与进入/停止条件：[`../execution-brief.md`](../execution-brief.md)；
+- 当前目标、真实并发、依赖与阻塞：[`../execution-brief.md`](../execution-brief.md)；它不决定维护者授权或另设准入；
 - 当前 claim 状态：[`../missions/independent-omnimind-v1.md`](../missions/independent-omnimind-v1.md)。
 
 如果本文与上述 owner 冲突，不能凭本文“更详细”而选本文。应先修正 owner 或更新本文的过期观察。本文不得演变成第二份产品规范、第二份 Provider Registry 或第二份 Campaign。
 
-### 0.1 Owner 与当前 candidate 已同步，Exit 仍由执行门裁决
+### 0.1 当时的 Owner 与 candidate 快照
 
 维护者已明确选择设置页名称 **`Model services / 模型服务`**，并要求它成为 OmniMind Agent 的模型服务配置中心。该 UI 裁决已写入 [`../architecture/workbench.md`](../architecture/workbench.md#6-settings)，runtime/Host/private-state authority 已写入 [`../architecture/execution.md`](../architecture/execution.md#omnimind-agent-model-services-authority)，不再与 sole owner 冲突。Owner 同时固定以下最小边界：
 
@@ -47,10 +47,10 @@ Status: local source observation + maintainer-confirmed product direction + impl
 - `Agent engines` 继续是独立 Engine 的安装、认证和原生配置入口；
 - `Model services` 主要配置 OmniMind Agent 的 Pi ModelRuntime；
 - Git writing default 已退出 Model services，底层字段与兼容仍保留；E7 Exit 前必须迁入真实调用功能并恢复搜索/deep-link，或由维护者明确退休，不能把当前无入口状态永久化；
-- “添加模型服务”以搜索/选择 Pi runtime 真实服务为主路径，以列表尾部弱一级的“通过 API 地址连接”为低频补充；后者的 E6 typed mutation 与 packaged journey已形成candidate，是否Exit只按`execution-brief.md`的fresh audit门裁决；
+- “添加模型服务”以搜索/选择 Pi runtime 真实服务为主路径，以列表尾部弱一级的“通过 API 地址连接”为低频补充；后者在当时快照中已形成 E6 typed mutation 与 packaged-journey candidate，今天的完成状态只能由当前代码、现行 claim 与相称证据判断；
 - 普通 UI、Composer、Engine menu、Model services、tooltip 与 aria-label 使用 `OmniMind`；`OmniMind Agent` 只作为技术实体全称进入 runtime、技术详情、诊断、About、Licenses 与来源语境。
 
-当前 cumulative candidate 已完成 Model services职责收缩、built-in搜索/详情、独立Engine custom slug归位、OAuth与custom API主旅程、双实例消歧和正常产品语言；这些都是producer candidate，不由本文改写为Exit。尚未实现的E7产品面是：本地LobeHub视觉resolver、intent-scoped Extension服务投影、Pi native ecosystem/package lifecycle可达性，以及Git writing最终归属/退休裁决。任何新会话必须先读取`execution-brief.md`的精确SHA和audit门，不能按本文旧source snapshot重复施工已形成candidate的E5/E6。
+在本文的旧快照中，cumulative candidate 已覆盖 Model services 职责收缩、built-in 搜索/详情、独立 Engine custom slug 归位、OAuth 与 custom API 主旅程、双实例消歧和正常产品语言；这些历史状态不能证明今天仍完成或仍缺失。新任务先读当前 owner、代码、claim 与 `execution-brief.md` 中的真实并发/阻塞，再决定是否需要复验；不得按本文旧 source snapshot 重复施工 E5/E6，也不得把旧 E7 缺口自动升级为当前任务。
 
 ## 1. 设计结论
 
@@ -855,7 +855,7 @@ Pi 当前没有通用的 provider `enabled` 开关。不能因为 Proma Channel 
 - credential、`.omnimind` / `.pi` 隔离、active Session 和 catalog invalidation；
 - Settings 的测试、live provider 与 packaged journey。
 
-因此，若没有本节，不能宣称“新会话对这档事完全明白”。
+因此，本节保存当时需要核对的安全语义；当前任务仍须以现行 owner 和代码复验相关部分。
 
 ### 10.2 页面名称与定位
 
@@ -1753,11 +1753,10 @@ E7 可以新增一个局部 `ModelServiceIcon`/resolver，精确锁定并显式�
 - Proma-style `Channel` aggregate、provider enum、default URL 表或 `/models` fetcher；
 - 读取/写入 stock Pi `.pi` 的 OmniMind Agent Settings bridge。
 
-## 12. 实施依据与推荐分解
+## 12. 历史实施依据与分解
 
-以下顺序只解释设计依赖，不取代 `execution-brief.md`，也不作为新会话 runbook。实际施工从
-[`model-services-composer-new-session-execution-guide.md`](model-services-composer-new-session-execution-guide.md)
-启动，并在进入实现前核对当前 HEAD、dirty state 和 owner 是否变化。
+以下顺序只解释当时的设计依赖，不取代现行 owner，也不作为新会话 runbook。历史验证方法见
+[`model-services-composer-new-session-execution-guide.md`](model-services-composer-new-session-execution-guide.md)；该文件已退休为非阻塞参考。当前任务必须从当前 HEAD、dirty state、现行 owner、维护者决定与真实阻塞独立推出最小路径。
 
 ### 联合优先顺序
 
@@ -1852,7 +1851,7 @@ E7 可以新增一个局部 `ModelServiceIcon`/resolver，精确锁定并显式�
 
 ## 13. 预计触达文件
 
-这不是必须全部修改的清单，而是新会话的 owner map。实际 diff 应保持最小。
+这不是必须全部修改的清单，而是当时的 owner map。当前实际 diff 应从现行 owner 推出并保持最小。
 
 ### Web / Composer
 
@@ -2064,13 +2063,11 @@ fresh launch
 12. 为支持多实例另建一份 secret、provider config 或 model catalog truth。
 13. “从供应商获取”绕过 Pi，开始维护供应商 endpoint/parser。
 
-## 18. 新会话执行入口
+## 18. 当前任务如何使用本文
 
-新的实现会话不得把本文当作 runbook。必须从
-[`model-services-composer-new-session-execution-guide.md`](model-services-composer-new-session-execution-guide.md)
-启动，由执行指南完成必读路由、snapshot 复验、切片选择、代码触达、验证、提交和停止判断。
+新的实现会话不得把本文或历史实现参考当作 runbook。按根 `AGENTS.md` 读取当前 owner，以当前代码、维护者决定、任务范围和真实阻塞选择最小路径；只有旧结论与当前变更相关时，才复用本文的 source evidence 或 falsifier。
 
-若当前代码、Pi package revision、owner contract 或 Campaign 状态已变化，执行会话必须按执行指南的漂移门局部复验；不能机械照抄本文行号、旧测试断言或旧 package 结论。
+若当前代码、Pi package revision、owner contract 或 Campaign 状态已变化，只局部复验受影响结论；不能机械照抄本文行号、旧测试断言、E0–E8 顺序或旧 package 结论。
 
 ## 19. 证据锚点
 
