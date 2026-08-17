@@ -17,6 +17,7 @@ Updated: 2026-08-18
 ## 当前事实
 
 - OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前 adoption 分支 `codex/synara-8f9f600-adoption`；exact pushed product SHA 为 `58f76446d3d7061b7fe18e140fe56676269497c3`。
+- `origin/main` 与 `origin/codex/synara-8f9f600-adoption` 已于 2026-08-18 非强制 fast-forward 到同一 authority closure `72eaf86219e369ea8227639f71a5a1b634667d25`；该纯文档 SHA 不冒充安装产品字节。
 - Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`，等于 `origin/main`。
 - `58f76446d` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归；其最后一轮改动只关闭 Automation 测试时钟/隔离和 Web compiler 回归，没有增加平行产品 owner。
 - `e0ee9cfe2` 的逐回合 `omnimind_update_tasks` Todo/task-list 投影仍与持久 Goal 分离；Todo 不是 Goal 的缩水替代。
@@ -27,7 +28,7 @@ Updated: 2026-08-18
 
 ## 当前工作范围
 
-正在进行：只剩 README、Source Review、Mission 与当前简报的 authority truth-convergence，以及 adoption 分支进入 `main`。产品代码、focused/final gates 与 exact pushed-SHA packaged fresh-profile journey 已闭合。
+已完成：Synara exact `8f9f600…` 的产品代码、commit-range 与 whole-tree disposition、作者等价测试、final gates、exact pushed-SHA packaged fresh-profile journey、README/Source Review/Mission/brief truth-convergence，以及 adoption set 进入 `main`。当前没有仍属于本轮的 Synara 产品施工。
 
 ## 保留边界
 
@@ -43,9 +44,7 @@ Updated: 2026-08-18
 
 ## 下一动作
 
-1. 提交并推送 README+research+Mission+brief 的 authority closure；
-2. fast-forward `main` 到完整 adoption set；
-3. adoption 闭合后再另行在隔离分支验证 Git ancestry 恢复方案，不把该实验冒充本轮采用证据。
+本轮无剩余动作。若维护者另行要求，可在隔离分支验证 Git ancestry baseline；该实验不得改写已闭合的 adopted-head 证据，也不得在未验证下一次 upstream 三方合并前宣称恢复了真实 ancestry。
 
 ## 证据入口
 
