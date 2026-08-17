@@ -341,6 +341,14 @@ S1 当前唯一代码 Slice 是 **Phase-9c Git behind-only header Pull A2**：�
 
 该 Slice 的 pre-commit source-candidate 证据：Git availability/既有action与Header owner `2 files / 132 tests`，真实Chromium thin control `1 file / 9 tests`覆盖root checkout/managed worktree exact cwd、无dialog/menu、running、键盘/focus/ARIA、现有英中`git.action.pull/pulling` actual values及`480/960/1440`横向geometry；既有ChatView Environment geometry `1 file / 8 tests`、monorepo typecheck `6/6`、format与diff check通过。changed-path lint为`0 errors / 1 warning`，唯一warning是exact base已存在的`renderProviderIcon` function-scoping行，本Slice不扩修。按准入不做package/install/live/README。
 
+Phase-9c Git A2 已在 exact pushed `172d7cfb384e6e29de73480a606833ab67a7dc31` 进入 `main`；上述 thin Pull 历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **Phase-9c Git Commit dialog action matrix A3**：在既有 `GitActionsControl` query、mutation、presentation 与 Base UI Dialog/state owner内，把 Commit 对话框收口为 Commit on new branch、Commit、Commit & Push、Create/View PR 四行紧凑 action matrix；共享 resolver 必须以 `item.dialogAction ?? item.id` 裁决真实动作。pure Push 不受 file selection gate；dirty 且零选择时所有会生成 commit 的动作 fail closed；Create PR 只在 include-local-changes 且确实需要 commit 时转交 trimmed commit message 与 exact nonempty selected file subset，关闭该选项则忽略；existing PR 直接走既有 external open。disabled row保持可聚焦，以 `aria-disabled`、可描述的英中原因和 Enter/Space 零副作用表达不可用。
+
+该 Slice 必须保护 A2 thin Pull、rich PR/default-branch confirmation、exact-cwd、既有 toast/focus 与 query invalidation；不得新增第二 Git control、dialog chrome、server/contracts、stack、layout owner或 whole-port donor。候选只以 logic matrix、真实 Chromium handoff/View PR/keyboard/narrow geometry、英中文案、typecheck、lint、format、document contract与diff证明；按准入不做package/install/live/README。
+
+Phase-9c Git A3 的 pre-commit source-candidate 证据为：Git action/availability logic与英中 catalog `2 files / 146 tests`、真实 Chromium Commit action matrix `1 file / 5 tests`、A2 thin Pull Chromium回归 `1 file / 9 tests`、monorepo typecheck `6/6 packages`与document contract `21/21`通过；changed-path lint为`0 warnings / 0 errors`，root lint为`0 errors / 478 warnings`，changed-path format与diff check通过。全局 product-copy guard仍有`workspaceExplorer.tsx`两条未触碰path/line raw-fact attribute的既有`1`个失败，本Slice不扩修该owner，也不把catalog parity扩张为全局copy全绿。按准入未运行package/install/live/README，故只主张source-only candidate。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -353,4 +361,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9b legacy compacted reasoning anchor as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9c Git A3 as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

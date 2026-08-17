@@ -349,6 +349,7 @@ export const EN_MESSAGES = {
   "git.action.refreshFailed": "Git status refresh failed.",
   "git.action.defaultBranchWarning": "Warning: default branch",
   "git.action.selectedOf": "{selected} of {total}",
+  "git.action.selectFilesToCommit": "Select at least one file to commit.",
   "git.action.excluded": "Excluded",
   "git.action.commitDialogTitle": "Commit changes",
   "git.action.commitDialogDescription":
@@ -3782,6 +3783,7 @@ export const ZH_CN_MESSAGES = {
   "git.action.refreshFailed": "Git 状态刷新失败。",
   "git.action.defaultBranchWarning": "警告：默认分支",
   "git.action.selectedOf": "已选 {selected} / {total}",
+  "git.action.selectFilesToCommit": "请至少选择一个要提交的文件。",
   "git.action.excluded": "已排除",
   "git.action.commitDialogTitle": "提交更改",
   "git.action.commitDialogDescription": "检查并确认本次提交；提交信息留空则自动生成。",

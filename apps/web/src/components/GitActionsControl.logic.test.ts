@@ -13,8 +13,10 @@ import {
   resolveCreatePrDialogRuntimeStatus,
   resolveCreatePrDialogView,
   resolveCreatePrExecution,
+  resolveCommitDialogActions,
   resolveDefaultCreateBranchName,
   resolveDefaultBranchActionDialogCopy,
+  resolveGitMenuActionDisabledReason,
   resolveLiveThreadBranchUpdate,
   resolvePullActionAvailability,
   resolveQuickAction,
@@ -60,6 +62,226 @@ function status(overrides: Partial<GitStatusResult> = {}): GitStatusResult {
     ...overrides,
   };
 }
+
+function dirtyStatus(overrides: Partial<GitStatusResult> = {}): GitStatusResult {
+  return status({
+    hasWorkingTreeChanges: true,
+    workingTree: {
+      files: [
+        { path: "src/a.ts", insertions: 3, deletions: 1 },
+        { path: "src/b.ts", insertions: 2, deletions: 0 },
+      ],
+      insertions: 5,
+      deletions: 1,
+    },
+    ...overrides,
+  });
+}
+
+describe("resolveCommitDialogActions", () => {
+  it("offers the four dirty-feature actions from the shared menu state", () => {
+    const actions = resolveCommitDialogActions({
+      context: {
+        gitStatus: dirtyStatus(),
+        isBusy: false,
+        isDefaultBranch: false,
+        hasOriginRemote: true,
+        defaultBranchName: "main",
+      },
+      hasFileSelection: true,
+    });
+
+    assert.deepEqual(
+      actions.map(({ id, label, action, featureBranch, disabled }) => ({
+        id,
+        label,
+        action,
+        featureBranch,
+        disabled,
+      })),
+      [
+        {
+          id: "commit_new_branch",
+          label: "Commit on new branch",
+          action: "commit",
+          featureBranch: true,
+          disabled: false,
+        },
+        {
+          id: "commit",
+          label: "Commit",
+          action: "commit",
+          featureBranch: false,
+          disabled: false,
+        },
+        {
+          id: "commit_push",
+          label: "Commit & push",
+          action: "commit_push",
+          featureBranch: false,
+          disabled: false,
+        },
+        {
+          id: "create_pr",
+          label: "Create PR",
+          action: "create_pr",
+          featureBranch: false,
+          disabled: false,
+        },
+      ],
+    );
+  });
+
+  it("fails closed every dirty action that would commit when no file is selected", () => {
+    const actions = resolveCommitDialogActions({
+      context: {
+        gitStatus: dirtyStatus(),
+        isBusy: false,
+        isDefaultBranch: false,
+        hasOriginRemote: true,
+        defaultBranchName: "main",
+      },
+      hasFileSelection: false,
+    });
+
+    assert.deepEqual(
+      actions.map(({ id, disabled, disabledReason }) => ({ id, disabled, disabledReason })),
+      [
+        {
+          id: "commit_new_branch",
+          disabled: true,
+          disabledReason: "Select at least one file to commit.",
+        },
+        {
+          id: "commit",
+          disabled: true,
+          disabledReason: "Select at least one file to commit.",
+        },
+        {
+          id: "commit_push",
+          disabled: true,
+          disabledReason: "Select at least one file to commit.",
+        },
+        {
+          id: "create_pr",
+          disabled: true,
+          disabledReason: "Select at least one file to commit.",
+        },
+      ],
+    );
+  });
+
+  it("keeps pure Push and clean Create PR runnable without a file selection", () => {
+    const actions = resolveCommitDialogActions({
+      context: {
+        gitStatus: status({ aheadCount: 2 }),
+        isBusy: false,
+        isDefaultBranch: false,
+        hasOriginRemote: true,
+        defaultBranchName: "main",
+      },
+      hasFileSelection: false,
+    });
+
+    assert.deepInclude(actions[1], {
+      id: "commit",
+      disabled: true,
+      disabledReason: "Worktree is clean. Make changes before committing.",
+    });
+    assert.deepInclude(actions[2], {
+      id: "commit_push",
+      label: "Push",
+      action: "push",
+      disabled: false,
+    });
+    assert.deepInclude(actions[3], {
+      id: "create_pr",
+      label: "Create PR",
+      disabled: false,
+    });
+  });
+
+  it("keeps Commit available but explains blocked push and PR on a behind branch", () => {
+    const actions = resolveCommitDialogActions({
+      context: {
+        gitStatus: dirtyStatus({ behindCount: 2 }),
+        isBusy: false,
+        isDefaultBranch: false,
+        hasOriginRemote: true,
+        defaultBranchName: "main",
+      },
+      hasFileSelection: true,
+    });
+
+    assert.equal(actions[1]?.disabled, false);
+    assert.deepInclude(actions[2], {
+      disabled: true,
+      disabledReason: "Branch is behind upstream. Pull/rebase before committing and pushing.",
+    });
+    assert.deepInclude(actions[3], {
+      disabled: true,
+      disabledReason: "Branch is behind upstream. Pull before creating a PR.",
+    });
+  });
+
+  it("labels an existing PR as View PR and leaves it independent of file selection", () => {
+    const actions = resolveCommitDialogActions({
+      context: {
+        gitStatus: dirtyStatus({ pr: statusPr() }),
+        isBusy: false,
+        isDefaultBranch: false,
+        hasOriginRemote: true,
+        defaultBranchName: "main",
+      },
+      hasFileSelection: false,
+    });
+
+    assert.deepInclude(actions[3], {
+      id: "create_pr",
+      label: "View PR",
+      action: "create_pr",
+      disabled: false,
+    });
+  });
+
+  it("uses busy reasons for every row while a git action is running", () => {
+    const actions = resolveCommitDialogActions({
+      context: {
+        gitStatus: dirtyStatus(),
+        isBusy: true,
+        isDefaultBranch: false,
+        hasOriginRemote: true,
+        defaultBranchName: "main",
+      },
+      hasFileSelection: true,
+    });
+
+    assert.isTrue(actions.every((action) => action.disabled));
+    assert.isTrue(actions.every((action) => action.disabledReason === "Git action in progress."));
+  });
+});
+
+describe("resolveGitMenuActionDisabledReason", () => {
+  it("uses dialogAction rather than the shifting menu id on the default branch", () => {
+    const gitStatus = dirtyStatus({ branch: "main", behindCount: 1 });
+    const pushItem = buildMenuItems(gitStatus, false, true, true, "main").find(
+      (item) => item.id === "push",
+    );
+    assert.isDefined(pushItem);
+
+    assert.equal(
+      resolveGitMenuActionDisabledReason({
+        item: pushItem,
+        gitStatus,
+        isBusy: false,
+        hasOriginRemote: true,
+        isDefaultBranch: true,
+        defaultBranchName: "main",
+      }),
+      "Branch is behind upstream. Pull/rebase before committing and pushing.",
+    );
+  });
+});
 
 describe("when: branch is clean and has an open PR", () => {
   it("resolveQuickAction opens the existing PR", () => {

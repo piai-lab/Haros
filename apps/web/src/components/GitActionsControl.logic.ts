@@ -202,6 +202,9 @@ export interface CreatePrDialogContext {
   defaultBranchName?: string | null | undefined;
 }
 
+/** Shared immutable status input for the existing Commit and Create PR dialogs. */
+export type GitDialogContext = CreatePrDialogContext;
+
 export interface CreatePrDialogRuntimeStatus {
   gitStatus: GitStatusResult | null;
   isDefaultBranch: boolean;
@@ -422,6 +425,191 @@ export function buildMenuItems(
           kind: "open_dialog",
           dialogAction: "create_pr",
         },
+  ];
+}
+
+/**
+ * Human-readable reason a git menu item is unavailable. Shared by the dropdown
+ * and Commit dialog so a logical action keeps the same failure explanation even
+ * when its menu id changes with branch state.
+ */
+export function resolveGitMenuActionDisabledReason(input: {
+  item: GitActionMenuItem;
+  gitStatus: GitStatusResult | null;
+  isBusy: boolean;
+  hasOriginRemote: boolean;
+  isDefaultBranch: boolean;
+  defaultBranchName: string | null | undefined;
+}): string | null {
+  const { item, gitStatus, isBusy, hasOriginRemote, isDefaultBranch, defaultBranchName } = input;
+  if (!item.disabled) return null;
+  if (isBusy) return "Git action in progress.";
+  if (!gitStatus) return "Git status is unavailable.";
+
+  const hasBranch = gitStatus.branch !== null;
+  const hasChanges = gitStatus.hasWorkingTreeChanges;
+  const hasOpenPr = gitStatus.pr?.state === "open";
+  const isAhead = gitStatus.aheadCount > 0;
+  const isBehind = gitStatus.behindCount > 0;
+  const action = item.dialogAction ?? item.id;
+
+  if (action === "commit") {
+    return hasChanges
+      ? "Commit is currently unavailable."
+      : "Worktree is clean. Make changes before committing.";
+  }
+
+  if (action === "push") {
+    if (!hasBranch) return "Detached HEAD: checkout a branch before pushing.";
+    if (hasChanges) return "Commit or stash local changes before pushing.";
+    if (isBehind) return "Branch is behind upstream. Pull/rebase before pushing.";
+    if (!gitStatus.hasUpstream && !hasOriginRemote) {
+      return 'Add an "origin" remote before pushing.';
+    }
+    if (!isAhead) return "No local commits to push.";
+    return "Push is currently unavailable.";
+  }
+
+  if (action === "commit_push") {
+    if (!hasBranch) {
+      return "Detached HEAD: checkout a branch before committing and pushing.";
+    }
+    if (isBehind) {
+      return "Branch is behind upstream. Pull/rebase before committing and pushing.";
+    }
+    if (!gitStatus.hasUpstream && !hasOriginRemote) {
+      return 'Add an "origin" remote before committing and pushing.';
+    }
+    if (!hasChanges && !isAhead) return "No local changes or commits to push.";
+    return "Commit & push is currently unavailable.";
+  }
+
+  if (hasOpenPr) return "View PR is currently unavailable.";
+  const prExecution = resolveCreatePrExecution({
+    gitStatus,
+    isBusy,
+    isDefaultBranch,
+    hasOriginRemote,
+    defaultBranchName,
+  });
+  return prExecution.kind === "unavailable"
+    ? prExecution.hint
+    : "Create PR is currently unavailable.";
+}
+
+export type GitCommitDialogActionId = "commit_new_branch" | "commit" | "commit_push" | "create_pr";
+
+export interface GitCommitDialogAction {
+  id: GitCommitDialogActionId;
+  label: string;
+  icon: GitActionIconName | "branch";
+  action: GitDialogAction;
+  featureBranch: boolean;
+  disabled: boolean;
+  disabledReason: string | null;
+}
+
+export const NO_FILE_SELECTION_HINT = "Select at least one file to commit.";
+
+/**
+ * Compose the four actions in the existing Commit dialog from the same menu and
+ * PR availability owners. Any action that would commit is fail-closed when no
+ * changed file is selected; pure Push and View PR remain independent of files.
+ */
+export function resolveCommitDialogActions(input: {
+  context: GitDialogContext;
+  hasFileSelection: boolean;
+}): GitCommitDialogAction[] {
+  const { gitStatus, isBusy, isDefaultBranch, hasOriginRemote, defaultBranchName } = input.context;
+  const menuItems = buildMenuItems(
+    gitStatus,
+    isBusy,
+    hasOriginRemote,
+    isDefaultBranch,
+    defaultBranchName,
+  );
+  const commitItem = menuItems.find((item) => item.id === "commit") ?? null;
+  const pushItem =
+    menuItems.find((item) => item.id === "commit_push") ??
+    menuItems.find((item) => item.id === "push") ??
+    null;
+  const reasonInput = {
+    gitStatus,
+    isBusy,
+    hasOriginRemote,
+    isDefaultBranch,
+    defaultBranchName,
+  };
+
+  const resolveRowState = (item: GitActionMenuItem | null, commits: boolean) => {
+    if (!item) {
+      return {
+        disabled: true,
+        disabledReason: isBusy ? "Git action in progress." : "Git status is unavailable.",
+      };
+    }
+    if (item.disabled) {
+      return {
+        disabled: true,
+        disabledReason: resolveGitMenuActionDisabledReason({ item, ...reasonInput }),
+      };
+    }
+    if (commits && !input.hasFileSelection) {
+      return { disabled: true, disabledReason: NO_FILE_SELECTION_HINT };
+    }
+    return { disabled: false, disabledReason: null };
+  };
+
+  const prExecution = resolveCreatePrExecution({
+    gitStatus,
+    isBusy,
+    isDefaultBranch,
+    hasOriginRemote,
+    defaultBranchName,
+  });
+  const pushCommits = pushItem?.dialogAction !== "push";
+  const prCommits = prExecution.kind === "run_action" && prExecution.action === "commit_push_pr";
+  const prSelectionBlocked = prCommits && !input.hasFileSelection;
+
+  return [
+    {
+      id: "commit_new_branch",
+      label: "Commit on new branch",
+      icon: "branch",
+      action: "commit",
+      featureBranch: true,
+      ...resolveRowState(commitItem, true),
+    },
+    {
+      id: "commit",
+      label: "Commit",
+      icon: "commit",
+      action: "commit",
+      featureBranch: false,
+      ...resolveRowState(commitItem, true),
+    },
+    {
+      id: "commit_push",
+      label: pushItem?.label ?? "Commit & push",
+      icon: "push",
+      action: pushItem?.dialogAction === "push" ? "push" : "commit_push",
+      featureBranch: false,
+      ...resolveRowState(pushItem, pushCommits),
+    },
+    {
+      id: "create_pr",
+      label: prExecution.kind === "open_pr" ? "View PR" : "Create PR",
+      icon: "pr",
+      action: "create_pr",
+      featureBranch: false,
+      disabled: prExecution.kind === "unavailable" || prSelectionBlocked,
+      disabledReason:
+        prExecution.kind === "unavailable"
+          ? prExecution.hint
+          : prSelectionBlocked
+            ? NO_FILE_SELECTION_HINT
+            : null,
+    },
   ];
 }
 

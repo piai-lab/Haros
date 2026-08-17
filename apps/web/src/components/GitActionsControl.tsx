@@ -13,7 +13,7 @@ import type {
   ThreadId,
 } from "@omnimind/contracts";
 import { useIsMutating, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ChevronDownIcon,
   CloudSyncIcon,
@@ -29,8 +29,10 @@ import {
   buildGitActionProgressStages,
   buildMenuItems,
   type CreatePrDialogContext,
+  type GitCommitDialogAction,
   type GitActionMenuItem,
   type GitActionIconName,
+  type GitDialogContext,
   type GitQuickAction,
   type DefaultBranchConfirmableAction,
   requiresFeatureBranchForDefaultBranchAction,
@@ -41,6 +43,8 @@ import {
   resolveCreatePrBaseBranch,
   resolveCreatePrDialogRuntimeStatus,
   resolveCreatePrExecution,
+  resolveCommitDialogActions,
+  resolveGitMenuActionDisabledReason,
   resolveQuickAction,
   resolvePullActionAvailability,
   shouldShowEnvironmentPanelPullRow,
@@ -174,6 +178,10 @@ interface CreatePrDialogState {
   statusOverride: GitStatusResult | null;
   statusOverrideSource: GitStatusResult | null;
   isDefaultBranchOverride: boolean | null;
+  /** Commit-dialog authoring retained only while Create PR still includes local changes. */
+  commitMessage?: string;
+  /** Omitted means all changed files; when present this is always a non-empty exact subset. */
+  filePaths?: string[];
 }
 
 interface GitPickerMenuItem {
@@ -195,6 +203,7 @@ type GitTranslate = ReturnType<typeof useI18n>["t"];
 const GIT_COPY_KEYS = {
   Commit: "git.action.commit",
   "Commit & push": "git.action.commitPush",
+  "Commit on new branch": "git.action.commitOnNewBranch",
   "Commit, push & PR": "git.action.commitPushPr",
   Push: "git.action.push",
   "Push & create PR": "git.action.pushCreatePr",
@@ -205,6 +214,23 @@ const GIT_COPY_KEYS = {
   Pull: "git.action.pull",
   "Git action in progress.": "git.pr.busy",
   "Git status is unavailable.": "git.pr.statusUnavailable",
+  "Worktree is clean. Make changes before committing.": "git.action.worktreeClean",
+  "Commit is currently unavailable.": "git.action.commitUnavailable",
+  "Detached HEAD: checkout a branch before pushing.": "git.action.detachedPush",
+  "Commit or stash local changes before pushing.": "git.action.commitOrStash",
+  "Branch is behind upstream. Pull/rebase before pushing.": "git.action.behindPush",
+  'Add an "origin" remote before pushing.': "git.action.originPush",
+  "Push is currently unavailable.": "git.action.pushUnavailable",
+  "Detached HEAD: checkout a branch before committing and pushing.":
+    "git.action.detachedCommitPush",
+  "Branch is behind upstream. Pull/rebase before committing and pushing.":
+    "git.action.behindCommitPush",
+  'Add an "origin" remote before committing and pushing.': "git.action.originCommitPush",
+  "No local changes or commits to push.": "git.action.noChangesOrCommits",
+  "Commit & push is currently unavailable.": "git.action.commitPushUnavailable",
+  "View PR is currently unavailable.": "git.action.viewPrUnavailable",
+  "Create PR is currently unavailable.": "git.action.unavailable",
+  "Select at least one file to commit.": "git.action.selectFilesToCommit",
   "This action is currently unavailable.": "git.action.unavailable",
   "Create and checkout a branch before pushing or opening a PR.": "git.action.detachedCreate",
   "Branch has diverged from upstream. Rebase/merge first.": "git.action.diverged",
@@ -235,6 +261,15 @@ function localizeGitCopy(value: string | null | undefined, t: GitTranslate): str
   return pushTarget ? t("git.action.pushingTo", { target: pushTarget }) : null;
 }
 
+function resolveLocalizedGitMenuActionDisabledReason(
+  input: Parameters<typeof resolveGitMenuActionDisabledReason>[0],
+  t: GitTranslate,
+): string | null {
+  const reason = resolveGitMenuActionDisabledReason(input);
+  if (!reason) return null;
+  return localizeGitCopy(reason, t) ?? t("git.action.unavailable");
+}
+
 function formatElapsedDescription(startedAtMs: number | null, t: GitTranslate): string | undefined {
   if (startedAtMs === null) {
     return undefined;
@@ -252,91 +287,6 @@ function resolveProgressDescription(
     return progress.lastOutputLine;
   }
   return formatElapsedDescription(progress.hookStartedAtMs ?? progress.phaseStartedAtMs, t);
-}
-
-function getMenuActionDisabledReason({
-  item,
-  gitStatus,
-  isBusy,
-  hasOriginRemote,
-  isDefaultBranch,
-  defaultBranchName,
-  t,
-}: {
-  item: GitActionMenuItem;
-  gitStatus: GitStatusResult | null;
-  isBusy: boolean;
-  hasOriginRemote: boolean;
-  isDefaultBranch: boolean;
-  defaultBranchName: string | null;
-  t: GitTranslate;
-}): string | null {
-  if (!item.disabled) return null;
-  if (isBusy) return t("git.pr.busy");
-  if (!gitStatus) return t("git.pr.statusUnavailable");
-
-  const hasBranch = gitStatus.branch !== null;
-  const hasChanges = gitStatus.hasWorkingTreeChanges;
-  const hasOpenPr = gitStatus.pr?.state === "open";
-  const isAhead = gitStatus.aheadCount > 0;
-  const isBehind = gitStatus.behindCount > 0;
-
-  if (item.id === "commit") {
-    if (!hasChanges) {
-      return t("git.action.worktreeClean");
-    }
-    return t("git.action.commitUnavailable");
-  }
-
-  if (item.id === "push") {
-    if (!hasBranch) {
-      return t("git.action.detachedPush");
-    }
-    if (hasChanges) {
-      return t("git.action.commitOrStash");
-    }
-    if (isBehind) {
-      return t("git.action.behindPush");
-    }
-    if (!gitStatus.hasUpstream && !hasOriginRemote) {
-      return t("git.action.originPush");
-    }
-    if (!isAhead) {
-      return t("git.action.noCommits");
-    }
-    return t("git.action.pushUnavailable");
-  }
-
-  if (item.id === "commit_push") {
-    if (!hasBranch) {
-      return t("git.action.detachedCommitPush");
-    }
-    if (isBehind) {
-      return t("git.action.behindCommitPush");
-    }
-    if (!gitStatus.hasUpstream && !hasOriginRemote) {
-      return t("git.action.originCommitPush");
-    }
-    if (!hasChanges && !isAhead) {
-      return t("git.action.noChangesOrCommits");
-    }
-    return t("git.action.commitPushUnavailable");
-  }
-
-  if (hasOpenPr) {
-    return t("git.action.viewPrUnavailable");
-  }
-  const prExecution = resolveCreatePrExecution({
-    gitStatus,
-    isBusy,
-    isDefaultBranch,
-    hasOriginRemote,
-    defaultBranchName,
-  });
-  if (prExecution.kind === "unavailable") {
-    return localizeGitCopy(prExecution.hint, t) ?? t("git.action.unavailable");
-  }
-  return t("git.action.unavailable");
 }
 
 function resolveLocalizedResultSummary(
@@ -457,13 +407,89 @@ function findRunnableCommitPushMenuItem(items: GitActionMenuItem[]): GitActionMe
 }
 
 function GitPickerMenuRow({ item }: { item: GitPickerMenuItem }) {
+  const disabledReasonId = useId();
   return (
-    <MenuItem disabled={item.disabled} onClick={item.onSelect}>
+    <MenuItem
+      aria-describedby={item.disabledReason ? disabledReasonId : undefined}
+      aria-disabled={item.disabled || undefined}
+      aria-label={item.label}
+      closeOnClick={!item.disabled}
+      className={item.disabled ? "cursor-not-allowed opacity-55" : undefined}
+      onClick={(event) => {
+        if (item.disabled) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        item.onSelect();
+      }}
+    >
       <span className="inline-flex shrink-0 items-center [&>svg]:size-3.5">
         <GitActionGlyph name={item.icon} />
       </span>
-      <span>{item.label}</span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">{item.label}</span>
+        {item.disabledReason ? (
+          <span
+            id={disabledReasonId}
+            className="block whitespace-normal text-muted-foreground text-xs leading-tight"
+          >
+            {item.disabledReason}
+          </span>
+        ) : null}
+      </span>
     </MenuItem>
+  );
+}
+
+export function GitCommitActionRow({
+  action,
+  label,
+  disabledReason,
+  onSelect,
+}: {
+  action: GitCommitDialogAction;
+  label: string;
+  disabledReason: string | null;
+  onSelect: () => void;
+}) {
+  const disabledReasonId = useId();
+  return (
+    <button
+      type="button"
+      aria-describedby={disabledReason ? disabledReasonId : undefined}
+      aria-disabled={action.disabled || undefined}
+      aria-label={label}
+      className={cn(
+        "flex w-full min-w-0 items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors",
+        "hover:bg-[var(--color-background-button-secondary-hover)] focus-visible:bg-[var(--color-background-button-secondary-hover)]",
+        action.id === "commit" && "bg-[var(--color-background-button-secondary-hover)]",
+        action.disabled && "cursor-not-allowed opacity-55",
+      )}
+      onClick={(event) => {
+        if (action.disabled) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        onSelect();
+      }}
+    >
+      <span className="shrink-0 text-muted-foreground [&_svg]:size-4">
+        <GitActionGlyph name={action.icon} />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate">{label}</span>
+        {disabledReason ? (
+          <span
+            id={disabledReasonId}
+            className="block whitespace-normal text-muted-foreground text-xs leading-tight"
+          >
+            {disabledReason}
+          </span>
+        ) : null}
+      </span>
+    </button>
   );
 }
 
@@ -733,6 +759,24 @@ export default function GitActionsControl({
       ),
     [defaultBranchName, gitStatusForActions, hasOriginRemote, isDefaultBranch, isGitActionRunning],
   );
+  const commitDialogContext = useMemo<GitDialogContext>(
+    () => ({
+      gitStatus: gitStatusForActions,
+      isBusy: isGitActionRunning,
+      isDefaultBranch,
+      hasOriginRemote,
+      defaultBranchName,
+    }),
+    [defaultBranchName, gitStatusForActions, hasOriginRemote, isDefaultBranch, isGitActionRunning],
+  );
+  const commitDialogActions = useMemo(
+    () =>
+      resolveCommitDialogActions({
+        context: commitDialogContext,
+        hasFileSelection: !noneSelected,
+      }),
+    [commitDialogContext, noneSelected],
+  );
   const quickActionLabel = localizeGitCopy(quickAction.label, t) ?? t("git.action.commit");
   const quickActionDisabledReason = quickAction.disabled
     ? (localizeGitCopy(quickAction.hint, t) ?? t("git.action.unavailable"))
@@ -858,6 +902,8 @@ export default function GitActionsControl({
       statusOverride?: GitStatusResult | null;
       statusOverrideSource?: GitStatusResult | null;
       isDefaultBranchOverride?: boolean;
+      commitMessage?: string;
+      filePaths?: string[];
     }) => {
       const execution = resolveCreatePrExecution({
         gitStatus: input?.statusOverride ?? gitStatusForActions,
@@ -883,6 +929,8 @@ export default function GitActionsControl({
         statusOverride: input?.statusOverride ?? null,
         statusOverrideSource: input?.statusOverrideSource ?? null,
         isDefaultBranchOverride: input?.isDefaultBranchOverride ?? null,
+        ...(input?.commitMessage ? { commitMessage: input.commitMessage } : {}),
+        ...(input?.filePaths?.length ? { filePaths: input.filePaths } : {}),
       });
     },
     [
@@ -1219,13 +1267,22 @@ export default function GitActionsControl({
 
   const handleCreatePrDialogSubmit = useCallback(
     (submission: GitCreatePrDialogSubmission) => {
+      const commitHandoff = createPrDialog;
       setCreatePrDialog(null);
       const actionStatus = createPrDialogRuntimeStatus.gitStatus;
       const actionIsDefaultBranch = createPrDialogRuntimeStatus.isDefaultBranch;
+      const includesHandedOffCommit =
+        submission.includeLocalChanges && submission.action === "commit_push_pr";
       const excludesDirtyChanges =
         !submission.includeLocalChanges && actionStatus?.hasWorkingTreeChanges === true;
       void runGitActionWithToast({
         action: submission.action,
+        ...(includesHandedOffCommit && commitHandoff?.commitMessage
+          ? { commitMessage: commitHandoff.commitMessage }
+          : {}),
+        ...(includesHandedOffCommit && commitHandoff?.filePaths?.length
+          ? { filePaths: commitHandoff.filePaths }
+          : {}),
         ...(createPrDialogRuntimeStatus.statusOverride
           ? { statusOverride: createPrDialogRuntimeStatus.statusOverride }
           : {}),
@@ -1238,11 +1295,12 @@ export default function GitActionsControl({
         ...(excludesDirtyChanges ? { allowDirtyWorkingTree: true } : {}),
       });
     },
-    [createPrDialogRuntimeStatus, runGitActionWithToast],
+    [createPrDialog, createPrDialogRuntimeStatus, runGitActionWithToast],
   );
 
   const handleCreatePrDialogBrowser = useCallback(
     (request: GitCreatePrDialogBrowserRequest) => {
+      const commitHandoff = createPrDialog;
       setCreatePrDialog(null);
       const actionStatus = createPrDialogRuntimeStatus.gitStatus;
       const actionIsDefaultBranch = createPrDialogRuntimeStatus.isDefaultBranch;
@@ -1269,8 +1327,18 @@ export default function GitActionsControl({
       }
       const excludesDirtyChanges =
         !request.includeLocalChanges && actionStatus?.hasWorkingTreeChanges === true;
+      const includesHandedOffCommit =
+        request.includeLocalChanges &&
+        preparation.kind === "run_action" &&
+        preparation.action === "commit_push";
       void runGitActionWithToast({
         action: preparation.action,
+        ...(includesHandedOffCommit && commitHandoff?.commitMessage
+          ? { commitMessage: commitHandoff.commitMessage }
+          : {}),
+        ...(includesHandedOffCommit && commitHandoff?.filePaths?.length
+          ? { filePaths: commitHandoff.filePaths }
+          : {}),
         ...(createPrDialogRuntimeStatus.statusOverride
           ? { statusOverride: createPrDialogRuntimeStatus.statusOverride }
           : {}),
@@ -1287,6 +1355,7 @@ export default function GitActionsControl({
       });
     },
     [
+      createPrDialog,
       createPrDialogRuntimeStatus,
       defaultBranchName,
       openComparePage,
@@ -1340,23 +1409,48 @@ export default function GitActionsControl({
     });
   }, [pendingDefaultBranchAction, runGitActionWithToast]);
 
-  const runDialogActionOnNewBranch = useCallback(() => {
-    if (!isCommitDialogOpen) return;
-    const commitMessage = dialogCommitMessage.trim();
-
+  const closeCommitDialog = useCallback(() => {
     setIsCommitDialogOpen(false);
     setDialogCommitMessage("");
     setExcludedFiles(new Set());
     setIsEditingFiles(false);
+  }, []);
 
-    void runGitActionWithToast({
-      action: "commit",
-      ...(commitMessage ? { commitMessage } : {}),
-      ...(!allSelected ? { filePaths: selectedFiles.map((f) => f.path) } : {}),
-      featureBranch: true,
-      skipDefaultBranchPrompt: true,
-    });
-  }, [allSelected, isCommitDialogOpen, dialogCommitMessage, runGitActionWithToast, selectedFiles]);
+  const runCommitDialogAction = useCallback(
+    (dialogAction: GitCommitDialogAction) => {
+      if (!isCommitDialogOpen || dialogAction.disabled) return;
+      const commitMessage = dialogCommitMessage.trim();
+      const selectedFilePaths = allSelected ? undefined : selectedFiles.map((file) => file.path);
+      closeCommitDialog();
+
+      if (dialogAction.action === "create_pr") {
+        openCreatePrDialog({
+          ...(commitMessage ? { commitMessage } : {}),
+          ...(selectedFilePaths?.length ? { filePaths: selectedFilePaths } : {}),
+        });
+        return;
+      }
+
+      const commits = dialogAction.action !== "push";
+      void runGitActionWithToast({
+        action: dialogAction.action,
+        ...(commits && commitMessage ? { commitMessage } : {}),
+        ...(commits && selectedFilePaths?.length ? { filePaths: selectedFilePaths } : {}),
+        ...(dialogAction.featureBranch
+          ? { featureBranch: true, skipDefaultBranchPrompt: true }
+          : {}),
+      });
+    },
+    [
+      allSelected,
+      closeCommitDialog,
+      dialogCommitMessage,
+      isCommitDialogOpen,
+      openCreatePrDialog,
+      runGitActionWithToast,
+      selectedFiles,
+    ],
+  );
 
   const openCreateBranchDialog = useCallback(() => {
     setCreateBranchName(suggestedCreateBranchName);
@@ -1576,15 +1670,17 @@ export default function GitActionsControl({
         id: "commit",
         label: localizeGitCopy(commitMenuItem.label, t) ?? t("git.action.commit"),
         disabled: commitMenuItem.disabled,
-        disabledReason: getMenuActionDisabledReason({
-          item: commitMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
+        disabledReason: resolveLocalizedGitMenuActionDisabledReason(
+          {
+            item: commitMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          },
           t,
-        }),
+        ),
         icon: "commit",
         onSelect: () => openDialogForMenuItem(commitMenuItem),
       });
@@ -1595,15 +1691,17 @@ export default function GitActionsControl({
         id: "commit_push",
         label: localizeGitCopy(commitPushMenuItem.label, t) ?? t("git.action.commitPush"),
         disabled: commitPushMenuItem.disabled,
-        disabledReason: getMenuActionDisabledReason({
-          item: commitPushMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
+        disabledReason: resolveLocalizedGitMenuActionDisabledReason(
+          {
+            item: commitPushMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          },
           t,
-        }),
+        ),
         icon: "push",
         onSelect: () => openDialogForMenuItem(commitPushMenuItem),
       });
@@ -1623,15 +1721,17 @@ export default function GitActionsControl({
         id: "push",
         label: localizeGitCopy(pushMenuItem.label, t) ?? t("git.action.push"),
         disabled: pushMenuItem.disabled,
-        disabledReason: getMenuActionDisabledReason({
-          item: pushMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
+        disabledReason: resolveLocalizedGitMenuActionDisabledReason(
+          {
+            item: pushMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          },
           t,
-        }),
+        ),
         icon: "push",
         onSelect: () => openDialogForMenuItem(pushMenuItem),
       });
@@ -1642,15 +1742,17 @@ export default function GitActionsControl({
         id: "pr",
         label: localizeGitCopy(prMenuItem.label, t) ?? t("git.pr.create"),
         disabled: prMenuItem.disabled,
-        disabledReason: getMenuActionDisabledReason({
-          item: prMenuItem,
-          gitStatus: gitStatusForActions,
-          isBusy: isGitActionRunning,
-          hasOriginRemote,
-          isDefaultBranch,
-          defaultBranchName,
+        disabledReason: resolveLocalizedGitMenuActionDisabledReason(
+          {
+            item: prMenuItem,
+            gitStatus: gitStatusForActions,
+            isBusy: isGitActionRunning,
+            hasOriginRemote,
+            isDefaultBranch,
+            defaultBranchName,
+          },
           t,
-        }),
+        ),
         icon: "pr",
         onSelect: () => openDialogForMenuItem(prMenuItem),
       });
@@ -1681,28 +1783,6 @@ export default function GitActionsControl({
     openDialogForMenuItem,
     runSyncWithRemote,
     t,
-  ]);
-
-  const runDialogAction = useCallback(() => {
-    if (!isCommitDialogOpen) return;
-    const commitMessage = dialogCommitMessage.trim();
-    setIsCommitDialogOpen(false);
-    setDialogCommitMessage("");
-    setExcludedFiles(new Set());
-    setIsEditingFiles(false);
-    void runGitActionWithToast({
-      action: "commit",
-      ...(commitMessage ? { commitMessage } : {}),
-      ...(!allSelected ? { filePaths: selectedFiles.map((f) => f.path) } : {}),
-    });
-  }, [
-    allSelected,
-    dialogCommitMessage,
-    isCommitDialogOpen,
-    runGitActionWithToast,
-    selectedFiles,
-    setDialogCommitMessage,
-    setIsCommitDialogOpen,
   ]);
 
   const openChangedFileInEditor = useCallback(
@@ -1743,26 +1823,9 @@ export default function GitActionsControl({
     <>
       <MenuGroup>
         <MenuGroupLabel>{t("git.action.actions")}</MenuGroupLabel>
-        {gitPickerMenuItems.map((item) => {
-          const menuRow = <GitPickerMenuRow item={item} />;
-          if (item.disabled && item.disabledReason) {
-            return (
-              <Popover key={item.id}>
-                <PopoverTrigger
-                  openOnHover
-                  nativeButton={false}
-                  render={<span className="block cursor-not-allowed" />}
-                >
-                  {menuRow}
-                </PopoverTrigger>
-                <PopoverPopup tooltipStyle side="left" align="center">
-                  {item.disabledReason}
-                </PopoverPopup>
-              </Popover>
-            );
-          }
-          return <GitPickerMenuRow key={item.id} item={item} />;
-        })}
+        {gitPickerMenuItems.map((item) => (
+          <GitPickerMenuRow key={item.id} item={item} />
+        ))}
       </MenuGroup>
       {(gitStatusForActions?.branch === null ||
         (gitStatusForActions &&
@@ -1817,12 +1880,7 @@ export default function GitActionsControl({
       <Dialog
         open={isCommitDialogOpen}
         onOpenChange={(open) => {
-          if (!open) {
-            setIsCommitDialogOpen(false);
-            setDialogCommitMessage("");
-            setExcludedFiles(new Set());
-            setIsEditingFiles(false);
-          }
+          if (!open) closeCommitDialog();
         }}
       >
         <DialogPopup>
@@ -1963,31 +2021,36 @@ export default function GitActionsControl({
               />
             </div>
           </DialogPanel>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setIsCommitDialogOpen(false);
-                setDialogCommitMessage("");
-                setExcludedFiles(new Set());
-                setIsEditingFiles(false);
-              }}
-            >
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={noneSelected}
-              onClick={runDialogActionOnNewBranch}
-            >
-              {t("git.action.commitOnNewBranch")}
-            </Button>
-            <Button size="sm" disabled={noneSelected} onClick={runDialogAction}>
-              {t("git.action.commit")}
-            </Button>
-          </DialogFooter>
+          <div className="border-[color:var(--color-border)] border-t p-2">
+            {commitDialogActions.map((action) => {
+              const label =
+                localizeGitCopy(action.label, t) ??
+                (action.id === "commit_new_branch"
+                  ? t("git.action.commitOnNewBranch")
+                  : action.id === "commit_push"
+                    ? t("git.action.commitPush")
+                    : action.id === "create_pr"
+                      ? t("git.pr.create")
+                      : t("git.action.commit"));
+              const disabledReason = action.disabledReason
+                ? (localizeGitCopy(action.disabledReason, t) ?? t("git.action.unavailable"))
+                : null;
+              return (
+                <GitCommitActionRow
+                  key={action.id}
+                  action={action}
+                  label={label}
+                  disabledReason={disabledReason}
+                  onSelect={() => runCommitDialogAction(action)}
+                />
+              );
+            })}
+            <div className="mt-1 flex justify-end border-[color:var(--color-border)] border-t pt-2">
+              <Button variant="ghost" size="xs" onClick={closeCommitDialog}>
+                {t("common.cancel")}
+              </Button>
+            </div>
+          </div>
         </DialogPopup>
       </Dialog>
 
