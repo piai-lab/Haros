@@ -1,4 +1,4 @@
-import { ApprovalRequestId, ThreadId, TurnId } from "@omnimind/contracts";
+import { ApprovalRequestId, ProviderRuntimeEvent, ThreadId, TurnId } from "@omnimind/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import type {
   Agent,
@@ -8,7 +8,7 @@ import type {
   Provider,
   QuestionRequest,
 } from "@opencode-ai/sdk/v2";
-import { Deferred, Effect, Exit, Fiber, Layer, Scope, Stream } from "effect";
+import { Deferred, Effect, Exit, Fiber, Layer, Schema, Scope, Stream } from "effect";
 import { describe, it, expect, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
@@ -4648,7 +4648,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     });
   });
 
-  it("forwards OpenCode child-session tool activity created by task parts", async () => {
+  it("normalizes OpenCode running titles without blocking completed child tool activity", async () => {
     const eventQueue = createSubscribedEventQueue();
     const runtime = createMockOpenCodeRuntime();
     const client = runtime.runtime.createOpenCodeSdkClient({
@@ -4664,7 +4664,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     const result = await Effect.runPromise(
       Effect.gen(function* () {
         const adapter = yield* OpenCodeAdapter;
-        const eventsFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 5)).pipe(
+        const eventsFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 6)).pipe(
           Effect.forkChild,
         );
 
@@ -4696,7 +4696,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
               callID: "task-call-1",
               state: {
                 status: "running",
-                title: "Find changelog implementation",
+                title: "\nFind changelog implementation\n",
                 input: {
                   description: "Find changelog implementation",
                   prompt: "Explore changelog files.",
@@ -4715,6 +4715,30 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         eventQueue.push({
           type: "message.part.updated",
           properties: {
+            sessionID: "opencode-session-1",
+            part: {
+              id: "blank-title-task-part",
+              messageID: "assistant-message-1",
+              type: "tool",
+              tool: "task",
+              callID: "task-call-blank-title",
+              state: {
+                status: "running",
+                title: " \n ",
+                input: {
+                  description: "Inspect another task",
+                  prompt: "Continue after the blank provider title.",
+                },
+                time: {
+                  start: 2,
+                },
+              },
+            },
+          },
+        });
+        eventQueue.push({
+          type: "message.part.updated",
+          properties: {
             sessionID: "child-session-1",
             part: {
               id: "child-grep-part",
@@ -4724,13 +4748,14 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
               callID: "grep-call-1",
               state: {
                 status: "completed",
+                title: "\nProvider completion title\n",
                 input: {
                   pattern: "changelog",
                 },
-                output: "Found 18 matches",
+                output: "  Found 18 matches\n",
                 time: {
-                  start: 2,
-                  end: 3,
+                  start: 3,
+                  end: 4,
                 },
               },
             },
@@ -4757,6 +4782,7 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       "thread.started",
       "turn.started",
       "item.updated",
+      "item.updated",
       "item.completed",
     ]);
     expect(result[3]).toMatchObject({
@@ -4768,14 +4794,29 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
       },
     });
     expect(result[4]).toMatchObject({
+      type: "item.updated",
+      payload: {
+        itemType: "collab_agent_tool_call",
+        status: "inProgress",
+        title: "task",
+      },
+    });
+    expect(result[5]).toMatchObject({
       type: "item.completed",
       turnId: result[2]?.turnId,
       payload: {
         itemType: "dynamic_tool_call",
         status: "completed",
-        detail: "Found 18 matches",
+        title: "grep",
+        detail: "  Found 18 matches\n",
       },
     });
+    const decodeProviderRuntimeEvent = Schema.decodeUnknownSync(ProviderRuntimeEvent);
+    expect(() => {
+      for (const event of result.slice(3)) {
+        decodeProviderRuntimeEvent(event);
+      }
+    }).not.toThrow();
   });
 
   it("projects newer OpenCode shell step events as command executions", async () => {

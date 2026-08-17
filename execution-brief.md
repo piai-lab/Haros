@@ -373,6 +373,12 @@ B2 的 pre-commit source-candidate 证据为：contracts expectation decode `1 f
 
 B2 Judge HOLD identity follow-up 只收紧 async poll 的 request identity：首次 `pending` 必须给出 standard、path-safe UUID，后续 GET 永远只使用该 accepted UUID；任何后续 `pending` 或 terminal response 携带非法/不同 UUID 都立即 fail closed，不访问漂移路径、不投影成功。直接 `merged` / `enqueued` 继续不要求伪造 UUID，merge method/action strict check保持不变。focused GitHubCli `1 file / 38 tests`覆盖 A→B pending drift、terminal drift、只 GET A、零 GET B 与 unsafe UUID零 poll；不改变 contracts、service、UI、fallback或其他 Git owner。
 
+Phase-9c Git B2 及其 async identity follow-up 已在 exact pushed `78701868bc8c8ee1c79664aaf8b5937e85c9a354` 进入 `main`；上述 stacked pull request merge safety 历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **R11-1 OpenCode running tool title normalization**：只吸收 Synara `9a42dc9c256f696f0efc4aa71676b09a5a77b5b1` 的单一 author 语义，在既有 OpenCode adapter item-lifecycle title owner 内把 running tool 的 provider title 收为 trimmed nonempty 值，否则回退 exact tool name。纯空白或换行 title 不得越过 durable `TrimmedNonEmptyString` contract并隔离整条 item event；completed item 继续使用 tool name，`detail` 继续保留 Synara `5bae5420` 已准入的原始首尾空白字节。
+
+本 Slice 只补 OpenCode adapter/lifecycle author-equivalent tests，证明换行 title 精确 trim、纯空白 fallback、completed title语义与后续 consumer连续性、untrimmed tool detail byte preservation；不得改变 contracts、journal schema、其他 Provider、UI、package/install/live、README或建立第二 normalization owner。候选只以最窄 focused owner、monorepo typecheck、changed-path format/lint、document contract与 diff check证明。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -385,4 +391,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9c Git stacked pull request merge safety B2 as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with R11-1 OpenCode running tool title normalization as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
