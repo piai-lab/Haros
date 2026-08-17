@@ -32,6 +32,7 @@ describe("deriveAgentActivityTimelineState", () => {
         id: "reasoning-2",
         label: "Reasoning update",
         tone: "info",
+        sequence: 20,
         detail: "Running Verify diffToggleControl uses valid props",
       }),
       workEntry({
@@ -50,6 +51,7 @@ describe("deriveAgentActivityTimelineState", () => {
       toolTitle: "Reasoning trace",
       preview: "2 updates - Verify diffToggleControl uses valid props",
     });
+    expect(state.timelineWorkEntries[0]).not.toHaveProperty("sequence");
     expect(state.detailById.get("agent-reasoning:reasoning-1")?.entries).toHaveLength(2);
   });
 
@@ -64,6 +66,7 @@ describe("deriveAgentActivityTimelineState", () => {
         id: "reasoning-first",
         label: "Reasoning update",
         createdAt: firstReasoningAt,
+        sequence: 10,
         detail: "Running Inspect the initial state",
         toolStatus: "running",
         changedFiles: ["src/first.ts"],
@@ -72,18 +75,20 @@ describe("deriveAgentActivityTimelineState", () => {
         id: "reasoning-latest",
         label: "Reasoning update",
         createdAt: latestReasoningAt,
+        sequence: 30,
         turnId: latestTurnId,
         detail: "Running Verify the final state",
         toolStatus: "completed",
         changedFiles: ["src/latest.ts"],
         nativeEventType: "reasoning.completed",
       }),
-      workEntry({ id: "tool-middle", label: "Read", createdAt: toolAt }),
+      workEntry({ id: "tool-middle", label: "Read", createdAt: toolAt, sequence: 40 }),
     ]);
 
     expect(state.timelineWorkEntries[0]).toMatchObject({
       id: "agent-reasoning:reasoning-first",
       createdAt: firstReasoningAt,
+      sequence: 10,
       turnId: latestTurnId,
       preview: "2 updates - Verify the final state",
       detail: "2 updates - Verify the final state",
@@ -104,6 +109,20 @@ describe("deriveAgentActivityTimelineState", () => {
           text: "Intermediate assistant text",
           createdAt: textAt,
           streaming: false,
+          textSegments: [
+            {
+              sequence: 20,
+              startedAt: textAt,
+              endedAt: textAt,
+              text: "Intermediate assistant ",
+            },
+            {
+              sequence: 21,
+              startedAt: textAt,
+              endedAt: textAt,
+              text: "text",
+            },
+          ],
         },
       ],
       [],
@@ -111,6 +130,7 @@ describe("deriveAgentActivityTimelineState", () => {
     );
     expect(timeline.map(({ id }) => id)).toEqual([
       "agent-reasoning:reasoning-first",
+      `${textId}#segment:0`,
       textId,
       "tool-middle",
     ]);

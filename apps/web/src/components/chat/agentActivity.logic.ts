@@ -126,6 +126,11 @@ export function deriveAgentActivityTimelineState(
       tone: "tool",
       ...(displayPreview ? { preview: displayPreview, detail: displayPreview } : {}),
     };
+    if (first.sequence === undefined) {
+      delete displayEntry.sequence;
+    } else {
+      displayEntry.sequence = first.sequence;
+    }
 
     timelineWorkEntries.push(displayEntry);
     detailById.set(groupId, buildAgentActivityDetail(groupId, displayEntry, groupEntries));

@@ -325,9 +325,9 @@ Phase-9b pre-commit source-candidate 证据：shared-menu helper与现有 caller
 
 Phase-9b menu slice及其 fallback focus follow-up 已在 exact pushed `857fef191d729573ed2c359c5b3184c7acd87f79` 进入 `main`；上述菜单历史不再是当前准入。
 
-S1 当前唯一代码 Slice 是 **Phase-9b legacy compacted reasoning anchor**：只吸收 Synara `c4a82e0e` 的单一 author 语义，让连续 legacy reasoning group 的可见内容、最新状态与其他字段继续来自 latest update、group identity继续锚定 first id，但 `createdAt`改为 first update 的时间。最终 Timeline 中 compacted reasoning不得因 latest timestamp越过其间的 assistant text或 tool row；不得改变 canonical reasoning item、compaction边界、排序 owner、字段 schema、stream或 Timeline surface。
+S1 当前唯一代码 Slice 是 **Phase-9b legacy compacted reasoning anchor**：只吸收 Synara `c4a82e0e` 的单一 author 语义，让连续 legacy reasoning group 的可见内容、最新状态与其他字段继续来自 latest update、group identity继续锚定 first id，但 `createdAt`与durable `sequence`同时锚定 first update。最终 Timeline 中 compacted reasoning不得因 latest timestamp或sequence越过其间的 assistant text或 tool row；不得改变 canonical reasoning item、compaction边界、排序 owner、字段 schema、stream或 Timeline surface。
 
-该 Slice 的 pre-commit source-candidate 证据：agent activity compaction与最终 Timeline排序 owner `2 files / 107 tests`、monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与 diff check通过；本 Slice 不新增 surface、dependency或长期 owner，未重建安装 App，只主张上述 source-level legacy排序修复。
+该 Slice 的 pre-commit source-candidate 证据：agent activity compaction与最终 Timeline排序 owner `2 files / 107 tests`、monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与 diff check通过；Judge follow-up以reasoning `sequence 10/30`、assistant text segment `20/21`与tool `40`证明display row同时保留first sequence/createdAt且不越过assistant，latest status/native/detail等字段继续保留。本 Slice 不新增 surface、dependency或长期 owner，未重建安装 App，只主张上述 source-level legacy排序修复。
 
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
