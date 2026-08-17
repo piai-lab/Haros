@@ -40,6 +40,10 @@ function listEntry() {
   };
 }
 
+function stackContractEntry(position: number, number: number) {
+  return { position, number };
+}
+
 describe("PullRequestListEntry", () => {
   it("defaults legacy payloads missing pin and mergeability metadata", () => {
     // The fixture deliberately omits both fields — this is what an older server sends.
@@ -47,9 +51,19 @@ describe("PullRequestListEntry", () => {
     expect(decoded.isPinned).toBe(false);
     expect(decoded.projectContexts).toEqual([]);
     expect(decoded.mergeability).toBe("unknown");
+    expect(decoded.stack).toBeNull();
     expect(
       decodeListEntry({ ...listEntry(), isPinned: true, mergeability: "conflicting" }),
     ).toMatchObject({ isPinned: true, mergeability: "conflicting" });
+  });
+
+  it("decodes compact GitHub stack metadata for list rows", () => {
+    expect(
+      decodeListEntry({
+        ...listEntry(),
+        stack: { number: 8, size: 3, position: 2 },
+      }).stack,
+    ).toEqual({ number: 8, size: 3, position: 2 });
   });
 });
 
@@ -96,6 +110,62 @@ describe("PullRequestDetail", () => {
     });
 
     expect(decoded.mergeability).toBe("unknown");
+    expect(decoded.stack).toBeNull();
+    expect(decoded.stackMetadataIncomplete).toBe(false);
+  });
+
+  it("decodes a complete bottom-to-top stack projection", () => {
+    const legacy = decodeDetail({
+      projectId: "project-1",
+      projectTitle: "Project One",
+      workspaceRoot: "/workspace/project-one",
+      repository: "acme/widgets",
+      number: 42,
+      title: "Prioritize this",
+      body: "Description",
+      url: "https://github.com/acme/widgets/pull/42",
+      author: null,
+      state: "open",
+      isDraft: false,
+      mergeable: null,
+      mergeStateStatus: null,
+      reviewDecision: null,
+      additions: 2,
+      deletions: 1,
+      changedFiles: 1,
+      headBranch: "feature/top",
+      baseBranch: "feature/base",
+      createdAt: "2026-07-13T08:00:00.000Z",
+      updatedAt: "2026-07-14T08:00:00.000Z",
+      mergedAt: null,
+      closedAt: null,
+      maintainerCanModify: true,
+      reviewers: [],
+      labels: [],
+      checks: [],
+      comments: [],
+      commentsTruncated: false,
+      commentsIncomplete: false,
+      commits: [],
+      mergeCapabilities: {
+        merge: true,
+        squash: true,
+        rebase: true,
+        deleteBranchOnMerge: false,
+      },
+    });
+    const decoded = decodeDetail({
+      ...legacy,
+      stack: {
+        number: 8,
+        size: 2,
+        position: 2,
+        entries: [stackContractEntry(1, 41), stackContractEntry(2, 42)],
+      },
+      stackMetadataIncomplete: false,
+    });
+
+    expect(decoded.stack?.entries.map((member) => member.number)).toEqual([41, 42]);
   });
 });
 

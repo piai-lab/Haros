@@ -12,6 +12,7 @@ import type {
   GitPullRequestCheck,
   GitPullRequestComment,
   PullRequestMergeCapabilities,
+  PullRequestStack,
 } from "@omnimind/contracts";
 
 import { GitHubCliError } from "../Errors.ts";
@@ -54,6 +55,8 @@ export interface FakeGhScenario {
   viewerLogin?: string;
   repositoryPullRequestListJson?: string;
   pullRequestDetail?: GitHubPullRequestDetailData;
+  pullRequestStack?: PullRequestStack | null;
+  pullRequestStackError?: GitHubCliError;
   pullRequestListItems?: GitHubPullRequestListItem[];
   reviewRequestedPullRequestNumbers?: number[];
   mergeCapabilities?: PullRequestMergeCapabilities;
@@ -305,6 +308,12 @@ export function createGitHubCliWithFakeGh(scenario: FakeGhScenario = {}): {
                 detail: "Fake pull request detail was not configured.",
               }),
             );
+      },
+      getPullRequestStack: (input) => {
+        ghCalls.push(`api graphql stack ${input.repository}#${input.number}`);
+        return scenario.pullRequestStackError
+          ? Effect.fail(scenario.pullRequestStackError)
+          : Effect.succeed(scenario.pullRequestStack ?? null);
       },
       getRepositoryMergeCapabilities: (input) => {
         ghCalls.push(`repo view ${input.repository} --json merge-capabilities`);

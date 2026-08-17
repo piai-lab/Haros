@@ -92,6 +92,29 @@ export const PullRequestMergeCapabilities = Schema.Struct({
 });
 export type PullRequestMergeCapabilities = typeof PullRequestMergeCapabilities.Type;
 
+export const PullRequestStackEntry = Schema.Struct({
+  position: PositiveInt,
+  number: PositiveInt,
+});
+export type PullRequestStackEntry = typeof PullRequestStackEntry.Type;
+
+/** GitHub-authoritative stack metadata, ordered from the ultimate base branch upwards. */
+export const PullRequestStack = Schema.Struct({
+  number: PositiveInt,
+  size: PositiveInt,
+  position: PositiveInt,
+  entries: Schema.Array(PullRequestStackEntry),
+});
+export type PullRequestStack = typeof PullRequestStack.Type;
+
+/** Compact stack identity used by list rows; full entries remain detail-only. */
+export const PullRequestStackSummary = Schema.Struct({
+  number: PositiveInt,
+  size: PositiveInt,
+  position: PositiveInt,
+});
+export type PullRequestStackSummary = typeof PullRequestStackSummary.Type;
+
 export const PullRequestProjectContext = Schema.Struct({
   projectId: ProjectId,
   projectTitle: TrimmedNonEmptyString,
@@ -127,6 +150,9 @@ export const PullRequestListEntry = Schema.Struct({
   // the field (brief version skew during dev restarts must not reject whole payloads).
   mergeability: Schema.optional(GitPullRequestMergeability).pipe(
     Schema.withDecodingDefault(() => "unknown"),
+  ),
+  stack: Schema.optional(Schema.NullOr(PullRequestStackSummary)).pipe(
+    Schema.withDecodingDefault(() => null),
   ),
   labels: Schema.Array(PullRequestLabel),
 });
@@ -219,6 +245,13 @@ export const PullRequestDetail = Schema.Struct({
   commentsIncomplete: Schema.Boolean,
   commits: Schema.Array(PullRequestCommit),
   mergeCapabilities: PullRequestMergeCapabilities,
+  stack: Schema.optional(Schema.NullOr(PullRequestStack)).pipe(
+    Schema.withDecodingDefault(() => null),
+  ),
+  /** True only when authoritative stack metadata could not be loaded or validated. */
+  stackMetadataIncomplete: Schema.optional(Schema.Boolean).pipe(
+    Schema.withDecodingDefault(() => false),
+  ),
 });
 export type PullRequestDetail = typeof PullRequestDetail.Type;
 

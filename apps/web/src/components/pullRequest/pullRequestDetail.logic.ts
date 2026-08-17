@@ -6,7 +6,7 @@
 // Layer: Web domain helpers (no React)
 // Exports: pullRequestDetailInputKey, pullRequestPaneTabLabel, pullRequestDetailInputFromPane,
 //          describePullRequestState, stripHtmlComments, PullRequestTimelineEvent,
-//          buildPullRequestTimelineEvents
+//          buildPullRequestTimelineEvents, pullRequestStackNavigation
 
 import type {
   PullRequestDetail,
@@ -18,6 +18,39 @@ import type { RightDockPane } from "~/rightDockStore.logic";
 
 import { pullRequestMarkdownPreview } from "./pullRequestMarkdown.logic";
 import type { AppLocale } from "~/locale";
+
+export type PullRequestStackNavigation = {
+  readonly position: number;
+  readonly size: number;
+  readonly previousNumber: number | null;
+  readonly nextNumber: number | null;
+};
+
+/**
+ * Derive internal stack navigation only from a complete, self-consistent server projection.
+ * Older/malformed payloads and any failed authoritative lookup stay inert instead of guessing.
+ */
+export function pullRequestStackNavigation(
+  detail: Pick<PullRequestDetail, "number" | "stack" | "stackMetadataIncomplete">,
+): PullRequestStackNavigation | null {
+  const stack = detail.stack;
+  if (detail.stackMetadataIncomplete || !stack) return null;
+  if (
+    stack.position > stack.size ||
+    stack.entries.length !== stack.size ||
+    stack.entries.some((entry, index) => entry.position !== index + 1) ||
+    new Set(stack.entries.map((entry) => entry.number)).size !== stack.size ||
+    stack.entries[stack.position - 1]?.number !== detail.number
+  ) {
+    return null;
+  }
+  return {
+    position: stack.position,
+    size: stack.size,
+    previousNumber: stack.entries[stack.position - 2]?.number ?? null,
+    nextNumber: stack.entries[stack.position]?.number ?? null,
+  };
+}
 
 /** Canonical identity for one detail surface — used as the React key so switching the
  *  selected pull request remounts the panel (resetting its tab and diff state). */

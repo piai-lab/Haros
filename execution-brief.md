@@ -351,6 +351,14 @@ Phase-9c Git A3 的 pre-commit source-candidate 证据为：Git action/availabil
 
 A3 Judge HOLD P1 follow-up 只修正 default branch clean-ahead 的 `id=push / dialogAction=commit_push` 不代表真实会生成 commit：selection gate与Commit-dialog authoring handoff现在同时以当前 working-tree changes为准；clean-ahead 保持既有 `commit_push` action和default-branch confirmation，但不携带commit message/file paths，dirty counterpart仍在零选择时fail closed并在有选择时保留authoring。focused logic为`1 file / 138 tests`、真实Chromium matrix为`1 file / 6 tests`通过；不改变A2、PR、server/contracts、dialog chrome、layout或其他owner。
 
+Phase-9c Git A3 及其 P1 follow-up 已在 exact pushed `66c548369418bc5eed6a99b6b7368da4c88cd226` 进入 `main`；上述 Commit dialog action matrix 历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **Phase-9c Git stacked pull request read-only B1**：只吸收 Synara `57eacdb897193a7eac5820060371d99ee4699a0b` 的权威只读投影语义。既有 GitHubCli 通过 GitHub GraphQL `stackEntry` / `stack` 字段投影列表 position/count summary 与详情完整 bottom-to-top entries；不得以 branch 命名、本地 Git 拓扑或持久化数据猜 stack。列表 enrichment 是 progressive enhancement，失败时保留原 PR 主行且只隐藏 stack badge；详情只有在 cursor、count、连续 position、跨页 identity 与 selected PR 全部自洽时才提供前后导航，任一 incomplete/mismatch 都保留 PR 详情但 fail closed 为无导航。
+
+B1 只复用既有 PR list/detail contracts、PullRequestService、wsNativeApi/TanStack query、`PullRequestRow`、`PullRequestDetailPanel` 与 route URL selection owner：列表只增加中性 `2/3` 紧凑 badge，详情内部 previous/next 切换同仓库 PR，并在 selection remount 后把键盘焦点交给仍可用的 stack control；内部导航不得使用 external-link glyph。英中实际 catalog、ARIA group/label、Enter/Space 与 `480/960/1440` 几何必须闭合。不得引入第二 store/palette/route/dialog、merge mutation/confirmation/expected target-set、local persistence/product DB、GitHub 写 probe、Commit dialog/A2/search/package/install/live/README。
+
+B1 的 pre-commit source-candidate 证据为：contracts、GitHub GraphQL、PullRequestService、详情 fail-close 与 web projection logic focused unit `7 files / 127 tests`，英中 actual catalog focused `1 file / 10 tests`，真实 Chromium list badge + detail keyboard/focus/ARIA/`480/960/1440` `2 files / 15 tests`，monorepo typecheck `6/6 packages`与document contract `21/21`、changed-path format与diff check通过。changed-path lint为`0 errors / 4 warnings`，均是未触碰旧行的i18n test `sort()`与route `selectedInput` exhaustive-deps；root lint为`0 errors / 478 warnings`。该 Slice 不改变任何 GitHub mutation、merge/Commit owner或发行面，按准入只主张 source-only candidate。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
@@ -363,4 +371,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9c Git A3 as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9c Git stacked pull request read-only B1 as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**

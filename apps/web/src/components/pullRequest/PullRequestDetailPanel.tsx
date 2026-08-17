@@ -75,10 +75,16 @@ import { ensureNativeApi } from "~/nativeApi";
 import { useHandleNewThread } from "~/hooks/useHandleNewThread";
 import { copyTextToClipboard } from "~/hooks/useCopyToClipboard";
 import { PullRequestSummaryTab } from "./PullRequestSummaryTab";
+import {
+  PullRequestStackNavigation,
+  PullRequestStackPosition,
+  type StackNavigationDirection,
+} from "./PullRequestStackNavigation";
 import { PullRequestTimelineTab } from "./PullRequestTimelineTab";
 import { PullRequestsUnavailableState } from "./PullRequestsUnavailableState";
 import { PullRequestWarningNote } from "./PullRequestWarningNote";
 import { useI18n } from "~/i18n";
+import { pullRequestStackNavigation } from "./pullRequestDetail.logic";
 
 type DetailTab = "summary" | "timeline" | "code";
 
@@ -118,11 +124,15 @@ export function PullRequestDetailPanel({
   input,
   initialTab: initialTabProp,
   onClose,
+  onSelectPullRequest,
+  stackNavigationFocus,
   pollingEnabled: pollingEnabledProp,
 }: {
   input: PullRequestDetailInput;
   initialTab?: DetailTab;
   onClose?: () => void;
+  onSelectPullRequest?: (number: number, direction: StackNavigationDirection) => void;
+  stackNavigationFocus?: StackNavigationDirection;
   pollingEnabled?: boolean;
 }) {
   const { t } = useI18n();
@@ -313,6 +323,7 @@ export function PullRequestDetailPanel({
     { value: "timeline", label: t("pullRequest.tabTimeline") },
     { value: "code", label: t("pullRequest.tabCode") },
   ];
+  const stackNavigation = detail ? pullRequestStackNavigation(detail) : null;
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-[var(--color-background-surface)] text-foreground">
@@ -343,6 +354,19 @@ export function PullRequestDetailPanel({
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {detail ? (
             <>
+              {detail.stack && stackNavigation ? (
+                onSelectPullRequest ? (
+                  <PullRequestStackNavigation
+                    stack={detail.stack}
+                    previousNumber={stackNavigation.previousNumber}
+                    nextNumber={stackNavigation.nextNumber}
+                    {...(stackNavigationFocus ? { preferredFocus: stackNavigationFocus } : {})}
+                    onSelectPullRequest={onSelectPullRequest}
+                  />
+                ) : (
+                  <PullRequestStackPosition stack={detail.stack} />
+                )
+              ) : null}
               <IconButton
                 variant="chrome"
                 label={t("common.openExternal")}

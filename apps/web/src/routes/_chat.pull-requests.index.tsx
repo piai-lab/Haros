@@ -279,6 +279,12 @@ function PullRequestsRouteView() {
       : null;
   const detailOpen = selectedInput !== null;
   const [renderedInput, setRenderedInput] = useState(selectedInput);
+  const [stackNavigationFocus, setStackNavigationFocus] = useState<{
+    projectId: PullRequestListEntry["projectId"];
+    repository: string;
+    number: number;
+    direction: "previous" | "next";
+  } | null>(null);
   useEffect(() => {
     if (!selectedInput) return;
     // Timeout-0 keeps the state write asynchronous (compiler-eligible); the
@@ -340,6 +346,23 @@ function PullRequestsRouteView() {
         number: entry.number,
       }),
     [updateSearch],
+  );
+  const handleSelectStackPullRequest = useCallback(
+    (number: number, direction: "previous" | "next") => {
+      if (!renderedInput) return;
+      setStackNavigationFocus({
+        projectId: renderedInput.projectId,
+        repository: renderedInput.repository,
+        number,
+        direction,
+      });
+      updateSearch({
+        selectedProjectId: renderedInput.projectId,
+        selectedRepo: renderedInput.repository,
+        number,
+      });
+    },
+    [renderedInput, updateSearch],
   );
   const handleTogglePinned = useCallback(
     (entry: PullRequestListEntry) => {
@@ -564,7 +587,17 @@ function PullRequestsRouteView() {
         onAddPane={() => {}}
         renderPane={(pane, context) => (
           <Suspense fallback={<PanelStateMessage>{t("pullRequest.loading")}</PanelStateMessage>}>
-            <PullRequestDockPane pane={pane} pollingEnabled={context.isVisible} />
+            <PullRequestDockPane
+              pane={pane}
+              pollingEnabled={context.isVisible}
+              onSelectPullRequest={handleSelectStackPullRequest}
+              {...(renderedInput &&
+              stackNavigationFocus?.projectId === renderedInput.projectId &&
+              stackNavigationFocus.repository === renderedInput.repository &&
+              stackNavigationFocus.number === renderedInput.number
+                ? { stackNavigationFocus: stackNavigationFocus.direction }
+                : {})}
+            />
           </Suspense>
         )}
       />

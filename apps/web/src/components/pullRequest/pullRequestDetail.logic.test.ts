@@ -14,8 +14,15 @@ import {
   pullRequestDetailInputFromPane,
   pullRequestDetailInputKey,
   pullRequestPaneTabLabel,
+  pullRequestStackNavigation,
   stripHtmlComments,
 } from "./pullRequestDetail.logic";
+
+const stackEntries = [
+  { position: 1, number: 41 },
+  { position: 2, number: 42 },
+  { position: 3, number: 43 },
+];
 
 function makeCommit(overrides: Partial<PullRequestCommit> = {}): PullRequestCommit {
   return {
@@ -68,6 +75,48 @@ describe("pullRequestDetailInputKey", () => {
 describe("pullRequestPaneTabLabel", () => {
   it("formats the shared tab chip label", () => {
     expect(pullRequestPaneTabLabel(350)).toBe("PR #350");
+  });
+});
+
+describe("pullRequestStackNavigation", () => {
+  const detail = {
+    number: 42,
+    stackMetadataIncomplete: false,
+    stack: {
+      number: 8,
+      size: 3,
+      position: 2,
+      entries: stackEntries,
+    },
+  };
+
+  it("derives adjacent PR numbers from the authoritative position order", () => {
+    expect(pullRequestStackNavigation(detail)).toEqual({
+      position: 2,
+      size: 3,
+      previousNumber: 41,
+      nextNumber: 43,
+    });
+  });
+
+  it("fails closed for incomplete, count, position, or selected-PR mismatches", () => {
+    expect(pullRequestStackNavigation({ ...detail, stackMetadataIncomplete: true })).toBeNull();
+    expect(
+      pullRequestStackNavigation({
+        ...detail,
+        stack: { ...detail.stack, size: 4 },
+      }),
+    ).toBeNull();
+    expect(
+      pullRequestStackNavigation({
+        ...detail,
+        stack: {
+          ...detail.stack,
+          entries: [stackEntries[0]!, { ...stackEntries[1]!, position: 3 }, stackEntries[2]!],
+        },
+      }),
+    ).toBeNull();
+    expect(pullRequestStackNavigation({ ...detail, number: 99 })).toBeNull();
   });
 });
 

@@ -18,6 +18,38 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+function stackEntry(position: number, number: number) {
+  return { position, pullRequest: { number } };
+}
+
+function stackResponse(input: {
+  selectedPosition?: number;
+  size?: number;
+  totalCount?: number;
+  nodes?: ReadonlyArray<ReturnType<typeof stackEntry>>;
+  pageInfo?: { hasNextPage: boolean; endCursor: string | null };
+}) {
+  const size = input.size ?? 2;
+  return JSON.stringify({
+    data: {
+      repository: {
+        pullRequest: {
+          stackEntry: { position: input.selectedPosition ?? 2 },
+          stack: {
+            number: 17,
+            size,
+            entries: {
+              totalCount: input.totalCount ?? size,
+              nodes: input.nodes ?? [stackEntry(1, 11), stackEntry(2, 12)],
+              ...(input.pageInfo ? { pageInfo: input.pageInfo } : {}),
+            },
+          },
+        },
+      },
+    },
+  });
+}
+
 layer("GitHubCliLive", (it) => {
   it.effect("parses pull request view output", () =>
     Effect.gen(function* () {
@@ -49,7 +81,6 @@ layer("GitHubCliLive", (it) => {
         signal: null,
         timedOut: false,
       });
-
       const result = yield* Effect.gen(function* () {
         const gh = yield* GitHubCli;
         return yield* gh.getPullRequest({
@@ -742,6 +773,22 @@ layer("GitHubCliLive", (it) => {
         signal: null,
         timedOut: false,
       });
+      mockedRunProcess.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: {
+            repository: {
+              pr_9: {
+                stackEntry: { position: 2 },
+                stack: { number: 4, size: 3 },
+              },
+            },
+          },
+        }),
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
 
       const gh = yield* GitHubCli;
       const result = yield* gh.listRepositoryPullRequests({
@@ -756,6 +803,11 @@ layer("GitHubCliLive", (it) => {
       assert.equal(result.entries.length, 1);
       assert.equal(result.entries[0]?.title, "Healthy PR");
       assert.deepStrictEqual(result.entries[0]?.reviewRequestLogins, ["reviewer"]);
+      assert.deepStrictEqual(result.entries[0]?.stack, {
+        number: 4,
+        size: 3,
+        position: 2,
+      });
       expect(mockedRunProcess.mock.calls[0]?.[1]).toEqual([
         "pr",
         "list",
@@ -770,6 +822,90 @@ layer("GitHubCliLive", (it) => {
         "--json",
         expect.any(String),
       ]);
+    }),
+  );
+
+  it.effect("keeps repository rows when optional stack enrichment fails", () =>
+    Effect.gen(function* () {
+      mockedRunProcess
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify([
+            {
+              number: 11,
+              title: "Still visible",
+              url: "https://github.com/acme/app/pull/11",
+              headRefName: "feature",
+              baseRefName: "main",
+              state: "OPEN",
+              createdAt: "2026-07-01T00:00:00Z",
+              updatedAt: "2026-07-02T00:00:00Z",
+            },
+          ]),
+          stderr: "",
+          code: 0,
+          signal: null,
+          timedOut: false,
+        })
+        .mockRejectedValueOnce(new Error("GraphQL field unavailable"));
+
+      const gh = yield* GitHubCli;
+      const result = yield* gh.listRepositoryPullRequests({
+        cwd: "/repo",
+        repository: "acme/app",
+        state: "open",
+        involvement: "all",
+        viewer: "octocat",
+      });
+
+      assert.equal(result.entries[0]?.title, "Still visible");
+      assert.equal(result.entries[0]?.stack, null);
+    }),
+  );
+
+  it.effect("enriches an individually recovered pull request with stack metadata", () =>
+    Effect.gen(function* () {
+      mockedRunProcess
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({
+            number: 99,
+            title: "Pinned beyond the list cap",
+            url: "https://github.com/acme/app/pull/99",
+            headRefName: "stack-top",
+            baseRefName: "stack-base",
+            state: "OPEN",
+            createdAt: "2026-07-01T00:00:00Z",
+            updatedAt: "2026-07-02T00:00:00Z",
+          }),
+          stderr: "",
+          code: 0,
+          signal: null,
+          timedOut: false,
+        })
+        .mockResolvedValueOnce({
+          stdout: JSON.stringify({
+            data: {
+              repository: {
+                pr_99: {
+                  stackEntry: { position: 3 },
+                  stack: { number: 7, size: 3 },
+                },
+              },
+            },
+          }),
+          stderr: "",
+          code: 0,
+          signal: null,
+          timedOut: false,
+        });
+
+      const gh = yield* GitHubCli;
+      const result = yield* gh.getPullRequestListItem({
+        cwd: "/repo",
+        repository: "acme/app",
+        number: 99,
+      });
+
+      assert.deepStrictEqual(result.stack, { number: 7, size: 3, position: 3 });
     }),
   );
 
@@ -953,6 +1089,162 @@ layer("GitHubCliLive", (it) => {
       expect(detailFields).not.toMatch(
         /headRepository|latestReviews|milestone|assignees|autoMergeRequest/,
       );
+    }),
+  );
+
+  it.effect("loads authoritative stack metadata in bottom-to-top order", () =>
+    Effect.gen(function* () {
+      mockedRunProcess.mockResolvedValueOnce({
+        stdout: stackResponse({
+          nodes: [stackEntry(2, 12), stackEntry(1, 11)],
+        }),
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+
+      const gh = yield* GitHubCli;
+      const result = yield* gh.getPullRequestStack({
+        cwd: "/repo",
+        repository: "acme/app",
+        number: 12,
+      });
+
+      assert.deepStrictEqual(
+        result?.entries.map((entry) => entry.number),
+        [11, 12],
+      );
+      assert.deepStrictEqual(result, {
+        number: 17,
+        size: 2,
+        position: 2,
+        entries: result?.entries,
+      });
+      expect(mockedRunProcess.mock.calls[0]?.[1]).toEqual(
+        expect.arrayContaining(["api", "graphql", "-F", "number=12", "-F", "first=100"]),
+      );
+    }),
+  );
+
+  it.effect("returns null only for a confirmed standalone pull request", () =>
+    Effect.gen(function* () {
+      mockedRunProcess.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          data: { repository: { pullRequest: { stackEntry: null, stack: null } } },
+        }),
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+
+      const gh = yield* GitHubCli;
+      const result = yield* gh.getPullRequestStack({
+        cwd: "/repo",
+        repository: "acme/app",
+        number: 12,
+      });
+
+      assert.equal(result, null);
+    }),
+  );
+
+  it.effect("paginates a complete stack while preserving authoritative identity", () =>
+    Effect.gen(function* () {
+      mockedRunProcess
+        .mockResolvedValueOnce({
+          stdout: stackResponse({
+            selectedPosition: 3,
+            size: 3,
+            totalCount: 3,
+            nodes: [stackEntry(1, 11), stackEntry(2, 12)],
+            pageInfo: { hasNextPage: true, endCursor: "cursor-2" },
+          }),
+          stderr: "",
+          code: 0,
+          signal: null,
+          timedOut: false,
+        })
+        .mockResolvedValueOnce({
+          stdout: stackResponse({
+            selectedPosition: 3,
+            size: 3,
+            totalCount: 3,
+            nodes: [stackEntry(3, 13)],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          }),
+          stderr: "",
+          code: 0,
+          signal: null,
+          timedOut: false,
+        });
+
+      const gh = yield* GitHubCli;
+      const result = yield* gh.getPullRequestStack({
+        cwd: "/repo",
+        repository: "acme/app",
+        number: 13,
+      });
+
+      assert.deepStrictEqual(
+        result?.entries.map((entry) => entry.number),
+        [11, 12, 13],
+      );
+      expect(mockedRunProcess.mock.calls[1]?.[1]).toEqual(
+        expect.arrayContaining(["-F", "after=cursor-2"]),
+      );
+    }),
+  );
+
+  it.effect("fails closed on stack count or selected-entry mismatches", () =>
+    Effect.gen(function* () {
+      mockedRunProcess
+        .mockResolvedValueOnce({
+          stdout: stackResponse({ totalCount: 3 }),
+          stderr: "",
+          code: 0,
+          signal: null,
+          timedOut: false,
+        })
+        .mockResolvedValueOnce({
+          stdout: stackResponse({ nodes: [stackEntry(1, 11), stackEntry(2, 99)] }),
+          stderr: "",
+          code: 0,
+          signal: null,
+          timedOut: false,
+        });
+
+      const gh = yield* GitHubCli;
+      const countError = yield* gh
+        .getPullRequestStack({ cwd: "/repo", repository: "acme/app", number: 12 })
+        .pipe(Effect.flip);
+      const selectedError = yield* gh
+        .getPullRequestStack({ cwd: "/repo", repository: "acme/app", number: 12 })
+        .pipe(Effect.flip);
+
+      assert.equal(countError.detail.includes("partial or inconsistent"), true);
+      assert.equal(selectedError.detail.includes("partial or inconsistent"), true);
+    }),
+  );
+
+  it.effect("fails closed when a stack cursor is missing", () =>
+    Effect.gen(function* () {
+      mockedRunProcess.mockResolvedValueOnce({
+        stdout: stackResponse({ pageInfo: { hasNextPage: true, endCursor: null } }),
+        stderr: "",
+        code: 0,
+        signal: null,
+        timedOut: false,
+      });
+
+      const gh = yield* GitHubCli;
+      const error = yield* gh
+        .getPullRequestStack({ cwd: "/repo", repository: "acme/app", number: 12 })
+        .pipe(Effect.flip);
+
+      assert.equal(error.detail.includes("pagination metadata"), true);
+      expect(mockedRunProcess).toHaveBeenCalledTimes(1);
     }),
   );
 

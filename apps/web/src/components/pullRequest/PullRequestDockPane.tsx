@@ -14,15 +14,20 @@ import {
   pullRequestDetailInputKey,
 } from "./pullRequestDetail.logic";
 import { PullRequestDetailPanel } from "./PullRequestDetailPanel";
+import type { StackNavigationDirection } from "./PullRequestStackNavigation";
 import { useI18n } from "~/i18n";
 
 export function PullRequestDockPane({
   pane,
   onClose,
+  onSelectPullRequest,
+  stackNavigationFocus,
   pollingEnabled: pollingEnabledProp,
 }: {
   pane: RightDockPane;
   onClose?: (() => void) | undefined;
+  onSelectPullRequest?: (number: number, direction: StackNavigationDirection) => void;
+  stackNavigationFocus?: StackNavigationDirection;
   pollingEnabled?: boolean;
 }) {
   const { t } = useI18n();
@@ -38,6 +43,8 @@ export function PullRequestDockPane({
       initialTab={pane.pullRequestInitialTab ?? "summary"}
       pollingEnabled={pollingEnabled}
       {...(onClose ? { onClose } : {})}
+      {...(onSelectPullRequest ? { onSelectPullRequest } : {})}
+      {...(stackNavigationFocus ? { stackNavigationFocus } : {})}
     />
   );
 }

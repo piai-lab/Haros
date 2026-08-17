@@ -1,8 +1,9 @@
-import { ProjectId, type OrchestrationProject } from "@omnimind/contracts";
+import { ProjectId, type OrchestrationProject, type PullRequestStack } from "@omnimind/contracts";
 import { Deferred, Effect, Fiber } from "effect";
 import { describe, expect, it } from "vitest";
 
 import type { GitHubPullRequestDetailData } from "../git/Services/GitHubCli";
+import { GitHubCliError } from "../git/Errors";
 import { createGitHubCliWithFakeGh } from "../git/testing/fakeGitHubCli";
 import type { ProjectPullRequestPinsShape } from "../persistence/Services/ProjectPullRequestPins";
 import { makePullRequestOperations } from "./pullRequestOperations";
@@ -52,13 +53,14 @@ const detail: GitHubPullRequestDetailData = {
 };
 
 describe("makePullRequestOperations", () => {
-  it("starts detail, merge-capability, and review-comment reads together", async () => {
+  it("starts detail, merge-capability, review-comment, and stack reads together", async () => {
     await Effect.runPromise(
       Effect.scoped(
         Effect.gen(function* () {
           const detailStarted = yield* Deferred.make<void>();
           const capabilitiesStarted = yield* Deferred.make<void>();
           const commentsStarted = yield* Deferred.make<void>();
+          const stackStarted = yield* Deferred.make<void>();
           const release = yield* Deferred.make<void>();
           const waitForRelease = <A>(started: Deferred.Deferred<void>, value: A) =>
             Effect.gen(function* () {
@@ -77,6 +79,7 @@ describe("makePullRequestOperations", () => {
               getPullRequestDetail: () => waitForRelease(detailStarted, detail),
               getPullRequestReviewComments: () =>
                 waitForRelease(commentsStarted, { comments: [], truncated: false }),
+              getPullRequestStack: () => waitForRelease(stackStarted, null),
             },
             pins,
             findProject: () => Effect.succeed(project),
@@ -96,16 +99,84 @@ describe("makePullRequestOperations", () => {
           const fiber = yield* operations
             .detail({ projectId: project.id, repository: "acme/widgets", number: 42 })
             .pipe(Effect.forkChild);
-          yield* Effect.all([Deferred.await(detailStarted), Deferred.await(capabilitiesStarted)], {
-            concurrency: 2,
-          });
+          yield* Effect.all(
+            [
+              Deferred.await(detailStarted),
+              Deferred.await(capabilitiesStarted),
+              Deferred.await(commentsStarted),
+              Deferred.await(stackStarted),
+            ],
+            { concurrency: 4 },
+          );
           yield* Effect.yieldNow;
 
           expect(yield* Deferred.isDone(commentsStarted)).toBe(true);
+          expect(yield* Deferred.isDone(stackStarted)).toBe(true);
           yield* Deferred.succeed(release, undefined);
           expect((yield* Fiber.join(fiber)).number).toBe(42);
         }),
       ),
     );
+  });
+
+  it("preserves detail while distinguishing a failed stack lookup from standalone", async () => {
+    const stack: PullRequestStack = {
+      number: 8,
+      size: 2,
+      position: 2,
+      entries: [
+        { position: 1, number: 41 },
+        { position: 2, number: 42 },
+      ],
+    };
+    const makeOperations = (pullRequestStack: PullRequestStack | null, fail = false) => {
+      const fake = createGitHubCliWithFakeGh({
+        pullRequestDetail: detail,
+        pullRequestStack,
+        ...(fail
+          ? {
+              pullRequestStackError: new GitHubCliError({
+                operation: "getPullRequestStack",
+                detail: "stack unavailable",
+              }),
+            }
+          : {}),
+      }).service;
+      return makePullRequestOperations({
+        github: fake,
+        pins: {
+          listByProjectIds: () => Effect.succeed([]),
+          setPinned: () => Effect.void,
+        },
+        findProject: () => Effect.succeed(project),
+        validateRepository: (repository) => Effect.succeed(repository),
+        validateProjectRepository: (_project, repository) => Effect.succeed(repository),
+        loadMergeCapabilities: () =>
+          Effect.succeed({ merge: true, squash: true, rebase: true, deleteBranchOnMerge: false }),
+        withGitHubRead: (effect) => effect,
+        finalizeMutationCaches: () => Effect.void,
+      });
+    };
+
+    const projected = await Effect.runPromise(
+      makeOperations(stack).detail({
+        projectId: project.id,
+        repository: "acme/widgets",
+        number: 42,
+      }),
+    );
+    expect(projected.stack?.position).toBe(2);
+    expect(projected.stackMetadataIncomplete).toBe(false);
+
+    const incomplete = await Effect.runPromise(
+      makeOperations(null, true).detail({
+        projectId: project.id,
+        repository: "acme/widgets",
+        number: 42,
+      }),
+    );
+    expect(incomplete.number).toBe(42);
+    expect(incomplete.stack).toBeNull();
+    expect(incomplete.stackMetadataIncomplete).toBe(true);
   });
 });

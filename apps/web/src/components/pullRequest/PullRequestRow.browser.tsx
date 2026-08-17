@@ -244,6 +244,36 @@ describe("PullRequestRow pin control", () => {
     );
   });
 
+  it("renders a compact neutral stack position without expanding the row", async () => {
+    await render(
+      <div className="px-3">
+        <PullRequestRow
+          entry={{
+            ...makeEntry(false),
+            stack: { number: 8, size: 3, position: 2 },
+          }}
+          selected={false}
+          onClick={vi.fn()}
+          onTogglePinned={vi.fn()}
+        />
+      </div>,
+    );
+
+    const badge = page.getByLabelText("Pull request 2 of 3 in stack");
+    expect(badge).toBeVisible();
+    expect(badge.element().textContent).toBe("2/3");
+    expect(badge.element().className).toContain("text-muted-foreground");
+    for (const width of [480, 960, 1440]) {
+      await page.viewport(width, 620);
+      const rowRect = document
+        .querySelector<HTMLElement>("[data-pull-request-row]")!
+        .getBoundingClientRect();
+      expect(rowRect.left).toBeGreaterThanOrEqual(0);
+      expect(rowRect.right).toBeLessThanOrEqual(window.innerWidth + 1);
+      expect(document.body.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+    }
+  });
+
   it("restores focus by remote identity when aggregate project context changes", async () => {
     const entry = makeEntry(false);
     await render(

@@ -38,7 +38,7 @@ export function makePullRequestOperations(dependencies: {
     Effect.gen(function* () {
       const repository = yield* dependencies.validateProjectRepository(project, repositoryInput);
       const [owner = "", repo = ""] = repository.split("/");
-      const [detail, mergeCapabilities, reviewCommentsResult] = yield* Effect.all(
+      const [detail, mergeCapabilities, reviewCommentsResult, stackResult] = yield* Effect.all(
         [
           dependencies.withGitHubRead(
             dependencies.github.getPullRequestDetail({
@@ -64,8 +64,20 @@ export function makePullRequestOperations(dependencies: {
                 Effect.succeed({ comments: [], truncated: false, incomplete: true }),
               ),
             ),
+          dependencies
+            .withGitHubRead(
+              dependencies.github.getPullRequestStack({
+                cwd: project.workspaceRoot,
+                repository,
+                number,
+              }),
+            )
+            .pipe(
+              Effect.map((stack) => ({ stack, incomplete: false as const })),
+              Effect.catch(() => Effect.succeed({ stack: null, incomplete: true as const })),
+            ),
         ],
-        { concurrency: 3 },
+        { concurrency: 4 },
       );
       const comments = [
         ...detail.comments,
@@ -98,6 +110,8 @@ export function makePullRequestOperations(dependencies: {
         commentsTruncated: reviewCommentsResult.truncated,
         commentsIncomplete: reviewCommentsResult.incomplete,
         mergeCapabilities,
+        stack: stackResult.stack,
+        stackMetadataIncomplete: stackResult.incomplete,
       } satisfies PullRequestDetail;
     });
 

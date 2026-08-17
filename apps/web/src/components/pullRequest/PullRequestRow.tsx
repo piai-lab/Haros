@@ -22,6 +22,7 @@ import { PullRequestAvatar } from "./PullRequestAvatar";
 import { PullRequestDiffStat } from "./PullRequestDiffStat";
 import { PullRequestMetaLine } from "./PullRequestMetaLine";
 import { PullRequestStateGlyph } from "./PullRequestStateGlyph";
+import { PullRequestStackPosition } from "./PullRequestStackNavigation";
 import { useI18n } from "~/i18n";
 
 function TruncatedTitle({ title, number }: { title: string; number: number }) {
@@ -107,6 +108,7 @@ export const PullRequestRow = function PullRequestRow({
         <span className="min-w-0">
           <span className="flex min-w-0 items-center gap-2">
             <TruncatedTitle title={entry.title} number={entry.number} />
+            {entry.stack ? <PullRequestStackPosition stack={entry.stack} /> : null}
           </span>
           {/* Fine print, set once on the line: author, repository and branch are one thought at
               one size — the branch used to be the only part stepped down, which made the line

@@ -86,6 +86,17 @@ describe("message catalogs", () => {
     );
   });
 
+  it("localizes read-only stacked pull request navigation", () => {
+    expect(translate("en", "pullRequest.stackPosition", { position: 2, size: 3 })).toBe(
+      "Pull request 2 of 3 in stack",
+    );
+    expect(translate("zh-CN", "pullRequest.stackPosition", { position: 2, size: 3 })).toBe(
+      "堆叠中的第 2/3 个拉取请求",
+    );
+    expect(translate("en", "pullRequest.previousInStack")).toBe("Previous pull request in stack");
+    expect(translate("zh-CN", "pullRequest.nextInStack")).toBe("堆叠中的下一个拉取请求");
+  });
+
   it("keeps custom model discovery actionable and honest in both languages", () => {
     expect(translate("en", "settings.customApiDiscoverModels")).toBe("Get from service");
     expect(translate("zh-CN", "settings.customApiDiscoverModels")).toBe("从供应商获取");
