@@ -371,6 +371,8 @@ B2 不新增第二 store、dialog、route、local topology推断或产品数据�
 
 B2 的 pre-commit source-candidate 证据为：contracts expectation decode `1 file / 8 tests`，server GitHub async/legacy、fresh preflight、conflict与mutation serial owner `3 files / 61 tests`，web expectation/cache/英中 actual unit `4 files / 46 tests`，真实 Chromium stale/incomplete/cached-error confirmation `1 file / 3 tests`，monorepo typecheck `6/6 packages`与document contract `21/21`通过；root lint为`0 errors / 478 warnings`，changed-path lint为`0 errors / 3 warnings`且三条均是未触碰的 i18n test `sort()`旧行。GitHub async endpoint与 response status/UUID/poll schema只以 2026-03-10 official API docs和 author-equivalent fixtures证明，本轮明确不执行真实 GitHub写入；changed-path format与diff check通过，package/install/live/README均未运行，因此只主张 source-only candidate。
 
+B2 Judge HOLD identity follow-up 只收紧 async poll 的 request identity：首次 `pending` 必须给出 standard、path-safe UUID，后续 GET 永远只使用该 accepted UUID；任何后续 `pending` 或 terminal response 携带非法/不同 UUID 都立即 fail closed，不访问漂移路径、不投影成功。直接 `merged` / `enqueued` 继续不要求伪造 UUID，merge method/action strict check保持不变。focused GitHubCli `1 file / 38 tests`覆盖 A→B pending drift、terminal drift、只 GET A、零 GET B 与 unsafe UUID零 poll；不改变 contracts、service、UI、fallback或其他 Git owner。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；

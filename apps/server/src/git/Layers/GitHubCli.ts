@@ -38,6 +38,8 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const PULL_REQUEST_DIFF_MAX_BYTES = 8 * 1024 * 1024;
 const PULL_REQUEST_ASYNC_MERGE_POLL_LIMIT = 300;
 const PULL_REQUEST_ASYNC_MERGE_API_VERSION = "2026-03-10";
+const PULL_REQUEST_ASYNC_MERGE_UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const GITHUB_HOST = "github.com";
 
 export const PULL_REQUEST_LIST_JSON_FIELDS =
@@ -1398,7 +1400,26 @@ const makeGitHubCli = Effect.sync(() => {
       }
 
       let result = yield* decodeAsyncMergeResult(submission);
+      let acceptedUuid: string | null = null;
       for (let pollCount = 0; pollCount <= PULL_REQUEST_ASYNC_MERGE_POLL_LIMIT; pollCount += 1) {
+        const rawResponseUuid = result.details.uuid;
+        const responseHasUuid = typeof rawResponseUuid === "string";
+        const responseUuid = responseHasUuid ? rawResponseUuid.trim() : null;
+        if (
+          acceptedUuid !== null &&
+          responseHasUuid &&
+          (!responseUuid ||
+            !PULL_REQUEST_ASYNC_MERGE_UUID.test(responseUuid) ||
+            responseUuid !== acceptedUuid)
+        ) {
+          return yield* Effect.fail(
+            new GitHubCliError({
+              operation: "runPullRequestAction",
+              detail: "GitHub changed the asynchronous merge request identity while polling.",
+              reason: "other",
+            }),
+          );
+        }
         switch (result.status) {
           case "merged":
             return "merged";
@@ -1414,9 +1435,9 @@ const makeGitHubCli = Effect.sync(() => {
               }),
             );
           case "pending": {
-            const uuid = result.details.uuid?.trim();
             if (
-              !uuid ||
+              responseUuid === null ||
+              !PULL_REQUEST_ASYNC_MERGE_UUID.test(responseUuid) ||
               result.details.merge_method !== input.mergeMethod ||
               result.details.merge_action !== "default"
             ) {
@@ -1429,6 +1450,7 @@ const makeGitHubCli = Effect.sync(() => {
                 }),
               );
             }
+            acceptedUuid ??= responseUuid;
             if (pollCount === PULL_REQUEST_ASYNC_MERGE_POLL_LIMIT) break;
             yield* Effect.sleep("1 second");
             result = yield* execute({
@@ -1439,7 +1461,7 @@ const makeGitHubCli = Effect.sync(() => {
                 GITHUB_HOST,
                 "-H",
                 `X-GitHub-Api-Version: ${PULL_REQUEST_ASYNC_MERGE_API_VERSION}`,
-                `${endpoint}/${uuid}`,
+                `${endpoint}/${acceptedUuid}`,
               ],
             }).pipe(Effect.flatMap(decodeAsyncMergeResult));
             break;

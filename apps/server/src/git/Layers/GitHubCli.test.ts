@@ -1357,6 +1357,7 @@ layer("GitHubCliLive", (it) => {
 
   it.effect("polls the exact accepted async request and preserves an enqueued outcome", () =>
     Effect.gen(function* () {
+      const acceptedUuid = "630b9d5e-3f2a-4f7e-8b0c-2d5f9a8c1e42";
       mockedRunProcess
         .mockResolvedValueOnce(
           processResult(
@@ -1364,7 +1365,7 @@ layer("GitHubCliLive", (it) => {
               status: "pending",
               details: {
                 message: "accepted",
-                uuid: "request-123",
+                uuid: acceptedUuid,
                 merge_method: "squash",
                 merge_action: "default",
               },
@@ -1402,8 +1403,92 @@ layer("GitHubCliLive", (it) => {
         "github.com",
         "-H",
         "X-GitHub-Api-Version: 2026-03-10",
-        "repos/acme/app/pulls/12/merge-async/request-123",
+        `repos/acme/app/pulls/12/merge-async/${acceptedUuid}`,
       ]);
+    }),
+  );
+
+  it.effect("pins polling to the accepted UUID and rejects unsafe or drifting identities", () =>
+    Effect.gen(function* () {
+      const acceptedUuid = "630b9d5e-3f2a-4f7e-8b0c-2d5f9a8c1e42";
+      const changedUuid = "730b9d5e-3f2a-4f7e-8b0c-2d5f9a8c1e42";
+      const pending = (uuid: string) =>
+        processResult(
+          JSON.stringify({
+            status: "pending",
+            details: {
+              message: "pending",
+              uuid,
+              merge_method: "merge",
+              merge_action: "default",
+            },
+          }),
+        );
+      const input = {
+        cwd: "/repo",
+        repository: "acme/app",
+        number: 12,
+        action: "merge" as const,
+        mergeExpectation: {
+          kind: "stack" as const,
+          stackNumber: 17,
+          stackSize: 2,
+          selectedPosition: 2,
+          baseBranch: "main",
+          targetPullRequestNumbers: [11, 12],
+        },
+      };
+      mockedRunProcess
+        .mockResolvedValueOnce(pending(acceptedUuid))
+        .mockResolvedValueOnce(pending(changedUuid));
+      const gh = yield* GitHubCli;
+      const driftFiber = yield* gh
+        .runPullRequestAction(input)
+        .pipe(Effect.flip, Effect.forkChild({ startImmediately: true }));
+      yield* TestClock.adjust("1 second");
+      const driftError = yield* Fiber.join(driftFiber);
+
+      assert.equal(
+        driftError.detail.includes("changed the asynchronous merge request identity"),
+        true,
+      );
+      expect(mockedRunProcess).toHaveBeenCalledTimes(2);
+      expect(mockedRunProcess.mock.calls[1]?.[1]).toContain(
+        `repos/acme/app/pulls/12/merge-async/${acceptedUuid}`,
+      );
+      expect(mockedRunProcess.mock.calls.flatMap((call) => call[1]).join(" ")).not.toContain(
+        `/merge-async/${changedUuid}`,
+      );
+
+      mockedRunProcess.mockReset();
+      mockedRunProcess.mockResolvedValueOnce(pending(acceptedUuid)).mockResolvedValueOnce(
+        processResult(
+          JSON.stringify({
+            status: "enqueued",
+            details: { message: "queued", uuid: changedUuid },
+          }),
+        ),
+      );
+      const terminalDriftFiber = yield* gh
+        .runPullRequestAction(input)
+        .pipe(Effect.flip, Effect.forkChild({ startImmediately: true }));
+      yield* TestClock.adjust("1 second");
+      const terminalDriftError = yield* Fiber.join(terminalDriftFiber);
+      assert.equal(
+        terminalDriftError.detail.includes("changed the asynchronous merge request identity"),
+        true,
+      );
+      expect(mockedRunProcess).toHaveBeenCalledTimes(2);
+      expect(mockedRunProcess.mock.calls[1]?.[1]).toContain(
+        `repos/acme/app/pulls/12/merge-async/${acceptedUuid}`,
+      );
+
+      mockedRunProcess.mockReset();
+      mockedRunProcess.mockResolvedValueOnce(pending("../../unsafe"));
+      const unsafeError = yield* gh.runPullRequestAction(input).pipe(Effect.flip);
+      assert.equal(unsafeError.detail.includes("missing or different confirmed options"), true);
+      expect(mockedRunProcess).toHaveBeenCalledTimes(1);
+      expect(mockedRunProcess.mock.calls[0]?.[1]).not.toContain("../../unsafe");
     }),
   );
 
@@ -1473,7 +1558,7 @@ layer("GitHubCliLive", (it) => {
             status: "pending",
             details: {
               message: "already pending",
-              uuid: "existing-request",
+              uuid: "630b9d5e-3f2a-4f7e-8b0c-2d5f9a8c1e42",
               merge_method: "rebase",
               merge_action: "default",
             },
