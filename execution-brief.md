@@ -13,13 +13,15 @@ Updated: 2026-08-18
 3. 完整吸收 Synara ThreadGoal、Debug、bounded raw events、width/icon、Profile local export、perf harness，并闭合 Group 与不同名 owner parity；
 4. 同时完成 commit-range、whole-tree path/behavior 与作者测试 accounting；
 5. 代码、README adoption、research disposition、Mission 状态与 exact pushed/packaged evidence 同步收口。
+6. 修复全树审计中对 Synara `c7131c650` 的过宽 `current-stronger` 判断，恢复 Engine 图标和真实状态反馈，同时保留未就绪但可配置 Engine 的可发现性。
 
 ## 当前事实
 
-- OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前 adoption 分支 `codex/synara-8f9f600-adoption`；exact pushed product SHA 为 `58f76446d3d7061b7fe18e140fe56676269497c3`。
-- `origin/main` 与 `origin/codex/synara-8f9f600-adoption` 已于 2026-08-18 非强制 fast-forward 到同一 authority closure `72eaf86219e369ea8227639f71a5a1b634667d25`；该纯文档 SHA 不冒充安装产品字节。
+- OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前分支 `main`；原 Synara adoption 分支已删除，历史 authority closure 仍可由 `72eaf86219e369ea8227639f71a5a1b634667d25` 追溯。
+- 本地 `main` 已在不改写历史的前提下合入远端 Thinking-status 更新和维护者已有的 scoped-adoption 文档提交；`3077bf253` 为待推送、待 packaged 复验的最新 product candidate。
 - Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`，等于 `origin/main`。
 - `58f76446d` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归；其最后一轮改动只关闭 Automation 测试时钟/隔离和 Web compiler 回归，没有增加平行产品 owner。
+- `3077bf253` 是本轮 Engine picker 修复的 product candidate：直接复用现有 `ProviderIcon`、Server health 与 Composer availability 语义，补齐中英文图标/可用/登录/受限/未安装/不可用反馈，并保留未安装 Engine 的设置可达性；当前安装版仍是 `58f76446d`，在 exact pushed-SHA packaged journey 前不能把该 UI 修复称为已安装交付。
 - `e0ee9cfe2` 的逐回合 `omnimind_update_tasks` Todo/task-list 投影仍与持久 Goal 分离；Todo 不是 Goal 的缩水替代。
 - Synara Goal 与 Todo 是两条独立责任。ThreadGoal 位于 OmniMind 已继承的同一 Product Orchestration/Thread authority 内，不是第二产品控制面。
 - 历史 C0–C5 / C1–C3 阶段门已被维护者撤销；它们不能再阻挡母体能力采用。`research/omnimind-agent-core-execution-guide.md` 只保留验证参考。
@@ -28,7 +30,7 @@ Updated: 2026-08-18
 
 ## 当前工作范围
 
-已完成：Synara exact `8f9f600…` 的产品代码、commit-range 与 whole-tree disposition、作者等价测试、final gates、exact pushed-SHA packaged fresh-profile journey、README/Source Review/Mission/brief truth-convergence，以及 adoption set 进入 `main`。当前没有仍属于本轮的 Synara 产品施工。
+本轮仅重开 `c7131c650` 的混合责任处置：产品代码、双语、availability 接线、unit/browser/typecheck/lint/Web build 已完成；尚需把 fact-closed candidate 推送，并从该 exact pushed product SHA 重建安装版、用 fresh profile 验证 Settings Engine picker 后再完成 README/Mission/brief closure。其余 Synara adoption 不重新横向扩张。
 
 ## 保留边界
 
@@ -44,7 +46,7 @@ Updated: 2026-08-18
 
 ## 下一动作
 
-本轮无剩余动作。若维护者另行要求，可在隔离分支验证 Git ancestry baseline；该实验不得改写已闭合的 adopted-head 证据，也不得在未验证下一次 upstream 三方合并前宣称恢复了真实 ancestry。
+先推送包含 `3077bf253` 与本次 disposition 修正的候选；随后从 exact pushed product SHA 重建/安装 macOS ad-hoc candidate，用 fresh 任务 profile 验证中英文 Engine 图标、状态、未安装 Engine 可发现性与重开，再同步关闭 README/Mission/brief。ancestry baseline 仍在本轮之后，且不得改写 adopted-head 证据。
 
 ## 证据入口
 
