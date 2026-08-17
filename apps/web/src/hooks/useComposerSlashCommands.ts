@@ -468,7 +468,11 @@ export function useComposerSlashCommands(input: {
         sourceMessageId,
         historyOnlyFlight: flight,
       }).catch((error) => {
-        retainForHydration = error instanceof HistoryOnlyForkHydrationPendingError;
+        // Once dispatch is accepted, every later failure belongs to shell/UI
+        // hydration or navigation. Preserve the exact receipt identity so a
+        // retry cannot mint a second Thread after sync or router preload fails.
+        retainForHydration =
+          flight.dispatchAccepted || error instanceof HistoryOnlyForkHydrationPendingError;
         toastManager.add({
           type: retainForHydration ? "warning" : "error",
           title: t(

@@ -6657,6 +6657,78 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("reuses the accepted fork receipt after synced navigation rejects", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      commitForkCreateOnSuccess: true,
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-history-only-fork-navigation" as MessageId,
+        targetText: "history-only fork navigation target",
+      }),
+    });
+    const originalNavigate = mounted.router.navigate;
+    let rejectNextNavigation = true;
+    const navigateSpy = vi.spyOn(mounted.router, "navigate").mockImplementation((options) => {
+      if (rejectNextNavigation) {
+        rejectNextNavigation = false;
+        return Promise.reject(new Error("router preload unavailable"));
+      }
+      return originalNavigate.call(mounted.router, options);
+    });
+
+    try {
+      const sourceRow = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-message-id="msg-assistant-20"]'),
+        "Unable to find the navigation-recovery fork source message.",
+      );
+      const forkButton = sourceRow.querySelector<HTMLButtonElement>(
+        'button[aria-label="Fork from this message"]',
+      );
+      expect(forkButton).not.toBeNull();
+      if (!forkButton) return;
+
+      wsRequests.length = 0;
+      forkButton.click();
+      await expect
+        .element(
+          page.getByText(EN_MESSAGES["timeline.forkMessageHydrationPending"], { exact: true }),
+        )
+        .toBeInTheDocument();
+      const acceptedCommands = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.fork.create");
+      expect(acceptedCommands).toHaveLength(1);
+      const acceptedCommand = acceptedCommands[0];
+      expect(acceptedCommand).toBeDefined();
+      const targetThreadId = acceptedCommand?.threadId as ThreadId;
+      expect(useStore.getState().threadIds).toContain(targetThreadId);
+      expect(mounted.router.state.location.pathname).toBe(`/${THREAD_ID}`);
+
+      forkButton.click();
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${targetThreadId}`,
+        "The retained accepted receipt should navigate without creating another thread.",
+      );
+      const commandsAfterRetry = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.fork.create");
+      expect(commandsAfterRetry).toHaveLength(1);
+      expect(commandsAfterRetry[0]?.commandId).toBe(acceptedCommand?.commandId);
+      expect(commandsAfterRetry[0]?.threadId).toBe(targetThreadId);
+      expect(navigateSpy).toHaveBeenCalledTimes(2);
+      expect(
+        page.getByText(EN_MESSAGES["timeline.forkMessageFailed"], { exact: true }).query(),
+      ).not.toBeInTheDocument();
+    } finally {
+      navigateSpy.mockRestore();
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
   it("sends unmarked automation questions as normal chat messages", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,

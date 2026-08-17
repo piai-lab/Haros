@@ -431,6 +431,8 @@ R11-7 的首个 source candidate 已在 exact pushed `47613073877c733d2585865e9a
 
 该 follow-up 的 pre-commit focused proof为：public/internal schema与client rejection `1 file / 43 tests`；history-only decider exact completion/mismatch、fresh skill boundary与Claude multi-stale exact replay `2 files / 16 tests`；英中catalog parity `1 file / 11 tests`；真实Chromium rapid double、ambiguous receipt、delayed同ID replay与accepted-shell hydration recovery `1 file / 4 tests`。monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path format与diff check通过；root lint为`0 errors / 478 warnings`，changed-path lint为`0 errors / 43 warnings`，新增行的唯一unsafe optional-chain warning已修复，其余均来自未触碰既有行。package/install/live/README仍未准入，因此继续只主张source-only candidate。
 
+上述 safety follow-up 已在 exact pushed `28bafbfd84712200e2e8cf389364f25218035168` 进入 `main`。其最终 receipt retention 窄修只扩充既有 Web single-flight 的删除条件：一旦 exact fork dispatch 已接受，后续shell sync、route preload或navigation任一失败都保留原command/thread identity；再次操作只重新读取authoritative shell并导航，零第二次create。真实Chromium注入dispatch与shell成功、sync已落地但首次navigation reject，证明第二次点击复用同一IDs、总计一次`thread.fork.create`并成功进入原target；并与delayed exact receipt、accepted-shell hydration回归合计`1 file / 3 tests`通过。pre-accept definitive failure仍按原owner清理。本窄修不改变server、contracts、catalog、布局或其他fork路径；monorepo typecheck `6/6 packages`、document contract `21/21`、changed-path format与diff check通过，changed-path lint为`0 errors / 36 warnings`且均来自未触碰既有行。不做package/install/live/README。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
