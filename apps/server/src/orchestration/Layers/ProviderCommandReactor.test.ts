@@ -911,7 +911,12 @@ describe("ProviderCommandReactor", () => {
 
   async function createHistoryOnlyForkThread(
     harness: Awaited<ReturnType<typeof createHarness>>,
-    input: { readonly threadId: ThreadId; readonly now: string; readonly prefixUserText?: string },
+    input: {
+      readonly threadId: ThreadId;
+      readonly now: string;
+      readonly prefixUserText?: string;
+      readonly modelSelection?: ModelSelection;
+    },
   ) {
     const { userAt, assistantAt, prefixUserText } = await createHistoryOnlyForkSource(
       harness,
@@ -926,7 +931,7 @@ describe("ProviderCommandReactor", () => {
         sourceThreadId: ThreadId.makeUnsafe("thread-1"),
         projectId: asProjectId("project-1"),
         title: "History-only fork",
-        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        modelSelection: input.modelSelection ?? { provider: "codex", model: "gpt-5-codex" },
         runtimeMode: "approval-required",
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         envMode: "local",
@@ -2533,6 +2538,95 @@ describe("ProviderCommandReactor", () => {
     const secondInput = harness.sendTurn.mock.calls[1]?.[0] as { input?: string } | undefined;
     expect(secondInput?.input).toBe("Continue again");
     expect(harness.forkThread).not.toHaveBeenCalled();
+  });
+
+  it("normalizes skills only in the latest user segment after preserving imported bytes", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-history-only-fork-skill-boundary");
+    const harness = await createHarness({ startReactor: false });
+    const now = new Date().toISOString();
+    await createHistoryOnlyForkThread(harness, {
+      threadId,
+      now,
+      prefixUserText: "Imported /docs stays byte-exact\nsecond line",
+    });
+
+    await harness.startReactor();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("command-history-only-fork-skill-boundary"),
+        threadId,
+        message: {
+          messageId: asMessageId("history-only-fork-skill-user"),
+          role: "user",
+          text: "Use /docs for the latest segment",
+          attachments: [],
+          skills: [{ name: "docs", path: "/tmp/docs-skill" }],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const providerInput = (harness.sendTurn.mock.calls[0]?.[0] as { input?: string } | undefined)
+      ?.input;
+    expect(providerInput).toContain("User:\nImported /docs stays byte-exact\nsecond line");
+    expect(providerInput).toContain("<latest_user_message>\nUse $docs for the latest segment");
+    expect(providerInput).not.toContain("Use /docs for the latest segment");
+  });
+
+  it("reuses the exact history-only bootstrap across every stale Claude retry", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-history-only-fork-claude-stale");
+    const harness = await createHarness({ startReactor: false });
+    const now = new Date().toISOString();
+    const staleResumeFailure = () =>
+      Effect.fail(
+        new ProviderAdapterRequestError({
+          provider: "claudeAgent",
+          method: "turn/setModel",
+          detail: "Claude Code returned an error result: No conversation found with session ID",
+        }),
+      );
+    harness.sendTurn
+      .mockImplementationOnce(staleResumeFailure)
+      .mockImplementationOnce(staleResumeFailure);
+    await createHistoryOnlyForkThread(harness, {
+      threadId,
+      now,
+      prefixUserText: "Imported /docs must survive exactly",
+      modelSelection: { provider: "claudeAgent", model: "claude-opus-4-8" },
+    });
+
+    await harness.startReactor();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("command-history-only-fork-claude-stale"),
+        threadId,
+        message: {
+          messageId: asMessageId("history-only-fork-claude-stale-user"),
+          role: "user",
+          text: "Continue only this exact prefix",
+          attachments: [],
+        },
+        modelSelection: { provider: "claudeAgent", model: "claude-opus-4-8" },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 3);
+    const providerInputs = harness.sendTurn.mock.calls.map(
+      (call) => (call[0] as { input?: string }).input,
+    );
+    expect(providerInputs[0]).toContain("User:\nImported /docs must survive exactly");
+    expect(providerInputs[0]).not.toContain("SECRET_SUFFIX_MUST_NOT_CROSS");
+    expect(providerInputs[0]).not.toContain("omitted to fit the context budget");
+    expect(providerInputs[1]).toBe(providerInputs[0]);
+    expect(providerInputs[2]).toBe(providerInputs[0]);
   });
 
   it("keeps an oversized exact-prefix bootstrap pending without sending the provider turn", async () => {

@@ -1,6 +1,8 @@
 import {
+  type ClientOrchestrationCommand,
   type ModelSelection,
   type MessageId,
+  type NativeApi,
   type OrchestrationShellSnapshot,
   type ProviderInteractionMode,
   type ProviderKind,
@@ -8,8 +10,10 @@ import {
   type ProviderModelOptions,
   type RuntimeMode,
   type ThreadId,
+  WsRpcError,
 } from "@omnimind/contracts";
 import { deriveAssociatedWorktreeMetadata } from "@omnimind/shared/threadWorkspace";
+import { Schema } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { newCommandId, newMessageId, newThreadId } from "../lib/utils";
 import { readNativeApi } from "../nativeApi";
@@ -57,6 +61,58 @@ type ComposerSnapshot = {
 type SlashCommandItem = Extract<ComposerCommandItem, { type: "slash-command" }>;
 
 class HistoryOnlyForkUnavailableError extends Error {}
+class HistoryOnlyForkHydrationPendingError extends Error {}
+
+type HistoryOnlyForkCommand = Extract<ClientOrchestrationCommand, { type: "thread.fork.create" }>;
+
+type HistoryOnlyForkFlight = {
+  command: HistoryOnlyForkCommand | null;
+  dispatchAccepted: boolean;
+  promise: Promise<boolean> | null;
+};
+
+async function dispatchAndHydrateHistoryOnlyFork(input: {
+  readonly api: NativeApi;
+  readonly flight: HistoryOnlyForkFlight;
+  readonly command: HistoryOnlyForkCommand;
+}): Promise<OrchestrationShellSnapshot> {
+  let lastDispatchFailure: unknown;
+  let observedAbsentSnapshot = false;
+
+  // One exact-command replay resolves an ambiguous acknowledgement through the
+  // server's durable command receipt. Shell hydration is independently bounded
+  // so an accepted create never causes a second Thread identity to be minted.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    if (!input.flight.dispatchAccepted) {
+      try {
+        await input.api.orchestration.dispatchCommand(input.command);
+        input.flight.dispatchAccepted = true;
+      } catch (error) {
+        lastDispatchFailure = error;
+      }
+    }
+
+    try {
+      const snapshot = await input.api.orchestration.getShellSnapshot();
+      if (snapshot.threads.some((thread) => thread.id === input.command.threadId)) {
+        input.flight.dispatchAccepted = true;
+        return snapshot;
+      }
+      observedAbsentSnapshot = true;
+    } catch {
+      // Retain the exact receipt identity; a later activation may hydrate it.
+    }
+  }
+
+  if (
+    !input.flight.dispatchAccepted &&
+    observedAbsentSnapshot &&
+    Schema.is(WsRpcError)(lastDispatchFailure)
+  ) {
+    throw lastDispatchFailure;
+  }
+  throw new HistoryOnlyForkHydrationPendingError();
+}
 
 function wasPromptReplacementApplied(result: number | false): boolean {
   return result !== false;
@@ -267,13 +323,39 @@ export function useComposerSlashCommands(input: {
   );
 
   const createForkThreadFromSlashCommand = useCallback(
-    async (inputOptions?: { target?: ForkSlashCommandTarget; sourceMessageId?: MessageId }) => {
-      if (!selectedModelSelection) {
+    async (inputOptions?: {
+      target?: ForkSlashCommandTarget;
+      sourceMessageId?: MessageId;
+      historyOnlyFlight?: HistoryOnlyForkFlight;
+    }) => {
+      const retainedHistoryOnlyCommand = inputOptions?.historyOnlyFlight?.command;
+      if (!retainedHistoryOnlyCommand && !selectedModelSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return true;
       }
       const api = readNativeApi();
-      if (!api || !activeProject || !activeThread || !isServerThread) {
+      if (!api) {
+        toastManager.add({
+          type: "warning",
+          title: t("conversation.forkUnavailable"),
+          description: t("conversation.forkUnavailableDescription"),
+        });
+        return true;
+      }
+      if (retainedHistoryOnlyCommand && inputOptions?.historyOnlyFlight) {
+        const snapshot = await dispatchAndHydrateHistoryOnlyFork({
+          api,
+          flight: inputOptions.historyOnlyFlight,
+          command: retainedHistoryOnlyCommand,
+        });
+        syncServerShellSnapshot(snapshot);
+        await navigateToThread(retainedHistoryOnlyCommand.threadId);
+        return true;
+      }
+      // The retained-command branch above is the only path that can continue
+      // after the current model selection disappears.
+      if (!selectedModelSelection) return true;
+      if (!activeProject || !activeThread || !isServerThread) {
         toastManager.add({
           type: "warning",
           title: t("conversation.forkUnavailable"),
@@ -327,22 +409,25 @@ export function useComposerSlashCommands(input: {
           : {}),
         importedMessages: [...importedMessages],
         createdAt,
-      };
+      } satisfies HistoryOnlyForkCommand;
+      if (historyOnlyPayload && inputOptions?.historyOnlyFlight) {
+        inputOptions.historyOnlyFlight.command = command;
+      }
       let snapshot: OrchestrationShellSnapshot;
       if (!historyOnlyPayload) {
         await api.orchestration.dispatchCommand(command);
         snapshot = await api.orchestration.getShellSnapshot();
       } else {
-        try {
-          await api.orchestration.dispatchCommand(command);
-          snapshot = await api.orchestration.getShellSnapshot();
-        } catch (error) {
-          const recoveredSnapshot = await api.orchestration.getShellSnapshot().catch(() => null);
-          if (!recoveredSnapshot?.threads.some((thread) => thread.id === nextThreadId)) {
-            throw error;
-          }
-          snapshot = recoveredSnapshot;
-        }
+        const historyOnlyFlight = inputOptions?.historyOnlyFlight ?? {
+          command,
+          dispatchAccepted: false,
+          promise: null,
+        };
+        snapshot = await dispatchAndHydrateHistoryOnlyFork({
+          api,
+          flight: historyOnlyFlight,
+          command,
+        });
       }
       syncServerShellSnapshot(snapshot);
       await navigateToThread(nextThreadId);
@@ -362,32 +447,52 @@ export function useComposerSlashCommands(input: {
     ],
   );
 
-  const historyOnlyForkFlightsRef = useRef(new Map<string, Promise<boolean>>());
+  const historyOnlyForkFlightsRef = useRef(new Map<string, HistoryOnlyForkFlight>());
   const createForkThreadFromMessage = useCallback(
     (sourceMessageId: MessageId): Promise<boolean> => {
       const flightKey = `${activeThread?.id ?? "missing"}:${sourceMessageId}`;
       const existing = historyOnlyForkFlightsRef.current.get(flightKey);
-      if (existing) {
-        return existing;
+      if (existing?.promise) {
+        return existing.promise;
       }
+      const flight =
+        existing ??
+        ({
+          command: null,
+          dispatchAccepted: false,
+          promise: null,
+        } satisfies HistoryOnlyForkFlight);
+      let retainForHydration = false;
       const attempt = createForkThreadFromSlashCommand({
         target: "local",
         sourceMessageId,
+        historyOnlyFlight: flight,
       }).catch((error) => {
+        retainForHydration = error instanceof HistoryOnlyForkHydrationPendingError;
         toastManager.add({
-          type: "error",
-          title: t("timeline.forkMessageFailed"),
+          type: retainForHydration ? "warning" : "error",
+          title: t(
+            retainForHydration
+              ? "timeline.forkMessageHydrationPending"
+              : "timeline.forkMessageFailed",
+          ),
           description:
             error instanceof HistoryOnlyForkUnavailableError
               ? t("timeline.forkMessageUnavailableDescription")
-              : t("timeline.forkMessageFailedDescription"),
+              : retainForHydration
+                ? t("timeline.forkMessageHydrationPendingDescription")
+                : t("timeline.forkMessageFailedDescription"),
         });
         return false;
       });
-      historyOnlyForkFlightsRef.current.set(flightKey, attempt);
+      flight.promise = attempt;
+      historyOnlyForkFlightsRef.current.set(flightKey, flight);
       void attempt.finally(() => {
-        if (historyOnlyForkFlightsRef.current.get(flightKey) === attempt) {
-          historyOnlyForkFlightsRef.current.delete(flightKey);
+        if (historyOnlyForkFlightsRef.current.get(flightKey) === flight) {
+          flight.promise = null;
+          if (!retainForHydration) {
+            historyOnlyForkFlightsRef.current.delete(flightKey);
+          }
         }
       });
       return attempt;

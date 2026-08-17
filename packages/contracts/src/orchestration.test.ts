@@ -490,6 +490,41 @@ it.effect("keeps atomic Session binding commits internal", () =>
   }),
 );
 
+it.effect("keeps history-only fork bootstrap completion internal", () =>
+  Effect.gen(function* () {
+    const forgedClientMeta = {
+      type: "thread.meta.update",
+      commandId: "cmd-forged-fork-completion",
+      threadId: "thread-1",
+      forkScope: {
+        kind: "history-only",
+        sourceMessageId: "message-cutoff",
+        sourceMessageUpdatedAt: "2026-08-17T00:00:00.000Z",
+        bootstrapStatus: "completed",
+      },
+    } as const;
+    assert.strictEqual(
+      (yield* Effect.exit(decodeClientOrchestrationCommand(forgedClientMeta)))._tag,
+      "Failure",
+    );
+
+    const internal = {
+      type: "thread.fork.bootstrap.complete",
+      commandId: "cmd-internal-fork-completion",
+      threadId: "thread-1",
+      sourceMessageId: "message-cutoff",
+      sourceMessageUpdatedAt: "2026-08-17T00:00:00.000Z",
+      completedAt: "2026-08-17T00:00:01.000Z",
+    } as const;
+    const decoded = yield* decodeOrchestrationCommand(internal);
+    assert.strictEqual(decoded.type, "thread.fork.bootstrap.complete");
+    assert.strictEqual(
+      (yield* Effect.exit(decodeClientOrchestrationCommand(internal)))._tag,
+      "Failure",
+    );
+  }),
+);
+
 it.effect("bounds initial turn text while preserving attachment-only turns", () =>
   Effect.gen(function* () {
     const command = (text: string, attachments: ReadonlyArray<unknown> = []) => ({

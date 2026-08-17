@@ -1583,6 +1583,9 @@ function installDeterministicSendNativeApi(options?: {
   rejectProjectMeta?: Error;
   forkCreateBarrier?: Promise<void>;
   recoverRejectedForkCreateInShell?: boolean;
+  rejectForkCreateAttempts?: number;
+  rejectShellSnapshotAttempts?: number;
+  commitForkCreateOnSuccess?: boolean;
   rejectThreadCreateAttempts?: number;
   rejectThreadDeleteAttempts?: number;
   rejectThreadMetaAttempts?: number;
@@ -1595,6 +1598,9 @@ function installDeterministicSendNativeApi(options?: {
   let remainingThreadCreateRejects = options?.rejectThreadCreateAttempts ?? 0;
   let remainingThreadDeleteRejects = options?.rejectThreadDeleteAttempts ?? 0;
   let remainingThreadMetaRejects = options?.rejectThreadMetaAttempts ?? 0;
+  let remainingForkCreateRejects = options?.rejectForkCreateAttempts ?? 0;
+  let remainingShellSnapshotRejects = options?.rejectShellSnapshotAttempts ?? 0;
+  let forkCreateDispatched = false;
 
   Object.defineProperty(window, "nativeApi", {
     configurable: true,
@@ -1657,6 +1663,7 @@ function installDeterministicSendNativeApi(options?: {
             throw options.rejectProjectMeta;
           }
           if (command.type === "thread.fork.create") {
+            forkCreateDispatched = true;
             await options?.forkCreateBarrier;
             if (options?.recoverRejectedForkCreateInShell) {
               fixture = {
@@ -1665,7 +1672,17 @@ function installDeterministicSendNativeApi(options?: {
               };
               throw new Error("thread.fork.create acknowledgement unavailable");
             }
+            if (remainingForkCreateRejects > 0) {
+              remainingForkCreateRejects -= 1;
+              throw new Error("thread.fork.create acknowledgement unavailable");
+            }
             if (options?.forkCreateBarrier) {
+              fixture = {
+                ...fixture,
+                snapshot: addThreadToSnapshot(fixture.snapshot, command.threadId),
+              };
+            }
+            if (options?.commitForkCreateOnSuccess) {
               fixture = {
                 ...fixture,
                 snapshot: addThreadToSnapshot(fixture.snapshot, command.threadId),
@@ -1685,6 +1702,13 @@ function installDeterministicSendNativeApi(options?: {
             throw new Error("thread.meta.update acknowledgement unavailable");
           }
           return { sequence: fixture.snapshot.snapshotSequence + 1 };
+        },
+        getShellSnapshot: async () => {
+          if (forkCreateDispatched && remainingShellSnapshotRejects > 0) {
+            remainingShellSnapshotRejects -= 1;
+            throw new Error("shell snapshot hydration unavailable");
+          }
+          return createShellSnapshotFromReadModel(fixture.snapshot);
         },
       },
     },
@@ -6503,6 +6527,127 @@ describe("ChatView timeline estimator parity (full app)", () => {
         (pathname) => pathname === `/${targetThreadId}`,
         "The shell receipt should recover navigation after an ambiguous acknowledgement.",
       );
+      expect(
+        page.getByText(EN_MESSAGES["timeline.forkMessageFailed"], { exact: true }).query(),
+      ).not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("replays one exact fork receipt after delayed acknowledgement and shell failures", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectForkCreateAttempts: 2,
+      rejectShellSnapshotAttempts: 2,
+      commitForkCreateOnSuccess: true,
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-history-only-fork-delayed" as MessageId,
+        targetText: "history-only fork delayed target",
+      }),
+    });
+
+    try {
+      const sourceRow = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-message-id="msg-assistant-20"]'),
+        "Unable to find the delayed fork source message.",
+      );
+      const forkButton = sourceRow.querySelector<HTMLButtonElement>(
+        'button[aria-label="Fork from this message"]',
+      );
+      expect(forkButton).not.toBeNull();
+      if (!forkButton) return;
+
+      wsRequests.length = 0;
+      forkButton.click();
+      await expect
+        .element(
+          page.getByText(EN_MESSAGES["timeline.forkMessageHydrationPending"], { exact: true }),
+        )
+        .toBeInTheDocument();
+      const initialCommands = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.fork.create");
+      expect(initialCommands).toHaveLength(2);
+      expect(new Set(initialCommands.map((command) => command?.commandId)).size).toBe(1);
+      expect(new Set(initialCommands.map((command) => command?.threadId)).size).toBe(1);
+
+      forkButton.click();
+      const targetThreadId = String(initialCommands[0]?.threadId ?? "");
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${targetThreadId}`,
+        "The delayed receipt replay should open the original target thread.",
+      );
+      const allCommands = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.fork.create");
+      expect(allCommands).toHaveLength(3);
+      expect(new Set(allCommands.map((command) => command?.commandId))).toEqual(
+        new Set([initialCommands[0]?.commandId]),
+      );
+      expect(new Set(allCommands.map((command) => command?.threadId))).toEqual(
+        new Set([initialCommands[0]?.threadId]),
+      );
+      expect(
+        page.getByText(EN_MESSAGES["timeline.forkMessageFailed"], { exact: true }).query(),
+      ).not.toBeInTheDocument();
+    } finally {
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("retains an accepted fork identity while shell hydration is unavailable", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      rejectShellSnapshotAttempts: 2,
+      commitForkCreateOnSuccess: true,
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-history-only-fork-hydration" as MessageId,
+        targetText: "history-only fork hydration target",
+      }),
+    });
+
+    try {
+      const sourceRow = await waitForElement(
+        () => document.querySelector<HTMLElement>('[data-message-id="msg-assistant-20"]'),
+        "Unable to find the hydration fork source message.",
+      );
+      const forkButton = sourceRow.querySelector<HTMLButtonElement>(
+        'button[aria-label="Fork from this message"]',
+      );
+      expect(forkButton).not.toBeNull();
+      if (!forkButton) return;
+
+      wsRequests.length = 0;
+      forkButton.click();
+      await expect
+        .element(
+          page.getByText(EN_MESSAGES["timeline.forkMessageHydrationPending"], { exact: true }),
+        )
+        .toBeInTheDocument();
+      const commandsAfterFailure = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.fork.create");
+      expect(commandsAfterFailure).toHaveLength(1);
+
+      forkButton.click();
+      const targetThreadId = String(commandsAfterFailure[0]?.threadId ?? "");
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${targetThreadId}`,
+        "Recovered shell hydration should open the already accepted target.",
+      );
+      const commandsAfterRecovery = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.fork.create");
+      expect(commandsAfterRecovery).toHaveLength(1);
       expect(
         page.getByText(EN_MESSAGES["timeline.forkMessageFailed"], { exact: true }).query(),
       ).not.toBeInTheDocument();

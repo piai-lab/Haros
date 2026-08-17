@@ -1196,7 +1196,9 @@ const ThreadMetaUpdateCommand = Schema.Struct({
   subagentNickname: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   subagentRole: Schema.optional(Schema.NullOr(TrimmedNonEmptyString)),
   handoff: Schema.optional(Schema.NullOr(ThreadHandoff)),
-  forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)),
+  // Bootstrap completion is server-owned; a client meta update carrying this
+  // field must fail decode rather than being silently stripped.
+  forkScope: Schema.optional(Schema.Never),
   lastKnownPr: Schema.optional(Schema.NullOr(OrchestrationThreadPullRequest)),
   pinnedMessages: Schema.optional(ThreadPinnedMessages),
   threadMarkers: Schema.optional(ThreadMarkers),
@@ -1620,6 +1622,15 @@ const ThreadConversationRollbackCompleteCommand = Schema.Struct({
   createdAt: IsoDateTime,
 });
 
+const ThreadForkBootstrapCompleteCommand = Schema.Struct({
+  type: Schema.Literal("thread.fork.bootstrap.complete"),
+  commandId: CommandId,
+  threadId: ThreadId,
+  sourceMessageId: MessageId,
+  sourceMessageUpdatedAt: IsoDateTime,
+  completedAt: IsoDateTime,
+});
+
 const InternalOrchestrationCommand = Schema.Union([
   ThreadSessionSetCommand,
   ThreadMessagesImportCommand,
@@ -1631,6 +1642,7 @@ const InternalOrchestrationCommand = Schema.Union([
   ThreadRevertCompleteCommand,
   ThreadConversationRollbackCommand,
   ThreadConversationRollbackCompleteCommand,
+  ThreadForkBootstrapCompleteCommand,
   ThreadDispatchQueuedTurnCommand,
 ]);
 export type InternalOrchestrationCommand = typeof InternalOrchestrationCommand.Type;

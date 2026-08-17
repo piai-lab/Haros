@@ -1280,32 +1280,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         threadId: command.threadId,
       });
       const project = readModel.projects.find((candidate) => candidate.id === thread.projectId);
-      if (command.forkScope !== undefined) {
-        const currentScope = thread.forkScope ?? null;
-        const nextScope = command.forkScope ?? null;
-        const sameCutoff =
-          currentScope !== null &&
-          nextScope !== null &&
-          currentScope.kind === nextScope.kind &&
-          currentScope.sourceMessageId === nextScope.sourceMessageId &&
-          currentScope.sourceMessageUpdatedAt === nextScope.sourceMessageUpdatedAt;
-        const validStatusTransition =
-          currentScope !== null &&
-          nextScope !== null &&
-          ((currentScope.bootstrapStatus === "pending" &&
-            nextScope.bootstrapStatus === "completed") ||
-            (currentScope.bootstrapStatus === "completed" &&
-              nextScope.bootstrapStatus === "completed"));
-        if (!sameCutoff || !validStatusTransition) {
-          return yield* Effect.fail(
-            new OrchestrationCommandInvariantError({
-              commandType: command.type,
-              detail:
-                "A history-only fork scope is immutable except for its pending-to-completed bootstrap transition.",
-            }),
-          );
-        }
-      }
       if (command.groupIds !== undefined) {
         if (!project || (project.kind ?? "project") !== "project") {
           return yield* Effect.fail(
@@ -1365,13 +1339,49 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             : {}),
           ...(command.subagentRole !== undefined ? { subagentRole: command.subagentRole } : {}),
           ...(command.handoff !== undefined ? { handoff: command.handoff } : {}),
-          ...(command.forkScope !== undefined ? { forkScope: command.forkScope } : {}),
           ...(command.lastKnownPr !== undefined ? { lastKnownPr: command.lastKnownPr } : {}),
           ...(command.pinnedMessages !== undefined
             ? { pinnedMessages: command.pinnedMessages }
             : {}),
           ...(command.notes !== undefined ? { notes: command.notes } : {}),
           updatedAt: occurredAt,
+        },
+      };
+    }
+
+    case "thread.fork.bootstrap.complete": {
+      const thread = yield* requireThread({
+        readModel,
+        command,
+        threadId: command.threadId,
+      });
+      const scope = thread.forkScope ?? null;
+      if (
+        scope?.kind !== "history-only" ||
+        scope.bootstrapStatus !== "pending" ||
+        scope.sourceMessageId !== command.sourceMessageId ||
+        scope.sourceMessageUpdatedAt !== command.sourceMessageUpdatedAt
+      ) {
+        return yield* Effect.fail(
+          new OrchestrationCommandInvariantError({
+            commandType: command.type,
+            detail:
+              "Only the exact pending history-only fork bootstrap can be completed internally.",
+          }),
+        );
+      }
+      return {
+        ...withEventBase({
+          aggregateKind: "thread",
+          aggregateId: command.threadId,
+          occurredAt: command.completedAt,
+          commandId: command.commandId,
+        }),
+        type: "thread.meta-updated",
+        payload: {
+          threadId: command.threadId,
+          forkScope: { ...scope, bootstrapStatus: "completed" },
+          updatedAt: command.completedAt,
         },
       };
     }

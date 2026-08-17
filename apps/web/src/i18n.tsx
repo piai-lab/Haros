@@ -1751,6 +1751,9 @@ export const EN_MESSAGES = {
   "timeline.forkMessageFailed": "Could not fork from this message",
   "timeline.forkMessageFailedDescription":
     "An error occurred while creating the history-only fork.",
+  "timeline.forkMessageHydrationPending": "Fork is still loading",
+  "timeline.forkMessageHydrationPendingDescription":
+    "The request may already be accepted. Try the same action again to finish opening it.",
   "conversation.forkUnavailable": "Fork is unavailable",
   "conversation.forkUnavailableDescription":
     "Only existing server-backed tasks can be forked right now.",
@@ -5148,6 +5151,9 @@ export const ZH_CN_MESSAGES = {
     "这条消息已不再是可用的派生节点。请刷新任务后重试。",
   "timeline.forkMessageFailed": "无法从此消息派生",
   "timeline.forkMessageFailedDescription": "创建仅保留此前历史的派生任务时发生错误。",
+  "timeline.forkMessageHydrationPending": "派生任务仍在加载",
+  "timeline.forkMessageHydrationPendingDescription":
+    "请求可能已被接受。请再次执行同一操作以完成打开。",
   "conversation.forkUnavailable": "暂时无法派生",
   "conversation.forkUnavailableDescription": "目前只能从已保存到服务器的任务派生。",
   "timeline.copyClipboard": "复制到剪贴板",

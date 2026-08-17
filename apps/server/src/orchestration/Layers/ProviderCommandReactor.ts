@@ -1689,9 +1689,22 @@ const make = Effect.gen(function* () {
     // instead so it never reads as part of the user's own words. The budget
     // text below still counts the suffix, keeping the total under the provider
     // input limit regardless of where the suffix sits.
+    const selectedProvider =
+      input.modelSelection?.provider ??
+      threadSessionModelSelections.get(input.threadId)?.provider ??
+      thread.session?.providerName ??
+      thread.modelSelection.provider;
+    // Skill aliases belong to the newly submitted user segment only. Imported
+    // context is durable source material and must remain byte-exact, including
+    // literal slash commands from an earlier turn.
+    const normalizedLatestUserMessageText = normalizeSkillMentionTextForProvider({
+      provider: selectedProvider as ProviderKind,
+      messageText: input.messageText,
+      ...(input.skills !== undefined ? { skills: input.skills } : {}),
+    });
     const boundaryMessageText = thread.sidechatSourceThreadId
-      ? `<sidechat_boundary>\n${SIDECHAT_BOUNDARY_INSTRUCTION}\n</sidechat_boundary>\n\n<latest_user_message>\n${input.messageText}\n</latest_user_message>`
-      : input.messageText;
+      ? `<sidechat_boundary>\n${SIDECHAT_BOUNDARY_INSTRUCTION}\n</sidechat_boundary>\n\n<latest_user_message>\n${normalizedLatestUserMessageText}\n</latest_user_message>`
+      : normalizedLatestUserMessageText;
     const bootstrapBudgetMessageText = `${boundaryMessageText}${mentionContextSuffix}`;
     const shouldBootstrapHandoff =
       thread.handoff?.bootstrapStatus === "pending" &&
@@ -1705,11 +1718,6 @@ const make = Effect.gen(function* () {
       shouldBootstrapHandoff && handoffBootstrapAvailableChars > 0
         ? buildHandoffBootstrapText(thread, handoffBootstrapAvailableChars)
         : null;
-    const selectedProvider =
-      input.modelSelection?.provider ??
-      threadSessionModelSelections.get(input.threadId)?.provider ??
-      thread.session?.providerName ??
-      thread.modelSelection.provider;
     const historyOnlyForkScope = thread.forkScope ?? null;
     const shouldBootstrapHistoryOnlyFork =
       historyOnlyForkScope?.kind === "history-only" &&
@@ -1811,12 +1819,16 @@ const make = Effect.gen(function* () {
     // The guards above make the bootstrap flavors mutually exclusive, so
     // a turn carries at most one context block.
     const selectedBootstrapContext: BootstrapContextSelection | null =
-      handoffBootstrapText !== null
-        ? { tag: "handoff_context", contextText: handoffBootstrapText, wrapLatestUserMessage: true }
-        : historyOnlyForkBootstrapText !== null
+      historyOnlyForkBootstrapText !== null
+        ? {
+            tag: "thread_context",
+            contextText: historyOnlyForkBootstrapText,
+            wrapLatestUserMessage: true,
+          }
+        : handoffBootstrapText !== null
           ? {
-              tag: "thread_context",
-              contextText: historyOnlyForkBootstrapText,
+              tag: "handoff_context",
+              contextText: handoffBootstrapText,
               wrapLatestUserMessage: true,
             }
           : sidechatBootstrapText !== null
@@ -1866,13 +1878,7 @@ const make = Effect.gen(function* () {
       const withSkills = skillInlineText
         ? `${withMentionContext}\n\n${skillInlineText}`
         : withMentionContext;
-      return toNonEmptyProviderInput(
-        normalizeSkillMentionTextForProvider({
-          provider: selectedProvider as ProviderKind,
-          messageText: withSkills,
-          ...(input.skills !== undefined ? { skills: input.skills } : {}),
-        }),
-      );
+      return toNonEmptyProviderInput(withSkills);
     };
     const normalizedInput = finalizeProviderInput(selectedBootstrapContext);
     const normalizedAttachments = yield* resolveProviderDispatchAttachments({
@@ -2020,30 +2026,44 @@ const make = Effect.gen(function* () {
           });
           yield* ensureSessionForStaleRetry;
 
+          // A history-only fork has one authoritative, exact prefix. Every
+          // stale-session retry reuses that same selection; falling back to an
+          // ordinary transcript builder could summarize, truncate, or admit a
+          // message beyond the persisted cutoff.
           const retryBootstrapText =
-            priorTranscriptBootstrapAvailableChars > 0
-              ? buildPriorTranscriptBootstrapText(
-                  thread,
-                  input.messageId,
-                  priorTranscriptBootstrapAvailableChars,
-                )
-              : null;
-          const retryNormalizedInput = finalizeProviderInput(
-            retryBootstrapText !== null
+            historyOnlyForkBootstrapText !== null
+              ? historyOnlyForkBootstrapText
+              : priorTranscriptBootstrapAvailableChars > 0
+                ? buildPriorTranscriptBootstrapText(
+                    thread,
+                    input.messageId,
+                    priorTranscriptBootstrapAvailableChars,
+                  )
+                : null;
+          const retryBootstrapSelection =
+            historyOnlyForkBootstrapText !== null
               ? {
-                  tag: "thread_context",
-                  contextText: retryBootstrapText,
+                  tag: "thread_context" as const,
+                  contextText: historyOnlyForkBootstrapText,
                   wrapLatestUserMessage: true,
                 }
-              : null,
-          );
+              : retryBootstrapText !== null
+                ? {
+                    tag: "thread_context" as const,
+                    contextText: retryBootstrapText,
+                    wrapLatestUserMessage: true,
+                  }
+                : null;
+          const retryNormalizedInput = finalizeProviderInput(retryBootstrapSelection);
 
           yield* Effect.logWarning(
             "provider command reactor retrying claude turn after stale resume",
             {
               threadId: input.threadId,
               messageId: input.messageId,
-              bootstrappedPriorTranscript: retryBootstrapText !== null,
+              bootstrappedPriorTranscript:
+                historyOnlyForkBootstrapText === null && retryBootstrapText !== null,
+              reusedHistoryOnlyForkBootstrap: historyOnlyForkBootstrapText !== null,
             },
           );
           return yield* sendQueuedProviderTurn(retryNormalizedInput);
@@ -2147,13 +2167,12 @@ const make = Effect.gen(function* () {
       input.reviewTarget === undefined
     ) {
       yield* orchestrationEngine.dispatch({
-        type: "thread.meta.update",
+        type: "thread.fork.bootstrap.complete",
         commandId: serverCommandId("history-only-fork-bootstrap-complete"),
         threadId: input.threadId,
-        forkScope: {
-          ...historyOnlyForkScope,
-          bootstrapStatus: "completed",
-        },
+        sourceMessageId: historyOnlyForkScope.sourceMessageId,
+        sourceMessageUpdatedAt: historyOnlyForkScope.sourceMessageUpdatedAt,
+        completedAt: new Date().toISOString(),
       });
     }
     if (

@@ -214,6 +214,52 @@ describe("history-only fork decider", () => {
     ]);
   });
 
+  it("allows only the internal exact-cutoff command to complete the bootstrap", async () => {
+    let readModel = await readModelWithSourceMessages();
+    const created = await Effect.runPromise(
+      decideOrchestrationCommand({ command: scopedForkCommand(), readModel }),
+    );
+    const createdEvents = Array.isArray(created) ? created : [created];
+    for (const [index, event] of createdEvents.entries()) {
+      readModel = await Effect.runPromise(
+        projectEvent(readModel, { ...event, sequence: 10 + index }),
+      );
+    }
+
+    const completion = {
+      type: "thread.fork.bootstrap.complete" as const,
+      commandId: CommandId.makeUnsafe("command-fork-bootstrap-complete"),
+      threadId: TARGET_THREAD_ID,
+      sourceMessageId: MessageId.makeUnsafe("message-assistant-1"),
+      sourceMessageUpdatedAt: "2026-08-17T00:00:03.000Z",
+      completedAt: "2026-08-17T00:00:11.000Z",
+    };
+    await expect(
+      Effect.runPromise(decideOrchestrationCommand({ command: completion, readModel })),
+    ).resolves.toMatchObject({
+      type: "thread.meta-updated",
+      payload: {
+        forkScope: {
+          kind: "history-only",
+          sourceMessageId: MessageId.makeUnsafe("message-assistant-1"),
+          bootstrapStatus: "completed",
+        },
+      },
+    });
+    await expect(
+      Effect.runPromise(
+        decideOrchestrationCommand({
+          command: {
+            ...completion,
+            commandId: CommandId.makeUnsafe("command-fork-bootstrap-stale"),
+            sourceMessageUpdatedAt: "2026-08-17T00:00:02.000Z",
+          },
+          readModel,
+        }),
+      ),
+    ).rejects.toThrow(/exact pending history-only fork bootstrap/);
+  });
+
   it.each([
     [
       "missing cutoff",
