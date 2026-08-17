@@ -737,6 +737,110 @@ describe("searchWorkspaceContent", () => {
   );
 
   it.skipIf(process.platform === "win32")(
+    "rechecks current root and nested gitignore policy for warm-index files and aliases",
+    async () => {
+      const cwd = makeTempDir("omnimind-content-search-current-gitignore-");
+      writeFile(cwd, "root-secret.ts", "root needle\n");
+      writeFile(cwd, "nested/secret.ts", "nested needle\n");
+      writeFile(cwd, "safe.ts", "safe needle\n");
+      fs.symlinkSync(path.join(cwd, "nested/secret.ts"), path.join(cwd, "visible-link.ts"));
+      runGit(cwd, ["init"]);
+      runGit(cwd, ["add", "root-secret.ts", "nested/secret.ts", "safe.ts", "visible-link.ts"]);
+      await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+
+      writeFile(cwd, ".gitignore", "/root-secret.ts\n");
+      writeFile(cwd, "nested/.gitignore", "secret.ts\n");
+      const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+      expect(result.matches.map((match) => match.path)).toEqual(["safe.ts"]);
+    },
+  );
+
+  it("rechecks current gitignore policy after reading matched files", async () => {
+    const cwd = makeTempDir("omnimind-content-search-gitignore-race-");
+    writeFile(cwd, "secret.ts", "policy race needle\n");
+    runGit(cwd, ["init"]);
+    runGit(cwd, ["add", "secret.ts"]);
+    await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+
+    const originalRunProcess = ProcessRunner.runProcess.bind(ProcessRunner);
+    const checkIgnoreResults: Array<{ code: number | null; stdout: string }> = [];
+    vi.spyOn(ProcessRunner, "runProcess").mockImplementation(async (command, args, options) => {
+      const result = await originalRunProcess(command, args, options);
+      if (command === "git" && args.includes("check-ignore")) {
+        checkIgnoreResults.push({ code: result.code, stdout: result.stdout });
+      }
+      return result;
+    });
+    const originalOpen = fsPromises.open.bind(fsPromises);
+    let policyChanged = false;
+    vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      const handle = await originalOpen(...args);
+      if (!policyChanged && String(args[0]).endsWith(`${path.sep}secret.ts`)) {
+        policyChanged = true;
+        writeFile(cwd, ".gitignore", "secret.ts\n");
+      }
+      return handle;
+    });
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+    expect(policyChanged).toBe(true);
+    expect(checkIgnoreResults).toEqual([
+      { code: 1, stdout: "" },
+      { code: 0, stdout: "secret.ts\0" },
+    ]);
+    expect(result.matches).toEqual([]);
+  });
+
+  it("fails closed without returning matched content when a current policy recheck fails", async () => {
+    const cwd = makeTempDir("omnimind-content-search-gitignore-error-");
+    writeFile(cwd, "secret.ts", "private needle\n");
+    runGit(cwd, ["init"]);
+    runGit(cwd, ["add", "secret.ts"]);
+    await searchWorkspaceEntries({ cwd, query: "", limit: 100 });
+
+    const originalRunProcess = ProcessRunner.runProcess.bind(ProcessRunner);
+    let checkIgnoreCalls = 0;
+    vi.spyOn(ProcessRunner, "runProcess").mockImplementation(async (command, args, options) => {
+      if (command === "git" && args.includes("check-ignore")) {
+        checkIgnoreCalls += 1;
+        if (checkIgnoreCalls === 2) {
+          return {
+            stdout: "",
+            stderr: "policy unavailable",
+            code: 2,
+            signal: null,
+            timedOut: false,
+            stdoutTruncated: false,
+            stderrTruncated: false,
+          };
+        }
+      }
+      return originalRunProcess(command, args, options);
+    });
+    const originalOpen = fsPromises.open.bind(fsPromises);
+    let openedHandles = 0;
+    let closedHandles = 0;
+    vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      const handle = await originalOpen(...args);
+      openedHandles += 1;
+      const originalClose = handle.close.bind(handle);
+      vi.spyOn(handle, "close").mockImplementation(async () => {
+        closedHandles += 1;
+        return originalClose();
+      });
+      return handle;
+    });
+
+    await expect(searchWorkspaceContent({ cwd, query: "needle" })).rejects.toThrow(
+      "Workspace ignore policy could not be verified",
+    );
+    expect(checkIgnoreCalls).toBe(2);
+    expect(openedHandles).toBe(1);
+    expect(closedHandles).toBe(openedHandles);
+  });
+
+  it.skipIf(process.platform === "win32")(
     "indexes only regular in-root file symlinks outside git workspaces",
     async () => {
       const cwd = makeTempDir("omnimind-content-search-non-git-symlink-");

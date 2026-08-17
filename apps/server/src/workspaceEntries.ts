@@ -493,30 +493,55 @@ function sameWorkspaceRootIdentity(
   return left.realPath === right.realPath && left.dev === right.dev && left.ino === right.ino;
 }
 
-async function isInsideGitWorkTree(cwd: string, signal?: AbortSignal): Promise<boolean> {
+async function queryGitWorkTreeState(
+  cwd: string,
+  options?: { readonly signal?: AbortSignal; readonly deadline?: number },
+): Promise<boolean | null> {
+  options?.signal?.throwIfAborted();
+  if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+    throw new WorkspaceIndexDeadlineExceeded();
+  }
   const insideWorkTree = await runProcess("git", ["rev-parse", "--is-inside-work-tree"], {
     cwd,
-    ...(signal ? { signal } : {}),
+    ...(options?.signal ? { signal: options.signal } : {}),
     allowNonZeroExit: true,
-    timeoutMs: 5_000,
+    timeoutMs:
+      options?.deadline === undefined
+        ? 5_000
+        : Math.max(1, Math.min(5_000, options.deadline - Date.now())),
     maxBufferBytes: 4_096,
   }).catch(() => {
-    signal?.throwIfAborted();
+    options?.signal?.throwIfAborted();
+    if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+      throw new WorkspaceIndexDeadlineExceeded();
+    }
     return null;
   });
-  signal?.throwIfAborted();
-  return Boolean(
-    insideWorkTree && insideWorkTree.code === 0 && insideWorkTree.stdout.trim() === "true",
-  );
+  options?.signal?.throwIfAborted();
+  if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+    throw new WorkspaceIndexDeadlineExceeded();
+  }
+  if (!insideWorkTree || insideWorkTree.timedOut || insideWorkTree.code === null) {
+    return null;
+  }
+  return insideWorkTree.code === 0 && insideWorkTree.stdout.trim() === "true";
 }
 
-async function filterGitIgnoredPaths(
+async function isInsideGitWorkTree(cwd: string, signal?: AbortSignal): Promise<boolean> {
+  return Boolean(await queryGitWorkTreeState(cwd, signal ? { signal } : undefined));
+}
+
+async function queryGitIgnoredPaths(
   cwd: string,
-  relativePaths: string[],
-  signal?: AbortSignal,
-): Promise<string[]> {
+  relativePaths: readonly string[],
+  options?: {
+    readonly signal?: AbortSignal;
+    readonly deadline?: number;
+    readonly requireCompleteOutput?: boolean;
+  },
+): Promise<ReadonlySet<string> | null> {
   if (relativePaths.length === 0) {
-    return relativePaths;
+    return new Set();
   }
 
   const ignoredPaths = new Set<string>();
@@ -524,7 +549,10 @@ async function filterGitIgnoredPaths(
   let chunkBytes = 0;
 
   const flushChunk = async (): Promise<boolean> => {
-    signal?.throwIfAborted();
+    options?.signal?.throwIfAborted();
+    if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+      throw new WorkspaceIndexDeadlineExceeded();
+    }
     if (chunk.length === 0) {
       return true;
     }
@@ -534,22 +562,35 @@ async function filterGitIgnoredPaths(
       [...WORKSPACE_GIT_HARDENED_CONFIG_ARGS, "check-ignore", "--no-index", "-z", "--stdin"],
       {
         cwd,
-        ...(signal ? { signal } : {}),
+        ...(options?.signal ? { signal: options.signal } : {}),
         allowNonZeroExit: true,
-        timeoutMs: 20_000,
+        timeoutMs:
+          options?.deadline === undefined
+            ? 20_000
+            : Math.max(1, Math.min(20_000, options.deadline - Date.now())),
         maxBufferBytes: 16 * 1024 * 1024,
         outputMode: "truncate",
         stdin: `${chunk.join("\0")}\0`,
       },
     ).catch(() => {
-      signal?.throwIfAborted();
+      options?.signal?.throwIfAborted();
+      if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+        throw new WorkspaceIndexDeadlineExceeded();
+      }
       return null;
     });
-    signal?.throwIfAborted();
+    options?.signal?.throwIfAborted();
+    if (options?.deadline !== undefined && Date.now() >= options.deadline) {
+      throw new WorkspaceIndexDeadlineExceeded();
+    }
     chunk = [];
     chunkBytes = 0;
 
-    if (!checkIgnore) {
+    if (
+      !checkIgnore ||
+      checkIgnore.timedOut ||
+      (options?.requireCompleteOutput && checkIgnore.stdoutTruncated)
+    ) {
       return false;
     }
 
@@ -569,29 +610,43 @@ async function filterGitIgnoredPaths(
   };
 
   for (const relativePath of relativePaths) {
-    signal?.throwIfAborted();
+    options?.signal?.throwIfAborted();
     const relativePathBytes = Buffer.byteLength(relativePath) + 1;
     if (
       chunk.length > 0 &&
       chunkBytes + relativePathBytes > GIT_CHECK_IGNORE_MAX_STDIN_BYTES &&
       !(await flushChunk())
     ) {
-      return relativePaths;
+      return null;
     }
 
     chunk.push(relativePath);
     chunkBytes += relativePathBytes;
 
     if (chunkBytes >= GIT_CHECK_IGNORE_MAX_STDIN_BYTES && !(await flushChunk())) {
-      return relativePaths;
+      return null;
     }
   }
 
   if (!(await flushChunk())) {
-    return relativePaths;
+    return null;
   }
 
-  if (ignoredPaths.size === 0) {
+  return ignoredPaths;
+}
+
+async function filterGitIgnoredPaths(
+  cwd: string,
+  relativePaths: string[],
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const ignoredPaths = await queryGitIgnoredPaths(
+    cwd,
+    relativePaths,
+    signal ? { signal } : undefined,
+  );
+
+  if (!ignoredPaths || ignoredPaths.size === 0) {
     return relativePaths;
   }
 
@@ -1117,6 +1172,16 @@ const CONTENT_SEARCH_MAX_LINE_LENGTH = 1024;
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 class ContentSearchDeadlineExceeded extends Error {}
+class ContentSearchPolicyUnavailable extends Error {
+  constructor() {
+    super("Workspace ignore policy could not be verified.");
+  }
+}
+
+interface ContentSearchCandidate {
+  readonly relativePath: string;
+  readonly canonicalRelativePath: string;
+}
 
 function assertContentSearchBudget(deadline: number, signal?: AbortSignal): void {
   signal?.throwIfAborted();
@@ -1144,20 +1209,91 @@ function sameContentFileState(left: BigIntStats, right: BigIntStats): boolean {
   );
 }
 
+function canonicalContentSearchRelativePath(
+  realRoot: string,
+  realTarget: string,
+  indexedFilePaths: ReadonlySet<string>,
+): string | null {
+  if (!isContainedPath(realRoot, realTarget)) {
+    return null;
+  }
+  const canonicalRelativePath = toPosixPath(path.relative(realRoot, realTarget));
+  return canonicalRelativePath.length > 0 &&
+    isContentSearchablePath(canonicalRelativePath) &&
+    indexedFilePaths.has(canonicalRelativePath)
+    ? canonicalRelativePath
+    : null;
+}
+
 function isCanonicalContentSearchPathAllowed(
   realRoot: string,
   realTarget: string,
   indexedFilePaths: ReadonlySet<string>,
 ): boolean {
-  if (!isContainedPath(realRoot, realTarget)) {
-    return false;
-  }
-  const canonicalRelativePath = toPosixPath(path.relative(realRoot, realTarget));
-  return (
-    canonicalRelativePath.length > 0 &&
-    isContentSearchablePath(canonicalRelativePath) &&
-    indexedFilePaths.has(canonicalRelativePath)
+  return canonicalContentSearchRelativePath(realRoot, realTarget, indexedFilePaths) !== null;
+}
+
+async function resolveContentSearchCandidates(input: {
+  cwd: string;
+  rootIdentity: WorkspaceRootIdentity;
+  indexedFilePaths: ReadonlySet<string>;
+  relativePaths: readonly string[];
+  deadline: number;
+  signal?: AbortSignal;
+}): Promise<ContentSearchCandidate[]> {
+  await assertContentSearchRootIdentity(input);
+  const candidates = await mapWithConcurrency(
+    input.relativePaths,
+    CONTENT_SEARCH_READ_CONCURRENCY,
+    async (relativePath): Promise<ContentSearchCandidate | null> => {
+      assertContentSearchBudget(input.deadline, input.signal);
+      const realTarget = await resolveRealPathWithinRoot(
+        input.rootIdentity.realPath,
+        path.join(input.cwd, relativePath),
+      ).catch(() => null);
+      assertContentSearchBudget(input.deadline, input.signal);
+      if (!realTarget) return null;
+      const canonicalRelativePath = canonicalContentSearchRelativePath(
+        input.rootIdentity.realPath,
+        realTarget,
+        input.indexedFilePaths,
+      );
+      return canonicalRelativePath ? { relativePath, canonicalRelativePath } : null;
+    },
   );
+  await assertContentSearchRootIdentity(input);
+  return candidates.filter((candidate): candidate is ContentSearchCandidate => candidate !== null);
+}
+
+async function filterCurrentContentSearchPolicy(input: {
+  cwd: string;
+  candidates: readonly ContentSearchCandidate[];
+  deadline: number;
+  signal?: AbortSignal;
+}): Promise<ContentSearchCandidate[]> {
+  if (input.candidates.length === 0) return [];
+  const gitWorkTree = await queryGitWorkTreeState(input.cwd, {
+    deadline: input.deadline,
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+  if (gitWorkTree === null) {
+    throw new ContentSearchPolicyUnavailable();
+  }
+  if (!gitWorkTree) {
+    return [...input.candidates];
+  }
+  const canonicalPaths = [
+    ...new Set(input.candidates.map((candidate) => candidate.canonicalRelativePath)),
+  ];
+  const ignoredPaths = await queryGitIgnoredPaths(input.cwd, canonicalPaths, {
+    deadline: input.deadline,
+    requireCompleteOutput: true,
+    ...(input.signal ? { signal: input.signal } : {}),
+  });
+  if (!ignoredPaths) {
+    throw new ContentSearchPolicyUnavailable();
+  }
+  return input.candidates.filter((candidate) => !ignoredPaths.has(candidate.canonicalRelativePath));
 }
 
 async function assertContentSearchRootIdentity(input: {
@@ -1201,7 +1337,11 @@ async function searchWorkspaceFileContent(input: {
   normalizedQuery: string;
   deadline: number;
   signal?: AbortSignal;
-}): Promise<{ matches: ProjectContentMatch[]; truncated: boolean } | null> {
+}): Promise<{
+  matches: ProjectContentMatch[];
+  truncated: boolean;
+  canonicalRelativePath: string;
+} | null> {
   assertContentSearchBudget(input.deadline, input.signal);
   await assertContentSearchRootIdentity(input);
   const lexicalPath = path.join(input.cwd, input.relativePath);
@@ -1267,14 +1407,17 @@ async function searchWorkspaceFileContent(input: {
     const afterReadStat = await handle.stat({ bigint: true });
     await assertContentSearchRootIdentity(input);
     const finalRealPath = await fs.realpath(lexicalPath).catch(() => null);
+    const finalCanonicalRelativePath = finalRealPath
+      ? canonicalContentSearchRelativePath(
+          input.rootIdentity.realPath,
+          finalRealPath,
+          input.indexedFilePaths,
+        )
+      : null;
     if (
       offset !== byteLength ||
       !finalRealPath ||
-      !isCanonicalContentSearchPathAllowed(
-        input.rootIdentity.realPath,
-        finalRealPath,
-        input.indexedFilePaths,
-      ) ||
+      !finalCanonicalRelativePath ||
       !sameContentFileState(beforeReadStat, afterReadStat)
     ) {
       return null;
@@ -1314,7 +1457,7 @@ async function searchWorkspaceFileContent(input: {
         lineText: buildContentLineText(line),
       });
     }
-    return { matches, truncated };
+    return { matches, truncated, canonicalRelativePath: finalCanonicalRelativePath };
   } catch (cause) {
     if (
       cause instanceof ContentSearchDeadlineExceeded ||
@@ -1386,7 +1529,33 @@ export async function searchWorkspaceContent(
   );
   const allFilePaths = [...indexedFilePaths].filter(isContentSearchablePath);
   const filePaths = allFilePaths.slice(0, CONTENT_SEARCH_MAX_FILES_SCANNED);
-  const collected: ProjectContentMatch[] = [];
+  let candidates: ContentSearchCandidate[];
+  try {
+    candidates = await filterCurrentContentSearchPolicy({
+      cwd: input.cwd,
+      candidates: await resolveContentSearchCandidates({
+        cwd: input.cwd,
+        rootIdentity: index.rootIdentity,
+        indexedFilePaths,
+        relativePaths: filePaths,
+        deadline,
+        ...(signal ? { signal } : {}),
+      }),
+      deadline,
+      ...(signal ? { signal } : {}),
+    });
+  } catch (cause) {
+    if (signal?.aborted) throw cause;
+    if (
+      cause instanceof WorkspaceIndexDeadlineExceeded ||
+      cause instanceof ContentSearchDeadlineExceeded ||
+      cause instanceof WorkspaceIndexRootChanged
+    ) {
+      return { matches: [], truncated: true };
+    }
+    throw cause;
+  }
+  const collected: Array<ProjectContentMatch & { readonly canonicalRelativePath: string }> = [];
   let nextIndex = 0;
   let scannedFiles = 0;
   let rootChanged = false;
@@ -1394,25 +1563,31 @@ export async function searchWorkspaceContent(
 
   const workers = Array.from(
     {
-      length: Math.max(1, Math.min(CONTENT_SEARCH_READ_CONCURRENCY, filePaths.length)),
+      length: Math.max(1, Math.min(CONTENT_SEARCH_READ_CONCURRENCY, candidates.length)),
     },
     async () => {
-      while (!rootChanged && nextIndex < filePaths.length) {
+      while (!rootChanged && nextIndex < candidates.length) {
         const currentIndex = nextIndex;
         nextIndex += 1;
         try {
+          const candidate = candidates[currentIndex]!;
           const fileMatches = await searchWorkspaceFileContent({
             cwd: input.cwd,
             rootIdentity: index.rootIdentity,
             indexedFilePaths,
-            relativePath: filePaths[currentIndex]!,
+            relativePath: candidate.relativePath,
             normalizedQuery,
             deadline,
             ...(signal ? { signal } : {}),
           });
           scannedFiles += 1;
           if (fileMatches) {
-            collected.push(...fileMatches.matches);
+            collected.push(
+              ...fileMatches.matches.map((match) => ({
+                ...match,
+                canonicalRelativePath: fileMatches.canonicalRelativePath,
+              })),
+            );
             truncated ||= fileMatches.truncated;
           }
         } catch (cause) {
@@ -1433,19 +1608,50 @@ export async function searchWorkspaceContent(
   await Promise.all(workers);
   signal?.throwIfAborted();
 
-  const orderedMatches = collected
+  let currentMatches = collected;
+  if (collected.length > 0) {
+    try {
+      const currentMatchedCandidates = await filterCurrentContentSearchPolicy({
+        cwd: input.cwd,
+        candidates: collected.map((match) => ({
+          relativePath: match.path,
+          canonicalRelativePath: match.canonicalRelativePath,
+        })),
+        deadline,
+        ...(signal ? { signal } : {}),
+      });
+      const allowedCanonicalPaths = new Set(
+        currentMatchedCandidates.map((candidate) => candidate.canonicalRelativePath),
+      );
+      currentMatches = collected.filter((match) =>
+        allowedCanonicalPaths.has(match.canonicalRelativePath),
+      );
+    } catch (cause) {
+      if (signal?.aborted) throw cause;
+      if (
+        cause instanceof WorkspaceIndexDeadlineExceeded ||
+        cause instanceof ContentSearchDeadlineExceeded
+      ) {
+        return { matches: [], truncated: true };
+      }
+      throw cause;
+    }
+  }
+
+  const orderedMatches = currentMatches
     .toSorted((left, right) => {
       const pathDelta = left.path.localeCompare(right.path);
       return pathDelta !== 0 ? pathDelta : left.lineNumber - right.lineNumber;
     })
-    .slice(0, limit);
+    .slice(0, limit)
+    .map(({ canonicalRelativePath: _, ...match }) => match);
   return {
     matches: orderedMatches,
     truncated:
       truncated ||
       Date.now() >= deadline ||
-      scannedFiles < filePaths.length ||
-      collected.length > limit,
+      scannedFiles < candidates.length ||
+      currentMatches.length > limit,
   };
 }
 

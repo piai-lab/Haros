@@ -311,6 +311,8 @@ Phase-9a 首个 source candidate 已在 exact pushed `c0038039015fa6c623289a08b7
 
 Judge HOLD follow-up 的同一 pre-commit tree 证据为：Workspace index/content `2 files / 40 tests`、Provider runtime ingestion `2 files / 111 tests`、web query `1 file / 4 tests`、真实 Chromium search/relocation `2 files / 8 tests`通过；root typecheck `6/6 packages`、root lint `0 errors`、changed-path format、`git diff --check`与旧 build停止后零额外目录工作/content handle闭合断言通过。root lint仍报告仓库既有 `478 warnings`，changed paths中 `ProviderRuntimeIngestion.ts` 的三条既有 warning未扩修；不能写成 lint零 warning。
 
+同一 Judge 的 current-policy P1 follow-up 从 exact pushed `48da69e7876ddbd47eccd5fc2f3fb3cfd4f85906` 继续，只修正 warm index 不能授权当前 gitignore 的缺口：content scan在读取前有界解析最多 `2000` 个 alias到 canonical relative path，继续以 containment、hidden/default ignore与当前 index identity为前置条件；Git workspace复用既有 hardened `git check-ignore --stdin` chunk owner做一次批量 current-policy gate，只读取当下 unignored target。实际产生 match后，再对最终 canonical targets批量复核；mid-scan新增 root/nested `.gitignore`时 direct path与visible symlink均不得返回，unexpected或truncated `check-ignore`结果 fail closed为明确 search error，budget耗尽保持 empty + truncated。non-Git继续只用既有 hidden/default ignore。该闭合不新增 per-file subprocess、index、watcher、cache、fingerprint或公共合同；focused Workspace owner为 `2 files / 43 tests`通过。
+
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
 1. child 继承 canonical Root effective instructions、cwd 与适用 project instructions；第一 falsifier 是 Root 不重复规则时 child 仍遵守作用域内 `AGENTS.md`；
