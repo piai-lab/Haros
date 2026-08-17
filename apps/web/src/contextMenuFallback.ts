@@ -13,6 +13,7 @@ export function showContextMenuFallback<T extends string>(
   items: readonly ContextMenuItemWithIcon<T>[],
   position?: { x: number; y: number },
 ): Promise<T | null> {
+  const originalActiveElement = document.activeElement;
   return new Promise<T | null>((resolve) => {
     const overlay = document.createElement("div");
     overlay.style.cssText = "position:fixed;inset:0;z-index:9999";
@@ -34,12 +35,30 @@ export function showContextMenuFallback<T extends string>(
     menu.appendChild(inner);
 
     let focusedIndex = -1;
+    let settled = false;
     const buttons: HTMLButtonElement[] = [];
 
     function cleanup(result: T | null) {
+      if (settled) return;
+      settled = true;
+      const activeElement = document.activeElement;
+      const focusMovedOutsideMenu =
+        activeElement !== null &&
+        activeElement !== originalActiveElement &&
+        activeElement.isConnected &&
+        !menu.contains(activeElement);
       document.removeEventListener("keydown", onKeyDown);
       overlay.remove();
       menu.remove();
+      // Restore synchronously before resolving so a consumer that moves focus
+      // after awaiting the menu cannot be overwritten by a later callback.
+      if (
+        !focusMovedOutsideMenu &&
+        originalActiveElement instanceof HTMLElement &&
+        originalActiveElement.isConnected
+      ) {
+        originalActiveElement.focus({ preventScroll: true });
+      }
       resolve(result);
     }
 
@@ -69,7 +88,10 @@ export function showContextMenuFallback<T extends string>(
       }
     }
 
-    overlay.addEventListener("mousedown", () => cleanup(null));
+    overlay.addEventListener("mousedown", (event) => {
+      event.preventDefault();
+      cleanup(null);
+    });
     document.addEventListener("keydown", onKeyDown);
 
     for (let i = 0; i < items.length; i++) {
