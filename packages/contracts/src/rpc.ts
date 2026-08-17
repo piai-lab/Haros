@@ -204,6 +204,8 @@ import {
   ProjectResolveOutOfRootFileReferenceResult,
   ProjectRunDevServerInput,
   ProjectRunDevServerResult,
+  ProjectSearchContentInput,
+  ProjectSearchContentResult,
   ProjectSearchEntriesInput,
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesInput,
@@ -430,6 +432,12 @@ export const WsProjectsDiscoverScriptsRpc = Rpc.make(WS_METHODS.projectsDiscover
 export const WsProjectsSearchEntriesRpc = Rpc.make(WS_METHODS.projectsSearchEntries, {
   payload: ProjectSearchEntriesInput,
   success: ProjectSearchEntriesResult,
+  error: WsRpcError,
+});
+
+export const WsProjectsSearchContentRpc = Rpc.make(WS_METHODS.projectsSearchContent, {
+  payload: ProjectSearchContentInput,
+  success: ProjectSearchContentResult,
   error: WsRpcError,
 });
 
@@ -1381,6 +1389,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProjectsDiscoverScriptsRpc,
   WsProjectsListDirectoriesRpc,
   WsProjectsSearchEntriesRpc,
+  WsProjectsSearchContentRpc,
   WsProjectsSearchLocalEntriesRpc,
   WsProjectsReadFileRpc,
   WsProjectsResolveOutOfRootFileReferenceRpc,

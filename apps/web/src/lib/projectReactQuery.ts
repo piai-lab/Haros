@@ -5,6 +5,7 @@ import type {
   ProjectReadFileResult,
   ProjectResolveOutOfRootFileReferenceResult,
   ProjectDiscoverScriptsResult,
+  ProjectSearchContentResult,
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesResult,
 } from "@omnimind/contracts";
@@ -29,6 +30,8 @@ export const projectQueryKeys = {
     limit: number,
     kind: ProjectEntry["kind"] | null = null,
   ) => ["projects", "search-entries", cwd, query, limit, kind] as const,
+  searchContent: (cwd: string | null, query: string, limit: number) =>
+    ["projects", "search-content", cwd, query, limit] as const,
   searchLocalEntries: (rootPath: string | null, query: string, limit: number) =>
     ["projects", "search-local-entries", rootPath, query, limit] as const,
 };
@@ -48,6 +51,7 @@ export function invalidateProjectFileQueriesForCwds(
         queryKey: ["projects", "resolve-out-of-root-file-reference", cwd] as const,
       }),
       queryClient.invalidateQueries({ queryKey: ["projects", "search-entries", cwd] as const }),
+      queryClient.invalidateQueries({ queryKey: ["projects", "search-content", cwd] as const }),
     ]),
   );
 }
@@ -55,6 +59,9 @@ export function invalidateProjectFileQueriesForCwds(
 const DEFAULT_SEARCH_ENTRIES_LIMIT = 80;
 const DEFAULT_LIST_DIRECTORIES_STALE_TIME = 15_000;
 const DEFAULT_SEARCH_ENTRIES_STALE_TIME = 15_000;
+const DEFAULT_SEARCH_CONTENT_LIMIT = 50;
+const DEFAULT_SEARCH_CONTENT_STALE_TIME = 10_000;
+const SEARCH_CONTENT_MIN_QUERY_LENGTH = 2;
 const DEFAULT_DISCOVER_SCRIPTS_DEPTH = 2;
 const DEFAULT_DISCOVER_SCRIPTS_STALE_TIME = 30_000;
 const DEFAULT_SEARCH_LOCAL_ENTRIES_LIMIT = 50;
@@ -65,6 +72,10 @@ const LOCAL_PREVIEW_GRANT_MIN_REFETCH_INTERVAL_MS = 1_000;
 export const LOCAL_PREVIEW_GRANT_MAX_REFETCH_INTERVAL_MS = 30_000;
 const EMPTY_SEARCH_ENTRIES_RESULT: ProjectSearchEntriesResult = {
   entries: [],
+  truncated: false,
+};
+const EMPTY_SEARCH_CONTENT_RESULT: ProjectSearchContentResult = {
+  matches: [],
   truncated: false,
 };
 const EMPTY_DISCOVER_SCRIPTS_RESULT: ProjectDiscoverScriptsResult = {
@@ -262,6 +273,33 @@ export function projectSearchEntriesQueryOptions(input: {
     enabled: (input.enabled ?? true) && input.cwd !== null && input.query.length > 0,
     staleTime: input.staleTime ?? DEFAULT_SEARCH_ENTRIES_STALE_TIME,
     placeholderData: (previous) => previous ?? EMPTY_SEARCH_ENTRIES_RESULT,
+  });
+}
+
+export function projectSearchContentQueryOptions(input: {
+  cwd: string | null;
+  query: string;
+  enabled?: boolean;
+  limit?: number;
+  staleTime?: number;
+}) {
+  const limit = input.limit ?? DEFAULT_SEARCH_CONTENT_LIMIT;
+  const trimmedQuery = input.query.trim();
+  return queryOptions({
+    queryKey: projectQueryKeys.searchContent(input.cwd, trimmedQuery, limit),
+    queryFn: async ({ signal }) => {
+      const api = ensureNativeApi();
+      if (!input.cwd) {
+        throw new Error("Workspace content search is unavailable.");
+      }
+      return api.projects.searchContent({ cwd: input.cwd, query: trimmedQuery, limit }, { signal });
+    },
+    enabled:
+      (input.enabled ?? true) &&
+      input.cwd !== null &&
+      trimmedQuery.length >= SEARCH_CONTENT_MIN_QUERY_LENGTH,
+    staleTime: input.staleTime ?? DEFAULT_SEARCH_CONTENT_STALE_TIME,
+    placeholderData: (previous) => previous ?? EMPTY_SEARCH_CONTENT_RESULT,
   });
 }
 

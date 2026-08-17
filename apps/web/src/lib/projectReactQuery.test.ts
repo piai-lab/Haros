@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { QueryClient } from "@tanstack/react-query";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   isLocalPreviewGrantUsable,
+  invalidateProjectFileQueriesForCwds,
   LOCAL_PREVIEW_GRANT_MAX_REFETCH_INTERVAL_MS,
   localPreviewGrantRefetchIntervalMs,
   projectLocalPreviewGrantQueryOptions,
@@ -55,5 +57,21 @@ describe("local preview grant query options", () => {
         state: { data: { grant: "grant-token", expiresAt: "not-a-date" } },
       } as never),
     ).toBe(LOCAL_PREVIEW_GRANT_MAX_REFETCH_INTERVAL_MS);
+  });
+});
+
+describe("workspace search invalidation", () => {
+  it("invalidates filename and content results for the changed workspace only", async () => {
+    const queryClient = new QueryClient();
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
+
+    await invalidateProjectFileQueriesForCwds(queryClient, ["/repo", "/repo"]);
+
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["projects", "search-entries", "/repo"],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["projects", "search-content", "/repo"],
+    });
   });
 });

@@ -5,7 +5,11 @@
 // Exports: WorkspaceFilesSidebar, WorkspaceSearchSidebar, WorkspaceExplorerSidebar,
 //          ExplorerActivityBarButton, useExplorerEntryPrefetch, setFileReferenceDragData.
 
-import type { ProjectEntry, ProjectFileSystemEntry } from "@omnimind/contracts";
+import type {
+  ProjectContentMatch,
+  ProjectEntry,
+  ProjectFileSystemEntry,
+} from "@omnimind/contracts";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -28,6 +32,7 @@ import { showFileReferenceContextMenu } from "~/lib/fileReferenceContextMenu";
 import {
   projectListDirectoriesQueryOptions,
   projectReadFileQueryOptions,
+  projectSearchContentQueryOptions,
   projectSearchEntriesQueryOptions,
 } from "~/lib/projectReactQuery";
 import { getSyntaxHighlighterPromise, getSyntaxLanguageForPath } from "~/lib/syntaxHighlighting";
@@ -64,7 +69,7 @@ const EXPLORER_HIDDEN_DIRECTORY_NAMES = new Set([
 // out into fuzzy-search RPCs, and cap results to keep the sidebar light.
 const EXPLORER_SEARCH_QUERY_DEBOUNCE_MS = 120;
 const EXPLORER_SEARCH_RESULTS_LIMIT = 80;
-const EMPTY_WORKSPACE_SEARCH_FILE_MATCHES: ReadonlyArray<ProjectEntry> = [];
+const EXPLORER_CONTENT_SEARCH_MIN_QUERY_LENGTH = 2;
 
 // Default sidebar shell: a full-height column in the editor's wide row layout
 // that collapses to a stacked block on narrow viewports. Surfaces with a fixed
@@ -414,6 +419,7 @@ function WorkspaceSearchResultRow(props: {
     <button
       {...EXPLORER_ROW_PROPS}
       type="button"
+      aria-current={props.selected ? "page" : undefined}
       className={fileRowClassName(props.selected, "h-8 px-2")}
       title={entry.path}
       draggable
@@ -439,10 +445,68 @@ function WorkspaceSearchResultRow(props: {
   );
 }
 
-interface WorkspaceFileSearchState {
+function WorkspaceContentSearchResultRow(props: {
+  match: ProjectContentMatch;
+  onSelectFile: (path: string) => void;
+  onPrefetchEntry: (entry: Pick<ProjectFileSystemEntry, "path" | "kind">) => void;
+  onEntryContextMenu: (path: string, position: { x: number; y: number }) => void;
+}) {
+  const { t } = useI18n();
+  const { match, onEntryContextMenu, onPrefetchEntry, onSelectFile } = props;
+  const { dir, name } = splitRepoRelativePath(match.path);
+  const entry = { path: match.path, kind: "file" as const };
+  const handlePrefetch = () => onPrefetchEntry(entry);
+  const lineLabel = t("file.line", { line: match.lineNumber });
+
+  return (
+    <button
+      {...EXPLORER_ROW_PROPS}
+      type="button"
+      aria-label={`${match.path}, ${lineLabel}: ${match.lineText}`}
+      className={fileRowClassName(false, "min-h-11 items-start px-2 py-1.5")}
+      title={`${match.path}:${match.lineNumber}`}
+      draggable
+      onDragStart={(event) => {
+        setFileReferenceDragData(event.dataTransfer, match.path);
+      }}
+      onClick={() => onSelectFile(match.path)}
+      onPointerEnter={handlePrefetch}
+      onFocus={handlePrefetch}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onEntryContextMenu(match.path, { x: event.clientX, y: event.clientY });
+      }}
+    >
+      <FileEntryIcon
+        pathValue={match.path}
+        kind="file"
+        className="mt-0.5 size-3.5 shrink-0 opacity-75"
+      />
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="flex min-w-0 items-baseline gap-1.5 overflow-hidden">
+          <span className="shrink-0 truncate font-medium">{name}</span>
+          <span className="min-w-0 truncate text-[11px] text-muted-foreground/55">
+            {dir ? `${dir} · ${lineLabel}` : lineLabel}
+          </span>
+        </div>
+        <div className="truncate font-mono text-[11px] leading-5 text-muted-foreground/70">
+          {match.lineText}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+type WorkspaceSearchMatch =
+  | { readonly type: "file"; readonly path: string; readonly entry: ProjectEntry }
+  | { readonly type: "content"; readonly path: string; readonly match: ProjectContentMatch };
+
+const EMPTY_WORKSPACE_SEARCH_MATCHES: ReadonlyArray<WorkspaceSearchMatch> = [];
+
+interface WorkspaceSearchState {
   // Trimmed live input — drives the "is the box empty?" decision (tree vs results).
   inputQuery: string;
-  fileMatches: ReadonlyArray<ProjectEntry>;
+  matches: ReadonlyArray<WorkspaceSearchMatch>;
   searchResultsPending: boolean;
   searchResultsCurrent: boolean;
   isFetching: boolean;
@@ -450,18 +514,16 @@ interface WorkspaceFileSearchState {
   truncated: boolean;
 }
 
-// Fuzzy file-name search shared by the standalone search sidebar and the
-// combined explorer sidebar: debounce keystrokes, then expose the matches plus
-// the freshness flags both surfaces need to gate selection on stale results.
-function useWorkspaceFileSearch(
-  workspaceRoot: string | null,
-  query: string,
-): WorkspaceFileSearchState {
+// One debounced projection shared by the standalone search sidebar and the
+// combined explorer. Filename rank stays authoritative and content matches
+// follow in deterministic path/line order inside the same keyboard list.
+function useWorkspaceSearch(workspaceRoot: string | null, query: string): WorkspaceSearchState {
   const [debouncedQuery] = useDebouncedValue(query, {
     wait: EXPLORER_SEARCH_QUERY_DEBOUNCE_MS,
   });
   const inputQuery = query.trim();
   const trimmedQuery = debouncedQuery.trim();
+  const contentSearchEnabled = trimmedQuery.length >= EXPLORER_CONTENT_SEARCH_MIN_QUERY_LENGTH;
   const entriesQuery = useQuery(
     projectSearchEntriesQueryOptions({
       cwd: workspaceRoot,
@@ -470,21 +532,51 @@ function useWorkspaceFileSearch(
       limit: EXPLORER_SEARCH_RESULTS_LIMIT,
     }),
   );
+  const contentQuery = useQuery(
+    projectSearchContentQueryOptions({
+      cwd: workspaceRoot,
+      query: trimmedQuery,
+      limit: EXPLORER_SEARCH_RESULTS_LIMIT,
+      enabled: contentSearchEnabled,
+    }),
+  );
   // Results are tied to the debounced query. While the user is ahead of that
   // query, keep old results non-selectable so Enter cannot open a stale match.
-  const searchResultsPending = inputQuery !== trimmedQuery || entriesQuery.isPlaceholderData;
+  const searchResultsPending =
+    inputQuery !== trimmedQuery ||
+    (entriesQuery.isPlaceholderData && !entriesQuery.error) ||
+    (contentSearchEnabled && contentQuery.isPlaceholderData && !contentQuery.error);
   const searchResultsCurrent = !searchResultsPending;
-  const fileMatches = searchResultsCurrent
-    ? (entriesQuery.data?.entries ?? EMPTY_WORKSPACE_SEARCH_FILE_MATCHES)
-    : EMPTY_WORKSPACE_SEARCH_FILE_MATCHES;
+  const currentError = searchResultsCurrent
+    ? (entriesQuery.error ?? (contentSearchEnabled ? contentQuery.error : null))
+    : null;
+  const allMatches: WorkspaceSearchMatch[] =
+    searchResultsCurrent && !currentError
+      ? [
+          ...(entriesQuery.data?.entries ?? []).map(
+            (entry): WorkspaceSearchMatch => ({ type: "file", path: entry.path, entry }),
+          ),
+          ...(contentSearchEnabled ? (contentQuery.data?.matches ?? []) : []).map(
+            (match): WorkspaceSearchMatch => ({ type: "content", path: match.path, match }),
+          ),
+        ]
+      : [];
+  const matches = searchResultsCurrent
+    ? allMatches.slice(0, EXPLORER_SEARCH_RESULTS_LIMIT)
+    : EMPTY_WORKSPACE_SEARCH_MATCHES;
   return {
     inputQuery,
-    fileMatches,
+    matches,
     searchResultsPending,
     searchResultsCurrent,
-    isFetching: entriesQuery.isFetching,
-    error: searchResultsCurrent ? entriesQuery.error : null,
-    truncated: entriesQuery.data?.truncated ?? false,
+    isFetching: entriesQuery.isFetching || (contentSearchEnabled && contentQuery.isFetching),
+    error: currentError,
+    truncated:
+      searchResultsCurrent &&
+      !currentError &&
+      ((entriesQuery.data?.truncated ?? false) ||
+        (contentSearchEnabled && (contentQuery.data?.truncated ?? false)) ||
+        allMatches.length > EXPLORER_SEARCH_RESULTS_LIMIT),
   };
 }
 
@@ -492,7 +584,7 @@ function useWorkspaceFileSearch(
 // Enter and clears (returning to the tree, in the combined sidebar) on Escape.
 function WorkspaceSearchInputHeader(props: {
   query: string;
-  search: WorkspaceFileSearchState;
+  search: WorkspaceSearchState;
   autoFocus?: boolean;
   onQueryChange: (query: string) => void;
   onSelectFile: (path: string) => void;
@@ -505,7 +597,7 @@ function WorkspaceSearchInputHeader(props: {
       if (!search.searchResultsCurrent) {
         return;
       }
-      const topMatch = search.fileMatches[0];
+      const topMatch = search.matches[0];
       if (topMatch) {
         onSelectFile(topMatch.path);
       }
@@ -538,20 +630,31 @@ function WorkspaceSearchInputHeader(props: {
 // mount it once the query is non-empty, so the empty-query state lives outside.
 function WorkspaceSearchResultsBody(props: {
   workspaceRoot: string | null;
-  search: WorkspaceFileSearchState;
+  search: WorkspaceSearchState;
   selectedFilePath: string | null;
   onSelectFile: (path: string) => void;
   onPrefetchEntry: (entry: Pick<ProjectFileSystemEntry, "path" | "kind">) => void;
   onEntryContextMenu: (path: string, position: { x: number; y: number }) => void;
 }) {
   const { t } = useI18n();
-  const { fileMatches } = props.search;
+  const { matches } = props.search;
+  const statusText = props.search.error
+    ? t("file.searchFailed")
+    : props.search.searchResultsPending || props.search.isFetching
+      ? t("common.loading")
+      : t(matches.length === 1 ? "file.searchResultCount" : "file.searchResultCountPlural", {
+          count: matches.length,
+        });
   return (
     <>
+      <p role="status" aria-live="polite" className="sr-only">
+        {statusText}
+      </p>
       <div
+        aria-busy={props.search.searchResultsPending || props.search.isFetching}
         className={cn(
           "min-h-0 flex-1 overflow-auto px-1 py-1",
-          fileMatches.length === 0 && "flex flex-col",
+          matches.length === 0 && "flex flex-col",
         )}
       >
         {!props.workspaceRoot ? (
@@ -572,7 +675,7 @@ function WorkspaceSearchResultsBody(props: {
               ) : null}
             </div>
           </PanelStateMessage>
-        ) : fileMatches.length === 0 ? (
+        ) : matches.length === 0 ? (
           props.search.searchResultsPending || props.search.isFetching ? (
             <ExplorerLoadingRows depth={0} />
           ) : (
@@ -581,19 +684,29 @@ function WorkspaceSearchResultsBody(props: {
             </PanelStateMessage>
           )
         ) : (
-          fileMatches.map((entry) => (
-            <WorkspaceSearchResultRow
-              key={entry.path}
-              entry={entry}
-              selected={entry.path === props.selectedFilePath}
-              onSelectFile={props.onSelectFile}
-              onPrefetchEntry={props.onPrefetchEntry}
-              onEntryContextMenu={props.onEntryContextMenu}
-            />
-          ))
+          matches.map((result) =>
+            result.type === "file" ? (
+              <WorkspaceSearchResultRow
+                key={`file:${result.path}`}
+                entry={result.entry}
+                selected={result.path === props.selectedFilePath}
+                onSelectFile={props.onSelectFile}
+                onPrefetchEntry={props.onPrefetchEntry}
+                onEntryContextMenu={props.onEntryContextMenu}
+              />
+            ) : (
+              <WorkspaceContentSearchResultRow
+                key={`content:${result.path}:${result.match.lineNumber}`}
+                match={result.match}
+                onSelectFile={props.onSelectFile}
+                onPrefetchEntry={props.onPrefetchEntry}
+                onEntryContextMenu={props.onEntryContextMenu}
+              />
+            ),
+          )
         )}
       </div>
-      {fileMatches.length > 0 && props.search.truncated ? (
+      {props.search.searchResultsCurrent && props.search.truncated ? (
         <p className="shrink-0 border-t border-border/45 px-3 py-1.5 text-[10px] text-muted-foreground/70">
           {t("file.topMatches")}
         </p>
@@ -615,7 +728,7 @@ export function WorkspaceSearchSidebar(props: {
   const prefetchEntry = useExplorerEntryPrefetch(props.workspaceRoot);
   const handleEntryContextMenu = useResultEntryContextMenu(props.onReferenceInChat);
   const handleListKeyDown = useExplorerListNavigation();
-  const search = useWorkspaceFileSearch(props.workspaceRoot, props.query);
+  const search = useWorkspaceSearch(props.workspaceRoot, props.query);
 
   return (
     <aside
@@ -667,7 +780,7 @@ export function WorkspaceExplorerSidebar(props: {
   const handleTreeEntryContextMenu = useTreeEntryContextMenu(props.onReferenceInChat);
   const handleResultEntryContextMenu = useResultEntryContextMenu(props.onReferenceInChat);
   const handleListKeyDown = useExplorerListNavigation();
-  const search = useWorkspaceFileSearch(props.workspaceRoot, props.query);
+  const search = useWorkspaceSearch(props.workspaceRoot, props.query);
 
   return (
     <aside

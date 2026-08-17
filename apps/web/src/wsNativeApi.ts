@@ -522,6 +522,11 @@ export function createWsNativeApi(): NativeApi {
       discoverScripts: (input) => transport.request(WS_METHODS.projectsDiscoverScripts, input),
       listDirectories: (input) => transport.request(WS_METHODS.projectsListDirectories, input),
       searchEntries: (input) => transport.request(WS_METHODS.projectsSearchEntries, input),
+      searchContent: (input, options) =>
+        transport.request(WS_METHODS.projectsSearchContent, input, {
+          timeoutMs: 5_000,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
       searchLocalEntries: (input) =>
         transport.request(WS_METHODS.projectsSearchLocalEntries, input),
       readFile: (input) => transport.request(WS_METHODS.projectsReadFile, input),

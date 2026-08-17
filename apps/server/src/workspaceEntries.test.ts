@@ -10,6 +10,7 @@ import * as ProcessRunner from "./processRunner";
 import {
   discoverProjectScripts,
   listWorkspaceDirectories,
+  searchWorkspaceContent,
   searchWorkspaceEntries,
 } from "./workspaceEntries";
 
@@ -452,5 +453,230 @@ describe("discoverProjectScripts", () => {
     expect(commandsByPath.get("apps/pnpm")).toBe("pnpm run dev");
     expect(commandsByPath.get("apps/yarn")).toBe("yarn dev");
     expect(commandsByPath.get("apps/npm")).toBe("npm run dev");
+  });
+});
+
+describe("searchWorkspaceContent", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    for (const dir of tempDirs.splice(0, tempDirs.length)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns case-insensitive path, line, and bounded snippet matches", async () => {
+    const cwd = makeTempDir("omnimind-content-search-basic-");
+    writeFile(
+      cwd,
+      "src/index.ts",
+      "export const a = 1;\nexport function FindMe() {\n  return true;\n}\n",
+    );
+    writeFile(cwd, "src/other.ts", "const FINDME = 'x';\n");
+
+    const result = await searchWorkspaceContent({ cwd, query: "findme" });
+
+    expect(result).toEqual({
+      matches: [
+        { path: "src/index.ts", lineNumber: 2, lineText: "export function FindMe() {" },
+        { path: "src/other.ts", lineNumber: 1, lineText: "const FINDME = 'x';" },
+      ],
+      truncated: false,
+    });
+  });
+
+  it("defensively ignores one-character content queries", async () => {
+    const cwd = makeTempDir("omnimind-content-search-short-");
+    writeFile(cwd, "a.ts", "x\n");
+
+    await expect(searchWorkspaceContent({ cwd, query: "x" } as never)).resolves.toEqual({
+      matches: [],
+      truncated: false,
+    });
+  });
+
+  it("skips hidden, ignored, binary, invalid UTF-8, and oversized files", async () => {
+    const cwd = makeTempDir("omnimind-content-search-filtered-");
+    writeFile(cwd, "src/visible.ts", "visible needle\n");
+    writeFile(cwd, ".env", "hidden needle\n");
+    writeFile(cwd, ".hidden/secret.ts", "hidden needle\n");
+    writeFile(cwd, ".omnimind-cache/secret.ts", "hidden needle\n");
+    writeFile(cwd, "packages/app/node_modules/pkg/index.js", "ignored needle\n");
+    writeFile(cwd, ".gitignore", "ignored/**\n");
+    writeFile(cwd, "ignored/secret.ts", "ignored needle\n");
+    runGit(cwd, ["init"]);
+    fs.writeFileSync(
+      path.join(cwd, "blob.bin"),
+      Buffer.concat([Buffer.from("needle"), Buffer.alloc(9_000, 0x61), Buffer.from([0x00])]),
+    );
+    fs.writeFileSync(
+      path.join(cwd, "invalid.txt"),
+      Buffer.from([0xff, 0x6e, 0x65, 0x65, 0x64, 0x6c, 0x65]),
+    );
+    fs.writeFileSync(
+      path.join(cwd, "too-large.txt"),
+      Buffer.concat([Buffer.from("needle"), Buffer.alloc(512 * 1024, 0x61)]),
+    );
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+    expect(result.matches).toEqual([
+      { path: "src/visible.ts", lineNumber: 1, lineText: "visible needle" },
+    ]);
+  });
+
+  it("applies hidden and default ignore rules outside git workspaces", async () => {
+    const cwd = makeTempDir("omnimind-content-search-non-git-ignore-");
+    writeFile(cwd, "src/visible.ts", "visible needle\n");
+    writeFile(cwd, ".hidden/secret.ts", "hidden needle\n");
+    writeFile(cwd, ".omnimind-cache/secret.ts", "hidden needle\n");
+    writeFile(cwd, "node_modules/pkg/index.js", "ignored needle\n");
+    writeFile(cwd, "dist/output.js", "ignored needle\n");
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+    expect(result.matches).toEqual([
+      { path: "src/visible.ts", lineNumber: 1, lineText: "visible needle" },
+    ]);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "allows in-root symlinks but never reads tracked external symlinks",
+    async () => {
+      const cwd = makeTempDir("omnimind-content-search-symlink-");
+      const outside = makeTempDir("omnimind-content-search-outside-");
+      writeFile(cwd, "docs/inside.txt", "inside needle\n");
+      writeFile(outside, "secret.txt", "outside needle\n");
+      fs.symlinkSync(path.join(cwd, "docs/inside.txt"), path.join(cwd, "inside-link.txt"));
+      fs.symlinkSync(path.join(outside, "secret.txt"), path.join(cwd, "outside-link.txt"));
+      runGit(cwd, ["init"]);
+      runGit(cwd, ["add", "docs/inside.txt", "inside-link.txt", "outside-link.txt"]);
+
+      const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+      expect(result.matches.map((match) => match.path)).toEqual([
+        "docs/inside.txt",
+        "inside-link.txt",
+      ]);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "rejects a file swapped to an external symlink between realpath and open",
+    async () => {
+      const cwd = makeTempDir("omnimind-content-search-swap-");
+      const outside = makeTempDir("omnimind-content-search-swap-outside-");
+      const targetPath = path.join(cwd, "target.txt");
+      writeFile(cwd, "target.txt", "inside needle\n");
+      writeFile(outside, "secret.txt", "outside needle\n");
+      const canonicalTargetPath = await fsPromises.realpath(targetPath);
+      const originalOpen = fsPromises.open.bind(fsPromises);
+      let swapped = false;
+      vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+        if (!swapped && args[0] === canonicalTargetPath) {
+          swapped = true;
+          fs.unlinkSync(targetPath);
+          fs.symlinkSync(path.join(outside, "secret.txt"), targetPath);
+        }
+        return originalOpen(...args);
+      });
+
+      const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+      expect(swapped).toBe(true);
+      expect(result.matches).toEqual([]);
+    },
+  );
+
+  it("caps hot files and reports global truncation", async () => {
+    const cwd = makeTempDir("omnimind-content-search-limits-");
+    writeFile(cwd, "hot.ts", Array.from({ length: 10 }, () => "hot needle\n").join(""));
+    for (let index = 0; index < 10; index += 1) {
+      writeFile(cwd, `src/file${index}.ts`, `needle ${index}\n`);
+    }
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+    expect(result.matches.filter((match) => match.path === "hot.ts")).toHaveLength(5);
+    expect(result.matches.some((match) => match.path.startsWith("src/"))).toBe(true);
+    expect(result.truncated).toBe(true);
+
+    const limitedResult = await searchWorkspaceContent({ cwd, query: "needle", limit: 5 });
+
+    expect(limitedResult.matches).toHaveLength(5);
+    expect(limitedResult.truncated).toBe(true);
+  });
+
+  it("bounds snippets without producing an invalid surrogate", async () => {
+    const cwd = makeTempDir("omnimind-content-search-line-boundary-");
+    writeFile(cwd, "long.ts", `needle ${"a".repeat(1_016)}🙂tail\n`);
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+
+    expect(result.matches[0]?.lineText.length).toBeLessThanOrEqual(1_024);
+    expect(result.matches[0]?.lineText).not.toContain("�");
+  });
+
+  it("never scans beyond the bounded workspace file cap", async () => {
+    const cwd = makeTempDir("omnimind-content-search-file-cap-");
+    for (let index = 0; index < 2_001; index += 1) {
+      writeFile(cwd, `src/file-${String(index).padStart(4, "0")}.txt`, "needle\n");
+    }
+    await searchWorkspaceEntries({ cwd, query: "", limit: 1 });
+    const originalOpen = fsPromises.open.bind(fsPromises);
+    const openSpy = vi
+      .spyOn(fsPromises, "open")
+      .mockImplementation((...args) => originalOpen(...args));
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle", limit: 1 });
+
+    expect(openSpy.mock.calls.length).toBeLessThanOrEqual(2_000);
+    expect(result.truncated).toBe(true);
+  });
+
+  it("honors cancellation before filesystem work starts", async () => {
+    const cwd = makeTempDir("omnimind-content-search-abort-");
+    writeFile(cwd, "a.ts", "needle\n");
+    const controller = new AbortController();
+    controller.abort();
+    const openSpy = vi.spyOn(fsPromises, "open");
+
+    await expect(
+      searchWorkspaceContent({ cwd, query: "needle" }, controller.signal),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it("stops an active scan when its request signal is cancelled", async () => {
+    const cwd = makeTempDir("omnimind-content-search-active-abort-");
+    for (let index = 0; index < 20; index += 1) {
+      writeFile(cwd, `file-${index}.ts`, "needle\n");
+    }
+    const controller = new AbortController();
+    const originalOpen = fsPromises.open.bind(fsPromises);
+    const openSpy = vi.spyOn(fsPromises, "open").mockImplementation(async (...args) => {
+      const handle = await originalOpen(...args);
+      if (!controller.signal.aborted) controller.abort();
+      return handle;
+    });
+
+    await expect(
+      searchWorkspaceContent({ cwd, query: "needle" }, controller.signal),
+    ).rejects.toMatchObject({ name: "AbortError" });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(openSpy.mock.calls.length).toBeLessThanOrEqual(8);
+  });
+
+  it("counts index acquisition inside the bounded search budget", async () => {
+    const cwd = makeTempDir("omnimind-content-search-timeout-");
+    writeFile(cwd, "a.ts", "needle\n");
+    const openSpy = vi.spyOn(fsPromises, "open");
+    vi.spyOn(Date, "now").mockReturnValueOnce(0).mockReturnValue(4_000);
+
+    await expect(searchWorkspaceContent({ cwd, query: "needle" })).resolves.toEqual({
+      matches: [],
+      truncated: true,
+    });
+    expect(openSpy).not.toHaveBeenCalled();
   });
 });

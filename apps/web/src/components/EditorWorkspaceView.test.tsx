@@ -399,7 +399,7 @@ describe("EditorWorkspaceView", () => {
 
     const filesIndex = markup.indexOf('aria-label="Hide files sidebar"');
     const diffIndex = markup.indexOf('aria-label="Diff"');
-    const searchIndex = markup.indexOf('aria-label="Search files"');
+    const searchIndex = markup.indexOf('aria-label="Search workspace"');
     expect(filesIndex).toBeGreaterThan(-1);
     expect(diffIndex).toBeGreaterThan(filesIndex);
     expect(searchIndex).toBeGreaterThan(diffIndex);
@@ -420,8 +420,8 @@ describe("EditorWorkspaceView", () => {
       </QueryClientProvider>,
     );
 
-    expect(markup).toContain('placeholder="Search files…"');
-    expect(markup).toContain("Search files by name or path.");
+    expect(markup).toContain('placeholder="Search files and contents…"');
+    expect(markup).toContain("Search by file name, path, or content.");
   });
 
   it("lists only matching files from the workspace search results", () => {
@@ -430,6 +430,19 @@ describe("EditorWorkspaceView", () => {
       projectQueryKeys.searchEntries("/Users/tester/project", "editor", 80, "file"),
       {
         entries: [{ path: "apps/web/src/components/EditorWorkspaceView.tsx", kind: "file" }],
+        truncated: false,
+      },
+    );
+    queryClient.setQueryData(
+      projectQueryKeys.searchContent("/Users/tester/project", "editor", 80),
+      {
+        matches: [
+          {
+            path: "apps/web/src/components/OtherView.tsx",
+            lineNumber: 12,
+            lineText: "const editorMode = true;",
+          },
+        ],
         truncated: false,
       },
     );
@@ -448,7 +461,9 @@ describe("EditorWorkspaceView", () => {
 
     expect(markup).toContain('title="apps/web/src/components/EditorWorkspaceView.tsx"');
     expect(markup).toContain("EditorWorkspaceView.tsx");
-    expect(markup).not.toContain("No matching files.");
+    expect(markup).toContain('title="apps/web/src/components/OtherView.tsx:12"');
+    expect(markup).toContain("const editorMode = true;");
+    expect(markup).not.toContain("No matching files or contents.");
   });
 
   it("shows pointer cursor on activity buttons that switch files and diff", () => {

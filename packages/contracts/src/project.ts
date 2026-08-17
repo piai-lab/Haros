@@ -8,6 +8,9 @@ import {
 } from "./baseSchemas";
 
 const PROJECT_SEARCH_ENTRIES_MAX_LIMIT = 200;
+const PROJECT_SEARCH_CONTENT_MAX_LIMIT = 100;
+const PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH = 2;
+const PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH = 1024;
 const PROJECT_SEARCH_LOCAL_ENTRIES_MAX_LIMIT = 100;
 const PROJECT_FILE_PATH_MAX_LENGTH = 512;
 const PROJECT_READ_FILE_PATH_MAX_LENGTH = 2048;
@@ -105,6 +108,30 @@ export const ProjectSearchEntriesResult = Schema.Struct({
   truncated: Schema.Boolean,
 });
 export type ProjectSearchEntriesResult = typeof ProjectSearchEntriesResult.Type;
+
+export const ProjectSearchContentInput = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+  query: TrimmedNonEmptyString.check(Schema.isMaxLength(256)).check(
+    Schema.isMinLength(PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH),
+  ),
+  limit: Schema.optional(
+    PositiveInt.check(Schema.isLessThanOrEqualTo(PROJECT_SEARCH_CONTENT_MAX_LIMIT)),
+  ),
+});
+export type ProjectSearchContentInput = typeof ProjectSearchContentInput.Type;
+
+export const ProjectContentMatch = Schema.Struct({
+  path: TrimmedNonEmptyString,
+  lineNumber: PositiveInt,
+  lineText: Schema.String.check(Schema.isMaxLength(PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH)),
+});
+export type ProjectContentMatch = typeof ProjectContentMatch.Type;
+
+export const ProjectSearchContentResult = Schema.Struct({
+  matches: Schema.Array(ProjectContentMatch),
+  truncated: Schema.Boolean,
+});
+export type ProjectSearchContentResult = typeof ProjectSearchContentResult.Type;
 
 export const ProjectSearchLocalEntriesInput = Schema.Struct({
   rootPath: TrimmedNonEmptyString,

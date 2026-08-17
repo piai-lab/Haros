@@ -14,6 +14,7 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(ORCHESTRATION_WS_METHODS.repairState)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverPrewarmVoice)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.serverGetUsageHistory)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.projectsSearchContent)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesList)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesGet)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
@@ -85,7 +86,7 @@ describe("WsRequestAdmission", () => {
         const fiber = yield* admission
           .guard(
             1,
-            ORCHESTRATION_WS_METHODS.getSnapshot,
+            WS_METHODS.projectsSearchContent,
             Deferred.succeed(started, undefined).pipe(Effect.andThen(Effect.never)),
           )
           .pipe(Effect.forkChild);

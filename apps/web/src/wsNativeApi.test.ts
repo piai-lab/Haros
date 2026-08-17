@@ -840,6 +840,21 @@ describe("wsNativeApi", () => {
     });
   });
 
+  it("forwards workspace content-search cancellation with its bounded RPC ceiling", async () => {
+    requestMock.mockResolvedValue({ matches: [], truncated: false });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+    const input = { cwd: "/repo", query: "needle", limit: 80 };
+
+    await api.projects.searchContent(input, { signal: controller.signal });
+
+    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.projectsSearchContent, input, {
+      timeoutMs: 5_000,
+      signal: controller.signal,
+    });
+  });
+
   it("forwards full-thread diff requests to the orchestration websocket method", async () => {
     requestMock.mockResolvedValue({ diff: "patch" });
     const { createWsNativeApi } = await import("./wsNativeApi");

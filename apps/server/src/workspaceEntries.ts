@@ -1,5 +1,5 @@
 import fs from "node:fs/promises";
-import type { Dirent } from "node:fs";
+import type { BigIntStats, Dirent } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { runProcess } from "./processRunner";
@@ -16,13 +16,16 @@ import {
   ProjectListDirectoriesResult,
   ProjectEntry,
   ProjectLocalSearchEntry,
+  ProjectContentMatch,
+  ProjectSearchContentInput,
+  ProjectSearchContentResult,
   ProjectSearchEntriesInput,
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesInput,
   ProjectSearchLocalEntriesResult,
 } from "@omnimind/contracts";
 import { isExplicitRelativePath, isWindowsAbsolutePath } from "@omnimind/shared/path";
-import { resolveRealPathWithinRoot } from "./workspace/realPathContainment";
+import { isContainedPath, resolveRealPathWithinRoot } from "./workspace/realPathContainment";
 
 const WORKSPACE_CACHE_TTL_MS = 15_000;
 const WORKSPACE_CACHE_MAX_KEYS = 4;
@@ -826,6 +829,261 @@ export async function searchWorkspaceEntries(
   return {
     entries: rankedEntries.map((candidate) => candidate.entry),
     truncated: index.truncated || matchedEntryCount > limit,
+  };
+}
+
+const CONTENT_SEARCH_DEFAULT_LIMIT = 50;
+const CONTENT_SEARCH_MAX_LIMIT = 100;
+const CONTENT_SEARCH_MIN_QUERY_LENGTH = 2;
+const CONTENT_SEARCH_MAX_FILE_BYTES = 512 * 1024;
+const CONTENT_SEARCH_MAX_MATCHES_PER_FILE = 5;
+const CONTENT_SEARCH_MAX_FILES_SCANNED = 2_000;
+const CONTENT_SEARCH_TIME_BUDGET_MS = 4_000;
+const CONTENT_SEARCH_READ_CONCURRENCY = 8;
+const CONTENT_SEARCH_MAX_LINE_LENGTH = 1024;
+const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+
+class ContentSearchDeadlineExceeded extends Error {}
+
+function assertContentSearchBudget(deadline: number, signal?: AbortSignal): void {
+  signal?.throwIfAborted();
+  if (Date.now() >= deadline) {
+    throw new ContentSearchDeadlineExceeded();
+  }
+}
+
+function isContentSearchablePath(relativePath: string): boolean {
+  return relativePath.split("/").every((segment) => {
+    if (!segment || segment.startsWith(".")) {
+      return false;
+    }
+    return !IGNORED_DIRECTORY_NAMES.has(segment);
+  });
+}
+
+function sameContentFileState(left: BigIntStats, right: BigIntStats): boolean {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.size === right.size &&
+    left.mtimeNs === right.mtimeNs &&
+    left.ctimeNs === right.ctimeNs
+  );
+}
+
+function buildContentLineText(line: string): string {
+  const trimmed = line.trimEnd();
+  if (trimmed.length <= CONTENT_SEARCH_MAX_LINE_LENGTH) {
+    return trimmed;
+  }
+  let sliceEnd = CONTENT_SEARCH_MAX_LINE_LENGTH - 1;
+  const finalCodeUnit = trimmed.charCodeAt(sliceEnd - 1);
+  if (finalCodeUnit >= 0xd800 && finalCodeUnit <= 0xdbff) {
+    sliceEnd -= 1;
+  }
+  return `${trimmed.slice(0, sliceEnd)}…`;
+}
+
+async function searchWorkspaceFileContent(input: {
+  cwd: string;
+  realRoot: string;
+  rootStat: BigIntStats;
+  relativePath: string;
+  normalizedQuery: string;
+  deadline: number;
+  signal?: AbortSignal;
+}): Promise<{ matches: ProjectContentMatch[]; truncated: boolean } | null> {
+  assertContentSearchBudget(input.deadline, input.signal);
+  const lexicalPath = path.join(input.cwd, input.relativePath);
+  const initialRealPath = await resolveRealPathWithinRoot(input.realRoot, lexicalPath).catch(
+    () => null,
+  );
+  if (!initialRealPath) {
+    return null;
+  }
+
+  let handle: Awaited<ReturnType<typeof fs.open>>;
+  try {
+    handle = await fs.open(initialRealPath, "r");
+  } catch {
+    return null;
+  }
+
+  try {
+    assertContentSearchBudget(input.deadline, input.signal);
+    const beforeReadStat = await handle.stat({ bigint: true });
+    const [currentRealRoot, currentRootStat, currentRealPath] = await Promise.all([
+      fs.realpath(input.cwd),
+      fs.stat(input.realRoot, { bigint: true }),
+      fs.realpath(lexicalPath),
+    ]);
+    if (
+      currentRealRoot !== input.realRoot ||
+      !sameContentFileState(input.rootStat, currentRootStat) ||
+      !isContainedPath(currentRealRoot, currentRealPath)
+    ) {
+      return null;
+    }
+    const pathStat = await fs.stat(currentRealPath, { bigint: true });
+    if (
+      !beforeReadStat.isFile() ||
+      beforeReadStat.size === 0n ||
+      beforeReadStat.size > BigInt(CONTENT_SEARCH_MAX_FILE_BYTES) ||
+      !sameContentFileState(beforeReadStat, pathStat)
+    ) {
+      return null;
+    }
+
+    const byteLength = Number(beforeReadStat.size);
+    const bytes = Buffer.alloc(byteLength);
+    let offset = 0;
+    while (offset < byteLength) {
+      assertContentSearchBudget(input.deadline, input.signal);
+      const { bytesRead } = await handle.read(bytes, offset, byteLength - offset, offset);
+      if (bytesRead === 0) break;
+      offset += bytesRead;
+    }
+    assertContentSearchBudget(input.deadline, input.signal);
+
+    const [afterReadStat, finalRealRoot, finalRealPath] = await Promise.all([
+      handle.stat({ bigint: true }),
+      fs.realpath(input.cwd),
+      fs.realpath(lexicalPath),
+    ]);
+    if (
+      offset !== byteLength ||
+      finalRealRoot !== input.realRoot ||
+      !isContainedPath(finalRealRoot, finalRealPath) ||
+      !sameContentFileState(beforeReadStat, afterReadStat)
+    ) {
+      return null;
+    }
+    const finalPathStat = await fs.stat(finalRealPath, { bigint: true });
+    if (!sameContentFileState(afterReadStat, finalPathStat)) {
+      return null;
+    }
+
+    if (bytes.includes(0)) {
+      return null;
+    }
+    const textBytes = bytes.subarray(0, UTF8_BOM.length).equals(UTF8_BOM)
+      ? bytes.subarray(UTF8_BOM.length)
+      : bytes;
+    let contents: string;
+    try {
+      contents = new TextDecoder("utf-8", { fatal: true }).decode(textBytes);
+    } catch {
+      return null;
+    }
+
+    const matches: ProjectContentMatch[] = [];
+    let truncated = false;
+    const lines = contents.split(/\r\n|\n|\r/);
+    for (let index = 0; index < lines.length; index += 1) {
+      assertContentSearchBudget(input.deadline, input.signal);
+      const line = lines[index];
+      if (!line || !line.toLowerCase().includes(input.normalizedQuery)) continue;
+      if (matches.length >= CONTENT_SEARCH_MAX_MATCHES_PER_FILE) {
+        truncated = true;
+        break;
+      }
+      matches.push({
+        path: input.relativePath,
+        lineNumber: index + 1,
+        lineText: buildContentLineText(line),
+      });
+    }
+    return { matches, truncated };
+  } catch (cause) {
+    if (cause instanceof ContentSearchDeadlineExceeded || input.signal?.aborted) {
+      throw cause;
+    }
+    return null;
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
+}
+
+export async function searchWorkspaceContent(
+  input: ProjectSearchContentInput,
+  signal?: AbortSignal,
+): Promise<ProjectSearchContentResult> {
+  const normalizedQuery = input.query.trim().toLowerCase();
+  if (normalizedQuery.length < CONTENT_SEARCH_MIN_QUERY_LENGTH) {
+    return { matches: [], truncated: false };
+  }
+
+  const deadline = Date.now() + CONTENT_SEARCH_TIME_BUDGET_MS;
+  signal?.throwIfAborted();
+  const [index, realRoot] = await Promise.all([
+    getWorkspaceIndex(input.cwd),
+    fs.realpath(input.cwd),
+  ]);
+  signal?.throwIfAborted();
+  if (Date.now() >= deadline) {
+    return { matches: [], truncated: true };
+  }
+  const rootStat = await fs.stat(realRoot, { bigint: true });
+  const limit = Math.max(
+    1,
+    Math.min(input.limit ?? CONTENT_SEARCH_DEFAULT_LIMIT, CONTENT_SEARCH_MAX_LIMIT),
+  );
+  const allFilePaths = index.entries
+    .filter((entry) => entry.kind === "file" && isContentSearchablePath(entry.path))
+    .map((entry) => entry.path);
+  const filePaths = allFilePaths.slice(0, CONTENT_SEARCH_MAX_FILES_SCANNED);
+  const collected: ProjectContentMatch[] = [];
+  let nextIndex = 0;
+  let scannedFiles = 0;
+  let truncated = index.truncated || filePaths.length < allFilePaths.length;
+
+  const workers = Array.from(
+    { length: Math.max(1, Math.min(CONTENT_SEARCH_READ_CONCURRENCY, filePaths.length)) },
+    async () => {
+      while (nextIndex < filePaths.length) {
+        const currentIndex = nextIndex;
+        nextIndex += 1;
+        try {
+          const fileMatches = await searchWorkspaceFileContent({
+            cwd: input.cwd,
+            realRoot,
+            rootStat,
+            relativePath: filePaths[currentIndex]!,
+            normalizedQuery,
+            deadline,
+            ...(signal ? { signal } : {}),
+          });
+          scannedFiles += 1;
+          if (fileMatches) {
+            collected.push(...fileMatches.matches);
+            truncated ||= fileMatches.truncated;
+          }
+        } catch (cause) {
+          if (cause instanceof ContentSearchDeadlineExceeded) {
+            truncated = true;
+            return;
+          }
+          throw cause;
+        }
+      }
+    },
+  );
+  await Promise.all(workers);
+  signal?.throwIfAborted();
+
+  const orderedMatches = collected
+    .toSorted((left, right) => {
+      const pathDelta = left.path.localeCompare(right.path);
+      return pathDelta !== 0 ? pathDelta : left.lineNumber - right.lineNumber;
+    })
+    .slice(0, limit);
+  return {
+    matches: orderedMatches,
+    truncated:
+      truncated ||
+      Date.now() >= deadline ||
+      scannedFiles < filePaths.length ||
+      collected.length > limit,
   };
 }
 

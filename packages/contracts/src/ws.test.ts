@@ -94,6 +94,25 @@ it.effect("accepts project script discovery requests", () =>
   }),
 );
 
+it.effect("accepts bounded workspace content search requests", () =>
+  Effect.gen(function* () {
+    const parsed = yield* decode(WebSocketRequest, {
+      id: "req-project-content-search-1",
+      body: {
+        _tag: WS_METHODS.projectsSearchContent,
+        cwd: "/repo",
+        query: "needle",
+        limit: 80,
+      },
+    });
+    assert.strictEqual(parsed.body._tag, WS_METHODS.projectsSearchContent);
+    if (parsed.body._tag === WS_METHODS.projectsSearchContent) {
+      assert.strictEqual(parsed.body.query, "needle");
+      assert.strictEqual(parsed.body.limit, 80);
+    }
+  }),
+);
+
 it.effect("accepts credential-blind OmniMind model-services requests", () =>
   Effect.gen(function* () {
     const list = yield* decode(WebSocketRequest, {
