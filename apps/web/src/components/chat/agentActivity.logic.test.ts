@@ -1,5 +1,7 @@
+import { MessageId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 import type { WorkLogEntry } from "../../session-logic";
+import { deriveTimelineEntries } from "../../workLog";
 import {
   deriveAgentActivityTimelineState,
   formatAgentActivityEntryPreview,
@@ -49,6 +51,69 @@ describe("deriveAgentActivityTimelineState", () => {
       preview: "2 updates - Verify diffToggleControl uses valid props",
     });
     expect(state.detailById.get("agent-reasoning:reasoning-1")?.entries).toHaveLength(2);
+  });
+
+  it("anchors compacted legacy reasoning before interleaved text and tool rows", () => {
+    const firstReasoningAt = "2026-06-05T00:00:01.000Z";
+    const textAt = "2026-06-05T00:00:02.000Z";
+    const toolAt = "2026-06-05T00:00:03.000Z";
+    const latestReasoningAt = "2026-06-05T00:00:04.000Z";
+    const latestTurnId = TurnId.makeUnsafe("turn-latest-reasoning");
+    const state = deriveAgentActivityTimelineState([
+      workEntry({
+        id: "reasoning-first",
+        label: "Reasoning update",
+        createdAt: firstReasoningAt,
+        detail: "Running Inspect the initial state",
+        toolStatus: "running",
+        changedFiles: ["src/first.ts"],
+      }),
+      workEntry({
+        id: "reasoning-latest",
+        label: "Reasoning update",
+        createdAt: latestReasoningAt,
+        turnId: latestTurnId,
+        detail: "Running Verify the final state",
+        toolStatus: "completed",
+        changedFiles: ["src/latest.ts"],
+        nativeEventType: "reasoning.completed",
+      }),
+      workEntry({ id: "tool-middle", label: "Read", createdAt: toolAt }),
+    ]);
+
+    expect(state.timelineWorkEntries[0]).toMatchObject({
+      id: "agent-reasoning:reasoning-first",
+      createdAt: firstReasoningAt,
+      turnId: latestTurnId,
+      preview: "2 updates - Verify the final state",
+      detail: "2 updates - Verify the final state",
+      toolStatus: "completed",
+      changedFiles: ["src/latest.ts"],
+      nativeEventType: "reasoning.completed",
+    });
+    expect(
+      state.detailById.get("agent-reasoning:reasoning-first")?.entries.map(({ id }) => id),
+    ).toEqual(["reasoning-first", "reasoning-latest"]);
+
+    const textId = MessageId.makeUnsafe("text-middle");
+    const timeline = deriveTimelineEntries(
+      [
+        {
+          id: textId,
+          role: "assistant",
+          text: "Intermediate assistant text",
+          createdAt: textAt,
+          streaming: false,
+        },
+      ],
+      [],
+      state.timelineWorkEntries,
+    );
+    expect(timeline.map(({ id }) => id)).toEqual([
+      "agent-reasoning:reasoning-first",
+      textId,
+      "tool-middle",
+    ]);
   });
 
   it("cleans reasoning prefixes for single update previews", () => {

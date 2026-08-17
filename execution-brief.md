@@ -319,9 +319,15 @@ Judge HOLD follow-up 的同一 pre-commit tree 证据为：Workspace index/conte
 
 Phase-9a 的最终 source candidate 已在 exact pushed `c4e8e7bcaf85b2c60da46dd3f878a587a65530de` 进入 `main`；上述 Workspace search/current-policy 历史不再是当前准入。
 
-S1 当前唯一代码 Slice 是 **Phase-9b Chat file-link context menu**：只吸收 Synara `bf07024a` 的真实 author 语义，让 assistant/openable file link 复用既有 `fileReferenceContextMenu`；position-free absolute local path在 Desktop提供平台原生 Reveal，relative path或 browser只保留 Copy，assistant link明确不提供 `Reference in Chat`。共享菜单既有 Reference/Ask与新增 Reveal/Copy、失败 toast全部使用同一简中/英文 catalog；`Shift+F10`/Menu key 的零坐标按 focused target rect定位并保持焦点。不得新增 `readFile` purpose、内容附件、draft/persistence、turn contract、Provider prompt、surface、store或 schema；`c4a82e0e` reasoning timestamp anchor必须留给下一独立 commit。
+S1 上一独立代码 Slice 是 **Phase-9b Chat file-link context menu**：只吸收 Synara `bf07024a` 的真实 author 语义，让 assistant/openable file link 复用既有 `fileReferenceContextMenu`；position-free absolute local path在 Desktop提供平台原生 Reveal，relative path或 browser只保留 Copy，assistant link明确不提供 `Reference in Chat`。共享菜单既有 Reference/Ask与新增 Reveal/Copy、失败 toast全部使用同一简中/英文 catalog；`Shift+F10`/Menu key 的零坐标按 focused target rect定位并保持焦点。不得新增 `readFile` purpose、内容附件、draft/persistence、turn contract、Provider prompt、surface、store或 schema。
 
 Phase-9b pre-commit source-candidate 证据：shared-menu helper与现有 caller focused unit `3 files / 54 tests`、Chromium assistant/Workspace/Preview `3 files / 15 tests`、monorepo typecheck `6/6`、document contract `21/21`、changed-path format与 diff check通过；全仓 lint `0 errors / 478 warnings`，本轮路径 `0 errors / 4` 条未改旧行 warning。此次按 menu-only Gate 未重建或安装 packaged App，因此只主张 source-only candidate，不主张已安装产品验证。
+
+Phase-9b menu slice及其 fallback focus follow-up 已在 exact pushed `857fef191d729573ed2c359c5b3184c7acd87f79` 进入 `main`；上述菜单历史不再是当前准入。
+
+S1 当前唯一代码 Slice 是 **Phase-9b legacy compacted reasoning anchor**：只吸收 Synara `c4a82e0e` 的单一 author 语义，让连续 legacy reasoning group 的可见内容、最新状态与其他字段继续来自 latest update、group identity继续锚定 first id，但 `createdAt`改为 first update 的时间。最终 Timeline 中 compacted reasoning不得因 latest timestamp越过其间的 assistant text或 tool row；不得改变 canonical reasoning item、compaction边界、排序 owner、字段 schema、stream或 Timeline surface。
+
+该 Slice 的 pre-commit source-candidate 证据：agent activity compaction与最终 Timeline排序 owner `2 files / 107 tests`、monorepo typecheck `6/6`、changed-path lint `0 warnings / 0 errors`、format与 diff check通过；本 Slice 不新增 surface、dependency或长期 owner，未重建安装 App，只主张上述 source-level legacy排序修复。
 
 W4 完成后，维护者若明确授权 C1，必须从当时 latest `main` 开始，只闭合：
 
@@ -335,4 +341,4 @@ C1 明确不包含 Goal/Todo、economics平台、search/LSP/RepoMap、Memory/Kno
 
 Pi成熟能力继续按 [`research/pi-native-product-integration-review.md`](research/pi-native-product-integration-review.md) 做preservation输入：C1不能复制Pi prompt builder、tool registry、Session tree、Package lifecycle、usage/cache、credential/model catalog，也不能用旧分支实现覆盖latest main owner。gotgenes exact source重新进入仍遵循 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)；source retained、shipped bytes/exports与runtime activation必须分别证明。
 
-STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9a Workspace filename + content search as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
+STATE：**W2 complete at `0eec65ac…`；P1 Pi stable `v0.84.2` refresh complete at product `d88edd3db…`；W3 Sidebar gesture continuity complete at `a5bae33ae…`；W4 First-run three-step readiness complete at `bde90d56…`；R10 complete at `c59d5442…`；S1 Synara v0.7.2 source alignment active with Phase-9b legacy compacted reasoning anchor as the sole current code Slice；C1 deferred and not admitted；first-public mature Agent incomplete；V1 release blocked。**
