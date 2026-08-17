@@ -633,8 +633,8 @@ export function deriveMessagesTimelineRows(input: {
     });
   }
 
-  // The generic Thinking shimmer remains the single live status. Provider work
-  // rows are transcript history and must never replace it.
+  // The generic live-status row remains the single transient wait surface.
+  // Provider work rows are transcript history and must never replace it.
   if (input.isWorking && !(input.worktreeSetup && input.worktreeSetupOpen)) {
     nextRows.push({
       kind: "working",
@@ -652,8 +652,8 @@ export function deriveMessagesTimelineRows(input: {
   // The live turn wears a "Working for Xs" header + divider — the counting-up
   // twin of a settled turn's "Worked for Xs" disclosure. It anchors to the top
   // of the active turn (right after the user message that opened it) and needs a
-  // real start time to count from; the trailing "Thinking" shimmer covers the
-  // gap before one exists. Inserted after collapse so folding is untouched.
+  // real start time to count from; the trailing status row covers the gap before
+  // one exists. Inserted after collapse so folding is untouched.
   if (
     input.isWorking &&
     input.activeTurnStartedAt &&

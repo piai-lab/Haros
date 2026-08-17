@@ -110,6 +110,7 @@ import {
 } from "./MessagesTimeline.logic";
 import { summarizeToolCallGroup } from "./toolCallGroup.logic";
 import { ToolCallGroupSummaryRow } from "./ToolCallGroupSummaryRow";
+import { ThinkingStatus } from "./ThinkingStatus";
 import { useTailAnchorScroll } from "./useTailAnchorScroll";
 import { useTimelineRowOverlapGuard } from "./useTimelineRowOverlapGuard";
 import { useI18n } from "~/i18n";
@@ -407,7 +408,6 @@ function WorktreeSetupCard({
 interface MessagesTimelineProps {
   hasMessages: boolean;
   isWorking: boolean;
-  workingLabel?: "Loading" | "Thinking" | undefined;
   activeTurnInProgress: boolean;
   activeTurnStartedAt: string | null;
   /** Transient "New worktree" setup progress; rendered as an ephemeral step card at the tail. */
@@ -517,7 +517,6 @@ interface MessagesTimelineProps {
 export const MessagesTimeline = memo(function MessagesTimeline({
   hasMessages,
   isWorking,
-  workingLabel: workingLabelProp,
   activeTurnInProgress,
   activeTurnStartedAt,
   worktreeSetup: worktreeSetupProp,
@@ -579,12 +578,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   contentInsetBottomPx,
   contentInsetBottomClearancePx,
 }: MessagesTimelineProps) {
-  const { t } = useI18n();
+  const { t, thinkingHints } = useI18n();
   // Prop defaults are resolved in the body rather than in the destructuring pattern:
   // an `AssignmentPattern` in the parameter list makes React Compiler bail out on the
   // entire component (silently, since `panicThreshold` is unset), which would drop
   // memoization for the whole transcript. See MessagesTimeline.compiler.test.ts.
-  const workingLabel = workingLabelProp ?? t("timeline.thinking");
   const worktreeSetup = worktreeSetupProp ?? null;
   const worktreeSetupPendingAction = worktreeSetupPendingActionProp ?? null;
   const followLiveOutput = followLiveOutputProp ?? false;
@@ -2452,12 +2450,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       )}
 
       {row.kind === "working" && (
-        <div
-          className="shimmer pt-0.5 font-system-ui text-[var(--color-text-foreground-secondary)]"
-          style={{ fontSize: `${appTypographyScale.activityPx}px` }}
-        >
-          {workingLabel}
-        </div>
+        <ThinkingStatus
+          accessibleLabel={t("timeline.workingStatus")}
+          fontSizePx={appTypographyScale.activityPx}
+          hints={thinkingHints}
+          theme={resolvedTheme}
+        />
       )}
 
       {row.kind === "worktree-setup" && (

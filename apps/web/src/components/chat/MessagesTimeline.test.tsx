@@ -1266,7 +1266,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("h-px flex-1 bg-border");
   });
 
-  it("does not reserve a timestamp footer between live status updates and Thinking", async () => {
+  it("does not reserve a timestamp footer between live status updates and the wait row", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const activeTurnId = TurnId.makeUnsafe("turn-live-status");
     const assistantCreatedAt = "2026-03-17T19:12:29.000Z";
@@ -1308,7 +1308,8 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain("Tasks updated");
-    expect(markup).toContain("Thinking");
+    expect(markup).toContain('data-testid="thinking-status"');
+    expect(markup).not.toContain(">Thinking<");
     expect(markup).not.toContain(formatShortTimestamp(assistantCreatedAt, "locale"));
     expect(markup).toMatch(/class="[^"]*\bpb-1\b[^"]*" data-timeline-row-kind="message"/);
   });
@@ -1764,7 +1765,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("+2 more tool calls");
   });
 
-  it("renders reasoning activity as iconless tool text while Thinking remains live", async () => {
+  it("renders reasoning activity as iconless tool text while the wait row remains live", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const activeTurnId = TurnId.makeUnsafe("turn-reasoning-live");
     const markup = renderToStaticMarkup(
@@ -1851,7 +1852,7 @@ describe("MessagesTimeline", () => {
 
     expect(markup.match(/data-codex-status-row="true"/g) ?? []).toHaveLength(3);
     expect(markup.match(/data-work-entry-icon="true"/g) ?? []).toHaveLength(1);
-    expect(markup).toContain(">Thinking<");
+    expect(markup).toContain('data-testid="thinking-status"');
     expect(markup).toContain("Inspecting apps/web/src/store.ts");
     expect(markup).not.toContain("Reasoning trace Inspecting");
   });
@@ -1902,40 +1903,42 @@ describe("MessagesTimeline", () => {
         },
       }),
     },
-  ])("renders $provider tool activity beside live Thinking", async ({ activity, expectedText }) => {
-    const { MessagesTimeline } = await import("./MessagesTimeline");
-    const activeTurnId = TurnId.makeUnsafe("turn-provider-live-tool");
-    const markup = renderToStaticMarkup(
-      <MessagesTimeline
-        {...makeTimelineBaseProps()}
-        isWorking
-        activeTurnInProgress
-        activeTurnId={activeTurnId}
-        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
-        timelineEntries={deriveWorkLogEntries([activity], activeTurnId).map((entry) => ({
-          id: entry.id,
-          kind: "work" as const,
-          createdAt: entry.createdAt,
-          entry,
-        }))}
-      />,
-    );
+  ])(
+    "renders $provider tool activity beside the live wait row",
+    async ({ activity, expectedText }) => {
+      const { MessagesTimeline } = await import("./MessagesTimeline");
+      const activeTurnId = TurnId.makeUnsafe("turn-provider-live-tool");
+      const markup = renderToStaticMarkup(
+        <MessagesTimeline
+          {...makeTimelineBaseProps()}
+          isWorking
+          activeTurnInProgress
+          activeTurnId={activeTurnId}
+          activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+          timelineEntries={deriveWorkLogEntries([activity], activeTurnId).map((entry) => ({
+            id: entry.id,
+            kind: "work" as const,
+            createdAt: entry.createdAt,
+            entry,
+          }))}
+        />,
+      );
 
-    expect(markup).toContain('data-timeline-row-kind="work"');
-    expect(markup).toContain('data-work-entry-display-text="true"');
-    expect(markup).toContain('data-live-activity-meta="true"');
-    expect(markup).toContain(">Thinking<");
-    expect(markup).toContain(expectedText);
-  });
+      expect(markup).toContain('data-timeline-row-kind="work"');
+      expect(markup).toContain('data-work-entry-display-text="true"');
+      expect(markup).toContain('data-live-activity-meta="true"');
+      expect(markup).toContain('data-testid="thinking-status"');
+      expect(markup).toContain(expectedText);
+    },
+  );
 
-  it("shows Loading when a new local send has no server turn id yet", async () => {
+  it("keeps the single live status while a local send has no server turn id yet", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const previousTurnId = TurnId.makeUnsafe("turn-previous");
     const markup = renderToStaticMarkup(
       <MessagesTimeline
         hasMessages
         isWorking
-        workingLabel="Loading"
         activeTurnInProgress
         activeTurnId={null}
         activeTurnStartedAt={null}
@@ -2007,7 +2010,9 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain(">Loading<");
+    expect(markup).toContain('data-testid="thinking-status"');
+    expect(markup).toContain('aria-label="Working on your response"');
+    expect(markup).not.toContain(">Loading<");
   });
 
   it("attaches trailing tool rows to the last assistant reply after completion", async () => {

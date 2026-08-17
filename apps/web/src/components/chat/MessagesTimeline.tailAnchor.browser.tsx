@@ -67,7 +67,7 @@ function seedEntries(): TimelineEntries {
 interface HarnessHandle {
   send: (messageId: string) => void;
   growStream: (streamMessageId: string, lines: number) => void;
-  showThinking: () => void;
+  showLiveStatus: () => void;
   showWorkingHeader: () => void;
   finishTurn: () => void;
   clearAnchor: () => void;
@@ -115,7 +115,7 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         return current.map((entry, index) => (index === streamingIndex ? grown : entry));
       });
     },
-    showThinking: () => {
+    showLiveStatus: () => {
       setIsWorking(true);
       setActiveTurnStartedAt(null);
     },
@@ -454,7 +454,7 @@ describe("MessagesTimeline tail anchor", () => {
   });
 
   // Regression: visible-content preservation must stay disabled for the full
-  // lifetime of a send anchor. Thinking and the "Working for" header are rows
+  // lifetime of a send anchor. The live status and "Working for" header are rows
   // inserted below that anchor; letting the list start a second preservation
   // cycle for those inserts resets scrollTop after the sent row has reached the
   // top and visibly juggles it through the pre-turn phases.
@@ -481,11 +481,11 @@ describe("MessagesTimeline tail anchor", () => {
       handle().send(FIRST_SENT_MESSAGE_ID);
 
       // The pre-turn status rows land while the anchored slide is still in
-      // flight, exactly like a real send: Thinking appears on the server ack,
+      // flight, exactly like a real send: the live status appears on server ack,
       // the "Working for" header once the turn starts, then text streams.
       const samples: Array<number | null> = [];
       for (let frame = 0; frame < 90; frame += 1) {
-        if (frame === 3) handle().showThinking();
+        if (frame === 3) handle().showLiveStatus();
         if (frame === 12) handle().showWorkingHeader();
         if (frame === 40) handle().growStream(FIRST_STREAMING_MESSAGE_ID, 2);
         await settleFrames(1);
@@ -518,7 +518,7 @@ describe("MessagesTimeline tail anchor", () => {
     }
   });
 
-  it("keeps a settled send anchored when Thinking gains its Working for header", async () => {
+  it("keeps a settled send anchored when the live status gains its Working for header", async () => {
     const handleRef: { current: HarnessHandle | null } = { current: null };
     const screen = await render(<TailAnchorTimeline handleRef={handleRef} />);
 
@@ -542,7 +542,7 @@ describe("MessagesTimeline tail anchor", () => {
         })
         .toBe(true);
 
-      handle().showThinking();
+      handle().showLiveStatus();
       await settleFrames(6);
       handle().showWorkingHeader();
 

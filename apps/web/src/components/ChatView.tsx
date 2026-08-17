@@ -588,7 +588,6 @@ import {
   LOCAL_DISPATCH_ACK_TIMEOUT_MS,
   LOCAL_DISPATCH_TURN_TAKEOVER_TIMEOUT_MS,
   resolveNextLocalDispatchSnapshot,
-  resolveWorkingLabel,
   resolveThreadArtifactWorkspaceRoot,
   WORKTREE_SETUP_ERROR_HOLD_MS,
   worktreeSetupHasError,
@@ -3221,7 +3220,7 @@ export default function ChatView({
     promptRef,
     setComposerDraftPrompt,
   });
-  // Keep Thinking through the post-ack gap where the server has the message /
+  // Keep the live status through the post-ack gap where the server has the message /
   // turn request but the provider session is not live yet (common on first send).
   const isWorking =
     hasLiveTurn || isSendBusy || isConnecting || isRevertingCheckpoint || isAwaitingTurnStart;
@@ -6228,7 +6227,7 @@ export default function ChatView({
   }, []);
 
   // Clears only the setup stepper from the dispatch marker: after "Work
-  // locally" the send continues (composer stays busy, Thinking shimmer takes
+  // locally" the send continues (composer stays busy, the live status takes
   // over) but the worktree card animates out.
   const clearLocalDispatchWorktreeSetup = useCallback(() => {
     setLocalDispatch((current) =>
@@ -6357,7 +6356,7 @@ export default function ChatView({
   ]);
 
   // Fail-open: if takeover never arrives, clear the awaiting-turn bridge so
-  // Thinking cannot stick forever. Skipped while worktree setup is active.
+  // the live status cannot stick forever. Skipped while worktree setup is active.
   useEffect(() => {
     if (!localDispatch || turnTakenOver || localDispatch.worktreeSetup) {
       return;
@@ -12837,7 +12836,6 @@ export default function ChatView({
                     agentActivityDetail={openAgentActivityDetail}
                     hasMessages={timelineEntries.length > 0}
                     isWorking={isWorking}
-                    workingLabel={resolveWorkingLabel({ isSendBusy, turnTakenOver })}
                     worktreeSetup={activeWorktreeSetup}
                     worktreeSetupPendingAction={worktreeSetupPendingAction}
                     onResolveWorktreeSetup={onResolveWorktreeSetup}

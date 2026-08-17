@@ -99,6 +99,8 @@ Timeline 长期显示用户输入、Assistant 可见结果、结构化请求、�
 
 wire noise、逐 token event、重复系统消息与不应展示的 reasoning 不进入 Timeline。同一 stream item 原位归并；自然成功不额外 Toast。只有失败、结果未知、隐藏副作用或需要用户处理时升级提示。
 
+Timeline 尾部只有一条通用 live-status 行，继续直接由现有 `isWorking`、turn、worktree setup 与虚拟列表生命周期控制；不新增 Thinking message、runtime status store 或第二条进度事实。该行的普通视觉固定为 `20px Composing Orb + 双语趣味提示 + 对称潮汐三点`：提示首次随机选择，之后每五秒替换且普通重渲染不换句；它只是等待氛围，不进入 transcript、reasoning、journal、Session 或恢复数据，也不能覆盖真实 Tool、approval、error、recovery 和 Provider activity。图标与文本容器保持固定尺寸，长文案单行省略；隐藏文档和离屏状态暂停不必要绘制，`prefers-reduced-motion` 下图标、文字与三点全部静止。用户可见行不再显示笼统的 `Thinking / 正在思考` 或 `Loading`，screen reader 使用稳定、非轮播的本地化工作状态。
+
 Child Agent、Goal、Todo、Question 继续使用 source 已有的产品语义；不得借此创建第二 task system 或 Run hierarchy。
 
 ### 自动能力的显示原则
