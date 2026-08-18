@@ -170,7 +170,11 @@ Synara 的 `Project instructions` 表面在 OmniMind 中整体退休，不改名
 
 V1 保留 Synara 当前设置 IA、搜索、deep-link、分组和 keyboard behavior，不另起 `Models / Agents / Packages / Application` 四域重构。
 
-当前 section 继续以 source 为准，例如 General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent providers、Model services、Agent skills、MCP connections、Managed worktrees、System tools 与 Archived threads。`Model services / 模型服务` 是对原 `Models & writing / 模型与写作` section 的定向改名与职责修正：保留现有 route、内部 section id `models`、搜索、deep-link、分组和 keyboard behavior，不借此重排整个 Settings taxonomy。
+当前section继续复用source的Settings母体、分组与顺序，例如General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent engines、Model services、Agent skills、Built-in tools、Managed worktrees、System tools与Archived threads；Integrations中的现有MCP连接页准确命名为`External connections / 外部连接`。`Model services / 模型服务`是对原`Models & writing / 模型与写作` section的定向改名与职责修正：保留现有route、内部section id `models`、搜索、deep-link、分组和keyboard behavior，不借此重排整个Settings taxonomy。
+
+`Built-in tools / 内置工具`用一套fresh默认开放的组级开关控制OmniMind自带Browser、Device、Thread、Automation等能力是否提供给所有Agent引擎，包括OmniMind Agent；不提供Engine selector、Provider维度持久状态或逐tool权限矩阵。页面只显示canonical catalog派生的真实组、计数、可用性与简短说明，不暴露Pi/MCP transport术语，也不硬编码当前24/22/12数量。关闭某组后，OmniMind Agent新会话不注册或搜索该组，stock Pi和其他Engine新会话不接收definitions，所有旧会话的新调用由Gateway立即拒绝；已准入in-flight call仍由turn/session owner取消。该设置只控制Agent使用，不影响Browser/Device的人类UI，enablement也不替代runtime permission或approval。
+
+`External connections / 外部连接`只管理Codex、Claude Code等独立本地应用进入OmniMind的现有External MCP任务连接，并准确显示paired、last used、revoked、expired与runtime availability；没有heartbeat就不伪造“当前已连接”。V1不提供第三方MCP server Settings、CRUD、credential/OAuth UI、连接测试、全局状态面板或跨Engine自动分发，也不把AgentGateway Host MCP或未来第三方MCP混进这个页面。
 
 `Model services` 只管理 OmniMind 内置 Agent runtime 的模型服务连接、认证、catalog、可用模型、状态与恢复；技术 authority 是 bundled OmniMind Agent 的 Pi ModelRuntime。页面不承载 Git 写作、Composer/Project 默认值或独立 Engine 的 custom model slug。那些设置属于实际调用它们的功能或对应 `Agent engines` detail，不能因都含有“模型”就与连接/catalog 控制面混在一起。
 

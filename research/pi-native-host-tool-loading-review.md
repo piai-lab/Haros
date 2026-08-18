@@ -10,7 +10,7 @@
 
 这份文档回答一个具体问题：
 
-> OmniMind Host 能力、外部 MCP、Pi Package/Extension、Skill 与工具搜索分别应该由谁拥有；OmniMind Agent 如何在不 fork Pi、不复制 registry、不把几十到上百个工具一次塞给模型的前提下，使用 Pi 官方动态工具机制。
+> 如何把OmniMind Agent的初始上下文与工具选择注意力保护好，同时尊重Pi原生Tool Registry / active-set语义；以及Host能力、外部MCP、Pi Package/Extension、Skill与工具搜索分别应该由谁拥有，才能让这个结果不失控。
 
 重开本议题时，不依赖历史聊天，按以下顺序恢复事实：
 
@@ -46,22 +46,24 @@ Candidate exact source:
 
 Exact OmniMind integration path:
   AgentGateway canonical MCP catalog and execution
-    -> native MCP injection for non-Pi Engines
-    -> PiAdapter tools/list + tools/call projection for Pi-family Engines
+    -> provider === "omnimind": Pi inline Extension + owned additive Tool Search
+    -> stock Pi: existing PiAdapter customTools direct/eager projection
+    -> Codex/Claude/OpenCode/etc: native MCP/plugin direct projection
 
 User journey:
-  ordinary work starts with a small, accurate tool surface;
-  when Host capability is needed, the Agent finds and activates the exact tools;
+  OmniMind Agent ordinary work starts with a small, accurate Host tool surface;
+  when Host capability is needed, it finds and activates the exact tools;
   Package/Skill/Extension behavior remains Pi-native;
-  external Engines retain their native MCP lifecycle.
+  stock Pi and other Agents retain their direct/eager native projection.
 
 Simplest baseline:
   preserve current Gateway owner and Pi SDK;
-  replace only the Pi-family eager Gateway projection with one inline Pi Extension.
+  replace only canonical omnimind Provider's eager Gateway projection with one inline Pi Extension;
+  leave stock Pi and all other Agents on their existing direct projection.
 
 Primary falsifier:
   the proposal is rejected if it requires a Pi core patch, a second registry/config store,
-  silently changes third-party Extension active tools, weakens permission/cancellation,
+  lets stock Pi enter Host search, silently changes third-party Extension active tools, weakens permission/cancellation,
   or fails representative outcome/economics against the current eager baseline.
 
 Gate B authorization:
@@ -80,15 +82,17 @@ Architecture disposition:
 
 具体裁决：
 
-1. OmniMind 内置 Browser、Device、Thread、Automation 等能力继续由 `AgentGateway` 唯一拥有 catalog、执行、权限、凭据、turn authority、取消与生命周期。
+1. OmniMind内置Browser、Device、Thread、Automation等能力继续由`AgentGateway`唯一拥有catalog、执行、权限、凭据、turn authority、取消与生命周期；一套fresh默认开放的Built-in policy统一控制它们是否提供给所有Agent，包括OmniMind Agent。
 2. Codex、Claude Agent、OpenCode、Cursor、Grok、Droid、Antigravity 等非 Pi Engine 继续使用各自已经支持的原生 MCP 接入；Host 不把 Pi 的 `tool_search` 语义强加给它们。
-3. OmniMind Agent 与 stock Pi 这两个 Pi-family Engine 通过 Pi 官方 `ResourceLoader.extensionFactories` 接收一个 session-scoped、named、hidden inline Extension。该 Extension 把同一 Gateway tool definitions 注册进 Pi Tool Registry，并用 Pi 官方 `getAllTools / getActiveTools / setActiveTools` 管理按需激活。
-4. Gateway tool execution 仍调用现有 `tools/call`，不搬进 Extension，不复制 schema，不复制凭据，不持久化 MCP 配置。
-5. 用户安装的 Pi Packages、Extensions、Skills、Prompts 与 Pi-only MCP adapter 继续由 Pi `DefaultPackageManager / ResourceLoader` 拥有。Host inline Extension不得关闭、重命名或接管其他 Extension 的工具。
-6. `tool search` 只搜索已经注册到 Pi Tool Registry、且明确由该 inline Extension拥有的 Host Gateway tools。它不搜索或安装 Package，不搜索 Skill 正文，不管理 MCP server lifecycle，也不擅自激活其他 Extension 刻意保持 inactive 的工具。
-7. 不为本议题引入第三方 `pi-mcp-adapter`，首版也不产品化第三方 MCP Settings。第三方 adapter 只保留为未来“Pi-only 外部 MCP”候选；对 OmniMind 自己的 AgentGateway，它是一次没有收益的回环和第二生命周期。
-8. 不修改 Pi core。若 public Extension/SDK seam 不足，先保留 current `customTools` bridge 或向 upstream 提 seam；不能把不足悄悄补成长期 fork。
-9. 面向未来的扩展单位固定为“新增一个 canonical Host tool definition，自动进入既有投影”，而不是“每增加一个工具，就分别修改 Pi、MCP、Prompt、UI 与权限五处”。若新增 Provider 或能力类型仍要求成倍复制 glue，视为边界设计失败，不以更多抽象掩盖。
+3. 只有canonical `provider === "omnimind"`的OmniMind Agent通过Pi官方`ResourceLoader.extensionFactories`接收一个session-scoped、named、hidden inline Extension。该Extension把Built-in policy与平台可用性允许的Gateway tool definitions注册进Pi Tool Registry，并用Pi官方`getAllTools / getActiveTools / setActiveTools`管理按需激活。
+4. stock Pi虽然技术上属于Pi-family，产品身份不是OmniMind Agent，继续通过现有PiAdapter `customTools` seam直接/eager获得同一Built-in policy允许的Host tools；所有其他Agent继续各自直接投影。实现只做最窄Provider身份分支，不建立新平台抽象。
+5. Gateway tool execution仍调用现有`tools/call`，不搬进Extension，不复制schema，不复制凭据，不持久化MCP配置。registered、active与authorized严格分离，每次实际调用继续检查当前Built-in policy、session identity、credential、runtime permission、turn authority、timeout与cancellation。
+6. 用户安装的Pi Packages、Extensions、Skills、Prompts与Pi-only MCP adapter继续由Pi `DefaultPackageManager / ResourceLoader`拥有。Host inline Extension不得关闭、重命名或接管其他Extension的工具。
+7. `tool search`只搜索已注册到Pi Tool Registry、明确由该inline Extension拥有且当前inactive的Host Gateway tools；用name、短description与provenance做轻量确定性检索，只请求additive activation，不代理执行。它不接管Pi built-ins、supervised Bash、task/session-control tools、Package/其他Extension、Skills或third-party MCP。
+8. 不为active set、search index或resume另建Host持久状态；Pi Session owner能保持就复用，不能保持则安全重搜。
+9. 不为本议题引入第三方`pi-mcp-adapter`，首版也不产品化第三方MCP Settings。第三方adapter只保留为未来候选；对OmniMind自己的AgentGateway，它是一次没有收益的回环和第二生命周期。
+10. 不修改Pi core。若public Extension/SDK seam不足，先让OmniMind Agent保留current `customTools` bridge或向upstream提seam；不能把不足悄悄补成长期fork。
+11. 面向未来的扩展单位固定为“新增一个canonical Host tool definition，自动进入既有投影”，而不是“每增加一个工具，就分别修改Pi、MCP、Prompt、UI与权限五处”。若新增Provider或能力类型仍要求成倍复制glue，视为边界设计失败，不以更多抽象掩盖。
 
 Disposition：**Bridge narrowly**。
 
@@ -96,20 +100,21 @@ Disposition：**Bridge narrowly**。
 
 ```text
 Outcome:
-  OmniMind Agent 按需发现并使用 Host tools，外部 Engines 保持 native MCP，
-  用户的 Pi 生态不被 Host 接管。
+  OmniMind Agent初始只看到Tool Search与经实证确需常驻的极小Host core，
+  减少schema上下文和工具选择噪声；其他Agent保持直接/eager原生投影。
 
 Current truth:
-  AgentGateway 已是唯一 catalog/execution owner；PiAdapter 已用官方 customTools 投影，
-  但当前 Gateway tools 全部 eager active，且没有 Pi-native search/activation owner。
+  AgentGateway已是唯一catalog/execution owner；OmniMind Agent与stock Pi当前共享PiAdapter官方customTools投影，
+  Gateway tools全部eager active，且没有只属于OmniMind Agent的Pi-native search/activation owner。
 
 Smallest path:
-  保留 Gateway 与 provider injection；把 Pi-family Gateway projection收口为一个 inline Extension，
-  只增加 owned-tool search 与 additive activation。
+  保留Gateway与所有direct projections；只为canonical omnimind Provider增加一个inline Extension，
+  只增加owned-tool search与additive activation；stock Pi保持current customTools。
 
 Excess rejected:
   Host Plugin Registry、第二 Tool Registry、第三方 adapter 回连自身 Gateway、
-  embeddings/BM25 服务、Package discovery 与 tool search 合并、Pi core fork、全量 UI 控制台。
+  Pi-family统一search、跨Engine动态benchmark、第二active store、embeddings/BM25服务、
+  Package discovery与tool search合并、Pi core fork、全量UI控制台。
 
 Proof:
   exact Pi conformance + current Adapter focused tests + representative DeepSeek/MiMo live journeys
@@ -172,7 +177,7 @@ Decision:
 
 这些都是工具加载之外的执行冰山。任何新的 Pi Extension只能复用，不能重写。
 
-### 3.2 非 Pi Engines 已经走 native MCP
+### 3.2 非 OmniMind Agent 已经有直接投影
 
 `apps/server/src/agentGateway/mcpInjection.ts` 从同一 `AgentGatewayMcpConnection` 生成：
 
@@ -182,9 +187,9 @@ Decision:
 - OpenCode 的 remote MCP config；
 - Antigravity 的 secret-free plugin fragment。
 
-这条路径的 owner 选择是正确的：外部 Engine 拥有自己的 Session、MCP client、tool namespace、cache 与错误语义，OmniMind 只做 thread-scoped connection projection。
+这条路径的owner选择是正确的：外部Engine拥有自己的Session、MCP client、tool namespace、cache与错误语义，OmniMind只做thread-scoped connection projection。stock Pi不走这条MCP injection，但同样已有`PiAdapter customTools`直接/eager投影；它不是Host Tool Search的目标。
 
-### 3.3 Pi-family 当前走 eager `customTools`
+### 3.3 OmniMind Agent 与 stock Pi 当前共享 eager `customTools`
 
 `apps/server/src/provider/Layers/PiAdapter.ts` 当前：
 
@@ -196,15 +201,15 @@ Decision:
 
 这不是错误的非官方 hack。Pi 0.84.2 官方 SDK 明确支持 `customTools`，并将其与 Extension tools 合并进同一个 registry。当前 bridge 还正确保留了 per-thread connection、token rotation、abort signal 与 Gateway execution owner。
 
-当前真正缺口是：
+当前真正缺口只属于OmniMind Agent的attention治理，不是stock Pi或跨Engine统一架构：
 
-- Pi 创建 Session 时默认把全部 Extension/custom tools active；
-- OmniMind 没有注入任何 loader Extension；
+- Pi创建Session时默认把全部Extension/custom tools active；
+- OmniMind Agent没有注入任何loader Extension；
 - 当前代码没有 `search_tools`、`tool_search` 或 `setActiveTools` 调用；
-- 因此最多 58 个 Host schemas 与 Pi built-ins/package tools 同时暴露给模型；
+- 因此OmniMind Agent最多58个Host schemas与Pi built-ins/package tools同时暴露给模型；
 - Gateway tools作为 SDK tools的 `sourceInfo.source` 只能显示 `sdk`，不能准确区分 supervised Bash、task tool 与 Host Gateway；
 - Pi custom tool在 registry 合并顺序中可覆盖同名 Extension tool，而 ResourceLoader 的 Extension conflict diagnostics看不到 custom-tool collision；
-- 当前 Host policy 大量直接点名 Browser、Device、Thread 与 Automation tools；若工具改成 inactive，必须同步保持 prompt与真实 active set一致。
+- 当前Host policy大量直接点名Browser、Device、Thread与Automation tools；若OmniMind Agent工具改成inactive，必须同步删除初始prompt中的直接枚举/调用要求，保持prompt与真实active set一致。
 
 ### 3.4 Pi Package lifecycle 已经接上，不应重造
 
@@ -326,24 +331,25 @@ flowchart LR
     G["AgentGateway<br/>canonical catalog + execution + authority"]
     H --> G
 
-    G --> N["Non-Pi Engine adapters"]
-    N --> M["Engine-native MCP config/client"]
-
-    G --> B["Pi-family Host bridge"]
-    B --> X["named hidden inline Pi Extension"]
+    G --> O{"provider === omnimind?"}
+    O -->|yes| X["named hidden inline Pi Extension"]
     X --> R["Pi Tool Registry"]
+
+    O -->|stock Pi| C["existing Pi customTools<br/>direct / eager"]
+    G --> N["Other Engine adapters"]
+    N --> M["Engine-native MCP/plugin<br/>direct projection"]
 
     P["User/curated Pi Packages & Extensions"] --> R
     S["Pi Skills / Prompts"] --> Q["Pi ResourceLoader & system prompt"]
 
     X --> A["owned-tool search + additive setActiveTools"]
     A --> R
-    R --> W["Pi/native Provider request encoding"]
+    R --> W["OmniMind Agent Pi/native<br/>Provider request encoding"]
 ```
 
 ### 5.1 关键边界句
 
-> Host 决定“这项 OmniMind 能力是否存在、谁获准执行”；Pi 决定“当前 Pi Session 的模型下一轮看见哪些工具、如何按 Provider协议加载”。
+> Built-in policy决定“这项OmniMind能力是否提供给所有Agent”，Gateway决定“谁获准执行”；只有OmniMind Agent的Pi Session决定“当前模型下一轮看见哪些已注册工具、如何按Provider协议加载”。
 
 ### 5.2 为什么使用 named hidden inline Extension，而不是继续只用 customTools
 
@@ -369,20 +375,20 @@ supervised Bash与 `omnimind_update_tasks` 仍可保留为 `customTools`。它�
 
 ### 5.4 stock Pi 的处理
 
-本规则按 runtime family，不按产品品牌划分：
+本规则按产品身份，不按runtime family划分：
 
-- 非 Pi Engines走 native MCP；
-- OmniMind Agent与 stock Pi都运行 Pi `AgentSession`，因此二者都应走同一个 Pi-native inline Extension bridge；
-- 二者仍使用各自独立 package、agentDir、Session、settings与 diagnostics；
-- inline Extension不读取或写入 stock `.pi`，也不让 OmniMind Agent读取它。
+- 只有canonical `provider === "omnimind"`使用Host Tool Search；
+- stock Pi虽然运行Pi `AgentSession`，产品身份仍是非OmniMind Agent，继续通过现有`customTools`直接/eager获得Built-in policy允许且平台可用的完整Host tool set；
+- 二者仍使用各自独立package、agentDir、Session、settings与diagnostics；OmniMind inline Extension不进入stock Pi，也不读取或写入stock `.pi`；
+- 若共享同一`PiAdapter.ts`，只复用definition→Pi Tool与execute forwarding等真实同构代码，并以canonical Provider identity做最窄分支；不为这一分支抽象新平台或复制第二套catalog。
 
-这样能继续共享窄 Pi-family adapter core，不复制两份工具加载实现。
+外部Agent的模型注意力优化留给其原生Engine。OmniMind只保证canonical schema、Built-in过滤、prompt一致和call-time安全。
 
 ## 6. Inline Extension 的最小设计
 
 ### 6.1 建议形状
 
-在 `PiAdapter.ts` 现有具体 owner内先实现，不预建通用 plugin framework：
+只在`provider === "omnimind"`路径、`PiAdapter.ts`现有具体owner内先实现，不预建通用plugin framework：
 
 ```ts
 makePiAgentGatewayExtension({ gatewayTools }): InlineExtension
@@ -404,8 +410,8 @@ makePiAgentGatewayExtension({ gatewayTools }): InlineExtension
 
 factory在启动期：
 
-1. 验证 Gateway descriptor/tool names唯一；
-2. 构建 `ownedToolNames` immutable set；
+1. 先按当前Built-in policy与平台/服务真实可用性过滤Gateway descriptors，再验证tool names唯一；过滤后为空则不创建Host Extension或Search tool，但不能由此擅自删除其他Provider/session lifecycle；
+2. 只从过滤后的Host tools构建`ownedToolNames` immutable set；关闭的Browser/Device/OmniMind group不得注册，也不得进入search pool；
 3. 对每个现有 Gateway `ToolDefinition` 调用 `pi.registerTool(tool)`；
 4. 注册一个 namespaced loader：`omnimind_search_tools`；
 5. 注册 `session_start` handler。
@@ -422,33 +428,35 @@ next = current - owned Gateway tool names + omnimind_search_tools
 pi.setActiveTools(dedupe(next))
 ```
 
-必须保持：
+`next`只描述这个Host Extension拥有的Gateway tools；必须保持其他owner的当前决定：
 
 - Pi built-ins；
 - supervised Bash replacement；
-- `omnimind_update_tasks`；
+- 任务/session-control等非Gateway、OmniMind-owned session tools的真实生命周期；
 - 用户/项目 Pi Extensions当前已经 active的 tools；
 - 其他 Extension的 loader tools。
 
 不得使用“所有非 builtin 都先关闭”的算法。Pi官方示例只隐藏当前 Extension明确拥有的 searchable tools；越过这条边界会破坏第三方 Extension对启动、prompt、权限和生命周期的假设。
 
-首个候选不预设额外常驻 Gateway core tools。若 representative journey证明某个小工具在绝大多数 OmniMind Agent任务中必需，才把它加入 evidence-backed core set。工具数量不是唯一判据，应该同时看 schema bytes、调用频率、额外 search round trip和任务成功率。
+首个候选不预设额外常驻Gateway core tools。若三臂实证证明某个小工具在绝大多数OmniMind Agent任务中必需，才把它加入evidence-backed core set。`omnimind_update_tasks`、supervised Bash或其他不在Gateway catalog内的OmniMind-owned session tool不能因“都是自己的工具”被强塞进这个Extension；是否常驻由其真实session/work-surface/supervision生命周期决定。工具数量不是唯一判据，应该同时看schema bytes、调用频率、额外search round trip、任务成功率和安全责任。
 
 ### 6.4 Search范围
 
-首版候选严格是：
+首版候选每次search都严格求交当前live policy：
 
 ```text
-all tools ∩ ownedToolNames - current active tools
+all tools ∩ ownedToolNames ∩ current Built-in policy ∩ current availability - current active tools
 ```
+
+`ownedToolNames`是Session注册快照，不能替代live policy。用户在旧Session关闭某组后，search立即不再返回或激活它；如果schema已经active，可能要到安全reload/new session才从模型上下文消失，但实际call立即由Gateway拒绝。重新开启后，创建时已注册该tool的旧Session可以再次搜索；创建时因disabled而未注册的Session等待安全reload/new session。
 
 不自动扩大到：
 
 - built-ins；
-- SDK Bash/task tools；
+- supervised Bash、SDK task/session-control tools；
 - user/project Package tools；
 - 其他 Extension故意保持 inactive的 tools；
-- Skills、Prompts、Package catalog或未连接的 MCP server。
+- Skills、Prompts、Package catalog、third-party MCP tools或未连接的 MCP server。
 
 以后只有 Pi upstream提供明确的 searchable ownership/metadata contract，或真实第二消费者证明需要，才重开跨 Extension聚合搜索。不能从 `sourceInfo !== builtin` 猜“Host有权激活”。
 
@@ -458,7 +466,7 @@ all tools ∩ ownedToolNames - current active tools
 
 1. query trim、lowercase、按非字母数字与 `_` 分词；
 2. tool name exact/prefix/token match权重大于 description substring；
-3. 只对 name + description搜索，不把完整 JSON Schema序列化进索引；
+3. 只对name、短description与明确的Host provenance搜索，不把完整JSON Schema、全量工具清单或长prompt序列化进索引；
 4. stable sort：score降序，再按 canonical name升序；
 5. 默认最多返回/激活 5 个，硬上限 10；
 6. 无命中返回明确结果，不改变 active set；
@@ -483,8 +491,8 @@ pi.setActiveTools(unique(active + added))
 - 不在 loader执行中移除任何 active tool；
 - 不手工生成 `tool_reference`、`tool_search_call` 或 Provider-specific payload；
 - 不返回完整 schemas；
-- tool result只报告 canonical names、简短 descriptions与 `added/alreadyActive`；
-- Pi根据 before/after active set在下一 request生成 native deferred representation或fallback；
+- tool result只报告最小命中信息、canonical names与`added/alreadyActive`；不返回完整schemas或借结果重复灌入全catalog；
+- loader只请求activation，不代理执行；Pi根据before/after active set在下一安全agent turn生成native deferred representation或fallback，届时完整schema才进入真实工具面；
 - activation不是permission。Gateway仍在 `tools/call`检查 capability、turn authority与runtime mode。
 
 ### 6.7 Reload、resume、fork与重开
@@ -513,17 +521,23 @@ Pi active set是 Session内存事实，不是当前持久 package状态。官方
 
 如果所有这些 Tool初始 inactive，而 prompt仍要求直接调用，模型会得到“政策说存在、request里没有 definition”的矛盾。
 
-### 7.2 第一候选的最小修复
+### 7.2 第一候选必须同步修复Prompt
 
-不要在第一切片同时重写整份 Harness Policy。先保持其安全与行为内容，并增加一条稳定、靠前、准确的桥接规则：
+减少schema而保留一份直接枚举inactive tools的长prompt，不是可归因的干净baseline，而是自相矛盾的产品行为。OmniMind Agent初始prompt必须在同一候选中收口为：
 
-> 当前 request中未出现所需 Host tool时，先调用 `omnimind_search_tools` 按任务/能力搜索并激活；不要猜不存在的 tool或绕过到 Host storage。
+> Host能力可通过Tool Search发现；需要时先按任务/能力搜索，激活后在下一安全agent turn调用；不要猜工具名。
 
-这允许独立测量“只减少 tool schemas”带来的结果，避免同时改变工具暴露与认知 policy后无法归因。
+同时满足：
 
-### 7.3 Prompt Diet 只在证据支持时进入第二切片
+1. 初始prompt不枚举Browser、Device、Thread、Automation等inactive Host tool names，也不要求直接调用它们；
+2. Tool Search的description、prompt与结果不列出全catalog，不把完整schema或长说明换一种形式塞回上下文；
+3. 权限、停止、人类接管、数据边界等跨工具且调用前必须知道的安全约束继续保留，但不伪装某个inactive tool已经可调用；
+4. tool-specific guidance优先由激活后的canonical Tool description/真实owner提供，不建立第二guidance registry；
+5. stock Pi与其他Agent继续收到与其完整filtered schema一致的直接工具指导；Codex静态Browser instructions随Built-in policy过滤，但这套外部prompt机制不得反向套给OmniMind Agent。
 
-测量以下事实：
+### 7.3 Prompt Diet 的深度由证据决定，方向不是可选项
+
+同步消除“prompt直呼inactive tools”是第一候选的正确性要求；进一步压缩跨工具安全说明的幅度，才由数据决定。测量以下事实：
 
 - Host policy静态 bytes/tokens；
 - initial active tool schema bytes/tokens；
@@ -533,12 +547,12 @@ Pi active set是 Session内存事实，不是当前持久 package状态。官方
 - input/cacheRead/cacheWrite/output/cost provenance；
 - resume/compaction后重复搜索。
 
-只有数据证明静态 policy本身仍造成明显 attention/context负担，才在现有 `harnessPolicy.ts` owner内做 prompt diet。优先顺序：
+在现有`harnessPolicy.ts` owner内先完成必要的不对称prompt；若数据证明剩余静态policy仍造成明显attention/context负担，再继续diet。优先顺序：
 
 1. 删除重复且已由 Tool description/handler错误覆盖的说明；
 2. 保留身份、不可替代性、权限与停止规则等跨 Tool关键约束；
-3. 将只对某一 Tool有效的说明收进 canonical Tool description；
-4. 如果跨 Tool指南确实需要按需加载，优先让 search result返回简短 capability guidance，而不是新增第二 guide registry；
+3. 将只对某一Tool有效的说明收进canonical Tool description，并确保只有激活后才随真实工具面出现；
+4. 如果跨Tool指南确实需要按需加载，复用当前真实owner；不要让search result扩张成第二guide registry或catalog dump；
 5. 避免给 lazy Tool添加长 `promptSnippet/promptGuidelines`，因为 Pi官方明确提示这会重建 system prompt并可能破坏稳定前缀。
 
 不能为了 cache冻结过期 capability truth，也不能用更短 prompt换取权限、停止、人类接管或错误处理退化。
@@ -604,7 +618,7 @@ named inline Extension让 Pi ResourceLoader能够报告 Tool conflict与两侧 s
 | 数十至数百长尾 Host tools              | 全部注册、少量active、owned search additive加载 | 不把schemas放进system prompt，不建向量库 |
 | 上千 metadata且线性搜索已被profile证伪 | 先优化进程内索引/排序，再评估成熟库             | 不先上远端搜索、持久索引或第二 catalog   |
 
-首版 Host Gateway已达到最多58个，足以证明 dynamic activation有现实价值，但最终 core set仍由 benchmark决定。
+首版Host Gateway已达到最多58个，足以构成需要实测的attention/context风险，但不能单靠数量证明dynamic activation净胜eager。eager / search-only / tiny-core+search三臂结果决定是否采用以及core set。
 
 ### 9.3 Skills
 
@@ -628,11 +642,11 @@ Package discovery、安装、更新、移除、resource enable与reload继续走
 
 未来 MCP必须先选择产品 scope：
 
-| 用户承诺                                      | owner                       | Pi-family投影                               | 非 Pi投影                                      |
-| --------------------------------------------- | --------------------------- | ------------------------------------------- | ---------------------------------------------- |
-| “只增强 OmniMind Agent/stock Pi”              | 对应 Pi Package/Extension   | 该 Extension注册 Pi Tools                   | 不提供                                         |
-| “作为 OmniMind Library asset注入兼容 Engines” | OmniMind asset/config owner | session-scoped Pi Extension/Tool projection | 每个 Engine真实支持的 native MCP/session mount |
-| OmniMind内置 Host能力                         | AgentGateway                | 本文 inline Extension                       | 当前 native MCP injection                      |
+| 用户承诺 | owner | OmniMind Agent投影 | stock Pi / 其他Agent投影 |
+| --- | --- | --- | --- |
+| 未来“只增强OmniMind Agent”的第三方MCP | 经独立Gate A采用的Pi Package/Extension | 仅在真实支持lazy discovery/proxy时进入该adapter自己的体验 | 首版不分发 |
+| 未来“作为OmniMind Library asset注入兼容Engines” | 届时唯一asset/config owner | 按exact adapter已证明seam | 每个Engine真实支持的native MCP/session mount |
+| OmniMind内置Host能力 | AgentGateway | 本文`provider === "omnimind"` inline Extension/search | stock Pi `customTools`；其他Engine当前native direct injection |
 
 同一个 external MCP不能同时在 Host settings和 `.omnimind` Pi Package中维护两份凭据/config。选择scope后只有一个 lifecycle owner。
 
@@ -648,9 +662,9 @@ Package discovery、安装、更新、移除、resource enable与reload继续走
 
 1. `AgentGateway` 提供 canonical tool catalog 与 call transport；
 2. 每个 definition 至少拥有稳定 name、description、input schema、annotations 与 required capability；
-3. Pi-family bridge把 definition无损映射为 Pi Tool，execute只转发到同一 Gateway call；
-4. inline Extension只管理自己的 `ownedToolNames` 与会话内 active set；
-5. 非 Pi adapter只负责目标 Engine的 native projection；
+3. shared PiAdapter projection把definition无损映射为Pi Tool，execute只转发到同一Gateway call；只有omnimind身份把结果注册进inline Extension；
+4. inline Extension只存在于OmniMind Agent Session，只管理自己的`ownedToolNames`与会话内active set；
+5. stock Pi与非Pi adapter只负责目标Engine的direct/eager native projection；
 6. 权限、凭据、turn authority、取消与业务执行始终留在 Host owner；
 7. Package、Skill、MCP server lifecycle仍由各自 ecosystem owner管理。
 
@@ -660,10 +674,10 @@ Package discovery、安装、更新、移除、resource enable与reload继续走
 
 | 未来变化                                       | 唯一主要落点                                        | 理想影响面                                      | 如果还要改很多地方，说明什么                                      |
 | ---------------------------------------------- | --------------------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------- |
-| 新增一个 Browser/Device/Thread/Automation Tool | 对应 Host service + AgentGateway catalog            | Pi与native MCP投影自动继承；只补契约/权限测试   | adapter仍复制schema或prompt仍硬编码catalog                        |
+| 新增一个 Browser/Device/Thread/Automation Tool | 对应 Host service + AgentGateway catalog            | OmniMind search注册与其他direct投影自动继承；只补契约/权限测试 | adapter仍复制schema或prompt仍硬编码catalog                        |
 | 修改 Tool schema/name                          | AgentGateway canonical definition                   | projection tests与必要迁移；调用侧编译/契约失败 | 存在第二schema truth或silent compatibility层                      |
 | 新增非 Pi Engine                               | 新 Engine adapter                                   | 复用Gateway catalog/call；不碰Pi bridge         | Host被Pi语义污染或建立了global lowest-common-denominator registry |
-| Pi升级                                         | bundled Pi adoption + Pi-family adapter conformance | 只重验Extension/active/deferred seam            | fork/private patch已成为隐性依赖                                  |
+| Pi升级                                         | bundled Pi adoption + shared PiAdapter conformance | OmniMind重验Extension/active/deferred；stock Pi重验customTools | fork/private patch或身份分支已成为隐性依赖                         |
 | 新增Pi Package/Skill                           | Pi PackageManager/ResourceLoader                    | Host bridge无需修改                             | Host search接管了Pi生态                                           |
 | 引入Pi-only外部MCP                             | 独立Pi Package/Extension                            | 不改变AgentGateway                              | Host被迫维护无跨Engine承诺的integration                           |
 | 引入跨Engine外部MCP产品                        | 新的Host-owned asset Gate A                         | 各Engine仅增加projection                        | 与Pi-only config双写credential/lifecycle                          |
@@ -754,7 +768,7 @@ Package discovery、安装、更新、移除、resource enable与reload继续走
 5. 有边界测试证明替换后行为不变；
 6. 能明确写出未来删除或upstream替代路径。
 
-否则保持具体：一个AgentGateway、一条Pi-family bridge、每个非Pi Engine一个native adapter。这是当前既可扩展又不过拟合的最小形状。
+否则保持具体：一份AgentGateway catalog、OmniMind Agent一个Pi-native search投影、stock Pi一条现有customTools投影、每个其他Engine一个native adapter。这是当前既可扩展又不过拟合的最小形状。
 
 ## 10. 为什么拒绝其他路线
 
@@ -802,9 +816,10 @@ Pi official Tool/Extension seam -> OmniMind Host
 
 ### 11.1 Startup 与 discovery
 
-- Gateway `tools/list`仍只在Session启动调用一次；
-- no Gateway/empty/error时不注册 Extension，现有 warning与identity-only policy保持；
-- Device不支持时不注册 `device_*`，search不得返回幽灵工具；
+- 只有`provider === "omnimind"`创建inline Extension；stock Pi仍走现有direct/eager customTools；
+- Gateway `tools/list`仍只在Session启动调用一次，随后按当前Built-in policy与平台/服务可用性形成注册池；
+- no Gateway、Built-in过滤后empty或discovery error时不注册Extension/Search，现有warning与identity-only policy保持；
+- Built-in policy关闭的group与不受支持的Device都不注册，search不得返回被关闭或不存在的幽灵工具；
 - inline factory不得启动timer、watcher、child process或network连接；
 - Package/Project Extension加载顺序与trust继续由Pi ResourceLoader拥有；
 - 被动 Library/Settings不因本功能执行third-party Extension。
@@ -820,7 +835,7 @@ Pi official Tool/Extension seam -> OmniMind Host
 ### 11.3 Permission、runtime mode与authority
 
 - active只表示下一 request可调用；
-- Gateway handler仍检查capability；
+- Gateway handler仍检查当前Built-in policy与capability；旧Session中曾经注册/激活的tool也不能绕过关闭；
 - write call仍要求exact active turn；
 - thread privilege ceiling、worktree/local boundary、Browser/Device runtimeMode不因search改变；
 - search本身read-only、无外部副作用；
@@ -832,6 +847,7 @@ Pi official Tool/Extension seam -> OmniMind Host
 - search是同步/短CPU路径，不创建可泄漏任务；
 - parent stop、Provider replacement与Session disposal语义不变；
 - active set变化不取消in-flight Tool；
+- Built-in exposure toggle同样不是emergency kill：设置提交后尚未准入的新call fail closed，已经准入执行中的call默认继续，除非turn/session owner取消；
 - late HTTP response仍由现有session/turn authority拒绝或抑制。
 
 ### 11.5 Reload、resume、compaction与cache
@@ -879,7 +895,7 @@ Pi official Tool/Extension seam -> OmniMind Host
 
 动作：
 
-1. 在当前 exact `main`记录Pi-family Session的：
+1. 在当前exact `main`分别记录OmniMind Agent与stock Pi Session的：
    - all tools；
    - active tools；
    - sourceInfo；
@@ -890,7 +906,7 @@ Pi official Tool/Extension seam -> OmniMind Host
    - 唯一普通tool；
    - 故意与Gateway同名tool；
    - 自己的loader + inactive tool。
-3. 证明当前 `customTools` eager active、source为`sdk`、同名覆盖行为与第三方Extension active状态。
+3. 证明当前两者`customTools` eager active、source为`sdk`、同名覆盖行为与第三方Extension active状态；后续动态三臂只以OmniMind Agent为实验对象，stock Pi只保留direct/eager回归基线。
 
 最窄落点：优先扩展 `apps/server/src/provider/Layers/PiAdapter.test.ts`；不新增生产接口只为测试。
 
@@ -898,15 +914,15 @@ Pi official Tool/Extension seam -> OmniMind Host
 
 ### Slice 2：将Gateway tools迁入named inline Extension
 
-目标：不改变执行结果，只改变注册owner/provenance/collision visibility。
+目标：只改变OmniMind Agent的注册owner/provenance/collision visibility，不改变执行结果或stock Pi路径。
 
 预计生产触点：
 
 - `apps/server/src/provider/Layers/PiAdapter.ts`
   - 保留 `buildPiAgentGatewayCustomTools()` 的descriptor→ToolDefinition与execute bridge，除非重命名为更准确的projection helper；
   - 新增一个具体的inline Extension factory helper；
-  - `resourceLoaderOptions.extensionFactories`注入named hidden Extension；
-  - 从`customTools`数组移除Gateway tools，只保留Bash/task tools；
+  - 只在canonical `provider === "omnimind"`时通过`resourceLoaderOptions.extensionFactories`注入named hidden Extension；
+  - 只从OmniMind Agent的`customTools`数组移除Gateway tools并保留Bash/task tools；stock Pi继续直接/eager customTools；
   - 检查duplicate与source-aware collisions；
   - 不扩大`PiCodingAgentModule`为第二SDK定义，只增加真实使用的public type/import。
 
@@ -915,14 +931,14 @@ Pi official Tool/Extension seam -> OmniMind Host
 验证：
 
 - Gateway execute参数、结果、错误与AbortSignal与当前测试等价；
-- `getAllTools()`保留全部Gateway tools；
+- OmniMind Agent的`getAllTools()`包含Built-in policy与平台可用性允许的Gateway tools；disabled groups不注册；
 - source path为named inline Extension；
-- stock Pi与OmniMind Agent都使用各自runtime实例和state root；
-- no Gateway时无inline Extension；-冲突明确失败。
+- stock Pi不创建该Extension、继续direct/eager customTools；二者仍使用各自runtime实例和state root；
+- no Gateway时无inline Extension；冲突明确失败。
 
-### Slice 3：实现owned dynamic search
+### Slice 3：实现owned dynamic search与必要Prompt一致性
 
-目标：模型初始不接收全部Gateway schemas，需要时一次search后下一turn可调用。
+目标：OmniMind Agent初始不接收全部Gateway schemas，也不从prompt获得一份伪catalog；需要时一次search后在下一安全agent turn调用。
 
 动作：
 
@@ -933,6 +949,8 @@ Pi official Tool/Extension seam -> OmniMind Host
 5. search tool无副作用、无网络、无持久状态；
 6. 不给lazy tools增加会重写prompt的长prompt metadata；
 7. current operation不热切。
+8. 同步把OmniMind Agent初始Host prompt改为“需要时先按能力搜索、激活后下一turn调用、不要猜名字”，删除inactive Browser/Device/Thread/Automation tools的枚举和直接调用要求；
+9. stock Pi与其他Engine的直接工具prompt继续与其filtered schema一致；Codex静态Browser instructions随Built-in policy过滤。
 
 验证：
 
@@ -946,7 +964,7 @@ Pi official Tool/Extension seam -> OmniMind Host
 - fallback Provider同样可调用；
 - removal/replace不被错误使用。
 
-### Slice 4：Prompt一致性与最小diet
+### Slice 4：三臂结果与进一步Prompt diet
 
 预计触点：
 
@@ -954,20 +972,18 @@ Pi official Tool/Extension seam -> OmniMind Host
 - 对应 harness policy tests；
 - 必要时当前Gateway tool description owner。
 
-先只增加“工具未出现时调用`omnimind_search_tools`”的准确规则，并验证普通coding任务不会无意义search、Host任务会先search。
-
-只有Slice 1–3数据证明静态policy仍是主要负担，才删除重复说明或把局部规则归入canonical description。不得在同一个未冻结候选里同时大改tool selection与整个Agent identity/policy。
+以OmniMind Agent的eager / search-only / tiny-core+search三臂测量决定最终形状。Slice 3已经完成正确性所需的prompt不对称；只有数据证明剩余静态policy仍是主要负担，才继续删除重复说明或把局部规则归入canonical description。不得重写整个Agent identity/policy，也不得让search description/result成为全catalog或第二guidance registry。
 
 ### Slice 5：Focused conformance
 
 至少覆盖：
 
 1. Pi 0.84.2 exact bundled package，而不是仅stock类型或πCode latest source；
-2. OmniMind Agent与stock Pi两种family；
+2. Provider identity分支：只有OmniMind Agent创建Extension/search；stock Pi保持direct/eager；
 3. Gateway 0/46/58 tools；
 4. Package Extension无冲突/冲突/自有loader；
 5. startup/reload/resume/fork；
-6. search→browser tool、search→thread tool、search→automation tool；
+6. OmniMind Agent search→browser tool、search→thread tool、search→automation tool；
 7. Browser human interrupt/OAuth/download error不回归；
 8. Device unsupported不被search发现；
 9. write turn authority retired后拒绝；
@@ -979,18 +995,18 @@ Pi official Tool/Extension seam -> OmniMind Host
 
 ### Slice 6：真实Provider outcome与经济性
 
-按本机授权资源选择协议匹配、费用有界的最小DeepSeek与MiMo probe。每个provider至少比较current eager baseline与candidate：
+按本机授权资源选择协议匹配、费用有界的最小DeepSeek与MiMo probe。动态三臂只评估OmniMind Agent；每个provider比较eager / search-only / tiny-core+search。stock Pi和其他Agent只验证直接投影、Built-in过滤、prompt与call-deny回归，不建立通用动态工具benchmark：
 
 | Journey                             | 关键观测                                         |
 | ----------------------------------- | ------------------------------------------------ |
-| 普通代码解释，不需要Host Tool       | 是否错误search；首轮tool schema/input/cache/TTFR |
+| 普通代码解释，不需要Host Tool       | 是否错误search；真实wire tool-schema bytes、prompt/cache、TTFR/总成本 |
 | 打开并操作OmniMind Browser          | search召回、工具序列、额外turn、任务成功、停止   |
 | 创建/等待多个Thread                 | capabilities/create/wait召回与exact target       |
 | 创建Automation                      | 相关tools是否足够、policy是否仍准确              |
 | Stop正在执行的Gateway Tool          | abort-to-idle、无late side effect                |
 | Session reload/resume后再次使用Tool | 重搜成本、上下文与结果真实性                     |
 
-报告必须区分直连、兼容endpoint与代理转换；只记录脱敏数值和pass/fail。Native deferred support只由wire acceptance证明；否则标fallback。
+报告必须区分直连、兼容endpoint与代理转换；同时记录真实wire tool-schema bytes、prompt/cache、选错工具率、额外round trip、任务成功率、TTFR与总成本，只保留脱敏数值和pass/fail。Native deferred support只由wire acceptance证明；否则标fallback。
 
 ### Slice 7：exact pushed SHA packaged journey
 
@@ -1012,12 +1028,12 @@ Pi official Tool/Extension seam -> OmniMind Host
 
 ### 13.1 功能
 
-- `getAllTools()`包含全部当前Gateway definitions；
-- initial active set不包含Gateway长尾，只包含loader与Pi/Package原有active tools；
+- OmniMind Agent的`getAllTools()`包含当前Built-in policy与平台可用性允许的Gateway definitions，disabled groups不注册；
+- OmniMind Agent initial active set不包含Gateway长尾，只包含loader、经三臂实证保留的极小Host core与其他owner原有active tools；
 - search能按任务找到正确tools并additive激活；
-- 下一model request可调用已激活Tool；-实际调用仍进入同一个Gateway handler；
+- 下一model request可调用已激活Tool；实际调用仍进入同一个Gateway handler；
 - 0/unsupported capability准确不可用；
-- stock Pi与OmniMind Agent行为同构但state完全隔离。
+- stock Pi不注册Host Extension、不提供Host Tool Search，继续直接/eager customTools；与OmniMind Agent state完全隔离。
 
 ### 13.2 不回归
 
@@ -1026,11 +1042,11 @@ Pi official Tool/Extension seam -> OmniMind Host
 - third-party Extension active set不被Host重写；
 - Bash supervision、task tool、retry、compaction、usage与Session lifecycle不回归；
 - Browser/Device/Thread/Automation权限、turn authority、cancel与错误语义不回归；
-- non-Pi native MCP injection不变化。
+- stock Pi与non-Pi native direct injection不承担动态搜索；Built-in policy过滤、prompt与call-time deny保持一致。
 
 ### 13.3 性能与经济性
 
-- initial Provider tool schema bytes显著低于eager baseline；
+- 只对OmniMind Agent要求initial Provider tool schema bytes显著低于eager baseline；
 - ordinary task不支付无意义search round trip；
 - Host task额外search成本没有抵消成功率/context收益；
 - linear search无可感知主线程阻塞；
@@ -1047,11 +1063,12 @@ Pi official Tool/Extension seam -> OmniMind Host
 - reload/shutdown无handler或connection泄漏；
 - no `.pi` cross-read/write；
 - UI不新增第二状态源或虚假跨Engine parity。
+- Built-in policy关闭后OmniMind Agent新session不注册/搜索该组，所有旧session的新call fail closed；已准入in-flight call不被伪取消。
 
 ### 13.5 可维护性与未来扩展
 
 - 新增fixture Host Tool时，Pi与native MCP projection无需各写一份schema；
-- 新增非Pi Engine时，不修改Pi inline Extension或Host业务handler；
+- 新增非OmniMind Engine时，不修改OmniMind inline Extension或Host业务handler；
 - 新增Pi Package/Skill时，不修改AgentGateway与owned search范围；
 - canonical name/schema变化在contract tests中显式失败，不被silent adapter coercion吞掉；
 - diagnostics能从Session source追到Gateway call，但不泄露secret或用户payload；
@@ -1065,9 +1082,9 @@ Pi official Tool/Extension seam -> OmniMind Host
 
 本方案不增加数据库、migration、settings字段、Package或外部服务。回滚应是代码级可逆：
 
-1. 移除inline Extension factory injection；
-2. 把Gateway definitions放回现有`customTools`数组；
-3. 恢复旧Harness Policy；
+1. 只移除OmniMind Agent的inline Extension factory injection；
+2. 只把OmniMind Agent Gateway definitions放回现有`customTools`数组；stock Pi与其他direct projection始终未变；
+3. 恢复与eager schema一致的OmniMind Agent Harness Policy；
 4. 保留现有Gateway catalog/execution/lease/cancel；
 5. 无用户数据迁移或清理。
 
@@ -1137,8 +1154,8 @@ Strongest counterevidence:
   fallback Providers未必获得cache收益；Package Extensions可能有自己的active策略。
 
 Disposition:
-  Bridge narrowly：Host catalog/execution不变，Pi-family通过named hidden inline Extension投影；
-  首版search只管理该Extension拥有的Gateway tools。
+  Bridge narrowly：Host catalog/execution不变；只有canonical omnimind Provider通过named hidden inline Extension投影；
+  stock Pi和其他Agent继续direct/eager；首版search只管理该Extension拥有且Built-in policy允许的Gateway tools。
 
 Required proof:
   exact Pi conformance、collision/provenance、reload/resume/cancel、DeepSeek/MiMo paired outcome、
@@ -1150,10 +1167,14 @@ Stop-loss / rollback:
 Reopen trigger:
   Pi/Gateway/Provider wire/scale/产品scope变化，或真实outcome推翻本结论。
 
-Unresolved maintainer choice:
+Only unresolved implementation evidence:
+  非AgentGateway但OmniMind-owned的session tools（尤其task/session-control类）哪些确需常驻；
+  必须按真实lifecycle、频率与安全责任取证，不能凭感觉预留core或塞进Host search owner。
+
+Gate B status:
   稳定架构原则已于2026-08-18被维护者接受；是否进入Gate B代码实施仍需维护者明确启动。
 ```
 
 最终原则：
 
-> **不要让 OmniMind Host 取代 Pi，也不要让 Pi Package 取代 OmniMind Host。Host 能力以 Pi Extension 的方式进入 Pi；进入以后，registry、active set、dynamic loading与Provider编码全部交还 Pi。**
+> **第一目标是保护OmniMind Agent的上下文与工具选择注意力：一份AgentGateway catalog，OmniMind Agent一个Pi-native search投影，stock Pi和其他Agent保持直接/eager。Host不取代Pi，Pi Package也不取代Host；registered、active、authorized永远不是同一件事。**
