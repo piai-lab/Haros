@@ -306,9 +306,9 @@ other Engines
 current-source已经给出两类不应交给loader临时猜测的canonical lifecycle：
 
 - active ThreadGoal由现有Product state、`/goal`、Composer Goal panel、prompt injection与continuation拥有。Gateway的Goal mutation tool要求`thread:write`和active turn；synthetic continuation直接要求完成时记录achievement、重复外部blocker时暂停Goal。因此active Goal的request发送前必须ensure该exact tool active；若此前inactive，只做一次additive activation。Goal cleared/paused/achieved后停止对应prompt与continuation duty，不移除已经active的schema。无active Goal时不预留固定core，普通自然语言设Goal仍可经loader发现；
-- automation-dispatched turn的canonical run envelope直接要求/允许report result、update memory与cancel，并明确completion duties不进入later manual follow-up。Gate B必须从exact envelope与schemas得到bounded closure；当前cancel需要view返回的definition revision，普通update也有`update → view`前置依赖。automation turn发送前ensure完整closure active；turn结束只停止run duty，schema可以保持active，不造dependency registry或per-turn controller。
+- automation-dispatched turn的canonical run envelope直接要求/允许report result、update memory与cancel，并明确completion duties不进入later manual follow-up。Gate B候选已从exact envelope与schemas得到bounded closure；当前cancel需要view返回的definition revision，普通update也有`update → view`前置依赖。automation turn发送前ensure完整closure active；turn结束只停止run duty，schema可以保持active，不造dependency registry或per-turn controller。
 
-generic `harnessPolicy.ts`当前还直接枚举Browser、Device、Thread、Automation tools，属于需要diet的全局说明，不是lifecycle authority。架构不固定bundle names；研究只记录current-source names作为conformance falsifier。
+generic `harnessPolicy.ts`已在OmniMind dynamic路径收敛为不枚举inactive names的短发现原则；direct Engine只获得与其filtered tool surface一致的server instructions。它不是lifecycle authority。架构不固定bundle names；研究只记录current-source names作为conformance falsifier。
 
 ### 7.3 Exact Pi loader边界
 
@@ -366,7 +366,7 @@ Pi Session/ResourceLoader拥有lifecycle与active truth；Host不在每个reques
 
 ## 9. Collision、provenance 与 empty failure
 
-ResourceLoader已知能对Extension-Extension conflict给出diagnostic/load-order语义，但builtin/custom/inline交叉来源不能凭名字推断。Gate B必须用exact conformance证明。
+ResourceLoader已知能对Extension-Extension conflict给出diagnostic/load-order语义，但builtin/custom/inline交叉来源不能凭名字推断。Gate B候选已用stock/product Pi exact conformance覆盖Extension、customTools与inline交叉组合；未来Pi revision或来源优先级变化仍须重新证明。
 
 Gateway内部duplicate必须拒绝不可信catalog。cross-source同名时，Host只对自己的ownership claim、collided capability及依赖它的Goal/Automation dispatch fail closed：不能把第三方winner当成owned Host capability，不能由Host loader激活或投影它。Pi-native第三方winner与Session其余能力默认继续，并发既有diagnostic/warning。只有exact Provider contract不能诚实隔离局部冲突时，才把Session标为unavailable；这是待conformance事实，不预先承诺fatal。不得silent override、drop或rename；Host只按自己的immutable names核对sourceInfo，不建立全局tool inventory。错误不泄露secret、endpoint、schema或用户参数。
 

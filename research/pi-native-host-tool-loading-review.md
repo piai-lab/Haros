@@ -177,8 +177,8 @@ eager baseline本身使用官方seam，不是错误hack；本轮改变的是Omni
 全局反扫区分了generic `harnessPolicy.ts`与真正由Product lifecycle生成的prompt/envelope：
 
 - **ThreadGoal**：[`architecture/product-state.md`](../architecture/product-state.md)已经把持久objective、计时/暂停/achievement、prompt injection与continuation交给现有ThreadGoal owner，并与逐turn进度快照分开。`AgentGateway.ts`中的`omnimind_set_thread_goal`是Gateway tool，要求`thread:write`与active turn；`goalMode.ts`的synthetic continuation直接要求完成时调用它记录achievement，重复外部blocker时调用它暂停Goal。active Goal的任何可能完成/阻塞request都必须在发送前确保该exact definition active；若此前inactive，只做一次additive activation。Goal cleared、paused或achieved后停止对应prompt与continuation duty，不卸载已经active的schema。没有active Goal时不预留固定core：普通自然语言设Goal可由loader发现，`/goal`与Composer Goal panel继续走Product owner；
-- **Automation run**：`runEnvelope.ts`只为automation-dispatched turn直接要求/允许`omnimind_report_automation_result`、`omnimind_update_automation_memory`与`omnimind_cancel_automation`，并明确这些completion duties不得泄漏到later manual follow-up。三者来自`automationTools.ts`且受active-turn authority约束。`omnimind_cancel_automation`需要definition revision，当前revision source来自`omnimind_view_automation`；普通更新路径也明确要求`omnimind_update_automation → omnimind_view_automation`。Gate B必须以exact envelope与schemas证明automation turn的最小依赖closure，不能只激活一个无法完成的schema；
-- **Generic harness**：`harnessPolicy.ts`当前还会跨场景直接枚举Browser、Device、Thread与Automation tools，这是需要diet的通用说明，不是active-set authority。只有Goal prompt与Automation envelope可以在其canonical lifecycle内直接点名tools，且同一request发送前必须已经active。
+- **Automation run**：`runEnvelope.ts`只为automation-dispatched turn直接要求/允许`omnimind_report_automation_result`、`omnimind_update_automation_memory`与`omnimind_cancel_automation`，并明确这些completion duties不得泄漏到later manual follow-up。三者来自`automationTools.ts`且受active-turn authority约束。`omnimind_cancel_automation`需要definition revision，当前revision source来自`omnimind_view_automation`；普通更新路径也明确要求`omnimind_update_automation → omnimind_view_automation`。Gate B候选已按exact envelope与schemas锁定automation turn的最小依赖closure，避免只激活一个无法完成职责的schema；
+- **Generic harness**：`harnessPolicy.ts`已在OmniMind dynamic路径收敛为不枚举inactive names的短发现原则；direct Engine则只获得与其filtered tool surface一致的server instructions。它不是active-set authority。只有Goal prompt与Automation envelope可以在其canonical lifecycle内直接点名tools，且同一request发送前必须已经active。
 
 ## 4. 目标架构
 
@@ -300,7 +300,7 @@ loader造成纯additive active-set change后，Pi记录新增tool names；下一
 
 稳定invariant是：任何发送给模型的prompt或envelope都不得直接点名inactive tool。
 
-`apps/server/src/agentGateway/harnessPolicy.ts`是generic Host guidance，当前直接枚举/要求调用Browser、Device、Thread、Automation等tools，必须在OmniMind dynamic路径diet成：额外Host能力可按需发现和加载；需要时使用当前active加载入口；激活后在下一安全turn调用；不要猜tool name；发现、prompt-required或active都不等于authorized。
+`apps/server/src/agentGateway/harnessPolicy.ts`是generic Host guidance。Gate B候选已在OmniMind dynamic路径将它diet成：额外Host能力可按需发现和加载；需要时使用当前active加载入口；激活后在下一安全turn调用；不要猜tool name；发现、prompt-required或active都不等于authorized。该路径不再枚举Browser、Device、Thread或Automation的inactive names。
 
 Goal prompt与Automation run envelope是不同的canonical lifecycle owner：它们可以直接点名当前duty所需tools，但Host必须在同一request发送前ensure exact bounded closure active。不得把这些工具说明反向塞进generic prompt，也不得枚举其他inactive Host names、在loader description/result列出全catalog、把完整schema放进system prompt或用长`promptSnippet`/`promptGuidelines`重建稳定前缀。
 
