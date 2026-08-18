@@ -282,7 +282,7 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "piConfig.configDir",
       "identity-neutral default system prompt without unshipped docs navigation",
       "bounded project context root or global-only context projection",
-      "host-owned immutable system prompt appended after extension turn mutation",
+      "host-owned immutable engine contract appended after extension turn mutation",
       "injectable models.json content reader",
       "accepted model-config provider provenance",
       "credential-blind model-config projection",

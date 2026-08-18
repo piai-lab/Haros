@@ -448,7 +448,7 @@ revision and four Pi package manifests report the same candidate and `0.84.2`. A
 profile showed stock Pi `v0.84.2`, accurate zero-model-service setup, complete exit and same-profile
 reopen. This is now product-level candidate evidence, not Campaign verification or release evidence.
 
-On 2026-08-18 the unpushed `codex/retire-project-instructions` candidate kept the same exact Pi
+On 2026-08-18 the then-unpushed `codex/retire-project-instructions` candidate kept the same exact Pi
 revision and stock/OAuth patches while extending the sole product source patch to remove the false
 Pi coding-assistant identity and navigation to docs/examples omitted from the archive, and to give
 Pi's existing ResourceLoader an explicit canonical Project-root boundary or global-only context
@@ -466,13 +466,17 @@ OpenAI-compatible endpoints: MiMo Chat and DeepSeek folder-backed Agent both com
 and continuation, identified OmniMind and πAI-Lab, and returned the correct Chat/Agent overlay label;
 the DeepSeek Agent probe retained that identity after a Project Extension replaced the mutable
 system prompt. The pass-through only avoided persisting secret endpoints and did not translate the
-upstream protocol. These hashes and probes describe the current local source candidate only; they do
-not replace the earlier pushed-SHA or installed-App evidence until the maintainer later authorizes
-push and an exact-SHA delivery run.
+upstream protocol. The maintainer subsequently authorized integration: merge
+`b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` was pushed, rebuilt from that exact revision and installed
+from the resulting arm64 DMG (`SHA-256 86857d371a0555f1e760b693993ed621335676d5da296a2f6165d262cdb4dea3`).
+Two fresh-profile installed-App launches, including same-profile reopen, completed startup and clean
+shutdown. This replaces the earlier installed-product evidence for this scope, but is not a signed or
+notarized release claim.
 
-Rollback remains a single hard pin to `v0.84.1` if lifecycle, isolation, real-provider or packaged
-evidence exposes a material regression. No compatibility dual track is authorized or needed, and no
-maintainer choice remains open for this exact source set.
+Rollback for this integrated slice is its first parent
+`8066f23f92a8dbe35c052fc9bcdbd71d347f2c0a`, which already uses the product-owned Pi `v0.84.2`
+baseline. No compatibility dual track is authorized or needed, and no maintainer choice remains open
+for this exact source set.
 
 ## 14. Implemented Synara `712d88f…18ff998` intake; non-adoption decisions reopened
 
