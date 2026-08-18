@@ -3727,9 +3727,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(dockRect.right).toBeCloseTo(shellRect.right, 0);
       expect(Math.abs(chatRect.width + dockRect.width - shellRect.width)).toBeLessThanOrEqual(1);
       expect(
-        Math.abs(
-          canvasRect.x + canvasRect.width / 2 - (composerRect.x + composerRect.width / 2),
-        ),
+        Math.abs(canvasRect.x + canvasRect.width / 2 - (composerRect.x + composerRect.width / 2)),
       ).toBeLessThanOrEqual(1);
       expect(dockContainer).toBeTruthy();
       expect(getComputedStyle(dockContainer!).borderLeftWidth).toBe("1px");
@@ -4636,8 +4634,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       { name: "short", messageCount: 10, activityCount: 20 },
       { name: "near-cap", messageCount: 81, activityCount: 1_609 },
     ] as const;
-    const reports: Array<{
+    const trialReports: Array<{
       name: (typeof cases)[number]["name"];
+      trial: number;
       inputP95Ms: number;
       reactCommitTotalMs: number;
     }> = [];
@@ -4649,73 +4648,95 @@ describe("ChatView timeline estimator parity (full app)", () => {
     await warmup.cleanup();
     useComposerDraftStore.setState({ draftsByThreadId: {} });
 
-    for (const benchmarkCase of cases) {
-      const commits: number[] = [];
-      const mounted = await mountChatView({
-        viewport: DEFAULT_VIEWPORT,
-        snapshot: createIssue550Snapshot(benchmarkCase),
-        onRender: (_id, phase, actualDuration) => {
-          if (phase === "update") commits.push(actualDuration);
-        },
-      });
-      try {
-        const editor = await waitForComposerEditor();
-        await userEvent.click(editor);
-        commits.length = 0;
+    // Run both case orders and use the median of three trials. A single short→near-cap
+    // pair made the relative gate sensitive to browser/JIT/host load that happened only
+    // during the second case, while still reporting a deterministic product regression as
+    // soon as it persists across the trials. The 1.6× product threshold is unchanged.
+    const trialOrders = [cases, cases.toReversed(), cases] as const;
+    for (const [trial, trialCases] of trialOrders.entries()) {
+      for (const benchmarkCase of trialCases) {
+        const commits: number[] = [];
+        const mounted = await mountChatView({
+          viewport: DEFAULT_VIEWPORT,
+          snapshot: createIssue550Snapshot(benchmarkCase),
+          onRender: (_id, phase, actualDuration) => {
+            if (phase === "update") commits.push(actualDuration);
+          },
+        });
+        try {
+          const editor = await waitForComposerEditor();
+          await userEvent.click(editor);
+          commits.length = 0;
 
-        const inputToPaintMs: number[] = [];
-        for (let index = 0; index < 12; index += 1) {
-          const startedAt = performance.now();
-          useStore.getState().applyOrchestrationEventsHotPath([
-            makeDomainEvent(
-              "thread.activity-appended",
-              {
-                threadId: THREAD_ID,
-                activity: {
-                  id: EventId.makeUnsafe(`activity-issue-550-live-${index}`),
-                  createdAt: isoAt(
-                    benchmarkCase.messageCount * 2 + benchmarkCase.activityCount + index,
-                  ),
-                  kind: "tool.completed",
-                  summary: `live tool ${index}`,
-                  tone: "tool",
-                  turnId: null,
-                  payload: {
-                    itemType: "dynamic_tool_call",
-                    toolName: `live-tool-${index}`,
+          const inputToPaintMs: number[] = [];
+          for (let index = 0; index < 12; index += 1) {
+            const startedAt = performance.now();
+            useStore.getState().applyOrchestrationEventsHotPath([
+              makeDomainEvent(
+                "thread.activity-appended",
+                {
+                  threadId: THREAD_ID,
+                  activity: {
+                    id: EventId.makeUnsafe(`activity-issue-550-live-${trial}-${index}`),
+                    createdAt: isoAt(
+                      benchmarkCase.messageCount * 2 + benchmarkCase.activityCount + index,
+                    ),
+                    kind: "tool.completed",
+                    summary: `live tool ${index}`,
+                    tone: "tool",
+                    turnId: null,
+                    payload: {
+                      itemType: "dynamic_tool_call",
+                      toolName: `live-tool-${index}`,
+                    },
                   },
                 },
-              },
-              { sequence: benchmarkCase.activityCount + index + 1 },
-            ),
-          ]);
-          await userEvent.keyboard("x");
-          await nextFrame();
-          inputToPaintMs.push(performance.now() - startedAt);
-        }
+                { sequence: benchmarkCase.activityCount + index + 1 },
+              ),
+            ]);
+            await userEvent.keyboard("x");
+            await nextFrame();
+            inputToPaintMs.push(performance.now() - startedAt);
+          }
 
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
-          "x".repeat(12),
-        );
-        expect(useStore.getState().activityIdsByThreadId?.[THREAD_ID]).toHaveLength(
-          benchmarkCase.activityCount + 12,
-        );
-        reports.push({
-          name: benchmarkCase.name,
-          inputP95Ms: percentile(inputToPaintMs, 0.95),
-          reactCommitTotalMs: commits.reduce((total, duration) => total + duration, 0),
-        });
-      } finally {
-        await mounted.cleanup();
-        useComposerDraftStore.setState({ draftsByThreadId: {} });
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.prompt).toBe(
+            "x".repeat(12),
+          );
+          expect(useStore.getState().activityIdsByThreadId?.[THREAD_ID]).toHaveLength(
+            benchmarkCase.activityCount + 12,
+          );
+          trialReports.push({
+            name: benchmarkCase.name,
+            trial,
+            inputP95Ms: percentile(inputToPaintMs, 0.95),
+            reactCommitTotalMs: commits.reduce((total, duration) => total + duration, 0),
+          });
+        } finally {
+          await mounted.cleanup();
+          useComposerDraftStore.setState({ draftsByThreadId: {} });
+        }
       }
     }
 
+    const reports = cases.map((benchmarkCase) => {
+      const samples = trialReports.filter((report) => report.name === benchmarkCase.name);
+      return {
+        name: benchmarkCase.name,
+        inputP95Ms: percentile(
+          samples.map((report) => report.inputP95Ms),
+          0.5,
+        ),
+        reactCommitTotalMs: percentile(
+          samples.map((report) => report.reactCommitTotalMs),
+          0.5,
+        ),
+      };
+    });
     const short = reports.find((report) => report.name === "short")!;
     const nearCap = reports.find((report) => report.name === "near-cap")!;
     expect(
       nearCap.reactCommitTotalMs,
-      `Issue #550 benchmark: ${JSON.stringify(reports)}`,
+      `Issue #550 benchmark: ${JSON.stringify({ reports, trialReports })}`,
     ).toBeLessThan(short.reactCommitTotalMs * 1.6);
   });
 
@@ -5559,9 +5580,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       environmentToggle.click();
       const environmentPanel = await waitForElement(
         () =>
-          mounted.host.querySelector<HTMLElement>(
-            "[data-environment-panel][aria-hidden='false']",
-          ),
+          mounted.host.querySelector<HTMLElement>("[data-environment-panel][aria-hidden='false']"),
         "Unable to find the open Environment inspector.",
       );
       expect(environmentPanel.hasAttribute("inert")).toBe(false);
@@ -5577,9 +5596,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(
         Math.abs(withEnvironment.composerCenter - withEnvironment.canvasCenter),
       ).toBeLessThanOrEqual(1);
-      expect(withEnvironment.composerCenter).toBeLessThan(
-        beforeEnvironment.composerCenter - 150,
-      );
+      expect(withEnvironment.composerCenter).toBeLessThan(beforeEnvironment.composerCenter - 150);
       expect(
         Math.abs(withEnvironment.composerWidth - beforeEnvironment.composerWidth),
       ).toBeLessThanOrEqual(1);
@@ -8430,9 +8447,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(draft?.files).toEqual([]);
         expect(draft?.pendingDirectTurnRecovery?.messageId).toBe(failedMessageId);
       });
-      await expect
-        .element(page.getByText("Attachments are not ready to restore"))
-        .toBeVisible();
+      await expect.element(page.getByText("Attachments are not ready to restore")).toBeVisible();
       expect(failedFileAttachmentId).not.toBeNull();
       expect(failedFileBytes).not.toBeNull();
       attachmentDownloadFixtures.set(failedFileAttachmentId!, {
@@ -9706,7 +9721,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const hostRect = mounted.host.getBoundingClientRect();
       const canvasCenter = canvasRect.x + canvasRect.width / 2;
       expect(Math.abs(headingRect.x + headingRect.width / 2 - canvasCenter)).toBeLessThanOrEqual(1);
-      expect(Math.abs(composerRect.x + composerRect.width / 2 - canvasCenter)).toBeLessThanOrEqual(1);
+      expect(Math.abs(composerRect.x + composerRect.width / 2 - canvasCenter)).toBeLessThanOrEqual(
+        1,
+      );
       expect(Math.abs(canvasCenter - (hostRect.x + hostRect.width / 2))).toBeGreaterThan(100);
 
       // Simulate the snapshot sync arriving from the server after the draft
