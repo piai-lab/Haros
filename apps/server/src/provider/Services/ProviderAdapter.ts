@@ -9,6 +9,7 @@
  */
 import type {
   ApprovalRequestId,
+  MessageDispatchOrigin,
   ProviderComposerCapabilities,
   ProviderApprovalDecision,
   ProviderForkThreadInput,
@@ -67,6 +68,12 @@ export interface ProviderSteerSubagentPayload {
 export type ProviderConversationRollbackMode = "native" | "restart-session";
 export type ProviderSessionResourceReloadState = "reloaded" | "no_active_session" | "busy";
 
+/** Server-internal dispatch truth; never crosses renderer RPC or persistence contracts. */
+export interface ProviderTurnDispatchContext {
+  readonly turnKind: "user" | "goal-continuation";
+  readonly dispatchOrigin: MessageDispatchOrigin;
+}
+
 export interface ProviderAdapterCapabilities {
   /**
    * Declares whether changing the model on an existing session is supported.
@@ -115,6 +122,7 @@ export interface ProviderAdapterShape<TError> {
    */
   readonly sendTurn: (
     input: ProviderSendTurnInput,
+    dispatchContext?: ProviderTurnDispatchContext,
   ) => Effect.Effect<ProviderTurnStartResult, TError>;
 
   /**

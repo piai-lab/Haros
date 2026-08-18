@@ -17,6 +17,13 @@ import { type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
 import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
+import {
+  AgentGatewayCredentials,
+  type AgentGatewayCredentialsShape,
+} from "../../agentGateway/Services/AgentGatewayCredentials.ts";
+import { AGENT_GATEWAY_HOST_LOADER_NAME } from "../agentGatewayHostExtension.ts";
+import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
+import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
 import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
@@ -39,6 +46,7 @@ import {
   PLAIN_PI_EXTENSION_THEME,
   toPiProviderModelDescriptor,
   makeOmniMindAgentAdapterLive,
+  promptRequiredAgentGatewayToolNames,
 } from "./PiAdapter";
 
 describe("Pi native resource projection", () => {
@@ -114,6 +122,36 @@ describe("Pi native resource projection", () => {
     expect(enginePrompt).not.toContain("BrowserDownloadApprovalRequired");
     expect(enginePrompt).not.toContain("Device mutations such as");
     expect(enginePrompt).not.toContain("<omnimind_host_context>");
+  });
+
+  it("keeps dynamic Host guidance compact and free of inactive catalog names", () => {
+    const prompt = makePiHostSystemPrompt({
+      provider: "omnimind",
+      gatewayControlAvailable: true,
+      dynamicHostTools: true,
+    });
+
+    expect(prompt).toContain("currently active Pi-native loader");
+    expect(prompt).toContain("Do not guess tool names");
+    expect(prompt).not.toContain("omnimind_list_threads");
+    expect(prompt).not.toContain("BrowserDownloadApprovalRequired");
+    expect(prompt).not.toContain("Device mutations such as");
+  });
+
+  it("derives only the bounded canonical prompt-required Gateway closure", () => {
+    expect(promptRequiredAgentGatewayToolNames(undefined)).toEqual([]);
+    expect(
+      promptRequiredAgentGatewayToolNames({ turnKind: "user", dispatchOrigin: "user" }),
+    ).toEqual([]);
+    expect(
+      promptRequiredAgentGatewayToolNames({
+        turnKind: "goal-continuation",
+        dispatchOrigin: "agent",
+      }),
+    ).toEqual(GOAL_CONTINUATION_GATEWAY_TOOL_NAMES);
+    expect(
+      promptRequiredAgentGatewayToolNames({ turnKind: "user", dispatchOrigin: "automation" }),
+    ).toEqual(AUTOMATION_RUN_GATEWAY_TOOL_NAMES);
   });
 
   it("does not give stock Pi the OmniMind identity or work-surface contract", () => {
@@ -264,6 +302,584 @@ describe("Pi native OmniMind gateway tools", () => {
     expect(callSignal).toBe(controller.signal);
     expect(controller.signal.aborted).toBe(true);
   });
+
+  it("loads Host tools dynamically only for OmniMind while leaving other owners opaque", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-dynamic-host-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    const gateway = makeGatewayCatalogFetch(() => [
+      gatewayToolDescriptor({
+        name: "browser_open",
+        group: "browser",
+        description: "Open a browser page.",
+      }),
+    ]);
+    const requestBodies: any[] = [];
+    let modelRequest = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      modelRequest += 1;
+      return modelRequest === 1
+        ? piOpenAiToolCallResponse({
+            name: AGENT_GATEWAY_HOST_LOADER_NAME,
+            arguments: { query: "open browser page" },
+            callId: "call-host-loader",
+          })
+        : piOpenAiSuccessResponse();
+    });
+    const agentThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000081");
+    const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000082");
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+        Layer.provideMerge(makeGatewayCredentialsLayer()),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            const agentSession = yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const agentTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "Open a browser page",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === agentTurn.turnId,
+                  ),
+                "Dynamic Host turn did not settle.",
+              ),
+            );
+            yield* adapter.rollbackThread(agentThreadId, 1);
+            const branchedTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "Continue on the native branch",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === branchedTurn.turnId,
+                  ),
+                "Branched Dynamic Host turn did not settle.",
+              ),
+            );
+            expect(yield* adapter.reloadSessionResources!(agentThreadId)).toBe("reloaded");
+            const reloadedTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "Continue after reloading Session resources",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === reloadedTurn.turnId,
+                  ),
+                "Reloaded Dynamic Host turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(agentThreadId);
+
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              ...(agentSession.resumeCursor === undefined
+                ? {}
+                : { resumeCursor: agentSession.resumeCursor }),
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const resumedTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "Continue after native resume",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === resumedTurn.turnId,
+                  ),
+                "Resumed Dynamic Host turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(agentThreadId);
+
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: chatThreadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const chatTurn = yield* adapter.sendTurn({
+              threadId: chatThreadId,
+              input: "Explain the browser capability",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === chatTurn.turnId,
+                  ),
+                "Dynamic Host Chat turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(chatThreadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(requestBodies).toHaveLength(6);
+      expect(piRequestToolNames(requestBodies[0])).toEqual(
+        expect.arrayContaining(["bash", "omnimind_update_tasks", AGENT_GATEWAY_HOST_LOADER_NAME]),
+      );
+      expect(piRequestToolNames(requestBodies[0])).not.toContain("browser_open");
+      expect(piRequestToolNames(requestBodies[1])).toEqual(
+        expect.arrayContaining([
+          "bash",
+          "omnimind_update_tasks",
+          AGENT_GATEWAY_HOST_LOADER_NAME,
+          "browser_open",
+        ]),
+      );
+      expect(piRequestToolNames(requestBodies[2])).toContain("browser_open");
+      const initialPrompt =
+        requestBodies[0]?.messages?.find((message: any) => message.role === "system")?.content ??
+        "";
+      expect(initialPrompt).toContain("active Host loader");
+      expect(initialPrompt).not.toContain("browser_open");
+      expect(piRequestToolNames(requestBodies[3])).toEqual(
+        expect.arrayContaining(["bash", "omnimind_update_tasks", AGENT_GATEWAY_HOST_LOADER_NAME]),
+      );
+      expect(piRequestToolNames(requestBodies[3])).not.toContain("browser_open");
+      expect(piRequestToolNames(requestBodies[4])).toEqual(
+        expect.arrayContaining(["bash", "omnimind_update_tasks", AGENT_GATEWAY_HOST_LOADER_NAME]),
+      );
+      expect(piRequestToolNames(requestBodies[4])).not.toContain("browser_open");
+      expect(piRequestToolNames(requestBodies[5])).toEqual(
+        expect.arrayContaining(["bash", AGENT_GATEWAY_HOST_LOADER_NAME]),
+      );
+      expect(piRequestToolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
+      expect(piRequestToolNames(requestBodies[5])).not.toContain("browser_open");
+      expect(gateway.requests.map(({ method }) => method)).toEqual([
+        "tools/list",
+        "tools/list",
+        "tools/list",
+        "tools/list",
+      ]);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps stock Pi on the direct eager Gateway projection", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "stock-pi-direct-host-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    const gateway = makeGatewayCatalogFetch(() => [
+      gatewayToolDescriptor({ name: "browser_open", group: "browser" }),
+    ]);
+    const requestBodies: any[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      return piOpenAiSuccessResponse();
+    });
+
+    try {
+      const layer = makePiAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+        Layer.provideMerge(makeGatewayCredentialsLayer()),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* PiAdapter;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000083");
+            yield* adapter.startSession({
+              provider: "pi",
+              threadId,
+              cwd,
+              providerOptions: { pi: { agentDir } },
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "Open a browser page",
+              attachments: [],
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+                  ),
+                "Stock Pi direct turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      const names = (requestBodies[0]?.tools ?? []).map(
+        (tool: any) => tool.function?.name ?? tool.name,
+      );
+      expect(names).toContain("browser_open");
+      expect(names).not.toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
+      expect(names).not.toContain("omnimind_update_tasks");
+      expect(gateway.requests.map(({ method }) => method)).toEqual(["tools/list"]);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("ensures exact synthetic-turn closures additively before the same model request", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-host-preflight-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    const gateway = makeGatewayCatalogFetch(() => [
+      ...GOAL_CONTINUATION_GATEWAY_TOOL_NAMES.map((name) => gatewayToolDescriptor({ name })),
+      ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES.map((name) => gatewayToolDescriptor({ name })),
+    ]);
+    const requestBodies: any[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      return piOpenAiSuccessResponse();
+    });
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000084");
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+        Layer.provideMerge(makeGatewayCredentialsLayer()),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const send = (
+              input: string,
+              dispatchContext?: Parameters<typeof adapter.sendTurn>[1],
+            ) =>
+              adapter.sendTurn(
+                {
+                  threadId,
+                  input,
+                  attachments: [],
+                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                },
+                dispatchContext,
+              );
+            const wait = (turnId: string) =>
+              Effect.promise(() =>
+                waitForTestCondition(
+                  () =>
+                    events.some(
+                      (event) => event.type === "turn.completed" && event.turnId === turnId,
+                    ),
+                  `Synthetic turn '${turnId}' did not settle.`,
+                ),
+              );
+            const goal = yield* send("Continue the goal", {
+              turnKind: "goal-continuation",
+              dispatchOrigin: "agent",
+            });
+            yield* wait(goal.turnId);
+            const manual = yield* send("Manual follow-up", {
+              turnKind: "user",
+              dispatchOrigin: "user",
+            });
+            yield* wait(manual.turnId);
+            const automation = yield* send("Automation envelope", {
+              turnKind: "user",
+              dispatchOrigin: "automation",
+            });
+            yield* wait(automation.turnId);
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(piRequestToolNames(requestBodies[0])).toEqual(
+        expect.arrayContaining([
+          AGENT_GATEWAY_HOST_LOADER_NAME,
+          ...GOAL_CONTINUATION_GATEWAY_TOOL_NAMES,
+        ]),
+      );
+      expect(piRequestToolNames(requestBodies[0])).not.toContain(
+        "omnimind_report_automation_result",
+      );
+      expect(piRequestToolNames(requestBodies[1])).toContain("omnimind_set_thread_goal");
+      expect(piRequestToolNames(requestBodies[1])).not.toContain(
+        "omnimind_report_automation_result",
+      );
+      expect(piRequestToolNames(requestBodies[2])).toEqual(
+        expect.arrayContaining(["omnimind_set_thread_goal", ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES]),
+      );
+      expect(gateway.requests.map(({ method }) => method)).toEqual([
+        "tools/list",
+        "tools/list",
+        "tools/list",
+      ]);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("blocks disabled preflight while keeping an empty-Gateway Session usable", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-host-policy-preflight-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    let enabled = true;
+    const gateway = makeGatewayCatalogFetch(() =>
+      enabled ? [gatewayToolDescriptor({ name: GOAL_CONTINUATION_GATEWAY_TOOL_NAMES[0] })] : [],
+    );
+    const modelBodies: any[] = [];
+    const modelFetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      modelBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      return piOpenAiSuccessResponse();
+    });
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000085");
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive({ agentGatewayFetch: gateway.fetch }).pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+        Layer.provideMerge(makeGatewayCredentialsLayer()),
+      );
+      const exit = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            enabled = false;
+            const sendExit = yield* Effect.exit(
+              adapter.sendTurn(
+                {
+                  threadId,
+                  input: "Continue the goal",
+                  attachments: [],
+                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                },
+                { turnKind: "goal-continuation", dispatchOrigin: "agent" },
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            const emptyThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000086");
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: emptyThreadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const ordinaryTurn = yield* adapter.sendTurn({
+              threadId: emptyThreadId,
+              input: "Continue without Host tools",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === ordinaryTurn.turnId,
+                  ),
+                "Empty-Gateway Session turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(emptyThreadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return sendExit;
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(exit._tag).toBe("Failure");
+      expect(modelFetch).toHaveBeenCalledTimes(1);
+      const names = (modelBodies[0]?.tools ?? []).map(
+        (tool: any) => tool.function?.name ?? tool.name,
+      );
+      expect(names).not.toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
+      expect(
+        modelBodies[0]?.messages?.find((message: any) => message.role === "system")?.content ?? "",
+      ).toContain("unavailable");
+      expect(gateway.requests.map(({ method }) => method)).toEqual([
+        "tools/list",
+        "tools/list",
+        "tools/list",
+      ]);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("Pi Bash process supervision", () => {
@@ -340,6 +956,10 @@ async function waitForTestCondition(predicate: () => boolean, message: string, t
   }
 }
 
+function piRequestToolNames(body: any): string[] {
+  return (body.tools ?? []).map((tool: any) => tool.function?.name ?? tool.name);
+}
+
 function piOpenAiSuccessResponse(text = "ok") {
   return new Response(
     [
@@ -411,6 +1031,119 @@ function piOpenAiTaskToolCallResponse() {
     ].join("\n\n"),
     { headers: { "content-type": "text/event-stream" } },
   );
+}
+
+function piOpenAiToolCallResponse(input: {
+  readonly name: string;
+  readonly arguments: Record<string, unknown>;
+  readonly callId?: string;
+}) {
+  return new Response(
+    [
+      `data: ${JSON.stringify({
+        id: `chatcmpl-${input.callId ?? "tool"}`,
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [
+          {
+            index: 0,
+            delta: {
+              role: "assistant",
+              tool_calls: [
+                {
+                  index: 0,
+                  id: input.callId ?? "call-tool",
+                  type: "function",
+                  function: {
+                    name: input.name,
+                    arguments: JSON.stringify(input.arguments),
+                  },
+                },
+              ],
+            },
+            finish_reason: null,
+          },
+        ],
+      })}`,
+      `data: ${JSON.stringify({
+        id: `chatcmpl-${input.callId ?? "tool"}`,
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+      })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n"),
+    { headers: { "content-type": "text/event-stream" } },
+  );
+}
+
+function makeGatewayCredentialsLayer(): Layer.Layer<AgentGatewayCredentials> {
+  const cancellation = { count: 0, settled: Promise.resolve() };
+  const credentials: AgentGatewayCredentialsShape = {
+    mcpEndpointUrl: "http://127.0.0.1:3773/mcp",
+    setListeningPort: () => undefined,
+    issueSessionToken: () => "gateway-token",
+    verifySessionToken: () => null,
+    verifySession: () => null,
+    issueStdioBootstrapToken: () => null,
+    exchangeStdioBootstrapToken: () => null,
+    bindWriteAuthority: () => null,
+    verifyWriteAuthority: () => false,
+    registerInFlightRequest: () => () => undefined,
+    cancelInFlightRequests: () => cancellation,
+    cancelSessionTurnRequests: () => Promise.resolve(),
+    retireSessionTurn: () => Promise.resolve(),
+    revokeSessionToken: () => undefined,
+    connectionForThread: (threadId, provider) => ({
+      url: "http://127.0.0.1:3773/mcp",
+      bearerToken: `gateway-token:${provider}:${threadId}`,
+    }),
+    stdioProxy: { command: "node", args: ["gateway-proxy.mjs"] },
+  };
+  return Layer.succeed(AgentGatewayCredentials, credentials);
+}
+
+function gatewayToolDescriptor(input: {
+  readonly name: string;
+  readonly group?: "omnimind" | "browser" | "device";
+  readonly description?: string;
+}) {
+  return {
+    name: input.name,
+    description: input.description ?? `Use ${input.name}.`,
+    inputSchema: { type: "object", properties: {} },
+    _meta: {
+      "omnimind/owner": "agent-gateway",
+      "omnimind/group": input.group ?? "omnimind",
+    },
+  };
+}
+
+function makeGatewayCatalogFetch(loadCatalog: () => ReadonlyArray<Record<string, unknown>>) {
+  const requests: Array<{ readonly method: string; readonly params?: unknown }> = [];
+  const fetch = async (_input: string | URL | Request, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body)) as {
+      readonly id: string;
+      readonly method: string;
+      readonly params?: unknown;
+    };
+    requests.push({
+      method: body.method,
+      ...(body.params === undefined ? {} : { params: body.params }),
+    });
+    return Response.json({
+      jsonrpc: "2.0",
+      id: body.id,
+      result:
+        body.method === "tools/list"
+          ? { tools: loadCatalog() }
+          : { content: [{ type: "text", text: "gateway tool completed" }] },
+    });
+  };
+  return { fetch, requests };
 }
 
 function piRetryableResponse() {

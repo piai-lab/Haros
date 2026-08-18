@@ -14,6 +14,8 @@ import type { AgentGatewayMcpToolDescriptor } from "../agentGateway/mcpInjection
 import {
   AGENT_GATEWAY_HOST_EXTENSION_PATH,
   AGENT_GATEWAY_HOST_LOADER_NAME,
+  deactivateUnavailableAgentGatewayHostProjection,
+  inspectAgentGatewayHostExtensionRegistration,
   makeAgentGatewayHostExtension,
   type AgentGatewayHostDiagnostic,
 } from "./agentGatewayHostExtension.ts";
@@ -251,6 +253,57 @@ describe.each([
       session.getAllTools().find((tool) => tool.name === AGENT_GATEWAY_HOST_LOADER_NAME)?.sourceInfo
         .path,
     ).toBe("<inline:foreign-loader>");
+
+    const inspection = inspectAgentGatewayHostExtensionRegistration({
+      extensions: session.resourceLoader.getExtensions(),
+      candidateToolNames: handle.candidateToolNames,
+    });
+    expect(inspection.available).toBe(false);
+    expect(
+      deactivateUnavailableAgentGatewayHostProjection({
+        session,
+        candidateToolNames: handle.candidateToolNames,
+      }),
+    ).toEqual(expect.arrayContaining(["browser_open", "omnimind_list_threads"]));
+    expect(session.getActiveToolNames()).toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
+    expect(session.getActiveToolNames()).not.toContain("browser_open");
+    expect(session.getActiveToolNames()).not.toContain("omnimind_list_threads");
+  });
+
+  it("removes an empty Host loader without disabling foreign collided winners", async () => {
+    const handle = makeAgentGatewayHostExtension({
+      descriptors,
+      connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
+      defineTool: (tool) => runtime.defineTool(tool),
+    });
+    if (!handle) throw new Error("expected Host Extension");
+    const foreign = foreignExtension({
+      name: "foreign-host-names",
+      toolNames: handle.candidateToolNames,
+    });
+    const { session } = await createSession({
+      runtime,
+      extensions: [foreign, handle.extension],
+    });
+
+    const inspection = inspectAgentGatewayHostExtensionRegistration({
+      extensions: session.resourceLoader.getExtensions(),
+      candidateToolNames: handle.candidateToolNames,
+    });
+    expect(inspection).toMatchObject({ available: false, ownedToolNames: [] });
+    expect(session.getActiveToolNames()).toEqual(
+      expect.arrayContaining([...handle.candidateToolNames, AGENT_GATEWAY_HOST_LOADER_NAME]),
+    );
+    expect(
+      deactivateUnavailableAgentGatewayHostProjection({
+        session,
+        candidateToolNames: handle.candidateToolNames,
+      }),
+    ).toEqual([AGENT_GATEWAY_HOST_LOADER_NAME]);
+    expect(session.getActiveToolNames()).toEqual(
+      expect.arrayContaining([...handle.candidateToolNames]),
+    );
+    expect(session.getActiveToolNames()).not.toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
   });
 
   it("does not claim or deactivate a customTools winner with the same name", async () => {

@@ -1,4 +1,9 @@
-import type { InlineExtension, ToolDefinition, ToolInfo } from "@earendil-works/pi-coding-agent";
+import type {
+  InlineExtension,
+  LoadExtensionsResult,
+  ToolDefinition,
+  ToolInfo,
+} from "@earendil-works/pi-coding-agent";
 import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 import type { ImageContent, TextContent } from "@earendil-works/pi-ai";
 
@@ -24,6 +29,16 @@ export interface AgentGatewayHostExtensionHandle {
   readonly extension: InlineExtension;
   readonly loaderName: string;
   readonly candidateToolNames: ReadonlyArray<string>;
+}
+
+export class AgentGatewayHostCapabilityUnavailableError extends Error {
+  readonly unavailableNames: ReadonlyArray<string>;
+
+  constructor(unavailableNames: ReadonlyArray<string>) {
+    super(`Required OmniMind Host tools are unavailable: ${unavailableNames.join(", ")}`);
+    this.name = "AgentGatewayHostCapabilityUnavailableError";
+    this.unavailableNames = unavailableNames;
+  }
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -69,13 +84,109 @@ function toPiGatewayToolResult(result: unknown): AgentToolResult<unknown> {
   };
 }
 
-function hasHostSource(tool: ToolInfo | undefined): boolean {
+export function isAgentGatewayHostTool(tool: ToolInfo | undefined): boolean {
   return (
     tool?.sourceInfo.path === AGENT_GATEWAY_HOST_EXTENSION_PATH &&
     tool.sourceInfo.source === "inline" &&
     tool.sourceInfo.scope === "temporary" &&
     tool.sourceInfo.origin === "top-level"
   );
+}
+
+function hasHostRegisteredSource(
+  tool: { readonly sourceInfo: ToolInfo["sourceInfo"] } | undefined,
+): boolean {
+  return (
+    tool?.sourceInfo.path === AGENT_GATEWAY_HOST_EXTENSION_PATH &&
+    tool.sourceInfo.source === "inline" &&
+    tool.sourceInfo.scope === "temporary" &&
+    tool.sourceInfo.origin === "top-level"
+  );
+}
+
+export function inspectAgentGatewayHostExtensionRegistration(input: {
+  readonly extensions: LoadExtensionsResult;
+  readonly candidateToolNames: ReadonlyArray<string>;
+}): {
+  readonly available: boolean;
+  readonly ownedToolNames: ReadonlyArray<string>;
+  readonly diagnostics: ReadonlyArray<string>;
+} {
+  const winner = (name: string) =>
+    input.extensions.extensions
+      .map((extension) => extension.tools.get(name))
+      .find((tool) => tool !== undefined);
+  const loaderOwned = hasHostRegisteredSource(winner(AGENT_GATEWAY_HOST_LOADER_NAME));
+  const ownedToolNames = input.candidateToolNames.filter((name) =>
+    hasHostRegisteredSource(winner(name)),
+  );
+  const collisionDiagnostics = input.extensions.errors
+    .filter(
+      ({ path, error }) =>
+        path === AGENT_GATEWAY_HOST_EXTENSION_PATH ||
+        error.includes(AGENT_GATEWAY_HOST_LOADER_NAME) ||
+        input.candidateToolNames.some((name) => error.includes(name)),
+    )
+    .map(({ error }) => error);
+  return {
+    available: loaderOwned && ownedToolNames.length > 0,
+    ownedToolNames,
+    diagnostics:
+      !loaderOwned && collisionDiagnostics.length === 0
+        ? ["Pi did not select the bundled AgentGateway Host loader."]
+        : collisionDiagnostics,
+  };
+}
+
+/** Ensure one exact prompt-required closure without touching any non-owned tool. */
+export function ensureAgentGatewayHostToolsActive(input: {
+  readonly session: {
+    readonly getAllTools: () => ToolInfo[];
+    readonly getActiveToolNames: () => string[];
+    readonly setActiveToolsByName: (names: string[]) => void;
+  };
+  readonly requiredNames: ReadonlyArray<string>;
+  readonly currentlyExposedNames: ReadonlySet<string>;
+}): ReadonlyArray<string> {
+  const allTools = input.session.getAllTools();
+  const unavailable = input.requiredNames.filter((name) => {
+    const tool = allTools.find((candidate) => candidate.name === name);
+    return !isAgentGatewayHostTool(tool) || !input.currentlyExposedNames.has(name);
+  });
+  if (unavailable.length > 0) {
+    throw new AgentGatewayHostCapabilityUnavailableError(unavailable);
+  }
+  const active = input.session.getActiveToolNames();
+  const activeNames = new Set(active);
+  const added = input.requiredNames.filter((name) => !activeNames.has(name));
+  if (added.length > 0) {
+    input.session.setActiveToolsByName([...new Set([...active, ...added])]);
+  }
+  return added;
+}
+
+/** Disable only this failed projection; a foreign winner and every other owner stay untouched. */
+export function deactivateUnavailableAgentGatewayHostProjection(input: {
+  readonly session: {
+    readonly getAllTools: () => ToolInfo[];
+    readonly getActiveToolNames: () => string[];
+    readonly setActiveToolsByName: (names: string[]) => void;
+  };
+  readonly candidateToolNames: ReadonlyArray<string>;
+}): ReadonlyArray<string> {
+  const candidateNames = new Set([...input.candidateToolNames, AGENT_GATEWAY_HOST_LOADER_NAME]);
+  const ownedNames = new Set(
+    input.session
+      .getAllTools()
+      .filter((tool) => candidateNames.has(tool.name) && isAgentGatewayHostTool(tool))
+      .map(({ name }) => name),
+  );
+  if (ownedNames.size > 0) {
+    input.session.setActiveToolsByName(
+      input.session.getActiveToolNames().filter((name) => !ownedNames.has(name)),
+    );
+  }
+  return [...ownedNames];
 }
 
 function assertCanonicalDescriptors(
@@ -224,7 +335,10 @@ export function makeAgentGatewayHostExtension(input: {
               const allTools = pi.getAllTools();
               const ownedNames = new Set(
                 allTools
-                  .filter((tool) => candidateToolNames.includes(tool.name) && hasHostSource(tool))
+                  .filter(
+                    (tool) =>
+                      candidateToolNames.includes(tool.name) && isAgentGatewayHostTool(tool),
+                  )
                   .map(({ name }) => name),
               );
               const liveNames = input.loadCurrentlyExposedToolNames
@@ -265,7 +379,7 @@ export function makeAgentGatewayHostExtension(input: {
         pi.on("session_start", () => {
           const allTools = pi.getAllTools();
           const loader = allTools.find((tool) => tool.name === AGENT_GATEWAY_HOST_LOADER_NAME);
-          if (!hasHostSource(loader)) {
+          if (!isAgentGatewayHostTool(loader)) {
             input.onDiagnostic?.({
               kind: "loader-collision",
               name: AGENT_GATEWAY_HOST_LOADER_NAME,
@@ -276,7 +390,7 @@ export function makeAgentGatewayHostExtension(input: {
           const ownedNames = new Set<string>();
           for (const name of candidateToolNames) {
             const tool = allTools.find((candidate) => candidate.name === name);
-            if (hasHostSource(tool)) {
+            if (isAgentGatewayHostTool(tool)) {
               ownedNames.add(name);
             } else {
               input.onDiagnostic?.({ kind: "tool-collision", name });

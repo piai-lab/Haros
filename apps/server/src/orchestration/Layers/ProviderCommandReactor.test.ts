@@ -3014,6 +3014,9 @@ describe("ProviderCommandReactor", () => {
     expect(providerInput).toContain("<omnimind_goal>");
     expect(providerInput).toContain("Finish the complete implementation");
     expect(providerInput).toContain("Continue working toward the active thread goal");
+    expect(harness.sendTurn.mock.calls[0]?.[1]).toMatchObject({
+      turnKind: "goal-continuation",
+    });
     expect((await readHarnessThread(harness))?.messages).toEqual([]);
   });
 
@@ -8271,6 +8274,10 @@ describe("ProviderCommandReactor", () => {
         }),
       );
       await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+      expect(harness.sendTurn.mock.calls[0]?.[1]).toEqual({
+        turnKind: "user",
+        dispatchOrigin: "automation",
+      });
       expect((await readHarnessThread(harness))?.modelSelection).toEqual(committedSelection);
 
       harness.setRuntimeSessionTurnState({ threadId, status: "running", activeTurnId });
