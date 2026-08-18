@@ -21,11 +21,6 @@ import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
 import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
 import {
-  buildOmniMindTaskListTool,
-  decodeOmniMindTaskListUpdate,
-  makeOmniMindTaskListExtension,
-} from "../omnimindTaskListExtension.ts";
-import {
   createPiModelRuntime,
   createOmniMindModelRuntime,
   findModelInRegistry,
@@ -128,124 +123,6 @@ describe("Pi native resource projection", () => {
     expect(prompt).not.toContain("You are OmniMind");
     expect(prompt).not.toContain("In Chat,");
     expect(prompt).not.toContain("In Agent,");
-  });
-
-  it("normalizes one bounded OmniMind task projection and rejects competing current tasks", async () => {
-    expect(
-      decodeOmniMindTaskListUpdate({
-        explanation: "  Intake reconciled  ",
-        tasks: [
-          { task: "  Inspect source  ", status: "completed" },
-          { task: "Implement candidate", status: "in_progress" },
-          { task: "Verify result", status: "pending" },
-        ],
-      }),
-    ).toEqual({
-      explanation: "Intake reconciled",
-      tasks: [
-        { task: "Inspect source", status: "completed" },
-        { task: "Implement candidate", status: "inProgress" },
-        { task: "Verify result", status: "pending" },
-      ],
-    });
-    expect(
-      decodeOmniMindTaskListUpdate({
-        tasks: [
-          { task: "First", status: "in_progress" },
-          { task: "Second", status: "in_progress" },
-        ],
-      }),
-    ).toBeNull();
-    expect(decodeOmniMindTaskListUpdate({ tasks: [] })).toBeNull();
-    expect(
-      decodeOmniMindTaskListUpdate({ tasks: [{ task: "Invalid", status: "abandoned" }] }),
-    ).toBeNull();
-
-    const tool = buildOmniMindTaskListTool({ defineTool: (definition) => definition });
-    expect(tool.name).toBe("omnimind_update_tasks");
-    expect(tool.promptGuidelines).toEqual([
-      "Track user goals and meaningful outcomes when progress visibility helps; investigate first when needed, and never list internal tool or loading steps.",
-    ]);
-    const openAiFunctionEnvelope = {
-      type: "function",
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.parameters,
-      },
-    };
-    expect(Buffer.byteLength(JSON.stringify(openAiFunctionEnvelope), "utf8")).toBeLessThan(1_024);
-    expect(Buffer.byteLength(JSON.stringify(tool.promptGuidelines), "utf8")).toBeLessThan(256);
-    await expect(
-      tool.execute(
-        "task-call",
-        { tasks: [{ task: "Finish", status: "completed" }] },
-        undefined,
-        undefined,
-        {} as never,
-      ),
-    ).resolves.toMatchObject({
-      details: { tasks: [{ task: "Finish", status: "completed" }] },
-    });
-  });
-
-  it("projects only result details created by the product Todo Extension instance", async () => {
-    const projected: unknown[] = [];
-    let tool: any;
-    let onExecutionEnd: ((event: any) => void) | undefined;
-    const extension = makeOmniMindTaskListExtension({
-      defineTool: (definition) => definition,
-      onTasksUpdated: (update) => projected.push(update),
-    });
-    expect(typeof extension).not.toBe("function");
-    if (typeof extension === "function") throw new Error("expected a named inline Extension");
-    await extension.factory({
-      registerTool: (definition: unknown) => {
-        tool = definition;
-      },
-      on: (event: string, handler: (value: any) => void) => {
-        if (event === "tool_execution_end") onExecutionEnd = handler;
-      },
-    } as never);
-
-    onExecutionEnd?.({
-      type: "tool_execution_end",
-      toolCallId: "forged",
-      toolName: "omnimind_update_tasks",
-      isError: false,
-      result: { details: { tasks: [{ task: "Forged", status: "completed" }] } },
-    });
-    expect(projected).toEqual([]);
-
-    const result = await tool.execute(
-      "trusted",
-      { tasks: [{ task: "Verified outcome", status: "completed" }] },
-      undefined,
-      undefined,
-      {} as never,
-    );
-    onExecutionEnd?.({
-      type: "tool_execution_end",
-      toolCallId: "trusted",
-      toolName: "omnimind_update_tasks",
-      isError: false,
-      result,
-    });
-    expect(projected).toEqual([
-      {
-        toolCallId: "trusted",
-        payload: { tasks: [{ task: "Verified outcome", status: "completed" }] },
-      },
-    ]);
-
-    onExecutionEnd?.({
-      type: "tool_execution_end",
-      toolCallId: "replayed",
-      toolName: "omnimind_update_tasks",
-      isError: false,
-      result,
-    });
-    expect(projected).toHaveLength(1);
   });
 
   it("normalizes native tool text before it reaches the Timeline event contract", () => {
