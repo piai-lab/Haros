@@ -758,7 +758,7 @@ describe("Pi native OmniMind gateway tools", () => {
     }
   });
 
-  it("blocks disabled preflight while keeping an empty-Gateway Session usable", async () => {
+  it("blocks disabled preflight without killing the current Pi Session", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-host-policy-preflight-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -828,19 +828,9 @@ describe("Pi native OmniMind gateway tools", () => {
                 { turnKind: "goal-continuation", dispatchOrigin: "agent" },
               ),
             );
-            yield* adapter.stopSession(threadId);
-            const emptyThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000086");
-            yield* adapter.startSession({
-              provider: "omnimind",
-              threadId: emptyThreadId,
-              cwd,
-              workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
-              runtimeMode: "full-access",
-            });
             const ordinaryTurn = yield* adapter.sendTurn({
-              threadId: emptyThreadId,
-              input: "Continue without Host tools",
+              threadId,
+              input: "Continue with the ordinary Agent task",
               attachments: [],
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
             });
@@ -851,10 +841,10 @@ describe("Pi native OmniMind gateway tools", () => {
                     (event) =>
                       event.type === "turn.completed" && event.turnId === ordinaryTurn.turnId,
                   ),
-                "Empty-Gateway Session turn did not settle.",
+                "Ordinary turn after blocked Host preflight did not settle.",
               ),
             );
-            yield* adapter.stopSession(emptyThreadId);
+            yield* adapter.stopSession(threadId);
             yield* Fiber.interrupt(eventsFiber);
             return sendExit;
           }).pipe(Effect.provide(layer)),
@@ -863,18 +853,9 @@ describe("Pi native OmniMind gateway tools", () => {
 
       expect(exit._tag).toBe("Failure");
       expect(modelFetch).toHaveBeenCalledTimes(1);
-      const names = (modelBodies[0]?.tools ?? []).map(
-        (tool: any) => tool.function?.name ?? tool.name,
-      );
-      expect(names).not.toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
-      expect(
-        modelBodies[0]?.messages?.find((message: any) => message.role === "system")?.content ?? "",
-      ).toContain("unavailable");
-      expect(gateway.requests.map(({ method }) => method)).toEqual([
-        "tools/list",
-        "tools/list",
-        "tools/list",
-      ]);
+      expect(piRequestToolNames(modelBodies[0])).toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
+      expect(piRequestToolNames(modelBodies[0])).not.toContain("omnimind_set_thread_goal");
+      expect(gateway.requests.map(({ method }) => method)).toEqual(["tools/list", "tools/list"]);
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });

@@ -358,6 +358,48 @@ describe.each([
     expect(browser.details).toEqual({ matches: [], added: [] });
     expect(session.getActiveToolNames()).not.toContain("browser_open");
   });
+
+  it("does not treat an active schema as live Gateway authorization", async () => {
+    let authorized = true;
+    const fetch = async (_request: string | URL | Request, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { readonly id: string };
+      return Response.json({
+        jsonrpc: "2.0",
+        id: body.id,
+        result: authorized
+          ? { content: [{ type: "text", text: "opened" }] }
+          : {
+              isError: true,
+              content: [{ type: "text", text: "Browser is disabled by current policy." }],
+            },
+      });
+    };
+    const handle = makeAgentGatewayHostExtension({
+      descriptors,
+      connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
+      defineTool: (tool) => runtime.defineTool(tool),
+      fetch,
+    });
+    if (!handle) throw new Error("expected Host Extension");
+    const { session } = await createSession({ runtime, extensions: [handle.extension] });
+    const loader = session.getToolDefinition(AGENT_GATEWAY_HOST_LOADER_NAME)!;
+    await loader.execute(
+      "load-browser",
+      { query: "open browser" },
+      undefined,
+      undefined,
+      {} as never,
+    );
+    expect(session.getActiveToolNames()).toContain("browser_open");
+
+    authorized = false;
+    await expect(
+      session
+        .getToolDefinition("browser_open")!
+        .execute("stale-browser", {}, undefined, undefined, {} as never),
+    ).rejects.toThrow("Browser is disabled by current policy.");
+    expect(session.getActiveToolNames()).toContain("browser_open");
+  });
 });
 
 describe("AgentGateway Host Extension catalog admission", () => {
