@@ -1,19 +1,19 @@
 # OmniMind 当前执行简报
 
-Updated: 2026-08-18
+Updated: 2026-08-19
 
 本文件只拥有当前目标、范围、真实冲突/阻塞与下一动作。历史 Slice、构建日志、测试计数和 artifact 证据属于 Git、`research/` 与 active Mission，不在这里追加。它不能推翻维护者对完整 source decision surface 的明确采用决定。
 
 ## 当前目标
 
-`Project instructions` 全链退休与 bundled OmniMind 默认身份/Chat-Agent 分层已通过 exact pushed merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 合入并安装验证：普通 OmniMind 会话不再继承 Pi coding-assistant 身份，且用户已确认的理解、提问、拔高、执行与风险边界在启动、重载、恢复和 Provider replacement 后保持一致。
+在既有 identity/Chat-Agent/trust 基线上完成 Agent tools Gate B：让 AgentGateway Host tools 只在 canonical `omnimind` Provider 中作为 named hidden Pi Extension 参与原生 Dynamic Tool Loading，同时保留 stock Pi 与其他 Engine 的 direct/eager projection。
 
-1. 只修改 `omnimind` Provider 的产品身份和行为；stock `pi` 及其他 Engine 保持原生 identity；
-2. 内置不可覆盖的共同 identity/cognitive contract，并按 canonical Project kind 投影 `Agent` 或 `Chat` 行为；不从 cwd、路径名称或 Provider options 猜测工作方式；
-3. `project` 映射为 Agent，`chat`/`studio` 映射为 Chat；该投影只作为现有 Provider Session binding 的恢复快照，不成为第二持久 authority；
-4. canonical folder-backed Project 只在正式 Agent Session admission 后显式 trusted，Project rules 只从 Project/worktree root 到当前 cwd 读取；Chat/Studio 与无 active Session 的被动 discovery 都保持 untrusted/global-only，不执行 Project Extension；
-5. 保留 Pi 原生 dynamic tools、Skills、Extensions、Prompt files、reload、compaction 与 Session lifecycle，不新增 Prompt store、设置页、隐藏文件或兼容轨；
-6. 修正 product-owned default base 中错误的 Pi identity 和未随 archive 发行的 docs/examples 导航，并同步 patch/archive/adoption digest。
+1. 一份 AgentGateway canonical catalog 同时拥有 name/schema/group、availability、execution 与 call-time policy；
+2. fresh 默认开放的 Built-in tools policy 覆盖所有 Agent，新 Session 过滤、旧 Session 新调用实时拒绝；
+3. OmniMind Host Extension 只注册和 additive 激活自己的 Gateway names，不识别其他 Extension、Todo、Bash、Skills、Packages 或第三方 MCP；
+4. Goal continuation 与 Automation envelope 在同一 request 前只 additive ensure 其明确要求的 bounded closure，职责结束不卸载 schema；
+5. Todo 继续是独立的 product-bundled Pi Session Extension，只在 OmniMind Agent work surface initial-active；
+6. Settings 只新增 Built-in tools，并把现有连接页准确呈现为 External connections；第三方 MCP Settings 继续退出首版。
 
 ## 当前事实
 
@@ -35,7 +35,7 @@ Updated: 2026-08-18
 
 ## 当前工作范围
 
-本次已合入范围只包含 OmniMind 默认 identity/cognitive contract、Chat/Agent overlay、Project trust/context boundary、为此必需的 Session admission/recovery 接线，以及 Project instructions 退休。没有启动 Prompt 管理 UI、Template CRUD、Host policy 全量 diet、Memory/Knowledge、Workflow、第二 Prompt loader/store 或其他 Agent Core 扩张。
+当前只实施 AgentGateway catalog/Built-in exposure、OmniMind Host Pi projection、Todo Extension 收口、prompt truth、Settings 两个既定入口和相称的 exact/live/packaged 验证。不实施第三方 MCP manager、通用 Tool Search、第二 registry/active store、Prompt 管理、Memory/Knowledge 或 Workflow。
 
 ## 保留边界
 
@@ -51,11 +51,14 @@ Updated: 2026-08-18
 
 ## 下一动作
 
-本关注点已关闭，不再扩张 discovery 或 Prompt 管理责任。MiMo Chat 与 DeepSeek folder-backed Agent 的首轮、continuation、identity、surface overlay 及 Extension replacement 已完成脱敏 live probe；request-level 与 packaged evidence 继续保护同一边界。下一产品议题是独立的 Prompt 管理决策面：只管理 OmniMind 引擎使用的个人指令、项目规则和提示词模板，在所有关键细节明确前不进入实现。
+按 Gate B 纵向切片依次闭合 adoption authority、Todo Extension、External connections、all-agent Built-in policy、prompt diet、collision-safe Host Extension、OmniMind-only dynamic loading、call-time authority 与真实 provider/packaged evidence。每个关注点单独本地提交；当前任务明确不 push、merge、发布或替换已安装 App。
 
 ## 证据入口
 
 - Source intake 与逐责任 disposition：[`research/source-review.md`](research/source-review.md)
+- Host dynamic loading exact evidence：[`research/pi-native-host-tool-loading-review.md`](research/pi-native-host-tool-loading-review.md)
+- Settings、all-agent policy 与 MCP 边界：[`research/agent-tools-mcp-settings-review.md`](research/agent-tools-mcp-settings-review.md)
+- Todo Extension bounded owner：[`research/pi-native-todo-extension-review.md`](research/pi-native-todo-extension-review.md)
 - Project instructions 母体调用链、退休边界与 Prompt 分工：[`research/omnimind-prompt-management-review.md`](research/omnimind-prompt-management-review.md)
 - Agent Core 稳定责任：[`architecture/execution.md`](architecture/execution.md)；Pi 外部来源与验证规则：[`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)
 - Claim 状态与 evidence pointer：[`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md)
