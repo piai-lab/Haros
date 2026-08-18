@@ -141,7 +141,7 @@ Terminal 使用真实 PTY，区分 running/exited，支持 input/copy/search/res
 
 ### Chat shell、环境信息与响应式 Workbench
 
-Chat shell 只有一个会随真实可用区域自适应的主画布：Timeline 与 Composer。两者与空态 Hero、运行状态行、消息列和回到底部按钮必须共用同一横向中心轴；该轴始终是当前 Chat 左边界与当前右侧占位表面（Environment、Plan 或 Workbench）边界之间的几何中心，不是整个窗口的中心。布局应由同一个 flex/grid 可用宽度自然推导，不得根据外层 Sidebar 宽度再施加反向 translate、固定 inset 或第二套几何补偿。打开或关闭宽屏 Environment、Sidebar 或 Workbench 时，主画布可以平滑重新居中于剩余区域；使用 overlay/exclusive presentation 的表面不占用该区域。
+Chat shell 只有一个会随真实可用区域自适应的主画布：Timeline 与 Composer。两者与空态 Hero、运行状态行、消息列和回到底部按钮必须共用同一横向中心轴；该轴始终是当前 Chat 左边界与当前右侧占位表面（Environment、Plan 或 Workbench）边界之间的几何中心，不是整个窗口的中心。Message Trail 是 Chat pane 左侧的辅助导航 chrome，不属于该居中内容轴：其横向位置固定锚定当前 Chat 左边界并保留稳定 inset，只有 Chat 左边界本身移动时才等量移动；窗口右缘、正文宽度或右侧占位表面变化只能改变正文居中与轨道是否有足够防碰撞空间，不能拖着轨道横向漂移。布局应由同一个 flex/grid 可用宽度自然推导，不得根据外层 Sidebar 宽度再施加反向 translate、固定 inset 或第二套几何补偿。打开或关闭宽屏 Environment、Sidebar 或 Workbench 时，主画布可以平滑重新居中于剩余区域；使用 overlay/exclusive presentation 的表面不占用该区域。
 
 四类表面的职责固定如下：
 

@@ -344,6 +344,7 @@ export function ChatTranscriptPane({
         {!agentActivityDetail ? (
           <MessageTrail
             items={trailItems}
+            activeThreadId={activeThreadId}
             activeStore={activeTrailStore}
             onSelect={handleTrailSelect}
           />
