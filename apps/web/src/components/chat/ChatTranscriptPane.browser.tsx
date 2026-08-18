@@ -343,14 +343,13 @@ describe("ChatTranscriptPane", () => {
     );
     try {
       await vi.waitFor(() => {
-        const trail = screen.container.querySelector('nav[aria-label="Message navigation"]');
+        const trail = screen.container.querySelector("[data-message-trail]");
         expect(trail?.getAttribute("aria-hidden")).toBe("true");
+        expect(trail?.hasAttribute("inert")).toBe(true);
       });
 
       const ticks = Array.from(
-        screen.container.querySelectorAll<HTMLButtonElement>(
-          'nav[aria-label="Message navigation"] button',
-        ),
+        screen.container.querySelectorAll<HTMLButtonElement>("[data-message-trail] button"),
       );
       expect(ticks).toHaveLength(2);
       expect(ticks.every((tick) => tick.tabIndex === -1)).toBe(true);
