@@ -3808,6 +3808,113 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("animates and reverses RightDock geometry when route navigation changes thread-local state", async () => {
+    const explorerPane = createRightDockPane("pane-explorer-route-motion", "explorer");
+    useRightDockStore.setState({
+      dockStateByThreadId: {
+        [THREAD_ID]: {
+          open: true,
+          panes: [explorerPane],
+          activePaneId: explorerPane.id,
+        },
+      },
+    });
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1536 },
+      snapshot: addThreadToSnapshot(
+        createSnapshotForTargetUser({
+          targetMessageId: "msg-user-right-dock-route-motion" as MessageId,
+          targetText: "right dock route motion",
+        }),
+        OTHER_THREAD_ID,
+      ),
+    });
+
+    const workbench = () =>
+      mounted.host.querySelector<HTMLElement>("[data-workbench-presentation]");
+    const dockRoot = () =>
+      workbench()?.querySelector<HTMLElement>("[data-right-dock-presentation]") ?? null;
+    const dockSidebar = () =>
+      dockRoot()?.querySelector<HTMLElement>("[data-slot='sidebar']") ?? null;
+    const dockGap = () =>
+      dockRoot()?.querySelector<HTMLElement>("[data-slot='sidebar-gap']") ?? null;
+
+    const recordTransitionAtNextDockState = async (
+      nextState: "expanded" | "collapsed",
+      navigate: () => Promise<unknown>,
+    ) => {
+      const sidebar = await waitForElement(dockSidebar, "Unable to find RightDock sidebar.");
+      const transitionDurations: string[] = [];
+      const observer = new MutationObserver(() => {
+        if (sidebar.getAttribute("data-state") === nextState) {
+          const gap = dockGap();
+          if (gap) transitionDurations.push(getComputedStyle(gap).transitionDuration);
+        }
+      });
+      observer.observe(sidebar, { attributes: true, attributeFilter: ["data-state"] });
+      try {
+        await navigate();
+        await vi.waitFor(() => expect(transitionDurations.length).toBeGreaterThan(0));
+        expect(transitionDurations[0]?.split(",")).toContain("0.24s");
+      } finally {
+        observer.disconnect();
+      }
+    };
+
+    try {
+      await vi.waitFor(() =>
+        expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("split"),
+      );
+      await waitForLayout();
+      expect(getComputedStyle(dockGap()!).transitionDuration.split(",")).toContain("0.24s");
+      const authoredOpenWidth = dockGap()!.getBoundingClientRect().width;
+      expect(authoredOpenWidth).toBeGreaterThan(0);
+
+      await recordTransitionAtNextDockState("collapsed", () =>
+        mounted.router.navigate({
+          to: "/$threadId",
+          params: { threadId: OTHER_THREAD_ID },
+        }),
+      );
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${OTHER_THREAD_ID}`,
+        "Expected route navigation to reach the closed-dock thread.",
+      );
+      await vi.waitFor(() =>
+        expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("closed"),
+      );
+      expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.open).toBe(true);
+      // Reverse before the 240ms close completes. CSS drawer motion must remain
+      // interruptible rather than finishing an obsolete route transition first.
+      expect(dockGap()!.getBoundingClientRect().width).toBeGreaterThan(0);
+
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 48));
+      await recordTransitionAtNextDockState("expanded", () =>
+        mounted.router.navigate({
+          to: "/$threadId",
+          params: { threadId: THREAD_ID },
+        }),
+      );
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${THREAD_ID}`,
+        "Expected route navigation to restore the open-dock thread.",
+      );
+      await vi.waitFor(() =>
+        expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("split"),
+      );
+      expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual([
+        explorerPane,
+      ]);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 280));
+      await waitForLayout();
+      expect(dockGap()!.getBoundingClientRect().width).toBeCloseTo(authoredOpenWidth, 0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("keeps the responsive shell continuous through the authored hysteresis widths", async () => {
     const explorerPane = createRightDockPane("pane-explorer-continuous-resize", "explorer");
     useRightDockStore.setState({
@@ -5336,6 +5443,80 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
     } finally {
       restoreScrollTo();
+      await mounted.cleanup();
+    }
+  });
+
+  it("centers the scroll-to-bottom arrow on the same compensated column as Composer", async () => {
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1894, height: 1072 },
+      snapshot: createSnapshotWithLongAssistantResponse(),
+    });
+
+    try {
+      const scrollContainer = await waitForElement(
+        () => document.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
+        "Unable to find message scroll container.",
+      );
+      await vi.waitFor(() => {
+        expect(scrollContainer.scrollHeight).toBeGreaterThan(scrollContainer.clientHeight);
+      });
+      scrollContainer.dispatchEvent(new WheelEvent("wheel", { bubbles: true, deltaY: -100 }));
+      scrollContainer.scrollTo({ top: 0, behavior: "auto" });
+      const scrollButton = await waitForElement(
+        () =>
+          document.querySelector<HTMLButtonElement>(
+            "button[aria-label='Scroll to bottom'][aria-hidden='false']",
+          ),
+        "Unable to find the visible scroll-to-bottom button.",
+      );
+      const composerShell = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>(".chat-composer-shell"),
+        "Unable to find Composer shell.",
+      );
+      await waitForLayout();
+
+      const measureSharedCenter = () => {
+        const scrollButtonRect = scrollButton.getBoundingClientRect();
+        const composerRect = composerShell.getBoundingClientRect();
+        return {
+          scrollButtonCenter: scrollButtonRect.x + scrollButtonRect.width / 2,
+          composerCenter: composerRect.x + composerRect.width / 2,
+          composerWidth: composerRect.width,
+        };
+      };
+      const beforeEnvironment = measureSharedCenter();
+      expect(
+        Math.abs(beforeEnvironment.scrollButtonCenter - beforeEnvironment.composerCenter),
+      ).toBeLessThanOrEqual(1);
+      expect(scrollButton.closest("[data-scroll-to-bottom-frame]")).toBeTruthy();
+
+      const environmentToggle = await waitForElement(
+        () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+        "Unable to find Environment toggle.",
+      );
+      environmentToggle.click();
+      const environmentPanel = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLElement>(
+            "[data-environment-panel-presentation='overlay'][aria-hidden='false']",
+          ),
+        "Unable to find the open Environment inspector.",
+      );
+      expect(environmentPanel.hasAttribute("inert")).toBe(false);
+      await waitForLayout();
+
+      const withEnvironment = measureSharedCenter();
+      expect(
+        Math.abs(withEnvironment.scrollButtonCenter - withEnvironment.composerCenter),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(withEnvironment.composerCenter - beforeEnvironment.composerCenter),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(withEnvironment.composerWidth - beforeEnvironment.composerWidth),
+      ).toBeLessThanOrEqual(1);
+    } finally {
       await mounted.cleanup();
     }
   });

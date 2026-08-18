@@ -88,7 +88,6 @@ interface RightDockProps {
   /** Width the primary surface must retain while this dock is split beside it. */
   minimumPrimaryWidth?: number;
   presentation?: "split" | "exclusive";
-  motionKey?: string;
   activePaneRuntimeMode?: DockPaneRuntimeMode;
   renderPane: (
     pane: RightDockPane,
@@ -308,15 +307,17 @@ export function RightDock(props: RightDockProps) {
   const renderedPanes = props.state.panes.filter(
     (pane) => pane.id === activePane?.id || keepMountedPaneIds.has(pane.id),
   );
-  // Motion allowance keyed to the current motionKey: a key change (reposition/
-  // remount) derives straight back to "suppressed" in that same render, and the
-  // rAF below re-enables motion once the suppressed frame has painted. Mounting
-  // with the dock open starts suppressed for the same reason.
+  // A responsive presentation change derives straight back to "suppressed" in
+  // that same render, and the rAF below re-enables motion once the final tier has
+  // painted. Mounting with the dock open starts suppressed for the same reason.
+  // Thread changes intentionally keep the drawer transition: the controlled dock
+  // state already swaps atomically, while the chat canvas must follow the new
+  // thread's open/closed geometry instead of snapping between product surfaces.
   // Responsive presentation changes must commit their final geometry before
   // paint; they are not drawer open/close animations. Fold the presentation
   // tier into the existing one-frame motion gate so no second motion owner is
   // introduced.
-  const chromeMotionKey = `${props.motionKey ?? "default"}:${props.presentation ?? "split"}`;
+  const chromeMotionKey = props.presentation ?? "split";
   const [motionState, setMotionState] = useState<{
     key: string;
     allow: boolean;
