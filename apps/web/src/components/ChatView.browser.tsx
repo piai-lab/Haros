@@ -3808,7 +3808,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("animates RightDock geometry when route navigation changes the thread-local open state", async () => {
+  it("animates and reverses RightDock geometry when route navigation changes thread-local state", async () => {
     const explorerPane = createRightDockPane("pane-explorer-route-motion", "explorer");
     useRightDockStore.setState({
       dockStateByThreadId: {
@@ -3867,6 +3867,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       await waitForLayout();
       expect(getComputedStyle(dockGap()!).transitionDuration.split(",")).toContain("0.24s");
+      const authoredOpenWidth = dockGap()!.getBoundingClientRect().width;
+      expect(authoredOpenWidth).toBeGreaterThan(0);
 
       await recordTransitionAtNextDockState("collapsed", () =>
         mounted.router.navigate({
@@ -3883,8 +3885,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(workbench()?.getAttribute("data-workbench-presentation")).toBe("closed"),
       );
       expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.open).toBe(true);
+      // Reverse before the 240ms close completes. CSS drawer motion must remain
+      // interruptible rather than finishing an obsolete route transition first.
+      expect(dockGap()!.getBoundingClientRect().width).toBeGreaterThan(0);
 
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 280));
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 48));
       await recordTransitionAtNextDockState("expanded", () =>
         mounted.router.navigate({
           to: "/$threadId",
@@ -3902,6 +3907,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useRightDockStore.getState().dockStateByThreadId[THREAD_ID]?.panes).toEqual([
         explorerPane,
       ]);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 280));
+      await waitForLayout();
+      expect(dockGap()!.getBoundingClientRect().width).toBeCloseTo(authoredOpenWidth, 0);
     } finally {
       await mounted.cleanup();
     }
@@ -5468,12 +5476,46 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       await waitForLayout();
 
-      const scrollButtonRect = scrollButton.getBoundingClientRect();
-      const composerRect = composerShell.getBoundingClientRect();
-      const scrollButtonCenter = scrollButtonRect.x + scrollButtonRect.width / 2;
-      const composerCenter = composerRect.x + composerRect.width / 2;
-      expect(Math.abs(scrollButtonCenter - composerCenter)).toBeLessThanOrEqual(1);
+      const measureSharedCenter = () => {
+        const scrollButtonRect = scrollButton.getBoundingClientRect();
+        const composerRect = composerShell.getBoundingClientRect();
+        return {
+          scrollButtonCenter: scrollButtonRect.x + scrollButtonRect.width / 2,
+          composerCenter: composerRect.x + composerRect.width / 2,
+          composerWidth: composerRect.width,
+        };
+      };
+      const beforeEnvironment = measureSharedCenter();
+      expect(
+        Math.abs(beforeEnvironment.scrollButtonCenter - beforeEnvironment.composerCenter),
+      ).toBeLessThanOrEqual(1);
       expect(scrollButton.closest("[data-scroll-to-bottom-frame]")).toBeTruthy();
+
+      const environmentToggle = await waitForElement(
+        () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+        "Unable to find Environment toggle.",
+      );
+      environmentToggle.click();
+      const environmentPanel = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLElement>(
+            "[data-environment-panel-presentation='overlay'][aria-hidden='false']",
+          ),
+        "Unable to find the open Environment inspector.",
+      );
+      expect(environmentPanel.hasAttribute("inert")).toBe(false);
+      await waitForLayout();
+
+      const withEnvironment = measureSharedCenter();
+      expect(
+        Math.abs(withEnvironment.scrollButtonCenter - withEnvironment.composerCenter),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(withEnvironment.composerCenter - beforeEnvironment.composerCenter),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(withEnvironment.composerWidth - beforeEnvironment.composerWidth),
+      ).toBeLessThanOrEqual(1);
     } finally {
       await mounted.cleanup();
     }

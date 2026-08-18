@@ -1,23 +1,38 @@
 // FILE: MessagesTimeline.statusAlignment.browser.tsx
-// Purpose: Browser geometry regression for live and settled turn-status leading edges.
+// Purpose: Browser geometry and locale regression for live and settled turn-status rows.
 // Layer: Vitest browser tests
 
 import "../../index.css";
 
 import { MessageId } from "@omnimind/contracts";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
+const harness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN" } } => ({
+  settings: { localePreference: "en" },
+}));
+
+vi.mock("~/appSettings", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/appSettings")>()),
+  useAppSettings: () => ({ settings: harness.settings }),
+}));
+
+import { I18nProvider } from "~/i18n";
 import { MessagesTimeline } from "./MessagesTimeline";
 
 const VIEWPORT_WIDTHS = [480, 960, 1440] as const;
 const LIVE_STATUS_CASES = VIEWPORT_WIDTHS.flatMap((widthPx) =>
-  (["light", "dark"] as const).map((theme) => [widthPx, theme] as const),
+  (["light", "dark"] as const).flatMap((theme) =>
+    (["en", "zh-CN"] as const).map((locale) => [widthPx, theme, locale] as const),
+  ),
 );
+const SETTLED_STATUS_CASES = VIEWPORT_WIDTHS.flatMap((widthPx) =>
+  (["en", "zh-CN"] as const).map((locale) => [widthPx, locale] as const),
+);
+const FIXED_NOW_ISO = "2026-03-17T19:12:30.000Z";
 
 const sharedProps = {
   turnDiffSummaryByAssistantMessageId: new Map(),
-  nowIso: "2026-03-17T19:12:30.000Z",
   expandedWorkGroups: {},
   onToggleWorkGroup: () => {},
   onOpenTurnDiff: () => {},
@@ -30,56 +45,67 @@ const sharedProps = {
   workspaceRoot: undefined,
 };
 
-function LiveStatusTimeline({ theme }: { theme: "light" | "dark" }) {
+function LiveStatusTimeline({
+  theme,
+  useLiveClock = false,
+}: {
+  theme: "light" | "dark";
+  useLiveClock?: boolean;
+}) {
   return (
-    <MessagesTimeline
-      {...sharedProps}
-      hasMessages
-      isWorking
-      activeTurnInProgress
-      activeTurnStartedAt="2026-03-17T19:12:28.000Z"
-      timelineEntries={[]}
-      resolvedTheme={theme}
-    />
+    <I18nProvider>
+      <MessagesTimeline
+        {...sharedProps}
+        {...(useLiveClock ? {} : { nowIso: FIXED_NOW_ISO })}
+        hasMessages
+        isWorking
+        activeTurnInProgress
+        activeTurnStartedAt="2026-03-17T19:12:28.000Z"
+        timelineEntries={[]}
+        resolvedTheme={theme}
+      />
+    </I18nProvider>
   );
 }
 
 function SettledStatusTimeline() {
   return (
-    <MessagesTimeline
-      {...sharedProps}
-      hasMessages
-      isWorking={false}
-      activeTurnInProgress={false}
-      activeTurnStartedAt={null}
-      timelineEntries={[
-        {
-          id: "entry-work-inline",
-          kind: "work",
-          createdAt: "2026-03-17T19:12:28.000Z",
-          entry: {
-            id: "work-inline-1",
+    <I18nProvider>
+      <MessagesTimeline
+        {...sharedProps}
+        hasMessages
+        isWorking={false}
+        activeTurnInProgress={false}
+        activeTurnStartedAt={null}
+        timelineEntries={[
+          {
+            id: "entry-work-inline",
+            kind: "work",
             createdAt: "2026-03-17T19:12:28.000Z",
-            label: "turn",
-            tone: "info",
+            entry: {
+              id: "work-inline-1",
+              createdAt: "2026-03-17T19:12:28.000Z",
+              label: "turn",
+              tone: "info",
+            },
           },
-        },
-        {
-          id: "entry-assistant-inline",
-          kind: "message",
-          createdAt: "2026-03-17T19:12:29.000Z",
-          message: {
-            id: MessageId.makeUnsafe("message-assistant-inline"),
-            role: "assistant",
-            text: "Alignment reference text.",
+          {
+            id: "entry-assistant-inline",
+            kind: "message",
             createdAt: "2026-03-17T19:12:29.000Z",
-            completedAt: "2026-03-17T19:12:30.000Z",
-            streaming: false,
+            message: {
+              id: MessageId.makeUnsafe("message-assistant-inline"),
+              role: "assistant",
+              text: "Alignment reference text.",
+              createdAt: "2026-03-17T19:12:29.000Z",
+              completedAt: "2026-03-17T19:12:30.000Z",
+              streaming: false,
+            },
           },
-        },
-      ]}
-      resolvedTheme="dark"
-    />
+        ]}
+        resolvedTheme="dark"
+      />
+    </I18nProvider>
   );
 }
 
@@ -101,8 +127,9 @@ describe("MessagesTimeline turn-status alignment", () => {
   });
 
   it.each(LIVE_STATUS_CASES)(
-    "keeps the live header and orb on the same safe leading edge at %ipx in %s mode",
-    async (widthPx, theme) => {
+    "keeps the live header and orb on the same safe leading edge at %ipx in %s mode for %s",
+    async (widthPx, theme, locale) => {
+      harness.settings.localePreference = locale;
       const host = createTimelineHost(widthPx);
       const screen = await render(<LiveStatusTimeline theme={theme} />, { container: host });
       try {
@@ -119,7 +146,9 @@ describe("MessagesTimeline turn-status alignment", () => {
 
         expect(headerRow).not.toBeNull();
         expect(workingRow).not.toBeNull();
-        expect(headerLabel?.textContent).toContain("Working for 2s");
+        expect(headerLabel?.textContent).toContain(
+          locale === "zh-CN" ? "正在工作，已用时 2s" : "Working for 2s",
+        );
         expect(orb).not.toBeNull();
         if (!headerRow || !workingRow || !headerLabel || !orb) return;
 
@@ -135,17 +164,19 @@ describe("MessagesTimeline turn-status alignment", () => {
     },
   );
 
-  it.each(VIEWPORT_WIDTHS)(
-    "keeps the settled status trigger inside its row safe edge at %ipx",
-    async (widthPx) => {
+  it.each(SETTLED_STATUS_CASES)(
+    "keeps the settled status trigger inside its row safe edge at %ipx for %s",
+    async (widthPx, locale) => {
+      harness.settings.localePreference = locale;
       const host = createTimelineHost(widthPx);
       const screen = await render(<SettledStatusTimeline />, { container: host });
 
       try {
         await settleLayout();
         const row = host.querySelector<HTMLElement>('[data-message-id="message-assistant-inline"]');
+        const expectedLabel = locale === "zh-CN" ? "工作了" : "Worked for";
         const trigger = [...(row?.querySelectorAll<HTMLButtonElement>("button") ?? [])].find(
-          (button) => button.textContent?.includes("Worked for"),
+          (button) => button.textContent?.includes(expectedLabel),
         );
         expect(row).not.toBeNull();
         expect(trigger).not.toBeNull();
@@ -160,4 +191,24 @@ describe("MessagesTimeline turn-status alignment", () => {
       }
     },
   );
+
+  it("localizes the real ticking live-status path", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const host = createTimelineHost(960);
+    const screen = await render(<LiveStatusTimeline theme="light" useLiveClock />, {
+      container: host,
+    });
+
+    try {
+      await settleLayout();
+      const headerRow = host.querySelector<HTMLElement>(
+        '[data-timeline-row-kind="working-header"]',
+      );
+      expect(headerRow?.textContent).toContain("正在工作，已用时");
+      expect(headerRow?.textContent).not.toContain("Working for");
+    } finally {
+      screen.unmount();
+      host.remove();
+    }
+  });
 });

@@ -4,6 +4,10 @@ import { createRef, type ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ChatTranscriptPane } from "./ChatTranscriptPane";
+import {
+  CHAT_COLUMN_FRAME_CLASS_NAME,
+  CHAT_COLUMN_GUTTER_CLASS_NAME,
+} from "./composerPickerStyles";
 
 function renderTranscriptPaneMarkup(
   props: Partial<ComponentProps<typeof ChatTranscriptPane>> = {},
@@ -95,5 +99,12 @@ describe("ChatTranscriptPane", () => {
 
     expect(markup).toContain('style="padding-right:360px"');
     expect(markup).toContain("Scroll to bottom");
+    expect(markup).toContain('data-scroll-to-bottom-frame="true"');
+    for (const className of [
+      ...CHAT_COLUMN_GUTTER_CLASS_NAME.split(/\s+/),
+      ...CHAT_COLUMN_FRAME_CLASS_NAME.split(/\s+/),
+    ]) {
+      expect(markup).toContain(className);
+    }
   });
 });
