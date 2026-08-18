@@ -3018,7 +3018,7 @@ export const EN_MESSAGES = {
   "settings.connectionReadyDescription":
     "Give your agent the setup prompt before the one-time code expires.",
   "settings.connectionCreateFailed": "Could not create connection",
-  "settings.connectionCreateUnknown": "External MCP setup failed.",
+  "settings.connectionCreateUnknown": "External connection setup failed.",
   "settings.connectionRevoked": "Connection revoked",
   "settings.connectionRevokedDescription": "Its credential stops working immediately.",
   "settings.connectionRevokeFailed": "Could not revoke connection",
@@ -3032,7 +3032,7 @@ export const EN_MESSAGES = {
   "settings.connectionName": "Name",
   "settings.connectionNameDescription":
     "How this connection appears in OmniMind. Works with Codex, Claude Code, and other local apps.",
-  "settings.accessAllOmniMind": "Access all of OmniMind",
+  "settings.accessAllOmniMind": "Access all projects",
   "settings.accessAllOmniMindDescription":
     "The app can discover and work in every project, including ones you add later. Turn off to pick specific projects.",
   "settings.noProjectsAvailable": "No projects are available.",
@@ -6443,7 +6443,7 @@ export const ZH_CN_MESSAGES = {
   "settings.connectionReady": "连接已就绪",
   "settings.connectionReadyDescription": "请在一次性代码过期前把设置提示发给 Agent。",
   "settings.connectionCreateFailed": "无法创建连接",
-  "settings.connectionCreateUnknown": "外部 MCP 设置失败。",
+  "settings.connectionCreateUnknown": "外部连接设置失败。",
   "settings.connectionRevoked": "连接已撤销",
   "settings.connectionRevokedDescription": "其凭据立即停止生效。",
   "settings.connectionRevokeFailed": "无法撤销连接",
@@ -6456,7 +6456,7 @@ export const ZH_CN_MESSAGES = {
   "settings.connectionName": "名称",
   "settings.connectionNameDescription":
     "此连接在 OmniMind 中的名称；适用于 Codex、Claude Code 等本地应用。",
-  "settings.accessAllOmniMind": "访问全部 OmniMind",
+  "settings.accessAllOmniMind": "访问所有项目",
   "settings.accessAllOmniMindDescription":
     "该应用可以发现并处理所有项目，包括以后添加的项目；关闭后可选择特定项目。",
   "settings.noProjectsAvailable": "没有可用项目。",

@@ -21,9 +21,12 @@ describe("ExternalConnectionsSettingsPanel", () => {
     );
 
     expect(markup).toContain("Connect an external app");
+    expect(markup).toContain('aria-label="Name"');
+    expect(markup).toContain('aria-label="Access all projects"');
     expect(markup).toContain('role="switch"');
     expect(markup).toContain('data-unchecked=""');
     expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Create connection<\/button>/);
+    expect(markup).not.toContain("Access all of OmniMind");
     expect(markup).not.toContain("MCP manager");
   });
 });

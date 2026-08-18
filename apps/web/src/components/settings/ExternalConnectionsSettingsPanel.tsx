@@ -257,6 +257,7 @@ export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
                 className="w-full sm:w-64"
                 value={name}
                 maxLength={120}
+                aria-label={t("settings.connectionName")}
                 placeholder={t("settings.codingAgent")}
                 onChange={(event) => setName(event.target.value)}
               />
@@ -265,7 +266,13 @@ export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
           <SettingsRow
             title={t("settings.accessAllOmniMind")}
             description={t("settings.accessAllOmniMindDescription")}
-            control={<Switch checked={allProjects} onCheckedChange={setAllProjects} />}
+            control={
+              <Switch
+                checked={allProjects}
+                aria-label={t("settings.accessAllOmniMind")}
+                onCheckedChange={setAllProjects}
+              />
+            }
           >
             <DisclosureRegion open={!allProjects} contentClassName="mt-3">
               <div className="grid gap-2 sm:grid-cols-2">
@@ -329,7 +336,11 @@ export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
                     {t("settings.readOtherProjectTasksDescription")}
                   </div>
                 </div>
-                <Switch checked={allowProjectRead} onCheckedChange={setAllowProjectRead} />
+                <Switch
+                  checked={allowProjectRead}
+                  aria-label={t("settings.readOtherProjectTasks")}
+                  onCheckedChange={setAllowProjectRead}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -338,7 +349,11 @@ export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
                     {t("settings.useSharedCheckoutDescription")}
                   </div>
                 </div>
-                <Switch checked={allowLocal} onCheckedChange={setAllowLocal} />
+                <Switch
+                  checked={allowLocal}
+                  aria-label={t("settings.useSharedCheckout")}
+                  onCheckedChange={setAllowLocal}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -347,7 +362,11 @@ export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
                     {t("settings.runWithoutApprovalDescription")}
                   </div>
                 </div>
-                <Switch checked={allowFullAccess} onCheckedChange={setAllowFullAccess} />
+                <Switch
+                  checked={allowFullAccess}
+                  aria-label={t("settings.runWithoutApproval")}
+                  onCheckedChange={setAllowFullAccess}
+                />
               </div>
             </DisclosureRegion>
           </SettingsRow>
