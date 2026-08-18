@@ -2991,7 +2991,7 @@ export const EN_MESSAGES = {
   "settings.builtInToolGroups": "Capability groups",
   "settings.builtInGroupOmniMind": "OmniMind",
   "settings.builtInGroupOmniMindDescription":
-    "Projects, threads, goals, automations, and other OmniMind workspace capabilities.",
+    "Projects, tasks, goals, automations, and other OmniMind workspace capabilities.",
   "settings.builtInGroupBrowser": "Browser",
   "settings.builtInGroupBrowserDescription":
     "Lets Agents work with OmniMind's shared in-app browser when it is available.",
