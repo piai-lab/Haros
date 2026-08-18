@@ -1,8 +1,8 @@
 # Pi-native Todo Extension：owner、provenance 与生命周期复核
 
-> 证据日期：2026-08-18
+> 证据日期：2026-08-19
 >
-> 状态：责任方向已确认；exact-source事实已核验；本地代码仅为可丢弃candidate，尚未push、合并、打包、真实journey验证或产品交付
+> 状态：责任方向已确认；exact-source事实已核验；本地实现候选已完成focused/full测试并进入隔离packaged startup产物，但尚未push、合并、安装或完成Todo交互journey，不能称产品已交付
 >
 > 唯一职责：记录OmniMind Agent Todo Extension。稳定运行时合同属于[`architecture/execution.md`](../architecture/execution.md)；AgentGateway Host动态加载属于[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)。
 
@@ -20,9 +20,9 @@ Pi built-ins、supervised Bash、AgentGateway Host tools与其他Extensions均�
 
 ## 2. 当前事实与本地候选必须分开
 
-当前公共产品基线把Todo definition、prompt、`provider/workSurface`分支与event projection集中在`PiAdapter.customTools`路径。这个downstream-only lone wolf横跨definition、prompt、Session lifecycle例外和事件authority，导致Host研究误分类、active-set判断漂移，并让同名tool仅凭名字接近Product projection authority。
+当前公共main/installed产品基线把Todo definition、prompt、`provider/workSurface`分支与event projection集中在`PiAdapter.customTools`路径。这个downstream-only lone wolf横跨definition、prompt、Session lifecycle例外和事件authority，导致Host研究误分类、active-set判断漂移，并让同名tool仅凭名字接近Product projection authority。
 
-本地任务分支已有一个未push代码candidate（`779b6d759…`），尝试把definition、prompt、validation与实例级result provenance迁到独立inline Extension，PiAdapter只保留Session装配和canonical event桥。该commit是可丢弃、可重构的验证草图，不是已采用产品事实；本文只记录其假设和falsifier，不授予继续施工或交付权。
+本地任务分支从早期草图`779b6d759…`继续收口为`e9c2007e0`：definition、最短guidance、三态validation与实例级result provenance迁到独立inline Extension，PiAdapter只保留Session装配和canonical event桥；同名第三方winner继续按Pi原生precedence运行，Product Todo仅局部unavailable。它仍是未push local candidate，不是main、installed bytes或产品交付。
 
 ## 3. Exact Pi `0.84.2` 事实
 
@@ -36,7 +36,7 @@ Pi built-ins、supervised Bash、AgentGateway Host tools与其他Extensions均�
 - `tool_execution_end`不携带sourceInfo，所以tool name本身不能成为Product Todo projection authority；
 - current wrapper在纯additive active变化时浅拷贝外层result并保留nested `details`对象身份。对象身份能否作为长期provenance seam仍须受exact版本与真实Session回归保护。
 
-这些事实只证明Pi公开seam和冲突/生命周期约束，不自动证明本地candidate已经具备packaged可靠性。
+这些事实只证明Pi公开seam和冲突/生命周期约束。本地candidate的source测试与packaged startup已通过，但startup smoke不调用Todo，不能自动证明packaged Todo provenance、Agent/Chat身份矩阵或真实模型调用可靠性。
 
 ## 4. 候选实现形状与待实证问题
 
@@ -54,7 +54,7 @@ Product Session admission (omnimind + agent)
   → PiAdapter projects canonical turn.tasks.updated
 ```
 
-候选当前使用Extension-instance WeakSet识别exact returned `details`对象。focused source tests支持真实Session中的对象身份、同名冲突降级、reload与event order，但进入已采用实现前仍必须证明：
+候选当前使用Extension-instance WeakSet识别exact returned `details`对象。focused source tests已支持真实Session中的对象身份、同名冲突降级、reload与event order，但进入已采用实现前仍必须证明：
 
 - Agent首个请求、branch、resume、reload与Session replacement下Todo surface和旧handler fence准确；
 - Chat、stock Pi与其他Engine无Product Todo Extension；
@@ -80,17 +80,18 @@ Pi官方`examples/extensions/todo.ts`及pi-todotools、avtc、armory只能作为
 
 ## 7. 验证矩阵
 
-| falsifier                               | 当前要求                                                                               | 成熟度                   |
-| --------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------ |
-| OmniMind Agent first request            | Product Extension注册，winner时Todo initial-active；可用不等于must-call                | confirmed direction      |
-| Chat / stock Pi / other Engine          | 不注册Product Todo Extension                                                           | confirmed direction      |
-| valid full snapshot                     | canonical三态、trim、最多一个in-progress，可信结果先于turn terminal投影                | candidate focused proof  |
-| empty / invalid / competing in-progress | execute拒绝，不投影                                                                    | candidate focused proof  |
-| forged/replayed details                 | candidate provenance不匹配或已消费，不投影                                             | candidate focused proof  |
-| same-name global/project Extension      | Pi native winner可执行；Product Todo unavailable；Session不失败；无task projection污染 | candidate focused proof  |
-| branch / resume / reload                | tool surface与projection保持，旧Extension handler不泄漏                                | focused + journey needed |
-| prompt/context                          | 无重复Todo policy；不描述Host loader/activation；简单任务不被强制调用                  | candidate focused proof  |
-| packaged real journey                   | fresh isolated App中Agent/Chat、重开与warning呈现准确                                  | open                     |
+| falsifier                               | 当前要求                                                                               | 成熟度                  |
+| --------------------------------------- | -------------------------------------------------------------------------------------- | ----------------------- |
+| OmniMind Agent first request            | Product Extension注册，winner时Todo initial-active；可用不等于must-call                | confirmed direction     |
+| Chat / stock Pi / other Engine          | 不注册Product Todo Extension                                                           | confirmed direction     |
+| valid full snapshot                     | canonical三态、trim、最多一个in-progress，可信结果先于turn terminal投影                | local focused proof     |
+| empty / invalid / competing in-progress | execute拒绝，不投影                                                                    | local focused proof     |
+| forged/replayed details                 | candidate provenance不匹配或已消费，不投影                                             | local focused proof     |
+| same-name global/project Extension      | Pi native winner可执行；Product Todo unavailable；Session不失败；无task projection污染 | local focused proof     |
+| branch / resume / reload                | tool surface与projection保持，旧Extension handler不泄漏                                | focused; journey needed |
+| prompt/context                          | 无重复Todo policy；不描述Host loader/activation；简单任务不被强制调用                  | local focused proof     |
+| packaged startup                        | exact local candidate ZIP在隔离profile启动并完成Server ready/进程树清理                | local startup proof     |
+| packaged Todo journey                   | fresh isolated App中Agent/Chat、真实调用、重开与warning呈现准确                        | open                    |
 
 ## 8. Revalidation triggers
 

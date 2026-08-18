@@ -17,6 +17,10 @@ Updated: 2026-08-19
 
 ## 当前事实
 
+- Agent tools Gate B已在唯一隔离分支形成local source candidate：`f08872595`到`d3cf632c7`依次闭合authority、Todo、External connections、Built-in policy、prompt diet、Host Extension、OmniMind-only dynamic loading、call-time/lifecycle矩阵、产品词汇与exact provider wire；未push、未merge、未安装。
+- 当前candidate的focused/full gates通过：Server 362个test files/4251项通过（另3 files/16项skip），Web 322 files/4108项通过；document contract 20/20、typecheck、lint（0 error，保留482条既有warning）、licenses与changed-file format通过。全仓`fmt:check`仍命中83个既有无关文件，未扩大格式化范围。
+- MiMo与DeepSeek只以OpenAI Chat-compatible endpoint完成脱敏最小live journey：两者均完成`loader → activated Host tool`两请求链并观察到stream abort；exact OpenAI Responses/Anthropic/Kimi/fallback wire由安装的Pi `0.84.2` serializer tests证明，不把endpoint品牌当wire事实。
+- `d3cf632c7`已生成macOS arm64 DMG/ZIP，闭合240项staged legal identities，并通过隔离HOME/OMNIMIND_HOME/userData的packaged startup smoke。仓库没有现成packaged交互journey harness；Settings toggle、Todo/Host交互与reopen语义当前由source integration覆盖，不能把startup冒充完整journey。
 - 本地与远端 `main` 已通过 merge commit `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 合入 Project instructions 退休及 OmniMind identity/surface/trust contract；该提交的第一父提交是当时最新 `origin/main@8066f23f9`，第二父提交是通过 final gates 的任务 head `91f2aebe3`。
 - Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`，等于 `origin/main`。
 - `58f76446d` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归；其最后一轮改动只关闭 Automation 测试时钟/隔离和 Web compiler 回归，没有增加平行产品 owner。
@@ -47,11 +51,11 @@ Updated: 2026-08-19
 
 ## 当前阻塞
 
-当前没有待裁决的产品阻塞。当前安装产物仍是本地未签名/未公证 candidate；GitHub Release、update feed、签名、公证及 Windows/Linux artifact/journey 未获本轮授权，发行边界保持不变。
+当前没有待裁决的产品阻塞。packaged交互自动化缺少既有harness，是证据覆盖限制而不是新增产品决定；本轮不为它创建永久E2E平台。当前安装产物仍是此前本地未签名/未公证candidate；GitHub Release、update feed、签名、公证及Windows/Linux artifact/journey未获本轮授权，发行边界保持不变。
 
 ## 下一动作
 
-按 Gate B 纵向切片依次闭合 adoption authority、Todo Extension、External connections、all-agent Built-in policy、prompt diet、collision-safe Host Extension、OmniMind-only dynamic loading、call-time authority 与真实 provider/packaged evidence。每个关注点单独本地提交；当前任务明确不 push、merge、发布或替换已安装 App。
+冻结Gate B证据文档并形成最后一个docs-only本地commit；随后从该精确clean HEAD重新生成macOS arm64产物并运行隔离startup smoke，确认最终source provenance。完成后保持分支clean并回报；不push、merge、发布或替换已安装App。
 
 ## 证据入口
 

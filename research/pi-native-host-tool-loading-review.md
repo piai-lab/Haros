@@ -1,11 +1,11 @@
 # Pi-native Host 工具动态加载、投影与生态所有权复核
 
-> 证据日期：2026-08-18
-> OmniMind 源码复核基线：原始调用链锁定于 `a24653bc7b00f9632275f2960776c31c68d61968`；当前文档候选位于独立分支 `codex/review-pi-host-tool-mcp-settings` 的未提交工作树，不表示本地代码candidate已经采用
+> 证据日期：2026-08-19
+> OmniMind 源码复核基线：原始调用链锁定于 `a24653bc7b00f9632275f2960776c31c68d61968`；Gate B 本地实现候选位于独立分支 `codex/review-pi-host-tool-mcp-settings`，截至 `d3cf632c7` 未 push、merge、发布或替换已安装 App
 > Upstream/stock exact source artifact：`@earendil-works/pi-coding-agent@0.84.2`，upstream exact commit `914cf1472e715297caa30db4b9535d534a9eb718`
 > OmniMind Agent 产品 runtime：生成后的 `@omnimind/pi-coding-agent@0.84.2`，基于同一 exact source 与产品窄 patch；本文不宣称它与 upstream artifact byte-identical
 > 维护者裁决：OmniMind Agent 的 AgentGateway Host tools 必须进入 Pi 原生 Extension、Tool Registry 与 Dynamic Tool Loading 生命周期；dynamic 是目标架构，不再与 eager 共同参与产品方向表决
-> 文档角色：Gate A exact-source 证据、已确认架构的实现约束与未来 Gate B 参考；不取代 `architecture/`、`execution-brief.md`、代码或 Campaign 状态
+> 文档角色：Gate A exact-source 证据、已确认架构约束与 Gate B 本地候选证据；不取代 `architecture/`、`execution-brief.md`、代码或 Campaign 状态
 
 ## 0. 本文回答什么
 
@@ -54,11 +54,24 @@ Evidence maturity:
   Pi core/wire mechanics: upstream/stock artifact-verified + source-matched
   OmniMind product runtime lineage: source-derived; not claimed byte-identical
   current eager OmniMind bridge: current-source-observed
-  target integration: architecture-confirmed, implementation not yet product-journey-proven
+  target integration: architecture-confirmed + local focused/full/wire/live evidence;
+  packaged interactive product journey remains narrower than source coverage
 
 Disposition:
   Bridge narrowly through Pi's existing Extension and AgentSession owners.
 ```
+
+### 0.2 Gate B 本地候选证据
+
+截至本地代码候选`d3cf632c7`，目标形状已由一组不改写历史的本地commits实现：`14725599b`建立all-agent Built-in policy，`eac33f156`使prompt按projection/policy收敛，`38f4b7a84`增加collision-safe Host Extension，`81921d8fa`只为canonical `omnimind`接入dynamic loading与prompt-required preflight，`d9f74bd64`闭合active/authorized、toggle/in-flight、late-result与局部collision矩阵，`d3cf632c7`锁定exact Pi provider wire。它们仍是local candidate，不是main、installed bytes或public delivery。
+
+当前证据边界：
+
+- exact serializer 4/4通过：OpenAI Responses分别捕获`tool_search_output`与`additional_tools`；Anthropic捕获deferred definition与`tool_reference`；Kimi exact system-tool encoding与generic OpenAI-compatible fallback被区分；
+- focused Host/Provider矩阵分别通过353与567项；全仓测试通过，Server为362个test files/4251项通过（另3 files/16项skip），Web为322 files/4108项通过；
+- MiMo与DeepSeek在明确标记为OpenAI Chat-compatible endpoint的最小live probe中，均完成`loader → activated browser tool`两请求journey并观察到stream abort；这不证明Responses或Anthropic native wire；
+- 代表性live payload中loader-only tools envelope为222 bytes，加入一个activated tool后为434 bytes。该数值只证明“未激活definition没有被偷偷搬回首轮tools payload”的局部方向，不冒充完整Gateway catalog、cache、TTFR或总成本benchmark；
+- `d3cf632c7`的macOS arm64 DMG/ZIP成功闭合240个staged production dependency identities，ZIP通过隔离`HOME`、`OMNIMIND_HOME`、Electron userData与provider-private-home缺省隔离的packaged startup smoke；仓库尚无可复用的packaged交互journey harness，因此Settings toggle、Todo/Host真实点击与reopen语义仍由source integration tests证明，不能被这次startup smoke冒充。
 
 ## 1. 结论先行
 
@@ -85,7 +98,7 @@ Disposition:
 
 ## 2. Exact Pi 0.84.2：三层事实必须分开
 
-下列Pi原生语义锁定于upstream/stock exact source artifact `@earendil-works/pi-coding-agent@0.84.2`与commit `914cf147…`。OmniMind Agent实际运行生成后的`@omnimind/pi-coding-agent@0.84.2`，其来源是同一exact source加产品窄patch；这建立lineage，不建立byte-identical推断。Gate B仍须在产品runtime中证明目标Host Extension、active-set与Provider wire行为没有被生成或patch路径改变。
+下列Pi原生语义锁定于upstream/stock exact source artifact `@earendil-works/pi-coding-agent@0.84.2`与commit `914cf147…`。OmniMind Agent实际运行生成后的`@omnimind/pi-coding-agent@0.84.2`，其来源是同一exact source加产品窄patch；这建立lineage，不建立byte-identical推断。本地Gate B conformance已在产品runtime证明Host Extension、active-set、collision与reload路径；Provider payload形状另由exact installed `@earendil-works/pi-ai@0.84.2` serializer锁定，live兼容endpoint证据不替代它。
 
 ### 2.1 Pi Core / AgentSession 原生拥有的事实
 
@@ -147,11 +160,13 @@ Pi `0.84.2` 没有默认注册到每个 Session、自动搜索所有 Extensions 
 
 stock Pi 不走这条 MCP injection，但已有 `PiAdapter customTools` direct/eager projection；其source/stock exact artifact身份是`@earendil-works/pi-coding-agent@0.84.2`。它的产品身份不是 OmniMind Agent，不承担本轮 attention governance。
 
-### 3.3 当前 OmniMind Agent 是 eager customTools
+### 3.3 公共基线与本地 Gate B 候选必须分开
 
-`apps/server/src/provider/Layers/PiAdapter.ts` 当前从 `tools/list` 取得 definitions，通过 Pi `defineTool()` 转为 `ToolDefinition`，`execute()` 调回 Gateway `tools/call`并转发`AbortSignal`，最后通过 `createAgentSessionFromServices({ customTools })` 直接注入Gateway tools。OmniMind Agent这条调用链实际使用生成后的`@omnimind/pi-coding-agent@0.84.2`产品runtime，而不是把upstream/stock package identity直接冒充为产品runtime。
+公共main/installed产品基线仍从`tools/list`取得definitions，通过Pi `defineTool()`转为`ToolDefinition`，`execute()`调回Gateway `tools/call`并转发`AbortSignal`，再经`customTools` eager注入。OmniMind Agent这条调用链实际使用生成后的`@omnimind/pi-coding-agent@0.84.2`产品runtime，而不是把upstream/stock package identity直接冒充为产品runtime。
 
-这是官方 seam，不是错误 hack；缺口是 OmniMind Agent 初始上下文与 provenance/collision，而不是 Gateway execution。
+本地Gate B候选已把canonical `omnimind`的Gateway definitions迁入named hidden Host inline Extension，stock Pi与其他Engine仍direct/eager；同Session内loader只additive激活owned names，Goal/Automation bounded closure在同一request前ensure active，execute仍回到Gateway。该结论由source/exact tests支持，但未push、未进入main或安装产品。
+
+eager baseline本身使用官方seam，不是错误hack；本轮改变的是OmniMind Agent的初始上下文与provenance/collision，不是Gateway execution owner。
 
 ### 3.4 Pi ecosystem lifecycle 已有 owner
 
@@ -423,10 +438,10 @@ Pi Skills已使用progressive disclosure；Package install/update/remove/enable/
 
 - MiMo/DeepSeek最小真实journeys；
 - schema bytes、prompt/cache、错选率、额外turn、成功率、TTFR、成本；
-- exact pushed SHA fresh isolated packaged profile；
+- exact local candidate SHA fresh isolated packaged profile；
 - close/reopen与private-home隔离。
 
-本文是纯文档修正，不触发产品打包或live probe。
+当前本地候选已经完成exact serializer、focused/full tests、MiMo/DeepSeek兼容endpoint最小journey与隔离packaged startup；完整Gateway catalog economics、packaged Settings/Todo/Host交互与close/reopen journey仍不得从startup smoke或小型payload probe外推。
 
 ## 16. 验收矩阵
 
@@ -505,7 +520,7 @@ Pi Skills已使用progressive disclosure；Package install/update/remove/enable/
 - future third-party MCP产品scope被维护者重新开启；
 - 真实泄密、orphan、late side effect或resume失败。
 
-## 18. Gate A 最终 disposition
+## 18. Gate B 本地候选 disposition
 
 ```text
 Exact identity:
@@ -522,7 +537,7 @@ Replaceable detail:
   its name, ranking, limit and algorithm are not stable contracts.
 
 Dynamic status:
-  required target, not an eager-vs-dynamic product experiment.
+  required target, implemented as a local candidate; not an eager-vs-dynamic product experiment.
 
 Loader scope:
   only this Host Extension's registered, live-policy-allowed, available, inactive Gateway tools.
@@ -541,6 +556,10 @@ Non-owned tools:
 Revalidation trigger:
   Goal/Automation prompt, envelope, schema or dependency changes;
   or the Pi Extension API changes the owned-set isolation/collision guarantees.
+
+Delivery boundary:
+  local source candidate only; not pushed, merged, installed or released;
+  packaged startup is proven, packaged interactive Gate B journey is not claimed.
 ```
 
 最终原则：

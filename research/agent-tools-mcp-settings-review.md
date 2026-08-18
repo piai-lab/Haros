@@ -1,11 +1,11 @@
 # Agent 内置工具、Host MCP 与外部连接：Settings 与运行时执行方案复核
 
-> 证据日期：2026-08-18
-> OmniMind 源码复核基线：原始调用链锁定于 `a24653bc7b00f9632275f2960776c31c68d61968`；当前文档候选位于独立分支 `codex/review-pi-host-tool-mcp-settings` 的未提交工作树，不表示本地代码candidate已经采用
+> 证据日期：2026-08-19
+> OmniMind 源码复核基线：原始调用链锁定于 `a24653bc7b00f9632275f2960776c31c68d61968`；Gate B 本地实现候选位于独立分支 `codex/review-pi-host-tool-mcp-settings`，截至 `d3cf632c7` 未 push、merge、发布或替换已安装 App
 > 关联 Pi 证据：[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)；upstream/stock exact source artifact为`@earendil-works/pi-coding-agent@0.84.2` / `914cf147…`，OmniMind Agent产品runtime为基于同一exact source与窄patch生成的`@omnimind/pi-coding-agent@0.84.2`，不宣称两者byte-identical
 > 已确认产品意图：一套 fresh 默认开放的 Built-in policy 控制所有 Agent，包括 OmniMind Agent；只有 `provider === "omnimind"` 让 AgentGateway Host tools 作为标准 Pi Extension tools 参与 Pi-native Dynamic Tool Loading，stock Pi 与其他 Engine 保持 direct/eager
 > 产品范围：首版不提供第三方 MCP Settings 页面或管理生命周期
-> 文档角色：当前源码事实、已确认裁决与未来 Gate B 实施/验收参考；不取代 `architecture/`、`execution-brief.md` 或 Campaign
+> 文档角色：公共基线事实、已确认裁决与 Gate B 本地候选证据/验收边界；不取代 `architecture/`、`execution-brief.md` 或 Campaign
 
 ## 0. 本文解决什么
 
@@ -167,16 +167,18 @@ Archived
 
 正常产品表面不出现 Pi、MCP transport、loader、Tool Registry、active set 或动态搜索等实现心智。技术事实只进入架构、诊断、About/Licenses或用户主动展开的技术详情。
 
-## 4. 当前源码事实与缺口
+## 4. 公共基线与本地 Gate B 候选
+
+本节必须同时保留两层事实：`main`与已安装产品仍是公共基线；本地任务分支已经实现目标，但在push/merge/安装前只能称local candidate。
 
 ### 4.1 Settings
 
 - `apps/web/src/settingsNavigation.ts` 已有 `personal / integrations / coding / system / archived`；
-- 当前外部连接页可见名仍来自 `MCP connections` / `External agents`；
+- 公共基线的外部连接页可见名仍来自 `MCP connections` / `External agents`；本地候选已统一为`External connections / 外部连接`；
 - `apps/web/src/routes/_chat.settings.tsx` 挂载 `ExternalMcpSettingsPanel`；
 - `apps/web/src/settingsSearchIndex.ts`、deep link、keyboard与route-owned panel是现有母体；
 - `SkillsSettingsPanel.tsx` 已提供统一catalog、真实来源与enablement展示范式；
-- 尚无Built-in tools section与all-agent Host exposure policy。
+- 公共基线尚无Built-in tools section与all-agent Host exposure policy；本地候选已加入一份revisioned ServerSettings intent、runtime group projection、双语页面、rapid-toggle fencing与all-agent新Session/call-time enforcement。
 
 仅在UI隐藏工具而不在`tools/call`实时拒绝，会形成假的安全开关。
 
@@ -184,13 +186,13 @@ Archived
 
 `apps/server/src/agentGateway/Layers/AgentGateway.ts` 组装 OmniMind/Thread/Automation、Browser、可用时Device。当前观察为普通46、Device可用时最多58；UI不得硬编码。
 
-`apps/server/src/agentGateway/mcpTransport.ts` 当前持有静态session catalog；`tools/list`返回definitions，`tools/call`执行credential/capability/turn checks。当前没有动态list-change通知，因此“开关后立刻从所有Engine上下文消失”不能虚假承诺。
+公共基线的`mcpTransport.ts`持有静态session catalog；本地候选让`tools/list`按live policy与availability过滤，并在`tools/call` admission前重验policy，同时保留credential/capability/turn checks。仍没有跨Engine热改旧上下文的动态list-change承诺：旧Session可暂时看见stale schema，但新call必须拒绝。
 
 `AgentGatewaySessionIdentity.provider` 已提供可信canonical Provider identity。分支只使用`provider === "omnimind"`，不让renderer、display name或client input自报身份。
 
 ### 4.3 Engine projection
 
-`apps/server/src/agentGateway/mcpInjection.ts` 已投影Codex、Claude SDK、ACP、OpenCode与Antigravity等native seam。`apps/server/src/provider/Layers/PiAdapter.ts` 当前把全部Gateway definitions eager转成Pi `customTools`并把call转回Gateway。
+`apps/server/src/agentGateway/mcpInjection.ts` 已投影Codex、Claude SDK、ACP、OpenCode与Antigravity等native seam。公共基线的`PiAdapter`把全部Gateway definitions eager转成Pi `customTools`并把call转回Gateway；本地候选只把canonical `omnimind`切到Host inline Extension，stock Pi与其他Engine保持原投影。
 
 目标不是重做这些owner，而是：
 
@@ -204,7 +206,7 @@ Archived
 
 它已有owner-only、pairing、client-generated secret、credential hash、private file、revoke/expiry、rate/concurrency、audit、idempotency与cancellation。它不是第三方MCP manager。
 
-当前产品缺口：命名方向含混；默认`allProjects=true`会包含未来项目；UI未准确投影runtime availability；没有heartbeat却可能被误写成“当前已连接”。
+公共基线缺口是命名方向含混且默认`allProjects=true`会包含未来项目；本地候选已改为selected-project默认、至少选一项才能创建，并继续只投影现有paired/last-used/revoked/expired/runtime facts，没有发明heartbeat或“当前在线”。
 
 ### 4.5 第三方 MCP manager不是首版缺口
 
@@ -479,7 +481,7 @@ Gateway不可用、filtered pool为空、discovery失败时准确unavailable；�
 
 ## 14. Gate B 实施切片
 
-本文不授予代码施工权。获授权后按纵向结果推进。
+维护者已授权并在本地隔离分支完成下列切片；本节记录结果边界，不把local candidate冒充main或installed product。
 
 ### Slice 0：重新锁定exact source/owner
 
@@ -526,7 +528,9 @@ Gateway不可用、filtered pool为空、discovery失败时准确unavailable；�
 - Pi lifecycle/collision/provider wire；
 - direct projections回归；
 - MiMo/DeepSeek最小真实journey；
-- exact pushed SHA fresh packaged profile。
+- exact local candidate SHA fresh packaged profile。
+
+截至`d3cf632c7`的本地证据为：Settings/Built-in/Host/Todo/authority focused矩阵通过；全仓Server 4251项与Web 4108项通过；exact Pi serializers覆盖OpenAI Responses两种native anchor、Anthropic `tool_reference`、Kimi exact encoding与generic compatible fallback；MiMo/DeepSeek仅以OpenAI Chat-compatible live endpoint完成两请求Host journey与abort；macOS arm64产物闭合240项legal metadata并通过隔离startup smoke。没有现成packaged交互harness，因此不能声称Settings点击、Todo/Host交互与close/reopen已经由packaged App证明；这些当前只由source-level integration测试覆盖。
 
 ## 15. 验收矩阵
 
@@ -627,11 +631,12 @@ Gateway不可用、filtered pool为空、discovery失败时准确unavailable；�
 - Pi拥有Registry/active/wire，AgentGateway拥有execution/authority；
 - 第三方MCP Settings、CRUD、credential、状态、自动分发与统一搜索退出首版。
 
-### 当前源码已证实的 prompt/envelope requirement 与待 Gate B 证明的目标行为
+### Source requirement、本地实现与交付边界
 
 - **source fact**：ThreadGoal continuation会直接要求Goal mutation职责；Automation run envelope会直接要求report result、update memory与cancel职责，并且current schemas给出update/cancel取得revision所需的view依赖；manual follow-up不继承Automation run duty；
 - **architecture-confirmed target**：带这些canonical prompt/envelope的同一request发送前，必须additively ensure当前policy/availability允许的exact bounded closure active；职责结束只停止prompt/duty/loop，不移除已active schema；
-- **implementation evidence boundary**：当前公开产品仍通过eager `customTools`提供Gateway definitions。目标Host Extension、prompt-required preflight、collision isolation与真实Provider wire尚未由exact product Session和packaged journey证明；这不重开dynamic产品方向，只限定Gate B必须补齐的实现证据；
+- **local implementation evidence**：本地`81921d8fa`已实现bounded preflight，`d9f74bd64`证明policy-disabled/collided dispatch局部失败而Session其余能力继续，`d3cf632c7`证明exact provider serializer native/fallback形状；全仓测试保持绿色；
+- **delivery boundary**：当前公开产品仍是eager `customTools`，本地Host Extension尚未push、merge或安装。packaged startup已证明候选字节可启动，但尚无packaged交互journey证明Settings→new/old Session→Todo/Host→reopen完整链；这不重开dynamic产品方向，只限制可宣称的证据范围；
 - prompt-required closure始终受Built-in policy与availability约束；缺必需能力时目标行为是阻止或暂停对应loop并准确unavailable。依赖只做bounded exact conformance，不建立dependency registry。
 
 ## 20. 最终判断
