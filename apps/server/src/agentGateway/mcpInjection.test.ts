@@ -15,6 +15,7 @@ import {
   buildCodexMcpConfigToml,
   buildOpenCodeMcpServer,
   callAgentGatewayMcpTool,
+  agentGatewayGroupsFromToolDescriptors,
   listAgentGatewayMcpTools,
   OMNIMIND_AGENT_GATEWAY_TOKEN_ENV,
 } from "./mcpInjection.ts";
@@ -237,6 +238,10 @@ describe("agent gateway MCP injection", () => {
                     name: "omnimind_list_threads",
                     description: "List OmniMind threads.",
                     inputSchema: { type: "object", properties: {} },
+                    _meta: {
+                      "omnimind/owner": "agent-gateway",
+                      "omnimind/group": "omnimind",
+                    },
                   },
                 ],
               }
@@ -249,8 +254,22 @@ describe("agent gateway MCP injection", () => {
         name: "omnimind_list_threads",
         description: "List OmniMind threads.",
         inputSchema: { type: "object", properties: {} },
+        group: "omnimind",
+        provenance: "agent-gateway",
       },
     ]);
+    assert.deepEqual(
+      agentGatewayGroupsFromToolDescriptors([
+        {
+          name: "omnimind_list_threads",
+          description: "List OmniMind threads.",
+          inputSchema: {},
+          group: "omnimind",
+          provenance: "agent-gateway",
+        },
+      ]),
+      ["omnimind"],
+    );
     assert.deepEqual(
       await callAgentGatewayMcpTool({
         connection,

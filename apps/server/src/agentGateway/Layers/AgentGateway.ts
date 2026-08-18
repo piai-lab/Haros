@@ -17,6 +17,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   CommandId,
+  type BuiltInToolGroupId,
   OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION,
   MessageId,
   THREAD_GOAL_MAX_CHARS,
@@ -76,15 +77,32 @@ import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserA
 import { makeBrowserAutomationHost } from "../../browserAutomation/Layers/BrowserAutomationHost.ts";
 import { makeThreadReadTools } from "../threadReadTools.ts";
 import { makeThreadDiagnosticTools } from "../threadDiagnosticTools.ts";
+import {
+  exposedAgentGatewayTools,
+  makeAgentGatewayToolCatalog,
+  projectBuiltInToolGroups,
+  tagAgentGatewayTools,
+} from "../toolCatalog.ts";
 import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
+import { renderAgentGatewayMcpInstructions } from "../harnessPolicy.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
 // tool definition, so repeating the full policy here adds tens of thousands of
 // context characters per round without adding authority or safety.
-const AGENT_GATEWAY_INSTRUCTIONS =
-  "OmniMind tools are thread-scoped. Use browser_* only for OmniMind's shared in-app browser runtime; follow the provider-delivered <omnimind_host_context> for full policy.";
+function renderAgentGatewayInstructions(tools: ReadonlyArray<ToolEntry>): string {
+  const groups = Array.from(
+    new Set(
+      tools.flatMap((tool) =>
+        tool.provenance === "agent-gateway" && tool.group !== undefined
+          ? [tool.group as BuiltInToolGroupId]
+          : [],
+      ),
+    ),
+  );
+  return renderAgentGatewayMcpInstructions(groups);
+}
 
 function readThreadGoalArg(args: Record<string, unknown>): string {
   if (!("goal" in args)) {
@@ -675,7 +693,7 @@ export const makeAgentGateway = Effect.gen(function* () {
             ? { threadId: target.id, goal: null, achieved: true }
             : blocked
               ? { threadId: target.id, goal: target.goal, blocked: true, paused: true }
-            : { threadId: target.id, goal: goal || null },
+              : { threadId: target.id, goal: goal || null },
         );
       }).pipe(Effect.catch((error) => Effect.succeed(mcpToolResultError(errorText(error))))),
   };
@@ -717,28 +735,50 @@ export const makeAgentGateway = Effect.gen(function* () {
       }).pipe(Effect.orElseSucceed(() => null)),
   });
 
-  const tools: ReadonlyArray<ToolEntry> = [
-    ...readTools,
-    ...diagnosticTools,
-    createThreads,
-    createThread,
-    sendMessage,
-    interruptThread,
-    setThreadTitle,
-    setThreadArchived,
-    setThreadGoal,
-    ...automationTools,
-    ...browserTools,
-    ...(deviceService?.supported === true
-      ? makeAgentGatewayDeviceTools({ manager: deviceService.manager })
-      : []),
-  ];
+  const tools = makeAgentGatewayToolCatalog([
+    tagAgentGatewayTools({
+      group: "omnimind",
+      available: true,
+      tools: [
+        ...readTools,
+        ...diagnosticTools,
+        createThreads,
+        createThread,
+        sendMessage,
+        interruptThread,
+        setThreadTitle,
+        setThreadArchived,
+        setThreadGoal,
+        ...automationTools,
+      ],
+    }),
+    tagAgentGatewayTools({
+      group: "browser",
+      available: browserAutomationHost.available,
+      tools: browserTools,
+    }),
+    tagAgentGatewayTools({
+      group: "device",
+      available: deviceService?.supported === true,
+      tools:
+        deviceService?.supported === true
+          ? makeAgentGatewayDeviceTools({ manager: deviceService.manager })
+          : [],
+    }),
+  ]);
+  const loadExposedTools = serverSettings.getSettings.pipe(
+    Effect.map((settings) => exposedAgentGatewayTools(tools, settings)),
+  );
   return {
+    getBuiltInToolGroups: serverSettings.getSettings.pipe(
+      Effect.map((settings) => projectBuiltInToolGroups(tools, settings)),
+    ),
     handleMcpPost: makeAgentGatewayMcpTransport({
       credentials,
       snapshotQuery,
       tools,
-      instructions: AGENT_GATEWAY_INSTRUCTIONS,
+      loadExposedTools,
+      instructions: renderAgentGatewayInstructions,
       requireThreadShell,
     }),
   } satisfies AgentGatewayShape;

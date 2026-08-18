@@ -15,6 +15,7 @@
  * @module agentGateway/mcpInjection
  */
 import type * as Acp from "@agentclientprotocol/sdk";
+import { BUILT_IN_TOOL_GROUP_IDS, type BuiltInToolGroupId } from "@omnimind/contracts";
 
 import type {
   AgentGatewayMcpConnection,
@@ -88,6 +89,8 @@ export interface AgentGatewayMcpToolDescriptor {
   readonly name: string;
   readonly description: string;
   readonly inputSchema: Record<string, unknown>;
+  readonly group?: BuiltInToolGroupId;
+  readonly provenance?: "agent-gateway";
 }
 
 export type AgentGatewayMcpFetch = (
@@ -97,6 +100,23 @@ export type AgentGatewayMcpFetch = (
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function readAgentGatewayToolMetadata(value: Record<string, unknown>): {
+  readonly group?: BuiltInToolGroupId;
+  readonly provenance?: "agent-gateway";
+} {
+  const metadata = isRecord(value._meta) ? value._meta : undefined;
+  const owner = metadata?.["omnimind/owner"];
+  const group = metadata?.["omnimind/group"];
+  if (
+    owner !== "agent-gateway" ||
+    typeof group !== "string" ||
+    !BUILT_IN_TOOL_GROUP_IDS.includes(group as BuiltInToolGroupId)
+  ) {
+    return {};
+  }
+  return { group: group as BuiltInToolGroupId, provenance: "agent-gateway" };
 }
 
 async function postAgentGatewayJsonRpc(input: {
@@ -162,12 +182,42 @@ export async function listAgentGatewayMcpTools(input: {
     ) {
       throw new Error("OmniMind MCP tools/list returned an invalid tool descriptor.");
     }
-    return {
-      name: value.name,
-      description: value.description,
-      inputSchema: value.inputSchema,
-    };
+    const metadata = readAgentGatewayToolMetadata(value);
+    return metadata.group === undefined
+      ? {
+          name: value.name,
+          description: value.description,
+          inputSchema: value.inputSchema,
+        }
+      : {
+          name: value.name,
+          description: value.description,
+          inputSchema: value.inputSchema,
+          group: metadata.group,
+          provenance: "agent-gateway" as const,
+        };
   });
+}
+
+/** Derive the enabled/available group snapshot from one authenticated tools/list response. */
+export function agentGatewayGroupsFromToolDescriptors(
+  tools: ReadonlyArray<AgentGatewayMcpToolDescriptor>,
+): ReadonlyArray<BuiltInToolGroupId> {
+  const present = new Set(
+    tools.flatMap((tool) =>
+      tool.provenance === "agent-gateway" && tool.group !== undefined ? [tool.group] : [],
+    ),
+  );
+  return BUILT_IN_TOOL_GROUP_IDS.filter((group) => present.has(group));
+}
+
+/** Load one truthful session-start snapshot for projection-aware prompt rendering. */
+export async function loadAgentGatewayHarnessGroups(input: {
+  readonly connection: AgentGatewayMcpConnection;
+  readonly fetch?: AgentGatewayMcpFetch;
+  readonly signal?: AbortSignal;
+}): Promise<ReadonlyArray<BuiltInToolGroupId>> {
+  return agentGatewayGroupsFromToolDescriptors(await listAgentGatewayMcpTools(input));
 }
 
 /** Invoke the canonical gateway dispatcher through its authenticated MCP route. */

@@ -60,12 +60,12 @@ function copyWithToast(
   );
 }
 
-export function ExternalMcpSettingsPanel(props: { active: boolean }) {
+export function ExternalConnectionsSettingsPanel(props: { active: boolean }) {
   const { locale, t } = useI18n();
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const connectionName = name.trim() || t("settings.codingAgent");
-  const [allProjects, setAllProjects] = useState(true);
+  const [allProjects, setAllProjects] = useState(false);
   const [selectedProjects, setSelectedProjects] = useState<ReadonlySet<string>>(new Set());
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -204,7 +204,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
   const projects = projectsQuery.data?.projects ?? [];
   const canCreate = (allProjects || selectedProjects.size > 0) && !createMutation.isPending;
   const paired = setupIntegration?.pairedAt != null;
-  const connected = paired && setupIntegration?.lastUsedAt != null;
+  const hasBeenUsed = paired && setupIntegration?.lastUsedAt != null;
   const revoked = setupIntegration?.revokedAt != null;
   const integrationExpired = setupIntegration
     ? dateMillis(setupIntegration.expiresAt) <= nowMs
@@ -221,13 +221,11 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
     ? t("settings.statusRevoked")
     : integrationExpired
       ? t("settings.statusExpired")
-      : connected
-        ? t("settings.statusConnected")
-        : paired
-          ? t("settings.statusPairedWaiting")
-          : pairingExpired
-            ? t("settings.statusPairingExpired")
-            : t("settings.statusWaitingPairing");
+      : paired
+        ? t("settings.statusPaired")
+        : pairingExpired
+          ? t("settings.statusPairingExpired")
+          : t("settings.statusWaitingPairing");
   const platform = typeof navigator === "undefined" ? "" : navigator.platform;
   const setupPrompt = setup
     ? buildExternalMcpSetupPrompt({
@@ -259,6 +257,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 className="w-full sm:w-64"
                 value={name}
                 maxLength={120}
+                aria-label={t("settings.connectionName")}
                 placeholder={t("settings.codingAgent")}
                 onChange={(event) => setName(event.target.value)}
               />
@@ -267,7 +266,13 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
           <SettingsRow
             title={t("settings.accessAllOmniMind")}
             description={t("settings.accessAllOmniMindDescription")}
-            control={<Switch checked={allProjects} onCheckedChange={setAllProjects} />}
+            control={
+              <Switch
+                checked={allProjects}
+                aria-label={t("settings.accessAllOmniMind")}
+                onCheckedChange={setAllProjects}
+              />
+            }
           >
             <DisclosureRegion open={!allProjects} contentClassName="mt-3">
               <div className="grid gap-2 sm:grid-cols-2">
@@ -331,7 +336,11 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                     {t("settings.readOtherProjectTasksDescription")}
                   </div>
                 </div>
-                <Switch checked={allowProjectRead} onCheckedChange={setAllowProjectRead} />
+                <Switch
+                  checked={allowProjectRead}
+                  aria-label={t("settings.readOtherProjectTasks")}
+                  onCheckedChange={setAllowProjectRead}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -340,7 +349,11 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                     {t("settings.useSharedCheckoutDescription")}
                   </div>
                 </div>
-                <Switch checked={allowLocal} onCheckedChange={setAllowLocal} />
+                <Switch
+                  checked={allowLocal}
+                  aria-label={t("settings.useSharedCheckout")}
+                  onCheckedChange={setAllowLocal}
+                />
               </div>
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -349,7 +362,11 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                     {t("settings.runWithoutApprovalDescription")}
                   </div>
                 </div>
-                <Switch checked={allowFullAccess} onCheckedChange={setAllowFullAccess} />
+                <Switch
+                  checked={allowFullAccess}
+                  aria-label={t("settings.runWithoutApproval")}
+                  onCheckedChange={setAllowFullAccess}
+                />
               </div>
             </DisclosureRegion>
           </SettingsRow>
@@ -374,11 +391,7 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                   aria-hidden="true"
                   className={cn(
                     "size-2 rounded-full",
-                    setupUnavailable
-                      ? "bg-destructive"
-                      : connected
-                        ? "bg-green-500"
-                        : "bg-amber-500",
+                    setupUnavailable ? "bg-destructive" : "bg-amber-500",
                   )}
                 />
                 {setupStatus}
@@ -389,17 +402,15 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
                 ? t("settings.revokedDescription")
                 : integrationExpired
                   ? t("settings.expiredDescription")
-                  : connected
-                    ? t("settings.connectedDescription")
-                    : paired
-                      ? t("settings.pairedDescription")
-                      : pairingExpired
-                        ? t("settings.pairingExpiredDescription")
-                        : t("settings.waitingPairingDescription")
+                  : paired
+                    ? t("settings.pairedDescription")
+                    : pairingExpired
+                      ? t("settings.pairingExpiredDescription")
+                      : t("settings.waitingPairingDescription")
             }
             status={
-              connected
-                ? t("settings.lastConnected", {
+              hasBeenUsed
+                ? t("settings.lastUsed", {
                     time: formatDate(setupIntegration.lastUsedAt, locale, t("settings.never")),
                   })
                 : t("settings.connectionExpires", {
@@ -544,7 +555,9 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             title={t("settings.tryConnectionStep")}
             description={t("settings.tryConnectionStepDescription")}
             status={
-              connected ? t("settings.connectionVerified") : t("settings.connectionPendingFirstUse")
+              hasBeenUsed
+                ? t("settings.connectionUsedBefore")
+                : t("settings.connectionPendingFirstUse")
             }
             control={
               <Button
@@ -581,11 +594,11 @@ export function ExternalMcpSettingsPanel(props: { active: boolean }) {
             const active =
               integration.revokedAt === null && dateMillis(integration.expiresAt) > nowMs;
             const status = active
-              ? integration.lastUsedAt
-                ? t("settings.statusConnected")
-                : integration.pairedAt
-                  ? t("settings.statusPairedUnused")
-                  : t("settings.statusWaitingPairing")
+              ? integration.pairedAt
+                ? integration.lastUsedAt
+                  ? t("settings.statusPaired")
+                  : t("settings.statusPairedUnused")
+                : t("settings.statusWaitingPairing")
               : integration.revokedAt
                 ? t("settings.statusRevoked")
                 : t("settings.statusExpired");

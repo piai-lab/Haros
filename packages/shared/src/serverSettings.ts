@@ -29,20 +29,38 @@ export function validateServerSettingsPatch(
   return null;
 }
 
+export function normalizeDisabledBuiltInGroups(values: readonly string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))].sort(
+    (left, right) => (left < right ? -1 : left > right ? 1 : 0),
+  );
+}
+
+export function normalizeServerSettings(settings: ServerSettings): ServerSettings {
+  return {
+    ...settings,
+    agentTools: {
+      ...settings.agentTools,
+      disabledBuiltInGroups: normalizeDisabledBuiltInGroups(
+        settings.agentTools.disabledBuiltInGroups,
+      ),
+    },
+  };
+}
+
 export function applyServerSettingsPatch(
   current: ServerSettings,
   patch: ServerSettingsPatch,
 ): ServerSettings {
   const selectionPatch = patch.textGenerationModelSelection;
-  const next = deepMerge(current, patch as DeepPartial<ServerSettings>);
+  const next = normalizeServerSettings(deepMerge(current, patch as DeepPartial<ServerSettings>));
   if (!selectionPatch) {
     return next;
   }
   if (validateServerSettingsPatch(current, patch) !== null) {
-    return {
+    return normalizeServerSettings({
       ...next,
       textGenerationModelSelection: current.textGenerationModelSelection,
-    };
+    });
   }
 
   const provider = selectionPatch.provider ?? current.textGenerationModelSelection.provider;
@@ -60,14 +78,14 @@ export function applyServerSettingsPatch(
     ? selectionPatch.options
     : (selectionPatch.options ?? current.textGenerationModelSelection.options);
 
-  return {
+  return normalizeServerSettings({
     ...next,
     textGenerationModelSelection: {
       provider,
       model,
       ...(options !== undefined ? { options } : {}),
     } as ModelSelection,
-  };
+  });
 }
 
 /** Server-owned launch options derived from the persisted non-secret settings snapshot. */

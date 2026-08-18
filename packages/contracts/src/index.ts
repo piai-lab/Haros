@@ -21,6 +21,7 @@ export * from "./omnimindEcosystem";
 export * from "./model";
 export * from "./agentMentions";
 export * from "./agentGateway";
+export * from "./agentTools";
 export * from "./externalMcp";
 export * from "./ws";
 export * from "./wsCompatibility";

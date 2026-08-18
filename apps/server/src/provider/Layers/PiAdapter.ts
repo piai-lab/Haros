@@ -22,6 +22,7 @@ import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-a
 import type { PromptOutcome as OmniMindPromptOutcome } from "@omnimind/pi-coding-agent";
 import {
   ApprovalRequestId,
+  type BuiltInToolGroupId,
   type ChatAttachment,
   EventId,
   type ProviderComposerCapabilities,
@@ -34,7 +35,6 @@ import {
   type ProviderSession,
   type ProviderUserInputAnswers,
   type ProviderWorkSurface,
-  type RuntimeTaskListItem,
   RuntimeItemId,
   RuntimeRequestId,
   ThreadId,
@@ -50,9 +50,11 @@ import {
   renderOmniMindHarnessPolicy,
 } from "../../agentGateway/harnessPolicy.ts";
 import {
+  agentGatewayGroupsFromToolDescriptors,
   callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
   type AgentGatewayMcpFetch,
+  type AgentGatewayMcpToolDescriptor,
 } from "../../agentGateway/mcpInjection.ts";
 import {
   AgentGatewayCredentials,
@@ -79,12 +81,25 @@ import {
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import {
+  deactivateUnavailableAgentGatewayHostProjection,
+  ensureAgentGatewayHostToolsActive,
+  inspectAgentGatewayHostExtensionRegistration,
+  makeAgentGatewayHostExtension,
+} from "../agentGatewayHostExtension.ts";
+import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
+import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
+import {
+  inspectOmniMindTaskListExtensionRegistration,
+  makeOmniMindTaskListExtension,
+  OMNIMIND_TASK_LIST_TOOL_NAME,
+} from "../omnimindTaskListExtension.ts";
+import {
   PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
   type ProviderAdapterShape,
   type ProviderThreadSnapshot,
+  type ProviderTurnDispatchContext,
 } from "../Services/ProviderAdapter.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
-import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { makeKeyedLock } from "../keyedLock.ts";
 import { classifyPiTurnFailure } from "../piTurnFailure.ts";
@@ -118,16 +133,6 @@ import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.t
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
-const OMNIMIND_TASK_LIST_TOOL_NAME = "omnimind_update_tasks";
-const OMNIMIND_TASK_LIST_MAX_ITEMS = 50;
-const OMNIMIND_TASK_TEXT_MAX_LENGTH = 1_000;
-const OMNIMIND_TASK_EXPLANATION_MAX_LENGTH = 2_000;
-const OMNIMIND_AGENT_TASK_POLICY = [
-  "For a non-trivial request with multiple steps, use omnimind_update_tasks to maintain one current task list. This task list is the progress projection for the user's objective, not a second Goal authority.",
-  "Absorb requested work into the current task list whenever it can be completed safely and within scope. Keep statuses current as work advances, with at most one task in progress.",
-  "Before finishing, reconcile every requested part against the task list. Do not silently omit, defer, or narrow requested work: if something remains unfinished or you recommend not doing it, tell the user why and obtain confirmation before treating it as out of scope.",
-  "Do not create background continuation, retry loops, timers, or a separate durable Goal record. A settled turn is the completion boundary; if blocked, leave the relevant task unfinished and state the exact blocker.",
-].join("\n");
 const OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT = [
   "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
   "",
@@ -583,125 +588,6 @@ function piGatewayToolResult(result: unknown): AgentToolResult<unknown> {
   };
 }
 
-function boundedTrimmedString(value: unknown, maxLength: number): string | undefined {
-  if (typeof value !== "string") return undefined;
-  const trimmed = value.trim();
-  return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : undefined;
-}
-
-/**
- * Decode the OmniMind Agent's progress projection without creating a second
- * durable Goal model. The canonical runtime task-list contract remains the
- * sole owner consumed by ProviderService and the Workbench.
- */
-export function decodeOmniMindTaskListUpdate(args: unknown): TurnTasksUpdatedPayload | null {
-  const record = toolRecord(args);
-  const rawTasks = record?.tasks;
-  if (
-    !Array.isArray(rawTasks) ||
-    rawTasks.length === 0 ||
-    rawTasks.length > OMNIMIND_TASK_LIST_MAX_ITEMS
-  ) {
-    return null;
-  }
-
-  const tasks: RuntimeTaskListItem[] = [];
-  let inProgressCount = 0;
-  for (const rawTask of rawTasks) {
-    const taskRecord = toolRecord(rawTask);
-    const task = boundedTrimmedString(taskRecord?.task, OMNIMIND_TASK_TEXT_MAX_LENGTH);
-    const status = taskRecord?.status;
-    if (
-      task === undefined ||
-      (status !== "pending" &&
-        status !== "in_progress" &&
-        status !== "inProgress" &&
-        status !== "completed")
-    ) {
-      return null;
-    }
-    const item = makeRuntimeTaskListItem(task, status);
-    if (!item) return null;
-    if (item.status === "inProgress") inProgressCount += 1;
-    tasks.push(item);
-  }
-  if (inProgressCount > 1) return null;
-
-  const rawExplanation = record?.explanation;
-  if (rawExplanation !== undefined && typeof rawExplanation !== "string") return null;
-  const explanation = boundedTrimmedString(rawExplanation, OMNIMIND_TASK_EXPLANATION_MAX_LENGTH);
-  if (typeof rawExplanation === "string" && rawExplanation.trim().length > 0 && !explanation) {
-    return null;
-  }
-  return {
-    ...(explanation ? { explanation } : {}),
-    tasks,
-  };
-}
-
-export function buildOmniMindTaskListTool(input: {
-  readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
-}): ToolDefinition {
-  return input.defineTool({
-    name: OMNIMIND_TASK_LIST_TOOL_NAME,
-    label: "Update OmniMind tasks",
-    description:
-      "Replace the current OmniMind task list for this turn. Use for non-trivial multi-step work, keep every requested part represented, and keep at most one task in progress. Mark every task completed before claiming the objective is complete; if a task remains or should be omitted, explain it to the user instead of silently dropping it.",
-    promptSnippet: "Maintain the current task list for non-trivial multi-step work",
-    promptGuidelines: [
-      "Treat tasks as the live progress projection of the user's objective, not as a separate durable Goal.",
-      "Send the full current list on every update and keep at most one task in progress.",
-    ],
-    parameters: {
-      type: "object",
-      properties: {
-        explanation: {
-          type: "string",
-          maxLength: OMNIMIND_TASK_EXPLANATION_MAX_LENGTH,
-          description: "Optional concise reason for the task-list update.",
-        },
-        tasks: {
-          type: "array",
-          minItems: 1,
-          maxItems: OMNIMIND_TASK_LIST_MAX_ITEMS,
-          items: {
-            type: "object",
-            properties: {
-              task: { type: "string", minLength: 1, maxLength: OMNIMIND_TASK_TEXT_MAX_LENGTH },
-              status: {
-                type: "string",
-                enum: ["pending", "in_progress", "completed"],
-              },
-            },
-            required: ["task", "status"],
-            additionalProperties: false,
-          },
-        },
-      },
-      required: ["tasks"],
-      additionalProperties: false,
-    } as ToolDefinition["parameters"],
-    executionMode: "sequential",
-    execute: async (_toolCallId, params) => {
-      const payload = decodeOmniMindTaskListUpdate(params);
-      if (!payload) {
-        throw new Error(
-          "Invalid OmniMind task list: provide 1-50 non-empty tasks and at most one in-progress task.",
-        );
-      }
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Updated the current OmniMind task list (${payload.tasks.length} tasks).`,
-          },
-        ],
-        details: payload,
-      };
-    },
-  });
-}
-
 /**
  * Project the canonical MCP catalog into Pi's native custom-tool API. Tool
  * schemas and execution both remain owned by the gateway; Pi only adapts the
@@ -711,6 +597,7 @@ export async function buildPiAgentGatewayCustomTools(input: {
   readonly connection: AgentGatewayMcpConnection;
   readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
   readonly fetch?: AgentGatewayMcpFetch;
+  readonly onCatalog?: (tools: ReadonlyArray<AgentGatewayMcpToolDescriptor>) => void;
 }): Promise<ReadonlyArray<ToolDefinition>> {
   const tools = await listAgentGatewayMcpTools({
     connection: input.connection,
@@ -719,7 +606,17 @@ export async function buildPiAgentGatewayCustomTools(input: {
   if (tools.length === 0) {
     throw new Error("OmniMind MCP returned an empty tool catalog.");
   }
-  return tools.map((tool) =>
+  input.onCatalog?.(tools);
+  return buildPiAgentGatewayCustomToolsFromDescriptors({ ...input, tools });
+}
+
+export function buildPiAgentGatewayCustomToolsFromDescriptors(input: {
+  readonly connection: AgentGatewayMcpConnection;
+  readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
+  readonly tools: ReadonlyArray<AgentGatewayMcpToolDescriptor>;
+  readonly fetch?: AgentGatewayMcpFetch;
+}): ReadonlyArray<ToolDefinition> {
+  return input.tools.map((tool) =>
     input.defineTool({
       name: tool.name,
       label: tool.name,
@@ -1127,6 +1024,8 @@ export function makePiGatewayLoadWarning(displayName: string) {
 export function makePiHostSystemPrompt(input: {
   readonly provider: ProviderKind;
   readonly gatewayControlAvailable: boolean;
+  readonly enabledBuiltInGroups?: ReadonlyArray<BuiltInToolGroupId>;
+  readonly dynamicHostTools?: boolean;
 }): string {
   return [
     "<omnimind_host_context>",
@@ -1135,9 +1034,27 @@ export function makePiHostSystemPrompt(input: {
         provider: input.provider,
         scopedGatewayConnectionAvailable: input.gatewayControlAvailable,
       }),
+      projection: input.dynamicHostTools
+        ? { mode: "dynamic" }
+        : {
+            mode: "direct",
+            enabledGroups: input.enabledBuiltInGroups ?? [],
+          },
     }),
     "</omnimind_host_context>",
   ].join("\n");
+}
+
+export function promptRequiredAgentGatewayToolNames(
+  dispatchContext: ProviderTurnDispatchContext | undefined,
+): ReadonlyArray<string> {
+  if (dispatchContext?.turnKind === "goal-continuation") {
+    return GOAL_CONTINUATION_GATEWAY_TOOL_NAMES;
+  }
+  if (dispatchContext?.dispatchOrigin === "automation") {
+    return AUTOMATION_RUN_GATEWAY_TOOL_NAMES;
+  }
+  return [];
 }
 
 /** Stable OmniMind identity and work-surface behavior that user Prompt resources cannot replace. */
@@ -1149,14 +1066,6 @@ export function makeOmniMindEngineSystemPrompt(input: {
     OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT,
     "",
     input.workSurface === "agent" ? OMNIMIND_AGENT_CONTRACT : OMNIMIND_CHAT_CONTRACT,
-    ...(input.workSurface === "agent"
-      ? [
-          "",
-          "<omnimind_agent_task_policy>",
-          OMNIMIND_AGENT_TASK_POLICY,
-          "</omnimind_agent_task_policy>",
-        ]
-      : []),
     "</omnimind_engine_contract>",
   ].join("\n");
 }
@@ -2479,13 +2388,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             extractPiCuratorWebSurfaceUrl(event.toolName, event.result);
           const safeResult = sanitizeEngineWebSurfacePayload(event.result, surfaceUrl);
           const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
-          const taskListPayload = event.isError
-            ? null
-            : provider === "omnimind" &&
-                context.workSurface === "agent" &&
-                event.toolName === OMNIMIND_TASK_LIST_TOOL_NAME
-              ? decodeOmniMindTaskListUpdate(tracked.args)
-              : null;
           context.activeToolItems.delete(event.toolCallId);
           tracked.engineWebSurface?.unregister();
           const detail = piToolTimelineDetail(safeResult);
@@ -2517,18 +2419,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             },
             raw: { source: "pi.sdk.event", messageType: event.type, payload: safeEvent },
           } satisfies ProviderRuntimeEvent);
-          if (taskListPayload) {
-            offerRuntimeEvent({
-              ...makeEventBase(context),
-              type: "turn.tasks.updated",
-              payload: taskListPayload,
-              raw: {
-                source: "pi.sdk.event",
-                messageType: OMNIMIND_TASK_LIST_TOOL_NAME,
-                payload: { toolCallId: event.toolCallId },
-              },
-            } satisfies ProviderRuntimeEvent);
-          }
           return;
         }
         case "compaction_start": {
@@ -2649,6 +2539,38 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       }
     };
 
+    const warnIfTaskListExtensionUnavailable = (context: PiSessionContext) => {
+      if (provider !== "omnimind" || context.workSurface !== "agent") return;
+      const inspection = inspectOmniMindTaskListExtensionRegistration({
+        extensions: context.runtime.session.resourceLoader.getExtensions(),
+        tools: context.runtime.session.getAllTools(),
+        activeToolNames: context.runtime.session.getActiveToolNames(),
+      });
+      if (inspection.available) return;
+      offerRuntimeEvent({
+        ...makeEventBase(context, { includeTurnId: false }),
+        type: "runtime.warning",
+        payload: {
+          message:
+            "Task progress is unavailable for this Agent session. Other Agent capabilities remain available.",
+          detail: {
+            source: "pi-resource-loader",
+            capability: "turn-task-projection",
+            availability: "unavailable",
+            diagnostics: inspection.diagnostics,
+          },
+        },
+        raw: {
+          source: "pi.sdk.event",
+          method: "extension/resource-diagnostic",
+          payload: {
+            capability: "turn-task-projection",
+            diagnosticCount: inspection.diagnostics.length,
+          },
+        },
+      } satisfies ProviderRuntimeEvent);
+    };
+
     const createSdkRuntime = async (input: {
       sdk: PiCodingAgentModule;
       cwd: string;
@@ -2658,20 +2580,77 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       thinkingLevel?: ThinkingLevel;
       processSupervisor: PiBashProcessSupervisor;
       gatewayTools?: ReadonlyArray<ToolDefinition>;
-      hostSystemPrompt: string;
+      gatewayDescriptors?: ReadonlyArray<AgentGatewayMcpToolDescriptor>;
+      gatewayConnection?: AgentGatewayMcpConnection;
+      agentGatewayFetch?: AgentGatewayMcpFetch;
+      onTaskListUpdate?: (input: {
+        readonly toolCallId: string;
+        readonly payload: TurnTasksUpdatedPayload;
+      }) => void;
+      hostSystemPrompt: (gatewayControlAvailable: boolean) => string;
       immutableSystemPrompt?: string;
       workSurface?: ProviderWorkSurface;
       projectContextRoot?: string;
     }) => {
       const modelRuntime = await family.createModelRuntime(input.agentDir);
+      let resolvedGatewayControlAvailable =
+        provider !== "omnimind" && (input.gatewayTools?.length ?? 0) > 0;
+      const hostProjectionDiagnostics: string[] = [];
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
         cwd,
         agentDir,
         sessionManager,
         sessionStartEvent,
       }) => {
+        const taskListExtension =
+          provider === "omnimind" &&
+          input.workSurface === "agent" &&
+          input.onTaskListUpdate !== undefined
+            ? makeOmniMindTaskListExtension({
+                defineTool: (tool) => input.sdk.defineTool(tool),
+                onTasksUpdated: input.onTaskListUpdate,
+              })
+            : undefined;
+        const hostExtensionHandle =
+          provider === "omnimind" &&
+          input.gatewayConnection !== undefined &&
+          (input.gatewayDescriptors?.length ?? 0) > 0
+            ? makeAgentGatewayHostExtension({
+                descriptors: input.gatewayDescriptors ?? [],
+                connection: input.gatewayConnection,
+                defineTool: (tool) => input.sdk.defineTool(tool),
+                ...(input.agentGatewayFetch === undefined
+                  ? {}
+                  : { fetch: input.agentGatewayFetch }),
+                loadCurrentlyExposedToolNames: async (signal) =>
+                  new Set(
+                    (
+                      await listAgentGatewayMcpTools({
+                        connection: input.gatewayConnection!,
+                        ...(input.agentGatewayFetch === undefined
+                          ? {}
+                          : { fetch: input.agentGatewayFetch }),
+                        ...(signal === undefined ? {} : { signal }),
+                      })
+                    )
+                      .filter((tool) => tool.provenance === "agent-gateway")
+                      .map(({ name }) => name),
+                  ),
+                onDiagnostic: (diagnostic) => {
+                  hostProjectionDiagnostics.push(`${diagnostic.kind}:${diagnostic.name}`);
+                },
+              })
+            : null;
+        const inlineExtensions = [
+          ...(taskListExtension === undefined ? [] : [taskListExtension]),
+          ...(hostExtensionHandle === null ? [] : [hostExtensionHandle.extension]),
+        ];
         const resourceLoaderOptions = {
-          appendSystemPromptOverride: (base: string[]) => [...base, input.hostSystemPrompt],
+          appendSystemPromptOverride: (base: string[]) => [
+            ...base,
+            input.hostSystemPrompt(resolvedGatewayControlAvailable),
+          ],
+          ...(inlineExtensions.length === 0 ? {} : { extensionFactories: inlineExtensions }),
           ...(provider === "omnimind"
             ? {
                 projectContextRoot:
@@ -2692,6 +2671,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...(settingsManager === undefined ? {} : { settingsManager }),
           resourceLoaderOptions,
         });
+        if (hostExtensionHandle !== null) {
+          const inspection = inspectAgentGatewayHostExtensionRegistration({
+            extensions: services.resourceLoader.getExtensions(),
+            candidateToolNames: hostExtensionHandle.candidateToolNames,
+          });
+          resolvedGatewayControlAvailable = inspection.available;
+          hostProjectionDiagnostics.push(...inspection.diagnostics);
+        }
         const registry = modelRegistryFacade(services.modelRuntime, input.sdk);
         const model = findModelInRegistry(registry, input.modelId);
         if (input.modelId && !model) {
@@ -2719,18 +2706,18 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(shellPath === undefined ? {} : { shellPath }),
               }),
             ),
-            ...(provider === "omnimind" && input.workSurface === "agent"
-              ? [
-                  buildOmniMindTaskListTool({
-                    defineTool: (tool) => input.sdk.defineTool(tool),
-                  }),
-                ]
-              : []),
             ...(input.gatewayTools ?? []),
           ],
         };
+        const createdSession = await input.sdk.createAgentSessionFromServices(agentSessionOptions);
+        if (hostExtensionHandle !== null && !resolvedGatewayControlAvailable) {
+          deactivateUnavailableAgentGatewayHostProjection({
+            session: createdSession.session,
+            candidateToolNames: hostExtensionHandle.candidateToolNames,
+          });
+        }
         return {
-          ...(await input.sdk.createAgentSessionFromServices(agentSessionOptions)),
+          ...createdSession,
           services,
           diagnostics: services.diagnostics,
         };
@@ -2743,6 +2730,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       return {
         runtime,
         modelRegistry: modelRegistryFacade(runtime.services.modelRuntime, input.sdk),
+        gatewayControlAvailable: resolvedGatewayControlAvailable,
+        hostProjectionDiagnostics,
       };
     };
 
@@ -2838,14 +2827,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         );
         const agentGatewayConnection = agentGatewaySessionLease?.connection;
         let gatewayToolLoadFailed = false;
-        const gatewayTools = agentGatewayConnection
+        let enabledBuiltInGroups: ReadonlyArray<BuiltInToolGroupId> = [];
+        const gatewayDescriptors = agentGatewayConnection
           ? yield* releaseAgentGatewaySessionLeaseOnInterrupt(
               agentGatewaySessionLease,
               Effect.tryPromise({
                 try: () =>
-                  buildPiAgentGatewayCustomTools({
+                  listAgentGatewayMcpTools({
                     connection: agentGatewayConnection,
-                    defineTool: (tool) => piSdk.defineTool(tool),
                     ...(options?.agentGatewayFetch === undefined
                       ? {}
                       : { fetch: options.agentGatewayFetch }),
@@ -2864,55 +2853,108 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       reason: "gateway-discovery-failed",
                     }),
                   ),
-                  Effect.as([] as ReadonlyArray<ToolDefinition>),
+                  Effect.as([] as ReadonlyArray<AgentGatewayMcpToolDescriptor>),
                 ),
               ),
             )
           : [];
-        const gatewayControlAvailable = gatewayTools.length > 0;
+        enabledBuiltInGroups = agentGatewayGroupsFromToolDescriptors(gatewayDescriptors);
+        const gatewayTools =
+          provider === "omnimind" || !agentGatewayConnection
+            ? []
+            : buildPiAgentGatewayCustomToolsFromDescriptors({
+                connection: agentGatewayConnection,
+                defineTool: (tool) => piSdk.defineTool(tool),
+                tools: gatewayDescriptors,
+                ...(options?.agentGatewayFetch === undefined
+                  ? {}
+                  : { fetch: options.agentGatewayFetch }),
+              });
+        if (gatewayDescriptors.length === 0) {
+          agentGatewaySessionLease?.release();
+        }
+        let taskProjectionContext: PiSessionContext | undefined;
+        const { runtime, modelRegistry, gatewayControlAvailable, hostProjectionDiagnostics } =
+          yield* releaseAgentGatewaySessionLeaseOnInterrupt(
+            agentGatewaySessionLease,
+            Effect.tryPromise({
+              try: () =>
+                createSdkRuntime({
+                  sdk: piSdk,
+                  cwd,
+                  agentDir,
+                  sessionManager,
+                  ...(modelId ? { modelId } : {}),
+                  ...(thinkingLevel ? { thinkingLevel } : {}),
+                  processSupervisor,
+                  ...(gatewayTools.length > 0 ? { gatewayTools } : {}),
+                  ...(provider === "omnimind" && gatewayDescriptors.length > 0
+                    ? {
+                        gatewayDescriptors,
+                        gatewayConnection: agentGatewayConnection!,
+                        ...(options?.agentGatewayFetch === undefined
+                          ? {}
+                          : { agentGatewayFetch: options.agentGatewayFetch }),
+                      }
+                    : {}),
+                  ...(workSurface === undefined ? {} : { workSurface }),
+                  ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
+                  ...(provider === "omnimind" && workSurface === "agent"
+                    ? {
+                        onTaskListUpdate: ({ toolCallId, payload }) => {
+                          const current = taskProjectionContext;
+                          if (
+                            !current ||
+                            current.stopped ||
+                            !current.activeTurnId ||
+                            sessions.get(input.threadId) !== current
+                          ) {
+                            return;
+                          }
+                          offerRuntimeEvent({
+                            ...makeEventBase(current),
+                            type: "turn.tasks.updated",
+                            payload,
+                            raw: {
+                              source: "pi.sdk.event",
+                              messageType: OMNIMIND_TASK_LIST_TOOL_NAME,
+                              payload: { toolCallId },
+                            },
+                          } satisfies ProviderRuntimeEvent);
+                        },
+                      }
+                    : {}),
+                  hostSystemPrompt: (available) =>
+                    makePiHostSystemPrompt({
+                      provider,
+                      gatewayControlAvailable: available,
+                      enabledBuiltInGroups,
+                      dynamicHostTools: provider === "omnimind" && available,
+                    }),
+                  ...(provider === "omnimind" && workSurface !== undefined
+                    ? {
+                        immutableSystemPrompt: makeOmniMindEngineSystemPrompt({ workSurface }),
+                      }
+                    : {}),
+                }),
+              catch: (cause) =>
+                new ProviderAdapterRequestError({
+                  provider: provider,
+                  method: "session/start",
+                  detail: toMessage(cause, `Failed to start ${displayName} session.`),
+                  cause,
+                }),
+            }),
+          ).pipe(
+            Effect.tapError(() =>
+              Effect.sync(() => {
+                agentGatewaySessionLease?.release();
+              }),
+            ),
+          );
         if (!gatewayControlAvailable) {
           agentGatewaySessionLease?.release();
         }
-        const { runtime, modelRegistry } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
-          agentGatewaySessionLease,
-          Effect.tryPromise({
-            try: () =>
-              createSdkRuntime({
-                sdk: piSdk,
-                cwd,
-                agentDir,
-                sessionManager,
-                ...(modelId ? { modelId } : {}),
-                ...(thinkingLevel ? { thinkingLevel } : {}),
-                processSupervisor,
-                ...(gatewayControlAvailable ? { gatewayTools } : {}),
-                ...(workSurface === undefined ? {} : { workSurface }),
-                ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
-                hostSystemPrompt: makePiHostSystemPrompt({
-                  provider,
-                  gatewayControlAvailable,
-                }),
-                ...(provider === "omnimind" && workSurface !== undefined
-                  ? {
-                      immutableSystemPrompt: makeOmniMindEngineSystemPrompt({ workSurface }),
-                    }
-                  : {}),
-              }),
-            catch: (cause) =>
-              new ProviderAdapterRequestError({
-                provider: provider,
-                method: "session/start",
-                detail: toMessage(cause, `Failed to start ${displayName} session.`),
-                cause,
-              }),
-          }),
-        ).pipe(
-          Effect.tapError(() =>
-            Effect.sync(() => {
-              agentGatewaySessionLease?.release();
-            }),
-          ),
-        );
         const now = new Date().toISOString();
         const model = runtime.session.model
           ? `${runtime.session.model.provider}/${runtime.session.model.id}`
@@ -2960,6 +3002,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           lastKnownTokenUsage: undefined,
           unsubscribe: undefined,
         };
+        taskProjectionContext = context;
         context.unsubscribe = runtime.session.subscribe((event) =>
           handleSessionEvent(context, event),
         );
@@ -3010,6 +3053,32 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             },
           } satisfies ProviderRuntimeEvent);
         }
+        if (hostProjectionDiagnostics.length > 0) {
+          const diagnostics = [...new Set(hostProjectionDiagnostics)];
+          offerRuntimeEvent({
+            ...makeEventBase(context, { includeTurnId: false }),
+            type: "runtime.warning",
+            payload: {
+              message:
+                "Some OmniMind Host capabilities could not be projected into this Agent session. Other Agent capabilities remain available.",
+              detail: {
+                source: "pi-resource-loader",
+                capability: "agent-gateway-host-projection",
+                availability: gatewayControlAvailable ? "degraded" : "unavailable",
+                diagnostics,
+              },
+            },
+            raw: {
+              source: "pi.sdk.event",
+              method: "extension/resource-diagnostic",
+              payload: {
+                capability: "agent-gateway-host-projection",
+                diagnosticCount: diagnostics.length,
+              },
+            },
+          } satisfies ProviderRuntimeEvent);
+        }
+        warnIfTaskListExtensionUnavailable(context);
         const loadedExtensions = runtime.session.resourceLoader.getExtensions().extensions;
         if (loadedExtensions.length > 0) {
           const extensionNames = loadedExtensions.map(extensionDisplayName);
@@ -3108,7 +3177,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         };
       });
 
-    const sendTurn: PiAdapterShape["sendTurn"] = (input) =>
+    const sendTurn: PiAdapterShape["sendTurn"] = (input, dispatchContext) =>
       sessionResourceAdmission.withLock(
         input.threadId,
         Effect.gen(function* () {
@@ -3193,6 +3262,44 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               issue: activeModel
                 ? `${displayName} cannot send with provider '${activeModel.provider}' because no credentials are configured. Add credentials for ${displayName}, then retry.`
                 : `${displayName} cannot send because no model with configured credentials is selected.`,
+            });
+          }
+          const promptRequiredNames = promptRequiredAgentGatewayToolNames(dispatchContext);
+          if (provider === "omnimind" && promptRequiredNames.length > 0) {
+            if (!context.gatewayControlAvailable || context.gatewayConnection === undefined) {
+              return yield* new ProviderAdapterValidationError({
+                provider,
+                operation: "sendTurn",
+                issue:
+                  "This synthetic OmniMind turn requires Host capabilities that are unavailable in the current Agent session.",
+              });
+            }
+            yield* Effect.tryPromise({
+              try: async () => {
+                const currentlyExposed = await listAgentGatewayMcpTools({
+                  connection: context.gatewayConnection!,
+                  ...(options?.agentGatewayFetch === undefined
+                    ? {}
+                    : { fetch: options.agentGatewayFetch }),
+                });
+                ensureAgentGatewayHostToolsActive({
+                  session: context.runtime.session,
+                  requiredNames: promptRequiredNames,
+                  currentlyExposedNames: new Set(
+                    currentlyExposed
+                      .filter((tool) => tool.provenance === "agent-gateway")
+                      .map(({ name }) => name),
+                  ),
+                });
+              },
+              catch: (cause) =>
+                new ProviderAdapterValidationError({
+                  provider,
+                  operation: "sendTurn",
+                  issue:
+                    "This synthetic OmniMind turn requires Host capabilities that are disabled, unavailable, or collided in the current Agent session.",
+                  cause,
+                }),
             });
           }
           const payload = yield* buildPromptPayload(input);
@@ -3433,6 +3540,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 cause,
               }),
           });
+          warnIfTaskListExtensionUnavailable(context);
           return "reloaded" as const;
         }),
       );

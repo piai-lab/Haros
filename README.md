@@ -66,7 +66,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 
 这四条规定产品结果。`omnimind` 与 `pi` 是两个真实 Provider identity，但仍服从同一个 inherited orchestration；这与重建通用多 Engine 平台不同。
 
-OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。production-adopted Synara head 是 exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`；当前安装的 OmniMind product bytes 来自 exact pushed merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13`，它在既有 `3077bf253` 产品基线上彻底退休错误的 Project instructions 表面与隐藏写入，并为 bundled OmniMind 建立独立默认身份、Chat/Agent 边界和 Project trust contract，stock Pi 保持原生身份。持久 ThreadGoal 与逐回合 Todo 是两条独立责任，且都位于同一个 inherited Thread/Product Orchestration authority 内。
+OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。production-adopted Synara head 是 exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`；当前安装的 OmniMind product bytes 来自 exact pushed merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13`，它在既有 `3077bf253` 产品基线上彻底退休错误的 Project instructions 表面与隐藏写入，并为 bundled OmniMind 建立独立默认身份、Chat/Agent 边界和 Project trust contract，stock Pi 保持原生身份。持久 ThreadGoal 与逐回合 Todo 是两条独立责任：Goal 继续属于 inherited Thread/Product Orchestration；Todo 是 OmniMind-authored、product-bundled 的 Pi Session Extension，只向既有 canonical turn event 做薄投影。
 
 ## 4. 来源、身份与结构
 
@@ -165,17 +165,6 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "changes": "A per-login optional AuthInteraction renderer may replace only the browser loopback completion/error HTML. It receives only the safe authorization-received/error state, never Provider messages, diagnostics, codes or token-exchange results. OpenAI Codex, Anthropic, OpenRouter and Radius pass the same request-scoped renderer through their existing callback servers; absent or failing renderers retain the stock Pi page. Provider authorization, state validation, token exchange, cancellation and device-code flows remain unchanged.",
       "updatePolicy": "Pinned package integrity plus Bun patchedDependencies. Every install applies the committed patch or fails on conflict; remove it when upstream exposes an equivalent request-scoped renderer. A Pi update must re-check all four browser callback providers and prove the stock default and device-code paths remain unchanged before changing the pinned package or patch. The current provider-default automation is valid only because each OAuth select prompt it can consume in pinned Pi 0.84.2 marks its first option as default/recommended; source intake must re-prove that property or fail closed to an explicit user choice rather than treating array order as a permanent API.",
       "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
-    },
-    {
-      "id": "pi-todo-headless-package",
-      "url": "https://github.com/earendil-works/pi.git",
-      "revision": "20be4b18d4c57487f8993d2762bace129f0cf7c6",
-      "paths": ["assets/packages/pi-todo-0.81.1/todo.ts"],
-      "rights": "The copied todo extension source is MIT-licensed under the retained canonical legal text. This adoption is limited to the exact selected file and does not adopt the Pi repository as OmniMind product source.",
-      "mode": "transplant",
-      "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. The isolated macOS Electron journey at evidence commit 9a46b4f477b335929eadaaf3584e72706942ee0e ran the unchanged source through the Pi 0.84.1 ResourceLoader/session in a folder-backed OmniMind Agent and preserved global/project .pi sentinels. The source remains byte-identical at the current Pi 0.84.2 baseline (SHA-256 e46824d00217e25242c186d41837cc84ca81b23f978500323448502a9a424ee2); rerun only when the selected bytes, ResourceLoader/session contract, Pi patch, isolation boundary, platform, or packaged execution path changes.",
-      "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires the explicit Gate A/Gate B process in PI-ECOSYSTEM-INTAKE.md and affected revalidation before activation.",
-      "licenseFiles": ["LICENSES/pi-todo-MIT.txt"]
     },
     {
       "id": "thinking-orbs-composing-20px",

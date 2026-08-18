@@ -15,6 +15,36 @@ OmniMind 选择 Pi 作为默认 Agent 内核，不等于从零重写 Pi 已经�
 5. 配置和窄桥能解决时不 fork；候选已经属于 OmniMind 明确继承的同一 Product Orchestration/Thread 生命周期时，优先保留母体 owner，不把它误判为第二控制面；
 6. 无法证明净收益时拒绝采用。
 
+### 1.1 OmniMind Agent 深度对齐 Pi
+
+OmniMind Agent 的默认技术哲学、规则和路线以 exact bundled Pi 为主，不只追求函数签名或工具 schema 表面兼容。必须优先对齐 Pi 已有的：
+
+- `ModelRuntime` / `AgentSession` 与 native turn、stream、abort、settlement、branch、resume、compaction 生命周期；
+- `ResourceLoader` / `PackageManager` 的 Extension、Package、Skill、Prompt、Tool、MCP 发现、优先级、冲突、reload、install/update/remove 与 private-state 边界；
+- Pi Tool Registry 的 registered/active truth、Extension-owned name set、dynamic loading 和 Provider-native/fallback wire 语义；
+- Pi 的 context/instruction composition、Session event、tool result provenance、permission/approval 与失败恢复方式；
+- 上游公开 seam、原始来源身份、作者测试、默认行为和可删除的最小 OmniMind patch。
+
+“深度对齐”不表示把 Pi CLI/TUI 品牌或所有 package 原样暴露给普通用户，也不表示 Pi 可以取代 Synara 的 Product Orchestration/Thread/Workbench owner。OmniMind 可以使用独立产品 identity、`.omnimind` private state、双语 Workbench projection、AgentGateway 执行与产品随附 Extension，但这些增强应通过 Pi 公开或已证明的 native seam 窄接入，不在 adapter 外重建 Pi 已拥有的 Session、Registry、loader、active store、package lifecycle 或第二 Agent runtime。把自建系统改名为“Pi-compatible Extension”不算对齐；真实 owner、调用链和生命周期必须进入 Pi native composition。
+
+只要拟议偏离 Pi 的哲学、公开 API、owner、生命周期或技术路线，或对 exact Pi 实际行为存在会改变结论的不确定，Agent 必须先停在只读/可逆安全边界，用 junior 能理解的方式向维护者说清：
+
+1. Pi 原生是怎么工作的，现在 exact source/runtime 已经提供了什么；
+2. OmniMind 真正遇到的用户结果缺口或安全/交付缺口是什么；
+3. 为什么配置、原生 Extension/Package/Tool seam、窄 bridge 或 upstream patch 不足以解决；
+4. 拟议偏离会改变哪些调用链、默认行为、同步成本、兼容性、安全与回滚路径；
+5. Agent 推荐什么、理由是什么，以及如何用 exact-source conformance 和真实 journey 证伪。
+
+维护者是这类偏离与真实分叉的最终决策者。获得明确决定前，不得因为 OmniMind 能够 fork、代码更容易重写、或抽象看起来更整齐就离开 Pi 路线。已经清楚属于 Pi 原生 owner 内的局部实现、不会增加长期责任的窄接线和经授权的固定产品 divergence 继续直接完成，不需要对每个变量重复请示。
+
+### 1.2 冲突裁决没有中间地带
+
+归类为 OmniMind Agent 的Pi运行时机制后，当现有adapter、自建机制、其他Engine donor、第三方package或新抽象与exact bundled Pi的公开seam和生命周期冲突时，**Pi在ModelRuntime/AgentSession、agent loop、context/compaction、资源注册、Tool Registry/active set、reload与Provider wire范围内默认胜出**；只有维护者已明确批准并记录的fixed OmniMind divergence可以覆盖该默认。
+
+不得用一个“中间层”同时保留 Pi 与自建的两套 Registry、Session truth、active store、Package lifecycle、Tool authority、Prompt composition 或 resume/recovery；不得用改名、wrapper、双写、兼容双轨或“以后再切换”逃避 owner 裁决。如果 Pi 的 exact 机制还没查清、冲突两边都有重要用户结果，或责任同时跨越 Pi 内核与 Synara Product projection，Agent 必须停在只读/可逆边界，用通俗语言把冲突、选项、损失和推荐说给维护者，等待唯一决定。
+
+这个默认不转移业务owner：AgentGateway继续唯一拥有OmniMind Host canonical catalog、schema、execution、credential、permission/turn authority、timeout与cancel；Pi Extension只负责把这些definitions投影进Pi的注册/active/wire lifecycle。Product Thread、Timeline、Workbench、Product Orchestration、Queue/receipt与跨Provider用户事实听Synara。third-party Extension/MCP仍由各自来源拥有config、secret、transport、server/process lifecycle与business state，进入Pi Registry不使其成为Pi或Host业务能力。仍不能唯一归类时，不允许Agent自行选边或建立折中双轨，只能请维护者裁决。
+
 本文要防止两种同样昂贵的错误：
 
 - **重复造轮子**：忽略 Pi/Engine 已有的 session、tool loop、compaction、skill、extension 等原语；
@@ -32,9 +62,6 @@ OmniMind 选择 Pi 作为默认 Agent 内核，不等于从零重写 Pi 已经�
 4. [`execution-brief.md`](execution-brief.md)：当前工作目标、并发协调、真实阻塞与下一动作；
 5. [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md)：仅在 active 时读取状态与证据指针；
 6. [`research/README.md`](research/README.md) 路由的相关 evidence owner；
-7. Agent Core 相关任务再完整读取：
-   - [`research/omnimind-agent-core-design.md`](research/omnimind-agent-core-design.md)
-   - [`research/omnimind-agent-core-execution-guide.md`](research/omnimind-agent-core-execution-guide.md)
 
 权威关系不可倒置：
 
@@ -89,6 +116,17 @@ exact artifact
 3. **未采用候选**：默认只读；热度只决定研究优先级。
 4. **既有 fork/patch**：必须能追溯 upstream、补丁清单、删除条件和同步成本。
 5. **其他 Engine donor**：可翻译机制或通过官方 seam 加法挂载，但不得伪造跨 Engine 相同语义。
+
+Pi Extension 进入 OmniMind Agent composition 前还必须明确其来源与长期责任模式，不得因为最终都是 Pi `ToolDefinition` 就混同 owner：
+
+| 模式                              | 产品与运行时边界                                                                                   | 必须承担                                                                                    | 不自动获得                                                                          |
+| --------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| OmniMind 自有、产品随附 Extension | OmniMind 编写并维护，只在明确的 Provider/Session surface 注册                                      | definition、prompt、lifecycle、回归、发行与回滚                                             | AgentGateway owner、跨 Engine 分发或 Host Built-in policy                           |
+| OmniMind Host 投影 Extension      | OmniMind 只拥有 AgentGateway canonical definitions 到 Pi Registry 的投影与 owned-set activation    | 投影、collision/provenance、Session 装配与 Pi wire 兼容                                     | Gateway tool 的执行、状态、credential、权限或其他 Extension 的 active-set authority |
+| Fork 后修改上游 Extension         | 保留 exact upstream lineage，OmniMind 发行并维护有界 patch                                         | license/notice、作者测试、patch inventory、安全与兼容修复、upstream sync、回滚/退出         | 被重命名为第一方、成为 Host tool、跨 Engine 分发或新的产品控制面                    |
+| 直接安装上游 Extension            | 保留上游 package identity、version、provenance 与语义，由 Pi 原生 package/extension lifecycle 管理 | exact artifact、rights、兼容/安全证据、原生 install/update/remove/reload 与准确 unavailable | OmniMind 对其业务状态的所有权、默认预装、静默修改、Host search 或跨 Engine 投影     |
+
+同一上游 Extension 不能同时被记为“直接安装”和“fork 后修改”。两者之间切换会改变法定来源、更新与安全 owner、回滚方式和长期同步成本，必须重开 exact-source intake 并获得维护者确认。这个分类是证据与 owner 合同，不授权新建 Extension registry、manifest、Settings 或安装控制面。
 
 ## 5. Gate A：只读研究合同
 
@@ -167,6 +205,8 @@ metadata-only
 - update/install/telemetry/crash recovery。
 
 对每个 owner 给出 disposition：保留候选 owner、桥到 OmniMind 现有 owner、翻译机制，或拒绝。不得用“隐藏 UI”“关闭自动模式”误当 owner 已消失；必须证明 schema、state、listener、timer、writer、command 和 recovery path 都没有注册。
+
+若候选接入方案会重大自创或偏离上游，并新增 owner、state、lifecycle、public contract、control plane 或长期兼容责任，进入 Gate B 施工前必须先用新手可理解的语言向维护者说明上游原行为、当前精确缺口、拟议偏离、全局调用链与维护影响、以及回滚方式，并获得明确授权；既有 owner 内不增加长期责任的普通局部实现无需逐变量请示。不得让单一 adapter/module 静默同时拥有 definition、prompt、lifecycle、authority 与 event projection。
 
 每个采用结论必须分别记录三层事实，不能互相外推：
 

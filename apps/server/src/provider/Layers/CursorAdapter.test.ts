@@ -13,7 +13,8 @@ describe("Cursor OmniMind harness policy", () => {
       const state: { harnessPolicyDelivered?: boolean } = {};
       const first = takeCursorOmniMindHarnessPolicyTextPart(state, true);
       expect(first?.text, lifecycle).toContain(OMNIMIND_HARNESS_POLICY_MARKER);
-      expect(first?.text, lifecycle).toContain("Use the omnimind_* tools");
+      expect(first?.text, lifecycle).toContain("tools actually available");
+      expect(first?.text, lifecycle).not.toContain("omnimind_create_threads");
       expect(takeCursorOmniMindHarnessPolicyTextPart(state, true), lifecycle).toBeNull();
     }
   });

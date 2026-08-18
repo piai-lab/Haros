@@ -13,13 +13,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
-import {
-  ApprovalRequestId,
-  BROWSER_TOOL_NAMES,
-  ThreadId,
-  TurnId,
-  type RuntimeMode,
-} from "@omnimind/contracts";
+import { ApprovalRequestId, ThreadId, TurnId, type RuntimeMode } from "@omnimind/contracts";
 
 import {
   buildCodexProcessEnv,
@@ -79,13 +73,10 @@ describe("Codex OmniMind harness policy", () => {
       expect(instructions).toContain(OMNIMIND_HARNESS_POLICY_MARKER);
       expect(instructions.split(OMNIMIND_HARNESS_POLICY_MARKER)).toHaveLength(2);
       expect(instructions).toContain("OmniMind is the host and harness");
-      expect(instructions).toContain("one exact omnimind_create_threads plan");
-      expect(instructions).toContain("tools.mcp__omnimind__browser_open");
-      for (const name of BROWSER_TOOL_NAMES) {
-        expect(instructions, name).toContain(`\`${name.slice("browser_".length)}\``);
-      }
-      expect(instructions).toContain("Do not search or filter \`ALL_TOOLS\`");
-      expect(instructions).toContain("sequentially in one \`functions.exec\` invocation");
+      expect(instructions).toContain("tools actually available");
+      expect(instructions).not.toContain("omnimind_create_threads");
+      expect(instructions).not.toContain("browser_open");
+      expect(instructions).not.toContain("device_list");
     }
   });
 

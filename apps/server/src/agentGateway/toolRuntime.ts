@@ -1,4 +1,4 @@
-import type { ProviderKind } from "@omnimind/contracts";
+import type { BuiltInToolGroupId, ProviderKind } from "@omnimind/contracts";
 import type { Effect } from "effect";
 
 import type { AgentGatewayTargetError } from "./targetResolver.ts";
@@ -61,6 +61,15 @@ export interface ToolEntry {
   readonly handler: ToolHandler;
   readonly requiredCapability: AgentGatewayCapability;
   readonly requiresActiveTurn?: boolean;
+  readonly group?: BuiltInToolGroupId;
+  readonly available?: boolean;
+  readonly provenance?: "agent-gateway";
+}
+
+export interface AgentGatewayCatalogToolEntry extends ToolEntry {
+  readonly group: BuiltInToolGroupId;
+  readonly available: boolean;
+  readonly provenance: "agent-gateway";
 }
 
 export interface McpToolEntry<Context, Capability extends string> {

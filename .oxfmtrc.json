@@ -14,8 +14,7 @@
     "bun.lock",
     "*.tsbuildinfo",
     "**/routeTree.gen.ts",
-    "apps/web/public/mockServiceWorker.js",
-    "assets/packages/pi-todo-0.81.1/todo.ts"
+    "apps/web/public/mockServiceWorker.js"
   ],
   "sortPackageJson": {}
 }

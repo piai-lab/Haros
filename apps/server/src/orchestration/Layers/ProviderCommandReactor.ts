@@ -2040,10 +2040,16 @@ const make = Effect.gen(function* () {
     const sendQueuedProviderTurn = (messageText: string | undefined) =>
       markProviderAttempted().pipe(
         Effect.andThen(
-          providerService.sendTurn({
-            ...providerTurnInput,
-            ...(messageText ? { input: messageText } : {}),
-          }),
+          providerService.sendTurn(
+            {
+              ...providerTurnInput,
+              ...(messageText ? { input: messageText } : {}),
+            },
+            {
+              turnKind: input.turnKind ?? "user",
+              dispatchOrigin: input.dispatchOrigin ?? "user",
+            },
+          ),
         ),
       );
 

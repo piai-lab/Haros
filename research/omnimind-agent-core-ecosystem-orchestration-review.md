@@ -13,7 +13,9 @@
 > [!IMPORTANT]
 > **当前处置（2026-08-15）**：本文保留为绑定 `a9adf9fb9a30f6b0a9fb43fc3349c8d2fdfd5a9d` 的历史研究证据，不再是当前施工顺序或零背景执行入口。它仍保存后续研究需要的 Prompt Diet、Agentic Search、Memory/Wiki 分工、Pi package 候选矩阵、外部证据、压力测试和风险登记；其中关于当前代码状态、package 时点信号、Slice 顺序和执行准入的文字必须在最新 `main` 重新验证。
 >
-> 当前 Agent Core 研究与执行入口是 `research/omnimind-agent-core-design.md`、`research/omnimind-agent-core-execution-guide.md` 和 `research/omnimind-agent-capability-surface.md`；Pi 生态重新进入遵循根 `PI-ECOSYSTEM-INTAKE.md`；Pi 成熟 runtime 能力的下一轮产品整合边界见 `research/pi-native-product-integration-review.md`。若本文与这些现行 owner 或 `architecture/`、`execution-brief.md` 冲突，以现行 owner 为准，先修 owner 冲突后再施工；不得从本文直接恢复旧分支、安装 package、创建第二控制面或复制旧 Slice 顺序。
+> 本文不是当前 Agent Core 研究或执行入口。现行稳定事实只看 `architecture/*`，Pi 生态重新进入遵循根 `PI-ECOSYSTEM-INTAKE.md`，当前工作只看 `execution-brief.md`；Pi 成熟 runtime 能力边界见 `research/pi-native-product-integration-review.md`，用户可见能力投影候选见 `research/omnimind-agent-capability-surface.md`。已弃用设计与退休施工门只由 Git 历史保留；不得从本文直接恢复旧分支、安装 package、创建第二控制面或复制旧 Slice 顺序。
+>
+> **当前议题 supersession（2026-08-18）**：正文中任何“优先采用第三方Pi Todo Extension”、把lazy MCP或第三方MCP Settings纳入首版、或把Host active set设计成每回合重算/反复卸载的表述均为历史proposal，不能作为当前准入。Todo现行证据只看[`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)；Host动态加载只看[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)与`architecture/execution.md`；第三方MCP管理继续退出首版。
 
 ## 0. 为什么存在这份文档
 
@@ -210,29 +212,29 @@ Anthropic 对 workflow 与 agent 的区分可作为外部概念参照：workflow
 
 ### 3.4 Todo、Goal、Workflow、Automation
 
-| 概念 | 唯一职责 | 不应拥有 |
-| --- | --- | --- |
-| Todo | 当前工作中的轻量步骤和即时进度 | 跨会话 durable scheduler、Provider routing、Run truth |
-| Goal | 一个会话内“继续直到完成/阻塞/等待”的完成循环 | 多 Goal 队列、第二任务系统、第二 Automation |
-| Delegate | 一次聚焦的父子任务委派 | 全局任务图、周期调度 |
-| Dynamic Workflow | 多节点依赖、并发波次、验证、恢复 | 第二 Product Thread、第二 Provider Registry、第二 Auth |
-| Product Thread | 用户可见协作与 execution truth | workflow-specific DAG 算法 |
-| Automation | 定时/事件触发的 durable 产品能力 | 冒充 session Goal 或 workflow scheduler |
+| 概念             | 唯一职责                                     | 不应拥有                                               |
+| ---------------- | -------------------------------------------- | ------------------------------------------------------ |
+| Todo             | 当前工作中的轻量步骤和即时进度               | 跨会话 durable scheduler、Provider routing、Run truth  |
+| Goal             | 一个会话内“继续直到完成/阻塞/等待”的完成循环 | 多 Goal 队列、第二任务系统、第二 Automation            |
+| Delegate         | 一次聚焦的父子任务委派                       | 全局任务图、周期调度                                   |
+| Dynamic Workflow | 多节点依赖、并发波次、验证、恢复             | 第二 Product Thread、第二 Provider Registry、第二 Auth |
+| Product Thread   | 用户可见协作与 execution truth               | workflow-specific DAG 算法                             |
+| Automation       | 定时/事件触发的 durable 产品能力             | 冒充 session Goal 或 workflow scheduler                |
 
 最危险的错误是把一个 package 自带的 `task`、`mission`、`schedule`、`run` 直接映射为新的 OmniMind 产品实体。那会制造 owner 冲突、恢复歧义和 UI 双轨。
 
 ### 3.5 单一 owner 地图
 
-| 事实 | 唯一 owner | Core / Workflow 如何消费 |
-| --- | --- | --- |
-| Engine identity、auth、native Session、Tools、resume | 对应 Engine adapter/native runtime | 查询、精确选择、保留 provenance，不复制 |
-| OmniMind Agent Model service auth/catalog/config | Pi ModelRuntime + `.omnimind` | 通过 typed Host projection 使用，不建静态镜像 |
-| Provider request、prompt cache、usage/cost | Pi/native Engine adapter | 传入稳定 session/target，投影原生事实，不建统一缓存真相 |
-| Session context、compaction、branch summary | Pi/native Engine runtime | 消费事件与摘要，不复制 transcript 或自建 context engine |
-| 用户可见 Thread/Turn、Timeline、cancel/recovery | Product Orchestration / Product state | child node 引用 canonical IDs |
-| Role/Skill/Prompt/Wiki | 对应 Markdown / package asset owner | lazy resolve，记录 source |
-| Workflow 图与节点依赖 | thin Scheduler journal | 只保存图事实和 canonical references |
-| 用户可见 workflow/worker surface | Workbench | 投影真实状态，不复制 package TUI |
+| 事实                                                 | 唯一 owner                            | Core / Workflow 如何消费                                |
+| ---------------------------------------------------- | ------------------------------------- | ------------------------------------------------------- |
+| Engine identity、auth、native Session、Tools、resume | 对应 Engine adapter/native runtime    | 查询、精确选择、保留 provenance，不复制                 |
+| OmniMind Agent Model service auth/catalog/config     | Pi ModelRuntime + `.omnimind`         | 通过 typed Host projection 使用，不建静态镜像           |
+| Provider request、prompt cache、usage/cost           | Pi/native Engine adapter              | 传入稳定 session/target，投影原生事实，不建统一缓存真相 |
+| Session context、compaction、branch summary          | Pi/native Engine runtime              | 消费事件与摘要，不复制 transcript 或自建 context engine |
+| 用户可见 Thread/Turn、Timeline、cancel/recovery      | Product Orchestration / Product state | child node 引用 canonical IDs                           |
+| Role/Skill/Prompt/Wiki                               | 对应 Markdown / package asset owner   | lazy resolve，记录 source                               |
+| Workflow 图与节点依赖                                | thin Scheduler journal                | 只保存图事实和 canonical references                     |
+| 用户可见 workflow/worker surface                     | Workbench                             | 投影真实状态，不复制 package TUI                        |
 
 这张表是奥卡姆剃刀：Core 只新增目前没有 owner、且确实属于跨节点协调的最小事实。
 
@@ -266,13 +268,13 @@ Anthropic 对 workflow 与 agent 的区分可作为外部概念参照：workflow
 
 这意味着“Gateway 能描述/接受 target”不等于“Pi ModelRuntime 已确认该 service instance 有凭据且可发送”。必须把以下状态分开：
 
-| 状态 | 含义 | 能否作为 dispatch 证据 |
-| --- | --- | --- |
-| known | 目录知道这个 model slug | 否 |
-| available | 当前 runtime/provider 声明可选择 | 仍需 auth/send gate |
-| authenticated | credential lifecycle 已确认 | 仍需真实 admission |
-| executable now | 当前 exact target 经 send admission 可执行 | 是 |
-| unknown | 尚无足够证据 | 否，不能用 bundled/static default 抹平 |
+| 状态           | 含义                                       | 能否作为 dispatch 证据                 |
+| -------------- | ------------------------------------------ | -------------------------------------- |
+| known          | 目录知道这个 model slug                    | 否                                     |
+| available      | 当前 runtime/provider 声明可选择           | 仍需 auth/send gate                    |
+| authenticated  | credential lifecycle 已确认                | 仍需真实 admission                     |
+| executable now | 当前 exact target 经 send admission 可执行 | 是                                     |
+| unknown        | 尚无足够证据                               | 否，不能用 bundled/static default 抹平 |
 
 第一项实现优先级不是“再加一个模型映射”，而是修复这条静态 default 伪 ready 路径，并让 capabilities 与 send admission 使用同一份真实 ModelRuntime evidence。
 
@@ -298,7 +300,7 @@ Anthropic 对 workflow 与 agent 的区分可作为外部概念参照：workflow
 ModelRuntime.create({
   authPath: path.join(agentDir, "auth.json"),
   modelsPath: path.join(agentDir, "models.json"),
-})
+});
 ```
 
 创建 SDK session 时，Pi services 使用该 runtime，加载 Pi resources，追加 Host system prompt，并注入 OmniMind gateway tools。
@@ -327,17 +329,17 @@ ModelRuntime.create({
 
 ### 4.5 当前能力真值表
 
-| 能力 | 当前判断 | 不得外推 |
-| --- | --- | --- |
-| exact one-wave Host Thread dispatch | 结构已存在 | 不等于多波次 Workflow |
-| Host independent Engines | 继承 adapter 各自拥有 | 不等于共享 auth/catalog |
-| OmniMind Agent Pi ModelRuntime | per-agent-dir 已存在 | 不等于 Settings Model services 已完整交付 |
-| OmniMind model static default | source 中存在 | 不等于 live known/available/authenticated |
-| child Thread execution concurrency | 创建后可并行 | 不等于 creation dispatch 已高并发 |
-| Pi package compatibility | representative journeys 已有证据 | 不等于 TUI/native/background 全兼容 |
-| Pi SDK child session | 可做多 Model service micro-worker | 不等于可调用任意 Host Engine |
-| Pi Session/Resource/Tool/Compaction | public runtime 已拥有 | 不等于 Host bridge 已完整保真 |
-| Pi provider cache/usage | 多 adapter 已原生建模 | 不等于每个兼容 endpoint 真实支持，也不等于跨 Engine 可共享 cache |
+| 能力                                | 当前判断                          | 不得外推                                                         |
+| ----------------------------------- | --------------------------------- | ---------------------------------------------------------------- |
+| exact one-wave Host Thread dispatch | 结构已存在                        | 不等于多波次 Workflow                                            |
+| Host independent Engines            | 继承 adapter 各自拥有             | 不等于共享 auth/catalog                                          |
+| OmniMind Agent Pi ModelRuntime      | per-agent-dir 已存在              | 不等于 Settings Model services 已完整交付                        |
+| OmniMind model static default       | source 中存在                     | 不等于 live known/available/authenticated                        |
+| child Thread execution concurrency  | 创建后可并行                      | 不等于 creation dispatch 已高并发                                |
+| Pi package compatibility            | representative journeys 已有证据  | 不等于 TUI/native/background 全兼容                              |
+| Pi SDK child session                | 可做多 Model service micro-worker | 不等于可调用任意 Host Engine                                     |
+| Pi Session/Resource/Tool/Compaction | public runtime 已拥有             | 不等于 Host bridge 已完整保真                                    |
+| Pi provider cache/usage             | 多 adapter 已原生建模             | 不等于每个兼容 endpoint 真实支持，也不等于跨 Engine 可共享 cache |
 
 ### 4.6 Pi extension UI bridge 不是完整 TUI
 
@@ -373,14 +375,14 @@ ModelRuntime.create({
 
 据此，当前能力采用地图应是：
 
-| 能力面 | 默认动作 | 允许自研/fork 的触发条件 |
-| --- | --- | --- |
-| Provider/Auth/Model Registry | 直接复用 Pi/native Engine | public surface 确实无法表达真实 service instance 或认证生命周期 |
-| Session/Context/Compaction | 直接复用并投影事件 | packaged journey 证明语义丢失，且 bridge 无法修复 |
-| Skills/Prompts/Extensions/Tools | 直接兼容 + lazy exposure | TUI/Host API 冲突或高价值 package 依赖不可桥接行为 |
-| Usage/Cache/Cost | 原生 adapter owner + Host normalization | 只补缺失字段、错误归一或诊断；不建缓存服务 |
-| Host heterogeneous Delegate | OmniMind 薄编排 | Pi 只知道内部 Model services，无法拥有独立 Host Engines |
-| Dynamic Workflow/Product UX | OmniMind owner，吸收 Pi 算法 | package 自带 owner 与 Product Thread/Workbench 冲突 |
+| 能力面                          | 默认动作                                | 允许自研/fork 的触发条件                                        |
+| ------------------------------- | --------------------------------------- | --------------------------------------------------------------- |
+| Provider/Auth/Model Registry    | 直接复用 Pi/native Engine               | public surface 确实无法表达真实 service instance 或认证生命周期 |
+| Session/Context/Compaction      | 直接复用并投影事件                      | packaged journey 证明语义丢失，且 bridge 无法修复               |
+| Skills/Prompts/Extensions/Tools | 直接兼容 + lazy exposure                | TUI/Host API 冲突或高价值 package 依赖不可桥接行为              |
+| Usage/Cache/Cost                | 原生 adapter owner + Host normalization | 只补缺失字段、错误归一或诊断；不建缓存服务                      |
+| Host heterogeneous Delegate     | OmniMind 薄编排                         | Pi 只知道内部 Model services，无法拥有独立 Host Engines         |
+| Dynamic Workflow/Product UX     | OmniMind owner，吸收 Pi 算法            | package 自带 owner 与 Product Thread/Workbench 冲突             |
 
 这里还隐含一条发布约束：`@omnimind/pi-coding-agent` 只应承担命名、配置根、物理模块隔离和发行封装。若要改变 Runtime 行为，优先在 Host public injection point 完成；任何进入 branded `dist` 的行为差异都按 Pi core patch 的最高门槛处理。
 
@@ -452,14 +454,14 @@ Pi SDK child session 有低启动成本、共享 Pi resource loader 和更紧凑
 
 ### 5.4 是否允许 Challenger 晋级
 
-| 条件 | Host Thread | Pi SDK micro-worker challenger |
-| --- | --- | --- |
-| 需要 Codex/Claude/Cursor/stock Pi 等独立 Engine | 必须 | 不可 |
-| 需要用户打开、继续、诊断原生 Session | 默认 | 不宜 |
-| 需要完整 Host tools / Workbench / recovery | 默认 | 不宜 |
-| 只读、短促、大量、输出 contract 很小 | 可用 | benchmark 候选 |
-| 只需 OmniMind Agent 内多个 Model services | 可用 | 可用 |
-| 有外部副作用、worktree 或复杂 cancel | 默认 | 首版禁用 |
+| 条件                                            | Host Thread | Pi SDK micro-worker challenger |
+| ----------------------------------------------- | ----------- | ------------------------------ |
+| 需要 Codex/Claude/Cursor/stock Pi 等独立 Engine | 必须        | 不可                           |
+| 需要用户打开、继续、诊断原生 Session            | 默认        | 不宜                           |
+| 需要完整 Host tools / Workbench / recovery      | 默认        | 不宜                           |
+| 只读、短促、大量、输出 contract 很小            | 可用        | benchmark 候选                 |
+| 只需 OmniMind Agent 内多个 Model services       | 可用        | 可用                           |
+| 有外部副作用、worktree 或复杂 cancel            | 默认        | 首版禁用                       |
 
 晋级条件不是“理论上更轻”，而是在至少一种高频真实任务上同时改善 task success/首个有效结果/总成本中的实际指标，并保持 cancel、diagnostics、state isolation 与 packaged behavior。未显著获胜就删除实验，不保留为“未来可能用到”的第二路径。
 
@@ -671,14 +673,14 @@ Agentic Search 是一个循环：
 
 ### 8.2 工具路由
 
-| 信息需求 | 首选路径 |
-| --- | --- |
-| 本地代码、Markdown、配置、历史研究 | `rg --files` + 多 query `rg` + 精读命中文件 |
-| 普通公开网页、文档、仓库、PDF、视频 | `pi-web-access` 的 search/fetch/source_check |
-| 需要登录、动态渲染、点击、用户可见会话 | OmniMind Browser |
-| SaaS、数据库、外部系统的结构化能力 | lazy MCP proxy |
-| 大量可独立来源/模块 | heterogeneous research Workers / Workflow |
-| 长期已综合知识 | Markdown Memory/Wiki，经 `rg` 检索 |
+| 信息需求                               | 首选路径                                     |
+| -------------------------------------- | -------------------------------------------- |
+| 本地代码、Markdown、配置、历史研究     | `rg --files` + 多 query `rg` + 精读命中文件  |
+| 普通公开网页、文档、仓库、PDF、视频    | `pi-web-access` 的 search/fetch/source_check |
+| 需要登录、动态渲染、点击、用户可见会话 | OmniMind Browser                             |
+| SaaS、数据库、外部系统的结构化能力     | lazy MCP proxy                               |
+| 大量可独立来源/模块                    | heterogeneous research Workers / Workflow    |
+| 长期已综合知识                         | Markdown Memory/Wiki，经 `rg` 检索           |
 
 ### 8.3 本地只用 `rg`
 
@@ -1113,14 +1115,14 @@ Engine
 
 单独看 cache hit ratio 会产生错误激励。一个塞满无用固定文本的 Agent 很容易得到漂亮比例，却更慢、更贵、更笨。每个代表性任务至少联合观察：
 
-| 维度 | 建议指标 |
-| --- | --- |
-| 结果 | task success、首次正确行动、验证通过、repair 次数 |
+| 维度    | 建议指标                                                                                 |
+| ------- | ---------------------------------------------------------------------------------------- |
+| 结果    | task success、首次正确行动、验证通过、repair 次数                                        |
 | Context | 总 prompt、uncached input、cache read、cache write、compaction 次数、root context growth |
-| 时延 | TTFT、首个有效结果、总完成时间、Worker 启动时间 |
-| 成本 | native reported cost、估算总成本、cache write premium、重复计费 |
-| 稳定性 | cache miss 归因、target/model/tool/prompt 变化、proxy 是否报告真实 usage |
-| 产品 | 不必要提问、用户暴露概念数、恢复重算量、可诊断性 |
+| 时延    | TTFT、首个有效结果、总完成时间、Worker 启动时间                                          |
+| 成本    | native reported cost、估算总成本、cache write premium、重复计费                          |
+| 稳定性  | cache miss 归因、target/model/tool/prompt 变化、proxy 是否报告真实 usage                 |
+| 产品    | 不必要提问、用户暴露概念数、恢复重算量、可诊断性                                         |
 
 优先使用 Pi/native provider 返回的 usage 与 cost；OmniMind normalization 必须保留“provider 未报告”和“报告为 0”的区别，不能凭静态价格或品牌名伪造 cache 效果。跨 Provider 不直接比较原始 hit ratio，因为计费桶、最小可缓存长度、写入语义、TTL 与 usage 字段都不同；只在同 exact target/request family 内做前后对照，再比较端到端任务结果。
 
@@ -1144,20 +1146,20 @@ Engine
 
 ### 12.1 核心候选
 
-| Package | 时点信号 | 真正价值 | 冰山/冲突 | 裁决 |
-| --- | --- | --- | --- | --- |
-| `pi-web-access` 0.22.0 | 222K/mo | search/fetch/GitHub/PDF/video/source_check，多 provider fallback | 默认 curator、remote fetch/privacy/cost、cache/config path | **Core，优先兼容/窄配置**；机器调用 headless，UI curator 显式触发 |
-| `pi-mcp-adapter` 2.23.0 | 354.4K/mo | 单 lazy proxy 约 200 tokens、按需发现、resources/prompts/OAuth | host config discovery、TUI/config mutation、native keyring/deps | **Core，programmatic/headless 接入**；复用 `.omnimind` 和现有 MCP owner |
-| `pi-subagents` 0.47.0 | 214K/mo | roles、delegate、review patterns、自然语言 UX | scope 极大：missions/schedules/fleet/worktrees/TUI；child spawn 依赖 Pi CLI 路径 | **兼容目标 + donor**，不做 canonical worker runtime |
-| `@tintinweb/pi-subagents` 0.15.0 | 40.7K/mo | Pi SDK child sessions、steer/resume、role frontmatter、skill preload，可跨多个 Pi Model services | 默认并发 4；不能调用任意 Host Engine；widget/fleet/scheduler/event-bus 形成重复控制面 | **算法/UX donor + micro-worker challenger**；可验证 OmniMind 多 Model service fast path，不是 Host hetero canonical backend |
-| `@quintinshaw/pi-dynamic-workflows` 3.5.1 | 30.9K/mo | deterministic JS、parallel/pipeline/phase、schema、verify/judge、journal/resume、worktree | 自带 model tiers/state/TUI/run manager；最大并发 16；无配置时可无 timeout/budget；child 默认不加载 host extensions | **重点 fork/donor**；保留 scheduler semantics；canonical 路径换 HostThread backend，也可作为 Pi multi-service micro-worker 算法基准 |
-| `pi-taskflow` 0.2.9 | 2,703/mo | 编译验证的 FlowIR/DAG、dynamic fanout、gate、resume/replay/recompute、host-neutral runner | 采用量低；完整 compiler/persistence/cache/approval/analytics 会复制控制面 | **严肃 challenger/donor**；与 dynamic-workflows 做隔离基准，暂不直接 Core adoption |
-| `@narumitw/pi-goal` 0.51.0 | 30.2K/mo | complete/blocked/wait、continuation、no-progress/budget | queue、TUI、tool policy 可能成为第二任务/权限系统 | **窄 fork/first-party Goal Loop**；一个 active goal，无 queue |
-| `pi-hermes-memory` 0.9.4 | 23.7K/mo | Markdown memory、纠错、consolidation、procedural lessons | SQLite FTS5、background cadence、auto skill、native rebuild | **机制 donor，不原装**；Markdown + `rg` only |
-| `context-mode` 1.0.169 | 73.4K/mo | think-in-code、raw output 不进 context、跨 host 经验 | FTS5/BM25/SQLite/hook 平台，与维护者方向冲突 | **机制 donor/benchmark**；拒绝其 retrieval/control plane |
-| `pi-prompt-template-model` 0.12.0 | 13.8K/mo | Prompt frontmatter 携带 skills/model/thinking/parallel/best-of-N | 自带 chain/loop/model routing/worktree 容易成为第三 orchestration；静态 model tier 会形成第二能力真相 | **资产 metadata donor**，不拥有 target selection，不导入其 orchestration owner |
-| `@zosmaai/pi-llm-wiki` 0.11.3 | 3,681/mo | Karpathy-style sources → canonical Wiki，Markdown 结构 | 采用量低；自动化、目录和更新语义需源码验证 | **Wiki benchmark/donor**，不因形式偏好直接进 Core |
-| `pi-fabric` 0.47.2 | 28.3K/mo | QuickJS code-mode，tool/MCP/agent/workflow composition，final-result-only | actors/mesh/councils/recursion 是广泛第二 runtime/control plane | **benchmark/donor**，不直接采用 |
+| Package                                   | 时点信号  | 真正价值                                                                                         | 冰山/冲突                                                                                                          | 裁决                                                                                                                                |
+| ----------------------------------------- | --------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `pi-web-access` 0.22.0                    | 222K/mo   | search/fetch/GitHub/PDF/video/source_check，多 provider fallback                                 | 默认 curator、remote fetch/privacy/cost、cache/config path                                                         | **Core，优先兼容/窄配置**；机器调用 headless，UI curator 显式触发                                                                   |
+| `pi-mcp-adapter` 2.23.0                   | 354.4K/mo | 单 lazy proxy 约 200 tokens、按需发现、resources/prompts/OAuth                                   | host config discovery、TUI/config mutation、native keyring/deps                                                    | **Core，programmatic/headless 接入**；复用 `.omnimind` 和现有 MCP owner                                                             |
+| `pi-subagents` 0.47.0                     | 214K/mo   | roles、delegate、review patterns、自然语言 UX                                                    | scope 极大：missions/schedules/fleet/worktrees/TUI；child spawn 依赖 Pi CLI 路径                                   | **兼容目标 + donor**，不做 canonical worker runtime                                                                                 |
+| `@tintinweb/pi-subagents` 0.15.0          | 40.7K/mo  | Pi SDK child sessions、steer/resume、role frontmatter、skill preload，可跨多个 Pi Model services | 默认并发 4；不能调用任意 Host Engine；widget/fleet/scheduler/event-bus 形成重复控制面                              | **算法/UX donor + micro-worker challenger**；可验证 OmniMind 多 Model service fast path，不是 Host hetero canonical backend         |
+| `@quintinshaw/pi-dynamic-workflows` 3.5.1 | 30.9K/mo  | deterministic JS、parallel/pipeline/phase、schema、verify/judge、journal/resume、worktree        | 自带 model tiers/state/TUI/run manager；最大并发 16；无配置时可无 timeout/budget；child 默认不加载 host extensions | **重点 fork/donor**；保留 scheduler semantics；canonical 路径换 HostThread backend，也可作为 Pi multi-service micro-worker 算法基准 |
+| `pi-taskflow` 0.2.9                       | 2,703/mo  | 编译验证的 FlowIR/DAG、dynamic fanout、gate、resume/replay/recompute、host-neutral runner        | 采用量低；完整 compiler/persistence/cache/approval/analytics 会复制控制面                                          | **严肃 challenger/donor**；与 dynamic-workflows 做隔离基准，暂不直接 Core adoption                                                  |
+| `@narumitw/pi-goal` 0.51.0                | 30.2K/mo  | complete/blocked/wait、continuation、no-progress/budget                                          | queue、TUI、tool policy 可能成为第二任务/权限系统                                                                  | **窄 fork/first-party Goal Loop**；一个 active goal，无 queue                                                                       |
+| `pi-hermes-memory` 0.9.4                  | 23.7K/mo  | Markdown memory、纠错、consolidation、procedural lessons                                         | SQLite FTS5、background cadence、auto skill、native rebuild                                                        | **机制 donor，不原装**；Markdown + `rg` only                                                                                        |
+| `context-mode` 1.0.169                    | 73.4K/mo  | think-in-code、raw output 不进 context、跨 host 经验                                             | FTS5/BM25/SQLite/hook 平台，与维护者方向冲突                                                                       | **机制 donor/benchmark**；拒绝其 retrieval/control plane                                                                            |
+| `pi-prompt-template-model` 0.12.0         | 13.8K/mo  | Prompt frontmatter 携带 skills/model/thinking/parallel/best-of-N                                 | 自带 chain/loop/model routing/worktree 容易成为第三 orchestration；静态 model tier 会形成第二能力真相              | **资产 metadata donor**，不拥有 target selection，不导入其 orchestration owner                                                      |
+| `@zosmaai/pi-llm-wiki` 0.11.3             | 3,681/mo  | Karpathy-style sources → canonical Wiki，Markdown 结构                                           | 采用量低；自动化、目录和更新语义需源码验证                                                                         | **Wiki benchmark/donor**，不因形式偏好直接进 Core                                                                                   |
+| `pi-fabric` 0.47.2                        | 28.3K/mo  | QuickJS code-mode，tool/MCP/agent/workflow composition，final-result-only                        | actors/mesh/councils/recursion 是广泛第二 runtime/control plane                                                    | **benchmark/donor**，不直接采用                                                                                                     |
 
 ### 12.2 `pi-subagents` 的特别裁决
 
@@ -1190,16 +1192,16 @@ Composer/Model services 研究提高了它作为 **OmniMind micro-worker donor**
 
 ### 12.3 Dynamic Workflows 与 Taskflow 的双候选比较
 
-| 维度 | `pi-dynamic-workflows` | `pi-taskflow` | OmniMind 倾向 |
-| --- | --- | --- | --- |
-| Agent 写法 | 动态 JavaScript primitives | declarative graph / FlowIR | 首版选最易被强模型稳定生成并调试者 |
-| 静态验证 | 有 capability contract/schema，但偏 runtime | compile-time graph validation 更强 | 借 Taskflow 的 validate 思路 |
-| 动态 fanout | `parallel`/`pipeline`/loops | expand/map/reduce 等图语义 | 都要基准，不先过度 DSL 化 |
-| Resume | positional call journal/edit-resume | graph replay/recompute frontier | 首版 node ID + input hash；后续按证据升级 |
-| Worker backend | Pi sessions | 多 host runner，但自有 host layer | canonical 收敛到 HostThread；Pi sessions 只保留为有界 micro-worker backend |
-| 并发 | clamp 16 | 自有 runner policy | 读取 Host cap，ready wave 可达 20 |
-| 产品控制面 | workflow manager/TUI/state | compiler/run/cache/approval/analytics | 两者都不能原样成为第二控制面 |
-| 采用信号 | 中高 | 低 | 动态工作流优先实证，Taskflow 作为 challenger |
+| 维度           | `pi-dynamic-workflows`                      | `pi-taskflow`                         | OmniMind 倾向                                                              |
+| -------------- | ------------------------------------------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| Agent 写法     | 动态 JavaScript primitives                  | declarative graph / FlowIR            | 首版选最易被强模型稳定生成并调试者                                         |
+| 静态验证       | 有 capability contract/schema，但偏 runtime | compile-time graph validation 更强    | 借 Taskflow 的 validate 思路                                               |
+| 动态 fanout    | `parallel`/`pipeline`/loops                 | expand/map/reduce 等图语义            | 都要基准，不先过度 DSL 化                                                  |
+| Resume         | positional call journal/edit-resume         | graph replay/recompute frontier       | 首版 node ID + input hash；后续按证据升级                                  |
+| Worker backend | Pi sessions                                 | 多 host runner，但自有 host layer     | canonical 收敛到 HostThread；Pi sessions 只保留为有界 micro-worker backend |
+| 并发           | clamp 16                                    | 自有 runner policy                    | 读取 Host cap，ready wave 可达 20                                          |
+| 产品控制面     | workflow manager/TUI/state                  | compiler/run/cache/approval/analytics | 两者都不能原样成为第二控制面                                               |
+| 采用信号       | 中高                                        | 低                                    | 动态工作流优先实证，Taskflow 作为 challenger                               |
 
 ### 12.4 其他包的裁决
 
@@ -1418,31 +1420,31 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 
 ### 17.1 能力验证矩阵
 
-| Claim | 最小可推翻证据 |
-| --- | --- |
-| OmniMind 没有削弱 Pi | 相同 Pi revision/provider/model/task 的 public-SDK family 与 packaged OmniMind product family 差分 journey；关键 lifecycle/event/usage/cancel/compaction 不丢失，结果无显著退化 |
-| Pi core 保持可升级 | Core 默认零 patch；任何 patch 有 exact upstream pin、独立差分测试、最小 rebase surface 与上游补齐后的删除路径 |
-| 小白无需 Prompt engineering | 只给口语化目标、错误术语或不完整指代，Agent 能先检查上下文、恢复 outcome，并完成或只问一个 material question |
-| Agent 不机械执行错误解法 | 用户给出次优实现但目标清楚时，Agent 能提出更小推荐路径；用户明确坚持后仍准确服从 |
-| 提问纪律 | 可查事实不反问；真正产品分叉给出一个带推荐答案的问题；普通可逆执行不反复请求确认 |
-| 专家控制不丢失 | exact Engine/model/options、Role、Tool 或 Workflow 显式约束覆盖默认判断，且不被“智能推荐”静默改写 |
-| Engine 与 Model service 不混淆 | Composer/Settings/Capabilities 分层显示；独立 Engine 不进入 Pi auth；OmniMind service 不冒充 Host Engine |
-| Model service capability truth | 空 discovery/auth unknown 不再把 static default 宣称 executable；known/available/auth/send admission 可分别证伪 |
-| 多实例身份稳定 | 同供应商两个 provider ids 可独立 auth/refresh/send；rename 不变 identity；delete 后 exact target 显式 unavailable |
-| 强模型能调度任意已配置模型 | capabilities 返回多个 Host Engines 与 OmniMind Model services；同一 root 一批创建不同 exact targets；各自真实 auth/Session 成功 |
-| Worker 真并行 | 至少一波多个 child Threads 时间区间重叠，不仅创建 API 返回快 |
-| Root 真在判断 | 有独立冲突结果，root 能引用证据消解而非拼接 |
-| Dynamic Workflow | 第二波节点由第一波结果产生；中断恢复不重跑已验证节点 |
-| 高并发 | ready wave 可超过 4，并能达到当前 Host limit 范围；限流时隔离和退避正确 |
-| Goal | 模型在未完成时继续，在 complete/blocked/wait/no-progress 时准确停止 |
-| Memory/Wiki | 新 session 用 `rg` 找到正确 Markdown 并改善任务；错误/陈旧信息可追溯和修订 |
-| Package compatibility | packaged App 中运行；`.pi` 未改变；cancel/restart/native deps/UI bridge 均有证据 |
-| Core lazy exposure | 普通小任务 context/tool 数不膨胀，复杂任务可发现完整能力 |
-| target 不随配置漂移 | admission 后修改/删除 service 不热切 active attempt；未接纳 node 重新解析；显式 target 不 fallback |
-| 跨 Engine repair 真实 | repair 创建新 attempt/child Thread 并保留 provenance，不把另一 Engine 冒充 native resume |
-| Pi micro-worker 值得保留 | 在同任务 contract 下显著胜过 HostThread 且 cancel/diagnostics/state 不形成第二真相，否则删除 fast path |
-| Cache 优化真实有效 | 同 exact target/request family 下 task success 不降，uncached input、总成本或 TTFT 至少一项实质改善；不能只报告 hit ratio |
-| Cache 不污染架构 | journal/Product state 不保存 cache entry/key/TTL；cache miss 不改变语义、resume 或 fallback；proxy 不报告时保持 unknown |
+| Claim                          | 最小可推翻证据                                                                                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| OmniMind 没有削弱 Pi           | 相同 Pi revision/provider/model/task 的 public-SDK family 与 packaged OmniMind product family 差分 journey；关键 lifecycle/event/usage/cancel/compaction 不丢失，结果无显著退化 |
+| Pi core 保持可升级             | Core 默认零 patch；任何 patch 有 exact upstream pin、独立差分测试、最小 rebase surface 与上游补齐后的删除路径                                                                   |
+| 小白无需 Prompt engineering    | 只给口语化目标、错误术语或不完整指代，Agent 能先检查上下文、恢复 outcome，并完成或只问一个 material question                                                                    |
+| Agent 不机械执行错误解法       | 用户给出次优实现但目标清楚时，Agent 能提出更小推荐路径；用户明确坚持后仍准确服从                                                                                                |
+| 提问纪律                       | 可查事实不反问；真正产品分叉给出一个带推荐答案的问题；普通可逆执行不反复请求确认                                                                                                |
+| 专家控制不丢失                 | exact Engine/model/options、Role、Tool 或 Workflow 显式约束覆盖默认判断，且不被“智能推荐”静默改写                                                                               |
+| Engine 与 Model service 不混淆 | Composer/Settings/Capabilities 分层显示；独立 Engine 不进入 Pi auth；OmniMind service 不冒充 Host Engine                                                                        |
+| Model service capability truth | 空 discovery/auth unknown 不再把 static default 宣称 executable；known/available/auth/send admission 可分别证伪                                                                 |
+| 多实例身份稳定                 | 同供应商两个 provider ids 可独立 auth/refresh/send；rename 不变 identity；delete 后 exact target 显式 unavailable                                                               |
+| 强模型能调度任意已配置模型     | capabilities 返回多个 Host Engines 与 OmniMind Model services；同一 root 一批创建不同 exact targets；各自真实 auth/Session 成功                                                 |
+| Worker 真并行                  | 至少一波多个 child Threads 时间区间重叠，不仅创建 API 返回快                                                                                                                    |
+| Root 真在判断                  | 有独立冲突结果，root 能引用证据消解而非拼接                                                                                                                                     |
+| Dynamic Workflow               | 第二波节点由第一波结果产生；中断恢复不重跑已验证节点                                                                                                                            |
+| 高并发                         | ready wave 可超过 4，并能达到当前 Host limit 范围；限流时隔离和退避正确                                                                                                         |
+| Goal                           | 模型在未完成时继续，在 complete/blocked/wait/no-progress 时准确停止                                                                                                             |
+| Memory/Wiki                    | 新 session 用 `rg` 找到正确 Markdown 并改善任务；错误/陈旧信息可追溯和修订                                                                                                      |
+| Package compatibility          | packaged App 中运行；`.pi` 未改变；cancel/restart/native deps/UI bridge 均有证据                                                                                                |
+| Core lazy exposure             | 普通小任务 context/tool 数不膨胀，复杂任务可发现完整能力                                                                                                                        |
+| target 不随配置漂移            | admission 后修改/删除 service 不热切 active attempt；未接纳 node 重新解析；显式 target 不 fallback                                                                              |
+| 跨 Engine repair 真实          | repair 创建新 attempt/child Thread 并保留 provenance，不把另一 Engine 冒充 native resume                                                                                        |
+| Pi micro-worker 值得保留       | 在同任务 contract 下显著胜过 HostThread 且 cancel/diagnostics/state 不形成第二真相，否则删除 fast path                                                                          |
+| Cache 优化真实有效             | 同 exact target/request family 下 task success 不降，uncached input、总成本或 TTFT 至少一项实质改善；不能只报告 hit ratio                                                       |
+| Cache 不污染架构               | journal/Product state 不保存 cache entry/key/TTL；cache miss 不改变语义、resume 或 fallback；proxy 不报告时保持 unknown                                                         |
 
 ### 17.2 任务集
 

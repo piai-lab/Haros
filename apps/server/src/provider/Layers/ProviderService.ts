@@ -2683,7 +2683,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         return forked;
       });
 
-    const sendTurn: ProviderServiceShape["sendTurn"] = (rawInput) =>
+    const sendTurn: ProviderServiceShape["sendTurn"] = (rawInput, dispatchContext) =>
       Effect.gen(function* () {
         const parsed = yield* decodeInputOrValidationError({
           operation: "ProviderService.sendTurn",
@@ -2708,7 +2708,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               operation: "ProviderService.sendTurn",
               allowRecovery: true,
             });
-            const turn = yield* routed.adapter.sendTurn(input);
+            const turn = yield* routed.adapter.sendTurn(input, dispatchContext);
             const persistenceInput: StartedTurnPersistenceInput = {
               threadId: input.threadId,
               provider: routed.adapter.provider,

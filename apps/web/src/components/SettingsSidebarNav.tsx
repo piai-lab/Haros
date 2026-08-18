@@ -59,6 +59,7 @@ const SETTINGS_SECTION_LABEL_KEY: Record<SettingsSectionId, MessageKey> = {
   providers: "settings.providers",
   skills: "settings.skills",
   usage: "settings.usage",
+  "built-in-tools": "settings.builtInTools",
   integrations: "settings.integrations",
   advanced: "settings.advanced",
 };

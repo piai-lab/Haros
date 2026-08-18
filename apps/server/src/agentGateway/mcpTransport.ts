@@ -62,30 +62,39 @@ export function makeAgentGatewayMcpTransport(input: {
   readonly credentials: AgentGatewayCredentialsShape;
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly tools: ReadonlyArray<ToolEntry>;
-  readonly instructions: string;
+  readonly loadExposedTools?: Effect.Effect<ReadonlyArray<ToolEntry>, unknown>;
+  readonly instructions: string | ((tools: ReadonlyArray<ToolEntry>) => string);
   readonly requireThreadShell: (
     threadId: string,
   ) => Effect.Effect<OrchestrationThreadShell, unknown>;
 }): AgentGatewayShape["handleMcpPost"] {
   const toolsByName = new Map(input.tools.map((tool) => [tool.definition.name, tool]));
+  const loadExposedTools = input.loadExposedTools ?? Effect.succeed(input.tools);
   const handleRequest = (request: JsonRpcRequest, context: Omit<ToolContext, "jsonRpcRequestId">) =>
     Effect.gen(function* () {
       switch (request.method) {
-        case "initialize":
+        case "initialize": {
+          const initializeTools = yield* loadExposedTools;
           return jsonRpcResult(
             request.id,
             buildMcpInitializeResult({
               requestedProtocolVersion: request.params.protocolVersion,
               serverVersion: "1.0.0",
-              instructions: input.instructions,
+              instructions:
+                typeof input.instructions === "function"
+                  ? input.instructions(initializeTools)
+                  : input.instructions,
             }),
           );
+        }
         case "ping":
           return jsonRpcResult(request.id, {});
-        case "tools/list":
+        case "tools/list": {
+          const exposedTools = yield* loadExposedTools;
           return jsonRpcResult(request.id, {
-            tools: input.tools.map((tool) => tool.definition),
+            tools: exposedTools.map((tool) => tool.definition),
           });
+        }
         case "tools/call": {
           const toolName = request.params.name;
           if (typeof toolName !== "string") {
@@ -94,6 +103,21 @@ export function makeAgentGatewayMcpTransport(input: {
           const tool = toolsByName.get(toolName);
           if (!tool) {
             return jsonRpcError(request.id, JSON_RPC_INVALID_PARAMS, `Unknown tool "${toolName}".`);
+          }
+          const exposedToolNames = new Set(
+            (yield* loadExposedTools).map((entry) => entry.definition.name),
+          );
+          if (!exposedToolNames.has(toolName)) {
+            return jsonRpcResult(
+              request.id,
+              gatewayToolErrorResult(
+                new GatewayToolError(
+                  "tool_unavailable",
+                  `Tool "${toolName}" is disabled or unavailable.`,
+                  { group: tool.group },
+                ),
+              ),
+            );
           }
           const rawArgs = request.params.arguments;
           const args = asRecord(rawArgs) ?? {};

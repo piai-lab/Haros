@@ -1,120 +1,103 @@
-# Agent 内置工具、MCP 与外部连接：Settings 与运行时执行方案复核
+# Agent 内置工具、Host MCP 与外部连接：Settings 与运行时执行方案复核
 
-> 证据日期：2026-08-18
-> OmniMind 证据快照：`main@cd2f6fce47a72d04ed018a651a8155a1585aff18`，写入前工作树 clean
-> 关联 Pi 证据：[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md) 及其锁定的 bundled Pi `0.84.2` / upstream `914cf147…`
-> 维护者已确认的产品意图：Settings 最终菜单采用本文 §2；一套内置工具开关统一控制所有非 OmniMind Agent 引擎，OmniMind Agent 自身不受该外部暴露开关影响
-> 产品阶段：开发期、无旧用户、无已发布配置或连接需要兼容；实施应直接收口到干净终态，不做 alias、dual-read、弃用期或迁移层
-> 文档角色：当前源码事实、产品裁决、架构建议与未来实施/验收参考；它不取代 `architecture/` 的稳定 contract、`execution-brief.md` 的当前施工入口或 Mission 的状态真相
+> 证据日期：2026-08-19
+> OmniMind 源码复核基线：原始调用链锁定于 `a24653bc7b00f9632275f2960776c31c68d61968`；Gate B 本地实现候选位于独立分支 `codex/review-pi-host-tool-mcp-settings`，截至 `d3cf632c7` 未 push、merge、发布或替换已安装 App
+> 关联 Pi 证据：[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)；upstream/stock exact source artifact为`@earendil-works/pi-coding-agent@0.84.2` / `914cf147…`，OmniMind Agent产品runtime为基于同一exact source与窄patch生成的`@omnimind/pi-coding-agent@0.84.2`，不宣称两者byte-identical
+> 已确认产品意图：一套 fresh 默认开放的 Built-in policy 控制所有 Agent，包括 OmniMind Agent；只有 `provider === "omnimind"` 让 AgentGateway Host tools 作为标准 Pi Extension tools 参与 Pi-native Dynamic Tool Loading，stock Pi 与其他 Engine 保持 direct/eager
+> 产品范围：首版不提供第三方 MCP Settings 页面或管理生命周期
+> 文档角色：公共基线事实、已确认裁决与 Gate B 本地候选证据/验收边界；不取代 `architecture/`、`execution-brief.md` 或 Campaign
 
-## 0. 任何时候从零重启，先读这里
+## 0. 本文解决什么
 
-本文解决的不是“设置里加两个菜单”这么浅的问题，而是以下五个容易混淆、却必须分开的产品与运行时责任：
+这不是“设置里加两个菜单”的浅层任务，而是五个必须分开的责任：
 
 1. OmniMind Host 自己拥有的 Browser、Device、Thread、Automation 等能力；
-2. 这些能力是否统一交给非 OmniMind Agent 引擎，以及不同引擎用什么原生协议交付；
-3. 用户给 OmniMind Agent 接入的第三方 MCP server；
-4. 独立运行的 Codex、Claude Code 等外部应用如何反向连接 OmniMind；
-5. Skills、MCP、Tools 在 Settings 中如何平级、清楚、可关闭，又不暴露运行时术语。
+2. 一套 Built-in policy 如何控制这些能力是否提供给所有 Agent；
+3. OmniMind Agent如何用Pi原生动态加载保护上下文，其他Engine如何保持各自原生direct projection；
+4. 第三方MCP为何退出首版Settings与Host生命周期；
+5. 独立Codex、Claude Code等外部应用如何反向连接OmniMind。
 
-重开本议题时，不依赖历史聊天，按以下顺序恢复事实：
+重开时按以下顺序读：
 
-1. 根 [`README.md`](../README.md)：产品身份、母体纪律和 production adoption；
-2. [`architecture/workbench.md`](../architecture/workbench.md)：Settings 信息架构、交互与视觉品味；
-3. [`architecture/execution.md`](../architecture/execution.md)：AgentGateway、Provider、Pi-family、MCP 与权限的稳定 owner；
-4. [`architecture/product-state.md`](../architecture/product-state.md)：持久化与状态权威；
-5. [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)：Pi Core、Package、Extension、Skill、Tool、MCP 的来源准入；
-6. [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)：Pi 官方工具注册、动态激活、tool search 与 Host 投影的 fixed-source 结论；
-7. 当前 [`execution-brief.md`](../execution-brief.md) 与 active Mission：只判断现在是否获准施工，不从本文推断“已实现”；
-8. 本文 §4 的源码 owner map，并重新运行 §16 的复验条件。
+1. [`README.md`](../README.md)；
+2. [`architecture/workbench.md`](../architecture/workbench.md)；
+3. [`architecture/execution.md`](../architecture/execution.md)；
+4. [`architecture/product-state.md`](../architecture/product-state.md)；
+5. [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)；
+6. [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)；
+7. 当前 [`execution-brief.md`](../execution-brief.md) 与 active Campaign；
+8. 本文列出的 current source symbols。
 
-若当前 HEAD、Pi revision、Provider SDK、AgentGateway topology、Settings 母体或 External MCP transport 已变化，只重验受影响结论。不要把本文旧数字或旧文件名当永恒 API。
-
-### 0.1 结论摘要
-
-最终模型是一份能力真相、三种清楚的产品入口、两类 Engine-native 投影：
+## 1. 结论摘要
 
 ```text
 OmniMind Host canonical capabilities
-  └─ AgentGateway：catalog / execution / permission / cancellation / credential
-       ├─ Pi-family（OmniMind Agent、Pi）
-       │    └─ Pi 官方 Extension / Tool Registry seam
-       └─ 非 Pi Engine（Codex、Claude、OpenCode、ACP…）
-            └─ 各 Engine 原生支持的 MCP / plugin projection
+  └─ AgentGateway
+       ├─ catalog / schema / annotations / group provenance
+       ├─ execution / credential / capability / turn authority
+       └─ timeout / cancellation / lifecycle
 
-用户接入的第三方 MCP
-  └─ OmniMind Agent 的 Pi-native MCP Extension / Package owner
+Built-in tools policy (fresh default: enabled)
+  └─ applies to every Agent engine, including OmniMind Agent
 
-外部应用连接 OmniMind
-  └─ 现有 External MCP Gateway（方向与上面相反）
+provider === "omnimind"
+  └─ allowed Gateway definitions → real Pi ToolDefinition
+       → named hidden session-scoped inline Extension
+       → Pi Tool Registry (Host subset initial-minimal, then session-monotonic additive)
+       → Pi-native Dynamic Tool Loading
+       → actual execute returns to AgentGateway
+
+stock Pi
+  └─ existing customTools direct/eager projection
+
+Codex / Claude / OpenCode / ACP / others
+  └─ each Engine's native MCP/plugin direct projection
+
+Third-party MCP
+  └─ outside first-release Settings and Host lifecycle
+
+External connections
+  └─ existing external app → OmniMind task connection
 ```
 
-三个设置入口分别是：
+稳定裁决：
 
-- **内置工具 / Built-in tools**：管理 OmniMind 自带能力是否统一交给所有非 OmniMind Agent 引擎。底层可能是 MCP，也可能是 Pi Tool，但产品身份始终是内置工具；OmniMind Agent 自身继续走自己的 Pi-native 机制。
-- **MCP**：管理 OmniMind Agent 要消费的第三方 MCP server。它不是 Host 原生工具总表，也不是承诺替所有外部 Engine 管理其私有 MCP 配置。
-- **外部连接 / External connections**：让独立 Codex、Claude Code 等本地应用把 OmniMind 当任务与编排后端。连接方向与上一项相反。
+- 一份 AgentGateway catalog；
+- 一套 all-agent Built-in policy；
+- OmniMind Agent一条Pi-native dynamic projection；
+- Host-owned Gateway subset初始只暴露loader与首个request明确要求的exact closure，不预设固定Host core；loader整个Session保持active，其他owner的active set保持opaque；后续Host activation保持monotonic/additive；
+- stock Pi与其他Engine保留现有direct/eager projection；
+- AgentGateway继续唯一执行与call-time authority owner；
+- 首版只有 `Built-in tools / 内置工具` 与 `External connections / 外部连接` 两个相关Settings入口；
+- 不建立第三方MCP页面、manager、registry、secret store、状态面板、统一搜索或跨Engine自动分发；
+- 不建立第二Tool Registry、active store、permission system、index或配置库。
 
-`zq-dev-rules` 紧凑裁决：
+动态加载是确定目标。eager只作当前行为、测量 comparator与临时代码rollback；exact Pi seam不足时报告blocker/upstream需要。
+
+## 2. 产品语义：能力身份不等于传输协议
+
+用户的设置主键是 capability group，不是MCP server或Provider：
 
 ```text
-Outcome:
-  用户能看懂三种能力方向，并用一套开关控制所有非自有引擎是否获得 OmniMind 内置工具；
-  OmniMind Agent 按 Pi 官方机制接第三方 MCP；外部应用仍能安全连接 OmniMind。
-
-Current truth:
-  AgentGateway 已是一份 Host tool catalog；非 Pi Engine 已经原生 MCP 投影；
-  Pi 当前 eager 接收 Gateway tools；External MCP Gateway 已有窄而完整的六工具闭环；
-  Settings 没有 Built-in tools 页面，也没有真正的 OmniMind Agent MCP manager。
-
-Smallest complete path:
-  保留所有现有 owner；只增加一套 external-engine capability policy、真实 catalog projection、
-  External connections 改名与安全默认值，以及经独立 Gate A 证明的 Pi-native MCP lifecycle bridge。
-
-Excess rejected:
-  第二 Tool Registry、通用 Integration Registry、跨 Engine MCP 总管、58×N 开关矩阵、
-  Host MCP 配置副本、每工具权限账本、Pi core fork、用第三方 adapter 回连自家 AgentGateway。
-
-Decision:
-  SIMPLIFY 后 GO；MCP adapter 的具体采用仍受 exact-source Gate A 约束。
+Built-in capability group → available to all Agent engines / not available
 ```
 
-## 1. 最重要的语义：能力身份不等于传输协议
+| 用户看到的能力                  | OmniMind Agent                 | stock Pi                   | 其他 Engine              | 设置归属       |
+| ------------------------------- | ------------------------------ | -------------------------- | ------------------------ | -------------- |
+| Browser                         | Pi Extension注册、原生动态加载 | `customTools` direct/eager | native MCP/plugin direct | Built-in tools |
+| Device                          | 可用时注册并动态加载           | 可用时direct/eager         | 支持时native direct      | Built-in tools |
+| Thread/Automation               | Pi Extension注册、原生动态加载 | direct/eager               | native direct            | Built-in tools |
+| GitHub/Notion/数据库等第三方MCP | 首版不由Host管理               | 保持Engine-native owner    | 保持Engine-native owner  | 首版无入口     |
 
-维护者补充的关键要求是：
+Browser给Codex时经过MCP，不等于用户应在“MCP server列表”里管理Browser。协议属于adapter，产品能力属于Built-in tools。
 
-> 当用户使用 Codex 等非 OmniMind Agent 内核时，必须能够决定 OmniMind 是否把某组内置工具交给这些外部引擎；不需要为 Codex、Claude 等分别配置。
+Enablement也不是permission：enabled只表示某Engine可以按其真实projection获得能力；每次call仍受credential、runtimeMode、真实approval、turn authority、availability、timeout与cancellation约束。
 
-这意味着“是否可插拔”的主键不是 MCP server，也不是某个 Provider，而是一个简单的产品边界：
+## 3. 首版 Settings 信息架构
 
-```text
-Built-in capability group → exposed to all non-OmniMind engines / not exposed
-```
+保持现有Synara-derived taxonomy，只做必要改名与新增。
 
-例如：
-
-| 用户看到的能力 | Codex 获得它的底层方式 | OmniMind Agent 获得它的底层方式 | 设置归属 |
-| --- | --- | --- | --- |
-| Browser | OmniMind 私有、per-session MCP projection | Pi 官方 Tool / Extension seam | 内置工具 |
-| Device | Engine 支持时的原生投影 | Pi 官方 Tool / Extension seam | 内置工具 |
-| OmniMind task/thread/automation tools | Engine-native MCP/plugin projection | Pi 官方 Tool / Extension seam | 内置工具 |
-| GitHub、数据库或用户自建 MCP | 不由本轮统一接管；保留 Engine-native ownership | Pi-native MCP Extension/Package | MCP |
-
-因此不得把 Browser 因为“给 Codex 时走 MCP”就显示到 MCP server 列表里。MCP 是传输/生态协议，Browser 是用户认知中的产品能力。设置页应以能力身份组织，adapter 才处理协议差异。
-
-这个开关表达的是**能力可用性**，不是权限：
-
-- disabled：所有非 OmniMind Agent 引擎的新会话都不应看见该组工具，旧外部引擎会话中的新调用也必须被 Gateway 拒绝；
-- enabled：允许所有非 OmniMind Agent 引擎通过各自原生 projection 获得工具定义，但某次调用仍受 `runtimeMode`、turn authority、项目范围、凭据和真实 Engine permission owner 约束；
-- OmniMind Agent 自身不受这套“向外部引擎提供”开关影响，仍按 Pi-native Tool/Extension 机制使用 Host 能力；
-- Browser/Device 的人类 UI 不因 Agent 工具关闭而失效；
-- External MCP 对外暴露的六个任务工具是独立 public surface，不自动跟随内部工具开关。
-
-## 2. 已确认的最终 Settings 菜单
-
-这是面向用户的最终信息架构。保留当前 Synara-derived 分组与顺序，只做必要改名和新增，不为了“架构整齐”重排整个 Settings。
-
-### 2.1 中文
+### 3.1 中文
 
 ```text
 个人
@@ -135,7 +118,6 @@ Built-in capability group → exposed to all non-OmniMind engines / not exposed
 ├── 模型服务
 ├── Agent 技能
 ├── 内置工具
-├── MCP
 └── 托管工作树
 
 系统
@@ -145,7 +127,7 @@ Built-in capability group → exposed to all non-OmniMind engines / not exposed
 └── 已归档任务
 ```
 
-### 2.2 English
+### 3.2 English
 
 ```text
 Personal
@@ -166,7 +148,6 @@ Coding
 ├── Model services
 ├── Agent skills
 ├── Built-in tools
-├── MCP
 └── Managed worktrees
 
 System
@@ -176,684 +157,494 @@ Archived
 └── Archived tasks
 ```
 
-### 2.3 命名与方向
+### 3.3 页面语言
 
-| 页面 | 一句话问题 | 中文说明 | English description |
-| --- | --- | --- | --- |
-| Agent 技能 | Agent 会遵循哪些可复用说明和工作流？ | 管理可供 Agent 使用的技能。 | Manage skills available to agents. |
-| 内置工具 | OmniMind 自带哪些能力可以交给其他 Agent 引擎？ | 选择可供其他 Agent 引擎使用的内置工具；不会影响 OmniMind Agent。 | Choose which OmniMind built-in tools are available to other agent engines. This does not affect OmniMind Agent. |
-| MCP | OmniMind Agent 可以连接哪些外部工具与服务？ | 为 OmniMind Agent 连接外部 MCP 服务。 | Connect external MCP services to OmniMind Agent. |
-| 外部连接 | 哪些独立应用可以进入 OmniMind？ | 允许 Codex、Claude Code 等本地应用连接并使用 OmniMind。 | Let Codex, Claude Code, and other local apps use OmniMind. |
+| 页面       | 中文说明                                                | English description                                                      |
+| ---------- | ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Agent 技能 | 管理可供 Agent 使用的技能。                             | Manage skills available to agents.                                       |
+| 内置工具   | 选择可供所有 Agent 引擎使用的 OmniMind 内置工具。       | Choose which OmniMind built-in tools are available to all agent engines. |
+| 外部连接   | 允许 Codex、Claude Code 等本地应用连接并使用 OmniMind。 | Let Codex, Claude Code, and other local apps use OmniMind.               |
 
-英文 `External connections` 比 `External agents` 更准确：后者会与 `Agent engines` 冲突，也把“客户端应用”误写成一种运行内核。
+正常产品表面不出现 Pi、MCP transport、loader、Tool Registry、active set 或动态搜索等实现心智。技术事实只进入架构、诊断、About/Licenses或用户主动展开的技术详情。
 
-## 3. 当前源码事实与缺口
+## 4. 公共基线与本地 Gate B 候选
 
-### 3.1 Settings 当前事实
+本节必须同时保留两层事实：`main`与已安装产品仍是公共基线；本地任务分支已经实现目标，但在push/merge/安装前只能称local candidate。
 
-- `apps/web/src/settingsNavigation.ts` 已有 `personal / integrations / coding / system / archived` 五个 group；当前 `integrations` section 的可见名称是 `MCP connections`，eyebrow 是 `External agents`。
-- `apps/web/src/routes/_chat.settings.tsx` 在 `integrations` section 挂载 `ExternalMcpSettingsPanel`。
-- `apps/web/src/i18n.tsx` 已有 Agent engines、Model services、Agent skills、MCP connections、System tools 的中英文词条。
-- `apps/web/src/settingsSearchIndex.ts`、深链、键盘行为和 route-owned panel 是现有 Settings 母体的一部分，新增页面必须进入同一机制。
-- `SkillsSettingsPanel.tsx` 已证明一个可复用交互模式：统一 catalog、真实来源、OmniMind-owned toggle 与 engine-managed 状态分开表达。
+### 4.1 Settings
 
-缺口：
+- `apps/web/src/settingsNavigation.ts` 已有 `personal / integrations / coding / system / archived`；
+- 公共基线的外部连接页可见名仍来自 `MCP connections` / `External agents`；本地候选已统一为`External connections / 外部连接`；
+- `apps/web/src/routes/_chat.settings.tsx` 挂载 `ExternalMcpSettingsPanel`；
+- `apps/web/src/settingsSearchIndex.ts`、deep link、keyboard与route-owned panel是现有母体；
+- `SkillsSettingsPanel.tsx` 已提供统一catalog、真实来源与enablement展示范式；
+- 公共基线尚无Built-in tools section与all-agent Host exposure policy；本地候选已加入一份revisioned ServerSettings intent、runtime group projection、双语页面、rapid-toggle fencing与all-agent新Session/call-time enforcement。
 
-1. 当前“`MCP connections`”其实是**外部应用连接 OmniMind**，名称方向含混；
-2. 没有 `Built-in tools` section，也没有统一控制“是否向非 OmniMind Agent 引擎暴露”的 Host capability policy；
-3. 没有真正管理“OmniMind Agent 消费外部 MCP”的页面或 lifecycle owner；
-4. 如果只在 UI 隐藏工具而不在 `tools/call` 做实时拒绝，会形成假的安全开关。
+仅在UI隐藏工具而不在`tools/call`实时拒绝，会形成假的安全开关。
 
-### 3.2 AgentGateway 当前事实
+### 4.2 AgentGateway
 
-`apps/server/src/agentGateway/Layers/AgentGateway.ts` 组合以下真实工具来源：
+`apps/server/src/agentGateway/Layers/AgentGateway.ts` 组装 OmniMind/Thread/Automation、Browser、可用时Device。当前观察为普通46、Device可用时最多58；UI不得硬编码。
 
-- OmniMind read / diagnostics / thread mutations / automations；
-- Browser tools；
-- 平台与服务可用时的 Device tools。
+公共基线的`mcpTransport.ts`持有静态session catalog；本地候选让`tools/list`按live policy与availability过滤，并在`tools/call` admission前重验policy，同时保留credential/capability/turn checks。仍没有跨Engine热改旧上下文的动态list-change承诺：旧Session可暂时看见stale schema，但新call必须拒绝。
 
-当前 canonical catalog 通常为 46 个工具，Device 可用时最多 58 个：
+`AgentGatewaySessionIdentity.provider` 已提供可信canonical Provider identity。分支只使用`provider === "omnimind"`，不让renderer、display name或client input自报身份。
 
-- `omnimind_*`：24；
-- `browser_*`：22；
-- `device_*`：12。
+### 4.3 Engine projection
 
-数字是当前观察，不是公共 API。UI 必须从 catalog projection 读取计数和 availability，不得硬编码。
+`apps/server/src/agentGateway/mcpInjection.ts` 已投影Codex、Claude SDK、ACP、OpenCode与Antigravity等native seam。公共基线的`PiAdapter`把全部Gateway definitions eager转成Pi `customTools`并把call转回Gateway；本地候选只把canonical `omnimind`切到Host inline Extension，stock Pi与其他Engine保持原投影。
 
-`apps/server/src/agentGateway/mcpTransport.ts` 当前持有静态 `tools` / `toolsByName`，`tools/list` 返回全部 definitions，`tools/call` 再执行 session capability 与 active-turn authority。当前没有动态 list-change notification，因此“运行中立刻从某 Engine 的 schema 消失”不能被产品虚假承诺。
+目标不是重做这些owner，而是：
 
-区分自有/外部引擎不需要新增身份系统：`AgentGatewaySessionIdentity` 已在 `apps/server/src/agentGateway/Services/AgentGatewaySessionRegistry.ts` 持有受信任的 `provider: ProviderKind`，credential 由 Host 在 session 创建时签发并在请求入口验证。实施应直接使用 `provider === "omnimind"` 这一现有 canonical identity，而不是让 renderer 或 MCP client 自报身份。
+- all-agent Built-in policy先过滤同一canonical catalog；
+- 只有`omnimind`改成标准Pi Extension tools + native dynamic lifecycle；
+- stock Pi与其他Engine保持direct/eager。
 
-### 3.3 Engine 投影当前事实
+### 4.4 External connections
 
-`apps/server/src/agentGateway/mcpInjection.ts` 已把同一 AgentGateway 连接投影到 Codex TOML、Claude SDK `mcpServers`、ACP HTTP/stdio、OpenCode remote MCP、Antigravity plugin 等原生 seam；凭据按 session/env 传递，不写入普通配置。
+`apps/server/src/externalMcp/*` 与 `ExternalMcpSettingsPanel.tsx` 实际提供“外部应用 → OmniMind”任务连接，公开六个窄工具：overview、capabilities、allowed projects、create task、wait task、read task。
 
-`apps/server/src/provider/Layers/PiAdapter.ts` 当前通过 `buildPiAgentGatewayCustomTools()` 调 `tools/list`，把所有 Gateway definitions eager 转成 Pi `customTools`，调用再回到 `tools/call`。
+它已有owner-only、pairing、client-generated secret、credential hash、private file、revoke/expiry、rate/concurrency、audit、idempotency与cancellation。它不是第三方MCP manager。
 
-所以当前不是“没有插件机制”，而是：
+公共基线缺口是命名方向含混且默认`allProjects=true`会包含未来项目；本地候选已改为selected-project默认、至少选一项才能创建，并继续只投影现有paired/last-used/revoked/expired/runtime facts，没有发明heartbeat或“当前在线”。
 
-- Host tool 的 canonical owner 已存在；
-- 非 Pi Engine 的原生投影已存在；
-- Pi 路径仍是 eager tools，尚未实现此前已接受但未获施工授权的 owned additive tool search；
-- 非 OmniMind Agent 路径尚未接入统一的外部暴露开关。
+### 4.5 第三方 MCP manager不是首版缺口
 
-### 3.4 External MCP 当前事实
+第三方MCP会引入config owner、secret、OAuth、stdio/HTTP、审批、子进程、项目配置、重连、状态、审计与卸载责任。目前没有足够明确的首版用户结果证明值得承担，所以“无第三方MCP Settings”是完整终态，不是缺功能。
 
-现有 `apps/server/src/externalMcp/*` 与 `ExternalMcpSettingsPanel.tsx` 提供的是“外部应用 → OmniMind”连接，公开且仅公开六个工具：
+## 5. 唯一 owner map
 
-1. `omnimind_overview`
-2. `omnimind_capabilities`
-3. `omnimind_list_allowed_projects`
-4. `omnimind_create_task`
-5. `omnimind_wait_for_task`
-6. `omnimind_read_task`
+| 状态/行为                          | 唯一 owner                                | Settings/adapter只做                          | 禁止复制                        |
+| ---------------------------------- | ----------------------------------------- | --------------------------------------------- | ------------------------------- |
+| Host name/schema/annotations/group | AgentGateway catalog                      | filter与projection                            | 每Provider一份schema            |
+| Host execution                     | AgentGateway + Host service               | forward call                                  | 在Pi/MCP adapter重写实现        |
+| all-agent exposure intent          | 现有ServerSettings中的一份Built-in policy | UI修改intent                                  | localStorage/per-Provider副本   |
+| call permission/approval           | runtimeMode + Gateway/Engine owner        | 显示真实结果                                  | per-tool permission ledger      |
+| Pi Registry/all/active/reload      | Pi AgentSession/ResourceLoader            | Extension注册owned tools、additive activation | Host第二registry/active store   |
+| Goal/Automation prompt requirement | ThreadGoal/Automation Product owner       | request前ensure exact closure active          | 固定Host core/第二control plane |
+| exact callable loader              | Host inline Extension内部可替换细节       | 轻量metadata discovery                        | 产品工具/全局搜索owner          |
+| stock Pi direct projection         | PiAdapter `customTools`                   | 消费filtered catalog                          | 进入OmniMind dynamic分支        |
+| 其他Engine direct projection       | 对应native adapter                        | 消费filtered catalog                          | 跨Engine万能runtime             |
+| third-party MCP                    | 首版无人接管；未来exact adapter owner     | 首版无UI/数据                                 | Host manager/config/secret DB   |
+| 外部应用进入OmniMind               | 现有External MCP Gateway                  | 管理connection与scope                         | 与内部AgentGateway合并          |
+| Skills                             | Pi/Engine native owner                    | catalog与enablement投影                       | 用Host loader代替Skill loader   |
 
-它已有 owner-only 管理、pairing、client-generated secret、credential hash、private file、revoke/expiry、rate/concurrency、audit、idempotency、cancellation，以及默认 managed worktree + approval-required。它是一个窄而真实的任务后端，不是通用 MCP 管理器。
+新增一个Host tool时只应改canonical definition/handler与必要权限测试；若还要分别改Pi、Codex、Claude、UI、Prompt六份schema，说明边界失败。
 
-当前产品缺口：
+## 6. Built-in tools 页面
 
-- 名称没有表达连接方向；
-- project scope 默认 `allProjects=true`，还会包含未来项目，不符合最小授权默认值；
-- loopback/public URL 不可用时，管理 RPC 与 UI 可能仍允许创建实际不可连接的配置；
-- “paired”“connected”“last used”“failed”需要基于真实证据区分；
-- lifecycle 目前主要是 create/list/revoke/refresh pairing，尚无完整 edit/test/renew/delete/last error；但这些不是首轮改名必须顺手扩张的范围。
+### 6.1 形状
 
-### 3.5 真正的 OmniMind Agent MCP manager 当前不存在
-
-Pi Core 有意不内置 MCP。Pi 官方文档给出的方向是 Extension/Package，而不是在 core 中塞一个固定 MCP runtime。因此新 `MCP` 页面不能先造 Host 通用管理器，再让 Pi 被动服从；应先证明并采用 Pi 官方 public seam 上的成熟 Extension/Package，或只做最窄 bridge。
-
-## 4. 唯一 owner map
-
-| 状态/行为 | 唯一 owner | Settings/adapter 只做什么 | 禁止复制什么 |
-| --- | --- | --- | --- |
-| Host tool name/schema/annotations/group provenance | AgentGateway catalog assembly | 读取、筛选、投影 | 每个 Provider 一份 schema |
-| Host tool execution | AgentGateway + 对应 Host service | 转发 call | 在 Pi/MCP adapter 重写 Browser/Device |
-| 哪些内置能力组向非 OmniMind Agent 引擎开放 | OmniMind ServerSettings 中一份 external-engine user-intent policy | UI 修改 intent；Gateway 对所有非自有引擎在 list/call 应用 | UI localStorage、按 Provider 私有副本 |
-| 某次调用的权限 | `runtimeMode` + Gateway/Engine permission owner | 显示真实拒绝 | 新的 per-tool permission ledger |
-| Pi session Tool Registry 与 active set | Pi AgentSession / Extension seam | 注册 owned tools、additive activation | Host 第二 registry |
-| 非 Pi Engine 的投影 transport | 对应 Provider adapter/native MCP | 从同一 filtered catalog 生成会话配置 | 一个跨 Engine “万能 MCP runtime” |
-| 第三方 MCP 的 transport/config/lifecycle | 经 Gate A 采用的 Pi-native MCP Extension/Package | OmniMind 做 typed intent/projection | Host DB 与 `.omnimind` 双写 |
-| 外部应用访问 OmniMind | 现有 External MCP Gateway | UI 管理连接与 scope | 与内部 AgentGateway 合并 |
-| Skills | 现有 Skill/native owner | catalog 与 enablement 投影 | 用 tool search 代替 Skill loader |
-
-所有新增都必须满足一个判据：新增一个 Host tool 时，只在 canonical owner 定义一次，其他 Engine 自动通过既有 projection 获得；若需要分别改 Pi、Codex、Claude、UI、Prompt、权限六份清单，架构即失败。
-
-## 5. `内置工具`页面：干净、真实、用一套开关控制所有外部引擎
-
-### 5.1 信息结构
-
-页面直接显示三组真实能力，不放 Agent Engine 选择器。标题下用一句话说清开关范围：
+只显示真实group，不显示Engine selector或tools×engines矩阵：
 
 ```text
 内置工具
-选择可供其他 Agent 引擎使用的内置工具；不会影响 OmniMind Agent。
+选择可供所有 Agent 引擎使用的 OmniMind 内置工具。
 
-OmniMind                         24 个工具        [开]
+OmniMind      runtime-derived count      [开]
 任务、线程、自动化与诊断。
 
-Browser                          22 个工具        [开]
+Browser       runtime-derived count      [开]
 浏览、读取网页并与页面交互。
 
-Device                           12 个工具        [开]
-使用受支持设备的相机、位置等能力。
+Device        runtime-derived count      [开/不可用]
+检查并操作受支持的 iOS 模拟器。
 ```
 
-关闭任一组后，Codex、Claude、OpenCode、stock Pi 等所有非 OmniMind Agent 引擎都不再获得该组；OmniMind Agent 自身仍按 Pi 原生 Tool/Extension 使用它。正常页面不展示 MCP/Pi transport 差异，必要时仅在“详细信息”中说明“外部 Agent 引擎通过其原生连接使用这些工具”。
+计数与availability来自canonical catalog projection，不硬编码24/22/12。真实Device unavailable与用户disabled必须分开。
 
-### 5.2 为什么不用矩阵
+### 6.2 状态语义
 
-不做 `58 tools × 10 providers` 的 checkbox 墙，也不提供 Engine selector：
+- `available`：平台/Host service真实支持；
+- `enabledForAgentEngines`：用户intent；
+- `effectiveForAgentEngines = available && enabled`；
+- current Session registered/active：诊断事实，不是持久设置。
 
-- 维护者的真实意图是“不要向任何外部引擎提供 Device/Browser”，不是维护十份 Provider 例外；
-- 横向矩阵在中文、窄窗口和未来 100 工具时都会崩；
-- 三行组开关把认知负荷固定在 O(groups)，持久状态也只有一份；
-- 如需审计，展开一组可只读显示真实工具名、短描述和可用性，不默认提供 58 个细粒度开关。
+### 6.3 默认与持久化
 
-只有真实用户证据证明组粒度不够，才讨论 per-tool exception；届时仍应是组详情里的少量例外，而不是第二权限系统。
+fresh默认全部开放。持久化一份disabled group intent即可；字段名服从现有schema风格，不持久化Provider维度、catalog snapshot、tool active set或permission。
 
-### 5.3 状态语义
+要求：
 
-每组必须区分：
+- 进入现有revisioned atomic `ServerSettings`；
+- 默认空disabled集合；
+- 当前无旧用户，不造migration/alias/dual-read；
+- unknown future disabled IDs有界保留并round-trip，或整体明确fail；不得丢弃后静默重新开放；
+- rapid toggles遵循现有revision/stream，旧响应不能覆盖新intent。
 
-- `available`：平台与 Host service 真实支持该组；
-- `exposedToExternalEngines`：用户是否允许把这组能力统一交给非 OmniMind Agent 引擎；
-- `effectiveForExternalEngines`：外部引擎的新会话实际会获得；只由 `available && exposedToExternalEngines` 派生；
-- `active in current session`：会话是否已经加载/激活，属于诊断信息，不是持久设置。
+## 7. End-to-end 会话与动态加载
 
-Device 在当前平台不可用时显示“此设备不支持”，开关 disabled；不能伪装成用户关闭。某个 Provider 没有可证明的安全 projection 是该 Provider adapter 的诊断事实，不需要为此把页面重新变成逐 Engine 配置。
-
-### 5.4 默认值与持久化
-
-为了让第三方 Agent 引擎开箱即用，三组默认都向外部引擎开放。建议只持久化被关闭的组：
-
-```ts
-type BuiltInToolGroupId = "omnimind" | "browser" | "device"
-
-type BuiltInToolsServerSettings = {
-  disabledForExternalEngines: BuiltInToolGroupId[]
-}
-```
-
-这是意图草图，不是要求照抄字段名。关键是不持久化 Provider 维度；运行时直接复用现有 `AgentGatewaySessionIdentity.provider`，以 canonical `provider === "omnimind"` 区分自有 Agent 与其他引擎，不能通过可编辑 display name 或 client input 推断。
-
-约束：
-
-- 字段进入现有 revisioned、atomic `ServerSettings`；不建新表、不用 localStorage；
-- 默认空数组；当前没有旧用户，不增加迁移、兼容 alias 或 dual-read；
-- normalize 时去重、丢弃未知 group、限制键和值长度；
-- UI 从 server projection 获取真实 group、计数和 availability，不硬编码 Provider 全集或 24/22/12；
-- rapid toggles 使用现有 settings revision/stream，避免最后写入被旧响应覆盖。
-
-### 5.5 运行时强制
-
-开关必须同时影响 definition 与 execution：
-
-1. 新 session 建立时先判断它是否为 OmniMind Agent；非自有引擎按一份 external policy 过滤 catalog，自有引擎不套用该外部暴露开关；
-2. 非自有引擎的 `tools/list` / native projection / stock Pi registration 不包含 disabled groups；
-3. 非自有引擎的 `tools/call` 在真正执行前重新读取当前 policy，并按 tool provenance 拒绝已禁用组；
-4. 拒绝错误应稳定、可本地化、不可泄露 schema/credential；
-5. 给模型的 Host policy、tool-search catalog 与诊断说明必须从同一 filtered catalog 派生，不能提示它使用已关闭的工具；
-6. 如果三组对外都关闭，且当前源码复核确认没有其他独立控制面依赖，应完全跳过外部引擎的 AgentGateway MCP/plugin 注入、credential 与 stdio proxy，而不是挂一个空 server；
-7. 不依赖模型“自觉不调用”，也不只依赖旧 session 的静态 tool list。
-
-由于部分 Engine 不支持动态 tool-list refresh：
-
-- 关闭后，安全效果必须立即生效：旧 session 的 stale call 被 Gateway 拒绝；
-- schema 从模型上下文消失可能只在 next safe reload / new session 生效；
-- UI 应写“外部引擎的新会话将不再提供；当前外部会话中的调用会立即被阻止”，除非对应 Engine 已有可证明的安全热刷新；
-- 不为追求即时消失强杀用户正在执行的会话。
-
-### 5.6 catalog provenance
-
-不要到处用 name prefix 推断组。`AgentGateway.ts` 组装时已经分别持有 OmniMind、Browser、Device arrays，应在这一处附加内部 provenance，然后 flatten 给 transport。projection 可以返回：
+### 7.1 新 Session
 
 ```text
-group id / localized label key / description key / available / reason / tool count
+Provider/session owner fixes canonical identity
+  → read current Built-in policy
+  → intersect platform/service availability
+  → obtain one filtered AgentGateway catalog
+
+provider === "omnimind"
+  → convert definitions to real Pi ToolDefinition
+  → named hidden session-scoped inline Extension registers them
+  → Pi Registry owns all/active truth
+  → session_start keeps loader active and sets searchable owned names inactive
+  → add any first-request exact prompt/envelope-required closure
+  → remaining Gateway Host tools stay inactive until on-demand activation
+
+stock Pi
+  → existing customTools direct/eager
+
+other Engines
+  → native MCP/plugin direct/eager
 ```
 
-tool schema 仍只有一份。group metadata 是 catalog 的内部组织信息，不应演化成公开 Plugin Registry。
+所有允许且可用的Gateway definitions注册；在Host-owned Gateway subset中，首个request只让loader和当次明确要求且policy/availability允许的exact closure active，其余owned Gateway tools保持inactive，不预设Host core。其他owner的active set保持opaque。此后loader与prompt-required preflight只做additive activation；已active Host schema在同一Session内保持active，直到Pi原生reload/new Session/session replacement或确有安全/政策收缩边界。
 
-## 6. `MCP`页面：只管理 OmniMind Agent 消费的外部 MCP
+所有非owned Pi tools均超出Host设计范围，Host不为它们建立inventory、例外清单或控制逻辑；产品Todo的独立证据owner是[`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)。
 
-### 6.1 首版边界
+### 7.2 Goal 与 Automation prompt-required closure
 
-首版页面标题可保持极简 `MCP`，副文案必须限定方向：
+current-source已经给出两类不应交给loader临时猜测的canonical lifecycle：
 
-> 为 OmniMind Agent 连接外部 MCP 服务。
+- active ThreadGoal由现有Product state、`/goal`、Composer Goal panel、prompt injection与continuation拥有。Gateway的Goal mutation tool要求`thread:write`和active turn；synthetic continuation直接要求完成时记录achievement、重复外部blocker时暂停Goal。因此active Goal的request发送前必须ensure该exact tool active；若此前inactive，只做一次additive activation。Goal cleared/paused/achieved后停止对应prompt与continuation duty，不移除已经active的schema。无active Goal时不预留固定core，普通自然语言设Goal仍可经loader发现；
+- automation-dispatched turn的canonical run envelope直接要求/允许report result、update memory与cancel，并明确completion duties不进入later manual follow-up。Gate B候选已从exact envelope与schemas得到bounded closure；当前cancel需要view返回的definition revision，普通update也有`update → view`前置依赖。automation turn发送前ensure完整closure active；turn结束只停止run duty，schema可以保持active，不造dependency registry或per-turn controller。
 
-它不承诺：
+generic `harnessPolicy.ts`已在OmniMind dynamic路径收敛为不枚举inactive names的短发现原则；direct Engine只获得与其filtered tool surface一致的server instructions。它不是lifecycle authority。架构不固定bundle names；研究只记录current-source names作为conformance falsifier。
 
-- 替 Codex 修改 `~/.codex`；
-- 替 Claude Code 修改其用户配置；
-- 把同一 server 强行同步给全部 Agent Engine；
-- 接管第三方 Engine 自己的 MCP authentication、marketplace 或 lifecycle；
-- 把 AgentGateway 自家 Host tools 绕一圈接回 Pi。
+### 7.3 Exact Pi loader边界
 
-未来若有确凿需求让用户把同一个第三方 MCP 显式分发给多个 Engine，应先做独立 owner/compatibility review。不能从“UI 看起来对称”推导跨 Engine 配置写入权。
+Pi `0.84.2` 原生拥有registered/all/active、additive change detection与Provider native/fallback wire，但没有默认全局callable search tool。若需要callable入口，它只是Host Extension内部的薄loader。
 
-### 6.2 必须先过的 exact-source Gate A
-
-`pi-mcp-adapter` 或同类项目只是候选，不因名字合理就自动采用。实现前必须锁定 exact artifact、version、source commit、dependency tree 与 license，并证明：
-
-1. 使用 Pi 官方 Extension/Package public seam，不 patch Pi core；
-2. 有可嵌入的 headless/programmatic API，不依赖 TUI 点击或修改 stock `.pi`；
-3. config、credential、server lifecycle、tool registration 各有清晰唯一 owner；
-4. 精确支持哪些 transport：stdio、Streamable HTTP；legacy SSE 只在实证支持时出现；
-5. 是否支持 lazy tool discovery/proxy，而不是启动时把所有 server 的全部 schema塞进模型；
-6. resources、prompts、OAuth、reconnect、shutdown、cancellation 的真实支持边界；
-7. local command 是否使用 structured `command + args + env`，绝不经 shell interpolation；
-8. remote URL 是否有 SSRF、redirect、DNS rebinding、private network 与 credential forwarding 防线；
-9. 多 server tool-name collision、server provenance、错误隔离与 deterministic order；
-10. 配置能放在 OmniMind Agent 自己的 `.omnimind` lifecycle，不污染 stock Pi 用户目录；
-11. 不产生 ambient daemon、僵尸 child process、无限 reconnect 或无界日志；
-12. 能在 fresh profile、headless server、桌面 packaged 环境中确定性启动和关闭。
-
-采用优先级固定为：
-
-1. Pi 官方 public Extension/Package seam；
-2. 配置/裁剪成熟 adapter；
-3. 最窄 bridge；
-4. 不 fork Pi core。
-
-若候选失败，不以“先自己写一个完整 MCP 框架”补洞。回退为页面暂不开放或仅支持已证明的窄 transport。
-
-### 6.3 owner 与配置
-
-若 exact adapter 通过 Gate A：
-
-- adapter/Extension 拥有 MCP transport、server config、connection、reconnect、tool registration；
-- OmniMind Host 只暴露 typed list/add/update/test/remove intents 给 Settings；
-- 配置保存在 OmniMind Agent 已有 `.omnimind` lifecycle 下；
-- secret 用现有 OS/keychain/secret owner 或 adapter 已证明的安全 store，renderer 只拿 `configured: true`；
-- 不在 `ServerSettings`、Host DB 与 adapter config 三处保存同一 server；
-- `omnimind_search_tools` 只拥有 Host Gateway tools，不吞并第三方 MCP tools；第三方工具由 MCP Extension 自己以 Pi-native lazy semantics 注册。
-
-### 6.4 页面结构
-
-沿用 Model services 的“总览 → 添加 → 详情”，不做卡片墙：
+它只发现/激活：
 
 ```text
-MCP
-为 OmniMind Agent 连接外部 MCP 服务。                  [添加]
-
-GitHub                     已连接      18 个工具
-Local Postgres             已关闭       6 个工具
-Research server            连接失败                ›
+this Extension owns
+∩ registered in this Session
+∩ current Built-in policy allows
+∩ current availability
+∩ currently inactive
 ```
 
-总览只显示：名称、enabled、真实连接状态、tool count、最后错误的短状态。详情页才提供：
+它只用name、短description、provenance等轻量metadata，并只做additive `setActiveTools([...active, ...matches])`。不代理执行、不返回完整schema、不连接server、不建索引/store，也不搜索、分类或修改任何非owned tool。
 
-- 开启/关闭；
-- 测试连接；
-- 编辑非秘密配置；
-- 替换 credential；
-- reconnect；
-- 只读查看工具名/描述/provenance；
-- 删除。
+若exact schema/description明确要求另一个Gateway tool提供前置事实，loader或prompt-required preflight必须additively ensure完成调用所需的有界closure。当前至少有automation update依赖view、automation cancel依赖view提供definition revision；只为这些source-proven关系做conformance，不建通用dependency graph/registry。
 
-添加流程只呈现 exact adapter 已证明的 transport。stdio 输入应拆成 command、args、env；HTTP 输入 URL 与认证方式。secret 输入永不回显，不进入 URL query、日志、错误、timeline 或复制文本。
+Pi启动默认会把Extension/custom tools active，所以Host Extension在`session_start`只能把自己拥有且可搜索的Host names设为inactive并保持loader active；之后只add tools。exact Pi API若要求完整active list，只把当前集合视为opaque base并union owned additions，不能据此识别、重算或修改非owned names。
 
-### 6.5 10 / 100 / 1000 server 与工具规模
+### 7.4 Prompt
 
-规模治理从 lifecycle 和上下文开始，不从向量库开始：
+任何发送给模型的prompt/envelope不得直接点名inactive tool。OmniMind Agent generic Host prompt只说明额外Host能力可按需发现/加载、需要时使用当前active loader、激活后下一安全turn调用、不要猜名字；不枚举inactive Browser/Device/Thread/Automation，不把全catalog或长说明搬进loader description/result。exact Goal/Automation lifecycle prompt可以点名duty所需tools，但同一request发送前对应bounded closure必须active，且tool-specific duty不得泄漏回generic prompt或later manual follow-up。
 
-- App 启动或被动打开 Settings 时只读轻量 configured metadata；不连接全部 server；
-- 明确 test、当前 session 需要或用户打开详情时才连接；
-- bounded concurrency、指数退避上限、idle shutdown、hard timeout、取消与 child cleanup；
-- 初始 model context 不携带全部 MCP tool schema；使用 adapter 已证明的 lazy proxy/search；
-- UI 搜索只过滤 connection metadata，不为了 100 个 server 引入 embedding、remote recommendation service 或第二索引；
-- tool detail 长列表需要虚拟化/分页，但仅在实际数量越过现有组件性能边界时启用；
-- 单个 server 失败不拖垮其他 server，也不阻塞新 session；
-- 冷启动预算、首个 tool 调用延迟、idle memory 与 child process 数必须有测量上限。
+stock Pi与其他Engine继续获得与完整filtered schema一致的直接指导；Codex静态Browser instructions随Built-in policy过滤。
 
-Cache 只能缓存可失效的 discovery metadata，不缓存授权结论：
+### 7.5 调用
 
-- key 至少包含 server identity、config revision、adapter version 和 transport fingerprint；
-- credential 变化、server `listChanged`、reconnect generation 或 explicit refresh 使缓存失效；
-- tool call 前仍走实时 connection/permission；
-- 不把 stale tool schema 静默当成功，错误需指明“连接已变化，请刷新”。
+loader activation由Pi在下一安全turn通过exact Provider native deferred或fallback暴露新增definitions；prompt-required closure则在带对应prompt/envelope的同一request发送前ensure active。两者都只做owned-set additive activation；职责结束不移除schema。actual execute仍进入AgentGateway `tools/call`。
 
-## 7. `外部连接`页面：保留 owner，纠正方向与最小授权
+`registered != active != authorized`。每次call重新检查policy、session identity、credential、availability、runtimeMode/permission、真实approval、turn authority、timeout与cancellation。
 
-现有 External MCP Gateway 不重写，只把产品定义说对并修复明显安全/可用性缺口。
+## 8. Toggle、旧 Session 与 in-flight
 
-### 7.1 首轮必须做
-
-1. 可见名称从 `MCP connections` 改为 `External connections / 外部连接`；
-2. 把内部 `integrations` section id 一次性改成语义准确的 `externalConnections`（最终精确命名服从现有 id 风格），同步 route、search、tests 与 deep link；当前无旧用户，不保留 alias；
-3. 说明文案改为：
-   - EN：`Let Codex, Claude Code, and other local apps use OmniMind.`
-   - ZH：`允许 Codex、Claude Code 等本地应用连接并使用 OmniMind。`
-4. 用 connection/client 命名替代 connected agent，避免与 Agent engines 冲突；
-5. 创建时默认选择明确项目，不默认 `allProjects`，更不能默认包含未来新项目；
-6. backend 与 UI 共同投影 runtime availability：loopback/public URL 不可用时不能创建“看似成功、实际不可用”的连接；
-7. paired、connected/last used、revoked、expired、failed 只根据真实审计/transport 证据显示。
-
-### 7.2 暂不顺手扩张
-
-edit、renew、delete、test、last error、不同 client setup card 都有价值，但应在首轮改名/安全闭环后按实际痛点排优先级。不要为了让页面“看起来完整”扩大 External MCP 协议和 DB 状态机。
-
-### 7.3 与内部开关隔离
-
-External MCP 暴露的是外部任务 API，不是 AgentGateway 的全部 Browser/Device 工具。因此：
-
-- 关闭“Codex → Browser”不影响外部 Codex 通过 External connection 创建 OmniMind task；
-- 关闭 `omnimind` 内置能力组也不自动撤销已有 External connection；
-- External connection 的 project scope、expiry、revocation、rate limit 继续独立执行；
-- 若未来要改变 External MCP tool surface，必须走 public-surface contract，不偷用内部 group toggle。
-
-## 8. 端到端运行时设计
-
-### 8.1 会话创建
+### 8.1 关闭
 
 ```text
-Composer 选择 Agent Engine
-  → Provider/session owner 固定 canonical engine identity
-  → 如果是 OmniMind Agent：走完整 canonical catalog 与 Pi-native Tool/Extension seam
-  → 如果是其他引擎：读取 ServerSettings 的 disabledForExternalEngines
-  → external catalog 按 availability + 一份共享 policy 过滤
-  → stock Pi：注册到 Pi session Tool Registry / Extension
-  → 其他非 Pi Engine：生成各自 native MCP/plugin session projection
-  → credential、turn authority、cancellation 仍留在 Gateway
+atomic settings update
+  → new OmniMind Session does not register disabled group
+  → old OmniMind loader and request ensure-active live-filter it out
+  → new stock Pi/other Engine Sessions do not receive definitions
+  → every stale new call is denied by Gateway immediately
 ```
 
-不得让 renderer 决定最终 tool list，也不得把用户可编辑的 engine label 当自有/外部身份判据。
+若active Goal、Automation run或其他canonical lifecycle的必要closure被policy/availability截断，不得绕过policy ensure-active，也不得继续dispatch/loop并伪造achievement或result；对应lifecycle必须被阻止或暂停并准确unavailable，具体UI投影由现有Product owner与focused Gate B证据决定。已active schema不承诺下一turn自行移除：exact Pi能通过安全reload/session replacement收缩时沿用原生边界，否则可以暂时可见但不能执行，并准确诊断。不得为Settings toggle建立per-turn removal controller。已准入in-flight call不因普通exposure toggle被伪杀；cancel归turn/session owner。Browser/Device人类UI不受影响。
 
-### 8.2 设置改变
+### 8.2 重新开启
 
-```text
-用户关闭“向外部 Agent 引擎提供 Browser”
-  → atomic settings update + revision stream
-  → Gateway execution policy 立即看到新 revision
-  → 已运行的 Codex / Claude / stock Pi 等外部 session 再调用 browser_*：稳定拒绝
-  → 所有新外部 session：不再收到 Browser definitions
-  → OmniMind Agent：不受该外部暴露开关影响
-  → 若某 Provider adapter 未来支持安全 list refresh，再做非破坏性热更新
-```
+不把创建时未注册/未投影的schema偷偷加入旧Session。按各Engine真实reload/new-session边界生效。不得为视觉一致建立全局registry或第二active store。
 
-开启时不应把工具偷偷注入已经稳定运行的旧上下文，除非该 Engine 明确支持动态更新且测试覆盖 context/permission 一致性。默认“下一安全会话生效”比伪热更新更可靠。
+### 8.3 Reload/resume/fork
 
-### 8.3 Pi Tool Search 的边界
+Pi Session/ResourceLoader拥有lifecycle与active truth；Host不在每个request重算或收缩active set。能原生恢复就复用，不能时由loader重新发现；prompt/run envelope只ensure当次明确需要的missing closure。旧Extension instance/handler不得泄漏。没有Host active persistence、dependency registry、LKG、generation或migration。
 
-此前研究建议的 `omnimind_search_tools` 只搜索同一 hidden inline Extension 明确拥有的 Host Gateway tools，并 additive 激活。它：
+## 9. Collision、provenance 与 empty failure
 
-- 不搜索 Skill 正文；
-- 不安装 Package；
-- 不搜索未连接 MCP server；
-- 不擅自激活其他 Extension 刻意 inactive 的 tools；
-- 不管理第三方 MCP connection lifecycle；
-- 不成为第二权限系统。
+ResourceLoader已知能对Extension-Extension conflict给出diagnostic/load-order语义，但builtin/custom/inline交叉来源不能凭名字推断。Gate B候选已用stock/product Pi exact conformance覆盖Extension、customTools与inline交叉组合；未来Pi revision或来源优先级变化仍须重新证明。
 
-第三方 MCP adapter 如果有自己的 proxy/search tool，由它拥有其 MCP tools。两个搜索面可以在 Pi Tool Registry 中共存，但 provenance 与名称必须无冲突；不要为了“一次搜索所有东西”提前造统一向量 catalog。
+Gateway内部duplicate必须拒绝不可信catalog。cross-source同名时，Host只对自己的ownership claim、collided capability及依赖它的Goal/Automation dispatch fail closed：不能把第三方winner当成owned Host capability，不能由Host loader激活或投影它。Pi-native第三方winner与Session其余能力默认继续，并发既有diagnostic/warning。只有exact Provider contract不能诚实隔离局部冲突时，才把Session标为unavailable；这是待conformance事实，不预先承诺fatal。不得silent override、drop或rename；Host只按自己的immutable names核对sourceInfo，不建立全局tool inventory。错误不泄露secret、endpoint、schema或用户参数。
 
-### 8.4 碰撞与命名
+Gateway不可用、filtered pool为空、discovery失败时准确unavailable；不注册空壳loader产品，也不从“无tools”推断可以跳过其他Provider lifecycle。
 
-- Host tools 保留 canonical `omnimind_* / browser_* / device_*` names；
-- 第三方 MCP tools 应保留 server provenance；具体 namespace 规则服从 exact adapter 的已证明机制；
-- 同名冲突必须 deterministic fail 或显式 namespace，不能 last-write-wins；
-- UI 可显示友好名称，但调用名、source 与 server identity 必须可审计；
-- tool call name 是运行时 contract，不应由 Settings 自由修改；开发期若确需重命名，应在同一变更中一次性更新全部 owner、tests 与 fixtures，不留双名兼容层。
+## 10. 第三方 MCP：首版明确退出
 
-## 9. 安全、隐私与故障冰山
+### 10.1 删除/延期范围
 
-### 9.1 权限与撤销
+首版不实现：
 
-- enablement 只控制 exposure，不替代 permission；
-- call path 每次重验 session credential、active turn、project scope 与当前 enablement revision；
-- 关闭组后 stale session 的调用立即 fail closed；
-- revoke External connection 与关闭内部 capability 是两条独立撤销链；
-- 任何 UI “已关闭”都必须能用真实 call falsifier 证明。
+- 第三方MCP server CRUD、启停或连接测试；
+- credential/OAuth/write-only secret UI；
+- 全局health/status/last error/tool count面板；
+- Host通用MCP manager、config DB、registry、permission或recovery state machine；
+- 自动投影给Codex、Claude、OpenCode等外部Agent；
+- 一个统一入口搜索Host tools与所有third-party MCP tools。
 
-### 9.2 secret
+这不删除MCP协议。AgentGateway MCP transport、外部Engine native Host projection与External connections都继续。
 
-- secret 不进入 renderer state snapshot、ServerSettings、URL query、CLI argv、日志、错误详情、截图、analytics 或 tool schema；
-- setup 只展示 client-generated secret 的一次性、安全交付流程；
-- MCP credential 更新使用 write-only replace，列表只返回 configured/last verified；
-- child process env 只传目标 server 必需变量，并在退出后释放引用。
+### 10.2 两类 MCP
 
-### 9.3 本地进程与网络
+1. **OmniMind-owned AgentGateway MCP**：Browser、Device、Thread、Automation等Host能力；AgentGateway是catalog/execution owner。
+2. **Third-party MCP**：GitHub、Notion、数据库、搜索服务等；未来可能作为OmniMind Agent扩展，但首版不由OmniMind Settings管理。
 
-- stdio 不经 shell，不接受一段任意 shell script 作为“command”；
-- command/args/env 分离校验，明确 cwd owner，禁止继承无关 secrets；
-- child 有 startup timeout、call timeout、cancel、graceful close、hard kill fallback 和 zombie proof；
-- HTTP MCP 校验协议、redirect、DNS/host change、loopback/private ranges 与 auth forwarding；
-- reconnect 有 jitter、上限和 circuit break，设置页打开不能触发 reconnect storm；
-- app shutdown、session cancel、server remove 都有确定性 cleanup。
+### 10.3 对未来tool discovery的准确表述
 
-### 9.4 错误与恢复
+只有未来采用的Pi-native MCP Extension/adapter经exact-source、isolated runtime与真实Session证明支持lazy discovery/proxy或按需activation时，它的tools才可能进入其owner自己的动态体验。不能从MCP协议推导。
 
-用户可见错误只回答：发生了什么、影响什么、下一步是什么。技术详情可展开，但不泄露 command env、credential、绝对私密路径或原始第三方响应。
+其discovery只负责发现/描述/请求activation，不负责config、credential、OAuth、start/stop、reconnect、approval、permission、cancel或audit。discovered/active不等于authorized。不得为发现连接所有server、制造process/network/reconnect storm或把全量schemas塞入context。Host与third-party tools保持不同owner/provenance，不预建总registry或统一permission。
 
-必须覆盖：
+### 10.4 未来重开门
 
-- adapter/package 缺失或版本不兼容；
-- server 不存在、启动慢、启动后立刻退出；
-- schema 无效、tool list 巨大、重复名称；
-- auth 过期、OAuth 取消；
-- settings rapid toggle、并发 session、关闭时正在调用；
-- network flap、redirect 变化、server `listChanged`；
-- app crash/restart 后不遗留 child、不把旧 connection 状态显示为 connected。
+必须先回答：
 
-## 10. 数据、终态收口与开发期清理
+- exact adapter是否有稳定headless/programmatic seam；
+- 是否真实支持lazy discovery/proxy；
+- config/secret/transport/approval/lifecycle各自唯一owner；
+- stdio env/shell、HTTP SSRF/redirect/private network与credential forwarding；
+- 如何避免连接/进程/重连风暴与context膨胀；
+- 只服务OmniMind Agent还是显式分发给其他Engine；
+- session-scoped状态如何不伪装成global connected；
+- packaged fresh-profile startup/cancel/close/reopen/orphan cleanup；
+- 用户需求是否足够明确，值得恢复Settings页面。
 
-### 10.1 Built-in tools
+## 11. External connections
 
-- 在现有 `ServerSettings` 增加一个小型、默认空的 `disabledForExternalEngines` groups 字段；
-- default empty 等于全部开启；当前无旧用户，直接更新 schema/default/fixtures，不写数据迁移脚本；
-- schema decode 对未来未知 Engine/group fail safe：未知值不扩大权限；具体是忽略并记录诊断，还是保留 round-trip，实施时按现有 Settings compatibility policy 统一；
-- 不把实际 catalog snapshot 持久化；计数与 availability 每次由当前 runtime projection 生成。
+现有External MCP Gateway保留owner，只纠正产品方向与最小授权。
 
-### 10.2 MCP
+首轮要求：
 
-- 配置 owner 跟随经 Gate A 采用的 Pi-native Extension/Package；
-- OmniMind 只保存其无法由 native owner表达、且确有产品价值的最小偏好；默认不保存第二份 server catalog；
-- 若 native config 没有 revision/change notification，Host bridge 可以做只读 fingerprint 与 explicit refresh，不因此建数据库镜像；
-- secret storage 必须在采用前定案，不以 plaintext JSON 暂存过渡。
+1. 可见名改为`External connections / 外部连接`；
+2. route/search/deep link/internal id原子改为准确命名，不留开发期alias；
+3. 文案说明“外部本地应用连接并使用OmniMind”；
+4. 用connection/client而不是connected agent；
+5. 默认选择明确projects，不默认all/future projects；
+6. backend继续owner + loopback-only，UI投影同源runtime availability；
+7. 只显示paired、last used、revoked、expired等已有事实；无heartbeat不显示current connected。
 
-### 10.3 External connections
+暂不顺手扩张edit/test/renew/delete/last error/每client setup card。External connection的project scope、expiry、revocation、rate limit与audit继续独立，不跟随内部Built-in toggle。
 
-- 继续复用现有 External MCP DB、credentials、audit 与 stdio/http owner，因为职责正确，不是因为存在旧用户兼容义务；
-- 一次性清理错误的 Settings route key、UI 命名与测试；不做 `integrations` alias 或双路由；
-- MCP protocol/tool names 若语义正确可继续使用；若 exact review 发现命名错误，开发期直接原子重命名 contracts、backend、setup 与 fixtures；
-- 当前开发数据、integration IDs 与 pairing records 不承诺保留，可按 schema 终态清理或重建；不得为本地测试数据增加 migration layer；
-- project scope 默认直接收口到 selected projects；若未来提供 edit scope，应产生 audit event 并对扩权重新确认。
+## 12. 安全、隐私与故障冰山
 
-## 11. 详细实施切片
+### 12.1 Secret
 
-本文不授予施工权。获得 Gate B 后，按“一个切片交付一个可验证用户结果”推进；不要先建抽象再等 UI 来用。
+- AgentGateway bearer继续由per-session Host owner签发/轮换/撤销；
+- secret不进入renderer snapshot、ServerSettings、URL query、argv、日志、错误、截图、analytics、schema或loader metadata；
+- External connection secret继续一次性安全交付与hash owner；
+- 首版没有第三方MCP credential输入/持久化路径。
 
-### Slice 0：重新锁定来源与同步稳定 contract
+### 12.2 Permission与撤销
 
-目标：在代码变化前确认 owner 没漂移。
+- enablement不替代permission；
+- call path每次重验credential、turn、scope、availability与policy；
+- stale call立即fail closed；
+- External revoke与Built-in disable是两条独立链；
+- UI“已关闭”必须用真实call falsifier证明。
 
-1. 记录当前 OmniMind HEAD、bundled Pi exact version/commit、候选 MCP adapter exact source；
-2. 重跑 `PI-ECOSYSTEM-INTAKE.md` 对应 Gate A；
-3. 复核 AgentGateway tool counts、Provider projection、Settings route 与 External MCP public tools；
-4. 把维护者已经确认的“用一套开关控制所有非 OmniMind Agent 引擎”和三页面方向同步到 `architecture/workbench.md` / `architecture/execution.md` 的唯一 owner；
-5. 本文只保留证据与参考，不让 research 成为第二 architecture。
+### 12.3 Cancellation与late result
 
-退出条件：owner map 无冲突；没有未知 dirty paths；MCP adapter disposition 明确为 adopt/configure/bridge/reject 之一。
+- loader短、进程内、无network/process；
+- actual Tool继续转发Pi `AbortSignal`；
+- Provider replacement/session disposal沿现有owner；
+- active-set变化和普通toggle不取消in-flight；
+- late response由session/turn fence拒绝或抑制。
 
-### Slice 1：把现有页面准确改名为 External connections
+### 12.4 用户可见错误
 
-用户结果：设置菜单和页面方向不再误导，创建连接默认最小授权。
-
-最小触点：
-
-- `apps/web/src/settingsNavigation.ts`
-- `apps/web/src/settingsSearchIndex.ts`
-- `apps/web/src/routes/_chat.settings.tsx`
-- `apps/web/src/i18n.tsx`
-- `apps/web/src/components/settings/ExternalMcpSettingsPanel.tsx`
-- `packages/contracts/src/externalMcp.ts`
-- `apps/server/src/externalMcp/httpRoute.ts`
-- `apps/server/src/wsRpc.ts`
-
-实现：双语改名与搜索关键词；section id 原子改为 `externalConnections`；默认 selected projects；runtime availability；paired/connected 状态校正。继续使用现有 backend owner，但不保留旧 route alias。
-
-退出条件：代码、tests、fixtures 中不再有误导性的 Settings `integrations`/`MCP connections` 命名；不可用 runtime 无法创建假连接；连接不默认未来所有项目；英文和中文同轮交付。
-
-### Slice 2：Built-in tools 端到端
-
-用户结果：分别开关 OmniMind / Browser / Device 是否提供给所有非 OmniMind Agent 引擎，并且开关真的控制曝光和调用。
-
-最小触点：
-
-- `packages/contracts/src/settings.ts`
-- `apps/server/src/serverSettings.ts`
-- `apps/server/src/agentGateway/Layers/AgentGateway.ts`
-- `apps/server/src/agentGateway/mcpTransport.ts`
-- `apps/server/src/agentGateway/mcpInjection.ts`（应只消费过滤结果，不复制 policy）
-- `apps/server/src/provider/Layers/PiAdapter.ts`
-- 新的窄 `BuiltInToolsSettingsPanel.tsx`
-- Settings navigation/search/route/i18n
-
-实施顺序：
-
-1. 在 catalog assembly 附加唯一 group provenance；
-2. 增加只读 group projection contract；
-3. 增加一份 `disabledForExternalEngines` groups 设置；
-4. 所有非自有引擎的 `tools/list` / native projection / stock Pi registration 使用同一过滤结果；
-5. `tools/call` 做实时 fail-closed policy check；
-6. 做无 Engine selector 的三组安静行 UI；
-7. 明确 current session / next session 生效文案。
-
-退出条件：关闭 Browser 后，Codex、Claude、stock Pi 等所有外部引擎的新 session schema 都不含 Browser、旧 session call 被拒绝；OmniMind Agent 仍可使用；Browser 人类 UI 不受影响；Device unavailable 真实显示。
-
-### Slice 3：MCP adapter exact-source Gate A
-
-用户结果：无 UI 变化；团队获得能否可靠接入的事实结论。
-
-只读审判 §6.2 全部条件，做最小隔离 probe：fresh `.omnimind`、stdio/HTTP、list/call/cancel/shutdown、collision、auth failure、100-tool synthetic server、restart。不能读取或修改用户 stock `.pi`，不能建立长期兼容层。
-
-退出条件：exact disposition 与 falsifier 写入 research；失败则停止 Slice 4，不现场重写完整 adapter。
-
-### Slice 4：OmniMind Agent MCP lifecycle bridge + UI
-
-前提：Slice 3 通过且采用已获 Gate B。
-
-用户结果：可以在 MCP 页面添加、测试、启停、编辑、替换凭据和删除 OmniMind Agent 的 MCP server。
-
-owner 落点优先靠近现有 OmniMind/Pi ecosystem lifecycle，例如 `apps/server/src/provider/Layers/OmniMindEcosystem.ts` 或一个被它拥有的窄 service；只有当前代码证明该 owner 不合适时才新建模块。不要先创建 `GenericIntegrationManager`。
-
-实现：typed intents、redacted view、native config write、connection lifecycle、Pi Extension registration、总览/添加/详情 UI、双语、错误/empty/loading/retry、清理。
-
-退出条件：fresh profile 配置一次即可；restart 后一致；secret 不泄露；disable/remove 后新 session 不见工具；失败 server 不阻塞其他 server。
-
-### Slice 5：Pi-owned lazy composition
-
-前提：此前 `pi-native-host-tool-loading-review.md` 的 inline Extension 实现另获 Gate B，且 MCP adapter 的 lazy semantics 已证明。
-
-用户结果：工具规模增长时，模型初始上下文仍小而准确；Host tools 与第三方 MCP tools 各由自己的 Extension 搜索/代理，不相互抢 owner。
-
-验证 tool activation additive、cache/key 变化、third-party inactive tools 不被误激活、prompt economics、collision/provenance。若收益不超过 current eager baseline 的复杂度，保持现状，不为“理论优雅”施工。
-
-### Slice 6：focused、live 与 packaged closure
-
-按风险比例验证，不做无界 benchmark：
-
-- contracts/schema/default/migration；
-- navigation/search/deep-link/i18n/a11y；
-- Gateway catalog、filter、call deny、concurrency；
-- Codex/Claude/ACP/Pi representative projections；
-- adapter conformance、process cleanup、network failure；
-- fresh profile、restart、packaged desktop；
-- 真实 Engine journey 只用最小请求证明 wire behavior，不把模型名当协议证据。
-
-完成状态只能进入当前 Campaign/代码/测试/Git，不回写成本文的“已完成故事”。
-
-## 12. 验收矩阵
-
-| 维度 | 必须证明 | 主要 falsifier |
-| --- | --- | --- |
-| 菜单 | 中英菜单顺序、名称、搜索、深链一致 | MCP/外部连接方向仍混淆 |
-| Built-in UI | 不选 Engine，只见真实组、计数、可用性和清楚的外部范围 | 硬编码 24/22/12、出现 Workspace Files 假能力或 Provider 矩阵 |
-| 产品默认 | fresh settings 下三组对外 enabled，用户关闭后才收窄 | 默认值与 UI 文案或 runtime 不一致 |
-| 新会话曝光 | disabled group 不在任何外部引擎的新 session schema | 只在 UI 关掉，模型仍看到 |
-| 旧会话安全 | disabled 后 stale call 立即被 Gateway 拒绝 | 需重启才真正禁用 |
-| 自有/外部隔离 | 一份开关一致影响全部外部引擎，但不影响 OmniMind Agent | 按 Provider 漂移，或外部开关误伤自有引擎 |
-| 人类 UI 隔离 | Agent Browser off 不影响 Browser 面板 | 能力与 Agent exposure 混成一件事 |
-| 权限 | enablement 不绕过 runtimeMode/turn authority | enabled 被误当为自动授权 |
-| MCP owner | config/secret/lifecycle 只有一份 owner | Host DB 与 adapter JSON 双写漂移 |
-| MCP 规模 | 100 server metadata 不触发全连接；大量 tools 不全塞 prompt | Settings mount 产生进程/网络风暴 |
-| MCP failure | 单 server fail/cancel/restart/cleanup 可恢复 | zombie、无限重连、全局阻塞 |
-| 外部连接 | 默认选定项目、runtime 可用、状态真实 | 默认未来所有项目或假 connected |
-| Secret | renderer/log/argv/error/snapshot 无明文 | 任一路径可复现 secret |
-| 性能 | Settings 交互即时；长列表有边界；无主线程长任务 | 每次 render 重做全 schema/连接探测 |
-| 可访问性 | 键盘、focus、label、disabled reason、screen reader | 仅靠颜色/tooltip 表达状态 |
-| packaged | fresh packaged profile 行为与开发态一致 | 只在源码/dev home 可用 |
-
-## 13. 测试与证据落点
-
-建议 focused tests 随 owner 放置：
-
-- Settings navigation/search/route/i18n：现有相邻 test；
-- `ServerSettings` decode/default/patch/rapid updates；
-- AgentGateway catalog group projection、external-engine policy filter、call-time deny；
-- `mcpInjection` 的 Codex/Claude/ACP/OpenCode representative config；
-- `PiAdapter` / inline Extension 的 registry、activation、call forwarding；
-- `ExternalMcpSettingsPanel` default scope 与 runtime unavailable；
-- External MCP HTTP/RPC owner-only、loopback/public URL 与 existing credentials regression；
-- MCP adapter conformance：stdio、HTTP、cancel、shutdown、collision、secret redaction、fresh profile。
-
-不要用 snapshot 代替语义断言。tool list 测试至少断言 group provenance、enabled/disabled、所有外部引擎一致和 OmniMind Agent 隔离；security tests 必须真正 call，而不是只看 UI。
-
-## 14. 明确拒绝的过拟合与第二系统
-
-以下路线除非出现新的强证据，否则不进入实现：
-
-1. **通用 Capability Center / Integration Registry**：三个现有 owner 足够，没有真实用户结果要求第四个总管。
-2. **跨 Engine MCP 配置同步器**：会写多个用户目录、吞掉各 Engine 原生差异，责任与回滚不可控。
-3. **Host-owned MCP server database**：若 Pi-native adapter 已拥有 config，这是第二真相源。
-4. **全部 Host tools 都“变成 MCP 产品”**：传输细节污染用户心智，Pi 路径也不应被迫绕 MCP。
-5. **`pi-mcp-adapter` 回连 OmniMind AgentGateway**：自家 Gateway 已有 Pi custom tool/Extension seam，回环只增加 transport、credential 与 lifecycle。
-6. **每工具权限矩阵**：首版三组 enablement 足够；permission 继续由 runtimeMode 与真实 owner 管。
-7. **58 个 toggle 或 tools × engines 大表**：维护与认知成本随规模平方增长。
-8. **Embedding / vector tool marketplace**：10/100 规模先用轻量 metadata 与 native lazy discovery；无 outcome 证据不加服务。
-9. **Pi core fork**：public seam 不足时先 bridge/upstream；不能把局部不足变成永久维护分叉。
-10. **把 Settings mount 当 health monitor**：打开页面不应启动全部 server 或持续轮询。
-11. **把 Skills、MCP、Tools 合成“插件”大页**：实现层可共享扩展 seam，用户任务和 lifecycle 仍不同。
-
-## 15. 回滚与删除策略
-
-每个切片必须可独立回退：
-
-- External connections 改名失败：恢复文案，不改 protocol/DB；
-- Built-in tools policy 失败：删除新增 settings 字段与 UI，默认回到当前全启用 projection；canonical catalog 不受损；
-- MCP candidate 失败：不进入生产依赖，删除隔离 probe artifacts；
-- MCP bridge 失败：禁用/删除 Extension registration 和 Settings section，保留 Pi core、AgentGateway 与外部 Engine 原生配置不变；
-- lazy tool search 经济性不成立：退回当前 eager Pi customTools，不影响 external-engine policy 与非 Pi projections。
-
-禁止用迁移脚本把用户 stock `.pi/.codex/.claude` 配置搬进 OmniMind 后再声称“可回滚”。首版不能写这些 owner 的用户目录。
-
-## 16. 复验触发器
-
-只有以下事实变化才重新打开对应结论：
-
-- bundled Pi version、Tool Registry/Extension/Package API 或官方 MCP stance 变化；
-- exact MCP adapter revision、依赖、license、transport 或 storage owner 变化；
-- AgentGateway 从静态 catalog 改为动态 list notifications；
-- Provider SDK 新增/移除 native MCP、dynamic tool refresh 或 permission seam；
-- Host 新增第四类真实 capability group；
-- 用户证据显示组粒度不足或需要跨 Engine 分发第三方 MCP；
-- External MCP 从 loopback-only 扩展到 remote/public deployment；
-- Settings 母体 section/deep-link/search contract 变化；
-- packaged runtime、platform、secret store 或 process sandbox 变化。
-
-没有新 falsifier 时，不重复做同一来源、同一调用路径的 probe。
-
-## 17. 精确文件与 symbol 导航
-
-重启实现前优先从这些现有 owner 搜索，不凭本文猜路径：
-
-| 关注点 | 当前入口 |
-| --- | --- |
-| Settings sections/groups | `apps/web/src/settingsNavigation.ts` |
-| Settings search | `apps/web/src/settingsSearchIndex.ts` |
-| Settings route/panel mount | `apps/web/src/routes/_chat.settings.tsx` |
-| 双语 | `apps/web/src/i18n.tsx` |
-| Skill 页面范式 | `apps/web/src/components/settings/SkillsSettingsPanel.tsx`、`skillsSettingsModel.ts` |
-| External connections UI/setup | `ExternalMcpSettingsPanel.tsx`、`externalMcpSetup.ts` |
-| Server settings schema/default/patch | `packages/contracts/src/settings.ts` |
-| Server settings persistence/revision | `apps/server/src/serverSettings.ts` |
-| Gateway catalog assembly | `apps/server/src/agentGateway/Layers/AgentGateway.ts` |
-| Gateway 受信任的 Provider session identity | `apps/server/src/agentGateway/Services/AgentGatewaySessionRegistry.ts` |
-| Gateway MCP list/call | `apps/server/src/agentGateway/mcpTransport.ts` |
-| 非 Pi Engine projection | `apps/server/src/agentGateway/mcpInjection.ts` |
-| Pi projection | `apps/server/src/provider/Layers/PiAdapter.ts` |
-| OmniMind/Pi ecosystem lifecycle candidate owner | `apps/server/src/provider/Layers/OmniMindEcosystem.ts` |
-| External MCP contracts | `packages/contracts/src/externalMcp.ts` |
-| External MCP backend | `apps/server/src/externalMcp/*`、`apps/server/src/wsRpc.ts` |
-
-## 18. 已确定与仍需证据决定的事项
-
-### 已由维护者确定
-
-- 使用 §2 的中英文菜单；
-- `External connections / 外部连接`，不用 `External agents`；
-- Agent skills、Built-in tools、MCP 在 Coding 中平级；
-- Workspace Files 不是一个可伪造的内置工具组；
-- OmniMind Host 原生工具可由用户决定是否向外部 Agent 引擎提供；
-- 只有一套外部引擎开关：关闭某组后，Codex、Claude、OpenCode、stock Pi 等所有非 OmniMind Agent 引擎都关闭；
-- 不提供 Engine selector，不持久化 Provider 维度；OmniMind Agent 自身不受该外部暴露开关影响；
-- 自有/外部判据复用现有 `AgentGatewaySessionIdentity.provider`，canonical `omnimind` 是自有 Agent；
-- 尊重 Pi 官方设计，不用 Host 发明一套替代 Pi 的插件/工具生命周期。
-
-### 仍由证据决定，不应让用户提前猜技术答案
-
-- exact `pi-mcp-adapter` 或其他候选是否满足 Gate A；
-- MCP 首版能安全支持哪些 transport、OAuth/resources/prompts；
-- 哪些 Provider 支持运行中 tool-list 热刷新；
-- Pi lazy tool search 的真实效果/经济性是否值得从 eager bridge 演进；
-
-这些是实现证据问题，不是新的产品分叉。候选失败时遵循 stop-loss，不把失败变成用户必须理解的复杂设置。
-
-## 19. 最终判断
-
-这套方案尊重 Pi 的地方，不是把所有东西都命名为 Pi Plugin，而是尊重它真正的边界：Pi session 内的 Package、Extension、Tool Registry 与 active tools 由 Pi 机制拥有；OmniMind Host 只通过官方 seam 注入自己唯一拥有的能力。非 Pi Engine 继续走其原生 MCP/plugin seam，不被迫模拟 Pi。
-
-这套方案尊重 OmniMind taste 的地方，是把复杂度沉到底层：用户只需要理解“技能”“内置工具”“MCP”“外部连接”四个日常概念，并能在内置工具页直接关闭三组真实能力对所有外部引擎的暴露。底层再负责 catalog、transport、session、permission、secret、cache、reconnect、stale schema、cleanup 和可维护性。
+只回答发生了什么、影响什么、下一步是什么。技术详情可展开但不泄露command env、credential、私密路径或原始第三方response。
+
+## 13. 数据终态
+
+### 13.1 Built-in tools
+
+- 现有ServerSettings新增一个小型、默认空的disabled groups intent；
+- 不持久化catalog snapshot、active tools、Provider矩阵或permission；
+- 当前无旧用户，不写migration/alias/dual-read；
+- runtime-derived count/availability每次投影。
+
+### 13.2 Third-party MCP
+
+- 不增加server catalog/config/secret/status/cache/revision/fingerprint/migration；
+- 不读取、导入、迁移或修改stock `.pi/.codex/.claude`与project `.mcp.json`；
+- 不预留空壳service或字段。
+
+### 13.3 External connections
+
+- 继续现有DB、credentials、audit与transport owner；
+- 开发期一次性纠正route/UI命名与fixtures；
+- project scope默认收口到selected projects；
+- 不为本地测试数据增加migration layer。
+
+## 14. Gate B 实施切片
+
+维护者已授权并在本地隔离分支完成下列切片；本节记录结果边界，不把local candidate冒充main或installed product。
+
+### Slice 0：重新锁定exact source/owner
+
+- current OmniMind HEAD、upstream/stock source artifact与OmniMind产品runtime的exact identity；
+- AgentGateway counts/provenance；
+- current Provider projections；
+- Settings route与External public tools；
+- architecture与research无冲突；
+- 第三方MCP未漏回。
+
+### Slice 1：External connections准确改名与最小授权
+
+双语名称/search/deep link、route id、selected-project default、runtime availability与真实paired/last-used状态。继续现有backend，不新增heartbeat或manager。
+
+### Slice 2：Built-in tools all-agent policy
+
+- canonical catalog附唯一group provenance；
+- ServerSettings一份disabled intent；
+- runtime-derived group projection；
+- new-session filter覆盖所有Agent；
+- all-agent `tools/call` live deny；
+- Codex/其他direct prompt随policy；
+- 三组安静UI；
+- old-session/in-flight/re-enable语义。
+
+### Slice 3：OmniMind Agent Pi-native Dynamic Tool Loading
+
+- 复用Gateway definition→Pi Tool与execute bridge；
+- named hidden session-scoped inline Extension；
+- all allowedGateway definitions注册，session_start只停用owned searchable names并保持loader active；
+- Host-owned Gateway subset首个request只ensure exact prompt-required closure，后续Host activation monotonic/additive；
+- exact-version薄loader只做owned additive activation；
+- Goal/Automation bounded ensure-active与exact dependency conformance；职责结束不卸载schema；
+- generic prompt diet、lifecycle prompt-active invariant、collision、reload/resume/fork与Provider wire；
+- stock Pi/其他Engine不变。
+
+动态加载已是目标。eager baseline只用于测量schema bytes、prompt/cache、错选率、额外turn、成功率、TTFR与成本，以及作为临时rollback。若exact seam阻塞，报告upstream/blocker。
+
+### Slice 4：focused/live/packaged closure
+
+- contracts/default/revision；
+- navigation/search/deep link/i18n/a11y；
+- Gateway filter/call deny/concurrency；
+- Pi lifecycle/collision/provider wire；
+- direct projections回归；
+- MiMo/DeepSeek最小真实journey；
+- exact local candidate SHA fresh packaged profile。
+
+截至`d3cf632c7`的本地证据为：Settings/Built-in/Host/Todo/authority focused矩阵通过；全仓Server 4251项与Web 4108项通过；exact Pi serializers覆盖OpenAI Responses两种native anchor、Anthropic `tool_reference`、Kimi exact encoding与generic compatible fallback；MiMo/DeepSeek仅以OpenAI Chat-compatible live endpoint完成两请求Host journey与abort；macOS arm64产物闭合240项legal metadata并通过隔离startup smoke。没有现成packaged交互harness，因此不能声称Settings点击、Todo/Host交互与close/reopen已经由packaged App证明；这些当前只由source-level integration测试覆盖。
+
+## 15. 验收矩阵
+
+| 维度                 | 必须证明                                                        | 主要falsifier                               |
+| -------------------- | --------------------------------------------------------------- | ------------------------------------------- |
+| Settings             | 中英名称/顺序/search/deep link一致；无第三方MCP入口             | 仍出现MCP manager或方向混淆                 |
+| Built-in UI          | 无Engine selector；真实group/count/availability                 | 硬编码数量或矩阵                            |
+| 默认                 | fresh全部enabled，关闭后才收窄                                  | UI/default/runtime不一致                    |
+| all-agent policy     | 同一开关影响OmniMind、stock Pi与其他Engine                      | 任一路径绕过                                |
+| OmniMind new Session | Host-owned subset初始仅loader+首个request exact closure         | eager全暴露或固定core                       |
+| loader scope         | 只管理本Extension owned/live/available/inactive集合             | 接管builtins/Packages/Skills/MCP            |
+| additive Session     | 已激活schema保持到Pi原生reload/new Session等边界                | per-turn重算、替换或反复卸载                |
+| direct Engines       | stock Pi与其他Engine继续direct/eager                            | 被强制动态加载                              |
+| prompt               | generic prompt不直呼inactive；lifecycle点名tool同request active | prompt/tool surface矛盾或catalog搬家        |
+| Goal lifecycle       | 同request exact closure active；结束后停止prompt/loop           | continuation无法achievement/stop            |
+| Automation lifecycle | run closure可完成；manual follow-up无duty且run-only call被拒绝  | 缺revision依赖或authority泄漏               |
+| old Session          | disabled后loader不再激活，stale call立即deny                    | policy绕过或可见schema仍可执行              |
+| in-flight            | 普通toggle不伪杀已准入call                                      | exposure变成kill switch                     |
+| reload               | 无第二active store，旧instance不泄漏                            | handler/store双真相                         |
+| collision            | collided Host claim/capability局部fail closed；Session其余继续  | silent override/rename或默认全Session fatal |
+| permission           | registered/active不冒充authorized                               | enabled等于授权                             |
+| Human UI             | Agent Browser/Device off不影响人类pane                          | capability/exposure混合                     |
+| Third-party MCP      | 无UI/CRUD/secret/status/distribution/总搜索                     | 任一责任漏回                                |
+| External connections | selected projects、runtime真相、无假connected                   | 默认未来全部项目                            |
+| Secret               | renderer/log/argv/error/schema无明文                            | 任一路径泄露                                |
+| Performance          | schema bytes下降、无无意义加载、无重索引                        | context换位置膨胀                           |
+
+## 16. 测试与证据落点
+
+- Settings navigation/search/route/i18n相邻tests；
+- ServerSettings decode/default/patch/rapid updates；
+- AgentGateway group provenance、policy filter与call deny；
+- PiAdapter/inline Extension registry、all/active、additive activation、call forwarding；
+- active Goal/Goal结束、Automation run/manual follow-up、policy-disabled dispatch与exact schema dependency；
+- startup/reload/resume/fork/shutdown与old-instance fence；
+- builtin/custom/inline/Extension collision conformance；
+- `mcpInjection` representative Codex/Claude/ACP/OpenCode configs；
+- External settings default scope与runtime unavailable；
+- External backend owner-only/loopback/credential regressions；
+- negative static scan确保无第三方MCP Settings/config/secret/manager入口。
+
+测试断言语义，不用snapshot冒充。security test必须真正call。Provider wire必须来自exact runtime/endpoint，不从模型名推断。
+
+## 17. 明确拒绝的过拟合
+
+1. Third-party MCP Settings / Capability Center / Integration Registry；
+2. 跨Engine MCP配置同步器；
+3. Host-owned MCP server DB或预留schema；
+4. 把全部Host tools产品化为MCP；
+5. 用第三方adapter回连自家AgentGateway；
+6. 每工具permission矩阵；
+7. tools×engines大表；
+8. embedding/vector/BM25/remote tool catalog；
+9. Pi core fork；
+10. future MCP health monitor；
+11. Skills、third-party MCP、Host tools统一大页；
+12. global callable loader、第二active store或Tool Search设置页。
+
+## 18. Rollback、stop-loss 与复验
+
+### 18.1 Rollback
+
+- External改名可独立回退文案，不改protocol/DB；
+- Built-in policy失败可删除新增setting/UI并回到全启用projection，canonical catalog不变；
+- OmniMind dynamic实现故障可临时退回现有eager `customTools`，不影响all-agent Built-in policy、stock Pi或其他Engine。
+
+第三条只是临时代码止损，不是等价最终终态。无持久feature flag、双轨authority或数据迁移。
+
+### 18.2 Stop-loss
+
+若实现需要Pi core fork、第二registry/active/config/permission store、通用dependency graph、Host lifecycle control plane、全局search、接管其他Extension、silent collision、按模型名硬编码wire、第三方MCP manager、context catalog dump或削弱credential/turn/cancel边界，立即停止并报告blocker/upstream seam；不扩张系统，也不把eager重新宣布为目标。
+
+### 18.3 Revalidation triggers
+
+- upstream/stock source artifact、OmniMind产品runtime或AgentSession/Extension/wire变化；
+- AgentGateway catalog/listChanged/policy变化；
+- Provider native MCP/dynamic refresh/permission seam变化；
+- ThreadGoal prompt/continuation或Automation run envelope/schema/dependency变化；
+- 新真实capability group；
+- 用户证据证明group粒度不足；
+- 明确第三方MCP用户结果触发§10.4；
+- External从loopback扩展到remote/public；
+- Settings母体、secret store、sandbox或packaged topology变化。
+
+## 19. 当前决定、source facts 与实现证据边界
+
+### 已确定
+
+- 使用§3中英文菜单；
+- `External connections / 外部连接`，不用`External agents`；
+- Coding含Agent skills与Built-in tools，不含第三方MCP Settings；
+- fresh Built-in tools默认全部开放；
+- 一套policy覆盖所有Agent，包括OmniMind Agent；
+- 无Engine selector或Provider维度持久状态；
+- 只有canonical `provider === "omnimind"`使用Pi-native Dynamic Tool Loading；
+- stock Pi与其他Engine保持direct/eager；
+- 所有允许Gateway definitions注册；Host-owned Gateway subset初始只暴露loader与首个request明确要求的exact closure，不设固定Host core；其他owner保持opaque，后续Host active set由Pi保持monotonic/additive；
+- Pi拥有Registry/active/wire，AgentGateway拥有execution/authority；
+- 第三方MCP Settings、CRUD、credential、状态、自动分发与统一搜索退出首版。
+
+### Source requirement、本地实现与交付边界
+
+- **source fact**：ThreadGoal continuation会直接要求Goal mutation职责；Automation run envelope会直接要求report result、update memory与cancel职责，并且current schemas给出update/cancel取得revision所需的view依赖；manual follow-up不继承Automation run duty；
+- **architecture-confirmed target**：带这些canonical prompt/envelope的同一request发送前，必须additively ensure当前policy/availability允许的exact bounded closure active；职责结束只停止prompt/duty/loop，不移除已active schema；
+- **local implementation evidence**：本地`81921d8fa`已实现bounded preflight，`d9f74bd64`证明policy-disabled/collided dispatch局部失败而Session其余能力继续，`d3cf632c7`证明exact provider serializer native/fallback形状；全仓测试保持绿色；
+- **delivery boundary**：当前公开产品仍是eager `customTools`，本地Host Extension尚未push、merge或安装。packaged startup已证明候选字节可启动，但尚无packaged交互journey证明Settings→new/old Session→Todo/Host→reopen完整链；这不重开dynamic产品方向，只限制可宣称的证据范围；
+- prompt-required closure始终受Built-in policy与availability约束；缺必需能力时目标行为是阻止或暂停对应loop并准确unavailable。依赖只做bounded exact conformance，不建立dependency registry。
+
+## 20. 最终判断
+
+这套方案尊重Pi，不是因为把所有东西命名成Pi插件，而是让Pi Session真正拥有Tool Registry、all/active truth、Dynamic Tool Loading、reload与Provider wire；Host只用官方Extension seam注册自己拥有的Gateway tools，在exact版本需要时提供最薄的extension-local loader，并在prompt/envelope需要时additively ensure exact bounded closure active。
+
+这套方案尊重OmniMind产品，是因为用户只需理解“技能”“内置工具”“外部连接”，并能用一套默认开放的Built-in policy控制所有Agent；第三方MCP的长期责任不因协议存在就提前产品化。
 
 最关键的不变量是：
 
-> **一份能力真相；一套开关统一控制所有非自有引擎；每个 Engine 使用自己的原生 seam；OmniMind Agent 保持自身机制；任何设置中的“关闭”都必须在真实执行路径上成立。**
+> **一份AgentGateway catalog，一套all-agent Built-in policy；OmniMind Agent让Host tools进入Pi原生Dynamic Tool Loading，Host-owned Gateway subset首轮最小、Session内monotonic/additive且其他owner保持opaque，stock Pi和其他Engine保持direct/eager；首版不产品化第三方MCP；任何prompt点名与任何“关闭”都必须在真实request/call路径成立。**

@@ -2,10 +2,21 @@
 // Purpose: Builds the single canonical synthetic message sent to automation runs.
 
 import type { AutomationDefinition, AutomationRun } from "@omnimind/contracts";
-import { automationContinuesThread, automationOwnsItsThread } from "@omnimind/shared/automationMode";
+import {
+  automationContinuesThread,
+  automationOwnsItsThread,
+} from "@omnimind/shared/automationMode";
 
 export const AUTOMATION_MEMORY_INJECTION_MAX_BYTES = 8 * 1_024;
 export const AUTOMATION_MEMORY_TRUNCATION_MARKER = "[... older automation memory truncated ...]\n";
+
+/** Exact Gateway closure named by the canonical automation run envelope. */
+export const AUTOMATION_RUN_GATEWAY_TOOL_NAMES = [
+  "omnimind_report_automation_result",
+  "omnimind_update_automation_memory",
+  "omnimind_cancel_automation",
+  "omnimind_view_automation",
+] as const;
 
 export function automationMemoryForEnvelope(content: string): string {
   const bytes = Buffer.from(content, "utf8");

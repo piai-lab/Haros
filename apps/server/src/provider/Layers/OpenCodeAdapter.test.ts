@@ -1167,7 +1167,8 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     ]);
     expect(runtime.promptCalls).toHaveLength(2);
     for (const prompt of runtime.promptCalls) {
-      expect(JSON.stringify(prompt)).toContain("Use the omnimind_* tools");
+      expect(JSON.stringify(prompt)).toContain("tools actually available");
+      expect(JSON.stringify(prompt)).not.toContain("omnimind_create_threads");
     }
     expect(gateway.revoked).toEqual(["gateway-token-1", "gateway-token-2"]);
   });

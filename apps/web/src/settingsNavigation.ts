@@ -17,6 +17,7 @@ export const SETTINGS_SECTION_IDS = [
   "providers",
   "skills",
   "usage",
+  "built-in-tools",
   "integrations",
   "advanced",
 ] as const;
@@ -125,12 +126,20 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     eyebrow: "Screen capture",
   },
   {
+    id: "built-in-tools",
+    group: "integrations",
+    label: "Built-in tools",
+    description: "Choose which OmniMind capabilities are available to Agents.",
+    icon: "toolbox",
+    eyebrow: "Agent capabilities",
+  },
+  {
     id: "integrations",
     group: "integrations",
-    label: "MCP connections",
-    description: "Give Codex, Claude, and other local agents scoped access to OmniMind tasks.",
+    label: "External connections",
+    description: "Let Codex, Claude Code, and other local apps use OmniMind.",
     icon: "plugin-1",
-    eyebrow: "External agents",
+    eyebrow: "Connected apps",
   },
   {
     id: "providers",

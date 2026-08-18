@@ -3,6 +3,7 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   applyServerSettingsPatch,
+  normalizeDisabledBuiltInGroups,
   providerStartOptionsFromServerSettings,
   validateServerSettingsPatch,
 } from "./serverSettings";
@@ -10,6 +11,21 @@ import {
 const decodeProviderSessionStartInput = Schema.decodeUnknownSync(ProviderSessionStartInput);
 
 describe("applyServerSettingsPatch", () => {
+  it("normalizes disabled built-in groups without discarding unknown bounded ids", () => {
+    expect(normalizeDisabledBuiltInGroups([" browser ", "future-group", "browser", ""])).toEqual([
+      "browser",
+      "future-group",
+    ]);
+
+    expect(
+      applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
+        agentTools: {
+          disabledBuiltInGroups: [" device ", "future-group", "device"],
+        },
+      }).agentTools.disabledBuiltInGroups,
+    ).toEqual(["device", "future-group"]);
+  });
+
   it("refuses a provider-only switch to a runtime-catalog-only provider", () => {
     const patch = {
       textGenerationModelSelection: { provider: "omnimind" as const },
@@ -18,8 +34,9 @@ describe("applyServerSettingsPatch", () => {
     expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toContain(
       "requires an explicit model",
     );
-    expect(applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch).textGenerationModelSelection)
-      .toEqual(DEFAULT_SERVER_SETTINGS.textGenerationModelSelection);
+    expect(
+      applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch).textGenerationModelSelection,
+    ).toEqual(DEFAULT_SERVER_SETTINGS.textGenerationModelSelection);
   });
 
   it("preserves an explicit runtime-catalog model selection exactly", () => {
@@ -32,8 +49,9 @@ describe("applyServerSettingsPatch", () => {
     };
 
     expect(validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch)).toBeNull();
-    expect(applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch).textGenerationModelSelection)
-      .toEqual(patch.textGenerationModelSelection);
+    expect(
+      applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, patch).textGenerationModelSelection,
+    ).toEqual(patch.textGenerationModelSelection);
   });
 });
 

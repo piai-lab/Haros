@@ -2,6 +2,9 @@
 // Purpose: Injects OmniMind's provider-independent persistent task objective.
 // Layer: Provider prompt policy
 
+/** Exact Gateway closure named by the synthetic goal-continuation prompt. */
+export const GOAL_CONTINUATION_GATEWAY_TOOL_NAMES = ["omnimind_set_thread_goal"] as const;
+
 function escapeXmlText(value: string): string {
   return value
     .replaceAll("&", "&amp;")

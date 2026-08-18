@@ -41,8 +41,6 @@ const REQUIRED_ROUTES = [
   ["PI-ECOSYSTEM-INTAKE.md", "architecture/README.md"],
   ["PI-ECOSYSTEM-INTAKE.md", "execution-brief.md"],
   ["PI-ECOSYSTEM-INTAKE.md", "missions/independent-omnimind-v1.md"],
-  ["PI-ECOSYSTEM-INTAKE.md", "research/omnimind-agent-core-design.md"],
-  ["PI-ECOSYSTEM-INTAKE.md", "research/omnimind-agent-core-execution-guide.md"],
   ["architecture/README.md", "workbench.md"],
   ["architecture/README.md", "public-surface.md"],
   ["architecture/README.md", "product-state.md"],

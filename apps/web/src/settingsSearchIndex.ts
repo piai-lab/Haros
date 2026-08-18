@@ -399,11 +399,19 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Rebuild local project indexes without clearing existing chats when the local state gets out of sync.",
   },
   {
+    id: "built-in-tools:groups",
+    section: "built-in-tools",
+    title: "Built-in tools",
+    keywords:
+      "Agent capabilities OmniMind Browser Device availability enabled disabled exposure tools",
+    target: null,
+  },
+  {
     id: "integrations:external-mcp",
     section: "integrations",
-    title: "External MCP integrations",
+    title: "External connections",
     keywords:
-      "Pair Codex Claude and other local MCP clients with scoped project access. revoke credential task create wait read worktree approval",
+      "Pair Codex Claude Code and other local apps with scoped project access. revoke credential task create wait read worktree approval MCP",
   },
   {
     id: "advanced:version",
@@ -464,6 +472,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Assistant output": "settings.assistantOutput",
   "Automatic CLI update checks": "settings.automaticCliUpdates",
   "Base font size": "settings.baseFontSize",
+  "Built-in tools": "settings.builtInTools",
   "Chat width": "settings.chatWidth",
   "Capture sound": "settings.captureSound",
   Chat: "nav.chat",
@@ -474,7 +483,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Diff line wrapping": "settings.diffLineWrapping",
   Editor: "settings.editor",
   "Enable AppSnap": "settings.enableAppSnap",
-  "External MCP integrations": "settings.integrations",
+  "External connections": "settings.integrations",
   "Follow-up behavior": "settings.followUpBehavior",
   "Font smoothing": "settings.fontSmoothing",
   "Git writing model": "settings.gitWritingModel",
