@@ -121,12 +121,6 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     keywords: "Show highlighted and underlined transcript text in the Environment panel.",
   },
   {
-    id: "general:environment-instructions",
-    section: "general",
-    title: "Project instructions",
-    keywords: "Show project-level instructions in the Environment panel.",
-  },
-  {
     id: "general:environment-notepad",
     section: "general",
     title: "Notepad",
@@ -493,7 +487,6 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   Notepad: "settings.notepad",
   "Permission status": "settings.permissionStatus",
   "Pinned messages": "settings.pinnedMessages",
-  "Project instructions": "settings.projectInstructions",
   "Project order": "settings.projectOrder",
   "Provider updates": "settings.providerUpdates",
   "Pull request": "settings.pullRequest",

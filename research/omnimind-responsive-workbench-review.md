@@ -4,6 +4,8 @@
 > 研究基线：`main@fce4cb89f3f73f3f08d980de94d1ed6f95e20265`
 > 角色：保存可复核事实、观察、推论、反证、最小候选与复验条件。唯一 UI contract 仍是 [`architecture/workbench.md`](../architecture/workbench.md)，当前施工入口仍是 [`execution-brief.md`](../execution-brief.md)，验收状态只进入 active Mission。
 
+> **2026-08-18 supersession.** W1 当时明确不改变 `Project instructions`，所以本文保存的“不触碰”边界对那轮施工仍是真实证据；它不是永久产品裁决。后续独立审计已完整追到 localStorage、manual copy、首次发送/Automation promotion 的 `thread.meta.update` 与 reopen 边界，并复核 Synara 母体原始 commits。维护者在知晓真实 Project→new-task Notepad seed 及其损失后，明确决定在 OmniMind 中整体退休该能力、保留 Thread-level Notepad。现行 contract 以 `architecture/workbench.md` 为准，本文所有“保留 Project instructions”的未来式要求均被该决定 supersede。
+
 ## 0. 结论
 
 当前截图中的主要问题不是“面板样式不像 Codex”，而是 OmniMind 的四个产品角色没有在同一套空间策略中闭合：
@@ -397,7 +399,7 @@ abs(Composer.width_after - Composer.width_before) <= 1px
 | Sources              | 来源             | 任务来源                                    |
 | Subagents            | 子智能体         | 运行中的 child 集合                         |
 | Notepad              | 记事本           | 当前任务临时笔记                            |
-| Project instructions | 项目指令         | 保留现有功能，仅规范可见文案                |
+| Project instructions | 项目指令         | W1 snapshot 中保留；2026-08-18 已整体退休   |
 
 Notepad placeholder：
 
@@ -433,9 +435,9 @@ Local servers 状态：
 
 不能全局重命名全部 `workbench.*`，也不能把所有中文“更改”机械替换为“变更”。事实值如 branch `main`、repo/path、URL、命令、Cursor、Engine/model、原始诊断不翻译。
 
-## 11. Project instructions 边界
+## 11. Project instructions 边界（2026-08-18 已 supersede）
 
-当前 `EnvironmentProjectInstructionsSection` 真实存在：
+在本文绑定的 W1 snapshot 中，`EnvironmentProjectInstructionsSection` 真实存在：
 
 - per-project textarea；
 - `500ms` debounce autosave；
@@ -443,13 +445,13 @@ Local servers 状态：
 - 可复制或追加到 thread notepad；
 - 当前已有上层存储与 send path 关系需要独立调用链审计。
 
-因此本轮不得称其为“假功能”。本轮只允许：
+因此 W1 当时不得称其为“假功能”，也不得在响应式施工中顺带改行为。那轮只允许：
 
 - 可见标题、placeholder、动作、ARIA 的中英闭合；
 - 保留现有数据、autosave、copy 和 Prompt 行为；
 - 不删除、不迁移、不重定义，不依据 `research/omnimind-prompt-management-review.md:67` 改产品行为。
 
-若未来要裁决其 Prompt 语义，必须沿真实 route→store/API→dispatch→Provider prompt/event→reopen 链路另立证据并重新授权。
+这个重新进入条件现已满足。后续审计确认它是有意实现的 notes-seeding，而非 runtime Prompt；维护者明确接受失去 per-Project seed，并授权整体退休。当前代码/产品要求是删除 UI、设置/search、store/autosave、manual copy 与两处 hidden notes write，不迁移旧文本；Notepad 继续作为当前 Thread 的任务笔记。该裁决不倒改 W1 历史，也不证明母体功能当时是假的。
 
 ## 12. 可访问性、focus 与输入连续性
 
@@ -620,7 +622,7 @@ Environment toggle 前后四项 delta 均为 0
 - resize 期间 React 按像素重渲染、Observer loop、明显掉帧或 stream/scroll 跳动；
 - 为了对齐 Codex 重画 OmniMind Shell、复制视觉品牌或加入无产品职责的卡片/控件；
 - 以 storyboard 的 breakpoint 代替 production 测量；
-- 为本轮翻译全局改名内部 API 或 Project instructions 行为；
+- 为本轮翻译全局改名内部 API 或扩大已确认的功能退休范围；
 - 只跑 logic/unit 后宣称真实 Desktop 已完成；
 - 只凭 `480px` Chat/Web 能渲染就宣称全产品或安装 App 已闭合；
 - hardcoded 产品文案、placeholder、tooltip、ARIA、empty/error/recovery 仍在正常中英路径泄漏。
@@ -632,7 +634,7 @@ Environment toggle 前后四项 delta 均为 0
 - 新响应式 framework；
 - 全产品移动端重构；
 - 多窗口/跨 route layout database；
-- 环境信息中的新功能、Prompt manager 或 Project instructions 重定义；
+- 环境信息中的新功能或 Prompt manager；
 - Workflow graph、Agent dashboard、第二状态面板；
 - Codex 风格视觉复刻；
 - 任意全局 i18n namespace 重构。
@@ -669,7 +671,7 @@ Environment toggle 前后四项 delta 均为 0
 4. Workbench 宽屏分栏、受限时单面板，且 pane/runtime state 不丢；
 5. 连续拖动跟手，无阈值抖动、overflow、scroll jump、stream interruption；
 6. 中英产品表面、Settings/search、placeholder、tooltip、ARIA、empty/error/recovery 完整闭合；
-7. Project instructions 行为未被本轮偷改；
+7. 当前 Thread 的 Notepad 行为不因响应式 presentation 回归；已退休的 Project instructions 不再构成表面或布局消费者；
 8. focused、browser、a11y、reduced-motion、packaged fresh-profile journey 均由同一 exact SHA 证明；
 9. 没有新增第二 layout authority，也没有把 Codex 皮肤误当 OmniMind taste。
 

@@ -20,6 +20,7 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 | 运行模式            | Thread 上既有 `runtimeMode`，随下一次 dispatch 进入当前 Engine 与 Host capability                   | Provider 外再叠一套 permission profile 或逐工具授权账本 |
 | Goal                | Synara Thread 内的持久 objective、计时/暂停/achievement、prompt injection 与 continuation lifecycle | 用逐回合 task list 代替 Goal、另建 Goal DB/daemon       |
 | Todo / 当前步骤     | Provider runtime 的逐回合 `turn.tasks.updated` 全量快照与现有 Composer/Timeline 投影                | 持久 Goal、第二 Todo store 或跨回合成功 authority       |
+| Notepad / 记事本    | 当前 Thread 的既有 `notes` metadata、command/event/projection 与恢复路径                            | Project 级笔记模板、Prompt/规则含义或独立 localStorage  |
 
 命名映射只允许改变产品呈现，不改变底层唯一 owner。若现有 Synara 类型已经表达同一事实，OmniMind 必须直接复用或最小改名，不能再包装一层“更通用”的状态。
 
@@ -108,6 +109,8 @@ V1 没有跨 Provider Package authority：
 公开 Alpha 前，旧开发状态不是 migration input，也不是 deletion target。外层 inherited orchestration 使用新的 first-public namespace；旧 Product/service/draft 与此前自建 Package product state 保持原样、零读取、零修改。
 
 Provider native state、credentials、stock Pi settings/packages/session files、用户 workspace、Git、global config 与未知路径始终不动。OmniMind Agent 使用新的 `.omnimind` 全局与 project-local namespace，不读取或写入 `.pi`。只有用户显式选择 stock Pi Provider 后，stock Pi 自己才可按其原生 contract 使用 `.pi`；这不构成 OmniMind Agent 的迁移、同步或共享。若当前未发布 namespace 与旧字节碰撞，改变当前 namespace。
+
+已退休的 Synara `Project instructions` 不属于 first-public 产品状态：不再有 Project 级 store、reader、writer、autosave、手动 copy 或新 Thread/Automation promotion 预填。Notepad 仍由当前 Thread 的既有 notes authority 拥有；由于历史 notes 没有可证明的来源标记，退休动作不扫描、不删除也不重写已有 Thread notes。旧 Project instructions 不迁移到 `AGENTS.md`、Notepad 或其他 Prompt 资源，产品也不为没有用户的开发期 key 保留 migration/cleanup rail。
 
 ## 恢复与结果真实性
 

@@ -702,6 +702,7 @@ loss rather than silently treating “covered” or “no code” as approval:
 | Provider picker keeps recoverable uninstalled/sign-in setup routes instead of upstream installed-only filtering                                                                                                               | OmniMind Agent setup can make those services usable; hiding them would make recovery unreachable.                                                               | The picker is not exact upstream UI parity and needs its own availability regression.                                    |
 | Indexed Codex usage-history owner replaces upstream request-time bounded archive-tail scanning                                                                                                                                | The current owner separates capacity from history and avoids scanning session archives on every request.                                                        | Exact implementation/test parity is lost; upstream regressions must be translated into indexed-owner tests.              |
 | Structured missing-command classifier and current macOS build traversal guard remain instead of narrower upstream patches; Windows/browser CI workarounds enter only when their failure reproduces in OmniMind's frozen lanes | Current implementations are equal or stronger and copying weaker/irrelevant fixes would duplicate code.                                                         | Exact patch parity is lost; every upstream regression case still has to be imported or explicitly shown inapplicable.    |
+| Retire Synara's Project instructions localStorage/Thread-notes seeding surface while preserving Thread Notepad                                                                                                                | Its real behavior is a reusable Project→new-task notes template with manual and hidden writes, not runtime Project rules; keeping both scopes under “instructions/Notepad” creates a misleading second mental model.             | OmniMind loses the per-Project textarea, manual copy/append and automatic Notepad prefill for first-send and Automation draft promotion. |
 | Synara brand, release version/changelog/What's New, account/public-origin, marketing, signing/publication and prose identity bytes remain excluded                                                                            | Those bytes would make false claims about the OmniMind distribution and external authorities. Verified mechanism facts still enter the matching OmniMind owner. | OmniMind cannot copy donor release/docs verbatim and must maintain truthful bilingual distribution documents and assets. |
 | Merge/format-only carriers receive no separate product implementation until ancestry proof exposes independent conflict-resolution behavior                                                                                   | No independent bytes are currently attributable to them.                                                                                                        | Git topology remains absent, so future sync stays more expensive until the ancestry experiment succeeds.                 |
 
@@ -712,9 +713,12 @@ that records `8f9f600…` as a second parent while preserving the verified OmniM
 next upstream increment as a three-way merge. Until that experiment passes, do not claim common Git
 ancestry or use a synthetic merge to hide unresolved product differences.
 
-On 2026-08-17 the maintainer confirmed this root relationship and all five divergence rows after their
-losses were presented. The remaining mother mechanisms are authorized for the current fact-closed
-adoption set and do not wait for another execution-brief admission.
+On 2026-08-17 the maintainer confirmed this root relationship and the original five divergence rows
+after their losses were presented. On 2026-08-18, after a separate full route/store/dispatch/reopen
+audit and exact Synara commit review, the maintainer also confirmed the Project instructions
+retirement row and explicitly accepted loss of the reusable Project→new-task Notepad seed. The
+remaining mother mechanisms are authorized for the current fact-closed adoption set and do not wait
+for another execution-brief admission.
 
 ### 15.6 Whole-tree path/behavior closure surface
 
@@ -743,14 +747,17 @@ a 1,602-row parallel ledger.
 | Release history / What's New                                                                                       | Generic mechanism may be adapted, activation remains identity-gated                                               | Loss: current Release history stays unavailable. Activate only from real OmniMind version/changelog/publication evidence; never copy Synara entries                                                                                                           |
 | Synara/DP Code storage-origin and desktop-storage migrations                                                       | Confirmed non-adoption                                                                                             | Loss: OmniMind will not migrate data from Synara/DP Code legacy homes. The maintainer confirmed there is no predecessor user population; those identities are unrelated to OmniMind's first-public namespace, so running them could only risk reading or rewriting unrelated data. |
 | Automation consecutive-failure policy                                                                              | Confirmed semantic adoption: default `3`, with explicit `1`/`3`/`5`/keep-running choices                          | A three-failure threshold can permit two more attempts than fail-fast, so side-effect-sensitive automations can explicitly choose `1`. Any success resets the consecutive-failure count; contract, migration, bilingual UI and author-equivalent tests share the same policy. |
+| Project instructions→Thread notes seed                                                                              | Confirmed downstream retirement; Thread-level Notepad remains                                                     | Remove Environment UI, Settings/search, store/autosave, manual copy/append and first-send/Automation hidden `thread.meta.update`; do not migrate old text or delete existing Thread notes. Re-open only if a real per-Project notes-template outcome is required and can remain clearly distinct from runtime rules and task notes. |
 | Synara marketing/assets/logo/handle/domain/release/account/signing/publication bytes                               | Confirmed identity divergence                                                                                     | Keep truthful OmniMind assets, bilingual copy and distribution evidence; mixed commits must still contribute their product mechanisms                                                                                                                         |
 | Indexed Codex usage, missing-command classifier and macOS build traversal guard                                    | Confirmed current-stronger divergence                                                                             | Retain each upstream regression test or show it inapplicable; Windows/browser workarounds enter only after reproduction                                                                                                                                       |
 
 The 94 Synara-only paths close under the responsibility groups above: identity/marketing and release
 facts remain confirmed divergences; legacy-identity migrations are permanently excluded by the
-maintainer; migrations that carry product semantics are renumbered/translated; Space paths map to
-Thread Groups; usage, Git, search, automation, branch mismatch, PR stack and creation behavior reuse
-their existing OmniMind owners; author tests are retained or equivalently adapted. The 1,602
+maintainer; the Project instructions paths are an explicitly confirmed retirement with Notepad kept
+in the existing Thread owner; migrations that carry product semantics are renumbered/translated;
+Space paths map to Thread Groups; usage, Git, search, automation, branch mismatch, PR stack and
+creation behavior reuse their existing OmniMind owners; author tests are retained or equivalently
+adapted. The 1,602
 same-path differences group under Web/Workbench, Server Provider/Orchestration/Persistence,
 AgentGateway, contracts/shared, Desktop integration and the fixed downstream divergence categories.
 For each group the table points to the behavioral owner and author-equivalent evidence; absence is no

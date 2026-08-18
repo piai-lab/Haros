@@ -14,14 +14,16 @@
 
 证据等级：
 
-| 等级                | 含义                                              | 本文中的例子                                                                              |
-| ------------------- | ------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| 维护者产品方向      | 本轮已明确的目标，但尚需进入 architecture owner   | Settings 中收敛 Prompt 管理；正常产品语言去 Pi 化；stock Pi 不进入该页面                  |
-| 当前源码事实        | 当前 exact HEAD 与安装 runtime 可直接复现         | 默认 Prompt 自称 Pi；Project instructions 只写 localStorage/notes；模板只以 commands 投影 |
-| 有证据的推断        | 调用链足以支持设计选择，仍需 focused journey 收口 | Prompt 页面应直接投影 native resource owner；Session reopen 使用当前资源重建 Prompt       |
-| 待产品/运行证据确认 | 不能伪装为已确定事实                              | Prompt template CRUD 的最终 API；是否改变 project APPEND 对 global APPEND 的遮蔽语义      |
+| 等级                | 含义                                              | 本文中的例子                                                                            |
+| ------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| 维护者产品方向      | 本轮已明确的目标，但尚需进入 architecture owner   | Settings 中收敛 Prompt 管理；正常产品语言去 Pi 化；stock Pi 不进入该页面                |
+| 绑定 snapshot 事实  | 文档所列 exact HEAD 与当时安装 runtime 可直接复现 | 默认 Prompt 自称 Pi；Project instructions 写 localStorage/notes；模板只以 commands 投影 |
+| 有证据的推断        | 调用链足以支持设计选择，仍需 focused journey 收口 | Prompt 页面应直接投影 native resource owner；Session reopen 使用当前资源重建 Prompt     |
+| 待产品/运行证据确认 | 不能伪装为已确定事实                              | Prompt template CRUD 的最终 API；是否改变 project APPEND 对 global APPEND 的遮蔽语义    |
 
 本轮是仓库内研究文档写入，不修改 runtime、Settings、adoption record、依赖或 Campaign claim。
+
+> **2026-08-18 supersession.** 后续沿 Environment→store→草稿 promotion→`thread.meta.update`→Thread notes 的完整调用链，并复核 Synara exact `8f9f600…` 的 `af9c36465` 与 `bdfc332a8` 后，确认该能力不是死代码或“假功能”：母体有意把一段 per-Project 本地文本作为新任务 Notepad seed，并专门修复过持久化。它确实不进入 Agent runtime Prompt，也不等于 `AGENTS.md` Project rules。维护者在知晓这项真实行为及其损失后，明确决定整体退休该表面，保留 Thread-level Notepad，不改名、不改造、不迁移。本文中把它概括为“第二事实源”“假的 Project instructions”的旧措辞据此收窄；Prompt 管理产品化不能接管或迁移这批文本。
 
 ## 1. 结论
 
@@ -32,7 +34,7 @@ OmniMind 应在 Settings 的现有 `Coding / 开发` 分组中增加一个独立
 1. 页面只属于 bundled OmniMind Agent，不提供 Provider selector，不管理 stock Pi、Codex、Claude、OpenCode 或其他 Engine 的 native Prompt；
 2. UI 直接投影 runtime 已有文件、ResourceLoader 与 Session truth，不增加 `prompts.json`、Prompt 数据库、profile store、版本 ledger 或跨 Engine Prompt authority；
 3. 正常 OmniMind 默认 Prompt 与正常产品 UI 不再自称 Pi；stock Pi、第三方资产原名、license、SBOM、来源和诊断仍保持真实 identity；
-4. `AGENTS.md` 才是真正的 Project rules；当前 localStorage `Project instructions` 只是 notes seeding，不得继续冒充运行时指令；
+4. `AGENTS.md` 才是真正的 Project rules；母体 localStorage `Project instructions` 是有意实现的 notes seeding，但维护者已确认在 OmniMind 中整体退休，不能迁移或改造成运行时指令；
 5. Prompt、Tool activation、Permission 和 Extension mutation 是四个正交事实，不能合成一个开关；
 6. 表层只提供用户会用到的编辑、来源、重载和恢复，底层保留完整 precedence、原子写入、冲突检测、operation snapshot 与 provenance。
 
@@ -62,9 +64,9 @@ You are an expert coding assistant operating inside pi, a coding agent harness.
 - 不删除 license、SBOM、source adoption、诊断和技术 provenance 中的 Pi；
 - 不通过 Host append 再说一次“你是 OmniMind”来掩盖 base Prompt 仍自称 Pi，因为相互矛盾的身份同时存在仍是错误。
 
-### 2.2 当前 `Project instructions` 是第二事实源，但不是真指令
+### 2.2 Snapshot 中的 `Project instructions` 是真实 notes-seeding 功能，但不是运行时规则
 
-当前 `apps/web/src/projectInstructionsStore.ts`：
+本文绑定的 snapshot 中，`apps/web/src/projectInstructionsStore.ts`：
 
 - 使用 `omnimind:project-instructions:v1` 写浏览器 localStorage；
 - 以 Product `projectId` 保存一段自由文本；
@@ -77,15 +79,18 @@ Environment 面板的 `EnvironmentProjectInstructionsSection` 也明确把它实
 - 英文硬编码标题和 placeholder；
 - 与 native `AGENTS.md`、`SYSTEM.md`、`APPEND_SYSTEM.md`、Prompt templates 无直接接线。
 
-`thread.turn.start` 的 message contract 只带 text、attachments、skills 与 mentions，不带这个 localStorage 字段。因此该能力不能被描述为“Project instructions”。它最多是一个 Project-scoped scratch note。
+`thread.turn.start` 的 message contract 只带 text、attachments、skills 与 mentions，不带这个 localStorage 字段。真实路径是：用户编辑 per-Project 文本后，Environment 可手动 copy/append；本地草稿首次发送和 Automation 草稿 promotion 还会通过 `thread.meta.update` 把它 best-effort 写进 Thread notes。Synara `bdfc332a8` 正是为修复此前 `thread.create` 不接收 notes 的静默 no-op 而增加该写入。这证明它是完整的 Project→new-task Notepad seed，而不是 Prompt、Project rules 或未接线的占位。
 
-维护者已经要求把 Prompt 相关事实收敛到 Settings。最小处置是：
+维护者在 2026-08-18 明确接受失去“每个 Project 复用一段文字并自动预填新任务 Notepad”的能力，裁决为：
 
-1. 停止在 Environment 中把该 Store 呈现为 Project instructions；
-2. 停止在新 Thread/Automation promotion 时把它隐式复制进 notes；
-3. 不把旧 localStorage 迁移为 `AGENTS.md`，因为自动迁移会把此前的 notes 意图升级成真实 Agent 指令；
-4. first-public 阶段可以停止读取但不主动删除未知本机字节；
-5. 新的 `当前项目规则` 直接投影 native `AGENTS.md` 继承链。
+1. 整体删除 Environment UI、Settings 开关/search entry、store、autosave 与手动 copy/append；
+2. 删除首次发送与 Automation promotion 的隐藏 notes 写入；
+3. 保留现有 Thread-level Notepad 及已有 Thread notes，不按无法证明的来源反向删除内容；
+4. 不把旧 localStorage 或既有 notes 迁移到 `AGENTS.md`、Notepad 或任何 Prompt 资源；
+5. 不因没有用户而建立一次性 migration/cleanup/compatibility rail；first-public source 不再注册该 key；
+6. 新的 `当前项目规则` 若未来实现，只能直接投影 native `AGENTS.md` 继承链。
+
+退休理由是产品边界：名称暗示 runtime rules，实际行为却是跨任务模板与隐藏 notes 写入，会把 Project scope 和当前任务记录混成一个心智模型。它不是对母体实现质量的否定，也不能用“功能是假的”作为删除依据。
 
 ### 2.3 native ResourceLoader 已拥有正确基础
 
@@ -505,18 +510,18 @@ Host policy diet 必须以运行时真值为前提，不能为了 token 更少�
 
 ## 9. Disposition map
 
-| 机制/表面                         | 当前 owner                            | Disposition              | 原因                                         |
-| --------------------------------- | ------------------------------------- | ------------------------ | -------------------------------------------- |
-| Pi native Prompt builder          | product-owned Pi-derived runtime      | Preserve                 | 已正确重建 tools/resources/context，不复制   |
-| OmniMind default identity         | product-owned runtime source patch    | Modify narrowly          | 当前自称 Pi，直接违反产品身份                |
-| `SYSTEM.md` / `APPEND_SYSTEM.md`  | ResourceLoader/files                  | Preserve + project       | UI 只投影/编辑真实文件                       |
-| `AGENTS.md` chain                 | ResourceLoader + Workbench File owner | Preserve + route         | 真正 Project rules，不建 DB                  |
-| Prompt templates                  | ResourceLoader/Extension/Package      | Bridge narrowly          | 先补 typed provenance，动作按真实 capability |
-| current effective view            | Session/resource projection           | Add read-only projection | 用户需要解释，不取得 lifecycle               |
-| Host policy                       | Agent Gateway + tool definitions      | Simplify in owner        | 常驻手册过重且已有事实漂移                   |
-| localStorage Project instructions | Web Store/notes                       | Delete duplicate surface | 名称误导且不进入 native Prompt               |
-| Prompt profile/version DB         | 不存在                                | Do not build             | 没有当前用户结果要求                         |
-| stock Pi Prompt management        | stock Pi Provider                     | Out of scope             | 保持独立 Engine/private home                 |
+| 机制/表面                         | 当前 owner                            | Disposition              | 原因                                                                                         |
+| --------------------------------- | ------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------- |
+| Pi native Prompt builder          | product-owned Pi-derived runtime      | Preserve                 | 已正确重建 tools/resources/context，不复制                                                   |
+| OmniMind default identity         | product-owned runtime source patch    | Modify narrowly          | 当前自称 Pi，直接违反产品身份                                                                |
+| `SYSTEM.md` / `APPEND_SYSTEM.md`  | ResourceLoader/files                  | Preserve + project       | UI 只投影/编辑真实文件                                                                       |
+| `AGENTS.md` chain                 | ResourceLoader + Workbench File owner | Preserve + route         | 真正 Project rules，不建 DB                                                                  |
+| Prompt templates                  | ResourceLoader/Extension/Package      | Bridge narrowly          | 先补 typed provenance，动作按真实 capability                                                 |
+| current effective view            | Session/resource projection           | Add read-only projection | 用户需要解释，不取得 lifecycle                                                               |
+| Host policy                       | Agent Gateway + tool definitions      | Simplify in owner        | 常驻手册过重且已有事实漂移                                                                   |
+| localStorage Project instructions | Web Store/Thread notes                | Retire confirmed         | 真实 notes-seeding 与 runtime rules 不同；维护者接受失去 Project→new-task seed，保留 Notepad |
+| Prompt profile/version DB         | 不存在                                | Do not build             | 没有当前用户结果要求                                                                         |
+| stock Pi Prompt management        | stock Pi Provider                     | Out of scope             | 保持独立 Engine/private home                                                                 |
 
 ## 10. 最小纵向切片
 
@@ -544,7 +549,7 @@ Host policy diet 必须以运行时真值为前提，不能为了 token 更少�
 
 - Workbench owner 接纳窄 `prompts` section；
 - 增加 overview/focused detail、search/deep-link、中英 catalog；
-- 删除/退休假的 Environment Project instructions 读取链；
+- 删除已确认退休的 Environment Project instructions 全链路；
 - 先只读 + reload，不承诺 CRUD。
 
 成功条件：用户只在一个地方理解 OmniMind Prompt，旧 notes seeding 不再冒充 Project rules，Settings未被重排成新平台。
@@ -640,7 +645,8 @@ Outcome:
 
 Current truth:
   Pi native builder/ResourceLoader 已成熟；OmniMind base 仍自称 Pi；
-  现有 Project instructions 是 localStorage notes；模板只有 command projection；
+  母体 Project instructions 是有意实现的 localStorage→Thread notes seed，
+  但维护者已确认在 OmniMind 中整体退休；模板只有 command projection；
   Host policy 过重并存在事实漂移。
 
 Smallest path:

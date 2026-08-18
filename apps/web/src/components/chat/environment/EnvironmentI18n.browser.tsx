@@ -6,7 +6,6 @@ import "../../../index.css";
 
 import {
   MessageId,
-  ProjectId,
   ThreadId,
   ThreadMarkerId,
   type PinnedMessage,
@@ -29,11 +28,9 @@ import { I18nProvider } from "~/i18n";
 import { EnvironmentMarkersSection } from "./EnvironmentMarkersSection";
 import { EnvironmentNotesSection } from "./EnvironmentNotesSection";
 import { EnvironmentPinnedSection } from "./EnvironmentPinnedSection";
-import { EnvironmentProjectInstructionsSection } from "./EnvironmentProjectInstructionsSection";
 
 const MESSAGE_ID = MessageId.makeUnsafe("environment-i18n-message");
 const THREAD_ID = ThreadId.makeUnsafe("environment-i18n-thread");
-const PROJECT_ID = ProjectId.makeUnsafe("environment-i18n-project");
 
 const marker: ThreadMarker = {
   id: ThreadMarkerId.makeUnsafe("environment-i18n-marker"),
@@ -77,14 +74,6 @@ function EnvironmentLocaleHarness() {
         onRename={() => {}}
       />
       <EnvironmentNotesSection threadId={THREAD_ID} notes="" onChange={async () => {}} />
-      <EnvironmentProjectInstructionsSection
-        projectId={PROJECT_ID}
-        instructions="Keep the shell stable."
-        threadNotes=""
-        canCopyToThreadNotes
-        onInstructionsChange={() => {}}
-        onCopyToThreadNotes={() => {}}
-      />
     </I18nProvider>
   );
 }
@@ -101,12 +90,8 @@ describe("Environment locale projection", () => {
     expect(page.getByRole("button", { name: "Text markers", exact: true })).toBeInTheDocument();
     expect(page.getByRole("button", { name: "Pinned messages", exact: true })).toBeInTheDocument();
     expect(page.getByRole("button", { name: "Notepad", exact: true })).toBeInTheDocument();
-    expect(
-      page.getByRole("button", { name: "Project instructions", exact: true }),
-    ).toBeInTheDocument();
     expect(page.getByPlaceholder("Add notes for this task…")).toBeInTheDocument();
     expect(page.getByRole("checkbox", { name: "Mark done" }).first()).toBeInTheDocument();
-    expect(page.getByRole("button", { name: "Copy to notepad" })).toBeInTheDocument();
   });
 
   it("renders the same reachable surface in Simplified Chinese", async () => {
@@ -116,9 +101,7 @@ describe("Environment locale projection", () => {
     expect(page.getByRole("button", { name: "文本标记", exact: true })).toBeInTheDocument();
     expect(page.getByRole("button", { name: "置顶消息", exact: true })).toBeInTheDocument();
     expect(page.getByRole("button", { name: "记事本", exact: true })).toBeInTheDocument();
-    expect(page.getByRole("button", { name: "项目指令", exact: true })).toBeInTheDocument();
     expect(page.getByPlaceholder("记录当前任务的临时信息…")).toBeInTheDocument();
     expect(page.getByRole("checkbox", { name: "标记为已完成" }).first()).toBeInTheDocument();
-    expect(page.getByRole("button", { name: "复制到记事本" })).toBeInTheDocument();
   });
 });

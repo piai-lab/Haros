@@ -12,7 +12,7 @@
 - 原 Model services 关注点已经通过的证据，除非当前 SHA 出现新的直接反例，不应因本文重新演整轮 E0–E8；
 - 在本文绑定的 2026-08-15 快照中，`codex/model-services-composer` 先完成原承诺的 completion review、必要补完、clean 与 merge；这只记录当时的分支关系，不约束今天的准入、分支或施工顺序，本文识别的扩展 Pi-native 目标也不自动成为其他关注点的阻断；
 - 当时建议后续从合并后的 `main` 重验 exact runtime/Host 差额；今天是否仍需以及按何顺序施工，必须从当前代码、现行 owner、维护者决定与真实阻塞重新推出，不能把本文条目当封闭需求清单或固定路线；
-- OmniMind 默认身份、Prompt 文件/模板的用户管理、当前错误的 localStorage Project instructions、Session reload/reopen 与 Settings 收敛由后续专项 [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) 从 merged `main` 复核；本文第 4 节继续提供其 Pi-native runtime 语义底座；
+- OmniMind 默认身份、Prompt 文件/模板的用户管理、当时的 localStorage Project instructions、Session reload/reopen 与 Settings 收敛由后续专项 [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) 从 merged `main` 复核；后者已进一步确认该表面是真实 notes-seeding 而非 runtime rule，并记录维护者 2026-08-18 的整体退休决定。本文第 4 节继续提供其 Pi-native runtime 语义底座；
 - Apple 签名/notary、Windows Trusted Signing 与 Windows/Linux 原生安装旅程由后续工程交付统一负责，不属于本文发现的产品代码缺口。
 
 本文所有判断按证据等级分开，避免把历史 CLEAN、当前源码或产品偏好混成同一种事实：
@@ -167,7 +167,7 @@ Pi `createAgentSessionServices()` 在调用方未提供 `settingsManager` 时使
 
 ### 4.0 与 OmniMind Prompt 管理专项的关系
 
-本节锁定 Pi 原生 Prompt rebuild、动态 Extension tools、activation/permission 与下一 turn mutation 的成熟 runtime 语义。它不回答 OmniMind 默认 Prompt 应使用什么身份、用户应在哪里管理追加指令、`AGENTS.md` 如何成为 Project rules、模板如何投影、reload/reopen 如何解释，或当前 localStorage `Project instructions` 是否是真实指令。
+本节锁定 Pi 原生 Prompt rebuild、动态 Extension tools、activation/permission 与下一 turn mutation 的成熟 runtime 语义。它不回答 OmniMind 默认 Prompt 应使用什么身份、用户应在哪里管理追加指令、`AGENTS.md` 如何成为 Project rules、模板如何投影、reload/reopen 如何解释，或当时的 localStorage `Project instructions` 是否是真实指令；这些问题及后续 supersession 由 Prompt 专项复核拥有。
 
 这些产品与当前 `main` 差额已经在 [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) 继续复核。后续实现必须同时满足两篇研究：保留本节的 native dynamic mechanism，同时按专项 review 消除 Pi 产品身份泄漏和第二 Prompt 事实源；不能用新的 Settings textarea 冻结或复制 Pi prompt builder。
 
