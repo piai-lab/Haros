@@ -90,6 +90,7 @@ import {
 } from "~/lib/gitReactQuery";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import {
+  isProviderDiscoverySessionActive,
   providerComposerCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
   providerDiscoveryQueryKeys,
@@ -450,11 +451,6 @@ import {
 import { ComposerPromptEditor, type ComposerPromptEditorHandle } from "./ComposerPromptEditor";
 import { PullRequestThreadDialog } from "./PullRequestThreadDialog";
 import { ChatHeader } from "./chat/ChatHeader";
-import { dispatchThreadNotes } from "~/pinnedMessages";
-import {
-  mergeProjectInstructionsIntoThreadNotes,
-  useProjectInstructionsStore,
-} from "~/projectInstructionsStore";
 import { EnvironmentPanel, type EnvironmentPanelProps } from "./chat/environment/EnvironmentPanel";
 import { usePinnedMessageActions } from "./chat/environment/usePinnedMessageActions";
 import {
@@ -2200,10 +2196,6 @@ export default function ChatView({
     confirmTerminalClose: settings.confirmTerminalTabClose,
     onDeletePlaceholderThread: deletePlaceholderTerminalThread,
   });
-  const projectInstructions = useProjectInstructionsStore((state) =>
-    activeProjectId ? (state.instructionsByProjectId[activeProjectId] ?? "") : "",
-  );
-  const setProjectInstructions = useProjectInstructionsStore((state) => state.setInstructions);
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
@@ -2401,6 +2393,10 @@ export default function ChatView({
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const selectedProvider: ProviderKind =
     selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+  const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
+    provider: selectedProvider,
+    session: activeThread?.session,
+  });
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;
@@ -3569,28 +3565,6 @@ export default function ChatView({
     (messageId: MessageId) => !isPendingSetupBubbleId(messageId),
     [isPendingSetupBubbleId],
   );
-  const handleCopyProjectInstructionsToNotes = useCallback(() => {
-    if (!activeThreadId) {
-      return;
-    }
-    const nextNotes = mergeProjectInstructionsIntoThreadNotes({
-      threadNotes,
-      projectInstructions,
-    });
-    if (nextNotes === threadNotes) {
-      return;
-    }
-    void handleNotesChange(activeThreadId, nextNotes)
-      .then(() => {
-        toastManager.add({
-          type: "success",
-          title: t("conversation.instructionsAdded"),
-        });
-      })
-      .catch(() => {
-        // `handleNotesChange` already surfaces the save failure through the shared notes toast.
-      });
-  }, [activeThreadId, handleNotesChange, projectInstructions, t, threadNotes]);
   const handleJumpToPinnedMessage = useCallback((messageId: MessageId) => {
     timelineControllerRef.current?.scrollToMessage(messageId);
   }, []);
@@ -3801,6 +3775,7 @@ export default function ChatView({
       provider: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
+      activeSession: hasActiveProviderDiscoverySession,
       binaryPath:
         (selectedProvider === "opencode"
           ? providerOptionsForDispatch?.opencode?.binaryPath
@@ -3831,6 +3806,7 @@ export default function ChatView({
       provider: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
+      activeSession: hasActiveProviderDiscoverySession,
       agentDir: selectedProvider === "pi" ? settings.piAgentDir || null : null,
       enabled:
         (isSkillTrigger || composerTriggerKind === "slash-command" || selectedProvider === "pi") &&
@@ -7361,16 +7337,6 @@ export default function ChatView({
           return null;
         }
 
-        const inheritedProjectInstructions =
-          useProjectInstructionsStore.getState().instructionsByProjectId[activeProject.id] ?? "";
-        const inheritedThreadNotes = mergeProjectInstructionsIntoThreadNotes({
-          threadNotes,
-          projectInstructions: inheritedProjectInstructions,
-        });
-        if (inheritedThreadNotes !== threadNotes && inheritedThreadNotes.trim().length > 0) {
-          void dispatchThreadNotes(activeThread.id, inheritedThreadNotes).catch(() => undefined);
-        }
-
         return activeThread.id;
       };
 
@@ -8913,13 +8879,6 @@ export default function ChatView({
       const threadCreateModelSelection: ModelSelection = selectedModelSelectionForSend;
 
       if (isLocalDraftThread) {
-        const inheritedProjectInstructions =
-          useProjectInstructionsStore.getState().instructionsByProjectId[targetProjectIdForSend] ??
-          "";
-        const inheritedThreadNotes = mergeProjectInstructionsIntoThreadNotes({
-          threadNotes,
-          projectInstructions: inheritedProjectInstructions,
-        });
         const promotionCommand = {
           type: "thread.create",
           commandId: newCommandId(),
@@ -8948,17 +8907,6 @@ export default function ChatView({
           (promotion.ownership === "confirmed-existing" && promotion.failure === undefined);
         if (promotion.failure !== undefined) {
           throw promotion.failure;
-        }
-        // `thread.create` does not carry notes, so seed the freshly created
-        // server thread's notepad with the inherited project instructions via a
-        // dedicated meta update. Best-effort: a failure here must not abort the turn.
-        if (inheritedThreadNotes !== threadNotes && inheritedThreadNotes.trim().length > 0) {
-          try {
-            await dispatchThreadNotes(threadIdForSend, inheritedThreadNotes);
-          } catch {
-            // Seeding is non-critical; project instructions can still be copied
-            // into the notepad manually from the Environment panel.
-          }
         }
         if (targetProjectKindForSend === "chat") {
           await api.orchestration.dispatchCommand({
@@ -11889,10 +11837,6 @@ export default function ChatView({
     markerMessageTextById,
     notes: threadNotes,
     activeProjectId,
-    projectInstructions,
-    canCopyProjectInstructionsToNotes: !isLocalDraftThread,
-    onProjectInstructionsChange: setProjectInstructions,
-    onCopyProjectInstructionsToNotes: handleCopyProjectInstructionsToNotes,
     onToggleDiff,
     onOpenAutomation: openAutomationEditDialog,
     onOpenGithubRepository: openBrowserUrl,

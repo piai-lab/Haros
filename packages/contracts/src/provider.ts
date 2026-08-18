@@ -49,11 +49,16 @@ export const ProviderSession = Schema.Struct({
 });
 export type ProviderSession = typeof ProviderSession.Type;
 
+export const ProviderWorkSurface = Schema.Literals(["agent", "chat"]);
+export type ProviderWorkSurface = typeof ProviderWorkSurface.Type;
+
 export const ProviderSessionStartInput = Schema.Struct({
   threadId: ThreadId,
   provider: Schema.optional(ProviderKind),
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
   cwd: Schema.optional(TrimmedNonEmptyString),
+  workSurface: Schema.optional(ProviderWorkSurface),
+  projectContextRoot: Schema.optional(TrimmedNonEmptyString),
   modelSelection: Schema.optional(ModelSelection),
   resumeCursor: Schema.optional(Schema.Unknown),
   forkSourceResumeCursor: Schema.optional(Schema.Unknown),

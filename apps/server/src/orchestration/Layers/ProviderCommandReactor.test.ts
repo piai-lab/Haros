@@ -5943,7 +5943,7 @@ describe("ProviderCommandReactor", () => {
     );
   });
 
-  it("uses the runtime mode requested by thread.turn.start when starting the provider session", async () => {
+  it("keeps Product work-surface fields out of non-OmniMind provider bindings", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 
@@ -5969,10 +5969,44 @@ describe("ProviderCommandReactor", () => {
     expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
       runtimeMode: "full-access",
     });
+    expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("workSurface");
+    expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("projectContextRoot");
+  });
+
+  it("derives the bundled OmniMind Agent surface and canonical Project root", async () => {
+    const harness = await createHarness({
+      threadModelSelection: { provider: "omnimind", model: "deepseek/deepseek-chat" },
+    });
+    const now = new Date().toISOString();
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-omnimind-agent-surface"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("user-message-omnimind-agent-surface"),
+          role: "user",
+          text: "inspect the project",
+          attachments: [],
+        },
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "full-access",
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.startSession.mock.calls.length === 1);
+    expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
+      workSurface: "agent",
+      projectContextRoot: "/tmp/provider-project",
+    });
   });
 
   it("does not pass the Home chat container workspace root through as provider cwd", async () => {
-    const harness = await createHarness();
+    const harness = await createHarness({
+      threadModelSelection: { provider: "omnimind", model: "deepseek/deepseek-chat" },
+    });
     const now = new Date().toISOString();
 
     await Effect.runPromise(
@@ -5984,8 +6018,8 @@ describe("ProviderCommandReactor", () => {
         title: "Home",
         workspaceRoot: "/Users/tester",
         defaultModelSelection: {
-          provider: "codex",
-          model: "gpt-5-codex",
+          provider: "omnimind",
+          model: "deepseek/deepseek-chat",
         },
         createdAt: now,
       }),
@@ -5999,8 +6033,8 @@ describe("ProviderCommandReactor", () => {
         projectId: asProjectId("project-home"),
         title: "Home thread",
         modelSelection: {
-          provider: "codex",
-          model: "gpt-5-codex",
+          provider: "omnimind",
+          model: "deepseek/deepseek-chat",
         },
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         runtimeMode: "approval-required",
@@ -6030,12 +6064,14 @@ describe("ProviderCommandReactor", () => {
     await waitFor(() => harness.startSession.mock.calls.length === 1);
     expect(harness.startSession.mock.calls[0]?.[1]).toMatchObject({
       modelSelection: {
-        provider: "codex",
-        model: "gpt-5-codex",
+        provider: "omnimind",
+        model: "deepseek/deepseek-chat",
       },
       runtimeMode: "approval-required",
+      workSurface: "chat",
     });
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
+    expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("projectContextRoot");
   });
 
   it("renames a generic first-turn thread title using text generation", async () => {

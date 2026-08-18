@@ -44,6 +44,13 @@ const EMPTY_PLUGINS_RESULT: ProviderListPluginsResult = {
   cached: false,
 };
 
+export function isProviderDiscoverySessionActive(input: {
+  readonly provider: ProviderKind;
+  readonly session: { readonly provider: ProviderKind; readonly status: string } | null | undefined;
+}): boolean {
+  return input.session?.provider === input.provider && input.session.status !== "closed";
+}
+
 export const providerDiscoveryQueryKeys = {
   all: ["provider-discovery"] as const,
   composerCapabilities: (provider: ProviderKind) =>
@@ -53,11 +60,28 @@ export const providerDiscoveryQueryKeys = {
     cwd: string | null,
     agentDir: string | null,
     connectionKey: string | null,
-  ) => ["provider-discovery", "commands", provider, cwd, agentDir, connectionKey] as const,
+    threadId: string | null = null,
+    activeSession = false,
+  ) =>
+    [
+      "provider-discovery",
+      "commands",
+      provider,
+      cwd,
+      agentDir,
+      connectionKey,
+      threadId,
+      activeSession,
+    ] as const,
   // The skill list is query-independent (filtering is client-side), so the key
   // deliberately excludes the typed filter to avoid a refetch per keystroke.
-  skills: (provider: ProviderKind, cwd: string | null, agentDir: string | null) =>
-    ["provider-discovery", "skills", provider, cwd, agentDir] as const,
+  skills: (
+    provider: ProviderKind,
+    cwd: string | null,
+    agentDir: string | null,
+    threadId: string | null = null,
+    activeSession = false,
+  ) => ["provider-discovery", "skills", provider, cwd, agentDir, threadId, activeSession] as const,
   skillsCatalog: (cwd: string | null) => ["provider-discovery", "skills-catalog", cwd] as const,
   plugins: (provider: ProviderKind, cwd: string | null, threadId: string | null) =>
     ["provider-discovery", "plugins", provider, cwd, threadId] as const,
@@ -99,11 +123,18 @@ export function providerSkillsQueryOptions(input: {
   provider: ProviderKind;
   cwd: string | null;
   threadId?: string | null;
+  activeSession?: boolean;
   agentDir?: string | null;
   enabled?: boolean;
 }) {
   return queryOptions({
-    queryKey: providerDiscoveryQueryKeys.skills(input.provider, input.cwd, input.agentDir ?? null),
+    queryKey: providerDiscoveryQueryKeys.skills(
+      input.provider,
+      input.cwd,
+      input.agentDir ?? null,
+      input.threadId ?? null,
+      input.activeSession ?? false,
+    ),
     queryFn: async () => {
       const api = ensureNativeApi();
       if (!input.cwd) {
@@ -118,7 +149,9 @@ export function providerSkillsQueryOptions(input: {
     },
     enabled: (input.enabled ?? true) && input.cwd !== null,
     staleTime: 30_000,
-    placeholderData: (previous) => previous ?? EMPTY_SKILLS_RESULT,
+    // A different Thread/session key may have a different Project trust boundary.
+    // Never surface the previous key's resource names while the new key loads.
+    placeholderData: EMPTY_SKILLS_RESULT,
   });
 }
 
@@ -143,6 +176,7 @@ export function providerCommandsQueryOptions(input: {
   provider: ProviderKind;
   cwd: string | null;
   threadId?: string | null;
+  activeSession?: boolean;
   binaryPath?: string | null;
   serverUrl?: string | null;
   // Undefined means "not applicable" (non-OpenCode providers); the body normalizes it.
@@ -161,6 +195,8 @@ export function providerCommandsQueryOptions(input: {
       input.cwd,
       input.agentDir ?? null,
       connectionKey,
+      input.threadId ?? null,
+      input.activeSession ?? false,
     ),
     queryFn: async () => {
       const api = ensureNativeApi();
@@ -181,7 +217,8 @@ export function providerCommandsQueryOptions(input: {
     },
     enabled: (input.enabled ?? true) && input.cwd !== null,
     staleTime: 30_000,
-    placeholderData: (previous) => previous ?? EMPTY_COMMANDS_RESULT,
+    // Prompt commands follow the same Thread/session trust boundary as Skills.
+    placeholderData: EMPTY_COMMANDS_RESULT,
   });
 }
 

@@ -202,7 +202,6 @@ function validateCurrentState(findings, documents) {
       "historical decision record must be explicitly superseded",
     );
   }
-
 }
 
 function validateEngineCapabilityComposition(findings, documents) {
@@ -267,20 +266,23 @@ function validateBundledPiRuntimeAdoption(findings, documents) {
       "scripts/vendor-omnimind-pi-runtime.mjs",
     ],
     sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514",
+    archiveSha256: "aa47aec0a6b90e3e32385676aa444bad49f2b3efcc64275d2cd24f96f245deb9",
     upstreamPackage: "@earendil-works/pi-coding-agent@0.84.2",
     upstreamPackageIntegrity:
       "sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==",
     licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
     sharedRuntimeBytes: "patched",
     patchPath: "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
-    patchSha256: "c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f",
+    patchSha256: "4a6e091990c7d6fe89c21da40d7866c4b5a6311e3c3797a76a4152e9cc21d506",
     stockPatchPath: "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
     stockPatchSha256: "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77",
     generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
     behavioralDifferences: [
       "package identity",
       "piConfig.configDir",
+      "identity-neutral default system prompt without unshipped docs navigation",
+      "bounded project context root or global-only context projection",
+      "host-owned immutable system prompt appended after extension turn mutation",
       "injectable models.json content reader",
       "accepted model-config provider provenance",
       "credential-blind model-config projection",

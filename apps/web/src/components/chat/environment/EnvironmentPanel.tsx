@@ -60,7 +60,6 @@ import { EnvironmentMarkersSection } from "./EnvironmentMarkersSection";
 import { EnvironmentStudioOutputsSection } from "./EnvironmentStudioOutputsSection";
 import { EnvironmentNotesSection } from "./EnvironmentNotesSection";
 import { EnvironmentPinnedSection } from "./EnvironmentPinnedSection";
-import { EnvironmentProjectInstructionsSection } from "./EnvironmentProjectInstructionsSection";
 import { ENVIRONMENT_PANEL_RECAP_MARKDOWN_CLASS_NAME } from "./environmentPanelStyles";
 import { shouldShowStudioFolderRow } from "./EnvironmentPanel.logic";
 import {
@@ -147,16 +146,8 @@ export interface EnvironmentPanelProps {
   markerMessageTextById: ReadonlyMap<MessageId, string>;
   /** Per-thread freeform scratchpad notes (server-synced). */
   notes: string;
-  /** Active project whose local instructions should be edited. */
+  /** Active project used by project-bound Environment surfaces such as pull requests. */
   activeProjectId: ProjectId | null;
-  /** Per-project freeform instructions, persisted locally and optionally copied into notes. */
-  projectInstructions: string;
-  /** Whether the current thread is server-backed enough to accept notepad updates. */
-  canCopyProjectInstructionsToNotes: boolean;
-  /** Persist local project instruction edits. */
-  onProjectInstructionsChange: (projectId: ProjectId, instructions: string) => void;
-  /** Copy/append current project instructions into the active thread's notepad. */
-  onCopyProjectInstructionsToNotes: () => void;
   /** Toggle the Diff panel/route (same handler the header diff toggle used). */
   onToggleDiff: () => void;
   /** Open the shared automation editor for a thread-bound automation row. */
@@ -249,10 +240,6 @@ export function EnvironmentPanel({
   markerMessageTextById,
   notes,
   activeProjectId,
-  projectInstructions,
-  canCopyProjectInstructionsToNotes,
-  onProjectInstructionsChange,
-  onCopyProjectInstructionsToNotes,
   onToggleDiff,
   onOpenAutomation,
   onOpenGithubRepository,
@@ -555,21 +542,6 @@ export function EnvironmentPanel({
             onToggleDone={onToggleThreadMarkerDone}
             onRemove={onRemoveThreadMarker}
             onRename={onRenameThreadMarker}
-          />
-        </>
-      ) : null}
-
-      {settings.showEnvironmentInstructions && activeProjectId ? (
-        <>
-          <EnvironmentSectionDivider />
-          <EnvironmentProjectInstructionsSection
-            key={activeProjectId}
-            projectId={activeProjectId}
-            instructions={projectInstructions}
-            threadNotes={notes}
-            canCopyToThreadNotes={canCopyProjectInstructionsToNotes}
-            onInstructionsChange={onProjectInstructionsChange}
-            onCopyToThreadNotes={onCopyProjectInstructionsToNotes}
           />
         </>
       ) : null}

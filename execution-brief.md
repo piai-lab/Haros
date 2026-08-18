@@ -6,22 +6,27 @@ Updated: 2026-08-18
 
 ## 当前目标
 
-以 Synara exact `8f9f60045ea652db7d4a6822e2f723dde073f40a` 为当前产品母体完成一次事实闭合的 intake：
+在保留已完成的 `Project instructions` 退休候选之上，完成 bundled OmniMind Agent 的默认身份与 Chat/Agent 行为分层：普通 OmniMind 会话不再继承 Pi coding-assistant 身份，且用户已确认的理解、提问、拔高、执行与风险边界在启动、重载、恢复和 Provider replacement 后保持一致。
 
-1. 保留已有 runtime/security/recovery 更新；
-2. 把 Goal 与 Todo 重新分开；
-3. 完整吸收 Synara ThreadGoal、Debug、bounded raw events、width/icon、Profile local export、perf harness，并闭合 Group 与不同名 owner parity；
-4. 同时完成 commit-range、whole-tree path/behavior 与作者测试 accounting；
-5. 代码、README adoption、research disposition、Mission 状态与 exact pushed/packaged evidence 同步收口。
-6. 修复全树审计中对 Synara `c7131c650` 的过宽 `current-stronger` 判断，恢复 Engine 图标和真实状态反馈，同时保留未就绪但可配置 Engine 的可发现性。
+1. 只修改 `omnimind` Provider 的产品身份和行为；stock `pi` 及其他 Engine 保持原生 identity；
+2. 内置不可覆盖的共同 identity/cognitive contract，并按 canonical Project kind 投影 `Agent` 或 `Chat` 行为；不从 cwd、路径名称或 Provider options 猜测工作方式；
+3. `project` 映射为 Agent，`chat`/`studio` 映射为 Chat；该投影只作为现有 Provider Session binding 的恢复快照，不成为第二持久 authority；
+4. canonical folder-backed Project 只在正式 Agent Session admission 后显式 trusted，Project rules 只从 Project/worktree root 到当前 cwd 读取；Chat/Studio 与无 active Session 的被动 discovery 都保持 untrusted/global-only，不执行 Project Extension；
+5. 保留 Pi 原生 dynamic tools、Skills、Extensions、Prompt files、reload、compaction 与 Session lifecycle，不新增 Prompt store、设置页、隐藏文件或兼容轨；
+6. 修正 product-owned default base 中错误的 Pi identity 和未随 archive 发行的 docs/examples 导航，并同步 patch/archive/adoption digest。
 
 ## 当前事实
 
-- OmniMind 工作区：`/Users/liuzaoqu/Desktop/Develop/independent/OmniMind`，当前分支 `main`；原 Synara adoption 分支已删除，历史 authority closure 仍可由 `72eaf86219e369ea8227639f71a5a1b634667d25` 追溯。
+- 当前隔离工作区：`/Users/liuzaoqu/.codex/worktrees/retire-project-instructions/OmniMind`，分支 `codex/retire-project-instructions`；已于 2026-08-18 无冲突重放到 `origin/main@8066f23f9`。维护者现已授权在面向合并审查与 final gates 通过后推送该任务分支、安全合入最新 `main`、从合并 SHA 构建并验证本机安装产物，最后只清理该任务的 worktree 与本地/远端分支。
 - 本地与远端 `main` 已在不改写历史的前提下合入 Thinking-status 更新、维护者已有的 scoped-adoption 文档提交与 exact pushed product `3077bf253`。
 - Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`，等于 `origin/main`。
 - `58f76446d` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归；其最后一轮改动只关闭 Automation 测试时钟/隔离和 Web compiler 回归，没有增加平行产品 owner。
 - `3077bf253` 已直接复用现有 `ProviderIcon`、Server health 与 Composer availability 语义，补齐中英文图标/可用/登录/受限/未安装/不可用反馈，并保留未安装 Engine 的设置可达性。当前安装版及 arm64 ad-hoc DMG 均来自该 exact pushed product；fresh 隔离 profile 已证明图标、状态、可用数量、未安装 Engine 可发现性和关闭重开。
+- Synara `af9c36465` 有意增加了 per-Project localStorage→Thread notes seed，`bdfc332a8` 又专门通过 `thread.meta.update` 修复首次发送持久化；它是真实 notes-template 功能，但不是 Agent runtime Project rules。维护者于 2026-08-18 在知晓这项行为和损失后明确确认整体退休，并接受不再提供 Project→new-task Notepad seed。
+- `Project instructions` 全链退休已在当前分支提交为 `2bd0478a6`；默认身份与边界实现分别冻结于 `7f2fdd502`、`8439faeac`。面向合并的全量测试、typecheck、lint、document contract、license 与 exact product-owned Pi 再生成正在同一候选树上收口；任务分支尚未 push/merge，因此当前仍是本地 source candidate。
+- baseline product-owned `@omnimind/pi-coding-agent@0.84.2` 的 default base 写着 `You are an expert coding assistant operating inside pi` 并引用 archive 中没有发行的 docs/examples；当前本地 candidate 已把 base 改为 identity-neutral，并在 Extension turn mutation 后只把 Host-owned OmniMind engine contract 去重、追加为 exactly once。general Host/tool guidance 保持 mutable append，不因身份改造冻结已知 Browser/Device policy 漂移；stock Pi 的 identity/default base 不变。
+- baseline Provider start/recovery 没有携带 work surface 或 trusted Project root，Pi-family 依赖 SDK 默认 `projectTrusted=true` 并从 filesystem root 扫描 context files；当前本地 candidate 已从同一份 canonical Project snapshot 派生 surface、effective cwd 与 Project/worktree root，只为 bundled `omnimind` 随现有 binding recovery/rollback 传递，其他 Provider admission 丢弃这些字段。Chat 与无 active Session discovery 保持 untrusted/global-only，skills/commands 的 Thread/Session key 变化使用固定空 placeholder，不会短暂沿用上一 trust tuple；该 candidate 尚未 push，也未从 exact pushed SHA 打包或安装。
+- 维护者已确认：OmniMind identity、Chat/Agent 边界、Agent alignment/risk contract 属于不可被 Prompt 管理覆盖的 engine contract；未来 Prompt 管理只管理个人指令、项目规则和模板。
 - `e0ee9cfe2` 的逐回合 `omnimind_update_tasks` Todo/task-list 投影仍与持久 Goal 分离；Todo 不是 Goal 的缩水替代。
 - Synara Goal 与 Todo 是两条独立责任。ThreadGoal 位于 OmniMind 已继承的同一 Product Orchestration/Thread authority 内，不是第二产品控制面。
 - 历史 C0–C5 / C1–C3 阶段门已被维护者撤销；它们不能再阻挡母体能力采用。`research/omnimind-agent-core-execution-guide.md` 只保留验证参考。
@@ -30,7 +35,7 @@ Updated: 2026-08-18
 
 ## 当前工作范围
 
-本轮仅重开 `c7131c650` 的混合责任处置：产品代码、双语、availability 接线、unit/browser/typecheck/lint/Web build、exact pushed-SHA 打包安装与 fresh-profile 重开验证均已完成。其余 Synara adoption 不重新横向扩张。
+本轮只完成 OmniMind 默认 identity/cognitive contract、Chat/Agent overlay、Project trust/context boundary 与为此必需的 Session admission/recovery 接线；保留当前分支已完成的 Project instructions 退休。明确不启动 Prompt 管理 UI、Template CRUD、Host policy 全量 diet、Memory/Knowledge、Workflow、第二 Prompt loader/store 或其他 Agent Core 扩张。
 
 ## 保留边界
 
@@ -42,15 +47,16 @@ Updated: 2026-08-18
 
 ## 当前阻塞
 
-当前没有待裁决的产品阻塞。维护者已确认永久排除 Synara/DP Code legacy storage migration；Automation 采用连续失败策略，默认 `3`，并提供 `1`/`3`/`5`/持续运行选项。维护者也明确将签名、公证、Windows/Linux artifact/journey、GitHub Release 与 update feed 排除出本轮；本机产物只如实称为 macOS arm64 ad-hoc candidate。
+当前没有待裁决的产品阻塞。维护者已授权本轮完成任务分支 push、合入最新 `main`、本机构建/安装验证与精确分支清理；这不授权 GitHub Release、update feed、签名、公证或 Windows/Linux artifact/journey，这些发行边界保持不变。
 
 ## 下一动作
 
-当前 Synara adoption 与 Engine picker parity 没有剩余施工动作。后续若维护者另行启动 upstream ancestry baseline，只能在隔离分支验证三方合并质量，且不得改写本轮 adopted-head 证据。
+冻结已经闭合的最小实现，不再扩张 discovery 或 Prompt 管理责任；MiMo Chat 与 DeepSeek folder-backed Agent 的首轮、continuation、identity、surface overlay 及 Extension replacement 已完成脱敏 live probe。提交后 review 的边界修复已收缩为同一个本地 follow-up：跨 trust tuple 的 discovery 使用固定空 placeholder，`error` 仍投影可能存在的物理 Session，而 `closed` 切回 global-only，surface/root 只由 bundled OmniMind 承担，immutable engine contract 与 mutable Host append 已分离。完成剩余 final gates 后，提交本次审查收口；重新 fetch 并确认最新 `main`，推送任务分支，使用明确 merge commit 合入并推送 `main`；随后从该精确合并 SHA 构建、安装并用 fresh 隔离 profile 验证，最后只删除已合并的本任务 worktree 与本地/远端分支。Prompt 管理产品化继续停在独立决策面。
 
 ## 证据入口
 
 - Source intake 与逐责任 disposition：[`research/source-review.md`](research/source-review.md)
+- Project instructions 母体调用链、退休边界与 Prompt 分工：[`research/omnimind-prompt-management-review.md`](research/omnimind-prompt-management-review.md)
 - Agent Core 稳定 falsifier：[`research/omnimind-agent-core-execution-guide.md`](research/omnimind-agent-core-execution-guide.md)
 - Claim 状态与 evidence pointer：[`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md)
 - 产品事实：[`architecture/`](architecture/README.md)

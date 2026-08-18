@@ -98,7 +98,6 @@ const PRODUCT_COPY_SOURCES = [
   "components/chat/environment/EnvironmentNotesSection.tsx",
   "components/chat/environment/EnvironmentPanel.tsx",
   "components/chat/environment/EnvironmentPinnedSection.tsx",
-  "components/chat/environment/EnvironmentProjectInstructionsSection.tsx",
   "components/chat/environment/EnvironmentPullRequestSection.tsx",
   "components/chat/environment/EnvironmentRow.tsx",
   "components/chat/environment/EnvironmentStudioOutputsSection.tsx",
@@ -206,7 +205,6 @@ const REQUIRED_W1_COPY_SOURCES = [
   "components/chat/environment/EnvironmentPanel.tsx",
   "components/chat/environment/environmentPanelStyles.ts",
   "components/chat/environment/EnvironmentPinnedSection.tsx",
-  "components/chat/environment/EnvironmentProjectInstructionsSection.tsx",
   "components/chat/environment/environmentPullRequest.logic.ts",
   "components/chat/environment/EnvironmentPullRequestSection.tsx",
   "components/chat/environment/EnvironmentRow.tsx",
@@ -441,7 +439,6 @@ describe("reachable OmniMind-owned product copy", () => {
       ["Recap", "摘要"],
       ["Pinned messages", "置顶消息"],
       ["Text markers", "文本标记"],
-      ["Project instructions", "项目指令"],
       ["Notepad", "记事本"],
     ]);
     for (const [canonicalTitle, localizedTitle] of expectedZhW1Titles) {
@@ -481,7 +478,6 @@ describe("reachable OmniMind-owned product copy", () => {
       ["environment.textMarkers", "Text markers", "文本标记"],
       ["environment.notepad", "Notepad", "记事本"],
       ["environment.notepadPlaceholder", "Add notes for this task…", "记录当前任务的临时信息…"],
-      ["environment.projectInstructions", "Project instructions", "项目指令"],
       ["composer.command.subagents", "Subagents", "子智能体"],
     ] as const;
     for (const [key, en, zh] of exact) {

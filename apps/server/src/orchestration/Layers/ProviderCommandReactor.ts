@@ -1331,7 +1331,16 @@ const make = Effect.gen(function* () {
     }
     const resolvedProviderOptions =
       options?.providerOptions ?? providerStartOptionsFromServerSettings(settingsSnapshot.settings);
-    const effectiveCwd = yield* resolveProjectedThreadWorkspaceCwd(thread);
+    const project = yield* resolveThreadWorkspaceProject(thread);
+    if (!project) {
+      return yield* Effect.die(
+        new Error(`Project '${thread.projectId}' was not found in projection state.`),
+      );
+    }
+    const effectiveCwd = resolveThreadWorkspaceCwd({
+      thread,
+      projects: [project],
+    });
     const workspaceState = resolveThreadWorkspaceState({
       envMode: thread.envMode,
       worktreePath: thread.worktreePath,
@@ -1346,6 +1355,19 @@ const make = Effect.gen(function* () {
     const providerSessionOptions = {
       threadId,
       ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
+      ...(targetProvider === "omnimind"
+        ? {
+            workSurface: project.kind === "project" ? ("agent" as const) : ("chat" as const),
+            ...(project.kind === "project"
+              ? {
+                  projectContextRoot:
+                    workspaceState === "worktree-ready" && thread.worktreePath
+                      ? thread.worktreePath
+                      : project.workspaceRoot,
+                }
+              : {}),
+          }
+        : {}),
       modelSelection: desiredModelSelection,
       providerOptions: resolvedProviderOptions,
       runtimeMode: desiredRuntimeMode,
@@ -2156,8 +2178,8 @@ const make = Effect.gen(function* () {
                     tag: "thread_context" as const,
                     contextText: retryBootstrapText,
                     wrapLatestUserMessage: true,
-                }
-              : null;
+                  }
+                : null;
           const retryNormalizedInput = finalizeProviderInput(retryBootstrapSelection);
 
           yield* Effect.logWarning(

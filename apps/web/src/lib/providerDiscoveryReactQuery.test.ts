@@ -4,12 +4,15 @@
 // Layer: Web data fetching tests
 
 import type { NativeApi } from "@omnimind/contracts";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  isProviderDiscoverySessionActive,
   isInitialModelDiscoveryPending,
+  providerCommandsQueryOptions,
   providerModelsQueryOptions,
+  providerSkillsQueryOptions,
 } from "./providerDiscoveryReactQuery";
 import * as nativeApi from "../nativeApi";
 
@@ -118,5 +121,181 @@ describe("providerModelsQueryOptions", () => {
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(options)).resolves.toEqual(catalog);
+  });
+});
+
+describe("Session-aware resource discovery keys", () => {
+  it("keeps a recoverable error on the active key and changes key only after close", () => {
+    const errorActive = isProviderDiscoverySessionActive({
+      provider: "omnimind",
+      session: { provider: "omnimind", status: "error" },
+    });
+    const closedActive = isProviderDiscoverySessionActive({
+      provider: "omnimind",
+      session: { provider: "omnimind", status: "closed" },
+    });
+
+    expect(errorActive).toBe(true);
+    expect(closedActive).toBe(false);
+    expect(
+      providerSkillsQueryOptions({
+        provider: "omnimind",
+        cwd: "/tmp/project",
+        threadId: "thread-a",
+        activeSession: errorActive,
+      }).queryKey,
+    ).not.toEqual(
+      providerSkillsQueryOptions({
+        provider: "omnimind",
+        cwd: "/tmp/project",
+        threadId: "thread-a",
+        activeSession: closedActive,
+      }).queryKey,
+    );
+  });
+
+  it("separates threads and the pre-session versus active-session resource loaders", () => {
+    const skillsBeforeSession = providerSkillsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: false,
+    }).queryKey;
+    const skillsAfterSession = providerSkillsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: true,
+    }).queryKey;
+    const skillsForOtherThread = providerSkillsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-b",
+      activeSession: true,
+    }).queryKey;
+    const commandsBeforeSession = providerCommandsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: false,
+    }).queryKey;
+    const commandsAfterSession = providerCommandsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: true,
+    }).queryKey;
+
+    expect(skillsAfterSession).not.toEqual(skillsBeforeSession);
+    expect(skillsAfterSession).not.toEqual(skillsForOtherThread);
+    expect(commandsAfterSession).not.toEqual(commandsBeforeSession);
+  });
+
+  it("does not expose an active Agent Skill while a Chat key is loading", async () => {
+    let resolveChatSkills: ((value: unknown) => void) | undefined;
+    const listSkills = vi
+      .fn()
+      .mockResolvedValueOnce({
+        skills: [{ name: "project-only-skill", description: "Private Project Skill" }],
+        source: "active-agent",
+        cached: false,
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveChatSkills = resolve;
+          }),
+      );
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listSkills },
+    } as unknown as NativeApi);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const observer = new QueryObserver(
+      queryClient,
+      providerSkillsQueryOptions({
+        provider: "omnimind",
+        cwd: "/tmp/project",
+        threadId: "thread-agent",
+        activeSession: true,
+      }),
+    );
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    await vi.waitFor(() => {
+      expect(observer.getCurrentResult().data?.skills[0]?.name).toBe("project-only-skill");
+    });
+    observer.setOptions(
+      providerSkillsQueryOptions({
+        provider: "omnimind",
+        cwd: "/tmp/managed-chat",
+        threadId: "thread-chat",
+        activeSession: false,
+      }),
+    );
+
+    expect(observer.getCurrentResult().isPlaceholderData).toBe(true);
+    expect(observer.getCurrentResult().data).toEqual({
+      skills: [],
+      source: "empty",
+      cached: false,
+    });
+    resolveChatSkills?.({ skills: [], source: "chat", cached: false });
+    unsubscribe();
+  });
+
+  it("does not expose an active Agent Prompt command after its Session closes", async () => {
+    let resolveGlobalCommands: ((value: unknown) => void) | undefined;
+    const listCommands = vi
+      .fn()
+      .mockResolvedValueOnce({
+        commands: [{ name: "project-review", description: "Private Project Prompt" }],
+        source: "active-agent",
+        cached: false,
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveGlobalCommands = resolve;
+          }),
+      );
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listCommands },
+    } as unknown as NativeApi);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const observer = new QueryObserver(
+      queryClient,
+      providerCommandsQueryOptions({
+        provider: "omnimind",
+        cwd: "/tmp/project",
+        threadId: "thread-agent",
+        activeSession: true,
+      }),
+    );
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    await vi.waitFor(() => {
+      expect(observer.getCurrentResult().data?.commands[0]?.name).toBe("project-review");
+    });
+    observer.setOptions(
+      providerCommandsQueryOptions({
+        provider: "omnimind",
+        cwd: "/tmp/project",
+        threadId: "thread-agent",
+        activeSession: false,
+      }),
+    );
+
+    expect(observer.getCurrentResult().isPlaceholderData).toBe(true);
+    expect(observer.getCurrentResult().data).toEqual({
+      commands: [],
+      source: "empty",
+      cached: false,
+    });
+    resolveGlobalCommands?.({ commands: [], source: "global", cached: false });
+    unsubscribe();
   });
 });

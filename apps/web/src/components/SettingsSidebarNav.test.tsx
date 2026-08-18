@@ -51,10 +51,8 @@ describe("rankSettingsSearchEntries", () => {
     );
   });
 
-  it("indexes environment instructions and the system UI font row", () => {
-    expect(SETTINGS_SEARCH_ENTRIES.map((entry) => entry.id)).toEqual(
-      expect.arrayContaining(["general:environment-instructions", "appearance:system-ui-font"]),
-    );
+  it("indexes the system UI font row", () => {
+    expect(SETTINGS_SEARCH_ENTRIES.map((entry) => entry.id)).toContain("appearance:system-ui-font");
   });
 
   it("surfaces every row in a section when searching the section label", () => {

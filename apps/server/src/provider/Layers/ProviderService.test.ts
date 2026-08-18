@@ -486,7 +486,7 @@ function makeProviderServiceLayer(
   };
 }
 
-const routing = makeProviderServiceLayer();
+const routing = makeProviderServiceLayer(undefined, { includeOmniMind: true });
 const modelServiceAdmission = makeProviderServiceLayer(undefined, {
   includeOmniMind: true,
 });
@@ -2252,6 +2252,72 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
+  it.effect("strips OmniMind-only work-surface fields from other Provider admission", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-codex-work-surface-strip");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        cwd: "/tmp/project/packages/app",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/project",
+        runtimeMode: "full-access",
+      });
+      const startedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).workSurface, undefined);
+      assert.equal(
+        asRuntimePayloadRecord(startedBinding?.runtimePayload).projectContextRoot,
+        undefined,
+      );
+
+      yield* provider.stopRuntimeSession!({ threadId });
+      routing.codex.startSession.mockClear();
+      yield* provider.sendTurn({ threadId, input: "resume", attachments: [] });
+
+      const recoveredInput = routing.codex.startSession.mock.calls[0]?.[0];
+      assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
+      assert.equal(recoveredInput?.workSurface, undefined);
+      assert.equal(recoveredInput?.projectContextRoot, undefined);
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
+  it.effect("persists and recovers the bundled OmniMind work surface", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-omnimind-work-surface-recovery");
+
+      yield* provider.startSession(threadId, {
+        provider: "omnimind",
+        threadId,
+        cwd: "/tmp/project/packages/app",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/project",
+        runtimeMode: "full-access",
+      });
+      const startedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).workSurface, "agent");
+      assert.equal(
+        asRuntimePayloadRecord(startedBinding?.runtimePayload).projectContextRoot,
+        "/tmp/project",
+      );
+
+      yield* provider.stopRuntimeSession!({ threadId });
+      routing.omnimind.startSession.mockClear();
+      yield* provider.sendTurn({ threadId, input: "resume", attachments: [] });
+
+      const recoveredInput = routing.omnimind.startSession.mock.calls[0]?.[0];
+      assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
+      assert.equal(recoveredInput?.workSurface, "agent");
+      assert.equal(recoveredInput?.projectContextRoot, "/tmp/project");
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
   it.effect("fork source overrides explicit and persisted resume cursors", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
@@ -2906,20 +2972,17 @@ routing.layer("ProviderServiceLive routing", (it) => {
         const directory = yield* ProviderSessionDirectory;
         const threadId = asThreadId("thread-same-provider-start-persistence-failure");
         const previousModelSelection = {
-          provider: "codex" as const,
-          model: "gpt-5-codex",
-          options: { reasoningEffort: "high" },
-        };
-        const previousProviderOptions = {
-          codex: { binaryPath: "/tmp/codex-stable" },
+          provider: "omnimind" as const,
+          model: "local/stable-model",
         };
         yield* provider.startSession(threadId, {
-          provider: "codex",
+          provider: "omnimind",
           threadId,
           cwd: "/tmp/same-provider-persistence-failure",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/same-provider-persistence-failure",
           runtimeMode: "full-access",
           modelSelection: previousModelSelection,
-          providerOptions: previousProviderOptions,
         });
         const previousBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
         if (!previousBinding) assert.fail("Expected the previous provider binding");
@@ -2932,18 +2995,18 @@ routing.layer("ProviderServiceLive routing", (it) => {
           .spyOn(directory, "upsert")
           .mockImplementationOnce((binding) => originalUpsert(binding))
           .mockImplementationOnce(() => Effect.fail(persistenceFailure));
-        const stopCount = routing.codex.stopSession.mock.calls.length;
+        const stopCount = routing.omnimind.stopSession.mock.calls.length;
 
         const result = yield* Effect.result(
           provider.startSession(threadId, {
-            provider: "codex",
+            provider: "omnimind",
             threadId,
             cwd: "/tmp/same-provider-persistence-failure-new",
+            workSurface: "chat",
             runtimeMode: "full-access",
             modelSelection: {
-              provider: "codex",
-              model: "gpt-5.1-codex",
-              options: { reasoningEffort: "low" },
+              provider: "omnimind",
+              model: "local/new-model",
             },
           }),
         );
@@ -2953,8 +3016,8 @@ routing.layer("ProviderServiceLive routing", (it) => {
         // Stop-first retires the old incarnation, cleanup retires the failed
         // target, then the exact old binding is restored as a fresh physical
         // incarnation under a third generation.
-        assert.equal(routing.codex.stopSession.mock.calls.length, stopCount + 2);
-        assert.equal(yield* routing.codex.hasSession(threadId), true);
+        assert.equal(routing.omnimind.stopSession.mock.calls.length, stopCount + 2);
+        assert.equal(yield* routing.omnimind.hasSession(threadId), true);
         const restoredBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
         assert.equal(restoredBinding?.provider, previousBinding.provider);
         assert.notEqual(restoredBinding?.lifecycleGeneration, previousBinding.lifecycleGeneration);
@@ -2963,9 +3026,16 @@ routing.layer("ProviderServiceLive routing", (it) => {
           asRuntimePayloadRecord(restoredBinding?.runtimePayload).modelSelection,
           previousModelSelection,
         );
-        assert.deepEqual(
-          asRuntimePayloadRecord(restoredBinding?.runtimePayload).providerOptions,
-          previousProviderOptions,
+        assert.equal(asRuntimePayloadRecord(restoredBinding?.runtimePayload).workSurface, "agent");
+        assert.equal(
+          asRuntimePayloadRecord(restoredBinding?.runtimePayload).projectContextRoot,
+          "/tmp/same-provider-persistence-failure",
+        );
+        const restoredStartInput = routing.omnimind.startSession.mock.calls.at(-1)?.[0];
+        assert.equal(restoredStartInput?.workSurface, "agent");
+        assert.equal(
+          restoredStartInput?.projectContextRoot,
+          "/tmp/same-provider-persistence-failure",
         );
 
         yield* provider.stopSession({ threadId });

@@ -54,6 +54,7 @@ import {
   createThreadSelector,
 } from "~/storeSelectors";
 import {
+  isProviderDiscoverySessionActive,
   providerComposerCapabilitiesQueryOptions,
   providerPluginsQueryOptions,
   providerSkillsQueryOptions,
@@ -747,6 +748,10 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   // Library discovery stays bound to the Engine the user selected. Unsupported
   // tabs render an accurate unavailable state instead of reading another Engine.
   const effectiveProvider = selectedProvider;
+  const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
+    provider: effectiveProvider,
+    session: contextThread?.session,
+  });
 
   const discoveryCwd = resolveProviderDiscoveryCwd({
     activeThreadWorktreePath: contextThread?.worktreePath ?? null,
@@ -772,6 +777,7 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       provider: effectiveProvider,
       cwd: discoveryCwd,
       threadId: providerThreadId,
+      activeSession: hasActiveProviderDiscoverySession,
       enabled: selectedTab === "skills" && canListSkills && discoveryCwd !== null,
     }),
   );

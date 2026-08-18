@@ -7075,6 +7075,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
             prompt: "say hi",
             schedule: { type: "interval", everySeconds: 15 },
           });
+          expect(
+            wsRequests.some((request) => {
+              const command = readDispatchedCommand(request);
+              return command?.type === "thread.meta.update" && command.notes !== undefined;
+            }),
+            "draft promotion must not synthesize Notepad content",
+          ).toBe(false);
         },
         { timeout: 8_000, interval: 16 },
       );

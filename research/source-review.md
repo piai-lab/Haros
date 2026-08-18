@@ -434,9 +434,9 @@ The three existing OmniMind differences were semantically rebased without wideni
 The strongest counterevidence was patch mechanics, not a product API conflict: the former
 zero-context source patch could silently land across a shifted upstream lockfile, while the compiled
 OAuth patch conflicted after upstream output moved. Both were replaced by contextual, source-matched
-semantic rebases. The product archive is reproducible at SHA-256
-`a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514`; the source,
-stock and OAuth patch SHA-256 values are respectively
+semantic rebases. The pushed product evidence below used the then-current reproducible archive
+SHA-256 `a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514`; its source,
+stock and OAuth patch SHA-256 values were respectively
 `c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f`,
 `7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77` and
 `ade36ccb1486d21504fd32cccdddc06810a179958fb4b0b32343a2708f6f4240`.
@@ -447,6 +447,28 @@ continuation plus DeepSeek first-turn probes, then produced and installed an arm
 revision and four Pi package manifests report the same candidate and `0.84.2`. A fresh isolated
 profile showed stock Pi `v0.84.2`, accurate zero-model-service setup, complete exit and same-profile
 reopen. This is now product-level candidate evidence, not Campaign verification or release evidence.
+
+On 2026-08-18 the unpushed `codex/retire-project-instructions` candidate kept the same exact Pi
+revision and stock/OAuth patches while extending the sole product source patch to remove the false
+Pi coding-assistant identity and navigation to docs/examples omitted from the archive, and to give
+Pi's existing ResourceLoader an explicit canonical Project-root boundary or global-only context
+mode. The same narrow seam preserves native per-turn Extension mutation, then normalizes and appends
+the Host-owned immutable engine contract exactly once at final request composition; general
+Host/tool guidance remains in Pi's mutable append lifecycle. Project trust is only
+admitted by a real Agent Session; passive model/Skill/command discovery remains untrusted and
+global-only, so it neither executes Project Extension factories nor exposes project-local resources
+before admission. The regenerated product patch is
+`4a6e091990c7d6fe89c21da40d7866c4b5a6311e3c3797a76a4152e9cc21d506`; the deterministic archive
+is `aa47aec0a6b90e3e32385676aa444bad49f2b3efcc64275d2cd24f96f245deb9`. Its fixed-revision offline
+build and 325 focused Pi tests pass. A 2026-08-18 live probe then exercised the product adapter
+through credential-in-memory loopback pass-throughs to the official MiMo and DeepSeek
+OpenAI-compatible endpoints: MiMo Chat and DeepSeek folder-backed Agent both completed first turn
+and continuation, identified OmniMind and πAI-Lab, and returned the correct Chat/Agent overlay label;
+the DeepSeek Agent probe retained that identity after a Project Extension replaced the mutable
+system prompt. The pass-through only avoided persisting secret endpoints and did not translate the
+upstream protocol. These hashes and probes describe the current local source candidate only; they do
+not replace the earlier pushed-SHA or installed-App evidence until the maintainer later authorizes
+push and an exact-SHA delivery run.
 
 Rollback remains a single hard pin to `v0.84.1` if lifecycle, isolation, real-provider or packaged
 evidence exposes a material regression. No compatibility dual track is authorized or needed, and no
@@ -702,6 +724,7 @@ loss rather than silently treating “covered” or “no code” as approval:
 | Provider picker keeps recoverable uninstalled/sign-in setup routes instead of upstream installed-only filtering                                                                                                               | OmniMind Agent setup can make those services usable; hiding them would make recovery unreachable.                                                               | The picker is not exact upstream UI parity and needs its own availability regression.                                    |
 | Indexed Codex usage-history owner replaces upstream request-time bounded archive-tail scanning                                                                                                                                | The current owner separates capacity from history and avoids scanning session archives on every request.                                                        | Exact implementation/test parity is lost; upstream regressions must be translated into indexed-owner tests.              |
 | Structured missing-command classifier and current macOS build traversal guard remain instead of narrower upstream patches; Windows/browser CI workarounds enter only when their failure reproduces in OmniMind's frozen lanes | Current implementations are equal or stronger and copying weaker/irrelevant fixes would duplicate code.                                                         | Exact patch parity is lost; every upstream regression case still has to be imported or explicitly shown inapplicable.    |
+| Retire Synara's Project instructions localStorage/Thread-notes seeding surface while preserving Thread Notepad                                                                                                                | Its real behavior is a reusable Project→new-task notes template with manual and hidden writes, not runtime Project rules; keeping both scopes under “instructions/Notepad” creates a misleading second mental model.             | OmniMind loses the per-Project textarea, manual copy/append and automatic Notepad prefill for first-send and Automation draft promotion. |
 | Synara brand, release version/changelog/What's New, account/public-origin, marketing, signing/publication and prose identity bytes remain excluded                                                                            | Those bytes would make false claims about the OmniMind distribution and external authorities. Verified mechanism facts still enter the matching OmniMind owner. | OmniMind cannot copy donor release/docs verbatim and must maintain truthful bilingual distribution documents and assets. |
 | Merge/format-only carriers receive no separate product implementation until ancestry proof exposes independent conflict-resolution behavior                                                                                   | No independent bytes are currently attributable to them.                                                                                                        | Git topology remains absent, so future sync stays more expensive until the ancestry experiment succeeds.                 |
 
@@ -712,9 +735,12 @@ that records `8f9f600…` as a second parent while preserving the verified OmniM
 next upstream increment as a three-way merge. Until that experiment passes, do not claim common Git
 ancestry or use a synthetic merge to hide unresolved product differences.
 
-On 2026-08-17 the maintainer confirmed this root relationship and all five divergence rows after their
-losses were presented. The remaining mother mechanisms are authorized for the current fact-closed
-adoption set and do not wait for another execution-brief admission.
+On 2026-08-17 the maintainer confirmed this root relationship and the original five divergence rows
+after their losses were presented. On 2026-08-18, after a separate full route/store/dispatch/reopen
+audit and exact Synara commit review, the maintainer also confirmed the Project instructions
+retirement row and explicitly accepted loss of the reusable Project→new-task Notepad seed. The
+remaining mother mechanisms are authorized for the current fact-closed adoption set and do not wait
+for another execution-brief admission.
 
 ### 15.6 Whole-tree path/behavior closure surface
 
@@ -743,14 +769,17 @@ a 1,602-row parallel ledger.
 | Release history / What's New                                                                                       | Generic mechanism may be adapted, activation remains identity-gated                                               | Loss: current Release history stays unavailable. Activate only from real OmniMind version/changelog/publication evidence; never copy Synara entries                                                                                                           |
 | Synara/DP Code storage-origin and desktop-storage migrations                                                       | Confirmed non-adoption                                                                                             | Loss: OmniMind will not migrate data from Synara/DP Code legacy homes. The maintainer confirmed there is no predecessor user population; those identities are unrelated to OmniMind's first-public namespace, so running them could only risk reading or rewriting unrelated data. |
 | Automation consecutive-failure policy                                                                              | Confirmed semantic adoption: default `3`, with explicit `1`/`3`/`5`/keep-running choices                          | A three-failure threshold can permit two more attempts than fail-fast, so side-effect-sensitive automations can explicitly choose `1`. Any success resets the consecutive-failure count; contract, migration, bilingual UI and author-equivalent tests share the same policy. |
+| Project instructions→Thread notes seed                                                                              | Confirmed downstream retirement; Thread-level Notepad remains                                                     | Remove Environment UI, Settings/search, store/autosave, manual copy/append and first-send/Automation hidden `thread.meta.update`; do not migrate old text or delete existing Thread notes. Re-open only if a real per-Project notes-template outcome is required and can remain clearly distinct from runtime rules and task notes. |
 | Synara marketing/assets/logo/handle/domain/release/account/signing/publication bytes                               | Confirmed identity divergence                                                                                     | Keep truthful OmniMind assets, bilingual copy and distribution evidence; mixed commits must still contribute their product mechanisms                                                                                                                         |
 | Indexed Codex usage, missing-command classifier and macOS build traversal guard                                    | Confirmed current-stronger divergence                                                                             | Retain each upstream regression test or show it inapplicable; Windows/browser workarounds enter only after reproduction                                                                                                                                       |
 
 The 94 Synara-only paths close under the responsibility groups above: identity/marketing and release
 facts remain confirmed divergences; legacy-identity migrations are permanently excluded by the
-maintainer; migrations that carry product semantics are renumbered/translated; Space paths map to
-Thread Groups; usage, Git, search, automation, branch mismatch, PR stack and creation behavior reuse
-their existing OmniMind owners; author tests are retained or equivalently adapted. The 1,602
+maintainer; the Project instructions paths are an explicitly confirmed retirement with Notepad kept
+in the existing Thread owner; migrations that carry product semantics are renumbered/translated;
+Space paths map to Thread Groups; usage, Git, search, automation, branch mismatch, PR stack and
+creation behavior reuse their existing OmniMind owners; author tests are retained or equivalently
+adapted. The 1,602
 same-path differences group under Web/Workbench, Server Provider/Orchestration/Persistence,
 AgentGateway, contracts/shared, Desktop integration and the fixed downstream divergence categories.
 For each group the table points to the behavioral owner and author-equivalent evidence; absence is no

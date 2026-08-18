@@ -830,14 +830,6 @@ function SettingsRouteView() {
           })}
 
           {renderBooleanSettingRow({
-            settingKey: "showEnvironmentInstructions",
-            title: t("settings.projectInstructions"),
-            description: t("settings.projectInstructionsDescription"),
-            resetLabel: t("settings.projectInstructions"),
-            ariaLabel: t("settings.projectInstructionsDescription"),
-          })}
-
-          {renderBooleanSettingRow({
             settingKey: "showEnvironmentNotepad",
             title: t("settings.notepad"),
             description: t("settings.notepadDescription"),

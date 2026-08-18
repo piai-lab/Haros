@@ -111,6 +111,27 @@ stock Pi 继续由 inherited `pi` adapter 拥有其 Session、Pi version、confi
 
 stock Pi 的“实际会话 runtime version”和“本机可选 `pi` CLI version”是两个事实。若 session 使用 bundled SDK，就不能用 `pi --version` 冒充其执行版本；local CLI 只能作为独立诊断字段显示。
 
+### OmniMind identity、work surface 与 project context
+
+bundled `omnimind` Provider 的 engine contract 由 Host 作为不可被 `SYSTEM.md`、`APPEND_SYSTEM.md`、Skill、Extension 或未来 Prompt 管理覆盖的稳定层注入。Pi 继续按原生顺序组合、替换和修改 mutable base，包括现有 general Host harness/tool guidance 与每回合执行的 `before_agent_start` Extension；在最终模型请求前，runtime 只删除其中已有的同一 canonical engine contract，再把当前 Session 冻结的 engine contract 追加到末尾，保证 exactly once。它直接声明：`You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).`；模型应按用户语言自然回答，不在每次回复重复来源。stock `pi` 和其他 Engine 不接收这段 identity，继续保留原生身份。general Host harness/tool guidance 不属于 immutable engine contract，仍服从原生 mutable append/Extension 顺序；其中 Browser、Device 等已知 runtimeMode 事实漂移必须由后续 Host diet 在各自 owner 修正，不能借身份冻结扩大为不可覆盖产品合同。
+
+同一 engine contract 包含共同 cognitive core 与按 work surface 选择的行为：
+
+- 共同层把用户首个表述视为线索而非完整规格；先调查模型能够从上下文和工具获得的事实，对只有用户知道且会实质改变结果的目标、偏好、约束或质量要求积极提问，并附带推荐理解；不假设用户具有当前领域的专业知识，也不因此降低结果上限；
+- Chat 在不误导时先给可用起点并并行澄清，只有方向会反转、产生实质风险或大量浪费时才先问；它侧重理解、探索、判断、学习与产出，不获得修改现有 Project 的隐含授权；
+- Agent 只有在 outcome、material boundaries、important constraints 与 success criteria 已充分对齐、且不存在会实质改变结果的未决分叉后才进入实质执行；对齐前可继续安全只读调查和可逆准备，对齐后在范围内主动完成、验证和收口；不可逆、付费、权限扩张、外部发送/发布、安全边界变化或超范围动作仍须事前确认；
+- 用户明确要求“别问，直接做”时，低风险、可逆且不造成 material divergence 的未知可以说明关键假设后推进；该偏好不跨越 material intent fork 或高风险边界；
+- 共同层保持独立判断、给出推荐主路径、主动识别盲点与更高路径，不迎合错误前提，不声称未实际执行或验证的结果。
+- 共同层中的语言、语气、格式、详略与工作方式只定义默认值；用户或未来个人指令可以显式覆盖这些表达偏好，只要不与 identity、work-surface、alignment/task completion、truthfulness 或 safety 边界冲突。
+
+work surface 只由 Product Orchestration 在 bundled `omnimind` Session admission 时从 canonical Project kind 派生：`project → agent`，`chat | studio → chat`。它只为该 Provider 随现有 Session binding 保存为恢复快照，model switch、Provider replacement rollback、Server restart 与 native resume 必须继续传递；ProviderService 对其他 Provider 的同名输入不传递也不持久化。不得新建 mode store、从 cwd 猜测或在 turn 文本中注入。Resource reload、compaction 与 branch 使用当前 Session 已冻结的同一 contract；Project kind 变化通过新的 Product Thread/Session表达，不做运行中热切。
+
+内置 `omnimind_update_tasks` 的注册与 `turn.tasks.updated` 投影都必须检查同一份 frozen `workSurface === "agent"`。工具名不是 authority：Chat 中由 global Extension 注册的同名工具仍是普通第三方工具，不能写入 OmniMind Agent Todo projection。
+
+Project resource trust 同样来自 Product authority，而非 Pi SDK 默认值：canonical folder-backed Project 及其 materialized worktree 只在正式 Agent Session admission 后显式 trusted；规则读取边界是对应 Project/worktree root → 当前 cwd，并继续保留 OmniMind/Pi 各自 global agent-dir context。Chat/Studio 不获得 project-local trust，也不扫描 managed cwd 的 project resources。没有 active Session 时，OmniMind 的 Skills、Prompt commands 与 model discovery 一律使用 untrusted/global-only loader，不执行 Project Extension；首轮前 project-local autocomplete/template picker 不属于本轮 contract，真实首轮 Agent 请求仍在发送前通过正式 Session 加载可信 Project 资源。Skills/commands 查询按 Thread 与“物理 Session 可能仍存在”隔离缓存：可恢复 `error` 仍使用 active tuple，只有 `closed` 才切回 global-only；key 变化时必须先呈现固定空结果，不能把上一 Thread/Session 的资源作为 placeholder，Session admission 或关闭后也不能复用另一 trust tuple 的名称/描述。被动 model discovery 不绑定 Thread 或 Session，也不借机加载 Project Extension。Pi ResourceLoader 继续唯一拥有 context candidate precedence、Settings、Extensions、Skills、Prompts 与 reload；Host 只传递 canonical surface/root，不复制 loader、Trust store 或规则数据库。
+
+product-owned OmniMind Pi build 的默认 base 必须删除 Pi coding-assistant identity 和未随 archive 发行的 Pi docs/examples 导航，同时保留原生 dynamic tools、guidelines、custom `SYSTEM.md` replacement、append、context files、Skills、Extension turn mutation、cwd 与 operation snapshot。错误 base 被真正移除，不能只靠后置 Host 文案掩盖；immutable engine contract、mutable Host harness guidance 与可替换 default base 是三个不同责任。
+
 ### OmniMind Agent Model services authority
 
 `Model services / 模型服务` 只配置 OmniMind Agent 内置 Pi ModelRuntime 的 provider、authentication、model catalog 与 Pi-compatible custom provider；它不是跨 Engine credential center。Codex、Claude、OpenCode、stock Pi 等独立 Engine 继续由各自 adapter/native configuration 拥有登录、目录和 Session，凭据不得迁入 OmniMind Agent 的 private home。

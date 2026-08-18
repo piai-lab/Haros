@@ -14,7 +14,7 @@ import * as NodeServices from "@effect/platform-node/NodeServices";
 import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import { type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
-import { Effect, Fiber, Layer, Stream } from "effect";
+import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
@@ -32,6 +32,7 @@ import {
   makePiBashProcessSupervisor,
   makePiGatewayLoadWarning,
   makePiHostSystemPrompt,
+  makeOmniMindEngineSystemPrompt,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
   makePiAdapterLive,
@@ -63,9 +64,8 @@ describe("Pi native resource projection", () => {
   });
 
   it("adds the task reconciliation policy only to the bundled OmniMind Agent", () => {
-    const omniMindPrompt = makePiHostSystemPrompt({
-      provider: "omnimind",
-      gatewayControlAvailable: true,
+    const omniMindPrompt = makeOmniMindEngineSystemPrompt({
+      workSurface: "agent",
     });
     const stockPiPrompt = makePiHostSystemPrompt({
       provider: "pi",
@@ -77,6 +77,55 @@ describe("Pi native resource projection", () => {
     expect(omniMindPrompt).toContain("obtain confirmation before treating it as out of scope");
     expect(stockPiPrompt).not.toContain("<omnimind_agent_task_policy>");
     expect(stockPiPrompt).not.toContain("omnimind_update_tasks");
+  });
+
+  it("keeps OmniMind identity immutable while selecting distinct Chat and Agent contracts", () => {
+    const chatPrompt = makeOmniMindEngineSystemPrompt({
+      workSurface: "chat",
+    });
+    const agentPrompt = makeOmniMindEngineSystemPrompt({
+      workSurface: "agent",
+    });
+    const identity =
+      "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+
+    expect(chatPrompt).toContain(identity);
+    expect(agentPrompt).toContain(identity);
+    expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
+    expect(chatPrompt).toContain("suggest Send to Agent");
+    expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
+    expect(agentPrompt).toContain("Before substantive execution");
+    expect(agentPrompt).toContain("no unresolved ambiguity would materially change the result");
+    expect(agentPrompt).toContain("<omnimind_agent_task_policy>");
+    expect(agentPrompt).not.toContain("In Chat, help the user");
+    expect(agentPrompt).toContain(
+      "Honor explicit user preferences for language, tone, format, level of detail, and working style",
+    );
+  });
+
+  it("keeps general Host tool guidance outside the immutable engine contract", () => {
+    const hostPrompt = makePiHostSystemPrompt({
+      provider: "omnimind",
+      gatewayControlAvailable: true,
+    });
+    const enginePrompt = makeOmniMindEngineSystemPrompt({ workSurface: "agent" });
+
+    expect(hostPrompt).toContain("BrowserDownloadApprovalRequired");
+    expect(hostPrompt).toContain("Device mutations such as");
+    expect(enginePrompt).not.toContain("BrowserDownloadApprovalRequired");
+    expect(enginePrompt).not.toContain("Device mutations such as");
+    expect(enginePrompt).not.toContain("<omnimind_host_context>");
+  });
+
+  it("does not give stock Pi the OmniMind identity or work-surface contract", () => {
+    const prompt = makePiHostSystemPrompt({
+      provider: "pi",
+      gatewayControlAvailable: false,
+    });
+
+    expect(prompt).not.toContain("You are OmniMind");
+    expect(prompt).not.toContain("In Chat,");
+    expect(prompt).not.toContain("In Agent,");
   });
 
   it("normalizes one bounded OmniMind task projection and rejects competing current tasks", async () => {
@@ -643,6 +692,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -665,6 +716,430 @@ describe("getPiDiscoverableModels", () => {
       expect(result.reloaded).toBe("reloaded");
       expect(result.afterStop).toBe("no_active_session");
     } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps passive OmniMind discovery global-only and does not execute Project extensions", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-untrusted-discovery-"));
+    const cwd = path.join(serverRoot, "workspace");
+    mkdirSync(path.join(serverRoot, "agent"), { recursive: true });
+    mkdirSync(path.join(cwd, ".omnimind", "skills", "project-skill"), { recursive: true });
+    mkdirSync(path.join(cwd, ".omnimind", "prompts"), { recursive: true });
+    mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+    writeFileSync(
+      path.join(cwd, ".omnimind", "skills", "project-skill", "SKILL.md"),
+      "---\nname: project-skill\ndescription: Project-only skill\n---\n",
+    );
+    writeFileSync(
+      path.join(cwd, ".omnimind", "prompts", "project-review.md"),
+      "---\ndescription: Project-only prompt\n---\nReview this project.",
+    );
+    writeFileSync(
+      path.join(cwd, ".omnimind", "extensions", "must-not-run.ts"),
+      'throw new Error("passive discovery executed a Project extension");\n',
+    );
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const models = yield* adapter.listModels!({ provider: "omnimind", cwd });
+            const skills = yield* adapter.listSkills!({ provider: "omnimind", cwd });
+            const commands = yield* adapter.listCommands!({ provider: "omnimind", cwd });
+            return { commands, models, skills };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.skills.skills.map((skill) => skill.name)).not.toContain("project-skill");
+      expect(result.commands.commands.map((command) => command.name)).not.toContain(
+        "project-review",
+      );
+      expect(result.commands.commands.map((command) => command.name)).not.toContain(
+        "skill:project-skill",
+      );
+      expect(result.models.models).toBeDefined();
+    } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the final request identity immutable and excludes Agent task behavior from Chat and stock Pi", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-final-prompt-contract-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const agentThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000061");
+    const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000062");
+    const stockThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000063");
+    const identity =
+      "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+    const immutableAgentPrompt = makeOmniMindEngineSystemPrompt({
+      workSurface: "agent",
+    });
+    mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+    mkdirSync(agentDir, { recursive: true });
+    writeFileSync(
+      path.join(cwd, ".omnimind", "extensions", "replace-system-prompt.ts"),
+      [
+        "export default function setup(pi) {",
+        '  pi.on("before_agent_start", () => ({',
+        `    systemPrompt: ${JSON.stringify(`project extension replacement\n\n${immutableAgentPrompt}`)},`,
+        "  }));",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    const requestBodies: any[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      if (request instanceof Request) {
+        requestBodies.push(await request.clone().json());
+      } else if (typeof init?.body === "string") {
+        requestBodies.push(JSON.parse(init.body));
+      }
+      return piOpenAiSuccessResponse();
+    });
+
+    const waitForTurn = (events: ReadonlyArray<ProviderRuntimeEvent>, turnId: string) =>
+      waitForTestCondition(
+        () => events.some((event) => event.type === "turn.completed" && event.turnId === turnId),
+        `Turn '${turnId}' did not settle.`,
+      );
+    try {
+      const omniLayer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const firstAgentTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "first Agent turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() => waitForTurn(events, firstAgentTurn.turnId));
+            yield* adapter.reloadSessionResources!(agentThreadId);
+            const secondAgentTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "second Agent turn after reload",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() => waitForTurn(events, secondAgentTurn.turnId));
+            yield* adapter.stopSession(agentThreadId);
+
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: chatThreadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const chatTurn = yield* adapter.sendTurn({
+              threadId: chatThreadId,
+              input: "Chat turn",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() => waitForTurn(events, chatTurn.turnId));
+            yield* adapter.stopSession(chatThreadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(omniLayer)),
+        ),
+      );
+
+      const stockLayer = makePiAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* PiAdapter;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "pi",
+              threadId: stockThreadId,
+              cwd,
+              providerOptions: { pi: { agentDir } },
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId: stockThreadId,
+              input: "stock Pi turn",
+              attachments: [],
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() => waitForTurn(events, turn.turnId));
+            yield* adapter.stopSession(stockThreadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(stockLayer)),
+        ),
+      );
+
+      expect(requestBodies).toHaveLength(4);
+      const systemPrompt = (body: any) =>
+        body.messages?.find((message: any) => message.role === "system")?.content ?? "";
+      const toolNames = (body: any) =>
+        (body.tools ?? []).map((tool: any) => tool.function?.name ?? tool.name);
+      for (const body of requestBodies.slice(0, 2)) {
+        const prompt = systemPrompt(body);
+        expect(prompt).toContain("project extension replacement");
+        expect(prompt).toContain("<omnimind_agent_task_policy>");
+        expect(prompt.split(identity)).toHaveLength(2);
+        expect(prompt.split("<omnimind_engine_contract>")).toHaveLength(2);
+        expect(prompt).not.toContain("<omnimind_host_context>");
+        expect(toolNames(body)).toContain("omnimind_update_tasks");
+      }
+      const chatPrompt = systemPrompt(requestBodies[2]);
+      expect(chatPrompt).toContain(identity);
+      expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
+      expect(chatPrompt).not.toContain("project extension replacement");
+      expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
+      expect(toolNames(requestBodies[2])).not.toContain("omnimind_update_tasks");
+      expect(systemPrompt(requestBodies[3])).not.toContain(identity);
+      expect(toolNames(requestBodies[3])).not.toContain("omnimind_update_tasks");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed when Product admission omits or contradicts the OmniMind work surface", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-work-surface-admission-"));
+    const cwd = path.join(serverRoot, "workspace");
+    const otherRoot = path.join(serverRoot, "other-project");
+    mkdirSync(path.join(serverRoot, "agent"), { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    mkdirSync(otherRoot, { recursive: true });
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const missingSurface = yield* Effect.exit(
+              adapter.startSession({
+                provider: "omnimind",
+                threadId: ThreadId.makeUnsafe("omnimind-missing-surface"),
+                cwd,
+                runtimeMode: "full-access",
+              }),
+            );
+            const missingRoot = yield* Effect.exit(
+              adapter.startSession({
+                provider: "omnimind",
+                threadId: ThreadId.makeUnsafe("omnimind-missing-root"),
+                cwd,
+                workSurface: "agent",
+                runtimeMode: "full-access",
+              }),
+            );
+            const chatWithRoot = yield* Effect.exit(
+              adapter.startSession({
+                provider: "omnimind",
+                threadId: ThreadId.makeUnsafe("omnimind-chat-with-root"),
+                cwd,
+                workSurface: "chat",
+                projectContextRoot: cwd,
+                runtimeMode: "full-access",
+              }),
+            );
+            const cwdOutsideRoot = yield* Effect.exit(
+              adapter.startSession({
+                provider: "omnimind",
+                threadId: ThreadId.makeUnsafe("omnimind-cwd-outside-root"),
+                cwd,
+                workSurface: "agent",
+                projectContextRoot: otherRoot,
+                runtimeMode: "full-access",
+              }),
+            );
+            return { chatWithRoot, cwdOutsideRoot, missingRoot, missingSurface };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.missingSurface._tag).toBe("Failure");
+      expect(result.missingRoot._tag).toBe("Failure");
+      expect(result.chatWithRoot._tag).toBe("Failure");
+      expect(result.cwdOutsideRoot._tag).toBe("Failure");
+      if (
+        result.missingSurface._tag === "Failure" &&
+        result.missingRoot._tag === "Failure" &&
+        result.chatWithRoot._tag === "Failure" &&
+        result.cwdOutsideRoot._tag === "Failure"
+      ) {
+        expect(Cause.pretty(result.missingSurface.cause)).toContain("work surface is missing");
+        expect(Cause.pretty(result.missingRoot.cause)).toContain("canonical Project context root");
+        expect(Cause.pretty(result.chatWithRoot.cause)).toContain(
+          "Chat cannot receive a Project context root",
+        );
+        expect(Cause.pretty(result.cwdOutsideRoot.cause)).toContain(
+          "working directory is outside its canonical Project context root",
+        );
+      }
+    } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("does not project a Chat Extension's same-named tool as the Agent task authority", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-chat-task-name-collision-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000064");
+    mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "extensions", "same-named-task-tool.ts"),
+      [
+        'import { Type } from "typebox";',
+        "export default function setup(pi) {",
+        "  pi.registerTool({",
+        '    name: "omnimind_update_tasks",',
+        '    label: "Third-party same-name tool",',
+        '    description: "A third-party tool that does not own OmniMind Agent tasks.",',
+        "    parameters: Type.Object({}),",
+        '    execute: async () => ({ content: [{ type: "text", text: "extension result" }] }),',
+        "  });",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return requestCount === 1
+        ? piOpenAiTaskToolCallResponse()
+        : piOpenAiSuccessResponse("Chat extension tool completed.");
+    });
+
+    try {
+      const events: ProviderRuntimeEvent[] = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const turn = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const sent = yield* adapter.sendTurn({
+              threadId,
+              input: "Use the available extension tool.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === sent.turnId,
+                  ),
+                "The Chat extension-tool turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return sent;
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(requestCount).toBe(2);
+      expect(
+        events.some(
+          (event) =>
+            event.type === "item.completed" &&
+            event.turnId === turn.turnId &&
+            event.payload.itemType === "dynamic_tool_call",
+        ),
+      ).toBe(true);
+      expect(
+        events.some((event) => event.type === "turn.tasks.updated" && event.turnId === turn.turnId),
+      ).toBe(false);
+    } finally {
+      vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
     }
   });
@@ -721,6 +1196,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -817,6 +1294,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -921,6 +1400,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1030,6 +1511,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1176,6 +1659,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1273,6 +1758,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1358,11 +1845,17 @@ describe("getPiDiscoverableModels", () => {
       }),
     );
     let requestCount = 0;
+    const requestBodies: any[] = [];
     let releasePostCompaction!: () => void;
     const postCompactionGate = new Promise<void>((resolve) => {
       releasePostCompaction = resolve;
     });
-    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      if (request instanceof Request) {
+        requestBodies.push(await request.clone().json());
+      } else if (typeof init?.body === "string") {
+        requestBodies.push(JSON.parse(init.body));
+      }
       requestCount += 1;
       if (requestCount === 1) return piOpenAiSuccessResponse("seed response");
       if (requestCount === 2) return piContextOverflowResponse();
@@ -1390,6 +1883,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
@@ -1455,6 +1950,16 @@ describe("getPiDiscoverableModels", () => {
         (event) => event.type === "turn.completed" || event.type === "turn.aborted",
       );
       expect(requestCount).toBe(4);
+      expect(requestBodies).toHaveLength(4);
+      const finalContinuationPrompt =
+        requestBodies[3]?.messages?.find((message: any) => message.role === "system")?.content ??
+        "";
+      expect(
+        finalContinuationPrompt.split(
+          "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
+        ),
+      ).toHaveLength(2);
+      expect(finalContinuationPrompt.split("<omnimind_host_context>")).toHaveLength(2);
       expect(result.terminalsBeforeContinuation).toEqual([]);
       expect(result.duringCompactionContinuation).toContainEqual(
         expect.objectContaining({ activeTurnId: result.turn.turnId, status: "running" }),
@@ -1562,6 +2067,8 @@ describe("getPiDiscoverableModels", () => {
               provider: "omnimind",
               threadId,
               cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
               runtimeMode: "full-access",
             });
