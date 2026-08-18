@@ -11,7 +11,7 @@ const PI_REVISION = "914cf1472e715297caa30db4b9535d534a9eb718";
 const PI_VERSION = "0.84.2";
 const PI_AI_INTEGRITY =
   "sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==";
-const PATCH_SHA256 = "c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f";
+const PATCH_SHA256 = "4a6e091990c7d6fe89c21da40d7866c4b5a6311e3c3797a76a4152e9cc21d506";
 const STOCK_PATCH_SHA256 = "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77";
 const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -199,6 +199,7 @@ async function main() {
         "test/suite/agent-session-prompt.test.ts",
         "test/package-manager.test.ts",
         "test/resource-loader.test.ts",
+        "test/system-prompt.test.ts",
       ],
       {
         cwd: path.join(worktree, "packages", "coding-agent"),

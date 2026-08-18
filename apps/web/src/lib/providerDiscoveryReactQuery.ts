@@ -53,11 +53,28 @@ export const providerDiscoveryQueryKeys = {
     cwd: string | null,
     agentDir: string | null,
     connectionKey: string | null,
-  ) => ["provider-discovery", "commands", provider, cwd, agentDir, connectionKey] as const,
+    threadId: string | null = null,
+    activeSession = false,
+  ) =>
+    [
+      "provider-discovery",
+      "commands",
+      provider,
+      cwd,
+      agentDir,
+      connectionKey,
+      threadId,
+      activeSession,
+    ] as const,
   // The skill list is query-independent (filtering is client-side), so the key
   // deliberately excludes the typed filter to avoid a refetch per keystroke.
-  skills: (provider: ProviderKind, cwd: string | null, agentDir: string | null) =>
-    ["provider-discovery", "skills", provider, cwd, agentDir] as const,
+  skills: (
+    provider: ProviderKind,
+    cwd: string | null,
+    agentDir: string | null,
+    threadId: string | null = null,
+    activeSession = false,
+  ) => ["provider-discovery", "skills", provider, cwd, agentDir, threadId, activeSession] as const,
   skillsCatalog: (cwd: string | null) => ["provider-discovery", "skills-catalog", cwd] as const,
   plugins: (provider: ProviderKind, cwd: string | null, threadId: string | null) =>
     ["provider-discovery", "plugins", provider, cwd, threadId] as const,
@@ -99,11 +116,18 @@ export function providerSkillsQueryOptions(input: {
   provider: ProviderKind;
   cwd: string | null;
   threadId?: string | null;
+  activeSession?: boolean;
   agentDir?: string | null;
   enabled?: boolean;
 }) {
   return queryOptions({
-    queryKey: providerDiscoveryQueryKeys.skills(input.provider, input.cwd, input.agentDir ?? null),
+    queryKey: providerDiscoveryQueryKeys.skills(
+      input.provider,
+      input.cwd,
+      input.agentDir ?? null,
+      input.threadId ?? null,
+      input.activeSession ?? false,
+    ),
     queryFn: async () => {
       const api = ensureNativeApi();
       if (!input.cwd) {
@@ -143,6 +167,7 @@ export function providerCommandsQueryOptions(input: {
   provider: ProviderKind;
   cwd: string | null;
   threadId?: string | null;
+  activeSession?: boolean;
   binaryPath?: string | null;
   serverUrl?: string | null;
   // Undefined means "not applicable" (non-OpenCode providers); the body normalizes it.
@@ -161,6 +186,8 @@ export function providerCommandsQueryOptions(input: {
       input.cwd,
       input.agentDir ?? null,
       connectionKey,
+      input.threadId ?? null,
+      input.activeSession ?? false,
     ),
     queryFn: async () => {
       const api = ensureNativeApi();

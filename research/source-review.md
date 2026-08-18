@@ -434,9 +434,9 @@ The three existing OmniMind differences were semantically rebased without wideni
 The strongest counterevidence was patch mechanics, not a product API conflict: the former
 zero-context source patch could silently land across a shifted upstream lockfile, while the compiled
 OAuth patch conflicted after upstream output moved. Both were replaced by contextual, source-matched
-semantic rebases. The product archive is reproducible at SHA-256
-`a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514`; the source,
-stock and OAuth patch SHA-256 values are respectively
+semantic rebases. The pushed product evidence below used the then-current reproducible archive
+SHA-256 `a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514`; its source,
+stock and OAuth patch SHA-256 values were respectively
 `c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f`,
 `7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77` and
 `ade36ccb1486d21504fd32cccdddc06810a179958fb4b0b32343a2708f6f4240`.
@@ -447,6 +447,27 @@ continuation plus DeepSeek first-turn probes, then produced and installed an arm
 revision and four Pi package manifests report the same candidate and `0.84.2`. A fresh isolated
 profile showed stock Pi `v0.84.2`, accurate zero-model-service setup, complete exit and same-profile
 reopen. This is now product-level candidate evidence, not Campaign verification or release evidence.
+
+On 2026-08-18 the unpushed `codex/retire-project-instructions` candidate kept the same exact Pi
+revision and stock/OAuth patches while extending the sole product source patch to remove the false
+Pi coding-assistant identity and navigation to docs/examples omitted from the archive, and to give
+Pi's existing ResourceLoader an explicit canonical Project-root boundary or global-only context
+mode. The same narrow seam preserves native per-turn Extension mutation, then normalizes and appends
+the Host-owned immutable contract exactly once at final request composition. Project trust is only
+admitted by a real Agent Session; passive model/Skill/command discovery remains untrusted and
+global-only, so it neither executes Project Extension factories nor exposes project-local resources
+before admission. The regenerated product patch is
+`4a6e091990c7d6fe89c21da40d7866c4b5a6311e3c3797a76a4152e9cc21d506`; the deterministic archive
+is `aa47aec0a6b90e3e32385676aa444bad49f2b3efcc64275d2cd24f96f245deb9`. Its fixed-revision offline
+build and 325 focused Pi tests pass. A 2026-08-18 live probe then exercised the product adapter
+through credential-in-memory loopback pass-throughs to the official MiMo and DeepSeek
+OpenAI-compatible endpoints: MiMo Chat and DeepSeek folder-backed Agent both completed first turn
+and continuation, identified OmniMind and πAI-Lab, and returned the correct Chat/Agent overlay label;
+the DeepSeek Agent probe retained that identity after a Project Extension replaced the mutable
+system prompt. The pass-through only avoided persisting secret endpoints and did not translate the
+upstream protocol. These hashes and probes describe the current local source candidate only; they do
+not replace the earlier pushed-SHA or installed-App evidence until the maintainer later authorizes
+push and an exact-SHA delivery run.
 
 Rollback remains a single hard pin to `v0.84.1` if lifecycle, isolation, real-provider or packaged
 evidence exposes a material regression. No compatibility dual track is authorized or needed, and no

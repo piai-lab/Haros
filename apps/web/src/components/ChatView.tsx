@@ -2392,6 +2392,9 @@ export default function ChatView({
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const selectedProvider: ProviderKind =
     selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+  const hasActiveProviderDiscoverySession =
+    activeThread?.session?.provider === selectedProvider &&
+    activeThread.session.status !== "closed";
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;
@@ -3770,6 +3773,7 @@ export default function ChatView({
       provider: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
+      activeSession: hasActiveProviderDiscoverySession,
       binaryPath:
         (selectedProvider === "opencode"
           ? providerOptionsForDispatch?.opencode?.binaryPath
@@ -3800,6 +3804,7 @@ export default function ChatView({
       provider: selectedProvider,
       cwd: composerSkillCwd,
       threadId,
+      activeSession: hasActiveProviderDiscoverySession,
       agentDir: selectedProvider === "pi" ? settings.piAgentDir || null : null,
       enabled:
         (isSkillTrigger || composerTriggerKind === "slash-command" || selectedProvider === "pi") &&

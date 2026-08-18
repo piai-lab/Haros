@@ -28,6 +28,7 @@ import {
   ProviderSessionStartInput,
   ProviderStopSessionInput,
   ProviderStartOptions,
+  ProviderWorkSurface,
   TurnId,
   type ProviderRuntimeEvent,
   type ProviderSession,
@@ -227,6 +228,8 @@ function toRuntimePayloadFromSession(
   extra?: {
     readonly modelSelection?: unknown;
     readonly providerOptions?: unknown;
+    readonly workSurface?: unknown;
+    readonly projectContextRoot?: unknown;
     readonly lastRuntimeEvent?: string;
     readonly lastRuntimeEventAt?: string;
     readonly lifecycleGeneration?: string;
@@ -242,6 +245,10 @@ function toRuntimePayloadFromSession(
     lastError: nonEmptyTrimmed(session.lastError) ?? null,
     ...(extra?.modelSelection !== undefined ? { modelSelection: extra.modelSelection } : {}),
     ...(extra?.providerOptions !== undefined ? { providerOptions: extra.providerOptions } : {}),
+    ...(extra?.workSurface !== undefined ? { workSurface: extra.workSurface } : {}),
+    ...(extra?.projectContextRoot !== undefined
+      ? { projectContextRoot: extra.projectContextRoot }
+      : {}),
     ...(extra?.lastRuntimeEvent !== undefined ? { lastRuntimeEvent: extra.lastRuntimeEvent } : {}),
     ...(extra?.lastRuntimeEventAt !== undefined
       ? { lastRuntimeEventAt: extra.lastRuntimeEventAt }
@@ -282,6 +289,22 @@ function readPersistedCwd(
   const rawCwd = runtimePayloadRecord(runtimePayload).cwd;
   if (typeof rawCwd !== "string") return undefined;
   const trimmed = rawCwd.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function readPersistedWorkSurface(
+  runtimePayload: ProviderRuntimeBinding["runtimePayload"],
+): ProviderWorkSurface | undefined {
+  const raw = runtimePayloadRecord(runtimePayload).workSurface;
+  return Schema.is(ProviderWorkSurface)(raw) ? raw : undefined;
+}
+
+function readPersistedProjectContextRoot(
+  runtimePayload: ProviderRuntimeBinding["runtimePayload"],
+): string | undefined {
+  const rawRoot = runtimePayloadRecord(runtimePayload).projectContextRoot;
+  if (typeof rawRoot !== "string") return undefined;
+  const trimmed = rawRoot.trim();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
@@ -772,6 +795,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
         readonly lifecycleGeneration?: string;
         readonly modelSelection?: unknown;
         readonly providerOptions?: unknown;
+        readonly workSurface?: unknown;
+        readonly projectContextRoot?: unknown;
         readonly lastRuntimeEvent?: string;
         readonly lastRuntimeEventAt?: string;
       },
@@ -1683,6 +1708,10 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             const persistedCwd = readPersistedCwd(binding.runtimePayload);
             const persistedModelSelection = readPersistedModelSelection(binding.runtimePayload);
             const persistedProviderOptions = readPersistedProviderOptions(binding.runtimePayload);
+            const persistedWorkSurface = readPersistedWorkSurface(binding.runtimePayload);
+            const persistedProjectContextRoot = readPersistedProjectContextRoot(
+              binding.runtimePayload,
+            );
             yield* validateAutoRuntimeMode(
               input.operation,
               binding.provider,
@@ -1696,6 +1725,10 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               ...(persistedCwd ? { cwd: persistedCwd } : {}),
               ...(persistedModelSelection ? { modelSelection: persistedModelSelection } : {}),
               ...(persistedProviderOptions ? { providerOptions: persistedProviderOptions } : {}),
+              ...(persistedWorkSurface ? { workSurface: persistedWorkSurface } : {}),
+              ...(persistedProjectContextRoot
+                ? { projectContextRoot: persistedProjectContextRoot }
+                : {}),
               ...(hasPersistedResumeCursor ? { resumeCursor: binding.resumeCursor } : {}),
               runtimeMode: binding.runtimeMode ?? "full-access",
             });
@@ -1710,6 +1743,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               threadId,
               upsertSessionBinding(resumed, threadId, {
                 lifecycleGeneration: lease.generation,
+                workSurface: persistedWorkSurface,
+                projectContextRoot: persistedProjectContextRoot ?? null,
               }).pipe(
                 Effect.andThen(
                   requiresCredentialRotation
@@ -2002,11 +2037,25 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                     : undefined));
             const adapterStartInput = { ...input };
             delete adapterStartInput.resumeCursor;
+            delete adapterStartInput.workSurface;
+            delete adapterStartInput.projectContextRoot;
             const effectiveProviderOptions =
               input.providerOptions ??
               (persistedBinding?.provider === input.provider
                 ? readPersistedProviderOptions(persistedBinding.runtimePayload)
                 : undefined);
+            const effectiveWorkSurface =
+              input.workSurface ??
+              (persistedBinding?.provider === input.provider
+                ? readPersistedWorkSurface(persistedBinding.runtimePayload)
+                : undefined);
+            const effectiveProjectContextRoot =
+              effectiveWorkSurface === "agent"
+                ? (input.projectContextRoot ??
+                  (persistedBinding?.provider === input.provider
+                    ? readPersistedProjectContextRoot(persistedBinding.runtimePayload)
+                    : undefined))
+                : undefined;
             const adapter = yield* registry.getByProvider(input.provider);
             const startAndPersistReplacement = Effect.gen(function* () {
               // Publish the lifecycle owner before entering adapter code. An
@@ -2034,6 +2083,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                     ...(effectiveProviderOptions === undefined
                       ? {}
                       : { providerOptions: effectiveProviderOptions }),
+                    ...(effectiveWorkSurface === undefined
+                      ? {}
+                      : { workSurface: effectiveWorkSurface }),
+                    ...(effectiveWorkSurface === undefined
+                      ? {}
+                      : { projectContextRoot: effectiveProjectContextRoot ?? null }),
                   },
                 }),
               );
@@ -2047,6 +2102,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   lifecycleGeneration: lease.generation,
                   ...(effectiveProviderOptions !== undefined
                     ? { providerOptions: effectiveProviderOptions }
+                    : {}),
+                  ...(effectiveWorkSurface !== undefined
+                    ? { workSurface: effectiveWorkSurface }
+                    : {}),
+                  ...(effectiveProjectContextRoot !== undefined
+                    ? { projectContextRoot: effectiveProjectContextRoot }
                     : {}),
                   ...(effectiveResumeCursor !== undefined
                     ? { resumeCursor: effectiveResumeCursor }
@@ -2080,6 +2141,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 upsertSessionBinding(session, threadId, {
                   modelSelection: input.modelSelection,
                   providerOptions: effectiveProviderOptions,
+                  workSurface: effectiveWorkSurface,
+                  projectContextRoot: effectiveProjectContextRoot ?? null,
                   lifecycleGeneration: lease.generation,
                 }).pipe(
                   Effect.andThen(
@@ -2222,6 +2285,10 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             const previousProviderOptions = readPersistedProviderOptions(
               persistedBinding.runtimePayload,
             );
+            const previousWorkSurface = readPersistedWorkSurface(persistedBinding.runtimePayload);
+            const previousProjectContextRoot = readPersistedProjectContextRoot(
+              persistedBinding.runtimePayload,
+            );
             const previousCwd =
               previousLiveSession?.cwd ?? readPersistedCwd(persistedBinding.runtimePayload);
             const previousResumeCursor =
@@ -2335,6 +2402,10 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                       ...(previousProviderOptions !== undefined
                         ? { providerOptions: previousProviderOptions }
                         : {}),
+                      ...(previousWorkSurface !== undefined
+                        ? { workSurface: previousWorkSurface }
+                        : {}),
+                      projectContextRoot: previousProjectContextRoot ?? null,
                     },
                   }),
                 );
@@ -2349,6 +2420,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                     : {}),
                   ...(previousProviderOptions !== undefined
                     ? { providerOptions: previousProviderOptions }
+                    : {}),
+                  ...(previousWorkSurface !== undefined
+                    ? { workSurface: previousWorkSurface }
+                    : {}),
+                  ...(previousProjectContextRoot !== undefined
+                    ? { projectContextRoot: previousProjectContextRoot }
                     : {}),
                   ...(previousResumeCursor !== undefined
                     ? { resumeCursor: previousResumeCursor }
@@ -2368,6 +2445,8 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                     lifecycleGeneration: restoreGeneration,
                     modelSelection: previousModelSelection,
                     providerOptions: previousProviderOptions,
+                    workSurface: previousWorkSurface,
+                    projectContextRoot: previousProjectContextRoot ?? null,
                   }),
                 ),
               );

@@ -25,6 +25,8 @@
 
 > **2026-08-18 supersession.** 后续沿 Environment→store→草稿 promotion→`thread.meta.update`→Thread notes 的完整调用链，并复核 Synara exact `8f9f600…` 的 `af9c36465` 与 `bdfc332a8` 后，确认该能力不是死代码或“假功能”：母体有意把一段 per-Project 本地文本作为新任务 Notepad seed，并专门修复过持久化。它确实不进入 Agent runtime Prompt，也不等于 `AGENTS.md` Project rules。维护者在知晓这项真实行为及其损失后，明确决定整体退休该表面，保留 Thread-level Notepad，不改名、不改造、不迁移。本文中把它概括为“第二事实源”“假的 Project instructions”的旧措辞据此收窄；Prompt 管理产品化不能接管或迁移这批文本。
 
+> **2026-08-18 default-identity closure.** 维护者随后确认先完成默认身份、理解/提问/拔高行为与 Chat/Agent 分层，再讨论 Prompt 管理 UI。当前同一隔离分支的本地 candidate 已把以下 contract 写入 architecture 并接入 runtime：只有 bundled `omnimind` 获得不可被 `SYSTEM.md`、`APPEND_SYSTEM.md`、Skill、Extension 或未来 Prompt 管理覆盖的 OmniMind identity/cognitive contract；Extension 仍可按原生顺序替换 mutable base，runtime 在最终请求前把 canonical Host contract 去重并追加为 exactly once；`project → Agent`，`chat | studio → Chat`；Agent 以“目标充分对齐才进入实质执行”为边界，Chat 在不误导时先给可用起点并并行澄清；`别问，直接做` 只是低风险可逆未知的速度偏好。canonical Project/worktree root 是正式 Agent Session 的项目规则读取下界；Chat/Studio 和无 active Session 的被动 discovery 只读 global context，且不执行 Project Extension。product-owned Pi base 已改为 identity-neutral 并删除未发行 docs/examples 导航；stock Pi 不受影响。该 candidate 尚未 push/merge，因此本段不冒充已安装产品事实。Prompt 管理仍只允许管理个人指令、项目规则和模板，且本次未启动任何 UI/store/迁移。
+
 ## 1. 结论
 
 OmniMind 应在 Settings 的现有 `Coding / 开发` 分组中增加一个独立 `Prompts / 提示词` section，把 **OmniMind Agent** 的基础指令、个人追加指令、当前 Project 规则、Prompt templates 与当前生效来源收敛到一个地方。
@@ -44,7 +46,7 @@ OmniMind 应在 Settings 的现有 `Coding / 开发` 分组中增加一个独立
 
 ## 2. 当前源码真值
 
-### 2.1 OmniMind 默认 Prompt 仍错误地自称 Pi
+### 2.1 绑定 snapshot 的默认 Prompt 错误与当前本地 candidate
 
 当前安装的 `@omnimind/pi-coding-agent` 在 `dist/core/system-prompt.js` 中仍构造：
 
@@ -54,7 +56,7 @@ You are an expert coding assistant operating inside pi, a coding agent harness.
 
 并永久附带 Pi README、docs、examples 与 TUI/extension/package 文档导航。这与根 README 已锁定的产品身份直接冲突：普通用户面对的是 OmniMind 和 OmniMind Agent，Pi lineage 只应进入 About、Licenses、诊断和显式来源详情。
 
-这是当前源码事实和产品 bug，不是“是否更喜欢 OmniMind 文案”的审美选择。
+这是本文绑定 snapshot 的源码事实和产品 bug，不是“是否更喜欢 OmniMind 文案”的审美选择。上方 2026-08-18 default-identity closure 已在当前本地 candidate 中移除该错误 base；在获准 push、按 exact SHA 重建并完成 fresh-profile journey 前，已安装产品仍不能据此宣称完成。
 
 正确处置不是全仓库 `Pi → OmniMind`：
 
@@ -92,13 +94,13 @@ Environment 面板的 `EnvironmentProjectInstructionsSection` 也明确把它实
 
 退休理由是产品边界：名称暗示 runtime rules，实际行为却是跨任务模板与隐藏 notes 写入，会把 Project scope 和当前任务记录混成一个心智模型。它不是对母体实现质量的否定，也不能用“功能是假的”作为删除依据。
 
-### 2.3 native ResourceLoader 已拥有正确基础
+### 2.3 native ResourceLoader 基础与当前边界修正
 
-当前 product-owned runtime 已经具备：
+本文绑定 snapshot 的 product-owned runtime 已经具备：
 
 - OmniMind Agent 全局 `agentDir` 下的 `SYSTEM.md`、`APPEND_SYSTEM.md` 与 `prompts/`；
 - trusted folder-backed Project 下的 `.omnimind/SYSTEM.md`、`.omnimind/APPEND_SYSTEM.md` 与 `.omnimind/prompts/`；
-- 全局 context file 与从 filesystem root 到 cwd 的 Project `AGENTS.md`/候选 context file 继承链；
+- 全局 context file 与从 filesystem root 到 cwd 的 Project `AGENTS.md`/候选 context file 继承链；该起点会错误吸收 Project 之外的 ambient ancestor，当前本地 candidate 已通过 ResourceLoader 的窄输入修正为 canonical Project/worktree root → cwd，Chat/Studio 与无 Session discovery 则只读 global context；
 - Extension/Package 增加的 Prompt、Skill、Tool 与资源；
 - `session.reload()` 对 settings、extensions、skills、prompts、themes、tools 与 Prompt 的原生重建；
 - `PiAdapter.reloadSessionResources()` 的 active-turn/busy admission，运行中不会强拆 Session。

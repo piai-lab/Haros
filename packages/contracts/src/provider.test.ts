@@ -40,6 +40,20 @@ describe("ProviderSessionStartInput", () => {
     expect(parsed.providerOptions?.codex?.homePath).toBe("/tmp/.codex");
   });
 
+  it("accepts the product-derived work surface and project context root", () => {
+    const parsed = decodeProviderSessionStartInput({
+      threadId: "thread-agent",
+      provider: "omnimind",
+      cwd: "/tmp/workspace/packages/app",
+      workSurface: "agent",
+      projectContextRoot: "/tmp/workspace",
+      runtimeMode: "full-access",
+    });
+
+    expect(parsed.workSurface).toBe("agent");
+    expect(parsed.projectContextRoot).toBe("/tmp/workspace");
+  });
+
   it("rejects payloads without runtime mode", () => {
     expect(() =>
       decodeProviderSessionStartInput({

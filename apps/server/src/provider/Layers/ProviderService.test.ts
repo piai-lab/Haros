@@ -2252,6 +2252,39 @@ routing.layer("ProviderServiceLive routing", (it) => {
     }),
   );
 
+  it.effect("persists and recovers the Product work surface without inferring it from cwd", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-product-work-surface-recovery");
+
+      yield* provider.startSession(threadId, {
+        provider: "codex",
+        threadId,
+        cwd: "/tmp/project/packages/app",
+        workSurface: "agent",
+        projectContextRoot: "/tmp/project",
+        runtimeMode: "full-access",
+      });
+      const startedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).workSurface, "agent");
+      assert.equal(
+        asRuntimePayloadRecord(startedBinding?.runtimePayload).projectContextRoot,
+        "/tmp/project",
+      );
+
+      yield* provider.stopRuntimeSession!({ threadId });
+      routing.codex.startSession.mockClear();
+      yield* provider.sendTurn({ threadId, input: "resume", attachments: [] });
+
+      const recoveredInput = routing.codex.startSession.mock.calls[0]?.[0];
+      assert.equal(recoveredInput?.cwd, "/tmp/project/packages/app");
+      assert.equal(recoveredInput?.workSurface, "agent");
+      assert.equal(recoveredInput?.projectContextRoot, "/tmp/project");
+      yield* provider.stopSession({ threadId });
+    }),
+  );
+
   it.effect("fork source overrides explicit and persisted resume cursors", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;
@@ -2917,6 +2950,8 @@ routing.layer("ProviderServiceLive routing", (it) => {
           provider: "codex",
           threadId,
           cwd: "/tmp/same-provider-persistence-failure",
+          workSurface: "agent",
+          projectContextRoot: "/tmp/same-provider-persistence-failure",
           runtimeMode: "full-access",
           modelSelection: previousModelSelection,
           providerOptions: previousProviderOptions,
@@ -2939,6 +2974,7 @@ routing.layer("ProviderServiceLive routing", (it) => {
             provider: "codex",
             threadId,
             cwd: "/tmp/same-provider-persistence-failure-new",
+            workSurface: "chat",
             runtimeMode: "full-access",
             modelSelection: {
               provider: "codex",
@@ -2966,6 +3002,17 @@ routing.layer("ProviderServiceLive routing", (it) => {
         assert.deepEqual(
           asRuntimePayloadRecord(restoredBinding?.runtimePayload).providerOptions,
           previousProviderOptions,
+        );
+        assert.equal(asRuntimePayloadRecord(restoredBinding?.runtimePayload).workSurface, "agent");
+        assert.equal(
+          asRuntimePayloadRecord(restoredBinding?.runtimePayload).projectContextRoot,
+          "/tmp/same-provider-persistence-failure",
+        );
+        const restoredStartInput = routing.codex.startSession.mock.calls.at(-1)?.[0];
+        assert.equal(restoredStartInput?.workSurface, "agent");
+        assert.equal(
+          restoredStartInput?.projectContextRoot,
+          "/tmp/same-provider-persistence-failure",
         );
 
         yield* provider.stopSession({ threadId });

@@ -33,6 +33,7 @@ import {
   type ProviderRuntimeEvent,
   type ProviderSession,
   type ProviderUserInputAnswers,
+  type ProviderWorkSurface,
   type RuntimeTaskListItem,
   RuntimeItemId,
   RuntimeRequestId,
@@ -113,6 +114,7 @@ import {
   resolveOmniMindAgentDir,
 } from "../omnimindAgentRuntime.ts";
 import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntimeMutation.ts";
+import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -125,6 +127,43 @@ const OMNIMIND_AGENT_TASK_POLICY = [
   "Absorb requested work into the current task list whenever it can be completed safely and within scope. Keep statuses current as work advances, with at most one task in progress.",
   "Before finishing, reconcile every requested part against the task list. Do not silently omit, defer, or narrow requested work: if something remains unfinished or you recommend not doing it, tell the user why and obtain confirmation before treating it as out of scope.",
   "Do not create background continuation, retry loops, timers, or a separate durable Goal record. A settled turn is the completion boundary; if blocked, leave the relevant task unfinished and state the exact blocker.",
+].join("\n");
+const OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT = [
+  "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
+  "",
+  "Understand what the user is ultimately trying to achieve. Do not treat the user's first wording as a complete specification or assume specialized knowledge in the current domain. Adapt the density of explanation to evidence from the conversation without quizzing the user about their level.",
+  "",
+  "Separate facts you can investigate from intent only the user can provide. Use available context and tools to investigate facts yourself. Ask focused questions when the user's goal, preferences, constraints, or quality bar could materially change the result. Include your recommended interpretation or path instead of handing the decision back without judgment.",
+  "",
+  "Look beyond the literal request for important blind spots, risks, and meaningfully better paths. Improvements that preserve the same goal, scope, cost, and risk can be incorporated directly. Before changing any of those, explain the better path and align with the user.",
+  "",
+  "If the user asks you to proceed without questions, state and use reasonable assumptions for low-risk, reversible ambiguity. Do not bypass a material intent fork or high-risk boundary.",
+  "",
+  "Be honest and independent-minded. When evidence or constraints conflict with the user's premise, explain the conflict concretely and continue toward a workable path. Never claim an action or verification that did not occur.",
+  "",
+  "Communicate naturally in the user's language. Lead with the outcome. Default to concise but complete; expand when complexity, risk, learning, or evidence requires it. If asked who you are, answer directly without unnecessary preamble.",
+].join("\n");
+const OMNIMIND_CHAT_CONTRACT = [
+  "In Chat, help the user understand, explore, decide, learn, and produce useful work.",
+  "",
+  "Give a clear, usable starting answer whenever it can be done without misleading the user, and clarify in parallel. Ask before answering when different plausible intents would reverse the answer, create material risk, or waste substantial effort.",
+  "",
+  "Explain necessary concepts in place and connect prerequisites when the user is learning, without hiding essential complexity or burdening them with unrelated advanced detail.",
+  "",
+  "When several approaches are reasonable, recommend a primary path and explain why and its key tradeoffs; include alternatives only when useful.",
+  "",
+  "Use available tools when they materially improve accuracy, timeliness, or completeness. Do not assume authority to modify an existing user project; when that is required, explain the boundary and suggest Send to Agent.",
+].join("\n");
+const OMNIMIND_AGENT_CONTRACT = [
+  "In Agent, understand the user's actual desired outcome and carry aligned work through to a verified result.",
+  "",
+  "Before substantive execution, ensure the intended outcome, material boundaries, important constraints, and success criteria are sufficiently aligned. Alignment is sufficient when no unresolved ambiguity would materially change the result; it does not require the user to specify every low-risk implementation detail.",
+  "",
+  "While alignment is incomplete, continue with safe read-only investigation, analysis, and reversible preparation, but do not make direction-locking, persistent, costly, or externally consequential changes.",
+  "",
+  "Once aligned, act proactively within scope. Make ordinary, reversible, low-risk decisions and tool choices without repeated permission. Confirm before destructive, irreversible, costly, permission-expanding, externally publishing or sending, security-boundary-changing, or out-of-scope actions.",
+  "",
+  "Inspect existing state and applicable project rules, preserve existing work, execute the necessary steps, verify the result proportionately, and close the loop. Do not stop after superficial steps or hand back work that can be completed within available capabilities. If blocked, explain the exact cause, what is complete, and the smallest decision needed.",
 ].join("\n");
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
@@ -158,6 +197,7 @@ type PiCodingAgentModule = Pick<
   | "ModelRegistry"
   | "ModelRuntime"
   | "SessionManager"
+  | "SettingsManager"
   | "createAgentSessionFromServices"
   | "createAgentSessionRuntime"
   | "createAgentSessionServices"
@@ -364,6 +404,7 @@ const loadOmniMindAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule
     ModelRegistry: sdk.ModelRegistry,
     ModelRuntime: sdk.ModelRuntime,
     SessionManager: sdk.SessionManager,
+    SettingsManager: sdk.SettingsManager,
     createAgentSessionFromServices: sdk.createAgentSessionFromServices,
     createAgentSessionRuntime: sdk.createAgentSessionRuntime,
     createAgentSessionServices: sdk.createAgentSessionServices,
@@ -419,6 +460,7 @@ interface PiSessionContext {
   readonly agentDir: string;
   appliedModelRuntimeMutationRevision: number;
   readonly gatewayControlAvailable: boolean;
+  readonly workSurface?: ProviderWorkSurface;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
   readonly lifecycleGeneration?: string;
@@ -1084,7 +1126,11 @@ export function makePiGatewayLoadWarning(displayName: string) {
 export function makePiHostSystemPrompt(input: {
   readonly provider: ProviderKind;
   readonly gatewayControlAvailable: boolean;
+  readonly workSurface?: ProviderWorkSurface;
 }): string {
+  if (input.provider === "omnimind" && input.workSurface === undefined) {
+    throw new Error("OmniMind work surface is required to compose the engine contract.");
+  }
   return [
     "<omnimind_host_context>",
     renderOmniMindHarnessPolicy({
@@ -1095,9 +1141,19 @@ export function makePiHostSystemPrompt(input: {
     }),
     ...(input.provider === "omnimind"
       ? [
-          "<omnimind_agent_task_policy>",
-          OMNIMIND_AGENT_TASK_POLICY,
-          "</omnimind_agent_task_policy>",
+          "<omnimind_engine_contract>",
+          OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT,
+          "",
+          input.workSurface === "agent" ? OMNIMIND_AGENT_CONTRACT : OMNIMIND_CHAT_CONTRACT,
+          ...(input.workSurface === "agent"
+            ? [
+                "",
+                "<omnimind_agent_task_policy>",
+                OMNIMIND_AGENT_TASK_POLICY,
+                "</omnimind_agent_task_policy>",
+              ]
+            : []),
+          "</omnimind_engine_contract>",
         ]
       : []),
     "</omnimind_host_context>",
@@ -1537,6 +1593,19 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
     const sessions = new Map<ThreadId, PiSessionContext>();
+    const untrustedProductDiscoveryOptions = (
+      sdk: PiCodingAgentModule,
+      cwd: string,
+      agentDir: string,
+    ) =>
+      provider === "omnimind"
+        ? {
+            settingsManager: sdk.SettingsManager.create(cwd, agentDir, {
+              projectTrusted: false,
+            }),
+            resourceLoaderOptions: { noContextFiles: false, projectContextRoot: false },
+          }
+        : {};
     const sessionResourceAdmission = makeKeyedLock<ThreadId>();
     const ownsNativeEventLogger = options?.nativeEventLogger === undefined;
     const nativeEventLogger =
@@ -2411,7 +2480,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
           const taskListPayload = event.isError
             ? null
-            : provider === "omnimind" && event.toolName === OMNIMIND_TASK_LIST_TOOL_NAME
+            : provider === "omnimind" &&
+                context.workSurface === "agent" &&
+                event.toolName === OMNIMIND_TASK_LIST_TOOL_NAME
               ? decodeOmniMindTaskListUpdate(tracked.args)
               : null;
           context.activeToolItems.delete(event.toolCallId);
@@ -2587,6 +2658,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       processSupervisor: PiBashProcessSupervisor;
       gatewayTools?: ReadonlyArray<ToolDefinition>;
       hostSystemPrompt: string;
+      workSurface?: ProviderWorkSurface;
+      projectContextRoot?: string;
     }) => {
       const modelRuntime = await family.createModelRuntime(input.agentDir);
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
@@ -2595,13 +2668,28 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         sessionManager,
         sessionStartEvent,
       }) => {
+        const resourceLoaderOptions = {
+          appendSystemPromptOverride: (base: string[]) =>
+            provider === "omnimind" ? base : [...base, input.hostSystemPrompt],
+          ...(provider === "omnimind"
+            ? {
+                projectContextRoot:
+                  input.workSurface === "agent" ? input.projectContextRoot : false,
+              }
+            : {}),
+        };
+        const settingsManager =
+          provider === "omnimind"
+            ? input.sdk.SettingsManager.create(cwd, agentDir, {
+                projectTrusted: input.workSurface === "agent",
+              })
+            : undefined;
         const services = await input.sdk.createAgentSessionServices({
           cwd,
           agentDir,
           modelRuntime,
-          resourceLoaderOptions: {
-            appendSystemPromptOverride: (base) => [...base, input.hostSystemPrompt],
-          },
+          ...(settingsManager === undefined ? {} : { settingsManager }),
+          resourceLoaderOptions,
         });
         const registry = modelRegistryFacade(services.modelRuntime, input.sdk);
         const model = findModelInRegistry(registry, input.modelId);
@@ -2613,31 +2701,33 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const shellPath = services.settingsManager.getShellPath();
         const commandPrefix = services.settingsManager.getShellCommandPrefix();
         input.processSupervisor.setShellPath(shellPath);
+        const agentSessionOptions = {
+          services,
+          sessionManager,
+          ...(sessionStartEvent ? { sessionStartEvent } : {}),
+          ...(model ? { model } : {}),
+          thinkingLevel: input.thinkingLevel ?? DEFAULT_PI_THINKING_LEVEL,
+          ...(provider === "omnimind" ? { immutableSystemPrompt: input.hostSystemPrompt } : {}),
+          customTools: [
+            input.sdk.defineTool(
+              input.sdk.createBashToolDefinition(cwd, {
+                operations: input.processSupervisor.operations,
+                ...(commandPrefix === undefined ? {} : { commandPrefix }),
+                ...(shellPath === undefined ? {} : { shellPath }),
+              }),
+            ),
+            ...(provider === "omnimind" && input.workSurface === "agent"
+              ? [
+                  buildOmniMindTaskListTool({
+                    defineTool: (tool) => input.sdk.defineTool(tool),
+                  }),
+                ]
+              : []),
+            ...(input.gatewayTools ?? []),
+          ],
+        };
         return {
-          ...(await input.sdk.createAgentSessionFromServices({
-            services,
-            sessionManager,
-            ...(sessionStartEvent ? { sessionStartEvent } : {}),
-            ...(model ? { model } : {}),
-            thinkingLevel: input.thinkingLevel ?? DEFAULT_PI_THINKING_LEVEL,
-            customTools: [
-              input.sdk.defineTool(
-                input.sdk.createBashToolDefinition(cwd, {
-                  operations: input.processSupervisor.operations,
-                  ...(commandPrefix === undefined ? {} : { commandPrefix }),
-                  ...(shellPath === undefined ? {} : { shellPath }),
-                }),
-              ),
-              ...(provider === "omnimind"
-                ? [
-                    buildOmniMindTaskListTool({
-                      defineTool: (tool) => input.sdk.defineTool(tool),
-                    }),
-                  ]
-                : []),
-              ...(input.gatewayTools ?? []),
-            ],
-          })),
+          ...(await input.sdk.createAgentSessionFromServices(agentSessionOptions)),
           services,
           diagnostics: services.diagnostics,
         };
@@ -2656,6 +2746,49 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const startSession: PiAdapterShape["startSession"] = (input) =>
       Effect.gen(function* () {
         const cwd = trimToUndefined(input.cwd) ?? serverConfig.cwd;
+        const workSurface = input.workSurface;
+        const projectContextRoot = trimToUndefined(input.projectContextRoot);
+        if (provider === "omnimind" && workSurface === undefined) {
+          return yield* new ProviderAdapterValidationError({
+            provider,
+            operation: "session/start",
+            issue: "OmniMind work surface is missing from Product session admission.",
+          });
+        }
+        if (provider === "omnimind" && workSurface === "agent" && !projectContextRoot) {
+          return yield* new ProviderAdapterValidationError({
+            provider,
+            operation: "session/start",
+            issue: "OmniMind Agent requires a canonical Project context root.",
+          });
+        }
+        if (provider === "omnimind" && workSurface === "chat" && projectContextRoot) {
+          return yield* new ProviderAdapterValidationError({
+            provider,
+            operation: "session/start",
+            issue: "OmniMind Chat cannot receive a Project context root.",
+          });
+        }
+        if (provider === "omnimind" && workSurface === "agent" && projectContextRoot) {
+          const containedCwd = yield* Effect.tryPromise({
+            try: () => resolveRealPathWithinRoot(projectContextRoot, cwd),
+            catch: (cause) =>
+              new ProviderAdapterValidationError({
+                provider,
+                operation: "session/start",
+                issue: "OmniMind Agent Project context containment could not be verified.",
+                cause,
+              }),
+          });
+          if (containedCwd === null) {
+            return yield* new ProviderAdapterValidationError({
+              provider,
+              operation: "session/start",
+              issue:
+                "OmniMind Agent working directory is outside its canonical Project context root.",
+            });
+          }
+        }
         const piSdk = yield* loadPiSdk("session/start");
         const processSupervisor = makePiBashProcessSupervisor({
           getShellConfig: () => piSdk.getShellConfig(),
@@ -2750,9 +2883,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(thinkingLevel ? { thinkingLevel } : {}),
                 processSupervisor,
                 ...(gatewayControlAvailable ? { gatewayTools } : {}),
+                ...(workSurface === undefined ? {} : { workSurface }),
+                ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
                 hostSystemPrompt: makePiHostSystemPrompt({
                   provider,
                   gatewayControlAvailable,
+                  ...(workSurface === undefined ? {} : { workSurface }),
                 }),
               }),
             catch: (cause) =>
@@ -2795,6 +2931,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           appliedModelRuntimeMutationRevision:
             provider === "omnimind" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
           gatewayControlAvailable,
+          ...(workSurface === undefined ? {} : { workSurface }),
           ...(gatewayControlAvailable && agentGatewaySessionLease
             ? {
                 gatewaySessionLease: agentGatewaySessionLease,
@@ -3378,6 +3515,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             cwd,
             agentDir,
             modelRuntime,
+            ...untrustedProductDiscoveryOptions(piSdk, cwd, agentDir),
           });
           const registry = modelRegistryFacade(services.modelRuntime, piSdk);
           const extensionProviderIds = new Set(services.modelRuntime.getRegisteredProviderIds());
@@ -3439,6 +3577,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               cwd: input.cwd,
               agentDir,
               modelRuntime,
+              ...untrustedProductDiscoveryOptions(piSdk, input.cwd, agentDir),
             });
           }
           if (services && input.forceReload) {
@@ -3516,6 +3655,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             cwd: input.cwd,
             agentDir,
             modelRuntime,
+            ...untrustedProductDiscoveryOptions(piSdk, input.cwd, agentDir),
           });
           if (input.forceReload) {
             await services.resourceLoader.reload();

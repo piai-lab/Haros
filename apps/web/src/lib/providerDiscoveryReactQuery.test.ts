@@ -9,7 +9,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   isInitialModelDiscoveryPending,
+  providerCommandsQueryOptions,
   providerModelsQueryOptions,
+  providerSkillsQueryOptions,
 } from "./providerDiscoveryReactQuery";
 import * as nativeApi from "../nativeApi";
 
@@ -118,5 +120,44 @@ describe("providerModelsQueryOptions", () => {
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(options)).resolves.toEqual(catalog);
+  });
+});
+
+describe("Session-aware resource discovery keys", () => {
+  it("separates threads and the pre-session versus active-session resource loaders", () => {
+    const skillsBeforeSession = providerSkillsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: false,
+    }).queryKey;
+    const skillsAfterSession = providerSkillsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: true,
+    }).queryKey;
+    const skillsForOtherThread = providerSkillsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-b",
+      activeSession: true,
+    }).queryKey;
+    const commandsBeforeSession = providerCommandsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: false,
+    }).queryKey;
+    const commandsAfterSession = providerCommandsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project",
+      threadId: "thread-a",
+      activeSession: true,
+    }).queryKey;
+
+    expect(skillsAfterSession).not.toEqual(skillsBeforeSession);
+    expect(skillsAfterSession).not.toEqual(skillsForOtherThread);
+    expect(commandsAfterSession).not.toEqual(commandsBeforeSession);
   });
 });
