@@ -21,14 +21,17 @@ import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
 import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
 import {
+  buildOmniMindTaskListTool,
+  decodeOmniMindTaskListUpdate,
+  makeOmniMindTaskListExtension,
+} from "../omnimindTaskListExtension.ts";
+import {
   createPiModelRuntime,
   createOmniMindModelRuntime,
   findModelInRegistry,
   getPiDiscoverableModels,
   getPiSupportedThinkingOptions,
   buildPiAgentGatewayCustomTools,
-  buildOmniMindTaskListTool,
-  decodeOmniMindTaskListUpdate,
   makePiBashProcessSupervisor,
   makePiGatewayLoadWarning,
   makePiHostSystemPrompt,
@@ -63,7 +66,7 @@ describe("Pi native resource projection", () => {
     });
   });
 
-  it("adds the task reconciliation policy only to the bundled OmniMind Agent", () => {
+  it("keeps Todo guidance out of the immutable engine contract", () => {
     const omniMindPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "agent",
     });
@@ -72,9 +75,8 @@ describe("Pi native resource projection", () => {
       gatewayControlAvailable: true,
     });
 
-    expect(omniMindPrompt).toContain("<omnimind_agent_task_policy>");
-    expect(omniMindPrompt).toContain("Do not silently omit, defer, or narrow requested work");
-    expect(omniMindPrompt).toContain("obtain confirmation before treating it as out of scope");
+    expect(omniMindPrompt).not.toContain("<omnimind_agent_task_policy>");
+    expect(omniMindPrompt).not.toContain("omnimind_update_tasks");
     expect(stockPiPrompt).not.toContain("<omnimind_agent_task_policy>");
     expect(stockPiPrompt).not.toContain("omnimind_update_tasks");
   });
@@ -96,7 +98,7 @@ describe("Pi native resource projection", () => {
     expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
     expect(agentPrompt).toContain("Before substantive execution");
     expect(agentPrompt).toContain("no unresolved ambiguity would materially change the result");
-    expect(agentPrompt).toContain("<omnimind_agent_task_policy>");
+    expect(agentPrompt).not.toContain("<omnimind_agent_task_policy>");
     expect(agentPrompt).not.toContain("In Chat, help the user");
     expect(agentPrompt).toContain(
       "Honor explicit user preferences for language, tone, format, level of detail, and working style",
@@ -154,9 +156,26 @@ describe("Pi native resource projection", () => {
         ],
       }),
     ).toBeNull();
+    expect(decodeOmniMindTaskListUpdate({ tasks: [] })).toBeNull();
+    expect(
+      decodeOmniMindTaskListUpdate({ tasks: [{ task: "Invalid", status: "abandoned" }] }),
+    ).toBeNull();
 
     const tool = buildOmniMindTaskListTool({ defineTool: (definition) => definition });
     expect(tool.name).toBe("omnimind_update_tasks");
+    expect(tool.promptGuidelines).toEqual([
+      "Track user goals and meaningful outcomes when progress visibility helps; investigate first when needed, and never list internal tool or loading steps.",
+    ]);
+    const openAiFunctionEnvelope = {
+      type: "function",
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: tool.parameters,
+      },
+    };
+    expect(Buffer.byteLength(JSON.stringify(openAiFunctionEnvelope), "utf8")).toBeLessThan(1_024);
+    expect(Buffer.byteLength(JSON.stringify(tool.promptGuidelines), "utf8")).toBeLessThan(256);
     await expect(
       tool.execute(
         "task-call",
@@ -168,6 +187,65 @@ describe("Pi native resource projection", () => {
     ).resolves.toMatchObject({
       details: { tasks: [{ task: "Finish", status: "completed" }] },
     });
+  });
+
+  it("projects only result details created by the product Todo Extension instance", async () => {
+    const projected: unknown[] = [];
+    let tool: any;
+    let onExecutionEnd: ((event: any) => void) | undefined;
+    const extension = makeOmniMindTaskListExtension({
+      defineTool: (definition) => definition,
+      onTasksUpdated: (update) => projected.push(update),
+    });
+    expect(typeof extension).not.toBe("function");
+    if (typeof extension === "function") throw new Error("expected a named inline Extension");
+    await extension.factory({
+      registerTool: (definition: unknown) => {
+        tool = definition;
+      },
+      on: (event: string, handler: (value: any) => void) => {
+        if (event === "tool_execution_end") onExecutionEnd = handler;
+      },
+    } as never);
+
+    onExecutionEnd?.({
+      type: "tool_execution_end",
+      toolCallId: "forged",
+      toolName: "omnimind_update_tasks",
+      isError: false,
+      result: { details: { tasks: [{ task: "Forged", status: "completed" }] } },
+    });
+    expect(projected).toEqual([]);
+
+    const result = await tool.execute(
+      "trusted",
+      { tasks: [{ task: "Verified outcome", status: "completed" }] },
+      undefined,
+      undefined,
+      {} as never,
+    );
+    onExecutionEnd?.({
+      type: "tool_execution_end",
+      toolCallId: "trusted",
+      toolName: "omnimind_update_tasks",
+      isError: false,
+      result,
+    });
+    expect(projected).toEqual([
+      {
+        toolCallId: "trusted",
+        payload: { tasks: [{ task: "Verified outcome", status: "completed" }] },
+      },
+    ]);
+
+    onExecutionEnd?.({
+      type: "tool_execution_end",
+      toolCallId: "replayed",
+      toolName: "omnimind_update_tasks",
+      isError: false,
+      result,
+    });
+    expect(projected).toHaveLength(1);
   });
 
   it("normalizes native tool text before it reaches the Timeline event contract", () => {
@@ -484,6 +562,19 @@ function isPiAutoRetryWarning(event: ProviderRuntimeEvent) {
     detail !== null &&
     "source" in detail &&
     detail.source === "pi-auto-retry"
+  );
+}
+
+function isOmniMindTaskUnavailableWarning(event: ProviderRuntimeEvent) {
+  if (event.type !== "runtime.warning") return false;
+  const detail = event.payload.detail;
+  return (
+    typeof detail === "object" &&
+    detail !== null &&
+    "capability" in detail &&
+    detail.capability === "turn-task-projection" &&
+    "availability" in detail &&
+    detail.availability === "unavailable"
   );
 }
 
@@ -842,7 +933,7 @@ describe("getPiDiscoverableModels", () => {
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
-            yield* adapter.startSession({
+            const agentSession = yield* adapter.startSession({
               provider: "omnimind",
               threadId: agentThreadId,
               cwd,
@@ -866,6 +957,35 @@ describe("getPiDiscoverableModels", () => {
               modelSelection: { provider: "omnimind", model: "local/safe-model" },
             });
             yield* Effect.promise(() => waitForTurn(events, secondAgentTurn.turnId));
+            yield* adapter.rollbackThread(agentThreadId, 1);
+            const thirdAgentTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "third Agent turn after branch rollback",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() => waitForTurn(events, thirdAgentTurn.turnId));
+            yield* adapter.stopSession(agentThreadId);
+
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              ...(agentSession.resumeCursor === undefined
+                ? {}
+                : { resumeCursor: agentSession.resumeCursor }),
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const resumedAgentTurn = yield* adapter.sendTurn({
+              threadId: agentThreadId,
+              input: "fourth Agent turn after resume",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() => waitForTurn(events, resumedAgentTurn.turnId));
             yield* adapter.stopSession(agentThreadId);
 
             yield* adapter.startSession({
@@ -922,28 +1042,34 @@ describe("getPiDiscoverableModels", () => {
         ),
       );
 
-      expect(requestBodies).toHaveLength(4);
+      expect(requestBodies).toHaveLength(6);
       const systemPrompt = (body: any) =>
         body.messages?.find((message: any) => message.role === "system")?.content ?? "";
       const toolNames = (body: any) =>
         (body.tools ?? []).map((tool: any) => tool.function?.name ?? tool.name);
-      for (const body of requestBodies.slice(0, 2)) {
+      for (const body of requestBodies.slice(0, 4)) {
         const prompt = systemPrompt(body);
         expect(prompt).toContain("project extension replacement");
-        expect(prompt).toContain("<omnimind_agent_task_policy>");
+        expect(prompt).not.toContain("<omnimind_agent_task_policy>");
         expect(prompt.split(identity)).toHaveLength(2);
         expect(prompt.split("<omnimind_engine_contract>")).toHaveLength(2);
         expect(prompt).not.toContain("<omnimind_host_context>");
         expect(toolNames(body)).toContain("omnimind_update_tasks");
+        const taskTool = (body.tools ?? []).find(
+          (tool: any) => (tool.function?.name ?? tool.name) === "omnimind_update_tasks",
+        );
+        expect(taskTool?.function?.description ?? taskTool?.description).toContain("task snapshot");
+        expect(JSON.stringify(taskTool)).not.toContain("loader");
+        expect(JSON.stringify(taskTool)).not.toContain("activation");
       }
-      const chatPrompt = systemPrompt(requestBodies[2]);
+      const chatPrompt = systemPrompt(requestBodies[4]);
       expect(chatPrompt).toContain(identity);
       expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
       expect(chatPrompt).not.toContain("project extension replacement");
       expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
-      expect(toolNames(requestBodies[2])).not.toContain("omnimind_update_tasks");
-      expect(systemPrompt(requestBodies[3])).not.toContain(identity);
-      expect(toolNames(requestBodies[3])).not.toContain("omnimind_update_tasks");
+      expect(toolNames(requestBodies[4])).not.toContain("omnimind_update_tasks");
+      expect(systemPrompt(requestBodies[5])).not.toContain(identity);
+      expect(toolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -1137,6 +1263,253 @@ describe("getPiDiscoverableModels", () => {
       ).toBe(true);
       expect(
         events.some((event) => event.type === "turn.tasks.updated" && event.turnId === turn.turnId),
+      ).toBe(false);
+      expect(events.some(isOmniMindTaskUnavailableWarning)).toBe(false);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the Agent usable but disables Product Todo projection on same-name global/project Extensions", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-task-name-collision-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000065");
+    mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+    mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "extensions", "same-named-task-tool.ts"),
+      [
+        'import { Type } from "typebox";',
+        "export default function setup(pi) {",
+        "  pi.registerTool({",
+        '    name: "omnimind_update_tasks",',
+        '    label: "Global same-name tool",',
+        '    description: "Must remain a normal global Extension tool.",',
+        "    parameters: Type.Object({}),",
+        '    execute: async () => ({ content: [{ type: "text", text: "global result" }] }),',
+        "  });",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(cwd, ".omnimind", "extensions", "same-named-task-tool.ts"),
+      [
+        'import { Type } from "typebox";',
+        "export default function setup(pi) {",
+        "  pi.registerTool({",
+        '    name: "omnimind_update_tasks",',
+        '    label: "Project same-name tool",',
+        '    description: "Must not acquire Product Todo authority.",',
+        "    parameters: Type.Object({}),",
+        '    execute: async () => ({ content: [{ type: "text", text: "project result" }] }),',
+        "  });",
+        "}",
+      ].join("\n"),
+    );
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return requestCount === 1
+        ? piOpenAiTaskToolCallResponse()
+        : piOpenAiSuccessResponse("Project Extension tool completed.");
+    });
+
+    try {
+      const events: ProviderRuntimeEvent[] = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "Use the selected project tool.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+                  ),
+                "The same-name project Extension turn did not settle.",
+              ),
+            );
+            const exists = yield* adapter.hasSession(threadId);
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { exists, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(requestCount).toBe(2);
+      expect(result.exists).toBe(true);
+      expect(events.filter(isOmniMindTaskUnavailableWarning)).toHaveLength(1);
+      expect(
+        events.some(
+          (event) => event.type === "turn.tasks.updated" && event.turnId === result.turn.turnId,
+        ),
+      ).toBe(false);
+      expect(
+        events.some(
+          (event) =>
+            event.type === "item.completed" &&
+            event.turnId === result.turn.turnId &&
+            event.payload.itemType === "dynamic_tool_call",
+        ),
+      ).toBe(true);
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the Session usable but disables Product Todo when reload introduces a collision", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-agent-task-reload-collision-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000066");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    let requestCount = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => {
+      requestCount += 1;
+      return requestCount === 1
+        ? piOpenAiTaskToolCallResponse()
+        : piOpenAiSuccessResponse("Reloaded project Extension tool completed.");
+    });
+
+    try {
+      const events: ProviderRuntimeEvent[] = [];
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            yield* Effect.sync(() => {
+              mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
+              writeFileSync(
+                path.join(cwd, ".omnimind", "extensions", "same-named-task-tool.ts"),
+                [
+                  'import { Type } from "typebox";',
+                  "export default function setup(pi) {",
+                  "  pi.registerTool({",
+                  '    name: "omnimind_update_tasks",',
+                  '    label: "Reload collision",',
+                  '    description: "Must not close the Product Session.",',
+                  "    parameters: Type.Object({}),",
+                  '    execute: async () => ({ content: [{ type: "text", text: "collision" }] }),',
+                  "  });",
+                  "}",
+                ].join("\n"),
+              );
+            });
+            const reloaded = yield* adapter.reloadSessionResources!(threadId);
+            const exists = yield* adapter.hasSession(threadId);
+            const turn = yield* adapter.sendTurn({
+              threadId,
+              input: "Use the tool selected after reload.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+                  ),
+                "The reloaded same-name Extension turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+            return { exists, reloaded, turn };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(requestCount).toBe(2);
+      expect(result.reloaded).toBe("reloaded");
+      expect(result.exists).toBe(true);
+      expect(events.filter(isOmniMindTaskUnavailableWarning)).toHaveLength(1);
+      expect(
+        events.some(
+          (event) => event.type === "turn.tasks.updated" && event.turnId === result.turn.turnId,
+        ),
       ).toBe(false);
     } finally {
       vi.restoreAllMocks();
