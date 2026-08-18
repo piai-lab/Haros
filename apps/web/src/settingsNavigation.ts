@@ -127,10 +127,10 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   {
     id: "integrations",
     group: "integrations",
-    label: "MCP connections",
-    description: "Give Codex, Claude, and other local agents scoped access to OmniMind tasks.",
+    label: "External connections",
+    description: "Let Codex, Claude Code, and other local apps use OmniMind.",
     icon: "plugin-1",
-    eyebrow: "External agents",
+    eyebrow: "Connected apps",
   },
   {
     id: "providers",

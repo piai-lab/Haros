@@ -50,7 +50,7 @@ import { ProviderOptionLabel } from "../components/ProviderIcon";
 import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardShortcutsSettingsPanel";
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
-import { ExternalMcpSettingsPanel } from "../components/settings/ExternalMcpSettingsPanel";
+import { ExternalConnectionsSettingsPanel } from "../components/settings/ExternalConnectionsSettingsPanel";
 import {
   SettingResetButton,
   SettingsSegmentedControl,
@@ -108,9 +108,7 @@ import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
-const PROVIDER_SELECT_OPTIONS = PROVIDER_DESCRIPTORS.map(
-  (descriptor) => descriptor.kind,
-);
+const PROVIDER_SELECT_OPTIONS = PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind);
 const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
 
 const SETTINGS_SECTION_LABEL_KEY = {
@@ -129,10 +127,7 @@ const SETTINGS_SECTION_LABEL_KEY = {
   usage: "settings.usage",
   integrations: "settings.integrations",
   advanced: "settings.advanced",
-} as const satisfies Record<
-  (typeof SETTINGS_NAV_ITEMS)[number]["id"],
-  MessageKey
->;
+} as const satisfies Record<(typeof SETTINGS_NAV_ITEMS)[number]["id"], MessageKey>;
 
 const SETTINGS_SECTION_DESCRIPTION_KEY = {
   general: "settings.generalDescription",
@@ -150,10 +145,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY = {
   usage: "settings.usagePanelDescription",
   integrations: "settings.integrationsDescription",
   advanced: "settings.advancedDescription",
-} as const satisfies Record<
-  (typeof SETTINGS_NAV_ITEMS)[number]["id"],
-  MessageKey
->;
+} as const satisfies Record<(typeof SETTINGS_NAV_ITEMS)[number]["id"], MessageKey>;
 
 // ── Settings UI primitives ────────────────────────────────────────────────
 
@@ -174,8 +166,7 @@ type BooleanSettingKey = {
 function SettingsRouteView() {
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
-  const settingsTarget =
-    typeof routeSearch.target === "string" ? routeSearch.target : null;
+  const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
   const {
     isDefaultActiveTheme,
     resetAllThemes,
@@ -185,34 +176,29 @@ function SettingsRouteView() {
     systemUiFont,
     setSystemUiFont,
   } = useTheme();
-  const { settings, defaults, updateSettings, resetSettings } =
-    useAppSettings();
+  const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const { t } = useI18n();
-  const currentGitTextGenerationProvider =
-    settings.textGenerationProvider ?? "codex";
+  const currentGitTextGenerationProvider = settings.textGenerationProvider ?? "codex";
   const currentGitTextGenerationModel =
     settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const serverConfigQuery = useQuery({
     ...serverConfigQueryOptions(),
     enabled: activeSection === "general",
   });
-  const gitWritingModelHintByProvider = useMemo<
-    Partial<Record<ProviderKind, string | null>>
-  >(
+  const gitWritingModelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
     () => ({
       [currentGitTextGenerationProvider]: currentGitTextGenerationModel,
     }),
     [currentGitTextGenerationModel, currentGitTextGenerationProvider],
   );
-  const { modelOptionsByProvider: gitWritingCatalogOptionsByProvider } =
-    useProviderModelCatalog({
-      selectedProvider: currentGitTextGenerationProvider,
-      discoveryEnabled: activeSection === "general",
-      selectedProviderDiscoveryEnabled: activeSection === "general",
-      cwd: serverConfigQuery.data?.cwd ?? null,
-      modelHintByProvider: gitWritingModelHintByProvider,
-      prefetchProviders: GIT_WRITING_DISCOVERY_PROVIDERS,
-    });
+  const { modelOptionsByProvider: gitWritingCatalogOptionsByProvider } = useProviderModelCatalog({
+    selectedProvider: currentGitTextGenerationProvider,
+    discoveryEnabled: activeSection === "general",
+    selectedProviderDiscoveryEnabled: activeSection === "general",
+    cwd: serverConfigQuery.data?.cwd ?? null,
+    modelHintByProvider: gitWritingModelHintByProvider,
+    prefetchProviders: GIT_WRITING_DISCOVERY_PROVIDERS,
+  });
   const gitTextGenerationModelOptions = useMemo(
     () =>
       getGitTextGenerationModelOptions(settings, {
@@ -271,8 +257,7 @@ function SettingsRouteView() {
     }),
     [t],
   );
-  const desktopTopBarTrafficLightGutterClassName =
-    useDesktopTopBarTrafficLightGutterClassName();
+  const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const [resetEpoch, setResetEpoch] = useState(0);
   const shouldShowFontSmoothing = isMacPlatform(
     typeof navigator === "undefined" ? "" : navigator.platform,
@@ -285,19 +270,10 @@ function SettingsRouteView() {
     );
   }, [settings.terminalFontFamily]);
 
-  const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(
-    settings,
-    defaults,
-  );
-  const isInstallSettingsDirty = isProviderInstallSettingsDirty(
-    settings,
-    defaults,
-  );
+  const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
+  const isInstallSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
   const hiddenProviderCount = new Set(settings.hiddenProviders).size;
-  const isProviderOrderDirty = !sameProviderOrder(
-    settings.providerOrder,
-    defaults.providerOrder,
-  );
+  const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
 
   // Deep links and sidebar search targets all resolve to stable DOM ids in the active panel.
   useEffect(() => {
@@ -311,9 +287,7 @@ function SettingsRouteView() {
   }, [activeSection, settingsTarget]);
 
   const changedSettingLabels = [
-    ...(settings.localePreference !== defaults.localePreference
-      ? [t("settings.language")]
-      : []),
+    ...(settings.localePreference !== defaults.localePreference ? [t("settings.language")] : []),
     ...(theme !== "system" ? [t("settings.theme")] : []),
     ...(!isDefaultActiveTheme ? [t("settings.theme")] : []),
     ...(settings.defaultProvider !== defaults.defaultProvider
@@ -328,19 +302,11 @@ function SettingsRouteView() {
     ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder
       ? [t("settings.threadOrder")]
       : []),
-    ...(settings.showStudioSection !== defaults.showStudioSection
-      ? [t("nav.chat")]
-      : []),
-    ...(settings.uiDensity !== defaults.uiDensity
-      ? [t("settings.uiDensity")]
-      : []),
+    ...(settings.showStudioSection !== defaults.showStudioSection ? [t("nav.chat")] : []),
+    ...(settings.uiDensity !== defaults.uiDensity ? [t("settings.uiDensity")] : []),
     ...(settings.chatWidth !== defaults.chatWidth ? [t("settings.chatWidth")] : []),
-    ...(settings.desktopAppIcon !== defaults.desktopAppIcon
-      ? [t("settings.appIcon")]
-      : []),
-    ...(settings.chatFontSizePx !== defaults.chatFontSizePx
-      ? [t("settings.baseFontSize")]
-      : []),
+    ...(settings.desktopAppIcon !== defaults.desktopAppIcon ? [t("settings.appIcon")] : []),
+    ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? [t("settings.baseFontSize")] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx
       ? [t("settings.terminalFontSize")]
       : []),
@@ -351,11 +317,8 @@ function SettingsRouteView() {
     settings.enableNativeFontSmoothing !== defaults.enableNativeFontSmoothing
       ? [t("settings.fontSmoothing")]
       : []),
-    ...(settings.timestampFormat !== defaults.timestampFormat
-      ? [t("settings.timeFormat")]
-      : []),
-    ...(settings.enableTaskCompletionToasts !==
-    defaults.enableTaskCompletionToasts
+    ...(settings.timestampFormat !== defaults.timestampFormat ? [t("settings.timeFormat")] : []),
+    ...(settings.enableTaskCompletionToasts !== defaults.enableTaskCompletionToasts
       ? [t("settings.activityToasts")]
       : []),
     ...(settings.enableSystemTaskCompletionNotifications !==
@@ -368,24 +331,18 @@ function SettingsRouteView() {
     ...(settings.followUpBehavior !== defaults.followUpBehavior
       ? [t("settings.followUpBehavior")]
       : []),
-    ...(settings.enableAppSnap !== defaults.enableAppSnap
-      ? [t("settings.appsnap")]
-      : []),
+    ...(settings.enableAppSnap !== defaults.enableAppSnap ? [t("settings.appsnap")] : []),
     ...(!sameAppSnapShortcut(settings.appSnapShortcut, defaults.appSnapShortcut)
       ? [t("settings.shortcut")]
       : []),
     ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound
       ? [t("settings.captureSound")]
       : []),
-    ...(settings.enableProviderUpdateChecks !==
-    defaults.enableProviderUpdateChecks
+    ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks
       ? [t("settings.automaticCliUpdates")]
       : []),
-    ...(settings.diffWordWrap !== defaults.diffWordWrap
-      ? [t("settings.diffLineWrapping")]
-      : []),
-    ...(settings.showPullRequestDiffColors !==
-    defaults.showPullRequestDiffColors
+    ...(settings.diffWordWrap !== defaults.diffWordWrap ? [t("settings.diffLineWrapping")] : []),
+    ...(settings.showPullRequestDiffColors !== defaults.showPullRequestDiffColors
       ? [t("settings.pullRequestDiffColors")]
       : []),
     ...(settings.confirmThreadDelete !== defaults.confirmThreadDelete
@@ -500,8 +457,7 @@ function SettingsRouteView() {
             <SettingsSelectControl
               value={settings.localePreference}
               onValueChange={(value) => {
-                if (value !== "system" && value !== "zh-CN" && value !== "en")
-                  return;
+                if (value !== "system" && value !== "zh-CN" && value !== "en") return;
                 updateSettings({ localePreference: value });
               }}
               ariaLabel={t("settings.language")}
@@ -533,9 +489,7 @@ function SettingsRouteView() {
             settings.defaultProvider !== defaults.defaultProvider ? (
               <SettingResetButton
                 label={t("settings.defaultProvider")}
-                onClick={() =>
-                  updateSettings({ defaultProvider: defaults.defaultProvider })
-                }
+                onClick={() => updateSettings({ defaultProvider: defaults.defaultProvider })}
               />
             ) : null
           }
@@ -613,8 +567,7 @@ function SettingsRouteView() {
           title={t("settings.projectOrder")}
           description={t("settings.projectOrderDescription")}
           resetAction={
-            settings.sidebarProjectSortOrder !==
-            defaults.sidebarProjectSortOrder ? (
+            settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder ? (
               <SettingResetButton
                 label={t("settings.projectOrder")}
                 onClick={() =>
@@ -629,11 +582,7 @@ function SettingsRouteView() {
             <SettingsSelectControl
               value={settings.sidebarProjectSortOrder}
               onValueChange={(value) => {
-                if (
-                  value !== "updated_at" &&
-                  value !== "created_at" &&
-                  value !== "manual"
-                ) {
+                if (value !== "updated_at" && value !== "created_at" && value !== "manual") {
                   return;
                 }
                 updateSettings({ sidebarProjectSortOrder: value });
@@ -664,8 +613,7 @@ function SettingsRouteView() {
           title={t("settings.threadOrder")}
           description={t("settings.threadOrderDescription")}
           resetAction={
-            settings.sidebarThreadSortOrder !==
-            defaults.sidebarThreadSortOrder ? (
+            settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder ? (
               <SettingResetButton
                 label={t("settings.threadOrder")}
                 onClick={() =>
@@ -753,15 +701,8 @@ function SettingsRouteView() {
                   value={currentGitTextGenerationValue}
                   onValueChange={(value) => {
                     const separatorIndex = value.indexOf(":");
-                    if (
-                      separatorIndex <= 0 ||
-                      separatorIndex === value.length - 1
-                    )
-                      return;
-                    const provider = value.slice(
-                      0,
-                      separatorIndex,
-                    ) as ProviderKind;
+                    if (separatorIndex <= 0 || separatorIndex === value.length - 1) return;
+                    const provider = value.slice(0, separatorIndex) as ProviderKind;
                     const model = value.slice(separatorIndex + 1);
                     if (!PROVIDER_SELECT_OPTIONS.includes(provider)) return;
                     updateSettings({
@@ -847,10 +788,7 @@ function SettingsRouteView() {
         title={t("settings.themeSection")}
         action={
           theme !== "system" ? (
-            <SettingResetButton
-              label={t("settings.theme")}
-              onClick={() => setTheme("system")}
-            />
+            <SettingResetButton label={t("settings.theme")} onClick={() => setTheme("system")} />
           ) : null
         }
       >
@@ -890,21 +828,15 @@ function SettingsRouteView() {
               settings.desktopAppIcon !== defaults.desktopAppIcon ? (
                 <SettingResetButton
                   label={t("settings.appIcon")}
-                  onClick={() =>
-                    updateSettings({ desktopAppIcon: defaults.desktopAppIcon })
-                  }
+                  onClick={() => updateSettings({ desktopAppIcon: defaults.desktopAppIcon })}
                 />
               ) : null
             }
             control={
               <AppIconPicker
-                platform={
-                  typeof navigator === "undefined" ? "" : navigator.platform
-                }
+                platform={typeof navigator === "undefined" ? "" : navigator.platform}
                 value={settings.desktopAppIcon}
-                onValueChange={(desktopAppIcon) =>
-                  updateSettings({ desktopAppIcon })
-                }
+                onValueChange={(desktopAppIcon) => updateSettings({ desktopAppIcon })}
               />
             }
           />
@@ -1060,9 +992,7 @@ function SettingsRouteView() {
                   const nextValue = event.target.value.trim();
                   if (nextValue.length === 0) return;
                   updateSettings({
-                    terminalFontSizePx: normalizeTerminalFontSizePx(
-                      Number(nextValue),
-                    ),
+                    terminalFontSizePx: normalizeTerminalFontSizePx(Number(nextValue)),
                   });
                 }}
                 aria-label={t("settings.terminalFontSizeAria")}
@@ -1113,27 +1043,22 @@ function SettingsRouteView() {
                 />
                 <AutocompletePopup className="w-56 min-w-56 font-system-ui">
                   <AutocompleteList>
-                    {visibleTerminalFontFamilySuggestions.map(
-                      (suggestion, index) => (
-                        <AutocompleteItem
-                          key={suggestion}
-                          index={index}
-                          value={suggestion}
-                          className="font-normal text-[var(--color-text-foreground)]"
-                          onClick={() => {
-                            updateSettings({
-                              terminalFontFamily:
-                                normalizeTerminalFontFamily(suggestion),
-                            });
-                          }}
-                        >
-                          {suggestion}
-                        </AutocompleteItem>
-                      ),
-                    )}
-                    <AutocompleteEmpty>
-                      {t("settings.noSuggestedFonts")}
-                    </AutocompleteEmpty>
+                    {visibleTerminalFontFamilySuggestions.map((suggestion, index) => (
+                      <AutocompleteItem
+                        key={suggestion}
+                        index={index}
+                        value={suggestion}
+                        className="font-normal text-[var(--color-text-foreground)]"
+                        onClick={() => {
+                          updateSettings({
+                            terminalFontFamily: normalizeTerminalFontFamily(suggestion),
+                          });
+                        }}
+                      >
+                        {suggestion}
+                      </AutocompleteItem>
+                    ))}
+                    <AutocompleteEmpty>{t("settings.noSuggestedFonts")}</AutocompleteEmpty>
                   </AutocompleteList>
                 </AutocompletePopup>
               </Autocomplete>
@@ -1172,11 +1097,7 @@ function SettingsRouteView() {
             <SettingsSelectControl
               value={settings.timestampFormat}
               onValueChange={(value) => {
-                if (
-                  value !== "locale" &&
-                  value !== "12-hour" &&
-                  value !== "24-hour"
-                ) {
+                if (value !== "locale" && value !== "12-hour" && value !== "24-hour") {
                   return;
                 }
                 updateSettings({
@@ -1224,9 +1145,7 @@ function SettingsRouteView() {
           control={
             <SettingsSegmentedControl
               value={settings.followUpBehavior}
-              onValueChange={(value) =>
-                updateSettings({ followUpBehavior: value })
-              }
+              onValueChange={(value) => updateSettings({ followUpBehavior: value })}
               ariaLabel={t("settings.followUpBehavior")}
               options={followUpBehaviorOptions}
             />
@@ -1367,9 +1286,7 @@ function SettingsRouteView() {
                           ? t("settings.appearanceDescription")
                           : activeSection === "behavior"
                             ? t("settings.behaviorDescription")
-                            : t(
-                                SETTINGS_SECTION_DESCRIPTION_KEY[activeSection],
-                              )}
+                            : t(SETTINGS_SECTION_DESCRIPTION_KEY[activeSection])}
                     </p>
                   </div>
                   <Button
@@ -1401,9 +1318,7 @@ function SettingsRouteView() {
                   defaults={defaults}
                   updateSettings={updateSettings}
                 />
-                <WorktreesSettingsPanel
-                  active={activeSection === "worktrees"}
-                />
+                <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel
                   active={activeSection === "models"}
@@ -1419,9 +1334,7 @@ function SettingsRouteView() {
                   updateSettings={updateSettings}
                   resetEpoch={resetEpoch}
                 />
-                <ExternalMcpSettingsPanel
-                  active={activeSection === "integrations"}
-                />
+                <ExternalConnectionsSettingsPanel active={activeSection === "integrations"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}
                   resetEpoch={resetEpoch}

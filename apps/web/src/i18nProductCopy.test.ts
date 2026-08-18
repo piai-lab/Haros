@@ -142,7 +142,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/settings/AppSnapShortcutControl.tsx",
   "components/settings/ConversationStorageSettingsPanels.tsx",
   "components/settings/DesktopSettingsPanels.tsx",
-  "components/settings/ExternalMcpSettingsPanel.tsx",
+  "components/settings/ExternalConnectionsSettingsPanel.tsx",
   "components/settings/KeyboardShortcutsSettingsPanel.tsx",
   "components/settings/ModelsSettingsPanel.tsx",
   "components/settings/ProfileSettingsPanel.tsx",
