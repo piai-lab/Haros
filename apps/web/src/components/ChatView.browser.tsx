@@ -2656,6 +2656,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
 
       await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
+      expect(trail.hasAttribute("inert")).toBe(false);
       await waitForLayout();
       const initialTrailLeft = trail.getBoundingClientRect().left;
       const initialConversationLeft = conversation.getBoundingClientRect().left;
@@ -2713,8 +2714,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "window resize did not recenter the reading column",
       ).toBeGreaterThan(100);
 
+      tick.focus();
+      expect(document.activeElement).toBe(tick);
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1009, height: 1072 });
       await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("true"));
+      expect(trail.hasAttribute("inert")).toBe(true);
+      expect(document.activeElement, "the hidden rail retained keyboard focus").not.toBe(tick);
       expect(
         Array.from(trail.querySelectorAll<HTMLButtonElement>("button")).every(
           (button) => button.tabIndex === -1,
@@ -2723,6 +2728,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1358, height: 1072 });
       await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
+      expect(trail.hasAttribute("inert")).toBe(false);
       expect(trail.getBoundingClientRect().left).toBeCloseTo(pane.getBoundingClientRect().left, 0);
       expect(trail.getBoundingClientRect().left).toBeCloseTo(initialTrailLeft, 0);
       expect(

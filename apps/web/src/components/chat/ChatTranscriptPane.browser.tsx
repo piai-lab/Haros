@@ -345,6 +345,7 @@ describe("ChatTranscriptPane", () => {
       await vi.waitFor(() => {
         const trail = screen.container.querySelector("[data-message-trail]");
         expect(trail?.getAttribute("aria-hidden")).toBe("true");
+        expect(trail?.hasAttribute("inert")).toBe(true);
       });
 
       const ticks = Array.from(

@@ -351,10 +351,17 @@ export function MessageTrail({ items, activeThreadId, activeStore, onSelect }: M
       return;
     }
     let pendingRaf: number | null = null;
+    const releaseOwnedFocus = () => {
+      const activeElement = root.ownerDocument.activeElement;
+      if (activeElement instanceof HTMLElement && root.contains(activeElement)) {
+        activeElement.blur();
+      }
+    };
     const measure = () => {
       pendingRaf = null;
       const column = pane.querySelector<HTMLElement>(".chat-column-frame");
       if (!column) {
+        releaseOwnedFocus();
         hasGutterRef.current = false;
         setHasGutter(false);
         return;
@@ -366,6 +373,12 @@ export function MessageTrail({ items, activeThreadId, activeStore, onSelect }: M
         ? TRAIL_HIDE_COLUMN_CLEARANCE_PX
         : TRAIL_SHOW_COLUMN_CLEARANCE_PX;
       const nextHasGutter = availableLeftGutter >= minimumClearance;
+      if (!nextHasGutter) {
+        // A responsive surface can remove the rail while one tick owns keyboard
+        // focus. Release it before applying aria-hidden/inert so focus never stays
+        // trapped inside a subtree that assistive technology can no longer reach.
+        releaseOwnedFocus();
+      }
       hasGutterRef.current = nextHasGutter;
       setHasGutter(nextHasGutter);
     };
@@ -553,6 +566,7 @@ export function MessageTrail({ items, activeThreadId, activeStore, onSelect }: M
     <nav
       ref={rootRef}
       data-message-trail
+      inert={!visible}
       aria-label={t("timeline.messageNavigation")}
       aria-hidden={!visible}
       onKeyDown={handleKeyDown}
