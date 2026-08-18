@@ -201,11 +201,16 @@ OmniMind 内置 Browser、Device、Thread 与 Automation 等 Host capability 继
 
 投影必须尊重目标 Engine 的原生组合机制：
 
-- 只有canonical `provider === "omnimind"`的OmniMind Agent使用Host Tool Search：经Built-in policy与平台可用性过滤后的AgentGateway Host tools由named、hidden、session-scoped inline Extension注册进Pi Tool Registry；Pi拥有该Session的all/active tool truth，Extension只对自己注册且inactive的Host tools做owned、additive activation，Pi Provider层拥有native deferred或fallback编码。Host不得接管或改写Pi built-in、Package Extension或其他Extension的active set。
-- stock Pi虽共享Pi-family实现，产品身份仍是非OmniMind Agent，继续通过现有Pi `customTools` seam直接/eager获得Built-in policy允许的Host tools；Codex、Claude、OpenCode等其他Engine继续使用其真实支持的native MCP或等价adapter seam。实现只按canonical Provider身份做窄分支，不能把OmniMind Agent的Tool Search、active-set或Provider wire语义强加给其他Engine。
+- 只有canonical `provider === "omnimind"`的OmniMind Agent让AgentGateway Host tools作为标准Pi Extension tools参与Pi-native Dynamic Tool Loading：新Session先按Built-in policy与平台/服务可用性过滤，由named、hidden、session-scoped inline Extension注册允许的definitions。Pi `AgentSession`拥有registered/all/active truth、active-set mutation、reload/session lifecycle与Provider native/fallback编码；Host Extension只注册自己拥有的Gateway tools，并在exact runtime需要callable入口时提供一个无持久状态的极薄extension-local loader，请求纯additive activation。
+- 允许的Gateway Host tools初始全部inactive；Host Extension只从自己注册、当前policy仍允许、当前可用且inactive的集合中按轻量metadata发现并激活。它不得重置或接管Pi built-ins、supervised Bash、task/session-control tools、其他Extensions/Packages、Skills、Prompts或third-party MCP的active set，也不固定loader名称、ranking、limit或算法。Pi启动默认激活Extension/custom tools时，Host Extension只能移除自己拥有的Host tool names并保留其他owner的active决定。
+- stock Pi虽共享Pi-family实现，产品身份仍是非OmniMind Agent，继续通过现有Pi `customTools` seam直接/eager获得Built-in policy允许的Host tools；Codex、Claude、OpenCode等其他Engine继续使用其真实支持的native MCP或等价adapter seam。实现只按canonical Provider身份做窄分支，不能把OmniMind Agent的Pi Registry/active-set或Provider wire语义强加给其他Engine。
 - 两条投影共享同一AgentGateway definition与call owner，但不共享Engine私有配置、Package、Session、registry或credential lifecycle；同名冲突必须带provenance显式失败，不silent override。
 
-Tool Search只服务OmniMind Agent，并只负责当前Session中已经注册、当前Built-in policy仍允许且由该Host Extension拥有的Tool discovery与activation；旧Session中的registered tool不能因policy关闭而继续被搜索/激活。它不搜索或安装Package，不加载Skill正文，不接管supervised Bash、task/session-control tool、其他Extension或third-party MCP，也不拥有MCP transport/configuration lifecycle。registered、active与authorized是三种不同事实：完整schema只在激活后的下一安全agent turn进入工具面，最终执行仍由AgentGateway按当前Built-in policy、capability、runtime mode与exact turn authority判定。具体loader名称、ranking、默认命中数量与Provider兼容探针属于可替换实现，不是架构合同。
+Pi-native extension-local loader只是exact `0.84.2`下可能需要的可替换实现细节，不是OmniMind稳定子系统、产品工具或全局工具搜索。它只做轻量发现与additive `setActiveTools`，不代理执行、不返回完整schemas、不连接server、不建立索引或active store。完整schema只在激活后的下一安全agent turn由Pi以Provider-native deferred representation或安全fallback进入真实工具面；最终执行继续回到AgentGateway `tools/call`。registered、active与authorized是三种不同事实：每次真实调用仍按当前Built-in policy、session identity、credential、availability、runtime mode/permission、真实存在的approval、exact turn authority、timeout与cancellation重新判定。
+
+Built-in关闭某组后，新OmniMind Session不注册该组；旧Session的loader按live policy不再发现或激活它，stale call由Gateway立即拒绝。已准入且执行中的调用不因普通exposure toggle被伪装成emergency kill，取消仍归turn/session owner。重新开启不把创建时未注册的schema偷偷注入旧Session，只按Pi真实reload/new-session边界生效。reload、resume与fork优先让Pi Session承担active truth；无法原生保持时允许安全重载或重新发现，但不得建立第二active store，旧Extension实例与handler也不得继续生效。
+
+OmniMind Agent初始Host guidance只说明额外Host能力可按需发现和加载、需要时使用当前active loader、激活后在下一安全turn调用并且不要猜工具名；不得枚举inactive Browser、Device、Thread、Automation工具，也不得把全catalog或长说明换一个位置重新注入。stock Pi和其他Engine继续获得与其完整filtered schema一致的直接工具指导。
 
 OmniMind-owned Skill/MCP 的生命周期归 OmniMind，通过现有 adapter 或 Session projection 注入/挂载；不得复制、覆盖或迁移到 `~/.codex`、`.pi` 或其他 Engine private home。native 与 OmniMind asset 的 provenance、identity 始终保留；同名冲突不得静默覆盖，只有经实际 capability 检查兼容的资产才进入有效集合，不兼容时准确显示 unavailable。OmniMind Agent 可以消费可移植的 Codex/Pi assets，但 Codex/Pi 专属 runtime semantics 仍只属于相应 Engine，不能因资产可读而冒充支持。
 
