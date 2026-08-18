@@ -12,6 +12,32 @@ Synara 是 upstream product platform；OmniMind 是它的 downstream distributio
 2. 实现携带的机制、不变量、失败模型和测试；
 3. 作者解决问题时体现的产品判断、交互品味和用户结果。
 
+### 1.1 OmniMind 非 Agent 产品面以 Synara 为母体
+
+OmniMind Agent 内核之外的产品部分——包括 Desktop shell、Workbench、Project/Thread/Space、Product Orchestration、Queue/receipt/recovery、Settings、Provider 共同投影与其他母体已有用户旅程——默认以 exact Synara 的产品判断、owner、数据流、生命周期、失败/恢复和作者测试为主。优先完整继承、接线或做必要的 OmniMind 品牌/双语/身份翻译，不因本地代码已经分叉、抽象不同或重写更容易就改变母体路线。
+
+只要出现任何拟议偏离，或对 Synara 原行为、用户结果、owner、数据/生命周期、安全、交付证据存在会改变结论的不确定，Agent 都必须先暂停该分支，用 junior 能理解的方式向维护者说清：
+
+1. Synara 原本怎么工作，用户会看到什么；
+2. OmniMind 当前与它哪里不同，或哪个事实还没查清；
+3. 可选路线各自会带来什么用户结果、风险和长期维护成本；
+4. Agent 推荐哪条及具体理由，如何验证和回滚。
+
+维护者是这类偏离与真实分叉的最终决策者。获得明确决定前不得以“更现代”“更简洁”“OmniMind 已经不一样”或 Agent 自己的审美替代裁决。这个提问门只针对真实偏离或会改变结论的不确定；已明确的母体语义内、不增加长期责任的局部实现继续直接完成。
+
+OmniMind Agent 的内核、Pi-native Session/Extension/Package/Skill/Prompt/Tool/MCP 与模型执行路线改由 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md) 深度对齐 Pi；但 Agent 产生的 Thread、Timeline、Workbench 和其他 Product projection 仍属于 Synara 母体产品 owner，不因 runtime 采用 Pi 就另建产品世界。
+
+### 1.2 冲突裁决没有中间地带
+
+先按责任而不是文件名、代码所在模块或实现方便程度归类：
+
+- Desktop shell、Workbench、Project/Thread/Space、Product Orchestration、Queue/receipt/recovery、Settings、跨 Provider 的用户事实与产品投影属于 **Synara 产品母体域**；
+- OmniMind Agent 内部的 ModelRuntime/AgentSession、agent loop、context/compaction、Extension/Package/Skill/Prompt/Tool/MCP、Tool Registry/active set 与 `.omnimind` Provider-private lifecycle 属于 **Pi 内核域**。
+
+归类为 Synara 产品母体域后，当 OmniMind 现有实现、其他 donor、新抽象或个人偏好与 exact Synara 冲突时，**Synara 默认胜出**；只有维护者已明确批准并记录的 fixed OmniMind divergence 可以覆盖该默认。不得把两套语义取平均、部分各留一套、加 compatibility layer 或新建第二 owner 来逃避选择。
+
+如果 Agent 无法确定一项责任属于哪个域，发现两份权威文档给出不兼容要求，或一个变更同时改变 Synara 产品事实与 Pi 内核生命周期，必须立即停止做产品假设，把冲突两边各自的原行为、用户影响、代价和推荐用通俗语言说给维护者，并等待裁决。不存在“先做个折中版本”或“等实现后再选 owner”的中间状态。
+
 默认假设是上游改动有价值，并尽可能吸收。不同架构只说明需要翻译，不构成拒绝理由；合并困难、改动较大、文件冲突或 OmniMind 已经改过同一位置，也都不是拒绝理由。
 
 这项偏好不是盲从。任何直接或语义吸收都必须证明：
@@ -28,6 +54,10 @@ Synara 是 upstream product platform；OmniMind 是它的 downstream distributio
 长期 invariant：**默认完整继承母体；增强必须窄、可证伪、复用既有 owner，且不得增加第二权威或不成比例的长期同步责任。**“比母体更好”只能由更顺的用户 journey、更可靠的恢复、更清楚的诊断、更完整的双语、更自然的 OmniMind Agent/Provider/Group 集成，或可证明的安全/性能提升来说明；文件、抽象、设置和 wrapper 更多不算提升。若收益不足以覆盖新增长期责任，保持上游机制。
 
 “唯一 owner”必须按真实继承关系判断。Synara 已经位于 OmniMind 继承的同一 Product Orchestration、Thread、command/event/projection 与 Workbench 内时，其成熟字段和生命周期是母体产品能力，不因名称是 Goal、Todo、Queue 或 Scheduler 就自动成为“第二控制面”。只有候选另建并行数据库、writer、command path、timer/recovery authority 或用户事实时，才构成第二 owner。不得先把母体能力切碎，再以避免第二 owner 为由重建较弱版本。
+
+若拟议的 OmniMind 自创或母体偏离会新增 owner、state、lifecycle、public contract、control plane 或长期兼容责任，进入施工前必须先用新手可理解的语言向维护者说明母体原行为、当前精确缺口、拟议偏离、全局影响与回滚，并获得明确授权；既有 owner 内不增加长期责任的普通局部翻译无需逐变量请示。禁止单一 adapter/module 静默横跨 definition、prompt、lifecycle、authority 与 event projection 形成“独行侠”。`omnimind_update_tasks` 曾集中在 `PiAdapter` 的事故是本规则的边界示例，详细历史只由[`pi-native-session-tools-review.md`](research/pi-native-session-tools-review.md)记录。
+
+Synara source set 中若带入 Pi-compatible Extension，还必须识别其真实来源模式：Synara/OmniMind 自有字节、继承的上游 fork/patch，或由 Provider 原生 lifecycle 直接安装的第三方 package。不得因为文件出现在母体树中或被 adapter 加载，就静默改写其第一方归属、维护责任或运行时注册事实；source retained、shipped bytes 与 runtime registered 仍必须分开。直接安装与 fork/modify 之间的转换是会改变权利、安全/更新 owner、回滚和长期同步责任的重大 divergence，必须先说明并获得维护者授权；详细 intake 只由 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md) 拥有。
 
 ## 2. 触发与长期授权边界
 

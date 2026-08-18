@@ -100,13 +100,9 @@ test("Synara intake instructions cannot bypass the root handbook", async (t) => 
 
 test("Pi ecosystem intake instructions cannot bypass the root handbook", async (t) => {
   const root = await createFixture(t);
-  await replaceText(
-    root,
-    "AGENTS.md",
-    "PI-ECOSYSTEM-INTAKE.md",
-    "research/omnimind-agent-core-design.md",
-    { all: true },
-  );
+  await replaceText(root, "AGENTS.md", "PI-ECOSYSTEM-INTAKE.md", "research/source-review.md", {
+    all: true,
+  });
 
   assertFinding(await validateDocumentContract({ root }), "route.required", "AGENTS.md");
 });
