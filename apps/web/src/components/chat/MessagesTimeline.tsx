@@ -2077,10 +2077,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     <CollapsibleTrigger
                       // ChatView's click anchor preserves this trigger's screen position
                       // while the disclosure height animates, so opening it should not tail-scroll.
-                      // -ml-0.5 optically aligns the leading "W" with the reply
-                      // text below: the box is already flush, but the W glyph
-                      // carries a left side-bearing that reads as an inset.
-                      className="-ml-0.5 inline-flex items-center gap-1 pb-2 text-left text-[var(--color-text-foreground-secondary)] transition-colors duration-200 hover:text-foreground"
+                      // Keep the trigger inside the row's shared leading inset. Pulling
+                      // the W left by its side-bearing clips its antialiasing at common
+                      // desktop scales and breaks parity with the live-status orb.
+                      className="inline-flex items-center gap-1 pb-2 text-left text-[var(--color-text-foreground-secondary)] transition-colors duration-200 hover:text-foreground"
                       style={{ fontSize: `${appTypographyScale.activityPx}px` }}
                     >
                       <span>
@@ -2432,10 +2432,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
       {row.kind === "working-header" && (
         <div>
           {/* Non-collapsible twin of the settled "Worked for" header: same label
-              tone, size, and full-width divider, but counting up live. -ml-0.5
-              optically aligns the leading "W" with the reply text below. */}
+              tone, size, full-width divider, and safe leading inset, but counting up live. */}
           <div
-            className="-ml-0.5 pb-2 text-[var(--color-text-foreground-secondary)]"
+            className="pb-2 text-[var(--color-text-foreground-secondary)]"
             style={{ fontSize: `${appTypographyScale.activityPx}px` }}
           >
             Working for{" "}
