@@ -21,6 +21,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
+import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { DISCLOSURE_CONTENT_MOTION_CLASS } from "~/lib/disclosureMotion";
 import { APP_TOOLTIP_SURFACE_CLASS_NAME } from "./composerPickerStyles";
@@ -41,6 +42,8 @@ import {
 
 interface MessageTrailProps {
   items: readonly MessageTrailItem[];
+  /** Rebinds measured DOM ownership when the mounted pane switches conversations. */
+  activeThreadId: string;
   /** Stable holder for current + visible highlights; only this component re-renders on change. */
   activeStore: ActiveTrailStore;
   onSelect: (messageId: MessageId) => void;
@@ -52,18 +55,20 @@ const RAIL_WIDTH_PX = 56;
 // reads as a centered band with breathing room; long histories scroll inside it
 // (with top/bottom scroll-fade) instead of compressing to a tall solid block.
 const RAIL_MAX_HEIGHT_RATIO = 0.8;
-// Inset the ticks off the window edge so the rail isn't glued to the far left.
+// Inset the ticks off the Chat-pane seam so the rail isn't glued to the divider.
 const TICK_LEFT_PAD_PX = 14;
 const TICK_HEIGHT_PX = 2;
 // Short at rest, long when magnified — a wide base→max gap is what reads as a
 // real Dock magnification (left 14 + max 30 = 44px, clears the 56px rail).
 const TICK_BASE_W = 6;
 const TICK_MAX_W = 30;
-// Match the reference reading rhythm from the rail box's left edge to the chat
-// column. A fully magnified tick ends at 44px, leaving 56px of clear text space.
-// When this full gutter does not exist, the rail becomes inert instead of
-// crowding the conversation or moving the transcript/composer to manufacture it.
-const TRAIL_TO_COLUMN_GAP_PX = 100;
+// The rail is stable navigation chrome anchored to the Chat pane, not to the
+// centered reading column. It becomes interactive only when that column leaves
+// enough real clearance: a fully magnified tick ends at 44px, so 100px leaves
+// 56px of calm space before text. The lower hide threshold adds a small amount
+// of hysteresis so continuous resize cannot flicker at the boundary.
+const TRAIL_SHOW_COLUMN_CLEARANCE_PX = 100;
+const TRAIL_HIDE_COLUMN_CLEARANCE_PX = 92;
 // Vertical centre-to-centre gap — kept tight so the ticks read as one close
 // stack at rest. The magnified width is independent of this gap (ticks grow
 // sideways, not into each other), so tight spacing keeps full magnification.
@@ -79,7 +84,8 @@ const TICK_FOCUS_OPACITY = 1;
 const TOOLTIP_ESTIMATED_H_PX = 56;
 const TOOLTIP_OFFSET_X_PX = 8;
 
-export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps) {
+export function MessageTrail({ items, activeThreadId, activeStore, onSelect }: MessageTrailProps) {
+  const { t } = useI18n();
   const rootRef = useRef<HTMLElement | null>(null);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -90,6 +96,7 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
   const tooltipId = useId();
 
   const [hasGutter, setHasGutter] = useState(false);
+  const hasGutterRef = useRef(false);
   const [rovingIndex, setRovingIndex] = useState(0);
 
   // Reading-position highlights — fed by the timeline via a stable store so only
@@ -331,11 +338,12 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
     }
   };
 
-  // --- Gutter visibility: require real rendered clearance --------------------
-  // Observe both the pane and one representative transcript frame. Chat width
-  // settings resize the frame while Sidebar/layout pressure resizes the pane;
-  // measuring their actual rects keeps all three width modes honest. The tick
-  // layout is count-driven (see `geometry`), so this cannot form an observer loop.
+  // --- Gutter visibility: fixed pane anchor + measured text clearance --------
+  // The rail's X position is owned entirely by the pane's `left: 0`; resizing the
+  // window or a right-side surface must not drag it with the centered transcript.
+  // Observe both the pane and one representative frame only to decide whether the
+  // fixed rail can remain interactive without crowding text. The count-driven tick
+  // layout (see `geometry`) cannot feed back into either measurement.
   useEffect(() => {
     const root = rootRef.current;
     const pane = root?.parentElement;
@@ -347,16 +355,19 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
       pendingRaf = null;
       const column = pane.querySelector<HTMLElement>(".chat-column-frame");
       if (!column) {
-        root.style.removeProperty("left");
+        hasGutterRef.current = false;
         setHasGutter(false);
         return;
       }
       const paneRect = pane.getBoundingClientRect();
       const columnRect = column.getBoundingClientRect();
       const availableLeftGutter = columnRect.left - paneRect.left;
-      const hasFullGutter = availableLeftGutter >= TRAIL_TO_COLUMN_GAP_PX;
-      root.style.left = hasFullGutter ? `${availableLeftGutter - TRAIL_TO_COLUMN_GAP_PX}px` : "0px";
-      setHasGutter(hasFullGutter);
+      const minimumClearance = hasGutterRef.current
+        ? TRAIL_HIDE_COLUMN_CLEARANCE_PX
+        : TRAIL_SHOW_COLUMN_CLEARANCE_PX;
+      const nextHasGutter = availableLeftGutter >= minimumClearance;
+      hasGutterRef.current = nextHasGutter;
+      setHasGutter(nextHasGutter);
     };
     const schedule = () => {
       if (pendingRaf === null) {
@@ -376,7 +387,7 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
       }
       observer.disconnect();
     };
-  }, [items.length]);
+  }, [activeThreadId, items.length]);
 
   // Reposition the ticks whenever the layout changes (count → new centres).
   useEffect(() => {
@@ -541,7 +552,8 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
   return (
     <nav
       ref={rootRef}
-      aria-label="Message navigation"
+      data-message-trail
+      aria-label={t("timeline.messageNavigation")}
       aria-hidden={!visible}
       onKeyDown={handleKeyDown}
       onBlur={handleRailBlur}
@@ -576,7 +588,10 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
               }}
               type="button"
               tabIndex={visible && index === tabStop ? 0 : -1}
-              aria-label={`Message ${item.ordinal}: ${item.preview.slice(0, 60)}`}
+              aria-label={t("timeline.messageNavigationItem", {
+                ordinal: item.ordinal,
+                preview: item.preview.slice(0, 60),
+              })}
               aria-describedby={tooltipId}
               aria-current={index === anchorIndex ? "location" : undefined}
               onFocus={() => handleTickFocus(index)}

@@ -2628,7 +2628,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     document.body.innerHTML = "";
   });
 
-  it("keeps the message trail in a deliberate gutter beside a docked Sidebar", async () => {
+  it("keeps the message trail fixed to the Chat pane while the reading column recenters", async () => {
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1894, height: 1072 },
       snapshot: createSnapshotForTargetUser({
@@ -2639,8 +2639,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
     try {
       const trail = await waitForElement(
-        () => mounted.host.querySelector<HTMLElement>('nav[aria-label="Message navigation"]'),
+        () => mounted.host.querySelector<HTMLElement>("[data-message-trail]"),
         "Unable to find MessageTrail.",
+      );
+      const pane = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-chat-transcript-pane='true']"),
+        "Unable to find Chat transcript pane.",
       );
       const conversation = await waitForElement(
         () => mounted.host.querySelector<HTMLElement>("[data-timeline-row-kind='message']"),
@@ -2653,10 +2657,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
       await waitForLayout();
+      const initialTrailLeft = trail.getBoundingClientRect().left;
+      const initialConversationLeft = conversation.getBoundingClientRect().left;
+      expect(initialTrailLeft, "the rail left the Chat-pane seam").toBeCloseTo(
+        pane.getBoundingClientRect().left,
+        0,
+      );
       expect(
-        conversation.getBoundingClientRect().left - trail.getBoundingClientRect().left,
-        "the resting rail lost its authored reading gutter",
-      ).toBeCloseTo(100, 0);
+        tick.getBoundingClientRect().left - pane.getBoundingClientRect().left,
+        "the rail lost its authored seam inset",
+      ).toBeCloseTo(14, 0);
+      expect(trail.style.left, "the rail retained a content-column X override").toBe("");
 
       tick.focus();
       await vi.waitFor(() => expect(tick.getBoundingClientRect().width).toBeCloseTo(30, 0));
@@ -2664,12 +2675,59 @@ describe("ChatView timeline estimator parity (full app)", () => {
         conversation.getBoundingClientRect().left - tick.getBoundingClientRect().right,
         "a magnified trail tick intruded into the conversation",
       ).toBeGreaterThanOrEqual(54);
+      tick.blur();
+
+      const environmentToggle = await waitForElement(
+        () => mounted.host.querySelector<HTMLButtonElement>("[data-environment-toggle]"),
+        "Unable to find Environment toggle.",
+      );
+      environmentToggle.click();
+      const environmentPanel = await waitForElement(
+        () =>
+          mounted.host.querySelector<HTMLElement>("[data-environment-panel][aria-hidden='false']"),
+        "Unable to find the open Environment inspector.",
+      );
+      await vi.waitFor(() =>
+        expect(environmentPanel.getBoundingClientRect().width).toBeGreaterThanOrEqual(311),
+      );
+      await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
+      await waitForLayout();
+      expect(trail.getBoundingClientRect().left).toBeCloseTo(pane.getBoundingClientRect().left, 0);
+      expect(trail.getBoundingClientRect().left).toBeCloseTo(initialTrailLeft, 0);
+      expect(
+        Math.abs(conversation.getBoundingClientRect().left - initialConversationLeft),
+        "the Environment inspector did not recenter the reading column",
+      ).toBeGreaterThan(100);
+
+      environmentToggle.click();
+      await vi.waitFor(() => expect(environmentPanel.getAttribute("aria-hidden")).toBe("true"));
+      await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1358, height: 1072 });
+      await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
+      await waitForLayout();
+      expect(trail.getBoundingClientRect().left).toBeCloseTo(pane.getBoundingClientRect().left, 0);
+      expect(trail.getBoundingClientRect().left).toBeCloseTo(initialTrailLeft, 0);
+      expect(
+        Math.abs(conversation.getBoundingClientRect().left - initialConversationLeft),
+        "window resize did not recenter the reading column",
+      ).toBeGreaterThan(100);
 
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1009, height: 1072 });
       await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("true"));
       expect(
         Array.from(trail.querySelectorAll<HTMLButtonElement>("button")).every(
           (button) => button.tabIndex === -1,
+        ),
+      ).toBe(true);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1358, height: 1072 });
+      await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
+      expect(trail.getBoundingClientRect().left).toBeCloseTo(pane.getBoundingClientRect().left, 0);
+      expect(trail.getBoundingClientRect().left).toBeCloseTo(initialTrailLeft, 0);
+      expect(
+        Array.from(trail.querySelectorAll<HTMLButtonElement>("button")).some(
+          (button) => button.tabIndex === 0,
         ),
       ).toBe(true);
     } finally {
@@ -2697,7 +2755,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Unable to find a wide conversation frame.",
       );
       const trail = await waitForElement(
-        () => mounted.host.querySelector<HTMLElement>('nav[aria-label="Message navigation"]'),
+        () => mounted.host.querySelector<HTMLElement>("[data-message-trail]"),
         "Unable to find MessageTrail.",
       );
 
@@ -2954,7 +3012,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Unable to find Sidebar resize rail.",
       );
       const messageTrail = await waitForElement(
-        () => mounted.host.querySelector<HTMLElement>('nav[aria-label="Message navigation"]'),
+        () => mounted.host.querySelector<HTMLElement>("[data-message-trail]"),
         "Unable to find MessageTrail during Sidebar resize.",
       );
       await vi.waitFor(() => expect(messageTrail.getAttribute("aria-hidden")).toBe("false"));
@@ -2967,6 +3025,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         0,
       );
       expect(getComputedStyle(contentCard).boxShadow).toContain("-1px 0px 0px");
+      const initialMessageTrailX = messageTrail.getBoundingClientRect().left;
+      expect(initialMessageTrailX).toBeCloseTo(contentCard.getBoundingClientRect().left, 0);
+      expect(messageTrail.style.left, "the rail retained a content-column X override").toBe("");
       const initialGeometry = await measureEnvironmentInvariant(mounted.host);
       expectReadingFramesCentered(initialGeometry);
       const initialWidth = sidebar.getBoundingClientRect().width;
@@ -2999,11 +3060,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
         horizontalCenter(initialGeometry.composerShell) + 76,
         0,
       );
+      expect(messageTrail.getBoundingClientRect().left).toBeCloseTo(
+        contentCard.getBoundingClientRect().left,
+        0,
+      );
+      expect(messageTrail.getBoundingClientRect().left).toBeCloseTo(initialMessageTrailX + 152, 0);
       dispatchRailPointer(rail, "pointercancel", initialRailX + 152, 41);
       await vi.waitFor(() =>
         expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth, 0),
       );
       await vi.waitFor(() => expect(messageTrail.getAttribute("aria-hidden")).toBe("false"));
+      expect(messageTrail.getBoundingClientRect().left).toBeCloseTo(initialMessageTrailX, 0);
       expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
 
       // Pulling the seam nearly to the window edge commits manual closed intent,
