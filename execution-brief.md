@@ -6,7 +6,7 @@ Updated: 2026-08-19
 
 ## 当前目标
 
-在既有 identity/Chat-Agent/trust 基线上完成 Agent tools Gate B：让 AgentGateway Host tools 只在 canonical `omnimind` Provider 中作为 named hidden Pi Extension 参与原生 Dynamic Tool Loading，同时保留 stock Pi 与其他 Engine 的 direct/eager projection。
+Agent tools Gate B 已完成 source integration：AgentGateway Host tools 只在 canonical `omnimind` Provider 中作为 named hidden Pi Extension 参与原生 Dynamic Tool Loading，同时保留 stock Pi 与其他 Engine 的 direct/eager projection。当前职责是维持该 owner 边界与证据门槛，不再保留并行候选路线。
 
 1. 一份 AgentGateway canonical catalog 同时拥有 name/schema/group、availability、execution 与 call-time policy；
 2. fresh 默认开放的 Built-in tools policy 覆盖所有 Agent，新 Session 过滤、旧 Session 新调用实时拒绝；
@@ -17,7 +17,7 @@ Updated: 2026-08-19
 
 ## 当前事实
 
-- Agent tools Gate B已在唯一隔离分支形成local source candidate：`f08872595`到`d3cf632c7`依次闭合authority、Todo、External connections、Built-in policy、prompt diet、Host Extension、OmniMind-only dynamic loading、call-time/lifecycle矩阵、产品词汇与exact provider wire；未push、未merge、未安装。
+- Agent tools Gate B 的 source integration 由 merge commit `e7137c7dc873400d9a801f333f41e278e544e001` 锚定：`f08872595`到`d3cf632c7`依次闭合authority、Todo、External connections、Built-in policy、prompt diet、Host Extension、OmniMind-only dynamic loading、call-time/lifecycle矩阵、产品词汇与exact provider wire；`8186e5245`与`f6d9465bb`完成合并前产品文案、可访问性和证据状态审查。安装、签名、公证与Release仍是独立交付边界。
 - 当前candidate的focused/full gates通过：Server 362个test files/4251项通过（另3 files/16项skip），Web 322 files/4108项通过；document contract 20/20、typecheck、lint（0 error，保留482条既有warning）、licenses与changed-file format通过。全仓`fmt:check`仍命中83个既有无关文件，未扩大格式化范围。
 - MiMo与DeepSeek只以OpenAI Chat-compatible endpoint完成脱敏最小live journey：两者均完成`loader → activated Host tool`两请求链并观察到stream abort；exact OpenAI Responses/Anthropic/Kimi/fallback wire由安装的Pi `0.84.2` serializer tests证明，不把endpoint品牌当wire事实。
 - `d3cf632c7`已生成macOS arm64 DMG/ZIP，闭合240项staged legal identities，并通过隔离HOME/OMNIMIND_HOME/userData的packaged startup smoke。仓库没有现成packaged交互journey harness；Settings toggle、Todo/Host交互与reopen语义当前由source integration覆盖，不能把startup冒充完整journey。
@@ -55,7 +55,7 @@ Updated: 2026-08-19
 
 ## 下一动作
 
-冻结Gate B证据文档并形成最后一个docs-only本地commit；随后从该精确clean HEAD重新生成macOS arm64产物并运行隔离startup smoke，确认最终source provenance。完成后保持分支clean并回报；不push、merge、发布或替换已安装App。
+Gate B 当前没有待执行的工程动作。未来只有在Pi revision、Gateway catalog/authority、Provider wire、Settings policy或packaged journey harness发生实质变化时，才按对应owner重开focused conformance；不得重建第二registry、active store、MCP manager或跨Engine动态加载路线。
 
 ## 证据入口
 

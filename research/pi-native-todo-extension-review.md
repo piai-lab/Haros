@@ -2,7 +2,7 @@
 
 > 证据日期：2026-08-19
 >
-> 状态：责任方向已确认；exact-source事实已核验；本地实现候选已完成focused/full测试并进入隔离packaged startup产物，但尚未push、合并、安装或完成Todo交互journey，不能称产品已交付
+> 状态：责任方向与exact-source事实已核验；Todo Extension source由Gate B merge `e7137c7dc873400d9a801f333f41e278e544e001`合入main，并已有focused/full与隔离packaged startup证据；安装、Release和Todo packaged交互journey仍须由对应artifact另行证明
 >
 > 唯一职责：记录OmniMind Agent Todo Extension。稳定运行时合同属于[`architecture/execution.md`](../architecture/execution.md)；AgentGateway Host动态加载属于[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)。
 
@@ -18,11 +18,11 @@
 
 Pi built-ins、supervised Bash、AgentGateway Host tools与其他Extensions均不由本文编目或协调；它们继续服从各自唯一owner。新增其他session tool也必须建立自己的bounded owner/evidence，不得把本文扩成Session Tool Manager。
 
-## 2. 当前事实与本地候选必须分开
+## 2. pre-Gate-B 事实与已合入 source 必须分开
 
-当前公共main/installed产品基线把Todo definition、prompt、`provider/workSurface`分支与event projection集中在`PiAdapter.customTools`路径。这个downstream-only lone wolf横跨definition、prompt、Session lifecycle例外和事件authority，导致Host研究误分类、active-set判断漂移，并让同名tool仅凭名字接近Product projection authority。
+pre-Gate-B源码与当时已安装产品把Todo definition、prompt、`provider/workSurface`分支与event projection集中在`PiAdapter.customTools`路径。这个downstream-only lone wolf横跨definition、prompt、Session lifecycle例外和事件authority，导致Host研究误分类、active-set判断漂移，并让同名tool仅凭名字接近Product projection authority。
 
-本地任务分支从早期草图`779b6d759…`继续收口为`e9c2007e0`：definition、最短guidance、三态validation与实例级result provenance迁到独立inline Extension，PiAdapter只保留Session装配和canonical event桥；同名第三方winner继续按Pi原生precedence运行，Product Todo仅局部unavailable。它仍是未push local candidate，不是main、installed bytes或产品交付。
+`e9c2007e0`从早期草图`779b6d759…`继续收口：definition、最短guidance、三态validation与实例级result provenance迁到独立inline Extension，PiAdapter只保留Session装配和canonical event桥；同名第三方winner继续按Pi原生precedence运行，Product Todo仅局部unavailable。该source由`e7137c7…`合入main；source merge仍不等同于installed bytes或产品Release。
 
 ## 3. Exact Pi `0.84.2` 事实
 
@@ -90,7 +90,7 @@ Pi官方`examples/extensions/todo.ts`及pi-todotools、avtc、armory只能作为
 | same-name global/project Extension      | Pi native winner可执行；Product Todo unavailable；Session不失败；无task projection污染 | local focused proof     |
 | branch / resume / reload                | tool surface与projection保持，旧Extension handler不泄漏                                | focused; journey needed |
 | prompt/context                          | 无重复Todo policy；不描述Host loader/activation；简单任务不被强制调用                  | local focused proof     |
-| packaged startup                        | exact local candidate ZIP在隔离profile启动并完成Server ready/进程树清理                | local startup proof     |
+| packaged startup                        | exact source ZIP在隔离profile启动并完成Server ready/进程树清理                         | isolated startup proof  |
 | packaged Todo journey                   | fresh isolated App中Agent/Chat、真实调用、重开与warning呈现准确                        | open                    |
 
 ## 8. Revalidation triggers
