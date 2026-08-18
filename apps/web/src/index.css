@@ -260,11 +260,14 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
     --seam-line: color-mix(in srgb, var(--foreground) 30%, transparent);
   }
 
-  /* Keep the 46rem reading column centered against the whole visible workbench
-     whenever there is enough blank space to do so. On constrained surfaces the
-     max() arm stops the column at the normal chat gutter instead of letting it
-     slide underneath the Sidebar. The registered effective-width token moves in
-     lockstep with the drawer, while direct rail manipulation disables its tween. */
+  /* Keep the configured reading column centered against the whole visible
+     workbench whenever there is enough blank space to do so. On constrained
+     surfaces the max() arm stops the column at the normal chat gutter instead
+     of letting it slide underneath the Sidebar. MessageTrail independently
+     measures and occupies only real blank space, so it never becomes a second
+     authority for transcript/composer geometry. The registered effective-width
+     token moves in lockstep with the drawer, while direct rail manipulation
+     disables its tween. */
   [data-thread-sidebar-presentation] {
     --sidebar-effective-width: 0px;
     transition: --sidebar-effective-width 240ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -283,7 +286,13 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
         0px -
           min(
             calc(var(--sidebar-effective-width) / 2),
-            max(0px, calc((100cqw - 46rem) / 2 - var(--app-density-chat-gutter-x-lg, 1.25rem)))
+            max(
+              0px,
+              calc(
+                (100cqw - min(100cqw, var(--app-chat-max-width, 46rem))) / 2 -
+                  var(--app-density-chat-gutter-x-lg, 1.25rem)
+              )
+            )
           )
       )
       0;

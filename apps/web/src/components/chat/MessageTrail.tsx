@@ -46,10 +46,6 @@ interface MessageTrailProps {
   onSelect: (messageId: MessageId) => void;
 }
 
-// Rail only renders once the centered transcript column (max 46rem) leaves a left
-// gutter wide enough for the rail to sit clear of message text. Measured off the
-// pane so a docked side panel / the sidebar is accounted for.
-const MIN_PANE_WIDTH_PX = 864;
 // Fixed rail box. Ticks grow rightward inside it (left-aligned, like the Dock).
 const RAIL_WIDTH_PX = 56;
 // Cap the scrollable tick viewport a bit below the full pane height so the rail
@@ -63,6 +59,11 @@ const TICK_HEIGHT_PX = 2;
 // real Dock magnification (left 14 + max 30 = 44px, clears the 56px rail).
 const TICK_BASE_W = 6;
 const TICK_MAX_W = 30;
+// Match the reference reading rhythm from the rail box's left edge to the chat
+// column. A fully magnified tick ends at 44px, leaving 56px of clear text space.
+// When this full gutter does not exist, the rail becomes inert instead of
+// crowding the conversation or moving the transcript/composer to manufacture it.
+const TRAIL_TO_COLUMN_GAP_PX = 100;
 // Vertical centre-to-centre gap — kept tight so the ticks read as one close
 // stack at rest. The magnified width is independent of this gap (ticks grow
 // sideways, not into each other), so tight spacing keeps full magnification.
@@ -330,9 +331,11 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
     }
   };
 
-  // --- Gutter visibility: rail only shows when the pane is wide enough --------
-  // Width-only ResizeObserver; the tick layout is count-driven (see `geometry`),
-  // so observing size never feeds back into the layout.
+  // --- Gutter visibility: require real rendered clearance --------------------
+  // Observe both the pane and one representative transcript frame. Chat width
+  // settings resize the frame while Sidebar/layout pressure resizes the pane;
+  // measuring their actual rects keeps all three width modes honest. The tick
+  // layout is count-driven (see `geometry`), so this cannot form an observer loop.
   useEffect(() => {
     const root = rootRef.current;
     const pane = root?.parentElement;
@@ -342,7 +345,18 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
     let pendingRaf: number | null = null;
     const measure = () => {
       pendingRaf = null;
-      setHasGutter(pane.clientWidth >= MIN_PANE_WIDTH_PX);
+      const column = pane.querySelector<HTMLElement>(".chat-column-frame");
+      if (!column) {
+        root.style.removeProperty("left");
+        setHasGutter(false);
+        return;
+      }
+      const paneRect = pane.getBoundingClientRect();
+      const columnRect = column.getBoundingClientRect();
+      const availableLeftGutter = columnRect.left - paneRect.left;
+      const hasFullGutter = availableLeftGutter >= TRAIL_TO_COLUMN_GAP_PX;
+      root.style.left = hasFullGutter ? `${availableLeftGutter - TRAIL_TO_COLUMN_GAP_PX}px` : "0px";
+      setHasGutter(hasFullGutter);
     };
     const schedule = () => {
       if (pendingRaf === null) {
@@ -352,13 +366,17 @@ export function MessageTrail({ items, activeStore, onSelect }: MessageTrailProps
     schedule();
     const observer = new ResizeObserver(schedule);
     observer.observe(pane);
+    const column = pane.querySelector<HTMLElement>(".chat-column-frame");
+    if (column) {
+      observer.observe(column);
+    }
     return () => {
       if (pendingRaf !== null) {
         cancelAnimationFrame(pendingRaf);
       }
       observer.disconnect();
     };
-  }, []);
+  }, [items.length]);
 
   // Reposition the ticks whenever the layout changes (count → new centres).
   useEffect(() => {

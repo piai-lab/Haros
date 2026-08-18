@@ -2604,6 +2604,89 @@ describe("ChatView timeline estimator parity (full app)", () => {
     document.body.innerHTML = "";
   });
 
+  it("keeps the message trail in a deliberate gutter beside a docked Sidebar", async () => {
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1894, height: 1072 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-message-trail-gutter" as MessageId,
+        targetText: "message trail gutter",
+      }),
+    });
+
+    try {
+      const trail = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>('nav[aria-label="Message navigation"]'),
+        "Unable to find MessageTrail.",
+      );
+      const conversation = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-timeline-row-kind='message']"),
+        "Unable to find a conversation frame.",
+      );
+      const tick = await waitForElement(
+        () => trail.querySelector<HTMLButtonElement>("button"),
+        "Unable to find a MessageTrail tick.",
+      );
+
+      await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("false"));
+      await waitForLayout();
+      expect(
+        conversation.getBoundingClientRect().left - trail.getBoundingClientRect().left,
+        "the resting rail lost its authored reading gutter",
+      ).toBeCloseTo(100, 0);
+
+      tick.focus();
+      await vi.waitFor(() => expect(tick.getBoundingClientRect().width).toBeCloseTo(30, 0));
+      expect(
+        conversation.getBoundingClientRect().left - tick.getBoundingClientRect().right,
+        "a magnified trail tick intruded into the conversation",
+      ).toBeGreaterThanOrEqual(54);
+
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1358, height: 1072 });
+      await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("true"));
+      expect(
+        Array.from(trail.querySelectorAll<HTMLButtonElement>("button")).every(
+          (button) => button.tabIndex === -1,
+        ),
+      ).toBe(true);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("does not translate a wide chat column underneath the message trail", async () => {
+    localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
+    const mounted = await mountChatView({
+      viewport: { ...DEFAULT_VIEWPORT, width: 1358, height: 1072 },
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-wide-message-trail" as MessageId,
+        targetText: "wide message trail",
+      }),
+    });
+
+    try {
+      const timeline = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
+        "Unable to find Timeline viewport.",
+      );
+      const conversation = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-timeline-row-kind='message']"),
+        "Unable to find a wide conversation frame.",
+      );
+      const trail = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>('nav[aria-label="Message navigation"]'),
+        "Unable to find MessageTrail.",
+      );
+
+      await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("true"));
+      await waitForLayout();
+      expect(conversation.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+        timeline.getBoundingClientRect().left - 1,
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("keeps Sidebar through the reading range and only suppresses it under compact pressure", async () => {
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
@@ -2865,6 +2948,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
           ),
         "Unable to find Sidebar resize rail.",
       );
+      const messageTrail = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>('nav[aria-label="Message navigation"]'),
+        "Unable to find MessageTrail during Sidebar resize.",
+      );
+      await vi.waitFor(() => expect(messageTrail.getAttribute("aria-hidden")).toBe("false"));
       const initialGeometry = await measureEnvironmentInvariant(mounted.host);
       const initialWidth = sidebar.getBoundingClientRect().width;
       const initialRailX = rail.getBoundingClientRect().x + rail.getBoundingClientRect().width / 2;
@@ -2890,10 +2978,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await nextFrame();
       expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth + 152, 0);
       expectReadingAnchorStable(initialGeometry, await measureEnvironmentInvariant(mounted.host));
+      await vi.waitFor(() => expect(messageTrail.getAttribute("aria-hidden")).toBe("true"));
       dispatchRailPointer(rail, "pointercancel", initialRailX + 152, 41);
       await vi.waitFor(() =>
         expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth, 0),
       );
+      await vi.waitFor(() => expect(messageTrail.getAttribute("aria-hidden")).toBe("false"));
       expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
 
       // Pulling the seam nearly to the window edge commits manual closed intent,
