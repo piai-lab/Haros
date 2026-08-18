@@ -1255,7 +1255,6 @@ export function SingleChatSurface(props: {
           shouldAcceptWidth={shouldAcceptDockWidth}
           addMenuKinds={availableDockPaneKinds}
           launcherItems={dockLauncherItems}
-          motionKey={props.threadId}
           activePaneRuntimeMode={activePaneRuntimeMode}
           minimumPrimaryWidth={
             CHAT_CANVAS_MIN_WIDTH_PX + (planSidebarOpen ? PLAN_SIDEBAR_WIDTH_PX : 0)

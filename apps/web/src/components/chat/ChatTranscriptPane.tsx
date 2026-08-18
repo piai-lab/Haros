@@ -27,6 +27,10 @@ import { type ExpandedImagePreview } from "./ExpandedImagePreview";
 import { ChatEmptyStateHero } from "./ChatEmptyStateHero";
 import { MessagesTimeline, type MessagesTimelineController } from "./MessagesTimeline";
 import { composerOverlayAffordanceBottomPx } from "./composerOverlay";
+import {
+  CHAT_COLUMN_FRAME_CLASS_NAME,
+  CHAT_COLUMN_GUTTER_CLASS_NAME,
+} from "./composerPickerStyles";
 import { MessageTrail } from "./MessageTrail";
 import { createActiveTrailStore, deriveMessageTrailItems } from "./messageTrail.logic";
 import { AgentActivityDetailView } from "./AgentActivityDetailView";
@@ -301,7 +305,8 @@ export function ChatTranscriptPane({
         {!agentActivityDetail ? (
           <div
             className={cn(
-              "pointer-events-none absolute inset-x-0 bottom-6 z-30 flex justify-center py-1",
+              "pointer-events-none absolute inset-x-0 bottom-6 z-30 py-1",
+              CHAT_COLUMN_GUTTER_CLASS_NAME,
               // Reuse the shared disclosure motion so the arrow fades + drifts in/out with
               // the same 220ms ease-out curve (and motion-reduce fallback) as every other
               // show/hide in the app. The wrapper stays pointer-events-none; only the
@@ -313,21 +318,26 @@ export function ChatTranscriptPane({
             // visible chat column while the side panel overlays the viewport edge.
             style={scrollButtonFrameStyle}
           >
-            <button
-              type="button"
-              onClick={onScrollToBottom}
-              data-scroll-anchor-ignore
-              aria-label={t("timeline.scrollBottom")}
-              aria-hidden={!scrollButtonVisible}
-              tabIndex={scrollButtonVisible ? 0 : -1}
-              className={cn(
-                "flex size-8 items-center justify-center rounded-full border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-[var(--color-text-foreground)] backdrop-blur-md hover:cursor-pointer",
-                ELEVATED_HOVER_SURFACE_CLASS_NAME,
-                scrollButtonVisible ? "pointer-events-auto" : "pointer-events-none",
-              )}
+            <div
+              className={cn(CHAT_COLUMN_FRAME_CLASS_NAME, "flex justify-center")}
+              data-scroll-to-bottom-frame
             >
-              <ArrowDownIcon className="size-3.5" />
-            </button>
+              <button
+                type="button"
+                onClick={onScrollToBottom}
+                data-scroll-anchor-ignore
+                aria-label={t("timeline.scrollBottom")}
+                aria-hidden={!scrollButtonVisible}
+                tabIndex={scrollButtonVisible ? 0 : -1}
+                className={cn(
+                  "flex size-8 items-center justify-center rounded-full border border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-[var(--color-text-foreground)] backdrop-blur-md hover:cursor-pointer",
+                  ELEVATED_HOVER_SURFACE_CLASS_NAME,
+                  scrollButtonVisible ? "pointer-events-auto" : "pointer-events-none",
+                )}
+              >
+                <ArrowDownIcon className="size-3.5" />
+              </button>
+            </div>
           </div>
         ) : null}
 
