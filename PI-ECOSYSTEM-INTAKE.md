@@ -39,11 +39,11 @@ OmniMind Agent 的默认技术哲学、规则和路线以 exact bundled Pi 为�
 
 ### 1.2 冲突裁决没有中间地带
 
-归类为 OmniMind Agent 的 Pi 内核域后，当 OmniMind 现有 adapter、Host 自建机制、其他 Engine donor、第三方 package 或新抽象与 exact bundled Pi 的哲学、owner、公开 seam、默认行为或生命周期冲突时，**Pi 默认胜出**；只有维护者已明确批准并记录的 fixed OmniMind divergence 可以覆盖该默认。
+归类为 OmniMind Agent 的Pi运行时机制后，当现有adapter、自建机制、其他Engine donor、第三方package或新抽象与exact bundled Pi的公开seam和生命周期冲突时，**Pi在ModelRuntime/AgentSession、agent loop、context/compaction、资源注册、Tool Registry/active set、reload与Provider wire范围内默认胜出**；只有维护者已明确批准并记录的fixed OmniMind divergence可以覆盖该默认。
 
 不得用一个“中间层”同时保留 Pi 与自建的两套 Registry、Session truth、active store、Package lifecycle、Tool authority、Prompt composition 或 resume/recovery；不得用改名、wrapper、双写、兼容双轨或“以后再切换”逃避 owner 裁决。如果 Pi 的 exact 机制还没查清、冲突两边都有重要用户结果，或责任同时跨越 Pi 内核与 Synara Product projection，Agent 必须停在只读/可逆边界，用通俗语言把冲突、选项、损失和推荐说给维护者，等待唯一决定。
 
-责任分界的快速标准是：模型循环、Provider-private Session、context/compaction、Extension/Package/Skill/Prompt/Tool/MCP、Registry/active set 和 Pi private state 听 Pi；Thread、Timeline、Workbench、Product Orchestration、Queue/receipt 与跨 Provider 用户事实听 Synara。仍不能唯一归类时，不允许 Agent 自行选边或调和，只能请维护者裁决。
+这个默认不转移业务owner：AgentGateway继续唯一拥有OmniMind Host canonical catalog、schema、execution、credential、permission/turn authority、timeout与cancel；Pi Extension只负责把这些definitions投影进Pi的注册/active/wire lifecycle。Product Thread、Timeline、Workbench、Product Orchestration、Queue/receipt与跨Provider用户事实听Synara。third-party Extension/MCP仍由各自来源拥有config、secret、transport、server/process lifecycle与business state，进入Pi Registry不使其成为Pi或Host业务能力。仍不能唯一归类时，不允许Agent自行选边或建立折中双轨，只能请维护者裁决。
 
 本文要防止两种同样昂贵的错误：
 
@@ -206,7 +206,7 @@ metadata-only
 
 对每个 owner 给出 disposition：保留候选 owner、桥到 OmniMind 现有 owner、翻译机制，或拒绝。不得用“隐藏 UI”“关闭自动模式”误当 owner 已消失；必须证明 schema、state、listener、timer、writer、command 和 recovery path 都没有注册。
 
-若候选接入方案会重大自创或偏离上游，并新增 owner、state、lifecycle、public contract、control plane 或长期兼容责任，进入 Gate B 施工前必须先用新手可理解的语言向维护者说明上游原行为、当前精确缺口、拟议偏离、全局调用链与维护影响、以及回滚方式，并获得明确授权；既有 owner 内不增加长期责任的普通局部实现无需逐变量请示。不得让单一 adapter/module 静默同时拥有 definition、prompt、lifecycle、authority 与 event projection。`omnimind_update_tasks` 曾集中在 `PiAdapter` 的事故仅作边界示例，详细证据路由到[`pi-native-session-tools-review.md`](research/pi-native-session-tools-review.md)。
+若候选接入方案会重大自创或偏离上游，并新增 owner、state、lifecycle、public contract、control plane 或长期兼容责任，进入 Gate B 施工前必须先用新手可理解的语言向维护者说明上游原行为、当前精确缺口、拟议偏离、全局调用链与维护影响、以及回滚方式，并获得明确授权；既有 owner 内不增加长期责任的普通局部实现无需逐变量请示。不得让单一 adapter/module 静默同时拥有 definition、prompt、lifecycle、authority 与 event projection。
 
 每个采用结论必须分别记录三层事实，不能互相外推：
 

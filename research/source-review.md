@@ -911,11 +911,12 @@ generic Task Manager.
 
 Disposition: there are no new Synara Todo bytes to port and no unresolved non-adoption decision in this
 range. OmniMind Agent's existing three-state turn snapshot remains a narrow downstream Provider
-enhancement, but its definition, prompt, validation and result provenance move from the large
-`PiAdapter` into a named hidden Pi-native Session Extension; PiAdapter retains only Session wiring and
-the canonical event projection. Same-name precedence follows Pi and degrades only the optional Product
-Todo projection, never the Session or a third-party winner. No third-party Todo package, second state,
-registry, Settings surface or control plane is adopted. The bounded implementation and lifecycle
-evidence live in [`pi-native-session-tools-review.md`](pi-native-session-tools-review.md); stable runtime
-responsibility remains in [`architecture/execution.md`](../architecture/execution.md). This is a local,
-unpushed candidate and does not advance Synara's adopted revision or any packaged-product claim.
+enhancement. The confirmed responsibility direction is a named hidden Pi-native Todo Extension with
+PiAdapter retaining only Session wiring and canonical event projection; the current implementation is
+still a local, disposable, unpushed candidate rather than adopted product fact. Same-name precedence
+must follow Pi and degrade only the optional Product Todo projection, never the Session or a third-party
+winner. No third-party Todo package, second state, registry, Settings surface or control plane is
+adopted. Bounded evidence and candidate falsifiers live in
+[`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md); stable runtime responsibility
+remains in [`architecture/execution.md`](../architecture/execution.md). This disposition does not
+advance Synara's adopted revision or any packaged-product claim.

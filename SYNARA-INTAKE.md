@@ -32,7 +32,7 @@ OmniMind Agent 的内核、Pi-native Session/Extension/Package/Skill/Prompt/Tool
 先按责任而不是文件名、代码所在模块或实现方便程度归类：
 
 - Desktop shell、Workbench、Project/Thread/Space、Product Orchestration、Queue/receipt/recovery、Settings、跨 Provider 的用户事实与产品投影属于 **Synara 产品母体域**；
-- OmniMind Agent 内部的 ModelRuntime/AgentSession、agent loop、context/compaction、Extension/Package/Skill/Prompt/Tool/MCP、Tool Registry/active set 与 `.omnimind` Provider-private lifecycle 属于 **Pi 内核域**。
+- OmniMind Agent内部的ModelRuntime/AgentSession、agent loop、context/compaction，以及Extension/Package/Skill/Prompt/Tool/MCP进入Pi时的注册、active set、reload与Provider wire属于 **Pi运行时机制域**。这不转移它们的业务owner：AgentGateway仍拥有OmniMind Host catalog/execution/credential/permission/turn authority/cancel；third-party Extension/MCP仍拥有自己的config、secret、transport与business state。
 
 归类为 Synara 产品母体域后，当 OmniMind 现有实现、其他 donor、新抽象或个人偏好与 exact Synara 冲突时，**Synara 默认胜出**；只有维护者已明确批准并记录的 fixed OmniMind divergence 可以覆盖该默认。不得把两套语义取平均、部分各留一套、加 compatibility layer 或新建第二 owner 来逃避选择。
 
@@ -55,7 +55,7 @@ OmniMind Agent 的内核、Pi-native Session/Extension/Package/Skill/Prompt/Tool
 
 “唯一 owner”必须按真实继承关系判断。Synara 已经位于 OmniMind 继承的同一 Product Orchestration、Thread、command/event/projection 与 Workbench 内时，其成熟字段和生命周期是母体产品能力，不因名称是 Goal、Todo、Queue 或 Scheduler 就自动成为“第二控制面”。只有候选另建并行数据库、writer、command path、timer/recovery authority 或用户事实时，才构成第二 owner。不得先把母体能力切碎，再以避免第二 owner 为由重建较弱版本。
 
-若拟议的 OmniMind 自创或母体偏离会新增 owner、state、lifecycle、public contract、control plane 或长期兼容责任，进入施工前必须先用新手可理解的语言向维护者说明母体原行为、当前精确缺口、拟议偏离、全局影响与回滚，并获得明确授权；既有 owner 内不增加长期责任的普通局部翻译无需逐变量请示。禁止单一 adapter/module 静默横跨 definition、prompt、lifecycle、authority 与 event projection 形成“独行侠”。`omnimind_update_tasks` 曾集中在 `PiAdapter` 的事故是本规则的边界示例，详细历史只由[`pi-native-session-tools-review.md`](research/pi-native-session-tools-review.md)记录。
+若拟议的 OmniMind 自创或母体偏离会新增 owner、state、lifecycle、public contract、control plane 或长期兼容责任，进入施工前必须先用新手可理解的语言向维护者说明母体原行为、当前精确缺口、拟议偏离、全局影响与回滚，并获得明确授权；既有 owner 内不增加长期责任的普通局部翻译无需逐变量请示。禁止单一 adapter/module 静默横跨 definition、prompt、lifecycle、authority 与 event projection 形成“独行侠”。
 
 Synara source set 中若带入 Pi-compatible Extension，还必须识别其真实来源模式：Synara/OmniMind 自有字节、继承的上游 fork/patch，或由 Provider 原生 lifecycle 直接安装的第三方 package。不得因为文件出现在母体树中或被 adapter 加载，就静默改写其第一方归属、维护责任或运行时注册事实；source retained、shipped bytes 与 runtime registered 仍必须分开。直接安装与 fork/modify 之间的转换是会改变权利、安全/更新 owner、回滚和长期同步责任的重大 divergence，必须先说明并获得维护者授权；详细 intake 只由 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md) 拥有。
 
