@@ -32,6 +32,7 @@
 - wire evidence 先转成强类型事实，再形成增量 projection 和局部 view model。
 - 进程隔离缩小崩溃域，不自动构成文件、网络或系统调用沙箱。
 - 共用产品层只承载 Synara 已经证明需要跨 Provider 稳定的用户事实；native Session、protocol、capability、permission 与 ecosystem 保持 Provider-specific。
+- Host-owned capability 保持一个 Host catalog、execution 与 authority owner；进入某个 Engine 时优先通过该 Engine 官方的 Extension、Tool、MCP 或等价组合机制投影，不用跨 Engine Host 抽象取代 native registry、active set、Provider 编码或 lifecycle。
 - 产品名词优先映射到既有 Project、Thread、Space、Studio 与 Provider discovery；没有第二个真实 owner 时，不创建新的 aggregate、registry 或生命周期。
 - 产品表面保持克制；状态、进度、权限、恢复和动效必须由真实回执与失败语义支撑。
 - 第一位普通消费者先使用具体实现；第二位真实消费者出现后再提炼最小公共合同。

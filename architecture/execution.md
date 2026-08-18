@@ -195,6 +195,16 @@ Engine/Host 对某一 mode 没有真实实现时，capability projection 必须�
 
 用户显式选择某个 Engine（即当前 Provider runtime）后，其有效能力集合是 **该 Engine 的完整 native ecosystem + 与该 Engine 真实兼容的 OmniMind Library assets + OmniMind Workbench**。Codex、Pi、OpenCode 等 Engine 自己的 Skill、MCP、Tool、configuration、authentication 与 Session 能力不得因进入 OmniMind 而被替换、裁掉或伪装成 OmniMind 能力。
 
+OmniMind 内置 Browser、Device、Thread 与 Automation 等 Host capability 继续由对应 Host service 与 `AgentGateway` 唯一拥有 canonical tool catalog、schema、execution、credential、capability、turn authority、cancellation 与 lifecycle。Engine adapter只能无损投影同一 catalog并把调用转回同一 Gateway；不得逐 Engine复制 schema、handler、permission或credential state，也不得建立跨 Engine Tool/Plugin Registry。
+
+投影必须尊重目标 Engine 的原生组合机制：
+
+- OmniMind Agent 与 stock Pi 等 Pi-family runtime通过 Pi官方、session-scoped Extension/Tool seam注册Host tools；Pi Tool Registry拥有该Session的all/active tool truth，Pi Extension只对自己注册的Host tools做owned、additive dynamic activation，Pi Provider层拥有native deferred或fallback编码。Host不得接管或改写Pi built-in、Package Extension或其他Extension的active set。
+- 非Pi Engine继续使用其真实支持的native MCP或等价adapter seam；不能把Pi的Tool Search、active-set或Provider wire语义强加给它们。
+- 两条投影共享同一AgentGateway definition与call owner，但不共享Engine私有配置、Package、Session、registry或credential lifecycle；同名冲突必须带provenance显式失败，不silent override。
+
+Tool Search只负责当前Pi Session中已经注册且由该Host Extension拥有的Tool discovery与activation。它不搜索或安装Package，不加载Skill正文，不发现尚未连接的MCP server，也不拥有MCP transport/configuration lifecycle。active只表示模型下一轮可选择该Tool，不是权限授予；最终执行仍由AgentGateway按当前capability、runtime mode与exact turn authority判定。具体loader名称、ranking、默认命中数量与Provider兼容探针属于可替换实现，不是架构合同。
+
 OmniMind-owned Skill/MCP 的生命周期归 OmniMind，通过现有 adapter 或 Session projection 注入/挂载；不得复制、覆盖或迁移到 `~/.codex`、`.pi` 或其他 Engine private home。native 与 OmniMind asset 的 provenance、identity 始终保留；同名冲突不得静默覆盖，只有经实际 capability 检查兼容的资产才进入有效集合，不兼容时准确显示 unavailable。OmniMind Agent 可以消费可移植的 Codex/Pi assets，但 Codex/Pi 专属 runtime semantics 仍只属于相应 Engine，不能因资产可读而冒充支持。
 
 Engine native tool/extension 在当前 Session 产生的短时 Web UI 保留原生能力，由 OmniMind Host 负责桌面呈现：只有 adapter 已观察到、带 Engine/Thread/Tool provenance、仍在有效期内的 exact intent，才默认进入当前 Thread 的 OmniMind Browser/Workbench；不覆盖当前 route、不抢 Composer focus。系统浏览器只由用户在 Browser 中显式选择“Open externally”后打开。不得拦截普通 localhost、开发服务器或任意 URL，也不得修改 Engine private home 或插件字节来偷改语义；短时 bearer URL 只在内存中完成 Host handoff，不进入 Product facts、Timeline raw payload、日志、Campaign 或证据截图。Host 不可用时准确显示 unavailable，不 silent fallback 到系统浏览器。
