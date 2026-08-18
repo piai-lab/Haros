@@ -2,9 +2,9 @@
 // Purpose: "Environment" inspector. Consolidates the chat-header diff toggle,
 //          the composer-footer env/branch pickers, the header git actions, and the
 //          "Open in editor" controls into one vertical list of full-width rows. Always
-//          rendered as the same rounded card: floating at the chat column's top-right on wide
-//          surfaces and temporarily modal under pressure. It never reserves transcript or
-//          Composer layout space.
+//          rendered as the same rounded card: docked beside the chat canvas on wide surfaces
+//          and temporarily modal under pressure. The dock owns real flex width so the transcript
+//          and Composer remain centered in the usable canvas instead of against the full window.
 // Layer: Environment panel container
 
 import type {
@@ -32,6 +32,7 @@ import { useAppSettings } from "~/appSettings";
 import { useI18n } from "~/i18n";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import {
+  ENVIRONMENT_PANEL_LAYOUT_MOTION_CLASS,
   ENVIRONMENT_PANEL_MOTION_CLASS,
   ENVIRONMENT_PANEL_SURFACE_CLASS_NAME,
 } from "~/components/chat/composerPickerStyles";
@@ -71,8 +72,9 @@ import {
   EnvironmentSectionDivider,
 } from "./EnvironmentRow";
 
-const ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME =
-  "pointer-events-none absolute inset-y-0 right-0 z-20 flex flex-col p-3";
+const ENVIRONMENT_PANEL_WRAPPER_CLASS_NAME =
+  "pointer-events-none z-20 flex h-full shrink-0 flex-col overflow-hidden";
+const ENVIRONMENT_PANEL_DOCK_WIDTH_CLASS_NAME = "w-[calc(18rem+1.5rem)]";
 const ENVIRONMENT_FOCUSABLE_SELECTOR =
   "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])";
 
@@ -560,8 +562,8 @@ export function EnvironmentPanel({
     </div>
   );
 
-  // Top-right overlay pinned to the chat column with p-3 edge gutters. The inspector never
-  // participates in Timeline or Composer layout, so opening it cannot move the main canvas.
+  // Wide screens reserve one real flex rail for the existing card. Under pressure the same
+  // mounted panel becomes an absolute modal overlay, preserving its content and focus lifecycle.
   return (
     <>
       {modalActive ? (
@@ -576,9 +578,18 @@ export function EnvironmentPanel({
         />
       ) : null}
       <div
-        className={ENVIRONMENT_PANEL_OVERLAY_WRAPPER_CLASS_NAME}
-        data-environment-panel-presentation="overlay"
-        data-environment-panel-mode={modalActive ? "modal" : "floating"}
+        className={cn(
+          ENVIRONMENT_PANEL_WRAPPER_CLASS_NAME,
+          ENVIRONMENT_PANEL_LAYOUT_MOTION_CLASS,
+          modalActive
+            ? cn("absolute inset-y-0 right-0 p-3", ENVIRONMENT_PANEL_DOCK_WIDTH_CLASS_NAME)
+            : open
+              ? cn("relative p-3", ENVIRONMENT_PANEL_DOCK_WIDTH_CLASS_NAME)
+              : "relative w-0 p-0",
+        )}
+        data-environment-panel
+        data-environment-panel-presentation={modalActive ? "overlay" : "docked"}
+        data-environment-panel-mode={modalActive ? "modal" : "docked"}
         aria-hidden={!open}
         inert={!open}
       >
@@ -592,7 +603,7 @@ export function EnvironmentPanel({
           className={cn(
             ENVIRONMENT_PANEL_SURFACE_CLASS_NAME,
             ENVIRONMENT_PANEL_MOTION_CLASS,
-            "flex max-h-full w-72 flex-col",
+            "ml-auto flex max-h-full w-72 shrink-0 flex-col",
             open
               ? "pointer-events-auto translate-x-0 opacity-100"
               : "pointer-events-none translate-x-full opacity-0",

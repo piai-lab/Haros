@@ -561,7 +561,6 @@ function SidebarRail({
           ? visibleWidth - resolvedResizable.minWidth
           : resolvedResizable.minWidth - visibleWidth;
       resizeState.wrapper.style.setProperty("--sidebar-width", `${resolvedResizable.minWidth}px`);
-      resizeState.wrapper.style.setProperty("--sidebar-effective-width", `${visibleWidth}px`);
       resizeState.gap.style.setProperty("width", `${visibleWidth}px`);
       resizeState.container.style.setProperty("transform", `translate3d(${translateX}px, 0, 0)`);
       resizeState.sidebarRoot.dataset.resizeRetreating = "true";
@@ -573,7 +572,6 @@ function SidebarRail({
     resizeState.gap.style.removeProperty("width");
     resizeState.container.style.removeProperty("transform");
     resizeState.sidebarRoot.removeAttribute("data-resize-retreating");
-    resizeState.wrapper.style.setProperty("--sidebar-effective-width", `${nextWidth}px`);
     resizeState.wrapper.style.setProperty("--sidebar-width", `${nextWidth}px`);
     resizeState.retreating = false;
     resizeState.width = nextWidth;
@@ -608,22 +606,13 @@ function SidebarRail({
         // The below-minimum retreat is a close gesture, not a new committed width.
         // Keep the last valid width intact so a later dock/peek restores it.
         resizeState.wrapper.style.setProperty("--sidebar-width", `${resizeState.startWidth}px`);
-        resizeState.wrapper.style.setProperty("--sidebar-effective-width", "0px");
         resizeState.gap.style.setProperty("width", "0px");
         void setOpen(false);
       } else if (restorePreview) {
         resizeState.wrapper.style.setProperty("--sidebar-width", `${resizeState.startWidth}px`);
-        resizeState.wrapper.style.setProperty(
-          "--sidebar-effective-width",
-          `${resizeState.startWidth}px`,
-        );
         resizeState.gap.style.removeProperty("width");
         resizeState.container.style.removeProperty("transform");
       } else {
-        resizeState.wrapper.style.setProperty(
-          "--sidebar-effective-width",
-          `${resizeState.width}px`,
-        );
         if (resolvedResizable?.storageKey && typeof window !== "undefined") {
           setLocalStorageItem(resolvedResizable.storageKey, resizeState.width, Schema.Finite);
         }
@@ -645,13 +634,10 @@ function SidebarRail({
           }
           resizeState.gap.style.removeProperty("width");
           resizeState.container.style.removeProperty("transform");
-          resizeState.wrapper.style.removeProperty("--sidebar-effective-width");
           settleCleanupRef.current = null;
         };
         settleCleanupRef.current = finishSettling;
         settleTimeoutRef.current = window.setTimeout(finishSettling, 320);
-      } else {
-        resizeState.wrapper.style.removeProperty("--sidebar-effective-width");
       }
     },
     [applyPendingResize, resolvedResizable, setOpen],
@@ -711,7 +697,6 @@ function SidebarRail({
         wrapper,
       };
       wrapper.style.setProperty("--sidebar-width", `${initialWidth}px`);
-      wrapper.style.setProperty("--sidebar-effective-width", `${initialWidth}px`);
       wrapper.dataset.sidebarResizing = "true";
       document.body.dataset.sidebarResizing = "true";
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -818,7 +803,6 @@ function SidebarRail({
       });
       resizeState?.wrapper.removeAttribute("data-sidebar-resizing");
       resizeState?.sidebarRoot.removeAttribute("data-resize-retreating");
-      resizeState?.wrapper.style.removeProperty("--sidebar-effective-width");
       resizeState?.gap.style.removeProperty("width");
       resizeState?.container.style.removeProperty("transform");
       document.body.removeAttribute("data-sidebar-resizing");

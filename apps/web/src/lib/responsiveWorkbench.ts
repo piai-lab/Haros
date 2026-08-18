@@ -25,7 +25,7 @@ export const WORKBENCH_SPLIT_SUPPRESS_WIDTH_PX =
 export const WORKBENCH_SPLIT_RESTORE_WIDTH_PX = WORKBENCH_SPLIT_SUPPRESS_WIDTH_PX + 64;
 
 export type ThreadSidebarPresentation = "docked" | "hidden" | "overlay" | "peek";
-export type EnvironmentPresentation = "hidden" | "floating" | "overlay";
+export type EnvironmentPresentation = "hidden" | "docked" | "overlay";
 export type WorkbenchPresentation = "closed" | "split" | "exclusive";
 export type PlanSidebarPresentation = "side-by-side" | "exclusive";
 
@@ -86,7 +86,7 @@ export function resolveEnvironmentPresentation(input: {
   if (input.autoSuppressed) {
     return input.temporaryReveal ? "overlay" : "hidden";
   }
-  return input.manualOpen ? "floating" : "hidden";
+  return input.manualOpen ? "docked" : "hidden";
 }
 
 export function resolveWorkbenchAutoExclusive(input: {

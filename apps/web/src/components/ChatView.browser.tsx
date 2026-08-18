@@ -82,6 +82,7 @@ import type { RightDockPane, RightDockPaneKind } from "../rightDockStore.logic";
 import { PROVIDER_OPTIONS } from "../session-logic";
 import { resetWsNativeApiForTest } from "../wsNativeApi";
 import { FIRST_RUN_READINESS_PREFERENCE_KEY } from "./onboarding/firstRunReadinessPreference";
+import { toastManager } from "./ui/toast";
 // Pre-transform the compiler-heavy component outside the first case's timeout.
 // The router's auto-split route otherwise requests this module on first mount.
 import "./ChatView";
@@ -2284,7 +2285,8 @@ async function measureUserRow(options: {
       expect(measuredRow, "Unable to measure targeted user row height.").toBeTruthy();
       timelineWidthMeasuredPx = measuredRow!.getBoundingClientRect().width;
       measuredRowHeightPx = measuredRow!.getBoundingClientRect().height;
-      renderedInVirtualizedRegion = measuredRow!.closest("[data-index]") instanceof HTMLElement;
+      renderedInVirtualizedRegion =
+        measuredRow!.closest("[data-chat-scroll-container='true']") === scrollContainer;
       expect(timelineWidthMeasuredPx, "Unable to measure timeline width.").toBeGreaterThan(0);
       expect(measuredRowHeightPx, "Unable to measure targeted user row height.").toBeGreaterThan(0);
     },
@@ -2323,11 +2325,16 @@ async function measureChatLayout(host: HTMLElement): Promise<ChatLayoutMeasureme
 type HorizontalRect = { x: number; width: number };
 
 async function measureEnvironmentInvariant(host: HTMLElement): Promise<{
+  canvas: HorizontalRect;
   timeline: HorizontalRect;
   conversation: HorizontalRect;
   composerForm: HorizontalRect;
   composerShell: HorizontalRect;
 }> {
+  const canvas = await waitForElement(
+    () => host.querySelector<HTMLElement>("[data-chat-content-canvas]"),
+    "Unable to find the usable Chat canvas.",
+  );
   const timeline = await waitForElement(
     () => host.querySelector<HTMLElement>("[data-chat-scroll-container='true']"),
     "Unable to find Timeline viewport.",
@@ -2350,11 +2357,28 @@ async function measureEnvironmentInvariant(host: HTMLElement): Promise<{
     return { x: rect.x, width: rect.width };
   };
   return {
+    canvas: horizontal(canvas),
     timeline: horizontal(timeline),
     conversation: horizontal(conversation),
     composerForm: horizontal(composerForm),
     composerShell: horizontal(composerShell),
   };
+}
+
+function horizontalCenter(rect: HorizontalRect): number {
+  return rect.x + rect.width / 2;
+}
+
+function expectReadingFramesCentered(
+  geometry: Awaited<ReturnType<typeof measureEnvironmentInvariant>>,
+): void {
+  const canvasCenter = horizontalCenter(geometry.canvas);
+  for (const key of ["conversation", "composerForm", "composerShell"] as const) {
+    expect(
+      Math.abs(horizontalCenter(geometry[key]) - canvasCenter),
+      `${key} is not centered in the usable Chat canvas`,
+    ).toBeLessThanOrEqual(1);
+  }
 }
 
 function expectHorizontalGeometryStable(
@@ -2641,7 +2665,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "a magnified trail tick intruded into the conversation",
       ).toBeGreaterThanOrEqual(54);
 
-      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1358, height: 1072 });
+      await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1009, height: 1072 });
       await vi.waitFor(() => expect(trail.getAttribute("aria-hidden")).toBe("true"));
       expect(
         Array.from(trail.querySelectorAll<HTMLButtonElement>("button")).every(
@@ -2733,11 +2757,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expectPresentation("docked");
       const sidebar = mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']");
       expect(sidebar?.getBoundingClientRect().width).toBeCloseTo(368, 0);
-      const presentationRoot = mounted.host.querySelector<HTMLElement>(
-        "[data-thread-sidebar-presentation]",
-      );
       expect(getComputedStyle(sidebar!).transitionDuration.split(",")).toContain("0.24s");
-      expect(getComputedStyle(presentationRoot!).transitionDuration.split(",")).toContain("0.24s");
       const visibleToggle = Array.from(
         mounted.host.querySelectorAll<HTMLElement>("[data-slot='sidebar-trigger']"),
       ).find((element) => element.getClientRects().length > 0);
@@ -2882,8 +2902,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
     localStorage.removeItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY);
     const cookieSet = vi.spyOn(cookieStore, "set");
     const mounted = await mountChatView({
-      // Match the user's 1894px OmniMind capture: this is the range where the
-      // 46rem reading column can remain globally anchored while the rail moves.
+      // Match the user's 1894px OmniMind capture: the reading column must follow
+      // the center of the real canvas while the left boundary moves.
       viewport: { ...DEFAULT_VIEWPORT, width: 1894 },
       snapshot: createSnapshotForTargetUser({
         targetMessageId: "msg-user-sidebar-gesture-continuity" as MessageId,
@@ -2899,21 +2919,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       phase: string = expected,
     ) => {
       await vi.waitFor(() => expect(presentation(), phase).toBe(expected));
-    };
-    const expectReadingAnchorStable = (
-      before: Awaited<ReturnType<typeof measureEnvironmentInvariant>>,
-      after: Awaited<ReturnType<typeof measureEnvironmentInvariant>>,
-    ) => {
-      // The card seam/scroll viewport follows the direct-manipulation rail. The
-      // centered conversation and composer are the stable reading anchors seen
-      // in the Codex reference journey.
-      for (const key of ["conversation", "composerShell"] as const) {
-        expect(Math.abs(after[key].x - before[key].x), `${key}.x moved`).toBeLessThanOrEqual(1);
-        expect(
-          Math.abs(after[key].width - before[key].width),
-          `${key}.width changed`,
-        ).toBeLessThanOrEqual(1);
-      }
     };
     const dispatchRailPointer = (
       rail: HTMLButtonElement,
@@ -2953,7 +2958,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Unable to find MessageTrail during Sidebar resize.",
       );
       await vi.waitFor(() => expect(messageTrail.getAttribute("aria-hidden")).toBe("false"));
+      const contentCard = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>(".chat-content-card"),
+        "Unable to find the route content card.",
+      );
+      expect(contentCard.getBoundingClientRect().left).toBeCloseTo(
+        sidebar.getBoundingClientRect().right,
+        0,
+      );
+      expect(getComputedStyle(contentCard).boxShadow).toContain("-1px 0px 0px");
       const initialGeometry = await measureEnvironmentInvariant(mounted.host);
+      expectReadingFramesCentered(initialGeometry);
       const initialWidth = sidebar.getBoundingClientRect().width;
       const initialRailX = rail.getBoundingClientRect().x + rail.getBoundingClientRect().width / 2;
       vi.spyOn(rail, "setPointerCapture").mockImplementation(() => undefined);
@@ -2977,8 +2992,13 @@ describe("ChatView timeline estimator parity (full app)", () => {
       dispatchRailPointer(rail, "pointermove", initialRailX + 152, 41);
       await nextFrame();
       expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth + 152, 0);
-      expectReadingAnchorStable(initialGeometry, await measureEnvironmentInvariant(mounted.host));
-      await vi.waitFor(() => expect(messageTrail.getAttribute("aria-hidden")).toBe("true"));
+      const expandedGeometry = await measureEnvironmentInvariant(mounted.host);
+      expectReadingFramesCentered(expandedGeometry);
+      expect(expandedGeometry.canvas.width).toBeCloseTo(initialGeometry.canvas.width - 152, 0);
+      expect(horizontalCenter(expandedGeometry.composerShell)).toBeCloseTo(
+        horizontalCenter(initialGeometry.composerShell) + 76,
+        0,
+      );
       dispatchRailPointer(rail, "pointercancel", initialRailX + 152, 41);
       await vi.waitFor(() =>
         expect(sidebar.getBoundingClientRect().width).toBeCloseTo(initialWidth, 0),
@@ -2996,12 +3016,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await expectPresentation("hidden", "drag dismissal");
       await nextFrame();
       expect(sidebar.style.transform, "dismiss left a stale drag transform").toBe("");
-      expect(
-        mounted.host
-          .querySelector<HTMLElement>("[data-thread-sidebar-presentation]")
-          ?.style.getPropertyValue("--sidebar-effective-width"),
-        "dismiss left a stale effective width",
-      ).toBe("");
       expect(sidebar).toBe(
         mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
       );
@@ -3045,7 +3059,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(sidebar).toBe(
         mounted.host.querySelector<HTMLElement>("[data-slot='sidebar-container']"),
       );
-      expectReadingAnchorStable(initialGeometry, await measureEnvironmentInvariant(mounted.host));
+      const peekGeometry = await measureEnvironmentInvariant(mounted.host);
+      expectReadingFramesCentered(peekGeometry);
+      expect(horizontalCenter(peekGeometry.composerShell)).toBeLessThan(
+        horizontalCenter(initialGeometry.composerShell) - 100,
+      );
       expect(localStorage.getItem(THREAD_SIDEBAR_WIDTH_STORAGE_KEY)).toBeNull();
       expect(cookieSet).toHaveBeenCalledTimes(1);
 
@@ -3252,7 +3270,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     { width: 1440, storedLegacyDefaultOpen: false },
     { width: 1440, storedLegacyDefaultOpen: true },
   ] as const)(
-    "starts Environment closed and keeps it out of geometry at $width px with legacy default=$storedLegacyDefaultOpen",
+    "starts Environment closed and centers Chat in the usable canvas at $width px with legacy default=$storedLegacyDefaultOpen",
     async ({ width, storedLegacyDefaultOpen }) => {
       localStorage.setItem(
         "omnimind:app-settings:v1",
@@ -3271,32 +3289,39 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Unable to find Environment toggle.",
       );
       const panel = await waitForElement(
-        () =>
-          mounted.host.querySelector<HTMLElement>(
-            "[data-environment-panel-presentation='overlay']",
-          ),
+        () => mounted.host.querySelector<HTMLElement>("[data-environment-panel]"),
         "Unable to find Environment inspector.",
       );
       const expectOpen = async (open: boolean) => {
         await vi.waitFor(() => {
           expect(toggle.getAttribute("aria-pressed")).toBe(String(open));
           expect(panel.getAttribute("aria-hidden")).toBe(String(!open));
+          if (!open) {
+            expect(panel.getBoundingClientRect().width).toBeLessThanOrEqual(1);
+          }
         });
       };
 
       try {
         let dismissLayer: HTMLButtonElement | null = null;
         await expectOpen(false);
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 280));
         const initial = await measureEnvironmentInvariant(mounted.host);
+        expectReadingFramesCentered(initial);
 
         toggle.focus();
         await userEvent.click(toggle);
         await expectOpen(true);
         if (width === 1440) {
           expect(document.activeElement).toBe(toggle);
-          expect(panel.getAttribute("data-environment-panel-mode")).toBe("floating");
+          expect(panel.getAttribute("data-environment-panel-presentation")).toBe("docked");
+          expect(panel.getAttribute("data-environment-panel-mode")).toBe("docked");
           expect(mounted.host.querySelector("[data-environment-panel-dismiss-layer]")).toBeNull();
+          await vi.waitFor(() =>
+            expect(panel.getBoundingClientRect().width).toBeGreaterThanOrEqual(311),
+          );
         } else {
+          expect(panel.getAttribute("data-environment-panel-presentation")).toBe("overlay");
           expect(panel.getAttribute("data-environment-panel-mode")).toBe("modal");
           dismissLayer = mounted.host.querySelector<HTMLButtonElement>(
             "[data-environment-panel-dismiss-layer]",
@@ -3306,7 +3331,16 @@ describe("ChatView timeline estimator parity (full app)", () => {
           await vi.waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
         }
         const toggled = await measureEnvironmentInvariant(mounted.host);
-        expectHorizontalGeometryStable(initial, toggled);
+        expectReadingFramesCentered(toggled);
+        if (width === 1440) {
+          expect(toggled.canvas.x).toBeCloseTo(initial.canvas.x, 0);
+          expect(toggled.canvas.width).toBeLessThan(initial.canvas.width - 300);
+          expect(horizontalCenter(toggled.composerShell)).toBeLessThan(
+            horizontalCenter(initial.composerShell) - 150,
+          );
+        } else {
+          expectHorizontalGeometryStable(initial, toggled);
+        }
 
         if (dismissLayer) {
           await userEvent.click(dismissLayer);
@@ -3317,6 +3351,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         await vi.waitFor(() => expect(document.activeElement).toBe(toggle));
         const restored = await measureEnvironmentInvariant(mounted.host);
         expectHorizontalGeometryStable(initial, restored);
+        expectReadingFramesCentered(restored);
       } finally {
         await mounted.cleanup();
       }
@@ -3341,13 +3376,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       "Unable to find Environment toggle.",
     );
     const panel = await waitForElement(
-      () =>
-        mounted.host.querySelector<HTMLElement>("[data-environment-panel-presentation='overlay']"),
+      () => mounted.host.querySelector<HTMLElement>("[data-environment-panel]"),
       "Unable to find Environment inspector.",
     );
     const expectPanel = async (input: {
       open: boolean;
-      mode?: "floating" | "modal";
+      mode?: "docked" | "modal";
       stage: string;
     }) => {
       await vi.waitFor(() => {
@@ -3355,27 +3389,38 @@ describe("ChatView timeline estimator parity (full app)", () => {
         if (input.mode) {
           expect(panel.getAttribute("data-environment-panel-mode"), input.stage).toBe(input.mode);
         }
+        if (input.mode === "docked") {
+          expect(panel.getBoundingClientRect().width, input.stage).toBeGreaterThanOrEqual(311);
+        } else if (!input.open) {
+          expect(panel.getBoundingClientRect().width, input.stage).toBeLessThanOrEqual(1);
+        }
       });
     };
 
     try {
       await userEvent.click(toggle);
-      await expectPanel({ open: true, mode: "floating", stage: "wide manual open" });
+      await expectPanel({ open: true, mode: "docked", stage: "wide manual open" });
       const wideGeometry = await measureEnvironmentInvariant(mounted.host);
+      expectReadingFramesCentered(wideGeometry);
 
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1280 });
       await expectPanel({ open: false, stage: "first pressured hide" });
       expect(sidebarPresentation()).toBe("docked");
 
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
-      await expectPanel({ open: true, mode: "floating", stage: "manual intent restore" });
+      await expectPanel({ open: true, mode: "docked", stage: "manual intent restore" });
       expectHorizontalGeometryStable(wideGeometry, await measureEnvironmentInvariant(mounted.host));
 
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1280 });
       await expectPanel({ open: false, stage: "second pressured hide" });
       toggle.focus();
+      const pressuredHiddenGeometry = await measureEnvironmentInvariant(mounted.host);
       toggle.click();
       await expectPanel({ open: true, mode: "modal", stage: "temporary reveal" });
+      expectHorizontalGeometryStable(
+        pressuredHiddenGeometry,
+        await measureEnvironmentInvariant(mounted.host),
+      );
       await vi.waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
       await userEvent.tab({ shift: true });
       expect(panel.contains(document.activeElement)).toBe(true);
@@ -3386,7 +3431,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(() => expect(document.activeElement).toBe(toggle));
 
       await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 1440 });
-      await expectPanel({ open: true, mode: "floating", stage: "second intent restore" });
+      await expectPanel({ open: true, mode: "docked", stage: "second intent restore" });
       expect(sidebarPresentation()).toBe("docked");
     } finally {
       await mounted.cleanup();
@@ -3408,10 +3453,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         "Unable to find Environment toggle.",
       );
       const panel = await waitForElement(
-        () =>
-          mounted.host.querySelector<HTMLElement>(
-            "[data-environment-panel-presentation='overlay']",
-          ),
+        () => mounted.host.querySelector<HTMLElement>("[data-environment-panel]"),
         "Unable to find Environment inspector.",
       );
 
@@ -3484,17 +3526,18 @@ describe("ChatView timeline estimator parity (full app)", () => {
         );
         await userEvent.click(toggle);
         const panel = await waitForElement(
-          () =>
-            mounted.host.querySelector<HTMLElement>(
-              "[data-environment-panel-presentation='overlay']",
-            ),
+          () => mounted.host.querySelector<HTMLElement>("[data-environment-panel]"),
           "Unable to find the Environment inspector.",
         );
         const panelSurface = panel.firstElementChild as HTMLElement | null;
         const panelScroller = panelSurface?.firstElementChild as HTMLElement | null;
         expect(panelSurface).toBeTruthy();
         expect(panelScroller).toBeTruthy();
-        await waitForLayout();
+        await vi.waitFor(() => {
+          expect(panelSurface!.getBoundingClientRect().right).toBeLessThanOrEqual(
+            mounted.host.getBoundingClientRect().right + 1,
+          );
+        });
 
         const hostRect = mounted.host.getBoundingClientRect();
         const headerRect = header.getBoundingClientRect();
@@ -3550,10 +3593,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         );
         await userEvent.click(toggle);
         const panel = await waitForElement(
-          () =>
-            mounted.host.querySelector<HTMLElement>(
-              "[data-environment-panel-presentation='overlay']",
-            ),
+          () => mounted.host.querySelector<HTMLElement>("[data-environment-panel]"),
           "Unable to find the Environment inspector.",
         );
         await vi.waitFor(() => expect(panel.getAttribute("aria-hidden")).toBe("false"));
@@ -3660,6 +3700,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const shellRect = shell()!.getBoundingClientRect();
       const chatRect = chat()!.getBoundingClientRect();
       const dockRect = dock()!.getBoundingClientRect();
+      const canvasRect = mounted.host
+        .querySelector<HTMLElement>("[data-chat-content-canvas]")!
+        .getBoundingClientRect();
+      const composerRect = mounted.host
+        .querySelector<HTMLElement>(".chat-composer-shell")!
+        .getBoundingClientRect();
       const dockWrapper = dock()!.closest<HTMLElement>("[data-slot='sidebar-wrapper']");
       const dockGap = dockWrapper?.querySelector<HTMLElement>("[data-slot='sidebar-gap']");
       const dockContainer = dockWrapper?.querySelector<HTMLElement>(
@@ -3680,6 +3726,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(dockRect.width).toBeGreaterThanOrEqual(415);
       expect(dockRect.right).toBeCloseTo(shellRect.right, 0);
       expect(Math.abs(chatRect.width + dockRect.width - shellRect.width)).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(
+          canvasRect.x + canvasRect.width / 2 - (composerRect.x + composerRect.width / 2),
+        ),
+      ).toBeLessThanOrEqual(1);
+      expect(dockContainer).toBeTruthy();
+      expect(getComputedStyle(dockContainer!).borderLeftWidth).toBe("1px");
+      expect(dockContainer!.getBoundingClientRect().left).toBeCloseTo(chatRect.right, 0);
       return { shellRect, chatRect, dockRect };
     };
     const expectExclusiveGeometry = () => {
@@ -4900,7 +4954,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => {
           const title = document.querySelector<HTMLElement>(`h2[title='${longTitle}']`);
           const overflowButton = document.querySelector<HTMLButtonElement>(
-            'button[aria-label="Toggle environment panel"]',
+            "button[data-environment-toggle]",
           );
 
           expect(title, "Unable to find the chat header title.").toBeTruthy();
@@ -5447,7 +5501,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("centers the scroll-to-bottom arrow on the same compensated column as Composer", async () => {
+  it("centers the scroll-to-bottom arrow with Composer in each usable Chat canvas", async () => {
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1894, height: 1072 },
       snapshot: createSnapshotWithLongAssistantResponse(),
@@ -5479,15 +5533,22 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const measureSharedCenter = () => {
         const scrollButtonRect = scrollButton.getBoundingClientRect();
         const composerRect = composerShell.getBoundingClientRect();
+        const canvasRect = mounted.host
+          .querySelector<HTMLElement>("[data-chat-content-canvas]")!
+          .getBoundingClientRect();
         return {
           scrollButtonCenter: scrollButtonRect.x + scrollButtonRect.width / 2,
           composerCenter: composerRect.x + composerRect.width / 2,
           composerWidth: composerRect.width,
+          canvasCenter: canvasRect.x + canvasRect.width / 2,
         };
       };
       const beforeEnvironment = measureSharedCenter();
       expect(
         Math.abs(beforeEnvironment.scrollButtonCenter - beforeEnvironment.composerCenter),
+      ).toBeLessThanOrEqual(1);
+      expect(
+        Math.abs(beforeEnvironment.composerCenter - beforeEnvironment.canvasCenter),
       ).toBeLessThanOrEqual(1);
       expect(scrollButton.closest("[data-scroll-to-bottom-frame]")).toBeTruthy();
 
@@ -5499,20 +5560,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const environmentPanel = await waitForElement(
         () =>
           mounted.host.querySelector<HTMLElement>(
-            "[data-environment-panel-presentation='overlay'][aria-hidden='false']",
+            "[data-environment-panel][aria-hidden='false']",
           ),
         "Unable to find the open Environment inspector.",
       );
       expect(environmentPanel.hasAttribute("inert")).toBe(false);
-      await waitForLayout();
+      expect(environmentPanel.getAttribute("data-environment-panel-presentation")).toBe("docked");
+      await vi.waitFor(() =>
+        expect(environmentPanel.getBoundingClientRect().width).toBeGreaterThanOrEqual(311),
+      );
 
       const withEnvironment = measureSharedCenter();
       expect(
         Math.abs(withEnvironment.scrollButtonCenter - withEnvironment.composerCenter),
       ).toBeLessThanOrEqual(1);
       expect(
-        Math.abs(withEnvironment.composerCenter - beforeEnvironment.composerCenter),
+        Math.abs(withEnvironment.composerCenter - withEnvironment.canvasCenter),
       ).toBeLessThanOrEqual(1);
+      expect(withEnvironment.composerCenter).toBeLessThan(
+        beforeEnvironment.composerCenter - 150,
+      );
       expect(
         Math.abs(withEnvironment.composerWidth - beforeEnvironment.composerWidth),
       ).toBeLessThanOrEqual(1);
@@ -8214,7 +8281,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
         model: "claude-sonnet-4-5",
       });
       await waitForServerConfigToApply();
-      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("button", { name: /^Change engine\. Current:/ }).click();
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
@@ -8363,6 +8430,9 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(draft?.files).toEqual([]);
         expect(draft?.pendingDirectTurnRecovery?.messageId).toBe(failedMessageId);
       });
+      await expect
+        .element(page.getByText("Attachments are not ready to restore"))
+        .toBeVisible();
       expect(failedFileAttachmentId).not.toBeNull();
       expect(failedFileBytes).not.toBeNull();
       attachmentDownloadFixtures.set(failedFileAttachmentId!, {
@@ -8409,6 +8479,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       const secondFailedPrompt = "restore content without replacing my newer binding";
       useComposerDraftStore.getState().setPrompt(THREAD_ID, secondFailedPrompt);
+      toastManager.close();
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
@@ -9618,6 +9689,25 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       // The composer editor should be present for the new draft thread.
       await waitForComposerEditor();
+      const emptyHeading = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>("[data-testid='empty-landing-heading']"),
+        "Unable to find the centered empty-Chat heading.",
+      );
+      const emptyComposer = await waitForElement(
+        () => mounted.host.querySelector<HTMLElement>(".chat-composer-shell"),
+        "Unable to find the empty-Chat Composer shell.",
+      );
+      const chatCanvas = mounted.host.querySelector<HTMLElement>("[data-chat-content-canvas]");
+      expect(chatCanvas).toBeTruthy();
+      await waitForLayout();
+      const canvasRect = chatCanvas!.getBoundingClientRect();
+      const headingRect = emptyHeading.getBoundingClientRect();
+      const composerRect = emptyComposer.getBoundingClientRect();
+      const hostRect = mounted.host.getBoundingClientRect();
+      const canvasCenter = canvasRect.x + canvasRect.width / 2;
+      expect(Math.abs(headingRect.x + headingRect.width / 2 - canvasCenter)).toBeLessThanOrEqual(1);
+      expect(Math.abs(composerRect.x + composerRect.width / 2 - canvasCenter)).toBeLessThanOrEqual(1);
+      expect(Math.abs(canvasCenter - (hostRect.x + hostRect.width / 2))).toBeGreaterThan(100);
 
       // Simulate the snapshot sync arriving from the server after the draft
       // thread has been promoted to a server thread (thread.create + turn.start

@@ -221,7 +221,7 @@ describe("responsive Workbench presentation", () => {
         autoSuppressed: suppressed,
         temporaryReveal: false,
       }),
-    ).toBe("floating");
+    ).toBe("docked");
   });
 
   it("lets Environment temporarily overlay under pressure without requiring or rewriting intent", () => {
