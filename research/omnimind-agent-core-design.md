@@ -1,6 +1,8 @@
-# OmniMind Agent Core：窄内核、成熟执行冰山与按需组合
+# OmniMind Agent Core：窄内核、成熟执行冰山与按需组合（已弃用）
 
 > 证据日期：2026-08-15
+>
+> 状态：**已弃用（2026-08-18，维护者决定）**。本文只保留历史研究、来源处置与反证，不再描述当前产品方向、缺口、施工候选或准入条件；不得据此启动 bounded child、Delegate、Workflow、Memory/Knowledge、Prompt Diet 或其他 Agent Core 工作。当前产品事实只按 `architecture/*`，当前工作只按 `execution-brief.md` 与 active Mission。
 >
 > 文档角色：Agent Core 的研究设计、来源处置与反证地图。
 > 权威边界：产品事实属于 `architecture/*`，维护者决定 source adoption 与新增产品责任，`execution-brief.md` 只协调当前工作、并发与真实阻塞，Campaign 状态属于 active Mission。本文不授权施工。

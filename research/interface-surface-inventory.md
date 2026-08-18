@@ -130,9 +130,11 @@ bind 或 public URL 还要求独立 auth token，并拒绝不安全组合。它�
 
 ## 6. Feedback surface
 
+> **历史快照提示（2026-08-18 补记）**：本节记录的是 2026-08-10 source snapshot，下面“仅预留”的状态已经 superseded。当前 activation truth 只见 `architecture/public-surface.md`：截至 2026-08-13，Website 与 Feedback 已分别通过其 production gate，canonical endpoint、CORS、持久化、通知与管理面隔离已有真实证据。以下 payload 边界和复验触发器仍作为历史研究保留，但不得再读成当前 Feedback 未激活。
+
 ### 6.1 Current status
 
-Feedback 是 R0/P1，而不是普通 website form 的既成 API。当前仅预留：
+在该历史 snapshot 中，Feedback 是 R0/P1，而不是普通 website form 的既成 API，当时仅预留：
 
 ```text
 POST /api/v1/feedback

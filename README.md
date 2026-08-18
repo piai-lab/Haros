@@ -173,7 +173,7 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "paths": ["assets/packages/pi-todo-0.81.1/todo.ts"],
       "rights": "The copied todo extension source is MIT-licensed under the retained canonical legal text. This adoption is limited to the exact selected file and does not adopt the Pi repository as OmniMind product source.",
       "mode": "transplant",
-      "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. Its V1 runtime proof must be redone against the isolated OmniMind Agent rather than inherited from the retired host.",
+      "changes": "The selected todo.ts bytes are retained exactly from packages/coding-agent/examples/extensions/todo.ts at the fixed revision. The isolated macOS Electron journey at evidence commit 9a46b4f477b335929eadaaf3584e72706942ee0e ran the unchanged source through the Pi 0.84.1 ResourceLoader/session in a folder-backed OmniMind Agent and preserved global/project .pi sentinels. The source remains byte-identical at the current Pi 0.84.2 baseline (SHA-256 e46824d00217e25242c186d41837cc84ca81b23f978500323448502a9a424ee2); rerun only when the selected bytes, ResourceLoader/session contract, Pi patch, isolation boundary, platform, or packaged execution path changes.",
       "updatePolicy": "Pinned revision and exact SHA-256; any source, version, digest, rights, trust-surface or runtime-compatibility change requires the explicit Gate A/Gate B process in PI-ECOSYSTEM-INTAKE.md and affected revalidation before activation.",
       "licenseFiles": ["LICENSES/pi-todo-MIT.txt"]
     },
