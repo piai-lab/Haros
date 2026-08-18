@@ -629,8 +629,11 @@ function Toasts({ position: positionProp }: { position: ToastPosition }) {
             <Toast.Root
               className={cn(
                 "absolute z-[calc(9999-var(--toast-index))] h-(--toast-calc-height) select-none",
+                // Base UI measures changed content by temporarily setting height:auto.
+                // Keep height out of the transition so that probe stays synchronous;
+                // keyword-size interpolation remains enabled for the width animation.
                 statusMotion
-                  ? "[--toast-status-duration:180ms] [interpolate-size:allow-keywords] [transition:transform_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1),opacity_var(--toast-status-duration)_ease-out,height_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1),width_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1)] data-ending-style:[--toast-status-duration:200ms] motion-reduce:transition-none"
+                  ? "[--toast-status-duration:180ms] [interpolate-size:allow-keywords] [transition:transform_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1),opacity_var(--toast-status-duration)_ease-out,width_var(--toast-status-duration)_cubic-bezier(.22,1,.36,1)] data-ending-style:[--toast-status-duration:200ms] motion-reduce:transition-none"
                   : "[transition:transform_.5s_cubic-bezier(.22,1,.36,1),opacity_.5s,height_.15s]",
                 archiveUndoToast
                   ? cn(

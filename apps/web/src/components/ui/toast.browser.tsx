@@ -92,6 +92,7 @@ describe("status toast visible timing", () => {
         },
       });
       const loadingRoot = await waitForStatusToast("Updating 1/3 · Claude");
+      const loadingHeight = loadingRoot.getBoundingClientRect().height;
       const viewport = loadingRoot.closest<HTMLElement>('[data-slot="toast-viewport"]');
       expect(viewport).toBeTruthy();
       viewport!.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
@@ -119,6 +120,9 @@ describe("status toast visible timing", () => {
       });
       const successRoot = await waitForStatusToast("Claude updated");
       expect(successRoot.textContent).toContain("Applies to new sessions");
+      await vi.waitFor(() =>
+        expect(successRoot.getBoundingClientRect().height).toBeGreaterThan(loadingHeight),
+      );
       expect(
         successRoot.querySelector('[data-slot="toast-close"]')?.getAttribute("aria-label"),
       ).toBe("Dismiss notification");
@@ -134,11 +138,14 @@ describe("status toast visible timing", () => {
       // browser probe keeps enough scheduler slack to remain stable in the full suite.
       expect(endingAt - successStartedAt).toBeLessThan(TEST_DISMISS_AFTER_VISIBLE_MS + 180);
       expect(getComputedStyle(successRoot).transitionDuration.split(",")[0]?.trim()).toBe("0.2s");
-      expect(
-        getComputedStyle(successRoot)
-          .transitionProperty.split(",")
-          .map((property) => property.trim()),
-      ).toContain("width");
+      const transitionProperties = getComputedStyle(successRoot)
+        .transitionProperty.split(",")
+        .map((property) => property.trim());
+      expect(transitionProperties).toContain("width");
+      expect(transitionProperties).not.toContain("height");
+      expect(getComputedStyle(successRoot).getPropertyValue("interpolate-size").trim()).toBe(
+        "allow-keywords",
+      );
 
       await vi.waitFor(() => expect(successRoot.isConnected).toBe(false), {
         interval: 8,
@@ -170,6 +177,69 @@ describe("status toast visible timing", () => {
       document.dispatchEvent(new Event("visibilitychange"));
       await waitForEnding(pausedRoot);
       toastManager.close(pausedToastId);
+    } finally {
+      await cleanup();
+    }
+  });
+
+  it("shrinks an expanded update prompt when it becomes compact progress", async () => {
+    const { cleanup } = await mountToastSurface();
+
+    try {
+      const toastId = toastManager.add({
+        type: "warning",
+        title: "Claude 有可用更新",
+        description: "安装最新版本前，你可以先查看更新详情。",
+        actionProps: {
+          children: "查看",
+          onClick: () => undefined,
+        },
+        data: {
+          secondaryActionProps: {
+            children: "全部更新",
+            onClick: () => undefined,
+          },
+        },
+        timeout: 0,
+      });
+      const promptTitle = await vi.waitFor(() => {
+        const element = Array.from(
+          document.querySelectorAll<HTMLElement>('[data-slot="toast-title"]'),
+        ).find((candidate) => candidate.textContent === "Claude 有可用更新");
+        expect(element).toBeTruthy();
+        return element!;
+      });
+      const promptRoot = promptTitle.closest<HTMLElement>('[data-slot="toast-root"]');
+      expect(promptRoot).toBeTruthy();
+      const expandedHeight = await vi.waitFor(() => {
+        const height = promptRoot!.getBoundingClientRect().height;
+        expect(height).toBeGreaterThan(64);
+        return height;
+      });
+
+      toastManager.update(toastId, {
+        type: "loading",
+        title: "正在更新 Claude…",
+        description: undefined,
+        actionProps: undefined,
+        data: {
+          closeLabel: "隐藏更新进度",
+          statusMotion: true,
+        },
+        timeout: 0,
+      });
+
+      const progressRoot = await waitForStatusToast("正在更新 Claude…");
+      await vi.waitFor(() => {
+        expect(progressRoot.getBoundingClientRect().height).toBeLessThan(expandedHeight / 2);
+      });
+      const progressContent = progressRoot.lastElementChild as HTMLElement;
+      expect(
+        Math.abs(
+          progressRoot.getBoundingClientRect().height -
+            progressContent.getBoundingClientRect().height,
+        ),
+      ).toBeLessThanOrEqual(2);
     } finally {
       await cleanup();
     }
