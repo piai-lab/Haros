@@ -4966,7 +4966,13 @@ describe("ProviderCommandReactor", () => {
       }),
     );
 
-    await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
+    await waitFor(async () => {
+      const thread = await readHarnessThread(harness);
+      return (
+        thread?.session?.status === "error" &&
+        thread.activities.some((activity) => activity.kind === "provider.turn.start.failed")
+      );
+    });
     const thread = await readHarnessThread(harness);
     expect(thread?.session?.status).toBe("error");
     expect(thread?.session?.activeTurnId).toBeNull();
