@@ -204,7 +204,12 @@ canonical provider === "omnimind"
   → preserve every other owner's active tools
 ```
 
-所有允许的 AgentGateway Host tools 初始 inactive。默认不预留 Host core。非 Gateway session tools 由其真实 work-surface、supervision 与 session lifecycle 决定是否常驻；不能因“也是 OmniMind-owned”就塞进 Host Extension。
+所有允许的 AgentGateway Host tools 初始 inactive，不预留 Host core。current-source 盘点已经闭合非 Gateway 常驻工具边界：
+
+- `omnimind_update_tasks` 是当前唯一 OmniMind-exclusive、非 AgentGateway 的 custom session tool。`OMNIMIND_AGENT_TASK_POLICY` 要求非简单多步骤 Agent 请求从首轮维护任务列表；`buildOmniMindTaskListTool()` 提供真实 definition；`createSdkRuntime()` 只在 `provider === "omnimind" && workSurface === "agent"` 时把它直接注入 `customTools`；成功调用经同一 frozen work surface 投影为 canonical `turn.tasks.updated`。请求与投影测试证明它存在于 OmniMind Agent 首轮和后续请求，不进入 OmniMind Chat 或 stock Pi；
+- 它属于现有 PiAdapter/Session owner 的 work-surface session-control/progress lifecycle，必须 initially/always active。它不是 AgentGateway Host tool、不是 Host core、不是 Host Extension loader scope，也不受 Browser、Device、Thread、Automation Built-in group toggle 影响；否则 immutable task policy 会与首轮工具面矛盾，canonical turn task projection也无法及时建立；
+- supervised `bash` 继续由 Pi SDK definition 与 OmniMind process supervisor 的 custom/session owner 常驻；Pi `read`、`edit`、`write` built-ins由Pi拥有；Package/Extension tools由各自owner拥有。Host Extension initial deactivation必须保留这些owner的active决定；
+- 全面扫描没有第二个OmniMind-exclusive、非Gateway custom session tool。未来新增项只按自身真实owner、work surface、prompt与事件lifecycle审查，不预留抽象或Host core。
 
 如果 Gateway 不可用、过滤后集合为空或 discovery 失败，应准确 unavailable，不注册空壳 loader 产品。是否还能启动 identity-only Session 由现有 Provider owner决定，不能从“没有 Host tools”擅自推出。
 
@@ -445,6 +450,7 @@ Pi Skills已使用progressive disclosure；Package install/update/remove/enable/
 - Provider tool-search wire变化；
 - AgentGateway catalog/listChanged/policy/lifecycle变化；
 - Package collision/load order变化；
+- `omnimind_update_tasks` 的 Agent-only 注入、immutable task policy、initially/always-active 状态或 `turn.tasks.updated` 投影变化，或出现第二个 OmniMind-exclusive、非 Gateway custom session tool；
 - Host tool规模使有界metadata扫描被profile证伪；
 - future third-party MCP产品scope被维护者重新开启；
 - 真实泄密、orphan、late side effect或resume失败。
@@ -472,9 +478,14 @@ Loader scope:
 Third-party MCP:
   out of first release; no settings, manager, unified search or cross-Engine distribution.
 
-Only unresolved implementation evidence:
-  whether any non-Gateway session tool independently requires always-active lifecycle;
-  default is to leave it with its real owner, not place it in a Host core.
+Current non-Gateway always-active boundary:
+  omnimind_update_tasks is the only OmniMind-exclusive non-Gateway custom session tool;
+  PiAdapter/Session owns it as an initially/always-active Agent progress control,
+  outside AgentGateway, Host Extension, Host core and Built-in group policy.
+
+Revalidation trigger:
+  its Agent-only injection, immutable prompt, active lifecycle or canonical task projection changes,
+  or a second OmniMind-exclusive non-Gateway custom session tool is introduced.
 ```
 
 最终原则：

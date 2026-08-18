@@ -292,7 +292,7 @@ other Engines
   → native MCP/plugin direct/eager
 ```
 
-OmniMind path不预设Host core。非Gateway session tools由其真实lifecycle决定，默认不纳入Host Extension。
+OmniMind path不预设Host core。current-source 已证明 `omnimind_update_tasks` 是唯一 OmniMind-exclusive、非 AgentGateway 的 custom session tool：它只在 `provider === "omnimind" && workSurface === "agent"` 时由 PiAdapter/Session owner直接注入，和 immutable Agent task policy、canonical `turn.tasks.updated` progress projection构成同一lifecycle，因此必须initially/always active。它不是AgentGateway Host tool、Host core或Host Extension loader scope，也不受Browser、Device、Thread、Automation Built-in group toggle影响。supervised `bash`、Pi built-ins与Package/Extension tools继续保留各自custom/session/native owner及active决定。当前没有第二个OmniMind-exclusive非Gateway custom session tool；未来新增项逐一按真实owner/lifecycle复核，不预留共同抽象。
 
 ### 7.2 Exact Pi loader边界
 
@@ -582,13 +582,14 @@ Gateway不可用、filtered pool为空、discovery失败时准确unavailable；�
 - bundled Pi AgentSession/Extension/wire变化；
 - AgentGateway catalog/listChanged/policy变化；
 - Provider native MCP/dynamic refresh/permission seam变化；
+- `omnimind_update_tasks` 的 Agent-only 注入、immutable task policy、initially/always-active 状态或 `turn.tasks.updated` 投影变化，或新增 OmniMind-exclusive、非 Gateway custom session tool；
 - 新真实capability group；
 - 用户证据证明group粒度不足；
 - 明确第三方MCP用户结果触发§10.4；
 - External从loopback扩展到remote/public；
 - Settings母体、secret store、sandbox或packaged topology变化。
 
-## 19. 当前决定与唯一未决证据
+## 19. 当前决定与已证实的非 Gateway 常驻边界
 
 ### 已确定
 
@@ -604,9 +605,13 @@ Gateway不可用、filtered pool为空、discovery失败时准确unavailable；�
 - Pi拥有Registry/active/wire，AgentGateway拥有execution/authority；
 - 第三方MCP Settings、CRUD、credential、状态、自动分发与统一搜索退出首版。
 
-### 唯一仍需实现证据决定
+### 当前已证实
 
-非AgentGateway但OmniMind-owned的session tools，是否因其自身真实lifecycle必须always-active。默认答案是留在各自owner，不进入Host Extension或Host core；只有exact lifecycle/frequency/safety evidence才能改变实现。
+- `omnimind_update_tasks` 是唯一 OmniMind-exclusive、非 AgentGateway custom session tool；
+- 它由 PiAdapter/Session owner只为 `omnimind` Agent work surface注入，并因首轮immutable task policy与canonical `turn.tasks.updated` progress lifecycle保持initially/always active；
+- 它不进入Host Extension、Host core或Built-in group policy；
+- supervised `bash`、Pi built-ins及Package/Extension tools继续由各自owner常驻或管理active状态；Host initial deactivation不得误伤；
+- 当前没有第二个同类工具，也没有剩余实现分叉。未来只有这条注入/prompt/event lifecycle变化或新增同类工具时才重开逐项owner审查，不预留Host core或通用session-tool抽象。
 
 ## 20. 最终判断
 
