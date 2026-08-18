@@ -63,7 +63,7 @@ export function makeAgentGatewayMcpTransport(input: {
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly tools: ReadonlyArray<ToolEntry>;
   readonly loadExposedTools?: Effect.Effect<ReadonlyArray<ToolEntry>, unknown>;
-  readonly instructions: string;
+  readonly instructions: string | ((tools: ReadonlyArray<ToolEntry>) => string);
   readonly requireThreadShell: (
     threadId: string,
   ) => Effect.Effect<OrchestrationThreadShell, unknown>;
@@ -73,15 +73,20 @@ export function makeAgentGatewayMcpTransport(input: {
   const handleRequest = (request: JsonRpcRequest, context: Omit<ToolContext, "jsonRpcRequestId">) =>
     Effect.gen(function* () {
       switch (request.method) {
-        case "initialize":
+        case "initialize": {
+          const initializeTools = yield* loadExposedTools;
           return jsonRpcResult(
             request.id,
             buildMcpInitializeResult({
               requestedProtocolVersion: request.params.protocolVersion,
               serverVersion: "1.0.0",
-              instructions: input.instructions,
+              instructions:
+                typeof input.instructions === "function"
+                  ? input.instructions(initializeTools)
+                  : input.instructions,
             }),
           );
+        }
         case "ping":
           return jsonRpcResult(request.id, {});
         case "tools/list": {

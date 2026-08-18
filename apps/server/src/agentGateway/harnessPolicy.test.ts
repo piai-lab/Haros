@@ -2,6 +2,7 @@ import { assert, describe, it } from "@effect/vitest";
 
 import {
   renderOmniMindHarnessPolicy,
+  renderAgentGatewayMcpInstructions,
   OMNIMIND_HARNESS_POLICY_MARKER,
   takeOmniMindHarnessPolicyForProviderSession,
   takeOmniMindHarnessPolicyTextPartForProviderSession,
@@ -10,7 +11,10 @@ import {
 
 describe("OmniMind harness policy", () => {
   it("identifies OmniMind and explains exact batch coordination when MCP is available", () => {
-    const policy = renderOmniMindHarnessPolicy({ gatewayControlAvailable: true });
+    const policy = renderOmniMindHarnessPolicy({
+      gatewayControlAvailable: true,
+      projection: { mode: "direct", enabledGroups: ["omnimind", "browser", "device"] },
+    });
     assert.include(policy, OMNIMIND_HARNESS_POLICY_MARKER);
     assert.include(policy, "OmniMind is the host and harness");
     assert.include(policy, "one exact omnimind_create_threads plan");
@@ -70,7 +74,8 @@ describe("OmniMind harness policy", () => {
             scopedGatewayConnectionAvailable: true,
           })?.text ?? "";
         assert.include(first, OMNIMIND_HARNESS_POLICY_MARKER, `${provider}/${lifecycle}`);
-        assert.include(first, "Use the omnimind_* tools", `${provider}/${lifecycle}`);
+        assert.include(first, "tools actually available", `${provider}/${lifecycle}`);
+        assert.notInclude(first, "omnimind_create_threads", `${provider}/${lifecycle}`);
         assert.isNull(
           takeOmniMindHarnessPolicyForProviderSession(state, {
             provider,
@@ -96,7 +101,10 @@ describe("OmniMind harness policy", () => {
   });
 
   it("advertises only the Device capabilities the current approval boundary can honor", () => {
-    const policy = renderOmniMindHarnessPolicy({ gatewayControlAvailable: true });
+    const policy = renderOmniMindHarnessPolicy({
+      gatewayControlAvailable: true,
+      projection: { mode: "direct", enabledGroups: ["device"] },
+    });
 
     assert.include(policy, "inspect, test, demo, or debug an iOS Simulator");
     assert.include(policy, "canonical read surface");
@@ -125,5 +133,32 @@ describe("OmniMind harness policy", () => {
     // Promising tools this session cannot reach would be a lie.
     assert.notInclude(policy, "device_list");
     assert.notInclude(policy, "device_describe_ui");
+  });
+
+  it("renders only enabled direct groups and keeps dynamic discovery free of inactive names", () => {
+    const browserOnly = renderOmniMindHarnessPolicy({
+      gatewayControlAvailable: true,
+      projection: { mode: "direct", enabledGroups: ["browser"] },
+    });
+    assert.include(browserOnly, "browser_open");
+    assert.notInclude(browserOnly, "omnimind_create_threads");
+    assert.notInclude(browserOnly, "device_list");
+
+    const dynamic = renderOmniMindHarnessPolicy({
+      gatewayControlAvailable: true,
+      projection: { mode: "dynamic" },
+    });
+    assert.include(dynamic, "discovered and loaded on demand");
+    assert.notInclude(dynamic, "browser_open");
+    assert.notInclude(dynamic, "device_list");
+    assert.notInclude(dynamic, "omnimind_create_threads");
+  });
+
+  it("keeps native MCP instructions compact and group-filtered", () => {
+    const instructions = renderAgentGatewayMcpInstructions(["omnimind"]);
+    assert.include(instructions, "available omnimind_* tools");
+    assert.notInclude(instructions, "browser_*");
+    assert.notInclude(instructions, "device_*");
+    assert.isBelow(instructions.length, 200);
   });
 });

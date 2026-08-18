@@ -17,6 +17,7 @@ import { randomUUID } from "node:crypto";
 
 import {
   CommandId,
+  type BuiltInToolGroupId,
   OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION,
   MessageId,
   THREAD_GOAL_MAX_CHARS,
@@ -84,13 +85,24 @@ import {
 } from "../toolCatalog.ts";
 import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
+import { renderAgentGatewayMcpInstructions } from "../harnessPolicy.ts";
 
 // Providers already receive the versioned host policy exactly once in their
 // private prompt. MCP clients prepend initialize.instructions to every exposed
 // tool definition, so repeating the full policy here adds tens of thousands of
 // context characters per round without adding authority or safety.
-const AGENT_GATEWAY_INSTRUCTIONS =
-  "OmniMind tools are thread-scoped. Use browser_* only for OmniMind's shared in-app browser runtime; follow the provider-delivered <omnimind_host_context> for full policy.";
+function renderAgentGatewayInstructions(tools: ReadonlyArray<ToolEntry>): string {
+  const groups = Array.from(
+    new Set(
+      tools.flatMap((tool) =>
+        tool.provenance === "agent-gateway" && tool.group !== undefined
+          ? [tool.group as BuiltInToolGroupId]
+          : [],
+      ),
+    ),
+  );
+  return renderAgentGatewayMcpInstructions(groups);
+}
 
 function readThreadGoalArg(args: Record<string, unknown>): string {
   if (!("goal" in args)) {
@@ -766,7 +778,7 @@ export const makeAgentGateway = Effect.gen(function* () {
       snapshotQuery,
       tools,
       loadExposedTools,
-      instructions: AGENT_GATEWAY_INSTRUCTIONS,
+      instructions: renderAgentGatewayInstructions,
       requireThreadShell,
     }),
   } satisfies AgentGatewayShape;

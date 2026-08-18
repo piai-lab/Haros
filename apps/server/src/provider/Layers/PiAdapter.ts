@@ -22,6 +22,7 @@ import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-a
 import type { PromptOutcome as OmniMindPromptOutcome } from "@omnimind/pi-coding-agent";
 import {
   ApprovalRequestId,
+  type BuiltInToolGroupId,
   type ChatAttachment,
   EventId,
   type ProviderComposerCapabilities,
@@ -49,9 +50,11 @@ import {
   renderOmniMindHarnessPolicy,
 } from "../../agentGateway/harnessPolicy.ts";
 import {
+  agentGatewayGroupsFromToolDescriptors,
   callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
   type AgentGatewayMcpFetch,
+  type AgentGatewayMcpToolDescriptor,
 } from "../../agentGateway/mcpInjection.ts";
 import {
   AgentGatewayCredentials,
@@ -585,6 +588,7 @@ export async function buildPiAgentGatewayCustomTools(input: {
   readonly connection: AgentGatewayMcpConnection;
   readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
   readonly fetch?: AgentGatewayMcpFetch;
+  readonly onCatalog?: (tools: ReadonlyArray<AgentGatewayMcpToolDescriptor>) => void;
 }): Promise<ReadonlyArray<ToolDefinition>> {
   const tools = await listAgentGatewayMcpTools({
     connection: input.connection,
@@ -593,6 +597,7 @@ export async function buildPiAgentGatewayCustomTools(input: {
   if (tools.length === 0) {
     throw new Error("OmniMind MCP returned an empty tool catalog.");
   }
+  input.onCatalog?.(tools);
   return tools.map((tool) =>
     input.defineTool({
       name: tool.name,
@@ -1001,6 +1006,7 @@ export function makePiGatewayLoadWarning(displayName: string) {
 export function makePiHostSystemPrompt(input: {
   readonly provider: ProviderKind;
   readonly gatewayControlAvailable: boolean;
+  readonly enabledBuiltInGroups?: ReadonlyArray<BuiltInToolGroupId>;
 }): string {
   return [
     "<omnimind_host_context>",
@@ -1009,6 +1015,10 @@ export function makePiHostSystemPrompt(input: {
         provider: input.provider,
         scopedGatewayConnectionAvailable: input.gatewayControlAvailable,
       }),
+      projection: {
+        mode: "direct",
+        enabledGroups: input.enabledBuiltInGroups ?? [],
+      },
     }),
     "</omnimind_host_context>",
   ].join("\n");
@@ -2725,6 +2735,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         );
         const agentGatewayConnection = agentGatewaySessionLease?.connection;
         let gatewayToolLoadFailed = false;
+        let enabledBuiltInGroups: ReadonlyArray<BuiltInToolGroupId> = [];
         const gatewayTools = agentGatewayConnection
           ? yield* releaseAgentGatewaySessionLeaseOnInterrupt(
               agentGatewaySessionLease,
@@ -2736,6 +2747,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     ...(options?.agentGatewayFetch === undefined
                       ? {}
                       : { fetch: options.agentGatewayFetch }),
+                    onCatalog: (tools) => {
+                      enabledBuiltInGroups = agentGatewayGroupsFromToolDescriptors(tools);
+                    },
                   }),
                 catch: (cause) => cause,
               }),
@@ -2804,6 +2818,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 hostSystemPrompt: makePiHostSystemPrompt({
                   provider,
                   gatewayControlAvailable,
+                  enabledBuiltInGroups,
                 }),
                 ...(provider === "omnimind" && workSurface !== undefined
                   ? {

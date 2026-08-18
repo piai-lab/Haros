@@ -46,6 +46,7 @@ describe("Pi native resource projection", () => {
     const prompt = makePiHostSystemPrompt({
       provider: "omnimind",
       gatewayControlAvailable: true,
+      enabledBuiltInGroups: ["omnimind"],
     });
 
     expect(prompt).toContain("<omnimind_host_context>");
@@ -104,6 +105,7 @@ describe("Pi native resource projection", () => {
     const hostPrompt = makePiHostSystemPrompt({
       provider: "omnimind",
       gatewayControlAvailable: true,
+      enabledBuiltInGroups: ["browser", "device"],
     });
     const enginePrompt = makeOmniMindEngineSystemPrompt({ workSurface: "agent" });
 

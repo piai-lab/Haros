@@ -410,7 +410,8 @@ describe("Claude OmniMind harness policy", () => {
   it("advertises scoped MCP additively when credentials are available", () => {
     const text = buildEmbeddedClaudeSystemPromptAppend(true);
     assert.include(text, OMNIMIND_HARNESS_POLICY_MARKER);
-    assert.include(text, "Use the omnimind_* tools");
+    assert.include(text, "tools actually available");
+    assert.notInclude(text, "omnimind_create_threads");
     assert.notInclude(text, "OmniMind MCP control is unavailable");
   });
 
@@ -502,11 +503,8 @@ describe("ClaudeAdapterLive", () => {
       ) {
         return assert.fail("Expected Claude preset system prompt.");
       }
-      assert.include(systemPrompt.append ?? "", "Use the browser_* tools autonomously");
-      assert.include(
-        systemPrompt.append ?? "",
-        "exact thread-scoped Electron page OmniMind surfaces to the user",
-      );
+      assert.include(systemPrompt.append ?? "", "tools actually available");
+      assert.notInclude(systemPrompt.append ?? "", "browser_open");
     }).pipe(
       Effect.provideService(Random.Random, makeDeterministicRandomService()),
       Effect.provide(harness.layer),
