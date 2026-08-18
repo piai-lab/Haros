@@ -3285,6 +3285,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       };
 
       try {
+        let dismissLayer: HTMLButtonElement | null = null;
         await expectOpen(false);
         const initial = await measureEnvironmentInvariant(mounted.host);
 
@@ -3294,14 +3295,24 @@ describe("ChatView timeline estimator parity (full app)", () => {
         if (width === 1440) {
           expect(document.activeElement).toBe(toggle);
           expect(panel.getAttribute("data-environment-panel-mode")).toBe("floating");
+          expect(mounted.host.querySelector("[data-environment-panel-dismiss-layer]")).toBeNull();
         } else {
           expect(panel.getAttribute("data-environment-panel-mode")).toBe("modal");
+          dismissLayer = mounted.host.querySelector<HTMLButtonElement>(
+            "[data-environment-panel-dismiss-layer]",
+          );
+          expect(dismissLayer).toBeTruthy();
+          expect(getComputedStyle(dismissLayer!).backgroundColor).toBe("rgba(0, 0, 0, 0)");
           await vi.waitFor(() => expect(panel.contains(document.activeElement)).toBe(true));
         }
         const toggled = await measureEnvironmentInvariant(mounted.host);
         expectHorizontalGeometryStable(initial, toggled);
 
-        toggle.click();
+        if (dismissLayer) {
+          await userEvent.click(dismissLayer);
+        } else {
+          toggle.click();
+        }
         await expectOpen(false);
         await vi.waitFor(() => expect(document.activeElement).toBe(toggle));
         const restored = await measureEnvironmentInvariant(mounted.host);

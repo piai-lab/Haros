@@ -593,10 +593,13 @@ export function EnvironmentPanel({
   return (
     <>
       {modalActive ? (
+        // Keep the dismissal hit layer transparent: Environment is a temporary inspector,
+        // so changing presentation must not visually retheme the stable Chat canvas.
         <button
           type="button"
           aria-label={t("environment.close")}
-          className="absolute inset-0 z-[19] bg-black/10"
+          data-environment-panel-dismiss-layer
+          className="absolute inset-0 z-[19] bg-transparent"
           onClick={dismissTemporary}
         />
       ) : null}
