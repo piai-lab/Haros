@@ -6,9 +6,10 @@
 
 ## 1. 当前事实
 
-V1 canonical public origin 是 `https://omnimind.wisdomeyes.cn`。截至 2026-08-13，Public site origin 与 Feedback
-service 已经激活：canonical HTTPS origin、`/`、`/docs`、`/changelog`、`/download`、`/privacy`、`/support` 和
-`/api/health` 已通过外网真实 probe；Desktop 允许来源的 Feedback CORS preflight、持久化、SMTP 通知与管理面隔离
+V1 canonical public origin 是 `https://omnimind.wisdomeyes.cn`。截至 2026-08-18，Public site origin 与 Feedback
+service 已经激活：canonical HTTPS origin、`/`、`/product`、`/research`、`/ecosystem`、`/learn`、`/docs`、`/team`、
+`/changelog`、`/download`、`/privacy`、`/support` 和 `/api/health` 已通过外网真实 probe；Desktop 允许来源的 Feedback
+CORS preflight、持久化、SMTP 通知与管理面隔离
 也已完成真实 proof。网站源码和部署实现由 [`SolvingLab/OmniMind-Web`](https://github.com/SolvingLab/OmniMind-Web)
 拥有。当前尚无 public Desktop artifact；因此 Desktop 的官网/反馈接线已有 source 与 release-workflow candidate，不能
 冒充已随公开安装包交付。private upstream 只服务反向代理，始终不是用户入口，也不得成为产品 URL、文案、配置、
@@ -60,6 +61,7 @@ OmniMind 即使完全没有公共网络能力，也必须保持本地 Agent/Chat
 | Download         | `/download`                                          | 官网独立发行信息面；Desktop 更新失败直接使用 distribution authority 的手动恢复链接 | browser → website；app → release authority | platform、arch、目标版本可作为显式路径选择；不得包含 credential 或本机路径                                              | 已发布、可验证的精确 artifact，适用 license/notice，TLS 与下载校验                                                      | 官网不提供 artifact action；Desktop 保留本地使用、更新诊断与 authority-owned 恢复                 | Distribution authority                     |
 | Privacy          | `/privacy`                                           | 网站常驻；Desktop 仅在 Feedback/About 的真实披露上下文接线                         | browser → website                          | 无                                                                                                                      | 对实际产品数据流有效的已发布政策与真实 link probe                                                                       | 不增加无上下文 Desktop 入口；未激活时不得声称已有在线政策页                                       | Public site origin + product privacy owner |
 | Support          | `/support`                                           | 网站常驻；Desktop 仅在安装、更新或反馈失败恢复上下文接线                           | browser → website                          | 默认无；用户主动发起的支持内容另行确认                                                                                  | 真实受理渠道、owner、隐私边界与 link probe                                                                              | 不增加无上下文 Desktop 入口；不得借用 donor 账号                                                  | Public site origin + support owner         |
+| Ecosystem        | `/ecosystem`                                         | 官网独立的能力发现与上游分发入口；无 Desktop 入口                                  | browser → website → upstream source/artifact | 浏览与筛选不读取产品状态；下载只携带浏览器对已列明上游 artifact 的显式请求                                                | curated allowlist、真实 publisher/source、精确 version/license/integrity、官方上游 artifact 与 link probe              | 缺少任一来源事实时不展示对应资源或禁用 action；不镜像、不重打包、不猜测替代地址                    | Public site catalog + upstream distribution authority |
 | Feedback         | `POST /api/v1/feedback`                              | Help、Composer command 与全局 palette 的 Feedback dialog                           | app → separately configured endpoint       | 用户填写的 details；app/version、platform、language、viewport、Provider/Model、模式与非内容状态的 allowlist diagnostics | production build 中显式配置 approved canonical endpoint，且具备 CORS/timeout/cancel、隐私文案、滥用防护与真实收件 proof | endpoint 缺失、非法或不可达时保留 dialog 与 draft；Submit fail closed，不后台重试、不假报 success | Feedback endpoint                          |
 | Share/social     | 未分配；由具体 destination 决定                      | 未来的显式分享动作                                                                 | app → browser/service                      | 仅用户预览并确认的导出物；默认无自动上传                                                                                | 真实账号/目标、rights、隐私预览、撤销/失败语义与 delivery proof                                                         | 不显示假账号、假卡片或假 success；能力 lineage 保留                                               | Share destination authority                |
 | Update discovery | 不是 public-site route；使用独立 signed channel/feed | Desktop update check、download、install、retry 与手动恢复                          | app ↔ update feed                          | app identity、platform、arch、current version、channel；不含用户内容或 credential                                       | 签名与 artifact identity、channel/feed、manifest、install、失败重试和重新安装恢复 proof                                 | 不检查猜测 feed；应用继续本地运行并提供诊断和手动下载入口                                         | Release/update authority                   |
@@ -119,7 +121,7 @@ manifest 与安装 proof 仍按 Registry 独立裁决。未激活表面继续 fa
 
 | 变更目标                                                    | 修改位置                                                                    | 既有接线                                                                           | 不得顺手做                                                              |
 | ----------------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| 官网页面、双语内容、网站反馈接收与生产部署                  | `SolvingLab/OmniMind-Web`                                                   | canonical routes、`POST /api/v1/feedback`、`GET /api/health`、release presentation | 读取 Desktop 本地状态、复用内部 RPC/MCP/IPC、发布 updater manifest      |
+| 官网页面、双语内容、Ecosystem catalog、网站反馈接收与生产部署 | `SolvingLab/OmniMind-Web`                                                   | canonical routes、`POST /api/v1/feedback`、`GET /api/health`、release presentation | 读取 Desktop 本地状态、复用内部 RPC/MCP/IPC、镜像第三方 package、发布 updater manifest |
 | Desktop 的官网/Docs/Changelog/Privacy/Support 出口          | 本仓库 `apps/web/src/publicSurface.ts` 与真实 UI consumer                   | `VITE_PUBLIC_SITE_ORIGIN` 只在 production release build 中注入 canonical origin    | 把 public site origin 当 feedback、remote Server 或 updater authority   |
 | Desktop Feedback dialog 与诊断 allowlist                    | 本仓库 `apps/web/src/feedback.ts` 及其 UI consumer                          | `VITE_FEEDBACK_ENDPOINT` 独立注入 exact canonical endpoint                         | 自动附带 prompt、文件、路径、日志、credential 或 private Provider state |
 | Release notes、artifact、签名、SBOM、notices 与 update feed | 本仓库 `release-notes/`、`.github/workflows/release.yml` 与 Desktop updater | 发布到 `SolvingLab/OmniMind-Releases`；网站只读取 reviewed public release record   | 让网站生成 artifact、签名、feed 或替代 Desktop updater                  |
@@ -149,7 +151,7 @@ manifest 与安装 proof 仍按 Registry 独立裁决。未激活表面继续 fa
 | ---------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Desktop 必需     | Docs、What’s New、原生 Feedback、更新连续失败后的手动下载恢复 | 保持当前 Help/Feedback/updater journey；不扩成官网导航                                                  |
 | 按真实上下文可选 | Privacy、Support、Home                                        | 只在 Feedback 数据披露、安装/更新/反馈失败恢复或未来 About 的明确需求中接线；没有当前 consumer 时不展示 |
-| 官网专属         | Product、Research、Learn、Team                                | 留在网站信息架构，不进入 Desktop Public Surface Registry 或主导航                                       |
+| 官网专属         | Product、Research、Ecosystem、Learn、Team                     | 留在网站信息架构，不进入 Desktop 主导航；Ecosystem 也不成为 App package lifecycle 或 runtime authority   |
 
 ### 6.2 当前交付证据
 
@@ -160,4 +162,5 @@ manifest 与安装 proof 仍按 Registry 独立裁决。未激活表面继续 fa
 | Desktop Feedback                          | dialog、命令入口、diagnostic allowlist 与独立 endpoint 配置已存在 | receiver、CORS、持久化与通知已在线             | 尚无 public Desktop artifact；首发复验真实提交、失败保留 draft 与重开 |
 | Manual Download recovery                  | updater 已有失败恢复入口；目标来自 release authority              | `/download` 只有诚实信息页，无 artifact action | 尚无已发布 artifact、manifest 或安装 proof；F-18 闭合后独立激活       |
 | Website Changelog / Download presentation | 页面读取 public release authority，无记录时 fail closed           | 页面在线，当前没有 public release              | 首个 reviewed public release 后复验展示，但不替代 updater proof       |
+| Website Ecosystem catalog                 | 双语检索、分类、来源详情与 reviewed manifest 已存在               | `/ecosystem` 在线，官方上游链接已真实 probe     | 不适用；不成为 Desktop package lifecycle、兼容或 runtime authority    |
 | Public deep link / Developer API          | 只有 decision gate，没有公开合同                                  | 未部署                                         | 出现真实 consumer 后重新裁决                                          |

@@ -205,9 +205,9 @@ export const ENVIRONMENT_PANEL_SURFACE_CLASS_NAME = `relative overflow-hidden ro
 export const ENVIRONMENT_PANEL_MOTION_CLASS =
   "transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
 
-/** Transcript/composer right inset when the docked Environment card opens. */
-export const ENVIRONMENT_CONTENT_INSET_MOTION_CLASS =
-  "transition-[padding-right] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
+/** Width-owning Environment rail moves the existing Chat canvas through native flex layout. */
+export const ENVIRONMENT_PANEL_LAYOUT_MOTION_CLASS =
+  "transition-[width,padding] duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none";
 
 /** Anchors the command menu above the composer editor without shifting layout. */
 export const COMPOSER_COMMAND_MENU_FLOATING_WRAPPER_CLASS_NAME =

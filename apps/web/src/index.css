@@ -3,12 +3,6 @@
 
 @custom-variant dark (&:is(.dark, .dark *));
 
-@property --sidebar-effective-width {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 0px;
-}
-
 body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop"] {
   background: rgba(39, 43, 49, 0.24);
   backdrop-filter: blur(2px);
@@ -200,8 +194,9 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
 
   /* ─── Content seam (sidebar ↔ route divider) ──────────────────────────────────
      Chat, settings, kanban, automations, and the other route surfaces share one
-     square content edge. The visible seam belongs to the content surface; the
-     SidebarRail remains only the resize hit-area so a second line is never drawn. */
+     square content edge. The visible seam belongs to the content surface's outer
+     shadow, beyond every clipped route child; SidebarRail remains only the resize
+     hit-area so a second line is never drawn. */
 
   /* Seam tokens + soft depth, side-agnostic so each value lives in ONE place. The route
      reads as a raised surface over the sidebar without rounding the dividing edge.
@@ -236,72 +231,16 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
   [data-sidebar-side="left"] .chat-content-card {
     --seam-shadow-x: -6.5px;
     border-radius: 0;
-  }
-
-  .chat-content-card::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    pointer-events: none;
-    border-radius: 0;
-    /* Fade the seam divider with the slide (collapsed rule sets opacity:0) — `display`
-       can't transition, so opacity is what keeps this in step with the animation. */
-    transition: opacity 300ms cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  /* A single inset stroke produces the straight content edge without adding
-     layout width or painting top/bottom borders. */
-  [data-sidebar-side="left"] .chat-content-card::before {
-    box-shadow: inset 0.6px 0 0 var(--seam-line);
+    /* The crisp one-pixel stroke is an OUTER shadow. Route headers, transcript
+       scrollers, and other positioned children can no longer cover it, and the
+       card's own overflow clipping cannot trim it away. */
+    box-shadow:
+      -1px 0 0 var(--seam-line),
+      var(--seam-shadow-x) 0 12px -10px var(--seam-shadow-color);
   }
 
   [data-sidebar-side="left"]:has([data-placement="content-seam"]:hover) .chat-content-card {
     --seam-line: color-mix(in srgb, var(--foreground) 30%, transparent);
-  }
-
-  /* Keep the configured reading column centered against the whole visible
-     workbench whenever there is enough blank space to do so. On constrained
-     surfaces the max() arm stops the column at the normal chat gutter instead
-     of letting it slide underneath the Sidebar. MessageTrail independently
-     measures and occupies only real blank space, so it never becomes a second
-     authority for transcript/composer geometry. The registered effective-width
-     token moves in lockstep with the drawer, while direct rail manipulation
-     disables its tween. */
-  [data-thread-sidebar-presentation] {
-    --sidebar-effective-width: 0px;
-    transition: --sidebar-effective-width 240ms cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  [data-thread-sidebar-presentation="docked"] {
-    --sidebar-effective-width: var(--sidebar-width);
-  }
-
-  [data-thread-sidebar-presentation][data-sidebar-resizing="true"] {
-    transition-duration: 0ms;
-  }
-
-  [data-thread-sidebar-presentation] .chat-column-frame {
-    translate: calc(
-        0px -
-          min(
-            calc(var(--sidebar-effective-width) / 2),
-            max(
-              0px,
-              calc(
-                (100cqw - min(100cqw, var(--app-chat-max-width, 46rem))) / 2 -
-                  var(--app-density-chat-gutter-x-lg, 1.25rem)
-              )
-            )
-          )
-      )
-      0;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    [data-thread-sidebar-presentation] {
-      transition-duration: 0ms;
-    }
   }
 
   body[data-sidebar-resizing="true"] [data-slot="tooltip-positioner"],
@@ -324,12 +263,8 @@ body:has([data-testid="first-run-readiness-dialog"]) [data-slot="dialog-backdrop
     /* Fade the depth shadow via its color token rather than `box-shadow: none` —
        Chromium snaps box-shadow to/from `none`, but keeping the geometry and only
        driving the color to transparent interpolates cleanly with the slide. */
+    --seam-line: transparent;
     --seam-shadow-color: transparent;
-  }
-
-  [data-slot="sidebar-wrapper"]:has(> [data-slot="sidebar"][data-state="collapsed"])
-    .chat-content-card::before {
-    opacity: 0;
   }
 
   /* ─── Chat-surface header hairline (horizontal counterpart of the seam) ───────────

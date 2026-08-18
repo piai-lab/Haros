@@ -127,7 +127,6 @@ import {
 import {
   CHAT_COLUMN_FRAME_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,
-  ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
 } from "./composerPickerStyles";
 import { formatDayAwareTimestamp } from "../../timestampFormat";
 import {
@@ -2541,9 +2540,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
         // `listScrollStyle`: rows dissolve through the glass over the editor region and
         // are fully cut before the composer's footer controls.
         className={cn(
-          "h-full overflow-x-hidden overscroll-y-contain py-3 [scrollbar-gutter:stable] sm:py-4",
+          "h-full overflow-x-hidden overscroll-y-contain py-3 [scrollbar-gutter:stable_both-edges] sm:py-4",
           contentInsetBottomPx ? null : "scroll-fade-b",
-          ENVIRONMENT_CONTENT_INSET_MOTION_CLASS,
           CHAT_COLUMN_GUTTER_CLASS_NAME,
         )}
         {...(listScrollStyle ? { style: listScrollStyle } : {})}

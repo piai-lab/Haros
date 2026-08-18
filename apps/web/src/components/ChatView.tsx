@@ -4769,7 +4769,7 @@ export default function ChatView({
     const activeElement = document.activeElement;
     const environmentPanel =
       activeElement instanceof HTMLElement
-        ? activeElement.closest<HTMLElement>("[data-environment-panel-presentation='overlay']")
+        ? activeElement.closest<HTMLElement>("[data-environment-panel]")
         : null;
     setEnvironmentPanelTemporaryReveal(false);
     setEnvironmentPanelPreferenceOpen(false);
@@ -4796,7 +4796,7 @@ export default function ChatView({
     if (previousPresentation === "hidden" || environmentPanelPresentation !== "hidden") return;
     const activeElement = document.activeElement;
     const environmentPanel = responsiveContentRootRef.current?.querySelector<HTMLElement>(
-      "[data-environment-panel-presentation='overlay']",
+      "[data-environment-panel]",
     );
     const preferredTarget = environmentTemporaryFocusReturnRef.current;
     environmentTemporaryFocusReturnRef.current = null;
@@ -12676,6 +12676,7 @@ export default function ChatView({
             "relative flex min-h-0 min-w-0 flex-1 flex-col",
             planSidebarExclusive && "invisible pointer-events-none",
           )}
+          data-chat-content-canvas
           inert={planSidebarExclusive ? true : undefined}
         >
           <div
@@ -12926,15 +12927,6 @@ export default function ChatView({
             </div>
           ) : null}
 
-          {/* Environment overlay stays mounted so open/close can transition without rebuilding it. */}
-          {environmentEnabled ? (
-            <EnvironmentPanel
-              {...environmentPanelProps}
-              open={environmentPanelVisible}
-              modal={environmentPanelPresentation === "overlay"}
-              onDismissTemporary={dismissEnvironmentTemporaryReveal}
-            />
-          ) : null}
         </div>
         {/* end chat column */}
 
@@ -12958,6 +12950,17 @@ export default function ChatView({
                 planSidebarDismissedForTurnRef.current = turnKey;
               }
             }}
+          />
+        ) : null}
+
+        {/* The same Environment card owns flex width when docked and becomes an
+            absolute modal overlay under pressure. It stays mounted across both tiers. */}
+        {environmentEnabled ? (
+          <EnvironmentPanel
+            {...environmentPanelProps}
+            open={environmentPanelVisible}
+            modal={environmentPanelPresentation === "overlay"}
+            onDismissTemporary={dismissEnvironmentTemporaryReveal}
           />
         ) : null}
       </div>
