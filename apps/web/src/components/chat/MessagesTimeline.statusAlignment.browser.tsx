@@ -111,7 +111,8 @@ function SettledStatusTimeline() {
 
 function createTimelineHost(widthPx: number): HTMLDivElement {
   const host = document.createElement("div");
-  host.style.cssText = `display:flex;width:${widthPx}px;height:360px;overflow:hidden;`;
+  host.dataset.threadSidebarPresentation = "docked";
+  host.style.cssText = `display:flex;flex-direction:column;width:${widthPx}px;height:360px;overflow:hidden;container-type:inline-size;--sidebar-width:368px;`;
   document.body.append(host);
   return host;
 }
@@ -154,7 +155,23 @@ describe("MessagesTimeline turn-status alignment", () => {
 
         const headerLeft = headerLabel.getBoundingClientRect().left;
         const orbLeft = orb.getBoundingClientRect().left;
+        const hostRect = host.getBoundingClientRect();
+        const hostCenter = hostRect.x + hostRect.width / 2;
         expect(Math.abs(headerLeft - orbLeft)).toBeLessThanOrEqual(0.5);
+        expect(
+          Math.abs(
+            headerRow.getBoundingClientRect().x +
+              headerRow.getBoundingClientRect().width / 2 -
+              hostCenter,
+          ),
+        ).toBeLessThanOrEqual(0.5);
+        expect(
+          Math.abs(
+            workingRow.getBoundingClientRect().x +
+              workingRow.getBoundingClientRect().width / 2 -
+              hostCenter,
+          ),
+        ).toBeLessThanOrEqual(0.5);
         expect(headerLeft).toBeGreaterThanOrEqual(headerRow.getBoundingClientRect().left + 3.5);
         expect(orbLeft).toBeGreaterThanOrEqual(workingRow.getBoundingClientRect().left + 3.5);
       } finally {
