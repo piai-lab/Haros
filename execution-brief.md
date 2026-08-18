@@ -17,13 +17,13 @@ Updated: 2026-08-18
 
 ## 当前事实
 
-- 当前隔离工作区：`/Users/liuzaoqu/.codex/worktrees/retire-project-instructions/OmniMind`，分支 `codex/retire-project-instructions`；已于 2026-08-18 无冲突重放到当时最新 `origin/main@8066f23f9`，用户要求继续在该分支完成默认身份改造并保持不推送。
+- 当前隔离工作区：`/Users/liuzaoqu/.codex/worktrees/retire-project-instructions/OmniMind`，分支 `codex/retire-project-instructions`；已于 2026-08-18 无冲突重放到 `origin/main@8066f23f9`。维护者现已授权在面向合并审查与 final gates 通过后推送该任务分支、安全合入最新 `main`、从合并 SHA 构建并验证本机安装产物，最后只清理该任务的 worktree 与本地/远端分支。
 - 本地与远端 `main` 已在不改写历史的前提下合入 Thinking-status 更新、维护者已有的 scoped-adoption 文档提交与 exact pushed product `3077bf253`。
 - Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`，等于 `origin/main`。
 - `58f76446d` 已推送完整 adoption product set：ThreadGoal contract/migrations、`/goal`、Composer Goal panel/timer、achievement、Goal prompt injection、`omnimind_set_thread_goal`、terminal-driven continuation、startup recovery、Goal race fences、Debug、bounded raw events、chat width、暗色 icon、Profile local PNG export、perf harness、Group/PR/不同名 owner parity 与作者等价回归；其最后一轮改动只关闭 Automation 测试时钟/隔离和 Web compiler 回归，没有增加平行产品 owner。
 - `3077bf253` 已直接复用现有 `ProviderIcon`、Server health 与 Composer availability 语义，补齐中英文图标/可用/登录/受限/未安装/不可用反馈，并保留未安装 Engine 的设置可达性。当前安装版及 arm64 ad-hoc DMG 均来自该 exact pushed product；fresh 隔离 profile 已证明图标、状态、可用数量、未安装 Engine 可发现性和关闭重开。
 - Synara `af9c36465` 有意增加了 per-Project localStorage→Thread notes seed，`bdfc332a8` 又专门通过 `thread.meta.update` 修复首次发送持久化；它是真实 notes-template 功能，但不是 Agent runtime Project rules。维护者于 2026-08-18 在知晓这项行为和损失后明确确认整体退休，并接受不再提供 Project→new-task Notepad seed。
-- `Project instructions` 全链退休已在当前分支提交为 `2bd0478a6`，focused Web tests、typecheck、lint 与 document contract 已闭合；该提交尚未 push/merge，因此仍是本地 source candidate。
+- `Project instructions` 全链退休已在当前分支提交为 `2bd0478a6`；默认身份与边界实现分别冻结于 `7f2fdd502`、`8439faeac`。面向合并的全量测试、typecheck、lint、document contract、license 与 exact product-owned Pi 再生成正在同一候选树上收口；任务分支尚未 push/merge，因此当前仍是本地 source candidate。
 - baseline product-owned `@omnimind/pi-coding-agent@0.84.2` 的 default base 写着 `You are an expert coding assistant operating inside pi` 并引用 archive 中没有发行的 docs/examples；当前本地 candidate 已把 base 改为 identity-neutral，并在 Extension turn mutation 后只把 Host-owned OmniMind engine contract 去重、追加为 exactly once。general Host/tool guidance 保持 mutable append，不因身份改造冻结已知 Browser/Device policy 漂移；stock Pi 的 identity/default base 不变。
 - baseline Provider start/recovery 没有携带 work surface 或 trusted Project root，Pi-family 依赖 SDK 默认 `projectTrusted=true` 并从 filesystem root 扫描 context files；当前本地 candidate 已从同一份 canonical Project snapshot 派生 surface、effective cwd 与 Project/worktree root，只为 bundled `omnimind` 随现有 binding recovery/rollback 传递，其他 Provider admission 丢弃这些字段。Chat 与无 active Session discovery 保持 untrusted/global-only，skills/commands 的 Thread/Session key 变化使用固定空 placeholder，不会短暂沿用上一 trust tuple；该 candidate 尚未 push，也未从 exact pushed SHA 打包或安装。
 - 维护者已确认：OmniMind identity、Chat/Agent 边界、Agent alignment/risk contract 属于不可被 Prompt 管理覆盖的 engine contract；未来 Prompt 管理只管理个人指令、项目规则和模板。
@@ -47,11 +47,11 @@ Updated: 2026-08-18
 
 ## 当前阻塞
 
-当前没有待裁决的产品阻塞。维护者要求本项工作继续停留在同一独立分支/隔离 worktree，暂不 merge、push 或删除分支；因此即使 source、live 与本机 packaged journey 通过，当前交付边界仍是本地 candidate，不冒充 pushed-SHA official release。既有签名、公证、Windows/Linux artifact/journey、GitHub Release 与 update feed 边界不变。
+当前没有待裁决的产品阻塞。维护者已授权本轮完成任务分支 push、合入最新 `main`、本机构建/安装验证与精确分支清理；这不授权 GitHub Release、update feed、签名、公证或 Windows/Linux artifact/journey，这些发行边界保持不变。
 
 ## 下一动作
 
-冻结已经闭合的最小实现，不再扩张 discovery 或 Prompt 管理责任；MiMo Chat 与 DeepSeek folder-backed Agent 的首轮、continuation、identity、surface overlay 及 Extension replacement 已完成脱敏 live probe。提交后 review 的边界修复已收缩为同一个本地 follow-up 并通过 final gate：跨 trust tuple 的 discovery 使用固定空 placeholder，`error` 仍投影可能存在的物理 Session 而 `closed` 切回 global-only，surface/root 只由 bundled OmniMind 承担，immutable engine contract 与 mutable Host append 已分离。该 follow-up 作为独立本地提交冻结；由于维护者明确暂停 push，不执行正式 packaged/install journey，交付边界仍是本地 source candidate。Prompt 管理产品化继续停在独立决策面。
+冻结已经闭合的最小实现，不再扩张 discovery 或 Prompt 管理责任；MiMo Chat 与 DeepSeek folder-backed Agent 的首轮、continuation、identity、surface overlay 及 Extension replacement 已完成脱敏 live probe。提交后 review 的边界修复已收缩为同一个本地 follow-up：跨 trust tuple 的 discovery 使用固定空 placeholder，`error` 仍投影可能存在的物理 Session，而 `closed` 切回 global-only，surface/root 只由 bundled OmniMind 承担，immutable engine contract 与 mutable Host append 已分离。完成剩余 final gates 后，提交本次审查收口；重新 fetch 并确认最新 `main`，推送任务分支，使用明确 merge commit 合入并推送 `main`；随后从该精确合并 SHA 构建、安装并用 fresh 隔离 profile 验证，最后只删除已合并的本任务 worktree 与本地/远端分支。Prompt 管理产品化继续停在独立决策面。
 
 ## 证据入口
 

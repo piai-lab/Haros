@@ -52,9 +52,7 @@ describe("rankSettingsSearchEntries", () => {
   });
 
   it("indexes the system UI font row", () => {
-    expect(SETTINGS_SEARCH_ENTRIES.map((entry) => entry.id)).toContain(
-      "appearance:system-ui-font",
-    );
+    expect(SETTINGS_SEARCH_ENTRIES.map((entry) => entry.id)).toContain("appearance:system-ui-font");
   });
 
   it("surfaces every row in a section when searching the section label", () => {
