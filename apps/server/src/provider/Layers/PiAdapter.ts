@@ -141,7 +141,8 @@ const OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT = [
   "",
   "Be honest and independent-minded. When evidence or constraints conflict with the user's premise, explain the conflict concretely and continue toward a workable path. Never claim an action or verification that did not occur.",
   "",
-  "Communicate naturally in the user's language. Lead with the outcome. Default to concise but complete; expand when complexity, risk, learning, or evidence requires it. If asked who you are, answer directly without unnecessary preamble.",
+  "By default, communicate naturally in the user's language, lead with the outcome, and stay concise but complete; expand when complexity, risk, learning, or evidence requires it. If asked who you are, answer directly without unnecessary preamble.",
+  "Honor explicit user preferences for language, tone, format, level of detail, and working style when they do not conflict with identity, work-surface boundaries, alignment and task-completion policy, truthfulness, or safety.",
 ].join("\n");
 const OMNIMIND_CHAT_CONTRACT = [
   "In Chat, help the user understand, explore, decide, learn, and produce useful work.",
@@ -1120,17 +1121,13 @@ export function makePiGatewayLoadWarning(displayName: string) {
 
 /**
  * Pi owns native Prompt, Skill, Extension, and input-hook expansion. Keep the
- * host policy in Pi's existing system-prompt projection so slash input reaches
- * that source-locked pipeline unchanged.
+ * general Host/tool policy in Pi's existing mutable system-prompt projection
+ * so slash input reaches that source-locked pipeline unchanged.
  */
 export function makePiHostSystemPrompt(input: {
   readonly provider: ProviderKind;
   readonly gatewayControlAvailable: boolean;
-  readonly workSurface?: ProviderWorkSurface;
 }): string {
-  if (input.provider === "omnimind" && input.workSurface === undefined) {
-    throw new Error("OmniMind work surface is required to compose the engine contract.");
-  }
   return [
     "<omnimind_host_context>",
     renderOmniMindHarnessPolicy({
@@ -1139,24 +1136,28 @@ export function makePiHostSystemPrompt(input: {
         scopedGatewayConnectionAvailable: input.gatewayControlAvailable,
       }),
     }),
-    ...(input.provider === "omnimind"
+    "</omnimind_host_context>",
+  ].join("\n");
+}
+
+/** Stable OmniMind identity and work-surface behavior that user Prompt resources cannot replace. */
+export function makeOmniMindEngineSystemPrompt(input: {
+  readonly workSurface: ProviderWorkSurface;
+}): string {
+  return [
+    "<omnimind_engine_contract>",
+    OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT,
+    "",
+    input.workSurface === "agent" ? OMNIMIND_AGENT_CONTRACT : OMNIMIND_CHAT_CONTRACT,
+    ...(input.workSurface === "agent"
       ? [
-          "<omnimind_engine_contract>",
-          OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT,
           "",
-          input.workSurface === "agent" ? OMNIMIND_AGENT_CONTRACT : OMNIMIND_CHAT_CONTRACT,
-          ...(input.workSurface === "agent"
-            ? [
-                "",
-                "<omnimind_agent_task_policy>",
-                OMNIMIND_AGENT_TASK_POLICY,
-                "</omnimind_agent_task_policy>",
-              ]
-            : []),
-          "</omnimind_engine_contract>",
+          "<omnimind_agent_task_policy>",
+          OMNIMIND_AGENT_TASK_POLICY,
+          "</omnimind_agent_task_policy>",
         ]
       : []),
-    "</omnimind_host_context>",
+    "</omnimind_engine_contract>",
   ].join("\n");
 }
 
@@ -2658,6 +2659,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       processSupervisor: PiBashProcessSupervisor;
       gatewayTools?: ReadonlyArray<ToolDefinition>;
       hostSystemPrompt: string;
+      immutableSystemPrompt?: string;
       workSurface?: ProviderWorkSurface;
       projectContextRoot?: string;
     }) => {
@@ -2669,8 +2671,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         sessionStartEvent,
       }) => {
         const resourceLoaderOptions = {
-          appendSystemPromptOverride: (base: string[]) =>
-            provider === "omnimind" ? base : [...base, input.hostSystemPrompt],
+          appendSystemPromptOverride: (base: string[]) => [...base, input.hostSystemPrompt],
           ...(provider === "omnimind"
             ? {
                 projectContextRoot:
@@ -2707,7 +2708,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...(sessionStartEvent ? { sessionStartEvent } : {}),
           ...(model ? { model } : {}),
           thinkingLevel: input.thinkingLevel ?? DEFAULT_PI_THINKING_LEVEL,
-          ...(provider === "omnimind" ? { immutableSystemPrompt: input.hostSystemPrompt } : {}),
+          ...(input.immutableSystemPrompt === undefined
+            ? {}
+            : { immutableSystemPrompt: input.immutableSystemPrompt }),
           customTools: [
             input.sdk.defineTool(
               input.sdk.createBashToolDefinition(cwd, {
@@ -2888,8 +2891,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 hostSystemPrompt: makePiHostSystemPrompt({
                   provider,
                   gatewayControlAvailable,
-                  ...(workSurface === undefined ? {} : { workSurface }),
                 }),
+                ...(provider === "omnimind" && workSurface !== undefined
+                  ? {
+                      immutableSystemPrompt: makeOmniMindEngineSystemPrompt({ workSurface }),
+                    }
+                  : {}),
               }),
             catch: (cause) =>
               new ProviderAdapterRequestError({

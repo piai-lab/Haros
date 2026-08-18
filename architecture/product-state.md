@@ -44,7 +44,7 @@ Chat 复用 Synara 的 managed Home/Studio container。它没有用户选择的 
 
 ### Provider work surface projection
 
-`Agent | Chat` 不是新的持久化 mode。Provider Session admission 只从当前 Thread 所属 canonical Project kind 派生一个窄的 work-surface snapshot：`project → agent`，`chat | studio → chat`。该值随现有 Provider binding 保存只为 restart/recovery 重建同一 Session 环境；Project kind 始终是唯一 authority，runtime payload 不能被独立编辑，也不能反向改写 Project。
+`Agent | Chat` 不是新的持久化 mode。bundled `omnimind` Session admission 只从当前 Thread 所属 canonical Project kind 派生一个窄的 work-surface snapshot：`project → agent`，`chat | studio → chat`。该值只在该 Provider 的现有 binding 中保存，用于 restart/recovery 重建同一 Session 环境；其他 Provider admission 丢弃这两个 OmniMind-only 字段。Project kind 始终是唯一 authority，runtime payload 不能被独立编辑，也不能反向改写 Project。
 
 不得从 cwd 是否存在、路径名称、Workbench pane、Provider、模型或 `providerOptions` 猜测 work surface。Home Chat 可以没有 provider cwd，Studio 可以有 managed cwd，folder-backed Agent 也可以在 Project 子目录或 worktree 中运行；只有 Project kind 能稳定区分产品语义。`Send to Agent` 创建/打开新的 folder-backed Thread，因此不热切或复用原 Chat Session。
 

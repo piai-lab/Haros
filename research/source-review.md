@@ -453,7 +453,8 @@ revision and stock/OAuth patches while extending the sole product source patch t
 Pi coding-assistant identity and navigation to docs/examples omitted from the archive, and to give
 Pi's existing ResourceLoader an explicit canonical Project-root boundary or global-only context
 mode. The same narrow seam preserves native per-turn Extension mutation, then normalizes and appends
-the Host-owned immutable contract exactly once at final request composition. Project trust is only
+the Host-owned immutable engine contract exactly once at final request composition; general
+Host/tool guidance remains in Pi's mutable append lifecycle. Project trust is only
 admitted by a real Agent Session; passive model/Skill/command discovery remains untrusted and
 global-only, so it neither executes Project Extension factories nor exposes project-local resources
 before admission. The regenerated product patch is

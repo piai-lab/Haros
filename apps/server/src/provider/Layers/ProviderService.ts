@@ -1708,10 +1708,14 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             const persistedCwd = readPersistedCwd(binding.runtimePayload);
             const persistedModelSelection = readPersistedModelSelection(binding.runtimePayload);
             const persistedProviderOptions = readPersistedProviderOptions(binding.runtimePayload);
-            const persistedWorkSurface = readPersistedWorkSurface(binding.runtimePayload);
-            const persistedProjectContextRoot = readPersistedProjectContextRoot(
-              binding.runtimePayload,
-            );
+            const persistedWorkSurface =
+              binding.provider === "omnimind"
+                ? readPersistedWorkSurface(binding.runtimePayload)
+                : undefined;
+            const persistedProjectContextRoot =
+              persistedWorkSurface === "agent"
+                ? readPersistedProjectContextRoot(binding.runtimePayload)
+                : undefined;
             yield* validateAutoRuntimeMode(
               input.operation,
               binding.provider,
@@ -1743,8 +1747,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               threadId,
               upsertSessionBinding(resumed, threadId, {
                 lifecycleGeneration: lease.generation,
-                workSurface: persistedWorkSurface,
-                projectContextRoot: persistedProjectContextRoot ?? null,
+                ...(persistedWorkSurface === undefined
+                  ? {}
+                  : {
+                      workSurface: persistedWorkSurface,
+                      projectContextRoot: persistedProjectContextRoot ?? null,
+                    }),
               }).pipe(
                 Effect.andThen(
                   requiresCredentialRotation
@@ -2045,10 +2053,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 ? readPersistedProviderOptions(persistedBinding.runtimePayload)
                 : undefined);
             const effectiveWorkSurface =
-              input.workSurface ??
-              (persistedBinding?.provider === input.provider
-                ? readPersistedWorkSurface(persistedBinding.runtimePayload)
-                : undefined);
+              input.provider === "omnimind"
+                ? (input.workSurface ??
+                  (persistedBinding?.provider === input.provider
+                    ? readPersistedWorkSurface(persistedBinding.runtimePayload)
+                    : undefined))
+                : undefined;
             const effectiveProjectContextRoot =
               effectiveWorkSurface === "agent"
                 ? (input.projectContextRoot ??
@@ -2141,8 +2151,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 upsertSessionBinding(session, threadId, {
                   modelSelection: input.modelSelection,
                   providerOptions: effectiveProviderOptions,
-                  workSurface: effectiveWorkSurface,
-                  projectContextRoot: effectiveProjectContextRoot ?? null,
+                  ...(effectiveWorkSurface === undefined
+                    ? {}
+                    : {
+                        workSurface: effectiveWorkSurface,
+                        projectContextRoot: effectiveProjectContextRoot ?? null,
+                      }),
                   lifecycleGeneration: lease.generation,
                 }).pipe(
                   Effect.andThen(
@@ -2285,10 +2299,14 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             const previousProviderOptions = readPersistedProviderOptions(
               persistedBinding.runtimePayload,
             );
-            const previousWorkSurface = readPersistedWorkSurface(persistedBinding.runtimePayload);
-            const previousProjectContextRoot = readPersistedProjectContextRoot(
-              persistedBinding.runtimePayload,
-            );
+            const previousWorkSurface =
+              persistedBinding.provider === "omnimind"
+                ? readPersistedWorkSurface(persistedBinding.runtimePayload)
+                : undefined;
+            const previousProjectContextRoot =
+              previousWorkSurface === "agent"
+                ? readPersistedProjectContextRoot(persistedBinding.runtimePayload)
+                : undefined;
             const previousCwd =
               previousLiveSession?.cwd ?? readPersistedCwd(persistedBinding.runtimePayload);
             const previousResumeCursor =
@@ -2405,7 +2423,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                       ...(previousWorkSurface !== undefined
                         ? { workSurface: previousWorkSurface }
                         : {}),
-                      projectContextRoot: previousProjectContextRoot ?? null,
+                      ...(previousWorkSurface === undefined
+                        ? {}
+                        : { projectContextRoot: previousProjectContextRoot ?? null }),
                     },
                   }),
                 );
@@ -2445,8 +2465,12 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                     lifecycleGeneration: restoreGeneration,
                     modelSelection: previousModelSelection,
                     providerOptions: previousProviderOptions,
-                    workSurface: previousWorkSurface,
-                    projectContextRoot: previousProjectContextRoot ?? null,
+                    ...(previousWorkSurface === undefined
+                      ? {}
+                      : {
+                          workSurface: previousWorkSurface,
+                          projectContextRoot: previousProjectContextRoot ?? null,
+                        }),
                   }),
                 ),
               );

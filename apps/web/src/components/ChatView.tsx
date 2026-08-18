@@ -90,6 +90,7 @@ import {
 } from "~/lib/gitReactQuery";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import {
+  isProviderDiscoverySessionActive,
   providerComposerCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
   providerDiscoveryQueryKeys,
@@ -2392,9 +2393,10 @@ export default function ChatView({
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const selectedProvider: ProviderKind =
     selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
-  const hasActiveProviderDiscoverySession =
-    activeThread?.session?.provider === selectedProvider &&
-    activeThread.session.status !== "closed";
+  const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
+    provider: selectedProvider,
+    session: activeThread?.session,
+  });
   const previousSelectedProviderRef = useRef<{
     threadId: ThreadId;
     provider: ProviderKind;

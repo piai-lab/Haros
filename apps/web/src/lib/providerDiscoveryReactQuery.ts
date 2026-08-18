@@ -44,6 +44,13 @@ const EMPTY_PLUGINS_RESULT: ProviderListPluginsResult = {
   cached: false,
 };
 
+export function isProviderDiscoverySessionActive(input: {
+  readonly provider: ProviderKind;
+  readonly session: { readonly provider: ProviderKind; readonly status: string } | null | undefined;
+}): boolean {
+  return input.session?.provider === input.provider && input.session.status !== "closed";
+}
+
 export const providerDiscoveryQueryKeys = {
   all: ["provider-discovery"] as const,
   composerCapabilities: (provider: ProviderKind) =>
@@ -142,7 +149,9 @@ export function providerSkillsQueryOptions(input: {
     },
     enabled: (input.enabled ?? true) && input.cwd !== null,
     staleTime: 30_000,
-    placeholderData: (previous) => previous ?? EMPTY_SKILLS_RESULT,
+    // A different Thread/session key may have a different Project trust boundary.
+    // Never surface the previous key's resource names while the new key loads.
+    placeholderData: EMPTY_SKILLS_RESULT,
   });
 }
 
@@ -208,7 +217,8 @@ export function providerCommandsQueryOptions(input: {
     },
     enabled: (input.enabled ?? true) && input.cwd !== null,
     staleTime: 30_000,
-    placeholderData: (previous) => previous ?? EMPTY_COMMANDS_RESULT,
+    // Prompt commands follow the same Thread/session trust boundary as Skills.
+    placeholderData: EMPTY_COMMANDS_RESULT,
   });
 }
 

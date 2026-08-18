@@ -24,8 +24,8 @@ Updated: 2026-08-18
 - `3077bf253` 已直接复用现有 `ProviderIcon`、Server health 与 Composer availability 语义，补齐中英文图标/可用/登录/受限/未安装/不可用反馈，并保留未安装 Engine 的设置可达性。当前安装版及 arm64 ad-hoc DMG 均来自该 exact pushed product；fresh 隔离 profile 已证明图标、状态、可用数量、未安装 Engine 可发现性和关闭重开。
 - Synara `af9c36465` 有意增加了 per-Project localStorage→Thread notes seed，`bdfc332a8` 又专门通过 `thread.meta.update` 修复首次发送持久化；它是真实 notes-template 功能，但不是 Agent runtime Project rules。维护者于 2026-08-18 在知晓这项行为和损失后明确确认整体退休，并接受不再提供 Project→new-task Notepad seed。
 - `Project instructions` 全链退休已在当前分支提交为 `2bd0478a6`，focused Web tests、typecheck、lint 与 document contract 已闭合；该提交尚未 push/merge，因此仍是本地 source candidate。
-- baseline product-owned `@omnimind/pi-coding-agent@0.84.2` 的 default base 写着 `You are an expert coding assistant operating inside pi` 并引用 archive 中没有发行的 docs/examples；当前本地 candidate 已把 base 改为 identity-neutral，并在 Extension turn mutation 后把 Host-owned OmniMind contract 去重、追加为 exactly once。stock Pi 的 identity/default base 不变。
-- baseline Provider start/recovery 没有携带 work surface 或 trusted Project root，Pi-family 依赖 SDK 默认 `projectTrusted=true` 并从 filesystem root 扫描 context files；当前本地 candidate 已从同一份 canonical Project snapshot 派生 surface、effective cwd 与 Project/worktree root，随现有 binding recovery/rollback 传递，并让 Chat 与无 active Session discovery 保持 untrusted/global-only。该 candidate 尚未 push，也未从 exact pushed SHA 打包或安装。
+- baseline product-owned `@omnimind/pi-coding-agent@0.84.2` 的 default base 写着 `You are an expert coding assistant operating inside pi` 并引用 archive 中没有发行的 docs/examples；当前本地 candidate 已把 base 改为 identity-neutral，并在 Extension turn mutation 后只把 Host-owned OmniMind engine contract 去重、追加为 exactly once。general Host/tool guidance 保持 mutable append，不因身份改造冻结已知 Browser/Device policy 漂移；stock Pi 的 identity/default base 不变。
+- baseline Provider start/recovery 没有携带 work surface 或 trusted Project root，Pi-family 依赖 SDK 默认 `projectTrusted=true` 并从 filesystem root 扫描 context files；当前本地 candidate 已从同一份 canonical Project snapshot 派生 surface、effective cwd 与 Project/worktree root，只为 bundled `omnimind` 随现有 binding recovery/rollback 传递，其他 Provider admission 丢弃这些字段。Chat 与无 active Session discovery 保持 untrusted/global-only，skills/commands 的 Thread/Session key 变化使用固定空 placeholder，不会短暂沿用上一 trust tuple；该 candidate 尚未 push，也未从 exact pushed SHA 打包或安装。
 - 维护者已确认：OmniMind identity、Chat/Agent 边界、Agent alignment/risk contract 属于不可被 Prompt 管理覆盖的 engine contract；未来 Prompt 管理只管理个人指令、项目规则和模板。
 - `e0ee9cfe2` 的逐回合 `omnimind_update_tasks` Todo/task-list 投影仍与持久 Goal 分离；Todo 不是 Goal 的缩水替代。
 - Synara Goal 与 Todo 是两条独立责任。ThreadGoal 位于 OmniMind 已继承的同一 Product Orchestration/Thread authority 内，不是第二产品控制面。
@@ -51,7 +51,7 @@ Updated: 2026-08-18
 
 ## 下一动作
 
-冻结已经闭合的最小实现，不再扩张 discovery 或 Prompt 管理责任；MiMo Chat 与 DeepSeek folder-backed Agent 的首轮、continuation、identity、surface overlay 及 Extension replacement 已完成脱敏 live probe。继续完成剩余 final gate；由于维护者明确暂停 push，不能从 exact pushed SHA 执行正式 packaged/install journey，交付时必须准确标为本地 source candidate。随后提交本地候选，等待维护者决定何时 push；Prompt 管理产品化继续停在独立决策面。
+冻结已经闭合的最小实现，不再扩张 discovery 或 Prompt 管理责任；MiMo Chat 与 DeepSeek folder-backed Agent 的首轮、continuation、identity、surface overlay 及 Extension replacement 已完成脱敏 live probe。提交后 review 的边界修复已收缩为同一个本地 follow-up 并通过 final gate：跨 trust tuple 的 discovery 使用固定空 placeholder，`error` 仍投影可能存在的物理 Session 而 `closed` 切回 global-only，surface/root 只由 bundled OmniMind 承担，immutable engine contract 与 mutable Host append 已分离。该 follow-up 作为独立本地提交冻结；由于维护者明确暂停 push，不执行正式 packaged/install journey，交付边界仍是本地 source candidate。Prompt 管理产品化继续停在独立决策面。
 
 ## 证据入口
 

@@ -32,6 +32,7 @@ import {
   makePiBashProcessSupervisor,
   makePiGatewayLoadWarning,
   makePiHostSystemPrompt,
+  makeOmniMindEngineSystemPrompt,
   makePiRuntimeEventBase,
   makePiUserInputOptions,
   makePiAdapterLive,
@@ -47,7 +48,6 @@ describe("Pi native resource projection", () => {
     const prompt = makePiHostSystemPrompt({
       provider: "omnimind",
       gatewayControlAvailable: true,
-      workSurface: "agent",
     });
 
     expect(prompt).toContain("<omnimind_host_context>");
@@ -64,9 +64,7 @@ describe("Pi native resource projection", () => {
   });
 
   it("adds the task reconciliation policy only to the bundled OmniMind Agent", () => {
-    const omniMindPrompt = makePiHostSystemPrompt({
-      provider: "omnimind",
-      gatewayControlAvailable: true,
+    const omniMindPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "agent",
     });
     const stockPiPrompt = makePiHostSystemPrompt({
@@ -82,14 +80,10 @@ describe("Pi native resource projection", () => {
   });
 
   it("keeps OmniMind identity immutable while selecting distinct Chat and Agent contracts", () => {
-    const chatPrompt = makePiHostSystemPrompt({
-      provider: "omnimind",
-      gatewayControlAvailable: false,
+    const chatPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "chat",
     });
-    const agentPrompt = makePiHostSystemPrompt({
-      provider: "omnimind",
-      gatewayControlAvailable: false,
+    const agentPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "agent",
     });
     const identity =
@@ -104,6 +98,23 @@ describe("Pi native resource projection", () => {
     expect(agentPrompt).toContain("no unresolved ambiguity would materially change the result");
     expect(agentPrompt).toContain("<omnimind_agent_task_policy>");
     expect(agentPrompt).not.toContain("In Chat, help the user");
+    expect(agentPrompt).toContain(
+      "Honor explicit user preferences for language, tone, format, level of detail, and working style",
+    );
+  });
+
+  it("keeps general Host tool guidance outside the immutable engine contract", () => {
+    const hostPrompt = makePiHostSystemPrompt({
+      provider: "omnimind",
+      gatewayControlAvailable: true,
+    });
+    const enginePrompt = makeOmniMindEngineSystemPrompt({ workSurface: "agent" });
+
+    expect(hostPrompt).toContain("BrowserDownloadApprovalRequired");
+    expect(hostPrompt).toContain("Device mutations such as");
+    expect(enginePrompt).not.toContain("BrowserDownloadApprovalRequired");
+    expect(enginePrompt).not.toContain("Device mutations such as");
+    expect(enginePrompt).not.toContain("<omnimind_host_context>");
   });
 
   it("does not give stock Pi the OmniMind identity or work-surface contract", () => {
@@ -768,9 +779,7 @@ describe("getPiDiscoverableModels", () => {
     const stockThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000063");
     const identity =
       "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
-    const immutableAgentPrompt = makePiHostSystemPrompt({
-      provider: "omnimind",
-      gatewayControlAvailable: false,
+    const immutableAgentPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "agent",
     });
     mkdirSync(path.join(cwd, ".omnimind", "extensions"), { recursive: true });
@@ -923,7 +932,8 @@ describe("getPiDiscoverableModels", () => {
         expect(prompt).toContain("project extension replacement");
         expect(prompt).toContain("<omnimind_agent_task_policy>");
         expect(prompt.split(identity)).toHaveLength(2);
-        expect(prompt.split("<omnimind_host_context>")).toHaveLength(2);
+        expect(prompt.split("<omnimind_engine_contract>")).toHaveLength(2);
+        expect(prompt).not.toContain("<omnimind_host_context>");
         expect(toolNames(body)).toContain("omnimind_update_tasks");
       }
       const chatPrompt = systemPrompt(requestBodies[2]);
