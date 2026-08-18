@@ -337,6 +337,7 @@ describe("wsNativeApi", () => {
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
         },
         skills: { disabled: [] },
+        agentTools: { disabledBuiltInGroups: [] },
       },
     } as const;
     emitPush(WS_CHANNELS.serverSettingsUpdated, payload);
@@ -655,6 +656,16 @@ describe("wsNativeApi", () => {
     await api.server.getEnvironment();
 
     expect(requestMock).toHaveBeenCalledWith(WS_METHODS.serverGetEnvironment);
+  });
+
+  it("loads built-in Agent tool groups from the server catalog", async () => {
+    requestMock.mockResolvedValue([]);
+    const { createWsNativeApi } = await import("./wsNativeApi");
+
+    const api = createWsNativeApi();
+    await api.server.getBuiltInToolGroups();
+
+    expect(requestMock).toHaveBeenCalledWith(WS_METHODS.serverGetBuiltInToolGroups);
   });
 
   it("uses websocket RPC for external MCP management in packaged and browser builds", async () => {

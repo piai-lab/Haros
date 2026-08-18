@@ -641,6 +641,7 @@ export function createWsNativeApi(): NativeApi {
     server: {
       getConfig: () => transport.request(WS_METHODS.serverGetConfig),
       getEnvironment: () => transport.request(WS_METHODS.serverGetEnvironment),
+      getBuiltInToolGroups: () => transport.request(WS_METHODS.serverGetBuiltInToolGroups),
       getSettings: () => transport.request(WS_METHODS.serverGetSettings),
       updateSettings: (input) => transport.request(WS_METHODS.serverUpdateSettings, input),
       getAuthSession: () => requestAuthJson<AuthSessionState>("/api/auth/session"),

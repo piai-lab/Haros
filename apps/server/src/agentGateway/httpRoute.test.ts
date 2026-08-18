@@ -79,6 +79,7 @@ async function withGatewayServer(
       stdioProxy: { command: process.execPath, args: [] },
     };
     const gateway: AgentGatewayShape = {
+      getBuiltInToolGroups: Effect.succeed([]),
       handleMcpPost: (input) => {
         handledBodies.push(input.body);
         return Effect.succeed({ status: 200, body: { ok: true } });

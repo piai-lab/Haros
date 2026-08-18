@@ -114,6 +114,7 @@ function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): S
       ...overrides,
     },
     skills: { disabled: [] },
+    agentTools: { disabledBuiltInGroups: [] },
   };
 }
 

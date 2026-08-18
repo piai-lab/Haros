@@ -51,6 +51,7 @@ import { KeyboardShortcutsSettingsPanel } from "../components/settings/KeyboardS
 import { ProfileSettingsPanel } from "../components/settings/ProfileSettingsPanel";
 import { ProviderUsageSettingsPanel } from "../components/settings/ProviderUsageSettingsPanel";
 import { ExternalConnectionsSettingsPanel } from "../components/settings/ExternalConnectionsSettingsPanel";
+import { BuiltInToolsSettingsPanel } from "../components/settings/BuiltInToolsSettingsPanel";
 import {
   SettingResetButton,
   SettingsSegmentedControl,
@@ -125,6 +126,7 @@ const SETTINGS_SECTION_LABEL_KEY = {
   providers: "settings.providers",
   skills: "settings.skills",
   usage: "settings.usage",
+  "built-in-tools": "settings.builtInTools",
   integrations: "settings.integrations",
   advanced: "settings.advanced",
 } as const satisfies Record<(typeof SETTINGS_NAV_ITEMS)[number]["id"], MessageKey>;
@@ -143,6 +145,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY = {
   providers: "settings.providersDescription",
   skills: "settings.skillsDescription",
   usage: "settings.usagePanelDescription",
+  "built-in-tools": "settings.builtInToolsDescription",
   integrations: "settings.integrationsDescription",
   advanced: "settings.advancedDescription",
 } as const satisfies Record<(typeof SETTINGS_NAV_ITEMS)[number]["id"], MessageKey>;
@@ -1334,6 +1337,7 @@ function SettingsRouteView() {
                   updateSettings={updateSettings}
                   resetEpoch={resetEpoch}
                 />
+                <BuiltInToolsSettingsPanel active={activeSection === "built-in-tools"} />
                 <ExternalConnectionsSettingsPanel active={activeSection === "integrations"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}

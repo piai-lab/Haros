@@ -76,6 +76,12 @@ import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserA
 import { makeBrowserAutomationHost } from "../../browserAutomation/Layers/BrowserAutomationHost.ts";
 import { makeThreadReadTools } from "../threadReadTools.ts";
 import { makeThreadDiagnosticTools } from "../threadDiagnosticTools.ts";
+import {
+  exposedAgentGatewayTools,
+  makeAgentGatewayToolCatalog,
+  projectBuiltInToolGroups,
+  tagAgentGatewayTools,
+} from "../toolCatalog.ts";
 import { pruneProjectedArchivedManagedWorktrees } from "../../managedWorktrees.ts";
 import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 
@@ -675,7 +681,7 @@ export const makeAgentGateway = Effect.gen(function* () {
             ? { threadId: target.id, goal: null, achieved: true }
             : blocked
               ? { threadId: target.id, goal: target.goal, blocked: true, paused: true }
-            : { threadId: target.id, goal: goal || null },
+              : { threadId: target.id, goal: goal || null },
         );
       }).pipe(Effect.catch((error) => Effect.succeed(mcpToolResultError(errorText(error))))),
   };
@@ -717,27 +723,49 @@ export const makeAgentGateway = Effect.gen(function* () {
       }).pipe(Effect.orElseSucceed(() => null)),
   });
 
-  const tools: ReadonlyArray<ToolEntry> = [
-    ...readTools,
-    ...diagnosticTools,
-    createThreads,
-    createThread,
-    sendMessage,
-    interruptThread,
-    setThreadTitle,
-    setThreadArchived,
-    setThreadGoal,
-    ...automationTools,
-    ...browserTools,
-    ...(deviceService?.supported === true
-      ? makeAgentGatewayDeviceTools({ manager: deviceService.manager })
-      : []),
-  ];
+  const tools = makeAgentGatewayToolCatalog([
+    tagAgentGatewayTools({
+      group: "omnimind",
+      available: true,
+      tools: [
+        ...readTools,
+        ...diagnosticTools,
+        createThreads,
+        createThread,
+        sendMessage,
+        interruptThread,
+        setThreadTitle,
+        setThreadArchived,
+        setThreadGoal,
+        ...automationTools,
+      ],
+    }),
+    tagAgentGatewayTools({
+      group: "browser",
+      available: browserAutomationHost.available,
+      tools: browserTools,
+    }),
+    tagAgentGatewayTools({
+      group: "device",
+      available: deviceService?.supported === true,
+      tools:
+        deviceService?.supported === true
+          ? makeAgentGatewayDeviceTools({ manager: deviceService.manager })
+          : [],
+    }),
+  ]);
+  const loadExposedTools = serverSettings.getSettings.pipe(
+    Effect.map((settings) => exposedAgentGatewayTools(tools, settings)),
+  );
   return {
+    getBuiltInToolGroups: serverSettings.getSettings.pipe(
+      Effect.map((settings) => projectBuiltInToolGroups(tools, settings)),
+    ),
     handleMcpPost: makeAgentGatewayMcpTransport({
       credentials,
       snapshotQuery,
       tools,
+      loadExposedTools,
       instructions: AGENT_GATEWAY_INSTRUCTIONS,
       requireThreadShell,
     }),

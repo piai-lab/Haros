@@ -17,6 +17,7 @@ export const SETTINGS_SECTION_IDS = [
   "providers",
   "skills",
   "usage",
+  "built-in-tools",
   "integrations",
   "advanced",
 ] as const;
@@ -123,6 +124,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Capture another app's frontmost window directly into a task.",
     icon: "screen-capture",
     eyebrow: "Screen capture",
+  },
+  {
+    id: "built-in-tools",
+    group: "integrations",
+    label: "Built-in tools",
+    description: "Choose which OmniMind capabilities are available to Agents.",
+    icon: "toolbox",
+    eyebrow: "Agent capabilities",
   },
   {
     id: "integrations",

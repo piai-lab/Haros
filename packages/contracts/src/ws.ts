@@ -254,6 +254,7 @@ export const WS_METHODS = {
   // Server meta
   serverGetConfig: "server.getConfig",
   serverGetEnvironment: "server.getEnvironment",
+  serverGetBuiltInToolGroups: "server.getBuiltInToolGroups",
   serverGetSettings: "server.getSettings",
   serverUpdateSettings: "server.updateSettings",
   serverRefreshProviders: "server.refreshProviders",
@@ -494,6 +495,7 @@ const WebSocketRequestBody = Schema.Union([
   // Server meta
   tagRequestBody(WS_METHODS.serverGetConfig, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverGetEnvironment, Schema.Struct({})),
+  tagRequestBody(WS_METHODS.serverGetBuiltInToolGroups, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverGetSettings, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpdateSettings, ServerUpdateSettingsInput),
   tagRequestBody(WS_METHODS.serverRefreshProviders, Schema.Struct({})),

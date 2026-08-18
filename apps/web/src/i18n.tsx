@@ -2042,6 +2042,7 @@ export const EN_MESSAGES = {
   "settings.providers": "Agent engines",
   "settings.skills": "Agent skills",
   "settings.usage": "Usage & limits",
+  "settings.builtInTools": "Built-in tools",
   "settings.integrations": "External connections",
   "settings.advanced": "System tools",
   "settings.groupPersonal": "Personal",
@@ -2116,6 +2117,8 @@ export const EN_MESSAGES = {
   "settings.skillsDescription":
     "Review reusable workflows discovered across all configured engines.",
   "settings.usagePanelDescription": "See remaining quota and credits for every signed-in engine.",
+  "settings.builtInToolsDescription":
+    "Choose which OmniMind capabilities Agents can discover and use.",
   "settings.integrationsDescription":
     "Let Codex, Claude Code, and other local apps connect to and use OmniMind.",
   "settings.advancedDescription":
@@ -2982,6 +2985,32 @@ export const EN_MESSAGES = {
   "settings.optionalConditionExample": "Optional condition, e.g. !terminalFocus",
   "settings.noShortcutMatches": "No shortcuts match “{query}”.",
   "settings.never": "Never",
+  "settings.builtInToolsForAgents": "Agent access",
+  "settings.builtInToolsForAgentsDescription":
+    "These controls affect every Agent, including OmniMind Agent. They do not turn off the Browser or Device panels you use directly.",
+  "settings.builtInToolGroups": "Capability groups",
+  "settings.builtInGroupOmniMind": "OmniMind",
+  "settings.builtInGroupOmniMindDescription":
+    "Projects, threads, goals, automations, and other OmniMind workspace capabilities.",
+  "settings.builtInGroupBrowser": "Browser",
+  "settings.builtInGroupBrowserDescription":
+    "Lets Agents work with OmniMind's shared in-app browser when it is available.",
+  "settings.builtInGroupDevice": "Device",
+  "settings.builtInGroupDeviceDescription":
+    "Lets Agents inspect and control supported local device runtimes when they are available.",
+  "settings.builtInAvailable": "Available",
+  "settings.builtInDegraded": "Partially available",
+  "settings.builtInUnavailable": "Unavailable",
+  "settings.builtInDisabled": "Disabled",
+  "settings.builtInToolAvailabilitySummary": "{state} · {available} of {total} tools available",
+  "settings.builtInGroupToggle": "Allow Agents to use {group}",
+  "settings.loadingBuiltInToolGroups": "Loading built-in tools…",
+  "settings.builtInGroupsUnavailable": "Built-in tools are unavailable",
+  "settings.builtInGroupsUnavailableDescription":
+    "OmniMind could not load the current Agent capability catalog. Try again after the server reconnects.",
+  "settings.builtInUpdateFailed": "Could not update built-in tools",
+  "settings.builtInUpdateFailedDescription":
+    "OmniMind restored the server's current setting. Try again.",
   "settings.codingAgent": "External app",
   "settings.copyFailed": "Could not copy",
   "settings.clipboardFailed": "Clipboard access failed.",
@@ -5511,6 +5540,7 @@ export const ZH_CN_MESSAGES = {
   "settings.providers": "Agent 引擎",
   "settings.skills": "Agent 技能",
   "settings.usage": "用量与限额",
+  "settings.builtInTools": "内置工具",
   "settings.integrations": "外部连接",
   "settings.advanced": "系统工具",
   "settings.groupPersonal": "个人",
@@ -5575,6 +5605,7 @@ export const ZH_CN_MESSAGES = {
   "settings.providersDescription": "选择可见的编码 Agent，并管理已安装的 CLI 工具。",
   "settings.skillsDescription": "查看从所有已配置引擎中发现的可复用工作流。",
   "settings.usagePanelDescription": "查看每个已登录引擎的剩余额度与点数。",
+  "settings.builtInToolsDescription": "选择 Agent 可以发现和使用哪些 OmniMind 能力。",
   "settings.integrationsDescription": "允许 Codex、Claude Code 等本地应用连接并使用 OmniMind。",
   "settings.advancedDescription": "管理会话、恢复工具、底层快捷键与版本详情。",
   "settings.restoreConfirmTitle": "恢复默认设置？",
@@ -6382,6 +6413,30 @@ export const ZH_CN_MESSAGES = {
   "settings.optionalConditionExample": "可选条件，例如 !terminalFocus",
   "settings.noShortcutMatches": "没有与“{query}”匹配的快捷键。",
   "settings.never": "从未",
+  "settings.builtInToolsForAgents": "Agent 访问权限",
+  "settings.builtInToolsForAgentsDescription":
+    "这些开关作用于所有 Agent，包括 OmniMind Agent；不会关闭你直接使用的浏览器或设备面板。",
+  "settings.builtInToolGroups": "能力分组",
+  "settings.builtInGroupOmniMind": "OmniMind",
+  "settings.builtInGroupOmniMindDescription":
+    "项目、任务、目标、自动化及其他 OmniMind 工作区能力。",
+  "settings.builtInGroupBrowser": "浏览器",
+  "settings.builtInGroupBrowserDescription":
+    "在可用时允许 Agent 使用 OmniMind 共享的应用内浏览器。",
+  "settings.builtInGroupDevice": "设备",
+  "settings.builtInGroupDeviceDescription": "在可用时允许 Agent 检查和控制受支持的本机设备运行时。",
+  "settings.builtInAvailable": "可用",
+  "settings.builtInDegraded": "部分可用",
+  "settings.builtInUnavailable": "不可用",
+  "settings.builtInDisabled": "已关闭",
+  "settings.builtInToolAvailabilitySummary": "{state} · {available}/{total} 个工具可用",
+  "settings.builtInGroupToggle": "允许 Agent 使用{group}",
+  "settings.loadingBuiltInToolGroups": "正在加载内置工具…",
+  "settings.builtInGroupsUnavailable": "内置工具不可用",
+  "settings.builtInGroupsUnavailableDescription":
+    "OmniMind 无法加载当前 Agent 能力目录；请在服务器重新连接后重试。",
+  "settings.builtInUpdateFailed": "无法更新内置工具",
+  "settings.builtInUpdateFailedDescription": "OmniMind 已恢复服务器当前设置，请重试。",
   "settings.codingAgent": "外部应用",
   "settings.copyFailed": "复制失败",
   "settings.clipboardFailed": "无法访问剪贴板。",

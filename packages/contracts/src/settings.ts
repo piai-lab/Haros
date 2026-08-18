@@ -89,12 +89,22 @@ const DisabledSkillNames = Schema.Array(Schema.String.check(Schema.isMaxLength(2
   Schema.withDecodingDefault(() => []),
 );
 
+const DisabledBuiltInGroupsValue = Schema.Array(TrimmedString.check(Schema.isMaxLength(64))).check(
+  Schema.isMaxLength(32),
+);
+const DisabledBuiltInGroups = DisabledBuiltInGroupsValue.pipe(Schema.withDecodingDefault(() => []));
+
 // User-level skill toggles. Skills are keyed by lowercased name because the
 // unified catalog dedupes provider copies of the same skill by name.
 export const SkillsServerSettings = Schema.Struct({
   disabled: DisabledSkillNames,
 });
 export type SkillsServerSettings = typeof SkillsServerSettings.Type;
+
+export const AgentToolsServerSettings = Schema.Struct({
+  disabledBuiltInGroups: DisabledBuiltInGroups,
+});
+export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
 export const ServerSettings = Schema.Struct({
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
@@ -120,6 +130,7 @@ export const ServerSettings = Schema.Struct({
     pi: PiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
   }).pipe(Schema.withDecodingDefault(() => ({}))),
   skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
 });
 export type ServerSettings = typeof ServerSettings.Type;
 
@@ -208,6 +219,11 @@ export const ServerSettingsPatch = Schema.Struct({
   skills: Schema.optionalKey(
     Schema.Struct({
       disabled: Schema.optionalKey(Schema.Array(Schema.String.check(Schema.isMaxLength(256)))),
+    }),
+  ),
+  agentTools: Schema.optionalKey(
+    Schema.Struct({
+      disabledBuiltInGroups: Schema.optionalKey(DisabledBuiltInGroupsValue),
     }),
   ),
 });

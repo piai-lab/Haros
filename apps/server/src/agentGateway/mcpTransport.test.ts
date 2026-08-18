@@ -57,6 +57,7 @@ function makeThread(threadId: string): OrchestrationThreadShell {
 function makeTransport(input: {
   readonly tool: ToolEntry;
   readonly threads: ReadonlyArray<OrchestrationThreadShell>;
+  readonly loadExposedTools?: Effect.Effect<ReadonlyArray<ToolEntry>>;
 }) {
   const threads = new Map(input.threads.map((thread) => [String(thread.id), thread]));
   let nextSession = 0;
@@ -133,6 +134,7 @@ function makeTransport(input: {
     credentials,
     snapshotQuery,
     tools: [input.tool],
+    ...(input.loadExposedTools ? { loadExposedTools: input.loadExposedTools } : {}),
     instructions: "test",
     requireThreadShell: (threadId) => {
       const thread = threads.get(threadId);
@@ -187,6 +189,107 @@ function makeTransport(input: {
 
 const post = (transport: ReturnType<typeof makeTransport>, token: string, body: unknown) =>
   transport({ authorizationHeader: `Bearer ${transport.resolveToken(token)}`, body });
+
+describe("makeAgentGatewayMcpTransport exposure policy", () => {
+  it.effect("filters tools/list and rejects a stale schema before handler admission", () =>
+    Effect.gen(function* () {
+      let exposed = true;
+      let handlerCalls = 0;
+      const tool: ToolEntry = {
+        definition: {
+          name: "browser_click",
+          description: "test",
+          inputSchema: { type: "object" },
+        },
+        group: "browser",
+        available: true,
+        provenance: "agent-gateway",
+        requiredCapability: "browser:control",
+        handler: () => {
+          handlerCalls += 1;
+          return Effect.succeed({ content: [{ type: "text" as const, text: "ok" }] });
+        },
+      };
+      const transport = makeTransport({
+        threads: [makeThread("thread-policy")],
+        tool,
+        loadExposedTools: Effect.sync(() => (exposed ? [tool] : [])),
+      });
+
+      const listed = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "list-before",
+        method: "tools/list",
+      });
+      assert.deepEqual(
+        (listed.body as { result: { tools: ReadonlyArray<{ name: string }> } }).result.tools.map(
+          (entry) => entry.name,
+        ),
+        ["browser_click"],
+      );
+
+      exposed = false;
+      const hidden = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "list-after",
+        method: "tools/list",
+      });
+      assert.deepEqual(
+        (hidden.body as { result: { tools: ReadonlyArray<unknown> } }).result.tools,
+        [],
+      );
+      const denied = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "stale-call",
+        method: "tools/call",
+        params: { name: "browser_click", arguments: {} },
+      });
+      assert.equal((denied.body as { result: { isError?: boolean } }).result.isError, true);
+      assert.equal(handlerCalls, 0);
+    }),
+  );
+
+  it.effect("does not turn an exposure toggle into an in-flight kill switch", () =>
+    Effect.gen(function* () {
+      const admitted = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+      let exposed = true;
+      const tool: ToolEntry = {
+        definition: {
+          name: "browser_wait",
+          description: "test",
+          inputSchema: { type: "object" },
+        },
+        group: "browser",
+        available: true,
+        provenance: "agent-gateway",
+        requiredCapability: "browser:control",
+        handler: () =>
+          Deferred.succeed(admitted, undefined).pipe(
+            Effect.andThen(Deferred.await(release)),
+            Effect.as({ content: [{ type: "text" as const, text: "completed" }] }),
+          ),
+      };
+      const transport = makeTransport({
+        threads: [makeThread("thread-in-flight-policy")],
+        tool,
+        loadExposedTools: Effect.sync(() => (exposed ? [tool] : [])),
+      });
+      const request = yield* post(transport, "token-1", {
+        jsonrpc: "2.0",
+        id: "admitted-call",
+        method: "tools/call",
+        params: { name: "browser_wait", arguments: {} },
+      }).pipe(Effect.forkChild);
+      yield* Deferred.await(admitted);
+
+      exposed = false;
+      yield* Deferred.succeed(release, undefined);
+      const response = yield* Fiber.join(request);
+      assert.equal((response.body as { result: { isError?: boolean } }).result.isError, undefined);
+    }),
+  );
+});
 
 describe("makeAgentGatewayMcpTransport cancellation", () => {
   it.effect(

@@ -49,6 +49,7 @@ export interface McpToolDefinition {
     readonly idempotentHint?: boolean;
     readonly openWorldHint?: boolean;
   };
+  readonly _meta?: Readonly<Record<string, unknown>>;
 }
 
 export interface McpToolCallResult {

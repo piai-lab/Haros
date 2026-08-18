@@ -18,6 +18,7 @@ export const serverQueryKeys = {
   config: () => ["server", "config"] as const,
   authSession: () => ["server", "auth", "session"] as const,
   environment: () => ["server", "environment"] as const,
+  builtInToolGroups: () => ["server", "builtInToolGroups"] as const,
   settings: () => ["server", "settings"] as const,
   worktrees: () => ["server", "worktrees"] as const,
   localServers: () => ["server", "localServers"] as const,
@@ -190,6 +191,18 @@ export function serverSettingsQueryOptions() {
       return api.server.getSettings();
     },
     staleTime: Infinity,
+  });
+}
+
+export function serverBuiltInToolGroupsQueryOptions(input: { enabled?: boolean } = {}) {
+  return queryOptions({
+    queryKey: serverQueryKeys.builtInToolGroups(),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      return api.server.getBuiltInToolGroups();
+    },
+    enabled: input.enabled ?? true,
+    staleTime: 5_000,
   });
 }
 

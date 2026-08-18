@@ -140,6 +140,7 @@ const PRODUCT_COPY_SOURCES = [
   "components/settings/AdvancedSettingsPanel.tsx",
   "components/settings/AppIconPicker.tsx",
   "components/settings/AppSnapShortcutControl.tsx",
+  "components/settings/BuiltInToolsSettingsPanel.tsx",
   "components/settings/ConversationStorageSettingsPanels.tsx",
   "components/settings/DesktopSettingsPanels.tsx",
   "components/settings/ExternalConnectionsSettingsPanel.tsx",

@@ -399,6 +399,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
       "Rebuild local project indexes without clearing existing chats when the local state gets out of sync.",
   },
   {
+    id: "built-in-tools:groups",
+    section: "built-in-tools",
+    title: "Built-in tools",
+    keywords:
+      "Agent capabilities OmniMind Browser Device availability enabled disabled exposure tools",
+    target: null,
+  },
+  {
     id: "integrations:external-mcp",
     section: "integrations",
     title: "External connections",
@@ -464,6 +472,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Assistant output": "settings.assistantOutput",
   "Automatic CLI update checks": "settings.automaticCliUpdates",
   "Base font size": "settings.baseFontSize",
+  "Built-in tools": "settings.builtInTools",
   "Chat width": "settings.chatWidth",
   "Capture sound": "settings.captureSound",
   Chat: "nav.chat",

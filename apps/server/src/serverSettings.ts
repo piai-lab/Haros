@@ -18,6 +18,7 @@ import {
 import { deepMerge, type DeepPartial } from "@omnimind/shared/Struct";
 import {
   applyServerSettingsPatch,
+  normalizeServerSettings,
   validateServerSettingsPatch,
 } from "@omnimind/shared/serverSettings";
 import {
@@ -80,7 +81,7 @@ export class ServerSettingsService extends ServiceMap.Service<
       ServerSettingsService,
       Effect.gen(function* () {
         const currentSettingsRef = yield* Ref.make<ServerSettings>(
-          deepMerge(DEFAULT_SERVER_SETTINGS, overrides),
+          normalizeServerSettings(deepMerge(DEFAULT_SERVER_SETTINGS, overrides)),
         );
         const changesPubSub = yield* PubSub.unbounded<ServerSettings>();
         const revisionRef = yield* Ref.make(0);
@@ -232,7 +233,7 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
     }
     return {
       _tag: "Success" as const,
-      value: decoded.value,
+      value: normalizeServerSettings(decoded.value),
       revision:
         envelope && Number.isSafeInteger(envelope.revision) && Number(envelope.revision) >= 0
           ? Number(envelope.revision)

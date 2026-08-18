@@ -20,6 +20,7 @@ export const OmniMindGatewayErrorCode = Schema.Literals([
   "caller_session_inactive",
   "caller_turn_inactive",
   "capability_denied",
+  "tool_unavailable",
   "provider_unavailable",
   "model_unavailable",
   "model_option_unavailable",

@@ -223,6 +223,7 @@ import {
   ServerGenerateAutomationIntentResult,
   ServerGenerateThreadRecapInput,
   ServerGenerateThreadRecapResult,
+  ServerGetBuiltInToolGroupsResult,
   ServerGetEnvironmentResult,
   ServerGetUsageHistoryInput,
   ServerGetUsageHistoryResult,
@@ -936,6 +937,12 @@ export const WsServerGetEnvironmentRpc = Rpc.make(WS_METHODS.serverGetEnvironmen
   error: WsRpcError,
 });
 
+export const WsServerGetBuiltInToolGroupsRpc = Rpc.make(WS_METHODS.serverGetBuiltInToolGroups, {
+  payload: Schema.Struct({}),
+  success: ServerGetBuiltInToolGroupsResult,
+  error: WsRpcError,
+});
+
 export const WsServerGetSettingsRpc = Rpc.make(WS_METHODS.serverGetSettings, {
   payload: Schema.Struct({}),
   success: ServerGetSettingsResult,
@@ -1444,6 +1451,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsSubscribeTerminalEventsRpc,
   WsServerGetConfigRpc,
   WsServerGetEnvironmentRpc,
+  WsServerGetBuiltInToolGroupsRpc,
   WsServerGetSettingsRpc,
   WsServerUpdateSettingsRpc,
   WsServerRefreshProvidersRpc,

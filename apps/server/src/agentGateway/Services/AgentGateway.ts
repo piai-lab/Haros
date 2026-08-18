@@ -11,6 +11,7 @@
  */
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
+import type { BuiltInToolGroup } from "@omnimind/contracts";
 
 export interface AgentGatewayHttpResult {
   readonly status: number;
@@ -19,6 +20,8 @@ export interface AgentGatewayHttpResult {
 }
 
 export interface AgentGatewayShape {
+  readonly getBuiltInToolGroups: Effect.Effect<ReadonlyArray<BuiltInToolGroup>, unknown>;
+
   /**
    * Handle one MCP streamable-HTTP POST. All failures are folded into
    * JSON-RPC error responses or HTTP status codes; the effect never fails.
