@@ -1,7 +1,7 @@
 # Pi-native Host 工具投影、动态加载与生态所有权复核
 
 > 证据日期：2026-08-18
-> OmniMind 证据快照：`main@8066f23f92a8dbe35c052fc9bcdbd71d347f2c0a`，研究开始与写入前工作树均 clean
+> OmniMind 本轮复核基线：`main@a24653bc7b00f9632275f2960776c31c68d61968`；复核在独立 clean worktree 的 `codex/review-pi-host-tool-mcp-settings` 分支进行
 > Bundled Pi 基线：`@earendil-works/pi-coding-agent@0.84.2`，upstream exact commit `914cf1472e715297caa30db4b9535d534a9eb718`
 > 维护者裁决：2026-08-18 选择方案 A；本文的长期 owner/Engine-native 投影原则已同步到 `architecture/README.md` 与 `architecture/execution.md`，但未授权 Gate B 代码实施
 > 文档角色：Gate A 只读复核、架构建议与未来 Gate B 执行参考；不拥有产品架构、当前施工状态、Campaign claim 或实施授权
@@ -28,9 +28,9 @@
 
 ```text
 Workspace / branch / HEAD / dirty paths:
-  /Users/liuzaoqu/Desktop/Develop/independent/OmniMind
-  main @ 8066f23f92a8dbe35c052fc9bcdbd71d347f2c0a
-  clean at inspection and before this document write
+  /Users/liuzaoqu/Desktop/Develop/independent/OmniMind-wt-review-pi-host-tool-mcp-settings
+  codex/review-pi-host-tool-mcp-settings @ a24653bc7b00f9632275f2960776c31c68d61968
+  clean before this review update; the original main worktree was not modified
 
 Applicable authority owners:
   README.md
@@ -86,7 +86,7 @@ Architecture disposition:
 4. Gateway tool execution 仍调用现有 `tools/call`，不搬进 Extension，不复制 schema，不复制凭据，不持久化 MCP 配置。
 5. 用户安装的 Pi Packages、Extensions、Skills、Prompts 与 Pi-only MCP adapter 继续由 Pi `DefaultPackageManager / ResourceLoader` 拥有。Host inline Extension不得关闭、重命名或接管其他 Extension 的工具。
 6. `tool search` 只搜索已经注册到 Pi Tool Registry、且明确由该 inline Extension拥有的 Host Gateway tools。它不搜索或安装 Package，不搜索 Skill 正文，不管理 MCP server lifecycle，也不擅自激活其他 Extension 刻意保持 inactive 的工具。
-7. 不为本议题引入第三方 `pi-mcp-adapter`。它可能是未来“Pi-only 外部 MCP”候选，但对 OmniMind 自己的 AgentGateway 是一次没有收益的回环和第二生命周期。
+7. 不为本议题引入第三方 `pi-mcp-adapter`，首版也不产品化第三方 MCP Settings。第三方 adapter 只保留为未来“Pi-only 外部 MCP”候选；对 OmniMind 自己的 AgentGateway，它是一次没有收益的回环和第二生命周期。
 8. 不修改 Pi core。若 public Extension/SDK seam 不足，先保留 current `customTools` bridge 或向 upstream 提 seam；不能把不足悄悄补成长期 fork。
 9. 面向未来的扩展单位固定为“新增一个 canonical Host tool definition，自动进入既有投影”，而不是“每增加一个工具，就分别修改 Pi、MCP、Prompt、UI 与权限五处”。若新增 Provider 或能力类型仍要求成倍复制 glue，视为边界设计失败，不以更多抽象掩盖。
 
@@ -230,8 +230,8 @@ Decision:
 - package：`@earendil-works/pi-coding-agent@0.84.2`；
 - npm integrity：`sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==`；
 - OmniMind archive：`vendor/omnimind-pi-coding-agent-0.84.2.tgz`；
-- archive SHA-256：`a08d63bcfb691d936cea4a822b3e4c25b9152fd3f59ee5a5c13a04ab12525514`；
-- product patch SHA-256：`c2233003a1c313488e09bf0a2e8fc1c293ab3ba9392226e637d09f592489895f`；
+- archive SHA-256：`aa47aec0a6b90e3e32385676aa444bad49f2b3efcc64275d2cd24f96f245deb9`；
+- product patch SHA-256：`4a6e091990c7d6fe89c21da40d7866c4b5a6311e3c3797a76a4152e9cc21d506`；
 - stock package patch SHA-256：`7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77`。
 
 当前 `/Users/liuzaoqu/Desktop/Develop/πCode/pi` head 为 `209bc7b9a89b01c8fd05861cf5bbdda3e300037a`，虽然 package version仍显示 `0.84.2`，但相对 release commit已有后续源码变化。它可用于发现上游方向，不能替代 bundled artifact 的生产事实。
@@ -311,10 +311,12 @@ Pi 0.84.2 官方 surface 已提供：
 | Extension       | ResourceLoader执行 factory                   | 注册出的 active tools/commands及其实际贡献                      | 只处理本 inline Extension拥有的 tools    |
 | Skill           | 扫描 `SKILL.md`，解析 frontmatter            | 未禁用 model invocation的 name/description/path XML；正文不注入 | 否；模型按 Pi 指令用 read加载正文        |
 | Prompt template | ResourceLoader/命令扩展                      | 不作为 Tool schema                                              | 否                                       |
-| MCP server      | Pi core不内置；由 Extension实现连接          | 取决于该 Extension注册什么 Tool                                 | 只有被本 Extension拥有并注册的 Host Tool |
+| MCP server      | Pi core不内置；未来若采用则由对应 Extension实现连接 | 取决于该 Extension经验证后注册什么 Tool                      | 首版否；本 Host search只处理自己拥有的 Gateway Tool |
 | Pi Tool         | built-in、Extension或SDK custom registration | 只有 active tools的 definitions                                 | 是，但首版只搜索 Host-owned Gateway集合  |
 
-所以“把 MCP Tool转换成 Pi Tool后可被搜索”的完整含义是：它已经进入 Pi Tool Registry，并且某个 search Extension明确把它纳入候选。Pi不会因为它来自 MCP自动识别、安装或搜索该 server。
+所以不能把“第三方 MCP 可以通过 tool search 使用”写成既定事实。只有未来采用的 Pi-native MCP Extension/adapter 经 exact-source、isolated runtime 和真实 session 证明支持 lazy discovery、proxy或按需激活时，它注册的第三方 tools才可能进入对应的 discovery/search体验。Pi不会因为一个工具来自 MCP就自动识别、安装、连接或搜索该 server。
+
+即使未来成立，tool search也只负责发现、描述和请求激活工具，不拥有 MCP server配置、credential、OAuth、启动/关闭、重连、审批、权限、取消或审计。搜索到或激活不等于授权；真正的调用仍须经过 server状态、session identity、credential、runtime permission、approval、turn authority、timeout与cancellation。lazy discovery不得为搜索连接全部 server、制造进程/网络风暴或把全量 schema注入上下文。Host Gateway tools与third-party MCP tools保持不同 owner与provenance，不提前建立统一总 registry或统一权限系统。
 
 ## 5. 推荐目标架构
 
@@ -770,7 +772,7 @@ Pi -> third-party MCP lifecycle -> OmniMind MCP -> OmniMind Host
 Pi official Tool/Extension seam -> OmniMind Host
 ```
 
-前者新增依赖、配置、凭据传递、transport/reconnect、版本与shutdown owner，却没有新增用户能力。第三方 adapter仅在“Pi-only external MCP”中可能成立，且需要独立 exact-source Gate A。
+前者新增依赖、配置、凭据传递、transport/reconnect、版本与shutdown owner，却没有新增用户能力。首版不提供第三方 MCP Settings、CRUD、credential UI、全局状态面板或跨 Engine分发。第三方 adapter仅保留为未来“Pi-only external MCP”候选；若重新引入，必须先有明确用户需求，并重新完成独立 exact-source Gate A、isolated runtime与真实 session验证。
 
 ### 10.2 Host 全局 Plugin/Tool Registry
 
@@ -1111,7 +1113,7 @@ Pi official Tool/Extension seam -> OmniMind Host
 
 ```text
 Exact identity:
-  Pi 0.84.2 / upstream 914cf147...；OmniMind main 8066f23...
+  Pi 0.84.2 / upstream 914cf147...；OmniMind main a24653bc...
   artifact/hash/patch identity见本文4.1与README source-adoptions。
 
 Evidence maturity:
