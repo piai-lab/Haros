@@ -1,4 +1,5 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
+import { chmod } from "node:fs/promises";
 import { basename, dirname } from "node:path";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL, DEFAULT_MODEL_BY_PROVIDER } from "@omnimind/contracts";
 import { Effect, FileSystem, Layer } from "effect";
@@ -184,6 +185,65 @@ describe("ServerSettingsService", () => {
       });
     },
   );
+
+  it("performs one monotonic migration when concurrent callers start the service", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({ revision: 9, migrationVersion: 1, settings: {} }),
+        );
+        yield* Effect.all([service.start, service.start], { concurrency: "unbounded" });
+        return {
+          snapshot: yield* service.getSnapshot,
+          persisted: JSON.parse(yield* fs.readFileString(settingsPath)) as {
+            revision: number;
+            migrationVersion: number;
+          },
+        };
+      }),
+    );
+
+    expect(result.snapshot.revision).toBe(10);
+    expect(result.persisted).toMatchObject({ revision: 10, migrationVersion: 2 });
+  });
+
+  it("fails startup without publishing migrated state when the atomic write cannot commit", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        const settingsDirectory = dirname(settingsPath);
+        yield* fs.makeDirectory(settingsDirectory, { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({ revision: 11, migrationVersion: 1, settings: {} }),
+        );
+        yield* Effect.promise(() => chmod(settingsDirectory, 0o500));
+        const startExit = yield* Effect.exit(service.start).pipe(
+          Effect.ensuring(Effect.promise(() => chmod(settingsDirectory, 0o700))),
+        );
+        return {
+          startExit,
+          snapshot: yield* service.getSnapshot,
+          persisted: JSON.parse(yield* fs.readFileString(settingsPath)) as {
+            revision: number;
+            migrationVersion: number;
+          },
+        };
+      }),
+    );
+
+    expect(result.startExit._tag).toBe("Failure");
+    expect(result.snapshot.revision).toBe(0);
+    expect(result.snapshot.settings.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+    expect(result.persisted).toMatchObject({ revision: 11, migrationVersion: 1 });
+  });
 
   it("rejects provider-only runtime-catalog switches before persistence", async () => {
     const result = await runWithSettings(
