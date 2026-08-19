@@ -27,6 +27,7 @@ import {
   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
 } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
+import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentation";
 import { renderProviderTraitsMenuContent } from "./composerProviderRegistry";
 import { ProviderModelMenuItems, resolveProviderModelLabel } from "./ProviderModelPicker";
 import { resolveTraitsTriggerSummary } from "./TraitsPicker";
@@ -66,7 +67,6 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
     props.onOpenChange?.(nextOpen);
   };
 
-  const catalogIsChecking = props.catalogState === "checking";
   const modelLabel = props.model
     ? resolveProviderModelLabel({
         provider: props.provider,
@@ -74,9 +74,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
         model: props.model,
         modelOptionsByProvider: props.modelOptionsByProvider,
       })
-    : catalogIsChecking
-      ? t("composer.checkingModels")
-      : t("composer.noAvailableModel");
+    : t(resolveComposerModelFallbackMessageKey(props.catalogState));
   const traitsSummary = resolveTraitsTriggerSummary({
     provider: props.provider,
     model: props.model,
@@ -94,6 +92,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   });
   const triggerStatusLabel = props.model ? traitsSummary.summaryText || null : null;
   const showsFastBadge = props.model ? traitsSummary.showsFastBadge : false;
+  const catalogIsChecking = props.catalogState === "checking";
   const catalogIsIdle = props.catalogState === "idle";
   const catalogIsStale = props.catalogState === "stale";
   const catalogIsError = props.catalogState === "error";

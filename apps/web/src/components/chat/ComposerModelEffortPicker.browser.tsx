@@ -201,7 +201,9 @@ describe("ComposerModelEffortPicker", () => {
       />,
     );
     try {
-      await page.getByRole("button", { name: "Model and options" }).click();
+      const trigger = page.getByRole("button", { name: "Model and options" });
+      await expect.element(trigger).toHaveTextContent("No available model");
+      await trigger.click();
       await expect.element(page.getByText("No available models", { exact: true })).toBeVisible();
     } finally {
       await emptyScreen.unmount();
@@ -220,10 +222,10 @@ describe("ComposerModelEffortPicker", () => {
       />,
     );
     try {
-      await page.getByRole("button", { name: "Model and options" }).click();
-      await expect
-        .element(page.getByText("Model catalog unavailable", { exact: true }))
-        .toBeVisible();
+      const trigger = page.getByRole("button", { name: "Model and options" });
+      await expect.element(trigger).toHaveTextContent("Model catalog unavailable");
+      await expect.element(trigger).not.toHaveTextContent("No available model");
+      await trigger.click();
       await expect
         .element(page.getByRole("status").getByText("Model catalog unavailable", { exact: true }))
         .toBeVisible();
@@ -233,6 +235,42 @@ describe("ComposerModelEffortPicker", () => {
         .toBeVisible();
     } finally {
       await errorScreen.unmount();
+    }
+  });
+
+  it("does not present an idle catalog as an empty catalog", async () => {
+    const screen = await render(
+      <ComposerModelEffortPicker
+        provider="omnimind"
+        model={null}
+        catalogState="idle"
+        modelOptionsByProvider={{
+          omnimind: [],
+          claudeAgent: [],
+          codex: [],
+          cursor: [],
+          antigravity: [],
+          grok: [],
+          droid: [],
+          kilo: [],
+          opencode: [],
+          pi: [],
+        }}
+        onProviderModelChange={vi.fn()}
+        onRefreshModels={vi.fn()}
+        onOpenSettings={vi.fn()}
+        threadId={THREAD_ID}
+        modelOptions={undefined}
+        prompt=""
+        onPromptChange={vi.fn()}
+      />,
+    );
+    try {
+      const trigger = page.getByRole("button", { name: "Model and options" });
+      await expect.element(trigger).toHaveTextContent("Select model");
+      await expect.element(trigger).not.toHaveTextContent("No available model");
+    } finally {
+      await screen.unmount();
     }
   });
 

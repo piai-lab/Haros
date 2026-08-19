@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ProviderModelPicker } from "./ProviderModelPicker";
+import type { ProviderModelCatalogState } from "../../hooks/useProviderModelCatalog";
 import type { ProviderModelOption } from "../../providerModelOptions";
 import { FAVORITE_MODEL_STORAGE_KEYS } from "../../lib/modelFavorites";
 import { I18nProvider } from "../../i18n";
@@ -164,6 +165,7 @@ async function mountPicker(props: {
   lockedProvider: ProviderKind | null;
   providers?: ReadonlyArray<ServerProviderStatus>;
   loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
+  catalogStateByProvider?: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
   onSelectionCommitted?: () => void;
   onProviderBrowse?: (provider: ProviderKind) => void;
   modelOptionsByProvider?: Record<
@@ -185,6 +187,9 @@ async function mountPicker(props: {
         modelOptionsByProvider={props.modelOptionsByProvider ?? MODEL_OPTIONS_BY_PROVIDER}
         {...(props.loadingModelProviders
           ? { loadingModelProviders: props.loadingModelProviders }
+          : {})}
+        {...(props.catalogStateByProvider
+          ? { catalogStateByProvider: props.catalogStateByProvider }
           : {})}
         {...(props.providers ? { providers: props.providers } : {})}
         {...(props.onSelectionCommitted
@@ -218,6 +223,45 @@ describe("ProviderModelPicker", () => {
     localStorage.clear();
     i18nHarness.settings.localePreference = "en";
   });
+
+  it("does not present a loading catalog as an empty catalog", async () => {
+    const mounted = await mountPicker({
+      provider: "omnimind",
+      model: "" as ModelSlug,
+      lockedProvider: "omnimind",
+      catalogStateByProvider: { omnimind: "checking" },
+    });
+
+    try {
+      const trigger = page.getByRole("button");
+      await expect.element(trigger).toHaveTextContent("Checking models");
+      await expect.element(trigger).not.toHaveTextContent("No available model");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it.each([
+    ["ready", "Select model"],
+    ["empty", "No available model"],
+    ["error", "Model catalog unavailable"],
+  ] as const)(
+    "labels a settled %s catalog accurately without a selection",
+    async (state, label) => {
+      const mounted = await mountPicker({
+        provider: "omnimind",
+        model: "" as ModelSlug,
+        lockedProvider: "omnimind",
+        catalogStateByProvider: { omnimind: state },
+      });
+
+      try {
+        await expect.element(page.getByRole("button")).toHaveTextContent(label);
+      } finally {
+        await mounted.cleanup();
+      }
+    },
+  );
 
   it("shows provider submenus when provider switching is allowed", async () => {
     const mounted = await mountPicker({
