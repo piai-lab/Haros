@@ -76,8 +76,8 @@ function makeTransport(input: {
   const inFlightRequests = makeAgentGatewayInFlightRequestRegistry();
   const credentials = {
     verifySession: sessionRegistry.verify,
-    bindWriteAuthority: sessionRegistry.bindWriteAuthority,
-    verifyWriteAuthority: sessionRegistry.verifyWriteAuthority,
+    bindTurnAuthority: sessionRegistry.bindTurnAuthority,
+    verifyTurnAuthority: sessionRegistry.verifyTurnAuthority,
     registerInFlightRequest: inFlightRequests.register,
     cancelInFlightRequests: inFlightRequests.cancel,
     cancelSessionTurnRequests: (token: string, turnId: string) => {
@@ -89,7 +89,7 @@ function makeTransport(input: {
     retireSessionTurn: (token: string, turnId: string) => {
       const session = sessionRegistry.verify(token);
       if (!session) return Promise.resolve();
-      sessionRegistry.retireWriteAuthority(token, turnId);
+      sessionRegistry.retireTurnAuthority(token, turnId);
       return inFlightRequests.cancelTurn(session.sessionKey, turnId).settled;
     },
     revokeSessionToken: (token: string) => {
@@ -191,6 +191,64 @@ const post = (transport: ReturnType<typeof makeTransport>, token: string, body: 
   transport({ authorizationHeader: `Bearer ${transport.resolveToken(token)}`, body });
 
 describe("makeAgentGatewayMcpTransport exposure policy", () => {
+  it.effect(
+    "allows discovery without a turn but rejects every tool call before policy lookup",
+    () =>
+      Effect.gen(function* () {
+        let handlerCalls = 0;
+        const thread = { ...makeThread("thread-no-turn"), latestTurn: null };
+        const tool: ToolEntry = {
+          definition: {
+            name: "omnimind_read_thread",
+            description: "read-only diagnostic",
+            inputSchema: { type: "object" },
+          },
+          group: "omnimind",
+          available: true,
+          provenance: "agent-gateway",
+          requiredCapability: "thread:read",
+          handler: () => {
+            handlerCalls += 1;
+            return Effect.succeed({ content: [{ type: "text" as const, text: "ok" }] });
+          },
+        };
+        const transport = makeTransport({
+          threads: [thread],
+          tool,
+          // A stale bearer must not learn whether a capability is hidden or
+          // absent before exact-turn authority is checked.
+          loadExposedTools: Effect.succeed([]),
+        });
+
+        const listed = yield* post(transport, "token-1", {
+          jsonrpc: "2.0",
+          id: "list-without-turn",
+          method: "tools/list",
+        });
+        assert.deepEqual(
+          (listed.body as { result: { tools: ReadonlyArray<unknown> } }).result.tools,
+          [],
+        );
+
+        const denied = yield* post(transport, "token-1", {
+          jsonrpc: "2.0",
+          id: "read-without-turn",
+          method: "tools/call",
+          params: { name: "omnimind_read_thread", arguments: {} },
+        });
+        const result = (
+          denied.body as {
+            result: { content: ReadonlyArray<{ type: "text"; text: string }> };
+          }
+        ).result;
+        assert.equal(
+          JSON.parse(result.content[0]?.text ?? "{}").error?.code,
+          "caller_turn_inactive",
+        );
+        assert.equal(handlerCalls, 0);
+      }),
+  );
+
   it.effect("filters tools/list and rejects a stale schema before handler admission", () =>
     Effect.gen(function* () {
       let exposed = true;
@@ -306,7 +364,6 @@ describe("makeAgentGatewayMcpTransport cancellation", () => {
               inputSchema: { type: "object" },
             },
             requiredCapability: "browser:control",
-            requiresActiveTurn: true,
             handler: () => {
               handlerCalls += 1;
               return Effect.succeed({ content: [{ type: "text" as const, text: "ok" }] });

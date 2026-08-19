@@ -6,7 +6,7 @@ import {
   AgentGatewaySessionRegistry,
   type AgentGatewaySessionIdentity,
   type AgentGatewaySessionRegistryShape,
-  type AgentGatewayWriteAuthority,
+  type AgentGatewayTurnAuthority,
 } from "../Services/AgentGatewaySessionRegistry.ts";
 
 const PROVIDER_SESSION_CAPABILITIES = [
@@ -26,7 +26,7 @@ export function makeAgentGatewaySessionRegistry(options?: {
   const randomId = options?.randomId ?? randomUUID;
   interface RegisteredSession {
     readonly identity: AgentGatewaySessionIdentity;
-    retiredWriteTurnId: string | undefined;
+    retiredTurnId: string | undefined;
   }
   const sessions = new Map<string, RegisteredSession>();
   const sessionsByKey = new Map<string, RegisteredSession>();
@@ -49,44 +49,44 @@ export function makeAgentGatewaySessionRegistry(options?: {
       };
       const registered: RegisteredSession = {
         identity,
-        retiredWriteTurnId: undefined,
+        retiredTurnId: undefined,
       };
       sessions.set(token, registered);
       sessionsByKey.set(sessionKey, registered);
       return { token, ...identity };
     },
     verify: (token) => sessions.get(token)?.identity ?? null,
-    bindWriteAuthority: (token, turnId) => {
+    bindTurnAuthority: (token, turnId) => {
       const registered = sessions.get(token);
-      if (!registered || registered.retiredWriteTurnId !== undefined) return null;
+      if (!registered || registered.retiredTurnId !== undefined) return null;
       const { identity } = registered;
       return {
         sessionKey: identity.sessionKey,
         threadId: identity.threadId,
         provider: identity.provider,
         turnId,
-      } satisfies AgentGatewayWriteAuthority;
+      } satisfies AgentGatewayTurnAuthority;
     },
-    verifyWriteAuthority: (authority) => {
+    verifyTurnAuthority: (authority) => {
       const registered = sessionsByKey.get(authority.sessionKey);
       const identity = registered?.identity;
       return (
         identity !== undefined &&
-        registered?.retiredWriteTurnId === undefined &&
+        registered?.retiredTurnId === undefined &&
         identity.threadId === authority.threadId &&
         identity.provider === authority.provider
       );
     },
-    retireWriteAuthority: (token, turnId) => {
+    retireTurnAuthority: (token, turnId) => {
       const registered = sessions.get(token);
       if (!registered) return false;
-      if (registered.retiredWriteTurnId !== undefined) {
-        return registered.retiredWriteTurnId === turnId;
+      if (registered.retiredTurnId !== undefined) {
+        return registered.retiredTurnId === turnId;
       }
       // Record A even when it never called a gateway tool. This is the
       // critical case: a detached request from A must not arrive during B and
       // become the first request to bind this credential.
-      registered.retiredWriteTurnId = turnId;
+      registered.retiredTurnId = turnId;
       return true;
     },
     revoke: (token) => {

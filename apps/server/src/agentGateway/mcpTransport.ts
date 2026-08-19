@@ -100,6 +100,15 @@ export function makeAgentGatewayMcpTransport(input: {
           if (typeof toolName !== "string") {
             return jsonRpcError(request.id, JSON_RPC_INVALID_PARAMS, "Missing tool name.");
           }
+          const authorityError = yield* context.assertCallerTurnActive().pipe(
+            Effect.match({
+              onFailure: (error) => error,
+              onSuccess: () => null,
+            }),
+          );
+          if (authorityError !== null) {
+            return jsonRpcResult(request.id, gatewayToolErrorResult(authorityError));
+          }
           const tool = toolsByName.get(toolName);
           if (!tool) {
             return jsonRpcError(request.id, JSON_RPC_INVALID_PARAMS, `Unknown tool "${toolName}".`);
@@ -138,17 +147,6 @@ export function makeAgentGatewayMcpTransport(input: {
             ...context,
             jsonRpcRequestId: request.id,
           };
-          if (tool.requiresActiveTurn) {
-            const authorityError = yield* context.assertCallerTurnActive().pipe(
-              Effect.match({
-                onFailure: (error) => error,
-                onSuccess: () => null,
-              }),
-            );
-            if (authorityError !== null) {
-              return jsonRpcResult(request.id, gatewayToolErrorResult(authorityError));
-            }
-          }
           const result = yield* Effect.suspend(() => tool.handler(args, invocationContext)).pipe(
             Effect.catchDefect((defect) => Effect.succeed(mcpToolResultError(errorText(defect)))),
           );
@@ -190,17 +188,17 @@ export function makeAgentGatewayMcpTransport(input: {
           "caller_session_inactive: Provider session no longer owns this thread.",
         );
       }
-      const callerWriteAuthority =
+      const callerTurnAuthority =
         callerThread.value.latestTurn?.state === "running"
-          ? input.credentials.bindWriteAuthority(token, callerThread.value.latestTurn.turnId)
+          ? input.credentials.bindTurnAuthority(token, callerThread.value.latestTurn.turnId)
           : null;
       const assertCallerTurnActive = () =>
         Effect.gen(function* () {
-          if (callerWriteAuthority === null) {
+          if (callerTurnAuthority === null) {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This OmniMind write was rejected because this credential had no write authority for the exact active turn when the MCP request arrived.",
+                "This OmniMind tool call was rejected because this credential had no authority for the exact active turn when the MCP request arrived.",
                 {
                   callerThreadId,
                   latestTurnId: callerThread.value.latestTurn?.turnId ?? null,
@@ -208,11 +206,11 @@ export function makeAgentGatewayMcpTransport(input: {
               ),
             );
           }
-          if (!input.credentials.verifyWriteAuthority(callerWriteAuthority)) {
+          if (!input.credentials.verifyTurnAuthority(callerTurnAuthority)) {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_session_inactive",
-                "This OmniMind write was rejected because its provider-session authority is no longer active.",
+                "This OmniMind tool call was rejected because its provider-session authority is no longer active.",
                 { callerThreadId },
               ),
             );
@@ -224,22 +222,22 @@ export function makeAgentGatewayMcpTransport(input: {
                 (error) =>
                   new GatewayToolError(
                     "caller_turn_inactive",
-                    "This OmniMind write was rejected because the caller thread could no longer be verified.",
+                    "This OmniMind tool call was rejected because the caller thread could no longer be verified.",
                     { callerThreadId, error: errorText(error) },
                   ),
               ),
             );
           if (
             caller.latestTurn?.state !== "running" ||
-            caller.latestTurn.turnId !== callerWriteAuthority.turnId
+            caller.latestTurn.turnId !== callerTurnAuthority.turnId
           ) {
             return yield* Effect.fail(
               new GatewayToolError(
                 "caller_turn_inactive",
-                "This OmniMind write was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.",
+                "This OmniMind tool call was rejected because the turn that received this MCP request is no longer active. In-flight requests cannot inherit authority from a later turn.",
                 {
                   callerThreadId,
-                  authorizedTurnId: callerWriteAuthority.turnId,
+                  authorizedTurnId: callerTurnAuthority.turnId,
                   latestTurnId: caller.latestTurn?.turnId ?? null,
                   latestTurnState: caller.latestTurn?.state ?? null,
                 },
@@ -253,13 +251,13 @@ export function makeAgentGatewayMcpTransport(input: {
           sessionKey: callerSession.sessionKey,
           threadId: callerThreadId,
           provider: callerSession.provider,
-          turnId: callerWriteAuthority?.turnId ?? null,
+          turnId: callerTurnAuthority?.turnId ?? null,
         },
         callerThreadId,
         callerSessionKey: callerSession.sessionKey,
         callerProvider: callerSession.provider,
         callerCapabilities: callerSession.capabilities,
-        callerTurnId: callerWriteAuthority?.turnId ?? null,
+        callerTurnId: callerTurnAuthority?.turnId ?? null,
         assertCallerTurnActive,
       };
 

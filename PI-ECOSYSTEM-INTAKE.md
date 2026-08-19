@@ -119,14 +119,16 @@ exact artifact
 
 Pi Extension 进入 OmniMind Agent composition 前还必须明确其来源与长期责任模式，不得因为最终都是 Pi `ToolDefinition` 就混同 owner：
 
-| 模式                              | 产品与运行时边界                                                                                   | 必须承担                                                                                    | 不自动获得                                                                          |
-| --------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| OmniMind 自有、产品随附 Extension | OmniMind 编写并维护，只在明确的 Provider/Session surface 注册                                      | definition、prompt、lifecycle、回归、发行与回滚                                             | AgentGateway owner、跨 Engine 分发或 Host Built-in policy                           |
-| OmniMind Host 投影 Extension      | OmniMind 只拥有 AgentGateway canonical definitions 到 Pi Registry 的投影与 owned-set activation    | 投影、collision/provenance、Session 装配与 Pi wire 兼容                                     | Gateway tool 的执行、状态、credential、权限或其他 Extension 的 active-set authority |
-| Fork 后修改上游 Extension         | 保留 exact upstream lineage，OmniMind 发行并维护有界 patch                                         | license/notice、作者测试、patch inventory、安全与兼容修复、upstream sync、回滚/退出         | 被重命名为第一方、成为 Host tool、跨 Engine 分发或新的产品控制面                    |
-| 直接安装上游 Extension            | 保留上游 package identity、version、provenance 与语义，由 Pi 原生 package/extension lifecycle 管理 | exact artifact、rights、兼容/安全证据、原生 install/update/remove/reload 与准确 unavailable | OmniMind 对其业务状态的所有权、默认预装、静默修改、Host search 或跨 Engine 投影     |
+| 模式                              | 产品与运行时边界                                                                                                                                | 必须承担                                                                                    | 不自动获得                                                                                  |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| OmniMind 自有、产品随附 Extension | OmniMind 编写并维护，只在明确的 Provider/Session surface 注册                                                                                   | definition、prompt、lifecycle、回归、发行与回滚                                             | AgentGateway owner、跨 Engine 分发或 Host Built-in policy                                   |
+| OmniMind Host 投影 Extension      | OmniMind只拥有AgentGateway canonical definitions到Pi Registry的投影；loading lifecycle服从该具体Extension已确认的eager或owner-local dynamic语义 | 投影、collision/provenance、Session装配、Pi wire兼容；当前Host eager时直接注册并active      | Gateway tool的执行、状态、credential、权限、全局search或其他Extension的active-set authority |
+| Fork 后修改上游 Extension         | 保留 exact upstream lineage，OmniMind 发行并维护有界 patch                                                                                      | license/notice、作者测试、patch inventory、安全与兼容修复、upstream sync、回滚/退出         | 被重命名为第一方、成为 Host tool、跨 Engine 分发或新的产品控制面                            |
+| 直接安装上游 Extension            | 保留上游 package identity、version、provenance 与语义，由 Pi 原生 package/extension lifecycle 管理                                              | exact artifact、rights、兼容/安全证据、原生 install/update/remove/reload 与准确 unavailable | OmniMind 对其业务状态的所有权、默认预装、静默修改、Host search 或跨 Engine 投影             |
 
 同一上游 Extension 不能同时被记为“直接安装”和“fork 后修改”。两者之间切换会改变法定来源、更新与安全 owner、回滚方式和长期同步成本，必须重开 exact-source intake 并获得维护者确认。这个分类是证据与 owner 合同，不授权新建 Extension registry、manifest、Settings 或安装控制面。
+
+Dynamic Tool Loading不是OmniMind Agent或Host的全局默认策略。每个具体Extension必须由自己的工具规模、稀疏使用、schema/attention成本、activator和恢复语义决定eager或dynamic；没有可信activator的tool不得设为inactive。owner-local loader只能发现和激活该Extension自己的tools。未来Pi upstream若提供真正的全局发现机制，先复核并采用upstream owner；不得以“生态统一”为由恢复OmniMind Host/global search、第二索引、dependency graph或Plugin Manager。
 
 ## 5. Gate A：只读研究合同
 

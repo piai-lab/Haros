@@ -4,6 +4,8 @@
 >
 > 当前状态：维护者已用新的“两卡片”产品决定 supersede `cf1a1e580509423a92e5334a438a3e077d376210` 的三文件 Settings 模型，后续 `584045a291a91e57ec50ce0e91cee29253334ef1` 又被真实 Provider journey 证伪为 service-based initial Session 漏传 customized default。祖先 product `db25a5b91343a4ddbf70fedd98ea3583bd020317` 已完成窄 runtime 修复、fixed-source generator、deterministic request capture、full gates、MiMo/DeepSeek 与隔离 packaged journey；当前 merge-ready exact pushed product 为 `61bb9e471625186c7693c5b74588e4f6b0e4f956`，并已完成合并前 hardening 与隔离安装复验，`/Applications/OmniMind.app` app.asar 为 `55391e52…`。F-22 仍保持 `candidate`，等待维护者独立裁决。
 
+> **2026-08-19 Host projection supersession.** 本文历史段落中的 `Host loader激活` 只记录当时实现与 live journey；维护者后来明确删除 AgentGateway 自建的 Host callable loader、inactive pool 与 dynamic guidance。当前 Host Projection Extension 直接注册并激活 policy 与 availability 允许且由自身 source 赢得的 definitions；具体 Extension 未来如需 dynamic loading，只能拥有自己的 owner-local loader。现行结论见 [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md) 与 [`architecture/execution.md`](../architecture/execution.md)；本文不得恢复 Host/global search guidance。
+
 ## 0. 一页结论
 
 OmniMind 应在：

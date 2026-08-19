@@ -1,570 +1,469 @@
-# Pi-native Host 工具动态加载、投影与生态所有权复核
+# OmniMind Agent Extension Architecture 1.0 与 Host 投影复核
 
 > 证据日期：2026-08-19
-> OmniMind 源码复核基线：原始调用链锁定于 `a24653bc7b00f9632275f2960776c31c68d61968`；Gate B source integration 由 merge commit `e7137c7dc873400d9a801f333f41e278e544e001` 锚定，发布、安装与packaged交互journey仍是独立证据边界
-> Upstream/stock exact source artifact：`@earendil-works/pi-coding-agent@0.84.2`，upstream exact commit `914cf1472e715297caa30db4b9535d534a9eb718`
-> OmniMind Agent 产品 runtime：生成后的 `@omnimind/pi-coding-agent@0.84.2`，基于同一 exact source 与产品窄 patch；本文不宣称它与 upstream artifact byte-identical
-> 维护者裁决：OmniMind Agent 的 AgentGateway Host tools 必须进入 Pi 原生 Extension、Tool Registry 与 Dynamic Tool Loading 生命周期；dynamic 是目标架构，不再与 eager 共同参与产品方向表决
-> 文档角色：Gate A exact-source 证据、已确认架构约束与 Gate B source evidence；不取代 `architecture/`、`execution-brief.md`、代码或 Campaign 状态
+>
+> upstream/stock Pi exact source：`@earendil-works/pi-coding-agent@0.84.2`，commit `914cf1472e715297caa30db4b9535d534a9eb718`
+>
+> OmniMind Agent产品runtime：`@omnimind/pi-coding-agent@0.84.2`，由同一exact source加产品窄patch生成；本文不宣称两个artifact byte-identical
+>
+> production-adopted Synara：`8f9f60045ea652db7d4a6822e2f723dde073f40a`；只读对照：clean `c79fab498de1a911a14ff8b05bf83d0528ec54fa`
+>
+> code evidence：任务分支exact pushed SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；同SHA已完成full/live/isolated-packaged closure，仍未合并main、未发布或替换真实安装
+>
+> 文档角色：Pi/Synara exact-source证据、基线main观察、维护者已确认架构、本任务分支implementation与live/packaged falsifier。稳定运行时合同只由[`architecture/execution.md`](../architecture/execution.md)拥有。
 
-## 0. 本文回答什么
+## 0. 新会话先读
 
-第一目标不是建立一个 OmniMind 自有的工具搜索系统，而是：
+本文替代此前“Host Dynamic Tool Loading是确定终态”的研究结论。旧实现及其测试仍是已经合入源码的历史事实，但不再是目标架构。
 
-> 让 OmniMind Agent 在保留全部可用 Host 能力的同时，不在首轮上下文中承受几十个完整 schema，减少工具选择注意力噪声，并把 registered/all/active、reload 与 Provider wire 语义留给 Pi 原生 owner。
+必须同时区分四层：
 
-Owner、权限、MCP、reload、collision 与 prompt 都是保证这个用户结果不失控的冰山，不是新的产品能力。
+1. **基线main事实**：`main@849730c…`仍有Host-owned callable loader、inactive pool、lexical matching、`session_start` deactivation与Goal/Automation activation preflight；
+2. **已确认架构**：保留Pi-native Host Projection Extension，删除整条Host loader责任，允许且可用的Host definitions注册后直接active；
+3. **本任务分支production candidate**：已实现第2层，并在exact pushed code SHA `9c05e0902`通过settings、projection、reload、collision、prompt、exact-turn、full tests、MiMo/DeepSeek与isolated packaged closure；
+4. **未来非承诺**：某个具体Extension可以在证据成立时拥有自己的dynamic loader，但OmniMind不建立Host/global search manager。
 
-从零重开时按以下顺序读取：
+旧main的绿色测试只证明历史实现自洽。本分支证据证明的是未合并、未发布candidate，不得冒充main、Release、本机真实安装或用户已经收到新bytes。
 
-1. [`README.md`](../README.md)；
-2. [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)；
-3. [`architecture/README.md`](../architecture/README.md) 与 [`architecture/execution.md`](../architecture/execution.md)；
-4. [`execution-brief.md`](../execution-brief.md) 与 active Campaign；
-5. 本文锁定的 Pi artifact/source 与 OmniMind current symbols；
-6. [`agent-tools-mcp-settings-review.md`](agent-tools-mcp-settings-review.md) 的 Settings 与 all-agent Built-in policy 边界。
+## 1. 最终裁决
 
-若 Pi revision、AgentGateway topology、Provider SDK、Settings policy 或稳定 owner 改变，只重验受影响结论。
-
-### 0.1 Gate A 摘要
-
-```text
-Workspace / branch / writer:
-  /Users/liuzaoqu/Desktop/Develop/independent/OmniMind-wt-review-pi-host-tool-mcp-settings
-  codex/review-pi-host-tool-mcp-settings
-  one isolated writer; main workspace remains untouched
-
-Exact source:
-  upstream/stock source artifact @earendil-works/pi-coding-agent 0.84.2 / 914cf147...
-  OmniMind product runtime @omnimind/pi-coding-agent 0.84.2 / same exact source + narrow product patches
-  OmniMind AgentGateway + PiAdapter current integration path
-
-Confirmed product result:
-  provider === "omnimind" registers allowed Gateway tools as standard Pi Extension tools;
-  within the Host Extension-owned Gateway subset, only the loader and any exact
-  first-request closure start active; other owners stay opaque;
-  later Host-subset activation is monotonic/additive for that Session;
-  actual execution still returns to AgentGateway.
-
-Non-goals:
-  no global search subsystem, second registry, active store, ranking platform,
-  third-party MCP manager, cross-Engine dynamic loading, Pi core fork or product settings.
-
-Evidence maturity:
-  Pi core/wire mechanics: upstream/stock artifact-verified + source-matched
-  OmniMind product runtime lineage: source-derived; not claimed byte-identical
-  current eager OmniMind bridge: current-source-observed
-  target integration: architecture-confirmed + local focused/full/wire/live evidence;
-  packaged interactive product journey remains narrower than source coverage
-
-Disposition:
-  Bridge narrowly through Pi's existing Extension and AgentSession owners.
-```
-
-### 0.2 Gate B source evidence
-
-`d3cf632c7`及其祖先实现目标形状：`14725599b`建立all-agent Built-in policy，`eac33f156`使prompt按projection/policy收敛，`38f4b7a84`增加collision-safe Host Extension，`81921d8fa`只为canonical `omnimind`接入dynamic loading与prompt-required preflight，`d9f74bd64`闭合active/authorized、toggle/in-flight、late-result与局部collision矩阵，`d3cf632c7`锁定exact Pi provider wire；合并前审查修正由`8186e5245`与`f6d9465bb`完成，整体由`e7137c7…`合入main。这证明source integration，不等同于安装、Release或packaged交互journey。
-
-当前证据边界：
-
-- exact serializer 4/4通过：OpenAI Responses分别捕获`tool_search_output`与`additional_tools`；Anthropic捕获deferred definition与`tool_reference`；Kimi exact system-tool encoding与generic OpenAI-compatible fallback被区分；
-- focused Host/Provider矩阵分别通过353与567项；全仓测试通过，Server为362个test files/4251项通过（另3 files/16项skip），Web为322 files/4108项通过；
-- MiMo与DeepSeek在明确标记为OpenAI Chat-compatible endpoint的最小live probe中，均完成`loader → activated browser tool`两请求journey并观察到stream abort；这不证明Responses或Anthropic native wire；
-- 代表性live payload中loader-only tools envelope为222 bytes，加入一个activated tool后为434 bytes。该数值只证明“未激活definition没有被偷偷搬回首轮tools payload”的局部方向，不冒充完整Gateway catalog、cache、TTFR或总成本benchmark；
-- `d3cf632c7`的macOS arm64 DMG/ZIP成功闭合240个staged production dependency identities，ZIP通过隔离`HOME`、`OMNIMIND_HOME`、Electron userData与provider-private-home缺省隔离的packaged startup smoke；仓库尚无可复用的packaged交互journey harness，因此Settings toggle、Todo/Host真实点击与reopen语义仍由source integration tests证明，不能被这次startup smoke冒充。
-
-## 1. 结论先行
-
-稳定架构只有三层：
-
-1. **Pi 原生机制**：Tool Registry、registered/all/active truth、Dynamic Tool Loading、reload/session lifecycle、Provider-native deferred representation 与安全 fallback；
-2. **Host 接入**：AgentGateway definitions 转成标准 Pi `ToolDefinition`，由一个 named、hidden、session-scoped inline Extension 注册；
-3. **可替换细节**：若 exact runtime 没有可直接复用的 callable loader，Host Extension 内提供一个极薄、无持久状态的 extension-local loader，调用 `getAllTools()`、`getActiveTools()`、`setActiveTools()` 请求纯 additive activation。
-
-因此：
-
-- 只有 canonical `provider === "omnimind"` 使用这条 dynamic projection；
-- stock Pi 继续通过现有 `customTools` direct/eager；
-- Codex、Claude、OpenCode 等继续使用各自 native MCP/plugin seam direct/eager；
-- 一套 fresh 默认开放的 Built-in policy 控制所有 Agent，包括 OmniMind Agent；
-- 允许且可用的AgentGateway Host tools全部注册；在Host Extension拥有的Gateway subset中，Session启动时只让loader与同一首个request明确要求的exact closure active，其余owned searchable names设为inactive，不凭感觉预留固定Host core；loader整个Session保持active，其他owner的active set保持opaque；
-- 之后dynamic loading在同一Session内monotonic/additive：loader或prompt-required ensure-active只增加缺失owned names，已active schema不因职责结束被反复卸载；
-- Pi Registry 是 all/active truth，不另建 Host registry、active store、resume store 或索引；
-- extension-local loader 不是稳定产品工具、不是 OmniMind 全局工具搜索，也不固定名称、ranking、limit 或算法；
-- actual tool execution 始终进入 AgentGateway `tools/call`；
-- `registered != active != authorized`。
-
-动态加载是维护者已确定的目标。eager 仅保留为当前行为基线、测量 comparator 与实现故障时的临时代码 rollback。如果 exact Pi seam 无法满足目标，应报告 blocker 或 upstream seam 需求；不能把 eager 重新包装为等价终态。
-
-## 2. Exact Pi 0.84.2：三层事实必须分开
-
-下列Pi原生语义锁定于upstream/stock exact source artifact `@earendil-works/pi-coding-agent@0.84.2`与commit `914cf147…`。OmniMind Agent实际运行生成后的`@omnimind/pi-coding-agent@0.84.2`，其来源是同一exact source加产品窄patch；这建立lineage，不建立byte-identical推断。本地Gate B conformance已在产品runtime证明Host Extension、active-set、collision与reload路径；Provider payload形状另由exact installed `@earendil-works/pi-ai@0.84.2` serializer锁定，live兼容endpoint证据不替代它。
-
-### 2.1 Pi Core / AgentSession 原生拥有的事实
-
-锁定 artifact/source 已验证：
-
-- Extension 使用 `pi.registerTool()` 注册工具；
-- Session 提供 `getAllTools()`、`getActiveTools()` 与 `setActiveTools()`；
-- Pi 拥有 registered/all/active truth；
-- Extension wrapper 比较 loader 执行前后的 active set；
-- 只有纯 additive 变化会形成 `addedToolNames`；
-- Session/ResourceLoader 拥有 startup、reload、resume、fork 与 shutdown 生命周期；
-- Pi 根据新增 active definitions 选择 Provider-native deferred representation 或安全 fallback。
-
-`dist/core/agent-session.js` 的关键反例是：启动构建 runtime 时会包含全部 Extension tools，Extension/custom tools 默认 active。Host Extension因而必须在`session_start`只把自己拥有且可搜索的Host names设为inactive，同时保持loader与其他owner已有active tools。之后遵循官方建议add tools instead of replacing active set；绝不能用全局reset、每回合重算或反复removal接管Session。
-
-`dist/core/extensions/wrapper.js` 识别的信号不是 loader 名称，而是：
+`SIMPLIFY → GO`，North Star是 **OmniMind Agent Extension Architecture 1.0**：
 
 ```text
-activeBefore → loader executes → activeAfter
-no removals + one or more additions → addedToolNames
+OmniMind Agent
+└─ Pi AgentSession / ResourceLoader / Tool Registry
+   ├─ Pi Core built-ins
+   ├─ AgentGateway Host Projection Extension
+   ├─ OmniMind Todo Extension
+   ├─ other product-bundled OmniMind Extensions
+   ├─ team Pi Extensions
+   └─ user / third-party Pi Extensions
 ```
 
-所以 Pi 不依赖某个 magic tool name，也不要求 Host 手写 Provider-specific reference。
+这不是把所有工具合并成一个“OmniMind Extension”，而是让多个独立owner通过同一个Pi-native runtime内核组合。
 
-### 2.2 Provider / wire 层原生拥有的事实
+核心判断：
 
-锁定 `@earendil-works/pi-ai@0.84.2` 已验证：
+- Pi是**OmniMind Agent runtime内**唯一Extension/Tool Registry、registered/active、Session、reload与Provider wire真相；
+- AgentGateway仍是Host canonical catalog、schema、execution、credential、capability、exact-turn authority、timeout与cancel真相；
+- Extension注册与execute backend正交；进入Pi Registry不转移业务owner；
+- 当前AgentGateway Host Projection选择eager-active；
+- 删除Host callable loader、inactive pool与一切围绕它形成的控制面；
+- 当前所有健康Engine追求相同的canonical Host surface，adapter只换管道；
+- Dynamic Tool Loading由具体Extension owner按证据决定，不是OmniMind全局模式；
+- 不新增第二Registry、active store、search index、dependency graph、Extension Manager或第三方MCP manager。
 
-- OpenAI Responses completed client 处理 `tool_search_call` / `tool_search_output`，并处理 `additional_tools`；
-- Anthropic Messages 处理 `tool_reference`；
-- Kimi/OpenAI-compatible 路径存在已验证的 deferred handling；
-- `supportsToolSearch` 表达 Provider wire compatibility，不表达“Session 已经注册一个全局 callable search tool”。
+## 2. 为什么旧Host callable loader应整条删除
 
-因此 native/fallback 必须由 exact Provider/model/endpoint 的真实 wire evidence 区分。DeepSeek、MiMo、OpenAI-compatible proxy 或其他渠道不能按模型名、品牌或 API 外形推断。未知就保持 unknown，并使用 Pi 的安全 fallback；Host 不模拟 Provider payload。
+### 2.1 Pi原生到底提供了什么
 
-### 2.3 Exact source 没有的东西
+Pi `0.84.2`原生提供：
 
-Pi `0.84.2` 没有默认注册到每个 Session、自动搜索所有 Extensions 的 turnkey global callable search tool。
+- Extension通过`pi.registerTool()`注册`ToolDefinition`；
+- `AgentSession`拥有all/active truth与active-set mutation；
+- `ResourceLoader`拥有Extension source、precedence、diagnostics与reload；
+- wrapper可识别纯additive active-set change并产生`addedToolNames`；
+- Provider层可按exact endpoint走native deferred encoding或安全fallback。
 
-官方 `docs/extensions.md` 与 `examples/extensions/kimi-deferred-tools.ts` 中的 `search_tools` / `tool_search` 是 Extension 自己 `registerTool()` 的 pattern/example：searchable owned name set 与 metadata matching 由该 Extension实现，loader 调用 `setActiveTools()`，Pi只观察active set的纯additive变化并负责后续wire encoding。
+Pi没有默认注册到每个Session、自动搜索所有Extensions的全局callable search tool。官方docs/example只展示“某个Extension自己注册loader、自己匹配owned metadata、自己additively激活owned tools”的owner-local pattern。
 
-准确表述是：
+所以：
 
-> Pi 原生拥有动态工具加载与 Provider tool-search wire 机制；exact `0.84.2` 的 callable loader 是 Extension-local pattern/example，而非默认全局产品工具。
+- “Pi没有Dynamic Tool Loading”是错的；
+- “Pi自带一个全局callable loader，Host只需接入”也是错的；
+- “注册为inactive后Pi会自动发现”同样是错的。
 
-“Pi 完全没有 Tool Search”和“Pi 已提供一个可直接调用的全局 Search Tool”都不准确。
+没有明确activator的inactive tool，对模型而言就是不可发现能力。
 
-## 3. 当前 OmniMind 调用链
+### 2.2 旧实现为什么不再成立
 
-### 3.1 AgentGateway 是唯一 Host capability owner
+旧Host loader的owner边界曾经是窄的：它只搜索Host inline Extension自己的Gateway names，不搜索Todo、Bash、Pi built-ins、Skills、Packages、第三方Extension或MCP。问题不在于它越权搜索，而在于Host根本不应承担这项搜索责任：
 
-`apps/server/src/agentGateway/Layers/AgentGateway.ts` 的 `makeAgentGateway` 当前组装 Thread read/diagnostics/mutation、Automation、Browser，以及仅在平台与服务真实支持时加入的 Device tools。当前观察通常为 46 个工具、支持 Device 时最多 58 个；数字只是证据快照，不是稳定 API。
+1. 当前Host catalog是同一AgentGateway capability面，不是一个独立生态；
+2. 当前非Device Host tools均有明确、常见产品价值，没有足够证据证明额外发现回合净胜；
+3. 其他健康Engine直接获得完整Host surface，只有OmniMind Agent先搜索会形成长期能力等级差；
+4. loader增加一个模型可见工具、匹配算法、结果语义、碰撞、prompt、wire、live与维护责任；
+5. Device真实产品语义是fresh默认关闭并不注册，不是注册后藏在inactive pool；
+6. Synara exact基线已经证明更简单的路径：`tools/list → ToolDefinition → customTools eager`。
 
-`apps/server/src/agentGateway/mcpTransport.ts` 继续拥有 `tools/list` canonical definitions、`tools/call` execution、session-bound bearer、required capability、exact active-turn write authority、token revoke、Provider replacement、timeout 与 cancellation。Dynamic loading 不能复制这些责任。
+奥卡姆裁决不是给旧loader改名，而是删除需求本身。
 
-### 3.2 其他 Engine 已有正确的 direct projection
+### 2.3 本任务分支已删除的完整责任面
 
-`apps/server/src/agentGateway/mcpInjection.ts` 从同一 Gateway connection 生成 Codex、Claude SDK、ACP、OpenCode、Antigravity 等原生配置。外部 Engine 拥有其 Session、MCP client、cache、tool namespace 与错误语义；OmniMind 只投影当前 thread-scoped connection。
+本任务分支已经一起删除：
 
-stock Pi 不走这条 MCP injection，但已有 `PiAdapter customTools` direct/eager projection；其source/stock exact artifact身份是`@earendil-works/pi-coding-agent@0.84.2`。它的产品身份不是 OmniMind Agent，不承担本轮 attention governance。
+- Host callable loader及任何别名；
+- Host lexical tokenizer、ranking、limit与metadata search；
+- Host inactive searchable pool；
+- `session_start`批量deactivate Host names；
+- Goal/Automation ensure-active preflight；
+- dynamic Host system guidance；
+- loader collision、empty-loader与loader result合同；
+- Host deferred wire与两回合search journey专属测试；
+- eager/dynamic feature flag、rollback双轨、alias与死代码；
+- 任何“未来统一搜索Host与第三方Extension”的承诺。
 
-### 3.3 pre-Gate-B 基线与已合入 source 必须分开
+必须保留：
 
-公共main/installed产品基线仍从`tools/list`取得definitions，通过Pi `defineTool()`转为`ToolDefinition`，`execute()`调回Gateway `tools/call`并转发`AbortSignal`，再经`customTools` eager注入。OmniMind Agent这条调用链实际使用生成后的`@omnimind/pi-coding-agent@0.84.2`产品runtime，而不是把upstream/stock package identity直接冒充为产品runtime。
+- trusted Gateway descriptor → Pi `ToolDefinition`；
+- named hidden session-scoped Host inline Extension；
+- Pi Registry、`sourceInfo`、collision、reload与Session生命周期；
+- `ToolDefinition.execute → AgentGateway tools/call`；
+- Gateway逐call authorization与AbortSignal；
+- 其他Extension各自已有的eager或owner-local dynamic语义。
 
-已合入的Gate B source把canonical `omnimind`的Gateway definitions迁入named hidden Host inline Extension，stock Pi与其他Engine仍direct/eager；同Session内loader只additive激活owned names，Goal/Automation bounded closure在同一request前ensure active，execute仍回到Gateway。该结论由source/exact tests与merge `e7137c7…`支持；是否进入某个已安装产品或Release必须由对应artifact provenance另行证明。
+## 3. 两个Registry问题：准确答案是分层，不是二选一
 
-eager baseline本身使用官方seam，不是错误hack；本轮改变的是OmniMind Agent的初始上下文与provenance/collision，不是Gateway execution owner。
+| 真相                                                     | 唯一owner                      | 不拥有                           |
+| -------------------------------------------------------- | ------------------------------ | -------------------------------- |
+| Host canonical name/schema/group/annotations             | AgentGateway catalog           | Pi Extension安装与active truth   |
+| Host execution/credential/capability/turn/cancel         | AgentGateway + Host service    | Engine-native Session            |
+| OmniMind Agent中的Extension注册/sourceInfo/active/reload | Pi AgentSession/ResourceLoader | Gateway业务状态与权限            |
+| Built-in exposure intent                                 | revisioned ServerSettings      | availability或call authorization |
+| machine/service availability                             | 对应Host service/runtime       | 用户enablement                   |
+| Engine-native tools与权限                                | 对应Engine                     | Host平权或Gateway catalog        |
+| third-party Extension/MCP业务状态                        | 各自来源/adapter               | 因进入Pi而转移给Host             |
 
-### 3.4 Pi ecosystem lifecycle 已有 owner
+“Pi唯一Registry”只限定OmniMind Agent runtime的Extension/Tool Registry。AgentGateway catalog不是第二Pi Registry；它是所有Engine共享的Host definition与execution authority。删除任意一层都会丢失真实owner。
 
-`apps/server/src/provider/Layers/OmniMindEcosystem.ts` 已复用 Pi `SettingsManager`、`DefaultPackageManager`、`ResourceLoader`、package resource enable/disable 与 reload。本文不创建第二 package manager，也不让 Host Extension接管Package、Skill、Prompt或third-party MCP。
+## 4. Extension与execute backend必须正交
 
-### 3.5 Current-source 已有两类 canonical lifecycle prompt
+每个Extension必须分别回答：
 
-全局反扫区分了generic `harnessPolicy.ts`与真正由Product lifecycle生成的prompt/envelope：
+1. source是谁；
+2. 谁长期维护；
+3. 谁注册进Pi；
+4. 初始active还是自带activator；
+5. execute进入哪里；
+6. 状态、credential与authorization由谁拥有；
+7. 是否以及如何分发到其他Engine。
 
-- **ThreadGoal**：[`architecture/product-state.md`](../architecture/product-state.md)已经把持久objective、计时/暂停/achievement、prompt injection与continuation交给现有ThreadGoal owner，并与逐turn进度快照分开。`AgentGateway.ts`中的`omnimind_set_thread_goal`是Gateway tool，要求`thread:write`与active turn；`goalMode.ts`的synthetic continuation直接要求完成时调用它记录achievement，重复外部blocker时调用它暂停Goal。active Goal的任何可能完成/阻塞request都必须在发送前确保该exact definition active；若此前inactive，只做一次additive activation。Goal cleared、paused或achieved后停止对应prompt与continuation duty，不卸载已经active的schema。没有active Goal时不预留固定core：普通自然语言设Goal可由loader发现，`/goal`与Composer Goal panel继续走Product owner；
-- **Automation run**：`runEnvelope.ts`只为automation-dispatched turn直接要求/允许`omnimind_report_automation_result`、`omnimind_update_automation_memory`与`omnimind_cancel_automation`，并明确这些completion duties不得泄漏到later manual follow-up。三者来自`automationTools.ts`且受active-turn authority约束。`omnimind_cancel_automation`需要definition revision，当前revision source来自`omnimind_view_automation`；普通更新路径也明确要求`omnimind_update_automation → omnimind_view_automation`。Gate B候选已按exact envelope与schemas锁定automation turn的最小依赖closure，避免只激活一个无法完成职责的schema；
-- **Generic harness**：`harnessPolicy.ts`已在OmniMind dynamic路径收敛为不枚举inactive names的短发现原则；direct Engine则只获得与其filtered tool surface一致的server instructions。它不是active-set authority。只有Goal prompt与Automation envelope可以在其canonical lifecycle内直接点名tools，且同一request发送前必须已经active。
+当前责任示例：
 
-## 4. 目标架构
+| Extension                    | registration/Session owner                 | activation                   | execute/state owner                         | cross-Engine                  |
+| ---------------------------- | ------------------------------------------ | ---------------------------- | ------------------------------------------- | ----------------------------- |
+| AgentGateway Host Projection | Pi inline Extension                        | 当前eager-active             | AgentGateway/Host services                  | 同一catalog经各Engine原生seam |
+| OmniMind Todo                | 独立product-bundled Pi Extension           | Agent surface initial-active | Todo Extension + canonical event projection | 不自动分发                    |
+| team Extension               | Pi ResourceLoader或明确product composition | 自身owner决定                | 自身owner                                   | 不因安装于Pi自动分发          |
+| third-party Extension        | Pi原生package/extension lifecycle          | 保留上游语义                 | 上游/adapter                                | 不自动成为Host                |
+
+“是否execute进入AgentGateway”只是其中一列，不能据此把Todo、Host、团队和第三方Extensions吞成一个业务owner。
+
+## 5. 当前Host Projection的物理形状
+
+当前建议一个named hidden AgentGateway Host Projection Extension，而不是按Settings组拆成多份物理Extension。
+
+理由：
+
+- 当前Host definitions共享一份Gateway catalog；
+- execute、credential、capability、scope、turn与cancel owner相同；
+- Session admission与projection lifecycle相同；
+- 拆成多份只会复制相同glue、collision与reload责任；
+- Settings taxonomy是用户exposure分组，不等于source/package/lifecycle分包。
+
+自然抽取边界仍保留：未来Browser或Device若拥有独立source/package/version/install/lifecycle，或真实schema体积与稀疏使用证据支持owner-local dynamic，可抽成独立Projection Extension，而不改变Gateway catalog与execute合同。
+
+目标调用链：
 
 ```mermaid
 flowchart LR
-    H["OmniMind Host services<br/>Browser / Device / Thread / Automation"]
-    G["AgentGateway<br/>canonical catalog + execution + authority"]
-    H --> G
-    G --> I{"canonical provider identity"}
-    I -->|omnimind| X["named hidden session-scoped<br/>Host inline Extension"]
-    X --> T["register all allowed Gateway tools"]
-    X --> L["thin extension-local loader<br/>owned metadata + additive activation"]
-    C["canonical prompt / run envelope<br/>Goal / Automation"] --> A["ensure exact bounded closure active<br/>additive before same request"]
-    A --> R
-    T --> R["Pi Tool Registry<br/>registered / all / active truth"]
-    L --> R
-    R --> W["Pi Provider layer<br/>native deferred or safe fallback"]
-    W --> E["activated ToolDefinition execute"]
-    E --> G
-    I -->|stock Pi| P["existing customTools<br/>direct / eager"]
-    G --> N["other Engine adapters<br/>native direct projection"]
-    Q["Other Pi Extensions / Packages"] --> R
-    S["Pi Skills / Prompts"] --> U["Pi ResourceLoader / prompt owner"]
+    C["AgentGateway canonical catalog"]
+    P["global Built-in policy"]
+    A["machine/service availability"]
+    C --> F["Desired Host Surface"]
+    P --> F
+    A --> F
+    F --> I["named hidden Host Projection Extension"]
+    I --> R["Pi Registry: sourceInfo + registered/active"]
+    R --> M["model tool surface"]
+    M --> X["ToolDefinition.execute"]
+    X --> G["AgentGateway tools/call"]
+    G --> H["Host service"]
+    E["other Pi Extensions"] --> R
 ```
 
-图中 loader 位于 Host Extension 内部，只是 exact-version glue；它不是 Gateway 旁边的新子系统。
+Host Extension只处理自己的projection。它不得识别、枚举、保留、移除或控制Todo、supervised Bash、Pi built-ins、Skills、Packages或第三方Extensions。
 
-## 5. 唯一 owner map
+## 6. 强Host平权
 
-| 事实或行为                           | 唯一 owner                             | Host Extension 可以做                      | 禁止做                         |
-| ------------------------------------ | -------------------------------------- | ------------------------------------------ | ------------------------------ |
-| Host name/schema/annotations/group   | AgentGateway catalog                   | 无损转成 Pi `ToolDefinition`               | 维护第二 schema 清单           |
-| Host execution/credential/capability | AgentGateway + Host service            | closure 转发 call                          | 搬进 Extension 或 Package      |
-| Pi registered/all/active truth       | Pi AgentSession                        | 注册 owned tools、请求 additive activation | 建第二 registry/active store   |
-| Pi reload/resume/fork                | Pi Session/ResourceLoader              | 在 lifecycle 内重建本 Extension            | 持久化 parallel resume truth   |
-| Provider deferred/fallback wire      | Pi Provider adapter                    | 消费 exact evidence                        | 按模型名猜或手写 payload       |
-| Built-in exposure intent             | OmniMind ServerSettings policy         | session-start 与 live filter               | per-Provider 副本              |
-| Goal/Automation prompt requirement   | ThreadGoal/Automation Product owner    | request前ensure exact closure active       | 固定Host core或第二lifecycle   |
-| 某次 call 是否授权                   | Gateway/Engine runtime authority       | 传递 exact Session/turn context            | 把 active 当 permission        |
-| 所有非owned Pi tool source           | 各自唯一 owner                         | 无                                         | 盘点、分类、搜索或修改         |
-| third-party MCP                      | 首版无人接管；未来 exact adapter owner | 本轮无动作                                 | Host loader 扩张为 MCP manager |
-
-## 6. OmniMind Agent 端到端生命周期
-
-### 6.1 新 Session
+### 6.1 两个集合
 
 ```text
-canonical provider === "omnimind"
-  → read current Built-in policy
-  → intersect platform/service availability
-  → obtain allowed AgentGateway definitions
-  → validate names/provenance/collisions
-  → convert each definition to a real Pi ToolDefinition
-  → register through one named hidden session-scoped inline Extension
-  → on session_start keep extension-local loader active
-  → set this Extension's searchable owned Host names inactive
-  → before the first request, add any exact prompt/envelope-required closure
-  → mutate only the Extension's owned name set; leave non-owned names unclassified and unchanged
+Desired Host Surface
+= canonical Gateway catalog
+∩ global Built-in policy
+∩ machine/service availability
+
+Delivered Host Surface
+= Desired Host Surface
+∩ this thread-scoped Engine projection actually installed
 ```
 
-所有允许的AgentGateway Host definitions都注册；在Host-owned Gateway subset中，首个request只暴露loader和该request明确要求且policy/availability允许的exact closure，其余owned Host tools保持inactive，不预设固定core。其他owner的active set保持opaque且不受Host控制。之后loader与request preflight只做additive activation；已经active的Host schema继续留在Pi Session active truth中。
+所有健康、正式支持的Engine应获得相同Desired Host Surface。Delivered少于Desired只能是运行健康、collision或adapter defect事实，必须准确unavailable并修接线；不能沉淀为Provider的正常低配等级。
 
-所有非owned Pi tools均超出Host研究范围，Host不得为它们建立inventory、例外清单或控制逻辑；产品Todo的独立证据owner是[`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)。
+### 6.2 adapter只换管道
 
-如果 Gateway 不可用、过滤后集合为空或 discovery 失败，应准确 unavailable，不注册空壳 loader 产品。是否还能启动 identity-only Session 由现有 Provider owner决定，不能从“没有 Host tools”擅自推出。
+- OmniMind Agent：named hidden Pi inline Extension，registered + active；
+- stock Pi：现有`customTools` direct/eager；
+- Codex：native MCP config；
+- Claude：native MCP server seam；
+- OpenCode/Kilo：remote MCP；
+- ACP/Cursor/Grok/Droid：各自HTTP或proxy seam；
+- Antigravity：其真实plugin/MCP seam。
 
-### 6.2 Prompt-required ensure-active
+所有调用最终回到同一Gateway。强平权不统一各Engine的Bash、read/edit/write、native approval/sandbox、Todo、context、compaction、resume或Package。
 
-canonical prompt/envelope若直接点名Gateway tools，只在发送同一request前确保exact有界closure active：
+### 6.3 exact Synara证据
 
-```text
-current canonical Session/turn lifecycle
-  → exact prompt/envelope duties
-  → bounded schema dependency conformance
-  → intersect current Built-in policy and availability
-  → add any missing owned Gateway definitions before the same request
-  → keep Pi active set as the only Session truth
-```
+adopted Synara `8f9f600…`与只读exact `c79fab4…`在本议题核心adapter路径上保持同一原则：
 
-当前exact evidence：active ThreadGoal使Goal completion/blocking tool在该request active；Goal结束后停止prompt与continuation duty。automation-dispatched turn使run envelope直接要求的report/memory/cancel及其完成调用所需exact dependency active；later manual follow-up不继承automation duty。`cancel`所需definition revision来源与`update → view`依赖必须以exact schemas/conformance证明。
+- 一份Gateway catalog、`tools/list`与`tools/call`；
+- 正式支持Engine通过各自原生seam获得同一Host definitions；
+- stock Pi把全部Gateway descriptors转成`ToolDefinition`并放入`customTools`；
+- 没有Host-owned callable loader、inactive Host pool或dynamic preflight；
+- Gateway接线失败时harness准确降级，不伪造Host控制。
 
-这不是arbitrary core，也不是per-turn active controller。架构不固定tool names；研究记录当前names只为Gate B falsifier。ensure-active发生在request admission前，不热切已admitted request或call；职责结束只移除prompt、duty与对应loop，不移除schema。工具保持active也不表示later manual turn获得run-only authority，Gateway call-time检查必须拒绝。Pi active set仍是唯一truth，不持久化lifecycle overlay、dependency graph或第二active store。
+这不是要求逐字复制Synara，而是默认遵守母体已经成熟的责任模式，只有明确产品收益才增加窄downstream增强。
 
-### 6.3 Extension-local loader
+## 7. Built-in policy与Device fresh default
 
-候选集合每次由以下交集产生：
+全局policy覆盖所有Agent，并保持强平权。
 
-```text
-this Extension's immutable owned names
-∩ Pi getAllTools()
-∩ current Built-in policy
-∩ current availability
-− Pi getActiveTools()
-```
+### 7.1 四个事实必须分开
 
-它只用 name、短 description 与明确 provenance 等轻量 metadata；不得把完整 JSON Schema、全 catalog 或长 prompt 编成另一份上下文。
+- **fresh default**：仅用于从未存在settings文件的新配置；
+- **explicit choice**：已有用户选择是持久intent，不得被default覆盖；
+- **availability**：平台、服务与可执行闭包的当前事实，不持久化为用户选择；
+- **registration/authorization**：新Session是否投影schema，与每次call是否允许执行是不同边界。
 
-执行只允许：
+schema会把缺失`disabledBuiltInGroups`与显式`[]`都decode为`[]`，所以decoded值不能证明fresh或explicit。本任务分支已在decode default抹掉raw字段存在性之前复用settings文件存在事实与现有`migrationVersion`：无文件在内存采用Device off且不ambient write；existing valid snapshot无论字段缺失还是显式`[]`都保留legacy Device-on intent，显式`[device]`继续off，unknown IDs继续round-trip；corrupt snapshot沿现有quarantine/diagnostic并使用安全默认，但不宣称保留了用户选择。实现没有新增marker、store或第二migration owner，并已覆盖并发start、原子迁移写失败与revision单调。
 
-```text
-current = getActiveTools()
-matches = bounded deterministic matches in this owned inactive set
-setActiveTools(unique(current + matches))
-```
+已确认fresh defaults：
 
-稳定合同不规定模型可见名称、lexical 权重、默认命中数或长期 ranking 算法。首个实现应沿官方最薄 pattern，确定性、有界、无外部依赖；具体参数只是可替换 probe 参数。
+| group    | fresh default | 语义                           |
+| -------- | ------------- | ------------------------------ |
+| OmniMind | enabled       | policy与availability允许时投影 |
+| Browser  | enabled       | policy与availability允许时投影 |
+| Device   | disabled      | 新Session不投影、不注册        |
 
-若命中的exact tool schema/description明确要求另一个Gateway tool提供前置事实，activation必须带上完成该调用所需的有界closure。当前至少包括automation update对view的显式前置要求，以及automation cancel取得definition revision所需的exact closure。实现只编码被current source证明的少量关系，不建立通用dependency graph或registry。
+这不冻结未来Settings taxonomy的最终六组命名，也不自动批准Device 12/12 full-access产品语义。
 
-loader 不代理执行、不返回完整schemas、不连接server、不启动进程/timer/watcher/network、不建索引/cache/active store/resume store，也不搜索或修改任何非owned tool。
+### 7.2 toggle生命周期
 
-`getAllTools()` 能看到别人的工具不等于 Host 有权激活它们。其他 Extension若需要 dynamic loading，由其 owner负责。
+- disable：新Session不投影、不注册；
+- old Session：stale schema可以暂时可见，但新call由Gateway按当前policy即时deny；
+- in-flight：已经admitted的call不因普通toggle伪取消；
+- re-enable：只在真实reload/new Session边界注册并active；
+- unavailable：即使enabled也不投影，UI显示runtime事实；
+- no per-turn removal controller、no second active store。
 
-### 6.4 安全 request/turn 与实际调用
+Device disabled不是“registered but inactive”，也不是Dynamic Tool Loading的替代机制。
 
-loader造成纯additive active-set change后，Pi记录新增tool names；下一安全agent request由Pi选择native deferred representation或fallback。prompt/envelope直接点名的bounded closure则必须在同一request发送前ensure active。两条路径都只增加缺失的owned names，不会热切已经admitted的模型请求或正在执行的call；已经active的schema保持到Pi原生reload/new Session/session replacement，或确有安全/政策收缩需要沿这些原生边界处理。完整schema进入真实工具面后，模型调用ToolDefinition，execute bridge仍进入AgentGateway `tools/call`。
+## 8. Collision与provenance
 
-## 7. Prompt 与上下文合同
+### 8.1 Gateway内部duplicate
 
-稳定invariant是：任何发送给模型的prompt或envelope都不得直接点名inactive tool。
+同一canonical catalog内重复name表示Host definition不可信，必须拒绝该catalog或对应能力，不能靠load order修复。
 
-`apps/server/src/agentGateway/harnessPolicy.ts`是generic Host guidance。OmniMind Provider采用dynamic projection是Session创建前已知、跨reload不变的Engine事实；loader或具体Host tool是否实际active则只由Pi当前Registry、Extension guidance与tool definitions表达。generic Host block因此使用条件式能力说明：只使用当前Pi Session已active的能力；若active loader存在则先发现和加载、再在下一安全turn调用；若所需能力与loader都不存在则准确说明不可执行；不要猜tool name，也不把discovered、prompt-required或active冒充authorized。该路径不枚举Browser、Device、Thread或Automation的inactive names，也不因Extension注册检查的前后时序把同一Session从“不可用”改写为“可用”。
+### 8.2 cross-source same-name
 
-2026-08-19 conformance修正了一个Host层时序缺陷：旧实现把后验`gatewayControlAvailable`同时当作dynamic projection模式开关，导致首个ResourceLoader prompt在Pi完成inline Extension注册检查前冻结为unavailable，而显式reload后又变为dynamic。修正没有增加第二次reload、Registry、active store或Pi patch；只把稳定projection mode与运行时availability分离。focused request-capture现证明首轮、loader activation、rollback branch、resource reload、native resume与Chat六次请求的`<omnimind_host_context>`完全一致，同时tool schema仍随Pi active set发生有意义变化。
+Pi原生precedence继续成立。foreign winner可以运行，但Host只claim当前`ResourceLoader`/Session中`sourceInfo`证明由exact Host inline source赢得的names。
 
-Goal prompt与Automation run envelope是不同的canonical lifecycle owner：它们可以直接点名当前duty所需tools，但Host必须在同一request发送前ensure exact bounded closure active。不得把这些工具说明反向塞进generic prompt，也不得枚举其他inactive Host names、在loader description/result列出全catalog、把完整schema放进system prompt或用长`promptSnippet`/`promptGuidelines`重建稳定前缀。
+foreign winner不得：
 
-权限、停止、人类接管和数据边界等调用前必须知道的跨工具安全约束仍保留；tool-specific guidance 优先跟随激活后的 canonical ToolDefinition。stock Pi与其他Engine继续获得与其完整filtered schema一致的直接工具指导；Codex静态Browser instructions同样受Built-in policy过滤。
+- 获得Gateway provenance；
+- 被Host prompt宣称为canonical Host能力；
+- 满足Goal/Automation对Gateway capability的存在检查；
+- 获得Host event projection；
+- 被按工具名转发到Gateway。
 
-## 8. Built-in policy 与 availability
+collision默认只让对应Host capability局部unavailable并复用既有diagnostic。依赖它的dispatch fail closed，Session其余能力继续。只有exact Provider合同无法诚实隔离局部冲突时，才把Session标为unavailable。
 
-Built-in tools fresh 默认开放，并控制所有 Agent，包括 OmniMind Agent。
+owned delivered set是当前ResourceLoader/Session派生事实，不持久化、不建第二registry或catalog snapshot。
 
-### 8.1 关闭
+## 9. Prompt与上下文
 
-- 新 OmniMind Session：disabled/unavailable group 不注册；
-- 旧 OmniMind Session：loader与request ensure-active live-filter不再返回或激活该组；
-- Goal/Automation所需closure被policy或availability截断：阻止/暂停对应dispatch或continuation并准确unavailable，不绕过policy、不继续loop、不伪造achievement/result；
-- stale call：Gateway 按当前 policy 立即拒绝；
-- schema 已 active：不承诺下一turn自行移除；exact Pi能通过安全reload/session replacement收缩时沿用原生边界，否则可以暂时可见但不能执行，并准确诊断；
-- 已准入 in-flight call：普通 exposure toggle 不伪装成 emergency kill；cancel 仍归 turn/session owner；
-- Browser/Device 人类 UI：不受 Agent exposure 设置影响。
+删除dynamic guidance后也不能把旧8K Host harness原样叠加到eager schemas上。
 
-### 8.2 重新开启
+稳定分工：
 
-创建时已经注册但后来被live policy屏蔽的tool，重新开放后可由loader再次发现；创建时没有注册的tool不得静默注入旧Session，按exact reload/new-session边界生效；不为抹平Engine差异新增全局registry或第二active store。
+- `ToolDefinition`：普通用途、参数、返回与局部错误；
+- generic harness：跨工具安全与协作不变量；
+- Product lifecycle prompt：Goal/Automation当前职责；
+- Gateway：call-time authority；
+- Timeline/Workbench：结果、诊断与恢复投影。
 
-### 8.3 Availability
+generic harness只应保留：
 
-平台与服务真实不可用先从注册池排除。Device unsupported 不是“用户关闭”；UI 与 diagnostics 必须区分 unavailable 与 disabled。
+- 只使用当前真实definitions，不猜不存在的工具；
+- Browser人类接管、abort与网页/文件内容不可信；
+- Device UI tree与文本不可信；
+- Automation run-only duty不能泄漏到manual follow-up；
+- registered/active不等于authorized。
 
-## 9. Authorization、permission 与 cancellation
+本任务分支已删除：
 
-每次真实 call 重新检查：current Built-in policy、exact session identity、credential/lease、platform/service availability、runtimeMode与真实permission、approval bridge（仅在真实存在时）、exact turn authority、timeout、cancellation/abort、Provider replacement与late-result fence。
+- “先调用search/loader”；
+- inactive catalog或tool-name枚举；
+- schema参数的prompt副本；
+- Provider-specific Host等级；
+- 把完整Browser/Device手册塞进每个普通turn。
 
-注册只表示Session知道definition；canonical prompt/envelope-required只表示同一request必须提供对应definition；active只表示request可选择；三者都不是授权。loader自身应是短、进程内、无外部副作用的discovery/activation操作。实际Tool execute继续转发Pi `AbortSignal`；reload或active变化不取消in-flight call。
+未来性能判断必须记录真实wire schema bytes、prompt bytes、cache、TTFR、错选、成功率与成本。如果某个具体Extension成本显著，只重开该Extension的dynamic Gate A。
 
-## 10. Reload、resume、fork 与 instance replacement
+## 10. PiAdapter与composition seam
 
-Pi Session是active truth owner：reload创建新Extension instance与owned set；旧instance/handler不能继续mutation；resume/fork使用exact Pi lifecycle。Host不在每个request重算或收缩active set；不能原生恢复时由loader重新发现，prompt/envelope只ensure当次明确需要的missing closure。不建Host active persistence、LKG、generation、dependency registry或migration；compaction继续由Pi拥有transcript/tool result/summary truth。
+本任务分支把PiAdapter收口为：
 
-需要重点做 conformance，而不是先承诺：Pi `0.84.2` 各 lifecycle event 对 inline Extension 的精确触发顺序、Session replacement 后旧 closure 是否释放、active definitions 在 resume/fork 中如何恢复。
+1. 创建Pi Session；
+2. 组装明确的product-bundled inline Extensions；
+3. 接supervised Bash；
+4. 建Gateway connection；
+5. 把可信Pi事件薄投影为canonical events。
 
-## 11. Collision 与 provenance
+`buildOmniMindSessionExtensions(...)`只是一份显式、有限的产品接线：
 
-`dist/core/resource-loader.js` 对 Extension-Extension tool conflict 产生 diagnostics，并有加载顺序/priority语义。它不自动证明 built-in、SDK custom、inline Extension 等所有交叉来源的安全结果。AgentSession最终Map composition存在last-set风险；因此不能只靠命名猜测或“有 diagnostic”宣称安全。
+- 输入是创建当前Session所需的窄依赖；
+- 输出是当前product-bundled inline Extension factories，以及Todo/Host各自的具体窄handle；不返回generic handle map或lookup API；
+- 不扫描、安装、排序、缓存或管理第三方；
+- 不创建安装数据库、manifest或Settings；
+- 第三方/用户Extension继续由Pi ResourceLoader；
+- 新增product-bundled Extension可以修改composition list，但不修改PiAdapter核心Session流程。
 
-Gateway内部duplicate必须拒绝不可信catalog。cross-source同名时，Host只对自己的ownership claim、该collided capability以及依赖它的Goal/Automation dispatch fail closed：不得把第三方winner当成owned Gateway capability，不得由Host loader激活或投影为Host tool。Pi-native第三方winner与Session其余能力默认继续，并通过既有diagnostic/warning准确报告局部不可用。只有exact Provider contract无法诚实隔离局部冲突时，才把整个Session标为unavailable；这是必须由conformance证明的升级条件，不预先承诺fatal。
+Todo handle只拥有自身result provenance；Host handle只拥有从当前Pi `sourceInfo`派生Delivered names及核对bounded dependency。PiAdapter不拥有Extension definition、search、Built-in policy、permission、Todo validation、Goal/Automation lifecycle、collision算法、active-set或完整prompt catalog。
 
-不得silent override、silent drop或自动rename。错误只报告必要canonical names与provenance，不泄露bearer、endpoint、完整schema或用户参数。
+Host使用公开async `ExtensionFactory`：初载与`ResourceLoader.reload()`都会重新执行factory并实时调用`tools/list`，最新allowed+available definitions成为active，旧runner失效。factory不闭包固定descriptor snapshot，也不保存第二catalog。Gateway lease随Provider Session保留；一次空catalog、读取失败或全部collision只让本次Delivered capability降级，不能释放lease并阻断下一次native reload重试。stock与product Pi `0.84.2` focused conformance均已证明factory重执行、catalog替换与foreign winner局部降级；真实MiMo/DeepSeek与同SHA isolated packaged journey也已关闭，但没有因此修改main或真实安装。
 
-Provenance目标：Gateway tools与loader属于named inline Host Extension；Host只按自己的immutable names核对exact `sourceInfo`，不建立全局tool inventory，也不重写、归类或复制其他sourceInfo。Timeline继续记录实际tool name、Provider、Thread与call identity。UI若显示provenance，只投影现有真相，不建立第二表。
+## 11. 权限与Session生命周期
 
-## 12. Provider wire 验证
+`registered != active != exposed != available != authorized != executed`。
 
-每个 exact Provider/endpoint只允许三种结论：
+- registered：Pi Registry存在definition；
+- active：schema在当轮模型工具面；
+- exposed：global Built-in policy允许；
+- available：service/platform/executable closure真实存在；
+- authorized：本次identity、credential、scope、runtime permission/approval与exact turn允许；
+- executed：handler已经admitted并实际开始。
 
-- `native`：wire真实接受并完成deferred references；
-- `fallback`：Pi在下一request发送当前active tool definitions；
-- `unknown`：证据不足。
+`runtimeMode`只回答已exposed、当前available且属于任务意图的具体能力是否还要普通approval。它不替Device逐entry availability、安全分类、12/12 executable closure或产品准入作答，也不决定Browser download的artifact落点与receipt。
 
-验证至少记录脱敏的初始/激活后真实wire tool-schema bytes、compatibility path、native reference或fallback definitions、prompt/cache/input/output usage、额外round trip与TTFR。不把代理转换、兼容endpoint与直连混为同一证据。
+本任务分支已把所有Provider-facing真实`tools/call`统一到现有ingress-bound exact-turn authority；`tools/list`、initialize与ping可以在有效Session、turn外用于初始化。batch在ingress绑定同一个immutable turn，但每个call在handler前独立复验并保持并发；read、wait与diagnostics不再绕过。实现没有新建per-turn token、lease或permission manager，External connections的独立transport/principal也不受Provider turn gate影响。
 
-## 13. 性能与 outcome：证明实现，不重投产品方向
+普通toggle只影响后续projection与call admission，不取消in-flight。explicit cancel/timeout继续传递AbortSignal。Session replacement、reload或runner失效后，旧handler与late result不得污染新turn。
 
-维护者已经选择 dynamic architecture。benchmark只验证exact provider native/fallback、量化schema bytes与prompt/cache变化、调优轻量metadata matching、发现错误搜索/漏召回/额外turn，并证明任务成功率、TTFR、总成本与无回归；产品方向不由benchmark重新表决。eager只作current baseline/comparator/temporary rollback。
+## 12. Dynamic Tool Loading的future正确模型
 
-代表性 OmniMind Agent journeys：
+Dynamic不是“高级所以默认”，也不是“未来所以全局开启”。正确判断单位是具体Extension：
 
-| Journey                           | 关键观测                                                        |
-| --------------------------------- | --------------------------------------------------------------- |
-| 普通代码任务，无 Host需求         | 初始schema bytes、错误加载率、TTFR、成功率、成本                |
-| Browser任务                       | metadata召回、additive activation、下一turn schema、执行与停止  |
-| Thread协调                        | 精确工具选择、write authority、target identity                  |
-| active Goal普通/continuation turn | 同request Goal tool active；结束后停止prompt/loop；schema可保留 |
-| Automation-dispatched turn        | report/memory/cancel exact closure同request active              |
-| Automation manual follow-up       | 无run duty；run-only call即使schema active也被authority拒绝     |
-| Device unsupported                | 不注册、不发现、不产生幽灵schema                                |
-| Stop in-flight Gateway call       | abort-to-idle、无late副作用                                     |
-| reload/resume/fork                | instance replacement、重新发现成本、无第二truth                 |
+| 证据                                                      | 默认                         |
+| --------------------------------------------------------- | ---------------------------- |
+| 少量、常用、直接可达更重要                                | eager                        |
+| 数量大、稀疏、schema/attention成本显著，且有可靠activator | owner-local dynamic          |
+| 没有activator                                             | 不得inactive                 |
+| Pi upstream未来提供全局发现                               | 先按exact-source采用upstream |
 
-MiMo与DeepSeek使用协议匹配的最小真实journey；报告区分直连、兼容endpoint与代理。外部Engine只做direct projection、Built-in过滤、prompt和call deny回归，不建立通用动态工具benchmark。
+owner-local loader必须：
 
-## 14. Scale、Package、Skill 与 MCP
+- 只管理自己的tools；
+- 不搜索其他Extensions、Skills、Packages或MCP；
+- 不代理execute或authorization；
+- 不建全局index、store或dependency graph；
+- 遵守Pi active/reload/wire truth；
+- 失败只让自己degrade。
 
-当前几十个Host tools足以证明初始schema需要治理，但不授权embedding、BM25、远端服务或持久索引。首个loader线性扫描短metadata；只有profile真实证伪后才在Extension内部替换有界算法，owner与Registry不变。
+当前Host eager是已确认产品选择，但不是永恒不变量。未来自然抽取具体Projection Extension并采用owner-local dynamic，不等于恢复Host/global search。
 
-Pi Skills已使用progressive disclosure；Package install/update/remove/enable/reload继续由PackageManager/ResourceLoader拥有。Host loader不搜索Skill正文、不安装Package、不管理Package tools。
+## 13. 三个产品表面不能混
 
-首版不提供第三方MCP Settings、CRUD、credential/OAuth、连接测试、全局状态面板、跨Engine自动分发或统一搜索。未来只有某个exact Pi-native MCP Extension/adapter经source match、isolated runtime与真实Session证明支持lazy discovery/proxy或按需activation时，它才能拥有自己的加载体验；MCP协议本身不证明lazy语义。
+1. **Built-in tools**：管理OmniMind Host capability对所有Engine的全局exposure；
+2. **Extensions（未来产品表面）**：只投影Pi ResourceLoader/package truth，展示或管理product-bundled、团队、用户/第三方Pi Extensions；不能建第二安装DB/Registry；
+3. **External connections**：外部应用连接OmniMind的pairing、scope、credential、revoke与audit。
 
-即使未来成立，adapter仍拥有config、secret、transport、server lifecycle与its tools；Host Extension不接管；工具被发现/active不代表授权；不能为发现连接所有servers、制造process/network/reconnect storm或把全量schemas塞回上下文；不建立Host+third-party总registry或统一permission system。
+第三方MCP Settings、通用MCP manager、统一Host+MCP search以及把Pi第三方Extension自动分发给Codex/Claude均不在V1。
 
-## 15. 最小 Gate B 实施切片
+## 14. 本轮不自动批准的独立产品问题
 
-### Slice 1：冻结 exact baseline 与 conformance falsifier
+以下事项必须按各自owner另行裁决，不能借Architecture 1.0顺带采用：
 
-- 记录OmniMind Agent与stock Pi all/active/sourceInfo；
-- 记录Gateway 0/普通/Device可用tool count；
-- 记录initial prompt与wire schema bytes；
-- fixture覆盖普通Extension、自有dynamic loader与name collision；
-- fixture覆盖active Goal、Goal结束、automation run/manual follow-up与policy-disabled dispatch；
-- 证明Pi启动默认active Extension/custom tools与cross-source composition。
+- Chat是否获得Todo；
+- Settings最终六组taxonomy与除Device外的细粒度默认；
+- Device full-access 12/12；
+- Browser download落workspace还是managed artifact；
+- approval/auto产品表面；
+- Extension Marketplace/Manager；
+- 第三方MCP管理或跨Engine分发。
 
-### Slice 2：只迁移 OmniMind Agent 的注册 owner
+Architecture 1.0只确定owner、composition、Host平权、当前eager投影、collision、policy边界与future dynamic责任。
 
-- 复用现有definition→`ToolDefinition`与execute bridge；
-- 只有`provider === "omnimind"`注入named hidden inline Extension；
-- Gateway tools从该Provider的eager `customTools`移出；
-- stock Pi保持direct/eager；
-- 非owned tools不进入Host的注册、分类或active-set计算；
-- filter、duplicate、collision与empty failure先闭合。
+## 15. Gate B implementation与最终证据
 
-### Slice 3：接入 Pi-native Dynamic Tool Loading
+基线main实现旧dynamic方案。本任务分支已经完成以下source关注点：
 
-- Extension注册必要的极薄loader；
-- session start只调整owned Host names；exact Pi API若要求完整active list，把当前集合视为opaque base，只union owned additions；
-- session_start保持loader active并只把owned searchable Host names设为inactive；
-- Host-owned Gateway subset首个request只ensure当次明确要求的exact closure，其余owned tools保持inactive；
-- loader只做owned/live/available/inactive交集与additive `setActiveTools`；
-- Goal/Automation prompt-required closure只做bounded additive ensure-active，职责结束不卸载schema；
-- 同步区分generic Host guidance与Goal/Automation lifecycle prompt；
-- 不固定公共名称/ranking/limit。
+1. 删除Host loader、inactive pool、preflight、dynamic prompt/wire/live责任；
+2. 保留并简化named hidden Host Projection Extension；
+3. 让policy+availability允许且Host source赢得的definitions注册并active；
+4. 建立显式有限的product-bundled composition seam并瘦身PiAdapter；
+5. 保持Todo独立，不改变其当前已确认surface；
+6. 收口prompt/context diet；
+7. 证明所有Engine强Host平权与partial collision；
+8. 闭合all-agent Built-in policy与Device fresh default；
+9. 闭合exact-turn、toggle/in-flight、reload/replacement；
+10. 保留一个非Host的owner-local dynamic wire conformance，证明产品Pi patch没有破坏上游机制。
 
-### Slice 4：focused lifecycle 与 wire proof
+最终freeze时`origin/main@849730c…`已是本分支祖先，exact code SHA `9c05e0902`已通过full gates并push。其余证据如下：
 
-- exact upstream/stock source artifact与生成后的OmniMind产品runtime `0.84.2`；
-- startup/reload/resume/fork/shutdown；
-- collision/provenance；
-- Built-in disable/re-enable；
-- Browser/Thread representative calls；
-- active Goal completion/block、Goal paused/cleared/achieved；
-- Automation report/memory/cancel dependency closure与manual follow-up authority；
-- Device unavailable；
-- turn authority、AbortSignal、timeout、Provider replacement；
-- native/fallback wire。
+- MiMo Token Plan CN首轮真实调用`omnimind_list_projects`，continuation不重复调用，长回复可显式abort；
+- DeepSeek folder-backed Agent真实调用`read`与`omnimind_list_projects`；同SHA source/wire identity tests证明Todo schema属于Agent首轮工具面，packaged live证明它没有变成must-call，但不冒充Todo真实execute/provenance证据；
+- DeepSeek Goal continuation真实调用`omnimind_set_thread_goal`并在验证后achieved；
+- DeepSeek Automation run真实调用`omnimind_list_projects`和`omnimind_report_automation_result`；同Thread manual follow-up没有继承automation-only duty；
+- live Session上报初始input约35.9k–37.9k tokens，后续cache-read约35.8k–38.9k；模型结果没有`search_tools`调用。当前telemetry没有可靠TTFR，UI总完成时间单独记录，不能改名为TTFR；
+- 同code SHA的DMG为242,920,412 bytes，SHA-256 `8357594e71dc4c2b212b7ea84910a8752b5eb28a40d3ee942deabd9d1db31f64`；staged production closure核对240个依赖身份；ZIP fresh startup及持续isolated profile均证明bundled Server ready、fresh Device off、explicit Device-on重开保持、真实Provider journeys、优雅退出与无孤儿进程。
 
-### Slice 5：outcome/economics 与 packaged closure
+没有保留feature flag或eager/dynamic双轨。回滚是revert具体关注点，不是维护第二套长期实现；新shipped code会使该artifact证据失效。该candidate仍未merge main、未Release、未替换`/Applications/OmniMind.app`。
 
-- MiMo/DeepSeek最小真实journeys；
-- schema bytes、prompt/cache、错选率、额外turn、成功率、TTFR、成本；
-- exact source SHA fresh isolated packaged profile；
-- close/reopen与private-home隔离。
+## 16. 验证矩阵
 
-已合入source已经完成exact serializer、focused/full tests、MiMo/DeepSeek兼容endpoint最小journey与隔离packaged startup；`7c07184a9`的Host-context stability修正另完成DMG/ZIP legal closure、无ambient credentials的ZIP startup smoke及安装副本的隔离启动/关闭/重开。完整Gateway catalog economics、packaged Settings/Todo/Host真实交互仍不得从startup smoke、source request-capture或小型payload probe外推。
+| 维度        | 必须证明                                                                                  |
+| ----------- | ----------------------------------------------------------------------------------------- |
+| identity    | 只有OmniMind Agent使用Host inline Extension；stock Pi/其他Engine保持原生pipe              |
+| registry    | Host definitions有Pi sourceInfo；其他owner完全opaque                                      |
+| eager       | allowed+available Host definitions直接active；无Host loader/inactive pool                 |
+| parity      | 健康Engine获得相同Desired Host Surface                                                    |
+| policy      | no-file fresh default、legacy/explicit intent migration、unknown/corrupt、availability    |
+| lifecycle   | disable新Session不注册；stale call deny；in-flight不伪取消；re-enable按reload/new Session |
+| collision   | foreign winner继续；Host不claim；局部degrade；Session继续                                 |
+| authority   | active不等于authorized；read/wait/diagnostics也受exact-turn call gate                     |
+| prompt      | 无search guidance、无catalog副本、只承诺实际definitions                                   |
+| composition | 新product-bundled Extension不改PiAdapter核心流；第三方仍由ResourceLoader                  |
+| performance | initial wire/prompt/cache/TTFR/错选/成功/成本真实测量                                     |
+| packaged    | isolated profile证明Settings、new/old Session、Host call、reload/reopen与进程清理         |
 
-## 16. 验收矩阵
+## 17. Stop-loss
 
-### 16.1 Registry 与加载
+出现任一情况即停止扩张：
 
-- allowed Gateway definitions以真实Pi `ToolDefinition`注册；
-- disabled/unavailable definitions不注册；
-- Host-owned Gateway subset初始只有loader与首个request明确要求的closure active；其余owned tools inactive；
-- loader active且只管理owned集合；
-- other-owner active set保持不变；
-- 后续activation在Session内monotonic/additive，不因Goal/Automation duty结束移除schema；
-- 下一安全turn出现完整definitions；
-- actual execute回到同一Gateway handler。
+- 需要修改Pi core或复制AgentSession才能注册Host；
+- 需要第二Registry、active store、search index、dependency graph或Extension Manager；
+- collision只能靠silent override、rename或全Session fatal；
+- Gateway authority必须复制进Extension；
+- Provider capability只能靠模型名猜；
+- Device default被用来掩盖availability/execution缺口；
+- prompt只是把schema搬到另一段长文本；
+- packaged/live失败后没有新假设却重复probe。
 
-### 16.2 Prompt 与上下文
+## 18. 最终 disposition
 
-- generic prompt不枚举inactive tools；
-- OmniMind dynamic projection的generic Host block不随注册检查、activation、reload、resume或work surface改写；实际loader/tool surface仍由Pi当前请求表达；
-- Goal/Automation prompt/envelope点名的tools在同request active；
-- prompt-required tool说明不泄漏到generic prompt或later manual follow-up；
-- loader description/result不包含全catalog或完整schemas；
-- ordinary task不错误加载Host tools；
-- schema bytes显著低于eager baseline；
-- native/fallback有exact wire证据。
+应删除的是Host自建搜索责任，不是Pi-native Extension架构。
 
-### 16.3 Policy 与权限
+最终形状：
 
-- Built-in fresh默认开放且覆盖所有Agent；
-- 关闭后新Session不注册、旧loader/ensure-active不再增加、stale call deny；
-- prompt-required closure不完整时阻止/暂停对应loop并准确unavailable；
-- 已active schema不承诺per-turn移除；必要收缩只沿exact Pi reload/session replacement；
-- in-flight不被普通toggle伪杀；
-- re-enable遵循reload/new-session边界；
-- registered/prompt-required/active不冒充authorized；
-- credential、permission、approval、turn、timeout、cancel全部保留。
+> **一份AgentGateway canonical Host catalog；一个OmniMind Agent中的Pi-native Host Projection Extension；其他Engine通过各自原生管道获得同一Host surface。当前Host definitions在policy与availability允许时直接active。Pi拥有OmniMind Agent runtime内的Registry/Session truth，AgentGateway拥有Host定义、执行与授权。未来dynamic只由具体Extension owner按证据采用，永不恢复Host/global search manager。**
 
-### 16.4 Lifecycle 与 collision
+复验触发器：
 
-- reload/resume/fork无第二active store；
-- Goal/Automation结束后停止对应prompt/duty/loop，已active schema可保持；
-- automation cancel/update的revision dependency closure可完成；
-- old Extension instance/handler不泄漏；
-- no Gateway/empty/error准确unavailable；
-- duplicate拒绝；cross-source collision只让Host claim/capability局部fail closed；
-- 无silent override/rename；
-- `.pi`与`.omnimind`隔离。
-
-### 16.5 Scope
-
-- stock Pi仍direct/eager；
-- 其他Engine仍native direct；
-- Host loader不搜索、分类或修改任何非owned tool；
-- 无新registry、settings、permission system、index、process或持久状态。
-
-## 17. Rollback、stop-loss 与重开
-
-### 17.1 临时代码 rollback
-
-实现故障时可移除OmniMind Provider的inline Extension injection，临时把Gateway definitions放回该Provider现有`customTools`，恢复与eager schema一致的prompt，同时保持Gateway、Built-in policy、stock Pi与其他Engine不变。
-
-这条路径无数据迁移，但只是临时止损，不是等价最终架构。不得用永久feature flag或双轨配置让两种authority长期并存。
-
-### 17.2 Stop-loss
-
-出现任一条件即停止扩张并报告blocker/upstream需要：必须fork Pi core才能获得基本registered/active/additive seam；需要第二Registry/active/resume/search store、通用dependency registry或Host lifecycle control plane；必须接管其他Extension active set；collision只能靠silent override/rename；需要按模型名硬编码wire；需要全局搜索、embedding/BM25/远端索引；权限/credential/turn/timeout/cancel/secret边界被削弱；prompt只是把全catalog从schema搬到文字；相同失败没有新假设仍重复补丁。
-
-命中后只允许简化实现或请求exact upstream seam，不能把eager宣布为终态。
-
-### 17.3 Revalidation triggers
-
-- upstream/stock source artifact、OmniMind产品runtime revision或AgentSession/Extension API变化；
-- Provider tool-search wire变化；
-- AgentGateway catalog/listChanged/policy/lifecycle变化；
-- ThreadGoal prompt/continuation或Automation run envelope/schema/dependency变化；
-- Package collision/load order变化；
-- Host tool规模使有界metadata扫描被profile证伪；
-- future third-party MCP产品scope被维护者重新开启；
-- 真实泄密、orphan、late side effect或resume失败。
-
-## 18. Gate B source disposition
-
-```text
-Exact identity:
-  Pi 0.84.2 / upstream 914cf147...; OmniMind integration path as recorded above.
-
-Confirmed architecture:
-  AgentGateway Host definitions become standard Pi Extension tools for provider === "omnimind";
-  Pi owns Registry/active/wire; only the Host-owned Gateway subset starts minimal and then grows
-  monotonically/additively, while other owners remain opaque;
-  Gateway owns execution/authority.
-
-Replaceable detail:
-  exact 0.84.2 may need one thin extension-local callable loader;
-  its name, ranking, limit and algorithm are not stable contracts.
-
-Dynamic status:
-  required target, integrated into main source; not an eager-vs-dynamic product experiment.
-
-Loader scope:
-  only this Host Extension's registered, live-policy-allowed, available, inactive Gateway tools.
-
-Prompt-required scope:
-  ensure the exact policy-allowed/available Gateway closure required by the current request;
-  Goal and Automation prompts may name only tools active in that same request;
-  missing dependencies are added once, while duties end without schema removal.
-
-Third-party MCP:
-  out of first release; no settings, manager, unified search or cross-Engine distribution.
-
-Non-owned tools:
-  out of this Host Extension's registry, search and active-set authority.
-
-Revalidation trigger:
-  Goal/Automation prompt, envelope, schema or dependency changes;
-  or the Pi Extension API changes the owned-set isolation/collision guarantees.
-
-Delivery boundary:
-  source integration is anchored by merge `e7137c7…`, with Host-context stability correction `7c07184a9`;
-  packaged startup and installed close/reopen are proven; formal release and interactive Host journey remain separate.
-```
-
-最终原则：
-
-> **让AgentGateway Host tools真正进入Pi原生Extension与Dynamic Tool Loading生命周期；Pi拥有Registry、active set与Provider wire，Host Extension只注册并按需激活自己的工具，AgentGateway始终拥有执行与授权。**
+- Pi Extension/Registry/sourceInfo/reload/wire语义变化；
+- AgentGateway catalog/authority变化；
+- Engine projection seam或Host parity变化；
+- Built-in policy/default/migration事实变化；
+- 具体Extension出现显著schema/attention成本或稀疏使用证据；
+- 当前source candidate被重构、回滚或合入main。

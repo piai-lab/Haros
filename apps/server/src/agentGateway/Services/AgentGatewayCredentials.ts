@@ -12,7 +12,7 @@ import type { ProviderKind, ThreadId } from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type {
   AgentGatewaySessionIdentity,
-  AgentGatewayWriteAuthority,
+  AgentGatewayTurnAuthority,
 } from "./AgentGatewaySessionRegistry.ts";
 import type {
   AgentGatewayCancellation,
@@ -53,9 +53,9 @@ export interface AgentGatewayCredentialsShape {
   /** Consume one stdio bootstrap credential exactly once. */
   readonly exchangeStdioBootstrapToken: (bootstrapToken: string) => string | null;
   /** Pin one request/batch to the exact running turn observed at ingress. */
-  readonly bindWriteAuthority: (token: string, turnId: string) => AgentGatewayWriteAuthority | null;
+  readonly bindTurnAuthority: (token: string, turnId: string) => AgentGatewayTurnAuthority | null;
   /** Recheck that a previously bound authority still belongs to a live session. */
-  readonly verifyWriteAuthority: (authority: AgentGatewayWriteAuthority) => boolean;
+  readonly verifyTurnAuthority: (authority: AgentGatewayTurnAuthority) => boolean;
   /** Register one MCP request under its exact provider session and turn. */
   readonly registerInFlightRequest: (
     registration: AgentGatewayInFlightRequestRegistration,
@@ -68,7 +68,7 @@ export interface AgentGatewayCredentialsShape {
   readonly cancelSessionTurnRequests: (token: string, turnId: string) => Promise<void>;
   /**
    * Tombstone one terminal turn and permanently prevent this bearer from
-   * acquiring write authority for any later turn. Authority retirement must
+   * acquiring tool-call authority for any later turn. Authority retirement must
    * happen synchronously; the promise represents only in-flight drainage.
    */
   readonly retireSessionTurn: (token: string, turnId: string) => Promise<void>;

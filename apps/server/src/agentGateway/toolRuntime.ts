@@ -60,7 +60,6 @@ export interface ToolEntry {
   readonly definition: McpToolDefinition;
   readonly handler: ToolHandler;
   readonly requiredCapability: AgentGatewayCapability;
-  readonly requiresActiveTurn?: boolean;
   readonly group?: BuiltInToolGroupId;
   readonly available?: boolean;
   readonly provenance?: "agent-gateway";

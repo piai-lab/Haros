@@ -35,7 +35,7 @@ describe("AgentGatewaySessionLease", () => {
     expect(cancelSessionTurnRequests).toHaveBeenCalledOnce();
   });
 
-  it("retires terminal write authority without revoking the runtime until release", async () => {
+  it("retires terminal tool-call authority without revoking the runtime until release", async () => {
     const retireSessionTurn = vi.fn(() => Promise.resolve());
     const revokeSessionToken = vi.fn();
     const lease = acquireAgentGatewaySessionLease(

@@ -7,8 +7,8 @@ import { DEFAULT_SERVER_SETTINGS, ServerSettings, ServerSettingsPatch } from "./
 const decodePatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 
 describe("agent tool settings contract", () => {
-  it("keeps every built-in group enabled by default", () => {
-    expect(DEFAULT_SERVER_SETTINGS.agentTools.disabledBuiltInGroups).toEqual([]);
+  it("keeps Device disabled for a brand-new settings profile", () => {
+    expect(DEFAULT_SERVER_SETTINGS.agentTools.disabledBuiltInGroups).toEqual(["device"]);
   });
 
   it("bounds disabled group ids and list size", () => {

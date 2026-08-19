@@ -22,7 +22,6 @@ import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
 } from "../../agentGateway/Services/AgentGatewayCredentials.ts";
-import { AGENT_GATEWAY_HOST_LOADER_NAME } from "../agentGatewayHostExtension.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
@@ -59,7 +58,7 @@ describe("Pi native resource projection", () => {
     });
 
     expect(prompt).toContain("<omnimind_host_context>");
-    expect(prompt).toContain("Use the omnimind_* tools");
+    expect(prompt).toContain("Use the exposed capability metadata");
     expect(prompt).not.toContain("OmniMind MCP control is unavailable");
   });
 
@@ -122,25 +121,11 @@ describe("Pi native resource projection", () => {
     });
     const enginePrompt = makeOmniMindEngineSystemPrompt({ workSurface: "agent" });
 
-    expect(hostPrompt).toContain("BrowserDownloadApprovalRequired");
-    expect(hostPrompt).toContain("Device mutations such as");
-    expect(enginePrompt).not.toContain("BrowserDownloadApprovalRequired");
+    expect(hostPrompt).toContain("approval-required download");
+    expect(hostPrompt).toContain("per-call authorization");
+    expect(enginePrompt).not.toContain("approval-required download");
     expect(enginePrompt).not.toContain("Device mutations such as");
     expect(enginePrompt).not.toContain("<omnimind_host_context>");
-  });
-
-  it("keeps dynamic Host guidance compact and free of inactive catalog names", () => {
-    const prompt = makePiHostSystemPrompt({
-      provider: "omnimind",
-      gatewayControlAvailable: true,
-      dynamicHostTools: true,
-    });
-
-    expect(prompt).toContain("If an active Host loader is available");
-    expect(prompt).toContain("Do not guess tool names");
-    expect(prompt).not.toContain("omnimind_list_threads");
-    expect(prompt).not.toContain("BrowserDownloadApprovalRequired");
-    expect(prompt).not.toContain("Device mutations such as");
   });
 
   it("derives only the bounded canonical prompt-required Gateway closure", () => {
@@ -209,6 +194,10 @@ describe("Pi native OmniMind gateway tools", () => {
                   {
                     name: "omnimind_list_threads",
                     description: "List OmniMind threads.",
+                    _meta: {
+                      "omnimind/owner": "agent-gateway",
+                      "omnimind/group": "omnimind",
+                    },
                     inputSchema: {
                       type: "object",
                       properties: { limit: { type: "number" } },
@@ -273,6 +262,10 @@ describe("Pi native OmniMind gateway tools", () => {
               {
                 name: "omnimind_create_threads",
                 description: "Create OmniMind threads.",
+                _meta: {
+                  "omnimind/owner": "agent-gateway",
+                  "omnimind/group": "omnimind",
+                },
                 inputSchema: { type: "object", properties: {} },
               },
             ],
@@ -308,8 +301,8 @@ describe("Pi native OmniMind gateway tools", () => {
     expect(controller.signal.aborted).toBe(true);
   });
 
-  it("loads Host tools dynamically only for OmniMind while leaving other owners opaque", async () => {
-    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-dynamic-host-"));
+  it("projects eager Host tools only for OmniMind while leaving other owners opaque", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-eager-host-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     mkdirSync(agentDir, { recursive: true });
@@ -342,19 +335,11 @@ describe("Pi native OmniMind gateway tools", () => {
       }),
     ]);
     const requestBodies: any[] = [];
-    let modelRequest = 0;
     vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
       requestBodies.push(
         request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
       );
-      modelRequest += 1;
-      return modelRequest === 1
-        ? piOpenAiToolCallResponse({
-            name: AGENT_GATEWAY_HOST_LOADER_NAME,
-            arguments: { query: "open browser page" },
-            callId: "call-host-loader",
-          })
-        : piOpenAiSuccessResponse();
+      return piOpenAiSuccessResponse();
     });
     const agentThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000081");
     const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000082");
@@ -394,7 +379,7 @@ describe("Pi native OmniMind gateway tools", () => {
                   events.some(
                     (event) => event.type === "turn.completed" && event.turnId === agentTurn.turnId,
                   ),
-                "Dynamic Host turn did not settle.",
+                "Eager Host turn did not settle.",
               ),
             );
             yield* adapter.rollbackThread(agentThreadId, 1);
@@ -411,7 +396,7 @@ describe("Pi native OmniMind gateway tools", () => {
                     (event) =>
                       event.type === "turn.completed" && event.turnId === branchedTurn.turnId,
                   ),
-                "Branched Dynamic Host turn did not settle.",
+                "Branched eager Host turn did not settle.",
               ),
             );
             expect(yield* adapter.reloadSessionResources!(agentThreadId)).toBe("reloaded");
@@ -428,7 +413,7 @@ describe("Pi native OmniMind gateway tools", () => {
                     (event) =>
                       event.type === "turn.completed" && event.turnId === reloadedTurn.turnId,
                   ),
-                "Reloaded Dynamic Host turn did not settle.",
+                "Reloaded eager Host turn did not settle.",
               ),
             );
             yield* adapter.stopSession(agentThreadId);
@@ -458,7 +443,7 @@ describe("Pi native OmniMind gateway tools", () => {
                     (event) =>
                       event.type === "turn.completed" && event.turnId === resumedTurn.turnId,
                   ),
-                "Resumed Dynamic Host turn did not settle.",
+                "Resumed eager Host turn did not settle.",
               ),
             );
             yield* adapter.stopSession(agentThreadId);
@@ -483,7 +468,7 @@ describe("Pi native OmniMind gateway tools", () => {
                   events.some(
                     (event) => event.type === "turn.completed" && event.turnId === chatTurn.turnId,
                   ),
-                "Dynamic Host Chat turn did not settle.",
+                "Eager Host Chat turn did not settle.",
               ),
             );
             yield* adapter.stopSession(chatThreadId);
@@ -492,51 +477,30 @@ describe("Pi native OmniMind gateway tools", () => {
         ),
       );
 
-      expect(requestBodies).toHaveLength(6);
+      expect(requestBodies).toHaveLength(5);
       expect(piRequestToolNames(requestBodies[0])).toEqual(
-        expect.arrayContaining(["bash", "omnimind_update_tasks", AGENT_GATEWAY_HOST_LOADER_NAME]),
+        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
       );
-      expect(piRequestToolNames(requestBodies[0])).not.toContain("browser_open");
       expect(piRequestToolNames(requestBodies[1])).toEqual(
-        expect.arrayContaining([
-          "bash",
-          "omnimind_update_tasks",
-          AGENT_GATEWAY_HOST_LOADER_NAME,
-          "browser_open",
-        ]),
+        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
       );
       expect(piRequestToolNames(requestBodies[2])).toContain("browser_open");
-      const initialPrompt =
-        requestBodies[0]?.messages?.find((message: any) => message.role === "system")?.content ??
-        "";
-      expect(initialPrompt).toContain("active Host loader");
-      expect(initialPrompt).not.toContain("OmniMind MCP control is unavailable");
-      expect(initialPrompt).not.toContain("browser_open");
       expect(piRequestToolNames(requestBodies[3])).toEqual(
-        expect.arrayContaining(["bash", "omnimind_update_tasks", AGENT_GATEWAY_HOST_LOADER_NAME]),
+        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
       );
-      expect(piRequestToolNames(requestBodies[3])).not.toContain("browser_open");
       expect(piRequestToolNames(requestBodies[4])).toEqual(
-        expect.arrayContaining(["bash", "omnimind_update_tasks", AGENT_GATEWAY_HOST_LOADER_NAME]),
+        expect.arrayContaining(["bash", "browser_open"]),
       );
-      expect(piRequestToolNames(requestBodies[4])).not.toContain("browser_open");
-      expect(piRequestToolNames(requestBodies[5])).toEqual(
-        expect.arrayContaining(["bash", AGENT_GATEWAY_HOST_LOADER_NAME]),
-      );
-      expect(piRequestToolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
-      expect(piRequestToolNames(requestBodies[5])).not.toContain("browser_open");
+      expect(piRequestToolNames(requestBodies[4])).not.toContain("omnimind_update_tasks");
       const hostContexts = requestBodies.map(piRequestHostContext);
-      expect(hostContexts[0]).toBeTruthy();
-      expect(new Set(hostContexts)).toHaveLength(1);
+      expect(hostContexts.every(Boolean)).toBe(true);
       for (const body of requestBodies) {
         expect(piRequestSystemPrompt(body)).not.toContain("OmniMind MCP control is unavailable");
       }
-      expect(gateway.requests.map(({ method }) => method)).toEqual([
-        "tools/list",
-        "tools/list",
-        "tools/list",
-        "tools/list",
-      ]);
+      expect(piRequestSystemPrompt(requestBodies[0])).toContain("thread-scoped in-app page");
+      expect(gateway.requests.map(({ method }) => method)).toEqual(
+        Array.from({ length: 4 }, () => "tools/list"),
+      );
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -628,7 +592,6 @@ describe("Pi native OmniMind gateway tools", () => {
         (tool: any) => tool.function?.name ?? tool.name,
       );
       expect(names).toContain("browser_open");
-      expect(names).not.toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
       expect(names).not.toContain("omnimind_update_tasks");
       expect(gateway.requests.map(({ method }) => method)).toEqual(["tools/list"]);
     } finally {
@@ -637,7 +600,7 @@ describe("Pi native OmniMind gateway tools", () => {
     }
   });
 
-  it("ensures exact synthetic-turn closures additively before the same model request", async () => {
+  it("verifies exact synthetic-turn closures before the same eager model request", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-host-preflight-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -745,17 +708,12 @@ describe("Pi native OmniMind gateway tools", () => {
 
       expect(piRequestToolNames(requestBodies[0])).toEqual(
         expect.arrayContaining([
-          AGENT_GATEWAY_HOST_LOADER_NAME,
           ...GOAL_CONTINUATION_GATEWAY_TOOL_NAMES,
+          ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES,
         ]),
       );
-      expect(piRequestToolNames(requestBodies[0])).not.toContain(
-        "omnimind_report_automation_result",
-      );
       expect(piRequestToolNames(requestBodies[1])).toContain("omnimind_set_thread_goal");
-      expect(piRequestToolNames(requestBodies[1])).not.toContain(
-        "omnimind_report_automation_result",
-      );
+      expect(piRequestToolNames(requestBodies[1])).toContain("omnimind_report_automation_result");
       expect(piRequestToolNames(requestBodies[2])).toEqual(
         expect.arrayContaining(["omnimind_set_thread_goal", ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES]),
       );
@@ -865,8 +823,7 @@ describe("Pi native OmniMind gateway tools", () => {
 
       expect(exit._tag).toBe("Failure");
       expect(modelFetch).toHaveBeenCalledTimes(1);
-      expect(piRequestToolNames(modelBodies[0])).toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
-      expect(piRequestToolNames(modelBodies[0])).not.toContain("omnimind_set_thread_goal");
+      expect(piRequestToolNames(modelBodies[0])).toContain("omnimind_set_thread_goal");
       expect(gateway.requests.map(({ method }) => method)).toEqual(["tools/list", "tools/list"]);
     } finally {
       vi.restoreAllMocks();
@@ -1038,53 +995,6 @@ function piOpenAiTaskToolCallResponse() {
   );
 }
 
-function piOpenAiToolCallResponse(input: {
-  readonly name: string;
-  readonly arguments: Record<string, unknown>;
-  readonly callId?: string;
-}) {
-  return new Response(
-    [
-      `data: ${JSON.stringify({
-        id: `chatcmpl-${input.callId ?? "tool"}`,
-        object: "chat.completion.chunk",
-        created: 1,
-        model: "safe-model",
-        choices: [
-          {
-            index: 0,
-            delta: {
-              role: "assistant",
-              tool_calls: [
-                {
-                  index: 0,
-                  id: input.callId ?? "call-tool",
-                  type: "function",
-                  function: {
-                    name: input.name,
-                    arguments: JSON.stringify(input.arguments),
-                  },
-                },
-              ],
-            },
-            finish_reason: null,
-          },
-        ],
-      })}`,
-      `data: ${JSON.stringify({
-        id: `chatcmpl-${input.callId ?? "tool"}`,
-        object: "chat.completion.chunk",
-        created: 1,
-        model: "safe-model",
-        choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
-      })}`,
-      "data: [DONE]",
-      "",
-    ].join("\n\n"),
-    { headers: { "content-type": "text/event-stream" } },
-  );
-}
-
 function makeGatewayCredentialsLayer(): Layer.Layer<AgentGatewayCredentials> {
   const cancellation = { count: 0, settled: Promise.resolve() };
   const credentials: AgentGatewayCredentialsShape = {
@@ -1095,8 +1005,8 @@ function makeGatewayCredentialsLayer(): Layer.Layer<AgentGatewayCredentials> {
     verifySession: () => null,
     issueStdioBootstrapToken: () => null,
     exchangeStdioBootstrapToken: () => null,
-    bindWriteAuthority: () => null,
-    verifyWriteAuthority: () => false,
+    bindTurnAuthority: () => null,
+    verifyTurnAuthority: () => false,
     registerInFlightRequest: () => () => undefined,
     cancelInFlightRequests: () => cancellation,
     cancelSessionTurnRequests: () => Promise.resolve(),

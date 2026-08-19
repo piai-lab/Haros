@@ -147,7 +147,7 @@ export const makeAgentGatewayCredentials = Effect.gen(function* () {
     if (!session) return Promise.resolve();
     // Retire synchronously before exposing the asynchronous drain barrier.
     // Requests racing the terminal event can no longer bind this bearer to B.
-    sessionRegistry.retireWriteAuthority(token, turnId);
+    sessionRegistry.retireTurnAuthority(token, turnId);
     return inFlightRequests.cancelTurn(session.sessionKey, turnId).settled;
   };
 
@@ -161,8 +161,8 @@ export const makeAgentGatewayCredentials = Effect.gen(function* () {
     verifySession: sessionRegistry.verify,
     issueStdioBootstrapToken,
     exchangeStdioBootstrapToken,
-    bindWriteAuthority: sessionRegistry.bindWriteAuthority,
-    verifyWriteAuthority: sessionRegistry.verifyWriteAuthority,
+    bindTurnAuthority: sessionRegistry.bindTurnAuthority,
+    verifyTurnAuthority: sessionRegistry.verifyTurnAuthority,
     registerInFlightRequest: inFlightRequests.register,
     cancelInFlightRequests: inFlightRequests.cancel,
     cancelSessionTurnRequests,

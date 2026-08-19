@@ -1,5 +1,6 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { dirname } from "node:path";
+import { chmod } from "node:fs/promises";
+import { basename, dirname } from "node:path";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL, DEFAULT_MODEL_BY_PROVIDER } from "@omnimind/contracts";
 import { Effect, Fiber, FileSystem, Layer, Option, Stream } from "effect";
 import { describe, expect, it } from "vitest";
@@ -18,14 +19,20 @@ const runWithSettings = <A, E>(
 
 describe("ServerSettingsService", () => {
   it("loads defaults when settings file does not exist", async () => {
-    const settings = await runWithSettings(
+    const result = await runWithSettings(
       Effect.gen(function* () {
         const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
         yield* service.start;
-        return yield* service.getSettings;
+        return {
+          settings: yield* service.getSettings,
+          settingsFileExists: yield* fs.exists(settingsPath),
+        };
       }),
     );
 
+    const { settings } = result;
     expect(settings.providers.codex.binaryPath).toBe("codex");
     expect(settings.providers.grok.binaryPath).toBe("grok");
     expect(settings.defaultThreadEnvMode).toBe("local");
@@ -34,6 +41,8 @@ describe("ServerSettingsService", () => {
       provider: "codex",
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     });
+    expect(settings.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+    expect(result.settingsFileExists).toBe(false);
   });
 
   it("preserves an explicitly selected previous Git writing model", async () => {
@@ -61,14 +70,21 @@ describe("ServerSettingsService", () => {
         const settings = yield* service.getSettings;
         const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
           migrationVersion: number;
-          settings: { textGenerationModelSelection: { model: string } };
+          settings: {
+            textGenerationModelSelection: { model: string };
+            agentTools: { disabledBuiltInGroups: string[] };
+          };
         };
         return { settings, persisted };
       }),
     );
 
     expect(result.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
-    expect(result.persisted.migrationVersion).toBe(1);
+    expect(result.settings.agentTools.disabledBuiltInGroups).toEqual([]);
+    expect(result.persisted.migrationVersion).toBe(2);
+    expect(result.persisted.settings).toMatchObject({
+      agentTools: { disabledBuiltInGroups: [] },
+    });
     expect(result.persisted.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
   });
 
@@ -100,7 +116,7 @@ describe("ServerSettingsService", () => {
     expect(result.updated.providers.codex.binaryPath).toBe("/usr/local/bin/codex");
     expect(result.parsed).toMatchObject({
       revision: 1,
-      migrationVersion: 1,
+      migrationVersion: 2,
       settings: {
         enableAssistantStreaming: true,
         enableProviderUpdateChecks: false,
@@ -110,8 +126,123 @@ describe("ServerSettingsService", () => {
             customModels: ["gpt-custom"],
           },
         },
+        agentTools: { disabledBuiltInGroups: ["device"] },
       },
     });
+  });
+
+  it.each([
+    {
+      name: "an explicit legacy Device-on choice",
+      disabledBuiltInGroups: [] as string[],
+      expected: [] as string[],
+    },
+    {
+      name: "an explicit Device-off choice",
+      disabledBuiltInGroups: ["device"],
+      expected: ["device"],
+    },
+    {
+      name: "unknown bounded group ids",
+      disabledBuiltInGroups: ["future-group", "device"],
+      expected: ["device", "future-group"],
+    },
+  ])(
+    "preserves $name while migrating the settings envelope",
+    async ({ disabledBuiltInGroups, expected }) => {
+      const result = await runWithSettings(
+        Effect.gen(function* () {
+          const service = yield* ServerSettingsService;
+          const { settingsPath } = yield* ServerConfig;
+          const fs = yield* FileSystem.FileSystem;
+          yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+          yield* fs.writeFileString(
+            settingsPath,
+            JSON.stringify({
+              revision: 4,
+              migrationVersion: 1,
+              settings: { agentTools: { disabledBuiltInGroups } },
+            }),
+          );
+          yield* service.start;
+          return {
+            snapshot: yield* service.getSnapshot,
+            persisted: JSON.parse(yield* fs.readFileString(settingsPath)) as {
+              revision: number;
+              migrationVersion: number;
+              settings: { agentTools: { disabledBuiltInGroups: string[] } };
+            },
+          };
+        }),
+      );
+
+      expect(result.snapshot.revision).toBe(5);
+      expect(result.snapshot.settings.agentTools.disabledBuiltInGroups).toEqual(expected);
+      expect(result.persisted).toMatchObject({
+        revision: 5,
+        migrationVersion: 2,
+        settings: { agentTools: { disabledBuiltInGroups: expected } },
+      });
+    },
+  );
+
+  it("performs one monotonic migration when concurrent callers start the service", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({ revision: 9, migrationVersion: 1, settings: {} }),
+        );
+        yield* Effect.all([service.start, service.start], { concurrency: "unbounded" });
+        return {
+          snapshot: yield* service.getSnapshot,
+          persisted: JSON.parse(yield* fs.readFileString(settingsPath)) as {
+            revision: number;
+            migrationVersion: number;
+          },
+        };
+      }),
+    );
+
+    expect(result.snapshot.revision).toBe(10);
+    expect(result.persisted).toMatchObject({ revision: 10, migrationVersion: 2 });
+  });
+
+  it("fails startup without publishing migrated state when the atomic write cannot commit", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        const settingsDirectory = dirname(settingsPath);
+        yield* fs.makeDirectory(settingsDirectory, { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({ revision: 11, migrationVersion: 1, settings: {} }),
+        );
+        yield* Effect.promise(() => chmod(settingsDirectory, 0o500));
+        const startExit = yield* Effect.exit(service.start).pipe(
+          Effect.ensuring(Effect.promise(() => chmod(settingsDirectory, 0o700))),
+        );
+        return {
+          startExit,
+          snapshot: yield* service.getSnapshot,
+          persisted: JSON.parse(yield* fs.readFileString(settingsPath)) as {
+            revision: number;
+            migrationVersion: number;
+          },
+        };
+      }),
+    );
+
+    expect(result.startExit._tag).toBe("Failure");
+    expect(result.snapshot.revision).toBe(0);
+    expect(result.snapshot.settings.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+    expect(result.persisted).toMatchObject({ revision: 11, migrationVersion: 1 });
   });
 
   it("rejects provider-only runtime-catalog switches before persistence", async () => {
@@ -137,6 +268,31 @@ describe("ServerSettingsService", () => {
       provider: "codex",
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     });
+  });
+
+  it("quarantines a corrupt snapshot and uses the fresh Device-off default", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(settingsPath, "{not-json");
+        yield* service.start;
+        return {
+          settings: yield* service.getSettings,
+          originalExists: yield* fs.exists(settingsPath),
+          siblingNames: yield* fs.readDirectory(dirname(settingsPath)),
+          settingsFileName: basename(settingsPath),
+        };
+      }),
+    );
+
+    expect(result.settings.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+    expect(result.originalExists).toBe(false);
+    expect(
+      result.siblingNames.some((name) => name.startsWith(`${result.settingsFileName}.invalid-`)),
+    ).toBe(true);
   });
 
   it("persists an explicit runtime-catalog model selection exactly", async () => {

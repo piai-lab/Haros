@@ -52,6 +52,11 @@ const GROUPS = [
   },
 ] as const;
 
+const EXPLICIT_DEVICE_ENABLED_SETTINGS: ServerSettingsView = {
+  ...DEFAULT_SERVER_SETTINGS_VIEW,
+  agentTools: { disabledBuiltInGroups: [] },
+};
+
 describe("BuiltInToolsSettingsPanel", () => {
   afterEach(() => {
     delete window.nativeApi;
@@ -68,13 +73,13 @@ describe("BuiltInToolsSettingsPanel", () => {
       .mockImplementationOnce(() => second.promise);
     window.nativeApi = {
       server: {
-        getSettings: vi.fn().mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW),
+        getSettings: vi.fn().mockResolvedValue(EXPLICIT_DEVICE_ENABLED_SETTINGS),
         getBuiltInToolGroups: vi.fn().mockResolvedValue(GROUPS),
         updateSettings,
       },
     } as unknown as NativeApi;
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
+    queryClient.setQueryData(serverQueryKeys.settings(), EXPLICIT_DEVICE_ENABLED_SETTINGS);
     queryClient.setQueryData(serverQueryKeys.builtInToolGroups(), GROUPS);
     const screen = await render(
       <QueryClientProvider client={queryClient}>
@@ -97,14 +102,14 @@ describe("BuiltInToolsSettingsPanel", () => {
     });
 
     first.resolve({
-      ...DEFAULT_SERVER_SETTINGS_VIEW,
+      ...EXPLICIT_DEVICE_ENABLED_SETTINGS,
       agentTools: { disabledBuiltInGroups: ["browser"] },
     });
     await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(2));
     expect(updateSettings).toHaveBeenNthCalledWith(2, {
       agentTools: { disabledBuiltInGroups: [] },
     });
-    second.resolve(DEFAULT_SERVER_SETTINGS_VIEW);
+    second.resolve(EXPLICIT_DEVICE_ENABLED_SETTINGS);
     await vi.waitFor(() =>
       expect(
         queryClient.getQueryData<ServerSettingsView>(serverQueryKeys.settings())?.agentTools
@@ -112,6 +117,35 @@ describe("BuiltInToolsSettingsPanel", () => {
       ).toEqual([]),
     );
     await expect.element(browserSwitch).toBeChecked();
+
+    await screen.unmount();
+    queryClient.clear();
+  });
+
+  it("distinguishes the fresh Device-off intent from runtime unavailability", async () => {
+    window.nativeApi = {
+      server: {
+        getSettings: vi.fn().mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW),
+        getBuiltInToolGroups: vi.fn().mockResolvedValue(GROUPS),
+        updateSettings: vi.fn(),
+      },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
+    queryClient.setQueryData(serverQueryKeys.builtInToolGroups(), GROUPS);
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <BuiltInToolsSettingsPanel active />
+      </QueryClientProvider>,
+    );
+    const deviceSwitch = screen.getByRole("switch", { name: "Allow Agents to use Device" });
+
+    await expect.element(deviceSwitch).not.toBeChecked();
+    await expect.element(screen.getByText("Disabled · 0 of 0 tools available")).toBeVisible();
+
+    queryClient.setQueryData(serverQueryKeys.settings(), EXPLICIT_DEVICE_ENABLED_SETTINGS);
+    await expect.element(deviceSwitch).toBeChecked();
+    await expect.element(screen.getByText("Unavailable · 0 of 0 tools available")).toBeVisible();
 
     await screen.unmount();
     queryClient.clear();

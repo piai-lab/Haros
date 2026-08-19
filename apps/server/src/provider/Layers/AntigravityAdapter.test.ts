@@ -236,8 +236,8 @@ describe("Antigravity CLI integration helpers", () => {
         bootstrapOwners.delete(bootstrap);
         return owner && liveTokens.has(owner) ? owner : null;
       },
-      bindWriteAuthority: () => null,
-      verifyWriteAuthority: () => false,
+      bindTurnAuthority: () => null,
+      verifyTurnAuthority: () => false,
       registerInFlightRequest: () => () => undefined,
       cancelInFlightRequests: () => ({ count: 0, settled: Promise.resolve() }),
       cancelSessionTurnRequests: () => Promise.resolve(),

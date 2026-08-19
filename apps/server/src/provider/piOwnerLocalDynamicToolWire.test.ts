@@ -1,4 +1,4 @@
-// FILE: piDynamicToolWire.test.ts
+// FILE: piOwnerLocalDynamicToolWire.test.ts
 // Purpose: Captures exact Pi 0.84.2 provider payloads for additive tool loading.
 // Layer: Provider wire conformance tests
 
@@ -18,14 +18,14 @@ const usage: Usage = {
 };
 
 const loaderTool = {
-  name: "search_tools",
-  description: "Load another Host capability.",
+  name: "load_extra_tools",
+  description: "Load an optional owner-local capability.",
   parameters: Type.Object({ query: Type.String() }),
 };
 
 const loadedTool = {
-  name: "browser_open",
-  description: "Open one browser page.",
+  name: "team_lookup_symbol",
+  description: "Look up one symbol in the team index.",
   parameters: Type.Object({ url: Type.String() }),
 };
 
@@ -54,7 +54,7 @@ function makeLoadedToolContext(api: Api, provider: string): Context {
     systemPrompt: "Wire conformance",
     tools: [loaderTool, loadedTool],
     messages: [
-      { role: "user", content: "Open a browser page", timestamp: 1 },
+      { role: "user", content: "Look up a team symbol", timestamp: 1 },
       {
         role: "assistant",
         api,
@@ -65,7 +65,7 @@ function makeLoadedToolContext(api: Api, provider: string): Context {
             type: "toolCall",
             id: "call-loader",
             name: loaderTool.name,
-            arguments: { query: "browser" },
+            arguments: { query: "symbol" },
           },
         ],
         usage,
@@ -76,7 +76,7 @@ function makeLoadedToolContext(api: Api, provider: string): Context {
         role: "toolResult",
         toolCallId: "call-loader",
         toolName: loaderTool.name,
-        content: [{ type: "text", text: "Loaded one matching Host tool." }],
+        content: [{ type: "text", text: "Loaded one tool owned by this Extension." }],
         addedToolNames: [loadedTool.name],
         isError: false,
         timestamp: 3,
@@ -95,7 +95,7 @@ async function capturePayload(
   return read() as Record<string, any>;
 }
 
-describe("Pi 0.84.2 dynamic tool provider wire", () => {
+describe("Pi 0.84.2 owner-local dynamic tool provider wire", () => {
   it.each([
     ["tool-search", { supportsToolSearch: true }, "tool_search_output"],
     ["additional-tools", { supportsAdditionalTools: true }, "additional_tools"],

@@ -184,7 +184,11 @@ Settings 的内部 `coding` 分组对用户统一显示为 `Development / 开发
 
 Custom rules 的外部并发修改必须保留用户草稿并以 conflict 呈现，不能静默覆盖。同一 source 仅正文变化时允许重新载入，或显式保留草稿并基于 fresh version 再次保存；active source 已变化时禁止把旧草稿写到新 source，只允许重新载入。该能力准确表示 OmniMind writer 串行化与 expected-version 乐观冲突检测，不宣传跨进程严格 CAS：Node 公开文件 API 无法把 target identity/version 条件与 replace/unlink 合成一个原子操作，非协作外部编辑器若恰好在最终检查与 commit 之间写入，仍存在极窄竞态。不得为消除该窗口新增 native addon、第二 writer、锁协议或 rollback。首次 create 继续使用原子 no-clobber，目标已出现时不得覆盖。Prompt snapshot 是 bounded standard read，retryable load failure 提供可操作重试。正常页面、空态、Toast、Dialog、错误、帮助与恢复只使用 OmniMind 产品语言，不出现 `Pi`、`Pi-compatible`、`ResourceLoader`、`Engine Contract`、`SYSTEM.md` 或 `APPEND_SYSTEM.md` 等内部术语；真实来源只保留在 architecture、research、诊断、About/Licenses 或明确允许的技术归属面。
 
-`Built-in tools / 内置工具`用一套fresh默认开放的组级开关控制OmniMind自带Browser、Device、Thread、Automation等能力是否提供给所有Agent引擎，包括OmniMind Agent；不提供Engine selector、Provider维度持久状态或逐tool权限矩阵。页面只显示canonical catalog派生的真实组、计数、可用性与简短说明，不暴露Pi、MCP transport、动态加载器或工具注册等实现术语，也不硬编码当前24/22/12数量。关闭某组后，所有Agent的新会话都不再获得该组，所有旧会话的新调用由Gateway立即拒绝；已准入in-flight call不被普通开关伪装成紧急停止，取消仍由当前任务/会话拥有。重新开启不把能力偷偷加入已经稳定运行的旧会话，按各引擎真实的安全重载或新会话边界生效。该设置只控制Agent使用，不影响Browser/Device的人类UI，enablement也不替代runtime permission或approval。
+`Built-in tools / 内置工具`用一套全局组级开关控制OmniMind自带Browser、Device、Thread、Automation等Host capability是否提供给所有Agent引擎，包括OmniMind Agent；不提供Engine selector、Provider维度持久状态或逐tool权限矩阵。brand-new且没有settings文件时默认开放OmniMind与Browser、关闭Device；任何可读取的existing snapshot按下述migration contract保留既有intent。页面只显示canonical catalog派生的真实组、计数、用户选择、平台/服务可用性与effective状态，不暴露Pi、MCP transport、动态加载器或工具注册等实现术语，也不硬编码当前工具数量。
+
+“fresh”只表示从未存在有效ServerSettings文件。升级时，既有有效snapshot继续保留legacy intent：缺失`disabledBuiltInGroups`与显式空数组都按既有Device enabled处理，显式禁用Device继续禁用；迁移完成后由现有revisioned settings owner写入当前版本。损坏snapshot无法恢复用户选择，必须准确提示设置已隔离/恢复默认，而不能显示成一次普通fresh onboarding。页面不新增“是否迁移过”开关或隐藏marker。
+
+关闭某组后，所有Agent的新会话都不再投影或注册该组；旧会话即使暂时仍显示stale schema，所有新调用也由Gateway按当前policy立即拒绝。已准入in-flight call不被普通开关伪装成紧急停止，取消仍由当前任务/会话拥有。重新开启不把能力偷偷加入已经稳定运行的旧会话，只按各引擎真实的安全reload或新会话边界投影；OmniMind Agent中的Device在启用且平台/服务可用后注册并active，而不是预先注册为inactive。该设置只控制Agent使用，不影响Browser/Device的人类UI，enablement也不替代availability、runtime permission、approval或call-time authority。
 
 `External connections / 外部连接`只管理Codex、Claude Code等独立本地应用进入OmniMind的现有任务连接，并准确显示paired、last used、revoked、expired与runtime availability；没有heartbeat就不伪造“当前已连接”。正常页面只表达“哪些外部应用可以连接OmniMind”，不要求用户理解底层协议。V1不提供第三方MCP server Settings、CRUD、credential/OAuth UI、连接测试、全局状态面板或跨Engine自动分发，也不把OmniMind内置能力或未来第三方MCP混进这个页面。
 
@@ -268,7 +272,9 @@ OmniMind 只做：
 
 ## 7. 扩展与生态 UI
 
-V1 不创建新的顶层 Package 平台。它恢复并复用 Synara 已有 PluginLibrary、Skills 页面和 provider discovery，以 `扩展`、`Skills`、`Plugins` 等既有产品入口呈现真实内容：
+V1不因Extension Architecture 1.0创建新的顶层Extension Manager、Marketplace或Package平台。既有Synara PluginLibrary、Skills页面和provider discovery只能投影各runtime的原生truth；它们不是第二Registry、安装数据库或Host控制面。Built-in tools中的AgentGateway capability不在这里伪装成可安装Extension，External connections也不进入这里。
+
+未来用户可见的`扩展`表面若进入范围，仍复用这些既有入口并明确区分product-bundled、团队、用户/第三方来源；状态与动作直接来自对应Pi ResourceLoader/package lifecycle或其他Provider原生seam：
 
 - OmniMind Agent 区显示其 bundled Pi-compatible manager/loader/settings/trust 的真实结果；锁定 runtime 已暴露的 install/update/remove/reload/enable 必须提供，未暴露的动作才不显示；
 - stock Pi 与其他 Provider 保持 source 已有的 discovery、health 和原生动作，不为界面对称而新增 lifecycle API；
@@ -279,6 +285,8 @@ OmniMind-curated/preinstalled resources 用发行 manifest 说明 source、hash�
 
 禁止跨 Provider `PackageActivation`、统一 generation、通用 rollback、第二 Marketplace 或第二 loader。一个 Pi-compatible artifact 不因进入共同列表就对 Codex/Claude/OpenCode 可用。Synara PluginLibrary 只需移除其“静默选择第一个可 discovery Provider”的 fallback：若当前 Provider 不支持该页，必须让用户显式切换或准确显示不可用。
 
+OmniMind Agent内部的product-bundled composition list只是创建Session时的显式有限接线，不是这套UI的runtime store；用户/第三方Extension完全由Pi ResourceLoader发现与管理，不进入product composition。某个Extension是否eager或自带dynamic loader由该Extension owner决定，UI不得新增全局search/activation策略。
+
 ## 8. 权限与真实性
 
 Composer 的运行模式是当前任务唯一的自动化选择；用户不应在 Provider、Browser、Device、下载和每个 Tool 上重复支付确认成本。完整语义由 [`architecture/execution.md`](execution.md#runtime-mode一个任务只有一个自动化边界) 拥有，Workbench 只负责准确投影：
@@ -287,6 +295,8 @@ Composer 的运行模式是当前任务唯一的自动化选择；用户不应�
 - `自动批准 / Approve for me`：只有 exact Engine/Host 存在真实自动 reviewer 时显示；
 - `需要时询问 / Ask for approval`：只有 exact Engine/Host 存在可完成 request/response bridge 时显示；
 - OAuth、2FA、系统原生权限、物理设备到场和用户未表达的不可逆外部动作使用“需要你完成/确认”的真实语言，不混称普通工具权限。
+
+`Full access`只免除已启用、当前可用且属于任务意图的普通能力之重复approval。它不证明Device每个entry都具备可执行闭包或已获12/12产品准入，也不替Browser download决定artifact落点与receipt；这些缺口必须由各自owner准确显示为unavailable、unsupported或待完成，而不是从mode名称推断成功。
 
 Provider/Host capability 改变时，Composer mode menu 由 loaded capability truth 决定：不支持的项隐藏或显示 unavailable reason，不能允许用户选择一个底层只会一律拒绝的 mode。Pi-family 当前没有 OmniMind approval request path 时，不显示 `需要时询问`。`acceptForSession` 若实际持久切换当前 Thread 为 `full-access`，按钮显示“此任务始终允许 / Always allow for this task”，不能显示“本会话始终允许”。
 

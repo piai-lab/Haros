@@ -468,7 +468,6 @@ export function makeAgentGatewayBrowserTools(
       // must belong to a live provider turn. Detached Codex cells can keep
       // running after their parent turn ends; rejecting every browser_* call
       // at this boundary prevents them from observing or touching the browser.
-      requiresActiveTurn: true,
       definition: {
         name,
         description: catalogueEntry.description,

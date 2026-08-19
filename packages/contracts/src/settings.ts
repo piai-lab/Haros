@@ -99,7 +99,9 @@ const DisabledSkillNames = Schema.Array(Schema.String.check(Schema.isMaxLength(2
 const DisabledBuiltInGroupsValue = Schema.Array(TrimmedString.check(Schema.isMaxLength(64))).check(
   Schema.isMaxLength(32),
 );
-const DisabledBuiltInGroups = DisabledBuiltInGroupsValue.pipe(Schema.withDecodingDefault(() => []));
+const DisabledBuiltInGroups = DisabledBuiltInGroupsValue.pipe(
+  Schema.withDecodingDefault(() => ["device"]),
+);
 
 // User-level skill toggles. Skills are keyed by lowercased name because the
 // unified catalog dedupes provider copies of the same skill by name.

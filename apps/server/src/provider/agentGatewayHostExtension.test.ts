@@ -1,8 +1,8 @@
 // FILE: agentGatewayHostExtension.test.ts
-// Purpose: Conformance coverage for Pi-owned registry and Host-owned dynamic activation.
+// Purpose: Exact Pi conformance for the eager AgentGateway Host projection.
 // Layer: Provider Extension tests
 
-import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -12,12 +12,10 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { AgentGatewayMcpToolDescriptor } from "../agentGateway/mcpInjection.ts";
 import {
-  AGENT_GATEWAY_HOST_EXTENSION_PATH,
-  AGENT_GATEWAY_HOST_LOADER_NAME,
-  deactivateUnavailableAgentGatewayHostProjection,
+  assertAgentGatewayHostToolsDelivered,
   inspectAgentGatewayHostExtensionRegistration,
   makeAgentGatewayHostExtension,
-  type AgentGatewayHostDiagnostic,
+  renderDeliveredAgentGatewayHostGuidance,
 } from "./agentGatewayHostExtension.ts";
 
 const temporaryRoots: string[] = [];
@@ -53,7 +51,6 @@ type PiRuntime = Pick<
 async function createSession(input: {
   readonly runtime: PiRuntime;
   readonly extensions: StockPi.InlineExtension[];
-  readonly customTools?: StockPi.ToolDefinition[];
 }) {
   const root = mkdtempSync(path.join(tmpdir(), "omnimind-host-extension-"));
   temporaryRoots.push(root);
@@ -76,39 +73,26 @@ async function createSession(input: {
     agentDir,
     resourceLoader,
     sessionManager: input.runtime.SessionManager.inMemory(cwd),
-    ...(input.customTools === undefined ? {} : { customTools: input.customTools }),
   });
   await created.session.bindExtensions({ mode: "print" });
-  return created;
+  return { ...created, resourceLoader };
 }
 
-function foreignExtension(input: {
-  readonly name: string;
-  readonly toolNames: ReadonlyArray<string>;
-  readonly deactivateOnStart?: boolean;
-}): StockPi.InlineExtension {
+function foreignExtension(name: string): StockPi.InlineExtension {
   return {
-    name: input.name,
+    name: "foreign-browser",
     hidden: true,
     factory: (pi) => {
-      for (const name of input.toolNames) {
-        pi.registerTool({
-          name,
-          label: `Foreign ${name}`,
-          description: `Foreign ${name}`,
-          parameters: { type: "object", properties: {} } as StockPi.ToolDefinition["parameters"],
-          execute: async () => ({
-            content: [{ type: "text", text: "foreign" }],
-            details: { source: "foreign" },
-          }),
-        });
-      }
-      if (input.deactivateOnStart) {
-        pi.on("session_start", () => {
-          const names = new Set(input.toolNames);
-          pi.setActiveTools(pi.getActiveTools().filter((name) => !names.has(name)));
-        });
-      }
+      pi.registerTool({
+        name,
+        label: `Foreign ${name}`,
+        description: `Foreign ${name}`,
+        parameters: { type: "object", properties: {} } as StockPi.ToolDefinition["parameters"],
+        execute: async () => ({
+          content: [{ type: "text", text: "foreign" }],
+          details: { source: "foreign" },
+        }),
+      });
     },
   };
 }
@@ -116,317 +100,147 @@ function foreignExtension(input: {
 describe.each([
   ["stock", StockPi as PiRuntime],
   ["product", ProductPi as unknown as PiRuntime],
-])("AgentGateway Host Extension on %s Pi", (_label, runtime) => {
-  it("deactivates only its owned searchable subset and activates matches additively", async () => {
-    const calls: Array<{ readonly body: unknown; readonly signal: AbortSignal | null }> = [];
-    const fetch = async (_request: string | URL | Request, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { readonly id: string };
-      calls.push({ body, signal: init?.signal ?? null });
-      return Response.json({
-        jsonrpc: "2.0",
-        id: body.id,
-        result: { content: [{ type: "text", text: "opened" }] },
-      });
-    };
+])("eager AgentGateway Host projection on %s Pi", (_label, runtime) => {
+  it("registers every canonical definition active without touching another owner", async () => {
     const handle = makeAgentGatewayHostExtension({
-      descriptors,
       connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
       defineTool: (tool) => runtime.defineTool(tool),
-      fetch,
+      loadDescriptors: async () => descriptors,
     });
-    expect(handle).not.toBeNull();
-    if (!handle) throw new Error("expected Host Extension");
+    const { session, resourceLoader } = await createSession({
+      runtime,
+      extensions: [foreignExtension("team_tool"), handle.extension],
+    });
 
-    const { session } = await createSession({ runtime, extensions: [handle.extension] });
-    const allTools = session.getAllTools();
-    for (const name of [...handle.candidateToolNames, handle.loaderName]) {
-      expect(allTools.find((tool) => tool.name === name)?.sourceInfo.path).toBe(
-        AGENT_GATEWAY_HOST_EXTENSION_PATH,
-      );
-    }
-    const initialActive = session.getActiveToolNames();
-    expect(initialActive).toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
-    expect(initialActive).not.toContain("browser_open");
-    expect(initialActive).not.toContain("omnimind_list_threads");
-
-    const loader = session.agent.state.tools.find(
-      (tool) => tool.name === AGENT_GATEWAY_HOST_LOADER_NAME,
-    );
-    expect(loader).toBeDefined();
-    const result = await loader!.execute(
-      "load-browser",
-      { query: "open browser" },
-      undefined,
-      undefined,
-    );
-    expect(result.details).toEqual({ matches: ["browser_open"], added: ["browser_open"] });
-    expect(result.addedToolNames).toEqual(["browser_open"]);
     expect(session.getActiveToolNames()).toEqual(
-      expect.arrayContaining([...initialActive, "browser_open"]),
+      expect.arrayContaining(["team_tool", "browser_open", "omnimind_list_threads"]),
     );
-    expect(session.getActiveToolNames()).not.toContain("omnimind_list_threads");
-    expect(JSON.stringify(result)).not.toContain("inputSchema");
-
-    const controller = new AbortController();
-    await expect(
-      session
-        .getToolDefinition("browser_open")!
-        .execute(
-          "open-browser",
-          { url: "https://example.com" },
-          controller.signal,
-          undefined,
-          {} as never,
-        ),
-    ).resolves.toMatchObject({ content: [{ type: "text", text: "opened" }] });
-    expect(calls).toHaveLength(1);
-    expect(calls[0]?.signal).toBe(controller.signal);
-    expect(calls[0]?.body).toMatchObject({
-      method: "tools/call",
-      params: { name: "browser_open", arguments: { url: "https://example.com" } },
+    const inspection = inspectAgentGatewayHostExtensionRegistration({
+      extensions: resourceLoader.getExtensions(),
+      tools: session.getAllTools(),
+    });
+    expect(inspection).toMatchObject({
+      available: true,
+      deliveredToolNames: ["browser_open", "omnimind_list_threads"],
+      collidedToolNames: [],
     });
   });
 
-  it("keeps a foreign same-name winner opaque and degrades only the collided claim", async () => {
-    const diagnostics: AgentGatewayHostDiagnostic[] = [];
+  it("reruns the async factory on native reload and replaces the Host catalog", async () => {
+    let catalog: ReadonlyArray<AgentGatewayMcpToolDescriptor> = [descriptors[0]];
+    let factoryCalls = 0;
     const handle = makeAgentGatewayHostExtension({
-      descriptors,
       connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
       defineTool: (tool) => runtime.defineTool(tool),
-      onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
+      loadDescriptors: async () => {
+        factoryCalls += 1;
+        return catalog;
+      },
     });
-    if (!handle) throw new Error("expected Host Extension");
-    const foreign = foreignExtension({
-      name: "foreign-browser",
-      toolNames: ["browser_open"],
-      deactivateOnStart: true,
-    });
-    const { session } = await createSession({
-      runtime,
-      extensions: [foreign, handle.extension],
-    });
-
-    expect(
-      session.getAllTools().find((tool) => tool.name === "browser_open")?.sourceInfo.path,
-    ).toBe("<inline:foreign-browser>");
-    expect(diagnostics).toContainEqual({ kind: "tool-collision", name: "browser_open" });
-    expect(session.getActiveToolNames()).not.toContain("browser_open");
-
-    const loader = session.getToolDefinition(AGENT_GATEWAY_HOST_LOADER_NAME)!;
-    const result = await loader.execute(
-      "load-collided-browser",
-      { query: "open browser" },
-      undefined,
-      undefined,
-      {} as never,
-    );
-    expect(result.details).toEqual({ matches: [], added: [] });
-    expect(session.getActiveToolNames()).not.toContain("browser_open");
-  });
-
-  it("does not stop the Session or rewrite active tools when the loader name collides", async () => {
-    const diagnostics: AgentGatewayHostDiagnostic[] = [];
-    const handle = makeAgentGatewayHostExtension({
-      descriptors,
-      connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
-      defineTool: (tool) => runtime.defineTool(tool),
-      onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
-    });
-    if (!handle) throw new Error("expected Host Extension");
-    const foreign = foreignExtension({
-      name: "foreign-loader",
-      toolNames: [AGENT_GATEWAY_HOST_LOADER_NAME],
-    });
-    const { session } = await createSession({
-      runtime,
-      extensions: [foreign, handle.extension],
-    });
-
-    expect(diagnostics).toContainEqual({
-      kind: "loader-collision",
-      name: AGENT_GATEWAY_HOST_LOADER_NAME,
-    });
-    expect(session.getActiveToolNames()).toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
+    const { session } = await createSession({ runtime, extensions: [handle.extension] });
+    expect(factoryCalls).toBe(1);
     expect(session.getActiveToolNames()).toContain("browser_open");
+
+    catalog = [descriptors[1]];
+    await session.reload();
+
+    expect(factoryCalls).toBe(2);
     expect(session.getActiveToolNames()).toContain("omnimind_list_threads");
-    expect(
-      session.getAllTools().find((tool) => tool.name === AGENT_GATEWAY_HOST_LOADER_NAME)?.sourceInfo
-        .path,
-    ).toBe("<inline:foreign-loader>");
-
-    const inspection = inspectAgentGatewayHostExtensionRegistration({
-      extensions: session.resourceLoader.getExtensions(),
-      candidateToolNames: handle.candidateToolNames,
-    });
-    expect(inspection.available).toBe(false);
-    expect(
-      deactivateUnavailableAgentGatewayHostProjection({
-        session,
-        candidateToolNames: handle.candidateToolNames,
-      }),
-    ).toEqual(expect.arrayContaining(["browser_open", "omnimind_list_threads"]));
-    expect(session.getActiveToolNames()).toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
-    expect(session.getActiveToolNames()).not.toContain("browser_open");
-    expect(session.getActiveToolNames()).not.toContain("omnimind_list_threads");
+    expect(session.getAllTools().map(({ name }) => name)).not.toContain("browser_open");
   });
 
-  it("removes an empty Host loader without disabling foreign collided winners", async () => {
+  it("keeps the Session alive and recovers a transient catalog failure on native reload", async () => {
+    let available = false;
     const handle = makeAgentGatewayHostExtension({
-      descriptors,
       connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
       defineTool: (tool) => runtime.defineTool(tool),
+      loadDescriptors: async () => {
+        if (!available) throw new Error("transient catalog failure");
+        return descriptors;
+      },
     });
-    if (!handle) throw new Error("expected Host Extension");
-    const foreign = foreignExtension({
-      name: "foreign-host-names",
-      toolNames: handle.candidateToolNames,
-    });
-    const { session } = await createSession({
+    const { session, resourceLoader } = await createSession({
       runtime,
-      extensions: [foreign, handle.extension],
+      extensions: [foreignExtension("team_tool"), handle.extension],
     });
 
-    const inspection = inspectAgentGatewayHostExtensionRegistration({
-      extensions: session.resourceLoader.getExtensions(),
-      candidateToolNames: handle.candidateToolNames,
-    });
-    expect(inspection).toMatchObject({ available: false, ownedToolNames: [] });
+    expect(session.getActiveToolNames()).toContain("team_tool");
+    expect(session.getActiveToolNames()).not.toContain("browser_open");
+    expect(
+      resourceLoader
+        .getExtensions()
+        .errors.map(({ error }) => error)
+        .join("\n"),
+    ).toContain("transient catalog failure");
+
+    available = true;
+    await session.reload();
+
     expect(session.getActiveToolNames()).toEqual(
-      expect.arrayContaining([...handle.candidateToolNames, AGENT_GATEWAY_HOST_LOADER_NAME]),
+      expect.arrayContaining(["team_tool", "browser_open", "omnimind_list_threads"]),
     );
     expect(
-      deactivateUnavailableAgentGatewayHostProjection({
-        session,
-        candidateToolNames: handle.candidateToolNames,
-      }),
-    ).toEqual([AGENT_GATEWAY_HOST_LOADER_NAME]);
-    expect(session.getActiveToolNames()).toEqual(
-      expect.arrayContaining([...handle.candidateToolNames]),
-    );
-    expect(session.getActiveToolNames()).not.toContain(AGENT_GATEWAY_HOST_LOADER_NAME);
+      handle.inspectRegistration({
+        extensions: resourceLoader.getExtensions(),
+        tools: session.getAllTools(),
+      }).deliveredToolNames,
+    ).toEqual(["browser_open", "omnimind_list_threads"]);
   });
 
-  it("does not claim or deactivate a customTools winner with the same name", async () => {
-    const diagnostics: AgentGatewayHostDiagnostic[] = [];
+  it("keeps a foreign same-name winner and degrades only the collided Host capability", async () => {
     const handle = makeAgentGatewayHostExtension({
-      descriptors,
       connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
       defineTool: (tool) => runtime.defineTool(tool),
-      onDiagnostic: (diagnostic) => diagnostics.push(diagnostic),
+      loadDescriptors: async () => descriptors,
     });
-    if (!handle) throw new Error("expected Host Extension");
-    const customBrowser = runtime.defineTool({
-      name: "browser_open",
-      label: "Custom browser",
-      description: "Custom browser winner",
-      parameters: { type: "object", properties: {} } as StockPi.ToolDefinition["parameters"],
-      execute: async () => ({
-        content: [{ type: "text", text: "custom" }],
-        details: { source: "custom" },
-      }),
-    });
-    const { session } = await createSession({
+    const { session, resourceLoader } = await createSession({
       runtime,
-      extensions: [handle.extension],
-      customTools: [customBrowser],
+      extensions: [foreignExtension("browser_open"), handle.extension],
+    });
+    const inspection = inspectAgentGatewayHostExtensionRegistration({
+      extensions: resourceLoader.getExtensions(),
+      tools: session.getAllTools(),
     });
 
-    const winner = session.getAllTools().find((tool) => tool.name === "browser_open");
-    expect(winner?.sourceInfo.path).not.toBe(AGENT_GATEWAY_HOST_EXTENSION_PATH);
-    expect(diagnostics).toContainEqual({ kind: "tool-collision", name: "browser_open" });
-    expect(session.getActiveToolNames()).toContain("browser_open");
-  });
-
-  it("intersects loader matches with the current policy snapshot", async () => {
-    const handle = makeAgentGatewayHostExtension({
-      descriptors,
-      connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
-      defineTool: (tool) => runtime.defineTool(tool),
-      loadCurrentlyExposedToolNames: async () => new Set(["omnimind_list_threads"]),
-    });
-    if (!handle) throw new Error("expected Host Extension");
-    const { session } = await createSession({ runtime, extensions: [handle.extension] });
-    const loader = session.agent.state.tools.find(
-      (tool) => tool.name === AGENT_GATEWAY_HOST_LOADER_NAME,
-    )!;
-    const browser = await loader.execute(
-      "disabled-browser",
-      { query: "open browser" },
-      undefined,
-      undefined,
-    );
-    expect(browser.details).toEqual({ matches: [], added: [] });
-    expect(session.getActiveToolNames()).not.toContain("browser_open");
-  });
-
-  it("does not treat an active schema as live Gateway authorization", async () => {
-    let authorized = true;
-    const fetch = async (_request: string | URL | Request, init?: RequestInit) => {
-      const body = JSON.parse(String(init?.body)) as { readonly id: string };
-      return Response.json({
-        jsonrpc: "2.0",
-        id: body.id,
-        result: authorized
-          ? { content: [{ type: "text", text: "opened" }] }
-          : {
-              isError: true,
-              content: [{ type: "text", text: "Browser is disabled by current policy." }],
-            },
-      });
-    };
-    const handle = makeAgentGatewayHostExtension({
-      descriptors,
-      connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
-      defineTool: (tool) => runtime.defineTool(tool),
-      fetch,
-    });
-    if (!handle) throw new Error("expected Host Extension");
-    const { session } = await createSession({ runtime, extensions: [handle.extension] });
-    const loader = session.getToolDefinition(AGENT_GATEWAY_HOST_LOADER_NAME)!;
-    await loader.execute(
-      "load-browser",
-      { query: "open browser" },
-      undefined,
-      undefined,
-      {} as never,
-    );
-    expect(session.getActiveToolNames()).toContain("browser_open");
-
-    authorized = false;
+    expect(inspection.deliveredToolNames).toEqual(["omnimind_list_threads"]);
+    expect(inspection.collidedToolNames).toEqual(["browser_open"]);
+    expect(
+      renderDeliveredAgentGatewayHostGuidance({
+        descriptors,
+        tools: session.getAllTools(),
+      }),
+    ).not.toContain("thread-scoped in-app page");
     await expect(
       session
         .getToolDefinition("browser_open")!
-        .execute("stale-browser", {}, undefined, undefined, {} as never),
-    ).rejects.toThrow("Browser is disabled by current policy.");
-    expect(session.getActiveToolNames()).toContain("browser_open");
+        .execute("foreign", {}, undefined, undefined, {} as never),
+    ).resolves.toMatchObject({ details: { source: "foreign" } });
+    expect(() =>
+      assertAgentGatewayHostToolsDelivered({
+        tools: session.getAllTools(),
+        requiredNames: ["browser_open"],
+        currentlyExposedNames: new Set(["browser_open"]),
+      }),
+    ).toThrow("Required OmniMind Host tools are unavailable");
   });
-});
 
-describe("AgentGateway Host Extension catalog admission", () => {
-  it("rejects untrusted and duplicate descriptors and omits an empty shell", () => {
-    const base = {
+  it("contains an invalid catalog to the Host Extension diagnostic", async () => {
+    const handle = makeAgentGatewayHostExtension({
       connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
-      defineTool: (tool: StockPi.ToolDefinition) => tool,
-    };
-    expect(makeAgentGatewayHostExtension({ ...base, descriptors: [] })).toBeNull();
-    expect(() =>
-      makeAgentGatewayHostExtension({
-        ...base,
-        descriptors: [
-          {
-            name: descriptors[0].name,
-            description: descriptors[0].description,
-            inputSchema: descriptors[0].inputSchema,
-            group: descriptors[0].group,
-          },
-        ],
-      }),
-    ).toThrow("Untrusted AgentGateway tool descriptor");
-    expect(() =>
-      makeAgentGatewayHostExtension({
-        ...base,
-        descriptors: [descriptors[0], descriptors[0]],
-      }),
-    ).toThrow("Duplicate AgentGateway Host tool name");
+      defineTool: (tool) => runtime.defineTool(tool),
+      loadDescriptors: async () => [descriptors[0], descriptors[0]],
+    });
+    const { session, resourceLoader } = await createSession({
+      runtime,
+      extensions: [foreignExtension("team_tool"), handle.extension],
+    });
+    const inspection = inspectAgentGatewayHostExtensionRegistration({
+      extensions: resourceLoader.getExtensions(),
+      tools: session.getAllTools(),
+    });
+
+    expect(session.getActiveToolNames()).toContain("team_tool");
+    expect(inspection.available).toBe(false);
+    expect(inspection.diagnostics.join("\n")).toContain("Duplicate AgentGateway tool name");
   });
 });
