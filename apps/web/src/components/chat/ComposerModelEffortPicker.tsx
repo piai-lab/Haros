@@ -27,6 +27,7 @@ import {
   COMPOSER_PICKER_TRIGGER_TEXT_CLASS_NAME,
 } from "./composerPickerStyles";
 import { ComposerPickerMenuPopup, ComposerPickerMenuSubPopup } from "./ComposerPickerMenuPopup";
+import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentation";
 import { renderProviderTraitsMenuContent } from "./composerProviderRegistry";
 import { ProviderModelMenuItems, resolveProviderModelLabel } from "./ProviderModelPicker";
 import { resolveTraitsTriggerSummary } from "./TraitsPicker";
@@ -73,7 +74,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
         model: props.model,
         modelOptionsByProvider: props.modelOptionsByProvider,
       })
-    : t("composer.noAvailableModel");
+    : t(resolveComposerModelFallbackMessageKey(props.catalogState));
   const traitsSummary = resolveTraitsTriggerSummary({
     provider: props.provider,
     model: props.model,

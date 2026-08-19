@@ -11161,7 +11161,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
           Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
             (button) =>
               button.getClientRects().length > 0 &&
-              button.textContent?.includes(EN_MESSAGES["composer.noAvailableModel"]),
+              button.textContent?.includes(EN_MESSAGES["composer.selectModel"]),
           ) ?? null,
         "Unable to find the deferred Composer model trigger.",
       );

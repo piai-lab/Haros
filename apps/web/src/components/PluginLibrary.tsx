@@ -56,6 +56,7 @@ import {
 import {
   isProviderDiscoverySessionActive,
   providerComposerCapabilitiesQueryOptions,
+  providerDiscoveryQueryKeys,
   providerPluginsQueryOptions,
   providerSkillsQueryOptions,
   supportsPluginDiscovery,
@@ -673,7 +674,15 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
       if (action.type === "reload" && "state" in result) {
         setPackageReloadState(result.state);
       }
-      await queryClient.invalidateQueries({ queryKey: ecosystemQueryKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ecosystemQueryKey }),
+        // An install/update/remove/filter/reload can change the global Extension
+        // providers registered into passive OmniMind model discovery. Keep the
+        // existing provider-prefix invalidation as the single refresh boundary.
+        queryClient.invalidateQueries({
+          queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+        }),
+      ]);
     },
     onError: () => setPackageError(true),
   });

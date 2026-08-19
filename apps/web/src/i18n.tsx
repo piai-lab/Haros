@@ -1697,6 +1697,7 @@ export const EN_MESSAGES = {
   "composer.engineNotInstalled": "Not installed",
   "composer.engineLimited": "Limited",
   "composer.engineComingSoon": "Coming soon",
+  "composer.selectModel": "Select model",
   "composer.noAvailableModel": "No available model",
   "composer.noAvailableModels": "No available models",
   "composer.noAvailableModelsHint":
@@ -5214,6 +5215,7 @@ export const ZH_CN_MESSAGES = {
   "composer.engineNotInstalled": "未安装",
   "composer.engineLimited": "受限",
   "composer.engineComingSoon": "即将推出",
+  "composer.selectModel": "选择模型",
   "composer.noAvailableModel": "没有可用模型",
   "composer.noAvailableModels": "当前没有可用模型",
   "composer.noAvailableModelsHint": "请先登录、添加模型或刷新此引擎的模型目录。",

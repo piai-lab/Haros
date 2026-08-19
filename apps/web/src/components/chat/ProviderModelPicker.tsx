@@ -50,6 +50,8 @@ import {
 } from "../../lib/modelFavorites";
 import { Skeleton } from "../ui/skeleton";
 import { useI18n } from "~/i18n";
+import type { ProviderModelCatalogState } from "../../hooks/useProviderModelCatalog";
+import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentation";
 
 function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
   value: ProviderKind;
@@ -446,6 +448,7 @@ type ProviderModelPickerProps = {
   providers?: ReadonlyArray<ServerProviderStatus>;
   modelOptionsByProvider: Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
   loadingModelProviders?: Partial<Record<ProviderKind, boolean>>;
+  catalogStateByProvider?: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
   hiddenProviders?: ReadonlyArray<ProviderKind>;
   providerOrder?: ReadonlyArray<ProviderKind>;
   activeProviderIconClassName?: string;
@@ -468,6 +471,9 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
   const selectionCommitTimerRef = useRef<number | null>(null);
   const isMenuOpen = open ?? uncontrolledMenuOpen;
   const activeProvider = props.lockedProvider ?? props.provider;
+  const activeCatalogState =
+    props.catalogStateByProvider?.[activeProvider] ??
+    (props.loadingModelProviders?.[activeProvider] ? "checking" : null);
   const selectedModelLabel = props.model
     ? resolveProviderModelLabel({
         provider: props.provider,
@@ -475,7 +481,9 @@ export const ProviderModelPicker = function ProviderModelPicker(props: ProviderM
         model: props.model,
         modelOptionsByProvider: props.modelOptionsByProvider,
       })
-    : t("composer.noAvailableModel");
+    : activeCatalogState
+      ? t(resolveComposerModelFallbackMessageKey(activeCatalogState))
+      : t("composer.noAvailableModel");
   const ProviderIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[activeProvider];
 
   const setMenuOpen = (nextOpen: boolean) => {

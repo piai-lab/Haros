@@ -492,6 +492,7 @@ import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import { AVAILABLE_PROVIDER_OPTIONS, resolveProviderModelLabel } from "./chat/ProviderModelPicker";
 import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { ComposerEnginePicker } from "./chat/ComposerEnginePicker";
+import { resolveComposerModelFallbackMessageKey } from "./chat/modelCatalogPresentation";
 import { resolveTraitsTriggerSummary } from "./chat/TraitsPicker";
 import { ComposerCommandItem, ComposerCommandMenu } from "./chat/ComposerCommandMenu";
 import {
@@ -10136,7 +10137,7 @@ export default function ChatView({
         model: selectedModelForPickerWithCustomFallback,
         modelOptionsByProvider: selectableModelOptionsByProvider,
       })
-    : t("composer.noAvailableModel");
+    : t(resolveComposerModelFallbackMessageKey(catalogStateByProvider[selectedProvider]));
   const composerFooterTraitsSummary = resolveTraitsTriggerSummary({
     provider: selectedProvider,
     model: selectedModelForPickerWithCustomFallback,
@@ -12926,7 +12927,6 @@ export default function ChatView({
               </Suspense>
             </div>
           ) : null}
-
         </div>
         {/* end chat column */}
 

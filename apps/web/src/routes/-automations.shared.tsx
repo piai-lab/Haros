@@ -1013,6 +1013,7 @@ export function AutomationModelPicker({
   });
   const {
     modelOptionsByProvider,
+    catalogStateByProvider,
     loadingModelProviders,
     runtimeModelsByProvider,
     selectedRuntimeModel,
@@ -1049,6 +1050,7 @@ export function AutomationModelPicker({
       lockedProvider={null}
       providers={providerStatuses}
       modelOptionsByProvider={modelOptionsByProvider}
+      catalogStateByProvider={catalogStateByProvider}
       loadingModelProviders={loadingModelProviders}
       hiddenProviders={settings.hiddenProviders}
       providerOrder={settings.providerOrder}

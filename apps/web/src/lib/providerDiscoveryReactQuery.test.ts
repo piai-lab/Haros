@@ -11,6 +11,7 @@ import {
   isProviderDiscoverySessionActive,
   isInitialModelDiscoveryPending,
   providerCommandsQueryOptions,
+  providerDiscoveryQueryKeys,
   providerModelsQueryOptions,
   providerSkillsQueryOptions,
 } from "./providerDiscoveryReactQuery";
@@ -62,6 +63,93 @@ describe("isInitialModelDiscoveryPending", () => {
 });
 
 describe("providerModelsQueryOptions", () => {
+  it("shares passive OmniMind discovery across Projects without sending a cwd", async () => {
+    const catalog = {
+      models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
+      source: "pi.sdk",
+      cached: false,
+    };
+    const listModels = mockListModels(vi.fn().mockResolvedValue(catalog));
+    const firstProject = providerModelsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project-a",
+    });
+    const secondProject = providerModelsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project-b",
+    });
+
+    expect(firstProject.queryKey).toEqual(secondProject.queryKey);
+
+    const queryClient = new QueryClient();
+    await expect(queryClient.fetchQuery(firstProject)).resolves.toEqual(catalog);
+    await expect(queryClient.fetchQuery(secondProject)).resolves.toEqual(catalog);
+    expect(listModels).toHaveBeenCalledTimes(1);
+    expect(listModels).toHaveBeenCalledWith({ provider: "omnimind" });
+    expect(queryClient.getQueryState(secondProject.queryKey)).toMatchObject({ status: "success" });
+  });
+
+  it("keeps genuinely Project-scoped Engine catalogs separated by cwd", async () => {
+    const catalog = {
+      models: [{ slug: "project-model", name: "Project model" }],
+      source: "opencode",
+      cached: false,
+    };
+    const listModels = mockListModels(vi.fn().mockResolvedValue(catalog));
+    const firstProject = providerModelsQueryOptions({
+      provider: "opencode",
+      binaryPath: "/bin/opencode",
+      cwd: "/tmp/project-a",
+    });
+    const secondProject = providerModelsQueryOptions({
+      provider: "opencode",
+      binaryPath: "/bin/opencode",
+      cwd: "/tmp/project-b",
+    });
+
+    expect(firstProject.queryKey).not.toEqual(secondProject.queryKey);
+
+    const queryClient = new QueryClient();
+    await queryClient.fetchQuery(firstProject);
+    await queryClient.fetchQuery(secondProject);
+    expect(listModels).toHaveBeenCalledTimes(2);
+    expect(listModels).toHaveBeenNthCalledWith(1, {
+      provider: "opencode",
+      binaryPath: "/bin/opencode",
+      cwd: "/tmp/project-a",
+    });
+    expect(listModels).toHaveBeenNthCalledWith(2, {
+      provider: "opencode",
+      binaryPath: "/bin/opencode",
+      cwd: "/tmp/project-b",
+    });
+  });
+
+  it("refreshes the shared OmniMind catalog after provider-prefix invalidation", async () => {
+    const listModels = mockListModels(
+      vi.fn().mockResolvedValue({ models: [], source: "pi.sdk", cached: false }),
+    );
+    const firstProject = providerModelsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project-a",
+    });
+    const secondProject = providerModelsQueryOptions({
+      provider: "omnimind",
+      cwd: "/tmp/project-b",
+    });
+    const queryClient = new QueryClient();
+
+    await queryClient.fetchQuery(firstProject);
+    await queryClient.invalidateQueries({
+      queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+    });
+    await queryClient.fetchQuery(secondProject);
+
+    expect(listModels).toHaveBeenCalledTimes(2);
+    expect(listModels).toHaveBeenNthCalledWith(1, { provider: "omnimind" });
+    expect(listModels).toHaveBeenNthCalledWith(2, { provider: "omnimind" });
+  });
+
   it("fails fast for Cursor so a missing CLI settles instead of spinning (#103)", async () => {
     const listModels = mockListModels(
       vi.fn().mockRejectedValue(new Error("Cursor CLI is not installed or not on PATH")),

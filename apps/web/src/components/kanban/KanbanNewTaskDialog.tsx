@@ -201,6 +201,7 @@ export function KanbanNewTaskDialog({
   );
   const {
     modelOptionsByProvider,
+    catalogStateByProvider,
     loadingModelProviders,
     runtimeModelsByProvider,
     selectedRuntimeModel,
@@ -596,10 +597,11 @@ export function KanbanNewTaskDialog({
                   <ProviderModelPicker
                     compact
                     provider={selectedProvider}
-                    model={selectedModel ?? ""}
+                    model={selectedModel}
                     lockedProvider={null}
                     providers={providerStatuses}
                     modelOptionsByProvider={modelOptionsByProvider}
+                    catalogStateByProvider={catalogStateByProvider}
                     loadingModelProviders={loadingModelProviders}
                     hiddenProviders={settings.hiddenProviders}
                     providerOrder={settings.providerOrder}
