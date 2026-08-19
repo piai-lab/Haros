@@ -251,6 +251,8 @@ describe("ChatTranscriptPane", () => {
       await vi.waitFor(() => {
         expect(document.querySelector('[data-transcript-selection-action="true"]')).not.toBeNull();
       });
+      await expect.element(page.getByRole("button", { name: "Highlight" })).toBeVisible();
+      await expect.element(page.getByRole("button", { name: "Underline" })).toBeVisible();
       await page.getByRole("button", { name: "Add to Chat" }).click();
 
       expect(addedSelections).toEqual(["Selectable assistant answer"]);

@@ -170,6 +170,7 @@ interface EditorChatPaneResizeState {
   session: PanelResizeSession | null;
   onPointerMove: (event: PointerEvent) => void;
   onPointerEnd: (event: PointerEvent) => void;
+  onPointerCancel: (event: PointerEvent) => void;
 }
 
 function DiffFileRow(props: {
@@ -457,6 +458,7 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
       session: null,
       onPointerMove: () => undefined,
       onPointerEnd: () => undefined,
+      onPointerCancel: () => undefined,
     };
 
     resizeState.onPointerMove = (moveEvent) => {
@@ -484,19 +486,28 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
       }
       resizeState.session?.finish("commit");
     };
+    resizeState.onPointerCancel = (cancelEvent) => {
+      if (cancelEvent.pointerId !== resizeState.pointerId) {
+        return;
+      }
+      resizeState.session?.finish("cancel");
+    };
 
     resizeState.session = createPanelResizeSession({
       cursor: "col-resize",
-      onFinish: () => {
+      onFinish: (outcome) => {
         if (resizeState.rafId !== null) {
           window.cancelAnimationFrame(resizeState.rafId);
           resizeState.rafId = null;
         }
         window.removeEventListener("pointermove", resizeState.onPointerMove);
         window.removeEventListener("pointerup", resizeState.onPointerEnd);
-        window.removeEventListener("pointercancel", resizeState.onPointerEnd);
-        setChatPaneWidth(resizeState.pendingWidth);
-        storeEditorChatPaneWidth(resizeState.pendingWidth);
+        window.removeEventListener("pointercancel", resizeState.onPointerCancel);
+        const finalWidth = outcome === "commit" ? resizeState.pendingWidth : resizeState.startWidth;
+        setChatPaneWidth(finalWidth);
+        if (outcome === "commit") {
+          storeEditorChatPaneWidth(finalWidth);
+        }
         if (chatPaneResizeStateRef.current === resizeState) {
           chatPaneResizeStateRef.current = null;
         }
@@ -505,7 +516,7 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
     chatPaneResizeStateRef.current = resizeState;
     window.addEventListener("pointermove", resizeState.onPointerMove);
     window.addEventListener("pointerup", resizeState.onPointerEnd);
-    window.addEventListener("pointercancel", resizeState.onPointerEnd);
+    window.addEventListener("pointercancel", resizeState.onPointerCancel);
   };
 
   const handleChatPaneResizeDoubleClick = () => {

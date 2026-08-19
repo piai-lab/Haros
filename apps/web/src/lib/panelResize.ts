@@ -16,6 +16,8 @@ export interface PanelResizeSession {
   finish: (outcome: PanelResizeOutcome) => void;
 }
 
+let activePanelResizeSession: PanelResizeSession | null = null;
+
 /**
  * Owns the document-wide part of one resize gesture. Pointer events can disappear
  * when Electron loses focus, a native surface takes over, or React unmounts the
@@ -26,14 +28,24 @@ export function createPanelResizeSession(input: {
   cursor: "col-resize" | "row-resize";
   onFinish: (outcome: PanelResizeOutcome) => void;
 }): PanelResizeSession {
+  // Body cursor/user-select are document-global. End the previous owner before
+  // reading the restoration baseline so overlapping entry points cannot restore
+  // each other's transient resize styles in reverse order.
+  activePanelResizeSession?.finish("cancel");
+
   const previousBodyCursor = document.body.style.cursor;
   const previousBodyUserSelect = document.body.style.userSelect;
   let active = true;
+  let session: PanelResizeSession;
 
   const finish = (outcome: PanelResizeOutcome) => {
     if (!active) return;
     active = false;
+    if (activePanelResizeSession === session) {
+      activePanelResizeSession = null;
+    }
     window.removeEventListener("blur", cancel);
+    window.removeEventListener("keydown", handleKeyDown);
     document.removeEventListener("visibilitychange", handleVisibilityChange);
     document.body.style.cursor = previousBodyCursor;
     document.body.style.userSelect = previousBodyUserSelect;
@@ -45,13 +57,22 @@ export function createPanelResizeSession(input: {
       cancel();
     }
   };
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancel();
+    }
+  };
 
   document.body.style.cursor = input.cursor;
   document.body.style.userSelect = "none";
   window.addEventListener("blur", cancel);
+  window.addEventListener("keydown", handleKeyDown);
   document.addEventListener("visibilitychange", handleVisibilityChange);
 
-  return { finish };
+  session = { finish };
+  activePanelResizeSession = session;
+  return session;
 }
 
 // Minimum width (px) the composer's left controls cluster needs before it overflows.

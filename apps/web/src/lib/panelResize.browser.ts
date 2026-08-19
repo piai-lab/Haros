@@ -155,4 +155,43 @@ describe("createPanelResizeSession", () => {
     expect(document.body.style.userSelect).toBe("");
     expect(onFinish).toHaveBeenCalledWith("cancel");
   });
+
+  it("cancels the previous document owner before a different resize starts", () => {
+    const firstFinish = vi.fn();
+    const secondFinish = vi.fn();
+    const firstSession = createPanelResizeSession({
+      cursor: "col-resize",
+      onFinish: firstFinish,
+    });
+
+    const secondSession = createPanelResizeSession({
+      cursor: "row-resize",
+      onFinish: secondFinish,
+    });
+
+    expect(firstFinish).toHaveBeenCalledTimes(1);
+    expect(firstFinish).toHaveBeenCalledWith("cancel");
+    expect(document.body.style.cursor).toBe("row-resize");
+    expect(document.body.style.userSelect).toBe("none");
+
+    firstSession.finish("commit");
+    secondSession.finish("commit");
+
+    expect(document.body.style.cursor).toBe("");
+    expect(document.body.style.userSelect).toBe("");
+    expect(secondFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets Escape cancel the active resize without leaving text selection disabled", () => {
+    const onFinish = vi.fn();
+    createPanelResizeSession({ cursor: "col-resize", onFinish });
+    const escape = new KeyboardEvent("keydown", { cancelable: true, key: "Escape" });
+
+    window.dispatchEvent(escape);
+
+    expect(escape.defaultPrevented).toBe(true);
+    expect(document.body.style.cursor).toBe("");
+    expect(document.body.style.userSelect).toBe("");
+    expect(onFinish).toHaveBeenCalledWith("cancel");
+  });
 });

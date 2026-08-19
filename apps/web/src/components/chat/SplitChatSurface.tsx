@@ -119,6 +119,8 @@ function SplitPaneEmbeddedPanel(props: {
   const panelWidthStorageKey =
     props.panel === "browser" ? "browser" : props.panel === "diff" ? "diff" : "panel";
   const storageKey = `${RIGHT_PANEL_SIDEBAR_WIDTH_STORAGE_KEY}:${props.splitViewId}:${props.paneId}:${panelWidthStorageKey}`;
+  const storageKeyRef = useRef(storageKey);
+  storageKeyRef.current = storageKey;
   const defaultPanelWidth =
     props.panel === "browser"
       ? BROWSER_SPLIT_PANE_PANEL_DEFAULT_WIDTH_PX
@@ -137,7 +139,7 @@ function SplitPaneEmbeddedPanel(props: {
       ? panelWidthState.value
       : (getLocalStorageItem(storageKey, Schema.Finite) ?? defaultPanelWidth);
 
-  const shouldAcceptEmbeddedWidth = (nextWidth: number) => {
+  const shouldAcceptEmbeddedWidth = (nextWidth: number, currentWidth: number) => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return true;
     return canComposerHandlePanelWidth({
@@ -147,7 +149,7 @@ function SplitPaneEmbeddedPanel(props: {
         wrapper.style.width = `${width}px`;
       },
       resetWidth: () => {
-        wrapper.style.width = `${panelWidth}px`;
+        wrapper.style.width = `${currentWidth}px`;
       },
     });
   };
@@ -166,16 +168,22 @@ function SplitPaneEmbeddedPanel(props: {
     const maxWidth = Math.max(minPanelWidth, parent.clientWidth - SPLIT_PANE_CHAT_MIN_WIDTH);
     const resizeOverlay = createPanelResizeOverlay();
     const pointerId = event.pointerId;
+    let latestWidth = startWidth;
+    let hasAcceptedResize = false;
 
     const onPointerMove = (moveEvent: PointerEvent) => {
       if (moveEvent.pointerId !== pointerId) return;
       const delta = startX - moveEvent.clientX;
       const nextWidth = Math.max(minPanelWidth, Math.min(maxWidth, startWidth + delta));
-      if (!shouldAcceptEmbeddedWidth(nextWidth)) {
+      if (Math.abs(nextWidth - latestWidth) < 0.5) {
         return;
       }
-      setPanelWidthState({ key: storageKey, value: nextWidth });
-      setLocalStorageItem(storageKey, nextWidth, Schema.Finite);
+      if (!shouldAcceptEmbeddedWidth(nextWidth, latestWidth)) {
+        return;
+      }
+      latestWidth = nextWidth;
+      hasAcceptedResize = true;
+      wrapper.style.width = `${nextWidth}px`;
     };
 
     const onPointerUp = (endEvent: PointerEvent) => {
@@ -188,7 +196,7 @@ function SplitPaneEmbeddedPanel(props: {
     };
     const resizeSession = createPanelResizeSession({
       cursor: "col-resize",
-      onFinish: () => {
+      onFinish: (outcome) => {
         if (resizeSessionRef.current === resizeSession) {
           resizeSessionRef.current = null;
         }
@@ -196,6 +204,12 @@ function SplitPaneEmbeddedPanel(props: {
         window.removeEventListener("pointerup", onPointerUp);
         window.removeEventListener("pointercancel", onPointerCancel);
         removePanelResizeOverlay(resizeOverlay);
+        if (outcome === "commit" && hasAcceptedResize) {
+          setPanelWidthState({ key: storageKey, value: latestWidth });
+          setLocalStorageItem(storageKey, latestWidth, Schema.Finite);
+        } else if (storageKeyRef.current === storageKey) {
+          wrapper.style.width = `${panelWidth}px`;
+        }
       },
     });
 
