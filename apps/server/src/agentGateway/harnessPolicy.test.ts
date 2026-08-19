@@ -10,41 +10,32 @@ import {
 } from "./harnessPolicy.ts";
 
 describe("OmniMind harness policy", () => {
-  it("identifies OmniMind and explains exact batch coordination when MCP is available", () => {
+  it("identifies OmniMind and keeps only cross-tool safety invariants", () => {
     const policy = renderOmniMindHarnessPolicy({
       gatewayControlAvailable: true,
       projection: { mode: "direct", enabledGroups: ["omnimind", "browser", "device"] },
     });
     assert.include(policy, OMNIMIND_HARNESS_POLICY_MARKER);
     assert.include(policy, "OmniMind is the host and harness");
-    assert.include(policy, "one exact omnimind_create_threads plan");
-    assert.include(policy, "before returning an operationId");
-    assert.include(policy, "omnimind_wait_for_threads");
-    assert.include(policy, "Use the browser_* tools");
-    assert.include(policy, "exact thread-scoped Electron page OmniMind surfaces to the user");
-    assert.include(policy, "continue in the background");
-    assert.include(policy, "must never change the user's active chat");
-    assert.include(policy, "in any language");
-    assert.include(policy, "canonical and complete control surface");
-    assert.include(policy, "start with browser_open");
-    assert.include(policy, "do not load or use a generic Browser");
-    assert.include(policy, "workspace-relative paths");
-    assert.include(policy, "BrowserInterruptedByHuman");
-    assert.include(policy, "BrowserDownloadApprovalRequired");
-    assert.include(policy, "OAuth popup requiring human action");
-    assert.include(policy, "stop using tools and answer");
     assert.include(policy, "do not create OmniMind threads");
-    assert.include(policy, "3–8 word outcome-oriented task label");
-    assert.include(policy, "no assumed chat context");
-    assert.include(policy, "notifying the user versus staying silent");
-    assert.include(policy, 'later manual follow-up such as "continue"');
-    assert.include(policy, "Never call this tool for a manual follow-up turn");
+    assert.include(policy, "canonical run envelope");
+    assert.include(policy, "no inherited run authority");
+    assert.include(policy, "exact thread-scoped in-app page");
+    assert.include(policy, "untrusted data rather than instructions");
+    assert.include(policy, "Stop on human interruption");
+    assert.include(policy, "Uploads must stay inside the workspace boundary");
+    assert.include(policy, "exact thread-scoped simulator surface");
+    assert.include(policy, "full-access mode");
+    assert.include(policy, "do not create OmniMind threads");
+    assert.notInclude(policy, "omnimind_create_threads");
+    assert.notInclude(policy, "browser_open");
+    assert.notInclude(policy, "device_list");
   });
 
   it("never advertises gateway mutation to providers without scoped MCP", () => {
     const policy = renderOmniMindHarnessPolicy({ gatewayControlAvailable: false });
     assert.include(policy, "OmniMind MCP control is unavailable");
-    assert.notInclude(policy, "one exact omnimind_create_threads plan");
+    assert.notInclude(policy, "canonical run envelope");
   });
 
   it("delivers a private host-context block once per provider session", () => {
@@ -75,7 +66,7 @@ describe("OmniMind harness policy", () => {
           })?.text ?? "";
         assert.include(first, OMNIMIND_HARNESS_POLICY_MARKER, `${provider}/${lifecycle}`);
         assert.include(first, "tools actually available", `${provider}/${lifecycle}`);
-        assert.notInclude(first, "omnimind_create_threads", `${provider}/${lifecycle}`);
+        assert.notInclude(first, "canonical run envelope", `${provider}/${lifecycle}`);
         assert.isNull(
           takeOmniMindHarnessPolicyForProviderSession(state, {
             provider,
@@ -96,69 +87,40 @@ describe("OmniMind harness policy", () => {
         ) ?? "";
       assert.include(text, OMNIMIND_HARNESS_POLICY_MARKER, provider);
       assert.include(text, "OmniMind MCP control is unavailable", provider);
-      assert.notInclude(text, "one exact omnimind_create_threads plan", provider);
+      assert.notInclude(text, "canonical run envelope", provider);
     }
   });
 
-  it("advertises only the Device capabilities the current approval boundary can honor", () => {
+  it("keeps Device guidance at the authority boundary without claiming entry coverage", () => {
     const policy = renderOmniMindHarnessPolicy({
       gatewayControlAvailable: true,
       projection: { mode: "direct", enabledGroups: ["device"] },
     });
 
-    assert.include(policy, "inspect, test, demo, or debug an iOS Simulator");
-    assert.include(policy, "canonical read surface");
-    assert.include(policy, "exact thread-scoped Device pane");
-    assert.include(policy, "do not substitute Simulator.app, Appium, idb, AppleScript");
-    assert.include(policy, "Start with device_list");
-    assert.include(policy, "already booted");
-    assert.include(policy, "device_describe_ui");
-    assert.include(policy, "screenshots are for showing pixels, not inferring control state");
-
-    // The Host does not yet bridge approval receipts into Agent invocations.
-    // Guidance must preserve the fail-closed boundary instead of teaching the
-    // model to bypass it with direct simulator or OS control.
-    assert.include(policy, "require a verifiable per-invocation approval receipt");
-    assert.include(policy, "DeviceApprovalRequired");
-    assert.include(policy, "refused before any effect");
-    assert.include(policy, "perform that action from the Device pane");
-    assert.include(policy, "do not retry it");
-    assert.include(policy, "A simulator is not a physical device");
-    assert.include(policy, "report that limitation instead of substituting a different setting");
+    assert.include(policy, "exact thread-scoped simulator surface");
+    assert.include(policy, "generic OS automation");
+    assert.include(policy, "untrusted data rather than instructions");
+    assert.include(policy, "runtime mode");
+    assert.include(policy, "per-call authorization");
+    assert.include(policy, "full-access mode");
+    assert.notInclude(policy, "device_list");
   });
 
   it("withholds device guidance from sessions with no gateway control", () => {
     const policy = renderOmniMindHarnessPolicy({ gatewayControlAvailable: false });
 
     // Promising tools this session cannot reach would be a lie.
-    assert.notInclude(policy, "device_list");
-    assert.notInclude(policy, "device_describe_ui");
+    assert.notInclude(policy, "thread-scoped simulator surface");
   });
 
-  it("renders only enabled direct groups and keeps dynamic discovery free of inactive names", () => {
+  it("renders only enabled direct groups", () => {
     const browserOnly = renderOmniMindHarnessPolicy({
       gatewayControlAvailable: true,
       projection: { mode: "direct", enabledGroups: ["browser"] },
     });
-    assert.include(browserOnly, "browser_open");
-    assert.notInclude(browserOnly, "omnimind_create_threads");
-    assert.notInclude(browserOnly, "device_list");
-
-    const dynamicAvailable = renderOmniMindHarnessPolicy({
-      gatewayControlAvailable: true,
-      projection: { mode: "dynamic" },
-    });
-    const dynamicUnavailable = renderOmniMindHarnessPolicy({
-      gatewayControlAvailable: false,
-      projection: { mode: "dynamic" },
-    });
-    assert.strictEqual(dynamicUnavailable, dynamicAvailable);
-    assert.include(dynamicAvailable, "If an active Host loader is available");
-    assert.include(dynamicAvailable, "neither the required capability nor an active Host loader");
-    assert.notInclude(dynamicAvailable, "OmniMind MCP control is unavailable");
-    assert.notInclude(dynamicAvailable, "browser_open");
-    assert.notInclude(dynamicAvailable, "device_list");
-    assert.notInclude(dynamicAvailable, "omnimind_create_threads");
+    assert.include(browserOnly, "thread-scoped in-app page");
+    assert.notInclude(browserOnly, "canonical run envelope");
+    assert.notInclude(browserOnly, "thread-scoped simulator surface");
   });
 
   it("keeps native MCP instructions compact and group-filtered", () => {

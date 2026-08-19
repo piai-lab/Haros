@@ -57,7 +57,7 @@ describe("Pi native resource projection", () => {
     });
 
     expect(prompt).toContain("<omnimind_host_context>");
-    expect(prompt).toContain("Use the omnimind_* tools");
+    expect(prompt).toContain("Use the exposed capability metadata");
     expect(prompt).not.toContain("OmniMind MCP control is unavailable");
   });
 
@@ -120,9 +120,9 @@ describe("Pi native resource projection", () => {
     });
     const enginePrompt = makeOmniMindEngineSystemPrompt({ workSurface: "agent" });
 
-    expect(hostPrompt).toContain("BrowserDownloadApprovalRequired");
-    expect(hostPrompt).toContain("Device mutations such as");
-    expect(enginePrompt).not.toContain("BrowserDownloadApprovalRequired");
+    expect(hostPrompt).toContain("approval-required download");
+    expect(hostPrompt).toContain("per-call authorization");
+    expect(enginePrompt).not.toContain("approval-required download");
     expect(enginePrompt).not.toContain("Device mutations such as");
     expect(enginePrompt).not.toContain("<omnimind_host_context>");
   });
