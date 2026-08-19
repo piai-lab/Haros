@@ -991,6 +991,37 @@ describe("wsNativeApi", () => {
     );
   });
 
+  it("forwards typed OmniMind Agent prompt file intents without path authority", async () => {
+    requestMock.mockResolvedValue({});
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+
+    await api.omnimindAgentPrompts.getSnapshot({ resource: "globalContext" });
+    await api.omnimindAgentPrompts.mutate({
+      action: "update",
+      resource: "globalContext",
+      sourceId: "AGENTS.md",
+      expectedVersion: "a".repeat(64),
+      content: "Be concise.",
+    });
+
+    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.omnimindAgentPromptsGetSnapshot, {
+      resource: "globalContext",
+    });
+    expect(requestMock).toHaveBeenNthCalledWith(
+      2,
+      WS_METHODS.omnimindAgentPromptsMutate,
+      {
+        action: "update",
+        resource: "globalContext",
+        sourceId: "AGENTS.md",
+        expectedVersion: "a".repeat(64),
+        content: "Be concise.",
+      },
+      { timeoutMs: null },
+    );
+  });
+
   it("forwards typed OmniMind model-service credential operations", async () => {
     const requestId = "00000000-0000-4000-8000-000000000041";
     const promptId = "00000000-0000-4000-8000-000000000042";

@@ -117,13 +117,14 @@ describe("SettingsSidebarNav", () => {
 
     expect(markup).toContain("Personal");
     expect(markup).toContain("Integrations");
-    expect(markup).toContain("Coding");
+    expect(markup).toContain("Development");
     expect(markup).toContain("System");
     expect(markup).toContain("Archived");
     expect(markup).toContain("Chat behavior");
     expect(markup).toContain("Built-in tools");
     expect(markup).toContain("External connections");
     expect(markup).toContain("Agent engines");
+    expect(markup).toContain("Prompts");
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");
     expect(markup).toContain("Archived tasks and chats");

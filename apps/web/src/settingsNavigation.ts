@@ -16,6 +16,7 @@ export const SETTINGS_SECTION_IDS = [
   "models",
   "providers",
   "skills",
+  "prompts",
   "usage",
   "built-in-tools",
   "integrations",
@@ -37,6 +38,7 @@ export const SETTINGS_TARGETS = {
   engineDetails: "setting-installed-clis",
   environmentPanel: "environment-panel",
   gitWritingModel: "setting-git-writing-model",
+  globalPersonalInstructions: "setting-global-personal-instructions",
 } as const;
 
 export type SettingsNavItem = {
@@ -55,7 +57,7 @@ export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
 }> = [
   { id: "personal", label: "Personal" },
   { id: "integrations", label: "Integrations" },
-  { id: "coding", label: "Coding" },
+  { id: "coding", label: "Development" },
   { id: "system", label: "System" },
   { id: "archived", label: "Archived" },
 ] as const;
@@ -164,6 +166,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Review reusable workflows discovered across all configured providers.",
     icon: "building-blocks",
     eyebrow: "Reusable workflows",
+  },
+  {
+    id: "prompts",
+    group: "coding",
+    label: "Prompts",
+    description: "Edit the global instruction files used by OmniMind Agent.",
+    icon: "prompt",
+    eyebrow: "Agent instructions",
   },
   {
     id: "worktrees",

@@ -819,6 +819,12 @@ export function createWsNativeApi(): NativeApi {
       reload: (input) =>
         transport.request(WS_METHODS.omnimindEcosystemReload, input, { timeoutMs: null }),
     },
+    omnimindAgentPrompts: {
+      getSnapshot: (input = {}) =>
+        transport.request(WS_METHODS.omnimindAgentPromptsGetSnapshot, input),
+      mutate: (input) =>
+        transport.request(WS_METHODS.omnimindAgentPromptsMutate, input, { timeoutMs: null }),
+    },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
       getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),
