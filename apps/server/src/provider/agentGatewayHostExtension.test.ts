@@ -148,6 +148,41 @@ describe.each([
     expect(session.getAllTools().map(({ name }) => name)).not.toContain("browser_open");
   });
 
+  it("keeps the Session alive and recovers a transient catalog failure on native reload", async () => {
+    let available = false;
+    const handle = makeAgentGatewayHostExtension({
+      connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
+      defineTool: (tool) => runtime.defineTool(tool),
+      loadDescriptors: async () => {
+        if (!available) throw new Error("transient catalog failure");
+        return descriptors;
+      },
+    });
+    const { session, resourceLoader } = await createSession({
+      runtime,
+      extensions: [foreignExtension("team_tool"), handle.extension],
+    });
+
+    expect(session.getActiveToolNames()).toContain("team_tool");
+    expect(session.getActiveToolNames()).not.toContain("browser_open");
+    expect(resourceLoader.getExtensions().errors.map(({ error }) => error).join("\n")).toContain(
+      "transient catalog failure",
+    );
+
+    available = true;
+    await session.reload();
+
+    expect(session.getActiveToolNames()).toEqual(
+      expect.arrayContaining(["team_tool", "browser_open", "omnimind_list_threads"]),
+    );
+    expect(
+      handle.inspectRegistration({
+        extensions: resourceLoader.getExtensions(),
+        tools: session.getAllTools(),
+      }).deliveredToolNames,
+    ).toEqual(["browser_open", "omnimind_list_threads"]);
+  });
+
   it("keeps a foreign same-name winner and degrades only the collided Host capability", async () => {
     const handle = makeAgentGatewayHostExtension({
       connection: { url: "http://127.0.0.1:3773/mcp", bearerToken: "test-token" },
