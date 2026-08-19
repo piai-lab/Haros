@@ -10,6 +10,71 @@ import { SINGLE_CHAT_PANE_SCOPE_ID } from "./chatPaneScope";
 import { findNearestMeasurableAncestor } from "./domLayout";
 import { notifyNativeSurfaceOcclusionChange } from "./nativeSurfaceOcclusion";
 
+export type PanelResizeOutcome = "commit" | "cancel";
+
+export interface PanelResizeSession {
+  finish: (outcome: PanelResizeOutcome) => void;
+}
+
+let activePanelResizeSession: PanelResizeSession | null = null;
+
+/**
+ * Owns the document-wide part of one resize gesture. Pointer events can disappear
+ * when Electron loses focus, a native surface takes over, or React unmounts the
+ * initiating handle. Every caller still owns its local geometry, but all callers
+ * get the same idempotent escape paths and exact body-style restoration.
+ */
+export function createPanelResizeSession(input: {
+  cursor: "col-resize" | "row-resize";
+  onFinish: (outcome: PanelResizeOutcome) => void;
+}): PanelResizeSession {
+  // Body cursor/user-select are document-global. End the previous owner before
+  // reading the restoration baseline so overlapping entry points cannot restore
+  // each other's transient resize styles in reverse order.
+  activePanelResizeSession?.finish("cancel");
+
+  const previousBodyCursor = document.body.style.cursor;
+  const previousBodyUserSelect = document.body.style.userSelect;
+  let active = true;
+  let session: PanelResizeSession;
+
+  const finish = (outcome: PanelResizeOutcome) => {
+    if (!active) return;
+    active = false;
+    if (activePanelResizeSession === session) {
+      activePanelResizeSession = null;
+    }
+    window.removeEventListener("blur", cancel);
+    window.removeEventListener("keydown", handleKeyDown);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    document.body.style.cursor = previousBodyCursor;
+    document.body.style.userSelect = previousBodyUserSelect;
+    input.onFinish(outcome);
+  };
+  const cancel = () => finish("cancel");
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      cancel();
+    }
+  };
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancel();
+    }
+  };
+
+  document.body.style.cursor = input.cursor;
+  document.body.style.userSelect = "none";
+  window.addEventListener("blur", cancel);
+  window.addEventListener("keydown", handleKeyDown);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  session = { finish };
+  activePanelResizeSession = session;
+  return session;
+}
+
 // Minimum width (px) the composer's left controls cluster needs before it overflows.
 // Kept intentionally lean: this is only a soft buffer, since canComposerHandlePanelWidth
 // also blocks on real overflow (hasComposerOverflow / overflowsViewport). A smaller value

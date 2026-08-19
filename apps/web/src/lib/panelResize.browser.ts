@@ -3,10 +3,10 @@
 // Layer: Web DOM behavior tests
 // Depends on: panelResize, chatPaneScope
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SINGLE_CHAT_PANE_SCOPE_ID, dockSidechatPaneScopeId } from "./chatPaneScope";
-import { canComposerHandlePanelWidth } from "./panelResize";
+import { canComposerHandlePanelWidth, createPanelResizeSession } from "./panelResize";
 
 interface MountedComposer {
   viewport: HTMLDivElement;
@@ -62,6 +62,9 @@ function mountComposer(input: {
 describe("canComposerHandlePanelWidth", () => {
   afterEach(() => {
     document.body.replaceChildren();
+    document.body.style.removeProperty("cursor");
+    document.body.style.removeProperty("user-select");
+    vi.restoreAllMocks();
   });
 
   it("measures through display: contents composer wrappers", () => {
@@ -112,5 +115,83 @@ describe("canComposerHandlePanelWidth", () => {
     expect(accepted).toBe(true);
     expect(sidechatComposer.viewport.style.width).toBe("520px");
     expect(singleComposer.viewport.style.width).toBe("520px");
+  });
+});
+
+describe("createPanelResizeSession", () => {
+  afterEach(() => {
+    document.body.replaceChildren();
+    document.body.style.removeProperty("cursor");
+    document.body.style.removeProperty("user-select");
+    vi.restoreAllMocks();
+  });
+
+  it("restores the exact prior document styles once when the window loses focus", () => {
+    document.body.style.cursor = "crosshair";
+    document.body.style.userSelect = "text";
+    const onFinish = vi.fn();
+    const session = createPanelResizeSession({ cursor: "col-resize", onFinish });
+
+    expect(document.body.style.cursor).toBe("col-resize");
+    expect(document.body.style.userSelect).toBe("none");
+
+    window.dispatchEvent(new Event("blur"));
+    session.finish("commit");
+
+    expect(document.body.style.cursor).toBe("crosshair");
+    expect(document.body.style.userSelect).toBe("text");
+    expect(onFinish).toHaveBeenCalledTimes(1);
+    expect(onFinish).toHaveBeenCalledWith("cancel");
+  });
+
+  it("cancels when the document becomes hidden", () => {
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+    const onFinish = vi.fn();
+    createPanelResizeSession({ cursor: "row-resize", onFinish });
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    expect(document.body.style.cursor).toBe("");
+    expect(document.body.style.userSelect).toBe("");
+    expect(onFinish).toHaveBeenCalledWith("cancel");
+  });
+
+  it("cancels the previous document owner before a different resize starts", () => {
+    const firstFinish = vi.fn();
+    const secondFinish = vi.fn();
+    const firstSession = createPanelResizeSession({
+      cursor: "col-resize",
+      onFinish: firstFinish,
+    });
+
+    const secondSession = createPanelResizeSession({
+      cursor: "row-resize",
+      onFinish: secondFinish,
+    });
+
+    expect(firstFinish).toHaveBeenCalledTimes(1);
+    expect(firstFinish).toHaveBeenCalledWith("cancel");
+    expect(document.body.style.cursor).toBe("row-resize");
+    expect(document.body.style.userSelect).toBe("none");
+
+    firstSession.finish("commit");
+    secondSession.finish("commit");
+
+    expect(document.body.style.cursor).toBe("");
+    expect(document.body.style.userSelect).toBe("");
+    expect(secondFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets Escape cancel the active resize without leaving text selection disabled", () => {
+    const onFinish = vi.fn();
+    createPanelResizeSession({ cursor: "col-resize", onFinish });
+    const escape = new KeyboardEvent("keydown", { cancelable: true, key: "Escape" });
+
+    window.dispatchEvent(escape);
+
+    expect(escape.defaultPrevented).toBe(true);
+    expect(document.body.style.cursor).toBe("");
+    expect(document.body.style.userSelect).toBe("");
+    expect(onFinish).toHaveBeenCalledWith("cancel");
   });
 });

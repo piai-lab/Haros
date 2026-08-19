@@ -21,6 +21,7 @@ import { ShortcutKbd } from "~/components/ui/shortcut-kbd";
 import { useIsMobile } from "~/hooks/useMediaQuery";
 import { getLocalStorageItem, setLocalStorageItem } from "~/hooks/useLocalStorage";
 import { useI18n } from "~/i18n";
+import { createPanelResizeSession, type PanelResizeSession } from "~/lib/panelResize";
 import { Schema } from "effect";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
@@ -521,6 +522,7 @@ function SidebarRail({
     rafId: number | null;
     retreating: boolean;
     sidebarRoot: HTMLElement;
+    session: PanelResizeSession;
     side: "left" | "right";
     startWidth: number;
     startX: number;
@@ -623,9 +625,6 @@ function SidebarRail({
       if (resizeState.rail.hasPointerCapture(pointerId)) {
         resizeState.rail.releasePointerCapture(pointerId);
       }
-      document.body.style.removeProperty("cursor");
-      document.body.style.removeProperty("user-select");
-
       if (dismiss || restorePreview) {
         const finishSettling = () => {
           if (settleTimeoutRef.current !== null) {
@@ -679,16 +678,22 @@ function SidebarRail({
 
       event.preventDefault();
       event.stopPropagation();
+      const pointerId = event.pointerId;
+      const session = createPanelResizeSession({
+        cursor: "col-resize",
+        onFinish: (outcome) => stopResize(pointerId, outcome),
+      });
       resizeStateRef.current = {
         container: sidebarContainer,
         gap: sidebarGap,
         moved: false,
-        pointerId: event.pointerId,
+        pointerId,
         pendingWidth: initialWidth,
         rail: event.currentTarget,
         rafId: null,
         retreating: false,
         sidebarRoot,
+        session,
         side: sidebarInstance?.side ?? "left",
         startWidth: initialWidth,
         startX: event.clientX,
@@ -699,11 +704,13 @@ function SidebarRail({
       wrapper.style.setProperty("--sidebar-width", `${initialWidth}px`);
       wrapper.dataset.sidebarResizing = "true";
       document.body.dataset.sidebarResizing = "true";
-      event.currentTarget.setPointerCapture(event.pointerId);
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
+      try {
+        event.currentTarget.setPointerCapture(pointerId);
+      } catch {
+        session.finish("cancel");
+      }
     },
-    [onPointerDown, open, resolvedResizable, sidebarInstance?.side],
+    [onPointerDown, open, resolvedResizable, sidebarInstance?.side, stopResize],
   );
 
   const handlePointerMove = React.useCallback(
@@ -743,9 +750,9 @@ function SidebarRail({
 
       event.preventDefault();
       suppressClickRef.current = resizeState.moved;
-      stopResize(event.pointerId, outcome);
+      resizeState.session.finish(outcome);
     },
-    [stopResize],
+    [],
   );
 
   const handlePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
@@ -758,6 +765,12 @@ function SidebarRail({
     onPointerCancel?.(event);
     if (event.defaultPrevented) return;
     endResizeInteraction(event, "cancel");
+  };
+
+  const handleLostPointerCapture = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const resizeState = resizeStateRef.current;
+    if (!resizeState || resizeState.pointerId !== event.pointerId) return;
+    resizeState.session.finish("cancel");
   };
 
   const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
@@ -795,19 +808,8 @@ function SidebarRail({
         settleCleanupRef.current?.();
       }
       const resizeState = resizeStateRef.current;
-      if (resizeState?.rafId != null) {
-        window.cancelAnimationFrame(resizeState.rafId);
-      }
-      resizeState?.transitionTargets.forEach((element) => {
-        element.style.removeProperty("transition-duration");
-      });
-      resizeState?.wrapper.removeAttribute("data-sidebar-resizing");
-      resizeState?.sidebarRoot.removeAttribute("data-resize-retreating");
-      resizeState?.gap.style.removeProperty("width");
-      resizeState?.container.style.removeProperty("transform");
-      document.body.removeAttribute("data-sidebar-resizing");
-      document.body.style.removeProperty("cursor");
-      document.body.style.removeProperty("user-select");
+      resizeState?.session.finish("cancel");
+      settleCleanupRef.current?.();
     };
   }, []);
 
@@ -845,6 +847,7 @@ function SidebarRail({
       onClick={handleClick}
       onPointerCancel={handlePointerCancel}
       onPointerDown={handlePointerDown}
+      onLostPointerCapture={handleLostPointerCapture}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       ref={railRef}

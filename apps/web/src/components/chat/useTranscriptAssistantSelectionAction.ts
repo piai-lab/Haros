@@ -24,6 +24,7 @@ import {
   resolveTranscriptSelectionActionLayout,
   type TranscriptAssistantSelection,
 } from "./chatSelectionActions";
+import { useI18n } from "~/i18n";
 
 export interface PendingTranscriptSelectionAction {
   selection: TranscriptAssistantSelection;
@@ -59,6 +60,7 @@ interface UseTranscriptAssistantSelectionActionOptions {
 export function useTranscriptAssistantSelectionAction(
   options: UseTranscriptAssistantSelectionActionOptions,
 ) {
+  const { t } = useI18n();
   const {
     threadId,
     enabled,
@@ -202,7 +204,9 @@ export function useTranscriptAssistantSelectionAction(
       setPendingTranscriptSelectionAction(null);
       toastManager.add({
         type: "warning",
-        title: `You can attach up to ${PROVIDER_SEND_TURN_MAX_ATTACHMENTS} references per message.`,
+        title: t("selection.attachmentLimit", {
+          count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+        }),
       });
       return;
     }
@@ -213,7 +217,7 @@ export function useTranscriptAssistantSelectionAction(
       if (getAssistantSelectionValidationError(pendingSelection.selection) === "too-long") {
         toastManager.add({
           type: "warning",
-          title: "Selections can be up to 4,000 characters.",
+          title: t("selection.tooLong"),
         });
       }
       return;

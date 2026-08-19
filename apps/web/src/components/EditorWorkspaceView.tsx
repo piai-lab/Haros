@@ -40,6 +40,7 @@ import {
 } from "~/lib/fileReferenceContextMenu";
 import type { ChatFileReference } from "~/lib/chatReferences";
 import type { FileCommentSelection } from "~/lib/fileComments";
+import { createPanelResizeSession, type PanelResizeSession } from "~/lib/panelResize";
 import { cn } from "~/lib/utils";
 import { useTheme } from "~/hooks/useTheme";
 import { Skeleton } from "./ui/skeleton";
@@ -166,10 +167,10 @@ interface EditorChatPaneResizeState {
   startWidth: number;
   pendingWidth: number;
   rafId: number | null;
-  restoreBodyCursor: string;
-  restoreBodyUserSelect: string;
+  session: PanelResizeSession | null;
   onPointerMove: (event: PointerEvent) => void;
   onPointerEnd: (event: PointerEvent) => void;
+  onPointerCancel: (event: PointerEvent) => void;
 }
 
 function DiffFileRow(props: {
@@ -424,28 +425,20 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
     });
   };
 
-  const stopChatPaneResize = () => {
+  const stopChatPaneResize = (outcome: "commit" | "cancel" = "commit") => {
     const resizeState = chatPaneResizeStateRef.current;
-    if (!resizeState || typeof window === "undefined") {
+    if (!resizeState?.session || typeof window === "undefined") {
       return;
     }
-
-    if (resizeState.rafId !== null) {
-      window.cancelAnimationFrame(resizeState.rafId);
-      resizeState.rafId = null;
-    }
-
-    window.removeEventListener("pointermove", resizeState.onPointerMove);
-    window.removeEventListener("pointerup", resizeState.onPointerEnd);
-    window.removeEventListener("pointercancel", resizeState.onPointerEnd);
-    document.body.style.cursor = resizeState.restoreBodyCursor;
-    document.body.style.userSelect = resizeState.restoreBodyUserSelect;
-    setChatPaneWidth(resizeState.pendingWidth);
-    storeEditorChatPaneWidth(resizeState.pendingWidth);
-    chatPaneResizeStateRef.current = null;
+    resizeState.session.finish(outcome);
   };
 
-  useEffect(() => stopChatPaneResize, [stopChatPaneResize]);
+  useEffect(
+    () => () => {
+      chatPaneResizeStateRef.current?.session?.finish("cancel");
+    },
+    [],
+  );
 
   const handleChatPaneResizePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0 || typeof window === "undefined") {
@@ -454,7 +447,7 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
 
     event.preventDefault();
     event.stopPropagation();
-    stopChatPaneResize();
+    stopChatPaneResize("commit");
 
     const resizeState: EditorChatPaneResizeState = {
       pointerId: event.pointerId,
@@ -462,10 +455,10 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
       startWidth: chatPaneWidth,
       pendingWidth: chatPaneWidth,
       rafId: null,
-      restoreBodyCursor: document.body.style.cursor,
-      restoreBodyUserSelect: document.body.style.userSelect,
+      session: null,
       onPointerMove: () => undefined,
       onPointerEnd: () => undefined,
+      onPointerCancel: () => undefined,
     };
 
     resizeState.onPointerMove = (moveEvent) => {
@@ -491,15 +484,39 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
       if (endEvent.pointerId !== resizeState.pointerId) {
         return;
       }
-      stopChatPaneResize();
+      resizeState.session?.finish("commit");
+    };
+    resizeState.onPointerCancel = (cancelEvent) => {
+      if (cancelEvent.pointerId !== resizeState.pointerId) {
+        return;
+      }
+      resizeState.session?.finish("cancel");
     };
 
+    resizeState.session = createPanelResizeSession({
+      cursor: "col-resize",
+      onFinish: (outcome) => {
+        if (resizeState.rafId !== null) {
+          window.cancelAnimationFrame(resizeState.rafId);
+          resizeState.rafId = null;
+        }
+        window.removeEventListener("pointermove", resizeState.onPointerMove);
+        window.removeEventListener("pointerup", resizeState.onPointerEnd);
+        window.removeEventListener("pointercancel", resizeState.onPointerCancel);
+        const finalWidth = outcome === "commit" ? resizeState.pendingWidth : resizeState.startWidth;
+        setChatPaneWidth(finalWidth);
+        if (outcome === "commit") {
+          storeEditorChatPaneWidth(finalWidth);
+        }
+        if (chatPaneResizeStateRef.current === resizeState) {
+          chatPaneResizeStateRef.current = null;
+        }
+      },
+    });
     chatPaneResizeStateRef.current = resizeState;
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
     window.addEventListener("pointermove", resizeState.onPointerMove);
     window.addEventListener("pointerup", resizeState.onPointerEnd);
-    window.addEventListener("pointercancel", resizeState.onPointerEnd);
+    window.addEventListener("pointercancel", resizeState.onPointerCancel);
   };
 
   const handleChatPaneResizeDoubleClick = () => {

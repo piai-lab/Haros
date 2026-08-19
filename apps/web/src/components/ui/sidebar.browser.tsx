@@ -59,6 +59,9 @@ describe("SidebarProvider persistence boundary", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     document.body.innerHTML = "";
+    document.body.style.removeProperty("cursor");
+    document.body.style.removeProperty("user-select");
+    document.body.removeAttribute("data-sidebar-resizing");
   });
 
   it("does not persist a controlled transient presentation change", async () => {
@@ -190,5 +193,75 @@ describe("SidebarProvider persistence boundary", () => {
 
     tooltip.remove();
     await screen.unmount();
+  });
+
+  it("cancels an active resize on window blur and restores native text selection", async () => {
+    localStorage.removeItem("test:sidebar-width");
+    await page.viewport(1280, 720);
+    const screen = await render(<DragDismissSidebar />);
+    const rail = screen.container.querySelector<HTMLButtonElement>("[data-slot='sidebar-rail']")!;
+    const container = screen.container.querySelector<HTMLElement>(
+      "[data-slot='sidebar-container']",
+    )!;
+    const startWidth = container.getBoundingClientRect().width;
+    const startX = rail.getBoundingClientRect().x + rail.getBoundingClientRect().width / 2;
+    vi.spyOn(rail, "setPointerCapture").mockImplementation(() => undefined);
+    vi.spyOn(rail, "hasPointerCapture").mockReturnValue(true);
+    vi.spyOn(rail, "releasePointerCapture").mockImplementation(() => undefined);
+    document.body.style.cursor = "crosshair";
+    document.body.style.userSelect = "text";
+
+    rail.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        buttons: 1,
+        clientX: startX,
+        pointerId: 72,
+        pointerType: "mouse",
+      }),
+    );
+    expect(document.body.style.cursor).toBe("col-resize");
+    expect(document.body.style.userSelect).toBe("none");
+
+    window.dispatchEvent(new Event("blur"));
+
+    await vi.waitFor(() => {
+      expect(container.getBoundingClientRect().width).toBeCloseTo(startWidth, 0);
+      expect(document.body.hasAttribute("data-sidebar-resizing")).toBe(false);
+    });
+    expect(document.body.style.cursor).toBe("crosshair");
+    expect(document.body.style.userSelect).toBe("text");
+    expect(localStorage.getItem("test:sidebar-width")).toBeNull();
+
+    await screen.unmount();
+  });
+
+  it("cleans the document resize state when the rail unmounts mid-drag", async () => {
+    await page.viewport(1280, 720);
+    const screen = await render(<DragDismissSidebar />);
+    const rail = screen.container.querySelector<HTMLButtonElement>("[data-slot='sidebar-rail']")!;
+    vi.spyOn(rail, "setPointerCapture").mockImplementation(() => undefined);
+    vi.spyOn(rail, "hasPointerCapture").mockReturnValue(false);
+
+    rail.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        buttons: 1,
+        clientX: rail.getBoundingClientRect().x,
+        pointerId: 73,
+        pointerType: "mouse",
+      }),
+    );
+    expect(document.body.style.userSelect).toBe("none");
+
+    await screen.unmount();
+
+    expect(document.body.style.cursor).toBe("");
+    expect(document.body.style.userSelect).toBe("");
+    expect(document.body.hasAttribute("data-sidebar-resizing")).toBe(false);
   });
 });
