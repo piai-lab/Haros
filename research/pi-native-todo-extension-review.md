@@ -4,7 +4,7 @@
 >
 > 状态：责任方向与exact-source事实已核验；Todo Extension source由Gate B merge `e7137c7dc873400d9a801f333f41e278e544e001`合入main，并已有focused/full与隔离packaged startup证据；安装、Release和Todo packaged交互journey仍须由对应artifact另行证明
 >
-> 唯一职责：记录OmniMind Agent Todo Extension。稳定运行时合同属于[`architecture/execution.md`](../architecture/execution.md)；AgentGateway Host动态加载属于[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)。
+> 唯一职责：记录OmniMind Agent Todo Extension。稳定运行时合同属于[`architecture/execution.md`](../architecture/execution.md)；OmniMind Agent Extension composition与AgentGateway Host投影属于[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)。
 
 ## 1. 已确认的产品与 owner 结论
 
@@ -14,7 +14,7 @@
 - 在该Session首个模型请求前initial-active。active只表示schema当轮可选择，不表示首轮必须调用、自动执行、已经授权或跨应用常驻；
 - Agent按真实不确定性决定时机：理解不足时先调查；理解足够、任务确实非平凡且进度投影有帮助时才创建或修订Todo；简单任务不用；
 - Todo是可修订的当前快照，只记录用户目标与重要成果，不记录loader、tool activation、函数名等内部plumbing；
-- Todo不进入AgentGateway Host Extension、Host动态加载、third-party MCP或Built-in Host exposure policy，不建立第二state、registry、Settings、Package install state、migration或control plane。
+- Todo不进入AgentGateway Host Projection、Host exposure policy、third-party MCP或任何Host/global search，不建立第二state、registry、Settings、Package install state、migration或control plane。Chat是否注册Todo是独立产品决定，本文当前不把Agent-surface结论扩张到Chat。
 
 Pi built-ins、supervised Bash、AgentGateway Host tools与其他Extensions均不由本文编目或协调；它们继续服从各自唯一owner。新增其他session tool也必须建立自己的bounded owner/evidence，不得把本文扩成Session Tool Manager。
 

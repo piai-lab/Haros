@@ -912,11 +912,64 @@ generic Task Manager.
 Disposition: there are no new Synara Todo bytes to port and no unresolved non-adoption decision in this
 range. OmniMind Agent's existing three-state turn snapshot remains a narrow downstream Provider
 enhancement. The confirmed responsibility direction is a named hidden Pi-native Todo Extension with
-PiAdapter retaining only Session wiring and canonical event projection; the current implementation is
-still a local, disposable, unpushed candidate rather than adopted product fact. Same-name precedence
+PiAdapter retaining only Session wiring and canonical event projection; that source direction was later
+integrated by Agent-tools merge `e7137c7…`, while packaged Todo interaction remains a separate evidence
+boundary. Same-name precedence
 must follow Pi and degrade only the optional Product Todo projection, never the Session or a third-party
 winner. No third-party Todo package, second state, registry, Settings surface or control plane is
 adopted. Bounded evidence and candidate falsifiers live in
 [`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md); stable runtime responsibility
 remains in [`architecture/execution.md`](../architecture/execution.md). This disposition does not
 advance Synara's adopted revision or any packaged-product claim.
+
+## 18. Synara Host-surface parity and Pi projection check
+
+On 2026-08-19 the maintainer requested an exact-source recheck after the OmniMind Host loader had been
+treated as a stable target. The source set was production-adopted Synara
+`8f9f60045ea652db7d4a6822e2f723dde073f40a` and the clean read-only local Synara
+`c79fab498de1a911a14ff8b05bf83d0528ec54fa`. The latter is 40 commits ahead. The relevant
+`harnessPolicy.ts`, `mcpInjection.ts`, `PiAdapter.ts`, and the core Codex, Claude, OpenCode, Cursor and
+Droid adapter paths do not change across this range. Later Antigravity and Grok changes preserve the
+same Gateway ownership pattern.
+
+The exact Synara shape is one canonical AgentGateway catalog plus `tools/list`, `tools/call`,
+credential, thread/scope, active-turn and cancellation authority. Every formally supported Engine with
+a successfully installed thread-scoped Gateway projection targets the same filtered Host surface.
+Adapters only translate the pipe: Codex uses native MCP configuration, Claude uses its MCP server seam,
+OpenCode/Kilo uses remote MCP, ACP-family Engines use their supported HTTP/proxy seam, and stock Pi
+maps every `tools/list` descriptor into a `ToolDefinition` placed directly in `customTools`. Synara
+stock Pi has no Host `search_tools`, lexical matcher, inactive Host pool or dynamic activation
+preflight.
+
+The exact user-result formula is:
+
+```text
+Desired Host Surface
+= canonical Gateway catalog
+∩ global Built-in policy
+∩ machine/service availability
+
+Delivered Host Surface
+= Desired Host Surface
+∩ the thread-scoped Engine projection that actually installed
+```
+
+The second intersection is runtime health, collision or adapter failure, not a Provider-specific
+capability tier. This parity does not normalize Engine-native Bash, file tools, sandbox/approval, Todo,
+context, resume or Package semantics.
+
+Disposition: follow the Synara responsibility pattern. OmniMind Agent may keep a narrow named hidden Pi
+inline Extension to preserve Pi Registry, sourceInfo, collision, Session and reload semantics, but the
+current Host projection target is eager-active and contains no Host-owned loader. AgentGateway remains
+the Host definition/execution/authorization owner. Pi remains the sole Extension/Tool Registry and
+active/session truth inside the OmniMind Agent runtime. Future dynamic loading is decided only by a
+concrete Extension owner with a credible activator and measured benefit; it does not justify a
+Host/global search manager.
+
+This evidence supersedes the product-direction claim in the earlier merged dynamic Host Gate B without
+erasing its historical source, test or wire evidence. The current `main` still contains that old
+implementation, so Architecture 1.0 is an architecture-confirmed target rather than delivered source.
+The bounded decision, falsifiers and future Gate B scope live in
+[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md). This section does not
+approve Chat Todo, final Settings taxonomy, Device full-access, Browser download handling,
+approval/auto UI or Extension Marketplace.

@@ -15,7 +15,7 @@
 >
 > 本文不是当前 Agent Core 研究或执行入口。现行稳定事实只看 `architecture/*`，Pi 生态重新进入遵循根 `PI-ECOSYSTEM-INTAKE.md`，当前工作只看 `execution-brief.md`；Pi 成熟 runtime 能力边界见 `research/pi-native-product-integration-review.md`，用户可见能力投影候选见 `research/omnimind-agent-capability-surface.md`。已弃用设计与退休施工门只由 Git 历史保留；不得从本文直接恢复旧分支、安装 package、创建第二控制面或复制旧 Slice 顺序。
 >
-> **当前议题 supersession（2026-08-18）**：正文中任何“优先采用第三方Pi Todo Extension”、把lazy MCP或第三方MCP Settings纳入首版、或把Host active set设计成每回合重算/反复卸载的表述均为历史proposal，不能作为当前准入。Todo现行证据只看[`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)；Host动态加载只看[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)与`architecture/execution.md`；第三方MCP管理继续退出首版。
+> **当前议题 supersession（2026-08-19）**：正文中任何“优先采用第三方Pi Todo Extension”、把lazy MCP或第三方MCP Settings纳入首版、建立Host/global Tool Search、让Host active set按每回合重算，或把Host dynamic loading视为确定终态的表述均为历史proposal，不能作为当前准入。Todo现行证据只看[`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md)；Extension Architecture 1.0、Host Projection eager-active、strong Host parity与owner-local dynamic边界只看[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)及`architecture/execution.md`；第三方MCP管理继续退出首版。本文中的Chat Todo、六组taxonomy、Device full-access、Browser download、approval/auto与Marketplace建议也不能借当前Host裁决自动采用。
 
 ## 0. 为什么存在这份文档
 

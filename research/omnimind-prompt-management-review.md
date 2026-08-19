@@ -29,6 +29,8 @@
 
 > **2026-08-19 bilingual identity and live closure.** 维护者确认英文机构名 `International Academy of Phronesis Medicine (Guangdong)` 保持不变，官方中文名是“广东智慧医学国际研究院”。中文名因此进入同一份 Host-owned immutable engine contract，而不是用户 Prompt、Extension append 或 Provider adapter 补丁。request/reload/compaction 回归证明 Chat 与 Agent 都 exactly once 接收该身份，stock Pi 不接收；授权的 MiMo 与 DeepSeek OpenAI Chat-compatible 最小 live journey 又分别完成首次身份回答、resource reload 后 continuation、Host loader 激活和实际 Host tool 调用，两者都回答 OmniMind/πAI-Lab/官方中文机构名，没有把底层模型身份冒充产品身份。该 journey 同时证明 engine contract 与稳定 Host context 的请求指纹跨上述阶段不变；它不证明 Provider cache 命中率，也不为新增 Prompt framework、缓存层或跨 Engine Prompt 管理提供理由。
 
+> **2026-08-19 Host projection supersession.** 上述`Host loader激活`只记录当时main与live journey的历史证据；维护者后来明确删除AgentGateway Host自建`search_tools`、inactive pool与dynamic guidance。当前目标是保留Pi-native Host Projection Extension并让allowed+available definitions直接active，prompt只保留跨工具不变量。现行结论见[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)与`architecture/execution.md`；本文不得恢复search guidance或把旧live绿色扩写为当前终态。
+
 ## 1. 结论
 
 OmniMind 应在 Settings 的现有 `Coding / 开发` 分组中增加一个独立 `Prompts / 提示词` section，把 **OmniMind Agent** 的基础指令、个人追加指令、当前 Project 规则、Prompt templates 与当前生效来源收敛到一个地方。
