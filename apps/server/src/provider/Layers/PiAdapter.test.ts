@@ -496,6 +496,7 @@ describe("Pi native OmniMind gateway tools", () => {
       for (const body of requestBodies) {
         expect(piRequestSystemPrompt(body)).not.toContain("OmniMind MCP control is unavailable");
       }
+      expect(piRequestSystemPrompt(requestBodies[0])).toContain("thread-scoped in-app page");
       expect(gateway.requests.map(({ method }) => method)).toEqual(
         Array.from({ length: 4 }, () => "tools/list"),
       );

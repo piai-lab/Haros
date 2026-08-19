@@ -11,6 +11,7 @@ import {
   type AgentGatewayMcpToolDescriptor,
 } from "../agentGateway/mcpInjection.ts";
 import type { AgentGatewayMcpConnection } from "../agentGateway/Services/AgentGatewayCredentials.ts";
+import { renderAgentGatewayDirectToolGuidance } from "../agentGateway/harnessPolicy.ts";
 import { buildAgentGatewayPiToolDefinitions } from "./agentGatewayPiProjection.ts";
 
 export const AGENT_GATEWAY_HOST_EXTENSION_NAME = "omnimind-agent-gateway-host";
@@ -107,6 +108,23 @@ export function assertAgentGatewayHostToolsDelivered(input: {
   }
 }
 
+/** Render cross-tool guidance only for Host groups that won this Pi Registry pass. */
+export function renderDeliveredAgentGatewayHostGuidance(input: {
+  readonly descriptors: ReadonlyArray<AgentGatewayMcpToolDescriptor>;
+  readonly tools: ReadonlyArray<ToolInfo>;
+}): string {
+  const groupByName = new Map(
+    input.descriptors.map((descriptor) => [descriptor.name, descriptor.group]),
+  );
+  const deliveredGroups = new Set(
+    input.tools.flatMap((tool) => {
+      const group = groupByName.get(tool.name);
+      return isAgentGatewayHostTool(tool) && group !== undefined ? [group] : [];
+    }),
+  );
+  return renderAgentGatewayDirectToolGuidance([...deliveredGroups]);
+}
+
 /** Build a session-scoped eager Host projection using Pi's async factory lifecycle. */
 export function makeAgentGatewayHostExtension(input: {
   readonly connection: AgentGatewayMcpConnection;
@@ -128,14 +146,24 @@ export function makeAgentGatewayHostExtension(input: {
       hidden: true,
       factory: async (pi) => {
         const descriptors = await loadDescriptors();
-        for (const tool of buildAgentGatewayPiToolDefinitions({
+        const tools = buildAgentGatewayPiToolDefinitions({
           connection: input.connection,
           defineTool: input.defineTool,
           descriptors,
           ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
-        })) {
+        });
+        for (const tool of tools) {
           pi.registerTool(tool);
         }
+        pi.on("before_agent_start", (event) => {
+          const guidance = renderDeliveredAgentGatewayHostGuidance({
+            descriptors,
+            tools: pi.getAllTools(),
+          });
+          return guidance === ""
+            ? undefined
+            : { systemPrompt: `${event.systemPrompt}\n${guidance}` };
+        });
       },
     },
     inspectRegistration: inspectAgentGatewayHostExtensionRegistration,

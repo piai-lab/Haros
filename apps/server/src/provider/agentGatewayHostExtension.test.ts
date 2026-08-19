@@ -15,6 +15,7 @@ import {
   assertAgentGatewayHostToolsDelivered,
   inspectAgentGatewayHostExtensionRegistration,
   makeAgentGatewayHostExtension,
+  renderDeliveredAgentGatewayHostGuidance,
 } from "./agentGatewayHostExtension.ts";
 
 const temporaryRoots: string[] = [];
@@ -165,9 +166,12 @@ describe.each([
 
     expect(session.getActiveToolNames()).toContain("team_tool");
     expect(session.getActiveToolNames()).not.toContain("browser_open");
-    expect(resourceLoader.getExtensions().errors.map(({ error }) => error).join("\n")).toContain(
-      "transient catalog failure",
-    );
+    expect(
+      resourceLoader
+        .getExtensions()
+        .errors.map(({ error }) => error)
+        .join("\n"),
+    ).toContain("transient catalog failure");
 
     available = true;
     await session.reload();
@@ -200,6 +204,12 @@ describe.each([
 
     expect(inspection.deliveredToolNames).toEqual(["omnimind_list_threads"]);
     expect(inspection.collidedToolNames).toEqual(["browser_open"]);
+    expect(
+      renderDeliveredAgentGatewayHostGuidance({
+        descriptors,
+        tools: session.getAllTools(),
+      }),
+    ).not.toContain("thread-scoped in-app page");
     await expect(
       session
         .getToolDefinition("browser_open")!
