@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-**OmniMind Agent Extension Architecture 1.0 Gate B**已经在任务分支闭合为未合并、未发布的production candidate。shipped bytes对应exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；同SHA已完成最终main同步、full gates、MiMo/DeepSeek live与隔离packaged journey。随后只允许补充不改变shipped bytes的证据文档，不得把该分支状态写成main、Release、本机真实安装或用户已交付产品。
+**OmniMind Agent Extension Architecture 1.0 Gate B**已经通过merge commit `5e22dd916ccba0dbc383fb0a9495f4888a69594b`并入`main`，但仍未发布或替换本机真实安装。shipped-bytes证据继续锁定exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；该SHA已完成最终main同步、full gates、MiMo/DeepSeek live与隔离packaged journey。合并后的docs-only状态收口不改变也不冒充已验证的product bytes。
 
 最终形状只有一条：
 
@@ -12,9 +12,9 @@
 4. stock Pi与其他Engine继续用各自native direct/eager管道获得同一Desired Host Surface；adapter只换管道，不形成Engine权限等级；
 5. Todo、supervised Bash、Pi built-ins、团队/用户/第三方Extensions保持独立owner。具体Extension可以按证据自带owner-local dynamic loader，但没有Host/global loader或第二Registry。
 
-## 当前分支已实现
+## 已并入main的实现
 
-以下source关注点已经在任务分支形成独立commits并通过focused测试：
+以下source关注点已经形成独立commits、通过focused测试，并随`5e22dd916`并入`main`：
 
 - `066d62035`：brand-new无settings文件时Device默认关闭；valid legacy snapshot在decode前保留既有Device intent；corrupt走quarantine与安全默认；不因启动ambient write；
 - `39109b033`：Gateway typed descriptor到Pi `ToolDefinition`与`tools/call` bridge集中到一份窄投影；transport JSON-RPC decoding仍只归`mcpInjection`；
@@ -36,7 +36,7 @@
 - MiMo `xiaomi-token-plan-cn/mimo-v2.5-pro`完成Chat首轮、`omnimind_list_projects`真实Host调用、continuation与abort；首次错误选择通用Xiaomi identity得到401，而同一凭据direct token-plan probe为200，改用Pi精确provider identity后通过，未产生产品补偿逻辑；
 - DeepSeek `deepseek/deepseek-v4-pro`完成folder-backed Agent的`read + omnimind_list_projects`；同SHA source/wire identity tests证明Todo schema属于Agent首轮工具面，packaged live则证明它没有被强制调用，但没有完成Todo真实execute/provenance journey；active Goal在continuation中读取真实文件并调用`omnimind_set_thread_goal`标记achieved；Automation run调用`omnimind_list_projects + omnimind_report_automation_result`，manual follow-up未继承run-only completion duty；
 - packaged profile证明fresh Device off；显式开启写成`disabledBuiltInGroups: []`并在同profile关闭/重开后保持on；Helper与bundled Server参数全部落入任务专用隔离路径，最终优雅退出且无存活owner；
-- shipped DMG来自同一code SHA，SHA-256为`8357594e71dc4c2b212b7ea84910a8752b5eb28a40d3ee942deabd9d1db31f64`。它没有替换`/Applications/OmniMind.app`，没有Release、update feed或main merge。
+- shipped DMG来自同一code SHA，SHA-256为`8357594e71dc4c2b212b7ea84910a8752b5eb28a40d3ee942deabd9d1db31f64`。该code已通过`5e22dd916`并入`main`，但没有替换`/Applications/OmniMind.app`，也没有创建Release或修改update feed。
 
 Live Session上报的初始input约35.9k–37.9k tokens；MiMo后续turn命中约38.9k cache-read，DeepSeek后续turn命中约35.8k–36.6k cache-read。可见完成时间为MiMo Host首轮16s、continuation 9.4s、DeepSeek folder-backed 7.3s、Automation 7.9s；当前telemetry没有可靠first-token timestamp，因此不把这些总时长伪称TTFR。未保存原始wire或credential。
 

@@ -2,7 +2,7 @@
 
 > 证据日期：2026-08-19
 >
-> current-source基线：`main@849730c508be0dde9570529431395acc7be2943b`；任务分支exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`已完成Architecture 1.0 source/full/live/isolated-packaged closure，但未合并main、未发布或替换真实安装
+> historical-source基线：`main@849730c508be0dde9570529431395acc7be2943b`；exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`已完成Architecture 1.0 source/full/live/isolated-packaged closure，并通过merge `5e22dd916ccba0dbc383fb0a9495f4888a69594b`进入main，但未发布或替换真实安装
 >
 > 文档角色：Settings、AgentGateway、Engine projection与MCP产品边界的证据owner；稳定UI与运行时合同分别由[`architecture/workbench.md`](../architecture/workbench.md)和[`architecture/execution.md`](../architecture/execution.md)拥有。
 
@@ -25,7 +25,7 @@ Host运行时目标也已改变：
 - 删除Host-owned callable loader、inactive pool与activation preflight；
 - future dynamic只属于具体Extension owner。
 
-基线main仍实现旧Host dynamic方案；本任务分支已经单轨删除该责任并改为eager Host Projection。两者必须分开：旧main只提供历史source evidence，本分支是已完成Gate B证据的未合并production candidate，不是main、Release或真实安装。
+历史基线main实现旧Host dynamic方案；当前main已单轨删除该责任并改为eager Host Projection。两者必须分开：旧main只提供历史source evidence；`9c05e0902`是已完成Gate B证据、并由`5e22dd916`合入main的production candidate，但不是Release或真实安装。
 
 ## 1. 产品问题不是“MCP页面放哪里”
 

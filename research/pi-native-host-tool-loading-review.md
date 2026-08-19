@@ -8,7 +8,7 @@
 >
 > production-adopted Synara：`8f9f60045ea652db7d4a6822e2f723dde073f40a`；只读对照：clean `c79fab498de1a911a14ff8b05bf83d0528ec54fa`
 >
-> code evidence：任务分支exact pushed SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；同SHA已完成full/live/isolated-packaged closure，仍未合并main、未发布或替换真实安装
+> code evidence：exact pushed SHA `9c05e09027be374cc2e858536aad5ab79a394c45`已完成full/live/isolated-packaged closure，并通过merge `5e22dd916ccba0dbc383fb0a9495f4888a69594b`进入main；仍未发布或替换真实安装
 >
 > 文档角色：Pi/Synara exact-source证据、基线main观察、维护者已确认架构、本任务分支implementation与live/packaged falsifier。稳定运行时合同只由[`architecture/execution.md`](../architecture/execution.md)拥有。
 
@@ -18,12 +18,12 @@
 
 必须同时区分四层：
 
-1. **基线main事实**：`main@849730c…`仍有Host-owned callable loader、inactive pool、lexical matching、`session_start` deactivation与Goal/Automation activation preflight；
+1. **历史基线事实**：`main@849730c…`曾有Host-owned callable loader、inactive pool、lexical matching、`session_start` deactivation与Goal/Automation activation preflight；
 2. **已确认架构**：保留Pi-native Host Projection Extension，删除整条Host loader责任，允许且可用的Host definitions注册后直接active；
-3. **本任务分支production candidate**：已实现第2层，并在exact pushed code SHA `9c05e0902`通过settings、projection、reload、collision、prompt、exact-turn、full tests、MiMo/DeepSeek与isolated packaged closure；
+3. **已合入main的production candidate**：第2层由exact pushed code SHA `9c05e0902`实现，通过settings、projection、reload、collision、prompt、exact-turn、full tests、MiMo/DeepSeek与isolated packaged closure，并由`5e22dd916`合入main；
 4. **未来非承诺**：某个具体Extension可以在证据成立时拥有自己的dynamic loader，但OmniMind不建立Host/global search manager。
 
-旧main的绿色测试只证明历史实现自洽。本分支证据证明的是未合并、未发布candidate，不得冒充main、Release、本机真实安装或用户已经收到新bytes。
+旧main的绿色测试只证明历史实现自洽。`9c05e0902`的证据证明当前已合入main但仍未发布的candidate，不得冒充Release、本机真实安装或用户已经收到新bytes。
 
 ## 1. 最终裁决
 
@@ -419,7 +419,7 @@ Architecture 1.0只确定owner、composition、Host平权、当前eager投影、
 - live Session上报初始input约35.9k–37.9k tokens，后续cache-read约35.8k–38.9k；模型结果没有`search_tools`调用。当前telemetry没有可靠TTFR，UI总完成时间单独记录，不能改名为TTFR；
 - 同code SHA的DMG为242,920,412 bytes，SHA-256 `8357594e71dc4c2b212b7ea84910a8752b5eb28a40d3ee942deabd9d1db31f64`；staged production closure核对240个依赖身份；ZIP fresh startup及持续isolated profile均证明bundled Server ready、fresh Device off、explicit Device-on重开保持、真实Provider journeys、优雅退出与无孤儿进程。
 
-没有保留feature flag或eager/dynamic双轨。回滚是revert具体关注点，不是维护第二套长期实现；新shipped code会使该artifact证据失效。该candidate仍未merge main、未Release、未替换`/Applications/OmniMind.app`。
+没有保留feature flag或eager/dynamic双轨。回滚是revert具体关注点，不是维护第二套长期实现；新shipped code会使该artifact证据失效。该candidate已通过`5e22dd916`merge main，但未Release、未替换`/Applications/OmniMind.app`。
 
 ## 16. 验证矩阵
 
