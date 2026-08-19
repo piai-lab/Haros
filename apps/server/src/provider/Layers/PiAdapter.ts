@@ -80,9 +80,7 @@ import {
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
-import {
-  type AgentGatewayHostExtensionHandle,
-} from "../agentGatewayHostExtension.ts";
+import { type AgentGatewayHostExtensionHandle } from "../agentGatewayHostExtension.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
 import {
@@ -2645,9 +2643,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         modelRegistry: modelRegistryFacade(runtime.services.modelRuntime, input.sdk),
         gatewayControlAvailable: resolvedGatewayControlAvailable,
         hostProjectionDiagnostics,
-        ...(resolvedHostProjection === undefined
-          ? {}
-          : { hostProjection: resolvedHostProjection }),
+        ...(resolvedHostProjection === undefined ? {} : { hostProjection: resolvedHostProjection }),
       };
     };
 
@@ -2800,83 +2796,82 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           gatewayControlAvailable,
           hostProjectionDiagnostics,
           hostProjection,
-        } =
-          yield* releaseAgentGatewaySessionLeaseOnInterrupt(
-            agentGatewaySessionLease,
-            Effect.tryPromise({
-              try: () =>
-                createSdkRuntime({
-                  sdk: piSdk,
-                  cwd,
-                  agentDir,
-                  sessionManager,
-                  ...(modelId ? { modelId } : {}),
-                  ...(thinkingLevel ? { thinkingLevel } : {}),
-                  processSupervisor,
-                  ...(gatewayTools.length > 0 ? { gatewayTools } : {}),
-                  ...(provider === "omnimind" && agentGatewayConnection !== undefined
-                    ? {
-                        gatewayConnection: agentGatewayConnection!,
-                        ...(options?.agentGatewayFetch === undefined
-                          ? {}
-                          : { agentGatewayFetch: options.agentGatewayFetch }),
-                      }
-                    : {}),
-                  ...(workSurface === undefined ? {} : { workSurface }),
-                  ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
-                  ...(provider === "omnimind" && workSurface === "agent"
-                    ? {
-                        onTaskListUpdate: ({ toolCallId, payload }) => {
-                          const current = taskProjectionContext;
-                          if (
-                            !current ||
-                            current.stopped ||
-                            !current.activeTurnId ||
-                            sessions.get(input.threadId) !== current
-                          ) {
-                            return;
-                          }
-                          offerRuntimeEvent({
-                            ...makeEventBase(current),
-                            type: "turn.tasks.updated",
-                            payload,
-                            raw: {
-                              source: "pi.sdk.event",
-                              messageType: OMNIMIND_TASK_LIST_TOOL_NAME,
-                              payload: { toolCallId },
-                            },
-                          } satisfies ProviderRuntimeEvent);
-                        },
-                      }
-                    : {}),
-                  hostSystemPrompt: (available) =>
-                    makePiHostSystemPrompt({
-                      provider,
-                      gatewayControlAvailable:
-                        provider === "omnimind" ? agentGatewayConnection !== undefined : available,
-                      enabledBuiltInGroups,
-                    }),
-                  ...(provider === "omnimind" && workSurface !== undefined
-                    ? {
-                        immutableSystemPrompt: makeOmniMindEngineSystemPrompt({ workSurface }),
-                      }
-                    : {}),
-                }),
-              catch: (cause) =>
-                new ProviderAdapterRequestError({
-                  provider: provider,
-                  method: "session/start",
-                  detail: toMessage(cause, `Failed to start ${displayName} session.`),
-                  cause,
-                }),
-            }),
-          ).pipe(
-            Effect.tapError(() =>
-              Effect.sync(() => {
-                agentGatewaySessionLease?.release();
+        } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
+          agentGatewaySessionLease,
+          Effect.tryPromise({
+            try: () =>
+              createSdkRuntime({
+                sdk: piSdk,
+                cwd,
+                agentDir,
+                sessionManager,
+                ...(modelId ? { modelId } : {}),
+                ...(thinkingLevel ? { thinkingLevel } : {}),
+                processSupervisor,
+                ...(gatewayTools.length > 0 ? { gatewayTools } : {}),
+                ...(provider === "omnimind" && agentGatewayConnection !== undefined
+                  ? {
+                      gatewayConnection: agentGatewayConnection!,
+                      ...(options?.agentGatewayFetch === undefined
+                        ? {}
+                        : { agentGatewayFetch: options.agentGatewayFetch }),
+                    }
+                  : {}),
+                ...(workSurface === undefined ? {} : { workSurface }),
+                ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
+                ...(provider === "omnimind" && workSurface === "agent"
+                  ? {
+                      onTaskListUpdate: ({ toolCallId, payload }) => {
+                        const current = taskProjectionContext;
+                        if (
+                          !current ||
+                          current.stopped ||
+                          !current.activeTurnId ||
+                          sessions.get(input.threadId) !== current
+                        ) {
+                          return;
+                        }
+                        offerRuntimeEvent({
+                          ...makeEventBase(current),
+                          type: "turn.tasks.updated",
+                          payload,
+                          raw: {
+                            source: "pi.sdk.event",
+                            messageType: OMNIMIND_TASK_LIST_TOOL_NAME,
+                            payload: { toolCallId },
+                          },
+                        } satisfies ProviderRuntimeEvent);
+                      },
+                    }
+                  : {}),
+                hostSystemPrompt: (available) =>
+                  makePiHostSystemPrompt({
+                    provider,
+                    gatewayControlAvailable:
+                      provider === "omnimind" ? agentGatewayConnection !== undefined : available,
+                    enabledBuiltInGroups,
+                  }),
+                ...(provider === "omnimind" && workSurface !== undefined
+                  ? {
+                      immutableSystemPrompt: makeOmniMindEngineSystemPrompt({ workSurface }),
+                    }
+                  : {}),
               }),
-            ),
-          );
+            catch: (cause) =>
+              new ProviderAdapterRequestError({
+                provider: provider,
+                method: "session/start",
+                detail: toMessage(cause, `Failed to start ${displayName} session.`),
+                cause,
+              }),
+          }),
+        ).pipe(
+          Effect.tapError(() =>
+            Effect.sync(() => {
+              agentGatewaySessionLease?.release();
+            }),
+          ),
+        );
         const now = new Date().toISOString();
         const model = runtime.session.model
           ? `${runtime.session.model.provider}/${runtime.session.model.id}`
