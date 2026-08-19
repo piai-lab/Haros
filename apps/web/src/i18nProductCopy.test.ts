@@ -566,6 +566,8 @@ describe("reachable OmniMind-owned product copy", () => {
       /Pi-compatible/iu,
       /ResourceLoader/u,
       /Engine Contract/iu,
+      /APPEND_SYSTEM\.md/u,
+      /SYSTEM\.md/u,
       /runtime projection/iu,
       /资源加载器/u,
       /引擎合同/u,
@@ -574,12 +576,8 @@ describe("reachable OmniMind-owned product copy", () => {
       const promptCopy = Object.entries(catalog).filter(
         ([key]) =>
           key.startsWith("settings.prompt") ||
-          key.startsWith("settings.globalPersonal") ||
-          key.startsWith("settings.appendSystem") ||
-          key.startsWith("settings.systemInstructions") ||
-          key.startsWith("settings.advancedPrompt") ||
-          key.startsWith("settings.createSystemPrompt") ||
-          key.startsWith("settings.removePrompt") ||
+          key.startsWith("settings.customRules") ||
+          key.startsWith("settings.removeCustomRules") ||
           key.startsWith("settings.currentConversation") ||
           key.startsWith("settings.reloadConversation") ||
           key.startsWith("settings.shadowedPrompt") ||

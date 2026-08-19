@@ -1,25 +1,16 @@
 import { Schema } from "effect";
 
 import { TrimmedNonEmptyString } from "./baseSchemas";
-import { EDITABLE_TEXT_FILE_MAX_BYTES, isEditableTextContent } from "./editableText";
+import { isOmniMindAgentPromptContent, OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 
-export const OmniMindAgentPromptResourceKind = Schema.Literals([
-  "globalContext",
-  "appendSystem",
-  "system",
-]);
-export type OmniMindAgentPromptResourceKind = typeof OmniMindAgentPromptResourceKind.Type;
-
-export const OmniMindAgentPromptSourceId = Schema.Literals([
+export const OmniMindAgentCustomRulesSourceId = Schema.Literals([
   "AGENTS.override.md",
   "AGENTS.md",
   "AGENTS.MD",
   "CLAUDE.md",
   "CLAUDE.MD",
-  "APPEND_SYSTEM.md",
-  "SYSTEM.md",
 ]);
-export type OmniMindAgentPromptSourceId = typeof OmniMindAgentPromptSourceId.Type;
+export type OmniMindAgentCustomRulesSourceId = typeof OmniMindAgentCustomRulesSourceId.Type;
 
 const PromptVersion = TrimmedNonEmptyString.check(
   Schema.isMinLength(64),
@@ -27,78 +18,100 @@ const PromptVersion = TrimmedNonEmptyString.check(
   Schema.isPattern(/^[a-f0-9]{64}$/u),
 );
 const DisplayPath = TrimmedNonEmptyString.check(Schema.isMaxLength(4_096));
+const RevealPath = TrimmedNonEmptyString.check(Schema.isMaxLength(16_384));
 const PromptContent = Schema.String.check(
-  Schema.isMaxLength(EDITABLE_TEXT_FILE_MAX_BYTES),
-  Schema.makeFilter(isEditableTextContent),
+  Schema.isMaxLength(OMNIMIND_AGENT_PROMPT_MAX_BYTES),
+  Schema.makeFilter(isOmniMindAgentPromptContent),
 );
 
-export const OmniMindAgentPromptCandidate = Schema.Struct({
-  sourceId: OmniMindAgentPromptSourceId,
-  displayPath: DisplayPath,
-  exists: Schema.Boolean,
-  active: Schema.Boolean,
+export const OmniMindAgentDefaultPromptSnapshot = Schema.Struct({
+  content: PromptContent,
+  customized: Schema.Boolean,
+  version: PromptVersion,
 });
-export type OmniMindAgentPromptCandidate = typeof OmniMindAgentPromptCandidate.Type;
+export type OmniMindAgentDefaultPromptSnapshot = typeof OmniMindAgentDefaultPromptSnapshot.Type;
 
-export const OmniMindAgentPromptResourceSnapshot = Schema.Struct({
-  kind: OmniMindAgentPromptResourceKind,
-  sourceId: Schema.NullOr(OmniMindAgentPromptSourceId),
-  displayPath: Schema.NullOr(DisplayPath),
-  exists: Schema.Boolean,
-  version: Schema.NullOr(PromptVersion),
-  contentLoaded: Schema.Boolean,
-  content: Schema.NullOr(PromptContent),
-});
-export type OmniMindAgentPromptResourceSnapshot = typeof OmniMindAgentPromptResourceSnapshot.Type;
+export const OmniMindAgentCustomRulesSnapshot = Schema.Union([
+  Schema.Struct({
+    availability: Schema.Literal("absent"),
+    unavailableReason: Schema.Null,
+    sourceId: Schema.Null,
+    displayPath: Schema.Null,
+    revealPath: Schema.Null,
+    exists: Schema.Literal(false),
+    version: Schema.Null,
+    content: Schema.Literal(""),
+  }),
+  Schema.Struct({
+    availability: Schema.Literal("available"),
+    unavailableReason: Schema.Null,
+    sourceId: OmniMindAgentCustomRulesSourceId,
+    displayPath: DisplayPath,
+    revealPath: RevealPath,
+    exists: Schema.Literal(true),
+    version: PromptVersion,
+    content: PromptContent,
+  }),
+  Schema.Struct({
+    availability: Schema.Literal("unavailable"),
+    unavailableReason: Schema.Literals(["too_large", "unsupported_text"]),
+    sourceId: Schema.NullOr(OmniMindAgentCustomRulesSourceId),
+    displayPath: DisplayPath,
+    revealPath: RevealPath,
+    exists: Schema.Literal(true),
+    version: Schema.Null,
+    content: Schema.Literal(""),
+  }),
+]);
+export type OmniMindAgentCustomRulesSnapshot = typeof OmniMindAgentCustomRulesSnapshot.Type;
 
 export const OmniMindAgentPromptSnapshot = Schema.Struct({
-  globalContextCandidates: Schema.Array(OmniMindAgentPromptCandidate).check(
-    Schema.isMinLength(5),
-    Schema.isMaxLength(5),
-  ),
-  globalContext: OmniMindAgentPromptResourceSnapshot,
-  appendSystem: OmniMindAgentPromptResourceSnapshot,
-  system: OmniMindAgentPromptResourceSnapshot,
-  maxBytes: Schema.Literal(EDITABLE_TEXT_FILE_MAX_BYTES),
+  defaultPrompt: OmniMindAgentDefaultPromptSnapshot,
+  customRules: OmniMindAgentCustomRulesSnapshot,
+  maxBytes: Schema.Literal(OMNIMIND_AGENT_PROMPT_MAX_BYTES),
 });
 export type OmniMindAgentPromptSnapshot = typeof OmniMindAgentPromptSnapshot.Type;
 
-export const OmniMindAgentPromptGetSnapshotInput = Schema.Struct({
-  resource: Schema.optional(OmniMindAgentPromptResourceKind),
-});
+export const OmniMindAgentPromptGetSnapshotInput = Schema.Struct({});
 export type OmniMindAgentPromptGetSnapshotInput = typeof OmniMindAgentPromptGetSnapshotInput.Type;
 
-export const OmniMindAgentPromptCreateInput = Schema.Struct({
-  action: Schema.Literal("create"),
-  resource: OmniMindAgentPromptResourceKind,
-  content: PromptContent,
-});
-export const OmniMindAgentPromptUpdateInput = Schema.Struct({
-  action: Schema.Literal("update"),
-  resource: OmniMindAgentPromptResourceKind,
-  sourceId: OmniMindAgentPromptSourceId,
+export const OmniMindAgentDefaultPromptSetInput = Schema.Struct({
+  action: Schema.Literal("setDefault"),
   expectedVersion: PromptVersion,
   content: PromptContent,
 });
-export const OmniMindAgentPromptRemoveInput = Schema.Struct({
-  action: Schema.Literal("remove"),
-  resource: OmniMindAgentPromptResourceKind,
-  sourceId: OmniMindAgentPromptSourceId,
+export const OmniMindAgentDefaultPromptRestoreInput = Schema.Struct({
+  action: Schema.Literal("restoreDefault"),
+  expectedVersion: PromptVersion,
+});
+export const OmniMindAgentCustomRulesCreateInput = Schema.Struct({
+  action: Schema.Literal("createCustomRules"),
+  content: PromptContent,
+});
+export const OmniMindAgentCustomRulesUpdateInput = Schema.Struct({
+  action: Schema.Literal("updateCustomRules"),
+  sourceId: OmniMindAgentCustomRulesSourceId,
+  expectedVersion: PromptVersion,
+  content: PromptContent,
+});
+export const OmniMindAgentCustomRulesRemoveInput = Schema.Struct({
+  action: Schema.Literal("removeCustomRules"),
+  sourceId: OmniMindAgentCustomRulesSourceId,
   expectedVersion: PromptVersion,
 });
 
 export const OmniMindAgentPromptMutationInput = Schema.Union([
-  OmniMindAgentPromptCreateInput,
-  OmniMindAgentPromptUpdateInput,
-  OmniMindAgentPromptRemoveInput,
+  OmniMindAgentDefaultPromptSetInput,
+  OmniMindAgentDefaultPromptRestoreInput,
+  OmniMindAgentCustomRulesCreateInput,
+  OmniMindAgentCustomRulesUpdateInput,
+  OmniMindAgentCustomRulesRemoveInput,
 ]);
 export type OmniMindAgentPromptMutationInput = typeof OmniMindAgentPromptMutationInput.Type;
 
-// expectedVersion is optimistic conflict detection for external editors. The
-// Server serializes OmniMind mutations and checks the version immediately
-// before replace/remove, but Node does not expose an inode/version CAS for a
-// non-cooperating process. Callers must not describe this as a strict atomic
-// compare-and-replace guarantee. Atomic create remains no-clobber.
+// Custom rules use optimistic version checks against non-cooperating external
+// editors. Node does not provide strict inode/version CAS for replace/remove;
+// callers must not describe the final narrow race as atomically eliminated.
 const PromptMutationCompleted = Schema.Struct({
   state: Schema.Literals(["changed", "unchanged"]),
   snapshot: OmniMindAgentPromptSnapshot,

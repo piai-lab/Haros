@@ -5,22 +5,22 @@ import * as path from "node:path";
 
 import {
   EDITABLE_TEXT_FILE_MAX_BYTES,
+  editableTextByteLength,
   hasDisallowedEditableTextControl,
-  isEditableTextContent,
-  type OmniMindAgentPromptCandidate,
+  isOmniMindAgentPromptContent,
+  OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+  type OmniMindAgentCustomRulesSourceId,
   type OmniMindAgentPromptGetSnapshotInput,
   type OmniMindAgentPromptMutationInput,
   type OmniMindAgentPromptMutationResult,
-  type OmniMindAgentPromptResourceKind,
-  type OmniMindAgentPromptResourceSnapshot,
   type OmniMindAgentPromptSnapshot,
-  type OmniMindAgentPromptSourceId,
 } from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
 
 import { writeFileStringAtomically } from "../../atomicWrite.ts";
 import { ServerConfig } from "../../config.ts";
 import { PRIVATE_FILE_MODE } from "../../privatePathPermissions.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import {
   loadOmniMindCodingAgentModule,
   resolveOmniMindAgentDir,
@@ -37,19 +37,8 @@ const GLOBAL_CANDIDATES = [
   "AGENTS.MD",
   "CLAUDE.md",
   "CLAUDE.MD",
-] as const satisfies ReadonlyArray<OmniMindAgentPromptSourceId>;
-const FIXED_SOURCE = {
-  appendSystem: "APPEND_SYSTEM.md",
-  system: "SYSTEM.md",
-} as const satisfies Record<
-  Exclude<OmniMindAgentPromptResourceKind, "globalContext">,
-  OmniMindAgentPromptSourceId
->;
-const MANAGED_SOURCES = new Set<OmniMindAgentPromptSourceId>([
-  ...GLOBAL_CANDIDATES,
-  FIXED_SOURCE.appendSystem,
-  FIXED_SOURCE.system,
-]);
+] as const satisfies ReadonlyArray<OmniMindAgentCustomRulesSourceId>;
+const MANAGED_SOURCES = new Set<OmniMindAgentCustomRulesSourceId>(GLOBAL_CANDIDATES);
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 type FileIdentity = Pick<Stats, "dev" | "ino">;
@@ -72,11 +61,11 @@ type Discovery = {
 export type SafeReadHooks = {
   readonly afterLeafValidation?: (input: {
     readonly agentDir: string;
-    readonly sourceId: OmniMindAgentPromptSourceId;
+    readonly sourceId: OmniMindAgentCustomRulesSourceId;
   }) => Promise<void>;
   readonly afterHandleStat?: (input: {
     readonly agentDir: string;
-    readonly sourceId: OmniMindAgentPromptSourceId;
+    readonly sourceId: OmniMindAgentCustomRulesSourceId;
   }) => Promise<void>;
 };
 
@@ -84,6 +73,15 @@ class PromptConflict extends Error {
   constructor(readonly reason: "content_changed" | "source_changed" | "state_changed") {
     super(reason);
     this.name = "PromptConflict";
+  }
+}
+
+class PromptUnavailable extends Error {
+  constructor(
+    readonly reason: "too_large" | "unsupported_text",
+    readonly sourceId: OmniMindAgentCustomRulesSourceId | null,
+  ) {
+    super(reason);
   }
 }
 
@@ -123,7 +121,12 @@ function encodeForExisting(content: string, existing?: SafeFile): Buffer {
 }
 
 function assertEditableContent(content: string): void {
-  if (!isEditableTextContent(content)) throw new Error("Prompt content is not editable text");
+  if (
+    !isOmniMindAgentPromptContent(content) ||
+    editableTextByteLength(content) > OMNIMIND_AGENT_PROMPT_MAX_BYTES
+  ) {
+    throw new Error("Prompt content is not editable text");
+  }
 }
 
 function displayPath(filePath: string, homeDir: string): string {
@@ -152,7 +155,7 @@ async function rootState(
 
 async function validateLeaf(
   agentDir: string,
-  sourceId: OmniMindAgentPromptSourceId,
+  sourceId: OmniMindAgentCustomRulesSourceId,
 ): Promise<Stats | null> {
   if (!MANAGED_SOURCES.has(sourceId)) throw new Error("Unknown prompt source");
   const root = await rootState(agentDir);
@@ -175,14 +178,15 @@ async function validateLeaf(
 
 async function safeRead(
   agentDir: string,
-  sourceId: OmniMindAgentPromptSourceId,
+  sourceId: OmniMindAgentCustomRulesSourceId,
   hooks: SafeReadHooks = {},
 ): Promise<SafeFile> {
   const rootBefore = await rootState(agentDir);
   if (!rootBefore) throw new PromptConflict("state_changed");
   const leafBefore = await validateLeaf(agentDir, sourceId);
   if (!leafBefore) throw new PromptConflict("state_changed");
-  if (leafBefore.size > EDITABLE_TEXT_FILE_MAX_BYTES) throw new Error("Prompt source is too large");
+  if (leafBefore.size > OMNIMIND_AGENT_PROMPT_MAX_BYTES)
+    throw new PromptUnavailable("too_large", sourceId);
   await hooks.afterLeafValidation?.({ agentDir, sourceId });
   const filePath = path.join(agentDir, sourceId);
   const handle = await fs.open(filePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
@@ -191,8 +195,8 @@ async function safeRead(
     if (!handleStat.isFile() || handleStat.nlink !== 1 || !sameIdentity(handleStat, leafBefore)) {
       throw new PromptConflict("state_changed");
     }
-    if (handleStat.size > EDITABLE_TEXT_FILE_MAX_BYTES) {
-      throw new Error("Prompt source is too large");
+    if (handleStat.size > OMNIMIND_AGENT_PROMPT_MAX_BYTES) {
+      throw new PromptUnavailable("too_large", sourceId);
     }
     await hooks.afterHandleStat?.({ agentDir, sourceId });
     const bytes = Buffer.alloc(handleStat.size);
@@ -219,9 +223,14 @@ async function safeRead(
     ) {
       throw new PromptConflict("state_changed");
     }
-    const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    let decoded: string;
+    try {
+      decoded = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+    } catch {
+      throw new PromptUnavailable("unsupported_text", sourceId);
+    }
     if (hasDisallowedEditableTextControl(decoded)) {
-      throw new Error("Prompt source is not editable text");
+      throw new PromptUnavailable("unsupported_text", sourceId);
     }
     const hasBom = bytes.subarray(0, UTF8_BOM.length).equals(UTF8_BOM);
     const withoutBom = hasBom ? decoded.slice(1) : decoded;
@@ -247,11 +256,23 @@ async function discover(input: {
 }): Promise<Discovery> {
   const candidateExists = new Map<(typeof GLOBAL_CANDIDATES)[number], boolean>();
   const seenCandidateIdentities = new Set<string>();
+  const existingCandidates: OmniMindAgentCustomRulesSourceId[] = [];
+  const oversizedCandidates: OmniMindAgentCustomRulesSourceId[] = [];
   for (const sourceId of GLOBAL_CANDIDATES) {
     const stat = await validateLeaf(input.agentDir, sourceId);
     const identity = stat ? `${stat.dev}:${stat.ino}` : null;
     candidateExists.set(sourceId, identity !== null && !seenCandidateIdentities.has(identity));
-    if (identity !== null) seenCandidateIdentities.add(identity);
+    if (identity !== null) {
+      seenCandidateIdentities.add(identity);
+      existingCandidates.push(sourceId);
+      if (stat!.size > EDITABLE_TEXT_FILE_MAX_BYTES) oversizedCandidates.push(sourceId);
+    }
+  }
+  if (oversizedCandidates.length > 0) {
+    throw new PromptUnavailable(
+      "too_large",
+      existingCandidates.length === 1 ? oversizedCandidates[0]! : null,
+    );
   }
   if (!(await rootState(input.agentDir))) {
     return { agentDir: input.agentDir, activeSourceId: null, activeFile: null, candidateExists };
@@ -278,101 +299,76 @@ async function discover(input: {
   return { agentDir: input.agentDir, activeSourceId: sourceId, activeFile, candidateExists };
 }
 
-function emptyResource(kind: OmniMindAgentPromptResourceKind): OmniMindAgentPromptResourceSnapshot {
-  return {
-    kind,
-    sourceId: null,
-    displayPath: null,
-    exists: false,
-    version: null,
-    contentLoaded: false,
-    content: null,
-  };
-}
-
 async function makeSnapshot(input: {
   readonly sdk: OmniMindCodingAgentModule;
   readonly agentDir: string;
   readonly homeDir: string;
-  readonly requested: OmniMindAgentPromptResourceKind;
+  readonly factoryContent: string;
+  readonly customizedContent: string | null;
   readonly hooks: SafeReadHooks | undefined;
 }): Promise<OmniMindAgentPromptSnapshot> {
-  const discovery = await discover(input);
-  const candidates: OmniMindAgentPromptCandidate[] = GLOBAL_CANDIDATES.map((sourceId) => ({
-    sourceId,
-    displayPath: displayPath(path.join(input.agentDir, sourceId), input.homeDir),
-    exists: discovery.candidateExists.get(sourceId) === true,
-    active: discovery.activeSourceId === sourceId,
-  }));
-  const globalContext =
-    discovery.activeSourceId && discovery.activeFile
-      ? {
-          kind: "globalContext" as const,
-          sourceId: discovery.activeSourceId,
-          displayPath: displayPath(
-            path.join(input.agentDir, discovery.activeSourceId),
-            input.homeDir,
-          ),
-          exists: true,
-          version: discovery.activeFile.version,
-          contentLoaded: input.requested === "globalContext",
-          content: input.requested === "globalContext" ? discovery.activeFile.content : null,
-        }
-      : {
-          ...emptyResource("globalContext"),
-          contentLoaded: input.requested === "globalContext",
-        };
-  const fixed = async (kind: "appendSystem" | "system") => {
-    const sourceId = FIXED_SOURCE[kind];
-    const exists = (await validateLeaf(input.agentDir, sourceId)) !== null;
-    if (!exists) {
-      return {
-        ...emptyResource(kind),
-        sourceId,
-        displayPath: displayPath(path.join(input.agentDir, sourceId), input.homeDir),
-        contentLoaded: input.requested === kind,
-      };
-    }
-    if (input.requested !== kind) {
-      return {
-        kind,
-        sourceId,
-        displayPath: displayPath(path.join(input.agentDir, sourceId), input.homeDir),
-        exists: true,
-        version: null,
-        contentLoaded: false,
-        content: null,
-      } satisfies OmniMindAgentPromptResourceSnapshot;
-    }
-    const file = await safeRead(input.agentDir, sourceId, input.hooks);
-    return {
-      kind,
-      sourceId,
-      displayPath: displayPath(path.join(input.agentDir, sourceId), input.homeDir),
-      exists: true,
-      version: file.version,
-      contentLoaded: true,
-      content: file.content,
-    } satisfies OmniMindAgentPromptResourceSnapshot;
-  };
+  let discovery: Discovery | null = null;
+  let unavailable: PromptUnavailable | null = null;
+  try {
+    discovery = await discover(input);
+  } catch (error) {
+    if (!(error instanceof PromptUnavailable)) throw error;
+    unavailable = error;
+  }
+  const currentDefault = input.customizedContent ?? input.factoryContent;
+  const defaultVersion = createHash("sha256")
+    .update(input.customizedContent === null ? "factory\0" : "custom\0")
+    .update(currentDefault)
+    .digest("hex");
+  const activePath = discovery?.activeSourceId
+    ? path.join(input.agentDir, discovery.activeSourceId)
+    : null;
+  const unavailablePath = unavailable
+    ? unavailable.sourceId
+      ? path.join(input.agentDir, unavailable.sourceId)
+      : input.agentDir
+    : null;
   return {
-    globalContextCandidates: candidates,
-    globalContext,
-    appendSystem: await fixed("appendSystem"),
-    system: await fixed("system"),
-    maxBytes: EDITABLE_TEXT_FILE_MAX_BYTES,
+    defaultPrompt: {
+      content: currentDefault,
+      customized: input.customizedContent !== null,
+      version: defaultVersion,
+    },
+    customRules:
+      unavailable && unavailablePath
+        ? {
+            availability: "unavailable",
+            unavailableReason: unavailable.reason,
+            sourceId: unavailable.sourceId,
+            displayPath: displayPath(unavailablePath, input.homeDir),
+            revealPath: unavailablePath,
+            exists: true,
+            version: null,
+            content: "",
+          }
+        : discovery?.activeSourceId && discovery.activeFile && activePath
+          ? {
+              availability: "available",
+              unavailableReason: null,
+              sourceId: discovery.activeSourceId,
+              displayPath: displayPath(activePath, input.homeDir),
+              revealPath: activePath,
+              exists: true,
+              version: discovery.activeFile.version,
+              content: discovery.activeFile.content,
+            }
+          : {
+              availability: "absent",
+              unavailableReason: null,
+              sourceId: null,
+              displayPath: null,
+              revealPath: null,
+              exists: false,
+              version: null,
+              content: "",
+            },
+    maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
   };
-}
-
-function sourceForCreate(resource: OmniMindAgentPromptResourceKind): OmniMindAgentPromptSourceId {
-  return resource === "globalContext" ? "AGENTS.md" : FIXED_SOURCE[resource];
-}
-
-function sourceForDiscovery(
-  resource: OmniMindAgentPromptResourceKind,
-  discovery: Discovery,
-): OmniMindAgentPromptSourceId | null {
-  return resource === "globalContext" ? discovery.activeSourceId : FIXED_SOURCE[resource];
 }
 
 function assertCurrentAgentDir(baseDir: string, expectedAgentDir: string): void {
@@ -394,17 +390,20 @@ export function makeOmniMindAgentPromptFilesLive(
     OmniMindAgentPromptFiles,
     Effect.gen(function* () {
       const config = yield* ServerConfig;
+      const serverSettings = yield* ServerSettingsService;
       let mutationTail = Promise.resolve();
       const owners = async () => ({
         sdk: await (options.loadModule ?? loadOmniMindCodingAgentModule)(),
         agentDir: resolveOmniMindAgentDir(config.baseDir),
       });
-      const snapshot = async (resource: OmniMindAgentPromptResourceKind = "globalContext") => {
+      const snapshot = async () => {
         const current = await owners();
+        const settings = await Effect.runPromise(serverSettings.getSettings);
         return makeSnapshot({
           ...current,
           homeDir: config.homeDir,
-          requested: resource,
+          factoryContent: current.sdk.DEFAULT_BASE_INSTRUCTIONS,
+          customizedContent: settings.providers.omnimind.defaultPrompt,
           hooks: options.safeReadHooks,
         });
       };
@@ -423,37 +422,53 @@ export function makeOmniMindAgentPromptFilesLive(
       };
       const conflict = async (
         reason: PromptConflict["reason"],
-        resource: OmniMindAgentPromptResourceKind,
       ): Promise<OmniMindAgentPromptMutationResult> => ({
         state: "conflict",
         reason,
-        snapshot: await snapshot(resource),
+        snapshot: await snapshot(),
       });
 
       return {
-        getSnapshot: (input: OmniMindAgentPromptGetSnapshotInput = {}) =>
-          run(() => snapshot(input.resource ?? "globalContext")),
+        getSnapshot: (_input: OmniMindAgentPromptGetSnapshotInput = {}) => run(snapshot),
         mutate: (input: OmniMindAgentPromptMutationInput) =>
           run(() =>
             serialize(async (): Promise<OmniMindAgentPromptMutationResult> => {
-              assertEditableContent(input.action === "remove" ? "" : input.content);
+              if ("content" in input) assertEditableContent(input.content);
+
+              if (input.action === "setDefault" || input.action === "restoreDefault") {
+                const before = await snapshot();
+                if (before.defaultPrompt.version !== input.expectedVersion) {
+                  return conflict("content_changed");
+                }
+                const nextContent = input.action === "setDefault" ? input.content : null;
+                const expectedContent = before.defaultPrompt.customized
+                  ? before.defaultPrompt.content
+                  : null;
+                const mutation = await Effect.runPromise(
+                  serverSettings.mutateOmniMindDefaultPrompt(expectedContent, nextContent),
+                );
+                if (mutation.state === "conflict") return conflict("content_changed");
+                return {
+                  state: mutation.state,
+                  snapshot: mutation.state === "unchanged" ? before : await snapshot(),
+                };
+              }
+
               const { sdk, agentDir } = await owners();
               const discovery = await discover({ sdk, agentDir, hooks: options.safeReadHooks });
-              const selectedSource = sourceForDiscovery(input.resource, discovery);
+              const selectedSource = discovery.activeSourceId;
 
-              if (input.action === "create") {
+              if (input.action === "createCustomRules") {
                 if (input.content.length === 0) {
-                  return { state: "unchanged", snapshot: await snapshot(input.resource) };
+                  return { state: "unchanged", snapshot: await snapshot() };
                 }
                 if (
-                  input.resource === "globalContext"
-                    ? discovery.activeSourceId !== null ||
-                      [...discovery.candidateExists.values()].some(Boolean)
-                    : (await validateLeaf(agentDir, sourceForCreate(input.resource))) !== null
+                  discovery.activeSourceId !== null ||
+                  [...discovery.candidateExists.values()].some(Boolean)
                 ) {
-                  return conflict("state_changed", input.resource);
+                  return conflict("state_changed");
                 }
-                const sourceId = sourceForCreate(input.resource);
+                const sourceId = "AGENTS.md" as const;
                 const bytes = encodeForExisting(input.content);
                 await Effect.runPromise(
                   writeFileStringAtomically({
@@ -469,54 +484,52 @@ export function makeOmniMindAgentPromptFilesLive(
                         hooks: options.safeReadHooks,
                       });
                       const occupied =
-                        input.resource === "globalContext"
-                          ? fresh.activeSourceId !== null ||
-                            [...fresh.candidateExists.values()].some(Boolean)
-                          : (await validateLeaf(agentDir, sourceId)) !== null;
+                        fresh.activeSourceId !== null ||
+                        [...fresh.candidateExists.values()].some(Boolean);
                       if (occupied) throw new PromptConflict("state_changed");
                     },
                   }),
                 );
-                return { state: "changed", snapshot: await snapshot(input.resource) };
+                return { state: "changed", snapshot: await snapshot() };
               }
 
               if (selectedSource !== input.sourceId) {
-                return conflict("source_changed", input.resource);
+                return conflict("source_changed");
               }
               let existing: SafeFile;
               try {
                 existing = await safeRead(agentDir, input.sourceId, options.safeReadHooks);
               } catch (error) {
-                if (error instanceof PromptConflict) return conflict(error.reason, input.resource);
+                if (error instanceof PromptConflict) return conflict(error.reason);
                 throw error;
               }
               if (existing.version !== input.expectedVersion) {
-                return conflict("content_changed", input.resource);
+                return conflict("content_changed");
               }
 
-              if (input.action === "remove") {
+              if (input.action === "removeCustomRules") {
                 assertCurrentAgentDir(config.baseDir, agentDir);
                 const freshDiscovery = await discover({
                   sdk,
                   agentDir,
                   hooks: options.safeReadHooks,
                 });
-                if (sourceForDiscovery(input.resource, freshDiscovery) !== input.sourceId) {
-                  return conflict("source_changed", input.resource);
+                if (freshDiscovery.activeSourceId !== input.sourceId) {
+                  return conflict("source_changed");
                 }
                 const freshFile = await safeRead(agentDir, input.sourceId, options.safeReadHooks);
                 if (
                   freshFile.version !== input.expectedVersion ||
                   !sameIdentity(freshFile.identity, existing.identity)
                 ) {
-                  return conflict("content_changed", input.resource);
+                  return conflict("content_changed");
                 }
                 await fs.unlink(path.join(agentDir, input.sourceId));
-                return { state: "changed", snapshot: await snapshot(input.resource) };
+                return { state: "changed", snapshot: await snapshot() };
               }
 
               if (existing.content === normalizeContent(input.content)) {
-                return { state: "unchanged", snapshot: await snapshot(input.resource) };
+                return { state: "unchanged", snapshot: await snapshot() };
               }
               const bytes = encodeForExisting(input.content, existing);
               await Effect.runPromise(
@@ -531,7 +544,7 @@ export function makeOmniMindAgentPromptFilesLive(
                       agentDir,
                       hooks: options.safeReadHooks,
                     });
-                    if (sourceForDiscovery(input.resource, fresh) !== input.sourceId) {
+                    if (fresh.activeSourceId !== input.sourceId) {
                       throw new PromptConflict("source_changed");
                     }
                     const freshFile = await safeRead(
@@ -548,16 +561,16 @@ export function makeOmniMindAgentPromptFilesLive(
                   },
                 }),
               );
-              return { state: "changed", snapshot: await snapshot(input.resource) };
+              return { state: "changed", snapshot: await snapshot() };
             }).catch(async (error) => {
-              if (error instanceof PromptConflict) return conflict(error.reason, input.resource);
+              if (error instanceof PromptConflict) return conflict(error.reason);
               if (
                 typeof error === "object" &&
                 error !== null &&
                 "code" in error &&
                 error.code === "EEXIST"
               ) {
-                return conflict("state_changed", input.resource);
+                return conflict("state_changed");
               }
               throw error;
             }),

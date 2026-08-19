@@ -17,6 +17,7 @@ import { type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
 import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
@@ -1747,12 +1748,14 @@ describe("getPiDiscoverableModels", () => {
     try {
       const layer = makeOmniMindAgentAdapterLive().pipe(
         Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(ServerSettingsService.layerTest()),
         Layer.provideMerge(NodeServices.layer),
       );
       await Effect.runPromise(
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
+            const serverSettings = yield* ServerSettingsService;
             const events: ProviderRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
@@ -1778,6 +1781,9 @@ describe("getPiDiscoverableModels", () => {
               });
 
             yield* send("initial resources");
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt(null, "customized-default-v1"),
+            ).toMatchObject({ state: "changed" });
             yield* Effect.sync(() => {
               writeFileSync(path.join(agentDir, "AGENTS.md"), "global-context-v2");
               writeFileSync(path.join(projectAgentDir, "APPEND_SYSTEM.md"), "project-append-v2");
@@ -1791,6 +1797,13 @@ describe("getPiDiscoverableModels", () => {
             );
             expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
             yield* send("replacement base");
+
+            yield* Effect.sync(() => unlinkSync(path.join(agentDir, "SYSTEM.md")));
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt("customized-default-v1", null),
+            ).toMatchObject({ state: "changed" });
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("restored factory default");
 
             yield* Effect.sync(() =>
               writeFileSync(path.join(agentDir, "AGENTS.override.md"), "override-context-v1"),
@@ -1811,21 +1824,33 @@ describe("getPiDiscoverableModels", () => {
         ),
       );
 
-      expect(requestBodies).toHaveLength(7);
+      expect(requestBodies).toHaveLength(8);
+      expect(prompt(requestBodies[0])).toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
       expect(prompt(requestBodies[0])).toContain("global-context-v1");
       expect(prompt(requestBodies[0])).toContain("project-append-v1");
       expect(prompt(requestBodies[0])).not.toContain("global-append-v1");
       expect(prompt(requestBodies[1])).toBe(prompt(requestBodies[0]));
       expect(prompt(requestBodies[2])).toContain("global-context-v2");
       expect(prompt(requestBodies[2])).toContain("project-append-v2");
+      expect(prompt(requestBodies[2])).toContain("customized-default-v1");
+      expect(prompt(requestBodies[2])).not.toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
       expect(prompt(requestBodies[3])).toContain("replacement-base-v1");
+      expect(prompt(requestBodies[3])).not.toContain("customized-default-v1");
       expect(prompt(requestBodies[3])).toContain("global-context-v2");
       expect(prompt(requestBodies[3])).toContain("<omnimind_engine_contract>");
-      expect(prompt(requestBodies[4])).toContain("override-context-v1");
-      expect(prompt(requestBodies[4])).not.toContain("global-context-v2");
-      expect(prompt(requestBodies[5])).not.toContain("override-context-v1");
+      expect(prompt(requestBodies[4])).toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
+      expect(prompt(requestBodies[4])).not.toContain("customized-default-v1");
+      expect(prompt(requestBodies[5])).toContain("override-context-v1");
       expect(prompt(requestBodies[5])).not.toContain("global-context-v2");
-      expect(prompt(requestBodies[6])).toContain("global-context-v2");
+      expect(prompt(requestBodies[6])).not.toContain("override-context-v1");
+      expect(prompt(requestBodies[6])).not.toContain("global-context-v2");
+      expect(prompt(requestBodies[7])).toContain("global-context-v2");
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });

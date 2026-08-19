@@ -38,8 +38,8 @@ export const SETTINGS_TARGETS = {
   engineDetails: "setting-installed-clis",
   environmentPanel: "environment-panel",
   gitWritingModel: "setting-git-writing-model",
-  globalPersonalInstructions: "setting-global-personal-instructions",
-  advancedPromptFiles: "setting-advanced-prompt-files",
+  defaultPrompt: "setting-default-prompt",
+  customRules: "setting-custom-rules",
 } as const;
 
 export type SettingsNavItem = {
@@ -172,7 +172,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     id: "prompts",
     group: "coding",
     label: "Prompts",
-    description: "Edit the global instruction files used by OmniMind Agent.",
+    description: "Customize OmniMind Agent's default instructions and personal rules.",
     icon: "prompt",
     eyebrow: "Agent instructions",
   },

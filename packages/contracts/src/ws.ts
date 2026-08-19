@@ -161,10 +161,12 @@ import {
   OmniMindEcosystemResourceToggleInput,
 } from "./omnimindEcosystem";
 import {
-  OmniMindAgentPromptCreateInput,
+  OmniMindAgentCustomRulesCreateInput,
+  OmniMindAgentCustomRulesRemoveInput,
+  OmniMindAgentCustomRulesUpdateInput,
+  OmniMindAgentDefaultPromptRestoreInput,
+  OmniMindAgentDefaultPromptSetInput,
   OmniMindAgentPromptGetSnapshotInput,
-  OmniMindAgentPromptRemoveInput,
-  OmniMindAgentPromptUpdateInput,
 } from "./omnimindAgentPrompts";
 import {
   PullRequestMergeActionInput,
@@ -386,9 +388,11 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.omnimindEcosystemReload, OmniMindEcosystemReloadInput),
   tagRequestBody(WS_METHODS.omnimindAgentPromptsGetSnapshot, OmniMindAgentPromptGetSnapshotInput),
   Schema.Union([
-    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentPromptCreateInput),
-    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentPromptUpdateInput),
-    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentPromptRemoveInput),
+    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentDefaultPromptSetInput),
+    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentDefaultPromptRestoreInput),
+    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentCustomRulesCreateInput),
+    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentCustomRulesUpdateInput),
+    tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentCustomRulesRemoveInput),
   ]),
   tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),

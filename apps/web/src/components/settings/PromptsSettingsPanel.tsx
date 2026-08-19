@@ -1,5 +1,5 @@
 // FILE: PromptsSettingsPanel.tsx
-// Purpose: File-first editing for the global prompt resources used by OmniMind Agent.
+// Purpose: Edit OmniMind Agent's native default instruction segment and global custom rules.
 // Layer: Settings UI composition
 
 import {
@@ -7,11 +7,9 @@ import {
   hasDisallowedEditableTextControl,
   ThreadId,
   type OmniMindAgentPromptMutationResult,
-  type OmniMindAgentPromptResourceKind,
-  type OmniMindAgentPromptResourceSnapshot,
   type OmniMindAgentPromptSnapshot,
 } from "@omnimind/contracts";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   SettingsCard,
@@ -28,134 +26,72 @@ import {
   AlertDialogTitle,
 } from "~/components/ui/alert-dialog";
 import { Button } from "~/components/ui/button";
-import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from "~/components/ui/collapsible";
-import { DisclosureChevron } from "~/components/ui/DisclosureChevron";
 import { Textarea } from "~/components/ui/textarea";
 import { toastManager } from "~/components/ui/toast";
-import { useI18n, type MessageKey } from "~/i18n";
+import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import { resolvePromptReloadThreadId } from "./promptReloadTarget";
 
-type EditorBase = {
-  readonly sourceId: OmniMindAgentPromptResourceSnapshot["sourceId"];
-  readonly version: string | null;
-};
-type ConflictState = {
+type EditorKind = "defaultPrompt" | "customRules";
+type EditorConflict = {
   readonly reason: "content_changed" | "source_changed" | "state_changed";
-  readonly fresh: OmniMindAgentPromptResourceSnapshot;
+  readonly fresh: OmniMindAgentPromptSnapshot;
 };
-type ConfirmAction =
-  | { readonly type: "create-system" }
-  | { readonly type: "remove"; readonly resource: OmniMindAgentPromptResourceKind }
-  | null;
-
-const RESOURCE_COPY: Record<
-  OmniMindAgentPromptResourceKind,
-  { readonly title: MessageKey; readonly description: MessageKey }
-> = {
-  globalContext: {
-    title: "settings.globalPersonalInstructions",
-    description: "settings.globalPersonalInstructionsDescription",
-  },
-  appendSystem: {
-    title: "settings.appendSystemInstructions",
-    description: "settings.appendSystemInstructionsDescription",
-  },
-  system: {
-    title: "settings.systemInstructions",
-    description: "settings.systemInstructionsDescription",
-  },
-};
-
-function resourceOf(
-  snapshot: OmniMindAgentPromptSnapshot,
-  resource: OmniMindAgentPromptResourceKind,
-): OmniMindAgentPromptResourceSnapshot {
-  return snapshot[resource];
-}
-
-function preserveLoadedResource(
-  oldResource: OmniMindAgentPromptResourceSnapshot,
-  newResource: OmniMindAgentPromptResourceSnapshot,
-) {
-  return !newResource.contentLoaded &&
-    oldResource.contentLoaded &&
-    oldResource.sourceId === newResource.sourceId
-    ? oldResource
-    : newResource;
-}
-
-function mergeSnapshot(
-  previous: OmniMindAgentPromptSnapshot | null,
-  next: OmniMindAgentPromptSnapshot,
-): OmniMindAgentPromptSnapshot {
-  if (!previous) return next;
-  return {
-    ...next,
-    globalContext: preserveLoadedResource(previous.globalContext, next.globalContext),
-    appendSystem: preserveLoadedResource(previous.appendSystem, next.appendSystem),
-    system: preserveLoadedResource(previous.system, next.system),
-  };
-}
 
 export function PromptsSettingsPanel(props: { active: boolean }) {
   const { t } = useI18n();
   const [snapshot, setSnapshot] = useState<OmniMindAgentPromptSnapshot | null>(null);
-  const [drafts, setDrafts] = useState<Record<OmniMindAgentPromptResourceKind, string>>({
-    globalContext: "",
-    appendSystem: "",
-    system: "",
-  });
-  const [bases, setBases] = useState<Record<OmniMindAgentPromptResourceKind, EditorBase>>({
-    globalContext: { sourceId: null, version: null },
-    appendSystem: { sourceId: null, version: null },
-    system: { sourceId: null, version: null },
-  });
-  const [adding, setAdding] = useState<Record<OmniMindAgentPromptResourceKind, boolean>>({
-    globalContext: false,
-    appendSystem: false,
-    system: false,
-  });
-  const [conflicts, setConflicts] = useState<
-    Partial<Record<OmniMindAgentPromptResourceKind, ConflictState>>
-  >({});
-  const [pendingResource, setPendingResource] = useState<OmniMindAgentPromptResourceKind | null>(
-    null,
-  );
+  const [defaultDraft, setDefaultDraft] = useState("");
+  const [customRulesDraft, setCustomRulesDraft] = useState("");
+  const [defaultBaseVersion, setDefaultBaseVersion] = useState("");
+  const [customRulesBase, setCustomRulesBase] = useState<{
+    readonly sourceId: OmniMindAgentPromptSnapshot["customRules"]["sourceId"];
+    readonly version: string | null;
+  }>({ sourceId: null, version: null });
+  const [conflicts, setConflicts] = useState<Partial<Record<EditorKind, EditorConflict>>>({});
+  const [pendingEditor, setPendingEditor] = useState<EditorKind | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [loadRetrying, setLoadRetrying] = useState(false);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
   const [reloadThreadId, setReloadThreadId] = useState<ThreadId | null>(null);
   const [reloadState, setReloadState] = useState<
     "reloaded" | "no_active_session" | "different_engine" | "busy" | "failed" | null
   >(null);
   const [reloading, setReloading] = useState(false);
 
-  const adoptResource = (
-    nextSnapshot: OmniMindAgentPromptSnapshot,
-    resource: OmniMindAgentPromptResourceKind,
-    options: { readonly preserveDraft?: boolean } = {},
-  ) => {
-    const nextResource = resourceOf(nextSnapshot, resource);
-    setSnapshot((current) => mergeSnapshot(current, nextSnapshot));
-    setBases((current) => ({
-      ...current,
-      [resource]: { sourceId: nextResource.sourceId, version: nextResource.version },
-    }));
-    if (!options.preserveDraft) {
-      setDrafts((current) => ({ ...current, [resource]: nextResource.content ?? "" }));
-      setAdding((current) => ({ ...current, [resource]: false }));
+  const clearConflict = (editor: EditorKind) => {
+    setConflicts((current) => {
+      const next = { ...current };
+      delete next[editor];
+      return next;
+    });
+  };
+
+  const adoptSnapshot = (next: OmniMindAgentPromptSnapshot, editor?: EditorKind) => {
+    setSnapshot((current) => {
+      if (editor === undefined || current === null) return next;
+      return editor === "defaultPrompt"
+        ? { ...current, defaultPrompt: next.defaultPrompt, maxBytes: next.maxBytes }
+        : { ...current, customRules: next.customRules, maxBytes: next.maxBytes };
+    });
+    if (editor === undefined || editor === "defaultPrompt") {
+      setDefaultDraft(next.defaultPrompt.content);
+      setDefaultBaseVersion(next.defaultPrompt.version);
+    }
+    if (editor === undefined || editor === "customRules") {
+      setCustomRulesDraft(next.customRules.content);
+      setCustomRulesBase({
+        sourceId: next.customRules.sourceId,
+        version: next.customRules.version,
+      });
     }
   };
 
-  const loadResource = async (resource: OmniMindAgentPromptResourceKind) => {
-    const next = await ensureNativeApi().omnimindAgentPrompts.getSnapshot({ resource });
-    adoptResource(next, resource);
-    return next;
+  const load = async () => {
+    const next = await ensureNativeApi().omnimindAgentPrompts.getSnapshot({});
+    adoptSnapshot(next);
   };
 
   useEffect(() => {
@@ -164,9 +100,9 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     setLoadError(false);
     setReloadThreadId(resolvePromptReloadThreadId());
     void ensureNativeApi()
-      .omnimindAgentPrompts.getSnapshot({ resource: "globalContext" })
+      .omnimindAgentPrompts.getSnapshot({})
       .then((next) => {
-        if (!cancelled) adoptResource(next, "globalContext");
+        if (!cancelled) adoptSnapshot(next);
       })
       .catch(() => {
         if (!cancelled) setLoadError(true);
@@ -176,14 +112,6 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     };
   }, [props.active]);
 
-  const shadowedCandidates = useMemo(
-    () =>
-      snapshot?.globalContextCandidates.filter(
-        (candidate) => candidate.exists && !candidate.active,
-      ) ?? [],
-    [snapshot],
-  );
-
   if (!props.active) return null;
 
   const retryLoad = async () => {
@@ -191,10 +119,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     setLoadRetrying(true);
     setLoadError(false);
     try {
-      await loadResource("globalContext");
-      if (advancedOpen) {
-        await Promise.all([loadResource("appendSystem"), loadResource("system")]);
-      }
+      await load();
     } catch {
       setLoadError(true);
     } finally {
@@ -202,61 +127,30 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     }
   };
 
-  const save = async (resource: OmniMindAgentPromptResourceKind) => {
-    const current = snapshot ? resourceOf(snapshot, resource) : null;
-    if (!current || pendingResource) return;
-    if (resource === "system" && !current.exists) {
-      setConfirmAction({ type: "create-system" });
-      return;
-    }
-    await performSave(resource);
-  };
-
-  const performSave = async (resource: OmniMindAgentPromptResourceKind) => {
-    const current = snapshot ? resourceOf(snapshot, resource) : null;
-    const base = bases[resource];
-    if (!current || pendingResource) return;
-    setPendingResource(resource);
-    setConflicts((state) => ({ ...state, [resource]: undefined }));
-    try {
-      const result = await ensureNativeApi().omnimindAgentPrompts.mutate(
-        base.sourceId && base.version
-          ? {
-              action: "update",
-              resource,
-              sourceId: base.sourceId,
-              expectedVersion: base.version,
-              content: drafts[resource],
-            }
-          : { action: "create", resource, content: drafts[resource] },
-      );
-      handleMutationResult(resource, result);
-    } catch {
-      toastManager.add({
-        type: "error",
-        title: t("settings.promptSaveFailed"),
-        description: t("settings.promptSaveFailedDescription"),
-      });
-    } finally {
-      setPendingResource(null);
-    }
-  };
-
-  const handleMutationResult = (
-    resource: OmniMindAgentPromptResourceKind,
-    result: OmniMindAgentPromptMutationResult,
-  ) => {
+  const handleMutation = (editor: EditorKind, result: OmniMindAgentPromptMutationResult) => {
     if (result.state === "conflict") {
-      const fresh = resourceOf(result.snapshot, resource);
-      setSnapshot((current) => mergeSnapshot(current, result.snapshot));
+      setSnapshot((current) => {
+        if (current === null) return result.snapshot;
+        return editor === "defaultPrompt"
+          ? {
+              ...current,
+              defaultPrompt: result.snapshot.defaultPrompt,
+              maxBytes: result.snapshot.maxBytes,
+            }
+          : {
+              ...current,
+              customRules: result.snapshot.customRules,
+              maxBytes: result.snapshot.maxBytes,
+            };
+      });
       setConflicts((current) => ({
         ...current,
-        [resource]: { reason: result.reason, fresh },
+        [editor]: { reason: result.reason, fresh: result.snapshot },
       }));
       return;
     }
-    adoptResource(result.snapshot, resource);
-    setConflicts((current) => ({ ...current, [resource]: undefined }));
+    adoptSnapshot(result.snapshot, editor);
+    clearConflict(editor);
     if (result.state === "changed") setReloadState(null);
     toastManager.add({
       type: "success",
@@ -265,18 +159,93 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     });
   };
 
-  const remove = async (resource: OmniMindAgentPromptResourceKind) => {
-    const base = bases[resource];
-    if (!base.sourceId || !base.version || pendingResource) return;
-    setPendingResource(resource);
+  const saveDefault = async () => {
+    if (!snapshot || pendingEditor) return;
+    setPendingEditor("defaultPrompt");
+    clearConflict("defaultPrompt");
     try {
-      const result = await ensureNativeApi().omnimindAgentPrompts.mutate({
-        action: "remove",
-        resource,
-        sourceId: base.sourceId,
-        expectedVersion: base.version,
+      handleMutation(
+        "defaultPrompt",
+        await ensureNativeApi().omnimindAgentPrompts.mutate({
+          action: "setDefault",
+          expectedVersion: defaultBaseVersion,
+          content: defaultDraft,
+        }),
+      );
+    } catch {
+      toastManager.add({
+        type: "error",
+        title: t("settings.promptSaveFailed"),
+        description: t("settings.promptSaveFailedDescription"),
       });
-      handleMutationResult(resource, result);
+    } finally {
+      setPendingEditor(null);
+    }
+  };
+
+  const restoreDefault = async () => {
+    if (!snapshot || pendingEditor || !snapshot.defaultPrompt.customized) return;
+    setPendingEditor("defaultPrompt");
+    try {
+      handleMutation(
+        "defaultPrompt",
+        await ensureNativeApi().omnimindAgentPrompts.mutate({
+          action: "restoreDefault",
+          expectedVersion: defaultBaseVersion,
+        }),
+      );
+    } catch {
+      toastManager.add({
+        type: "error",
+        title: t("settings.promptRestoreFailed"),
+        description: t("settings.promptSaveFailedDescription"),
+      });
+    } finally {
+      setPendingEditor(null);
+    }
+  };
+
+  const saveCustomRules = async () => {
+    if (!snapshot || pendingEditor || snapshot.customRules.availability === "unavailable") return;
+    setPendingEditor("customRules");
+    clearConflict("customRules");
+    try {
+      const result =
+        customRulesBase.sourceId && customRulesBase.version
+          ? await ensureNativeApi().omnimindAgentPrompts.mutate({
+              action: "updateCustomRules",
+              sourceId: customRulesBase.sourceId,
+              expectedVersion: customRulesBase.version,
+              content: customRulesDraft,
+            })
+          : await ensureNativeApi().omnimindAgentPrompts.mutate({
+              action: "createCustomRules",
+              content: customRulesDraft,
+            });
+      handleMutation("customRules", result);
+    } catch {
+      toastManager.add({
+        type: "error",
+        title: t("settings.promptSaveFailed"),
+        description: t("settings.promptSaveFailedDescription"),
+      });
+    } finally {
+      setPendingEditor(null);
+    }
+  };
+
+  const removeCustomRules = async () => {
+    if (!customRulesBase.sourceId || !customRulesBase.version || pendingEditor) return;
+    setPendingEditor("customRules");
+    try {
+      handleMutation(
+        "customRules",
+        await ensureNativeApi().omnimindAgentPrompts.mutate({
+          action: "removeCustomRules",
+          sourceId: customRulesBase.sourceId,
+          expectedVersion: customRulesBase.version,
+        }),
+      );
     } catch {
       toastManager.add({
         type: "error",
@@ -284,7 +253,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
         description: t("settings.promptRemoveFailedDescription"),
       });
     } finally {
-      setPendingResource(null);
+      setPendingEditor(null);
     }
   };
 
@@ -305,398 +274,319 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     }
   };
 
-  const renderEditor = (resource: OmniMindAgentPromptResourceKind) => {
-    const current = snapshot ? resourceOf(snapshot, resource) : null;
-    if (!current) return null;
-    if (!current.contentLoaded) {
-      return (
-        <SettingsCard divided={false}>
-          <SettingsEmptyState className="py-7">{t("common.loading")}</SettingsEmptyState>
-        </SettingsCard>
-      );
+  const resolveConflict = (editor: EditorKind, keepDraft: boolean) => {
+    const conflict = conflicts[editor];
+    if (!conflict) return;
+    if (editor === "defaultPrompt") {
+      setDefaultBaseVersion(conflict.fresh.defaultPrompt.version);
+      if (!keepDraft) setDefaultDraft(conflict.fresh.defaultPrompt.content);
+    } else {
+      setCustomRulesBase({
+        sourceId: conflict.fresh.customRules.sourceId,
+        version: conflict.fresh.customRules.version,
+      });
+      if (!keepDraft) setCustomRulesDraft(conflict.fresh.customRules.content);
     }
-    const isAdding = adding[resource];
-    const visible = current.exists || isAdding;
-    const conflict = conflicts[resource];
-    const currentBytes = editableTextByteLength(drafts[resource]);
-    const tooLarge = snapshot ? currentBytes > snapshot.maxBytes : false;
-    const hasUnsupportedControl = hasDisallowedEditableTextControl(drafts[resource]);
-    const unchanged = current.exists
-      ? drafts[resource] === (current.content ?? "") && bases[resource].version === current.version
-      : drafts[resource].length === 0;
+    clearConflict(editor);
+  };
 
+  const renderConflict = (editor: EditorKind) => {
+    const conflict = conflicts[editor];
+    if (!conflict) return null;
+    const canKeepDraft =
+      conflict.reason === "content_changed" ||
+      (editor === "defaultPrompt" && conflict.reason === "state_changed");
     return (
-      <SettingsCard divided={false}>
-        <div className="space-y-4 p-4">
-          <div>
-            <h3 className="text-sm font-medium text-foreground">
-              {t(RESOURCE_COPY[resource].title)}
-            </h3>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {t(RESOURCE_COPY[resource].description)}
-            </p>
-          </div>
-          {!visible ? (
-            <SettingsEmptyState className="py-7">
-              <p>{t("settings.promptFileNotCreated")}</p>
-              <Button
-                className="mt-3"
-                size="sm"
-                onClick={() =>
-                  setAdding((currentAdding) => ({ ...currentAdding, [resource]: true }))
-                }
-              >
-                {resource === "globalContext"
-                  ? t("settings.addInstructions")
-                  : t("settings.createPromptFile")}
-              </Button>
-            </SettingsEmptyState>
-          ) : (
-            <div className="space-y-3">
-              <Textarea
-                aria-label={t(RESOURCE_COPY[resource].title)}
-                className="max-h-[min(48vh,28rem)] overflow-hidden [&_[data-slot=textarea]]:max-h-[min(48vh,28rem)] [&_[data-slot=textarea]]:overflow-y-auto"
-                value={drafts[resource]}
-                onChange={(event) => {
-                  const value = event.currentTarget.value;
-                  setDrafts((currentDrafts) => ({
-                    ...currentDrafts,
-                    [resource]: value,
-                  }));
-                }}
-              />
-              {hasUnsupportedControl ? (
-                <p className="text-xs leading-relaxed text-destructive">
-                  {t("settings.promptInvalidText")}
-                </p>
-              ) : null}
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span
-                  className={cn(
-                    "text-[11px] text-muted-foreground",
-                    tooLarge && "text-destructive",
-                  )}
-                >
-                  {t("settings.promptByteCount", {
-                    current: currentBytes.toLocaleString(),
-                    max: snapshot?.maxBytes.toLocaleString() ?? "—",
-                  })}
-                </span>
-                <div className="flex flex-wrap justify-end gap-2">
-                  {current.exists ? (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={pendingResource !== null}
-                      onClick={() => setConfirmAction({ type: "remove", resource })}
-                    >
-                      {t("common.delete")}
-                    </Button>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={pendingResource !== null}
-                    onClick={() => {
-                      setDrafts((draftState) => ({
-                        ...draftState,
-                        [resource]: current.content ?? "",
-                      }));
-                      setAdding((addingState) => ({ ...addingState, [resource]: false }));
-                      setConflicts((state) => ({ ...state, [resource]: undefined }));
-                    }}
-                  >
-                    {t("common.cancel")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    disabled={
-                      pendingResource !== null ||
-                      tooLarge ||
-                      hasUnsupportedControl ||
-                      unchanged ||
-                      conflict != null
-                    }
-                    onClick={() => void save(resource)}
-                  >
-                    {pendingResource === resource ? t("common.saving") : t("common.save")}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-          {conflict ? (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/6 p-3 text-xs leading-relaxed">
-              <p className="font-medium text-foreground">{t("settings.promptConflictTitle")}</p>
-              <p className="mt-1 text-muted-foreground">
-                {conflict.reason === "source_changed"
-                  ? t("settings.promptSourceChanged")
-                  : t("settings.promptContentChanged")}
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={() => {
-                    adoptResource(
-                      { ...(snapshot as OmniMindAgentPromptSnapshot), [resource]: conflict.fresh },
-                      resource,
-                    );
-                    setConflicts((state) => ({ ...state, [resource]: undefined }));
-                  }}
-                >
-                  {t("settings.reloadPromptFile")}
-                </Button>
-                {conflict.reason === "content_changed" &&
-                conflict.fresh.sourceId &&
-                conflict.fresh.version ? (
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() => {
-                      setBases((state) => ({
-                        ...state,
-                        [resource]: {
-                          sourceId: conflict.fresh.sourceId,
-                          version: conflict.fresh.version,
-                        },
-                      }));
-                      setConflicts((state) => ({ ...state, [resource]: undefined }));
-                    }}
-                  >
-                    {t("settings.keepPromptDraft")}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/6 p-3 text-xs leading-relaxed">
+        <p className="font-medium text-foreground">{t("settings.promptConflictTitle")}</p>
+        <p className="mt-1 text-muted-foreground">
+          {conflict.reason === "source_changed"
+            ? t("settings.promptSourceChanged")
+            : t("settings.promptContentChanged")}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button size="xs" variant="outline" onClick={() => resolveConflict(editor, false)}>
+            {t("settings.reloadPromptValue")}
+          </Button>
+          {canKeepDraft ? (
+            <Button size="xs" variant="ghost" onClick={() => resolveConflict(editor, true)}>
+              {t("settings.keepPromptDraft")}
+            </Button>
           ) : null}
         </div>
-      </SettingsCard>
+      </div>
     );
   };
 
+  if (loadError) {
+    return (
+      <SettingsEmptyState tone="destructive">
+        <p>{t("settings.promptsUnavailable")}</p>
+        <Button
+          className="mt-3"
+          size="sm"
+          variant="outline"
+          disabled={loadRetrying}
+          onClick={() => void retryLoad()}
+        >
+          {loadRetrying ? t("common.loading") : t("common.retry")}
+        </Button>
+      </SettingsEmptyState>
+    );
+  }
+  if (!snapshot) return <SettingsEmptyState>{t("common.loading")}</SettingsEmptyState>;
+
+  const defaultBytes = editableTextByteLength(defaultDraft);
+  const customRulesBytes = editableTextByteLength(customRulesDraft);
+  const defaultInvalid = hasDisallowedEditableTextControl(defaultDraft);
+  const customRulesInvalid = hasDisallowedEditableTextControl(customRulesDraft);
+  const defaultTooLarge = defaultBytes > snapshot.maxBytes;
+  const customRulesTooLarge = customRulesBytes > snapshot.maxBytes;
+  const customRulesUnavailable = snapshot.customRules.availability === "unavailable";
+  const canRevealCustomRules =
+    typeof window.desktopBridge?.showInFolder === "function" &&
+    snapshot.customRules.revealPath !== null;
+  const defaultUnchanged =
+    defaultDraft === snapshot.defaultPrompt.content &&
+    defaultBaseVersion === snapshot.defaultPrompt.version;
+  const customRulesUnchanged =
+    customRulesDraft === snapshot.customRules.content &&
+    customRulesBase.sourceId === snapshot.customRules.sourceId &&
+    customRulesBase.version === snapshot.customRules.version;
+
   return (
     <div className="space-y-6">
-      {loadError ? (
-        <SettingsEmptyState tone="destructive">
-          <p>{t("settings.promptsUnavailable")}</p>
-          <Button
-            className="mt-3"
-            size="sm"
-            variant="outline"
-            disabled={loadRetrying}
-            onClick={() => void retryLoad()}
-          >
-            {loadRetrying ? t("common.loading") : t("common.retry")}
-          </Button>
-        </SettingsEmptyState>
-      ) : !snapshot ? (
-        <SettingsEmptyState>{t("common.loading")}</SettingsEmptyState>
-      ) : (
-        <>
-          <SettingsSectionShell title={t("settings.globalPersonalInstructions")}>
-            <div id={SETTINGS_TARGETS.globalPersonalInstructions} className="space-y-3">
-              {renderEditor("globalContext")}
-              {shadowedCandidates.length > 0 ? (
-                <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-                  {t("settings.shadowedPromptFiles", {
-                    files: shadowedCandidates.map((candidate) => candidate.sourceId).join(", "),
-                  })}
-                </p>
-              ) : null}
+      <SettingsSectionShell title={t("settings.defaultPrompt")}>
+        <SettingsCard divided={false}>
+          <div id={SETTINGS_TARGETS.defaultPrompt} className="space-y-4 p-4">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t("settings.defaultPromptDescription")}
+            </p>
+            <Textarea
+              aria-label={t("settings.defaultPrompt")}
+              className="max-h-[min(48vh,28rem)] overflow-hidden [&_[data-slot=textarea]]:max-h-[min(48vh,28rem)] [&_[data-slot=textarea]]:overflow-y-auto"
+              value={defaultDraft}
+              onChange={(event) => setDefaultDraft(event.currentTarget.value)}
+            />
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {snapshot.defaultPrompt.customized
+                ? t("settings.defaultPromptCustomizedNotice")
+                : t("settings.defaultPromptSourceNotice")}
+            </p>
+            {defaultInvalid ? (
+              <p className="text-xs leading-relaxed text-destructive">
+                {t("settings.promptInvalidText")}
+              </p>
+            ) : null}
+            {renderConflict("defaultPrompt")}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span
+                className={cn(
+                  "text-[11px] text-muted-foreground",
+                  defaultTooLarge && "text-destructive",
+                )}
+              >
+                {t("settings.promptByteCount", {
+                  current: defaultBytes.toLocaleString(),
+                  max: snapshot.maxBytes.toLocaleString(),
+                })}
+              </span>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={pendingEditor !== null || !snapshot.defaultPrompt.customized}
+                  onClick={() => void restoreDefault()}
+                >
+                  {t("settings.restoreFactoryDefault")}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pendingEditor !== null}
+                  onClick={() => {
+                    setDefaultDraft(snapshot.defaultPrompt.content);
+                    setDefaultBaseVersion(snapshot.defaultPrompt.version);
+                    clearConflict("defaultPrompt");
+                  }}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={
+                    pendingEditor !== null ||
+                    defaultInvalid ||
+                    defaultTooLarge ||
+                    defaultUnchanged ||
+                    conflicts.defaultPrompt !== undefined
+                  }
+                  onClick={() => void saveDefault()}
+                >
+                  {pendingEditor === "defaultPrompt" ? t("common.saving") : t("common.save")}
+                </Button>
+              </div>
             </div>
-          </SettingsSectionShell>
+          </div>
+        </SettingsCard>
+      </SettingsSectionShell>
 
-          <Collapsible
-            id={SETTINGS_TARGETS.advancedPromptFiles}
-            open={advancedOpen}
-            onOpenChange={(open) => {
-              setAdvancedOpen(open);
-              if (
-                open &&
-                (!snapshot.appendSystem.contentLoaded || !snapshot.system.contentLoaded)
-              ) {
-                void Promise.all([loadResource("appendSystem"), loadResource("system")]).catch(() =>
-                  setLoadError(true),
-                );
-              }
-            }}
-          >
-            <SettingsSectionShell title={t("settings.advancedPromptFiles")}>
-              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border/70 bg-card px-4 py-3 text-left">
-                <span>
-                  <span className="block text-sm font-medium text-foreground">
-                    {t("settings.advancedPromptSection")}
-                  </span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    {t("settings.advancedPromptFilesDescription")}
-                  </span>
-                </span>
-                <DisclosureChevron open={advancedOpen} className="size-4 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsiblePanel className="space-y-4 pt-4">
-                {renderEditor("appendSystem")}
-                {renderEditor("system")}
-                <p className="px-1 text-xs leading-relaxed text-muted-foreground">
-                  {t("settings.projectPromptShadowNotice")}
-                </p>
-              </CollapsiblePanel>
-            </SettingsSectionShell>
-          </Collapsible>
-
-          <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-            <SettingsSectionShell title={t("settings.technicalDetails")}>
-              <CollapsibleTrigger className="flex w-full items-center justify-between rounded-lg border border-border/70 bg-card px-4 py-3 text-left">
-                <span className="text-sm font-medium text-foreground">
-                  {t("settings.promptFileLocations")}
-                </span>
-                <DisclosureChevron open={detailsOpen} className="size-4 text-muted-foreground" />
-              </CollapsibleTrigger>
-              <CollapsiblePanel className="pt-3">
-                <SettingsCard>
-                  {snapshot.globalContextCandidates
-                    .filter(
-                      (candidate) =>
-                        candidate.exists || candidate.active || candidate.sourceId === "AGENTS.md",
-                    )
-                    .map((candidate) => (
-                      <div
-                        key={candidate.sourceId}
-                        className="flex min-w-0 items-center gap-3 px-4 py-3"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-foreground">
-                            {candidate.sourceId} ·{" "}
-                            {candidate.active
-                              ? t("settings.activePromptFile")
-                              : candidate.exists
-                                ? t("settings.shadowedPromptFile")
-                                : t("settings.defaultPromptFile")}
-                          </div>
-                          <code className="mt-1 block break-all text-[11px] text-muted-foreground">
-                            {candidate.displayPath}
-                          </code>
-                        </div>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => {
-                            void navigator.clipboard.writeText(candidate.displayPath).then(
-                              () =>
-                                toastManager.add({
-                                  type: "success",
-                                  title: t("settings.pathCopied"),
-                                }),
-                              () =>
-                                toastManager.add({
-                                  type: "error",
-                                  title: t("settings.pathCopyFailed"),
-                                }),
-                            );
-                          }}
-                        >
-                          {t("common.copy")}
-                        </Button>
-                      </div>
-                    ))}
-                  {(["appendSystem", "system"] as const).map((resource) => {
-                    const current = resourceOf(snapshot, resource);
-                    if (!current.displayPath) return null;
-                    return (
-                      <div key={resource} className="flex min-w-0 items-center gap-3 px-4 py-3">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-medium text-foreground">
-                            {current.sourceId} ·{" "}
-                            {current.exists
-                              ? t("settings.globalPromptFileCreated")
-                              : t("settings.promptFileNotCreatedShort")}
-                          </div>
-                          <code className="mt-1 block break-all text-[11px] text-muted-foreground">
-                            {current.displayPath}
-                          </code>
-                        </div>
-                        <Button
-                          size="xs"
-                          variant="ghost"
-                          onClick={() => {
-                            void navigator.clipboard.writeText(current.displayPath!).then(
-                              () =>
-                                toastManager.add({
-                                  type: "success",
-                                  title: t("settings.pathCopied"),
-                                }),
-                              () =>
-                                toastManager.add({
-                                  type: "error",
-                                  title: t("settings.pathCopyFailed"),
-                                }),
-                            );
-                          }}
-                        >
-                          {t("common.copy")}
-                        </Button>
-                      </div>
-                    );
+      <SettingsSectionShell title={t("settings.customRules")}>
+        <SettingsCard divided={false}>
+          <div id={SETTINGS_TARGETS.customRules} className="space-y-4 p-4">
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {t("settings.customRulesDescription")}
+            </p>
+            <Textarea
+              aria-label={t("settings.customRules")}
+              className="max-h-[min(48vh,28rem)] overflow-hidden [&_[data-slot=textarea]]:max-h-[min(48vh,28rem)] [&_[data-slot=textarea]]:overflow-y-auto"
+              disabled={customRulesUnavailable}
+              value={customRulesDraft}
+              onChange={(event) => setCustomRulesDraft(event.currentTarget.value)}
+            />
+            {customRulesUnavailable ? (
+              <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+                {snapshot.customRules.unavailableReason === "too_large"
+                  ? t("settings.customRulesTooLarge")
+                  : t("settings.customRulesUnavailable")}
+              </p>
+            ) : null}
+            <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {snapshot.customRules.exists && snapshot.customRules.displayPath ? (
+                <>
+                  <code className="min-w-0 flex-1 select-text break-all">
+                    {snapshot.customRules.displayPath}
+                  </code>
+                  {canRevealCustomRules ? (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => {
+                        void ensureNativeApi()
+                          .shell.showInFolder(snapshot.customRules.revealPath!)
+                          .catch(() =>
+                            toastManager.add({
+                              type: "error",
+                              title: t("settings.promptOpenFailed"),
+                            }),
+                          );
+                      }}
+                    >
+                      {t("common.open")}
+                    </Button>
+                  ) : null}
+                </>
+              ) : (
+                <span>{t("settings.customRulesCreateNotice")}</span>
+              )}
+            </div>
+            {!customRulesUnavailable && customRulesInvalid ? (
+              <p className="text-xs leading-relaxed text-destructive">
+                {t("settings.promptInvalidText")}
+              </p>
+            ) : null}
+            {renderConflict("customRules")}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {customRulesUnavailable ? (
+                <span />
+              ) : (
+                <span
+                  className={cn(
+                    "text-[11px] text-muted-foreground",
+                    customRulesTooLarge && "text-destructive",
+                  )}
+                >
+                  {t("settings.promptByteCount", {
+                    current: customRulesBytes.toLocaleString(),
+                    max: snapshot.maxBytes.toLocaleString(),
                   })}
-                </SettingsCard>
-                <p className="mt-3 px-1 text-xs leading-relaxed text-muted-foreground">
-                  {t("settings.externalEditorRaceNotice")}
-                </p>
-              </CollapsiblePanel>
-            </SettingsSectionShell>
-          </Collapsible>
-
-          <SettingsSectionShell title={t("settings.currentConversationResources")}>
-            <SettingsCard divided={false}>
-              <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-                <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">
-                  {reloadThreadId
-                    ? t("settings.promptReloadAvailable")
-                    : t("settings.promptReloadUnavailable")}
-                </p>
-                {reloadThreadId ? (
-                  <Button size="sm" disabled={reloading} onClick={() => void reload()}>
-                    {reloading
-                      ? t("settings.reloadingResources")
-                      : t("settings.reloadConversationResources")}
+                </span>
+              )}
+              <div className="flex flex-wrap justify-end gap-2">
+                {snapshot.customRules.availability === "available" ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={pendingEditor !== null || conflicts.customRules !== undefined}
+                    onClick={() => setRemoveDialogOpen(true)}
+                  >
+                    {t("common.delete")}
                   </Button>
                 ) : null}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={pendingEditor !== null || customRulesUnavailable}
+                  onClick={() => {
+                    setCustomRulesDraft(snapshot.customRules.content);
+                    setCustomRulesBase({
+                      sourceId: snapshot.customRules.sourceId,
+                      version: snapshot.customRules.version,
+                    });
+                    clearConflict("customRules");
+                  }}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={
+                    pendingEditor !== null ||
+                    customRulesUnavailable ||
+                    customRulesInvalid ||
+                    customRulesTooLarge ||
+                    customRulesUnchanged ||
+                    (!snapshot.customRules.exists && customRulesDraft.length === 0) ||
+                    conflicts.customRules !== undefined
+                  }
+                  onClick={() => void saveCustomRules()}
+                >
+                  {pendingEditor === "customRules" ? t("common.saving") : t("common.save")}
+                </Button>
               </div>
-              {reloadState ? (
-                <p className="border-t border-border/70 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-                  {reloadState === "reloaded"
-                    ? t("settings.promptReloaded")
-                    : reloadState === "busy"
-                      ? t("settings.promptReloadBusy")
-                      : reloadState === "no_active_session"
-                        ? t("settings.promptReloadNoSession")
-                        : reloadState === "different_engine"
-                          ? t("settings.promptReloadDifferentEngine")
-                          : t("settings.promptReloadFailed")}
-                </p>
-              ) : null}
-            </SettingsCard>
-          </SettingsSectionShell>
-        </>
-      )}
+            </div>
+          </div>
+        </SettingsCard>
+      </SettingsSectionShell>
 
-      <AlertDialog
-        open={confirmAction !== null}
-        onOpenChange={(open) => !open && setConfirmAction(null)}
-      >
+      <SettingsSectionShell title={t("settings.currentConversationResources")}>
+        <SettingsCard divided={false}>
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">
+              {reloadThreadId
+                ? t("settings.promptReloadAvailable")
+                : t("settings.promptReloadUnavailable")}
+            </p>
+            {reloadThreadId ? (
+              <Button size="sm" disabled={reloading} onClick={() => void reload()}>
+                {reloading
+                  ? t("settings.reloadingResources")
+                  : t("settings.reloadConversationResources")}
+              </Button>
+            ) : null}
+          </div>
+          {reloadState ? (
+            <p className="border-t border-border/70 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+              {reloadState === "reloaded"
+                ? t("settings.promptReloaded")
+                : reloadState === "busy"
+                  ? t("settings.promptReloadBusy")
+                  : reloadState === "no_active_session"
+                    ? t("settings.promptReloadNoSession")
+                    : reloadState === "different_engine"
+                      ? t("settings.promptReloadDifferentEngine")
+                      : t("settings.promptReloadFailed")}
+            </p>
+          ) : null}
+        </SettingsCard>
+      </SettingsSectionShell>
+
+      <AlertDialog open={removeDialogOpen} onOpenChange={setRemoveDialogOpen}>
         <AlertDialogPopup>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {confirmAction?.type === "create-system"
-                ? t("settings.createSystemPromptTitle")
-                : t("settings.removePromptFileTitle")}
-            </AlertDialogTitle>
+            <AlertDialogTitle>{t("settings.removeCustomRulesTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction?.type === "create-system"
-                ? t("settings.createSystemPromptDescription")
-                : confirmAction?.type === "remove" && confirmAction.resource === "globalContext"
-                  ? t("settings.removeGlobalPromptFileDescription")
-                  : t("settings.removePromptFileDescription")}
+              {t("settings.removeCustomRulesDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -705,15 +595,13 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
             </AlertDialogClose>
             <Button
               size="sm"
-              variant={confirmAction?.type === "remove" ? "destructive" : "default"}
+              variant="destructive"
               onClick={() => {
-                const action = confirmAction;
-                setConfirmAction(null);
-                if (action?.type === "create-system") void performSave("system");
-                if (action?.type === "remove") void remove(action.resource);
+                setRemoveDialogOpen(false);
+                void removeCustomRules();
               }}
             >
-              {confirmAction?.type === "remove" ? t("common.delete") : t("common.confirm")}
+              {t("common.delete")}
             </Button>
           </AlertDialogFooter>
         </AlertDialogPopup>

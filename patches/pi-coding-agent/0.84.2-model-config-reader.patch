@@ -147,7 +147,7 @@ index 531f51d61b8767d9e6ee3406ddac5f3cdcb8ad23..72e7d6751084e1e0972a58a3cbfc1d98
  	});
  }
 diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
-index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb5d9940e1 100644
+index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..a21d915aaee34ff916086c496e6fb35365edcdb8 100644
 --- a/packages/coding-agent/src/core/agent-session.ts
 +++ b/packages/coding-agent/src/core/agent-session.ts
 @@ -122,6 +122,12 @@ export interface ParsedSkillBlock {
@@ -163,16 +163,18 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  /**
   * Parse a skill block from message text.
   * Returns null if the text doesn't contain a skill block.
-@@ -225,6 +231,8 @@ export interface AgentSessionConfig {
+@@ -225,6 +231,10 @@ export interface AgentSessionConfig {
  	extensionRunnerRef?: { current?: ExtensionRunner };
  	/** Session start event metadata emitted when extensions bind to this runtime. */
  	sessionStartEvent?: SessionStartEvent;
++	/** Stable instruction segment used by the default prompt builder. */
++	defaultPrompt?: string;
 +	/** Host-owned system prompt appended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  export interface ExtensionBindings {
-@@ -360,6 +368,7 @@ export class AgentSession {
+@@ -360,6 +370,7 @@ export class AgentSession {
  	private _extensionShutdownHandler?: ShutdownHandler;
  	private _extensionErrorListener?: ExtensionErrorListener;
  	private _extensionErrorUnsubscriber?: () => void;
@@ -180,23 +182,25 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  
  	private _modelRuntime: ModelRuntime;
  
-@@ -373,6 +382,7 @@ export class AgentSession {
+@@ -373,6 +384,8 @@ export class AgentSession {
  	private _baseSystemPrompt = "";
  	private _baseSystemPromptOptions!: BuildSystemPromptOptions;
  	private _systemPromptOverride?: string;
++	private _defaultPrompt?: string;
 +	private _immutableSystemPrompt?: string;
  
  	constructor(config: AgentSessionConfig) {
  		this.agent = config.agent;
-@@ -389,6 +399,7 @@ export class AgentSession {
+@@ -389,6 +402,8 @@ export class AgentSession {
  		this._excludedToolNames = config.excludedToolNames ? new Set(config.excludedToolNames) : undefined;
  		this._baseToolsOverride = config.baseToolsOverride;
  		this._sessionStartEvent = config.sessionStartEvent ?? { type: "session_start", reason: "startup" };
++		this._defaultPrompt = config.defaultPrompt;
 +		this._immutableSystemPrompt = config.immutableSystemPrompt?.trim() || undefined;
  
  		// Always subscribe to agent events for internal handling
  		// (session persistence, extensions, auto-compaction, retry logic)
-@@ -546,7 +557,7 @@ export class AgentSession {
+@@ -546,7 +561,7 @@ export class AgentSession {
  				...previousSnapshot,
  				context: {
  					...previousContext,
@@ -205,7 +209,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  					tools: this.agent.state.tools.slice(),
  				},
  				model: this.agent.state.model,
-@@ -939,7 +950,7 @@ export class AgentSession {
+@@ -939,7 +954,7 @@ export class AgentSession {
  
  		// Rebuild base system prompt with new tool set
  		this._baseSystemPrompt = this._rebuildSystemPrompt(validToolNames);
@@ -214,7 +218,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	}
  
  	/** Whether compaction or branch summarization is currently running */
-@@ -1020,6 +1031,12 @@ export class AgentSession {
+@@ -1020,6 +1035,12 @@ export class AgentSession {
  		return Array.from(unique);
  	}
  
@@ -227,7 +231,15 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	private _rebuildSystemPrompt(toolNames: string[]): string {
  		const validToolNames = toolNames.filter((name) => this._toolRegistry.has(name));
  		const toolSnippets: Record<string, string> = {};
-@@ -1113,7 +1130,7 @@ export class AgentSession {
+@@ -1045,6 +1066,7 @@ export class AgentSession {
+ 
+ 		this._baseSystemPromptOptions = {
+ 			cwd: this._cwd,
++			defaultPrompt: this._defaultPrompt,
+ 			skills: loadedSkills,
+ 			contextFiles: loadedContextFiles,
+ 			customPrompt: loaderSystemPrompt,
+@@ -1113,7 +1135,7 @@ export class AgentSession {
  	 * @throws Error if streaming and no streamingBehavior specified
  	 * @throws Error if no model selected or no API key available (when not streaming)
  	 */
@@ -236,7 +248,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  		const expandPromptTemplates = options?.expandPromptTemplates ?? true;
  		const preflightResult = options?.preflightResult;
  		let messages: AgentMessage[] | undefined;
-@@ -1122,11 +1139,11 @@ export class AgentSession {
+@@ -1122,11 +1144,11 @@ export class AgentSession {
  			// Handle extension commands first (execute immediately, even during streaming)
  			// Extension commands manage their own LLM interaction via pi.sendMessage()
  			if (expandPromptTemplates && text.startsWith("/")) {
@@ -252,7 +264,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  				}
  			}
  
-@@ -1140,15 +1157,29 @@ export class AgentSession {
+@@ -1140,15 +1162,29 @@ export class AgentSession {
  			let currentText = text;
  			let currentImages = options?.images;
  			if (this._extensionRunner.hasHandlers("input")) {
@@ -290,7 +302,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  				}
  				if (inputResult.action === "transform") {
  					currentText = inputResult.text;
-@@ -1176,7 +1207,7 @@ export class AgentSession {
+@@ -1176,7 +1212,7 @@ export class AgentSession {
  					await this._queueSteer(expandedText, currentImages);
  				}
  				preflightResult?.(true);
@@ -299,7 +311,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  			}
  
  			// Flush any pending bash messages before the new prompt
-@@ -1252,12 +1283,12 @@ export class AgentSession {
+@@ -1252,12 +1288,12 @@ export class AgentSession {
  			}
  			// Apply extension-modified system prompt, or reset to base
  			if (result?.systemPrompt !== undefined) {
@@ -315,7 +327,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  			}
  		} catch (error) {
  			preflightResult?.(false);
-@@ -1265,40 +1296,53 @@ export class AgentSession {
+@@ -1265,40 +1301,53 @@ export class AgentSession {
  		}
  
  		if (!messages) {
@@ -375,7 +387,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	}
  
  	/**
-@@ -2281,7 +2325,7 @@ export class AgentSession {
+@@ -2281,7 +2330,7 @@ export class AgentSession {
  
  		this._resourceLoader.extendResources(extensionPaths);
  		this._baseSystemPrompt = this._rebuildSystemPrompt(this.getActiveToolNames());
@@ -384,7 +396,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	}
  
  	private buildExtensionResourcePaths(entries: Array<{ path: string; extensionPath: string }>): Array<{
-@@ -2362,10 +2406,13 @@ export class AgentSession {
+@@ -2362,10 +2411,13 @@ export class AgentSession {
  			return [...extensionCommands, ...templates, ...skills];
  		};
  
@@ -400,7 +412,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  						runner.emitError({
  							extensionPath: "<runtime>",
  							event: "send_message",
-@@ -2374,7 +2421,10 @@ export class AgentSession {
+@@ -2374,7 +2426,10 @@ export class AgentSession {
  					});
  				},
  				sendUserMessage: (content, options) => {
@@ -412,6 +424,28 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  						runner.emitError({
  							extensionPath: "<runtime>",
  							event: "send_user_message",
+@@ -2607,7 +2662,10 @@ export class AgentSession {
+ 		});
+ 	}
+ 
+-	async reload(options?: { beforeSessionStart?: () => void | Promise<void> }): Promise<void> {
++	async reload(options?: {
++		beforeSessionStart?: () => void | Promise<void>;
++		defaultPrompt?: string;
++	}): Promise<void> {
+ 		const oldRunner = this._extensionRunner;
+ 		const previousFlagValues = oldRunner.getFlagValues();
+ 		await emitSessionShutdownEvent(oldRunner, { type: "session_shutdown", reason: "reload" });
+@@ -2616,6 +2674,9 @@ export class AgentSession {
+ 		this.syncQueueModesFromSettings();
+ 		resetApiProviders();
+ 		await this._resourceLoader.reload();
++		if (options && "defaultPrompt" in options) {
++			this._defaultPrompt = options.defaultPrompt;
++		}
+ 		this._buildRuntime({
+ 			activeToolNames: this.getActiveToolNames(),
+ 			flagValues: previousFlagValues,
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
 index 7ea12cbebdd914aa6ef480272162036c35ded2d9..21853d1d64af3f8aa9ea7348b59299b8c2307edd 100644
 --- a/packages/coding-agent/src/core/model-config.ts
@@ -2328,39 +2362,61 @@ index c24d0a2104771064015e149ebd5894f83dc102bd..338f7748f981d4268d94b44f7168889b
  			temporary: true,
  		});
 diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
-index a9a26641868926f775f06f3cfdac1b775e42a62f..3112a637c2840eb574059cf6f87cb6fe8b5cc9d8 100644
+index a9a26641868926f775f06f3cfdac1b775e42a62f..23f98374bf27885f6f99ca39c7a785a0a758bf43 100644
 --- a/packages/coding-agent/src/core/sdk.ts
 +++ b/packages/coding-agent/src/core/sdk.ts
-@@ -84,6 +84,8 @@ export interface CreateAgentSessionOptions {
+@@ -84,6 +84,10 @@ export interface CreateAgentSessionOptions {
  	settingsManager?: SettingsManager;
  	/** Session start event metadata for extension runtime startup. */
  	sessionStartEvent?: SessionStartEvent;
++	/** Stable instruction segment used by the default prompt builder. */
++	defaultPrompt?: string;
 +	/** Host-owned system prompt appended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  /** Result from createAgentSession */
-@@ -390,6 +392,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+@@ -390,6 +394,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  		excludedToolNames,
  		extensionRunnerRef,
  		sessionStartEvent: options.sessionStartEvent,
++		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  	});
  	const extensionsResult = resourceLoader.getExtensions();
  
 diff --git a/packages/coding-agent/src/core/system-prompt.ts b/packages/coding-agent/src/core/system-prompt.ts
-index 3b1aa63340bdfddfb712d81fbc6afb49927db36c..2a09dfc93cc821614414d012ca2ed28f6c5dde95 100644
+index 3b1aa63340bdfddfb712d81fbc6afb49927db36c..2be10c87d026d8f46f4c223691ac9ef677da2583 100644
 --- a/packages/coding-agent/src/core/system-prompt.ts
 +++ b/packages/coding-agent/src/core/system-prompt.ts
-@@ -2,7 +2,6 @@
+@@ -2,12 +2,17 @@
   * System prompt construction and project context loading
   */
  
 -import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
  import { formatSkillsForPrompt, type Skill } from "./skills.ts";
  
++/** Stable, product-editable instruction segment used by the default builder. */
++export const DEFAULT_BASE_INSTRUCTIONS =
++	"Help users by reading files, executing commands, editing code, and writing new files.";
++
  export interface BuildSystemPromptOptions {
-@@ -71,11 +70,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+ 	/** Custom system prompt (replaces default). */
+ 	customPrompt?: string;
++	/** Stable instruction segment used only by the default builder. */
++	defaultPrompt?: string;
+ 	/** Tools to include in prompt. Default: [read, bash, edit, write] */
+ 	selectedTools?: string[];
+ 	/** Optional one-line tool snippets keyed by tool name. */
+@@ -28,6 +33,7 @@ export interface BuildSystemPromptOptions {
+ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+ 	const {
+ 		customPrompt,
++		defaultPrompt,
+ 		selectedTools,
+ 		toolSnippets,
+ 		promptGuidelines,
+@@ -71,11 +77,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
  		return prompt;
  	}
  
@@ -2372,14 +2428,15 @@ index 3b1aa63340bdfddfb712d81fbc6afb49927db36c..2a09dfc93cc821614414d012ca2ed28f
  	// Build tools list based on selected tools.
  	// A tool appears in Available tools only when the caller provides a one-line snippet.
  	const tools = selectedTools || ["read", "bash", "edit", "write"];
-@@ -118,24 +112,13 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+@@ -118,24 +119,14 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
  
  	const guidelines = guidelinesList.map((g) => `- ${g}`).join("\n");
  
 -	let prompt = `You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.
 -
 -Available tools:
-+	let prompt = `Available tools:
++	const baseInstructions = defaultPrompt ?? DEFAULT_BASE_INSTRUCTIONS;
++	let prompt = `${baseInstructions.length > 0 ? `${baseInstructions}\n\n` : ""}Available tools:
  ${toolsList}
  
  In addition to the tools above, you may have access to other custom tools depending on the project.
@@ -2400,7 +2457,7 @@ index 3b1aa63340bdfddfb712d81fbc6afb49927db36c..2a09dfc93cc821614414d012ca2ed28f
  	if (appendSection) {
  		prompt += appendSection;
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2d23f97b9 100644
+index 6d64d70c87cefcea0c0d34066d3f225625837a08..d1f8e0502991a686adc79f8a42068c27804ab71c 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
 @@ -20,6 +20,7 @@ export {
@@ -2411,10 +2468,11 @@ index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2
  	parseSkillBlock,
  	type SessionStats,
  } from "./core/agent-session.ts";
-@@ -168,6 +169,20 @@ export {
+@@ -168,6 +169,21 @@ export {
  // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
  export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.ts";
  export { convertToLlm } from "./core/messages.ts";
++export { DEFAULT_BASE_INSTRUCTIONS } from "./core/system-prompt.ts";
 +export type {
 +	ModelConfigCredentialReferenceMutation,
 +	ModelConfigHeaderReferenceMetadata,
@@ -2432,7 +2490,7 @@ index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2
  export { ModelRegistry } from "./core/model-registry.ts";
  export {
  	type ModelScopeDiagnostic,
-@@ -181,14 +196,25 @@ export {
+@@ -181,14 +197,25 @@ export {
  	type CreateModelRuntimeOptions,
  	CredentialSynchronizationError,
  	type CredentialSynchronizationOperation,
@@ -4313,10 +4371,10 @@ index 145eca3b2510dd24d49cb85134ed0cee37fb0999..e4c97acfa95243599746280802daff04
  			mkdirSync(join(cwd, "AGENTS.override.md"));
  			mkdirSync(join(cwd, "AGENTS.md"));
 diff --git a/packages/coding-agent/test/suite/agent-session-prompt.test.ts b/packages/coding-agent/test/suite/agent-session-prompt.test.ts
-index 1fa23fbe29c3ee9d41dc53f01c93910e994772be..72b9b048344a0bd21860986fb9a3ff32370fba5b 100644
+index 1fa23fbe29c3ee9d41dc53f01c93910e994772be..783051dede2ef1bd949dc35236c1572166a0d0a5 100644
 --- a/packages/coding-agent/test/suite/agent-session-prompt.test.ts
 +++ b/packages/coding-agent/test/suite/agent-session-prompt.test.ts
-@@ -40,6 +40,47 @@ describe("AgentSession prompt characterization", () => {
+@@ -40,6 +40,60 @@ describe("AgentSession prompt characterization", () => {
  		expect(harness.getPendingResponseCount()).toBe(0);
  	});
  
@@ -4361,40 +4419,104 @@ index 1fa23fbe29c3ee9d41dc53f01c93910e994772be..72b9b048344a0bd21860986fb9a3ff32
 +		expect(harness.session.agent.state.systemPrompt.split(immutableSystemPrompt)).toHaveLength(2);
 +	});
 +
++	it("changes the native default segment only when reload receives a new snapshot", async () => {
++		const harness = await createHarness({ defaultPrompt: "Initial default instructions." });
++		harnesses.push(harness);
++
++		expect(harness.session.agent.state.systemPrompt).toContain("Initial default instructions.");
++		await harness.session.reload({ defaultPrompt: "Updated default instructions." });
++
++		expect(harness.session.agent.state.systemPrompt).toContain("Updated default instructions.");
++		expect(harness.session.agent.state.systemPrompt).not.toContain("Initial default instructions.");
++		expect(harness.session.agent.state.systemPrompt).toContain("Available tools:");
++		expect(harness.session.agent.state.systemPrompt).toContain("Guidelines:");
++	});
++
  	it("handles a tool call turn and waits for the follow-up LLM response", async () => {
  		const toolRuns: string[] = [];
  		const echoTool: AgentTool = {
 diff --git a/packages/coding-agent/test/suite/harness.ts b/packages/coding-agent/test/suite/harness.ts
-index a1dd2ce26604399636f680c71d1fa82d4339ff89..3a88e0efde565f9e7d23222fbc16149b4a5fa70e 100644
+index a1dd2ce26604399636f680c71d1fa82d4339ff89..b62d1930872f71dfbb15d519d30346901ef9e603 100644
 --- a/packages/coding-agent/test/suite/harness.ts
 +++ b/packages/coding-agent/test/suite/harness.ts
-@@ -64,6 +64,7 @@ export interface HarnessOptions {
+@@ -64,6 +64,8 @@ export interface HarnessOptions {
  	models?: FauxModelDefinition[];
  	settings?: Partial<Settings>;
  	systemPrompt?: string;
++	defaultPrompt?: string;
 +	immutableSystemPrompt?: string;
  	tools?: AgentTool[];
  	initialActiveToolNames?: string[];
  	allowedToolNames?: string[];
-@@ -191,6 +192,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
+@@ -191,6 +193,8 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
  		allowedToolNames: options.allowedToolNames,
  		excludedToolNames: options.excludedToolNames,
  		extensionRunnerRef,
++		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  	});
  
  	const events: AgentSessionEvent[] = [];
 diff --git a/packages/coding-agent/test/system-prompt.test.ts b/packages/coding-agent/test/system-prompt.test.ts
-index 6e38fcb0f22a3403f6ffa2a836b05fde09fcb865..a179d6fd24d029ae1eb3cc7cf9a9188ab8085873 100644
+index 6e38fcb0f22a3403f6ffa2a836b05fde09fcb865..8e8e2567069b6ab77dc94bc9eab0c204db3b6f6b 100644
 --- a/packages/coding-agent/test/system-prompt.test.ts
 +++ b/packages/coding-agent/test/system-prompt.test.ts
-@@ -46,17 +46,17 @@ describe("buildSystemPrompt", () => {
+@@ -1,5 +1,5 @@
+ import { describe, expect, test } from "vitest";
+-import { buildSystemPrompt } from "../src/core/system-prompt.ts";
++import { DEFAULT_BASE_INSTRUCTIONS, buildSystemPrompt } from "../src/core/system-prompt.ts";
+ 
+ describe("buildSystemPrompt", () => {
+ 	describe("empty tools", () => {
+@@ -27,6 +27,23 @@ describe("buildSystemPrompt", () => {
+ 	});
+ 
+ 	describe("default tools", () => {
++		test("keeps the stable default instructions separate from dynamic sections", () => {
++			const prompt = buildSystemPrompt({
++				defaultPrompt: "Prefer small, reversible changes.",
++				selectedTools: ["read"],
++				toolSnippets: { read: "Read file contents" },
++				promptGuidelines: ["Check the result."],
++				contextFiles: [],
++				skills: [],
++				cwd: process.cwd(),
++			});
++
++			expect(prompt).toContain("Prefer small, reversible changes.\n\nAvailable tools:");
++			expect(prompt).toContain("- read: Read file contents");
++			expect(prompt).toContain("- Check the result.");
++			expect(prompt).not.toContain(DEFAULT_BASE_INSTRUCTIONS);
++		});
++
+ 		test("includes all default tools when snippets are provided", () => {
+ 			const prompt = buildSystemPrompt({
+ 				toolSnippets: {
+@@ -46,17 +63,35 @@ describe("buildSystemPrompt", () => {
  			expect(prompt).toContain("- write:");
  		});
  
 -		test("instructs models to resolve pi docs and examples under absolute base paths", () => {
 +		test("keeps the default base identity-neutral and free of unavailable Pi documentation", () => {
++			const prompt = buildSystemPrompt({
++				contextFiles: [],
++				skills: [],
++				cwd: process.cwd(),
++			});
++
++			expect(prompt).toContain("Available tools:");
++			expect(prompt).toContain(DEFAULT_BASE_INSTRUCTIONS);
++			expect(prompt).toContain("Guidelines:");
++			expect(prompt).not.toContain("You are an expert coding assistant operating inside pi");
++			expect(prompt).not.toContain("Pi documentation");
++		});
++	});
++
++	describe("custom system replacement", () => {
++		test("continues to bypass the factory or customized default segment", () => {
  			const prompt = buildSystemPrompt({
++				customPrompt: "Manual system replacement.",
++				defaultPrompt: "Customized default instructions.",
  				contextFiles: [],
  				skills: [],
  				cwd: process.cwd(),
@@ -4404,10 +4526,10 @@ index 6e38fcb0f22a3403f6ffa2a836b05fde09fcb865..a179d6fd24d029ae1eb3cc7cf9a9188a
 -				"- When reading pi docs or examples, resolve docs/... under Additional docs and examples/... under Examples, not the current working directory",
 -			);
 -			expect(prompt).toContain("environment variables (docs/environment-variables.md)");
-+			expect(prompt).toContain("Available tools:");
-+			expect(prompt).toContain("Guidelines:");
-+			expect(prompt).not.toContain("You are an expert coding assistant operating inside pi");
-+			expect(prompt).not.toContain("Pi documentation");
++			expect(prompt).toContain("Manual system replacement.");
++			expect(prompt).not.toContain("Customized default instructions.");
++			expect(prompt).not.toContain(DEFAULT_BASE_INSTRUCTIONS);
++			expect(prompt).not.toContain("Available tools:");
  		});
  	});
  

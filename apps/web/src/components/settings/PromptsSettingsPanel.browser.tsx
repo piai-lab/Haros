@@ -1,15 +1,14 @@
 // FILE: PromptsSettingsPanel.browser.tsx
-// Purpose: Locks the file-first Prompt settings journey and explicit reload separation.
+// Purpose: Locks the two-card Prompt settings journey and explicit reload separation.
 // Layer: Browser UI test
 
 import "../../index.css";
 
 import {
-  EDITABLE_TEXT_FILE_MAX_BYTES,
+  OMNIMIND_AGENT_PROMPT_MAX_BYTES,
   ThreadId,
   type NativeApi,
-  OmniMindAgentPromptResourceKind,
-  OmniMindAgentPromptSnapshot,
+  type OmniMindAgentPromptSnapshot,
 } from "@omnimind/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
@@ -25,272 +24,374 @@ vi.mock("./promptReloadTarget", () => ({
 
 import { PromptsSettingsPanel } from "./PromptsSettingsPanel";
 
-const SOURCES = ["AGENTS.override.md", "AGENTS.md", "AGENTS.MD", "CLAUDE.md", "CLAUDE.MD"] as const;
+const FACTORY = "Factory default instructions";
 
 function snapshot(
   input: {
-    readonly global?: string | null;
-    readonly globalVersion?: string;
-    readonly append?: string | null;
-    readonly system?: string | null;
-    readonly requested?: OmniMindAgentPromptResourceKind;
+    readonly defaultContent?: string;
+    readonly defaultCustomized?: boolean;
+    readonly defaultVersion?: string;
+    readonly customRules?: string | null;
+    readonly customVersion?: string;
+    readonly customSource?: "AGENTS.override.md" | "AGENTS.md";
+    readonly customUnavailableReason?: "too_large" | "unsupported_text";
   } = {},
 ): OmniMindAgentPromptSnapshot {
-  const requested = input.requested ?? "globalContext";
-  const fixed = (kind: "appendSystem" | "system", content: string | null | undefined) => {
-    const sourceId =
-      kind === "appendSystem" ? ("APPEND_SYSTEM.md" as const) : ("SYSTEM.md" as const);
-    return {
-      kind,
-      sourceId,
-      displayPath: `~/.omnimind/agent/${sourceId}`,
-      exists: content != null,
-      version: content != null && requested === kind ? "c".repeat(64) : null,
-      contentLoaded: requested === kind,
-      content: requested === kind ? (content ?? null) : null,
-    };
-  };
+  const customRules = input.customRules ?? null;
+  const customSource = input.customSource ?? "AGENTS.md";
   return {
-    globalContextCandidates: SOURCES.map((sourceId) => ({
-      sourceId,
-      displayPath: `~/.omnimind/agent/${sourceId}`,
-      exists: sourceId === "AGENTS.md" && input.global != null,
-      active: sourceId === "AGENTS.md" && input.global != null,
-    })),
-    globalContext:
-      input.global == null
+    defaultPrompt: {
+      content: input.defaultContent ?? FACTORY,
+      customized: input.defaultCustomized ?? false,
+      version: input.defaultVersion ?? "a".repeat(64),
+    },
+    customRules: input.customUnavailableReason
+      ? {
+          availability: "unavailable",
+          unavailableReason: input.customUnavailableReason,
+          sourceId: customSource,
+          displayPath: `~/.omnimind/agent/${customSource}`,
+          revealPath: `/private/example/.omnimind/agent/${customSource}`,
+          exists: true,
+          version: null,
+          content: "",
+        }
+      : customRules === null
         ? {
-            kind: "globalContext",
+            availability: "absent",
+            unavailableReason: null,
             sourceId: null,
             displayPath: null,
+            revealPath: null,
             exists: false,
             version: null,
-            contentLoaded: requested === "globalContext",
-            content: null,
+            content: "",
           }
         : {
-            kind: "globalContext",
-            sourceId: "AGENTS.md",
-            displayPath: "~/.omnimind/agent/AGENTS.md",
+            availability: "available",
+            unavailableReason: null,
+            sourceId: customSource,
+            displayPath: `~/.omnimind/agent/${customSource}`,
+            revealPath: `/private/example/.omnimind/agent/${customSource}`,
             exists: true,
-            version: input.globalVersion ?? "a".repeat(64),
-            contentLoaded: requested === "globalContext",
-            content: requested === "globalContext" ? input.global : null,
+            version: input.customVersion ?? "b".repeat(64),
+            content: customRules,
           },
-    appendSystem: fixed("appendSystem", input.append),
-    system: fixed("system", input.system),
-    maxBytes: EDITABLE_TEXT_FILE_MAX_BYTES,
+    maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
   };
+}
+
+function installApi(input: {
+  readonly getSnapshot?: NativeApi["omnimindAgentPrompts"]["getSnapshot"];
+  readonly mutate?: NativeApi["omnimindAgentPrompts"]["mutate"];
+  readonly reload?: NativeApi["omnimindEcosystem"]["reload"];
+  readonly showInFolder?: NativeApi["shell"]["showInFolder"];
+}) {
+  window.nativeApi = {
+    omnimindAgentPrompts: {
+      getSnapshot: input.getSnapshot ?? vi.fn().mockResolvedValue(snapshot()),
+      mutate: input.mutate ?? vi.fn(),
+    },
+    omnimindEcosystem: { reload: input.reload ?? vi.fn() },
+    shell: { showInFolder: input.showInFolder ?? vi.fn() },
+  } as unknown as NativeApi;
 }
 
 describe("PromptsSettingsPanel", () => {
   afterEach(() => {
     reloadTargetHarness.threadId = null;
     delete window.nativeApi;
+    delete window.desktopBridge;
     window.localStorage.clear();
     document.body.innerHTML = "";
     vi.restoreAllMocks();
   });
 
-  it("keeps visit, draft cancel, and first empty state side-effect free", async () => {
+  it("shows the factory default on a fresh profile while visit, cancel, and blank rules stay passive", async () => {
     const getSnapshot = vi.fn().mockResolvedValue(snapshot());
     const mutate = vi.fn();
     const reload = vi.fn();
-    window.nativeApi = {
-      omnimindAgentPrompts: { getSnapshot, mutate },
-      omnimindEcosystem: { reload },
-    } as unknown as NativeApi;
+    installApi({ getSnapshot, mutate, reload });
 
     const screen = await render(<PromptsSettingsPanel active />);
-    await expect.element(screen.getByText("This file has not been created.")).toBeVisible();
+    await expect
+      .element(screen.getByRole("textbox", { name: "Default prompt" }))
+      .toHaveValue(FACTORY);
+    await expect
+      .element(
+        screen.getByText(
+          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+        ),
+      )
+      .toBeVisible();
+    await expect.element(screen.getByRole("textbox", { name: "Custom rules" })).toHaveValue("");
+    await expect
+      .element(screen.getByText("AGENTS.md will be created on the first non-empty save."))
+      .toBeVisible();
+    await expect.element(screen.getByRole("button", { name: "Save" }).nth(1)).toBeDisabled();
+    for (const title of ["Default prompt", "Custom rules"]) {
+      expect(
+        [...document.querySelectorAll("h1,h2,h3,h4,h5,h6")].filter(
+          (heading) => heading.textContent?.trim() === title,
+        ),
+      ).toHaveLength(1);
+    }
+
+    const rules = screen.getByRole("textbox", { name: "Custom rules" });
+    await rules.fill("draft only");
+    await screen.getByRole("button", { name: "Cancel" }).nth(1).click();
+    await expect.element(rules).toHaveValue("");
+    expect(getSnapshot).toHaveBeenCalledTimes(1);
     expect(mutate).not.toHaveBeenCalled();
     expect(reload).not.toHaveBeenCalled();
-
-    await screen.getByRole("button", { name: "Add instructions" }).click();
-    const editor = screen.getByRole("textbox", { name: "Global personal instructions" });
-    await editor.fill("draft only");
-    await screen.getByRole("button", { name: "Cancel" }).click();
-    await expect.element(screen.getByText("This file has not been created.")).toBeVisible();
-    expect(mutate).not.toHaveBeenCalled();
-    await expect
-      .element(screen.getByRole("button", { name: "Reload current conversation resources" }))
-      .not.toBeInTheDocument();
     await screen.unmount();
   });
 
-  it("offers an actionable retry when the initial bounded snapshot read is rejected", async () => {
+  it("keeps an unavailable custom-rules file local to its card and hides Open without Desktop", async () => {
+    installApi({
+      getSnapshot: vi.fn().mockResolvedValue(
+        snapshot({
+          defaultContent: FACTORY,
+          customUnavailableReason: "too_large",
+        }),
+      ),
+    });
+
+    const screen = await render(<PromptsSettingsPanel active />);
+    await expect
+      .element(screen.getByRole("textbox", { name: "Default prompt" }))
+      .toHaveValue(FACTORY);
+    await expect.element(screen.getByRole("textbox", { name: "Custom rules" })).toBeDisabled();
+    await expect
+      .element(
+        screen.getByText(
+          "These custom rules are too large to edit here. Use the location below to make changes.",
+        ),
+      )
+      .toBeVisible();
+    await expect.element(screen.getByText("~/.omnimind/agent/AGENTS.md")).toBeVisible();
+    await expect.element(screen.getByRole("button", { name: "Open" })).not.toBeInTheDocument();
+    await screen.unmount();
+  });
+
+  it("offers an actionable retry when the bounded local snapshot read fails", async () => {
     const getSnapshot = vi
       .fn()
       .mockRejectedValueOnce(new Error("capacity"))
       .mockResolvedValue(snapshot());
-    window.nativeApi = {
-      omnimindAgentPrompts: { getSnapshot, mutate: vi.fn() },
-      omnimindEcosystem: { reload: vi.fn() },
-    } as unknown as NativeApi;
+    installApi({ getSnapshot });
 
     const screen = await render(<PromptsSettingsPanel active />);
     await expect
       .element(
         screen.getByText(
-          "Prompt files are unavailable right now. No files were changed; try again.",
-          { exact: true },
+          "Prompt settings are unavailable right now. Nothing was changed; try again.",
         ),
       )
       .toBeVisible();
     await screen.getByRole("button", { name: "Retry" }).click();
-    await expect.element(screen.getByText("This file has not been created.")).toBeVisible();
+    await expect
+      .element(screen.getByRole("textbox", { name: "Default prompt" }))
+      .toHaveValue(FACTORY);
+    await expect
+      .element(
+        screen.getByText(
+          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+        ),
+      )
+      .toBeVisible();
     expect(getSnapshot).toHaveBeenCalledTimes(2);
     await screen.unmount();
   });
 
-  it("creates the default global file without sending a path or reloading", async () => {
-    const created = snapshot({ global: "Be concise.", globalVersion: "b".repeat(64) });
-    const mutate = vi.fn().mockResolvedValue({ state: "changed", snapshot: created });
+  it("saves and restores only the native default segment without automatically reloading", async () => {
+    const customized = snapshot({
+      defaultContent: "Customized default",
+      defaultCustomized: true,
+      defaultVersion: "c".repeat(64),
+    });
+    const restored = snapshot({ defaultVersion: "d".repeat(64) });
+    const mutate = vi
+      .fn()
+      .mockResolvedValueOnce({ state: "changed", snapshot: customized })
+      .mockResolvedValueOnce({ state: "changed", snapshot: restored });
     const reload = vi.fn();
-    window.nativeApi = {
-      omnimindAgentPrompts: {
-        getSnapshot: vi.fn().mockResolvedValue(snapshot()),
-        mutate,
-      },
-      omnimindEcosystem: { reload },
-    } as unknown as NativeApi;
+    installApi({ mutate, reload });
 
     const screen = await render(<PromptsSettingsPanel active />);
-    await screen.getByRole("button", { name: "Add instructions" }).click();
-    await screen.getByRole("textbox", { name: "Global personal instructions" }).fill("Be concise.");
-    await screen.getByRole("button", { name: "Save" }).click();
-
+    await expect
+      .element(
+        screen.getByText(
+          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+        ),
+      )
+      .toBeVisible();
+    const editor = screen.getByRole("textbox", { name: "Default prompt" });
+    await editor.fill("Customized default");
+    await screen.getByRole("button", { name: "Save" }).nth(0).click();
     await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
-    expect(mutate).toHaveBeenCalledWith({
-      action: "create",
-      resource: "globalContext",
+    expect(mutate).toHaveBeenNthCalledWith(1, {
+      action: "setDefault",
+      expectedVersion: "a".repeat(64),
+      content: "Customized default",
+    });
+    expect(reload).not.toHaveBeenCalled();
+    await expect
+      .element(
+        screen.getByText(
+          "Customized for OmniMind Agent. Saved changes require an explicit conversation reload.",
+        ),
+      )
+      .toBeVisible();
+
+    await screen.getByRole("button", { name: "Restore factory default" }).click();
+    await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
+    expect(mutate).toHaveBeenNthCalledWith(2, {
+      action: "restoreDefault",
+      expectedVersion: "c".repeat(64),
+    });
+    await expect.element(editor).toHaveValue(FACTORY);
+    await expect
+      .element(
+        screen.getByText(
+          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+        ),
+      )
+      .toBeVisible();
+    expect(reload).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("creates exact custom rules, exposes only their subdued path, opens it, and preserves conflict drafts", async () => {
+    const created = snapshot({ customRules: "Be concise." });
+    const external = snapshot({ customRules: "External", customVersion: "c".repeat(64) });
+    const mutate = vi
+      .fn()
+      .mockResolvedValueOnce({ state: "changed", snapshot: created })
+      .mockResolvedValueOnce({
+        state: "conflict",
+        reason: "content_changed",
+        snapshot: external,
+      });
+    const showInFolder = vi.fn().mockResolvedValue(undefined);
+    window.desktopBridge = { showInFolder: vi.fn() } as unknown as NonNullable<
+      typeof window.desktopBridge
+    >;
+    installApi({ mutate, showInFolder });
+
+    const screen = await render(<PromptsSettingsPanel active />);
+    const editor = screen.getByRole("textbox", { name: "Custom rules" });
+    await editor.fill("Be concise.");
+    await screen.getByRole("button", { name: "Save" }).nth(1).click();
+    await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    expect(mutate).toHaveBeenNthCalledWith(1, {
+      action: "createCustomRules",
       content: "Be concise.",
     });
-    expect(JSON.stringify(mutate.mock.calls)).not.toContain("displayPath");
-    expect(reload).not.toHaveBeenCalled();
-    await screen.getByRole("button", { name: "File locations" }).click();
+    expect(JSON.stringify(mutate.mock.calls)).not.toContain("revealPath");
     await expect.element(screen.getByText("~/.omnimind/agent/AGENTS.md")).toBeVisible();
+    expect(document.body.textContent).not.toContain("SYSTEM.md");
+    expect(document.body.textContent).not.toContain("APPEND_SYSTEM.md");
+    await screen.getByRole("button", { name: "Open" }).click();
+    expect(showInFolder).toHaveBeenCalledWith("/private/example/.omnimind/agent/AGENTS.md");
+
+    await editor.fill("Mine");
+    await screen.getByRole("button", { name: "Save" }).nth(1).click();
+    await expect.element(screen.getByText("This setting changed elsewhere")).toBeVisible();
+    await expect.element(editor).toHaveValue("Mine");
+    await screen.getByRole("button", { name: "Reload current value" }).click();
+    await expect.element(editor).toHaveValue("External");
     await screen.unmount();
   });
 
-  it("preserves a draft on conflict and only replaces it after explicit reload", async () => {
-    const initial = snapshot({ global: "old" });
-    const fresh = snapshot({ global: "external", globalVersion: "b".repeat(64) });
-    window.nativeApi = {
-      omnimindAgentPrompts: {
-        getSnapshot: vi.fn().mockResolvedValue(initial),
-        mutate: vi.fn().mockResolvedValue({
-          state: "conflict",
-          reason: "content_changed",
-          snapshot: fresh,
-        }),
-      },
-      omnimindEcosystem: { reload: vi.fn() },
-    } as unknown as NativeApi;
-
-    const screen = await render(<PromptsSettingsPanel active />);
-    const editor = screen.getByRole("textbox", { name: "Global personal instructions" });
-    await expect.element(editor).toHaveValue("old");
-    await editor.fill("mine");
-    await screen.getByRole("button", { name: "Save" }).click();
-    await expect.element(screen.getByText("The file changed elsewhere")).toBeVisible();
-    await expect.element(editor).toHaveValue("mine");
-
-    await screen.getByRole("button", { name: "Reload file" }).click();
-    await expect.element(editor).toHaveValue("external");
-    await screen.unmount();
-  });
-
-  it("keeps advanced files folded and confirms first replacement-file creation", async () => {
-    const getSnapshot = vi.fn(
-      async ({ resource }: { resource?: OmniMindAgentPromptResourceKind }) =>
-        snapshot(resource ? { requested: resource } : {}),
-    );
-    const mutate = vi.fn().mockResolvedValue({
-      state: "changed",
-      snapshot: snapshot({ system: "replacement", requested: "system" }),
+  it("uses the default editor base version when another resource refreshes the snapshot", async () => {
+    const initial = snapshot({
+      defaultContent: "My earlier default",
+      defaultCustomized: true,
+      defaultVersion: "a".repeat(64),
     });
-    window.nativeApi = {
-      omnimindAgentPrompts: { getSnapshot, mutate },
-      omnimindEcosystem: { reload: vi.fn() },
-    } as unknown as NativeApi;
+    const afterRulesSave = snapshot({
+      defaultContent: "External newer default",
+      defaultCustomized: true,
+      defaultVersion: "c".repeat(64),
+      customRules: "Saved rules",
+    });
+    const mutate = vi
+      .fn()
+      .mockResolvedValueOnce({ state: "changed", snapshot: afterRulesSave })
+      .mockResolvedValueOnce({
+        state: "conflict",
+        reason: "content_changed",
+        snapshot: afterRulesSave,
+      });
+    installApi({ getSnapshot: vi.fn().mockResolvedValue(initial), mutate });
 
     const screen = await render(<PromptsSettingsPanel active />);
-    await expect
-      .element(screen.getByRole("textbox", { name: "Replacement system instructions" }))
-      .not.toBeInTheDocument();
-    await screen.getByRole("button", { name: /Advanced/ }).click();
-    await vi.waitFor(() => expect(getSnapshot).toHaveBeenCalledWith({ resource: "system" }));
-    await screen.getByRole("button", { name: "Create file" }).nth(1).click();
-    await screen
-      .getByRole("textbox", { name: "Replacement system instructions" })
-      .fill("replacement");
-    await screen.getByRole("button", { name: "Save" }).click();
-    await expect
-      .element(screen.getByText("Replace the default system instructions?"))
-      .toBeVisible();
-    expect(mutate).not.toHaveBeenCalled();
-    await screen.getByRole("button", { name: "Confirm" }).click();
+    await screen.getByRole("textbox", { name: "Default prompt" }).fill("My dirty draft");
+    await screen.getByRole("textbox", { name: "Custom rules" }).fill("Saved rules");
+    await screen.getByRole("button", { name: "Save" }).nth(1).click();
     await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    await screen.getByRole("button", { name: "Restore factory default" }).click();
+    await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
+    expect(mutate).toHaveBeenNthCalledWith(2, {
+      action: "restoreDefault",
+      expectedVersion: "a".repeat(64),
+    });
+    await expect.element(screen.getByText("This setting changed elsewhere")).toBeVisible();
+    await expect
+      .element(screen.getByRole("textbox", { name: "Default prompt" }))
+      .toHaveValue("My dirty draft");
     await screen.unmount();
   });
 
-  it("labels fixed global files as created rather than active and exposes the advanced target", async () => {
-    window.nativeApi = {
-      omnimindAgentPrompts: {
-        getSnapshot: vi.fn(async ({ resource }: { resource?: OmniMindAgentPromptResourceKind }) =>
-          snapshot({
-            append: "append",
-            system: "replacement",
-            requested: resource ?? "globalContext",
-          }),
-        ),
-        mutate: vi.fn(),
-      },
-      omnimindEcosystem: { reload: vi.fn() },
-    } as unknown as NativeApi;
+  it("keeps untouched custom-rules content, source details, and Open action on one snapshot slice", async () => {
+    const initial = snapshot({
+      customRules: "Rules from A",
+      customSource: "AGENTS.md",
+      customVersion: "b".repeat(64),
+    });
+    const afterDefaultSave = snapshot({
+      defaultContent: "Customized default",
+      defaultCustomized: true,
+      defaultVersion: "c".repeat(64),
+      customRules: "Rules from B",
+      customSource: "AGENTS.override.md",
+      customVersion: "d".repeat(64),
+    });
+    const mutate = vi.fn().mockResolvedValue({ state: "changed", snapshot: afterDefaultSave });
+    const showInFolder = vi.fn().mockResolvedValue(undefined);
+    window.desktopBridge = { showInFolder: vi.fn() } as unknown as NonNullable<
+      typeof window.desktopBridge
+    >;
+    installApi({
+      getSnapshot: vi.fn().mockResolvedValue(initial),
+      mutate,
+      showInFolder,
+    });
 
     const screen = await render(<PromptsSettingsPanel active />);
-    expect(document.getElementById("setting-advanced-prompt-files")).not.toBeNull();
-    await screen.getByRole("button", { name: /Advanced/ }).click();
-    await screen.getByRole("button", { name: "File locations" }).click();
+    await screen.getByRole("textbox", { name: "Default prompt" }).fill("Customized default");
+    await screen.getByRole("button", { name: "Save" }).nth(0).click();
+    await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+
     await expect
-      .element(screen.getByText("APPEND_SYSTEM.md · global file created", { exact: true }))
-      .toBeVisible();
+      .element(screen.getByRole("textbox", { name: "Custom rules" }))
+      .toHaveValue("Rules from A");
+    await expect.element(screen.getByText("~/.omnimind/agent/AGENTS.md")).toBeVisible();
     await expect
-      .element(screen.getByText("SYSTEM.md · global file created", { exact: true }))
-      .toBeVisible();
-    expect(document.body.textContent).not.toContain("APPEND_SYSTEM.md · active");
-    expect(document.body.textContent).not.toContain("SYSTEM.md · active");
+      .element(screen.getByText("~/.omnimind/agent/AGENTS.override.md"))
+      .not.toBeInTheDocument();
+    await screen.getByRole("button", { name: "Open" }).click();
+    expect(showInFolder).toHaveBeenCalledWith("/private/example/.omnimind/agent/AGENTS.md");
     await screen.unmount();
   });
 
-  it("keeps keyboard focus and long editing content contained at the narrow viewport", async () => {
+  it("keeps long editors contained and returns focus after the delete dialog at a narrow width", async () => {
     await page.viewport(480, 620);
-    const mutate = vi.fn();
-    window.nativeApi = {
-      omnimindAgentPrompts: {
-        getSnapshot: vi.fn(async ({ resource }: { resource?: OmniMindAgentPromptResourceKind }) =>
-          snapshot(resource ? { requested: resource } : {}),
-        ),
-        mutate,
-      },
-      omnimindEcosystem: { reload: vi.fn() },
-    } as unknown as NativeApi;
-
+    installApi({ getSnapshot: vi.fn().mockResolvedValue(snapshot({ customRules: "saved" })) });
     const screen = await render(<PromptsSettingsPanel active />);
     try {
-      const advanced = screen.getByRole("button", { name: /Advanced/ });
-      advanced.element().focus();
-      await userEvent.keyboard("{Enter}");
-      await expect
-        .element(screen.getByRole("textbox", { name: "Replacement system instructions" }))
-        .not.toBeInTheDocument();
-
-      const createSystem = screen.getByRole("button", { name: "Create file" }).nth(1);
-      createSystem.element().focus();
-      await userEvent.keyboard("{Enter}");
-      const editor = screen.getByRole("textbox", { name: "Replacement system instructions" });
+      const editor = screen.getByRole("textbox", { name: "Default prompt" });
       await editor.fill(Array.from({ length: 1_200 }, (_, index) => `line ${index}`).join("\n"));
       const textarea = editor.element() as HTMLTextAreaElement;
       expect(getComputedStyle(textarea).overflowY).toBe("auto");
@@ -299,22 +400,18 @@ describe("PromptsSettingsPanel", () => {
         document.documentElement.clientWidth + 1,
       );
 
-      const save = screen.getByRole("button", { name: "Save" });
-      save.element().focus();
+      const deleteButton = screen.getByRole("button", { name: "Delete" });
+      deleteButton.element().focus();
       await userEvent.keyboard("{Enter}");
-      await expect
-        .element(screen.getByText("Replace the default system instructions?"))
-        .toBeVisible();
+      await expect.element(screen.getByText("Delete your custom rules?")).toBeVisible();
       expect(
         document
           .querySelector('[data-slot="alert-dialog-popup"]')
           ?.contains(document.activeElement),
       ).toBe(true);
       await userEvent.keyboard("{Escape}");
-      await expect
-        .element(screen.getByText("Replace the default system instructions?"))
-        .not.toBeInTheDocument();
-      await expect.poll(() => document.activeElement).toBe(save.element());
+      await expect.element(screen.getByText("Delete your custom rules?")).not.toBeInTheDocument();
+      await expect.poll(() => document.activeElement).toBe(deleteButton.element());
 
       await editor.fill("valid tab\tand line\nbut invalid \u0001 control");
       await expect
@@ -324,15 +421,14 @@ describe("PromptsSettingsPanel", () => {
           ),
         )
         .toBeVisible();
-      await expect.element(save).toBeDisabled();
-      expect(mutate).not.toHaveBeenCalled();
+      await expect.element(screen.getByRole("button", { name: "Save" }).nth(0)).toBeDisabled();
     } finally {
       await screen.unmount();
       await page.viewport(1280, 720);
     }
   });
 
-  it("projects every explicit reload result without changing the saved-file receipt", async () => {
+  it("projects every explicit reload result separately from saved settings", async () => {
     reloadTargetHarness.threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000021");
     const reload = vi
       .fn()
@@ -341,36 +437,21 @@ describe("PromptsSettingsPanel", () => {
       .mockResolvedValueOnce({ state: "no_active_session" })
       .mockResolvedValueOnce({ state: "different_engine" })
       .mockRejectedValueOnce(new Error("reload failed"));
-    const mutate = vi.fn().mockResolvedValue({
-      state: "changed",
-      snapshot: snapshot({ global: "saved again", globalVersion: "b".repeat(64) }),
-    });
-    window.nativeApi = {
-      omnimindAgentPrompts: {
-        getSnapshot: vi.fn().mockResolvedValue(snapshot({ global: "saved" })),
-        mutate,
-      },
-      omnimindEcosystem: { reload },
-    } as unknown as NativeApi;
+    installApi({ reload });
 
     const screen = await render(<PromptsSettingsPanel active />);
     const button = screen.getByRole("button", { name: "Reload current conversation resources" });
     await button.click();
     await expect
-      .element(screen.getByText("Reloaded. Messages sent next will use the current files."))
+      .element(
+        screen.getByText("Reloaded. Messages sent next will use the current prompt settings."),
+      )
       .toBeVisible();
-    await screen.getByRole("textbox", { name: "Global personal instructions" }).fill("saved again");
-    await screen.getByRole("button", { name: "Save" }).click();
-    await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
-    await expect
-      .element(screen.getByText("Reloaded. Messages sent next will use the current files."))
-      .not.toBeInTheDocument();
-    expect(reload).toHaveBeenCalledTimes(1);
     await button.click();
     await expect
       .element(
         screen.getByText(
-          "This conversation is currently running. The saved files do not change the work in progress.",
+          "This conversation is currently running. Saved changes do not affect the work in progress.",
         ),
       )
       .toBeVisible();
@@ -378,7 +459,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "No active session needed reloading. The conversation will read the current files when it starts again.",
+          "No active session needed reloading. The conversation will use current prompt settings when it starts again.",
         ),
       )
       .toBeVisible();
@@ -390,11 +471,12 @@ describe("PromptsSettingsPanel", () => {
         ),
       )
       .toBeVisible();
+    reloadTargetHarness.threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000021");
     await button.click();
     await expect
       .element(
         screen.getByText(
-          "The files remain saved, but conversation resources could not be reloaded. Try again or start a new conversation.",
+          "Changes remain saved, but conversation resources could not be reloaded. Try again or start a new conversation.",
         ),
       )
       .toBeVisible();

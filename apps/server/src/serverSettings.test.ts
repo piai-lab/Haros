@@ -1,7 +1,7 @@
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { dirname } from "node:path";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL, DEFAULT_MODEL_BY_PROVIDER } from "@omnimind/contracts";
-import { Effect, FileSystem, Layer } from "effect";
+import { Effect, Fiber, FileSystem, Layer, Option, Stream } from "effect";
 import { describe, expect, it } from "vitest";
 import { ServerConfig } from "./config";
 import { ServerSettingsLive, ServerSettingsService } from "./serverSettings";
@@ -194,6 +194,58 @@ describe("ServerSettingsService", () => {
     expect(JSON.stringify(result.view)).not.toContain('"serverPassword"');
     expect(result.persisted).not.toContain("kilo-secret");
     expect(result.persisted).not.toContain("opencode-secret");
+  });
+
+  it("keeps the customized default prompt out of public views and streams", async () => {
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const initialView = yield* service.getSettingsView;
+        const streamedViewFiber = yield* Stream.runHead(service.streamViews).pipe(
+          Effect.forkChild({ startImmediately: true }),
+        );
+        const mutation = yield* service.mutateOmniMindDefaultPrompt("private one", "private two");
+        const streamedView = Option.getOrThrow(yield* Fiber.join(streamedViewFiber));
+        return { initialView, mutation, streamedView };
+      }).pipe(
+        Effect.provide(
+          ServerSettingsService.layerTest({
+            providers: { omnimind: { defaultPrompt: "private one" } },
+          }),
+        ),
+      ),
+    );
+
+    expect(result.mutation.state).toBe("changed");
+    expect(result.initialView.providers.omnimind).not.toHaveProperty("defaultPrompt");
+    expect(result.streamedView.providers.omnimind).not.toHaveProperty("defaultPrompt");
+    expect(JSON.stringify(result.initialView)).not.toContain("private one");
+    expect(JSON.stringify(result.streamedView)).not.toContain("private two");
+  });
+
+  it("serializes default-prompt compare-and-set so one concurrent edit conflicts", async () => {
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const mutations = yield* Effect.all(
+          [
+            service.mutateOmniMindDefaultPrompt(null, "first"),
+            service.mutateOmniMindDefaultPrompt(null, "second"),
+          ],
+          { concurrency: "unbounded" },
+        );
+        return {
+          mutations,
+          snapshot: yield* service.getSnapshot,
+        };
+      }).pipe(Effect.provide(ServerSettingsService.layerTest())),
+    );
+
+    expect(result.mutations.map(({ state }) => state).sort()).toEqual(["changed", "conflict"]);
+    expect(["first", "second"]).toContain(
+      result.snapshot.settings.providers.omnimind.defaultPrompt,
+    );
+    expect(result.snapshot.revision).toBe(1);
   });
 
   it("resolves text generation selection away from disabled providers", async () => {

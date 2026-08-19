@@ -5,6 +5,7 @@ import path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
   EDITABLE_TEXT_FILE_MAX_BYTES,
+  OMNIMIND_AGENT_PROMPT_MAX_BYTES,
   OmniMindAgentPromptMutationInput,
   OmniMindAgentPromptSnapshot,
   WS_METHODS,
@@ -14,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
 import { MAX_WEBSOCKET_MESSAGE_BYTES } from "../../nodeHttpServer.ts";
+import { ServerSettingsService, type ServerSettingsShape } from "../../serverSettings.ts";
 import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
 import {
   OmniMindAgentPromptFiles,
@@ -57,18 +59,27 @@ function harness(options: OmniMindAgentPromptFilesLiveOptions = {}) {
       return [];
     },
   );
-  const sdk = { loadProjectContextFiles } as unknown as OmniMindCodingAgentModule;
+  const sdk = {
+    DEFAULT_BASE_INSTRUCTIONS: "Factory instructions",
+    loadProjectContextFiles,
+  } as unknown as OmniMindCodingAgentModule;
   const layer = makeOmniMindAgentPromptFilesLive({
     ...options,
     loadModule: async () => sdk,
   }).pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
+    Layer.provideMerge(ServerSettingsService.layerTest()),
     Layer.provideMerge(NodeServices.layer),
   );
-  const run = <A>(operation: (service: OmniMindAgentPromptFilesShape) => Effect.Effect<A, Error>) =>
+  const run = <A>(
+    operation: (
+      service: OmniMindAgentPromptFilesShape,
+      settings: ServerSettingsShape,
+    ) => Effect.Effect<A, unknown, never>,
+  ) =>
     Effect.runPromise(
       Effect.gen(function* () {
-        return yield* operation(yield* OmniMindAgentPromptFiles);
+        return yield* operation(yield* OmniMindAgentPromptFiles, yield* ServerSettingsService);
       }).pipe(Effect.provide(layer)),
     );
   return { run, root, baseDir, agentDir, loadProjectContextFiles };
@@ -85,8 +96,11 @@ describe("OmniMindAgentPromptFilesLive", () => {
 
     const snapshot = await test.run((service) => service.getSnapshot());
 
-    expect(snapshot.globalContext.exists).toBe(false);
-    expect(snapshot.globalContextCandidates).toHaveLength(5);
+    expect(snapshot.defaultPrompt).toMatchObject({
+      content: "Factory instructions",
+      customized: false,
+    });
+    expect(snapshot.customRules.exists).toBe(false);
     expect(fs.existsSync(test.agentDir)).toBe(false);
     expect(test.loadProjectContextFiles).not.toHaveBeenCalled();
   });
@@ -96,44 +110,40 @@ describe("OmniMindAgentPromptFilesLive", () => {
     write(test.agentDir, "AGENTS.md", "lower");
     write(test.agentDir, "AGENTS.override.md", "active");
 
-    const snapshot = await test.run((service) =>
-      service.getSnapshot({ resource: "globalContext" }),
-    );
+    const snapshot = await test.run((service) => service.getSnapshot());
 
-    expect(snapshot.globalContext).toMatchObject({
+    expect(snapshot.customRules).toMatchObject({
       sourceId: "AGENTS.override.md",
       content: "active",
       exists: true,
-      contentLoaded: true,
     });
-    expect(snapshot.globalContextCandidates.filter((candidate) => candidate.exists)).toHaveLength(
-      2,
+    expect(snapshot.customRules.displayPath).toContain("AGENTS.override.md");
+    expect(snapshot.customRules.displayPath).not.toContain("..");
+    expect(snapshot.customRules.revealPath).toBe(
+      fs.realpathSync(path.join(test.agentDir, "AGENTS.override.md")),
     );
-    expect(snapshot.globalContext.displayPath).toContain("AGENTS.override.md");
-    expect(snapshot.globalContext.displayPath).not.toContain("..");
     expect(test.loadProjectContextFiles).toHaveBeenCalledTimes(1);
   });
 
   it("creates AGENTS.md only for the first non-empty save and preserves no-op bytes and mtime", async () => {
     const test = harness();
     const empty = await test.run((service) =>
-      service.mutate({ action: "create", resource: "globalContext", content: "" }),
+      service.mutate({ action: "createCustomRules", content: "" }),
     );
     expect(empty.state).toBe("unchanged");
     expect(fs.existsSync(test.agentDir)).toBe(false);
 
     const created = await test.run((service) =>
-      service.mutate({ action: "create", resource: "globalContext", content: "hello\n" }),
+      service.mutate({ action: "createCustomRules", content: "hello\n" }),
     );
     expect(created.state).toBe("changed");
     const source = path.join(test.agentDir, "AGENTS.md");
     const before = fs.statSync(source);
-    const version = created.snapshot.globalContext.version!;
+    const version = created.snapshot.customRules.version!;
 
     const unchanged = await test.run((service) =>
       service.mutate({
-        action: "update",
-        resource: "globalContext",
+        action: "updateCustomRules",
         sourceId: "AGENTS.md",
         expectedVersion: version,
         content: "hello\n",
@@ -157,16 +167,15 @@ describe("OmniMindAgentPromptFilesLive", () => {
 
     const result = await test.run((service) =>
       service.mutate({
-        action: "update",
-        resource: "globalContext",
+        action: "updateCustomRules",
         sourceId: "AGENTS.md",
-        expectedVersion: snapshot.globalContext.version!,
+        expectedVersion: snapshot.customRules.version!,
         content: "mine",
       }),
     );
 
     expect(result).toMatchObject({ state: "conflict", reason: "content_changed" });
-    expect(result.snapshot.globalContext.content).toBe("external");
+    expect(result.snapshot.customRules.content).toBe("external");
     expect(fs.readFileSync(path.join(test.agentDir, "AGENTS.md"), "utf8")).toBe("external");
   });
 
@@ -178,16 +187,15 @@ describe("OmniMindAgentPromptFilesLive", () => {
 
     const result = await test.run((service) =>
       service.mutate({
-        action: "update",
-        resource: "globalContext",
+        action: "updateCustomRules",
         sourceId: "AGENTS.md",
-        expectedVersion: snapshot.globalContext.version!,
+        expectedVersion: snapshot.customRules.version!,
         content: "mine",
       }),
     );
 
     expect(result).toMatchObject({ state: "conflict", reason: "source_changed" });
-    expect(result.snapshot.globalContext.sourceId).toBe("AGENTS.override.md");
+    expect(result.snapshot.customRules.sourceId).toBe("AGENTS.override.md");
   });
 
   it("rediscovers the next candidate after removing the active file", async () => {
@@ -198,61 +206,114 @@ describe("OmniMindAgentPromptFilesLive", () => {
 
     const result = await test.run((service) =>
       service.mutate({
-        action: "remove",
-        resource: "globalContext",
+        action: "removeCustomRules",
         sourceId: "AGENTS.override.md",
-        expectedVersion: snapshot.globalContext.version!,
+        expectedVersion: snapshot.customRules.version!,
       }),
     );
 
     expect(result.state).toBe("changed");
-    expect(result.snapshot.globalContext).toMatchObject({ sourceId: "AGENTS.md", content: "next" });
+    expect(result.snapshot.customRules).toMatchObject({ sourceId: "AGENTS.md", content: "next" });
   });
 
-  it("loads advanced contents only when explicitly requested", async () => {
+  it("saves, no-ops, and restores the native default segment without creating a file", async () => {
     const test = harness();
-    write(test.agentDir, "APPEND_SYSTEM.md", "append");
+    const { initial, changed, changedRevision, unchanged, unchangedRevision, restored } =
+      await test.run((service, settings) =>
+        Effect.gen(function* () {
+          const initial = yield* service.getSnapshot();
+          const changed = yield* service.mutate({
+            action: "setDefault",
+            expectedVersion: initial.defaultPrompt.version,
+            content: "My default",
+          });
+          const changedRevision = (yield* settings.getSnapshot).revision;
+          const unchanged = yield* service.mutate({
+            action: "setDefault",
+            expectedVersion: changed.snapshot.defaultPrompt.version,
+            content: "My default",
+          });
+          const unchangedRevision = (yield* settings.getSnapshot).revision;
+          const restored = yield* service.mutate({
+            action: "restoreDefault",
+            expectedVersion: unchanged.snapshot.defaultPrompt.version,
+          });
+          return { initial, changed, changedRevision, unchanged, unchangedRevision, restored };
+        }),
+      );
+    expect(initial.defaultPrompt.customized).toBe(false);
+    expect(changed).toMatchObject({
+      state: "changed",
+      snapshot: { defaultPrompt: { content: "My default", customized: true } },
+    });
+    expect(unchanged.state).toBe("unchanged");
+    expect(unchangedRevision).toBe(changedRevision);
+    expect(restored).toMatchObject({
+      state: "changed",
+      snapshot: {
+        defaultPrompt: {
+          content: "Factory instructions",
+          customized: false,
+        },
+      },
+    });
+    expect(fs.existsSync(test.agentDir)).toBe(false);
+  });
 
-    const initial = await test.run((service) => service.getSnapshot());
-    expect(initial.appendSystem).toMatchObject({
-      exists: true,
-      contentLoaded: false,
-      content: null,
-    });
-    const loaded = await test.run((service) => service.getSnapshot({ resource: "appendSystem" }));
-    expect(loaded.appendSystem).toMatchObject({
-      exists: true,
-      contentLoaded: true,
-      content: "append",
-    });
+  it("returns a typed conflict instead of overwriting a concurrent default edit", async () => {
+    const test = harness();
+    const results = await test.run((service) =>
+      Effect.gen(function* () {
+        const initial = yield* service.getSnapshot();
+        return yield* Effect.all(
+          [
+            service.mutate({
+              action: "setDefault",
+              expectedVersion: initial.defaultPrompt.version,
+              content: "first",
+            }),
+            service.mutate({
+              action: "setDefault",
+              expectedVersion: initial.defaultPrompt.version,
+              content: "second",
+            }),
+          ],
+          { concurrency: "unbounded" },
+        );
+      }),
+    );
+
+    expect(results.map(({ state }) => state).sort()).toEqual(["changed", "conflict"]);
+    const conflict = results.find(({ state }) => state === "conflict");
+    expect(conflict).toMatchObject({ state: "conflict", reason: "content_changed" });
+    expect(["first", "second"]).toContain(conflict?.snapshot.defaultPrompt.content);
   });
 
   it("preserves BOM, consistent line endings, and mode on update", async () => {
     const test = harness();
     write(
       test.agentDir,
-      "SYSTEM.md",
+      "AGENTS.md",
       Buffer.from([0xef, 0xbb, 0xbf, ...Buffer.from("one\r\ntwo\r\n")]),
       0o640,
     );
-    const snapshot = await test.run((service) => service.getSnapshot({ resource: "system" }));
+    const snapshot = await test.run((service) => service.getSnapshot());
 
     const result = await test.run((service) =>
       service.mutate({
-        action: "update",
-        resource: "system",
-        sourceId: "SYSTEM.md",
-        expectedVersion: snapshot.system.version!,
+        action: "updateCustomRules",
+        sourceId: "AGENTS.md",
+        expectedVersion: snapshot.customRules.version!,
         content: "three\nfour\n",
       }),
     );
 
     expect(result.state).toBe("changed");
-    const bytes = fs.readFileSync(path.join(test.agentDir, "SYSTEM.md"));
+    const bytes = fs.readFileSync(path.join(test.agentDir, "AGENTS.md"));
     expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
     expect(bytes.subarray(3).toString("utf8")).toBe("three\r\nfour\r\n");
     if (process.platform !== "win32")
-      expect(fs.statSync(path.join(test.agentDir, "SYSTEM.md")).mode & 0o777).toBe(0o640);
+      expect(fs.statSync(path.join(test.agentDir, "AGENTS.md")).mode & 0o777).toBe(0o640);
   });
 
   it("rejects symlinks and hardlinks before bundled discovery can read them", async () => {
@@ -275,33 +336,80 @@ describe("OmniMindAgentPromptFilesLive", () => {
     expect(test.loadProjectContextFiles).not.toHaveBeenCalled();
   });
 
-  it("rejects invalid UTF-8 without exposing bytes", async () => {
+  it("keeps the default editable while an unsupported custom-rules file is unavailable", async () => {
     const test = harness();
     write(test.agentDir, "AGENTS.md", Buffer.from([0xc3, 0x28]));
 
-    await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
-      "OmniMind Agent prompt file operation failed",
-    );
+    const invalidUtf8 = await test.run((service) => service.getSnapshot());
+    expect(invalidUtf8.defaultPrompt.content).toBe("Factory instructions");
+    expect(invalidUtf8.customRules).toMatchObject({
+      availability: "unavailable",
+      unavailableReason: "unsupported_text",
+      sourceId: "AGENTS.md",
+      content: "",
+      version: null,
+    });
 
     const control = harness();
     write(control.agentDir, "AGENTS.md", "plain\u0001control");
-    await expect(control.run((service) => service.getSnapshot())).rejects.toThrow(
-      "OmniMind Agent prompt file operation failed",
-    );
+    const invalidControl = await control.run((service) => service.getSnapshot());
+    expect(invalidControl.customRules).toMatchObject({
+      availability: "unavailable",
+      unavailableReason: "unsupported_text",
+    });
   });
 
-  it("rejects oversized, binary-like, directory, and linked-root inputs", async () => {
+  it("localizes oversized and binary-like custom rules without weakening unsafe path failures", async () => {
     const oversized = harness();
-    write(oversized.agentDir, "AGENTS.md", Buffer.alloc(EDITABLE_TEXT_FILE_MAX_BYTES + 1, 0x61));
-    await expect(oversized.run((service) => service.getSnapshot())).rejects.toThrow(
-      "OmniMind Agent prompt file operation failed",
+    write(oversized.agentDir, "AGENTS.md", Buffer.alloc(OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1, 0x61));
+    const oversizedSnapshot = await oversized.run((service) => service.getSnapshot());
+    expect(oversizedSnapshot.defaultPrompt.content).toBe("Factory instructions");
+    expect(oversizedSnapshot.customRules).toMatchObject({
+      availability: "unavailable",
+      unavailableReason: "too_large",
+      sourceId: "AGENTS.md",
+      exists: true,
+      content: "",
+      version: null,
+    });
+    expect(oversizedSnapshot.customRules.displayPath).toContain("AGENTS.md");
+    expect(oversized.loadProjectContextFiles).toHaveBeenCalledTimes(1);
+
+    const beyondSafeDiscovery = harness();
+    write(
+      beyondSafeDiscovery.agentDir,
+      "AGENTS.md",
+      Buffer.alloc(EDITABLE_TEXT_FILE_MAX_BYTES + 1, 0x61),
     );
+    const beyondSafeSnapshot = await beyondSafeDiscovery.run((service) => service.getSnapshot());
+    expect(beyondSafeSnapshot.customRules).toMatchObject({
+      availability: "unavailable",
+      unavailableReason: "too_large",
+    });
+    expect(beyondSafeDiscovery.loadProjectContextFiles).not.toHaveBeenCalled();
+
+    const shadowedOversized = harness();
+    write(shadowedOversized.agentDir, "AGENTS.override.md", "active and editable");
+    write(
+      shadowedOversized.agentDir,
+      "CLAUDE.md",
+      Buffer.alloc(OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1, 0x61),
+    );
+    const shadowedSnapshot = await shadowedOversized.run((service) => service.getSnapshot());
+    expect(shadowedSnapshot.customRules).toMatchObject({
+      availability: "available",
+      sourceId: "AGENTS.override.md",
+      content: "active and editable",
+    });
+    expect(shadowedOversized.loadProjectContextFiles).toHaveBeenCalledTimes(1);
 
     const binary = harness();
     write(binary.agentDir, "AGENTS.md", "text\0binary");
-    await expect(binary.run((service) => service.getSnapshot())).rejects.toThrow(
-      "OmniMind Agent prompt file operation failed",
-    );
+    const binarySnapshot = await binary.run((service) => service.getSnapshot());
+    expect(binarySnapshot.customRules).toMatchObject({
+      availability: "unavailable",
+      unavailableReason: "unsupported_text",
+    });
 
     const directory = harness();
     fs.mkdirSync(path.join(directory.agentDir, "AGENTS.md"), { recursive: true });
@@ -327,18 +435,20 @@ describe("OmniMindAgentPromptFilesLive", () => {
           expanded = true;
           fs.appendFileSync(
             path.join(agentDir, sourceId),
-            Buffer.alloc(EDITABLE_TEXT_FILE_MAX_BYTES, 0x61),
+            Buffer.alloc(OMNIMIND_AGENT_PROMPT_MAX_BYTES, 0x61),
           );
         },
       },
     });
     write(test.agentDir, "AGENTS.md", "x");
 
-    await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
-      "OmniMind Agent prompt file operation failed",
-    );
+    const snapshot = await test.run((service) => service.getSnapshot());
+    expect(snapshot.customRules).toMatchObject({
+      availability: "unavailable",
+      unavailableReason: "too_large",
+    });
     expect(fs.statSync(path.join(test.agentDir, "AGENTS.md")).size).toBe(
-      EDITABLE_TEXT_FILE_MAX_BYTES + 1,
+      OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1,
     );
   });
 
@@ -362,35 +472,45 @@ describe("OmniMindAgentPromptFilesLive", () => {
   });
 
   it("keeps the largest legal escaped request and response below the existing WS ceiling", async () => {
-    const content = "\\".repeat(EDITABLE_TEXT_FILE_MAX_BYTES);
-    const payload = Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
-      action: "create",
-      resource: "globalContext",
-      content,
-    });
-    const requestFrame = JSON.stringify({
-      _tag: "Request",
-      id: "00000000-0000-4000-8000-000000000099",
-      tag: WS_METHODS.omnimindAgentPromptsMutate,
-      payload,
-    });
-    expect(Buffer.byteLength(requestFrame, "utf8")).toBeLessThan(MAX_WEBSOCKET_MESSAGE_BYTES);
+    const content = "\\".repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES);
+    for (const payload of [
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+        action: "createCustomRules",
+        content,
+      }),
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+        action: "setDefault",
+        expectedVersion: "a".repeat(64),
+        content,
+      }),
+    ]) {
+      const requestFrame = JSON.stringify({
+        _tag: "Request",
+        id: "00000000-0000-4000-8000-000000000099",
+        tag: WS_METHODS.omnimindAgentPromptsMutate,
+        payload,
+      });
+      expect(Buffer.byteLength(requestFrame, "utf8")).toBeLessThan(MAX_WEBSOCKET_MESSAGE_BYTES);
+    }
 
     const test = harness();
     write(test.agentDir, "AGENTS.md", content);
-    const snapshot = await test.run((service) =>
-      service.getSnapshot({ resource: "globalContext" }),
-    );
+    const snapshot = await test.run((service) => service.getSnapshot());
     const maxDisplayPath = `/${"x".repeat(4_094)}`;
+    const maxRevealPath = `/${"x".repeat(16_382)}`;
     const maxLegalSnapshot = Schema.decodeUnknownSync(OmniMindAgentPromptSnapshot)({
       ...snapshot,
-      globalContextCandidates: snapshot.globalContextCandidates.map((candidate) => ({
-        ...candidate,
+      defaultPrompt: {
+        ...snapshot.defaultPrompt,
+        content,
+        customized: true,
+      },
+      customRules: {
+        ...snapshot.customRules,
+        content,
         displayPath: maxDisplayPath,
-      })),
-      globalContext: { ...snapshot.globalContext, displayPath: maxDisplayPath },
-      appendSystem: { ...snapshot.appendSystem, displayPath: maxDisplayPath },
-      system: { ...snapshot.system, displayPath: maxDisplayPath },
+        revealPath: maxRevealPath,
+      },
     });
     const responseFrame = JSON.stringify({
       _tag: "Exit",
@@ -408,16 +528,15 @@ describe("OmniMindAgentPromptFilesLive", () => {
 
     const result = await test.run((service) =>
       service.mutate({
-        action: "update",
-        resource: "globalContext",
+        action: "updateCustomRules",
         sourceId: "AGENTS.override.md",
-        expectedVersion: before.globalContext.version!,
+        expectedVersion: before.customRules.version!,
         content: "",
       }),
     );
 
     expect(result.state).toBe("changed");
-    expect(result.snapshot.globalContext).toMatchObject({
+    expect(result.snapshot.customRules).toMatchObject({
       sourceId: "AGENTS.override.md",
       exists: true,
       content: "",

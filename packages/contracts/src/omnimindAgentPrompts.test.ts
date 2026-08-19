@@ -1,121 +1,137 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 
-import { EDITABLE_TEXT_FILE_MAX_BYTES } from "./editableText";
+import { OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 import {
   OmniMindAgentPromptGetSnapshotInput,
   OmniMindAgentPromptMutationInput,
   OmniMindAgentPromptSnapshot,
 } from "./omnimindAgentPrompts";
 
-function emptyPromptResource(kind: "appendSystem" | "system") {
-  return {
-    kind,
-    sourceId: null,
-    displayPath: null,
-    exists: false,
-    version: null,
-    contentLoaded: false,
-    content: null,
-  };
-}
-
 describe("OmniMind Agent prompt contracts", () => {
-  it("accepts typed resource intents without accepting paths", () => {
+  it("accepts product intents without accepting renderer-selected paths", () => {
     expect(
       Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
-        action: "update",
-        resource: "globalContext",
+        action: "updateCustomRules",
         sourceId: "AGENTS.md",
         expectedVersion: "a".repeat(64),
         content: "Be concise.",
       }),
     ).toEqual({
-      action: "update",
-      resource: "globalContext",
+      action: "updateCustomRules",
       sourceId: "AGENTS.md",
       expectedVersion: "a".repeat(64),
       content: "Be concise.",
     });
     expect(() =>
       Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
-        action: "update",
-        resource: "globalContext",
+        action: "updateCustomRules",
         sourceId: "/tmp/AGENTS.md",
         expectedVersion: "a".repeat(64),
         content: "forged",
       }),
     ).toThrow();
+    expect(
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+        action: "updateCustomRules",
+        sourceId: "AGENTS.md",
+        expectedVersion: "a".repeat(64),
+        content: "forged",
+        revealPath: "/tmp/AGENTS.md",
+      }),
+    ).not.toHaveProperty("revealPath");
   });
 
-  it("keeps snapshots lazy and bounded to one requested resource", () => {
+  it("projects factory/current defaults and only the active custom-rules source", () => {
     expect(Schema.decodeUnknownSync(OmniMindAgentPromptGetSnapshotInput)({})).toEqual({});
-    const candidates = [
-      "AGENTS.override.md",
-      "AGENTS.md",
-      "AGENTS.MD",
-      "CLAUDE.md",
-      "CLAUDE.MD",
-    ].map((sourceId, index) => ({
-      sourceId,
-      displayPath: `~/.omnimind/agent/${sourceId}`,
-      exists: index === 1,
-      active: index === 1,
-    }));
-    expect(
+    const snapshot = Schema.decodeUnknownSync(OmniMindAgentPromptSnapshot)({
+      defaultPrompt: {
+        content: "Customized instructions",
+        customized: true,
+        version: "a".repeat(64),
+      },
+      customRules: {
+        availability: "available",
+        unavailableReason: null,
+        sourceId: "AGENTS.md",
+        displayPath: "~/.omnimind/agent/AGENTS.md",
+        revealPath: "/private/example/.omnimind/agent/AGENTS.md",
+        exists: true,
+        version: "b".repeat(64),
+        content: "Be concise.",
+      },
+      maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
+    });
+    expect(snapshot.defaultPrompt.customized).toBe(true);
+    expect(snapshot.customRules.content).toBe("Be concise.");
+  });
+
+  it("rejects contradictory custom-rules availability states", () => {
+    expect(() =>
       Schema.decodeUnknownSync(OmniMindAgentPromptSnapshot)({
-        globalContextCandidates: candidates,
-        globalContext: {
-          kind: "globalContext",
+        defaultPrompt: {
+          content: "Factory",
+          customized: false,
+          version: "a".repeat(64),
+        },
+        customRules: {
+          availability: "available",
+          unavailableReason: null,
           sourceId: "AGENTS.md",
           displayPath: "~/.omnimind/agent/AGENTS.md",
-          exists: true,
-          version: "b".repeat(64),
-          contentLoaded: true,
-          content: "hello",
+          revealPath: "/private/example/.omnimind/agent/AGENTS.md",
+          exists: false,
+          version: null,
+          content: "",
         },
-        appendSystem: emptyPromptResource("appendSystem"),
-        system: emptyPromptResource("system"),
-        maxBytes: EDITABLE_TEXT_FILE_MAX_BYTES,
-      }).globalContext.content,
-    ).toBe("hello");
-  });
-
-  it("rejects oversized character payloads before transport", () => {
-    expect(() =>
-      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
-        action: "create",
-        resource: "system",
-        content: "x".repeat(EDITABLE_TEXT_FILE_MAX_BYTES + 1),
-      }),
-    ).toThrow();
-
-    expect(() =>
-      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
-        action: "create",
-        resource: "system",
-        content: "😀".repeat(Math.floor(EDITABLE_TEXT_FILE_MAX_BYTES / 4) + 1),
+        maxBytes: OMNIMIND_AGENT_PROMPT_MAX_BYTES,
       }),
     ).toThrow();
   });
 
-  it("allows normal whitespace but rejects C0 controls that can over-expand JSON", () => {
+  it("rejects oversized payloads and disallowed C0 controls before transport", () => {
+    for (const action of ["setDefault", "createCustomRules"] as const) {
+      const base =
+        action === "setDefault" ? { action, expectedVersion: "a".repeat(64) } : { action };
+      expect(() =>
+        Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+          ...base,
+          content: "x".repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES + 1),
+        }),
+      ).toThrow();
+      for (const content of ["before\0after", "before\u0001after", "before\u000cafter"]) {
+        expect(() =>
+          Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({ ...base, content }),
+        ).toThrow();
+      }
+    }
+  });
+
+  it("allows ordinary prompt whitespace", () => {
     expect(
       Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
-        action: "create",
-        resource: "system",
+        action: "setDefault",
+        expectedVersion: "a".repeat(64),
         content: "line one\n\tline two\r\n",
       }),
     ).toMatchObject({ content: "line one\n\tline two\r\n" });
+  });
 
-    for (const content of ["before\0after", "before\u0001after", "before\u000cafter"]) {
-      expect(() =>
-        Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
-          action: "create",
-          resource: "system",
-          content,
-        }),
-      ).toThrow();
-    }
+  it("enforces the prompt byte boundary for multibyte content", () => {
+    const emoji = "😀";
+    const withinLimit = emoji.repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES / 4);
+    const overLimit = `${withinLimit}${emoji}`;
+    const input = (content: string) => ({
+      action: "setDefault" as const,
+      expectedVersion: "a".repeat(64),
+      content,
+    });
+
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)(input(withinLimit)),
+    ).not.toThrow();
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)(input(overLimit)),
+    ).toThrow();
   });
 });

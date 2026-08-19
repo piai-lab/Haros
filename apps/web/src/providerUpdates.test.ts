@@ -3,7 +3,7 @@
 // Layer: Web utility tests
 // Exports: Vitest suites for providerUpdates.ts
 
-import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus, ServerSettingsView } from "@omnimind/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -81,7 +81,9 @@ function providerStatus(
   };
 }
 
-function serverSettings(overrides: Partial<ServerSettings["providers"]> = {}): ServerSettings {
+function serverSettings(
+  overrides: Partial<ServerSettingsView["providers"]> = {},
+): ServerSettingsView {
   const provider = {
     enabled: true,
     binaryPath: "",

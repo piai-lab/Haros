@@ -3,7 +3,7 @@
 // Layer: Web settings/notification utility
 // Exports: update candidate helpers, notification keys, and auto-refresh timing.
 
-import type { ProviderKind, ServerProviderStatus, ServerSettings } from "@omnimind/contracts";
+import type { ProviderKind, ServerProviderStatus, ServerSettingsView } from "@omnimind/contracts";
 
 export const PROVIDER_UPDATE_INITIAL_REFRESH_DELAY_MS = 10_000;
 export const PROVIDER_UPDATE_REFRESH_INTERVAL_MS = 60 * 60 * 1_000;
@@ -82,7 +82,7 @@ type ProviderUpdateFilterInput = {
   readonly providers: ReadonlyArray<ServerProviderStatus>;
   readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
   readonly serverSettings?:
-    | Pick<ServerSettings, "providers" | "enableProviderUpdateChecks">
+    | Pick<ServerSettingsView, "providers" | "enableProviderUpdateChecks">
     | null
     | undefined;
   readonly oneClickOnly?: boolean;
@@ -93,7 +93,7 @@ type ProviderUpdateVisibilityInput = {
   readonly hiddenProviders?: ReadonlyArray<ProviderKind>;
   readonly hiddenProviderSet?: ReadonlySet<ProviderKind>;
   readonly serverSettings?:
-    | Pick<ServerSettings, "providers" | "enableProviderUpdateChecks">
+    | Pick<ServerSettingsView, "providers" | "enableProviderUpdateChecks">
     | null
     | undefined;
   readonly oneClickOnly?: boolean;
@@ -126,7 +126,7 @@ export function shouldPromptProviderUpdate(provider: ServerProviderStatus): bool
 
 function isProviderEnabled(
   provider: ProviderKind,
-  serverSettings: Pick<ServerSettings, "providers"> | null | undefined,
+  serverSettings: Pick<ServerSettingsView, "providers"> | null | undefined,
 ): boolean {
   if (!serverSettings) {
     return false;

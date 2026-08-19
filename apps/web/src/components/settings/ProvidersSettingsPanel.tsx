@@ -6,7 +6,7 @@ import {
   PROVIDER_DISPLAY_NAMES,
   type ProviderKind,
   type ServerProviderStatus,
-  type ServerSettings,
+  type ServerSettingsView,
 } from "@omnimind/contracts";
 import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import {
@@ -860,7 +860,7 @@ function ProviderToolRow(props: {
   settings: AppSettings;
   defaults: AppSettings;
   hiddenProviderSet: ReadonlySet<ProviderKind>;
-  serverSettings: Pick<ServerSettings, "providers" | "enableProviderUpdateChecks"> | null;
+  serverSettings: Pick<ServerSettingsView, "providers" | "enableProviderUpdateChecks"> | null;
   providerStatus: ServerProviderStatus | undefined;
   updatingProviders: ReadonlySet<ProviderKind>;
   onOpenChange: (open: boolean) => void;

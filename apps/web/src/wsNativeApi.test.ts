@@ -996,24 +996,20 @@ describe("wsNativeApi", () => {
     const { createWsNativeApi } = await import("./wsNativeApi");
     const api = createWsNativeApi();
 
-    await api.omnimindAgentPrompts.getSnapshot({ resource: "globalContext" });
+    await api.omnimindAgentPrompts.getSnapshot({});
     await api.omnimindAgentPrompts.mutate({
-      action: "update",
-      resource: "globalContext",
+      action: "updateCustomRules",
       sourceId: "AGENTS.md",
       expectedVersion: "a".repeat(64),
       content: "Be concise.",
     });
 
-    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.omnimindAgentPromptsGetSnapshot, {
-      resource: "globalContext",
-    });
+    expect(requestMock).toHaveBeenNthCalledWith(1, WS_METHODS.omnimindAgentPromptsGetSnapshot, {});
     expect(requestMock).toHaveBeenNthCalledWith(
       2,
       WS_METHODS.omnimindAgentPromptsMutate,
       {
-        action: "update",
-        resource: "globalContext",
+        action: "updateCustomRules",
         sourceId: "AGENTS.md",
         expectedVersion: "a".repeat(64),
         content: "Be concise.",

@@ -98,10 +98,15 @@ describe("rankSettingsSearchEntries", () => {
     expect(SETTINGS_TARGETS.gitWritingModel).toBe("setting-git-writing-model");
   });
 
-  it("routes advanced prompt search to the existing advanced section", () => {
-    const entry = SETTINGS_SEARCH_ENTRIES.find((candidate) => candidate.id === "prompts:advanced")!;
-    expect(settingsSearchEntryTarget(entry)).toBe(SETTINGS_TARGETS.advancedPromptFiles);
-    expect(SETTINGS_TARGETS.advancedPromptFiles).toBe("setting-advanced-prompt-files");
+  it("routes prompt search results to the two product-owned editors", () => {
+    const defaultEntry = SETTINGS_SEARCH_ENTRIES.find(
+      (candidate) => candidate.id === "prompts:default-prompt",
+    )!;
+    const rulesEntry = SETTINGS_SEARCH_ENTRIES.find(
+      (candidate) => candidate.id === "prompts:custom-rules",
+    )!;
+    expect(settingsSearchEntryTarget(defaultEntry)).toBe(SETTINGS_TARGETS.defaultPrompt);
+    expect(settingsSearchEntryTarget(rulesEntry)).toBe(SETTINGS_TARGETS.customRules);
   });
 });
 

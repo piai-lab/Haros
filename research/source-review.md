@@ -481,6 +481,16 @@ Two fresh-profile installed-App launches, including same-profile reopen, complet
 shutdown. This replaces the earlier installed-product evidence for this scope, but is not a signed or
 notarized release claim.
 
+On 2026-08-19 the Prompt Settings product decision required one further bounded change to the same
+exact `914cf147…` product source: the native builder now exports its stable identity-neutral default
+instruction segment and accepts a caller-supplied replacement for that segment. This remains an
+input to the existing builder; dynamic tool snippets, guidelines, context, Skills, cwd, manual
+SYSTEM replacement, Extension mutation and the final immutable OmniMind contract keep their native
+owners and order. The focused upstream suite passes 328 tests. The current product patch is
+`6a0e475780b22b1ee3ed1c484e4c4c88aabb6322ce07aea6fb8971736da7af02`; the deterministic archive is
+`8603bfde5a63d99b263fb22bfa0ebaefb89a515117be296d2420b31d86250458`. This source evidence does not
+by itself prove a pushed or installed product candidate.
+
 Rollback for this integrated slice is its first parent
 `8066f23f92a8dbe35c052fc9bcdbd71d347f2c0a`, which already uses the product-owned Pi `v0.84.2`
 baseline. No compatibility dual track is authorized or needed, and no maintainer choice remains open

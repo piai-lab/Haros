@@ -89,7 +89,11 @@ export function makeServerProviderLayer(
     ).pipe(Layer.provide(agentGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
     const omniMindAgentAdapterLayer = makeOmniMindAgentAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
-    ).pipe(Layer.provide(agentGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
+    ).pipe(
+      Layer.provide(agentGatewayCredentialsLayer),
+      Layer.provide(BrowserAutomationHostLive),
+      Layer.provide(ServerSettingsLive),
+    );
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -120,7 +124,9 @@ export function makeServerProviderLayer(
       Layer.provide(providerServiceLayer),
     );
     const omniMindEcosystemLayer = OmniMindEcosystemLive.pipe(Layer.provide(providerServiceLayer));
-    const omniMindAgentPromptFilesLayer = OmniMindAgentPromptFilesLive;
+    const omniMindAgentPromptFilesLayer = OmniMindAgentPromptFilesLive.pipe(
+      Layer.provide(ServerSettingsLive),
+    );
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
