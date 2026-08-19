@@ -8,7 +8,9 @@
 >
 > production-adopted Synara：`8f9f60045ea652db7d4a6822e2f723dde073f40a`；只读对照：clean `c79fab498de1a911a14ff8b05bf83d0528ec54fa`
 >
-> 文档角色：Pi/Synara exact-source证据、基线main观察、维护者已确认架构、本任务分支source candidate与剩余live/packaged falsifier。稳定运行时合同只由[`architecture/execution.md`](../architecture/execution.md)拥有。
+> code evidence：任务分支exact pushed SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；同SHA已完成full/live/isolated-packaged closure，仍未合并main、未发布或替换真实安装
+>
+> 文档角色：Pi/Synara exact-source证据、基线main观察、维护者已确认架构、本任务分支implementation与live/packaged falsifier。稳定运行时合同只由[`architecture/execution.md`](../architecture/execution.md)拥有。
 
 ## 0. 新会话先读
 
@@ -18,10 +20,10 @@
 
 1. **基线main事实**：`main@849730c…`仍有Host-owned callable loader、inactive pool、lexical matching、`session_start` deactivation与Goal/Automation activation preflight；
 2. **已确认架构**：保留Pi-native Host Projection Extension，删除整条Host loader责任，允许且可用的Host definitions注册后直接active；
-3. **本任务分支source candidate**：已实现第2层，并通过settings、projection、reload、collision、prompt与exact-turn focused tests；尚未完成最终push、live与packaged closure；
+3. **本任务分支production candidate**：已实现第2层，并在exact pushed code SHA `9c05e0902`通过settings、projection、reload、collision、prompt、exact-turn、full tests、MiMo/DeepSeek与isolated packaged closure；
 4. **未来非承诺**：某个具体Extension可以在证据成立时拥有自己的dynamic loader，但OmniMind不建立Host/global search manager。
 
-旧main的绿色测试只证明历史实现自洽；本分支的focused绿色只证明source candidate。两者都不能冒充已安装、已发布或已完成真实Provider/packaged journey。
+旧main的绿色测试只证明历史实现自洽。本分支证据证明的是未合并、未发布candidate，不得冒充main、Release、本机真实安装或用户已经收到新bytes。
 
 ## 1. 最终裁决
 
@@ -330,7 +332,7 @@ generic harness只应保留：
 
 Todo handle只拥有自身result provenance；Host handle只拥有从当前Pi `sourceInfo`派生Delivered names及核对bounded dependency。PiAdapter不拥有Extension definition、search、Built-in policy、permission、Todo validation、Goal/Automation lifecycle、collision算法、active-set或完整prompt catalog。
 
-Host使用公开async `ExtensionFactory`：初载与`ResourceLoader.reload()`都会重新执行factory并实时调用`tools/list`，最新allowed+available definitions成为active，旧runner失效。factory不闭包固定descriptor snapshot，也不保存第二catalog。Gateway lease随Provider Session保留；一次空catalog、读取失败或全部collision只让本次Delivered capability降级，不能释放lease并阻断下一次native reload重试。stock与product Pi `0.84.2` focused conformance均已证明factory重执行、catalog替换与foreign winner局部降级；真实Provider/packaged journey仍待关闭。
+Host使用公开async `ExtensionFactory`：初载与`ResourceLoader.reload()`都会重新执行factory并实时调用`tools/list`，最新allowed+available definitions成为active，旧runner失效。factory不闭包固定descriptor snapshot，也不保存第二catalog。Gateway lease随Provider Session保留；一次空catalog、读取失败或全部collision只让本次Delivered capability降级，不能释放lease并阻断下一次native reload重试。stock与product Pi `0.84.2` focused conformance均已证明factory重执行、catalog替换与foreign winner局部降级；真实MiMo/DeepSeek与同SHA isolated packaged journey也已关闭，但没有因此修改main或真实安装。
 
 ## 11. 权限与Session生命周期
 
@@ -393,7 +395,7 @@ owner-local loader必须：
 
 Architecture 1.0只确定owner、composition、Host平权、当前eager投影、collision、policy边界与future dynamic责任。
 
-## 15. Gate B source candidate与剩余交付
+## 15. Gate B implementation与最终证据
 
 基线main实现旧dynamic方案。本任务分支已经完成以下source关注点：
 
@@ -408,7 +410,16 @@ Architecture 1.0只确定owner、composition、Host平权、当前eager投影、
 9. 闭合exact-turn、toggle/in-flight、reload/replacement；
 10. 保留一个非Host的owner-local dynamic wire conformance，证明产品Pi patch没有破坏上游机制。
 
-当前剩余门只有：最终merge最新`origin/main`；在同一exact SHA跑full gates并push；完成MiMo/DeepSeek与isolated packaged证据；把脱敏结论和精确artifact SHA写回。不要保留feature flag或eager/dynamic双轨；回滚是revert具体关注点，不是维护第二套长期实现。
+最终freeze时`origin/main@849730c…`已是本分支祖先，exact code SHA `9c05e0902`已通过full gates并push。其余证据如下：
+
+- MiMo Token Plan CN首轮真实调用`omnimind_list_projects`，continuation不重复调用，长回复可显式abort；
+- DeepSeek folder-backed Agent真实调用`read`与`omnimind_list_projects`；同SHA source/wire identity tests证明Todo schema属于Agent首轮工具面，packaged live证明它没有变成must-call，但不冒充Todo真实execute/provenance证据；
+- DeepSeek Goal continuation真实调用`omnimind_set_thread_goal`并在验证后achieved；
+- DeepSeek Automation run真实调用`omnimind_list_projects`和`omnimind_report_automation_result`；同Thread manual follow-up没有继承automation-only duty；
+- live Session上报初始input约35.9k–37.9k tokens，后续cache-read约35.8k–38.9k；模型结果没有`search_tools`调用。当前telemetry没有可靠TTFR，UI总完成时间单独记录，不能改名为TTFR；
+- 同code SHA的DMG为242,920,412 bytes，SHA-256 `8357594e71dc4c2b212b7ea84910a8752b5eb28a40d3ee942deabd9d1db31f64`；staged production closure核对240个依赖身份；ZIP fresh startup及持续isolated profile均证明bundled Server ready、fresh Device off、explicit Device-on重开保持、真实Provider journeys、优雅退出与无孤儿进程。
+
+没有保留feature flag或eager/dynamic双轨。回滚是revert具体关注点，不是维护第二套长期实现；新shipped code会使该artifact证据失效。该candidate仍未merge main、未Release、未替换`/Applications/OmniMind.app`。
 
 ## 16. 验证矩阵
 

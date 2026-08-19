@@ -2,7 +2,7 @@
 
 > 证据日期：2026-08-19
 >
-> 状态：责任方向与exact-source事实已核验；Todo Extension source由Gate B merge `e7137c7dc873400d9a801f333f41e278e544e001`合入main，并已有focused/full与隔离packaged startup证据；安装、Release和Todo packaged交互journey仍须由对应artifact另行证明
+> 状态：责任方向与exact-source事实已核验；Todo Extension source由Gate B merge `e7137c7dc873400d9a801f333f41e278e544e001`合入main，并已有focused/full与隔离packaged startup证据；Extension Architecture candidate的同SHA packaged DeepSeek Agent证明Todo没有被initial-active强制首轮调用，但没有实际调用Todo，因此result provenance packaged journey、安装与Release仍须另行证明
 >
 > 唯一职责：记录OmniMind Agent Todo Extension。稳定运行时合同属于[`architecture/execution.md`](../architecture/execution.md)；OmniMind Agent Extension composition与AgentGateway Host投影属于[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)。
 
@@ -91,7 +91,8 @@ Pi官方`examples/extensions/todo.ts`及pi-todotools、avtc、armory只能作为
 | branch / resume / reload                | tool surface与projection保持，旧Extension handler不泄漏                                | focused; journey needed |
 | prompt/context                          | 无重复Todo policy；不描述Host loader/activation；简单任务不被强制调用                  | local focused proof     |
 | packaged startup                        | exact source ZIP在隔离profile启动并完成Server ready/进程树清理                         | isolated startup proof  |
-| packaged Todo journey                   | fresh isolated App中Agent/Chat、真实调用、重开与warning呈现准确                        | open                    |
+| packaged Todo non-forcing               | fresh isolated DeepSeek Agent完成`read + Host call`且没有被initial-active强制调用Todo  | candidate `9c05e0902`   |
+| packaged Todo result/provenance journey | fresh isolated App中真实Todo调用、Agent/Chat身份、重开与warning呈现准确                | open                    |
 
 ## 8. Revalidation triggers
 

@@ -968,9 +968,10 @@ Host/global search manager.
 
 This evidence supersedes the product-direction claim in the earlier merged dynamic Host Gate B without
 erasing its historical source, test or wire evidence. The baseline `main@849730c…` still contains that
-old implementation; the task branch has since implemented the Architecture 1.0 source candidate and
-passed focused conformance, but still requires final push, live-provider and packaged closure. The
-bounded decision, falsifiers and remaining Gate B evidence live in
+old implementation. Task-branch exact pushed code SHA `9c05e0902` implements the Architecture 1.0
+candidate and has completed focused/full conformance, MiMo/DeepSeek live journeys and an isolated
+same-SHA packaged journey. It remains unmerged and unreleased and did not replace the installed App.
+The bounded decision, falsifiers and Gate B evidence live in
 [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md). This section does not
 approve Chat Todo, final Settings taxonomy, Device full-access, Browser download handling,
 approval/auto UI or Extension Marketplace.

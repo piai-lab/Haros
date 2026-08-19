@@ -2,7 +2,7 @@
 
 > 证据日期：2026-08-19
 >
-> current-source基线：`main@849730c508be0dde9570529431395acc7be2943b`；本任务分支在此基础上实现Architecture 1.0 source candidate，尚待最终push/live/packaged closure
+> current-source基线：`main@849730c508be0dde9570529431395acc7be2943b`；任务分支exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`已完成Architecture 1.0 source/full/live/isolated-packaged closure，但未合并main、未发布或替换真实安装
 >
 > 文档角色：Settings、AgentGateway、Engine projection与MCP产品边界的证据owner；稳定UI与运行时合同分别由[`architecture/workbench.md`](../architecture/workbench.md)和[`architecture/execution.md`](../architecture/execution.md)拥有。
 
@@ -25,7 +25,7 @@ Host运行时目标也已改变：
 - 删除Host-owned callable loader、inactive pool与activation preflight；
 - future dynamic只属于具体Extension owner。
 
-基线main仍实现旧Host dynamic方案；本任务分支已经单轨删除该责任并改为eager Host Projection。两者必须分开：旧main只提供历史source evidence，本分支在完成最终同步、push、live与packaged前也只能称source candidate。
+基线main仍实现旧Host dynamic方案；本任务分支已经单轨删除该责任并改为eager Host Projection。两者必须分开：旧main只提供历史source evidence，本分支是已完成Gate B证据的未合并production candidate，不是main、Release或真实安装。
 
 ## 1. 产品问题不是“MCP页面放哪里”
 
@@ -180,7 +180,8 @@ Device disabled不是“注册为inactive”。没有activator的inactive tool�
 - Pi；
 - MCP transport；
 - Tool Registry或active set；
-- loader/search；-具体工具数量硬编码；
+- loader/search；
+- 具体工具数量硬编码；
 - Engine selector；
 - 逐tool权限矩阵。
 
@@ -334,11 +335,19 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 
 ### 12.3 本任务分支implementation evidence
 
-本任务分支已经完成并通过focused source验证：raw settings migration与Device fresh default、统一Gateway→Pi投影、显式有限composition、async Host factory在native ResourceLoader reload重读实时catalog、eager active、collision局部降级、lease/Delivered capability分离、prompt diet、所有Provider `tools/call`的ingress exact-turn，以及一个非Host的owner-local dynamic wire conformance。当前未完成的是最终main同步、push、MiMo/DeepSeek live与同一pushed code SHA的隔离packaged journey；这些门关闭前不能宣称已交付、已安装或已发布。
+任务分支exact code SHA `9c05e0902`已完成并通过raw settings migration与Device fresh default、统一Gateway→Pi投影、显式有限composition、async Host factory native reload、eager active、collision局部降级、lease/Delivered capability分离、prompt diet、所有Provider `tools/call`的ingress exact-turn，以及一个非Host owner-local dynamic wire conformance。最终main同步、push、MiMo/DeepSeek live与同SHA隔离packaged journey也已完成。证据关闭不等于main、安装或Release：真实`/Applications/OmniMind.app`没有被替换。
 
-## 13. Gate B剩余交付切片
+## 13. Gate B最终交付证据
 
-source切片已经在任务分支用独立commits闭合。剩余只允许：再次merge最新`origin/main`并在最终SHA跑full gates；push该任务分支；随后完成MiMo/DeepSeek与隔离packaged journey；最后把脱敏结果和精确artifact SHA写回evidence。任何live/packaged代码修正都必须产生新commit、新push SHA并重建，不能在旧artifact上补文档宣称完成。
+source切片已经在任务分支用独立commits闭合。final gates、live与packaged结果为：
+
+- no-file fresh profile在内存显示OmniMind/Browser on、Device off且没有ambient settings write；显式开启Device后保存`disabledBuiltInGroups: []`，同隔离profile关闭/重开仍为on；source矩阵另覆盖legacy missing field、explicit off、unknown、corrupt、migration写失败与并发revision；
+- MiMo Token Plan CN和DeepSeek V4 Pro均真实调用同一Host catalog中的`omnimind_list_projects`；DeepSeek还完成Goal achieved与Automation result上报；
+- provider identity错误的首次MiMo probe得到401，而同一凭据direct token-plan endpoint为200；改用Pi精确`xiaomi-token-plan-cn`后通过。该诊断没有变成model-name猜测、alias或生产补偿；
+- packaged process参数证明Electron Helper、Renderer与bundled Server均使用任务专用home/userData；优雅退出后无存活owner；
+- exact code SHA `9c05e0902`对应DMG SHA-256为`8357594e71dc4c2b212b7ea84910a8752b5eb28a40d3ee942deabd9d1db31f64`，没有安装、发布或合并。
+
+任何后续shipped-code修正都必须产生新commit、新push SHA并重建artifact；不能在旧artifact上补文档宣称完成。docs-only evidence SHA不得冒充新shipped bytes。
 
 ## 14. 验收矩阵
 

@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-当前唯一施工目标是关闭 **OmniMind Agent Extension Architecture 1.0 Gate B**。本分支已经把维护者确认的目标落成source candidate；它尚未完成最终main同步、push、真实Provider与隔离packaged journey，因此不能写成已交付产品。
+**OmniMind Agent Extension Architecture 1.0 Gate B**已经在任务分支闭合为未合并、未发布的production candidate。shipped bytes对应exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；同SHA已完成最终main同步、full gates、MiMo/DeepSeek live与隔离packaged journey。随后只允许补充不改变shipped bytes的证据文档，不得把该分支状态写成main、Release、本机真实安装或用户已交付产品。
 
 最终形状只有一条：
 
@@ -23,16 +23,22 @@
 - `c30a439c3`：所有Provider-facing `tools/call`统一绑定ingress exact turn；`tools/list`/initialize/ping仍可在有效Session、无active turn时使用；External connections继续独立principal/transport；
 - `289eb4949`：删除Host-specific dynamic wire fixture，只保留一个owner-neutral Extension additive-loading conformance；
 - `527e1bedd`：补齐settings migration并发、写失败不发布内存成功与revision单调证据。
+- `93488abdc`、`4df34ad7e`：Host reload恢复、Pi source winner与prompt provenance闭合；
+- `972ea8f7e`：canonical catalog只在唯一inventory test固定`24/22/12`，adapter parity继续动态使用同一filtered expected set；
+- `9c05e0902`：修复Settings browser fixture对Device fresh default的错误假设，并证明fresh Device-off与enabled-but-unavailable是两个不同UI事实。
 
 旧Host callable loader、lexical matcher、inactive pool、`session_start` deactivation、Goal/Automation activation preflight、dynamic prompt与Host search wire/live路径已经从active code删除。Goal/Automation只在同一request前核对`live tools/list ∩ 当前Pi sourceInfo真正交付的Host names`，不修改active set。
 
-## 仍未完成的证据
+## 已关闭的最终证据
 
-- 候选冻结前重新fetch并merge最新`origin/main`，在同一exact SHA重跑全量typecheck、lint、format、document contract、licenses、full test与desktop build；
-- push任务分支后，用授权资源完成MiMo Chat、DeepSeek folder-backed Agent、Todo、eager Host call、Goal continuation、Automation run/manual follow-up与abort；
-- 从同一pushed code SHA构建并使用任务专用`OMNIMIND_HOME`、Electron `userData`、HOME与Provider private homes完成packaged journey；
-- 证明fresh Device off、synthetic legacy explicit Device-on、toggle→new Session/native reload、旧Session stale call deny、collision局部degrade、close/reopen/resume和进程清理；
-- 最后只把脱敏pass/fail、wire/schema/prompt bytes和精确artifact SHA写回research/Mission。旧dynamic live绿色只算历史source evidence。
+- 最终freeze前再次fetch并正常merge`origin/main@849730c508be0dde9570529431395acc7be2943b`；同SHA通过server/web typecheck、lint（0 errors，保留482个基线warning）、task-changed formatting、document contract 20/20、licenses 240项、full test 8/8 workspace tasks与desktop build。全仓`fmt:check`仍被83个任务外既有文件阻塞，本分支没有批量改写它们；
+- exact code SHA `9c05e0902`已push到`origin/codex/omnimind-extension-architecture-docs`，remote与local一致；
+- MiMo `xiaomi-token-plan-cn/mimo-v2.5-pro`完成Chat首轮、`omnimind_list_projects`真实Host调用、continuation与abort；首次错误选择通用Xiaomi identity得到401，而同一凭据direct token-plan probe为200，改用Pi精确provider identity后通过，未产生产品补偿逻辑；
+- DeepSeek `deepseek/deepseek-v4-pro`完成folder-backed Agent的`read + omnimind_list_projects`；同SHA source/wire identity tests证明Todo schema属于Agent首轮工具面，packaged live则证明它没有被强制调用，但没有完成Todo真实execute/provenance journey；active Goal在continuation中读取真实文件并调用`omnimind_set_thread_goal`标记achieved；Automation run调用`omnimind_list_projects + omnimind_report_automation_result`，manual follow-up未继承run-only completion duty；
+- packaged profile证明fresh Device off；显式开启写成`disabledBuiltInGroups: []`并在同profile关闭/重开后保持on；Helper与bundled Server参数全部落入任务专用隔离路径，最终优雅退出且无存活owner；
+- shipped DMG来自同一code SHA，SHA-256为`8357594e71dc4c2b212b7ea84910a8752b5eb28a40d3ee942deabd9d1db31f64`。它没有替换`/Applications/OmniMind.app`，没有Release、update feed或main merge。
+
+Live Session上报的初始input约35.9k–37.9k tokens；MiMo后续turn命中约38.9k cache-read，DeepSeek后续turn命中约35.8k–36.6k cache-read。可见完成时间为MiMo Host首轮16s、continuation 9.4s、DeepSeek folder-backed 7.3s、Automation 7.9s；当前telemetry没有可靠first-token timestamp，因此不把这些总时长伪称TTFR。未保存原始wire或credential。
 
 ## 不在本轮自动获批
 
@@ -43,7 +49,7 @@ Chat Todo、最终Built-in taxonomy、Device 12/12 full-access执行闭合、Bro
 - async inline factory若在真实product artifact的native reload不重执行，降为new Session/session replacement生效；不造mutable descriptor store或reload manager；
 - cross-source collision不能用`sourceInfo`局部隔离时，只关闭对应Host capability；不默认杀Session；
 - exact-turn不能沿现有ingress绑定时停止，不解析prompt、不造turn token/lease系统；
-- live或packaged关键journey失败时保留未完成candidate，不用mock代替；代码修正后必须新commit、新push SHA并重建artifact。
+- 未来若改动shipped code，旧artifact证据立即失效，必须新commit、新push SHA并重建；docs-only证据收口不得冒充新shipped bytes。
 
 ## 权威路由
 
