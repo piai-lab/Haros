@@ -268,8 +268,10 @@ describe("ComposerModelEffortPicker", () => {
       />,
     );
     try {
-      await page.getByRole("button", { name: "Model and options" }).click();
-      await expect.element(page.getByText("Checking models", { exact: true })).toBeVisible();
+      const trigger = page.getByRole("button", { name: "Model and options" });
+      await expect.element(trigger).toHaveTextContent("Checking models");
+      await expect.element(trigger).not.toHaveTextContent("No available model");
+      await trigger.click();
       await expect
         .element(page.getByRole("status").getByText("Checking models", { exact: true }))
         .toBeVisible();
@@ -529,6 +531,46 @@ describe("ComposerModelEffortPicker", () => {
       await expect.element(page.getByText("当前没有可用模型", { exact: true })).toBeVisible();
       await expect.element(page.getByRole("menuitem", { name: "刷新模型" })).toBeVisible();
       await expect.element(page.getByRole("menuitem", { name: "打开模型服务" })).toBeVisible();
+    } finally {
+      await screen.unmount();
+      harness.settings.localePreference = "en";
+    }
+  });
+
+  it("labels a cold catalog check accurately in zh-CN", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const screen = await render(
+      <I18nProvider>
+        <ComposerModelEffortPicker
+          provider="omnimind"
+          model={null}
+          catalogState="checking"
+          modelOptionsByProvider={{
+            omnimind: [],
+            claudeAgent: [],
+            codex: [],
+            cursor: [],
+            antigravity: [],
+            grok: [],
+            droid: [],
+            kilo: [],
+            opencode: [],
+            pi: [],
+          }}
+          onProviderModelChange={vi.fn()}
+          onRefreshModels={vi.fn()}
+          onOpenSettings={vi.fn()}
+          threadId={THREAD_ID}
+          modelOptions={undefined}
+          prompt=""
+          onPromptChange={vi.fn()}
+        />
+      </I18nProvider>,
+    );
+    try {
+      const trigger = page.getByRole("button", { name: "模型与选项" });
+      await expect.element(trigger).toHaveTextContent("正在检查模型");
+      await expect.element(trigger).not.toHaveTextContent("没有可用模型");
     } finally {
       await screen.unmount();
       harness.settings.localePreference = "en";

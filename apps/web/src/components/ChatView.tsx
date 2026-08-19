@@ -10136,7 +10136,9 @@ export default function ChatView({
         model: selectedModelForPickerWithCustomFallback,
         modelOptionsByProvider: selectableModelOptionsByProvider,
       })
-    : t("composer.noAvailableModel");
+    : catalogStateByProvider[selectedProvider] === "checking"
+      ? t("composer.checkingModels")
+      : t("composer.noAvailableModel");
   const composerFooterTraitsSummary = resolveTraitsTriggerSummary({
     provider: selectedProvider,
     model: selectedModelForPickerWithCustomFallback,

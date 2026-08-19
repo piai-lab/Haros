@@ -66,6 +66,7 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
     props.onOpenChange?.(nextOpen);
   };
 
+  const catalogIsChecking = props.catalogState === "checking";
   const modelLabel = props.model
     ? resolveProviderModelLabel({
         provider: props.provider,
@@ -73,7 +74,9 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
         model: props.model,
         modelOptionsByProvider: props.modelOptionsByProvider,
       })
-    : t("composer.noAvailableModel");
+    : catalogIsChecking
+      ? t("composer.checkingModels")
+      : t("composer.noAvailableModel");
   const traitsSummary = resolveTraitsTriggerSummary({
     provider: props.provider,
     model: props.model,
@@ -91,7 +94,6 @@ export function ComposerModelEffortPicker(props: ComposerModelEffortPickerProps)
   });
   const triggerStatusLabel = props.model ? traitsSummary.summaryText || null : null;
   const showsFastBadge = props.model ? traitsSummary.showsFastBadge : false;
-  const catalogIsChecking = props.catalogState === "checking";
   const catalogIsIdle = props.catalogState === "idle";
   const catalogIsStale = props.catalogState === "stale";
   const catalogIsError = props.catalogState === "error";

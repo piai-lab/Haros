@@ -88,19 +88,21 @@ vi.mock("../hooks/useDesktopTopBarGutter", () => ({
 }));
 
 import { I18nProvider } from "../i18n";
+import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
 import { PluginLibrary } from "./PluginLibrary";
 
-function renderLibrary(sourceThreadId: ThreadId | null = null) {
+async function renderLibrary(sourceThreadId: ThreadId | null = null) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const screen = await render(
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <PluginLibrary sourceThreadId={sourceThreadId} />
       </I18nProvider>
     </QueryClientProvider>,
   );
+  return { queryClient, screen };
 }
 
 describe("PluginLibrary OmniMind Agent packages", () => {
@@ -190,13 +192,17 @@ describe("PluginLibrary OmniMind Agent packages", () => {
     fixture.sourceProject = { id: "project-1", cwd: "/workspace" };
     fixture.reload.mockResolvedValue({ state: "reloaded" });
 
-    await renderLibrary(threadId);
+    const { queryClient } = await renderLibrary(threadId);
+    const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries");
     await page.getByRole("button", { name: "Packages" }).click();
     const reloadButton = page.getByRole("button", { name: "Reload current task" });
     await reloadButton.click();
 
     await expect.poll(() => fixture.reload.mock.calls.length).toBe(1);
     expect(fixture.reload).toHaveBeenCalledWith({ threadId });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: providerDiscoveryQueryKeys.modelsForProvider("omnimind"),
+    });
     await expect
       .poll(() => document.body.textContent)
       .toContain("Resources were reloaded for the current task.");

@@ -244,13 +244,19 @@ export function providerModelsQueryOptions(input: {
   cwd?: string | null;
   enabled?: boolean;
 }) {
+  // Passive OmniMind model discovery is intentionally global-only: the Server
+  // does not bind a Thread/Session or execute Project extensions on this path.
+  // Keeping a Project cwd in the query identity would therefore repeat the same
+  // expensive runtime catalog load for every Project and briefly replace an
+  // authoritative catalog with a cold placeholder during navigation.
+  const discoveryCwd = input.provider === "omnimind" ? null : (input.cwd ?? null);
   return queryOptions({
     queryKey: providerDiscoveryQueryKeys.models(
       input.provider,
       input.binaryPath ?? null,
       input.apiEndpoint ?? null,
       input.agentDir ?? null,
-      input.cwd ?? null,
+      discoveryCwd,
     ),
     queryFn: async (): Promise<ProviderListModelsResult> => {
       const api = ensureNativeApi();
@@ -259,7 +265,7 @@ export function providerModelsQueryOptions(input: {
         ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
         ...(input.apiEndpoint ? { apiEndpoint: input.apiEndpoint } : {}),
         ...(input.agentDir ? { agentDir: input.agentDir } : {}),
-        ...(input.cwd ? { cwd: input.cwd } : {}),
+        ...(discoveryCwd ? { cwd: discoveryCwd } : {}),
       });
     },
     enabled: input.enabled ?? true,

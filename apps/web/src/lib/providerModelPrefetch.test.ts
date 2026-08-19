@@ -166,6 +166,15 @@ describe("providerModelsPrefetchQueryOptions", () => {
       providerDiscoveryQueryKeys.models("cursor", "/bin/agent", "https://api.example", null, null),
     );
 
+    const omniMindOptions = providerModelsPrefetchQueryOptions({
+      provider: "omnimind",
+      settings,
+      cwd: "/tmp/project",
+    });
+    expect(omniMindOptions.queryKey).toEqual(
+      providerDiscoveryQueryKeys.models("omnimind", null, null, null, null),
+    );
+
     const claudeOptions = providerModelsPrefetchQueryOptions({
       provider: "claudeAgent",
       settings,
