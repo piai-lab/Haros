@@ -2,6 +2,8 @@
 
 ## 当前目标
 
+维护者于 2026-08-20 明确收窄 Prompt Settings：它只修改 OmniMind Agent 的 provider-global 默认提示词与自定义规则，不解析、选择或重载任何“当前对话”。当前最小关注点是删除 Prompts 页面的 current-conversation resources 区、Thread/split target resolver 与专用 reload 文案/测试，同时保留底层 Session reload seam 给原生生命周期使用；不自动中断或批量重建已运行 Session，不扩张为新的 Prompt runtime。
+
 **OmniMind Agent Extension Architecture 1.0 Gate B**已经通过merge commit `5e22dd916ccba0dbc383fb0a9495f4888a69594b`并入`main`，但仍未发布或替换本机真实安装。shipped-bytes证据继续锁定exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；该SHA已完成最终main同步、full gates、MiMo/DeepSeek live与隔离packaged journey。合并后的docs-only状态收口不改变也不冒充已验证的product bytes。
 
 最终形状只有一条：

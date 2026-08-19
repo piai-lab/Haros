@@ -58,10 +58,10 @@ Settings → Development → Prompts
 | 维护者确认决定    | 已确认目标，施工前仍须进入 architecture owner | 页面只针对 OmniMind Agent；主入口用全局 context candidate；不做项目规则和模板        |
 | exact-source fact | 可从锁定 artifact 与当前调用链复验            | candidate 顺序；SYSTEM/APPEND 遮蔽；`session.reload()` 重建资源                      |
 | 已验证产品事实    | 已合入、重建并完成 focused/live journey       | OmniMind identity exactly once；MiMo/DeepSeek 身份回答；stock Pi 不受影响            |
-| 实施建议          | 当前最小路径，代码前仍需核现状                | 复用既有 Settings section/editor、typed server mutation、现有 reload API             |
+| 实施建议          | 当前最小路径，代码前仍需核现状                | 复用既有 Settings section/editor、typed server mutation 与 Session 创建快照          |
 | 非承诺            | 当前证据不支持，不能宣传                      | Provider cache 命中率不下降的绝对保证；reload 失败自动回滚；历史 Prompt exact replay |
 
-## 2. 维护者已经锁定的决定（2026-08-19 最新）
+## 2. 维护者已经锁定的决定（2026-08-20 最新）
 
 以下内容不再是开放分叉：
 
@@ -77,7 +77,7 @@ Settings → Development → Prompts
 10. 已有候选时编辑 runtime 当前真正采用的 exact file；不迁移、不改名、不复制。
 11. `APPEND_SYSTEM.md` 与 `SYSTEM.md` 不进入 Settings；手工文件继续由原生 runtime 管理。
 12. fresh profile 必须展示 factory default；恢复默认只移除 customized value，不创建或修改 Prompt 文件。
-13. 保存只修改文件，不自动 reload 当前 Session；显式 reload 复用现有 `session.reload()`。
+13. 保存只修改 provider-global 持久事实，不查找、选择或 reload 当前 Session；新建或正常重建的 Session 读取最新值。现有 `session.reload()` 继续服务其他原生生命周期入口。
 14. 不改变 Prompt 物理顺序，不做每轮动态注入，不因设置页降低既有稳定前缀和缓存表现。
 15. 用户可见界面只说 OmniMind 和 OmniMind Agent；内部 lineage 与文件机制只留在代码、research、About/Licenses/SBOM、来源详情和诊断边界。
 
@@ -90,7 +90,7 @@ Settings → Development → Prompts
 维护者希望 Prompt 像 Todo Extension 一样容易安装、替换和维护。对 Prompt 而言，最小且正确的“可插拔”结果是：
 
 ```text
-不存在 → 显式创建 → 编辑 → 保存 → 显式重新加载 → 清空/删除 → runtime 重新发现
+不存在 → 显式创建 → 编辑 → 保存 → 新 Session 读取 → 清空/删除 → runtime 重新发现
 ```
 
 不需要把所有可选内容都实现成 Extension，也不需要发明 `PromptPlugin`、Prompt package manifest 或另一套 registry。bundled runtime 已经把不同责任分成 Extension、Skill、Prompt template、context file、system prompt file 和 Package；OmniMind 应复用这些差异，而不是用“一切皆插件”的口号抹平生命周期。
@@ -132,13 +132,11 @@ Settings → Development → Prompts
 - OmniMind；
 - OmniMind Agent；
 - 全局个人指令；
-- 附加系统指令；
-- 替换基础提示词；
-- 当前对话；
-- 重新加载当前对话资源；
-- 文件；
-- 技术详情；
-- 已保存、待重新加载、已加载、加载失败。
+- 默认提示词；
+- 自定义规则；
+- 全局指令已保存；
+- 保存的修改会用于之后启动的任务和对话；
+- 安全来源位置（仅自定义规则卡片的淡色辅助信息）。
 
 ### 4.2 正常产品表面禁止出现的内部词
 
@@ -307,13 +305,13 @@ ResourceLoader 只选择一个来源：
 
 因此设置页不能在用户发消息前声称知道下一轮 final exact prompt，也不提供“完整最终提示词预览”。
 
-## 7. Session、保存、reload、reopen 与 operation
+## 7. Session、保存、创建边界、reopen 与 operation
 
 ### 7.1 三个必须分开的事实
 
 ```text
-文件已保存
-Session 已重新加载
+全局设置已保存
+Session 已在何时创建
 当前 operation 已冻结
 ```
 
@@ -321,25 +319,25 @@ Session 已重新加载
 
 ### 7.2 保存
 
-- 保存只修改 exact file；
-- 保存不自动调用 reload；
+- 默认提示词保存只修改 Server settings 中的 customized value，自定义规则保存只修改 exact active file；
+- 保存不查找 Thread、不自动调用 reload；
 - active operation 不因文件写入改变；
 - 内容字节未变化时不写文件、不更新 mtime、不 reload；
-- 成功写入后可显示“已保存，待当前对话重新加载”；
-- 没有 active OmniMind Agent Session 时，新 Session 会自然加载当前文件。
+- 成功写入后只显示全局持久事实已保存；
+- 已运行 Session 保持启动时的旧 snapshot；新建或因 App 重启、空闲回收等正常生命周期重建的 Session 自然加载当前全局值。
 
-### 7.3 reload
+### 7.3 Session 创建边界与底层 reload
 
-现有 Host seam `PiAdapter.reloadSessionResources()` 已按 exact thread 使用 bundled runtime 的 `session.reload()`，并在以下任一状态返回 `busy`：
+Prompt Settings 不提供 current-thread target、reload 按钮、busy 状态或 reload receipt，也不在保存后排队重建 Session。现有 Host seam `PiAdapter.reloadSessionResources()` 仍按 exact thread 使用 bundled runtime 的 `session.reload()`，并在以下任一状态返回 `busy`：
 
 - active turn；
 - streaming；
 - active tool items；
 - pending user inputs。
 
-`session.reload()` 不是 Prompt-only reload。它会关闭并失效旧 Extension runner，reload settings 和全部 resources，重建 runtime，再发出 reload session start。因此用户按钮必须叫“重新加载当前对话资源”或等价 OmniMind 文案，不能暗示只刷新当前文本。
+`session.reload()` 不是 Prompt-only reload。它会关闭并失效旧 Extension runner，reload settings 和全部 resources，重建 runtime，再发出 reload session start。它继续服务 Extension、Skill、Package、Plugin Library 和高级 `/reload` 等既有入口；Prompt Settings 不接管或包装这条 seam。若用户从其他入口显式执行整体 reload，新的 Session resources 仍按原生语义读取当前全局设置。
 
-重要非承诺：exact `0.84.2` reload 在资源加载前已经 invalidates old runner。当前没有证据支持“reload 失败会完整保留旧可用 runner”或“原子回滚”。UI 必须准确显示失败并给出恢复动作，不能宣传不存在的 LKG/rollback。确定性恢复路径可以是修复文件后重试，或新建对话；首版不自动创建 Session、不排 background reload queue。
+重要非承诺：exact `0.84.2` reload 在资源加载前已经 invalidates old runner。当前没有证据支持“reload 失败会完整保留旧可用 runner”或“原子回滚”。这条底层事实不得被改写成 Prompt Settings 的失败状态，也不能催生 LKG、background reload queue 或自动 Session 重建。
 
 ### 7.4 operation snapshot
 
@@ -354,7 +352,7 @@ operation 开始时复制：
 - 文件修改不改变 in-flight loop；
 - active tool set 更新只影响后续 turn；
 - 已接纳 tool call 不因文件保存而换 implementation；
-- reload 只能在 idle admission 后执行；
+- 其他入口的 native reload 只能在 idle admission 后执行；
 - UI 不得显示“已应用到当前运行任务”。
 
 ### 7.5 reopen
@@ -396,7 +394,8 @@ SessionManager 持久化 conversation tree、messages、branch、compaction 等 
 有意义：
 
 - 用户真正修改文件；
-- 用户显式 reload；
+- Session 因正常生命周期创建或重建；
+- 用户从其他原生入口显式执行整体 reload；
 - Project/context/Skill/Tool/Extension active surface 真正改变；
 - Provider 或 runtime 合法改变请求。
 
@@ -422,7 +421,6 @@ SessionManager 持久化 conversation tree、messages、branch、compaction 等 
 提示词
   默认提示词                   native factory/custom segment
   自定义规则                   global personal rules
-  当前对话资源                 explicit reload
 ```
 
 首版明确不包含：
@@ -467,7 +465,6 @@ SessionManager 持久化 conversation tree、messages、branch、compaction 等 
 | 取消          | 取消                                         |
 | 删除动作      | 删除自定义规则                               |
 | 打开动作      | 打开                                         |
-| reload 动作   | 重新加载当前对话资源                         |
 
 推荐 placeholder 仅用于示例，不得保存：
 
@@ -498,7 +495,6 @@ SessionManager 持久化 conversation tree、messages、branch、compaction 等 
 | Cancel              | Cancel                                                              |
 | Remove action       | Delete custom rules                                                 |
 | Open action         | Open                                                                |
-| Reload action       | Reload current conversation resources                               |
 
 ### 9.5 用户绝不能看到的错误文案示例
 
@@ -515,7 +511,7 @@ SessionManager 持久化 conversation tree、messages、branch、compaction 等 
 对应产品化表达应是：
 
 - “默认提示词”与“自定义规则”；
-- “重新加载当前对话资源”；
+- “保存的修改会用于之后启动的任务和对话”；
 - “OmniMind 的产品身份与安全边界仍会保留”；
 - “自定义规则无法在此编辑，请使用下方位置进行修改”。
 
@@ -523,18 +519,15 @@ SessionManager 持久化 conversation tree、messages、branch、compaction 等 
 
 ### 10.1 两资源状态
 
-| 事实                          | UI 状态                        | 动作                              |
-| ----------------------------- | ------------------------------ | --------------------------------- |
-| factory default               | OmniMind 内置默认              | 编辑、保存 customized value       |
-| customized default            | 已自定义                       | 编辑、取消、保存、恢复默认        |
-| 没有 custom rules candidate   | 空编辑器                       | 非空保存才创建 `AGENTS.md`        |
-| active custom rules可安全编辑 | 显示正文与淡色安全路径         | 编辑 exact active source          |
-| active source超限/非安全文本  | 该卡 unavailable，默认卡仍可用 | Desktop 可用时打开所在位置恢复    |
-| exact value/source 外部变化   | 这项设置已在其他位置变化       | 阻止覆盖；重新载入或显式保留草稿  |
-| 保存成功                      | 已保存                         | 不自动 reload                     |
-| Session busy                  | 当前对话正在运行               | reload拒绝；不取消 operation      |
-| reload 成功                   | 当前对话已重新加载             | 下一轮使用新 snapshot             |
-| reload 失败                   | 已保存但无法重新加载           | 可重试或新建对话；不伪装 rollback |
+| 事实                          | UI 状态                        | 动作                             |
+| ----------------------------- | ------------------------------ | -------------------------------- |
+| factory default               | OmniMind 内置默认              | 编辑、保存 customized value      |
+| customized default            | 已自定义                       | 编辑、取消、保存、恢复默认       |
+| 没有 custom rules candidate   | 空编辑器                       | 非空保存才创建 `AGENTS.md`       |
+| active custom rules可安全编辑 | 显示正文与淡色安全路径         | 编辑 exact active source         |
+| active source超限/非安全文本  | 该卡 unavailable，默认卡仍可用 | Desktop 可用时打开所在位置恢复   |
+| exact value/source 外部变化   | 这项设置已在其他位置变化       | 阻止覆盖；重新载入或显式保留草稿 |
+| 保存成功                      | 全局指令已保存                 | 不查找或 reload 当前 Session     |
 
 ### 10.2 来源路径与 Open
 
@@ -542,25 +535,19 @@ SessionManager 持久化 conversation tree、messages、branch、compaction 等 
 
 ### 10.3 保存反馈
 
-无 active Session：
+保存成功只报告：
 
-> 已保存。新的 OmniMind Agent 对话将自动使用这些指令。
+> 全局指令已保存。
 
-有 active idle Session：
+卡片淡色说明统一表达：
 
-> 已保存。重新加载当前对话资源后，后续消息将使用最新内容。
+> 保存的修改会用于之后启动的任务和对话。
 
-busy：
-
-> 当前对话正在运行，暂时无法重新加载。保存的内容不会影响正在进行的任务。
-
-reload failure：
-
-> 修改已经保存，但当前对话资源重新加载失败。请重试，或新建一个对话。
+页面不判断当前 Session、当前 Engine、busy 或 reload 结果，也不声称保存已改变正在运行的任务。
 
 ### 10.4 默认状态与恢复
 
-默认卡的淡色说明必须依据 `customized` 准确显示“OmniMind 内置默认”或“已为 OmniMind Agent 自定义”，两者都提醒保存后需要显式 reload。恢复默认提交该编辑器实际基于的 version；另一资源 mutation 带回的新 snapshot 不能替换这个 CAS base，否则会越过用户旧草稿冲突。两张卡各自把 draft、base version、正文状态与来源详情绑定到同一个 resource snapshot slice；一次 mutation 只刷新对应 slice，不能让另一卡出现旧正文配新路径或新状态的混合视图。
+默认卡的淡色说明必须依据 `customized` 准确显示“OmniMind 内置默认”或“已为 OmniMind Agent 自定义”，两者都说明保存的修改用于之后启动的任务和对话。恢复默认提交该编辑器实际基于的 version；另一资源 mutation 带回的新 snapshot 不能替换这个 CAS base，否则会越过用户旧草稿冲突。两张卡各自把 draft、base version、正文状态与来源详情绑定到同一个 resource snapshot slice；一次 mutation 只刷新对应 slice，不能让另一卡出现旧正文配新路径或新状态的混合视图。
 
 ### 10.5 不可编辑 custom rules
 
@@ -610,7 +597,7 @@ Prompt snapshot 一次只懒加载一个受 shared editable-text contract 限界
 
 snapshot 可以返回 Server 生成的安全 `displayPath`，用于自定义规则卡底部定位和复制真实来源；它不是 mutation 输入。只有真实 Desktop bridge 支持 reveal 时才显示“打开”，普通 Web surface 不呈现静默 no-op。路径不得进入 Prompt、普通日志、Timeline、telemetry 或交付截图证据。
 
-write receipt、reload receipt 与 next-turn request evidence 必须分开；API 不得返回“已应用”作为模糊布尔值。
+write receipt 与 Session/request evidence 必须分开；Prompt Settings 只报告全局持久事实已保存，不得返回“当前对话已应用”之类模糊布尔值，也不得触发 Session reload。
 
 ## 13. 最小实现路径
 
@@ -635,9 +622,9 @@ Settings route/section
 → server Prompt resource projection/mutation
 → resolveOmniMindAgentDir
 → bundled ResourceLoader getters/discovery
-→ active Thread/session lookup
-→ reloadSessionResources
-→ AgentSession.reload
+→ Server settings / global context file persistence
+→ Provider Session start or normal rebuild
+→ native buildSystemPrompt / ResourceLoader snapshot
 → next request capture
 ```
 
@@ -651,8 +638,8 @@ Settings route/section
 2. **唯一 persistence owner**：customized default 留在 server-internal settings，通过同一 settings write semaphore 的窄 CAS seam读写；公共 settings view/stream/patch不投影正文。
 3. **custom rules projection/mutation**：bundled discovery 决定 active source；Host 只安全读取 exact active、create/update/remove，并把不可编辑 active 局部降级为 unavailable。
 4. **两卡片 Settings UI**：默认提示词、自定义规则、双语 catalog、独立 draft/save/cancel/restore/delete、准确状态与 Desktop-only Open；没有 advanced files。
-5. **reload 接线**：只对 exact active OmniMind Agent thread 调用既有 reload seam；busy/none/failure准确。
-6. **证据闭合**：focused request capture、MiMo/DeepSeek 最小 live、packaged fresh-profile journey。
+5. **Session 创建边界**：保存不解析 Thread、不 reload；已运行 Session 保持旧 snapshot，新的或正常重建的 Session 读取当前全局值。
+6. **证据闭合**：focused request capture与 packaged fresh-profile journey；runtime 未变时复用既有 MiMo/DeepSeek wire evidence。
 
 这不是五个长期模块或五个 PR。一个关注点完成后停止，不吞入 Project rules、templates、Host diet 或跨 Engine 功能。
 
@@ -663,7 +650,7 @@ Settings route/section
 - Disclosure、Dialog、Toast、Button、empty/error state：复用现有 primitive family；
 - Server settings mutation：default 只用既有 settings owner 内同锁的窄 internal compare/no-op/write seam；
 - Server 文件 mutation：custom rules 复用已有 anchored atomic writer/conflict owner；确实不足才增加窄、OmniMind-Agent-scoped seam；
-- reload：直接复用 `reloadSessionResources`，不新增 Prompt reload；
+- reload：Settings 不调用 `reloadSessionResources`；该 seam 继续由 Pi 原生 Extension/Skill/Package 生命周期和其他已有消费者使用，不新增 Prompt reload；
 - resource discovery：直接读取 bundled loader 的真实结果或补一个窄 getter；不复制候选算法。
 
 若必须 patch product-owned runtime 才能获得安全且准确的 source projection，必须走 `PI-ECOSYSTEM-INTAKE.md` Gate，优先窄、可上游 seam；不能把 UI 需要变成第二 loader 的理由。
@@ -674,7 +661,7 @@ Settings route/section
 
 - fresh profile 首次打开即显示 bundled factory default；保存 customized value 不创建 `SYSTEM.md`，restore 后回到当前安装版本 factory bytes；
 - default customized value 不出现在公共 settings view/stream/patch，并发同 expected version只有一个 changed、另一个 typed conflict；
-- fresh task-specific OmniMind home 没有候选时，启动、打开页面、取消、reload 都不创建 `AGENTS.md`；
+- fresh task-specific OmniMind home 没有候选时，启动、打开页面、取消和空保存都不创建 `AGENTS.md`；
 - 第一次非空保存创建 exact global `AGENTS.md`；
 - 已有 `CLAUDE.md` 时页面编辑它，不创建更高优先级 `AGENTS.md`；
 - 已有 `AGENTS.override.md` + `AGENTS.md` 时前者生效，但普通 UI 不建立遮蔽 dashboard；
@@ -693,16 +680,15 @@ Settings route/section
 - OmniMind identity exactly once；
 - stock Pi identity和 private home不变。
 
-### 14.3 Save/reload/operation
+### 14.3 Save/Session lifecycle/operation
 
 - view/cancel/空保存/no-op：settings revision、文件 bytes/mtime、request prompt、reload count不变；
 - default save/restore 与 custom rules save/delete都不自动 reload；
-- content change + no reload：active Session next request仍使用旧 loaded resource；若真实 runtime path不同，以 request capture为准并更新 owner，不靠猜；
+- content change 后 active Session next request仍使用旧 loaded resource；若真实 runtime path不同，以 request capture为准并更新 owner，不靠猜；
 - active operation保存不改变其 systemPrompt/messages/tools snapshot；
-- busy reload准确拒绝，不中断 active turn；
-- idle reload成功后下一轮使用新内容；
-- reload failure不被 UI宣称已回滚；
-- reopen用当前文件重建，不承诺历史 exact Prompt。
+- stop 后重新创建、空闲回收后恢复或 App reopen 时读取当前全局值，不承诺历史 exact Prompt；
+- Settings 不解析 Thread、split view 或 Engine，不显示 reload/busy/failure receipt；
+- Pi 原生整体 reload 仍由独立 runtime fixture覆盖，不能被解释为 Prompt Settings 产品动作。
 
 ### 14.4 Cache/request stability
 
@@ -731,7 +717,7 @@ Settings route/section
 - Prompt内容与private path不进入普通日志/telemetry/screenshot artifact；
 - fresh task profile 的 stock `.pi` tree hash/mtime/size不变；
 - 其他 Engine private home零读取、零写入；
-- packaged App 使用隔离 userData/home/provider private home完成启动、编辑、reload、关闭和重开验证。
+- packaged App 使用隔离 userData/home/provider private home完成启动、编辑、关闭和重开验证。
 
 ## 15. Live 与 packaged 证据计划
 
@@ -740,11 +726,12 @@ Settings route/section
 先用 deterministic request capture 建立以下 baseline：
 
 - factory default request与稳定 segment；
-- customized default save without reload / reload / restore / reopen；
+- customized default 以 V1 启动 Session，保存 V2 后同一 Session 仍为 V1，stop 后重建使用 V2，再覆盖 restore/reopen；
 - custom rules after create；
 - no-op save；
-- save without reload；
-- idle reload；
+- active Session 在全局保存后保持旧 snapshot；
+- stop、空闲回收或 App reopen 后的新 Session 读取最新全局值；
+- explicit native reload 作为独立 runtime regression，证明其他原生入口仍可整体重读资源，但不作为 Prompt Settings 验收；
 - manual `APPEND_SYSTEM.md` / `SYSTEM.md` 原生 precedence不回归，但它们不经过 Settings；
 - active candidate/delete/empty shadow；
 - unavailable active 与 shadowed oversized candidate；
@@ -755,13 +742,13 @@ Settings route/section
 
 ### 15.2 real Provider
 
-按根 `AGENTS.md` 使用 `/Users/liuzaoqu/Desktop/本机AI-API资源盘点.md` 中协议匹配、状态最新的最小资源，优先 Xiaomi MiMo 与 DeepSeek。每个 Provider 最少证明：
+本轮不修改 runtime、Provider wire 或 Prompt composition，复用祖先 exact runtime 上已有的 MiMo/DeepSeek wire evidence；不再用模型输出重复证明 UI 删减。未来若受影响 runtime 变化，按根 `AGENTS.md` 使用 `/Users/liuzaoqu/Desktop/本机AI-API资源盘点.md` 中协议匹配、状态最新的最小资源，优先 Xiaomi MiMo 与 DeepSeek，并最少证明：
 
 1. fresh Session 身份回答仍为 OmniMind；
-2. customized default保存后未 reload 保持旧 snapshot，reload 后真实影响下一轮；
-3. custom rules在创建/reload后真实影响下一轮；
+2. customized default保存后 active Session 保持旧 snapshot，新建或正常重建 Session 使用新值；
+3. custom rules创建后 active Session保持旧 snapshot，新建或正常重建 Session使用新值；
 4. no-op save不产生请求变化；
-5. busy/reload continuation与 reopen正常；
+5. stop/rebuild 与 reopen正常；
 6. usage/cache read/write真实可观测时记录脱敏数值；
 7. 手工 `SYSTEM.md` 原生路径不删除 OmniMind identity，但 Settings 不创建或管理它。
 
@@ -772,10 +759,11 @@ Settings route/section
 任何改变用户可观察行为的实现必须从 exact pushed SHA 重建安装 App，并使用 task-specific fresh profile。UI 控制前先停止所有现存 OmniMind 实例，显式设置隔离 userData/home/provider private home，并从进程参数或等价证据核验隔离。验证：
 
 - Settings 可发现；
+- 页面只有默认提示词与自定义规则两张卡，不出现当前对话资源或 reload 控件；
 - 初始不创建文件；
 - factory显示、customize/no-op/restore；
 - custom rules create/edit/conflict/remove/unavailable与Desktop-only Open；
-- reload busy/success/failure；
+- 保存不触发 reload；
 - App 关闭重开；
 - 中英文与 keyboard/focus；
 - stock `.pi` 不变。
@@ -823,7 +811,7 @@ Settings route/section
 - 需要把 Settings state写入每轮 Prompt；
 - 需要保存完整最终 Prompt 才能解释状态；
 - 需要新的 package/manager/public resource platform；
-- reload 失败处理开始催生 LKG/generation/rollback子系统；
+- 其他原生 reload 入口的失败处理开始催生 LKG/generation/rollback子系统；
 - Project rules/templates/Host diet 被顺带吞入；
 - 为消除内部词开始伪造 license、diagnostic 或 third-party identity；
 - 文档、checker、fixture增长但用户 journey没有更接近完成。
@@ -886,7 +874,7 @@ Codex、Claude Code、Gemini CLI、OpenCode、VS Code/Copilot 的调研只证明
 4. 先把已确认稳定决定写入 architecture sole owner，删除/修正冲突路由；
 5. 完成 Settings→RPC→server→runtime→request 的真实调用链盘点；
 6. 形成一句最小复用裁决；
-7. 只实现 native factory/custom default、自定义规则与既有 reload接线；
+7. 只实现 native factory/custom default、自定义规则与 provider-global 保存/Session 创建边界；Settings 不接线 reload；
 8. 运行 focused、live、packaged证据；
 9. 同一关注点包含代码、architecture、research disposition、Campaign evidence；
 10. focused闭合后按项目规则 commit/push；用户可观察变更继续完成 exact pushed SHA packaged install/journey。
@@ -908,7 +896,7 @@ Current truth:
 
 Smallest path:
   native builder stable segment + private settings CAS → 安全编辑 exact active custom rules
-  → 复用现有 Session reload → 用 OmniMind 产品语言解释保存、busy、失败和恢复。
+  → Session start/native builder capture → 用 OmniMind 产品语言只报告全局保存事实。
 
 Excess rejected:
   Prompt Plugin System、DB/profile/registry、跨 Engine 同步、Project/templates、
@@ -920,4 +908,4 @@ Decision:
 
 一句话交接：
 
-> 默认正文是同一 native builder 的稳定输入，自定义规则继续服从原生文件发现；设置页只投影这两项，保存与 reload 分离，没有第二套 Prompt 系统。
+> 默认正文是同一 native builder 的稳定输入，自定义规则继续服从原生文件发现；设置页只投影这两项，保存不控制当前 Session，新的或正常重建的 Session 读取最新全局值，没有第二套 Prompt 系统。

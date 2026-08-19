@@ -73,11 +73,11 @@ Provider runtime 启动成功后，Product 对该次接纳所拥有的 Session �
 
 OmniMind Agent 使用独立 `omnimind` Provider identity；stock Pi 保持 `pi` identity。二者可以共享经过证明同构的 Pi-family adapter core，但各自拥有 Session、version、configuration、state root、Package install state 与 diagnostics。OmniMind Agent 的全局和 project-local private state 都属于 `.omnimind`；stock Pi 的对应 native state 属于 `.pi`。任何 binding、resume cursor、native reference 或 filesystem state 都不能跨两者复用。
 
-OmniMind Agent 提示词设置必须区分三类持久输入与两层 runtime 事实：安装版本随附的 factory default 是 bundled runtime truth；用户 customized default 是 Server settings truth，未定制时不存在；global custom rules 是 runtime-active candidate 的文件 truth。Session reload receipt 只证明指定 OmniMind Agent Thread 的原生资源重载结果；已准入 operation 的 system prompt、messages 与 tools snapshot 已冻结，不能被保存或 reload 追溯热切。产品不保存 `pending prompt`、generation、LKG、history、rollback 或 cache dashboard 来把这些事实伪装成一个事务。
+OmniMind Agent 提示词设置必须区分三类持久输入与 runtime snapshot：安装版本随附的 factory default 是 bundled runtime truth；用户 customized default 是 Server settings truth，未定制时不存在；global custom rules 是 runtime-active candidate 的文件 truth。设置页只修改前述 provider-global 持久事实，不拥有或选择任何 Conversation/Thread。已创建 Session 和已准入 operation 的 system prompt、messages 与 tools snapshot 已冻结，不能被保存追溯热切；新的或正常重建的 Session 读取当时当前的全局值。产品不保存 `pending prompt`、generation、LKG、history、rollback 或 cache dashboard 来把这些事实伪装成一个事务。
 
-这里的 OmniMind Agent Thread 包括 canonical `omnimind` Engine 的 Chat 与 Agent work surfaces；两者共享 provider-level factory/customized default 与 global custom rules，但继续拥有不同的 immutable work-surface contract、Project trust 和 tool surface。其他 Engine 的 Thread 不得成为读取、保存或 reload 目标。
+canonical `omnimind` Engine 的 Chat 与 Agent work surfaces 共享 provider-level factory/customized default 与 global custom rules，但继续拥有不同的 immutable work-surface contract、Project trust 和 tool surface。其他 Engine 一律不读取这些设置；Settings 不建立 Thread target 或跨 Engine 选择器。
 
-恢复 factory default 只删除/清空 customized-default value，不修改 bundled artifact，也不创建 `SYSTEM.md`。关闭并重开 App、停止并恢复 Thread 或 native Session 不承诺重放历史 exact Prompt；需要重建 Session 环境时读取当前安装版本 factory、当前 customization 与当前原生资源。删除 active global candidate 后，后续 discovery 可以暴露下一候选；保留一个空的 active 文件仍保留其原生遮蔽语义。保存成功而 reload 失败时，setting/file 事实保持成功，用户可以重试 reload 或开始新对话，产品不得声称自动回滚。
+恢复 factory default 只删除/清空 customized-default value，不修改 bundled artifact，也不创建 `SYSTEM.md`。关闭并重开 App、停止并恢复 Thread 或 native Session 不承诺重放历史 exact Prompt；需要重建 Session 环境时读取当前安装版本 factory、当前 customization 与当前原生资源。删除 active global candidate 后，后续 discovery 可以暴露下一候选；保留一个空的 active 文件仍保留其原生遮蔽语义。设置保存 receipt 只证明全局持久事实已更新，不声称已经热切现有 Session。
 
 ## Composer、Queue 与 receipt
 
