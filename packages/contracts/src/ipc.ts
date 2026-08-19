@@ -285,6 +285,12 @@ import type {
   OmniMindEcosystemSnapshot,
 } from "./omnimindEcosystem";
 import type {
+  OmniMindAgentPromptGetSnapshotInput,
+  OmniMindAgentPromptMutationInput,
+  OmniMindAgentPromptMutationResult,
+  OmniMindAgentPromptSnapshot,
+} from "./omnimindAgentPrompts";
+import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
   StatsGetProfileTokenStatsInput,
@@ -890,6 +896,12 @@ export interface NativeApi {
       input: OmniMindEcosystemResourceToggleInput,
     ) => Promise<OmniMindEcosystemMutationResult>;
     reload: (input: OmniMindEcosystemReloadInput) => Promise<OmniMindEcosystemReloadResult>;
+  };
+  omnimindAgentPrompts: {
+    getSnapshot: (
+      input?: OmniMindAgentPromptGetSnapshotInput,
+    ) => Promise<OmniMindAgentPromptSnapshot>;
+    mutate: (input: OmniMindAgentPromptMutationInput) => Promise<OmniMindAgentPromptMutationResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

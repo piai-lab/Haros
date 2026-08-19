@@ -1,5 +1,5 @@
 diff --git a/package-lock.json b/package-lock.json
-index 1f77aa69a44915990ba2e4f41573cb2b7005b0ca..513d7c02564c45e0331cf2302f713d5ed2510034 100644
+index 1f77aa69a..513d7c025 100644
 --- a/package-lock.json
 +++ b/package-lock.json
 @@ -3570,6 +3570,12 @@
@@ -24,7 +24,7 @@ index 1f77aa69a44915990ba2e4f41573cb2b7005b0ca..513d7c02564c45e0331cf2302f713d5e
  				"proper-lockfile": "4.1.2",
  				"semver": "7.8.0",
 diff --git a/packages/coding-agent/package.json b/packages/coding-agent/package.json
-index 58d9dd64d57ce37477fd0376904513a3d470e109..199b569124c01ae2335b38ab541c716f889248e0 100644
+index 58d9dd64d..199b56912 100644
 --- a/packages/coding-agent/package.json
 +++ b/packages/coding-agent/package.json
 @@ -58,6 +58,7 @@
@@ -36,19 +36,21 @@ index 58d9dd64d57ce37477fd0376904513a3d470e109..199b569124c01ae2335b38ab541c716f
  		"proper-lockfile": "4.1.2",
  		"semver": "7.8.0",
 diff --git a/packages/coding-agent/src/core/agent-session-services.ts b/packages/coding-agent/src/core/agent-session-services.ts
-index 531f51d61b8767d9e6ee3406ddac5f3cdcb8ad23..72e7d6751084e1e0972a58a3cbfc1d98237589ba 100644
+index 531f51d61..43083fae7 100644
 --- a/packages/coding-agent/src/core/agent-session-services.ts
 +++ b/packages/coding-agent/src/core/agent-session-services.ts
-@@ -62,6 +62,8 @@ export interface CreateAgentSessionFromServicesOptions {
+@@ -62,6 +62,10 @@ export interface CreateAgentSessionFromServicesOptions {
  	excludeTools?: CreateAgentSessionOptions["excludeTools"];
  	noTools?: CreateAgentSessionOptions["noTools"];
  	customTools?: ToolDefinition[];
++	/** Stable instruction segment used by the default prompt builder. */
++	defaultPrompt?: string;
 +	/** Host-owned system prompt appended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  /**
-@@ -151,45 +153,54 @@ export async function createAgentSessionServices(
+@@ -151,45 +155,54 @@ export async function createAgentSessionServices(
  		agentDir,
  		settingsManager,
  	});
@@ -138,16 +140,17 @@ index 531f51d61b8767d9e6ee3406ddac5f3cdcb8ad23..72e7d6751084e1e0972a58a3cbfc1d98
  }
  
  /**
-@@ -216,6 +227,7 @@ export async function createAgentSessionFromServices(
+@@ -216,6 +229,8 @@ export async function createAgentSessionFromServices(
  		excludeTools: options.excludeTools,
  		noTools: options.noTools,
  		customTools: options.customTools,
++		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  		sessionStartEvent: options.sessionStartEvent,
  	});
  }
 diff --git a/packages/coding-agent/src/core/agent-session.ts b/packages/coding-agent/src/core/agent-session.ts
-index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb5d9940e1 100644
+index 1a1228d00..a21d915aa 100644
 --- a/packages/coding-agent/src/core/agent-session.ts
 +++ b/packages/coding-agent/src/core/agent-session.ts
 @@ -122,6 +122,12 @@ export interface ParsedSkillBlock {
@@ -163,16 +166,18 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  /**
   * Parse a skill block from message text.
   * Returns null if the text doesn't contain a skill block.
-@@ -225,6 +231,8 @@ export interface AgentSessionConfig {
+@@ -225,6 +231,10 @@ export interface AgentSessionConfig {
  	extensionRunnerRef?: { current?: ExtensionRunner };
  	/** Session start event metadata emitted when extensions bind to this runtime. */
  	sessionStartEvent?: SessionStartEvent;
++	/** Stable instruction segment used by the default prompt builder. */
++	defaultPrompt?: string;
 +	/** Host-owned system prompt appended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  export interface ExtensionBindings {
-@@ -360,6 +368,7 @@ export class AgentSession {
+@@ -360,6 +370,7 @@ export class AgentSession {
  	private _extensionShutdownHandler?: ShutdownHandler;
  	private _extensionErrorListener?: ExtensionErrorListener;
  	private _extensionErrorUnsubscriber?: () => void;
@@ -180,23 +185,25 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  
  	private _modelRuntime: ModelRuntime;
  
-@@ -373,6 +382,7 @@ export class AgentSession {
+@@ -373,6 +384,8 @@ export class AgentSession {
  	private _baseSystemPrompt = "";
  	private _baseSystemPromptOptions!: BuildSystemPromptOptions;
  	private _systemPromptOverride?: string;
++	private _defaultPrompt?: string;
 +	private _immutableSystemPrompt?: string;
  
  	constructor(config: AgentSessionConfig) {
  		this.agent = config.agent;
-@@ -389,6 +399,7 @@ export class AgentSession {
+@@ -389,6 +402,8 @@ export class AgentSession {
  		this._excludedToolNames = config.excludedToolNames ? new Set(config.excludedToolNames) : undefined;
  		this._baseToolsOverride = config.baseToolsOverride;
  		this._sessionStartEvent = config.sessionStartEvent ?? { type: "session_start", reason: "startup" };
++		this._defaultPrompt = config.defaultPrompt;
 +		this._immutableSystemPrompt = config.immutableSystemPrompt?.trim() || undefined;
  
  		// Always subscribe to agent events for internal handling
  		// (session persistence, extensions, auto-compaction, retry logic)
-@@ -546,7 +557,7 @@ export class AgentSession {
+@@ -546,7 +561,7 @@ export class AgentSession {
  				...previousSnapshot,
  				context: {
  					...previousContext,
@@ -205,7 +212,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  					tools: this.agent.state.tools.slice(),
  				},
  				model: this.agent.state.model,
-@@ -939,7 +950,7 @@ export class AgentSession {
+@@ -939,7 +954,7 @@ export class AgentSession {
  
  		// Rebuild base system prompt with new tool set
  		this._baseSystemPrompt = this._rebuildSystemPrompt(validToolNames);
@@ -214,7 +221,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	}
  
  	/** Whether compaction or branch summarization is currently running */
-@@ -1020,6 +1031,12 @@ export class AgentSession {
+@@ -1020,6 +1035,12 @@ export class AgentSession {
  		return Array.from(unique);
  	}
  
@@ -227,7 +234,15 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	private _rebuildSystemPrompt(toolNames: string[]): string {
  		const validToolNames = toolNames.filter((name) => this._toolRegistry.has(name));
  		const toolSnippets: Record<string, string> = {};
-@@ -1113,7 +1130,7 @@ export class AgentSession {
+@@ -1045,6 +1066,7 @@ export class AgentSession {
+ 
+ 		this._baseSystemPromptOptions = {
+ 			cwd: this._cwd,
++			defaultPrompt: this._defaultPrompt,
+ 			skills: loadedSkills,
+ 			contextFiles: loadedContextFiles,
+ 			customPrompt: loaderSystemPrompt,
+@@ -1113,7 +1135,7 @@ export class AgentSession {
  	 * @throws Error if streaming and no streamingBehavior specified
  	 * @throws Error if no model selected or no API key available (when not streaming)
  	 */
@@ -236,7 +251,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  		const expandPromptTemplates = options?.expandPromptTemplates ?? true;
  		const preflightResult = options?.preflightResult;
  		let messages: AgentMessage[] | undefined;
-@@ -1122,11 +1139,11 @@ export class AgentSession {
+@@ -1122,11 +1144,11 @@ export class AgentSession {
  			// Handle extension commands first (execute immediately, even during streaming)
  			// Extension commands manage their own LLM interaction via pi.sendMessage()
  			if (expandPromptTemplates && text.startsWith("/")) {
@@ -252,7 +267,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  				}
  			}
  
-@@ -1140,15 +1157,29 @@ export class AgentSession {
+@@ -1140,15 +1162,29 @@ export class AgentSession {
  			let currentText = text;
  			let currentImages = options?.images;
  			if (this._extensionRunner.hasHandlers("input")) {
@@ -290,7 +305,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  				}
  				if (inputResult.action === "transform") {
  					currentText = inputResult.text;
-@@ -1176,7 +1207,7 @@ export class AgentSession {
+@@ -1176,7 +1212,7 @@ export class AgentSession {
  					await this._queueSteer(expandedText, currentImages);
  				}
  				preflightResult?.(true);
@@ -299,7 +314,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  			}
  
  			// Flush any pending bash messages before the new prompt
-@@ -1252,12 +1283,12 @@ export class AgentSession {
+@@ -1252,12 +1288,12 @@ export class AgentSession {
  			}
  			// Apply extension-modified system prompt, or reset to base
  			if (result?.systemPrompt !== undefined) {
@@ -315,7 +330,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  			}
  		} catch (error) {
  			preflightResult?.(false);
-@@ -1265,40 +1296,53 @@ export class AgentSession {
+@@ -1265,40 +1301,53 @@ export class AgentSession {
  		}
  
  		if (!messages) {
@@ -375,7 +390,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	}
  
  	/**
-@@ -2281,7 +2325,7 @@ export class AgentSession {
+@@ -2281,7 +2330,7 @@ export class AgentSession {
  
  		this._resourceLoader.extendResources(extensionPaths);
  		this._baseSystemPrompt = this._rebuildSystemPrompt(this.getActiveToolNames());
@@ -384,7 +399,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  	}
  
  	private buildExtensionResourcePaths(entries: Array<{ path: string; extensionPath: string }>): Array<{
-@@ -2362,10 +2406,13 @@ export class AgentSession {
+@@ -2362,10 +2411,13 @@ export class AgentSession {
  			return [...extensionCommands, ...templates, ...skills];
  		};
  
@@ -400,7 +415,7 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  						runner.emitError({
  							extensionPath: "<runtime>",
  							event: "send_message",
-@@ -2374,7 +2421,10 @@ export class AgentSession {
+@@ -2374,7 +2426,10 @@ export class AgentSession {
  					});
  				},
  				sendUserMessage: (content, options) => {
@@ -412,8 +427,30 @@ index 1a1228d006d8d49a930c28f1e9cb46b54cf63ae5..195496771f40426948d9da002bd0fcfb
  						runner.emitError({
  							extensionPath: "<runtime>",
  							event: "send_user_message",
+@@ -2607,7 +2662,10 @@ export class AgentSession {
+ 		});
+ 	}
+ 
+-	async reload(options?: { beforeSessionStart?: () => void | Promise<void> }): Promise<void> {
++	async reload(options?: {
++		beforeSessionStart?: () => void | Promise<void>;
++		defaultPrompt?: string;
++	}): Promise<void> {
+ 		const oldRunner = this._extensionRunner;
+ 		const previousFlagValues = oldRunner.getFlagValues();
+ 		await emitSessionShutdownEvent(oldRunner, { type: "session_shutdown", reason: "reload" });
+@@ -2616,6 +2674,9 @@ export class AgentSession {
+ 		this.syncQueueModesFromSettings();
+ 		resetApiProviders();
+ 		await this._resourceLoader.reload();
++		if (options && "defaultPrompt" in options) {
++			this._defaultPrompt = options.defaultPrompt;
++		}
+ 		this._buildRuntime({
+ 			activeToolNames: this.getActiveToolNames(),
+ 			flagValues: previousFlagValues,
 diff --git a/packages/coding-agent/src/core/model-config.ts b/packages/coding-agent/src/core/model-config.ts
-index 7ea12cbebdd914aa6ef480272162036c35ded2d9..21853d1d64af3f8aa9ea7348b59299b8c2307edd 100644
+index 7ea12cbeb..21853d1d6 100644
 --- a/packages/coding-agent/src/core/model-config.ts
 +++ b/packages/coding-agent/src/core/model-config.ts
 @@ -1,11 +1,17 @@
@@ -1113,7 +1150,7 @@ index 7ea12cbebdd914aa6ef480272162036c35ded2d9..21853d1d64af3f8aa9ea7348b59299b8
 +	}
  }
 diff --git a/packages/coding-agent/src/core/model-runtime.ts b/packages/coding-agent/src/core/model-runtime.ts
-index 6f4071b60b3bf6ab58d6174d38b090f62dc6dbce..b6b38b258384ed03e99b5199a4954ba820eb530f 100644
+index 6f4071b60..b6b38b258 100644
 --- a/packages/coding-agent/src/core/model-runtime.ts
 +++ b/packages/coding-agent/src/core/model-runtime.ts
 @@ -17,6 +17,7 @@ import {
@@ -1528,7 +1565,7 @@ index 6f4071b60b3bf6ab58d6174d38b090f62dc6dbce..b6b38b258384ed03e99b5199a4954ba8
  		if (options.providers) {
  			for (const providerId of new Set(options.providers)) this.recomposeProvider(providerId);
 diff --git a/packages/coding-agent/src/core/package-manager.ts b/packages/coding-agent/src/core/package-manager.ts
-index e221d2e7e3fa9fdfc55b1ba6d0cc8b68167e5214..d27585503c656991a9257ed1bcd279ddda8851c2 100644
+index e221d2e7e..d27585503 100644
 --- a/packages/coding-agent/src/core/package-manager.ts
 +++ b/packages/coding-agent/src/core/package-manager.ts
 @@ -1,5 +1,5 @@
@@ -1880,7 +1917,7 @@ index e221d2e7e3fa9fdfc55b1ba6d0cc8b68167e5214..d27585503c656991a9257ed1bcd279dd
  		const parsed = this.parseSource(source);
  		if (parsed.type === "npm") {
 diff --git a/packages/coding-agent/src/core/provider-composer.ts b/packages/coding-agent/src/core/provider-composer.ts
-index 1be7fcdb50e214db1afbd96bc147b6f3847d4f16..04b8931c2a248cf81a9c6301734832fb4bcae0a3 100644
+index 1be7fcdb5..04b8931c2 100644
 --- a/packages/coding-agent/src/core/provider-composer.ts
 +++ b/packages/coding-agent/src/core/provider-composer.ts
 @@ -444,8 +444,16 @@ export function composeModelProvider(
@@ -1903,7 +1940,7 @@ index 1be7fcdb50e214db1afbd96bc147b6f3847d4f16..04b8931c2a248cf81a9c6301734832fb
  	const oauth = composeOAuthAuth(providerId, base, config, extension);
  	if (!apiKey && !oauth) throw new Error(`Provider ${providerId}: no authentication method configured.`);
 diff --git a/packages/coding-agent/src/core/resource-loader.ts b/packages/coding-agent/src/core/resource-loader.ts
-index c24d0a2104771064015e149ebd5894f83dc102bd..338f7748f981d4268d94b44f7168889b572cd2cb 100644
+index c24d0a210..338f7748f 100644
 --- a/packages/coding-agent/src/core/resource-loader.ts
 +++ b/packages/coding-agent/src/core/resource-loader.ts
 @@ -17,7 +17,12 @@ import {
@@ -2328,39 +2365,61 @@ index c24d0a2104771064015e149ebd5894f83dc102bd..338f7748f981d4268d94b44f7168889b
  			temporary: true,
  		});
 diff --git a/packages/coding-agent/src/core/sdk.ts b/packages/coding-agent/src/core/sdk.ts
-index a9a26641868926f775f06f3cfdac1b775e42a62f..3112a637c2840eb574059cf6f87cb6fe8b5cc9d8 100644
+index a9a266418..23f98374b 100644
 --- a/packages/coding-agent/src/core/sdk.ts
 +++ b/packages/coding-agent/src/core/sdk.ts
-@@ -84,6 +84,8 @@ export interface CreateAgentSessionOptions {
+@@ -84,6 +84,10 @@ export interface CreateAgentSessionOptions {
  	settingsManager?: SettingsManager;
  	/** Session start event metadata for extension runtime startup. */
  	sessionStartEvent?: SessionStartEvent;
++	/** Stable instruction segment used by the default prompt builder. */
++	defaultPrompt?: string;
 +	/** Host-owned system prompt appended after per-turn extension mutation. */
 +	immutableSystemPrompt?: string;
  }
  
  /** Result from createAgentSession */
-@@ -390,6 +392,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
+@@ -390,6 +394,8 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
  		excludedToolNames,
  		extensionRunnerRef,
  		sessionStartEvent: options.sessionStartEvent,
++		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  	});
  	const extensionsResult = resourceLoader.getExtensions();
  
 diff --git a/packages/coding-agent/src/core/system-prompt.ts b/packages/coding-agent/src/core/system-prompt.ts
-index 3b1aa63340bdfddfb712d81fbc6afb49927db36c..2a09dfc93cc821614414d012ca2ed28f6c5dde95 100644
+index 3b1aa6334..2be10c87d 100644
 --- a/packages/coding-agent/src/core/system-prompt.ts
 +++ b/packages/coding-agent/src/core/system-prompt.ts
-@@ -2,7 +2,6 @@
+@@ -2,12 +2,17 @@
   * System prompt construction and project context loading
   */
  
 -import { getDocsPath, getExamplesPath, getReadmePath } from "../config.ts";
  import { formatSkillsForPrompt, type Skill } from "./skills.ts";
  
++/** Stable, product-editable instruction segment used by the default builder. */
++export const DEFAULT_BASE_INSTRUCTIONS =
++	"Help users by reading files, executing commands, editing code, and writing new files.";
++
  export interface BuildSystemPromptOptions {
-@@ -71,11 +70,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+ 	/** Custom system prompt (replaces default). */
+ 	customPrompt?: string;
++	/** Stable instruction segment used only by the default builder. */
++	defaultPrompt?: string;
+ 	/** Tools to include in prompt. Default: [read, bash, edit, write] */
+ 	selectedTools?: string[];
+ 	/** Optional one-line tool snippets keyed by tool name. */
+@@ -28,6 +33,7 @@ export interface BuildSystemPromptOptions {
+ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+ 	const {
+ 		customPrompt,
++		defaultPrompt,
+ 		selectedTools,
+ 		toolSnippets,
+ 		promptGuidelines,
+@@ -71,11 +77,6 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
  		return prompt;
  	}
  
@@ -2372,14 +2431,15 @@ index 3b1aa63340bdfddfb712d81fbc6afb49927db36c..2a09dfc93cc821614414d012ca2ed28f
  	// Build tools list based on selected tools.
  	// A tool appears in Available tools only when the caller provides a one-line snippet.
  	const tools = selectedTools || ["read", "bash", "edit", "write"];
-@@ -118,24 +112,13 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
+@@ -118,24 +119,14 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions): string {
  
  	const guidelines = guidelinesList.map((g) => `- ${g}`).join("\n");
  
 -	let prompt = `You are an expert coding assistant operating inside pi, a coding agent harness. You help users by reading files, executing commands, editing code, and writing new files.
 -
 -Available tools:
-+	let prompt = `Available tools:
++	const baseInstructions = defaultPrompt ?? DEFAULT_BASE_INSTRUCTIONS;
++	let prompt = `${baseInstructions.length > 0 ? `${baseInstructions}\n\n` : ""}Available tools:
  ${toolsList}
  
  In addition to the tools above, you may have access to other custom tools depending on the project.
@@ -2400,7 +2460,7 @@ index 3b1aa63340bdfddfb712d81fbc6afb49927db36c..2a09dfc93cc821614414d012ca2ed28f
  	if (appendSection) {
  		prompt += appendSection;
 diff --git a/packages/coding-agent/src/index.ts b/packages/coding-agent/src/index.ts
-index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2d23f97b9 100644
+index 6d64d70c8..d1f8e0502 100644
 --- a/packages/coding-agent/src/index.ts
 +++ b/packages/coding-agent/src/index.ts
 @@ -20,6 +20,7 @@ export {
@@ -2411,10 +2471,11 @@ index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2
  	parseSkillBlock,
  	type SessionStats,
  } from "./core/agent-session.ts";
-@@ -168,6 +169,20 @@ export {
+@@ -168,6 +169,21 @@ export {
  // Footer data provider (git branch + extension statuses - data not otherwise available to extensions)
  export type { ReadonlyFooterDataProvider } from "./core/footer-data-provider.ts";
  export { convertToLlm } from "./core/messages.ts";
++export { DEFAULT_BASE_INSTRUCTIONS } from "./core/system-prompt.ts";
 +export type {
 +	ModelConfigCredentialReferenceMutation,
 +	ModelConfigHeaderReferenceMetadata,
@@ -2432,7 +2493,7 @@ index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2
  export { ModelRegistry } from "./core/model-registry.ts";
  export {
  	type ModelScopeDiagnostic,
-@@ -181,14 +196,25 @@ export {
+@@ -181,14 +197,25 @@ export {
  	type CreateModelRuntimeOptions,
  	CredentialSynchronizationError,
  	type CredentialSynchronizationOperation,
@@ -2458,1503 +2519,31 @@ index 6d64d70c87cefcea0c0d34066d3f225625837a08..27944870d0bb5ef8f4a9eb17d6f4dad2
  	ResolvedPaths,
  	ResolvedResource,
  } from "./core/package-manager.ts";
-diff --git a/packages/coding-agent/test/model-config-mutation.test.ts b/packages/coding-agent/test/model-config-mutation.test.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..c4504b3c23df08764eff36a9b74e5c712dd897e3
---- /dev/null
-+++ b/packages/coding-agent/test/model-config-mutation.test.ts
-@@ -0,0 +1,756 @@
-+import { link, lstat, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
-+import { tmpdir } from "node:os";
-+import { join } from "node:path";
-+import { afterEach, describe, expect, it } from "vitest";
-+import { ModelRuntime, mutateModelConfigProvider } from "../src/core/model-runtime.ts";
-+
-+const roots: string[] = [];
-+
-+async function createRoot(): Promise<string> {
-+	const root = await mkdtemp(join(tmpdir(), "pi-model-config-mutation-"));
-+	roots.push(root);
-+	return root;
-+}
-+
-+async function exists(path: string): Promise<boolean> {
-+	try {
-+		await lstat(path);
-+		return true;
-+	} catch {
-+		return false;
-+	}
-+}
-+
-+function provider(name: string, modelId: string) {
-+	return {
-+		name,
-+		baseUrl: "https://example.test/v1",
-+		api: "openai-completions",
-+		models: [{ id: modelId }],
-+	};
-+}
-+
-+afterEach(async () => {
-+	await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
-+});
-+
-+describe("persistent ModelConfig provider mutation", () => {
-+	it("upserts one provider while preserving comments and unrelated unknown fields", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		const untouchedProvider = `"existing": {
-+			// This comment and unknown field must survive byte-for-byte.
-+			"baseUrl": "https://existing.test/v1",
-+			"api": "openai-responses",
-+			"futureProviderField": { "keep": true },
-+			"models": [{ "id": "existing-model", "futureModelField": 7 }]
-+		}`;
-+		await writeFile(
-+			modelsPath,
-+			`{
-+		// Root comments and future fields are not the mutation target.
-+		"futureRootField": { "keep": true },
-+		"providers": {
-+			${untouchedProvider}
-+		}
-+	}\n`,
-+			{ encoding: "utf8", mode: 0o600 },
+diff --git a/packages/coding-agent/test/default-tools-setting.test.ts b/packages/coding-agent/test/default-tools-setting.test.ts
+index 69adbceb5..c93cde1ae 100644
+--- a/packages/coding-agent/test/default-tools-setting.test.ts
++++ b/packages/coding-agent/test/default-tools-setting.test.ts
+@@ -136,6 +136,7 @@ describe("defaultTools setting", () => {
+ 			services,
+ 			sessionManager: SessionManager.inMemory(tempDir),
+ 			model: getModel("anthropic", "claude-sonnet-4-5")!,
++			defaultPrompt: "Service-owned default instructions.",
+ 		});
+ 
+ 		expect(
+@@ -145,6 +146,10 @@ describe("defaultTools setting", () => {
+ 				.sort(),
+ 		).toEqual(["bash", "edit", "find", "grep", "ls", "read", "write"]);
+ 		expect(session.getActiveToolNames()).toEqual(["ls"]);
++		expect(session.systemPrompt).toContain("Service-owned default instructions.");
++		expect(session.systemPrompt).not.toContain(
++			"Help users by reading files, executing commands, editing code, and writing new files.",
 +		);
-+
-+		const result = await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "custom-one",
-+			provider: provider("Custom One", "model-one"),
-+		});
-+		const content = await readFile(modelsPath, "utf8");
-+
-+		expect(result).toEqual({ changed: true, providerIds: ["existing", "custom-one"] });
-+		expect(content).toContain("// Root comments and future fields are not the mutation target.");
-+		expect(content).toContain('"futureRootField": { "keep": true }');
-+		expect(content).toContain(untouchedProvider);
-+		expect(content).toContain('"custom-one"');
-+		expect((await lstat(modelsPath)).mode & 0o777).toBe(0o600);
-+	});
-+
-+	it("serializes concurrent provider mutations without dropping either update", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+
-+		await Promise.all([
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "custom-one",
-+				provider: provider("Custom One", "model-one"),
-+			}),
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "custom-two",
-+				provider: provider("Custom Two", "model-two"),
-+			}),
-+		]);
-+
-+		const content = await readFile(modelsPath, "utf8");
-+		expect(content).toContain('"custom-one"');
-+		expect(content).toContain('"custom-two"');
-+	});
-+
-+	it("replaces only an existing target provider", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("Old Target", "old-model"),
-+		});
-+		const withFutureTargetField = (await readFile(modelsPath, "utf8")).replace(
-+			'"name": "Old Target",',
-+			'"name": "Old Target",\n\t\t"futureTargetField": { "keep": true },',
-+		);
-+		await writeFile(modelsPath, withFutureTargetField, { encoding: "utf8", mode: 0o600 });
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "untouched",
-+			provider: provider("Untouched", "keep-model"),
-+		});
-+
-+		const result = await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("New Target", "new-model"),
-+		});
-+		const content = await readFile(modelsPath, "utf8");
-+
-+		expect(result).toEqual({ changed: true, providerIds: ["target", "untouched"] });
-+		expect(content).toContain('"New Target"');
-+		expect(content).toContain('"new-model"');
-+		expect(content).not.toContain('"Old Target"');
-+		expect(content).not.toContain('"old-model"');
-+		expect(content).toContain('"futureTargetField": { "keep": true }');
-+		expect(content).toContain('"Untouched"');
-+		expect(content).toContain('"keep-model"');
-+	});
-+
-+	it("preserves existing credential and compatibility fields omitted by an edit", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await writeFile(
-+			modelsPath,
-+			JSON.stringify({
-+				providers: {
-+					target: {
-+						...provider("Old Target", "old-model"),
-+						apiKey: "existing-safe-reference",
-+						headers: { "X-Existing": "keep" },
-+						compat: { supportsStore: false },
-+					},
-+				},
-+			}),
-+			{ encoding: "utf8", mode: 0o600 },
-+		);
-+
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("New Target", "new-model"),
-+		});
-+
-+		const content = await readFile(modelsPath, "utf8");
-+		expect(content).toContain('"New Target"');
-+		expect(content).toContain('"new-model"');
-+		const target = JSON.parse(content).providers.target;
-+		expect(target.apiKey).toBe("existing-safe-reference");
-+		expect(target.headers).toEqual({ "X-Existing": "keep" });
-+		expect(target.compat).toEqual({ supportsStore: false });
-+	});
-+
-+	it("encodes typed credential references while preserving or explicitly clearing the existing mode", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("Target", "model"),
-+			credentialReference: { type: "environment", variableName: "PRIVATE_API_KEY" },
-+		});
-+		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
-+			"${PRIVATE_API_KEY}",
-+		);
-+
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: { ...provider("Target renamed", "model") },
-+		});
-+		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
-+			"${PRIVATE_API_KEY}",
-+		);
-+
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("Target renamed", "model"),
-+			credentialReference: { type: "command", command: "security find-generic-password -w -s private" },
-+		});
-+		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target.apiKey).toBe(
-+			"!security find-generic-password -w -s private",
-+		);
-+
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("Target renamed", "model"),
-+			credentialReference: { type: "clear" },
-+		});
-+		expect(JSON.parse(await readFile(modelsPath, "utf8")).providers.target).not.toHaveProperty(
-+			"apiKey",
-+		);
-+	});
-+
-+	it("rejects invalid typed credential references without changing the file", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("Target", "model"),
-+		});
-+		const before = await readFile(modelsPath, "utf8");
-+		await expect(
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "target",
-+				provider: provider("Target", "model"),
-+				credentialReference: { type: "environment", variableName: "NOT VALID" },
-+			}),
-+		).rejects.toThrow("environment variable name");
-+		expect(await readFile(modelsPath, "utf8")).toBe(before);
-+		await expect(
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "target",
-+				provider: provider("Target", "model"),
-+				credentialReference: { type: "command", command: "echo first\necho second" },
-+			}),
-+		).rejects.toThrow("Credential command is invalid");
-+		expect(await readFile(modelsPath, "utf8")).toBe(before);
-+	});
-+
-+	it("preserves hidden fields on retained models while explicitly removing omitted models", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await writeFile(
-+			modelsPath,
-+			JSON.stringify({
-+				providers: {
-+					target: {
-+						...provider("Target", "rich-model"),
-+						models: [
-+							{
-+								id: "rich-model",
-+								name: "Before",
-+								cost: { input: 1, output: 2, cacheRead: 3, cacheWrite: 4 },
-+								samplingParams: { temperature: 0.25 },
-+								headers: { Authorization: "Bearer hidden" },
-+								compat: {
-+									supportsStore: false,
-+									supportsDeveloperRole: true,
-+									supportsUsageInStreaming: true,
-+									openRouterRouting: { order: ["hidden"] },
-+								},
-+							},
-+							{ id: "remove-me", samplingParams: { keep: false } },
-+						],
-+					},
-+				},
-+			}),
-+			{ encoding: "utf8", mode: 0o600 },
-+		);
-+
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: {
-+				name: "Target",
-+				baseUrl: "https://example.test/v1",
-+				api: "openai-completions",
-+				models: [
-+					{
-+						id: "rich-model",
-+						name: "After",
-+						cost: {
-+							input: 5,
-+							output: 6,
-+							cacheRead: 7,
-+							cacheWrite: 8,
-+							tiers: [
-+								{
-+									inputTokensAbove: 64_000,
-+									input: 9,
-+									output: 10,
-+									cacheRead: 11,
-+									cacheWrite: 12,
-+								},
-+							],
-+						},
-+						compat: { supportsDeveloperRole: false, supportsStrictMode: true },
-+					},
-+				],
-+			},
-+		});
-+
-+		const models = JSON.parse(await readFile(modelsPath, "utf8")).providers.target.models;
-+		expect(models).toEqual([
-+			{
-+				id: "rich-model",
-+				name: "After",
-+				cost: {
-+					input: 5,
-+					output: 6,
-+					cacheRead: 7,
-+					cacheWrite: 8,
-+					tiers: [
-+						{
-+							inputTokensAbove: 64_000,
-+							input: 9,
-+							output: 10,
-+							cacheRead: 11,
-+							cacheWrite: 12,
-+						},
-+					],
-+				},
-+				samplingParams: { temperature: 0.25 },
-+				headers: { Authorization: "Bearer hidden" },
-+				compat: {
-+					supportsStore: false,
-+					supportsDeveloperRole: false,
-+					supportsStrictMode: true,
-+					openRouterRouting: { order: ["hidden"] },
-+				},
-+			},
-+		]);
-+	});
-+
-+	it("clears omitted public edit fields while preserving hidden rich model fields", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await writeFile(
-+			modelsPath,
-+			JSON.stringify({
-+				providers: {
-+					target: {
-+						name: "Target",
-+						baseUrl: "https://example.test/v1",
-+						api: "openai-completions",
-+						authHeader: true,
-+						models: [
-+							{
-+								id: "rich-model",
-+								name: "Before",
-+								api: "openai-responses",
-+								baseUrl: "https://model.example.test/v1",
-+								reasoning: false,
-+								thinkingLevelMap: { high: "high-budget", max: null },
-+								input: ["text"],
-+								contextWindow: 65_536,
-+								maxTokens: 8_192,
-+								cost: {
-+									input: 1,
-+									output: 2,
-+									cacheRead: 3,
-+									cacheWrite: 4,
-+									tiers: [
-+										{
-+											inputTokensAbove: 32_000,
-+											input: 0.5,
-+											output: 1,
-+											cacheRead: 0.25,
-+											cacheWrite: 0.75,
-+										},
-+									],
-+								},
-+								samplingParams: { temperature: 0.25 },
-+								headers: { Authorization: "Bearer hidden" },
-+								compat: { supportsStore: false, supportsStrictMode: true },
-+							},
-+						],
-+					},
-+				},
-+			}),
-+			{ encoding: "utf8", mode: 0o600 },
-+		);
-+
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: {
-+				name: "Target renamed",
-+				baseUrl: "https://example.test/v1",
-+				api: "openai-completions",
-+				models: [{ id: "rich-model", compat: {} }],
-+			},
-+		});
-+
-+		const target = JSON.parse(await readFile(modelsPath, "utf8")).providers.target;
-+		expect(target).not.toHaveProperty("authHeader");
-+		expect(target.models).toEqual([
-+			{
-+				id: "rich-model",
-+				samplingParams: { temperature: 0.25 },
-+				headers: { Authorization: "Bearer hidden" },
-+				compat: { supportsStore: false },
-+			},
-+		]);
-+
-+		const runtime = await ModelRuntime.create({
-+			modelsPath,
-+			allowModelNetwork: false,
-+			refreshOnCreate: false,
-+		});
-+		expect(runtime.getError()).toBeUndefined();
-+		expect(runtime.getModelConfigProvider("target")).toMatchObject({
-+			name: "Target renamed",
-+			baseUrl: "https://example.test/v1",
-+			api: "openai-completions",
-+			models: [{ id: "rich-model" }],
-+		});
-+		expect(runtime.getModelConfigProvider("target")).not.toHaveProperty("authHeader");
-+		expect(runtime.getModel("target", "rich-model")).toMatchObject({
-+			name: "rich-model",
-+			reasoning: false,
-+			input: ["text"],
-+			contextWindow: 128_000,
-+			maxTokens: 16_384,
-+		});
-+	});
-+
-+	it("mutates provider and model header references without reading their values", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		const commandSentinel = join(root, "header-command-ran");
-+		await writeFile(
-+			modelsPath,
-+			JSON.stringify({
-+				providers: {
-+					target: {
-+						...provider("Target", "model"),
-+						headers: {
-+							Authorization: "Bearer imported-secret",
-+							"Bad Header": "hidden-invalid-secret",
-+							"X-External": "literal-canary",
-+							"X-Command": `!touch ${commandSentinel}`,
-+							"X-Env": "${OLD_PROVIDER_HEADER}",
-+							"X-Scope": "${PROVIDER_SCOPE}",
-+						},
-+						models: [
-+							{
-+								id: "model",
-+								headers: {
-+									"Bad Model Header": "hidden-invalid-model-secret",
-+									"x-scope": "${OLD_MODEL_HEADER}",
-+									"X-Keep": "keep",
-+								},
-+							},
-+						],
-+						modelOverrides: {
-+							model: {
-+								headers: {
-+									"X-SCOPE": `!touch ${commandSentinel}`,
-+									"X-Override": "keep",
-+								},
-+							},
-+						},
-+					},
-+				},
-+			}),
-+			{ encoding: "utf8", mode: 0o600 },
-+		);
-+
-+		const beforeRuntime = await ModelRuntime.create({
-+			modelsPath,
-+			allowModelNetwork: false,
-+			refreshOnCreate: false,
-+		});
-+		expect(beforeRuntime.getModelConfigProviderHeaderMetadata("target")).toEqual({
-+			provider: [
-+				{ name: "Authorization", source: "external" },
-+				{ name: "X-External", source: "external" },
-+				{ name: "X-Command", source: "command" },
-+				{ name: "X-Env", source: "environment" },
-+				{ name: "X-Scope", source: "environment" },
-+			],
-+			models: [
-+				{
-+					modelId: "model",
-+					headers: [
-+						{ name: "x-scope", source: "environment" },
-+						{ name: "X-Override", source: "external" },
-+						{ name: "X-Keep", source: "external" },
-+					],
-+				},
-+			],
-+		});
-+		expect(await exists(commandSentinel)).toBe(false);
-+
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "target",
-+			provider: provider("Target", "model"),
-+			headerReferences: [
-+				{
-+					scope: { type: "provider" },
-+					name: "x-env",
-+					reference: { type: "environment", variableName: "NEW_PROVIDER_HEADER" },
-+				},
-+				{ scope: { type: "provider" }, name: "Authorization", reference: { type: "clear" } },
-+				{ scope: { type: "provider" }, name: "X-External", reference: { type: "clear" } },
-+				{
-+					scope: { type: "model", modelId: "model" },
-+					name: "X-Scope",
-+					reference: { type: "environment", variableName: "NEW_MODEL_HEADER" },
-+				},
-+				{
-+					scope: { type: "model", modelId: "model" },
-+					name: "X-Keep",
-+					reference: { type: "clear" },
-+				},
-+			],
-+		});
-+
-+		const stored = JSON.parse(await readFile(modelsPath, "utf8")).providers.target;
-+		expect(stored.headers).toEqual({
-+			"Bad Header": "hidden-invalid-secret",
-+			"X-Command": `!touch ${commandSentinel}`,
-+			"X-Scope": "${PROVIDER_SCOPE}",
-+			"x-env": "${NEW_PROVIDER_HEADER}",
-+		});
-+		expect(stored.models[0].headers).toEqual({
-+			"Bad Model Header": "hidden-invalid-model-secret",
-+			"X-Scope": "${NEW_MODEL_HEADER}",
-+		});
-+		expect(stored.modelOverrides.model.headers).toEqual({ "X-Override": "keep" });
-+		expect(await exists(commandSentinel)).toBe(false);
-+	});
-+
-+	it("rejects unsafe header reference mutations without changing models.json", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await writeFile(
-+			modelsPath,
-+			JSON.stringify({ providers: { target: provider("Target", "model") } }),
-+			{ encoding: "utf8", mode: 0o600 },
-+		);
-+		const before = await readFile(modelsPath, "utf8");
-+		const invalidMutations = [
-+			[
-+				{
-+					scope: { type: "provider" },
-+					name: "Authorization",
-+					reference: { type: "environment", variableName: "TOKEN" },
-+				},
-+			],
-+			[
-+				{
-+					scope: { type: "provider" },
-+					name: "Bad Header",
-+					reference: { type: "environment", variableName: "TOKEN" },
-+				},
-+			],
-+			[
-+				{ scope: { type: "provider" }, name: "X-Trace", reference: { type: "clear" } },
-+				{ scope: { type: "provider" }, name: "x-trace", reference: { type: "clear" } },
-+			],
-+			[
-+				{
-+					scope: { type: "model", modelId: "missing" },
-+					name: "X-Trace",
-+					reference: { type: "clear" },
-+				},
-+			],
-+			[
-+				{
-+					scope: { type: "provider" },
-+					name: "X-Command",
-+					reference: { type: "command", command: "echo forbidden" },
-+				},
-+			],
-+		] as const;
-+
-+		for (const headerReferences of invalidMutations) {
-+			await expect(
-+				mutateModelConfigProvider(modelsPath, {
-+					type: "upsert",
-+					providerId: "target",
-+					provider: provider("Target", "model"),
-+					headerReferences: headerReferences as never,
-+				}),
-+			).rejects.toThrow();
-+			expect(await readFile(modelsPath, "utf8")).toBe(before);
-+		}
-+	});
-+
-+	it("removes only the target provider and treats a missing target as an exact no-op", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "keep",
-+			provider: provider("Keep", "keep-model"),
-+		});
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "remove",
-+			provider: provider("Remove", "remove-model"),
-+		});
-+		const before = await readFile(modelsPath, "utf8");
-+
-+		const removed = await mutateModelConfigProvider(modelsPath, {
-+			type: "remove",
-+			providerId: "remove",
-+		});
-+		const after = await readFile(modelsPath, "utf8");
-+		expect(removed).toEqual({ changed: true, providerIds: ["keep"] });
-+		expect(after).toContain('"keep"');
-+		expect(after).not.toContain('"remove"');
-+
-+		const missing = await mutateModelConfigProvider(modelsPath, {
-+			type: "remove",
-+			providerId: "missing",
-+		});
-+		expect(missing).toEqual({ changed: false, providerIds: ["keep"] });
-+		expect(await readFile(modelsPath, "utf8")).toBe(after);
-+		expect(before).not.toBe(after);
-+	});
-+
-+	it("rejects invalid typed content without changing the last valid file", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "valid",
-+			provider: provider("Valid", "valid-model"),
-+		});
-+		const before = await readFile(modelsPath, "utf8");
-+
-+		await expect(
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "invalid",
-+				provider: { models: "wrong" } as never,
-+			}),
-+		).rejects.toThrow("Invalid models.json schema");
-+		expect(await readFile(modelsPath, "utf8")).toBe(before);
-+	});
-+
-+	it("rejects a schema-valid provider that a fresh runtime cannot compose", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "valid",
-+			provider: provider("Valid", "valid-model"),
-+		});
-+		const before = await readFile(modelsPath, "utf8");
-+
-+		await expect(
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "cannot-compose",
-+				provider: {
-+					...provider("Cannot Compose", "broken-model"),
-+					api: "not-a-real-pi-api",
-+				} as never,
-+			}),
-+		).rejects.toThrow();
-+		expect(await readFile(modelsPath, "utf8")).toBe(before);
-+	});
-+
-+	it("is exactly reloadable by a fresh official runtime after replacement", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		await mutateModelConfigProvider(modelsPath, {
-+			type: "upsert",
-+			providerId: "reloadable",
-+			provider: provider("Reloadable", "reload-model"),
-+		});
-+
-+		const runtime = await ModelRuntime.create({
-+			modelsPath,
-+			allowModelNetwork: false,
-+			refreshOnCreate: false,
-+		});
-+		expect(runtime.getError()).toBeUndefined();
-+		expect(runtime.getModelConfigProviderIds()).toContain("reloadable");
-+		expect(runtime.getModel("reloadable", "reload-model")).toBeDefined();
-+	});
-+
-+	it("rejects an invalid existing document without rewriting it", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		const invalid = '{ "providers": { "broken": { "models": "wrong" } } }\n';
-+		await writeFile(modelsPath, invalid, { encoding: "utf8", mode: 0o600 });
-+
-+		await expect(
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "blocked",
-+				provider: provider("Blocked", "blocked-model"),
-+			}),
-+		).rejects.toThrow("Invalid models.json schema");
-+		expect(await readFile(modelsPath, "utf8")).toBe(invalid);
-+	});
-+
-+	it("rejects a linked models.json leaf instead of replacing it", async () => {
-+		const root = await createRoot();
-+		const outside = join(root, "outside.json");
-+		const modelsPath = join(root, "models.json");
-+		await writeFile(outside, '{ "providers": {} }', { mode: 0o600 });
-+		await symlink(outside, modelsPath);
-+
-+		await expect(
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "blocked",
-+				provider: provider("Blocked", "blocked-model"),
-+			}),
-+		).rejects.toThrow();
-+		expect(await readFile(outside, "utf8")).toBe('{ "providers": {} }');
-+	});
-+
-+	it("rejects a multiply linked models.json leaf", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		const aliasPath = join(root, "models-alias.json");
-+		const original = '{ "providers": {} }';
-+		await writeFile(modelsPath, original, { mode: 0o600 });
-+		await link(modelsPath, aliasPath);
-+
-+		await expect(
-+			mutateModelConfigProvider(modelsPath, {
-+				type: "upsert",
-+				providerId: "blocked",
-+				provider: provider("Blocked", "blocked-model"),
-+			}),
-+		).rejects.toThrow("private regular file");
-+		expect(await readFile(aliasPath, "utf8")).toBe(original);
-+	});
-+
-+	it("honors caller cancellation before creating or changing the file", async () => {
-+		const root = await createRoot();
-+		const modelsPath = join(root, "models.json");
-+		const controller = new AbortController();
-+		controller.abort();
-+
-+		await expect(
-+			mutateModelConfigProvider(
-+				modelsPath,
-+				{
-+					type: "upsert",
-+					providerId: "cancelled",
-+					provider: provider("Cancelled", "cancelled-model"),
-+				},
-+				{ signal: controller.signal },
-+			),
-+		).rejects.toMatchObject({ name: "AbortError" });
-+		await expect(readFile(modelsPath, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
-+	});
-+});
-diff --git a/packages/coding-agent/test/model-runtime-config-reader.test.ts b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..39e4d88ebaeb5467ffe077ca2574cae739657d69
---- /dev/null
-+++ b/packages/coding-agent/test/model-runtime-config-reader.test.ts
-@@ -0,0 +1,497 @@
-+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-+import { tmpdir } from "node:os";
-+import { join } from "node:path";
-+import { afterEach, describe, expect, it, vi } from "vitest";
-+import { AuthStorage } from "../src/core/auth-storage.ts";
-+import { ModelRegistry } from "../src/core/model-registry.ts";
-+import { ModelConfigProviderDiscoveryError, ModelRuntime } from "../src/core/model-runtime.ts";
-+import { InMemoryCodingAgentModelsStore } from "../src/core/models-store.ts";
-+
-+function modelsJson(provider: string, model: string): string {
-+	return `{
-+		// The product reader supplies bytes; Pi remains the parser and schema authority.
-+		"providers": {
-+			"${provider}": {
-+				"baseUrl": "https://example.test/v1",
-+				"api": "openai-completions",
-+				"apiKey": "test-key",
-+				"models": [{ "id": "${model}" }]
-+			}
-+		}
-+	}`;
-+}
-+
-+function createRuntime(
-+	modelsConfigReader: NonNullable<Parameters<typeof ModelRuntime.create>[0]["modelsConfigReader"]>,
-+) {
-+	return ModelRuntime.create({
-+		credentials: AuthStorage.inMemory(),
-+		modelsPath: null,
-+		modelsConfigReader,
-+		modelsStore: new InMemoryCodingAgentModelsStore(),
-+		allowModelNetwork: false,
-+		refreshOnCreate: false,
-+	});
-+}
-+
-+afterEach(() => {
-+	vi.unstubAllGlobals();
-+});
-+
-+describe("ModelRuntime modelsConfigReader", () => {
-+	it("uses one official parser snapshot for create and refresh provenance", async () => {
-+		let content = modelsJson("custom-one", "model-one");
-+		const reader = vi.fn(async () => content);
-+		const runtime = await createRuntime(reader);
-+
-+		expect(reader).toHaveBeenCalledTimes(1);
-+		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-one"]);
-+		expect(runtime.getModelConfigProvider("custom-one")).toMatchObject({
-+			api: "openai-completions",
-+			baseUrl: "https://example.test/v1",
-+		});
-+		expect(runtime.getModel("custom-one", "model-one")).toBeDefined();
-+
-+		content = modelsJson("custom-two", "model-two");
-+		await runtime.refresh({ allowNetwork: false });
-+
-+		expect(reader).toHaveBeenCalledTimes(2);
-+		expect(runtime.getModelConfigProviderIds()).toEqual(["custom-two"]);
-+		expect(runtime.getModel("custom-one", "model-one")).toBeUndefined();
-+		expect(runtime.getModel("custom-two", "model-two")).toBeDefined();
-+	});
-+
-+	it("keeps provider, model, and override credentials out of the host projection", async () => {
-+		const runtime = await createRuntime(async () =>
-+			JSON.stringify({
-+				providers: {
-+					private: {
-+						baseUrl: "https://example.test/v1",
-+						api: "openai-completions",
-+						apiKey: "provider-secret",
-+						headers: { Authorization: "provider-header" },
-+						models: [{ id: "model", headers: { Authorization: "model-header" } }],
-+						modelOverrides: { model: { headers: { Authorization: "override-header" } } },
-+					},
-+				},
-+			}),
-+		);
-+
-+		const projected = runtime.getModelConfigProvider("private") as Record<string, unknown>;
-+		expect(JSON.stringify(projected)).not.toContain("secret");
-+		expect(JSON.stringify(projected)).not.toContain("header");
-+		expect(projected).toMatchObject({
-+			baseUrl: "https://example.test/v1",
-+			models: [{ id: "model" }],
-+			modelOverrides: { model: {} },
-+		});
-+	});
-+
-+	it("tests a credential-blind edit with the retained configured credential", async () => {
-+		const runtime = await createRuntime(async () =>
-+			JSON.stringify({
-+				providers: {
-+					private: {
-+						name: "Before",
-+						baseUrl: "https://example.test/v1",
-+						api: "openai-completions",
-+						apiKey: "configured-reference",
-+						models: [{ id: "model", samplingParams: { temperature: 0.25 } }],
-+					},
-+				},
-+			}),
-+		);
-+
-+		runtime.registerModelConfigProviderPreview("private", {
-+			name: "After",
-+			baseUrl: "https://example.test/v1",
-+			api: "openai-completions",
-+			models: [{ id: "model", name: "Edited" }],
-+		});
-+
-+		expect(runtime.getProviderAuthStatus("private").configured).toBe(true);
-+		expect(runtime.getModel("private", "model")?.name).toBe("Edited");
-+		expect(runtime.getModelConfigProvider("private")?.models?.[0]).toMatchObject({
-+			id: "model",
-+			samplingParams: { temperature: 0.25 },
-+		});
-+	});
-+
-+	it("keeps typed environment and command references passive until an explicit operation", async () => {
-+		const root = await mkdtemp(join(tmpdir(), "pi-model-config-reference-"));
-+		const marker = join(root, "command-ran");
-+		try {
-+			const runtime = await createRuntime(async () => '{"providers":{}}');
-+			runtime.registerModelConfigProviderPreview(
-+				"command-provider",
-+				{
-+					baseUrl: "https://example.test/v1",
-+					api: "openai-completions",
-+					models: [],
-+				},
-+				{ type: "command", command: `printf touched > '${marker}'; printf test-key` },
-+			);
-+			expect(runtime.getProviderAuthStatus("command-provider")).toMatchObject({
-+				configured: true,
-+				source: "models_json_command",
-+			});
-+			await expect(readFile(marker, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
-+
-+			vi.stubGlobal(
-+				"fetch",
-+				vi.fn(async () => new Response(JSON.stringify({ data: [{ id: "model" }] }), { status: 200 })),
-+			);
-+			await expect(runtime.discoverModelConfigProviderModels("command-provider")).resolves.toEqual([
-+				{ id: "model" },
-+			]);
-+			expect(await readFile(marker, "utf8")).toBe("touched");
-+
-+			const missingEnvironmentRuntime = await createRuntime(async () => '{"providers":{}}');
-+			missingEnvironmentRuntime.registerModelConfigProviderPreview(
-+				"environment-provider",
-+				{
-+					baseUrl: "https://example.test/v1",
-+					api: "openai-completions",
-+					models: [],
-+				},
-+				{ type: "environment", variableName: "OMNIMIND_PI_TEST_MISSING_API_KEY_7B184" },
-+			);
-+			await expect(
-+				missingEnvironmentRuntime.discoverModelConfigProviderModels("environment-provider"),
-+			).rejects.toMatchObject({ code: "authentication_failed" });
-+		} finally {
-+			await rm(root, { recursive: true, force: true });
-+		}
-+	});
-+
-+	it.each([
-+		{
-+			api: "openai-completions",
-+			baseUrl: "https://example.test/v1",
-+			expectedUrl: "https://example.test/v1/models",
-+			header: "authorization",
-+			headerValue: "Bearer test-key",
-+			payload: { data: [{ id: "model-one", name: "Model One" }] },
-+			expected: [{ id: "model-one", name: "Model One" }],
-+		},
-+		{
-+			api: "openai-responses",
-+			baseUrl: "https://example.test",
-+			expectedUrl: "https://example.test/v1/models",
-+			header: "authorization",
-+			headerValue: "Bearer test-key",
-+			payload: { data: [{ id: "model-two" }] },
-+			expected: [{ id: "model-two" }],
-+		},
-+		{
-+			api: "anthropic-messages",
-+			baseUrl: "https://example.test",
-+			expectedUrl: "https://example.test/v1/models",
-+			header: "x-api-key",
-+			headerValue: "test-key",
-+			payload: { data: [{ id: "model-three", display_name: "Model Three" }] },
-+			expected: [{ id: "model-three", name: "Model Three" }],
-+		},
-+		{
-+			api: "google-generative-ai",
-+			baseUrl: "https://example.test/v1beta",
-+			expectedUrl: "https://example.test/v1beta/models",
-+			header: "x-goog-api-key",
-+			headerValue: "test-key",
-+			payload: { models: [{ name: "models/gemini-test", displayName: "Gemini Test" }] },
-+			expected: [{ id: "gemini-test", name: "Gemini Test" }],
-+		},
-+	] as const)("discovers $api model identities without mutating the preview", async (testCase) => {
-+		const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
-+			expect(String(input)).toBe(testCase.expectedUrl);
-+			expect(init?.redirect).toBe("error");
-+			const headers = new Headers(init?.headers);
-+			expect(headers.get(testCase.header)).toBe(testCase.headerValue);
-+			if (testCase.api === "anthropic-messages") {
-+				expect(headers.get("anthropic-version")).toBe("2023-06-01");
-+			}
-+			return new Response(JSON.stringify(testCase.payload), {
-+				status: 200,
-+				headers: { "content-type": "application/json" },
-+			});
-+		});
-+		vi.stubGlobal("fetch", fetchMock);
-+		const runtime = await createRuntime(async () =>
-+			JSON.stringify({
-+				providers: {
-+					custom: {
-+						baseUrl: testCase.baseUrl,
-+						api: testCase.api,
-+						apiKey: "test-key",
-+						models: [],
-+					},
-+				},
-+			}),
-+		);
-+
-+		expect(await runtime.discoverModelConfigProviderModels("custom")).toEqual(testCase.expected);
-+		expect(runtime.getModels("custom")).toEqual([]);
-+		expect(fetchMock).toHaveBeenCalledTimes(1);
-+	});
-+
-+	it("fails discovery closed before network on cancellation or unsupported config", async () => {
-+		const fetchMock = vi.fn();
-+		vi.stubGlobal("fetch", fetchMock);
-+		const runtime = await createRuntime(async () =>
-+			JSON.stringify({
-+				providers: {
-+					custom: {
-+						baseUrl: "https://example.test/v1",
-+						api: "openai-completions",
-+						apiKey: "test-key",
-+						models: [],
-+					},
-+				},
-+			}),
-+		);
-+		const controller = new AbortController();
-+		controller.abort();
-+		await expect(
-+			runtime.discoverModelConfigProviderModels("custom", { signal: controller.signal }),
-+		).rejects.toMatchObject({ name: "AbortError" });
-+		await expect(runtime.discoverModelConfigProviderModels("missing")).rejects.toMatchObject({
-+			name: "ModelConfigProviderDiscoveryError",
-+			code: "invalid_configuration",
-+		});
-+		expect(fetchMock).not.toHaveBeenCalled();
-+	});
-+
-+	it("returns bounded typed failures without endpoint or credential diagnostics", async () => {
-+		const runtime = await createRuntime(async () =>
-+			JSON.stringify({
-+				providers: {
-+					custom: {
-+						baseUrl: "https://secret-endpoint.example.test/v1",
-+						api: "openai-completions",
-+						apiKey: "secret-key",
-+						models: [],
-+					},
-+				},
-+			}),
-+		);
-+		vi.stubGlobal(
-+			"fetch",
-+			vi.fn(async () => new Response(null, { status: 401 })),
-+		);
-+		const authenticationFailure = await runtime
-+			.discoverModelConfigProviderModels("custom")
-+			.catch((error: unknown) => error);
-+		expect(authenticationFailure).toBeInstanceOf(ModelConfigProviderDiscoveryError);
-+		expect(authenticationFailure).toMatchObject({ code: "authentication_failed" });
-+		expect(String(authenticationFailure)).not.toContain("secret");
-+
-+		vi.stubGlobal(
-+			"fetch",
-+			vi.fn(
-+				async () =>
-+					new Response(JSON.stringify({ data: [] }), {
-+						status: 200,
-+						headers: { "content-type": "application/json" },
-+					}),
-+			),
-+		);
-+		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
-+			code: "catalog_unavailable",
-+		});
-+
-+		const invalidRuntime = await createRuntime(async () =>
-+			JSON.stringify({
-+				providers: {
-+					custom: {
-+						baseUrl: "not-a-url",
-+						api: "openai-completions",
-+						apiKey: "secret-key",
-+					},
-+				},
-+			}),
-+		);
-+		await expect(invalidRuntime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
-+			code: "invalid_configuration",
-+		});
-+	});
-+
-+	it("stops reading an unbounded chunked discovery response at the byte limit", async () => {
-+		let pulls = 0;
-+		let cancelled = false;
-+		vi.stubGlobal(
-+			"fetch",
-+			vi.fn(
-+				async () =>
-+					new Response(
-+						new ReadableStream<Uint8Array>({
-+							pull(controller) {
-+								pulls += 1;
-+								controller.enqueue(new Uint8Array(1024 * 1024));
-+							},
-+							cancel() {
-+								cancelled = true;
-+							},
-+						}),
-+						{ status: 200 },
-+					),
-+			),
-+		);
-+		const runtime = await createRuntime(async () =>
-+			JSON.stringify({
-+				providers: {
-+					custom: {
-+						baseUrl: "https://example.test/v1",
-+						api: "openai-completions",
-+						apiKey: "test-key",
-+						models: [],
-+					},
-+				},
-+			}),
-+		);
-+
-+		await expect(runtime.discoverModelConfigProviderModels("custom")).rejects.toMatchObject({
-+			code: "response_too_large",
-+		});
-+		expect(pulls).toBeLessThanOrEqual(6);
-+		expect(cancelled).toBe(true);
-+	});
-+
-+	it("rejects path and reader dual authority", async () => {
-+		const reader = async () => undefined;
-+		await expect(ModelRuntime.create({ modelsConfigReader: reader })).rejects.toThrow(
-+			"modelsConfigReader requires modelsPath: null",
-+		);
-+		await expect(ModelRuntime.create({ modelsPath: "/tmp/models.json", modelsConfigReader: reader })).rejects.toThrow(
-+			"modelsConfigReader requires modelsPath: null",
-+		);
-+	});
-+
-+	it("propagates cancellation before and after the reader", async () => {
-+		const before = new AbortController();
-+		before.abort();
-+		const unread = vi.fn(async () => modelsJson("unread", "unread"));
-+		await expect(
-+			ModelRuntime.create({ modelsPath: null, modelsConfigReader: unread, signal: before.signal }),
-+		).rejects.toMatchObject({ name: "AbortError" });
-+		expect(unread).not.toHaveBeenCalled();
-+
-+		const during = new AbortController();
-+		await expect(
-+			ModelRuntime.create({
-+				modelsPath: null,
-+				modelsConfigReader: async () => {
-+					during.abort();
-+					return modelsJson("cancelled", "cancelled");
-+				},
-+				signal: during.signal,
-+			}),
-+		).rejects.toMatchObject({ name: "AbortError" });
-+	});
-+
-+	it("keeps reader failures private and invalid content under the official schema", async () => {
-+		const failed = await createRuntime(async () => {
-+			throw new Error("secret path and credential");
-+		});
-+		expect(failed.getError()).toBe("Failed to load models.json from configured reader");
-+
-+		const invalid = await createRuntime(async () => '{ "providers": { "broken": { "models": "wrong" } } }');
-+		expect(invalid.getError()).toContain("Invalid models.json schema");
-+		expect(invalid.getModelConfigProviderIds()).toEqual([]);
-+	});
-+
-+	it("keeps an explicit file catalog store when models config comes from a reader", async () => {
-+		const root = await mkdtemp(join(tmpdir(), "omnimind-model-reader-store-"));
-+		const modelsStorePath = join(root, "models-store.json");
-+		const providerId = "reader-store-provider";
-+		const storedModel = {
-+			id: "stored-model",
-+			name: "Stored Model",
-+			api: "openai-responses" as const,
-+			provider: providerId,
-+			baseUrl: "https://example.test/v1",
-+			reasoning: false,
-+			input: ["text"] as const,
-+			cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-+			contextWindow: 128_000,
-+			maxTokens: 16_384,
-+		};
-+		const refreshedModel = { ...storedModel, id: "reopened-model", name: "Reopened Model" };
-+		const observedStoredModelIds: string[][] = [];
-+		const registerDynamicProvider = (runtime: ModelRuntime, publishRefreshed: boolean) => {
-+			let models = [] as (typeof storedModel)[];
-+			new ModelRegistry(runtime).registerProvider({
-+				id: providerId,
-+				name: "Reader Store Provider",
-+				auth: {
-+					apiKey: {
-+						name: "Reader store key",
-+						resolve: async () => ({ auth: { apiKey: "test-key" }, source: "test" }),
-+					},
-+				},
-+				getModels: () => models,
-+				refreshModels: async (context) => {
-+					observedStoredModelIds.push(context.stored?.models.map((model) => model.id) ?? []);
-+					if (context.stored) {
-+						await context.publish({
-+							update: () => {
-+								models = [...context.stored!.models] as (typeof storedModel)[];
-+							},
-+						});
-+					}
-+					if (!publishRefreshed) return;
-+					await context.publish({
-+						persist: { models: [refreshedModel], checkedAt: Date.now() },
-+						update: () => {
-+							models = [refreshedModel];
-+						},
-+					});
-+				},
-+				stream: () => {
-+					throw new Error("unused");
-+				},
-+				streamSimple: () => {
-+					throw new Error("unused");
-+				},
-+			});
-+		};
-+
-+		try {
-+			await writeFile(
-+				modelsStorePath,
-+				JSON.stringify({
-+					[providerId]: { models: [storedModel], checkedAt: 1 },
-+				}),
-+			);
-+			const first = await ModelRuntime.create({
-+				credentials: AuthStorage.inMemory(),
-+				modelsPath: null,
-+				modelsConfigReader: async () => undefined,
-+				modelsStorePath,
-+				allowModelNetwork: false,
-+				refreshOnCreate: false,
-+			});
-+			registerDynamicProvider(first, true);
-+			await first.refresh({ providers: [providerId], allowNetwork: false });
-+			expect(observedStoredModelIds).toEqual([["stored-model"]]);
-+			expect(first.getModel(providerId, "reopened-model")).toBeDefined();
-+			const persisted = JSON.parse(await readFile(modelsStorePath, "utf8"));
-+			expect(persisted[providerId].models.map((model: { id: string }) => model.id)).toEqual(["reopened-model"]);
-+
-+			const reopened = await ModelRuntime.create({
-+				credentials: AuthStorage.inMemory(),
-+				modelsPath: null,
-+				modelsConfigReader: async () => undefined,
-+				modelsStorePath,
-+				allowModelNetwork: false,
-+				refreshOnCreate: false,
-+			});
-+			registerDynamicProvider(reopened, false);
-+			await reopened.refresh({ providers: [providerId], allowNetwork: false });
-+			expect(observedStoredModelIds).toEqual([["stored-model"], ["reopened-model"]]);
-+			expect(reopened.getModel(providerId, "stored-model")).toBeUndefined();
-+			expect(reopened.getModel(providerId, "reopened-model")).toBeDefined();
-+		} finally {
-+			await rm(root, { recursive: true, force: true });
-+		}
-+	});
-+});
-diff --git a/packages/coding-agent/test/model-session-prompt-outcome.test.ts b/packages/coding-agent/test/model-session-prompt-outcome.test.ts
-new file mode 100644
-index 0000000000000000000000000000000000000000..9e0c36498a6cd43eaafb4fc9c77331c71a778387
---- /dev/null
-+++ b/packages/coding-agent/test/model-session-prompt-outcome.test.ts
-@@ -0,0 +1,224 @@
-+import { fauxAssistantMessage } from "@earendil-works/pi-ai";
-+import { afterEach, describe, expect, it } from "vitest";
-+import llamaExtension from "../src/extensions/llama/index.ts";
-+import { createHarness, type Harness } from "./suite/harness.ts";
-+
-+describe("AgentSession prompt outcomes", () => {
-+	const harnesses: Harness[] = [];
-+
-+	afterEach(() => {
-+		while (harnesses.length > 0) harnesses.pop()?.cleanup();
-+	});
-+
-+	it("reports a command handled without starting an agent run", async () => {
-+		const harness = await createHarness({
-+			extensionFactories: [
-+				(pi) => {
-+					pi.registerCommand("noop", {
-+						description: "No-op command",
-+						handler: async () => {},
-+					});
-+				},
-+			],
-+		});
-+		harnesses.push(harness);
-+		const events: string[] = [];
-+		harness.session.subscribe((event) => events.push(event.type));
-+
-+		const outcome = await harness.session.prompt("/noop");
-+
-+		expect(outcome).toEqual({ kind: "handled-without-agent", success: true });
-+		expect(events).not.toContain("agent_start");
-+		expect(events).not.toContain("agent_settled");
-+	});
-+
-+	it("settles the bundled /llama command without an agent run outside TUI mode", async () => {
-+		const harness = await createHarness({ extensionFactories: [llamaExtension] });
-+		harnesses.push(harness);
-+
-+		const outcome = await harness.session.prompt("/llama");
-+
-+		expect(outcome).toEqual({ kind: "handled-without-agent", success: true });
-+		expect(harness.eventsOfType("agent_start")).toEqual([]);
-+		expect(harness.eventsOfType("agent_settled")).toEqual([]);
-+	});
-+
-+	it("reports a command failure without exposing it as an agent run", async () => {
-+		const harness = await createHarness({
-+			extensionFactories: [
-+				(pi) => {
-+					pi.registerCommand("fail", {
-+						description: "Failing command",
-+						handler: async () => {
-+							throw new Error("command failed");
-+						},
-+					});
-+				},
-+			],
-+		});
-+		harnesses.push(harness);
-+
-+		await expect(harness.session.prompt("/fail")).resolves.toEqual({
-+			kind: "handled-without-agent",
-+			success: false,
-+		});
-+	});
-+
-+	it("reports an input hook handled without starting an agent run", async () => {
-+		const harness = await createHarness({
-+			extensionFactories: [
-+				(pi) => {
-+					pi.on("input", async () => ({ action: "handled" }));
-+				},
-+			],
-+		});
-+		harnesses.push(harness);
-+		const events: string[] = [];
-+		harness.session.subscribe((event) => events.push(event.type));
-+
-+		const outcome = await harness.session.prompt("handled by input hook");
-+
-+		expect(outcome).toEqual({ kind: "handled-without-agent", success: true });
-+		expect(events).not.toContain("agent_start");
-+		expect(events).not.toContain("agent_settled");
-+	});
-+
-+	it("waits for an agent run dispatched by a fire-and-forget command action", async () => {
-+		let releaseResponse!: () => void;
-+		const responseGate = new Promise<void>((resolve) => {
-+			releaseResponse = resolve;
-+		});
-+		const harness = await createHarness({
-+			extensionFactories: [
-+				(pi) => {
-+					pi.registerCommand("agent", {
-+						description: "Agent command",
-+						handler: async () => {
-+							pi.sendUserMessage("from command");
-+						},
-+					});
-+				},
-+			],
-+		});
-+		harnesses.push(harness);
-+		harness.setResponses([
-+			async () => {
-+				await responseGate;
-+				return fauxAssistantMessage("done");
-+			},
-+		]);
-+		let settled = false;
-+		harness.session.subscribe((event) => {
-+			if (event.type === "agent_settled") settled = true;
-+		});
-+
-+		const outcomePromise = harness.session.prompt("/agent");
-+		await Promise.resolve();
-+		expect(settled).toBe(false);
-+		releaseResponse();
-+
-+		await expect(outcomePromise).resolves.toEqual({ kind: "agent-run" });
-+		expect(settled).toBe(true);
-+	});
-+
-+	it("reports command failure after Agent work scheduled by that command settles", async () => {
-+		const harness = await createHarness({
-+			extensionFactories: [
-+				(pi) => {
-+					pi.registerCommand("mixed-failure", {
-+						description: "Schedules Agent work and then fails",
-+						handler: async () => {
-+							pi.sendUserMessage("from failing command");
-+							throw new Error("command failed after scheduling");
-+						},
-+					});
-+				},
-+			],
-+		});
-+		harnesses.push(harness);
-+		harness.setResponses([fauxAssistantMessage("agent response")]);
-+
-+		const outcome = await harness.session.prompt("/mixed-failure");
-+
-+		expect(outcome).toEqual({ kind: "handled-without-agent", success: false });
-+		expect(harness.eventsOfType("agent_settled")).toHaveLength(1);
-+	});
-+
-+	it("waits for an agent run dispatched by a trigger-turn custom message", async () => {
-+		let releaseResponse!: () => void;
-+		const responseGate = new Promise<void>((resolve) => {
-+			releaseResponse = resolve;
-+		});
-+		const harness = await createHarness({
-+			extensionFactories: [
-+				(pi) => {
-+					pi.registerCommand("custom-agent", {
-+						description: "Agent custom message command",
-+						handler: async () => {
-+							pi.sendMessage(
-+								{ customType: "test", content: "from command", display: true },
-+								{ triggerTurn: true },
-+							);
-+						},
-+					});
-+				},
-+			],
-+		});
-+		harnesses.push(harness);
-+		harness.setResponses([
-+			async () => {
-+				await responseGate;
-+				return fauxAssistantMessage("done");
-+			},
-+		]);
-+
-+		const outcomePromise = harness.session.prompt("/custom-agent");
-+		let resolved = false;
-+		void outcomePromise.then(() => {
-+			resolved = true;
-+		});
-+		await Promise.resolve();
-+		expect(resolved).toBe(false);
-+		releaseResponse();
-+
-+		await expect(outcomePromise).resolves.toEqual({ kind: "agent-run" });
-+		expect(harness.eventsOfType("agent_settled")).toHaveLength(1);
-+	});
-+
-+	it("waits for an agent run dispatched by a handled input hook", async () => {
-+		let releaseResponse!: () => void;
-+		const responseGate = new Promise<void>((resolve) => {
-+			releaseResponse = resolve;
-+		});
-+		const harness = await createHarness({
-+			extensionFactories: [
-+				(pi) => {
-+					pi.on("input", async (event) => {
-+						if (event.source !== "interactive") return { action: "continue" };
-+						pi.sendUserMessage("from input hook");
-+						return { action: "handled" };
-+					});
-+				},
-+			],
-+		});
-+		harnesses.push(harness);
-+		harness.setResponses([
-+			async () => {
-+				await responseGate;
-+				return fauxAssistantMessage("done");
-+			},
-+		]);
-+
-+		const outcomePromise = harness.session.prompt("handled and dispatched");
-+		let resolved = false;
-+		void outcomePromise.then(() => {
-+			resolved = true;
-+		});
-+		await Promise.resolve();
-+		expect(resolved).toBe(false);
-+		releaseResponse();
-+
-+		await expect(outcomePromise).resolves.toEqual({ kind: "agent-run" });
-+		expect(harness.eventsOfType("agent_settled")).toHaveLength(1);
-+	});
-+});
+ 		session.dispose();
+ 	});
+ });
 diff --git a/packages/coding-agent/test/package-manager.test.ts b/packages/coding-agent/test/package-manager.test.ts
-index 31c89faffce59deeac1e93ea482466e29609b31d..5ae403fb40dd2f10c62d047b2c885d2def90a545 100644
+index 31c89faff..5ae403fb4 100644
 --- a/packages/coding-agent/test/package-manager.test.ts
 +++ b/packages/coding-agent/test/package-manager.test.ts
 @@ -297,6 +297,179 @@ Content`,
@@ -4138,7 +2727,7 @@ index 31c89faffce59deeac1e93ea482466e29609b31d..5ae403fb40dd2f10c62d047b2c885d2d
  		it("should use the agent dir as baseDir for user .pi/agent skills", async () => {
  			const skillPath = join(agentDir, "skills", "user-pi", "SKILL.md");
 diff --git a/packages/coding-agent/test/resource-loader.test.ts b/packages/coding-agent/test/resource-loader.test.ts
-index 145eca3b2510dd24d49cb85134ed0cee37fb0999..e4c97acfa95243599746280802daff04948423dc 100644
+index 145eca3b2..e4c97acfa 100644
 --- a/packages/coding-agent/test/resource-loader.test.ts
 +++ b/packages/coding-agent/test/resource-loader.test.ts
 @@ -4,7 +4,9 @@ import { join } from "node:path";
@@ -4313,10 +2902,10 @@ index 145eca3b2510dd24d49cb85134ed0cee37fb0999..e4c97acfa95243599746280802daff04
  			mkdirSync(join(cwd, "AGENTS.override.md"));
  			mkdirSync(join(cwd, "AGENTS.md"));
 diff --git a/packages/coding-agent/test/suite/agent-session-prompt.test.ts b/packages/coding-agent/test/suite/agent-session-prompt.test.ts
-index 1fa23fbe29c3ee9d41dc53f01c93910e994772be..72b9b048344a0bd21860986fb9a3ff32370fba5b 100644
+index 1fa23fbe2..783051ded 100644
 --- a/packages/coding-agent/test/suite/agent-session-prompt.test.ts
 +++ b/packages/coding-agent/test/suite/agent-session-prompt.test.ts
-@@ -40,6 +40,47 @@ describe("AgentSession prompt characterization", () => {
+@@ -40,6 +40,60 @@ describe("AgentSession prompt characterization", () => {
  		expect(harness.getPendingResponseCount()).toBe(0);
  	});
  
@@ -4361,40 +2950,104 @@ index 1fa23fbe29c3ee9d41dc53f01c93910e994772be..72b9b048344a0bd21860986fb9a3ff32
 +		expect(harness.session.agent.state.systemPrompt.split(immutableSystemPrompt)).toHaveLength(2);
 +	});
 +
++	it("changes the native default segment only when reload receives a new snapshot", async () => {
++		const harness = await createHarness({ defaultPrompt: "Initial default instructions." });
++		harnesses.push(harness);
++
++		expect(harness.session.agent.state.systemPrompt).toContain("Initial default instructions.");
++		await harness.session.reload({ defaultPrompt: "Updated default instructions." });
++
++		expect(harness.session.agent.state.systemPrompt).toContain("Updated default instructions.");
++		expect(harness.session.agent.state.systemPrompt).not.toContain("Initial default instructions.");
++		expect(harness.session.agent.state.systemPrompt).toContain("Available tools:");
++		expect(harness.session.agent.state.systemPrompt).toContain("Guidelines:");
++	});
++
  	it("handles a tool call turn and waits for the follow-up LLM response", async () => {
  		const toolRuns: string[] = [];
  		const echoTool: AgentTool = {
 diff --git a/packages/coding-agent/test/suite/harness.ts b/packages/coding-agent/test/suite/harness.ts
-index a1dd2ce26604399636f680c71d1fa82d4339ff89..3a88e0efde565f9e7d23222fbc16149b4a5fa70e 100644
+index a1dd2ce26..b62d19308 100644
 --- a/packages/coding-agent/test/suite/harness.ts
 +++ b/packages/coding-agent/test/suite/harness.ts
-@@ -64,6 +64,7 @@ export interface HarnessOptions {
+@@ -64,6 +64,8 @@ export interface HarnessOptions {
  	models?: FauxModelDefinition[];
  	settings?: Partial<Settings>;
  	systemPrompt?: string;
++	defaultPrompt?: string;
 +	immutableSystemPrompt?: string;
  	tools?: AgentTool[];
  	initialActiveToolNames?: string[];
  	allowedToolNames?: string[];
-@@ -191,6 +192,7 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
+@@ -191,6 +193,8 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
  		allowedToolNames: options.allowedToolNames,
  		excludedToolNames: options.excludedToolNames,
  		extensionRunnerRef,
++		defaultPrompt: options.defaultPrompt,
 +		immutableSystemPrompt: options.immutableSystemPrompt,
  	});
  
  	const events: AgentSessionEvent[] = [];
 diff --git a/packages/coding-agent/test/system-prompt.test.ts b/packages/coding-agent/test/system-prompt.test.ts
-index 6e38fcb0f22a3403f6ffa2a836b05fde09fcb865..a179d6fd24d029ae1eb3cc7cf9a9188ab8085873 100644
+index 6e38fcb0f..8e8e25670 100644
 --- a/packages/coding-agent/test/system-prompt.test.ts
 +++ b/packages/coding-agent/test/system-prompt.test.ts
-@@ -46,17 +46,17 @@ describe("buildSystemPrompt", () => {
+@@ -1,5 +1,5 @@
+ import { describe, expect, test } from "vitest";
+-import { buildSystemPrompt } from "../src/core/system-prompt.ts";
++import { DEFAULT_BASE_INSTRUCTIONS, buildSystemPrompt } from "../src/core/system-prompt.ts";
+ 
+ describe("buildSystemPrompt", () => {
+ 	describe("empty tools", () => {
+@@ -27,6 +27,23 @@ describe("buildSystemPrompt", () => {
+ 	});
+ 
+ 	describe("default tools", () => {
++		test("keeps the stable default instructions separate from dynamic sections", () => {
++			const prompt = buildSystemPrompt({
++				defaultPrompt: "Prefer small, reversible changes.",
++				selectedTools: ["read"],
++				toolSnippets: { read: "Read file contents" },
++				promptGuidelines: ["Check the result."],
++				contextFiles: [],
++				skills: [],
++				cwd: process.cwd(),
++			});
++
++			expect(prompt).toContain("Prefer small, reversible changes.\n\nAvailable tools:");
++			expect(prompt).toContain("- read: Read file contents");
++			expect(prompt).toContain("- Check the result.");
++			expect(prompt).not.toContain(DEFAULT_BASE_INSTRUCTIONS);
++		});
++
+ 		test("includes all default tools when snippets are provided", () => {
+ 			const prompt = buildSystemPrompt({
+ 				toolSnippets: {
+@@ -46,17 +63,35 @@ describe("buildSystemPrompt", () => {
  			expect(prompt).toContain("- write:");
  		});
  
 -		test("instructs models to resolve pi docs and examples under absolute base paths", () => {
 +		test("keeps the default base identity-neutral and free of unavailable Pi documentation", () => {
++			const prompt = buildSystemPrompt({
++				contextFiles: [],
++				skills: [],
++				cwd: process.cwd(),
++			});
++
++			expect(prompt).toContain("Available tools:");
++			expect(prompt).toContain(DEFAULT_BASE_INSTRUCTIONS);
++			expect(prompt).toContain("Guidelines:");
++			expect(prompt).not.toContain("You are an expert coding assistant operating inside pi");
++			expect(prompt).not.toContain("Pi documentation");
++		});
++	});
++
++	describe("custom system replacement", () => {
++		test("continues to bypass the factory or customized default segment", () => {
  			const prompt = buildSystemPrompt({
++				customPrompt: "Manual system replacement.",
++				defaultPrompt: "Customized default instructions.",
  				contextFiles: [],
  				skills: [],
  				cwd: process.cwd(),
@@ -4404,10 +3057,10 @@ index 6e38fcb0f22a3403f6ffa2a836b05fde09fcb865..a179d6fd24d029ae1eb3cc7cf9a9188a
 -				"- When reading pi docs or examples, resolve docs/... under Additional docs and examples/... under Examples, not the current working directory",
 -			);
 -			expect(prompt).toContain("environment variables (docs/environment-variables.md)");
-+			expect(prompt).toContain("Available tools:");
-+			expect(prompt).toContain("Guidelines:");
-+			expect(prompt).not.toContain("You are an expert coding assistant operating inside pi");
-+			expect(prompt).not.toContain("Pi documentation");
++			expect(prompt).toContain("Manual system replacement.");
++			expect(prompt).not.toContain("Customized default instructions.");
++			expect(prompt).not.toContain(DEFAULT_BASE_INSTRUCTIONS);
++			expect(prompt).not.toContain("Available tools:");
  		});
  	});
  

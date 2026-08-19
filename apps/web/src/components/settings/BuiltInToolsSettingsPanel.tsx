@@ -3,7 +3,7 @@
 // Layer: Settings UI
 // Depends on: ServerSettings intent, AgentGateway group availability, and shared Settings primitives.
 
-import type { BuiltInToolGroupId, ServerSettings } from "@omnimind/contracts";
+import type { BuiltInToolGroupId, ServerSettingsView } from "@omnimind/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 
@@ -60,7 +60,7 @@ export function BuiltInToolsSettingsPanel(props: { active: boolean }) {
         const nextSettings = await ensureNativeApi().server.updateSettings({
           agentTools: { disabledBuiltInGroups },
         });
-        queryClient.setQueryData<ServerSettings>(serverQueryKeys.settings(), nextSettings);
+        queryClient.setQueryData<ServerSettingsView>(serverQueryKeys.settings(), nextSettings);
         await queryClient.invalidateQueries({ queryKey: serverQueryKeys.builtInToolGroups() });
         if (generationRef.current === generation) {
           latestIntentRef.current = null;

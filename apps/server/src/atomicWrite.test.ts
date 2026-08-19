@@ -228,4 +228,57 @@ describe.skipIf(process.platform === "win32")("private atomic writes", () => {
       fs.rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it("runs an optional final guard without changing default replacement behavior", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-atomic-guard-"));
+    const filePath = path.join(directory, "state.json");
+    fs.writeFileSync(filePath, "old");
+    try {
+      await expect(
+        Effect.runPromise(
+          writeFileStringAtomically({
+            filePath,
+            contents: "new",
+            beforeReplace: async () => {
+              throw new Error("stale");
+            },
+          }).pipe(Effect.provide(NodeServices.layer)),
+        ),
+      ).rejects.toThrow("stale");
+      expect(fs.readFileSync(filePath, "utf8")).toBe("old");
+      expect(fs.readdirSync(directory).filter((entry) => entry.endsWith(".tmp"))).toEqual([]);
+
+      await Effect.runPromise(
+        writeFileStringAtomically({ filePath, contents: "default" }).pipe(
+          Effect.provide(NodeServices.layer),
+        ),
+      );
+      expect(fs.readFileSync(filePath, "utf8")).toBe("default");
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("supports atomic create placement without replacing a raced target", async () => {
+    const directory = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-atomic-create-"));
+    const filePath = path.join(directory, "state.json");
+    try {
+      await Effect.runPromise(
+        writeFileStringAtomically({ filePath, contents: "first", placement: "create" }).pipe(
+          Effect.provide(NodeServices.layer),
+        ),
+      );
+      await expect(
+        Effect.runPromise(
+          writeFileStringAtomically({ filePath, contents: "second", placement: "create" }).pipe(
+            Effect.provide(NodeServices.layer),
+          ),
+        ),
+      ).rejects.toMatchObject({ code: "EEXIST" });
+      expect(fs.readFileSync(filePath, "utf8")).toBe("first");
+      expect(fs.readdirSync(directory).filter((entry) => entry.endsWith(".tmp"))).toEqual([]);
+    } finally {
+      fs.rmSync(directory, { recursive: true, force: true });
+    }
+  });
 });

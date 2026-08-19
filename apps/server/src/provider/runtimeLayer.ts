@@ -21,6 +21,7 @@ import { makeOmniMindAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdap
 import { ProviderAdapterRegistryLive } from "./Layers/ProviderAdapterRegistry";
 import { ProviderDiscoveryServiceLive } from "./Layers/ProviderDiscoveryService";
 import { OmniMindEcosystemLive } from "./Layers/OmniMindEcosystem";
+import { OmniMindAgentPromptFilesLive } from "./Layers/OmniMindAgentPromptFiles";
 import { OmniMindModelServicesLive } from "./Layers/OmniMindModelServices";
 import { makeDurableProviderServiceLive } from "./Layers/ProviderService";
 import { ProviderSessionDirectoryLive } from "./Layers/ProviderSessionDirectory";
@@ -88,7 +89,11 @@ export function makeServerProviderLayer(
     ).pipe(Layer.provide(agentGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
     const omniMindAgentAdapterLayer = makeOmniMindAgentAdapterLive(
       nativeEventLogger ? { nativeEventLogger } : undefined,
-    ).pipe(Layer.provide(agentGatewayCredentialsLayer), Layer.provide(BrowserAutomationHostLive));
+    ).pipe(
+      Layer.provide(agentGatewayCredentialsLayer),
+      Layer.provide(BrowserAutomationHostLive),
+      Layer.provide(ServerSettingsLive),
+    );
     const adapterRegistryLayer = ProviderAdapterRegistryLive.pipe(
       Layer.provide(codexAdapterLayer),
       Layer.provide(claudeAdapterLayer),
@@ -119,10 +124,14 @@ export function makeServerProviderLayer(
       Layer.provide(providerServiceLayer),
     );
     const omniMindEcosystemLayer = OmniMindEcosystemLive.pipe(Layer.provide(providerServiceLayer));
+    const omniMindAgentPromptFilesLayer = OmniMindAgentPromptFilesLive.pipe(
+      Layer.provide(ServerSettingsLive),
+    );
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
       omniMindEcosystemLayer,
+      omniMindAgentPromptFilesLayer,
       omniMindModelServicesLayer,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,

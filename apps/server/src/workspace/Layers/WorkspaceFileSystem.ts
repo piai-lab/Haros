@@ -4,6 +4,7 @@ import * as NodeFs from "node:fs/promises";
 import * as NodePath from "node:path";
 
 import { isLocalAbsolutePath } from "@omnimind/shared/path";
+import { EDITABLE_TEXT_FILE_MAX_BYTES } from "@omnimind/contracts";
 import { Effect, Layer, Path } from "effect";
 
 import { resolveLocalPreviewGrantRealPath } from "../../localImageFiles";
@@ -23,7 +24,7 @@ import {
   resolveRealPathWithinRoot,
 } from "../realPathContainment";
 
-const DEFAULT_READ_FILE_MAX_BYTES = 1_000_000;
+const DEFAULT_READ_FILE_MAX_BYTES = EDITABLE_TEXT_FILE_MAX_BYTES;
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 function fileVersion(bytes: Uint8Array): string {

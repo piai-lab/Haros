@@ -89,6 +89,8 @@ export const writeFileStringAtomically = (input: {
   readonly filePath: string;
   readonly contents: string | Uint8Array;
   readonly mode?: number;
+  readonly beforeReplace?: () => Promise<void>;
+  readonly placement?: "replace" | "create";
 }) => {
   const directoryPath = path.dirname(input.filePath);
   const mode = input.mode ?? PRIVATE_FILE_MODE;
@@ -121,7 +123,13 @@ export const writeFileStringAtomically = (input: {
             }
             const pathStat = await fs.lstat(tempPath);
             assertSameRegularFile(descriptorStat, pathStat, tempPath);
-            await fs.rename(tempPath, input.filePath);
+            await input.beforeReplace?.();
+            if (input.placement === "create") {
+              await fs.link(tempPath, input.filePath);
+              await fs.unlink(tempPath);
+            } else {
+              await fs.rename(tempPath, input.filePath);
+            }
             await syncDirectoryEntry(directoryPath);
           },
           catch: (cause) => cause,

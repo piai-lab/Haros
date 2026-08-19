@@ -20,7 +20,34 @@ describe("WsRequestAdmission", () => {
     expect(classifyWsRequest(WS_METHODS.omnimindModelServicesDiscoverCustom)).toBe(
       "expensive-read",
     );
+    expect(classifyWsRequest(WS_METHODS.omnimindAgentPromptsGetSnapshot)).toBe("standard");
     expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
+  });
+
+  it("admits the bounded local prompt snapshot while both expensive-read leases are occupied", async () => {
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const admission = yield* makeWsRequestAdmission;
+        const first = yield* admission.acquire(1, ORCHESTRATION_WS_METHODS.getSnapshot);
+        const second = yield* admission.acquire(1, WS_METHODS.gitReadWorkingTreeDiff);
+
+        const promptSnapshot = yield* admission.acquire(
+          1,
+          WS_METHODS.omnimindAgentPromptsGetSnapshot,
+        );
+        expect(promptSnapshot.requestClass).toBe("standard");
+
+        yield* admission.release(first);
+        yield* admission.release(second);
+        yield* admission.release(promptSnapshot);
+        expect(yield* admission.snapshot).toMatchObject({
+          active: 0,
+          admittedTotal: 3,
+          releasedTotal: 3,
+          rejectedTotal: 0,
+        });
+      }),
+    );
   });
 
   it("reserves independent capacity for control traffic during an expensive-read flood", async () => {

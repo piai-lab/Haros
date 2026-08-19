@@ -66,7 +66,7 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 
 这四条规定产品结果。`omnimind` 与 `pi` 是两个真实 Provider identity，但仍服从同一个 inherited orchestration；这与重建通用多 Engine 平台不同。
 
-OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。production-adopted Synara head 是 exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`；当前安装的 OmniMind product bytes 来自 exact pushed commit `f943f0a1f033fbd221f8e076ab43811ec26f5c27`。它继承 `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 对 Project instructions、默认身份、Chat/Agent 与 Project trust contract 的闭合以及 `7c07184a9` 的稳定 Host context，并在同一 immutable engine contract 中补齐官方中文机构名“广东智慧医学国际研究院”；stock Pi 保持原生身份。持久 ThreadGoal 与逐回合 Todo 是两条独立责任：Goal 继续属于 inherited Thread/Product Orchestration；Todo 是 OmniMind-authored、product-bundled 的 Pi Session Extension，只向既有 canonical turn event 做薄投影。
+OmniMind Agent 当前技术 lineage/生态兼容基准是 Pi stable `v0.84.2`，之后使用自己的 runtime version；它不以 Pi version 作为长期产品身份。它使用独立构建或等价的 instance-level 配置，使全局与 project-local private state 都进入 `.omnimind`。stock Pi 仅在被用户显式选择时使用自己的 `.pi` native state；产品 reset、OmniMind Agent 和后台 discovery 都不得读取、迁移、同步或改写它。stock Pi 的实际 session runtime version 与可选本机 CLI version 必须分别呈现，不能互相冒充。production-adopted Synara head 是 exact `8f9f60045ea652db7d4a6822e2f723dde073f40a`；当前安装的 OmniMind product bytes 来自 exact pushed product commit `61bb9e471625186c7693c5b74588e4f6b0e4f956`。它继承既有 Project instructions、默认身份、Chat/Agent、Project trust 与稳定 Host context 的闭合，并增加当前 native Prompt 设置能力；官方中文机构名“广东智慧医学国际研究院”仍由同一 immutable engine contract 保证，stock Pi 保持原生身份。持久 ThreadGoal 与逐回合 Todo 是两条独立责任：Goal 继续属于 inherited Thread/Product Orchestration；Todo 是 OmniMind-authored、product-bundled 的 Pi Session Extension，只向既有 canonical turn event 做薄投影。
 
 ## 4. 来源、身份与结构
 
@@ -133,13 +133,14 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
       "paths": ["vendor/omnimind-pi-coding-agent-0.84.2.tgz", "patches/pi-coding-agent/0.84.2-model-config-reader.patch", "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
       "sourcePaths": ["packages/coding-agent"],
-      "archiveSha256": "aa47aec0a6b90e3e32385676aa444bad49f2b3efcc64275d2cd24f96f245deb9",
+      "archiveSha256": "b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7",
       "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.2",
       "upstreamPackageIntegrity": "sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==",
       "generation": {
         "sharedRuntimeBytes": "patched",
+        "factoryDefaultSeam": "The product runtime exports its stable identity-neutral default instruction segment and accepts one caller-supplied replacement as an input to the same native builder. Dynamic tools, guidelines, context, Skills, cwd, manual SYSTEM replacement and Extension mutation remain native; no second composer or Prompt registry is introduced.",
         "patchPath": "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
-        "patchSha256": "4a6e091990c7d6fe89c21da40d7866c4b5a6311e3c3797a76a4152e9cc21d506",
+        "patchSha256": "499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af",
         "stockPatchPath": "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
         "stockPatchSha256": "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77",
         "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
@@ -239,7 +240,7 @@ omni-harness
 
 Source Review 已记录 fixed source 的 exact comparison、全树 disposition 及其局限。Synara source adoption 的最终证据只覆盖当前产品范围；维护者已明确把签名、公证、Windows/Linux artifact/journey、GitHub Release 与 update feed 排除出本轮，而不是把它们列为 adoption 阻塞。
 
-当前本机安装与 macOS arm64 ad-hoc candidate 均来自 exact pushed commit `f943f0a1f033fbd221f8e076ab43811ec26f5c27`，DMG SHA-256 为 `bb64765aa7dd476f1b06ca92e522eb1a30566ec2bb9720b69cfeba90456df040`。同 SHA 的 staged production closure 闭合 240 个依赖身份，ZIP fresh-state smoke 与安装版 fresh profile 均完成启动、bundled Server ready、优雅关闭、同 profile 重开及再次关闭；Helper 的 `user-data-dir` 与 Server 日志/状态均位于任务专用 OmniMind home。request-level、reload、compaction 与 discovery 回归分别证明 OmniMind Chat/Agent 双语 identity、Extension replacement 后 immutable contract exactly once、Chat 无 Agent task authority、stock Pi 无 OmniMind identity、Project containment 与跨 trust tuple 空 placeholder；MiMo/DeepSeek source-adapter live journey 又证明身份回答、reload continuation、Host loader/tool 与稳定 Engine/Host 指纹，但不冒充 packaged UI journey 或 Provider cache 命中证据。其祖先 `3077bf253` 已真实验证 Engine picker 的十个 Engine 图标、中英文 readiness、可用数量汇总及未安装 Engine 的设置可达性；`58f76446d` 已验证 DeepSeek、Goal/continuation、Todo、Debug、宽屏、图标、Profile 与 Thread Group journey。该产物是本地未签名/未公证 candidate，不冒充 official release，也没有创建 GitHub Release 或修改 update feed；后续纯文档 SHA 不冒充 installed product bytes。
+当前 `/Applications/OmniMind.app` 来自 exact pushed product commit `61bb9e471625186c7693c5b74588e4f6b0e4f956`；macOS arm64 DMG SHA-256 为 `b3604c655750cf894923f6efdf78ff90d36cbd1a6c7b3323c5fe154de337943c`，安装副本 app.asar 为 `55391e5206248c6746445f910d7978feeb5f81ca3a6a5e2a1282bea1bc7e7b62`；asar 内嵌 commit 与该 pushed SHA 一致，240 项 staged legal identities闭合。本轮未生成与该 SHA 对应的 ZIP，目录中的旧 ZIP 不属于当前证据。任务专用 HOME、OmniMind home、显式 Electron userData 与 Provider private home 下的 fresh-profile journey 证明：内置默认与空 custom rules 首屏可用；两卡未保存草稿跨 Settings 分区切换保持同源；view/cancel 不创建 Prompt 文件；save、customized notice、安全 display path 与 Desktop Open 正常；同 profile 关闭重开保留值且 rules hash/mtime 不变；恢复 factory 回到当前安装版本内置正文。祖先 product `db25a5b91343a4ddbf70fedd98ea3583bd020317` 的 deterministic request capture、MiMo/DeepSeek、save/no-reload/reload、busy、remove 与 cache-stable digest 证据仍覆盖未被本轮 review 改动的 runtime 链。该产物是本地未签名、未公证 candidate，不冒充 official release，也没有创建 GitHub Release 或修改 update feed；F-22 保持 `candidate`，后续纯文档 SHA 不冒充 installed product bytes。
 
 旧 isolated Native Host、平行 Product Control Plane 与 Product Truth checkpoint 只作可追溯历史，不再定义生产 topology 或下一步。
 

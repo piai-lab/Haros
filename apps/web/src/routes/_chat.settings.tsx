@@ -42,6 +42,7 @@ import {
   NotificationsSettingsPanel,
 } from "~/components/settings/DesktopSettingsPanels";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
+import { PromptsSettingsPanel } from "~/components/settings/PromptsSettingsPanel";
 import {
   isProviderInstallSettingsDirty,
   ProvidersSettingsPanel,
@@ -125,6 +126,7 @@ const SETTINGS_SECTION_LABEL_KEY = {
   models: "settings.models",
   providers: "settings.providers",
   skills: "settings.skills",
+  prompts: "settings.prompts",
   usage: "settings.usage",
   "built-in-tools": "settings.builtInTools",
   integrations: "settings.integrations",
@@ -144,6 +146,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY = {
   models: "settings.modelsDescription",
   providers: "settings.providersDescription",
   skills: "settings.skillsDescription",
+  prompts: "settings.promptsDescription",
   usage: "settings.usagePanelDescription",
   "built-in-tools": "settings.builtInToolsDescription",
   integrations: "settings.integrationsDescription",
@@ -1292,16 +1295,18 @@ function SettingsRouteView() {
                             : t(SETTINGS_SECTION_DESCRIPTION_KEY[activeSection])}
                     </p>
                   </div>
-                  <Button
-                    size="xs"
-                    variant="outline"
-                    className="shrink-0"
-                    disabled={changedSettingLabels.length === 0}
-                    onClick={() => void restoreDefaults()}
-                  >
-                    <RotateCcwIcon className="size-3.5" />
-                    {t("settings.restoreDefaults")}
-                  </Button>
+                  {activeSection !== "prompts" ? (
+                    <Button
+                      size="xs"
+                      variant="outline"
+                      className="shrink-0"
+                      disabled={changedSettingLabels.length === 0}
+                      onClick={() => void restoreDefaults()}
+                    >
+                      <RotateCcwIcon className="size-3.5" />
+                      {t("settings.restoreDefaults")}
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
 
@@ -1338,6 +1343,7 @@ function SettingsRouteView() {
                   resetEpoch={resetEpoch}
                 />
                 <BuiltInToolsSettingsPanel active={activeSection === "built-in-tools"} />
+                <PromptsSettingsPanel active={activeSection === "prompts"} />
                 <ExternalConnectionsSettingsPanel active={activeSection === "integrations"} />
                 <AdvancedSettingsPanel
                   active={activeSection === "advanced"}

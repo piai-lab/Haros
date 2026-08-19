@@ -1,5 +1,6 @@
 import {
   WS_GITHUB_PROJECT_PROVISIONING_CAPABILITY,
+  WS_OMNIMIND_AGENT_PROMPTS_CAPABILITY,
   WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
   WS_OMNIMIND_MODEL_SERVICES_CAPABILITY,
   type NativeApi,
@@ -54,6 +55,12 @@ export function readNativeApiServerCapabilityState(capability: string): boolean 
       return (
         typeof window.nativeApi.omnimindEcosystem?.list === "function" &&
         typeof window.nativeApi.omnimindEcosystem?.listResources === "function"
+      );
+    }
+    if (capability === WS_OMNIMIND_AGENT_PROMPTS_CAPABILITY) {
+      return (
+        typeof window.nativeApi.omnimindAgentPrompts?.getSnapshot === "function" &&
+        typeof window.nativeApi.omnimindAgentPrompts?.mutate === "function"
       );
     }
     return false;

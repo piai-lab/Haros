@@ -97,6 +97,17 @@ describe("rankSettingsSearchEntries", () => {
     });
     expect(SETTINGS_TARGETS.gitWritingModel).toBe("setting-git-writing-model");
   });
+
+  it("routes prompt search results to the two product-owned editors", () => {
+    const defaultEntry = SETTINGS_SEARCH_ENTRIES.find(
+      (candidate) => candidate.id === "prompts:default-prompt",
+    )!;
+    const rulesEntry = SETTINGS_SEARCH_ENTRIES.find(
+      (candidate) => candidate.id === "prompts:custom-rules",
+    )!;
+    expect(settingsSearchEntryTarget(defaultEntry)).toBe(SETTINGS_TARGETS.defaultPrompt);
+    expect(settingsSearchEntryTarget(rulesEntry)).toBe(SETTINGS_TARGETS.customRules);
+  });
 });
 
 describe("SettingsSidebarNav", () => {
@@ -117,13 +128,14 @@ describe("SettingsSidebarNav", () => {
 
     expect(markup).toContain("Personal");
     expect(markup).toContain("Integrations");
-    expect(markup).toContain("Coding");
+    expect(markup).toContain("Development");
     expect(markup).toContain("System");
     expect(markup).toContain("Archived");
     expect(markup).toContain("Chat behavior");
     expect(markup).toContain("Built-in tools");
     expect(markup).toContain("External connections");
     expect(markup).toContain("Agent engines");
+    expect(markup).toContain("Prompts");
     expect(markup).toContain("Managed worktrees");
     expect(markup).toContain("System tools");
     expect(markup).toContain("Archived tasks and chats");
