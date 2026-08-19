@@ -1,26 +1,17 @@
 // FILE: PromptsSettingsPanel.browser.tsx
-// Purpose: Locks the two-card Prompt settings journey and explicit reload separation.
+// Purpose: Locks the provider-global two-card Prompt settings journey.
 // Layer: Browser UI test
 
 import "../../index.css";
 
 import {
   OMNIMIND_AGENT_PROMPT_MAX_BYTES,
-  ThreadId,
   type NativeApi,
   type OmniMindAgentPromptSnapshot,
 } from "@omnimind/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
-
-const reloadTargetHarness = vi.hoisted(() => ({
-  threadId: null as ReturnType<typeof ThreadId.makeUnsafe> | null,
-}));
-
-vi.mock("./promptReloadTarget", () => ({
-  resolvePromptReloadThreadId: () => reloadTargetHarness.threadId,
-}));
 
 import { PromptsSettingsPanel } from "./PromptsSettingsPanel";
 
@@ -99,7 +90,6 @@ function installApi(input: {
 
 describe("PromptsSettingsPanel", () => {
   afterEach(() => {
-    reloadTargetHarness.threadId = null;
     delete window.nativeApi;
     delete window.desktopBridge;
     window.localStorage.clear();
@@ -120,7 +110,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -136,6 +126,12 @@ describe("PromptsSettingsPanel", () => {
         ),
       ).toHaveLength(1);
     }
+    await expect
+      .element(screen.getByText("Current conversation resources"))
+      .not.toBeInTheDocument();
+    await expect
+      .element(screen.getByRole("button", { name: "Reload current conversation resources" }))
+      .not.toBeInTheDocument();
 
     const rules = screen.getByRole("textbox", { name: "Custom rules" });
     await rules.fill("draft only");
@@ -221,7 +217,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -247,7 +243,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -264,7 +260,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "Customized for OmniMind Agent. Saved changes require an explicit conversation reload.",
+          "Customized for OmniMind Agent. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -279,7 +275,7 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(
         screen.getByText(
-          "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+          "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
         ),
       )
       .toBeVisible();
@@ -451,61 +447,5 @@ describe("PromptsSettingsPanel", () => {
       await screen.unmount();
       await page.viewport(1280, 720);
     }
-  });
-
-  it("projects every explicit reload result separately from saved settings", async () => {
-    reloadTargetHarness.threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000021");
-    const reload = vi
-      .fn()
-      .mockResolvedValueOnce({ state: "reloaded" })
-      .mockResolvedValueOnce({ state: "busy" })
-      .mockResolvedValueOnce({ state: "no_active_session" })
-      .mockResolvedValueOnce({ state: "different_engine" })
-      .mockRejectedValueOnce(new Error("reload failed"));
-    installApi({ reload });
-
-    const screen = await render(<PromptsSettingsPanel active />);
-    const button = screen.getByRole("button", { name: "Reload current conversation resources" });
-    await button.click();
-    await expect
-      .element(
-        screen.getByText("Reloaded. Messages sent next will use the current prompt settings."),
-      )
-      .toBeVisible();
-    await button.click();
-    await expect
-      .element(
-        screen.getByText(
-          "This conversation is currently running. Saved changes do not affect the work in progress.",
-        ),
-      )
-      .toBeVisible();
-    await button.click();
-    await expect
-      .element(
-        screen.getByText(
-          "No active session needed reloading. The conversation will use current prompt settings when it starts again.",
-        ),
-      )
-      .toBeVisible();
-    await button.click();
-    await expect
-      .element(
-        screen.getByText(
-          "The remembered conversation no longer uses OmniMind Agent. Start or return to an OmniMind Agent conversation to reload it.",
-        ),
-      )
-      .toBeVisible();
-    reloadTargetHarness.threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000021");
-    await button.click();
-    await expect
-      .element(
-        screen.getByText(
-          "Changes remain saved, but conversation resources could not be reloaded. Try again or start a new conversation.",
-        ),
-      )
-      .toBeVisible();
-    expect(reload).toHaveBeenCalledTimes(5);
-    await screen.unmount();
   });
 });

@@ -578,8 +578,6 @@ describe("reachable OmniMind-owned product copy", () => {
           key.startsWith("settings.prompt") ||
           key.startsWith("settings.customRules") ||
           key.startsWith("settings.removeCustomRules") ||
-          key.startsWith("settings.currentConversation") ||
-          key.startsWith("settings.reloadConversation") ||
           key.startsWith("settings.shadowedPrompt") ||
           key.startsWith("settings.projectPrompt") ||
           key.startsWith("settings.activePrompt") ||

@@ -6,7 +6,6 @@ import {
   editableTextByteLength,
   hasDisallowedEditableTextControl,
   hasUnpairedUtf16Surrogate,
-  ThreadId,
   type OmniMindAgentPromptMutationResult,
   type OmniMindAgentPromptSnapshot,
 } from "@omnimind/contracts";
@@ -33,7 +32,6 @@ import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
-import { resolvePromptReloadThreadId } from "./promptReloadTarget";
 
 type EditorKind = "defaultPrompt" | "customRules";
 type EditorConflict = {
@@ -56,11 +54,6 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
   const [loadError, setLoadError] = useState(false);
   const [loadRetrying, setLoadRetrying] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
-  const [reloadThreadId, setReloadThreadId] = useState<ThreadId | null>(null);
-  const [reloadState, setReloadState] = useState<
-    "reloaded" | "no_active_session" | "different_engine" | "busy" | "failed" | null
-  >(null);
-  const [reloading, setReloading] = useState(false);
 
   const clearConflict = (editor: EditorKind) => {
     setConflicts((current) => {
@@ -94,11 +87,6 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     const next = await ensureNativeApi().omnimindAgentPrompts.getSnapshot({});
     adoptSnapshot(next);
   };
-
-  useEffect(() => {
-    if (!props.active) return;
-    setReloadThreadId(resolvePromptReloadThreadId());
-  }, [props.active]);
 
   useEffect(() => {
     if (!props.active || snapshot !== null) return;
@@ -156,7 +144,6 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     }
     adoptSnapshot(result.snapshot, editor);
     clearConflict(editor);
-    if (result.state === "changed") setReloadState(null);
     toastManager.add({
       type: "success",
       title:
@@ -259,23 +246,6 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
       });
     } finally {
       setPendingEditor(null);
-    }
-  };
-
-  const reload = async () => {
-    if (!reloadThreadId || reloading) return;
-    setReloading(true);
-    setReloadState(null);
-    try {
-      const result = await ensureNativeApi().omnimindEcosystem.reload({
-        threadId: reloadThreadId,
-      });
-      setReloadState(result.state);
-      if (result.state === "different_engine") setReloadThreadId(resolvePromptReloadThreadId());
-    } catch {
-      setReloadState("failed");
-    } finally {
-      setReloading(false);
     }
   };
 
@@ -554,38 +524,6 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
               </div>
             </div>
           </div>
-        </SettingsCard>
-      </SettingsSectionShell>
-
-      <SettingsSectionShell title={t("settings.currentConversationResources")}>
-        <SettingsCard divided={false}>
-          <div className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <p className="min-w-0 flex-1 text-xs leading-relaxed text-muted-foreground">
-              {reloadThreadId
-                ? t("settings.promptReloadAvailable")
-                : t("settings.promptReloadUnavailable")}
-            </p>
-            {reloadThreadId ? (
-              <Button size="sm" disabled={reloading} onClick={() => void reload()}>
-                {reloading
-                  ? t("settings.reloadingResources")
-                  : t("settings.reloadConversationResources")}
-              </Button>
-            ) : null}
-          </div>
-          {reloadState ? (
-            <p className="border-t border-border/70 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-              {reloadState === "reloaded"
-                ? t("settings.promptReloaded")
-                : reloadState === "busy"
-                  ? t("settings.promptReloadBusy")
-                  : reloadState === "no_active_session"
-                    ? t("settings.promptReloadNoSession")
-                    : reloadState === "different_engine"
-                      ? t("settings.promptReloadDifferentEngine")
-                      : t("settings.promptReloadFailed")}
-            </p>
-          ) : null}
         </SettingsCard>
       </SettingsSectionShell>
 
