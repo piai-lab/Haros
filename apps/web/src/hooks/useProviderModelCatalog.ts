@@ -17,6 +17,7 @@ import { resolveRuntimeModelDescriptor } from "../components/chat/runtimeModelCa
 import { COMPOSER_PROVIDER_KINDS } from "../composerDraftModels";
 import { collapseCursorModelVariants } from "../cursorModelVariants";
 import {
+  isInitialModelDiscoveryPending,
   providerAgentsQueryOptions,
   providerModelsQueryOptions,
 } from "../lib/providerDiscoveryReactQuery";
@@ -103,11 +104,8 @@ export function useProviderModelCatalog(input: {
    * Picker surfaces can omit this to use the visible-provider list from settings.
    */
   prefetchProviders?: ReadonlyArray<ProviderKind>;
-  /** Preserve eager Claude/Codex agent discovery on surfaces that already prefetch both. */
-  agentDiscoveryPolicy?: "selected" | "eager-core";
 }): ProviderModelCatalog {
   const { selectedProvider, discoveryEnabled, modelHintByProvider } = input;
-  const agentDiscoveryPolicy = input.agentDiscoveryPolicy ?? "selected";
   const discoveryCwd = input.cwd ?? null;
   const { settings, serverSettings } = useAppSettings();
   const customModelsByProvider = useMemo(() => getCustomModelsByProvider(settings), [settings]);
@@ -239,16 +237,27 @@ export function useProviderModelCatalog(input: {
   );
 
   // Agent/mode discovery (kilo/opencode "Mode"/"Agent" picker, claude/codex subagents).
+  // Models are send-critical; agent metadata is secondary. Sequencing them
+  // prevents a newly mounted ChatView from spending both expensive-read leases
+  // before the selected Engine's model catalog has settled.
+  const claudeAgentDiscoveryEnabled =
+    claudeModelDiscoveryEnabled && !isInitialModelDiscoveryPending(claudeDynamicModelsQuery);
+  const codexAgentDiscoveryEnabled =
+    codexModelDiscoveryEnabled && !isInitialModelDiscoveryPending(codexDynamicModelsQuery);
+  const openCodeAgentDiscoveryEnabled =
+    openCodeModelDiscoveryEnabled && !isInitialModelDiscoveryPending(openCodeDynamicModelsQuery);
+  const kiloAgentDiscoveryEnabled =
+    kiloModelDiscoveryEnabled && !isInitialModelDiscoveryPending(kiloDynamicModelsQuery);
   const claudeDynamicAgentsQuery = useQuery(
     providerAgentsQueryOptions({
       provider: "claudeAgent",
-      enabled: shouldDiscoverProvider("claudeAgent", agentDiscoveryPolicy === "eager-core"),
+      enabled: claudeAgentDiscoveryEnabled,
     }),
   );
   const codexDynamicAgentsQuery = useQuery(
     providerAgentsQueryOptions({
       provider: "codex",
-      enabled: shouldDiscoverProvider("codex", agentDiscoveryPolicy === "eager-core"),
+      enabled: codexAgentDiscoveryEnabled,
     }),
   );
   const openCodeDynamicAgentsQuery = useQuery(
@@ -256,7 +265,7 @@ export function useProviderModelCatalog(input: {
       provider: "opencode",
       binaryPath: settings.openCodeBinaryPath || null,
       cwd: discoveryCwd,
-      enabled: openCodeModelDiscoveryEnabled,
+      enabled: openCodeAgentDiscoveryEnabled,
     }),
   );
   const kiloDynamicAgentsQuery = useQuery(
@@ -264,7 +273,7 @@ export function useProviderModelCatalog(input: {
       provider: "kilo",
       binaryPath: settings.kiloBinaryPath || null,
       cwd: discoveryCwd,
-      enabled: kiloModelDiscoveryEnabled,
+      enabled: kiloAgentDiscoveryEnabled,
     }),
   );
 
@@ -606,18 +615,18 @@ export function useProviderModelCatalog(input: {
   const selectedAgentCatalog =
     selectedProvider === "claudeAgent"
       ? {
-          enabled: shouldDiscoverProvider("claudeAgent", agentDiscoveryPolicy === "eager-core"),
+          enabled: claudeAgentDiscoveryEnabled,
           query: claudeDynamicAgentsQuery,
         }
       : selectedProvider === "codex"
         ? {
-            enabled: shouldDiscoverProvider("codex", agentDiscoveryPolicy === "eager-core"),
+            enabled: codexAgentDiscoveryEnabled,
             query: codexDynamicAgentsQuery,
           }
         : selectedProvider === "kilo"
-          ? { enabled: kiloModelDiscoveryEnabled, query: kiloDynamicAgentsQuery }
+          ? { enabled: kiloAgentDiscoveryEnabled, query: kiloDynamicAgentsQuery }
           : selectedProvider === "opencode"
-            ? { enabled: openCodeModelDiscoveryEnabled, query: openCodeDynamicAgentsQuery }
+            ? { enabled: openCodeAgentDiscoveryEnabled, query: openCodeDynamicAgentsQuery }
             : null;
   const selectedDynamicAgents =
     !selectedAgentCatalog?.enabled ||

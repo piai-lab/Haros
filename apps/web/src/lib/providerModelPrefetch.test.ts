@@ -239,15 +239,16 @@ describe("prefetchProviderModelsForNewThread", () => {
       cwd: "/tmp/project",
     });
 
-    expect(prefetchQuery).toHaveBeenCalledTimes(3);
+    expect(prefetchQuery).toHaveBeenCalledTimes(2);
     expect(prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(
       providerDiscoveryQueryKeys.models("kilo", "/bin/kilo", null, null, "/tmp/project"),
     );
     expect(prefetchQuery.mock.calls[1]?.[0].queryKey).toEqual(
-      providerDiscoveryQueryKeys.agents("kilo", "/bin/kilo", "/tmp/project"),
-    );
-    expect(prefetchQuery.mock.calls[2]?.[0].queryKey).toEqual(
       providerDiscoveryQueryKeys.composerCapabilities("kilo"),
+    );
+    await vi.waitFor(() => expect(prefetchQuery).toHaveBeenCalledTimes(3));
+    expect(prefetchQuery.mock.calls[2]?.[0].queryKey).toEqual(
+      providerDiscoveryQueryKeys.agents("kilo", "/bin/kilo", "/tmp/project"),
     );
   });
 
@@ -314,7 +315,10 @@ describe("prefetchProviderModelsForNewThread", () => {
       expect(listModels).toHaveBeenCalledTimes(1);
       expect(getComposerCapabilities).toHaveBeenCalledTimes(1);
     });
-    expect(listModels).toHaveBeenCalledWith({ provider: "omnimind" });
+    expect(listModels).toHaveBeenCalledWith(
+      { provider: "omnimind" },
+      { signal: expect.any(AbortSignal) },
+    );
   });
 
   it("shares one in-flight React Query request for the same selected Engine intent", async () => {
@@ -344,10 +348,13 @@ describe("prefetchProviderModelsForNewThread", () => {
       expect(listModels).toHaveBeenCalledTimes(1);
       expect(getComposerCapabilities).toHaveBeenCalledTimes(1);
     });
-    expect(listModels).toHaveBeenCalledWith({
-      provider: "droid",
-      binaryPath: "/bin/droid",
-      cwd: "/tmp/project",
-    });
+    expect(listModels).toHaveBeenCalledWith(
+      {
+        provider: "droid",
+        binaryPath: "/bin/droid",
+        cwd: "/tmp/project",
+      },
+      { signal: expect.any(AbortSignal) },
+    );
   });
 });
