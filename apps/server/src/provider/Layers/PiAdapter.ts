@@ -81,18 +81,16 @@ import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
 import {
-  deactivateUnavailableAgentGatewayHostProjection,
-  ensureAgentGatewayHostToolsActive,
+  assertAgentGatewayHostToolsDelivered,
   inspectAgentGatewayHostExtensionRegistration,
-  makeAgentGatewayHostExtension,
 } from "../agentGatewayHostExtension.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
 import {
   inspectOmniMindTaskListExtensionRegistration,
-  makeOmniMindTaskListExtension,
   OMNIMIND_TASK_LIST_TOOL_NAME,
 } from "../omnimindTaskListExtension.ts";
+import { buildOmniMindSessionExtensions } from "../omnimindSessionExtensions.ts";
 import {
   PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
   type ProviderAdapterShape,
@@ -466,7 +464,6 @@ const OMNIMIND_AGENT_FAMILY = {
 interface PiSessionContext {
   readonly agentDir: string;
   appliedModelRuntimeMutationRevision: number;
-  readonly gatewayControlAvailable: boolean;
   readonly workSurface?: ProviderWorkSurface;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
@@ -975,7 +972,6 @@ export function makePiHostSystemPrompt(input: {
   readonly provider: ProviderKind;
   readonly gatewayControlAvailable: boolean;
   readonly enabledBuiltInGroups?: ReadonlyArray<BuiltInToolGroupId>;
-  readonly dynamicHostTools?: boolean;
 }): string {
   return [
     "<omnimind_host_context>",
@@ -984,12 +980,10 @@ export function makePiHostSystemPrompt(input: {
         provider: input.provider,
         scopedGatewayConnectionAvailable: input.gatewayControlAvailable,
       }),
-      projection: input.dynamicHostTools
-        ? { mode: "dynamic" }
-        : {
-            mode: "direct",
-            enabledGroups: input.enabledBuiltInGroups ?? [],
-          },
+      projection: {
+        mode: "direct",
+        enabledGroups: input.enabledBuiltInGroups ?? [],
+      },
     }),
     "</omnimind_host_context>",
   ].join("\n");
@@ -2530,7 +2524,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       thinkingLevel?: ThinkingLevel;
       processSupervisor: PiBashProcessSupervisor;
       gatewayTools?: ReadonlyArray<ToolDefinition>;
-      gatewayDescriptors?: ReadonlyArray<AgentGatewayMcpToolDescriptor>;
       gatewayConnection?: AgentGatewayMcpConnection;
       agentGatewayFetch?: AgentGatewayMcpFetch;
       onTaskListUpdate?: (input: {
@@ -2552,49 +2545,23 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         sessionManager,
         sessionStartEvent,
       }) => {
-        const taskListExtension =
-          provider === "omnimind" &&
-          input.workSurface === "agent" &&
-          input.onTaskListUpdate !== undefined
-            ? makeOmniMindTaskListExtension({
+        const composition =
+          provider === "omnimind"
+            ? buildOmniMindSessionExtensions({
                 defineTool: (tool) => input.sdk.defineTool(tool),
-                onTasksUpdated: input.onTaskListUpdate,
-              })
-            : undefined;
-        const hostExtensionHandle =
-          provider === "omnimind" &&
-          input.gatewayConnection !== undefined &&
-          (input.gatewayDescriptors?.length ?? 0) > 0
-            ? makeAgentGatewayHostExtension({
-                descriptors: input.gatewayDescriptors ?? [],
-                connection: input.gatewayConnection,
-                defineTool: (tool) => input.sdk.defineTool(tool),
+                ...(input.workSurface === undefined ? {} : { workSurface: input.workSurface }),
+                ...(input.gatewayConnection === undefined
+                  ? {}
+                  : { gatewayConnection: input.gatewayConnection }),
                 ...(input.agentGatewayFetch === undefined
                   ? {}
-                  : { fetch: input.agentGatewayFetch }),
-                loadCurrentlyExposedToolNames: async (signal) =>
-                  new Set(
-                    (
-                      await listAgentGatewayMcpTools({
-                        connection: input.gatewayConnection!,
-                        ...(input.agentGatewayFetch === undefined
-                          ? {}
-                          : { fetch: input.agentGatewayFetch }),
-                        ...(signal === undefined ? {} : { signal }),
-                      })
-                    )
-                      .filter((tool) => tool.provenance === "agent-gateway")
-                      .map(({ name }) => name),
-                  ),
-                onDiagnostic: (diagnostic) => {
-                  hostProjectionDiagnostics.push(`${diagnostic.kind}:${diagnostic.name}`);
-                },
+                  : { gatewayFetch: input.agentGatewayFetch }),
+                ...(input.onTaskListUpdate === undefined
+                  ? {}
+                  : { onTasksUpdated: input.onTaskListUpdate }),
               })
-            : null;
-        const inlineExtensions = [
-          ...(taskListExtension === undefined ? [] : [taskListExtension]),
-          ...(hostExtensionHandle === null ? [] : [hostExtensionHandle.extension]),
-        ];
+            : { extensions: [] };
+        const inlineExtensions = composition.extensions;
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
@@ -2621,14 +2588,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...(settingsManager === undefined ? {} : { settingsManager }),
           resourceLoaderOptions,
         });
-        if (hostExtensionHandle !== null) {
-          const inspection = inspectAgentGatewayHostExtensionRegistration({
-            extensions: services.resourceLoader.getExtensions(),
-            candidateToolNames: hostExtensionHandle.candidateToolNames,
-          });
-          resolvedGatewayControlAvailable = inspection.available;
-          hostProjectionDiagnostics.push(...inspection.diagnostics);
-        }
         const registry = modelRegistryFacade(services.modelRuntime, input.sdk);
         const model = findModelInRegistry(registry, input.modelId);
         if (input.modelId && !model) {
@@ -2660,11 +2619,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ],
         };
         const createdSession = await input.sdk.createAgentSessionFromServices(agentSessionOptions);
-        if (hostExtensionHandle !== null && !resolvedGatewayControlAvailable) {
-          deactivateUnavailableAgentGatewayHostProjection({
-            session: createdSession.session,
-            candidateToolNames: hostExtensionHandle.candidateToolNames,
+        if (composition.host !== undefined) {
+          const inspection = inspectAgentGatewayHostExtensionRegistration({
+            extensions: services.resourceLoader.getExtensions(),
+            tools: createdSession.session.getAllTools(),
           });
+          resolvedGatewayControlAvailable = inspection.available;
+          hostProjectionDiagnostics.push(...inspection.diagnostics);
         }
         return {
           ...createdSession,
@@ -2778,36 +2739,40 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const agentGatewayConnection = agentGatewaySessionLease?.connection;
         let gatewayToolLoadFailed = false;
         let enabledBuiltInGroups: ReadonlyArray<BuiltInToolGroupId> = [];
-        const gatewayDescriptors = agentGatewayConnection
-          ? yield* releaseAgentGatewaySessionLeaseOnInterrupt(
-              agentGatewaySessionLease,
-              Effect.tryPromise({
-                try: () =>
-                  listAgentGatewayMcpTools({
-                    connection: agentGatewayConnection,
-                    ...(options?.agentGatewayFetch === undefined
-                      ? {}
-                      : { fetch: options.agentGatewayFetch }),
-                  }),
-                catch: (cause) => cause,
-              }),
-            ).pipe(
-              Effect.catch(() =>
-                Effect.sync(() => {
-                  gatewayToolLoadFailed = true;
-                  agentGatewaySessionLease?.release();
-                }).pipe(
-                  Effect.andThen(
-                    Effect.logWarning("Pi could not install thread-scoped OmniMind gateway tools", {
-                      provider,
-                      reason: "gateway-discovery-failed",
+        const gatewayDescriptors =
+          agentGatewayConnection && provider !== "omnimind"
+            ? yield* releaseAgentGatewaySessionLeaseOnInterrupt(
+                agentGatewaySessionLease,
+                Effect.tryPromise({
+                  try: () =>
+                    listAgentGatewayMcpTools({
+                      connection: agentGatewayConnection,
+                      ...(options?.agentGatewayFetch === undefined
+                        ? {}
+                        : { fetch: options.agentGatewayFetch }),
                     }),
+                  catch: (cause) => cause,
+                }),
+              ).pipe(
+                Effect.catch(() =>
+                  Effect.sync(() => {
+                    gatewayToolLoadFailed = true;
+                    agentGatewaySessionLease?.release();
+                  }).pipe(
+                    Effect.andThen(
+                      Effect.logWarning(
+                        "Pi could not install thread-scoped OmniMind gateway tools",
+                        {
+                          provider,
+                          reason: "gateway-discovery-failed",
+                        },
+                      ),
+                    ),
+                    Effect.as([] as ReadonlyArray<AgentGatewayMcpToolDescriptor>),
                   ),
-                  Effect.as([] as ReadonlyArray<AgentGatewayMcpToolDescriptor>),
                 ),
-              ),
-            )
-          : [];
+              )
+            : [];
         enabledBuiltInGroups = agentGatewayGroupsFromToolDescriptors(gatewayDescriptors);
         const gatewayTools =
           provider === "omnimind" || !agentGatewayConnection
@@ -2820,7 +2785,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ? {}
                   : { fetch: options.agentGatewayFetch }),
               });
-        if (gatewayDescriptors.length === 0) {
+        if (provider !== "omnimind" && gatewayDescriptors.length === 0) {
           agentGatewaySessionLease?.release();
         }
         let taskProjectionContext: PiSessionContext | undefined;
@@ -2838,9 +2803,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   ...(thinkingLevel ? { thinkingLevel } : {}),
                   processSupervisor,
                   ...(gatewayTools.length > 0 ? { gatewayTools } : {}),
-                  ...(provider === "omnimind" && gatewayDescriptors.length > 0
+                  ...(provider === "omnimind" && agentGatewayConnection !== undefined
                     ? {
-                        gatewayDescriptors,
                         gatewayConnection: agentGatewayConnection!,
                         ...(options?.agentGatewayFetch === undefined
                           ? {}
@@ -2877,13 +2841,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   hostSystemPrompt: (available) =>
                     makePiHostSystemPrompt({
                       provider,
-                      gatewayControlAvailable: available,
+                      gatewayControlAvailable:
+                        provider === "omnimind" ? agentGatewayConnection !== undefined : available,
                       enabledBuiltInGroups,
-                      // Projection mode is a stable Engine fact. Pi's active
-                      // Registry reports whether the loader/tools actually
-                      // exist; that runtime result must not rewrite this
-                      // global Host block on reload.
-                      dynamicHostTools: provider === "omnimind",
                     }),
                   ...(provider === "omnimind" && workSurface !== undefined
                     ? {
@@ -2906,9 +2866,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               }),
             ),
           );
-        if (!gatewayControlAvailable) {
-          agentGatewaySessionLease?.release();
-        }
         const now = new Date().toISOString();
         const model = runtime.session.model
           ? `${runtime.session.model.provider}/${runtime.session.model.id}`
@@ -2933,9 +2890,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           agentDir,
           appliedModelRuntimeMutationRevision:
             provider === "omnimind" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
-          gatewayControlAvailable,
           ...(workSurface === undefined ? {} : { workSurface }),
-          ...(gatewayControlAvailable && agentGatewaySessionLease
+          ...(agentGatewaySessionLease
             ? {
                 gatewaySessionLease: agentGatewaySessionLease,
                 gatewayConnection: agentGatewayConnection!,
@@ -3220,7 +3176,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           }
           const promptRequiredNames = promptRequiredAgentGatewayToolNames(dispatchContext);
           if (provider === "omnimind" && promptRequiredNames.length > 0) {
-            if (!context.gatewayControlAvailable || context.gatewayConnection === undefined) {
+            if (context.gatewayConnection === undefined) {
               return yield* new ProviderAdapterValidationError({
                 provider,
                 operation: "sendTurn",
@@ -3236,8 +3192,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     ? {}
                     : { fetch: options.agentGatewayFetch }),
                 });
-                ensureAgentGatewayHostToolsActive({
-                  session: context.runtime.session,
+                assertAgentGatewayHostToolsDelivered({
+                  tools: context.runtime.session.getAllTools(),
                   requiredNames: promptRequiredNames,
                   currentlyExposedNames: new Set(
                     currentlyExposed
