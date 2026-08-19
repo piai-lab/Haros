@@ -6,7 +6,7 @@ Updated: 2026-08-19
 
 ## 当前目标
 
-Agent tools Gate B 已完成 source integration：AgentGateway Host tools 只在 canonical `omnimind` Provider 中作为 named hidden Pi Extension 参与原生 Dynamic Tool Loading，同时保留 stock Pi 与其他 Engine 的 direct/eager projection。当前职责是维持该 owner 边界与证据门槛，不再保留并行候选路线。
+当前闭合关注点是 OmniMind Agent 全局提示词设置：在 `Settings → Development / 开发 → Prompts / 提示词` 中提供全局个人指令与折叠高级文件的真实文件入口，复用 bundled runtime 的原生 discovery、precedence、composition、Session snapshot 与 exact-thread reload，并以 Host 的窄安全投影/mutation seam 防止越界和静默覆盖。它不建立第二 Prompt runtime、registry/profile/history/cache，也不管理 Project rules、模板、其他 Engine 或 raw effective Prompt。
 
 1. 一份 AgentGateway canonical catalog 同时拥有 name/schema/group、availability、execution 与 call-time policy；
 2. fresh 默认开放的 Built-in tools policy 覆盖所有 Agent，新 Session 过滤、旧 Session 新调用实时拒绝；
@@ -31,7 +31,7 @@ Agent tools Gate B 已完成 source integration：AgentGateway Host tools 只在
 - OmniMind Provider的dynamic Host projection mode现作为创建前已知的稳定Engine事实进入generic Host block；Gateway registration/active availability仍由Pi Registry与Extension拥有。首轮、loader activation、rollback、resource reload、resume与Chat的request-capture证明同一Host block保持一致，不再出现“active loader”与“MCP unavailable”并存，也没有增加第二次reload、Registry、active store或Pi patch。
 - Provider admission 从同一份 canonical Project snapshot 派生 surface、effective cwd 与 Project/worktree root，只为 bundled `omnimind` 随现有 binding recovery/rollback 传递，其他 Provider admission 丢弃这些字段。Chat 与无 active Session discovery 保持 untrusted/global-only，skills/commands 的 Thread/Session key 变化使用固定空 placeholder，不会短暂沿用上一 trust tuple。
 - exact merge 的全量测试、typecheck、build、lint、document contract、license、Pi fixed-revision 325/325 与 deterministic archive 均闭合；历史 macOS arm64 DMG SHA-256 为 `86857d371a0555f1e760b693993ed621335676d5da296a2f6165d262cdb4dea3`。当前 `/Applications/OmniMind.app` 已替换为 exact pushed `f943f0a1f033fbd221f8e076ab43811ec26f5c27` 的本机 ad-hoc candidate，DMG SHA-256 为 `bb64765aa7dd476f1b06ca92e522eb1a30566ec2bb9720b69cfeba90456df040`；其DMG/ZIP闭合240项staged legal identities，ZIP通过无ambient credentials的隔离startup smoke，安装副本又以任务专用HOME、OMNIMIND_HOME与Electron userData完成启动、Server ready、优雅关闭、同profile重开与再次关闭。该证据不冒充正式签名、公证、Release或packaged真实Provider交互journey。
-- 维护者已确认：OmniMind identity、Chat/Agent 边界、Agent alignment/risk contract 属于不可被 Prompt 管理覆盖的 engine contract；未来 Prompt 管理只管理个人指令、项目规则和模板。
+- 维护者已确认：OmniMind identity、Chat/Agent 边界、Agent alignment/risk contract 属于不可被 Prompt 管理覆盖的 engine contract；本关注点只管理 OmniMind Agent 的 global context candidate 与全局 `APPEND_SYSTEM.md` / `SYSTEM.md`，不接管 Project rules 或模板。
 - OmniMind engine contract 同时冻结英文机构名 `International Academy of Phronesis Medicine (Guangdong)` 与官方中文名“广东智慧医学国际研究院”；这只是既有身份 owner 的双语闭合，不增加 Prompt registry、Settings 表面、缓存控制面或跨 Engine 注入。
 - `e0ee9cfe2` 的逐回合 `omnimind_update_tasks` Todo/task-list 投影仍与持久 Goal 分离；Todo 不是 Goal 的缩水替代。
 - Synara Goal 与 Todo 是两条独立责任。ThreadGoal 位于 OmniMind 已继承的同一 Product Orchestration/Thread authority 内，不是第二产品控制面。
@@ -41,7 +41,7 @@ Agent tools Gate B 已完成 source integration：AgentGateway Host tools 只在
 
 ## 当前工作范围
 
-当前只实施 AgentGateway catalog/Built-in exposure、OmniMind Host Pi projection、Todo Extension 收口、prompt truth、Settings 两个既定入口和相称的 exact/live/packaged 验证。不实施第三方 MCP manager、通用 Tool Search、第二 registry/active store、Prompt 管理、Memory/Knowledge 或 Workflow。
+当前只实施上述 OmniMind Agent global prompt file → save receipt → explicit exact-thread reload → next request → remove/reopen 闭环，以及相称的 contracts、Server 安全边界、双语 Settings、request stability、MiMo/DeepSeek focused live 和 exact pushed SHA packaged fresh-profile journey。既有 AgentGateway/Built-in/Todo owner 保持不变。不实施第三方 MCP manager、通用 Tool Search、第二 registry/active store、Prompt Plugin System、Prompt profile/history/cache、Project rules、模板、跨 Engine 同步、Memory/Knowledge 或 Workflow。
 
 ## 保留边界
 
@@ -53,11 +53,11 @@ Agent tools Gate B 已完成 source integration：AgentGateway Host tools 只在
 
 ## 当前阻塞
 
-当前没有待裁决的产品阻塞。packaged交互自动化缺少既有harness，是证据覆盖限制而不是新增产品决定；本轮不为它创建永久E2E平台。当前安装产物仍是此前本地未签名/未公证candidate；GitHub Release、update feed、签名、公证及Windows/Linux artifact/journey未获本轮授权，发行边界保持不变。
+当前没有待裁决的产品阻塞。若实现必须复制 bundled candidate precedence、建立第二 loader/atomic writer、patch bundled runtime、读取或改写 Project/stock `.pi`/其他 Engine private home，立即停止并回到 owner/source intake。packaged交互自动化缺少既有 harness 是证据覆盖限制，本轮只保留任务专用 journey，不创建永久 E2E 平台。GitHub Release、update feed、签名、公证及 Windows/Linux artifact/journey 未获本轮授权，发行边界保持不变。
 
 ## 下一动作
 
-Gate B 当前没有待执行的工程动作。未来只有在Pi revision、Gateway catalog/authority、Provider wire、Settings policy或packaged journey harness发生实质变化时，才按对应owner重开focused conformance；不得重建第二registry、active store、MCP manager或跨Engine动态加载路线。
+typed `omnimindAgentPrompts` contract、单一 Server file service、Settings 组合面板与现有 reload seam 已闭合 focused/full source gate。下一步把有序 commits 推送为 exact source candidate，再以 MiMo/DeepSeek 真实 Provider 与该 exact pushed SHA 的 packaged fresh-profile journey 逐层证伪。Campaign 已在本 brief 与 architecture 准入后使用下一个未占用 claim `F-22` 记录 candidate/evidence，不授予施工准入。
 
 ## 证据入口
 

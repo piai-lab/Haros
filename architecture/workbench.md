@@ -172,6 +172,14 @@ V1 保留 Synara 当前设置 IA、搜索、deep-link、分组和 keyboard behav
 
 当前section继续复用source的Settings母体、分组与顺序，例如General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent engines、Model services、Agent skills、Built-in tools、Managed worktrees、System tools与Archived threads；Integrations中的现有MCP连接页准确命名为`External connections / 外部连接`。`Model services / 模型服务`是对原`Models & writing / 模型与写作` section的定向改名与职责修正：保留现有route、内部section id `models`、搜索、deep-link、分组和keyboard behavior，不借此重排整个Settings taxonomy。
 
+Settings 的内部 `coding` 分组对用户统一显示为 `Development / 开发`。其中新增 `Prompts / 提示词`，只管理 OmniMind Agent 的全局原生提示词文件，不成为其他 Engine、Project rules、模板或最终有效 Prompt 的管理入口。页面首屏以 `Global personal instructions / 全局个人指令` 为唯一视觉中心：当前原生 discovery 没有选中候选时只显示空态，首次保存非空内容才创建 `AGENTS.md`；已有候选时始终编辑 runtime 当前实际选中的 exact 文件，不迁移、不改名、不复制。多个候选共存时显示 active 与 shadowed 文件名，删除 active 文件后重新发现下一候选；保存空内容与删除文件是两个不同动作。
+
+`APPEND_SYSTEM.md` 与 `SYSTEM.md` 位于默认折叠的 `Advanced / 高级` 区。两者继续遵循 runtime 的原生组合与 Project-local shadow 语义，首版只提供准确的静态 Project shadow 说明，不为此读取或编辑 Project 文件，也不建立第二 loader。首次创建 `SYSTEM.md` 必须确认其替换默认基础指令的风险；更新已有文件不重复确认。技术详情显示由 Server 生成、用户可定位且可复制的安全 `displayPath`，但 Renderer 不把路径提交为 mutation authority；路径不得进入 Prompt、普通日志、Timeline、telemetry 或交付截图证据。
+
+编辑只在页内以显式保存/取消完成，不 autosave。查看页面、取消、无文件、absent + empty save 与 no-op save 都不得创建或改写文件、触发 reload、改变 mtime 或改变下一请求的 system prompt。保存与 Session reload 是两件独立事实：成功保存只显示文件已保存；仅当进入 Settings 前最后聚焦的有效 OmniMind Agent Thread 可解析时，页面才提供 `Reload resources for current conversation / 重新加载当前对话资源`，并直接调用既有 exact-thread reload。busy 时拒绝且不取消当前 operation；reload 失败不得声称文件回滚。没有有效目标时只说明新的 OmniMind Agent 对话会读取当前文件，不猜测、不新建 Session、不提供跨 Engine 选择器。
+
+外部并发修改必须保留用户草稿并以 conflict 呈现，不能静默覆盖。同一 source 仅正文变化时允许重新载入文件，或显式保留草稿并基于 fresh version 再次保存；active source 已变化时禁止把旧草稿写到新 source，只允许重新载入。正常页面、空态、Toast、Dialog、错误、帮助与恢复只使用 OmniMind 产品语言，不出现 `Pi`、`Pi-compatible`、`ResourceLoader`、`Engine Contract` 等内部术语；这些真实来源只保留在 architecture、research、诊断、About/Licenses 或明确允许的技术归属面。
+
 `Built-in tools / 内置工具`用一套fresh默认开放的组级开关控制OmniMind自带Browser、Device、Thread、Automation等能力是否提供给所有Agent引擎，包括OmniMind Agent；不提供Engine selector、Provider维度持久状态或逐tool权限矩阵。页面只显示canonical catalog派生的真实组、计数、可用性与简短说明，不暴露Pi、MCP transport、动态加载器或工具注册等实现术语，也不硬编码当前24/22/12数量。关闭某组后，所有Agent的新会话都不再获得该组，所有旧会话的新调用由Gateway立即拒绝；已准入in-flight call不被普通开关伪装成紧急停止，取消仍由当前任务/会话拥有。重新开启不把能力偷偷加入已经稳定运行的旧会话，按各引擎真实的安全重载或新会话边界生效。该设置只控制Agent使用，不影响Browser/Device的人类UI，enablement也不替代runtime permission或approval。
 
 `External connections / 外部连接`只管理Codex、Claude Code等独立本地应用进入OmniMind的现有任务连接，并准确显示paired、last used、revoked、expired与runtime availability；没有heartbeat就不伪造“当前已连接”。正常页面只表达“哪些外部应用可以连接OmniMind”，不要求用户理解底层协议。V1不提供第三方MCP server Settings、CRUD、credential/OAuth UI、连接测试、全局状态面板或跨Engine自动分发，也不把OmniMind内置能力或未来第三方MCP混进这个页面。
