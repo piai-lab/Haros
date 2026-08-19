@@ -283,6 +283,40 @@ describe("prefetchProviderModelsForNewThread", () => {
     expect(prefetchQuery).not.toHaveBeenCalled();
   });
 
+  it("reuses one OmniMind discovery when explicit new-thread intent crosses Projects", async () => {
+    const listModels = vi.fn(async () => ({
+      source: "pi.sdk",
+      models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
+    }));
+    const getComposerCapabilities = vi.fn(async () => ({
+      supportsImages: true,
+      supportsFiles: true,
+      supportsMentions: true,
+    }));
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listModels, getComposerCapabilities },
+    } as unknown as NativeApi);
+    const queryClient = new QueryClient();
+    const settings = makeSettings({ defaultProvider: "omnimind" });
+
+    prefetchProviderModelsForNewThread(queryClient, {
+      provider: "omnimind",
+      settings,
+      cwd: "/tmp/project-a",
+    });
+    prefetchProviderModelsForNewThread(queryClient, {
+      provider: "omnimind",
+      settings,
+      cwd: "/tmp/project-b",
+    });
+
+    await vi.waitFor(() => {
+      expect(listModels).toHaveBeenCalledTimes(1);
+      expect(getComposerCapabilities).toHaveBeenCalledTimes(1);
+    });
+    expect(listModels).toHaveBeenCalledWith({ provider: "omnimind" });
+  });
+
   it("shares one in-flight React Query request for the same selected Engine intent", async () => {
     const listModels = vi.fn(async () => ({
       source: "test",
