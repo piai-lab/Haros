@@ -8,7 +8,7 @@ import type {
   ProviderListSkillsResult,
   ProviderSkillsCatalogResult,
 } from "@omnimind/contracts";
-import { queryOptions, type QueryClient } from "@tanstack/react-query";
+import { queryOptions } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
 
 const EMPTY_SKILLS_RESULT: ProviderListSkillsResult = {
@@ -270,20 +270,6 @@ export function providerCatalogDiscoveryRetryDelay(attemptIndex: number, error: 
   return Math.min(1_000 * 2 ** attemptIndex, 30_000);
 }
 
-export async function cancelProviderSelectionDiscovery(
-  queryClient: QueryClient,
-  provider: ProviderKind,
-): Promise<void> {
-  await Promise.all([
-    queryClient.cancelQueries({
-      queryKey: providerDiscoveryQueryKeys.modelsForProvider(provider),
-    }),
-    queryClient.cancelQueries({
-      queryKey: providerDiscoveryQueryKeys.agentsForProvider(provider),
-    }),
-  ]);
-}
-
 export function providerModelsQueryOptions(input: {
   provider: ProviderKind;
   binaryPath?: string | null;
@@ -320,6 +306,10 @@ export function providerModelsQueryOptions(input: {
       );
     },
     enabled: input.enabled ?? true,
+    // Disabled catalog hooks must not keep an observer alive. TanStack then
+    // aborts an orphaned request after an Engine switch, while a shared query
+    // remains alive when another window or surface still observes it.
+    subscribed: input.enabled ?? true,
     // The transport already waits for Server readiness and owns reconnects. Do
     // not add a second 1s + 2s + 4s retry loop for deterministic CLI, auth,
     // config, or unknown provider failures. Only a typed RPC error that
@@ -356,6 +346,7 @@ export function providerAgentsQueryOptions(input: {
       );
     },
     enabled: input.enabled ?? true,
+    subscribed: input.enabled ?? true,
     retry: shouldRetryProviderCatalogDiscovery,
     retryDelay: providerCatalogDiscoveryRetryDelay,
     staleTime: 60_000,

@@ -90,7 +90,6 @@ import {
 } from "~/lib/gitReactQuery";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import {
-  cancelProviderSelectionDiscovery,
   isProviderDiscoverySessionActive,
   providerComposerCapabilitiesQueryOptions,
   providerCommandsQueryOptions,
@@ -6592,13 +6591,11 @@ export default function ChatView({
     (provider: ProviderKind) => {
       if (!activeThread) return;
       if (provider === selectedProvider) return;
-      void cancelProviderSelectionDiscovery(queryClient, selectedProvider);
       setComposerDraftActiveProviderAndSticky(activeThread.id, provider);
       scheduleComposerFocus();
     },
     [
       activeThread,
-      queryClient,
       scheduleComposerFocus,
       selectedProvider,
       setComposerDraftActiveProviderAndSticky,

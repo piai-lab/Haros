@@ -8,7 +8,6 @@ import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  cancelProviderSelectionDiscovery,
   isProviderDiscoverySessionActive,
   isInitialModelDiscoveryPending,
   providerCatalogDiscoveryRetryDelay,
@@ -240,7 +239,17 @@ describe("providerModelsQueryOptions", () => {
     expect(listModels).toHaveBeenCalledTimes(1);
   });
 
-  it("aborts the superseded Engine request and prevents orphaned retries", async () => {
+  it("unsubscribes disabled catalogs so an orphaned Engine request can be aborted", () => {
+    expect(providerModelsQueryOptions({ provider: "codex", enabled: true }).subscribed).toBe(true);
+    expect(providerModelsQueryOptions({ provider: "codex", enabled: false }).subscribed).toBe(
+      false,
+    );
+    expect(providerAgentsQueryOptions({ provider: "codex", enabled: false }).subscribed).toBe(
+      false,
+    );
+  });
+
+  it("keeps a shared Engine request alive until its last consumer leaves", async () => {
     let capturedSignal: AbortSignal | undefined;
     const listModels = mockListModels(
       vi.fn(
@@ -260,54 +269,22 @@ describe("providerModelsQueryOptions", () => {
     );
     const queryClient = new QueryClient();
     const options = providerModelsQueryOptions({ provider: "codex", enabled: true });
-    const observer = new QueryObserver(queryClient, options);
-    const unsubscribe = observer.subscribe(() => undefined);
+    const firstObserver = new QueryObserver(queryClient, options);
+    const secondObserver = new QueryObserver(queryClient, options);
+    const unsubscribeFirst = firstObserver.subscribe(() => undefined);
+    const unsubscribeSecond = secondObserver.subscribe(() => undefined);
 
     await vi.waitFor(() => expect(listModels).toHaveBeenCalledTimes(1));
     expect(capturedSignal?.aborted).toBe(false);
 
-    await cancelProviderSelectionDiscovery(queryClient, "codex");
+    unsubscribeFirst();
+    await Promise.resolve();
+    expect(capturedSignal?.aborted).toBe(false);
 
+    unsubscribeSecond();
+    await vi.waitFor(() => expect(capturedSignal?.aborted).toBe(true));
     expect(capturedSignal?.aborted).toBe(true);
     expect(listModels).toHaveBeenCalledTimes(1);
-    expect(observer.getCurrentResult().fetchStatus).toBe("idle");
-    unsubscribe();
-    queryClient.clear();
-  });
-
-  it("also aborts secondary agent discovery for the superseded Engine", async () => {
-    let capturedSignal: AbortSignal | undefined;
-    const listAgents = vi.fn(
-      (
-        _input: unknown,
-        options?: { readonly signal?: AbortSignal },
-      ): Promise<{ agents: []; source: string; cached: false }> =>
-        new Promise((_resolve, reject) => {
-          capturedSignal = options?.signal;
-          capturedSignal?.addEventListener(
-            "abort",
-            () => reject(new DOMException("Aborted", "AbortError")),
-            { once: true },
-          );
-        }),
-    );
-    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
-      provider: { listAgents },
-    } as unknown as NativeApi);
-    const queryClient = new QueryClient();
-    const observer = new QueryObserver(
-      queryClient,
-      providerAgentsQueryOptions({ provider: "codex", enabled: true }),
-    );
-    const unsubscribe = observer.subscribe(() => undefined);
-
-    await vi.waitFor(() => expect(listAgents).toHaveBeenCalledTimes(1));
-    await cancelProviderSelectionDiscovery(queryClient, "codex");
-
-    expect(capturedSignal?.aborted).toBe(true);
-    expect(listAgents).toHaveBeenCalledTimes(1);
-    expect(observer.getCurrentResult().fetchStatus).toBe("idle");
-    unsubscribe();
     queryClient.clear();
   });
 
