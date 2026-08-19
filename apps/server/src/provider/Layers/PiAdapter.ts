@@ -2929,7 +2929,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       provider,
                       gatewayControlAvailable: available,
                       enabledBuiltInGroups,
-                      dynamicHostTools: provider === "omnimind" && available,
+                      // Projection mode is a stable Engine fact. Pi's active
+                      // Registry reports whether the loader/tools actually
+                      // exist; that runtime result must not rewrite this
+                      // global Host block on reload.
+                      dynamicHostTools: provider === "omnimind",
                     }),
                   ...(provider === "omnimind" && workSurface !== undefined
                     ? {

@@ -3,7 +3,7 @@ import type { BuiltInToolGroupId, ProviderKind } from "@omnimind/contracts";
 import { AUTOMATION_AUTHORING_GUIDANCE } from "./automationAuthoringGuidance.ts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
-export const OMNIMIND_HARNESS_POLICY_VERSION = "2026-08-03.8";
+export const OMNIMIND_HARNESS_POLICY_VERSION = "2026-08-19.9";
 export const OMNIMIND_HARNESS_POLICY_MARKER = `[OmniMind harness policy ${OMNIMIND_HARNESS_POLICY_VERSION}]`;
 
 export interface OmniMindHarnessCapabilities {
@@ -52,8 +52,9 @@ const DEVICE_GROUP_GUIDANCE = [
 ];
 
 const DYNAMIC_HOST_GUIDANCE = [
-  "Additional OmniMind Host capabilities can be discovered and loaded on demand through the currently active Pi-native loader.",
-  "When a Host capability is needed, use that loader before attempting the action, then call the newly available tool on the next safe agent turn. Do not guess tool names or assume that an inactive capability is authorized.",
+  "Use only OmniMind Host capabilities active in the current Pi session; their tool definitions and server guidance are authoritative.",
+  "If an active Host loader is available, use it to discover and load a needed Host capability before attempting the action, then call the newly available tool on the next safe agent turn.",
+  "If neither the required capability nor an active Host loader is available, explain that this session cannot perform the Host action. Do not guess tool names, treat an inactive capability as authorized, or claim that a Host-side action occurred.",
 ];
 
 function directControlPolicy(
@@ -105,17 +106,21 @@ export function renderOmniMindHarnessPolicy(capabilities: OmniMindHarnessCapabil
     mode: "direct" as const,
     enabledGroups: [],
   };
-  const controlPolicy = capabilities.gatewayControlAvailable
-    ? projection.mode === "dynamic"
+  // Dynamic availability is owned by Pi's current Registry/active set. Keep
+  // this Host block invariant while Pi's extension-local loader guidance and
+  // active tool definitions report the actual surface for each request.
+  const controlPolicy =
+    projection.mode === "dynamic"
       ? DYNAMIC_HOST_GUIDANCE
-      : [
-          "Use only the OmniMind tools actually available in this provider session; their native tool definitions and server guidance are authoritative.",
-          ...directControlPolicy(new Set(projection.enabledGroups)),
-        ]
-    : [
-        "OmniMind MCP control is unavailable in this provider session. Do not claim that OmniMind threads, projects, or automations were created or changed.",
-        "Provider-native subagent or Task tools do not create OmniMind threads. If the user explicitly requests OmniMind resource management, explain that this session cannot perform it.",
-      ];
+      : capabilities.gatewayControlAvailable
+        ? [
+            "Use only the OmniMind tools actually available in this provider session; their native tool definitions and server guidance are authoritative.",
+            ...directControlPolicy(new Set(projection.enabledGroups)),
+          ]
+        : [
+            "OmniMind MCP control is unavailable in this provider session. Do not claim that OmniMind threads, projects, or automations were created or changed.",
+            "Provider-native subagent or Task tools do not create OmniMind threads. If the user explicitly requests OmniMind resource management, explain that this session cannot perform it.",
+          ];
 
   return [
     OMNIMIND_HARNESS_POLICY_MARKER,

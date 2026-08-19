@@ -300,7 +300,9 @@ loader造成纯additive active-set change后，Pi记录新增tool names；下一
 
 稳定invariant是：任何发送给模型的prompt或envelope都不得直接点名inactive tool。
 
-`apps/server/src/agentGateway/harnessPolicy.ts`是generic Host guidance。Gate B候选已在OmniMind dynamic路径将它diet成：额外Host能力可按需发现和加载；需要时使用当前active加载入口；激活后在下一安全turn调用；不要猜tool name；发现、prompt-required或active都不等于authorized。该路径不再枚举Browser、Device、Thread或Automation的inactive names。
+`apps/server/src/agentGateway/harnessPolicy.ts`是generic Host guidance。OmniMind Provider采用dynamic projection是Session创建前已知、跨reload不变的Engine事实；loader或具体Host tool是否实际active则只由Pi当前Registry、Extension guidance与tool definitions表达。generic Host block因此使用条件式能力说明：只使用当前Pi Session已active的能力；若active loader存在则先发现和加载、再在下一安全turn调用；若所需能力与loader都不存在则准确说明不可执行；不要猜tool name，也不把discovered、prompt-required或active冒充authorized。该路径不枚举Browser、Device、Thread或Automation的inactive names，也不因Extension注册检查的前后时序把同一Session从“不可用”改写为“可用”。
+
+2026-08-19 conformance修正了一个Host层时序缺陷：旧实现把后验`gatewayControlAvailable`同时当作dynamic projection模式开关，导致首个ResourceLoader prompt在Pi完成inline Extension注册检查前冻结为unavailable，而显式reload后又变为dynamic。修正没有增加第二次reload、Registry、active store或Pi patch；只把稳定projection mode与运行时availability分离。focused request-capture现证明首轮、loader activation、rollback branch、resource reload、native resume与Chat六次请求的`<omnimind_host_context>`完全一致，同时tool schema仍随Pi active set发生有意义变化。
 
 Goal prompt与Automation run envelope是不同的canonical lifecycle owner：它们可以直接点名当前duty所需tools，但Host必须在同一request发送前ensure exact bounded closure active。不得把这些工具说明反向塞进generic prompt，也不得枚举其他inactive Host names、在loader description/result列出全catalog、把完整schema放进system prompt或用长`promptSnippet`/`promptGuidelines`重建稳定前缀。
 
@@ -459,6 +461,7 @@ Pi Skills已使用progressive disclosure；Package install/update/remove/enable/
 ### 16.2 Prompt 与上下文
 
 - generic prompt不枚举inactive tools；
+- OmniMind dynamic projection的generic Host block不随注册检查、activation、reload、resume或work surface改写；实际loader/tool surface仍由Pi当前请求表达；
 - Goal/Automation prompt/envelope点名的tools在同request active；
 - prompt-required tool说明不泄漏到generic prompt或later manual follow-up；
 - loader description/result不包含全catalog或完整schemas；

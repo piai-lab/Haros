@@ -144,14 +144,21 @@ describe("OmniMind harness policy", () => {
     assert.notInclude(browserOnly, "omnimind_create_threads");
     assert.notInclude(browserOnly, "device_list");
 
-    const dynamic = renderOmniMindHarnessPolicy({
+    const dynamicAvailable = renderOmniMindHarnessPolicy({
       gatewayControlAvailable: true,
       projection: { mode: "dynamic" },
     });
-    assert.include(dynamic, "discovered and loaded on demand");
-    assert.notInclude(dynamic, "browser_open");
-    assert.notInclude(dynamic, "device_list");
-    assert.notInclude(dynamic, "omnimind_create_threads");
+    const dynamicUnavailable = renderOmniMindHarnessPolicy({
+      gatewayControlAvailable: false,
+      projection: { mode: "dynamic" },
+    });
+    assert.strictEqual(dynamicUnavailable, dynamicAvailable);
+    assert.include(dynamicAvailable, "If an active Host loader is available");
+    assert.include(dynamicAvailable, "neither the required capability nor an active Host loader");
+    assert.notInclude(dynamicAvailable, "OmniMind MCP control is unavailable");
+    assert.notInclude(dynamicAvailable, "browser_open");
+    assert.notInclude(dynamicAvailable, "device_list");
+    assert.notInclude(dynamicAvailable, "omnimind_create_threads");
   });
 
   it("keeps native MCP instructions compact and group-filtered", () => {

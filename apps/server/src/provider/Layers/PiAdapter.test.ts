@@ -131,7 +131,7 @@ describe("Pi native resource projection", () => {
       dynamicHostTools: true,
     });
 
-    expect(prompt).toContain("currently active Pi-native loader");
+    expect(prompt).toContain("If an active Host loader is available");
     expect(prompt).toContain("Do not guess tool names");
     expect(prompt).not.toContain("omnimind_list_threads");
     expect(prompt).not.toContain("BrowserDownloadApprovalRequired");
@@ -505,6 +505,7 @@ describe("Pi native OmniMind gateway tools", () => {
         requestBodies[0]?.messages?.find((message: any) => message.role === "system")?.content ??
         "";
       expect(initialPrompt).toContain("active Host loader");
+      expect(initialPrompt).not.toContain("OmniMind MCP control is unavailable");
       expect(initialPrompt).not.toContain("browser_open");
       expect(piRequestToolNames(requestBodies[3])).toEqual(
         expect.arrayContaining(["bash", "omnimind_update_tasks", AGENT_GATEWAY_HOST_LOADER_NAME]),
@@ -519,6 +520,12 @@ describe("Pi native OmniMind gateway tools", () => {
       );
       expect(piRequestToolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
       expect(piRequestToolNames(requestBodies[5])).not.toContain("browser_open");
+      const hostContexts = requestBodies.map(piRequestHostContext);
+      expect(hostContexts[0]).toBeTruthy();
+      expect(new Set(hostContexts)).toHaveLength(1);
+      for (const body of requestBodies) {
+        expect(piRequestSystemPrompt(body)).not.toContain("OmniMind MCP control is unavailable");
+      }
       expect(gateway.requests.map(({ method }) => method)).toEqual([
         "tools/list",
         "tools/list",
@@ -939,6 +946,18 @@ async function waitForTestCondition(predicate: () => boolean, message: string, t
 
 function piRequestToolNames(body: any): string[] {
   return (body.tools ?? []).map((tool: any) => tool.function?.name ?? tool.name);
+}
+
+function piRequestSystemPrompt(body: any): string {
+  return body.messages?.find((message: any) => message.role === "system")?.content ?? "";
+}
+
+function piRequestHostContext(body: any): string {
+  return (
+    piRequestSystemPrompt(body).match(
+      /<omnimind_host_context>[\s\S]*?<\/omnimind_host_context>/,
+    )?.[0] ?? ""
+  );
 }
 
 function piOpenAiSuccessResponse(text = "ok") {
