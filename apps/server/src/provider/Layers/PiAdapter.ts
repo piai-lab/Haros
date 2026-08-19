@@ -17,7 +17,7 @@ import type {
   ExtensionUIContext,
   ToolDefinition,
 } from "@earendil-works/pi-coding-agent";
-import type { AgentToolResult, ThinkingLevel } from "@earendil-works/pi-agent-core";
+import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
 import type { PromptOutcome as OmniMindPromptOutcome } from "@omnimind/pi-coding-agent";
 import {
@@ -51,7 +51,6 @@ import {
 } from "../../agentGateway/harnessPolicy.ts";
 import {
   agentGatewayGroupsFromToolDescriptors,
-  callAgentGatewayMcpTool,
   listAgentGatewayMcpTools,
   type AgentGatewayMcpFetch,
   type AgentGatewayMcpToolDescriptor,
@@ -80,6 +79,7 @@ import {
 } from "../Errors.ts";
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
+import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
 import {
   deactivateUnavailableAgentGatewayHostProjection,
   ensureAgentGatewayHostToolsActive,
@@ -550,45 +550,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function piGatewayToolResult(result: unknown): AgentToolResult<unknown> {
-  if (isRecord(result) && result.isError === true) {
-    const message = Array.isArray(result.content)
-      ? result.content
-          .flatMap((item) =>
-            isRecord(item) && item.type === "text" && typeof item.text === "string"
-              ? [item.text]
-              : [],
-          )
-          .join("\n")
-      : "";
-    throw new Error(message || "OmniMind gateway tool failed.");
-  }
-  const content =
-    isRecord(result) && Array.isArray(result.content)
-      ? result.content.flatMap((item): Array<TextContent | ImageContent> => {
-          if (isRecord(item) && item.type === "text" && typeof item.text === "string") {
-            return [{ type: "text", text: item.text }];
-          }
-          if (
-            isRecord(item) &&
-            item.type === "image" &&
-            typeof item.data === "string" &&
-            typeof item.mimeType === "string"
-          ) {
-            return [{ type: "image", data: item.data, mimeType: item.mimeType }];
-          }
-          return [];
-        })
-      : [];
-  return {
-    content:
-      content.length > 0
-        ? content
-        : [{ type: "text", text: JSON.stringify(result ?? null) } satisfies TextContent],
-    details: result,
-  };
-}
-
 /**
  * Project the canonical MCP catalog into Pi's native custom-tool API. Tool
  * schemas and execution both remain owned by the gateway; Pi only adapts the
@@ -617,24 +578,12 @@ export function buildPiAgentGatewayCustomToolsFromDescriptors(input: {
   readonly tools: ReadonlyArray<AgentGatewayMcpToolDescriptor>;
   readonly fetch?: AgentGatewayMcpFetch;
 }): ReadonlyArray<ToolDefinition> {
-  return input.tools.map((tool) =>
-    input.defineTool({
-      name: tool.name,
-      label: tool.name,
-      description: tool.description,
-      parameters: tool.inputSchema as ToolDefinition["parameters"],
-      execute: async (_toolCallId, params, signal) =>
-        piGatewayToolResult(
-          await callAgentGatewayMcpTool({
-            connection: input.connection,
-            name: tool.name,
-            arguments: params as Record<string, unknown>,
-            ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
-            ...(signal === undefined ? {} : { signal }),
-          }),
-        ),
-    }),
-  );
+  return buildAgentGatewayPiToolDefinitions({
+    connection: input.connection,
+    defineTool: input.defineTool,
+    descriptors: input.tools,
+    ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
+  });
 }
 
 function toMessage(cause: unknown, fallback: string): string {

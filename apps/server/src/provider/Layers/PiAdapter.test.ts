@@ -208,6 +208,10 @@ describe("Pi native OmniMind gateway tools", () => {
                   {
                     name: "omnimind_list_threads",
                     description: "List OmniMind threads.",
+                    _meta: {
+                      "omnimind/owner": "agent-gateway",
+                      "omnimind/group": "omnimind",
+                    },
                     inputSchema: {
                       type: "object",
                       properties: { limit: { type: "number" } },
@@ -272,6 +276,10 @@ describe("Pi native OmniMind gateway tools", () => {
               {
                 name: "omnimind_create_threads",
                 description: "Create OmniMind threads.",
+                _meta: {
+                  "omnimind/owner": "agent-gateway",
+                  "omnimind/group": "omnimind",
+                },
                 inputSchema: { type: "object", properties: {} },
               },
             ],

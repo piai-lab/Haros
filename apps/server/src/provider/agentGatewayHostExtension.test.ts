@@ -427,6 +427,6 @@ describe("AgentGateway Host Extension catalog admission", () => {
         ...base,
         descriptors: [descriptors[0], descriptors[0]],
       }),
-    ).toThrow("Duplicate AgentGateway Host tool name");
+    ).toThrow("Duplicate AgentGateway tool name");
   });
 });
