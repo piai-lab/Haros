@@ -94,9 +94,13 @@ describe("Pi native resource projection", () => {
     });
     const identity =
       "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+    const officialChineseIdentity =
+      "The academy's official Chinese name is 广东智慧医学国际研究院.";
 
     expect(chatPrompt).toContain(identity);
     expect(agentPrompt).toContain(identity);
+    expect(chatPrompt).toContain(officialChineseIdentity);
+    expect(agentPrompt).toContain(officialChineseIdentity);
     expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
     expect(chatPrompt).toContain("suggest Send to Agent");
     expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
@@ -1482,6 +1486,8 @@ describe("getPiDiscoverableModels", () => {
     const stockThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000063");
     const identity =
       "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
+    const officialChineseIdentity =
+      "The academy's official Chinese name is 广东智慧医学国际研究院.";
     const immutableAgentPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "agent",
     });
@@ -1664,6 +1670,7 @@ describe("getPiDiscoverableModels", () => {
         expect(prompt).toContain("project extension replacement");
         expect(prompt).not.toContain("<omnimind_agent_task_policy>");
         expect(prompt.split(identity)).toHaveLength(2);
+        expect(prompt.split(officialChineseIdentity)).toHaveLength(2);
         expect(prompt.split("<omnimind_engine_contract>")).toHaveLength(2);
         expect(prompt).not.toContain("<omnimind_host_context>");
         expect(toolNames(body)).toContain("omnimind_update_tasks");
@@ -1676,11 +1683,13 @@ describe("getPiDiscoverableModels", () => {
       }
       const chatPrompt = systemPrompt(requestBodies[4]);
       expect(chatPrompt).toContain(identity);
+      expect(chatPrompt).toContain(officialChineseIdentity);
       expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
       expect(chatPrompt).not.toContain("project extension replacement");
       expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
       expect(toolNames(requestBodies[4])).not.toContain("omnimind_update_tasks");
       expect(systemPrompt(requestBodies[5])).not.toContain(identity);
+      expect(systemPrompt(requestBodies[5])).not.toContain(officialChineseIdentity);
       expect(toolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
     } finally {
       vi.restoreAllMocks();
@@ -2942,6 +2951,11 @@ describe("getPiDiscoverableModels", () => {
       expect(
         finalContinuationPrompt.split(
           "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).",
+        ),
+      ).toHaveLength(2);
+      expect(
+        finalContinuationPrompt.split(
+          "The academy's official Chinese name is 广东智慧医学国际研究院.",
         ),
       ).toHaveLength(2);
       expect(finalContinuationPrompt.split("<omnimind_host_context>")).toHaveLength(2);

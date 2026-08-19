@@ -27,6 +27,8 @@
 
 > **2026-08-18 default-identity closure.** 维护者随后确认先完成默认身份、理解/提问/拔高行为与 Chat/Agent 分层，再讨论 Prompt 管理 UI。pushed merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 已把以下 contract 写入 architecture 并接入 runtime：只有 bundled `omnimind` 获得不可被 `SYSTEM.md`、`APPEND_SYSTEM.md`、Skill、Extension 或未来 Prompt 管理覆盖的 OmniMind identity/cognitive engine contract；Extension 仍可按原生顺序替换 mutable base，runtime 在最终请求前只把 canonical engine contract 去重并追加为 exactly once，general Host harness/tool guidance 仍留在 mutable append 生命周期；`project → Agent`，`chat | studio → Chat`；Agent 以“目标充分对齐才进入实质执行”为边界，Chat 在不误导时先给可用起点并并行澄清；`别问，直接做` 只是低风险可逆未知的速度偏好。canonical Project/worktree root 是正式 Agent Session 的项目规则读取下界；Chat/Studio 和无 active Session 的被动 discovery 只读 global context，且不执行 Project Extension。product-owned Pi base 已改为 identity-neutral 并删除未发行 docs/examples 导航；stock Pi 不受影响。该 merge 已从 exact SHA 重建、安装，并通过 fresh-profile 启动与重开验证；这不构成签名或公证发行声明。Prompt 管理仍只允许管理个人指令、项目规则和模板，且本次未启动任何 UI/store/迁移。
 
+> **2026-08-19 bilingual identity and live closure.** 维护者确认英文机构名 `International Academy of Phronesis Medicine (Guangdong)` 保持不变，官方中文名是“广东智慧医学国际研究院”。中文名因此进入同一份 Host-owned immutable engine contract，而不是用户 Prompt、Extension append 或 Provider adapter 补丁。request/reload/compaction 回归证明 Chat 与 Agent 都 exactly once 接收该身份，stock Pi 不接收；授权的 MiMo 与 DeepSeek OpenAI Chat-compatible 最小 live journey 又分别完成首次身份回答、resource reload 后 continuation、Host loader 激活和实际 Host tool 调用，两者都回答 OmniMind/πAI-Lab/官方中文机构名，没有把底层模型身份冒充产品身份。该 journey 同时证明 engine contract 与稳定 Host context 的请求指纹跨上述阶段不变；它不证明 Provider cache 命中率，也不为新增 Prompt framework、缓存层或跨 Engine Prompt 管理提供理由。
+
 ## 1. 结论
 
 OmniMind 应在 Settings 的现有 `Coding / 开发` 分组中增加一个独立 `Prompts / 提示词` section，把 **OmniMind Agent** 的基础指令、个人追加指令、当前 Project 规则、Prompt templates 与当前生效来源收敛到一个地方。

@@ -115,7 +115,7 @@ OmniMind Agent Core 是上述 Pi-compatible runtime 与多个独立 Extension ow
 
 ### OmniMind identity、work surface 与 project context
 
-bundled `omnimind` Provider 的 engine contract 由 Host 作为不可被 `SYSTEM.md`、`APPEND_SYSTEM.md`、Skill、Extension 或未来 Prompt 管理覆盖的稳定层注入。Pi 继续按原生顺序组合、替换和修改 mutable base，包括现有 general Host harness/tool guidance 与每回合执行的 `before_agent_start` Extension；在最终模型请求前，runtime 只删除其中已有的同一 canonical engine contract，再把当前 Session 冻结的 engine contract 追加到末尾，保证 exactly once。它直接声明：`You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).`；模型应按用户语言自然回答，不在每次回复重复来源。stock `pi` 和其他 Engine 不接收这段 identity，继续保留原生身份。general Host harness/tool guidance 不属于 immutable engine contract，仍服从原生 mutable append/Extension 顺序；其中 Browser、Device 等已知 runtimeMode 事实漂移必须由后续 Host diet 在各自 owner 修正，不能借身份冻结扩大为不可覆盖产品合同。
+bundled `omnimind` Provider 的 engine contract 由 Host 作为不可被 `SYSTEM.md`、`APPEND_SYSTEM.md`、Skill、Extension 或未来 Prompt 管理覆盖的稳定层注入。Pi 继续按原生顺序组合、替换和修改 mutable base，包括现有 general Host harness/tool guidance 与每回合执行的 `before_agent_start` Extension；在最终模型请求前，runtime 只删除其中已有的同一 canonical engine contract，再把当前 Session 冻结的 engine contract 追加到末尾，保证 exactly once。它直接声明：`You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong). The academy's official Chinese name is 广东智慧医学国际研究院.`；模型应按用户语言自然回答，不在每次回复重复来源。stock `pi` 和其他 Engine 不接收这段 identity，继续保留原生身份。general Host harness/tool guidance 不属于 immutable engine contract，仍服从原生 mutable append/Extension 顺序；其中 Browser、Device 等已知 runtimeMode 事实漂移必须由后续 Host diet 在各自 owner 修正，不能借身份冻结扩大为不可覆盖产品合同。
 
 同一 engine contract 包含共同 cognitive core 与按 work surface 选择的行为：
 
