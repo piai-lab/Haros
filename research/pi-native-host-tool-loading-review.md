@@ -443,7 +443,7 @@ Pi Skills已使用progressive disclosure；Package install/update/remove/enable/
 - exact source SHA fresh isolated packaged profile；
 - close/reopen与private-home隔离。
 
-已合入source已经完成exact serializer、focused/full tests、MiMo/DeepSeek兼容endpoint最小journey与隔离packaged startup；完整Gateway catalog economics、packaged Settings/Todo/Host交互与close/reopen journey仍不得从startup smoke或小型payload probe外推。
+已合入source已经完成exact serializer、focused/full tests、MiMo/DeepSeek兼容endpoint最小journey与隔离packaged startup；`7c07184a9`的Host-context stability修正另完成DMG/ZIP legal closure、无ambient credentials的ZIP startup smoke及安装副本的隔离启动/关闭/重开。完整Gateway catalog economics、packaged Settings/Todo/Host真实交互仍不得从startup smoke、source request-capture或小型payload probe外推。
 
 ## 16. 验收矩阵
 
@@ -561,8 +561,8 @@ Revalidation trigger:
   or the Pi Extension API changes the owned-set isolation/collision guarantees.
 
 Delivery boundary:
-  source integration is anchored by merge `e7137c7…`; installation and release remain separate;
-  packaged startup is proven, packaged interactive Gate B journey is not claimed.
+  source integration is anchored by merge `e7137c7…`, with Host-context stability correction `7c07184a9`;
+  packaged startup and installed close/reopen are proven; formal release and interactive Host journey remain separate.
 ```
 
 最终原则：
