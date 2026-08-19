@@ -1,6 +1,7 @@
 export * from "./auth";
 export * from "./automation";
 export * from "./baseSchemas";
+export * from "./editableText";
 export * from "./browserAutomationBounds";
 export * from "./browserAutomationIds";
 export * from "./browserAutomationErrors";
@@ -18,6 +19,7 @@ export * from "./providerDiscovery";
 export * from "./providerRuntime";
 export * from "./omnimindModelServices";
 export * from "./omnimindEcosystem";
+export * from "./omnimindAgentPrompts";
 export * from "./model";
 export * from "./agentMentions";
 export * from "./agentGateway";

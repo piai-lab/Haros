@@ -21,6 +21,7 @@ import { makeOmniMindAgentAdapterLive, makePiAdapterLive } from "./Layers/PiAdap
 import { ProviderAdapterRegistryLive } from "./Layers/ProviderAdapterRegistry";
 import { ProviderDiscoveryServiceLive } from "./Layers/ProviderDiscoveryService";
 import { OmniMindEcosystemLive } from "./Layers/OmniMindEcosystem";
+import { OmniMindAgentPromptFilesLive } from "./Layers/OmniMindAgentPromptFiles";
 import { OmniMindModelServicesLive } from "./Layers/OmniMindModelServices";
 import { makeDurableProviderServiceLive } from "./Layers/ProviderService";
 import { ProviderSessionDirectoryLive } from "./Layers/ProviderSessionDirectory";
@@ -119,10 +120,12 @@ export function makeServerProviderLayer(
       Layer.provide(providerServiceLayer),
     );
     const omniMindEcosystemLayer = OmniMindEcosystemLive.pipe(Layer.provide(providerServiceLayer));
+    const omniMindAgentPromptFilesLayer = OmniMindAgentPromptFilesLive;
     return Layer.mergeAll(
       providerServiceLayer,
       providerDiscoveryLayer,
       omniMindEcosystemLayer,
+      omniMindAgentPromptFilesLayer,
       omniMindModelServicesLayer,
       adapterRegistryLayer,
       providerSessionDirectoryLayer,
