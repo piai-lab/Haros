@@ -278,7 +278,6 @@ describe("agent gateway browser tools", () => {
       "browser_close",
     ]);
     expect(tools.every((tool) => tool.requiredCapability === "browser:control")).toBe(true);
-    expect(tools.every((tool) => tool.requiresActiveTurn === true)).toBe(true);
     expect(tools.every((tool) => tool.definition.outputSchema === undefined)).toBe(true);
 
     const openSchema = tools.find((tool) => tool.definition.name === "browser_open")!.definition

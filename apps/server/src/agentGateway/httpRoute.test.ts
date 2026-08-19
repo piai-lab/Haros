@@ -57,7 +57,7 @@ async function withGatewayServer(
           return VALID_TOKEN;
         };
       })(),
-      bindWriteAuthority: (token, turnId) =>
+      bindTurnAuthority: (token, turnId) =>
         token === VALID_TOKEN
           ? {
               sessionKey: "session-http-route-test",
@@ -66,7 +66,7 @@ async function withGatewayServer(
               turnId,
             }
           : null,
-      verifyWriteAuthority: (authority) => authority.sessionKey === "session-http-route-test",
+      verifyTurnAuthority: (authority) => authority.sessionKey === "session-http-route-test",
       registerInFlightRequest: () => () => undefined,
       cancelInFlightRequests: () => ({ count: 0, settled: Promise.resolve() }),
       cancelSessionTurnRequests: () => Promise.resolve(),

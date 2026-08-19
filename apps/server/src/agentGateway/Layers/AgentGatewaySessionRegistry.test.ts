@@ -30,18 +30,18 @@ describe("AgentGatewaySessionRegistry", () => {
     assert.equal(registry.verify(second.token)?.threadId, "thread-1");
   });
 
-  it("binds write authority to one exact turn and invalidates it on revocation", () => {
+  it("binds tool-call authority to one exact turn and invalidates it on revocation", () => {
     const registry = makeAgentGatewaySessionRegistry({ randomId: () => "authority" });
     const issued = registry.issue(ThreadId.makeUnsafe("thread-1"), "codex");
-    const authority = registry.bindWriteAuthority(issued.token, "turn-a");
+    const authority = registry.bindTurnAuthority(issued.token, "turn-a");
 
     assert.isNotNull(authority);
     assert.equal(authority?.turnId, "turn-a");
-    assert.isTrue(registry.verifyWriteAuthority(authority!));
+    assert.isTrue(registry.verifyTurnAuthority(authority!));
 
     registry.revoke(issued.token);
-    assert.isFalse(registry.verifyWriteAuthority(authority!));
-    assert.isNull(registry.bindWriteAuthority(issued.token, "turn-b"));
+    assert.isFalse(registry.verifyTurnAuthority(authority!));
+    assert.isNull(registry.bindTurnAuthority(issued.token, "turn-b"));
   });
 
   it("permanently fences a terminal turn credential even when A never used it", () => {
@@ -49,18 +49,18 @@ describe("AgentGatewaySessionRegistry", () => {
     const registry = makeAgentGatewaySessionRegistry({ randomId: () => String(++nextId) });
     const outgoing = registry.issue(ThreadId.makeUnsafe("thread-1"), "codex");
 
-    assert.isTrue(registry.retireWriteAuthority(outgoing.token, "turn-a"));
-    assert.isNull(registry.bindWriteAuthority(outgoing.token, "turn-a"));
-    assert.isNull(registry.bindWriteAuthority(outgoing.token, "turn-b"));
+    assert.isTrue(registry.retireTurnAuthority(outgoing.token, "turn-a"));
+    assert.isNull(registry.bindTurnAuthority(outgoing.token, "turn-a"));
+    assert.isNull(registry.bindTurnAuthority(outgoing.token, "turn-b"));
     // Retirement is idempotent for the same terminal turn but cannot be
     // reassigned to a different one.
-    assert.isTrue(registry.retireWriteAuthority(outgoing.token, "turn-a"));
-    assert.isFalse(registry.retireWriteAuthority(outgoing.token, "turn-b"));
+    assert.isTrue(registry.retireTurnAuthority(outgoing.token, "turn-a"));
+    assert.isFalse(registry.retireTurnAuthority(outgoing.token, "turn-b"));
 
     const replacement = registry.issue(ThreadId.makeUnsafe("thread-1"), "codex");
-    const turnBAuthority = registry.bindWriteAuthority(replacement.token, "turn-b");
+    const turnBAuthority = registry.bindTurnAuthority(replacement.token, "turn-b");
     assert.isNotNull(turnBAuthority);
-    assert.isTrue(registry.verifyWriteAuthority(turnBAuthority!));
+    assert.isTrue(registry.verifyTurnAuthority(turnBAuthority!));
   });
 
   it("keeps credentials valid for a long-lived provider session but not across restart", () => {

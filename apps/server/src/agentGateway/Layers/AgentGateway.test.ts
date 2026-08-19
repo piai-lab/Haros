@@ -353,7 +353,7 @@ function makeHarnessLayer(
     },
     issueStdioBootstrapToken: () => "bootstrap-test-token",
     exchangeStdioBootstrapToken: () => null,
-    bindWriteAuthority: (token: string, turnId: string) => {
+    bindTurnAuthority: (token: string, turnId: string) => {
       const threadId = VALID_TOKENS[token];
       return threadId
         ? {
@@ -365,7 +365,7 @@ function makeHarnessLayer(
           }
         : null;
     },
-    verifyWriteAuthority: (authority) =>
+    verifyTurnAuthority: (authority) =>
       authority.sessionKey === `session-for-${authority.threadId}`,
     registerInFlightRequest: inFlightRequests.register,
     cancelInFlightRequests: inFlightRequests.cancel,
@@ -2861,7 +2861,7 @@ describe("AgentGateway", () => {
   },
   );
 
-  it.effect("rejects every destructive tool after the caller turn completes", () => {
+  it.effect("rejects every provider tool call after the caller turn completes", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer([
       makeThreadShell("thread-parent", {
         latestTurn: {
@@ -2935,7 +2935,10 @@ describe("AgentGateway", () => {
         name: "omnimind_list_threads",
         args: {},
       });
-      assert.isFalse(isToolError(read.result), toolErrorText(read.result));
+      assert.equal(
+        (toolResultJson(read.result).error as { code: string }).code,
+        "caller_turn_inactive",
+      );
     }).pipe(Effect.provide(gatewayLayer));
   },
   );
@@ -4232,20 +4235,6 @@ describe("AgentGateway", () => {
           },
         ],
       });
-      harness.setThreadDetail(
-        makeThreadDetail(
-          makeThreadShell("thread-parent", {
-            latestTurn: {
-              turnId: TurnId.makeUnsafe("turn-parent-active"),
-              state: "interrupted",
-              requestedAt: NOW,
-              startedAt: NOW,
-              completedAt: NOW,
-              assistantMessageId: null,
-            },
-          }),
-        ),
-      );
       const second = yield* harness.callTool({
         token: "token-parent",
         name: "omnimind_wait_for_threads",

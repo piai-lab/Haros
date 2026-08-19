@@ -313,8 +313,8 @@ function makeGatewayCredentialsHarness(options?: {
     verifySession: () => null,
     issueStdioBootstrapToken: () => "gateway-bootstrap",
     exchangeStdioBootstrapToken: () => null,
-    bindWriteAuthority: () => null,
-    verifyWriteAuthority: () => false,
+    bindTurnAuthority: () => null,
+    verifyTurnAuthority: () => false,
     registerInFlightRequest: () => () => undefined,
     cancelInFlightRequests: () => ({ count: 0, settled: Promise.resolve() }),
     cancelSessionTurnRequests: (token, turnId) => {

@@ -102,12 +102,6 @@ describe("agent gateway device tools surface", () => {
     expect(tools.every((tool) => tool.requiredCapability === "device:control")).toBe(true);
   });
 
-  it("requires an active turn for every tool, including the read-only ones", async () => {
-    const { tools } = await setup();
-
-    expect(tools.every((tool) => tool.requiresActiveTurn === true)).toBe(true);
-  });
-
   it("marks read tools read-only and input tools as writes", async () => {
     const { byName } = await setup();
 

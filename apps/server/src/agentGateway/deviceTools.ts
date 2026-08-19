@@ -270,7 +270,6 @@ export function makeAgentGatewayDeviceTools(
   const tools: ToolEntry[] = [
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_list",
         description:
@@ -293,7 +292,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_boot",
         description:
@@ -321,7 +319,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_install",
         description:
@@ -349,7 +346,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_launch",
         description: "Launch an installed app by bundle id on a booted simulator.",
@@ -382,7 +378,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_open_url",
         description:
@@ -410,7 +405,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_tap",
         description:
@@ -468,7 +462,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_swipe",
         description: "Swipe between two points on the device screen, in device points.",
@@ -506,7 +499,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_type",
         description:
@@ -532,7 +524,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_press_button",
         description: "Press a hardware button: home, lock, volume-up, or volume-down.",
@@ -565,7 +556,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_screenshot",
         description:
@@ -603,7 +593,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_describe_ui",
         description:
@@ -622,7 +611,6 @@ export function makeAgentGatewayDeviceTools(
     },
     {
       requiredCapability: DEVICE_CONTROL_CAPABILITY,
-      requiresActiveTurn: true,
       definition: {
         name: "device_scroll_to_element",
         description:

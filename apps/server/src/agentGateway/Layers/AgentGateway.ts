@@ -258,7 +258,6 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const createThreads: ToolEntry = {
     requiredCapability: "thread:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_create_threads",
       description:
@@ -322,7 +321,6 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const createThread: ToolEntry = {
     requiredCapability: "thread:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_create_thread",
       description:
@@ -425,7 +423,6 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const sendMessage: ToolEntry = {
     requiredCapability: "thread:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_send_message",
       description:
@@ -482,7 +479,6 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const interruptThread: ToolEntry = {
     requiredCapability: "thread:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_interrupt_thread",
       description: "Interrupt the running turn of a OmniMind thread.",
@@ -528,7 +524,6 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const setThreadTitle: ToolEntry = {
     requiredCapability: "thread:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_set_thread_title",
       description: "Rename a OmniMind thread.",
@@ -564,7 +559,6 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const setThreadArchived: ToolEntry = {
     requiredCapability: "thread:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_set_thread_archived",
       description:
@@ -619,7 +613,6 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const setThreadGoal: ToolEntry = {
     requiredCapability: "thread:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_set_thread_goal",
       description:

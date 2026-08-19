@@ -307,7 +307,6 @@ export function makeAgentGatewayAutomationTools(
 
   const createAutomation: ToolEntry = {
     requiredCapability: "automation:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_create_automation",
       description: `Create a heartbeat, standalone, or dedicated OmniMind automation. ${AUTOMATION_AUTHORING_GUIDANCE} Existing calls remain compatible: omitting mode/schedule creates a heartbeat on your thread using everyMinutes (default 5). Prefer suggested:true unless the user explicitly requested creation.`,
@@ -633,7 +632,6 @@ export function makeAgentGatewayAutomationTools(
 
   const updateAutomation: ToolEntry = {
     requiredCapability: "automation:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_update_automation",
       description: `Fully replace an automation's mutable configuration. ${AUTOMATION_AUTHORING_GUIDANCE} You MUST call omnimind_view_automation first, then resend definition.definitionRevision as expectedDefinitionRevision plus name, prompt, schedule, enabled, maxIterations, notificationPolicy, and completionPolicy, including every unchanged field. Stale revisions and partial updates are rejected.`,
@@ -732,7 +730,6 @@ export function makeAgentGatewayAutomationTools(
 
   const cancelAutomation: ToolEntry = {
     requiredCapability: "automation:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_cancel_automation",
       description:
@@ -780,7 +777,6 @@ export function makeAgentGatewayAutomationTools(
 
   const updateMemory: ToolEntry = {
     requiredCapability: "automation:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_update_automation_memory",
       description:
@@ -826,7 +822,6 @@ export function makeAgentGatewayAutomationTools(
 
   const reportResult: ToolEntry = {
     requiredCapability: "automation:write",
-    requiresActiveTurn: true,
     definition: {
       name: "omnimind_report_automation_result",
       description:

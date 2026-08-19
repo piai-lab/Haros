@@ -34,7 +34,7 @@ export interface AgentGatewaySessionLease {
   readonly issueStdioBootstrapToken?: () => string | null;
   readonly cancelTurn: (turnId: string) => Promise<void>;
   /**
-   * Permanently retire write authority for a terminal turn while leaving the
+   * Permanently retire tool-call authority for a terminal turn while leaving the
    * provider runtime available to drain background work. The admission fence
    * is synchronous; the promise represents only request drainage.
    */
