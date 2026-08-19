@@ -2073,6 +2073,8 @@ export const EN_MESSAGES = {
   "settings.addInstructions": "Add instructions",
   "settings.createPromptFile": "Create file",
   "settings.promptByteCount": "{current} of {max} bytes",
+  "settings.promptInvalidText":
+    "Remove unsupported control characters. Tabs and line breaks are allowed.",
   "settings.promptSaved": "Instructions saved",
   "settings.promptAlreadyCurrent": "No file changes were needed",
   "settings.promptSaveFailed": "Could not save instructions",
@@ -2092,11 +2094,14 @@ export const EN_MESSAGES = {
   "settings.technicalDetails": "Technical details",
   "settings.promptFileLocations": "File locations",
   "settings.activePromptFile": "active",
+  "settings.globalPromptFileCreated": "global file created",
   "settings.shadowedPromptFile": "shadowed",
   "settings.defaultPromptFile": "created on first save",
   "settings.promptFileNotCreatedShort": "not created",
   "settings.pathCopied": "Path copied",
   "settings.pathCopyFailed": "Could not copy the path",
+  "settings.externalEditorRaceNotice":
+    "OmniMind checks the file version before changing it. If another app saves at the same instant, reopen the file to confirm the final contents.",
   "settings.currentConversationResources": "Current conversation resources",
   "settings.promptReloadAvailable":
     "Saving does not change a conversation that is already open. Reload its resources explicitly when ready.",
@@ -5643,6 +5648,7 @@ export const ZH_CN_MESSAGES = {
   "settings.addInstructions": "添加指令",
   "settings.createPromptFile": "创建文件",
   "settings.promptByteCount": "{current} / {max} 字节",
+  "settings.promptInvalidText": "请移除不支持的控制字符；制表符和换行符可以保留。",
   "settings.promptSaved": "指令已保存",
   "settings.promptAlreadyCurrent": "文件内容无需更改",
   "settings.promptSaveFailed": "无法保存指令",
@@ -5660,11 +5666,14 @@ export const ZH_CN_MESSAGES = {
   "settings.technicalDetails": "技术详情",
   "settings.promptFileLocations": "文件位置",
   "settings.activePromptFile": "当前生效",
+  "settings.globalPromptFileCreated": "已创建全局文件",
   "settings.shadowedPromptFile": "已被遮蔽",
   "settings.defaultPromptFile": "首次保存时创建",
   "settings.promptFileNotCreatedShort": "尚未创建",
   "settings.pathCopied": "路径已复制",
   "settings.pathCopyFailed": "无法复制路径",
+  "settings.externalEditorRaceNotice":
+    "OmniMind 会在修改前检查文件版本。如果其他应用恰好同时保存，请重新打开文件确认最终内容。",
   "settings.currentConversationResources": "当前对话资源",
   "settings.promptReloadAvailable":
     "保存不会改变已经打开的对话。准备好后，请显式重新加载它的资源。",

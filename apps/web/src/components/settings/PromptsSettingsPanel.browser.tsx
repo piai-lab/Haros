@@ -5,12 +5,14 @@
 import "../../index.css";
 
 import {
+  EDITABLE_TEXT_FILE_MAX_BYTES,
   ThreadId,
   type NativeApi,
   OmniMindAgentPromptResourceKind,
   OmniMindAgentPromptSnapshot,
 } from "@omnimind/contracts";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 const reloadTargetHarness = vi.hoisted(() => ({
@@ -77,7 +79,7 @@ function snapshot(
           },
     appendSystem: fixed("appendSystem", input.append),
     system: fixed("system", input.system),
-    maxBytes: 1_000_000,
+    maxBytes: EDITABLE_TEXT_FILE_MAX_BYTES,
   };
 }
 
@@ -113,6 +115,31 @@ describe("PromptsSettingsPanel", () => {
     await expect
       .element(screen.getByRole("button", { name: "Reload current conversation resources" }))
       .not.toBeInTheDocument();
+    await screen.unmount();
+  });
+
+  it("offers an actionable retry when the initial bounded snapshot read is rejected", async () => {
+    const getSnapshot = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("capacity"))
+      .mockResolvedValue(snapshot());
+    window.nativeApi = {
+      omnimindAgentPrompts: { getSnapshot, mutate: vi.fn() },
+      omnimindEcosystem: { reload: vi.fn() },
+    } as unknown as NativeApi;
+
+    const screen = await render(<PromptsSettingsPanel active />);
+    await expect
+      .element(
+        screen.getByText(
+          "Prompt files are unavailable right now. No files were changed; try again.",
+          { exact: true },
+        ),
+      )
+      .toBeVisible();
+    await screen.getByRole("button", { name: "Retry" }).click();
+    await expect.element(screen.getByText("This file has not been created.")).toBeVisible();
+    expect(getSnapshot).toHaveBeenCalledTimes(2);
     await screen.unmount();
   });
 
@@ -175,7 +202,6 @@ describe("PromptsSettingsPanel", () => {
   });
 
   it("keeps advanced files folded and confirms first replacement-file creation", async () => {
-    const initial = snapshot();
     const getSnapshot = vi.fn(
       async ({ resource }: { resource?: OmniMindAgentPromptResourceKind }) =>
         snapshot(resource ? { requested: resource } : {}),
@@ -207,6 +233,103 @@ describe("PromptsSettingsPanel", () => {
     await screen.getByRole("button", { name: "Confirm" }).click();
     await vi.waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
     await screen.unmount();
+  });
+
+  it("labels fixed global files as created rather than active and exposes the advanced target", async () => {
+    window.nativeApi = {
+      omnimindAgentPrompts: {
+        getSnapshot: vi.fn(async ({ resource }: { resource?: OmniMindAgentPromptResourceKind }) =>
+          snapshot({
+            append: "append",
+            system: "replacement",
+            requested: resource ?? "globalContext",
+          }),
+        ),
+        mutate: vi.fn(),
+      },
+      omnimindEcosystem: { reload: vi.fn() },
+    } as unknown as NativeApi;
+
+    const screen = await render(<PromptsSettingsPanel active />);
+    expect(document.getElementById("setting-advanced-prompt-files")).not.toBeNull();
+    await screen.getByRole("button", { name: /Advanced/ }).click();
+    await screen.getByRole("button", { name: "File locations" }).click();
+    await expect
+      .element(screen.getByText("APPEND_SYSTEM.md · global file created", { exact: true }))
+      .toBeVisible();
+    await expect
+      .element(screen.getByText("SYSTEM.md · global file created", { exact: true }))
+      .toBeVisible();
+    expect(document.body.textContent).not.toContain("APPEND_SYSTEM.md · active");
+    expect(document.body.textContent).not.toContain("SYSTEM.md · active");
+    await screen.unmount();
+  });
+
+  it("keeps keyboard focus and long editing content contained at the narrow viewport", async () => {
+    await page.viewport(480, 620);
+    const mutate = vi.fn();
+    window.nativeApi = {
+      omnimindAgentPrompts: {
+        getSnapshot: vi.fn(async ({ resource }: { resource?: OmniMindAgentPromptResourceKind }) =>
+          snapshot(resource ? { requested: resource } : {}),
+        ),
+        mutate,
+      },
+      omnimindEcosystem: { reload: vi.fn() },
+    } as unknown as NativeApi;
+
+    const screen = await render(<PromptsSettingsPanel active />);
+    try {
+      const advanced = screen.getByRole("button", { name: /Advanced/ });
+      advanced.element().focus();
+      await userEvent.keyboard("{Enter}");
+      await expect
+        .element(screen.getByRole("textbox", { name: "Replacement system instructions" }))
+        .not.toBeInTheDocument();
+
+      const createSystem = screen.getByRole("button", { name: "Create file" }).nth(1);
+      createSystem.element().focus();
+      await userEvent.keyboard("{Enter}");
+      const editor = screen.getByRole("textbox", { name: "Replacement system instructions" });
+      await editor.fill(Array.from({ length: 1_200 }, (_, index) => `line ${index}`).join("\n"));
+      const textarea = editor.element() as HTMLTextAreaElement;
+      expect(getComputedStyle(textarea).overflowY).toBe("auto");
+      expect(textarea.scrollHeight).toBeGreaterThan(textarea.clientHeight);
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
+        document.documentElement.clientWidth + 1,
+      );
+
+      const save = screen.getByRole("button", { name: "Save" });
+      save.element().focus();
+      await userEvent.keyboard("{Enter}");
+      await expect
+        .element(screen.getByText("Replace the default system instructions?"))
+        .toBeVisible();
+      expect(
+        document
+          .querySelector('[data-slot="alert-dialog-popup"]')
+          ?.contains(document.activeElement),
+      ).toBe(true);
+      await userEvent.keyboard("{Escape}");
+      await expect
+        .element(screen.getByText("Replace the default system instructions?"))
+        .not.toBeInTheDocument();
+      await expect.poll(() => document.activeElement).toBe(save.element());
+
+      await editor.fill("valid tab\tand line\nbut invalid \u0001 control");
+      await expect
+        .element(
+          screen.getByText(
+            "Remove unsupported control characters. Tabs and line breaks are allowed.",
+          ),
+        )
+        .toBeVisible();
+      await expect.element(save).toBeDisabled();
+      expect(mutate).not.toHaveBeenCalled();
+    } finally {
+      await screen.unmount();
+      await page.viewport(1280, 720);
+    }
   });
 
   it("projects every explicit reload result without changing the saved-file receipt", async () => {

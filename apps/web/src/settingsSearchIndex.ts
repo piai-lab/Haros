@@ -425,7 +425,7 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     section: "prompts",
     title: "Advanced prompt files",
     keywords: "append system replacement technical details file path",
-    target: null,
+    target: SETTINGS_TARGETS.advancedPromptFiles,
   },
   {
     id: "advanced:version",

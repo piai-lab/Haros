@@ -39,6 +39,7 @@ export const SETTINGS_TARGETS = {
   environmentPanel: "environment-panel",
   gitWritingModel: "setting-git-writing-model",
   globalPersonalInstructions: "setting-global-personal-instructions",
+  advancedPromptFiles: "setting-advanced-prompt-files",
 } as const;
 
 export type SettingsNavItem = {

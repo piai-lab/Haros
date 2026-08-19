@@ -64,7 +64,6 @@ const EXPENSIVE_READ_METHODS = new Set<string>([
   WS_METHODS.omnimindModelServicesGet,
   WS_METHODS.omnimindModelServicesDiscoverCustom,
   WS_METHODS.omnimindModelServicesTestCustom,
-  WS_METHODS.omnimindAgentPromptsGetSnapshot,
 ]);
 
 export function classifyWsRequest(method: string): WsRequestClass {

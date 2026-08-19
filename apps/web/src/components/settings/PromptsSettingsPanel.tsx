@@ -3,6 +3,8 @@
 // Layer: Settings UI composition
 
 import {
+  editableTextByteLength,
+  hasDisallowedEditableTextControl,
   ThreadId,
   type OmniMindAgentPromptMutationResult,
   type OmniMindAgentPromptResourceKind,
@@ -74,30 +76,28 @@ function resourceOf(
   return snapshot[resource];
 }
 
+function preserveLoadedResource(
+  oldResource: OmniMindAgentPromptResourceSnapshot,
+  newResource: OmniMindAgentPromptResourceSnapshot,
+) {
+  return !newResource.contentLoaded &&
+    oldResource.contentLoaded &&
+    oldResource.sourceId === newResource.sourceId
+    ? oldResource
+    : newResource;
+}
+
 function mergeSnapshot(
   previous: OmniMindAgentPromptSnapshot | null,
   next: OmniMindAgentPromptSnapshot,
 ): OmniMindAgentPromptSnapshot {
   if (!previous) return next;
-  const preserveLoaded = (
-    oldResource: OmniMindAgentPromptResourceSnapshot,
-    newResource: OmniMindAgentPromptResourceSnapshot,
-  ) =>
-    !newResource.contentLoaded &&
-    oldResource.contentLoaded &&
-    oldResource.sourceId === newResource.sourceId
-      ? oldResource
-      : newResource;
   return {
     ...next,
-    globalContext: preserveLoaded(previous.globalContext, next.globalContext),
-    appendSystem: preserveLoaded(previous.appendSystem, next.appendSystem),
-    system: preserveLoaded(previous.system, next.system),
+    globalContext: preserveLoadedResource(previous.globalContext, next.globalContext),
+    appendSystem: preserveLoadedResource(previous.appendSystem, next.appendSystem),
+    system: preserveLoadedResource(previous.system, next.system),
   };
-}
-
-function byteLength(value: string): number {
-  return new TextEncoder().encode(value).byteLength;
 }
 
 export function PromptsSettingsPanel(props: { active: boolean }) {
@@ -125,6 +125,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     null,
   );
   const [loadError, setLoadError] = useState(false);
+  const [loadRetrying, setLoadRetrying] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
@@ -185,9 +186,24 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
 
   if (!props.active) return null;
 
+  const retryLoad = async () => {
+    if (loadRetrying) return;
+    setLoadRetrying(true);
+    setLoadError(false);
+    try {
+      await loadResource("globalContext");
+      if (advancedOpen) {
+        await Promise.all([loadResource("appendSystem"), loadResource("system")]);
+      }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoadRetrying(false);
+    }
+  };
+
   const save = async (resource: OmniMindAgentPromptResourceKind) => {
     const current = snapshot ? resourceOf(snapshot, resource) : null;
-    const base = bases[resource];
     if (!current || pendingResource) return;
     if (resource === "system" && !current.exists) {
       setConfirmAction({ type: "create-system" });
@@ -302,8 +318,9 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     const isAdding = adding[resource];
     const visible = current.exists || isAdding;
     const conflict = conflicts[resource];
-    const currentBytes = byteLength(drafts[resource]);
+    const currentBytes = editableTextByteLength(drafts[resource]);
     const tooLarge = snapshot ? currentBytes > snapshot.maxBytes : false;
+    const hasUnsupportedControl = hasDisallowedEditableTextControl(drafts[resource]);
     const unchanged = current.exists
       ? drafts[resource] === (current.content ?? "") && bases[resource].version === current.version
       : drafts[resource].length === 0;
@@ -338,7 +355,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
             <div className="space-y-3">
               <Textarea
                 aria-label={t(RESOURCE_COPY[resource].title)}
-                className="max-h-[min(48vh,28rem)]"
+                className="max-h-[min(48vh,28rem)] overflow-hidden [&_[data-slot=textarea]]:max-h-[min(48vh,28rem)] [&_[data-slot=textarea]]:overflow-y-auto"
                 value={drafts[resource]}
                 onChange={(event) => {
                   const value = event.currentTarget.value;
@@ -348,6 +365,11 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
                   }));
                 }}
               />
+              {hasUnsupportedControl ? (
+                <p className="text-xs leading-relaxed text-destructive">
+                  {t("settings.promptInvalidText")}
+                </p>
+              ) : null}
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span
                   className={cn(
@@ -388,7 +410,13 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
                   </Button>
                   <Button
                     size="sm"
-                    disabled={pendingResource !== null || tooLarge || unchanged || conflict != null}
+                    disabled={
+                      pendingResource !== null ||
+                      tooLarge ||
+                      hasUnsupportedControl ||
+                      unchanged ||
+                      conflict != null
+                    }
                     onClick={() => void save(resource)}
                   >
                     {pendingResource === resource ? t("common.saving") : t("common.save")}
@@ -451,7 +479,16 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     <div className="space-y-6">
       {loadError ? (
         <SettingsEmptyState tone="destructive">
-          {t("settings.promptsUnavailable")}
+          <p>{t("settings.promptsUnavailable")}</p>
+          <Button
+            className="mt-3"
+            size="sm"
+            variant="outline"
+            disabled={loadRetrying}
+            onClick={() => void retryLoad()}
+          >
+            {loadRetrying ? t("common.loading") : t("common.retry")}
+          </Button>
         </SettingsEmptyState>
       ) : !snapshot ? (
         <SettingsEmptyState>{t("common.loading")}</SettingsEmptyState>
@@ -471,6 +508,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
           </SettingsSectionShell>
 
           <Collapsible
+            id={SETTINGS_TARGETS.advancedPromptFiles}
             open={advancedOpen}
             onOpenChange={(open) => {
               setAdvancedOpen(open);
@@ -570,7 +608,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
                           <div className="text-xs font-medium text-foreground">
                             {current.sourceId} ·{" "}
                             {current.exists
-                              ? t("settings.activePromptFile")
+                              ? t("settings.globalPromptFileCreated")
                               : t("settings.promptFileNotCreatedShort")}
                           </div>
                           <code className="mt-1 block break-all text-[11px] text-muted-foreground">
@@ -601,6 +639,9 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
                     );
                   })}
                 </SettingsCard>
+                <p className="mt-3 px-1 text-xs leading-relaxed text-muted-foreground">
+                  {t("settings.externalEditorRaceNotice")}
+                </p>
               </CollapsiblePanel>
             </SettingsSectionShell>
           </Collapsible>

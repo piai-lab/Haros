@@ -5,6 +5,8 @@ import * as path from "node:path";
 
 import {
   EDITABLE_TEXT_FILE_MAX_BYTES,
+  hasDisallowedEditableTextControl,
+  isEditableTextContent,
   type OmniMindAgentPromptCandidate,
   type OmniMindAgentPromptGetSnapshotInput,
   type OmniMindAgentPromptMutationInput,
@@ -67,10 +69,21 @@ type Discovery = {
   readonly activeFile: SafeFile | null;
   readonly candidateExists: ReadonlyMap<(typeof GLOBAL_CANDIDATES)[number], boolean>;
 };
+export type SafeReadHooks = {
+  readonly afterLeafValidation?: (input: {
+    readonly agentDir: string;
+    readonly sourceId: OmniMindAgentPromptSourceId;
+  }) => Promise<void>;
+  readonly afterHandleStat?: (input: {
+    readonly agentDir: string;
+    readonly sourceId: OmniMindAgentPromptSourceId;
+  }) => Promise<void>;
+};
 
 class PromptConflict extends Error {
   constructor(readonly reason: "content_changed" | "source_changed" | "state_changed") {
     super(reason);
+    this.name = "PromptConflict";
   }
 }
 
@@ -110,10 +123,7 @@ function encodeForExisting(content: string, existing?: SafeFile): Buffer {
 }
 
 function assertEditableContent(content: string): void {
-  if (content.includes("\0")) throw new Error("Prompt content is not editable text");
-  if (Buffer.byteLength(content, "utf8") > EDITABLE_TEXT_FILE_MAX_BYTES) {
-    throw new Error("Prompt content exceeds the editable text boundary");
-  }
+  if (!isEditableTextContent(content)) throw new Error("Prompt content is not editable text");
 }
 
 function displayPath(filePath: string, homeDir: string): string {
@@ -166,12 +176,14 @@ async function validateLeaf(
 async function safeRead(
   agentDir: string,
   sourceId: OmniMindAgentPromptSourceId,
+  hooks: SafeReadHooks = {},
 ): Promise<SafeFile> {
   const rootBefore = await rootState(agentDir);
   if (!rootBefore) throw new PromptConflict("state_changed");
   const leafBefore = await validateLeaf(agentDir, sourceId);
   if (!leafBefore) throw new PromptConflict("state_changed");
   if (leafBefore.size > EDITABLE_TEXT_FILE_MAX_BYTES) throw new Error("Prompt source is too large");
+  await hooks.afterLeafValidation?.({ agentDir, sourceId });
   const filePath = path.join(agentDir, sourceId);
   const handle = await fs.open(filePath, fsConstants.O_RDONLY | (fsConstants.O_NOFOLLOW ?? 0));
   try {
@@ -179,6 +191,10 @@ async function safeRead(
     if (!handleStat.isFile() || handleStat.nlink !== 1 || !sameIdentity(handleStat, leafBefore)) {
       throw new PromptConflict("state_changed");
     }
+    if (handleStat.size > EDITABLE_TEXT_FILE_MAX_BYTES) {
+      throw new Error("Prompt source is too large");
+    }
+    await hooks.afterHandleStat?.({ agentDir, sourceId });
     const bytes = Buffer.alloc(handleStat.size);
     let offset = 0;
     while (offset < bytes.length) {
@@ -187,18 +203,26 @@ async function safeRead(
       offset += result.bytesRead;
     }
     if (offset !== bytes.length) throw new PromptConflict("state_changed");
+    const handleAfter = await handle.stat();
     const leafAfter = await fs.lstat(filePath);
     const rootAfter = await rootState(agentDir);
     if (
       !rootAfter ||
       !sameIdentity(rootBefore.stat, rootAfter.stat) ||
+      !sameIdentity(handleStat, handleAfter) ||
       !sameIdentity(handleStat, leafAfter) ||
+      handleAfter.size !== handleStat.size ||
+      leafAfter.size !== handleStat.size ||
+      handleAfter.mtimeMs !== handleStat.mtimeMs ||
+      handleAfter.ctimeMs !== handleStat.ctimeMs ||
       path.dirname(await fs.realpath(filePath)) !== rootBefore.real
     ) {
       throw new PromptConflict("state_changed");
     }
     const decoded = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-    if (decoded.includes("\0")) throw new Error("Prompt source is not editable text");
+    if (hasDisallowedEditableTextControl(decoded)) {
+      throw new Error("Prompt source is not editable text");
+    }
     const hasBom = bytes.subarray(0, UTF8_BOM.length).equals(UTF8_BOM);
     const withoutBom = hasBom ? decoded.slice(1) : decoded;
     return {
@@ -219,6 +243,7 @@ async function safeRead(
 async function discover(input: {
   readonly sdk: OmniMindCodingAgentModule;
   readonly agentDir: string;
+  readonly hooks: SafeReadHooks | undefined;
 }): Promise<Discovery> {
   const candidateExists = new Map<(typeof GLOBAL_CANDIDATES)[number], boolean>();
   const seenCandidateIdentities = new Set<string>();
@@ -248,7 +273,7 @@ async function discover(input: {
   ) {
     throw new Error("Prompt discovery escaped the managed candidates");
   }
-  const activeFile = await safeRead(input.agentDir, sourceId);
+  const activeFile = await safeRead(input.agentDir, sourceId, input.hooks);
   if (selected[0]!.content !== activeFile.decoded) throw new PromptConflict("state_changed");
   return { agentDir: input.agentDir, activeSourceId: sourceId, activeFile, candidateExists };
 }
@@ -270,6 +295,7 @@ async function makeSnapshot(input: {
   readonly agentDir: string;
   readonly homeDir: string;
   readonly requested: OmniMindAgentPromptResourceKind;
+  readonly hooks: SafeReadHooks | undefined;
 }): Promise<OmniMindAgentPromptSnapshot> {
   const discovery = await discover(input);
   const candidates: OmniMindAgentPromptCandidate[] = GLOBAL_CANDIDATES.map((sourceId) => ({
@@ -318,7 +344,7 @@ async function makeSnapshot(input: {
         content: null,
       } satisfies OmniMindAgentPromptResourceSnapshot;
     }
-    const file = await safeRead(input.agentDir, sourceId);
+    const file = await safeRead(input.agentDir, sourceId, input.hooks);
     return {
       kind,
       sourceId,
@@ -357,6 +383,8 @@ function assertCurrentAgentDir(baseDir: string, expectedAgentDir: string): void 
 
 export interface OmniMindAgentPromptFilesLiveOptions {
   readonly loadModule?: () => Promise<OmniMindCodingAgentModule>;
+  /** Deterministic race seams for focused tests; production leaves these absent. */
+  readonly safeReadHooks?: SafeReadHooks;
 }
 
 export function makeOmniMindAgentPromptFilesLive(
@@ -373,7 +401,12 @@ export function makeOmniMindAgentPromptFilesLive(
       });
       const snapshot = async (resource: OmniMindAgentPromptResourceKind = "globalContext") => {
         const current = await owners();
-        return makeSnapshot({ ...current, homeDir: config.homeDir, requested: resource });
+        return makeSnapshot({
+          ...current,
+          homeDir: config.homeDir,
+          requested: resource,
+          hooks: options.safeReadHooks,
+        });
       };
       const run = <A>(operation: () => Promise<A>) =>
         Effect.tryPromise({
@@ -405,7 +438,7 @@ export function makeOmniMindAgentPromptFilesLive(
             serialize(async (): Promise<OmniMindAgentPromptMutationResult> => {
               assertEditableContent(input.action === "remove" ? "" : input.content);
               const { sdk, agentDir } = await owners();
-              const discovery = await discover({ sdk, agentDir });
+              const discovery = await discover({ sdk, agentDir, hooks: options.safeReadHooks });
               const selectedSource = sourceForDiscovery(input.resource, discovery);
 
               if (input.action === "create") {
@@ -430,7 +463,11 @@ export function makeOmniMindAgentPromptFilesLive(
                     placement: "create",
                     beforeReplace: async () => {
                       assertCurrentAgentDir(config.baseDir, agentDir);
-                      const fresh = await discover({ sdk, agentDir });
+                      const fresh = await discover({
+                        sdk,
+                        agentDir,
+                        hooks: options.safeReadHooks,
+                      });
                       const occupied =
                         input.resource === "globalContext"
                           ? fresh.activeSourceId !== null ||
@@ -448,7 +485,7 @@ export function makeOmniMindAgentPromptFilesLive(
               }
               let existing: SafeFile;
               try {
-                existing = await safeRead(agentDir, input.sourceId);
+                existing = await safeRead(agentDir, input.sourceId, options.safeReadHooks);
               } catch (error) {
                 if (error instanceof PromptConflict) return conflict(error.reason, input.resource);
                 throw error;
@@ -459,11 +496,15 @@ export function makeOmniMindAgentPromptFilesLive(
 
               if (input.action === "remove") {
                 assertCurrentAgentDir(config.baseDir, agentDir);
-                const freshDiscovery = await discover({ sdk, agentDir });
+                const freshDiscovery = await discover({
+                  sdk,
+                  agentDir,
+                  hooks: options.safeReadHooks,
+                });
                 if (sourceForDiscovery(input.resource, freshDiscovery) !== input.sourceId) {
                   return conflict("source_changed", input.resource);
                 }
-                const freshFile = await safeRead(agentDir, input.sourceId);
+                const freshFile = await safeRead(agentDir, input.sourceId, options.safeReadHooks);
                 if (
                   freshFile.version !== input.expectedVersion ||
                   !sameIdentity(freshFile.identity, existing.identity)
@@ -485,11 +526,19 @@ export function makeOmniMindAgentPromptFilesLive(
                   mode: existing.mode,
                   beforeReplace: async () => {
                     assertCurrentAgentDir(config.baseDir, agentDir);
-                    const fresh = await discover({ sdk, agentDir });
+                    const fresh = await discover({
+                      sdk,
+                      agentDir,
+                      hooks: options.safeReadHooks,
+                    });
                     if (sourceForDiscovery(input.resource, fresh) !== input.sourceId) {
                       throw new PromptConflict("source_changed");
                     }
-                    const freshFile = await safeRead(agentDir, input.sourceId);
+                    const freshFile = await safeRead(
+                      agentDir,
+                      input.sourceId,
+                      options.safeReadHooks,
+                    );
                     if (
                       freshFile.version !== input.expectedVersion ||
                       !sameIdentity(freshFile.identity, existing.identity)

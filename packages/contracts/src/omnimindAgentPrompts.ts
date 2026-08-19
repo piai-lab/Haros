@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { TrimmedNonEmptyString } from "./baseSchemas";
-import { EDITABLE_TEXT_FILE_MAX_BYTES } from "./editableText";
+import { EDITABLE_TEXT_FILE_MAX_BYTES, isEditableTextContent } from "./editableText";
 
 export const OmniMindAgentPromptResourceKind = Schema.Literals([
   "globalContext",
@@ -27,7 +27,10 @@ const PromptVersion = TrimmedNonEmptyString.check(
   Schema.isPattern(/^[a-f0-9]{64}$/u),
 );
 const DisplayPath = TrimmedNonEmptyString.check(Schema.isMaxLength(4_096));
-const PromptContent = Schema.String.check(Schema.isMaxLength(EDITABLE_TEXT_FILE_MAX_BYTES));
+const PromptContent = Schema.String.check(
+  Schema.isMaxLength(EDITABLE_TEXT_FILE_MAX_BYTES),
+  Schema.makeFilter(isEditableTextContent),
+);
 
 export const OmniMindAgentPromptCandidate = Schema.Struct({
   sourceId: OmniMindAgentPromptSourceId,
@@ -91,6 +94,11 @@ export const OmniMindAgentPromptMutationInput = Schema.Union([
 ]);
 export type OmniMindAgentPromptMutationInput = typeof OmniMindAgentPromptMutationInput.Type;
 
+// expectedVersion is optimistic conflict detection for external editors. The
+// Server serializes OmniMind mutations and checks the version immediately
+// before replace/remove, but Node does not expose an inode/version CAS for a
+// non-cooperating process. Callers must not describe this as a strict atomic
+// compare-and-replace guarantee. Atomic create remains no-clobber.
 const PromptMutationCompleted = Schema.Struct({
   state: Schema.Literals(["changed", "unchanged"]),
   snapshot: OmniMindAgentPromptSnapshot,

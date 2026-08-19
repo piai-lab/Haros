@@ -8,6 +8,18 @@ import {
   OmniMindAgentPromptSnapshot,
 } from "./omnimindAgentPrompts";
 
+function emptyPromptResource(kind: "appendSystem" | "system") {
+  return {
+    kind,
+    sourceId: null,
+    displayPath: null,
+    exists: false,
+    version: null,
+    contentLoaded: false,
+    content: null,
+  };
+}
+
 describe("OmniMind Agent prompt contracts", () => {
   it("accepts typed resource intents without accepting paths", () => {
     expect(
@@ -50,15 +62,6 @@ describe("OmniMind Agent prompt contracts", () => {
       exists: index === 1,
       active: index === 1,
     }));
-    const empty = (kind: "appendSystem" | "system") => ({
-      kind,
-      sourceId: null,
-      displayPath: null,
-      exists: false,
-      version: null,
-      contentLoaded: false,
-      content: null,
-    });
     expect(
       Schema.decodeUnknownSync(OmniMindAgentPromptSnapshot)({
         globalContextCandidates: candidates,
@@ -71,8 +74,8 @@ describe("OmniMind Agent prompt contracts", () => {
           contentLoaded: true,
           content: "hello",
         },
-        appendSystem: empty("appendSystem"),
-        system: empty("system"),
+        appendSystem: emptyPromptResource("appendSystem"),
+        system: emptyPromptResource("system"),
         maxBytes: EDITABLE_TEXT_FILE_MAX_BYTES,
       }).globalContext.content,
     ).toBe("hello");
@@ -86,5 +89,33 @@ describe("OmniMind Agent prompt contracts", () => {
         content: "x".repeat(EDITABLE_TEXT_FILE_MAX_BYTES + 1),
       }),
     ).toThrow();
+
+    expect(() =>
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+        action: "create",
+        resource: "system",
+        content: "😀".repeat(Math.floor(EDITABLE_TEXT_FILE_MAX_BYTES / 4) + 1),
+      }),
+    ).toThrow();
+  });
+
+  it("allows normal whitespace but rejects C0 controls that can over-expand JSON", () => {
+    expect(
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+        action: "create",
+        resource: "system",
+        content: "line one\n\tline two\r\n",
+      }),
+    ).toMatchObject({ content: "line one\n\tline two\r\n" });
+
+    for (const content of ["before\0after", "before\u0001after", "before\u000cafter"]) {
+      expect(() =>
+        Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+          action: "create",
+          resource: "system",
+          content,
+        }),
+      ).toThrow();
+    }
   });
 });

@@ -637,14 +637,18 @@ Server 必须：
 - 进行 realpath、no-follow、containment 和 symlink escape 检查；
 - 限制 UTF-8 bytes，拒绝不可接受编码和超限内容；
 - 使用 same-directory temporary file + atomic replace，并合理保留 mode；
-- 使用 expected hash/version 拒绝覆盖外部修改；
+- 使用 expected hash/version 尽可能检测并拒绝外部修改；该检查是 optimistic conflict detection，不宣称严格跨进程 CAS；
 - no-op save 不写；
 - 序列化同一文件并发 writer；
 - 删除只作用 exact selected resource；
 - Prompt 内容、private path、secret 和原始响应不进入普通日志、Timeline、telemetry、截图或测试快照；
 - 不读取、迁移、同步或改写 stock `.pi`、其他 Engine private home 和未知目录。
 
-本实现没有为 Prompt 拍脑袋新增独立的 `1 MB` 产品规则。它复用 Web 已有本地可编辑文本边界，将该边界抽为 contracts-owned `EDITABLE_TEXT_FILE_MAX_BYTES = 1,000,000`：单次 snapshot 只懒加载一个正文，使 UTF-8 文档连同 JSON/RPC 元数据保持在既有 `2 MiB` WebSocket frame ceiling 以下；Server 再按真实 UTF-8 bytes 强制同一界限，UI 使用 snapshot 返回的 `maxBytes`。若传输 owner、编辑器或 runtime 可用性边界以后变化，应在 shared contract 中统一重验，而不是给 Prompt 建第二常量。
+本实现没有为 Prompt 拍脑袋新增独立的 `1 MB` 产品规则。它复用 Web 已有本地可编辑文本边界，将该边界抽为 contracts-owned `EDITABLE_TEXT_FILE_MAX_BYTES = 1,000,000`，但 **1,000,000 UTF-8 bytes 本身并不自动证明 JSON/RPC 小于 `2 MiB`**：例如 C0 控制字符会被 JSON 转义为六个字节。shared editable-text contract 因此同时拒绝 NUL 与除 tab、LF、CR 外的 C0 控制字符，并按真实 UTF-8 bytes 限额；Server read/write 与 UI 使用同一规则。focused transport test 用最大合法、最坏二倍转义的正文构造真实 Effect RPC request 与 response envelope，证明二者都低于现有 `MAX_WEBSOCKET_MESSAGE_BYTES = 2 MiB`，而不是提高全局 ceiling 或依赖口头 headroom。若传输 owner、编辑器或 runtime 可用性边界以后变化，应在 shared contract 中统一重验，而不是给 Prompt 建第二常量。
+
+Node 当前公开 `fs` 只提供无条件原子 `rename`/`unlink`，没有将“target 仍是这个 inode/version”与 replace/remove 合成一个 syscall 的 API。现有 `beforeReplace` 和 remove 前 `safeRead` 能显著缩小并检测常见 external edit race，但检查后仍有最终 TOCTOU 窗口；严格 CAS 需要 native syscall bridge、协作锁或新协议，均超出本关注点并会形成新的长期 owner。准确合同是：OmniMind writers 在进程内串行，expected version 提供 optimistic conflict detection，检测到变化时 fail closed；极窄的非协作 external-writer race 不宣称原子消除。create 的 link/`EEXIST` 路径仍是原子 no-clobber。
+
+Prompt snapshot 一次只懒加载一个受 shared editable-text contract 限界的本地文件，不执行 workspace search、diff、模型调用或全量 Session 投影，因此属于 standard WS read。把它列入每 client 仅两条 lease 的 expensive-read 集合会让无文件的 Settings 页面被无关长读取阻断；正确修复是恢复 standard 分类并让 UI 失败态提供显式 retry，而不是扩大全局 expensive-read limit。focused admission test 必须在两条 expensive lease 均被占用时仍能取得 Prompt snapshot lease。
 
 snapshot 可以返回 Server 生成的安全 `displayPath`，用于本机技术详情中定位和复制真实文件；它不是 mutation 输入。mutation authority 仍只有 resource kind、allowlisted opaque source id、expected version 与 intent。该路径不得进入 Prompt、普通日志、Timeline、telemetry 或交付截图证据。
 
@@ -759,7 +763,7 @@ Settings route/section
 
 - Renderer 任意绝对路径、path traversal、symlink escape全部失败；
 - external edit conflict不被覆盖；
-- concurrent writers串行或准确冲突；
+- OmniMind writers串行；external writers使用 expected-version optimistic conflict detection，检测到变化时准确冲突，但不宣称最终 TOCTOU 被原子消除；
 - Prompt内容与private path不进入普通日志/telemetry/screenshot artifact；
 - fresh task profile 的 stock `.pi` tree hash/mtime/size不变；
 - 其他 Engine private home零读取、零写入；
@@ -820,7 +824,7 @@ Settings route/section
 - Xiaomi MiMo 与 DeepSeek 分别通过任务专用 loopback credential pass-through 访问各自官方 OpenAI-compatible endpoint。两者都返回 OmniMind、πAI-Lab 与中英文机构名；MiMo 的 save-without-reload continuation 仍使用旧 Session snapshot，显式 reload 后的真实 request capture 从 PINE 切换为 CEDAR。DeepSeek 在首次请求、no-op、busy reload、abort 后 continuation 与同 profile reopen 后保持同一脱敏 system-prompt digest `98712c775b83e14a`，且请求只含 CEDAR、不含 PINE。该 digest 只证明本轮请求字节稳定，不冒充 Provider cache 命中率。
 - exact product SHA 构建的 macOS arm64 DMG SHA-256 为 `3c58808a1bd71231f642156e47518d9db0cb5e74667b6d3edbb0b0a569bd3322`，ZIP SHA-256 为 `2b7ede9308b9c9ee998047af34ab350fecf6293c7055a5df91dd21b26f95b545`；ZIP 通过隔离 startup smoke，安装副本 app.asar SHA-256 为 `f70182af21eac0c7ab3157bde86a2ddbfb2c061761aa62e8b229c837325fd31c`。
 - packaged fresh profile 证明中英文导航与搜索/deep-link、初始零创建、create/edit/no-op、safe displayPath、advanced 折叠、SYSTEM 首次确认、external conflict 不覆盖、candidate 删除后重新发现、显式 reload success/busy、abort 后 continuation，以及关闭 App 后同 profile 对话与当前文件重建。运行参数证明 Electron userData 使用任务专用目录；HOME、OmniMind home、Agent private home 与 Project 同样隔离，真实用户 stock `.pi` 和其他 Engine private home 未被读取或改写。
-- reload RPC failure、窄宽布局及完整 keyboard/focus 矩阵由 focused browser tests 覆盖；本轮没有为制造 packaged failure 而破坏 Session 或文件安全边界，也没有新增永久 GUI harness。Provider 未暴露可归因的 cache read/write 字段，因此没有生成 cache 命中结论。
+- reload RPC failure由 focused browser tests 覆盖；初版 Prompts suite 当时没有证明窄宽、keyboard/focus 或 long-content overflow，因此不能把五项 happy-path tests 写成完整矩阵。后续收口只补本页关键风险：窄宽无横向溢出、advanced 键盘进入、SYSTEM dialog Escape/focus return、长正文 textarea 内部滚动与 C0 控制字符阻断；不建设庞大 GUI harness。Provider 未暴露可归因的 cache read/write 字段，因此没有生成 cache 命中结论。
 
 ## 16. 明确否决与 stop-loss
 

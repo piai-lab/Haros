@@ -97,6 +97,12 @@ describe("rankSettingsSearchEntries", () => {
     });
     expect(SETTINGS_TARGETS.gitWritingModel).toBe("setting-git-writing-model");
   });
+
+  it("routes advanced prompt search to the existing advanced section", () => {
+    const entry = SETTINGS_SEARCH_ENTRIES.find((candidate) => candidate.id === "prompts:advanced")!;
+    expect(settingsSearchEntryTarget(entry)).toBe(SETTINGS_TARGETS.advancedPromptFiles);
+    expect(SETTINGS_TARGETS.advancedPromptFiles).toBe("setting-advanced-prompt-files");
+  });
 });
 
 describe("SettingsSidebarNav", () => {

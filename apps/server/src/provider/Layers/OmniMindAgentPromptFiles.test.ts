@@ -3,17 +3,26 @@ import os from "node:os";
 import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { EDITABLE_TEXT_FILE_MAX_BYTES } from "@omnimind/contracts";
-import { Effect, Layer } from "effect";
+import {
+  EDITABLE_TEXT_FILE_MAX_BYTES,
+  OmniMindAgentPromptMutationInput,
+  OmniMindAgentPromptSnapshot,
+  WS_METHODS,
+} from "@omnimind/contracts";
+import { Effect, Layer, Schema } from "effect";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
+import { MAX_WEBSOCKET_MESSAGE_BYTES } from "../../nodeHttpServer.ts";
 import type { OmniMindCodingAgentModule } from "../omnimindAgentRuntime.ts";
 import {
   OmniMindAgentPromptFiles,
   type OmniMindAgentPromptFilesShape,
 } from "../Services/OmniMindAgentPromptFiles.ts";
-import { makeOmniMindAgentPromptFilesLive } from "./OmniMindAgentPromptFiles.ts";
+import {
+  makeOmniMindAgentPromptFilesLive,
+  type OmniMindAgentPromptFilesLiveOptions,
+} from "./OmniMindAgentPromptFiles.ts";
 
 const CANDIDATES = [
   "AGENTS.override.md",
@@ -30,7 +39,7 @@ afterEach(() => {
   }
 });
 
-function harness() {
+function harness(options: OmniMindAgentPromptFilesLiveOptions = {}) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-prompts-"));
   const baseDir = path.join(root, "state");
   fs.mkdirSync(baseDir, { mode: 0o700 });
@@ -49,7 +58,10 @@ function harness() {
     },
   );
   const sdk = { loadProjectContextFiles } as unknown as OmniMindCodingAgentModule;
-  const layer = makeOmniMindAgentPromptFilesLive({ loadModule: async () => sdk }).pipe(
+  const layer = makeOmniMindAgentPromptFilesLive({
+    ...options,
+    loadModule: async () => sdk,
+  }).pipe(
     Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
     Layer.provideMerge(NodeServices.layer),
   );
@@ -270,6 +282,12 @@ describe("OmniMindAgentPromptFilesLive", () => {
     await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
       "OmniMind Agent prompt file operation failed",
     );
+
+    const control = harness();
+    write(control.agentDir, "AGENTS.md", "plain\u0001control");
+    await expect(control.run((service) => service.getSnapshot())).rejects.toThrow(
+      "OmniMind Agent prompt file operation failed",
+    );
   });
 
   it("rejects oversized, binary-like, directory, and linked-root inputs", async () => {
@@ -298,6 +316,88 @@ describe("OmniMindAgentPromptFilesLive", () => {
     await expect(linkedRoot.run((service) => service.getSnapshot())).rejects.toThrow(
       "OmniMind Agent prompt file operation failed",
     );
+  });
+
+  it("rechecks the opened handle size before allocating a read buffer", async () => {
+    let expanded = false;
+    const test = harness({
+      safeReadHooks: {
+        afterLeafValidation: async ({ agentDir, sourceId }) => {
+          if (expanded) return;
+          expanded = true;
+          fs.appendFileSync(
+            path.join(agentDir, sourceId),
+            Buffer.alloc(EDITABLE_TEXT_FILE_MAX_BYTES, 0x61),
+          );
+        },
+      },
+    });
+    write(test.agentDir, "AGENTS.md", "x");
+
+    await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
+      "OmniMind Agent prompt file operation failed",
+    );
+    expect(fs.statSync(path.join(test.agentDir, "AGENTS.md")).size).toBe(
+      EDITABLE_TEXT_FILE_MAX_BYTES + 1,
+    );
+  });
+
+  it("rejects a file that grows after handle admission instead of returning a partial snapshot", async () => {
+    let expanded = false;
+    const test = harness({
+      safeReadHooks: {
+        afterHandleStat: async ({ agentDir, sourceId }) => {
+          if (expanded) return;
+          expanded = true;
+          fs.appendFileSync(path.join(agentDir, sourceId), "raced");
+        },
+      },
+    });
+    write(test.agentDir, "AGENTS.md", "stable");
+
+    await expect(test.run((service) => service.getSnapshot())).rejects.toThrow(
+      "OmniMind Agent prompt file operation failed",
+    );
+    expect(fs.readFileSync(path.join(test.agentDir, "AGENTS.md"), "utf8")).toBe("stableraced");
+  });
+
+  it("keeps the largest legal escaped request and response below the existing WS ceiling", async () => {
+    const content = "\\".repeat(EDITABLE_TEXT_FILE_MAX_BYTES);
+    const payload = Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({
+      action: "create",
+      resource: "globalContext",
+      content,
+    });
+    const requestFrame = JSON.stringify({
+      _tag: "Request",
+      id: "00000000-0000-4000-8000-000000000099",
+      tag: WS_METHODS.omnimindAgentPromptsMutate,
+      payload,
+    });
+    expect(Buffer.byteLength(requestFrame, "utf8")).toBeLessThan(MAX_WEBSOCKET_MESSAGE_BYTES);
+
+    const test = harness();
+    write(test.agentDir, "AGENTS.md", content);
+    const snapshot = await test.run((service) =>
+      service.getSnapshot({ resource: "globalContext" }),
+    );
+    const maxDisplayPath = `/${"x".repeat(4_094)}`;
+    const maxLegalSnapshot = Schema.decodeUnknownSync(OmniMindAgentPromptSnapshot)({
+      ...snapshot,
+      globalContextCandidates: snapshot.globalContextCandidates.map((candidate) => ({
+        ...candidate,
+        displayPath: maxDisplayPath,
+      })),
+      globalContext: { ...snapshot.globalContext, displayPath: maxDisplayPath },
+      appendSystem: { ...snapshot.appendSystem, displayPath: maxDisplayPath },
+      system: { ...snapshot.system, displayPath: maxDisplayPath },
+    });
+    const responseFrame = JSON.stringify({
+      _tag: "Exit",
+      requestId: "00000000-0000-4000-8000-000000000099",
+      exit: { _tag: "Success", value: maxLegalSnapshot },
+    });
+    expect(Buffer.byteLength(responseFrame, "utf8")).toBeLessThan(MAX_WEBSOCKET_MESSAGE_BYTES);
   });
 
   it("keeps an intentionally empty active file and its native shadow semantics", async () => {
