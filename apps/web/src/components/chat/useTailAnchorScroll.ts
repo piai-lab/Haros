@@ -1,6 +1,6 @@
 // FILE: useTailAnchorScroll.ts
 // Purpose: Slide a just-sent user message to the top of the transcript viewport
-//          and own the scroll until that slide settles.
+//          and keep that anchor stable until overflow or reader takeover.
 // Layer: Chat transcript behavior hook
 // Why: The space that lets the message anchor at the top while the response
 //      streams below it is reserved natively by LegendList's `anchoredEndSpace`
@@ -8,7 +8,8 @@
 //      measured row sizes inside the list's own layout pass. This hook performs
 //      the one visible motion — moving the sent message to its anchored
 //      coordinate — as a single frame loop that re-reads that coordinate every
-//      frame. Re-targeting is what keeps the motion glitch-free: the anchor's
+//      frame, then retains event-driven corrections for late row measurement.
+//      Re-targeting is what keeps the motion glitch-free: the anchor's
 //      position moves while the slide is in flight (the end-space reserve grows,
 //      rows above settle from estimated to measured heights, pre-turn status rows
 //      land), and a fixed-target native smooth scroll would land wrong and then
@@ -62,6 +63,8 @@ interface UseTailAnchorScrollOptions {
   anchorScrollInFlightRef?: RefObject<boolean> | undefined;
   /** Lets the list suspend its own end-follow until the anchor slide is settled. */
   onAnchorSlideFinished?: ((messageId: MessageId) => void) | undefined;
+  /** Permanently releases an anchor once its native end reserve is exhausted. */
+  onAnchorOverflow?: ((messageId: MessageId) => void) | undefined;
   /** Changes whenever transcript content may have moved the anchor row. */
   contentChangeSignal?: unknown;
   /** Last measured native end-space reserve; null until a positive reserve exists. */
@@ -122,6 +125,7 @@ export function useTailAnchorScroll({
   anchorMessageId,
   anchorScrollInFlightRef,
   onAnchorSlideFinished,
+  onAnchorOverflow,
   contentChangeSignal,
   anchorEndSpaceSizeRef,
   animateAnchorSlide = true,
@@ -158,6 +162,7 @@ export function useTailAnchorScroll({
     }
 
     let disposed = false;
+    let hasSettled = false;
     let frameId: number | null = null;
     let layoutObserver: MutationObserver | null = null;
     let rowResizeObserver: ResizeObserver | null = null;
@@ -186,11 +191,15 @@ export function useTailAnchorScroll({
     // reserve that has yet to appear.
     let hasBeenReachable = false;
 
-    function stopFrameLoop(): void {
+    function stopScheduledFrame(): void {
       if (frameId !== null) {
         window.cancelAnimationFrame(frameId);
         frameId = null;
       }
+    }
+
+    function stopAnchorOwnership(): void {
+      stopScheduledFrame();
       anchorSlideCorrectionRef.current = null;
       layoutObserver?.disconnect();
       layoutObserver = null;
@@ -201,7 +210,25 @@ export function useTailAnchorScroll({
     // The slide is over (or was never possible): hand scroll ownership back to
     // ChatView's auto-follow machinery.
     function finishAnchorSlide(): void {
-      stopFrameLoop();
+      stopAnchorOwnership();
+      if (anchorScrollInFlightRef) {
+        anchorScrollInFlightRef.current = false;
+      }
+      onAnchorSlideFinished?.(anchorId);
+    }
+
+    // Once the visible motion is quiet, stop polling and release ChatView's
+    // in-flight gate, but retain a timeline-scoped row/layout observer for as
+    // long as this short-turn anchor exists. Async Markdown highlighting and
+    // disclosure collapse can settle much later than the initial slide; the
+    // persistent anchor remains their sole position owner until overflow or a
+    // user gesture clears it.
+    function settleAnchorSlide(): void {
+      if (hasSettled) {
+        return;
+      }
+      hasSettled = true;
+      stopScheduledFrame();
       if (anchorScrollInFlightRef) {
         anchorScrollInFlightRef.current = false;
       }
@@ -223,7 +250,7 @@ export function useTailAnchorScroll({
       }
       // A pointer/wheel/touch gesture clears the shared flag in ChatView. Do not
       // pull the transcript back after the user takes over the scroll.
-      if (anchorScrollInFlightRef && !anchorScrollInFlightRef.current) {
+      if (anchorScrollInFlightRef && !anchorScrollInFlightRef.current && !hasSettled) {
         finishAnchorSlide();
         return true;
       }
@@ -282,8 +309,19 @@ export function useTailAnchorScroll({
           // and the list only re-sticks on its next content change, so leaving
           // it here would strand the transcript short of the live edge.
           container.scrollTop = target.maxScrollTopPx;
+          // Exhaustion is a one-way lifecycle boundary. Keeping the anchor
+          // alive here lets a later tail shrink (for example settled tool-row
+          // grouping) recreate the reserve and pull the viewport back to the
+          // original user message.
+          onAnchorOverflow?.(anchorId);
           finishAnchorSlide();
           return true;
+        }
+        // Keep the frame sampler alive until exhaustion is confirmed. After
+        // the initial slide settles, row observers are event-driven and a
+        // single resize may be the only signal for this boundary.
+        if (hasSettled) {
+          return false;
         }
       } else {
         overflowFrames = 0;
@@ -379,18 +417,20 @@ export function useTailAnchorScroll({
       ) {
         return false;
       }
-      finishAnchorSlide();
+      settleAnchorSlide();
       return true;
     }
 
     anchorSlideCorrectionRef.current = () => {
-      advanceAnchorSlide(performance.now());
+      if (!advanceAnchorSlide(performance.now()) && frameId === null) {
+        frameId = window.requestAnimationFrame(step);
+      }
     };
     const timelineRoot = timelineRootRef.current;
     if (timelineRoot && typeof MutationObserver !== "undefined") {
       const observeMessageRows = () => {
         if (!rowResizeObserver) return;
-        for (const row of timelineRoot.querySelectorAll<HTMLElement>("[data-message-id]")) {
+        for (const row of timelineRoot.querySelectorAll<HTMLElement>("[data-timeline-row-kind]")) {
           rowResizeObserver.observe(row);
         }
       };
@@ -400,8 +440,12 @@ export function useTailAnchorScroll({
         });
         observeMessageRows();
       }
-      layoutObserver = new MutationObserver(() => {
-        observeMessageRows();
+      layoutObserver = new MutationObserver((records) => {
+        // Style-only position updates do not add anything for ResizeObserver
+        // to watch. Avoid a full rendered-row query on the hot streaming path.
+        if (records.some((record) => record.type === "childList")) {
+          observeMessageRows();
+        }
         anchorSlideCorrectionRef.current?.();
       });
       // LegendList repositions rows — and re-issues its own end-follow scroll —
@@ -409,7 +453,10 @@ export function useTailAnchorScroll({
       // already run. Correcting from the mutation itself puts the anchor back on
       // its coordinate before paint; waiting for the next rAF instead leaves the
       // anchored message visibly displaced for that frame. The observer only
-      // lives for the duration of the slide and its hold.
+      // remains scoped to the mounted timeline while the anchor exists. Style
+      // changes on LegendList's positioned wrappers are the only pre-paint
+      // signal that an async row measurement moved the anchor; the callback is
+      // constant-time unless child structure actually changes.
       layoutObserver.observe(timelineRoot, {
         attributes: true,
         attributeFilter: ["style"],
@@ -424,17 +471,17 @@ export function useTailAnchorScroll({
     // the two makes the eased progress jump backwards between a frame and the
     // correction that follows it, which the reader sees as the message dropping
     // back down mid-glide. One clock for every step keeps the motion monotonic.
-    const step = () => {
+    function step(): void {
       frameId = null;
       if (!advanceAnchorSlide(performance.now())) {
         frameId = window.requestAnimationFrame(step);
       }
-    };
+    }
     frameId = window.requestAnimationFrame(step);
 
     return () => {
       disposed = true;
-      stopFrameLoop();
+      stopAnchorOwnership();
       if (anchorScrollInFlightRef) {
         anchorScrollInFlightRef.current = false;
       }
@@ -444,6 +491,7 @@ export function useTailAnchorScroll({
     anchorMessageId,
     anchorScrollInFlightRef,
     listRef,
+    onAnchorOverflow,
     onAnchorSlideFinished,
     timelineRootRef,
   ]);

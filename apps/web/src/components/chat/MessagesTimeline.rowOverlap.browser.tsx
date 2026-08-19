@@ -10,7 +10,7 @@ import "../../index.css";
 
 import { MessageId } from "@omnimind/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -100,7 +100,6 @@ function seedEntries(): TimelineEntry[] {
 interface HarnessHandle {
   listRef: React.RefObject<LegendListRef | null>;
   send: (messageId: string) => void;
-  clearAnchor: () => void;
   update: (mutate: (current: TimelineEntry[]) => TimelineEntry[]) => void;
   setFollowLiveOutput: (follow: boolean) => void;
 }
@@ -110,6 +109,9 @@ function RowOverlapTimeline({ handleRef }: { handleRef: { current: HarnessHandle
   const [entries, setEntries] = useState<TimelineEntry[]>(seedEntries);
   const [tailAnchorMessageId, setTailAnchorMessageId] = useState<MessageId | null>(null);
   const [followLiveOutput, setFollowLiveOutput] = useState(false);
+  const handleTailAnchorOverflow = useCallback((messageId: MessageId) => {
+    setTailAnchorMessageId((current) => (current === messageId ? null : current));
+  }, []);
 
   handleRef.current = {
     listRef,
@@ -119,9 +121,6 @@ function RowOverlapTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         messageEntry(messageId, "user", "Freshly sent question."),
       ]);
       setTailAnchorMessageId(MessageId.makeUnsafe(messageId));
-    },
-    clearAnchor: () => {
-      setTailAnchorMessageId(null);
     },
     update: (mutate) => {
       setEntries((current) => mutate([...current]));
@@ -138,6 +137,7 @@ function RowOverlapTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         activeTurnStartedAt="2026-03-17T19:12:29.000Z"
         listRef={listRef}
         tailAnchorMessageId={tailAnchorMessageId}
+        onTailAnchorOverflow={handleTailAnchorOverflow}
         followLiveOutput={followLiveOutput}
         timelineEntries={entries}
         turnDiffSummaryByAssistantMessageId={new Map()}
@@ -181,7 +181,7 @@ function deepestRowOverlap(): { overlapPx: number; pair: string } {
   const rows = [...document.querySelectorAll<HTMLElement>("[data-timeline-row-kind]")]
     .map((row) => ({ row, rect: row.getBoundingClientRect() }))
     .filter(({ rect }) => rect.height > 0)
-    .sort((left, right) => left.rect.top - right.rect.top);
+    .toSorted((left, right) => left.rect.top - right.rect.top);
 
   let overlapPx = 0;
   let pair = "";
@@ -342,13 +342,9 @@ describe("MessagesTimeline row overlap under streaming", () => {
 
       for (let frame = 0; frame < 170; frame += 1) {
         applyStreamStep(frame);
-        // Mid-stream the tail anchor releases (the real hand-off once the
-        // response grows past the reserve), turning maintainVisibleContentPosition
-        // back on while data keeps changing — the mode where LegendList's
-        // anchor lock defers size-driven position recalcs past the paint.
-        if (frame === 40) {
-          handle().clearAnchor();
-        }
+        // The production overflow callback now releases the anchor as soon as
+        // the response consumes its reserve; the harness deliberately has no
+        // manual frame-based release, so this stream exercises that lifecycle.
         // The reader has scrolled to the live tail; the frame-100 disclosure
         // now animates above the viewport, so MVCP keeps compensating scroll
         // while sizes change — the anchor-locked mode that defers recalcs.

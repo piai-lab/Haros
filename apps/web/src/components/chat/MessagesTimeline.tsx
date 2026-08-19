@@ -12,7 +12,7 @@ import {
   type TurnId,
 } from "@omnimind/contracts";
 import { pluralize } from "@omnimind/shared/text";
-import { LegendList, type LegendListRef } from "@legendapp/list/react";
+import { LegendList, type AnchoredEndSpaceConfig, type LegendListRef } from "@legendapp/list/react";
 import {
   memo,
   useCallback,
@@ -439,9 +439,11 @@ interface MessagesTimelineProps {
   /**
    * Just-sent user message to anchor at the top of the viewport for the live turn.
    * While set, the tail spacer reserves the space below it so the streaming response
-   * fills the remaining viewport; null collapses the reserve (turn finished).
+   * fills the remaining viewport; null releases the reserve after overflow or reader takeover.
    */
   tailAnchorMessageId?: MessageId | null;
+  /** Releases a send anchor after the streamed tail permanently exhausts its reserve. */
+  onTailAnchorOverflow?: (messageId: MessageId) => void;
   /**
    * Shared flag set by ChatView on send and cleared by the tail-anchor hook once
    * the anchored slide settles; ChatView's auto-follow re-snaps pause while set.
@@ -533,6 +535,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   goalAchievements: goalAchievementsProp,
   enteringUserMessageIds: enteringUserMessageIdsProp,
   tailAnchorMessageId: tailAnchorMessageIdProp,
+  onTailAnchorOverflow,
   tailAnchorScrollInFlightRef,
   crossTaskOrigin: crossTaskOriginProp,
   forkSource: forkSourceProp,
@@ -760,6 +763,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     anchorMessageId: hasInheritedTailAnchor ? null : tailAnchorMessageId,
     anchorScrollInFlightRef: tailAnchorScrollInFlightRef,
     onAnchorSlideFinished: handleTailAnchorSlideFinished,
+    onAnchorOverflow: onTailAnchorOverflow,
     contentChangeSignal: timelineEntries,
     anchorEndSpaceSizeRef: tailAnchorEndSpaceSizeRef,
     animateAnchorSlide: !followLiveOutput,
@@ -869,15 +873,28 @@ export const MessagesTimeline = memo(function MessagesTimeline({
     const inset = (Number.parseFloat(style.paddingTop) || 0) + bottomPadding;
     setAnchorVerticalInsetPx((current) => (Math.abs(current - inset) > 0.5 ? inset : current));
   }, [contentInsetBottomPx, resolvedListRef, tailAnchorMessageId]);
-  const anchoredEndSpace = useMemo(
+  const handleInheritedTailAnchorReady = useCallback(
+    ({ size }: { size: number }) => {
+      // A timeline remount can inherit an anchor after its response has already
+      // overflowed. The slide hook intentionally does not replay on re-entry,
+      // so close the same one-way lifecycle boundary from LegendList's first
+      // complete measurement instead.
+      if (hasInheritedTailAnchor && size <= 0.5 && tailAnchorMessageId !== null) {
+        onTailAnchorOverflow?.(tailAnchorMessageId);
+      }
+    },
+    [hasInheritedTailAnchor, onTailAnchorOverflow, tailAnchorMessageId],
+  );
+  const anchoredEndSpace = useMemo<AnchoredEndSpaceConfig | undefined>(
     () =>
       tailAnchorRowIndex < 0
         ? undefined
         : {
             anchorIndex: tailAnchorRowIndex,
             anchorOffset: anchorVerticalInsetPx,
+            onReady: handleInheritedTailAnchorReady,
           },
-    [anchorVerticalInsetPx, tailAnchorRowIndex],
+    [anchorVerticalInsetPx, handleInheritedTailAnchorReady, tailAnchorRowIndex],
   );
   // `anchoredEndSpaceSize` is an internal LegendList signal used to distinguish
   // a live reserve from a true overflow and to expose that boundary to browser

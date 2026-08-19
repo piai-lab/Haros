@@ -10,7 +10,7 @@ import "../../index.css";
 
 import { MessageId } from "@omnimind/contracts";
 import { type LegendListRef } from "@legendapp/list/react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { render } from "vitest-browser-react";
 
@@ -67,6 +67,7 @@ function seedEntries(): TimelineEntries {
 interface HarnessHandle {
   send: (messageId: string) => void;
   growStream: (streamMessageId: string, lines: number) => void;
+  growEarlierMessage: (messageId: string, lines: number) => void;
   showLiveStatus: () => void;
   showWorkingHeader: () => void;
   finishTurn: () => void;
@@ -87,6 +88,9 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
   const atEndStatesRef = useRef<boolean[]>([]);
   const trailEmissionCountRef = useRef(0);
   const scrollCallbackOrderRef = useRef<string[]>([]);
+  const handleTailAnchorOverflow = useCallback((messageId: MessageId) => {
+    setTailAnchorMessageId((current) => (current === messageId ? null : current));
+  }, []);
 
   handleRef.current = {
     listRef,
@@ -114,6 +118,21 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         }
         return current.map((entry, index) => (index === streamingIndex ? grown : entry));
       });
+    },
+    growEarlierMessage: (messageId: string, lines: number) => {
+      setEntries((current) =>
+        current.map((entry) =>
+          entry.kind === "message" && entry.message.id === messageId
+            ? {
+                ...entry,
+                message: {
+                  ...entry.message,
+                  text: `${entry.message.text}\n\n${"Late rich-content expansion above the reader.\n\n".repeat(lines)}`,
+                },
+              }
+            : entry,
+        ),
+      );
     },
     showLiveStatus: () => {
       setIsWorking(true);
@@ -145,6 +164,7 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         activeTurnStartedAt={activeTurnStartedAt}
         listRef={listRef}
         tailAnchorMessageId={tailAnchorMessageId}
+        onTailAnchorOverflow={handleTailAnchorOverflow}
         followLiveOutput={followLiveOutput}
         timelineEntries={entries}
         turnDiffSummaryByAssistantMessageId={new Map()}
@@ -448,6 +468,65 @@ describe("MessagesTimeline tail anchor", () => {
           return offset !== null && Math.abs(offset - topGapPx) <= 8;
         })
         .toBe(true);
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  it("preserves the reader's anchored row after a short turn settles and older rich content expands", async () => {
+    const handleRef: { current: HarnessHandle | null } = { current: null };
+    const screen = await render(<TailAnchorTimeline handleRef={handleRef} />);
+
+    try {
+      const handle = () => {
+        if (!handleRef.current) throw new Error("harness not mounted");
+        return handleRef.current;
+      };
+
+      await expect.poll(() => handle().listRef.current?.getScrollableNode?.() != null).toBe(true);
+      await settleFrames(3);
+      void handle().listRef.current?.scrollToEnd?.({ animated: false });
+
+      const container = getScrollContainer(handle());
+      const topGapPx = Number.parseFloat(getComputedStyle(container).paddingTop) || 0;
+      handle().send(FIRST_SENT_MESSAGE_ID);
+      handle().growStream(FIRST_STREAMING_MESSAGE_ID, 2);
+      await expect
+        .poll(() => {
+          const offset = anchorTopOffsetPx(handle(), FIRST_SENT_MESSAGE_ID);
+          return offset !== null && Math.abs(offset - topGapPx) <= 8;
+        })
+        .toBe(true);
+
+      handle().finishTurn();
+      // The custom slide/hold has a 450ms quiet window. Wait until it has
+      // stopped frame polling before changing an older row; the settled anchor
+      // still owns exact position through its event-driven layout observer.
+      await settleFrames(45);
+      const baselineOffset = anchorTopOffsetPx(handle(), FIRST_SENT_MESSAGE_ID);
+      expect(baselineOffset).not.toBeNull();
+
+      handle().growEarlierMessage("seed-assistant-5", 24);
+      const offsets: number[] = [];
+      const scrollTops: number[] = [];
+      for (let frame = 0; frame < 24; frame += 1) {
+        await settleFrames(1);
+        const offset = anchorTopOffsetPx(handle(), FIRST_SENT_MESSAGE_ID);
+        if (offset !== null) {
+          offsets.push(offset);
+          scrollTops.push(container.scrollTop);
+        }
+      }
+
+      expect(offsets.length).toBeGreaterThan(0);
+      const worstDriftPx = offsets.reduce(
+        (worst, offset) => Math.max(worst, Math.abs(offset - baselineOffset!)),
+        0,
+      );
+      expect(
+        worstDriftPx,
+        `anchored row drifted across frames: ${offsets.map((offset, index) => `${offset.toFixed(1)}@${scrollTops[index]?.toFixed(1)}`).join(", ")}`,
+      ).toBeLessThanOrEqual(2);
     } finally {
       await screen.unmount();
     }
