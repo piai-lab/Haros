@@ -56,8 +56,17 @@ export interface ServerSettingsShape {
   readonly updateSettingsView: (
     patch: ServerSettingsPatch,
   ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
+  readonly mutateOmniMindDefaultPrompt: (
+    expected: string | null,
+    next: string | null,
+  ) => Effect.Effect<OmniMindDefaultPromptMutationResult, ServerSettingsError>;
   readonly streamChanges: Stream.Stream<ServerSettings>;
   readonly streamViews: Stream.Stream<ServerSettingsView>;
+}
+
+export interface OmniMindDefaultPromptMutationResult {
+  readonly state: "changed" | "unchanged" | "conflict";
+  readonly current: string | null;
 }
 
 export interface ServerSettingsSnapshot {
@@ -69,7 +78,14 @@ export interface ServerSettingsSnapshot {
 const SERVER_SETTINGS_MIGRATION_VERSION = 2;
 
 export function toServerSettingsView(settings: ServerSettings): ServerSettingsView {
-  return settings;
+  const { defaultPrompt: _defaultPrompt, ...omnimind } = settings.providers.omnimind;
+  return {
+    ...settings,
+    providers: {
+      ...settings.providers,
+      omnimind,
+    },
+  };
 }
 
 export class ServerSettingsService extends ServiceMap.Service<
@@ -85,20 +101,41 @@ export class ServerSettingsService extends ServiceMap.Service<
         );
         const changesPubSub = yield* PubSub.unbounded<ServerSettings>();
         const revisionRef = yield* Ref.make(0);
+        const writeSemaphore = yield* Semaphore.make(1);
         const emitChange = (settings: ServerSettings) =>
           PubSub.publish(changesPubSub, settings).pipe(Effect.asVoid);
         const getSettings = Ref.get(currentSettingsRef).pipe(
           Effect.map(resolveTextGenerationProvider),
         );
         const updateSettings = (patch: ServerSettingsPatch) =>
-          Ref.get(currentSettingsRef).pipe(
-            Effect.flatMap((currentSettings) =>
-              normalizeSettings("<memory>", currentSettings, patch),
+          writeSemaphore.withPermits(1)(
+            Ref.get(currentSettingsRef).pipe(
+              Effect.flatMap((currentSettings) =>
+                normalizeSettings("<memory>", currentSettings, patch),
+              ),
+              Effect.tap((nextSettings) => Ref.set(currentSettingsRef, nextSettings)),
+              Effect.tap(() => Ref.update(revisionRef, (revision) => revision + 1)),
+              Effect.tap(emitChange),
+              Effect.map(resolveTextGenerationProvider),
             ),
-            Effect.tap((nextSettings) => Ref.set(currentSettingsRef, nextSettings)),
-            Effect.tap(() => Ref.update(revisionRef, (revision) => revision + 1)),
-            Effect.tap(emitChange),
-            Effect.map(resolveTextGenerationProvider),
+          );
+        const mutateOmniMindDefaultPrompt = (expected: string | null, next: string | null) =>
+          writeSemaphore.withPermits(1)(
+            Effect.gen(function* () {
+              const currentSettings = yield* Ref.get(currentSettingsRef);
+              const current = currentSettings.providers.omnimind.defaultPrompt;
+              if (current !== expected) return { state: "conflict" as const, current };
+              if (current === next) return { state: "unchanged" as const, current };
+              const nextSettings = yield* replaceOmniMindDefaultPrompt(
+                "<memory>",
+                currentSettings,
+                next,
+              );
+              yield* Ref.set(currentSettingsRef, nextSettings);
+              yield* Ref.update(revisionRef, (revision) => revision + 1);
+              yield* emitChange(nextSettings);
+              return { state: "changed" as const, current: next };
+            }),
           );
 
         return {
@@ -119,6 +156,7 @@ export class ServerSettingsService extends ServiceMap.Service<
           updateSettings,
           updateSettingsView: (patch) =>
             updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
+          mutateOmniMindDefaultPrompt,
           get streamChanges() {
             return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationProvider));
           },
@@ -180,6 +218,32 @@ function normalizeSettings(
         new ServerSettingsError({
           settingsPath,
           detail: `failed to normalize server settings: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
+          cause,
+        }),
+    ),
+  );
+}
+
+function replaceOmniMindDefaultPrompt(
+  settingsPath: string,
+  current: ServerSettings,
+  defaultPrompt: string | null,
+): Effect.Effect<ServerSettings, ServerSettingsError> {
+  return Schema.decodeUnknownEffect(ServerSettings)({
+    ...current,
+    providers: {
+      ...current.providers,
+      omnimind: {
+        ...current.providers.omnimind,
+        defaultPrompt,
+      },
+    },
+  }).pipe(
+    Effect.mapError(
+      (cause) =>
+        new ServerSettingsError({
+          settingsPath,
+          detail: `failed to normalize OmniMind default prompt: ${SchemaIssue.makeFormatterDefault()(cause.issue)}`,
           cause,
         }),
     ),
@@ -501,6 +565,27 @@ const makeServerSettings = Effect.gen(function* () {
       }),
     );
 
+  const mutateOmniMindDefaultPrompt = (expected: string | null, nextValue: string | null) =>
+    writeSemaphore.withPermits(1)(
+      Effect.gen(function* () {
+        const disk = yield* loadSettingsFromDisk;
+        const current = disk.settings.providers.omnimind.defaultPrompt;
+        if (current !== expected) return { state: "conflict" as const, current };
+        if (current === nextValue) return { state: "unchanged" as const, current };
+        const next = yield* replaceOmniMindDefaultPrompt(settingsPath, disk.settings, nextValue);
+        const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
+        yield* writeSettingsAtomically({
+          revision: nextRevision,
+          migrationVersion: SERVER_SETTINGS_MIGRATION_VERSION,
+          settings: next,
+        });
+        yield* Ref.set(settingsRef, next);
+        yield* Ref.set(revisionRef, nextRevision);
+        yield* emitChange(next);
+        return { state: "changed" as const, current: nextValue };
+      }),
+    );
+
   return {
     start,
     ready: Deferred.await(startedDeferred),
@@ -515,6 +600,7 @@ const makeServerSettings = Effect.gen(function* () {
     ),
     updateSettings,
     updateSettingsView: (patch) => updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
+    mutateOmniMindDefaultPrompt,
     get streamChanges() {
       return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationProvider));
     },

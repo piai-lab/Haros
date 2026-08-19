@@ -68,6 +68,7 @@ import {
 } from "../../agentGateway/sessionLease.ts";
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
 import { ServerConfig } from "../../config.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import { lazyModule } from "../../lazyModule.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import {
@@ -207,7 +208,7 @@ type PiCodingAgentModule = Pick<
   | "defineTool"
   | "getAgentDir"
   | "getShellConfig"
->;
+> & { readonly DEFAULT_BASE_INSTRUCTIONS?: string };
 type PiAgentRuntime = Awaited<ReturnType<PiCodingAgentModule["createAgentSessionRuntime"]>>;
 type PiShellConfig = ReturnType<PiCodingAgentModule["getShellConfig"]>;
 type PiPromptSettlementEvent = {
@@ -414,6 +415,7 @@ const loadOmniMindAdapterModule: () => Promise<PiCodingAgentModule> = lazyModule
     defineTool: sdk.defineTool,
     getAgentDir: sdk.getAgentDir,
     getShellConfig: sdk.getShellConfig,
+    DEFAULT_BASE_INSTRUCTIONS: sdk.DEFAULT_BASE_INSTRUCTIONS,
   } as unknown as PiCodingAgentModule;
 });
 
@@ -1434,6 +1436,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const displayName = family.displayName;
     const extensionLabel = `${displayName} extension`;
     const serverConfig = yield* ServerConfig;
+    const serverSettings = Option.getOrUndefined(
+      yield* Effect.serviceOption(ServerSettingsService),
+    );
     const fileSystem = yield* FileSystem.FileSystem;
     const agentGatewayCredentials = Option.getOrUndefined(
       yield* Effect.serviceOption(AgentGatewayCredentials),
@@ -2529,6 +2534,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         readonly payload: TurnTasksUpdatedPayload;
       }) => void;
       hostSystemPrompt: (gatewayControlAvailable: boolean) => string;
+      defaultPrompt?: string;
       immutableSystemPrompt?: string;
       workSurface?: ProviderWorkSurface;
       projectContextRoot?: string;
@@ -2607,6 +2613,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...(input.immutableSystemPrompt === undefined
             ? {}
             : { immutableSystemPrompt: input.immutableSystemPrompt }),
+          ...(input.defaultPrompt === undefined ? {} : { defaultPrompt: input.defaultPrompt }),
           customTools: [
             input.sdk.defineTool(
               input.sdk.createBashToolDefinition(cwd, {
@@ -2694,6 +2701,33 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           }
         }
         const piSdk = yield* loadPiSdk("session/start");
+        const currentServerSettings =
+          provider === "omnimind" && serverSettings
+            ? yield* serverSettings.getSettings.pipe(
+                Effect.mapError(
+                  (cause) =>
+                    new ProviderAdapterRequestError({
+                      provider,
+                      method: "session/start",
+                      detail: "Failed to load OmniMind settings.",
+                      cause,
+                    }),
+                ),
+              )
+            : undefined;
+        const configuredDefaultPrompt =
+          provider === "omnimind" ? currentServerSettings?.providers.omnimind.defaultPrompt : null;
+        const defaultPrompt =
+          provider === "omnimind"
+            ? (configuredDefaultPrompt ?? piSdk.DEFAULT_BASE_INSTRUCTIONS)
+            : undefined;
+        if (provider === "omnimind" && defaultPrompt === undefined) {
+          return yield* new ProviderAdapterValidationError({
+            provider,
+            operation: "session/start",
+            issue: "OmniMind default instructions are unavailable.",
+          });
+        }
         const processSupervisor = makePiBashProcessSupervisor({
           getShellConfig: () => piSdk.getShellConfig(),
           ...(options?.spawnProcess ? { spawnProcess: options.spawnProcess } : {}),
@@ -2851,6 +2885,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       provider === "omnimind" ? agentGatewayConnection !== undefined : available,
                     enabledBuiltInGroups,
                   }),
+                ...(defaultPrompt === undefined ? {} : { defaultPrompt }),
                 ...(provider === "omnimind" && workSurface !== undefined
                   ? {
                       immutableSystemPrompt: makeOmniMindEngineSystemPrompt({ workSurface }),
@@ -3447,8 +3482,44 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ) {
             return "busy" as const;
           }
+          const currentServerSettings =
+            provider === "omnimind" && serverSettings
+              ? yield* serverSettings.getSettings.pipe(
+                  Effect.mapError(
+                    (cause) =>
+                      new ProviderAdapterRequestError({
+                        provider,
+                        method: "session/reload",
+                        detail: "Failed to load OmniMind settings.",
+                        cause,
+                      }),
+                  ),
+                )
+              : undefined;
+          const reloadSdk = provider === "omnimind" ? yield* loadPiSdk("session/reload") : null;
+          const configuredDefaultPrompt =
+            provider === "omnimind"
+              ? currentServerSettings?.providers.omnimind.defaultPrompt
+              : null;
+          const defaultPrompt =
+            provider === "omnimind"
+              ? (configuredDefaultPrompt ?? reloadSdk?.DEFAULT_BASE_INSTRUCTIONS)
+              : undefined;
+          if (provider === "omnimind" && defaultPrompt === undefined) {
+            return yield* new ProviderAdapterValidationError({
+              provider,
+              operation: "session/reload",
+              issue: "OmniMind default instructions are unavailable.",
+            });
+          }
           yield* Effect.tryPromise({
-            try: () => context.runtime.session.reload(),
+            try: () =>
+              (
+                context.runtime.session.reload as (options?: {
+                  beforeSessionStart?: () => void | Promise<void>;
+                  defaultPrompt?: string;
+                }) => Promise<void>
+              )(defaultPrompt === undefined ? undefined : { defaultPrompt }),
             catch: (cause) =>
               new ProviderAdapterRequestError({
                 provider,

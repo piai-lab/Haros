@@ -68,6 +68,7 @@ interface ChatTranscriptPaneProps {
   goalAchievements?: ComponentProps<typeof MessagesTimeline>["goalAchievements"];
   enteringUserMessageIds?: ComponentProps<typeof MessagesTimeline>["enteringUserMessageIds"];
   tailAnchorMessageId?: ComponentProps<typeof MessagesTimeline>["tailAnchorMessageId"];
+  onTailAnchorOverflow?: ComponentProps<typeof MessagesTimeline>["onTailAnchorOverflow"];
   tailAnchorScrollInFlightRef?: ComponentProps<
     typeof MessagesTimeline
   >["tailAnchorScrollInFlightRef"];
@@ -142,6 +143,7 @@ export function ChatTranscriptPane({
   goalAchievements,
   enteringUserMessageIds,
   tailAnchorMessageId,
+  onTailAnchorOverflow,
   tailAnchorScrollInFlightRef,
   crossTaskOrigin,
   forkSource,
@@ -251,6 +253,7 @@ export function ChatTranscriptPane({
             {...(goalAchievements ? { goalAchievements } : {})}
             {...(enteringUserMessageIds ? { enteringUserMessageIds } : {})}
             tailAnchorMessageId={tailAnchorMessageId ?? null}
+            {...(onTailAnchorOverflow ? { onTailAnchorOverflow } : {})}
             {...(tailAnchorScrollInFlightRef ? { tailAnchorScrollInFlightRef } : {})}
             {...(crossTaskOrigin ? { crossTaskOrigin } : {})}
             {...(forkSource ? { forkSource } : {})}

@@ -172,6 +172,12 @@ import {
   OmniMindEcosystemSnapshot,
 } from "./omnimindEcosystem";
 import {
+  OmniMindAgentPromptGetSnapshotInput,
+  OmniMindAgentPromptMutationInput,
+  OmniMindAgentPromptMutationResult,
+  OmniMindAgentPromptSnapshot,
+} from "./omnimindAgentPrompts";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -1306,6 +1312,19 @@ export const WsOmniMindEcosystemReloadRpc = Rpc.make(WS_METHODS.omnimindEcosyste
   success: OmniMindEcosystemReloadResult,
   error: WsRpcError,
 });
+export const WsOmniMindAgentPromptsGetSnapshotRpc = Rpc.make(
+  WS_METHODS.omnimindAgentPromptsGetSnapshot,
+  {
+    payload: OmniMindAgentPromptGetSnapshotInput,
+    success: OmniMindAgentPromptSnapshot,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindAgentPromptsMutateRpc = Rpc.make(WS_METHODS.omnimindAgentPromptsMutate, {
+  payload: OmniMindAgentPromptMutationInput,
+  success: OmniMindAgentPromptMutationResult,
+  error: WsRpcError,
+});
 
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
@@ -1506,6 +1525,8 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOmniMindEcosystemRemoveRpc,
   WsOmniMindEcosystemSetResourceEnabledRpc,
   WsOmniMindEcosystemReloadRpc,
+  WsOmniMindAgentPromptsGetSnapshotRpc,
+  WsOmniMindAgentPromptsMutateRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,

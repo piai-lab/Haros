@@ -560,6 +560,39 @@ describe("reachable OmniMind-owned product copy", () => {
     );
   });
 
+  it("keeps normal Prompt settings copy in OmniMind product language", () => {
+    const forbidden = [
+      /\bPi\b/u,
+      /Pi-compatible/iu,
+      /ResourceLoader/u,
+      /Engine Contract/iu,
+      /APPEND_SYSTEM\.md/u,
+      /SYSTEM\.md/u,
+      /runtime projection/iu,
+      /资源加载器/u,
+      /引擎合同/u,
+    ];
+    for (const catalog of [EN_MESSAGES, ZH_CN_MESSAGES] as const) {
+      const promptCopy = Object.entries(catalog).filter(
+        ([key]) =>
+          key.startsWith("settings.prompt") ||
+          key.startsWith("settings.customRules") ||
+          key.startsWith("settings.removeCustomRules") ||
+          key.startsWith("settings.currentConversation") ||
+          key.startsWith("settings.reloadConversation") ||
+          key.startsWith("settings.shadowedPrompt") ||
+          key.startsWith("settings.projectPrompt") ||
+          key.startsWith("settings.activePrompt") ||
+          key.startsWith("settings.defaultPrompt"),
+      );
+      expect(
+        promptCopy.flatMap(([key, message]) =>
+          forbidden.flatMap((pattern) => (pattern.test(message) ? [`${key}: ${message}`] : [])),
+        ),
+      ).toEqual([]);
+    }
+  });
+
   it("locks the bilingual first-run focus-flow copy without internal runtime vocabulary", () => {
     const exact = [
       ["onboarding.firstRun.engineTitle", "Choose your work engine", "选择你的工作引擎"],

@@ -102,6 +102,7 @@ import { ProjectionSnapshotQuery } from "./orchestration/Services/ProjectionSnap
 import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEvents";
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
 import { OmniMindEcosystem } from "./provider/Services/OmniMindEcosystem";
+import { OmniMindAgentPromptFiles } from "./provider/Services/OmniMindAgentPromptFiles";
 import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
 import { discoverSkillsCatalog, omnimindSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
@@ -372,6 +373,7 @@ const makeWsRpcHandlersLayer = () =>
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
       const omniMindEcosystem = yield* OmniMindEcosystem;
+      const omniMindAgentPromptFiles = yield* OmniMindAgentPromptFiles;
       const omniMindModelServices = yield* OmniMindModelServices;
       const providerHealth = yield* ProviderHealth;
       const providerService = yield* ProviderService;
@@ -2014,6 +2016,16 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindEcosystem.reload(input))),
             "Failed to reload OmniMind Agent resources",
+          ),
+        [WS_METHODS.omnimindAgentPromptsGetSnapshot]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindAgentPromptFiles.getSnapshot(input))),
+            "Failed to read OmniMind Agent prompt files",
+          ),
+        [WS_METHODS.omnimindAgentPromptsMutate]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindAgentPromptFiles.mutate(input))),
+            "Failed to change an OmniMind Agent prompt file",
           ),
         [WS_METHODS.omnimindModelServicesList]: (input) =>
           rpcEffect(

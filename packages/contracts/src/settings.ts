@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { ModelSelection, ProviderKind, ThreadEnvironmentMode } from "./orchestration";
+import { isOmniMindAgentPromptContent, OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
 const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
@@ -17,6 +18,12 @@ const ProviderSettingsBase = {
 export const OmniMindServerProviderSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   customModels: CustomModels,
+  defaultPrompt: Schema.NullOr(
+    Schema.String.check(
+      Schema.isMaxLength(OMNIMIND_AGENT_PROMPT_MAX_BYTES),
+      Schema.makeFilter(isOmniMindAgentPromptContent),
+    ),
+  ).pipe(Schema.withDecodingDefault(() => null)),
 });
 export type OmniMindServerProviderSettings = typeof OmniMindServerProviderSettings.Type;
 
@@ -138,9 +145,39 @@ export type ServerSettings = typeof ServerSettings.Type;
 
 export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerSettings)({});
 
-// Public settings are structurally separate so the RPC contract can remain an
-// explicitly redacted boundary if server-only settings gain more fields later.
-export const ServerSettingsView = ServerSettings;
+const OmniMindServerProviderSettingsView = Schema.Struct({
+  enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  customModels: CustomModels,
+});
+
+// Public settings deliberately omit the customized default prompt. Its only
+// projection and mutation authority is the dedicated OmniMind prompt contract.
+export const ServerSettingsView = Schema.Struct({
+  enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
+  defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
+  addProjectBaseDirectory: StringSetting.pipe(Schema.withDecodingDefault(() => "")),
+  textGenerationModelSelection: ModelSelection.pipe(
+    Schema.withDecodingDefault(() => ({
+      provider: "codex" as const,
+      model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
+    })),
+  ),
+  providers: Schema.Struct({
+    omnimind: OmniMindServerProviderSettingsView.pipe(Schema.withDecodingDefault(() => ({}))),
+    codex: CodexServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    claudeAgent: ClaudeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    cursor: CursorServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    antigravity: AntigravityServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    grok: GrokServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    droid: DroidServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    kilo: KiloServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    opencode: OpenCodeServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+    pi: PiServerProviderSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  }).pipe(Schema.withDecodingDefault(() => ({}))),
+  skills: SkillsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+  agentTools: AgentToolsServerSettings.pipe(Schema.withDecodingDefault(() => ({}))),
+});
 export type ServerSettingsView = typeof ServerSettingsView.Type;
 
 export const DEFAULT_SERVER_SETTINGS_VIEW: ServerSettingsView = Schema.decodeSync(

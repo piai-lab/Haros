@@ -3498,14 +3498,17 @@ export default function ChatView({
     [optimisticUserMessages],
   );
   // The user message a local send anchored at the top of the transcript viewport.
-  // Set at the send sites and kept after the turn settles — collapsing the tail
-  // spacer when a turn ends would visibly yank the settled transcript. The next
-  // send replaces it, and thread switches reset it via the per-thread timeline
-  // remount plus the threadId guard at the render site.
+  // Set at the send sites and kept after a short turn settles — collapsing the
+  // tail spacer at turn end would visibly yank the settled transcript. A long
+  // response clears it exactly when the native reserve is exhausted so later
+  // row regrouping cannot recreate the reserve and pull the reader backwards.
   const [tailAnchor, setTailAnchor] = useState<{
     threadId: ThreadId;
     messageId: MessageId;
   } | null>(null);
+  const handleTailAnchorOverflow = useCallback((messageId: MessageId) => {
+    setTailAnchor((current) => (current?.messageId === messageId ? null : current));
+  }, []);
   // True from send until the tail-anchor hook finishes sliding the sent message
   // to the viewport top. The auto-follow effect stays quiet while set so the
   // anchored slide has exactly one scroll owner (see useTailAnchorScroll).
@@ -5419,6 +5422,7 @@ export default function ChatView({
     programmaticScrollUntilRef.current = 0;
     // A user scroll gesture takes over from any in-flight tail-anchor slide.
     tailAnchorScrollInFlightRef.current = false;
+    setTailAnchor(null);
     if (settledScrollTarget) {
       void stopTranscriptScrollAtCurrentOffset(settledScrollTarget);
     }
@@ -12818,6 +12822,7 @@ export default function ChatView({
                         ? tailAnchor.messageId
                         : null
                     }
+                    onTailAnchorOverflow={handleTailAnchorOverflow}
                     tailAnchorScrollInFlightRef={tailAnchorScrollInFlightRef}
                     crossTaskOrigin={crossTaskOrigin}
                     forkSource={forkSource}

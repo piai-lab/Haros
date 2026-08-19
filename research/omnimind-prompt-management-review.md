@@ -1,658 +1,923 @@
-# OmniMind 提示词管理与运行时语义复核
+# OmniMind Agent 提示词设置：研究与实施输入
 
-## 0. 文档角色
+> 当前复核基线：本关注点从 OmniMind `f9da96c48a274d4c2884964d9dec5d9962772fd1` 开始实施；研究源基线 `baf0174c8c7a66610c3446f9370f46bcc7c984c3` 是其祖先。bundled OmniMind Agent runtime 仍为 `@omnimind/pi-coding-agent@0.84.2`；upstream exact source `914cf1472e715297caa30db4b9535d534a9eb718`；本轮按同一 exact source 增加并闭合 native factory-default input seam 后，vendored artifact SHA-256 为 `b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7`，product patch SHA-256 为 `499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af`。
+>
+> 当前状态：维护者已用新的“两卡片”产品决定 supersede `cf1a1e580509423a92e5334a438a3e077d376210` 的三文件 Settings 模型，后续 `584045a291a91e57ec50ce0e91cee29253334ef1` 又被真实 Provider journey 证伪为 service-based initial Session 漏传 customized default。祖先 product `db25a5b91343a4ddbf70fedd98ea3583bd020317` 已完成窄 runtime 修复、fixed-source generator、deterministic request capture、full gates、MiMo/DeepSeek 与隔离 packaged journey；当前 merge-ready exact pushed product 为 `61bb9e471625186c7693c5b74588e4f6b0e4f956`，并已完成合并前 hardening 与隔离安装复验，`/Applications/OmniMind.app` app.asar 为 `55391e52…`。F-22 仍保持 `candidate`，等待维护者独立裁决。
 
-本文记录 2026-08-15 对当前 `main@549952d1d1bc7eb9c7830c801febe8f363a1d307`、产品自有 OmniMind Agent runtime 与锁定 Pi `v0.84.1` 的 Prompt 专项复核，并把维护者确认的产品方向收敛为一份可推翻、可实施前复验的研究结论。
+> **2026-08-19 Host projection supersession.** 本文历史段落中的 `Host loader激活` 只记录当时实现与 live journey；维护者后来明确删除 AgentGateway 自建的 Host callable loader、inactive pool 与 dynamic guidance。当前 Host Projection Extension 直接注册并激活 policy 与 availability 允许且由自身 source 赢得的 definitions；具体 Extension 未来如需 dynamic loading，只能拥有自己的 owner-local loader。现行结论见 [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md) 与 [`architecture/execution.md`](../architecture/execution.md)；本文不得恢复 Host/global search guidance。
 
-本文与 [`pi-native-product-integration-review.md`](pi-native-product-integration-review.md) 的分工是：
+## 0. 一页结论
 
-- Pi-native review 继续拥有 Pi 原生 system prompt rebuild、动态工具、activation/permission、operation snapshot 与 Extension mutation 的来源事实和接入边界；
-- 本文负责从当前 `main` 继续回答 OmniMind 默认身份、用户可管理层、Project instructions、Prompt templates、Session reopen、Settings 信息架构与 Host prompt diet；
-- 两文都属于 research evidence，不取代 `architecture/workbench.md`、`architecture/product-state.md`、`architecture/execution.md`、`execution-brief.md` 或 Campaign；
-- 任何稳定产品 contract 必须先进入对应 architecture sole owner，任何代码施工仍服从当时的 `execution-brief.md` 与 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) Gate B；
-- 本文不宣称下述设计已经实现，也不把当前 bug 或历史行为晋升为产品规范。
-
-证据等级：
-
-| 等级                | 含义                                              | 本文中的例子                                                                            |
-| ------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 维护者产品方向      | 本轮已明确的目标，但尚需进入 architecture owner   | Settings 中收敛 Prompt 管理；正常产品语言去 Pi 化；stock Pi 不进入该页面                |
-| 绑定 snapshot 事实  | 文档所列 exact HEAD 与当时安装 runtime 可直接复现 | 默认 Prompt 自称 Pi；Project instructions 写 localStorage/notes；模板只以 commands 投影 |
-| 有证据的推断        | 调用链足以支持设计选择，仍需 focused journey 收口 | Prompt 页面应直接投影 native resource owner；Session reopen 使用当前资源重建 Prompt     |
-| 待产品/运行证据确认 | 不能伪装为已确定事实                              | Prompt template CRUD 的最终 API；是否改变 project APPEND 对 global APPEND 的遮蔽语义    |
-
-本轮是仓库内研究文档写入，不修改 runtime、Settings、adoption record、依赖或 Campaign claim。
-
-> **2026-08-18 supersession.** 后续沿 Environment→store→草稿 promotion→`thread.meta.update`→Thread notes 的完整调用链，并复核 Synara exact `8f9f600…` 的 `af9c36465` 与 `bdfc332a8` 后，确认该能力不是死代码或“假功能”：母体有意把一段 per-Project 本地文本作为新任务 Notepad seed，并专门修复过持久化。它确实不进入 Agent runtime Prompt，也不等于 `AGENTS.md` Project rules。维护者在知晓这项真实行为及其损失后，明确决定整体退休该表面，保留 Thread-level Notepad，不改名、不改造、不迁移。本文中把它概括为“第二事实源”“假的 Project instructions”的旧措辞据此收窄；Prompt 管理产品化不能接管或迁移这批文本。
-
-> **2026-08-18 default-identity closure.** 维护者随后确认先完成默认身份、理解/提问/拔高行为与 Chat/Agent 分层，再讨论 Prompt 管理 UI。pushed merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 已把以下 contract 写入 architecture 并接入 runtime：只有 bundled `omnimind` 获得不可被 `SYSTEM.md`、`APPEND_SYSTEM.md`、Skill、Extension 或未来 Prompt 管理覆盖的 OmniMind identity/cognitive engine contract；Extension 仍可按原生顺序替换 mutable base，runtime 在最终请求前只把 canonical engine contract 去重并追加为 exactly once，general Host harness/tool guidance 仍留在 mutable append 生命周期；`project → Agent`，`chat | studio → Chat`；Agent 以“目标充分对齐才进入实质执行”为边界，Chat 在不误导时先给可用起点并并行澄清；`别问，直接做` 只是低风险可逆未知的速度偏好。canonical Project/worktree root 是正式 Agent Session 的项目规则读取下界；Chat/Studio 和无 active Session 的被动 discovery 只读 global context，且不执行 Project Extension。product-owned Pi base 已改为 identity-neutral 并删除未发行 docs/examples 导航；stock Pi 不受影响。该 merge 已从 exact SHA 重建、安装，并通过 fresh-profile 启动与重开验证；这不构成签名或公证发行声明。Prompt 管理仍只允许管理个人指令、项目规则和模板，且本次未启动任何 UI/store/迁移。
-
-> **2026-08-19 bilingual identity and live closure.** 维护者确认英文机构名 `International Academy of Phronesis Medicine (Guangdong)` 保持不变，官方中文名是“广东智慧医学国际研究院”。中文名因此进入同一份 Host-owned immutable engine contract，而不是用户 Prompt、Extension append 或 Provider adapter 补丁。request/reload/compaction 回归证明 Chat 与 Agent 都 exactly once 接收该身份，stock Pi 不接收；授权的 MiMo 与 DeepSeek OpenAI Chat-compatible 最小 live journey 又分别完成首次身份回答、resource reload 后 continuation、Host loader 激活和实际 Host tool 调用，两者都回答 OmniMind/πAI-Lab/官方中文机构名，没有把底层模型身份冒充产品身份。该 journey 同时证明 engine contract 与稳定 Host context 的请求指纹跨上述阶段不变；它不证明 Provider cache 命中率，也不为新增 Prompt framework、缓存层或跨 Engine Prompt 管理提供理由。
-
-> **2026-08-19 Host projection supersession.** 上述`Host loader激活`只记录当时main与live journey的历史证据；维护者后来明确删除AgentGateway自建的Host-owned callable loader、inactive pool与dynamic guidance。当前目标是保留Pi-native Host Projection Extension并让allowed+available definitions直接active，prompt只保留跨工具不变量。现行结论见[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)与`architecture/execution.md`；本文不得恢复search guidance或把旧live绿色扩写为当前终态。
-
-## 1. 结论
-
-OmniMind 应在 Settings 的现有 `Coding / 开发` 分组中增加一个独立 `Prompts / 提示词` section，把 **OmniMind Agent** 的基础指令、个人追加指令、当前 Project 规则、Prompt templates 与当前生效来源收敛到一个地方。
-
-这个结论同时带有六个硬边界：
-
-1. 页面只属于 bundled OmniMind Agent，不提供 Provider selector，不管理 stock Pi、Codex、Claude、OpenCode 或其他 Engine 的 native Prompt；
-2. UI 直接投影 runtime 已有文件、ResourceLoader 与 Session truth，不增加 `prompts.json`、Prompt 数据库、profile store、版本 ledger 或跨 Engine Prompt authority；
-3. 正常 OmniMind 默认 Prompt 与正常产品 UI 不再自称 Pi；stock Pi、第三方资产原名、license、SBOM、来源和诊断仍保持真实 identity；
-4. `AGENTS.md` 才是真正的 Project rules；母体 localStorage `Project instructions` 是有意实现的 notes seeding，但维护者已确认在 OmniMind 中整体退休，不能迁移或改造成运行时指令；
-5. Prompt、Tool activation、Permission 和 Extension mutation 是四个正交事实，不能合成一个开关；
-6. 表层只提供用户会用到的编辑、来源、重载和恢复，底层保留完整 precedence、原子写入、冲突检测、operation snapshot 与 provenance。
-
-这不是 Prompt 平台，也不是 Pi TUI 的 Desktop 镜像。正确产品是：
-
-> **一个安静、可信的设置入口，背后直接连接 OmniMind Agent 已有的 native Prompt 世界。**
-
-## 2. 当前源码真值
-
-### 2.1 绑定 snapshot 的默认 Prompt 错误与已集成修复
-
-本文绑定 snapshot 当时安装的 `@omnimind/pi-coding-agent` 在 `dist/core/system-prompt.js` 中仍构造：
+OmniMind 应在：
 
 ```text
-You are an expert coding assistant operating inside pi, a coding agent harness.
+设置 → 开发 → 提示词
+Settings → Development → Prompts
 ```
 
-并永久附带 Pi README、docs、examples 与 TUI/extension/package 文档导航。这与根 README 已锁定的产品身份直接冲突：普通用户面对的是 OmniMind 和 OmniMind Agent，Pi lineage 只应进入 About、Licenses、诊断和显式来源详情。
+增加一个只服务 **OmniMind Agent** 的窄设置页。
 
-这是本文绑定 snapshot 的源码事实和产品 bug，不是“是否更喜欢 OmniMind 文案”的审美选择。上方 2026-08-18 default-identity closure 已在 merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 中移除该错误 base，并从 exact SHA 重建、安装和完成 fresh-profile journey；它现在是已验证的产品实现事实。
+页面只保留两张主卡片。“默认提示词”展示当前安装版本 bundled runtime 导出的 factory instruction segment 或用户定制值；定制只替换 native builder 的这个稳定输入，不写 `SYSTEM.md`、不经 Host append、不保存展开后的 effective prompt。“自定义规则”继续编辑 OmniMind Agent 当前实际采用的 global context candidate；无候选时为空，首次非空保存才创建标准 `AGENTS.md`，已有候选时编辑 exact active source。
 
-正确处置不是全仓库 `Pi → OmniMind`：
+`APPEND_SYSTEM.md`、`SYSTEM.md`、候选/遮蔽 dashboard 与高级文件区全部移出 Settings。高级用户手工文件的 native precedence、Project shadow 和 reload 语义保持不变，OmniMind 不接管或迁移它们。自定义规则卡片底部只显示安全 `displayPath` 与“打开”动作。
 
-- 必须修改 product-owned OmniMind Agent 的默认身份与默认文档导航；
-- 必须保持 stock `pi` Provider 的真实 Pi 身份；
-- 不改写第三方 Extension、Package、Skill、Prompt、MCP 的名称和内容；
-- 不删除 license、SBOM、source adoption、诊断和技术 provenance 中的 Pi；
-- 不通过 Host append 再说一次“你是 OmniMind”来掩盖 base Prompt 仍自称 Pi，因为相互矛盾的身份同时存在仍是错误。
+实现不得增加 Prompt DB、profile、registry、version ledger、跨 Engine 同步、第二 loader/composer、Prompt-only reload 或动态注入框架。factory text 与 builder 属于 bundled runtime，customized value 属于既有 Server settings，global rules 属于 native file/discovery，Session snapshot 与 reload 继续由既有 owner 负责。
 
-### 2.2 Snapshot 中的 `Project instructions` 是真实 notes-seeding 功能，但不是运行时规则
+用户面对的是 **OmniMind**。正常设置页文案、Toast、空态、错误和帮助文本不得出现 Pi、Pi-compatible、ResourceLoader、Engine Contract、Host append、upstream、fork 等内部词。内部研究、代码、诊断、许可证、SBOM 和来源详情必须继续准确记录 lineage，不能为了产品语言干净而伪造来源。
 
-本文绑定的 snapshot 中，`apps/web/src/projectInstructionsStore.ts`：
+## 1. 文档角色与权威边界
 
-- 使用 `omnimind:project-instructions:v1` 写浏览器 localStorage；
-- 以 Product `projectId` 保存一段自由文本；
-- 只通过 `mergeProjectInstructionsIntoThreadNotes()` 合并到 Thread notes。
+### 1.1 本文拥有的内容
 
-Environment 面板的 `EnvironmentProjectInstructionsSection` 也明确把它实现为：
+本文集中保存：
 
-- 500ms debounce autosave；
-- `Copy to notepad / Append to notepad`；
-- 英文硬编码标题和 placeholder；
-- 与 native `AGENTS.md`、`SYSTEM.md`、`APPEND_SYSTEM.md`、Prompt templates 无直接接线。
+- exact-source Prompt 发现、组合、覆盖、reload 与 operation snapshot 事实；
+- 已完成的 OmniMind identity/cognitive contract 事实与 live evidence；
+- 维护者在 2026-08-19 最终确认的 Prompt 设置范围；
+- 用户可见产品语言与内部实现语言的防火墙；
+- 最小 Settings 信息架构、交互、状态、错误和双语文案；
+- 文件 mutation 的安全、并发、冲突和私有目录隔离要求；
+- 缓存保护不变量、focused/live/packaged 验证矩阵；
+- 已否决路线、历史 supersession 与新会话施工前置条件。
 
-`thread.turn.start` 的 message contract 只带 text、attachments、skills 与 mentions，不带这个 localStorage 字段。真实路径是：用户编辑 per-Project 文本后，Environment 可手动 copy/append；本地草稿首次发送和 Automation 草稿 promotion 还会通过 `thread.meta.update` 把它 best-effort 写进 Thread notes。Synara `bdfc332a8` 正是为修复此前 `thread.create` 不接收 notes 的静默 no-op 而增加该写入。这证明它是完整的 Project→new-task Notepad seed，而不是 Prompt、Project rules 或未接线的占位。
+### 1.2 本文不拥有的内容
 
-维护者在 2026-08-18 明确接受失去“每个 Project 复用一段文字并自动预填新任务 Notepad”的能力，裁决为：
+- OmniMind identity、Chat/Agent work surface、cognitive core 与安全边界的最终 product contract，唯一 owner 是 `architecture/execution.md`；
+- Settings 整体信息架构、组件与用户语言规则，唯一 owner 是 `architecture/workbench.md`；
+- Workspace、Conversation、Run、Queue 与恢复事实，唯一 owner 是 `architecture/product-state.md`；
+- 当前施工准入、并发与阻塞，唯一 owner 是 `execution-brief.md`；
+- Pi ecosystem source adoption、fork 与 Gate，唯一 owner 是 `PI-ECOSYSTEM-INTAKE.md`；
+- Campaign claim 状态与交付证据，唯一 owner 是 active Campaign。
 
-1. 整体删除 Environment UI、Settings 开关/search entry、store、autosave 与手动 copy/append；
-2. 删除首次发送与 Automation promotion 的隐藏 notes 写入；
-3. 保留现有 Thread-level Notepad 及已有 Thread notes，不按无法证明的来源反向删除内容；
-4. 不把旧 localStorage 或既有 notes 迁移到 `AGENTS.md`、Notepad 或任何 Prompt 资源；
-5. 不因没有用户而建立一次性 migration/cleanup/compatibility rail；first-public source 不再注册该 key；
-6. 新的 `当前项目规则` 若未来实现，只能直接投影 native `AGENTS.md` 继承链。
+新会话不能把本文当作跳过 architecture owner 或 Gate 的理由。本文的作用是让后续会话无需重新猜测本轮产品决定和 source facts。
 
-退休理由是产品边界：名称暗示 runtime rules，实际行为却是跨任务模板与隐藏 notes 写入，会把 Project scope 和当前任务记录混成一个心智模型。它不是对母体实现质量的否定，也不能用“功能是假的”作为删除依据。
+### 1.3 证据分类
 
-### 2.3 native ResourceLoader 基础与当前边界修正
+| 类型              | 含义                                          | 本文示例                                                                             |
+| ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 维护者确认决定    | 已确认目标，施工前仍须进入 architecture owner | 页面只针对 OmniMind Agent；主入口用全局 context candidate；不做项目规则和模板        |
+| exact-source fact | 可从锁定 artifact 与当前调用链复验            | candidate 顺序；SYSTEM/APPEND 遮蔽；`session.reload()` 重建资源                      |
+| 已验证产品事实    | 已合入、重建并完成 focused/live journey       | OmniMind identity exactly once；MiMo/DeepSeek 身份回答；stock Pi 不受影响            |
+| 实施建议          | 当前最小路径，代码前仍需核现状                | 复用既有 Settings section/editor、typed server mutation、现有 reload API             |
+| 非承诺            | 当前证据不支持，不能宣传                      | Provider cache 命中率不下降的绝对保证；reload 失败自动回滚；历史 Prompt exact replay |
 
-本文绑定 snapshot 的 product-owned runtime 已经具备：
+## 2. 维护者已经锁定的决定（2026-08-19 最新）
 
-- OmniMind Agent 全局 `agentDir` 下的 `SYSTEM.md`、`APPEND_SYSTEM.md` 与 `prompts/`；
-- trusted folder-backed Project 下的 `.omnimind/SYSTEM.md`、`.omnimind/APPEND_SYSTEM.md` 与 `.omnimind/prompts/`；
-- 全局 context file 与从 filesystem root 到 cwd 的 Project `AGENTS.md`/候选 context file 继承链；该起点会错误吸收 Project 之外的 ambient ancestor，merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 已通过 ResourceLoader 的窄输入修正为 canonical Project/worktree root → cwd，Chat/Studio 与无 Session discovery 则只读 global context；
-- Extension/Package 增加的 Prompt、Skill、Tool 与资源；
-- `session.reload()` 对 settings、extensions、skills、prompts、themes、tools 与 Prompt 的原生重建；
-- `PiAdapter.reloadSessionResources()` 的 active-turn/busy admission，运行中不会强拆 Session。
+以下内容不再是开放分叉：
 
-因此不需要第二 Prompt loader 或第二文件格式。UI 只需要一个窄的 typed projection 与必要 mutation seam。
+1. Prompt 设置主要且仅针对 OmniMind Agent，不考虑 Codex、Claude、OpenCode、stock Pi 或其他 Engine 的统一管理。
+2. 其他 Engine 的调研只用于理解行业概念，不能进入 OmniMind 的产品抽象、状态或同步范围。
+3. 第一性 follow bundled runtime 的原生 Prompt 发现、组合与 reload 语义；当前 builder 没有 stable editable segment，因此只在 product-owned exact runtime 内增加这个窄输入 seam，不复制 composer。
+4. 页面位于 `设置 → 开发 → 提示词`，不放在“通用”，不新建应用一级导航，不重排 Settings taxonomy。
+5. 页面只管理 native default 的 factory/custom segment 与跨项目 global custom rules；不管理当前项目规则。
+6. 页面不提供全局 Prompt templates、当前项目模板或模板管理。
+7. 页面不展示或编辑 OmniMind Engine Contract。
+8. customized default 是唯一 Server setting value；global custom rules 的主 owner 仍是 bundled runtime 当前实际选择的 global context candidate。
+9. 初始默认不创建全局 `AGENTS.md`；没有候选时首次保存有效内容才创建。
+10. 已有候选时编辑 runtime 当前真正采用的 exact file；不迁移、不改名、不复制。
+11. `APPEND_SYSTEM.md` 与 `SYSTEM.md` 不进入 Settings；手工文件继续由原生 runtime 管理。
+12. fresh profile 必须展示 factory default；恢复默认只移除 customized value，不创建或修改 Prompt 文件。
+13. 保存只修改文件，不自动 reload 当前 Session；显式 reload 复用现有 `session.reload()`。
+14. 不改变 Prompt 物理顺序，不做每轮动态注入，不因设置页降低既有稳定前缀和缓存表现。
+15. 用户可见界面只说 OmniMind 和 OmniMind Agent；内部 lineage 与文件机制只留在代码、research、About/Licenses/SBOM、来源详情和诊断边界。
 
-### 2.4 当前 Prompt template 能“运行”，但还不能诚实管理
+> 下文关于 exact-source `SYSTEM.md` / `APPEND_SYSTEM.md`、candidate precedence、Session 与 operation 的事实仍有效；其中把三类文件作为 Settings IA、按钮或验收项的旧产品建议均被本节 supersede，只作为历史证据保留。
 
-`PiAdapter.listCommands()` 已把当前 Session 或 task-local ResourceLoader 发现的 Prompt templates 映射为 slash commands；Composer 可以运行它们。
+## 3. 最重要的概念分层
 
-但是当前公共结果只有 `name` 和 `description`，没有完整的：
+### 3.1 “可插拔”是用户结果，不是新技术类型
 
-- stable resource identity；
-- source kind 与 exact source path；
-- user/project/package/extension provenance；
-- read content；
-- create/update/delete capability；
-- collision/diagnostic projection。
-
-所以 V1 不能先画一个全功能 Template CRUD 再让 Server 猜路径。第一步只应展示 runtime 能证明的列表、来源、运行和打开；只有 product-owned runtime 提供窄、typed、credential-blind 的 Prompt resource API 后，才开放对应可写动作。
-
-### 2.5 Host prompt 已成为常驻手册
-
-`apps/server/src/agentGateway/harnessPolicy.ts` 当前把 Browser、Device、Thread、Subagent、Automation 与诊断操作说明连接成一大段稳定 Host policy，并通过 Pi `appendSystemPromptOverride` 加进 base append list。
-
-已集成的 default-identity 实现只把 identity/cognitive/Chat-Agent/task engine contract 接入 final immutable seam；这段 general Host policy 仍属于上述 mutable append list，可被后续 Extension replacement 改写。二者不能因同由 Host 组装而合并成一个冻结面。
-
-这里有两个问题：
-
-1. 常驻 Prompt 包含大量只有相关工具激活时才需要的指导，持续消耗 attention 和 cache；
-2. Browser download 与 Device approval 文案仍表达旧的逐次拒绝语义，与 `architecture/execution.md` 的单一 `runtimeMode` 目标不一致。
-
-正确方向不是删除 Host truth，而是按生命周期分层：
-
-- 永久在线：Host identity、可用性与“不能伪成功”的极小不变量；
-- tool-scoped：Browser、Device、Gateway 等随 exact active tool definition 的 `promptSnippet`/`promptGuidelines` 注入；
-- task-scoped：Automation authoring、复杂工作流与产品教程按需由 Skill/Prompt/command help 加载；
-- runtime-enforced：permission、containment、approval、abort 与 late-effect 由代码强制，Prompt 只描述事实，不拥有安全。
-
-## 3. Prompt 的真实组装模型
-
-### 3.1 静态层与动态层
-
-OmniMind Agent 的每轮 Prompt 不是一个可独立编辑的大字符串，而是一条构建链：
+维护者希望 Prompt 像 Todo Extension 一样容易安装、替换和维护。对 Prompt 而言，最小且正确的“可插拔”结果是：
 
 ```text
-product-owned default base
+不存在 → 显式创建 → 编辑 → 保存 → 显式重新加载 → 清空/删除 → runtime 重新发现
+```
+
+不需要把所有可选内容都实现成 Extension，也不需要发明 `PromptPlugin`、Prompt package manifest 或另一套 registry。bundled runtime 已经把不同责任分成 Extension、Skill、Prompt template、context file、system prompt file 和 Package；OmniMind 应复用这些差异，而不是用“一切皆插件”的口号抹平生命周期。
+
+准确结论：
+
+> Prompt 在产品体验上可插拔；在内部实现上仍是 bundled runtime 的原生文件资源。
+
+### 3.2 产品 Prompt、用户 Prompt、项目规则和任务方法不是一层
+
+| 内容                                                       | 责任                                     | 当前产品策略                                   |
+| ---------------------------------------------------------- | ---------------------------------------- | ---------------------------------------------- |
+| OmniMind 产品身份、共同认知、Chat/Agent 行为、安全与真实性 | OmniMind-owned immutable engine contract | 始终存在；不进入设置页                         |
+| 稳定默认基础指令                                           | product-owned factory/custom segment     | 设置页“默认提示词”；仍由 native builder组合    |
+| 默认工具、guidelines、context、Skills、cwd 构造            | runtime builder                          | 保留动态构造；不展示或保存 effective prompt    |
+| 通用 Host/tool guidance                                    | mutable Host append/tool-scoped guidance | 不冻结进 identity；后续 diet 由各自 owner 处理 |
+| 用户跨项目工作习惯                                         | 全局 context candidate                   | 设置页“自定义规则”                             |
+| 项目具体约束                                               | Project context chain                    | 文件优先；本页不管理                           |
+| 特定任务方法                                               | Skill / Prompt template / Extension      | 本页不管理                                     |
+| 高级追加系统行为                                           | `APPEND_SYSTEM.md`                       | 手工原生能力；设置页不管理                     |
+| 完整替换基础 Prompt                                        | `SYSTEM.md`                              | 手工原生能力；设置页不管理                     |
+
+把产品身份预写入用户 `AGENTS.md` 会导致用户内容与产品内容混合、升级困难、重复 Token、删除歧义和迁移责任，因此被否决。
+
+### 3.3 “跨项目”不等于“跨 Engine”
+
+本页的“全局”只表示：
+
+> 对 OmniMind Agent 的所有 Project、Chat 和新 Session 适用的用户级资源。
+
+它不表示一次设置同步到其他 Engine。跨 Engine 统一会要求写入其他 Engine private home、建立 overlay、处理冲突和更新兼容，是完全不同且未授权的控制面。
+
+## 4. 用户产品语言与内部实现语言防火墙
+
+### 4.1 正常产品表面必须使用的语言
+
+允许并推荐：
+
+- OmniMind；
+- OmniMind Agent；
+- 全局个人指令；
+- 附加系统指令；
+- 替换基础提示词；
+- 当前对话；
+- 重新加载当前对话资源；
+- 文件；
+- 技术详情；
+- 已保存、待重新加载、已加载、加载失败。
+
+### 4.2 正常产品表面禁止出现的内部词
+
+以下词不得进入正常页面标题、说明、空态、Toast、确认框或恢复文案：
+
+- Pi；
+- Pi-compatible；
+- Pi-derived；
+- ResourceLoader；
+- AgentSession；
+- Host append；
+- Engine Contract；
+- immutable/mutable prompt；
+- upstream/fork/patch；
+- stock Pi；
+- provider adapter；
+- operation snapshot。
+
+### 4.3 可以保留真实 lineage 的边界
+
+以下内部或法定边界必须准确保留来源，不做机械改名：
+
+- research 与 architecture；
+- source adoption record；
+- About、Licenses、SBOM；
+- 第三方 Package/Extension/Skill 的真实名称；
+- 开发者诊断和显式技术 provenance；
+- 代码标识、测试和日志中为定位问题所必需的 source facts。
+
+技术详情可以显示用户自己的 exact file name/path，但不需要解释 upstream lineage。例如可以显示 `~/.omnimind/.../AGENTS.md`，不能写“由 Pi ResourceLoader 加载”。
+
+## 5. 当前已实现的 OmniMind 身份与认知层
+
+### 5.1 已完成事实
+
+merge `b89149f3c4b3316fa6ff8f7f0546c6e5b02bff13` 已把 bundled OmniMind Agent 的 default base 改为 identity-neutral，并将 OmniMind identity/cognitive/work-surface contract 放入不可被 `SYSTEM.md`、`APPEND_SYSTEM.md`、Skill 或 Extension 删除的 final seam。
+
+identity 至少明确：
+
+```text
+You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).
+The academy's official Chinese name is 广东智慧医学国际研究院.
+```
+
+同一 contract 还拥有：
+
+- 把用户首个表述视为线索而非完整规格；
+- 先调查能从上下文与工具获得的事实；
+- 只为会实质改变结果且只有用户知道的分叉提问，并给出推荐；
+- 不假设用户是专家，也不降低结果上限；
+- Chat 在不误导时先给可用起点并并行澄清；
+- Agent 在 outcome、边界、约束和成功标准充分对齐后再进入实质执行；
+- “别问，直接做”只放宽低风险可逆未知，不跨越 material fork 或高风险边界；
+- 保持独立判断、识别盲点、不迎合错误前提、不伪造验证结果；
+- 用户可以覆盖语言、语气、格式和工作偏好，但不能覆盖产品身份、真实性、安全和任务完成边界。
+
+### 5.2 已完成证据
+
+2026-08-19 的 request/reload/compaction 回归证明 Chat 与 Agent 都 exactly once 接收 identity，stock Pi 不接收。授权的 MiMo 与 DeepSeek OpenAI Chat-compatible focused live journey 分别完成首次身份回答、reload 后 continuation、Host loader 激活和实际 Host tool 调用；两者均回答 OmniMind、πAI-Lab、英文机构名和官方中文名，没有把底层模型身份冒充产品身份。
+
+该证据证明 identity 与稳定 Host context 在这些阶段的请求指纹不变；它不证明所有 Provider 的 cache 命中率，也不授权建立 Prompt 缓存层。
+
+### 5.3 对本设置页的直接约束
+
+- 不在用户 `AGENTS.md` 预置产品身份；
+- 不在设置页展示完整 Engine Contract；
+- 不让 `SYSTEM.md` 删除 OmniMind 产品身份和安全边界；
+- 不把“你首先是某模型，现在作为 OmniMind”写成默认用户文件；底层模型身份与产品身份的区分由内部 contract 和 Provider facts 负责；
+- 用户问“你是谁”时，应回答 OmniMind 产品身份；只有相关时再说明底层模型，不让底层模型自报覆盖产品身份。
+
+## 6. exact-source Prompt 组合模型
+
+OmniMind Agent 每轮 system prompt 不是一个可持久编辑的大字符串，而是构建链：
+
+```text
+product-owned factory/custom default segment
   或一个有效 SYSTEM.md
-→ default base 内根据 active tools 生成 tool snippets/guidelines
+→ active tools 的 snippets/guidelines
 → 一个有效 APPEND_SYSTEM.md
-→ OmniMind Host append
-→ global + ancestor Project context files
+→ mutable OmniMind Host guidance
+→ global context candidate
+→ canonical Project root → cwd 的 Project context chain（正式 Agent Session）
 → Skills summary
 → current working directory
 → before_agent_start Extension mutation/messages
-→ normalize and append the immutable OmniMind engine contract exactly once
-→ operation admission 时冻结 systemPrompt/messages/tools snapshot
+→ normalize and append OmniMind engine contract exactly once
+→ operation admission 时冻结 systemPrompt/messages/tools
 ```
 
-这条链决定 UI 不能把“系统提示词”简化成一个 textarea，也不能把最终完整 Prompt 当作可稳定预览的持久事实。
+设置页只允许用户修改 factory/custom default segment 与 global context candidate；不拥有最终 Prompt，不管理 `SYSTEM.md` / `APPEND_SYSTEM.md`，不改变上述顺序，也不构造 raw preview。
 
-### 3.2 `SYSTEM.md` 的替换语义
+### 6.1 全局 context candidate
 
-ResourceLoader 只选择一个 `SYSTEM.md`：
+锁定 runtime 在 `agentDir` 中按以下顺序选择每个目录里的第一个候选：
 
-1. trusted Project 的 `<cwd>/.omnimind/SYSTEM.md`；
-2. 否则 OmniMind Agent `agentDir/SYSTEM.md`；
+```text
+AGENTS.override.md
+AGENTS.md
+AGENTS.MD
+CLAUDE.md
+CLAUDE.MD
+```
+
+事实与产品后果：
+
+- 全局候选存在时首先进入 context chain；
+- Project 中的规则继续在其后叠加，全局文件不会因项目文件存在而整体消失；
+- 同一目录只有第一个候选生效，其余候选被遮蔽；
+- 文件即使为空，只要存在，仍可能遮蔽后续候选；
+- global candidate 在 runtime 包装中仍属于 context instructions，不是 system prompt 的最终最高层；
+- UI 可以称“全局个人指令”，但不能宣传为“最高优先级”或“覆盖所有项目规则”。
+
+### 6.2 默认不创建 `AGENTS.md`
+
+exact source 只执行 `exists → read`，没有首次启动、安装、reload 或 agentDir 初始化时生成 `AGENTS.md` 的逻辑。因此 OmniMind 必须保持同样行为：
+
+- 打开设置页不创建；
+- 进入编辑器不创建；
+- 点击取消不创建；
+- reload 不创建；
+- 没有候选且第一次保存非空内容时才创建标准 `AGENTS.md`；
+- 不保存 placeholder；
+- 不为产品身份或“最佳实践”写默认正文。
+
+### 6.3 已有候选的编辑规则
+
+- 始终编辑 runtime 当前真正选中的 exact candidate；
+- 不发现 `CLAUDE.md` 后又创建更高优先级的 `AGENTS.md`；
+- 不自动把 `AGENTS.MD` 改名；
+- 不合并多个候选；
+- 不复制到 Product DB；
+- 多候选时仍只编辑 bundled runtime 选中的 active source，普通 UI 不建立候选/遮蔽 dashboard；
+- 删除 exact candidate 后重新发现下一候选，不能继续显示 stale source。
+
+### 6.4 `APPEND_SYSTEM.md`
+
+ResourceLoader 只选择一个来源：
+
+1. 正式 trusted Project 当前 cwd 下的 `.omnimind/APPEND_SYSTEM.md`；
+2. 否则 global agentDir 的 `APPEND_SYSTEM.md`；
+3. 否则没有用户 append。
+
+Project 文件存在时遮蔽 global 文件，二者不合并。设置页不管理任何 `APPEND_SYSTEM.md`，也不能偷偷把 global 强行追加回来；该事实只用于保护原生 composition 回归，不进入普通页面。
+
+### 6.5 `SYSTEM.md`
+
+ResourceLoader 只选择一个来源：
+
+1. 正式 trusted Project 当前 cwd 下的 `.omnimind/SYSTEM.md`；
+2. 否则 global agentDir 的 `SYSTEM.md`；
 3. 否则 product-owned default base。
 
-Project 文件遮蔽 global 文件，不合并。
+自定义 `SYSTEM.md` 替换 default base。它仍会收到 append、context files、Skills、cwd 和 final OmniMind contract，但会绕过 default base 内动态生成的工具列表和基础 guidelines。实际 tool schema 与权限不会因此消失；可能消失的是模型如何使用工具和工作的默认指导。
 
-自定义 `SYSTEM.md` 仍会收到 append、Project context、Skills 和 cwd，但会绕开 default base 中动态生成的 tool list 和基础 guidelines。实际工具 schema 仍可存在，permission 也不改变；消失的是默认 Prompt 对工具和行为的引导。
+这仍是高级用户可手工使用的原生 replacement seam；Settings 不读取、创建、编辑、迁移或确认它。默认提示词卡编辑的是 native builder 的稳定 factory/custom segment，不能用 `SYSTEM.md` 模拟。
 
-所以 UI 必须把它命名为 `完整替换`，放在高级 disclosure 中，并准确提示副作用。不能把它作为首页主编辑器或推荐路线。
+### 6.6 Extension turn-time mutation
 
-### 3.3 `APPEND_SYSTEM.md` 的追加与遮蔽语义
+`before_agent_start` handlers 按 load order 依次处理 mutable system prompt：
 
-ResourceLoader 同样只发现一个文件来源：
+- 每个 handler 接收前一个 handler 的结果；
+- 成功返回 `systemPrompt` 时替换/继续变换当前值；
+- handler error 被记录，后续 handler 可继续；
+- mutation 只属于当轮；下一轮未返回修改时恢复 base；
+- 所有 mutation 后，OmniMind engine contract 去重并 exactly once 追加。
 
-1. trusted Project 的 `<cwd>/.omnimind/APPEND_SYSTEM.md`；
-2. 否则 OmniMind Agent `agentDir/APPEND_SYSTEM.md`。
+因此设置页不能在用户发消息前声称知道下一轮 final exact prompt，也不提供“完整最终提示词预览”。
 
-Project 文件存在时会遮蔽 global 文件，不是二者自动合并。Host `appendSystemPromptOverride` 随后把 general OmniMind Host policy 加到 mutable append list；`APPEND_SYSTEM.md` 本身不能移除这段 append，但 `before_agent_start` Extension 仍可替换整个 mutable prompt。只有在 Extension mutation 之后 exactly-once 追加的 OmniMind engine contract 不可替换。
+## 7. Session、保存、reload、reopen 与 operation
 
-本文建议首版保持原生遮蔽语义，并在 UI 显示：
-
-```text
-当前项目追加已覆盖“我的指令”
-```
-
-若维护者未来要“全局永远生效 + Project 再追加”，那是对 Pi 原生 precedence 的产品改动，必须单独确认并更新 runtime contract；不能由 UI 偷偷拼接。
-
-### 3.4 `AGENTS.md` 是 Project rules
-
-当前 loader 会：
-
-- 读取 OmniMind Agent `agentDir` 中的 global context candidate；
-- 从 cwd 向上寻找每级 context candidate；
-- 按 root → cwd 顺序组装，避免重复；
-- 保留每个文件的真实 path。
-
-因此用户界面的自然语言应为：
-
-- section/row：`当前项目规则 / Current project rules`；
-- 技术详情：显示真实 `AGENTS.md`、`AGENTS.override.md` 或其他实际 candidate 名称和路径；
-- 不把 `Agent.md` 当作规范文件名；
-- 不复制内容进 Product DB；
-- 编辑 Project 文件时复用现有 Workbench File editor 与 save-conflict owner。
-
-### 3.5 Extension 的 turn-time 修改
-
-`before_agent_start` handlers 按 Extension load order 顺序执行：
-
-- 每个 handler 收到前一个 handler 已修改的 current system prompt；
-- 返回新的 `systemPrompt` 时替换 current value；
-- 后执行的成功 mutation 因而覆盖/继续变换前面的结果；
-- handler error 被记录，后续 handler 仍可继续；
-- mutation 只能改变本次 turn 的 mutable prompt，下一轮没有返回修改时恢复 base prompt；
-- 所有 Extension mutation 完成后，runtime 去重并 exactly-once 追加 immutable OmniMind engine contract，Extension 不能替换它。
-
-所以 `当前生效` 只能准确展示：
-
-- base/resource 层的当前 snapshot；
-- 已知 Extension 与其可能的 turn-time mutation capability；
-- 最近一次已接纳 operation 的实际 hash/来源摘要（若后续 contract 提供）；
-
-不能在用户发送前声称已经知道下一轮最终 Prompt 的 exact bytes。
-
-## 4. Tool activation、Permission 与 operation snapshot
-
-### 4.1 四个不同问题
+### 7.1 三个必须分开的事实
 
 ```text
-configured tool  = registry 中存在
-active tool      = 模型下一轮可选择
-permission       = 某次调用是否获准、在哪个边界执行
-in-flight call   = 已被当前 operation 接纳并正在执行
+文件已保存
+Session 已重新加载
+当前 operation 已冻结
 ```
 
-- active 不等于 allowed；
-- inactive 不等于安全 deny；
-- Prompt 说“允许”不能越过 runtimeMode、Host gate、OS 权限或目标 containment；
-- 已运行的调用不能靠关闭 activation 自动取消，必须走 operation/tool abort owner。
+它们不是一个状态。
 
-### 4.2 当前 operation 不热切
+### 7.2 保存
 
-Pi agent core 在 operation 开始时复制：
+- 保存只修改 exact file；
+- 保存不自动调用 reload；
+- active operation 不因文件写入改变；
+- 内容字节未变化时不写文件、不更新 mtime、不 reload；
+- 成功写入后可显示“已保存，待当前对话重新加载”；
+- 没有 active OmniMind Agent Session 时，新 Session 会自然加载当前文件。
+
+### 7.3 reload
+
+现有 Host seam `PiAdapter.reloadSessionResources()` 已按 exact thread 使用 bundled runtime 的 `session.reload()`，并在以下任一状态返回 `busy`：
+
+- active turn；
+- streaming；
+- active tool items；
+- pending user inputs。
+
+`session.reload()` 不是 Prompt-only reload。它会关闭并失效旧 Extension runner，reload settings 和全部 resources，重建 runtime，再发出 reload session start。因此用户按钮必须叫“重新加载当前对话资源”或等价 OmniMind 文案，不能暗示只刷新当前文本。
+
+重要非承诺：exact `0.84.2` reload 在资源加载前已经 invalidates old runner。当前没有证据支持“reload 失败会完整保留旧可用 runner”或“原子回滚”。UI 必须准确显示失败并给出恢复动作，不能宣传不存在的 LKG/rollback。确定性恢复路径可以是修复文件后重试，或新建对话；首版不自动创建 Session、不排 background reload queue。
+
+### 7.4 operation snapshot
+
+operation 开始时复制：
 
 - `systemPrompt`；
 - `messages`；
 - `tools`。
 
-因此 operation 进行中：
+因此：
 
-- Resource 文件修改不改写当前 loop；
-- `setActiveToolsByName()` 更新 Session state 和 base Prompt，但只影响下一 agent turn；
-- Extension 新注册/移除工具不应替换已经接纳的 tool call implementation；
-- reload 必须在 idle admission 后执行，不能边 stream 边换 runner。
+- 文件修改不改变 in-flight loop；
+- active tool set 更新只影响后续 turn；
+- 已接纳 tool call 不因文件保存而换 implementation；
+- reload 只能在 idle admission 后执行；
+- UI 不得显示“已应用到当前运行任务”。
 
-### 4.3 下一轮 exact tool set
+### 7.5 reopen
 
-下一轮的 exact set 只有在以下动作完成后才成立：
+SessionManager 持久化 conversation tree、messages、branch、compaction 等 native context，不把历史 system prompt exact bytes 作为版本化恢复 authority。reopen 的准确语义是：
 
-1. pending settings/resource reload 完成；
-2. Extension resource discovery/registration 完成；
-3. 当前 Session 最后一次成功 active-set mutation 完成；
-4. `before_agent_start` 相关逻辑完成；
-5. immutable OmniMind engine contract 去重并 exactly-once 追加；
-6. operation context snapshot 创建。
+> 恢复会话上下文，并使用重新打开时的当前设置、Prompt 文件、Project rules、Extensions、Skills 和 tools 重建运行环境。
 
-Settings 可以显示 `当前 Session active` 和 `all configured`，也可以显示 `保存后待重新加载`，但不能把保存时的候选列表冒充下一轮 exact set。
+首版不建立历史 Prompt revision DB，不承诺历史回答可用当时 exact Prompt 重放。
 
-### 4.4 同名工具与再次 mutation 谁优先
+## 8. 缓存保护原则
 
-当前 registry 先放 built-ins，再放 Extension/custom tools；同名定义由后写入者覆盖。active set 则由同一 Session 中最后一次成功 mutation 决定下一 turn。
+### 8.1 目标
 
-产品规则应是：
+维护者的核心要求不是为当前几百 Token 波动新建缓存框架，而是：
 
-- runtime registry 与 Session 是唯一 owner；
-- UI 订阅真实结果，不保存一个更高优先级的 active-tool store；
-- 同名覆盖必须产生 source/collision diagnostics，不能静默隐藏；
-- 若用户需要 durable deny，应进入真实 permission/policy owner，而不是把一个 activation toggle 宣传成安全控制。
+> 不要因为 OmniMind 增加设置页，降低 bundled runtime 原本优质的缓存稳定性。
 
-## 5. Session reload、reopen 与历史可复现性
+生态规模不变量仍是：
 
-### 5.1 保存不等于当前 Session 已生效
+> Large ecosystem, small effective surface.
 
-文件保存后，当前 Session 仍持有已加载 ResourceLoader state。产品必须明确区分：
+安装大量扩展不应自动产生 Prompt 成本；单轮成本应由当前 Session 真正暴露和使用的能力决定。该全局原则由其他 owner 负责，本设置页不得新增 ambient writer 或动态注入破坏它。
 
-```text
-已保存
-当前 Session 已加载
-当前 operation 已冻结
-```
+### 8.2 设置页必须保护的不变量
 
-正确交互：
+- 不改变现有 Prompt 物理顺序；
+- 不把 global instructions 移到自创 finalizer；
+- 不通过每轮 Hook 注入设置内容；
+- 不把同一内容复制到 `AGENTS.md`、`APPEND_SYSTEM.md` 或 Host guidance；
+- 不添加时间戳、保存时间、随机 ID、generation、UI metadata；
+- 不因打开页面或无变化保存而 reload；
+- 不建立 Prompt DB 后每轮再序列化；
+- 内容与来源相同必须尽量产生相同 system prompt bytes；
+- Extension、Skill、Tool 的确定性行为继续由原有 runtime owner负责，本页不复制排序。
 
-- 保存成功后显示 `已保存，当前运行中的任务不受影响`；
-- Session idle 时提供 `重新加载 OmniMind`；
-- active turn、stream、tool、pending user input 存在时返回/显示 `busy`；
-- 首版不创建 background reload queue、generation 或 LKG；
-- reload 失败保持原 Session 失败事实，不伪装保存失败，也不自动新建 Session。
+### 8.3 有意义与无意义的缓存变化
 
-### 5.2 reopen 使用当前资源，不复现历史 Prompt
+有意义：
 
-Pi SessionManager 持久化 append-only conversation tree、message/custom entries、branch、compaction 等 native context。System Prompt 和 tool definitions 可用于当下 export/debug，但不是 Session JSONL 中一份版本化、可恢复的 Prompt authority。
+- 用户真正修改文件；
+- 用户显式 reload；
+- Project/context/Skill/Tool/Extension active surface 真正改变；
+- Provider 或 runtime 合法改变请求。
 
-因此 reopen 的准确语义是：
+无意义且必须消除：
 
-> 恢复 native conversation/session context，并用重新打开时的当前 settings、Prompt files、Project rules、Extensions、Skills 和 tools 构建运行环境。
+- no-op save 改 mtime 并触发 reload；
+- UI 将路径标签、状态或版本写进 Prompt；
+- 仅进入 Settings 就重建 Session；
+- 相同内容因非确定序列化或临时 ID 改变；
+- OmniMind 再包一层 Prompt composer。
 
-V1 不建立 Prompt revision DB 来复现历史 exact bytes。UI 在 `当前生效` 中显示 current/reloaded facts；若未来出现审计级 reproducibility 用户任务，再以 operation receipt 的 bounded digest/provenance 评估，而不是先保存完整敏感 Prompt。
+### 8.4 Provider 证据边界
 
-## 6. 产品信息架构
+不同 Provider 可能使用前缀缓存、显式 block cache 或兼容代理转换。不能从模型名推断 wire 语义。后续实施只需证明设置页没有引入新的无意义变化，并在 MiMo、DeepSeek 等授权资源上读取真实 usage/cache read/write 数据；不能承诺所有 Provider 的命中率数值完全相同。
 
-### 6.1 Settings 中增加一个窄 section
+首版不需要 Prompt fingerprint DB、缓存仪表盘或 benchmark 平台。测试可以在进程内 capture exact request bytes/digest，但不得把完整用户 Prompt、秘密 Host context 或 private path写入 artifact、日志或快照。
 
-目标位置：现有 Settings sidebar 的 `Coding / 开发` 分组。
+## 9. Settings 最终信息架构
 
-```text
-Prompts / 提示词
-```
-
-- 内部 section id 候选：`prompts`；
-- 图标：复用 `apps/web/public/central-icons-reversed/prompt.svg`；
-- 中文标题：`提示词管理`；
-- 英文标题：`Prompt management`；
-- 中文说明：`管理 OmniMind 的基础指令、项目规则和提示词模板。仅影响 OmniMind。`；
-- 英文说明应独立自然写作，不逐字回译；
-- 继续使用现有 Settings search、deep-link、keyboard、focus、section mount 与 message catalog；
-- 不新增应用一级导航，不重排其他 Settings section，不把页面扩成 `Agents / Models / Packages / Prompts` 四域重构。
-
-当前 `architecture/workbench.md` 要求新增设置进入最近既有 section，并禁止 taxonomy rewrite。维护者现在明确要求 Prompt 相关事实收敛到一个 Settings section；施工前必须把这个窄例外写入 Workbench owner，说明它只是增加一个 `prompts` section，而不是重构整个 taxonomy。
-
-### 6.2 页面结构：overview → focused detail，不使用顶层 tabs
-
-首屏建议：
+### 9.1 页面范围
 
 ```text
-提示词管理
-管理 OmniMind 的指令和模板。仅影响 OmniMind。
-
-指令
-  我的指令                    已配置 / 未配置
-  当前项目规则                AGENTS.md · 3 个来源
-  OmniMind 默认指令           内置
-
-提示词模板
-  最近使用                    4 个
-  查看全部                    →
-
-当前生效
-  7 个来源 · 12 个活动工具
-  查看详情                    →
-
-高级
-  完整替换                    未启用
+提示词
+  默认提示词                   native factory/custom segment
+  自定义规则                   global personal rules
+  当前对话资源                 explicit reload
 ```
 
-页面不采用三个等权 Tab，也不采用卡片墙、Prompt profile gallery、变量 builder、token 仪表盘或通用 AI Studio。原因不是功能做少，而是用户的主要任务只有两个：修改自己的稳定偏好，以及理解当前 Project 为什么这样运行。
+首版明确不包含：
+
+- 当前项目规则；
+- Prompt templates；
+- 当前最终 Prompt；
+- raw effective Prompt / Engine Contract 预览；
+- Provider selector；
+- 其他 Engine 状态；
+- Prompt profiles；
+- Prompt history；
+- Token/cache dashboard；
+- Marketplace 或云同步。
+
+### 9.2 页面布局
+
+- 复用现有 Settings sidebar、section mounting、search、deep-link、keyboard、focus 和 message catalog；
+- 不新增顶层 Tab、卡片墙或三层导航；
+- 页面只有“默认提示词”和“自定义规则”两个主卡片；
+- 编辑使用同 Settings pane 内的 full-width editor，不弹 Modal；
+- 显式“保存 / 取消”，不 autosave；
+- 默认卡提供独立“恢复默认”；自定义规则卡底部以淡色显示安全路径；
+- Open 只在真实 Desktop bridge存在时显示；
+- 不呈现 candidate dashboard、advanced files 或技术详情面板；
+- 后续实现前按 `architecture/workbench.md` 和最近同角色 Settings surface完成组件复用裁决，不能在 research 阶段预建新 component family。
+
+### 9.3 中文产品文案
+
+| 位置          | 中文文案                                     |
+| ------------- | -------------------------------------------- |
+| Settings 导航 | 提示词                                       |
+| 页面标题      | 提示词                                       |
+| 页面说明      | 自定义 OmniMind Agent 的默认指令与个人规则。 |
+| 默认卡标题    | 默认提示词                                   |
+| 默认卡说明    | 决定 OmniMind Agent 的基础工作方式。         |
+| 恢复动作      | 恢复出厂默认                                 |
+| 规则卡标题    | 自定义规则                                   |
+| 规则卡说明    | 用于所有 OmniMind Agent 项目的个人偏好。     |
+| 无规则来源    | 首次保存非空内容后会创建 AGENTS.md。         |
+| 保存          | 保存                                         |
+| 取消          | 取消                                         |
+| 删除动作      | 删除自定义规则                               |
+| 打开动作      | 打开                                         |
+| reload 动作   | 重新加载当前对话资源                         |
 
-每一行进入同一 Settings pane 内的 focused detail：
+推荐 placeholder 仅用于示例，不得保存：
 
-- 返回后恢复 scroll/focus；
-- 长文本用 full-width editor，不弹 Modal；
-- 显式 `保存 / 取消`，不对真实 Agent 指令做 500ms autosave；
-- source、scope、覆盖关系与 reload state 就近显示；
-- technical path 放 disclosure，不在首屏铺 badge wall；
-- 空态说明下一步动作，不解释内部 Pi lineage。
+```markdown
+例如：
 
-### 6.3 `我的指令`
+- 默认使用简体中文回答。
+- 先给出结论，再解释关键依据。
+- 修改代码后运行最相关的验证。
+```
 
-这是页面唯一视觉中心和推荐入口，owner 是 OmniMind Agent 当前 `agentDir/APPEND_SYSTEM.md`，不是一个新的 Product setting row value。
+### 9.4 英文产品文案
 
-UI 语义：
+英文必须独立自然写作，不逐字回译：
 
-- 默认追加，不替换 OmniMind base；
-- 显示当前 Project 是否由 project-local APPEND 遮蔽；
-- 明确 Save 与 Reload 两个状态；
-- 不显示 stock Pi 路径；
-- Server 写入必须 anchored 到 `resolveOmniMindAgentDir(serverBaseDir)` 的 exact root，而不是信任 renderer 传入绝对路径。
+| Location            | English copy                                                        |
+| ------------------- | ------------------------------------------------------------------- |
+| Settings navigation | Prompts                                                             |
+| Page title          | Prompts                                                             |
+| Page description    | Customize OmniMind Agent's default instructions and personal rules. |
+| Default card        | Default prompt                                                      |
+| Default description | Sets the basic way OmniMind Agent works.                            |
+| Restore action      | Restore factory default                                             |
+| Rules card          | Custom rules                                                        |
+| Rules description   | Personal preferences used across all OmniMind Agent projects.       |
+| No rules source     | AGENTS.md will be created on the first non-empty save.              |
+| Save                | Save                                                                |
+| Cancel              | Cancel                                                              |
+| Remove action       | Delete custom rules                                                 |
+| Open action         | Open                                                                |
+| Reload action       | Reload current conversation resources                               |
+
+### 9.5 用户绝不能看到的错误文案示例
 
-### 6.4 `当前项目规则`
+以下写法禁止进入产品：
 
-这一页展示 effective context chain：
+- “编辑 Pi 全局 AGENTS.md”；
+- “Pi-compatible Prompt”；
+- “调用 ResourceLoader reload”；
+- “Engine Contract 不会被覆盖”；
+- “stock Pi 不受影响”；
+- “修改 mutable base”；
+- “Pi Project APPEND shadows global”。
 
-- global context candidate；
-- ancestor directories root → cwd；
-- exact file name/path；
-- 是否被 shadow/override；
-- load warning/diagnostics。
+对应产品化表达应是：
 
-可写行为优先复用已有 Workbench 文件编辑器：
+- “默认提示词”与“自定义规则”；
+- “重新加载当前对话资源”；
+- “OmniMind 的产品身份与安全边界仍会保留”；
+- “自定义规则无法在此编辑，请使用下方位置进行修改”。
 
-- 已存在文件：打开 exact file；
-- 不存在时：用户显式选择 `创建项目规则` 后，在 canonical folder-backed Project root 创建 `AGENTS.md`；
-- Chat/Studio managed workspace 是否允许创建，服从其 existing workspace owner，不从 Prompt 页面猜；
-- 外部或非 canonical cwd 不提供写动作；
-- 保存冲突、外部修改和 dirty buffer 继续由 File owner处理。
+## 10. UI 状态与交互合同
 
-### 6.5 `OmniMind 默认指令`
+### 10.1 两资源状态
 
-只读展示始终存在的 product-owned engine contract 与 mutable base 的来源，不把每轮完整动态 Prompt 暴露成一大块 raw text。
+| 事实                          | UI 状态                        | 动作                              |
+| ----------------------------- | ------------------------------ | --------------------------------- |
+| factory default               | OmniMind 内置默认              | 编辑、保存 customized value       |
+| customized default            | 已自定义                       | 编辑、取消、保存、恢复默认        |
+| 没有 custom rules candidate   | 空编辑器                       | 非空保存才创建 `AGENTS.md`        |
+| active custom rules可安全编辑 | 显示正文与淡色安全路径         | 编辑 exact active source          |
+| active source超限/非安全文本  | 该卡 unavailable，默认卡仍可用 | Desktop 可用时打开所在位置恢复    |
+| exact value/source 外部变化   | 这项设置已在其他位置变化       | 阻止覆盖；重新载入或显式保留草稿  |
+| 保存成功                      | 已保存                         | 不自动 reload                     |
+| Session busy                  | 当前对话正在运行               | reload拒绝；不取消 operation      |
+| reload 成功                   | 当前对话已重新加载             | 下一轮使用新 snapshot             |
+| reload 失败                   | 已保存但无法重新加载           | 可重试或新建对话；不伪装 rollback |
 
-页面可显示：
+### 10.2 来源路径与 Open
 
-- engine contract 中的产品身份与不可覆盖边界，以及语言、语气、格式、详略和工作方式可服从显式个人偏好的限定；
-- engine contract 的 `内置` source；
-- mutable base 当前来自 product default 还是被 exact `SYSTEM.md` 完整替换；该替换不删除 engine contract；
-- runtime/version 与 technical provenance 的按需链接。
+候选数量、遮蔽关系和文件名不成为主信息架构。自定义规则卡底部只显示 Server 生成的安全 `displayPath`；无文件时显示首次非空保存会创建 `AGENTS.md`。`revealPath` 只用于真实 Desktop bridge 的本机打开动作，普通 Web surface 不显示无效按钮，路径也不成为 mutation authority。
 
-动态 tool schema、Host secret/context、完整 Project instructions 和第三方 Prompt 不在普通只读预览中拼接，以免泄露、误导和制造一个伪 exact snapshot。
+### 10.3 保存反馈
 
-### 6.6 `提示词模板`
+无 active Session：
 
-第一阶段：
+> 已保存。新的 OmniMind Agent 对话将自动使用这些指令。
 
-- 列表、搜索、description、source/scope、collision diagnostics；
-- 在 Composer 中运行；
-- 对 user/project plain file 提供 `打开来源`；
-- Package/Extension/bundled 模板只读；
-- unsupported/unknown 直接显示，不由其他 Provider 代办。
+有 active idle Session：
 
-第二阶段只有在 typed resource API 存在后才允许：
+> 已保存。重新加载当前对话资源后，后续消息将使用最新内容。
 
-- create user/project template；
-- update content/frontmatter；
-- rename/delete；
-- conflict-safe save；
-- reload affected Session。
+busy：
 
-不建立跨 Provider模板库、Marketplace、云同步或 Product DB。
+> 当前对话正在运行，暂时无法重新加载。保存的内容不会影响正在进行的任务。
 
-### 6.7 `当前生效`
+reload failure：
 
-这是低噪声、只读的解释面，不是 raw Prompt inspector。建议显示：
+> 修改已经保存，但当前对话资源重新加载失败。请重试，或新建一个对话。
 
-- engine contract：始终存在的内置 identity/cognitive/Chat-Agent/task source；
-- mutable base：identity-neutral product default 或 exact `SYSTEM.md` source；
-- append：global/project file 与遮蔽关系；
-- mutable Host context：available/unavailable 与 policy version；
-- Project rules：文件数量与列表；
-- Skills：数量与来源摘要；
-- tools：current active / all configured / collision count；
-- Extensions：数量、load warnings、是否可 turn-time 修改；
-- Session：last loaded、saved-but-pending-reload、busy/idle；
-- 限定语：`Extension 可在任务开始时动态调整 mutable 指令和工具，但不能替换 OmniMind engine contract。`。
+### 10.4 默认状态与恢复
 
-## 7. 默认 OmniMind Prompt 与 Host diet
+默认卡的淡色说明必须依据 `customized` 准确显示“OmniMind 内置默认”或“已为 OmniMind Agent 自定义”，两者都提醒保存后需要显式 reload。恢复默认提交该编辑器实际基于的 version；另一资源 mutation 带回的新 snapshot 不能替换这个 CAS base，否则会越过用户旧草稿冲突。两张卡各自把 draft、base version、正文状态与来源详情绑定到同一个 resource snapshot slice；一次 mutation 只刷新对应 slice，不能让另一卡出现旧正文配新路径或新状态的混合视图。
 
-### 7.1 default base 候选（已被当前分层实现取代）
+### 10.5 不可编辑 custom rules
 
-本节此前展示的单段 `You are OmniMind, the built-in agent...` 只是 2026-08-15 的历史候选，缺少后来确认的 πAI-Lab/研究院归属，也错误地把 product identity 与可替换 base 放在同一层。它不得作为未来 Prompt UI 或 runtime 的实现输入。
+现存 active candidate 若超过 8 KiB、含不支持控制字符或不是合法 UTF-8，snapshot 返回 resource-level unavailable而不是让整页失败。正文与 version 不投影，编辑/删除禁用；安全 `displayPath` 仍显示，Desktop bridge可用时提供 Open。真正的 transport/snapshot failure 才进入整页 error + Retry。手工 `SYSTEM.md` / `APPEND_SYSTEM.md` 与 Project-local shadow继续原生工作，但本页不读取、展示或管理。
 
-当前 authority 是 `architecture/execution.md` 与 runtime constants：product-owned default base 保持 identity-neutral，只拥有 native dynamic tools/guidelines/context/skills/cwd 组装；OmniMind identity、cognitive core、Chat/Agent 与 task policy 位于始终存在的 immutable engine contract；general Host/tool guidance 仍是 mutable append。本文不复制整段 runtime Prompt，避免形成第二文本真相。
+## 11. 恢复默认、清空与删除
 
-### 7.2 product-owned patch 处置
+两个资源的恢复语义不同：
 
-当前 production adoption 已不再是“shared runtime bytes unchanged”：仓库已经用 `patches/pi-coding-agent/0.84.2-model-config-reader.patch`、Bun stock patch 与 `scripts/vendor-omnimind-pi-runtime.mjs` 维护一个有 digest、可复算的 product-owned patch inventory。
+- 默认提示词的“恢复默认”只移除 Server settings 中的 customized value，使 native builder 回到当前安装版本的 factory segment；它不写文件，也不创建 `SYSTEM.md`。
+- 自定义规则的空文件与删除仍遵循 runtime 原生语义：保存空内容到已有 active source 会保留该 source 及其遮蔽；删除 exact active source 后重新调用 bundled discovery，下一候选可能生效。
+- 无候选时保存空内容不创建 `AGENTS.md`；页面访问、取消与 no-op 也不创建、不写、不 reload。
+- 普通 UI 只说“删除自定义规则”，不把候选、遮蔽或文件管理提升为信息架构；确认文案可以准确提醒另一个已有规则来源可能随后生效。
+- Settings 不删除或修改手工 `SYSTEM.md`、`APPEND_SYSTEM.md`、Project 文件、Session transcript、其他 Engine home 或 stock `.pi`。
 
-因此默认 Prompt 修正的最小物理路径不是再建第三个 wrapper，也不是 runtime monkey patch，而是：
+## 12. 写入、安全与并发边界
 
-1. 在现有 product-owned Pi source patch inventory 中增加这一项窄差异；
-2. 不把 OmniMind identity patch 应用到 stock Pi dependency；
-3. 更新 patch digest、archive digest、README adoption record、legal/SBOM 受影响事实；
-4. 增加 default/custom/append/AGENTS/tools/skills/Extension composition tests；
-5. 重跑代表性 Pi ecosystem 与 packaged OmniMind journey。
+Renderer 不能提交任意绝对路径。公共 Prompt contract 只投影两个资源：
 
-该变更虽小，却改变 shipped runtime bytes 和 adoption statement，必须按 Gate B 交付，不能作为文案热修。
+- `defaultPrompt`：当前 factory/custom正文、是否已定制、opaque version；
+- `customRules`：active source 的正文、opaque source id/version、安全 `displayPath`/revealPath，以及 `absent | available | unavailable` 状态。
 
-### 7.3 Host policy 收缩顺序
+mutation 只接受 `setDefault`、`restoreDefault`、`createCustomRules`、`updateCustomRules`、`removeCustomRules` 的 tagged intent、必要的 expected version/source id 与 UTF-8 content；Renderer 不提交路径。
 
-Host policy diet 必须以运行时真值为前提，不能为了 token 更少先删除必要约束：
+Server 必须：
 
-1. 先修正与 `runtimeMode` 冲突的 Browser/Device facts；
-2. 把 exact tool guidance 移到对应 tool definition，并证明只在 tool active 时出现；
-3. 把 Automation authoring 长文迁到按需 Skill/Prompt/command help；
-4. 保留最小 Host identity、gateway availability、provenance、abort 与 no-false-success invariant；
-5. 用同一任务比较 task success、prompt tokens、cacheRead/cacheWrite、latency 与 recovery，不以 token 下降单独判成功。
+- 从 `resolveOmniMindAgentDir(serverBaseDir)` 或当前唯一 owner重新解析允许路径；
+- default customized value 只保留在 server-internal `ServerSettings`，从公共 `ServerSettingsView`、普通 settings stream 与 `ServerSettingsPatch` 删除；专用 Prompt service 通过 Server settings 同一 write semaphore 内的窄 compare/no-op/write seam 修改，不能建立第二 writer；
+- custom rules 只允许候选集合中的 exact active filename，新建只允许 `AGENTS.md`；
+- 进行 realpath、no-follow、containment 和 symlink escape 检查；
+- 限制 UTF-8 bytes，拒绝不可接受编码和超限内容；
+- 使用 same-directory temporary file + atomic replace，并合理保留 mode；
+- 使用 expected hash/version 尽可能检测并拒绝外部修改；该检查是 optimistic conflict detection，不宣称严格跨进程 CAS；
+- no-op save 不写；
+- 序列化 OmniMind Prompt writers；default 的 compare 与写入在 settings owner 同一锁内完成，自定义规则仍使用 expected-version optimistic conflict；
+- 删除只作用 exact selected resource；
+- Prompt 内容、private path、secret 和原始响应不进入普通日志、Timeline、telemetry、截图或测试快照；
+- 不读取、迁移、同步或改写 stock `.pi`、其他 Engine private home 和未知目录。
 
-## 8. 写入、安全与并发边界
+`EDITABLE_TEXT_FILE_MAX_BYTES = 1,000,000` 只继续拥有通用本地可编辑文本上限，并作为调用 bundled discovery 前的 allocation guard，不是 Prompt 可用性边界。bundled helper 选定 active source 后，只有 active source 应用 contracts-owned `OMNIMIND_AGENT_PROMPT_MAX_BYTES = 8 KiB`（每个可编辑 segment）；因此被遮蔽的 9 KiB 候选不会压过一个更高优先级、可编辑的 active source。active 超限或不是安全文本时，只把 `customRules` 投影为 unavailable，保留安全定位/打开恢复，`defaultPrompt` 仍正常显示。当前支持模型的最小 context window 为 32k tokens，两段最大合法正文合计 16 KiB；按保守的一 byte 至多对应一 token 的工程估计，它们最多占用最小窗口的一半，为 native builder、tools、Project context、Skills 与 conversation 留下另一半。这个取值是跨 tokenizer 的保守工程边界，不是对任意 tokenizer 的数学 token 保证，也不承诺其他原生动态资源永不造成 context pressure。
 
-任何 Prompt 文件 mutation 都必须由 Server owner完成，Renderer 只发送 scope、resource identity、expected version 和新内容。
+Prompt-specific predicate 同时拒绝 NUL 与除 tab、LF、CR 外的 C0 控制字符，并按真实 UTF-8 bytes 执行 `8 KiB` 上限；contracts、server-internal persisted default、Server safe read/write 与 UI 共用这一规则。focused tests 以多字节 emoji 证明 code-unit 长度不能绕过 byte limit，并以最大合法、最坏二倍 JSON 转义的两段正文构造真实 Effect RPC request 与 response envelope，证明低于现有 `MAX_WEBSOCKET_MESSAGE_BYTES = 2 MiB`，而不提高全局 ceiling。若最小模型窗口、传输或编辑器边界变化，应在这个 contracts owner 中统一重验。
 
-最低合同：
+Node 当前公开 `fs` 只提供无条件原子 `rename`/`unlink`，没有将“target 仍是这个 inode/version”与 replace/remove 合成一个 syscall 的 API。现有 `beforeReplace` 和 remove 前 `safeRead` 能显著缩小并检测常见 external edit race，但检查后仍有最终 TOCTOU 窗口；严格 CAS 需要 native syscall bridge、协作锁或新协议，均超出本关注点并会形成新的长期 owner。准确合同是：OmniMind writers 在进程内串行，expected version 提供 optimistic conflict detection，检测到变化时 fail closed；极窄的非协作 external-writer race 不宣称原子消除。create 的 link/`EEXIST` 路径仍是原子 no-clobber。
 
-- `user` scope 只解析到 current OmniMind `agentDir`；
-- `project` scope 只解析到 canonical trusted folder-backed Project 与 `.omnimind`/`AGENTS.md` 允许位置；
-- realpath/no-follow/containment 检查，拒绝 symlink escape；
-- UTF-8、bounded bytes、frontmatter parse error 与 unknown fields准确处理；
-- atomic temporary-write + replace，合理保留文件 mode；
-- expected hash/version 冲突时不覆盖外部修改；
-- secret、完整 Prompt、用户内容和 private path 不进入普通日志、Timeline 或 telemetry；
-- write success、reload success 与 next-turn effect 是三个不同 receipt；
-- 删除动作只作用于 exact selected resource，并说明不会删除 Session transcript；
-- stock `.pi`、其他 Provider private home 与未知文件零读取、零迁移、零写入。
+Prompt snapshot 一次只懒加载一个受 shared editable-text contract 限界的本地文件，不执行 workspace search、diff、模型调用或全量 Session 投影，因此属于 standard WS read。把它列入每 client 仅两条 lease 的 expensive-read 集合会让无文件的 Settings 页面被无关长读取阻断；正确修复是恢复 standard 分类并让 UI 失败态提供显式 retry，而不是扩大全局 expensive-read limit。focused admission test 必须在两条 expensive lease 均被占用时仍能取得 Prompt snapshot lease。
 
-## 9. Disposition map
+snapshot 可以返回 Server 生成的安全 `displayPath`，用于自定义规则卡底部定位和复制真实来源；它不是 mutation 输入。只有真实 Desktop bridge 支持 reveal 时才显示“打开”，普通 Web surface 不呈现静默 no-op。路径不得进入 Prompt、普通日志、Timeline、telemetry 或交付截图证据。
 
-| 机制/表面                         | 当前 owner                            | Disposition              | 原因                                                                                         |
-| --------------------------------- | ------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------- |
-| Pi native Prompt builder          | product-owned Pi-derived runtime      | Preserve                 | 已正确重建 tools/resources/context，不复制                                                   |
-| OmniMind default identity         | product-owned runtime source patch    | Adopted narrowly         | 已集成 identity-neutral Pi base 与 Host-owned immutable engine contract；stock Pi 保持原身份 |
-| `SYSTEM.md` / `APPEND_SYSTEM.md`  | ResourceLoader/files                  | Preserve + project       | UI 只投影/编辑真实文件                                                                       |
-| `AGENTS.md` chain                 | ResourceLoader + Workbench File owner | Preserve + route         | 真正 Project rules，不建 DB                                                                  |
-| Prompt templates                  | ResourceLoader/Extension/Package      | Bridge narrowly          | 先补 typed provenance，动作按真实 capability                                                 |
-| current effective view            | Session/resource projection           | Add read-only projection | 用户需要解释，不取得 lifecycle                                                               |
-| Host policy                       | Agent Gateway + tool definitions      | Simplify in owner        | 常驻手册过重且已有事实漂移                                                                   |
-| localStorage Project instructions | Web Store/Thread notes                | Retire confirmed         | 真实 notes-seeding 与 runtime rules 不同；维护者接受失去 Project→new-task seed，保留 Notepad |
-| Prompt profile/version DB         | 不存在                                | Do not build             | 没有当前用户结果要求                                                                         |
-| stock Pi Prompt management        | stock Pi Provider                     | Out of scope             | 保持独立 Engine/private home                                                                 |
+write receipt、reload receipt 与 next-turn request evidence 必须分开；API 不得返回“已应用”作为模糊布尔值。
 
-## 10. 最小纵向切片
+## 13. 最小实现路径
 
-本文不改变 `execution-brief.md` 的全局顺序。若 architecture owner 接纳本设计，最小施工应拆成四个可独立停止的关注点：
+### 13.1 先修 owner，再施工
 
-### Slice A：身份与 composition correctness
+代码前必须更新：
 
-- 修 product-owned default Prompt；
-- 保留 dynamic builder；
-- 冻结 default/custom/append/AGENTS/tools/skills/Extension precedence；
-- 更新 patch/adoption/digest；
-- 不做 Settings。
+1. `architecture/workbench.md`：接纳 `开发 → 提示词` 窄 section，锁定用户产品语言、页面范围和不管理 Project/templates；
+2. `architecture/execution.md`：只在必要处补充 global user Prompt projection 不改变 runtime owner、identity 或 reload；不得复制本文全部实现细节；
+3. `execution-brief.md`：只协调该关注点当前是否可进入、真实并发与阻塞；不能重新否决维护者已确认的完整 decision surface；
+4. active Campaign：只在本任务确实进入施工时增加/更新对应 claim 与 evidence pointer。
 
-成功条件：OmniMind Agent normal turn 不再自称 Pi，stock Pi 和第三方 provenance不变，dynamic tool/resource behavior无回归。
+### 13.2 沿真实调用链盘点
 
-### Slice B：只读 Prompt truth
+新会话施工前必须从真实入口追踪：
 
-- 从现有 ResourceLoader/Session 投影 sources、active/all tools、reload state 与 diagnostics；
-- 补 template provenance/listing；
-- 不增加 mutation、store 或 Settings taxonomy。
+```text
+Settings route/section
+→ current Settings layout/editor/dialog/i18n owners
+→ Web API contract
+→ wsRpc admission
+→ server Prompt resource projection/mutation
+→ resolveOmniMindAgentDir
+→ bundled ResourceLoader getters/discovery
+→ active Thread/session lookup
+→ reloadSessionResources
+→ AgentSession.reload
+→ next request capture
+```
 
-成功条件：Server 能准确解释 current base/append/context/templates/tools，unknown与turn-time mutation边界诚实。
+每一层标记“已存在、部分存在、缺失”，先复用现有 owner。未完成该盘点前不得增加新 store、manager 或公共抽象。
 
-### Slice C：Settings section 与错误表面收口
+### 13.3 最小纵向切片
 
-- Workbench owner 接纳窄 `prompts` section；
-- 增加 overview/focused detail、search/deep-link、中英 catalog；
-- 删除已确认退休的 Environment Project instructions 全链路；
-- 先只读 + reload，不承诺 CRUD。
+建议一个关注点内按以下顺序闭合，但不要为每步建立第二状态系统：
 
-成功条件：用户只在一个地方理解 OmniMind Prompt，旧 notes seeding 不再冒充 Project rules，Settings未被重排成新平台。
+1. **native default segment**：product-owned bundled runtime 导出 factory text，并让同一个 builder 接受可选 customized segment；不走 `SYSTEM.md`、Host append 或第二 composer。
+2. **唯一 persistence owner**：customized default 留在 server-internal settings，通过同一 settings write semaphore 的窄 CAS seam读写；公共 settings view/stream/patch不投影正文。
+3. **custom rules projection/mutation**：bundled discovery 决定 active source；Host 只安全读取 exact active、create/update/remove，并把不可编辑 active 局部降级为 unavailable。
+4. **两卡片 Settings UI**：默认提示词、自定义规则、双语 catalog、独立 draft/save/cancel/restore/delete、准确状态与 Desktop-only Open；没有 advanced files。
+5. **reload 接线**：只对 exact active OmniMind Agent thread 调用既有 reload seam；busy/none/failure准确。
+6. **证据闭合**：focused request capture、MiMo/DeepSeek 最小 live、packaged fresh-profile journey。
 
-### Slice D：最小可写资源
+这不是五个长期模块或五个 PR。一个关注点完成后停止，不吞入 Project rules、templates、Host diet 或跨 Engine 功能。
 
-- 先做 `我的指令`；
-- Project rules 复用 Workbench editor；
-- Template CRUD 等待 typed runtime API；
-- 证明 save/reload/reopen/conflict/private-home isolation。
+### 13.4 复用要求
 
-成功条件：写入唯一 native owner，当前 operation不热切，busy/reload/reopen事实准确。
+- Settings sidebar/section/search/deep-link：复用现有 Settings owner；
+- 长文本编辑：复用最近同角色 editor/save-conflict owner，每段使用稳定的 8 KiB byte boundary；
+- Disclosure、Dialog、Toast、Button、empty/error state：复用现有 primitive family；
+- Server settings mutation：default 只用既有 settings owner 内同锁的窄 internal compare/no-op/write seam；
+- Server 文件 mutation：custom rules 复用已有 anchored atomic writer/conflict owner；确实不足才增加窄、OmniMind-Agent-scoped seam；
+- reload：直接复用 `reloadSessionResources`，不新增 Prompt reload；
+- resource discovery：直接读取 bundled loader 的真实结果或补一个窄 getter；不复制候选算法。
 
-每个 Slice 完成后停止，不把下一个 Slice 作为当前完成条件。
+若必须 patch product-owned runtime 才能获得安全且准确的 source projection，必须走 `PI-ECOSYSTEM-INTAKE.md` Gate，优先窄、可上游 seam；不能把 UI 需要变成第二 loader 的理由。
 
-## 11. 必须证明的反例
+## 14. 验证与 falsifier
 
-### Identity/composition
+### 14.1 Discovery/default
 
-- default OmniMind turn 的 system identity、normal reply 与 technical provenance无 Pi 产品身份泄漏；
-- stock Pi turn仍保持 Pi identity；
-- global/project `SYSTEM.md` 与 `APPEND_SYSTEM.md` precedence exact；
-- custom `SYSTEM.md` 不被误称为改变 permission；
-- AGENTS chain、Skills、active tool snippets 与 mutable Host append 按原生 composition 存在，Extension 替换后仍保证 immutable engine contract exactly once；
-- Extension turn mutation按load order生效并在下一轮恢复base。
+- fresh profile 首次打开即显示 bundled factory default；保存 customized value 不创建 `SYSTEM.md`，restore 后回到当前安装版本 factory bytes；
+- default customized value 不出现在公共 settings view/stream/patch，并发同 expected version只有一个 changed、另一个 typed conflict；
+- fresh task-specific OmniMind home 没有候选时，启动、打开页面、取消、reload 都不创建 `AGENTS.md`；
+- 第一次非空保存创建 exact global `AGENTS.md`；
+- 已有 `CLAUDE.md` 时页面编辑它，不创建更高优先级 `AGENTS.md`；
+- 已有 `AGENTS.override.md` + `AGENTS.md` 时前者生效，但普通 UI 不建立遮蔽 dashboard；
+- 删除 override 后重新发现 `AGENTS.md`；
+- 空 active file 仍保持 active 并可遮蔽后续 candidate。
+- active source 超过 8 KiB或不是安全文本时，自定义规则卡 unavailable而默认卡仍可编辑；被遮蔽的 9 KiB候选不得阻断更高优先级的可编辑 active；超过通用 1 MiB allocation guard 时不调用 bundled reader。
 
-### Operation/reload/reopen
+### 14.2 Composition
 
-- active turn保存文件不改变当前 Prompt/tools snapshot；
-- busy reload准确拒绝且无partial runner replacement；
-- idle reload后下一turn采用新资源；
-- App/Session reopen使用当前资源并保持native conversation context；
-- 未建立历史 Prompt复现承诺。
+- default base、global context、Project context、Skills、cwd 与 active tool guidance仍按 exact source 顺序存在；
+- customized default 只替换稳定 factory segment，同一 native builder继续组合动态内容；
+- `APPEND_SYSTEM.md` 追加而不替换 default base；
+- Project APPEND 遮蔽 global，不被 UI 偷偷合并；
+- `SYSTEM.md` 替换 base 但 context/Skills/cwd/final OmniMind identity仍存在；
+- Extension turn mutation仍按 load order，下一轮无 mutation 时恢复 base；
+- OmniMind identity exactly once；
+- stock Pi identity和 private home不变。
 
-### Settings/taste
+### 14.3 Save/reload/operation
 
-- 中文/英文、search/deep-link、keyboard、screen reader、focus return完整；
-- 页面不出现Provider selector、Pi lineage主文案、raw Prompt dump、卡片墙或三层tabs；
-- Project APPEND遮蔽global时一眼可见；
-- current effective明确区分loaded/pending/dynamic；
-- empty/error/conflict/busy/reload failed都有下一步动作。
+- view/cancel/空保存/no-op：settings revision、文件 bytes/mtime、request prompt、reload count不变；
+- default save/restore 与 custom rules save/delete都不自动 reload；
+- content change + no reload：active Session next request仍使用旧 loaded resource；若真实 runtime path不同，以 request capture为准并更新 owner，不靠猜；
+- active operation保存不改变其 systemPrompt/messages/tools snapshot；
+- busy reload准确拒绝，不中断 active turn；
+- idle reload成功后下一轮使用新内容；
+- reload failure不被 UI宣称已回滚；
+- reopen用当前文件重建，不承诺历史 exact Prompt。
 
-### Safety/isolation
+### 14.4 Cache/request stability
 
-- Renderer不能提交任意绝对路径；
-- symlink/path traversal不能越过agentDir/project root；
-- external file conflict不被覆盖；
-- stock `.pi` tree hash/mtime/size不变；
-- Prompt内容与private path不进入普通日志、Timeline、screenshot evidence或telemetry；
-- Extension/Package只读资源不能被UI伪造为可编辑。
+- 相同 files + 相同 Session resources + 相同 active surface 生成相同 system prompt bytes；
+- 页面 visit、read、cancel、no-op save 不改变下一请求；
+- Settings state、filename label、save timestamp不进入 prompt；
+- 只有真正内容/reload/resource变化改变 request digest；
+- MiMo 与 DeepSeek 的真实 usage/cache read/write 数据脱敏记录，区分 direct、compatible endpoint 与 proxy；
+- 不因单个 Provider 偶然结果新增通用补偿。
 
-## 12. Stop-loss 与被否决路线
+### 14.5 UI/product language
 
-出现以下任一情况立即停止扩张：
+- 中英文 catalog key 一一对应；
+- 正常页面、空态、Toast、Dialog、error/recovery 全部只使用 OmniMind 产品语言；
+- 用户可见路径不出现 Pi、Pi-compatible、ResourceLoader、Engine Contract 等内部词；
+- 只有 custom rules 卡底部显示安全 `displayPath`；Open 仅在 Desktop bridge真实可用时出现；
+- factory/customized淡色状态准确切换；两张卡不重复标题；unavailable只禁用 custom rules编辑并保留恢复路径；
+- keyboard、screen reader、focus return、content overflow、search/deep-link工作；
+- 页面没有 Provider selector、Project rules、templates、raw Prompt、profile gallery、Token dashboard或卡片墙。
 
-- 为页面新建 Prompt DB、profiles、version ledger、sync service 或 background reload state；
-- UI开始复制 ResourceLoader precedence、tool registry 或 Extension lifecycle；
-- 为统一其他 Engine 修改 stock Pi/Codex/Claude/OpenCode private home；
-- 用一个 textarea覆盖 default、Host、Project rules、Skills和Extensions；
-- 把 activation toggle宣传成permission；
-- 为精确预览保存完整最终Prompt或敏感Host context；
-- 在Prompt切片中顺带重写Settings taxonomy、Library、Agent Core、Memory或Workflow；
-- 为去Pi痕迹删除license/source/third-party identity；
-- Template CRUD需要通用filesystem manager或新的公共resource platform。
+### 14.6 Security/isolation
 
-明确被否决：
+- Renderer 任意绝对路径、path traversal、symlink escape全部失败；
+- external edit conflict不被覆盖；
+- OmniMind writers串行；external writers使用 expected-version optimistic conflict detection，检测到变化时准确冲突，但不宣称最终 TOCTOU 被原子消除；
+- Prompt内容与private path不进入普通日志/telemetry/screenshot artifact；
+- fresh task profile 的 stock `.pi` tree hash/mtime/size不变；
+- 其他 Engine private home零读取、零写入；
+- packaged App 使用隔离 userData/home/provider private home完成启动、编辑、reload、关闭和重开验证。
 
+## 15. Live 与 packaged 证据计划
+
+### 15.1 focused fixture
+
+先用 deterministic request capture 建立以下 baseline：
+
+- factory default request与稳定 segment；
+- customized default save without reload / reload / restore / reopen；
+- custom rules after create；
+- no-op save；
+- save without reload；
+- idle reload；
+- manual `APPEND_SYSTEM.md` / `SYSTEM.md` 原生 precedence不回归，但它们不经过 Settings；
+- active candidate/delete/empty shadow；
+- unavailable active 与 shadowed oversized candidate；
+- Chat global-only；
+- Agent global + canonical Project chain。
+
+只保存脱敏 digest、长度、source kind 和 pass/fail，不保存完整 Prompt。
+
+### 15.2 real Provider
+
+按根 `AGENTS.md` 使用 `/Users/liuzaoqu/Desktop/本机AI-API资源盘点.md` 中协议匹配、状态最新的最小资源，优先 Xiaomi MiMo 与 DeepSeek。每个 Provider 最少证明：
+
+1. fresh Session 身份回答仍为 OmniMind；
+2. customized default保存后未 reload 保持旧 snapshot，reload 后真实影响下一轮；
+3. custom rules在创建/reload后真实影响下一轮；
+4. no-op save不产生请求变化；
+5. busy/reload continuation与 reopen正常；
+6. usage/cache read/write真实可观测时记录脱敏数值；
+7. 手工 `SYSTEM.md` 原生路径不删除 OmniMind identity，但 Settings 不创建或管理它。
+
+硬超时、最少请求、明确费用边界；不做无界跑分。
+
+### 15.3 packaged Desktop
+
+任何改变用户可观察行为的实现必须从 exact pushed SHA 重建安装 App，并使用 task-specific fresh profile。UI 控制前先停止所有现存 OmniMind 实例，显式设置隔离 userData/home/provider private home，并从进程参数或等价证据核验隔离。验证：
+
+- Settings 可发现；
+- 初始不创建文件；
+- factory显示、customize/no-op/restore；
+- custom rules create/edit/conflict/remove/unavailable与Desktop-only Open；
+- reload busy/success/failure；
+- App 关闭重开；
+- 中英文与 keyboard/focus；
+- stock `.pi` 不变。
+
+源码测试或 dev HMR 单独通过不能宣称用户已拿到功能。
+
+### 15.4 本轮实际证据
+
+- `695f80baf`、`7850ff878`、`9d3642557` 与 installed `cf1a1e580509423a92e5334a438a3e077d376210` 属于已被维护者新产品决定 supersede 的旧“三文件 Settings”历史证据。其 source、artifact hash、隔离与 Provider 观察只保留 provenance，不能给当前“两卡片”candidate背书，也不能据此把 F-22 标为 verified。
+- `584045a291a91e57ec50ce0e91cee29253334ef1` 的两卡 installed journey 证明 Settings/custom rules 路径可用，但 MiMo Chat 首轮没有 customized-default marker。随后 deterministic request capture 把 customization 放在全新 Session `startSession` 之前，仍得到 factory default，排除了“保存后未 reload”的正确 snapshot语义；根因是 bundled `createAgentSessionFromServices` 接收方没有把 Host 已传入的 `defaultPrompt` 继续转交 native `createAgentSession`。修复只增加这一窄转发及上游/Host回归，并证明 V1 在全新 Chat 首轮出现、保存V2但不reload仍为V1、explicit reload后才为V2；没有按work surface过滤或另建composer。旧digest或旧installed bytes不得冒充新产品结果。
+- runtime 修复祖先冻结为 exact pushed product SHA `db25a5b91343a4ddbf70fedd98ea3583bd020317`。macOS arm64 DMG SHA-256=`9a62e2384bb5a917a460679928e67fea2ce0733de61eb67fba06d59d1e28aaef`，ZIP=`43d446891944749d2647a2bec5bc5fabd5d8c02c6932a6bf067f899d90d5966b`，installed app.asar=`95937e7f95237917556151afb6324392704d9f44af3d7cd9e506643dd0389aea`；asar 内嵌 commit 一致，240 项 legal identities 闭合。它继续拥有下条 MiMo/DeepSeek 与完整 reload/remove 证据，但不再是当前安装 bytes。
+- 合并前 deep review 将最新 main 合入任务分支，并修复 Settings section 切换覆盖未保存草稿、Prompt 接受孤立 UTF-16 surrogate 后持久化静默替换、worktree status 过期 DOM 断言与 TraitsPicker 菜单初始 focus race；current exact pushed product 为 `61bb9e471625186c7693c5b74588e4f6b0e4f956`。macOS arm64 DMG SHA-256=`b3604c655750cf894923f6efdf78ff90d36cbd1a6c7b3323c5fe154de337943c`，installed app.asar=`55391e5206248c6746445f910d7978feeb5f81ca3a6a5e2a1282bea1bc7e7b62`；asar 内嵌 commit 一致，240 项 legal identities 闭合。本轮未生成 current-SHA ZIP，旧 ZIP 不作为证据。task-specific root 中主进程收到显式 `--user-data-dir`，Helper userData、Server state/log 与 Provider agent dir 均保持同根隔离；fresh UI、跨 Settings 分区双草稿、cancel/no-create、save/customized notice、safe display path/Desktop Open、view/reopen hash/mtime 稳定及 restore factory 通过。当前 journey 无 active thread，未把 reload/next-request 冒充为本轮 packaged 证据；相关 runtime 事实继续由 deterministic fixture 与上一条祖先 live journey 支撑。
+- packaged UI控制前，主进程显式接收task-specific `--user-data-dir`；Helper实际userData、Server cwd/state/log、Provider agent dir均从argv与open handles证明位于同一task root。MiMo全新Chat首轮同时遵循V1与custom rules，save V2 without reload仍保持V1，explicit reload后以排除历史消息干扰的新问题确认V2；DeepSeek全新Agent首轮同时遵循V2与custom rules，并保持OmniMind/πAI-Lab及中英文机构identity。相同内容页面visit/cancel前后settings与rules hash/mtime完全相同；同profile关闭重开保留值；restore factory与remove rules回到empty state。重复同一句的MiMo输出曾沿历史assistant文本复述V1，随后明确询问current system instruction得到V2；wire/session正确性以deterministic request capture为主，不用模型服从性代替。
+- 一次`--version`探测被Electron当作正常默认启动，未进入UI、未作为journey证据且立即停止。按维护者要求只读复核真实`~/.omnimind/agent`的`AGENTS.override.md`、`AGENTS.md`、`AGENTS.MD`、`CLAUDE.md`、`CLAUDE.MD`、`SYSTEM.md`、`APPEND_SYSTEM.md`仍全部absent；未读取正文或无关用户数据。
+
+## 16. 明确否决与 stop-loss
+
+### 16.1 当前明确不做
+
+- Prompt Plugin System；
+- Prompt Profile/版本切换；
+- Prompt DB/registry/ledger；
 - Prompt Studio；
-- Prompt profile切换器；
-- 跨Provider统一system prompt；
-- raw prompt/schema/JSON dashboard；
-- Pi TUI config selector复刻；
-- 自动迁移旧Project notes为`AGENTS.md`；
-- 自动在active turn后排队reload；
-- 用Host append掩盖错误base identity；
-- 全仓库机械改名Pi。
+- raw final Prompt inspector；
+- Prompt fingerprint 数据库；
+- 缓存仪表盘或自建缓存层；
+- 全局模板/当前项目模板管理；
+- 当前项目 `AGENTS.md` 编辑；
+- Engine Contract 展示或编辑；
+- 跨 Engine 同步；
+- 写入其他 Engine private home；
+- `ROLE.md`、`PREPEND_SYSTEM.md`、自创 finalizer；
+- Prompt-only reload 或 background reload queue；
+- 自动迁移旧 Project instructions/Thread notes；
+- 全仓库把 Pi 名称机械替换为 OmniMind；
+- 为 UI 复制 ResourceLoader、Tool Registry 或 Extension lifecycle。
 
-## 13. 尚存不确定性
+### 16.2 Stop-loss
 
-1. **Project APPEND 是否应与 global 合并**：当前确切行为是Project遮蔽global。本文推荐首版保留并明示；若维护者要global永远生效，必须单独作产品裁决。
-2. **Prompt template mutation API**：当前只有command listing与native file/resources，尚无足够typed CRUD/provenance contract。没有该contract前不开放完整管理动作。
-3. **最终Prompt可见度**：Extension可在turn admission修改system prompt。是否保存bounded digest用于诊断，应由真实复现任务和隐私评估决定，首版不做。
-4. **Chat/Studio Project rules创建**：folder-backed Project可复用File owner；managed Chat workspace是否允许用户创建`AGENTS.md`，必须由其workspace owner裁决，Prompt页面不自行放宽。
-5. **Host policy diet的最终切分**：哪些guideline进入tool definition、哪些进入按需Skill，需用真实Browser/Device/Automation journey比较；不能只按文本长度决定。
+出现以下任一情况停止并回到 owner/维护者裁决：
 
-这些不确定性不阻止确认本研究的核心方向，但会阻止对应可写/合并/诊断功能在无owner裁决时施工。
+- 需要第二个候选文件算法才能做页面；
+- 需要 Prompt DB 才能完成保存；
+- 需要修改其他 Engine private home；
+- 需要把 Settings state写入每轮 Prompt；
+- 需要保存完整最终 Prompt 才能解释状态；
+- 需要新的 package/manager/public resource platform；
+- reload 失败处理开始催生 LKG/generation/rollback子系统；
+- Project rules/templates/Host diet 被顺带吞入；
+- 为消除内部词开始伪造 license、diagnostic 或 third-party identity；
+- 文档、checker、fixture增长但用户 journey没有更接近完成。
 
-## 14. 最终研究裁决
+## 17. 历史路线与 supersession
+
+### 17.1 已取代的宽方案与三文件方案
+
+本文旧版本曾建议页面同时展示：
+
+- “我的指令”=`APPEND_SYSTEM.md`；
+- 当前项目规则；
+- OmniMind 默认指令；
+- Prompt templates；
+- 当前生效来源；
+- 高级完整替换。
+
+随后曾形成“global context 主入口 + advanced `APPEND_SYSTEM.md` / `SYSTEM.md`”三文件 candidate，并完成一次历史 installed journey。维护者最终再次收敛为当前两资源模型：
+
+- “默认提示词”编辑 native builder 的 stable factory/custom segment，不是 `SYSTEM.md`；
+- “自定义规则”继续编辑 exact active global context source；
+- `APPEND_SYSTEM.md` / `SYSTEM.md` 全部移出 Settings，只保留手工原生能力；
+- 不管理 Project rules、templates、Engine Contract、effective/raw Prompt或其他 Engine；
+- 用户产品语言不得出现 Pi lineage。
+
+旧方案不得作为实施输入。
+
+### 17.2 Environment `Project instructions`
+
+Synara exact source 的旧 `Project instructions` 是真实 per-Project localStorage → new-task Thread notes seed，不是死代码，也不是 runtime Prompt。维护者已知情接受失去该能力并确认整体退休：保留 Thread-level Notepad 和已有 notes，不迁移、不扫描、不删除，不改造成 `AGENTS.md` 或 Prompt 设置。当前全局 Prompt 页面不得接管这些历史内容。
+
+### 17.3 identity 历史候选
+
+旧单段 `You are OmniMind, the built-in agent...` 候选已经被 identity-neutral default base + immutable OmniMind contract 的分层实现取代。本文不得复制完整 runtime constants成为第二文本真相；后续如改 identity，先改 `architecture/execution.md` 与 runtime exact owner，再更新研究证据。
+
+### 17.4 外部产品调研的正确用途
+
+Codex、Claude Code、Gemini CLI、OpenCode、VS Code/Copilot 的调研只证明行业普遍存在“用户级长期指令”和“项目级指令”的概念；它们的文件名、目录和 Settings 设计不是 OmniMind contract。OmniMind 不建立跨产品映射，也不以外部实现覆盖 bundled runtime exact facts。
+
+## 18. 新会话执行清单
+
+新会话在开始实现前必须按根 `AGENTS.md` 读取：
+
+1. `README.md`；
+2. `PI-ECOSYSTEM-INTAKE.md`；
+3. `architecture/README.md`；
+4. `architecture/workbench.md`；
+5. `architecture/execution.md`；
+6. `architecture/product-state.md`（涉及 Session/恢复时）；
+7. `execution-brief.md`；
+8. active Campaign；
+9. 本文；
+10. `pi-native-product-integration-review.md` 与 `pi-native-host-tool-loading-review.md` 中与 Prompt/reload 直接相关的 exact evidence。
+
+然后：
+
+1. 核 `git status --short`，保留未知修改；
+2. 复验 current HEAD、vendored artifact 与 runtime source是否仍为本文基线；
+3. 若版本或调用链变化，只重验受影响事实；
+4. 先把已确认稳定决定写入 architecture sole owner，删除/修正冲突路由；
+5. 完成 Settings→RPC→server→runtime→request 的真实调用链盘点；
+6. 形成一句最小复用裁决；
+7. 只实现 native factory/custom default、自定义规则与既有 reload接线；
+8. 运行 focused、live、packaged证据；
+9. 同一关注点包含代码、architecture、research disposition、Campaign evidence；
+10. focused闭合后按项目规则 commit/push；用户可观察变更继续完成 exact pushed SHA packaged install/journey。
+
+不得从本文推断已经授权：发布、签名、迁移、跨 Engine 写入、Provider 配置变化、Host diet 或 Project/template 管理。
+
+## 19. 最终研究裁决
 
 ```text
 Outcome:
-  一个只属于 OmniMind Agent、直接连接 native Prompt 世界的安静设置入口。
+  用户在“设置 → 开发 → 提示词”中编辑 OmniMind Agent 的默认提示词，
+  并设置跨项目的自定义规则；页面不管理高级 Prompt 文件。
 
 Current truth:
-  Pi native builder/ResourceLoader 已成熟；OmniMind base 仍自称 Pi；
-  母体 Project instructions 是有意实现的 localStorage→Thread notes seed，
-  但维护者已确认在 OmniMind 中整体退休；模板只有 command projection；
-  Host policy 过重并存在事实漂移。
+  bundled runtime 导出稳定 factory segment，并继续拥有 Prompt 动态组合；
+  Server settings唯一持久化 customized default，global context文件继续由原生 discovery拥有；
+  OmniMind identity/cognitive contract 已独立且 exactly once；
+  fresh profile显示 factory default，但不会因访问页面创建 AGENTS.md。
 
 Smallest path:
-  修 product-owned base identity → 投影 native truth → 增加窄 Settings section
-  → 只给有真实 owner 的资源开放写入。
+  native builder stable segment + private settings CAS → 安全编辑 exact active custom rules
+  → 复用现有 Session reload → 用 OmniMind 产品语言解释保存、busy、失败和恢复。
 
 Excess rejected:
-  Prompt DB/profile/Studio、跨 Provider 统一、第二 loader、raw dashboard、
-  自动迁移、全仓库 Pi 改名、通用 resource platform。
+  Prompt Plugin System、DB/profile/registry、跨 Engine 同步、Project/templates、
+  raw Prompt、advanced file UI、缓存层、Prompt-only reload、自创文件格式和第二 loader。
 
 Decision:
-  GO for product direction；implementation 逐 Slice 服从 architecture owner 与 Gate B。
+  GO for the confirmed product direction after architecture owner alignment.
 ```
 
-本文没有发现需要维护者在本次 research 写入前回答的阻断性分叉。首个后续实现分叉是第 13.1 项；默认推荐已经明确为保留 native shadow semantics。
+一句话交接：
+
+> 默认正文是同一 native builder 的稳定输入，自定义规则继续服从原生文件发现；设置页只投影这两项，保存与 reload 分离，没有第二套 Prompt 系统。

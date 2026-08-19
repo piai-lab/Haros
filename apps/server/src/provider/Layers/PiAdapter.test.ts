@@ -6,7 +6,7 @@
 import { EventEmitter } from "node:events";
 import { PassThrough } from "node:stream";
 import type { ChildProcess } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -17,6 +17,7 @@ import { type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
 import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
+import { ServerSettingsService } from "../../serverSettings.ts";
 import {
   AgentGatewayCredentials,
   type AgentGatewayCredentialsShape,
@@ -1601,6 +1602,282 @@ describe("getPiDiscoverableModels", () => {
       expect(systemPrompt(requestBodies[5])).not.toContain(identity);
       expect(systemPrompt(requestBodies[5])).not.toContain(officialChineseIdentity);
       expect(toolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("passes the customized native default into OmniMind Chat request capture", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-chat-default-prompt-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000065");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+
+    const requestBodies: any[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      return piOpenAiSuccessResponse();
+    });
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(ServerSettingsService.layerTest()),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const serverSettings = yield* ServerSettingsService;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt(
+                null,
+                "customized-chat-default-marker",
+              ),
+            ).toMatchObject({ state: "changed" });
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const send = (input: string) =>
+              Effect.gen(function* () {
+                const turn = yield* adapter.sendTurn({
+                  threadId,
+                  input,
+                  attachments: [],
+                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                });
+                yield* Effect.promise(() =>
+                  waitForTestCondition(
+                    () =>
+                      events.some(
+                        (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+                      ),
+                    `Customized Chat default turn '${turn.turnId}' did not settle.`,
+                  ),
+                );
+              });
+            yield* send("capture Chat native default");
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt(
+                "customized-chat-default-marker",
+                "customized-chat-default-v2",
+              ),
+            ).toMatchObject({ state: "changed" });
+            yield* send("without Chat reload");
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("after Chat reload");
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(requestBodies).toHaveLength(3);
+      const initialPrompt = piRequestSystemPrompt(requestBodies[0]);
+      expect(initialPrompt).toContain("customized-chat-default-marker");
+      expect(initialPrompt).not.toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
+      expect(initialPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
+      expect(piRequestSystemPrompt(requestBodies[1])).toBe(initialPrompt);
+      expect(piRequestSystemPrompt(requestBodies[2])).toContain("customized-chat-default-v2");
+      expect(piRequestSystemPrompt(requestBodies[2])).not.toContain(
+        "customized-chat-default-marker",
+      );
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps native Prompt resources session-scoped until explicit reload", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-native-prompt-reload-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const projectAgentDir = path.join(cwd, ".omnimind");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000064");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(projectAgentDir, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    writeFileSync(path.join(agentDir, "AGENTS.md"), "global-context-v1");
+    writeFileSync(path.join(agentDir, "APPEND_SYSTEM.md"), "global-append-v1");
+    writeFileSync(path.join(projectAgentDir, "APPEND_SYSTEM.md"), "project-append-v1");
+
+    const requestBodies: any[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      return piOpenAiSuccessResponse();
+    });
+    const prompt = (body: any) =>
+      body.messages?.find((message: any) => message.role === "system")?.content ?? "";
+    const waitForTurn = (events: ReadonlyArray<ProviderRuntimeEvent>, turnId: string) =>
+      waitForTestCondition(
+        () => events.some((event) => event.type === "turn.completed" && event.turnId === turnId),
+        `Prompt resource turn '${turnId}' did not settle.`,
+      );
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(ServerSettingsService.layerTest()),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const serverSettings = yield* ServerSettingsService;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "agent",
+              projectContextRoot: cwd,
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const send = (input: string) =>
+              Effect.gen(function* () {
+                const turn = yield* adapter.sendTurn({
+                  threadId,
+                  input,
+                  attachments: [],
+                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                });
+                yield* Effect.promise(() => waitForTurn(events, turn.turnId));
+              });
+
+            yield* send("initial resources");
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt(null, "customized-default-v1"),
+            ).toMatchObject({ state: "changed" });
+            yield* Effect.sync(() => {
+              writeFileSync(path.join(agentDir, "AGENTS.md"), "global-context-v2");
+              writeFileSync(path.join(projectAgentDir, "APPEND_SYSTEM.md"), "project-append-v2");
+            });
+            yield* send("without reload");
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("after reload");
+
+            yield* Effect.sync(() =>
+              writeFileSync(path.join(agentDir, "SYSTEM.md"), "replacement-base-v1"),
+            );
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("replacement base");
+
+            yield* Effect.sync(() => unlinkSync(path.join(agentDir, "SYSTEM.md")));
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt("customized-default-v1", null),
+            ).toMatchObject({ state: "changed" });
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("restored factory default");
+
+            yield* Effect.sync(() =>
+              writeFileSync(path.join(agentDir, "AGENTS.override.md"), "override-context-v1"),
+            );
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("override candidate");
+
+            yield* Effect.sync(() => writeFileSync(path.join(agentDir, "AGENTS.override.md"), ""));
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("empty override");
+
+            yield* Effect.sync(() => unlinkSync(path.join(agentDir, "AGENTS.override.md")));
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("removed override");
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(requestBodies).toHaveLength(8);
+      expect(prompt(requestBodies[0])).toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
+      expect(prompt(requestBodies[0])).toContain("global-context-v1");
+      expect(prompt(requestBodies[0])).toContain("project-append-v1");
+      expect(prompt(requestBodies[0])).not.toContain("global-append-v1");
+      expect(prompt(requestBodies[1])).toBe(prompt(requestBodies[0]));
+      expect(prompt(requestBodies[2])).toContain("global-context-v2");
+      expect(prompt(requestBodies[2])).toContain("project-append-v2");
+      expect(prompt(requestBodies[2])).toContain("customized-default-v1");
+      expect(prompt(requestBodies[2])).not.toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
+      expect(prompt(requestBodies[3])).toContain("replacement-base-v1");
+      expect(prompt(requestBodies[3])).not.toContain("customized-default-v1");
+      expect(prompt(requestBodies[3])).toContain("global-context-v2");
+      expect(prompt(requestBodies[3])).toContain("<omnimind_engine_contract>");
+      expect(prompt(requestBodies[4])).toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
+      expect(prompt(requestBodies[4])).not.toContain("customized-default-v1");
+      expect(prompt(requestBodies[5])).toContain("override-context-v1");
+      expect(prompt(requestBodies[5])).not.toContain("global-context-v2");
+      expect(prompt(requestBodies[6])).not.toContain("override-context-v1");
+      expect(prompt(requestBodies[6])).not.toContain("global-context-v2");
+      expect(prompt(requestBodies[7])).toContain("global-context-v2");
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });

@@ -11,7 +11,7 @@ const PI_REVISION = "914cf1472e715297caa30db4b9535d534a9eb718";
 const PI_VERSION = "0.84.2";
 const PI_AI_INTEGRITY =
   "sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==";
-const PATCH_SHA256 = "4a6e091990c7d6fe89c21da40d7866c4b5a6311e3c3797a76a4152e9cc21d506";
+const PATCH_SHA256 = "499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af";
 const STOCK_PATCH_SHA256 = "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77";
 const PRODUCT_ARCHIVE_NAME = `omnimind-pi-coding-agent-${PI_VERSION}.tgz`;
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -196,6 +196,7 @@ async function main() {
         "test/model-registry.test.ts",
         "test/model-runtime-modify-models-compat.test.ts",
         "test/model-session-prompt-outcome.test.ts",
+        "test/default-tools-setting.test.ts",
         "test/suite/agent-session-prompt.test.ts",
         "test/package-manager.test.ts",
         "test/resource-loader.test.ts",

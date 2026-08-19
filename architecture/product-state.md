@@ -73,6 +73,12 @@ Provider runtime 启动成功后，Product 对该次接纳所拥有的 Session �
 
 OmniMind Agent 使用独立 `omnimind` Provider identity；stock Pi 保持 `pi` identity。二者可以共享经过证明同构的 Pi-family adapter core，但各自拥有 Session、version、configuration、state root、Package install state 与 diagnostics。OmniMind Agent 的全局和 project-local private state 都属于 `.omnimind`；stock Pi 的对应 native state 属于 `.pi`。任何 binding、resume cursor、native reference 或 filesystem state 都不能跨两者复用。
 
+OmniMind Agent 提示词设置必须区分三类持久输入与两层 runtime 事实：安装版本随附的 factory default 是 bundled runtime truth；用户 customized default 是 Server settings truth，未定制时不存在；global custom rules 是 runtime-active candidate 的文件 truth。Session reload receipt 只证明指定 OmniMind Agent Thread 的原生资源重载结果；已准入 operation 的 system prompt、messages 与 tools snapshot 已冻结，不能被保存或 reload 追溯热切。产品不保存 `pending prompt`、generation、LKG、history、rollback 或 cache dashboard 来把这些事实伪装成一个事务。
+
+这里的 OmniMind Agent Thread 包括 canonical `omnimind` Engine 的 Chat 与 Agent work surfaces；两者共享 provider-level factory/customized default 与 global custom rules，但继续拥有不同的 immutable work-surface contract、Project trust 和 tool surface。其他 Engine 的 Thread 不得成为读取、保存或 reload 目标。
+
+恢复 factory default 只删除/清空 customized-default value，不修改 bundled artifact，也不创建 `SYSTEM.md`。关闭并重开 App、停止并恢复 Thread 或 native Session 不承诺重放历史 exact Prompt；需要重建 Session 环境时读取当前安装版本 factory、当前 customization 与当前原生资源。删除 active global candidate 后，后续 discovery 可以暴露下一候选；保留一个空的 active 文件仍保留其原生遮蔽语义。保存成功而 reload 失败时，setting/file 事实保持成功，用户可以重试 reload 或开始新对话，产品不得声称自动回滚。
+
 ## Composer、Queue 与 receipt
 
 Composer draft/QueueItem 在 Product Orchestration 接纳前可编辑、删除和排序。Renderer 把用户消息加入本地 Queue 时，QueueItem 即冻结当时 effective `ModelSelection`；后续 Composer 改选 Engine、Model 或 options 不得重写既有 QueueItem。QueueItem 被发送到 Product Orchestration 时，admission command/event 必须再次携带并 durable 保存该 exact selection；非 Composer caller 若省略 selection，Orchestration 必须在 admission 当下解析 Thread 的 effective selection 并冻结，promotion/dispatch 不得重新读取届时可能已变化的 Thread metadata。
