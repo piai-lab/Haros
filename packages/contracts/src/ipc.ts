@@ -823,8 +823,14 @@ export interface NativeApi {
     listSkillsCatalog: (input: ProviderSkillsCatalogInput) => Promise<ProviderSkillsCatalogResult>;
     listPlugins: (input: ProviderListPluginsInput) => Promise<ProviderListPluginsResult>;
     readPlugin: (input: ProviderReadPluginInput) => Promise<ProviderReadPluginResult>;
-    listModels: (input: ProviderListModelsInput) => Promise<ProviderListModelsResult>;
-    listAgents: (input: ProviderListAgentsInput) => Promise<ProviderListAgentsResult>;
+    listModels: (
+      input: ProviderListModelsInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<ProviderListModelsResult>;
+    listAgents: (
+      input: ProviderListAgentsInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<ProviderListAgentsResult>;
   };
   omnimindModelServices: {
     list: (

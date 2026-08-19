@@ -3,17 +3,21 @@
 //          stale-catalog preservation, and initial-vs-background pending (#103).
 // Layer: Web data fetching tests
 
-import type { NativeApi } from "@omnimind/contracts";
+import type { NativeApi, ProviderListModelsResult } from "@omnimind/contracts";
 import { QueryClient, QueryObserver } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  cancelProviderSelectionDiscovery,
   isProviderDiscoverySessionActive,
   isInitialModelDiscoveryPending,
+  providerCatalogDiscoveryRetryDelay,
+  providerAgentsQueryOptions,
   providerCommandsQueryOptions,
   providerDiscoveryQueryKeys,
   providerModelsQueryOptions,
   providerSkillsQueryOptions,
+  shouldRetryProviderCatalogDiscovery,
 } from "./providerDiscoveryReactQuery";
 import * as nativeApi from "../nativeApi";
 
@@ -85,7 +89,10 @@ describe("providerModelsQueryOptions", () => {
     await expect(queryClient.fetchQuery(firstProject)).resolves.toEqual(catalog);
     await expect(queryClient.fetchQuery(secondProject)).resolves.toEqual(catalog);
     expect(listModels).toHaveBeenCalledTimes(1);
-    expect(listModels).toHaveBeenCalledWith({ provider: "omnimind" });
+    expect(listModels).toHaveBeenCalledWith(
+      { provider: "omnimind" },
+      { signal: expect.any(AbortSignal) },
+    );
     expect(queryClient.getQueryState(secondProject.queryKey)).toMatchObject({ status: "success" });
   });
 
@@ -113,16 +120,24 @@ describe("providerModelsQueryOptions", () => {
     await queryClient.fetchQuery(firstProject);
     await queryClient.fetchQuery(secondProject);
     expect(listModels).toHaveBeenCalledTimes(2);
-    expect(listModels).toHaveBeenNthCalledWith(1, {
-      provider: "opencode",
-      binaryPath: "/bin/opencode",
-      cwd: "/tmp/project-a",
-    });
-    expect(listModels).toHaveBeenNthCalledWith(2, {
-      provider: "opencode",
-      binaryPath: "/bin/opencode",
-      cwd: "/tmp/project-b",
-    });
+    expect(listModels).toHaveBeenNthCalledWith(
+      1,
+      {
+        provider: "opencode",
+        binaryPath: "/bin/opencode",
+        cwd: "/tmp/project-a",
+      },
+      { signal: expect.any(AbortSignal) },
+    );
+    expect(listModels).toHaveBeenNthCalledWith(
+      2,
+      {
+        provider: "opencode",
+        binaryPath: "/bin/opencode",
+        cwd: "/tmp/project-b",
+      },
+      { signal: expect.any(AbortSignal) },
+    );
   });
 
   it("refreshes the shared OmniMind catalog after provider-prefix invalidation", async () => {
@@ -146,8 +161,16 @@ describe("providerModelsQueryOptions", () => {
     await queryClient.fetchQuery(secondProject);
 
     expect(listModels).toHaveBeenCalledTimes(2);
-    expect(listModels).toHaveBeenNthCalledWith(1, { provider: "omnimind" });
-    expect(listModels).toHaveBeenNthCalledWith(2, { provider: "omnimind" });
+    expect(listModels).toHaveBeenNthCalledWith(
+      1,
+      { provider: "omnimind" },
+      { signal: expect.any(AbortSignal) },
+    );
+    expect(listModels).toHaveBeenNthCalledWith(
+      2,
+      { provider: "omnimind" },
+      { signal: expect.any(AbortSignal) },
+    );
   });
 
   it("fails fast for Cursor so a missing CLI settles instead of spinning (#103)", async () => {
@@ -155,7 +178,6 @@ describe("providerModelsQueryOptions", () => {
       vi.fn().mockRejectedValue(new Error("Cursor CLI is not installed or not on PATH")),
     );
     const options = providerModelsQueryOptions({ provider: "cursor", enabled: true });
-    expect(options.retry).toBe(0);
 
     const queryClient = new QueryClient();
     await expect(queryClient.fetchQuery(options)).rejects.toThrow(
@@ -165,9 +187,128 @@ describe("providerModelsQueryOptions", () => {
     expect(queryClient.getQueryState(options.queryKey)?.status).toBe("error");
   });
 
-  it("keeps retrying transient failures for other providers", () => {
-    expect(providerModelsQueryOptions({ provider: "codex" }).retry).toBe(3);
-    expect(providerModelsQueryOptions({ provider: "droid" }).retry).toBe(0);
+  it("retries only typed transient failures and honors the server delay", () => {
+    const transient = { retryable: true, retryAfterMs: 275 };
+    const startupCapacity = {
+      code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+      retryable: true,
+      retryAfterMs: 250,
+    };
+    expect(shouldRetryProviderCatalogDiscovery(0, transient)).toBe(true);
+    expect(shouldRetryProviderCatalogDiscovery(2, transient)).toBe(true);
+    expect(shouldRetryProviderCatalogDiscovery(3, transient)).toBe(false);
+    expect(shouldRetryProviderCatalogDiscovery(11, startupCapacity)).toBe(true);
+    expect(shouldRetryProviderCatalogDiscovery(12, startupCapacity)).toBe(false);
+    expect(shouldRetryProviderCatalogDiscovery(0, new Error("missing CLI"))).toBe(false);
+    expect(shouldRetryProviderCatalogDiscovery(0, { retryable: false })).toBe(false);
+    expect(providerCatalogDiscoveryRetryDelay(0, transient)).toBe(275);
+    expect(providerCatalogDiscoveryRetryDelay(0, startupCapacity)).toBe(250);
+  });
+
+  it("settles a catalog after temporary startup admission pressure", async () => {
+    const catalog = {
+      models: [{ slug: "gpt-5.4", name: "GPT-5.4" }],
+      source: "codex",
+      cached: false,
+    };
+    const startupCapacity = {
+      code: "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED",
+      retryable: true,
+      retryAfterMs: 1,
+    };
+    const listModels = mockListModels(
+      vi
+        .fn()
+        .mockRejectedValueOnce(startupCapacity)
+        .mockRejectedValueOnce(startupCapacity)
+        .mockResolvedValue(catalog),
+    );
+    const queryClient = new QueryClient();
+
+    await expect(
+      queryClient.fetchQuery(providerModelsQueryOptions({ provider: "codex", enabled: true })),
+    ).resolves.toEqual(catalog);
+    expect(listModels).toHaveBeenCalledTimes(3);
+  });
+
+  it("fails fast for unclassified provider errors instead of adding a seven-second loop", async () => {
+    const listModels = mockListModels(vi.fn().mockRejectedValue(new Error("model/list failed")));
+    const options = providerModelsQueryOptions({ provider: "codex", enabled: true });
+    const queryClient = new QueryClient();
+
+    await expect(queryClient.fetchQuery(options)).rejects.toThrow("model/list failed");
+    expect(listModels).toHaveBeenCalledTimes(1);
+  });
+
+  it("aborts the superseded Engine request and prevents orphaned retries", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    const listModels = mockListModels(
+      vi.fn(
+        (
+          _input: unknown,
+          options?: { readonly signal?: AbortSignal },
+        ): Promise<ProviderListModelsResult> =>
+          new Promise((_resolve, reject) => {
+            capturedSignal = options?.signal;
+            capturedSignal?.addEventListener(
+              "abort",
+              () => reject(new DOMException("Aborted", "AbortError")),
+              { once: true },
+            );
+          }),
+      ),
+    );
+    const queryClient = new QueryClient();
+    const options = providerModelsQueryOptions({ provider: "codex", enabled: true });
+    const observer = new QueryObserver(queryClient, options);
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    await vi.waitFor(() => expect(listModels).toHaveBeenCalledTimes(1));
+    expect(capturedSignal?.aborted).toBe(false);
+
+    await cancelProviderSelectionDiscovery(queryClient, "codex");
+
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(listModels).toHaveBeenCalledTimes(1);
+    expect(observer.getCurrentResult().fetchStatus).toBe("idle");
+    unsubscribe();
+    queryClient.clear();
+  });
+
+  it("also aborts secondary agent discovery for the superseded Engine", async () => {
+    let capturedSignal: AbortSignal | undefined;
+    const listAgents = vi.fn(
+      (
+        _input: unknown,
+        options?: { readonly signal?: AbortSignal },
+      ): Promise<{ agents: []; source: string; cached: false }> =>
+        new Promise((_resolve, reject) => {
+          capturedSignal = options?.signal;
+          capturedSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        }),
+    );
+    vi.spyOn(nativeApi, "ensureNativeApi").mockReturnValue({
+      provider: { listAgents },
+    } as unknown as NativeApi);
+    const queryClient = new QueryClient();
+    const observer = new QueryObserver(
+      queryClient,
+      providerAgentsQueryOptions({ provider: "codex", enabled: true }),
+    );
+    const unsubscribe = observer.subscribe(() => undefined);
+
+    await vi.waitFor(() => expect(listAgents).toHaveBeenCalledTimes(1));
+    await cancelProviderSelectionDiscovery(queryClient, "codex");
+
+    expect(capturedSignal?.aborted).toBe(true);
+    expect(listAgents).toHaveBeenCalledTimes(1);
+    expect(observer.getCurrentResult().fetchStatus).toBe("idle");
+    unsubscribe();
+    queryClient.clear();
   });
 
   it("surfaces real errors instead of masking them as empty catalogs", async () => {

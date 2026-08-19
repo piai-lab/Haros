@@ -142,6 +142,27 @@ afterEach(() => {
 });
 
 describe("wsNativeApi", () => {
+  it("forwards provider model discovery cancellation to the WebSocket transport", async () => {
+    requestMock.mockResolvedValue({ models: [], source: "test", cached: false });
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const api = createWsNativeApi();
+    const controller = new AbortController();
+
+    await api.provider.listModels({ provider: "codex" }, { signal: controller.signal });
+    await api.provider.listAgents({ provider: "codex" }, { signal: controller.signal });
+
+    expect(requestMock).toHaveBeenCalledWith(
+      WS_METHODS.providerListModels,
+      { provider: "codex" },
+      { signal: controller.signal },
+    );
+    expect(requestMock).toHaveBeenCalledWith(
+      WS_METHODS.providerListAgents,
+      { provider: "codex" },
+      { signal: controller.signal },
+    );
+  });
+
   it("delivers and caches valid server.welcome payloads", async () => {
     const { createWsNativeApi, onServerWelcome } = await import("./wsNativeApi");
 

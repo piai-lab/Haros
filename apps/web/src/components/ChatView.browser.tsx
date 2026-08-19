@@ -8112,6 +8112,48 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
+  it("starts global-only OmniMind discovery on Engine selection, not passive menu browse", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-omnimind-engine-intent" as MessageId,
+        targetText: "OmniMind Engine intent",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.omnimind = {
+          source: "browser.fixture",
+          models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
+        };
+      },
+    });
+
+    const omniMindModelRequests = () =>
+      wsRequests.filter(
+        (request) =>
+          request._tag === WS_METHODS.providerListModels && request.provider === "omnimind",
+      );
+
+    try {
+      await waitForServerConfigToApply();
+      expect(omniMindModelRequests()).toHaveLength(0);
+
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await expect.element(page.getByRole("menuitemradio", { name: /OmniMind/ })).toBeVisible();
+      expect(omniMindModelRequests()).toHaveLength(0);
+
+      await page.getByRole("menuitemradio", { name: /OmniMind/ }).click();
+      await vi.waitFor(() => {
+        expect(omniMindModelRequests()).toHaveLength(1);
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "omnimind",
+        );
+      });
+      expect(omniMindModelRequests()[0]).not.toHaveProperty("cwd");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
   it("only discovers models for the current Engine when Model/options opens", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,

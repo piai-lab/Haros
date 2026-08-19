@@ -149,18 +149,31 @@ describe("useProviderModelCatalog", () => {
     expect(second?.selectedRuntimeAgents).toBe(first?.selectedRuntimeAgents);
   });
 
-  it("discovers core agents only when selected unless eager-core is requested", () => {
+  it("discovers agents only for the selected Engine", () => {
     readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: false });
     expect(readAgentQueryEnabled("claudeAgent")).toBe(false);
     expect(readAgentQueryEnabled("codex")).toBe(false);
+  });
 
-    mocks.useQuery.mockClear();
-    readCatalogRenders({
-      selectedProvider: "cursor",
-      discoveryEnabled: false,
-      agentDiscoveryPolicy: "eager-core",
+  it("settles the selected model catalog before starting secondary agent discovery", () => {
+    modelQueries.set("codex", {
+      isFetching: true,
+      isLoading: true,
+      isPending: true,
+      isPlaceholderData: true,
     });
-    expect(readAgentQueryEnabled("claudeAgent")).toBe(true);
+    readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: false });
+    expect(readAgentQueryEnabled("codex")).toBe(false);
+
+    modelQueries.set("codex", {
+      data: { models: [], source: "codex", cached: false },
+      isFetching: false,
+      isLoading: false,
+      isPending: false,
+      isPlaceholderData: false,
+    });
+    mocks.useQuery.mockClear();
+    readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: false });
     expect(readAgentQueryEnabled("codex")).toBe(true);
   });
 

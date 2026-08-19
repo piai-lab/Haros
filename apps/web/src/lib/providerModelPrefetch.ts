@@ -187,7 +187,7 @@ export function prefetchProviderModelsForNewThread(
     return;
   }
   const cwd = input.cwd ?? null;
-  void queryClient.prefetchQuery(
+  const modelPrefetch = queryClient.prefetchQuery(
     providerModelsPrefetchQueryOptions({
       provider: input.provider,
       settings: input.settings,
@@ -202,7 +202,10 @@ export function prefetchProviderModelsForNewThread(
     cwd,
   });
   if (agentsOptions) {
-    void queryClient.prefetchQuery(agentsOptions);
+    // Model readiness is send-critical, while agent/mode metadata is secondary.
+    // Sequence the two expensive reads so a new Thread cannot consume both
+    // Server admission leases before its model catalog is available.
+    void modelPrefetch.then(() => queryClient.prefetchQuery(agentsOptions));
   }
 
   // Composer capabilities gate composer affordances on ChatView mount; the query
