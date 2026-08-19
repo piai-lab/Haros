@@ -2394,6 +2394,11 @@ export default function ChatView({
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const selectedProvider: ProviderKind =
     selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+  // A draft/thread/project OmniMind binding is durable user intent, unlike the
+  // untouched application default. Reopen may therefore begin its global-only
+  // catalog before the user pays a second click on the Model picker.
+  const hasExplicitOmniMindEngineBinding =
+    selectedProviderByThreadId === "omnimind" || threadProvider === "omnimind";
   const hasActiveProviderDiscoverySession = isProviderDiscoverySessionActive({
     provider: selectedProvider,
     session: activeThread?.session,
@@ -2452,11 +2457,11 @@ export default function ChatView({
     selectedProviderDiscoveryEnabled:
       selectedProvider !== "omnimind" ||
       omniMindModelDiscoveryRequested ||
-      composerModelHintByProvider.omnimind !== null,
+      composerModelHintByProvider.omnimind !== null ||
+      hasExplicitOmniMindEngineBinding,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: composerModelHintByProvider,
-    agentDiscoveryPolicy: "eager-core",
   });
   const { modelOptions: composerModelOptions, selectedModel } = useEffectiveComposerModelState({
     threadId,
@@ -4495,6 +4500,11 @@ export default function ChatView({
   const handleProviderBrowse = useCallback((provider: ProviderKind) => {
     if (provider === "pi") {
       setPiDiscoveryRequested(true);
+    }
+    if (provider === "omnimind") {
+      // Selecting OmniMind is explicit Engine intent. Start its global-only
+      // catalog immediately instead of waiting for a second click on Model.
+      setOmniMindModelDiscoveryRequested(true);
     }
   }, []);
   const handleTraitsPickerOpenChange = useCallback(
@@ -6580,10 +6590,16 @@ export default function ChatView({
   const onComposerEngineSelect = useCallback(
     (provider: ProviderKind) => {
       if (!activeThread) return;
+      if (provider === selectedProvider) return;
       setComposerDraftActiveProviderAndSticky(activeThread.id, provider);
       scheduleComposerFocus();
     },
-    [activeThread, scheduleComposerFocus, setComposerDraftActiveProviderAndSticky],
+    [
+      activeThread,
+      scheduleComposerFocus,
+      selectedProvider,
+      setComposerDraftActiveProviderAndSticky,
+    ],
   );
 
   const copyThreadIdToClipboard = useCopyThreadIdToClipboard();

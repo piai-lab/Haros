@@ -745,8 +745,18 @@ export function createWsNativeApi(): NativeApi {
       listSkillsCatalog: (input) => transport.request(WS_METHODS.providerListSkillsCatalog, input),
       listPlugins: (input) => transport.request(WS_METHODS.providerListPlugins, input),
       readPlugin: (input) => transport.request(WS_METHODS.providerReadPlugin, input),
-      listModels: (input) => transport.request(WS_METHODS.providerListModels, input),
-      listAgents: (input) => transport.request(WS_METHODS.providerListAgents, input),
+      listModels: (input, options) =>
+        transport.request(
+          WS_METHODS.providerListModels,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
+      listAgents: (input, options) =>
+        transport.request(
+          WS_METHODS.providerListAgents,
+          input,
+          options?.signal ? { signal: options.signal } : undefined,
+        ),
     },
     omnimindModelServices: {
       list: (input = {}, options) =>

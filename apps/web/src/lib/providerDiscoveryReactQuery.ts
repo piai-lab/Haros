@@ -236,6 +236,40 @@ export function isInitialModelDiscoveryPending(query: {
   return query.isLoading || (query.isFetching && query.isPlaceholderData);
 }
 
+function isExplicitlyRetryableDiscoveryError(error: unknown): error is {
+  readonly code?: unknown;
+  readonly retryable: true;
+  readonly retryAfterMs?: unknown;
+} {
+  return (
+    typeof error === "object" && error !== null && "retryable" in error && error.retryable === true
+  );
+}
+
+const EXPENSIVE_READ_CAPACITY_CODE = "RPC_EXPENSIVE_READ_CAPACITY_EXCEEDED";
+const EXPENSIVE_READ_CAPACITY_RETRY_LIMIT = 12;
+const TRANSIENT_DISCOVERY_RETRY_LIMIT = 3;
+
+export function shouldRetryProviderCatalogDiscovery(failureCount: number, error: unknown): boolean {
+  if (!isExplicitlyRetryableDiscoveryError(error)) return false;
+  return (
+    failureCount <
+    (error.code === EXPENSIVE_READ_CAPACITY_CODE
+      ? EXPENSIVE_READ_CAPACITY_RETRY_LIMIT
+      : TRANSIENT_DISCOVERY_RETRY_LIMIT)
+  );
+}
+
+export function providerCatalogDiscoveryRetryDelay(attemptIndex: number, error: unknown): number {
+  if (isExplicitlyRetryableDiscoveryError(error)) {
+    const retryAfterMs = error.retryAfterMs;
+    if (typeof retryAfterMs === "number" && Number.isFinite(retryAfterMs) && retryAfterMs >= 0) {
+      return retryAfterMs;
+    }
+  }
+  return Math.min(1_000 * 2 ** attemptIndex, 30_000);
+}
+
 export function providerModelsQueryOptions(input: {
   provider: ProviderKind;
   binaryPath?: string | null;
@@ -258,20 +292,30 @@ export function providerModelsQueryOptions(input: {
       input.agentDir ?? null,
       discoveryCwd,
     ),
-    queryFn: async (): Promise<ProviderListModelsResult> => {
+    queryFn: async ({ signal }): Promise<ProviderListModelsResult> => {
       const api = ensureNativeApi();
-      return api.provider.listModels({
-        provider: input.provider,
-        ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
-        ...(input.apiEndpoint ? { apiEndpoint: input.apiEndpoint } : {}),
-        ...(input.agentDir ? { agentDir: input.agentDir } : {}),
-        ...(discoveryCwd ? { cwd: discoveryCwd } : {}),
-      });
+      return api.provider.listModels(
+        {
+          provider: input.provider,
+          ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
+          ...(input.apiEndpoint ? { apiEndpoint: input.apiEndpoint } : {}),
+          ...(input.agentDir ? { agentDir: input.agentDir } : {}),
+          ...(discoveryCwd ? { cwd: discoveryCwd } : {}),
+        },
+        { signal },
+      );
     },
     enabled: input.enabled ?? true,
-    // Cursor/droid failures are permanent for a session (missing CLI/auth): fail
-    // fast so the picker settles to static options instead of spinning (#103).
-    retry: input.provider === "droid" || input.provider === "cursor" ? 0 : 3,
+    // Disabled catalog hooks must not keep an observer alive. TanStack then
+    // aborts an orphaned request after an Engine switch, while a shared query
+    // remains alive when another window or surface still observes it.
+    subscribed: input.enabled ?? true,
+    // The transport already waits for Server readiness and owns reconnects. Do
+    // not add a second 1s + 2s + 4s retry loop for deterministic CLI, auth,
+    // config, or unknown provider failures. Only a typed RPC error that
+    // explicitly declares itself transient may retry.
+    retry: shouldRetryProviderCatalogDiscovery,
+    retryDelay: providerCatalogDiscoveryRetryDelay,
     staleTime: input.provider === "droid" ? 5 * 60_000 : 60_000,
     ...(input.provider === "droid" ? { refetchOnWindowFocus: false } : {}),
     placeholderData: (previous) => previous ?? EMPTY_MODELS_RESULT,
@@ -290,15 +334,21 @@ export function providerAgentsQueryOptions(input: {
       input.binaryPath ?? null,
       input.cwd ?? null,
     ),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const api = ensureNativeApi();
-      return api.provider.listAgents({
-        provider: input.provider,
-        ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
-        ...(input.cwd ? { cwd: input.cwd } : {}),
-      });
+      return api.provider.listAgents(
+        {
+          provider: input.provider,
+          ...(input.binaryPath ? { binaryPath: input.binaryPath } : {}),
+          ...(input.cwd ? { cwd: input.cwd } : {}),
+        },
+        { signal },
+      );
     },
     enabled: input.enabled ?? true,
+    subscribed: input.enabled ?? true,
+    retry: shouldRetryProviderCatalogDiscovery,
+    retryDelay: providerCatalogDiscoveryRetryDelay,
     staleTime: 60_000,
     placeholderData: (previous) => previous ?? EMPTY_AGENTS_RESULT,
   });
