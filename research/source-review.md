@@ -938,7 +938,7 @@ a successfully installed thread-scoped Gateway projection targets the same filte
 Adapters only translate the pipe: Codex uses native MCP configuration, Claude uses its MCP server seam,
 OpenCode/Kilo uses remote MCP, ACP-family Engines use their supported HTTP/proxy seam, and stock Pi
 maps every `tools/list` descriptor into a `ToolDefinition` placed directly in `customTools`. Synara
-stock Pi has no Host `search_tools`, lexical matcher, inactive Host pool or dynamic activation
+stock Pi has no Host-owned callable loader, lexical matcher, inactive Host pool or dynamic activation
 preflight.
 
 The exact user-result formula is:
@@ -967,9 +967,10 @@ concrete Extension owner with a credible activator and measured benefit; it does
 Host/global search manager.
 
 This evidence supersedes the product-direction claim in the earlier merged dynamic Host Gate B without
-erasing its historical source, test or wire evidence. The current `main` still contains that old
-implementation, so Architecture 1.0 is an architecture-confirmed target rather than delivered source.
-The bounded decision, falsifiers and future Gate B scope live in
+erasing its historical source, test or wire evidence. The baseline `main@849730c…` still contains that
+old implementation; the task branch has since implemented the Architecture 1.0 source candidate and
+passed focused conformance, but still requires final push, live-provider and packaged closure. The
+bounded decision, falsifiers and remaining Gate B evidence live in
 [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md). This section does not
 approve Chat Todo, final Settings taxonomy, Device full-access, Browser download handling,
 approval/auto UI or Extension Marketplace.

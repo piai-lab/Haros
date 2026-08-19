@@ -2,7 +2,7 @@
 
 > 证据日期：2026-08-19
 >
-> 当前源码基线：`main@849730c508be0dde9570529431395acc7be2943b`
+> current-source基线：`main@849730c508be0dde9570529431395acc7be2943b`；本任务分支在此基础上实现Architecture 1.0 source candidate，尚待最终push/live/packaged closure
 >
 > 文档角色：Settings、AgentGateway、Engine projection与MCP产品边界的证据owner；稳定UI与运行时合同分别由[`architecture/workbench.md`](../architecture/workbench.md)和[`architecture/execution.md`](../architecture/execution.md)拥有。
 
@@ -22,10 +22,10 @@ Host运行时目标也已改变：
 - 同一全局Built-in policy覆盖所有Agent；
 - OmniMind Agent通过named hidden Pi Host Projection Extension注册allowed+available definitions，并在当前方案中直接active；
 - stock Pi与其他Engine继续各自native direct/eager projection；
-- 删除Host `search_tools`、inactive pool与activation preflight；
+- 删除Host-owned callable loader、inactive pool与activation preflight；
 - future dynamic只属于具体Extension owner。
 
-当前main仍实现旧Host dynamic方案。本文将其记录为current-source evidence，不把它冒充已确认终态。
+基线main仍实现旧Host dynamic方案；本任务分支已经单轨删除该责任并改为eager Host Projection。两者必须分开：旧main只提供历史source evidence，本分支在完成最终同步、push、live与packaged前也只能称source candidate。
 
 ## 1. 产品问题不是“MCP页面放哪里”
 
@@ -128,7 +128,7 @@ brand-new且没有settings文件时：
 
 | raw输入                            | 目标intent                                | 升级结果                                                                 |
 | ---------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------ |
-| settings文件不存在                 | brand-new；Device disabled                | 创建当前版本snapshot，disabled包含`device`                               |
+| settings文件不存在                 | brand-new；Device disabled                | 仅在内存使用fresh default；启动不ambient write                           |
 | existing legacy snapshot，字段缺失 | 保留legacy decoded intent；Device enabled | 当前版本物化为不含`device`                                               |
 | existing snapshot，显式`[]`        | 保留显式Device enabled                    | 当前版本保持不含`device`                                                 |
 | existing snapshot，显式`[device]`  | 保留Device disabled                       | 当前版本保持`device`                                                     |
@@ -203,7 +203,7 @@ Device disabled不是“注册为inactive”。没有activator的inactive tool�
 
 ## 6. OmniMind Agent Host Projection
 
-当前目标形状：
+本任务分支source形状：
 
 ```text
 current policy
@@ -223,7 +223,7 @@ Host Extension拥有projection、collision/provenance与Pi Session wiring，不�
 
 ## 7. Dynamic Tool Loading边界
 
-Pi原生支持Extension owner-local Dynamic Tool Loading，但没有默认全局callable search tool。官方`search_tools`是示例pattern，不是产品级总搜索。
+Pi原生支持Extension owner-local Dynamic Tool Loading，但没有默认全局callable search tool。官方loader只是Extension-local示例pattern，不是产品级总搜索。
 
 当前Host不采用dynamic，原因见[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)。未来判断规则：
 
@@ -305,9 +305,9 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 - 不因“连接存在”推断在线；
 - 不因未来third-party MCP adapter而共享credential或process owner。
 
-## 12. 当前源码、目标与证据成熟度
+## 12. 基线、分支实现与证据成熟度
 
-### 12.1 current source
+### 12.1 基线main的历史source evidence
 
 已合入main的旧Gate B证明：
 
@@ -332,22 +332,13 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 - exact-turn覆盖所有Provider calls；
 - partial collision局部degrade。
 
-### 12.3 implementation evidence
+### 12.3 本任务分支implementation evidence
 
-上述target尚未完成代码Gate B、真实Provider与packaged交互journey。文档不能宣称已交付或已安装。
+本任务分支已经完成并通过focused source验证：raw settings migration与Device fresh default、统一Gateway→Pi投影、显式有限composition、async Host factory在native ResourceLoader reload重读实时catalog、eager active、collision局部降级、lease/Delivered capability分离、prompt diet、所有Provider `tools/call`的ingress exact-turn，以及一个非Host的owner-local dynamic wire conformance。当前未完成的是最终main同步、push、MiMo/DeepSeek live与同一pushed code SHA的隔离packaged journey；这些门关闭前不能宣称已交付、已安装或已发布。
 
-## 13. 未来Gate B切片
+## 13. Gate B剩余交付切片
 
-1. **authority与baseline**：冻结current eager/dynamic wire、catalog与prompt基线；
-2. **删除Host loader**：简化Host Extension，删除inactive/preflight/双轨；
-3. **composition/PiAdapter**：建立显式有限composition seam，Todo保持独立；
-4. **Built-in policy**：raw settings migration、brand-new default、existing intent、availability、new/old Session与rapid toggle；
-5. **prompt diet**：去dynamic guidance与catalog duplication；
-6. **Host parity/collision**：所有Engine相同Desired surface，foreign winner局部degrade；
-7. **authority/races**：all Provider calls exact-turn、cancel/timeout/late/replacement；
-8. **evidence**：exact Pi、MiMo/DeepSeek、isolated packaged journey与文档状态。
-
-每个关注点独立commit；不保留feature flag、第二registry或长期双轨。
+source切片已经在任务分支用独立commits闭合。剩余只允许：再次merge最新`origin/main`并在最终SHA跑full gates；push该任务分支；随后完成MiMo/DeepSeek与隔离packaged journey；最后把脱敏结果和精确artifact SHA写回evidence。任何live/packaged代码修正都必须产生新commit、新push SHA并重建，不能在旧artifact上补文档宣称完成。
 
 ## 14. 验收矩阵
 
@@ -374,7 +365,7 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 
 ## 15. 明确拒绝
 
-- Host `search_tools`或改名alias；
+- Host-owned callable loader或改名alias；
 - Host/global跨Extension搜索；
 - inactive Host pool；
 - Goal/Automation activation preflight；

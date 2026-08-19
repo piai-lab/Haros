@@ -8,19 +8,20 @@
 >
 > production-adopted Synara：`8f9f60045ea652db7d4a6822e2f723dde073f40a`；只读对照：clean `c79fab498de1a911a14ff8b05bf83d0528ec54fa`
 >
-> 文档角色：Pi/Synara exact-source证据、当前源码观察、维护者已确认架构方向与未来Gate B falsifier。稳定运行时合同只由[`architecture/execution.md`](../architecture/execution.md)拥有。
+> 文档角色：Pi/Synara exact-source证据、基线main观察、维护者已确认架构、本任务分支source candidate与剩余live/packaged falsifier。稳定运行时合同只由[`architecture/execution.md`](../architecture/execution.md)拥有。
 
 ## 0. 新会话先读
 
 本文替代此前“Host Dynamic Tool Loading是确定终态”的研究结论。旧实现及其测试仍是已经合入源码的历史事实，但不再是目标架构。
 
-必须同时区分三层：
+必须同时区分四层：
 
-1. **当前源码事实**：main中仍有AgentGateway Host `search_tools`、Host-owned inactive pool、lexical matching、`session_start` deactivation与Goal/Automation activation preflight；
-2. **已确认目标**：保留Pi-native Host Projection Extension，删除整条Host loader责任，允许且可用的Host definitions注册后直接active；
-3. **未来非承诺**：某个具体Extension可以在证据成立时拥有自己的dynamic loader，但OmniMind不建立Host/global search manager。
+1. **基线main事实**：`main@849730c…`仍有Host-owned callable loader、inactive pool、lexical matching、`session_start` deactivation与Goal/Automation activation preflight；
+2. **已确认架构**：保留Pi-native Host Projection Extension，删除整条Host loader责任，允许且可用的Host definitions注册后直接active；
+3. **本任务分支source candidate**：已实现第2层，并通过settings、projection、reload、collision、prompt与exact-turn focused tests；尚未完成最终push、live与packaged closure；
+4. **未来非承诺**：某个具体Extension可以在证据成立时拥有自己的dynamic loader，但OmniMind不建立Host/global search manager。
 
-任何把第1层写成最终设计、把第2层写成已交付，或把第3层写成统一平台承诺的表述都不准确。
+旧main的绿色测试只证明历史实现自洽；本分支的focused绿色只证明source candidate。两者都不能冒充已安装、已发布或已完成真实Provider/packaged journey。
 
 ## 1. 最终裁决
 
@@ -45,12 +46,12 @@ OmniMind Agent
 - AgentGateway仍是Host canonical catalog、schema、execution、credential、capability、exact-turn authority、timeout与cancel真相；
 - Extension注册与execute backend正交；进入Pi Registry不转移业务owner；
 - 当前AgentGateway Host Projection选择eager-active；
-- 删除Host callable `search_tools`、inactive pool与一切围绕它形成的控制面；
+- 删除Host callable loader、inactive pool与一切围绕它形成的控制面；
 - 当前所有健康Engine追求相同的canonical Host surface，adapter只换管道；
 - Dynamic Tool Loading由具体Extension owner按证据决定，不是OmniMind全局模式；
 - 不新增第二Registry、active store、search index、dependency graph、Extension Manager或第三方MCP manager。
 
-## 2. 为什么旧Host `search_tools`应整条删除
+## 2. 为什么旧Host callable loader应整条删除
 
 ### 2.1 Pi原生到底提供了什么
 
@@ -62,12 +63,12 @@ Pi `0.84.2`原生提供：
 - wrapper可识别纯additive active-set change并产生`addedToolNames`；
 - Provider层可按exact endpoint走native deferred encoding或安全fallback。
 
-Pi没有默认注册到每个Session、自动搜索所有Extensions的全局callable search tool。官方docs/example中的`search_tools`只是某个Extension自己注册loader、自己匹配owned metadata、自己additively激活owned tools的示例。
+Pi没有默认注册到每个Session、自动搜索所有Extensions的全局callable search tool。官方docs/example只展示“某个Extension自己注册loader、自己匹配owned metadata、自己additively激活owned tools”的owner-local pattern。
 
 所以：
 
 - “Pi没有Dynamic Tool Loading”是错的；
-- “Pi自带一个全局`search_tools`，Host只需接入”也是错的；
+- “Pi自带一个全局callable loader，Host只需接入”也是错的；
 - “注册为inactive后Pi会自动发现”同样是错的。
 
 没有明确activator的inactive tool，对模型而言就是不可发现能力。
@@ -83,13 +84,13 @@ Pi没有默认注册到每个Session、自动搜索所有Extensions的全局call
 5. Device真实产品语义是fresh默认关闭并不注册，不是注册后藏在inactive pool；
 6. Synara exact基线已经证明更简单的路径：`tools/list → ToolDefinition → customTools eager`。
 
-奥卡姆裁决不是把`search_tools`改名，而是删除需求本身。
+奥卡姆裁决不是给旧loader改名，而是删除需求本身。
 
-### 2.3 必须删除的完整责任面
+### 2.3 本任务分支已删除的完整责任面
 
-后续代码Gate B应一起删除：
+本任务分支已经一起删除：
 
-- callable `search_tools`及任何OmniMind别名；
+- Host callable loader及任何别名；
 - Host lexical tokenizer、ranking、limit与metadata search；
 - Host inactive searchable pool；
 - `session_start`批量deactivate Host names；
@@ -217,7 +218,7 @@ adopted Synara `8f9f600…`与只读exact `c79fab4…`在本议题核心adapter�
 - 一份Gateway catalog、`tools/list`与`tools/call`；
 - 正式支持Engine通过各自原生seam获得同一Host definitions；
 - stock Pi把全部Gateway descriptors转成`ToolDefinition`并放入`customTools`；
-- 没有Host `search_tools`、inactive Host pool或dynamic preflight；
+- 没有Host-owned callable loader、inactive Host pool或dynamic preflight；
 - Gateway接线失败时harness准确降级，不伪造Host控制。
 
 这不是要求逐字复制Synara，而是默认遵守母体已经成熟的责任模式，只有明确产品收益才增加窄downstream增强。
@@ -233,7 +234,7 @@ adopted Synara `8f9f600…`与只读exact `c79fab4…`在本议题核心adapter�
 - **availability**：平台、服务与可执行闭包的当前事实，不持久化为用户选择；
 - **registration/authorization**：新Session是否投影schema，与每次call是否允许执行是不同边界。
 
-当前schema会把缺失`disabledBuiltInGroups`与显式`[]`都decode为`[]`，所以decoded值不能证明fresh或explicit。目标Gate B必须在decode default抹掉raw字段存在性之前，复用settings文件存在事实与现有`migrationVersion`：无文件才采用Device off；existing valid snapshot无论字段缺失还是显式`[]`都保留legacy Device-on intent，显式`[device]`继续off，unknown IDs继续round-trip；corrupt snapshot沿现有quarantine/diagnostic并使用安全默认，但不得宣称保留了用户选择。不新增marker、store或第二migration owner。
+schema会把缺失`disabledBuiltInGroups`与显式`[]`都decode为`[]`，所以decoded值不能证明fresh或explicit。本任务分支已在decode default抹掉raw字段存在性之前复用settings文件存在事实与现有`migrationVersion`：无文件在内存采用Device off且不ambient write；existing valid snapshot无论字段缺失还是显式`[]`都保留legacy Device-on intent，显式`[device]`继续off，unknown IDs继续round-trip；corrupt snapshot沿现有quarantine/diagnostic并使用安全默认，但不宣称保留了用户选择。实现没有新增marker、store或第二migration owner，并已覆盖并发start、原子迁移写失败与revision单调。
 
 已确认fresh defaults：
 
@@ -298,7 +299,7 @@ generic harness只应保留：
 - Automation run-only duty不能泄漏到manual follow-up；
 - registered/active不等于authorized。
 
-应删除：
+本任务分支已删除：
 
 - “先调用search/loader”；
 - inactive catalog或tool-name枚举；
@@ -310,7 +311,7 @@ generic harness只应保留：
 
 ## 10. PiAdapter与composition seam
 
-理想PiAdapter只承担：
+本任务分支把PiAdapter收口为：
 
 1. 创建Pi Session；
 2. 组装明确的product-bundled inline Extensions；
@@ -318,16 +319,18 @@ generic harness只应保留：
 4. 建Gateway connection；
 5. 把可信Pi事件薄投影为canonical events。
 
-概念上的`buildOmniMindSessionExtensions(context): InlineExtension[]`只是一份显式、有限的产品接线：
+`buildOmniMindSessionExtensions(...)`只是一份显式、有限的产品接线：
 
 - 输入是创建当前Session所需的窄依赖；
-- 输出是当前product-bundled inline Extension factories；
+- 输出是当前product-bundled inline Extension factories，以及Todo/Host各自的具体窄handle；不返回generic handle map或lookup API；
 - 不扫描、安装、排序、缓存或管理第三方；
 - 不创建安装数据库、manifest或Settings；
 - 第三方/用户Extension继续由Pi ResourceLoader；
 - 新增product-bundled Extension可以修改composition list，但不修改PiAdapter核心Session流程。
 
-PiAdapter不应拥有Extension definition、search、Built-in policy、permission、Todo validation、Goal/Automation lifecycle、collision策略、active-set或完整prompt catalog。
+Todo handle只拥有自身result provenance；Host handle只拥有从当前Pi `sourceInfo`派生Delivered names及核对bounded dependency。PiAdapter不拥有Extension definition、search、Built-in policy、permission、Todo validation、Goal/Automation lifecycle、collision算法、active-set或完整prompt catalog。
+
+Host使用公开async `ExtensionFactory`：初载与`ResourceLoader.reload()`都会重新执行factory并实时调用`tools/list`，最新allowed+available definitions成为active，旧runner失效。factory不闭包固定descriptor snapshot，也不保存第二catalog。Gateway lease随Provider Session保留；一次空catalog、读取失败或全部collision只让本次Delivered capability降级，不能释放lease并阻断下一次native reload重试。stock与product Pi `0.84.2` focused conformance均已证明factory重执行、catalog替换与foreign winner局部降级；真实Provider/packaged journey仍待关闭。
 
 ## 11. 权限与Session生命周期
 
@@ -342,7 +345,7 @@ PiAdapter不应拥有Extension definition、search、Built-in policy、permissio
 
 `runtimeMode`只回答已exposed、当前available且属于任务意图的具体能力是否还要普通approval。它不替Device逐entry availability、安全分类、12/12 executable closure或产品准入作答，也不决定Browser download的artifact落点与receipt。
 
-所有Provider-facing真实`tools/call`应复用现有ingress-bound exact-turn authority；`tools/list`可以在有效Session、turn外用于初始化。扩大既有gate到read/wait/diagnostics时，不新建per-turn token、lease或permission manager。
+本任务分支已把所有Provider-facing真实`tools/call`统一到现有ingress-bound exact-turn authority；`tools/list`、initialize与ping可以在有效Session、turn外用于初始化。batch在ingress绑定同一个immutable turn，但每个call在handler前独立复验并保持并发；read、wait与diagnostics不再绕过。实现没有新建per-turn token、lease或permission manager，External connections的独立transport/principal也不受Provider turn gate影响。
 
 普通toggle只影响后续projection与call admission，不取消in-flight。explicit cancel/timeout继续传递AbortSignal。Session replacement、reload或runner失效后，旧handler与late result不得污染新turn。
 
@@ -390,9 +393,9 @@ owner-local loader必须：
 
 Architecture 1.0只确定owner、composition、Host平权、当前eager投影、collision、policy边界与future dynamic责任。
 
-## 15. Current source → target Gate B
+## 15. Gate B source candidate与剩余交付
 
-当前main已经实现旧dynamic方案。下一轮产品代码Gate B应按以下关注点收口，但本文不宣称这些改动已经完成：
+基线main实现旧dynamic方案。本任务分支已经完成以下source关注点：
 
 1. 删除Host loader、inactive pool、preflight、dynamic prompt/wire/live责任；
 2. 保留并简化named hidden Host Projection Extension；
@@ -403,9 +406,9 @@ Architecture 1.0只确定owner、composition、Host平权、当前eager投影、
 7. 证明所有Engine强Host平权与partial collision；
 8. 闭合all-agent Built-in policy与Device fresh default；
 9. 闭合exact-turn、toggle/in-flight、reload/replacement；
-10. 在同一SHA完成exact Pi、MiMo/DeepSeek与isolated packaged证据。
+10. 保留一个非Host的owner-local dynamic wire conformance，证明产品Pi patch没有破坏上游机制。
 
-不要保留feature flag或eager/dynamic双轨。回滚是revert该关注点，不是维护第二套长期实现。
+当前剩余门只有：最终merge最新`origin/main`；在同一exact SHA跑full gates并push；完成MiMo/DeepSeek与isolated packaged证据；把脱敏结论和精确artifact SHA写回。不要保留feature flag或eager/dynamic双轨；回滚是revert具体关注点，不是维护第二套长期实现。
 
 ## 16. 验证矩阵
 
@@ -452,4 +455,4 @@ Architecture 1.0只确定owner、composition、Host平权、当前eager投影、
 - Engine projection seam或Host parity变化；
 - Built-in policy/default/migration事实变化；
 - 具体Extension出现显著schema/attention成本或稀疏使用证据；
-- 当前旧dynamic源码被实际替换或回滚。
+- 当前source candidate被重构、回滚或合入main。
