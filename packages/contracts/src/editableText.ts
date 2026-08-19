@@ -24,6 +24,23 @@ export function hasDisallowedEditableTextControl(value: string): boolean {
   return false;
 }
 
+// TextEncoder and Buffer replace isolated UTF-16 surrogate code units with the
+// replacement character. Reject them at the Prompt boundary so accepted text
+// round-trips through UTF-8 persistence without silent content changes.
+export function hasUnpairedUtf16Surrogate(value: string): boolean {
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (code >= 0xd800 && code <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (next < 0xdc00 || next > 0xdfff) return true;
+      index += 1;
+      continue;
+    }
+    if (code >= 0xdc00 && code <= 0xdfff) return true;
+  }
+  return false;
+}
+
 export function isEditableTextContent(value: string): boolean {
   return (
     !hasDisallowedEditableTextControl(value) &&
@@ -34,6 +51,7 @@ export function isEditableTextContent(value: string): boolean {
 export function isOmniMindAgentPromptContent(value: string): boolean {
   return (
     !hasDisallowedEditableTextControl(value) &&
+    !hasUnpairedUtf16Surrogate(value) &&
     editableTextByteLength(value) <= OMNIMIND_AGENT_PROMPT_MAX_BYTES
   );
 }

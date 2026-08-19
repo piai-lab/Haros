@@ -283,7 +283,7 @@ describe("OmniMindAgentPromptFilesLive", () => {
       }),
     );
 
-    expect(results.map(({ state }) => state).sort()).toEqual(["changed", "conflict"]);
+    expect(results.map(({ state }) => state).toSorted()).toEqual(["changed", "conflict"]);
     const conflict = results.find(({ state }) => state === "conflict");
     expect(conflict).toMatchObject({ state: "conflict", reason: "content_changed" });
     expect(["first", "second"]).toContain(conflict?.snapshot.defaultPrompt.content);

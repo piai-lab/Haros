@@ -193,9 +193,7 @@ describe("TraitsPicker (Claude)", () => {
     await vi.waitFor(() => {
       expect(document.body.textContent ?? "").toContain("Effort");
       expect(
-        document.body
-          .querySelector('[role="menuitemcheckbox"]')
-          ?.getAttribute("aria-checked"),
+        document.body.querySelector('[role="menuitemcheckbox"]')?.getAttribute("aria-checked"),
       ).toBe("true");
     });
   });
@@ -510,10 +508,13 @@ describe("TraitsPicker (Codex)", () => {
 
     const trigger = page.getByRole("button");
     trigger.element().focus();
-    await userEvent.keyboard("{Enter}{End}");
+    await userEvent.keyboard("{Enter}");
+    const firstEffortItem = page.getByRole("menuitemradio", { name: "Low" });
+    await expect.poll(() => document.activeElement === firstEffortItem.element()).toBe(true);
+    await userEvent.keyboard("{End}");
     const fastItem = page.getByRole("menuitemcheckbox", { name: "Fast mode" });
     await expect.element(fastItem).toHaveAttribute("aria-checked", "false");
-    expect(document.activeElement).toBe(fastItem.element());
+    await expect.poll(() => document.activeElement === fastItem.element()).toBe(true);
     await userEvent.keyboard(" ");
 
     expect(useComposerDraftStore.getState().stickyModelSelectionByProvider.codex).toMatchObject({

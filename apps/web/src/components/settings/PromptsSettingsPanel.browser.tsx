@@ -147,6 +147,31 @@ describe("PromptsSettingsPanel", () => {
     await screen.unmount();
   });
 
+  it("retains both unsaved drafts when another Settings section is visited", async () => {
+    const getSnapshot = vi.fn().mockResolvedValue(snapshot({ customRules: "Saved rules" }));
+    installApi({ getSnapshot });
+
+    const screen = await render(<PromptsSettingsPanel active />);
+    const defaultEditor = screen.getByRole("textbox", { name: "Default prompt" });
+    const rulesEditor = screen.getByRole("textbox", { name: "Custom rules" });
+    await expect.element(defaultEditor).toHaveValue(FACTORY);
+    await defaultEditor.fill("Unsaved default draft");
+    await rulesEditor.fill("Unsaved rules draft");
+
+    await screen.rerender(<PromptsSettingsPanel active={false} />);
+    await expect.element(defaultEditor).not.toBeInTheDocument();
+    await screen.rerender(<PromptsSettingsPanel active />);
+
+    await expect
+      .element(screen.getByRole("textbox", { name: "Default prompt" }))
+      .toHaveValue("Unsaved default draft");
+    await expect
+      .element(screen.getByRole("textbox", { name: "Custom rules" }))
+      .toHaveValue("Unsaved rules draft");
+    expect(getSnapshot).toHaveBeenCalledTimes(1);
+    await screen.unmount();
+  });
+
   it("keeps an unavailable custom-rules file local to its card and hides Open without Desktop", async () => {
     installApi({
       getSnapshot: vi.fn().mockResolvedValue(
@@ -417,7 +442,7 @@ describe("PromptsSettingsPanel", () => {
       await expect
         .element(
           screen.getByText(
-            "Remove unsupported control characters. Tabs and line breaks are allowed.",
+            "Use valid text without unsupported control characters. Tabs and line breaks are allowed.",
           ),
         )
         .toBeVisible();

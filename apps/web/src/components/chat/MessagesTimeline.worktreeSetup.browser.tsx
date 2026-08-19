@@ -235,7 +235,7 @@ describe("MessagesTimeline worktree setup card", () => {
       await expect.poll(() => workingRow() !== null).toBe(true);
       await expect.poll(() => setupRow() === null, { timeout: 2000 }).toBe(true);
       expect(workingRow()).not.toBeNull();
-      expect(workingRow()?.querySelector(".shimmer")?.classList).not.toContain("shimmer-once");
+      expect(workingRow()?.querySelector('[data-testid="thinking-status"]')).not.toBeNull();
     } finally {
       await screen.unmount();
     }

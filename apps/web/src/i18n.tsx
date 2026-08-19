@@ -2077,7 +2077,7 @@ export const EN_MESSAGES = {
   "settings.promptOpenFailed": "Could not open the custom rules location",
   "settings.promptByteCount": "{current} of {max} bytes",
   "settings.promptInvalidText":
-    "Remove unsupported control characters. Tabs and line breaks are allowed.",
+    "Use valid text without unsupported control characters. Tabs and line breaks are allowed.",
   "settings.promptSaved": "Instructions saved",
   "settings.promptAlreadyCurrent": "Already up to date",
   "settings.promptSaveFailed": "Could not save instructions",
@@ -5632,7 +5632,7 @@ export const ZH_CN_MESSAGES = {
   "settings.customRulesUnavailable": "自定义规则无法在此编辑。请使用下方位置进行修改。",
   "settings.promptOpenFailed": "无法打开自定义规则所在位置",
   "settings.promptByteCount": "{current} / {max} 字节",
-  "settings.promptInvalidText": "请移除不支持的控制字符；制表符和换行符可以保留。",
+  "settings.promptInvalidText": "请输入有效文本并移除不支持的控制字符；制表符和换行符可以保留。",
   "settings.promptSaved": "指令已保存",
   "settings.promptAlreadyCurrent": "当前内容已是最新",
   "settings.promptSaveFailed": "无法保存指令",

@@ -5,6 +5,7 @@
 import {
   editableTextByteLength,
   hasDisallowedEditableTextControl,
+  hasUnpairedUtf16Surrogate,
   ThreadId,
   type OmniMindAgentPromptMutationResult,
   type OmniMindAgentPromptSnapshot,
@@ -96,9 +97,13 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
 
   useEffect(() => {
     if (!props.active) return;
+    setReloadThreadId(resolvePromptReloadThreadId());
+  }, [props.active]);
+
+  useEffect(() => {
+    if (!props.active || snapshot !== null) return;
     let cancelled = false;
     setLoadError(false);
-    setReloadThreadId(resolvePromptReloadThreadId());
     void ensureNativeApi()
       .omnimindAgentPrompts.getSnapshot({})
       .then((next) => {
@@ -110,7 +115,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [props.active]);
+  }, [props.active, snapshot]);
 
   if (!props.active) return null;
 
@@ -338,8 +343,11 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
 
   const defaultBytes = editableTextByteLength(defaultDraft);
   const customRulesBytes = editableTextByteLength(customRulesDraft);
-  const defaultInvalid = hasDisallowedEditableTextControl(defaultDraft);
-  const customRulesInvalid = hasDisallowedEditableTextControl(customRulesDraft);
+  const defaultInvalid =
+    hasDisallowedEditableTextControl(defaultDraft) || hasUnpairedUtf16Surrogate(defaultDraft);
+  const customRulesInvalid =
+    hasDisallowedEditableTextControl(customRulesDraft) ||
+    hasUnpairedUtf16Surrogate(customRulesDraft);
   const defaultTooLarge = defaultBytes > snapshot.maxBytes;
   const customRulesTooLarge = customRulesBytes > snapshot.maxBytes;
   const customRulesUnavailable = snapshot.customRules.availability === "unavailable";

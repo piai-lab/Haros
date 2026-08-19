@@ -8,6 +8,12 @@ import {
   OmniMindAgentPromptSnapshot,
 } from "./omnimindAgentPrompts";
 
+const defaultPromptInput = (content: string) => ({
+  action: "setDefault" as const,
+  expectedVersion: "a".repeat(64),
+  content,
+});
+
 describe("OmniMind Agent prompt contracts", () => {
   it("accepts product intents without accepting renderer-selected paths", () => {
     expect(
@@ -89,7 +95,7 @@ describe("OmniMind Agent prompt contracts", () => {
     ).toThrow();
   });
 
-  it("rejects oversized payloads and disallowed C0 controls before transport", () => {
+  it("rejects oversized payloads, disallowed C0 controls, and invalid UTF-16 before transport", () => {
     for (const action of ["setDefault", "createCustomRules"] as const) {
       const base =
         action === "setDefault" ? { action, expectedVersion: "a".repeat(64) } : { action };
@@ -100,6 +106,11 @@ describe("OmniMind Agent prompt contracts", () => {
         }),
       ).toThrow();
       for (const content of ["before\0after", "before\u0001after", "before\u000cafter"]) {
+        expect(() =>
+          Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({ ...base, content }),
+        ).toThrow();
+      }
+      for (const content of ["before\ud800after", "before\udc00after"]) {
         expect(() =>
           Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)({ ...base, content }),
         ).toThrow();
@@ -121,17 +132,11 @@ describe("OmniMind Agent prompt contracts", () => {
     const emoji = "😀";
     const withinLimit = emoji.repeat(OMNIMIND_AGENT_PROMPT_MAX_BYTES / 4);
     const overLimit = `${withinLimit}${emoji}`;
-    const input = (content: string) => ({
-      action: "setDefault" as const,
-      expectedVersion: "a".repeat(64),
-      content,
-    });
-
     expect(() =>
-      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)(input(withinLimit)),
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)(defaultPromptInput(withinLimit)),
     ).not.toThrow();
     expect(() =>
-      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)(input(overLimit)),
+      Schema.decodeUnknownSync(OmniMindAgentPromptMutationInput)(defaultPromptInput(overLimit)),
     ).toThrow();
   });
 });
