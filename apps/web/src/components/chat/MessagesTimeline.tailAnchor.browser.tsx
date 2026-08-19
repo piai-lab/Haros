@@ -67,11 +67,13 @@ function seedEntries(): TimelineEntries {
 interface HarnessHandle {
   send: (messageId: string) => void;
   growStream: (streamMessageId: string, lines: number) => void;
+  replaceStream: (streamMessageId: string, lines: number) => void;
   growEarlierMessage: (messageId: string, lines: number) => void;
   showLiveStatus: () => void;
   showWorkingHeader: () => void;
   finishTurn: () => void;
   clearAnchor: () => void;
+  activeTailAnchor: MessageId | null;
   listRef: React.RefObject<LegendListRef | null>;
   atEndStates: boolean[];
   trailEmissionCount: () => number;
@@ -119,6 +121,21 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
         return current.map((entry, index) => (index === streamingIndex ? grown : entry));
       });
     },
+    replaceStream: (streamMessageId: string, lines: number) => {
+      setEntries((current) =>
+        current.map((entry) =>
+          entry.kind === "message" && entry.message.id === streamMessageId
+            ? {
+                ...entry,
+                message: {
+                  ...entry.message,
+                  text: "Settled compact response.\n\n".repeat(lines),
+                },
+              }
+            : entry,
+        ),
+      );
+    },
     growEarlierMessage: (messageId: string, lines: number) => {
       setEntries((current) =>
         current.map((entry) =>
@@ -150,6 +167,7 @@ function TailAnchorTimeline({ handleRef }: { handleRef: { current: HarnessHandle
     clearAnchor: () => {
       setTailAnchorMessageId(null);
     },
+    activeTailAnchor: tailAnchorMessageId,
     atEndStates: atEndStatesRef.current,
     trailEmissionCount: () => trailEmissionCountRef.current,
     scrollCallbackOrder: scrollCallbackOrderRef.current,
@@ -412,6 +430,21 @@ describe("MessagesTimeline tail anchor", () => {
       // The anchored message has scrolled up and out of the way of the live tail.
       const overflowOffset = anchorTopOffsetPx(handle(), SECOND_SENT_MESSAGE_ID);
       expect(overflowOffset === null || overflowOffset < 0).toBe(true);
+
+      // The original failure happened after this hand-off: settled tool/Markdown
+      // rows shrank, LegendList recreated end reserve for the still-live anchor,
+      // and the viewport jumped back to the old user message. Overflow must have
+      // cleared that owner, so later tail shrink cannot reopen the reserve.
+      await expect.poll(() => handle().activeTailAnchor).toBeNull();
+      handle().replaceStream(SECOND_STREAMING_MESSAGE_ID, 1);
+      await settleFrames(12);
+      expect(reservePx()).toBe(0);
+      expect(handle().activeTailAnchor).toBeNull();
+      const offsetAfterTailShrink = anchorTopOffsetPx(handle(), SECOND_SENT_MESSAGE_ID);
+      expect(
+        offsetAfterTailShrink === null || Math.abs(offsetAfterTailShrink - topGapPx) > 8,
+        "overflowed send anchor revived after the streamed tail shrank",
+      ).toBe(true);
     } finally {
       await screen.unmount();
     }
