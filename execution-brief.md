@@ -9,9 +9,9 @@ Updated: 2026-08-19
 当前目标是把已确认的 **OmniMind Agent Extension Architecture 1.0** 从文档裁决推进为后续唯一Gate B方向。现有main已经合入一套可运行的Host Dynamic Loading实现，但维护者已明确否决其Host-owned `search_tools`、inactive pool与activation preflight；这些只能作为历史source evidence，不再是目标终态。
 
 1. Pi `AgentSession` / `ResourceLoader` / Tool Registry是OmniMind Agent runtime内唯一Extension注册、sourceInfo、registered/active、Session、reload与Provider wire真相；AgentGateway继续唯一拥有Host canonical catalog、execution、credential、capability、exact-turn authority、timeout与cancel；
-2. 当前Host物理形状是一份named hidden AgentGateway Host Projection Extension；policy与availability允许的definitions注册后直接active，不附加Host search、inactive pool或dynamic双轨；
+2. 目标Host物理形状是一份named hidden AgentGateway Host Projection Extension；policy与availability允许的definitions注册后直接active，不附加Host search、inactive pool或dynamic双轨。当前main仍是loader/inactive实现，eager target尚未获得新代码与交付证据；
 3. 所有健康、正式支持Engine获得同一Desired Host Surface；OmniMind Agent、stock Pi与其他Engine只在投影管道上不同，不形成Host能力等级；
-4. Built-in policy覆盖所有Agent。fresh profile在没有既有显式选择时默认开放OmniMind与Browser、关闭Device；已有显式选择不被覆盖；
+4. Built-in policy覆盖所有Agent。brand-new且没有settings文件时默认开放OmniMind与Browser、关闭Device；existing valid snapshot保留legacy decoded intent，不能从decode后的`[]`猜“fresh/explicit”。该migration target尚未实现；
 5. Todo继续是独立product-bundled Pi Session Extension，当前仅OmniMind Agent work surface initial-active；Chat Todo不是本轮已批准结论；
 6. Settings只拥有Built-in tools与External connections。future Extensions表面只能投影Pi原生truth；第三方MCP Settings继续退出首版。
 

@@ -172,7 +172,9 @@ V1 保留 Synara 当前设置 IA、搜索、deep-link、分组和 keyboard behav
 
 当前section继续复用source的Settings母体、分组与顺序，例如General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent engines、Model services、Agent skills、Built-in tools、Managed worktrees、System tools与Archived threads；Integrations中的现有MCP连接页准确命名为`External connections / 外部连接`。`Model services / 模型服务`是对原`Models & writing / 模型与写作` section的定向改名与职责修正：保留现有route、内部section id `models`、搜索、deep-link、分组和keyboard behavior，不借此重排整个Settings taxonomy。
 
-`Built-in tools / 内置工具`用一套全局组级开关控制OmniMind自带Browser、Device、Thread、Automation等Host capability是否提供给所有Agent引擎，包括OmniMind Agent；不提供Engine selector、Provider维度持久状态或逐tool权限矩阵。fresh profile在没有既有显式选择时默认开放OmniMind与Browser、关闭Device；fresh default不得覆盖已有用户明确选择。页面只显示canonical catalog派生的真实组、计数、用户选择、平台/服务可用性与effective状态，不暴露Pi、MCP transport、动态加载器或工具注册等实现术语，也不硬编码当前工具数量。
+`Built-in tools / 内置工具`用一套全局组级开关控制OmniMind自带Browser、Device、Thread、Automation等Host capability是否提供给所有Agent引擎，包括OmniMind Agent；不提供Engine selector、Provider维度持久状态或逐tool权限矩阵。brand-new且没有settings文件时默认开放OmniMind与Browser、关闭Device；任何可读取的existing snapshot按下述migration contract保留既有intent。页面只显示canonical catalog派生的真实组、计数、用户选择、平台/服务可用性与effective状态，不暴露Pi、MCP transport、动态加载器或工具注册等实现术语，也不硬编码当前工具数量。
+
+“fresh”只表示从未存在有效ServerSettings文件。升级时，既有有效snapshot继续保留legacy intent：缺失`disabledBuiltInGroups`与显式空数组都按既有Device enabled处理，显式禁用Device继续禁用；迁移完成后由现有revisioned settings owner写入当前版本。损坏snapshot无法恢复用户选择，必须准确提示设置已隔离/恢复默认，而不能显示成一次普通fresh onboarding。页面不新增“是否迁移过”开关或隐藏marker。
 
 关闭某组后，所有Agent的新会话都不再投影或注册该组；旧会话即使暂时仍显示stale schema，所有新调用也由Gateway按当前policy立即拒绝。已准入in-flight call不被普通开关伪装成紧急停止，取消仍由当前任务/会话拥有。重新开启不把能力偷偷加入已经稳定运行的旧会话，只按各引擎真实的安全reload或新会话边界投影；OmniMind Agent中的Device在启用且平台/服务可用后注册并active，而不是预先注册为inactive。该设置只控制Agent使用，不影响Browser/Device的人类UI，enablement也不替代availability、runtime permission、approval或call-time authority。
 
@@ -281,6 +283,8 @@ Composer 的运行模式是当前任务唯一的自动化选择；用户不应�
 - `自动批准 / Approve for me`：只有 exact Engine/Host 存在真实自动 reviewer 时显示；
 - `需要时询问 / Ask for approval`：只有 exact Engine/Host 存在可完成 request/response bridge 时显示；
 - OAuth、2FA、系统原生权限、物理设备到场和用户未表达的不可逆外部动作使用“需要你完成/确认”的真实语言，不混称普通工具权限。
+
+`Full access`只免除已启用、当前可用且属于任务意图的普通能力之重复approval。它不证明Device每个entry都具备可执行闭包或已获12/12产品准入，也不替Browser download决定artifact落点与receipt；这些缺口必须由各自owner准确显示为unavailable、unsupported或待完成，而不是从mode名称推断成功。
 
 Provider/Host capability 改变时，Composer mode menu 由 loaded capability truth 决定：不支持的项隐藏或显示 unavailable reason，不能允许用户选择一个底层只会一律拒绝的 mode。Pi-family 当前没有 OmniMind approval request path 时，不显示 `需要时询问`。`acceptForSession` 若实际持久切换当前 Thread 为 `full-access`，按钮显示“此任务始终允许 / Always allow for this task”，不能显示“本会话始终允许”。
 

@@ -114,15 +114,30 @@ Settings只持久化用户disabled/enabled intent。以下状态不得混写：
 
 ### 4.2 已确认fresh defaults
 
-fresh profile且没有既有显式选择时：
+brand-new且没有settings文件时：
 
 - OmniMind：enabled；
 - Browser：enabled；
 - Device：disabled。
 
-该裁决不自动冻结最终六组taxonomy，也不覆盖已有用户明确选择。
+该裁决不自动冻结最终六组taxonomy，也不覆盖已有用户明确选择。这里不能依赖当前decoded settings猜来源：`disabledBuiltInGroups`使用decoding default `[]`，因此raw字段缺失与显式`[]`在`decodeSettingsFromJson()`后已经不可区分。
 
-### 4.3 disable与re-enable
+### 4.3 Gate B migration contract
+
+不新增store、marker或第二migration framework；复用现有settings文件存在事实、revisioned envelope与`migrationVersion`，并在schema decoding default抹掉字段存在性之前判定：
+
+| raw输入                            | 目标intent                                | 升级结果                                                                 |
+| ---------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------ |
+| settings文件不存在                 | brand-new；Device disabled                | 创建当前版本snapshot，disabled包含`device`                               |
+| existing legacy snapshot，字段缺失 | 保留legacy decoded intent；Device enabled | 当前版本物化为不含`device`                                               |
+| existing snapshot，显式`[]`        | 保留显式Device enabled                    | 当前版本保持不含`device`                                                 |
+| existing snapshot，显式`[device]`  | 保留Device disabled                       | 当前版本保持`device`                                                     |
+| existing snapshot，含unknown IDs   | 保留已知与unknown IDs                     | normalize后有界round-trip                                                |
+| corrupt snapshot                   | 无法证明任何显式选择                      | 沿现有quarantine/diagnostic，使用当前安全默认；不得称为fresh或“保留选择” |
+
+迁移必须是一次有界的existing→current版本转换。它不授权新的用户迁移数据库、LKG、双读或长期compat marker。若未来维护者选择pre-public reset，必须在sole owner明确接受覆盖损失后替换本合同，不能让实现自行决定。
+
+### 4.4 disable与re-enable
 
 disable某组：
 
@@ -143,7 +158,7 @@ re-enable：
 
 Device disabled不是“注册为inactive”。没有activator的inactive tool不可发现；exposure policy必须在projection/registration边界表达。
 
-### 4.4 partial availability
+### 4.5 partial availability
 
 同组部分能力不可用时，UI显示ephemeral degraded与真实可用数量。degraded不是用户选择，不能写回Settings。Device enabled也不等于所有handler都具有可执行闭包；availability必须覆盖service、platform和真实execution prerequisites。
 
@@ -250,6 +265,8 @@ Goal/Automation prompt可以描述真实职责，但不再承担activation prefl
 
 `registered != active != exposed != available != authorized != executed`。
 
+`runtimeMode`只决定一个已exposed、当前available且属于任务意图的具体能力是否再收普通approval。它不证明Device每个entry都属于普通能力，不证明12/12 executable closure或产品准入，也不替Browser download决定artifact落点、receipt或恢复。Settings enablement、逐entry availability/安全分类、runtimeMode和最终execute必须分别验证。
+
 每次Provider-facing真实`tools/call`必须重新检查：
 
 - current policy；
@@ -324,7 +341,7 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 1. **authority与baseline**：冻结current eager/dynamic wire、catalog与prompt基线；
 2. **删除Host loader**：简化Host Extension，删除inactive/preflight/双轨；
 3. **composition/PiAdapter**：建立显式有限composition seam，Todo保持独立；
-4. **Built-in policy**：fresh default、explicit choice、availability、new/old Session与rapid toggle；
+4. **Built-in policy**：raw settings migration、brand-new default、existing intent、availability、new/old Session与rapid toggle；
 5. **prompt diet**：去dynamic guidance与catalog duplication；
 6. **Host parity/collision**：所有Engine相同Desired surface，foreign winner局部degrade；
 7. **authority/races**：all Provider calls exact-turn、cancel/timeout/late/replacement；
@@ -334,22 +351,26 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 
 ## 14. 验收矩阵
 
-| 场景                        | 期望                                                                 |
-| --------------------------- | -------------------------------------------------------------------- |
-| fresh config                | OmniMind/Browser enabled，Device disabled                            |
-| existing explicit Device on | 不被fresh default覆盖                                                |
-| Device off new Session      | 所有Engine不投影；OmniMind不注册                                     |
-| Device on + available       | reload/new Session后所有健康Engine获得同一surface                    |
-| old stale schema            | 可见不等于可执行；Gateway新call deny                                 |
-| in-flight toggle            | 不伪取消                                                             |
-| OmniMind Host               | named hidden Extension，definitions registered+active，无Host loader |
-| stock Pi/other Engine       | 原生direct/eager pipe不变                                            |
-| collision                   | foreign winner继续；Host不claim；局部unavailable                     |
-| prompt                      | 无search guidance/全catalog；只承诺实际definitions                   |
-| authority                   | read/write/browser/device/diagnostics均exact-turn                    |
-| External connections        | pairing/scope/revoke准确，无在线伪装                                 |
-| third-party MCP             | 无V1 Settings/CRUD/credential/status/unified search                  |
-| Todo                        | 独立owner；不进入Host policy/search                                  |
+| 场景                         | 期望                                                                 |
+| ---------------------------- | -------------------------------------------------------------------- |
+| fresh config                 | OmniMind/Browser enabled，Device disabled                            |
+| legacy missing field         | 保留legacy Device enabled并物化current snapshot                      |
+| existing explicit Device on  | 不被fresh default覆盖                                                |
+| existing explicit Device off | 保持disabled                                                         |
+| unknown IDs                  | 有界round-trip，不产生运行效果                                       |
+| corrupt settings             | quarantine/diagnostic + safe default，不伪称fresh或preserved         |
+| Device off new Session       | 所有Engine不投影；OmniMind不注册                                     |
+| Device on + available        | reload/new Session后所有健康Engine获得同一surface                    |
+| old stale schema             | 可见不等于可执行；Gateway新call deny                                 |
+| in-flight toggle             | 不伪取消                                                             |
+| OmniMind Host                | named hidden Extension，definitions registered+active，无Host loader |
+| stock Pi/other Engine        | 原生direct/eager pipe不变                                            |
+| collision                    | foreign winner继续；Host不claim；局部unavailable                     |
+| prompt                       | 无search guidance/全catalog；只承诺实际definitions                   |
+| authority                    | read/write/browser/device/diagnostics均exact-turn                    |
+| External connections         | pairing/scope/revoke准确，无在线伪装                                 |
+| third-party MCP              | 无V1 Settings/CRUD/credential/status/unified search                  |
+| Todo                         | 独立owner；不进入Host policy/search                                  |
 
 ## 15. 明确拒绝
 
@@ -363,6 +384,7 @@ Pi built-ins、supervised Bash、团队/第三方Extensions、Skills与Packages�
 - 第三方MCP Settings、CRUD、OAuth/credential、全局状态或自动分发；
 - 把Todo、Bash、Pi built-ins或第三方Extension并入Host；
 - 用Device default-off掩盖availability/execution缺口；
+- 从decoded `[]`猜测fresh或explicit intent；
 - 用模型名猜Provider wire；
 - 用旧source测试冒充新target或packaged delivery。
 

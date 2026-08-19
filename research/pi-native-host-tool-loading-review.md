@@ -228,10 +228,12 @@ adopted Synara `8f9f600…`与只读exact `c79fab4…`在本议题核心adapter�
 
 ### 7.1 四个事实必须分开
 
-- **fresh default**：仅用于没有既有显式选择的新配置；
+- **fresh default**：仅用于从未存在settings文件的新配置；
 - **explicit choice**：已有用户选择是持久intent，不得被default覆盖；
 - **availability**：平台、服务与可执行闭包的当前事实，不持久化为用户选择；
 - **registration/authorization**：新Session是否投影schema，与每次call是否允许执行是不同边界。
+
+当前schema会把缺失`disabledBuiltInGroups`与显式`[]`都decode为`[]`，所以decoded值不能证明fresh或explicit。目标Gate B必须在decode default抹掉raw字段存在性之前，复用settings文件存在事实与现有`migrationVersion`：无文件才采用Device off；existing valid snapshot无论字段缺失还是显式`[]`都保留legacy Device-on intent，显式`[device]`继续off，unknown IDs继续round-trip；corrupt snapshot沿现有quarantine/diagnostic并使用安全默认，但不得宣称保留了用户选择。不新增marker、store或第二migration owner。
 
 已确认fresh defaults：
 
@@ -338,6 +340,8 @@ PiAdapter不应拥有Extension definition、search、Built-in policy、permissio
 - authorized：本次identity、credential、scope、runtime permission/approval与exact turn允许；
 - executed：handler已经admitted并实际开始。
 
+`runtimeMode`只回答已exposed、当前available且属于任务意图的具体能力是否还要普通approval。它不替Device逐entry availability、安全分类、12/12 executable closure或产品准入作答，也不决定Browser download的artifact落点与receipt。
+
 所有Provider-facing真实`tools/call`应复用现有ingress-bound exact-turn authority；`tools/list`可以在有效Session、turn外用于初始化。扩大既有gate到read/wait/diagnostics时，不新建per-turn token、lease或permission manager。
 
 普通toggle只影响后续projection与call admission，不取消in-flight。explicit cancel/timeout继续传递AbortSignal。Session replacement、reload或runner失效后，旧handler与late result不得污染新turn。
@@ -411,7 +415,7 @@ Architecture 1.0只确定owner、composition、Host平权、当前eager投影、
 | registry    | Host definitions有Pi sourceInfo；其他owner完全opaque                                      |
 | eager       | allowed+available Host definitions直接active；无Host loader/inactive pool                 |
 | parity      | 健康Engine获得相同Desired Host Surface                                                    |
-| policy      | fresh OmniMind/Browser on、Device off；explicit choice不被覆盖                            |
+| policy      | no-file fresh default、legacy/explicit intent migration、unknown/corrupt、availability    |
 | lifecycle   | disable新Session不注册；stale call deny；in-flight不伪取消；re-enable按reload/new Session |
 | collision   | foreign winner继续；Host不claim；局部degrade；Session继续                                 |
 | authority   | active不等于authorized；read/wait/diagnostics也受exact-turn call gate                     |

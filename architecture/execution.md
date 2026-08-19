@@ -187,6 +187,8 @@ Product Thread 的 `runtimeMode` 是 Engine adapter 与 OmniMind Host capability
 | `auto`              | 只在 exact Engine/model 有真实 reviewer/classifier 时提供 | 只在 Host 也有可验证的自动裁决路径时覆盖 Host mutation；否则该组合不可选 | 仅真实高风险分类结果可介入                                             |
 | `approval-required` | 只在 adapter 有 request/response path 时提供              | 只在 Host 有可完成的 approval bridge 时提供                              | 显示 exact scope/consequence；没有 bridge 时不可选而不是运行时一律拒绝 |
 
+`runtimeMode`只回答一个已经enabled、当前available且属于用户任务意图的具体能力，是否还需要普通approval；它不证明每个Device entry都属于普通能力，不证明其service/platform/executable closure成立，也不授予Device 12/12产品准入。Device exposure default、逐entry availability与安全分类、12/12执行闭合仍是独立事实。Browser任务内下载在`full-access`下不重复收取普通approval，也不替Product/Artifact owner决定下载落点、receipt或恢复语义。
+
 登录、2FA、系统原生权限面板、物理设备到场以及用户没有表达过的发布、付费或远端删除，是“需要人完成或需要扩张任务意图”，不应伪装成普通工具权限。相反，测试、依赖安装、工作区写入、网页点击、模拟器输入和任务内下载不能因为底层换成 Host tool 就重新收费一次确认。
 
 `acceptForSession` 是 wire decision 名，不拥有用户语义。当前实现若会把持久 Thread mode 改为 `full-access`，UI 必须表达“此任务始终允许”；若未来要提供真正的 process-session override，应由 adapter 保存为易失 native state，不能与 Thread mode 同名。
@@ -199,7 +201,9 @@ Engine/Host 对某一 mode 没有真实实现时，capability projection 必须�
 
 OmniMind 内置 Browser、Device、Thread 与 Automation 等 Host capability 继续由对应 Host service 与 `AgentGateway` 唯一拥有 canonical tool catalog、schema、execution、credential、capability、turn authority、cancellation 与 lifecycle。Engine adapter只能无损投影同一 catalog并把调用转回同一 Gateway；不得逐 Engine复制 schema、handler、permission或credential state，也不得建立跨 Engine Tool/Plugin Registry。
 
-一套全局Built-in policy统一决定这些Host capability是否提供给所有Agent引擎，包括OmniMind Agent。fresh profile在没有既有显式选择时默认开放OmniMind与Browser、关闭Device；已有用户的明确选择不得被fresh default覆盖。平台/服务真实不可用仍先从有效catalog排除。该policy只控制Agent暴露，不影响Browser/Device的人类UI。所有新会话按当前policy形成投影，所有旧会话的新调用由Gateway按当前policy重新判定；已经准入且执行中的调用不因开关变化自动终止，取消仍归turn/session owner。
+一套全局Built-in policy统一决定这些Host capability是否提供给所有Agent引擎，包括OmniMind Agent。brand-new且没有settings文件时默认开放OmniMind与Browser、关闭Device；任何可读取的existing snapshot按下述migration contract保留既有intent。平台/服务真实不可用仍先从有效catalog排除。该policy只控制Agent暴露，不影响Browser/Device的人类UI。所有新会话按当前policy形成投影，所有旧会话的新调用由Gateway按当前policy重新判定；已经准入且执行中的调用不因开关变化自动终止，取消仍归turn/session owner。
+
+fresh与existing不能从已decode的`disabledBuiltInGroups: []`反推：当前schema会把字段缺失和显式空数组都解码为同一值。Gate B必须在schema default抹掉raw字段存在性之前，复用现有settings文件存在事实与envelope `migrationVersion`完成一次有界迁移，不新增marker或第二store。brand-new且没有settings文件时使用Device disabled；任何可成功读取的existing snapshot都按legacy decoded intent保留，包括字段缺失或显式`[]`所表达的Device enabled，并在升级写入时物化为当前版本；显式包含`device`继续disabled，unknown IDs继续有界round-trip。corrupt snapshot无法证明用户选择，必须沿现有quarantine/diagnostic路径并使用当前安全默认，不能伪称“保留了显式选择”或把它归类为fresh。该合同必须覆盖missing file、legacy missing field、explicit `[]`、explicit `[device]`、unknown IDs与corrupt fallback。
 
 OmniMind Agent 是 Pi-native multi-Extension composition host。Pi `AgentSession`、`ResourceLoader`与Tool Registry是OmniMind Agent runtime内唯一的Extension注册、`sourceInfo`、registered/active、Session、reload与Provider wire真相；这不取代AgentGateway的canonical Host catalog，也不把Gateway升级成Extension Registry。Extension是注册与Session生命周期单元，execute backend是另一维度：每个Extension必须分别明确source、maintenance、registration、activation、execution/state与distribution owner，不能因为都进入Pi Registry就合并业务责任。
 
@@ -290,9 +294,9 @@ File、Git 与 Terminal 分别由 filesystem、Git repository 与 local process/
 
 iOS Simulator Device 是同一 Desktop→Server 系统能力链的一部分，不是 Provider runtime 或第二控制面。`DeviceService`/`DeviceManager` 唯一拥有设备枚举、boot ownership、每 Thread attachment、helper lifecycle、frame transport 与操作结果；Web 只消费 typed RPC/event/frame contract，native helper 只负责 CoreSimulator/SimulatorKit 桥接。helper 源码随 macOS App 物理打包，并在用户机器上按当前 Xcode build 编译到 `~/Library/Caches/omnimind/device-helper/<xcode-build>/`；缓存、binary、环境变量、Unix socket 与临时路径全部使用 OmniMind namespace，打包必须同时保留 facebook/idb 精确 MIT notice。
 
-Device 的 discovery、screen、UI tree、screenshot 与 mutation 都通过现有 Agent Gateway 暴露，并继承 caller Thread 的 `runtimeMode`。`full-access` 下，tap、swipe、key、text、hardware button、boot、shutdown、install、launch 与 open-url 等任务内操作直接执行；`approval-required` 只有在 Host 已有真实 request/response bridge 时才可选，不能像当前实现一样因 bridge 缺失而对所有调用一律 fail-closed。`auto` 只有在 Host 有可验证 reviewer 时才覆盖 Device mutation。不得从 Provider 名称或 pane 可见性推断 mode，也不得为 Device 建第二 permission broker。macOS helper 的 sandbox profile缺失或不可读仍属于运行条件错误：production 启动失败；仅显式 development opt-out 可运行 unconfined helper，且不得包装成 sandbox 保证。
+Device的discovery、screen、UI tree、screenshot与mutation继续由现有Device/Gateway owner暴露，并继承caller Thread的`runtimeMode`。只有已经通过逐entry产品准入、安全分类、service/platform与executable-closure验证，且属于当前任务意图的普通操作，才在`full-access`下免除重复approval；本文不据此批准tap、swipe、key、text、hardware button、boot、shutdown、install、launch、open-url等全部entry 12/12直接执行。`approval-required`只有在Host已有真实request/response bridge时才可选，`auto`只有在Host有可验证reviewer时才覆盖对应mutation；不满足的entry准确unavailable/unsupported，不用默认关闭或mode名称掩盖。不得从Provider名称或pane可见性推断mode，也不得为Device建第二permission broker。macOS helper的sandbox profile缺失或不可读仍属于运行条件错误：production启动失败；仅显式development opt-out可运行unconfined helper，且不得包装成sandbox保证。
 
-Browser 的导航、点击、输入、上传和任务内下载使用同一 mode。`full-access` 下下载不弹二次批准：落到当前 project/workspace 或 OmniMind managed artifact/download root，结果以普通文件/artifact receipt 呈现；目标路径需要系统原生选择器、网站弹出 OAuth/2FA 或用户实际接管页面时，才进入 human-presence flow。现有 `BrowserDownloadApprovalRequired` 的无条件取消只能作为当前缺口，不能成为 V1 产品合同。
+Browser的导航、点击、输入、上传和任务内下载使用同一mode语义：已准入、当前可用且属于任务意图的普通操作在`full-access`下不重复弹approval。Browser download落current project/workspace还是OmniMind managed artifact/download root、采用何种receipt与恢复，仍由Browser/Product Artifact owner独立裁决；runtimeMode不替它选路径。系统原生选择器、OAuth/2FA或用户实际接管继续进入human-presence flow。现有`BrowserDownloadApprovalRequired`无条件取消是current-source缺口，但本文不预先固定替代实现。
 
 不建设第二 observed-version 平台。Agent structured mutation 必须复用现有 filesystem `expectedVersion`/atomic conflict truth；同一 Root delegation tree 内只允许 Root 或一个 foreground child 写，不同 Thread 与外部编辑器可以并存，但冲突必须 fail closed，不能静默覆盖。只有现实反例证明乐观冲突检测不足时才考虑更重 lease。
 
