@@ -1003,6 +1003,7 @@ export function AutomationModelPicker({
   const providerStatuses = useProviderStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
+  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<ProviderKind>>([]);
   const modelHintByProvider: Partial<Record<ProviderKind, string | null>> = {
     [value.provider]: value.model,
   };
@@ -1023,6 +1024,10 @@ export function AutomationModelPicker({
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider,
+    // The selected Engine is always discovered. Other Engine catalogs start
+    // only after their submenu is explicitly opened, avoiding a ten-provider
+    // cold-start burst against the Server's bounded expensive-read admission.
+    prefetchProviders,
   });
   const providerStatus = findProviderStatus(providerStatuses, value.provider);
   const persistedRuntimeModel =
@@ -1057,9 +1062,15 @@ export function AutomationModelPicker({
       open={open}
       onOpenChange={(nextOpen) => {
         setOpen(nextOpen);
-        if (!nextOpen) setPiDiscoveryRequested(false);
+        if (!nextOpen) {
+          setPiDiscoveryRequested(false);
+          setPrefetchProviders([]);
+        }
       }}
       onProviderBrowse={(provider) => {
+        setPrefetchProviders((current) =>
+          current.includes(provider) ? current : [...current, provider],
+        );
         if (provider === "pi") setPiDiscoveryRequested(true);
       }}
       onProviderModelChange={(provider, model) => {

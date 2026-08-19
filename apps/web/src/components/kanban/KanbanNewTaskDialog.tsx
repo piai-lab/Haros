@@ -172,6 +172,7 @@ export function KanbanNewTaskDialog({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
+  const [prefetchProviders, setPrefetchProviders] = useState<ReadonlyArray<ProviderKind>>([]);
   const [isDragOverComposer, setIsDragOverComposer] = useState(false);
   const [expandedImage, setExpandedImage] = useState<ExpandedImagePreview | null>(null);
   const selectedProject = useMemo(
@@ -214,6 +215,10 @@ export function KanbanNewTaskDialog({
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider,
+    // The current Engine stays authoritative. A different Engine enters the
+    // discovery set only when the user opens that submenu, so this picker does
+    // not cold-start every CLI/provider at once.
+    prefetchProviders,
   });
   const selectedRuntimeModelForCapabilities = useMemo(
     () =>
@@ -609,9 +614,15 @@ export function KanbanNewTaskDialog({
                     open={isModelPickerOpen}
                     onOpenChange={(open) => {
                       setIsModelPickerOpen(open);
-                      if (!open) setPiDiscoveryRequested(false);
+                      if (!open) {
+                        setPiDiscoveryRequested(false);
+                        setPrefetchProviders([]);
+                      }
                     }}
                     onProviderBrowse={(provider) => {
+                      setPrefetchProviders((current) =>
+                        current.includes(provider) ? current : [...current, provider],
+                      );
                       if (provider === "pi") setPiDiscoveryRequested(true);
                     }}
                   />

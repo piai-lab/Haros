@@ -313,6 +313,31 @@ describe("useProviderModelCatalog", () => {
     expect(readModelQueryEnabled("antigravity")).toBe(false);
   });
 
+  it("keeps an intent-scoped picker on the selected Engine until another submenu is opened", () => {
+    readCatalogRenders({
+      selectedProvider: "codex",
+      discoveryEnabled: true,
+      prefetchProviders: [],
+    });
+
+    expect(readModelQueryEnabled("codex")).toBe(true);
+    expect(readModelQueryEnabled("claudeAgent")).toBe(false);
+    expect(readModelQueryEnabled("cursor")).toBe(false);
+    expect(readModelQueryEnabled("opencode")).toBe(false);
+
+    mocks.useQuery.mockClear();
+    readCatalogRenders({
+      selectedProvider: "codex",
+      discoveryEnabled: true,
+      prefetchProviders: ["opencode"],
+    });
+
+    expect(readModelQueryEnabled("codex")).toBe(true);
+    expect(readModelQueryEnabled("opencode")).toBe(true);
+    expect(readModelQueryEnabled("claudeAgent")).toBe(false);
+    expect(readModelQueryEnabled("cursor")).toBe(false);
+  });
+
   it("keeps placeholder models visible but non-selectable until the new catalog settles", () => {
     modelQueries.set("cursor", {
       data: {
