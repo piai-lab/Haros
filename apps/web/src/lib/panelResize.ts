@@ -10,6 +10,50 @@ import { SINGLE_CHAT_PANE_SCOPE_ID } from "./chatPaneScope";
 import { findNearestMeasurableAncestor } from "./domLayout";
 import { notifyNativeSurfaceOcclusionChange } from "./nativeSurfaceOcclusion";
 
+export type PanelResizeOutcome = "commit" | "cancel";
+
+export interface PanelResizeSession {
+  finish: (outcome: PanelResizeOutcome) => void;
+}
+
+/**
+ * Owns the document-wide part of one resize gesture. Pointer events can disappear
+ * when Electron loses focus, a native surface takes over, or React unmounts the
+ * initiating handle. Every caller still owns its local geometry, but all callers
+ * get the same idempotent escape paths and exact body-style restoration.
+ */
+export function createPanelResizeSession(input: {
+  cursor: "col-resize" | "row-resize";
+  onFinish: (outcome: PanelResizeOutcome) => void;
+}): PanelResizeSession {
+  const previousBodyCursor = document.body.style.cursor;
+  const previousBodyUserSelect = document.body.style.userSelect;
+  let active = true;
+
+  const finish = (outcome: PanelResizeOutcome) => {
+    if (!active) return;
+    active = false;
+    window.removeEventListener("blur", cancel);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    document.body.style.cursor = previousBodyCursor;
+    document.body.style.userSelect = previousBodyUserSelect;
+    input.onFinish(outcome);
+  };
+  const cancel = () => finish("cancel");
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      cancel();
+    }
+  };
+
+  document.body.style.cursor = input.cursor;
+  document.body.style.userSelect = "none";
+  window.addEventListener("blur", cancel);
+  document.addEventListener("visibilitychange", handleVisibilityChange);
+
+  return { finish };
+}
+
 // Minimum width (px) the composer's left controls cluster needs before it overflows.
 // Kept intentionally lean: this is only a soft buffer, since canComposerHandlePanelWidth
 // also blocks on real overflow (hasComposerOverflow / overflowsViewport). A smaller value

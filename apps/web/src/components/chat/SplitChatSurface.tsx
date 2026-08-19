@@ -31,7 +31,9 @@ import { stripDiffSearchParams } from "../../diffRouteSearch";
 import {
   canComposerHandlePanelWidth,
   createPanelResizeOverlay,
+  createPanelResizeSession,
   removePanelResizeOverlay,
+  type PanelResizeSession,
 } from "../../lib/panelResize";
 import { splitViewPaneScopeId } from "../../lib/chatPaneScope";
 import { resolveActiveSplitView } from "../../splitViewRoute";
@@ -113,6 +115,7 @@ function SplitPaneEmbeddedPanel(props: {
 }) {
   const { t } = useI18n();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const resizeSessionRef = useRef<PanelResizeSession | null>(null);
   const panelWidthStorageKey =
     props.panel === "browser" ? "browser" : props.panel === "diff" ? "diff" : "panel";
   const storageKey = `${RIGHT_PANEL_SIDEBAR_WIDTH_STORAGE_KEY}:${props.splitViewId}:${props.paneId}:${panelWidthStorageKey}`;
@@ -150,18 +153,22 @@ function SplitPaneEmbeddedPanel(props: {
   };
 
   const startResize = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
     const wrapper = wrapperRef.current;
     const parent = wrapper?.parentElement;
     if (!wrapper || !parent) return;
 
+    resizeSessionRef.current?.finish("cancel");
     event.preventDefault();
     event.stopPropagation();
     const startX = event.clientX;
     const startWidth = wrapper.getBoundingClientRect().width;
     const maxWidth = Math.max(minPanelWidth, parent.clientWidth - SPLIT_PANE_CHAT_MIN_WIDTH);
     const resizeOverlay = createPanelResizeOverlay();
+    const pointerId = event.pointerId;
 
     const onPointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== pointerId) return;
       const delta = startX - moveEvent.clientX;
       const nextWidth = Math.max(minPanelWidth, Math.min(maxWidth, startWidth + delta));
       if (!shouldAcceptEmbeddedWidth(nextWidth)) {
@@ -171,21 +178,39 @@ function SplitPaneEmbeddedPanel(props: {
       setLocalStorageItem(storageKey, nextWidth, Schema.Finite);
     };
 
-    const onPointerUp = () => {
-      removePanelResizeOverlay(resizeOverlay);
-      document.body.style.removeProperty("cursor");
-      document.body.style.removeProperty("user-select");
-      resizeOverlay.removeEventListener("pointermove", onPointerMove);
-      resizeOverlay.removeEventListener("pointerup", onPointerUp);
-      resizeOverlay.removeEventListener("pointercancel", onPointerUp);
+    const onPointerUp = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId !== pointerId) return;
+      resizeSession.finish("commit");
     };
+    const onPointerCancel = (cancelEvent: PointerEvent) => {
+      if (cancelEvent.pointerId !== pointerId) return;
+      resizeSession.finish("cancel");
+    };
+    const resizeSession = createPanelResizeSession({
+      cursor: "col-resize",
+      onFinish: () => {
+        if (resizeSessionRef.current === resizeSession) {
+          resizeSessionRef.current = null;
+        }
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("pointercancel", onPointerCancel);
+        removePanelResizeOverlay(resizeOverlay);
+      },
+    });
 
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    resizeOverlay.addEventListener("pointermove", onPointerMove);
-    resizeOverlay.addEventListener("pointerup", onPointerUp);
-    resizeOverlay.addEventListener("pointercancel", onPointerUp);
+    resizeSessionRef.current = resizeSession;
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
   };
+
+  useEffect(
+    () => () => {
+      resizeSessionRef.current?.finish("cancel");
+    },
+    [props.panelOpen, props.threadId, storageKey],
+  );
 
   if (!props.panelOpen || !props.threadId) {
     return null;
@@ -298,13 +323,18 @@ function SplitPaneEmptyState(props: {
 function SplitDivider(props: {
   splitNodeId: PaneId;
   direction: SplitDirection;
+  ratio: number;
   onSetRatio: (nodeId: PaneId, ratio: number) => void;
 }) {
+  const { t } = useI18n();
   const { onSetRatio, splitNodeId, direction } = props;
+  const resizeSessionRef = useRef<PanelResizeSession | null>(null);
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
     const target = event.currentTarget;
     const parent = target.parentElement as HTMLElement | null;
     if (!parent) return;
+    resizeSessionRef.current?.finish("cancel");
     event.preventDefault();
     const rect = parent.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
@@ -319,8 +349,6 @@ function SplitDivider(props: {
     let latestRatio = computeRatio(event.clientX, event.clientY);
     let frameId = 0;
     const previousParentPosition = parent.style.position;
-    const previousBodyCursor = document.body.style.cursor;
-    const previousBodyUserSelect = document.body.style.userSelect;
     if (getComputedStyle(parent).position === "static") {
       parent.style.position = "relative";
     }
@@ -363,32 +391,78 @@ function SplitDivider(props: {
     };
 
     const onPointerMove = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId !== event.pointerId) return;
       latestRatio = computeRatio(moveEvent.clientX, moveEvent.clientY);
       if (frameId === 0) {
         frameId = window.requestAnimationFrame(applyGuide);
       }
     };
-    const onPointerUp = () => {
-      if (frameId !== 0) {
-        window.cancelAnimationFrame(frameId);
-        applyGuide();
-      }
-      document.body.style.userSelect = previousBodyUserSelect;
-      document.body.style.cursor = previousBodyCursor;
-      parent.style.position = previousParentPosition;
-      resizeGuide.remove();
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", onPointerUp);
-      onSetRatio(splitNodeId, latestRatio);
+    const onPointerUp = (endEvent: PointerEvent) => {
+      if (endEvent.pointerId !== event.pointerId) return;
+      resizeSession.finish("commit");
     };
+    const onPointerCancel = (cancelEvent: PointerEvent) => {
+      if (cancelEvent.pointerId !== event.pointerId) return;
+      // Preserve the existing continuous-drag contract: pointercancel commits the
+      // last valid ratio, while focus loss/visibility/unmount remain true cancels.
+      resizeSession.finish("commit");
+    };
+    const resizeSession = createPanelResizeSession({
+      cursor: direction === "horizontal" ? "col-resize" : "row-resize",
+      onFinish: (outcome) => {
+        if (resizeSessionRef.current === resizeSession) {
+          resizeSessionRef.current = null;
+        }
+        if (frameId !== 0) {
+          window.cancelAnimationFrame(frameId);
+          frameId = 0;
+        }
+        parent.style.position = previousParentPosition;
+        resizeGuide.remove();
+        window.removeEventListener("pointermove", onPointerMove);
+        window.removeEventListener("pointerup", onPointerUp);
+        window.removeEventListener("pointercancel", onPointerCancel);
+        if (target.hasPointerCapture(event.pointerId)) {
+          target.releasePointerCapture(event.pointerId);
+        }
+        if (outcome === "commit") {
+          onSetRatio(splitNodeId, latestRatio);
+        }
+      },
+    });
 
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = direction === "horizontal" ? "col-resize" : "row-resize";
+    resizeSessionRef.current = resizeSession;
     applyGuide();
+    try {
+      target.setPointerCapture(event.pointerId);
+    } catch {
+      resizeSession.finish("cancel");
+      return;
+    }
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onPointerUp);
+    window.addEventListener("pointercancel", onPointerCancel);
+  };
+
+  useEffect(
+    () => () => {
+      resizeSessionRef.current?.finish("cancel");
+    },
+    [],
+  );
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = 0.025;
+    let nextRatio: number | null = null;
+    if (event.key === "Home") nextRatio = SPLIT_RATIO_MIN;
+    if (event.key === "End") nextRatio = SPLIT_RATIO_MAX;
+    if (direction === "horizontal" && event.key === "ArrowLeft") nextRatio = props.ratio - step;
+    if (direction === "horizontal" && event.key === "ArrowRight") nextRatio = props.ratio + step;
+    if (direction === "vertical" && event.key === "ArrowUp") nextRatio = props.ratio - step;
+    if (direction === "vertical" && event.key === "ArrowDown") nextRatio = props.ratio + step;
+    if (nextRatio === null) return;
+    event.preventDefault();
+    onSetRatio(splitNodeId, clampSplitRatio(nextRatio));
   };
 
   return (
@@ -396,6 +470,13 @@ function SplitDivider(props: {
       data-split-divider="true"
       data-split-node-id={splitNodeId}
       data-split-direction={direction}
+      role="separator"
+      aria-label={t("workbench.resizeSplitPanes")}
+      aria-orientation={direction === "horizontal" ? "vertical" : "horizontal"}
+      aria-valuemin={SPLIT_RATIO_MIN * 100}
+      aria-valuemax={SPLIT_RATIO_MAX * 100}
+      aria-valuenow={Math.round(props.ratio * 100)}
+      tabIndex={0}
       className={cn(
         "relative z-10 shrink-0 bg-border/70",
         direction === "horizontal"
@@ -403,6 +484,8 @@ function SplitDivider(props: {
           : "h-px cursor-row-resize before:absolute before:inset-x-0 before:-top-1 before:h-2 before:bg-transparent",
       )}
       onPointerDown={handlePointerDown}
+      onLostPointerCapture={() => resizeSessionRef.current?.finish("cancel")}
+      onKeyDown={handleKeyDown}
     />
   );
 }
@@ -439,6 +522,7 @@ function PaneRenderer(props: {
       <SplitDivider
         splitNodeId={node.id}
         direction={node.direction}
+        ratio={node.ratio}
         onSetRatio={props.onSetRatio}
       />
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">

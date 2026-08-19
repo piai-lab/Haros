@@ -8,7 +8,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ChatTranscriptPane } from "./ChatTranscriptPane";
+import { TranscriptSelectionActionLayer } from "./TranscriptSelectionActionLayer";
 import { useTranscriptAssistantSelectionAction } from "./useTranscriptAssistantSelectionAction";
+import { createPanelResizeSession } from "../../lib/panelResize";
 
 const EMPTY_WORK_GROUPS: Record<string, boolean> = {};
 const EMPTY_TURN_DIFFS = new Map();
@@ -131,6 +133,53 @@ function TranscriptPerfHarness(props: { onTranscriptRender: () => void }) {
   );
 }
 
+function TranscriptSelectionHarness(props: { onAddSelection: (text: string) => void }) {
+  const composerImagesRef = useRef<readonly []>([]);
+  const composerFilesRef = useRef<readonly []>([]);
+  const composerAssistantSelectionsRef = useRef<readonly []>([]);
+  const {
+    pendingTranscriptSelectionAction,
+    commitTranscriptAssistantSelection,
+    onMessagesMouseUp,
+  } = useTranscriptAssistantSelectionAction({
+    threadId: "thread-transcript-selection",
+    enabled: true,
+    composerImagesRef,
+    composerFilesRef,
+    composerAssistantSelectionsRef,
+    addComposerAssistantSelectionToDraft: (selection) => {
+      props.onAddSelection(selection.text);
+      return true;
+    },
+    scheduleComposerFocus: NOOP,
+    onMessagesClickCaptureBase: NOOP,
+    onMessagesPointerCancelBase: NOOP,
+    onMessagesPointerDownBase: NOOP,
+    onMessagesPointerUpBase: NOOP,
+    onMessagesScrollBase: NOOP,
+    onMessagesTouchEndBase: NOOP,
+    onMessagesTouchMoveBase: NOOP,
+    onMessagesTouchStartBase: NOOP,
+    onMessagesWheelBase: NOOP,
+  });
+
+  return (
+    <>
+      <div data-testid="selection-transcript" onMouseUp={onMessagesMouseUp}>
+        <p data-assistant-message-id="assistant-selection-message">
+          <span>Selectable assistant answer</span>
+        </p>
+      </div>
+      <TranscriptSelectionActionLayer
+        action={pendingTranscriptSelectionAction}
+        onHighlight={NOOP}
+        onUnderline={NOOP}
+        onAddToChat={commitTranscriptAssistantSelection}
+      />
+    </>
+  );
+}
+
 describe("ChatTranscriptPane", () => {
   afterEach(() => {
     document.body.innerHTML = "";
@@ -160,6 +209,54 @@ describe("ChatTranscriptPane", () => {
 
       expect(transcriptCommitCount).toBe(baselineCommitCount);
     } finally {
+      await screen.unmount();
+    }
+  });
+
+  it("keeps assistant text selectable and actionable after an interrupted resize", async () => {
+    const addedSelections: string[] = [];
+    const screen = await render(
+      <TranscriptSelectionHarness
+        onAddSelection={(text) => {
+          addedSelections.push(text);
+        }}
+      />,
+    );
+    try {
+      const resizeSession = createPanelResizeSession({ cursor: "col-resize", onFinish: NOOP });
+      window.dispatchEvent(new Event("blur"));
+      resizeSession.finish("commit");
+      expect(document.body.style.cursor).toBe("");
+      expect(document.body.style.userSelect).toBe("");
+
+      const transcript = screen.container.querySelector<HTMLElement>(
+        '[data-testid="selection-transcript"]',
+      )!;
+      const textNode = transcript.querySelector("span")?.firstChild;
+      expect(textNode).toBeInstanceOf(Text);
+      const range = document.createRange();
+      range.selectNodeContents(textNode!);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      transcript.dispatchEvent(
+        new MouseEvent("mouseup", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 120,
+          clientY: 80,
+        }),
+      );
+
+      await vi.waitFor(() => {
+        expect(document.querySelector('[data-transcript-selection-action="true"]')).not.toBeNull();
+      });
+      await page.getByRole("button", { name: "Add to Chat" }).click();
+
+      expect(addedSelections).toEqual(["Selectable assistant answer"]);
+      expect(window.getSelection()?.isCollapsed).toBe(true);
+    } finally {
+      window.getSelection()?.removeAllRanges();
       await screen.unmount();
     }
   });
