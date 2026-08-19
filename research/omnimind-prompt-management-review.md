@@ -1,8 +1,8 @@
 # OmniMind Agent 提示词设置：研究与实施输入
 
-> 当前复核基线：本关注点从 OmniMind `f9da96c48a274d4c2884964d9dec5d9962772fd1` 开始实施；研究源基线 `baf0174c8c7a66610c3446f9370f46bcc7c984c3` 是其祖先。bundled OmniMind Agent runtime 仍为 `@omnimind/pi-coding-agent@0.84.2`；upstream exact source `914cf1472e715297caa30db4b9535d534a9eb718`；本轮按同一 exact source 增加 native factory-default input seam 后，vendored artifact SHA-256 为 `8603bfde5a63d99b263fb22bfa0ebaefb89a515117be296d2420b31d86250458`，product patch SHA-256 为 `6a0e475780b22b1ee3ed1c484e4c4c88aabb6322ce07aea6fb8971736da7af02`。
+> 当前复核基线：本关注点从 OmniMind `f9da96c48a274d4c2884964d9dec5d9962772fd1` 开始实施；研究源基线 `baf0174c8c7a66610c3446f9370f46bcc7c984c3` 是其祖先。bundled OmniMind Agent runtime 仍为 `@omnimind/pi-coding-agent@0.84.2`；upstream exact source `914cf1472e715297caa30db4b9535d534a9eb718`；本轮按同一 exact source 增加并闭合 native factory-default input seam 后，vendored artifact SHA-256 为 `b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7`，product patch SHA-256 为 `499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af`。
 >
-> 当前状态：维护者已用新的“两卡片”产品决定 supersede `cf1a1e580509423a92e5334a438a3e077d376210` 的三文件 Settings 模型。旧 SHA、MiMo/DeepSeek、macOS artifact 与隔离 packaged journey 只证明历史 candidate；当前 `/Applications/OmniMind.app` 仍是 superseded installed bytes，不证明本轮完成。F-22 保持 `candidate`。bounded standard snapshot、retry UI、global context 安全 hardening 与真实 TOCTOU 边界仍是可复用证据；factory/custom default native seam、新合同/UI/live/packaged evidence 尚待闭合。
+> 当前状态：维护者已用新的“两卡片”产品决定 supersede `cf1a1e580509423a92e5334a438a3e077d376210` 的三文件 Settings 模型。后续 installed `584045a291a91e57ec50ce0e91cee29253334ef1` 已是两卡 UI，但真实 Provider journey 证伪了其 service-based initial Session 漏传 customized default；当前 `/Applications/OmniMind.app` 仍是该 superseded bytes，不证明本轮完成。窄 runtime 修复已通过 fixed-source generator、deterministic request capture 和 source gates，新的 exact pushed SHA、MiMo/DeepSeek 与 packaged evidence 尚待闭合。F-22 保持 `candidate`。
 
 ## 0. 一页结论
 
@@ -783,7 +783,7 @@ Settings route/section
 ### 15.4 本轮实际证据
 
 - `695f80baf`、`7850ff878`、`9d3642557` 与 installed `cf1a1e580509423a92e5334a438a3e077d376210` 属于已被维护者新产品决定 supersede 的旧“三文件 Settings”历史证据。其 source、artifact hash、隔离与 Provider 观察只保留 provenance，不能给当前“两卡片”candidate背书，也不能据此把 F-22 标为 verified。
-- 当前工作树已建立 native factory/custom segment、server-internal default CAS、global custom rules安全投影、standard WS admission与两卡片 UI 的 focused candidate；最终 test counts、exact pushed product SHA、MiMo/DeepSeek、packaged hashes与 fresh-profile journey必须在当前代码冻结后重新记录。本节在这些证据产生前不得沿用旧数字、旧 digest或旧 installed bytes冒充新产品结果。
+- `584045a291a91e57ec50ce0e91cee29253334ef1` 的两卡 installed journey 证明 Settings/custom rules 路径可用，但 MiMo Chat 首轮没有 customized-default marker。随后 deterministic request capture 把 customization 放在全新 Session `startSession` 之前，仍得到 factory default，排除了“保存后未 reload”的正确 snapshot语义；根因是 bundled `createAgentSessionFromServices` 接收方没有把 Host 已传入的 `defaultPrompt` 继续转交 native `createAgentSession`。当前 source candidate 只增加这一窄转发及上游/Host回归，并证明 V1 在全新 Chat 首轮出现、保存V2但不reload仍为V1、explicit reload后才为V2；没有按work surface过滤或另建composer。最终 exact pushed product SHA、MiMo/DeepSeek、packaged hashes与 fresh-profile journey必须在代码冻结后重新记录，旧 digest或旧 installed bytes不得冒充新产品结果。
 
 ## 16. 明确否决与 stop-loss
 

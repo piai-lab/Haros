@@ -1698,6 +1698,123 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
+  it("passes the customized native default into OmniMind Chat request capture", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-chat-default-prompt-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const threadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000065");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+
+    const requestBodies: any[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      return piOpenAiSuccessResponse();
+    });
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(ServerSettingsService.layerTest()),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const serverSettings = yield* ServerSettingsService;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt(
+                null,
+                "customized-chat-default-marker",
+              ),
+            ).toMatchObject({ state: "changed" });
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const send = (input: string) =>
+              Effect.gen(function* () {
+                const turn = yield* adapter.sendTurn({
+                  threadId,
+                  input,
+                  attachments: [],
+                  modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                });
+                yield* Effect.promise(() =>
+                  waitForTestCondition(
+                    () =>
+                      events.some(
+                        (event) => event.type === "turn.completed" && event.turnId === turn.turnId,
+                      ),
+                    `Customized Chat default turn '${turn.turnId}' did not settle.`,
+                  ),
+                );
+              });
+            yield* send("capture Chat native default");
+            expect(
+              yield* serverSettings.mutateOmniMindDefaultPrompt(
+                "customized-chat-default-marker",
+                "customized-chat-default-v2",
+              ),
+            ).toMatchObject({ state: "changed" });
+            yield* send("without Chat reload");
+            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
+            yield* send("after Chat reload");
+            yield* adapter.stopSession(threadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(requestBodies).toHaveLength(3);
+      const initialPrompt = piRequestSystemPrompt(requestBodies[0]);
+      expect(initialPrompt).toContain("customized-chat-default-marker");
+      expect(initialPrompt).not.toContain(
+        "Help users by reading files, executing commands, editing code, and writing new files.",
+      );
+      expect(initialPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
+      expect(piRequestSystemPrompt(requestBodies[1])).toBe(initialPrompt);
+      expect(piRequestSystemPrompt(requestBodies[2])).toContain("customized-chat-default-v2");
+      expect(piRequestSystemPrompt(requestBodies[2])).not.toContain(
+        "customized-chat-default-marker",
+      );
+    } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
   it("keeps native Prompt resources session-scoped until explicit reload", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-native-prompt-reload-"));
     const agentDir = path.join(serverRoot, "agent");

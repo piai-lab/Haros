@@ -133,14 +133,14 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
       "paths": ["vendor/omnimind-pi-coding-agent-0.84.2.tgz", "patches/pi-coding-agent/0.84.2-model-config-reader.patch", "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch", "scripts/vendor-omnimind-pi-runtime.mjs"],
       "sourcePaths": ["packages/coding-agent"],
-      "archiveSha256": "8603bfde5a63d99b263fb22bfa0ebaefb89a515117be296d2420b31d86250458",
+      "archiveSha256": "b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7",
       "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.2",
       "upstreamPackageIntegrity": "sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==",
       "generation": {
         "sharedRuntimeBytes": "patched",
         "factoryDefaultSeam": "The product runtime exports its stable identity-neutral default instruction segment and accepts one caller-supplied replacement as an input to the same native builder. Dynamic tools, guidelines, context, Skills, cwd, manual SYSTEM replacement and Extension mutation remain native; no second composer or Prompt registry is introduced.",
         "patchPath": "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
-        "patchSha256": "6a0e475780b22b1ee3ed1c484e4c4c88aabb6322ce07aea6fb8971736da7af02",
+        "patchSha256": "499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af",
         "stockPatchPath": "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
         "stockPatchSha256": "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77",
         "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
@@ -240,7 +240,7 @@ omni-harness
 
 Source Review 已记录 fixed source 的 exact comparison、全树 disposition 及其局限。Synara source adoption 的最终证据只覆盖当前产品范围；维护者已明确把签名、公证、Windows/Linux artifact/journey、GitHub Release 与 update feed 排除出本轮，而不是把它们列为 adoption 阻塞。
 
-当前本机安装与 macOS arm64 ad-hoc candidate 均来自 exact pushed product commit `cf1a1e580509423a92e5334a438a3e077d376210`，DMG SHA-256 为 `131335b34cba63b64896f7ff630bc687ddc8194799dd1ffb24f0d1cbb9ff753d`，ZIP SHA-256 为 `260b4c23820f1e32165ca6390da5b42e8b70f7f2f14fbd13e65a99609be19f12`，安装副本 app.asar SHA-256 为 `0052734e2eea60e7de6729462b7c18618428798946e823642413ce8ee6300981`。同 SHA 闭合 240 个依赖身份、ZIP fresh-state smoke，以及任务专用 HOME、OmniMind home、Electron userData 与 Agent private home 下的 packaged Settings、create/edit/no-op、save-without-reload、显式 reload、下一请求和关闭重开 journey。MiMo 与 DeepSeek 都证明 OmniMind/πAI-Lab/中英文机构身份以及 reload 后相同的脱敏 system-prompt digest；MiMo 另证明 no-op 与 reload 前的旧 Session snapshot 保持原 digest，DeepSeek 证明同 profile reopen 后 digest 保持稳定。该 digest 不冒充 Provider cache 命中证据。WS focused test 在两条 expensive-read lease 均被占用时仍准入 bounded Prompt snapshot；installed 页面也正常打开，UI retryable failure 由 focused browser test覆盖，不把这两项合并冒充 packaged lease-injection。验收 profile 未读取或改写真实用户 stock `.pi` 或其他 Engine private home。其祖先证据继续覆盖 request-level、compaction、Host loader/tool、Engine picker、Goal/Todo/Debug/宽屏/图标/Profile/Thread Group 等既有责任。该产物是本地 ad-hoc、未公证 candidate，不冒充 official release，也没有创建 GitHub Release 或修改 update feed；后续纯文档 SHA 不冒充 installed product bytes。
+当前 `/Applications/OmniMind.app` 的 app.asar SHA-256 为 `cfab377fc49bbdea033a52c9f044312412c3c4e281cdd0f30bf31eac4c49b662`，来自 exact pushed product commit `584045a291a91e57ec50ce0e91cee29253334ef1`。该 installed candidate 已在真实 Provider journey 中暴露 service-based Session 创建漏传 customized default 的问题，因此只保留为 superseded 历史证据，不能证明当前 Prompt 产品完成。修复继续保持 factory/custom segment 由同一 native builder 组合、Session snapshot 只在创建或显式 reload 时更新；新的 exact pushed SHA、artifact hashes 与隔离 installed journey 产生前，只能称 source candidate。F-22 保持 `candidate`。历史产物均为本地 ad-hoc、未公证 candidate，不冒充 official release，也没有创建 GitHub Release 或修改 update feed；后续纯文档 SHA 不冒充 installed product bytes。
 
 旧 isolated Native Host、平行 Product Control Plane 与 Product Truth checkpoint 只作可追溯历史，不再定义生产 topology 或下一步。
 

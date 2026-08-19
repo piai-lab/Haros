@@ -174,6 +174,8 @@ V1 保留 Synara 当前设置 IA、搜索、deep-link、分组和 keyboard behav
 
 Settings 的内部 `coding` 分组对用户统一显示为 `Development / 开发`。其中新增 `Prompts / 提示词`，只管理 OmniMind Agent 的两项用户结果：`Default prompt / 默认提示词` 与 `Custom rules / 自定义规则`。它不是 Prompt 文件管理器，不成为其他 Engine、Project rules、模板、历史或最终有效 Prompt 的管理入口。
 
+这里的 OmniMind Agent 指 canonical `omnimind` Engine identity，而不是只指 `Agent` work surface：同一 Engine 的 Chat 与 Agent Session 都使用这两项 provider-level 用户资源；work surface 只改变各自不可移除的行为 contract、Project trust 与工具表面。页面与 reload 目标不得把这些设置扩张到其他 Engine，也不得因当前 Thread 位于 Chat surface 而错误排除一个有效的 OmniMind 对话。
+
 `Default prompt / 默认提示词` 页面首次打开即显示当前安装版本随附、且正在由原生 builder 使用的稳定基础指令正文；fresh profile 不显示“未创建”。用户可独立编辑、取消、保存和恢复当前安装版本的 factory default。该正文只是 native builder 的一个稳定输入：dynamic tools、guidelines、context、Skills、cwd、Extension turn mutation、Host guidance 与不可移除的 OmniMind contract 继续由原生链路组合，页面不展示或保存展开后的 effective prompt。默认提示词的定制值由既有 Server settings owner 持久化，不写安装包、不写 `SYSTEM.md`，也不建立 Prompt profile/registry/history。
 
 `Custom rules / 自定义规则` 表达跨项目个人偏好，并继续使用 bundled runtime 的 global context discovery。无候选时编辑器为空，打开页面、取消、空保存和 no-op 不创建文件；首次非空保存才创建标准 `AGENTS.md`。已有 active candidate 时只更新 exact active source，不迁移、不改名、不复制。候选、遮蔽、文件名和 `APPEND_SYSTEM.md` / `SYSTEM.md` 不进入页面信息架构；后两者仍保留为高级用户可手工使用的原生能力，Settings 不读取、不编辑、不迁移。卡片底部只用淡色辅助文字显示 Server 生成的安全 `displayPath`；仅在真实 Desktop bridge 支持本机 reveal 时提供 `Open / 打开`，普通 Web 不呈现无效按钮。无文件时准确说明首次保存将创建 `AGENTS.md`。若 active 文件超过 Prompt 编辑边界或不是可安全编辑的文本，只将自定义规则卡标为不可编辑，保留安全定位/打开恢复，不得让默认提示词卡一同失败；更低优先级的超限候选也不得压过 bundled runtime 已选择的可编辑 active source。Renderer 不把路径提交为 mutation authority，路径也不得进入 Prompt、普通日志、Timeline、telemetry 或交付截图证据。
