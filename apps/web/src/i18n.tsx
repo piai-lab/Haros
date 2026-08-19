@@ -2991,7 +2991,7 @@ export const EN_MESSAGES = {
   "settings.never": "Never",
   "settings.builtInToolsForAgents": "Agent access",
   "settings.builtInToolsForAgentsDescription":
-    "These controls affect every Agent, including OmniMind Agent. They do not turn off the Browser or Device panels you use directly.",
+    "These controls affect every Agent, including OmniMind Agent. They do not turn off the Browser or Device panels you use directly. New calls are checked immediately; tool lists update in a new session or after a supported reload.",
   "settings.builtInToolGroups": "Capability groups",
   "settings.builtInGroupOmniMind": "OmniMind",
   "settings.builtInGroupOmniMindDescription":
@@ -6423,7 +6423,7 @@ export const ZH_CN_MESSAGES = {
   "settings.never": "从未",
   "settings.builtInToolsForAgents": "Agent 访问权限",
   "settings.builtInToolsForAgentsDescription":
-    "这些开关作用于所有 Agent，包括 OmniMind Agent；不会关闭你直接使用的浏览器或设备面板。",
+    "这些开关作用于所有 Agent，包括 OmniMind Agent；不会关闭你直接使用的浏览器或设备面板。新调用会立即按当前设置检查，工具列表在新会话或受支持的重新加载后更新。",
   "settings.builtInToolGroups": "能力分组",
   "settings.builtInGroupOmniMind": "OmniMind",
   "settings.builtInGroupOmniMindDescription":

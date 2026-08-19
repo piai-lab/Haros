@@ -66,7 +66,7 @@ export interface ServerSettingsSnapshot {
   readonly settings: ServerSettings;
 }
 
-const SERVER_SETTINGS_MIGRATION_VERSION = 1;
+const SERVER_SETTINGS_MIGRATION_VERSION = 2;
 
 export function toServerSettingsView(settings: ServerSettings): ServerSettingsView {
   return settings;
@@ -220,6 +220,40 @@ function omitProviderPasswords(patch: ServerSettingsPatch): ServerSettingsPatch 
   };
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function injectLegacyBuiltInGroupIntent(settings: unknown): {
+  readonly settings: unknown;
+  readonly migrated: boolean;
+} {
+  if (!isRecord(settings)) return { settings, migrated: false };
+  if (!Object.hasOwn(settings, "agentTools")) {
+    return {
+      settings: {
+        ...settings,
+        agentTools: { disabledBuiltInGroups: [] },
+      },
+      migrated: true,
+    };
+  }
+  if (!isRecord(settings.agentTools)) return { settings, migrated: false };
+  if (Object.hasOwn(settings.agentTools, "disabledBuiltInGroups")) {
+    return { settings, migrated: false };
+  }
+  return {
+    settings: {
+      ...settings,
+      agentTools: {
+        ...settings.agentTools,
+        disabledBuiltInGroups: [],
+      },
+    },
+    migrated: true,
+  };
+}
+
 function decodeSettingsFromJson(settingsPath: string, raw: string) {
   try {
     const parsed = JSON.parse(raw) as unknown;
@@ -227,7 +261,8 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
       parsed !== null && typeof parsed === "object" && "settings" in parsed
         ? (parsed as { revision?: unknown; migrationVersion?: unknown; settings: unknown })
         : null;
-    const decoded = Schema.decodeUnknownExit(ServerSettings)(envelope?.settings ?? parsed);
+    const legacyBuiltInGroups = injectLegacyBuiltInGroupIntent(envelope?.settings ?? parsed);
+    const decoded = Schema.decodeUnknownExit(ServerSettings)(legacyBuiltInGroups.settings);
     if (decoded._tag === "Failure") {
       return { _tag: "Failure" as const, error: Cause.pretty(decoded.cause) };
     }
@@ -243,6 +278,7 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
           ? Number(envelope.migrationVersion)
           : 0,
       legacyFormat: envelope === null,
+      legacyBuiltInGroups: legacyBuiltInGroups.migrated,
     };
   } catch (cause) {
     const error = new ServerSettingsError({
@@ -365,6 +401,7 @@ const makeServerSettings = Effect.gen(function* () {
       migrated:
         legacyPasswords.size > 0 ||
         decoded.legacyFormat ||
+        decoded.legacyBuiltInGroups ||
         decoded.migrationVersion !== SERVER_SETTINGS_MIGRATION_VERSION,
     };
   });
