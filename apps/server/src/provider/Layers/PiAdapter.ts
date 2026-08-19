@@ -81,8 +81,7 @@ import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
 import {
-  assertAgentGatewayHostToolsDelivered,
-  inspectAgentGatewayHostExtensionRegistration,
+  type AgentGatewayHostExtensionHandle,
 } from "../agentGatewayHostExtension.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
@@ -465,6 +464,7 @@ interface PiSessionContext {
   readonly agentDir: string;
   appliedModelRuntimeMutationRevision: number;
   readonly workSurface?: ProviderWorkSurface;
+  readonly hostProjection?: AgentGatewayHostExtensionHandle;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
   readonly lifecycleGeneration?: string;
@@ -2538,6 +2538,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       const modelRuntime = await family.createModelRuntime(input.agentDir);
       let resolvedGatewayControlAvailable =
         provider !== "omnimind" && (input.gatewayTools?.length ?? 0) > 0;
+      let resolvedHostProjection: AgentGatewayHostExtensionHandle | undefined;
       const hostProjectionDiagnostics: string[] = [];
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
         cwd,
@@ -2562,6 +2563,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               })
             : { extensions: [] };
         const inlineExtensions = composition.extensions;
+        resolvedHostProjection = composition.host;
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
@@ -2620,7 +2622,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         };
         const createdSession = await input.sdk.createAgentSessionFromServices(agentSessionOptions);
         if (composition.host !== undefined) {
-          const inspection = inspectAgentGatewayHostExtensionRegistration({
+          const inspection = composition.host.inspectRegistration({
             extensions: services.resourceLoader.getExtensions(),
             tools: createdSession.session.getAllTools(),
           });
@@ -2643,6 +2645,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         modelRegistry: modelRegistryFacade(runtime.services.modelRuntime, input.sdk),
         gatewayControlAvailable: resolvedGatewayControlAvailable,
         hostProjectionDiagnostics,
+        ...(resolvedHostProjection === undefined
+          ? {}
+          : { hostProjection: resolvedHostProjection }),
       };
     };
 
@@ -2789,7 +2794,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           agentGatewaySessionLease?.release();
         }
         let taskProjectionContext: PiSessionContext | undefined;
-        const { runtime, modelRegistry, gatewayControlAvailable, hostProjectionDiagnostics } =
+        const {
+          runtime,
+          modelRegistry,
+          gatewayControlAvailable,
+          hostProjectionDiagnostics,
+          hostProjection,
+        } =
           yield* releaseAgentGatewaySessionLeaseOnInterrupt(
             agentGatewaySessionLease,
             Effect.tryPromise({
@@ -2891,6 +2902,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           appliedModelRuntimeMutationRevision:
             provider === "omnimind" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
           ...(workSurface === undefined ? {} : { workSurface }),
+          ...(hostProjection === undefined ? {} : { hostProjection }),
           ...(agentGatewaySessionLease
             ? {
                 gatewaySessionLease: agentGatewaySessionLease,
@@ -3176,7 +3188,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           }
           const promptRequiredNames = promptRequiredAgentGatewayToolNames(dispatchContext);
           if (provider === "omnimind" && promptRequiredNames.length > 0) {
-            if (context.gatewayConnection === undefined) {
+            if (context.gatewayConnection === undefined || context.hostProjection === undefined) {
               return yield* new ProviderAdapterValidationError({
                 provider,
                 operation: "sendTurn",
@@ -3192,7 +3204,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     ? {}
                     : { fetch: options.agentGatewayFetch }),
                 });
-                assertAgentGatewayHostToolsDelivered({
+                context.hostProjection!.assertDelivered({
                   tools: context.runtime.session.getAllTools(),
                   requiredNames: promptRequiredNames,
                   currentlyExposedNames: new Set(

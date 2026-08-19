@@ -18,6 +18,22 @@ export const AGENT_GATEWAY_HOST_EXTENSION_PATH = `<inline:${AGENT_GATEWAY_HOST_E
 
 export interface AgentGatewayHostExtensionHandle {
   readonly extension: InlineExtension;
+  readonly inspectRegistration: (input: {
+    readonly extensions: LoadExtensionsResult;
+    readonly tools: ReadonlyArray<ToolInfo>;
+  }) => AgentGatewayHostExtensionInspection;
+  readonly assertDelivered: (input: {
+    readonly tools: ReadonlyArray<ToolInfo>;
+    readonly requiredNames: ReadonlyArray<string>;
+    readonly currentlyExposedNames: ReadonlySet<string>;
+  }) => void;
+}
+
+export interface AgentGatewayHostExtensionInspection {
+  readonly available: boolean;
+  readonly deliveredToolNames: ReadonlyArray<string>;
+  readonly collidedToolNames: ReadonlyArray<string>;
+  readonly diagnostics: ReadonlyArray<string>;
 }
 
 export class AgentGatewayHostCapabilityUnavailableError extends Error {
@@ -43,12 +59,7 @@ export function isAgentGatewayHostTool(tool: ToolInfo | undefined): boolean {
 export function inspectAgentGatewayHostExtensionRegistration(input: {
   readonly extensions: LoadExtensionsResult;
   readonly tools: ReadonlyArray<ToolInfo>;
-}): {
-  readonly available: boolean;
-  readonly deliveredToolNames: ReadonlyArray<string>;
-  readonly collidedToolNames: ReadonlyArray<string>;
-  readonly diagnostics: ReadonlyArray<string>;
-} {
+}): AgentGatewayHostExtensionInspection {
   const hostExtension = input.extensions.extensions.find(
     (extension) => extension.path === AGENT_GATEWAY_HOST_EXTENSION_PATH,
   );
@@ -127,5 +138,7 @@ export function makeAgentGatewayHostExtension(input: {
         }
       },
     },
+    inspectRegistration: inspectAgentGatewayHostExtensionRegistration,
+    assertDelivered: assertAgentGatewayHostToolsDelivered,
   };
 }
