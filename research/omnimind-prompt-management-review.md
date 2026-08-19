@@ -2,7 +2,7 @@
 
 > 当前复核基线：本关注点从 OmniMind `f9da96c48a274d4c2884964d9dec5d9962772fd1` 开始实施；研究源基线 `baf0174c8c7a66610c3446f9370f46bcc7c984c3` 是其祖先。bundled OmniMind Agent runtime 仍为 `@omnimind/pi-coding-agent@0.84.2`；upstream exact source `914cf1472e715297caa30db4b9535d534a9eb718`；本轮按同一 exact source 增加并闭合 native factory-default input seam 后，vendored artifact SHA-256 为 `b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7`，product patch SHA-256 为 `499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af`。
 >
-> 当前状态：维护者已用新的“两卡片”产品决定 supersede `cf1a1e580509423a92e5334a438a3e077d376210` 的三文件 Settings 模型。后续 installed `584045a291a91e57ec50ce0e91cee29253334ef1` 已是两卡 UI，但真实 Provider journey 证伪了其 service-based initial Session 漏传 customized default；当前 `/Applications/OmniMind.app` 仍是该 superseded bytes，不证明本轮完成。窄 runtime 修复已通过 fixed-source generator、deterministic request capture 和 source gates，新的 exact pushed SHA、MiMo/DeepSeek 与 packaged evidence 尚待闭合。F-22 保持 `candidate`。
+> 当前状态：维护者已用新的“两卡片”产品决定 supersede `cf1a1e580509423a92e5334a438a3e077d376210` 的三文件 Settings 模型，后续 `584045a291a91e57ec50ce0e91cee29253334ef1` 又被真实 Provider journey 证伪为 service-based initial Session 漏传 customized default。窄 runtime 修复已冻结为 exact pushed product SHA `db25a5b91343a4ddbf70fedd98ea3583bd020317`，并完成 fixed-source generator、deterministic request capture、full gates、MiMo/DeepSeek 与隔离 packaged journey；当前 `/Applications/OmniMind.app` app.asar 为 `95937e7f…`。F-22 仍保持 `candidate`，等待维护者独立裁决。
 
 ## 0. 一页结论
 
@@ -783,7 +783,10 @@ Settings route/section
 ### 15.4 本轮实际证据
 
 - `695f80baf`、`7850ff878`、`9d3642557` 与 installed `cf1a1e580509423a92e5334a438a3e077d376210` 属于已被维护者新产品决定 supersede 的旧“三文件 Settings”历史证据。其 source、artifact hash、隔离与 Provider 观察只保留 provenance，不能给当前“两卡片”candidate背书，也不能据此把 F-22 标为 verified。
-- `584045a291a91e57ec50ce0e91cee29253334ef1` 的两卡 installed journey 证明 Settings/custom rules 路径可用，但 MiMo Chat 首轮没有 customized-default marker。随后 deterministic request capture 把 customization 放在全新 Session `startSession` 之前，仍得到 factory default，排除了“保存后未 reload”的正确 snapshot语义；根因是 bundled `createAgentSessionFromServices` 接收方没有把 Host 已传入的 `defaultPrompt` 继续转交 native `createAgentSession`。当前 source candidate 只增加这一窄转发及上游/Host回归，并证明 V1 在全新 Chat 首轮出现、保存V2但不reload仍为V1、explicit reload后才为V2；没有按work surface过滤或另建composer。最终 exact pushed product SHA、MiMo/DeepSeek、packaged hashes与 fresh-profile journey必须在代码冻结后重新记录，旧 digest或旧 installed bytes不得冒充新产品结果。
+- `584045a291a91e57ec50ce0e91cee29253334ef1` 的两卡 installed journey 证明 Settings/custom rules 路径可用，但 MiMo Chat 首轮没有 customized-default marker。随后 deterministic request capture 把 customization 放在全新 Session `startSession` 之前，仍得到 factory default，排除了“保存后未 reload”的正确 snapshot语义；根因是 bundled `createAgentSessionFromServices` 接收方没有把 Host 已传入的 `defaultPrompt` 继续转交 native `createAgentSession`。修复只增加这一窄转发及上游/Host回归，并证明 V1 在全新 Chat 首轮出现、保存V2但不reload仍为V1、explicit reload后才为V2；没有按work surface过滤或另建composer。旧digest或旧installed bytes不得冒充新产品结果。
+- 修复冻结为 exact pushed product SHA `db25a5b91343a4ddbf70fedd98ea3583bd020317`。macOS arm64 DMG SHA-256=`9a62e2384bb5a917a460679928e67fea2ce0733de61eb67fba06d59d1e28aaef`，ZIP=`43d446891944749d2647a2bec5bc5fabd5d8c02c6932a6bf067f899d90d5966b`，installed app.asar=`95937e7f95237917556151afb6324392704d9f44af3d7cd9e506643dd0389aea`；asar内嵌commit一致，240项legal identities闭合。
+- packaged UI控制前，主进程显式接收task-specific `--user-data-dir`；Helper实际userData、Server cwd/state/log、Provider agent dir均从argv与open handles证明位于同一task root。MiMo全新Chat首轮同时遵循V1与custom rules，save V2 without reload仍保持V1，explicit reload后以排除历史消息干扰的新问题确认V2；DeepSeek全新Agent首轮同时遵循V2与custom rules，并保持OmniMind/πAI-Lab及中英文机构identity。相同内容页面visit/cancel前后settings与rules hash/mtime完全相同；同profile关闭重开保留值；restore factory与remove rules回到empty state。重复同一句的MiMo输出曾沿历史assistant文本复述V1，随后明确询问current system instruction得到V2；wire/session正确性以deterministic request capture为主，不用模型服从性代替。
+- 一次`--version`探测被Electron当作正常默认启动，未进入UI、未作为journey证据且立即停止。按维护者要求只读复核真实`~/.omnimind/agent`的`AGENTS.override.md`、`AGENTS.md`、`AGENTS.MD`、`CLAUDE.md`、`CLAUDE.MD`、`SYSTEM.md`、`APPEND_SYSTEM.md`仍全部absent；未读取正文或无关用户数据。
 
 ## 16. 明确否决与 stop-loss
 
