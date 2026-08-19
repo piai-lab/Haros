@@ -146,7 +146,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   );
   // Optional and platform-gated: off macOS (and in tests that do not provide
   // it) the agent never sees the device_* tools at all, rather than being
-  // offered eleven tools that can only report an unsupported platform.
+  // offered tools that can only report an unsupported platform.
   const deviceService = Option.getOrUndefined(yield* Effect.serviceOption(DeviceService));
   const loadProviderAvailabilities = Effect.gen(function* () {
     const [settings, statuses] = yield* Effect.all([
