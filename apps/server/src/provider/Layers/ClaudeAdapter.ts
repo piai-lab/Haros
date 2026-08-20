@@ -39,13 +39,13 @@ import {
   type ProviderInteractionMode,
   ProviderItemId,
   type ProviderRuntimeEvent,
-  type ProviderRuntimeTurnStatus,
   type ProviderSendTurnInput,
   type ProviderSession,
   type ThreadTokenUsageSnapshot,
   type ProviderUserInputAnswers,
   type RuntimeContentStreamKind,
   type RuntimeSessionState,
+  type RuntimeTurnState,
   RuntimeItemId,
   RuntimeRequestId,
   RuntimeTaskId,
@@ -1262,7 +1262,7 @@ function buildUserMessageEffect(
   });
 }
 
-function turnStatusFromResult(result: SDKResultMessage): ProviderRuntimeTurnStatus {
+function turnStatusFromResult(result: SDKResultMessage): RuntimeTurnState {
   if (result.subtype === "success") {
     return "completed";
   }
@@ -1350,7 +1350,7 @@ function sanitizeClaudeDisplayText(text: string): string {
 
 function normalizeClaudeUserVisibleErrorMessage(
   text: string | undefined,
-  status: ProviderRuntimeTurnStatus,
+  status: RuntimeTurnState,
 ): string | undefined {
   if (typeof text !== "string") {
     return undefined;
@@ -1678,9 +1678,7 @@ function recognizedSubagentParentToolUseId(
   return toolUseId && isRecognizedSubagentToolUseId(context, toolUseId) ? toolUseId : undefined;
 }
 
-function claudeTaskTurnStatus(
-  status: "completed" | "failed" | "stopped",
-): ProviderRuntimeTurnStatus {
+function claudeTaskTurnStatus(status: "completed" | "failed" | "stopped"): RuntimeTurnState {
   switch (status) {
     case "completed":
       return "completed";
@@ -2663,7 +2661,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
 
     const completeTurn = (
       context: ClaudeSessionContext,
-      status: ProviderRuntimeTurnStatus,
+      status: RuntimeTurnState,
       errorMessage?: string,
       result?: SDKResultMessage,
     ): Effect.Effect<void> =>
@@ -3673,7 +3671,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         const assistantError = context.turnState?.assistantError;
-        let status: ProviderRuntimeTurnStatus;
+        let status: RuntimeTurnState;
         if (hasPendingUserInterrupt(context) && message.subtype === "error_during_execution") {
           status = "interrupted";
         } else if (assistantError) {
