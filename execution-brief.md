@@ -2,9 +2,9 @@
 
 ## 当前目标
 
-把 clean local Synara exact `57f48ef1a3354ae7967d4a8f9f83a1105691ede6` 的完整 adoption set 收口到 OmniMind：代码、作者等价测试、全树 responsibility disposition、本机 exact pushed SHA 隔离 packaged journey 与 adoption authority 必须相互一致，随后 fast-forward `main`，push，并删除本地和远端 `codex/synara-57f48ef-adoption`。
+没有正在施工的 Synara adoption。exact upstream `57f48ef1a3354ae7967d4a8f9f83a1105691ede6` 的代码、作者等价测试、全树 responsibility disposition、本机 exact pushed SHA 隔离 packaged journey 与 adoption authority 已闭合，并通过 fast-forward 进入 `main@50e85dd950`。
 
-当前候选分支为 `codex/synara-57f48ef-adoption`。产品与测试已覆盖最新范围的 Grok、Cursor、Antigravity、跨 Provider `/side`、Provider usage、managed-worktree cleanup、projection/approval/terminal recovery、Windows path/WSL、安全脱敏、Workspace directory search、Workbench 视觉、Windows taskbar icon lifecycle 与 Windows/Linux custom titlebar。完整仓库测试与 final gates 已通过；exact pushed product `14c54d5a23` 已完成本机 fresh-profile 构建、安装、可见链路、退出与重开 journey，README adopted head 已据此闭合到 `57f48ef…`。
+安装版 product bytes 仍准确绑定 pushed product `14c54d5a23`；后续 docs-only main 状态提交不冒充 shipped bytes。下一轮只有在维护者再次发起 Synara intake 时，才从新的 exact upstream head 重新做只读比较与 decision surface。
 
 ## 已确认范围
 
@@ -16,14 +16,11 @@
 
 ## 当前阻塞
 
-没有产品或证据阻塞。剩余工作只有提交并 push 当前 docs-only authority closure、`main` fast-forward/push 与精确分支清理。
+没有当前产品、证据或 source-adoption 阻塞。official signing、notarization、Windows/Linux artifacts、GitHub Release 与 update feed 仍在维护者明确排除的本轮范围之外，不是遗留阻塞。
 
 ## 下一动作
 
-1. 运行 docs-only diff/document contract；
-2. 提交并 push authority closure；
-3. fast-forward `main`、push；
-4. 删除本地与远端 `codex/synara-57f48ef-adoption`。
+等待维护者发起下一项工作；新的 Synara 更新统一按 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md) 处理。
 
 ## 权威路由
 
