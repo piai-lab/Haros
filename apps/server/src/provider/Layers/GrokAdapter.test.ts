@@ -27,11 +27,36 @@ import {
   isRenderableGrokAssistantDelta,
   mergeGrokModelDescriptors,
   parseXaiLanguageModelDescriptors,
+  selectGrokDiscoveredModelGroups,
   resolveGrokPlanHookResponse,
+  resolveGrokRuntimeModelSettings,
   scopeGrokRuntimeItemIdForTurn,
   scopeGrokToolCallStateForTurn,
   takeGrokOmniMindHarnessPolicyTextPart,
 } from "./GrokAdapter.ts";
+
+describe("Grok runtime model settings", () => {
+  it("keeps only reasoning efforts supported by the selected model family", () => {
+    expect(
+      resolveGrokRuntimeModelSettings({
+        model: "grok-build",
+        options: { reasoningEffort: "xhigh" },
+      }),
+    ).toEqual({ model: "grok-build" });
+    expect(
+      resolveGrokRuntimeModelSettings({
+        model: "grok-4.6",
+        options: { reasoningEffort: "xhigh" },
+      }),
+    ).toEqual({ model: "grok-4.6", reasoningEffort: "xhigh" });
+    expect(
+      resolveGrokRuntimeModelSettings({
+        model: "grok-build",
+        options: { reasoningEffort: "high" },
+      }),
+    ).toEqual({ model: "grok-build", reasoningEffort: "high" });
+  });
+});
 
 describe("Grok OmniMind harness policy", () => {
   it("delivers private scoped host context once", () => {
@@ -338,6 +363,22 @@ describe("GrokAdapter runtime event scoping", () => {
       "low",
       "medium",
       "high",
+    ]);
+  });
+
+  it("keeps the live Grok CLI catalog instead of retired xAI API slugs", () => {
+    const models = mergeGrokModelDescriptors(
+      selectGrokDiscoveredModelGroups({
+        cliModels: [{ slug: "grok-4.6", name: "Grok 4.6" }],
+        apiModels: [
+          { slug: "grok-build-0.1", name: "Grok Build 0.1" },
+          { slug: "grok-4.5", name: "Grok 4.5" },
+        ],
+      }),
+    );
+
+    expect(models.map(({ slug, name }) => ({ slug, name }))).toEqual([
+      { slug: "grok-4.6", name: "Grok 4.6" },
     ]);
   });
 

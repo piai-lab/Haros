@@ -383,7 +383,9 @@ describe("getModelCapabilities reasoningEffortLevels", () => {
       controlSource: "api-effort",
     });
     expect(
-      getModelCapabilities("grok", "grok-4.6").reasoningEffortLevels.find((l) => l.value === "xhigh"),
+      getModelCapabilities("grok", "grok-4.6").reasoningEffortLevels.find(
+        (l) => l.value === "xhigh",
+      ),
     ).toMatchObject({
       value: "xhigh",
       label: "Extra High",
@@ -440,6 +442,7 @@ describe("resolveGrokEffortFamily", () => {
     expect(resolveGrokEffortFamily("grok-4.5")).toBe("4.5");
     expect(resolveGrokEffortFamily("grok-4.6")).toBe("4.6");
     expect(resolveGrokEffortFamily("grok-4.7")).toBe("4.6");
+    expect(resolveGrokEffortFamily("custom/grok-fast")).toBe("build");
   });
 });
 

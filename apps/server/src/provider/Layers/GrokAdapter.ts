@@ -20,7 +20,11 @@ import {
   type ThreadId,
   TurnId,
 } from "@omnimind/contracts";
-import { getDefaultEffort, getModelCapabilities } from "@omnimind/shared/model";
+import {
+  getDefaultEffort,
+  getModelCapabilities,
+  normalizeGrokModelOptions,
+} from "@omnimind/shared/model";
 import {
   decodeOutboundJson,
   decodeOutboundText,
@@ -565,6 +569,21 @@ export function parseXaiLanguageModelDescriptors(
   return models;
 }
 
+export function selectGrokDiscoveredModelGroups(input: {
+  readonly cliModels: ReadonlyArray<{ slug: string; name: string }>;
+  readonly apiModels: ReadonlyArray<{ slug: string; name: string }>;
+}): ReadonlyArray<ReadonlyArray<{ slug: string; name: string }>> {
+  // `grok models` is the picker source of truth. The xAI language-model API still
+  // advertises retired grok-build slugs that the current CLI no longer serves.
+  if (input.cliModels.length > 0) {
+    return [input.cliModels];
+  }
+  if (input.apiModels.length > 0) {
+    return [input.apiModels];
+  }
+  return [];
+}
+
 export function mergeGrokModelDescriptors(
   groups: ReadonlyArray<ReadonlyArray<{ slug: string; name: string }>>,
 ): ProviderModelDescriptor[] {
@@ -664,6 +683,22 @@ function applyRequestedModelSelection<E>(input: {
     options: input.modelSelection.options,
     mapError: ({ cause, method }) => input.mapError({ cause, method }),
   });
+}
+
+export function resolveGrokRuntimeModelSettings(
+  modelSelection:
+    | {
+        readonly model: string;
+        readonly options?: GrokModelOptions | null | undefined;
+      }
+    | undefined,
+): GrokAcpRuntimeSettings {
+  if (!modelSelection) return {};
+  const options = normalizeGrokModelOptions(modelSelection.model, modelSelection.options);
+  return {
+    model: modelSelection.model,
+    ...(options?.reasoningEffort ? { reasoningEffort: options.reasoningEffort } : {}),
+  };
 }
 
 function resolveGrokSessionCwd(
@@ -1083,6 +1118,7 @@ export function makeGrokAdapter(
               payload.includes("grokShell") || payload.includes("x.ai/fs_notify"),
           });
           const providerGrokOptions = input.providerOptions?.grok;
+          const runtimeGrokModelSettings = resolveGrokRuntimeModelSettings(grokModelSelection);
           const effectiveGrokSettings: GrokAcpRuntimeSettings = {
             ...(grokSettings.binaryPath !== undefined
               ? { binaryPath: grokSettings.binaryPath }
@@ -1090,10 +1126,7 @@ export function makeGrokAdapter(
             ...(providerGrokOptions?.binaryPath !== undefined
               ? { binaryPath: providerGrokOptions.binaryPath }
               : {}),
-            ...(grokModelSelection?.model ? { model: grokModelSelection.model } : {}),
-            ...(grokModelSelection?.options?.reasoningEffort
-              ? { reasoningEffort: grokModelSelection.options.reasoningEffort }
-              : {}),
+            ...runtimeGrokModelSettings,
           };
 
           yield* Effect.logInfo("grok.acp.start", {
@@ -2476,7 +2509,9 @@ export function makeGrokAdapter(
               ),
             )
           : [];
-        const models = mergeGrokModelDescriptors([cliModels, apiModels]);
+        const models = mergeGrokModelDescriptors(
+          selectGrokDiscoveredModelGroups({ cliModels, apiModels }),
+        );
         if (models.length === 0) {
           if (cliError) {
             return yield* mapGrokModelDiscoveryError(cliError);
@@ -2492,7 +2527,7 @@ export function makeGrokAdapter(
         }
         return {
           models,
-          source: apiModels.length > 0 ? "grok-cli+xai-api" : "grok-cli",
+          source: cliModels.length > 0 ? "grok-cli" : "grok-cli+xai-api",
           cached: false,
         } satisfies ProviderListModelsResult;
       }).pipe(

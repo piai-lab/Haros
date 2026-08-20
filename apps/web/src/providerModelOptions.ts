@@ -114,7 +114,7 @@ function normalizeDynamicModelSlug(provider: ProviderKind, slug: string): string
  * Folds runtime-discovered models into the static option list for a provider:
  * discovered models lead (with display names recovered from the static list when
  * possible), static built-ins fill gaps unless discovery fully owns the catalog
- * (antigravity/kilo/opencode/cursor), and user-defined custom models always survive.
+ * (antigravity/kilo/opencode/cursor/grok), and user-defined custom models always survive.
  */
 export function mergeDynamicModelOptions(input: {
   provider: ProviderKind;
@@ -194,7 +194,8 @@ export function mergeDynamicModelOptions(input: {
       input.provider === "kilo" ||
       input.provider === "opencode" ||
       input.provider === "cursor" ||
-      input.provider === "droid") &&
+      input.provider === "droid" ||
+      input.provider === "grok") &&
     normalizedDynamicOptions.length > 0
       ? []
       : staticBuiltInModels.filter((model) => !dynamicNormalizedSlugs.has(model.slug));
