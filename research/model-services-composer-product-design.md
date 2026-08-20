@@ -1631,7 +1631,7 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 
 1. 所有独立 Engine custom slugs 由 `Agent engines` 对应 detail 呈现，stock Pi 与 OmniMind Agent 不混用 private home；
 2. 不迁移底层 settings 字段；
-3. 既有 OmniMind Agent legacy custom model hints 只读兼容并提供显式转化/移除路径，不自动伪造 Pi model definition；
+3. **已被 2026-08-20 clean-break 裁决取代**：OmniMind Agent legacy custom model hints 不再只读兼容，不提供转化/移除路径，也不伪造 Pi model definition；
 4. Composer 的 Engine-specific config link 指向正确 section；
 5. 移除 `Models & writing` 遗留文案；
 6. 完成 Settings search/deep-link/i18n/a11y。
