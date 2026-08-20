@@ -354,7 +354,6 @@ import {
   type LocalDraftPromotionOwnership,
 } from "~/lib/threadCreatePromotion";
 import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
-import { compareProvidersByOrder } from "../providerOrdering";
 import {
   getCustomBinaryPathForProvider,
   getProviderStartOptions,
@@ -491,10 +490,7 @@ import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimelin
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
 import { AVAILABLE_PROVIDER_OPTIONS, resolveProviderModelLabel } from "./chat/ProviderModelPicker";
-import {
-  prefetchProviderModelsForExplicitIntent,
-  providerModelsPrefetchQueryOptions,
-} from "../lib/providerModelPrefetch";
+import { providerModelsPrefetchQueryOptions } from "../lib/providerModelPrefetch";
 import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { ComposerEnginePicker } from "./chat/ComposerEnginePicker";
 import { resolveComposerModelFallbackMessageKey } from "./chat/modelCatalogPresentation";
@@ -1713,11 +1709,6 @@ export default function ChatView({
   const [isModelPickerOpen, setIsModelPickerOpen] = useState(false);
   const [isTraitsPickerOpen, setIsTraitsPickerOpen] = useState(false);
   const [isEnginePickerOpen, setIsEnginePickerOpen] = useState(false);
-  const explicitModelPrefetchGenerationRef = useRef(0);
-  const explicitModelPrefetchRef = useRef<{
-    scopeKey: string;
-    promise: Promise<void>;
-  } | null>(null);
   const [omniMindModelDiscoveryRequested, setOmniMindModelDiscoveryRequested] = useState(false);
   const [piDiscoveryRequested, setPiDiscoveryRequested] = useState(false);
   const legendListRef = useRef<LegendListRef | null>(null);
@@ -1734,7 +1725,6 @@ export default function ChatView({
   );
 
   useEffect(() => {
-    explicitModelPrefetchGenerationRef.current += 1;
     // Async setState (post-paint) keeps this thread-change reset out of the
     // render->effect->render cascade; the pickers already closed post-commit.
     const settle = window.setTimeout(() => {
@@ -1746,10 +1736,6 @@ export default function ChatView({
     }, 0);
     return () => {
       window.clearTimeout(settle);
-      // Stop an explicit-intent queue between reads when this Thread scope is
-      // replaced or ChatView unmounts. Do not cancel the current shared query:
-      // another mounted surface may still be consuming the same catalog.
-      explicitModelPrefetchGenerationRef.current += 1;
     };
   }, [threadId]);
   useEffect(() => {
@@ -4536,9 +4522,8 @@ export default function ChatView({
       if (status && (!status.available || status.authStatus === "unauthenticated")) {
         return;
       }
-      // Selection is stronger intent than the background browse queue. Start the
-      // exact target in the same event turn; the enabled catalog hook on the next
-      // render observes and shares this query instead of paying another request.
+      // Selection is exact Engine intent. Start the target in the same event turn;
+      // the enabled catalog hook on the next render shares this canonical query.
       void queryClient.prefetchQuery(
         providerModelsPrefetchQueryOptions({
           provider,
@@ -4549,101 +4534,6 @@ export default function ChatView({
     },
     [providerModelDiscoveryCwd, providerStatuses, queryClient, settings],
   );
-  const explicitPrefetchEligibleProviders = useMemo(() => {
-    const hiddenProviders = new Set(settings.hiddenProviders);
-    return AVAILABLE_PROVIDER_OPTIONS.toSorted((left, right) =>
-      compareProvidersByOrder(settings.providerOrder, left.value, right.value),
-    ).flatMap((option) => {
-      const provider = option.value;
-      if (hiddenProviders.has(provider)) {
-        return [];
-      }
-      if (serverSettingsQuery.data?.providers[provider]?.enabled === false) {
-        return [];
-      }
-      const status = findProviderStatus(providerStatuses, provider);
-      if (!status?.available || status.authStatus === "unauthenticated") {
-        return [];
-      }
-      return [provider];
-    });
-  }, [
-    providerStatuses,
-    serverSettingsQuery.data?.providers,
-    settings.hiddenProviders,
-    settings.providerOrder,
-  ]);
-  const scheduleExplicitEngineModelPrefetch = useCallback(
-    (providers: ProviderKind[]) => {
-      if (catalogStateByProvider[selectedProvider] === "checking") {
-        return;
-      }
-      if (providers.length === 0) {
-        return;
-      }
-      const scopeKey = JSON.stringify({
-        providers,
-        selectedProvider,
-        cwd: providerModelDiscoveryCwd,
-        claudeBinaryPath: settings.claudeBinaryPath,
-        cursorBinaryPath: settings.cursorBinaryPath,
-        cursorApiEndpoint: settings.cursorApiEndpoint,
-        antigravityBinaryPath: settings.antigravityBinaryPath,
-        grokBinaryPath: settings.grokBinaryPath,
-        kiloBinaryPath: settings.kiloBinaryPath,
-        openCodeBinaryPath: settings.openCodeBinaryPath,
-      });
-      if (explicitModelPrefetchRef.current?.scopeKey === scopeKey) {
-        return;
-      }
-      const generation = explicitModelPrefetchGenerationRef.current + 1;
-      explicitModelPrefetchGenerationRef.current = generation;
-      const previousPrefetch = explicitModelPrefetchRef.current?.promise;
-      const prefetch = (async () => {
-        await previousPrefetch?.catch(() => undefined);
-        if (explicitModelPrefetchGenerationRef.current !== generation) {
-          return;
-        }
-        await prefetchProviderModelsForExplicitIntent(queryClient, {
-          providers,
-          selectedProvider,
-          settings,
-          cwd: providerModelDiscoveryCwd,
-          shouldContinue: () => explicitModelPrefetchGenerationRef.current === generation,
-        });
-      })();
-      explicitModelPrefetchRef.current = { scopeKey, promise: prefetch };
-      const clearPrefetch = () => {
-        if (explicitModelPrefetchRef.current?.promise === prefetch) {
-          explicitModelPrefetchRef.current = null;
-        }
-      };
-      void prefetch.then(clearPrefetch, clearPrefetch);
-    },
-    [catalogStateByProvider, providerModelDiscoveryCwd, queryClient, selectedProvider, settings],
-  );
-  const prefetchEngineBrowseModels = useCallback(() => {
-    scheduleExplicitEngineModelPrefetch(explicitPrefetchEligibleProviders);
-  }, [explicitPrefetchEligibleProviders, scheduleExplicitEngineModelPrefetch]);
-  const boundProviderPrefetches = useMemo(
-    () =>
-      explicitPrefetchEligibleProviders.filter(
-        (provider) =>
-          provider !== selectedProvider && composerModelHintByProvider[provider] !== null,
-      ),
-    [composerModelHintByProvider, explicitPrefetchEligibleProviders, selectedProvider],
-  );
-  useEffect(() => {
-    // Exact draft/thread/project model bindings are durable user intent. Warm
-    // those known Engines after the foreground catalog settles so restart does
-    // not move their cold-process cost onto a later Engine click.
-    scheduleExplicitEngineModelPrefetch(boundProviderPrefetches);
-  }, [boundProviderPrefetches, scheduleExplicitEngineModelPrefetch]);
-  useEffect(() => {
-    if (isEnginePickerOpen) {
-      prefetchEngineBrowseModels();
-    }
-  }, [isEnginePickerOpen, prefetchEngineBrowseModels]);
   const handleTraitsPickerOpenChange = useCallback(
     (open: boolean) => {
       setIsTraitsPickerOpen(open);
@@ -4670,13 +4560,12 @@ export default function ChatView({
       }
       setIsEnginePickerOpen(open);
       if (open) {
-        prefetchEngineBrowseModels();
         setIsModelPickerOpen(false);
         setIsTraitsPickerOpen(false);
         setPiDiscoveryRequested(false);
       }
     },
-    [prefetchEngineBrowseModels, selectedModel],
+    [selectedModel],
   );
   const appendVoiceTranscriptToComposer = useCallback(
     (transcript: string) => {

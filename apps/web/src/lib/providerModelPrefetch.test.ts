@@ -8,7 +8,6 @@ import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  prefetchProviderModelsForExplicitIntent,
   prefetchProviderModelsForNewThread,
   providerModelsPrefetchQueryOptions,
   resolveNewThreadModelPrefetchCwd,
@@ -357,82 +356,5 @@ describe("prefetchProviderModelsForNewThread", () => {
       },
       { signal: expect.any(AbortSignal) },
     );
-  });
-});
-
-describe("prefetchProviderModelsForExplicitIntent", () => {
-  it("warms safe catalogs sequentially while preserving a foreground admission lease", async () => {
-    const queryClient = new QueryClient();
-    let releaseFirst: (() => void) | undefined;
-    const firstPrefetch = new Promise<void>((resolve) => {
-      releaseFirst = resolve;
-    });
-    const prefetchQuery = vi
-      .spyOn(queryClient, "prefetchQuery")
-      .mockImplementationOnce(() => firstPrefetch)
-      .mockResolvedValue(undefined);
-
-    const prefetch = prefetchProviderModelsForExplicitIntent(queryClient, {
-      providers: ["codex", "omnimind", "pi", "droid", "claudeAgent", "omnimind"],
-      selectedProvider: "codex",
-      settings: makeSettings(),
-      cwd: "/tmp/project",
-    });
-
-    expect(prefetchQuery).toHaveBeenCalledTimes(1);
-    expect(prefetchQuery.mock.calls[0]?.[0].queryKey).toEqual(
-      providerDiscoveryQueryKeys.models("omnimind", null, null, null, null),
-    );
-
-    releaseFirst?.();
-    await prefetch;
-
-    expect(prefetchQuery).toHaveBeenCalledTimes(2);
-    expect(prefetchQuery.mock.calls[1]?.[0].queryKey).toEqual(
-      providerDiscoveryQueryKeys.models("claudeAgent", null, null, null, null),
-    );
-  });
-
-  it("preserves cwd identity for project-scoped Engines", async () => {
-    const queryClient = new QueryClient();
-    const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockResolvedValue(undefined);
-
-    await prefetchProviderModelsForExplicitIntent(queryClient, {
-      providers: ["opencode", "antigravity"],
-      selectedProvider: "codex",
-      settings: makeSettings({
-        openCodeBinaryPath: "/bin/opencode",
-        antigravityBinaryPath: "/bin/antigravity",
-      }),
-      cwd: "/tmp/project",
-    });
-
-    expect(prefetchQuery.mock.calls.map(([options]) => options.queryKey)).toEqual([
-      providerDiscoveryQueryKeys.models("opencode", "/bin/opencode", null, null, "/tmp/project"),
-      providerDiscoveryQueryKeys.models(
-        "antigravity",
-        "/bin/antigravity",
-        null,
-        null,
-        "/tmp/project",
-      ),
-    ]);
-  });
-
-  it("stops between reads when a newer Project or picker scope supersedes the queue", async () => {
-    const queryClient = new QueryClient();
-    let current = true;
-    const prefetchQuery = vi.spyOn(queryClient, "prefetchQuery").mockImplementation(async () => {
-      current = false;
-    });
-
-    await prefetchProviderModelsForExplicitIntent(queryClient, {
-      providers: ["omnimind", "claudeAgent", "cursor"],
-      selectedProvider: "codex",
-      settings: makeSettings(),
-      shouldContinue: () => current,
-    });
-
-    expect(prefetchQuery).toHaveBeenCalledTimes(1);
   });
 });
