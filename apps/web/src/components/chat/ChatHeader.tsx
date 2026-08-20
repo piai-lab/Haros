@@ -134,6 +134,10 @@ interface ChatHeaderProps {
   className?: string;
   hideSidebarControls?: boolean;
   hideHandoffControls?: boolean;
+  // Empty-draft landings hide all thread-scoped chrome (title, Hand off, project
+  // scripts, git/open-in) — the chat hasn't started yet — keeping only the sidebar
+  // cluster plus the Environment and right-panel toggles.
+  minimalChrome?: boolean;
   isGitRepo: boolean;
   openInTarget: string | null;
   activeProjectScripts: ProjectScript[] | undefined;
@@ -552,6 +556,7 @@ export function ChatHeader({
   className,
   hideSidebarControls: hideSidebarControlsProp,
   hideHandoffControls: hideHandoffControlsProp,
+  minimalChrome: minimalChromeProp,
   isGitRepo,
   openInTarget,
   activeProjectScripts,
@@ -594,6 +599,7 @@ export function ChatHeader({
   const { t } = useI18n();
   const hideSidebarControls = hideSidebarControlsProp ?? false;
   const hideHandoffControls = hideHandoffControlsProp ?? false;
+  const minimalChrome = minimalChromeProp ?? false;
   const showGitActions = showGitActionsProp ?? true;
   const showDiffToggle = showDiffToggleProp ?? true;
   const diffDisabledReason = diffDisabledReasonProp ?? null;
@@ -718,7 +724,11 @@ export function ChatHeader({
       >
         {hideSidebarControls ? null : <SidebarHeaderNavigationControls />}
         <div
-          className={cn("flex min-w-0 flex-1 items-center gap-2", editorChatControls && "h-full")}
+          className={cn(
+            "flex min-w-0 flex-1 items-center gap-2",
+            editorChatControls && "h-full",
+            minimalChrome && "hidden",
+          )}
         >
           <div
             className={cn(
@@ -836,10 +846,10 @@ export function ChatHeader({
       </div>
       <div className="flex shrink-0 items-center gap-2 [-webkit-app-region:no-drag]">
         {sendToAgentControl}
-        {!hideHandoffControls && !environment ? (
+        {!minimalChrome && !hideHandoffControls && !environment ? (
           <ProviderUsageMenuControl provider={activeProvider} />
         ) : null}
-        {!hideHandoffControls ? (
+        {!minimalChrome && !hideHandoffControls ? (
           <Menu modal={false}>
             <Tooltip>
               <TooltipTrigger
@@ -879,7 +889,7 @@ export function ChatHeader({
             </ComposerPickerMenuPopup>
           </Menu>
         ) : null}
-        {activeProjectScripts ? (
+        {!minimalChrome && activeProjectScripts ? (
           <ProjectScriptsControl
             scripts={activeProjectScripts}
             keybindings={keybindings}
@@ -946,7 +956,7 @@ export function ChatHeader({
           <>
             {/* Open in editor: dedicated split-button with an editor switcher; the project
                 action control now lives beside Hand off as its own project command surface. */}
-            {activeProjectName ? (
+            {!minimalChrome && activeProjectName ? (
               <OpenInPicker
                 keybindings={keybindings}
                 availableEditors={availableEditors}
@@ -954,7 +964,7 @@ export function ChatHeader({
               />
             ) : null}
 
-            {activeProjectName && showGitActions ? (
+            {!minimalChrome && activeProjectName && showGitActions ? (
               <GitActionsControl
                 gitCwd={gitCwd}
                 activeThreadId={activeThreadId}

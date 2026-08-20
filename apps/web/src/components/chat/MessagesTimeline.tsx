@@ -119,6 +119,7 @@ import {
   type ParsedTerminalContextEntry,
 } from "~/lib/terminalContext";
 import { cn } from "~/lib/utils";
+import { MUTED_LABEL_TEXT_CLASS_NAME } from "~/surfaceStyles";
 import {
   DEFAULT_CHAT_FONT_SIZE_PX,
   normalizeChatFontSizePx,
@@ -2021,7 +2022,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             ) : (
               <div
                 key={`${keyPrefix}:narration:${row.message.id}:${item.id}`}
-                className="text-[var(--color-text-foreground-secondary)]"
+                className={MUTED_LABEL_TEXT_CLASS_NAME}
               >
                 <ChatMarkdown
                   text={item.message.text}
@@ -2096,7 +2097,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       // Keep the trigger inside the row's shared leading inset. Pulling
                       // the W left by its side-bearing clips its antialiasing at common
                       // desktop scales and breaks parity with the live-status orb.
-                      className="inline-flex items-center gap-1 pb-2 text-left text-[var(--color-text-foreground-secondary)] transition-colors duration-200 hover:text-foreground"
+                      className={cn(
+                        "inline-flex items-center gap-1 pb-2 text-left transition-colors duration-200 hover:text-foreground",
+                        MUTED_LABEL_TEXT_CLASS_NAME,
+                      )}
                       style={{ fontSize: `${appTypographyScale.activityPx}px` }}
                     >
                       <span>
@@ -2106,7 +2110,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       </span>
                       <DisclosureChevron
                         open={isCollapsedWorkExpanded}
-                        className="text-[var(--color-text-foreground-tertiary)]"
+                        className="text-muted-foreground/70"
                       />
                     </CollapsibleTrigger>
                     <CollapsiblePanel>
@@ -2450,7 +2454,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           {/* Non-collapsible twin of the settled "Worked for" header: same label
               tone, size, full-width divider, and safe leading inset, but counting up live. */}
           <div
-            className="pb-2 text-[var(--color-text-foreground-secondary)]"
+            className={cn("pb-2", MUTED_LABEL_TEXT_CLASS_NAME)}
             style={{ fontSize: `${appTypographyScale.activityPx}px` }}
           >
             {nowIso ? (

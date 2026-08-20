@@ -11870,16 +11870,12 @@ export default function ChatView({
       showEmptyLandingBranchToolbar);
   const emptyLandingControls = showEmptyLandingControls ? (
     <div
-      className={cn(
-        // Full-width tray under the composer that reads as UNITED but not fused: it carries extra
-        // top height (pt-6) and is pulled up by that amount (-mt-5 = 20px, just past the
-        // --composer-radius ~19px corner). That hidden top slice sits BEHIND the composer's rounded
-        // bottom corners (z-0), so its tint fills those corner notches and its straight full-width
-        // top edge stays covered by the composer's solid sides — no gap/poke at the sides. The
-        // composer keeps its own rounded shape; the tray keeps its tint + rounded bottom.
-        "chat-composer-shell relative z-0 -mt-5 flex min-h-8 min-w-0 flex-nowrap items-center gap-x-1.5 overflow-hidden !rounded-t-none !rounded-b-[var(--composer-radius)] bg-[color-mix(in_srgb,var(--color-background-elevated-secondary)_76%,var(--color-background-surface)_24%)] px-2 pb-1.5 pt-6 transition-colors duration-150 ease-out motion-reduce:transition-none sm:min-h-7",
-        COMPOSER_COLUMN_FRAME_CLASS_NAME,
-      )}
+      data-empty-landing-controls="true"
+      // United-but-not-fused tray sitting in normal flow directly above the composer at a
+      // narrower width (w-11/12): tinted, rounded on top only, flush against the input
+      // shell below. No overlap/underlay tricks — in dark mode a slice tucked behind the
+      // composer's translucent corners reads as a visible cut along the seam.
+      className="chat-composer-shell mx-auto flex min-h-8 w-11/12 min-w-0 flex-nowrap items-center gap-x-1.5 overflow-hidden !rounded-b-none !rounded-t-[var(--composer-radius)] bg-[color-mix(in_srgb,var(--color-background-elevated-secondary)_76%,var(--color-background-surface)_24%)] px-2 py-1.5 transition-colors duration-150 ease-out motion-reduce:transition-none sm:min-h-7"
     >
       {showContainerChatWorkspacePicker ? (
         <ProjectPicker
@@ -12174,6 +12170,7 @@ export default function ChatView({
                   />
                 </div>
               ) : null}
+              {emptyLandingControls}
             </div>
             <div
               className={cn(
@@ -12610,7 +12607,6 @@ export default function ChatView({
             </div>
           </ComposerColumnFrame>
         </form>
-        {emptyLandingControls}
       </div>
     ) : (
       <div
@@ -12677,6 +12673,7 @@ export default function ChatView({
           isSidechat={Boolean(activeThread.sidechatSourceThreadId)}
           hideSidebarControls={isEditorRail}
           hideHandoffControls={terminalWorkspaceTerminalTabActive || isEditorRail}
+          minimalChrome={isCenteredEmptyLanding}
           isGitRepo={isGitRepo}
           openInTarget={threadWorkspaceCwd}
           activeProjectScripts={isEditorRail ? undefined : activeProjectScripts}
@@ -12846,19 +12843,18 @@ export default function ChatView({
             {shouldRenderChatPaneContent && isCenteredEmptyLanding ? (
               <div
                 className={cn(
-                  "chat-pane-enter flex flex-1 items-center justify-center",
+                  "chat-pane-enter flex min-h-0 flex-1 flex-col",
                   CHAT_COLUMN_GUTTER_CLASS_NAME,
                 )}
               >
-                {/* Center the heading, composer, and suggestion list together as a
-                    single group: the suggestions live in normal flow so the whole
-                    block (composer + suggestions) stays vertically centered in the
-                    view instead of the composer being centered with the list hanging
-                    below it. */}
-                <div className="flex w-full flex-col justify-center">
+                {/* The heading floats centered in the space above the composer, which is
+                    anchored to the bottom of the pane (with its workspace-tools rail
+                    stacked on top of the input) so starting a chat keeps the composer
+                    where it lives for the rest of the conversation. */}
+                <div className="flex min-h-0 flex-1 items-center justify-center">
                   <div
                     className={cn(
-                      "flex flex-col items-center gap-4 px-6 pb-5 text-center select-none",
+                      "flex flex-col items-center gap-4 px-6 text-center select-none",
                       CHAT_COLUMN_FRAME_CLASS_NAME,
                     )}
                   >
@@ -12909,19 +12905,15 @@ export default function ChatView({
                       )}
                     </h2>
                   </div>
+                </div>
+                <div className="w-full shrink-0 pb-3 sm:pb-4">
                   {composerSection}
-                  {(isGitRepo && !environmentEnabled && !isCenteredEmptyLanding) ||
-                  relocateComposerLeadingControls ? (
+                  {relocateComposerLeadingControls ? (
                     <div className={COMPOSER_COLUMN_FRAME_CLASS_NAME}>
                       <div className="flex w-full items-center gap-1">
-                        {relocateComposerLeadingControls ? (
-                          <div className="flex shrink-0 items-center gap-1 pl-1">
-                            {renderComposerLeadingControls({ iconOnly: true })}
-                          </div>
-                        ) : null}
-                        {isGitRepo && !environmentEnabled && !isCenteredEmptyLanding ? (
-                          <BranchToolbar {...branchToolbarProps} className="min-w-0 flex-1" />
-                        ) : null}
+                        <div className="flex shrink-0 items-center gap-1 pl-1">
+                          {renderComposerLeadingControls({ iconOnly: true })}
+                        </div>
                       </div>
                     </div>
                   ) : null}
