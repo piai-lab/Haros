@@ -2,7 +2,6 @@ import type { ModelSelection, ProviderKind, ThreadId } from "@omnimind/contracts
 import { useLocation, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { useAppSettings } from "~/appSettings";
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { ProviderIcon } from "~/components/ProviderIcon";
 import {
@@ -96,7 +95,6 @@ export function FirstRunReadinessDialog() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const { settings } = useAppSettings();
   const [selectedProvider, setSelectedProvider] = useState<ProviderKind>("omnimind");
   const controller = useFirstRunReadinessController(selectedProvider);
   const [step, setStep] = useState<WizardStep>("engine");
