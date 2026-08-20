@@ -2,15 +2,11 @@
 
 ## 当前目标
 
-第七个独立 `RETIRE` 已形成 source candidate：Usage History discovery cursor 现在只接受 `null` 或 canonical version 1 JSON DFS stack，首版内部标量 path reader、跳过逻辑与兼容注释已完整删除。原始 Provider archive、SQLite schema、worker protocol、parser/计数模型、event/file identity、Refresh/Reindex 与 Web UI 均未改变；非 canonical cursor 复用既有 worker failure、provider-scoped `paused`、last-good 与 Resume 恢复，不新增 migration、cleanup、error code、fallback 或第二 cursor owner。focused、完整 Server suite、typecheck、build 与构建 worker stdin probe 已通过，packaged 安装与隔离旧 cursor journey 是当前唯一未闭合动作。
+第七个独立 `RETIRE` 已闭合：Usage History discovery cursor 现在只接受 `null` 或 canonical version 1 JSON DFS stack，首版内部标量 path reader、跳过逻辑与兼容注释已完整删除。原始 Provider archive、SQLite schema、worker protocol、parser/计数模型、event/file identity、Refresh/Reindex 与 Web UI 均未改变；非 canonical cursor 复用既有 worker failure、provider-scoped `paused`、last-good 与 Resume 恢复，不新增 migration、cleanup、error code、fallback 或第二 cursor owner。
 
-安装版 product bytes 现准确绑定 pushed product `3c05e3ce3521cfd82793fa192048614fc2b581ee`。同 SHA arm64 DMG SHA-256 为 `beeca6ef5583e99465e3567364348450fc5f4b9d828e56eff76dbaa17e852f71`，DMG staged `app.asar` 与安装版 `app.asar` 均为 `d8492eb0d40a394857bc8bf1563afa739ccdc9712c759741b9e8ad6c95a74d07`，240 个 staged legal identities 闭合；本机安装版完成 ad-hoc 重签并通过 strict deep verification。后续 source-only 状态提交不冒充 shipped bytes。
+安装版 product bytes 现准确绑定 pushed product `8dfdd7310f984956de8e3b513f497c8a30700761`。同 SHA arm64 DMG SHA-256 为 `70fff3aeb24809521a3738eb3a9ac4df6fbf7882af2320d205d27e9453b77c43`，DMG staged `app.asar` 与安装版 `app.asar` 均为 `7d46bf8644099993c5d06ce4cc9b32c343ae10148935956cee57b706bbd084d2`，240 个 staged legal identities 闭合；本机安装版完成 ad-hoc 重签并通过 strict deep verification。后续 docs-only 状态提交不冒充 shipped bytes。
 
-一个 fresh、任务专用 packaged profile 先由进程参数证明 Electron `userData`、OmniMind home、Provider private home 与 SQLite 全部隔离，再以环境变量引用而非明文配置发现精确 MiMo `mimo-v2.5-pro` 与 DeepSeek `deepseek-v4-pro` catalog。两者都经真实 Agent→Pi→Host tool 链创建 `mode=standalone`、`schedule={type:"daily",timeOfDay:"09:30",timezone:"Asia/Shanghai"}` 的定义；各自 Pi transcript 中 tool arguments 与 nested schedule 都保持 object。两条同线程 continuation 均完成 view→精确 revision→delete/archive。停机 SQLite 证明两个定义 disabled、archived、revision 1、iteration count 0，Automation run count 为 0；同 profile 重开后两个 thread 仍 completed、catalog 仍 ready、active definition 与 run 都为 0，再次正常退出后全部 OmniMind 进程归零。
-
-route defect 有两个同一导航责任内的最早错误点：Sidebar 在当前 segment 的 remembered route 失效时只回退 Server threads，忽略既有 recent-view MRU 中仍有效的本地 draft；Agent `/` landing 又把未 promotion 的 Terminal-first draft 排除在可恢复集合之外。修复复用既有 MRU、draft persistence、project boundary 与 route resolver，没有新增 route store、snapshot retry、reload、兼容 alias、schema 或模型状态。最终安装包在隔离 profile 中完成 Terminal draft→Chat→Agent，并准确回到原 Terminal；持久化的 current route 经 LevelDB 精确读取确认后，同 profile 冷启动也直接恢复该 Terminal draft。正常退出后全部 OmniMind 进程归零。
-
-README 已退休当前/历次安装产物、历史 journey 与施工状态叙事，只保留稳定产品身份、战略不变量、production adoption 和权威路由。当前目标、安装产物、真实阻塞与下一动作重新由本文件单独拥有；该文档切片不进入 shipped bytes，安装版仍准确绑定 `3c05e3ce3521cfd82793fa192048614fc2b581ee`。
+一个 fresh、任务专用 packaged profile 先由进程参数证明 Electron `userData`、OmniMind home、Codex/Claude private home 与 SQLite 全部隔离，再从本地 Codex fixture 建立 1 个会话、80 input、8 output 的 ready last-good。停机后只向任务 SQLite 植入旧标量 cursor；同 profile 重开准确收敛为 `paused`，last-good 聚合不变，现有“继续”动作恢复 canonical 重扫且聚合不重不漏。停机 SQLite 证明两 Provider 均 `ready`、cursor `NULL`、discovery complete、restart 归零、detail 清空；同 profile 冷重开仍为 ready 与 80/8，最终全部 OmniMind 进程归零。旧 App 与任务 profile 已移入 Trash，可恢复；真实用户 profile、Provider archive 与凭据均未读取或改写。
 
 ## 已确认范围
 
@@ -29,7 +25,7 @@ official signing、notarization、Windows/Linux artifacts、GitHub Release 与 u
 
 ## 下一动作
 
-提交并推送当前单一 source concern；随后只从该 exact pushed SHA 重建、安装 macOS ad-hoc candidate，并以 fresh、完全隔离的任务 profile 证明 canonical indexing、旧标量 cursor 的 paused/last-good 边界、Resume 后聚合守恒、同 profile 重开与进程清理。闭合后重新读取当时的 `main` 并全局重排，不默认继续寻找删除候选。
+重新读取当时的 `main` 并全局重排，不默认继续寻找删除候选。package version mismatch 与 Browser E2E credential seam 分别属于发行 correctness 和测试装配，若进入施工必须独立裁决；engine catalog warming 与 SQLite migrations 1–100 继续 `DEFER`。
 
 ## 权威路由
 
