@@ -15,10 +15,6 @@ import {
 } from "@omnimind/shared/desktopIdentity";
 
 import {
-  readReleaseUpdatePolicyConfig,
-  resolveReleaseUpdatePolicy,
-} from "./lib/release-update-policy.ts";
-import {
   OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
@@ -114,16 +110,6 @@ function verifyCanonicalIdentity(): void {
   }
   if (OMNIMIND_DESKTOP_UPDATE_CHANNEL !== "omnimind") {
     throw new Error(`Unexpected desktop update channel: ${OMNIMIND_DESKTOP_UPDATE_CHANNEL}.`);
-  }
-
-  const releasePolicy = readReleaseUpdatePolicyConfig(repoRoot);
-  const resolvedPolicy = resolveReleaseUpdatePolicy("9.9.9", releasePolicy);
-  if (
-    resolvedPolicy.lane !== "clean" ||
-    !resolvedPolicy.makeLatest ||
-    resolvedPolicy.mirrorToStableChannel
-  ) {
-    throw new Error("Expected stable clean OmniMind releases to publish on GitHub Latest.");
   }
 }
 

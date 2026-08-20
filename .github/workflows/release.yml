@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
-      version: ${{ steps.release_meta.outputs.version }}
+      version: ${{ steps.source_provenance.outputs.version }}
       source_commit: ${{ steps.source_provenance.outputs.source_commit }}
       source_tag: ${{ steps.source_provenance.outputs.source_tag }}
       lockfile_sha256: ${{ steps.source_provenance.outputs.lockfile_sha256 }}
@@ -40,24 +40,16 @@ jobs:
         with:
           node-version-file: package.json
 
-      - id: release_meta
-        name: Resolve build version
+      - id: source_provenance
+        name: Resolve version and verify exact build source
         env:
           RELEASE_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
-        run: node scripts/resolve-release-update-policy.ts "$RELEASE_VERSION"
-
-      - id: source_provenance
-        name: Verify exact build source
-        env:
-          RELEASE_VERSION: ${{ steps.release_meta.outputs.version }}
-          RELEASE_TAG: ${{ steps.release_meta.outputs.tag }}
           EXPECTED_COMMIT: ${{ github.sha }}
           SOURCE_REF_TYPE: ${{ github.ref_type }}
           SOURCE_REF_NAME: ${{ github.ref_name }}
         run: |
           node scripts/verify-release-source-provenance.ts \
             "$RELEASE_VERSION" \
-            "$RELEASE_TAG" \
             false \
             "$EXPECTED_COMMIT" \
             "$SOURCE_REF_TYPE" \

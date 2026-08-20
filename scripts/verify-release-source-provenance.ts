@@ -9,16 +9,18 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { serializeReleaseGithubOutput } from "./lib/release-github-output.ts";
+import { resolveReleaseVersion } from "./lib/release-version.ts";
 import { releasePackageFiles } from "./update-release-package-versions.ts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const [version, tag, publishRelease, expectedCommit, refType, refName] = process.argv.slice(2);
+const [rawVersion, publishRelease, expectedCommit, refType, refName] = process.argv.slice(2);
 
-if (!version || !tag || !publishRelease || !expectedCommit) {
+if (!rawVersion || !publishRelease || !expectedCommit) {
   throw new Error(
-    "Usage: node scripts/verify-release-source-provenance.ts <version> <tag> <publish:true|false> <expected-commit> [ref-type] [ref-name]",
+    "Usage: node scripts/verify-release-source-provenance.ts <version> <publish:true|false> <expected-commit> [ref-type] [ref-name]",
   );
 }
+const { version, tag } = resolveReleaseVersion(rawVersion);
 if (publishRelease !== "true" && publishRelease !== "false") {
   throw new Error(`Invalid publication mode: ${publishRelease}`);
 }
@@ -87,6 +89,8 @@ const lockfileSha256 = createHash("sha256")
   .digest("hex");
 
 const output = {
+  version,
+  tag,
   source_commit: sourceCommit,
   source_tag: sourceTag,
   lockfile_sha256: lockfileSha256,
