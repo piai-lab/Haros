@@ -10987,6 +10987,7 @@ export default function ChatView({
     canOfferCompactCommand: isServerThread && canCompactActiveSession,
     canOfferForkCommand,
     canOfferSideCommand,
+    sidechatTargetProviders: handoffTargetProviders,
     canOfferExportCommand,
     supportsTextNativeReviewCommand,
     fastModeEnabled,

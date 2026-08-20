@@ -1,4 +1,5 @@
 import {
+  PROVIDER_DISPLAY_NAMES,
   type ClientOrchestrationCommand,
   type ModelSelection,
   type MessageId,
@@ -30,11 +31,13 @@ import {
   parseFastSlashCommandAction,
   parseForkSlashCommandArgs,
   parseGoalSlashCommandArgs,
+  parseSideSlashCommandArgs,
   type ForkSlashCommandTarget,
 } from "../composerSlashCommands";
 import {
   buildHistoryOnlyForkPayload,
   buildThreadHandoffImportedMessages,
+  resolveThreadHandoffModelSelection,
 } from "../lib/threadHandoff";
 import { toastManager } from "../components/ui/toast";
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
@@ -131,6 +134,7 @@ export function useComposerSlashCommands(input: {
   canOfferCompactCommand: boolean;
   canOfferForkCommand: boolean;
   canOfferSideCommand: boolean;
+  sidechatTargetProviders: ReadonlyArray<ProviderKind>;
   canOfferExportCommand: boolean;
   supportsTextNativeReviewCommand: boolean;
   fastModeEnabled: boolean;
@@ -184,6 +188,7 @@ export function useComposerSlashCommands(input: {
     canOfferCompactCommand,
     canOfferForkCommand,
     canOfferSideCommand,
+    sidechatTargetProviders,
     canOfferExportCommand,
     supportsTextNativeReviewCommand,
     fastModeEnabled,
@@ -604,7 +609,7 @@ export function useComposerSlashCommands(input: {
 
   const sidechatCreationBySourceThreadIdRef = useRef(new Map<ThreadId, SidechatCreationFlight>());
   const createSidechatFromSlashCommand = useCallback(
-    (inputOptions?: { initialPrompt?: string }): Promise<true> => {
+    (inputOptions?: { initialPrompt?: string; targetProvider?: ProviderKind }): Promise<true> => {
       if (!selectedModelSelection) {
         toastManager.add({ type: "warning", title: t("composer.modelRequiredToSend") });
         return Promise.resolve(true);
@@ -625,6 +630,18 @@ export function useComposerSlashCommands(input: {
         return Promise.resolve(true);
       }
 
+      const targetProvider = inputOptions?.targetProvider ?? null;
+      const sidechatModelSelection =
+        targetProvider && targetProvider !== selectedModelSelection.provider
+          ? resolveThreadHandoffModelSelection({
+              sourceThread: activeThread,
+              targetProvider,
+              projectDefaultModelSelection: activeProject.defaultModelSelection,
+              stickyModelSelectionByProvider:
+                useComposerDraftStore.getState().stickyModelSelectionByProvider,
+            })
+          : selectedModelSelection;
+
       return createOrJoinSidechat({
         inFlightBySourceThreadId: sidechatCreationBySourceThreadIdRef.current,
         sourceThreadId: activeThread.id,
@@ -634,7 +651,7 @@ export function useComposerSlashCommands(input: {
             api,
             project: activeProject,
             sourceThread: activeThread,
-            selectedModelSelection,
+            selectedModelSelection: sidechatModelSelection,
             initialPrompt,
             openSidechat: (sidechatThreadId) => {
               useRightDockStore.getState().openPane(activeThread.id, {
@@ -648,7 +665,7 @@ export function useComposerSlashCommands(input: {
           sendSidechatPrompt({
             api,
             threadId: sidechatThreadId,
-            selectedModelSelection,
+            selectedModelSelection: sidechatModelSelection,
             prompt,
           }),
         onCreationResult: (result) => {
@@ -1079,9 +1096,29 @@ export function useComposerSlashCommands(input: {
           });
           return true;
         }
+        const { targetProvider, prompt, unavailableProvider } = parseSideSlashCommandArgs(
+          slashInvocation.args,
+          {
+            currentProvider: selectedModelSelection.provider,
+            availableTargetProviders: sidechatTargetProviders,
+          },
+        );
+        if (unavailableProvider) {
+          toastManager.add({
+            type: "warning",
+            title: `${PROVIDER_DISPLAY_NAMES[unavailableProvider]} is unavailable for Side`,
+            description: "Enable and sign in to that provider, then run /side again.",
+          });
+          return true;
+        }
+        // Hoisted out of the `try` below: React Compiler cannot lower `?:` inside
+        // a try block and would bail out of compiling this whole hook.
+        const sidechatOptions = targetProvider
+          ? { initialPrompt: prompt, targetProvider }
+          : { initialPrompt: prompt };
         try {
           editorActions.clearComposerSlashDraft();
-          await createSidechatFromSlashCommand({ initialPrompt: slashInvocation.args });
+          await createSidechatFromSlashCommand(sidechatOptions);
         } catch (error) {
           toastManager.add({
             type: "error",
@@ -1108,6 +1145,8 @@ export function useComposerSlashCommands(input: {
       openFeedbackDialog,
       openReviewTargetPicker,
       selectedProvider,
+      selectedModelSelection.provider,
+      sidechatTargetProviders,
       supportsTextNativeReviewCommand,
       runCodexReviewStart,
       runExportSlashCommand,
