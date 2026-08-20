@@ -149,7 +149,7 @@ type AntigravitySessionContext = ToolSurfaceCounters & {
   /**
    * Conversations owned by spawned subagents, keyed by conversation id.
    * The capture hook is installed globally, so a subagent CLI spawned by the
-   * session's own CLI inherits `SYNARA_ANTIGRAVITY_EVENTS` and writes its
+   * session's own CLI inherits `OMNIMIND_ANTIGRAVITY_EVENTS` and writes its
    * pre-invocation/tool/stop events into this session's hook stream. Those
    * events describe a different process and conversation and must never
    * rebind the session; they are forwarded as child-thread events carrying
@@ -235,7 +235,7 @@ function shellQuote(value: string, platform: NodeJS.Platform = process.platform)
  * denial that aborts the invocation. The CLI raises a PreInvocation for the
  * subagent's first model call when the parent agent invokes a subagent, so
  * `{}` there denies the subagent launch and the parent CLI exits with code 1
- * ("Antigravity CLI exited with code 1."). Synara-managed sessions spawn
+ * ("Antigravity CLI exited with code 1."). OmniMind-managed sessions spawn
  * subagents deliberately, so pre-invocation must answer "allow".
  *
  * `{}` stays correct for the other hook points, including Stop, where an
@@ -343,7 +343,7 @@ process.stdin.on("end", () => {
     const decision = process.env.OMNIMIND_ANTIGRAVITY_HOOK_DECISION === "allow" ? "allow" : "ask";
     process.stdout.write(JSON.stringify({ decision }) + "\\n");
   } else if (event === "pre-invocation") {
-    // PreInvocation vetoes the upcoming LLM invocation; Synara-managed
+    // PreInvocation vetoes the upcoming LLM invocation; OmniMind-managed
     // sessions run subagents deliberately, so never block them here. An
     // empty object would deny the launch and the parent CLI exits 1.
     process.stdout.write('{"decision":"allow"}\\n');
@@ -1510,7 +1510,7 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     /**
      * Forward a hook event that belongs to a subagent conversation spawned by
      * the session's own CLI. The capture hook is installed globally, so the
-     * subagent CLI inherits `SYNARA_ANTIGRAVITY_EVENTS` and writes its
+     * subagent CLI inherits `OMNIMIND_ANTIGRAVITY_EVENTS` and writes its
      * events into this session's hook stream. Those events describe a
      * different process and conversation: they must never rebind the session
      * (cursor, transcript, thread) — instead they are surfaced as child-thread

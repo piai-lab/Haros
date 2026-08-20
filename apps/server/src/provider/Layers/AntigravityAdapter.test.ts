@@ -1996,6 +1996,7 @@ describe("Antigravity background task helpers (#752)", () => {
               teardownProcessTree: async () => {
                 teardownCalls += 1;
                 resolveTeardown();
+                return { escalated: false, signalErrors: [] };
               },
             }).pipe(
               Layer.provideMerge(
@@ -2068,7 +2069,7 @@ describe("Antigravity background task helpers (#752)", () => {
               Effect.gen(function* () {
                 if (event.type === "item.started" || event.type === "item.completed") {
                   itemEventTypes.push(event.type);
-                  itemEventTitles.push(event.payload.title);
+                  itemEventTitles.push(event.payload.title ?? "");
                   if (itemEventTypes.length === 2) {
                     yield* Deferred.succeed(itemsObserved, undefined);
                   }
@@ -2126,7 +2127,7 @@ describe("Antigravity background task helpers (#752)", () => {
               ensurePlugin: async () => undefined,
               readCompleteLines,
               spawnProcess,
-              teardownProcessTree: async () => undefined,
+              teardownProcessTree: async () => ({ escalated: false, signalErrors: [] }),
             }).pipe(
               Layer.provideMerge(ServerConfig.layerTest(root, { prefix: "final-drain-" })),
               Layer.provideMerge(NodeServices.layer),
@@ -2238,7 +2239,7 @@ describe("Antigravity background task helpers (#752)", () => {
               ensurePlugin: async () => undefined,
               readCompleteLines,
               spawnProcess,
-              teardownProcessTree: async () => undefined,
+              teardownProcessTree: async () => ({ escalated: false, signalErrors: [] }),
             }).pipe(
               Layer.provideMerge(ServerConfig.layerTest(root, { prefix: "stale-poll-" })),
               Layer.provideMerge(NodeServices.layer),
@@ -2431,7 +2432,7 @@ describe("Antigravity background task helpers (#752)", () => {
             makeAntigravityAdapterLive({
               ensurePlugin: async () => undefined,
               spawnProcess,
-              teardownProcessTree: async () => undefined,
+              teardownProcessTree: async () => ({ escalated: false, signalErrors: [] }),
             }).pipe(
               Layer.provideMerge(
                 ServerConfig.layerTest(root, { prefix: "antigravity-background-restart-" }),
