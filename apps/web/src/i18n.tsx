@@ -2190,6 +2190,7 @@ export const EN_MESSAGES = {
   "settings.appSection": "App",
   "settings.appIcon": "App icon",
   "settings.appIconDescription": "Choose the icon OmniMind uses in the dock or taskbar.",
+  "settings.updatingAppIcon": "Updating app icon",
   "settings.typography": "Typography and spacing",
   "settings.systemUiFont": "Use system UI font",
   "settings.systemUiFontDescription":
@@ -5719,6 +5720,7 @@ export const ZH_CN_MESSAGES = {
   "settings.appSection": "应用",
   "settings.appIcon": "应用图标",
   "settings.appIconDescription": "选择 OmniMind 在程序坞或任务栏中使用的图标。",
+  "settings.updatingAppIcon": "正在更新应用图标",
   "settings.typography": "字体与间距",
   "settings.systemUiFont": "使用系统界面字体",
   "settings.systemUiFontDescription":

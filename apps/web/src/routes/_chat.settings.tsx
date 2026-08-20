@@ -842,7 +842,12 @@ function SettingsRouteView() {
               <AppIconPicker
                 platform={typeof navigator === "undefined" ? "" : navigator.platform}
                 value={settings.desktopAppIcon}
-                onValueChange={(desktopAppIcon) => updateSettings({ desktopAppIcon })}
+                onValueChange={async (desktopAppIcon) => {
+                  if (desktopAppIcon !== settings.desktopAppIcon) {
+                    updateSettings({ desktopAppIcon });
+                  }
+                  await window.desktopBridge?.setAppIcon(desktopAppIcon);
+                }}
               />
             }
           />

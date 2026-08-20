@@ -1,10 +1,9 @@
 // FILE: desktopAppIcon.ts
-// Purpose: Validate app-icon preferences, map platform resources, and refresh native icon surfaces.
+// Purpose: Validate app-icon preferences and map them to platform resources.
 // Layer: Desktop-native preference logic
 
 import { DesktopAppIcon } from "@omnimind/contracts";
 import { Schema } from "effect";
-import type { BrowserWindow } from "electron";
 
 type DesktopPlatform = "darwin" | "linux" | "win32";
 
@@ -33,16 +32,6 @@ const APP_ICON_RESOURCE_NAMES = {
   },
 } as const;
 
-// Explorer coalesces a synchronous detach/reattach and keeps its cached icon.
-// Keep the taskbar button detached long enough for the shell to process removal.
-const WINDOWS_TASKBAR_ICON_REFRESH_DELAY_MS = 250;
-let windowsTaskbarIconRefreshGeneration = 0;
-
-type WindowsTaskbarIconRefreshScheduler = (
-  callback: () => void,
-  delayMs: number,
-) => unknown;
-
 export const isDesktopAppIcon = Schema.is(DesktopAppIcon);
 
 export function shouldUpdateDesktopAppIcon(
@@ -50,37 +39,6 @@ export function shouldUpdateDesktopAppIcon(
   requestedIcon: DesktopAppIcon,
 ): boolean {
   return currentIcon !== requestedIcon;
-}
-
-export function refreshWindowsTaskbarIcon({
-  platform,
-  window,
-  schedule = setTimeout,
-}: {
-  readonly platform: NodeJS.Platform;
-  readonly window: BrowserWindow | null;
-  readonly schedule?: WindowsTaskbarIconRefreshScheduler;
-}): void {
-  if (
-    platform !== "win32" ||
-    !window ||
-    window.isDestroyed() ||
-    !window.isVisible()
-  ) {
-    return;
-  }
-
-  const generation = ++windowsTaskbarIconRefreshGeneration;
-  window.setSkipTaskbar(true);
-  schedule(() => {
-    if (
-      generation !== windowsTaskbarIconRefreshGeneration ||
-      window.isDestroyed()
-    ) {
-      return;
-    }
-    window.setSkipTaskbar(false);
-  }, WINDOWS_TASKBAR_ICON_REFRESH_DELAY_MS);
 }
 
 export function desktopAppIconResourceName(

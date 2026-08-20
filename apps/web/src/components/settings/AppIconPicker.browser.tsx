@@ -51,9 +51,62 @@ it("uses the OmniMind icon variants and selects the alternate", async () => {
   expect(onValueChange).toHaveBeenCalledWith("icon");
 });
 
+it("shows a loading state and ignores extra clicks while an apply is in flight", async () => {
+  let release: (() => void) | undefined;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const onValueChange = vi.fn(() => pending);
+  const mounted = await render(
+    <AppIconPicker platform="Win32" value="default" onValueChange={onValueChange} />,
+  );
+
+  const iconButton = mounted.getByRole("button", { name: "Icon", exact: true });
+  const defaultIconButton = mounted.getByRole("button", { name: "Default icon" });
+  await iconButton.click();
+  await expect.element(mounted.getByRole("status", { name: "Updating app icon" })).toBeVisible();
+  await expect.element(defaultIconButton).toBeDisabled();
+  await expect.element(iconButton).toBeDisabled();
+  expect(onValueChange).toHaveBeenCalledTimes(1);
+
+  release?.();
+  await vi.waitFor(() => expect.element(defaultIconButton).toBeEnabled());
+  expect(onValueChange).toHaveBeenCalledTimes(1);
+});
+
+it("clears the loading state without leaking a rejected apply", async () => {
+  const applyError = new Error("native icon apply failed");
+  const unhandledRejections: unknown[] = [];
+  const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+    event.preventDefault();
+    unhandledRejections.push(event.reason);
+  };
+  window.addEventListener("unhandledrejection", onUnhandledRejection);
+
+  try {
+    const mounted = await render(
+      <AppIconPicker
+        platform="Win32"
+        value="default"
+        onValueChange={() => Promise.reject(applyError)}
+      />,
+    );
+    const iconButton = mounted.getByRole("button", { name: "Icon", exact: true });
+
+    await iconButton.click();
+    await vi.waitFor(() => expect.element(iconButton).toBeEnabled());
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(unhandledRejections).toEqual([]);
+  } finally {
+    window.removeEventListener("unhandledrejection", onUnhandledRejection);
+  }
+});
+
 it("offers the dark artwork only on macOS", async () => {
+  const onValueChange = vi.fn();
   const mac = await render(
-    <AppIconPicker platform="MacIntel" value="dark" onValueChange={vi.fn()} />,
+    <AppIconPicker platform="MacIntel" value="default" onValueChange={onValueChange} />,
   );
   await expect
     .element(mac.getByRole("button", { name: "Dark icon" }))
@@ -65,6 +118,8 @@ it("offers the dark artwork only on macOS", async () => {
       .querySelector("img")
       ?.getAttribute("src"),
   ).toBe("/app-icons/dark.png");
+  await mac.getByRole("button", { name: "Dark icon" }).click();
+  expect(onValueChange).toHaveBeenCalledWith("dark");
   mac.unmount();
 
   const windows = await render(
