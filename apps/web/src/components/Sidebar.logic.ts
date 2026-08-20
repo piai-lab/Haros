@@ -473,6 +473,7 @@ export type SettingsBackTarget =
 
 export function resolveSettingsBackTarget(input: {
   lastThreadRoute: LastThreadRoute | null;
+  recentThreadRoutes?: readonly LastThreadRoute[];
   availableThreadIds: ReadonlySet<string>;
   latestThreadId: string | null;
   availableSplitViewIds?: ReadonlySet<string>;
@@ -489,6 +490,23 @@ export function resolveSettingsBackTarget(input: {
       threadId: restorableRoute.threadId,
       splitViewId: restorableRoute.splitViewId,
     };
+  }
+
+  for (const recentThreadRoute of input.recentThreadRoutes ?? []) {
+    const recentRestorableRoute = resolveRestorableThreadRoute({
+      lastThreadRoute: recentThreadRoute,
+      availableThreadIds: input.availableThreadIds,
+      ...(input.availableSplitViewIds
+        ? { availableSplitViewIds: input.availableSplitViewIds }
+        : {}),
+    });
+    if (recentRestorableRoute) {
+      return {
+        kind: "thread",
+        threadId: recentRestorableRoute.threadId,
+        splitViewId: recentRestorableRoute.splitViewId,
+      };
+    }
   }
 
   if (input.latestThreadId) {

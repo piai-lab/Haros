@@ -603,6 +603,26 @@ describe("resolveSettingsBackTarget", () => {
     });
   });
 
+  it("restores the target segment's most recent draft when another segment owns the remembered route", () => {
+    expect(
+      resolveSettingsBackTarget({
+        lastThreadRoute: {
+          threadId: "studio-draft",
+        },
+        recentThreadRoutes: [
+          { threadId: "studio-draft" },
+          { threadId: "terminal-draft" },
+          { threadId: "older-agent-draft" },
+        ],
+        availableThreadIds: new Set(["terminal-draft", "older-agent-draft"]),
+        latestThreadId: null,
+      }),
+    ).toEqual({
+      kind: "thread",
+      threadId: "terminal-draft",
+    });
+  });
+
   it("falls back to home when no thread target is available", () => {
     expect(
       resolveSettingsBackTarget({

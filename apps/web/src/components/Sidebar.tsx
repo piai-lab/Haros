@@ -152,6 +152,7 @@ import {
 } from "../lib/studioProjects";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useLatestProjectStore } from "../latestProjectStore";
+import { useRecentViewsStore } from "../recentViewsStore";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
 import { dispatchThreadRename } from "../lib/threadRename";
 import { resolveThreadDisplayTitle } from "../lib/threadDisplayTitle";
@@ -1344,6 +1345,7 @@ export default function Sidebar() {
   const openTerminalThreadPage = useTerminalStateStore((state) => state.openTerminalThreadPage);
   const clearProjectDraftThreads = useComposerDraftStore((store) => store.clearProjectDraftThreads);
   const draftThreadsByThreadId = useComposerDraftStore((store) => store.draftThreadsByThreadId);
+  const recentViews = useRecentViewsStore((store) => store.recentViews);
   const temporaryThreadIds = useTemporaryThreadStore((store) => store.temporaryThreadIds);
   const persistedPinnedProjectIds = usePinnedProjectsStore((store) => store.pinnedProjectIds);
   const pinProjectLocally = usePinnedProjectsStore((store) => store.pinProject);
@@ -2284,6 +2286,16 @@ export default function Sidebar() {
       }
       return resolveSettingsBackTarget({
         lastThreadRoute,
+        recentThreadRoutes: recentViews.flatMap((view) =>
+          view.kind === "thread"
+            ? [
+                {
+                  threadId: view.threadId,
+                  ...(view.splitViewId ? { splitViewId: view.splitViewId } : {}),
+                },
+              ]
+            : [],
+        ),
         availableThreadIds,
         availableSplitViewIds: new Set(
           Object.keys(splitViewsById).filter((splitViewId) => splitViewsById[splitViewId]),
@@ -2291,7 +2303,7 @@ export default function Sidebar() {
         latestThreadId: latestThread?.id ?? null,
       });
     },
-    [appSettings.sidebarThreadSortOrder, lastThreadRoute, splitViewsById],
+    [appSettings.sidebarThreadSortOrder, lastThreadRoute, recentViews, splitViewsById],
   );
 
   // Fresh unsent chats have a route id but no persisted sidebar summary yet. Keep those draft
