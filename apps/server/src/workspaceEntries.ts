@@ -17,14 +17,20 @@ import {
   ProjectEntry,
   ProjectLocalSearchEntry,
   ProjectContentMatch,
+  ProjectPrewarmSearchIndexInput,
+  ProjectPrewarmSearchIndexResult,
   ProjectSearchContentInput,
   ProjectSearchContentResult,
   ProjectSearchEntriesInput,
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesInput,
   ProjectSearchLocalEntriesResult,
+  PROJECT_SEARCH_CONTENT_MAX_LIMIT,
+  PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH,
+  PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH,
 } from "@omnimind/contracts";
 import { isExplicitRelativePath, isWindowsAbsolutePath } from "@omnimind/shared/path";
+import { normalizeWorkspaceEntrySearchQuery } from "@omnimind/shared/searchQuery";
 import { isContainedPath, resolveRealPathWithinRoot } from "./workspace/realPathContainment";
 
 const WORKSPACE_CACHE_TTL_MS = 15_000;
@@ -90,6 +96,7 @@ class WorkspacePolicyUnavailable extends Error {
 interface SearchableWorkspaceEntry extends ProjectEntry {
   normalizedPath: string;
   normalizedName: string;
+  depth: number;
 }
 
 interface RankedWorkspaceEntry {
@@ -122,18 +129,24 @@ function basenameOf(input: string): string {
 
 function toSearchableWorkspaceEntry(entry: ProjectEntry): SearchableWorkspaceEntry {
   const normalizedPath = entry.path.toLowerCase();
+  let depth = 1;
+  for (let index = 0; index < normalizedPath.length; index += 1) {
+    if (normalizedPath[index] === "/") depth += 1;
+  }
   return {
     ...entry,
     normalizedPath,
     normalizedName: basenameOf(normalizedPath),
+    depth,
   };
 }
 
-function normalizeQuery(input: string): string {
-  return input
-    .trim()
-    .replace(/^[@./]+/, "")
-    .toLowerCase();
+function normalizeLocalSearchQuery(input: string): string {
+  let query = input.trim();
+  while (query.startsWith("@") || query.startsWith("/") || query.startsWith("./")) {
+    query = query.startsWith("./") ? query.slice(2) : query.slice(1);
+  }
+  return query.toLowerCase();
 }
 
 function scoreSubsequenceMatch(value: string, query: string): number | null {
@@ -178,19 +191,20 @@ function scoreEntry(entry: SearchableWorkspaceEntry, query: string): number | nu
   if (normalizedName === query) return 0;
   if (normalizedPath === query) return 1;
   if (normalizedName.startsWith(query)) return 2;
-  if (normalizedPath.startsWith(query)) return 3;
-  if (normalizedPath.includes(`/${query}`)) return 4;
-  if (normalizedName.includes(query)) return 5;
-  if (normalizedPath.includes(query)) return 6;
+  if (normalizedName.includes(query)) return 3;
 
   const nameFuzzyScore = scoreSubsequenceMatch(normalizedName, query);
   if (nameFuzzyScore !== null) {
     return 100 + nameFuzzyScore;
   }
 
+  if (normalizedPath.startsWith(query)) return 1000;
+  if (normalizedPath.includes(`/${query}`)) return 1001;
+  if (normalizedPath.includes(query)) return 1002;
+
   const pathFuzzyScore = scoreSubsequenceMatch(normalizedPath, query);
   if (pathFuzzyScore !== null) {
-    return 200 + pathFuzzyScore;
+    return 1100 + pathFuzzyScore;
   }
 
   return null;
@@ -202,6 +216,8 @@ function compareRankedWorkspaceEntries(
 ): number {
   const scoreDelta = left.score - right.score;
   if (scoreDelta !== 0) return scoreDelta;
+  const depthDelta = left.entry.depth - right.entry.depth;
+  if (depthDelta !== 0) return depthDelta;
   return left.entry.path.localeCompare(right.entry.path);
 }
 
@@ -1120,6 +1136,13 @@ export function clearWorkspaceIndexCache(cwd: string): void {
   }
 }
 
+export function prewarmWorkspaceSearchIndex(
+  input: ProjectPrewarmSearchIndexInput,
+): ProjectPrewarmSearchIndexResult {
+  void getWorkspaceIndex(input.cwd).catch(() => undefined);
+  return { started: true };
+}
+
 function expandHomePath(input: string): string {
   if (input === "~") {
     return os.homedir();
@@ -1180,7 +1203,7 @@ export async function searchWorkspaceEntries(
   input: ProjectSearchEntriesInput,
 ): Promise<ProjectSearchEntriesResult> {
   const index = await getWorkspaceIndex(input.cwd);
-  const normalizedQuery = normalizeQuery(input.query);
+  const normalizedQuery = normalizeWorkspaceEntrySearchQuery(input.query);
   const limit = Math.max(0, Math.floor(input.limit));
   const rankedEntries: RankedWorkspaceEntry[] = [];
   let matchedEntryCount = 0;
@@ -1206,14 +1229,13 @@ export async function searchWorkspaceEntries(
 }
 
 const CONTENT_SEARCH_DEFAULT_LIMIT = 50;
-const CONTENT_SEARCH_MAX_LIMIT = 100;
-const CONTENT_SEARCH_MIN_QUERY_LENGTH = 2;
+const CONTENT_SEARCH_MAX_LIMIT = PROJECT_SEARCH_CONTENT_MAX_LIMIT;
+const CONTENT_SEARCH_MIN_QUERY_LENGTH = PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH;
 const CONTENT_SEARCH_MAX_FILE_BYTES = 512 * 1024;
 const CONTENT_SEARCH_MAX_MATCHES_PER_FILE = 5;
-const CONTENT_SEARCH_MAX_FILES_SCANNED = 2_000;
 const CONTENT_SEARCH_TIME_BUDGET_MS = 4_000;
 const CONTENT_SEARCH_READ_CONCURRENCY = 8;
-const CONTENT_SEARCH_MAX_LINE_LENGTH = 1024;
+const CONTENT_SEARCH_MAX_LINE_LENGTH = PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH;
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 class ContentSearchDeadlineExceeded extends Error {}
@@ -1494,6 +1516,9 @@ async function searchWorkspaceFileContent(input: {
     } catch {
       return null;
     }
+    if (!contents.toLowerCase().includes(input.normalizedQuery)) {
+      return null;
+    }
 
     const matches: ProjectContentMatch[] = [];
     let truncated = false;
@@ -1583,7 +1608,7 @@ export async function searchWorkspaceContent(
     index.entries.filter((entry) => entry.kind === "file").map((entry) => entry.path),
   );
   const allFilePaths = [...indexedFilePaths].filter(isContentSearchablePath);
-  const filePaths = allFilePaths.slice(0, CONTENT_SEARCH_MAX_FILES_SCANNED);
+  const filePaths = allFilePaths;
   let candidates: ContentSearchCandidate[];
   try {
     candidates = await filterCurrentContentSearchPolicy({
@@ -1616,7 +1641,7 @@ export async function searchWorkspaceContent(
   let nextIndex = 0;
   let scannedFiles = 0;
   let rootChanged = false;
-  let truncated = index.truncated || filePaths.length < allFilePaths.length;
+  let truncated = index.truncated;
 
   const workers = Array.from(
     {
@@ -1952,7 +1977,7 @@ function scoreLocalName(name: string, query: string): number | null {
 export async function searchLocalEntries(
   input: ProjectSearchLocalEntriesInput,
 ): Promise<ProjectSearchLocalEntriesResult> {
-  const normalizedQuery = normalizeQuery(input.query);
+  const normalizedQuery = normalizeLocalSearchQuery(input.query);
   if (normalizedQuery.length === 0) {
     return { entries: [], truncated: false };
   }

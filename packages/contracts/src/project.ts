@@ -9,9 +9,9 @@ import {
 import { EDITABLE_TEXT_FILE_MAX_BYTES } from "./editableText";
 
 const PROJECT_SEARCH_ENTRIES_MAX_LIMIT = 200;
-const PROJECT_SEARCH_CONTENT_MAX_LIMIT = 100;
-const PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH = 2;
-const PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH = 1024;
+export const PROJECT_SEARCH_CONTENT_MAX_LIMIT = 100;
+export const PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH = 2;
+export const PROJECT_SEARCH_CONTENT_MAX_LINE_LENGTH = 1024;
 const PROJECT_SEARCH_LOCAL_ENTRIES_MAX_LIMIT = 100;
 const PROJECT_FILE_PATH_MAX_LENGTH = 512;
 const PROJECT_READ_FILE_PATH_MAX_LENGTH = 2048;
@@ -133,6 +133,16 @@ export const ProjectSearchContentResult = Schema.Struct({
   truncated: Schema.Boolean,
 });
 export type ProjectSearchContentResult = typeof ProjectSearchContentResult.Type;
+
+export const ProjectPrewarmSearchIndexInput = Schema.Struct({
+  cwd: TrimmedNonEmptyString,
+});
+export type ProjectPrewarmSearchIndexInput = typeof ProjectPrewarmSearchIndexInput.Type;
+
+export const ProjectPrewarmSearchIndexResult = Schema.Struct({
+  started: Schema.Boolean,
+});
+export type ProjectPrewarmSearchIndexResult = typeof ProjectPrewarmSearchIndexResult.Type;
 
 export const ProjectSearchLocalEntriesInput = Schema.Struct({
   rootPath: TrimmedNonEmptyString,

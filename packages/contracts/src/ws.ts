@@ -77,6 +77,7 @@ import {
   ProjectDevServerEvent,
   ProjectDiscoverScriptsInput,
   ProjectListDirectoriesInput,
+  ProjectPrewarmSearchIndexInput,
   ProjectReadFileInput,
   ProjectResolveOutOfRootFileReferenceInput,
   ProjectRunDevServerInput,
@@ -196,6 +197,7 @@ export const WS_METHODS = {
   projectsSearchEntries: "projects.searchEntries",
   projectsSearchContent: "projects.searchContent",
   projectsSearchLocalEntries: "projects.searchLocalEntries",
+  projectsPrewarmSearchIndex: "projects.prewarmSearchIndex",
   projectsReadFile: "projects.readFile",
   projectsResolveOutOfRootFileReference: "projects.resolveOutOfRootFileReference",
   projectsCreateLocalFilePreviewGrant: "projects.createLocalFilePreviewGrant",
@@ -416,6 +418,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.projectsSearchEntries, ProjectSearchEntriesInput),
   tagRequestBody(WS_METHODS.projectsSearchContent, ProjectSearchContentInput),
   tagRequestBody(WS_METHODS.projectsSearchLocalEntries, ProjectSearchLocalEntriesInput),
+  tagRequestBody(WS_METHODS.projectsPrewarmSearchIndex, ProjectPrewarmSearchIndexInput),
   tagRequestBody(WS_METHODS.projectsReadFile, ProjectReadFileInput),
   tagRequestBody(
     WS_METHODS.projectsResolveOutOfRootFileReference,

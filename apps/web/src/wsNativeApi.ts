@@ -529,6 +529,8 @@ export function createWsNativeApi(): NativeApi {
         }),
       searchLocalEntries: (input) =>
         transport.request(WS_METHODS.projectsSearchLocalEntries, input),
+      prewarmSearchIndex: (input) =>
+        transport.request(WS_METHODS.projectsPrewarmSearchIndex, input),
       readFile: (input) => transport.request(WS_METHODS.projectsReadFile, input),
       resolveOutOfRootFileReference: (input) =>
         transport.request(WS_METHODS.projectsResolveOutOfRootFileReference, input),

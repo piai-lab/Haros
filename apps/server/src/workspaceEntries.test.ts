@@ -11,6 +11,8 @@ import {
   clearWorkspaceIndexCache,
   discoverProjectScripts,
   listWorkspaceDirectories,
+  prewarmWorkspaceSearchIndex,
+  searchLocalEntries,
   searchWorkspaceContent,
   searchWorkspaceEntries,
 } from "./workspaceEntries";
@@ -79,6 +81,34 @@ describe("searchWorkspaceEntries", () => {
     assert.isAbove(result.entries.length, 0);
     assert.isTrue(result.entries.some((entry) => entry.path === "src/components"));
     assert.isTrue(result.entries.every((entry) => entry.path.toLowerCase().includes("compo")));
+  });
+
+  it("ranks name matches above ancestor-only matches", async () => {
+    const cwd = makeTempDir("omnimind-workspace-name-first-");
+    writeFile(cwd, "apps/web/src/lib/central-icons.tsx");
+    writeFile(cwd, "apps/web/public/central-icons-fill/3d.svg");
+    writeFile(cwd, "apps/web/public/central-icons-reversed/at.svg");
+
+    const result = await searchWorkspaceEntries({ cwd, query: "cent", kind: "file", limit: 10 });
+    expect(result.entries[0]?.path).toBe("apps/web/src/lib/central-icons.tsx");
+  });
+
+  it("breaks equal scores toward shallower entries", async () => {
+    const cwd = makeTempDir("omnimind-workspace-depth-tiebreak-");
+    writeFile(cwd, "zz/deep/nested/config.ts");
+    writeFile(cwd, "config.ts");
+
+    const result = await searchWorkspaceEntries({ cwd, query: "config.ts", limit: 10 });
+    expect(result.entries[0]?.path).toBe("config.ts");
+  });
+
+  it("prewarms the same search index used by the first query", async () => {
+    const cwd = makeTempDir("omnimind-workspace-prewarm-");
+    writeFile(cwd, "src/prewarmed.ts");
+    expect(prewarmWorkspaceSearchIndex({ cwd })).toEqual({ started: true });
+    await expect(searchWorkspaceEntries({ cwd, query: "prewarmed", limit: 10 })).resolves.toMatchObject({
+      entries: [expect.objectContaining({ path: "src/prewarmed.ts" })],
+    });
   });
 
   it("can restrict search results to files before ranking", async () => {
@@ -447,6 +477,27 @@ describe("searchWorkspaceEntries", () => {
       expect(peakResolutions).toBeLessThanOrEqual(32);
     },
   );
+});
+
+describe("searchLocalEntries", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    for (const dir of tempDirs.splice(0, tempDirs.length)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a leading dot meaningful for dotfile search", async () => {
+    const rootPath = makeTempDir("omnimind-local-dotfiles-");
+    writeFile(rootPath, ".env", "SECRET=1");
+    writeFile(rootPath, "envelope.txt");
+
+    const dotResult = await searchLocalEntries({ rootPath, query: ".env" });
+    expect(dotResult.entries.map((entry) => entry.name)).toContain(".env");
+
+    const plainResult = await searchLocalEntries({ rootPath, query: "env" });
+    expect(plainResult.entries.map((entry) => entry.name)).not.toContain(".env");
+  });
 });
 
 describe("listWorkspaceDirectories", () => {
@@ -1068,27 +1119,6 @@ describe("searchWorkspaceContent", () => {
     expect(result.matches[0]?.lineText).not.toContain("�");
   });
 
-  it("never scans beyond the bounded workspace file cap", async () => {
-    const cwd = makeTempDir("omnimind-content-search-file-cap-");
-    for (let index = 0; index < 2_001; index += 1) {
-      writeFile(cwd, `src/file-${String(index).padStart(4, "0")}.txt`, "needle\n");
-    }
-    await searchWorkspaceEntries({ cwd, query: "", limit: 1 });
-    const originalOpen = fsPromises.open.bind(fsPromises);
-    const openSpy = vi
-      .spyOn(fsPromises, "open")
-      .mockImplementation((...args) => originalOpen(...args));
-
-    const result = await searchWorkspaceContent({
-      cwd,
-      query: "needle",
-      limit: 1,
-    });
-
-    expect(openSpy.mock.calls.length).toBeLessThanOrEqual(2_000);
-    expect(result.truncated).toBe(true);
-  });
-
   it("honors cancellation before filesystem work starts", async () => {
     const cwd = makeTempDir("omnimind-content-search-abort-");
     writeFile(cwd, "a.ts", "needle\n");
@@ -1201,5 +1231,23 @@ describe("searchWorkspaceContent", () => {
     await expect(searchWorkspaceEntries({ cwd, query: "new", limit: 100 })).resolves.toMatchObject({
       entries: [expect.objectContaining({ path: "new.ts" })],
     });
+  });
+
+  it("scans files past the first 2000 in alphabetical order", async () => {
+    const cwd = makeTempDir("omnimind-content-search-no-count-cap-");
+    fs.mkdirSync(path.join(cwd, "bulk"), { recursive: true });
+    for (let index = 0; index < 2_000; index += 1) {
+      fs.writeFileSync(
+        path.join(cwd, "bulk", `filler-${String(index).padStart(4, "0")}.txt`),
+        "nothing here\n",
+      );
+    }
+    writeFile(cwd, "zzz-last.txt", "needle at the end of the alphabet\n");
+
+    const result = await searchWorkspaceContent({ cwd, query: "needle" });
+    expect(result.matches).toEqual([
+      { path: "zzz-last.txt", lineNumber: 1, lineText: "needle at the end of the alphabet" },
+    ]);
+    expect(result.truncated).toBe(false);
   });
 });

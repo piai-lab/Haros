@@ -9,6 +9,7 @@ import type {
   ProjectSearchEntriesResult,
   ProjectSearchLocalEntriesResult,
 } from "@omnimind/contracts";
+import { PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH } from "@omnimind/contracts";
 import { isLocalAbsolutePath } from "@omnimind/shared/path";
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { ensureNativeApi } from "~/nativeApi";
@@ -61,7 +62,7 @@ const DEFAULT_LIST_DIRECTORIES_STALE_TIME = 15_000;
 const DEFAULT_SEARCH_ENTRIES_STALE_TIME = 15_000;
 const DEFAULT_SEARCH_CONTENT_LIMIT = 50;
 const DEFAULT_SEARCH_CONTENT_STALE_TIME = 10_000;
-const SEARCH_CONTENT_MIN_QUERY_LENGTH = 2;
+export const SEARCH_CONTENT_MIN_QUERY_LENGTH = PROJECT_SEARCH_CONTENT_MIN_QUERY_LENGTH;
 const DEFAULT_DISCOVER_SCRIPTS_DEPTH = 2;
 const DEFAULT_DISCOVER_SCRIPTS_STALE_TIME = 30_000;
 const DEFAULT_SEARCH_LOCAL_ENTRIES_LIMIT = 50;
@@ -86,6 +87,17 @@ const EMPTY_SEARCH_LOCAL_ENTRIES_RESULT: ProjectSearchLocalEntriesResult = {
   truncated: false,
 };
 const ABSOLUTE_LOCAL_READ_CWD = "/";
+
+export function prewarmProjectSearchIndex(cwd: string | null): void {
+  if (!cwd) return;
+  try {
+    void ensureNativeApi()
+      .projects.prewarmSearchIndex({ cwd })
+      .catch(() => undefined);
+  } catch {
+    // The real search will build the same index after the native API connects.
+  }
+}
 
 export function isLocalPreviewGrantUsable(
   grant: Pick<ProjectCreateLocalFilePreviewGrantResult, "expiresAt"> | null | undefined,

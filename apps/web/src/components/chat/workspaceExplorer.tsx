@@ -12,6 +12,7 @@ import type {
 } from "@omnimind/contracts";
 import { useDebouncedValue } from "@tanstack/react-pacer";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { normalizeWorkspaceEntrySearchQuery } from "@omnimind/shared/searchQuery";
 import {
   type ComponentPropsWithoutRef,
   type DragEvent as ReactDragEvent,
@@ -19,6 +20,7 @@ import {
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   forwardRef,
+  useEffect,
 } from "react";
 
 import {
@@ -34,10 +36,12 @@ import {
 } from "~/lib/fileReferenceContextMenu";
 import {
   projectListDirectoriesQueryOptions,
+  prewarmProjectSearchIndex,
   projectReadFileQueryOptions,
   projectSearchContentQueryOptions,
   projectSearchEntriesQueryOptions,
 } from "~/lib/projectReactQuery";
+import { buildMatchSegments } from "~/lib/matchHighlight";
 import { getSyntaxHighlighterPromise, getSyntaxLanguageForPath } from "~/lib/syntaxHighlighting";
 import { cn } from "~/lib/utils";
 import { Skeleton } from "../ui/skeleton";
@@ -414,6 +418,7 @@ export function WorkspaceFilesSidebar(props: {
 
 function WorkspaceSearchResultRow(props: {
   entry: ProjectEntry;
+  highlightQuery: string;
   selected: boolean;
   onSelectFile: (path: string) => void;
   onPrefetchEntry: (entry: Pick<ProjectFileSystemEntry, "path" | "kind">) => void;
@@ -421,6 +426,7 @@ function WorkspaceSearchResultRow(props: {
 }) {
   const { entry, onEntryContextMenu, onPrefetchEntry, onSelectFile } = props;
   const { dir, name } = splitRepoRelativePath(entry.path);
+  const nameSegments = buildMatchSegments(name, props.highlightQuery);
   const handlePrefetch = () => {
     onPrefetchEntry(entry);
   };
@@ -446,7 +452,22 @@ function WorkspaceSearchResultRow(props: {
     >
       <FileEntryIcon pathValue={entry.path} kind="file" className="size-3.5 shrink-0 opacity-75" />
       <div className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
-        <span className="shrink-0 truncate font-medium">{name}</span>
+        <span className="shrink-0 truncate font-medium">
+          {nameSegments
+            ? nameSegments.map((segment) =>
+                segment.matched ? (
+                  <mark
+                    key={segment.start}
+                    className="rounded-[3px] bg-amber-200/80 px-[1px] text-current dark:bg-amber-300/25"
+                  >
+                    {segment.text}
+                  </mark>
+                ) : (
+                  <span key={segment.start}>{segment.text}</span>
+                ),
+              )
+            : name}
+        </span>
         {dir ? (
           <span className="min-w-0 truncate text-[11px] text-muted-foreground/55">{dir}</span>
         ) : null}
@@ -536,6 +557,9 @@ interface WorkspaceSearchState {
 // combined explorer. Filename rank stays authoritative and content matches
 // follow in deterministic path/line order inside the same keyboard list.
 function useWorkspaceSearch(workspaceRoot: string | null, query: string): WorkspaceSearchState {
+  useEffect(() => {
+    prewarmProjectSearchIndex(workspaceRoot);
+  }, [workspaceRoot]);
   const [debouncedQuery] = useDebouncedValue(query, {
     wait: EXPLORER_SEARCH_QUERY_DEBOUNCE_MS,
   });
@@ -717,6 +741,7 @@ function WorkspaceSearchResultsBody(props: {
               <WorkspaceSearchResultRow
                 key={`file:${result.path}`}
                 entry={result.entry}
+                highlightQuery={normalizeWorkspaceEntrySearchQuery(props.search.inputQuery)}
                 selected={result.path === props.selectedFilePath}
                 onSelectFile={props.onSelectFile}
                 onPrefetchEntry={props.onPrefetchEntry}

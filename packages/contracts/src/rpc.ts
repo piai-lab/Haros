@@ -204,6 +204,8 @@ import {
   ProjectListDevServersResult,
   ProjectListDirectoriesInput,
   ProjectListDirectoriesResult,
+  ProjectPrewarmSearchIndexInput,
+  ProjectPrewarmSearchIndexResult,
   ProjectReadFileInput,
   ProjectReadFileResult,
   ProjectResolveOutOfRootFileReferenceInput,
@@ -451,6 +453,12 @@ export const WsProjectsSearchContentRpc = Rpc.make(WS_METHODS.projectsSearchCont
 export const WsProjectsSearchLocalEntriesRpc = Rpc.make(WS_METHODS.projectsSearchLocalEntries, {
   payload: ProjectSearchLocalEntriesInput,
   success: ProjectSearchLocalEntriesResult,
+  error: WsRpcError,
+});
+
+export const WsProjectsPrewarmSearchIndexRpc = Rpc.make(WS_METHODS.projectsPrewarmSearchIndex, {
+  payload: ProjectPrewarmSearchIndexInput,
+  success: ProjectPrewarmSearchIndexResult,
   error: WsRpcError,
 });
 
@@ -1417,6 +1425,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsProjectsSearchEntriesRpc,
   WsProjectsSearchContentRpc,
   WsProjectsSearchLocalEntriesRpc,
+  WsProjectsPrewarmSearchIndexRpc,
   WsProjectsReadFileRpc,
   WsProjectsResolveOutOfRootFileReferenceRpc,
   WsProjectsCreateLocalFilePreviewGrantRpc,
