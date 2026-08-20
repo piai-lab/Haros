@@ -1084,12 +1084,15 @@ bridges through `a54ef5ba49`; current tracked consumers use `memory`, and persis
 `AutomationMemory.content` is a different canonical database field.
 
 On 2026-08-20 the maintainer explicitly approved both compatibility breaks after reviewing their
-effects, but also approved responsibility-level sequencing. The current Slice retires only the
-memory-tool `content` alias: `memory` remains byte-preserving, an omitted `automationId` still resolves
-from the active Automation turn, existing definitions/memory are untouched, and no migration,
-tombstone, fallback or generic schema validator is added. The separately approved retirement of
-`everyMinutes` plus implicit heartbeat/five-minute creation remains a later independent Slice and
-cannot inherit this Slice's validation evidence.
+effects, but also approved responsibility-level sequencing. Exact pushed source
+`06496f86ca9a4ba939b1331f6da4a30aa4dbe663` first retired only the memory-tool `content` alias:
+`memory` remains byte-preserving, an omitted `automationId` still resolves from the active Automation
+turn, existing definitions/memory are untouched, and no migration, tombstone, fallback or generic
+schema validator was added. The later independent Slice at
+`0202d9a4411658b2b2b662b6694798dcc4de2bda` then retired `everyMinutes` and implicit
+heartbeat/five-minute creation. Its AgentGateway schema now requires `mode` plus canonical `schedule`;
+the underlying Automation contract, Web form, scheduler, persistence and existing definitions are
+unchanged, and no string coercion or compatibility alias was introduced.
 
 The retirement shipped in exact pushed source `06496f86ca9a4ba939b1331f6da4a30aa4dbe663`.
 Focused AgentGateway, AutomationService-memory and run-envelope tests passed; the complete Server
@@ -1112,3 +1115,27 @@ processes exited. Accepted runs first proved task-specific Electron `userData` f
 and Server base/state/database paths from runtime logs. An earlier rejected setup caused the UI
 controller to launch the default profile; it was detected before any Provider send or settings
 mutation, stopped immediately, and is excluded from the evidence set.
+
+The second Slice passed 90 focused AgentGateway tests, Server typecheck, targeted format/lint with no
+errors, `git diff --check`, and the complete Server suite with 4,363 tests passed and 16 skipped. The
+exact pushed source produced an arm64 DMG with SHA-256
+`be4a4d060c9d465d07dff40b538ba9ddfd35060978c569ee403eacab989f55a9`; staged and installed
+`app.asar` SHA-256 was `da45356dbad163a2dc9f94e6a3c4694b6dc81cbd45645e896183fccccaba6fa6`,
+all 240 packaged legal identities were accounted for, and the ad-hoc installed App passed strict deep
+verification. This remains a local candidate, not official signing, notarization, Release or update
+feed activation.
+
+One fresh isolated packaged profile then provided a deliberate cross-Provider contrast. Both model
+services resolved from environment-backed task configuration without storing plaintext credentials.
+DeepSeek `deepseek-v4-pro` submitted `mode=standalone` and an object-valued 24-hour interval schedule,
+created the definition, and used a continuation to archive it before execution. Stopped-state SQLite
+preserved `{"type":"interval","everySeconds":86400}`, `mode=standalone`, archived/disabled state and
+zero runs; the same profile reopened with no active Automation entry. MiMo `mimo-v2.5-pro` completed a
+real turn and received explicit tool failures, but five create attempts in the earliest persisted Pi
+session transcript already contained an object-valued top-level `arguments` whose nested `schedule`
+was text. The Gateway correctly rejected every attempt and persisted no MiMo definition. DeepSeek's
+corresponding `tool_execution_start` retained an object-valued `schedule`, so canonical Automation
+creation and the packaged Server path survive; current evidence narrows the MiMo defect to the raw
+Provider-response-to-Pi-normalized-message interval but does not yet identify which side first changed
+the type. The next investigation must capture those two boundaries with an equivalent harness. It
+must not add Gateway JSON parsing, a schema alias or a Provider-specific compatibility lane.
