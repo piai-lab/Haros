@@ -1139,3 +1139,36 @@ creation and the packaged Server path survive; current evidence narrows the MiMo
 Provider-response-to-Pi-normalized-message interval but does not yet identify which side first changed
 the type. The next investigation must capture those two boundaries with an equivalent harness. It
 must not add Gateway JSON parsing, a schema alias or a Provider-specific compatibility lane.
+
+That boundary investigation is now closed by exact pushed source
+`17a79a37ee21861e7aff1503bab381614d6a4ab2`. A one-time redacted harness sent MiMo and DeepSeek the
+same prompt and isolated only the model-facing schedule schema. With the previous nested
+`schedule.oneOf`, MiMo's raw wire response already contained a string-valued schedule and Pi preserved
+that string; with one flat discriminator object, MiMo's raw response and Pi-normalized call both
+contained an object. DeepSeek retained object arguments in both cases. The faulty owner was therefore
+the Agent-facing schema shape, not Pi normalization, Gateway decoding or Automation persistence.
+The fix flattened only that projection; the canonical `AutomationSchedule` decoder and branch-specific
+validation remain strict, with no JSON-string coercion, Provider branch, alias or compatibility lane.
+
+Focused AgentGateway tests passed 91/91, Pi projection/adapter tests passed 59/59, Server typecheck
+passed, targeted format and diff checks passed, and the complete Server suite passed 4,364 tests with
+16 skipped. Lint reported zero errors and one unrelated pre-existing warning. The exact pushed product
+produced an arm64 DMG with SHA-256
+`9fd17ebb981e0eaef5979f7a3905b9c468ad4a488506b32142dae0f43c0251f9`; staged and installed
+`app.asar` SHA-256 was `228e9fc4a85268f831e21f3142f6332ab4566d0addaa0a2a628ffdfcd690fbf3`,
+all 240 packaged legal identities were accounted for, and the locally ad-hoc-signed App passed strict
+deep verification. This remains a local candidate, not official signing, notarization, Release or
+update-feed activation.
+
+One isolated fresh packaged profile then proved both real Provider journeys through the shipped
+Agent→Pi→Host-tool path. MiMo `mimo-v2.5-pro` and DeepSeek `deepseek-v4-pro` each created exactly one
+standalone daily Automation for 09:30 Asia/Shanghai; their persisted Pi transcripts retained
+object-valued tool arguments and object-valued schedules. On the same threads, continuation turns
+viewed each definition and archived it with the exact revision before execution. Stopped-state SQLite
+held both definitions as disabled, archived, revision 1 and iteration count 0, with zero Automation
+runs. The same profile reopened with both model catalogs ready, both threads completed, both schedules
+preserved and no active definition or run; a second normal quit left no OmniMind process. During setup,
+the fresh window also remained on a nonexistent thread route and did not project authoritative
+Project/Model state already present over authenticated packaged RPC. That bounded stale-UI observation
+is kept separate for reproduction and owner diagnosis; it is not attributed to this schema fix and did
+not trigger a reload shim or fallback.
