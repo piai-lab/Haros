@@ -130,6 +130,7 @@ export function isFilesystemBrowseQuery(
     value.startsWith("..\\") ||
     value.startsWith("/") ||
     value.startsWith("~/") ||
+    (allowWindowsPaths && value.startsWith("~\\")) ||
     (allowWindowsPaths && isWindowsAbsolutePath(value))
   );
 }
