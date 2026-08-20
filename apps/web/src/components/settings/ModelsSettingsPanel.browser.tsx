@@ -25,7 +25,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
-import { AppSettingsSchema, type AppSettings } from "~/appSettings";
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { makeQueuedChatTurn, resetComposerDraftStore } from "~/composerDraftStoreTestFixtures";
 import { serverQueryKeys } from "~/lib/serverReactQuery";
@@ -49,8 +48,6 @@ vi.mock("~/i18n", () => ({
 import { ModelsSettingsPanel, type PreparedModelService } from "./ModelsSettingsPanel";
 
 const checkedAt = "2026-08-12T00:00:00.000Z";
-const settings = AppSettingsSchema.makeUnsafe({});
-
 type ServiceOverrides = Omit<
   Partial<OmniMindModelServiceDescriptor>,
   "catalogState" | "catalogErrorCode"
@@ -222,8 +219,6 @@ async function renderPanel(input: {
   readonly presentation?: "settings" | "first-run";
   readonly onServicePrepared?: (prepared: PreparedModelService) => void;
   readonly onSetupReady?: (selection: ModelSelection) => void;
-  readonly settings?: AppSettings;
-  readonly updateSettings?: (patch: Partial<AppSettings>) => void;
   readonly list: (
     input?: { readonly intent?: "add_service" },
     options?: { readonly signal?: AbortSignal },
@@ -261,9 +256,6 @@ async function renderPanel(input: {
         <ModelsSettingsPanel
           active={active}
           resetEpoch={0}
-          settings={input.settings ?? settings}
-          defaults={settings}
-          updateSettings={input.updateSettings ?? (() => {})}
           startInAddFlow={input.startInAddFlow ?? false}
           presentation={input.presentation ?? "settings"}
           {...(input.onServicePrepared ? { onServicePrepared: input.onServicePrepared } : {})}
@@ -997,167 +989,7 @@ describe("ModelsSettingsPanel model services", () => {
     mounted.queryClient.clear();
   });
 
-  it("keeps legacy OmniMind hints explicit and removes only the confirmed compatibility entry", async () => {
-    const legacySettings = AppSettingsSchema.makeUnsafe({
-      customOmniMindModels: ["duplicate/model", "legacy/model", "duplicate/model"],
-    });
-    const updateSettings = vi.fn<(patch: Partial<AppSettings>) => void>();
-    const mounted = await renderPanel({
-      settings: legacySettings,
-      updateSettings,
-      list: async () => ({
-        state: "empty",
-        services: [],
-        connectableServices: [],
-        customApiConfiguration: {
-          protocols: [
-            "openai-completions",
-            "openai-responses",
-            "anthropic-messages",
-            "google-generative-ai",
-          ],
-        },
-        errorCode: null,
-      }),
-    });
-
-    await expect.poll(() => document.body.textContent).toContain("settings.legacyOmniMindModels");
-    expect(document.body.textContent?.match(/duplicate\/model/gu)).toHaveLength(2);
-    await mounted.screen
-      .getByRole("button", {
-        name: 'settings.legacyOmniMindModelConvertNamed:{"number":2,"model":"legacy/model"}',
-      })
-      .click();
-    expect(mounted.screen.getByLabelText("settings.customApiModelId")).toHaveValue("legacy/model");
-    expect(document.body.textContent).toContain(
-      "settings.legacyOmniMindModelConversionDescription",
-    );
-    await mounted.screen.getByRole("button", { name: "common.back" }).click();
-    expect(updateSettings).not.toHaveBeenCalled();
-    expect(mounted.calls.testCustom).not.toHaveBeenCalled();
-    expect(mounted.calls.saveCustom).not.toHaveBeenCalled();
-    expect(mounted.calls.removeCustom).not.toHaveBeenCalled();
-    expect(mounted.calls.logout).not.toHaveBeenCalled();
-
-    await mounted.screen
-      .getByRole("button", {
-        name: 'settings.legacyOmniMindModelRemoveNamed:{"number":2,"model":"legacy/model"}',
-      })
-      .click();
-    const removeDialog = mounted.screen.getByLabelText("settings.legacyOmniMindModelRemoveTitle");
-    expect(removeDialog.element().textContent).toContain(
-      'settings.legacyOmniMindModelRemoveDescription:{"model":"legacy/model"}',
-    );
-    await removeDialog.getByRole("button", { name: "common.cancel" }).click();
-    expect(updateSettings).not.toHaveBeenCalled();
-
-    await mounted.screen
-      .getByRole("button", {
-        name: 'settings.legacyOmniMindModelRemoveNamed:{"number":2,"model":"legacy/model"}',
-      })
-      .click();
-    await mounted.screen
-      .getByLabelText("settings.legacyOmniMindModelRemoveTitle")
-      .getByRole("button", { name: "settings.legacyOmniMindModelRemove" })
-      .click();
-    expect(updateSettings).toHaveBeenCalledWith({
-      customOmniMindModels: ["duplicate/model", "duplicate/model"],
-    });
-    expect(mounted.calls.saveCustom).not.toHaveBeenCalled();
-    expect(mounted.calls.removeCustom).not.toHaveBeenCalled();
-    expect(mounted.calls.logout).not.toHaveBeenCalled();
-
-    await mounted.screen.unmount();
-    mounted.queryClient.clear();
-  });
-
-  it("removes an exact legacy hint only after the Pi-owned connection save commits", async () => {
-    const legacySettings = AppSettingsSchema.makeUnsafe({
-      customOmniMindModels: ["before/model", "legacy/model", "after/model"],
-    });
-    const updateSettings = vi.fn<(patch: Partial<AppSettings>) => void>();
-    const customService = service({
-      serviceId: "converted-service",
-      providerId: "converted-service",
-      displayName: "Converted Service",
-      origin: "models_json",
-      supportsNetworkRefresh: false,
-    });
-    let saveAttempt = 0;
-    const saveCustom = vi.fn(async () => {
-      saveAttempt += 1;
-      return saveAttempt === 1
-        ? ({ state: "config_saved_auth_failed" as const, service: customService } as const)
-        : ({ state: "complete" as const, service: customService } as const);
-    });
-    const mounted = await renderPanel({
-      settings: legacySettings,
-      updateSettings,
-      list: async () => ({
-        state: "empty",
-        services: [],
-        connectableServices: [],
-        customApiConfiguration: {
-          protocols: [
-            "openai-completions",
-            "openai-responses",
-            "anthropic-messages",
-            "google-generative-ai",
-          ],
-        },
-        errorCode: null,
-      }),
-      get: async ({ serviceId }) =>
-        serviceId === customService.serviceId
-          ? { state: "ready", service: customService, models: [], errorCode: null }
-          : { state: "empty", service: null, errorCode: null },
-      saveCustom,
-    });
-
-    await mounted.screen
-      .getByRole("button", {
-        name: 'settings.legacyOmniMindModelConvertNamed:{"number":2,"model":"legacy/model"}',
-      })
-      .click();
-    await mounted.screen
-      .getByLabelText("settings.customApiConnectionName")
-      .fill("Converted Service");
-    await mounted.screen
-      .getByLabelText("settings.customApiEndpoint")
-      .fill("https://api.example.test/v1");
-    await mounted.screen.getByLabelText("settings.customApiKey").fill("browser-secret");
-    expect(mounted.screen.getByLabelText("settings.customApiModelId")).toHaveValue("legacy/model");
-
-    await mounted.screen.getByRole("button", { name: "settings.customApiTestConnection" }).click();
-    await confirmCustomApiRisk(mounted.screen);
-    await expect
-      .poll(() => mounted.screen.getByRole("button", { name: "settings.customApiSave" }))
-      .toBeEnabled();
-    await mounted.screen.getByRole("button", { name: "settings.customApiSave" }).click();
-    await expect.poll(() => saveCustom).toHaveBeenCalledTimes(1);
-    expect(updateSettings).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain("settings.customApiSavedAuthFailed");
-
-    await mounted.screen.getByRole("button", { name: "settings.customApiSave" }).click();
-    await expect.poll(() => saveCustom).toHaveBeenCalledTimes(2);
-    expect(saveCustom).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        config: expect.objectContaining({
-          serviceId: null,
-          models: [expect.objectContaining({ modelId: "legacy/model" })],
-        }),
-      }),
-    );
-    expect(updateSettings).toHaveBeenCalledWith({
-      customOmniMindModels: ["before/model", "after/model"],
-    });
-
-    await mounted.screen.unmount();
-    mounted.queryClient.clear();
-  });
-
   it("creates a Pi-owned API connection only after an exact successful test", async () => {
-    const updateSettings = vi.fn<(patch: Partial<AppSettings>) => void>();
     const customService = service({
       serviceId: "custom-service",
       providerId: "custom-service",
@@ -1180,7 +1012,6 @@ describe("ModelsSettingsPanel model services", () => {
     }));
     const saveCustom = vi.fn(async () => ({ state: "complete" as const, service: customService }));
     const mounted = await renderPanel({
-      updateSettings,
       list: async () => ({
         state: "empty",
         services: [],
@@ -1453,7 +1284,6 @@ describe("ModelsSettingsPanel model services", () => {
         }),
       );
     expect(document.body.textContent).not.toContain("browser-secret");
-    expect(updateSettings).not.toHaveBeenCalled();
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

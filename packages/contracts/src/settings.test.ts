@@ -27,6 +27,25 @@ describe("agent tool settings contract", () => {
 });
 
 describe("server-only OmniMind default prompt settings", () => {
+  it("ignores retired OmniMind model hints in persisted settings and public patches", () => {
+    const retiredKey = ["custom", "Models"].join("");
+    const settings = Schema.decodeUnknownSync(ServerSettings)({
+      providers: {
+        omnimind: {
+          enabled: false,
+          [retiredKey]: ["legacy/provider-model"],
+          defaultPrompt: null,
+        },
+      },
+    });
+    const patch = decodePatch({
+      providers: { omnimind: { [retiredKey]: ["legacy/provider-model"] } },
+    });
+
+    expect(settings.providers.omnimind).toEqual({ enabled: false, defaultPrompt: null });
+    expect(patch.providers?.omnimind).toEqual({});
+  });
+
   it("is not accepted by the public settings patch", () => {
     const patch = decodePatch({
       providers: { omnimind: { defaultPrompt: "must stay private" } },

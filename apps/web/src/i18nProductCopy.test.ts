@@ -504,10 +504,7 @@ describe("reachable OmniMind-owned product copy", () => {
 
     for (const catalog of catalogs) {
       const modelServiceCopy = Object.entries(catalog).filter(
-        ([key]) =>
-          key.startsWith("settings.modelService") ||
-          key.startsWith("settings.customApi") ||
-          key.startsWith("settings.legacyOmniMindModel"),
+        ([key]) => key.startsWith("settings.modelService") || key.startsWith("settings.customApi"),
       );
       expect(
         modelServiceCopy.flatMap(([key, message]) =>
@@ -545,18 +542,6 @@ describe("reachable OmniMind-owned product copy", () => {
     );
     expect(ZH_CN_MESSAGES["settings.customApiHeaderCommandDescription.provider"]).toContain(
       "不会再次经过设置页确认",
-    );
-    expect(EN_MESSAGES["settings.legacyOmniMindModelsDescription"]).toContain(
-      "real API format, endpoint, and credential",
-    );
-    expect(ZH_CN_MESSAGES["settings.legacyOmniMindModelsDescription"]).toContain(
-      "真实的 API 格式、地址和凭据",
-    );
-    expect(EN_MESSAGES["settings.legacyOmniMindModelRemoveDescription"]).toContain(
-      "does not delete an API connection",
-    );
-    expect(ZH_CN_MESSAGES["settings.legacyOmniMindModelRemoveDescription"]).toContain(
-      "不会删除 API 连接",
     );
   });
 

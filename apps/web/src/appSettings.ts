@@ -124,7 +124,6 @@ export function getDefaultNativeFontSmoothing(_platform = globalThis.navigator?.
 }
 
 type CustomModelSettingsKey =
-  | "customOmniMindModels"
   | "customCodexModels"
   | "customClaudeModels"
   | "customCursorModels"
@@ -135,7 +134,7 @@ type CustomModelSettingsKey =
   | "customOpenCodeModels"
   | "customPiModels";
 export type ProviderCustomModelConfig = {
-  provider: ProviderKind;
+  provider: Exclude<ProviderKind, "omnimind">;
   settingsKey: CustomModelSettingsKey;
   defaultSettingsKey: CustomModelSettingsKey;
   title: string;
@@ -275,7 +274,6 @@ export const AppSettingsSchema = Schema.Struct({
   ),
   timestampFormat: TimestampFormat.pipe(withDefaults(() => DEFAULT_TIMESTAMP_FORMAT)),
   customCodexModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
-  customOmniMindModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customClaudeModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customCursorModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
   customAntigravityModels: Schema.Array(Schema.String).pipe(withDefaults(() => [])),
@@ -340,16 +338,10 @@ export interface AppModelOption extends ProviderModelOption {
 const DEFAULT_APP_SETTINGS = AppSettingsSchema.makeUnsafe({});
 let serverSettingsMigrationInFlight = false;
 
-const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConfig> = {
-  omnimind: {
-    provider: "omnimind",
-    settingsKey: "customOmniMindModels",
-    defaultSettingsKey: "customOmniMindModels",
-    title: "OmniMind",
-    description: "Save additional upstream model slugs for OmniMind.",
-    placeholder: "provider/model",
-    example: "provider/model",
-  },
+const PROVIDER_CUSTOM_MODEL_CONFIG: Record<
+  Exclude<ProviderKind, "omnimind">,
+  ProviderCustomModelConfig
+> = {
   codex: {
     provider: "codex",
     settingsKey: "customCodexModels",
@@ -435,12 +427,11 @@ const PROVIDER_CUSTOM_MODEL_CONFIG: Record<ProviderKind, ProviderCustomModelConf
 
 export const MODEL_PROVIDER_SETTINGS = Object.values(PROVIDER_CUSTOM_MODEL_CONFIG);
 
-// OmniMind and Pi take their selectable models from Pi's authoritative runtime catalog, while
-// Droid's ACP catalog rejects unknown slugs. Preserve their historical fields for compatibility,
-// but only advertise editors for engines that actually own independent custom model slugs.
+// OmniMind has no custom-model setting: its selectable models come only from the authoritative
+// runtime catalog. Pi also uses its runtime catalog, while Droid rejects unknown ACP slugs, so
+// neither advertises an editor even though their existing provider settings remain intact.
 export const CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS = MODEL_PROVIDER_SETTINGS.filter(
-  (config) =>
-    config.provider !== "omnimind" && config.provider !== "pi" && config.provider !== "droid",
+  (config) => config.provider !== "pi" && config.provider !== "droid",
 );
 
 export function normalizeCustomModelSlugs(
@@ -571,11 +562,6 @@ function normalizeAppSettings(settings: AppSettings): AppSettings {
     terminalFontSizePx: normalizeTerminalFontSizePx(settings.terminalFontSizePx),
     terminalFontFamily: normalizeTerminalFontFamily(settings.terminalFontFamily),
     customCodexModels: normalizeCustomModelSlugs(settings.customCodexModels, "codex"),
-    // Compatibility-only input from releases that allowed free-form OmniMind model hints.
-    // Keep every byte and position intact so the explicit Model services migration UI can
-    // convert or remove one exact entry at a time. Runtime catalog consumers normalize at
-    // getAppModelOptions instead; passive settings reads must never migrate this array.
-    customOmniMindModels: [...settings.customOmniMindModels],
     customClaudeModels: normalizeCustomModelSlugs(settings.customClaudeModels, "claudeAgent"),
     customCursorModels: normalizeCustomModelSlugs(settings.customCursorModels, "cursor"),
     customAntigravityModels: normalizeCustomModelSlugs(
@@ -616,7 +602,6 @@ function serverSettingsToAppSettings(settings: ServerSettingsView): Partial<AppS
     piAgentDir: settings.providers.pi.agentDir,
     piBinaryPath: settings.providers.pi.binaryPath,
     customCodexModels: settings.providers.codex.customModels,
-    customOmniMindModels: settings.providers.omnimind.customModels,
     customClaudeModels: settings.providers.claudeAgent.customModels,
     customCursorModels: settings.providers.cursor.customModels,
     customAntigravityModels: settings.providers.antigravity.customModels,
@@ -661,10 +646,6 @@ function touchesProviderDiscoverySettings(patch: Partial<AppSettings>): boolean 
 function appSettingsPatchToServerSettingsPatch(patch: Partial<AppSettings>): ServerSettingsPatch {
   const providers: MutableServerSettingsProvidersPatch = {};
   const serverPatch: MutableServerSettingsPatch = {};
-
-  if (hasOwn(patch, "customOmniMindModels")) {
-    providers.omnimind = { customModels: patch.customOmniMindModels ?? [] };
-  }
 
   if (hasOwn(patch, "enableAssistantStreaming")) {
     serverPatch.enableAssistantStreaming = Boolean(patch.enableAssistantStreaming);
@@ -850,7 +831,6 @@ function buildInitialServerSettingsMigrationPatch(settings: AppSettings): Server
   }
 
   for (const key of [
-    "customOmniMindModels",
     "customCodexModels",
     "customClaudeModels",
     "customCursorModels",
@@ -899,20 +879,20 @@ export function migrateLegacyTypographyDefaults(
 
 export function getCustomModelsForProvider(
   settings: Partial<Pick<AppSettings, CustomModelSettingsKey>>,
-  provider: ProviderKind,
+  provider: Exclude<ProviderKind, "omnimind">,
 ): readonly string[] {
   return settings[PROVIDER_CUSTOM_MODEL_CONFIG[provider].settingsKey] ?? [];
 }
 
 export function getDefaultCustomModelsForProvider(
   defaults: Partial<Pick<AppSettings, CustomModelSettingsKey>>,
-  provider: ProviderKind,
+  provider: Exclude<ProviderKind, "omnimind">,
 ): readonly string[] {
   return defaults[PROVIDER_CUSTOM_MODEL_CONFIG[provider].defaultSettingsKey] ?? [];
 }
 
 export function patchCustomModels(
-  provider: ProviderKind,
+  provider: Exclude<ProviderKind, "omnimind">,
   models: string[],
 ): Partial<Pick<AppSettings, CustomModelSettingsKey>> {
   return {
@@ -924,7 +904,7 @@ export function getCustomModelsByProvider(
   settings: Partial<Pick<AppSettings, CustomModelSettingsKey>>,
 ): Record<ProviderKind, readonly string[]> {
   return {
-    omnimind: getCustomModelsForProvider(settings, "omnimind"),
+    omnimind: [],
     codex: getCustomModelsForProvider(settings, "codex"),
     claudeAgent: getCustomModelsForProvider(settings, "claudeAgent"),
     cursor: getCustomModelsForProvider(settings, "cursor"),
@@ -1071,7 +1051,7 @@ export function getCustomModelOptionsByProvider(
 ): Record<ProviderKind, ReadonlyArray<ProviderModelOption>> {
   const customModelsByProvider = getCustomModelsByProvider(settings);
   return {
-    omnimind: getAppModelOptions("omnimind", customModelsByProvider.omnimind),
+    omnimind: getAppModelOptions("omnimind", []),
     codex: getAppModelOptions("codex", customModelsByProvider.codex),
     claudeAgent: getAppModelOptions("claudeAgent", customModelsByProvider.claudeAgent),
     cursor: getAppModelOptions("cursor", customModelsByProvider.cursor),

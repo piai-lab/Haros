@@ -911,10 +911,10 @@ Generation defaults
   └─ Git writing model
 
 Custom models
-  └─ 除 Droid 外全部 Engine 的 custom model slugs
+  └─ 拥有独立 custom slug 合同的 Engine；OmniMind 明确排除
 ```
 
-这里还需纠正一个容易被表面 UI 隐藏的事实：Git writing 的动态目录当前只预取 Codex、Kilo、OpenCode，但 custom slug 编辑器来自 `CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS`，实际覆盖 OmniMind Agent、Codex、Claude、Cursor、Antigravity、Grok、Kilo、OpenCode、stock Pi，只有 Droid 因其 ACP catalog 拒绝未知 slug 而不提供编辑器。不能把“Git writing 只发现三种 Engine”误写成“custom model 只支持三种 Engine”。
+这里还需纠正一个容易被表面 UI 隐藏的事实：Git writing 的动态目录当前只预取 Codex、Kilo、OpenCode，但这不定义各 Engine 的 custom-model 合同。OmniMind 已退出 free-form custom slug：它只消费 authoritative runtime catalog。Codex、Claude、Cursor、Antigravity、Grok、Kilo、OpenCode 等独立 Engine 继续使用各自 custom slug owner；stock Pi 的既有字段保持 Provider-owned，不迁入 OmniMind；Droid 的 ACP catalog 仍拒绝未知 slug。
 
 当前 `ProvidersSettingsPanel.tsx` 负责：
 
@@ -928,7 +928,7 @@ Custom models
 - `Git writing model` 退出 Model services；底层字段暂时保留，UI 新归属由调用功能的 sole owner 在 E7 单独裁决；
 - Codex、Claude、Cursor、Antigravity、Grok、Kilo、OpenCode 等 custom slug 属于独立 Engine，应在不迁移现有 storage 字段的前提下由 `Agent engines` 对应 detail 渲染；
 - stock Pi custom slug 继续属于 stock Pi Engine detail，不能迁入 OmniMind Agent 的 `.omnimind`；
-- 既有 `customOmniMindModels` 是 Composer 的 legacy model hint，不是完整 Pi provider/model config；Model services 上线后停止从新 UI 创建这种 hint，继续无损读取既有值，并提供“保留为兼容提示 / 转为 Pi custom model definition / 移除”的明确迁移路径。没有 `api`、`baseUrl`、capability 等必要数据时不得自动伪造 models.json 定义；
+- **已被 2026-08-20 clean-break 裁决取代**：旧 OmniMind free-form model hint 不属于 first-public 产品能力，也不再由 Settings、Composer 或转换 UI 读取。旧 JSON 字段按通用 schema 解码规则忽略，并在下一次正常 Settings 保存时自然不再写回；不建立 alias、迁移、清理任务或静态模型 fallback。OmniMind 选择只来自 Pi ModelRuntime 的 authoritative catalog；
 - 若首个实现为控制风险暂不移动 custom slug，必须放在折叠的“独立引擎模型”区并明确“由引擎管理”，不能继续与 OmniMind Agent 模型服务混为同一列表；
 - 不改变现有 settings storage 字段即可完成 UI 归位，不为改位置创建 migration。
 
@@ -1688,7 +1688,7 @@ Composer 与所有 direct consumer 都必须先按现有优先级解析 exact se
 - [ ] active session 在下一 turn 前应用 agentDir mutation generation，不把 query invalidation 当 runtime 同步；
 - [ ] Git writing default 从 Model services 移除；新归属未定前不新建 taxonomy；
 - [ ] independent Engine custom slugs 准确归位；
-- [ ] legacy `customOmniMindModels` 不再新增，既有值无损兼容且不自动伪造 Pi config；
+- [x] 旧 OmniMind free-form model hint 已 clean break：合同、writer、UI 与发送候选归零；旧字段只被通用 Settings 解码安全忽略，不迁移、不转换、不清理其他数据；
 - [ ] 双语、响应式、键盘、screen reader 和 packaged restart 通过。
 - [ ] 模型服务彩色品牌图标来自单一、本地打包的LobeHub presentation resolver；Engine图标owner不变，unknown/custom/Extension安全fallback，状态不只靠颜色，legal/SBOM与offline package闭合。
 

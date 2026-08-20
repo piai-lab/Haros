@@ -96,7 +96,7 @@ export function FirstRunReadinessDialog() {
   const { t } = useI18n();
   const navigate = useNavigate();
   const pathname = useLocation({ select: (location) => location.pathname });
-  const { settings, defaults, updateSettings } = useAppSettings();
+  const { settings } = useAppSettings();
   const [selectedProvider, setSelectedProvider] = useState<ProviderKind>("omnimind");
   const controller = useFirstRunReadinessController(selectedProvider);
   const [step, setStep] = useState<WizardStep>("engine");
@@ -400,9 +400,6 @@ export function FirstRunReadinessDialog() {
                   <ModelsSettingsPanel
                     active
                     resetEpoch={0}
-                    settings={settings}
-                    defaults={defaults}
-                    updateSettings={updateSettings}
                     startInAddFlow
                     presentation="first-run"
                     onServicePrepared={handleServicePrepared}

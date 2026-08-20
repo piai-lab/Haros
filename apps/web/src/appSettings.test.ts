@@ -614,7 +614,6 @@ describe("getProviderStartOptions", () => {
 
 describe("provider-indexed custom model settings", () => {
   const settings = {
-    customOmniMindModels: ["deepseek/custom-omnimind"],
     customCodexModels: ["custom/codex-model"],
     customClaudeModels: ["claude/custom-opus"],
     customCursorModels: ["cursor/custom-model"],
@@ -626,9 +625,8 @@ describe("provider-indexed custom model settings", () => {
     customPiModels: ["anthropic/custom-pi"],
   } as const;
 
-  it("exports one provider config per provider", () => {
+  it("does not expose a custom-model setting for runtime-catalog-only OmniMind", () => {
     expect(MODEL_PROVIDER_SETTINGS.map((config) => config.provider)).toEqual([
-      "omnimind",
       "codex",
       "claudeAgent",
       "cursor",
@@ -641,7 +639,7 @@ describe("provider-indexed custom model settings", () => {
     ]);
   });
 
-  it("keeps runtime-catalog persistence compatible without advertising unsupported editors", () => {
+  it("advertises editors only for Engines that own independent custom model slugs", () => {
     expect(CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.map((config) => config.provider)).toEqual([
       "codex",
       "claudeAgent",
@@ -653,24 +651,7 @@ describe("provider-indexed custom model settings", () => {
     ]);
   });
 
-  it("preserves every legacy OmniMind model hint until the user explicitly handles it", () => {
-    const legacyHints = [
-      ...Array.from({ length: 33 }, (_, index) => `legacy/model-${index}`),
-      "legacy/model-0",
-      "deepseek/deepseek-v4-flash",
-      "  opaque legacy value  ",
-    ];
-
-    const normalized = normalizeStoredAppSettings(
-      AppSettingsSchema.makeUnsafe({ customOmniMindModels: legacyHints }),
-    );
-
-    expect(normalized.customOmniMindModels).toEqual(legacyHints);
-    expect(normalized.customOmniMindModels).not.toBe(legacyHints);
-  });
-
-  it("reads custom models for each provider", () => {
-    expect(getCustomModelsForProvider(settings, "omnimind")).toEqual(["deepseek/custom-omnimind"]);
+  it("reads custom models for each supported provider", () => {
     expect(getCustomModelsForProvider(settings, "codex")).toEqual(["custom/codex-model"]);
     expect(getCustomModelsForProvider(settings, "claudeAgent")).toEqual(["claude/custom-opus"]);
     expect(getCustomModelsForProvider(settings, "cursor")).toEqual(["cursor/custom-model"]);
@@ -683,7 +664,6 @@ describe("provider-indexed custom model settings", () => {
 
   it("reads default custom models for each provider", () => {
     const defaults = {
-      customOmniMindModels: ["deepseek/default-omnimind"],
       customCodexModels: ["default/codex-model"],
       customClaudeModels: ["claude/default-opus"],
       customCursorModels: ["cursor/default-model"],
@@ -695,9 +675,6 @@ describe("provider-indexed custom model settings", () => {
       customPiModels: ["anthropic/default-pi"],
     } as const;
 
-    expect(getDefaultCustomModelsForProvider(defaults, "omnimind")).toEqual([
-      "deepseek/default-omnimind",
-    ]);
     expect(getDefaultCustomModelsForProvider(defaults, "codex")).toEqual(["default/codex-model"]);
     expect(getDefaultCustomModelsForProvider(defaults, "claudeAgent")).toEqual([
       "claude/default-opus",
@@ -769,7 +746,7 @@ describe("provider-indexed custom model settings", () => {
 
   it("builds a complete provider-indexed custom model record", () => {
     expect(getCustomModelsByProvider(settings)).toEqual({
-      omnimind: ["deepseek/custom-omnimind"],
+      omnimind: [],
       codex: ["custom/codex-model"],
       claudeAgent: ["claude/custom-opus"],
       cursor: ["cursor/custom-model"],
@@ -785,9 +762,7 @@ describe("provider-indexed custom model settings", () => {
   it("builds provider-indexed model options including custom models", () => {
     const modelOptionsByProvider = getCustomModelOptionsByProvider(settings);
 
-    expect(
-      modelOptionsByProvider.omnimind.some((option) => option.slug === "deepseek/custom-omnimind"),
-    ).toBe(true);
+    expect(modelOptionsByProvider.omnimind).toEqual([]);
     expect(
       modelOptionsByProvider.codex.some((option) => option.slug === "custom/codex-model"),
     ).toBe(true);
@@ -882,6 +857,22 @@ describe("provider-indexed custom model settings", () => {
 });
 
 describe("AppSettingsSchema", () => {
+  it("drops retired OmniMind model hints while preserving unrelated browser settings", () => {
+    const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
+    const retiredKey = ["custom", "OmniMind", "Models"].join("");
+    const decoded = decode(
+      JSON.stringify({
+        [retiredKey]: ["legacy/provider-model"],
+        customCodexModels: ["custom/codex-model"],
+        confirmThreadDelete: false,
+      }),
+    );
+
+    expect(decoded).not.toHaveProperty(retiredKey);
+    expect(decoded.customCodexModels).toEqual(["custom/codex-model"]);
+    expect(decoded.confirmThreadDelete).toBe(false);
+  });
+
   it("migrates persisted Gemini provider settings to Antigravity", () => {
     const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
     const decoded = decode(

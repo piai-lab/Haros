@@ -451,18 +451,21 @@ function createProviderInstallDisclosureState(
   settings: AppSettings,
 ): Record<ProviderKind, boolean> {
   return Object.fromEntries(
-    PROVIDER_INSTALL_SETTINGS.map((config) => [
-      config.provider,
-      config.fields.some((field) =>
-        field.kind === "password"
-          ? settings[field.configuredKey]
-          : Boolean(settings[field.settingsKey]),
-      ) ||
-        (CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.some(
-          (candidate) => candidate.provider === config.provider,
-        ) &&
-          getCustomModelsForProvider(settings, config.provider).length > 0),
-    ]),
+    PROVIDER_INSTALL_SETTINGS.map((config) => {
+      const customModelsConfig = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.find(
+        (candidate) => candidate.provider === config.provider,
+      );
+      return [
+        config.provider,
+        config.fields.some((field) =>
+          field.kind === "password"
+            ? settings[field.configuredKey]
+            : Boolean(settings[field.settingsKey]),
+        ) ||
+          (customModelsConfig !== undefined &&
+            getCustomModelsForProvider(settings, customModelsConfig.provider).length > 0),
+      ];
+    }),
   ) as Record<ProviderKind, boolean>;
 }
 
@@ -755,12 +758,13 @@ function ProviderCustomModelsEditor(props: {
   const [error, setError] = useState<string | null>(null);
   if (!config) return null;
 
-  const savedModels = getCustomModelsForProvider(props.settings, props.provider);
-  const defaultModels = getDefaultCustomModelsForProvider(props.defaults, props.provider);
+  const provider = config.provider;
+  const savedModels = getCustomModelsForProvider(props.settings, provider);
+  const defaultModels = getDefaultCustomModelsForProvider(props.defaults, provider);
   const isDirty = JSON.stringify(savedModels) !== JSON.stringify(defaultModels);
   const addModel = () => {
     const result = validateProviderCustomModelInput({
-      provider: props.provider,
+      provider,
       value: input,
       savedModels,
     });
@@ -776,7 +780,7 @@ function ProviderCustomModelsEditor(props: {
       );
       return;
     }
-    props.updateSettings(patchCustomModels(props.provider, [...savedModels, result.model]));
+    props.updateSettings(patchCustomModels(provider, [...savedModels, result.model]));
     setInput("");
     setError(null);
   };
@@ -793,9 +797,7 @@ function ProviderCustomModelsEditor(props: {
         {isDirty ? (
           <SettingResetButton
             label={t("settings.customModels")}
-            onClick={() =>
-              props.updateSettings(patchCustomModels(props.provider, [...defaultModels]))
-            }
+            onClick={() => props.updateSettings(patchCustomModels(provider, [...defaultModels]))}
           />
         ) : null}
       </div>
@@ -838,7 +840,7 @@ function ProviderCustomModelsEditor(props: {
                 onClick={() =>
                   props.updateSettings(
                     patchCustomModels(
-                      props.provider,
+                      provider,
                       savedModels.filter((candidate) => candidate !== model),
                     ),
                   )

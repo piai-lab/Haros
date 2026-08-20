@@ -778,7 +778,7 @@ deepseek-research
 - 独立 Engine custom slug 控件归 `Agent engines` 对应 detail，底层 storage 不迁移；
 - Pi Extension 模型服务是 V1 必达能力：被动 Settings 页面不得执行 Extension；用户显式进入添加流程后，复用 Pi 既有 ResourceLoader/Session provenance owner 做 intent-scoped 加载，并让真实 Extension provider 可搜索、可进入 detail，origin准确为 `extension`；
 - 锁定 OmniMind Agent runtime 已暴露的 manager/loader/settings/trust 与 install/update/remove/reload/enable lifecycle 必须通过既有 Agent skills/Engine detail owner可发现、可操作、可恢复；只有runtime确实未暴露的动作才隐藏，不复制package manager、不建立跨Provider共享Package state；
-- legacy `customOmniMindModels` 不再由新 UI 创建，既有值无损读取并提供显式转化/移除；
+- 本执行指南原定的 legacy OmniMind hint 转化/移除 UI 已被 2026-08-20 clean-break 裁决取代：旧字段不再读取、投影或写回，OmniMind 只接受 authoritative runtime catalog 模型；
 - 普通 UI `OmniMind`，技术 detail `OmniMind Agent`；
 - 不用可翻译 title 当稳定 anchor；
 - service deep-link 只携带非敏感 id。

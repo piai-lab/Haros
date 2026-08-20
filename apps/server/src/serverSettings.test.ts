@@ -131,6 +131,78 @@ describe("ServerSettingsService", () => {
     });
   });
 
+  it("retires only the old OmniMind model hint field on the next normal settings save", async () => {
+    const retiredKey = ["custom", "Models"].join("");
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 4,
+            migrationVersion: 2,
+            settings: {
+              enableAssistantStreaming: true,
+              enableProviderUpdateChecks: false,
+              addProjectBaseDirectory: "/tmp/omnimind-projects",
+              providers: {
+                omnimind: {
+                  enabled: false,
+                  [retiredKey]: ["legacy/provider-model"],
+                  defaultPrompt: "private prompt",
+                },
+                codex: { customModels: ["custom/codex-model"] },
+              },
+              agentTools: { disabledBuiltInGroups: ["device"] },
+            },
+          }),
+        );
+
+        yield* service.start;
+        const rawAfterRead = yield* fs.readFileString(settingsPath);
+        const view = yield* service.getSettingsView;
+        const internal = yield* service.getSettings;
+        yield* service.updateSettings({ enableAssistantStreaming: false });
+        const persisted = JSON.parse(yield* fs.readFileString(settingsPath)) as {
+          revision: number;
+          migrationVersion: number;
+          settings: Record<string, unknown> & {
+            providers: Record<string, unknown> & {
+              omnimind: Record<string, unknown>;
+              codex: { customModels: string[] };
+            };
+          };
+        };
+        return { rawAfterRead, view, internal, persisted };
+      }),
+    );
+
+    expect(result.rawAfterRead).toContain(`"${retiredKey}":["legacy/provider-model"]`);
+    expect(result.view.providers.omnimind).toEqual({ enabled: false });
+    expect(result.internal.providers.omnimind).toEqual({
+      enabled: false,
+      defaultPrompt: "private prompt",
+    });
+    expect(result.persisted).toMatchObject({
+      revision: 5,
+      migrationVersion: 2,
+      settings: {
+        enableAssistantStreaming: false,
+        enableProviderUpdateChecks: false,
+        addProjectBaseDirectory: "/tmp/omnimind-projects",
+        providers: {
+          omnimind: { enabled: false, defaultPrompt: "private prompt" },
+          codex: { customModels: ["custom/codex-model"] },
+        },
+        agentTools: { disabledBuiltInGroups: ["device"] },
+      },
+    });
+    expect(result.persisted.settings.providers.omnimind).not.toHaveProperty(retiredKey);
+  });
+
   it.each([
     {
       name: "an explicit legacy Device-on choice",

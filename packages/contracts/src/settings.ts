@@ -17,7 +17,6 @@ const ProviderSettingsBase = {
 
 export const OmniMindServerProviderSettings = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-  customModels: CustomModels,
   defaultPrompt: Schema.NullOr(
     Schema.String.check(
       Schema.isMaxLength(OMNIMIND_AGENT_PROMPT_MAX_BYTES),
@@ -147,7 +146,6 @@ export const DEFAULT_SERVER_SETTINGS: ServerSettings = Schema.decodeSync(ServerS
 
 const OmniMindServerProviderSettingsView = Schema.Struct({
   enabled: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
-  customModels: CustomModels,
 });
 
 // Public settings deliberately omit the customized default prompt. Its only
@@ -207,7 +205,6 @@ export const ServerSettingsPatch = Schema.Struct({
       omnimind: Schema.optionalKey(
         Schema.Struct({
           enabled: Schema.optionalKey(Schema.Boolean),
-          customModels: Schema.optionalKey(CustomModels),
         }),
       ),
       codex: Schema.optionalKey(

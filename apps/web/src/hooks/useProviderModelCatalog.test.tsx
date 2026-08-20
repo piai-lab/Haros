@@ -421,14 +421,7 @@ describe("useProviderModelCatalog", () => {
     ).toEqual(["Gemini 4 Pro", "custom/private-model"]);
   });
 
-  it("does not treat an OmniMind legacy custom hint as a Pi runtime model definition", () => {
-    mocks.useAppSettings.mockReturnValue({
-      settings: {
-        ...SETTINGS,
-        customOmniMindModels: ["legacy/provider-model"],
-      },
-      serverSettings: DEFAULT_SERVER_SETTINGS,
-    });
+  it("does not surface an unavailable exact OmniMind binding as a static model option", () => {
     modelQueries.set("omnimind", {
       data: {
         models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
@@ -447,7 +440,7 @@ describe("useProviderModelCatalog", () => {
       modelHintByProvider: { omnimind: "legacy/provider-model" },
     }).at(-1);
 
-    expect(catalog?.modelOptionsByProvider.omnimind.map((model) => model.slug)).toContain(
+    expect(catalog?.modelOptionsByProvider.omnimind.map((model) => model.slug)).not.toContain(
       "legacy/provider-model",
     );
     expect(catalog?.selectableModelOptionsByProvider.omnimind.map((model) => model.slug)).toEqual([

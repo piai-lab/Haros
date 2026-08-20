@@ -2293,26 +2293,6 @@ export const EN_MESSAGES = {
     "Add a skill folder containing a SKILL.md to the OmniMind skills folder above, or install skills for any supported engine.",
   "settings.engineManaged": "Engine managed",
   "settings.configuredModelServices": "Connected",
-  "settings.legacyOmniMindModels": "Earlier OmniMind model entries",
-  "settings.legacyOmniMindModelsDescription":
-    "These model IDs came from an earlier OmniMind setup. Convert one by supplying its real API format, endpoint, and credential, or remove only the old entry.",
-  "settings.legacyOmniMindModelDescription":
-    "Compatibility entry {number}; not an API connection yet.",
-  "settings.legacyOmniMindModelEmpty": "Empty compatibility entry",
-  "settings.legacyOmniMindModelConvert": "Convert",
-  "settings.legacyOmniMindModelConvertNamed": "Convert compatibility entry {number}: {model}",
-  "settings.legacyOmniMindModelRemove": "Remove entry",
-  "settings.legacyOmniMindModelRemoveNamed": "Remove compatibility entry {number}: {model}",
-  "settings.legacyOmniMindModelConversionDescription":
-    "The exact earlier model ID is prefilled. OmniMind will not guess the connection name, API format, endpoint, credential, or capabilities. Test and save the real connection to finish converting this entry; going back leaves it unchanged.",
-  "settings.legacyOmniMindModelRemoveTitle": "Remove earlier model entry?",
-  "settings.legacyOmniMindModelRemoveDescription":
-    "Remove only the compatibility entry {model}? This does not delete an API connection, credential, conversation, draft, or model selection.",
-  "settings.legacyOmniMindModelHintRemoved": "The earlier model entry was removed.",
-  "settings.legacyOmniMindModelHintChanged":
-    "The earlier model entries changed before this action completed, so no entry was removed.",
-  "settings.legacyOmniMindModelConvertedHintChanged":
-    "The API connection was saved, but the earlier model entries changed before conversion completed. Review and remove the remaining entry manually.",
   "settings.modelServicesLoading": "Loading model services…",
   "settings.modelServicesChecking": "Checking…",
   "settings.modelServicesCapabilityChecking": "Checking Server support…",
@@ -5826,25 +5806,6 @@ export const ZH_CN_MESSAGES = {
     "请在上方 OmniMind 技能文件夹中添加包含 SKILL.md 的技能文件夹，或为受支持的引擎安装技能。",
   "settings.engineManaged": "由引擎管理",
   "settings.configuredModelServices": "已连接",
-  "settings.legacyOmniMindModels": "旧版 OmniMind 模型条目",
-  "settings.legacyOmniMindModelsDescription":
-    "这些模型 ID 来自旧版 OmniMind 配置。请补充真实的 API 格式、地址和凭据完成转化，或只移除旧条目。",
-  "settings.legacyOmniMindModelDescription": "兼容条目 {number}；目前还不是 API 连接。",
-  "settings.legacyOmniMindModelEmpty": "空的兼容条目",
-  "settings.legacyOmniMindModelConvert": "转化",
-  "settings.legacyOmniMindModelConvertNamed": "转化兼容条目 {number}：{model}",
-  "settings.legacyOmniMindModelRemove": "移除条目",
-  "settings.legacyOmniMindModelRemoveNamed": "移除兼容条目 {number}：{model}",
-  "settings.legacyOmniMindModelConversionDescription":
-    "旧模型 ID 已原样填入。OmniMind 不会猜测连接名称、API 格式、地址、凭据或能力；请测试并保存真实连接以完成转化。返回不会改变旧条目。",
-  "settings.legacyOmniMindModelRemoveTitle": "移除旧模型条目？",
-  "settings.legacyOmniMindModelRemoveDescription":
-    "只移除兼容条目 {model} 吗？这不会删除 API 连接、凭据、对话、草稿或模型选择。",
-  "settings.legacyOmniMindModelHintRemoved": "旧模型条目已移除。",
-  "settings.legacyOmniMindModelHintChanged":
-    "操作完成前旧模型条目已发生变化，因此没有移除任何条目。",
-  "settings.legacyOmniMindModelConvertedHintChanged":
-    "API 连接已保存，但转化完成前旧模型条目已发生变化。请检查并手动移除仍保留的条目。",
   "settings.modelServicesLoading": "正在加载模型服务…",
   "settings.modelServicesChecking": "正在检查…",
   "settings.modelServicesCapabilityChecking": "正在检查 Server 支持情况…",

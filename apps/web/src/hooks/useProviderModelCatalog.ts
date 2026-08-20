@@ -284,11 +284,7 @@ export function useProviderModelCatalog(input: {
 
   const modelOptionsByProvider = useMemo(() => {
     const staticOptions: Record<ProviderKind, ReturnType<typeof getAppModelOptions>> = {
-      omnimind: getAppModelOptions(
-        "omnimind",
-        customModelsByProvider.omnimind,
-        modelHintByProvider?.omnimind,
-      ),
+      omnimind: getAppModelOptions("omnimind", []),
       codex: getAppModelOptions("codex", customModelsByProvider.codex, modelHintByProvider?.codex),
       claudeAgent: getAppModelOptions(
         "claudeAgent",

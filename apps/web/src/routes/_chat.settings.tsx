@@ -1452,13 +1452,7 @@ function SettingsRouteView() {
                 />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
-                <ModelsSettingsPanel
-                  active={activeSection === "models"}
-                  settings={settings}
-                  defaults={defaults}
-                  updateSettings={updateSettings}
-                  resetEpoch={resetEpoch}
-                />
+                <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}
                   settings={settings}
