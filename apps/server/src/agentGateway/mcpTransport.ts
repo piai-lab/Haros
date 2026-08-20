@@ -59,7 +59,14 @@ function requestIdKey(id: JsonRpcId): string {
 }
 
 export function makeAgentGatewayMcpTransport(input: {
-  readonly credentials: AgentGatewayCredentialsShape;
+  readonly credentials: Pick<
+    AgentGatewayCredentialsShape,
+    | "verifySession"
+    | "bindTurnAuthority"
+    | "verifyTurnAuthority"
+    | "registerInFlightRequest"
+    | "cancelInFlightRequests"
+  >;
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly tools: ReadonlyArray<ToolEntry>;
   readonly loadExposedTools?: Effect.Effect<ReadonlyArray<ToolEntry>, unknown>;

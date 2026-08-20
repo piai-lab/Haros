@@ -6,12 +6,11 @@ import {
 } from "@omnimind/contracts";
 import { Effect, Option } from "effect";
 
-import { makeAgentGatewayBrowserTools } from "../../../server/src/agentGateway/browserTools";
-import { makeAgentGatewayInFlightRequestRegistry } from "../../../server/src/agentGateway/inFlightRequestRegistry";
-import { makeAgentGatewayMcpTransport } from "../../../server/src/agentGateway/mcpTransport";
-import { makeAgentGatewaySessionRegistry } from "../../../server/src/agentGateway/Layers/AgentGatewaySessionRegistry";
-import { makeBrowserAutomationHost } from "../../../server/src/browserAutomation/Layers/BrowserAutomationHost";
-import type { AgentGatewayCredentialsShape } from "../../../server/src/agentGateway/Services/AgentGatewayCredentials";
+import { makeAgentGatewayBrowserTools } from "../../src/agentGateway/browserTools";
+import { makeAgentGatewayInFlightRequestRegistry } from "../../src/agentGateway/inFlightRequestRegistry";
+import { makeAgentGatewayMcpTransport } from "../../src/agentGateway/mcpTransport";
+import { makeAgentGatewaySessionRegistry } from "../../src/agentGateway/Layers/AgentGatewaySessionRegistry";
+import { makeBrowserAutomationHost } from "../../src/browserAutomation/Layers/BrowserAutomationHost";
 
 const PROVIDER: ProviderKind = "codex";
 
@@ -44,34 +43,13 @@ export function createBrowserMcpHarness(input: {
   const registry = makeAgentGatewaySessionRegistry();
   const inFlightRequests = makeAgentGatewayInFlightRequestRegistry();
   const issued = registry.issue(threadId, PROVIDER);
-  const credentials: AgentGatewayCredentialsShape = {
-    mcpEndpointUrl: "http://127.0.0.1.invalid/mcp",
-    setListeningPort: () => undefined,
-    issueSessionToken: (requestedThreadId, provider) =>
-      registry.issue(requestedThreadId, provider).token,
-    verifySessionToken: (token) => registry.verify(token)?.threadId ?? null,
+  const credentials = {
     verifySession: registry.verify,
-    bindWriteAuthority: registry.bindWriteAuthority,
-    verifyWriteAuthority: registry.verifyWriteAuthority,
+    bindTurnAuthority: registry.bindTurnAuthority,
+    verifyTurnAuthority: registry.verifyTurnAuthority,
     registerInFlightRequest: inFlightRequests.register,
     cancelInFlightRequests: inFlightRequests.cancel,
-    cancelSessionTurnRequests: (token, turnId) => {
-      const session = registry.verify(token);
-      return session
-        ? inFlightRequests.cancelTurn(session.sessionKey, turnId).settled
-        : Promise.resolve();
-    },
-    revokeSessionToken: (token) => {
-      const session = registry.verify(token);
-      registry.revoke(token);
-      if (session) void inFlightRequests.revokeSession(session.sessionKey).settled;
-    },
-    connectionForThread: (requestedThreadId, provider) => ({
-      url: "http://127.0.0.1.invalid/mcp",
-      bearerToken: registry.issue(requestedThreadId, provider).token,
-    }),
-    stdioProxy: { command: process.execPath, args: [] },
-  };
+  } satisfies Parameters<typeof makeAgentGatewayMcpTransport>[0]["credentials"];
   const shell = {
     id: threadId,
     modelSelection: { provider: PROVIDER, model: "e2e-fixture" },

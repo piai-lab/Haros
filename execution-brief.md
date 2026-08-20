@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-第七个独立 `RETIRE` 已闭合：Usage History discovery cursor 现在只接受 `null` 或 canonical version 1 JSON DFS stack，首版内部标量 path reader、跳过逻辑与兼容注释已完整删除。原始 Provider archive、SQLite schema、worker protocol、parser/计数模型、event/file identity、Refresh/Reindex 与 Web UI 均未改变；非 canonical cursor 复用既有 worker failure、provider-scoped `paused`、last-good 与 Resume 恢复，不新增 migration、cleanup、error code、fallback 或第二 cursor owner。
+Browser exact-turn Electron 证据链已恢复：Server-owned E2E harness 现在只实现 MCP transport 实际消费的 `verifySession`、turn authority 与 in-flight request seam，并直接复用 canonical SessionRegistry；两条 visible Browser Electron journey 不再依赖已退休的 write-authority fixture。production exact-turn 权限、MCP wire、Browser pipe、取消与错误行为均未改变。
 
 安装版 product bytes 现准确绑定 pushed product `8dfdd7310f984956de8e3b513f497c8a30700761`。同 SHA arm64 DMG SHA-256 为 `70fff3aeb24809521a3738eb3a9ac4df6fbf7882af2320d205d27e9453b77c43`，DMG staged `app.asar` 与安装版 `app.asar` 均为 `7d46bf8644099993c5d06ce4cc9b32c343ae10148935956cee57b706bbd084d2`，240 个 staged legal identities 闭合；本机安装版完成 ad-hoc 重签并通过 strict deep verification。后续 docs-only 状态提交不冒充 shipped bytes。
 
@@ -19,13 +19,13 @@
 
 ## 当前阻塞
 
-前六个已退休责任没有产品阻塞。两项既有反证继续隔离在各自 owner，不能拿来给本轮加补偿层：release provenance 的全包版本一致性检查发现产品包为 `0.1.0-alpha.0`、`packages/contracts` 为 `0.7.0`；visible Browser Electron E2E fixture 缺少当前 `bindTurnAuthority` credential seam，尚未进入 pipe journey 即失败。二者都不是本轮删除产生的行为回归，需要单独裁决和修复。
+当前已退休责任没有产品阻塞。Browser Electron E2E fixture 的 exact-turn credential seam 已闭合；剩余既有反证是 release provenance 的全包版本一致性检查发现产品包为 `0.1.0-alpha.0`、`packages/contracts` 为 `0.7.0`。它属于发行身份 correctness，不是既有退休删除产生的行为回归。
 
 official signing、notarization、Windows/Linux artifacts、GitHub Release 与 update feed 仍在维护者明确排除的本轮范围之外，不是遗留阻塞。
 
 ## 下一动作
 
-重新读取当时的 `main` 并全局重排，不默认继续寻找删除候选。package version mismatch 与 Browser E2E credential seam 分别属于发行 correctness 和测试装配，若进入施工必须独立裁决；engine catalog warming 与 SQLite migrations 1–100 继续 `DEFER`。
+在当前 pushed `main` 上独立统一 private contracts 的 OmniMind 产品版本；完成后再以真实 A/B 审判 engine catalog warming。SQLite migrations 1–100 继续 `DEFER`。
 
 ## 权威路由
 

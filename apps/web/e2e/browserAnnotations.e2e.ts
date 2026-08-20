@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import type { BrowserAnnotationEvent, BrowserAnnotationTheme } from "@omnimind/contracts";
 import { _electron as electron, expect, test, type ElectronApplication } from "playwright/test";
 
-import { createBrowserMcpHarness } from "./fixtures/mcpBrowserHarness";
+import { createBrowserMcpHarness } from "../../server/integration/fixtures/mcpBrowserHarness";
 import { startVisibleBrowserFixtureSite } from "./fixtures/siteServer";
 
 const WEB_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -56,7 +56,7 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
   }
 
   const site = await startVisibleBrowserFixtureSite();
-  const home = mkdtempSync(join(tmpdir(), "omnimind-browser-annotations-e2e-"));
+  const home = mkdtempSync(join(tmpdir(), "omnimind-annotations-e2e-"));
   const workspaceRoot = join(home, "workspace");
   mkdirSync(workspaceRoot);
   const pipePath = join(home, "browser-host.sock");
@@ -304,6 +304,15 @@ test("a real Electron guest commits and reprojects a continuous annotation sessi
       targetRect.x + targetRect.width / 2,
       targetRect.y + targetRect.height / 2,
     );
+    await expect
+      .poll(
+        () =>
+          runInGuest(
+            "document.activeElement?.matches('[data-omnimind-browser-annotations]') ?? false",
+          ),
+        { timeout: 5_000, intervals: [25, 50, 100] },
+      )
+      .toBe(true);
     await insertNativeText("Make this action clearer");
     await pressNativeKey("Tab");
     await pressNativeKey("Enter");

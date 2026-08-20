@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 import { BROWSER_TOOL_NAMES } from "@omnimind/contracts";
 import { _electron as electron, expect, test, type ElectronApplication } from "playwright/test";
 
-import { createBrowserMcpHarness } from "./fixtures/mcpBrowserHarness";
+import { createBrowserMcpHarness } from "../../server/integration/fixtures/mcpBrowserHarness";
 import { startVisibleBrowserFixtureSite } from "./fixtures/siteServer";
 
 const WEB_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
