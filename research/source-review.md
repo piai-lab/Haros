@@ -1090,3 +1090,25 @@ from the active Automation turn, existing definitions/memory are untouched, and 
 tombstone, fallback or generic schema validator is added. The separately approved retirement of
 `everyMinutes` plus implicit heartbeat/five-minute creation remains a later independent Slice and
 cannot inherit this Slice's validation evidence.
+
+The retirement shipped in exact pushed source `06496f86ca9a4ba939b1331f6da4a30aa4dbe663`.
+Focused AgentGateway, AutomationService-memory and run-envelope tests passed; the complete Server
+suite passed 4,362 tests with 16 skipped, Server typecheck passed, and lint reported no errors. The
+same SHA produced an arm64 DMG with SHA-256
+`708da78557ed94800e94adae9ed2ae8909a9095aa1a64fc6eadb1b40dff3f56e`; its staged and installed
+`app.asar` SHA-256 was `0971711b6f518a3cdbb4c4cdb1119a3c1ede35b3cc2ab6ed58caaf2a8fd45fc9`,
+and all 240 packaged legal identities were accounted for. The local installed candidate was ad-hoc
+signed and passed strict deep verification; this is not official signing, notarization, Release or
+update-feed activation.
+
+Two separately isolated packaged profiles then proved the real Agent journey with MiMo
+`mimo-v2.5-pro` and DeepSeek `deepseek-v4-pro`. Each Provider created a 24-hour standalone
+automation, called the canonical `memory` input, viewed the exact persisted excerpt, and used a
+continuation turn to archive the definition before its first run. After clean shutdown, SQLite held
+the exact 27-byte `MEMORY_CANONICAL_MIMO_06496` and 31-byte
+`MEMORY_CANONICAL_DEEPSEEK_06496` values, with both definitions disabled/archived and zero active
+automations. DeepSeek's same profile reopened with no active Automation UI entry, and all OmniMind
+processes exited. Accepted runs first proved task-specific Electron `userData` from Helper arguments
+and Server base/state/database paths from runtime logs. An earlier rejected setup caused the UI
+controller to launch the default profile; it was detected before any Provider send or settings
+mutation, stopped immediately, and is excluded from the evidence set.
