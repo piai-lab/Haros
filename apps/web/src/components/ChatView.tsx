@@ -1744,7 +1744,13 @@ export default function ChatView({
       setIsEnginePickerOpen(false);
       setPiDiscoveryRequested(false);
     }, 0);
-    return () => window.clearTimeout(settle);
+    return () => {
+      window.clearTimeout(settle);
+      // Stop an explicit-intent queue between reads when this Thread scope is
+      // replaced or ChatView unmounts. Do not cancel the current shared query:
+      // another mounted surface may still be consuming the same catalog.
+      explicitModelPrefetchGenerationRef.current += 1;
+    };
   }, [threadId]);
   useEffect(() => {
     const scrollDebouncer = showScrollDebouncer.current;
@@ -2422,6 +2428,21 @@ export default function ChatView({
   const showDebugTaskBanner = import.meta.env.DEV && featureFlags["show-debug-task-banner"];
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
+  const providerStatuses = useMemo(
+    () =>
+      (serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES)
+        .map((status) => {
+          const customBinaryPath = getCustomBinaryPathForProvider(settings, status.provider);
+          return normalizeProviderStatusForLocalConfig({
+            provider: status.provider,
+            status,
+            customBinaryPath,
+            confirmedCustomBinaryPath: confirmedCustomBinaryPathsByProvider[status.provider],
+          });
+        })
+        .flatMap((status) => (status ? [status] : [])),
+    [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
+  );
   const composerModelHintByProvider = useMemo<Record<ProviderKind, string | null>>(() => {
     const threadModelSelection = serverThread?.modelSelection ?? null;
     const projectModelSelection = activeProject?.defaultModelSelection ?? null;
@@ -2454,9 +2475,10 @@ export default function ChatView({
     activeProjectCwd: activeProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
-  const selectedProviderDiscoveryAuthPermitted =
-    serverConfigQuery.data?.providers.find((status) => status.provider === selectedProvider)
-      ?.authStatus !== "unauthenticated";
+  const selectedProviderStatus = findProviderStatus(providerStatuses, selectedProvider);
+  const selectedProviderDiscoveryPermitted =
+    selectedProviderStatus === null ||
+    (selectedProviderStatus.available && selectedProviderStatus.authStatus !== "unauthenticated");
   const {
     customModelsByProvider,
     catalogStateByProvider,
@@ -2469,7 +2491,7 @@ export default function ChatView({
     selectedProvider,
     discoveryEnabled: false,
     selectedProviderDiscoveryEnabled:
-      selectedProviderDiscoveryAuthPermitted &&
+      selectedProviderDiscoveryPermitted &&
       (selectedProvider !== "omnimind" ||
         omniMindModelDiscoveryRequested ||
         composerModelHintByProvider.omnimind !== null ||
@@ -4131,21 +4153,6 @@ export default function ChatView({
   useEffect(() => {
     saveConfirmedCustomBinaryPaths(confirmedCustomBinaryPathsByProvider);
   }, [confirmedCustomBinaryPathsByProvider]);
-  const providerStatuses = useMemo(
-    () =>
-      (serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES)
-        .map((status) => {
-          const customBinaryPath = getCustomBinaryPathForProvider(settings, status.provider);
-          return normalizeProviderStatusForLocalConfig({
-            provider: status.provider,
-            status,
-            customBinaryPath,
-            confirmedCustomBinaryPath: confirmedCustomBinaryPathsByProvider[status.provider],
-          });
-        })
-        .flatMap((status) => (status ? [status] : [])),
-    [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
-  );
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const handoffBadgeLabel = useMemo(
     () => (activeThread ? resolveThreadHandoffBadgeLabel(activeThread) : null),
@@ -4525,7 +4532,8 @@ export default function ChatView({
         // catalog immediately instead of waiting for a second click on Model.
         setOmniMindModelDiscoveryRequested(true);
       }
-      if (findProviderStatus(providerStatuses, provider)?.authStatus === "unauthenticated") {
+      const status = findProviderStatus(providerStatuses, provider);
+      if (status && (!status.available || status.authStatus === "unauthenticated")) {
         return;
       }
       // Selection is stronger intent than the background browse queue. Start the
