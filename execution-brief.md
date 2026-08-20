@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-第六个独立 `RETIRE`、其后暴露的 MiMo correctness defect 与 packaged fresh-profile route defect 均已闭合。AgentGateway 不再接受 `everyMinutes`，也不再把缺失的 `mode`/`schedule` 猜成 heartbeat/五分钟；`omnimind_create_automation` 仍只接受显式执行模式和 canonical schedule。一次同 schema、同 prompt 的脱敏 raw-wire harness 证明：旧的 nested `schedule.oneOf` 会让 MiMo 在原始 Provider response 中直接把 `schedule` 生成为 JSON string，而等价的 flat object schema 会让 MiMo 与 DeepSeek 都保留 object。最早错误 owner 因而是 Agent-facing schema，不是 Gateway decoder、Pi normalization 或 Automation persistence。精确修复只把 model-facing schedule 投影压平为一个带 `type` discriminator 和可选 branch fields 的 object；canonical `AutomationSchedule` decoder、branch validation、Web 表单、scheduler、persistence 与既有定义不变，也没有加入 string coercion、Provider 特判、alias、migration、fallback 或第二 validator。
+第七个独立 `RETIRE` 已形成 source candidate：Usage History discovery cursor 现在只接受 `null` 或 canonical version 1 JSON DFS stack，首版内部标量 path reader、跳过逻辑与兼容注释已完整删除。原始 Provider archive、SQLite schema、worker protocol、parser/计数模型、event/file identity、Refresh/Reindex 与 Web UI 均未改变；非 canonical cursor 复用既有 worker failure、provider-scoped `paused`、last-good 与 Resume 恢复，不新增 migration、cleanup、error code、fallback 或第二 cursor owner。focused、完整 Server suite、typecheck、build 与构建 worker stdin probe 已通过，packaged 安装与隔离旧 cursor journey 是当前唯一未闭合动作。
 
 安装版 product bytes 现准确绑定 pushed product `3c05e3ce3521cfd82793fa192048614fc2b581ee`。同 SHA arm64 DMG SHA-256 为 `beeca6ef5583e99465e3567364348450fc5f4b9d828e56eff76dbaa17e852f71`，DMG staged `app.asar` 与安装版 `app.asar` 均为 `d8492eb0d40a394857bc8bf1563afa739ccdc9712c759741b9e8ad6c95a74d07`，240 个 staged legal identities 闭合；本机安装版完成 ad-hoc 重签并通过 strict deep verification。后续 source-only 状态提交不冒充 shipped bytes。
 
@@ -29,7 +29,7 @@ official signing、notarization、Windows/Linux artifacts、GitHub Release 与 u
 
 ## 下一动作
 
-重新读取届时的 `main` 后，独立审判 Usage History 旧字符串 discovery cursor。该候选不得与 Usage History schema、SQLite migration、计数模型、文件解析或重建逻辑混改；若无法证明 canonical JSON cursor、幂等重扫和恢复边界足以承担结果，就保持 `DEFER`，不加补偿层。
+提交并推送当前单一 source concern；随后只从该 exact pushed SHA 重建、安装 macOS ad-hoc candidate，并以 fresh、完全隔离的任务 profile 证明 canonical indexing、旧标量 cursor 的 paused/last-good 边界、Resume 后聚合守恒、同 profile 重开与进程清理。闭合后重新读取当时的 `main` 并全局重排，不默认继续寻找删除候选。
 
 ## 权威路由
 

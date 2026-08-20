@@ -7,6 +7,7 @@ import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
+import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { ServerConfig } from "../config";
@@ -181,6 +182,83 @@ describe("UsageHistory", () => {
         expect(settled.providers.every((provider) => provider.status === "paused")).toBe(true);
         expect(settled.rows).toEqual([]);
         expect(process.pid).toBeGreaterThan(0);
+      }).pipe(Effect.provide(layer), Effect.scoped),
+    );
+  });
+
+  it("keeps last-good usage while a retired scalar cursor pauses and resumes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-usage-cursor-"));
+    tempRoots.push(root);
+    const codexHome = path.join(root, ".codex");
+    const sessions = path.join(codexHome, "sessions");
+    const claudeHome = path.join(root, ".claude");
+    await mkdir(sessions, { recursive: true });
+    await mkdir(path.join(claudeHome, "projects"), { recursive: true });
+    process.env.CLAUDE_CONFIG_DIR = claudeHome;
+
+    const metadata = JSON.stringify({
+      type: "session_meta",
+      payload: { id: "session-cursor", cwd: path.join(root, "workspace"), model: "gpt-5" },
+    });
+    const event = JSON.stringify({
+      type: "event_msg",
+      timestamp: "2026-08-20T00:00:00.000Z",
+      payload: {
+        type: "token_count",
+        id: "event-cursor",
+        info: { last_token_usage: { input_tokens: 80, output_tokens: 8 } },
+      },
+    });
+    await writeFile(path.join(sessions, "session.jsonl"), `${metadata}\n${event}\n`);
+
+    const layer = UsageHistoryLive.pipe(
+      Layer.provideMerge(SqlitePersistenceMemory),
+      Layer.provideMerge(
+        ServerSettingsService.layerTest({ providers: { codex: { homePath: codexHome } } }),
+      ),
+      Layer.provide(
+        ServerConfig.layerTest(process.cwd(), { prefix: "omnimind-usage-cursor-test-" }),
+      ),
+      Layer.provide(NodeServices.layer),
+    );
+
+    await Effect.runPromise(
+      Effect.gen(function* () {
+        const history = yield* UsageHistory;
+        const sql = yield* SqlClient.SqlClient;
+        yield* history.command({ action: "authorize" });
+        const ready = yield* Effect.promise(() => waitForSettled(history));
+        expect(ready.status).toBe("ready");
+        expect(ready.rows[0]?.inputTokens).toBe(80);
+        expect(ready.rows[0]?.outputTokens).toBe(8);
+
+        yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 25)));
+        yield* sql`
+          UPDATE usage_history_provider_state SET status = 'pending',
+            discovery_cursor = 'session.jsonl', discovery_complete = 0,
+            restart_attempts = 0, detail_code = NULL
+          WHERE provider = 'codex'
+        `;
+        yield* sql`
+          UPDATE usage_history_control SET status = 'indexing',
+            updated_at = ${new Date().toISOString()}
+          WHERE singleton_id = 1
+        `;
+
+        yield* history.get({ range: "all", groupBy: "model" });
+        const paused = yield* Effect.promise(() => waitForSettled(history));
+        expect(paused.status).toBe("paused");
+        expect(paused.providers.find((provider) => provider.provider === "codex")?.status).toBe(
+          "paused",
+        );
+        expect(paused.rows[0]?.inputTokens).toBe(80);
+        expect(paused.rows[0]?.outputTokens).toBe(8);
+
+        yield* history.command({ action: "resume" });
+        const resumed = yield* Effect.promise(() => waitForSettled(history));
+        expect(resumed.status).toBe("ready");
+        expect(resumed.rows[0]?.inputTokens).toBe(80);
+        expect(resumed.rows[0]?.outputTokens).toBe(8);
       }).pipe(Effect.provide(layer), Effect.scoped),
     );
   });

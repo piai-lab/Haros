@@ -31,7 +31,6 @@ interface DiscoveryCursorFrame {
 interface DiscoveryCursorState {
   readonly version: 1;
   readonly stack: DiscoveryCursorFrame[];
-  readonly legacyAfterPath?: string;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -95,36 +94,27 @@ function decodeDiscoveryCursor(cursor: string | null): DiscoveryCursorState {
   if (!cursor) {
     return { version: 1, stack: [{ relativeDirectory: "", afterEntry: null }] };
   }
-  try {
-    const decoded = JSON.parse(cursor) as Partial<DiscoveryCursorState>;
-    if (
-      decoded.version === 1 &&
-      Array.isArray(decoded.stack) &&
-      decoded.stack.length > 0 &&
-      decoded.stack.every(
-        (frame) =>
-          frame &&
-          isSafeRelativeDirectory(frame.relativeDirectory) &&
-          (frame.afterEntry === null || typeof frame.afterEntry === "string"),
-      )
-    ) {
-      return {
-        version: 1,
-        stack: decoded.stack.map((frame) => ({
-          relativeDirectory: frame.relativeDirectory,
-          afterEntry: frame.afterEntry,
-        })),
-      };
-    }
-  } catch {
-    // A cursor written by the first release was the last relative file path.
-    // Resume it once without creating a second durable cursor format.
+  const decoded = JSON.parse(cursor) as Partial<DiscoveryCursorState>;
+  if (
+    decoded.version === 1 &&
+    Array.isArray(decoded.stack) &&
+    decoded.stack.length > 0 &&
+    decoded.stack.every(
+      (frame) =>
+        frame &&
+        isSafeRelativeDirectory(frame.relativeDirectory) &&
+        (frame.afterEntry === null || typeof frame.afterEntry === "string"),
+    )
+  ) {
+    return {
+      version: 1,
+      stack: decoded.stack.map((frame) => ({
+        relativeDirectory: frame.relativeDirectory,
+        afterEntry: frame.afterEntry,
+      })),
+    };
   }
-  return {
-    version: 1,
-    stack: [{ relativeDirectory: "", afterEntry: null }],
-    legacyAfterPath: cursor,
-  };
+  throw new Error("invalid-discovery-cursor");
 }
 
 function encodeDiscoveryCursor(state: DiscoveryCursorState): string {
@@ -223,7 +213,6 @@ async function discover(
       }
 
       if (!entry.isFile() || !entry.name.endsWith(".jsonl")) continue;
-      if (cursor.legacyAfterPath && relativePath <= cursor.legacyAfterPath) continue;
       const contained = await resolveContainedFile(rootRealPath, relativePath);
       if (!contained) {
         issueCodes.add("discovery-file-unavailable");

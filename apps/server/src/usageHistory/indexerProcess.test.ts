@@ -98,10 +98,37 @@ describe("usage history indexer", () => {
       });
       if (response.type !== "discover-result") throw new Error("unexpected worker response");
       response.files.forEach((file) => discovered.add(file.relativePath));
+      if (response.nextCursor) {
+        expect(JSON.parse(response.nextCursor)).toMatchObject({
+          version: 1,
+          stack: expect.any(Array),
+        });
+      }
       cursor = response.nextCursor;
       if (response.complete) break;
     }
     expect(discovered.size).toBe(2_105);
+  });
+
+  it("rejects non-canonical discovery cursors instead of silently rescanning", async () => {
+    const root = await makeRoot();
+    const invalidCursors = [
+      "nested/session.jsonl",
+      "{not-json",
+      JSON.stringify({ version: 2, stack: [{ relativeDirectory: "", afterEntry: null }] }),
+    ];
+
+    for (const cursor of invalidCursors) {
+      await expect(
+        handleUsageHistoryWorkerRequest({
+          type: "discover",
+          provider: "codex",
+          rootPath: root,
+          cursor,
+          limit: 128,
+        }),
+      ).rejects.toThrow();
+    }
   });
 
   it("ignores symlinks and never discovers files outside the allowed provider root", async () => {
