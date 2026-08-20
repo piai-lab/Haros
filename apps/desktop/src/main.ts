@@ -55,7 +55,6 @@ import { isKeyboardShortcutsHelpChord } from "@omnimind/shared/browserShortcuts"
 import { getMacTrafficLightPosition } from "@omnimind/shared/desktopChrome";
 import { DEVICE_HELPER_SOURCE_DIR_ENV } from "@omnimind/shared/deviceHelperCache";
 import {
-  OMNIMIND_DESKTOP_UPDATE_CHANNEL,
   resolveOmniMindDesktopFlavor,
   omnimindDesktopIdentity,
 } from "@omnimind/shared/desktopIdentity";
@@ -3297,9 +3296,6 @@ function configureAutoUpdater(): void {
 
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = false;
-  // The dedicated channel keeps the permanent compatibility release on the
-  // default feed while OmniMind versions advance independently.
-  autoUpdater.channel = OMNIMIND_DESKTOP_UPDATE_CHANNEL;
   autoUpdater.allowPrerelease = DESKTOP_UPDATE_ALLOW_PRERELEASE;
   autoUpdater.allowDowngrade = false;
   // Match electron-updater's native GitHub provider path; the packaged

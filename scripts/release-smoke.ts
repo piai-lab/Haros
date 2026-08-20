@@ -9,10 +9,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import {
-  OMNIMIND_DESKTOP_UPDATE_CHANNEL,
-  OMNIMIND_PRODUCTION_BUNDLE_ID,
-} from "@omnimind/shared/desktopIdentity";
+import { OMNIMIND_PRODUCTION_BUNDLE_ID } from "@omnimind/shared/desktopIdentity";
 
 import {
   OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
@@ -107,9 +104,6 @@ function verifyCanonicalIdentity(): void {
   }
   if (OMNIMIND_PRODUCTION_BUNDLE_ID !== "app.omnimind.desktop") {
     throw new Error(`Unexpected production bundle ID: ${OMNIMIND_PRODUCTION_BUNDLE_ID}.`);
-  }
-  if (OMNIMIND_DESKTOP_UPDATE_CHANNEL !== "omnimind") {
-    throw new Error(`Unexpected desktop update channel: ${OMNIMIND_DESKTOP_UPDATE_CHANNEL}.`);
   }
 }
 

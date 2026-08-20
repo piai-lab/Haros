@@ -7,7 +7,6 @@ import {
   OMNIMIND_CANARY_DESKTOP_ORIGIN,
   OMNIMIND_DESKTOP_ENTRY_URL,
   OMNIMIND_DESKTOP_ORIGIN,
-  OMNIMIND_DESKTOP_UPDATE_CHANNEL,
   OMNIMIND_DEVELOPMENT_BUNDLE_ID,
   OMNIMIND_PRODUCTION_BUNDLE_ID,
   omnimindBundleId,
@@ -25,10 +24,6 @@ describe("desktopIdentity", () => {
   it("uses the exact packaged renderer origin and entry URL", () => {
     expect(OMNIMIND_DESKTOP_ORIGIN).toBe("omnimind://app");
     expect(OMNIMIND_DESKTOP_ENTRY_URL).toBe("omnimind://app/index.html");
-  });
-
-  it("uses the isolated OmniMind desktop update channel", () => {
-    expect(OMNIMIND_DESKTOP_UPDATE_CHANNEL).toBe("omnimind");
   });
 
   it("gives Canary a fully separate desktop identity and storage profile", () => {
