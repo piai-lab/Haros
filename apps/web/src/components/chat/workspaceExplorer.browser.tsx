@@ -79,6 +79,7 @@ function makeNativeApi(overrides?: {
 
 function SearchHarness(props: {
   onSelectFile: (path: string) => void;
+  onSelectDirectory?: (path: string) => void;
   onReferenceInChat?: (reference: ChatFileReference) => void;
   queryClient?: QueryClient;
 }) {
@@ -96,6 +97,7 @@ function SearchHarness(props: {
           onQueryChange={setQuery}
           selectedFilePath={null}
           onSelectFile={props.onSelectFile}
+          onSelectDirectory={props.onSelectDirectory ?? vi.fn()}
           onReferenceInChat={props.onReferenceInChat}
         />
       </QueryClientProvider>
@@ -202,6 +204,39 @@ describe("workspace search", () => {
       await userEvent.keyboard("{Escape}");
       expect(input).toHaveValue("");
       expect(document.activeElement).toBe(input.element());
+    } finally {
+      restoreApi();
+    }
+  });
+
+  it("routes directory matches to explorer reveal instead of opening them as files", async () => {
+    const restoreApi = installNativeApi(
+      makeNativeApi({
+        searchEntries: vi.fn(async () => ({
+          entries: [{ path: "src/components", kind: "directory" as const }],
+          truncated: false,
+        })),
+        searchContent: vi.fn(async () => ({ matches: [], truncated: false })),
+      }),
+    );
+    const onSelectFile = vi.fn();
+    const onSelectDirectory = vi.fn();
+    try {
+      await render(
+        <SearchHarness
+          onSelectFile={onSelectFile}
+          onSelectDirectory={onSelectDirectory}
+        />,
+      );
+      const input = page.getByRole("textbox", { name: "Search workspace" });
+      await userEvent.type(input, "components");
+      await vi.waitFor(() =>
+        expect(document.querySelector('[title="src/components"]')).not.toBeNull(),
+      );
+
+      await page.getByTitle("src/components").click();
+      expect(onSelectDirectory).toHaveBeenCalledWith("src/components");
+      expect(onSelectFile).not.toHaveBeenCalled();
     } finally {
       restoreApi();
     }

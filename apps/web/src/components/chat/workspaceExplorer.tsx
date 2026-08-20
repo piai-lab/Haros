@@ -421,10 +421,11 @@ function WorkspaceSearchResultRow(props: {
   highlightQuery: string;
   selected: boolean;
   onSelectFile: (path: string) => void;
+  onSelectDirectory: (path: string) => void;
   onPrefetchEntry: (entry: Pick<ProjectFileSystemEntry, "path" | "kind">) => void;
   onEntryContextMenu: (path: string, position: { x: number; y: number }) => void;
 }) {
-  const { entry, onEntryContextMenu, onPrefetchEntry, onSelectFile } = props;
+  const { entry, onEntryContextMenu, onPrefetchEntry, onSelectDirectory, onSelectFile } = props;
   const { dir, name } = splitRepoRelativePath(entry.path);
   const nameSegments = buildMatchSegments(name, props.highlightQuery);
   const handlePrefetch = () => {
@@ -438,11 +439,13 @@ function WorkspaceSearchResultRow(props: {
       aria-current={props.selected ? "page" : undefined}
       className={fileRowClassName(props.selected, "h-8 px-2")}
       title={entry.path}
-      draggable
+      draggable={entry.kind === "file"}
       onDragStart={(event) => {
-        setFileReferenceDragData(event.dataTransfer, entry.path);
+        if (entry.kind === "file") setFileReferenceDragData(event.dataTransfer, entry.path);
       }}
-      onClick={() => onSelectFile(entry.path)}
+      onClick={() =>
+        entry.kind === "directory" ? onSelectDirectory(entry.path) : onSelectFile(entry.path)
+      }
       onPointerEnter={handlePrefetch}
       onFocus={handlePrefetch}
       onContextMenu={(event) => {
@@ -450,7 +453,11 @@ function WorkspaceSearchResultRow(props: {
         onEntryContextMenu(entry.path, getFileContextMenuPosition(event));
       }}
     >
-      <FileEntryIcon pathValue={entry.path} kind="file" className="size-3.5 shrink-0 opacity-75" />
+      <FileEntryIcon
+        pathValue={entry.path}
+        kind={entry.kind}
+        className="size-3.5 shrink-0 opacity-75"
+      />
       <div className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">
         <span className="shrink-0 truncate font-medium">
           {nameSegments
@@ -530,7 +537,7 @@ function WorkspaceContentSearchResultRow(props: {
 
 type WorkspaceSearchMatch =
   | {
-      readonly type: "file";
+      readonly type: "entry";
       readonly path: string;
       readonly entry: ProjectEntry;
     }
@@ -570,7 +577,6 @@ function useWorkspaceSearch(workspaceRoot: string | null, query: string): Worksp
     projectSearchEntriesQueryOptions({
       cwd: workspaceRoot,
       query: trimmedQuery,
-      kind: "file",
       limit: EXPLORER_SEARCH_RESULTS_LIMIT,
     }),
   );
@@ -599,7 +605,7 @@ function useWorkspaceSearch(workspaceRoot: string | null, query: string): Worksp
       ? [
           ...(entriesQuery.data?.entries ?? []).map(
             (entry): WorkspaceSearchMatch => ({
-              type: "file",
+              type: "entry",
               path: entry.path,
               entry,
             }),
@@ -640,9 +646,10 @@ function WorkspaceSearchInputHeader(props: {
   autoFocus?: boolean;
   onQueryChange: (query: string) => void;
   onSelectFile: (path: string) => void;
+  onSelectDirectory: (path: string) => void;
 }) {
   const { t } = useI18n();
-  const { onQueryChange, onSelectFile, query, search } = props;
+  const { onQueryChange, onSelectDirectory, onSelectFile, query, search } = props;
   const handleInputKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -651,7 +658,11 @@ function WorkspaceSearchInputHeader(props: {
       }
       const topMatch = search.matches[0];
       if (topMatch) {
-        onSelectFile(topMatch.path);
+        if (topMatch.type === "entry" && topMatch.entry.kind === "directory") {
+          onSelectDirectory(topMatch.path);
+        } else {
+          onSelectFile(topMatch.path);
+        }
       }
       return;
     }
@@ -685,6 +696,7 @@ function WorkspaceSearchResultsBody(props: {
   search: WorkspaceSearchState;
   selectedFilePath: string | null;
   onSelectFile: (path: string) => void;
+  onSelectDirectory: (path: string) => void;
   onPrefetchEntry: (entry: Pick<ProjectFileSystemEntry, "path" | "kind">) => void;
   onEntryContextMenu: (path: string, position: { x: number; y: number }) => void;
 }) {
@@ -737,13 +749,14 @@ function WorkspaceSearchResultsBody(props: {
           )
         ) : (
           matches.map((result) =>
-            result.type === "file" ? (
+            result.type === "entry" ? (
               <WorkspaceSearchResultRow
-                key={`file:${result.path}`}
+                key={`entry:${result.path}`}
                 entry={result.entry}
                 highlightQuery={normalizeWorkspaceEntrySearchQuery(props.search.inputQuery)}
                 selected={result.path === props.selectedFilePath}
                 onSelectFile={props.onSelectFile}
+                onSelectDirectory={props.onSelectDirectory}
                 onPrefetchEntry={props.onPrefetchEntry}
                 onEntryContextMenu={props.onEntryContextMenu}
               />
@@ -775,6 +788,7 @@ export function WorkspaceSearchSidebar(props: {
   selectedFilePath: string | null;
   containerClassName?: string;
   onSelectFile: (path: string) => void;
+  onSelectDirectory: (path: string) => void;
   onReferenceInChat: ((reference: ChatFileReference) => void) | undefined;
 }) {
   const { t } = useI18n();
@@ -794,6 +808,7 @@ export function WorkspaceSearchSidebar(props: {
         autoFocus
         onQueryChange={props.onQueryChange}
         onSelectFile={props.onSelectFile}
+        onSelectDirectory={props.onSelectDirectory}
       />
       {search.inputQuery.length === 0 ? (
         <div className="flex min-h-0 flex-1 flex-col px-1 py-1">
@@ -807,6 +822,7 @@ export function WorkspaceSearchSidebar(props: {
           search={search}
           selectedFilePath={props.selectedFilePath}
           onSelectFile={props.onSelectFile}
+          onSelectDirectory={props.onSelectDirectory}
           onPrefetchEntry={prefetchEntry}
           onEntryContextMenu={handleEntryContextMenu}
         />
@@ -834,6 +850,12 @@ export function WorkspaceExplorerSidebar(props: {
   const handleResultEntryContextMenu = useResultEntryContextMenu(props.onReferenceInChat);
   const handleListKeyDown = useExplorerListNavigation();
   const search = useWorkspaceSearch(props.workspaceRoot, props.query);
+  const handleSelectDirectory = (path: string) => {
+    for (const directory of workspaceDirectoryChain(path)) {
+      if (!props.expandedDirectories.has(directory)) props.onToggleDirectory(directory);
+    }
+    props.onQueryChange("");
+  };
 
   return (
     <aside
@@ -845,6 +867,7 @@ export function WorkspaceExplorerSidebar(props: {
         search={search}
         onQueryChange={props.onQueryChange}
         onSelectFile={props.onSelectFile}
+        onSelectDirectory={handleSelectDirectory}
       />
       {search.inputQuery.length === 0 ? (
         <WorkspaceFilesTreeBody
@@ -862,12 +885,18 @@ export function WorkspaceExplorerSidebar(props: {
           search={search}
           selectedFilePath={props.selectedFilePath}
           onSelectFile={props.onSelectFile}
+          onSelectDirectory={handleSelectDirectory}
           onPrefetchEntry={prefetchEntry}
           onEntryContextMenu={handleResultEntryContextMenu}
         />
       )}
     </aside>
   );
+}
+
+export function workspaceDirectoryChain(path: string): string[] {
+  const segments = path.split("/").filter(Boolean);
+  return segments.map((_segment, index) => segments.slice(0, index + 1).join("/"));
 }
 
 export function ExplorerActivityBarButton(props: {

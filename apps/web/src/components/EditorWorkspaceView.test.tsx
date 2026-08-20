@@ -10,7 +10,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { EditorWorkspaceView } from "./EditorWorkspaceView";
-import { WorkspaceSearchSidebar } from "./chat/workspaceExplorer";
+import { workspaceDirectoryChain, WorkspaceSearchSidebar } from "./chat/workspaceExplorer";
 import { projectQueryKeys } from "../lib/projectReactQuery";
 import { SidebarProvider } from "./ui/sidebar";
 
@@ -38,6 +38,10 @@ function createFileDiff(path: string, additions: number, deletions: number): Fil
 }
 
 describe("EditorWorkspaceView", () => {
+  it("expands every ancestor when a directory search result is revealed", () => {
+    expect(workspaceDirectoryChain("apps/web/src")).toEqual(["apps", "apps/web", "apps/web/src"]);
+  });
+
   it("renders a project switcher arrow beside the project title", () => {
     const markup = renderToStaticMarkup(
       <EditorWorkspaceView
@@ -415,6 +419,7 @@ describe("EditorWorkspaceView", () => {
           onQueryChange={vi.fn()}
           selectedFilePath={null}
           onSelectFile={vi.fn()}
+          onSelectDirectory={vi.fn()}
           onReferenceInChat={undefined}
         />
       </QueryClientProvider>,
@@ -427,7 +432,7 @@ describe("EditorWorkspaceView", () => {
   it("lists only matching files from the workspace search results", () => {
     const queryClient = new QueryClient();
     queryClient.setQueryData(
-      projectQueryKeys.searchEntries("/Users/tester/project", "editor", 80, "file"),
+      projectQueryKeys.searchEntries("/Users/tester/project", "editor", 80, null),
       {
         entries: [{ path: "apps/web/src/components/EditorWorkspaceView.tsx", kind: "file" }],
         truncated: false,
@@ -454,6 +459,7 @@ describe("EditorWorkspaceView", () => {
           onQueryChange={vi.fn()}
           selectedFilePath="apps/web/src/components/EditorWorkspaceView.tsx"
           onSelectFile={vi.fn()}
+          onSelectDirectory={vi.fn()}
           onReferenceInChat={undefined}
         />
       </QueryClientProvider>,

@@ -58,6 +58,7 @@ import { PanelStateMessage } from "./chat/PanelStateMessage";
 import {
   ExplorerActivityBarButton,
   setFileReferenceDragData,
+  workspaceDirectoryChain,
   WorkspaceFilesSidebar,
   WorkspaceSearchSidebar,
 } from "./chat/workspaceExplorer";
@@ -417,6 +418,14 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
     setSearchPaneActive(false);
     onCenterModeChange(item);
   };
+  const handleSearchDirectorySelect = (path: string) => {
+    for (const directory of workspaceDirectoryChain(path)) {
+      if (!props.expandedDirectories.has(directory)) props.onToggleDirectory(directory);
+    }
+    setSearchQuery("");
+    setSearchPaneActive(false);
+    onCenterModeChange("file");
+  };
   const toggleChatPaneVisible = () => {
     setChatPaneVisible((previous) => {
       const next = !previous;
@@ -627,6 +636,7 @@ export function EditorWorkspaceView(props: EditorWorkspaceViewProps) {
               onQueryChange={setSearchQuery}
               selectedFilePath={props.selectedFilePath}
               onSelectFile={props.onSelectFile}
+              onSelectDirectory={handleSearchDirectorySelect}
               onReferenceInChat={props.onReferenceInChat}
             />
           ) : props.centerMode === "diff" ? (
