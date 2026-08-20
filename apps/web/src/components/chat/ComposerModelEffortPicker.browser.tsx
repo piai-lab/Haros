@@ -17,7 +17,7 @@ vi.mock("../../appSettings", () => ({
 }));
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-grok-model-effort-picker");
-const GROK_4_5 = "grok-4.5" as ModelSlug;
+const GROK_4_6 = "grok-4.6" as ModelSlug;
 
 describe("ComposerModelEffortPicker", () => {
   it("shows the model list directly when the current Engine has no native options", async () => {
@@ -76,11 +76,11 @@ describe("ComposerModelEffortPicker", () => {
     }
   });
 
-  it("keeps Grok effort visible in compact layouts before runtime discovery", async () => {
+  it("keeps Grok 4.6 effort visible in compact layouts before runtime discovery", async () => {
     const screen = await render(
       <ComposerModelEffortPicker
         provider="grok"
-        model={GROK_4_5}
+        model={GROK_4_6}
         catalogState="ready"
         modelOptionsByProvider={{
           omnimind: [],
@@ -88,7 +88,7 @@ describe("ComposerModelEffortPicker", () => {
           codex: [],
           cursor: [],
           antigravity: [],
-          grok: [{ slug: GROK_4_5, name: "Grok 4.5" }],
+          grok: [{ slug: GROK_4_6, name: "Grok 4.6" }],
           droid: [],
           kilo: [],
           opencode: [],
@@ -107,14 +107,14 @@ describe("ComposerModelEffortPicker", () => {
 
     try {
       const trigger = page.getByRole("button", { name: "Model and options" });
-      await expect.element(trigger).toHaveAttribute("title", "Low");
-      await expect.element(trigger).toHaveTextContent("Grok 4.5");
+      await expect.element(trigger).toHaveAttribute("title", "High");
+      await expect.element(trigger).toHaveTextContent("Grok 4.6");
 
       await trigger.click();
-      await expect.element(page.getByRole("menuitemradio", { name: "None" })).toBeVisible();
       await expect.element(page.getByRole("menuitemradio", { name: "Low" })).toBeVisible();
       await expect.element(page.getByRole("menuitemradio", { name: "Medium" })).toBeVisible();
-      await expect.element(page.getByRole("menuitemradio", { name: "High" })).toBeVisible();
+      await expect.element(page.getByRole("menuitemradio", { name: "High (default)" })).toBeVisible();
+      await expect.element(page.getByRole("menuitemradio", { name: "Extra High" })).toBeVisible();
     } finally {
       await screen.unmount();
     }
