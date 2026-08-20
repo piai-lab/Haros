@@ -142,6 +142,14 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     target: null,
   },
   {
+    id: "appearance:custom-title-bar",
+    section: "appearance",
+    title: "Use custom title bar",
+    keywords:
+      "frameless window system title bar Windows Linux caption controls minimize maximize close chrome",
+    target: null,
+  },
+  {
     id: "appearance:system-ui-font",
     section: "appearance",
     title: "Use system UI font",
@@ -481,6 +489,7 @@ export function rankSettingsSearchEntries(
 const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> = {
   "Activity toasts": "settings.activityToasts",
   "App icon": "settings.appIcon",
+  "Use custom title bar": "settings.customTitleBar",
   "Archive confirmation": "settings.archiveConfirmation",
   "Archived threads": "settings.archived",
   "Assistant output": "settings.assistantOutput",

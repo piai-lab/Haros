@@ -56,6 +56,7 @@ export const EN_MESSAGES = {
   "common.minimize": "Minimize",
   "common.maximize": "Maximize",
   "common.restore": "Restore",
+  "common.restart": "Restart",
   "common.copyCode": "Copy code",
   "common.enableSoftWrap": "Enable soft wrap",
   "common.disableSoftWrap": "Disable soft wrap",
@@ -2191,6 +2192,17 @@ export const EN_MESSAGES = {
   "settings.appIcon": "App icon",
   "settings.appIconDescription": "Choose the icon OmniMind uses in the dock or taskbar.",
   "settings.updatingAppIcon": "Updating app icon",
+  "settings.customTitleBar": "Use custom title bar",
+  "settings.customTitleBarDescription":
+    "Replace the system title bar with OmniMind's window controls. Restart required to apply.",
+  "settings.customTitleBarRestartDescription":
+    "Restart OmniMind to apply. Some Linux window managers work better with the system title bar.",
+  "settings.customTitleBarRestartRequired": "Restart required",
+  "settings.customTitleBarRestartToastTitle": "Restart to apply title bar",
+  "settings.customTitleBarRestartToastDescription":
+    "The window frame updates the next time OmniMind launches.",
+  "settings.customTitleBarUpdateFailed": "Could not update the title bar preference",
+  "settings.restartOmniMind": "Restart OmniMind",
   "settings.typography": "Typography and spacing",
   "settings.systemUiFont": "Use system UI font",
   "settings.systemUiFontDescription":
@@ -3694,6 +3706,7 @@ export const ZH_CN_MESSAGES = {
   "common.minimize": "最小化",
   "common.maximize": "最大化",
   "common.restore": "还原",
+  "common.restart": "重新启动",
   "common.copyCode": "复制代码",
   "common.enableSoftWrap": "开启自动换行",
   "common.disableSoftWrap": "关闭自动换行",
@@ -5721,6 +5734,16 @@ export const ZH_CN_MESSAGES = {
   "settings.appIcon": "应用图标",
   "settings.appIconDescription": "选择 OmniMind 在程序坞或任务栏中使用的图标。",
   "settings.updatingAppIcon": "正在更新应用图标",
+  "settings.customTitleBar": "使用自定义标题栏",
+  "settings.customTitleBarDescription":
+    "使用 OmniMind 的窗口控制按钮替代系统标题栏；重启后生效。",
+  "settings.customTitleBarRestartDescription":
+    "重启 OmniMind 后生效。部分 Linux 窗口管理器使用系统标题栏时表现更好。",
+  "settings.customTitleBarRestartRequired": "需要重启",
+  "settings.customTitleBarRestartToastTitle": "重启以应用标题栏设置",
+  "settings.customTitleBarRestartToastDescription": "OmniMind 下次启动时会更新窗口边框。",
+  "settings.customTitleBarUpdateFailed": "无法更新标题栏偏好设置",
+  "settings.restartOmniMind": "重新启动 OmniMind",
   "settings.typography": "字体与间距",
   "settings.systemUiFont": "使用系统界面字体",
   "settings.systemUiFontDescription":

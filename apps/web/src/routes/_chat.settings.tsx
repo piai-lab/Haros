@@ -86,8 +86,10 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { SelectItem } from "../components/ui/select";
 import { Switch } from "../components/ui/switch";
+import { toastManager } from "../components/ui/toast";
 import { RouteInsetSurface } from "../components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavigationControls";
+import { useDesktopCustomTitleBarState } from "../hooks/useDesktopCustomTitleBar";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
 import { useTheme } from "../hooks/useTheme";
@@ -96,7 +98,13 @@ import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
 import { isElectron } from "../env";
 import { useI18n, type MessageKey } from "../i18n";
 import { RotateCcwIcon } from "../lib/icons";
-import { cn, isMacPlatform } from "../lib/utils";
+import {
+  cn,
+  getNavigatorPlatform,
+  isLinuxPlatform,
+  isMacPlatform,
+  isWindowsPlatform,
+} from "../lib/utils";
 import { ensureNativeApi, readNativeApi } from "../nativeApi";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { sameProviderOrder } from "../providerOrdering";
@@ -265,9 +273,65 @@ function SettingsRouteView() {
   );
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const [resetEpoch, setResetEpoch] = useState(0);
-  const shouldShowFontSmoothing = isMacPlatform(
-    typeof navigator === "undefined" ? "" : navigator.platform,
-  );
+  const platform = getNavigatorPlatform();
+  const shouldShowFontSmoothing = isMacPlatform(platform);
+  const supportsCustomTitleBarSetting =
+    isElectron && (isWindowsPlatform(platform) || isLinuxPlatform(platform));
+  const customTitleBarState = useDesktopCustomTitleBarState();
+  const customTitleBarRestartRequired =
+    customTitleBarState.supported && settings.useCustomTitleBar !== customTitleBarState.active;
+  const customTitleBarPreferenceDirty =
+    supportsCustomTitleBarSetting &&
+    (settings.useCustomTitleBar !== defaults.useCustomTitleBar ||
+      (customTitleBarState.supported &&
+        customTitleBarState.preference !== defaults.useCustomTitleBar));
+
+  function showCustomTitleBarRestartToast(): void {
+    toastManager.add({
+      type: "warning",
+      title: t("settings.customTitleBarRestartToastTitle"),
+      description: t("settings.customTitleBarRestartToastDescription"),
+      actionProps: {
+        "aria-label": t("settings.restartOmniMind"),
+        children: t("common.restart"),
+        onClick: () => {
+          void window.desktopBridge?.customTitleBar?.relaunch();
+        },
+      },
+    });
+  }
+
+  async function persistCustomTitleBarPreference(
+    enabled: boolean,
+  ): Promise<{ readonly restartRequired: boolean } | null> {
+    try {
+      const bridge = window.desktopBridge?.customTitleBar;
+      if (!bridge) throw new Error("Desktop title bar bridge is unavailable.");
+      const state = await bridge.setPreference(enabled);
+      if (!state.supported || state.preference !== enabled) {
+        throw new Error("Desktop title bar preference was not persisted.");
+      }
+      return state;
+    } catch {
+      toastManager.add({
+        type: "error",
+        title: t("settings.customTitleBarUpdateFailed"),
+      });
+      return null;
+    }
+  }
+
+  async function applyCustomTitleBarPreference(enabled: boolean): Promise<void> {
+    const previous = settings.useCustomTitleBar;
+    updateSettings({ useCustomTitleBar: enabled });
+    const state = await persistCustomTitleBarPreference(enabled);
+    if (state === null) {
+      updateSettings({ useCustomTitleBar: previous });
+      return;
+    }
+    if (state.restartRequired) showCustomTitleBarRestartToast();
+  }
+
   const visibleTerminalFontFamilySuggestions = useMemo(() => {
     const query = settings.terminalFontFamily.trim().toLowerCase();
     if (!query) return TERMINAL_FONT_FAMILY_SUGGESTIONS;
@@ -319,6 +383,7 @@ function SettingsRouteView() {
     ...(settings.terminalFontFamily !== defaults.terminalFontFamily
       ? [t("settings.terminalFont")]
       : []),
+    ...(customTitleBarPreferenceDirty ? [t("settings.customTitleBar")] : []),
     ...(shouldShowFontSmoothing &&
     settings.enableNativeFontSmoothing !== defaults.enableNativeFontSmoothing
       ? [t("settings.fontSmoothing")]
@@ -390,6 +455,12 @@ function SettingsRouteView() {
       ].join("\n"),
     );
     if (!confirmed) return;
+
+    if (customTitleBarPreferenceDirty) {
+      const state = await persistCustomTitleBarPreference(defaults.useCustomTitleBar);
+      if (state === null) return;
+      if (state.restartRequired) showCustomTitleBarRestartToast();
+    }
 
     setTheme("system");
     resetAllThemes();
@@ -851,6 +922,54 @@ function SettingsRouteView() {
               />
             }
           />
+          {supportsCustomTitleBarSetting ? (
+            <SettingsRow
+              title={t("settings.customTitleBar")}
+              description={
+                customTitleBarRestartRequired
+                  ? t("settings.customTitleBarRestartDescription")
+                  : t("settings.customTitleBarDescription")
+              }
+              status={
+                customTitleBarRestartRequired
+                  ? t("settings.customTitleBarRestartRequired")
+                  : undefined
+              }
+              resetAction={
+                customTitleBarPreferenceDirty ? (
+                  <SettingResetButton
+                    label={t("settings.customTitleBar")}
+                    onClick={() => {
+                      void applyCustomTitleBarPreference(defaults.useCustomTitleBar);
+                    }}
+                  />
+                ) : null
+              }
+              control={
+                <div className="flex items-center gap-2">
+                  {customTitleBarRestartRequired ? (
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="outline"
+                      onClick={() => {
+                        void window.desktopBridge?.customTitleBar?.relaunch();
+                      }}
+                    >
+                      {t("common.restart")}
+                    </Button>
+                  ) : null}
+                  <Switch
+                    checked={settings.useCustomTitleBar}
+                    onCheckedChange={(checked) => {
+                      void applyCustomTitleBarPreference(Boolean(checked));
+                    }}
+                    aria-label={t("settings.customTitleBar")}
+                  />
+                </div>
+              }
+            />
+          ) : null}
         </SettingsSection>
       ) : null}
 
