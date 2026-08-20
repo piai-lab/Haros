@@ -27,6 +27,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const requestMock = vi.fn<(...args: Array<unknown>) => Promise<unknown>>();
 const disposeMock = vi.fn();
+const stateChangeMock = vi.fn(
+  (
+    listener: (state: "connecting" | "open" | "closed" | "incompatible" | "disposed") => void,
+    options?: { readonly replayCurrent?: boolean },
+  ) => {
+    if (options?.replayCurrent) listener("connecting");
+    return () => undefined;
+  },
+);
 const showContextMenuFallbackMock =
   vi.fn<
     <T extends string>(
@@ -63,9 +72,7 @@ vi.mock("./wsTransport", () => {
     WsTransport: class MockWsTransport {
       request = requestMock;
       subscribe = subscribeMock;
-      onStateChange() {
-        return () => undefined;
-      }
+      onStateChange = stateChangeMock;
       onCompatibilityIssue() {
         return () => undefined;
       }
@@ -128,6 +135,7 @@ beforeEach(() => {
   vi.resetModules();
   requestMock.mockReset();
   disposeMock.mockReset();
+  stateChangeMock.mockClear();
   showContextMenuFallbackMock.mockReset();
   subscribeMock.mockClear();
   channelListeners.clear();
@@ -142,6 +150,18 @@ afterEach(() => {
 });
 
 describe("wsNativeApi", () => {
+  it("publishes the transport's current state as soon as the NativeApi is created", async () => {
+    const { createWsNativeApi } = await import("./wsNativeApi");
+    const { readLatestWsTransportState } = await import("./wsTransportEvents");
+
+    createWsNativeApi();
+
+    expect(stateChangeMock).toHaveBeenCalledWith(expect.any(Function), {
+      replayCurrent: true,
+    });
+    expect(readLatestWsTransportState()).toBe("connecting");
+  });
+
   it("forwards provider model discovery cancellation to the WebSocket transport", async () => {
     requestMock.mockResolvedValue({ models: [], source: "test", cached: false });
     const { createWsNativeApi } = await import("./wsNativeApi");

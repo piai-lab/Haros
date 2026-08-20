@@ -2204,11 +2204,12 @@ function ActiveModelsSettingsPanel({
               <SettingsEmptyState layout="status" tone="destructive">
                 <div role="alert">{t("settings.modelServicesServerUpdateRequired")}</div>
               </SettingsEmptyState>
-            ) : modelServicesTransport !== "open" || modelServicesQuery.isPending ? (
+            ) : modelServicesQuery.isPending ? (
               <SettingsEmptyState layout="status">
                 {t("settings.modelServicesLoading")}
               </SettingsEmptyState>
-            ) : modelServicesQuery.isError && confirmedOpenReadFailure ? (
+            ) : modelServicesQuery.isError &&
+              (modelServicesTransport !== "open" || confirmedOpenReadFailure) ? (
               <SettingsEmptyState layout="status" tone="destructive">
                 <div role="alert" className="flex flex-wrap items-center justify-between gap-3">
                   <span>{t("settings.modelServicesConnectionUnavailable")}</span>

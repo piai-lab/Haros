@@ -36,7 +36,20 @@ const catalogHarness = vi.hoisted(() => ({
   })),
 }));
 
+const nativeApiHarness = vi.hoisted(() => ({
+  transportState: "open" as "open" | null,
+}));
+
 vi.mock("~/hooks/useProviderModelCatalog", () => catalogHarness);
+
+vi.mock("~/nativeApi", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/nativeApi")>();
+  return {
+    ...actual,
+    readNativeApiTransportState: () => nativeApiHarness.transportState,
+    onNativeApiTransportStateChange: () => () => undefined,
+  };
+});
 
 vi.mock("~/i18n", () => ({
   useI18n: () => ({
@@ -309,6 +322,7 @@ async function confirmCustomApiRisk(
 
 afterEach(async () => {
   await page.viewport(1280, 720);
+  nativeApiHarness.transportState = "open";
   resetComposerDraftStore();
   delete window.nativeApi;
   document.body.innerHTML = "";
@@ -609,6 +623,25 @@ describe("ModelsSettingsPanel model services", () => {
     expect(document.body.textContent).not.toContain("settings.gitWritingModel");
     expect(document.body.textContent).not.toContain("settings.independentEngineModels");
     expect(catalogHarness.useProviderModelCatalog).not.toHaveBeenCalled();
+
+    await mounted.screen.unmount();
+    mounted.queryClient.clear();
+  });
+
+  it("renders a resolved projection before the transport tracker has its first snapshot", async () => {
+    nativeApiHarness.transportState = null;
+    const configuredService = service();
+    const mounted = await renderPanel({
+      list: async () => ({
+        state: "ready",
+        services: [configuredService],
+        connectableServices: [],
+        errorCode: null,
+      }),
+    });
+
+    await expect.poll(() => document.body.textContent).toContain("DeepSeek");
+    expect(document.body.textContent).not.toContain("settings.modelServicesLoading");
 
     await mounted.screen.unmount();
     mounted.queryClient.clear();

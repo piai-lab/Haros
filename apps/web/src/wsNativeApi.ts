@@ -432,7 +432,7 @@ export function createWsNativeApi(): NativeApi {
 
   const transport = new WsTransport();
   let unsubscribeDomainEventTransport: (() => void) | null = null;
-  transport.onStateChange((state) => emitWsTransportState(state));
+  transport.onStateChange((state) => emitWsTransportState(state), { replayCurrent: true });
   transport.onCompatibilityIssue((issue) => emitWsCompatibilityIssue(issue), {
     replayCurrent: true,
   });
