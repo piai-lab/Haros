@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-维护者于 2026-08-20 明确收窄 Prompt Settings：它只修改 OmniMind Agent 的 provider-global 默认提示词与自定义规则，不解析、选择或重载任何“当前对话”。exact pushed product `1aac8c1e2a690f17ed0356eab90a01a39c3b65f6` 已删除 current-conversation resources 区、Thread/split target resolver 与专用 reload 文案/测试，通过 full gates，并完成隔离安装复验；底层 Session reload seam 继续只服务原生生命周期。该分支尚未合入 `main`，F-22 仍为 `candidate`，不得把本机安装或证据文档冒充正式发行或 verified claim。
+维护者于 2026-08-20 明确收窄 Prompt Settings：它只修改 OmniMind Agent 的 provider-global 默认提示词与自定义规则，不解析、选择或重载任何“当前对话”。exact pushed product `1aac8c1e2a690f17ed0356eab90a01a39c3b65f6` 已删除 current-conversation resources 区、Thread/split target resolver 与专用 reload 文案/测试，通过 full gates，并完成隔离安装复验；底层 Session reload seam 继续只服务原生生命周期。该关注点已通过 merge `22e4939f3` 合入 `main`；F-22 仍为 `candidate`，不得把本机安装、合并事实或证据文档冒充正式发行或 verified claim。
 
 **OmniMind Agent Extension Architecture 1.0 Gate B**已经通过merge commit `5e22dd916ccba0dbc383fb0a9495f4888a69594b`并入`main`，但仍未发布或替换本机真实安装。shipped-bytes证据继续锁定exact pushed code SHA `9c05e09027be374cc2e858536aad5ab79a394c45`；该SHA已完成最终main同步、full gates、MiMo/DeepSeek live与隔离packaged journey。合并后的docs-only状态收口不改变也不冒充已验证的product bytes。
 
