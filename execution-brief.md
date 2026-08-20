@@ -10,6 +10,8 @@
 
 route defect 有两个同一导航责任内的最早错误点：Sidebar 在当前 segment 的 remembered route 失效时只回退 Server threads，忽略既有 recent-view MRU 中仍有效的本地 draft；Agent `/` landing 又把未 promotion 的 Terminal-first draft 排除在可恢复集合之外。修复复用既有 MRU、draft persistence、project boundary 与 route resolver，没有新增 route store、snapshot retry、reload、兼容 alias、schema 或模型状态。最终安装包在隔离 profile 中完成 Terminal draft→Chat→Agent，并准确回到原 Terminal；持久化的 current route 经 LevelDB 精确读取确认后，同 profile 冷启动也直接恢复该 Terminal draft。正常退出后全部 OmniMind 进程归零。
 
+README 已退休当前/历次安装产物、历史 journey 与施工状态叙事，只保留稳定产品身份、战略不变量、production adoption 和权威路由。当前目标、安装产物、真实阻塞与下一动作重新由本文件单独拥有；该文档切片不进入 shipped bytes，安装版仍准确绑定 `3c05e3ce3521cfd82793fa192048614fc2b581ee`。
+
 ## 已确认范围
 
 - `providers.omnimind.customModels` 精确丢弃；不扫描、迁移或清理其他数据，不触碰 stock Pi custom models、`models.json`、凭据、Workspace 或 SQLite；
@@ -27,7 +29,7 @@ official signing、notarization、Windows/Linux artifacts、GitHub Release 与 u
 
 ## 下一动作
 
-按 responsibility portfolio 重新审计下一张可退休责任图；不以文件陈旧、名称像 legacy 或行数大作为删除理由。`stopOnError`、SQLite migration 1–100 与 engine catalog warming 仍保持 `DEFER`，package version mismatch 与 Browser E2E `bindTurnAuthority` seam 继续作为独立 correctness/test-assembly 任务。新的 Synara 更新仍统一按 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md) 处理。
+重新读取届时的 `main` 后，独立审判 Usage History 旧字符串 discovery cursor。该候选不得与 Usage History schema、SQLite migration、计数模型、文件解析或重建逻辑混改；若无法证明 canonical JSON cursor、幂等重扫和恢复边界足以承担结果，就保持 `DEFER`，不加补偿层。
 
 ## 权威路由
 
