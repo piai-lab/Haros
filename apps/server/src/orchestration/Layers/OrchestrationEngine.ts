@@ -518,6 +518,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       case "thread.conversation.rollback":
       case "thread.message.edit-and-resend":
       case "thread.message.assistant.complete":
+      case "thread.approval.respond":
         return loadThreadDetailForDecider(command, commandReadModel, command.threadId);
       default:
         return Effect.succeed(commandReadModel);
