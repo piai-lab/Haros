@@ -48,57 +48,23 @@ const AUTOMATION_VIEW_DEFAULT_RUNS = 5;
 const AUTOMATION_VIEW_MAX_RUNS = 50;
 
 const SCHEDULE_INPUT_SCHEMA = {
-  oneOf: [
-    {
-      type: "object",
-      properties: {
-        type: { const: "interval" },
-        everySeconds: { type: "number", minimum: 1 },
-      },
-      required: ["type", "everySeconds"],
-      additionalProperties: false,
+  type: "object",
+  description:
+    "Schedule fields by type: interval requires everySeconds; once requires runAt; daily and weekdays require timeOfDay; weekly requires dayOfWeek and timeOfDay; cron requires expression and timezone.",
+  properties: {
+    type: {
+      type: "string",
+      enum: ["interval", "once", "daily", "weekdays", "weekly", "cron"],
     },
-    {
-      type: "object",
-      properties: {
-        type: { const: "once" },
-        runAt: { type: "string", format: "date-time" },
-      },
-      required: ["type", "runAt"],
-      additionalProperties: false,
-    },
-    ...(["daily", "weekdays"] as const).map((type) => ({
-      type: "object",
-      properties: {
-        type: { const: type },
-        timeOfDay: { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" },
-        timezone: { type: "string" },
-      },
-      required: ["type", "timeOfDay"],
-      additionalProperties: false,
-    })),
-    {
-      type: "object",
-      properties: {
-        type: { const: "weekly" },
-        dayOfWeek: { type: "number", minimum: 0, maximum: 6 },
-        timeOfDay: { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" },
-        timezone: { type: "string" },
-      },
-      required: ["type", "dayOfWeek", "timeOfDay"],
-      additionalProperties: false,
-    },
-    {
-      type: "object",
-      properties: {
-        type: { const: "cron" },
-        expression: { type: "string" },
-        timezone: { type: "string" },
-      },
-      required: ["type", "expression", "timezone"],
-      additionalProperties: false,
-    },
-  ],
+    everySeconds: { type: "number", minimum: 1 },
+    runAt: { type: "string", format: "date-time" },
+    timeOfDay: { type: "string", pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" },
+    timezone: { type: "string" },
+    dayOfWeek: { type: "number", minimum: 0, maximum: 6 },
+    expression: { type: "string" },
+  },
+  required: ["type"],
+  additionalProperties: false,
 } as const;
 
 const COMPLETION_POLICY_INPUT_SCHEMA = {

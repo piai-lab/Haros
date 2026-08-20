@@ -1516,7 +1516,16 @@ describe("AgentGateway", () => {
         "schedule",
       ]);
       const createAutomationProperties = createAutomation?.inputSchema.properties as
-        | Record<string, { description?: string }>
+        | Record<
+            string,
+            {
+              description?: string;
+              oneOf?: unknown;
+              properties?: Record<string, { enum?: string[] }>;
+              required?: string[];
+              type?: string;
+            }
+          >
         | undefined;
       assert.include(
         createAutomationProperties?.name?.description ?? "",
@@ -1530,6 +1539,19 @@ describe("AgentGateway", () => {
         createAutomationProperties?.prompt?.description ?? "",
         "notifying the user versus staying silent",
       );
+      const scheduleSchema = createAutomationProperties?.schedule;
+      assert.equal(scheduleSchema?.type, "object");
+      assert.notProperty(scheduleSchema ?? {}, "oneOf");
+      assert.deepEqual(scheduleSchema?.required, ["type"]);
+      assert.deepEqual(scheduleSchema?.properties?.type?.enum, [
+        "interval",
+        "once",
+        "daily",
+        "weekdays",
+        "weekly",
+        "cron",
+      ]);
+      assert.include(scheduleSchema?.description ?? "", "weekly requires dayOfWeek and timeOfDay");
       const updateAutomationMemory = tools.find(
         (tool) => tool.name === "omnimind_update_automation_memory",
       );
@@ -4318,6 +4340,39 @@ describe("AgentGateway", () => {
       assert.include(toolErrorText(missingMode.result), '"mode"');
       assert.isTrue(isToolError(missingSchedule.result));
       assert.include(toolErrorText(missingSchedule.result), '"schedule"');
+      assert.lengthOf(harness.automationCreates, 0);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("keeps schedule decoding strict behind the flat model-facing schema", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const encodedObject = yield* harness.callTool({
+        token: "token-parent",
+        name: "omnimind_create_automation",
+        args: {
+          name: "Daily review",
+          prompt: "Review the project.",
+          mode: "standalone",
+          schedule: '{"type":"daily","timeOfDay":"09:30"}',
+        },
+      });
+      const incompleteBranch = yield* harness.callTool({
+        token: "token-parent",
+        name: "omnimind_create_automation",
+        args: {
+          name: "Weekly review",
+          prompt: "Review the project.",
+          mode: "standalone",
+          schedule: { type: "weekly", timeOfDay: "09:30" },
+        },
+      });
+
+      assert.isTrue(isToolError(encodedObject.result));
+      assert.include(toolErrorText(encodedObject.result), '"schedule" must be an object');
+      assert.isTrue(isToolError(incompleteBranch.result));
+      assert.include(toolErrorText(incompleteBranch.result), "Invalid automation schedule");
       assert.lengthOf(harness.automationCreates, 0);
     }).pipe(Effect.provide(gatewayLayer));
   });
