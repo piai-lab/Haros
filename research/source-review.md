@@ -996,7 +996,7 @@ exact `57f48ef1a3354ae7967d4a8f9f83a1105691ede6`. It is 107 commits after the pr
 still the downstream distribution of this product platform, so applicable product mechanisms enter by
 standing default; the review did not treat the range as an unrelated donor patch list.
 
-The current candidate `8aef91b3d9` and exact upstream have 6,433 common `apps/` + `packages/` paths:
+The pushed product `14c54d5a23` and exact upstream have 6,433 common `apps/` + `packages/` paths:
 4,812 byte-identical and 1,621 modified at the same path. There are 99 Synara-only and 201
 OmniMind-only paths. These numbers are produced from Git tree object IDs, not locale-sensitive text
 `comm`, and must be recomputed after any shipped-code change.
@@ -1047,9 +1047,27 @@ exclude Synara identity/release/headless-tarball bytes; and adopt custom titleba
 limiting this round to a local macOS packaged candidate. Official signing, notarization, GitHub Release,
 update feed and Windows/Linux artifacts are outside scope.
 
-Focused author-equivalent suites and the complete repository suite pass on candidate `8aef91b3d9`:
-Web 4,173 tests, Server 4,361, and all Desktop/Contracts/Shared/Scripts tasks are green. README's adopted
-head intentionally remains `8f9f600…` until an exact pushed product SHA is rebuilt, installed and run
-with a fresh isolated macOS profile. The final journey must prove the app/server/helper isolation and
-the reachable latest surfaces; only then may authority move to `57f48ef…` and the adoption branch enter
-`main`.
+Focused author-equivalent suites and the complete repository suite pass on the shipped code contained
+by pushed product `14c54d5a23`: Web 4,173 tests, Server 4,361, and all
+Desktop/Contracts/Shared/Scripts tasks are green. Typecheck is 6/6, lint reports zero errors, the legal
+closure verifies 240 packaged components and the document contract is 20/20.
+
+That exact pushed product was rebuilt into the installed macOS arm64 ad-hoc App. The DMG SHA-256 is
+`24e4800c32f29c6dbce29e0166f39925365ca3fad89b26ab1af31756f2fb762d`; the DMG and installed
+`app.asar` SHA-256 is `0333cfaa3445390fe000026dde8459b19d069cc9d50e6849eda5d443be10f23f`.
+A brand-new task-specific HOME, OMNIMIND_HOME, XDG, Electron userData and Provider-private home proved
+main/Helper/bundled-Server isolation. The installed UI showed all ten Engine icons plus bilingual
+readiness, the expanded Provider usage and managed-worktree surfaces, `/debug`, wide-chat projection,
+durable OmniMind dark-icon selection and local Profile PNG copy/save. The generated PNG SHA-256 was
+`513c13b7b1a1d35cb9bd0e764deaca2675e077fe87dd13e0a4c0cde5ed53f4f3`.
+
+The same isolated profile exited cleanly and reopened at the safe root with its project, wide-chat and
+dark-icon preferences intact; migrations 1–100 ran on first start and no migration reran. A first,
+immediate Terminal→Chat→Agent switch emitted one renderer `THREAD_SNAPSHOT_NOT_FOUND` for a transient
+route with no durable Thread. Reopen removed the stale route and the same switch did not reproduce it;
+no Goal-continuation error was observed. This is recorded as bounded recovery evidence, not relabeled
+as a Goal failure. Goal failure/interrupt/reopen, Todo independence, directory reveal, Windows icon and
+Windows/Linux titlebar remain protected by the same shipped-code SHA's focused/browser/complete suites;
+the fresh profile deliberately contained no model credentials, so the packaged pass does not invent a
+real Provider turn. These results close the adopted-head invariant for exact `57f48ef…`; signing,
+notarization, official Release and Windows/Linux artifacts remain outside the maintainer-selected scope.

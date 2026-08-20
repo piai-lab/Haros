@@ -4,7 +4,7 @@
 
 把 clean local Synara exact `57f48ef1a3354ae7967d4a8f9f83a1105691ede6` 的完整 adoption set 收口到 OmniMind：代码、作者等价测试、全树 responsibility disposition、本机 exact pushed SHA 隔离 packaged journey 与 adoption authority 必须相互一致，随后 fast-forward `main`，push，并删除本地和远端 `codex/synara-57f48ef-adoption`。
 
-当前候选分支为 `codex/synara-57f48ef-adoption`。产品与测试已覆盖最新范围的 Grok、Cursor、Antigravity、跨 Provider `/side`、Provider usage、managed-worktree cleanup、projection/approval/terminal recovery、Windows path/WSL、安全脱敏、Workspace directory search、Workbench 视觉、Windows taskbar icon lifecycle 与 Windows/Linux custom titlebar。完整仓库测试已通过；README adopted head 仍保持 `8f9f600…`，直到 final pushed product SHA 的本机 fresh-profile packaged journey 闭合。
+当前候选分支为 `codex/synara-57f48ef-adoption`。产品与测试已覆盖最新范围的 Grok、Cursor、Antigravity、跨 Provider `/side`、Provider usage、managed-worktree cleanup、projection/approval/terminal recovery、Windows path/WSL、安全脱敏、Workspace directory search、Workbench 视觉、Windows taskbar icon lifecycle 与 Windows/Linux custom titlebar。完整仓库测试与 final gates 已通过；exact pushed product `14c54d5a23` 已完成本机 fresh-profile 构建、安装、可见链路、退出与重开 journey，README adopted head 已据此闭合到 `57f48ef…`。
 
 ## 已确认范围
 
@@ -16,14 +16,14 @@
 
 ## 当前阻塞
 
-没有产品裁决阻塞。剩余工作只有 final-SHA packaged journey、证据回写、README adopted head 前移、`main` fast-forward/push 与精确分支清理。
+没有产品或证据阻塞。剩余工作只有提交并 push 当前 docs-only authority closure、`main` fast-forward/push 与精确分支清理。
 
 ## 下一动作
 
-1. 提交并 push 当前 candidate authority；
-2. 从该 exact pushed product SHA 构建、安装并用全新隔离 profile 完成本机 macOS journey；
-3. 以 docs-only commit 回写 packaged 证据并前移 adopted head；
-4. 再跑文档/final gates，fast-forward `main`、push，删除对应本地与远端 adoption 分支。
+1. 运行 docs-only diff/document contract；
+2. 提交并 push authority closure；
+3. fast-forward `main`、push；
+4. 删除本地与远端 `codex/synara-57f48ef-adoption`。
 
 ## 权威路由
 
