@@ -2,7 +2,9 @@
 
 ## 当前目标
 
-Model services 概览的冷启动假 loading 已完整闭合。成功的 canonical list query 不再被独立 transport snapshot 遮挡；真实 pending 继续显示 loading，断连后的失败进入既有可重试错误，transport 创建时立即 replay 当前状态。修复只调整现有 Web query/transport presentation owner，没有新增 timeout、静态服务目录、第二缓存或后台重试系统。
+Composer 在 Desktop 重启后约 10 秒才恢复模型目录的问题已形成 source candidate。根因是当前/刚选中的 Engine 目录发现被上次运行持久化的 Provider health/auth 结果提前阻断，直到全局 Provider update coordinator 的 10 秒 live refresh 才重新启用；目录与发送权限因此被错误耦合。
+
+当前实现让 exact selected Engine 立即进入既有 canonical `provider.listModels` query，目录继续决定“有哪些模型”，Provider health 继续独立决定“能否发送”。未选中的 Engine 不恢复后台 warming，stock Pi 仍只在明确选择后读取，OmniMind 仍要求现有 binding/model hint/显式 intent；没有新增 timeout、静态模型、第二缓存、重试系统或并行 owner。浏览器完整 `ChatView` suite 170/170、相关 unit 17/17、Web typecheck 与 focused lint 已通过；packaged Desktop 重建、隔离 profile journey 与本机安装尚待从本 candidate 的 pushed SHA 完成。
 
 当前安装版 product bytes 准确绑定 pushed code `17355073cbc203c347f92ebac6884b564ed91011`：arm64 DMG SHA-256 为 `b278a5df78f93f59f4d8b0b2044c3e967fefea08dbc57f85edc66c41e3554504`，staged/installed `app.asar` SHA-256 均为 `78e2ab7621bf1e427f53f6e149e506b00f294bda645a2836d8372e9756dd0823`。240 个 legal identities 已闭合；本机安装 App 已 ad-hoc 重签并通过 strict deep verification。
 
@@ -19,7 +21,9 @@ Model services 概览的冷启动假 loading 已完整闭合。成功的 canonic
 
 ## 当前阻塞
 
-本修复没有剩余产品阻塞。focused Model services browser tests 为 42/42，WebSocket transport focused tests 为 92/92，Web unit tests 为 4173/4173；Web build/typecheck、root lint/format、document contract 与 release provenance 通过。
+Composer 冷启动 candidate 没有 source 阻塞，但在完成 pushed-SHA packaged Desktop 重建、隔离 profile journey 与本机安装前，只能称 source candidate，不能宣称用户已拿到修复。
+
+上一个 Model services 冷启动修复没有剩余产品阻塞：focused Model services browser tests 为 42/42，WebSocket transport focused tests 为 92/92，Web unit tests 为 4173/4173；Web build/typecheck、root lint/format、document contract 与 release provenance 通过。
 
 完整 browser suite 的 6 个失败分布于既有 Sidebar、ResizeObserver、MessagesTimeline geometry 与 rerender benchmark；临时撤回本修复唯一可能影响全局 transport 初态的 replay 行后，ResizeObserver 与 3 个 geometry baseline 仍原样失败，Sidebar/benchmark 的 focused 重跑通过。因此它们没有被归因或混入本修复，也不能据此声称完整 browser suite 全绿。
 
@@ -27,7 +31,7 @@ official signing、notarization、Windows/Linux artifacts、GitHub Release 与 u
 
 ## 下一动作
 
-回到真实用户结果；不再为本轮继续寻找推测性的精简或重构候选。若 Model services 再出现异常，优先记录当时的可见状态、transport/query 结果与 bundled Server 生命周期，沿现有 owner 局部处理。
+提交并推送 Composer 冷启动 candidate；从该精确 SHA 重建 arm64 Desktop artifact，停止所有现存 OmniMind 实例后安装，使用任务专用 `OMNIMIND_HOME`、HOME 与 Provider private homes 证明进程隔离，并验证冷启动当前 Engine 模型目录在 10 秒 Provider refresh 前恢复、关闭重开仍成立。若 packaged 证据推翻 source harness，回到同一目录/健康 owner 局部修正，不恢复全 Engine warming。
 
 ## 权威路由
 

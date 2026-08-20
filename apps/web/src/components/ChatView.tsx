@@ -2461,10 +2461,6 @@ export default function ChatView({
     activeProjectCwd: activeProject?.cwd ?? null,
     serverCwd: serverConfigQuery.data?.cwd ?? null,
   });
-  const selectedProviderStatus = findProviderStatus(providerStatuses, selectedProvider);
-  const selectedProviderDiscoveryPermitted =
-    selectedProviderStatus === null ||
-    (selectedProviderStatus.available && selectedProviderStatus.authStatus !== "unauthenticated");
   const {
     customModelsByProvider,
     catalogStateByProvider,
@@ -2477,11 +2473,10 @@ export default function ChatView({
     selectedProvider,
     discoveryEnabled: false,
     selectedProviderDiscoveryEnabled:
-      selectedProviderDiscoveryPermitted &&
-      (selectedProvider !== "omnimind" ||
-        omniMindModelDiscoveryRequested ||
-        composerModelHintByProvider.omnimind !== null ||
-        hasExplicitOmniMindEngineBinding),
+      selectedProvider !== "omnimind" ||
+      omniMindModelDiscoveryRequested ||
+      composerModelHintByProvider.omnimind !== null ||
+      hasExplicitOmniMindEngineBinding,
     piDiscoveryRequested,
     cwd: providerModelDiscoveryCwd,
     modelHintByProvider: composerModelHintByProvider,
@@ -4518,12 +4513,10 @@ export default function ChatView({
         // catalog immediately instead of waiting for a second click on Model.
         setOmniMindModelDiscoveryRequested(true);
       }
-      const status = findProviderStatus(providerStatuses, provider);
-      if (status && (!status.available || status.authStatus === "unauthenticated")) {
-        return;
-      }
       // Selection is exact Engine intent. Start the target in the same event turn;
       // the enabled catalog hook on the next render shares this canonical query.
+      // A cached health/auth failure must not block catalog truth until the delayed
+      // live status refresh; provider health remains the separate send-admission owner.
       void queryClient.prefetchQuery(
         providerModelsPrefetchQueryOptions({
           provider,
@@ -4532,7 +4525,7 @@ export default function ChatView({
         }),
       );
     },
-    [providerModelDiscoveryCwd, providerStatuses, queryClient, settings],
+    [providerModelDiscoveryCwd, queryClient, settings],
   );
   const handleTraitsPickerOpenChange = useCallback(
     (open: boolean) => {

@@ -11647,8 +11647,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps an unavailable Engine out of model discovery and in recovery controls", async () => {
+  it("discovers the current Engine immediately despite a cached unavailable status", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
+    useComposerDraftStore.getState().setModelSelectionAndSticky(THREAD_ID, {
+      provider: "codex",
+      model: "gpt-5",
+    });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
     const refreshProviders = vi.fn(async () => ({ providers: [] }));
@@ -11700,15 +11704,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.filter(
+            (request) =>
+              request._tag === WS_METHODS.providerListModels && request.provider === "codex",
+          ),
+        ).toHaveLength(1);
       });
-      expect(
-        wsRequests.filter(
-          (request) =>
-            request._tag === WS_METHODS.providerListModels && request.provider === "codex",
-        ),
-      ).toHaveLength(0);
+      await vi.waitFor(() => {
+        expect(page.getByRole("button", { name: "Model and options" }).element().textContent).toBe(
+          "GPT-5",
+        );
+      });
       expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
       await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
       const engineTrigger = page.getByRole("button", {
@@ -11824,12 +11832,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      expect(
-        wsRequests.filter(
-          (request) =>
-            request._tag === WS_METHODS.providerListModels && request.provider === "codex",
-        ),
-      ).toHaveLength(0);
+      await vi.waitFor(() => {
+        expect(
+          wsRequests.filter(
+            (request) =>
+              request._tag === WS_METHODS.providerListModels && request.provider === "codex",
+          ),
+        ).toHaveLength(1);
+      });
       expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
       await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
       await expect
