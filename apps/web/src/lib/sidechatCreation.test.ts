@@ -256,15 +256,16 @@ describe("createOrJoinSidechat", () => {
   } satisfies SidechatCreationResult;
 
   function run(input: {
-    flights: Map<ThreadId, SidechatCreationFlight>;
+    flights: Map<string, SidechatCreationFlight>;
     sourceThreadId: ThreadId;
+    targetProvider?: string;
     initialPrompt?: string | undefined;
     startCreation: (initialPrompt?: string | undefined) => Promise<SidechatCreationResult>;
     sendQueuedPrompt: (threadId: ThreadId, prompt: string) => Promise<void>;
   }): Promise<true> {
     return createOrJoinSidechat({
-      inFlightBySourceThreadId: input.flights,
-      sourceThreadId: input.sourceThreadId,
+      inFlightByKey: input.flights,
+      flightKey: `${input.sourceThreadId}:${input.targetProvider ?? "codex"}`,
       initialPrompt: input.initialPrompt,
       startCreation: input.startCreation,
       sendQueuedPrompt: input.sendQueuedPrompt,
@@ -282,7 +283,7 @@ describe("createOrJoinSidechat", () => {
         }),
     );
     const sendQueuedPrompt = vi.fn().mockResolvedValue(undefined);
-    const flights = new Map<ThreadId, SidechatCreationFlight>();
+    const flights = new Map<string, SidechatCreationFlight>();
     const sourceThreadId = ThreadId.makeUnsafe("source-a");
 
     const first = run({ flights, sourceThreadId, startCreation, sendQueuedPrompt });
@@ -309,7 +310,7 @@ describe("createOrJoinSidechat", () => {
         }),
     );
     const sendQueuedPrompt = vi.fn().mockResolvedValue(undefined);
-    const flights = new Map<ThreadId, SidechatCreationFlight>();
+    const flights = new Map<string, SidechatCreationFlight>();
     const sourceThreadId = ThreadId.makeUnsafe("source-a");
 
     const first = run({
@@ -335,7 +336,7 @@ describe("createOrJoinSidechat", () => {
   });
 
   it("allows different host threads to create sidechats concurrently", async () => {
-    const flights = new Map<ThreadId, SidechatCreationFlight>();
+    const flights = new Map<string, SidechatCreationFlight>();
     const startFirst = vi.fn().mockResolvedValue(result);
     const startSecond = vi.fn().mockResolvedValue({
       ...result,
@@ -363,5 +364,35 @@ describe("createOrJoinSidechat", () => {
 
     expect(startFirst).toHaveBeenCalledOnce();
     expect(startSecond).toHaveBeenCalledOnce();
+  });
+
+  it("creates separate in-flight sidechats for different target providers", async () => {
+    const flights = new Map<string, SidechatCreationFlight>();
+    const sourceThreadId = ThreadId.makeUnsafe("source-a");
+    const startCodex = vi.fn().mockResolvedValue(result);
+    const startCursor = vi.fn().mockResolvedValue({
+      ...result,
+      threadId: ThreadId.makeUnsafe("cursor-sidechat"),
+    });
+
+    await Promise.all([
+      run({
+        flights,
+        sourceThreadId,
+        targetProvider: "codex",
+        startCreation: startCodex,
+        sendQueuedPrompt: vi.fn().mockResolvedValue(undefined),
+      }),
+      run({
+        flights,
+        sourceThreadId,
+        targetProvider: "cursor",
+        startCreation: startCursor,
+        sendQueuedPrompt: vi.fn().mockResolvedValue(undefined),
+      }),
+    ]);
+
+    expect(startCodex).toHaveBeenCalledOnce();
+    expect(startCursor).toHaveBeenCalledOnce();
   });
 });
