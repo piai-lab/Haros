@@ -624,8 +624,8 @@ export function useComposerSlashCommands(input: {
       ) {
         toastManager.add({
           type: "warning",
-          title: "Side is unavailable",
-          description: "Open a server-backed main thread before starting Side.",
+          title: t("workbench.sideChatUnavailableTitle"),
+          description: t("workbench.sideChatUnavailableDescription"),
         });
         return Promise.resolve(true);
       }
@@ -672,23 +672,22 @@ export function useComposerSlashCommands(input: {
           if (result.promptError) {
             toastManager.add({
               type: "warning",
-              title: "Side chat started without the prompt",
-              description: "The side chat is open. Send the prompt again when it finishes loading.",
+              title: t("composer.sideStartedWithoutPromptTitle"),
+              description: t("composer.sidePromptRetryDescription"),
             });
           } else if (result.snapshotError) {
             toastManager.add({
               type: "warning",
-              title: "Side chat is still syncing",
-              description:
-                "The fork succeeded and will appear as soon as the thread list refreshes.",
+              title: t("composer.sideSyncingTitle"),
+              description: t("composer.sideSyncingDescription"),
             });
           }
         },
         onQueuedPromptError: () => {
           toastManager.add({
             type: "warning",
-            title: "Side chat prompt was not sent",
-            description: "The side chat is open. Send the prompt again when it finishes loading.",
+            title: t("composer.sidePromptNotSentTitle"),
+            description: t("composer.sidePromptRetryDescription"),
           });
         },
       });
@@ -1091,23 +1090,25 @@ export function useComposerSlashCommands(input: {
         if (!canOfferSideCommand) {
           toastManager.add({
             type: "warning",
-            title: "Side is unavailable",
-            description: "Remove composer attachments or context before using /side.",
+            title: t("workbench.sideChatUnavailableTitle"),
+            description: t("composer.sideUnavailableAttachments"),
           });
           return true;
         }
         const { targetProvider, prompt, unavailableProvider } = parseSideSlashCommandArgs(
           slashInvocation.args,
           {
-            currentProvider: selectedModelSelection.provider,
+            currentProvider: selectedProvider,
             availableTargetProviders: sidechatTargetProviders,
           },
         );
         if (unavailableProvider) {
           toastManager.add({
             type: "warning",
-            title: `${PROVIDER_DISPLAY_NAMES[unavailableProvider]} is unavailable for Side`,
-            description: "Enable and sign in to that provider, then run /side again.",
+            title: t("composer.sideProviderUnavailableTitle", {
+              provider: PROVIDER_DISPLAY_NAMES[unavailableProvider],
+            }),
+            description: t("composer.sideProviderUnavailableDescription"),
           });
           return true;
         }
@@ -1122,9 +1123,9 @@ export function useComposerSlashCommands(input: {
         } catch (error) {
           toastManager.add({
             type: "error",
-            title: "Could not start Side",
+            title: t("workbench.sideChatStartFailed"),
             description:
-              error instanceof Error ? error.message : "An error occurred while creating Side.",
+              error instanceof Error ? error.message : t("workbench.sideChatStartFailedDescription"),
           });
         }
         return true;
@@ -1145,12 +1146,13 @@ export function useComposerSlashCommands(input: {
       openFeedbackDialog,
       openReviewTargetPicker,
       selectedProvider,
-      selectedModelSelection.provider,
       sidechatTargetProviders,
       supportsTextNativeReviewCommand,
+      t,
       runCodexReviewStart,
       runExportSlashCommand,
       runFastSlashCommand,
+      t,
       runGoalSlashCommand,
     ],
   );
@@ -1350,9 +1352,9 @@ export function useComposerSlashCommands(input: {
         void createSidechatFromSlashCommand().catch((error) => {
           toastManager.add({
             type: "error",
-            title: "Could not start Side",
+            title: t("workbench.sideChatStartFailed"),
             description:
-              error instanceof Error ? error.message : "An error occurred while creating Side.",
+              error instanceof Error ? error.message : t("workbench.sideChatStartFailedDescription"),
           });
         });
       }

@@ -120,6 +120,18 @@ export const EN_MESSAGES = {
   "composer.command.reviewDescription": "Start a code review for current changes",
   "composer.command.forkDescription": "Fork this task into the main repository or a new worktree",
   "composer.command.sideDescription": "Open a guarded Side from this task",
+  "composer.sideUnavailableAttachments":
+    "Remove composer attachments or context before using /side.",
+  "composer.sideProviderUnavailableTitle": "{provider} is unavailable for Side",
+  "composer.sideProviderUnavailableDescription":
+    "Enable and sign in to that engine, then run /side again.",
+  "composer.sideStartedWithoutPromptTitle": "Side chat started without the prompt",
+  "composer.sidePromptRetryDescription":
+    "The side chat is open. Send the prompt again when it finishes loading.",
+  "composer.sideSyncingTitle": "Side chat is still syncing",
+  "composer.sideSyncingDescription":
+    "The fork succeeded and will appear as soon as the task list refreshes.",
+  "composer.sidePromptNotSentTitle": "Side chat prompt was not sent",
   "composer.command.statusDescription": "Show context usage and rate-limit status",
   "composer.command.subagentsDescription":
     "Insert a prompt that asks the assistant to delegate work",
@@ -3744,6 +3756,14 @@ export const ZH_CN_MESSAGES = {
   "composer.command.reviewDescription": "审查当前代码更改",
   "composer.command.forkDescription": "将当前任务分叉到主仓库或新的独立工作树",
   "composer.command.sideDescription": "从当前任务打开受保护的旁路对话",
+  "composer.sideUnavailableAttachments": "请先移除输入框中的附件或上下文，再使用 /side。",
+  "composer.sideProviderUnavailableTitle": "{provider} 暂不可用于 Side",
+  "composer.sideProviderUnavailableDescription": "请启用并登录该引擎，然后重新运行 /side。",
+  "composer.sideStartedWithoutPromptTitle": "侧边对话已创建，但提示词尚未发送",
+  "composer.sidePromptRetryDescription": "侧边对话已打开；加载完成后请重新发送提示词。",
+  "composer.sideSyncingTitle": "侧边对话仍在同步",
+  "composer.sideSyncingDescription": "分支创建成功，任务列表刷新后便会显示。",
+  "composer.sidePromptNotSentTitle": "侧边对话的提示词未发送",
   "composer.command.statusDescription": "查看上下文用量和速率限制状态",
   "composer.command.subagentsDescription": "插入一条让助手委派工作的提示",
   "composer.command.fastDescription": "开启或关闭当前任务的快速模式",
