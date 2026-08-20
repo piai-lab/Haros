@@ -1608,7 +1608,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("passes the customized native default into OmniMind Chat request capture", async () => {
+  it("applies the global default when a Chat Session starts without hot-changing it", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-chat-default-prompt-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -1665,14 +1665,16 @@ describe("getPiDiscoverableModels", () => {
                 "customized-chat-default-marker",
               ),
             ).toMatchObject({ state: "changed" });
-            yield* adapter.startSession({
-              provider: "omnimind",
-              threadId,
-              cwd,
-              workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
-              runtimeMode: "full-access",
-            });
+            const start = () =>
+              adapter.startSession({
+                provider: "omnimind",
+                threadId,
+                cwd,
+                workSurface: "chat",
+                modelSelection: { provider: "omnimind", model: "local/safe-model" },
+                runtimeMode: "full-access",
+              });
+            yield* start();
             const send = (input: string) =>
               Effect.gen(function* () {
                 const turn = yield* adapter.sendTurn({
@@ -1698,9 +1700,10 @@ describe("getPiDiscoverableModels", () => {
                 "customized-chat-default-v2",
               ),
             ).toMatchObject({ state: "changed" });
-            yield* send("without Chat reload");
-            expect(yield* adapter.reloadSessionResources!(threadId)).toBe("reloaded");
-            yield* send("after Chat reload");
+            yield* send("same active Chat Session");
+            yield* adapter.stopSession(threadId);
+            yield* start();
+            yield* send("after Chat Session rebuild");
             yield* adapter.stopSession(threadId);
             yield* Fiber.interrupt(eventsFiber);
           }).pipe(Effect.provide(layer)),

@@ -2056,14 +2056,14 @@ export const EN_MESSAGES = {
   "settings.groupSystem": "System",
   "settings.groupArchived": "Archived",
   "settings.promptsDescription":
-    "Customize OmniMind Agent's default instructions and personal rules, then reload a conversation when you are ready.",
+    "Customize OmniMind Agent's default instructions and personal rules.",
   "settings.defaultPrompt": "Default prompt",
   "settings.defaultPromptDescription":
     "Sets the basic way OmniMind Agent works. Dynamic tools, skills, and project context remain automatic.",
   "settings.defaultPromptSourceNotice":
-    "OmniMind built-in default. Saved changes require an explicit conversation reload.",
+    "OmniMind built-in default. Saved changes apply to tasks and conversations started afterward.",
   "settings.defaultPromptCustomizedNotice":
-    "Customized for OmniMind Agent. Saved changes require an explicit conversation reload.",
+    "Customized for OmniMind Agent. Saved changes apply to tasks and conversations started afterward.",
   "settings.restoreFactoryDefault": "Restore factory default",
   "settings.promptRestoreFailed": "Could not restore the default prompt",
   "settings.customRules": "Custom rules",
@@ -2078,7 +2078,7 @@ export const EN_MESSAGES = {
   "settings.promptByteCount": "{current} of {max} bytes",
   "settings.promptInvalidText":
     "Use valid text without unsupported control characters. Tabs and line breaks are allowed.",
-  "settings.promptSaved": "Instructions saved",
+  "settings.promptSaved": "Global instructions saved",
   "settings.promptAlreadyCurrent": "Already up to date",
   "settings.promptSaveFailed": "Could not save instructions",
   "settings.promptSaveFailedDescription": "Your draft is still here. Check it and try again.",
@@ -2091,25 +2091,9 @@ export const EN_MESSAGES = {
     "The source of your custom rules changed. Reload before making another change.",
   "settings.reloadPromptValue": "Reload current value",
   "settings.keepPromptDraft": "Keep my draft",
-  "settings.currentConversationResources": "Current conversation resources",
-  "settings.promptReloadAvailable":
-    "Saving does not change a conversation that is already open. Reload its resources explicitly when ready.",
-  "settings.promptReloadUnavailable":
-    "No current OmniMind Agent conversation is available. New conversations will use the saved prompt settings.",
-  "settings.reloadConversationResources": "Reload current conversation resources",
-  "settings.reloadingResources": "Reloading resources…",
-  "settings.promptReloaded": "Reloaded. Messages sent next will use the current prompt settings.",
-  "settings.promptReloadBusy":
-    "This conversation is currently running. Saved changes do not affect the work in progress.",
-  "settings.promptReloadNoSession":
-    "No active session needed reloading. The conversation will use current prompt settings when it starts again.",
-  "settings.promptReloadDifferentEngine":
-    "The remembered conversation no longer uses OmniMind Agent. Start or return to an OmniMind Agent conversation to reload it.",
-  "settings.promptReloadFailed":
-    "Changes remain saved, but conversation resources could not be reloaded. Try again or start a new conversation.",
   "settings.removeCustomRulesTitle": "Delete your custom rules?",
   "settings.removeCustomRulesDescription":
-    "Your current conversation will not reload automatically. If another personal rule already exists, OmniMind may use it next.",
+    "If another personal rule already exists, OmniMind may use it next.",
   "settings.promptsUnavailable":
     "Prompt settings are unavailable right now. Nothing was changed; try again.",
   "settings.language": "Language",
@@ -5615,14 +5599,13 @@ export const ZH_CN_MESSAGES = {
   "settings.groupCoding": "开发",
   "settings.groupSystem": "系统",
   "settings.groupArchived": "归档",
-  "settings.promptsDescription":
-    "自定义 OmniMind Agent 的默认指令与个人规则，并在准备好后重新加载对话资源。",
+  "settings.promptsDescription": "自定义 OmniMind Agent 的默认指令与个人规则。",
   "settings.defaultPrompt": "默认提示词",
   "settings.defaultPromptDescription":
     "决定 OmniMind Agent 的基础工作方式；工具、技能与项目上下文仍会自动组合。",
-  "settings.defaultPromptSourceNotice": "OmniMind 内置默认；保存修改后需显式重新加载对话。",
+  "settings.defaultPromptSourceNotice": "OmniMind 内置默认；保存的修改会用于之后启动的任务和对话。",
   "settings.defaultPromptCustomizedNotice":
-    "已为 OmniMind Agent 自定义；保存修改后需显式重新加载对话。",
+    "已为 OmniMind Agent 自定义；保存的修改会用于之后启动的任务和对话。",
   "settings.restoreFactoryDefault": "恢复出厂默认",
   "settings.promptRestoreFailed": "无法恢复默认提示词",
   "settings.customRules": "自定义规则",
@@ -5633,7 +5616,7 @@ export const ZH_CN_MESSAGES = {
   "settings.promptOpenFailed": "无法打开自定义规则所在位置",
   "settings.promptByteCount": "{current} / {max} 字节",
   "settings.promptInvalidText": "请输入有效文本并移除不支持的控制字符；制表符和换行符可以保留。",
-  "settings.promptSaved": "指令已保存",
+  "settings.promptSaved": "全局指令已保存",
   "settings.promptAlreadyCurrent": "当前内容已是最新",
   "settings.promptSaveFailed": "无法保存指令",
   "settings.promptSaveFailedDescription": "草稿仍然保留。请检查后重试。",
@@ -5644,22 +5627,8 @@ export const ZH_CN_MESSAGES = {
   "settings.promptSourceChanged": "自定义规则的来源已经改变，请先重新载入再继续修改。",
   "settings.reloadPromptValue": "重新载入当前内容",
   "settings.keepPromptDraft": "保留我的草稿",
-  "settings.currentConversationResources": "当前对话资源",
-  "settings.promptReloadAvailable":
-    "保存不会改变已经打开的对话。准备好后，请显式重新加载它的资源。",
-  "settings.promptReloadUnavailable":
-    "当前没有可用的 OmniMind Agent 对话。新对话会使用已保存的提示词设置。",
-  "settings.reloadConversationResources": "重新加载当前对话资源",
-  "settings.reloadingResources": "正在重新加载资源…",
-  "settings.promptReloaded": "已重新加载。接下来发送的消息会使用当前提示词设置。",
-  "settings.promptReloadBusy": "当前对话正在运行；已保存修改不会影响正在进行的工作。",
-  "settings.promptReloadNoSession": "当前没有需要重载的会话；再次启动对话时会使用当前提示词设置。",
-  "settings.promptReloadDifferentEngine":
-    "记住的对话已不再使用 OmniMind Agent。请进入或新建 OmniMind Agent 对话后再重新加载。",
-  "settings.promptReloadFailed": "修改已经保存，但对话资源重新加载失败。请重试，或新建一个对话。",
   "settings.removeCustomRulesTitle": "要删除自定义规则吗？",
-  "settings.removeCustomRulesDescription":
-    "当前对话不会自动重新加载。如果已有另一份个人规则，OmniMind 接下来可能会采用它。",
+  "settings.removeCustomRulesDescription": "如果已有另一份个人规则，OmniMind 接下来可能会采用它。",
   "settings.promptsUnavailable": "暂时无法读取提示词设置。没有修改任何内容，请重试。",
   "settings.language": "语言",
   "settings.languageDescription": "“系统”会跟随此设备的语言偏好。",
