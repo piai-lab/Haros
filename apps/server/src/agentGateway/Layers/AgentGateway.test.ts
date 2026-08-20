@@ -1452,7 +1452,7 @@ describe("AgentGateway", () => {
             tools: Array<{
               name: string;
               description?: string;
-              inputSchema: { properties?: Record<string, unknown> };
+              inputSchema: { properties?: Record<string, unknown>; required?: string[] };
             }>;
           };
         }
@@ -1509,6 +1509,12 @@ describe("AgentGateway", () => {
 
       const createAutomation = tools.find((tool) => tool.name === "omnimind_create_automation");
       assert.include(createAutomation?.description ?? "", "self-contained brief");
+      assert.deepEqual(createAutomation?.inputSchema.required, [
+        "name",
+        "prompt",
+        "mode",
+        "schedule",
+      ]);
       const createAutomationProperties = createAutomation?.inputSchema.properties as
         | Record<string, { description?: string }>
         | undefined;
@@ -4179,6 +4185,8 @@ describe("AgentGateway", () => {
         args: {
           name: "escalate",
           prompt: "keep running privileged work",
+          mode: "heartbeat",
+          schedule: { type: "interval", everySeconds: 300 },
           targetThreadId: "thread-full-access",
         },
       });
@@ -4283,14 +4291,50 @@ describe("AgentGateway", () => {
     }).pipe(Effect.provide(gatewayLayer));
   });
 
-  it.effect("creates a heartbeat automation on the caller thread by default", () => {
+  it.effect("requires an explicit automation mode and schedule", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const missingMode = yield* harness.callTool({
+        token: "token-parent",
+        name: "omnimind_create_automation",
+        args: {
+          name: "monitor children",
+          prompt: "check the child threads",
+          schedule: { type: "interval", everySeconds: 300 },
+        },
+      });
+      const missingSchedule = yield* harness.callTool({
+        token: "token-parent",
+        name: "omnimind_create_automation",
+        args: {
+          name: "monitor children",
+          prompt: "check the child threads",
+          mode: "heartbeat",
+        },
+      });
+
+      assert.isTrue(isToolError(missingMode.result));
+      assert.include(toolErrorText(missingMode.result), '"mode"');
+      assert.isTrue(isToolError(missingSchedule.result));
+      assert.include(toolErrorText(missingSchedule.result), '"schedule"');
+      assert.lengthOf(harness.automationCreates, 0);
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("creates an explicit heartbeat automation on the caller thread", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {
       const harness = yield* makeHarness;
       const response = yield* harness.callTool({
         token: "token-parent",
         name: "omnimind_create_automation",
-        args: { name: "monitor children", prompt: "check the child threads", everyMinutes: 5 },
+        args: {
+          name: "monitor children",
+          prompt: "check the child threads",
+          mode: "heartbeat",
+          schedule: { type: "interval", everySeconds: 300 },
+        },
       });
       assert.isFalse(isToolError(response.result), toolErrorText(response.result));
       assert.equal(harness.automationCreates.length, 1);
@@ -4318,7 +4362,8 @@ describe("AgentGateway", () => {
         args: {
           name: "monitor children",
           prompt: "check the child threads",
-          everyMinutes: 5,
+          mode: "heartbeat",
+          schedule: { type: "interval", everySeconds: 300 },
         },
       });
 
@@ -4400,6 +4445,7 @@ describe("AgentGateway", () => {
           name: "Release watch",
           prompt: "Track the release branch.",
           mode: "dedicated",
+          schedule: { type: "interval", everySeconds: 3600 },
           targetThreadId: "thread-parent",
         },
       });
@@ -4421,6 +4467,7 @@ describe("AgentGateway", () => {
           name: "Cross-project review",
           prompt: "Review another project.",
           mode: "standalone",
+          schedule: { type: "interval", everySeconds: 3600 },
           projectId: "project-other",
         },
       });
@@ -4443,6 +4490,7 @@ describe("AgentGateway", () => {
           args: {
             name: "Fast monitor",
             prompt: "Check quickly.",
+            mode: "standalone",
             schedule: { type: "interval", everySeconds: 15 },
           },
         });
@@ -4455,6 +4503,7 @@ describe("AgentGateway", () => {
           args: {
             name: "Fast monitor",
             prompt: "Check quickly.",
+            mode: "standalone",
             schedule: { type: "interval", everySeconds: 15 },
             fastInterval: true,
           },
@@ -4511,6 +4560,8 @@ describe("AgentGateway", () => {
         args: {
           name: "Suggested monitor",
           prompt: "Watch the build.",
+          mode: "standalone",
+          schedule: { type: "interval", everySeconds: 3600 },
           suggested: true,
         },
       });

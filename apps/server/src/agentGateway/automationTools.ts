@@ -43,7 +43,6 @@ import {
   type ToolEntry,
 } from "./toolRuntime.ts";
 
-const HEARTBEAT_DEFAULT_INTERVAL_MINUTES = 5;
 const HEARTBEAT_DEFAULT_MAX_ITERATIONS = 50;
 const AUTOMATION_VIEW_DEFAULT_RUNS = 5;
 const AUTOMATION_VIEW_MAX_RUNS = 50;
@@ -234,8 +233,7 @@ function readWorktreeMode(args: Record<string, unknown>): AutomationWorktreeMode
 }
 
 function readMode(args: Record<string, unknown>): AutomationDefinition["mode"] {
-  // The default stays "heartbeat" for callers written before modes existed.
-  const raw = readStringArg(args, "mode") ?? "heartbeat";
+  const raw = readStringArg(args, "mode", { required: true })!;
   if (raw !== "heartbeat" && raw !== "standalone" && raw !== "dedicated") {
     throw new ToolInputError('Argument "mode" must be "heartbeat", "standalone", or "dedicated".');
   }
@@ -308,7 +306,7 @@ export function makeAgentGatewayAutomationTools(
     requiredCapability: "automation:write",
     definition: {
       name: "omnimind_create_automation",
-      description: `Create a heartbeat, standalone, or dedicated OmniMind automation. ${AUTOMATION_AUTHORING_GUIDANCE} Existing calls remain compatible: omitting mode/schedule creates a heartbeat on your thread using everyMinutes (default 5). Prefer suggested:true unless the user explicitly requested creation.`,
+      description: `Create a heartbeat, standalone, or dedicated OmniMind automation with an explicit execution mode and schedule. ${AUTOMATION_AUTHORING_GUIDANCE} Prefer suggested:true unless the user explicitly requested creation.`,
       inputSchema: {
         type: "object",
         properties: {
@@ -321,10 +319,6 @@ export function makeAgentGatewayAutomationTools(
               'Where runs execute. "heartbeat" appends turns to an existing thread and waits for it to be idle — use it to drive that thread forward. "standalone" opens a fresh thread per run. "dedicated" opens one thread the automation owns and reuses it for every run, so the runs build on each other without ever writing into someone else\'s thread.',
           },
           schedule: SCHEDULE_INPUT_SCHEMA,
-          everyMinutes: {
-            type: "number",
-            description: "Legacy interval shorthand. Cannot be combined with schedule.",
-          },
           targetThreadId: {
             type: "string",
             description:
@@ -363,7 +357,7 @@ export function makeAgentGatewayAutomationTools(
               "Persist disabled as a pending proposal and surface Accept/Dismiss actions.",
           },
         },
-        required: ["name", "prompt"],
+        required: ["name", "prompt", "mode", "schedule"],
         additionalProperties: false,
       },
       annotations: { title: "Create a OmniMind automation", ...WRITE_TOOL_ANNOTATIONS },
@@ -374,22 +368,10 @@ export function makeAgentGatewayAutomationTools(
         const name = readStringArg(args, "name", { required: true })!;
         const prompt = readStringArg(args, "prompt", { required: true })!;
         const mode = readMode(args);
-        const explicitSchedule = decodeSchedule(args);
-        if (explicitSchedule && args.everyMinutes !== undefined) {
-          throw new ToolInputError(
-            'Arguments "schedule" and "everyMinutes" are mutually exclusive.',
-          );
+        const schedule = decodeSchedule(args);
+        if (!schedule) {
+          throw new ToolInputError('Missing required argument "schedule".');
         }
-        const everyMinutes = Math.max(
-          1,
-          readNumberArg(args, "everyMinutes") ?? HEARTBEAT_DEFAULT_INTERVAL_MINUTES,
-        );
-        const schedule =
-          explicitSchedule ??
-          ({
-            type: "interval",
-            everySeconds: Math.round(everyMinutes * 60),
-          } as const);
         const fastInterval = readBooleanArg(args, "fastInterval") ?? false;
         const scheduleSpacingSeconds = computeAutomationScheduleSpacingSeconds(
           schedule,
