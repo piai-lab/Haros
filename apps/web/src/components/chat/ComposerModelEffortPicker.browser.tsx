@@ -17,6 +17,7 @@ vi.mock("../../appSettings", () => ({
 }));
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-grok-model-effort-picker");
+const GROK_4_5 = "grok-4.5" as ModelSlug;
 const GROK_4_6 = "grok-4.6" as ModelSlug;
 
 describe("ComposerModelEffortPicker", () => {
