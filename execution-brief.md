@@ -2,13 +2,13 @@
 
 ## 当前目标
 
-Composer 在 Desktop 重启后约 10 秒才恢复模型目录的问题已形成 source candidate。根因是当前/刚选中的 Engine 目录发现被上次运行持久化的 Provider health/auth 结果提前阻断，直到全局 Provider update coordinator 的 10 秒 live refresh 才重新启用；目录与发送权限因此被错误耦合。
+Composer 在 Desktop 重启后约 10 秒才恢复模型目录的问题已闭合。根因是当前/刚选中的 Engine 目录发现被上次运行持久化的 Provider health/auth 结果提前阻断，直到全局 Provider update coordinator 的 10 秒 live refresh 才重新启用；目录与发送权限因此被错误耦合。
 
-当前实现让 exact selected Engine 立即进入既有 canonical `provider.listModels` query，目录继续决定“有哪些模型”，Provider health 继续独立决定“能否发送”。未选中的 Engine 不恢复后台 warming，stock Pi 仍只在明确选择后读取，OmniMind 仍要求现有 binding/model hint/显式 intent；没有新增 timeout、静态模型、第二缓存、重试系统或并行 owner。浏览器完整 `ChatView` suite 170/170、相关 unit 17/17、Web typecheck 与 focused lint 已通过；packaged Desktop 重建、隔离 profile journey 与本机安装尚待从本 candidate 的 pushed SHA 完成。
+当前实现让 exact selected Engine 立即进入既有 canonical `provider.listModels` query，目录继续决定“有哪些模型”，Provider health 继续独立决定“能否发送”。未选中的 Engine 不恢复后台 warming，stock Pi 仍只在明确选择后读取，OmniMind 仍要求现有 binding/model hint/显式 intent；没有新增 timeout、静态模型、第二缓存、重试系统或并行 owner。浏览器完整 `ChatView` suite 170/170、相关 unit 17/17、Web unit 4173/4173、Web typecheck 与 focused lint 已通过。
 
-当前安装版 product bytes 准确绑定 pushed code `17355073cbc203c347f92ebac6884b564ed91011`：arm64 DMG SHA-256 为 `b278a5df78f93f59f4d8b0b2044c3e967fefea08dbc57f85edc66c41e3554504`，staged/installed `app.asar` SHA-256 均为 `78e2ab7621bf1e427f53f6e149e506b00f294bda645a2836d8372e9756dd0823`。240 个 legal identities 已闭合；本机安装 App 已 ad-hoc 重签并通过 strict deep verification。
+当前安装版 product bytes 准确绑定 pushed code `c538c3c052793cd0c83b54d423bbeba2a3c89ef3`：arm64 DMG SHA-256 为 `b4dc28cde812c93f97f70769a5611e6dbf932569c1ba70f14e5d5f8c1e55332d`，staged/installed `app.asar` SHA-256 均为 `326fdfe4a91c931bc799f5e872930b4a959641a8e333036629dc4e77bde54e5a`。240 个 legal identities 与 packaged startup smoke 已闭合；本机安装 App 已 ad-hoc 重签并通过 strict deep verification。
 
-完全隔离的 fresh packaged profile 在 Model services 首次进入约 362ms 后呈现准确空态；植入无凭据、无网络调用的任务本地 `models.json` 后约 821ms 呈现非空服务投影，没有假 loading。将该隔离实例的 bundled Server 连续终止至既有五次重启止损后，Desktop 准确给出恢复对话框，`Try again` 恢复同一服务投影；完整关闭重开后约 663ms 再次呈现，未读取真实用户 Provider home。最终任务进程归零，隔离 profile 与旧安装版均已移入 Trash，可恢复。
+完全隔离的 installed-App profile 使用任务专用 `HOME`、`OMNIMIND_HOME`、`CODEX_HOME`、`CLAUDE_CONFIG_DIR` 与 `PI_CODING_AGENT_DIR`，并由主进程、Helper 与 bundled Server 的运行参数/环境证明隔离。植入无凭据、无网络调用的任务本地 catalog 后，将持久化 OmniMind Provider 状态改成 `available: false` 的旧缓存；关闭重开 installed App 后，7.616 秒即可打开模型按钮，8.717 秒已呈现 `Restart Fixture / Instant Model`，早于 10 秒 Provider refresh。真实用户 Provider home 未被读取或改写，最终任务进程归零；旧安装版已移入 Trash，可恢复。
 
 ## 已确认范围
 
@@ -21,7 +21,7 @@ Composer 在 Desktop 重启后约 10 秒才恢复模型目录的问题已形成 
 
 ## 当前阻塞
 
-Composer 冷启动 candidate 没有 source 阻塞，但在完成 pushed-SHA packaged Desktop 重建、隔离 profile journey 与本机安装前，只能称 source candidate，不能宣称用户已拿到修复。
+Composer 冷启动修复没有剩余产品阻塞；source、pushed SHA、packaged artifact、本机安装与隔离重启 journey 已闭合。
 
 上一个 Model services 冷启动修复没有剩余产品阻塞：focused Model services browser tests 为 42/42，WebSocket transport focused tests 为 92/92，Web unit tests 为 4173/4173；Web build/typecheck、root lint/format、document contract 与 release provenance 通过。
 
@@ -31,7 +31,7 @@ official signing、notarization、Windows/Linux artifacts、GitHub Release 与 u
 
 ## 下一动作
 
-提交并推送 Composer 冷启动 candidate；从该精确 SHA 重建 arm64 Desktop artifact，停止所有现存 OmniMind 实例后安装，使用任务专用 `OMNIMIND_HOME`、HOME 与 Provider private homes 证明进程隔离，并验证冷启动当前 Engine 模型目录在 10 秒 Provider refresh 前恢复、关闭重开仍成立。若 packaged 证据推翻 source harness，回到同一目录/健康 owner 局部修正，不恢复全 Engine warming。
+本轮无需继续施工；保持模型目录与发送准入分离的既有 owner 边界，后续若出现特定 Engine 的真实目录失败，沿该 Engine 的 canonical `provider.listModels` 链路单独归因，不恢复全 Engine warming。
 
 ## 权威路由
 
