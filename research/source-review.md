@@ -985,3 +985,71 @@ The bounded decision, falsifiers and Gate B evidence live in
 [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md). This section does not
 approve Chat Todo, final Settings taxonomy, Device full-access, Browser download handling,
 approval/auto UI or Extension Marketplace.
+
+## 19. Synara exact `57f48ef…` adoption audit
+
+### 19.1 Source and relationship
+
+The maintainer requested another complete sync on 2026-08-20. The read-only local upstream was clean at
+exact `57f48ef1a3354ae7967d4a8f9f83a1105691ede6`. It is 107 commits after the previously adopted
+`8f9f60045ea652db7d4a6822e2f723dde073f40a`: 83 non-merge commits and 24 merge carriers. OmniMind is
+still the downstream distribution of this product platform, so applicable product mechanisms enter by
+standing default; the review did not treat the range as an unrelated donor patch list.
+
+The current candidate `8aef91b3d9` and exact upstream have 6,433 common `apps/` + `packages/` paths:
+4,812 byte-identical and 1,621 modified at the same path. There are 99 Synara-only and 201
+OmniMind-only paths. These numbers are produced from Git tree object IDs, not locale-sensitive text
+`comm`, and must be recomputed after any shipped-code change.
+
+### 19.2 Commit-range disposition
+
+| Responsibility | Disposition and evidence owner |
+| --- | --- |
+| Grok model ladders, custom models and usage | Adopted through the existing Grok ACP/model/usage owners and their author-equivalent adapter, picker and parser tests. |
+| Cursor fast/auto/model preservation | Adopted in the current Cursor options owner with the upstream model-switch regressions. |
+| Antigravity stream, tool settlement, child-thread routing and background turns | Adopted without a second runtime owner; ACP/adapter and subagent tests retain the lifecycle. |
+| `/side` cross-Provider targeting | Adopted in the existing Composer + sidechat creation owner, with provider-keyed single-flight, truthful bilingual unavailable/retry states and no second sidechat store. |
+| Projection repair, approval idempotency and terminal reply fences | Adopted with the stricter shell-sequence, receipt and post-settlement assistant-reply invariants; recovery tests cover catch-up, repair, duplicate response and late reply races. |
+| Windows paths, UNC, WSL cwd, WebSocket origin and sensitive-flag redaction | Adopted in existing path/transport/redaction owners with the upstream Windows and security regressions. |
+| Managed worktree cleanup | Adopted with a stronger no-data-loss fence: only product-owned, provably clean worktrees are reclaimed; dirty worktrees are retained and reported. |
+| Provider usage expansion | Adopted in the existing account-capacity and history-index boundaries. Every signed-in supported Provider can expose native limits without letting archive history become a fallback or second usage authority. |
+| Workspace search and reveal | Adopted into the existing unified Explorer search owner. Files and directories share one palette; directory activation expands ancestors and reveals in the existing tree. No upstream parallel palette/store was added. |
+| Desktop icon refresh | Adopted using OmniMind assets. Windows uses a shell-visible ICO, AppUserModel/shortcut synchronization and serialized rapid changes; the obsolete second refresh owner was removed. macOS dark icon behavior remains in its native owner. |
+| Windows/Linux custom titlebar | Adopted with persisted preference, restart/rollback and existing Desktop window controls. macOS remains native. This round requires source tests, not Windows/Linux release artifacts. |
+| Workbench/landing/chat/sidebar visual tuning | Adopted in existing theme and layout tokens; regression updates lock the intentional opaque surface and keep normal product copy free of internal Composer vocabulary. |
+| Xcode 27 SimulatorKit relocation | Adopted as a narrow capability lookup update with fallback tests. |
+| DeepSeek Harness add/revert, noop/format/CI carriers | Net-zero or no independent product behavior after parent/tree comparison; no parallel implementation was created. |
+| Synara website/docs, release smoke and headless release tarball | Explicitly excluded by the maintainer. Loss: OmniMind does not inherit Synara's website, release automation or server tarball distribution. Reason: those bytes assert Synara identity/publication authority and the user explicitly selected non-adoption. |
+
+### 19.3 Whole-tree responsibility closure
+
+The 99 upstream-only paths close by responsibility rather than a 99-row ledger:
+
+| Group | Paths | Disposition / proof pointer |
+| --- | ---: | --- |
+| Synara identity, marketing, release/What's New and identity-specific assets | 31 | Product mechanisms are adapted where applicable, but Synara names, logo bytes, website, changelog and publication facts remain the user's explicit identity divergence. OmniMind icon/titlebar assets and unavailable Release History remain truthful. |
+| Upstream-numbered migrations | 11 | Goal and automation semantics are adopted in OmniMind's existing deterministic lineage (`093`, `096`–`100`) and migration replay tests. Synara/DP Code storage-origin migrations are excluded because there is no predecessor user population and reading unrelated identity homes would add risk without benefit. |
+| Space implementation files | 21 | Semantically translated into the existing Thread Group owner: `groupIds`, editor/picker, icon suggestion, order/route restore, search/bulk and empty/void behavior. `space.projects.assign` and a parallel `spacesUiStore` are not copied. |
+| Project Instructions | 4 | Confirmed retirement remains in force; Thread Notepad stays. Loss and reopening condition remain documented in §15.6 and `architecture/workbench.md`. |
+| Upstream usage/OpenUsage owners | 6 | Account capacity is adopted through the current multi-Provider fetcher; history uses the stronger indexed UsageHistory owner. Upstream regression outcomes are retained without installing a second query/cache authority. |
+| Different-name UI/test owners | 26 | Git dialogs, Workspace palette/reveal, PR stack, automation draft/risk UI, branch mismatch, Thread creation, External MCP, diff stat, App Icon and shared hook harness outcomes are covered by current owners and focused/browser tests. Same outcome does not justify duplicate files or stores. |
+
+The 1,621 modified shared paths are grouped by physical owner: Desktop 104, Server 640, Web 777,
+contracts 39 and shared 61. Their evidence is the corresponding package suites plus focused author
+regressions above; the review does not create a second 1,621-row manifest. OmniMind-only paths remain
+downstream branding/bilingual, OmniMind Agent/Provider/Group, safety and evidence additions and do not
+authorize unrelated refactors.
+
+### 19.4 Maintainer decisions and remaining proof
+
+The maintainer explicitly selected: adopt managed worktree cleanup; adopt expanded Provider usage;
+exclude Synara identity/release/headless-tarball bytes; and adopt custom titlebar source behavior while
+limiting this round to a local macOS packaged candidate. Official signing, notarization, GitHub Release,
+update feed and Windows/Linux artifacts are outside scope.
+
+Focused author-equivalent suites and the complete repository suite pass on candidate `8aef91b3d9`:
+Web 4,173 tests, Server 4,361, and all Desktop/Contracts/Shared/Scripts tasks are green. README's adopted
+head intentionally remains `8f9f600…` until an exact pushed product SHA is rebuilt, installed and run
+with a fresh isolated macOS profile. The final journey must prove the app/server/helper isolation and
+the reachable latest surfaces; only then may authority move to `57f48ef…` and the adoption branch enter
+`main`.

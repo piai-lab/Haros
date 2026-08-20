@@ -131,6 +131,8 @@ V1 直接保全 Synara 已有能力：
 
 同一母体基线还包括持久 Goal、evidence-first Debug、480/960/1440 chat width、暗色 Dock icon 自动切换、本地 Profile activity PNG 导出，以及 Space→Group 的完整交互结果。它们必须复用现有 Composer/Thread、interaction mode、Settings、Desktop icon、Profile 与 Group owners，并在简体中文和英文中同时完整；不能因历史漏移植而降格成 Todo、提示词或另一套 store/API。
 
+持续同步还保留同一批既有 owner 的冰山行为：Workspace 搜索同时覆盖文件和目录，目录结果必须展开祖先链并在现有 Explorer 中 reveal；Engine 图标、安装/登录/受限状态与容量信息继续来自 canonical Provider descriptors、health 和 usage owners；managed Thread 删除只回收产品创建且可安全证明干净的 worktree，遇到脏目录必须保留并准确提示。Windows taskbar 图标切换和 Windows/Linux custom titlebar 复用 Desktop window/icon owner，偏好写入后若重启失败必须回滚；macOS 继续使用原生 titlebar。不得为这些差异另建 Palette、Provider catalog、worktree registry、window state 或第二套 UI。
+
 Profile 分享首版只提供设备本地、确定性的 render/copy/save，不包含 Synara 社交 handle、domain 或外部发帖链接。Release history/What's New 可以保留通用 UI 机制，但只有存在真实 OmniMind version、changelog 与 publication evidence 才能激活；未满足时准确显示不可用，不复制 Synara release identity。
 
 每个 Thread 恢复其 tabs、open files、layout、viewer refs 与 terminal state。具体 state 直接复用 source 实现，不新增 WorkbenchLayout aggregate。
