@@ -1026,7 +1026,6 @@ describe("buildCodexProcessEnv", () => {
           CODEX_HOME: codexHome,
           OMNIMIND_HOME: tempDir,
           OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/omnimind-browser-host.sock",
-          OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/legacy-browser-use.sock",
           OMNIMIND_BROWSER_HOST_CAPABILITY: "desktop-capability",
           OMNIMIND_BROWSER_HOST_CAPABILITY_FD: "3",
           NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/existing.sock",
@@ -1035,7 +1034,6 @@ describe("buildCodexProcessEnv", () => {
       });
 
       expect(env.OMNIMIND_BROWSER_HOST_PIPE_PATH).toBeUndefined();
-      expect(env.OMNIMIND_BROWSER_USE_PIPE_PATH).toBeUndefined();
       expect(env.OMNIMIND_BROWSER_HOST_CAPABILITY).toBeUndefined();
       expect(env.OMNIMIND_BROWSER_HOST_CAPABILITY_FD).toBeUndefined();
       expect(env.NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS).toBeUndefined();

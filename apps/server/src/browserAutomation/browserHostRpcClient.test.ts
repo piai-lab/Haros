@@ -294,16 +294,13 @@ describe("browser host RPC client", () => {
     expect(performance.now() - startedAt).toBeLessThan(275);
   });
 
-  it("prefers the canonical host path and accepts the legacy alias during upgrade", () => {
+  it("accepts only the canonical host path", () => {
     expect(
       resolveBrowserHostPipePath({
         OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/canonical.sock",
-        OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/legacy.sock",
       }),
     ).toBe("/tmp/canonical.sock");
-    expect(resolveBrowserHostPipePath({ OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/legacy.sock" })).toBe(
-      "/tmp/legacy.sock",
-    );
+    expect(resolveBrowserHostPipePath({})).toBeNull();
   });
 
   it("accepts only a bounded private desktop capability from direct test environments", () => {

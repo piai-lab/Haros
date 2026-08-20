@@ -419,7 +419,6 @@ describe("Antigravity CLI integration helpers", () => {
         OMNIMIND_AGENT_GATEWAY_TOKEN: "stale-token",
         OMNIMIND_AUTH_TOKEN: "host-control-plane-token",
         OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/desktop.sock",
-        OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/legacy.sock",
         OMNIMIND_BROWSER_HOST_CAPABILITY: "desktop-capability",
         OMNIMIND_BROWSER_HOST_CAPABILITY_FD: "3",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/desktop.sock",

@@ -53,7 +53,7 @@ describe("claudeProcessEnv", () => {
       env: {
         ANTHROPIC_API_KEY: "api-key-auth",
         OMNIMIND_AUTH_TOKEN: "server-secret",
-        OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/browser.sock",
+        OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
         NODE_OPTIONS: "--require=/tmp/inject.js",
       },
       hasClaudeCliCredentials: false,
@@ -61,7 +61,7 @@ describe("claudeProcessEnv", () => {
 
     assert.equal(result.ANTHROPIC_API_KEY, "api-key-auth");
     assert.equal(result.OMNIMIND_AUTH_TOKEN, undefined);
-    assert.equal(result.OMNIMIND_BROWSER_USE_PIPE_PATH, undefined);
+    assert.equal(result.OMNIMIND_BROWSER_HOST_PIPE_PATH, undefined);
     assert.equal(result.NODE_OPTIONS, undefined);
   });
 

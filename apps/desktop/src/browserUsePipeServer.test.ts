@@ -10,7 +10,6 @@ import {
   BrowserHostPipeServer,
   OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV,
   OMNIMIND_BROWSER_HOST_PIPE_ENV,
-  OMNIMIND_BROWSER_USE_PIPE_ENV,
   resolveBrowserHostPipeBackendEnv,
   resolveConfiguredBrowserHostPipePath,
   resolveDefaultBrowserHostPipePath,
@@ -107,37 +106,26 @@ describe("canonical browser host pipe resolution", () => {
     expect(pipePath).not.toBe(resolveDefaultBrowserHostPipePath("win32", 456));
   });
 
-  it("prefers the canonical env and accepts the legacy env as fallback", () => {
+  it("uses only the canonical configured pipe env", () => {
     expect(
       resolveConfiguredBrowserHostPipePath(
         {
           [OMNIMIND_BROWSER_HOST_PIPE_ENV]: "/canonical.sock",
-          [OMNIMIND_BROWSER_USE_PIPE_ENV]: "/legacy.sock",
         },
         "darwin",
       ),
     ).toBe("/canonical.sock");
-    expect(
-      resolveConfiguredBrowserHostPipePath(
-        {
-          [OMNIMIND_BROWSER_USE_PIPE_ENV]: String.raw`\\.\pipe\legacy`,
-        },
-        "win32",
-      ),
-    ).toBe(String.raw`\\.\pipe\legacy`);
   });
 
-  it("publishes both env names only while a listener is active", () => {
+  it("publishes the canonical env only while a listener is active", () => {
     const inherited = {
       KEEP_ME: "yes",
       [OMNIMIND_BROWSER_HOST_PIPE_ENV]: "/stale-canonical.sock",
-      [OMNIMIND_BROWSER_USE_PIPE_ENV]: "/stale-legacy.sock",
     };
     expect(resolveBrowserHostPipeBackendEnv(inherited, null, null)).toEqual({ KEEP_ME: "yes" });
     expect(resolveBrowserHostPipeBackendEnv(inherited, "/active.sock", 3)).toEqual({
       KEEP_ME: "yes",
       [OMNIMIND_BROWSER_HOST_PIPE_ENV]: "/active.sock",
-      [OMNIMIND_BROWSER_USE_PIPE_ENV]: "/active.sock",
       [OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV]: "3",
     });
   });

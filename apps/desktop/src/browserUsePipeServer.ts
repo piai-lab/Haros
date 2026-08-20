@@ -34,8 +34,6 @@ const PIPE_NAME_PREFIX = "omnimind-browser-host";
 export const OMNIMIND_BROWSER_HOST_PIPE_ENV = "OMNIMIND_BROWSER_HOST_PIPE_PATH";
 export const OMNIMIND_BROWSER_HOST_CAPABILITY_ENV = "OMNIMIND_BROWSER_HOST_CAPABILITY";
 export const OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV = "OMNIMIND_BROWSER_HOST_CAPABILITY_FD";
-/** @deprecated Read/written only while old backend builds are still supported. */
-export const OMNIMIND_BROWSER_USE_PIPE_ENV = "OMNIMIND_BROWSER_USE_PIPE_PATH";
 
 type RpcId = string | number;
 type WriteResult = "written" | "overflow" | "closed";
@@ -119,19 +117,11 @@ export function resolveConfiguredBrowserHostPipePath(
   env: NodeJS.ProcessEnv = process.env,
   platform = process.platform,
 ): string {
-  const configured =
-    env[OMNIMIND_BROWSER_HOST_PIPE_ENV]?.trim() || env[OMNIMIND_BROWSER_USE_PIPE_ENV]?.trim();
+  const configured = env[OMNIMIND_BROWSER_HOST_PIPE_ENV]?.trim();
   return configured || resolveDefaultBrowserHostPipePath(platform);
 }
 
-/** @deprecated Compatibility export for callers using the former IAB name. */
-export const resolveDefaultBrowserUsePipePath = resolveDefaultBrowserHostPipePath;
-/** @deprecated Compatibility export for callers using the former IAB name. */
-export const resolveConfiguredBrowserUsePipePath = resolveConfiguredBrowserHostPipePath;
-
 export const OMNIMIND_BROWSER_HOST_PIPE_PATH = resolveConfiguredBrowserHostPipePath();
-/** @deprecated Compatibility alias for old packaged backend builds. */
-export const OMNIMIND_BROWSER_USE_PIPE_PATH = OMNIMIND_BROWSER_HOST_PIPE_PATH;
 
 export function resolveBrowserHostPipeBackendEnv(
   inheritedEnv: NodeJS.ProcessEnv,
@@ -140,20 +130,15 @@ export function resolveBrowserHostPipeBackendEnv(
 ): NodeJS.ProcessEnv {
   const backendEnv = { ...inheritedEnv };
   delete backendEnv[OMNIMIND_BROWSER_HOST_PIPE_ENV];
-  delete backendEnv[OMNIMIND_BROWSER_USE_PIPE_ENV];
   delete backendEnv[OMNIMIND_BROWSER_HOST_CAPABILITY_ENV];
   delete backendEnv[OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV];
   const pipePath = activePipePath?.trim();
   if (pipePath && Number.isInteger(capabilityFd) && (capabilityFd ?? 0) >= 3) {
     backendEnv[OMNIMIND_BROWSER_HOST_PIPE_ENV] = pipePath;
-    backendEnv[OMNIMIND_BROWSER_USE_PIPE_ENV] = pipePath;
     backendEnv[OMNIMIND_BROWSER_HOST_CAPABILITY_FD_ENV] = String(capabilityFd);
   }
   return backendEnv;
 }
-
-/** @deprecated Compatibility export for the former function name. */
-export const resolveBrowserUsePipeBackendEnv = resolveBrowserHostPipeBackendEnv;
 
 function encodeFrame(message: unknown): Buffer {
   const payload = Buffer.from(JSON.stringify(message), "utf8");
@@ -492,6 +477,3 @@ export class BrowserHostPipeServer {
     return "written";
   }
 }
-
-/** @deprecated Compatibility alias for callers using the former browser-use name. */
-export { BrowserHostPipeServer as BrowserUsePipeServer };

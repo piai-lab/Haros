@@ -327,9 +327,7 @@ export async function callBrowserHostTool(input: BrowserHostToolCall): Promise<u
 }
 
 export function resolveBrowserHostPipePath(env: NodeJS.ProcessEnv = process.env): string | null {
-  const configured =
-    env.OMNIMIND_BROWSER_HOST_PIPE_PATH?.trim() || env.OMNIMIND_BROWSER_USE_PIPE_PATH?.trim();
-  return configured || null;
+  return env.OMNIMIND_BROWSER_HOST_PIPE_PATH?.trim() || null;
 }
 
 let inheritedCapabilityFromFd: string | null | undefined;

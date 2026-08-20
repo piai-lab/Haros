@@ -7,7 +7,7 @@ import {
   BROWSER_SESSION_PARTITION,
   DesktopBrowserManager,
 } from "../../../desktop/src/browserManager";
-import { BrowserUsePipeServer } from "../../../desktop/src/browserUsePipeServer";
+import { BrowserHostPipeServer } from "../../../desktop/src/browserUsePipeServer";
 import { BROWSER_IPC_CHANNELS } from "../../../desktop/src/ipcChannels";
 import { hardenBrowserAnnotationWebviewPreferences } from "../../../desktop/src/browserAnnotations/webviewSecurity";
 import { createBrowserPanelHideScheduler } from "../../src/components/BrowserPanel.logic";
@@ -81,7 +81,7 @@ browserManager.subscribeAnnotationEvents((event) => {
   annotationEvents.push(event);
 });
 
-const pipeServer = new BrowserUsePipeServer(browserManager, {
+const pipeServer = new BrowserHostPipeServer(browserManager, {
   pipePath,
   capability,
   requestOpenPanel: (requestedThreadId) => {

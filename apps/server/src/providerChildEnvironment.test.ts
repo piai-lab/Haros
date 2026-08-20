@@ -13,7 +13,7 @@ describe("buildProviderChildEnvironment", () => {
         HOME: "/home/test",
         GEMINI_API_KEY: "provider-key",
         OMNIMIND_AUTH_TOKEN: "control-plane-secret",
-        OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/browser.sock",
+        OMNIMIND_BROWSER_HOST_PIPE_PATH: "/tmp/browser.sock",
         OMNIMIND_BROWSER_HOST_CAPABILITY: "private-desktop-capability",
         OMNIMIND_BROWSER_HOST_CAPABILITY_FD: "3",
         NODE_OPTIONS: "--require=/tmp/inject.js",
@@ -33,15 +33,15 @@ describe("buildProviderChildEnvironment", () => {
       provider: "codex",
       baseEnv: {
         OMNIMIND_AUTH_TOKEN: "control-plane-secret",
-        OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/browser.sock",
+        OMNIMIND_ALLOWED_CAPABILITY: "allowed",
         NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/browser.sock",
       },
-      inheritedOmniMindKeys: ["OMNIMIND_BROWSER_USE_PIPE_PATH"],
+      inheritedOmniMindKeys: ["OMNIMIND_ALLOWED_CAPABILITY"],
       inheritedNativeCapabilityKeys: ["NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS"],
     });
 
     expect(env).toEqual({
-      OMNIMIND_BROWSER_USE_PIPE_PATH: "/tmp/browser.sock",
+      OMNIMIND_ALLOWED_CAPABILITY: "allowed",
       NODE_REPL_SANDBOX_ALLOWED_UNIX_SOCKETS: "/tmp/browser.sock",
     });
   });
