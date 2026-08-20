@@ -140,6 +140,7 @@ interface TestFixture {
   gitHasWorkingTreeChanges?: boolean;
   providerCommandsByProvider: Partial<Record<ProviderKind, ProviderListCommandsResult>>;
   providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
+  providerModelBarrierByProvider?: Partial<Record<ProviderKind, Promise<void>>>;
 }
 
 let fixture: TestFixture;
@@ -1814,6 +1815,16 @@ const worker = setupWorker(
         method === DEVICE_WS_METHODS.subscribeEvents
       ) {
         return;
+      }
+      if (method === WS_METHODS.providerListModels && typeof requestBody.provider === "string") {
+        const barrier =
+          fixture.providerModelBarrierByProvider?.[requestBody.provider as ProviderKind];
+        if (barrier) {
+          void barrier.then(() => {
+            sendEffectRpcExit(client, parsed.request.id, resolveWsRpc(requestBody));
+          });
+          return;
+        }
       }
       sendEffectRpcExit(client, parsed.request.id, resolveWsRpc(requestBody));
     });
@@ -8112,7 +8123,68 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("starts global-only OmniMind discovery on Engine selection, not passive menu browse", async () => {
+  it("warms a previously bound Engine after restart without waiting for its menu click", async () => {
+    useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
+      provider: "claudeAgent",
+      model: "claude-sonnet-4-5",
+    });
+    useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "codex");
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-bound-engine-restart" as MessageId,
+        targetText: "Bound Engine restart",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            ...nextFixture.serverConfig.providers,
+            {
+              provider: "claudeAgent",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+      },
+    });
+
+    const countClaudeModelRequests = () =>
+      wsRequests.filter(
+        (request) =>
+          request._tag === WS_METHODS.providerListModels && request.provider === "claudeAgent",
+      ).length;
+
+    try {
+      await waitForServerConfigToApply();
+      await vi.waitFor(() => {
+        expect(countClaudeModelRequests()).toBe(1);
+      });
+      expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).not.toBe(
+        "claudeAgent",
+      );
+
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await page.getByRole("menuitemradio", { name: /Claude/ }).click();
+      await vi.waitFor(() => {
+        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+          "claudeAgent",
+        );
+      });
+      expect(countClaudeModelRequests()).toBe(1);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("starts global-only OmniMind discovery on explicit Engine menu browse", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -8123,6 +8195,19 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.providerModelsByProvider.omnimind = {
           source: "browser.fixture",
           models: [{ slug: "deepseek/deepseek-chat", name: "DeepSeek Chat" }],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            ...nextFixture.serverConfig.providers,
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+          ],
         };
       },
     });
@@ -8139,7 +8224,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await expect.element(page.getByRole("menuitemradio", { name: /OmniMind/ })).toBeVisible();
-      expect(omniMindModelRequests()).toHaveLength(0);
+      await vi.waitFor(() => {
+        expect(omniMindModelRequests()).toHaveLength(1);
+      });
+      expect(omniMindModelRequests()[0]).not.toHaveProperty("cwd");
 
       await page.getByRole("menuitemradio", { name: /OmniMind/ }).click();
       await vi.waitFor(() => {
@@ -8148,13 +8236,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
           "omnimind",
         );
       });
+      expect(omniMindModelRequests()).toHaveLength(1);
       expect(omniMindModelRequests()[0]).not.toHaveProperty("cwd");
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it("only discovers models for the current Engine when Model/options opens", async () => {
+  it("warms safe Engine catalogs on Engine browse and reuses them on selection", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -8169,6 +8258,26 @@ describe("ChatView timeline estimator parity (full app)", () => {
         nextFixture.providerModelsByProvider.claudeAgent = {
           source: "browser.fixture",
           models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            ...nextFixture.serverConfig.providers,
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "claudeAgent",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+          ],
         };
       },
     });
@@ -8192,19 +8301,98 @@ describe("ChatView timeline estimator parity (full app)", () => {
 
       await userEvent.keyboard("{Escape}");
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await vi.waitFor(() => {
+        expect(requestedModelProviders()).toContain("claudeAgent");
+      });
+      expect(requestedModelProviders()).not.toContain("pi");
+      expect(requestedModelProviders()).not.toContain("droid");
+      const claudeRequestsBeforeSelection = requestedModelProviders().filter(
+        (provider) => provider === "claudeAgent",
+      ).length;
       await page.getByRole("menuitemradio", { name: /Claude/ }).click();
       await vi.waitFor(() => {
         expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
           "claudeAgent",
         );
-        expect(requestedModelProviders()).toContain("claudeAgent");
       });
+      expect(
+        requestedModelProviders().filter((provider) => provider === "claudeAgent"),
+      ).toHaveLength(claudeRequestsBeforeSelection);
 
       await page.getByRole("button", { name: "Model and options" }).click();
-      await vi.waitFor(() => {
-        expect(new Set(requestedModelProviders())).toEqual(new Set(["codex", "claudeAgent"]));
-      });
+      expect(
+        requestedModelProviders().filter((provider) => provider === "claudeAgent"),
+      ).toHaveLength(claudeRequestsBeforeSelection);
     } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("stops the Engine browse queue between catalog reads after ChatView unmounts", async () => {
+    let releaseFirstCatalog: (() => void) | undefined;
+    const firstCatalogBarrier = new Promise<void>((resolve) => {
+      releaseFirstCatalog = resolve;
+    });
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-engine-prefetch-unmount" as MessageId,
+        targetText: "Engine prefetch unmount",
+      }),
+      configureFixture: (nextFixture) => {
+        nextFixture.providerModelBarrierByProvider = {
+          omnimind: firstCatalogBarrier,
+        };
+        nextFixture.providerModelsByProvider.claudeAgent = {
+          source: "browser.fixture",
+          models: [{ slug: "claude-sonnet-4-5", name: "Claude Sonnet 4.5" }],
+        };
+        nextFixture.serverConfig = {
+          ...nextFixture.serverConfig,
+          providers: [
+            ...nextFixture.serverConfig.providers,
+            {
+              provider: "omnimind",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+            {
+              provider: "claudeAgent",
+              status: "ready",
+              available: true,
+              authStatus: "authenticated",
+              checkedAt: NOW_ISO,
+            },
+          ],
+        };
+      },
+    });
+
+    const requestedModelProviders = () =>
+      wsRequests.flatMap((request) =>
+        request._tag === WS_METHODS.providerListModels && typeof request.provider === "string"
+          ? [request.provider]
+          : [],
+      );
+
+    try {
+      await waitForServerConfigToApply();
+      await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
+      await vi.waitFor(() => {
+        expect(requestedModelProviders()).toContain("omnimind");
+      });
+      const requestsBeforeUnmount = requestedModelProviders();
+
+      await mounted.cleanup();
+      releaseFirstCatalog?.();
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+      expect(requestedModelProviders()).toEqual(requestsBeforeUnmount);
+      expect(requestedModelProviders()).not.toContain("claudeAgent");
+    } finally {
+      releaseFirstCatalog?.();
       await mounted.cleanup();
     }
   });
@@ -11552,7 +11740,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps unavailable Engine recovery in the existing Composer controls", async () => {
+  it("keeps an unavailable Engine out of model discovery and in recovery controls", async () => {
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
@@ -11589,7 +11777,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
               provider: "codex",
               status: "error",
               available: false,
-              authStatus: "unauthenticated",
+              authStatus: "unknown",
               supportsAutoRuntimeMode: true,
               checkedAt: NOW_ISO,
             },
@@ -11608,6 +11796,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await new Promise<void>((resolve) => {
         requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
       });
+      expect(
+        wsRequests.filter(
+          (request) =>
+            request._tag === WS_METHODS.providerListModels && request.provider === "codex",
+        ),
+      ).toHaveLength(0);
       expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
       await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
       const engineTrigger = page.getByRole("button", {
@@ -11723,6 +11917,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
+      expect(
+        wsRequests.filter(
+          (request) =>
+            request._tag === WS_METHODS.providerListModels && request.provider === "codex",
+        ),
+      ).toHaveLength(0);
       expect(document.querySelector('[data-testid="model-readiness-prompt"]')).toBeNull();
       await expect.element(page.getByTestId("first-run-readiness-dialog")).not.toBeInTheDocument();
       await expect

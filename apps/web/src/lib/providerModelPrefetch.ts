@@ -33,6 +33,14 @@ export type ProviderModelPrefetchSettings = Pick<
   | "piAgentDir"
 >;
 
+/**
+ * Providers whose catalog discovery has side effects or a substantially heavier
+ * lifecycle than an ordinary listModels read. Opening the Engine menu is not
+ * sufficient intent to inspect stock Pi's private state, and Droid probes its
+ * catalog through disposable ACP sessions.
+ */
+const ENGINE_BROWSE_PREFETCH_EXCLUSIONS: ReadonlySet<ProviderKind> = new Set(["pi", "droid"]);
+
 export function resolveNewThreadModelPrefetchProvider(input: {
   providerOverride?: ProviderKind | null | undefined;
   draftActiveProvider?: ProviderKind | null | undefined;
@@ -211,4 +219,47 @@ export function prefetchProviderModelsForNewThread(
   // Composer capabilities gate composer affordances on ChatView mount; the query
   // has staleTime Infinity, so this costs one IPC per provider per session.
   void queryClient.prefetchQuery(providerComposerCapabilitiesQueryOptions(input.provider));
+}
+
+/**
+ * Warms safe Engine catalogs after durable model binding or an explicit Engine
+ * picker interaction establishes user intent.
+ *
+ * Reads are deliberately sequential. The Server admits at most two expensive
+ * reads per client; retaining one lease for the selected/foreground Engine
+ * prevents background warming from creating capacity failures and retry churn.
+ * Each prefetch uses the exact query identity observed by ChatView, so selecting
+ * a warmed Engine consumes the same in-memory result rather than a second catalog.
+ */
+export async function prefetchProviderModelsForExplicitIntent(
+  queryClient: QueryClient,
+  input: {
+    providers: ReadonlyArray<ProviderKind>;
+    selectedProvider: ProviderKind;
+    settings: ProviderModelPrefetchSettings;
+    cwd?: string | null;
+    shouldContinue?: () => boolean;
+  },
+): Promise<void> {
+  const seen = new Set<ProviderKind>();
+  for (const provider of input.providers) {
+    if (input.shouldContinue?.() === false) {
+      return;
+    }
+    if (
+      provider === input.selectedProvider ||
+      ENGINE_BROWSE_PREFETCH_EXCLUSIONS.has(provider) ||
+      seen.has(provider)
+    ) {
+      continue;
+    }
+    seen.add(provider);
+    await queryClient.prefetchQuery(
+      providerModelsPrefetchQueryOptions({
+        provider,
+        settings: input.settings,
+        cwd: input.cwd ?? null,
+      }),
+    );
+  }
 }
