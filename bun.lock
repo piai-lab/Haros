@@ -145,7 +145,7 @@
     },
     "packages/contracts": {
       "name": "@omnimind/contracts",
-      "version": "0.7.0",
+      "version": "0.1.0-alpha.0",
       "dependencies": {
         "effect": "catalog:",
       },

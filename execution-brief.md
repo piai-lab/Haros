@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-Browser exact-turn Electron 证据链已恢复：Server-owned E2E harness 现在只实现 MCP transport 实际消费的 `verifySession`、turn authority 与 in-flight request seam，并直接复用 canonical SessionRegistry；两条 visible Browser Electron journey 不再依赖已退休的 write-authority fixture。production exact-turn 权限、MCP wire、Browser pipe、取消与错误行为均未改变。
+private release workspace 的 OmniMind 产品版本已统一为 `0.1.0-alpha.0`：root、Desktop、Server、Web 与 Contracts 现在共享既有 release version owner，Contracts 不再携带继承自 Synara 的 `0.7.0` 产品身份。未建立独立 Contracts semver、版本映射、兼容声明或 release migration；`packages/shared` 不属于当前 release package set，保持原有 package 身份。
 
 安装版 product bytes 现准确绑定 pushed product `8dfdd7310f984956de8e3b513f497c8a30700761`。同 SHA arm64 DMG SHA-256 为 `70fff3aeb24809521a3738eb3a9ac4df6fbf7882af2320d205d27e9453b77c43`，DMG staged `app.asar` 与安装版 `app.asar` 均为 `7d46bf8644099993c5d06ce4cc9b32c343ae10148935956cee57b706bbd084d2`，240 个 staged legal identities 闭合；本机安装版完成 ad-hoc 重签并通过 strict deep verification。后续 docs-only 状态提交不冒充 shipped bytes。
 
@@ -19,13 +19,13 @@ Browser exact-turn Electron 证据链已恢复：Server-owned E2E harness 现在
 
 ## 当前阻塞
 
-当前已退休责任没有产品阻塞。Browser Electron E2E fixture 的 exact-turn credential seam 已闭合；剩余既有反证是 release provenance 的全包版本一致性检查发现产品包为 `0.1.0-alpha.0`、`packages/contracts` 为 `0.7.0`。它属于发行身份 correctness，不是既有退休删除产生的行为回归。
+当前已退休责任没有产品阻塞。Browser Electron E2E fixture 的 exact-turn credential seam 与 release provenance 的全包产品版本一致性均已闭合。
 
 official signing、notarization、Windows/Linux artifacts、GitHub Release 与 update feed 仍在维护者明确排除的本轮范围之外，不是遗留阻塞。
 
 ## 下一动作
 
-在当前 pushed `main` 上独立统一 private contracts 的 OmniMind 产品版本；完成后再以真实 A/B 审判 engine catalog warming。SQLite migrations 1–100 继续 `DEFER`。
+在当前 pushed `main` 上以隔离、交错的真实 A/B 审判后台 engine catalog warming；只有至少两个真实 Engine 出现明确、可重复的用户收益才保留，否则完整退休后台生命周期。SQLite migrations 1–100 继续 `DEFER`。
 
 ## 权威路由
 
