@@ -2743,7 +2743,7 @@ export const EN_MESSAGES = {
   "settings.refresh": "Refresh",
   "settings.loadingProviderUsage": "Loading engine usage…",
   "settings.providerUsagePrivacy":
-    "Usage is read locally from each engine CLI's stored credentials and fetched directly from its upstream service. Short-lived tokens are refreshed through the engine's own CLI or official token endpoint; if an engine shows “Not signed in”, re-authenticate with its CLI.",
+    "Usage is read locally from each engine CLI's stored credentials and fetched directly from its upstream service. Once any account is connected, unsigned engines are hidden. Short-lived tokens are refreshed through the engine's own CLI or official token endpoint; if an engine shows “Not signed in”, re-authenticate with its CLI.",
   "settings.accountCapacity": "Account capacity",
   "settings.usageHistory": "Usage history",
   "settings.loadingUsageHistory": "Loading usage history…",
@@ -6232,7 +6232,7 @@ export const ZH_CN_MESSAGES = {
   "settings.refresh": "刷新",
   "settings.loadingProviderUsage": "正在加载引擎用量…",
   "settings.providerUsagePrivacy":
-    "用量数据从各引擎 CLI 的本机凭据中读取，并直接向其上游服务获取。短期 token 由对应 CLI 或官方 token endpoint 刷新；若显示“未登录”，请使用其 CLI 重新认证。",
+    "用量数据从各引擎 CLI 的本机凭据中读取，并直接向其上游服务获取。只要已有账户连接，未登录的引擎便会隐藏。短期 token 由对应 CLI 或官方 token endpoint 刷新；若显示“未登录”，请使用其 CLI 重新认证。",
   "settings.accountCapacity": "账户额度",
   "settings.usageHistory": "历史用量",
   "settings.loadingUsageHistory": "正在加载历史用量…",

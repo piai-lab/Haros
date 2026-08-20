@@ -1,10 +1,11 @@
 // FILE: ProviderUsageSettingsPanel.tsx
 // Purpose: Settings → Usage panel. One card per supported provider showing live remaining
 // quota/credits with linear progress meters, the provider brand icon, and plan/status pills.
-// Usage is fetched read-only from each CLI's stored credentials by the server.
+// Usage is fetched from each CLI's local sign-in state by the server. Providers that use
+// short-lived OAuth tokens may refresh and atomically persist those tokens through their
+// official endpoint; the panel itself never receives credential material.
 
 import type {
-  ProviderKind,
   ServerProviderUsageSnapshot,
   UsageHistoryRow,
   UsageHistoryGroupBy,
@@ -12,7 +13,11 @@ import type {
 } from "@omnimind/contracts";
 import { USAGE_HISTORY_UNKNOWN_MODEL, USAGE_HISTORY_UNKNOWN_WORKSPACE } from "@omnimind/contracts";
 import { formatBytes } from "@omnimind/shared/formatBytes";
-import { PROVIDER_USAGE_PROVIDERS, providerUsageDisplayName } from "@omnimind/shared/providerUsage";
+import {
+  PROVIDER_USAGE_PROVIDERS,
+  providerUsageDisplayName,
+  selectVisibleProviderUsageSnapshots,
+} from "@omnimind/shared/providerUsage";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -141,17 +146,6 @@ function ProviderUsageCard({ snapshot }: { snapshot: ServerProviderUsageSnapshot
       </div>
     </SettingsCard>
   );
-}
-
-function missingSnapshot(provider: ProviderKind): ServerProviderUsageSnapshot {
-  return {
-    provider,
-    updatedAt: new Date(0).toISOString(),
-    limits: [],
-    usageLines: [],
-    source: "unavailable",
-    status: "error",
-  };
 }
 
 function mergeProviderUsageRefresh(
@@ -540,15 +534,9 @@ export function ProviderUsageSettingsPanel() {
     },
   });
 
-  // Always render a card per supported provider, ordered consistently, even if the batch
-  // omitted one (e.g. a transient server error) — fall back to an "unavailable" placeholder.
-  const byProvider = new Map<ProviderKind, ServerProviderUsageSnapshot>();
-  for (const snapshot of usageQuery.data ?? []) {
-    byProvider.set(snapshot.provider, snapshot);
-  }
-  const cards = PROVIDER_USAGE_PROVIDERS.map(
-    (provider) => byProvider.get(provider) ?? missingSnapshot(provider),
-  );
+  // Use the live payload only. Inventing error placeholders for omitted providers
+  // would count as "connected" and hide unsigned cards.
+  const cards = selectVisibleProviderUsageSnapshots(usageQuery.data ?? []);
 
   const showInitialLoading = usageQuery.isPending && !usageQuery.data;
 

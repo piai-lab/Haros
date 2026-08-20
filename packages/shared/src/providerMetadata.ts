@@ -73,41 +73,58 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
     displayName: PROVIDER_DISPLAY_NAMES.antigravity,
     available: true,
     supportsNativeTurnSteering: false,
-    usage: null,
+    usage: {
+      signInCommand: "agy",
+      learnMoreHref: "https://antigravity.google",
+    },
   },
   {
     kind: "grok",
     displayName: PROVIDER_DISPLAY_NAMES.grok,
     available: true,
     supportsNativeTurnSteering: false,
-    usage: null,
+    usage: {
+      signInCommand: "grok login",
+      learnMoreHref: "https://console.x.ai",
+    },
   },
   {
     kind: "droid",
     displayName: PROVIDER_DISPLAY_NAMES.droid,
     available: true,
     supportsNativeTurnSteering: false,
-    usage: null,
+    usage: {
+      signInCommand: "droid",
+      learnMoreHref: "https://docs.factory.ai/pricing",
+    },
   },
   {
     kind: "kilo",
     displayName: PROVIDER_DISPLAY_NAMES.kilo,
     available: true,
     supportsNativeTurnSteering: false,
-    usage: null,
+    usage: {
+      signInCommand: "kilo",
+      learnMoreHref: "https://kilo.ai",
+    },
   },
   {
     kind: "opencode",
     displayName: PROVIDER_DISPLAY_NAMES.opencode,
     available: true,
     supportsNativeTurnSteering: false,
-    usage: null,
+    usage: {
+      signInCommand: "opencode auth login",
+      learnMoreHref: "https://opencode.ai",
+    },
   },
   {
     kind: "pi",
     displayName: PROVIDER_DISPLAY_NAMES.pi,
     available: true,
     supportsNativeTurnSteering: true,
+    // Stock Pi private state is intentionally isolated. OmniMind must not discover or read
+    // ~/.pi merely to populate a background settings panel.
     usage: null,
   },
 ] as const satisfies readonly ProviderDescriptor[]);

@@ -12,6 +12,8 @@ import type {
 } from "@omnimind/contracts";
 import { Effect } from "effect";
 
+import { PROVIDER_USAGE_PROVIDERS } from "@omnimind/shared/providerUsage";
+
 import { ServerConfig } from "../config";
 import { buildProviderChildEnvironment, type ProviderChildKind } from "../providerChildEnvironment";
 import { ServerSettingsService } from "../serverSettings";
@@ -181,7 +183,9 @@ export async function collectProviderUsageSnapshots(
 ): Promise<ServerProviderUsageSnapshot[]> {
   const providers = options.provider
     ? ([options.provider] as ProviderKind[])
-    : (Object.keys(PROVIDER_USAGE_FETCHERS) as ProviderKind[]);
+    : PROVIDER_USAGE_PROVIDERS.filter(
+        (provider) => PROVIDER_USAGE_FETCHERS[provider] !== undefined,
+      );
   const settled = await Promise.allSettled(
     providers.map((provider) =>
       getProviderUsageSnapshot(provider, ctx, options.forceRefresh === true),
