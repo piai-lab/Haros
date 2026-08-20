@@ -2,11 +2,13 @@
 
 ## 当前目标
 
-第六个独立 `RETIRE` 与其后暴露的 MiMo correctness defect 均已闭合。AgentGateway 不再接受 `everyMinutes`，也不再把缺失的 `mode`/`schedule` 猜成 heartbeat/五分钟；`omnimind_create_automation` 仍只接受显式执行模式和 canonical schedule。一次同 schema、同 prompt 的脱敏 raw-wire harness 证明：旧的 nested `schedule.oneOf` 会让 MiMo 在原始 Provider response 中直接把 `schedule` 生成为 JSON string，而等价的 flat object schema 会让 MiMo 与 DeepSeek 都保留 object。最早错误 owner 因而是 Agent-facing schema，不是 Gateway decoder、Pi normalization 或 Automation persistence。精确修复只把 model-facing schedule 投影压平为一个带 `type` discriminator 和可选 branch fields 的 object；canonical `AutomationSchedule` decoder、branch validation、Web 表单、scheduler、persistence 与既有定义不变，也没有加入 string coercion、Provider 特判、alias、migration、fallback 或第二 validator。
+第六个独立 `RETIRE`、其后暴露的 MiMo correctness defect 与 packaged fresh-profile route defect 均已闭合。AgentGateway 不再接受 `everyMinutes`，也不再把缺失的 `mode`/`schedule` 猜成 heartbeat/五分钟；`omnimind_create_automation` 仍只接受显式执行模式和 canonical schedule。一次同 schema、同 prompt 的脱敏 raw-wire harness 证明：旧的 nested `schedule.oneOf` 会让 MiMo 在原始 Provider response 中直接把 `schedule` 生成为 JSON string，而等价的 flat object schema 会让 MiMo 与 DeepSeek 都保留 object。最早错误 owner 因而是 Agent-facing schema，不是 Gateway decoder、Pi normalization 或 Automation persistence。精确修复只把 model-facing schedule 投影压平为一个带 `type` discriminator 和可选 branch fields 的 object；canonical `AutomationSchedule` decoder、branch validation、Web 表单、scheduler、persistence 与既有定义不变，也没有加入 string coercion、Provider 特判、alias、migration、fallback 或第二 validator。
 
-安装版 product bytes 现准确绑定 pushed product `17a79a37ee21861e7aff1503bab381614d6a4ab2`。同 SHA arm64 DMG SHA-256 为 `9fd17ebb981e0eaef5979f7a3905b9c468ad4a488506b32142dae0f43c0251f9`，DMG staged `app.asar` 与安装版 `app.asar` 均为 `228e9fc4a85268f831e21f3142f6332ab4566d0addaa0a2a628ffdfcd690fbf3`，240 个 staged legal identities 闭合；本机安装版完成 ad-hoc 重签并通过 strict deep verification。后续 source-only 状态提交不冒充 shipped bytes。
+安装版 product bytes 现准确绑定 pushed product `3c05e3ce3521cfd82793fa192048614fc2b581ee`。同 SHA arm64 DMG SHA-256 为 `beeca6ef5583e99465e3567364348450fc5f4b9d828e56eff76dbaa17e852f71`，DMG staged `app.asar` 与安装版 `app.asar` 均为 `d8492eb0d40a394857bc8bf1563afa739ccdc9712c759741b9e8ad6c95a74d07`，240 个 staged legal identities 闭合；本机安装版完成 ad-hoc 重签并通过 strict deep verification。后续 source-only 状态提交不冒充 shipped bytes。
 
 一个 fresh、任务专用 packaged profile 先由进程参数证明 Electron `userData`、OmniMind home、Provider private home 与 SQLite 全部隔离，再以环境变量引用而非明文配置发现精确 MiMo `mimo-v2.5-pro` 与 DeepSeek `deepseek-v4-pro` catalog。两者都经真实 Agent→Pi→Host tool 链创建 `mode=standalone`、`schedule={type:"daily",timeOfDay:"09:30",timezone:"Asia/Shanghai"}` 的定义；各自 Pi transcript 中 tool arguments 与 nested schedule 都保持 object。两条同线程 continuation 均完成 view→精确 revision→delete/archive。停机 SQLite 证明两个定义 disabled、archived、revision 1、iteration count 0，Automation run count 为 0；同 profile 重开后两个 thread 仍 completed、catalog 仍 ready、active definition 与 run 都为 0，再次正常退出后全部 OmniMind 进程归零。
+
+route defect 有两个同一导航责任内的最早错误点：Sidebar 在当前 segment 的 remembered route 失效时只回退 Server threads，忽略既有 recent-view MRU 中仍有效的本地 draft；Agent `/` landing 又把未 promotion 的 Terminal-first draft 排除在可恢复集合之外。修复复用既有 MRU、draft persistence、project boundary 与 route resolver，没有新增 route store、snapshot retry、reload、兼容 alias、schema 或模型状态。最终安装包在隔离 profile 中完成 Terminal draft→Chat→Agent，并准确回到原 Terminal；持久化的 current route 经 LevelDB 精确读取确认后，同 profile 冷启动也直接恢复该 Terminal draft。正常退出后全部 OmniMind 进程归零。
 
 ## 已确认范围
 
@@ -21,13 +23,11 @@
 
 前六个已退休责任没有产品阻塞。两项既有反证继续隔离在各自 owner，不能拿来给本轮加补偿层：release provenance 的全包版本一致性检查发现产品包为 `0.1.0-alpha.0`、`packages/contracts` 为 `0.7.0`；visible Browser Electron E2E fixture 缺少当前 `bindTurnAuthority` credential seam，尚未进入 pipe journey 即失败。二者都不是本轮删除产生的行为回归，需要单独裁决和修复。
 
-本轮 packaged setup 还观察到一项独立、尚未复现归因的 UI 反证：fresh profile 的窗口落在不存在的 thread route，Server 返回 `THREAD_SNAPSHOT_NOT_FOUND`；即使 authoritative RPC 已存在 project、thread 与 ready model catalog，当前窗口的 Project/Model 投影仍未刷新。正式 Agent/Automation 验收因此直接走同一 packaged Server 的 authenticated WebSocket contract，而没有把 stale UI 当成模型或 Automation 失败。该观察尚不足以证明 route restore、Web store 或 snapshot subscription 中谁是 owner，不得在本轮顺手加 reload/fallback。
-
 official signing、notarization、Windows/Linux artifacts、GitHub Release 与 update feed 仍在维护者明确排除的本轮范围之外，不是遗留阻塞。
 
 ## 下一动作
 
-先对 packaged fresh-profile 的 phantom thread route / stale Project-Model projection 做一次最小只读复现与真实调用链审计；若可复现，只修最早错误 owner，若不可复现则把它保留为 bounded 反证而不建立补偿层。该 correctness 问题裁决后，再按 responsibility portfolio 重新审计下一张可退休责任图；不以文件陈旧、名称像 legacy 或行数大作为删除理由。`stopOnError`、SQLite migration 1–100 与 engine catalog warming 仍保持 `DEFER`，package version mismatch 与 Browser E2E `bindTurnAuthority` seam 继续作为独立 correctness/test-assembly 任务。新的 Synara 更新仍统一按 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md) 处理。
+按 responsibility portfolio 重新审计下一张可退休责任图；不以文件陈旧、名称像 legacy 或行数大作为删除理由。`stopOnError`、SQLite migration 1–100 与 engine catalog warming 仍保持 `DEFER`，package version mismatch 与 Browser E2E `bindTurnAuthority` seam 继续作为独立 correctness/test-assembly 任务。新的 Synara 更新仍统一按 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md) 处理。
 
 ## 权威路由
 
