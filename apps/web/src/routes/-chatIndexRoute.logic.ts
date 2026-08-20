@@ -8,6 +8,27 @@ import type { ProjectId, ThreadId } from "@omnimind/contracts";
 
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
 
+export function collectRestorableDraftProjectIds(
+  draftThreadsByThreadId: Readonly<
+    Record<
+      string,
+      | {
+          readonly projectId: ProjectId;
+          readonly promotedTo?: ThreadId | undefined;
+        }
+      | undefined
+    >
+  >,
+): ReadonlyMap<string, ProjectId> {
+  const draftProjectIdByThreadId = new Map<string, ProjectId>();
+  for (const [threadId, draft] of Object.entries(draftThreadsByThreadId)) {
+    if (draft && draft.promotedTo === undefined) {
+      draftProjectIdByThreadId.set(threadId, draft.projectId);
+    }
+  }
+  return draftProjectIdByThreadId;
+}
+
 export function resolveChatIndexRestoreRoute(input: {
   readonly lastThreadRoute: LastThreadRoute | null;
   readonly availableSplitViewIds: ReadonlySet<string>;
@@ -17,9 +38,8 @@ export function resolveChatIndexRestoreRoute(input: {
   >;
   readonly studioProjectIds: ReadonlySet<ProjectId>;
   /**
-   * Still-unsent chat drafts. They have a route id but no sidebar summary yet, so the summary
-   * lookup below never matches them — mirrors the /studio landing's draft handling so a cold
-   * start on "/" can reopen an unsent draft instead of always minting a new one.
+   * Still-unsent Agent drafts, including Terminal-first drafts. They have a route id but no
+   * sidebar summary yet, so the summary lookup below never matches them.
    */
   readonly draftProjectIdByThreadId: ReadonlyMap<string, ProjectId>;
   /**

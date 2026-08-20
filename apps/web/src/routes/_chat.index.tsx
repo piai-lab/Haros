@@ -3,7 +3,6 @@
 // Layer: Routing
 // Depends on: the shared restore/create route surface plus the home-chat new-chat handler.
 
-import type { ProjectId } from "@omnimind/contracts";
 import { createFileRoute } from "@tanstack/react-router";
 
 import {
@@ -17,7 +16,10 @@ import { collectStudioProjectIds } from "../lib/studioProjects";
 import { resolveSplitViewThreadIds, useSplitViewStore } from "../splitViewStore";
 import { EMPTY_THREAD_IDS, useStore } from "../store";
 import { useWorkspacePathsStore } from "../workspacePathsStore";
-import { resolveChatIndexRestoreRoute } from "./-chatIndexRoute.logic";
+import {
+  collectRestorableDraftProjectIds,
+  resolveChatIndexRestoreRoute,
+} from "./-chatIndexRoute.logic";
 
 function ChatIndexRouteView() {
   const { handleNewChat } = useHandleNewChat();
@@ -35,15 +37,9 @@ function ChatIndexRouteView() {
   // /studio surface, and restoring one from "/" would silently switch the user into the Studio
   // segment. A Studio lastThreadRoute falls through to the matching home-chat draft instead.
   const studioProjectIds = collectStudioProjectIds(projects, workspacePaths);
-  // Only plain, still-unsent chat drafts qualify as restore targets: a non-"chat" entry point
-  // isn't a home-chat draft, and `promotedTo` means the draft already became a real thread, so
-  // its stale id is no longer valid (matches the filtering findStudioDraftThreadId applies).
-  const draftProjectIdByThreadId = new Map<string, ProjectId>();
-  for (const [threadId, draft] of Object.entries(draftThreadsByThreadId)) {
-    if (draft.entryPoint === "chat" && draft.promotedTo === undefined) {
-      draftProjectIdByThreadId.set(threadId, draft.projectId);
-    }
-  }
+  // Terminal-first drafts are valid Agent routes too. Only promoted drafts are stale: their
+  // server thread id is already classified through sidebarThreadSummaryById.
+  const draftProjectIdByThreadId = collectRestorableDraftProjectIds(draftThreadsByThreadId);
 
   const resolveRestoreRoute: RestoreRouteResolver = ({ availableSplitViewIds }) => {
     const lastThreadRoute = readSidebarUiState().lastThreadRoute;
