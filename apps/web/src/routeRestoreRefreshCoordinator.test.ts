@@ -163,7 +163,9 @@ describe("route restore refresh coordinator", () => {
     let shellCalls = 0;
     const getShellSnapshot = vi.fn().mockImplementation(async () => {
       shellCalls += 1;
-      return shellCalls === 1 ? shellSnapshot([]) : shellSnapshot(["thread-1"]);
+      return shellCalls === 1
+        ? shellSnapshot([], { requiresEmptyProjectShellRepair: true })
+        : shellSnapshot(["thread-1"]);
     });
     const getSnapshot = vi.fn().mockResolvedValue(readModel([]));
     const repairState = vi.fn();

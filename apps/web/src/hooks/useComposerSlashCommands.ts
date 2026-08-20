@@ -1372,6 +1372,7 @@ export function useComposerSlashCommands(input: {
       supportsTextNativeReviewCommand,
       runExportSlashCommand,
       runFastSlashCommand,
+      t,
     ],
   );
 

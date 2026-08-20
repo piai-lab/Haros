@@ -342,9 +342,7 @@ describe("buildThemeCssVariables", () => {
       "color-mix(in srgb, var(--color-text-foreground) 8%, transparent)",
     );
     expect(cssVariables.variables["--app-sidebar-backdrop-filter"]).toBe("none");
-    expect(cssVariables.variables["--app-sidebar-surface"]).toBe(
-      "color-mix(in oklab, #0f0f11 94%, var(--color-text-foreground) 6%)",
-    );
+    expect(cssVariables.variables["--app-sidebar-surface"]).toBe("#0f0f11");
     expect(cssVariables.variables["--theme-font-ui-family"]).toBe("Inter");
     expect(cssVariables.variables["--theme-font-code-family"]).toBe(
       `"Jetbrains Mono", ${DEFAULT_MONOSPACE_FONT_FAMILY_STACK}`,

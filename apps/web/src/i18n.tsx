@@ -122,7 +122,7 @@ export const EN_MESSAGES = {
   "composer.command.forkDescription": "Fork this task into the main repository or a new worktree",
   "composer.command.sideDescription": "Open a guarded Side from this task",
   "composer.sideUnavailableAttachments":
-    "Remove composer attachments or context before using /side.",
+    "Remove message attachments or context before using /side.",
   "composer.sideProviderUnavailableTitle": "{provider} is unavailable for Side",
   "composer.sideProviderUnavailableDescription":
     "Enable and sign in to that engine, then run /side again.",
