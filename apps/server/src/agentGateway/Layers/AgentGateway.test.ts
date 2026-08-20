@@ -1527,6 +1527,14 @@ describe("AgentGateway", () => {
       const updateAutomationMemory = tools.find(
         (tool) => tool.name === "omnimind_update_automation_memory",
       );
+      const updateAutomationMemorySchema = updateAutomationMemory?.inputSchema as
+        | {
+            properties?: Record<string, unknown>;
+            required?: string[];
+          }
+        | undefined;
+      assert.notProperty(updateAutomationMemorySchema?.properties ?? {}, "content");
+      assert.deepEqual(updateAutomationMemorySchema?.required, ["memory"]);
       const reportAutomationResult = tools.find(
         (tool) => tool.name === "omnimind_report_automation_result",
       );
@@ -4462,7 +4470,7 @@ describe("AgentGateway", () => {
     },
   );
 
-  it.effect("accepts memory writes without automationId and via the content alias", () => {
+  it.effect("accepts implicit memory writes and rejects the retired content input", () => {
     const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
     return Effect.gen(function* () {
       const harness = yield* makeHarness;
@@ -4471,10 +4479,10 @@ describe("AgentGateway", () => {
         name: "omnimind_update_automation_memory",
         args: { memory: "Iteration 1 complete." },
       });
-      const legacy = yield* harness.callTool({
+      const retired = yield* harness.callTool({
         token: "token-parent",
         name: "omnimind_update_automation_memory",
-        args: { automationId: "automation-1", content: "Legacy payload." },
+        args: { automationId: "automation-1", content: "Retired payload." },
       });
       const missing = yield* harness.callTool({
         token: "token-parent",
@@ -4483,12 +4491,12 @@ describe("AgentGateway", () => {
       });
 
       assert.isFalse(isToolError(implicit.result), toolErrorText(implicit.result));
-      assert.isFalse(isToolError(legacy.result), toolErrorText(legacy.result));
+      assert.isTrue(isToolError(retired.result));
+      assert.include(toolErrorText(retired.result), '"memory"');
       assert.isTrue(isToolError(missing.result));
       assert.include(toolErrorText(missing.result), '"memory"');
       assert.deepEqual(harness.automationMemoryUpdates, [
         { automationId: null, content: "Iteration 1 complete." },
-        { automationId: "automation-1", content: "Legacy payload." },
       ]);
     }).pipe(Effect.provide(gatewayLayer));
   });

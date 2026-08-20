@@ -242,9 +242,8 @@ function readMode(args: Record<string, unknown>): AutomationDefinition["mode"] {
   return raw;
 }
 
-function readMemoryContent(args: Record<string, unknown>): string {
-  // "content" is the legacy name of "memory"; accept both so older callers keep working.
-  const value = args.memory ?? args.content;
+function readMemory(args: Record<string, unknown>): string {
+  const value = args.memory;
   if (typeof value !== "string") {
     throw new ToolInputError('Argument "memory" must be a string.');
   }
@@ -794,11 +793,6 @@ export function makeAgentGatewayAutomationTools(
             description:
               "Defaults to the automation that dispatched the current turn; only needed elsewhere.",
           },
-          content: {
-            type: "string",
-            maxLength: 32 * 1_024,
-            description: 'Deprecated alias of "memory".',
-          },
         },
         required: ["memory"],
         additionalProperties: false,
@@ -811,7 +805,7 @@ export function makeAgentGatewayAutomationTools(
         const memory = yield* automationService
           .updateMemory({
             automationId: automationIdArg ? AutomationId.makeUnsafe(automationIdArg) : null,
-            content: readMemoryContent(args),
+            content: readMemory(args),
             callerThreadId: ThreadId.makeUnsafe(context.callerThreadId),
             callerTurnId: context.callerTurnId ? TurnId.makeUnsafe(context.callerTurnId) : null,
           })

@@ -1071,3 +1071,22 @@ Windows/Linux titlebar remain protected by the same shipped-code SHA's focused/b
 the fresh profile deliberately contained no model credentials, so the packaged pass does not invent a
 real Provider turn. These results close the adopted-head invariant for exact `57f48ef…`; signing,
 notarization, official Release and Windows/Linux artifacts remain outside the maintainer-selected scope.
+
+## 20. AgentGateway Automation compatibility retirement
+
+The exact source history distinguishes product capability from compatibility debt. Synara PR `#291`
+introduced a heartbeat-only Agent Gateway where `everyMinutes`, the caller thread and a five-minute
+default were the complete creation contract. Commit `f084e94e8edb8a66f8a01d37773dc5d806b857f7`
+later added explicit modes and the canonical schedule shape while deliberately retaining those old
+calls. Commit `8ed0da893f0666e601639033413f0d9f18649273` then renamed the memory-tool input
+from `content` to `memory` and explicitly kept `content` as an alias. OmniMind inherited those exact
+bridges through `a54ef5ba49`; current tracked consumers use `memory`, and persisted
+`AutomationMemory.content` is a different canonical database field.
+
+On 2026-08-20 the maintainer explicitly approved both compatibility breaks after reviewing their
+effects, but also approved responsibility-level sequencing. The current Slice retires only the
+memory-tool `content` alias: `memory` remains byte-preserving, an omitted `automationId` still resolves
+from the active Automation turn, existing definitions/memory are untouched, and no migration,
+tombstone, fallback or generic schema validator is added. The separately approved retirement of
+`everyMinutes` plus implicit heartbeat/five-minute creation remains a later independent Slice and
+cannot inherit this Slice's validation evidence.
