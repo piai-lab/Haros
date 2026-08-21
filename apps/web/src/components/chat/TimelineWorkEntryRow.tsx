@@ -440,6 +440,64 @@ function ToolRowTooltip(props: { content: ReactNode; children: ReactElement }) {
   );
 }
 
+function AttachmentTransferFailuresRow(props: {
+  failures: NonNullable<WorkLogEntry["attachmentTransferFailures"]>;
+  compact: boolean;
+  rowFontSizePx: number;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={cn("group/tool-row min-w-0", props.compact ? "py-0.5" : "py-1")}>
+      <button
+        type="button"
+        className={cn(
+          "flex w-full max-w-full items-center text-left focus-visible:outline-none",
+          props.compact ? "gap-1.5" : "gap-2",
+        )}
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span
+          className={cn(
+            "flex shrink-0 items-center justify-center",
+            WORK_ROW_MUTED_HOVER_TONE["tool-row"],
+            props.compact ? "size-4" : "size-5",
+          )}
+        >
+          <CircleAlertIcon className={props.compact ? "size-3.5" : "size-4"} />
+        </span>
+        <span
+          className={cn("min-w-0 flex-1 truncate", WORK_ROW_MUTED_HOVER_TONE["tool-row"])}
+          style={{ fontSize: `${props.rowFontSizePx}px` }}
+        >
+          {t("chatToAgent.attachmentsPartial", { count: props.failures.length })}
+        </span>
+        <DisclosureChevron open={open} />
+      </button>
+      <DisclosureRegion
+        open={open}
+        contentClassName={cn("ml-7 min-w-0 pt-1.5", props.compact && "ml-5")}
+      >
+        <ul className="space-y-1 text-[var(--color-text-foreground-secondary)]">
+          {props.failures.map((failure) => (
+            <li
+              key={`${failure.targetMessageId}:${failure.attachmentIndex}`}
+              className="flex min-w-0 items-baseline gap-2"
+              style={{ fontSize: `${Math.max(11, props.rowFontSizePx - 1)}px` }}
+            >
+              <span className="min-w-0 truncate">{failure.name}</span>
+              <span className="shrink-0 text-muted-foreground">
+                {t(`chatToAgent.attachmentFailure.${failure.reason}`)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </DisclosureRegion>
+    </div>
+  );
+}
+
 export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   workEntry: TimelineWorkEntry;
   chatMetaFontSizePx: number;
@@ -475,6 +533,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   } = props;
   const textFontSizePx = textFontSizePxProp ?? chatMetaFontSizePx;
   const density = densityProp ?? "default";
+  const rowFontSizePx = textFontSizePx;
   const { t } = useI18n();
   const compact = density === "compact";
   const isCodexStatusRow =
@@ -522,8 +581,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
         Boolean(workEntry.command ?? workEntry.rawCommand)
       ? t("tool.command.single")
       : workEntry.taskListProgress
-      ? t("taskList.progress", workEntry.taskListProgress)
-      : toolWorkEntryHeading(workEntry);
+        ? t("taskList.progress", workEntry.taskListProgress)
+        : toolWorkEntryHeading(workEntry);
   const rawPreview = workEntryPreview(workEntry);
   const preview =
     isOmniMindBrowserToolRow || isOmniMindToolRow
@@ -549,9 +608,9 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
             : "agentActivity.reasoningUpdates",
           { count: workEntry.reasoningUpdateCount ?? 1 },
         )
-    : webFetchUrl
-      ? describeLinkChip(webFetchUrl).label
-      : combineWorkEntryDisplayText(heading, preview);
+      : webFetchUrl
+        ? describeLinkChip(webFetchUrl).label
+        : combineWorkEntryDisplayText(heading, preview);
   const showInlineAgentTaskPreview =
     workEntry.itemType === "collab_agent_tool_call" &&
     Boolean(preview) &&
@@ -575,7 +634,10 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
         onImageExpand({
           images: [
             {
-              src: buildLocalImageUrl({ src: viewedImagePath, cwd: markdownCwd }),
+              src: buildLocalImageUrl({
+                src: viewedImagePath,
+                cwd: markdownCwd,
+              }),
               name: localImageFileName(viewedImagePath) || t("timeline.viewedImage"),
             },
           ],
@@ -622,6 +684,16 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     );
   }
 
+  if (workEntry.attachmentTransferFailures) {
+    return (
+      <AttachmentTransferFailuresRow
+        failures={workEntry.attachmentTransferFailures}
+        compact={compact}
+        rowFontSizePx={rowFontSizePx}
+      />
+    );
+  }
+
   const readFilePath =
     opener !== null &&
     !canOpenAgentActivity &&
@@ -639,9 +711,6 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     : undefined;
   const prefetchReadFile =
     readFilePath && opener?.prefetchFile ? () => opener.prefetchFile?.(readFilePath) : undefined;
-
-  // Use the text font size (matching the UI settings) for tool call rows
-  const rowFontSizePx = textFontSizePx;
 
   return (
     <div className={cn(compact ? "py-0.5" : "rounded-lg py-1")}>

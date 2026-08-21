@@ -50,7 +50,7 @@ export const THREAD_SELECTION_SAFE_SELECTOR = "[data-thread-item], [data-thread-
 export const SIDEBAR_THREAD_PREWARM_LIMIT = 10;
 export const DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY = "omnimind:show-debug-feature-flags-menu";
 export type SidebarNewThreadEnvMode = "local" | "worktree";
-export type SidebarView = "threads" | "studio";
+export type SidebarView = "agent" | "chat" | "studio";
 export type SidebarActionBadge = {
   readonly text: string;
   readonly accessibleLabel: string;

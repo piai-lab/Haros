@@ -1,5 +1,4 @@
 import { type ModelSelection } from "@omnimind/contracts";
-import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
 
 import type { Project } from "../types";
 import { buildChatWorkspaceFolderPath } from "./chatWorkspaceFolders";
@@ -35,10 +34,6 @@ function buildProjectTarget(project: Project): FirstSendProjectTarget {
   };
 }
 
-function buildProjectTitleFromWorkspaceRoot(workspaceRoot: string): string {
-  return workspaceRoot.split(/[/\\]/).findLast((segment) => segment.length > 0) ?? workspaceRoot;
-}
-
 export function resolveFirstSendTarget(input: {
   activeProject: Project;
   chatWorkspaceRoot: string | null;
@@ -48,7 +43,6 @@ export function resolveFirstSendTarget(input: {
   isHomeChatContainer: boolean;
   isStudioContainer: boolean;
   projects: readonly Project[];
-  selectedWorkspaceRoot: string | null;
   title: string;
   titleSeed: string;
 }): FirstSendTargetResolution {
@@ -61,7 +55,6 @@ export function resolveFirstSendTarget(input: {
     isHomeChatContainer,
     isStudioContainer,
     projects,
-    selectedWorkspaceRoot,
     title,
     titleSeed,
   } = input;
@@ -82,51 +75,27 @@ export function resolveFirstSendTarget(input: {
     };
   }
 
-  // Home-chat folder mentions intentionally escape the generic-chat workspace and become
-  // normal projects.
-  if (!selectedWorkspaceRoot) {
-    if (!chatWorkspaceRoot) {
-      return {
-        kind: "current",
-        target: buildProjectTarget(activeProject),
-      };
-    }
-
+  // Chat always remains a managed Chat container. A stale directory selection from an older
+  // draft is deliberately ignored; explicit file/folder references are message context, not cwd.
+  if (!chatWorkspaceRoot) {
     return {
-      kind: "create-project",
-      creation: {
-        workspaceRoot: buildChatWorkspaceFolderPath({
-          chatWorkspaceRoot,
-          createdAt,
-          existingWorkspaceRoots: projects.map((project) => project.cwd),
-          titleSeed,
-        }),
-        title,
-        kind: "chat",
-        createWorkspaceRootIfMissing: true,
-        defaultModelSelection,
-      },
-    };
-  }
-
-  const existingProject = projects.find(
-    (project) =>
-      project.kind === "project" && workspaceRootsEqual(project.cwd, selectedWorkspaceRoot),
-  );
-  if (existingProject) {
-    return {
-      kind: "existing-project",
-      target: buildProjectTarget(existingProject),
+      kind: "current",
+      target: buildProjectTarget(activeProject),
     };
   }
 
   return {
     kind: "create-project",
     creation: {
-      workspaceRoot: selectedWorkspaceRoot,
-      title: buildProjectTitleFromWorkspaceRoot(selectedWorkspaceRoot),
-      kind: "project",
-      createWorkspaceRootIfMissing: false,
+      workspaceRoot: buildChatWorkspaceFolderPath({
+        chatWorkspaceRoot,
+        createdAt,
+        existingWorkspaceRoots: projects.map((project) => project.cwd),
+        titleSeed,
+      }),
+      title,
+      kind: "chat",
+      createWorkspaceRootIfMissing: true,
       defaultModelSelection,
     },
   };

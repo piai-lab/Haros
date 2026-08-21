@@ -639,11 +639,23 @@ export function ChatHeader({
   useEffect(() => {
     const el = headerRef.current;
     if (!el) return;
-    const measure = () => setCompact(isSplitPane || el.clientWidth < HEADER_COMPACT_BREAKPOINT);
+    let frameId: number | null = null;
+    const measure = () => {
+      frameId = null;
+      const nextCompact = isSplitPane || el.clientWidth < HEADER_COMPACT_BREAKPOINT;
+      setCompact((previous) => (previous === nextCompact ? previous : nextCompact));
+    };
+    const scheduleMeasure = () => {
+      if (frameId !== null) return;
+      frameId = window.requestAnimationFrame(measure);
+    };
     measure();
-    const observer = new ResizeObserver(() => measure());
+    const observer = new ResizeObserver(scheduleMeasure);
     observer.observe(el);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frameId !== null) window.cancelAnimationFrame(frameId);
+    };
   }, [isSplitPane]);
 
   const renderProviderIcon = (provider: ProviderKind | null, className: string) => {

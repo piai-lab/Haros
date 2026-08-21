@@ -89,7 +89,6 @@ import {
 } from "@omnimind/contracts";
 import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
 import { getDefaultModel } from "@omnimind/shared/model";
-import { pluralize } from "@omnimind/shared/text";
 import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
@@ -194,7 +193,7 @@ import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import { SidebarMetaChipStack } from "./SidebarMetaChip";
 import { SidebarRowHoverActions } from "./SidebarRowHoverActions";
 import { SidebarSectionToolbar } from "./SidebarSectionToolbar";
-import { SidebarGlyph, sidebarGlyphClass, SIDEBAR_TRAILING_ICON_CLASS } from "./sidebarGlyphs";
+import { SidebarGlyph, sidebarGlyphClass } from "./sidebarGlyphs";
 import { SidebarStatusTrailingGlyph } from "./SidebarStatusTrailingGlyph";
 import { ThreadArchiveActionButton } from "./ThreadArchiveActionButton";
 import { ThreadPinToggleButton } from "./ThreadPinToggleButton";
@@ -262,8 +261,6 @@ import {
   MenuRadioGroup,
   MenuRadioItem,
   MenuSeparator,
-  MenuSub,
-  MenuSubTrigger,
   MenuTrigger,
 } from "./ui/menu";
 import { Tooltip, TooltipPopup, TooltipTrigger } from "./ui/tooltip";
@@ -293,7 +290,6 @@ import {
   pullRequestRepositoryConfigFingerprint,
   getNextVisibleSidebarThreadId,
   getSidebarThreadIdsToPrewarm,
-  getVisibleSidebarEntriesForPreview,
   groupSidebarThreadsByProjectId,
   partitionSidebarThreadsByProjectIds,
   isLatestPinnedProjectMutation,
@@ -303,10 +299,8 @@ import {
   runProjectProvisionWithCancellationRecovery,
   resolvePullRequestReviewBadge,
   resolveNewProjectDefaultModelSelection,
-  resolveSidebarThreadListPaging,
   DEBUG_FEATURE_FLAGS_MENU_STORAGE_KEY,
   resolveProjectEmptyState,
-  resolveProjectStatusIndicator,
   resolveSettingsBackTarget,
   type SettingsBackTarget,
   resolveSidebarNewThreadEnvMode,
@@ -357,10 +351,7 @@ import {
   SIDEBAR_SECTION_LABEL_CLASS_NAME,
 } from "../sidebarRowStyles";
 import { SettingsSidebarNav } from "./SettingsSidebarNav";
-import {
-  ComposerPickerMenuPopup,
-  ComposerPickerMenuSubPopup,
-} from "./chat/ComposerPickerMenuPopup";
+import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import {
   resolveSplitViewFocusedPaneThreadId,
   selectSplitView,
@@ -400,7 +391,6 @@ import {
   type ConversationGroupPickerTarget,
 } from "./ConversationGroupPickerDialog";
 import {
-  SIDEBAR_CONTEXT_MENU_ICON_CLASS_NAME,
   SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME,
   SIDEBAR_CONTEXT_MENU_PANEL_CLASS_NAME,
   SidebarContextMenuIcon,
@@ -477,7 +467,6 @@ type GroupEditorTarget =
 // sidebarContextMenuStyles.
 const PROJECT_CONTEXT_MENU_PANEL_CLASS_NAME = SIDEBAR_CONTEXT_MENU_PANEL_CLASS_NAME;
 const PROJECT_CONTEXT_MENU_ITEM_CLASS_NAME = SIDEBAR_CONTEXT_MENU_ITEM_CLASS_NAME;
-const PROJECT_CONTEXT_MENU_ICON_CLASS_NAME = SIDEBAR_CONTEXT_MENU_ICON_CLASS_NAME;
 
 function ProjectContextMenuIcon({ icon }: { icon: LucideIcon }) {
   return <SidebarContextMenuIcon icon={icon} />;
@@ -671,7 +660,6 @@ function resolveThreadRowMetaChips(input: {
 
   const threadAutomations = input.threadAutomations;
   if (threadAutomations && threadAutomations.length > 0) {
-    const anyEnabled = threadAutomations.some((automation) => automation.enabled);
     const firstAutomation = threadAutomations[0]!;
     const tooltip =
       threadAutomations.length === 1
@@ -1244,7 +1232,7 @@ function SidebarActivityBellButton({
   );
 }
 
-/** Route-native primary work navigation. Both product surfaces stay visible;
+/** Route-native primary work navigation. Available product surfaces stay visible;
  * the active route is the only selection authority. */
 export function SidebarSurfacePicker({
   views,
@@ -1258,9 +1246,11 @@ export function SidebarSurfacePicker({
   onPrewarmView?: (view: SidebarView) => void;
 }) {
   const { t } = useI18n();
-  const titleByView: Record<SidebarView, string> = {
-    threads: t("nav.agent"),
-    studio: t("nav.chat"),
+  const [menuOpen, setMenuOpen] = useState(false);
+  const presentationByView: Record<SidebarView, { title: string; description: string }> = {
+    agent: { title: t("nav.agent"), description: t("nav.agentDescription") },
+    chat: { title: t("nav.chat"), description: t("nav.chatDescription") },
+    studio: { title: t("nav.studio"), description: t("nav.studioDescription") },
   };
 
   if (views.length === 1) {
@@ -1270,47 +1260,61 @@ export function SidebarSurfacePicker({
         data-slot="sidebar-surface-title"
       >
         <span className="font-display min-w-0 truncate text-[17px] text-foreground">
-          {titleByView[views[0] ?? "threads"]}
+          {presentationByView[views[0] ?? "agent"].title}
         </span>
       </div>
     );
   }
 
   return (
-    <nav
-      aria-label={t("shell.switchSurface")}
-      className="sidebar-segmented-picker grid h-8 min-w-0 flex-1 max-w-40 grid-cols-2 gap-0.5 rounded-lg p-0.5"
-      data-slot="sidebar-surface-navigation"
-    >
-      {views.map((view) => {
-        const active = view === activeView;
-        return (
+    <Menu open={menuOpen} onOpenChange={setMenuOpen}>
+      <MenuTrigger
+        render={
           <button
-            key={view}
             type="button"
-            aria-current={active ? "page" : undefined}
-            data-active={active ? "true" : "false"}
-            onMouseEnter={() => onPrewarmView?.(view)}
-            onFocus={() => onPrewarmView?.(view)}
-            onPointerDown={() => onPrewarmView?.(view)}
-            onClick={() => {
-              if (active) return;
-              onPrewarmView?.(view);
-              onSelectView(view);
-            }}
+            aria-label={t("shell.switchSurface")}
             className={cn(
-              "flex min-w-0 items-center justify-center rounded-md px-2 text-[length:var(--app-font-size-ui,12px)] font-medium transition-colors motion-reduce:transition-none",
+              "flex h-8 min-w-0 flex-1 items-center rounded-lg px-2.5 text-left hover:bg-[var(--color-background-button-secondary-hover)]",
               SIDEBAR_ROW_FOCUS_CLASS_NAME,
-              active
-                ? "sidebar-segmented-thumb text-foreground"
-                : "text-[var(--color-text-foreground-secondary)] hover:bg-[var(--color-background-button-secondary-hover)] hover:text-foreground",
             )}
-          >
-            <span className="min-w-0 truncate">{titleByView[view]}</span>
-          </button>
-        );
-      })}
-    </nav>
+            data-slot="sidebar-surface-navigation"
+          />
+        }
+      >
+        <span className="font-display min-w-0 truncate text-[17px] text-foreground">
+          {presentationByView[activeView].title}
+        </span>
+      </MenuTrigger>
+      <ComposerPickerMenuPopup align="start" side="bottom" className="min-w-64">
+        <MenuRadioGroup
+          value={activeView}
+          onValueChange={(value) => {
+            onSelectView(value as SidebarView);
+            setMenuOpen(false);
+          }}
+        >
+          {views.map((view) => {
+            const presentation = presentationByView[view];
+            return (
+              <MenuRadioItem
+                key={view}
+                value={view}
+                className="items-start py-2"
+                onMouseEnter={() => onPrewarmView?.(view)}
+                onFocus={() => onPrewarmView?.(view)}
+              >
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="font-medium text-foreground">{presentation.title}</span>
+                  <span className="text-[11px] leading-4 text-muted-foreground">
+                    {presentation.description}
+                  </span>
+                </span>
+              </MenuRadioItem>
+            );
+          })}
+        </MenuRadioGroup>
+      </ComposerPickerMenuPopup>
+    </Menu>
   );
 }
 
@@ -1362,6 +1366,7 @@ export default function Sidebar() {
     select: (loc) => loc.pathname === "/settings",
   });
   const isOnStudioRoute = pathname.startsWith("/studio");
+  const isOnChatRoute = pathname.startsWith("/chat");
   const isOnKanban = pathname.startsWith("/kanban");
   const isOnAutomations = pathname.startsWith("/automations");
   const isOnPullRequests = pathname.startsWith("/pull-requests");
@@ -1413,7 +1418,7 @@ export default function Sidebar() {
     [automationListQuery.data],
   );
   const { settings: appSettings, updateSettings } = useAppSettings();
-  // Agent is always available; Chat can be hidden explicitly from Settings.
+  // Agent and Chat are always available; Studio retains its existing visibility setting.
   const studioSectionVisible = appSettings.showStudioSection;
   const { handleNewThread } = useHandleNewThread();
   const { handleNewChat } = useHandleNewChat();
@@ -1422,11 +1427,6 @@ export default function Sidebar() {
   const routeThreadId = useParams({
     strict: false,
     select: (params) => (params.threadId ? ThreadId.makeUnsafe(params.threadId) : null),
-  });
-  const routeProjectId = useParams({
-    strict: false,
-    select: (params) =>
-      typeof params.projectId === "string" ? ProjectId.makeUnsafe(params.projectId) : null,
   });
   const routeSearch = useDiffRouteSearch();
   const settingsSectionSearch = useSearch({ strict: false }) as Record<string, unknown>;
@@ -1510,7 +1510,6 @@ export default function Sidebar() {
       }
     };
   }, []);
-  const createSplitViewFromDrop = useSplitViewStore((store) => store.createFromDrop);
   const setSplitFocusedPane = useSplitViewStore((store) => store.setFocusedPane);
   const openRightDockPane = useRightDockStore((store) => store.openPane);
   // Query defaults are applied after destructuring: a default inside the destructuring
@@ -1603,9 +1602,7 @@ export default function Sidebar() {
         setLastThreadRoute(state.lastThreadRoute);
         setActivityViewEnabled(state.activityViewEnabled);
         setGroupsSectionExpanded(state.groupsSectionExpanded);
-        setExpandedGroupIds(
-          new Set(state.expandedGroupIds.map((id) => SpaceId.makeUnsafe(id))),
-        );
+        setExpandedGroupIds(new Set(state.expandedGroupIds.map((id) => SpaceId.makeUnsafe(id))));
       }),
     [],
   );
@@ -1679,6 +1676,20 @@ export default function Sidebar() {
     () => collectStudioProjectIds(projects, { homeDir, chatWorkspaceRoot, studioWorkspaceRoot }),
     [chatWorkspaceRoot, homeDir, projects, studioWorkspaceRoot],
   );
+  const chatProjectIdSet = useMemo(
+    () =>
+      new Set(projects.filter((project) => project.kind === "chat").map((project) => project.id)),
+    [projects],
+  );
+  const agentProjectIdSet = useMemo(
+    () =>
+      new Set(
+        projects
+          .filter((project) => (project.kind ?? "project") === "project")
+          .map((project) => project.id),
+      ),
+    [projects],
+  );
   const { nonStudioThreads: nonStudioSidebarThreads, studioThreads: studioSidebarThreads } =
     useMemo(
       () => partitionSidebarThreadsByProjectIds(sidebarThreads, studioProjectIdSet),
@@ -1689,6 +1700,22 @@ export default function Sidebar() {
       () => partitionSidebarThreadsByProjectIds(sidebarTreeThreads, studioProjectIdSet),
       [sidebarTreeThreads, studioProjectIdSet],
     );
+  const agentSidebarThreads = useMemo(
+    () => nonStudioSidebarThreads.filter((thread) => agentProjectIdSet.has(thread.projectId)),
+    [agentProjectIdSet, nonStudioSidebarThreads],
+  );
+  const chatSidebarThreads = useMemo(
+    () => nonStudioSidebarThreads.filter((thread) => chatProjectIdSet.has(thread.projectId)),
+    [chatProjectIdSet, nonStudioSidebarThreads],
+  );
+  const agentSidebarTreeThreads = useMemo(
+    () => nonStudioSidebarTreeThreads.filter((thread) => agentProjectIdSet.has(thread.projectId)),
+    [agentProjectIdSet, nonStudioSidebarTreeThreads],
+  );
+  const chatSidebarTreeThreads = useMemo(
+    () => nonStudioSidebarTreeThreads.filter((thread) => chatProjectIdSet.has(thread.projectId)),
+    [chatProjectIdSet, nonStudioSidebarTreeThreads],
+  );
   // Drives the unread dot on the header Activity bell.
   const hasUnreadActivity = useMemo(
     () => hasUnreadActivityOutsideActiveThread(nonStudioSidebarThreads, activeSidebarThreadId),
@@ -1860,6 +1887,8 @@ export default function Sidebar() {
       chatWorkspaceRoot,
       studioWorkspaceRoot,
     });
+  const isOnChat = !isOnStudio && (isOnChatRoute || activeRouteProject?.kind === "chat");
+  const activeProductSurface: SidebarView = isOnStudio ? "studio" : isOnChat ? "chat" : "agent";
   const ordinarySpaceProjects = useMemo(
     () =>
       projects.filter((project) =>
@@ -1871,14 +1900,24 @@ export default function Sidebar() {
   // Only one segment's pinned threads are ever rendered at a time, so derive a single
   // memo from the already-partitioned active list instead of computing both segments'
   // pinned lists on every render (hooks can't be conditional, but the inputs can be).
-  const agentSidebarTreeThreads = nonStudioSidebarTreeThreads;
   const pinnedThreads = useMemo(
     () =>
       getPinnedThreadsForSidebar(
-        isOnStudio ? studioSidebarTreeThreads : agentSidebarTreeThreads,
+        isOnStudio
+          ? studioSidebarTreeThreads
+          : isOnChat
+            ? chatSidebarTreeThreads
+            : agentSidebarTreeThreads,
         pinnedThreadIds,
       ),
-    [agentSidebarTreeThreads, isOnStudio, pinnedThreadIds, studioSidebarTreeThreads],
+    [
+      agentSidebarTreeThreads,
+      chatSidebarTreeThreads,
+      isOnChat,
+      isOnStudio,
+      pinnedThreadIds,
+      studioSidebarTreeThreads,
+    ],
   );
   const openPrLink = useCallback(
     (event: MouseEvent<HTMLElement>, prUrl: string) => {
@@ -2318,15 +2357,24 @@ export default function Sidebar() {
     }
     return draftThreadIds;
   }, [draftThreadsByThreadId, studioProjectIdSet]);
-  const nonStudioDraftThreadIds = useMemo(() => {
+  const agentDraftThreadIds = useMemo(() => {
     const draftThreadIds = new Set<string>();
     for (const [threadId, draft] of Object.entries(draftThreadsByThreadId)) {
-      if (!studioProjectIdSet.has(draft.projectId)) {
+      if (agentProjectIdSet.has(draft.projectId)) {
         draftThreadIds.add(threadId);
       }
     }
     return draftThreadIds;
-  }, [draftThreadsByThreadId, studioProjectIdSet]);
+  }, [agentProjectIdSet, draftThreadsByThreadId]);
+  const chatDraftThreadIds = useMemo(() => {
+    const draftThreadIds = new Set<string>();
+    for (const [threadId, draft] of Object.entries(draftThreadsByThreadId)) {
+      if (chatProjectIdSet.has(draft.projectId)) {
+        draftThreadIds.add(threadId);
+      }
+    }
+    return draftThreadIds;
+  }, [chatProjectIdSet, draftThreadsByThreadId]);
 
   // Where the Studio segment lands, resolved directly (remembered Studio route, else the latest
   // Studio chat) instead of bouncing through the "/studio" splash route — that extra hop +
@@ -2343,9 +2391,13 @@ export default function Sidebar() {
     [activeStudioSidebarThreads, resolveBackTargetForThreads, studioDraftThreadIds],
   );
 
-  const resolveBackToThreadsTarget = useCallback(
-    () => resolveBackTargetForThreads(nonStudioSidebarThreads, nonStudioDraftThreadIds),
-    [nonStudioDraftThreadIds, nonStudioSidebarThreads, resolveBackTargetForThreads],
+  const resolveBackToAgentTarget = useCallback(
+    () => resolveBackTargetForThreads(agentSidebarThreads, agentDraftThreadIds),
+    [agentDraftThreadIds, agentSidebarThreads, resolveBackTargetForThreads],
+  );
+  const resolveBackToChatTarget = useCallback(
+    () => resolveBackTargetForThreads(chatSidebarThreads, chatDraftThreadIds),
+    [chatDraftThreadIds, chatSidebarThreads, resolveBackTargetForThreads],
   );
 
   // Navigates to a resolved settings-back / segment-switch target. Returns whether it navigated
@@ -2380,13 +2432,13 @@ export default function Sidebar() {
   // back. This keeps the back button from bouncing across segments when the remembered thread
   // route is stale (e.g. its thread was deleted): the segment-scoped resolver falls back to that
   // *same* segment's latest thread instead of the globally most-recent thread.
-  const lastActiveSidebarSegmentRef = useRef<"studio" | "threads">("threads");
+  const lastActiveSidebarSegmentRef = useRef<SidebarView>("agent");
   useEffect(() => {
     if (isOnSettings) {
       return;
     }
-    lastActiveSidebarSegmentRef.current = isOnStudio ? "studio" : "threads";
-  }, [isOnSettings, isOnStudio]);
+    lastActiveSidebarSegmentRef.current = activeProductSurface;
+  }, [activeProductSurface, isOnSettings]);
 
   // Shared Studio fallback: reopen/create via handleNewStudioChat and, on failure, land on
   // /studio — its splash already displays the error with a retry. Swallowing the result here
@@ -2400,8 +2452,13 @@ export default function Sidebar() {
   }, [handleNewStudioChat, navigate]);
 
   const handleBackToAppFromSettings = useCallback(() => {
-    const fromStudio = lastActiveSidebarSegmentRef.current === "studio";
-    const target = fromStudio ? resolveBackToStudioTarget() : resolveBackToThreadsTarget();
+    const surface = lastActiveSidebarSegmentRef.current;
+    const target =
+      surface === "studio"
+        ? resolveBackToStudioTarget()
+        : surface === "chat"
+          ? resolveBackToChatTarget()
+          : resolveBackToAgentTarget();
 
     if (navigateToBackTarget(target)) {
       return;
@@ -2409,17 +2466,22 @@ export default function Sidebar() {
 
     // Segment-appropriate fallback, matching handleSidebarViewChange: leaving Settings from the
     // Studio segment with nothing restorable lands back in Studio, not on a fresh home draft.
-    if (fromStudio) {
+    if (surface === "studio") {
       openStudioChatFallback();
       return;
     }
-    void navigate({ to: "/" });
+    if (surface === "chat") {
+      void navigate({ to: "/chat" });
+    } else {
+      void navigate({ to: "/" });
+    }
   }, [
     navigate,
     navigateToBackTarget,
     openStudioChatFallback,
     resolveBackToStudioTarget,
-    resolveBackToThreadsTarget,
+    resolveBackToAgentTarget,
+    resolveBackToChatTarget,
   ]);
 
   const handleSidebarViewChange = useCallback(
@@ -2435,19 +2497,25 @@ export default function Sidebar() {
         openStudioChatFallback();
         return;
       }
-
-      if (navigateToBackTarget(resolveBackToThreadsTarget())) {
+      if (view === "chat") {
+        if (navigateToBackTarget(resolveBackToChatTarget())) {
+          return;
+        }
+        void navigate({ to: "/chat" });
         return;
       }
-
-      void handleNewChat();
+      if (navigateToBackTarget(resolveBackToAgentTarget())) {
+        return;
+      }
+      void navigate({ to: "/" });
     },
     [
-      handleNewChat,
       navigateToBackTarget,
+      navigate,
       openStudioChatFallback,
+      resolveBackToAgentTarget,
+      resolveBackToChatTarget,
       resolveBackToStudioTarget,
-      resolveBackToThreadsTarget,
     ],
   );
 
@@ -2459,7 +2527,7 @@ export default function Sidebar() {
       return;
     }
     if (isOnStudio && !studioSectionVisible) {
-      handleSidebarViewChange("threads");
+      handleSidebarViewChange("agent");
       return;
     }
   }, [handleSidebarViewChange, isOnSettings, isOnStudio, studioSectionVisible]);
@@ -2812,15 +2880,22 @@ export default function Sidebar() {
   // in after a subscribe round-trip once the route has already swapped.
   const prewarmSidebarViewTarget = useCallback(
     (view: SidebarView) => {
-      if (view !== "studio" && view !== "threads") {
-        return;
-      }
-      const target = view === "studio" ? resolveBackToStudioTarget() : resolveBackToThreadsTarget();
+      const target =
+        view === "studio"
+          ? resolveBackToStudioTarget()
+          : view === "chat"
+            ? resolveBackToChatTarget()
+            : resolveBackToAgentTarget();
       if (target.kind === "thread") {
         prewarmThreadDetailForIntent(ThreadId.makeUnsafe(target.threadId));
       }
     },
-    [prewarmThreadDetailForIntent, resolveBackToStudioTarget, resolveBackToThreadsTarget],
+    [
+      prewarmThreadDetailForIntent,
+      resolveBackToAgentTarget,
+      resolveBackToChatTarget,
+      resolveBackToStudioTarget,
+    ],
   );
 
   const copyThreadIdToClipboard = useCopyThreadIdToClipboard();
@@ -3577,6 +3652,10 @@ export default function Sidebar() {
       ),
     [chatWorkspaceRoot, homeDir, sortedProjects, studioWorkspaceRoot],
   );
+  const chatProjects = useMemo(
+    () => sortedProjects.filter((project) => project.kind === "chat"),
+    [sortedProjects],
+  );
   // Studio threads, flattened the same way the home Chats list is. Skipped entirely while the
   // Studio surface is not showing so thread updates on Projects don't pay for an unused sort.
   // Pinned threads are hidden here the same way `deriveSidebarProjectData` hides them from
@@ -3609,6 +3688,30 @@ export default function Sidebar() {
     () => studioChatThreadRows.map((row) => row.thread.id),
     [studioChatThreadRows],
   );
+  const chatThreadRows = useMemo(() => {
+    if (!isOnChat) return [];
+    return buildProjectThreadTree({
+      threads: sortThreadsForSidebar(
+        getUnpinnedThreadsForSidebar(
+          chatProjects.flatMap((project) => sortedSidebarThreadsByProjectId.get(project.id) ?? []),
+          pinnedThreadIds,
+        ),
+        appSettings.sidebarThreadSortOrder,
+      ),
+      forceVisibleThreadId: activeSidebarThreadId ?? undefined,
+    });
+  }, [
+    activeSidebarThreadId,
+    appSettings.sidebarThreadSortOrder,
+    chatProjects,
+    isOnChat,
+    pinnedThreadIds,
+    sortedSidebarThreadsByProjectId,
+  ]);
+  const chatThreadIds = useMemo(() => chatThreadRows.map((row) => row.thread.id), [chatThreadRows]);
+  const containerThreadRows = isOnStudio ? studioChatThreadRows : chatThreadRows;
+  const containerThreadIds = isOnStudio ? studioChatThreadIds : chatThreadIds;
+  const isOnContainerSurface = isOnStudio || isOnChat;
   const allStandardProjectsBase = useMemo(
     () =>
       sortedProjects.filter((project) =>
@@ -5077,7 +5180,7 @@ export default function Sidebar() {
         const shouldOpenActivity = isOnSettings || isOnStudio || !activityViewEnabled;
         setActivityViewEnabledSmoothly(shouldOpenActivity);
         if (shouldOpenActivity && (isOnSettings || isOnStudio)) {
-          handleSidebarViewChange("threads");
+          handleSidebarViewChange("agent");
         }
         return;
       }
@@ -5757,8 +5860,8 @@ export default function Sidebar() {
           <>
             <div className="flex items-center gap-2 px-2 pb-1.5 pt-0.5">
               <SidebarSurfacePicker
-                views={["threads", ...(studioSectionVisible ? (["studio"] as const) : [])]}
-                activeView={isOnStudio ? "studio" : "threads"}
+                views={["agent", "chat", ...(studioSectionVisible ? (["studio"] as const) : [])]}
+                activeView={activeProductSurface}
                 onSelectView={handleSidebarViewChange}
                 onPrewarmView={prewarmSidebarViewTarget}
               />
@@ -5778,7 +5881,7 @@ export default function Sidebar() {
                     setSearchPaletteOpen(true);
                   }}
                 />
-                {isOnStudio && studioChatThreadRows.length > 1 ? (
+                {isOnContainerSurface && containerThreadRows.length > 1 ? (
                   <ChatSortMenu
                     threadSortOrder={appSettings.sidebarThreadSortOrder}
                     onThreadSortOrderChange={(sortOrder) => {
@@ -5786,7 +5889,7 @@ export default function Sidebar() {
                     }}
                   />
                 ) : null}
-                {!isOnStudio ? (
+                {!isOnContainerSurface ? (
                   <SidebarActivityBellButton
                     active={activityViewEnabled}
                     showUnreadDot={hasUnreadActivity}
@@ -5799,19 +5902,27 @@ export default function Sidebar() {
             {/* The keyed content remounts with a short enter animation while the
                 route-native surface navigation stays mounted. */}
             <div
-              key={isOnStudio ? "studio" : activityViewEnabled ? "activity" : "threads"}
+              key={
+                isOnStudio
+                  ? "studio"
+                  : isOnChat
+                    ? "chat"
+                    : activityViewEnabled
+                      ? "activity"
+                      : "agent"
+              }
               className="sidebar-surface-enter"
             >
               {/* Primary sidebar actions stay limited to features we currently ship. */}
               <SidebarGroup className="px-2 pb-2 pt-1">
                 <SidebarMenu className="gap-0.5">
-                  {isOnStudio ? (
+                  {isOnContainerSurface ? (
                     <>
                       <SidebarPrimaryAction
                         icon={NewThreadIcon}
                         iconClassName="size-3.5"
                         label={t("nav.newChat")}
-                        onClick={handleCreateStudioChat}
+                        onClick={isOnStudio ? handleCreateStudioChat : handleCreateHomeChat}
                       />
                     </>
                   ) : (
@@ -5856,15 +5967,15 @@ export default function Sidebar() {
                 </SidebarMenu>
               </SidebarGroup>
 
-              {isOnStudio ? (
-                // Chat is already named by the primary surface selector. Keep the list flat and
-                // avoid repeating that mode as a second section heading.
+              {isOnContainerSurface ? (
+                // Chat and Studio are already named by the primary surface selector. Keep their
+                // managed conversations flat instead of exposing backing containers as Projects.
                 <SidebarGroup className="px-2 py-2" data-slot="sidebar-chat-list">
                   {renderPinnedThreadsSection()}
                   <SidebarMenu ref={attachProjectListAutoAnimateRef} className="gap-1">
-                    {studioChatThreadRows.length > 0 ? (
-                      studioChatThreadRows.map((row) =>
-                        renderThreadRow(row.thread, studioChatThreadIds, row.depth, true),
+                    {containerThreadRows.length > 0 ? (
+                      containerThreadRows.map((row) =>
+                        renderThreadRow(row.thread, containerThreadIds, row.depth, true),
                       )
                     ) : (
                       <div className="px-2 pt-4 text-center text-[length:var(--app-font-size-ui,12px)] text-muted-foreground/58">

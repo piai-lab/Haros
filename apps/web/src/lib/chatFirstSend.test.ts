@@ -40,7 +40,6 @@ describe("resolveFirstSendTarget", () => {
       isHomeChatContainer: true,
       isStudioContainer: false,
       projects: [makeProject()],
-      selectedWorkspaceRoot: null,
       title: "Yes it takes",
       titleSeed: "Yes, it takes all the skills!",
     });
@@ -57,7 +56,7 @@ describe("resolveFirstSendTarget", () => {
     });
   });
 
-  it("keeps folder mentions as ordinary projects", () => {
+  it("ignores a stale workspace selection and still creates a managed Chat", () => {
     const result = resolveFirstSendTarget({
       activeProject: makeProject(),
       chatWorkspaceRoot: "/Users/tester/Documents/OmniMind",
@@ -67,7 +66,6 @@ describe("resolveFirstSendTarget", () => {
       isHomeChatContainer: true,
       isStudioContainer: false,
       projects: [makeProject()],
-      selectedWorkspaceRoot: "/Users/tester/Developer/app",
       title: "Use app",
       titleSeed: "Use app",
     });
@@ -75,10 +73,10 @@ describe("resolveFirstSendTarget", () => {
     expect(result).toMatchObject({
       kind: "create-project",
       creation: {
-        workspaceRoot: "/Users/tester/Developer/app",
-        title: "app",
-        kind: "project",
-        createWorkspaceRootIfMissing: false,
+        workspaceRoot: "/Users/tester/Documents/OmniMind/2026-06-11/use-app",
+        title: "Use app",
+        kind: "chat",
+        createWorkspaceRootIfMissing: true,
         defaultModelSelection,
       },
     });
@@ -95,7 +93,6 @@ describe("resolveFirstSendTarget", () => {
       isHomeChatContainer: false,
       isStudioContainer: false,
       projects: [activeProject],
-      selectedWorkspaceRoot: null,
       title: "Follow up",
       titleSeed: "Follow up",
     });
@@ -126,7 +123,6 @@ describe("resolveFirstSendTarget", () => {
       isHomeChatContainer: false,
       isStudioContainer: true,
       projects: [activeProject],
-      selectedWorkspaceRoot: null,
       title: "Write content",
       titleSeed: "Write content",
     });
@@ -158,7 +154,6 @@ describe("resolveFirstSendTarget", () => {
       isHomeChatContainer: false,
       isStudioContainer: true,
       projects: [activeProject],
-      selectedWorkspaceRoot: "/Users/tester/Developer/app",
       title: "Use app",
       titleSeed: "Use app",
     });

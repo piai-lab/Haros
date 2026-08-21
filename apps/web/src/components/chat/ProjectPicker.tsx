@@ -352,7 +352,7 @@ export const ProjectPicker = memo(function ProjectPicker({
       if (cancelled) return;
       const api = readNativeApi();
       if (!api) {
-        setErrorMessage("App is still connecting. Try again in a moment.");
+        setErrorMessage(t("composer.local.connecting"));
         return;
       }
 
@@ -377,7 +377,9 @@ export const ProjectPicker = memo(function ProjectPicker({
           );
         })
         .catch((error) => {
-          setErrorMessage(error instanceof Error ? error.message : "Unable to load folders.");
+          setErrorMessage(
+            error instanceof Error ? error.message : t("projectPicker.loadFoldersFailed"),
+          );
         })
         .finally(() => {
           setIsLoadingDirectories(false);
@@ -387,7 +389,7 @@ export const ProjectPicker = memo(function ProjectPicker({
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [directoryEntries.length, homeDir, isLoadingDirectories, isProjectSelectionMode, open]);
+  }, [directoryEntries.length, homeDir, isLoadingDirectories, isProjectSelectionMode, open, t]);
 
   const handleSelectActiveFolder = useCallback(
     (folder: ActiveFolderOption) => {
@@ -402,20 +404,24 @@ export const ProjectPicker = memo(function ProjectPicker({
             setOpen(false);
           })
           .catch((error) => {
-            setErrorMessage(error instanceof Error ? error.message : "Unable to select project.");
+            setErrorMessage(
+              error instanceof Error ? error.message : t("projectPicker.selectProjectFailed"),
+            );
           });
       } catch (error) {
-        setErrorMessage(error instanceof Error ? error.message : "Unable to select project.");
+        setErrorMessage(
+          error instanceof Error ? error.message : t("projectPicker.selectProjectFailed"),
+        );
       }
     },
-    [isProjectSelectionMode, onSelectProject, onSelectWorkspaceRoot],
+    [isProjectSelectionMode, onSelectProject, onSelectWorkspaceRoot, t],
   );
 
   const handleAddNewProject = useCallback(async () => {
     if (isPicking) return;
     const api = readNativeApi();
     if (!api) {
-      setErrorMessage("App is still connecting. Try again in a moment.");
+      setErrorMessage(t("composer.local.connecting"));
       return;
     }
 
@@ -438,9 +444,11 @@ export const ProjectPicker = memo(function ProjectPicker({
       setOpen(false);
     } catch (error) {
       setIsPicking(false);
-      setErrorMessage(error instanceof Error ? error.message : "Unable to open the folder picker.");
+      setErrorMessage(
+        error instanceof Error ? error.message : t("projectPicker.openFolderPickerFailed"),
+      );
     }
-  }, [isPicking, onCreateProjectFromPath, onSelectWorkspaceRoot]);
+  }, [isPicking, onCreateProjectFromPath, onSelectWorkspaceRoot, t]);
 
   const handleResetToHome = useCallback(() => {
     if (resetInFlightRef.current) {
@@ -462,24 +470,29 @@ export const ProjectPicker = memo(function ProjectPicker({
         })
         .catch((error) => {
           resetInFlightRef.current = false;
-          setErrorMessage(error instanceof Error ? error.message : "Unable to update project.");
+          setErrorMessage(
+            error instanceof Error ? error.message : t("projectPicker.updateProjectFailed"),
+          );
           setOpen(true);
         });
     } catch (error) {
       resetInFlightRef.current = false;
-      setErrorMessage(error instanceof Error ? error.message : "Unable to update project.");
+      setErrorMessage(
+        error instanceof Error ? error.message : t("projectPicker.updateProjectFailed"),
+      );
       setOpen(true);
     }
-  }, [onResetToHome]);
+  }, [onResetToHome, t]);
 
   const shouldShowResetToHome = showResetToHome || isProjectSelectionMode;
   const canResetFromTrigger =
     renderTrigger === undefined && selectedFolderOption !== null && onResetToHome !== undefined;
   const addProjectLabel =
-    addActionLabel ?? (isProjectSelectionMode ? "New project" : "Add new project");
+    addActionLabel ??
+    (isProjectSelectionMode ? t("projectPicker.newProject") : t("projectPicker.addProject"));
   const loadingAddProjectLabel = isProjectSelectionMode
-    ? "Adding project..."
-    : "Opening folder picker...";
+    ? t("projectPicker.addingProject")
+    : t("projectPicker.openingFolderPicker");
 
   const renderActiveFolderOption = (folder: ActiveFolderOption, index: number) => {
     const selected = isProjectSelectionMode
@@ -646,10 +659,10 @@ export const ProjectPicker = memo(function ProjectPicker({
         >
           <ComboboxEmpty>
             {isLoadingDirectories
-              ? "Loading folders…"
+              ? t("projectPicker.loadingFolders")
               : activeFolderOptions.length === 0 && localFolderOptions.length === 0
-                ? "No folders found"
-                : "No matches"}
+                ? t("projectPicker.noFolders")
+                : t("projectPicker.noMatches")}
           </ComboboxEmpty>
           <ComboboxList className="max-h-64">
             {filteredActiveFolderOptions.length > 0 ? (

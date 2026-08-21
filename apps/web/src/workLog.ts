@@ -95,6 +95,12 @@ export interface WorkLogEntry {
     mode: "inline" | "reference";
     failureReason?: "unreadable" | "oversized" | "budget_exceeded";
   };
+  attachmentTransferFailures?: ReadonlyArray<{
+    targetMessageId: string;
+    name: string;
+    attachmentIndex: number;
+    reason: "missing" | "unreadable" | "limit" | "clone-failed";
+  }>;
 }
 
 export type WorkLogLiveActivityState =
@@ -335,6 +341,9 @@ function shouldKeepActivityForWorkLog(
   if (activity.kind === CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND) {
     return true;
   }
+  if (activity.kind === "chat-to-agent.attachments.partial") {
+    return true;
+  }
 
   // An empty set means the transcript has no turn-stamped assistant messages
   // (e.g. providers that never supply turn ids); fall back to the legacy
@@ -500,6 +509,37 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
         ? { failureReason: payload.failureReason }
         : {}),
     };
+  }
+  if (activity.kind === "chat-to-agent.attachments.partial" && Array.isArray(payload?.failures)) {
+    const failures = payload.failures.flatMap((value) => {
+      const failure = asRecord(value);
+      const targetMessageId = asTrimmedString(failure?.targetMessageId);
+      const name = asTrimmedString(failure?.name);
+      const attachmentIndex = failure?.attachmentIndex;
+      const reason = failure?.reason;
+      if (
+        !targetMessageId ||
+        !name ||
+        typeof attachmentIndex !== "number" ||
+        !Number.isInteger(attachmentIndex) ||
+        attachmentIndex < 0 ||
+        (reason !== "missing" &&
+          reason !== "unreadable" &&
+          reason !== "limit" &&
+          reason !== "clone-failed")
+      ) {
+        return [];
+      }
+      return [
+        {
+          targetMessageId,
+          name,
+          attachmentIndex,
+          reason: reason as "missing" | "unreadable" | "limit" | "clone-failed",
+        },
+      ];
+    });
+    if (failures.length > 0) entry.attachmentTransferFailures = failures;
   }
   if (payload && typeof payload.detail === "string" && payload.detail.length > 0) {
     const detail = stripTrailingExitCode(payload.detail).output;
@@ -673,7 +713,11 @@ function extractEngineWebSurface(
   ) {
     return undefined;
   }
-  return { status, provenance: "engine-native", presentation: "omnimind-browser" };
+  return {
+    status,
+    provenance: "engine-native",
+    presentation: "omnimind-browser",
+  };
 }
 
 function deriveProviderRuntimeReconciliationCollapseKey(

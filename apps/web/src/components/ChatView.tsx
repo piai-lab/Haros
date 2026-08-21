@@ -118,6 +118,7 @@ import {
   providerSkillReferencesEqual,
   skillMentionPrefix,
 } from "~/lib/composerMentions";
+import { joinProjectPath } from "~/lib/projectPaths";
 import { getLocalFolderBrowseRootPath, isLocalFolderMentionQuery } from "~/lib/localFolderMentions";
 import {
   findProviderStatus,
@@ -132,9 +133,10 @@ import {
 import { isElectron } from "../env";
 import { isScrollContainerNearBottom } from "../chat-scroll";
 import { stripDiffSearchParams } from "../diffRouteSearch";
+import { basenameOfPath } from "../file-icons";
 import { resolveSubagentPresentationForThread } from "../lib/subagentPresentation";
 import { ensureHomeChatProject, isHomeChatContainerProject } from "../lib/chatProjects";
-import { ensureStudioProject, isStudioContainerProject } from "../lib/studioProjects";
+import { isStudioContainerProject } from "../lib/studioProjects";
 import { resolveFirstSendTarget } from "../lib/chatFirstSend";
 import {
   createOrRecoverProjectFromPath,
@@ -321,7 +323,6 @@ import {
   ComposerSendArrowIcon,
   LayoutSidebarIcon,
   LoaderCircleIcon,
-  RefreshCwIcon,
   TemporaryThreadIcon,
 } from "~/lib/icons";
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
@@ -620,7 +621,7 @@ import {
   resolveDiffEnvironmentState,
   resolveThreadEnvironmentMode,
 } from "../lib/threadEnvironment";
-import { buildModelSelection, buildNextProviderOptions } from "../providerModelOptions";
+import { buildModelSelection } from "../providerModelOptions";
 import {
   isDuplicateProjectCreateError,
   waitForRecoverableProjectForDuplicateCreate,
@@ -780,11 +781,19 @@ function automationScheduleActivityPayload(schedule: AutomationSchedule) {
       return { type: "interval", everySeconds: schedule.everySeconds } as const;
     case "daily":
       return schedule.timezone
-        ? { type: "daily", timeOfDay: schedule.timeOfDay, timezone: schedule.timezone }
+        ? {
+            type: "daily",
+            timeOfDay: schedule.timeOfDay,
+            timezone: schedule.timezone,
+          }
         : { type: "daily", timeOfDay: schedule.timeOfDay };
     case "weekdays":
       return schedule.timezone
-        ? { type: "weekdays", timeOfDay: schedule.timeOfDay, timezone: schedule.timezone }
+        ? {
+            type: "weekdays",
+            timeOfDay: schedule.timeOfDay,
+            timezone: schedule.timezone,
+          }
         : { type: "weekdays", timeOfDay: schedule.timeOfDay };
     case "weekly":
       return schedule.timezone
@@ -949,7 +958,9 @@ async function fetchDirectTurnRecoveryFile(input: {
     ) {
       throw new DirectTurnRecoveryAttachmentError();
     }
-    return new File([blob], input.attachment.name, { type: input.attachment.mimeType });
+    return new File([blob], input.attachment.name, {
+      type: input.attachment.mimeType,
+    });
   } catch (error) {
     if (error instanceof DirectTurnRecoveryAttachmentError) throw error;
     throw new DirectTurnRecoveryAttachmentError();
@@ -1238,6 +1249,18 @@ interface LateComposerSendHandlers {
   readonly handleStandaloneSlashCommand: (trimmedPrompt: string) => Promise<boolean>;
 }
 
+type ChatToAgentForkCommand = Extract<
+  Parameters<NativeApi["orchestration"]["dispatchCommand"]>[0],
+  { readonly type: "thread.fork.create" }
+>;
+
+interface ChatToAgentAttempt {
+  readonly command: ChatToAgentForkCommand;
+  accepted: boolean;
+  draftCopied: boolean;
+  warningShown: boolean;
+}
+
 interface ChatViewProps {
   threadId: ThreadId;
   paneScopeId?: string;
@@ -1342,7 +1365,7 @@ export default function ChatView({
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
-  const { settings, updateSettings } = useAppSettings();
+  const { settings } = useAppSettings();
   const { t } = useI18n();
   const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
@@ -1392,7 +1415,6 @@ export default function ChatView({
   const composerPastedTexts = composerDraft.pastedTexts;
   const composerSkills = composerDraft.skills;
   const composerMentions = composerDraft.mentions;
-  const composerActiveProvider = composerDraft.activeProvider;
   const queuedComposerTurns = composerDraft.queuedTurns;
   const pendingDirectTurnRecovery = composerDraft.pendingDirectTurnRecovery;
   const restoredSourceProposedPlan = composerDraft.restoredSourceProposedPlan;
@@ -1568,6 +1590,10 @@ export default function ChatView({
   const [optimisticUserMessages, setOptimisticUserMessages] = useState<ChatMessage[]>([]);
   const optimisticUserMessagesRef = useRef(optimisticUserMessages);
   const pendingDirectTurnRecoveryMaterializationRef = useRef<string | null>(null);
+  // A fork can be accepted before shell refresh or navigation fails. Keep the
+  // original command/thread identity so retry resumes hydration and hits the
+  // same server receipt instead of creating a second Agent Thread.
+  const chatToAgentAttemptsRef = useRef<Map<string, ChatToAgentAttempt>>(new Map());
   // Mirror during the commit, before events or async continuations can observe
   // the new UI with the previous render's preview URLs.
   useLayoutEffect(() => {
@@ -2018,7 +2044,10 @@ export default function ChatView({
   useEffect(() => {
     if (
       !pendingFileUndo ||
-      !hasFileUndoSettled({ pending: pendingFileUndo, thread: activeThread ?? null })
+      !hasFileUndoSettled({
+        pending: pendingFileUndo,
+        thread: activeThread ?? null,
+      })
     ) {
       return;
     }
@@ -2217,7 +2246,8 @@ export default function ChatView({
   const activeProjectDisplayName = isHomeChatContainer
     ? activeProject?.folderName
     : activeProject?.name;
-  const isChatProject = isContainerLandingProject;
+  const canSendToAgent = activeProject?.kind === "chat" && isServerThread;
+  const activeChatWorkspaceRoot = activeProject?.kind === "chat" ? activeProject.cwd : null;
   const activeProjectScripts =
     activeProject?.kind === "project" ? activeProject.scripts : undefined;
   const threadLineageThreads = useStore(
@@ -2391,7 +2421,6 @@ export default function ChatView({
     markThreadVisited,
   ]);
 
-  const sessionProvider = activeThread?.session?.provider ?? null;
   const selectedProviderByThreadId = composerDraft.activeProvider ?? null;
   const threadProvider =
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
@@ -3034,7 +3063,10 @@ export default function ChatView({
         backgroundedProviderThreadIds: backgroundedSubagentToolUseIds,
         viewedThreadId: stripParentThread ? (activeThread?.id ?? null) : null,
         parentRow: stripParentThread
-          ? { threadId: stripParentThread.id, label: stripParentThread.title ?? null }
+          ? {
+              threadId: stripParentThread.id,
+              label: stripParentThread.title ?? null,
+            }
           : null,
       }),
     [
@@ -4264,10 +4296,6 @@ export default function ChatView({
       }),
     [keybindings],
   );
-  const traitsPickerShortcutLabel = useMemo(
-    () => shortcutLabelForCommand(keybindings, "traitsPicker.toggle"),
-    [keybindings],
-  );
   const onToggleDiff = useCallback(() => {
     if (diffEnvironmentPending && !diffOpen) {
       return;
@@ -4717,7 +4745,9 @@ export default function ChatView({
       environmentObservedWidthRef.current = nextWidth;
       if (planSidebarOpen) {
         setPlanSidebarPresentation((previousPresentation) => {
-          const nextPresentation = resolvePlanSidebarPresentation({ availableWidth: nextWidth });
+          const nextPresentation = resolvePlanSidebarPresentation({
+            availableWidth: nextWidth,
+          });
           return nextPresentation === previousPresentation
             ? previousPresentation
             : nextPresentation;
@@ -7011,7 +7041,9 @@ export default function ChatView({
       setThreadError(
         activeThreadId,
         insertedCount < nextFiles.length
-          ? t("browser.attachmentLimit", { count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS })
+          ? t("browser.attachmentLimit", {
+              count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+            })
           : error,
       );
     },
@@ -8191,7 +8223,9 @@ export default function ChatView({
       } else {
         toastManager.add({
           type: "warning",
-          title: t("browser.attachmentLimit", { count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS }),
+          title: t("browser.attachmentLimit", {
+            count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+          }),
           description: t("conversation.browserAttachmentSkipped"),
         });
       }
@@ -8233,7 +8267,9 @@ export default function ChatView({
       } else {
         toastManager.add({
           type: "warning",
-          title: t("browser.attachmentLimit", { count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS }),
+          title: t("browser.attachmentLimit", {
+            count: PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
+          }),
           description: t("conversation.deviceAttachmentSkipped"),
         });
       }
@@ -8348,7 +8384,6 @@ export default function ChatView({
       projects: currentStoreState.projects,
       // Studio reference folders change the thread cwd without moving the chat out of
       // the managed Studio project. Home-chat folder selection keeps its project routing.
-      selectedWorkspaceRoot: isHomeChatContainer ? (resolvedThreadWorktreePath ?? null) : null,
       title,
       titleSeed,
     });
@@ -8357,14 +8392,12 @@ export default function ChatView({
       targetProjectKind: targetProjectKindForSend,
       targetProjectCwd: targetProjectCwdForSend,
       targetProjectScripts: targetProjectScriptsForSend,
-      targetProjectDefaultModelSelection: targetProjectDefaultModelSelectionForSend,
     } = firstSendTarget.kind === "create-project"
       ? {
           targetProjectId: activeProject.id,
           targetProjectKind: activeProject.kind,
           targetProjectCwd: activeProject.cwd,
           targetProjectScripts: activeProject.kind === "project" ? activeProject.scripts : [],
-          targetProjectDefaultModelSelection: activeProject.defaultModelSelection ?? null,
         }
       : firstSendTarget.target;
     let nextRuntimeModeForSend = runtimeModeForSend;
@@ -8409,8 +8442,6 @@ export default function ChatView({
           targetProjectKindForSend = firstSendTarget.creation.kind;
           targetProjectCwdForSend = firstSendTarget.creation.workspaceRoot;
           targetProjectScriptsForSend = [];
-          targetProjectDefaultModelSelectionForSend =
-            firstSendTarget.creation.defaultModelSelection;
         } catch (error) {
           const description =
             error instanceof Error ? error.message : "Failed to create the selected project.";
@@ -8437,9 +8468,6 @@ export default function ChatView({
             (recoveredProject.kind ?? firstSendTarget.creation.kind) === "project"
               ? [...recoveredProject.scripts]
               : [];
-          targetProjectDefaultModelSelectionForSend =
-            recoveredProject.defaultModelSelection ??
-            firstSendTarget.creation.defaultModelSelection;
         }
       }
 
@@ -8535,7 +8563,10 @@ export default function ChatView({
     const composerFilesSnapshot = [...composerFilesForSend];
     const composerAssistantSelectionsSnapshot = [...composerAssistantSelectionsForSend];
     const composerBrowserAnnotationsSnapshot = composerBrowserAnnotationsForSend.map(
-      (annotation) => ({ ...annotation, source: { ...annotation.source } }),
+      (annotation) => ({
+        ...annotation,
+        source: { ...annotation.source },
+      }),
     );
     const composerFileCommentsSnapshot = [...composerFileCommentsForSend];
     const composerTerminalContextsSnapshot = [...sendableComposerTerminalContexts];
@@ -8749,7 +8780,9 @@ export default function ChatView({
       if (pendingTurnStartRecoveryCandidate) {
         armPendingDirectTurnRecovery(threadIdForSend, pendingTurnStartRecoveryCandidate);
       } else {
-        clearComposerDraftContent(threadIdForSend, { preservePreviewUrls: true });
+        clearComposerDraftContent(threadIdForSend, {
+          preservePreviewUrls: true,
+        });
       }
       if (isLivePlanFollowUpSubmission) {
         setComposerDraftInteractionMode(threadIdForSend, interactionModeForSend);
@@ -10206,7 +10239,6 @@ export default function ChatView({
   useLayoutEffect(() => {
     composerFooterLayoutSyncRef.current?.();
   }, [composerFooterTier]);
-  const composerModelEffortPickerWidthClassName = isComposerFooterCompact ? "w-40" : "w-44 sm:w-52";
   const isComposerModelEffortPickerOpen = isModelPickerOpen || isTraitsPickerOpen;
   const handleComposerModelEffortPickerOpenChange = useCallback(
     (open: boolean) => {
@@ -10227,7 +10259,9 @@ export default function ChatView({
   const openSelectedProviderSettings = useCallback(() => {
     void navigate({
       to: "/settings",
-      search: { section: selectedProvider === "omnimind" ? "models" : "providers" },
+      search: {
+        section: selectedProvider === "omnimind" ? "models" : "providers",
+      },
     });
   }, [navigate, selectedProvider]);
   const composerPickerControls = (
@@ -10350,7 +10384,10 @@ export default function ChatView({
           if (!homeDir) {
             throw new Error("Home folder is not available yet.");
           }
-          const homeProjectId = await ensureHomeChatProject({ homeDir, chatWorkspaceRoot });
+          const homeProjectId = await ensureHomeChatProject({
+            homeDir,
+            chatWorkspaceRoot,
+          });
           if (!homeProjectId) {
             throw new Error("Unable to prepare a normal chat.");
           }
@@ -10417,7 +10454,6 @@ export default function ChatView({
     scheduleComposerFocus,
     setDraftThreadContext,
     setStoreThreadWorkspace,
-    studioWorkspaceRoot,
     syncServerShellSnapshot,
     threadId,
   ]);
@@ -10495,7 +10531,7 @@ export default function ChatView({
         .getState()
         .projects.find((candidate) => candidate.id === projectId && candidate.kind === "project");
       if (!project) {
-        throw new Error("Selected project is not available.");
+        throw new Error(t("chatToAgent.selectedProjectUnavailable"));
       }
       if (draftThread?.projectId === projectId) {
         scheduleComposerFocus();
@@ -10508,6 +10544,7 @@ export default function ChatView({
       isLocalDraftThread,
       moveEmptyDraftToLocalProject,
       scheduleComposerFocus,
+      t,
     ],
   );
 
@@ -10518,7 +10555,7 @@ export default function ChatView({
       }
       const api = readNativeApi();
       if (!api) {
-        throw new Error("App is still connecting. Try again in a moment.");
+        throw new Error(t("composer.local.connecting"));
       }
       if (!selectedModelSelection) {
         throw new Error(t("composer.modelRequiredToSend"));
@@ -10564,35 +10601,141 @@ export default function ChatView({
 
   const handleSendToAgentProject = useCallback(
     async (projectId: ProjectId) => {
+      const api = readNativeApi();
       const project = useStore
         .getState()
         .projects.find((candidate) => candidate.id === projectId && candidate.kind === "project");
       if (!project) {
-        throw new Error("Selected project is not available.");
+        throw new Error(t("chatToAgent.selectedProjectUnavailable"));
+      }
+      if (!api || !activeThread || !canSendToAgent || !activeChatWorkspaceRoot) {
+        throw new Error(t("error.prepareAgent"));
       }
       if (!selectedModelSelection) {
         throw new Error(t("composer.modelRequiredToSend"));
       }
-      const targetThreadId = await handleNewThread(projectId, {
-        fresh: true,
-        provider: selectedProvider,
-      });
-      if (!targetThreadId) {
-        throw new Error(t("error.prepareAgent"));
+      const attemptKey = `${activeThread.id}:${projectId}`;
+      let attempt = chatToAgentAttemptsRef.current.get(attemptKey);
+      if (!attempt) {
+        attempt = {
+          command: {
+            type: "thread.fork.create",
+            commandId: newCommandId(),
+            threadId: newThreadId(),
+            sourceThreadId: activeThread.id,
+            projectId,
+            title: activeThread.title,
+            modelSelection: selectedModelSelection,
+            runtimeMode,
+            interactionMode,
+            envMode: "local",
+            branch: null,
+            worktreePath: null,
+            workingDirectory: null,
+            associatedWorktreePath: null,
+            associatedWorktreeBranch: null,
+            associatedWorktreeRef: null,
+            createBranchFlowCompleted: false,
+            sidechatSourceThreadId: null,
+            forkScope: {
+              kind: "chat-to-agent",
+              bootstrapStatus: "pending",
+            },
+            createdAt: new Date().toISOString(),
+          },
+          accepted: false,
+          draftCopied: false,
+          warningShown: false,
+        };
+        chatToAgentAttemptsRef.current.set(attemptKey, attempt);
+      }
+      const targetThreadId = attempt.command.threadId;
+
+      if (!attempt.accepted) {
+        try {
+          await api.orchestration.dispatchCommand(attempt.command);
+          attempt.accepted = true;
+        } catch (error) {
+          const recoverySnapshot = await api.orchestration.getShellSnapshot().catch(() => null);
+          const acceptedTarget = recoverySnapshot?.threads.some(
+            (thread) => thread.id === targetThreadId,
+          );
+          if (!recoverySnapshot || !acceptedTarget) {
+            throw error;
+          }
+          syncServerShellSnapshot(recoverySnapshot);
+          attempt.accepted = true;
+        }
       }
 
-      const draftStore = useComposerDraftStore.getState();
-      draftStore.copyTransferableComposerState(threadId, targetThreadId);
-      draftStore.setModelSelection(targetThreadId, selectedModelSelection);
+      if (!attempt.draftCopied) {
+        const draftStore = useComposerDraftStore.getState();
+        draftStore.copyTransferableComposerState(threadId, targetThreadId);
+        draftStore.setModelSelection(targetThreadId, attempt.command.modelSelection);
+        attempt.draftCopied = true;
+      }
+      const outputsPath = joinProjectPath(activeChatWorkspaceRoot, "outputs");
+      const outputs = await api.filesystem.browse({ partialPath: outputsPath }).catch(() => null);
+      if (outputs && outputs.entries.length > 0) {
+        const targetDraft = useComposerDraftStore.getState().draftsByThreadId[targetThreadId];
+        const token = formatComposerMentionToken(outputsPath);
+        const currentPrompt = targetDraft?.prompt ?? "";
+        const currentMentions = targetDraft?.mentions ?? [];
+        if (!currentMentions.some((mention) => mention.path === outputsPath)) {
+          const nextPrompt = `${currentPrompt}${currentPrompt && !/\s$/u.test(currentPrompt) ? " " : ""}${token} `;
+          useComposerDraftStore.getState().setPrompt(targetThreadId, nextPrompt);
+          useComposerDraftStore
+            .getState()
+            .setMentions(targetThreadId, [
+              ...currentMentions,
+              { name: "outputs", path: outputsPath, resourceKind: "directory" },
+            ]);
+        }
+      }
+
+      const snapshot = await api.orchestration.getShellSnapshot();
+      syncServerShellSnapshot(snapshot);
+      const targetDetail = await api.orchestration
+        .getThreadDetailSnapshot({ threadId: targetThreadId })
+        .catch(() => null);
+      if (
+        !attempt.warningShown &&
+        targetDetail?.thread.activities.some(
+          (activity) => activity.kind === "chat-to-agent.attachments.partial",
+        )
+      ) {
+        toastManager.add({
+          type: "warning",
+          title: t("chatToAgent.attachmentsPartialToast"),
+          description: t("chatToAgent.attachmentsPartialToastDescription"),
+        });
+        attempt.warningShown = true;
+      }
+      await navigate({
+        to: "/$threadId",
+        params: { threadId: targetThreadId },
+      });
+      chatToAgentAttemptsRef.current.delete(attemptKey);
     },
-    [handleNewThread, selectedModelSelection, selectedProvider, t, threadId],
+    [
+      activeThread,
+      activeChatWorkspaceRoot,
+      interactionMode,
+      canSendToAgent,
+      navigate,
+      runtimeMode,
+      selectedModelSelection,
+      syncServerShellSnapshot,
+      t,
+      threadId,
+    ],
   );
 
   const handleCreateAgentProjectFromPickerPath = useCallback(
     async (workspaceRoot: string) => {
       const api = readNativeApi();
       if (!api) {
-        throw new Error("App is still connecting. Try again in a moment.");
+        throw new Error(t("composer.local.connecting"));
       }
       if (!selectedModelSelection) {
         throw new Error(t("composer.modelRequiredToSend"));
@@ -10776,10 +10919,58 @@ export default function ChatView({
         snapshot,
         trigger,
         base: `${formatComposerMentionToken(absolutePath)} `,
+        onApplied: () => {
+          updateSelectedComposerMentions((existing) => {
+            const nextMention = {
+              name: absolutePath,
+              path: absolutePath,
+              resourceKind: "directory",
+            } satisfies ProviderMentionReference;
+            return [...existing.filter((mention) => mention.path !== absolutePath), nextMention];
+          });
+        },
       });
     },
-    [applyComposerTriggerReplacement, resolveActiveComposerTrigger],
+    [applyComposerTriggerReplacement, resolveActiveComposerTrigger, updateSelectedComposerMentions],
   );
+
+  const insertExplicitPathReference = useCallback(
+    (absolutePath: string, resourceKind: "file" | "directory") => {
+      const snapshot = readComposerSnapshot();
+      const token = formatComposerMentionToken(absolutePath);
+      const needsLeadingSpace =
+        snapshot.expandedCursor > 0 &&
+        !/\s/.test(snapshot.value[snapshot.expandedCursor - 1] ?? "");
+      const replacement = `${needsLeadingSpace ? " " : ""}${token} `;
+      const applied = applyPromptReplacement(
+        snapshot.expandedCursor,
+        snapshot.expandedCursor,
+        replacement,
+      );
+      if (applied === false) return;
+      updateSelectedComposerMentions((existing) => {
+        const nextMention = {
+          name: basenameOfPath(absolutePath) || absolutePath,
+          path: absolutePath,
+          resourceKind,
+        } satisfies ProviderMentionReference;
+        return [...existing.filter((mention) => mention.path !== absolutePath), nextMention];
+      });
+    },
+    [applyPromptReplacement, readComposerSnapshot, updateSelectedComposerMentions],
+  );
+
+  const handleAddFileReference = useCallback(async () => {
+    const api = readNativeApi();
+    const picked = await api?.dialogs.pickFile?.();
+    if (picked) insertExplicitPathReference(picked, "file");
+  }, [insertExplicitPathReference]);
+
+  const handleAddFolderReference = useCallback(async () => {
+    const api = readNativeApi();
+    const picked = await api?.dialogs.pickFolder();
+    if (picked) insertExplicitPathReference(picked, "directory");
+  }, [insertExplicitPathReference]);
 
   // Rewrites the active `@...` mention to an absolute folder path with a trailing separator
   // so the local-folder picker stays open and the user can keep browsing by clicking or typing.
@@ -10985,6 +11176,16 @@ export default function ChatView({
           snapshot,
           trigger,
           base: `${formatComposerMentionToken(item.path)} `,
+          onApplied: () => {
+            updateSelectedComposerMentions((existing) => {
+              const nextMention = {
+                name: basenameOfPath(item.path) || item.path,
+                path: item.path,
+                resourceKind: item.pathKind,
+              } satisfies ProviderMentionReference;
+              return [...existing.filter((mention) => mention.path !== item.path), nextMention];
+            });
+          },
         });
         return;
       }
@@ -11480,7 +11681,10 @@ export default function ChatView({
     // Keep the editor workspace view (and any open file) across the new-thread
     // navigation; the default new-thread flow clears all search params.
     void handleNewThread(activeProjectIdForNewChat, undefined, {
-      search: (previous) => ({ ...stripDiffSearchParams(previous), view: "editor" }),
+      search: (previous) => ({
+        ...stripDiffSearchParams(previous),
+        view: "editor",
+      }),
     });
   }, [activeProjectIdForNewChat, handleNewThread]);
   const onOpenEditorChat = useCallback(
@@ -11692,6 +11896,8 @@ export default function ChatView({
       <ComposerExtrasMenu
         interactionMode={interactionMode}
         onAddAttachments={addComposerAttachments}
+        onAddFileReference={() => void handleAddFileReference()}
+        onAddFolderReference={() => void handleAddFolderReference()}
         onSetPlanMode={setPlanMode}
       />
       {!isVoiceRecording && !isVoiceTranscribing ? (
@@ -11733,8 +11939,7 @@ export default function ChatView({
   };
   const showEmptyLandingProjectPicker =
     isCenteredEmptyLanding && isLocalDraftThread && activeProject?.kind === "project";
-  const showContainerChatWorkspacePicker =
-    isEmptyChatLanding && (isHomeChatContainer || isStudioContainer);
+  const showContainerChatWorkspacePicker = isEmptyChatLanding && isStudioContainer;
   const emptyLandingProjectChip =
     !showContainerChatWorkspacePicker &&
     !showEmptyLandingProjectPicker &&
@@ -12622,13 +12827,13 @@ export default function ChatView({
               : null
           }
           sendToAgentControl={
-            isChatProject && !isEditorRail ? (
+            canSendToAgent && !isEditorRail ? (
               <ProjectPicker
                 align="end"
                 side="bottom"
                 selectionMode="project"
-                addActionLabel="Choose another folder"
-                searchPlaceholder="Choose a project for Agent"
+                addActionLabel={t("chatToAgent.chooseAnotherFolder")}
+                searchPlaceholder={t("chatToAgent.chooseProject")}
                 onSelectProject={handleSendToAgentProject}
                 onCreateProjectFromPath={handleCreateAgentProjectFromPickerPath}
                 renderTrigger={
@@ -12905,7 +13110,9 @@ export default function ChatView({
                         <div className="flex w-full items-center gap-1">
                           {relocateComposerLeadingControls ? (
                             <div className="flex shrink-0 items-center gap-1 pl-1">
-                              {renderComposerLeadingControls({ iconOnly: true })}
+                              {renderComposerLeadingControls({
+                                iconOnly: true,
+                              })}
                             </div>
                           ) : null}
                           {isGitRepo && !environmentEnabled ? (
