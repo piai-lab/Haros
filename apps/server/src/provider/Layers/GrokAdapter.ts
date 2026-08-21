@@ -142,7 +142,6 @@ export const takeGrokOmniMindHarnessPolicyTextPart = (
   scopedGatewayConnectionAvailable: boolean,
 ) =>
   takeOmniMindHarnessPolicyTextPartForProviderSession(state, {
-    provider: PROVIDER,
     scopedGatewayConnectionAvailable,
   });
 const GROK_RESUME_VERSION = 1 as const;

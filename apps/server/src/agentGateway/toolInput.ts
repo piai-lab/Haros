@@ -2,6 +2,7 @@ import {
   DEFAULT_MODEL_BY_PROVIDER,
   OmniMindCreateThreadsInput,
   OmniMindWaitForThreadsInput,
+  PROVIDER_KINDS,
   type ModelSelection,
   type ProviderKind,
 } from "@omnimind/contracts";
@@ -9,18 +10,7 @@ import { Schema } from "effect";
 
 import { AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION } from "./targetResolver.ts";
 
-export const PROVIDER_KINDS: ReadonlyArray<ProviderKind> = [
-  "omnimind",
-  "codex",
-  "claudeAgent",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-];
+export { PROVIDER_KINDS };
 
 export const MODEL_SELECTION_INPUT_SCHEMA = {
   type: "object",

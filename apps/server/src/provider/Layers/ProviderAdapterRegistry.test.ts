@@ -1,4 +1,4 @@
-import type { ProviderKind } from "@omnimind/contracts";
+import { PROVIDER_KINDS, type ProviderKind } from "@omnimind/contracts";
 import { it, assert, vi } from "@effect/vitest";
 import { assertFailure } from "@effect/vitest/utils";
 
@@ -231,18 +231,7 @@ layer("ProviderAdapterRegistryLive", (it) => {
       assert.equal(pi, fakePiAdapter);
 
       const providers = yield* registry.listProviders();
-      assert.deepEqual(providers, [
-        "codex",
-        "claudeAgent",
-        "cursor",
-        "antigravity",
-        "grok",
-        "droid",
-        "kilo",
-        "opencode",
-        "omnimind",
-        "pi",
-      ]);
+      assert.deepEqual(new Set(providers), new Set(PROVIDER_KINDS));
     }),
   );
 

@@ -52,7 +52,6 @@ import {
 describe("Pi native resource projection", () => {
   it("keeps native slash input in Pi and injects OmniMind policy through its system prompt", () => {
     const prompt = makePiHostSystemPrompt({
-      provider: "omnimind",
       gatewayControlAvailable: true,
       enabledBuiltInGroups: ["tasks"],
     });
@@ -75,7 +74,6 @@ describe("Pi native resource projection", () => {
       workSurface: "agent",
     });
     const stockPiPrompt = makePiHostSystemPrompt({
-      provider: "pi",
       gatewayControlAvailable: true,
     });
 
@@ -115,7 +113,6 @@ describe("Pi native resource projection", () => {
 
   it("keeps general Host tool guidance outside the immutable engine contract", () => {
     const hostPrompt = makePiHostSystemPrompt({
-      provider: "omnimind",
       gatewayControlAvailable: true,
       enabledBuiltInGroups: ["browser", "device"],
     });
@@ -146,7 +143,6 @@ describe("Pi native resource projection", () => {
 
   it("does not give stock Pi the OmniMind identity or work-surface contract", () => {
     const prompt = makePiHostSystemPrompt({
-      provider: "pi",
       gatewayControlAvailable: false,
     });
 

@@ -3885,7 +3885,6 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             ...(context.harnessPolicyDelivered ? { harnessPolicyDelivered: true } : {}),
           },
           {
-            provider,
             scopedGatewayConnectionAvailable: context.gatewayControlAvailable,
           },
         );

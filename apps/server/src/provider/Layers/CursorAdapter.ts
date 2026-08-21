@@ -135,7 +135,6 @@ export const takeCursorOmniMindHarnessPolicyTextPart = (
   scopedGatewayConnectionAvailable: boolean,
 ) =>
   takeOmniMindHarnessPolicyTextPartForProviderSession(state, {
-    provider: PROVIDER,
     scopedGatewayConnectionAvailable,
   });
 const CURSOR_RESUME_VERSION = 1 as const;

@@ -45,10 +45,7 @@ import {
 } from "@omnimind/contracts";
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
 
-import {
-  providerHasOmniMindGatewayControl,
-  renderOmniMindHarnessPolicy,
-} from "../../agentGateway/harnessPolicy.ts";
+import { renderOmniMindHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
 import {
   agentGatewayGroupsFromToolDescriptors,
   listAgentGatewayMcpTools,
@@ -969,17 +966,13 @@ export function makePiGatewayLoadWarning(displayName: string) {
  * so slash input reaches that source-locked pipeline unchanged.
  */
 export function makePiHostSystemPrompt(input: {
-  readonly provider: ProviderKind;
   readonly gatewayControlAvailable: boolean;
   readonly enabledBuiltInGroups?: ReadonlyArray<BuiltInToolGroupId>;
 }): string {
   return [
     "<omnimind_host_context>",
     renderOmniMindHarnessPolicy({
-      gatewayControlAvailable: providerHasOmniMindGatewayControl({
-        provider: input.provider,
-        scopedGatewayConnectionAvailable: input.gatewayControlAvailable,
-      }),
+      gatewayControlAvailable: input.gatewayControlAvailable,
       projection: {
         mode: "direct",
         enabledGroups: input.enabledBuiltInGroups ?? [],
@@ -2880,7 +2873,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   : {}),
                 hostSystemPrompt: (available) =>
                   makePiHostSystemPrompt({
-                    provider,
                     gatewayControlAvailable:
                       provider === "omnimind" ? agentGatewayConnection !== undefined : available,
                     enabledBuiltInGroups,

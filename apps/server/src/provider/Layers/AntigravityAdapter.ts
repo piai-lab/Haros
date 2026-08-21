@@ -547,7 +547,6 @@ export function buildAntigravityTurnPrompt(
   },
 ): string {
   const harnessPolicy = takeOmniMindHarnessPolicyForProviderSession(state, {
-    provider: PROVIDER,
     scopedGatewayConnectionAvailable: input.hasGatewaySessionLease,
   });
   return [harnessPolicy, input.prompt].filter(Boolean).join("\n\n");

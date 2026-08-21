@@ -129,7 +129,6 @@ export const takeDroidOmniMindHarnessPolicyTextPart = (
   scopedGatewayConnectionAvailable: boolean,
 ) =>
   takeOmniMindHarnessPolicyTextPartForProviderSession(state, {
-    provider: PROVIDER,
     scopedGatewayConnectionAvailable,
   });
 const DROID_RESUME_VERSION = 1 as const;

@@ -53,7 +53,7 @@ export const ORCHESTRATION_WS_CHANNELS = {
   threadEvent: "orchestration.threadEvent",
 } as const;
 
-export const ProviderKind = Schema.Literals([
+export const PROVIDER_KINDS = [
   "omnimind",
   "codex",
   "claudeAgent",
@@ -64,7 +64,9 @@ export const ProviderKind = Schema.Literals([
   "kilo",
   "opencode",
   "pi",
-]);
+] as const;
+
+export const ProviderKind = Schema.Literals(PROVIDER_KINDS);
 export type ProviderKind = typeof ProviderKind.Type;
 export const ProviderApprovalPolicy = Schema.Literals([
   "untrusted",

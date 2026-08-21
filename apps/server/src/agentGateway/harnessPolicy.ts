@@ -1,4 +1,4 @@
-import type { BuiltInToolGroupId, ProviderKind } from "@omnimind/contracts";
+import type { BuiltInToolGroupId } from "@omnimind/contracts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
 export const OMNIMIND_HARNESS_POLICY_VERSION = "2026-08-21.1";
@@ -105,29 +105,6 @@ export interface OmniMindHarnessPolicyDeliveryState {
   harnessPolicyDelivered?: boolean | undefined;
 }
 
-const PROVIDERS_WITH_THREAD_SCOPED_OMNIMIND_MCP = new Set<ProviderKind>([
-  "codex",
-  "claudeAgent",
-  "antigravity",
-  "cursor",
-  "grok",
-  "droid",
-  "opencode",
-  "kilo",
-  "pi",
-  "omnimind",
-]);
-
-export function providerHasOmniMindGatewayControl(input: {
-  readonly provider: ProviderKind;
-  readonly scopedGatewayConnectionAvailable: boolean;
-}): boolean {
-  return (
-    input.scopedGatewayConnectionAvailable &&
-    PROVIDERS_WITH_THREAD_SCOPED_OMNIMIND_MCP.has(input.provider)
-  );
-}
-
 /** Return the private host-context block exactly once for one provider session. */
 export function takeOmniMindHarnessPolicyForSession(
   state: OmniMindHarnessPolicyDeliveryState,
@@ -143,25 +120,23 @@ export function takeOmniMindHarnessPolicyForSession(
 }
 
 /**
- * Provider-aware delivery guard. The transport flag must only become true
- * after a provider has installed thread-scoped gateway tools successfully.
+ * Session-scoped delivery guard. The transport flag must only become true
+ * after the Engine has installed thread-scoped gateway tools successfully.
  */
 export function takeOmniMindHarnessPolicyForProviderSession(
   state: OmniMindHarnessPolicyDeliveryState,
   input: {
-    readonly provider: ProviderKind;
     readonly scopedGatewayConnectionAvailable: boolean;
   },
 ): string | null {
   return takeOmniMindHarnessPolicyForSession(state, {
-    gatewayControlAvailable: providerHasOmniMindGatewayControl(input),
+    gatewayControlAvailable: input.scopedGatewayConnectionAvailable,
   });
 }
 
 export function takeOmniMindHarnessPolicyTextPartForProviderSession(
   state: OmniMindHarnessPolicyDeliveryState,
   input: {
-    readonly provider: ProviderKind;
     readonly scopedGatewayConnectionAvailable: boolean;
   },
 ): { readonly type: "text"; readonly text: string } | null {

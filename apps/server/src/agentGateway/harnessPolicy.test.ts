@@ -50,48 +50,34 @@ describe("OmniMind harness policy", () => {
     assert.isNull(takeOmniMindHarnessPolicyForSession(state, { gatewayControlAvailable: true }));
   });
 
-  it("delivers once on fresh/load/fork sessions for every scoped MCP provider", () => {
-    for (const provider of [
-      "antigravity",
-      "cursor",
-      "grok",
-      "droid",
-      "opencode",
-      "kilo",
-      "pi",
-    ] as const) {
-      for (const lifecycle of ["fresh", "load", "fork"] as const) {
-        const state: { harnessPolicyDelivered?: boolean } = {};
-        const first =
-          takeOmniMindHarnessPolicyTextPartForProviderSession(state, {
-            provider,
-            scopedGatewayConnectionAvailable: true,
-          })?.text ?? "";
-        assert.include(first, OMNIMIND_HARNESS_POLICY_MARKER, `${provider}/${lifecycle}`);
-        assert.include(first, "tools actually available", `${provider}/${lifecycle}`);
-        assert.notInclude(first, "canonical run envelope", `${provider}/${lifecycle}`);
-        assert.isNull(
-          takeOmniMindHarnessPolicyForProviderSession(state, {
-            provider,
-            scopedGatewayConnectionAvailable: true,
-          }),
-          `${provider}/${lifecycle}`,
-        );
-      }
+  it("delivers once on fresh/load/fork sessions after scoped setup succeeds", () => {
+    for (const lifecycle of ["fresh", "load", "fork"] as const) {
+      const state: { harnessPolicyDelivered?: boolean } = {};
+      const first =
+        takeOmniMindHarnessPolicyTextPartForProviderSession(state, {
+          scopedGatewayConnectionAvailable: true,
+        })?.text ?? "";
+      assert.include(first, OMNIMIND_HARNESS_POLICY_MARKER, lifecycle);
+      assert.include(first, "tools actually available", lifecycle);
+      assert.notInclude(first, "canonical run envelope", lifecycle);
+      assert.isNull(
+        takeOmniMindHarnessPolicyForProviderSession(state, {
+          scopedGatewayConnectionAvailable: true,
+        }),
+        lifecycle,
+      );
     }
   });
 
-  it("keeps OpenCode, Kilo, and Pi identity-only until scoped setup succeeds", () => {
-    for (const provider of ["opencode", "kilo", "pi"] as const) {
-      const text =
-        takeOmniMindHarnessPolicyForProviderSession(
-          {},
-          { provider, scopedGatewayConnectionAvailable: false },
-        ) ?? "";
-      assert.include(text, OMNIMIND_HARNESS_POLICY_MARKER, provider);
-      assert.include(text, "OmniMind MCP control is unavailable", provider);
-      assert.notInclude(text, "canonical run envelope", provider);
-    }
+  it("keeps a provider session identity-only until scoped setup succeeds", () => {
+    const text =
+      takeOmniMindHarnessPolicyForProviderSession(
+        {},
+        { scopedGatewayConnectionAvailable: false },
+      ) ?? "";
+    assert.include(text, OMNIMIND_HARNESS_POLICY_MARKER);
+    assert.include(text, "OmniMind MCP control is unavailable");
+    assert.notInclude(text, "canonical run envelope");
   });
 
   it("keeps Device guidance at the authority boundary without claiming entry coverage", () => {
