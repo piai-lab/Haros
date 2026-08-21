@@ -27,6 +27,7 @@ import { makeDurableProviderServiceLive } from "./Layers/ProviderService";
 import { ProviderSessionDirectoryLive } from "./Layers/ProviderSessionDirectory";
 import { ProviderSessionRuntimeRepositoryLive } from "../persistence/Layers/ProviderSessionRuntime";
 import { ProviderRuntimeEventRepositoryLive } from "../persistence/Layers/ProviderRuntimeEvents";
+import { OrchestrationProjectionSnapshotQueryLive } from "../orchestration/Layers/ProjectionSnapshotQuery";
 
 export function makeServerProviderLayer(
   options: {
@@ -116,6 +117,7 @@ export function makeServerProviderLayer(
     );
     const providerDiscoveryLayer = ProviderDiscoveryServiceLive.pipe(
       Layer.provide(adapterRegistryLayer),
+      Layer.provide(OrchestrationProjectionSnapshotQueryLive),
       // Skill toggles live in server settings; the shared ServerSettingsLive
       // layer is memoized so this reuses the instance built at the top level.
       Layer.provide(ServerSettingsLive),

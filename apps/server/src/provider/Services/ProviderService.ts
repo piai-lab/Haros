@@ -35,6 +35,7 @@ import type {
 } from "@omnimind/contracts";
 import { ServiceMap } from "effect";
 import type { Effect, Stream } from "effect";
+import type { ProductSurface } from "@omnimind/shared/productSurface";
 
 import type { ProviderServiceError } from "../Errors.ts";
 import type { PersistedProviderRuntimeEvent } from "../../persistence/Services/ProviderRuntimeEvents.ts";
@@ -67,6 +68,7 @@ export interface ProviderServiceShape {
   readonly startSession: (
     threadId: ThreadId,
     input: ProviderSessionStartInput,
+    context?: { readonly productSurface?: ProductSurface },
   ) => Effect.Effect<ProviderSession, ProviderServiceError>;
 
   /**

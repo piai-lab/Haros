@@ -10,13 +10,16 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import type {
+  OrchestrationProjectShell,
+  OrchestrationThreadShell,
   ProviderComposerCapabilities,
   ProviderKind,
   ProviderListModelsResult,
   ProviderListSkillsResult,
 } from "@omnimind/contracts";
+import { ProjectId, ThreadId } from "@omnimind/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
-import { Effect, Layer } from "effect";
+import { Effect, Layer, Option } from "effect";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -27,6 +30,10 @@ import {
   type ServerConfigShape,
 } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
+import {
+  ProjectionSnapshotQuery,
+  type ProjectionSnapshotQueryShape,
+} from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import type { ProviderAdapterError } from "../Errors.ts";
 import { ProviderAdapterRequestError } from "../Errors.ts";
 import type { ProviderAdapterShape } from "../Services/ProviderAdapter.ts";
@@ -141,6 +148,107 @@ afterEach(() => {
 });
 
 describe("ProviderDiscoveryService.listSkills", () => {
+  it.each([
+    ["project", "project" as const, "project" as const],
+    ["chat", "chat" as const, "global-only" as const],
+    ["studio", "studio" as const, "global-only" as const],
+  ])(
+    "derives %s resource trust from the authoritative Project kind",
+    async (_label, projectKind, expectedScope) => {
+      const projectId = ProjectId.makeUnsafe(`project-scope-${projectKind}`);
+      const threadId = ThreadId.makeUnsafe(`thread-scope-${projectKind}`);
+      const authoritativeRoot = path.join(root, `authoritative-${projectKind}`);
+      const forgedRendererCwd = path.join(root, "forged-renderer-cwd");
+      await mkdir(authoritativeRoot, { recursive: true });
+      await mkdir(forgedRendererCwd, { recursive: true });
+      const observed: unknown[] = [];
+      const adapter = {
+        listSkills: (input: unknown) => {
+          observed.push(input);
+          return Effect.succeed({ skills: [], source: "test", cached: false });
+        },
+        listCommands: (input: unknown) => {
+          observed.push(input);
+          return Effect.succeed({ commands: [], source: "test", cached: false });
+        },
+      } satisfies Partial<ProviderAdapterShape<ProviderAdapterError>>;
+      const thread = {
+        id: threadId,
+        projectId,
+        envMode: "local",
+        worktreePath: null,
+        workingDirectory: null,
+      } as OrchestrationThreadShell;
+      const project = {
+        id: projectId,
+        kind: projectKind,
+        workspaceRoot: authoritativeRoot,
+      } as OrchestrationProjectShell;
+      const snapshotQuery = {
+        getThreadShellById: () => Effect.succeed(Option.some(thread)),
+        getProjectShellById: () => Effect.succeed(Option.some(project)),
+      } as unknown as ProjectionSnapshotQueryShape;
+      const baseLayer = Layer.mergeAll(
+        makeConfigLayer(),
+        ServerSettingsService.layerTest(),
+        makeRegistryLayer(adapter),
+        Layer.succeed(ProjectionSnapshotQuery, snapshotQuery),
+      ).pipe(Layer.provideMerge(NodeServices.layer));
+      const testLayer = ProviderDiscoveryServiceLive.pipe(Layer.provideMerge(baseLayer));
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const discovery = yield* ProviderDiscoveryService;
+          const skills = yield* discovery.listSkills({
+            provider: "omnimind",
+            cwd: forgedRendererCwd,
+            threadId,
+          });
+          const commands = yield* discovery.listCommands({
+            provider: "omnimind",
+            cwd: forgedRendererCwd,
+            threadId,
+          });
+          return { skills, commands };
+        }).pipe(Effect.provide(testLayer)),
+      );
+
+      expect(result.skills.source).toContain("test");
+      expect(result.commands.source).toBe("test");
+      expect(observed).toHaveLength(2);
+      for (const scopedInput of observed) {
+        expect(scopedInput).toMatchObject(
+          expectedScope === "project"
+            ? {
+                cwd: authoritativeRoot,
+                resourceScope: { kind: "project", authoritativeRoot },
+              }
+            : {
+                cwd: homeDir,
+                resourceScope: { kind: "global-only" },
+              },
+        );
+        expect(scopedInput).not.toMatchObject({ cwd: forgedRendererCwd });
+      }
+    },
+  );
+
+  it("fails closed to global-only when no server Thread is available", async () => {
+    const observed: unknown[] = [];
+    await runListSkills({
+      adapter: {
+        listSkills: (input) => {
+          observed.push(input);
+          return Effect.succeed({ skills: [], source: "test", cached: false });
+        },
+      },
+      provider: "omnimind",
+    });
+    expect(observed[0]).toMatchObject({
+      cwd: homeDir,
+      resourceScope: { kind: "global-only" },
+    });
+  });
+
   it("serves the unified catalog for providers without native skill discovery", async () => {
     await writeSkill(path.join(baseDir, "skills", "portable"), "portable");
 

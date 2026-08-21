@@ -27,7 +27,7 @@ export function buildOmniMindSessionExtensions(input: {
   }) => void;
 }): OmniMindSessionExtensionComposition {
   const todoExtension =
-    input.workSurface === "agent" && input.onTasksUpdated !== undefined
+    input.workSurface !== undefined && input.onTasksUpdated !== undefined
       ? makeOmniMindTaskListExtension({
           defineTool: input.defineTool,
           onTasksUpdated: input.onTasksUpdated,

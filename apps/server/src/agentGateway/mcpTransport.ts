@@ -69,19 +69,31 @@ export function makeAgentGatewayMcpTransport(input: {
   >;
   readonly snapshotQuery: ProjectionSnapshotQueryShape;
   readonly tools: ReadonlyArray<ToolEntry>;
-  readonly loadExposedTools?: Effect.Effect<ReadonlyArray<ToolEntry>, unknown>;
+  readonly loadExposedTools?:
+    | Effect.Effect<ReadonlyArray<ToolEntry>, unknown>
+    | ((
+        callerThread: OrchestrationThreadShell,
+      ) => Effect.Effect<ReadonlyArray<ToolEntry>, unknown>);
   readonly instructions: string | ((tools: ReadonlyArray<ToolEntry>) => string);
   readonly requireThreadShell: (
     threadId: string,
   ) => Effect.Effect<OrchestrationThreadShell, unknown>;
 }): AgentGatewayShape["handleMcpPost"] {
   const toolsByName = new Map(input.tools.map((tool) => [tool.definition.name, tool]));
-  const loadExposedTools = input.loadExposedTools ?? Effect.succeed(input.tools);
+  const loadExposedTools =
+    typeof input.loadExposedTools === "function"
+      ? input.loadExposedTools
+      : input.loadExposedTools
+        ? () => input.loadExposedTools as Effect.Effect<ReadonlyArray<ToolEntry>, unknown>
+        : () => Effect.succeed(input.tools);
   const handleRequest = (request: JsonRpcRequest, context: Omit<ToolContext, "jsonRpcRequestId">) =>
     Effect.gen(function* () {
+      const loadCurrentExposedTools = input
+        .requireThreadShell(context.callerThreadId)
+        .pipe(Effect.flatMap(loadExposedTools));
       switch (request.method) {
         case "initialize": {
-          const initializeTools = yield* loadExposedTools;
+          const initializeTools = yield* loadCurrentExposedTools;
           return jsonRpcResult(
             request.id,
             buildMcpInitializeResult({
@@ -97,7 +109,7 @@ export function makeAgentGatewayMcpTransport(input: {
         case "ping":
           return jsonRpcResult(request.id, {});
         case "tools/list": {
-          const exposedTools = yield* loadExposedTools;
+          const exposedTools = yield* loadCurrentExposedTools;
           return jsonRpcResult(request.id, {
             tools: exposedTools.map((tool) => tool.definition),
           });
@@ -121,7 +133,7 @@ export function makeAgentGatewayMcpTransport(input: {
             return jsonRpcError(request.id, JSON_RPC_INVALID_PARAMS, `Unknown tool "${toolName}".`);
           }
           const exposedToolNames = new Set(
-            (yield* loadExposedTools).map((entry) => entry.definition.name),
+            (yield* loadCurrentExposedTools).map((entry) => entry.definition.name),
           );
           if (!exposedToolNames.has(toolName)) {
             return jsonRpcResult(

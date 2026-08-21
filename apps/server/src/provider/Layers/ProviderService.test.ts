@@ -5734,6 +5734,39 @@ restartRollbackRouting.layer("ProviderServiceLive restart-based rollback", (it) 
 });
 
 piInteractionRouting.layer("ProviderServiceLive Pi interaction generation", (it) => {
+  it.effect("persists and recovers stock Pi work-surface trust", () =>
+    Effect.gen(function* () {
+      const provider = yield* ProviderService;
+      const directory = yield* ProviderSessionDirectory;
+      const threadId = asThreadId("thread-stock-pi-work-surface-recovery");
+
+      yield* provider.startSession(threadId, {
+        provider: "pi",
+        threadId,
+        cwd: "/tmp/managed-chat",
+        workSurface: "chat",
+        runtimeMode: "full-access",
+      });
+      const startedBinding = Option.getOrUndefined(yield* directory.getBinding(threadId));
+      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).workSurface, "chat");
+      assert.equal(asRuntimePayloadRecord(startedBinding?.runtimePayload).projectContextRoot, null);
+
+      yield* provider.stopRuntimeSession!({ threadId });
+      piInteractionRouting.pi.startSession.mockClear();
+      yield* provider.sendTurn({
+        threadId,
+        input: "resume global-only Chat",
+        attachments: [],
+      });
+
+      const recoveredInput = piInteractionRouting.pi.startSession.mock.calls[0]?.[0];
+      assert.equal(recoveredInput?.workSurface, "chat");
+      assert.equal(recoveredInput?.projectContextRoot, undefined);
+      yield* provider.stopSession({ threadId });
+      piInteractionRouting.pi.startSession.mockClear();
+    }),
+  );
+
   it.effect("requires the source lifecycle generation for modern Pi user input", () =>
     Effect.gen(function* () {
       const provider = yield* ProviderService;

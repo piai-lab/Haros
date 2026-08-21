@@ -18,6 +18,7 @@ import { randomUUID } from "node:crypto";
 import {
   CommandId,
   type BuiltInToolGroupId,
+  type OrchestrationThreadShell,
   OMNIMIND_GATEWAY_MAX_THREADS_PER_OPERATION,
   MessageId,
   THREAD_GOAL_MAX_CHARS,
@@ -78,7 +79,7 @@ import { makeBrowserAutomationHost } from "../../browserAutomation/Layers/Browse
 import { makeThreadReadTools } from "../threadReadTools.ts";
 import { makeThreadDiagnosticTools } from "../threadDiagnosticTools.ts";
 import {
-  exposedAgentGatewayTools,
+  exposedAgentGatewayToolsForProjectKind,
   makeAgentGatewayToolCatalog,
   projectBuiltInToolGroups,
   tagAgentGatewayTools,
@@ -199,7 +200,10 @@ export const makeAgentGateway = Effect.gen(function* () {
   // that runs with more privileges than the user granted the caller itself —
   // otherwise an approval-required or worktree-isolated agent escalates by proxy.
   const assertCallerMayDriveThread = (
-    caller: { readonly runtimeMode: RuntimeMode; readonly envMode?: string | null | undefined },
+    caller: {
+      readonly runtimeMode: RuntimeMode;
+      readonly envMode?: string | null | undefined;
+    },
     target: {
       readonly id: string;
       readonly runtimeMode: RuntimeMode;
@@ -432,12 +436,19 @@ export const makeAgentGateway = Effect.gen(function* () {
         properties: {
           threadId: { type: "string", description: "Target thread." },
           message: { type: "string", description: "Message text." },
-          mode: { type: "string", enum: ["queue", "steer"], description: "Dispatch mode." },
+          mode: {
+            type: "string",
+            enum: ["queue", "steer"],
+            description: "Dispatch mode.",
+          },
         },
         required: ["threadId", "message"],
         additionalProperties: false,
       },
-      annotations: { title: "Send a OmniMind message", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: {
+        title: "Send a OmniMind message",
+        ...WRITE_TOOL_ANNOTATIONS,
+      },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -473,7 +484,10 @@ export const makeAgentGateway = Effect.gen(function* () {
             createdAt: isoNow(),
           })
           .pipe(Effect.mapError((error) => new ToolInputError(errorText(error))));
-        return mcpToolResultJson({ threadId: target.id, dispatched: dispatchMode });
+        return mcpToolResultJson({
+          threadId: target.id,
+          dispatched: dispatchMode,
+        });
       }).pipe(Effect.catch((error) => Effect.succeed(mcpToolResultError(errorText(error))))),
   };
 
@@ -485,12 +499,18 @@ export const makeAgentGateway = Effect.gen(function* () {
       inputSchema: {
         type: "object",
         properties: {
-          threadId: { type: "string", description: "Thread whose turn should be interrupted." },
+          threadId: {
+            type: "string",
+            description: "Thread whose turn should be interrupted.",
+          },
         },
         required: ["threadId"],
         additionalProperties: false,
       },
-      annotations: { title: "Interrupt a OmniMind thread", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: {
+        title: "Interrupt a OmniMind thread",
+        ...WRITE_TOOL_ANNOTATIONS,
+      },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -536,7 +556,10 @@ export const makeAgentGateway = Effect.gen(function* () {
         required: ["threadId", "title"],
         additionalProperties: false,
       },
-      annotations: { title: "Rename a OmniMind thread", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: {
+        title: "Rename a OmniMind thread",
+        ...WRITE_TOOL_ANNOTATIONS,
+      },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -566,13 +589,22 @@ export const makeAgentGateway = Effect.gen(function* () {
       inputSchema: {
         type: "object",
         properties: {
-          threadId: { type: "string", description: "Thread to archive/unarchive." },
-          archived: { type: "boolean", description: "true to archive, false to unarchive." },
+          threadId: {
+            type: "string",
+            description: "Thread to archive/unarchive.",
+          },
+          archived: {
+            type: "boolean",
+            description: "true to archive, false to unarchive.",
+          },
         },
         required: ["archived"],
         additionalProperties: false,
       },
-      annotations: { title: "Update a OmniMind thread", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: {
+        title: "Update a OmniMind thread",
+        ...WRITE_TOOL_ANNOTATIONS,
+      },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -644,7 +676,10 @@ export const makeAgentGateway = Effect.gen(function* () {
         required: [],
         additionalProperties: false,
       },
-      annotations: { title: "Set an OmniMind task goal", ...WRITE_TOOL_ANNOTATIONS },
+      annotations: {
+        title: "Set an OmniMind task goal",
+        ...WRITE_TOOL_ANNOTATIONS,
+      },
     },
     handler: (args, context) =>
       Effect.gen(function* () {
@@ -685,7 +720,12 @@ export const makeAgentGateway = Effect.gen(function* () {
           achieved
             ? { threadId: target.id, goal: null, achieved: true }
             : blocked
-              ? { threadId: target.id, goal: target.goal, blocked: true, paused: true }
+              ? {
+                  threadId: target.id,
+                  goal: target.goal,
+                  blocked: true,
+                  paused: true,
+                }
               : { threadId: target.id, goal: goal || null },
         );
       }).pipe(Effect.catch((error) => Effect.succeed(mcpToolResultError(errorText(error))))),
@@ -771,9 +811,19 @@ export const makeAgentGateway = Effect.gen(function* () {
           : [],
     }),
   ]);
-  const loadExposedTools = serverSettings.getSettings.pipe(
-    Effect.map((settings) => exposedAgentGatewayTools(tools, settings)),
-  );
+  const loadExposedTools = (thread: OrchestrationThreadShell) =>
+    Effect.all([
+      serverSettings.getSettings,
+      snapshotQuery.getProjectShellById(thread.projectId),
+    ]).pipe(
+      Effect.map(([settings, project]) =>
+        Option.match(project, {
+          onNone: () => [],
+          onSome: (entry) =>
+            entry.kind ? exposedAgentGatewayToolsForProjectKind(tools, settings, entry.kind) : [],
+        }),
+      ),
+    );
   return {
     getBuiltInToolGroups: serverSettings.getSettings.pipe(
       Effect.map((settings) => projectBuiltInToolGroups(tools, settings)),
