@@ -44,7 +44,7 @@ describe("AgentGateway tool catalog", () => {
   it("projects availability separately from persisted user enablement", () => {
     const catalog = makeAgentGatewayToolCatalog([
       tagAgentGatewayTools({
-        group: "omnimind",
+        group: "tasks",
         available: true,
         tools: [makeTool("omnimind_read_thread")],
       }),
@@ -56,17 +56,41 @@ describe("AgentGateway tool catalog", () => {
     ]);
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
-      agentTools: { disabledBuiltInGroups: ["omnimind", "future-group"] },
+      agentTools: { disabledBuiltInGroups: ["tasks", "future-group"] },
     };
 
     expect(exposedAgentGatewayTools(catalog, settings)).toEqual([]);
     expect(projectBuiltInToolGroups(catalog, settings)).toEqual([
       {
-        id: "omnimind",
+        id: "tasks",
         toolCount: 1,
         availableToolCount: 1,
         availability: "available",
         enabled: false,
+        effective: false,
+      },
+      {
+        id: "diagnostics",
+        toolCount: 0,
+        availableToolCount: 0,
+        availability: "unavailable",
+        enabled: true,
+        effective: false,
+      },
+      {
+        id: "goals",
+        toolCount: 0,
+        availableToolCount: 0,
+        availability: "unavailable",
+        enabled: true,
+        effective: false,
+      },
+      {
+        id: "automations",
+        toolCount: 0,
+        availableToolCount: 0,
+        availability: "unavailable",
+        enabled: true,
         effective: false,
       },
       {

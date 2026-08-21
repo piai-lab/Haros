@@ -38,7 +38,7 @@ const descriptors = [
     name: "omnimind_list_threads",
     description: "List OmniMind threads.",
     inputSchema: { type: "object", properties: {} },
-    group: "omnimind",
+    group: "tasks",
     provenance: "agent-gateway",
   },
 ] as const satisfies ReadonlyArray<AgentGatewayMcpToolDescriptor>;

@@ -203,7 +203,7 @@ describe("makeAgentGatewayMcpTransport exposure policy", () => {
             description: "read-only diagnostic",
             inputSchema: { type: "object" },
           },
-          group: "omnimind",
+          group: "tasks",
           available: true,
           provenance: "agent-gateway",
           requiredCapability: "thread:read",

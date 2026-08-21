@@ -13,7 +13,10 @@ describe("OmniMind harness policy", () => {
   it("identifies OmniMind and keeps only cross-tool safety invariants", () => {
     const policy = renderOmniMindHarnessPolicy({
       gatewayControlAvailable: true,
-      projection: { mode: "direct", enabledGroups: ["omnimind", "browser", "device"] },
+      projection: {
+        mode: "direct",
+        enabledGroups: ["tasks", "diagnostics", "goals", "automations", "browser", "device"],
+      },
     });
     assert.include(policy, OMNIMIND_HARNESS_POLICY_MARKER);
     assert.include(policy, "OmniMind is the host and harness");
@@ -124,10 +127,10 @@ describe("OmniMind harness policy", () => {
   });
 
   it("keeps native MCP instructions compact and group-filtered", () => {
-    const instructions = renderAgentGatewayMcpInstructions(["omnimind"]);
-    assert.include(instructions, "available omnimind_* tools");
-    assert.notInclude(instructions, "browser_*");
-    assert.notInclude(instructions, "device_*");
+    const instructions = renderAgentGatewayMcpInstructions(["tasks"]);
+    assert.include(instructions, "Enabled groups: Tasks");
+    assert.notInclude(instructions, "Browser");
+    assert.notInclude(instructions, "Device");
     assert.isBelow(instructions.length, 200);
   });
 });

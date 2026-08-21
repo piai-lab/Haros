@@ -2,7 +2,14 @@ import { Schema } from "effect";
 
 import { NonNegativeInt } from "./baseSchemas";
 
-export const BUILT_IN_TOOL_GROUP_IDS = ["omnimind", "browser", "device"] as const;
+export const BUILT_IN_TOOL_GROUP_IDS = [
+  "tasks",
+  "diagnostics",
+  "goals",
+  "automations",
+  "browser",
+  "device",
+] as const;
 
 export const BuiltInToolGroupId = Schema.Literals(BUILT_IN_TOOL_GROUP_IDS);
 export type BuiltInToolGroupId = typeof BuiltInToolGroupId.Type;

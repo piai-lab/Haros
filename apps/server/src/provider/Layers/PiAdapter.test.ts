@@ -54,7 +54,7 @@ describe("Pi native resource projection", () => {
     const prompt = makePiHostSystemPrompt({
       provider: "omnimind",
       gatewayControlAvailable: true,
-      enabledBuiltInGroups: ["omnimind"],
+      enabledBuiltInGroups: ["tasks"],
     });
 
     expect(prompt).toContain("<omnimind_host_context>");
@@ -196,7 +196,7 @@ describe("Pi native OmniMind gateway tools", () => {
                     description: "List OmniMind threads.",
                     _meta: {
                       "omnimind/owner": "agent-gateway",
-                      "omnimind/group": "omnimind",
+                      "omnimind/group": "tasks",
                     },
                     inputSchema: {
                       type: "object",
@@ -264,7 +264,7 @@ describe("Pi native OmniMind gateway tools", () => {
                 description: "Create OmniMind threads.",
                 _meta: {
                   "omnimind/owner": "agent-gateway",
-                  "omnimind/group": "omnimind",
+                  "omnimind/group": "tasks",
                 },
                 inputSchema: { type: "object", properties: {} },
               },
@@ -627,8 +627,12 @@ describe("Pi native OmniMind gateway tools", () => {
       JSON.stringify({ retry: { enabled: false } }),
     );
     const gateway = makeGatewayCatalogFetch(() => [
-      ...GOAL_CONTINUATION_GATEWAY_TOOL_NAMES.map((name) => gatewayToolDescriptor({ name })),
-      ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES.map((name) => gatewayToolDescriptor({ name })),
+      ...GOAL_CONTINUATION_GATEWAY_TOOL_NAMES.map((name) =>
+        gatewayToolDescriptor({ name, group: "goals" }),
+      ),
+      ...AUTOMATION_RUN_GATEWAY_TOOL_NAMES.map((name) =>
+        gatewayToolDescriptor({ name, group: "automations" }),
+      ),
     ]);
     const requestBodies: any[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
@@ -752,7 +756,14 @@ describe("Pi native OmniMind gateway tools", () => {
     );
     let enabled = true;
     const gateway = makeGatewayCatalogFetch(() =>
-      enabled ? [gatewayToolDescriptor({ name: GOAL_CONTINUATION_GATEWAY_TOOL_NAMES[0] })] : [],
+      enabled
+        ? [
+            gatewayToolDescriptor({
+              name: GOAL_CONTINUATION_GATEWAY_TOOL_NAMES[0],
+              group: "goals",
+            }),
+          ]
+        : [],
     );
     const modelBodies: any[] = [];
     const modelFetch = vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
@@ -1023,7 +1034,7 @@ function makeGatewayCredentialsLayer(): Layer.Layer<AgentGatewayCredentials> {
 
 function gatewayToolDescriptor(input: {
   readonly name: string;
-  readonly group?: "omnimind" | "browser" | "device";
+  readonly group?: "tasks" | "diagnostics" | "goals" | "automations" | "browser" | "device";
   readonly description?: string;
 }) {
   return {
@@ -1032,7 +1043,7 @@ function gatewayToolDescriptor(input: {
     inputSchema: { type: "object", properties: {} },
     _meta: {
       "omnimind/owner": "agent-gateway",
-      "omnimind/group": input.group ?? "omnimind",
+      "omnimind/group": input.group ?? "tasks",
     },
   };
 }

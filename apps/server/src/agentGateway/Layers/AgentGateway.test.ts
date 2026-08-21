@@ -1257,7 +1257,7 @@ describe("AgentGateway", () => {
 
       assert.deepStrictEqual(
         Object.fromEntries(groups.map((group) => [group.id, group.toolCount])),
-        { omnimind: 24, browser: 22, device: 12 },
+        { tasks: 12, diagnostics: 4, goals: 1, automations: 7, browser: 22, device: 12 },
       );
     }).pipe(Effect.provide(gatewayLayer));
   });

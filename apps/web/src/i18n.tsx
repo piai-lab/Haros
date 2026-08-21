@@ -3054,9 +3054,18 @@ export const EN_MESSAGES = {
   "settings.builtInToolsForAgentsDescription":
     "These controls affect every Agent, including OmniMind Agent. They do not turn off the Browser or Device panels you use directly. New calls are checked immediately; tool lists update in a new session or after a supported reload.",
   "settings.builtInToolGroups": "Capability groups",
-  "settings.builtInGroupOmniMind": "OmniMind",
-  "settings.builtInGroupOmniMindDescription":
-    "Projects, tasks, goals, automations, and other OmniMind workspace capabilities.",
+  "settings.builtInGroupTasks": "Tasks",
+  "settings.builtInGroupTasksDescription":
+    "Lets Agents inspect, create, coordinate, interrupt, rename, and archive OmniMind tasks.",
+  "settings.builtInGroupDiagnostics": "Diagnostics",
+  "settings.builtInGroupDiagnosticsDescription":
+    "Lets Agents inspect task activity, durable events, runtime events, and bounded diagnostic snapshots.",
+  "settings.builtInGroupGoals": "Goals",
+  "settings.builtInGroupGoalsDescription":
+    "Lets Agents manage explicit persistent goals for OmniMind tasks.",
+  "settings.builtInGroupAutomations": "Automations",
+  "settings.builtInGroupAutomationsDescription":
+    "Lets Agents create, inspect, update, stop, and report scheduled OmniMind automations.",
   "settings.builtInGroupBrowser": "Browser",
   "settings.builtInGroupBrowserDescription":
     "Lets Agents work with OmniMind's shared in-app browser when it is available.",
@@ -5743,8 +5752,7 @@ export const ZH_CN_MESSAGES = {
   "settings.appIconDescription": "选择 OmniMind 在程序坞或任务栏中使用的图标。",
   "settings.updatingAppIcon": "正在更新应用图标",
   "settings.customTitleBar": "使用自定义标题栏",
-  "settings.customTitleBarDescription":
-    "使用 OmniMind 的窗口控制按钮替代系统标题栏；重启后生效。",
+  "settings.customTitleBarDescription": "使用 OmniMind 的窗口控制按钮替代系统标题栏；重启后生效。",
   "settings.customTitleBarRestartDescription":
     "重启 OmniMind 后生效。部分 Linux 窗口管理器使用系统标题栏时表现更好。",
   "settings.customTitleBarRestartRequired": "需要重启",
@@ -6533,9 +6541,17 @@ export const ZH_CN_MESSAGES = {
   "settings.builtInToolsForAgentsDescription":
     "这些开关作用于所有 Agent，包括 OmniMind Agent；不会关闭你直接使用的浏览器或设备面板。新调用会立即按当前设置检查，工具列表在新会话或受支持的重新加载后更新。",
   "settings.builtInToolGroups": "能力分组",
-  "settings.builtInGroupOmniMind": "OmniMind",
-  "settings.builtInGroupOmniMindDescription":
-    "项目、任务、目标、自动化及其他 OmniMind 工作区能力。",
+  "settings.builtInGroupTasks": "任务",
+  "settings.builtInGroupTasksDescription":
+    "允许 Agent 查看、创建、协调、中断、重命名和归档 OmniMind 任务。",
+  "settings.builtInGroupDiagnostics": "诊断",
+  "settings.builtInGroupDiagnosticsDescription":
+    "允许 Agent 检查任务活动、持久事件、运行时事件和有界诊断快照。",
+  "settings.builtInGroupGoals": "目标",
+  "settings.builtInGroupGoalsDescription": "允许 Agent 管理 OmniMind 任务中明确设置的持续目标。",
+  "settings.builtInGroupAutomations": "自动化",
+  "settings.builtInGroupAutomationsDescription":
+    "允许 Agent 创建、检查、更新、停止和报告定时自动化。",
   "settings.builtInGroupBrowser": "浏览器",
   "settings.builtInGroupBrowserDescription":
     "在可用时允许 Agent 使用 OmniMind 共享的应用内浏览器。",

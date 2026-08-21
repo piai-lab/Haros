@@ -75,7 +75,14 @@ export interface ServerSettingsSnapshot {
   readonly settings: ServerSettings;
 }
 
-const SERVER_SETTINGS_MIGRATION_VERSION = 2;
+const SERVER_SETTINGS_MIGRATION_VERSION = 3;
+const LEGACY_OMNIMIND_BUILT_IN_GROUP = "omnimind";
+const OMNIMIND_FINE_GRAINED_BUILT_IN_GROUPS = [
+  "tasks",
+  "diagnostics",
+  "goals",
+  "automations",
+] as const;
 
 export function toServerSettingsView(settings: ServerSettings): ServerSettingsView {
   const { defaultPrompt: _defaultPrompt, ...omnimind } = settings.providers.omnimind;
@@ -288,30 +295,43 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-function injectLegacyBuiltInGroupIntent(settings: unknown): {
+function migrateLegacyBuiltInGroupIntent(
+  settings: unknown,
+  migrationVersion: number,
+): {
   readonly settings: unknown;
   readonly migrated: boolean;
 } {
   if (!isRecord(settings)) return { settings, migrated: false };
+  let migrated = false;
+  let disabledBuiltInGroups: unknown;
   if (!Object.hasOwn(settings, "agentTools")) {
-    return {
-      settings: {
-        ...settings,
-        agentTools: { disabledBuiltInGroups: [] },
-      },
-      migrated: true,
-    };
-  }
-  if (!isRecord(settings.agentTools)) return { settings, migrated: false };
-  if (Object.hasOwn(settings.agentTools, "disabledBuiltInGroups")) {
+    disabledBuiltInGroups = [];
+    migrated = true;
+  } else if (!isRecord(settings.agentTools)) {
     return { settings, migrated: false };
+  } else if (!Object.hasOwn(settings.agentTools, "disabledBuiltInGroups")) {
+    disabledBuiltInGroups = [];
+    migrated = true;
+  } else {
+    disabledBuiltInGroups = settings.agentTools.disabledBuiltInGroups;
   }
+
+  if (migrationVersion < 3 && Array.isArray(disabledBuiltInGroups)) {
+    const expanded = disabledBuiltInGroups.flatMap((group) =>
+      group === LEGACY_OMNIMIND_BUILT_IN_GROUP ? OMNIMIND_FINE_GRAINED_BUILT_IN_GROUPS : [group],
+    );
+    if (expanded.length !== disabledBuiltInGroups.length) migrated = true;
+    disabledBuiltInGroups = expanded;
+  }
+
+  if (!migrated) return { settings, migrated: false };
   return {
     settings: {
       ...settings,
       agentTools: {
-        ...settings.agentTools,
-        disabledBuiltInGroups: [],
+        ...(isRecord(settings.agentTools) ? settings.agentTools : {}),
+        disabledBuiltInGroups,
       },
     },
     migrated: true,
@@ -325,8 +345,15 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
       parsed !== null && typeof parsed === "object" && "settings" in parsed
         ? (parsed as { revision?: unknown; migrationVersion?: unknown; settings: unknown })
         : null;
-    const legacyBuiltInGroups = injectLegacyBuiltInGroupIntent(envelope?.settings ?? parsed);
-    const decoded = Schema.decodeUnknownExit(ServerSettings)(legacyBuiltInGroups.settings);
+    const migrationVersion =
+      envelope && Number.isSafeInteger(envelope.migrationVersion)
+        ? Number(envelope.migrationVersion)
+        : 0;
+    const legacyBuiltInGroupIntent = migrateLegacyBuiltInGroupIntent(
+      envelope?.settings ?? parsed,
+      migrationVersion,
+    );
+    const decoded = Schema.decodeUnknownExit(ServerSettings)(legacyBuiltInGroupIntent.settings);
     if (decoded._tag === "Failure") {
       return { _tag: "Failure" as const, error: Cause.pretty(decoded.cause) };
     }
@@ -337,12 +364,9 @@ function decodeSettingsFromJson(settingsPath: string, raw: string) {
         envelope && Number.isSafeInteger(envelope.revision) && Number(envelope.revision) >= 0
           ? Number(envelope.revision)
           : 0,
-      migrationVersion:
-        envelope && Number.isSafeInteger(envelope.migrationVersion)
-          ? Number(envelope.migrationVersion)
-          : 0,
+      migrationVersion,
       legacyFormat: envelope === null,
-      legacyBuiltInGroups: legacyBuiltInGroups.migrated,
+      builtInGroupIntentMigrated: legacyBuiltInGroupIntent.migrated,
     };
   } catch (cause) {
     const error = new ServerSettingsError({
@@ -465,7 +489,7 @@ const makeServerSettings = Effect.gen(function* () {
       migrated:
         legacyPasswords.size > 0 ||
         decoded.legacyFormat ||
-        decoded.legacyBuiltInGroups ||
+        decoded.builtInGroupIntentMigrated ||
         decoded.migrationVersion !== SERVER_SETTINGS_MIGRATION_VERSION,
     };
   });

@@ -27,17 +27,41 @@ function deferred<T>() {
 
 const GROUPS = [
   {
-    id: "omnimind" as const,
-    toolCount: 18,
-    availableToolCount: 18,
+    id: "tasks" as const,
+    toolCount: 12,
+    availableToolCount: 12,
+    availability: "available" as const,
+    enabled: true,
+    effective: true,
+  },
+  {
+    id: "diagnostics" as const,
+    toolCount: 4,
+    availableToolCount: 4,
+    availability: "available" as const,
+    enabled: true,
+    effective: true,
+  },
+  {
+    id: "goals" as const,
+    toolCount: 1,
+    availableToolCount: 1,
+    availability: "available" as const,
+    enabled: true,
+    effective: true,
+  },
+  {
+    id: "automations" as const,
+    toolCount: 7,
+    availableToolCount: 7,
     availability: "available" as const,
     enabled: true,
     effective: true,
   },
   {
     id: "browser" as const,
-    toolCount: 9,
-    availableToolCount: 9,
+    toolCount: 22,
+    availableToolCount: 22,
     availability: "available" as const,
     enabled: true,
     effective: true,
@@ -87,6 +111,10 @@ describe("BuiltInToolsSettingsPanel", () => {
       </QueryClientProvider>,
     );
     const browserSwitch = screen.getByRole("switch", { name: "Allow Agents to use Browser" });
+    await expect
+      .element(screen.getByRole("switch", { name: "Allow Agents to use Tasks" }))
+      .toBeChecked();
+    await expect.element(screen.getByText("Available · 12 of 12 tools available")).toBeVisible();
     await expect.element(screen.getByText("Unavailable · 0 of 0 tools available")).toBeVisible();
     await expect
       .element(screen.getByRole("switch", { name: "Allow Agents to use Device" }))

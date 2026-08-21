@@ -81,7 +81,7 @@ describe("ServerSettingsService", () => {
 
     expect(result.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
     expect(result.settings.agentTools.disabledBuiltInGroups).toEqual([]);
-    expect(result.persisted.migrationVersion).toBe(2);
+    expect(result.persisted.migrationVersion).toBe(3);
     expect(result.persisted.settings).toMatchObject({
       agentTools: { disabledBuiltInGroups: [] },
     });
@@ -116,7 +116,7 @@ describe("ServerSettingsService", () => {
     expect(result.updated.providers.codex.binaryPath).toBe("/usr/local/bin/codex");
     expect(result.parsed).toMatchObject({
       revision: 1,
-      migrationVersion: 2,
+      migrationVersion: 3,
       settings: {
         enableAssistantStreaming: true,
         enableProviderUpdateChecks: false,
@@ -143,7 +143,7 @@ describe("ServerSettingsService", () => {
           settingsPath,
           JSON.stringify({
             revision: 4,
-            migrationVersion: 2,
+            migrationVersion: 3,
             settings: {
               enableAssistantStreaming: true,
               enableProviderUpdateChecks: false,
@@ -188,7 +188,7 @@ describe("ServerSettingsService", () => {
     });
     expect(result.persisted).toMatchObject({
       revision: 5,
-      migrationVersion: 2,
+      migrationVersion: 3,
       settings: {
         enableAssistantStreaming: false,
         enableProviderUpdateChecks: false,
@@ -219,6 +219,11 @@ describe("ServerSettingsService", () => {
       disabledBuiltInGroups: ["future-group", "device"],
       expected: ["device", "future-group"],
     },
+    {
+      name: "the disabled legacy OmniMind aggregate",
+      disabledBuiltInGroups: ["omnimind", "future-group"],
+      expected: ["automations", "diagnostics", "future-group", "goals", "tasks"],
+    },
   ])(
     "preserves $name while migrating the settings envelope",
     async ({ disabledBuiltInGroups, expected }) => {
@@ -232,7 +237,7 @@ describe("ServerSettingsService", () => {
             settingsPath,
             JSON.stringify({
               revision: 4,
-              migrationVersion: 1,
+              migrationVersion: 2,
               settings: { agentTools: { disabledBuiltInGroups } },
             }),
           );
@@ -252,7 +257,7 @@ describe("ServerSettingsService", () => {
       expect(result.snapshot.settings.agentTools.disabledBuiltInGroups).toEqual(expected);
       expect(result.persisted).toMatchObject({
         revision: 5,
-        migrationVersion: 2,
+        migrationVersion: 3,
         settings: { agentTools: { disabledBuiltInGroups: expected } },
       });
     },
@@ -281,7 +286,7 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.snapshot.revision).toBe(10);
-    expect(result.persisted).toMatchObject({ revision: 10, migrationVersion: 2 });
+    expect(result.persisted).toMatchObject({ revision: 10, migrationVersion: 3 });
   });
 
   it("fails startup without publishing migrated state when the atomic write cannot commit", async () => {

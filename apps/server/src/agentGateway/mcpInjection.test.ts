@@ -240,7 +240,7 @@ describe("agent gateway MCP injection", () => {
                     inputSchema: { type: "object", properties: {} },
                     _meta: {
                       "omnimind/owner": "agent-gateway",
-                      "omnimind/group": "omnimind",
+                      "omnimind/group": "tasks",
                     },
                   },
                 ],
@@ -254,7 +254,7 @@ describe("agent gateway MCP injection", () => {
         name: "omnimind_list_threads",
         description: "List OmniMind threads.",
         inputSchema: { type: "object", properties: {} },
-        group: "omnimind",
+        group: "tasks",
         provenance: "agent-gateway",
       },
     ]);
@@ -264,11 +264,11 @@ describe("agent gateway MCP injection", () => {
           name: "omnimind_list_threads",
           description: "List OmniMind threads.",
           inputSchema: {},
-          group: "omnimind",
+          group: "tasks",
           provenance: "agent-gateway",
         },
       ]),
-      ["omnimind"],
+      ["tasks"],
     );
     assert.deepEqual(
       await callAgentGatewayMcpTool({

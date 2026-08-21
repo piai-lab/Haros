@@ -1,7 +1,7 @@
 import type { BuiltInToolGroupId, ProviderKind } from "@omnimind/contracts";
 
 /** Canonical, versioned host policy delivered to every supported provider. */
-export const OMNIMIND_HARNESS_POLICY_VERSION = "2026-08-19.10";
+export const OMNIMIND_HARNESS_POLICY_VERSION = "2026-08-21.1";
 export const OMNIMIND_HARNESS_POLICY_MARKER = `[OmniMind harness policy ${OMNIMIND_HARNESS_POLICY_VERSION}]`;
 
 export interface OmniMindHarnessCapabilities {
@@ -12,9 +12,12 @@ export interface OmniMindHarnessCapabilities {
   };
 }
 
-const OMNIMIND_GROUP_GUIDANCE = [
+const TASKS_GROUP_GUIDANCE = [
   "Provider-native subagent or Task tools are implementation details: they do not create OmniMind threads and must not substitute for an explicit request to create OmniMind threads.",
-  "Use the exposed capability metadata instead of guessing provider, model, option, thread, or automation identifiers.",
+  "Use the exposed capability metadata instead of guessing provider, model, option, project, or thread identifiers.",
+];
+
+const AUTOMATIONS_GROUP_GUIDANCE = [
   'Automation run duties apply only when the current user message contains OmniMind\'s canonical run envelope. A later manual follow-up such as "continue" has no inherited run authority.',
 ];
 
@@ -33,7 +36,8 @@ function directControlPolicy(
   enabledGroups: ReadonlySet<BuiltInToolGroupId>,
 ): ReadonlyArray<string> {
   return [
-    ...(enabledGroups.has("omnimind") ? OMNIMIND_GROUP_GUIDANCE : []),
+    ...(enabledGroups.has("tasks") ? TASKS_GROUP_GUIDANCE : []),
+    ...(enabledGroups.has("automations") ? AUTOMATIONS_GROUP_GUIDANCE : []),
     ...(enabledGroups.has("browser") ? BROWSER_GROUP_GUIDANCE : []),
     ...(enabledGroups.has("device") ? DEVICE_GROUP_GUIDANCE : []),
   ];
@@ -49,23 +53,15 @@ export function renderAgentGatewayDirectToolGuidance(
 export function renderAgentGatewayMcpInstructions(
   enabledGroups: ReadonlyArray<BuiltInToolGroupId>,
 ): string {
-  const groups = new Set(enabledGroups);
-  return [
-    "OmniMind tools are thread-scoped. Use only tools exposed by this server in the current provider session.",
-    ...(groups.has("omnimind")
-      ? ["Use available omnimind_* tools for OmniMind threads, projects, goals, and automations."]
-      : []),
-    ...(groups.has("browser")
-      ? [
-          "Use available browser_* tools only for OmniMind's thread-scoped in-app browser; prefer semantic snapshots and stop on user interruption or abort.",
-        ]
-      : []),
-    ...(groups.has("device")
-      ? [
-          "Use available device_* tools only for the thread-scoped Device pane; mutations still require their per-invocation approval boundary.",
-        ]
-      : []),
-  ].join("\n");
+  const labels: Readonly<Record<BuiltInToolGroupId, string>> = {
+    tasks: "Tasks",
+    diagnostics: "Diagnostics",
+    goals: "Goals",
+    automations: "Automations",
+    browser: "Browser",
+    device: "Device",
+  };
+  return `OmniMind tools are thread-scoped; use only tools exposed in this provider session. Enabled groups: ${enabledGroups.map((group) => labels[group]).join(", ")}. Follow each tool schema and current authorization.`;
 }
 
 /**

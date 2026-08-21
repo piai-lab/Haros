@@ -19,7 +19,10 @@ import {
 import { ensureNativeApi } from "~/nativeApi";
 
 const GROUP_COPY: Readonly<Record<BuiltInToolGroupId, readonly [MessageKey, MessageKey]>> = {
-  omnimind: ["settings.builtInGroupOmniMind", "settings.builtInGroupOmniMindDescription"],
+  tasks: ["settings.builtInGroupTasks", "settings.builtInGroupTasksDescription"],
+  diagnostics: ["settings.builtInGroupDiagnostics", "settings.builtInGroupDiagnosticsDescription"],
+  goals: ["settings.builtInGroupGoals", "settings.builtInGroupGoalsDescription"],
+  automations: ["settings.builtInGroupAutomations", "settings.builtInGroupAutomationsDescription"],
   browser: ["settings.builtInGroupBrowser", "settings.builtInGroupBrowserDescription"],
   device: ["settings.builtInGroupDevice", "settings.builtInGroupDeviceDescription"],
 };

@@ -730,20 +730,32 @@ export const makeAgentGateway = Effect.gen(function* () {
 
   const tools = makeAgentGatewayToolCatalog([
     tagAgentGatewayTools({
-      group: "omnimind",
+      group: "tasks",
       available: true,
       tools: [
         ...readTools,
-        ...diagnosticTools,
         createThreads,
         createThread,
         sendMessage,
         interruptThread,
         setThreadTitle,
         setThreadArchived,
-        setThreadGoal,
-        ...automationTools,
       ],
+    }),
+    tagAgentGatewayTools({
+      group: "diagnostics",
+      available: true,
+      tools: diagnosticTools,
+    }),
+    tagAgentGatewayTools({
+      group: "goals",
+      available: true,
+      tools: [setThreadGoal],
+    }),
+    tagAgentGatewayTools({
+      group: "automations",
+      available: true,
+      tools: automationTools,
     }),
     tagAgentGatewayTools({
       group: "browser",
