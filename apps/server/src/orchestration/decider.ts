@@ -4,6 +4,7 @@ import type {
   OrchestrationEvent,
   OrchestrationReadModel,
   OrchestrationThread,
+  ProviderMentionReference,
   ProjectKind,
   ThreadGoalAchievement,
   ThreadMarker,
@@ -214,7 +215,9 @@ function validateProjectPinLimit(input: {
   }
 
   const excludeProjectIds = new Set<string>([input.projectId, ...(input.staleProjectIds ?? [])]);
-  const pinnedProjectCount = countPinnedProjects(input.readModel, { excludeProjectIds });
+  const pinnedProjectCount = countPinnedProjects(input.readModel, {
+    excludeProjectIds,
+  });
   if (pinnedProjectCount < MAX_PINNED_PROJECTS) {
     return Effect.void;
   }
@@ -362,6 +365,26 @@ function chatAttachmentsEqual(
   );
 }
 
+function providerMentionsEqual(
+  left: ReadonlyArray<ProviderMentionReference> | undefined,
+  right: ReadonlyArray<ProviderMentionReference> | undefined,
+): boolean {
+  const leftMentions = left ?? [];
+  const rightMentions = right ?? [];
+  return (
+    leftMentions.length === rightMentions.length &&
+    leftMentions.every((mention, index) => {
+      const candidate = rightMentions[index];
+      return (
+        candidate !== undefined &&
+        mention.name === candidate.name &&
+        mention.path === candidate.path &&
+        mention.resourceKind === candidate.resourceKind
+      );
+    })
+  );
+}
+
 function validateHistoryOnlyFork(input: {
   readonly command: Extract<OrchestrationCommand, { type: "thread.fork.create" }>;
   readonly projectKind: ProjectKind | undefined;
@@ -369,7 +392,7 @@ function validateHistoryOnlyFork(input: {
 }) {
   const { command, projectKind, sourceThread } = input;
   const forkScope = command.forkScope ?? null;
-  if (forkScope === null) {
+  if (forkScope === null || forkScope.kind !== "history-only") {
     return Effect.void;
   }
 
@@ -422,6 +445,7 @@ function validateHistoryOnlyFork(input: {
   }
 
   const sourcePrefix = importableMessages.slice(0, cutoffIndex + 1);
+  const importedMessages = command.importedMessages ?? [];
   if (sourcePrefix.some((message) => (message.attachments?.length ?? 0) > 0)) {
     return Effect.fail(
       new OrchestrationCommandInvariantError({
@@ -432,11 +456,11 @@ function validateHistoryOnlyFork(input: {
     );
   }
   const sourceMessageIds = new Set(sourcePrefix.map((message) => message.id));
-  const importedMessageIds = new Set(command.importedMessages.map((message) => message.messageId));
+  const importedMessageIds = new Set(importedMessages.map((message) => message.messageId));
   const importedPrefixMatches =
-    command.importedMessages.length === sourcePrefix.length &&
-    importedMessageIds.size === command.importedMessages.length &&
-    command.importedMessages.every((message, index) => {
+    importedMessages.length === sourcePrefix.length &&
+    importedMessageIds.size === importedMessages.length &&
+    importedMessages.every((message, index) => {
       const sourceMessage = sourcePrefix[index];
       return (
         sourceMessage !== undefined &&
@@ -446,6 +470,7 @@ function validateHistoryOnlyFork(input: {
         message.role === sourceMessage.role &&
         message.text === sourceMessage.text &&
         chatAttachmentsEqual(message.attachments, sourceMessage.attachments) &&
+        providerMentionsEqual(message.mentions, sourceMessage.mentions) &&
         message.createdAt === sourceMessage.createdAt &&
         message.updatedAt === sourceMessage.updatedAt
       );
@@ -539,7 +564,11 @@ function resolveThreadGoalPatch(
     if (activeGoal.length > 0) {
       return { goal: command.goal };
     }
-    return { goal: command.goal, goalStartedAt: occurredAt, goalPausedAt: null };
+    return {
+      goal: command.goal,
+      goalStartedAt: occurredAt,
+      goalPausedAt: null,
+    };
   }
   if (command.goalPaused === undefined || activeGoal.length === 0) {
     return {};
@@ -643,14 +672,22 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
 > {
   switch (command.type) {
     case "space.create": {
-      yield* requireSpaceAbsent({ readModel, command, spaceId: command.spaceId });
+      yield* requireSpaceAbsent({
+        readModel,
+        command,
+        spaceId: command.spaceId,
+      });
       if (command.spaceId === RESERVED_VOID_SPACE_ID) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail: "The reserved Void identity cannot be used for a custom space.",
         });
       }
-      yield* requireSpaceNameAvailable({ readModel, command, name: command.name });
+      yield* requireSpaceNameAvailable({
+        readModel,
+        command,
+        name: command.name,
+      });
       const activeSpaces = listActiveSpaces(readModel);
       if (activeSpaces.length >= SPACES_MAX_COUNT) {
         return yield* new OrchestrationCommandInvariantError({
@@ -682,7 +719,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
     }
 
     case "space.meta.update": {
-      const existingSpace = yield* requireSpace({ readModel, command, spaceId: command.spaceId });
+      const existingSpace = yield* requireSpace({
+        readModel,
+        command,
+        spaceId: command.spaceId,
+      });
       // Fields equal to the current value are not changes: a Save with nothing edited (or a
       // rename that resends the icon) must not append an event or bump updatedAt.
       const nextName =
@@ -1132,28 +1173,30 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // clock floors on the new thread's own createdAt/updatedAt (see
       // `threadRetention.getThreadLastActivityMs`) so a handoff of an old
       // conversation is never born past the retention cutoff.
-      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> =
-        command.importedMessages.map((message) => ({
-          ...withEventBase({
-            aggregateKind: "thread",
-            aggregateId: command.threadId,
-            occurredAt: command.createdAt,
-            commandId: command.commandId,
-          }),
-          type: "thread.message-sent",
-          payload: {
-            threadId: command.threadId,
-            messageId: message.messageId,
-            role: message.role,
-            text: message.text,
-            ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
-            turnId: null,
-            streaming: false,
-            source: "handoff-import",
-            createdAt: message.createdAt,
-            updatedAt: message.updatedAt,
-          },
-        }));
+      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> = (
+        command.importedMessages ?? []
+      ).map((message) => ({
+        ...withEventBase({
+          aggregateKind: "thread",
+          aggregateId: command.threadId,
+          occurredAt: command.createdAt,
+          commandId: command.commandId,
+        }),
+        type: "thread.message-sent",
+        payload: {
+          threadId: command.threadId,
+          messageId: message.messageId,
+          role: message.role,
+          text: message.text,
+          ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
+          ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
+          turnId: null,
+          streaming: false,
+          source: "handoff-import",
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
+        },
+      }));
 
       return [createdEvent, ...importedMessageEvents];
     }
@@ -1181,10 +1224,32 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.sourceThreadId,
       });
-      if (sourceThread.projectId !== command.projectId) {
+      const isChatToAgent = command.forkScope?.kind === "chat-to-agent";
+      const sourceProject = yield* requireProject({
+        readModel,
+        command,
+        projectId: sourceThread.projectId,
+      });
+      if (!isChatToAgent && sourceThread.projectId !== command.projectId) {
         return yield* new OrchestrationCommandInvariantError({
           commandType: command.type,
           detail: `Source thread '${command.sourceThreadId}' belongs to a different project.`,
+        });
+      }
+      if (isChatToAgent && (sourceProject.kind !== "chat" || project.kind !== "project")) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "Chat-to-Agent fork requires a Chat source and a Project target.",
+        });
+      }
+      if (
+        isChatToAgent &&
+        (command.sidechatSourceThreadId !== null ||
+          command.forkScope?.bootstrapStatus !== "pending")
+      ) {
+        return yield* new OrchestrationCommandInvariantError({
+          commandType: command.type,
+          detail: "Chat-to-Agent fork must start as a pending non-sidechat bootstrap.",
         });
       }
       yield* validateHistoryOnlyFork({
@@ -1235,28 +1300,30 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // clock floors on the new thread's own createdAt/updatedAt (see
       // `threadRetention.getThreadLastActivityMs`) so a fork of an old conversation
       // is never born past the retention cutoff.
-      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> =
-        command.importedMessages.map((message) => ({
-          ...withEventBase({
-            aggregateKind: "thread",
-            aggregateId: command.threadId,
-            occurredAt: command.createdAt,
-            commandId: command.commandId,
-          }),
-          type: "thread.message-sent",
-          payload: {
-            threadId: command.threadId,
-            messageId: message.messageId,
-            role: message.role,
-            text: message.text,
-            ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
-            turnId: null,
-            streaming: false,
-            source: "fork-import",
-            createdAt: message.createdAt,
-            updatedAt: message.updatedAt,
-          },
-        }));
+      const importedMessageEvents: ReadonlyArray<Omit<OrchestrationEvent, "sequence">> = (
+        command.importedMessages ?? []
+      ).map((message) => ({
+        ...withEventBase({
+          aggregateKind: "thread",
+          aggregateId: command.threadId,
+          occurredAt: command.createdAt,
+          commandId: command.commandId,
+        }),
+        type: "thread.message-sent",
+        payload: {
+          threadId: command.threadId,
+          messageId: message.messageId,
+          role: message.role,
+          text: message.text,
+          ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
+          ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
+          turnId: null,
+          streaming: false,
+          source: "fork-import",
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
+        },
+      }));
 
       return [createdEvent, ...importedMessageEvents];
     }
@@ -1437,17 +1504,21 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         threadId: command.threadId,
       });
       const scope = thread.forkScope ?? null;
-      if (
-        scope?.kind !== "history-only" ||
-        scope.bootstrapStatus !== "pending" ||
-        scope.sourceMessageId !== command.sourceMessageId ||
-        scope.sourceMessageUpdatedAt !== command.sourceMessageUpdatedAt
-      ) {
+      const historyOnlyMatches =
+        scope?.kind === "history-only" &&
+        scope.bootstrapStatus === "pending" &&
+        scope.sourceMessageId === command.sourceMessageId &&
+        scope.sourceMessageUpdatedAt === command.sourceMessageUpdatedAt;
+      const chatToAgentMatches =
+        scope?.kind === "chat-to-agent" &&
+        scope.bootstrapStatus === "pending" &&
+        command.sourceMessageId === undefined &&
+        command.sourceMessageUpdatedAt === undefined;
+      if (!historyOnlyMatches && !chatToAgentMatches) {
         return yield* Effect.fail(
           new OrchestrationCommandInvariantError({
             commandType: command.type,
-            detail:
-              "Only the exact pending history-only fork bootstrap can be completed internally.",
+            detail: "Only the matching pending fork bootstrap can be completed internally.",
           }),
         );
       }
@@ -2443,6 +2514,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           role: message.role,
           text: message.text,
           ...(message.attachments !== undefined ? { attachments: message.attachments } : {}),
+          ...(message.mentions !== undefined ? { mentions: message.mentions } : {}),
           turnId: null,
           streaming: false,
           source: "native" as const,

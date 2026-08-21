@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -16,6 +17,7 @@ import { SqlitePersistenceMemory } from "./Sqlite.ts";
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { runManagedAttachmentCleanupBatch } from "../../managedAttachmentCleanup.ts";
 import {
+  cloneManagedAttachmentForFork,
   persistReservedManagedAttachment,
   reserveManagedAttachmentUpload,
 } from "../../managedAttachmentStore.ts";
@@ -791,6 +793,134 @@ layer("ManagedAttachmentRepository", (it) => {
       assert.isTrue(fs.existsSync(path.join(attachmentsDir, committedReservation.relativePath)));
       assert.isFalse(fs.existsSync(path.join(attachmentsDir, ".staging", `${preRenameId}.part`)));
       assert.isFalse(fs.existsSync(path.join(attachmentsDir, postRenameRelativePath)));
+    }).pipe(
+      Effect.ensuring(
+        Effect.sync(() => fs.rmSync(attachmentsDir, { recursive: true, force: true })),
+      ),
+    );
+  });
+
+  it.effect("reuses deterministic staging after a clone-before-receipt crash", () => {
+    const attachmentsDir = fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-managed-fork-replay-"));
+    return Effect.gen(function* () {
+      yield* resetSchema;
+      const repository = yield* ManagedAttachmentRepository;
+      const principal = attachmentPrincipalForSession("fork-replay-session");
+      const sourceThreadId = "fork-replay-source-thread";
+      const sourceMessageId = "fork-replay-source-message";
+      const targetThreadId = "fork-replay-target-thread";
+      const targetMessageId = "fork-replay-target-message";
+      const commandId = "fork-replay-command";
+      const sourceId = "att_v2_33333333333333333333333333333333";
+      const targetId = "att_v2_44444444444444444444444444444444";
+      const sourceRelativePath = `objects/33/${sourceId}.txt`;
+      const sourcePath = path.join(attachmentsDir, sourceRelativePath);
+      const now = new Date().toISOString();
+      const sourceBytes = Buffer.from("fork");
+
+      const reserved = yield* repository.reserve({
+        attachmentId: sourceId,
+        ownerThreadId: sourceThreadId,
+        ownerKind: principal.ownerKind,
+        ownerId: principal.ownerId,
+        kind: "file",
+        originalName: "fork.txt",
+        mimeType: "text/plain",
+        reservedBytes: sourceBytes.byteLength,
+        relativePath: sourceRelativePath,
+        now,
+      });
+      assert.strictEqual(reserved.status, "reserved");
+      yield* Effect.sync(() => {
+        fs.mkdirSync(path.dirname(sourcePath), { recursive: true });
+        fs.writeFileSync(sourcePath, sourceBytes);
+      });
+      const stagedSource = yield* repository.finalizeStaged({
+        attachmentId: sourceId,
+        ownerThreadId: sourceThreadId,
+        ownerKind: principal.ownerKind,
+        ownerId: principal.ownerId,
+        sizeBytes: sourceBytes.byteLength,
+        sha256: createHash("sha256").update(sourceBytes).digest("hex"),
+        stagingExpiresAt: new Date(Date.now() + 60_000).toISOString(),
+        now,
+      });
+      assert.strictEqual(stagedSource.status, "staged");
+      assert.strictEqual(
+        (yield* repository.claimForAcceptedTurn({
+          attachmentIds: [sourceId],
+          ownerThreadId: sourceThreadId,
+          ownerKind: principal.ownerKind,
+          ownerId: principal.ownerId,
+          commandId: "source-command",
+          messageId: sourceMessageId,
+          now,
+        })).status,
+        "claimed",
+      );
+      const source = Option.getOrThrow(
+        yield* repository.findClaimedById({ attachmentId: sourceId }),
+      );
+      const cloneInput = {
+        source,
+        targetAttachmentId: targetId,
+        targetThreadId,
+        targetMessageId,
+        commandId,
+        attachmentsDir,
+        now,
+        principal,
+        repository,
+      } as const;
+
+      const first = yield* cloneManagedAttachmentForFork(cloneInput);
+      assert.strictEqual(first.status, "cloned");
+      const stagedBeforeReplay = Option.getOrThrow(
+        yield* repository.findById({ attachmentId: targetId }),
+      );
+      assert.strictEqual(stagedBeforeReplay.state, "staged");
+
+      // This is the process-loss window: bytes and staging exist, but no
+      // target events or command receipt were committed. Immediate replay must
+      // reuse the same row and bytes rather than reserve a random replacement.
+      const replay = yield* cloneManagedAttachmentForFork(cloneInput);
+      assert.deepStrictEqual(replay, first);
+
+      const targetPath = path.join(
+        attachmentsDir,
+        Option.getOrThrow(yield* repository.findById({ attachmentId: targetId })).relativePath,
+      );
+      yield* Effect.sync(() => fs.writeFileSync(targetPath, Buffer.from("bork")));
+      const recoveredCorruptStaging = yield* cloneManagedAttachmentForFork(cloneInput);
+      assert.deepStrictEqual(recoveredCorruptStaging, first);
+      assert.deepStrictEqual(fs.readFileSync(targetPath), sourceBytes);
+
+      yield* Effect.sync(() => fs.writeFileSync(sourcePath, Buffer.from("bork")));
+      const rejectedCorruptSource = yield* cloneManagedAttachmentForFork(cloneInput);
+      assert.deepStrictEqual(rejectedCorruptSource, {
+        status: "failed",
+        reason: "unreadable",
+      });
+      yield* Effect.sync(() => fs.writeFileSync(sourcePath, sourceBytes));
+
+      assert.strictEqual(
+        (yield* repository.claimForImportedMessages({
+          groups: [{ messageId: targetMessageId, attachmentIds: [targetId] }],
+          ownerThreadId: targetThreadId,
+          ownerKind: principal.ownerKind,
+          ownerId: principal.ownerId,
+          commandId,
+          now,
+        })).status,
+        "claimed",
+      );
+      const claimedReplay = yield* cloneManagedAttachmentForFork(cloneInput);
+      assert.deepStrictEqual(claimedReplay, first);
+      const target = Option.getOrThrow(
+        yield* repository.findClaimedById({ attachmentId: targetId }),
+      );
+      assert.strictEqual(target.claimCommandId, commandId);
+      assert.strictEqual(target.claimMessageId, targetMessageId);
     }).pipe(
       Effect.ensuring(
         Effect.sync(() => fs.rmSync(attachmentsDir, { recursive: true, force: true })),

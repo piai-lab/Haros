@@ -62,6 +62,10 @@ import {
 import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
 import { turnStartBindingMatchesCommitted } from "../turnStartSession.ts";
 import { resolveThreadWorkspaceState } from "@omnimind/shared/threadEnvironment";
+import {
+  projectKindToProductSurface,
+  productSurfaceToProviderWorkSurface,
+} from "@omnimind/shared/productSurface";
 
 import {
   checkpointRefForThreadMessageStart,
@@ -103,6 +107,7 @@ import {
 import { resolveTextGenerationInputForSelection } from "../../git/textGenerationSelection.ts";
 import { ProviderService } from "../../provider/Services/ProviderService.ts";
 import { resolveProviderDispatchAttachments } from "../../provider/providerAttachmentPaths.ts";
+import { resolveAttachmentRelativePath } from "../../attachmentPaths.ts";
 import { OrchestrationEventDeliveryRepositoryLive } from "../../persistence/Layers/OrchestrationEventDeliveries.ts";
 import { ProjectionPendingInteractionRepositoryLive } from "../../persistence/Layers/ProjectionPendingInteractions.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
@@ -123,6 +128,7 @@ import { clearWorkspaceIndexCache } from "../../workspaceEntries.ts";
 import {
   buildPriorTranscriptBootstrapText,
   buildForkBootstrapText,
+  buildChatToAgentForkBootstrapText,
   buildHistoryOnlyForkBootstrapText,
   buildHandoffBootstrapText,
   hasNativeAssistantMessagesBefore,
@@ -328,6 +334,8 @@ const DEFAULT_RUNTIME_MODE: RuntimeMode = "full-access";
 const SIDECHAT_BOUNDARY_INSTRUCTION =
   "You are in a sidechat. Treat all prior conversation as reference-only context. Do not continue any prior task automatically. Do not mutate files, git, or the workspace and do not run workspace-changing commands unless the latest user message explicitly asks you to do so after this boundary. Use this sidechat for focused explanation, safety checks, summaries, and alternatives.";
 
+const CHAT_TO_AGENT_RESOURCE_MANIFEST_MAX_CHARS = 6_000;
+
 type ProviderContextTag = "handoff_context" | "sidechat_context" | "thread_context";
 
 interface BootstrapContextSelection {
@@ -371,6 +379,17 @@ function availableThreadMentionContextChars(messageText: string, reservedChars =
       THREAD_MENTION_CONTEXT_SUFFIX_PREFIX_CHARS -
       reservedChars,
   );
+}
+
+function appendBoundedManifestLine(input: {
+  readonly lines: string[];
+  readonly line: string;
+  readonly maxChars: number;
+}): boolean {
+  const candidate = [...input.lines, input.line].join("\n");
+  if (candidate.length > input.maxChars) return false;
+  input.lines.push(input.line);
+  return true;
 }
 
 function debugModePromptOverheadChars(
@@ -553,16 +572,17 @@ const make = Effect.gen(function* () {
   const waitForGatewayOperationCompletion = Effect.fnUntraced(function* (operationId: string) {
     const completed = yield* Effect.gen(function* () {
       while (true) {
-        const operation = yield* gatewayOperations
-          .getById(operationId)
-          .pipe(
-            Effect.catch((error) =>
-              Effect.logWarning(
-                "provider command reactor could not read creating gateway operation; skipping worktree branch rename",
-                { operationId, error: error instanceof Error ? error.message : String(error) },
-              ).pipe(Effect.as(null)),
-            ),
-          );
+        const operation = yield* gatewayOperations.getById(operationId).pipe(
+          Effect.catch((error) =>
+            Effect.logWarning(
+              "provider command reactor could not read creating gateway operation; skipping worktree branch rename",
+              {
+                operationId,
+                error: error instanceof Error ? error.message : String(error),
+              },
+            ).pipe(Effect.as(null)),
+          ),
+        );
         if (operation === null) {
           return false;
         }
@@ -586,6 +606,52 @@ const make = Effect.gen(function* () {
   });
   const managedAttachments = yield* ManagedAttachmentRepository;
   const serverConfig = yield* ServerConfig;
+
+  const buildChatToAgentResourceManifest = Effect.fnUntraced(function* (input: {
+    readonly thread: OrchestrationThread;
+    readonly maxChars: number;
+  }) {
+    const maxChars = Math.min(
+      CHAT_TO_AGENT_RESOURCE_MANIFEST_MAX_CHARS,
+      Math.max(0, input.maxChars),
+    );
+    const header =
+      "Imported file references (newest first; paths are references, not the Project root):";
+    if (maxChars <= header.length) return null;
+
+    const lines = [header];
+    const importedMessages = listImportedForkMessages(input.thread).toReversed();
+    for (const message of importedMessages) {
+      const binaryAttachments = (message.attachments ?? []).filter(
+        (attachment) => attachment.type === "file" || attachment.type === "image",
+      );
+      for (const attachment of binaryAttachments.toReversed()) {
+        const blob = yield* managedAttachments
+          .findClaimedById({ attachmentId: attachment.id })
+          .pipe(Effect.catch(() => Effect.succeed(Option.none())));
+        const managedPath = Option.isSome(blob)
+          ? blob.value.ownerThreadId === input.thread.id && blob.value.claimMessageId === message.id
+            ? resolveAttachmentRelativePath({
+                attachmentsDir: serverConfig.attachmentsDir,
+                relativePath: blob.value.relativePath,
+              })
+            : null
+          : null;
+        const line = `- ${message.role} message: managed ${attachment.type} ${JSON.stringify(attachment.name)}${managedPath ? ` at ${JSON.stringify(managedPath)}` : " (managed path unavailable)"}`;
+        if (!appendBoundedManifestLine({ lines, line, maxChars })) {
+          return lines.length === 1 ? null : lines.join("\n");
+        }
+      }
+      for (const mention of (message.mentions ?? []).toReversed()) {
+        const line = `- ${message.role} message: external ${mention.resourceKind ?? "file"} reference ${JSON.stringify(mention.name)} at ${JSON.stringify(mention.path)}`;
+        if (!appendBoundedManifestLine({ lines, line, maxChars })) {
+          return lines.length === 1 ? null : lines.join("\n");
+        }
+      }
+    }
+    return lines.length === 1 ? null : lines.join("\n");
+  });
+
   const handledTurnStartKeys = yield* Cache.make<string, true>({
     capacity: HANDLED_TURN_START_KEY_MAX,
     timeToLive: HANDLED_TURN_START_KEY_TTL,
@@ -857,11 +923,12 @@ const make = Effect.gen(function* () {
     Effect.forEach(
       input.deliveries,
       (delivery, index) => {
-        const safeSkillName = delivery.name
-          .normalize("NFC")
-          .replace(/[\\/\u0000-\u001F\u007F\uD800-\uDFFF]/gu, " ")
-          .trim()
-          .slice(0, 120) || "Skill";
+        const safeSkillName =
+          delivery.name
+            .normalize("NFC")
+            .replace(/[\\/\p{Cc}\p{Cs}]/gu, " ")
+            .trim()
+            .slice(0, 120) || "Skill";
         const activityKey = `skill-delivery:${input.messageId}:${index}:${encodeURIComponent(safeSkillName)}`;
         return orchestrationEngine.dispatch({
           type: "thread.activity.append",
@@ -1308,7 +1375,10 @@ const make = Effect.gen(function* () {
     // tolerated there; every other turn must have its checkpoint on disk.
     if (
       targetTurnCount !== 0 &&
-      !(yield* checkpointStore.hasCheckpointRef({ cwd, checkpointRef: targetCheckpointRef }))
+      !(yield* checkpointStore.hasCheckpointRef({
+        cwd,
+        checkpointRef: targetCheckpointRef,
+      }))
     ) {
       return yield* Effect.fail(
         new Error(`Filesystem checkpoint is unavailable for edit replay turn ${targetTurnCount}.`),
@@ -1409,12 +1479,13 @@ const make = Effect.gen(function* () {
         issue: `Thread '${threadId}' targets a worktree that has not been created yet.`,
       });
     }
+    const productSurface = projectKindToProductSurface(project.kind);
     const providerSessionOptions = {
       threadId,
       ...(effectiveCwd ? { cwd: effectiveCwd } : {}),
       ...(targetProvider === "omnimind"
         ? {
-            workSurface: project.kind === "project" ? ("agent" as const) : ("chat" as const),
+            workSurface: productSurfaceToProviderWorkSurface(productSurface),
             ...(project.kind === "project"
               ? {
                   projectContextRoot:
@@ -1436,11 +1507,15 @@ const make = Effect.gen(function* () {
         .pipe(Effect.map((sessions) => sessions.find((session) => session.threadId === threadId)));
 
     const startProviderSession = (resumeCursor?: unknown) =>
-      providerService.startSession(threadId, {
-        ...providerSessionOptions,
-        provider: targetProvider,
-        ...(resumeCursor !== undefined ? { resumeCursor } : {}),
-      });
+      providerService.startSession(
+        threadId,
+        {
+          ...providerSessionOptions,
+          provider: targetProvider,
+          ...(resumeCursor !== undefined ? { resumeCursor } : {}),
+        },
+        { productSurface },
+      );
 
     const bindSessionToThread = (session: ProviderSession) =>
       setThreadSessionFromProviderSession({
@@ -1663,6 +1738,13 @@ const make = Effect.gen(function* () {
     if (!thread) {
       return;
     }
+    const dispatchProject = yield* resolveThreadWorkspaceProject(thread);
+    if (!dispatchProject) {
+      return yield* Effect.die(
+        new Error(`Project '${thread.projectId}' was not found in projection state.`),
+      );
+    }
+    const dispatchProductSurface = projectKindToProductSurface(dispatchProject.kind);
     const debugPromptOverheadChars = debugModePromptOverheadChars(input.interactionMode);
     const goalPromptOverheadChars = providerGoalPromptOverheadChars(activeThreadGoal(thread));
     const providerPromptOverheadChars = debugPromptOverheadChars + goalPromptOverheadChars;
@@ -1728,7 +1810,10 @@ const make = Effect.gen(function* () {
                 ),
               ),
             )
-          : { text: "", deliveries: [] as ReadonlyArray<SkillInstructionDelivery> };
+          : {
+              text: "",
+              deliveries: [] as ReadonlyArray<SkillInstructionDelivery>,
+            };
       const steerMessageWithSkills = steerSkillResult.text
         ? `${messageText}\n\n${steerSkillResult.text}`
         : messageText;
@@ -1906,6 +1991,35 @@ const make = Effect.gen(function* () {
       shouldBootstrapHistoryOnlyFork && historyOnlyForkBootstrapAvailableChars > 0
         ? buildHistoryOnlyForkBootstrapText(thread, historyOnlyForkBootstrapAvailableChars)
         : null;
+    const shouldBootstrapChatToAgentFork =
+      historyOnlyForkScope?.kind === "chat-to-agent" &&
+      historyOnlyForkScope.bootstrapStatus === "pending" &&
+      !hasNativeAssistantMessagesBefore(thread, transcriptBoundaryMessageId);
+    const chatToAgentResourceManifest = shouldBootstrapChatToAgentFork
+      ? yield* buildChatToAgentResourceManifest({
+          thread,
+          maxChars: Math.min(
+            CHAT_TO_AGENT_RESOURCE_MANIFEST_MAX_CHARS,
+            Math.floor(historyOnlyForkBootstrapAvailableChars / 4),
+          ),
+        })
+      : null;
+    const chatToAgentManifestSeparatorChars =
+      chatToAgentResourceManifest === null ? 0 : chatToAgentResourceManifest.length + 2;
+    const chatToAgentTranscriptBudget = Math.max(
+      0,
+      historyOnlyForkBootstrapAvailableChars - chatToAgentManifestSeparatorChars,
+    );
+    const chatToAgentTranscriptBootstrapText =
+      shouldBootstrapChatToAgentFork && chatToAgentTranscriptBudget > 0
+        ? buildChatToAgentForkBootstrapText(thread, chatToAgentTranscriptBudget)
+        : null;
+    const chatToAgentForkBootstrapText =
+      chatToAgentTranscriptBootstrapText === null && chatToAgentResourceManifest === null
+        ? null
+        : [chatToAgentTranscriptBootstrapText, chatToAgentResourceManifest]
+            .filter((value): value is string => value !== null)
+            .join("\n\n");
     const hasHistoryOnlyForkBootstrapContent =
       shouldBootstrapHistoryOnlyFork && listImportedForkMessages(thread).length > 0;
     if (
@@ -1943,6 +2057,7 @@ const make = Effect.gen(function* () {
       !hasNativeAssistantMessagesBefore(thread, transcriptBoundaryMessageId) &&
       !shouldBootstrapHandoff &&
       !shouldBootstrapHistoryOnlyFork &&
+      !shouldBootstrapChatToAgentFork &&
       !hasPendingPriorTranscriptBootstrap;
     const sidechatBootstrapAvailableChars = availableProviderContextChars({
       tag: "sidechat_context",
@@ -1974,6 +2089,7 @@ const make = Effect.gen(function* () {
         hasPendingPriorTranscriptBootstrap) &&
       !shouldBootstrapHandoff &&
       !shouldBootstrapHistoryOnlyFork &&
+      !shouldBootstrapChatToAgentFork &&
       !shouldBootstrapSidechatContext;
     const hasPriorTranscriptBootstrapContent =
       shouldBootstrapPriorTranscriptContext &&
@@ -2015,28 +2131,37 @@ const make = Effect.gen(function* () {
             contextText: historyOnlyForkBootstrapText,
             wrapLatestUserMessage: true,
           }
-        : handoffBootstrapText !== null
+        : chatToAgentForkBootstrapText !== null
           ? {
-              tag: "handoff_context",
-              contextText: handoffBootstrapText,
+              tag: "thread_context",
+              contextText: chatToAgentForkBootstrapText,
               wrapLatestUserMessage: true,
             }
-          : sidechatBootstrapText !== null
+          : handoffBootstrapText !== null
             ? {
-                tag: "sidechat_context",
-                contextText: sidechatBootstrapText,
-                wrapLatestUserMessage: false,
+                tag: "handoff_context",
+                contextText: handoffBootstrapText,
+                wrapLatestUserMessage: true,
               }
-            : priorTranscriptBootstrapText !== null
+            : sidechatBootstrapText !== null
               ? {
-                  tag: "thread_context",
-                  contextText: priorTranscriptBootstrapText,
-                  wrapLatestUserMessage: true,
+                  tag: "sidechat_context",
+                  contextText: sidechatBootstrapText,
+                  wrapLatestUserMessage: false,
                 }
-              : null;
+              : priorTranscriptBootstrapText !== null
+                ? {
+                    tag: "thread_context",
+                    contextText: priorTranscriptBootstrapText,
+                    wrapLatestUserMessage: true,
+                  }
+                : null;
     const composeProviderInput = (bootstrap: BootstrapContextSelection | null): string =>
       bootstrap
-        ? wrapProviderContext({ ...bootstrap, messageText: boundaryMessageText })
+        ? wrapProviderContext({
+            ...bootstrap,
+            messageText: boundaryMessageText,
+          })
         : boundaryMessageText;
     const providerInputWithMentionContext = withProviderThreadStatePrompts({
       interactionMode: input.interactionMode,
@@ -2058,25 +2183,28 @@ const make = Effect.gen(function* () {
                   PROVIDER_INPUT_SAFETY_MARGIN_CHARS,
               ),
             }),
-            ).pipe(
-              Effect.catch((error) =>
-                Effect.logWarning("failed to inline portable skill instructions", {
-                  threadId: input.threadId,
-                  error,
-                }).pipe(
-                  Effect.as({
-                    text: "",
-                    deliveries: (input.skills ?? []).map((skill) => ({
-                      name: skill.name,
-                      status: "failed" as const,
-                      mode: "inline" as const,
-                      failureReason: "unreadable" as const,
-                    })),
-                  }),
-                ),
+          ).pipe(
+            Effect.catch((error) =>
+              Effect.logWarning("failed to inline portable skill instructions", {
+                threadId: input.threadId,
+                error,
+              }).pipe(
+                Effect.as({
+                  text: "",
+                  deliveries: (input.skills ?? []).map((skill) => ({
+                    name: skill.name,
+                    status: "failed" as const,
+                    mode: "inline" as const,
+                    failureReason: "unreadable" as const,
+                  })),
+                }),
               ),
-            )
-          : { text: "", deliveries: [] as ReadonlyArray<SkillInstructionDelivery> };
+            ),
+          )
+        : {
+            text: "",
+            deliveries: [] as ReadonlyArray<SkillInstructionDelivery>,
+          };
     const finalizeProviderInput = (bootstrap: BootstrapContextSelection | null) => {
       const withMentionContext = `${composeProviderInput(bootstrap)}${mentionContextSuffix}`;
       const withSkills = skillInlineResult.text
@@ -2132,6 +2260,7 @@ const make = Effect.gen(function* () {
             {
               turnKind: input.turnKind ?? "user",
               dispatchOrigin: input.dispatchOrigin ?? "user",
+              productSurface: dispatchProductSurface,
             },
           ),
         ),
@@ -2260,9 +2389,11 @@ const make = Effect.gen(function* () {
           // stale-session retry reuses that same selection; falling back to an
           // ordinary transcript builder could summarize, truncate, or admit a
           // message beyond the persisted cutoff.
+          const stableForkBootstrapText =
+            historyOnlyForkBootstrapText ?? chatToAgentForkBootstrapText;
           const retryBootstrapText =
-            historyOnlyForkBootstrapText !== null
-              ? historyOnlyForkBootstrapText
+            stableForkBootstrapText !== null
+              ? stableForkBootstrapText
               : priorTranscriptBootstrapAvailableChars > 0
                 ? buildPriorTranscriptBootstrapText(
                     thread,
@@ -2271,10 +2402,10 @@ const make = Effect.gen(function* () {
                   )
                 : null;
           const retryBootstrapSelection =
-            historyOnlyForkBootstrapText !== null
+            stableForkBootstrapText !== null
               ? {
                   tag: "thread_context" as const,
-                  contextText: historyOnlyForkBootstrapText,
+                  contextText: stableForkBootstrapText,
                   wrapLatestUserMessage: true,
                 }
               : retryBootstrapText !== null
@@ -2292,8 +2423,9 @@ const make = Effect.gen(function* () {
               threadId: input.threadId,
               messageId: input.messageId,
               bootstrappedPriorTranscript:
-                historyOnlyForkBootstrapText === null && retryBootstrapText !== null,
+                stableForkBootstrapText === null && retryBootstrapText !== null,
               reusedHistoryOnlyForkBootstrap: historyOnlyForkBootstrapText !== null,
+              reusedChatToAgentForkBootstrap: chatToAgentForkBootstrapText !== null,
             },
           );
           return yield* sendQueuedProviderTurn(retryNormalizedInput);
@@ -2316,7 +2448,9 @@ const make = Effect.gen(function* () {
             // turn; stopping it for a native-resume retry would silently kill
             // them. Recover on the live runtime via transcript bootstrap.
             const liveBackgroundTasks = providerService.hasLiveRuntimeTasks
-              ? yield* providerService.hasLiveRuntimeTasks({ threadId: input.threadId })
+              ? yield* providerService.hasLiveRuntimeTasks({
+                  threadId: input.threadId,
+                })
               : false;
             if (liveBackgroundTasks) {
               yield* Effect.logWarning(
@@ -2399,16 +2533,24 @@ const make = Effect.gen(function* () {
       });
     }
     if (
-      historyOnlyForkBootstrapText &&
+      (historyOnlyForkBootstrapText ||
+        chatToAgentForkBootstrapText !== null ||
+        shouldBootstrapChatToAgentFork) &&
       historyOnlyForkScope !== null &&
       input.reviewTarget === undefined
     ) {
+      const completionIdentity =
+        historyOnlyForkScope.kind === "history-only"
+          ? {
+              sourceMessageId: historyOnlyForkScope.sourceMessageId,
+              sourceMessageUpdatedAt: historyOnlyForkScope.sourceMessageUpdatedAt,
+            }
+          : {};
       yield* orchestrationEngine.dispatch({
         type: "thread.fork.bootstrap.complete",
         commandId: serverCommandId("history-only-fork-bootstrap-complete"),
         threadId: input.threadId,
-        sourceMessageId: historyOnlyForkScope.sourceMessageId,
-        sourceMessageUpdatedAt: historyOnlyForkScope.sourceMessageUpdatedAt,
+        ...completionIdentity,
         completedAt: new Date().toISOString(),
       });
     }
@@ -4089,7 +4231,9 @@ const make = Effect.gen(function* () {
       provider !== undefined &&
       (yield* providerService.getCapabilities(provider)).conversationRollback === "restart-session";
     if (rebuildsContext && providerService.clearSessionResumeCursor) {
-      yield* providerService.clearSessionResumeCursor({ threadId: input.threadId });
+      yield* providerService.clearSessionResumeCursor({
+        threadId: input.threadId,
+      });
       rollbackContextBootstrapThreadIds.add(input.threadId);
       return;
     }
@@ -5203,7 +5347,9 @@ const make = Effect.gen(function* () {
       PROVIDER_COMMAND_REACTOR_CONSUMER,
     );
     yield* deliverySourceLock.withPermits(1)(
-      Effect.forEach(retryableDeliveries, resumeRetryableDelivery, { discard: true }),
+      Effect.forEach(retryableDeliveries, resumeRetryableDelivery, {
+        discard: true,
+      }),
     );
 
     const processOrderedEventSerially = (event: OrchestrationEvent) =>

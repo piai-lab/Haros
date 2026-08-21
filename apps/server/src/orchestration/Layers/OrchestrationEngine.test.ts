@@ -12,6 +12,9 @@ import {
 import { Effect, Layer, ManagedRuntime, Option, Queue, Stream } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 import { describe, expect, it, vi } from "vitest";
+import { createHash } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 
 import { PersistenceSqlError } from "../../persistence/Errors.ts";
 import { OrchestrationCommandReceiptRepositoryLive } from "../../persistence/Layers/OrchestrationCommandReceipts.ts";
@@ -127,9 +130,11 @@ async function createOrchestrationSystem() {
   const managedAttachmentRepository = await runtime.runPromise(
     Effect.service(ManagedAttachmentRepository),
   );
+  const serverConfig = await runtime.runPromise(Effect.service(ServerConfig));
   return {
     engine,
     managedAttachmentRepository,
+    serverConfig,
     run: <A, E>(effect: Effect.Effect<A, E>) => runtime.runPromise(effect),
     dispose: () => runtime.dispose(),
   };
@@ -499,6 +504,442 @@ describe("OrchestrationEngine", () => {
     expect(claimed.map((attachment) => attachment.attachmentId)).toEqual([firstAttachmentId]);
     await system.dispose();
   });
+
+  it("derives Chat-to-Agent history on the server and keeps attachment failures partial", async () => {
+    const system = await createOrchestrationSystem();
+    const { engine, managedAttachmentRepository: repository, serverConfig } = system;
+    const createdAt = "2026-08-21T08:00:00.000Z";
+    const sourceProjectId = asProjectId("project-chat-fork-source");
+    const targetProjectId = asProjectId("project-chat-fork-target");
+    const invalidTargetProjectId = asProjectId("project-chat-fork-invalid-target");
+    const sourceThreadId = ThreadId.makeUnsafe("thread-chat-fork-source");
+    const targetThreadId = ThreadId.makeUnsafe("thread-chat-fork-target");
+    const sourceMessageId = asMessageId("msg-chat-fork-source-user");
+    const principal = { ownerKind: "session" as const, ownerId: "chat-fork-session" };
+
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-chat-fork-source-project"),
+        projectId: sourceProjectId,
+        kind: "chat",
+        title: "Chat",
+        workspaceRoot: path.join(serverConfig.chatWorkspaceRoot, "fork-source"),
+        defaultModelSelection: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-chat-fork-invalid-target-project"),
+        projectId: invalidTargetProjectId,
+        kind: "chat",
+        title: "Invalid target",
+        workspaceRoot: path.join(serverConfig.chatWorkspaceRoot, "fork-invalid-target"),
+        defaultModelSelection: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-chat-fork-target-project"),
+        projectId: targetProjectId,
+        kind: "project",
+        title: "Target",
+        workspaceRoot: path.join(serverConfig.cwd, "fork-target"),
+        defaultModelSelection: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-chat-fork-source-thread"),
+        threadId: sourceThreadId,
+        projectId: sourceProjectId,
+        title: "Canonical Chat title",
+        modelSelection: { provider: "omnimind", model: "local/model" },
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "full-access",
+        branch: null,
+        worktreePath: null,
+        createdAt,
+      }),
+    );
+
+    const stageSource = async (input: {
+      readonly attachmentId: string;
+      readonly name: string;
+      readonly contents: string;
+      readonly writeBytes: boolean;
+    }) => {
+      const relativePath = `objects/source/${input.attachmentId}.txt`;
+      const reserved = await system.run(
+        repository.reserve({
+          attachmentId: input.attachmentId,
+          ownerThreadId: sourceThreadId,
+          ownerKind: principal.ownerKind,
+          ownerId: principal.ownerId,
+          kind: "file",
+          originalName: input.name,
+          mimeType: "text/plain",
+          reservedBytes: Buffer.byteLength(input.contents),
+          relativePath,
+          now: createdAt,
+        }),
+      );
+      expect(reserved.status).toBe("reserved");
+      if (input.writeBytes) {
+        const absolutePath = path.join(serverConfig.attachmentsDir, relativePath);
+        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+        await fs.writeFile(absolutePath, input.contents);
+      }
+      const finalized = await system.run(
+        repository.finalizeStaged({
+          attachmentId: input.attachmentId,
+          ownerThreadId: sourceThreadId,
+          ownerKind: principal.ownerKind,
+          ownerId: principal.ownerId,
+          sizeBytes: Buffer.byteLength(input.contents),
+          sha256: createHash("sha256").update(input.contents).digest("hex"),
+          stagingExpiresAt: new Date(Date.now() + 60 * 60 * 1_000).toISOString(),
+          now: createdAt,
+        }),
+      );
+      expect(finalized.status).toBe("staged");
+      return {
+        type: "file" as const,
+        id: input.attachmentId,
+        name: input.name,
+        mimeType: "text/plain",
+        sizeBytes: Buffer.byteLength(input.contents),
+      };
+    };
+    const readable = await stageSource({
+      attachmentId: "att_v2_11111111111111111111111111111111",
+      name: "readable.txt",
+      contents: "readable source",
+      writeBytes: true,
+    });
+    const missing = await stageSource({
+      attachmentId: "att_v2_22222222222222222222222222222222",
+      name: "missing.txt",
+      contents: "missing source",
+      writeBytes: false,
+    });
+    await system.run(
+      engine.dispatch(
+        {
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-chat-fork-source-turn"),
+          threadId: sourceThreadId,
+          message: {
+            messageId: sourceMessageId,
+            role: "user",
+            text: "Canonical user text",
+            attachments: [
+              {
+                type: "assistant-selection",
+                id: "selection-source-assistant",
+                assistantMessageId: asMessageId("msg-chat-fork-source-assistant"),
+                text: "Selected assistant context",
+              },
+              readable,
+              missing,
+            ],
+            mentions: [
+              {
+                name: "External folder",
+                path: "/tmp/external-reference",
+                resourceKind: "directory",
+              },
+            ],
+          },
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "full-access",
+          createdAt,
+        },
+        { attachmentPrincipal: principal },
+      ),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "thread.messages.import",
+        commandId: CommandId.makeUnsafe("cmd-chat-fork-source-assistant"),
+        threadId: sourceThreadId,
+        messages: [
+          {
+            messageId: asMessageId("msg-chat-fork-source-assistant"),
+            role: "assistant",
+            text: "Canonical assistant text",
+            createdAt: "2026-08-21T08:00:01.000Z",
+            updatedAt: "2026-08-21T08:00:01.000Z",
+          },
+        ],
+        createdAt: "2026-08-21T08:00:01.000Z",
+      }),
+    );
+
+    const forkCommand = {
+      type: "thread.fork.create" as const,
+      commandId: CommandId.makeUnsafe("cmd-chat-to-agent-fork"),
+      threadId: targetThreadId,
+      sourceThreadId,
+      projectId: targetProjectId,
+      title: "Client supplied title must not win",
+      modelSelection: { provider: "omnimind" as const, model: "local/model" },
+      runtimeMode: "full-access" as const,
+      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      envMode: "local" as const,
+      branch: null,
+      worktreePath: null,
+      workingDirectory: null,
+      associatedWorktreePath: null,
+      associatedWorktreeBranch: null,
+      associatedWorktreeRef: null,
+      createBranchFlowCompleted: false,
+      sidechatSourceThreadId: null,
+      forkScope: {
+        kind: "chat-to-agent" as const,
+        bootstrapStatus: "pending" as const,
+      },
+      importedMessages: [],
+      createdAt: "2026-08-21T08:00:02.000Z",
+    };
+    const rejectedCommandId = CommandId.makeUnsafe("cmd-chat-to-agent-invalid-target");
+    const rejectedTargetThreadId = ThreadId.makeUnsafe("thread-chat-fork-invalid-target");
+    await expect(
+      system.run(
+        engine.dispatch(
+          {
+            ...forkCommand,
+            commandId: rejectedCommandId,
+            threadId: rejectedTargetThreadId,
+            projectId: invalidTargetProjectId,
+          },
+          { attachmentPrincipal: principal },
+        ),
+      ),
+    ).rejects.toThrow(/requires a Chat source and a Project target/);
+    const rejectedCloneId = `att_v2_${createHash("sha256")
+      .update("omnimind:chat-to-agent:attachment:v1\0")
+      .update(rejectedCommandId)
+      .update("\0")
+      .update(sourceMessageId)
+      .update("\0")
+      .update(readable.id)
+      .digest("hex")
+      .slice(0, 32)}`;
+    expect(
+      Option.isNone(await system.run(repository.findById({ attachmentId: rejectedCloneId }))),
+    ).toBe(true);
+
+    const accepted = await system.run(
+      engine.dispatch(forkCommand, { attachmentPrincipal: principal }),
+    );
+    await expect(
+      system.run(engine.dispatch(forkCommand, { attachmentPrincipal: principal })),
+    ).resolves.toEqual(accepted);
+
+    const target = (await system.run(engine.getReadModel())).threads.find(
+      (thread) => thread.id === targetThreadId,
+    );
+    expect(target).toBeDefined();
+    expect(target?.title).not.toBe(forkCommand.title);
+    expect(target?.messages.map(({ text }) => text)).toEqual([
+      "Canonical user text",
+      "Canonical assistant text",
+    ]);
+    expect(target?.messages[0]?.mentions).toEqual([
+      {
+        name: "External folder",
+        path: "/tmp/external-reference",
+        resourceKind: "directory",
+      },
+    ]);
+    expect(target?.messages[0]?.attachments).toHaveLength(2);
+    expect(target?.messages[0]?.attachments?.[0]).toMatchObject({
+      type: "assistant-selection",
+      assistantMessageId: target?.messages[1]?.id,
+    });
+    expect(target?.messages[0]?.attachments?.[1]).toMatchObject({
+      type: "file",
+      name: "readable.txt",
+    });
+    expect(target?.messages[0]?.attachments?.[1]?.id).not.toBe(readable.id);
+    const clonedId = target?.messages[0]?.attachments?.[1]?.id;
+    expect(clonedId).toBeDefined();
+    const cloned = await system.run(repository.findClaimedById({ attachmentId: clonedId! }));
+    expect(Option.getOrNull(cloned)).toMatchObject({
+      ownerThreadId: targetThreadId,
+      claimMessageId: target?.messages[0]?.id,
+      claimCommandId: forkCommand.commandId,
+      state: "claimed",
+    });
+    expect(
+      target?.activities.filter(
+        (activity) => activity.kind === "chat-to-agent.attachments.partial",
+      ),
+    ).toEqual([
+      expect.objectContaining({
+        payload: {
+          failures: [
+            expect.objectContaining({
+              name: "missing.txt",
+              reason: "unreadable",
+              attachmentIndex: 2,
+            }),
+          ],
+        },
+      }),
+    ]);
+
+    await expect(
+      system.run(
+        engine.dispatch(
+          {
+            ...forkCommand,
+            commandId: CommandId.makeUnsafe("cmd-chat-to-agent-client-history"),
+            threadId: ThreadId.makeUnsafe("thread-chat-fork-forged"),
+            importedMessages: [
+              {
+                messageId: asMessageId("msg-forged"),
+                role: "user",
+                text: "Forged client history",
+                createdAt,
+                updatedAt: createdAt,
+              },
+            ],
+          },
+          { attachmentPrincipal: principal },
+        ),
+      ),
+    ).rejects.toThrow(/server-owned/);
+
+    await system.dispose();
+  });
+
+  it("keeps a large Chat-to-Agent command constant-size and imports canonical history within bounded time and memory", async () => {
+    const system = await createOrchestrationSystem();
+    const { engine, serverConfig } = system;
+    const createdAt = "2026-08-21T09:00:00.000Z";
+    const sourceProjectId = asProjectId("project-large-chat-source");
+    const targetProjectId = asProjectId("project-large-chat-target");
+    const sourceThreadId = ThreadId.makeUnsafe("thread-large-chat-source");
+    const targetThreadId = ThreadId.makeUnsafe("thread-large-chat-target");
+    const messageCount = 500;
+
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-large-chat-source-project"),
+        projectId: sourceProjectId,
+        kind: "chat",
+        title: "Large Chat",
+        workspaceRoot: path.join(serverConfig.chatWorkspaceRoot, "large-fork-source"),
+        defaultModelSelection: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-large-chat-target-project"),
+        projectId: targetProjectId,
+        kind: "project",
+        title: "Large Agent Target",
+        workspaceRoot: path.join(serverConfig.cwd, "large-fork-target"),
+        defaultModelSelection: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-large-chat-source-thread"),
+        threadId: sourceThreadId,
+        projectId: sourceProjectId,
+        title: "Large canonical Chat",
+        modelSelection: { provider: "omnimind", model: "local/model" },
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "full-access",
+        branch: null,
+        worktreePath: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "thread.messages.import",
+        commandId: CommandId.makeUnsafe("cmd-large-chat-source-messages"),
+        threadId: sourceThreadId,
+        messages: Array.from({ length: messageCount }, (_, index) => ({
+          messageId: asMessageId(`msg-large-chat-source-${index}`),
+          role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
+          text: `LARGE-CHAT-${index} ${"context ".repeat(120)}`,
+          mentions:
+            index % 25 === 0
+              ? [
+                  {
+                    name: `reference-${index}`,
+                    path: `/tmp/reference-${index}`,
+                    resourceKind: "directory" as const,
+                  },
+                ]
+              : undefined,
+          createdAt: new Date(Date.parse(createdAt) + index).toISOString(),
+          updatedAt: new Date(Date.parse(createdAt) + index).toISOString(),
+        })),
+        createdAt,
+      }),
+    );
+
+    const forkCommand = {
+      type: "thread.fork.create" as const,
+      commandId: CommandId.makeUnsafe("cmd-large-chat-to-agent-fork"),
+      threadId: targetThreadId,
+      sourceThreadId,
+      projectId: targetProjectId,
+      title: "Client title",
+      modelSelection: { provider: "omnimind" as const, model: "local/model" },
+      runtimeMode: "full-access" as const,
+      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      envMode: "local" as const,
+      branch: null,
+      worktreePath: null,
+      workingDirectory: null,
+      associatedWorktreePath: null,
+      associatedWorktreeBranch: null,
+      associatedWorktreeRef: null,
+      createBranchFlowCompleted: false,
+      sidechatSourceThreadId: null,
+      forkScope: {
+        kind: "chat-to-agent" as const,
+        bootstrapStatus: "pending" as const,
+      },
+      importedMessages: [],
+      createdAt,
+    };
+    expect(JSON.stringify(forkCommand).length).toBeLessThan(2_000);
+
+    const heapBefore = process.memoryUsage().heapUsed;
+    const startedAt = performance.now();
+    await system.run(engine.dispatch(forkCommand));
+    const elapsedMs = performance.now() - startedAt;
+    const heapGrowth = Math.max(0, process.memoryUsage().heapUsed - heapBefore);
+
+    const target = (await system.run(engine.getReadModel())).threads.find(
+      (thread) => thread.id === targetThreadId,
+    );
+    expect(target?.messages).toHaveLength(messageCount);
+    expect(target?.messages.at(-1)?.text).toContain("LARGE-CHAT-499");
+    expect(elapsedMs).toBeLessThan(8_000);
+    expect(heapGrowth).toBeLessThan(192 * 1024 * 1024);
+
+    await system.dispose();
+  }, 15_000);
 
   it("replays append-only events from sequence", async () => {
     const system = await createOrchestrationSystem();

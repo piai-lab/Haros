@@ -162,6 +162,16 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
         Effect.mapError(toPersistenceSqlError("ManagedAttachment.findClaimedById")),
       );
 
+    const findById: ManagedAttachmentRepositoryShape["findById"] = (input) =>
+      sql<ManagedAttachmentBlob>`
+        SELECT ${blobColumns(sql)}
+        FROM managed_attachment_blobs
+        WHERE attachment_id = ${input.attachmentId}
+      `.pipe(
+        Effect.map((rows) => Option.fromNullishOr(rows[0])),
+        Effect.mapError(toPersistenceSqlError("ManagedAttachment.findById")),
+      );
+
     const findClaimedForCommand: ManagedAttachmentRepositoryShape["findClaimedForCommand"] = (
       input,
     ) =>
@@ -254,12 +264,55 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
         `.pipe(
         Effect.flatMap((rows) =>
           rows.length === input.attachmentIds.length
-            ? Effect.succeed({ status: "claimed" as const, attachments: rows })
+            ? Effect.succeed({
+                status: "claimed" as const,
+                attachments: rows,
+              })
             : classifyClaimRejection(input),
         ),
         Effect.mapError(toPersistenceSqlError("ManagedAttachment.claimForAcceptedTurn")),
       );
     };
+
+    const claimForImportedMessages: ManagedAttachmentRepositoryShape["claimForImportedMessages"] = (
+      input,
+    ) =>
+      Effect.gen(function* () {
+        const allIds = input.groups.flatMap((group) => group.attachmentIds);
+        if (new Set(allIds).size !== allIds.length) {
+          return { status: "rejected", reason: "duplicate-id" } as const;
+        }
+        const attachments: ManagedAttachmentBlob[] = [];
+        for (const group of input.groups) {
+          const result = yield* claimForAcceptedTurn({
+            attachmentIds: group.attachmentIds,
+            ownerThreadId: input.ownerThreadId,
+            ownerKind: input.ownerKind,
+            ownerId: input.ownerId,
+            commandId: input.commandId,
+            messageId: group.messageId,
+            now: input.now,
+          });
+          if (result.status === "rejected") return result;
+          attachments.push(...result.attachments);
+        }
+        return { status: "claimed", attachments } as const;
+      });
+
+    const deleteUnclaimedForRecovery: ManagedAttachmentRepositoryShape["deleteUnclaimedForRecovery"] =
+      (input) =>
+        sql<ManagedAttachmentBlob>`
+          DELETE FROM managed_attachment_blobs
+          WHERE attachment_id = ${input.attachmentId}
+            AND owner_thread_id = ${input.ownerThreadId}
+            AND owner_kind = ${input.ownerKind}
+            AND owner_id = ${input.ownerId}
+            AND state IN ('uploading', 'staged')
+          RETURNING ${blobColumns(sql)}
+        `.pipe(
+          Effect.map((rows) => Option.fromNullishOr(rows[0])),
+          Effect.mapError(toPersistenceSqlError("ManagedAttachment.deleteUnclaimedForRecovery")),
+        );
 
     const enqueueCleanupRows = (input: {
       readonly attachmentIds: ReadonlyArray<string>;
@@ -606,9 +659,12 @@ const makeRepository = (limits: ManagedAttachmentLimits) =>
       finalizeStaged,
       findServerOwned,
       findClaimedById,
+      findById,
       findClaimedForCommand,
       cancelStaged,
       claimForAcceptedTurn,
+      claimForImportedMessages,
+      deleteUnclaimedForRecovery,
       markCleanupByIds,
       markCleanupByThread,
       markUnreferencedClaimedForCleanup,
