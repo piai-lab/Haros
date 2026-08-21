@@ -10890,7 +10890,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("keeps a fresh Chat draft free of Project and workspace pickers", async () => {
+  it("keeps a fresh Chat draft free of Project and workspace chrome", async () => {
     useComposerDraftStore.setState({
       draftThreadsByThreadId: {
         [THREAD_ID]: {
@@ -10935,7 +10935,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const composerBlockBefore = document.querySelector<HTMLElement>(
         '[data-empty-landing-composer-block="true"]',
       );
-      expect(controlsBefore).not.toBeNull();
+      expect(controlsBefore).toBeNull();
       expect(composerBlockBefore).not.toBeNull();
       expect(useComposerDraftStore.getState().getDraftThread(THREAD_ID)?.projectId).toBe(
         HOME_PROJECT_ID,

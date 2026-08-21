@@ -11943,6 +11943,7 @@ export default function ChatView({
   const emptyLandingProjectChip =
     !showContainerChatWorkspacePicker &&
     !showEmptyLandingProjectPicker &&
+    activeProject?.kind !== "chat" &&
     activeProjectDisplayName ? (
       <span className="inline-flex min-w-0 max-w-56 shrink items-center gap-2 overflow-hidden rounded-md px-2 py-1 text-[length:var(--app-font-size-ui-sm,11px)] font-normal text-[var(--color-text-foreground-secondary)] sm:max-w-64">
         <FolderClosed className="size-3.5 shrink-0" />
@@ -11951,7 +11952,7 @@ export default function ChatView({
     ) : null;
   const showEmptyLandingControls =
     isCenteredEmptyLanding &&
-    (isEmptyChatLanding ||
+    (showContainerChatWorkspacePicker ||
       showEmptyLandingProjectPicker ||
       emptyLandingProjectChip !== null ||
       showEmptyLandingBranchToolbar);
