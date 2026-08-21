@@ -6,7 +6,7 @@
 
 已完成的 source candidate：服务端将可读 Reasoning 投影为 `reasoning.completed`/`info` 非 Tool activity，并保留 Provider item、turn 与顺序；Web 对新旧记录统一按 turn 合并、默认折叠、Bot icon、精确旁白去重。Skill 注入返回逐项 delivered/failed 结构化结果；OmniMind 明确走 Host inline seam，失败项不阻塞后续项，Provider 接受后写入确定性幂等 `skill.instructions.delivered`/`skill.instructions.failed` 回执。Tool 汇总只按结构化八类分类，混合类别使用通用执行 icon，未知事件不计入 Tool，正常产品文案和时长完成中英文 catalog parity。
 
-截至当前工作树，Web 全量 `326` files / `4176` tests 通过；Server typecheck、Reasoning projection/ingestion、Skill injection focused tests 通过（其中 ingestion `111/111`）。仍需在同一 SHA 完成 Server 全量回归、最终 `git diff --check`，并按 Desktop 交付链决定是否进行隔离 packaged journey；source-only candidate 不能宣称已安装修复。
+截至当前 pushed SHA `5b47a4cd10e7a7e523d6709fe46b5aad8b400efb`，Web 全量 `326` files / `4177` tests、Server 全量 `373` files / `4367` tests（另 3/16 skipped）通过，双方 typecheck 通过；Reasoning projection/ingestion、Skill injection focused tests 通过（ingestion `111/111`）。从该 SHA 重建的 arm64 DMG 已完成 240 项 legal closure，SHA-256 为 `ae8363e76b4c08a901493f468239d4021b6bcf4eeccdc028874129ee4feb5b59`；通过任务专用隔离环境的 packaged startup smoke。完整 fresh-profile Timeline 交互 journey（选择 Aihot、回执、Reasoning/command/mixed、关闭重开）尚未在 packaged App 上闭合，因此仍不能宣称安装版已完成全链路验收。
 
 完全隔离的 installed-App profile 使用任务专用 `HOME`、`OMNIMIND_HOME`、`CODEX_HOME`、`CLAUDE_CONFIG_DIR` 与 `PI_CODING_AGENT_DIR`，并由主进程、Helper 与 bundled Server 的运行参数/环境证明隔离。植入无凭据、无网络调用的任务本地 catalog 后，将持久化 OmniMind Provider 状态改成 `available: false` 的旧缓存；关闭重开 installed App 后，7.616 秒即可打开模型按钮，8.717 秒已呈现 `Restart Fixture / Instant Model`，早于 10 秒 Provider refresh。真实用户 Provider home 未被读取或改写，最终任务进程归零；旧安装版已移入 Trash，可恢复。
 
@@ -21,7 +21,7 @@
 
 ## 当前阻塞
 
-Timeline source candidate 尚未完成 commit/push、packaged App 重建与 fresh-profile 真实 journey，因此当前不能宣称已安装版已获得修复。除此之外没有已知产品语义阻塞；若最终 packaged journey 因环境或资源不可用，应准确标为 source-only candidate，不把 focused tests 扩写成安装证据。
+Timeline source 已完成 commit/push、packaged App 重建与隔离启动 smoke；剩余证据缺口只有 packaged App 内的完整 fresh-profile Timeline 交互 journey，因此当前不能宣称已安装版全链路验收完成。除此之外没有已知产品语义阻塞；若最终 journey 因环境或资源不可用，应准确保留为 source + startup-smoke candidate，不把 focused tests 扩写成安装证据。
 
 上一个 Model services 冷启动修复没有剩余产品阻塞：focused Model services browser tests 为 42/42，WebSocket transport focused tests 为 92/92，Web unit tests 为 4173/4173；Web build/typecheck、root lint/format、document contract 与 release provenance 通过。
 
