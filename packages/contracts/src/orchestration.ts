@@ -521,12 +521,18 @@ export const ThreadHandoff = Schema.Struct({
 });
 export type ThreadHandoff = typeof ThreadHandoff.Type;
 
-export const ThreadForkScope = Schema.Struct({
-  kind: Schema.Literal("history-only"),
-  sourceMessageId: MessageId,
-  sourceMessageUpdatedAt: IsoDateTime,
-  bootstrapStatus: ThreadHandoffBootstrapStatus,
-});
+export const ThreadForkScope = Schema.Union([
+  Schema.Struct({
+    kind: Schema.Literal("history-only"),
+    sourceMessageId: MessageId,
+    sourceMessageUpdatedAt: IsoDateTime,
+    bootstrapStatus: ThreadHandoffBootstrapStatus,
+  }),
+  Schema.Struct({
+    kind: Schema.Literal("chat-to-agent"),
+    bootstrapStatus: ThreadHandoffBootstrapStatus,
+  }),
+]);
 export type ThreadForkScope = typeof ThreadForkScope.Type;
 
 export const OrchestrationProposedPlanId = TrimmedNonEmptyString;
@@ -1141,6 +1147,7 @@ export const ThreadHandoffImportedMessage = Schema.Struct({
   role: Schema.Literals(["user", "assistant"]),
   text: Schema.String,
   attachments: Schema.optional(Schema.Array(ChatAttachment)),
+  mentions: Schema.optional(Schema.Array(ProviderMentionReference)),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
 });
@@ -1198,7 +1205,9 @@ const ThreadForkCreateCommand = Schema.Struct({
   forkScope: Schema.optional(Schema.NullOr(ThreadForkScope)).pipe(
     Schema.withDecodingDefault(() => null),
   ),
-  importedMessages: Schema.Array(ThreadHandoffImportedMessage),
+  importedMessages: Schema.optional(Schema.Array(ThreadHandoffImportedMessage)).pipe(
+    Schema.withDecodingDefault(() => []),
+  ),
   createdAt: IsoDateTime,
 });
 
@@ -1690,8 +1699,8 @@ const ThreadForkBootstrapCompleteCommand = Schema.Struct({
   type: Schema.Literal("thread.fork.bootstrap.complete"),
   commandId: CommandId,
   threadId: ThreadId,
-  sourceMessageId: MessageId,
-  sourceMessageUpdatedAt: IsoDateTime,
+  sourceMessageId: Schema.optional(MessageId),
+  sourceMessageUpdatedAt: Schema.optional(IsoDateTime),
   completedAt: IsoDateTime,
 });
 

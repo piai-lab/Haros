@@ -46,6 +46,7 @@ export type ProviderSkillReference = typeof ProviderSkillReference.Type;
 export const ProviderMentionReference = Schema.Struct({
   name: TrimmedNonEmptyString,
   path: TrimmedNonEmptyString,
+  resourceKind: Schema.optional(Schema.Literals(["file", "directory"])),
 });
 export type ProviderMentionReference = typeof ProviderMentionReference.Type;
 

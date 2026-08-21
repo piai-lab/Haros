@@ -144,6 +144,10 @@
       "types": "./src/projectContainers.ts",
       "import": "./src/projectContainers.ts"
     },
+    "./productSurface": {
+      "types": "./src/productSurface.ts",
+      "import": "./src/productSurface.ts"
+    },
     "./projectDirectoryName": {
       "types": "./src/projectDirectoryName.ts",
       "import": "./src/projectDirectoryName.ts"
@@ -251,6 +255,10 @@
     "./threadMentions": {
       "types": "./src/threadMentions.ts",
       "import": "./src/threadMentions.ts"
+    },
+    "./importedTranscript": {
+      "types": "./src/importedTranscript.ts",
+      "import": "./src/importedTranscript.ts"
     },
     "./browserAutomationCatalogue": {
       "types": "./src/browserAutomationCatalogue.ts",

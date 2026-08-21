@@ -571,6 +571,7 @@ export interface DesktopBridge {
    */
   getPathForFile?: (file: File) => string | null;
   pickFolder: () => Promise<string | null>;
+  pickFile?: () => Promise<string | null>;
   saveFile?: (input: {
     defaultFilename: string;
     contents: string;
@@ -655,6 +656,7 @@ export interface DesktopBridge {
 export interface NativeApi {
   dialogs: {
     pickFolder: () => Promise<string | null>;
+    pickFile?: () => Promise<string | null>;
     saveFile?: (input: {
       defaultFilename: string;
       contents: string;

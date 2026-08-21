@@ -3993,6 +3993,16 @@ function registerIpcHandlers(): void {
     return result.filePaths[0] ?? null;
   });
 
+  ipcMain.removeHandler(IPC.pickFile);
+  ipcMain.handle(IPC.pickFile, async () => {
+    const owner = BrowserWindow.getFocusedWindow() ?? mainWindow;
+    const result = owner
+      ? await dialog.showOpenDialog(owner, { properties: ["openFile"] })
+      : await dialog.showOpenDialog({ properties: ["openFile"] });
+    if (result.canceled) return null;
+    return result.filePaths[0] ?? null;
+  });
+
   ipcMain.removeHandler(IPC.saveFile);
   ipcMain.handle(IPC.saveFile, async (_event, input: unknown) => {
     if (!isSaveFileInput(input)) {
