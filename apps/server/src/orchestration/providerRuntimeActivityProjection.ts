@@ -495,8 +495,8 @@ export function projectProviderRuntimeActivities(
       {
         id: EventId.makeUnsafe(`provider-reasoning:${event.threadId}:${reasoningItemId}`),
         createdAt: event.createdAt,
-        tone: "tool",
-        kind: "task.progress",
+        tone: "info",
+        kind: "reasoning.completed",
         summary: "Reasoning trace",
         payload: toActivityPayload({
           ...(event.payload.status ? { status: event.payload.status } : {}),

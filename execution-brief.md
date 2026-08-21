@@ -2,11 +2,11 @@
 
 ## 当前目标
 
-Composer 在 Desktop 重启后约 10 秒才恢复模型目录的问题已闭合。根因是当前/刚选中的 Engine 目录发现被上次运行持久化的 Provider health/auth 结果提前阻断，直到全局 Provider update coordinator 的 10 秒 live refresh 才重新启用；目录与发送权限因此被错误耦合。
+闭合 OmniMind Timeline 的全链路语义一致性：Reasoning、显式 Skill 投递、Tool 分类/计数/icon 与中英文文案必须由 canonical activity facts 驱动，不能因 Engine 投影、未知事件或首条 icon 不同而出现不同产品语义。当前实现不新增 Provider/Pi 公共 API、数据库迁移、第二 Skill owner 或平行 UI/store。
 
-当前实现让 exact selected Engine 立即进入既有 canonical `provider.listModels` query，目录继续决定“有哪些模型”，Provider health 继续独立决定“能否发送”。未选中的 Engine 不恢复后台 warming，stock Pi 仍只在明确选择后读取，OmniMind 仍要求现有 binding/model hint/显式 intent；没有新增 timeout、静态模型、第二缓存、重试系统或并行 owner。浏览器完整 `ChatView` suite 170/170、相关 unit 17/17、Web unit 4173/4173、Web typecheck 与 focused lint 已通过。
+已完成的 source candidate：服务端将可读 Reasoning 投影为 `reasoning.completed`/`info` 非 Tool activity，并保留 Provider item、turn 与顺序；Web 对新旧记录统一按 turn 合并、默认折叠、Bot icon、精确旁白去重。Skill 注入返回逐项 delivered/failed 结构化结果；OmniMind 明确走 Host inline seam，失败项不阻塞后续项，Provider 接受后写入确定性幂等 `skill.instructions.delivered`/`skill.instructions.failed` 回执。Tool 汇总只按结构化八类分类，混合类别使用通用执行 icon，未知事件不计入 Tool，正常产品文案和时长完成中英文 catalog parity。
 
-当前安装版 product bytes 准确绑定 pushed code `c538c3c052793cd0c83b54d423bbeba2a3c89ef3`：arm64 DMG SHA-256 为 `b4dc28cde812c93f97f70769a5611e6dbf932569c1ba70f14e5d5f8c1e55332d`，staged/installed `app.asar` SHA-256 均为 `326fdfe4a91c931bc799f5e872930b4a959641a8e333036629dc4e77bde54e5a`。240 个 legal identities 与 packaged startup smoke 已闭合；本机安装 App 已 ad-hoc 重签并通过 strict deep verification。
+截至当前工作树，Web 全量 `326` files / `4176` tests 通过；Server typecheck、Reasoning projection/ingestion、Skill injection focused tests 通过（其中 ingestion `111/111`）。仍需在同一 SHA 完成 Server 全量回归、最终 `git diff --check`，并按 Desktop 交付链决定是否进行隔离 packaged journey；source-only candidate 不能宣称已安装修复。
 
 完全隔离的 installed-App profile 使用任务专用 `HOME`、`OMNIMIND_HOME`、`CODEX_HOME`、`CLAUDE_CONFIG_DIR` 与 `PI_CODING_AGENT_DIR`，并由主进程、Helper 与 bundled Server 的运行参数/环境证明隔离。植入无凭据、无网络调用的任务本地 catalog 后，将持久化 OmniMind Provider 状态改成 `available: false` 的旧缓存；关闭重开 installed App 后，7.616 秒即可打开模型按钮，8.717 秒已呈现 `Restart Fixture / Instant Model`，早于 10 秒 Provider refresh。真实用户 Provider home 未被读取或改写，最终任务进程归零；旧安装版已移入 Trash，可恢复。
 
@@ -21,7 +21,7 @@ Composer 在 Desktop 重启后约 10 秒才恢复模型目录的问题已闭合�
 
 ## 当前阻塞
 
-Composer 冷启动修复没有剩余产品阻塞；source、pushed SHA、packaged artifact、本机安装与隔离重启 journey 已闭合。
+Timeline source candidate 尚未完成 commit/push、packaged App 重建与 fresh-profile 真实 journey，因此当前不能宣称已安装版已获得修复。除此之外没有已知产品语义阻塞；若最终 packaged journey 因环境或资源不可用，应准确标为 source-only candidate，不把 focused tests 扩写成安装证据。
 
 上一个 Model services 冷启动修复没有剩余产品阻塞：focused Model services browser tests 为 42/42，WebSocket transport focused tests 为 92/92，Web unit tests 为 4173/4173；Web build/typecheck、root lint/format、document contract 与 release provenance 通过。
 

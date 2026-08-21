@@ -89,6 +89,12 @@ export interface WorkLogEntry {
     completed: number;
     total: number;
   };
+  reasoningUpdateCount?: number;
+  skillDelivery?: {
+    skillName: string;
+    mode: "inline" | "reference";
+    failureReason?: "unreadable" | "oversized" | "budget_exceeded";
+  };
 }
 
 export type WorkLogLiveActivityState =
@@ -479,6 +485,22 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   };
   const itemType = extractWorkLogItemType(payload);
   const requestKind = extractWorkLogRequestKind(payload);
+  if (
+    (activity.kind === "skill.instructions.delivered" ||
+      activity.kind === "skill.instructions.failed") &&
+    typeof payload?.skillName === "string" &&
+    (payload.deliveryMode === "inline" || payload.deliveryMode === "reference")
+  ) {
+    entry.skillDelivery = {
+      skillName: payload.skillName,
+      mode: payload.deliveryMode,
+      ...(payload.failureReason === "unreadable" ||
+      payload.failureReason === "oversized" ||
+      payload.failureReason === "budget_exceeded"
+        ? { failureReason: payload.failureReason }
+        : {}),
+    };
+  }
   if (payload && typeof payload.detail === "string" && payload.detail.length > 0) {
     const detail = stripTrailingExitCode(payload.detail).output;
     if (detail) {

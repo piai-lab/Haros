@@ -76,7 +76,10 @@ import {
   ProviderAdapterValidationError,
   ProviderServiceError,
 } from "../../provider/Errors.ts";
-import { buildInlineSkillInstructions } from "../../provider/skillPromptInjection.ts";
+import {
+  buildInlineSkillInstructions,
+  type SkillInstructionDelivery,
+} from "../../provider/skillPromptInjection.ts";
 import {
   PROVIDER_DEBUG_MODE_PROMPT_PREFIX,
   withProviderDebugModePrompt,
@@ -843,6 +846,55 @@ const make = Effect.gen(function* () {
       },
       createdAt: input.createdAt,
     });
+
+  const appendSkillDeliveryActivities = (input: {
+    readonly threadId: ThreadId;
+    readonly messageId: MessageId;
+    readonly turnId: TurnId | null;
+    readonly createdAt: string;
+    readonly deliveries: ReadonlyArray<SkillInstructionDelivery>;
+  }) =>
+    Effect.forEach(
+      input.deliveries,
+      (delivery, index) => {
+        const activityKey = `skill-delivery:${input.messageId}:${index}:${encodeURIComponent(delivery.name)}:${delivery.status}`;
+        return orchestrationEngine.dispatch({
+          type: "thread.activity.append",
+          commandId: CommandId.makeUnsafe(activityKey),
+          threadId: input.threadId,
+          activity: {
+            id: EventId.makeUnsafe(activityKey),
+            tone: delivery.status === "failed" ? "error" : "info",
+            kind:
+              delivery.status === "failed"
+                ? "skill.instructions.failed"
+                : "skill.instructions.delivered",
+            summary:
+              delivery.status === "failed"
+                ? "Skill instructions failed"
+                : "Skill instructions delivered",
+            payload: {
+              messageId: input.messageId,
+              skillName: delivery.name,
+              deliveryMode: delivery.mode,
+              ...(delivery.failureReason ? { failureReason: delivery.failureReason } : {}),
+            },
+            turnId: input.turnId,
+            createdAt: input.createdAt,
+          },
+          createdAt: input.createdAt,
+        });
+      },
+      { discard: true },
+    ).pipe(
+      Effect.catchCause((cause) =>
+        Effect.logWarning("failed to persist skill delivery receipt", {
+          threadId: input.threadId,
+          messageId: input.messageId,
+          cause: Cause.pretty(cause),
+        }),
+      ),
+    );
 
   const setThreadSession = (input: {
     readonly threadId: ThreadId;
@@ -1639,7 +1691,7 @@ const make = Effect.gen(function* () {
       // text-only subagent steering channel.
       const steerProvider = (providerThread.session?.providerName ??
         providerThread.modelSelection.provider) as ProviderKind;
-      const steerSkillInlineText =
+      const steerSkillResult =
         input.skills !== undefined && input.skills.length > 0
           ? yield* Effect.tryPromise(() =>
               buildInlineSkillInstructions({
@@ -1658,12 +1710,22 @@ const make = Effect.gen(function* () {
                 Effect.logWarning("failed to inline portable skill instructions", {
                   threadId: input.threadId,
                   error,
-                }).pipe(Effect.as("")),
+                }).pipe(
+                  Effect.as({
+                    text: "",
+                    deliveries: (input.skills ?? []).map((skill) => ({
+                      name: skill.name,
+                      status: "failed" as const,
+                      mode: "inline" as const,
+                      failureReason: "unreadable" as const,
+                    })),
+                  }),
+                ),
               ),
             )
-          : "";
-      const steerMessageWithSkills = steerSkillInlineText
-        ? `${messageText}\n\n${steerSkillInlineText}`
+          : { text: "", deliveries: [] as ReadonlyArray<SkillInstructionDelivery> };
+      const steerMessageWithSkills = steerSkillResult.text
+        ? `${messageText}\n\n${steerSkillResult.text}`
         : messageText;
       const composedSteerInput = withProviderThreadStatePrompts({
         interactionMode: input.interactionMode,
@@ -1703,6 +1765,13 @@ const make = Effect.gen(function* () {
           : {}),
         ...(input.skills !== undefined ? { skills: input.skills } : {}),
         ...(providerMentions !== undefined ? { mentions: providerMentions } : {}),
+      });
+      yield* appendSkillDeliveryActivities({
+        threadId: input.threadId,
+        messageId: MessageId.makeUnsafe(input.messageId),
+        turnId: null,
+        createdAt: input.createdAt,
+        deliveries: steerSkillResult.deliveries,
       });
       return;
     }
@@ -1971,7 +2040,7 @@ const make = Effect.gen(function* () {
     });
     // Portable skills fallback: providers that cannot load the referenced skill
     // file natively get the skill instructions inlined into the prompt.
-    const skillInlineText =
+    const skillInlineResult =
       input.skills !== undefined && input.skills.length > 0
         ? yield* Effect.tryPromise(() =>
             buildInlineSkillInstructions({
@@ -1984,19 +2053,29 @@ const make = Effect.gen(function* () {
                   PROVIDER_INPUT_SAFETY_MARGIN_CHARS,
               ),
             }),
-          ).pipe(
-            Effect.catch((error) =>
-              Effect.logWarning("failed to inline portable skill instructions", {
-                threadId: input.threadId,
-                error,
-              }).pipe(Effect.as("")),
-            ),
-          )
-        : "";
+            ).pipe(
+              Effect.catch((error) =>
+                Effect.logWarning("failed to inline portable skill instructions", {
+                  threadId: input.threadId,
+                  error,
+                }).pipe(
+                  Effect.as({
+                    text: "",
+                    deliveries: (input.skills ?? []).map((skill) => ({
+                      name: skill.name,
+                      status: "failed" as const,
+                      mode: "inline" as const,
+                      failureReason: "unreadable" as const,
+                    })),
+                  }),
+                ),
+              ),
+            )
+          : { text: "", deliveries: [] as ReadonlyArray<SkillInstructionDelivery> };
     const finalizeProviderInput = (bootstrap: BootstrapContextSelection | null) => {
       const withMentionContext = `${composeProviderInput(bootstrap)}${mentionContextSuffix}`;
-      const withSkills = skillInlineText
-        ? `${withMentionContext}\n\n${skillInlineText}`
+      const withSkills = skillInlineResult.text
+        ? `${withMentionContext}\n\n${skillInlineResult.text}`
         : withMentionContext;
       return toNonEmptyProviderInput(
         withProviderThreadStatePrompts({
@@ -2117,6 +2196,13 @@ const make = Effect.gen(function* () {
       if (input.onProviderAccepted) {
         yield* input.onProviderAccepted();
       }
+      yield* appendSkillDeliveryActivities({
+        threadId: input.threadId,
+        messageId: MessageId.makeUnsafe(input.messageId),
+        turnId: startedTurn.turnId,
+        createdAt: input.createdAt,
+        deliveries: skillInlineResult.deliveries,
+      });
     } else if (input.dispatchMode === "steer") {
       yield* markProviderAttempted();
       startedTurn = yield* providerService.steerTurn({
@@ -2126,6 +2212,13 @@ const make = Effect.gen(function* () {
       if (input.onProviderAccepted) {
         yield* input.onProviderAccepted();
       }
+      yield* appendSkillDeliveryActivities({
+        threadId: input.threadId,
+        messageId: MessageId.makeUnsafe(input.messageId),
+        turnId: startedTurn.turnId,
+        createdAt: input.createdAt,
+        deliveries: skillInlineResult.deliveries,
+      });
     } else {
       yield* capturePreTurnBaselines;
       pendingContextBootstrapAttempt =
@@ -2269,6 +2362,13 @@ const make = Effect.gen(function* () {
       if (input.onProviderAccepted) {
         yield* input.onProviderAccepted();
       }
+      yield* appendSkillDeliveryActivities({
+        threadId: input.threadId,
+        messageId: MessageId.makeUnsafe(input.messageId),
+        turnId: sentTurn.turnId,
+        createdAt: input.createdAt,
+        deliveries: skillInlineResult.deliveries,
+      });
       if (pendingContextBootstrapAttempt) {
         pendingContextBootstrapAttempt.turnId = sentTurn.turnId;
         const terminalEvent = pendingContextBootstrapAttempt.terminalEvent;

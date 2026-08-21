@@ -28,20 +28,18 @@ describe("classifyToolCallSummaryCategory", () => {
     ).toBe("edit");
   });
 
-  it("classifies file reads via requestKind and read-only commands", () => {
+  it("classifies file reads via requestKind without parsing command English", () => {
     expect(classifyToolCallSummaryCategory(workEntry({ id: "r1", requestKind: "file-read" }))).toBe(
       "read",
     );
-    expect(classifyToolCallSummaryCategory(command("r2", "cat src/app.ts"))).toBe("read");
+    expect(classifyToolCallSummaryCategory(command("r2", "cat src/app.ts"))).toBe("command");
   });
 
-  it("classifies search commands, structured search actions, and web searches", () => {
-    expect(classifyToolCallSummaryCategory(command("s1", 'rg -n "foo" src'))).toBe("search");
-    expect(
-      classifyToolCallSummaryCategory(
-        workEntry({ id: "s2", itemType: "command_execution", toolTitle: "Searched" }),
-      ),
-    ).toBe("search");
+  it("classifies structured web searches without parsing command English", () => {
+    expect(classifyToolCallSummaryCategory(command("s1", 'rg -n "foo" src'))).toBe("command");
+    expect(classifyToolCallSummaryCategory(workEntry({ id: "s2", itemType: "web_search" }))).toBe(
+      "search",
+    );
     expect(classifyToolCallSummaryCategory(workEntry({ id: "s3", itemType: "web_search" }))).toBe(
       "search",
     );
@@ -128,19 +126,21 @@ describe("summarizeToolCallGroup", () => {
     ]);
     expect(summary?.label).toBe("Ran 4 commands");
     expect(summary?.entryCount).toBe(4);
+    expect(summary?.iconKind).toBe("command");
   });
 
   it("joins mixed categories in a fixed order", () => {
     const summary = summarizeToolCallGroup([
-      command("s1", 'rg -n "alpha" src'),
+      workEntry({ id: "s1", itemType: "web_search" }),
       edit("e1", ["a.ts"]),
       command("c1"),
-      command("s2", "grep beta lib"),
+      workEntry({ id: "s2", itemType: "web_search" }),
       edit("e2", ["b.ts"]),
       command("c2", "bun run lint"),
-      command("s3", "rg gamma docs"),
+      workEntry({ id: "s3", itemType: "web_search" }),
     ]);
     expect(summary?.label).toBe("Ran 2 commands, Edited 2 files, Searched 3 files");
+    expect(summary?.iconKind).toBe("mixed");
   });
 
   it("counts distinct files for edits across entries", () => {
@@ -163,8 +163,8 @@ describe("summarizeToolCallGroup", () => {
 
   it("dedupes reads of the same file across command and structured entries", () => {
     const summary = summarizeToolCallGroup([
-      command("r1", "cat src/app.ts"),
-      command("r2", "cat src/app.ts"),
+      workEntry({ id: "r1", requestKind: "file-read", changedFiles: ["src/app.ts"] }),
+      workEntry({ id: "r2", requestKind: "file-read", changedFiles: ["src/app.ts"] }),
       workEntry({ id: "r3", requestKind: "file-read", changedFiles: ["src/main.ts"] }),
     ]);
     expect(summary?.label).toBe("Read 2 files");
@@ -184,12 +184,12 @@ describe("summarizeToolCallGroup", () => {
     expect(summary?.label).toBe("Ran 1 agent task, Used 2 tools");
   });
 
-  it("labels an uncategorized-only run as plain tool calls", () => {
+  it("keeps image categories explicit instead of degrading to other", () => {
     const summary = summarizeToolCallGroup([
       workEntry({ id: "o1", itemType: "image_view" }),
       workEntry({ id: "o2", itemType: "image_generation" }),
     ]);
-    expect(summary?.label).toBe("Ran 2 tool calls");
+    expect(summary?.label).toBe("Viewed 1 image, Generated 1 image");
   });
 
   it("skips excluded entries while summarizing the rest", () => {

@@ -4,7 +4,12 @@
 // Exports: row derivation, structural sharing, copy/timer helpers
 
 import { type MessageId, type TurnId } from "@omnimind/contracts";
-import { type TimelineEntry, type WorkLogEntry, formatElapsed } from "../../session-logic";
+import {
+  type TimelineEntry,
+  type WorkLogEntry,
+  elapsedMilliseconds,
+  formatElapsed,
+} from "../../session-logic";
 import { normalizeCompactToolLabel as normalizeCompactToolLabelValue } from "../../lib/toolCallLabel";
 import {
   isSummarizableToolCallEntry,
@@ -231,6 +236,7 @@ export type MessagesTimelineRow =
       inlineWorkGroupId?: string;
       collapsedTurnItems?: CollapsedTurnItem[];
       collapsedWorkElapsed?: string | null;
+      collapsedWorkElapsedMs?: number | null;
       durationStart: string;
       showAssistantCopyButton: boolean;
       assistantCopyStreaming: boolean;
@@ -807,8 +813,10 @@ function collapseSettledTurns(
 
     if (collapsedItems.length > 0) {
       const elapsed = formatElapsed(collapsedStart, message.completedAt);
+      const elapsedMs = elapsedMilliseconds(collapsedStart, message.completedAt);
       row.collapsedTurnItems = collapsedItems;
       row.collapsedWorkElapsed = elapsed ?? null;
+      row.collapsedWorkElapsedMs = elapsedMs;
       delete row.leadingWorkEntries;
       delete row.leadingWorkGroupId;
       delete row.inlineWorkEntries;
@@ -1101,6 +1109,7 @@ function isRowUnchanged(a: MessagesTimelineRow, b: MessagesTimelineRow): boolean
         a.inlineWorkGroupId === bm.inlineWorkGroupId &&
         collapsedTurnItemsEqual(a.collapsedTurnItems, bm.collapsedTurnItems) &&
         a.collapsedWorkElapsed === bm.collapsedWorkElapsed &&
+        a.collapsedWorkElapsedMs === bm.collapsedWorkElapsedMs &&
         a.durationStart === bm.durationStart &&
         a.showAssistantCopyButton === bm.showAssistantCopyButton &&
         a.assistantCopyStreaming === bm.assistantCopyStreaming &&

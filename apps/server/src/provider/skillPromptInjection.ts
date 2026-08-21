@@ -18,6 +18,24 @@ const INLINE_SKILLS_HEADER =
   "skill's instructions. File paths referenced inside a skill are relative to its " +
   '"dir" attribute.';
 
+export type SkillInstructionDeliveryMode = "inline" | "reference";
+export type SkillInstructionFailureReason =
+  | "unreadable"
+  | "oversized"
+  | "budget_exceeded";
+
+export interface SkillInstructionDelivery {
+  readonly name: string;
+  readonly status: "delivered" | "failed";
+  readonly mode: SkillInstructionDeliveryMode;
+  readonly failureReason?: SkillInstructionFailureReason;
+}
+
+export interface InlineSkillInstructionsResult {
+  readonly text: string;
+  readonly deliveries: ReadonlyArray<SkillInstructionDelivery>;
+}
+
 const CROSS_PROVIDER_SKILL_DIR_NAMES = [
   ".omnimind",
   ".codex",
@@ -52,6 +70,12 @@ export function shouldInlineSkillForProvider(provider: ProviderKind, skillPath: 
       // Pi loads its own skill set; anything resolved from a cross-provider
       // folder is portable and must be inlined.
       return CROSS_PROVIDER_SKILL_DIR_NAMES.some((dir) => segments.has(dir));
+    case "omnimind":
+      // OmniMind's explicit multi-skill Composer selection is a Host-owned
+      // inline path. Pi remains the owner of native discovery and model-invoked
+      // skills; this branch makes the Host boundary explicit instead of relying
+      // on the default fallback.
+      return true;
     default:
       // Antigravity/Grok/Droid/Kilo/OpenCode have no native skill support.
       return true;
@@ -62,25 +86,35 @@ export async function buildInlineSkillInstructions(input: {
   readonly provider: ProviderKind;
   readonly skills: ReadonlyArray<ProviderSkillReference>;
   readonly maxChars: number;
-}): Promise<string> {
-  const inlineSkills = input.skills.filter((skill) =>
-    shouldInlineSkillForProvider(input.provider, skill.path),
-  );
-  if (inlineSkills.length === 0 || input.maxChars <= 0) {
-    return "";
-  }
-
+}): Promise<InlineSkillInstructionsResult> {
+  const deliveries: SkillInstructionDelivery[] = [];
   let text = "";
-  for (const skill of inlineSkills) {
+  for (const skill of input.skills) {
+    if (!shouldInlineSkillForProvider(input.provider, skill.path)) {
+      deliveries.push({ name: skill.name, status: "delivered", mode: "reference" });
+      continue;
+    }
     let content: string;
     try {
       content = await fs.readFile(skill.path, "utf8");
     } catch {
+      deliveries.push({
+        name: skill.name,
+        status: "failed",
+        mode: "inline",
+        failureReason: "unreadable",
+      });
       continue;
     }
     let trimmed = content.trim();
     if (trimmed.length > MAX_INLINE_SKILL_CONTENT_CHARS) {
-      trimmed = `${trimmed.slice(0, MAX_INLINE_SKILL_CONTENT_CHARS)}\n[skill content truncated]`;
+      deliveries.push({
+        name: skill.name,
+        status: "failed",
+        mode: "inline",
+        failureReason: "oversized",
+      });
+      continue;
     }
     const block = `<skill name=${JSON.stringify(skill.name)} dir=${JSON.stringify(
       nodePath.dirname(skill.path),
@@ -88,10 +122,16 @@ export async function buildInlineSkillInstructions(input: {
     const candidate =
       text.length === 0 ? `${INLINE_SKILLS_HEADER}\n\n${block}` : `${text}\n\n${block}`;
     if (candidate.length > input.maxChars) {
-      // Keep whatever already fits instead of overflowing the provider turn budget.
-      break;
+      deliveries.push({
+        name: skill.name,
+        status: "failed",
+        mode: "inline",
+        failureReason: "budget_exceeded",
+      });
+      continue;
     }
     text = candidate;
+    deliveries.push({ name: skill.name, status: "delivered", mode: "inline" });
   }
-  return text;
+  return { text, deliveries };
 }

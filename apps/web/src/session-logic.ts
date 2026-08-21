@@ -81,37 +81,64 @@ export interface LatestProposedPlanState {
   implementationThreadId: ThreadId | null;
 }
 
-function formatDuration(durationMs: number): string {
+function formatDuration(durationMs: number, locale: "en" | "zh" = "en"): string {
+  const unit = (value: number, english: string, chinese: string) =>
+    locale === "zh" ? `${value}${chinese}` : `${value}${english}`;
   if (!Number.isFinite(durationMs) || durationMs < 0) return "0ms";
-  if (durationMs < 1_000) return `${Math.max(1, Math.round(durationMs))}ms`;
-  if (durationMs < 10_000) return `${(durationMs / 1_000).toFixed(1)}s`;
-  if (durationMs < 60_000) return `${Math.round(durationMs / 1_000)}s`;
+  if (durationMs < 1_000) return unit(Math.max(1, Math.round(durationMs)), "ms", "毫秒");
+  if (durationMs < 10_000) {
+    const value = (durationMs / 1_000).toFixed(1);
+    return locale === "zh" ? `${value}秒` : `${value}s`;
+  }
+  if (durationMs < 60_000) return unit(Math.round(durationMs / 1_000), "s", "秒");
   const minutes = Math.floor(durationMs / 60_000);
   const seconds = Math.round((durationMs % 60_000) / 1_000);
-  if (seconds === 0) return `${minutes}m`;
-  if (seconds === 60) return `${minutes + 1}m`;
-  return `${minutes}m ${seconds}s`;
+  if (seconds === 0) return unit(minutes, "m", "分");
+  if (seconds === 60) return unit(minutes + 1, "m", "分");
+  return locale === "zh"
+    ? `${minutes}分${seconds}秒`
+    : `${minutes}m ${seconds}s`;
 }
 
-export function formatClockDuration(durationMs: number): string {
+export function formatClockDuration(durationMs: number, locale: "en" | "zh" = "en"): string {
   const elapsedSeconds = Math.max(0, Math.floor(durationMs / 1_000));
-  if (elapsedSeconds < 60) return `${elapsedSeconds}s`;
+  if (elapsedSeconds < 60) {
+    return locale === "zh" ? formatDuration(elapsedSeconds * 1_000, locale) : `${elapsedSeconds}s`;
+  }
 
   const hours = Math.floor(elapsedSeconds / 3600);
   const minutes = Math.floor((elapsedSeconds % 3600) / 60);
   const seconds = elapsedSeconds % 60;
-  if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  if (hours > 0) {
+    return locale === "zh"
+      ? minutes > 0
+        ? `${hours}小时${minutes}分`
+        : `${hours}小时`
+      : minutes > 0
+        ? `${hours}h ${minutes}m`
+        : `${hours}h`;
+  }
+  return locale === "zh"
+    ? seconds > 0
+      ? `${minutes}分${seconds}秒`
+      : `${minutes}分`
+    : seconds > 0
+      ? `${minutes}m ${seconds}s`
+      : `${minutes}m`;
 }
 
-export function formatClockElapsed(startIso: string, endIso: string | undefined): string | null {
+export function formatClockElapsed(
+  startIso: string,
+  endIso: string | undefined,
+  locale: "en" | "zh" = "en",
+): string | null {
   if (!endIso) return null;
   const startedAt = Date.parse(startIso);
   const endedAt = Date.parse(endIso);
   if (Number.isNaN(startedAt) || Number.isNaN(endedAt) || endedAt < startedAt) {
     return null;
   }
-  return formatClockDuration(endedAt - startedAt);
+  return formatClockDuration(endedAt - startedAt, locale);
 }
 
 export function formatElapsed(startIso: string, endIso: string | undefined): string | null {
@@ -122,6 +149,16 @@ export function formatElapsed(startIso: string, endIso: string | undefined): str
     return null;
   }
   return formatDuration(endedAt - startedAt);
+}
+
+export function elapsedMilliseconds(startIso: string, endIso: string | undefined): number | null {
+  if (!endIso) return null;
+  const startedAt = Date.parse(startIso);
+  const endedAt = Date.parse(endIso);
+  if (Number.isNaN(startedAt) || Number.isNaN(endedAt) || endedAt < startedAt) {
+    return null;
+  }
+  return endedAt - startedAt;
 }
 
 type LatestTurnTiming = Pick<

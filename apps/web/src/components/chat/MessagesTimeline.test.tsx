@@ -1365,7 +1365,7 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup).toContain(formatShortTimestamp("2026-03-17T19:12:29.000Z", "locale"));
-    expect(markup).toContain("Worked for 1.0s");
+    expect(markup).toContain("Worked for 1s");
     expect(markup).not.toContain("data-scroll-anchor-ignore");
     expect(markup).not.toContain(
       `${formatShortTimestamp("2026-03-17T19:12:29.000Z", "locale")} • 1.0s`,
@@ -1446,6 +1446,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "tool 1",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1457,6 +1458,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.100Z",
               label: "tool 2",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1468,6 +1470,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.200Z",
               label: "tool 3",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1479,6 +1482,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.300Z",
               label: "tool 4",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1490,6 +1494,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.400Z",
               label: "tool 5",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1501,6 +1506,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.500Z",
               label: "tool 6",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1670,6 +1676,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "tool 1",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1681,6 +1688,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.100Z",
               label: "tool 2",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1692,6 +1700,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.200Z",
               label: "tool 3",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1703,6 +1712,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.300Z",
               label: "tool 4",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1714,6 +1724,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.400Z",
               label: "tool 5",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1725,6 +1736,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.500Z",
               label: "tool 6",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -1759,13 +1771,13 @@ describe("MessagesTimeline", () => {
 
     // The assistant's text block already follows the run, so it compacts
     // behind the summary row even while the turn is still live.
-    expect(markup).toContain("Ran 6 tool calls");
+    expect(markup).toContain("Used 6 tools");
     expect(markup).not.toContain("Tool 1");
     expect(markup).not.toContain("Tool 6");
     expect(markup).not.toContain("+2 more tool calls");
   });
 
-  it("renders reasoning activity as iconless tool text while the wait row remains live", async () => {
+  it("renders reasoning activity with a bot icon while the wait row remains live", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const activeTurnId = TurnId.makeUnsafe("turn-reasoning-live");
     const markup = renderToStaticMarkup(
@@ -1786,8 +1798,9 @@ describe("MessagesTimeline", () => {
               turnId: activeTurnId,
               label: "Reasoning trace",
               toolTitle: "Reasoning trace",
+              activityKind: "reasoning.completed",
               detail: "**Inspecting apps/web/src/store.ts**\n\n<!-- -->",
-              tone: "tool",
+              tone: "info",
             },
           },
           {
@@ -1815,8 +1828,9 @@ describe("MessagesTimeline", () => {
               turnId: activeTurnId,
               label: "Reasoning summary",
               toolTitle: "Reasoning summary",
+              activityKind: "reasoning.completed",
               preview: "Updating the adapter",
-              tone: "tool",
+              tone: "info",
             },
           },
           {
@@ -1850,17 +1864,46 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup.match(/data-codex-status-row="true"/g) ?? []).toHaveLength(3);
-    expect(markup.match(/data-work-entry-icon="true"/g) ?? []).toHaveLength(1);
+    expect(markup.match(/data-codex-status-row="true"/g) ?? []).toHaveLength(0);
+    expect(markup.match(/data-work-entry-icon="true"/g) ?? []).toHaveLength(4);
     expect(markup).toContain('data-testid="thinking-status"');
-    expect(markup).toContain("Inspecting apps/web/src/store.ts");
+    expect(markup).toContain("Reasoning · 1 update");
     expect(markup).not.toContain("Reasoning trace Inspecting");
+  });
+
+  it("renders a successful Skill delivery as its own non-Tool row", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        timelineEntries={[
+          {
+            id: "entry-skill-delivered",
+            kind: "work",
+            createdAt: "2026-03-17T19:12:28.100Z",
+            entry: {
+              id: "skill-delivered",
+              createdAt: "2026-03-17T19:12:28.100Z",
+              label: "Skill instructions delivered",
+              toolTitle: "Skill instructions delivered",
+              activityKind: "skill.instructions.delivered",
+              skillDelivery: { skillName: "Aihot", mode: "inline" },
+              tone: "info",
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(markup).toContain("Loaded Aihot skill instructions");
+    expect(markup).not.toContain("Used 1 tool");
+    expect(markup).toContain("/central-icons-reversed/building-blocks.svg");
   });
 
   it.each([
     {
       provider: "Anti-Gravity",
-      expectedText: "Run_command",
+      expectedText: "Ran 1 command",
       activity: makeActivity({
         id: "antigravity-live-tool",
         createdAt: "2026-03-17T19:12:28.100Z",
@@ -1880,7 +1923,7 @@ describe("MessagesTimeline", () => {
     },
     {
       provider: "Codex",
-      expectedText: "Checking git status",
+      expectedText: "Ran 1 command git status",
       activity: makeActivity({
         id: "codex-live-tool",
         createdAt: "2026-03-17T19:12:28.100Z",
@@ -2046,6 +2089,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:30.100Z",
               label: "tool 1",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -2057,6 +2101,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:30.200Z",
               label: "tool 2",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
         ]}
@@ -2117,6 +2162,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.000Z",
               label: "tool 1",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -2128,6 +2174,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.100Z",
               label: "tool 2",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -2139,6 +2186,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.200Z",
               label: "tool 3",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -2150,6 +2198,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.300Z",
               label: "tool 4",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
           {
@@ -2161,6 +2210,7 @@ describe("MessagesTimeline", () => {
               createdAt: "2026-03-17T19:12:28.400Z",
               label: "tool 5",
               tone: "tool",
+              itemType: "mcp_tool_call",
             },
           },
         ]}
@@ -2367,7 +2417,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Searched");
+    expect(markup).toContain("Ran 1 command");
     expect(markup).toContain("for ProjectionSnapshotQuery in server/src");
     expect(markup).not.toContain("data-work-entry-action-word");
     expect(markup).toContain(TOOLTIP_TRIGGER_MARKER);
@@ -2493,7 +2543,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("$ rg -n &quot;toolDetails&quot; apps/web/src");
     expect(markup).not.toContain("apps/web/src/session-logic.ts:55: toolDetails");
     expect(markup).not.toContain("Stdout");
-    expect(markup).toContain("Searched");
+    expect(markup).toContain("Ran 1 command");
   });
 
   it("renders command text even when commandActions provide a short preview", async () => {
@@ -2538,7 +2588,7 @@ describe("MessagesTimeline", () => {
       />,
     );
 
-    expect(markup).toContain("Listed");
+    expect(markup).toContain("Ran 1 command");
     expect(markup).not.toContain("data-work-entry-action-word");
     expect(markup).toContain("web/src");
     expect(markup).toContain(TOOLTIP_TRIGGER_MARKER);

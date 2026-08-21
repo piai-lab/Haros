@@ -21,7 +21,8 @@ export type ToolCallSummaryCategory =
   | "search"
   | "agent"
   | "tool"
-  | "other";
+  | "image_view"
+  | "image_generation";
 
 export interface ToolCallGroupSummaryPart {
   category: ToolCallSummaryCategory;
@@ -36,8 +37,9 @@ export interface ToolCallGroupSummary {
   // A group with in-flight work must never present itself as settled.
   hasRunningEntry: boolean;
   // First summarized entry: the collapsed row borrows its icon so the summary
-  // keeps the same leading glyph as the first tool row it folds away.
+  // can reuse the exact category icon for homogeneous groups.
   iconEntry: WorkLogEntry;
+  iconKind: ToolCallSummaryCategory | "mixed";
 }
 
 // Rich rows (subagent strips, automation cards, thread-creation recaps) and
@@ -49,20 +51,14 @@ export function isSummarizableToolCallEntry(entry: WorkLogEntry): boolean {
     !entry.omnimindThreadCreation &&
     !entry.automation &&
     !entry.subagentAction &&
-    (entry.subagents?.length ?? 0) === 0
+    (entry.subagents?.length ?? 0) === 0 &&
+    classifyToolCallSummaryCategory(entry) !== null
   );
 }
 
-const READ_VERBS = new Set(["Read", "Reading"]);
-const SEARCH_VERBS = new Set(["Searched", "Searching", "Found", "Finding"]);
-
-function classifyCommandVerb(verb: string): ToolCallSummaryCategory {
-  if (READ_VERBS.has(verb)) return "read";
-  if (SEARCH_VERBS.has(verb)) return "search";
-  return "command";
-}
-
-export function classifyToolCallSummaryCategory(entry: WorkLogEntry): ToolCallSummaryCategory {
+export function classifyToolCallSummaryCategory(
+  entry: WorkLogEntry,
+): ToolCallSummaryCategory | null {
   if (isFileChangeWorkLogEntry(entry)) {
     return "edit";
   }
@@ -72,15 +68,15 @@ export function classifyToolCallSummaryCategory(entry: WorkLogEntry): ToolCallSu
   if (entry.itemType === "web_search") {
     return "search";
   }
+  if (entry.itemType === "image_view") {
+    return "image_view";
+  }
+  if (entry.itemType === "image_generation") {
+    return "image_generation";
+  }
   const command = entry.command ?? entry.rawCommand;
   if (entry.itemType === "command_execution" || entry.requestKind === "command" || command) {
-    if (command) {
-      return classifyCommandVerb(deriveReadableCommandDisplay(command).verb);
-    }
-    // Structured command actions (e.g. Codex read/search) carry the verb as the
-    // derived tool title without any shell command string.
-    const titleVerb = entry.toolTitle?.trim().split(/\s+/, 1)[0] ?? "";
-    return classifyCommandVerb(titleVerb);
+    return "command";
   }
   if (entry.itemType === "collab_agent_tool_call") {
     return "agent";
@@ -91,7 +87,7 @@ export function classifyToolCallSummaryCategory(entry: WorkLogEntry): ToolCallSu
   if (entry.toolName) {
     return "tool";
   }
-  return "other";
+  return null;
 }
 
 // Distinct-file identity for an edit/read entry. Entries with no file info
@@ -124,7 +120,8 @@ const CATEGORY_ORDER: ReadonlyArray<ToolCallSummaryCategory> = [
   "search",
   "agent",
   "tool",
-  "other",
+  "image_view",
+  "image_generation",
 ];
 
 function summaryPartLabel(
@@ -145,10 +142,10 @@ function summaryPartLabel(
       return `Ran ${count} agent ${pluralize(count, "task")}`;
     case "tool":
       return `Used ${count} ${pluralize(count, "tool")}`;
-    case "other":
-      return isSolePart
-        ? `Ran ${count} tool ${pluralize(count, "call")}`
-        : `${count} other tool ${pluralize(count, "call")}`;
+    case "image_view":
+      return `Viewed ${count} ${pluralize(count, "image")}`;
+    case "image_generation":
+      return `Generated ${count} ${pluralize(count, "image")}`;
   }
 }
 
@@ -169,6 +166,9 @@ export function summarizeToolCallGroup(
       hasRunningEntry = true;
     }
     const category = classifyToolCallSummaryCategory(entry);
+    if (category === null) {
+      continue;
+    }
     if (category === "edit" || category === "read") {
       const fileKeys = entryFileKeys(entry);
       if (fileKeys.length === 0) {
@@ -206,5 +206,6 @@ export function summarizeToolCallGroup(
     entryCount: summarizable.length,
     hasRunningEntry,
     iconEntry: summarizable[0]!,
+    iconKind: populated.length === 1 ? populated[0]! : "mixed",
   };
 }

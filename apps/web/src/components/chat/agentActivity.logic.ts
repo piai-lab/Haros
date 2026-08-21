@@ -5,6 +5,8 @@
 
 import { normalizeCompactToolLabel } from "../../lib/toolCallLabel";
 import type { WorkLogEntry } from "../../session-logic";
+import { deriveTimelineEntries } from "../../workLog";
+import type { ChatMessage } from "../../types";
 
 export interface AgentActivityDetail {
   id: string;
@@ -22,8 +24,12 @@ export interface AgentActivityTimelineState {
 const REASONING_GROUP_PREFIX = "agent-reasoning";
 
 export function isReasoningUpdateWorkEntry(
-  entry: Pick<WorkLogEntry, "label" | "toolTitle">,
+  entry: Pick<WorkLogEntry, "activityKind" | "label" | "toolTitle">,
 ): boolean {
+  if (entry.activityKind === "reasoning.completed") {
+    return true;
+  }
+  // Read-only compatibility for activities persisted by older OmniMind builds.
   const heading = normalizeWorkText(entry.toolTitle ?? entry.label);
   return (
     heading === "reasoning" ||
@@ -34,14 +40,16 @@ export function isReasoningUpdateWorkEntry(
 }
 
 export function isCodexActivityStatusWorkEntry(entry: WorkLogEntry): boolean {
-  if (isReasoningUpdateWorkEntry(entry)) {
-    return true;
-  }
+  // A structured command fact is a real execution even when the provider did
+  // not include the raw shell string; it must keep the Terminal icon. Only a
+  // generic lifecycle label without command semantics remains iconless.
   const isStatusOnlyCommand =
-    entry.itemType === "command_execution" && !entry.command && !entry.rawCommand;
-  return (
-    isStatusOnlyCommand || normalizeWorkText(entry.toolTitle ?? entry.label) === "command execution"
-  );
+    entry.itemType !== "command_execution" &&
+    entry.requestKind !== "command" &&
+    !entry.command &&
+    !entry.rawCommand &&
+    normalizeWorkText(entry.toolTitle ?? entry.label) === "command execution";
+  return isStatusOnlyCommand;
 }
 
 export function isAgentActivityWorkEntry(entry: WorkLogEntry): boolean {
@@ -106,6 +114,7 @@ export function formatAgentActivityEntrySummary(entry: WorkLogEntry): string | n
 
 export function deriveAgentActivityTimelineState(
   entries: ReadonlyArray<WorkLogEntry>,
+  messages: ReadonlyArray<ChatMessage> = [],
 ): AgentActivityTimelineState {
   const timelineWorkEntries: WorkLogEntry[] = [];
   const detailById = new Map<string, AgentActivityDetail>();
@@ -124,18 +133,15 @@ export function deriveAgentActivityTimelineState(
     const latestPreview = findLatestPreview(groupEntries);
     const updateCount = groupEntries.length;
     const displayPreview =
-      updateCount > 1
-        ? latestPreview
-          ? `${updateCount} updates - ${latestPreview}`
-          : `${updateCount} updates`
-        : latestPreview;
+      latestPreview;
     const displayEntry: WorkLogEntry = {
       ...latest,
       id: groupId,
       createdAt: first.createdAt,
-      label: "Reasoning trace",
-      toolTitle: "Reasoning trace",
-      tone: "tool",
+      label: "Reasoning",
+      toolTitle: "Reasoning",
+      tone: "thinking",
+      reasoningUpdateCount: updateCount,
       ...(displayPreview ? { preview: displayPreview, detail: displayPreview } : {}),
     };
     if (first.sequence === undefined) {
@@ -148,41 +154,72 @@ export function deriveAgentActivityTimelineState(
     detailById.set(groupId, buildAgentActivityDetail(groupId, displayEntry, groupEntries));
   };
 
-  for (const entry of entries) {
-    // Legacy providers emit free-standing reasoning updates with no item id;
-    // keep compacting those. Canonical Codex reasoning carries toolCallId, so
-    // each completed provider item remains its own visible row.
-    if (isReasoningUpdateWorkEntry(entry) && !entry.toolCallId) {
+  const orderedTimeline =
+    messages.length > 0
+      ? deriveTimelineEntries([...messages], [], [...entries])
+      : entries.map((entry) => ({
+          id: entry.id,
+          kind: "work" as const,
+          createdAt: entry.createdAt,
+          ...(entry.sequence !== undefined ? { sequence: entry.sequence } : {}),
+          entry,
+        }));
+
+  for (const [index, timelineEntry] of orderedTimeline.entries()) {
+    if (timelineEntry.kind !== "work") {
+      flushReasoningEntries();
+      continue;
+    }
+    const entry = timelineEntry.entry;
+    if (isReasoningUpdateWorkEntry(entry)) {
+      const reasoningPreview = formatAgentActivityEntryPreview(entry);
+      if (!reasoningPreview || isDuplicateAdjacentAssistantNarration(orderedTimeline, index, entry)) {
+        continue;
+      }
       pendingReasoningEntries.push(entry);
       continue;
     }
 
     flushReasoningEntries();
-    const reasoningPreview = isReasoningUpdateWorkEntry(entry)
-      ? formatAgentActivityEntryPreview(entry)
-      : null;
-    // Old OmniMind builds persisted a literal placeholder for every empty Codex
-    // reasoning lifecycle. Match Codex history semantics and hide those rows.
-    if (isReasoningUpdateWorkEntry(entry) && !reasoningPreview) {
-      continue;
-    }
-    const displayEntry = reasoningPreview
-      ? {
-          ...entry,
-          label: "Reasoning trace",
-          toolTitle: "Reasoning trace",
-          preview: reasoningPreview,
-          tone: "tool" as const,
-        }
-      : entry;
-    timelineWorkEntries.push(displayEntry);
+    timelineWorkEntries.push(entry);
     if (isAgentActivityWorkEntry(entry)) {
-      detailById.set(entry.id, buildAgentActivityDetail(entry.id, displayEntry, [entry]));
+      detailById.set(entry.id, buildAgentActivityDetail(entry.id, entry, [entry]));
     }
   }
 
   flushReasoningEntries();
   return { timelineWorkEntries, detailById };
+}
+
+function isDuplicateAdjacentAssistantNarration(
+  timeline: ReturnType<typeof deriveTimelineEntries>,
+  index: number,
+  entry: WorkLogEntry,
+): boolean {
+  if (!entry.turnId) {
+    return false;
+  }
+  const preview = formatAgentActivityEntryPreview(entry);
+  if (!preview) {
+    return false;
+  }
+  const normalizedPreview = normalizeExactVisibleText(preview);
+  for (const adjacentIndex of [index - 1, index + 1]) {
+    const adjacent = timeline[adjacentIndex];
+    if (
+      adjacent?.kind === "message" &&
+      adjacent.message.role === "assistant" &&
+      adjacent.message.turnId === entry.turnId &&
+      normalizeExactVisibleText(adjacent.message.text) === normalizedPreview
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function normalizeExactVisibleText(value: string): string {
+  return value.normalize("NFC").replace(/\s+/gu, " ").trim();
 }
 
 function buildAgentActivityDetail(

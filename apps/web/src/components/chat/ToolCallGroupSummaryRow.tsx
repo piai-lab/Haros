@@ -14,6 +14,8 @@ import { cn } from "~/lib/utils";
 import { MUTED_LABEL_TEXT_CLASS_NAME } from "~/surfaceStyles";
 import { extractWebFetchUrl } from "../../lib/toolCallLabel";
 import { LinkChipIcon } from "../LinkChipIcon";
+import { HammerIcon } from "~/lib/icons";
+import { useI18n } from "~/i18n";
 import type { ToolCallGroupSummary } from "./toolCallGroup.logic";
 import { renderWorkEntryIcon, workEntryLeftIcon } from "./TimelineWorkEntryRow";
 
@@ -25,6 +27,7 @@ export function ToolCallGroupSummaryRow(props: {
   renderChildren: () => ReactNode;
 }) {
   const { summary, open, onToggle, fontSizePx, renderChildren } = props;
+  const { t } = useI18n();
   const [keepChildrenMounted, setKeepChildrenMounted] = useState(open);
 
   useEffect(() => {
@@ -42,9 +45,12 @@ export function ToolCallGroupSummaryRow(props: {
 
   const shouldRenderChildren = open || keepChildrenMounted;
 
-  // The collapsed row wears its first entry's icon (favicon for web fetches),
-  // so folding a run of tool calls keeps the leading glyph of the row it hides.
-  const iconWebFetchUrl = extractWebFetchUrl(summary.iconEntry);
+  const iconWebFetchUrl = summary.iconKind === "mixed" ? null : extractWebFetchUrl(summary.iconEntry);
+  const localizedLabel = summary.parts
+    .map((part) =>
+      t(`toolGroup.${part.category}` as Parameters<typeof t>[0], { count: part.count }),
+    )
+    .join(", ");
 
   return (
     <div>
@@ -62,10 +68,12 @@ export function ToolCallGroupSummaryRow(props: {
           {iconWebFetchUrl ? (
             <LinkChipIcon url={iconWebFetchUrl} className="size-3.5" />
           ) : (
-            renderWorkEntryIcon(workEntryLeftIcon(summary.iconEntry), "size-3.5")
+            summary.iconKind === "mixed"
+              ? renderWorkEntryIcon(HammerIcon, "size-3.5")
+              : renderWorkEntryIcon(workEntryLeftIcon(summary.iconEntry), "size-3.5")
           )}
         </span>
-        <span>{summary.label}</span>
+        <span>{localizedLabel}</span>
         {/* One step quieter than the label, matching the per-row disclosure chevron. */}
         <DisclosureChevron open={open} className="text-muted-foreground/70" />
       </button>

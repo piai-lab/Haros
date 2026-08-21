@@ -11,6 +11,77 @@ import {
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
+  it("projects skill delivery receipts as non-tool status rows", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "skill-loaded",
+          kind: "skill.instructions.delivered",
+          tone: "info",
+          summary: "Skill instructions delivered",
+          payload: {
+            messageId: "message-1",
+            skillName: "aihot",
+            deliveryMode: "inline",
+          },
+        }),
+        makeActivity({
+          id: "skill-failed",
+          kind: "skill.instructions.failed",
+          tone: "error",
+          summary: "Skill instructions failed",
+          payload: {
+            messageId: "message-1",
+            skillName: "reviewer",
+            deliveryMode: "inline",
+            failureReason: "unreadable",
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    const loaded = entries.find((entry) => entry.skillDelivery?.skillName === "aihot");
+    const failed = entries.find((entry) => entry.skillDelivery?.skillName === "reviewer");
+    expect(loaded).toMatchObject({
+      tone: "info",
+      skillDelivery: { skillName: "aihot", mode: "inline" },
+    });
+    expect(failed).toMatchObject({
+      tone: "error",
+      skillDelivery: { skillName: "reviewer", failureReason: "unreadable" },
+    });
+    expect(loaded?.itemType).toBeUndefined();
+    expect(failed?.itemType).toBeUndefined();
+  });
+
+  it("projects canonical reasoning as readable non-tool work", () => {
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "reasoning-canonical",
+          kind: "reasoning.completed",
+          tone: "info",
+          summary: "Reasoning trace",
+          turnId: TurnId.makeUnsafe("turn-1"),
+          payload: {
+            detail: "Plan the next verification step",
+            data: { toolCallId: "reasoning-1" },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry).toMatchObject({
+      tone: "info",
+      activityKind: "reasoning.completed",
+      detail: "Plan the next verification step",
+      toolCallId: "reasoning-1",
+    });
+    expect(entry?.itemType).toBeUndefined();
+  });
+
   it("keeps the typed active-edit failure reason for localized presentation", () => {
     const [entry] = deriveWorkLogEntries(
       [
