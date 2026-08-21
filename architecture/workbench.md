@@ -11,7 +11,7 @@ Synara 不是截图或灵感库，而是长期深耕这些问题的成熟产品�
 产品 surgery 只做四件事：
 
 1. 替换品牌和准确 legal/provenance；
-2. 将 `Agent | Chat` 作为清晰的两种工作入口；
+2. 将 `Agent | Chat | Studio` 作为清晰的三个一级产品工作面；
 3. 在 existing Registry 中接入 bundled OmniMind Agent，同时保留 stock Pi；
 4. 补经真实 journey 证明存在的 OmniMind 差异。
 
@@ -32,15 +32,16 @@ flowchart LR
     Studio --> Providers
 ```
 
-`Agent | Chat` 是唯一一级工作入口，不是持久化类型。正常 shell 在侧栏顶部同时呈现 `Agent`（左）与 `Chat`（右），当前项与另一入口始终可见，用户一次激活即可切换；不得把另一入口收进 dropdown、overflow、Provider selector 或二级导航。入口直接绑定当前 route、restore 与 prewarm 机制，不能为了恢复旧视觉而重建常驻双 panel、第二份 selection state 或新的导航 authority。
+`Agent | Chat | Studio` 是三个一级产品工作面，不是持久化类型。侧栏顶部直接复用 Synara 的描述式 `Menu / MenuRadioGroup / MenuRadioItem`：trigger 显示当前工作面，展开后每项同时显示名称和职责说明，键盘、焦点、Chevron 与 disclosure 保持母体行为。不得改成 segmented control、tabpanel、Provider selector或新的 selection authority。`/ → Agent`、`/chat → Chat`、`/studio → Studio`；共享 `/$threadId` 从 canonical Thread→Project.kind 投影当前工作面。
 
-用户在 Settings 中显式隐藏 Chat 时，可以只显示非交互的 `Agent` 标题；恢复 Chat 的入口仍由既有 Settings/search/deep-link 提供，不能留下只有一个选项的假 switcher。正常双入口必须在 source 最小侧栏宽度、简体中文/英文、键盘与 screen reader 下保持顺序、可见性、focus 和单次激活；实现应使用与当前 route 模型相符的互斥选择或 navigation 语义，不伪造不存在的 `tabpanel` 关系。
+Agent 与 Chat 始终作为一级入口可达，不新增显示设置。Studio 继续只服从既有 `showStudioSection`：隐藏不删除数据，且精确保留母体的 deep-link、redirect、prewarm 与 restore 行为。菜单在最小侧栏宽度、简体中文/英文、键盘与 screen reader 下保持可见性、focus 和单次激活。
 
-`Agent | Chat` 的“唯一一级”只约束工作模式，不删除 Agent 域二级控制台。Agent 选中时仍按 `New Task → Kanban → Pull Requests → Automations` 呈现；`/kanban` 是跨 Project 总览，`/kanban/:projectId` 是单 Project 看板，卡片回到对应 folder-backed Agent Thread，Project context menu 保留 `Open in Kanban`。Kanban route 的顶部仍表达 Agent 域，Chat 不把 Kanban 伪装成第三种工作模式。
+三工作面的一层导航只约束产品工作面的切换，不删除 Agent 域二级控制台。Agent 选中时仍按 `New Task → Kanban → Pull Requests → Automations` 呈现；`/kanban` 是跨 Project 总览，`/kanban/:projectId` 是单 Project 看板，卡片回到对应 folder-backed Agent Thread，Project context menu 保留 `Open in Kanban`。Kanban route 的顶部仍表达 Agent 域，Chat 不把 Kanban 伪装成第三种工作模式。
 
 ```work-surface-ia
 {
-  "primaryModes": ["Agent", "Chat"],
+  "primaryModes": ["Agent", "Chat", "Studio"],
+  "routes": {"Agent": "/", "Chat": "/chat", "Studio": "/studio"},
   "agentSecondary": ["New Task", "Kanban", "Pull Requests", "Automations"],
   "kanbanRoutes": ["/kanban", "/kanban/:projectId"],
   "kanbanPrimaryMode": "Agent",
@@ -75,13 +76,18 @@ flowchart LR
 
 ### Chat
 
-- 使用 Synara Home/Studio managed Thread，无用户选择的 Primary Folder；
+- 使用 Synara Home managed Thread，无用户选择的 Primary Folder；
 - 可以在 OmniMind-owned managed workspace/outbox 中生成 Artifact；
 - 上传或引用的外部用户文件默认只读，不默认修改现有 Project；
 - 不显示完整 Project Files/Git/Terminal 工作台，不暗中升级为可写 Agent；
-- 需要修改真实项目时，显式 `Send to Agent`，选择/创建 Project Thread 并带入 prompt、attachments 与 artifact refs。
+- Composer 提供明确的文件/文件夹引用入口和只读引用 chip；引用按消息或 draft 保存，不升级为 cwd/Project、不自动扫描；
+- 需要修改真实项目时，显式 `Send to Agent`，选择/创建 Project 后 contextual fork 完整可见历史、引用与可用附件；目标不自动执行。
 
-`Send to Agent` 不复制 Session、不 replay 旧 operation、不保证跨 Provider continuation，也不创建 Handoff platform。
+`Send to Agent` 不复制 Session、不 replay 旧 operation、不保证跨 Provider continuation，也不创建 Handoff platform。普通附件复制失败采用部分成功：持久 activity 保留不可用 provenance并定位源消息，命令只 Toast 一次，关闭重开仍可查看；补充文件只走目标当前 Composer，不修改不可变导入历史。
+
+### Studio
+
+Studio 默认 follow Synara 当前产品：继承现有 container、managed workspace、outputs、reactor、draft cwd、local environment、no-worktree/branch、创建、恢复、显示设置、隐藏和 deep-link 行为。本轮没有证据时不重设计；后续若有真实用户结果或缺口证据，只允许在既有 owner 内作窄、可回退的最小必要偏离，不能建立第二 Studio 状态机、恢复 owner 或平行生命周期。
 
 ## 3. Provider 与 Composer
 
@@ -153,7 +159,7 @@ Chat shell 只有一个会随真实可用区域自适应的主画布：Timeline 
 
 - `Environment / 环境信息` 是当前任务的辅助检查器，承载仓库、工作树、分支、变更、Git 入口、本地服务、来源、编辑器、摘要、置顶消息、文本标记与记事本等上下文。它在每次 App 启动时默认关闭，用户从聊天标题栏打开只影响当前运行中的 shell，不写成跨启动偏好。普通宽屏桌面态使用与 Chat 并列的右侧 inspector 区域，内部仍是现有圆角卡片；打开后 Chat 主画布平滑居中于剩余可用区域。当当前 Chat surface 无法同时容纳主阅读画布与 inspector 时，系统只临时压制并列 presentation，不改写用户本次运行中的手动 intent，空间恢复后可恢复原本手动打开的 inspector。受压时用户仍可主动临时以 overlay 查看，且必须具备 focus trap、Escape 与 focus return。它不拥有 Files、Diff、Terminal、Browser 或 Device 的工作面板角色。
 - `Workbench / 工作台` 是 Files、Viewer、Diff、Terminal、Browser、Device、Source Control 与 Side Chat 等真实操作区，继续复用现有 RightDock、Editor workspace、pane state 与 keep-mounted lifecycle。宽屏可与 Chat 分栏；空间不足时进入 Chat/Workbench 单面板切换，不能把 Composer 压成不可读窄条。
-- Sidebar 是 Agent/Chat、Project/Thread 与全局入口的导航。用户手动开关继续由当前 route/Sidebar owner 管理；同一 mounted shell 内的手动 intent 不被空间自动压制改写，不新增当前源码并不存在的 cookie rehydrate 或跨启动持久化语义。Sidebar 是主画布之外最后退场的辅助表面：Environment 先退，Sidebar 只有在其真实宽度会把可见 Chat 压到紧凑生存宽度以下时才自动压制，不能为了维持宽屏阅读舒适度而在约 `1000–1100px` 过早消失。空间不足造成的自动压制只属于可推导 presentation，不调用现有手动 `setOpen`，因而不写回 cookie、Settings 或导航偏好。空间恢复时只恢复原本手动打开的 Sidebar；用户手动关闭的 Sidebar 不得被系统自动复活。受压时用户仍可从 header 临时以 overlay/sheet 查看导航。`23rem` 只是 authored default，不是强制宽度；用户可把常驻 Sidebar 连续缩窄到 `13rem` 的既有物理下界，所有处于该可用区间的持久宽度都必须原样保留，不能因视觉偏好迁回默认值。继续向左越过收起阈值才明确关闭 Sidebar；该手势保留最后一个有效展开宽度，不能把阈值附近的压缩宽度写入 storage。隐藏后，窗口左缘提供短延迟的 pointer hover peek：同一个 Sidebar 非模态覆盖主画布，进入面板后保持、离开热区与面板后自动收回，不自动抢焦点、不把主画布设为 `inert`、不显示 scrim，也不改写手动 intent、最后有效宽度、cookie 或 Settings。pointer peek 只是视觉预览；用户点击 Sidebar toggle 或使用键盘快捷键时，动作必须提升为明确的常驻展开，不能因为面板此刻可见而把 peek 当成已打开后再次收回。空间受压时的显式 compact overlay 继续保留 modal、focus trap、Escape 与 focus return，不能与 pointer peek 混成一种状态。Sidebar toggle 的 hover surface必须解释动作并投影当前真实快捷键；不能只有无语义的背景变色，也不能硬编码与用户 keybinding 不同的提示。
+- Sidebar 是 Agent/Chat/Studio、Project/Thread 与全局入口的导航。用户手动开关继续由当前 route/Sidebar owner 管理；同一 mounted shell 内的手动 intent 不被空间自动压制改写，不新增当前源码并不存在的 cookie rehydrate 或跨启动持久化语义。Sidebar 是主画布之外最后退场的辅助表面：Environment 先退，Sidebar 只有在其真实宽度会把可见 Chat 压到紧凑生存宽度以下时才自动压制，不能为了维持宽屏阅读舒适度而在约 `1000–1100px` 过早消失。空间不足造成的自动压制只属于可推导 presentation，不调用现有手动 `setOpen`，因而不写回 cookie、Settings 或导航偏好。空间恢复时只恢复原本手动打开的 Sidebar；用户手动关闭的 Sidebar 不得被系统自动复活。受压时用户仍可从 header 临时以 overlay/sheet 查看导航。`23rem` 只是 authored default，不是强制宽度；用户可把常驻 Sidebar 连续缩窄到 `13rem` 的既有物理下界，所有处于该可用区间的持久宽度都必须原样保留，不能因视觉偏好迁回默认值。继续向左越过收起阈值才明确关闭 Sidebar；该手势保留最后一个有效展开宽度，不能把阈值附近的压缩宽度写入 storage。隐藏后，窗口左缘提供短延迟的 pointer hover peek：同一个 Sidebar 非模态覆盖主画布，进入面板后保持、离开热区与面板后自动收回，不自动抢焦点、不把主画布设为 `inert`、不显示 scrim，也不改写手动 intent、最后有效宽度、cookie 或 Settings。pointer peek 只是视觉预览；用户点击 Sidebar toggle 或使用键盘快捷键时，动作必须提升为明确的常驻展开，不能因为面板此刻可见而把 peek 当成已打开后再次收回。空间受压时的显式 compact overlay 继续保留 modal、focus trap、Escape 与 focus return，不能与 pointer peek 混成一种状态。Sidebar toggle 的 hover surface必须解释动作并投影当前真实快捷键；不能只有无语义的背景变色，也不能硬编码与用户 keybinding 不同的提示。
 - Timeline 与 Composer 始终优先保留。Environment、Sidebar 与 Workbench 按上述职责退让，不能各自用无关 fixed width 同时争夺主画布。
 
 现有 `PlanSidebar` 是当前 task list/proposed plan 的详情投影，不是第五个全局响应式 owner，也不并入 Environment 或 RightDock state。它的 `340px` 固定宽度必须作为真实空间消费者进入压力回归：打开时不得恢复被自动压制的 Sidebar、不得让 Environment 重新占位、不得与 Workbench split 共同把 Composer 压出可读宽度；其既有 active task/proposed plan、自动打开、按 turn dismiss 与跨 thread handoff intent 不因响应式变化丢失。当当前 Chat surface 连 `340px Plan + 320px 紧凑 Chat` 都无法容纳时，同一个 Plan DOM 进入临时 exclusive presentation，Chat 只在该 presentation 下 `inert/aria-hidden`，关闭后恢复同一 Composer；不为 PlanSidebar 新建持久状态或第二 owner。
@@ -372,8 +378,8 @@ Git `canary:rollback` 只用于开发工作流，不是用户产品功能。
 
 V1 UI 候选至少证明：
 
-- `Agent | Chat` 复用同一 Project/Thread/Provider substrate，边界准确；
-- 正常侧栏顶部的 `Agent`（左）与 `Chat`（右）同时可见、一次激活，在最小侧栏宽度与中英文下无溢出；用户显式隐藏 Chat 时不呈现单选项假 switcher；
+- `Agent | Chat | Studio` 复用同一 Project/Thread/Provider substrate，边界准确；
+- 正常侧栏顶部以描述式 Menu/Radio 呈现 `Agent`、`Chat` 与可见的 `Studio`，一次激活切换，在最小侧栏宽度与中英文下无溢出；隐藏 Studio 时仍保持 Agent 与 Chat 可达，不呈现单选项假 switcher；
 - bundled OmniMind Agent 的 Provider/Model/Thinking、Session、stream、Tool、abort、resume 与代表性 Pi-ecosystem journey 可用；
 - stock Pi 作为独立 Provider 可选择，identity/version/state 与 OmniMind Agent 不混用；
 - inherited Providers 没有因 OmniMind surgery 回退，状态与能力准确；
