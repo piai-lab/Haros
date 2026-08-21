@@ -250,6 +250,33 @@ describe("deriveAgentActivityTimelineState", () => {
     expect(state.detailById.get("agent-reasoning:reasoning-preserved")?.entries).toHaveLength(1);
   });
 
+  it("does not dedupe when display cleanup would make distinct raw reasoning text look equal", () => {
+    const turnId = TurnId.makeUnsafe("turn-raw-dedupe");
+    const reasoning = workEntry({
+      id: "reasoning-markdown",
+      activityKind: "reasoning.completed",
+      tone: "info",
+      turnId,
+      detail: "**Same text**",
+    });
+    const state = deriveAgentActivityTimelineState(
+      [reasoning],
+      [
+        {
+          id: MessageId.makeUnsafe("assistant-same-text"),
+          role: "assistant",
+          text: "Same text",
+          createdAt: "2026-06-05T00:00:01.000Z",
+          turnId,
+          streaming: false,
+        },
+      ],
+    );
+
+    expect(state.timelineWorkEntries).toHaveLength(1);
+    expect(state.detailById.has("agent-reasoning:reasoning-markdown")).toBe(true);
+  });
+
   it("recognizes reasoning trace and summary labels as reasoning activity", () => {
     const trace = workEntry({
       id: "reasoning-trace-1",

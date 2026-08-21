@@ -2609,8 +2609,9 @@ describe("ProviderCommandReactor", () => {
     await waitFor(() => harness.sendTurn.mock.calls.length === 1);
     await waitFor(async () => {
       const thread = await readHarnessThread(harness);
-      return thread?.activities.some(
-        (activity) => activity.kind === "skill.instructions.delivered",
+      return (
+        thread?.activities.some((activity) => activity.kind === "skill.instructions.delivered") ??
+        false
       );
     });
     const thread = await readHarnessThread(harness);
@@ -2619,7 +2620,7 @@ describe("ProviderCommandReactor", () => {
     );
     expect(receipts).toHaveLength(1);
     expect(receipts?.[0]).toMatchObject({
-      id: expect.stringContaining("omnimind-skill-delivery-message"),
+      id: "skill-delivery:omnimind-skill-delivery-message:0:Aihot",
       turnId: "turn-1",
       payload: {
         messageId: "omnimind-skill-delivery-message",

@@ -2471,13 +2471,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           >
             {nowIso ? (
               t("timeline.workingFor", {
-                                  duration:
-                                    formatClockElapsed(
-                                      row.createdAt,
-                                      nowIso,
-                                      locale === "zh-CN" ? "zh" : "en",
-                                    ) ??
-                                    (locale === "zh-CN" ? "0秒" : "0s"),
+                duration:
+                  formatClockElapsed(
+                    row.createdAt,
+                    nowIso,
+                    locale === "zh-CN" ? "zh" : "en",
+                  ) ?? (locale === "zh-CN" ? "0秒" : "0s"),
               })
             ) : (
               <WorkingTimer createdAt={row.createdAt} />
@@ -3257,6 +3256,7 @@ const UserMessageCollapsibleText = memo(function UserMessageCollapsibleText(prop
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const contentId = useId();
+  const { t } = useI18n();
   const [overflowing, setOverflowing] = useState(() => userMessageLikelyOverflows(props.text));
   const collapsed = !props.expanded;
 
@@ -3302,7 +3302,7 @@ const UserMessageCollapsibleText = memo(function UserMessageCollapsibleText(prop
           aria-controls={contentId}
           onClick={props.onToggle}
         >
-          {props.expanded ? "Show less" : "Show more"}
+          {props.expanded ? t("common.showLess") : t("common.showMore")}
         </button>
       )}
     </>

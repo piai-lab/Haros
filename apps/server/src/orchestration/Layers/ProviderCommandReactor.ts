@@ -857,7 +857,12 @@ const make = Effect.gen(function* () {
     Effect.forEach(
       input.deliveries,
       (delivery, index) => {
-        const activityKey = `skill-delivery:${input.messageId}:${index}:${encodeURIComponent(delivery.name)}:${delivery.status}`;
+        const safeSkillName = delivery.name
+          .normalize("NFC")
+          .replace(/[\\/\u0000-\u001F\u007F\uD800-\uDFFF]/gu, " ")
+          .trim()
+          .slice(0, 120) || "Skill";
+        const activityKey = `skill-delivery:${input.messageId}:${index}:${encodeURIComponent(safeSkillName)}`;
         return orchestrationEngine.dispatch({
           type: "thread.activity.append",
           commandId: CommandId.makeUnsafe(activityKey),
@@ -875,7 +880,7 @@ const make = Effect.gen(function* () {
                 : "Skill instructions delivered",
             payload: {
               messageId: input.messageId,
-              skillName: delivery.name,
+              skillName: safeSkillName,
               deliveryMode: delivery.mode,
               ...(delivery.failureReason ? { failureReason: delivery.failureReason } : {}),
             },
@@ -885,7 +890,7 @@ const make = Effect.gen(function* () {
           createdAt: input.createdAt,
         });
       },
-      { discard: true },
+      { concurrency: 1, discard: true },
     ).pipe(
       Effect.catchCause((cause) =>
         Effect.logWarning("failed to persist skill delivery receipt", {
@@ -2193,9 +2198,6 @@ const make = Effect.gen(function* () {
           target: input.reviewTarget,
         })
         .pipe(Effect.onError(() => cancelPendingStudioBaseline));
-      if (input.onProviderAccepted) {
-        yield* input.onProviderAccepted();
-      }
       yield* appendSkillDeliveryActivities({
         threadId: input.threadId,
         messageId: MessageId.makeUnsafe(input.messageId),
@@ -2203,15 +2205,15 @@ const make = Effect.gen(function* () {
         createdAt: input.createdAt,
         deliveries: skillInlineResult.deliveries,
       });
+      if (input.onProviderAccepted) {
+        yield* input.onProviderAccepted();
+      }
     } else if (input.dispatchMode === "steer") {
       yield* markProviderAttempted();
       startedTurn = yield* providerService.steerTurn({
         ...providerTurnInput,
         ...(normalizedInput ? { input: normalizedInput } : {}),
       });
-      if (input.onProviderAccepted) {
-        yield* input.onProviderAccepted();
-      }
       yield* appendSkillDeliveryActivities({
         threadId: input.threadId,
         messageId: MessageId.makeUnsafe(input.messageId),
@@ -2219,6 +2221,9 @@ const make = Effect.gen(function* () {
         createdAt: input.createdAt,
         deliveries: skillInlineResult.deliveries,
       });
+      if (input.onProviderAccepted) {
+        yield* input.onProviderAccepted();
+      }
     } else {
       yield* capturePreTurnBaselines;
       pendingContextBootstrapAttempt =
@@ -2359,9 +2364,6 @@ const make = Effect.gen(function* () {
         ),
       );
       startedTurn = sentTurn;
-      if (input.onProviderAccepted) {
-        yield* input.onProviderAccepted();
-      }
       yield* appendSkillDeliveryActivities({
         threadId: input.threadId,
         messageId: MessageId.makeUnsafe(input.messageId),
@@ -2369,6 +2371,9 @@ const make = Effect.gen(function* () {
         createdAt: input.createdAt,
         deliveries: skillInlineResult.deliveries,
       });
+      if (input.onProviderAccepted) {
+        yield* input.onProviderAccepted();
+      }
       if (pendingContextBootstrapAttempt) {
         pendingContextBootstrapAttempt.turnId = sentTurn.turnId;
         const terminalEvent = pendingContextBootstrapAttempt.terminalEvent;

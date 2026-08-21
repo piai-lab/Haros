@@ -199,18 +199,18 @@ function isDuplicateAdjacentAssistantNarration(
   if (!entry.turnId) {
     return false;
   }
-  const preview = formatAgentActivityEntryPreview(entry);
-  if (!preview) {
+  const rawReasoningText = entry.preview ?? entry.detail ?? entry.label;
+  const normalizedReasoningText = normalizeExactVisibleText(rawReasoningText);
+  if (!normalizedReasoningText) {
     return false;
   }
-  const normalizedPreview = normalizeExactVisibleText(preview);
   for (const adjacentIndex of [index - 1, index + 1]) {
     const adjacent = timeline[adjacentIndex];
     if (
       adjacent?.kind === "message" &&
       adjacent.message.role === "assistant" &&
       adjacent.message.turnId === entry.turnId &&
-      normalizeExactVisibleText(adjacent.message.text) === normalizedPreview
+      normalizeExactVisibleText(adjacent.message.text) === normalizedReasoningText
     ) {
       return true;
     }
