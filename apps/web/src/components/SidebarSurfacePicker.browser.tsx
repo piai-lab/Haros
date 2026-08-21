@@ -1,7 +1,7 @@
 import "../index.css";
 
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
@@ -24,17 +24,17 @@ import { SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH } from "./ui/sidebar";
 
 function SurfaceHarness({
   locale,
-  showChat = true,
+  showStudio = true,
   onSelectView,
   onPrewarmView,
 }: {
   locale: "en" | "zh-CN";
-  showChat?: boolean;
+  showStudio?: boolean;
   onSelectView?: (view: SidebarView) => void;
   onPrewarmView?: (view: SidebarView) => void;
 }) {
   harness.settings.localePreference = locale;
-  const [activeView, setActiveView] = useState<SidebarView>("threads");
+  const [activeView, setActiveView] = useState<SidebarView>("agent");
   return (
     <I18nProvider>
       <div
@@ -48,7 +48,7 @@ function SurfaceHarness({
         }}
       >
         <SidebarSurfacePicker
-          views={showChat ? ["threads", "studio"] : ["threads"]}
+          views={["agent", "chat", ...(showStudio ? (["studio"] as const) : [])]}
           activeView={activeView}
           onSelectView={(view) => {
             onSelectView?.(view);
@@ -72,30 +72,21 @@ function WordmarkWidthHarness({ width }: { width: number }) {
 }
 
 describe("SidebarSurfacePicker", () => {
-  afterEach(() => {
-    document.body.innerHTML = "";
-  });
-
   it.each(["en", "zh-CN"] as const)(
-    "keeps Agent left and Chat right at the 13rem sidebar floor in %s",
+    "keeps the current surface trigger within the 13rem sidebar floor in %s",
     async (locale) => {
       expect(SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH).toBe(13 * 16);
       const screen = await render(<SurfaceHarness locale={locale} />);
-      const navigation = screen.getByRole("navigation", {
-        name: locale === "en" ? "Switch between Agent and Chat" : "切换 Agent 与 Chat",
+      const trigger = screen.getByRole("button", {
+        name: locale === "en" ? "Switch workspace" : "切换工作面",
       });
-      const buttons = navigation.getByRole("button").elements();
 
-      await expect.element(screen.getByRole("button", { name: "Agent" })).toBeVisible();
-      await expect.element(screen.getByRole("button", { name: "Chat" })).toBeVisible();
-      expect(buttons.map((button) => button.textContent)).toEqual(["Agent", "Chat"]);
+      await expect.element(trigger).toBeVisible();
+      expect(trigger.element().textContent).toBe("Agent");
 
       const row = screen.getByTestId("minimum-sidebar-row").element();
       expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);
-      expect(navigation.element().scrollWidth).toBeLessThanOrEqual(
-        navigation.element().clientWidth,
-      );
-      expect(navigation.element().querySelector('[role="menu"], [role="tab"]')).toBeNull();
+      expect(trigger.element().scrollWidth).toBeLessThanOrEqual(trigger.element().clientWidth);
     },
   );
 
@@ -103,42 +94,76 @@ describe("SidebarSurfacePicker", () => {
     const narrow = await render(<WordmarkWidthHarness width={258.0078125} />);
     await expect.element(narrow.getByText("OmniMind")).not.toBeVisible();
 
-    document.body.innerHTML = "";
+    await narrow.unmount();
     const authored = await render(<WordmarkWidthHarness width={368} />);
     await expect.element(authored.getByText("OmniMind")).toBeVisible();
   });
 
-  it("switches once through route-owned buttons and exposes the current page", async () => {
+  it("exposes three described radio choices and routes Chat and Studio exactly once", async () => {
     const onSelectView = vi.fn();
     const onPrewarmView = vi.fn();
     const screen = await render(
       <SurfaceHarness locale="en" onSelectView={onSelectView} onPrewarmView={onPrewarmView} />,
     );
-    const agent = screen.getByRole("button", { name: "Agent" });
-    const chat = screen.getByRole("button", { name: "Chat" });
+    const trigger = screen.getByRole("button", { name: "Switch workspace" });
+    (trigger.element() as HTMLButtonElement).click();
+    const agent = screen.getByRole("menuitemradio", {
+      name: /Agent Work inside a project with execution tools/,
+    });
+    const chat = screen.getByRole("menuitemradio", {
+      name: /Chat Talk, analyze, and use explicit references/,
+    });
+    const studio = screen.getByRole("menuitemradio", {
+      name: /Studio Create in OmniMind's managed workspace/,
+    });
+    await expect.element(agent).toHaveAttribute("aria-checked", "true");
+    await expect.element(chat).toBeVisible();
+    await expect.element(studio).toBeVisible();
 
-    await expect.element(agent).toHaveAttribute("aria-current", "page");
-    await chat.click();
-    expect(onSelectView).toHaveBeenCalledTimes(1);
-    expect(onSelectView).toHaveBeenCalledWith("studio");
-    await expect.element(chat).toHaveAttribute("aria-current", "page");
-    expect(agent.element().hasAttribute("aria-current")).toBe(false);
+    chat.element().dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    (chat.element() as HTMLElement).click();
+    await vi.waitFor(() => {
+      expect(onSelectView).toHaveBeenCalledTimes(1);
+      expect(onSelectView).toHaveBeenCalledWith("chat");
+      expect(trigger.element().textContent).toBe("Chat");
+    });
+
+    await expect.element(trigger).toHaveAttribute("aria-expanded", "false");
+    (trigger.element() as HTMLButtonElement).click();
+    const reopenedStudio = screen.getByRole("menuitemradio", {
+      name: /Studio Create in OmniMind's managed workspace/,
+    });
+    await expect.element(reopenedStudio).toBeVisible();
+    reopenedStudio.element().focus();
+    (reopenedStudio.element() as HTMLElement).click();
+    await vi.waitFor(() => {
+      expect(onSelectView).toHaveBeenCalledTimes(2);
+      expect(onSelectView).toHaveBeenLastCalledWith("studio");
+      expect(trigger.element().textContent).toBe("Studio");
+    });
+    expect(onPrewarmView).toHaveBeenCalledWith("chat");
     expect(onPrewarmView).toHaveBeenCalledWith("studio");
-
-    agent.element().focus();
-    await userEvent.keyboard("{Enter}");
-    expect(onSelectView).toHaveBeenCalledTimes(2);
-    expect(onSelectView).toHaveBeenLastCalledWith("threads");
-    await expect.element(agent).toHaveAttribute("aria-current", "page");
   });
 
-  it("renders a non-interactive Agent title when Chat is explicitly hidden", async () => {
-    const screen = await render(<SurfaceHarness locale="zh-CN" showChat={false} />);
+  it("supports keyboard selection and keeps Studio out when its setting is hidden", async () => {
+    const onSelectView = vi.fn();
+    const screen = await render(
+      <SurfaceHarness locale="zh-CN" showStudio={false} onSelectView={onSelectView} />,
+    );
     const row = screen.getByTestId("minimum-sidebar-row").element();
+    const trigger = screen.getByRole("button", { name: "切换工作面" });
 
-    await expect.element(screen.getByText("Agent", { exact: true })).toBeVisible();
-    expect(row.querySelector('[data-slot="sidebar-surface-navigation"]')).toBeNull();
-    expect(row.querySelector('[data-slot="sidebar-surface-title"]')).not.toBeNull();
-    expect(row.querySelector('button[aria-current], [role="menu"], [role="tab"]')).toBeNull();
+    trigger.element().focus();
+    await userEvent.keyboard("{Enter}");
+    await expect.element(screen.getByRole("menuitemradio", { name: /Agent/ })).toBeVisible();
+    await expect.element(screen.getByRole("menuitemradio", { name: /Chat/ })).toBeVisible();
+    expect(screen.getByRole("menuitemradio", { name: /Studio/ }).query()).toBeNull();
+
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    expect(onSelectView).toHaveBeenCalledTimes(1);
+    expect(onSelectView).toHaveBeenCalledWith("chat");
+    expect(trigger.element().textContent).toBe("Chat");
+    expect(document.activeElement).toBe(trigger.element());
+    expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);
   });
 });

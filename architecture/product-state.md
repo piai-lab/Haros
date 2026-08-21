@@ -2,7 +2,7 @@
 
 ## 核心原则
 
-OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Product Orchestration。`Agent | Chat` 是两种用户工作方式，不是两套持久对象，也不授权创建第二个 Workspace、Conversation、Run、Group aggregate、Handoff 或 Package 生命周期。
+OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Product Orchestration。`Agent | Chat | Studio` 是三个一级产品工作面，不是三套持久对象，也不授权创建第二个 Workspace、Conversation、Run、Group aggregate、Handoff 或 Package 生命周期。
 
 产品层只保存已经由继承 substrate 证明必须跨 Provider 稳定、恢复和解释的用户事实。Provider adapter/runtime 继续拥有 native Session、protocol、transcript、Tool、permission 和私有生态语义；filesystem、Git 与 PTY 继续拥有各自真实状态。
 
@@ -11,9 +11,10 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 | 用户语言            | 直接复用的事实                                                                                      | 明确不新增                                              |
 | ------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | Agent               | folder-backed Synara Project + Thread + Workbench                                                   | `AgentWorkspace`、第二 Conversation/Run store           |
-| Chat                | Synara Home/Studio managed Project + Thread + managed workspace/outbox                              | 用户 Primary Folder、平行 Chat database                 |
+| Chat                | Synara Home managed Project + Thread + managed workspace/outbox                                     | 用户 Primary Folder、平行 Chat database                 |
+| Studio              | Synara Studio container、managed workspace、outputs、reactor、draft cwd 与恢复生命周期              | OmniMind Studio 状态机或第二 workspace owner            |
 | Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                    | 新 `Group` aggregate、Project 标签或 membership ledger  |
-| Send to Agent       | 创建或打开普通 folder-backed Project Thread，并带入用户选择的 prompt、attachment 与 artifact refs   | Handoff protocol、跨对象 replay、隐藏 cwd 切换          |
+| Send to Agent       | contextual fork 到新的 folder-backed Project Thread，带入完整可见历史与明确引用且不自动执行         | Provider Handoff、native continuation、operation replay |
 | Conversation        | Synara Thread 的用户可见身份                                                                        | Provider Session 的复制品                               |
 | Agent/Provider 选择 | 现有 Provider binding 与 adapter registry；独立 `omnimind` 与 `pi` identities                       | 第二 Provider Registry 或跨 Provider Session            |
 | Extensions / Skills | 既有 PluginLibrary/Skills discovery；有原生 API 时显示 Provider-scoped lifecycle                    | 顶层 Package aggregate、跨 Provider lifecycle authority |
@@ -38,13 +39,17 @@ OmniMind Agent 可以在当前 Root turn 内创建 bounded child Session；Root 
 
 ### Chat
 
-Chat 复用 Synara 的 managed Home/Studio container。它没有用户选择的 Primary Folder，但可以把生成内容写到 OmniMind-owned managed workspace/outbox 并展示为 Artifact。用户上传或引用的外部文件默认只读；Chat 不默认修改既有用户 Project。
+Chat 复用 Synara 的 managed Home container。它没有用户选择的 Primary Folder，也不能因陈旧 draft/cwd 字段升级成 Project；它可以把生成内容写到 OmniMind-owned、按会话隔离的 managed workspace/outbox 并展示为结果。用户明确添加的文件/文件夹只作为可见、可移除的只读引用，不自动扫描，也不激活 Project trust 或 project-local resources。
 
-需要进入真实项目修改时，用户显式使用 `Send to Agent`：选择或创建 folder-backed Project Thread，带入当前 prompt、选择的 attachments 和 artifact references。该动作不复制原生 Session、不 replay 旧 operation、不保证跨 Provider continuation，也不在后台改变原 Chat 的 cwd。
+需要进入真实项目修改时，用户显式使用 `Send to Agent`：选择或创建 folder-backed Project，保留原 Chat，并创建、打开新的 Agent Thread。目标带入完整的产品层可见用户/助手历史、每条消息的明确 references、可真实读取的受管附件和当前 draft；源 outputs 只作为目标 draft 中可见、可移除的引用。该动作不复制 Provider 私有 Session、不 replay Tool/operation、不保证跨 Provider native continuation，也不自动触发 Provider；用户检查、补充或发送后才开始执行。
+
+附件复制按源消息顺序复用 ManagedAttachmentStore 的既有 reserve/finalize/claim/cleanup owner，并以现有 principal staging数量和字节上限作为单次 fork 上限。单项 missing、unreadable、limit、unsupported 或 clone failure 不阻断 fork：成功项成为目标 Thread 真正拥有的普通附件，失败项只进入本次 fork 的窄持久 receipt/activity 并给出一次非阻塞汇总警告，不能伪造可点击附件。重放同一 command 不重复 clone、警告或目标 Thread；失败清理不得碰源附件或已 claim 的目标附件。
+
+Studio 默认继承 Synara 现有 container、managed workspace、outputs、reactor、draft cwd、local environment、no-worktree/branch、创建与恢复行为。当前基线的恢复顺序是 remembered Studio route → stored Studio draft → latest non-archived Studio chat → fresh；隐藏时不 prewarm/create，`/studio` 按母体现有行为重定向。本轮没有证据时不重设计；后续必要优化必须先证明具体用户缺口，以既有 owner 内的最小必要偏离完成，不能创建第二 Studio 状态机或恢复 owner。
 
 ### Provider work surface projection
 
-`Agent | Chat` 不是新的持久化 mode。bundled `omnimind` Session admission 只从当前 Thread 所属 canonical Project kind 派生一个窄的 work-surface snapshot：`project → agent`，`chat | studio → chat`。该值只在该 Provider 的现有 binding 中保存，用于 restart/recovery 重建同一 Session 环境；其他 Provider admission 丢弃这两个 OmniMind-only 字段。Project kind 始终是唯一 authority，runtime payload 不能被独立编辑，也不能反向改写 Project。
+`Agent | Chat | Studio` 不是新的持久化 mode。bundled `omnimind` Session admission 只从当前 Thread 所属 canonical Project kind 派生一个窄的 work-surface snapshot：`project → agent`，`chat | studio → chat`。该值只在该 Provider 的现有 binding 中保存，用于 restart/recovery 重建同一 Session 环境；其他 Provider admission 丢弃这两个 OmniMind-only 字段。Project kind 始终是唯一 authority，runtime payload 不能被独立编辑，也不能反向改写 Project。
 
 不得从 cwd 是否存在、路径名称、Workbench pane、Provider、模型或 `providerOptions` 猜测 work surface。Home Chat 可以没有 provider cwd，Studio 可以有 managed cwd，folder-backed Agent 也可以在 Project 子目录或 worktree 中运行；只有 Project kind 能稳定区分产品语义。`Send to Agent` 创建/打开新的 folder-backed Thread，因此不热切或复用原 Chat Session。
 

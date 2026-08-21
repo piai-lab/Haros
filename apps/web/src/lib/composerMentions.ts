@@ -4,7 +4,10 @@
 // Exports: mention token formatters plus regex helpers used by composer parsing and prompt sync.
 
 import type { ProviderMentionReference, ProviderSkillReference } from "@omnimind/contracts";
-import { isThreadMentionPath, threadIdFromThreadMentionPath } from "@omnimind/shared/threadMentions";
+import {
+  isThreadMentionPath,
+  threadIdFromThreadMentionPath,
+} from "@omnimind/shared/threadMentions";
 
 export function skillMentionPrefix(provider: string): string {
   return provider === "pi" ? "/skill:" : "/";
@@ -248,7 +251,9 @@ export function providerMentionReferencesEqual(
     left.length === right.length &&
     left.every(
       (mention, index) =>
-        mention.path === right[index]?.path && mention.name === right[index]?.name,
+        mention.path === right[index]?.path &&
+        mention.name === right[index]?.name &&
+        mention.resourceKind === right[index]?.resourceKind,
     )
   );
 }

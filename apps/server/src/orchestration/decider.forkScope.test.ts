@@ -5,6 +5,7 @@ import {
   MessageId,
   ProjectId,
   ThreadId,
+  type ThreadHandoffImportedMessage,
   TurnId,
   type OrchestrationReadModel,
 } from "@omnimind/contracts";
@@ -137,7 +138,7 @@ async function readModelWithSourceMessages(): Promise<OrchestrationReadModel> {
   };
 }
 
-function exactPrefix() {
+function exactPrefix(): ThreadHandoffImportedMessage[] {
   return [
     {
       messageId: MessageId.makeUnsafe("import-user-1"),
@@ -257,7 +258,46 @@ describe("history-only fork decider", () => {
           readModel,
         }),
       ),
-    ).rejects.toThrow(/exact pending history-only fork bootstrap/);
+    ).rejects.toThrow(/matching pending fork bootstrap/);
+  });
+
+  it("treats imported mention kind and path as part of the exact history", async () => {
+    const source = await readModelWithSourceMessages();
+    const mention = {
+      name: "Reference folder",
+      path: "/tmp/reference",
+      resourceKind: "directory" as const,
+    };
+    const readModel = {
+      ...source,
+      threads: source.threads.map((thread) =>
+        thread.id === SOURCE_THREAD_ID
+          ? {
+              ...thread,
+              messages: thread.messages.map((entry, index) =>
+                index === 0 ? { ...entry, mentions: [mention] } : entry,
+              ),
+            }
+          : thread,
+      ),
+    };
+    const matching = scopedForkCommand();
+    matching.importedMessages[0] = {
+      ...matching.importedMessages[0]!,
+      mentions: [mention],
+    };
+    await expect(
+      Effect.runPromise(decideOrchestrationCommand({ command: matching, readModel })),
+    ).resolves.toBeDefined();
+
+    const tampered = scopedForkCommand();
+    tampered.importedMessages[0] = {
+      ...tampered.importedMessages[0]!,
+      mentions: [{ ...mention, resourceKind: "file" }],
+    };
+    await expect(
+      Effect.runPromise(decideOrchestrationCommand({ command: tampered, readModel })),
+    ).rejects.toThrow(/exact persisted prefix/);
   });
 
   it.each([

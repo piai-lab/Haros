@@ -36,7 +36,7 @@ export function resolveChatIndexRestoreRoute(input: {
   readonly sidebarThreadSummaryById: Readonly<
     Record<string, { readonly projectId: ProjectId } | undefined>
   >;
-  readonly studioProjectIds: ReadonlySet<ProjectId>;
+  readonly allowedProjectIds: ReadonlySet<ProjectId>;
   /**
    * Still-unsent Agent drafts, including Terminal-first drafts. They have a route id but no
    * sidebar summary yet, so the summary lookup below never matches them.
@@ -47,7 +47,7 @@ export function resolveChatIndexRestoreRoute(input: {
    */
   readonly rememberedSplitViewThreadIds: readonly ThreadId[] | undefined;
 }): LastThreadRoute | null {
-  const { draftProjectIdByThreadId, sidebarThreadSummaryById, studioProjectIds } = input;
+  const { allowedProjectIds, draftProjectIdByThreadId, sidebarThreadSummaryById } = input;
 
   const availableThreadIds = new Set<string>();
   for (const threadId of [...input.threadIds, ...draftProjectIdByThreadId.keys()]) {
@@ -57,9 +57,7 @@ export function resolveChatIndexRestoreRoute(input: {
     const projectId =
       sidebarThreadSummaryById[threadId]?.projectId ?? draftProjectIdByThreadId.get(threadId);
     if (projectId === undefined) continue;
-    // Studio threads belong to the /studio surface; restoring one from "/" would silently
-    // switch the user into that segment.
-    if (studioProjectIds.has(projectId)) continue;
+    if (!allowedProjectIds.has(projectId)) continue;
     availableThreadIds.add(threadId);
   }
 

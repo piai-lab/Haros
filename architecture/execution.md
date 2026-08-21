@@ -73,14 +73,15 @@ Usage history B
 
 共用层只包含 Synara 已经证明稳定的最小事实。Provider-specific capability 通过现有 optional methods、capability data 与 namespaced detail 呈现；没有第二个“更统一”的 runtime contract。
 
-## Agent、Chat 与 Groups
+## Agent、Chat、Studio 与 Groups
 
-`Agent | Chat` 只改变入口与用户边界：
+`Agent | Chat | Studio` 只改变入口与用户边界；Provider 仍只有两种 work-surface 投影：
 
 - Agent 路由到 folder-backed Project Thread 和现有 Workbench；
-- Chat 路由到 Home/Studio managed Project Thread 与 managed workspace/outbox；
+- Chat 路由到 Home managed Project Thread，无 Primary Folder；
+- Studio 默认沿用 Synara 当前 Studio container 与 managed workspace/outputs，Provider 继续投影为 `chat`；后续只有在具体缺口证据成立时，才在既有 owner 内作最小必要偏离；
 - Groups 直接使用 Synara Space identity/name/order/lifecycle，并由同一 Thread command/event/projection 的 `groupIds` 表达多对多 membership；
-- `Send to Agent` 只创建/打开 folder-backed Project Thread，并携带用户选择的 prompt、attachments 与 artifact refs。
+- `Send to Agent` 通过既有 fork owner 创建新的 folder-backed Project Thread，导入完整产品可见历史、明确 mentions 与受限克隆的 target-owned attachments；不使用 provider handoff、不复制 native Session、不自动执行。
 
 Projects 不再按 Space 过滤或归组；Group 删除只从 Thread metadata 移除其 identity，不删除/移动 Thread。上述动作不创建新 aggregate、join ledger 或第二恢复状态，不复制 native Session，不承诺跨 Provider continuation，也不改变 Provider Registry。
 
@@ -128,7 +129,7 @@ bundled `omnimind` Provider 的 engine contract 由 Host 作为不可被 `SYSTEM
 
 work surface 只由 Product Orchestration 在 bundled `omnimind` Session admission 时从 canonical Project kind 派生：`project → agent`，`chat | studio → chat`。它只为该 Provider 随现有 Session binding 保存为恢复快照，model switch、Provider replacement rollback、Server restart 与 native resume 必须继续传递；ProviderService 对其他 Provider 的同名输入不传递也不持久化。不得新建 mode store、从 cwd 猜测或在 turn 文本中注入。Resource reload、compaction 与 branch 使用当前 Session 已冻结的同一 contract；Project kind 变化通过新的 Product Thread/Session表达，不做运行中热切。
 
-OmniMind Agent 的逐回合任务快照由一个产品随附、named、hidden 的 Pi-native Session Extension 拥有。它只在 frozen `workSurface === "agent"` 的 Session 注册，并在首个模型请求前 initial-active；active 只表示当轮可选择，不表示自动调用、已经授权或跨应用常驻。Chat、stock Pi 与其他 Engine 不注册该 Extension。Extension 拥有definition、最短tool guidance、三态全量快照校验和实例级结果provenance；PiAdapter只负责Session wiring，并把可信成功结果薄投影为既有canonical `turn.tasks.updated`。工具名不是authority：同名user/project Extension继续遵循Pi原生precedence；若产品definition未被选中，只将Product Todo准确降级为unavailable并保留Session其余能力，第三方结果不得污染任务投影。该Session Extension不属于AgentGateway Host tools，不受Built-in Host exposure policy控制，也不进入Host动态加载。
+OmniMind Agent 的逐回合任务快照由一个产品随附、named、hidden 的 Pi-native Session Extension 拥有。它在 OmniMind Agent 的 `agent` 与 `chat` 两种 frozen work surface 中注册，因此 Agent、Chat 与 Studio 默认共享；active 只表示当轮可选择，不表示自动调用、已经授权或跨应用常驻。stock Pi 与其他 Engine 不注册该 Extension。Extension 拥有definition、最短tool guidance、三态全量快照校验和实例级结果provenance；PiAdapter只负责Session wiring，并把可信成功结果薄投影为既有canonical `turn.tasks.updated`。工具名不是authority：同名user/project Extension继续遵循Pi原生precedence；若产品definition未被选中，只将Product Todo准确降级为unavailable并保留Session其余能力，第三方结果不得污染任务投影。该Session Extension不属于AgentGateway Host tools，不受Built-in Host exposure policy控制，也不进入Host动态加载。
 
 Project resource trust 同样来自 Product authority，而非 Pi SDK 默认值：canonical folder-backed Project 及其 materialized worktree 只在正式 Agent Session admission 后显式 trusted；规则读取边界是对应 Project/worktree root → 当前 cwd，并继续保留 OmniMind/Pi 各自 global agent-dir context。Chat/Studio 不获得 project-local trust，也不扫描 managed cwd 的 project resources。没有 active Session 时，OmniMind 的 Skills、Prompt commands 与 model discovery 一律使用 untrusted/global-only loader，不执行 Project Extension；首轮前 project-local autocomplete/template picker 不属于本轮 contract，真实首轮 Agent 请求仍在发送前通过正式 Session 加载可信 Project 资源。Skills/commands 查询按 Thread 与“物理 Session 可能仍存在”隔离缓存：可恢复 `error` 仍使用 active tuple，只有 `closed` 才切回 global-only；key 变化时必须先呈现固定空结果，不能把上一 Thread/Session 的资源作为 placeholder，Session admission 或关闭后也不能复用另一 trust tuple 的名称/描述。被动 model discovery 不绑定 Thread 或 Session，也不借机加载 Project Extension。Pi ResourceLoader 继续唯一拥有 context candidate precedence、Settings、Extensions、Skills、Prompts 与 reload；Host 只传递 canonical surface/root，不复制 loader、Trust store 或规则数据库。
 

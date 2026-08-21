@@ -1588,6 +1588,7 @@ function installDeterministicSendNativeApi(options?: {
   rejectForkCreateAttempts?: number;
   rejectShellSnapshotAttempts?: number;
   commitForkCreateOnSuccess?: boolean;
+  exposeManagedChatOutput?: boolean;
   rejectThreadCreateAttempts?: number;
   rejectThreadDeleteAttempts?: number;
   rejectThreadMetaAttempts?: number;
@@ -1648,6 +1649,21 @@ function installDeterministicSendNativeApi(options?: {
             ...input,
           });
         },
+      },
+      filesystem: {
+        ...wsNativeApi.filesystem,
+        browse: async (input: Parameters<typeof wsNativeApi.filesystem.browse>[0]) =>
+          options?.exposeManagedChatOutput && input.partialPath.endsWith("/outputs")
+            ? {
+                parentPath: input.partialPath,
+                entries: [
+                  {
+                    name: "result.md",
+                    fullPath: `${input.partialPath}/result.md`,
+                  },
+                ],
+              }
+            : wsNativeApi.filesystem.browse(input),
       },
       orchestration: {
         ...wsNativeApi.orchestration,
@@ -4580,12 +4596,12 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it.each([
     { locale: "en", mode: "Agent", projectId: PROJECT_ID, threadId: "draft-agent-en" },
     { locale: "zh-CN", mode: "Agent", projectId: PROJECT_ID, threadId: "draft-agent-zh" },
-    { locale: "en", mode: "Chat", projectId: STUDIO_PROJECT_ID, threadId: "draft-chat-en" },
+    { locale: "en", mode: "Studio", projectId: STUDIO_PROJECT_ID, threadId: "draft-studio-en" },
     {
       locale: "zh-CN",
-      mode: "Chat",
+      mode: "Studio",
       projectId: STUDIO_PROJECT_ID,
-      threadId: "draft-chat-zh",
+      threadId: "draft-studio-zh",
     },
   ] as const)(
     "keeps an empty $mode header identity-free in $locale",
@@ -4600,11 +4616,11 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const mounted = await mountChatView({
         viewport: DEFAULT_VIEWPORT,
         snapshot:
-          mode === "Chat"
+          mode === "Studio"
             ? withStudioProject(createDraftOnlySnapshot())
             : createDraftOnlySnapshot(),
         initialEntry: `/${draftThreadId}`,
-        ...(mode === "Chat"
+        ...(mode === "Studio"
           ? {
               configureFixture: (nextFixture: TestFixture) => {
                 nextFixture.welcome = {
@@ -4628,13 +4644,17 @@ describe("ChatView timeline estimator parity (full app)", () => {
         expect(header.querySelector("h2")).toBeNull();
 
         const messages = locale === "zh-CN" ? ZH_CN_MESSAGES : EN_MESSAGES;
+        const surfaceTrigger = document.querySelector<HTMLButtonElement>(
+          'button[data-slot="sidebar-surface-navigation"]',
+        );
+        expect(surfaceTrigger?.textContent?.trim()).toBe(
+          mode === "Studio" ? messages["nav.studio"] : messages["nav.agent"],
+        );
         const visibleButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
           .filter((button) => button.getBoundingClientRect().width > 0)
           .map((button) => button.textContent?.trim() ?? "");
-        expect(visibleButtons).toContain(messages["nav.agent"]);
-        expect(visibleButtons).toContain(messages["nav.chat"]);
         expect(visibleButtons).toContain(
-          mode === "Chat" ? messages["nav.newChat"] : messages["nav.newAgent"],
+          mode === "Studio" ? messages["nav.newChat"] : messages["nav.newAgent"],
         );
         await mounted.setViewport({ ...DEFAULT_VIEWPORT, width: 720 });
         await waitForLayout();
@@ -10121,16 +10141,14 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("uses the latest ordinary project from Home when the global New thread button is clicked", async () => {
+  it("uses the latest ordinary project when New Task is clicked on Agent", async () => {
     useLatestProjectStore.setState({ latestProjectId: PROJECT_ID });
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
-      snapshot: withActiveHomeChatThread(
-        createSnapshotForTargetUser({
-          targetMessageId: "msg-user-global-new-thread-latest-project" as MessageId,
-          targetText: "global new thread latest project",
-        }),
-      ),
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-global-new-thread-latest-project" as MessageId,
+        targetText: "global new thread latest project",
+      }),
     });
 
     try {
@@ -10160,12 +10178,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
     useLatestProjectStore.setState({ latestProjectId: PROJECT_ID });
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
-      snapshot: withActiveHomeChatThread(
-        createSnapshotForTargetUser({
-          targetMessageId: "msg-user-activity-new-chat-latest-project" as MessageId,
-          targetText: "activity new chat latest project",
-        }),
-      ),
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-activity-new-chat-latest-project" as MessageId,
+        targetText: "activity new chat latest project",
+      }),
     });
 
     try {
@@ -10250,18 +10266,25 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const initialPath = mounted.router.state.location.pathname;
-      const newThreadButton = page.getByRole("button", {
+      const surfaceTrigger = page.getByRole("button", { name: "Switch workspace" });
+      await surfaceTrigger.click();
+      await page
+        .getByRole("menuitemradio", {
+          name: /Agent Work inside a project with execution tools/,
+        })
+        .click();
+
+      const newAgentButton = page.getByRole("button", {
         name: EN_MESSAGES["nav.newAgent"],
         exact: true,
       });
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await newThreadButton.click();
+      await expect.element(newAgentButton).toBeInTheDocument();
+      await newAgentButton.click();
 
       await expect
         .element(page.getByRole("heading", { name: "Create project" }))
         .toBeInTheDocument();
-      expect(mounted.router.state.location.pathname).toBe(initialPath);
+      expect(mounted.router.state.location.pathname).toBe("/");
     } finally {
       await mounted.cleanup();
     }
@@ -10271,12 +10294,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
     useLatestProjectStore.setState({ latestProjectId: PROJECT_ID });
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
-      snapshot: withActiveHomeChatThread(
-        createSnapshotForTargetUser({
-          targetMessageId: "msg-user-global-new-thread-before-hydration" as MessageId,
-          targetText: "global new thread before hydration",
-        }),
-      ),
+      snapshot: createSnapshotForTargetUser({
+        targetMessageId: "msg-user-global-new-thread-before-hydration" as MessageId,
+        targetText: "global new thread before hydration",
+      }),
     });
 
     try {
@@ -10497,8 +10518,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
         () => document.querySelector<HTMLElement>('[data-slot="sidebar-chat-list"]'),
         "Unable to find the Chat sidebar list.",
       );
-      const visibleChatLabels = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
-        .filter((element) => element.textContent?.trim() === EN_MESSAGES["nav.chat"])
+      const visibleStudioLabels = Array.from(document.querySelectorAll<HTMLButtonElement>("button"))
+        .filter((element) => element.textContent?.trim() === EN_MESSAGES["nav.studio"])
         .filter((element) => element.getBoundingClientRect().width > 0);
       const newStudioChatButtons = Array.from(
         document.querySelectorAll<HTMLButtonElement>("button"),
@@ -10508,8 +10529,8 @@ describe("ChatView timeline estimator parity (full app)", () => {
           button.getAttribute("aria-label") === EN_MESSAGES["nav.newChat"],
       );
 
-      expect(chatList.textContent).not.toContain(EN_MESSAGES["nav.chat"]);
-      expect(visibleChatLabels).toHaveLength(1);
+      expect(chatList.textContent).not.toContain(EN_MESSAGES["nav.studio"]);
+      expect(visibleStudioLabels).toHaveLength(1);
       expect(newStudioChatButtons).toHaveLength(1);
 
       const newStudioChatButton = newStudioChatButtons[0]!;
@@ -10588,7 +10609,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("can detach an empty project draft back to a normal chat before first send", async () => {
+  it("switches an empty Agent draft to managed Chat without converting the Agent draft", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: withHomeChatProject(
@@ -10618,50 +10639,33 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
       const newThreadId = newThreadPath.slice(1) as ThreadId;
 
-      const composerEditor = await waitForComposerEditor();
-      composerEditor.focus();
-      expect(document.activeElement).toBe(composerEditor);
-      const projectPickerTrigger = page.getByTestId("project-picker-trigger");
-      await expect.element(projectPickerTrigger).toBeInTheDocument();
-      const resetProjectButton = page.getByTestId("project-picker-reset-trigger");
-      await projectPickerTrigger.hover();
+      expect(useComposerDraftStore.getState().getDraftThread(newThreadId)?.projectId).toBe(
+        PROJECT_ID,
+      );
+      const surfaceTrigger = page.getByRole("button", { name: "Switch workspace" });
+      await surfaceTrigger.click();
+      await page
+        .getByRole("menuitemradio", {
+          name: /Chat Talk, analyze, and use explicit references/,
+        })
+        .click();
       await vi.waitFor(() => {
-        expect(getComputedStyle(resetProjectButton.element()).opacity).toBe("1");
+        expect(surfaceTrigger.element().textContent?.trim()).toBe(EN_MESSAGES["nav.chat"]);
       });
-
-      const originalRequestAnimationFrame = window.requestAnimationFrame;
-      let frameRequestCount = 0;
-      window.requestAnimationFrame = (callback) => {
-        frameRequestCount += 1;
-        return originalRequestAnimationFrame(callback);
-      };
-      try {
-        await resetProjectButton.click();
-        await vi.waitFor(
-          () => {
-            expect(useComposerDraftStore.getState().getDraftThread(newThreadId)).toMatchObject({
-              projectId: HOME_PROJECT_ID,
-              envMode: "local",
-              branch: null,
-              worktreePath: null,
-            });
-          },
-          { timeout: 8_000, interval: 16 },
-        );
-      } finally {
-        window.requestAnimationFrame = originalRequestAnimationFrame;
-      }
-
-      expect(frameRequestCount).toBe(0);
-      expect(document.activeElement).toBe(composerEditor);
-      await expect.element(page.getByText("Don't work in a project")).not.toBeInTheDocument();
-      await expect.element(page.getByTestId("workspace-picker-trigger")).toBeInTheDocument();
+      expect(useComposerDraftStore.getState().getDraftThread(newThreadId)?.projectId).toBe(
+        PROJECT_ID,
+      );
+      await expect.element(page.getByTestId("workspace-picker-trigger")).not.toBeInTheDocument();
+      await expect.element(page.getByTestId("project-picker-trigger")).not.toBeInTheDocument();
     } finally {
       await mounted.cleanup();
     }
   });
 
-  it("sends only the current composer draft from managed Chat to a fresh folder Agent", async () => {
+  it("sends only fork intent plus the current Draft from managed Chat without auto-running Agent", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      commitForkCreateOnSuccess: true,
+    });
     const managedChatSnapshot = withActiveHomeChatThread(
       createSnapshotForTargetUser({
         targetMessageId: "msg-user-send-to-agent-test" as MessageId,
@@ -10716,10 +10720,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const targetThreadId = targetPath.slice(1) as ThreadId;
 
       await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().getDraftThread(targetThreadId)).toMatchObject({
-          projectId: PROJECT_ID,
-          entryPoint: "chat",
-        });
+        expect(useStore.getState().threadShellById?.[targetThreadId]?.projectId).toBe(PROJECT_ID);
         expect(useComposerDraftStore.getState().draftsByThreadId[targetThreadId]?.prompt).toBe(
           "Carry this unsent prompt and its references.",
         );
@@ -10738,12 +10739,158 @@ describe("ChatView timeline estimator parity (full app)", () => {
             request.command.type === "thread.handoff.create",
         ),
       ).toBe(false);
+      const forkCommand = wsRequests
+        .map(readDispatchedCommand)
+        .find((command) => command?.type === "thread.fork.create");
+      expect(forkCommand).toMatchObject({
+        sourceThreadId: THREAD_ID,
+        threadId: targetThreadId,
+        projectId: PROJECT_ID,
+        forkScope: { kind: "chat-to-agent", bootstrapStatus: "pending" },
+      });
+      expect(forkCommand).not.toHaveProperty("importedMessages");
+      expect(JSON.stringify(forkCommand).length).toBeLessThan(2_000);
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter(
+            (command) =>
+              command?.type === "thread.turn.start" && command.threadId === targetThreadId,
+          ),
+      ).toHaveLength(0);
     } finally {
       await mounted.cleanup();
+      restoreNativeApi();
     }
   });
 
-  it("moves a home draft into an existing project from the home picker without carrying branch", async () => {
+  it("shows Send to Agent only for a persisted Chat thread", async () => {
+    const studioBase = withStudioProject(
+      createSnapshotForTargetUser({
+        targetMessageId: "msg-user-studio-no-send-to-agent" as MessageId,
+        targetText: "studio history",
+      }),
+    );
+    const studioSnapshot = {
+      ...studioBase,
+      threads: studioBase.threads.map((thread) =>
+        thread.id === THREAD_ID ? { ...thread, projectId: STUDIO_PROJECT_ID } : thread,
+      ),
+    };
+    const studio = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: studioSnapshot,
+    });
+    try {
+      await waitForComposerEditor();
+      expect(document.querySelector('button[aria-label="Send to Agent"]')).toBeNull();
+    } finally {
+      await studio.cleanup();
+    }
+
+    seedLocalDraftThread({
+      threadId: THREAD_ID,
+      projectId: HOME_PROJECT_ID,
+    });
+    const freshChat = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: withHomeChatProject(createDraftOnlySnapshot()),
+    });
+    try {
+      await waitForComposerEditor();
+      expect(document.querySelector('button[aria-label="Send to Agent"]')).toBeNull();
+    } finally {
+      await freshChat.cleanup();
+    }
+  });
+
+  it("reuses an accepted Chat-to-Agent attempt after navigation fails", async () => {
+    const restoreNativeApi = installDeterministicSendNativeApi({
+      commitForkCreateOnSuccess: true,
+      exposeManagedChatOutput: true,
+    });
+    const managedChatSnapshot = withActiveHomeChatThread(
+      createSnapshotForTargetUser({
+        targetMessageId: "msg-user-send-to-agent-navigation" as MessageId,
+        targetText: "managed Chat navigation recovery",
+      }),
+    );
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: managedChatSnapshot,
+    });
+    const originalNavigate = mounted.router.navigate;
+    let rejectNextNavigation = true;
+    const navigateSpy = vi.spyOn(mounted.router, "navigate").mockImplementation((options) => {
+      if (rejectNextNavigation) {
+        rejectNextNavigation = false;
+        return Promise.reject(new Error("router preload unavailable"));
+      }
+      return originalNavigate.call(mounted.router, options);
+    });
+
+    const chooseTargetProject = async () => {
+      const button = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>('button[aria-label="Send to Agent"]'),
+        "Unable to find the Send to Agent action.",
+      );
+      button.click();
+      const projectOption = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>('[data-slot="combobox-item"]')).find(
+            (item) => item.textContent?.trim() === "project",
+          ) ?? null,
+        "Unable to find the Agent destination project.",
+      );
+      projectOption.click();
+    };
+
+    try {
+      await waitForComposerEditor();
+      wsRequests.length = 0;
+      await chooseTargetProject();
+      await vi.waitFor(() => {
+        expect(
+          wsRequests
+            .map(readDispatchedCommand)
+            .filter((command) => command?.type === "thread.fork.create"),
+        ).toHaveLength(1);
+      });
+      const acceptedCommand = wsRequests
+        .map(readDispatchedCommand)
+        .find((command) => command?.type === "thread.fork.create");
+      const targetThreadId = acceptedCommand?.threadId as ThreadId;
+      await vi.waitFor(() => {
+        expect(useStore.getState().threadIds).toContain(targetThreadId);
+        expect(mounted.router.state.location.pathname).toBe(`/${THREAD_ID}`);
+      });
+
+      await chooseTargetProject();
+      await waitForURL(
+        mounted.router,
+        (pathname) => pathname === `/${targetThreadId}`,
+        "The retained Chat-to-Agent attempt should open its accepted target.",
+      );
+      const commandsAfterRetry = wsRequests
+        .map(readDispatchedCommand)
+        .filter((command) => command?.type === "thread.fork.create");
+      expect(commandsAfterRetry).toHaveLength(1);
+      expect(commandsAfterRetry[0]?.commandId).toBe(acceptedCommand?.commandId);
+      expect(commandsAfterRetry[0]?.threadId).toBe(targetThreadId);
+      expect(navigateSpy).toHaveBeenCalledTimes(2);
+      const targetDraft = useComposerDraftStore.getState().draftsByThreadId[targetThreadId];
+      const outputMentions =
+        targetDraft?.mentions?.filter((mention) => mention.path.endsWith("/outputs")) ?? [];
+      expect(outputMentions).toHaveLength(1);
+      expect((targetDraft?.prompt ?? "").split(outputMentions[0]!.path)).toHaveLength(2);
+    } finally {
+      navigateSpy.mockRestore();
+      await mounted.cleanup();
+      restoreNativeApi();
+    }
+  });
+
+  it("keeps a fresh Chat draft free of Project and workspace chrome", async () => {
     useComposerDraftStore.setState({
       draftThreadsByThreadId: {
         [THREAD_ID]: {
@@ -10779,65 +10926,21 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const workspacePickerTrigger = page.getByTestId("workspace-picker-trigger");
-      await expect.element(workspacePickerTrigger).toBeInTheDocument();
+      await waitForComposerEditor();
+      await expect.element(page.getByTestId("workspace-picker-trigger")).not.toBeInTheDocument();
+      await expect.element(page.getByTestId("project-picker-trigger")).not.toBeInTheDocument();
       const controlsBefore = document.querySelector<HTMLElement>(
         '[data-empty-landing-controls="true"]',
       );
       const composerBlockBefore = document.querySelector<HTMLElement>(
         '[data-empty-landing-composer-block="true"]',
       );
-      expect(controlsBefore).not.toBeNull();
+      expect(controlsBefore).toBeNull();
       expect(composerBlockBefore).not.toBeNull();
-      const beforeRect = controlsBefore!.getBoundingClientRect();
-      const composerBlockBeforeRect = composerBlockBefore!.getBoundingClientRect();
-      await workspacePickerTrigger.click();
-
-      const projectOption = await waitForElement(
-        () =>
-          Array.from(document.querySelectorAll<HTMLElement>('[data-slot="combobox-item"]')).find(
-            (item) => item.textContent?.trim() === "project",
-          ) ?? null,
-        "Unable to find existing project option.",
+      expect(useComposerDraftStore.getState().getDraftThread(THREAD_ID)?.projectId).toBe(
+        HOME_PROJECT_ID,
       );
-      projectOption.click();
-
-      await vi.waitFor(
-        () => {
-          expect(useComposerDraftStore.getState().getDraftThread(THREAD_ID)).toMatchObject({
-            projectId: PROJECT_ID,
-            envMode: "local",
-            branch: null,
-            worktreePath: null,
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-      await expect.element(page.getByTestId("project-picker-trigger")).toBeInTheDocument();
-      await expect.element(page.getByRole("button", { name: "Local" })).toBeInTheDocument();
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-      const controlsAfter = document.querySelector<HTMLElement>(
-        '[data-empty-landing-controls="true"]',
-      );
-      const composerBlockAfter = document.querySelector<HTMLElement>(
-        '[data-empty-landing-composer-block="true"]',
-      );
-      expect(controlsAfter).not.toBeNull();
-      expect(composerBlockAfter).not.toBeNull();
-      const afterRect = controlsAfter!.getBoundingClientRect();
-      const composerBlockAfterRect = composerBlockAfter!.getBoundingClientRect();
-      // Guard against the empty-pane entry animation restarting with a vertical translate
-      // when Home selection turns into a project draft.
-      expect(
-        Math.round(Math.abs(afterRect.height - beforeRect.height)),
-        `Composer controls changed height ${beforeRect.height}px -> ${afterRect.height}px`,
-      ).toBeLessThanOrEqual(1);
-      expect(Math.round(Math.abs(afterRect.top - beforeRect.top))).toBeLessThanOrEqual(1);
-      expect(
-        Math.round(Math.abs(composerBlockAfterRect.top - composerBlockBeforeRect.top)),
-      ).toBeLessThanOrEqual(1);
+      expect(document.querySelector('button[aria-label="Send to Agent"]')).toBeNull();
     } finally {
       await mounted.cleanup();
     }

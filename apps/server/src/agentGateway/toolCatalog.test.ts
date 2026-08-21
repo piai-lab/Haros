@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   exposedAgentGatewayTools,
+  exposedAgentGatewayToolsForProjectKind,
   makeAgentGatewayToolCatalog,
   projectBuiltInToolGroups,
   tagAgentGatewayTools,
@@ -110,5 +111,40 @@ describe("AgentGateway tool catalog", () => {
         effective: false,
       },
     ]);
+  });
+
+  it("derives Agent, Chat, and Studio admission from ProductSurface without a second catalog", () => {
+    const catalog = makeAgentGatewayToolCatalog([
+      tagAgentGatewayTools({
+        group: "tasks",
+        available: true,
+        tools: [makeTool("omnimind_read_thread")],
+      }),
+      tagAgentGatewayTools({
+        group: "browser",
+        available: true,
+        tools: [makeTool("browser_click")],
+      }),
+      tagAgentGatewayTools({
+        group: "device",
+        available: false,
+        tools: [makeTool("device_open")],
+      }),
+    ]);
+
+    const namesFor = (kind: "project" | "chat" | "studio") =>
+      exposedAgentGatewayToolsForProjectKind(catalog, DEFAULT_SERVER_SETTINGS, kind).map(
+        (tool) => tool.definition.name,
+      );
+
+    expect(namesFor("project")).toEqual(["omnimind_read_thread", "browser_click"]);
+    expect(namesFor("chat")).toEqual(["browser_click"]);
+    expect(namesFor("studio")).toEqual(["omnimind_read_thread", "browser_click"]);
+
+    const browserDisabled = {
+      ...DEFAULT_SERVER_SETTINGS,
+      agentTools: { disabledBuiltInGroups: ["browser"] },
+    };
+    expect(exposedAgentGatewayToolsForProjectKind(catalog, browserDisabled, "chat")).toEqual([]);
   });
 });

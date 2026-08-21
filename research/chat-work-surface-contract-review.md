@@ -8,6 +8,8 @@
 >
 > Proma 只作为产品直觉与反例来源，不是 adopted source，也不授予复制其 Workspace、Memory、MCP 或 Agent 生命周期的权限。
 
+> **2026-08-21 supersession：** `§10–§14` 仍是对 `533fa40…` 的历史源码观察，不能倒改；本文其余目标裁决已经被当前 architecture supersede 为“三个 ProductSurface、两个 Provider execution/trust surface、immutable surface Prompt + mutable Host guidance”。Chat→Agent 的历史、附件与失败呈现也已锁定为服务端权威完整可见历史、有界 Provider bootstrap、逐附件 target-owned 部分复制，以及“一条 Timeline activity + 发起时一次 Toast”。当前实现与验收状态只看 `execution-brief.md` 和 Campaign。
+
 ## 0. 本文的角色、权威与新会话读法
 
 本文保存 2026-08-21 围绕 OmniMind `Chat` 工作面形成的完整认知：维护者已经确认的产品方向、当前代码事实、Synara/Pi/Proma 证据、互相冲突之处、明确否决的路线，以及未来重新进入施工时必须证伪的条件。
@@ -34,14 +36,14 @@
 
 这轮最重要的结论不是一张工具白名单，而是一条极简组合原则：
 
-> **一个能力装配体系，两个不同侧重的 Prompt 工作面，一条唯一的 Project 升级入口。**
+> **一个能力装配体系，三个产品 Prompt 工作面，两个 Provider 执行/信任面，一条唯一的 Project 升级入口。**
 
 更完整地说：
 
 1. OmniMind 产品导航应有三个一级工作面：`Agent / Chat / Studio`。Chat 不是 Agent 的空项目状态，也不是 Studio 的别名。
 2. Provider/runtime 仍只需要 `agent / chat` 两种 work-surface 语义：普通 Project 是 `agent`；Chat 与 Studio 都是 `chat`。不得为 Studio 新增第三种 Provider mode。
 3. OmniMind Agent 的 Engine-native/Pi-native 全局能力默认跨模式共用。未来安装的全局 Tool、Extension、Skill、Prompt，除非维护者明确要求或资源本身具有自然 scope，否则不要按 Chat/Agent 再维护两份注册、配置或 allowlist。
-4. Chat 与 Agent 的 Prompt 侧重必须不同，但不能各写一整套互相漂移的“大 Prompt”。正确形状是：共同 identity/cognitive core + 窄的 Chat overlay + 窄的 Agent overlay。
+4. Agent、Chat 与 Studio 的 Prompt 侧重必须不同，但不能各写一整套互相漂移的“大 Prompt”。正确形状是 immutable 的共同 identity/cognitive core + 三个窄 ProductSurface overlay；Settings、availability 与实际 Host catalog 形成 per-turn mutable guidance，不能冻结进 Session Prompt。
 5. Chat 不选择 Primary Folder、cwd 或 Project。它可以显式引用文件/文件夹，但引用不是 cwd、Project、Project trust 或 Project-local Skill 的激活器。
 6. Chat 使用普通 Engine 文件工具处理自己的受管工作目录。现有 per-chat workspace 的 `work/` 与 `outputs/` 足够；不要新建 `chat_files.*` 工具、Artifact Manager、下载中心或第二文件生命周期。
 7. Chat 的 OmniMind Host 默认只投影 Browser。线程协调、Automation、Diagnostics、Device 以及未来 Host capability 默认不投影给 Chat；`omnimind_update_tasks` 例外，因为它是 Pi Session Extension，不是 Host tool，并且研究、学习、规划等 Chat 任务同样可能需要 Todo。
@@ -74,12 +76,12 @@ Prompt 可以按类似插件的方式维护，但生命周期仍是 Prompt；Too
 
 自然例外是 scope：
 
-| 资源位置/身份                                   | 默认可见范围                          | 原因                                     |
-| ----------------------------------------------- | ------------------------------------- | ---------------------------------------- |
-| OmniMind/Pi 全局 Tool、Extension、Skill、Prompt | 所有模式                              | 用户级能力，不应按 tab 复制生命周期      |
-| Project-local Tool、Extension、Skill、Prompt    | 明确选择并受信的 Project work surface | 依赖 Project root 与 trust，不是全局能力 |
-| Studio-local 资源                               | Studio managed scope                  | 跟随 Synara Studio owner                 |
-| 维护者明确批准的例外                            | 按明确裁决                            | 不能由 adapter 静默推断                  |
+| 资源位置/身份                                   | 默认可见范围                          | 原因                                                  |
+| ----------------------------------------------- | ------------------------------------- | ----------------------------------------------------- |
+| OmniMind/Pi 全局 Tool、Extension、Skill、Prompt | 所有模式                              | 用户级能力，不应按 tab 复制生命周期                   |
+| Project-local Tool、Extension、Skill、Prompt    | 明确选择并受信的 Project work surface | 依赖 Project root 与 trust，不是全局能力              |
+| Studio workspace instructions/outputs           | Studio managed scope                  | 跟随 Synara Studio owner；不构成 ambient Pi discovery |
+| 维护者明确批准的例外                            | 按明确裁决                            | 不能由 adapter 静默推断                               |
 
 不得为了模式差异建立 `chatPiTools`、`agentPiTools`、第二 Package 配置、重复 Extension factories 或 per-mode 全量 allowlist。
 
@@ -205,12 +207,13 @@ Chat 对外部引用默认采取“读取和理解，不主动修改”的语义
 
 ### 5.1 必须分开的四层
 
-| 层                             | owner                                                         | Chat 默认                        |
-| ------------------------------ | ------------------------------------------------------------- | -------------------------------- |
-| Engine-native tools            | 各 Engine runtime                                             | 保持 Engine 真实提供的集合       |
-| Pi/global ecosystem            | Pi ResourceLoader/Package/Extension/Skill/Prompt owner        | 全局资源默认与其他模式共用       |
-| OmniMind Host tools            | AgentGateway catalog/execution/authority + adapter projection | Browser only；其他 Host 默认关闭 |
-| Project/Studio-local resources | 对应 Project trust 或 Studio scope                            | Chat 不 ambient 激活             |
+| 层                          | owner                                                         | Chat 默认                        |
+| --------------------------- | ------------------------------------------------------------- | -------------------------------- |
+| Engine-native tools         | 各 Engine runtime                                             | 保持 Engine 真实提供的集合       |
+| Pi/global ecosystem         | Pi ResourceLoader/Package/Extension/Skill/Prompt owner        | 全局资源默认与其他模式共用       |
+| OmniMind Host tools         | AgentGateway catalog/execution/authority + adapter projection | Browser only；其他 Host 默认关闭 |
+| Project-local Pi resources  | 受信 Agent Project root                                       | Chat/Studio 不 ambient 激活      |
+| Studio instructions/outputs | Synara Studio workspace owner                                 | Studio 专用，但不升级 Pi trust   |
 
 这四层不能因为 UI 都叫“工具”就合并为一个 Mode Tool Registry。
 
@@ -388,7 +391,7 @@ OmniMind 与 Synara 中确实有 `scope: "project"`，但它不是独立 durable
 
 Synara 对应使用 `.synara/skills`，其余兼容 roots 相同。Pi 自身约定全局 `~/.pi/agent/skills`、`~/.agents/skills`，Project 则从 cwd/ancestors 的 `.pi/skills`、`.agents/skills` 发现。
 
-干净合同：Chat ambient discovery 只含全局 Skill；Agent 在明确受信的 Project root 中增加 Project-local Skill；Studio 按 Synara Studio scope；用户在 Chat 中显式选择某个 Skill 是本 turn 的输入，不等于开启该路径周围全部 Project discovery。
+干净合同：Chat 与 Studio ambient Pi discovery 只含全局 Skill/Prompt/Extension；Agent 在明确受信的 Project root 中增加 Project-local resources。Studio workspace instructions/outputs 继续由 Synara Studio owner 管理，但不因此扫描 managed cwd 内的 ambient Pi resources。用户在 Chat 中显式选择某个 Skill 是本 turn 的输入，不等于开启该路径周围全部 Project discovery。
 
 ### 7.3 当前有一个真实不一致
 
@@ -421,15 +424,15 @@ Send to Agent   = 在这个 Project 边界内继续工作
 
 现有架构已经明确没有 Handoff platform、Session copy 或 replay。未来应实现 contextual fork/new Thread，而不是新增跨 Provider Session protocol。
 
-### 8.4 尚未锁死的 handoff 细节
+### 8.4 已锁定的 contextual fork 事实
 
-真正施工前仍需沿现有 Thread create/import/attachment seam 收敛：带入完整 transcript、压缩 recap 还是消息范围；refs 如何复用现有持久事实；managed output refs 何时只引用、何时用户明确复制；首条 prompt/title；创建失败、引用失效和 reopen 恢复。
+`thread.fork.create` 只接收 Chat→Agent intent；服务端从 canonical source Thread 派生完整产品层可见 user/assistant 历史、mentions 和确定性目标消息 id，Web 不提交 transcript。目标 UI 永久保留完整历史；第一次手动发送才使用有界 recent+earlier bootstrap，长历史不会新增 all-or-fail。
 
-无论最终形状如何，都不能产生第二 Handoff store 或 replay ledger。
+历史 managed binary 在既有 ManagedAttachmentStore 内按确定性 id、既有限额和目标消息归属逐项 clone/claim；失败不阻断 Thread，成功项成为 target-owned，失败项进入一条可展开 Timeline activity，发起动作只 Toast 一次。当前 Draft 仍属于 Composer owner；outputs 仅在存在且可读时作为可移除 directory mention。不得产生第二 Handoff store、attachment migration service 或 replay ledger。
 
 ## 9. Studio 的边界
 
-Studio 继续 follow Synara，不借本轮重新设计：保留 Studio container、managed workspace、output、reactor、draft cwd、local environment 和 no-worktree/branch 等语义；Provider workSurface 仍是 `chat`；全局 Pi Tool/Extension/Skill/Prompt 默认共享；Studio-local 资源按 Studio scope；Chat Host Browser-only 不能自动扩张为 Studio Host policy，除非维护者之后明确决定。
+Studio 默认继承 Synara 的 container、managed workspace、output、reactor、draft cwd、local environment、no-worktree/branch、visibility 与 restore 语义；Provider workSurface 仍是 `chat`，但 ProductSurface/Prompt overlay 是独立的 `studio`。全局 Pi Tool/Extension/Skill/Prompt 默认共享；Studio managed cwd 与 workspace instructions 不授予 project-local Pi trust，也不触发 ambient local Skill/Prompt/Extension discovery。Chat Host Browser-only 不扩张到 Studio；Studio 使用当前全局启用且运行时可用的 Host 集合。
 
 ## 10. 当前 OmniMind source 事实
 
@@ -437,7 +440,7 @@ Studio 继续 follow Synara，不借本轮重新设计：保留 Studio container
 
 ### 10.1 已经存在且方向正确
 
-- `PiAdapter.ts` 已有共同 identity/cognitive contract 和 Chat/Agent 两个窄 overlay；
+- `PiAdapter.ts` 在该历史 snapshot 已有共同 identity/cognitive contract 和 Chat/Agent 两个窄 overlay；当时 Studio 仍误用 Chat contract；
 - `ProviderCommandReactor.ts` 已按 `project.kind === "project" ? agent : chat` 投影；
 - Chat 首次发送会创建日期/slug 管理目录并 scaffold `work/outputs`；
 - RightDock 已复用 workspace Explorer，文件变化进入现有查询/刷新链路；
@@ -545,7 +548,7 @@ Proma 源码中存在受管 `workspace-files/`、session/workspace attached file
 
 ## 16. 未来 owner 同步顺序
 
-真正获授权实施时，最小完整顺序：
+本轮实施与后续复验的最小完整顺序：
 
 1. 先把 `README.md` 与 `architecture/workbench.md` 的一级工作面从两面同步为三面，并明确 Synara Menu/Radio；
 2. 在 `architecture/product-state.md` 固定 `Project kind → product surface → provider workSurface`、Chat reference 与 `Send to Agent` contextual fork；
@@ -559,7 +562,8 @@ Proma 源码中存在受管 `workspace-files/`、session/workspace attached file
 
 ### 17.1 Prompt 与能力
 
-- Chat/Agent identity core exactly once；overlay 不串面；
+- Agent/Chat/Studio identity core exactly once；三个 overlay 不串面，Studio 不误吃 Chat contract；
+- immutable Prompt 不含动态 Host catalog；下一 Turn 的 mutable guidance、tools/list 与 tools/call 共同反映最新 admission；
 - Chat 在任务 Project 化时推荐 `Send to Agent`，不是只匹配“修改项目”；
 - OmniMind Chat 真实 request 含 native tools、Todo、Browser，不含 thread/Automation/Diagnostics/Device Host tools；
 - OmniMind Agent 既有能力不回归；

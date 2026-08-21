@@ -44,6 +44,7 @@ import type {
 } from "@omnimind/contracts";
 import type { Effect } from "effect";
 import type { Stream } from "effect";
+import type { ProductSurface } from "@omnimind/shared/productSurface";
 
 export type ProviderSessionModelSwitchMode = "in-session" | "restart-session" | "unsupported";
 
@@ -72,7 +73,19 @@ export type ProviderSessionResourceReloadState = "reloaded" | "no_active_session
 export interface ProviderTurnDispatchContext {
   readonly turnKind: "user" | "goal-continuation";
   readonly dispatchOrigin: MessageDispatchOrigin;
+  /** Authoritative, per-dispatch Product surface; never persisted in provider bindings. */
+  readonly productSurface?: ProductSurface;
 }
+
+/** Canonical discovery trust resolved by the server from Thread -> Project.kind. */
+export type ProviderResourceDiscoveryScope =
+  | { readonly kind: "global-only" }
+  | { readonly kind: "project"; readonly authoritativeRoot: string };
+
+/** Server-internal adapter admission. Public Provider RPC remains two-surface. */
+export type ProviderAdapterSessionStartInput = ProviderSessionStartInput & {
+  readonly productSurface?: ProductSurface;
+};
 
 export interface ProviderAdapterCapabilities {
   /**
@@ -114,7 +127,7 @@ export interface ProviderAdapterShape<TError> {
    * Start a provider-backed session.
    */
   readonly startSession: (
-    input: ProviderSessionStartInput,
+    input: ProviderAdapterSessionStartInput,
   ) => Effect.Effect<ProviderSession, TError>;
 
   /**
@@ -267,14 +280,18 @@ export interface ProviderAdapterShape<TError> {
    * List skills available for a given cwd.
    */
   readonly listSkills?: (
-    input: ProviderListSkillsInput,
+    input: ProviderListSkillsInput & {
+      readonly resourceScope?: ProviderResourceDiscoveryScope;
+    },
   ) => Effect.Effect<ProviderListSkillsResult, TError>;
 
   /**
    * List provider-native slash commands available for a given cwd.
    */
   readonly listCommands?: (
-    input: ProviderListCommandsInput,
+    input: ProviderListCommandsInput & {
+      readonly resourceScope?: ProviderResourceDiscoveryScope;
+    },
   ) => Effect.Effect<ProviderListCommandsResult, TError>;
 
   /**

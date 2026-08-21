@@ -974,6 +974,89 @@ describe("ProviderCommandReactor", () => {
     );
   }
 
+  async function createChatToAgentForkThread(
+    harness: Awaited<ReturnType<typeof createHarness>>,
+    input: {
+      readonly threadId: ThreadId;
+      readonly now: string;
+      readonly importedMessageCount?: number;
+    },
+  ) {
+    const sourceProjectId = asProjectId(`chat-project-${input.threadId}`);
+    const sourceThreadId = ThreadId.makeUnsafe(`chat-thread-${input.threadId}`);
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe(`cmd-chat-project-${input.threadId}`),
+        projectId: sourceProjectId,
+        kind: "chat",
+        title: "Source Chat",
+        workspaceRoot: `/tmp/chat-workspace-${input.threadId}`,
+        defaultModelSelection: null,
+        createdAt: input.now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe(`cmd-chat-thread-${input.threadId}`),
+        threadId: sourceThreadId,
+        projectId: sourceProjectId,
+        title: "Canonical Chat",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        branch: null,
+        worktreePath: null,
+        createdAt: input.now,
+      }),
+    );
+    const messageCount = input.importedMessageCount ?? 12;
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.messages.import",
+        commandId: CommandId.makeUnsafe(`cmd-chat-messages-${input.threadId}`),
+        threadId: sourceThreadId,
+        messages: Array.from({ length: messageCount }, (_, index) => ({
+          messageId: asMessageId(`chat-source-${input.threadId}-${index}`),
+          role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
+          text: `CHAT-IMPORTED-${index} ${"context ".repeat(80)}`,
+          createdAt: new Date(Date.parse(input.now) + index).toISOString(),
+          updatedAt: new Date(Date.parse(input.now) + index).toISOString(),
+        })),
+        createdAt: input.now,
+      }),
+    );
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.fork.create",
+        commandId: CommandId.makeUnsafe(`cmd-chat-agent-fork-${input.threadId}`),
+        threadId: input.threadId,
+        sourceThreadId,
+        projectId: asProjectId("project-1"),
+        title: "Client title is ignored",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        envMode: "local",
+        branch: null,
+        worktreePath: null,
+        workingDirectory: null,
+        associatedWorktreePath: null,
+        associatedWorktreeBranch: null,
+        associatedWorktreeRef: null,
+        createBranchFlowCompleted: false,
+        sidechatSourceThreadId: null,
+        forkScope: {
+          kind: "chat-to-agent",
+          bootstrapStatus: "pending",
+        },
+        importedMessages: [],
+        createdAt: input.now,
+      }),
+    );
+  }
+
   it("REL-01B gate: delivers intents committed before the reactor subscribes", async () => {
     const harness = await createHarness({ startReactor: false });
     const now = new Date().toISOString();
@@ -2538,6 +2621,104 @@ describe("ProviderCommandReactor", () => {
     const secondInput = harness.sendTurn.mock.calls[1]?.[0] as { input?: string } | undefined;
     expect(secondInput?.input).toBe("Continue again");
     expect(harness.forkThread).not.toHaveBeenCalled();
+  });
+
+  it("sends one bounded Chat-to-Agent bootstrap only after the user starts the first Agent turn", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-chat-to-agent-bootstrap");
+    const harness = await createHarness({ startReactor: false });
+    const now = new Date().toISOString();
+    await createChatToAgentForkThread(harness, {
+      threadId,
+      now,
+      importedMessageCount: 120,
+    });
+
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    expect((await readHarnessThread(harness, threadId))?.forkScope).toMatchObject({
+      kind: "chat-to-agent",
+      bootstrapStatus: "pending",
+    });
+
+    await harness.startReactor();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-chat-to-agent-first-manual-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("chat-to-agent-first-manual-message"),
+          role: "user",
+          text: "Start the Agent work now",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    const firstInput = (harness.sendTurn.mock.calls[0]![0] as { input?: string }).input;
+    expect(firstInput).toContain("<thread_context>");
+    expect(firstInput).toContain("CHAT-IMPORTED-119");
+    expect(firstInput).toContain("omitted to fit the context budget");
+    expect(firstInput).toContain("Start the Agent work now");
+    await waitFor(
+      async () =>
+        (await readHarnessThread(harness, threadId))?.forkScope?.bootstrapStatus === "completed",
+    );
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-chat-to-agent-second-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("chat-to-agent-second-message"),
+          role: "user",
+          text: "Continue",
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+    await waitFor(() => harness.sendTurn.mock.calls.length === 2);
+    expect((harness.sendTurn.mock.calls[1]![0] as { input?: string }).input).toBe("Continue");
+  });
+
+  it("omits Chat history at zero remaining budget but preserves the ordinary latest-message limit", async () => {
+    const threadId = ThreadId.makeUnsafe("thread-chat-to-agent-zero-budget");
+    const harness = await createHarness({ startReactor: false });
+    const now = new Date().toISOString();
+    await createChatToAgentForkThread(harness, { threadId, now });
+    await harness.startReactor();
+    const latestText = "x".repeat(PROVIDER_SEND_TURN_MAX_INPUT_CHARS - 20);
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("cmd-chat-to-agent-zero-budget-turn"),
+        threadId,
+        message: {
+          messageId: asMessageId("chat-to-agent-zero-budget-message"),
+          role: "user",
+          text: latestText,
+          attachments: [],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect((harness.sendTurn.mock.calls[0]![0] as { input?: string }).input).toBe(latestText);
+    await waitFor(
+      async () =>
+        (await readHarnessThread(harness, threadId))?.forkScope?.bootstrapStatus === "completed",
+    );
   });
 
   it("normalizes skills only in the latest user segment after preserving imported bytes", async () => {
@@ -8336,6 +8517,7 @@ describe("ProviderCommandReactor", () => {
       expect(harness.sendTurn.mock.calls[0]?.[1]).toEqual({
         turnKind: "user",
         dispatchOrigin: "automation",
+        productSurface: "agent",
       });
       expect((await readHarnessThread(harness))?.modelSelection).toEqual(committedSelection);
 

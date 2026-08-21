@@ -6,7 +6,15 @@ import type {
   SpaceId,
   ThreadId,
 } from "@omnimind/contracts";
-import { OrchestrationCommand, ORCHESTRATION_WS_METHODS } from "@omnimind/contracts";
+import {
+  EventId,
+  MessageId,
+  OrchestrationCommand,
+  ORCHESTRATION_WS_METHODS,
+  type ThreadHandoffImportedMessage,
+} from "@omnimind/contracts";
+import { createHash, randomUUID } from "node:crypto";
+import { sanitizeImportedUserMessageText } from "@omnimind/shared/importedTranscript";
 import {
   Cause,
   Deferred,
@@ -35,8 +43,16 @@ import {
   OrchestrationCommandReceiptRepository,
   type OrchestrationCommandReceipt,
 } from "../../persistence/Services/OrchestrationCommandReceipts.ts";
-import { ManagedAttachmentRepository } from "../../persistence/Services/ManagedAttachments.ts";
+import {
+  ManagedAttachmentRepository,
+  type ManagedAttachmentRepositoryShape,
+} from "../../persistence/Services/ManagedAttachments.ts";
 import { ManagedAttachmentRepositoryLive } from "../../persistence/Layers/ManagedAttachments.ts";
+import {
+  cleanupManagedAttachmentForkStaging,
+  cloneManagedAttachmentForFork,
+  type ManagedAttachmentForkCloneFailureReason,
+} from "../../managedAttachmentStore.ts";
 import {
   LOCAL_LOOPBACK_ATTACHMENT_PRINCIPAL,
   type ManagedAttachmentPrincipal,
@@ -108,6 +124,210 @@ type CommittedCommandResult = {
   readonly lastSequence: number;
   readonly nextCommandReadModel: OrchestrationReadModel;
 };
+
+function deterministicForkMessageId(commandId: string, sourceMessageId: string): MessageId {
+  const digest = createHash("sha256")
+    .update("omnimind:chat-to-agent:message:v1\0")
+    .update(commandId)
+    .update("\0")
+    .update(sourceMessageId)
+    .digest("hex")
+    .slice(0, 32);
+  return MessageId.makeUnsafe(`msg_chatfork_${digest}`);
+}
+
+function deterministicForkAttachmentId(
+  commandId: string,
+  sourceMessageId: string,
+  sourceAttachmentId: string,
+): string {
+  const digest = createHash("sha256")
+    .update("omnimind:chat-to-agent:attachment:v1\0")
+    .update(commandId)
+    .update("\0")
+    .update(sourceMessageId)
+    .update("\0")
+    .update(sourceAttachmentId)
+    .digest("hex")
+    .slice(0, 32);
+  return `att_v2_${digest}`;
+}
+
+type ChatToAgentAttachmentFailure = {
+  readonly targetMessageId: MessageId;
+  readonly name: string;
+  readonly attachmentIndex: number;
+  readonly reason: ManagedAttachmentForkCloneFailureReason;
+};
+
+type PreparedChatToAgentFork = {
+  readonly importedMessages: ReadonlyArray<ThreadHandoffImportedMessage>;
+  readonly attachmentClaimGroups: ReadonlyArray<{
+    readonly messageId: MessageId;
+    readonly attachmentIds: ReadonlyArray<string>;
+  }>;
+  readonly failures: ReadonlyArray<ChatToAgentAttachmentFailure>;
+};
+
+function prepareChatToAgentImportedMessages(input: {
+  readonly commandId: string;
+  readonly sourceThread: OrchestrationReadModel["threads"][number];
+}): ReadonlyArray<ThreadHandoffImportedMessage> {
+  type SourceMessage = (typeof input.sourceThread.messages)[number] & {
+    readonly role: "user" | "assistant";
+  };
+  const sourceMessages: SourceMessage[] = [];
+  for (const message of input.sourceThread.messages) {
+    if ((message.role === "user" || message.role === "assistant") && message.streaming === false) {
+      sourceMessages.push(message as SourceMessage);
+    }
+  }
+  const targetMessageIdBySourceId = new Map(
+    sourceMessages.map((message) => [
+      message.id,
+      deterministicForkMessageId(input.commandId, message.id),
+    ]),
+  );
+  return sourceMessages.map((message) => {
+    const targetMessageId = targetMessageIdBySourceId.get(message.id)!;
+    const assistantSelections = (message.attachments ?? []).flatMap((attachment) => {
+      if (attachment.type !== "assistant-selection") return [];
+      const targetAssistantMessageId = targetMessageIdBySourceId.get(attachment.assistantMessageId);
+      if (!targetAssistantMessageId) return [];
+      return [
+        {
+          ...attachment,
+          id: `selection_chatfork_${createHash("sha256")
+            .update(input.commandId)
+            .update("\0")
+            .update(attachment.id)
+            .digest("hex")
+            .slice(0, 32)}`,
+          assistantMessageId: targetAssistantMessageId,
+        } satisfies ChatAttachment,
+      ];
+    });
+    return {
+      messageId: targetMessageId,
+      sourceMessageId: message.id,
+      sourceMessageUpdatedAt: message.updatedAt,
+      role: message.role,
+      text: message.role === "user" ? sanitizeImportedUserMessageText(message.text) : message.text,
+      ...(assistantSelections.length > 0 ? { attachments: assistantSelections } : {}),
+      ...(message.mentions === undefined ? {} : { mentions: message.mentions }),
+      createdAt: message.createdAt,
+      updatedAt: message.updatedAt,
+    };
+  });
+}
+
+function prepareChatToAgentFork(input: {
+  readonly commandId: string;
+  readonly targetThreadId: ThreadId;
+  readonly sourceThread: OrchestrationReadModel["threads"][number];
+  readonly principal: ManagedAttachmentPrincipal;
+  readonly repository: ManagedAttachmentRepositoryShape;
+  readonly attachmentsDir: string;
+  readonly now: string;
+}): Effect.Effect<PreparedChatToAgentFork, Error> {
+  return Effect.gen(function* () {
+    const baseMessages = prepareChatToAgentImportedMessages(input);
+    const targetBySource = new Map(
+      baseMessages.flatMap((message) =>
+        message.sourceMessageId ? [[message.sourceMessageId, message] as const] : [],
+      ),
+    );
+    const successfulByTargetMessage = new Map<MessageId, ChatAttachment[]>();
+    const failures: ChatToAgentAttachmentFailure[] = [];
+    let acceptedCount = 0;
+    let acceptedBytes = 0;
+
+    for (const sourceMessage of input.sourceThread.messages) {
+      const targetMessage = targetBySource.get(sourceMessage.id);
+      if (!targetMessage) continue;
+      for (const [attachmentIndex, attachment] of (sourceMessage.attachments ?? []).entries()) {
+        if (attachment.type !== "file" && attachment.type !== "image") {
+          continue;
+        }
+        const sourceBlob = yield* input.repository.findClaimedById({
+          attachmentId: attachment.id,
+        });
+        if (
+          Option.isNone(sourceBlob) ||
+          sourceBlob.value.ownerThreadId !== input.sourceThread.id ||
+          sourceBlob.value.claimMessageId !== sourceMessage.id
+        ) {
+          failures.push({
+            targetMessageId: targetMessage.messageId,
+            name: attachment.name,
+            attachmentIndex,
+            reason: "missing",
+          });
+          continue;
+        }
+        const sizeBytes = sourceBlob.value.sizeBytes ?? 0;
+        if (acceptedCount >= 16 || acceptedBytes + sizeBytes > 256 * 1024 * 1024) {
+          failures.push({
+            targetMessageId: targetMessage.messageId,
+            name: attachment.name,
+            attachmentIndex,
+            reason: "limit",
+          });
+          continue;
+        }
+        const cloned = yield* cloneManagedAttachmentForFork({
+          source: sourceBlob.value,
+          targetAttachmentId: deterministicForkAttachmentId(
+            input.commandId,
+            sourceMessage.id,
+            attachment.id,
+          ),
+          targetThreadId: input.targetThreadId,
+          targetMessageId: targetMessage.messageId,
+          commandId: input.commandId,
+          attachmentsDir: input.attachmentsDir,
+          now: input.now,
+          principal: input.principal,
+          repository: input.repository,
+        });
+        if (cloned.status === "failed") {
+          failures.push({
+            targetMessageId: targetMessage.messageId,
+            name: attachment.name,
+            attachmentIndex,
+            reason: cloned.reason,
+          });
+          continue;
+        }
+        acceptedCount += 1;
+        acceptedBytes += sizeBytes;
+        const existing = successfulByTargetMessage.get(targetMessage.messageId) ?? [];
+        existing.push(cloned.attachment);
+        successfulByTargetMessage.set(targetMessage.messageId, existing);
+      }
+    }
+
+    const importedMessages = baseMessages.map((message) => {
+      const successful = successfulByTargetMessage.get(message.messageId) ?? [];
+      return successful.length === 0
+        ? message
+        : {
+            ...message,
+            attachments: [...(message.attachments ?? []), ...successful],
+          };
+    });
+    return {
+      importedMessages,
+      attachmentClaimGroups: [...successfulByTargetMessage.entries()].map(
+        ([messageId, attachments]) => ({
+          messageId,
+          attachmentIds: attachments.map((attachment) => attachment.id),
+        }),
+      ),
+      failures,
+    };
+  });
+}
 
 function commandToAggregateRef(command: OrchestrationCommand): {
   readonly aggregateKind: "space" | "project" | "thread";
@@ -252,7 +472,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       const requestedIds = command.message.attachments
         .filter((attachment) => attachment.type === "image" || attachment.type === "file")
         .map((attachment) => attachment.id)
-        .sort();
+        .toSorted();
       const claimed = yield* Effect.forEach(
         requestedIds,
         (attachmentId) => managedAttachments.findClaimedById({ attachmentId }),
@@ -409,7 +629,12 @@ const makeOrchestrationEngine = Effect.gen(function* () {
             if (!sequenceByProjector.has(projector)) missingProjectors.push(projector);
           }
         }
-        return { probeFailed: false, highWaterSequence, lagByProjector, missingProjectors };
+        return {
+          probeFailed: false,
+          highWaterSequence,
+          lagByProjector,
+          missingProjectors,
+        };
       }).pipe(
         Effect.catch(() =>
           Effect.succeed({
@@ -737,12 +962,112 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       }
 
       const deciderReadModel = yield* buildDeciderReadModel(command);
+      let preparedChatToAgentFork: PreparedChatToAgentFork | null = null;
+      let chatToAgentCommand: Extract<
+        OrchestrationCommand,
+        { readonly type: "thread.fork.create" }
+      > | null = null;
+      let cleanupPreparedChatToAgentAttachments: (() => Effect.Effect<void, never>) | null = null;
+      if (command.type === "thread.fork.create" && command.forkScope?.kind === "chat-to-agent") {
+        const forkCommand = command;
+        if ((forkCommand.importedMessages ?? []).length > 0) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: forkCommand.type,
+            detail:
+              "Chat-to-Agent fork history is server-owned and must not be supplied by the client.",
+          });
+        }
+        const sourceThread = deciderReadModel.threads.find(
+          (thread) => thread.id === forkCommand.sourceThreadId,
+        );
+        if (!sourceThread) {
+          return yield* new OrchestrationCommandInvariantError({
+            commandType: forkCommand.type,
+            detail: `Source thread '${forkCommand.sourceThreadId}' was not found.`,
+          });
+        }
+        const candidateAttachmentIds = sourceThread.messages.flatMap((message) =>
+          (message.attachments ?? []).flatMap((attachment) =>
+            attachment.type === "file" || attachment.type === "image"
+              ? [deterministicForkAttachmentId(forkCommand.commandId, message.id, attachment.id)]
+              : [],
+          ),
+        );
+        const cleanupForkAttachments = () =>
+          cleanupManagedAttachmentForkStaging({
+            attachmentIds: candidateAttachmentIds,
+            targetThreadId: forkCommand.threadId,
+            attachmentsDir: serverConfig.attachmentsDir,
+            principal: envelope.attachmentPrincipal,
+            repository: managedAttachments,
+          });
+        cleanupPreparedChatToAgentAttachments = cleanupForkAttachments;
+        preparedChatToAgentFork = yield* prepareChatToAgentFork({
+          commandId: forkCommand.commandId,
+          targetThreadId: forkCommand.threadId,
+          sourceThread,
+          principal: envelope.attachmentPrincipal,
+          repository: managedAttachments,
+          attachmentsDir: serverConfig.attachmentsDir,
+          now: forkCommand.createdAt,
+        }).pipe(
+          Effect.tapError(cleanupForkAttachments),
+          Effect.mapError(
+            (error) =>
+              new OrchestrationCommandInternalError({
+                commandId: forkCommand.commandId,
+                commandType: forkCommand.type,
+                detail: `Chat-to-Agent attachment preparation failed: ${error.message}`,
+              }),
+          ),
+        );
+        command = {
+          ...forkCommand,
+          importedMessages: preparedChatToAgentFork.importedMessages,
+        };
+        chatToAgentCommand = command;
+      }
       const eventBase = yield* decideOrchestrationCommand({
         command,
         readModel: deciderReadModel,
         workspacePaths: deciderWorkspacePaths,
-      });
-      const eventBases = Array.isArray(eventBase) ? eventBase : [eventBase];
+      }).pipe(
+        Effect.tapError(() =>
+          cleanupPreparedChatToAgentAttachments === null
+            ? Effect.void
+            : cleanupPreparedChatToAgentAttachments(),
+        ),
+      );
+      const eventBases: Array<Omit<OrchestrationEvent, "sequence">> = Array.isArray(eventBase)
+        ? [...eventBase]
+        : [eventBase];
+      if (preparedChatToAgentFork && preparedChatToAgentFork.failures.length > 0) {
+        eventBases.push({
+          eventId: randomUUID() as OrchestrationEvent["eventId"],
+          aggregateKind: "thread",
+          aggregateId: chatToAgentCommand!.threadId,
+          occurredAt: chatToAgentCommand!.createdAt,
+          commandId: chatToAgentCommand!.commandId,
+          causationEventId: null,
+          correlationId: chatToAgentCommand!.commandId,
+          metadata: {},
+          type: "thread.activity-appended",
+          payload: {
+            threadId: chatToAgentCommand!.threadId,
+            activity: {
+              id: EventId.makeUnsafe(randomUUID()),
+              tone: "info",
+              kind: "chat-to-agent.attachments.partial",
+              summary: "Some files could not be carried into Agent",
+              payload: {
+                failures: preparedChatToAgentFork.failures,
+              },
+              turnId: null,
+              createdAt: chatToAgentCommand!.createdAt,
+            },
+          },
+        });
+      }
       const transactionalCommitEffect: Effect.Effect<
         CommittedCommandResult,
         OrchestrationDispatchError,
@@ -768,6 +1093,22 @@ const makeOrchestrationEngine = Effect.gen(function* () {
             return yield* new OrchestrationCommandInvariantError({
               commandType: command.type,
               detail: `Managed attachment claim was rejected: ${claim.reason}.`,
+            });
+          }
+        }
+        if (preparedChatToAgentFork && chatToAgentCommand) {
+          const claim = yield* managedAttachments.claimForImportedMessages({
+            groups: preparedChatToAgentFork.attachmentClaimGroups,
+            ownerThreadId: chatToAgentCommand.threadId,
+            ownerKind: envelope.attachmentPrincipal.ownerKind,
+            ownerId: envelope.attachmentPrincipal.ownerId,
+            commandId: chatToAgentCommand.commandId,
+            now: chatToAgentCommand.createdAt,
+          });
+          if (claim.status !== "claimed") {
+            return yield* new OrchestrationCommandInvariantError({
+              commandType: chatToAgentCommand.type,
+              detail: `Managed fork attachment claim was rejected: ${claim.reason}.`,
             });
           }
         }
@@ -847,15 +1188,18 @@ const makeOrchestrationEngine = Effect.gen(function* () {
         }),
       );
 
-      const committedCommand = yield* sql
-        .withTransaction(transactionalCommitEffect)
-        .pipe(
-          Effect.catchTag("SqlError", (sqlError) =>
-            Effect.fail(
-              toPersistenceSqlError("OrchestrationEngine.processEnvelope:transaction")(sqlError),
-            ),
+      const committedCommand = yield* sql.withTransaction(transactionalCommitEffect).pipe(
+        Effect.catchTag("SqlError", (sqlError) =>
+          Effect.fail(
+            toPersistenceSqlError("OrchestrationEngine.processEnvelope:transaction")(sqlError),
           ),
-        );
+        ),
+        Effect.tapError(() =>
+          cleanupPreparedChatToAgentAttachments === null
+            ? Effect.void
+            : cleanupPreparedChatToAgentAttachments(),
+        ),
+      );
 
       commandReadModel = committedCommand.nextCommandReadModel;
       yield* Effect.forEach(
@@ -900,7 +1244,9 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       for (const event of committedCommand.committedEvents) {
         yield* publishCommittedEvent(event);
       }
-      yield* Deferred.succeed(envelope.result, { sequence: committedCommand.lastSequence });
+      yield* Deferred.succeed(envelope.result, {
+        sequence: committedCommand.lastSequence,
+      });
     }).pipe(
       Effect.timeoutOption(remainingBudgetMs),
       Effect.flatMap((outcome) =>
@@ -930,8 +1276,14 @@ const makeOrchestrationEngine = Effect.gen(function* () {
               envelope.attachmentPrincipal,
             ).pipe(
               Effect.match({
-                onFailure: (resolvedError) => ({ _tag: "Left" as const, left: resolvedError }),
-                onSuccess: (value) => ({ _tag: "Right" as const, right: value }),
+                onFailure: (resolvedError) => ({
+                  _tag: "Left" as const,
+                  left: resolvedError,
+                }),
+                onSuccess: (value) => ({
+                  _tag: "Right" as const,
+                  right: value,
+                }),
               }),
             );
             if (resolvedTimeoutOutcome._tag === "Right") {
@@ -991,7 +1343,10 @@ const makeOrchestrationEngine = Effect.gen(function* () {
             envelope.attachmentPrincipal,
           ).pipe(
             Effect.match({
-              onFailure: (resolvedError) => ({ _tag: "Left" as const, left: resolvedError }),
+              onFailure: (resolvedError) => ({
+                _tag: "Left" as const,
+                left: resolvedError,
+              }),
               onSuccess: (value) => ({ _tag: "Right" as const, right: value }),
             }),
           );

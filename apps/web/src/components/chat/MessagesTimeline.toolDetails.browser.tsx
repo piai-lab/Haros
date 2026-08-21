@@ -194,7 +194,7 @@ describe("MessagesTimeline tool details", () => {
     const screen = await render(<LiveActivityTimeline />, { container: host });
 
     try {
-      expect(document.body.textContent ?? "").toContain("Running bun install");
+      expect(document.body.textContent ?? "").toContain("Ran 1 command bun install");
       expect(document.body.textContent ?? "").toContain("Active");
       expect(document.body.textContent ?? "").toContain("2m 14s elapsed");
       expect(document.body.textContent ?? "").toContain("42%");
@@ -203,7 +203,7 @@ describe("MessagesTimeline tool details", () => {
       const activityMeta = document.querySelector("[data-live-activity-meta='true']");
       expect(displayText?.closest("p")).toBe(activityMeta?.closest("p"));
       expect(displayText?.closest("p")?.textContent ?? "").toContain(
-        "Running bun install · Active",
+        "Ran 1 command bun install · Active",
       );
 
       const trigger = document.querySelector<HTMLButtonElement>(
@@ -296,7 +296,7 @@ describe("MessagesTimeline tool details", () => {
 
     try {
       const rowText = document.querySelector("[data-work-entry-display-text='true']")?.textContent;
-      expect(rowText).toBe("Searched for toolDetails in web/src");
+      expect(rowText).toBe("Ran 1 command for toolDetails in web/src");
       expect(document.querySelector("[data-live-activity-meta='true']")).toBeNull();
       expect(document.body.textContent ?? "").not.toContain("Completed");
       expect(document.body.textContent ?? "").not.toContain("elapsed");
@@ -389,6 +389,66 @@ describe("MessagesTimeline tool details", () => {
       fileRow?.click();
       expect(onOpenTurnDiff).toHaveBeenCalledWith(turnId, "src/app.ts");
       expect(document.querySelector("[data-tool-details-inline='true']")).toBeNull();
+    } finally {
+      await screen.unmount();
+      host.remove();
+      await settleLayout();
+    }
+  });
+
+  it("renders one accessible disclosure for partial Chat-to-Agent attachment transfer", async () => {
+    const host = createTimelineHost();
+    const screen = await render(
+      <TimelineWorkEntryRow
+        workEntry={{
+          id: "chat-to-agent-attachments-partial",
+          createdAt: "2026-08-21T19:12:28.000Z",
+          label: "Some files could not be carried into Agent",
+          tone: "error",
+          activityKind: "chat-to-agent.attachments.partial",
+          attachmentTransferFailures: [
+            {
+              targetMessageId: "target-message-1",
+              name: "notes.pdf",
+              attachmentIndex: 0,
+              reason: "unreadable",
+            },
+            {
+              targetMessageId: "target-message-2",
+              name: "archive.zip",
+              attachmentIndex: 1,
+              reason: "limit",
+            },
+          ],
+        }}
+        chatMetaFontSizePx={12}
+        textFontSizePx={13}
+        density="compact"
+        onImageExpand={() => {}}
+        markdownCwd={undefined}
+        timestampFormat="locale"
+      />,
+      { container: host },
+    );
+
+    try {
+      const disclosure = screen
+        .getByRole("button", {
+          name: "2 files could not be carried into Agent",
+        })
+        .element() as HTMLButtonElement;
+      expect(disclosure.getAttribute("aria-expanded")).toBe("false");
+      const detailsRegion = disclosure.nextElementSibling;
+      expect(detailsRegion).not.toBeNull();
+      expect(detailsRegion?.getAttribute("aria-hidden")).toBe("true");
+      expect(detailsRegion?.hasAttribute("inert")).toBe(true);
+
+      disclosure.click();
+      await vi.waitFor(() => expect(disclosure.getAttribute("aria-expanded")).toBe("true"));
+      expect(document.body.textContent ?? "").toContain("notes.pdf");
+      expect(document.body.textContent ?? "").toContain("Unreadable");
+      expect(document.body.textContent ?? "").toContain("archive.zip");
+      expect(document.body.textContent ?? "").toContain("Transfer limit");
     } finally {
       await screen.unmount();
       host.remove();

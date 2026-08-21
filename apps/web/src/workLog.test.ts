@@ -11,6 +11,63 @@ import {
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
+  it("keeps one thread-level partial attachment receipt with only valid safe failure items", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "chat-to-agent-attachment-partial",
+          kind: "chat-to-agent.attachments.partial",
+          tone: "error",
+          summary: "Some files could not be carried into Agent",
+          payload: {
+            failures: [
+              {
+                targetMessageId: "target-message-1",
+                name: "notes.pdf",
+                attachmentIndex: 0,
+                reason: "unreadable",
+              },
+              {
+                targetMessageId: "target-message-2",
+                name: "archive.zip",
+                attachmentIndex: 1,
+                reason: "limit",
+              },
+              {
+                targetMessageId: "",
+                name: "/private/source/path.txt",
+                attachmentIndex: -1,
+                reason: "unsupported",
+              },
+            ],
+          },
+        }),
+      ],
+      TurnId.makeUnsafe("unrelated-latest-turn"),
+      { visibleTurnIds: new Set(["other-turn"]) },
+    );
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      activityKind: "chat-to-agent.attachments.partial",
+      attachmentTransferFailures: [
+        {
+          targetMessageId: "target-message-1",
+          name: "notes.pdf",
+          attachmentIndex: 0,
+          reason: "unreadable",
+        },
+        {
+          targetMessageId: "target-message-2",
+          name: "archive.zip",
+          attachmentIndex: 1,
+          reason: "limit",
+        },
+      ],
+    });
+    expect(JSON.stringify(entries[0])).not.toContain("/private/source/path.txt");
+  });
+
   it("projects skill delivery receipts as non-tool status rows", () => {
     const entries = deriveWorkLogEntries(
       [

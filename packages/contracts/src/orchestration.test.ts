@@ -656,7 +656,7 @@ it.effect("decodes the exact durable scope for a history-only fork", () =>
       sourceMessageUpdatedAt: "2026-08-17T00:00:02.000Z",
       bootstrapStatus: "pending",
     });
-    assert.strictEqual(command.importedMessages[0]?.sourceMessageId, "message-cutoff");
+    assert.strictEqual(command.importedMessages?.[0]?.sourceMessageId, "message-cutoff");
   }),
 );
 

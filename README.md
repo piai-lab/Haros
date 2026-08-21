@@ -16,7 +16,7 @@ OmniMind 是一个本地优先、多 Provider 的桌面 Agent 产品，也是 Sy
 
 公开 Alpha 前没有用户数据兼容义务，但这不构成删除本机旧字节的产品价值。V1 的每个 owner 使用唯一、全新的 first-public canonical namespace；旧开发 Product、Automation/service、Web draft 与 Package 状态不再读取、推断、迁移、修复或删除。若旧路径与当前 owner 冲突，当前 owner 一次性选择新的最终路径或 key，而不是发布 destructive rebuild 工具。credential、Pi-native state、attachments、用户 workspace、Git、全局配置和任何未知路径始终保持原样。公开发行后的 schema 变更才进入有证据的 migration/recovery。
 
-OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 平台”，而是用 `Agent | Chat` 提供清晰默认路线，把成熟 Synara Workbench、多 Provider substrate 与 Pi 生态交付为一个完整桌面产品。OmniMind 不需要拥有每个内部 lifecycle 才能形成产品价值；可信来源、策展、体验和发行可以建立在上游原生 authority 之上。Remote/SSH 推迟到 V2。
+OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 平台”，而是用 `Agent | Chat | Studio` 提供清晰默认路线，把成熟 Synara Workbench、多 Provider substrate 与 Pi 生态交付为一个完整桌面产品。OmniMind 不需要拥有每个内部 lifecycle 才能形成产品价值；可信来源、策展、体验和发行可以建立在上游原生 authority 之上。Remote/SSH 推迟到 V2。
 
 已采用的 Synara UI mother 与仓库中已经运行的成熟机制是默认施工基座。一个 Campaign claim 为 `open`，只表示 OmniMind 对该产品语义的验收证据尚未闭合，不表示对应 File、Viewer、Diff、Terminal、Conversation、accessibility、performance、packaging 或 updater 基座不存在。替换既有机制前必须同时指出唯一 owner、可复现冲突，以及为什么接线、authority 收口或局部修复不能解决；否则保持既有实现并补齐 OmniMind 差异与 proof。
 
@@ -50,8 +50,8 @@ OmniMind 的价值不是“能启动 Pi”，也不是“再造一个多 Engine 
 
 ## 3. 不可协商的产品边界
 
-- App shell、导航、Agent/Chat、设置、错误、更新和默认生态入口只使用 OmniMind 产品语言。Synara 不作为用户概念；OmniMind Agent 不以 Pi 命名或解释自身。准确的 Pi lineage、采用版本、改动边界与 license 只在 About、Licenses、诊断和源码归属中按需可发现。
-- `Agent | Chat` 是唯一一级工作入口：正常 shell 在侧栏顶部同时呈现 `Agent`（左）与 `Chat`（右），一次激活即可切换；不得把另一入口隐藏进菜单或溢出项。用户显式隐藏 Chat 是唯一例外。Agent 复用 folder-backed Project Thread，Chat 复用 Home/Studio managed Thread；Groups 复用 Space identity/name/order，并以既有 Thread metadata 保存会话的多分组 membership，不给 Project 打标签，也不创建第二套 Group aggregate、tabpanel state 或 restore authority。
+- App shell、导航、Agent/Chat/Studio、设置、错误、更新和默认生态入口只使用 OmniMind 产品语言。Synara 不作为用户概念；OmniMind Agent 不以 Pi 命名或解释自身。准确的 Pi lineage、采用版本、改动边界与 license 只在 About、Licenses、诊断和源码归属中按需可发现。
+- `Agent | Chat | Studio` 是三个一级产品工作面：`/ → Agent`、`/chat → Chat`、`/studio → Studio`。Agent 与 Chat 始终可达；Studio 默认继承 Synara 既有“显示 Studio”设置、恢复与隐藏生命周期。侧栏使用 Synara 现有描述式 Menu/Radio，一次激活切换，不创建 tabpanel、第二 selection state 或三份 restore state。Agent 复用 folder-backed Project Thread；Chat 复用 Home managed Thread且没有目录；Studio 默认复用 managed Studio container。后续 Studio 优化必须先证明具体用户缺口，并以既有 owner 内的最小必要偏离完成，不能创建第二状态机或恢复 owner。Groups 仍复用 Space identity/name/order与既有 Thread metadata。
 - 生态生命周期属于各 Provider。V1 恢复并复用 Synara 既有 Plugin/Skill discovery；OmniMind Agent 对锁定 runtime 已真实提供的 provider-scoped install/update/remove/reload 必须保持用户可达，缺失的动作才不显示。API/capability gate 只决定某个 Provider 显示哪些动作，不把已存在的 Pi 能力降为产品可选项。stock Pi 与其他 Provider 不为视觉对称而补造不存在的生命周期 API，共同 UI 不保存跨 Provider current/LKG/generation。
 - V1 在 inherited Registry 中增加一个有界的 `omnimind` identity，并保留 `pi` 与其他既有 adapters；不把 ProviderKind 改成动态插件平台。OmniMind Agent 是默认、内置和最深验收路径；stock Pi 只在用户主动选择 Provider 或查看详情时以 `Pi` 显示。UI 使用每个 runtime 的 ready、auth、version、capability 与 diagnostics，不新增 support-tier 状态。
 - U1 是获准的完整 UI 物理母体和可运行底盘；采用遵守 Workbench 的逐域 preserve/adapt/delete gate，不按截图另画薄 shell，不因未接线就删除成熟表面。

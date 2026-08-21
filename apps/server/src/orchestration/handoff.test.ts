@@ -6,7 +6,11 @@
 import { MessageId, type OrchestrationMessage } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
-import { buildHistoryOnlyForkBootstrapText, buildPriorTranscriptBootstrapText } from "./handoff.ts";
+import {
+  buildChatToAgentForkBootstrapText,
+  buildHistoryOnlyForkBootstrapText,
+  buildPriorTranscriptBootstrapText,
+} from "./handoff.ts";
 
 const message = (
   index: number,
@@ -175,5 +179,45 @@ describe("buildHistoryOnlyForkBootstrapText", () => {
       },
     ];
     expect(buildHistoryOnlyForkBootstrapText(scopedThread(messages), 200)).toBeNull();
+  });
+});
+
+describe("buildChatToAgentForkBootstrapText", () => {
+  const scopedThread = (messages: ReadonlyArray<OrchestrationMessage>) => ({
+    ...thread(messages),
+    forkScope: {
+      kind: "chat-to-agent" as const,
+      bootstrapStatus: "pending" as const,
+    },
+  });
+
+  it("keeps the newest visible history while bounding a long Chat transcript", () => {
+    const messages = Array.from({ length: 300 }, (_, index) => ({
+      ...message(
+        index,
+        index % 2 === 0 ? "user" : "assistant",
+        `CHAT-MARKER-${index} ${"x".repeat(400)}`,
+      ),
+      source: "fork-import" as const,
+    }));
+
+    const text = buildChatToAgentForkBootstrapText(scopedThread(messages), 8_000);
+
+    expect(text).not.toBeNull();
+    expect(text!.length).toBeLessThanOrEqual(8_000);
+    expect(text).toContain("CHAT-MARKER-299");
+    expect(text).toContain("omitted to fit the context budget");
+    expect(text).not.toContain("CHAT-MARKER-0 ");
+  });
+
+  it("omits history when the latest normal turn leaves no bootstrap budget", () => {
+    const messages = [
+      {
+        ...message(0, "user", "Visible Chat context"),
+        source: "fork-import" as const,
+      },
+    ];
+
+    expect(buildChatToAgentForkBootstrapText(scopedThread(messages), 0)).toBeNull();
   });
 });

@@ -16,10 +16,9 @@ import {
   type ThreadForkScope,
 } from "@omnimind/contracts";
 import { getDefaultModel } from "@omnimind/shared/model";
+import { sanitizeImportedUserMessageText } from "@omnimind/shared/importedTranscript";
 import { type Thread } from "../types";
 import { DEFAULT_PROVIDER_ORDER } from "../providerOrdering";
-import { stripEmbeddedAssistantSelections } from "./assistantSelections";
-import { extractTrailingBrowserAnnotations } from "./browserAnnotations";
 import { findProviderStatus, isProviderUsable } from "./providerAvailability";
 import { randomUUID } from "./utils";
 
@@ -92,15 +91,11 @@ function buildImportedThreadMessage(
   const importedMessageId = MessageId.makeUnsafe(randomUUID());
   let importedText = message.text;
   if (!includeSourceIdentity && message.role === "user") {
-    const extractedBrowserAnnotations = extractTrailingBrowserAnnotations(message.text, message.id);
-    const visibleAndContextText = stripEmbeddedAssistantSelections(
-      extractedBrowserAnnotations.promptText,
-    );
     // Browser annotation ids and tab ids are scoped to the source thread's
     // live browser session. Carrying them into a handoff would advertise an
     // exact-page navigation target that the destination thread cannot
     // resolve, so import only the visible user/context text.
-    importedText = visibleAndContextText;
+    importedText = sanitizeImportedUserMessageText(message.text);
   }
   const importedMessage: ThreadHandoffImportedMessage = {
     messageId: importedMessageId,

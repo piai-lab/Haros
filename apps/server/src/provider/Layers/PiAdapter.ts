@@ -44,6 +44,7 @@ import {
   type UserInputQuestion,
 } from "@omnimind/contracts";
 import { Effect, FileSystem, Layer, Option, Queue, Stream } from "effect";
+import type { ProductSurface } from "@omnimind/shared/productSurface";
 
 import { renderOmniMindHarnessPolicy } from "../../agentGateway/harnessPolicy.ts";
 import {
@@ -89,6 +90,7 @@ import { buildOmniMindSessionExtensions } from "../omnimindSessionExtensions.ts"
 import {
   PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
   type ProviderAdapterShape,
+  type ProviderResourceDiscoveryScope,
   type ProviderThreadSnapshot,
   type ProviderTurnDispatchContext,
 } from "../Services/ProviderAdapter.ts";
@@ -152,7 +154,10 @@ const OMNIMIND_CHAT_CONTRACT = [
   "",
   "When several approaches are reasonable, recommend a primary path and explain why and its key tradeoffs; include alternatives only when useful.",
   "",
-  "Use available tools when they materially improve accuracy, timeliness, or completeness. Do not assume authority to modify an existing user project; when that is required, explain the boundary and suggest Send to Agent.",
+  "Explicit file and folder references are inputs for the current conversation. They are not a working directory, Project, or trusted project root, and must not be treated as permission to scan nearby paths.",
+  "Treat external references as read-and-understand inputs by default. If the user explicitly asks to write a named path or run an available Engine-native operation, follow the real permission and risk rules; Chat is not a hard filesystem, Git, or Terminal sandbox.",
+  "When you produce ordinary file results without an explicit destination, use the managed Chat workspace already provided by OmniMind.",
+  "Use available tools when they materially improve accuracy, timeliness, or completeness. When the work naturally needs a durable Project boundary, sustained project execution, or trusted project-local context and resources, explain that boundary and suggest Send to Agent.",
 ].join("\n");
 const OMNIMIND_AGENT_CONTRACT = [
   "In Agent, understand the user's actual desired outcome and carry aligned work through to a verified result.",
@@ -165,6 +170,11 @@ const OMNIMIND_AGENT_CONTRACT = [
   "",
   "Inspect existing state and applicable project rules, preserve existing work, execute the necessary steps, verify the result proportionately, and close the loop. Do not stop after superficial steps or hand back work that can be completed within available capabilities. If blocked, explain the exact cause, what is complete, and the smallest decision needed.",
 ].join("\n");
+const OMNIMIND_STUDIO_CONTRACT = [
+  "In Studio, work inside OmniMind's managed creative workspace and its established workspace instructions, drafts, files, and outputs.",
+  "Create, edit, and organize the requested work in that managed Studio environment, and make useful results visible through its existing outputs and file surfaces.",
+  "Studio is not an Agent Project trust root. Do not infer project-local resources or broader filesystem authority from its managed working directory.",
+].join("\n");
 const PI_THINKING_OPTIONS: ReadonlyArray<{
   readonly value: ThinkingLevel;
   readonly label: string;
@@ -174,7 +184,12 @@ const PI_THINKING_OPTIONS: ReadonlyArray<{
   { value: "off", label: "Off", description: "No extra reasoning" },
   { value: "minimal", label: "Minimal", description: "Light reasoning" },
   { value: "low", label: "Low", description: "Faster reasoning" },
-  { value: "medium", label: "Medium", description: "Balanced reasoning", isDefault: true },
+  {
+    value: "medium",
+    label: "Medium",
+    description: "Balanced reasoning",
+    isDefault: true,
+  },
   { value: "high", label: "High", description: "Deeper reasoning" },
   { value: "xhigh", label: "Extra High", description: "Extra-high reasoning" },
   { value: "max", label: "Max", description: "Maximum reasoning" },
@@ -337,7 +352,9 @@ export function makePiBashProcessSupervisor(
           requestTeardown();
         }, timeoutMs);
       }
-      execution.signal?.addEventListener("abort", requestTeardown, { once: true });
+      execution.signal?.addEventListener("abort", requestTeardown, {
+        once: true,
+      });
 
       try {
         const exitCode = await new Promise<number | null>((resolve, reject) => {
@@ -461,6 +478,9 @@ interface PiSessionContext {
   readonly agentDir: string;
   appliedModelRuntimeMutationRevision: number;
   readonly workSurface?: ProviderWorkSurface;
+  readonly productSurface?: ProductSurface;
+  /** Frozen discovery trust for this native ResourceLoader; not a second policy owner. */
+  readonly resourceScopeIdentity: string;
   readonly hostProjection?: AgentGatewayHostExtensionHandle;
   gatewaySessionLease?: AgentGatewaySessionLease;
   gatewayConnection?: AgentGatewayMcpConnection;
@@ -996,13 +1016,22 @@ export function promptRequiredAgentGatewayToolNames(
 
 /** Stable OmniMind identity and work-surface behavior that user Prompt resources cannot replace. */
 export function makeOmniMindEngineSystemPrompt(input: {
-  readonly workSurface: ProviderWorkSurface;
+  readonly productSurface?: ProductSurface;
+  /** Backward-compatible test/embedding fallback; production passes ProductSurface. */
+  readonly workSurface?: ProviderWorkSurface;
 }): string {
+  const surface = input.productSurface ?? (input.workSurface === "agent" ? "agent" : "chat");
+  const surfaceContract =
+    surface === "agent"
+      ? OMNIMIND_AGENT_CONTRACT
+      : surface === "studio"
+        ? OMNIMIND_STUDIO_CONTRACT
+        : OMNIMIND_CHAT_CONTRACT;
   return [
     "<omnimind_engine_contract>",
     OMNIMIND_IDENTITY_AND_COGNITIVE_CONTRACT,
     "",
-    input.workSurface === "agent" ? OMNIMIND_AGENT_CONTRACT : OMNIMIND_CHAT_CONTRACT,
+    surfaceContract,
     "</omnimind_engine_contract>",
   ].join("\n");
 }
@@ -1175,7 +1204,14 @@ function toolLifecycleData(input: {
         ...base,
         kind: "edit",
         ...(path ? { path, filePath: path, files: [{ path }], changes: [{ path }] } : {}),
-        ...(edits ? { edits: edits.map((edit) => ({ ...edit, ...(path ? { path } : {}) })) } : {}),
+        ...(edits
+          ? {
+              edits: edits.map((edit) => ({
+                ...edit,
+                ...(path ? { path } : {}),
+              })),
+            }
+          : {}),
         ...(unifiedDiff ? { unifiedDiff } : {}),
       };
     case "write":
@@ -1244,7 +1280,10 @@ function mapMessageHistory(session: PiAgentSession): unknown[] {
           continue;
         }
         if (content.type === "toolCall") {
-          pendingTools.set(content.id, { toolName: content.name, args: content.arguments });
+          pendingTools.set(content.id, {
+            toolName: content.name,
+            args: content.arguments,
+          });
           items.push({
             type: "tool_call",
             status: "started",
@@ -1443,25 +1482,36 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
     );
     const sessions = new Map<ThreadId, PiSessionContext>();
-    const untrustedProductDiscoveryOptions = (
+    const productDiscoveryOptions = (
       sdk: PiCodingAgentModule,
       cwd: string,
       agentDir: string,
+      scope: "global-only" | "project" = "global-only",
     ) =>
-      provider === "omnimind"
+      scope === "global-only"
         ? {
             settingsManager: sdk.SettingsManager.create(cwd, agentDir, {
               projectTrusted: false,
             }),
-            resourceLoaderOptions: { noContextFiles: false, projectContextRoot: false },
+            resourceLoaderOptions: {
+              noContextFiles: false,
+              projectContextRoot: false,
+            },
           }
         : {};
+    const resourceScopeIdentity = (
+      scope:
+        | ProviderResourceDiscoveryScope
+        | { readonly kind: "project"; readonly authoritativeRoot: string },
+    ): string => (scope.kind === "project" ? `project:${scope.authoritativeRoot}` : "global-only");
     const sessionResourceAdmission = makeKeyedLock<ThreadId>();
     const ownsNativeEventLogger = options?.nativeEventLogger === undefined;
     const nativeEventLogger =
       options?.nativeEventLogger ??
       (options?.nativeEventLogPath !== undefined
-        ? yield* makeEventNdjsonLogger(options.nativeEventLogPath, { stream: "native" })
+        ? yield* makeEventNdjsonLogger(options.nativeEventLogPath, {
+            stream: "native",
+          })
         : undefined);
     const runtimeEventIngress = yield* makeBoundedCallbackIngress<
       ProviderRuntimeEvent,
@@ -1538,7 +1588,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       offerRuntimeEvent({
         ...makeEventBase(context),
         itemId: tracked.itemId,
-        providerRefs: { providerItemId: ProviderItemId.makeUnsafe(tracked.toolCallId) },
+        providerRefs: {
+          providerItemId: ProviderItemId.makeUnsafe(tracked.toolCallId),
+        },
         type: "item.updated",
         payload: {
           itemType: tracked.itemType,
@@ -1671,7 +1723,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           raw: {
             source: "pi.sdk.event",
             method: input.method,
-            payload: input.rawPayload ?? { requestId, question: input.question },
+            payload: input.rawPayload ?? {
+              requestId,
+              question: input.question,
+            },
           },
         } satisfies ProviderRuntimeEvent);
       });
@@ -1772,7 +1827,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             offerRuntimeEvent({
               ...makeEventBase(context),
               type: "runtime.warning",
-              payload: { message: normalized, detail: { type: type ?? "info" } },
+              payload: {
+                message: normalized,
+                detail: { type: type ?? "info" },
+              },
               raw: {
                 source: "pi.sdk.event",
                 method: "extension/ui/notify",
@@ -1852,7 +1910,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           return undefined;
         },
         setTheme() {
-          return { success: false, error: `Themes are not available for ${displayName}.` };
+          return {
+            success: false,
+            error: `Themes are not available for ${displayName}.`,
+          };
         },
         getToolsExpanded() {
           return false;
@@ -1905,10 +1966,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const requireSession = Effect.fn("PiAdapter.requireSession")(function* (threadId: ThreadId) {
       const context = sessions.get(threadId);
       if (!context) {
-        return yield* new ProviderAdapterSessionNotFoundError({ provider: provider, threadId });
+        return yield* new ProviderAdapterSessionNotFoundError({
+          provider: provider,
+          threadId,
+        });
       }
       if (context.stopped) {
-        return yield* new ProviderAdapterSessionClosedError({ provider: provider, threadId });
+        return yield* new ProviderAdapterSessionClosedError({
+          provider: provider,
+          threadId,
+        });
       }
       return context;
     });
@@ -1970,8 +2037,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ...makeEventBase(context),
             itemId: context.activeAssistantItemId,
             type: "item.started",
-            payload: { itemType: "assistant_message", status: "inProgress", title: "Assistant" },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            payload: {
+              itemType: "assistant_message",
+              status: "inProgress",
+              title: "Assistant",
+            },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: event,
+            },
           } satisfies ProviderRuntimeEvent);
         }
         recordItem(context, { type: "assistant_message", delta: update.delta });
@@ -1984,7 +2059,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             delta: update.delta,
             contentIndex: update.contentIndex,
           },
-          raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+          raw: {
+            source: "pi.sdk.event",
+            messageType: event.type,
+            payload: event,
+          },
         } satisfies ProviderRuntimeEvent);
         return;
       }
@@ -1997,8 +2076,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ...makeEventBase(context),
             itemId: context.activeReasoningItemId,
             type: "item.started",
-            payload: { itemType: "reasoning", status: "inProgress", title: "Reasoning" },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            payload: {
+              itemType: "reasoning",
+              status: "inProgress",
+              title: "Reasoning",
+            },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: event,
+            },
           } satisfies ProviderRuntimeEvent);
         }
         recordItem(context, { type: "reasoning", delta: update.delta });
@@ -2011,7 +2098,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             delta: update.delta,
             contentIndex: update.contentIndex,
           },
-          raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+          raw: {
+            source: "pi.sdk.event",
+            messageType: event.type,
+            payload: event,
+          },
         } satisfies ProviderRuntimeEvent);
       }
     };
@@ -2031,7 +2122,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             status,
             title: "Assistant",
           },
-          raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+          raw: {
+            source: "pi.sdk.event",
+            messageType: event.type,
+            payload: event,
+          },
         } satisfies ProviderRuntimeEvent);
       }
       if (context.activeReasoningItemId) {
@@ -2044,7 +2139,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             status,
             title: "Reasoning",
           },
-          raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+          raw: {
+            source: "pi.sdk.event",
+            messageType: event.type,
+            payload: event,
+          },
         } satisfies ProviderRuntimeEvent);
       }
       context.activeAssistantItemId = undefined;
@@ -2084,7 +2183,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         Effect.runFork(
           Effect.promise(() => drainage).pipe(
             Effect.catchCause((cause) =>
-              Effect.logWarning("pi.agent_gateway.turn_retirement_failed", { turnId, cause }),
+              Effect.logWarning("pi.agent_gateway.turn_retirement_failed", {
+                turnId,
+                cause,
+              }),
             ),
           ),
         );
@@ -2104,7 +2206,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           usage: input.usage,
           ...(input.errorMessage ? { errorMessage: input.errorMessage } : {}),
         },
-        raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+        raw: {
+          source: "pi.sdk.event",
+          messageType: event.type,
+          payload: event,
+        },
       } satisfies ProviderRuntimeEvent);
     };
 
@@ -2149,7 +2255,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             : {}),
           effort: context.runtime.session.thinkingLevel,
         },
-        raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+        raw: {
+          source: "pi.sdk.event",
+          messageType: event.type,
+          payload: event,
+        },
       } satisfies ProviderRuntimeEvent);
     };
 
@@ -2165,7 +2275,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       ) {
         return;
       }
-      const event: PiPromptSettlementEvent = { type: "prompt_handled", outcome };
+      const event: PiPromptSettlementEvent = {
+        type: "prompt_handled",
+        outcome,
+      };
       ensurePiTurnStarted(context, event);
       const stats = context.runtime.session.getSessionStats();
       if (!outcome.success) {
@@ -2224,7 +2337,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             ...makeEventBase(context),
             type: "thread.state.changed",
             payload: { state: "active" },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: event,
+            },
           } satisfies ProviderRuntimeEvent);
           return;
         case "turn_start": {
@@ -2254,7 +2371,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId,
-            providerRefs: { providerItemId: ProviderItemId.makeUnsafe(event.toolCallId) },
+            providerRefs: {
+              providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
+            },
             type: "item.started",
             payload: {
               itemType: tracked.itemType,
@@ -2266,7 +2385,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 args: event.args,
               }),
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: event,
+            },
           } satisfies ProviderRuntimeEvent);
           return;
         }
@@ -2296,7 +2419,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId: tracked.itemId,
-            providerRefs: { providerItemId: ProviderItemId.makeUnsafe(event.toolCallId) },
+            providerRefs: {
+              providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
+            },
             type: "item.updated",
             payload: {
               itemType: tracked.itemType,
@@ -2311,7 +2436,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(surfaceUrl ? { engineWebSurfaceStatus: "waiting-for-user" } : {}),
               }),
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: safeEvent },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: safeEvent,
+            },
           } satisfies ProviderRuntimeEvent);
           return;
         }
@@ -2341,7 +2470,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId: tracked.itemId,
-            providerRefs: { providerItemId: ProviderItemId.makeUnsafe(event.toolCallId) },
+            providerRefs: {
+              providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
+            },
             type: "item.completed",
             payload: {
               itemType: tracked.itemType,
@@ -2357,7 +2488,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(surfaceUrl ? { engineWebSurfaceStatus: "completed" } : {}),
               }),
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: safeEvent },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: safeEvent,
+            },
           } satisfies ProviderRuntimeEvent);
           return;
         }
@@ -2372,7 +2507,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               status: "inProgress",
               title: "Compacting context",
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: event,
+            },
           } satisfies ProviderRuntimeEvent);
           return;
         }
@@ -2388,7 +2527,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               title: "Context compacted",
               data: event,
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: event,
+            },
           } satisfies ProviderRuntimeEvent);
           return;
         }
@@ -2407,7 +2550,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 delayMs: event.delayMs,
               },
             },
-            raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+            raw: {
+              source: "pi.sdk.event",
+              messageType: event.type,
+              payload: event,
+            },
           } satisfies ProviderRuntimeEvent);
           return;
         }
@@ -2444,7 +2591,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               ...makeEventBase(context),
               type: "thread.token-usage.updated",
               payload: { usage },
-              raw: { source: "pi.sdk.event", messageType: event.type, payload: event },
+              raw: {
+                source: "pi.sdk.event",
+                messageType: event.type,
+                payload: event,
+              },
             } satisfies ProviderRuntimeEvent);
           }
           context.session = makeSessionSnapshot(context, provider);
@@ -2480,7 +2631,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     };
 
     const warnIfTaskListExtensionUnavailable = (context: PiSessionContext) => {
-      if (provider !== "omnimind" || context.workSurface !== "agent") return;
+      if (provider !== "omnimind" || context.workSurface === undefined) return;
       const inspection = inspectOmniMindTaskListExtensionRegistration({
         extensions: context.runtime.session.resourceLoader.getExtensions(),
         tools: context.runtime.session.getAllTools(),
@@ -2492,7 +2643,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         type: "runtime.warning",
         payload: {
           message:
-            "Task progress is unavailable for this Agent session. Other Agent capabilities remain available.",
+            "Task progress is unavailable for this OmniMind session. Other capabilities remain available.",
           detail: {
             source: "pi-resource-loader",
             capability: "turn-task-projection",
@@ -2530,6 +2681,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       defaultPrompt?: string;
       immutableSystemPrompt?: string;
       workSurface?: ProviderWorkSurface;
+      productSurface?: ProductSurface;
       projectContextRoot?: string;
     }) => {
       const modelRuntime = await family.createModelRuntime(input.agentDir);
@@ -2564,10 +2716,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         const resourceLoaderOptions = {
           appendSystemPromptOverride: (base: string[]) => [
             ...base,
-            input.hostSystemPrompt(resolvedGatewayControlAvailable),
+            ...(provider === "omnimind"
+              ? []
+              : [input.hostSystemPrompt(resolvedGatewayControlAvailable)]),
           ],
           ...(inlineExtensions.length === 0 ? {} : { extensionFactories: inlineExtensions }),
-          ...(provider === "omnimind"
+          ...(input.workSurface !== undefined
             ? {
                 projectContextRoot:
                   input.workSurface === "agent" ? input.projectContextRoot : false,
@@ -2575,7 +2729,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             : {}),
         };
         const settingsManager =
-          provider === "omnimind"
+          input.workSurface !== undefined
             ? input.sdk.SettingsManager.create(cwd, agentDir, {
                 projectTrusted: input.workSurface === "agent",
               })
@@ -2651,6 +2805,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       Effect.gen(function* () {
         const cwd = trimToUndefined(input.cwd) ?? serverConfig.cwd;
         const workSurface = input.workSurface;
+        const productSurface = input.productSurface ?? (workSurface === "agent" ? "agent" : "chat");
         const projectContextRoot = trimToUndefined(input.projectContextRoot);
         if (provider === "omnimind" && workSurface === undefined) {
           return yield* new ProviderAdapterValidationError({
@@ -2659,28 +2814,28 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             issue: "OmniMind work surface is missing from Product session admission.",
           });
         }
-        if (provider === "omnimind" && workSurface === "agent" && !projectContextRoot) {
+        if (workSurface === "agent" && !projectContextRoot) {
           return yield* new ProviderAdapterValidationError({
             provider,
             operation: "session/start",
-            issue: "OmniMind Agent requires a canonical Project context root.",
+            issue: `${displayName} Agent requires a canonical Project context root.`,
           });
         }
-        if (provider === "omnimind" && workSurface === "chat" && projectContextRoot) {
+        if (workSurface === "chat" && projectContextRoot) {
           return yield* new ProviderAdapterValidationError({
             provider,
             operation: "session/start",
-            issue: "OmniMind Chat cannot receive a Project context root.",
+            issue: `${displayName} Chat cannot receive a Project context root.`,
           });
         }
-        if (provider === "omnimind" && workSurface === "agent" && projectContextRoot) {
+        if (workSurface === "agent" && projectContextRoot) {
           const containedCwd = yield* Effect.tryPromise({
             try: () => resolveRealPathWithinRoot(projectContextRoot, cwd),
             catch: (cause) =>
               new ProviderAdapterValidationError({
                 provider,
                 operation: "session/start",
-                issue: "OmniMind Agent Project context containment could not be verified.",
+                issue: `${displayName} Agent Project context containment could not be verified.`,
                 cause,
               }),
           });
@@ -2688,8 +2843,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             return yield* new ProviderAdapterValidationError({
               provider,
               operation: "session/start",
-              issue:
-                "OmniMind Agent working directory is outside its canonical Project context root.",
+              issue: `${displayName} Agent working directory is outside its canonical Project context root.`,
             });
           }
         }
@@ -2845,8 +2999,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     }
                   : {}),
                 ...(workSurface === undefined ? {} : { workSurface }),
+                ...(provider === "omnimind" ? { productSurface } : {}),
                 ...(projectContextRoot === undefined ? {} : { projectContextRoot }),
-                ...(provider === "omnimind" && workSurface === "agent"
+                ...(provider === "omnimind" && workSurface !== undefined
                   ? {
                       onTaskListUpdate: ({ toolCallId, payload }) => {
                         const current = taskProjectionContext;
@@ -2880,7 +3035,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(defaultPrompt === undefined ? {} : { defaultPrompt }),
                 ...(provider === "omnimind" && workSurface !== undefined
                   ? {
-                      immutableSystemPrompt: makeOmniMindEngineSystemPrompt({ workSurface }),
+                      immutableSystemPrompt: makeOmniMindEngineSystemPrompt({
+                        productSurface,
+                      }),
                     }
                   : {}),
               }),
@@ -2924,6 +3081,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           appliedModelRuntimeMutationRevision:
             provider === "omnimind" ? getOmniMindModelRuntimeMutationRevision(agentDir) : 0,
           ...(workSurface === undefined ? {} : { workSurface }),
+          ...(provider === "omnimind" ? { productSurface } : {}),
+          resourceScopeIdentity: resourceScopeIdentity(
+            workSurface === "chat"
+              ? { kind: "global-only" }
+              : workSurface === "agent"
+                ? { kind: "project", authoritativeRoot: projectContextRoot ?? cwd }
+                : { kind: "project", authoritativeRoot: cwd },
+          ),
           ...(hostProjection === undefined ? {} : { hostProjection }),
           ...(agentGatewaySessionLease
             ? {
@@ -2953,7 +3118,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         sessions.set(input.threadId, context);
         yield* Effect.tryPromise({
           try: () =>
-            runtime.session.bindExtensions({ uiContext: makePiExtensionUIContext(context) }),
+            runtime.session.bindExtensions({
+              uiContext: makePiExtensionUIContext(context),
+            }),
           catch: (cause) =>
             new ProviderAdapterRequestError({
               provider: provider,
@@ -3039,14 +3206,20 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             raw: {
               source: "pi.sdk.event",
               method: "extension/ui-limited-warning",
-              payload: { extensionCount: loadedExtensions.length, extensions: extensionNames },
+              payload: {
+                extensionCount: loadedExtensions.length,
+                extensions: extensionNames,
+              },
             },
           } satisfies ProviderRuntimeEvent);
         }
         offerRuntimeEvent({
           ...makeEventBase(context),
           type: "session.started",
-          payload: { message: `${displayName} session started`, resume: session.resumeCursor },
+          payload: {
+            message: `${displayName} session started`,
+            resume: session.resumeCursor,
+          },
         } satisfies ProviderRuntimeEvent);
         offerRuntimeEvent({
           ...makeEventBase(context),
@@ -3126,6 +3299,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         input.threadId,
         Effect.gen(function* () {
           const context = yield* requireSession(input.threadId);
+          let currentHostDescriptors: ReadonlyArray<AgentGatewayMcpToolDescriptor> | undefined;
           if (context.activeTurnId) {
             return yield* new ProviderAdapterValidationError({
               provider: provider,
@@ -3138,7 +3312,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             if (currentRevision > context.appliedModelRuntimeMutationRevision) {
               yield* Effect.tryPromise({
                 try: async () => {
-                  await context.runtime.services.modelRuntime.refresh({ allowNetwork: false });
+                  await context.runtime.services.modelRuntime.refresh({
+                    allowNetwork: false,
+                  });
                   const configurationError = context.runtime.services.modelRuntime.getError();
                   if (configurationError !== undefined) {
                     throw new Error("OmniMind model-service state could not be reconciled.");
@@ -3158,6 +3334,30 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                     cause,
                   }),
               });
+            }
+            if (context.hostProjection !== undefined) {
+              yield* Effect.tryPromise({
+                try: async () => {
+                  const descriptors = await context.hostProjection!.refreshCurrentDescriptors();
+                  currentHostDescriptors = descriptors;
+                  if (!context.hostProjection!.requiresReload(descriptors)) {
+                    return;
+                  }
+                  // Pi owns the active tool registry. Re-run its native
+                  // ResourceLoader before this turn when the authoritative Host
+                  // catalog changed, so newly enabled tools are registered and
+                  // disabled tools disappear rather than merely failing at call.
+                  await context.runtime.session.reload();
+                },
+                catch: (cause) =>
+                  new ProviderAdapterRequestError({
+                    provider,
+                    method: "host-catalog/reconcile",
+                    detail: "OmniMind Host tool changes could not be applied to this session.",
+                    cause,
+                  }),
+              });
+              warnIfTaskListExtensionUnavailable(context);
             }
           }
           if (input.modelSelection?.provider === provider) {
@@ -3220,12 +3420,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             }
             yield* Effect.tryPromise({
               try: async () => {
-                const currentlyExposed = await listAgentGatewayMcpTools({
-                  connection: context.gatewayConnection!,
-                  ...(options?.agentGatewayFetch === undefined
-                    ? {}
-                    : { fetch: options.agentGatewayFetch }),
-                });
+                const currentlyExposed =
+                  currentHostDescriptors ??
+                  (await context.hostProjection!.refreshCurrentDescriptors());
                 context.hostProjection!.assertDelivered({
                   tools: context.runtime.session.getAllTools(),
                   requiredNames: promptRequiredNames,
@@ -3264,7 +3461,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   : {}),
                 effort: context.runtime.session.thinkingLevel,
               },
-              raw: { source: "pi.sdk.event", method: "reload", payload: { command: payload.text } },
+              raw: {
+                source: "pi.sdk.event",
+                method: "reload",
+                payload: { command: payload.text },
+              },
             } satisfies ProviderRuntimeEvent);
             yield* Effect.tryPromise({
               try: () => context.runtime.session.reload(),
@@ -3282,8 +3483,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   offerRuntimeEvent({
                     ...makeEventBase(context),
                     type: "turn.completed",
-                    payload: { state: "failed", stopReason: "error", errorMessage: message },
-                    raw: { source: "pi.sdk.event", method: "reload", payload: error },
+                    payload: {
+                      state: "failed",
+                      stopReason: "error",
+                      errorMessage: message,
+                    },
+                    raw: {
+                      source: "pi.sdk.event",
+                      method: "reload",
+                      payload: error,
+                    },
                   } satisfies ProviderRuntimeEvent);
                   offerRuntimeError(context, {
                     message,
@@ -3302,7 +3511,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               ...makeEventBase(context),
               type: "turn.completed",
               payload: { state: "completed", stopReason: "reload" },
-              raw: { source: "pi.sdk.event", method: "reload", payload: { command: payload.text } },
+              raw: {
+                source: "pi.sdk.event",
+                method: "reload",
+                payload: { command: payload.text },
+              },
             } satisfies ProviderRuntimeEvent);
             yield* cancelAgentGatewayTurn(context.gatewaySessionLease, context.activeTurnId);
             context.activeTurnId = undefined;
@@ -3555,7 +3768,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         turns:
           turns.length > 0
             ? turns
-            : context.turns.map((turn) => ({ id: turn.id, items: [...turn.items] })),
+            : context.turns.map((turn) => ({
+                id: turn.id,
+                items: [...turn.items],
+              })),
       };
     };
 
@@ -3610,7 +3826,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             cwd,
             agentDir,
             modelRuntime,
-            ...untrustedProductDiscoveryOptions(piSdk, cwd, agentDir),
+            ...productDiscoveryOptions(piSdk, cwd, agentDir),
           });
           const registry = modelRegistryFacade(services.modelRuntime, piSdk);
           const extensionProviderIds = new Set(services.modelRuntime.getRegisteredProviderIds());
@@ -3657,9 +3873,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const active = input.threadId
             ? sessions.get(ThreadId.makeUnsafe(input.threadId))
             : undefined;
-          const loader = active?.runtime.session.resourceLoader;
-          if (active && input.forceReload) {
-            await active.runtime.session.reload();
+          const requestedScope = input.resourceScope ?? {
+            kind: "global-only" as const,
+          };
+          const reusableActive =
+            active?.resourceScopeIdentity === resourceScopeIdentity(requestedScope)
+              ? active
+              : undefined;
+          const loader = reusableActive?.runtime.session.resourceLoader;
+          if (reusableActive && input.forceReload) {
+            await reusableActive.runtime.session.reload();
           }
           let services:
             | Awaited<ReturnType<PiCodingAgentModule["createAgentSessionServices"]>>
@@ -3672,7 +3895,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               cwd: input.cwd,
               agentDir,
               modelRuntime,
-              ...untrustedProductDiscoveryOptions(piSdk, input.cwd, agentDir),
+              ...productDiscoveryOptions(piSdk, input.cwd, agentDir, requestedScope.kind),
             });
           }
           if (services && input.forceReload) {
@@ -3714,7 +3937,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const active = input.threadId
             ? sessions.get(ThreadId.makeUnsafe(input.threadId))
             : undefined;
-          const session = active?.runtime.session;
+          const requestedScope = input.resourceScope ?? {
+            kind: "global-only" as const,
+          };
+          const session =
+            active?.resourceScopeIdentity === resourceScopeIdentity(requestedScope)
+              ? active.runtime.session
+              : undefined;
           const reloadCommand = {
             name: "reload",
             description: `Reload ${displayName} extensions, skills, prompts, themes, tools, and settings`,
@@ -3750,7 +3979,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             cwd: input.cwd,
             agentDir,
             modelRuntime,
-            ...untrustedProductDiscoveryOptions(piSdk, input.cwd, agentDir),
+            ...productDiscoveryOptions(piSdk, input.cwd, agentDir, requestedScope.kind),
           });
           if (input.forceReload) {
             await services.resourceLoader.reload();
@@ -3837,7 +4066,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       get streamEvents() {
         return Stream.fromQueue(runtimeEventQueue);
       },
-    } satisfies ProviderAdapterShape<ProviderAdapterError> & { readonly provider: P };
+    } satisfies ProviderAdapterShape<ProviderAdapterError> & {
+      readonly provider: P;
+    };
   });
 
 export const PiAdapterLive = Layer.effect(PiAdapter, makePiAdapter(STOCK_PI_FAMILY));

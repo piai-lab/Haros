@@ -248,3 +248,24 @@ export function buildHistoryOnlyForkBootstrapText(
   const boundedMaxChars = Math.min(Math.max(0, maxChars), BOOTSTRAP_TRANSCRIPT_CHAR_BUDGET);
   return exactTranscript.length <= boundedMaxChars ? exactTranscript : null;
 }
+
+export function buildChatToAgentForkBootstrapText(
+  thread: Pick<OrchestrationThread, "title" | "branch" | "worktreePath" | "forkScope" | "messages">,
+  maxChars = BOOTSTRAP_TRANSCRIPT_CHAR_BUDGET,
+): string | null {
+  const importedMessages = listImportedForkMessages(thread);
+  if (
+    importedMessages.length === 0 ||
+    thread.forkScope?.kind !== "chat-to-agent" ||
+    maxChars <= 0
+  ) {
+    return null;
+  }
+  return buildImportedMessagesBootstrapText({
+    thread,
+    importedMessages,
+    intro:
+      "This Agent task was created from a Chat conversation. Use this bounded product-visible history as context for the latest user message; do not assume prior operations were executed in this Project.",
+    maxChars,
+  });
+}

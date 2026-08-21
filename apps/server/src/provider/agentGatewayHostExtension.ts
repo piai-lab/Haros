@@ -11,7 +11,7 @@ import {
   type AgentGatewayMcpToolDescriptor,
 } from "../agentGateway/mcpInjection.ts";
 import type { AgentGatewayMcpConnection } from "../agentGateway/Services/AgentGatewayCredentials.ts";
-import { renderAgentGatewayDirectToolGuidance } from "../agentGateway/harnessPolicy.ts";
+import { renderOmniMindHarnessPolicy } from "../agentGateway/harnessPolicy.ts";
 import { buildAgentGatewayPiToolDefinitions } from "./agentGatewayPiProjection.ts";
 
 export const AGENT_GATEWAY_HOST_EXTENSION_NAME = "omnimind-agent-gateway-host";
@@ -19,6 +19,8 @@ export const AGENT_GATEWAY_HOST_EXTENSION_PATH = `<inline:${AGENT_GATEWAY_HOST_E
 
 export interface AgentGatewayHostExtensionHandle {
   readonly extension: InlineExtension;
+  readonly refreshCurrentDescriptors: () => Promise<ReadonlyArray<AgentGatewayMcpToolDescriptor>>;
+  readonly requiresReload: (descriptors: ReadonlyArray<AgentGatewayMcpToolDescriptor>) => boolean;
   readonly inspectRegistration: (input: {
     readonly extensions: LoadExtensionsResult;
     readonly tools: ReadonlyArray<ToolInfo>;
@@ -28,6 +30,20 @@ export interface AgentGatewayHostExtensionHandle {
     readonly requiredNames: ReadonlyArray<string>;
     readonly currentlyExposedNames: ReadonlySet<string>;
   }) => void;
+}
+
+function descriptorFingerprint(descriptors: ReadonlyArray<AgentGatewayMcpToolDescriptor>): string {
+  return JSON.stringify(
+    descriptors
+      .toSorted((left, right) => left.name.localeCompare(right.name))
+      .map(({ name, description, group, inputSchema, provenance }) => ({
+        name,
+        description,
+        group,
+        inputSchema,
+        provenance,
+      })),
+  );
 }
 
 export interface AgentGatewayHostExtensionInspection {
@@ -122,7 +138,15 @@ export function renderDeliveredAgentGatewayHostGuidance(input: {
       return isAgentGatewayHostTool(tool) && group !== undefined ? [group] : [];
     }),
   );
-  return renderAgentGatewayDirectToolGuidance([...deliveredGroups]);
+  if (deliveredGroups.size === 0) return "";
+  return [
+    "<omnimind_host_context>",
+    renderOmniMindHarnessPolicy({
+      gatewayControlAvailable: true,
+      projection: { mode: "direct", enabledGroups: [...deliveredGroups] },
+    }),
+    "</omnimind_host_context>",
+  ].join("\n");
 }
 
 /** Build a session-scoped eager Host projection using Pi's async factory lifecycle. */
@@ -139,13 +163,23 @@ export function makeAgentGatewayHostExtension(input: {
         connection: input.connection,
         ...(input.fetch === undefined ? {} : { fetch: input.fetch }),
       }));
+  let registeredDescriptorFingerprint: string | null = null;
+  let currentDescriptors: ReadonlyArray<AgentGatewayMcpToolDescriptor> = [];
 
   return {
+    refreshCurrentDescriptors: async () => {
+      currentDescriptors = await loadDescriptors();
+      return currentDescriptors;
+    },
+    requiresReload: (descriptors) =>
+      registeredDescriptorFingerprint !== descriptorFingerprint(descriptors),
     extension: {
       name: AGENT_GATEWAY_HOST_EXTENSION_NAME,
       hidden: true,
       factory: async (pi) => {
         const descriptors = await loadDescriptors();
+        currentDescriptors = descriptors;
+        registeredDescriptorFingerprint = descriptorFingerprint(descriptors);
         const tools = buildAgentGatewayPiToolDefinitions({
           connection: input.connection,
           defineTool: input.defineTool,
@@ -155,9 +189,9 @@ export function makeAgentGatewayHostExtension(input: {
         for (const tool of tools) {
           pi.registerTool(tool);
         }
-        pi.on("before_agent_start", (event) => {
+        pi.on("before_agent_start", async (event) => {
           const guidance = renderDeliveredAgentGatewayHostGuidance({
-            descriptors,
+            descriptors: currentDescriptors,
             tools: pi.getAllTools(),
           });
           return guidance === ""

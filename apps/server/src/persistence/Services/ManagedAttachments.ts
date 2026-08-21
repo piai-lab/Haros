@@ -73,7 +73,10 @@ export type CancelManagedAttachmentResult =
   | { readonly status: "already-claimed" };
 
 export type ClaimManagedAttachmentsResult =
-  | { readonly status: "claimed"; readonly attachments: ReadonlyArray<ManagedAttachmentBlob> }
+  | {
+      readonly status: "claimed";
+      readonly attachments: ReadonlyArray<ManagedAttachmentBlob>;
+    }
   | {
       readonly status: "rejected";
       readonly reason:
@@ -124,6 +127,9 @@ export interface ManagedAttachmentRepositoryShape {
   readonly findClaimedById: (input: {
     readonly attachmentId: string;
   }) => Effect.Effect<Option.Option<ManagedAttachmentBlob>, PersistenceSqlError>;
+  readonly findById: (input: {
+    readonly attachmentId: string;
+  }) => Effect.Effect<Option.Option<ManagedAttachmentBlob>, PersistenceSqlError>;
   readonly findClaimedForCommand: (input: {
     readonly commandId: string;
   }) => Effect.Effect<ReadonlyArray<ManagedAttachmentBlob>, PersistenceSqlError>;
@@ -143,6 +149,25 @@ export interface ManagedAttachmentRepositoryShape {
     readonly messageId: string;
     readonly now: string;
   }) => Effect.Effect<ClaimManagedAttachmentsResult, PersistenceSqlError>;
+  /** Compose inside the fork command transaction; every group is claimed atomically. */
+  readonly claimForImportedMessages: (input: {
+    readonly groups: ReadonlyArray<{
+      readonly attachmentIds: ReadonlyArray<string>;
+      readonly messageId: string;
+    }>;
+    readonly ownerThreadId: string;
+    readonly ownerKind: string;
+    readonly ownerId: string;
+    readonly commandId: string;
+    readonly now: string;
+  }) => Effect.Effect<ClaimManagedAttachmentsResult, PersistenceSqlError>;
+  /** Remove only a proven unclaimed recovery row so the same deterministic id can be rebuilt. */
+  readonly deleteUnclaimedForRecovery: (input: {
+    readonly attachmentId: string;
+    readonly ownerThreadId: string;
+    readonly ownerKind: string;
+    readonly ownerId: string;
+  }) => Effect.Effect<Option.Option<ManagedAttachmentBlob>, PersistenceSqlError>;
   /** Compose this operation inside the transaction that removes the durable reference. */
   readonly markCleanupByIds: (input: {
     readonly attachmentIds: ReadonlyArray<string>;

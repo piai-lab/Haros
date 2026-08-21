@@ -1595,6 +1595,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
     const recoverSessionForThread = (input: {
       readonly binding: ProviderRuntimeBinding;
       readonly operation: string;
+      readonly productSurface?: import("@omnimind/shared/productSurface").ProductSurface;
     }) =>
       Effect.gen(function* () {
         const threadId = input.binding.threadId;
@@ -1709,7 +1710,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
             const persistedModelSelection = readPersistedModelSelection(binding.runtimePayload);
             const persistedProviderOptions = readPersistedProviderOptions(binding.runtimePayload);
             const persistedWorkSurface =
-              binding.provider === "omnimind"
+              binding.provider === "omnimind" || binding.provider === "pi"
                 ? readPersistedWorkSurface(binding.runtimePayload)
                 : undefined;
             const persistedProjectContextRoot =
@@ -1735,6 +1736,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 : {}),
               ...(hasPersistedResumeCursor ? { resumeCursor: binding.resumeCursor } : {}),
               runtimeMode: binding.runtimeMode ?? "full-access",
+              ...(input.productSurface === undefined
+                ? {}
+                : { productSurface: input.productSurface }),
             });
             if (resumed.provider !== adapter.provider) {
               return yield* toValidationError(
@@ -1815,6 +1819,17 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           yield* Effect.yieldNow;
           const binding = Option.getOrUndefined(yield* directory.getBinding(event.threadId));
           if (!binding) return;
+          // ProviderWorkSurface intentionally collapses Chat and Studio to the
+          // same untrusted execution surface, so it cannot reconstruct the
+          // immutable three-way ProductSurface prompt. Only Agent is
+          // unambiguous here; Chat/Studio recover on the next authoritative
+          // turn dispatch, which supplies ProductSurface from Project.kind.
+          if (
+            (binding.provider === "omnimind" || binding.provider === "pi") &&
+            readPersistedWorkSurface(binding.runtimePayload) !== "agent"
+          ) {
+            return;
+          }
           yield* recoverSessionForThread({
             binding,
             operation: "ProviderService.proactiveGatewayCredentialRotation",
@@ -1888,6 +1903,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
       readonly threadId: ThreadId;
       readonly operation: string;
       readonly allowRecovery: boolean;
+      readonly productSurface?: import("@omnimind/shared/productSurface").ProductSurface;
     }) =>
       Effect.gen(function* () {
         const binding = Option.getOrUndefined(yield* directory.getBinding(input.threadId));
@@ -1949,13 +1965,14 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           adapter: yield* recoverSessionForThread({
             binding,
             operation: input.operation,
+            ...(input.productSurface === undefined ? {} : { productSurface: input.productSurface }),
           }),
           isActive: true,
           lifecycleGeneration: lifecycle.currentGeneration(input.threadId),
         } as const;
       });
 
-    const startSession: ProviderServiceShape["startSession"] = (threadId, rawInput) =>
+    const startSession: ProviderServiceShape["startSession"] = (threadId, rawInput, context) =>
       Effect.gen(function* () {
         const parsed = yield* decodeInputOrValidationError({
           operation: "ProviderService.startSession",
@@ -2053,7 +2070,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                 ? readPersistedProviderOptions(persistedBinding.runtimePayload)
                 : undefined);
             const effectiveWorkSurface =
-              input.provider === "omnimind"
+              input.provider === "omnimind" || input.provider === "pi"
                 ? (input.workSurface ??
                   (persistedBinding?.provider === input.provider
                     ? readPersistedWorkSurface(persistedBinding.runtimePayload)
@@ -2098,7 +2115,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                       : { workSurface: effectiveWorkSurface }),
                     ...(effectiveWorkSurface === undefined
                       ? {}
-                      : { projectContextRoot: effectiveProjectContextRoot ?? null }),
+                      : {
+                          projectContextRoot: effectiveProjectContextRoot ?? null,
+                        }),
                   },
                 }),
               );
@@ -2122,6 +2141,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                   ...(effectiveResumeCursor !== undefined
                     ? { resumeCursor: effectiveResumeCursor }
                     : {}),
+                  ...(context?.productSurface === undefined
+                    ? {}
+                    : { productSurface: context.productSurface }),
                 })
                 .pipe(Effect.timeoutOption(PROVIDER_START_SESSION_TIMEOUT));
               if (Option.isNone(started)) {
@@ -2300,7 +2322,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               persistedBinding.runtimePayload,
             );
             const previousWorkSurface =
-              persistedBinding.provider === "omnimind"
+              persistedBinding.provider === "omnimind" || persistedBinding.provider === "pi"
                 ? readPersistedWorkSurface(persistedBinding.runtimePayload)
                 : undefined;
             const previousProjectContextRoot =
@@ -2425,7 +2447,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
                         : {}),
                       ...(previousWorkSurface === undefined
                         ? {}
-                        : { projectContextRoot: previousProjectContextRoot ?? null }),
+                        : {
+                            projectContextRoot: previousProjectContextRoot ?? null,
+                          }),
                     },
                   }),
                 );
@@ -2707,6 +2731,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               threadId: input.threadId,
               operation: "ProviderService.sendTurn",
               allowRecovery: true,
+              ...(dispatchContext?.productSurface === undefined
+                ? {}
+                : { productSurface: dispatchContext.productSurface }),
             });
             const turn = yield* routed.adapter.sendTurn(input, dispatchContext);
             const persistenceInput: StartedTurnPersistenceInput = {
@@ -3386,7 +3413,9 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               "OmniMind Agent does not expose active-session resource reload.",
             );
           }
-          return { state: yield* adapter.reloadSessionResources(input.threadId) };
+          return {
+            state: yield* adapter.reloadSessionResources(input.threadId),
+          };
         }),
       );
 

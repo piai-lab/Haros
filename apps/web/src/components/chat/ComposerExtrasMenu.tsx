@@ -16,6 +16,8 @@ import { Menu, MenuCheckboxItem, MenuItem, MenuSeparator, MenuTrigger } from "..
 export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
   interactionMode: ProviderInteractionMode;
   onAddAttachments: (files: File[]) => void;
+  onAddFileReference?: () => void;
+  onAddFolderReference?: () => void;
   onSetPlanMode: (enabled: boolean) => void;
 }) {
   const { t } = useI18n();
@@ -39,6 +41,7 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
         data-testid="composer-file-input"
         type="file"
         multiple
+        tabIndex={-1}
         className="sr-only"
         onChange={handleFileInputChange}
       />
@@ -64,6 +67,18 @@ export const ComposerExtrasMenu = function ComposerExtrasMenu(props: {
             <PaperclipIcon className="size-4 shrink-0" />
             {t("composer.addFiles")}
           </MenuItem>
+          {props.onAddFileReference ? (
+            <MenuItem onClick={props.onAddFileReference}>
+              <PaperclipIcon className="size-4 shrink-0" />
+              {t("composer.addFileReference")}
+            </MenuItem>
+          ) : null}
+          {props.onAddFolderReference ? (
+            <MenuItem onClick={props.onAddFolderReference}>
+              <PaperclipIcon className="size-4 shrink-0" />
+              {t("composer.addFolderReference")}
+            </MenuItem>
+          ) : null}
 
           <MenuSeparator />
           <MenuCheckboxItem

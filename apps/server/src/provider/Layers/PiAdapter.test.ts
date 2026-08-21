@@ -83,12 +83,15 @@ describe("Pi native resource projection", () => {
     expect(stockPiPrompt).not.toContain("omnimind_update_tasks");
   });
 
-  it("keeps OmniMind identity immutable while selecting distinct Chat and Agent contracts", () => {
+  it("keeps OmniMind identity immutable while selecting three distinct Product contracts", () => {
     const chatPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "chat",
     });
     const agentPrompt = makeOmniMindEngineSystemPrompt({
       workSurface: "agent",
+    });
+    const studioPrompt = makeOmniMindEngineSystemPrompt({
+      productSurface: "studio",
     });
     const identity =
       "You are OmniMind, created by πAI-Lab at the International Academy of Phronesis Medicine (Guangdong).";
@@ -97,10 +100,22 @@ describe("Pi native resource projection", () => {
 
     expect(chatPrompt).toContain(identity);
     expect(agentPrompt).toContain(identity);
+    expect(studioPrompt).toContain(identity);
     expect(chatPrompt).toContain(officialChineseIdentity);
     expect(agentPrompt).toContain(officialChineseIdentity);
+    expect(studioPrompt).toContain(officialChineseIdentity);
     expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
     expect(chatPrompt).toContain("suggest Send to Agent");
+    expect(chatPrompt).toContain("Chat is not a hard filesystem, Git, or Terminal sandbox");
+    expect(chatPrompt).toContain(
+      "If the user explicitly asks to write a named path or run an available Engine-native operation",
+    );
+    expect(chatPrompt).not.toContain(
+      "Do not write into a user Project unless the user explicitly moves the work to Agent",
+    );
+    expect(chatPrompt).not.toContain(
+      "When the work needs a durable Project boundary, project-local resources, Git or Terminal execution",
+    );
     expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
     expect(agentPrompt).toContain("Before substantive execution");
     expect(agentPrompt).toContain("no unresolved ambiguity would materially change the result");
@@ -109,6 +124,11 @@ describe("Pi native resource projection", () => {
     expect(agentPrompt).toContain(
       "Honor explicit user preferences for language, tone, format, level of detail, and working style",
     );
+    expect(studioPrompt).toContain("managed creative workspace");
+    expect(studioPrompt).toContain("not an Agent Project trust root");
+    expect(studioPrompt).not.toContain("suggest Send to Agent");
+    expect(studioPrompt).not.toContain("In Chat, help the user");
+    expect(studioPrompt).not.toContain("Before substantive execution");
   });
 
   it("keeps general Host tool guidance outside the immutable engine contract", () => {
@@ -485,9 +505,8 @@ describe("Pi native OmniMind gateway tools", () => {
         expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
       );
       expect(piRequestToolNames(requestBodies[4])).toEqual(
-        expect.arrayContaining(["bash", "browser_open"]),
+        expect.arrayContaining(["bash", "omnimind_update_tasks", "browser_open"]),
       );
-      expect(piRequestToolNames(requestBodies[4])).not.toContain("omnimind_update_tasks");
       const hostContexts = requestBodies.map(piRequestHostContext);
       expect(hostContexts.every(Boolean)).toBe(true);
       for (const body of requestBodies) {
@@ -495,7 +514,7 @@ describe("Pi native OmniMind gateway tools", () => {
       }
       expect(piRequestSystemPrompt(requestBodies[0])).toContain("thread-scoped in-app page");
       expect(gateway.requests.map(({ method }) => method)).toEqual(
-        Array.from({ length: 4 }, () => "tools/list"),
+        Array.from({ length: 9 }, () => "tools/list"),
       );
     } finally {
       vi.restoreAllMocks();
@@ -721,6 +740,7 @@ describe("Pi native OmniMind gateway tools", () => {
         "tools/list",
         "tools/list",
         "tools/list",
+        "tools/list",
       ]);
     } finally {
       vi.restoreAllMocks();
@@ -830,8 +850,13 @@ describe("Pi native OmniMind gateway tools", () => {
 
       expect(exit._tag).toBe("Failure");
       expect(modelFetch).toHaveBeenCalledTimes(1);
-      expect(piRequestToolNames(modelBodies[0])).toContain("omnimind_set_thread_goal");
-      expect(gateway.requests.map(({ method }) => method)).toEqual(["tools/list", "tools/list"]);
+      expect(piRequestToolNames(modelBodies[0])).not.toContain("omnimind_set_thread_goal");
+      expect(gateway.requests.map(({ method }) => method)).toEqual([
+        "tools/list",
+        "tools/list",
+        "tools/list",
+        "tools/list",
+      ]);
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -1395,6 +1420,262 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
+  it("reuses an active ResourceLoader only when its frozen authoritative scope identity matches", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-active-scope-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const projectA = path.join(serverRoot, "project-a");
+    const projectB = path.join(serverRoot, "project-b");
+    for (const [root, skillName] of [
+      [projectA, "project-a-skill"],
+      [projectB, "project-b-skill"],
+    ] as const) {
+      mkdirSync(path.join(root, ".omnimind", "skills", skillName), {
+        recursive: true,
+      });
+      writeFileSync(
+        path.join(root, ".omnimind", "skills", skillName, "SKILL.md"),
+        `---\nname: ${skillName}\ndescription: ${skillName}\n---\n`,
+      );
+      mkdirSync(path.join(root, ".omnimind", "prompts"), {
+        recursive: true,
+      });
+      writeFileSync(
+        path.join(root, ".omnimind", "prompts", `${skillName}.md`),
+        `---\ndescription: ${skillName} prompt\n---\n${skillName}`,
+      );
+    }
+    mkdirSync(agentDir, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [
+              {
+                id: "safe-model",
+                contextWindow: 128_000,
+                maxTokens: 16_384,
+              },
+            ],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    const agentThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000091");
+    const chatThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000092");
+    const studioThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000093");
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(projectA, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const result = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd: projectA,
+              workSurface: "agent",
+              productSurface: "agent",
+              projectContextRoot: projectA,
+              modelSelection: {
+                provider: "omnimind",
+                model: "local/safe-model",
+              },
+              runtimeMode: "full-access",
+            });
+            const agentA = yield* adapter.listSkills!({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd: projectA,
+              resourceScope: {
+                kind: "project",
+                authoritativeRoot: projectA,
+              },
+            });
+            const failClosedSkills = yield* adapter.listSkills!({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd: projectA,
+              resourceScope: { kind: "global-only" },
+            });
+            const failClosedCommands = yield* adapter.listCommands!({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd: projectA,
+              resourceScope: { kind: "global-only" },
+            });
+            const projectBCommands = yield* adapter.listCommands!({
+              provider: "omnimind",
+              threadId: agentThreadId,
+              cwd: projectB,
+              resourceScope: {
+                kind: "project",
+                authoritativeRoot: projectB,
+              },
+            });
+            yield* adapter.stopSession(agentThreadId);
+
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: chatThreadId,
+              cwd: projectA,
+              workSurface: "chat",
+              productSurface: "chat",
+              modelSelection: {
+                provider: "omnimind",
+                model: "local/safe-model",
+              },
+              runtimeMode: "full-access",
+            });
+            const chatSkills = yield* adapter.listSkills!({
+              provider: "omnimind",
+              threadId: chatThreadId,
+              cwd: projectA,
+              resourceScope: { kind: "global-only" },
+            });
+            yield* adapter.stopSession(chatThreadId);
+
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: studioThreadId,
+              cwd: projectB,
+              workSurface: "chat",
+              productSurface: "studio",
+              modelSelection: {
+                provider: "omnimind",
+                model: "local/safe-model",
+              },
+              runtimeMode: "full-access",
+            });
+            const studioCommands = yield* adapter.listCommands!({
+              provider: "omnimind",
+              threadId: studioThreadId,
+              cwd: projectB,
+              resourceScope: { kind: "global-only" },
+            });
+            yield* adapter.stopSession(studioThreadId);
+            return {
+              agentA,
+              chatSkills,
+              failClosedCommands,
+              failClosedSkills,
+              projectBCommands,
+              studioCommands,
+            };
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(result.agentA.skills.map((skill) => skill.name)).toContain("project-a-skill");
+      expect(result.failClosedSkills.skills.map((skill) => skill.name)).not.toContain(
+        "project-a-skill",
+      );
+      expect(result.failClosedCommands.commands.map((command) => command.name)).not.toContain(
+        "skill:project-a-skill",
+      );
+      expect(result.projectBCommands.commands.map((command) => command.name)).toContain(
+        "skill:project-b-skill",
+      );
+      expect(result.projectBCommands.commands.map((command) => command.name)).not.toContain(
+        "skill:project-a-skill",
+      );
+      expect(result.chatSkills.skills.map((skill) => skill.name)).not.toContain("project-a-skill");
+      expect(result.studioCommands.commands.map((command) => command.name)).not.toContain(
+        "skill:project-b-skill",
+      );
+
+      const stockLayer = makePiAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(projectA, serverRoot)),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      const stockResult = await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* PiAdapter;
+            const contradictoryChatScope = yield* Effect.exit(
+              adapter.startSession({
+                provider: "pi",
+                threadId: ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000094"),
+                cwd: projectA,
+                workSurface: "chat",
+                projectContextRoot: projectA,
+                providerOptions: { pi: { agentDir } },
+                modelSelection: { provider: "pi", model: "local/safe-model" },
+                runtimeMode: "full-access",
+              }),
+            );
+            yield* adapter.startSession({
+              provider: "pi",
+              threadId: chatThreadId,
+              cwd: projectA,
+              workSurface: "chat",
+              productSurface: "chat",
+              providerOptions: { pi: { agentDir } },
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const chatSkills = yield* adapter.listSkills!({
+              provider: "pi",
+              threadId: chatThreadId,
+              cwd: projectA,
+              agentDir,
+              resourceScope: { kind: "global-only" },
+            });
+            yield* adapter.stopSession(chatThreadId);
+
+            yield* adapter.startSession({
+              provider: "pi",
+              threadId: studioThreadId,
+              cwd: projectB,
+              workSurface: "chat",
+              productSurface: "studio",
+              providerOptions: { pi: { agentDir } },
+              modelSelection: { provider: "pi", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const studioCommands = yield* adapter.listCommands!({
+              provider: "pi",
+              threadId: studioThreadId,
+              cwd: projectB,
+              agentDir,
+              resourceScope: { kind: "global-only" },
+            });
+            yield* adapter.stopSession(studioThreadId);
+            return { chatSkills, contradictoryChatScope, studioCommands };
+          }).pipe(Effect.provide(stockLayer)),
+        ),
+      );
+      expect(stockResult.chatSkills.skills.map((skill) => skill.name)).not.toContain(
+        "project-a-skill",
+      );
+      expect(stockResult.contradictoryChatScope._tag).toBe("Failure");
+      if (stockResult.contradictoryChatScope._tag === "Failure") {
+        expect(Cause.pretty(stockResult.contradictoryChatScope.cause)).toContain(
+          "Chat cannot receive a Project context root",
+        );
+      }
+      expect(stockResult.studioCommands.commands.map((command) => command.name)).not.toContain(
+        "skill:project-b-skill",
+      );
+    } finally {
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
   it("keeps the final request identity immutable and excludes Agent task behavior from Chat and stock Pi", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-final-prompt-contract-"));
     const agentDir = path.join(serverRoot, "agent");
@@ -1605,7 +1886,7 @@ describe("getPiDiscoverableModels", () => {
       expect(chatPrompt).toContain("In Chat, help the user understand, explore, decide, learn");
       expect(chatPrompt).not.toContain("project extension replacement");
       expect(chatPrompt).not.toContain("<omnimind_agent_task_policy>");
-      expect(toolNames(requestBodies[4])).not.toContain("omnimind_update_tasks");
+      expect(toolNames(requestBodies[4])).toContain("omnimind_update_tasks");
       expect(systemPrompt(requestBodies[5])).not.toContain(identity);
       expect(systemPrompt(requestBodies[5])).not.toContain(officialChineseIdentity);
       expect(toolNames(requestBodies[5])).not.toContain("omnimind_update_tasks");
@@ -1977,7 +2258,7 @@ describe("getPiDiscoverableModels", () => {
     }
   });
 
-  it("does not project a Chat Extension's same-named tool as the Agent task authority", async () => {
+  it("keeps Chat Todo product-owned when a same-named Extension collides", async () => {
     const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-chat-task-name-collision-"));
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
@@ -2082,7 +2363,7 @@ describe("getPiDiscoverableModels", () => {
       expect(
         events.some((event) => event.type === "turn.tasks.updated" && event.turnId === turn.turnId),
       ).toBe(false);
-      expect(events.some(isOmniMindTaskUnavailableWarning)).toBe(false);
+      expect(events.some(isOmniMindTaskUnavailableWarning)).toBe(true);
     } finally {
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
@@ -3155,7 +3436,10 @@ describe("getPiDiscoverableModels", () => {
           "The academy's official Chinese name is 广东智慧医学国际研究院.",
         ),
       ).toHaveLength(2);
-      expect(finalContinuationPrompt.split("<omnimind_host_context>")).toHaveLength(2);
+      // This fixture intentionally starts without a thread-scoped Gateway
+      // connection, so mutable Host guidance stays absent while immutable
+      // Product identity survives the compaction continuation.
+      expect(finalContinuationPrompt).not.toContain("<omnimind_host_context>");
       expect(result.terminalsBeforeContinuation).toEqual([]);
       expect(result.duringCompactionContinuation).toContainEqual(
         expect.objectContaining({ activeTurnId: result.turn.turnId, status: "running" }),

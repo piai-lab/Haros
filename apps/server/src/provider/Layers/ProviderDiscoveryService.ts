@@ -13,11 +13,14 @@ import {
   ProviderReadPluginInput,
   type ProviderSkillDiscoveryWarning,
   type ProviderSkillDescriptor,
+  ThreadId,
 } from "@omnimind/contracts";
 import { Effect, Layer, Option, Schema, SchemaIssue } from "effect";
 
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
+import { ProjectionSnapshotQuery } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
+import { resolveThreadWorkspaceCwd } from "../../checkpointing/Utils.ts";
 import { ProviderValidationError } from "../Errors.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
 import {
@@ -81,7 +84,10 @@ export function combineProviderSkills(input: {
   const catalogSource = input.catalog === "failed" ? null : "omnimind.catalog";
   return {
     skills: filterDisabledSkills(
-      mergeSkillsIntoCatalog({ native: nativeResult?.skills ?? [], catalog: catalogSkills }),
+      mergeSkillsIntoCatalog({
+        native: nativeResult?.skills ?? [],
+        catalog: catalogSkills,
+      }),
       input.disabledSkillNames,
     ),
     source:
@@ -123,6 +129,49 @@ const make = Effect.gen(function* () {
   const registry = yield* ProviderAdapterRegistry;
   const serverConfig = yield* ServerConfig;
   const serverSettings = yield* ServerSettingsService;
+  const snapshotQuery = Option.getOrUndefined(yield* Effect.serviceOption(ProjectionSnapshotQuery));
+
+  const resolveResourceScope = (input: { readonly threadId?: string | undefined }) =>
+    Effect.gen(function* () {
+      if (!input.threadId || !snapshotQuery) {
+        return {
+          cwd: serverConfig.homeDir,
+          resourceScope: { kind: "global-only" } as const,
+        };
+      }
+      const thread = yield* snapshotQuery
+        .getThreadShellById(ThreadId.makeUnsafe(input.threadId))
+        .pipe(Effect.catch(() => Effect.succeed(Option.none())));
+      if (Option.isNone(thread)) {
+        return {
+          cwd: serverConfig.homeDir,
+          resourceScope: { kind: "global-only" } as const,
+        };
+      }
+      const project = yield* snapshotQuery
+        .getProjectShellById(thread.value.projectId)
+        .pipe(Effect.catch(() => Effect.succeed(Option.none())));
+      if (Option.isNone(project) || project.value.kind !== "project") {
+        return {
+          cwd: serverConfig.homeDir,
+          resourceScope: { kind: "global-only" } as const,
+        };
+      }
+      const authoritativeRoot = resolveThreadWorkspaceCwd({
+        thread: thread.value,
+        projects: [project.value],
+      });
+      if (!authoritativeRoot) {
+        return {
+          cwd: serverConfig.homeDir,
+          resourceScope: { kind: "global-only" } as const,
+        };
+      }
+      return {
+        cwd: authoritativeRoot,
+        resourceScope: { kind: "project", authoritativeRoot } as const,
+      };
+    });
 
   const getComposerCapabilities: ProviderDiscoveryServiceShape["getComposerCapabilities"] = (
     input,
@@ -153,9 +202,15 @@ const make = Effect.gen(function* () {
         schema: ProviderListSkillsInput,
         payload: input,
       });
+      const scope = yield* resolveResourceScope(parsed);
+      const scopedInput = {
+        ...parsed,
+        cwd: scope.cwd,
+        resourceScope: scope.resourceScope,
+      };
       const adapter = yield* registry.getByProvider(parsed.provider);
       const nativeDiscovery = adapter.listSkills
-        ? yield* adapter.listSkills(parsed).pipe(
+        ? yield* adapter.listSkills(scopedInput).pipe(
             Effect.map((result) => ({ _tag: "success", result }) as const),
             Effect.catch(() =>
               Effect.logWarning("provider-native skill discovery failed", {
@@ -167,7 +222,7 @@ const make = Effect.gen(function* () {
         : ({ _tag: "unsupported" } as const);
       const catalogDiscovery = yield* Effect.tryPromise(() =>
         discoverSkillsCatalog({
-          cwd: parsed.cwd,
+          ...(scope.resourceScope.kind === "project" ? { cwd: scope.cwd } : {}),
           homeDir: serverConfig.homeDir,
           omnimindBaseDir: serverConfig.baseDir,
           provider: parsed.provider,
@@ -200,6 +255,7 @@ const make = Effect.gen(function* () {
         schema: ProviderListCommandsInput,
         payload: input,
       });
+      const scope = yield* resolveResourceScope(parsed);
       const adapter = yield* registry.getByProvider(parsed.provider);
       if (!adapter.listCommands) {
         return {
@@ -208,7 +264,11 @@ const make = Effect.gen(function* () {
           cached: false,
         };
       }
-      return yield* adapter.listCommands(parsed);
+      return yield* adapter.listCommands({
+        ...parsed,
+        cwd: scope.cwd,
+        resourceScope: scope.resourceScope,
+      });
     });
 
   const listPlugins: ProviderDiscoveryServiceShape["listPlugins"] = (input) =>

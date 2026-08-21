@@ -3,7 +3,9 @@ import {
   type BuiltInToolGroup,
   type BuiltInToolGroupId,
   type ServerSettings,
+  type ProjectKind,
 } from "@omnimind/contracts";
+import { projectKindToProductSurface } from "@omnimind/shared/productSurface";
 
 import type { AgentGatewayCatalogToolEntry, ToolEntry } from "./toolRuntime.ts";
 
@@ -58,6 +60,17 @@ export function exposedAgentGatewayTools(
   return catalog.filter(
     (tool) => tool.available && isBuiltInToolGroupEnabled(settings, tool.group),
   );
+}
+
+export function exposedAgentGatewayToolsForProjectKind(
+  catalog: ReadonlyArray<AgentGatewayCatalogToolEntry>,
+  settings: ServerSettings,
+  projectKind: ProjectKind,
+): ReadonlyArray<AgentGatewayCatalogToolEntry> {
+  const enabled = exposedAgentGatewayTools(catalog, settings);
+  return projectKindToProductSurface(projectKind) === "chat"
+    ? enabled.filter((tool) => tool.group === "browser")
+    : enabled;
 }
 
 export function projectBuiltInToolGroups(

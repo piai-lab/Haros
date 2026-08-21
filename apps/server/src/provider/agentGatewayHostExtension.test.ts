@@ -140,11 +140,14 @@ describe.each([
     const { session } = await createSession({ runtime, extensions: [handle.extension] });
     expect(factoryCalls).toBe(1);
     expect(session.getActiveToolNames()).toContain("browser_open");
+    expect(handle.requiresReload(catalog)).toBe(false);
 
     catalog = [descriptors[1]];
+    expect(handle.requiresReload(catalog)).toBe(true);
     await session.reload();
 
     expect(factoryCalls).toBe(2);
+    expect(handle.requiresReload(catalog)).toBe(false);
     expect(session.getActiveToolNames()).toContain("omnimind_list_threads");
     expect(session.getAllTools().map(({ name }) => name)).not.toContain("browser_open");
   });
