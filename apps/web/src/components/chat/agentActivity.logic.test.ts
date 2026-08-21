@@ -49,9 +49,11 @@ describe("deriveAgentActivityTimelineState", () => {
       "tool-1",
     ]);
     expect(state.timelineWorkEntries[0]).toMatchObject({
-      label: "Reasoning trace",
-      toolTitle: "Reasoning trace",
-      preview: "2 updates - Verify diffToggleControl uses valid props",
+      label: "Reasoning",
+      toolTitle: "Reasoning",
+      preview: "Verify diffToggleControl uses valid props",
+      tone: "thinking",
+      reasoningUpdateCount: 2,
     });
     expect(state.timelineWorkEntries[0]).not.toHaveProperty("sequence");
     expect(state.detailById.get("agent-reasoning:reasoning-1")?.entries).toHaveLength(2);
@@ -92,8 +94,8 @@ describe("deriveAgentActivityTimelineState", () => {
       createdAt: firstReasoningAt,
       sequence: 10,
       turnId: latestTurnId,
-      preview: "2 updates - Verify the final state",
-      detail: "2 updates - Verify the final state",
+      preview: "Verify the final state",
+      detail: "Verify the final state",
       toolStatus: "completed",
       changedFiles: ["src/latest.ts"],
       nativeEventType: "reasoning.completed",
@@ -150,7 +152,7 @@ describe("deriveAgentActivityTimelineState", () => {
     );
   });
 
-  it("keeps canonical reasoning tool calls as separate timeline rows", () => {
+  it("groups canonical reasoning updates into one non-tool disclosure", () => {
     const state = deriveAgentActivityTimelineState([
       workEntry({
         id: "reasoning-item-1",
@@ -176,11 +178,12 @@ describe("deriveAgentActivityTimelineState", () => {
     ]);
 
     expect(state.timelineWorkEntries.map((entry) => entry.id)).toEqual([
-      "reasoning-item-1",
-      "reasoning-item-2",
-      "reasoning-item-3",
+      "agent-reasoning:reasoning-item-1",
     ]);
-    expect(state.timelineWorkEntries.every((entry) => entry.tone === "tool")).toBe(true);
+    expect(state.timelineWorkEntries[0]).toMatchObject({
+      tone: "thinking",
+      reasoningUpdateCount: 3,
+    });
   });
 
   it("shows the latest readable Codex summary and omits empty placeholders", () => {
@@ -203,9 +206,75 @@ describe("deriveAgentActivityTimelineState", () => {
 
     expect(state.timelineWorkEntries).toHaveLength(1);
     expect(state.timelineWorkEntries[0]).toMatchObject({
-      id: "reasoning-visible",
+      id: "agent-reasoning:reasoning-visible",
       preview: "Refining the display logic",
     });
+  });
+
+  it("dedupes only exact adjacent assistant narration while preserving non-identical reasoning", () => {
+    const turnId = TurnId.makeUnsafe("turn-dedupe");
+    const reasoning = workEntry({
+      id: "reasoning-duplicate",
+      activityKind: "reasoning.completed",
+      tone: "info",
+      turnId,
+      sequence: 10,
+      createdAt: "2026-06-05T00:00:01.000Z",
+      detail: "Converting all the timestamps to Beijing time for consistency.",
+    });
+    const preserved = workEntry({
+      id: "reasoning-preserved",
+      activityKind: "reasoning.completed",
+      tone: "info",
+      turnId,
+      sequence: 30,
+      createdAt: "2026-06-05T00:00:03.000Z",
+      detail: "Checking the final timeline boundary.",
+    });
+    const state = deriveAgentActivityTimelineState(
+      [reasoning, preserved],
+      [
+        {
+          id: MessageId.makeUnsafe("assistant-narration"),
+          role: "assistant",
+          text: "Converting all the timestamps to Beijing time for consistency.",
+          createdAt: "2026-06-05T00:00:02.000Z",
+          turnId,
+          streaming: false,
+        },
+      ],
+    );
+
+    expect(state.detailById.has("agent-reasoning:reasoning-duplicate")).toBe(false);
+    expect(state.timelineWorkEntries).toHaveLength(1);
+    expect(state.detailById.get("agent-reasoning:reasoning-preserved")?.entries).toHaveLength(1);
+  });
+
+  it("does not dedupe when display cleanup would make distinct raw reasoning text look equal", () => {
+    const turnId = TurnId.makeUnsafe("turn-raw-dedupe");
+    const reasoning = workEntry({
+      id: "reasoning-markdown",
+      activityKind: "reasoning.completed",
+      tone: "info",
+      turnId,
+      detail: "**Same text**",
+    });
+    const state = deriveAgentActivityTimelineState(
+      [reasoning],
+      [
+        {
+          id: MessageId.makeUnsafe("assistant-same-text"),
+          role: "assistant",
+          text: "Same text",
+          createdAt: "2026-06-05T00:00:01.000Z",
+          turnId,
+          streaming: false,
+        },
+      ],
+    );
+
+    expect(state.timelineWorkEntries).toHaveLength(1);
+    expect(state.detailById.has("agent-reasoning:reasoning-markdown")).toBe(true);
   });
 
   it("recognizes reasoning trace and summary labels as reasoning activity", () => {
@@ -231,7 +300,7 @@ describe("deriveAgentActivityTimelineState", () => {
           itemType: "command_execution",
         }),
       ),
-    ).toBe(true);
+    ).toBe(false);
     expect(formatAgentActivityEntryPreview(trace)).toBe("Inspect the protocol");
     expect(formatAgentActivityEntryPreview(summary)).toBe("Update the adapter");
   });

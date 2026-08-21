@@ -66,7 +66,7 @@ describe("buildInlineSkillInstructions", () => {
       const skillPath = path.join(skillDir, "SKILL.md");
       await writeFile(skillPath, "# Reviewer\n\nAlways review carefully.");
 
-      const text = await buildInlineSkillInstructions({
+      const result = await buildInlineSkillInstructions({
         provider: "antigravity",
         skills: [
           { name: "reviewer", path: skillPath },
@@ -75,9 +75,13 @@ describe("buildInlineSkillInstructions", () => {
         maxChars: 10_000,
       });
 
-      expect(text).toContain('<skill name="reviewer"');
-      expect(text).toContain("Always review carefully.");
-      expect(text).not.toContain("missing");
+      expect(result.text).toContain('<skill name="reviewer"');
+      expect(result.text).toContain("Always review carefully.");
+      expect(result.text).not.toContain("missing");
+      expect(result.deliveries).toEqual([
+        { name: "reviewer", status: "delivered", mode: "inline" },
+        { name: "missing", status: "failed", mode: "inline", failureReason: "unreadable" },
+      ]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -91,24 +95,63 @@ describe("buildInlineSkillInstructions", () => {
       const skillPath = path.join(skillDir, "SKILL.md");
       await writeFile(skillPath, "content".repeat(100));
 
-      const text = await buildInlineSkillInstructions({
+      const result = await buildInlineSkillInstructions({
         provider: "antigravity",
         skills: [{ name: "reviewer", path: skillPath }],
         maxChars: 50,
       });
 
-      expect(text).toBe("");
+      expect(result.text).toBe("");
+      expect(result.deliveries[0]).toMatchObject({
+        name: "reviewer",
+        status: "failed",
+        failureReason: "budget_exceeded",
+      });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
   });
 
   it("does not inline omnimind-rooted skills for codex (covered by the extra skill root)", async () => {
-    const text = await buildInlineSkillInstructions({
+    const result = await buildInlineSkillInstructions({
       provider: "codex",
       skills: [{ name: "reviewer", path: omnimindSkillPath }],
       maxChars: 10_000,
     });
-    expect(text).toBe("");
+    expect(result.text).toBe("");
+    expect(result.deliveries).toEqual([
+      { name: "reviewer", status: "delivered", mode: "reference" },
+    ]);
+  });
+
+  it("continues after an oversized skill so a later skill can still fit", async () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "skill-inline-partial-"));
+    try {
+      const firstDir = path.join(root, ".omnimind", "skills", "large");
+      const secondDir = path.join(root, ".omnimind", "skills", "small");
+      await mkdir(firstDir, { recursive: true });
+      await mkdir(secondDir, { recursive: true });
+      const firstPath = path.join(firstDir, "SKILL.md");
+      const secondPath = path.join(secondDir, "SKILL.md");
+      await writeFile(firstPath, "x".repeat(24_001));
+      await writeFile(secondPath, "Keep this instruction.");
+
+      const result = await buildInlineSkillInstructions({
+        provider: "omnimind",
+        skills: [
+          { name: "large", path: firstPath },
+          { name: "small", path: secondPath },
+        ],
+        maxChars: 10_000,
+      });
+
+      expect(result.text).toContain("Keep this instruction.");
+      expect(result.deliveries).toEqual([
+        { name: "large", status: "failed", mode: "inline", failureReason: "oversized" },
+        { name: "small", status: "delivered", mode: "inline" },
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

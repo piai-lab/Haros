@@ -235,6 +235,7 @@ function commandWorkEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
 }
 
 function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
+  if (isReasoningUpdateWorkEntry(workEntry)) return BotIcon;
   // User-input rows read as a question (awaiting an answer) and an upload
   // (answer submitted) rather than the generic "info" checkmark.
   if (workEntry.activityKind === "user-input.requested") return CircleQuestionIcon;
@@ -280,6 +281,8 @@ export function renderWorkEntryIcon(Icon: LucideIcon, className: string): ReactE
 // over the kind-derived entry icon. Shared with the collapsed tool-group summary
 // row, which borrows its first entry's icon.
 export function workEntryLeftIcon(workEntry: TimelineWorkEntry): LucideIcon {
+  if (workEntry.activityKind === "skill.instructions.failed") return CircleAlertIcon;
+  if (workEntry.activityKind === "skill.instructions.delivered") return SkillCubeIcon;
   if (isGitHubMcpToolCall(workEntry)) return GitHubIcon;
   if (isOmniMindBrowserWorkEntry(workEntry)) return GlobeIcon;
   if (isOmniMindToolCall(workEntry)) return OmniMindToolIcon;
@@ -474,7 +477,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   const density = densityProp ?? "default";
   const { t } = useI18n();
   const compact = density === "compact";
-  const isCodexStatusRow = isCodexActivityStatusWorkEntry(workEntry);
+  const isCodexStatusRow =
+    !isReasoningUpdateWorkEntry(workEntry) && isCodexActivityStatusWorkEntry(workEntry);
   const EntryIcon = workEntryIcon(workEntry);
   // Web-fetch tool calls surface the target site (favicon + URL) instead of the raw
   // `WebFetch: {json}` arguments, reusing the same link-chip icon/label path as
@@ -506,9 +510,20 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // Task progress is product copy, not a tool lifecycle suffix. Rendering the
   // structured count through the shared catalog both localizes it and keeps a
   // terminal "completed" from the compact heading normalizer.
-  const heading = workEntry.taskListProgress
-    ? t("taskList.progress", workEntry.taskListProgress)
-    : toolWorkEntryHeading(workEntry);
+  const heading = workEntry.skillDelivery
+    ? t(
+        workEntry.activityKind === "skill.instructions.failed"
+          ? "skill.instructionsFailed"
+          : "skill.instructionsLoaded",
+        { skillName: workEntry.skillDelivery.skillName },
+      )
+    : workEntry.itemType === "command_execution" ||
+        workEntry.requestKind === "command" ||
+        Boolean(workEntry.command ?? workEntry.rawCommand)
+      ? t("tool.command.single")
+      : workEntry.taskListProgress
+      ? t("taskList.progress", workEntry.taskListProgress)
+      : toolWorkEntryHeading(workEntry);
   const rawPreview = workEntryPreview(workEntry);
   const preview =
     isOmniMindBrowserToolRow || isOmniMindToolRow
@@ -527,11 +542,16 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // the verb already carries the tense and `liveActivityMetaText` covers the rest.
   const displayText = localizedActivityText
     ? localizedActivityText
+    : isReasoningUpdateWorkEntry(workEntry)
+      ? t(
+          (workEntry.reasoningUpdateCount ?? 1) === 1
+            ? "agentActivity.reasoningUpdate"
+            : "agentActivity.reasoningUpdates",
+          { count: workEntry.reasoningUpdateCount ?? 1 },
+        )
     : webFetchUrl
       ? describeLinkChip(webFetchUrl).label
-      : isReasoningUpdateWorkEntry(workEntry) && preview
-        ? preview
-        : combineWorkEntryDisplayText(heading, preview);
+      : combineWorkEntryDisplayText(heading, preview);
   const showInlineAgentTaskPreview =
     workEntry.itemType === "collab_agent_tool_call" &&
     Boolean(preview) &&

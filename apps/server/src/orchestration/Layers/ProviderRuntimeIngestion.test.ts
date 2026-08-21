@@ -2882,8 +2882,8 @@ describe("ProviderRuntimeIngestion", () => {
 
     expect(reasoningActivities).toHaveLength(1);
     expect(reasoningActivities[0]).toMatchObject({
-      kind: "task.progress",
-      tone: "tool",
+      kind: "reasoning.completed",
+      tone: "info",
       summary: "Reasoning trace",
       payload: {
         status: "completed",
@@ -2950,8 +2950,8 @@ describe("ProviderRuntimeIngestion", () => {
       ),
     ).toEqual([
       expect.objectContaining({
-        kind: "task.progress",
-        tone: "tool",
+        kind: "reasoning.completed",
+        tone: "info",
         summary: "Reasoning trace",
         payload: expect.objectContaining({
           status: "completed",
@@ -3026,8 +3026,8 @@ describe("ProviderRuntimeIngestion", () => {
 
     expect(reasoningActivities).toHaveLength(1);
     expect(reasoningActivities[0]).toMatchObject({
-      kind: "task.progress",
-      tone: "tool",
+      kind: "reasoning.completed",
+      tone: "info",
       summary: "Reasoning trace",
       payload: {
         status: "completed",
@@ -3096,8 +3096,8 @@ describe("ProviderRuntimeIngestion", () => {
         ),
       ).toEqual([
         expect.objectContaining({
-          kind: "task.progress",
-          tone: "tool",
+          kind: "reasoning.completed",
+          tone: "info",
           summary: "Reasoning trace",
           payload: expect.objectContaining({
             status: "completed",

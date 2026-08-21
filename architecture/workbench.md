@@ -95,9 +95,13 @@ Provider-specific 控制只在 capability data 支持时显示。这里的 capab
 
 Timeline 长期显示用户输入、Assistant 可见结果、结构化请求、重要 Tool/Activity，以及 File、Diff、Terminal、Artifact、Studio Output 引用和必要的 failure/unknown/recovery。
 
+Timeline 的高层语义由 canonical activity facts 决定，不由 Engine 文案、首条事件或 icon 猜测：有可读内容的 `reasoning.completed` 是独立的非 Tool activity，在同一 turn 内连续更新默认折叠为「思考 · N 条更新」，使用 Bot icon；展开只显示 Engine 已公开的原文，不展示隐藏思维链、不摘要、不翻译。Assistant 旁白保持独立；与相邻 reasoning 在同一 turn 内经 Unicode 空白归一化后完全重复时只隐藏 reasoning 副本，旁白保留。旧 `task.progress`/Reasoning trace 记录仅在展示层兼容识别。
+
+Composer 显式选中的 OmniMind Skill 由 Host 在本轮投递后逐 Skill 投影 `skill.instructions.delivered` 或 `skill.instructions.failed` 回执；成功行使用 Skill/Central icon，失败行使用 warning icon，回执只证明 Host 已投递 inline 或 reference，不证明模型读取、执行或遵循。文件不可读、单 Skill 超限或剩余预算不足均按 Skill 独立失败，后续 Skill 仍继续尝试；部分失败仍发送原始请求。Tool 汇总只接受结构化类别（command、edit、read、search、agent、MCP/dynamic、image view、image generation），同类使用精确类别 icon，混合使用通用执行 icon，未知事件保持独立技术行且不计入 Tool 数量。
+
 未发送首条消息且仍使用内部占位标题的 Agent/Chat 草稿，主内容顶栏左侧不渲染图标、标题或空 heading；形成真实标题或用户重命名后只显示标题，不显示 OmniMind/Provider 图标。Engine 与模型选择属于 Composer，混合 provenance 属于各 turn/Timeline；Terminal 因具有真实 surface 类型，保留 Terminal 图标与终端标题。Terminal 的 generic 持久占位值只在已确认 Terminal provenance 的普通 UI consumer 中按当前 locale 投影，重命名值、存储、搜索事实与诊断仍保持原文。该呈现规则不修改 Thread 的持久标题、生成/重命名流程，也不建立第二份标题 authority。
 
-wire noise、逐 token event、重复系统消息与不应展示的 reasoning 不进入 Timeline。同一 stream item 原位归并；自然成功不额外 Toast。只有失败、结果未知、隐藏副作用或需要用户处理时升级提示。
+wire noise、逐 token event、重复系统消息与隐藏不可读 reasoning 不进入 Timeline。同一 stream item 原位归并；自然成功不额外 Toast。只有失败、结果未知、隐藏副作用或需要用户处理时升级提示。
 
 Timeline 尾部只有一条通用 live-status 行，继续直接由现有 `isWorking`、turn、worktree setup 与虚拟列表生命周期控制；不新增 Thinking message、runtime status store 或第二条进度事实。该行的普通视觉固定为 `20px Composing Orb + 双语趣味提示 + 对称潮汐三点`：提示首次随机选择，之后每五秒替换且普通重渲染不换句；它只是等待氛围，不进入 transcript、reasoning、journal、Session 或恢复数据，也不能覆盖真实 Tool、approval、error、recovery 和 Provider activity。图标与文本容器保持固定尺寸，长文案单行省略；隐藏文档和离屏状态暂停不必要绘制，`prefers-reduced-motion` 下图标、文字与三点全部静止。用户可见行不再显示笼统的 `Thinking / 正在思考` 或 `Loading`，screen reader 使用稳定、非轮播的本地化工作状态。
 

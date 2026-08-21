@@ -432,7 +432,8 @@ describe("provider runtime activity projection", () => {
       );
       expect(activity).toMatchObject({
         id: `provider-reasoning:${THREAD_ID}:reasoning-${provider}`,
-        kind: "task.progress",
+        tone: "info",
+        kind: "reasoning.completed",
         summary: "Reasoning trace",
         payload: {
           status: "completed",

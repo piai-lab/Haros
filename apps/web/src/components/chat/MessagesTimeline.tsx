@@ -581,7 +581,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
   contentInsetBottomPx,
   contentInsetBottomClearancePx,
 }: MessagesTimelineProps) {
-  const { t, thinkingHints } = useI18n();
+  const { locale, t, thinkingHints } = useI18n();
   // Prop defaults are resolved in the body rather than in the destructuring pattern:
   // an `AssignmentPattern` in the parameter list makes React Compiler bail out on the
   // entire component (silently, since `panicThreshold` is unset), which would drop
@@ -2105,7 +2105,16 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     >
                       <span>
                         {row.collapsedWorkElapsed
-                          ? t("timeline.workedFor", { duration: row.collapsedWorkElapsed })
+                          ? t("timeline.workedFor", {
+                              duration:
+                                row.collapsedWorkElapsedMs !== undefined &&
+                                row.collapsedWorkElapsedMs !== null
+                                  ? formatClockDuration(
+                                      row.collapsedWorkElapsedMs,
+                                      locale === "zh-CN" ? "zh" : "en",
+                                    )
+                                  : row.collapsedWorkElapsed,
+                            })
                           : t("timeline.details")}
                       </span>
                       <DisclosureChevron
@@ -2424,7 +2433,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           <span className="truncate">
                             {goalAchievement.elapsedMs !== null
                               ? t("conversation.goalAchievedIn", {
-                                  duration: formatClockDuration(goalAchievement.elapsedMs),
+                                  duration: formatClockDuration(
+                                    goalAchievement.elapsedMs,
+                                    locale === "zh-CN" ? "zh" : "en",
+                                  ),
                                 })
                               : t("conversation.goalAchieved")}
                           </span>
@@ -2459,7 +2471,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           >
             {nowIso ? (
               t("timeline.workingFor", {
-                duration: formatClockElapsed(row.createdAt, nowIso) ?? "0s",
+                duration:
+                  formatClockElapsed(
+                    row.createdAt,
+                    nowIso,
+                    locale === "zh-CN" ? "zh" : "en",
+                  ) ?? (locale === "zh-CN" ? "0秒" : "0s"),
               })
             ) : (
               <WorkingTimer createdAt={row.createdAt} />
@@ -3239,6 +3256,7 @@ const UserMessageCollapsibleText = memo(function UserMessageCollapsibleText(prop
 }) {
   const contentRef = useRef<HTMLDivElement>(null);
   const contentId = useId();
+  const { t } = useI18n();
   const [overflowing, setOverflowing] = useState(() => userMessageLikelyOverflows(props.text));
   const collapsed = !props.expanded;
 
@@ -3284,7 +3302,7 @@ const UserMessageCollapsibleText = memo(function UserMessageCollapsibleText(prop
           aria-controls={contentId}
           onClick={props.onToggle}
         >
-          {props.expanded ? "Show less" : "Show more"}
+          {props.expanded ? t("common.showLess") : t("common.showMore")}
         </button>
       )}
     </>

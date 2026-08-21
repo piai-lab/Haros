@@ -2577,6 +2577,59 @@ describe("ProviderCommandReactor", () => {
     expect(providerInput).not.toContain("Use /docs for the latest segment");
   });
 
+  it("persists one deterministic Skill delivery receipt per selected OmniMind Skill", async () => {
+    const harness = await createHarness({
+      startReactor: false,
+      threadModelSelection: { provider: "omnimind", model: "omnimind-test" },
+    });
+    const skillPath = path.join(harness.stateDir, "skills", "aihot", "SKILL.md");
+    fs.mkdirSync(path.dirname(skillPath), { recursive: true });
+    fs.writeFileSync(skillPath, "Use the current AI news catalog.", "utf8");
+    const now = new Date().toISOString();
+
+    await harness.startReactor();
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.turn.start",
+        commandId: CommandId.makeUnsafe("command-omnimind-skill-delivery-receipt"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        message: {
+          messageId: asMessageId("omnimind-skill-delivery-message"),
+          role: "user",
+          text: "Summarize the latest AI news",
+          attachments: [],
+          skills: [{ name: "Aihot", path: skillPath }],
+        },
+        runtimeMode: "approval-required",
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        createdAt: now,
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    await waitFor(async () => {
+      const thread = await readHarnessThread(harness);
+      return (
+        thread?.activities.some((activity) => activity.kind === "skill.instructions.delivered") ??
+        false
+      );
+    });
+    const thread = await readHarnessThread(harness);
+    const receipts = thread?.activities.filter(
+      (activity) => activity.kind === "skill.instructions.delivered",
+    );
+    expect(receipts).toHaveLength(1);
+    expect(receipts?.[0]).toMatchObject({
+      id: "skill-delivery:omnimind-skill-delivery-message:0:Aihot",
+      turnId: "turn-1",
+      payload: {
+        messageId: "omnimind-skill-delivery-message",
+        skillName: "Aihot",
+        deliveryMode: "inline",
+      },
+    });
+  });
+
   it("reuses the exact history-only bootstrap across every stale Claude retry", async () => {
     const threadId = ThreadId.makeUnsafe("thread-history-only-fork-claude-stale");
     const harness = await createHarness({ startReactor: false });
