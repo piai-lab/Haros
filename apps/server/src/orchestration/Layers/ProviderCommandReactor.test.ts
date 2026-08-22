@@ -8,6 +8,7 @@ import os from "node:os";
 import path from "node:path";
 
 import type {
+  BuiltInToolGroupOverrides,
   ModelSelection,
   OrchestrationCommand,
   OrchestrationEvent,
@@ -210,6 +211,8 @@ describe("ProviderCommandReactor", () => {
     readonly commandEventTimeout?: Duration.Duration;
     readonly gatewayOperationId?: string;
     readonly gitWritingModelSelection?: ModelSelection;
+    readonly projectKind?: "project" | "chat" | "studio";
+    readonly builtInGroupOverrides?: BuiltInToolGroupOverrides;
   }) {
     const now = new Date().toISOString();
     const baseDir = input?.baseDir ?? fs.mkdtempSync(path.join(os.tmpdir(), "omnimind-reactor-"));
@@ -536,11 +539,14 @@ describe("ProviderCommandReactor", () => {
         } as unknown as TextGenerationShape),
       ),
       Layer.provideMerge(
-        ServerSettingsService.layerTest(
-          input?.gitWritingModelSelection
+        ServerSettingsService.layerTest({
+          ...(input?.gitWritingModelSelection
             ? { textGenerationModelSelection: input.gitWritingModelSelection }
-            : {},
-        ),
+            : {}),
+          ...(input?.builtInGroupOverrides
+            ? { agentTools: { builtInGroupOverrides: input.builtInGroupOverrides } }
+            : {}),
+        }),
       ),
       Layer.provideMerge(ServerConfig.layerTest(process.cwd(), baseDir)),
       Layer.provideMerge(NodeServices.layer),
@@ -607,6 +613,7 @@ describe("ProviderCommandReactor", () => {
         title: "Provider Project",
         workspaceRoot: "/tmp/provider-project",
         defaultModelSelection: modelSelection,
+        ...(input?.projectKind ? { kind: input.projectKind } : {}),
         createdAt: now,
       }),
     );
@@ -3269,6 +3276,44 @@ describe("ProviderCommandReactor", () => {
 
     await harness.drain();
     expect(harness.sendTurn).not.toHaveBeenCalled();
+  });
+
+  it("pauses a Chat goal instead of starting a continuation while Goals are disabled", async () => {
+    const harness = await createHarness({ projectKind: "chat" });
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.meta.update",
+        commandId: CommandId.makeUnsafe("cmd-chat-goal-policy-disabled"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        goal: "Keep researching until the question is answered",
+      }),
+    );
+
+    await harness.drain();
+    expect(harness.sendTurn).not.toHaveBeenCalled();
+    expect((await readHarnessThread(harness))?.goalPausedAt).toBeTruthy();
+  });
+
+  it("allows a Chat goal continuation after the user opts in", async () => {
+    const harness = await createHarness({
+      projectKind: "chat",
+      builtInGroupOverrides: { chat: { goals: true } },
+    });
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
+        type: "thread.meta.update",
+        commandId: CommandId.makeUnsafe("cmd-chat-goal-policy-enabled"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        goal: "Keep researching until the question is answered",
+      }),
+    );
+
+    await waitFor(() => harness.sendTurn.mock.calls.length === 1);
+    expect(harness.sendTurn.mock.calls[0]?.[1]).toMatchObject({
+      turnKind: "goal-continuation",
+    });
   });
 
   it("recovers an active idle goal when the reactor restarts", async () => {
@@ -6115,6 +6160,13 @@ describe("ProviderCommandReactor", () => {
     );
 
     await waitFor(async () => (await readHarnessThread(harness))?.session?.status === "error");
+    await waitFor(async () =>
+      Boolean(
+        (await readHarnessThread(harness))?.activities.some(
+          (activity) => activity.kind === "provider.turn.start.failed",
+        ),
+      ),
+    );
 
     const thread = await readHarnessThread(harness);
     expect(thread?.session?.status).toBe("error");

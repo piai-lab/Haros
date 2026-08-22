@@ -3,7 +3,6 @@ import { Effect } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
-  exposedAgentGatewayTools,
   exposedAgentGatewayToolsForProjectKind,
   makeAgentGatewayToolCatalog,
   projectBuiltInToolGroups,
@@ -17,6 +16,10 @@ function makeTool(name: string): ToolEntry {
     requiredCapability: "thread:read",
     handler: () => Effect.succeed({ content: [{ type: "text", text: "ok" }] }),
   };
+}
+
+function snapshot(settings = DEFAULT_SERVER_SETTINGS) {
+  return { revision: 7, migrationVersion: 4, settings };
 }
 
 describe("AgentGateway tool catalog", () => {
@@ -42,7 +45,7 @@ describe("AgentGateway tool catalog", () => {
     );
   });
 
-  it("projects availability separately from persisted user enablement", () => {
+  it("projects one revisioned read model with all eighteen support/default cells", () => {
     const catalog = makeAgentGatewayToolCatalog([
       tagAgentGatewayTools({
         group: "tasks",
@@ -57,63 +60,41 @@ describe("AgentGateway tool catalog", () => {
     ]);
     const settings = {
       ...DEFAULT_SERVER_SETTINGS,
-      agentTools: { disabledBuiltInGroups: ["tasks", "future-group"] },
+      agentTools: {
+        builtInGroupOverrides: {
+          agent: { tasks: false, "future-group": false },
+          chat: { goals: true },
+        },
+      },
     };
 
-    expect(exposedAgentGatewayTools(catalog, settings)).toEqual([]);
-    expect(projectBuiltInToolGroups(catalog, settings)).toEqual([
-      {
-        id: "tasks",
-        toolCount: 1,
-        availableToolCount: 1,
-        availability: "available",
-        enabled: false,
-        effective: false,
+    const projection = projectBuiltInToolGroups(catalog, snapshot(settings));
+    expect(projection.settingsRevision).toBe(7);
+    expect(projection.builtInGroupOverrides).toEqual(settings.agentTools.builtInGroupOverrides);
+    expect(projection.groups).toHaveLength(6);
+    expect(projection.groups.flatMap((group) => Object.values(group.surfaces))).toHaveLength(18);
+    expect(projection.groups.find((group) => group.id === "tasks")).toMatchObject({
+      availability: "available",
+      surfaces: {
+        agent: { supported: true, defaultEnabled: true, configuredEnabled: false },
+        chat: { supported: false, defaultEnabled: false, configuredEnabled: false },
+        studio: { supported: true, defaultEnabled: true, configuredEnabled: true },
       },
-      {
-        id: "diagnostics",
-        toolCount: 0,
-        availableToolCount: 0,
-        availability: "unavailable",
-        enabled: true,
-        effective: false,
-      },
-      {
-        id: "goals",
-        toolCount: 0,
-        availableToolCount: 0,
-        availability: "unavailable",
-        enabled: true,
-        effective: false,
-      },
-      {
-        id: "automations",
-        toolCount: 0,
-        availableToolCount: 0,
-        availability: "unavailable",
-        enabled: true,
-        effective: false,
-      },
-      {
-        id: "browser",
-        toolCount: 1,
-        availableToolCount: 0,
-        availability: "unavailable",
-        enabled: true,
-        effective: false,
-      },
-      {
-        id: "device",
-        toolCount: 0,
-        availableToolCount: 0,
-        availability: "unavailable",
-        enabled: true,
-        effective: false,
-      },
-    ]);
+    });
+    expect(projection.groups.find((group) => group.id === "goals")?.surfaces.chat).toEqual({
+      supported: true,
+      defaultEnabled: false,
+      configuredEnabled: true,
+      effective: false,
+    });
+    expect(projection.groups.find((group) => group.id === "device")?.surfaces).toMatchObject({
+      agent: { supported: true, defaultEnabled: false, configuredEnabled: false },
+      chat: { supported: true, defaultEnabled: false, configuredEnabled: false },
+      studio: { supported: true, defaultEnabled: false, configuredEnabled: false },
+    });
   });
 
-  it("derives Agent, Chat, and Studio admission from ProductSurface without a second catalog", () => {
+  it("derives Agent, Chat, and Studio admission without a second catalog", () => {
     const catalog = makeAgentGatewayToolCatalog([
       tagAgentGatewayTools({
         group: "tasks",
@@ -121,30 +102,43 @@ describe("AgentGateway tool catalog", () => {
         tools: [makeTool("omnimind_read_thread")],
       }),
       tagAgentGatewayTools({
+        group: "goals",
+        available: true,
+        tools: [makeTool("omnimind_set_goal")],
+      }),
+      tagAgentGatewayTools({
         group: "browser",
         available: true,
         tools: [makeTool("browser_click")],
       }),
-      tagAgentGatewayTools({
-        group: "device",
-        available: false,
-        tools: [makeTool("device_open")],
-      }),
     ]);
-
-    const namesFor = (kind: "project" | "chat" | "studio") =>
-      exposedAgentGatewayToolsForProjectKind(catalog, DEFAULT_SERVER_SETTINGS, kind).map(
+    const namesFor = (kind: "project" | "chat" | "studio", settings = DEFAULT_SERVER_SETTINGS) =>
+      exposedAgentGatewayToolsForProjectKind(catalog, settings, kind).map(
         (tool) => tool.definition.name,
       );
 
-    expect(namesFor("project")).toEqual(["omnimind_read_thread", "browser_click"]);
+    expect(namesFor("project")).toEqual([
+      "omnimind_read_thread",
+      "omnimind_set_goal",
+      "browser_click",
+    ]);
     expect(namesFor("chat")).toEqual(["browser_click"]);
-    expect(namesFor("studio")).toEqual(["omnimind_read_thread", "browser_click"]);
+    expect(namesFor("studio")).toEqual([
+      "omnimind_read_thread",
+      "omnimind_set_goal",
+      "browser_click",
+    ]);
 
-    const browserDisabled = {
+    const chatOptIn = {
       ...DEFAULT_SERVER_SETTINGS,
-      agentTools: { disabledBuiltInGroups: ["browser"] },
+      agentTools: { builtInGroupOverrides: { chat: { goals: true } } },
     };
-    expect(exposedAgentGatewayToolsForProjectKind(catalog, browserDisabled, "chat")).toEqual([]);
+    expect(namesFor("chat", chatOptIn)).toEqual(["omnimind_set_goal", "browser_click"]);
+
+    const maliciousUnsupported = {
+      ...DEFAULT_SERVER_SETTINGS,
+      agentTools: { builtInGroupOverrides: { chat: { tasks: true } } },
+    };
+    expect(namesFor("chat", maliciousUnsupported)).not.toContain("omnimind_read_thread");
   });
 });

@@ -12,6 +12,8 @@
 >
 > 文档角色：Pi/Synara exact-source证据、基线main观察、维护者已确认架构、本任务分支implementation与live/packaged falsifier。稳定运行时合同只由[`architecture/execution.md`](../architecture/execution.md)拥有。
 
+> **2026-08-22 supersession：** 本文关于Pi-native eager projection、collision与Delivered集合的source证据继续有效；旧“global Built-in policy覆盖所有Agent”公式已被三工作面策略替代。Desired Host Surface现在必须包含ProductSurface support与configured intent/default；guidance仍是Session-scoped，不建立per-turn schema controller。当前实现状态路由到[`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md)与`execution-brief.md`。
+
 ## 0. 新会话先读
 
 本文替代此前“Host Dynamic Tool Loading是确定终态”的研究结论。旧实现及其测试仍是已经合入源码的历史事实，但不再是目标架构。
@@ -168,7 +170,7 @@ Pi没有默认注册到每个Session、自动搜索所有Extensions的全局call
 ```mermaid
 flowchart LR
     C["AgentGateway canonical catalog"]
-    P["global Built-in policy"]
+    P["ProductSurface support + configured intent/default"]
     A["machine/service availability"]
     C --> F["Desired Host Surface"]
     P --> F
@@ -191,7 +193,8 @@ Host Extension只处理自己的projection。它不得识别、枚举、保留�
 ```text
 Desired Host Surface
 = canonical Gateway catalog
-∩ global Built-in policy
+∩ ProductSurface support
+∩ configured intent/default
 ∩ machine/service availability
 
 Delivered Host Surface
@@ -340,7 +343,7 @@ Host使用公开async `ExtensionFactory`：初载与`ResourceLoader.reload()`都
 
 - registered：Pi Registry存在definition；
 - active：schema在当轮模型工具面；
-- exposed：global Built-in policy允许；
+- exposed：ProductSurface support与configured intent/default共同允许；
 - available：service/platform/executable closure真实存在；
 - authorized：本次identity、credential、scope、runtime permission/approval与exact turn允许；
 - executed：handler已经admitted并实际开始。

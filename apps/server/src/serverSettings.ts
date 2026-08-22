@@ -6,6 +6,9 @@
  * and process-authoritative on the server.
  */
 import {
+  BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS,
+  BUILT_IN_TOOL_GROUP_IDS,
+  BUILT_IN_TOOL_SURFACES,
   DEFAULT_MODEL_BY_PROVIDER,
   DEFAULT_SERVER_SETTINGS,
   type ModelSelection,
@@ -21,6 +24,10 @@ import {
   normalizeServerSettings,
   validateServerSettingsPatch,
 } from "@omnimind/shared/serverSettings";
+import {
+  isBuiltInToolGroupId,
+  resolveHostGroupSurfacePolicy,
+} from "@omnimind/shared/hostToolSurfacePolicy";
 import {
   Cause,
   Deferred,
@@ -75,7 +82,7 @@ export interface ServerSettingsSnapshot {
   readonly settings: ServerSettings;
 }
 
-const SERVER_SETTINGS_MIGRATION_VERSION = 3;
+const SERVER_SETTINGS_MIGRATION_VERSION = 4;
 const LEGACY_OMNIMIND_BUILT_IN_GROUP = "omnimind";
 const OMNIMIND_FINE_GRAINED_BUILT_IN_GROUPS = [
   "tasks",
@@ -150,15 +157,17 @@ export class ServerSettingsService extends ServiceMap.Service<
           ready: Effect.void,
           getSettings,
           getSettingsView: getSettings.pipe(Effect.map(toServerSettingsView)),
-          getSnapshot: Effect.all({
-            revision: Ref.get(revisionRef),
-            settings: getSettings,
-          }).pipe(
-            Effect.map(({ revision, settings }) => ({
-              revision,
-              migrationVersion: SERVER_SETTINGS_MIGRATION_VERSION,
-              settings,
-            })),
+          getSnapshot: writeSemaphore.withPermits(1)(
+            Effect.all({
+              revision: Ref.get(revisionRef),
+              settings: getSettings,
+            }).pipe(
+              Effect.map(({ revision, settings }) => ({
+                revision,
+                migrationVersion: SERVER_SETTINGS_MIGRATION_VERSION,
+                settings,
+              })),
+            ),
           ),
           updateSettings,
           updateSettingsView: (patch) =>
@@ -303,7 +312,7 @@ function migrateLegacyBuiltInGroupIntent(
   readonly migrated: boolean;
 } {
   if (!isRecord(settings)) return { settings, migrated: false };
-  let migrated = false;
+  let migrated = migrationVersion < SERVER_SETTINGS_MIGRATION_VERSION;
   let disabledBuiltInGroups: unknown;
   if (!Object.hasOwn(settings, "agentTools")) {
     disabledBuiltInGroups = [];
@@ -325,16 +334,65 @@ function migrateLegacyBuiltInGroupIntent(
     disabledBuiltInGroups = expanded;
   }
 
-  if (!migrated) return { settings, migrated: false };
+  if (migrationVersion >= SERVER_SETTINGS_MIGRATION_VERSION) {
+    return { settings, migrated: false };
+  }
+
+  const legacyDisabled = new Set<string>();
+  if (Array.isArray(disabledBuiltInGroups)) {
+    for (const value of disabledBuiltInGroups) {
+      if (
+        typeof value === "string" &&
+        value.length <= 64 &&
+        /^[a-z0-9-]+$/u.test(value) &&
+        legacyDisabled.size < 32
+      ) {
+        legacyDisabled.add(value);
+      }
+    }
+  }
+
+  const builtInGroupOverrides: Partial<
+    Record<(typeof BUILT_IN_TOOL_SURFACES)[number], Record<string, boolean>>
+  > = {};
+  const ensureSurface = (surface: (typeof BUILT_IN_TOOL_SURFACES)[number]) =>
+    (builtInGroupOverrides[surface] ??= {});
+  for (const group of BUILT_IN_TOOL_GROUP_IDS) {
+    const legacyEnabled = !legacyDisabled.has(group);
+    for (const surface of ["agent", "studio"] as const) {
+      const policy = resolveHostGroupSurfacePolicy(group, surface);
+      if (policy.supported && legacyEnabled !== policy.defaultEnabled) {
+        ensureSurface(surface)[group] = legacyEnabled;
+      }
+    }
+    if (group === "browser") {
+      const policy = resolveHostGroupSurfacePolicy(group, "chat");
+      if (legacyEnabled !== policy.defaultEnabled) {
+        ensureSurface("chat")[group] = legacyEnabled;
+      }
+    }
+  }
+  for (const group of legacyDisabled) {
+    if (isBuiltInToolGroupId(group)) continue;
+    for (const surface of BUILT_IN_TOOL_SURFACES) {
+      const surfaceOverrides = ensureSurface(surface);
+      if (Object.keys(surfaceOverrides).length < BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS) {
+        surfaceOverrides[group] = false;
+      }
+    }
+  }
+
+  const legacyAgentTools = isRecord(settings.agentTools) ? settings.agentTools : {};
+  const { disabledBuiltInGroups: _disabledBuiltInGroups, ...retainedAgentTools } = legacyAgentTools;
   return {
     settings: {
       ...settings,
       agentTools: {
-        ...(isRecord(settings.agentTools) ? settings.agentTools : {}),
-        disabledBuiltInGroups,
+        ...retainedAgentTools,
+        builtInGroupOverrides,
       },
     },
-    migrated: true,
+    migrated,
   };
 }
 
@@ -615,12 +673,14 @@ const makeServerSettings = Effect.gen(function* () {
     ready: Deferred.await(startedDeferred),
     getSettings,
     getSettingsView: getSettings.pipe(Effect.map(toServerSettingsView)),
-    getSnapshot: Effect.all({ revision: Ref.get(revisionRef), settings: getSettings }).pipe(
-      Effect.map(({ revision, settings }) => ({
-        revision,
-        migrationVersion: SERVER_SETTINGS_MIGRATION_VERSION,
-        settings,
-      })),
+    getSnapshot: writeSemaphore.withPermits(1)(
+      Effect.all({ revision: Ref.get(revisionRef), settings: getSettings }).pipe(
+        Effect.map(({ revision, settings }) => ({
+          revision,
+          migrationVersion: SERVER_SETTINGS_MIGRATION_VERSION,
+          settings,
+        })),
+      ),
     ),
     updateSettings,
     updateSettingsView: (patch) => updateSettings(patch).pipe(Effect.map(toServerSettingsView)),

@@ -62,6 +62,7 @@ import {
 import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
 import { turnStartBindingMatchesCommitted } from "../turnStartSession.ts";
 import { resolveThreadWorkspaceState } from "@omnimind/shared/threadEnvironment";
+import { configuredHostGroupEnabled } from "@omnimind/shared/hostToolSurfacePolicy";
 import {
   projectKindToProductSurface,
   productSurfaceToProviderWorkSurface,
@@ -3506,6 +3507,19 @@ const make = Effect.gen(function* () {
     });
   });
 
+  const goalToolsEnabledForThread = Effect.fnUntraced(function* (
+    thread: Pick<OrchestrationThread, "projectId">,
+  ) {
+    const project = yield* resolveThreadWorkspaceProject(thread);
+    if (!project) return false;
+    const settings = yield* serverSettings.getSettings;
+    return configuredHostGroupEnabled({
+      group: "goals",
+      surface: projectKindToProductSurface(project.kind),
+      overrides: settings.agentTools.builtInGroupOverrides,
+    });
+  });
+
   const processGoalContinuationRequested = (
     event: Extract<ProviderIntentEvent, { type: "thread.goal-continuation-requested" }>,
   ) =>
@@ -3524,6 +3538,15 @@ const make = Effect.gen(function* () {
           (thread.goalStartedAt ?? null) !== event.payload.goalStartedAt
         ) {
           blockedGoalContinuations.delete(event.payload.threadId);
+          return;
+        }
+
+        if (!(yield* goalToolsEnabledForThread(thread))) {
+          blockedGoalContinuations.delete(thread.id);
+          yield* pauseActiveThreadGoal({
+            threadId: thread.id,
+            expectedGoalStartedAt: event.payload.goalStartedAt,
+          });
           return;
         }
 
@@ -3614,8 +3637,15 @@ const make = Effect.gen(function* () {
           (!latestThread ||
             latestThread.goalPausedAt != null ||
             !activeThreadGoal(latestThread)?.trim() ||
-            (latestThread.goalStartedAt ?? null) !== event.payload.goalStartedAt)
+            (latestThread.goalStartedAt ?? null) !== event.payload.goalStartedAt ||
+            !(yield* goalToolsEnabledForThread(latestThread)))
         ) {
+          if (latestThread && latestThread.goalPausedAt == null) {
+            yield* pauseActiveThreadGoal({
+              threadId: latestThread.id,
+              expectedGoalStartedAt: event.payload.goalStartedAt,
+            });
+          }
           yield* interruptProviderTurn({
             threadId: thread.id,
             turnId: startedTurn.turnId,

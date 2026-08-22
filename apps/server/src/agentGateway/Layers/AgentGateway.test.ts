@@ -3,7 +3,8 @@ import type {
   AutomationCreateInput,
   AutomationDefinition,
   AutomationUpdateInput,
-  BuiltInToolGroup,
+  BuiltInToolGroupOverrides,
+  BuiltInToolGroupsResult,
   OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationProjectShell,
@@ -71,10 +72,11 @@ const PROJECT_ID = ProjectId.makeUnsafe("project-1");
 
 function makeProjectShell(
   scripts: OrchestrationProjectShell["scripts"] = [],
+  kind: OrchestrationProjectShell["kind"] = "project",
 ): OrchestrationProjectShell {
   return {
     id: PROJECT_ID,
-    kind: "project",
+    kind,
     title: "Demo project",
     workspaceRoot: "/tmp/demo",
     defaultModelSelection: null,
@@ -177,7 +179,7 @@ interface GatewayHarness {
     readonly detailReads: number;
     readonly batchTurnReads: number;
   };
-  readonly getBuiltInToolGroups: () => Effect.Effect<ReadonlyArray<BuiltInToolGroup>, unknown>;
+  readonly getBuiltInToolGroups: () => Effect.Effect<BuiltInToolGroupsResult, unknown>;
   readonly callTool: (input: {
     readonly token: string;
     readonly name: string;
@@ -275,6 +277,8 @@ function makeHarnessLayer(
       readonly state?: "running" | "completed" | "interrupted";
     };
     readonly projectScripts?: OrchestrationProjectShell["scripts"];
+    readonly projectKind?: OrchestrationProjectShell["kind"];
+    readonly builtInGroupOverrides?: BuiltInToolGroupOverrides;
     readonly extraProjects?: ReadonlyArray<OrchestrationProjectShell>;
     readonly diagnosticActivities?: ReadonlyArray<DiagnosticThreadActivity>;
     readonly diagnosticEvents?: ReadonlyArray<OrchestrationEvent>;
@@ -408,7 +412,10 @@ function makeHarnessLayer(
     getShellSnapshot: () =>
       Effect.succeed({
         snapshotSequence: 1,
-        projects: [makeProjectShell(options.projectScripts), ...(options.extraProjects ?? [])],
+        projects: [
+          makeProjectShell(options.projectScripts, options.projectKind),
+          ...(options.extraProjects ?? []),
+        ],
         threads: [...threadsById.values()],
         updatedAt: NOW,
       }),
@@ -417,7 +424,7 @@ function makeHarnessLayer(
     getProjectShellById: (projectId: string) =>
       Effect.succeed(
         projectId === (PROJECT_ID as string)
-          ? Option.some(makeProjectShell(options.projectScripts))
+          ? Option.some(makeProjectShell(options.projectScripts, options.projectKind))
           : Option.none<OrchestrationProjectShell>(),
       ),
     getThreadDetailById: (threadId: ThreadIdType) =>
@@ -1142,7 +1149,13 @@ function makeHarnessLayer(
     Layer.provide(gitLayer),
     Layer.provide(providerDiscoveryLayer),
     Layer.provide(providerHealthLayer),
-    Layer.provide(ServerSettingsService.layerTest()),
+    Layer.provideMerge(
+      ServerSettingsService.layerTest(
+        options.builtInGroupOverrides
+          ? { agentTools: { builtInGroupOverrides: options.builtInGroupOverrides } }
+          : {},
+      ),
+    ),
     Layer.provide(deviceServiceLayer),
     Layer.provide(operationLayer),
     Layer.provide(projectionTurnsLayer),
@@ -1242,6 +1255,14 @@ function toolErrorText(result: Record<string, unknown> | undefined): string {
   return content[0]?.text ?? "";
 }
 
+function listedToolNames(response: { readonly body?: unknown }): ReadonlySet<string> {
+  const result = (response.body as { result?: { tools?: ReadonlyArray<Record<string, unknown>> } })
+    .result;
+  return new Set(
+    (result?.tools ?? []).flatMap((tool) => (typeof tool.name === "string" ? [tool.name] : [])),
+  );
+}
+
 describe("AgentGateway", () => {
   const baseThreads = [
     makeThreadShell("thread-parent"),
@@ -1256,9 +1277,81 @@ describe("AgentGateway", () => {
       const groups = yield* harness.getBuiltInToolGroups();
 
       assert.deepStrictEqual(
-        Object.fromEntries(groups.map((group) => [group.id, group.toolCount])),
+        Object.fromEntries(groups.groups.map((group) => [group.id, group.toolCount])),
         { tasks: 12, diagnostics: 4, goals: 1, automations: 7, browser: 22, device: 12 },
       );
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("projects the canonical Chat and Studio Host surfaces into tools/list", () => {
+    const chatDefault = makeHarnessLayer(baseThreads, [], { projectKind: "chat" });
+    const chatOptIn = makeHarnessLayer(baseThreads, [], {
+      projectKind: "chat",
+      builtInGroupOverrides: { chat: { goals: true, automations: true } },
+    });
+    const studioDefault = makeHarnessLayer(baseThreads, [], { projectKind: "studio" });
+    const list = (makeHarness: typeof chatDefault.makeHarness) =>
+      Effect.gen(function* () {
+        const harness = yield* makeHarness;
+        return yield* harness.postRaw({
+          authorizationHeader: "Bearer token-parent",
+          body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        });
+      });
+    return Effect.gen(function* () {
+      const chatDefaultResponse = yield* list(chatDefault.makeHarness).pipe(
+        Effect.provide(chatDefault.gatewayLayer),
+      );
+      const chatOptInResponse = yield* list(chatOptIn.makeHarness).pipe(
+        Effect.provide(chatOptIn.gatewayLayer),
+      );
+      const studioDefaultResponse = yield* list(studioDefault.makeHarness).pipe(
+        Effect.provide(studioDefault.gatewayLayer),
+      );
+
+      const chatDefaultNames = listedToolNames(chatDefaultResponse);
+      assert.strictEqual(chatDefaultNames.size, 0);
+      assert.isFalse(chatDefaultNames.has("omnimind_set_thread_goal"));
+      assert.isFalse(chatDefaultNames.has("omnimind_create_automation"));
+      assert.isFalse(chatDefaultNames.has("omnimind_set_thread_title"));
+
+      const chatOptInNames = listedToolNames(chatOptInResponse);
+      assert.isTrue(chatOptInNames.has("omnimind_set_thread_goal"));
+      assert.isTrue(chatOptInNames.has("omnimind_create_automation"));
+      assert.isFalse(chatOptInNames.has("omnimind_set_thread_title"));
+
+      const studioDefaultNames = listedToolNames(studioDefaultResponse);
+      assert.isTrue(studioDefaultNames.has("omnimind_set_thread_goal"));
+      assert.isTrue(studioDefaultNames.has("omnimind_create_automation"));
+      assert.isTrue(studioDefaultNames.has("omnimind_set_thread_title"));
+      assert.isTrue(studioDefaultNames.has("omnimind_diagnose_thread"));
+      assert.isFalse(studioDefaultNames.has("device_list"));
+    });
+  });
+
+  it.effect("denies a newly disabled group to an already active session", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads);
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const settings = yield* ServerSettingsService;
+
+      yield* settings.updateSettings({
+        agentTools: { builtInGroupOverrides: { agent: { tasks: false } } },
+      });
+      const listed = yield* harness.postRaw({
+        authorizationHeader: "Bearer token-parent",
+        body: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+      });
+      const called = yield* harness.callTool({
+        token: "token-parent",
+        name: "omnimind_set_thread_title",
+        args: { title: "Must not run" },
+      });
+
+      assert.isFalse(listedToolNames(listed).has("omnimind_set_thread_title"));
+      assert.isTrue(isToolError(called.result));
+      assert.match(toolErrorText(called.result), /disabled or unavailable/);
+      assert.strictEqual(harness.dispatched.length, 0);
     }).pipe(Effect.provide(gatewayLayer));
   });
 

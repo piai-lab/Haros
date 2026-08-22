@@ -3,6 +3,7 @@ import { TrimmedString } from "./baseSchemas";
 import { DEFAULT_GIT_TEXT_GENERATION_MODEL } from "./model";
 import { ModelSelection, ProviderKind, ThreadEnvironmentMode } from "./orchestration";
 import { isOmniMindAgentPromptContent, OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
+import { BuiltInToolGroupOverrides } from "./agentTools";
 
 const StringSetting = TrimmedString.check(Schema.isMaxLength(4096));
 const CustomModels = Schema.Array(Schema.String.check(Schema.isMaxLength(256))).pipe(
@@ -95,13 +96,6 @@ const DisabledSkillNames = Schema.Array(Schema.String.check(Schema.isMaxLength(2
   Schema.withDecodingDefault(() => []),
 );
 
-const DisabledBuiltInGroupsValue = Schema.Array(TrimmedString.check(Schema.isMaxLength(64))).check(
-  Schema.isMaxLength(32),
-);
-const DisabledBuiltInGroups = DisabledBuiltInGroupsValue.pipe(
-  Schema.withDecodingDefault(() => ["device"]),
-);
-
 // User-level skill toggles. Skills are keyed by lowercased name because the
 // unified catalog dedupes provider copies of the same skill by name.
 export const SkillsServerSettings = Schema.Struct({
@@ -110,7 +104,8 @@ export const SkillsServerSettings = Schema.Struct({
 export type SkillsServerSettings = typeof SkillsServerSettings.Type;
 
 export const AgentToolsServerSettings = Schema.Struct({
-  disabledBuiltInGroups: DisabledBuiltInGroups,
+  /** Tools offered to model agents; this is not the Agent product surface. */
+  builtInGroupOverrides: BuiltInToolGroupOverrides.pipe(Schema.withDecodingDefault(() => ({}))),
 });
 export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
@@ -259,7 +254,7 @@ export const ServerSettingsPatch = Schema.Struct({
   ),
   agentTools: Schema.optionalKey(
     Schema.Struct({
-      disabledBuiltInGroups: Schema.optionalKey(DisabledBuiltInGroupsValue),
+      builtInGroupOverrides: Schema.optionalKey(BuiltInToolGroupOverrides),
     }),
   ),
 });

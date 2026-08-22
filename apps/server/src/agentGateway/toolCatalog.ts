@@ -1,11 +1,18 @@
 import {
   BUILT_IN_TOOL_GROUP_IDS,
-  type BuiltInToolGroup,
+  BUILT_IN_TOOL_SURFACES,
   type BuiltInToolGroupId,
+  type BuiltInToolGroupAvailability,
+  type BuiltInToolGroupsResult,
   type ServerSettings,
   type ProjectKind,
 } from "@omnimind/contracts";
+import {
+  configuredHostGroupEnabled,
+  resolveHostGroupSurfacePolicy,
+} from "@omnimind/shared/hostToolSurfacePolicy";
 import { projectKindToProductSurface } from "@omnimind/shared/productSurface";
+import type { ServerSettingsSnapshot } from "../serverSettings.ts";
 
 import type { AgentGatewayCatalogToolEntry, ToolEntry } from "./toolRuntime.ts";
 
@@ -49,17 +56,13 @@ export function makeAgentGatewayToolCatalog(
 export function isBuiltInToolGroupEnabled(
   settings: ServerSettings,
   group: BuiltInToolGroupId,
+  projectKind: ProjectKind,
 ): boolean {
-  return !settings.agentTools.disabledBuiltInGroups.includes(group);
-}
-
-export function exposedAgentGatewayTools(
-  catalog: ReadonlyArray<AgentGatewayCatalogToolEntry>,
-  settings: ServerSettings,
-): ReadonlyArray<AgentGatewayCatalogToolEntry> {
-  return catalog.filter(
-    (tool) => tool.available && isBuiltInToolGroupEnabled(settings, tool.group),
-  );
+  return configuredHostGroupEnabled({
+    group,
+    surface: projectKindToProductSurface(projectKind),
+    overrides: settings.agentTools.builtInGroupOverrides,
+  });
 }
 
 export function exposedAgentGatewayToolsForProjectKind(
@@ -67,21 +70,20 @@ export function exposedAgentGatewayToolsForProjectKind(
   settings: ServerSettings,
   projectKind: ProjectKind,
 ): ReadonlyArray<AgentGatewayCatalogToolEntry> {
-  const enabled = exposedAgentGatewayTools(catalog, settings);
-  return projectKindToProductSurface(projectKind) === "chat"
-    ? enabled.filter((tool) => tool.group === "browser")
-    : enabled;
+  return catalog.filter(
+    (tool) => tool.available && isBuiltInToolGroupEnabled(settings, tool.group, projectKind),
+  );
 }
 
 export function projectBuiltInToolGroups(
   catalog: ReadonlyArray<AgentGatewayCatalogToolEntry>,
-  settings: ServerSettings,
-): ReadonlyArray<BuiltInToolGroup> {
-  return BUILT_IN_TOOL_GROUP_IDS.map((id) => {
+  snapshot: ServerSettingsSnapshot,
+): BuiltInToolGroupsResult {
+  const overrides = snapshot.settings.agentTools.builtInGroupOverrides;
+  const groups = BUILT_IN_TOOL_GROUP_IDS.map((id) => {
     const groupTools = catalog.filter((tool) => tool.group === id);
     const availableToolCount = groupTools.filter((tool) => tool.available).length;
-    const enabled = isBuiltInToolGroupEnabled(settings, id);
-    const availability =
+    const availability: BuiltInToolGroupAvailability =
       availableToolCount === 0
         ? "unavailable"
         : availableToolCount === groupTools.length
@@ -92,8 +94,30 @@ export function projectBuiltInToolGroups(
       toolCount: groupTools.length,
       availableToolCount,
       availability,
-      enabled,
-      effective: enabled && availableToolCount > 0,
+      surfaces: Object.fromEntries(
+        BUILT_IN_TOOL_SURFACES.map((surface) => {
+          const policy = resolveHostGroupSurfacePolicy(id, surface);
+          const configuredEnabled = configuredHostGroupEnabled({
+            group: id,
+            surface,
+            overrides,
+          });
+          return [
+            surface,
+            {
+              supported: policy.supported,
+              defaultEnabled: policy.defaultEnabled,
+              configuredEnabled,
+              effective: policy.supported && configuredEnabled && availableToolCount > 0,
+            },
+          ];
+        }),
+      ) as BuiltInToolGroupsResult["groups"][number]["surfaces"],
     };
   });
+  return {
+    settingsRevision: snapshot.revision,
+    builtInGroupOverrides: overrides,
+    groups,
+  };
 }

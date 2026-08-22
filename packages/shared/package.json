@@ -148,6 +148,10 @@
       "types": "./src/productSurface.ts",
       "import": "./src/productSurface.ts"
     },
+    "./hostToolSurfacePolicy": {
+      "types": "./src/hostToolSurfacePolicy.ts",
+      "import": "./src/hostToolSurfacePolicy.ts"
+    },
     "./projectDirectoryName": {
       "types": "./src/projectDirectoryName.ts",
       "import": "./src/projectDirectoryName.ts"

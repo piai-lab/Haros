@@ -825,8 +825,8 @@ export const makeAgentGateway = Effect.gen(function* () {
       ),
     );
   return {
-    getBuiltInToolGroups: serverSettings.getSettings.pipe(
-      Effect.map((settings) => projectBuiltInToolGroups(tools, settings)),
+    getBuiltInToolGroups: serverSettings.getSnapshot.pipe(
+      Effect.map((snapshot) => projectBuiltInToolGroups(tools, snapshot)),
     ),
     handleMcpPost: makeAgentGatewayMcpTransport({
       credentials,

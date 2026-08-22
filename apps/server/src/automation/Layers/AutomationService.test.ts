@@ -58,6 +58,11 @@ const project: OrchestrationProjectShell = {
   createdAt: now,
   updatedAt: now,
 };
+let activeProjectKind: OrchestrationProjectShell["kind"] = "project";
+
+function activeProject(): OrchestrationProjectShell {
+  return { ...project, kind: activeProjectKind };
+}
 
 const dispatchedCommands: OrchestrationCommand[] = [];
 const createdWorktrees: GitCreateDetachedWorktreeInput[] = [];
@@ -114,6 +119,7 @@ function resetHarness() {
   completionEvaluationGate = null;
   failDispatchType = null;
   dispatchHook = null;
+  activeProjectKind = "project";
 }
 
 // Build a partial thread shell; only the fields reconcileThread reads are populated.
@@ -459,12 +465,12 @@ const projectionSnapshotQuery = {
     Effect.succeed({
       snapshotSequence: 0,
       spaces: [],
-      projects: [project],
+      projects: [activeProject()],
       threads: [],
       updatedAt: now,
     }),
-  getActiveProjectByWorkspaceRoot: () => Effect.succeed(Option.some(project as never)),
-  getProjectShellById: () => Effect.succeed(Option.some(project)),
+  getActiveProjectByWorkspaceRoot: () => Effect.succeed(Option.some(activeProject() as never)),
+  getProjectShellById: () => Effect.succeed(Option.some(activeProject())),
   getSpaceShellById: () => Effect.succeed(Option.none()),
   getFirstActiveThreadIdByProjectId: () => Effect.succeed(Option.none()),
   getThreadCheckpointContext: () => Effect.succeed(Option.none()),
@@ -908,6 +914,65 @@ layer("AutomationService", (it) => {
       assert.strictEqual(result.run.messageId, turnStart.message.messageId);
       assert.strictEqual(result.run.threadCreateCommandId, threadCreate.commandId);
       assert.strictEqual(result.run.turnStartCommandId, turnStart.commandId);
+    }),
+  );
+
+  it.effect("admits Chat automations only while the Chat surface intent is enabled", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      activeProjectKind = "chat";
+      const service = yield* AutomationService;
+      const settings = yield* ServerSettingsService;
+
+      const defaultOff = yield* service.create({ ...createInput("local"), name: "Default off" });
+      const defaultOffError = yield* service
+        .runNow({ automationId: defaultOff.id })
+        .pipe(Effect.flip);
+      assert.match(defaultOffError.message, /unavailable for this work surface/);
+      assert.strictEqual(dispatchedCommands.length, 0);
+
+      yield* settings.updateSettings({
+        agentTools: { builtInGroupOverrides: { chat: { automations: true } } },
+      });
+      const enabled = yield* service.create({ ...createInput("local"), name: "Chat enabled" });
+      const accepted = yield* service.runNow({ automationId: enabled.id });
+      const threadCreate = dispatchedCommands.find(
+        (command) => command.type === "thread.create" && command.projectId === projectId,
+      );
+      assert.strictEqual(accepted.run.status, "running");
+      assert.strictEqual(threadCreate?.type, "thread.create");
+      assert.strictEqual(activeProject().kind, "chat");
+
+      yield* settings.updateSettings({
+        agentTools: { builtInGroupOverrides: { chat: { automations: false } } },
+      });
+      const disabled = yield* service.create({ ...createInput("local"), name: "Chat disabled" });
+      const disabledError = yield* service.runNow({ automationId: disabled.id }).pipe(Effect.flip);
+      assert.match(disabledError.message, /unavailable for this work surface/);
+
+      const listed = yield* service.list({ projectId });
+      const failedRun = listed.runs.find((run) => run.automationId === disabled.id);
+      assert.strictEqual(failedRun?.status, "failed");
+      assert.match(failedRun?.error ?? "", /unavailable for this work surface/);
+      assert.strictEqual(
+        dispatchedCommands.filter((command) => command.type === "thread.create").length,
+        1,
+      );
+    }),
+  );
+
+  it.effect("keeps Studio automations enabled by the Studio surface default", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      activeProjectKind = "studio";
+      const service = yield* AutomationService;
+      const created = yield* service.create({ ...createInput("local"), name: "Studio default" });
+
+      const result = yield* service.runNow({ automationId: created.id });
+
+      assert.strictEqual(result.run.status, "running");
+      assert.strictEqual(dispatchedCommands[0]?.type, "thread.create");
+      assert.strictEqual(activeProject().kind, "studio");
     }),
   );
 

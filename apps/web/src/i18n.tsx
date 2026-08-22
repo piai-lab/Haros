@@ -2220,7 +2220,7 @@ export const EN_MESSAGES = {
     "Review reusable workflows discovered across all configured engines.",
   "settings.usagePanelDescription": "See remaining quota and credits for every signed-in engine.",
   "settings.builtInToolsDescription":
-    "Choose which OmniMind capabilities Agents can discover and use.",
+    "Choose which OmniMind built-in tools are available in Agent, Chat, and Studio.",
   "settings.integrationsDescription":
     "Let Codex, Claude Code, and other local apps connect to and use OmniMind.",
   "settings.advancedDescription":
@@ -3082,7 +3082,10 @@ export const EN_MESSAGES = {
   "settings.builtInToolsForAgents": "Agent access",
   "settings.builtInToolsForAgentsDescription":
     "These controls affect every Agent, including OmniMind Agent. They do not turn off the Browser or Device panels you use directly. New calls are checked immediately; tool lists update in a new session or after a supported reload.",
-  "settings.builtInToolGroups": "Capability groups",
+  "settings.builtInToolGroups": "Tool groups",
+  "settings.builtInToolsForSurfacesDescription":
+    "Choose which built-in tool groups are available in Agent, Chat, and Studio. These settings do not control engine-native tools, skills, or the Browser and Device panels you use directly.",
+  "settings.builtInRestoreRecommended": "Restore recommended defaults",
   "settings.builtInGroupTasks": "Tasks",
   "settings.builtInGroupTasksDescription":
     "Lets Agents inspect, create, coordinate, interrupt, rename, and archive OmniMind tasks.",
@@ -3105,15 +3108,34 @@ export const EN_MESSAGES = {
   "settings.builtInDegraded": "Partially available",
   "settings.builtInUnavailable": "Unavailable",
   "settings.builtInDisabled": "Disabled",
+  "settings.builtInEnabled": "Enabled",
+  "settings.builtInEnabledUnavailable": "Enabled, currently unavailable",
+  "settings.builtInEnabledDegraded": "Enabled, some tools available",
+  "settings.builtInUnsupported": "Not available in this surface",
+  "settings.builtInSaving": "Saving…",
+  "settings.builtInToolCount": "{available} of {total} tools currently available",
+  "settings.builtInGroupSurfaceToggle": "Use {group} in {surface}",
+  "settings.builtInSessionTiming":
+    "Turning a group off takes effect immediately. Re-enabled tools are provided in a new session or after a reload.",
   "settings.builtInToolAvailabilitySummary": "{state} · {available} of {total} tools available",
   "settings.builtInGroupToggle": "Allow Agents to use {group}",
   "settings.loadingBuiltInToolGroups": "Loading built-in tools…",
   "settings.builtInGroupsUnavailable": "Built-in tools are unavailable",
   "settings.builtInGroupsUnavailableDescription":
-    "OmniMind could not load the current Agent capability catalog. Try again after the server reconnects.",
+    "OmniMind could not load the current built-in tool status. Try again after the server reconnects.",
   "settings.builtInUpdateFailed": "Could not update built-in tools",
   "settings.builtInUpdateFailedDescription":
     "OmniMind restored the server's current setting. Try again.",
+  "settings.builtInRefreshFailed": "Setting saved; status could not refresh",
+  "settings.builtInRefreshFailedDescription":
+    "Your choice is saved. OmniMind will refresh the current tool status after reconnecting.",
+  "settings.builtInRefreshFailedInline":
+    "Your choice is saved, but the current tool status could not be refreshed.",
+  "settings.builtInConfirmationFailed": "Could not confirm the setting",
+  "settings.builtInConfirmationFailedDescription":
+    "OmniMind could not confirm whether your choice was saved. It will refresh after reconnecting.",
+  "settings.builtInConfirmationFailedInline":
+    "OmniMind could not confirm whether your choice was saved. The current choice is kept until the server status refreshes.",
   "settings.codingAgent": "External app",
   "settings.copyFailed": "Could not copy",
   "settings.clipboardFailed": "Clipboard access failed.",
@@ -5796,7 +5818,7 @@ export const ZH_CN_MESSAGES = {
   "settings.providersDescription": "选择可见的编码 Agent，并管理已安装的 CLI 工具。",
   "settings.skillsDescription": "查看从所有已配置引擎中发现的可复用工作流。",
   "settings.usagePanelDescription": "查看每个已登录引擎的剩余额度与点数。",
-  "settings.builtInToolsDescription": "选择 Agent 可以发现和使用哪些 OmniMind 能力。",
+  "settings.builtInToolsDescription": "选择 OmniMind 内置工具可在哪些工作面使用。",
   "settings.integrationsDescription": "允许 Codex、Claude Code 等本地应用连接并使用 OmniMind。",
   "settings.advancedDescription": "管理会话、恢复工具、底层快捷键与版本详情。",
   "settings.restoreConfirmTitle": "恢复默认设置？",
@@ -6598,7 +6620,10 @@ export const ZH_CN_MESSAGES = {
   "settings.builtInToolsForAgents": "Agent 访问权限",
   "settings.builtInToolsForAgentsDescription":
     "这些开关作用于所有 Agent，包括 OmniMind Agent；不会关闭你直接使用的浏览器或设备面板。新调用会立即按当前设置检查，工具列表在新会话或受支持的重新加载后更新。",
-  "settings.builtInToolGroups": "能力分组",
+  "settings.builtInToolGroups": "工具组",
+  "settings.builtInToolsForSurfacesDescription":
+    "选择每组内置工具可在哪些工作面使用。这些设置不控制引擎原生工具、技能，也不会关闭你直接使用的浏览器或设备面板。",
+  "settings.builtInRestoreRecommended": "恢复推荐默认",
   "settings.builtInGroupTasks": "任务",
   "settings.builtInGroupTasksDescription":
     "允许 Agent 查看、创建、协调、中断、重命名和归档 OmniMind 任务。",
@@ -6619,14 +6644,31 @@ export const ZH_CN_MESSAGES = {
   "settings.builtInDegraded": "部分可用",
   "settings.builtInUnavailable": "不可用",
   "settings.builtInDisabled": "已关闭",
+  "settings.builtInEnabled": "已开启",
+  "settings.builtInEnabledUnavailable": "已开启，当前不可用",
+  "settings.builtInEnabledDegraded": "已开启，部分工具当前可用",
+  "settings.builtInUnsupported": "此工作面不可用",
+  "settings.builtInSaving": "正在保存…",
+  "settings.builtInToolCount": "当前 {available}/{total} 个工具可用",
+  "settings.builtInGroupSurfaceToggle": "在{surface}中使用{group}",
+  "settings.builtInSessionTiming": "关闭会立即生效。重新启用的工具会在新会话或重新加载后提供。",
   "settings.builtInToolAvailabilitySummary": "{state} · {available}/{total} 个工具可用",
   "settings.builtInGroupToggle": "允许 Agent 使用{group}",
   "settings.loadingBuiltInToolGroups": "正在加载内置工具…",
   "settings.builtInGroupsUnavailable": "内置工具不可用",
   "settings.builtInGroupsUnavailableDescription":
-    "OmniMind 无法加载当前 Agent 能力目录；请在服务器重新连接后重试。",
+    "OmniMind 无法加载当前内置工具状态；请在服务器重新连接后重试。",
   "settings.builtInUpdateFailed": "无法更新内置工具",
   "settings.builtInUpdateFailedDescription": "OmniMind 已恢复服务器当前设置，请重试。",
+  "settings.builtInRefreshFailed": "设置已保存，但无法刷新状态",
+  "settings.builtInRefreshFailedDescription":
+    "你的选择已经保存；OmniMind 会在重新连接后刷新当前工具状态。",
+  "settings.builtInRefreshFailedInline": "你的选择已经保存，但当前工具状态暂时无法刷新。",
+  "settings.builtInConfirmationFailed": "无法确认设置结果",
+  "settings.builtInConfirmationFailedDescription":
+    "OmniMind 暂时无法确认你的选择是否已保存；重新连接后会刷新服务器状态。",
+  "settings.builtInConfirmationFailedInline":
+    "OmniMind 暂时无法确认你的选择是否已保存；在服务器状态刷新前会保留当前选择。",
   "settings.codingAgent": "外部应用",
   "settings.copyFailed": "复制失败",
   "settings.clipboardFailed": "无法访问剪贴板。",
