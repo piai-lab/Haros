@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-`codex/host-tools-product-surface-policy` 正在从已合并的三工作面 `main@5451e22ce8` 实施并验收六组内置工具的 Agent/Chat/Studio 策略。代码已完成 Contracts、pure policy、ServerSettings v4 migration/atomic snapshot、AgentGateway read/list/call、Goal/Automation admission 与三列表格 UI 的主链路；当前动作是闭合文档、全量门禁、exact pushed-SHA Desktop/DMG与隔离fresh-profile journey。尚未完成packaged验收、合并main或分支清理，不得把本brief当成已发行证据。
+`codex/host-tools-product-surface-policy` 已从三工作面 `main@5451e22ce8` 完成六组内置工具的 Agent/Chat/Studio 策略与 source gates。exact pushed code SHA `586c9661e5` 已重建 Desktop/DMG、替换安装并用任务专用 `userData`、home 与 Provider private home 完成隔离 fresh-profile 验收；当前只剩安全合并最新 main、post-merge gate、push 与任务分支/worktree 清理。本交付仍是本机 ad-hoc candidate，不是签名、公证或 Release 证据。
 
 ## 唯一 owner 与当前事实
 
@@ -14,15 +14,12 @@
 - Host guidance与Session schema同生命周期。关闭立即拒绝旧Session的新call；重新开启只在新Session或真实native reload后提供。Todo、Engine-native tools、Skills、Prompts、Packages、Extensions、sandbox/approval和Browser/Device人类UI均不受此矩阵控制。
 - Goal continuation与Automation新run在既有lifecycle admission重新消费当前surface policy；关闭Chat Goals使用既有pause，关闭Chat Automations使未admit新run进入既有failed路径，不新增状态机且不伪取消in-flight。
 
-## 当前验收顺序
+## 已闭合证据与剩余顺序
 
-1. contracts/shared/server/web focused tests、typecheck、i18n与changed-path lint；
-2. AgentGateway、Goal、Automation完整受影响测试与Web browser matrix测试；
-3. 相关全量test/build及一次有目的Browser gate，既有flaky只按稳定性和diff相关性处置，不抽奖式刷绿；
-4. 同步最新main，按policy/settings、Gateway/lifecycle、Web/i18n、docs/evidence分关注点commit并push；
-5. 只从exact pushed SHA构建Desktop与DMG，停止现存App，以任务专用userData/home/Provider private home安装启动并证明隔离；
-6. fresh profile验证三面矩阵、四种状态、保存/刷新异常、Chat Goal/Automation、旧Session disable、关闭重开；资源匹配时用MiMo与DeepSeek做最小真实证伪；
-7. packaged candidate通过后合并并push main，记录exact证据，确认clean/no-unpushed后只删除本任务分支与worktree。
+1. focused/full source gates、root typecheck/build、changed-path lint与Settings Browser 10/10已通过；全量并行Browser harness只保留已证实与本diff无关的baseline/负载边界，不用旁支Timeline改动刷绿。
+2. exact pushed `586c9661e5` 生成DMG SHA-256 `cd97b9dd…51ece`，DMG与安装后的`app.asar`均为`3cdb313e…b784`；安装版进程使用隔离profile且bundled Server来自安装包。
+3. 安装版中文/英文矩阵、Agent/Chat/Studio默认、unsupported文案、真实815px窄屏分层、Chat Goals写入`revision=1`、关闭重开恢复均通过；App最小窗口约815px，390px由浏览器组件回归覆盖。
+4. 合并最新main并重跑必要post-merge gate，push main；随后确认没有本任务未推送commit，只删除已合并的本任务worktree与本地/远端分支。真实用户profile与并行research修改不得读取、改写或清理。
 
 ## Stop-loss
 
