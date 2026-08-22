@@ -116,7 +116,7 @@ function serverSettings(
       ...overrides,
     },
     skills: { disabled: [] },
-    agentTools: { disabledBuiltInGroups: [] },
+    agentTools: { builtInGroupOverrides: {} },
   };
 }
 

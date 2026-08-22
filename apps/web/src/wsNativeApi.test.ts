@@ -378,7 +378,7 @@ describe("wsNativeApi", () => {
           pi: { enabled: true, binaryPath: "pi", agentDir: "", customModels: [] },
         },
         skills: { disabled: [] },
-        agentTools: { disabledBuiltInGroups: [] },
+        agentTools: { builtInGroupOverrides: {} },
       },
     } as const;
     emitPush(WS_CHANNELS.serverSettingsUpdated, payload);
