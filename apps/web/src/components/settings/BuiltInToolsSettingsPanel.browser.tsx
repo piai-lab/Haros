@@ -14,6 +14,7 @@ import {
 } from "@omnimind/contracts";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { page } from "vitest/browser";
 import { render } from "vitest-browser-react";
 
 import { serverQueryKeys } from "~/lib/serverReactQuery";
@@ -140,6 +141,53 @@ describe("BuiltInToolsSettingsPanel", () => {
     await screen.unmount();
     queryClient.clear();
   });
+
+  it.each([
+    { viewportWidth: 1_100, contentWidth: 700, expectedColumns: 4 },
+    { viewportWidth: 815, contentWidth: 451, expectedColumns: 1 },
+    { viewportWidth: 390, contentWidth: 390, expectedColumns: 1 },
+  ])(
+    "keeps the matrix readable without horizontal overflow at $viewportWidth px",
+    async ({ viewportWidth, contentWidth, expectedColumns }) => {
+      await page.viewport(viewportWidth, 768);
+      const current = projection();
+      window.nativeApi = {
+        server: {
+          getBuiltInToolGroups: vi.fn().mockResolvedValue(current),
+          updateSettings: vi.fn(),
+        },
+      } as unknown as NativeApi;
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      queryClient.setQueryData(serverQueryKeys.builtInToolGroups(), current);
+      const screen = await render(
+        <div data-testid="matrix-host" style={{ width: `${contentWidth}px`, maxWidth: "100%" }}>
+          <QueryClientProvider client={queryClient}>
+            <BuiltInToolsSettingsPanel active />
+          </QueryClientProvider>
+        </div>,
+      );
+
+      const host = screen.getByTestId("matrix-host").element();
+      const taskTitle = screen.getByText("Tasks", { exact: true }).element();
+      const taskRow = taskTitle.parentElement?.parentElement;
+      const taskControls = screen.getByRole("switch", { name: "Use Tasks in Agent" }).element()
+        .parentElement?.parentElement;
+      expect(taskRow).not.toBeNull();
+      expect(taskControls).not.toBeNull();
+      expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
+      expect(getComputedStyle(taskRow!).gridTemplateColumns.split(" ")).toHaveLength(
+        expectedColumns,
+      );
+      expect(getComputedStyle(taskControls!).gridTemplateColumns.split(" ")).toHaveLength(3);
+      if (viewportWidth < 1_024) {
+        expect(taskTitle.getBoundingClientRect().width).toBeGreaterThan(contentWidth * 0.75);
+      }
+
+      await screen.unmount();
+      queryClient.clear();
+      await page.viewport(1_280, 720);
+    },
+  );
 
   it("serializes rapid cross-surface toggles and submits complete override maps", async () => {
     const first = deferred<ServerSettingsView>();

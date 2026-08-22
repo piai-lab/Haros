@@ -305,7 +305,7 @@ export function BuiltInToolsSettingsPanel(props: { active: boolean }) {
           </p>
         ) : null}
         <SettingsCard divided={false} className="overflow-hidden">
-          <div className="hidden grid-cols-[minmax(0,1fr)_repeat(3,minmax(5.5rem,0.28fr))] gap-3 border-b border-border/50 px-4 py-2.5 text-[11px] font-medium text-muted-foreground sm:grid">
+          <div className="hidden grid-cols-[minmax(0,1fr)_repeat(3,minmax(5.5rem,0.28fr))] gap-3 border-b border-border/50 px-4 py-2.5 text-[11px] font-medium text-muted-foreground lg:grid">
             <span>{t("settings.builtInToolGroups")}</span>
             {BUILT_IN_TOOL_SURFACES.map((surface) => (
               <span key={surface} className="text-center">
@@ -317,7 +317,7 @@ export function BuiltInToolsSettingsPanel(props: { active: boolean }) {
             {groupsQuery.data?.groups.map((group) => (
               <div
                 key={group.id}
-                className="grid gap-3 px-4 py-3.5 sm:grid-cols-[minmax(0,1fr)_repeat(3,minmax(5.5rem,0.28fr))] sm:items-center"
+                className="grid gap-3 px-4 py-3.5 lg:grid-cols-[minmax(0,1fr)_repeat(3,minmax(5.5rem,0.28fr))] lg:items-center"
               >
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-foreground">
@@ -333,7 +333,7 @@ export function BuiltInToolsSettingsPanel(props: { active: boolean }) {
                     })}
                   </p>
                 </div>
-                <div className="grid grid-cols-3 gap-2 sm:contents">
+                <div className="grid grid-cols-3 gap-2 lg:contents">
                   {BUILT_IN_TOOL_SURFACES.map((surface) => {
                     const projection = group.surfaces[surface];
                     const configuredEnabled = optimisticConfiguredEnabled({
@@ -362,7 +362,7 @@ export function BuiltInToolsSettingsPanel(props: { active: boolean }) {
                           !projection.supported && "bg-muted/35",
                         )}
                       >
-                        <span className="text-[10px] font-medium text-muted-foreground sm:hidden">
+                        <span className="text-[10px] font-medium text-muted-foreground lg:hidden">
                           {t(SURFACE_COPY[surface])}
                         </span>
                         {projection.supported ? (
