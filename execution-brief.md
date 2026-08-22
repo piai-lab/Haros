@@ -2,7 +2,7 @@
 
 ## 当前目标
 
-`codex/host-tools-product-surface-policy` 已从三工作面 `main@5451e22ce8` 完成六组内置工具的 Agent/Chat/Studio 策略与 source gates。exact pushed code SHA `586c9661e5` 已重建 Desktop/DMG、替换安装并用任务专用 `userData`、home 与 Provider private home 完成隔离 fresh-profile 验收；当前只剩安全合并最新 main、post-merge gate、push 与任务分支/worktree 清理。本交付仍是本机 ad-hoc candidate，不是签名、公证或 Release 证据。
+六组内置工具的 Agent/Chat/Studio 策略已由exact pushed code SHA `586c9661e5`实现并通过merge `d4989f5cee`进入main。该code SHA已重建Desktop/DMG、替换安装，并用任务专用`userData`、home与Provider private home完成隔离fresh-profile验收；post-merge focused gates与root typecheck均通过。当前没有未完成的Host矩阵产品施工；本交付仍是本机ad-hoc candidate，不是签名、公证或Release证据。
 
 ## 唯一 owner 与当前事实
 
@@ -19,7 +19,7 @@
 1. focused/full source gates、root typecheck/build、changed-path lint与Settings Browser 10/10已通过；全量并行Browser harness只保留已证实与本diff无关的baseline/负载边界，不用旁支Timeline改动刷绿。
 2. exact pushed `586c9661e5` 生成DMG SHA-256 `cd97b9dd…51ece`，DMG与安装后的`app.asar`均为`3cdb313e…b784`；安装版进程使用隔离profile且bundled Server来自安装包。
 3. 安装版中文/英文矩阵、Agent/Chat/Studio默认、unsupported文案、真实815px窄屏分层、Chat Goals写入`revision=1`、关闭重开恢复均通过；App最小窗口约815px，390px由浏览器组件回归覆盖。
-4. 合并最新main并重跑必要post-merge gate，push main；随后确认没有本任务未推送commit，只删除已合并的本任务worktree与本地/远端分支。真实用户profile与并行research修改不得读取、改写或清理。
+4. merge `d4989f5cee`后的Shared/Contracts 15项、Server 412项、Settings Browser 10项及root typecheck 6/6通过；另以独立测试维护提交修正两个既有`@synara/contracts`陈旧导入。真实用户profile与并行research修改未被读取、改写或清理。
 
 ## Stop-loss
 
