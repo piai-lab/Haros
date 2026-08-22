@@ -61,7 +61,15 @@ function snapshot(input: {
     workflow: input.workflow ?? "summary-review",
     capabilityStatus: "possible",
     providers: [
-      provider("tavily", "Tavily", [field("tavilyApiKey", input.tavilyKey ?? null, "TAVILY_API_KEY")]),
+      {
+        ...provider("tavily", "Tavily", [field("tavilyApiKey", input.tavilyKey ?? null, "TAVILY_API_KEY")]),
+        icon: {
+          kind: "local-asset" as const,
+          assetId: "tavily",
+          assetPath: "/web-access/provider-icons/tavily.svg",
+          admission: "admitted" as const,
+        },
+      },
       {
         ...provider("gemini", "Gemini", [field("geminiApiKey", null, "GEMINI_API_KEY")]),
         prerequisite: "gemini" as const,
@@ -122,7 +130,9 @@ describe("WebSearchSettingsPanel", () => {
     expect(document.body.textContent).not.toContain("Enable Web search");
 
     await page.getByRole("button", { name: "Add service" }).click();
-    expect(document.querySelectorAll('[data-provider-icon-kind="neutral"]')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-provider-icon-kind="local-asset"]')).toHaveLength(1);
+    expect(document.querySelector<HTMLImageElement>('img[src="/web-access/provider-icons/tavily.svg"]')?.className).toContain("dark:invert");
+    expect(document.querySelectorAll('[data-provider-icon-kind="neutral"]')).toHaveLength(1);
     await expect.element(page.getByText(/API key required · Not configured/)).toBeVisible();
     await page.getByRole("button", { name: "Edit" }).first().click();
     const keyInput = page.getByRole("textbox", { name: "tavilyApiKey" });
