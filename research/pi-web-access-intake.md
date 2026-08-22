@@ -2,7 +2,7 @@
 
 > 观察与收口日期：2026-08-22
 >
-> OmniMind 工作区基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；该分支当前另有 Host Tools / Settings 在途修改，本文不把它们写成 Web Access 已实施事实。
+> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。Host Tools / Settings 已进入 main，但 Web Access 仍未实施，二者不能互相外推。
 >
 > 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
 >
@@ -30,7 +30,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | --- | --- |
 | 产品名 | `OmniMind Web Access` |
 | package 名 | `@omnimind/om-web-access` |
-| 来源模式 | 保留 Git ancestry 的有界深 fork，不把 26k 行源码散抄进 OmniMind monorepo |
+| 来源模式 | OmniMind monorepo 私有 workspace package 内的有界深 fork；集中保留 exact 上游结构、作者测试、license 与可重复 diff，不建立独立 GitHub fork |
 | 受支持宿主 | 仅 OmniMind 官方发行版内的 bundled OmniMind Agent exact runtime |
 | stock Pi | 不安装、不注册、不测试、不承诺兼容；stock Pi 用户继续使用上游 `pi-web-access` |
 | Engine 范围 | 仅 canonical `provider === "omnimind"`；Codex、Claude、OpenCode、stock Pi 等保留各自 native web 能力 |
@@ -38,14 +38,22 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 明确非 owner | AgentGateway、Host Built-in policy、跨 Engine Tool Registry、Product Orchestration、Thread、Timeline、Workbench |
 | 工具名 | 保留 `web_search`、`source_check`、`fetch_content`、`get_search_content`，不允许产品 profile 改名 |
 | Curator | 默认 `summary-review`；进入当前 Thread 的 Right Dock Browser；不自动打开系统浏览器 |
+| Curator Tab | 每个 pending tool call 使用独立、短时、非历史 Browser Tab；第一次创建、之后按 exact tool call 聚焦或重开，不能复用并改写用户当前 Tab；控制台 internal-only |
+| 关闭语义 | 关闭 Curator Tab、Right Dock 或隐藏 Browser 只关闭展示；call terminal 只清理该 call，Run abort 只中止该 Run，Session shutdown 才清理整个 Extension instance |
+| Curator 语言/主题 | 创建时消费当前 OmniMind locale 与 resolved light/dark theme 的短时展示快照，不跟随 OS/browser 猜测，也不建立第二设置 owner |
 | Slash commands | OmniMind profile 不注册 `/websearch`、`/curator`、`/search`、`/google-account` |
 | TUI shortcuts/widget | OmniMind profile 不注册 `Ctrl+Shift+S`、`Ctrl+Shift+W` 或 TUI activity widget |
 | Settings 主开关 | 不提供“启用网络搜索”总开关；一级能力一直可见，当前不可用时准确说明并提供配置/重试 |
 | 配置真相 | `.omnimind/agent/web-search.json` 是唯一 canonical 配置；UI 与文件双向同步，不建数据库副本 |
+| 默认文件创建 | 首次进入 Web Search Settings 或首次启动 OmniMind Agent Session 时创建，谁先发生谁创建；App 启动本身不 ambient write |
 | API Key | Settings 可读取、完整显示、复制和编辑 literal key；`$ENV`、`!command` 也显示其原始配置表达式 |
 | 零配置 | 保留 keyless Exa MCP 等上游路径，但绝不宣传为无限免费或永久可用 |
+| 自动检测 | 惰性真实检测：不在 App/Session 启动时探测；首次真实搜索或用户显式“重新检查”才运行 canonical route，可能消耗额度 |
 | 不可用处理 | 真正没有可用搜索路径时，只从该 Pi Session 的 active set 移除 `web_search` 与 `source_check`；保留两个 content 工具 |
 | `source_check` | 保留结构化 ResearchArtifact 与精确 passages；把 claim 判断明确降级为 heuristic，并补 Unicode/中文匹配 |
+| 能力图标 | OmniMind Web Access 的通用图标固定为现有 `globe`；不为同一功能发明第二个图标 |
+| 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
+| 图标来源 | runtime Provider定义与presentation字段同源；本地固定资产须单独闭合来源、revision/hash、license与trademark，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
 | 当前实施状态 | 尚未进入产品依赖、composition、Settings 或发行物；本文不能被引用为“功能已经可用” |
 
@@ -73,7 +81,7 @@ OmniMind Agent / Pi AgentSession
 不经过：AgentGateway → Host Built-in groups → cross-Engine projection
 ```
 
-### 0.4 没有剩余产品级问题
+### 0.4 产品方向已收敛，仍有发布前证据门
 
 维护者已经裁决 package identity、支持范围、Curator 默认、Settings key 可见性、配置双向同步、零配置失效处理、`source_check` 保留方式以及非 Host 边界。后续允许实现者在既有 owner 内选择局部可逆写法，但不得重新打开以下已否决方向：
 
@@ -83,6 +91,12 @@ OmniMind Agent / Pi AgentSession
 - stock Pi 双运行时兼容 profile；
 - OmniMind 自建搜索 Provider Registry、健康 daemon、结果数据库或第二 Extension Manager；
 - 为保留 TUI 命令而占用 OmniMind 的 `/` 注意力。
+
+这不等于“任何图片都可直接随产品发布”。Provider集合随上游演进、品牌资产再分发权、同源descriptor parity、多Thread隔离和真实route exhaustion仍是必须以exact upstream baseline与monorepo candidate证明的实施/发行门；它们不能被HTML原型或“官方网站能显示”替代。
+
+2026-08-22维护者进一步裁决来源形态：不创建独立GitHub fork或第二发布管道，完整上游源码集中内置为OmniMind monorepo私有workspace package。这里的“保留来源”只表示记录exact upstream commit/version/license、保留原结构与作者测试并维护可重复upstream diff/P1–P6 inventory，不暗示存在GitHub fork ancestry；`research/pi-web-access-intake.md`继续作为未来升级的唯一package-specific入口。
+
+2026-08-22维护者进一步确认Curator ephemeral Tab完全internal-only：只对该控制台隐藏`Open externally`、raw-link copy与raw token展示；普通Browser Tab不受影响，结果来源链接先进入普通OmniMind Browser Tab后仍可由用户显式外部打开。该收口属于P4 Host presentation，不增加第七个fork patch seam。
 
 ## 1. 为什么要 fork，但不能重写
 
@@ -172,6 +186,8 @@ Peer dependencies 当前都是 wildcard：
 - 普通产品 UI 只使用 OmniMind Web Access 品牌；不在 Curator、Settings 或普通 Tool 文案中显示 `pi-web-access`。
 - 上游名称与作者进入 fork README、LICENSE/NOTICE、source headers、About/Licenses、诊断和本 intake。
 - package 改名不抹掉 lineage，也不把上游代码伪装成从零第一方原创。
+- Provider logo、app icon与favicon不是上游MIT自动覆盖的代码资产。每个实际随App分发的品牌文件都要独立记录原始source、抓取/固定revision、内容hash、许可或trademark disposition和本地shipped path；不能因为来自官网就默认获得再分发权。
+- Bright Data的官方[Trademark Usage Guidelines](https://media.brightdata.com/2022/12/Permitted-Use-of-Bright-Datas-Trademark-Name.pdf)明确把logo使用置于书面同意之下。因此本轮HTML可将官方mark用于内部视觉比较，但production package在获得可审计许可前不得随包分发该mark，必须使用中性fallback。其他官方favicon尚未完成逐项再分发权核验，也不能从“未看到禁止条款”反推已获许可。
 
 ## 3. 上游能力全图
 
@@ -387,7 +403,8 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 上游 `getWebSearchConfigDir()` 依赖 process-global 环境，且 30 个模块各自拥有 `cachedConfig`，只有 4 个暴露 reset/clear。Fork 必须：
 
 - 从 Session composition 显式注入 `.omnimind/agent/web-search.json`；
-- 所有 Provider 通过一个 Extension-owned config reader/snapshot 读取；
+- fork package 导出一个 package-owned config read/mutation service；Settings 可在没有 Pi Session / Extension instance 时调用，同一服务也由每个 Extension instance 消费；
+- 所有 Provider 通过该单一 config reader/snapshot 读取；
 - 删除 module-local 配置真相；
 - 保留 unknown fields；
 - 支持 schema validation、revision/digest conflict 和同目录 atomic replace；
@@ -412,9 +429,19 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 ### P4. Host-presentable、双语、自包含 Curator
 
 - `ctx.hasUI === false` 不能再强制 `summary-review → none`；应区分 Pi TUI 与 OmniMind Host-presentable Web surface；
-- 继续使用 ephemeral loopback server + token，但交给现有 engine-web-surface intent bridge；
+- 继续使用 ephemeral loopback server + token，但 fork 的主合同必须通过 typed Curator presentation seam 交给现有 engine-web-surface intent bridge；递归扫描任意 tool-result 字符串只能是旧兼容证据，不能成为 `@omnimind/om-web-access` 的长期接口；
 - 当前 Thread、Engine、Tool call provenance 和 TTL 必须齐全；
-- 页面默认在 Right Dock，不能抢 Composer focus、覆盖 route 或自动外部打开；
+- 页面默认在 Right Dock，第一次为该 tool call 创建独立 Tab，不能 `reuse` 并导航用户当前 Tab；后续 presentation 按 exact tool call 聚焦原 Tab，原 Tab 已关闭时才重建；
+- Browser owner 的内部 typed presentation seam 返回并复用 `tabId`，原子标记该 Tab 为 ephemeral/non-history；不得为此扩张 Agent 可见的 `browser_open` schema，也不得建立 Curator tab store；
+- ephemeral Curator Tab由同一presentation metadata派生internal-only chrome：隐藏external-open、raw-link copy与raw token地址，不创建第二toolbar状态；来源链接打开为普通Browser Tab，之后服从普通Browser行为；
+- per-call presentation handle 只在当前运行内存保存 `threadId/toolCallId/tabId/url/expiry` 等最小事实；Timeline action 携带 exact tool call identity，不能只展开通用 Browser pane；
+- 关闭 Tab、关闭 Right Dock 或隐藏 Browser 只关闭展示，tool call 与 Curator server继续等待；在 token/Curator仍有效时可从对应 Timeline activity重开；
+- 单个tool call terminal只清理该call自己的Curator server、stream、timer、request、presentation handle与临时资源，不能清理同Session其他并发call或revision listener；Run abort只中止属于该Run的in-flight calls；`session_start/session_tree`保留上游语义但只作用于当前Extension instance及对应branch；`session_shutdown`才清理整个instance的剩余请求、cache、storedResults、listener与临时资源；
+- 可恢复presentation失败保持pending并允许retry；Curator server/protocol或Host handoff不可恢复失败必须typed-error settle并按call scope cleanup，不能永久pending或只等idle timeout；terminal后不保留可重放Curator页面；
+- ephemeral Tab 的token URL不得进入Browser recent history、localStorage、持久tab restore、Product event、Timeline raw payload、log、screenshot或diagnostics；loopback response必须使用no-store/no-referrer等短时页面边界，persistent Browser partition也不得把它变成恢复数据；
+- Curator创建时接收当前OmniMind locale与resolved light/dark theme的短时presentation snapshot；不依赖OS `Accept-Language` / `prefers-color-scheme`，不监听全局设置，也不建立第二locale/theme owner；
+- 页面不能抢 Composer focus、覆盖 route 或自动外部打开；
+- 只有owning Thread正处于前台时才自动呈现；后台/非当前Thread只投影既有waiting-for-user activity/attention，不能切换route或抢占当前Right Dock。用户进入该Thread后可按exact activity打开；若一直忽略，继续服从上游idle timeout与deterministic settlement，不建立后台Curator调度器；
 - `curatorRemote` 在 OmniMind profile 恒不可用；
 - 页面改为 OmniMind 品牌和现有 Workbench tokens，完整简中/英文；
 - 移除 Google Fonts 和 jsDelivr `marked` CDN，改用本地/系统字体与 pinned local markdown renderer；
@@ -423,7 +450,7 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 
 ### P5. Provider availability → Pi active set
 
-不建 health daemon、后台轮询、付费 startup probe、cooldown service 或 Host loader。
+不建 health daemon、后台轮询、App/Session启动探测、cooldown service 或 Host loader。自动检测固定为惰性真实检测：Session init只计算结构候选，不发网络请求；第一次真实`web_search`沿canonical route得到availability证据。用户显式点“重新检查”时运行同一最小真实route，并在动作前说明可能消耗Provider额度；它不是无成本ping，也不生成永久“已连接”结论。
 
 状态只来自两类证据：
 
@@ -448,7 +475,7 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 - 不覆盖用户或 foreign owner 对 active set 的显式改变；
 - 工具表变化按 Pi native prompt rebuild 进入下一 turn，不自建 per-turn schema controller。
 
-恢复触发：Settings 成功保存、用户点“重新检查”、native reload 或新 Session。没有后台 timer。`fetch_content` 与 `get_search_content` 始终保留，因为本地 PDF、GitHub、direct URL、缓存读取等不依赖 search Provider。
+恢复触发：Settings 成功保存、用户点“重新检查”、native reload 或新 Session。package-owned config service只有在atomic commit/显式refresh成功后发布一次进程内revision invalidation；当前live Extension instances各自重新评估并只恢复自己移除的两个工具，listener随Session cleanup，不持久化availability、不维护Session registry。外部文件编辑没有watcher，必须由Settings refresh、native reload或新Session重新读入。没有后台 timer。`fetch_content` 与 `get_search_content` 始终保留，因为本地 PDF、GitHub、direct URL、缓存读取等不依赖 search Provider。
 
 ### P6. `source_check` honest evidence contract
 
@@ -464,7 +491,7 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 
 当前 canonical directory 是 OmniMind private home 下的 `.omnimind/agent`，因此普通本机形态等价于 `~/.omnimind/agent/web-search.json`；精确根仍由现有 `resolveOmniMindAgentDir` / bundled runtime owner 解析，不能由 Renderer 提交绝对路径，也不能从 `HOME`、cwd 或 stock `.pi` 猜测。
 
-首次 bundled Extension 初始化且文件缺失时，按维护者“默认出一个文件”的决定原子创建最小配置：
+首次进入 Web Search Settings 或首次启动 bundled OmniMind Agent Session 时，谁先发生谁通过同一个 package-owned config service 在文件缺失时原子创建最小配置：
 
 ```json
 {
@@ -474,7 +501,7 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 }
 ```
 
-创建失败不伪装成功：runtime 可继续使用同值内存默认，但 Settings 要显示文件不可写与恢复动作。读取或打开 Settings 不得持续改写 mtime；已存在文件不做格式化重写。
+App 启动、普通 Chat/Agent 页面和被动 readiness 投影本身不创建文件。Settings 创建路径不得实例化 Pi Session、执行 Extension、探测 Provider 或发网络请求；Session 创建路径也不能拥有第二套 writer。创建失败不伪装成功：runtime 可继续使用同值内存默认，但 Settings 要显示文件不可写与恢复动作。读取或重复打开 Settings 不得持续改写 mtime；已存在文件不做格式化重写。
 
 ### 6.2 双向同步语义
 
@@ -484,13 +511,16 @@ Settings UI ─┐
 高级用户文件 ┘
 ```
 
-- UI snapshot 返回完整配置、unknown fields、safe path、revision/digest 和 Provider presentation manifest；
+- UI snapshot 返回完整配置、unknown fields、safe display path、revision/digest 和 Provider presentation manifest；Renderer不得提交绝对路径，“打开配置文件”由Server/package从resolved OmniMind Agent directory重新推导；
 - UI 保存携带 expected revision，Server/Extension在同一临界区重读、校验、合并 unknown fields、atomic replace；
+- package唯一拥有`schemaVersion`、known-schema parser与有界migration；已知旧版本只在显式保存/变更的原子commit中升级，单纯read不改写文件；
+- unknown fields必须round-trip；损坏JSON或高于当前实现的schema fail closed并保留原文件，返回typed error与打开文件/刷新等恢复动作，不得自动覆盖、降级或另建Host迁移/quarantine数据库；
 - 外部文件编辑在下次 tool call 一定生效；Settings reopen、窗口重新聚焦或显式“刷新”时重新读取；
-- 页面已修改且文件外部变化时保留 draft并显示 conflict，不能静默覆盖；
+- 页面已修改且文件外部变化时保留 draft并显示 conflict，不能静默覆盖、自动更新expected revision或自动重试；只有用户明确重新加载或以当前草稿继续时才能再次mutation；
 - 不做常驻 file watcher、daemon、双写 DB 或 periodic sync；
 - provider/routing/workflow/key 等普通运行参数在下一次 tool call 生效；
 - OmniMind product profile 的 tools、commands、shortcuts、tool names、remote Curator 与 browser-open policy是固定结构，不从用户文件热改，也不因此形成 reload 设置。
+- 首次创建使用no-clobber原子创建，竞态中不覆盖已经出现的文件；mutation使用同目录atomic replace与private file mode（支持的平台为`0600`）；no-op保存不写文件、不改mtime、不发布revision invalidation。这只保护literal key所在的唯一canonical文件，不改变维护者已确认的完整key回读产品行为。
 
 从上游配置复制来的以下字段应保留 bytes 但准确标为 OmniMind profile 不支持，不能静默取得运行权：
 
@@ -538,7 +568,8 @@ Settings UI ─┐
    - key 完整 reveal/copy/edit；
    - base URL/model/zone/profile 等真实字段；
    - 保存、取消、清除、测试；
-   - 测试只调用该 Provider 的最小真实 request，不改变默认 routing。
+   - 测试把当前完整未保存Provider draft作为request-scoped candidate snapshot，走同一正式Provider runtime发起最小真实request；明确提示“不会保存，可能消耗额度”，不写canonical文件、不改变默认routing/active set、不生成永久“已连接”状态，成功后仍由用户主动保存；
+   - 同一次显式测试按request identity single-flight；不合并正常`web_search`、不跨Session共享请求或取消语义，config service不接管Provider请求生命周期；外部文件冲突时draft仍可测试，但保存继续服从expected revision/conflict。
 4. **Routing / 搜索方式**
    - `Auto` 为推荐默认；
    - 单 Provider严格模式；
@@ -553,22 +584,53 @@ Settings UI ─┐
 6. **Content & advanced / 网页读取与高级选项**
    - GitHub clone、PDF、video、max inline content、domain policy、remote hosted fetch opt-in；
    - Gemini browser-cookie、`authFetch`、SSRF ranges、custom headers、command credential source 等高风险/复杂结构可以只提供清楚的 file-only 标识和“打开配置文件”，不伪造半套 GUI；
-   - `curatorRemote`、slash commands、shortcuts、tool names 永远不显示，因为 OmniMind profile 不支持。
+   - `curatorRemote`、slash commands、shortcuts、tool names 永远不显示，因为 OmniMind profile 不支持；
+   - Gemini Web启用cookie路径时，在Provider detail/技术诊断显示当前Chromium profile/account，作为不注册`/google-account`后的产品替代；不恢复slash command。
 
-### 6.5 Provider manifest 是 presentation 投影，不是第二 Registry
+Settings不建设任意JSON Schema/form DSL。package presentation只使用满足当前26个Provider常用路径的closed field vocabulary（`secret/text/url/select/boolean/integer`及key/endpoint/model/zone/profile等稳定field identity）；无法诚实表达的复杂结构保持file-only。未来真实第二种表单消费者出现前，不抽象通用配置平台。
 
-Fork 应导出一份静态、versioned、credential-blind provider presentation manifest，至少包含：
+### 6.5 Provider descriptor 是同源 presentation 投影，不是第二 Registry
+
+Fork 应让presentation字段附着在runtime Provider定义的同一exact descriptor/index上，并导出versioned、credential-blind projection，至少包含：
 
 - stable provider ID / display name；
 - zero-config / auth / key / endpoint prerequisite；
 - auto/all/explicit-only participation；
 - UI-supported fields 与 advanced-file-only fields；
 - cost/remote-fetch hints；
-- optional local icon identity。
+- optional local icon identity与asset-admission状态。
 
-Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provider 清单；manifest 也不决定运行时 availability、路由或 credentials，不是 Provider Registry。测试必须保证所有 `RESOLVED_SEARCH_PROVIDERS` 恰好被 manifest 覆盖一次。
+Server只把这份projection投影给Web。Web不再手写第二个26-Provider清单；不得另外维护一个会独立增删Provider的静态manifest。presentation字段也不决定runtime availability、路由或credentials，不是Provider Registry。测试必须保证所有`RESOLVED_SEARCH_PROVIDERS`恰好被descriptor覆盖一次；新增/删除Provider若缺少presentation信息只能使用明确fallback，不能从UI消失或阻塞runtime。
 
-### 6.6 明确不提供的 UI
+### 6.6 本轮图标调研结论与生产准入
+
+本轮已完成26个resolved identity的HTML视觉原型，所有行都有可辨识图标，且HTML自包含、无运行时网络资产。候选字节已拆分保存到[`research/prototypes/pi-web-access-provider-icons/`](prototypes/pi-web-access-provider-icons/README.md)，其中记录26→25 alias、文件大小、SHA-256、来源类别与准入缺口。该原型与候选目录只证明**映射与视觉方向**，不是production asset registry，也不证明商标再分发权。
+
+| Provider identity | 接受的视觉映射 | 本轮候选来源 | Production disposition |
+| --- | --- | --- | --- |
+| SearXNG、OpenAI、Exa、Brave、Search1API、Tavily、Firecrawl、Jina Search、Kagi、Bocha、Ollama Cloud、Perplexity、Gemini、xAI | 对应服务品牌标记 | 现有OmniMind依赖的`@lobehub/icons-static-svg`候选 | exact版本与MIT/上游品牌边界复核后本地按需打包 |
+| Parallel、Parallel MCP | 同一个Parallel品牌标记；`MCP`只用名称/说明表达 | Parallel官方symbol候选 | 两个runtime ID共享一个asset identity；权利闭合后本地打包 |
+| TinyFish | TinyFish app icon | 官方站点/app asset候选 | 权利与hash闭合前仅为原型候选 |
+| Searchinfinity | Searchinfinity/BytePlus官方favicon视觉 | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+| Querit | Querit footer/app mark | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+| SERPdive | SERPdive app icon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+| DuckDuckGo | DuckDuckGo品牌图标 | Simple Icons候选 | 固定exact package/version、license与品牌边界后本地打包 |
+| AnySearch | AnySearch favicon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+| Bright Data | Bright Data官方mark仅用于内部原型 | 官方站点候选；官方guideline要求书面同意 | 未取得可审计许可前production必须使用中性fallback |
+| SerpBase | SerpBase官方SVG | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+| Serper | Serper favicon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+| Valyu | Valyu favicon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+
+稳定规则：
+
+- 能力级`Web search`只使用现有`globe`；服务级品牌标记不能再用`globe`兜底，否则会把“能力”和“供应商身份”混成一件事；
+- Provider name、role、auth前提与状态始终有文字，图标不能独自传达事实；
+- status使用文字/tone，不能通过把logo变灰来暗示唯一状态；
+- Settings、Curator、Timeline/technical detail只消费同一asset identity；Curator不得复制自己的logo表；
+- shipped asset全部本地、固定hash、无CDN/favicon热链；品牌更新只在新一轮source intake中发生，不在用户机器自动漂移；
+- 未通过asset admission时使用中性字母标记或统一provider glyph，保留完整Provider功能、名称和配置，不把视觉缺口升级成runtime unavailable。
+
+### 6.7 明确不提供的 UI
 
 - Web Search master enable switch；
 - `/search` 对应的持久结果中心；
@@ -586,23 +648,27 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 用户要求联网研究
   → Agent 调 web_search
   → results 流式产生
-  → 当前 Thread Right Dock 自动打开 OmniMind Web Access
+  → 当前 Thread Right Dock 为该 tool call 创建独立 OmniMind Web Access Tab
   → 用户选来源 / 加搜索 / 生成或编辑 summary
   → Approve 或发送原始结果
   → tool call settlement 回到同一 Pi turn
-  → Timeline 保留有意义的 activity 与 reopen action
+  → pending期间Timeline可精确聚焦/重开；terminal后只保留普通tool result/activity
 ```
 
 ### 7.2 展示与生命周期
 
 - loopback URL 必须是 exact tokenized intent，不拦截任意 localhost；
 - existing `engineWebSurfaceHost.ts` 继续校验 URL、Thread/Engine/Tool provenance、TTL 与一次性 claim；
-- URL/token 只在内存 handoff，不能进入 Product facts、raw Timeline payload、日志或截图；
+- fork 主路径直接发送typed Curator URL/details，不依赖对任意result字符串的递归URL扫描；Host claim失败在OmniMind profile中fail closed/unavailable，不能触发Glimpse或系统浏览器fallback；
+- URL/token 只在内存 handoff，不能进入 Product facts、raw Timeline payload、Browser recent history/localStorage/tab restore、日志、诊断或截图；页面响应禁用缓存与referrer传播；
+- 第一次打开使用独立ephemeral Browser Tab；不能覆盖用户当前Tab。Host保存当前pending tool call的短时tab handle，Timeline按exact tool call聚焦原Tab或在已关闭时重建；多个pending Curator互不覆盖；
+- 关闭Tab、Right Dock或Browser pane只隐藏审查，不取消tool call。对应Timeline row在Curator仍pending时保持可操作；Approve、Cancel、idle timeout、Run abort或Session shutdown才settlement并清理；terminal后不保留reopen action；
 - Right Dock 不抢 Composer focus，不切换当前 route；
-- 用户主动点 Browser 中的 `Open externally` 才能打开系统浏览器；
+- Curator控制台internal-only：不提供`Open externally`、raw-link copy或raw token展示；结果来源链接打开为普通OmniMind Browser Tab，之后仍可由用户显式外部打开；
 - Host presentation unavailable 时 tool result 准确说明无法展示，不 silent external fallback；
-- close、approve、timeout、abort、Session shutdown 都关闭对应 server/stream/timer；
+- Approve、Cancel、timeout、abort、Session shutdown关闭对应server/stream/timer与presentation handle；
 - 多 Session、多 Curator互不清理。
+- 只有owning Thread当前可见时自动展示；后台Thread只留下既有waiting activity/attention，用户进入后再精确打开，未处理则按上游idle timeout settlement。
 
 ### 7.3 UI 产品化
 
@@ -612,6 +678,7 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 
 - title/copy/logo/tokens 使用 OmniMind；
 - 简中/英文完整 catalog；
+- locale与resolved light/dark theme来自创建该Curator时的OmniMind presentation snapshot，不从OS/browser推断；
 - 页面 self-contained/offline；
 - 响应式适配 Right Dock 的真实窄宽度；
 - 不出现 Pi、`pi-web-access`、Glimpse、TUI、外部浏览器或 internal runtime 术语；
@@ -621,11 +688,10 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 
 ### 8.1 仓库形态
 
-- 建立专用 Git fork，保留 upstream remote 和完整 ancestry；
-- fork package 改为 `@omnimind/om-web-access`；
-- 首个候选版本建议 `0.24.1-omnimind.1`；
-- OmniMind product repo exact pin 一个 tgz/commit/integrity，不依赖 floating npm range；
-- 无论未来 package 是否公开发布，官方支持合同都只覆盖 bundled OmniMind Agent；
+- 在OmniMind monorepo中建立私有workspace package，集中导入exact upstream source、原目录、作者测试与license；不建立独立GitHub fork、不发布npm package、不生成第二tgz或同步控制面；
+- untouched upstream baseline独立commit保留exact `fbbd0cb…`字节；之后的monorepo commits形成可审计P1–P6 diff，不能把“来源可追溯”写成不存在的GitHub fork ancestry；
+- package改为`@omnimind/om-web-access`，首个候选版本建议`0.24.1-omnimind.1`并保持private；
+- 官方支持合同只覆盖bundled OmniMind Agent；
 - stock Pi 用户问题指向 upstream，不为其保留 `.pi`、Glimpse、commands、shortcuts 第二 profile。
 
 ### 8.2 每轮 upstream sync
@@ -634,10 +700,12 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 2. 检查 artifact/source 对应、license、install scripts、发布物增量；
 3. 先运行 upstream 原作者完整 tests；
 4. 按 P1–P6 逐项判断：upstream 已解决则删除 patch，发生冲突则说明用户影响；
-5. merge/rebase 由 fork 维护策略执行，但不能 squash 掉 upstream lineage；
+5. 在独立untouched baseline上重放或重做最小P1–P6差异，生成可重复upstream diff/patch inventory；不以目录重排或“干净架构”扩大修改半径；
 6. 运行 OmniMind conformance、isolated runtime、real-provider、packaged journey；
 7. 只有 exact pushed SHA 全链通过后才更新产品 pin、README adoption、license/SBOM 和 evidence；
 8. 不自动追 latest，不因 README 新功能直接扩大 Settings 或 runtime activation。
+
+候选交付使用两段事实链：实现、authority、research与execution status先在本地共同冻结为`candidate/pending-packaged`后才推送任务分支；Desktop必须从该次已pushed的exact implementation SHA构建。packaged journey通过后再以evidence/status commit记录被测implementation SHA、产物与结果，并明确evidence-recording SHA不属于Desktop shipped bytes；不在commit内容中嵌入自身SHA，也不制造尾随提交循环。
 
 ### 8.3 Patch 预算与 stop-loss
 
@@ -654,7 +722,7 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 
 ### 8.4 回滚
 
-- 产品依赖回退到上一 exact `@omnimind/om-web-access` tgz/commit；
+- 产品依赖回退到上一 exact monorepo implementation commit；
 - Session composition 移除该一项 Extension 即可停用，不触碰 AgentGateway/Host catalog；
 - 不迁移、不删除用户 canonical config 和 cache；旧字节保持原位，未来兼容重新进入另行裁决；
 - rollback 后 stock Pi、其他 Engine、Host Browser 与六组 Built-in 不受影响。
@@ -665,10 +733,11 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 | --- | --- | --- |
 | product-bundled Extensions | `apps/server/src/provider/omnimindSessionExtensions.ts` 的显式有限 composition | 增加一个独立 inline Extension factory；不能让 PiAdapter拥有其业务逻辑 |
 | Pi Session | `apps/server/src/provider/Layers/PiAdapter.ts` | 传入窄依赖、接收 events/provenance；不实现 Provider routing/config/active truth |
-| temporary Web UI | `apps/server/src/engineWebSurface/engineWebSurfaceHost.ts` | 扩展/复用 exact Curator intent；不加新 route 或 arbitrary localhost interception |
-| Browser presentation | 现有 AgentGateway Browser `browser_open` + Right Dock | 只呈现当前 Thread 页面；Browser 仍拥有 tab/pane lifecycle |
-| Timeline classification | canonical `web_search` item type 与 tool result projection | 保持 tool name/provenance；不存 bearer URL |
-| Settings shell | existing Settings IA/primitives/search/deep-link | 新增最接近的页面，复用 overview→add→detail；不建第二 settings framework |
+| temporary Web UI | `apps/server/src/engineWebSurface/engineWebSurfaceHost.ts` | 扩展exact typed Curator intent与per-call ephemeral handle；不加新route、arbitrary localhost interception或字符串扫描主合同 |
+| Browser presentation | existing Desktop BrowserManager/Right Dock + internal presentation seam | 创建/聚焦exact ephemeral tab并排除history/restore；不扩张Agent-visible `browser_open` schema，Browser仍拥有tab/pane lifecycle |
+| Timeline classification | canonical `web_search` item type 与 tool result projection | pending row按tool call触发exact reopen；terminal只留普通result，不存bearer URL |
+| Settings shell | existing Settings IA/primitives/search/deep-link | 新增最接近的页面，复用 overview→add→detail；不建第二settings framework或form DSL |
+| config read/mutation | fork package-owned config service | Settings与Extension共享同一reader/writer；Settings不为读配置启动Session |
 | private home | bundled OmniMind runtime `.omnimind/agent` owner | 注入 exact config path；零读取 `.pi` |
 | tool activation | Pi registered/active truth | 只调整本 Extension 自己两个 search-dependent names |
 
@@ -694,7 +763,8 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 
 ### 10.3 Config 与 Settings
 
-- fresh 创建 default file；existing file 不 ambient rewrite；
+- 首次Settings进入与首次OmniMind Agent Session两条路径谁先发生谁创建default file，且只使用同一writer；App启动/被动readiness不创建；
+- Settings创建/读取不实例化Session、不执行Extension、不发Provider请求；existing file不ambient rewrite；
 - UI save → next tool call生效；file edit → refresh/next tool call生效；
 - unknown fields round-trip；
 - concurrent UI/file edit typed conflict且 draft 不丢；
@@ -702,6 +772,8 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 - full literal key 与 `$ENV`/`!command` 可回读、copy/edit；
 - key 不进入 generic settings stream、Timeline、log 或 screenshot；
 - `.pi` 零枚举、零读取、零写入。
+- Provider“测试”和全局“重新检查”均明确执行最小真实请求、可能消耗额度，结果不被保存为永久connected truth。
+- 同一测试/重新检查在pending期间single-flight；连点、重渲染或客户端超时恢复不得自动重发真实请求。
 
 ### 10.4 Routing 与费用
 
@@ -715,6 +787,9 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 
 ### 10.5 Availability / active set
 
+- App启动与Session初始化不发health/search probe；结构候选只投影unknown/possible；
+- 第一次真实search按canonical route惰性得出availability证据；显式“重新检查”才主动运行同一最小route；
+- 单服务“测试”与页面级“重新检查”在各自pending期间single-flight，避免重复额度消耗；
 - keyless Exa 429 + 其他 auto candidates 成功：工具保持 active；
 -完整 candidate exhaustion：下一 turn 只移除 `web_search/source_check`；
 - `fetch_content/get_search_content` 保留；
@@ -726,11 +801,23 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 ### 10.6 Curator 与产品 UI
 
 - 默认 `summary-review` 在 `ctx.hasUI === false` 的 OmniMind runtime仍能呈现；
-- current Thread Right Dock 自动打开，不外跳、不抢 focus；
-- Timeline 可重开；
-- loopback token不落盘/日志；
+- current Thread Right Dock为每个tool call创建独立Tab，不复用/覆盖当前用户Tab，不外跳、不抢Composer focus；
+- Curator控制台隐藏`Open externally`、raw-link copy与raw token地址；来源链接进入普通OmniMind Browser Tab，普通Tab仍可显式外部打开；
+- 只有owning Thread前台时自动呈现；后台Thread只投影既有waiting activity/attention，不切route、不抢Right Dock，进入该Thread后按exact activity打开；
+- 多个pending Curator映射到不同tool call/Tab；Timeline按exact row聚焦，Tab已关闭时重建，不能只展开Browser pane；
+- 关闭Tab/Right Dock只隐藏、不settle；Approve/Cancel/timeout/abort/Session shutdown才settlement与cleanup；terminal后reopen action消失；
+- loopback token不进入Browser recent history、localStorage、tab restore、cache/referrer、Product payload或日志；persistent Browser partition下仍满足memory-only；
+- Curator使用OmniMind当前locale与resolved theme snapshot，而不是OS/browser默认；
+- typed presentation claim失败fail closed，不触发Glimpse/系统浏览器fallback；
 - 简中/英文、keyboard、screen reader、390px/Right Dock窄宽、dark/light、reduced motion；
 - 无 Google Fonts/jsDelivr/运行时 CDN；
+- 26个exact Provider descriptor全部有且只有一个presentation identity；Parallel/Parallel MCP共享品牌asset但保留两个runtime ID；
+- 能力级入口固定`globe`，服务级缺失/未获准品牌资产使用中性fallback而不是`globe`；
+- shipped品牌资产具备source/revision/hash/license/trademark记录，Bright Data在无书面许可时不随包分发官方mark；
+- Settings、Curator、Timeline/technical detail消费同一presentation projection，没有第二logo表或remote hotlink；
+- 损坏/未来schema不被默认值覆盖，unknown fields round-trip，known旧schema只在显式mutation时原子升级；
+- Settings保存/refresh的revision invalidation只唤醒live Extension实例自治恢复，不产生全局Session registry、file watcher或第二持久状态；
+- Provider测试/重新检查pending期间single-flight，没有重复额度消耗；
 - provider result、summary generation、edit/regenerate/raw send/approve/timeout/abort 全链。
 
 ### 10.7 `source_check`
@@ -785,6 +872,26 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
 
 会，除非 patch inventory保持六类、上游 ancestry/tests完整、产品只支持一套 bundled runtime、Settings/file只有一个配置 owner。拒绝 stock Pi 双 profile正是控制长期矩阵的关键。
 
+### Global：现在最大的长期风险是什么？
+
+不是“图标还少几个”，而是把三个不同事实揉成一张表：runtime Provider、用户配置和品牌展示。正确管理方式是runtime定义拥有Provider identity/routing，canonical JSON拥有用户配置，presentation只附着同源descriptor并携带本地asset admission；三者通过stable ID汇合，但任何一层都不能反向接管另外两层。若未来更新需要同时手改fork Provider列表、Server DTO、Web列表、Curator列表和logo表，这个设计已经失败，应在合并前`SIMPLIFY`。
+
+第二个风险是把“Web Access不可用”做成整包布尔值。搜索route exhaustion只影响`web_search/source_check`；direct URL、PDF/GitHub读取与已有result retrieval仍可能工作。反过来，某个fetch backend失败也不能让搜索消失。所有availability、文案和测试都按工具真实依赖收缩，不能为了UI简单牺牲能力边界。
+
+第三个风险是把“官方favicon”误当成稳定API和许可。品牌站点可以改文件、阻断请求或改变条款；production只能消费fork/release中固定、可审计的本地资产。视觉调研HTML是设计证据，永远不能升级成运行时下载器或权利证明。
+
+第四个风险是品牌层级错位。当前`xai`候选glyph内部标为Grok，Searchinfinity候选来自其BytePlus关联页面；它们可能视觉上正确，但production intake仍要确认“runtime Provider → 用户display name → 品牌mark”三者是同一产品层级。不能为了图标漂亮改写runtime ID，也不能把母公司mark、产品mark和传输方式静默混用。
+
+第五个风险是把Curator当成“打开一个URL”而不是pending tool call的短时交互面。当前source反例是PiAdapter用`browser_open reuse:true`，会导航用户当前Tab；Timeline callback只展开Browser pane，不能定位对应tool call；Browser recent-history store还会把token URL写入localStorage。实施必须一次闭合dedicated ephemeral Tab、exact reopen、close不取消、terminal cleanup和non-history，否则默认Curator会直接破坏用户当前浏览上下文并留下假恢复。
+
+第六个风险是为了26个Provider表单发明通用配置DSL，或为了Curator Tab把内部presentation需求塞进Agent可见Browser tool schema。两者都会把一个fork接入升级成新的平台owner。正确边界是package-owned closed field vocabulary与Browser owner内部typed presentation seam；复杂Provider配置保持file-only，Agent-facing Browser schema保持不变。
+
+第七个风险是把配置兼容升级做成Host级迁移平台。`web-search.json`属于package，schema、known migration与forward-compatibility也必须属于package；Host只调用typed service。高版本或损坏文件若被默认值静默覆盖，会直接丢掉高手的手工配置和literal keys，因此必须保留原文件并fail closed，不能为了“自动修好”另建quarantine数据库、通用migration registry或双读兼容层。
+
+第八个风险是为了让Settings保存后立即恢复inactive tools，建立全局Session registry或持续file watcher。这会把一次owner-local失效通知升级成第二生命周期控制面。正确实现只有process-local revision invalidation：写入成功后发信号，live Extension instance各自重读、恢复自己移除的工具并在Session shutdown解绑；文件仍是唯一真相，外部编辑按显式刷新/native reload/new Session生效。
+
+第九个风险是默认Curator在后台Thread抢占当前用户界面。自动呈现只属于当前owning Thread；后台Thread复用既有waiting-for-user activity/attention并继续上游timeout，不切route、不抢Right Dock，也不为此建通知中心或后台Curator scheduler。这既保留默认审查，又不让并发Agent互相劫持注意力。
+
 ## 13. Reopen triggers
 
 出现以下任一变化，重新执行 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)：
@@ -813,7 +920,7 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
     "productName": "OmniMind Web Access",
     "support": "bundled-omnimind-agent-only",
     "stockPiSupport": false,
-    "disposition": "fork-narrowly"
+    "disposition": "monorepo-owned-narrow-fork"
   },
   "runtime": {
     "owner": "pi-session-resource-loader-tool-registry-active-set",
@@ -824,13 +931,48 @@ Server 只把这份 manifest 投影给 Web。Web 不再手写第二个 26-Provid
     "commands": [],
     "tuiShortcuts": [],
     "curatorDefault": "summary-review",
-    "curatorPresentation": "current-thread-right-dock-browser"
+    "curatorPresentation": "current-thread-right-dock-dedicated-ephemeral-tab",
+    "curatorTabClose": "hide-only-tool-continues",
+    "curatorReopen": "pending-tool-call-exact-tab-or-recreate",
+    "curatorPresentationContext": "omnimind-locale-and-resolved-theme-snapshot",
+    "curatorUrlDurability": "memory-only-no-browser-history",
+    "curatorInternalOnly": true,
+    "curatorAutoPresent": "owning-thread-foreground-only"
   },
   "config": {
     "authority": ".omnimind/agent/web-search.json",
+    "owner": "fork-package-config-service",
+    "creation": "first-web-search-settings-or-first-omnimind-agent-session",
     "uiFileBidirectional": true,
     "secondStore": false,
-    "fullKeyReadback": true
+    "fullKeyReadback": true,
+    "schemaOwner": "fork-package",
+    "futureOrCorruptSchema": "preserve-file-fail-closed",
+    "liveInvalidation": "process-local-revision-signal-no-session-registry",
+    "draftProviderTest": "request-scoped-candidate-no-save-may-cost-quota",
+    "create": "no-clobber-private-0600",
+    "noOpMutation": "no-write-no-revision"
+  },
+  "cleanup": {
+    "toolCallTerminal": "call-owned-resources-only",
+    "runAbort": "run-owned-inflight-calls-only",
+    "sessionTree": "current-extension-instance-and-branch-only",
+    "sessionShutdown": "whole-extension-instance"
+  },
+  "availability": {
+    "detection": "lazy-real-search-or-explicit-recheck",
+    "startupProbe": false,
+    "backgroundHealthDaemon": false,
+    "explicitProbeSingleFlight": true
+  },
+  "presentation": {
+    "capabilityIcon": "globe",
+    "providerDescriptors": "runtime-definition-co-located-credential-blind-projection",
+    "providerListInWeb": false,
+    "runtimeRemoteAssets": false,
+    "parallelBrandAssetSharedWithMcp": true,
+    "brightDataOfficialMark": "internal-prototype-only-until-written-consent",
+    "missingAssetFallback": "neutral-provider-mark-not-globe"
   },
   "patchInventory": [
     "per-session-instance-state",
