@@ -21,6 +21,9 @@ describe("WsRequestAdmission", () => {
       "expensive-read",
     );
     expect(classifyWsRequest(WS_METHODS.omnimindAgentPromptsGetSnapshot)).toBe("standard");
+    expect(classifyWsRequest(WS_METHODS.omnimindWebSearchOpen)).toBe("standard");
+    expect(classifyWsRequest(WS_METHODS.omnimindWebSearchTestProvider)).toBe("expensive-read");
+    expect(classifyWsRequest(WS_METHODS.omnimindWebSearchRecheck)).toBe("expensive-read");
     expect(classifyWsRequest(WS_METHODS.terminalAckOutput)).toBe("control");
   });
 

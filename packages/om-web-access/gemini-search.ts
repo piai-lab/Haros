@@ -30,12 +30,108 @@ import { isSerperAvailable, searchWithSerper } from "./serper.ts";
 import { isValyuAvailable, searchWithValyu } from "./valyu.ts";
 import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
-export const RESOLVED_SEARCH_PROVIDERS = ["openai", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api", "searchinfinity", "querit", "tavily", "firecrawl", "jina", "searxng", "duckduckgo", "perplexity", "gemini", "exa", "serpdive", "kagi", "ollama", "anysearch", "xai", "brightdata", "serpbase", "serper", "valyu", "bocha"] as const;
-export const SEARCH_PROVIDERS = ["auto", "all", ...RESOLVED_SEARCH_PROVIDERS] as const;
+type ProviderConfigFieldKind = "secret" | "url" | "text";
+type ProviderConfigFieldRole = "api-key" | "endpoint" | "model" | "zone";
+type ProviderPrerequisite = "none" | "optional-key" | "key" | "endpoint" | "key-or-session" | "gemini";
+type ProviderCostHint = "keyless-shared-quota" | "may-charge" | "provider-dependent";
 
-export type ResolvedSearchProvider = typeof RESOLVED_SEARCH_PROVIDERS[number];
-export type SearchProvider = typeof SEARCH_PROVIDERS[number];
-export type SearchProviderSelection = SearchProvider | ResolvedSearchProvider[];
+export interface SearchProviderConfigFieldDescriptor {
+	readonly id: string;
+	readonly configKey: string;
+	readonly kind: ProviderConfigFieldKind;
+	readonly role: ProviderConfigFieldRole;
+	readonly required: boolean;
+	readonly environmentVariable?: string;
+	readonly qualifier?: string;
+}
+
+interface SearchProviderRuntimeOptions extends SearchOptions {
+	readonly includeContent?: boolean;
+	readonly extensionContext?: ExtensionContext;
+}
+
+export type SearchProviderIcon =
+	| {
+		readonly kind: "neutral";
+		readonly assetId: null;
+		readonly admission: "not-admitted";
+	}
+	| {
+		readonly kind: "local-asset";
+		readonly assetId: string;
+		readonly assetPath: string;
+		readonly admission: "admitted";
+	};
+
+interface SearchProviderRuntimeDescriptor<Id extends string = string> {
+	readonly id: Id;
+	readonly displayName: string;
+	readonly curatorLabel?: string;
+	readonly curatorOrder: number;
+	readonly prerequisite: ProviderPrerequisite;
+	readonly costHint: ProviderCostHint;
+	readonly autoOrder: number | null;
+	readonly allOrder: number | null;
+	readonly all: "included" | "excluded" | "api-only";
+	readonly fields: readonly SearchProviderConfigFieldDescriptor[];
+	readonly advancedFileOnly: readonly string[];
+	readonly icon: SearchProviderIcon;
+	readonly isStructurallyPossible?: (
+		config: Readonly<Record<string, unknown>>,
+		configured: boolean,
+	) => boolean;
+	readonly autoEligible?: (options: SearchProviderRuntimeOptions) => boolean;
+	readonly autoCredentialFailureIsFatal?: boolean;
+	readonly isAvailable: (options: SearchProviderRuntimeOptions) => boolean | Promise<boolean>;
+	readonly isAvailableForAuto?: (options: SearchProviderRuntimeOptions) => boolean | Promise<boolean>;
+	readonly isAvailableForAll?: (options: SearchProviderRuntimeOptions) => boolean | Promise<boolean>;
+	readonly search: (query: string, options: SearchProviderRuntimeOptions) => Promise<SearchResponse>;
+	readonly searchForAuto?: (query: string, options: SearchProviderRuntimeOptions) => Promise<SearchResponse>;
+	readonly searchForAll?: (query: string, options: SearchProviderRuntimeOptions) => Promise<SearchResponse>;
+}
+
+const neutralProviderIcon = {
+	kind: "neutral",
+	assetId: null,
+	admission: "not-admitted",
+} as const;
+
+const keyField = (
+	configKey: string,
+	environmentVariable: string,
+	qualifier?: string,
+): SearchProviderConfigFieldDescriptor => ({
+	id: configKey,
+	configKey,
+	kind: "secret",
+	role: "api-key",
+	required: true,
+	environmentVariable,
+	...(qualifier ? { qualifier } : {}),
+});
+
+const optionalKeyField = (
+	configKey: string,
+	environmentVariable: string,
+	qualifier?: string,
+): SearchProviderConfigFieldDescriptor => ({
+	...keyField(configKey, environmentVariable, qualifier),
+	required: false,
+});
+
+const textField = (
+	configKey: string,
+	role: Extract<ProviderConfigFieldRole, "endpoint" | "model" | "zone">,
+	options: { readonly required?: boolean; readonly environmentVariable?: string; readonly qualifier?: string } = {},
+): SearchProviderConfigFieldDescriptor => ({
+	id: configKey,
+	configKey,
+	kind: role === "endpoint" ? "url" : "text",
+	role,
+	required: options.required ?? false,
+	...(options.environmentVariable ? { environmentVariable: options.environmentVariable } : {}),
+	...(options.qualifier ? { qualifier: options.qualifier } : {}),
+});
 export type SearchProviderErrorKind =
 	| "transient"
 	| "quota"
@@ -118,9 +214,6 @@ export interface AttributedSearchResponse extends SearchResponse {
 
 const configPath = () => getWebSearchConfigPath();
 const DEFAULT_SEARCH_MODEL = "gemini-3.6-flash";
-// Explicit-only providers (Parallel MCP, DuckDuckGo, AnySearch, xAI, Bright Data, SerpBase, Serper, Valyu) are deliberately absent:
-// `all` must never fan out to an opt-in or paid provider without the user asking for it.
-const ALL_SEARCH_PROVIDERS: ResolvedSearchProvider[] = ["searxng", "openai", "exa", "brave", "parallel", "tinyfish", "search1api", "searchinfinity", "querit", "tavily", "firecrawl", "jina", "serpdive", "kagi", "ollama", "perplexity", "gemini", "bocha"];
 const VALID_ROUTING_KINDS = ["transient", "quota", "network", "invalid-response"] as const;
 
 type SearchConfig = {
@@ -209,6 +302,317 @@ export interface FullSearchOptions extends SearchOptions {
 	provider?: SearchProviderSelection;
 	includeContent?: boolean;
 	extensionContext?: ExtensionContext;
+}
+
+function requireProviderResult(provider: string, result: SearchResponse | null): SearchResponse {
+	if (result) return result;
+	throw new Error(`${provider} search returned no results.`);
+}
+
+/**
+ * The exact runtime definition is also the sole source of the credential-blind
+ * Settings/Curator projection. A provider must not be added to routing without
+ * acquiring a visible identity and deterministic neutral asset fallback here.
+ */
+export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
+	{
+		id: "openai", displayName: "OpenAI", prerequisite: "key-or-session", costHint: "provider-dependent",
+		curatorOrder: 0,
+		autoOrder: 1, allOrder: 1, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("openaiApiKey", "OPENAI_API_KEY"), textField("openaiSearchModel", "model")],
+		advancedFileOnly: ["openaiResponsesBaseUrl", "openaiSearchProviders"],
+		autoEligible: shouldTryOpenAIInAuto,
+		isAvailable: (options) => isOpenAISearchAvailable(options.extensionContext),
+		search: (query, options) => searchWithOpenAI(query, options, options.extensionContext),
+	},
+	{
+		id: "exa", displayName: "Exa", prerequisite: "optional-key", costHint: "keyless-shared-quota",
+		curatorOrder: 1,
+		autoOrder: 2, allOrder: 2, all: "included", icon: neutralProviderIcon,
+		fields: [optionalKeyField("exaApiKey", "EXA_API_KEY"), textField("exaBaseUrl", "endpoint", { environmentVariable: "EXA_BASE_URL" })],
+		advancedFileOnly: [], autoCredentialFailureIsFatal: true,
+		isAvailable: () => isExaAvailable(),
+		search: async (query, options) => requireProviderResult("Exa", await searchWithExa(query, options)),
+	},
+	{
+		id: "brave", displayName: "Brave", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 2,
+		autoOrder: 3, allOrder: 3, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("braveApiKey", "BRAVE_API_KEY"), textField("braveBaseUrl", "endpoint", { environmentVariable: "BRAVE_BASE_URL" })],
+		advancedFileOnly: [], isAvailable: () => isBraveAvailable(), search: searchWithBrave,
+	},
+	{
+		id: "parallel", displayName: "Parallel", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 3,
+		autoOrder: 4, allOrder: 4, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("parallelApiKey", "PARALLEL_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isParallelAvailable(), search: searchWithParallel,
+	},
+	{
+		id: "parallel-mcp", displayName: "Parallel MCP", prerequisite: "optional-key", costHint: "keyless-shared-quota",
+		curatorOrder: 4,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		fields: [optionalKeyField("parallelApiKey", "PARALLEL_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isParallelMcpAvailable(), search: searchWithParallelMcp,
+	},
+	{
+		id: "tinyfish", displayName: "TinyFish", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 5,
+		autoOrder: 5, allOrder: 5, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("tinyfishApiKey", "TINYFISH_API_KEY")], advancedFileOnly: ["tinyfish"],
+		isAvailable: () => isTinyFishAvailable(), search: searchWithTinyFish,
+	},
+	{
+		id: "search1api", displayName: "Search1API", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 6,
+		autoOrder: 6, allOrder: 6, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("search1apiApiKey", "SEARCH1API_KEY")], advancedFileOnly: ["search1api"],
+		isAvailable: () => isSearch1APIAvailable(), search: searchWithSearch1API,
+	},
+	{
+		id: "searchinfinity", displayName: "Searchinfinity", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 7,
+		autoOrder: 7, allOrder: 7, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("searchinfinityApiKey", "SEARCHINFINITY_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isSearchinfinityAvailable(), search: searchWithSearchinfinity,
+	},
+	{
+		id: "querit", displayName: "Querit", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 8,
+		autoOrder: 8, allOrder: 8, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("queritApiKey", "QUERIT_API_KEY")], advancedFileOnly: ["querit"],
+		isAvailable: () => isQueritAvailable(), search: searchWithQuerit,
+	},
+	{
+		id: "tavily", displayName: "Tavily", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 9,
+		autoOrder: 9, allOrder: 9, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("tavilyApiKey", "TAVILY_API_KEY"), textField("tavilyBaseUrl", "endpoint", { environmentVariable: "TAVILY_BASE_URL" })],
+		advancedFileOnly: [], isAvailable: () => isTavilyAvailable(), search: searchWithTavily,
+	},
+	{
+		id: "firecrawl", displayName: "Firecrawl", prerequisite: "endpoint", costHint: "provider-dependent",
+		curatorOrder: 10,
+		autoOrder: 10, allOrder: 10, all: "included", icon: neutralProviderIcon,
+		fields: [textField("firecrawlBaseUrl", "endpoint", { required: true, environmentVariable: "FIRECRAWL_BASE_URL" }), optionalKeyField("firecrawlApiKey", "FIRECRAWL_API_KEY")],
+		advancedFileOnly: ["firecrawlApiVersion", "firecrawlFreshScrape"],
+		isAvailable: () => isFirecrawlAvailable(), search: searchWithFirecrawl,
+	},
+	{
+		id: "jina", displayName: "Jina Search", curatorLabel: "Jina", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 11,
+		autoOrder: 11, allOrder: 11, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("jinaApiKey", "JINA_API_KEY")], advancedFileOnly: ["jina"],
+		isAvailable: () => isJinaSearchAvailable(), search: searchWithJina,
+	},
+	{
+		id: "serpdive", displayName: "SERPdive", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 12,
+		autoOrder: 12, allOrder: 12, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("serpdiveApiKey", "SERPDIVE_API_KEY"), textField("serpdiveModel", "model", { environmentVariable: "SERPDIVE_MODEL" })],
+		advancedFileOnly: [], isAvailable: () => isSerpdiveAvailable(), search: searchWithSerpdive,
+	},
+	{
+		id: "kagi", displayName: "Kagi", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 13,
+		autoOrder: 13, allOrder: 13, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("kagiApiKey", "KAGI_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isKagiAvailable(), search: searchWithKagi,
+	},
+	{
+		id: "bocha", displayName: "Bocha", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 14,
+		autoOrder: 14, allOrder: 17, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("bochaApiKey", "BOCHA_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isBochaAvailable(), search: searchWithBocha,
+	},
+	{
+		id: "ollama", displayName: "Ollama Cloud", curatorLabel: "Ollama", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 15,
+		autoOrder: 15, allOrder: 14, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("ollamaApiKey", "OLLAMA_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isOllamaAvailable(), search: searchWithOllama,
+	},
+	{
+		id: "searxng", displayName: "SearXNG", prerequisite: "endpoint", costHint: "provider-dependent",
+		curatorOrder: 16,
+		autoOrder: 0, allOrder: 0, all: "included", icon: neutralProviderIcon,
+		fields: [textField("searxngBaseUrl", "endpoint", { required: true, environmentVariable: "SEARXNG_BASE_URL" })],
+		advancedFileOnly: ["searxngHeaders", "ssrf"], isAvailable: () => isSearXNGAvailable(), search: searchWithSearXNG,
+	},
+	{
+		id: "duckduckgo", displayName: "DuckDuckGo", prerequisite: "none", costHint: "keyless-shared-quota",
+		curatorOrder: 17,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon, fields: [], advancedFileOnly: [],
+		isAvailable: () => isDuckDuckGoAvailable(), search: searchWithDuckDuckGo,
+	},
+	{
+		id: "perplexity", displayName: "Perplexity", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 18,
+		autoOrder: 16, allOrder: 15, all: "included", icon: neutralProviderIcon,
+		fields: [keyField("perplexityApiKey", "PERPLEXITY_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isPerplexityAvailable(), search: searchWithPerplexity,
+	},
+	{
+		id: "gemini", displayName: "Gemini", prerequisite: "gemini", costHint: "provider-dependent",
+		curatorOrder: 19,
+		autoOrder: 17, allOrder: 16, all: "api-only", icon: neutralProviderIcon,
+		fields: [optionalKeyField("geminiApiKey", "GEMINI_API_KEY", "Gemini"), textField("geminiBaseUrl", "endpoint", { environmentVariable: "GOOGLE_GEMINI_BASE_URL", qualifier: "Gemini" }), optionalKeyField("cloudflareApiKey", "CLOUDFLARE_API_KEY", "Cloudflare")],
+		advancedFileOnly: ["allowBrowserCookies", "chromeProfile", "geminiWebModel"],
+		isStructurallyPossible: (config, configured) => configured || config.allowBrowserCookies === true,
+		isAvailable: async () => isGeminiApiAvailable() || !!(await isGeminiWebAvailable()),
+		isAvailableForAuto: () => true,
+		isAvailableForAll: () => isGeminiApiAvailable(),
+		search: async (query, options) => requireProviderResult("Gemini", await searchWithGemini(query, options, true)),
+		searchForAuto: async (query, options) => requireProviderResult("Gemini", await searchWithGemini(query, options, false)),
+		searchForAll: async (query, options) => requireProviderResult("Gemini API", await searchWithGeminiApi(query, options)),
+	},
+	{
+		id: "anysearch", displayName: "AnySearch", prerequisite: "optional-key", costHint: "keyless-shared-quota",
+		curatorOrder: 20,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		fields: [optionalKeyField("anysearchApiKey", "ANYSEARCH_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isAnySearchAvailable(), search: searchWithAnySearch,
+	},
+	{
+		id: "xai", displayName: "xAI", prerequisite: "key-or-session", costHint: "provider-dependent",
+		curatorOrder: 21,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		fields: [optionalKeyField("xaiApiKey", "XAI_API_KEY"), textField("xaiSearchModel", "model")], advancedFileOnly: [],
+		isAvailable: (options) => isXaiSearchAvailable(options.extensionContext),
+		search: (query, options) => searchWithXai(query, options, options.extensionContext),
+	},
+	{
+		id: "brightdata", displayName: "Bright Data", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 22,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		fields: [keyField("brightdataApiKey", "BRIGHTDATA_API_KEY"), textField("brightdataSerpZone", "zone", { required: true, environmentVariable: "BRIGHTDATA_SERP_ZONE", qualifier: "SERP" })],
+		advancedFileOnly: ["brightdataUnlockerZone"], isAvailable: () => isBrightDataAvailable(), search: searchWithBrightData,
+	},
+	{
+		id: "serpbase", displayName: "SerpBase", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 23,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		fields: [keyField("serpbaseApiKey", "SERPBASE_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isSerpBaseAvailable(), search: searchWithSerpBase,
+	},
+	{
+		id: "serper", displayName: "Serper", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 24,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		fields: [keyField("serperApiKey", "SERPER_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isSerperAvailable(), search: searchWithSerper,
+	},
+	{
+		id: "valyu", displayName: "Valyu", prerequisite: "key", costHint: "may-charge",
+		curatorOrder: 25,
+		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		fields: [keyField("valyuApiKey", "VALYU_API_KEY")], advancedFileOnly: [],
+		isAvailable: () => isValyuAvailable(), search: searchWithValyu,
+	},
+] as const satisfies readonly SearchProviderRuntimeDescriptor[];
+
+export type ResolvedSearchProvider = typeof SEARCH_PROVIDER_RUNTIME_DEFINITIONS[number]["id"];
+export const RESOLVED_SEARCH_PROVIDERS = SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map(({ id }) => id) as readonly ResolvedSearchProvider[];
+export const SEARCH_PROVIDERS = ["auto", "all", ...RESOLVED_SEARCH_PROVIDERS] as const;
+export type SearchProvider = typeof SEARCH_PROVIDERS[number];
+export type SearchProviderSelection = SearchProvider | ResolvedSearchProvider[];
+export type SearchProviderAvailability = Record<ResolvedSearchProvider | "all", boolean>;
+
+export interface SearchProviderPresentation {
+	readonly id: ResolvedSearchProvider;
+	readonly displayName: string;
+	readonly curatorLabel: string;
+	readonly prerequisite: ProviderPrerequisite;
+	readonly costHint: ProviderCostHint;
+	readonly participation: {
+		readonly auto: boolean;
+		readonly all: "included" | "excluded" | "api-only";
+		readonly explicitOnly: boolean;
+	};
+	readonly fields: readonly SearchProviderConfigFieldDescriptor[];
+	readonly advancedFileOnly: readonly string[];
+	readonly icon: SearchProviderIcon;
+}
+
+export function getSearchProviderPresentation(): readonly SearchProviderPresentation[] {
+	return [...SEARCH_PROVIDER_RUNTIME_DEFINITIONS]
+		.sort((left, right) => left.curatorOrder - right.curatorOrder)
+		.map((descriptor) => ({
+		id: descriptor.id,
+		displayName: descriptor.displayName,
+		curatorLabel: "curatorLabel" in descriptor ? descriptor.curatorLabel : descriptor.displayName,
+		prerequisite: descriptor.prerequisite,
+		costHint: descriptor.costHint,
+		participation: {
+			auto: descriptor.autoOrder !== null,
+			all: descriptor.all,
+			explicitOnly: descriptor.autoOrder === null && descriptor.all === "excluded",
+		},
+		fields: descriptor.fields,
+		advancedFileOnly: descriptor.advancedFileOnly,
+		icon: descriptor.icon,
+	}));
+}
+
+export function isSearchProviderStructurallyPossible(
+	provider: ResolvedSearchProvider,
+	config: Readonly<Record<string, unknown>>,
+	configured: boolean,
+): boolean {
+	const descriptor = runtimeDescriptor(provider);
+	return descriptor.isStructurallyPossible?.(config, configured) ?? (
+		descriptor.prerequisite === "none"
+		|| descriptor.prerequisite === "optional-key"
+		|| configured
+	);
+}
+
+export async function getSearchProviderAvailability(
+	options: SearchProviderRuntimeOptions = {},
+): Promise<SearchProviderAvailability> {
+	const entries = await Promise.all(
+		SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map(async (descriptor) => [
+			descriptor.id,
+			await descriptor.isAvailable(options),
+		] as const),
+	);
+	const available = Object.fromEntries(entries) as Record<ResolvedSearchProvider, boolean>;
+	const allAvailability = await Promise.all(
+		ALL_SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map((descriptor) =>
+			descriptor.isAvailableForAll
+				? descriptor.isAvailableForAll(options)
+				: available[descriptor.id]
+		),
+	);
+	const all = allAvailability.some(Boolean);
+	return { all, ...available };
+}
+
+export function getAutoSearchProviderOrder(options: { readonly preferOpenAI?: boolean } = {}): readonly ResolvedSearchProvider[] {
+	return AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS
+		.filter((descriptor) => descriptor.id !== "openai" || options.preferOpenAI !== false)
+		.map((descriptor) => descriptor.id);
+}
+
+function runtimeDescriptor(provider: ResolvedSearchProvider): SearchProviderRuntimeDescriptor<ResolvedSearchProvider> {
+	const descriptor = SEARCH_PROVIDER_RUNTIME_DEFINITIONS.find((candidate) => candidate.id === provider);
+	if (!descriptor) throw new Error(`Unknown search provider: ${provider}`);
+	return descriptor as SearchProviderRuntimeDescriptor<ResolvedSearchProvider>;
+}
+
+const AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS: readonly SearchProviderRuntimeDescriptor<ResolvedSearchProvider>[] = SEARCH_PROVIDER_RUNTIME_DEFINITIONS
+	.filter((descriptor) => descriptor.autoOrder !== null)
+	.sort((left, right) => (left.autoOrder ?? 0) - (right.autoOrder ?? 0));
+
+// Explicit-only providers are absent by descriptor contract. Gemini's all-mode
+// executor is API-only and never falls through to browser cookies.
+const ALL_SEARCH_PROVIDER_RUNTIME_DEFINITIONS: readonly SearchProviderRuntimeDescriptor<ResolvedSearchProvider>[] = SEARCH_PROVIDER_RUNTIME_DEFINITIONS
+	.filter((descriptor) => descriptor.all !== "excluded")
+	.sort((left, right) => (left.allOrder ?? 0) - (right.allOrder ?? 0));
+
+export function getAllSearchProviderOrder(): readonly ResolvedSearchProvider[] {
+	return ALL_SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map((descriptor) => descriptor.id);
 }
 
 function errorMessage(err: unknown): string {
@@ -308,97 +712,16 @@ async function searchWithResolvedProvider(
 	query: string,
 	options: FullSearchOptions,
 ): Promise<AttributedSearchResponse> {
-	if (provider === "openai") {
-		const result = await searchWithOpenAI(query, options, options.extensionContext);
-		return { ...result, provider };
-	}
-	if (provider === "brave") return { ...(await searchWithBrave(query, options)), provider };
-	if (provider === "parallel") return { ...(await searchWithParallel(query, options)), provider };
-	if (provider === "parallel-mcp") return { ...(await searchWithParallelMcp(query, options)), provider };
-	if (provider === "tinyfish") return { ...(await searchWithTinyFish(query, options)), provider };
-	if (provider === "search1api") return { ...(await searchWithSearch1API(query, options)), provider };
-	if (provider === "searchinfinity") return { ...(await searchWithSearchinfinity(query, options)), provider };
-	if (provider === "querit") return { ...(await searchWithQuerit(query, options)), provider };
-	if (provider === "tavily") return { ...(await searchWithTavily(query, options)), provider };
-	if (provider === "firecrawl") return { ...(await searchWithFirecrawl(query, options)), provider };
-	if (provider === "jina") return { ...(await searchWithJina(query, options)), provider };
-	if (provider === "serpdive") return { ...(await searchWithSerpdive(query, options)), provider };
-	if (provider === "kagi") return { ...(await searchWithKagi(query, options)), provider };
-	if (provider === "bocha") return { ...(await searchWithBocha(query, options)), provider };
-	if (provider === "ollama") return { ...(await searchWithOllama(query, options)), provider };
-	if (provider === "anysearch") return { ...(await searchWithAnySearch(query, options)), provider };
-	if (provider === "xai") return { ...(await searchWithXai(query, options, options.extensionContext)), provider };
-	if (provider === "brightdata") return { ...(await searchWithBrightData(query, options)), provider };
-	if (provider === "serpbase") return { ...(await searchWithSerpBase(query, options)), provider };
-	if (provider === "serper") return { ...(await searchWithSerper(query, options)), provider };
-	if (provider === "valyu") return { ...(await searchWithValyu(query, options)), provider };
-	if (provider === "perplexity") return { ...(await searchWithPerplexity(query, options)), provider };
-	if (provider === "searxng") return { ...(await searchWithSearXNG(query, options)), provider };
-	if (provider === "duckduckgo") return { ...(await searchWithDuckDuckGo(query, options)), provider };
-	if (provider === "gemini") {
-		const result = await searchWithGemini(query, options, true);
-		if (result) return { ...result, provider };
-		throw new Error(
-			"Gemini search unavailable. Either:\n" +
-			`  1. Configure geminiApiKey in ${configPath()} or set GEMINI_API_KEY\n` +
-			"  2. Set GOOGLE_GEMINI_BASE_URL + CLOUDFLARE_API_KEY for Cloudflare AI Gateway routing\n" +
-			"  3. Sign into gemini.google.com in a supported Chromium-based browser",
-		);
-	}
-	const result = await searchWithExa(query, options);
-	if (result) return { ...result, provider };
-	throw new Error("Exa search returned no results.");
+	const result = await runtimeDescriptor(provider).search(query, options);
+	return { ...result, provider };
 }
 
 async function isResolvedProviderAvailable(provider: ResolvedSearchProvider, options: FullSearchOptions): Promise<boolean> {
-	if (provider === "openai") return isOpenAISearchAvailable(options.extensionContext);
-	if (provider === "brave") return isBraveAvailable();
-	if (provider === "parallel") return isParallelAvailable();
-	if (provider === "parallel-mcp") return isParallelMcpAvailable();
-	if (provider === "tinyfish") return isTinyFishAvailable();
-	if (provider === "search1api") return isSearch1APIAvailable();
-	if (provider === "searchinfinity") return isSearchinfinityAvailable();
-	if (provider === "querit") return isQueritAvailable();
-	if (provider === "tavily") return isTavilyAvailable();
-	if (provider === "firecrawl") return isFirecrawlAvailable();
-	if (provider === "jina") return isJinaSearchAvailable();
-	if (provider === "serpdive") return isSerpdiveAvailable();
-	if (provider === "kagi") return isKagiAvailable();
-	if (provider === "bocha") return isBochaAvailable();
-	if (provider === "ollama") return isOllamaAvailable();
-	if (provider === "anysearch") return isAnySearchAvailable();
-	if (provider === "xai") return isXaiSearchAvailable(options.extensionContext);
-	if (provider === "brightdata") return isBrightDataAvailable();
-	if (provider === "serpbase") return isSerpBaseAvailable();
-	if (provider === "serper") return isSerperAvailable();
-	if (provider === "valyu") return isValyuAvailable();
-	if (provider === "perplexity") return isPerplexityAvailable();
-	if (provider === "searxng") return isSearXNGAvailable();
-	if (provider === "duckduckgo") return isDuckDuckGoAvailable();
-	if (provider === "gemini") return isGeminiApiAvailable() || !!(await isGeminiWebAvailable());
-	return isExaAvailable();
+	return runtimeDescriptor(provider).isAvailable(options);
 }
 
 function providerLabel(provider: ResolvedSearchProvider): string {
-	if (provider === "openai") return "OpenAI";
-	if (provider === "parallel-mcp") return "Parallel MCP";
-	if (provider === "tinyfish") return "TinyFish";
-	if (provider === "search1api") return "Search1API";
-	if (provider === "searchinfinity") return "Searchinfinity";
-	if (provider === "querit") return "Querit";
-	if (provider === "firecrawl") return "Firecrawl";
-	if (provider === "serpdive") return "SERPdive";
-	if (provider === "searxng") return "SearXNG";
-	if (provider === "duckduckgo") return "DuckDuckGo";
-	if (provider === "kagi") return "Kagi";
-	if (provider === "bocha") return "Bocha";
-	if (provider === "ollama") return "Ollama";
-	if (provider === "xai") return "xAI";
-	if (provider === "brightdata") return "Bright Data";
-	if (provider === "serpbase") return "SerpBase";
-	if (provider === "serper") return "Serper";
-	if (provider === "valyu") return "Valyu";
-	return provider.charAt(0).toUpperCase() + provider.slice(1);
+	return runtimeDescriptor(provider).displayName;
 }
 
 async function searchWithAllProvider(
@@ -406,10 +729,9 @@ async function searchWithAllProvider(
 	query: string,
 	options: FullSearchOptions,
 ): Promise<AttributedSearchResponse> {
-	if (provider !== "gemini") return searchWithResolvedProvider(provider, query, options);
-	const result = await searchWithGeminiApi(query, options);
-	if (result) return { ...result, provider };
-	throw new Error("Gemini API search returned no results.");
+	const descriptor = runtimeDescriptor(provider);
+	const result = await (descriptor.searchForAll ?? descriptor.search)(query, options);
+	return { ...result, provider };
 }
 
 async function searchWithProviders(
@@ -417,14 +739,12 @@ async function searchWithProviders(
 	options: FullSearchOptions,
 	selectedProviders?: ResolvedSearchProvider[],
 ): Promise<AttributedSearchResponse> {
-	const providers = selectedProviders ?? (await Promise.all(ALL_SEARCH_PROVIDERS.map(async (provider) => ({
-		provider,
-		available: provider === "gemini"
-			? isGeminiApiAvailable()
-			: await isResolvedProviderAvailable(provider, options),
+	const providers = selectedProviders ?? (await Promise.all(ALL_SEARCH_PROVIDER_RUNTIME_DEFINITIONS.map(async (descriptor) => ({
+		provider: descriptor.id,
+		available: await (descriptor.isAvailableForAll ?? descriptor.isAvailable)(options),
 	})))).filter((entry) => entry.available).map((entry) => entry.provider);
 	if (providers.length === 0) {
-		throw new Error("No configured search provider available for provider \"all\". Parallel MCP, AnySearch, xAI, Bright Data, SerpBase, Serper, and Valyu are excluded.");
+		throw new Error("No eligible configured search provider is available for provider \"all\".");
 	}
 
 	const settled = await Promise.allSettled(
@@ -542,186 +862,22 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 		});
 	};
 
-	if (isSearXNGAvailable()) {
+	for (const descriptor of AUTO_SEARCH_PROVIDER_RUNTIME_DEFINITIONS) {
+		if (descriptor.autoEligible && !descriptor.autoEligible(options)) continue;
+		const available = await (descriptor.isAvailableForAuto ?? descriptor.isAvailable)(options);
+		if (!available) continue;
 		try {
-			const result = await searchWithSearXNG(query, options);
-			return { ...result, provider: "searxng" };
+			const result = await (descriptor.searchForAuto ?? descriptor.search)(query, options);
+			return { ...result, provider: descriptor.id };
 		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("searxng", err);
-		}
-	}
-
-	if (shouldTryOpenAIInAuto(options)) {
-		try {
-			if (await isOpenAISearchAvailable(options.extensionContext)) {
-				const result = await searchWithOpenAI(query, options, options.extensionContext);
-				return { ...result, provider: "openai" };
+			if (
+				isAbortError(err) ||
+				(descriptor.autoCredentialFailureIsFatal && err instanceof CredentialResolutionError)
+			) {
+				throw err;
 			}
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("openai", err);
+			recordFallback(descriptor.id, err);
 		}
-	}
-
-	if (isExaAvailable()) {
-		try {
-			const result = await searchWithExa(query, options);
-			if (result) return { ...result, provider: "exa" };
-			recordFallback("exa", new Error("Exa search returned no results."));
-		} catch (err) {
-			if (err instanceof CredentialResolutionError || isAbortError(err)) throw err;
-			recordFallback("exa", err);
-		}
-	}
-
-	if (isBraveAvailable()) {
-		try {
-			const result = await searchWithBrave(query, options);
-			return { ...result, provider: "brave" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("brave", err);
-		}
-	}
-
-	if (isParallelAvailable()) {
-		try {
-			const result = await searchWithParallel(query, options);
-			return { ...result, provider: "parallel" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("parallel", err);
-		}
-	}
-
-	if (isTinyFishAvailable()) {
-		try {
-			const result = await searchWithTinyFish(query, options);
-			return { ...result, provider: "tinyfish" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("tinyfish", err);
-		}
-	}
-
-	if (isSearch1APIAvailable()) {
-		try {
-			const result = await searchWithSearch1API(query, options);
-			return { ...result, provider: "search1api" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("search1api", err);
-		}
-	}
-
-	if (isSearchinfinityAvailable()) {
-		try {
-			const result = await searchWithSearchinfinity(query, options);
-			return { ...result, provider: "searchinfinity" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("searchinfinity", err);
-		}
-	}
-
-	if (isQueritAvailable()) {
-		try {
-			const result = await searchWithQuerit(query, options);
-			return { ...result, provider: "querit" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("querit", err);
-		}
-	}
-
-	if (isTavilyAvailable()) {
-		try {
-			const result = await searchWithTavily(query, options);
-			return { ...result, provider: "tavily" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("tavily", err);
-		}
-	}
-
-	if (isFirecrawlAvailable()) {
-		try {
-			const result = await searchWithFirecrawl(query, options);
-			return { ...result, provider: "firecrawl" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("firecrawl", err);
-		}
-	}
-
-	if (isJinaSearchAvailable()) {
-		try {
-			const result = await searchWithJina(query, options);
-			return { ...result, provider: "jina" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("jina", err);
-		}
-	}
-
-	if (isSerpdiveAvailable()) {
-		try {
-			const result = await searchWithSerpdive(query, options);
-			return { ...result, provider: "serpdive" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("serpdive", err);
-		}
-	}
-
-	if (isKagiAvailable()) {
-		try {
-			const result = await searchWithKagi(query, options);
-			return { ...result, provider: "kagi" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("kagi", err);
-		}
-	}
-
-	if (isBochaAvailable()) {
-		try {
-			const result = await searchWithBocha(query, options);
-			return { ...result, provider: "bocha" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("bocha", err);
-		}
-	}
-
-	if (isOllamaAvailable()) {
-		try {
-			const result = await searchWithOllama(query, options);
-			return { ...result, provider: "ollama" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("ollama", err);
-		}
-	}
-
-	if (isPerplexityAvailable()) {
-		try {
-			const result = await searchWithPerplexity(query, options);
-			return { ...result, provider: "perplexity" };
-		} catch (err) {
-			if (isAbortError(err)) throw err;
-			recordFallback("perplexity", err);
-		}
-	}
-
-	try {
-		const geminiResult = await searchWithGemini(query, options, false);
-		if (geminiResult) return { ...geminiResult, provider: "gemini" };
-		recordFallback("gemini", new Error("Gemini search returned no results."));
-	} catch (err) {
-		if (isAbortError(err)) throw err;
-		recordFallback("gemini", err);
 	}
 
 	if (fallbackFailures.length > 0) {

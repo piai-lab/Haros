@@ -56,6 +56,7 @@ const SETTINGS_SECTION_LABEL_KEY: Record<SettingsSectionId, MessageKey> = {
   worktrees: "settings.worktrees",
   archived: "settings.archived",
   models: "settings.models",
+  "web-search": "settings.webSearch",
   providers: "settings.providers",
   skills: "settings.skills",
   prompts: "settings.prompts",

@@ -70,7 +70,7 @@ export function getLastBrowserCookieDiagnostic(): string | null {
 
 export async function getGoogleCookies(
 	options?: { profile?: string; requiredCookies?: string[] },
-): Promise<{ cookies: CookieMap; warnings: string[] } | null> {
+): Promise<{ cookies: CookieMap; warnings: string[]; browser: string; profile: string } | null> {
 	return getBrowserCookiesForHosts({
 		hosts: GOOGLE_ORIGINS.map((origin) => new URL(origin).hostname),
 		profile: options?.profile,
@@ -82,7 +82,7 @@ export async function getGoogleCookies(
 
 export async function getBrowserCookiesForHosts(
 	options: { hosts: string[]; profile?: string; requiredCookies?: string[]; cookieNames?: Iterable<string>; requiredLabel?: string; requestUrl?: URL },
-): Promise<{ cookies: CookieMap; warnings: string[]; cookieHeader?: string } | null> {
+): Promise<{ cookies: CookieMap; warnings: string[]; browser: string; profile: string; cookieHeader?: string } | null> {
 	cookieDiagnostic.value = null;
 	if (!isBrowserCookieAccessAllowed()) {
 		cookieDiagnostic.value = "Browser cookie access is disabled; enable allowBrowserCookies to use browser cookies.";
@@ -189,6 +189,8 @@ export async function getBrowserCookiesForHosts(
 				return {
 					cookies,
 					warnings: [...warningSet],
+					browser: config.name,
+					profile,
 					...(options.requestUrl ? { cookieHeader: buildCookieHeader(entries) } : {}),
 				};
 			} finally {

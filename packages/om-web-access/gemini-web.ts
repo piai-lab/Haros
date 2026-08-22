@@ -141,6 +141,29 @@ export async function getActiveGoogleEmail(cookies: CookieMap): Promise<string |
 	}
 }
 
+/** Explicit Settings diagnostic; never called by passive readiness or Session startup. */
+export async function getGeminiWebAccountDiagnostic(): Promise<{
+	readonly state: "available" | "unavailable";
+	readonly browser: string | null;
+	readonly profile: string | null;
+	readonly account: string | null;
+}> {
+	if (!isBrowserCookieAccessAllowed()) {
+		return { state: "unavailable", browser: null, profile: null, account: null };
+	}
+	const result = await getGoogleCookies({
+		profile: getChromeProfileFromConfig(),
+		requiredCookies: REQUIRED_COOKIES,
+	});
+	if (!result) return { state: "unavailable", browser: null, profile: null, account: null };
+	return {
+		state: "available",
+		browser: result.browser,
+		profile: result.profile,
+		account: await getActiveGoogleEmail(result.cookies),
+	};
+}
+
 export async function queryWithCookies(
 	prompt: string,
 	cookieMap: CookieMap,

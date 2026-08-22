@@ -436,6 +436,24 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
     target: SETTINGS_TARGETS.customRules,
   },
   {
+    id: "web-search:routing",
+    section: "web-search",
+    title: "Search routing",
+    keywords: "web search auto all named parallel quota cost provider routing",
+  },
+  {
+    id: "web-search:workflow",
+    section: "web-search",
+    title: "Source workflow",
+    keywords: "raw results automatic summary review curator source approval",
+  },
+  {
+    id: "web-search:config-file",
+    section: "web-search",
+    title: "Canonical configuration",
+    keywords: "web-search.json keys credentials advanced file provider",
+  },
+  {
     id: "advanced:version",
     section: "advanced",
     title: "Version",
@@ -522,6 +540,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Permission status": "settings.permissionStatus",
   "Pinned messages": "settings.pinnedMessages",
   "Project order": "settings.projectOrder",
+  "Search routing": "settings.webSearch.routing",
   "Provider updates": "settings.providerUpdates",
   "Pull request": "settings.pullRequest",
   Recap: "settings.recap",
@@ -534,6 +553,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Terminal font": "settings.terminalFont",
   "Terminal font size": "settings.terminalFontSize",
   "Text markers": "settings.textMarkers",
+  "Source workflow": "settings.webSearch.workflow",
   Theme: "settings.theme",
   "Thread order": "settings.threadOrder",
   "Time format": "settings.timeFormat",
@@ -542,6 +562,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Usage and billing": "settings.usage",
   "Use system UI font": "settings.systemUiFont",
   Version: "settings.version",
+  "Canonical configuration": "settings.webSearch.configFile",
   "Visible providers": "settings.visibleProviders",
 };
 

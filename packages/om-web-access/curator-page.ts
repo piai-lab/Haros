@@ -1,4 +1,9 @@
 import type { CuratorPresentationSnapshot } from "./curator-presentation.ts";
+import { resolveCuratorCopy } from "./curator-copy.ts";
+import {
+	getSearchProviderPresentation,
+	type SearchProviderAvailability,
+} from "./gemini-search.ts";
 
 function safeInlineJSON(data: unknown): string {
 	return JSON.stringify(data)
@@ -9,121 +14,28 @@ function safeInlineJSON(data: unknown): string {
 		.replace(/\u2029/g, "\\u2029");
 }
 
-const CURATOR_ZH_REPLACEMENTS: ReadonlyArray<readonly [string, string]> = [
-	["Send selected results without summary", "直接发送所选结果，不生成摘要"],
-	["Time’s up — sending all results to your agent.", "审查已超时，正在将全部结果发送给 Agent。"],
-	["Select sources to generate a focused summary.", "选择来源以生成聚焦摘要。"],
-	["Edit the summary before approving.", "批准前可继续编辑摘要。"],
-	["Optional feedback for regeneration…", "可选：填写重新生成摘要的反馈…"],
-	["Summary draft will appear here…", "摘要草稿将在这里显示…"],
-	["Results will appear below as they complete.", "搜索完成后，结果会依次显示在下方。"],
-	["Waiting for remaining searches…", "正在等待其余搜索完成…"],
-	["Waiting for results…", "正在等待搜索结果…"],
-	["Generating summary draft…", "正在生成摘要草稿…"],
-	["Review summary draft", "审查摘要草稿"],
-	["Rewrite query with AI", "用 AI 改写查询"],
-	["No results for this query", "这个查询没有结果"],
-	["Search failed for this query", "这个查询搜索失败"],
-	["Select at least one result", "请至少选择一项结果"],
-	["Select all", "全选"],
-	["Deselect all", "取消全选"],
-	["Summary Preview", "摘要预览"],
-	["Summary provider", "摘要服务"],
-	["Summary model", "摘要模型"],
-	["Regenerate", "重新生成"],
-	["Generate summary", "生成摘要"],
-	["Approve", "批准"],
-	["Cancel", "取消"],
-	["Back", "返回"],
-	["Preview rendered summary", "预览渲染后的摘要"],
-	["Preview", "预览"],
-	["Add a search…", "添加搜索…"],
-	["Searching…", "正在搜索…"],
-	["Searching", "正在搜索"],
-	["Results sent", "结果已发送"],
-	["Session Ended", "本次审查已结束"],
-	["Closing in", "将在"],
-	["Toggle all", "切换全选"],
-	["Generate", "生成"],
-	["Click to adjust", "点击调整"],
-	["Summary review", "摘要审查"],
-	["Searching sources", "正在搜索来源"],
-	["Selection changed — regenerating summary…", "所选来源已变化，正在重新生成摘要…"],
-	["Selection changed — summary will regenerate shortly…", "所选来源已变化，摘要即将重新生成…"],
-	["Select results to summarize", "请选择要总结的结果"],
-	["Check the results to include, then generate and approve a summary.", "勾选要采用的结果，然后生成并批准摘要。"],
-	["Search for anything below, then generate and approve a summary.", "在下方搜索所需内容，然后生成并批准摘要。"],
-	["What do you need?", "你需要查找什么？"],
-	["No results yet", "暂无结果"],
-	["Searching sources", "正在搜索来源"],
-	["Planning summary", "正在规划摘要"],
-	["Drafting summary", "正在撰写摘要"],
-	["Polishing summary", "正在完善摘要"],
-	["Summary ready", "摘要已就绪"],
-	["Sources", "来源"],
-	["Search failed", "搜索失败"],
-	["Failed", "失败"],
-	["Close", "关闭"],
-	["Feedback…", "反馈…"],
-	[">Set<", ">设置<"],
-	[">sec<", ">秒<"],
-	["OmniMind Web Access", "OmniMind 网络访问"],
-];
-
-function localizeCuratorPage(html: string, locale: "en" | "zh-CN"): string {
-	if (locale !== "zh-CN") return html;
-	const localizeMarkup = (markup: string) => CURATOR_ZH_REPLACEMENTS.reduce(
-		(localized, [english, chinese]) => localized.replaceAll(english, chinese),
-		markup,
-	);
-	// Never run text replacement across executable JavaScript: labels such as
-	// "Back" and "Preview" also occur inside stable identifier names.
-	const inlineScriptStart = html.lastIndexOf("<script>\n");
-	const inlineScriptEnd = inlineScriptStart < 0
-		? -1
-		: html.indexOf("\n</script>", inlineScriptStart);
-	if (inlineScriptStart < 0 || inlineScriptEnd < 0) return localizeMarkup(html);
-	return [
-		localizeMarkup(html.slice(0, inlineScriptStart)),
-		html.slice(inlineScriptStart, inlineScriptEnd + "\n</script>".length),
-		localizeMarkup(html.slice(inlineScriptEnd + "\n</script>".length)),
-	].join("");
+function escapeMarkup(value: string): string {
+	return value
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll(">", "&gt;")
+		.replaceAll('"', "&quot;")
+		.replaceAll("'", "&#39;");
 }
 
 function buildProviderButtons(
-	available: { all: boolean; openai: boolean; brave: boolean; parallel: boolean; "parallel-mcp": boolean; tinyfish: boolean; search1api: boolean; searchinfinity: boolean; querit: boolean; tavily: boolean; firecrawl: boolean; jina: boolean; serpdive: boolean; kagi: boolean; bocha: boolean; ollama: boolean; searxng: boolean; duckduckgo: boolean; perplexity: boolean; exa: boolean; gemini: boolean; anysearch: boolean; xai: boolean; brightdata: boolean; serpbase: boolean; serper: boolean; valyu: boolean },
+	available: SearchProviderAvailability,
 	selected: string,
 	hasInitialQueries: boolean,
-	locale: "en" | "zh-CN",
+	allLabel: string,
 ): string {
 	const providers = [
-		{ value: "all", label: locale === "zh-CN" ? "全部" : "All", available: available.all },
-		{ value: "openai", label: "OpenAI", available: available.openai },
-		{ value: "exa", label: "Exa", available: available.exa },
-		{ value: "brave", label: "Brave", available: available.brave },
-		{ value: "parallel", label: "Parallel", available: available.parallel },
-		{ value: "parallel-mcp", label: "Parallel MCP", available: available["parallel-mcp"] },
-		{ value: "tinyfish", label: "TinyFish", available: available.tinyfish },
-		{ value: "search1api", label: "Search1API", available: available.search1api },
-		{ value: "searchinfinity", label: "Searchinfinity", available: available.searchinfinity },
-		{ value: "querit", label: "Querit", available: available.querit },
-		{ value: "tavily", label: "Tavily", available: available.tavily },
-		{ value: "firecrawl", label: "Firecrawl", available: available.firecrawl },
-		{ value: "jina", label: "Jina", available: available.jina },
-		{ value: "serpdive", label: "SERPdive", available: available.serpdive },
-		{ value: "kagi", label: "Kagi", available: available.kagi },
-		{ value: "bocha", label: "Bocha", available: available.bocha },
-		{ value: "ollama", label: "Ollama", available: available.ollama },
-		{ value: "searxng", label: "SearXNG", available: available.searxng },
-		{ value: "duckduckgo", label: "DuckDuckGo", available: available.duckduckgo },
-		{ value: "perplexity", label: "Perplexity", available: available.perplexity },
-		{ value: "gemini", label: "Gemini", available: available.gemini },
-		{ value: "anysearch", label: "AnySearch", available: available.anysearch },
-		{ value: "xai", label: "xAI", available: available.xai },
-		{ value: "brightdata", label: "Bright Data", available: available.brightdata },
-		{ value: "serpbase", label: "SerpBase", available: available.serpbase },
-		{ value: "serper", label: "Serper", available: available.serper },
-		{ value: "valyu", label: "Valyu", available: available.valyu },
+		{ value: "all", label: allLabel, available: available.all },
+		...getSearchProviderPresentation().map((provider) => ({
+			value: provider.id,
+			label: provider.curatorLabel,
+			available: available[provider.id],
+		})),
 	];
 
 	return providers
@@ -133,7 +45,7 @@ function buildProviderButtons(
 			const state = isDefault && hasInitialQueries ? "loading" : "idle";
 			const classes = ["provider-btn", state, isDefault ? "is-default" : ""].filter(Boolean).join(" ");
 			const disabled = state === "loading" ? " disabled" : "";
-			return `<button type="button" class="${classes}" data-provider="${p.value}" data-state="${state}"${disabled}>${p.label}</button>`;
+			return `<button type="button" class="${classes}" data-provider="${p.value}" data-state="${state}"${disabled}>${escapeMarkup(p.label)}</button>`;
 		})
 		.join("");
 }
@@ -142,7 +54,7 @@ export function generateCuratorPage(
 	queries: string[],
 	sessionToken: string,
 	timeout: number,
-	availableProviders: { all: boolean; openai: boolean; brave: boolean; parallel: boolean; "parallel-mcp": boolean; tinyfish: boolean; search1api: boolean; searchinfinity: boolean; querit: boolean; tavily: boolean; firecrawl: boolean; jina: boolean; serpdive: boolean; kagi: boolean; bocha: boolean; ollama: boolean; searxng: boolean; duckduckgo: boolean; perplexity: boolean; exa: boolean; gemini: boolean; anysearch: boolean; xai: boolean; brightdata: boolean; serpbase: boolean; serper: boolean; valyu: boolean },
+	availableProviders: SearchProviderAvailability,
 	defaultProvider: string,
 	searchProvider: string,
 	summaryModels: Array<{ value: string; label: string }>,
@@ -151,8 +63,11 @@ export function generateCuratorPage(
 ): string {
 	const lang = presentation?.locale ?? "en";
 	const theme = presentation?.theme ?? "dark";
-	const providerButtonsHtml = buildProviderButtons(availableProviders, defaultProvider, queries.length > 0, lang);
-	const inlineData = safeInlineJSON({ queries, sessionToken, timeout, defaultProvider, searchProvider, summaryModels, defaultSummaryModel, availableProviders, presentation });
+	const copy = resolveCuratorCopy(lang);
+	const providerButtonsHtml = buildProviderButtons(availableProviders, defaultProvider, queries.length > 0, copy.all);
+	const providerIds = ["all", ...getSearchProviderPresentation().map((provider) => provider.id)];
+	const providerIdsLiteral = safeInlineJSON(providerIds).replaceAll(",", ", ");
+	const inlineData = safeInlineJSON({ queries, sessionToken, timeout, defaultProvider, searchProvider, summaryModels, defaultSummaryModel, availableProviders, presentation, copy });
 	const legacyResizeBridge = presentation
 		? ""
 		: `var lastResizeHeight = 0;
@@ -167,6 +82,7 @@ export function generateCuratorPage(
   setInterval(checkContentHeight, 500);`;
 	const inlineScript = SCRIPT
 		.replace("__INLINE_DATA__", () => inlineData)
+		.replace("__PROVIDER_IDS__", () => providerIdsLiteral)
 		.replace("__LEGACY_RESIZE_BRIDGE__", () => legacyResizeBridge);
 
 	const html = `<!DOCTYPE html>
@@ -174,7 +90,7 @@ export function generateCuratorPage(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OmniMind Web Access</title>
+<title>${escapeMarkup(copy.brand)}</title>
 <meta name="referrer" content="no-referrer">
 <script src="/assets/marked.min.js?session=${encodeURIComponent(sessionToken)}"><\/script>
 <style>
@@ -183,51 +99,51 @@ ${CSS}
 </head>
 <body>
 
-<div class="timer-badge" id="timer" title="Click to adjust">--:--</div>
+<div class="timer-badge" id="timer" title="${escapeMarkup(copy.clickToAdjust)}">--:--</div>
 <div class="timer-adjust" id="timer-adjust">
 <input type="text" id="timer-input" value="${timeout}">
-<span class="timer-adjust-label">sec</span>
-<button class="timer-adjust-btn" id="timer-set">Set</button>
+<span class="timer-adjust-label">${escapeMarkup(copy.secondsShort)}</span>
+<button class="timer-adjust-btn" id="timer-set">${escapeMarkup(copy.set)}</button>
 </div>
 
 <main>
 <div class="hero" id="hero">
-<div class="hero-kicker">OmniMind Web Access</div>
-<h1 class="hero-title">Searching\u2026</h1>
-<p class="hero-desc">Results will appear below as they complete.</p>
+<div class="hero-kicker">${escapeMarkup(copy.brand)}</div>
+<h1 class="hero-title">${escapeMarkup(copy.searchingEllipsis)}</h1>
+<p class="hero-desc">${escapeMarkup(copy.resultsAppear)}</p>
 <div class="hero-meta">
-<span id="hero-status">Searching\u2026</span>
+<span id="hero-status">${escapeMarkup(copy.searchingEllipsis)}</span>
 <span class="hero-meta-sep"></span>
 <div class="provider-buttons" id="provider-buttons">${providerButtonsHtml}</div>
 </div>
 </div>
 <div id="result-cards"></div>
 <div class="send-raw-row hidden" id="send-raw-row">
-<button class="btn btn-secondary" id="btn-send-raw" disabled>Send selected results without summary</button>
+<button class="btn btn-secondary" id="btn-send-raw" disabled>${escapeMarkup(copy.sendRaw)}</button>
 </div>
 <div class="add-search" id="add-search">
 <span class="add-search-icon">+</span>
-<input type="text" placeholder="Add a search\u2026" id="add-search-input">
-<button type="button" class="add-search-wand" id="add-search-wand" disabled title="Rewrite query with AI">\u2728</button>
+<input type="text" placeholder="${escapeMarkup(copy.addSearch)}" id="add-search-input">
+<button type="button" class="add-search-wand" id="add-search-wand" disabled title="${escapeMarkup(copy.rewriteQuery)}">\u2728</button>
 </div>
 
-<section class="summary-panel hidden" id="summary-panel" aria-label="Summary review">
+<section class="summary-panel hidden" id="summary-panel" aria-label="${escapeMarkup(copy.summaryReview)}">
 <div class="summary-header">
 <div class="summary-header-top">
 <div>
-<h2 class="summary-title">Review summary draft</h2>
-<p class="summary-subtitle" id="summary-subtitle">Edit the summary before approving.</p>
+<h2 class="summary-title">${escapeMarkup(copy.reviewSummaryDraft)}</h2>
+<p class="summary-subtitle" id="summary-subtitle">${escapeMarkup(copy.editSummary)}</p>
 </div>
 <div class="summary-model-controls">
-<select id="summary-provider-select" class="summary-model-dropdown" aria-label="Summary provider"></select>
-<select id="summary-model-select" class="summary-model-dropdown" aria-label="Summary model"></select>
+<select id="summary-provider-select" class="summary-model-dropdown" aria-label="${escapeMarkup(copy.summaryProvider)}"></select>
+<select id="summary-model-select" class="summary-model-dropdown" aria-label="${escapeMarkup(copy.summaryModel)}"></select>
 </div>
 </div>
 </div>
 <div class="summary-generating hidden" id="summary-generating" aria-live="polite">
 <div class="summary-generating-head">
 <span class="summary-generating-orb" aria-hidden="true"></span>
-<span id="summary-generating-copy">Generating summary draft…</span>
+<span id="summary-generating-copy">${escapeMarkup(copy.generatingSummaryDraft)}</span>
 </div>
 <div class="summary-generating-bars" aria-hidden="true">
 <span class="summary-generating-bar b1"></span>
@@ -235,60 +151,60 @@ ${CSS}
 <span class="summary-generating-bar b3"></span>
 </div>
 </div>
-<textarea id="summary-input" class="summary-input" placeholder="Summary draft will appear here\u2026"></textarea>
+<textarea id="summary-input" class="summary-input" placeholder="${escapeMarkup(copy.summaryDraftPlaceholder)}"></textarea>
 <div class="summary-feedback-row">
-<input type="text" id="summary-feedback" class="summary-feedback" placeholder="Optional feedback for regeneration\u2026" />
+<input type="text" id="summary-feedback" class="summary-feedback" placeholder="${escapeMarkup(copy.optionalFeedback)}" />
 </div>
 <div class="summary-actions">
-<button class="btn btn-secondary" id="btn-summary-back">Back</button>
-<button class="btn btn-secondary" id="btn-summary-regenerate">Regenerate</button>
-<button class="btn btn-secondary" id="btn-summary-preview" title="Preview rendered summary">Preview</button>
-<button class="btn btn-submit" id="btn-summary-approve">Approve</button>
+<button class="btn btn-secondary" id="btn-summary-back">${escapeMarkup(copy.back)}</button>
+<button class="btn btn-secondary" id="btn-summary-regenerate">${escapeMarkup(copy.regenerate)}</button>
+<button class="btn btn-secondary" id="btn-summary-preview" title="${escapeMarkup(copy.previewRenderedSummary)}">${escapeMarkup(copy.preview)}</button>
+<button class="btn btn-submit" id="btn-summary-approve">${escapeMarkup(copy.approve)}</button>
 </div>
 </section>
 </main>
 
 <footer class="action-bar">
 <div class="action-shortcuts">
-<span class="shortcut"><kbd>A</kbd> <span>Toggle all</span></span>
-<span class="shortcut"><kbd>Enter</kbd> <span>Generate</span></span>
-<span class="shortcut"><kbd>Esc</kbd> <span>Cancel</span></span>
+<span class="shortcut"><kbd>A</kbd> <span>${escapeMarkup(copy.toggleAll)}</span></span>
+<span class="shortcut"><kbd>Enter</kbd> <span>${escapeMarkup(copy.generate)}</span></span>
+<span class="shortcut"><kbd>Esc</kbd> <span>${escapeMarkup(copy.cancel)}</span></span>
 </div>
 <div class="action-buttons">
-<button class="btn btn-submit" id="btn-send" disabled>Waiting for results\u2026</button>
+<button class="btn btn-submit" id="btn-send" disabled>${escapeMarkup(copy.waitingResults)}</button>
 </div>
 </footer>
 
 <div id="success-overlay" class="success-overlay hidden" aria-live="polite">
 <div class="success-icon">OK</div>
-<p id="success-text">Results sent</p>
+<p id="success-text">${escapeMarkup(copy.resultsSent)}</p>
 </div>
 
 <div id="expired-overlay" class="expired-overlay hidden" aria-live="polite">
 <div class="expired-content">
 <div class="expired-icon">!</div>
-<h2>Session Ended</h2>
-<p id="expired-text">Time\u2019s up \u2014 sending all results to your agent.</p>
-<div class="expired-countdown">Closing in <span id="close-countdown">5</span>s</div>
+<h2>${escapeMarkup(copy.sessionEnded)}</h2>
+<p id="expired-text">${escapeMarkup(copy.timeoutAllResults)}</p>
+<div class="expired-countdown">${escapeMarkup(copy.closingIn)} <span id="close-countdown">5</span>${escapeMarkup(copy.closingUnitSuffix)}</div>
 </div>
 </div>
 
 <div id="preview-modal" class="preview-modal hidden">
 <div class="preview-modal-inner">
 <div class="preview-modal-header">
-<h2 class="preview-modal-title">Summary Preview</h2>
-<button class="preview-modal-close" id="preview-modal-close" title="Close">\u00d7</button>
+<h2 class="preview-modal-title">${escapeMarkup(copy.summaryPreview)}</h2>
+<button class="preview-modal-close" id="preview-modal-close" title="${escapeMarkup(copy.close)}">\u00d7</button>
 </div>
 <div class="preview-modal-body" id="preview-modal-body"></div>
 <div class="preview-popover hidden" id="preview-popover">
 <div class="preview-popover-quote" id="preview-popover-quote"></div>
-<textarea class="preview-popover-input" id="preview-popover-input" placeholder="Feedback\u2026" rows="3"></textarea>
-<button class="btn btn-submit preview-popover-btn" id="preview-popover-regen">Regenerate</button>
+<textarea class="preview-popover-input" id="preview-popover-input" placeholder="${escapeMarkup(copy.feedback)}" rows="3"></textarea>
+<button class="btn btn-submit preview-popover-btn" id="preview-popover-regen">${escapeMarkup(copy.regenerate)}</button>
 </div>
 <div class="preview-modal-footer">
-<select id="preview-modal-model" class="preview-modal-model" aria-label="Summary model"></select>
-<button class="btn btn-secondary" id="preview-modal-regenerate">Regenerate</button>
-<button class="btn btn-submit" id="preview-modal-approve">Approve</button>
+<select id="preview-modal-model" class="preview-modal-model" aria-label="${escapeMarkup(copy.summaryModel)}"></select>
+<button class="btn btn-secondary" id="preview-modal-regenerate">${escapeMarkup(copy.regenerate)}</button>
+<button class="btn btn-submit" id="preview-modal-approve">${escapeMarkup(copy.approve)}</button>
 </div>
 </div>
 </div>
@@ -300,7 +216,7 @@ ${inlineScript}
 </script>
 </body>
 </html>`;
-	return localizeCuratorPage(html, lang);
+	return html;
 }
 
 const CSS = `
@@ -1555,12 +1471,17 @@ main {
 
 const SCRIPT = `(function() {
   var DATA = __INLINE_DATA__;
-  var isZh = DATA.presentation && DATA.presentation.locale === "zh-CN";
-  function tr(english, chinese) { return isZh ? chinese : english; }
+  var COPY = DATA.copy && typeof DATA.copy === "object" ? DATA.copy : {};
+  function t(key) { return typeof COPY[key] === "string" ? COPY[key] : key; }
+  function tf(key, values) {
+    return t(key).replace(/\{([a-z]+)\}/g, function(_match, name) {
+      return Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : "";
+    });
+  }
   var token = DATA.sessionToken;
   var timeoutSec = DATA.timeout;
   var queries = Array.isArray(DATA.queries) ? DATA.queries : [];
-  var providers = ["all", "openai", "exa", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api", "searchinfinity", "querit", "tavily", "firecrawl", "jina", "serpdive", "kagi", "bocha", "ollama", "searxng", "duckduckgo", "perplexity", "gemini", "anysearch", "xai", "brightdata", "serpbase", "serper", "valyu"];
+  var providers = __PROVIDER_IDS__;
   var availProviders = DATA.availableProviders && typeof DATA.availableProviders === "object" ? DATA.availableProviders : {};
   var workflow = "summary-review";
   var initialDefaultProvider = typeof DATA.defaultProvider === "string" ? DATA.defaultProvider : "exa";
@@ -1731,7 +1652,7 @@ const SCRIPT = `(function() {
             data = JSON.parse(raw);
           } catch (err) {
             var parseMessage = err instanceof Error ? err.message : String(err);
-            throw new Error(tr("Invalid JSON response from ", "响应不是有效 JSON：") + path + ": " + parseMessage);
+            throw new Error(t("invalidJsonResponsePrefix") + path + ": " + parseMessage);
           }
         }
 
@@ -1801,7 +1722,7 @@ const SCRIPT = `(function() {
     if (!normalizedProv) return "";
     var altProviders = providers.filter(function(p) { return p !== normalizedProv && availProviders[p] === true; });
     if (altProviders.length === 0) return "";
-    var html = '<div class="card-alt-providers"><span>Also try</span>';
+    var html = '<div class="card-alt-providers"><span>' + t("alsoTry") + '</span>';
     for (var ap = 0; ap < altProviders.length; ap++) {
       html += '<button type="button" class="card-alt-chip" data-alt-provider="' + altProviders[ap] + '" data-alt-query="' + escHtml(queryText) + '">' + escHtml(providerLabel(altProviders[ap])) + '</button>';
     }
@@ -1871,7 +1792,7 @@ const SCRIPT = `(function() {
 
     var autoOption = document.createElement("option");
     autoOption.value = "";
-    autoOption.textContent = tr("Auto", "自动");
+    autoOption.textContent = t("auto");
     summaryModelSelect.appendChild(autoOption);
 
     var models = summaryModelsByProvider[provider] || [];
@@ -1928,7 +1849,7 @@ const SCRIPT = `(function() {
       currentSummaryModel = "";
       if (summaryProviderSelect) summaryProviderSelect.innerHTML = "";
       if (summaryModelSelect) {
-        summaryModelSelect.innerHTML = '<option value="">' + tr("Auto", "自动") + '</option>';
+        summaryModelSelect.innerHTML = '<option value="">' + t("auto") + '</option>';
         summaryModelSelect.value = "";
       }
       return;
@@ -2048,21 +1969,15 @@ const SCRIPT = `(function() {
     var totalCards = resultCardsEl.querySelectorAll(".result-card").length;
     var searchingCount = totalCards - completedCount;
     if (searchingCount > 0) {
-      heroTitle.textContent = isZh
-        ? "已完成 " + completedCount + "/" + totalCards + " 个搜索"
-        : completedCount + " of " + totalCards + " Searches Complete";
+      heroTitle.textContent = tf("searchesCompleteProgress", { completed: completedCount, total: totalCards });
     } else {
-      heroTitle.textContent = isZh
-        ? "已完成 " + completedCount + " 个搜索"
-        : completedCount + " Search" + (completedCount !== 1 ? "es" : "") + " Complete";
+      heroTitle.textContent = tf(completedCount === 1 ? "searchesCompleteOne" : "searchesCompleteMany", { completed: completedCount });
     }
-    heroDesc.textContent = tr(
-      "Check the results to include, then generate and approve a summary.",
-      "勾选要采用的结果，然后生成并批准摘要。"
+    heroDesc.textContent = t("checkResults");
+    if (heroStatus) heroStatus.textContent = tf(
+      searchingCount > 0 ? "completedSearchingStatus" : "completedStatus",
+      { completed: completedCount, searching: searchingCount }
     );
-    if (heroStatus) heroStatus.textContent = isZh
-      ? "已完成 " + completedCount + (searchingCount > 0 ? "，搜索中 " + searchingCount : "")
-      : completedCount + " completed" + (searchingCount > 0 ? ", " + searchingCount + " searching" : "");
   }
 
   function getSummaryDraftText() {
@@ -2099,7 +2014,7 @@ const SCRIPT = `(function() {
     if (!summaryGeneratingCopy) return;
 
     if (stage !== "generating-summary") {
-      summaryGeneratingCopy.textContent = tr("Generating summary draft…", "正在生成摘要草稿…");
+      summaryGeneratingCopy.textContent = t("generatingSummaryDraft");
       summaryGeneratingPhase = -1;
       if (summaryGeneratingEl) {
         summaryGeneratingEl.removeAttribute("data-phase");
@@ -2117,12 +2032,12 @@ const SCRIPT = `(function() {
 
     summaryGeneratingPhase = nextPhase;
 
-    var phaseLabel = tr("Planning summary", "正在规划摘要");
-    if (nextPhase === 1) phaseLabel = tr("Drafting summary", "正在撰写摘要");
-    if (nextPhase === 2) phaseLabel = tr("Polishing summary", "正在完善摘要");
+    var phaseLabel = t("planningSummary");
+    if (nextPhase === 1) phaseLabel = t("draftingSummary");
+    if (nextPhase === 2) phaseLabel = t("polishingSummary");
 
     summaryGeneratingCopy.textContent = summaryPendingModel
-      ? phaseLabel + (isZh ? " · " : " with ") + summaryPendingModel + "…"
+      ? tf("phaseWithModel", { phase: phaseLabel, model: summaryPendingModel })
       : phaseLabel + "…";
 
     if (summaryGeneratingEl) {
@@ -2138,31 +2053,25 @@ const SCRIPT = `(function() {
     }
     if (summarySubtitle) {
       var selCount = getSelectedIndices().length;
-      var selLabel = isZh
-        ? "已选择 " + selCount + " 项结果"
-        : selCount + " selected result" + (selCount !== 1 ? "s" : "");
+      var selLabel = tf(selCount === 1 ? "selectedOne" : "selectedMany", { count: selCount });
       if (isRegenerating && stage === "generating-summary") {
-        summarySubtitle.textContent = tr("Selection changed — regenerating summary…", "所选来源已变化，正在重新生成摘要…");
+        summarySubtitle.textContent = t("selectionChangedRegenerating");
       } else if (isRegenerating) {
-        summarySubtitle.textContent = tr("Selection changed — summary will regenerate shortly…", "所选来源已变化，摘要即将重新生成…");
+        summarySubtitle.textContent = t("selectionChangedSoon");
       } else if (stage === "generating-summary") {
         summarySubtitle.textContent = summaryPendingModel
-          ? (isZh ? "正在使用 " + summaryPendingModel + " 总结" + selLabel + "…" : "Summarizing " + selLabel + " with " + summaryPendingModel + "…")
-          : (isZh ? "正在总结" + selLabel + "…" : "Summarizing " + selLabel + "…");
+          ? tf("summarizingWithModel", { selection: selLabel, model: summaryPendingModel })
+          : tf("summarizingSelection", { selection: selLabel });
       } else if (summaryMeta && summaryMeta.fallbackUsed) {
         var fallbackLabel = summaryMeta.phase === "deterministic-fallback"
-          ? (isZh ? "确定性备用摘要" : "Deterministic fallback summary")
-          : (isZh ? "备用摘要" : "Fallback summary");
+          ? t("deterministicFallbackSummary")
+          : t("fallbackSummary");
         var fallbackReason = summaryMeta.fallbackReason
-          ? (isZh ? " 原因：" : " Reason: ") + summaryMeta.fallbackReason + "."
+          ? tf("fallbackReason", { reason: summaryMeta.fallbackReason })
           : "";
-        summarySubtitle.textContent = isZh
-          ? fallbackLabel + "（" + selLabel + "）。" + fallbackReason
-          : fallbackLabel + " of " + selLabel + "." + fallbackReason;
+        summarySubtitle.textContent = tf("fallbackSelection", { label: fallbackLabel, selection: selLabel, reason: fallbackReason });
       } else {
-        summarySubtitle.textContent = isZh
-          ? selLabel + "的摘要。可直接编辑、根据反馈重新生成或批准。"
-          : "Summary of " + selLabel + ". Edit directly, regenerate with feedback, or approve.";
+        summarySubtitle.textContent = tf("summaryOfSelection", { selection: selLabel });
       }
     }
 
@@ -2194,16 +2103,16 @@ const SCRIPT = `(function() {
 
     if (btnSend) {
       if (stage === "generating-summary") {
-        btnSend.textContent = tr("Generating summary…", "正在生成摘要…");
+        btnSend.textContent = t("generatingSummary");
         btnSend.disabled = true;
       } else if (!inResults) {
-        btnSend.textContent = tr("Summary ready", "摘要已就绪");
+        btnSend.textContent = t("summaryReady");
         btnSend.disabled = true;
       } else if (!hasCompleted) {
-        btnSend.textContent = searchesDone ? tr("No results yet", "暂无结果") : tr("Waiting for results…", "正在等待搜索结果…");
+        btnSend.textContent = searchesDone ? t("noResultsYet") : t("waitingResults");
         btnSend.disabled = true;
       } else {
-        btnSend.textContent = hasSelection ? tr("Generate summary", "生成摘要") : tr("Select results to summarize", "请选择要总结的结果");
+        btnSend.textContent = hasSelection ? t("generateSummary") : t("selectResultsToSummarize");
         btnSend.disabled = !canGenerate || !hasSelection;
       }
     }
@@ -2239,8 +2148,8 @@ const SCRIPT = `(function() {
     panel.className = "result-loading";
     panel.innerHTML =
       '<div class="result-loading-header">' +
-        '<div class="result-loading-title">' + tr("Searching sources", "正在搜索来源") + '</div>' +
-        '<div class="result-loading-sub">' + tr("Searching\u2026", "正在搜索…") + '</div>' +
+        '<div class="result-loading-title">' + t("searchingSources") + '</div>' +
+        '<div class="result-loading-sub">' + t("searchingEllipsis") + '</div>' +
       '</div>' +
       '<div class="result-loading-grid">' +
         '<div class="loading-card"><div class="loading-card-row long"></div><div class="loading-card-row mid"></div><div class="loading-card-row short"></div></div>' +
@@ -2259,15 +2168,12 @@ const SCRIPT = `(function() {
 
     var total = allQueries.length;
     if (total <= 0) {
-      sub.textContent = tr("Searching\u2026", "正在搜索…");
+      sub.textContent = t("searchingEllipsis");
       return;
     }
 
     var done = Math.min(completedCount, total);
-    var noun = total === 1 ? "query" : "queries";
-    sub.textContent = isZh
-      ? "正在搜索 " + done + "/" + total + "\u2026"
-      : "Searching " + done + "/" + total + " " + noun + "\u2026";
+    sub.textContent = tf(total === 1 ? "searchingQuery" : "searchingQueries", { done: done, total: total });
   }
 
   function syncLoadingPanel() {
@@ -2293,10 +2199,10 @@ const SCRIPT = `(function() {
             '<div class="result-card-query">' + escHtml(queryText) + "</div>" +
             tag +
           "</div>" +
-          '<div class="result-card-meta" style="color:var(--timer-urgent-fg)">' + tr("Failed", "失败") + '</div>' +
+          '<div class="result-card-meta" style="color:var(--timer-urgent-fg)">' + t("failed") + '</div>' +
         "</div>" +
       "</div>" +
-      '<div class="result-card-error-msg">' + escHtml(errorText || tr("Search failed", "搜索失败")) + "</div>";
+      '<div class="result-card-error-msg">' + escHtml(errorText || t("searchFailed")) + "</div>";
   }
 
   function populateResultCard(card, data, queryText, provider) {
@@ -2307,9 +2213,7 @@ const SCRIPT = `(function() {
         domains.push(data.results[i].domain);
       }
     }
-    var metaText = isZh
-      ? sourceCount + " 个来源"
-      : sourceCount + " source" + (sourceCount !== 1 ? "s" : "");
+    var metaText = tf(sourceCount === 1 ? "sourceCountOne" : "sourceCountMany", { count: sourceCount });
     if (domains.length > 0) metaText += " \u00B7 " + domains.join(", ");
     if (sourceCount > 3) metaText += ", +" + (sourceCount - 3);
 
@@ -2326,7 +2230,7 @@ const SCRIPT = `(function() {
       bodyHtml += '<div class="result-card-answer">' + sanitizeMarkdownHtml(rendered) + "</div>";
     }
     if (data.results && data.results.length > 0) {
-      bodyHtml += '<div class="result-card-sources"><div class="result-card-sources-title">' + tr("Sources", "来源") + '</div>';
+      bodyHtml += '<div class="result-card-sources"><div class="result-card-sources-title">' + t("sources") + '</div>';
       for (var k = 0; k < data.results.length; k++) {
         var r = data.results[k];
         var label = r.title && r.title.indexOf("Source ") !== 0 ? r.title : r.url;
@@ -2366,7 +2270,7 @@ const SCRIPT = `(function() {
             '<div class="result-card-query">' + escHtml(queryText) + "</div>" +
             providerTagHtml(provider) +
           "</div>" +
-          '<div class="result-card-meta"><span class="searching-dots">' + tr("Searching", "正在搜索") + '</span></div>' +
+          '<div class="result-card-meta"><span class="searching-dots">' + t("searching") + '</span></div>' +
         "</div>" +
       "</div>" +
       buildAltChipsHtml(provider, queryText);
@@ -2513,7 +2417,7 @@ const SCRIPT = `(function() {
         }
       }).catch(function(err) {
         var message = err instanceof Error ? err.message : String(err);
-        setError(tr("Failed to save provider preference: ", "保存搜索服务偏好失败：") + (message || tr("unknown error", "未知错误")));
+        setError(t("failedToSaveProviderPrefix") + (message || t("unknownError")));
       });
     }
   }
@@ -2649,7 +2553,7 @@ const SCRIPT = `(function() {
           removeSlot(slotId);
           newCard.remove();
           var message = err instanceof Error ? err.message : String(err);
-          setError(tr("Re-search failed: ", "重新搜索失败：") + (message || tr("Search failed", "搜索失败")));
+          setError(t("researchFailedPrefix") + (message || t("searchFailed")));
           updateSummaryText();
         })
         .finally(function() {
@@ -2688,7 +2592,7 @@ const SCRIPT = `(function() {
         })
         .catch(function(err) {
           var message = err instanceof Error ? err.message : String(err);
-          setError(tr("Rewrite failed: ", "改写查询失败：") + (message || tr("unknown error", "未知错误")));
+          setError(t("rewriteFailedPrefix") + (message || t("unknownError")));
         })
         .finally(function() {
           rewriteInFlight = false;
@@ -2731,7 +2635,7 @@ const SCRIPT = `(function() {
         if (!data || data.ok === false) {
           removeSlot(slotId);
           card.remove();
-          setError(tr("Failed to add search: ", "添加搜索失败：") + (extractServerError(data) || tr("Search failed", "搜索失败")));
+          setError(t("addSearchFailedPrefix") + (extractServerError(data) || t("searchFailed")));
           recomputeProviderStates();
           updateSummaryText();
           return;
@@ -2745,7 +2649,7 @@ const SCRIPT = `(function() {
         removeSlot(slotId);
         card.remove();
         var message = err instanceof Error ? err.message : String(err);
-        setError(tr("Failed to add search: ", "添加搜索失败：") + (message || tr("Search failed", "搜索失败")));
+        setError(t("addSearchFailedPrefix") + (message || t("searchFailed")));
         recomputeProviderStates();
         updateSummaryText();
       })
@@ -2787,7 +2691,7 @@ const SCRIPT = `(function() {
   }
 
   function submitPayload(payload, successText) {
-    if (submitInFlight) return Promise.reject(new Error(tr("Submit already in progress", "正在提交，请稍候")));
+    if (submitInFlight) return Promise.reject(new Error(t("submitInProgress")));
     submitInFlight = true;
     submitted = true;
     syncLoadingPanel();
@@ -2818,7 +2722,7 @@ const SCRIPT = `(function() {
     syncLoadingPanel();
     updateStageUI();
     clearError();
-    showExpired(tr("Time\u2019s up \u2014 submitting current summary state.", "审查已超时，正在提交当前摘要状态。"));
+    showExpired(t("timeoutCurrentSummary"));
 
     function finalizeClose() {
       submitInFlight = false;
@@ -2875,10 +2779,10 @@ const SCRIPT = `(function() {
   }
 
   if (queries.length === 0) {
-    heroTitle.textContent = tr("What do you need?", "你需要查找什么？");
-    heroDesc.textContent = tr("Search for anything below, then generate and approve a summary.", "在下方搜索所需内容，然后生成并批准摘要。");
+    heroTitle.textContent = t("whatDoYouNeed");
+    heroDesc.textContent = t("searchAnything");
     if (heroStatus) heroStatus.textContent = "";
-    btnSend.textContent = tr("No results yet", "暂无结果");
+    btnSend.textContent = t("noResultsYet");
   } else {
     for (var i = 0; i < queries.length; i++) {
       queryIndexToSlot.set(i, i);
@@ -2900,7 +2804,7 @@ const SCRIPT = `(function() {
       return JSON.parse(e.data);
     } catch (err) {
       var message = err instanceof Error ? err.message : String(err);
-      setError(tr("Invalid live event payload: ", "实时事件数据无效：") + eventName + ": " + (message || tr("unknown parse error", "未知解析错误")));
+      setError(t("invalidLiveEventPrefix") + eventName + ": " + (message || t("unknownParseError")));
       return null;
     }
   }
@@ -2990,13 +2894,13 @@ const SCRIPT = `(function() {
         }
         if (data.done) applyDoneEvent();
         if (showWarning && !searchesDone) {
-          setLiveUpdateWarning(tr("Live search updates disconnected. Reconnecting and polling for results.", "实时搜索更新已断开，正在重连并轮询结果。"));
+          setLiveUpdateWarning(t("liveDisconnectedPolling"));
         }
       })
       .catch(function(err) {
         if (!showWarning || submitted || timerExpired) return;
         var message = err instanceof Error ? err.message : String(err);
-        setLiveUpdateWarning(tr("Live search updates disconnected. Retrying: ", "实时搜索更新已断开，正在重试：") + (message || tr("unknown error", "未知错误")));
+        setLiveUpdateWarning(t("liveDisconnectedRetryPrefix") + (message || t("unknownError")));
       })
       .finally(function() {
         stateSyncInFlight = false;
@@ -3178,14 +3082,14 @@ const SCRIPT = `(function() {
     if (submitted || timerExpired || submitInFlight) return;
 
     if (!Array.isArray(indices) || indices.length === 0) {
-      setError(tr("Select at least one result to summarize", "请至少选择一项结果以生成摘要"));
+      setError(t("selectOneToSummarize"));
       stage = "results";
       updateStageUI();
       return;
     }
 
     if (hasPendingSearchCards()) {
-      setError(tr("Wait for running searches to finish before generating summary", "请等待正在进行的搜索完成后再生成摘要"));
+      setError(t("waitForSearches"));
       stage = "results";
       updateStageUI();
       return;
@@ -3249,7 +3153,7 @@ const SCRIPT = `(function() {
 
         var summaryText = typeof data.summary === "string" ? data.summary.trim() : "";
         if (!summaryText) {
-          throw new Error(tr("Summary response was empty", "摘要响应为空"));
+          throw new Error(t("summaryResponseEmpty"));
         }
 
         if (summaryInput) {
@@ -3268,7 +3172,7 @@ const SCRIPT = `(function() {
       .catch(function(err) {
         if (requestId !== summaryRequestSeq) return;
         var message = err instanceof Error ? err.message : String(err);
-        setError(tr("Failed to generate summary — ", "生成摘要失败：") + (message || tr("unknown error", "未知错误")));
+        setError(t("generateSummaryFailedPrefix") + (message || t("unknownError")));
         resetSummaryGeneratingState();
         isRegenerating = false;
         if (wasRegenerating && getSummaryDraftText().length > 0) {
@@ -3321,7 +3225,7 @@ const SCRIPT = `(function() {
 
     var selected = getSelectedIndices();
     if (selected.length === 0) {
-      setError(tr("Select at least one result before approving", "批准前请至少选择一项结果"));
+      setError(t("selectOneBeforeApprove"));
       updateStageUI();
       return;
     }
@@ -3336,7 +3240,7 @@ const SCRIPT = `(function() {
     submitPayload(payload, "Summary approved")
       .catch(function(err) {
         var message = err instanceof Error ? err.message : String(err);
-        setError(tr("Failed to approve summary — ", "批准摘要失败：") + (message || tr("the agent may have moved on", "Agent 可能已继续执行")));
+        setError(t("approveFailedPrefix") + (message || t("agentMovedOn")));
       });
   }
 
@@ -3353,7 +3257,7 @@ const SCRIPT = `(function() {
         if (data && data.ok === false) {
           throw new Error(extractServerError(data) || "cancel rejected");
         }
-        showSuccess(tr("Skipped", "已跳过"));
+        showSuccess(t("skipped"));
       })
       .catch(function(err) {
         submitted = false;
@@ -3361,7 +3265,7 @@ const SCRIPT = `(function() {
         syncLoadingPanel();
         updateStageUI();
         var message = err instanceof Error ? err.message : String(err);
-        setError(tr("Failed to cancel — ", "取消失败：") + (message || tr("the agent may have moved on", "Agent 可能已继续执行")));
+        setError(t("cancelFailedPrefix") + (message || t("agentMovedOn")));
       });
   }
 
@@ -3374,10 +3278,10 @@ const SCRIPT = `(function() {
     btnSendRaw.addEventListener("click", function() {
       var selected = getSelectedIndices();
       if (selected.length === 0) return;
-      submitPayload({ selected: selected, rawResults: true }, tr("Results sent", "结果已发送"))
+      submitPayload({ selected: selected, rawResults: true }, t("resultsSent"))
         .catch(function(err) {
           var message = err instanceof Error ? err.message : String(err);
-          setError(tr("Failed to send results — ", "发送结果失败：") + (message || tr("the agent may have moved on", "Agent 可能已继续执行")));
+          setError(t("sendResultsFailedPrefix") + (message || t("agentMovedOn")));
         });
     });
   }
@@ -3411,7 +3315,7 @@ const SCRIPT = `(function() {
       : "<pre>" + escHtml(draft) + "</pre>";
     previewModalBody.innerHTML = sanitizeMarkdownHtml(rendered);
     if (previewModalModel) {
-      previewModalModel.innerHTML = '<option value="">' + tr("Auto", "自动") + '</option>';
+      previewModalModel.innerHTML = '<option value="">' + t("auto") + '</option>';
       for (var i = 0; i < summaryModels.length; i++) {
         var m = summaryModels[i];
         var opt = document.createElement("option");

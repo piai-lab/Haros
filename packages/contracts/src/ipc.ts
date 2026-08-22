@@ -293,6 +293,18 @@ import type {
   OmniMindAgentPromptSnapshot,
 } from "./omnimindAgentPrompts";
 import type {
+  OmniMindWebSearchGeminiDiagnosticInput,
+  OmniMindWebSearchGeminiDiagnosticResult,
+  OmniMindWebSearchMutationInput,
+  OmniMindWebSearchMutationResult,
+  OmniMindWebSearchOpenConfigInput,
+  OmniMindWebSearchProbeResult,
+  OmniMindWebSearchProviderTestInput,
+  OmniMindWebSearchReadResult,
+  OmniMindWebSearchRecheckInput,
+  OmniMindWebSearchRefreshInput,
+} from "./omnimindWebSearch";
+import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
   StatsGetProfileTokenStatsInput,
@@ -956,6 +968,24 @@ export interface NativeApi {
       input?: OmniMindAgentPromptGetSnapshotInput,
     ) => Promise<OmniMindAgentPromptSnapshot>;
     mutate: (input: OmniMindAgentPromptMutationInput) => Promise<OmniMindAgentPromptMutationResult>;
+  };
+  omnimindWebSearch: {
+    open: () => Promise<OmniMindWebSearchReadResult>;
+    refresh: (input?: OmniMindWebSearchRefreshInput) => Promise<OmniMindWebSearchReadResult>;
+    mutate: (input: OmniMindWebSearchMutationInput) => Promise<OmniMindWebSearchMutationResult>;
+    testProvider: (
+      input: OmniMindWebSearchProviderTestInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindWebSearchProbeResult>;
+    recheck: (
+      input: OmniMindWebSearchRecheckInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindWebSearchProbeResult>;
+    openConfig: (input: OmniMindWebSearchOpenConfigInput) => Promise<void>;
+    diagnoseGemini: (
+      input: OmniMindWebSearchGeminiDiagnosticInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindWebSearchGeminiDiagnosticResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

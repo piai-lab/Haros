@@ -42,6 +42,7 @@ import {
   NotificationsSettingsPanel,
 } from "~/components/settings/DesktopSettingsPanels";
 import { ModelsSettingsPanel } from "~/components/settings/ModelsSettingsPanel";
+import { WebSearchSettingsPanel } from "~/components/settings/WebSearchSettingsPanel";
 import { PromptsSettingsPanel } from "~/components/settings/PromptsSettingsPanel";
 import {
   isProviderInstallSettingsDirty,
@@ -132,6 +133,7 @@ const SETTINGS_SECTION_LABEL_KEY = {
   worktrees: "settings.worktrees",
   archived: "settings.archived",
   models: "settings.models",
+  "web-search": "settings.webSearch",
   providers: "settings.providers",
   skills: "settings.skills",
   prompts: "settings.prompts",
@@ -152,6 +154,7 @@ const SETTINGS_SECTION_DESCRIPTION_KEY = {
   worktrees: "settings.worktreesDescription",
   archived: "settings.archivedDescription",
   models: "settings.modelsDescription",
+  "web-search": "settings.webSearchDescription",
   providers: "settings.providersDescription",
   skills: "settings.skillsDescription",
   prompts: "settings.promptsDescription",
@@ -1419,7 +1422,7 @@ function SettingsRouteView() {
                             : t(SETTINGS_SECTION_DESCRIPTION_KEY[activeSection])}
                     </p>
                   </div>
-                  {activeSection !== "prompts" ? (
+                  {activeSection !== "prompts" && activeSection !== "web-search" ? (
                     <Button
                       size="xs"
                       variant="outline"
@@ -1453,6 +1456,7 @@ function SettingsRouteView() {
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
+                <WebSearchSettingsPanel active={activeSection === "web-search"} />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}
                   settings={settings}

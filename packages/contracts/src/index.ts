@@ -20,6 +20,7 @@ export * from "./providerRuntime";
 export * from "./omnimindModelServices";
 export * from "./omnimindEcosystem";
 export * from "./omnimindAgentPrompts";
+export * from "./omnimindWebSearch";
 export * from "./model";
 export * from "./agentMentions";
 export * from "./agentGateway";

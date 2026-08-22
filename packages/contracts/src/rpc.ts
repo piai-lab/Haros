@@ -178,6 +178,19 @@ import {
   OmniMindAgentPromptSnapshot,
 } from "./omnimindAgentPrompts";
 import {
+  OmniMindWebSearchGeminiDiagnosticInput,
+  OmniMindWebSearchGeminiDiagnosticResult,
+  OmniMindWebSearchMutationInput,
+  OmniMindWebSearchMutationResult,
+  OmniMindWebSearchOpenConfigInput,
+  OmniMindWebSearchOpenInput,
+  OmniMindWebSearchProbeResult,
+  OmniMindWebSearchProviderTestInput,
+  OmniMindWebSearchReadResult,
+  OmniMindWebSearchRecheckInput,
+  OmniMindWebSearchRefreshInput,
+} from "./omnimindWebSearch";
+import {
   ProviderGetComposerCapabilitiesInput,
   ProviderComposerCapabilities,
   ProviderListAgentsInput,
@@ -1333,6 +1346,50 @@ export const WsOmniMindAgentPromptsMutateRpc = Rpc.make(WS_METHODS.omnimindAgent
   success: OmniMindAgentPromptMutationResult,
   error: WsRpcError,
 });
+export const WsOmniMindWebSearchOpenRpc = Rpc.make(WS_METHODS.omnimindWebSearchOpen, {
+  payload: OmniMindWebSearchOpenInput,
+  success: OmniMindWebSearchReadResult,
+  error: WsRpcError,
+});
+export const WsOmniMindWebSearchRefreshRpc = Rpc.make(WS_METHODS.omnimindWebSearchRefresh, {
+  payload: OmniMindWebSearchRefreshInput,
+  success: OmniMindWebSearchReadResult,
+  error: WsRpcError,
+});
+export const WsOmniMindWebSearchMutateRpc = Rpc.make(WS_METHODS.omnimindWebSearchMutate, {
+  payload: OmniMindWebSearchMutationInput,
+  success: OmniMindWebSearchMutationResult,
+  error: WsRpcError,
+});
+export const WsOmniMindWebSearchTestProviderRpc = Rpc.make(
+  WS_METHODS.omnimindWebSearchTestProvider,
+  {
+    payload: OmniMindWebSearchProviderTestInput,
+    success: OmniMindWebSearchProbeResult,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindWebSearchRecheckRpc = Rpc.make(WS_METHODS.omnimindWebSearchRecheck, {
+  payload: OmniMindWebSearchRecheckInput,
+  success: OmniMindWebSearchProbeResult,
+  error: WsRpcError,
+});
+export const WsOmniMindWebSearchOpenConfigRpc = Rpc.make(
+  WS_METHODS.omnimindWebSearchOpenConfig,
+  {
+    payload: OmniMindWebSearchOpenConfigInput,
+    success: Schema.Void,
+    error: WsRpcError,
+  },
+);
+export const WsOmniMindWebSearchGeminiDiagnosticRpc = Rpc.make(
+  WS_METHODS.omnimindWebSearchGeminiDiagnostic,
+  {
+    payload: OmniMindWebSearchGeminiDiagnosticInput,
+    success: OmniMindWebSearchGeminiDiagnosticResult,
+    error: WsRpcError,
+  },
+);
 
 export const WsAutomationListRpc = Rpc.make(WS_METHODS.automationList, {
   payload: AutomationListInput,
@@ -1536,6 +1593,13 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOmniMindEcosystemReloadRpc,
   WsOmniMindAgentPromptsGetSnapshotRpc,
   WsOmniMindAgentPromptsMutateRpc,
+  WsOmniMindWebSearchOpenRpc,
+  WsOmniMindWebSearchRefreshRpc,
+  WsOmniMindWebSearchMutateRpc,
+  WsOmniMindWebSearchTestProviderRpc,
+  WsOmniMindWebSearchRecheckRpc,
+  WsOmniMindWebSearchOpenConfigRpc,
+  WsOmniMindWebSearchGeminiDiagnosticRpc,
   WsAutomationListRpc,
   WsAutomationGetMemoryRpc,
   WsAutomationCreateRpc,

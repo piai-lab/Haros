@@ -15,7 +15,7 @@ import { findContent, type FindMode } from "./content-find.ts";
 import { answerFromPage } from "./page-query.ts";
 import { rewriteSearchQuery } from "./query-rewrite.ts";
 import { clearCloneCache } from "./github-extract.ts";
-import { getConfiguredSearchRouting, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProvider, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
+import { getAutoSearchProviderOrder, getConfiguredSearchRouting, getSearchProviderAvailability, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProvider, type SearchProviderAvailability, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
 import type { SearchResult } from "./perplexity.ts";
 import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig, resolveCuratorNetworkConfig } from "./utils.ts";
 import {
@@ -45,34 +45,8 @@ import { createRequire } from "node:module";
 import { platform } from "node:os";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { isPerplexityAvailable } from "./perplexity.ts";
-import { isExaAvailable } from "./exa.ts";
-import { isGeminiApiAvailable } from "./gemini-api.ts";
 import { getActiveGoogleEmail, getGeminiWebAvailabilityDiagnostic, isGeminiWebAvailable } from "./gemini-web.ts";
 import { isBrowserCookieAccessAllowed } from "./gemini-web-config.ts";
-import { isBraveAvailable } from "./brave.ts";
-import { isOpenAISearchAvailable } from "./openai-search.ts";
-import { isParallelAvailable } from "./parallel.ts";
-import { isParallelMcpAvailable } from "./parallel-mcp.ts";
-import { isTinyFishAvailable } from "./tinyfish.ts";
-import { isSearch1APIAvailable } from "./search1api.ts";
-import { isSearchinfinityAvailable } from "./searchinfinity.ts";
-import { isQueritAvailable } from "./querit.ts";
-import { isTavilyAvailable } from "./tavily.ts";
-import { isFirecrawlAvailable } from "./firecrawl.ts";
-import { isJinaSearchAvailable } from "./jina-search.ts";
-import { isSerpdiveAvailable } from "./serpdive.ts";
-import { isKagiAvailable } from "./kagi.ts";
-import { isBochaAvailable } from "./bocha.ts";
-import { isOllamaAvailable } from "./ollama.ts";
-import { isSearXNGAvailable } from "./searxng.ts";
-import { isDuckDuckGoAvailable } from "./duckduckgo.ts";
-import { isAnySearchAvailable } from "./anysearch.ts";
-import { isXaiSearchAvailable } from "./xai-search.ts";
-import { isBrightDataAvailable } from "./brightdata.ts";
-import { isSerpBaseAvailable } from "./serpbase.ts";
-import { isSerperAvailable } from "./serper.ts";
-import { isValyuAvailable } from "./valyu.ts";
 import { buildSearchErrorPlan, type SearchErrorDetails, type SearchErrorPlan } from "./render-search-error.ts";
 import { findModelWithProviderRouting, loadEnabledModelPatterns, modelMatchesEnabledPatterns, splitThinkingSuffix } from "./summary-model-scope.ts";
 import {
@@ -174,35 +148,7 @@ interface WebSearchConfig {
 	};
 }
 
-interface ProviderAvailability {
-	all: boolean;
-	openai: boolean;
-	brave: boolean;
-	parallel: boolean;
-	"parallel-mcp": boolean;
-	tinyfish: boolean;
-	search1api: boolean;
-	searchinfinity: boolean;
-	querit: boolean;
-	tavily: boolean;
-	firecrawl: boolean;
-	jina: boolean;
-	serpdive: boolean;
-	searxng: boolean;
-	duckduckgo: boolean;
-	perplexity: boolean;
-	exa: boolean;
-	gemini: boolean;
-	kagi: boolean;
-	bocha: boolean;
-	ollama: boolean;
-	anysearch: boolean;
-	xai: boolean;
-	brightdata: boolean;
-	serpbase: boolean;
-	serper: boolean;
-	valyu: boolean;
-}
+type ProviderAvailability = SearchProviderAvailability;
 
 type WebSearchWorkflow = "none" | "summary-review" | "auto-summary";
 type CuratorWorkflow = "summary-review";
@@ -213,20 +159,6 @@ interface CuratorBootstrap {
 	availableProviders: ProviderAvailability;
 	defaultProvider: CuratorProvider;
 	timeoutSeconds: number;
-}
-
-function parseConfigRoot(raw: string): Record<string, unknown> {
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${getWebSearchConfigPath()}: ${message}`);
-	}
-	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${getWebSearchConfigPath()}: expected a JSON object`);
-	}
-	return parsed as Record<string, unknown>;
 }
 
 function loadConfig(): WebSearchConfig {
@@ -401,41 +333,7 @@ function shouldAutoOpenCuratorBrowser(config: WebSearchConfig): boolean {
 }
 
 async function getProviderAvailability(ctx: ExtensionContext): Promise<ProviderAvailability> {
-	const geminiWebAvail = await isGeminiWebAvailable();
-	const geminiApiAvail = isGeminiApiAvailable();
-	const providers = {
-		openai: await isOpenAISearchAvailable(ctx),
-		brave: isBraveAvailable(),
-		parallel: isParallelAvailable(),
-		"parallel-mcp": isParallelMcpAvailable(),
-		tinyfish: isTinyFishAvailable(),
-		search1api: isSearch1APIAvailable(),
-		searchinfinity: isSearchinfinityAvailable(),
-		querit: isQueritAvailable(),
-		tavily: isTavilyAvailable(),
-		firecrawl: isFirecrawlAvailable(),
-		jina: isJinaSearchAvailable(),
-		serpdive: isSerpdiveAvailable(),
-		kagi: isKagiAvailable(),
-		bocha: isBochaAvailable(),
-		ollama: isOllamaAvailable(),
-		searxng: isSearXNGAvailable(),
-		duckduckgo: isDuckDuckGoAvailable(),
-		perplexity: isPerplexityAvailable(),
-		exa: isExaAvailable(),
-		gemini: geminiApiAvail || !!geminiWebAvail,
-		anysearch: isAnySearchAvailable(),
-		xai: await isXaiSearchAvailable(ctx),
-		brightdata: isBrightDataAvailable(),
-		serpbase: isSerpBaseAvailable(),
-		serper: isSerperAvailable(),
-		valyu: isValyuAvailable(),
-	};
-	return {
-		// Parallel MCP, DuckDuckGo, AnySearch, xAI, Bright Data, SerpBase, Serper, and Valyu are explicit-only, so they never make `all` eligible.
-		all: Object.entries(providers).some(([provider, available]) => provider !== "parallel-mcp" && provider !== "duckduckgo" && provider !== "anysearch" && provider !== "xai" && provider !== "brightdata" && provider !== "serpbase" && provider !== "serper" && provider !== "valyu" && provider !== "gemini" && available) || geminiApiAvail,
-		...providers,
-	};
+	return getSearchProviderAvailability({ extensionContext: ctx });
 }
 
 function shouldPreferOpenAI(options?: Pick<PendingCurate, "numResults" | "recencyFilter">): boolean {
@@ -463,24 +361,9 @@ async function loadCuratorBootstrap(
 }
 
 function firstAvailableProvider(available: ProviderAvailability, preferOpenAI: boolean, fallback: ResolvedSearchProvider): ResolvedSearchProvider {
-	if (available.searxng) return "searxng";
-	if (preferOpenAI && available.openai) return "openai";
-	if (available.exa) return "exa";
-	if (available.brave) return "brave";
-	if (available.parallel) return "parallel";
-	if (available.tinyfish) return "tinyfish";
-	if (available.search1api) return "search1api";
-	if (available.searchinfinity) return "searchinfinity";
-	if (available.querit) return "querit";
-	if (available.tavily) return "tavily";
-	if (available.firecrawl) return "firecrawl";
-	if (available.jina) return "jina";
-	if (available.serpdive) return "serpdive";
-	if (available.kagi) return "kagi";
-	if (available.bocha) return "bocha";
-	if (available.ollama) return "ollama";
-	if (available.perplexity) return "perplexity";
-	if (available.gemini) return "gemini";
+	for (const provider of getAutoSearchProviderOrder({ preferOpenAI })) {
+		if (available[provider]) return provider;
+	}
 	return fallback;
 }
 
@@ -505,59 +388,8 @@ function resolveProvider(
 	if (provider === "all" && !available.all) {
 		return firstAvailableProvider(available, preferOpenAI, "exa");
 	}
-	if (provider === "openai" && !available.openai) {
-		return firstAvailableProvider(available, false, "openai");
-	}
-	if (provider === "brave" && !available.brave) {
-		return firstAvailableProvider(available, preferOpenAI, "brave");
-	}
-	if (provider === "parallel" && !available.parallel) {
-		return firstAvailableProvider(available, preferOpenAI, "parallel");
-	}
-	if (provider === "tinyfish" && !available.tinyfish) {
-		return firstAvailableProvider(available, preferOpenAI, "tinyfish");
-	}
-	if (provider === "search1api" && !available.search1api) {
-		return firstAvailableProvider(available, preferOpenAI, "search1api");
-	}
-	if (provider === "searchinfinity" && !available.searchinfinity) {
-		return firstAvailableProvider(available, preferOpenAI, "searchinfinity");
-	}
-	if (provider === "querit" && !available.querit) {
-		return firstAvailableProvider(available, preferOpenAI, "querit");
-	}
-	if (provider === "tavily" && !available.tavily) {
-		return firstAvailableProvider(available, preferOpenAI, "tavily");
-	}
-	if (provider === "firecrawl" && !available.firecrawl) {
-		return firstAvailableProvider(available, preferOpenAI, "firecrawl");
-	}
-	if (provider === "jina" && !available.jina) {
-		return firstAvailableProvider(available, preferOpenAI, "jina");
-	}
-	if (provider === "serpdive" && !available.serpdive) {
-		return firstAvailableProvider(available, preferOpenAI, "serpdive");
-	}
-	if (provider === "kagi" && !available.kagi) {
-		return firstAvailableProvider(available, preferOpenAI, "kagi");
-	}
-	if (provider === "bocha" && !available.bocha) {
-		return firstAvailableProvider(available, preferOpenAI, "bocha");
-	}
-	if (provider === "ollama" && !available.ollama) {
-		return firstAvailableProvider(available, preferOpenAI, "ollama");
-	}
-	if (provider === "searxng" && !available.searxng) {
-		return firstAvailableProvider(available, preferOpenAI, "searxng");
-	}
-	if (provider === "exa" && !available.exa) {
-		return firstAvailableProvider(available, preferOpenAI, "exa");
-	}
-	if (provider === "perplexity" && !available.perplexity) {
-		return firstAvailableProvider(available, preferOpenAI, "perplexity");
-	}
-	if (provider === "gemini" && !available.gemini) {
-		return firstAvailableProvider(available, preferOpenAI, "gemini");
+	if (provider !== "all" && !available[provider]) {
+		return firstAvailableProvider(available, provider === "openai" ? false : preferOpenAI, provider);
 	}
 	return provider;
 }

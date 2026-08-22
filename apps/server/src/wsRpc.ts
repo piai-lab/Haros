@@ -103,6 +103,7 @@ import { shouldPublishThreadShellForEvent } from "./orchestration/threadShellEve
 import { ProviderDiscoveryService } from "./provider/Services/ProviderDiscoveryService";
 import { OmniMindEcosystem } from "./provider/Services/OmniMindEcosystem";
 import { OmniMindAgentPromptFiles } from "./provider/Services/OmniMindAgentPromptFiles";
+import { OmniMindWebSearchSettings } from "./provider/Services/OmniMindWebSearchSettings";
 import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices";
 import { discoverSkillsCatalog, omnimindSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
@@ -374,6 +375,7 @@ const makeWsRpcHandlersLayer = () =>
       const providerDiscoveryService = yield* ProviderDiscoveryService;
       const omniMindEcosystem = yield* OmniMindEcosystem;
       const omniMindAgentPromptFiles = yield* OmniMindAgentPromptFiles;
+      const omniMindWebSearchSettings = yield* OmniMindWebSearchSettings;
       const omniMindModelServices = yield* OmniMindModelServices;
       const providerHealth = yield* ProviderHealth;
       const providerService = yield* ProviderService;
@@ -2031,6 +2033,49 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(
             requireOwnerRole.pipe(Effect.andThen(omniMindAgentPromptFiles.mutate(input))),
             "Failed to change an OmniMind Agent prompt file",
+          ),
+        [WS_METHODS.omnimindWebSearchOpen]: () =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.open())),
+            "Failed to open Web search settings",
+          ),
+        [WS_METHODS.omnimindWebSearchRefresh]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.refresh(input))),
+            "Failed to refresh Web search settings",
+          ),
+        [WS_METHODS.omnimindWebSearchMutate]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.mutate(input))),
+            "Failed to change Web search settings",
+          ),
+        [WS_METHODS.omnimindWebSearchTestProvider]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindWebSearchSettings.testProvider(input, String(clientId))),
+            ),
+            "Failed to test Web search Provider",
+          ),
+        [WS_METHODS.omnimindWebSearchRecheck]: (input, { clientId }) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindWebSearchSettings.recheck(input, String(clientId))),
+            ),
+            "Failed to recheck Web search",
+          ),
+        [WS_METHODS.omnimindWebSearchOpenConfig]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindWebSearchSettings.openConfig(input.editor)),
+            ),
+            "Failed to open Web search configuration",
+          ),
+        [WS_METHODS.omnimindWebSearchGeminiDiagnostic]: (input) =>
+          rpcEffect(
+            requireOwnerRole.pipe(
+              Effect.andThen(omniMindWebSearchSettings.diagnoseGemini(input)),
+            ),
+            "Failed to inspect Gemini Web account",
           ),
         [WS_METHODS.omnimindModelServicesList]: (input) =>
           rpcEffect(

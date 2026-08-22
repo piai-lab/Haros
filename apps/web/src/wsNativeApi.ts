@@ -841,6 +841,29 @@ export function createWsNativeApi(): NativeApi {
       mutate: (input) =>
         transport.request(WS_METHODS.omnimindAgentPromptsMutate, input, { timeoutMs: null }),
     },
+    omnimindWebSearch: {
+      open: () => transport.request(WS_METHODS.omnimindWebSearchOpen, {}),
+      refresh: (input = {}) => transport.request(WS_METHODS.omnimindWebSearchRefresh, input),
+      mutate: (input) =>
+        transport.request(WS_METHODS.omnimindWebSearchMutate, input, { timeoutMs: null }),
+      testProvider: (input, options) =>
+        transport.request(WS_METHODS.omnimindWebSearchTestProvider, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      recheck: (input, options) =>
+        transport.request(WS_METHODS.omnimindWebSearchRecheck, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+      openConfig: (input) =>
+        transport.request(WS_METHODS.omnimindWebSearchOpenConfig, input),
+      diagnoseGemini: (input, options) =>
+        transport.request(WS_METHODS.omnimindWebSearchGeminiDiagnostic, input, {
+          timeoutMs: null,
+          ...(options?.signal ? { signal: options.signal } : {}),
+        }),
+    },
     orchestration: {
       getSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getSnapshot),
       getShellSnapshot: () => transport.request(ORCHESTRATION_WS_METHODS.getShellSnapshot),

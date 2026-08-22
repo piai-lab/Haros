@@ -170,6 +170,15 @@ import {
   OmniMindAgentPromptGetSnapshotInput,
 } from "./omnimindAgentPrompts";
 import {
+  OmniMindWebSearchGeminiDiagnosticInput,
+  OmniMindWebSearchMutationInput,
+  OmniMindWebSearchOpenConfigInput,
+  OmniMindWebSearchOpenInput,
+  OmniMindWebSearchProviderTestInput,
+  OmniMindWebSearchRecheckInput,
+  OmniMindWebSearchRefreshInput,
+} from "./omnimindWebSearch";
+import {
   PullRequestMergeActionInput,
   PullRequestNonMergeActionInput,
   PullRequestCommentInput,
@@ -329,6 +338,13 @@ export const WS_METHODS = {
   omnimindEcosystemReload: "omnimindEcosystem.reload",
   omnimindAgentPromptsGetSnapshot: "omnimindAgentPrompts.getSnapshot",
   omnimindAgentPromptsMutate: "omnimindAgentPrompts.mutate",
+  omnimindWebSearchOpen: "omnimindWebSearch.open",
+  omnimindWebSearchRefresh: "omnimindWebSearch.refresh",
+  omnimindWebSearchMutate: "omnimindWebSearch.mutate",
+  omnimindWebSearchTestProvider: "omnimindWebSearch.testProvider",
+  omnimindWebSearchRecheck: "omnimindWebSearch.recheck",
+  omnimindWebSearchOpenConfig: "omnimindWebSearch.openConfig",
+  omnimindWebSearchGeminiDiagnostic: "omnimindWebSearch.geminiDiagnostic",
 
   // Automation methods
   automationList: "automation.list",
@@ -396,6 +412,16 @@ const WebSocketRequestBody = Schema.Union([
     tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentCustomRulesUpdateInput),
     tagRequestBody(WS_METHODS.omnimindAgentPromptsMutate, OmniMindAgentCustomRulesRemoveInput),
   ]),
+  tagRequestBody(WS_METHODS.omnimindWebSearchOpen, OmniMindWebSearchOpenInput),
+  tagRequestBody(WS_METHODS.omnimindWebSearchRefresh, OmniMindWebSearchRefreshInput),
+  tagRequestBody(WS_METHODS.omnimindWebSearchMutate, OmniMindWebSearchMutationInput),
+  tagRequestBody(WS_METHODS.omnimindWebSearchTestProvider, OmniMindWebSearchProviderTestInput),
+  tagRequestBody(WS_METHODS.omnimindWebSearchRecheck, OmniMindWebSearchRecheckInput),
+  tagRequestBody(WS_METHODS.omnimindWebSearchOpenConfig, OmniMindWebSearchOpenConfigInput),
+  tagRequestBody(
+    WS_METHODS.omnimindWebSearchGeminiDiagnostic,
+    OmniMindWebSearchGeminiDiagnosticInput,
+  ),
   tagRequestBody(ORCHESTRATION_WS_METHODS.importThread, OrchestrationImportThreadInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getSnapshot, OrchestrationGetSnapshotInput),
   tagRequestBody(ORCHESTRATION_WS_METHODS.getShellSnapshot, OrchestrationGetShellSnapshotInput),
