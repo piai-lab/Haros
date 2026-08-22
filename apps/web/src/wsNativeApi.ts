@@ -1085,6 +1085,19 @@ export function createWsNativeApi(): NativeApi {
         markFallbackBrowserStateChanged(state);
         return emitFallbackBrowserState(input.threadId);
       },
+      setEngineWebSurfaceContext: async (input) => {
+        if (window.desktopBridge) {
+          await window.desktopBridge.browser.setEngineWebSurfaceContext(input);
+          return;
+        }
+        throw new Error("Temporary Engine web surfaces require the desktop app.");
+      },
+      reopenEngineWebSurface: async (input) => {
+        if (window.desktopBridge) {
+          return window.desktopBridge.browser.reopenEngineWebSurface(input);
+        }
+        throw new Error("Temporary Engine web surfaces require the desktop app.");
+      },
       openDevTools: async (input) => {
         if (window.desktopBridge) {
           await window.desktopBridge.browser.openDevTools(input);

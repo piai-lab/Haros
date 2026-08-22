@@ -372,6 +372,17 @@ export interface BrowserTabState {
   faviconUrl: string | null;
   lastCommittedUrl: string | null;
   lastError: string | null;
+  /**
+   * Credential-blind presentation metadata for a short-lived internal page.
+   * The backing URL and protocol state never cross into renderer state.
+   */
+  presentation?: {
+    kind: "engine-web-surface";
+    surfaceId: string;
+    ephemeral: true;
+    nonHistory: true;
+    internalOnly: true;
+  };
 }
 
 export interface ThreadBrowserState {
@@ -407,6 +418,19 @@ export interface BrowserNewTabInput {
   threadId: ThreadId;
   url?: string;
   activate?: boolean;
+}
+
+export interface EngineWebSurfacePresentationContext {
+  locale: "en" | "zh-CN";
+  theme: "light" | "dark";
+}
+
+export interface BrowserSetEngineWebSurfaceContextInput
+  extends EngineWebSurfacePresentationContext {}
+
+export interface BrowserReopenEngineWebSurfaceInput {
+  threadId: ThreadId;
+  surfaceId: string;
 }
 
 export interface BrowserPanelBounds {
@@ -535,6 +559,12 @@ interface BrowserControlMethods {
   newTab: (input: BrowserNewTabInput) => Promise<ThreadBrowserState>;
   closeTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
   selectTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
+  setEngineWebSurfaceContext: (
+    input: BrowserSetEngineWebSurfaceContextInput,
+  ) => Promise<void>;
+  reopenEngineWebSurface: (
+    input: BrowserReopenEngineWebSurfaceInput,
+  ) => Promise<ThreadBrowserState>;
   openDevTools: (input: BrowserTabInput) => Promise<void>;
   onState: (listener: (state: ThreadBrowserState) => void) => () => void;
 }

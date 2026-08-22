@@ -211,6 +211,10 @@ contextBridge.exposeInMainWorld("desktopBridge", {
     newTab: (input) => ipcRenderer.invoke(IPC.browser.newTab, input),
     closeTab: (input) => ipcRenderer.invoke(IPC.browser.closeTab, input),
     selectTab: (input) => ipcRenderer.invoke(IPC.browser.selectTab, input),
+    setEngineWebSurfaceContext: (input) =>
+      ipcRenderer.invoke(IPC.browser.setEngineWebSurfaceContext, input),
+    reopenEngineWebSurface: (input) =>
+      ipcRenderer.invoke(IPC.browser.reopenEngineWebSurface, input),
     openDevTools: (input) => ipcRenderer.invoke(IPC.browser.openDevTools, input),
     annotations: {
       start: (input) => ipcRenderer.invoke(IPC.browser.annotations.start, input),

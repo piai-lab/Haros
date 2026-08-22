@@ -38,12 +38,26 @@ function normalizeHistoryUrl(url: string): string {
   return trimmed === "about:blank" ? "" : trimmed;
 }
 
+function isTemporaryEngineSurfaceUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.protocol === "http:" &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname) &&
+      parsed.pathname === "/" &&
+      parsed.searchParams.has("session")
+    );
+  } catch {
+    return url === "omnimind://temporary-page";
+  }
+}
+
 function upsertRecentHistoryEntry(
   entries: BrowserHistoryEntry[] | undefined,
   nextEntry: BrowserHistoryEntry,
 ): BrowserHistoryEntry[] {
   const normalizedUrl = normalizeHistoryUrl(nextEntry.url);
-  if (normalizedUrl.length === 0) {
+  if (normalizedUrl.length === 0 || isTemporaryEngineSurfaceUrl(normalizedUrl)) {
     return entries ?? [];
   }
 
@@ -90,7 +104,7 @@ function sanitizeBrowserHistoryEntry(rawEntry: unknown): BrowserHistoryEntry | n
   if (typeof url !== "string" || typeof title !== "string" || typeof tabId !== "string") {
     return null;
   }
-  return { url, title, tabId };
+  return isTemporaryEngineSurfaceUrl(url) ? null : { url, title, tabId };
 }
 
 // Drops malformed persisted history so a corrupt entry can never reach the
@@ -160,11 +174,13 @@ export const useBrowserStateStore = create<BrowserStateStore>()(
             current.recentHistoryByThreadId[state.threadId] ?? EMPTY_BROWSER_HISTORY;
           const nextHistory = orderedTabs.reduce(
             (entries, tab) =>
-              upsertRecentHistoryEntry(entries, {
-                url: tab.lastCommittedUrl ?? tab.url,
-                title: tab.title,
-                tabId: tab.id,
-              }),
+              tab.presentation?.nonHistory
+                ? entries
+                : upsertRecentHistoryEntry(entries, {
+                    url: tab.lastCommittedUrl ?? tab.url,
+                    title: tab.title,
+                    tabId: tab.id,
+                  }),
             previousHistory,
           );
           const historyChanged = !sameBrowserHistoryEntries(previousHistory, nextHistory);

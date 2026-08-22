@@ -8,8 +8,11 @@ import { describe, expect, it } from "vitest";
 import {
   BrowserHostRpcError,
   callBrowserHostTool,
+  getBrowserHostEngineWebSurfaceContext,
+  presentBrowserHostEngineWebSurface,
   resolveBrowserHostCapability,
   resolveBrowserHostPipePath,
+  settleBrowserHostEngineWebSurface,
 } from "./browserHostRpcClient.ts";
 
 const HEADER_BYTES = 4;
@@ -65,6 +68,77 @@ async function withRpcServer<T>(
 }
 
 describe("browser host RPC client", () => {
+  it("routes the private typed Engine Web surface lifecycle without exposing it as a Browser tool", async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    await withRpcServer(
+      (request) => {
+        requests.push(request);
+        const id = request.id;
+        if (request.method === "getInfo") {
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              protocolVersion: 1,
+              metadata: {
+                sessionId: "engine-surface-session",
+                protocolVersion: 1,
+                methods: [
+                  "getEngineWebSurfaceContext",
+                  "presentEngineWebSurface",
+                  "settleEngineWebSurface",
+                ],
+              },
+            },
+          };
+        }
+        if (request.method === "getEngineWebSurfaceContext") {
+          return { jsonrpc: "2.0", id, result: { locale: "zh-CN", theme: "dark" } };
+        }
+        if (request.method === "presentEngineWebSurface") {
+          return { jsonrpc: "2.0", id, result: { surfaceId: "surface-opaque-123", tabId: "tab-1" } };
+        }
+        return { jsonrpc: "2.0", id, result: { settled: true } };
+      },
+      async (pipePath) => {
+        const common = {
+          pipePath,
+          capability: TEST_CAPABILITY,
+          sessionKey: "engine-surface-session",
+          timeoutMs: 1_000,
+        };
+        await expect(getBrowserHostEngineWebSurfaceContext(common)).resolves.toEqual({
+          locale: "zh-CN",
+          theme: "dark",
+        });
+        await expect(presentBrowserHostEngineWebSurface({
+          ...common,
+          threadId: "thread-engine-surface" as never,
+          surfaceId: "surface-opaque-123",
+          url: "http://127.0.0.1:43123/?session=private-token",
+          expiresAt: Date.now() + 60_000,
+        })).resolves.toEqual({ surfaceId: "surface-opaque-123", tabId: "tab-1" });
+        await expect(settleBrowserHostEngineWebSurface({
+          ...common,
+          threadId: "thread-engine-surface" as never,
+          surfaceId: "surface-opaque-123",
+        })).resolves.toEqual({ settled: true });
+      },
+    );
+
+    expect(requests.filter(request => request.method !== "getInfo").map(request => request.method)).toEqual([
+      "getEngineWebSurfaceContext",
+      "presentEngineWebSurface",
+      "settleEngineWebSurface",
+    ]);
+    expect(requests.find(request => request.method === "presentEngineWebSurface")?.params).toMatchObject({
+      session_id: "engine-surface-session",
+      thread_id: "thread-engine-surface",
+      surface_id: "surface-opaque-123",
+      url: "http://127.0.0.1:43123/?session=private-token",
+    });
+  });
+
   it("routes the authenticated provider identity through getInfo and executeTool", async () => {
     const requests: Array<Record<string, unknown>> = [];
     const result = await withRpcServer(

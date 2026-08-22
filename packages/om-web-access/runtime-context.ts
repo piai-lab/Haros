@@ -4,12 +4,14 @@ import { join } from "node:path";
 
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { getWebSearchConfigService, type WebSearchConfigService } from "./config-service.ts";
+import type { CuratorPresenter } from "./curator-presentation.ts";
 
 export type WebAccessRuntimeProfile = "omnimind" | "upstream";
 
 export interface WebAccessInstanceContext {
 	readonly configService: WebSearchConfigService;
 	readonly profile: WebAccessRuntimeProfile;
+	readonly curatorPresenter?: CuratorPresenter;
 	readonly maps: Map<string, Map<unknown, unknown>>;
 	readonly values: Map<string, unknown>;
 }
@@ -38,12 +40,17 @@ export function currentWebSearchConfigService(): WebSearchConfigService {
 export function createWebAccessInstanceContext(input: {
 	readonly configService: WebSearchConfigService;
 	readonly profile: WebAccessRuntimeProfile;
+	readonly curatorPresenter?: CuratorPresenter;
 }): WebAccessInstanceContext {
 	return {
 		...input,
 		maps: new Map(),
 		values: new Map(),
 	};
+}
+
+export function currentCuratorPresenter(): CuratorPresenter | undefined {
+	return currentWebAccessContext()?.curatorPresenter;
 }
 
 export function runWithWebAccessContext<T>(context: WebAccessInstanceContext, run: () => T): T {

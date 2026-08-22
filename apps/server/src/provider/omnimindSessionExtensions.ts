@@ -1,6 +1,7 @@
 import type { InlineExtension, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { ProviderWorkSurface, TurnTasksUpdatedPayload } from "@omnimind/contracts";
 import { makeOmniMindWebAccessInlineExtension } from "@omnimind/om-web-access";
+import type { CuratorPresenter } from "@omnimind/om-web-access/curator-presentation";
 import { getWebSearchConfigService } from "@omnimind/om-web-access/config-service";
 
 import type { AgentGatewayMcpFetch } from "../agentGateway/mcpInjection.ts";
@@ -25,6 +26,7 @@ export function buildOmniMindSessionExtensions(input: {
   readonly defineTool: (tool: ToolDefinition) => ToolDefinition;
   readonly gatewayConnection?: AgentGatewayMcpConnection;
   readonly gatewayFetch?: AgentGatewayMcpFetch;
+  readonly curatorPresenter?: CuratorPresenter;
   readonly onTasksUpdated?: (input: {
     readonly toolCallId: string;
     readonly payload: TurnTasksUpdatedPayload;
@@ -32,6 +34,7 @@ export function buildOmniMindSessionExtensions(input: {
 }): OmniMindSessionExtensionComposition {
   const webAccess = makeOmniMindWebAccessInlineExtension({
     configService: getWebSearchConfigService(input.agentDir),
+    ...(input.curatorPresenter === undefined ? {} : { curatorPresenter: input.curatorPresenter }),
   });
   const todoExtension =
     input.workSurface !== undefined && input.onTasksUpdated !== undefined

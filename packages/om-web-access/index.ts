@@ -88,6 +88,7 @@ import {
 	bindToCurrentWebAccessContext,
 	clearCurrentWebAccessInstance,
 	createWebAccessInstanceContext,
+	currentCuratorPresenter,
 	currentWebAccessContext,
 	currentWebSearchConfigService,
 	runWithWebAccessContext,
@@ -98,6 +99,7 @@ import {
 import {
 	type WebSearchConfigService,
 } from "./config-service.ts";
+import type { CuratorPresenter, CuratorPresentationSnapshot } from "./curator-presentation.ts";
 import { WebSearchSessionAvailability } from "./availability.ts";
 
 type ExtensionTheme = ExtensionContext["ui"]["theme"];
@@ -594,6 +596,7 @@ interface PendingCurate {
 	cancel: (reason?: "user" | "stale") => void;
 	browserPromise?: Promise<void>;
 	browserOpenError?: string;
+	surfaceId?: string;
 }
 
 
@@ -672,15 +675,17 @@ function formatSourceCheckResult(artifact: ResearchArtifact, getSearchContentToo
 	const assessment = artifact.claims?.[0];
 	const lines = [`# Source check: ${artifact.query}`, ""];
 	if (assessment) {
-		lines.push(`**Status:** ${assessment.status} (confidence ${assessment.confidence.toFixed(2)})`);
-		lines.push(`**Rationale:** ${assessment.rationale}`);
+		lines.push(`**Heuristic assessment:** ${assessment.status} (heuristic confidence ${assessment.confidence.toFixed(2)})`);
+		lines.push(`**Heuristic rationale:** ${assessment.rationale}`);
 		if (assessment.supporting_passages.length > 0) lines.push(`**Supporting passages:** ${assessment.supporting_passages.join(", ")}`);
 		if (assessment.contradicting_passages.length > 0) lines.push(`**Contradicting passages:** ${assessment.contradicting_passages.join(", ")}`);
 		lines.push("");
 	}
+	lines.push("Provider fields record what the provider returned at search time; rank and snippet do not establish source quality or claim truth.");
+	lines.push("Passage spans and hashes support content location and integrity only. A matching hash does not make the page true; evaluate passages, source independence, time, and definitions before reaching a conclusion.", "");
 	if (artifact.sources.length > 0) {
 		lines.push("## Sources");
-		for (const source of artifact.sources) lines.push(`${source.rank}. [${source.quality}] ${source.title}\n   ${source.url}`);
+		for (const source of artifact.sources) lines.push(`${source.rank}. [heuristic type: ${source.quality}] ${source.title}\n   ${source.url}`);
 		lines.push("");
 	}
 	if (artifact.errors?.length) lines.push(`Search errors: ${artifact.errors.map((entry) => `${entry.query}: ${entry.error}`).join("; ")}`);
@@ -731,12 +736,22 @@ function abortPendingFetches(): void {
 	pendingFetches.clear();
 }
 
+function settleCuratorPresentation(callId: string, pc: PendingCurate | undefined): void {
+	const surfaceId = pc?.surfaceId;
+	const presenter = currentCuratorPresenter();
+	if (!surfaceId || !presenter) return;
+	pc.surfaceId = undefined;
+	void presenter.settle({ toolCallId: callId, surfaceId }).catch(() => undefined);
+}
+
 function closeCurator(callId?: string): void {
 	if (callId !== undefined) {
 		const win = glimpseWins.get(callId);
 		glimpseWins.delete(callId);
 		try { win?.close(); } catch {}
-		pendingCurates.get(callId)?.cancel("stale");
+		const pending = pendingCurates.get(callId);
+		settleCuratorPresentation(callId, pending);
+		pending?.cancel("stale");
 		pendingCurates.delete(callId);
 		const curator = activeCurators.get(callId);
 		activeCurators.delete(callId);
@@ -748,7 +763,8 @@ function closeCurator(callId?: string): void {
 		try { win.close(); } catch {}
 	}
 	glimpseWins.clear();
-	for (const pc of pendingCurates.values()) {
+	for (const [pendingCallId, pc] of pendingCurates) {
+		settleCuratorPresentation(pendingCallId, pc);
 		try { pc.cancel("stale"); } catch {}
 	}
 	pendingCurates.clear();
@@ -1422,7 +1438,37 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 
 	async function openCuratorBrowser(callId: string, pc: PendingCurate, ctx: ExtensionContext, searchesComplete = true): Promise<void> {
 		if (pendingCurates.get(callId) !== pc) return;
+		const presenter = currentCuratorPresenter();
+		let presentation: CuratorPresentationSnapshot | undefined;
+		if (omnimindProfile) {
+			if (!presenter) {
+				pc.finish({
+					content: [{ type: "text", text: "OmniMind Web Access could not start source review because the Browser presenter is unavailable." }],
+					details: { phase: "curator-presentation-error", error: "Browser presenter unavailable" },
+				});
+				return;
+			}
+			try {
+				presentation = await presenter.snapshot();
+			} catch (error) {
+				pc.finish({
+					content: [{ type: "text", text: "OmniMind Web Access could not resolve the current language and theme for source review." }],
+					details: {
+						phase: "curator-presentation-error",
+						error: error instanceof Error ? error.message : String(error),
+					},
+				});
+				return;
+			}
+			pc.surfaceId = randomUUID();
+		}
 		let handle: CuratorServerHandle | null = null;
+		const presentationDetails = (): Record<string, unknown> =>
+			omnimindProfile && pc.surfaceId
+				? { engineWebSurface: { surfaceId: pc.surfaceId, status: "pending" } }
+				: pc.curatorUrl
+					? { curatorUrl: pc.curatorUrl }
+					: {};
 		const sendCuratorFallbackUpdate = (message: string) => {
 			if (!handle) return;
 			pc.onUpdate?.({
@@ -1430,7 +1476,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				details: {
 					phase: "curator-fallback",
 					progress: searchesComplete ? 1 : 0.5,
-					curatorUrl: handle.url,
+					...presentationDetails(),
 					timeoutSeconds: pc.timeoutSeconds,
 					shortcut: curateKey,
 					browserOpenError: pc.browserOpenError,
@@ -1456,13 +1502,14 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					searchProvider: toCuratorProvider(pc.searchProvider) ?? "auto",
 					summaryModels: pc.summaryModels,
 					defaultSummaryModel: pc.defaultSummaryModel,
+					...(presentation === undefined ? {} : { presentation }),
 				},
 				{
 					async onSummarize(selectedQueryIndices, summarizeSignal, model, feedback) {
 						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
 						pc.onUpdate?.({
 							content: [{ type: "text", text: "Generating summary draft..." }],
-							details: { phase: "generating-summary", progress: 0.9, curatorUrl: pc.curatorUrl, timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
+							details: { phase: "generating-summary", progress: 0.9, ...presentationDetails(), timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
 						});
 						const draft = await generateSummaryForSelectedIndices(
 							selectedQueryIndices,
@@ -1475,7 +1522,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
 						pc.onUpdate?.({
 							content: [{ type: "text", text: "Summary draft ready — waiting for approval..." }],
-							details: { phase: "waiting-for-approval", progress: 1, curatorUrl: pc.curatorUrl, timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
+							details: { phase: "waiting-for-approval", progress: 1, ...presentationDetails(), timeoutSeconds: pc.timeoutSeconds, shortcut: curateKey },
 						});
 						return draft;
 					},
@@ -1530,7 +1577,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 								queryCount: pc.queryList.length,
 								browserConnected: conn?.browserConnected,
 								lastHeartbeatAgeMs: conn?.lastHeartbeatAgeMs,
-								curatorUrl: pc.curatorUrl,
+								...(omnimindProfile ? {} : { curatorUrl: pc.curatorUrl }),
 								browserOpenError: pc.browserOpenError,
 							}));
 						}
@@ -1607,11 +1654,44 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				details: {
 					phase: "curating",
 					progress: searchesComplete ? 1 : 0.5,
-					curatorUrl: handle.url,
+					...(omnimindProfile && pc.surfaceId
+						? { engineWebSurface: { surfaceId: pc.surfaceId, status: "pending" } }
+						: { curatorUrl: handle.url }),
 					timeoutSeconds: pc.timeoutSeconds,
 					shortcut: curateKey,
 				},
 			});
+
+			if (omnimindProfile && presenter && pc.surfaceId) {
+				const result = await presenter.present({
+					toolCallId: callId,
+					surfaceId: pc.surfaceId,
+					url: handle.url,
+					expiresAt: Date.now() + pc.timeoutSeconds * 1_000,
+				});
+				if (result.kind === "presented") return;
+				pc.browserOpenError = result.message;
+				if (result.kind === "recoverable-error") {
+					pc.onUpdate?.({
+						content: [{ type: "text", text: "Source review is waiting. Reopen it from this pending activity." }],
+						details: {
+							phase: "curating",
+							progress: searchesComplete ? 1 : 0.5,
+							engineWebSurface: { surfaceId: pc.surfaceId, status: "pending" },
+							presentationError: result.message,
+						},
+					});
+					return;
+				}
+				settleCuratorPresentation(callId, pc);
+				activeCurators.delete(callId);
+				handle.close();
+				pc.finish({
+					content: [{ type: "text", text: "OmniMind Web Access could not present source review. Open Development > Web search and retry." }],
+					details: { phase: "curator-presentation-error", error: result.message },
+				});
+				return;
+			}
 
 			if (!shouldAutoOpenCuratorBrowser(loadConfig())) {
 				sendCuratorFallbackUpdate("Search curator is running. Open the curator URL manually.");
@@ -1815,6 +1895,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				const finish = (value: AgentToolResult<Record<string, unknown>>) => {
 					if (cancelled) return;
 					cancelled = true;
+					settleCuratorPresentation(callId, pc);
 					pc.abortSearches();
 					signal?.removeEventListener("abort", onAbort);
 					pendingCurates.delete(callId);
@@ -1829,7 +1910,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						queryCount: queryList.length,
 						browserConnected: conn?.browserConnected,
 						lastHeartbeatAgeMs: conn?.lastHeartbeatAgeMs,
-						curatorUrl: pc.curatorUrl,
+						...(omnimindProfile ? {} : { curatorUrl: pc.curatorUrl }),
 						browserOpenError: pc.browserOpenError,
 					}));
 				};
@@ -1837,7 +1918,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				pc.finish = finish;
 				pc.cancel = cancel;
 
-				const onAbort = () => closeCurator(callId);
+				const onAbort = bindToCurrentWebAccessContext(() => closeCurator(callId));
 				pendingCurates.set(callId, pc);
 				signal?.addEventListener("abort", onAbort, { once: true });
 				pc.browserPromise = openCuratorBrowser(callId, pc, ctx, false);
@@ -1907,11 +1988,15 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					curator.searchesDone();
 					if (pc.browserOpenError) {
 						pc.onUpdate?.({
-							content: [{ type: "text", text: `All searches complete. Open the curator manually: ${pc.curatorUrl}` }],
+							content: [{ type: "text", text: omnimindProfile
+								? "All searches are complete. Source review is still pending; reopen it from this activity."
+								: `All searches complete. Open the curator manually: ${pc.curatorUrl}` }],
 							details: {
-								phase: "curator-fallback",
+								phase: omnimindProfile ? "curating" : "curator-fallback",
 								progress: 1,
-								curatorUrl: pc.curatorUrl,
+								...(omnimindProfile && pc.surfaceId
+									? { engineWebSurface: { surfaceId: pc.surfaceId, status: "pending" } }
+									: { curatorUrl: pc.curatorUrl }),
 								timeoutSeconds: pc.timeoutSeconds,
 								shortcut: curateKey,
 								browserOpenError: pc.browserOpenError,
@@ -1923,7 +2008,9 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 							details: {
 								phase: "curating",
 								progress: 1,
-								curatorUrl: pc.curatorUrl,
+								...(omnimindProfile && pc.surfaceId
+									? { engineWebSurface: { surfaceId: pc.surfaceId, status: "pending" } }
+									: { curatorUrl: pc.curatorUrl }),
 								timeoutSeconds: pc.timeoutSeconds,
 								shortcut: curateKey,
 							},
@@ -2279,8 +2366,8 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 	if (sourceCheckEnabled) pi.registerTool({
 		name: toolNames.sourceCheck,
 		label: "Source Check",
-		description: "Check a claim against web sources and return a bounded machine-readable research artifact with exact passage citations.",
-		promptSnippet: "Verify a claim with structured source evidence and passage-level citations.",
+		description: "Collect a bounded, traceable web evidence record for a claim, including provider-returned fields and exact passage spans/hashes. The supported/contradicted/missing assessment and confidence are heuristic signals, not a fact verdict; rank, snippet, page text, and matching hashes do not establish truth.",
+		promptSnippet: "Collect structured source evidence and passage-level integrity records, then make your own judgment; the tool's claim assessment is heuristic.",
 		parameters: Type.Object({
 			claim: Type.String({ description: "The assertion to check against web sources." }),
 			queries: Type.Optional(Type.Array(Type.String(), { description: "Search queries (default: the claim)." })),
@@ -3453,6 +3540,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 export interface OmniMindWebAccessExtensionOptions {
 	readonly configService: WebSearchConfigService;
 	readonly profile?: WebAccessRuntimeProfile;
+	readonly curatorPresenter?: CuratorPresenter;
 }
 
 export const OMNIMIND_WEB_ACCESS_EXTENSION_NAME = "omnimind-web-access";
@@ -3501,6 +3589,9 @@ export function makeOmniMindWebAccessExtension(
 		const context = createWebAccessInstanceContext({
 			configService: options.configService,
 			profile: options.profile ?? "omnimind",
+			...(options.curatorPresenter === undefined
+				? {}
+				: { curatorPresenter: options.curatorPresenter }),
 		});
 		return runWithWebAccessContext(context, () => {
 			options.configService.ensureDefault();

@@ -76,6 +76,7 @@ export interface WorkLogEntry {
     status: "waiting-for-user" | "unavailable" | "completed";
     provenance: "engine-native";
     presentation: "omnimind-browser";
+    surfaceId?: string;
   };
   // Source activity kind, kept so the timeline can pick a kind-specific icon
   // (e.g. user-input.requested -> question glyph) instead of the generic
@@ -706,6 +707,7 @@ function extractEngineWebSurface(
   const data = asRecord(payload?.data);
   const surface = asRecord(data?.engineWebSurface);
   const status = surface?.status;
+  const surfaceId = asTrimmedString(surface?.surfaceId);
   if (
     (status !== "waiting-for-user" && status !== "unavailable" && status !== "completed") ||
     surface?.provenance !== "engine-native" ||
@@ -717,6 +719,7 @@ function extractEngineWebSurface(
     status,
     provenance: "engine-native",
     presentation: "omnimind-browser",
+    ...(surfaceId ? { surfaceId } : {}),
   };
 }
 

@@ -1,11 +1,18 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { generateCuratorPage } from "./curator-page.ts";
 import type { SummaryMeta } from "./summary-review.ts";
 import { resolveCuratorNetworkConfig } from "./utils.ts";
+import type { CuratorPresentationSnapshot } from "./curator-presentation.ts";
 
 const STALE_THRESHOLD_MS = 30000;
 const WATCHDOG_INTERVAL_MS = 1000;
 const MAX_BODY_SIZE = 64 * 1024;
+const MARKED_BROWSER_SOURCE = readFileSync(
+	fileURLToPath(import.meta.resolve("marked/marked.min.js")),
+	"utf8",
+);
 
 type ServerState = "SEARCHING" | "RESULT_SELECTION" | "COMPLETED";
 type CuratorResultEventData = IndexedCuratorSearchEntry & { slotIndex?: number };
@@ -23,6 +30,7 @@ export interface CuratorServerOptions {
 	searchProvider: string;
 	summaryModels: Array<{ value: string; label: string }>;
 	defaultSummaryModel: string | null;
+	presentation?: CuratorPresentationSnapshot;
 }
 
 export interface CuratorSearchEntry {
@@ -200,6 +208,7 @@ export function startCuratorServer(
 		searchProvider,
 		summaryModels,
 		defaultSummaryModel,
+		presentation,
 	} = options;
 	let browserConnected = false;
 	let lastHeartbeatAt = Date.now();
@@ -341,6 +350,7 @@ export function startCuratorServer(
 		searchProvider,
 		summaryModels,
 		defaultSummaryModel,
+		presentation,
 	);
 
 	const server = http.createServer(async (req, res) => {
@@ -359,8 +369,28 @@ export function startCuratorServer(
 				res.writeHead(200, {
 					"Content-Type": "text/html; charset=utf-8",
 					"Cache-Control": "no-store",
+					"Referrer-Policy": "no-referrer",
+					"X-Content-Type-Options": "nosniff",
+					"Content-Security-Policy": "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src https: data:; font-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
 				});
 				res.end(pageHtml);
+				return;
+			}
+
+			if (method === "GET" && url.pathname === "/assets/marked.min.js") {
+				const token = url.searchParams.get("session");
+				if (token !== sessionToken) {
+					res.writeHead(403, { "Content-Type": "text/plain" });
+					res.end("Invalid session");
+					return;
+				}
+				res.writeHead(200, {
+					"Content-Type": "text/javascript; charset=utf-8",
+					"Cache-Control": "no-store",
+					"Referrer-Policy": "no-referrer",
+					"X-Content-Type-Options": "nosniff",
+				});
+				res.end(MARKED_BROWSER_SOURCE);
 				return;
 			}
 

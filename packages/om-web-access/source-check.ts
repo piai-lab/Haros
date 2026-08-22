@@ -31,6 +31,7 @@ export interface ResearchPassage {
 
 export interface ClaimAssessment {
 	claim: string;
+	assessment_kind: "heuristic";
 	status: ClaimStatus;
 	supporting_passages: string[];
 	contradicting_passages: string[];
@@ -100,12 +101,25 @@ export function hashContent(text: string): string {
 interface Span { text: string; start: number; end: number }
 
 function tokenize(value: string): string[] {
-	return [...new Set(value.toLowerCase().split(/[^a-z0-9]+/).filter((term) => term.length > 3))];
+	const tokens = new Set<string>();
+	for (const match of value.normalize("NFKC").toLocaleLowerCase().matchAll(/[\p{L}\p{N}]+/gu)) {
+		const term = match[0];
+		if (/\p{Script=Han}/u.test(term)) {
+			const characters = [...term];
+			if (characters.length === 1) tokens.add(term);
+			for (let index = 0; index < characters.length - 1; index += 1) {
+				tokens.add(characters.slice(index, index + 2).join(""));
+			}
+		} else if (term.length > 3) {
+			tokens.add(term);
+		}
+	}
+	return [...tokens];
 }
 
 function extractRelevantSpans(content: string, hint: string): Span[] {
 	const sentences: Span[] = [];
-	const sentencePattern = /[^.!?]+(?:[.!?]+(?=\s|$)|$)/g;
+	const sentencePattern = /[^.!?。！？]+(?:[.!?。！？]+|$)/gu;
 	for (const match of content.matchAll(sentencePattern)) {
 		const raw = match[0];
 		const text = raw.trim();
@@ -159,22 +173,39 @@ export function buildPassages(sources: ResearchSource[], fetched: ExtractedConte
 	return passages;
 }
 
-const CONTRADICTION_MARKERS = ["not true", "false", "incorrect", "debunked", "retracted", "no longer", "never", "denied", "contrary", "misleading"];
-const SUPPORT_MARKERS = ["yes", "true", "correct", "confirmed", "according to", "shows that", "demonstrates", "reported", "verified", "established"];
+const CONTRADICTION_MARKERS = [
+	"not true", "false", "incorrect", "debunked", "retracted", "no longer", "never", "denied", "contrary", "misleading",
+	"不正确", "错误", "不实", "已辟谣", "并非", "否认", "从未", "相反", "具有误导性",
+];
+const SUPPORT_MARKERS = [
+	"yes", "true", "correct", "confirmed", "according to", "shows that", "demonstrates", "reported", "verified", "established",
+	"证实", "确认", "显示", "表明", "报道", "根据", "支持", "成立", "正确",
+];
+
+function containsHan(value: string): boolean {
+	return /\p{Script=Han}/u.test(value);
+}
 
 function containsPhrase(value: string, phrase: string): boolean {
-	const escaped = phrase.trim().toLowerCase().split(/\s+/).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
-	return new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "i").test(value);
+	const normalizedPhrase = phrase.trim().toLocaleLowerCase();
+	if (containsHan(normalizedPhrase)) return value.includes(normalizedPhrase);
+	const escaped = normalizedPhrase.split(/\s+/).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
+	return new RegExp(`(?:^|[^\\p{L}\\p{N}])${escaped}(?=$|[^\\p{L}\\p{N}])`, "iu").test(value);
 }
 
 function markerIsNegated(value: string, marker: string): boolean {
-	const escaped = marker.trim().toLowerCase().split(/\s+/).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
-	const markerPattern = new RegExp(`(?:^|[^a-z0-9])${escaped}(?=$|[^a-z0-9])`, "i");
+	const normalizedMarker = marker.trim().toLocaleLowerCase();
+	if (containsHan(normalizedMarker)) {
+		const index = value.indexOf(normalizedMarker);
+		return index >= 0 && /(?:不|未|没有|并未|无法|不能)\s*$/u.test(value.slice(Math.max(0, index - 8), index));
+	}
+	const escaped = normalizedMarker.split(/\s+/).map((term) => term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("\\s+");
+	const markerPattern = new RegExp(`(?:^|[^\\p{L}\\p{N}])${escaped}(?=$|[^\\p{L}\\p{N}])`, "iu");
 	const match = markerPattern.exec(value);
 	if (!match || match.index === undefined) return false;
 	const matchedMarker = match[0].replace(/^[^a-z0-9]+/i, "");
 	const beforeMarker = value.slice(0, match.index + match[0].length - matchedMarker.length);
-	return /(?:^|[^a-z0-9])(?:not|no|never|without)\s+$/i.test(beforeMarker);
+	return /(?:^|[^\p{L}\p{N}])(?:not|no|never|without)\s+$/iu.test(beforeMarker);
 }
 
 function hasPolarityMarker(value: string, markers: string[], allowNegated = false): boolean {
@@ -184,7 +215,7 @@ function hasPolarityMarker(value: string, markers: string[], allowNegated = fals
 export function assessClaim(claim: string, passages: ResearchPassage[]): ClaimAssessment {
 	const terms = tokenize(claim);
 	if (terms.length === 0 || passages.length === 0) {
-		return { claim, status: "missing-evidence", supporting_passages: [], contradicting_passages: [], rationale: "No passages available that discuss the claim's terms.", confidence: 0.2 };
+		return { claim, assessment_kind: "heuristic", status: "missing-evidence", supporting_passages: [], contradicting_passages: [], rationale: "The heuristic found no passages that discuss the claim's terms.", confidence: 0.2 };
 	}
 	const supporting: string[] = [];
 	const contradicting: string[] = [];
@@ -198,15 +229,15 @@ export function assessClaim(claim: string, passages: ResearchPassage[]): ClaimAs
 		else if (support && !contra) supporting.push(passage.passage_id);
 	}
 	if (contradicting.length > 0 && supporting.length === 0) {
-		return { claim, status: "contradicted", supporting_passages: [], contradicting_passages: contradicting, rationale: `${contradicting.length} passage(s) contradict the claim; none support it.`, confidence: Math.min(0.85, 0.5 + contradicting.length * 0.1) };
+		return { claim, assessment_kind: "heuristic", status: "contradicted", supporting_passages: [], contradicting_passages: contradicting, rationale: `The heuristic found contradiction markers in ${contradicting.length} passage(s) and no support markers.`, confidence: Math.min(0.85, 0.5 + contradicting.length * 0.1) };
 	}
 	if (supporting.length > 0 && contradicting.length === 0) {
-		return { claim, status: "supported", supporting_passages: supporting, contradicting_passages: [], rationale: `${supporting.length} passage(s) support the claim; none contradict it.`, confidence: Math.min(0.85, 0.5 + supporting.length * 0.1) };
+		return { claim, assessment_kind: "heuristic", status: "supported", supporting_passages: supporting, contradicting_passages: [], rationale: `The heuristic found support markers in ${supporting.length} passage(s) and no contradiction markers.`, confidence: Math.min(0.85, 0.5 + supporting.length * 0.1) };
 	}
 	if (supporting.length > 0 || contradicting.length > 0) {
-		return { claim, status: "unclear", supporting_passages: supporting, contradicting_passages: contradicting, rationale: `${supporting.length} supporting and ${contradicting.length} contradicting passage(s); evidence is mixed.`, confidence: 0.4 };
+		return { claim, assessment_kind: "heuristic", status: "unclear", supporting_passages: supporting, contradicting_passages: contradicting, rationale: `The heuristic found ${supporting.length} passage(s) with support markers and ${contradicting.length} with contradiction markers.`, confidence: 0.4 };
 	}
-	return { claim, status: "unclear", supporting_passages: [], contradicting_passages: [], rationale: "Passages mention the claim's terms but contain no clear support or contradiction markers.", confidence: 0.3 };
+	return { claim, assessment_kind: "heuristic", status: "unclear", supporting_passages: [], contradicting_passages: [], rationale: "Passages mention the claim's terms, but the heuristic found no explicit support or contradiction markers.", confidence: 0.3 };
 }
 
 interface RankedSearchResult extends SearchResult {

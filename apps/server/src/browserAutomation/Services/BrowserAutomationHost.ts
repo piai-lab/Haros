@@ -1,4 +1,9 @@
-import type { BrowserToolName, ProviderKind, ThreadId } from "@omnimind/contracts";
+import type {
+  BrowserToolName,
+  EngineWebSurfacePresentationContext,
+  ProviderKind,
+  ThreadId,
+} from "@omnimind/contracts";
 import { ServiceMap, type Effect } from "effect";
 
 import type { BrowserHostRpcError } from "../browserHostRpcClient.ts";
@@ -19,6 +24,21 @@ export interface BrowserAutomationHostShape {
   readonly execute: (
     input: BrowserAutomationHostCall,
   ) => Effect.Effect<unknown, BrowserHostRpcError>;
+  readonly getEngineWebSurfaceContext?: (
+    sessionKey: string,
+  ) => Effect.Effect<EngineWebSurfacePresentationContext, BrowserHostRpcError>;
+  readonly presentEngineWebSurface?: (input: {
+    readonly sessionKey: string;
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+    readonly url: string;
+    readonly expiresAt: number;
+  }) => Effect.Effect<{ readonly surfaceId: string; readonly tabId: string }, BrowserHostRpcError>;
+  readonly settleEngineWebSurface?: (input: {
+    readonly sessionKey: string;
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+  }) => Effect.Effect<void, BrowserHostRpcError>;
 }
 
 export class BrowserAutomationHost extends ServiceMap.Service<

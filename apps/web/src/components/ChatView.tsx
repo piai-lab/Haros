@@ -147,6 +147,7 @@ import {
   maybeResolveBrowserPromptAttachment,
   type BrowserPromptAttachmentResolution,
 } from "../lib/browserPromptContext";
+import { useBrowserStateStore } from "../browserStateStore";
 import {
   maybeResolveDevicePromptAttachment,
   type DevicePromptAttachmentResolution,
@@ -1366,7 +1367,7 @@ export default function ChatView({
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
   const { settings } = useAppSettings();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
@@ -1396,6 +1397,12 @@ export default function ChatView({
   );
   const removeThreadFromSplitViews = useSplitViewStore((store) => store.removeThreadFromSplitViews);
   const { resolvedTheme } = useTheme();
+  useEffect(() => {
+    const api = readNativeApi();
+    void api?.browser
+      .setEngineWebSurfaceContext({ locale, theme: resolvedTheme })
+      .catch(() => undefined);
+  }, [locale, resolvedTheme]);
   const queryClient = useQueryClient();
   const createWorktreeMutation = useMutation(
     gitCreateDetachedWorktreeMutationOptions({ queryClient }),
@@ -4331,6 +4338,35 @@ export default function ChatView({
       },
     });
   }, [browserOpen, navigate, onToggleBrowserPanel, threadId]);
+  const onReopenEngineWebSurface = useCallback(
+    (surfaceId: string) => {
+      const api = readNativeApi();
+      if (!api) return;
+      void api.browser
+        .reopenEngineWebSurface({ threadId, surfaceId })
+        .then((state) => {
+          useBrowserStateStore.getState().upsertThreadState(state);
+          if (onRevealBrowserPanel) {
+            onRevealBrowserPanel();
+            return;
+          }
+          void navigate({
+            to: "/$threadId",
+            params: { threadId },
+            replace: true,
+            search: (previous) => ({ ...stripDiffSearchParams(previous), panel: "browser" }),
+          });
+        })
+        .catch((error) => {
+          toastManager.add({
+            type: "error",
+            title: t("browser.unavailable"),
+            description: error instanceof Error ? error.message : t("browser.actionFailed"),
+          });
+        });
+    },
+    [navigate, onRevealBrowserPanel, t, threadId],
+  );
   const openBrowserUrl = useCallback(
     (url: string) => {
       const api = readNativeApi();
@@ -13048,7 +13084,7 @@ export default function ChatView({
                     onOpenTurnDiff={onOpenTurnDiff}
                     onOpenThread={onNavigateToThread}
                     onOpenAutomation={onOpenAutomation}
-                    onOpenEngineWebSurface={onRevealBrowserPanel}
+                    onOpenEngineWebSurface={onReopenEngineWebSurface}
                     revertTurnCountByUserMessageId={revertTurnCountByUserMessageId}
                     onRevertUserMessage={onRevertUserMessage}
                     onUndoTurnFiles={onUndoTurnFiles}

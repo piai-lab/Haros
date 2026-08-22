@@ -38,6 +38,26 @@ test("fetched content supplies exact passages when the provider snippet is empty
   assert.deepEqual(artifact.passages[0].extraction_span, { start: 0, end: 37 });
 });
 
+test("Chinese claims produce exact Unicode passages and an explicitly heuristic assessment", () => {
+  const content = "背景说明。研究结果显示，该接口支持流式响应。其他结论不在本次讨论范围内。";
+  const artifact = buildResearchArtifact({
+    query: "该接口支持流式响应",
+    results: [result("https://docs.example.com/zh/api", "")],
+    fetched: [{ url: "https://docs.example.com/zh/api", title: "接口文档", content, error: null }],
+  });
+  const passage = artifact.passages.find((candidate) => candidate.extraction_span);
+  assert.ok(passage);
+  assert.equal(passage.text, "研究结果显示，该接口支持流式响应。");
+  assert.equal(content.slice(passage.extraction_span.start, passage.extraction_span.end), passage.text);
+  assert.equal(passage.content_hash, hashContent(passage.text));
+
+  const assessment = assessClaim("该接口支持流式响应", artifact.passages);
+  assert.equal(assessment.assessment_kind, "heuristic");
+  assert.equal(assessment.status, "supported");
+  assert.deepEqual(assessment.supporting_passages, [passage.passage_id]);
+  assert.match(assessment.rationale, /heuristic/i);
+});
+
 test("artifact assembly handles omitted domain filters and failed fetches", () => {
   const artifact = buildResearchArtifact({
     query: "API claim",
@@ -175,6 +195,8 @@ test("registered source_check validates the claim at runtime", async () => {
   });
   const tool = tools.find((candidate) => candidate.name === "source_check");
   assert.ok(tool);
+  assert.match(tool.description, /not a fact verdict/i);
+  assert.match(tool.promptSnippet, /heuristic/i);
   const response = await tool.execute("call", { claim: "   " });
   assert.equal(response.details.error, "Missing claim");
 });

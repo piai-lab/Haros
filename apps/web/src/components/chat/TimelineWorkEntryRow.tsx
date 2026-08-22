@@ -515,7 +515,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   onOpenTurnDiff?: (turnId: TurnId, filePath?: string) => void;
   onOpenAgentActivity?: (activityId: string) => void;
   onOpenAutomation?: (automationId: string) => void;
-  onOpenEngineWebSurface?: () => void;
+  onOpenEngineWebSurface?: (surfaceId: string) => void;
   timestampFormat: TimestampFormat;
 }) {
   // Defaults are applied in the body (not in the destructuring pattern): a default
@@ -668,7 +668,9 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     ? formatLiveActivityMeta(workEntry.liveActivity, liveActivityNowMs)
     : null;
   const engineWebSurfaceWaiting = workEntry.engineWebSurface?.status === "waiting-for-user";
-  const canOpenEngineWebSurface = engineWebSurfaceWaiting && Boolean(onOpenEngineWebSurface);
+  const engineWebSurfaceId = workEntry.engineWebSurface?.surfaceId;
+  const canOpenEngineWebSurface =
+    engineWebSurfaceWaiting && Boolean(engineWebSurfaceId && onOpenEngineWebSurface);
 
   // A created-automation row renders as its own card instead of a tool-call line.
   // Kept after the hooks above so the early return never changes hook order.
@@ -897,7 +899,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
               compact={compact}
               onOpen={
                 canOpenEngineWebSurface
-                  ? onOpenEngineWebSurface
+                  ? () => onOpenEngineWebSurface?.(engineWebSurfaceId!)
                   : (openViewedImage ?? openAgentActivity ?? openReadFile)
               }
               onHover={prefetchReadFile}

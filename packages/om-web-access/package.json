@@ -13,6 +13,10 @@
       "types": "./dist/config-service.d.ts",
       "default": "./config-service.ts"
     },
+    "./curator-presentation": {
+      "types": "./dist/curator-presentation.d.ts",
+      "default": "./curator-presentation.ts"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -57,12 +61,13 @@
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "linkedom": "^0.16.0",
+    "marked": "15.0.12",
     "p-limit": "^6.1.0",
     "promise.try": "^2.0.1",
     "turndown": "^7.2.0",
     "typebox": "^1.1.38",
-    "unpdf": "^1.6.2",
-    "undici": "^8.9.0"
+    "undici": "^8.9.0",
+    "unpdf": "^1.6.2"
   },
   "peerDependencies": {
     "@earendil-works/pi-ai": "0.84.2",

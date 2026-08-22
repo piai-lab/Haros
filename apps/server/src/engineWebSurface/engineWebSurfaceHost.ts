@@ -182,6 +182,26 @@ export function extractPiCuratorWebSurfaceUrl(
   return findEngineWebSurfaceUrl(result);
 }
 
+export function extractTypedEngineWebSurface(
+  toolName: string,
+  result: unknown,
+): { readonly surfaceId: string; readonly status: "pending" } | undefined {
+  if (toolName !== "web_search") return undefined;
+  const resultRecord = asRecord(result);
+  const details = asRecord(resultRecord?.details);
+  const surface = asRecord(details?.engineWebSurface);
+  const surfaceId = surface?.surfaceId;
+  if (
+    typeof surfaceId !== "string" ||
+    surfaceId.length < 8 ||
+    surfaceId.length > 128 ||
+    surface?.status !== "pending"
+  ) {
+    return undefined;
+  }
+  return { surfaceId, status: "pending" };
+}
+
 export function sanitizeEngineWebSurfacePayload(
   value: unknown,
   exactUrl?: string,
@@ -206,8 +226,12 @@ export function sanitizeEngineWebSurfacePayload(
   );
 }
 
-export const engineWebSurfacePresentationMetadata = (status: EngineWebSurfaceStatus) => ({
+export const engineWebSurfacePresentationMetadata = (
+  status: EngineWebSurfaceStatus,
+  surfaceId?: string,
+) => ({
   status,
   provenance: "engine-native",
   presentation: "omnimind-browser",
+  ...(surfaceId === undefined ? {} : { surfaceId }),
 });

@@ -267,7 +267,11 @@ export interface BrowserHostToolCall {
   readonly signal?: AbortSignal;
 }
 
-function assertCompatibleHostInfo(value: unknown, expectedSessionId: string): void {
+function assertCompatibleHostInfo(
+  value: unknown,
+  expectedSessionId: string,
+  requiredMethod = "executeTool",
+): void {
   const info = asRecord(value);
   const metadata = asRecord(info?.metadata);
   const protocolVersion = metadata?.protocolVersion ?? info?.protocolVersion;
@@ -277,13 +281,86 @@ function assertCompatibleHostInfo(value: unknown, expectedSessionId: string): vo
     protocolVersion !== 1 ||
     (info?.type !== undefined && info.type !== "omnimind-browser-host") ||
     (sessionId !== undefined && sessionId !== expectedSessionId) ||
-    (methods !== undefined && (!Array.isArray(methods) || !methods.includes("executeTool")))
+    (methods !== undefined && (!Array.isArray(methods) || !methods.includes(requiredMethod)))
   ) {
     throw new BrowserHostRpcError(
       "malformed",
       "The visible browser host uses an incompatible protocol.",
     );
   }
+}
+
+export interface BrowserHostEngineWebSurfaceContextCall {
+  readonly pipePath: string;
+  readonly capability: string;
+  readonly sessionKey: string;
+  readonly timeoutMs: number;
+  readonly signal?: AbortSignal;
+}
+
+export interface BrowserHostEngineWebSurfaceCall
+  extends BrowserHostEngineWebSurfaceContextCall {
+  readonly threadId: ThreadId;
+  readonly surfaceId: string;
+}
+
+async function callAuthenticatedBrowserHostMethod(
+  input: BrowserHostEngineWebSurfaceContextCall,
+  method: string,
+  params: Record<string, unknown>,
+): Promise<unknown> {
+  const deadline = makeDeadline(input.timeoutMs);
+  const connection = await BrowserHostRpcConnection.connect(
+    input.pipePath,
+    remainingOrThrow(deadline, "connection"),
+    input.signal,
+  );
+  try {
+    const hostInfo = await connection.request(
+      "getInfo",
+      { session_id: input.sessionKey, capability: input.capability },
+      Math.min(remainingOrThrow(deadline, "getInfo"), INFO_TIMEOUT_MS),
+      input.signal,
+    );
+    assertCompatibleHostInfo(hostInfo, input.sessionKey, method);
+    return await connection.request(
+      method,
+      { session_id: input.sessionKey, ...params },
+      remainingOrThrow(deadline, method),
+      input.signal,
+    );
+  } finally {
+    connection.close();
+  }
+}
+
+export function getBrowserHostEngineWebSurfaceContext(
+  input: BrowserHostEngineWebSurfaceContextCall,
+): Promise<unknown> {
+  return callAuthenticatedBrowserHostMethod(input, "getEngineWebSurfaceContext", {});
+}
+
+export function presentBrowserHostEngineWebSurface(
+  input: BrowserHostEngineWebSurfaceCall & {
+    readonly url: string;
+    readonly expiresAt: number;
+  },
+): Promise<unknown> {
+  return callAuthenticatedBrowserHostMethod(input, "presentEngineWebSurface", {
+    thread_id: input.threadId,
+    surface_id: input.surfaceId,
+    url: input.url,
+    expires_at: input.expiresAt,
+  });
+}
+
+export function settleBrowserHostEngineWebSurface(
+  input: BrowserHostEngineWebSurfaceCall,
+): Promise<unknown> {
+  return callAuthenticatedBrowserHostMethod(input, "settleEngineWebSurface", {
+    thread_id: input.threadId,
+    surface_id: input.surfaceId,
+  });
 }
 
 export async function callBrowserHostTool(input: BrowserHostToolCall): Promise<unknown> {

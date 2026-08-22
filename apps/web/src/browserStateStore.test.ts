@@ -82,6 +82,48 @@ describe("browserStateStore selectors", () => {
       tabs: [{ url: "https://new.example/", title: "New visible page" }],
     });
   });
+
+  it("never persists a non-history Engine web-surface token URL", () => {
+    const persisted = new Map<string, string>();
+    vi.stubGlobal("localStorage", {
+      getItem: (name: string) => persisted.get(name) ?? null,
+      setItem: (name: string, value: string) => persisted.set(name, value),
+      removeItem: (name: string) => persisted.delete(name),
+    });
+    useBrowserStateStore.setState({ threadStatesByThreadId: {}, recentHistoryByThreadId: {} });
+
+    useBrowserStateStore.getState().upsertThreadState({
+      threadId: THREAD_ID,
+      version: 10,
+      open: true,
+      activeTabId: "internal-tab",
+      tabs: [
+        {
+          id: "internal-tab",
+          url: "http://127.0.0.1:43123/?session=must-never-persist",
+          title: "OmniMind Web Access",
+          status: "live",
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+          faviconUrl: null,
+          lastCommittedUrl: null,
+          lastError: null,
+          presentation: {
+            kind: "engine-web-surface",
+            surfaceId: "surface-opaque-123",
+            ephemeral: true,
+            nonHistory: true,
+            internalOnly: true,
+          },
+        },
+      ],
+      lastError: null,
+    });
+
+    expect(selectThreadBrowserHistory(THREAD_ID)(useBrowserStateStore.getState())).toEqual([]);
+    expect([...persisted.values()].join("\n")).not.toContain("must-never-persist");
+  });
 });
 
 describe("createDedupedBrowserStateStorage", () => {
