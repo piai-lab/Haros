@@ -53,9 +53,9 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | `source_check` | 保留结构化 ResearchArtifact 与精确 passages；把 claim 判断明确降级为 heuristic，并补 Unicode/中文匹配 |
 | 能力图标 | OmniMind Web Access 的通用图标固定为现有 `globe`；不为同一功能发明第二个图标 |
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
-| 图标来源 | runtime Provider定义与presentation字段同源；本地固定资产须单独闭合来源、revision/hash、license与trademark，不能运行时热取favicon |
+| 图标来源 | runtime Provider定义与presentation字段同源；26家全部使用本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；pushed SHA `286df13768`已完成Desktop重建、替换安装与fresh隔离Settings/Provider-asset gate，真实Provider及完整search/Curator journey仍待验证，不能被引用为`packaged-product-proven`或已发行 |
+| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；当前26家原色品牌资产是尚未push/packaged复验的source candidate，旧SHA `286df13768`的13品牌+13中性视觉证据已失效；真实Provider及完整search/Curator journey仍待验证，不能被引用为`packaged-product-proven`或已发行 |
 
 ### 0.3 唯一 owner 图
 
@@ -186,8 +186,8 @@ Peer dependencies 当前都是 wildcard：
 - 普通产品 UI 只使用 OmniMind Web Access 品牌；不在 Curator、Settings 或普通 Tool 文案中显示 `pi-web-access`。
 - 上游名称与作者进入 fork README、LICENSE/NOTICE、source headers、About/Licenses、诊断和本 intake。
 - package 改名不抹掉 lineage，也不把上游代码伪装成从零第一方原创。
-- Provider logo、app icon与favicon不是上游MIT自动覆盖的代码资产。每个实际随App分发的品牌文件都要独立记录原始source、抓取/固定revision、内容hash、许可或trademark disposition和本地shipped path；不能因为来自官网就默认获得再分发权。
-- Bright Data的官方[Trademark Usage Guidelines](https://media.brightdata.com/2022/12/Permitted-Use-of-Bright-Datas-Trademark-Name.pdf)明确把logo使用置于书面同意之下。因此本轮HTML可将官方mark用于内部视觉比较，但production package在获得可审计许可前不得随包分发该mark，必须使用中性fallback。其他官方favicon尚未完成逐项再分发权核验，也不能从“未看到禁止条款”反推已获许可。
+- Provider logo、app icon与favicon不是上游MIT自动覆盖的代码资产。每个实际随App分发的品牌文件仍要记录source snapshot、内容hash、已知许可或trademark约束和本地shipped path；不能因为来自官网就伪称已获授权、合作或背书。
+- Bright Data的官方[Trademark Usage Guidelines](https://media.brightdata.com/2022/12/Permitted-Use-of-Bright-Datas-Trademark-Name.pdf)明确把logo使用置于书面同意之下。维护者已明确接受该约束并裁决：本轮26家准确指称性的原色品牌展示优先，书面许可不是视觉交付阻塞门；已知约束必须继续记录，不能改写成“已获许可”。
 
 ## 3. 上游能力全图
 
@@ -604,25 +604,14 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 ### 6.6 本轮图标调研结论与生产准入
 
-本轮已完成26个resolved identity的HTML视觉原型，所有行都有可辨识图标，且HTML自包含、无运行时网络资产。候选字节已拆分保存到[`research/prototypes/pi-web-access-provider-icons/`](prototypes/pi-web-access-provider-icons/README.md)，其中记录26→25 alias、文件大小、SHA-256、来源类别与准入缺口。该原型与候选目录只证明**映射与视觉方向**，不是production asset registry，也不证明商标再分发权。
-
-当前source candidate已从exact locked `@lobehub/icons-static-svg@1.94.0`逐字节准入13个Provider mark：SearXNG、OpenAI、Exa、Brave、Search1API、Tavily、Firecrawl、Jina Search、Kagi、Bocha、Ollama Cloud、Perplexity与Gemini。production bytes、SHA-256、MIT来源与未准入清单由[`packages/om-web-access/assets/provider-icons/README.md`](../packages/om-web-access/assets/provider-icons/README.md)记录，并由runtime descriptor唯一决定是否投影。9个旧研究候选与1.94.0当前字节不同，因此未把research原型反向提升为生产来源。xAI/Grok层级、Bright Data及其他official/favicon候选仍未闭合，继续使用中性字母mark；presentation缺口不改变routing。
+本轮先完成26个resolved identity的HTML视觉原型，再由维护者明确裁决26家全部采用身份准确、保持原色的本地品牌资产。当前source candidate已把固定研究快照逐字节提升到[`packages/om-web-access/assets/provider-icons/`](../packages/om-web-access/assets/provider-icons/README.md)：26个runtime identity映射到25份物理文件，唯一复用为`parallel-mcp → parallel.svg`。runtime descriptor唯一决定identity→asset投影，Web build机械复制`.svg/.png/.ico`，UI不再反色、重染或运行时热取。该交付准确记录来源与已知权利约束，但不把准确指称性使用伪装成已获授权。
 
 | Provider identity | 接受的视觉映射 | 本轮候选来源 | Production disposition |
 | --- | --- | --- | --- |
-| SearXNG、OpenAI、Exa、Brave、Search1API、Tavily、Firecrawl、Jina Search、Kagi、Bocha、Ollama Cloud、Perplexity、Gemini | 对应服务品牌标记 | exact `@lobehub/icons-static-svg@1.94.0` | 已按需本地打包；runtime descriptor投影固定asset ID/path，Web build只机械复制admitted目录 |
-| xAI | 保留中性字母mark | Lobe候选内部title为Grok | runtime Provider与品牌层级闭合前不准入 |
-| Parallel、Parallel MCP | 同一个Parallel品牌标记；`MCP`只用名称/说明表达 | Parallel官方symbol候选 | 两个runtime ID共享一个asset identity；权利闭合后本地打包 |
-| TinyFish | TinyFish app icon | 官方站点/app asset候选 | 权利与hash闭合前仅为原型候选 |
-| Searchinfinity | Searchinfinity/BytePlus官方favicon视觉 | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
-| Querit | Querit footer/app mark | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
-| SERPdive | SERPdive app icon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
-| DuckDuckGo | DuckDuckGo品牌图标 | Simple Icons候选 | 固定exact package/version、license与品牌边界后本地打包 |
-| AnySearch | AnySearch favicon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
-| Bright Data | Bright Data官方mark仅用于内部原型 | 官方站点候选；官方guideline要求书面同意 | 未取得可审计许可前production必须使用中性fallback |
-| SerpBase | SerpBase官方SVG | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
-| Serper | Serper favicon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
-| Valyu | Valyu favicon | 官方站点候选 | 权利与hash闭合前仅为原型候选 |
+| SearXNG、OpenAI、Exa、Brave、Search1API、Tavily、Firecrawl、Jina Search、Kagi、Bocha、Ollama Cloud、Perplexity、Gemini、xAI | 对应服务品牌标记 | exact `@lobehub/icons-static-svg@1.94.0` color/brand asset | 已逐字节本地固定；xAI内部title异常保留在source记录，不改写runtime identity |
+| Parallel、Parallel MCP | 同一个Parallel品牌标记；`MCP`只用名称/说明表达 | Parallel官方symbol候选 | 两个runtime ID共享一个asset identity并已本地固定 |
+| DuckDuckGo | DuckDuckGo品牌图标 | exact `simple-icons@16.28.0` | exact package字节匹配后本地固定 |
+| TinyFish、Searchinfinity、Querit、SERPdive、AnySearch、Bright Data、SerpBase、Serper、Valyu | 各服务官方站点/app/favicon mark | commit `563423d140e0fce6b1833f937f5c0a51ff313fa3`固定研究快照 | 已逐字节本地固定；已知许可/trademark约束记录但不阻塞本轮交付 |
 
 稳定规则：
 
@@ -631,7 +620,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 - status使用文字/tone，不能通过把logo变灰来暗示唯一状态；
 - Settings、Curator、Timeline/technical detail只消费同一asset identity；Curator不得复制自己的logo表；
 - shipped asset全部本地、固定hash、无CDN/favicon热链；品牌更新只在新一轮source intake中发生，不在用户机器自动漂移；
-- 未通过asset admission时使用中性字母标记或统一provider glyph，保留完整Provider功能、名称和配置，不把视觉缺口升级成runtime unavailable。
+- 当前26家不得出现中性fallback；未来新增Provider在身份或资产尚未确定时才使用中性字母标记或统一provider glyph，且视觉缺口不能升级成runtime unavailable。
 
 ### 6.7 明确不提供的 UI
 
@@ -815,8 +804,8 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 - 简中/英文、keyboard、screen reader、390px/Right Dock窄宽、dark/light、reduced motion；
 - 无 Google Fonts/jsDelivr/运行时 CDN；
 - 26个exact Provider descriptor全部有且只有一个presentation identity；Parallel/Parallel MCP共享品牌asset但保留两个runtime ID；
-- 能力级入口固定`globe`，服务级缺失/未获准品牌资产使用中性fallback而不是`globe`；
-- shipped品牌资产具备source/revision/hash/license/trademark记录，Bright Data在无书面许可时不随包分发官方mark；
+- 能力级入口固定`globe`，当前26个服务identity全部使用descriptor同源的本地品牌资产；未来新增但身份未定的服务才使用中性fallback；
+- shipped品牌资产具备source snapshot/hash与已知license/trademark约束记录；Bright Data等书面许可约束不被伪写成已获许可；
 - Settings、Curator、Timeline/technical detail消费同一presentation projection，没有第二logo表或remote hotlink；
 - 损坏/未来schema不被默认值覆盖，unknown fields round-trip，known旧schema只在显式mutation时原子升级；
 - Settings保存/refresh的revision invalidation只唤醒live Extension实例自治恢复，不产生全局Session registry、file watcher或第二持久状态；
@@ -834,7 +823,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 ### 10.8 Real-provider 与 packaged product
 
-- 已完成局部门：exact pushed implementation SHA `286df13768de943a2db4df033180251c2f353aca`经clean clone生成DMG SHA-256 `228796d58d64d3f2e3544e0a340fc6115db75b87fa8786e5152fa64de458b0c9`，安装`app.asar`为`4f4abbefef2b7011da70bdac57eccb48b3071053798783f0ab66967a23bbfadb`；fresh任务profile中backend启动、canonical默认文件、13个准入品牌asset与13个中性fallback的浅/深色真实渲染通过。该证据不包含真实搜索或Curator settlement。
+- 历史局部门：exact pushed implementation SHA `286df13768de943a2db4df033180251c2f353aca`的fresh任务profile曾证明13个品牌asset与13个中性fallback可渲染；维护者随后把标准提升为26家全部原色品牌asset，因此该视觉证据已经失效。当前26→25 source candidate已通过descriptor/hash、Web Settings、typecheck、Web build与25份dist asset检查，但仍需从新的exact pushed SHA重建、安装并完成fresh隔离视觉journey。
 - 使用最小真实资源覆盖至少一个 zero-config route、一个 keyed route、一个 route exhaustion；
 - MiMo 与 DeepSeek 作为 OmniMind Agent model锚点验证模型能发现/调用/继续 `get_search_content`；
 - exact pushed SHA 构建、安装、fresh task profile、隔离 `.omnimind` / `.pi`；
@@ -882,9 +871,9 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 第二个风险是把“Web Access不可用”做成整包布尔值。搜索route exhaustion只影响`web_search/source_check`；direct URL、PDF/GitHub读取与已有result retrieval仍可能工作。反过来，某个fetch backend失败也不能让搜索消失。所有availability、文案和测试都按工具真实依赖收缩，不能为了UI简单牺牲能力边界。
 
-第三个风险是把“官方favicon”误当成稳定API和许可。品牌站点可以改文件、阻断请求或改变条款；production只能消费fork/release中固定、可审计的本地资产。视觉调研HTML是设计证据，永远不能升级成运行时下载器或权利证明。
+第三个风险是把“官方favicon”误当成稳定运行时API。品牌站点可以改文件、阻断请求或改变条款；production只能消费fork/release中固定、有hash的本地资产。维护者接受已知许可约束不阻塞本轮交付，不等于可以建设运行时下载器，也不等于宣称第三方授权或背书。
 
-第四个风险是品牌层级错位。当前`xai`候选glyph内部标为Grok，Searchinfinity候选来自其BytePlus关联页面；它们可能视觉上正确，但production intake仍要确认“runtime Provider → 用户display name → 品牌mark”三者是同一产品层级。不能为了图标漂亮改写runtime ID，也不能把母公司mark、产品mark和传输方式静默混用。
+第四个风险是品牌层级错位。当前`xai`固定glyph内部title仍标为Grok，Searchinfinity资产来自其BytePlus关联页面；维护者已接受当前准确指称性映射进入candidate，但这些异常必须保留在source记录中。不能为了图标漂亮改写runtime ID，也不能在未来更新时静默把母公司mark、产品mark和传输方式互换。
 
 第五个风险是把Curator当成“打开一个URL”而不是pending tool call的短时交互面。untouched baseline的三个反例是PiAdapter用`browser_open reuse:true`导航用户当前Tab、Timeline callback只展开Browser pane而不能定位对应tool call、Browser recent-history把token URL写入localStorage；当前source candidate已通过typed dedicated ephemeral Tab、exact pending reopen、call-scoped settlement/cleanup与non-history metadata闭合并有focused回归。只有pushed-SHA packaged journey通过后，才能把这项source事实提升为安装产品证据。
 
@@ -975,8 +964,9 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "providerListInWeb": false,
     "runtimeRemoteAssets": false,
     "parallelBrandAssetSharedWithMcp": true,
-    "brightDataOfficialMark": "internal-prototype-only-until-written-consent",
-    "missingAssetFallback": "neutral-provider-mark-not-globe"
+    "providerBrandCoverage": "26-runtime-identities-to-25-local-original-color-assets",
+    "knownTrademarkConstraintsBlockVisualDelivery": false,
+    "missingAssetFallback": "future-unresolved-provider-only-neutral-provider-mark-not-globe"
   },
   "patchInventory": [
     "per-session-instance-state",
@@ -988,8 +978,8 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
   ],
   "evidenceMaturity": "source-candidate-pending-packaged",
   "implemented": true,
-  "testedImplementationSha": "286df13768de943a2db4df033180251c2f353aca",
-  "packagedSettingsProviderAssetGate": true,
+  "previousTestedImplementationSha": "286df13768de943a2db4df033180251c2f353aca",
+  "packagedSettingsProviderAssetGate": false,
   "packagedJourney": false,
   "unresolvedMaintainerChoice": "none"
 }

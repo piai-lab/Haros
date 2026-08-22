@@ -95,10 +95,10 @@ function ProviderMark({
     <span
       aria-hidden="true"
       data-provider-icon-kind={icon.kind}
-      className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-muted/45 text-muted-foreground"
+      className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border/80 bg-white text-muted-foreground"
     >
       {icon.kind === "local-asset" ? (
-        <img alt="" className="size-5 object-contain dark:invert" src={icon.assetPath} />
+        <img alt="" className="size-5 object-contain" src={icon.assetPath} />
       ) : (
         <span className="text-[10px] font-semibold tracking-tight">{fallbackMonogram}</span>
       )}

@@ -27,6 +27,7 @@ const buildSourcemap =
 
 const CENTRAL_ICON_DIR = "central-icons-reversed";
 const WEB_ACCESS_PROVIDER_ICON_DIR = "web-access/provider-icons";
+const WEB_ACCESS_PROVIDER_ICON_EXTENSIONS = new Set([".svg", ".png", ".ico"]);
 const CENTRAL_ICON_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 
@@ -119,13 +120,15 @@ function webAccessProviderIconPlugin(): Plugin {
       );
       const targetDir = path.join(resolvedOutDir, WEB_ACCESS_PROVIDER_ICON_DIR);
       await fs.mkdir(targetDir, { recursive: true });
-      const assetNames = (await fs.readdir(sourceDir)).filter((name) => name.endsWith(".svg"));
+      const assetNames = (await fs.readdir(sourceDir)).filter((name) =>
+        WEB_ACCESS_PROVIDER_ICON_EXTENSIONS.has(path.extname(name).toLowerCase()),
+      );
       await Promise.all(
         assetNames.map((name) => fs.copyFile(path.join(sourceDir, name), path.join(targetDir, name))),
       );
       await fs.copyFile(
         path.resolve(import.meta.dirname, "../../LICENSES/lobe-icons-MIT.txt"),
-        path.join(targetDir, "LICENSE.txt"),
+        path.join(targetDir, "LOBEHUB-LICENSE.txt"),
       );
     },
   };

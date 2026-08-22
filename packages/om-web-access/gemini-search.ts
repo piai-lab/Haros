@@ -90,16 +90,10 @@ interface SearchProviderRuntimeDescriptor<Id extends string = string> {
 	readonly searchForAll?: (query: string, options: SearchProviderRuntimeOptions) => Promise<SearchResponse>;
 }
 
-const neutralProviderIcon = {
-	kind: "neutral",
-	assetId: null,
-	admission: "not-admitted",
-} as const;
-
-const admittedProviderIcon = (assetId: string): SearchProviderIcon => ({
+const admittedProviderIcon = (assetId: string, extension = "svg"): SearchProviderIcon => ({
 	kind: "local-asset",
 	assetId,
-	assetPath: `/web-access/provider-icons/${assetId}.svg`,
+	assetPath: `/web-access/provider-icons/${assetId}.${extension}`,
 	admission: "admitted",
 });
 
@@ -351,21 +345,21 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "parallel", displayName: "Parallel", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 3,
-		autoOrder: 4, allOrder: 4, all: "included", icon: neutralProviderIcon,
+		autoOrder: 4, allOrder: 4, all: "included", icon: admittedProviderIcon("parallel"),
 		fields: [keyField("parallelApiKey", "PARALLEL_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isParallelAvailable(), search: searchWithParallel,
 	},
 	{
 		id: "parallel-mcp", displayName: "Parallel MCP", prerequisite: "optional-key", costHint: "keyless-shared-quota",
 		curatorOrder: 4,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("parallel"),
 		fields: [optionalKeyField("parallelApiKey", "PARALLEL_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isParallelMcpAvailable(), search: searchWithParallelMcp,
 	},
 	{
 		id: "tinyfish", displayName: "TinyFish", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 5,
-		autoOrder: 5, allOrder: 5, all: "included", icon: neutralProviderIcon,
+		autoOrder: 5, allOrder: 5, all: "included", icon: admittedProviderIcon("tinyfish", "png"),
 		fields: [keyField("tinyfishApiKey", "TINYFISH_API_KEY")], advancedFileOnly: ["tinyfish"],
 		isAvailable: () => isTinyFishAvailable(), search: searchWithTinyFish,
 	},
@@ -379,14 +373,14 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "searchinfinity", displayName: "Searchinfinity", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 7,
-		autoOrder: 7, allOrder: 7, all: "included", icon: neutralProviderIcon,
+		autoOrder: 7, allOrder: 7, all: "included", icon: admittedProviderIcon("searchinfinity", "png"),
 		fields: [keyField("searchinfinityApiKey", "SEARCHINFINITY_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isSearchinfinityAvailable(), search: searchWithSearchinfinity,
 	},
 	{
 		id: "querit", displayName: "Querit", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 8,
-		autoOrder: 8, allOrder: 8, all: "included", icon: neutralProviderIcon,
+		autoOrder: 8, allOrder: 8, all: "included", icon: admittedProviderIcon("querit", "png"),
 		fields: [keyField("queritApiKey", "QUERIT_API_KEY")], advancedFileOnly: ["querit"],
 		isAvailable: () => isQueritAvailable(), search: searchWithQuerit,
 	},
@@ -415,7 +409,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "serpdive", displayName: "SERPdive", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 12,
-		autoOrder: 12, allOrder: 12, all: "included", icon: neutralProviderIcon,
+		autoOrder: 12, allOrder: 12, all: "included", icon: admittedProviderIcon("serpdive", "png"),
 		fields: [keyField("serpdiveApiKey", "SERPDIVE_API_KEY"), textField("serpdiveModel", "model", { environmentVariable: "SERPDIVE_MODEL" })],
 		advancedFileOnly: [], isAvailable: () => isSerpdiveAvailable(), search: searchWithSerpdive,
 	},
@@ -450,7 +444,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "duckduckgo", displayName: "DuckDuckGo", prerequisite: "none", costHint: "keyless-shared-quota",
 		curatorOrder: 17,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon, fields: [], advancedFileOnly: [],
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("duckduckgo"), fields: [], advancedFileOnly: [],
 		isAvailable: () => isDuckDuckGoAvailable(), search: searchWithDuckDuckGo,
 	},
 	{
@@ -477,14 +471,14 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "anysearch", displayName: "AnySearch", prerequisite: "optional-key", costHint: "keyless-shared-quota",
 		curatorOrder: 20,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("anysearch", "ico"),
 		fields: [optionalKeyField("anysearchApiKey", "ANYSEARCH_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isAnySearchAvailable(), search: searchWithAnySearch,
 	},
 	{
 		id: "xai", displayName: "xAI", prerequisite: "key-or-session", costHint: "provider-dependent",
 		curatorOrder: 21,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("xai"),
 		fields: [optionalKeyField("xaiApiKey", "XAI_API_KEY"), textField("xaiSearchModel", "model")], advancedFileOnly: [],
 		isAvailable: (options) => isXaiSearchAvailable(options.extensionContext),
 		search: (query, options) => searchWithXai(query, options, options.extensionContext),
@@ -492,28 +486,28 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "brightdata", displayName: "Bright Data", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 22,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("bright-data", "png"),
 		fields: [keyField("brightdataApiKey", "BRIGHTDATA_API_KEY"), textField("brightdataSerpZone", "zone", { required: true, environmentVariable: "BRIGHTDATA_SERP_ZONE", qualifier: "SERP" })],
 		advancedFileOnly: ["brightdataUnlockerZone"], isAvailable: () => isBrightDataAvailable(), search: searchWithBrightData,
 	},
 	{
 		id: "serpbase", displayName: "SerpBase", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 23,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("serpbase"),
 		fields: [keyField("serpbaseApiKey", "SERPBASE_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isSerpBaseAvailable(), search: searchWithSerpBase,
 	},
 	{
 		id: "serper", displayName: "Serper", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 24,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("serper", "png"),
 		fields: [keyField("serperApiKey", "SERPER_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isSerperAvailable(), search: searchWithSerper,
 	},
 	{
 		id: "valyu", displayName: "Valyu", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 25,
-		autoOrder: null, allOrder: null, all: "excluded", icon: neutralProviderIcon,
+		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("valyu", "ico"),
 		fields: [keyField("valyuApiKey", "VALYU_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isValyuAvailable(), search: searchWithValyu,
 	},

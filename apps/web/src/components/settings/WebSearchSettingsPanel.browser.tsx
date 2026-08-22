@@ -131,7 +131,7 @@ describe("WebSearchSettingsPanel", () => {
 
     await page.getByRole("button", { name: "Add service" }).click();
     expect(document.querySelectorAll('[data-provider-icon-kind="local-asset"]')).toHaveLength(1);
-    expect(document.querySelector<HTMLImageElement>('img[src="/web-access/provider-icons/tavily.svg"]')?.className).toContain("dark:invert");
+    expect(document.querySelector<HTMLImageElement>('img[src="/web-access/provider-icons/tavily.svg"]')?.className).not.toContain("dark:invert");
     expect(document.querySelectorAll('[data-provider-icon-kind="neutral"]')).toHaveLength(1);
     await expect.element(page.getByText(/API key required · Not configured/)).toBeVisible();
     await page.getByRole("button", { name: "Edit" }).first().click();
