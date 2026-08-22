@@ -548,6 +548,7 @@ interface PiTrackedToolCall {
     readonly url?: string;
     readonly surfaceId?: string;
     readonly unregister?: () => void;
+	readonly status?: "pending" | "observing";
   };
 }
 
@@ -2423,10 +2424,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             tracked.engineWebSurface = {
               ...tracked.engineWebSurface,
               surfaceId: typedSurface.surfaceId,
+              status: typedSurface.status,
             };
           }
           const engineSurfaceId = typedSurface?.surfaceId ?? tracked.engineWebSurface?.surfaceId;
           const surfaceUrl = tracked.engineWebSurface?.url;
+          const engineSurfacePending = surfaceUrl !== undefined || tracked.engineWebSurface?.status === "pending";
           const safePartialResult = sanitizeEngineWebSurfacePayload(
             event.partialResult,
             surfaceUrl,
@@ -2457,7 +2460,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 args: tracked.args,
                 partialResult: safePartialResult,
                 ...(surfaceUrl ? { engineWebSurfaceStatus: "waiting-for-user" } : {}),
-                ...(engineSurfaceId
+                ...(engineSurfaceId && engineSurfacePending
                   ? {
                       engineWebSurfaceStatus: "waiting-for-user",
                       engineWebSurfaceId: engineSurfaceId,
@@ -2515,7 +2518,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 result: safeResult,
                 isError: event.isError,
                 ...(surfaceUrl ? { engineWebSurfaceStatus: "completed" } : {}),
-                ...(tracked.engineWebSurface?.surfaceId
+                ...(tracked.engineWebSurface?.surfaceId && tracked.engineWebSurface.status === "pending"
                   ? {
                       engineWebSurfaceStatus: "completed",
                       engineWebSurfaceId: tracked.engineWebSurface.surfaceId,
@@ -2756,13 +2759,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                   };
                 }
               },
-              settle: async ({ surfaceId }) => {
+              settle: async ({ surfaceId, preserveTab }) => {
                 await Effect.runPromise(
                   browserAutomationHost
                     .settleEngineWebSurface!({
                       sessionKey: `engine-web-surface:${provider}:${input.threadId}`,
                       threadId: input.threadId,
                       surfaceId,
+                      ...(preserveTab === undefined ? {} : { preserveTab }),
                     })
                     .pipe(Effect.ignore),
                 );

@@ -22,6 +22,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { SearchInput } from "../ui/search-input";
 import { Select, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
 import {
   SettingsCard,
@@ -37,6 +38,7 @@ type ReadySnapshot = OmniMindWebSearchSettingsSnapshot;
 type DraftState = {
   readonly provider: string | readonly string[];
   readonly workflow: OmniMindWebSearchWorkflow;
+  readonly autoShowSearchProcess: boolean;
   readonly fields: Readonly<Record<string, string | null>>;
 };
 type View = { readonly kind: "overview" } | { readonly kind: "add" } | {
@@ -54,6 +56,7 @@ function draftFrom(snapshot: ReadySnapshot): DraftState {
   return {
     provider: snapshot.provider,
     workflow: snapshot.workflow,
+    autoShowSearchProcess: snapshot.autoShowSearchProcess,
     fields: Object.fromEntries(
       snapshot.providers.flatMap((provider) =>
         provider.fields.map((field) => [field.configKey, field.value] as const),
@@ -66,6 +69,7 @@ function mutationDraft(draft: DraftState): OmniMindWebSearchDraft {
   return {
     provider: draft.provider,
     workflow: draft.workflow,
+    autoShowSearchProcess: draft.autoShowSearchProcess,
     fields: Object.entries(draft.fields).map(([configKey, value]) => ({ configKey, value })),
   };
 }
@@ -460,6 +464,21 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
               <SelectTrigger size="sm" className="w-full sm:w-52"><SelectValue /></SelectTrigger>
               <SettingsSelectPopup>{workflowOptions.map((workflow) => <SelectItem key={workflow} value={workflow}>{t(`settings.webSearch.workflow.${workflow}` as const)}</SelectItem>)}</SettingsSelectPopup>
             </Select>
+          }
+        />
+        <SettingsRow
+          title={t("settings.webSearch.autoShowSearchProcess")}
+          description={t("settings.webSearch.autoShowSearchProcessDescription")}
+          control={
+            <Switch
+              checked={draft.autoShowSearchProcess}
+              aria-label={t("settings.webSearch.autoShowSearchProcess")}
+              onCheckedChange={(checked) =>
+                setDraft((current) => current
+                  ? { ...current, autoShowSearchProcess: checked }
+                  : current)
+              }
+            />
           }
         />
       </SettingsSection>

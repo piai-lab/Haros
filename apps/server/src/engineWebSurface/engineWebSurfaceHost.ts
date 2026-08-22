@@ -185,7 +185,7 @@ export function extractPiCuratorWebSurfaceUrl(
 export function extractTypedEngineWebSurface(
   toolName: string,
   result: unknown,
-): { readonly surfaceId: string; readonly status: "pending" } | undefined {
+): { readonly surfaceId: string; readonly status: "pending" | "observing" } | undefined {
   if (toolName !== "web_search") return undefined;
   const resultRecord = asRecord(result);
   const details = asRecord(resultRecord?.details);
@@ -195,11 +195,12 @@ export function extractTypedEngineWebSurface(
     typeof surfaceId !== "string" ||
     surfaceId.length < 8 ||
     surfaceId.length > 128 ||
-    surface?.status !== "pending"
+    surface?.status !== "pending" &&
+    surface?.status !== "observing"
   ) {
     return undefined;
   }
-  return { surfaceId, status: "pending" };
+  return { surfaceId, status: surface.status };
 }
 
 export function sanitizeEngineWebSurfacePayload(

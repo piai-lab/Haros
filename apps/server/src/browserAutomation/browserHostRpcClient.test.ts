@@ -122,6 +122,7 @@ describe("browser host RPC client", () => {
           ...common,
           threadId: "thread-engine-surface" as never,
           surfaceId: "surface-opaque-123",
+		  preserveTab: true,
         })).resolves.toEqual({ settled: true });
       },
     );
@@ -137,6 +138,12 @@ describe("browser host RPC client", () => {
       surface_id: "surface-opaque-123",
       url: "http://127.0.0.1:43123/?session=private-token",
     });
+	expect(requests.find(request => request.method === "settleEngineWebSurface")?.params).toMatchObject({
+	  session_id: "engine-surface-session",
+	  thread_id: "thread-engine-surface",
+	  surface_id: "surface-opaque-123",
+	  preserve_tab: true,
+	});
   });
 
   it("routes the authenticated provider identity through getInfo and executeTool", async () => {

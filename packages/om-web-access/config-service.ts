@@ -92,6 +92,7 @@ function defaultConfig(): WebSearchConfigRecord {
 		schemaVersion: CURRENT_WEB_SEARCH_SCHEMA_VERSION,
 		provider: "auto",
 		workflow: "auto-summary",
+		autoOpenBrowser: false,
 	};
 }
 

@@ -144,6 +144,99 @@ test("canonical default search auto-summarizes without presenting Curator", asyn
 	await harness.handlers.get("session_shutdown")?.();
 });
 
+test("auto-summary and none can observe live results without becoming pending review", async (t) => {
+	const originalFetch = globalThis.fetch;
+	t.after(() => { globalThis.fetch = originalFetch; });
+	globalThis.fetch = async (url, init) => {
+		if (String(url).startsWith("https://api.exa.ai/answer")) {
+			const query = JSON.parse(String(init?.body ?? "{}")).query ?? "query";
+			return new Response(JSON.stringify({
+				answer: `Observed answer for ${query}`,
+				citations: [{
+					title: `Observed source for ${query}`,
+					url: `https://example.test/${encodeURIComponent(query)}`,
+					text: `Observed evidence for ${query}`,
+				}],
+			}), { status: 200, headers: { "content-type": "application/json" } });
+		}
+		return originalFetch(url, init);
+	};
+
+	const root = await mkdtemp(join(tmpdir(), "omnimind-web-observer-"));
+	const configService = createWebSearchConfigService(join(root, "agent"));
+	const initial = configService.ensureDefault();
+	configService.mutate({
+		expectedRevision: initial.revision,
+		patch: { exaApiKey: "test-only-key", autoOpenBrowser: true },
+	});
+	const presenter = makePresenter();
+	const harness = makeHarness(configService, presenter);
+	const updates = [];
+	const context = extensionContext(root);
+
+	const summaryResult = await harness.tool("web_search").execute(
+		"observer-summary",
+		{ query: "observer summary", provider: "exa" },
+		undefined,
+		update => updates.push(update),
+		context,
+	);
+	assert.equal(summaryResult.details.summary.workflow, "auto-summary");
+	assert.equal(presenter.requests.length, 1);
+	assert.deepEqual(presenter.settlements[0], {
+		toolCallId: "observer-summary",
+		surfaceId: presenter.requests[0].surfaceId,
+		preserveTab: true,
+	});
+	assert.match(JSON.stringify(updates), /"status":"observing"/);
+	assert.doesNotMatch(JSON.stringify(updates), /"status":"pending"|waiting-for-user|session=|curatorUrl/);
+
+	const rawResult = await harness.tool("web_search").execute(
+		"observer-raw",
+		{ query: "observer raw", provider: "exa", workflow: "none" },
+		undefined,
+		update => updates.push(update),
+		context,
+	);
+	assert.equal(rawResult.details.summary, undefined);
+	assert.equal(presenter.requests.length, 2);
+	assert.deepEqual(presenter.settlements[1], {
+		toolCallId: "observer-raw",
+		surfaceId: presenter.requests[1].surfaceId,
+		preserveTab: true,
+	});
+
+	const rejectedService = createWebSearchConfigService(join(root, "rejected", "agent"));
+	const rejectedInitial = rejectedService.ensureDefault();
+	rejectedService.mutate({
+		expectedRevision: rejectedInitial.revision,
+		patch: { exaApiKey: "test-only-key", autoOpenBrowser: true },
+	});
+	const rejectedPresenter = makePresenter();
+	rejectedPresenter.snapshot = async () => ({ locale: "zh-CN", theme: "dark" });
+	rejectedPresenter.present = async request => {
+		rejectedPresenter.requests.push(request);
+		throw new Error("typed handoff rejected");
+	};
+	const rejectedHarness = makeHarness(rejectedService, rejectedPresenter);
+	const rejectedUpdates = [];
+	const rejectedResult = await rejectedHarness.tool("web_search").execute(
+		"observer-rejected",
+		{ query: "observer rejected", provider: "exa" },
+		undefined,
+		update => rejectedUpdates.push(update),
+		context,
+	);
+	assert.equal(rejectedResult.details.summary.workflow, "auto-summary", "observer failure must not fail the search workflow");
+	assert.match(JSON.stringify(rejectedUpdates), /搜索仍在继续/);
+	assert.equal(rejectedPresenter.settlements.length, 1);
+	await rejectedHarness.handlers.get("session_shutdown")?.();
+	assert.equal(rejectedPresenter.settlements.length, 1, "failed observer handoff must settle exactly once");
+
+	await harness.handlers.get("session_shutdown")?.();
+	assert.equal(presenter.settlements.length, 2, "terminal observers must not settle twice on shutdown");
+});
+
 test("Session instances isolate stored results and shutdown cleanup", async (t) => {
 	const originalFetch = globalThis.fetch;
 	t.after(() => { globalThis.fetch = originalFetch; });

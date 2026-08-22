@@ -9,7 +9,8 @@ test("web_search accepts auto-summary workflow in schema and config resolution",
 	assert.match(indexSrc, /type WebSearchWorkflow = "none" \| "summary-review" \| "auto-summary"/);
 	assert.match(indexSrc, /StringEnum\(\["none", "summary-review", "auto-summary"\]/);
 	assert.match(indexSrc, /normalized === "auto-summary"/);
-	assert.match(indexSrc, /return "auto-summary";\n}/);
+	assert.match(indexSrc, /if \(profile === "omnimind"\) return "auto-summary"/);
+	assert.match(indexSrc, /return hasUI \? "summary-review" : "none"/);
 	assert.match(indexSrc, /arg === "none" \|\| arg === "summary-review" \|\| arg === "auto-summary"/);
 });
 

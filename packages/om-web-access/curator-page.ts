@@ -1,4 +1,5 @@
 import type { CuratorPresentationSnapshot } from "./curator-presentation.ts";
+import type { CuratorSurfaceMode } from "./curator-server.ts";
 import { resolveCuratorCopy } from "./curator-copy.ts";
 import {
 	getSearchProviderPresentation,
@@ -23,11 +24,18 @@ function escapeMarkup(value: string): string {
 		.replaceAll("'", "&#39;");
 }
 
+function buildProviderLabelResolver(): string {
+	return getSearchProviderPresentation()
+		.map((provider) => `    if (provider === ${JSON.stringify(provider.id)}) return ${JSON.stringify(provider.curatorLabel)};`)
+		.join("\n");
+}
+
 function buildProviderButtons(
 	available: SearchProviderAvailability,
 	selected: string,
 	hasInitialQueries: boolean,
 	allLabel: string,
+	sessionToken: string,
 ): string {
 	const providers = [
 		{ value: "all", label: allLabel, available: available.all },
@@ -45,7 +53,11 @@ function buildProviderButtons(
 			const state = isDefault && hasInitialQueries ? "loading" : "idle";
 			const classes = ["provider-btn", state, isDefault ? "is-default" : ""].filter(Boolean).join(" ");
 			const disabled = state === "loading" ? " disabled" : "";
-			return `<button type="button" class="${classes}" data-provider="${p.value}" data-state="${state}"${disabled}>${escapeMarkup(p.label)}</button>`;
+			const descriptor = getSearchProviderPresentation().find((provider) => provider.id === p.value);
+			const icon = descriptor?.icon.kind === "local-asset"
+				? `<img src="/assets/provider-icons/${encodeURIComponent(descriptor.icon.assetPath.split("/").at(-1) ?? "")}?session=${encodeURIComponent(sessionToken)}" alt="">`
+				: "";
+			return `<button type="button" class="${classes}" data-provider="${p.value}" data-state="${state}"${disabled}>${icon}${escapeMarkup(p.label)}</button>`;
 		})
 		.join("");
 }
@@ -60,14 +72,25 @@ export function generateCuratorPage(
 	summaryModels: Array<{ value: string; label: string }>,
 	defaultSummaryModel: string | null,
 	presentation?: CuratorPresentationSnapshot,
+	mode: CuratorSurfaceMode = "review",
 ): string {
 	const lang = presentation?.locale ?? "en";
 	const theme = presentation?.theme ?? "dark";
 	const copy = resolveCuratorCopy(lang);
-	const providerButtonsHtml = buildProviderButtons(availableProviders, defaultProvider, queries.length > 0, copy.all);
-	const providerIds = ["all", ...getSearchProviderPresentation().map((provider) => provider.id)];
+	const providerProjection = getSearchProviderPresentation();
+	const providerButtonsHtml = buildProviderButtons(availableProviders, defaultProvider, queries.length > 0, copy.all, sessionToken);
+	const providerIds = ["all", ...providerProjection.map((provider) => provider.id)];
+	const providerPresentation = Object.fromEntries(providerProjection.map((provider) => [
+		provider.id,
+		{
+			label: provider.curatorLabel,
+			iconSrc: provider.icon.kind === "local-asset"
+				? `/assets/provider-icons/${encodeURIComponent(provider.icon.assetPath.split("/").at(-1) ?? "")}?session=${encodeURIComponent(sessionToken)}`
+				: null,
+		},
+	]));
 	const providerIdsLiteral = safeInlineJSON(providerIds).replaceAll(",", ", ");
-	const inlineData = safeInlineJSON({ queries, sessionToken, timeout, defaultProvider, searchProvider, summaryModels, defaultSummaryModel, availableProviders, presentation, copy });
+	const inlineData = safeInlineJSON({ queries, sessionToken, timeout, defaultProvider, searchProvider, summaryModels, defaultSummaryModel, availableProviders, providerPresentation, presentation, copy, mode });
 	const legacyResizeBridge = presentation
 		? ""
 		: `var lastResizeHeight = 0;
@@ -83,10 +106,11 @@ export function generateCuratorPage(
 	const inlineScript = SCRIPT
 		.replace("__INLINE_DATA__", () => inlineData)
 		.replace("__PROVIDER_IDS__", () => providerIdsLiteral)
+		.replace("__PROVIDER_LABEL_RESOLVER__", () => buildProviderLabelResolver())
 		.replace("__LEGACY_RESIZE_BRIDGE__", () => legacyResizeBridge);
 
 	const html = `<!DOCTYPE html>
-<html lang="${lang}" data-theme="${theme}">
+<html lang="${lang}" data-theme="${theme}" data-surface-mode="${mode}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -110,7 +134,7 @@ ${CSS}
 <div class="hero" id="hero">
 <div class="hero-kicker">${escapeMarkup(copy.brand)}</div>
 <h1 class="hero-title">${escapeMarkup(copy.searchingEllipsis)}</h1>
-<p class="hero-desc">${escapeMarkup(copy.resultsAppear)}</p>
+<p class="hero-desc">${escapeMarkup(mode === "observer" ? copy.observerResultsAppear : copy.resultsAppear)}</p>
 <div class="hero-meta">
 <span id="hero-status">${escapeMarkup(copy.searchingEllipsis)}</span>
 <span class="hero-meta-sep"></span>
@@ -189,7 +213,7 @@ ${CSS}
 </div>
 </div>
 
-<div id="preview-modal" class="preview-modal hidden">
+<div id="preview-modal" class="preview-modal hidden" role="dialog" aria-modal="true">
 <div class="preview-modal-inner">
 <div class="preview-modal-header">
 <h2 class="preview-modal-title">${escapeMarkup(copy.summaryPreview)}</h2>
@@ -1241,6 +1265,27 @@ main {
 }
 .action-buttons { display: flex; gap: 8px; }
 
+body.summary-open .action-bar {
+  opacity: 0;
+  pointer-events: none;
+}
+
+html[data-surface-mode="observer"] .timer-badge,
+html[data-surface-mode="observer"] .timer-adjust,
+html[data-surface-mode="observer"] .provider-buttons,
+html[data-surface-mode="observer"] .send-raw-row,
+html[data-surface-mode="observer"] .add-search,
+html[data-surface-mode="observer"] .summary-panel,
+html[data-surface-mode="observer"] .action-bar,
+html[data-surface-mode="observer"] .result-card-header input[type="checkbox"],
+html[data-surface-mode="observer"] .card-alt-chip {
+  display: none !important;
+}
+
+html[data-surface-mode="observer"] main {
+  padding-bottom: 40px;
+}
+
 .btn {
   font-family: var(--font);
   font-size: 13px;
@@ -1441,6 +1486,216 @@ main {
   100% { transform: translateX(430%); }
 }
 
+/* OmniMind V7 presentation adapter. Protocol/state semantics remain above. */
+:root {
+  color-scheme: dark;
+  --bg: #0c0c0d;
+  --bg-card: #111112;
+  --bg-elevated: #171719;
+  --bg-hover: rgba(255,255,255,.045);
+  --fg: #f4f4f5;
+  --fg-muted: #b8b8bd;
+  --fg-dim: #87878e;
+  --accent: #f4f4f5;
+  --accent-hover: #ffffff;
+  --accent-muted: rgba(255,255,255,.07);
+  --accent-subtle: rgba(255,255,255,.04);
+  --border: rgba(255,255,255,.075);
+  --border-muted: rgba(255,255,255,.12);
+  --border-checked: rgba(255,255,255,.12);
+  --check-bg: #f4f4f5;
+  --btn-primary: #f4f4f5;
+  --btn-primary-hover: #ffffff;
+  --btn-primary-fg: #18181b;
+  --btn-secondary: rgba(255,255,255,.07);
+  --btn-secondary-hover: rgba(255,255,255,.11);
+  --timer-bg: #111112;
+  --timer-fg: #87878e;
+  --overlay-bg: rgba(12,12,13,.9);
+  --success: #65c98e;
+  --warning: #e6b75f;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font);
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #fafafa;
+  --bg-card: #ffffff;
+  --bg-elevated: #f4f4f5;
+  --bg-hover: rgba(0,0,0,.035);
+  --fg: #27272a;
+  --fg-muted: #5f5f66;
+  --fg-dim: #717178;
+  --accent: #18181b;
+  --accent-hover: #09090b;
+  --accent-muted: rgba(0,0,0,.06);
+  --accent-subtle: rgba(0,0,0,.025);
+  --border: rgba(0,0,0,.085);
+  --border-muted: rgba(0,0,0,.15);
+  --border-checked: rgba(0,0,0,.14);
+  --check-bg: #18181b;
+  --btn-primary: #18181b;
+  --btn-primary-hover: #27272a;
+  --btn-primary-fg: #ffffff;
+  --btn-secondary: rgba(0,0,0,.055);
+  --btn-secondary-hover: rgba(0,0,0,.09);
+  --timer-bg: #ffffff;
+  --timer-fg: #717178;
+  --overlay-bg: rgba(250,250,250,.92);
+  --success: #238653;
+  --warning: #9d6712;
+}
+
+body {
+  background-image: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 1px solid color-mix(in srgb, var(--fg) 22%, transparent);
+  outline-offset: 2px;
+}
+
+main {
+  max-width: 920px;
+  padding: 40px 24px 58px;
+}
+
+.hero { margin-bottom: 25px; }
+.hero-kicker {
+  color: var(--fg-dim);
+  text-transform: none;
+  letter-spacing: .015em;
+}
+.hero-title {
+  max-width: 720px;
+  font-size: clamp(24px, 3.3vw, 31px);
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: -.038em;
+  line-height: 1.16;
+}
+.hero-desc {
+  max-width: 650px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.hero-meta { font-size: 11px; }
+
+.provider-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 8px;
+  border-radius: 7px;
+  background: var(--bg-card);
+  color: var(--fg-muted);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: none;
+}
+.provider-btn img,
+.provider-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+#result-cards {
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+.result-card {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  transition: background .24s cubic-bezier(.16,1,.3,1);
+}
+.result-card.checked {
+  border-color: var(--border);
+  background: linear-gradient(90deg, var(--accent-subtle), transparent 52%);
+}
+.result-card.searching {
+  border-color: var(--border);
+  background: transparent;
+}
+.result-card.error {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--timer-urgent-fg) 4%, transparent);
+}
+.result-card-header {
+  min-height: 116px;
+  padding: 18px 5px 17px 3px;
+  gap: 14px;
+}
+.result-card-header:hover { background: var(--bg-hover); }
+.result-card-query { font-size: 15px; letter-spacing: -.012em; }
+.result-card-meta { margin-top: 4px; font-size: 11px; }
+.result-card-preview { margin-top: 8px; font-size: 13px; line-height: 1.55; }
+.provider-tag.provider-tag {
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--fg-dim);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.result-card-expand { font-size: 17px; transform: rotate(-90deg); transition: transform .34s cubic-bezier(.16,1,.3,1); }
+.result-card.is-open .result-card-expand { transform: none; }
+.result-card-body { border-top: 0; }
+.result-card-answer { padding: 0 34px 21px; max-height: none; font-size: 13.5px; line-height: 1.72; }
+.result-card-sources { border-top: 1px solid var(--border); }
+.source-link { border-bottom: 1px solid var(--border); }
+.source-link:hover { transform: translateX(2px); }
+
+.add-search {
+  margin: 21px 0 0;
+  padding: 7px;
+  border-radius: 11px;
+  background: var(--bg-card);
+}
+
+.action-bar {
+  min-height: 66px;
+  padding: 12px max(24px, calc((100vw - 900px) / 2));
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(18px) saturate(135%);
+}
+.btn { min-height: 34px; border-radius: 8px; font-size: 11px; }
+
+.summary-panel {
+  position: fixed;
+  z-index: 24;
+  top: 14px;
+  right: 14px;
+  bottom: 78px;
+  width: min(438px, calc(100vw - 28px));
+  margin: 0;
+  padding: 15px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+  box-shadow: 0 26px 78px rgba(0,0,0,.36);
+  backdrop-filter: blur(20px) saturate(130%);
+  overflow: auto;
+  animation: slide-up .32s cubic-bezier(.16,1,.3,1);
+}
+.summary-input { min-height: 230px; }
+
+@media (max-width: 680px) {
+  main { padding: 28px 16px 42px; }
+  .result-card-header { padding-inline: 3px; }
+  .result-card-answer { padding-inline: 29px 27px; }
+  .summary-panel { top: 8px; right: 8px; bottom: 74px; width: calc(100vw - 16px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .loading-card::after,
   .result-card.searching::after,
@@ -1483,6 +1738,8 @@ const SCRIPT = `(function() {
   var queries = Array.isArray(DATA.queries) ? DATA.queries : [];
   var providers = __PROVIDER_IDS__;
   var availProviders = DATA.availableProviders && typeof DATA.availableProviders === "object" ? DATA.availableProviders : {};
+  var providerPresentation = DATA.providerPresentation && typeof DATA.providerPresentation === "object" ? DATA.providerPresentation : {};
+  var observerMode = DATA.mode === "observer";
   var workflow = "summary-review";
   var initialDefaultProvider = typeof DATA.defaultProvider === "string" ? DATA.defaultProvider : "exa";
   if (providers.indexOf(initialDefaultProvider) === -1) initialDefaultProvider = "exa";
@@ -1684,37 +1941,21 @@ const SCRIPT = `(function() {
   }
 
   function providerLabel(provider) {
-    if (provider === "all") return "All";
-    if (provider === "openai") return "OpenAI";
-    if (provider === "brave") return "Brave";
-    if (provider === "parallel") return "Parallel";
-    if (provider === "tinyfish") return "TinyFish";
-    if (provider === "search1api") return "Search1API";
-    if (provider === "searchinfinity") return "Searchinfinity";
-    if (provider === "querit") return "Querit";
-    if (provider === "tavily") return "Tavily";
-    if (provider === "firecrawl") return "Firecrawl";
-    if (provider === "jina") return "Jina";
-    if (provider === "serpdive") return "SERPdive";
-    if (provider === "kagi") return "Kagi";
-    if (provider === "bocha") return "Bocha";
-    if (provider === "ollama") return "Ollama";
-    if (provider === "searxng") return "SearXNG";
-    if (provider === "duckduckgo") return "DuckDuckGo";
-    if (provider === "perplexity") return "Perplexity";
-    if (provider === "exa") return "Exa";
-    if (provider === "gemini") return "Gemini";
-    if (provider === "anysearch") return "AnySearch";
-    if (provider === "xai") return "xAI";
-    if (provider === "brightdata") return "Bright Data";
-    if (provider === "serpbase") return "SerpBase";
-    return "Unknown";
+    if (provider === "all") return t("all");
+__PROVIDER_LABEL_RESOLVER__
+    return provider;
+  }
+
+  function providerIconHtml(provider) {
+    var descriptor = providerPresentation[provider];
+    if (!descriptor || typeof descriptor.iconSrc !== "string" || descriptor.iconSrc.length === 0) return "";
+    return '<img class="provider-icon" src="' + escHtml(descriptor.iconSrc) + '" alt="">';
   }
 
   function providerTagHtml(provider) {
     var normalized = normalizeProvider(provider, "");
     if (!normalized) return "";
-    return '<span class="provider-tag provider-' + normalized + '">' + escHtml(providerLabel(normalized)) + "</span>";
+    return '<span class="provider-tag provider-' + normalized + '">' + providerIconHtml(normalized) + escHtml(providerLabel(normalized)) + "</span>";
   }
 
   function buildAltChipsHtml(provider, queryText) {
@@ -1906,7 +2147,7 @@ const SCRIPT = `(function() {
   }
 
   function isResultMutationLocked() {
-    return submitted || timerExpired || submitInFlight;
+    return observerMode || submitted || timerExpired || submitInFlight;
   }
 
   function applyProviderInterlocks() {
@@ -1973,7 +2214,7 @@ const SCRIPT = `(function() {
     } else {
       heroTitle.textContent = tf(completedCount === 1 ? "searchesCompleteOne" : "searchesCompleteMany", { completed: completedCount });
     }
-    heroDesc.textContent = t("checkResults");
+    heroDesc.textContent = observerMode ? t("observerResultsAppear") : t("checkResults");
     if (heroStatus) heroStatus.textContent = tf(
       searchingCount > 0 ? "completedSearchingStatus" : "completedStatus",
       { completed: completedCount, searching: searchingCount }
@@ -2047,6 +2288,7 @@ const SCRIPT = `(function() {
 
   function updateStageUI() {
     var showSummary = stage === "summary-review" || stage === "generating-summary" || isRegenerating;
+    document.body.classList.toggle("summary-open", showSummary && !observerMode);
     if (summaryPanel) {
       summaryPanel.classList.toggle("hidden", !showSummary);
       summaryPanel.classList.toggle("updating", isRegenerating);
@@ -2351,6 +2593,7 @@ const SCRIPT = `(function() {
   function resetTimer() { lastInteraction = Date.now(); }
 
   function updateTimer() {
+    if (observerMode) return;
     var idleSec = searchesDone ? Math.floor((Date.now() - lastInteraction) / 1000) : 0;
     var remaining = Math.max(0, timeoutSec - idleSec);
     timerEl.textContent = formatTime(remaining);
@@ -2433,12 +2676,7 @@ const SCRIPT = `(function() {
       var state = btn.dataset.state || "idle";
       if (state === "loading") return;
 
-      if (state === "searched") {
-        if (provider === currentProvider) return;
-        setDefaultProvider(provider, true);
-        resetTimer();
-        return;
-      }
+      if (state === "searched" && provider === currentProvider) return;
 
       setDefaultProvider(provider, true);
       if (allQueries.length === 0) {
@@ -2503,6 +2741,7 @@ const SCRIPT = `(function() {
               recomputeProviderStates();
               updateStageUI();
               maybeAutoGenerateSummary();
+              heroDesc.textContent = tf("providerPersistedAndResearched", { provider: provider });
             }
           });
       });
@@ -2767,7 +3006,7 @@ const SCRIPT = `(function() {
   }
 
   function onTimeout() {
-    if (submitted || timerExpired) return;
+    if (observerMode || submitted || timerExpired) return;
     var timeoutSelected = getTimeoutSelectedIndices();
     var payload = { selected: timeoutSelected };
     var draft = getSummaryDraftText();
@@ -2927,6 +3166,20 @@ const SCRIPT = `(function() {
     applyDoneEvent();
   });
 
+  es.addEventListener("terminal", function(e) {
+    if (!observerMode) return;
+    var data = parseSseEventData("terminal", e);
+    submitted = true;
+    searchesDone = true;
+    var terminalCopy = data && data.outcome === "summary-sent"
+      ? t("observerSummarySent")
+      : t("observerResultsSent");
+    heroDesc.textContent = terminalCopy;
+    if (heroStatus) heroStatus.textContent = terminalCopy;
+    document.body.classList.add("observer-terminal");
+    if (es) es.close();
+  });
+
   es.onerror = function() {
     if (submitted || timerExpired || searchesDone) return;
     syncStateFromServer(true);
@@ -2963,6 +3216,7 @@ const SCRIPT = `(function() {
       }
       var isExpanded = body && body.classList.contains("open");
       if (body) body.classList.toggle("open");
+	  card.classList.toggle("is-open", !isExpanded);
       if (expandEl) expandEl.textContent = isExpanded ? "\u25BC" : "\u25B2";
     });
 
@@ -3509,7 +3763,7 @@ const SCRIPT = `(function() {
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || tag === "BUTTON" || tag === "A") return true;
     if (typeof target.isContentEditable === "boolean" && target.isContentEditable) return true;
     if (typeof target.closest === "function") {
-      return !!target.closest('[contenteditable=""], [contenteditable="true"]');
+      return !!target.closest('[contenteditable=""], [contenteditable="true"], [role="dialog"], [role="combobox"], .preview-modal, .preview-popover');
     }
     return false;
   }
@@ -3523,6 +3777,8 @@ const SCRIPT = `(function() {
       if (stage === "summary-review") doApprove();
       return;
     }
+
+    if (isInteractiveTarget(e.target)) return;
 
     if (e.key === "Escape") {
       e.preventDefault();
@@ -3538,8 +3794,6 @@ const SCRIPT = `(function() {
       }
       return;
     }
-
-    if (isInteractiveTarget(e.target)) return;
 
     if (e.key === "Enter" && !e.metaKey && !e.ctrlKey) {
       if (stage !== "results") return;

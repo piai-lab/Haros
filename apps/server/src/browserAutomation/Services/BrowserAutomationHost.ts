@@ -38,6 +38,7 @@ export interface BrowserAutomationHostShape {
     readonly sessionKey: string;
     readonly threadId: ThreadId;
     readonly surfaceId: string;
+	readonly preserveTab?: boolean;
   }) => Effect.Effect<void, BrowserHostRpcError>;
 }
 

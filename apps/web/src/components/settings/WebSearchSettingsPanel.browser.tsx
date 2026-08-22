@@ -52,6 +52,7 @@ function snapshot(input: {
   readonly revision?: string;
   readonly tavilyKey?: string | null;
   readonly workflow?: "none" | "auto-summary" | "summary-review";
+  readonly autoShowSearchProcess?: boolean;
 } = {}): OmniMindWebSearchSettingsSnapshot {
   return {
     state: "ready",
@@ -59,6 +60,7 @@ function snapshot(input: {
     schemaVersion: 1,
     provider: "auto",
     workflow: input.workflow ?? "auto-summary",
+    autoShowSearchProcess: input.autoShowSearchProcess ?? false,
     capabilityStatus: "possible",
     providers: [
       {
@@ -128,6 +130,10 @@ describe("WebSearchSettingsPanel", () => {
     await expect.element(page.getByText("Open and read pages")).toBeVisible();
     await expect.element(page.getByText("Source handling")).toBeVisible();
     expect(document.body.textContent).not.toContain("Enable Web search");
+	const processSwitch = page.getByRole("switch", { name: "Show search progress automatically" });
+	await expect.element(processSwitch).not.toBeChecked();
+	await processSwitch.click();
+	await expect.element(processSwitch).toBeChecked();
 
     await page.getByRole("button", { name: "Add service" }).click();
     expect(document.querySelectorAll('[data-provider-icon-kind="local-asset"]')).toHaveLength(1);
@@ -148,6 +154,7 @@ describe("WebSearchSettingsPanel", () => {
       providerId: "tavily",
       draft: expect.objectContaining({
         workflow: "auto-summary",
+		autoShowSearchProcess: true,
         fields: expect.arrayContaining([
           { configKey: "tavilyApiKey", value: "unsaved-tavily-key" },
         ]),

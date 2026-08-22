@@ -2234,6 +2234,9 @@ export const EN_MESSAGES = {
   "settings.webSearch.workflow.summary-review": "Summary review · Wait for approval",
   "settings.webSearch.workflow.auto-summary": "Automatic summary · Recommended",
   "settings.webSearch.workflow.none": "Raw results",
+  "settings.webSearch.autoShowSearchProcess": "Show search progress automatically",
+  "settings.webSearch.autoShowSearchProcessDescription":
+    "Show live results in the Right Dock while search runs. This does not pause the Agent or require approval.",
   "settings.webSearch.routeAuto": "Auto · first success",
   "settings.webSearch.routeAll": "All eligible services",
   "settings.webSearch.selectedParallel": "Selected services · file configured",
@@ -5924,6 +5927,9 @@ export const ZH_CN_MESSAGES = {
   "settings.webSearch.workflow.summary-review": "摘要审查 · 等待批准",
   "settings.webSearch.workflow.auto-summary": "自动摘要 · 推荐",
   "settings.webSearch.workflow.none": "原始结果",
+  "settings.webSearch.autoShowSearchProcess": "自动显示搜索过程",
+  "settings.webSearch.autoShowSearchProcessDescription":
+    "搜索时在 Right Dock 展示实时结果。不会暂停 Agent 或要求批准。",
   "settings.webSearch.routeAuto": "自动 · 首个成功即停止",
   "settings.webSearch.routeAll": "全部符合条件的服务",
   "settings.webSearch.selectedParallel": "已选服务并发 · 由文件配置",

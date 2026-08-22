@@ -36,6 +36,7 @@ export type OmniMindWebSearchDraftField = typeof OmniMindWebSearchDraftField.Typ
 export const OmniMindWebSearchDraft = Schema.Struct({
   provider: OmniMindWebSearchProviderSelection,
   workflow: OmniMindWebSearchWorkflow,
+  autoShowSearchProcess: Schema.Boolean,
   fields: Schema.Array(OmniMindWebSearchDraftField).check(Schema.isMaxLength(128)),
 });
 export type OmniMindWebSearchDraft = typeof OmniMindWebSearchDraft.Type;
@@ -97,6 +98,7 @@ export const OmniMindWebSearchSettingsSnapshot = Schema.Struct({
   revision: Revision,
   schemaVersion: NonNegativeInt,
   workflow: OmniMindWebSearchWorkflow,
+  autoShowSearchProcess: Schema.Boolean,
   provider: OmniMindWebSearchProviderSelection,
   capabilityStatus: Schema.Literal("possible"),
   providers: Schema.Array(OmniMindWebSearchProvider).check(Schema.isMaxLength(64)),

@@ -19,7 +19,7 @@ const CANONICAL_TOOLS = [
 	"get_search_content",
 ];
 
-test("OmniMind profile always registers four canonical tools and no TUI surfaces", async () => {
+test("OmniMind profile respects file-level tool switches while keeping canonical names and no TUI surfaces", async () => {
 	const root = await mkdtemp(join(tmpdir(), "omnimind-web-profile-"));
 	const service = createWebSearchConfigService(join(root, "agent"));
 	const initial = service.ensureDefault();
@@ -47,9 +47,28 @@ test("OmniMind profile always registers four canonical tools and no TUI surfaces
 		on() {},
 	});
 
-	assert.deepEqual(tools.map(({ name }) => name), CANONICAL_TOOLS);
+	assert.deepEqual(tools.map(({ name }) => name), []);
 	assert.deepEqual(commands, []);
 	assert.deepEqual(shortcuts, []);
+
+	const disabled = service.readSnapshot();
+	service.mutate({
+		expectedRevision: disabled.revision,
+		patch: {
+			tools: {
+				webSearch: { enabled: true },
+				fetchContent: { enabled: true },
+			},
+		},
+	});
+	const partialTools = [];
+	makeOmniMindWebAccessExtension({ configService: service })({
+		registerTool(tool) { partialTools.push(tool); },
+		registerCommand() {},
+		registerShortcut() {},
+		on() {},
+	});
+	assert.deepEqual(partialTools.map(({ name }) => name), ["web_search", "fetch_content"]);
 });
 
 function ownedTool(name) {

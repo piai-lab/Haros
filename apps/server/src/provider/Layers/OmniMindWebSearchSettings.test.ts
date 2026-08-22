@@ -54,7 +54,7 @@ describe("OmniMindWebSearchSettingsLive", () => {
     expect(result.state).toBe("ready");
     const configPath = path.join(test.agentDir, "web-search.json");
     expect(fs.readFileSync(configPath, "utf8")).toBe(
-      '{\n  "schemaVersion": 1,\n  "provider": "auto",\n  "workflow": "auto-summary"\n}\n',
+      '{\n  "schemaVersion": 1,\n  "provider": "auto",\n  "workflow": "auto-summary",\n  "autoOpenBrowser": false\n}\n',
     );
     if (process.platform !== "win32") expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
   });
@@ -68,7 +68,12 @@ describe("OmniMindWebSearchSettingsLive", () => {
 
     const result = await test.run((service) => service.mutate({
       expectedRevision: opened.revision,
-      draft: { provider: "tavily", workflow: "auto-summary", fields: [] },
+      draft: {
+        provider: "tavily",
+        workflow: "auto-summary",
+        autoShowSearchProcess: false,
+        fields: [],
+      },
     }));
 
     expect(result.state).toBe("conflict");
@@ -91,6 +96,7 @@ describe("OmniMindWebSearchSettingsLive", () => {
       draft: {
         provider: "auto",
         workflow: "summary-review",
+        autoShowSearchProcess: false,
         fields: [{ configKey: "searxngBaseUrl", value: "https://example.com" }],
       },
     } as const;

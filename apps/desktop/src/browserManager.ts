@@ -1671,6 +1671,7 @@ export class DesktopBrowserManager {
   settleEngineWebSurface(input: {
     readonly threadId: ThreadId;
     readonly surfaceId: string;
+	readonly preserveTab?: boolean;
   }): ThreadBrowserState {
     const surface = this.engineWebSurfaces.get(input.surfaceId);
     if (!surface || surface.threadId !== input.threadId) {
@@ -1679,6 +1680,11 @@ export class DesktopBrowserManager {
     this.engineWebSurfaces.delete(input.surfaceId);
     const state = this.states.get(input.threadId);
     const tab = state && surface.tabId ? this.getTab(state, surface.tabId) : null;
+	if (state && tab && input.preserveTab) {
+		this.markThreadStateChanged(input.threadId);
+		this.emitState(input.threadId);
+		return this.snapshotThreadState(input.threadId, state);
+	}
     if (state && tab) {
       this.destroyRuntime(input.threadId, tab.id);
       state.tabs = state.tabs.filter((candidate) => candidate.id !== tab.id);

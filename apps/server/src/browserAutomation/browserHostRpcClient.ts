@@ -302,6 +302,7 @@ export interface BrowserHostEngineWebSurfaceCall
   extends BrowserHostEngineWebSurfaceContextCall {
   readonly threadId: ThreadId;
   readonly surfaceId: string;
+	readonly preserveTab?: boolean;
 }
 
 async function callAuthenticatedBrowserHostMethod(
@@ -360,6 +361,7 @@ export function settleBrowserHostEngineWebSurface(
   return callAuthenticatedBrowserHostMethod(input, "settleEngineWebSurface", {
     thread_id: input.threadId,
     surface_id: input.surfaceId,
+	...(input.preserveTab === true ? { preserve_tab: true } : {}),
   });
 }
 

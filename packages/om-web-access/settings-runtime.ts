@@ -33,6 +33,7 @@ export interface WebSearchSettingsFieldDraft {
 export interface WebSearchSettingsDraft {
 	readonly provider: string | readonly string[];
 	readonly workflow: WebSearchWorkflow;
+	readonly autoShowSearchProcess: boolean;
 	readonly fields: readonly WebSearchSettingsFieldDraft[];
 }
 
@@ -67,6 +68,7 @@ export interface WebSearchSettingsProjection {
 	readonly revision: string;
 	readonly schemaVersion: number;
 	readonly workflow: WebSearchWorkflow;
+	readonly autoShowSearchProcess: boolean;
 	readonly provider: SearchProviderSelection;
 	readonly capabilityStatus: "possible";
 	readonly providers: readonly WebSearchSettingsProviderProjection[];
@@ -101,6 +103,7 @@ export function projectWebSearchSettings(
 		revision: snapshot.revision,
 		schemaVersion: snapshot.schemaVersion,
 		workflow: workflowFrom(config.workflow),
+		autoShowSearchProcess: config.autoOpenBrowser === true,
 		provider: normalizeSearchProviderSelection(config.provider ?? config.searchProvider),
 		capabilityStatus: "possible",
 		providers: getSearchProviderPresentation().map((provider) => {
@@ -128,6 +131,7 @@ export function projectWebSearchSettings(
 const knownConfigKeys = new Set([
 	"provider",
 	"workflow",
+	"autoOpenBrowser",
 	...getSearchProviderPresentation().flatMap(({ fields }) => fields.map(({ configKey }) => configKey)),
 ]);
 
@@ -139,11 +143,12 @@ function validatedDraftPatch(draft: WebSearchSettingsDraft): {
 	const patch: WebSearchConfigRecord = {
 		provider,
 		workflow: workflowFrom(draft.workflow),
+		autoOpenBrowser: draft.autoShowSearchProcess === true,
 	};
 	const remove: string[] = [];
 	const seen = new Set<string>();
 	for (const field of draft.fields) {
-		if (!knownConfigKeys.has(field.configKey) || field.configKey === "provider" || field.configKey === "workflow") {
+		if (!knownConfigKeys.has(field.configKey) || field.configKey === "provider" || field.configKey === "workflow" || field.configKey === "autoOpenBrowser") {
 			throw new Error(`Unknown Web search setting: ${field.configKey}`);
 		}
 		if (seen.has(field.configKey)) throw new Error(`Duplicate Web search setting: ${field.configKey}`);

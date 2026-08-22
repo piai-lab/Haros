@@ -52,6 +52,18 @@ describe("Engine web-surface host", () => {
     expect(JSON.stringify(result)).not.toContain("session=");
   });
 
+  it("accepts nonblocking observer surfaces without changing them into pending review", () => {
+    const result = {
+      details: {
+        engineWebSurface: { surfaceId: "surface-observer-123", status: "observing" },
+      },
+    };
+    expect(extractTypedEngineWebSurface("web_search", result)).toEqual({
+      surfaceId: "surface-observer-123",
+      status: "observing",
+    });
+  });
+
   it("removes the bearer URL from structured and human-readable runtime payloads", () => {
     const safe = sanitizeEngineWebSurfacePayload(
       {

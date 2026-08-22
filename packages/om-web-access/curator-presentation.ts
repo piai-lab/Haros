@@ -24,5 +24,6 @@ export interface CuratorPresenter {
 	readonly settle: (input: {
 		readonly toolCallId: string;
 		readonly surfaceId: string;
+		readonly preserveTab?: boolean;
 	}) => Promise<void>;
 }

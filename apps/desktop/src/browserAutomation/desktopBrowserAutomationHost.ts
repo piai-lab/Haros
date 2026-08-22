@@ -352,6 +352,7 @@ export class DesktopBrowserAutomationHost {
   settleEngineWebSurface(input: {
     readonly threadId: ThreadId;
     readonly surfaceId: string;
+	readonly preserveTab?: boolean;
   }): ThreadBrowserState {
     return this.browserManager.settleEngineWebSurface(input);
   }

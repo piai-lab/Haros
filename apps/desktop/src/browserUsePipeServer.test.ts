@@ -313,6 +313,7 @@ describe("canonical browser host RPC", () => {
           session_id: "surface-session",
           thread_id: "surface-thread",
           surface_id: "surface-opaque-123",
+		  preserve_tab: true,
         },
       })).resolves.toMatchObject({ result: { settled: true } });
       await expect(request(socket, {
@@ -335,6 +336,7 @@ describe("canonical browser host RPC", () => {
     expect(settleEngineWebSurface).toHaveBeenCalledWith({
       threadId: "surface-thread",
       surfaceId: "surface-opaque-123",
+	  preserveTab: true,
     });
   });
 

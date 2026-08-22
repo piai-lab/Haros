@@ -539,6 +539,7 @@ export class BrowserHostPipeServer {
     const { request } = this.requireBoundSession(client, params);
     const threadId = asString(request.thread_id);
     const surfaceId = asString(request.surface_id);
+	const preserveTab = request.preserve_tab === true;
     if (!threadId || !surfaceId) {
       throw new BrowserAutomationHostError({ code: "BrowserInputUnsupported" });
     }
@@ -557,6 +558,7 @@ export class BrowserHostPipeServer {
     return this.automationHost.settleEngineWebSurface({
       threadId: threadId as ThreadId,
       surfaceId,
+	  ...(preserveTab ? { preserveTab: true } : {}),
     });
   }
 

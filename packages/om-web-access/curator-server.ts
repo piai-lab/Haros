@@ -1,21 +1,50 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import { basename, dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateCuratorPage } from "./curator-page.ts";
 import type { SummaryMeta } from "./summary-review.ts";
 import { resolveCuratorNetworkConfig } from "./utils.ts";
 import type { CuratorPresentationSnapshot } from "./curator-presentation.ts";
+import { getSearchProviderPresentation } from "./gemini-search.ts";
 
 const STALE_THRESHOLD_MS = 30000;
 const WATCHDOG_INTERVAL_MS = 1000;
 const MAX_BODY_SIZE = 64 * 1024;
+const CURATOR_MODULE_FILENAME = typeof __filename === "string" ? __filename : fileURLToPath(import.meta.url);
+const CURATOR_MODULE_DIRECTORY = dirname(CURATOR_MODULE_FILENAME);
+const MODULE_REQUIRE = createRequire(CURATOR_MODULE_FILENAME);
 const MARKED_BROWSER_SOURCE = readFileSync(
-	join(dirname(fileURLToPath(import.meta.resolve("marked/package.json"))), "marked.min.js"),
+	join(dirname(MODULE_REQUIRE.resolve("marked/package.json")), "marked.min.js"),
 	"utf8",
 );
+const PROVIDER_ICON_FILENAMES = new Set(
+	getSearchProviderPresentation().flatMap((provider) =>
+		provider.icon.kind === "local-asset"
+			? [provider.icon.assetPath.split("/").at(-1) ?? ""]
+			: [],
+	),
+);
+
+function readProviderIcon(filename: string): { body: Buffer; contentType: string } | null {
+	if (!PROVIDER_ICON_FILENAMES.has(filename) || basename(filename) !== filename) return null;
+	const candidates = [
+		join(CURATOR_MODULE_DIRECTORY, "assets/provider-icons", filename),
+		join(CURATOR_MODULE_DIRECTORY, "client/web-access/provider-icons", filename),
+	];
+	const path = candidates.find(existsSync);
+	if (!path) return null;
+	const contentType = extname(filename) === ".svg"
+		? "image/svg+xml"
+		: extname(filename) === ".png"
+			? "image/png"
+			: "image/x-icon";
+	return { body: readFileSync(path), contentType };
+}
 
 type ServerState = "SEARCHING" | "RESULT_SELECTION" | "COMPLETED";
+export type CuratorSurfaceMode = "review" | "observer";
 type CuratorResultEventData = IndexedCuratorSearchEntry & { slotIndex?: number };
 type CuratorSearchErrorEventData = { queryIndex: number; query: string; error: string; provider?: string; slotIndex?: number };
 type CuratorStoredEvent =
@@ -23,6 +52,7 @@ type CuratorStoredEvent =
 	| { event: "search-error"; data: CuratorSearchErrorEventData };
 
 export interface CuratorServerOptions {
+	mode?: CuratorSurfaceMode;
 	queries: string[];
 	sessionToken: string;
 	timeout: number;
@@ -68,6 +98,7 @@ export interface CuratorServerHandle {
 	pushResult: (queryIndex: number, data: CuratorSearchEntry & { query?: string; slotIndex?: number }) => void;
 	pushError: (queryIndex: number, error: string, provider?: string, meta?: { query?: string; slotIndex?: number }) => void;
 	searchesDone: () => void;
+	completeObserver: (outcome: "summary-sent" | "results-sent") => void;
 	/** Reports browser connection state so a cancelled search can surface WHY it
 	 * went stale (e.g. the browser never connected). */
 	getConnectionState: () => { browserConnected: boolean; lastHeartbeatAgeMs: number };
@@ -201,6 +232,7 @@ export function startCuratorServer(
 	callbacks: CuratorServerCallbacks,
 ): Promise<CuratorServerHandle> {
 	const {
+		mode = "review",
 		queries,
 		sessionToken,
 		timeout,
@@ -211,6 +243,7 @@ export function startCuratorServer(
 		defaultSummaryModel,
 		presentation,
 	} = options;
+	const observerMode = mode === "observer";
 	let browserConnected = false;
 	let lastHeartbeatAt = Date.now();
 	let stateChangedAt = Date.now();
@@ -263,6 +296,7 @@ export function startCuratorServer(
 	const getEffectiveTimeoutMs = (): number => Math.max(1000, Math.floor(clientTimeoutSeconds) * 1000);
 
 	const shouldTimeoutFromClientIdle = (): boolean => (
+		!observerMode &&
 		state === "RESULT_SELECTION" &&
 		clientIdleMs !== null &&
 		clientIdleMs >= getEffectiveTimeoutMs()
@@ -352,6 +386,7 @@ export function startCuratorServer(
 		summaryModels,
 		defaultSummaryModel,
 		presentation,
+		mode,
 	);
 
 	const server = http.createServer(async (req, res) => {
@@ -372,7 +407,7 @@ export function startCuratorServer(
 					"Cache-Control": "no-store",
 					"Referrer-Policy": "no-referrer",
 					"X-Content-Type-Options": "nosniff",
-					"Content-Security-Policy": "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src https: data:; font-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+					"Content-Security-Policy": "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' https: data:; font-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
 				});
 				res.end(pageHtml);
 				return;
@@ -392,6 +427,30 @@ export function startCuratorServer(
 					"X-Content-Type-Options": "nosniff",
 				});
 				res.end(MARKED_BROWSER_SOURCE);
+				return;
+			}
+
+			if (method === "GET" && url.pathname.startsWith("/assets/provider-icons/")) {
+				const token = url.searchParams.get("session");
+				if (token !== sessionToken) {
+					res.writeHead(403, { "Content-Type": "text/plain" });
+					res.end("Invalid session");
+					return;
+				}
+				const filename = decodeURIComponent(url.pathname.slice("/assets/provider-icons/".length));
+				const asset = readProviderIcon(filename);
+				if (!asset) {
+					res.writeHead(404, { "Content-Type": "text/plain", "Cache-Control": "no-store" });
+					res.end("Not found");
+					return;
+				}
+				res.writeHead(200, {
+					"Content-Type": asset.contentType,
+					"Cache-Control": "no-store",
+					"Referrer-Policy": "no-referrer",
+					"X-Content-Type-Options": "nosniff",
+				});
+				res.end(asset.body);
 				return;
 			}
 
@@ -459,6 +518,15 @@ export function startCuratorServer(
 				if (timedOut && markCompleted()) {
 					setImmediate(() => callbacks.onCancel("timeout"));
 				}
+				return;
+			}
+
+			if (
+				observerMode &&
+				method === "POST" &&
+				["/provider", "/search", "/summarize", "/rewrite", "/submit", "/cancel"].includes(url.pathname)
+			) {
+				sendJson(res, 409, { ok: false, error: "Observer surfaces are read-only" });
 				return;
 			}
 
@@ -716,7 +784,7 @@ export function startCuratorServer(
 			}
 			const url = `http://${networkConfig.host}:${addr.port}/?session=${sessionToken}`;
 
-			watchdog = setInterval(() => {
+			if (!observerMode) watchdog = setInterval(() => {
 				if (completed) return;
 				if (!browserConnected) {
 					const noBrowserTimeoutMs = Math.max(5000, getEffectiveTimeoutMs());
@@ -743,7 +811,7 @@ export function startCuratorServer(
 				close: () => {
 					const wasOpen = markCompleted();
 					try { server.close(); } catch {}
-					if (wasOpen) {
+					if (wasOpen && !observerMode) {
 						setImmediate(() => callbacks.onCancel("stale"));
 					}
 				},
@@ -767,6 +835,12 @@ export function startCuratorServer(
 					sendSSE("done", {});
 					state = "RESULT_SELECTION";
 					stateChangedAt = Date.now();
+				},
+				completeObserver: (outcome) => {
+					if (!observerMode || completed) return;
+					sendSSE("terminal", { outcome });
+					markCompleted();
+					try { server.close(); } catch {}
 				},
 				getConnectionState: () => ({
 					browserConnected,

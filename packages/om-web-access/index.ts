@@ -32,6 +32,7 @@ import {
 } from "./storage.ts";
 import { activityMonitor, type ActivityEntry } from "./activity.ts";
 import { startCuratorServer, type CuratorSearchEntry, type CuratorServerHandle, type IndexedCuratorSearchEntry } from "./curator-server.ts";
+import { resolveCuratorCopy } from "./curator-copy.ts";
 import {
 	buildDeterministicSummary,
 	generateSummaryDraft,
@@ -292,12 +293,19 @@ function normalizeCuratorTimeoutSeconds(value: unknown): number | undefined {
 	return Math.min(normalized, MAX_CURATOR_TIMEOUT_SECONDS);
 }
 
-function resolveWorkflow(input: unknown, hasUI: boolean): WebSearchWorkflow {
+function resolveWorkflow(
+	input: unknown,
+	hasUI: boolean,
+	profile: "omnimind" | "upstream" = "upstream",
+): WebSearchWorkflow {
 	const normalized = typeof input === "string" ? input.trim().toLowerCase() : "";
 	if (normalized === "auto-summary") return "auto-summary";
 	if (normalized === "none") return "none";
-	if (normalized === "summary-review") return hasUI ? "summary-review" : "none";
-	return "auto-summary";
+	if (normalized === "summary-review") {
+		return profile === "omnimind" || hasUI ? "summary-review" : "none";
+	}
+	if (profile === "omnimind") return "auto-summary";
+	return hasUI ? "summary-review" : "none";
 }
 
 function normalizeQueryList(queryList: unknown[]): string[] {
@@ -400,7 +408,14 @@ const widgetVisible = scopedValue("widget-visible", () => false);
 const widgetUnsubscribe = scopedValue<(() => void) | null>("widget-unsubscribe", () => null);
 const pendingCurates = scopedMap<string, PendingCurate>("pending-curates");
 const activeCurators = scopedMap<string, CuratorServerHandle>("active-curators");
+const activeObservers = scopedMap<string, ActiveSearchObserver>("active-search-observers");
 const glimpseWins = scopedMap<string, GlimpseWindow>("glimpse-windows");
+
+interface ActiveSearchObserver {
+	readonly handle: CuratorServerHandle;
+	readonly presenter: CuratorPresenter;
+	readonly surfaceId: string;
+}
 
 interface PendingCurate {
 	phase: "searching" | "curating";
@@ -576,8 +591,24 @@ function settleCuratorPresentation(callId: string, pc: PendingCurate | undefined
 	void presenter.settle({ toolCallId: callId, surfaceId }).catch(() => undefined);
 }
 
+function closeSearchObserver(callId: string, options?: { outcome?: "summary-sent" | "results-sent"; preserveTab?: boolean }): void {
+	const observer = activeObservers.get(callId);
+	if (!observer) return;
+	activeObservers.delete(callId);
+	if (options?.outcome) observer.handle.completeObserver(options.outcome);
+	else {
+		try { observer.handle.close(); } catch {}
+	}
+	void observer.presenter.settle({
+		toolCallId: callId,
+		surfaceId: observer.surfaceId,
+		preserveTab: options?.preserveTab === true,
+	}).catch(() => undefined);
+}
+
 function closeCurator(callId?: string): void {
 	if (callId !== undefined) {
+		closeSearchObserver(callId);
 		const win = glimpseWins.get(callId);
 		glimpseWins.delete(callId);
 		try { win?.close(); } catch {}
@@ -590,6 +621,8 @@ function closeCurator(callId?: string): void {
 		try { curator?.close(); } catch {}
 		return;
 	}
+
+	for (const observerCallId of [...activeObservers.keys()]) closeSearchObserver(observerCallId);
 
 	for (const win of glimpseWins.values()) {
 		try { win.close(); } catch {}
@@ -837,10 +870,10 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		: undefined;
 	const initConfig = loadConfigForExtensionInit();
 	const toolNames = omnimindProfile ? DEFAULT_TOOL_NAMES : resolveToolNames(initConfig);
-	const webSearchEnabled = omnimindProfile || isToolEnabled(initConfig, "webSearch");
-	const sourceCheckEnabled = omnimindProfile || isToolEnabled(initConfig, "sourceCheck");
-	const fetchContentEnabled = omnimindProfile || isToolEnabled(initConfig, "fetchContent");
-	const getSearchContentEnabled = omnimindProfile || isToolEnabled(initConfig, "getSearchContent");
+	const webSearchEnabled = isToolEnabled(initConfig, "webSearch");
+	const sourceCheckEnabled = isToolEnabled(initConfig, "sourceCheck");
+	const fetchContentEnabled = isToolEnabled(initConfig, "fetchContent");
+	const getSearchContentEnabled = isToolEnabled(initConfig, "getSearchContent");
 	const searchErrorMessage = (error: unknown): string => {
 		if (!omnimindProfile || !(error instanceof SearchRouteExhaustedError)) {
 			return error instanceof Error ? error.message : String(error);
@@ -1272,6 +1305,84 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		return { results, urls };
 	}
 
+	async function openSearchObserver(
+		callId: string,
+		queryList: string[],
+		requestedProvider: SearchProviderSelection,
+		ctx: ExtensionContext,
+		onUpdate: PendingCurate["onUpdate"],
+		options: {
+			numResults?: number;
+			recencyFilter?: "day" | "week" | "month" | "year";
+		},
+	): Promise<ActiveSearchObserver | undefined> {
+		const presenter = currentCuratorPresenter();
+		if (!presenter) return undefined;
+		let presentation: CuratorPresentationSnapshot;
+		try {
+			presentation = await presenter.snapshot();
+		} catch { return undefined; }
+		const copy = resolveCuratorCopy(presentation.locale);
+
+		let bootstrap: Awaited<ReturnType<typeof loadCuratorBootstrap>>;
+		try {
+			bootstrap = await loadCuratorBootstrap(requestedProvider, ctx, options);
+		} catch { return undefined; }
+		const surfaceId = randomUUID();
+		let handle: CuratorServerHandle;
+		try {
+			handle = await startCuratorServer({
+				mode: "observer",
+				queries: queryList,
+				sessionToken: randomUUID(),
+				timeout: bootstrap.timeoutSeconds,
+				availableProviders: bootstrap.availableProviders,
+				defaultProvider: bootstrap.defaultProvider,
+				searchProvider: toCuratorProvider(requestedProvider) ?? "auto",
+				summaryModels: [],
+				defaultSummaryModel: null,
+				presentation,
+			}, {
+				onSubmit() {},
+				onCancel() {},
+				onProviderChange() {},
+				async onAddSearch() { return []; },
+				onAddSearchResults() {},
+				async onSummarize() { throw new Error("Observer surfaces cannot generate review summaries."); },
+				async onRewriteQuery(query) { return query; },
+			});
+		} catch { return undefined; }
+		const observer: ActiveSearchObserver = { handle, presenter, surfaceId };
+		activeObservers.set(callId, observer);
+		onUpdate?.({
+			content: [{ type: "text", text: copy.observerDisplaying }],
+			details: {
+				phase: "observing-search",
+				progress: 0,
+				engineWebSurface: { surfaceId, status: "observing" },
+			},
+		});
+		let result: Awaited<ReturnType<CuratorPresenter["present"]>>;
+		try {
+			result = await presenter.present({
+				toolCallId: callId,
+				surfaceId,
+				url: handle.url,
+				expiresAt: Date.now() + MAX_CURATOR_TIMEOUT_SECONDS * 1_000,
+			});
+		} catch (error) {
+			result = { kind: "fatal-error", message: error instanceof Error ? error.message : String(error) };
+		}
+		if (result.kind === "presented") return observer;
+
+		closeSearchObserver(callId);
+		onUpdate?.({
+			content: [{ type: "text", text: copy.observerDisplayFailed }],
+			details: { phase: "observer-presentation-error", error: result.message },
+		});
+		return undefined;
+	}
+
 	async function openCuratorBrowser(callId: string, pc: PendingCurate, ctx: ExtensionContext, searchesComplete = true): Promise<void> {
 		if (pendingCurates.get(callId) !== pc) return;
 		const presenter = currentCuratorPresenter();
@@ -1503,7 +1614,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					toolCallId: callId,
 					surfaceId: pc.surfaceId,
 					url: handle.url,
-					expiresAt: Date.now() + pc.timeoutSeconds * 1_000,
+					expiresAt: Date.now() + MAX_CURATOR_TIMEOUT_SECONDS * 1_000,
 				});
 				if (result.kind === "presented") return;
 				pc.browserOpenError = result.message;
@@ -1620,7 +1731,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		name: toolNames.webSearch,
 		label: "Web Search",
 		description:
-			`Search the web using OpenAI, Brave, Parallel, Parallel MCP, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, SearXNG, DuckDuckGo, Exa, Perplexity, Gemini, AnySearch, Valyu, xAI, Bright Data, SerpBase, or Serper. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper. Returns an AI-synthesized answer with source citations. OpenAI search uses a Codex subscription or OpenAI API key; xAI search uses a SuperGrok/X Premium subscription or xAI API key. Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper are available only when explicitly selected. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches generate a background summary by default and continue without opening the curator. Use workflow "summary-review" only when the user explicitly asks to review or select sources, or workflow "none" to return raw results. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Without a configured provider, auto-selects OpenAI when suitable and available, then Exa, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, Perplexity, Gemini API, or Gemini Web. When SearXNG is configured, it is preferred first for local/private search.`,
+			`Search the web using OpenAI, Brave, Parallel, Parallel MCP, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, SearXNG, DuckDuckGo, Exa, Perplexity, Gemini, AnySearch, Valyu, xAI, Bright Data, SerpBase, or Serper. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper. Returns an AI-synthesized answer with source citations. OpenAI search uses a Codex subscription or OpenAI API key; xAI search uses a SuperGrok/X Premium subscription or xAI API key. Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper are available only when explicitly selected. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches generate a background summary by default and continue without waiting for source review; the independent display preference may show a nonblocking Right Dock observer. Use workflow "summary-review" only when the user explicitly asks to review or select sources, or workflow "none" to return raw results. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Without a configured provider, auto-selects OpenAI when suitable and available, then Exa, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, Perplexity, Gemini API, or Gemini Web. When SearXNG is configured, it is preferred first for local/private search.`,
 		promptSnippet:
 			"Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles over a single query for broader coverage. Omit provider unless explicitly overriding the configured default. Use summary-review only when the user explicitly asks to review or select sources.",
 		parameters: Type.Object({
@@ -1635,7 +1746,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			provider: Type.Optional(searchProviderSchema("Search provider or non-empty list of providers to search simultaneously; use all to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, xAI, Bright Data, SerpBase, Serper, and Valyu, omit this field to use the configured provider, or use auto when none is configured")),
 			workflow: Type.Optional(
 				StringEnum(["none", "summary-review", "auto-summary"], {
-					description: "Search workflow mode: auto-summary = generate a summary without opening the curator (default), summary-review = pause for interactive source review, none = return raw results",
+					description: "Search workflow mode: auto-summary = generate a summary without waiting for review (OmniMind default; an independent display preference may show a nonblocking observer), summary-review = pause for interactive source review, none = return raw results",
 				}),
 			),
 		}),
@@ -1645,9 +1756,15 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				? params.queries
 				: (params.query !== undefined ? [params.query] : []);
 			const queryList = normalizeQueryList(rawQueryList);
-			const configWorkflow = loadConfigForExtensionInit().workflow;
-			const workflow = resolveWorkflow(params.workflow ?? configWorkflow, ctx?.hasUI !== false);
+			const callConfig = loadConfigForExtensionInit();
+			const configWorkflow = callConfig.workflow;
+			const workflow = resolveWorkflow(
+				params.workflow ?? configWorkflow,
+				ctx?.hasUI !== false,
+				omnimindProfile ? "omnimind" : "upstream",
+			);
 			const shouldCurate = workflow === "summary-review";
+			const shouldObserve = omnimindProfile && callConfig.autoOpenBrowser === true && !shouldCurate && ctx !== undefined;
 			const recencyFilter = normalizeRecencyFilter(params.recencyFilter);
 
 			if (queryList.length === 0) {
@@ -1861,6 +1978,15 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			const allUrls: string[] = [];
 			const allInlineContent: ExtractedContent[] = [];
 			const resolvedProvider = resolveRequestedProvider(params.provider);
+			let observerResultIndex = 0;
+			let observer = shouldObserve && ctx
+				? await openSearchObserver(callId, queryList, resolvedProvider, ctx, onUpdate as PendingCurate["onUpdate"], {
+					numResults: params.numResults,
+					recencyFilter,
+				})
+				: undefined;
+			const onObserverAbort = bindToCurrentWebAccessContext(() => closeSearchObserver(callId));
+			if (observer) signal?.addEventListener("abort", onObserverAbort, { once: true });
 
 			for (let i = 0; i < queryList.length; i++) {
 				const query = queryList[i];
@@ -1871,7 +1997,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				});
 
 				try {
-					const { answer, results, inlineContent, provider } = await search(query, {
+					const response = await search(query, {
 						provider: resolvedProvider,
 						numResults: params.numResults,
 						recencyFilter,
@@ -1880,7 +2006,13 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						signal,
 						extensionContext: ctx,
 					});
+					const { answer, results, inlineContent, provider } = response;
 					availability?.noteSearchSuccess();
+					if (observer) {
+						for (const entry of toCuratorSearchEntries(response)) {
+							observer.handle.pushResult(observerResultIndex++, { ...entry, query, slotIndex: i });
+						}
+					}
 
 					searchResults.push({ query, answer, results, error: null, provider });
 					for (const r of results) {
@@ -1895,8 +2027,10 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					const message = searchErrorMessage(err);
 					const requestedProvider = toCuratorProvider(resolvedProvider);
 					searchResults.push({ query, answer: "", results: [], error: message, provider: requestedProvider });
+					observer?.handle.pushError(observerResultIndex++, message, requestedProvider, { query, slotIndex: i });
 				}
 			}
+			observer?.handle.searchesDone();
 
 			let approvedSummary: string | undefined;
 			let summaryMeta: SummaryMeta | undefined;
@@ -1918,17 +2052,33 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					isProjectTrusted: () => ctx.isProjectTrusted(),
 				};
 				const summaryModelChoices = await loadSummaryModelChoices(summaryContext);
-				const generated = await generateSummaryDraft(
-					searchResults,
-					summaryContext,
-					signal,
-					summaryModelChoices.defaultSummaryModel ?? undefined,
-					undefined,
-					undefined,
-					getSummaryGenerationDeadlineMs(),
-				);
+				let generated: Awaited<ReturnType<typeof generateSummaryDraft>>;
+				try {
+					generated = await generateSummaryDraft(
+						searchResults,
+						summaryContext,
+						signal,
+						summaryModelChoices.defaultSummaryModel ?? undefined,
+						undefined,
+						undefined,
+						getSummaryGenerationDeadlineMs(),
+					);
+				} catch (error) {
+					signal?.removeEventListener("abort", onObserverAbort);
+					closeSearchObserver(callId);
+					throw error;
+				}
 				approvedSummary = generated.summary;
 				summaryMeta = generated.meta;
+			}
+
+			if (observer) {
+				signal?.removeEventListener("abort", onObserverAbort);
+				closeSearchObserver(callId, {
+					outcome: workflow === "auto-summary" ? "summary-sent" : "results-sent",
+					preserveTab: true,
+				});
+				observer = undefined;
 			}
 
 			return buildSearchReturn({

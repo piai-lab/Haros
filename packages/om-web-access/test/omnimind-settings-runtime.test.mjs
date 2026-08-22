@@ -19,6 +19,7 @@ test("Settings projection uses auto-summary when workflow is absent", async () =
 	}) + "\n", { mode: 0o600 });
 	const projection = projectWebSearchSettings(createWebSearchConfigService(agentDir).readSnapshot());
 	assert.equal(projection.workflow, "auto-summary");
+	assert.equal(projection.autoShowSearchProcess, false);
 });
 
 test("Settings projection returns literal expressions and credential-blind runtime descriptors", async () => {
@@ -74,6 +75,7 @@ test("closed Settings mutation preserves unknown file-owned fields", async () =>
 		draft: {
 			provider: "tavily",
 			workflow: "none",
+			autoShowSearchProcess: true,
 			fields: [{ configKey: "tavilyApiKey", value: "synthetic-tavily-key" }],
 		},
 	});
@@ -81,6 +83,7 @@ test("closed Settings mutation preserves unknown file-owned fields", async () =>
 	assert.deepEqual(written.advancedExternalShape, { keep: [1, 2, 3] });
 	assert.equal(written.provider, "tavily");
 	assert.equal(written.workflow, "none");
+	assert.equal(written.autoOpenBrowser, true);
 });
 
 test("Provider draft test uses unsaved candidate through the formal runtime without writing", async () => {
@@ -105,6 +108,7 @@ test("Provider draft test uses unsaved candidate through the formal runtime with
 			draft: {
 				provider: "auto",
 				workflow: "summary-review",
+				autoShowSearchProcess: false,
 				fields: [{ configKey: "searxngBaseUrl", value: "https://example.com" }],
 			},
 		});

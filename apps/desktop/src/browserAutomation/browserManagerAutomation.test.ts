@@ -143,6 +143,24 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     expect(settled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-a")).toBe(false);
     expect(settled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-b")).toBe(true);
 
+    manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-observer",
+      url: "http://127.0.0.1:43125/?session=observer-private-token",
+      expiresAt: Date.now() + 60_000,
+    });
+    const observerSettled = manager.settleEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-observer",
+      preserveTab: true,
+    });
+    expect(observerSettled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-observer")).toBe(true);
+    expect(observerSettled.tabs.find((tab) => tab.presentation?.surfaceId === "surface-observer")?.url).toBe("omnimind://temporary-page");
+    expect(() => manager.reopenEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-observer",
+    })).toThrow(/no longer pending/i);
+
     manager.close({ threadId: THREAD_ID });
     const afterPaneClose = manager.reopenEngineWebSurface({
       threadId: THREAD_ID,
