@@ -1199,6 +1199,9 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		}
 
 		const searchId = storeAndPublishSearch(opts.results);
+		if (getSearchContentEnabled) {
+			output = `${output.trim()}\n\n---\nArtifact responseId: ${searchId}. Use ${toolNames.getSearchContent}({ responseId: "${searchId}", queryIndex: 0 }) to retrieve the first stored query.`;
+		}
 		const isBackgroundFetch = fetchId !== null && !hasInlineReady;
 
 		return {
@@ -1212,6 +1215,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				fetchId,
 				fetchUrls: isBackgroundFetch ? opts.urls : undefined,
 				searchId,
+				...(getSearchContentEnabled ? { responseId: searchId } : {}),
 				...(opts.curated ? {
 					curated: true,
 					curatedFrom: opts.curatedFrom,

@@ -112,7 +112,11 @@ test("canonical default search auto-summarizes without presenting Curator", asyn
 
 	const root = await mkdtemp(join(tmpdir(), "omnimind-web-default-workflow-"));
 	const configService = createWebSearchConfigService(join(root, "agent"));
-	configService.ensureDefault();
+	const initial = configService.ensureDefault();
+	configService.mutate({
+		expectedRevision: initial.revision,
+		patch: { exaApiKey: "test-only-key" },
+	});
 	const presenter = makePresenter();
 	const harness = makeHarness(configService, presenter);
 	const result = await harness.tool("web_search").execute(
@@ -126,6 +130,17 @@ test("canonical default search auto-summarizes without presenting Curator", asyn
 	assert.equal(presenter.requests.length, 0);
 	assert.equal(result.details.summary.workflow, "auto-summary");
 	assert.match(result.content[0].text, /default workflow/i);
+	assert.equal(result.details.responseId, result.details.searchId);
+	assert.match(
+		result.content[0].text,
+		new RegExp(`get_search_content\\(\\{ responseId: "${result.details.responseId}", queryIndex: 0 \\}\\)`),
+	);
+	const stored = await harness.tool("get_search_content").execute(
+		"default-workflow-read",
+		{ responseId: result.details.responseId, queryIndex: 0 },
+	);
+	assert.doesNotMatch(stored.content[0].text, /^Error:/);
+	assert.match(stored.content[0].text, /Default workflow source/);
 	await harness.handlers.get("session_shutdown")?.();
 });
 
