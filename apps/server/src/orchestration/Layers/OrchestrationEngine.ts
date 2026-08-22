@@ -153,6 +153,18 @@ function deterministicForkAttachmentId(
   return `att_v2_${digest}`;
 }
 
+function deterministicForkAssistantSelectionId(
+  commandId: string,
+  sourceAttachmentId: string,
+): string {
+  return `selection_chatfork_${createHash("sha256")
+    .update(commandId)
+    .update("\0")
+    .update(sourceAttachmentId)
+    .digest("hex")
+    .slice(0, 32)}`;
+}
+
 type ChatToAgentAttachmentFailure = {
   readonly targetMessageId: MessageId;
   readonly name: string;
@@ -197,12 +209,7 @@ function prepareChatToAgentImportedMessages(input: {
       return [
         {
           ...attachment,
-          id: `selection_chatfork_${createHash("sha256")
-            .update(input.commandId)
-            .update("\0")
-            .update(attachment.id)
-            .digest("hex")
-            .slice(0, 32)}`,
+          id: deterministicForkAssistantSelectionId(input.commandId, attachment.id),
           assistantMessageId: targetAssistantMessageId,
         } satisfies ChatAttachment,
       ];
@@ -237,7 +244,7 @@ function prepareChatToAgentFork(input: {
         message.sourceMessageId ? [[message.sourceMessageId, message] as const] : [],
       ),
     );
-    const successfulByTargetMessage = new Map<MessageId, ChatAttachment[]>();
+    const successfulByTargetMessage = new Map<MessageId, Map<number, ChatAttachment>>();
     const failures: ChatToAgentAttachmentFailure[] = [];
     let acceptedCount = 0;
     let acceptedBytes = 0;
@@ -301,27 +308,49 @@ function prepareChatToAgentFork(input: {
         }
         acceptedCount += 1;
         acceptedBytes += sizeBytes;
-        const existing = successfulByTargetMessage.get(targetMessage.messageId) ?? [];
-        existing.push(cloned.attachment);
+        const existing = successfulByTargetMessage.get(targetMessage.messageId) ?? new Map();
+        existing.set(attachmentIndex, cloned.attachment);
         successfulByTargetMessage.set(targetMessage.messageId, existing);
       }
     }
 
+    const sourceMessageById = new Map(
+      input.sourceThread.messages.map((message) => [message.id, message] as const),
+    );
     const importedMessages = baseMessages.map((message) => {
-      const successful = successfulByTargetMessage.get(message.messageId) ?? [];
-      return successful.length === 0
-        ? message
-        : {
-            ...message,
-            attachments: [...(message.attachments ?? []), ...successful],
-          };
+      const sourceMessage = message.sourceMessageId
+        ? sourceMessageById.get(message.sourceMessageId)
+        : undefined;
+      const remappedSelectionById = new Map(
+        (message.attachments ?? []).map((attachment) => [attachment.id, attachment] as const),
+      );
+      const successful = successfulByTargetMessage.get(message.messageId) ?? new Map();
+      const orderedAttachments = (sourceMessage?.attachments ?? []).flatMap(
+        (attachment, attachmentIndex) => {
+          if (attachment.type === "assistant-selection") {
+            const remapped = remappedSelectionById.get(
+              deterministicForkAssistantSelectionId(input.commandId, attachment.id),
+            );
+            return remapped ? [remapped] : [];
+          }
+          if (attachment.type === "file" || attachment.type === "image") {
+            const cloned = successful.get(attachmentIndex);
+            return cloned ? [cloned] : [];
+          }
+          return [];
+        },
+      );
+      const { attachments: _remappedSelections, ...messageWithoutAttachments } = message;
+      return orderedAttachments.length === 0
+        ? messageWithoutAttachments
+        : { ...messageWithoutAttachments, attachments: orderedAttachments };
     });
     return {
       importedMessages,
       attachmentClaimGroups: [...successfulByTargetMessage.entries()].map(
         ([messageId, attachments]) => ({
           messageId,
-          attachmentIds: attachments.map((attachment) => attachment.id),
+          attachmentIds: [...attachments.values()].map((attachment) => attachment.id),
         }),
       ),
       failures,
@@ -986,6 +1015,14 @@ const makeOrchestrationEngine = Effect.gen(function* () {
             detail: `Source thread '${forkCommand.sourceThreadId}' was not found.`,
           });
         }
+        // The decider is the sole owner of fork admission. Run its side-effect-free validation
+        // before reading or cloning any historical blobs so an invalid source/target/scope cannot
+        // spend the bounded attachment-copy budget and then merely clean it up afterwards.
+        yield* decideOrchestrationCommand({
+          command: forkCommand,
+          readModel: deciderReadModel,
+          workspacePaths: deciderWorkspacePaths,
+        });
         const candidateAttachmentIds = sourceThread.messages.flatMap((message) =>
           (message.attachments ?? []).flatMap((attachment) =>
             attachment.type === "file" || attachment.type === "image"

@@ -7,6 +7,7 @@ import {
   ArchiveIcon,
   BookIcon,
   ChatBubbleIcon,
+  ChevronDownIcon,
   CircleQuestionIcon,
   ClockIcon,
   CopyIcon,
@@ -1274,7 +1275,7 @@ export function SidebarSurfacePicker({
             type="button"
             aria-label={t("shell.switchSurface")}
             className={cn(
-              "flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2.5 text-left hover:bg-[var(--color-background-button-secondary-hover)]",
+              "group/surface flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2.5 text-left hover:bg-[var(--color-background-button-secondary-hover)]",
               SIDEBAR_ROW_FOCUS_CLASS_NAME,
             )}
             data-slot="sidebar-surface-navigation"
@@ -1284,7 +1285,10 @@ export function SidebarSurfacePicker({
         <span className="font-display min-w-0 truncate text-[17px] text-foreground">
           {presentationByView[activeView].title}
         </span>
-        <DisclosureChevron open className="text-muted-foreground/70" />
+        <ChevronDownIcon
+          aria-hidden="true"
+          className="size-3.5 shrink-0 text-muted-foreground/80 transition-colors group-hover/surface:text-foreground group-focus-visible/surface:text-foreground"
+        />
       </MenuTrigger>
       <ComposerPickerMenuPopup align="start" side="bottom" className="min-w-64">
         <MenuRadioGroup

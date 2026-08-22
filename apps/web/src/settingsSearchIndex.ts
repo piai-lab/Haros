@@ -64,9 +64,9 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "general:studio-section",
     section: "general",
-    title: "Chat",
+    title: "Studio",
     keywords:
-      "Show the Chat tab in the Agent | Chat switcher. sidebar section content outbox studio",
+      "Show Studio in the Agent Chat Studio work surface menu. sidebar section content workspace outputs",
   },
   {
     id: "general:environment-usage",
@@ -498,7 +498,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Built-in tools": "settings.builtInTools",
   "Chat width": "settings.chatWidth",
   "Capture sound": "settings.captureSound",
-  Chat: "nav.chat",
+  Studio: "nav.studio",
   "Default provider": "settings.defaultProvider",
   "Delete confirmation": "settings.deleteConfirmation",
   "Desktop notifications": "settings.desktopNotifications",

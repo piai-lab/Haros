@@ -10266,7 +10266,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     });
 
     try {
-      const surfaceTrigger = page.getByRole("button", { name: "Switch workspace" });
+      const surfaceTrigger = page.getByRole("button", { name: "Switch surface" });
       await surfaceTrigger.click();
       await page
         .getByRole("menuitemradio", {
@@ -10642,7 +10642,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       expect(useComposerDraftStore.getState().getDraftThread(newThreadId)?.projectId).toBe(
         PROJECT_ID,
       );
-      const surfaceTrigger = page.getByRole("button", { name: "Switch workspace" });
+      const surfaceTrigger = page.getByRole("button", { name: "Switch surface" });
       await surfaceTrigger.click();
       await page
         .getByRole("menuitemradio", {

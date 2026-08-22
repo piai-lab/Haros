@@ -215,4 +215,13 @@ describe("message catalogs", () => {
       );
     }
   });
+
+  it("names the three work surfaces and the Studio visibility setting truthfully", () => {
+    expect(EN_MESSAGES["shell.switchSurface"]).toBe("Switch surface");
+    expect(ZH_CN_MESSAGES["shell.switchSurface"]).toBe("切换工作面");
+    expect(EN_MESSAGES["settings.studioSurfaceDescription"]).toContain("Show Studio");
+    expect(EN_MESSAGES["settings.studioSurfaceDescription"]).not.toContain("Show Chat");
+    expect(ZH_CN_MESSAGES["settings.studioSurfaceDescription"]).toContain("显示 Studio");
+    expect(ZH_CN_MESSAGES["settings.studioSurfaceDescription"]).toContain("仍会保留");
+  });
 });

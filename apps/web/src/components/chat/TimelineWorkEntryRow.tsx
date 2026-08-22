@@ -389,16 +389,20 @@ function isFileChangeWorkEntry(workEntry: TimelineWorkEntry): boolean {
   return isFileChangeWorkLogEntry(workEntry);
 }
 
-function commandTooltipContent(command: string, displayText: string) {
+function commandTooltipContent(
+  command: string,
+  displayText: string,
+  labels: { readonly summary: string; readonly rawCall: string },
+) {
   return (
     <div className="max-w-96 whitespace-pre-wrap leading-tight">
       <div className="space-y-2">
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">Summary</div>
+          <div className="text-muted-foreground/70">{labels.summary}</div>
           <div>{displayText}</div>
         </div>
         <div className="space-y-0.5">
-          <div className="text-muted-foreground/70">Raw call</div>
+          <div className="text-muted-foreground/70">{labels.rawCall}</div>
           <code className="block whitespace-pre-wrap break-words font-chat-code text-[11px] text-foreground/92">
             {command}
           </code>
@@ -415,9 +419,10 @@ function toolRowTooltipContent(
   rawCommand: string | null | undefined,
   displayText: string,
   fallback: string | undefined,
+  labels: { readonly summary: string; readonly rawCall: string },
 ): ReactNode {
   if (rawCommand) {
-    return commandTooltipContent(rawCommand, displayText);
+    return commandTooltipContent(rawCommand, displayText, labels);
   }
   return fallback ? <span className="whitespace-pre-wrap">{fallback}</span> : null;
 }
@@ -871,7 +876,10 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                 activity={workEntry.liveActivity}
                 compact={compact}
                 timestampFormat={timestampFormat}
-                tooltip={toolRowTooltipContent(rawCommand, displayText, displayText)}
+                tooltip={toolRowTooltipContent(rawCommand, displayText, displayText, {
+                  summary: t("toolDetails.summary"),
+                  rawCall: t("toolDetails.rawCall"),
+                })}
               >
                 {rowContentChildren}
               </ToolDetailsDisclosure>
@@ -908,6 +916,10 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
                   : canOpenReadFile
                     ? (readFilePath ?? hoverText)
                     : hoverText,
+                {
+                  summary: t("toolDetails.summary"),
+                  rawCall: t("toolDetails.rawCall"),
+                },
               )}
             >
               {rowContentChildren}

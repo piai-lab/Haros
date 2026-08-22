@@ -8,7 +8,7 @@
 >
 > 文档角色：Settings、AgentGateway、Engine projection与MCP产品边界的证据owner；稳定UI与运行时合同分别由[`architecture/workbench.md`](../architecture/workbench.md)和[`architecture/execution.md`](../architecture/execution.md)拥有。
 >
-> 范围：本文主体只回答“目前 OmniMind Agent 中有哪些常驻工具、何时实际进入模型调用面、设置变化后怎样生效”。Chat/Studio 的目标策略不在本文展开；需要时只路由到 [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)。
+> 范围：本文主体只回答“目前 OmniMind Agent 中有哪些常驻工具、何时实际进入模型调用面、设置变化后怎样生效”。Chat/Studio 的当前产品面与信任边界见 [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)；2026-08-22 已锁定但尚未实施的六组 × Agent/Chat/Studio Host 设置矩阵、Chat Goal/Automation opt-in 与长期维护方案见 [`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md)。后者是目标候选，不得覆盖本文绑定 source 的当前代码事实。
 
 ## 当前清单：新会话零记忆入口
 
