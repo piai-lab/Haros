@@ -54,7 +54,7 @@ describe("OmniMindWebSearchSettingsLive", () => {
     expect(result.state).toBe("ready");
     const configPath = path.join(test.agentDir, "web-search.json");
     expect(fs.readFileSync(configPath, "utf8")).toBe(
-      '{\n  "schemaVersion": 1,\n  "provider": "auto",\n  "workflow": "summary-review"\n}\n',
+      '{\n  "schemaVersion": 1,\n  "provider": "auto",\n  "workflow": "auto-summary"\n}\n',
     );
     if (process.platform !== "win32") expect(fs.statSync(configPath).mode & 0o777).toBe(0o600);
   });

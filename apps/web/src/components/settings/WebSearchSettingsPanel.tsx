@@ -45,8 +45,8 @@ type View = { readonly kind: "overview" } | { readonly kind: "add" } | {
 };
 
 const workflowOptions: readonly OmniMindWebSearchWorkflow[] = [
-  "summary-review",
   "auto-summary",
+  "summary-review",
   "none",
 ];
 

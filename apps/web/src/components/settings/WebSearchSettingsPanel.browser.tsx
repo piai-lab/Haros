@@ -58,7 +58,7 @@ function snapshot(input: {
     revision: input.revision ?? "a".repeat(64),
     schemaVersion: 1,
     provider: "auto",
-    workflow: input.workflow ?? "summary-review",
+    workflow: input.workflow ?? "auto-summary",
     capabilityStatus: "possible",
     providers: [
       {
@@ -147,7 +147,7 @@ describe("WebSearchSettingsPanel", () => {
     expect(testProvider).toHaveBeenCalledWith(expect.objectContaining({
       providerId: "tavily",
       draft: expect.objectContaining({
-        workflow: "summary-review",
+        workflow: "auto-summary",
         fields: expect.arrayContaining([
           { configKey: "tavilyApiKey", value: "unsaved-tavily-key" },
         ]),

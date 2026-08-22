@@ -91,7 +91,7 @@ function defaultConfig(): WebSearchConfigRecord {
 	return {
 		schemaVersion: CURRENT_WEB_SEARCH_SCHEMA_VERSION,
 		provider: "auto",
-		workflow: "summary-review",
+		workflow: "auto-summary",
 	};
 }
 

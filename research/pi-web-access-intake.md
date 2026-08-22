@@ -16,7 +16,7 @@
 > **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态仍为`candidate/pending-packaged`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。exact-SHA Settings与Provider-asset安装门已通过，但不得把这项局部packaged evidence改写成真实Provider、Curator完整journey或发行已完成。
 
 > [!IMPORTANT]
-> 本文 supersede [`omnimind-agent-core-ecosystem-orchestration-review.md`](omnimind-agent-core-ecosystem-orchestration-review.md) §8.4 中“机器调用默认关闭 Curator、只有用户明确要求才打开”的历史建议。维护者当前决定是：**Curator 默认开启**；用户可在 Settings 改为关闭，Agent 也可按单次调用选择不打开或在用户要求审查来源时主动打开。
+> 2026-08-22维护者重新裁决默认体验：canonical默认workflow是`auto-summary`，普通联网后台摘要并同turn继续；Curator不再是日常默认，只在Settings显式选择、per-call override或用户明确要求审查/挑选来源时以`summary-review`进入。该决定supersede本文此前“Curator默认开启”的旧结论，但不删除P4或显式review能力。
 
 ## 0. 新会话先读这里
 
@@ -37,7 +37,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | Runtime owner | Pi `AgentSession`、`ResourceLoader`、Tool Registry / active set 和 Extension lifecycle |
 | 明确非 owner | AgentGateway、Host Built-in policy、跨 Engine Tool Registry、Product Orchestration、Thread、Timeline、Workbench |
 | 工具名 | 保留 `web_search`、`source_check`、`fetch_content`、`get_search_content`，不允许产品 profile 改名 |
-| Curator | 默认 `summary-review`；进入当前 Thread 的 Right Dock Browser；不自动打开系统浏览器 |
+| 结果处理 | 默认 `auto-summary`，无打扰地后台摘要并继续；显式 `summary-review` 才进入当前 Thread 的 Right Dock Browser；不自动打开系统浏览器 |
 | Curator Tab | 每个 pending tool call 使用独立、短时、非历史 Browser Tab；第一次创建、之后按 exact tool call 聚焦或重开，不能复用并改写用户当前 Tab；控制台 internal-only |
 | 关闭语义 | 关闭 Curator Tab、Right Dock 或隐藏 Browser 只关闭展示；call terminal 只清理该 call，Run abort 只中止该 Run，Session shutdown 才清理整个 Extension instance |
 | Curator 语言/主题 | 创建时消费当前 OmniMind locale 与 resolved light/dark theme 的短时展示快照，不跟随 OS/browser 猜测，也不建立第二设置 owner |
@@ -83,7 +83,7 @@ OmniMind Agent / Pi AgentSession
 
 ### 0.4 产品方向已收敛，仍有发布前证据门
 
-维护者已经裁决 package identity、支持范围、Curator 默认、Settings key 可见性、配置双向同步、零配置失效处理、`source_check` 保留方式以及非 Host 边界。后续允许实现者在既有 owner 内选择局部可逆写法，但不得重新打开以下已否决方向：
+维护者已经裁决 package identity、支持范围、workflow默认、Settings key 可见性、配置双向同步、零配置失效处理、`source_check` 保留方式以及非 Host 边界。后续允许实现者在既有 owner 内选择局部可逆写法，但不得重新打开以下已否决方向：
 
 - 第七组 `Web` Host capability；
 - AgentGateway 中的通用 Web Search；
@@ -118,7 +118,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 | --- | --- | --- |
 | 一个 Pi TUI 进程只有一个当前 Session | 同一 Server 可同时承载多个 Thread / Pi Session | 一个 Thread 的 session event 会清理另一个 Thread 的请求、Curator、缓存和 widget state |
 | 配置由 process-global `PI_CODING_AGENT_DIR` / `XDG_CONFIG_HOME` / `~/.pi` 决定 | OmniMind Agent 与 stock Pi 同进程且 private home 必须隔离 | 可能读取或写入 stock `.pi`，也无法为每个产品 runtime instance 安全选路径 |
-| `ctx.hasUI === false` 代表不能呈现 Curator | OmniMind 没有 Pi TUI，但有 Host-presentable Right Dock Browser | 默认 `summary-review` 会被强制降成 `none`，用户永远看不到 Curator |
+| `ctx.hasUI === false` 代表不能呈现 Curator | OmniMind 没有 Pi TUI，但有 Host-presentable Right Dock Browser | 用户显式选择 `summary-review` 时会被强制降成 `none`，专业审查路径失效 |
 | Glimpse 或系统浏览器是 UI 宿主 | 当前 Thread 的 OmniMind Browser / Workbench 是唯一默认宿主 | 用户离开 OmniMind，丢失 Thread provenance，甚至 silent fallback 外部浏览器 |
 | `/commands`、快捷键和 widget 是主要人工入口 | OmniMind 用自然语言、Settings、Timeline 与 Right Dock | 重复入口、占用 `/` 注意力、引入第二套 TUI 交互 |
 | 多个模块各自读取并缓存同一 JSON | Settings 会在 App 运行中编辑配置 | UI 保存后部分 Provider 仍使用陈旧 cache，形成多份配置真相 |
@@ -195,7 +195,7 @@ Peer dependencies 当前都是 wildcard：
 
 | Tool | 上游真实职责 | OmniMind disposition |
 | --- | --- | --- |
-| `web_search` | 单 query 或多 queries；auto/named/routing/array/all Provider；recency/domain；可后台抓全文；可进入 Curator 或自动摘要 | 保留 canonical name 与 schema；默认 Curator；搜索全局不可用时从当前 Session active set 移除 |
+| `web_search` | 单 query 或多 queries；auto/named/routing/array/all Provider；recency/domain；可后台抓全文；可进入 Curator 或自动摘要 | 保留 canonical name 与 schema；默认自动摘要，显式审查才进入 Curator；搜索全局不可用时从当前 Session active set 移除 |
 | `source_check` | 对 claim 搜索并构造 machine-readable `ResearchArtifact`、sources、passages、hash、quality 和 heuristic assessment | 保留；证据结构是一等价值；判断字段明确标注 heuristic，补 Unicode/中文 |
 | `fetch_content` | URL/多 URL、readable/raw/answer；GitHub clone、HTML、PDF、YouTube、本地视频、图片、认证页面和多级 extraction fallback | 保留；搜索 Provider 不可用时仍 active |
 | `get_search_content` | 按 responseId/query/url/urlIndex 检索搜索、抓取或 research artifact；支持 offset/limit/findText | 保留；搜索 Provider 不可用时仍 active |
@@ -278,11 +278,11 @@ Curator 不是搜索引擎，也不是搜索结果仓库；它是一次 `web_sea
 
 | 值 | 行为 | OmniMind |
 | --- | --- | --- |
-| `summary-review` | 打开 Curator，生成 draft，等待用户审查 | 默认 |
-| `auto-summary` | 后台生成 summary，不打开 Curator | Settings 可选；Agent 可 per-call |
+| `auto-summary` | 后台生成 summary，不打开 Curator，同一turn继续 | canonical默认；推荐的日常无打扰路径 |
+| `summary-review` | 打开 Curator，生成 draft，等待用户审查 | Settings显式选择；用户明确要求审查时Agent可per-call |
 | `none` | 直接返回 raw results | Settings 可选；Agent 可 per-call |
 
-OmniMind 不是每次都弹一个“选择工作流”的表单。默认值来自 Settings；Agent 在单次 tool call 可覆盖。用户说“帮我查一下”时按默认走，用户说“直接给结果，别让我审查”时可用 `none/auto-summary`，用户说“我要审查来源”时必须使用 `summary-review`。
+OmniMind 不是每次都弹一个“选择工作流”的表单。默认值来自 Settings；Agent 在单次 tool call 可覆盖。用户说“帮我查一下”时按`auto-summary`搜索、后台摘要并继续；用户说“直接给原始结果”时可用`none`；用户说“我要审查/挑选来源”时才使用`summary-review`。
 
 ### 3.5 `/commands` 在上游是什么，OmniMind 为什么不注册
 
@@ -497,7 +497,7 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 {
   "schemaVersion": 1,
   "provider": "auto",
-  "workflow": "summary-review"
+  "workflow": "auto-summary"
 }
 ```
 
@@ -555,7 +555,7 @@ Settings UI ─┐
    - 搜索：ready / degraded / unavailable / checking；
    - 网页读取：ready 或具体缺失能力；
    - 当前 routing：Auto / 单 Provider / ordered fallback / selected parallel / All；
-   - 搜索结果处理：默认审查 / 自动摘要 / 直接返回；
+   - 搜索结果处理：自动摘要（推荐默认）/ 摘要审查 / 直接返回；
    - 已配置 Provider rows；
    - `添加搜索服务`、`重新检查`、`打开配置文件`。
 2. **Add provider / 添加搜索服务**
@@ -577,8 +577,8 @@ Settings UI ─┐
    - selected parallel 和 `All` 明确写“会同时请求多个服务，可能消耗多份额度”；
    - 配置多个 key 本身不自动并发。
 5. **Search result handling / 搜索结果处理**
-   - `Open review by default / 默认打开来源审查`（`summary-review`，默认 on）；
-   - `Generate summary automatically / 自动生成摘要`（`auto-summary`）；
+   - `Generate summary automatically / 自动生成摘要`（`auto-summary`，推荐且默认；不打断当前turn）；
+   - `Review summary and sources / 审查摘要与来源`（`summary-review`；会暂停等待用户批准）；
    - `Return results directly / 直接返回结果`（`none`）；
    - 用普通语言解释，普通用户不需要理解 `Curator workflow`。
 6. **Content & advanced / 网页读取与高级选项**
@@ -792,7 +792,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 ### 10.6 Curator 与产品 UI
 
-- 默认 `summary-review` 在 `ctx.hasUI === false` 的 OmniMind runtime仍能呈现；
+- 显式 `summary-review` 在OmniMind runtime能通过Host-presentable surface呈现；默认`auto-summary`不创建Curator或pending用户操作；
 - current Thread Right Dock为每个tool call创建独立Tab，不复用/覆盖当前用户Tab，不外跳、不抢Composer focus；
 - Curator控制台隐藏`Open externally`、raw-link copy与raw token地址；来源链接进入普通OmniMind Browser Tab，普通Tab仍可显式外部打开；
 - 只有owning Thread前台时自动呈现；后台Thread只投影既有waiting activity/attention，不切route、不抢Right Dock，进入该Thread后按exact activity打开；
@@ -857,9 +857,9 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 不是。Provider 实现是上游最成熟部分；真正 P0 是 single-session globals、fragmented config caches 和 `hasUI=false` 导致 Curator失效。若先做漂亮 Settings 而不修这三点，产品会在多 Thread、热配置和默认 workflow 上系统性撒谎。
 
-### Adoption：默认 Curator 会不会烦？
+### Adoption：为什么不再默认 Curator？
 
-会带来额外介入，但这是维护者明确接受的价值交换：默认把来源选择权交给用户；用户可在 Settings 永久改为自动摘要/直接返回，Agent也能 per-call选择。不能因为担心“可能烦”偷偷把默认改回 headless。
+因为普通搜索的第一指标是少操作、少等待、不中断。上游Curator成熟说明它值得保留为专业增强，不等于每次搜索都应暂停。canonical默认因此是`auto-summary`；`summary-review`只在用户明确选择或要求审查来源时进入，P4生命周期与token边界仍完整保留。
 
 ### Sustain：深 fork 会不会失控？
 
@@ -883,7 +883,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 第八个风险是为了让Settings保存后立即恢复inactive tools，建立全局Session registry或持续file watcher。这会把一次owner-local失效通知升级成第二生命周期控制面。正确实现只有process-local revision invalidation：写入成功后发信号，live Extension instance各自重读、恢复自己移除的工具并在Session shutdown解绑；文件仍是唯一真相，外部编辑按显式刷新/native reload/new Session生效。
 
-第九个风险是默认Curator在后台Thread抢占当前用户界面。自动呈现只属于当前owning Thread；后台Thread复用既有waiting-for-user activity/attention并继续上游timeout，不切route、不抢Right Dock，也不为此建通知中心或后台Curator scheduler。这既保留默认审查，又不让并发Agent互相劫持注意力。
+第九个风险是显式Curator在后台Thread抢占当前用户界面。`auto-summary`默认路径不创建Curator；当`summary-review`被明确选择时，自动呈现仍只属于当前owning Thread，后台Thread复用既有waiting-for-user activity/attention并继续上游timeout，不切route、不抢Right Dock，也不为此建通知中心或后台Curator scheduler。
 
 ## 13. Reopen triggers
 
@@ -923,7 +923,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "tools": ["web_search", "source_check", "fetch_content", "get_search_content"],
     "commands": [],
     "tuiShortcuts": [],
-    "curatorDefault": "summary-review",
+    "workflowDefault": "auto-summary",
     "curatorPresentation": "current-thread-right-dock-dedicated-ephemeral-tab",
     "curatorTabClose": "hide-only-tool-continues",
     "curatorReopen": "pending-tool-call-exact-tab-or-recreate",

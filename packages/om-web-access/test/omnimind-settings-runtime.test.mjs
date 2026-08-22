@@ -11,6 +11,16 @@ import {
 	testWebSearchProvider,
 } from "../settings-runtime.ts";
 
+test("Settings projection uses auto-summary when workflow is absent", async () => {
+	const agentDir = await mkdtemp(join(tmpdir(), "omnimind-web-settings-default-workflow-"));
+	await writeFile(join(agentDir, "web-search.json"), JSON.stringify({
+		schemaVersion: 1,
+		provider: "auto",
+	}) + "\n", { mode: 0o600 });
+	const projection = projectWebSearchSettings(createWebSearchConfigService(agentDir).readSnapshot());
+	assert.equal(projection.workflow, "auto-summary");
+});
+
 test("Settings projection returns literal expressions and credential-blind runtime descriptors", async () => {
 	const agentDir = await mkdtemp(join(tmpdir(), "omnimind-web-settings-projection-"));
 	await writeFile(join(agentDir, "web-search.json"), JSON.stringify({

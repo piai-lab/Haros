@@ -29,7 +29,7 @@ test("default creation is no-clobber, private, and deterministic", async () => {
 	assert.equal(first.exists, true);
 	assert.equal(
 		await readFile(service.configPath, "utf8"),
-		'{\n  "schemaVersion": 1,\n  "provider": "auto",\n  "workflow": "summary-review"\n}\n',
+		'{\n  "schemaVersion": 1,\n  "provider": "auto",\n  "workflow": "auto-summary"\n}\n',
 	);
 	assert.equal(second.revision, first.revision);
 	assert.equal(secondStat.mtimeMs, firstStat.mtimeMs);

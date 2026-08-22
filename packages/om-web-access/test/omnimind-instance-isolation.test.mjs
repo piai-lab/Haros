@@ -93,6 +93,42 @@ function extensionContext(root, branch = []) {
 	};
 }
 
+test("canonical default search auto-summarizes without presenting Curator", async (t) => {
+	const originalFetch = globalThis.fetch;
+	t.after(() => { globalThis.fetch = originalFetch; });
+	globalThis.fetch = async (url, init) => {
+		if (String(url).startsWith("https://api.exa.ai/answer")) {
+			return new Response(JSON.stringify({
+				answer: "Default workflow answer",
+				citations: [{
+					title: "Default workflow source",
+					url: "https://example.test/default-workflow",
+					text: "Evidence for the default workflow",
+				}],
+			}), { status: 200, headers: { "content-type": "application/json" } });
+		}
+		return originalFetch(url, init);
+	};
+
+	const root = await mkdtemp(join(tmpdir(), "omnimind-web-default-workflow-"));
+	const configService = createWebSearchConfigService(join(root, "agent"));
+	configService.ensureDefault();
+	const presenter = makePresenter();
+	const harness = makeHarness(configService, presenter);
+	const result = await harness.tool("web_search").execute(
+		"default-workflow-call",
+		{ query: "default workflow", provider: "exa" },
+		undefined,
+		undefined,
+		extensionContext(root),
+	);
+
+	assert.equal(presenter.requests.length, 0);
+	assert.equal(result.details.summary.workflow, "auto-summary");
+	assert.match(result.content[0].text, /default workflow/i);
+	await harness.handlers.get("session_shutdown")?.();
+});
+
 test("Session instances isolate stored results and shutdown cleanup", async (t) => {
 	const originalFetch = globalThis.fetch;
 	t.after(() => { globalThis.fetch = originalFetch; });

@@ -86,7 +86,7 @@ export interface WebSearchProviderProbeResult {
 function workflowFrom(value: unknown): WebSearchWorkflow {
 	return value === "none" || value === "auto-summary" || value === "summary-review"
 		? value
-		: "summary-review";
+		: "auto-summary";
 }
 
 function stringValue(value: unknown): string | null {

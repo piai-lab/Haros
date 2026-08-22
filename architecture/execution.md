@@ -249,6 +249,8 @@ PiAdapter只负责创建Pi Session、组装明确的product-bundled inline Exten
 
 该fork集中内置为OmniMind monorepo私有workspace package，不建立独立GitHub fork、npm发布或第二tgz/sync控制面。来源管理记录exact upstream commit/version/license、保留原目录与作者测试，并以独立untouched baseline和可重复P1–P6 diff证明修改；不得把这种可追溯性写成不存在的GitHub fork ancestry。
 
+Web Access的canonical默认workflow是`auto-summary`：新配置显式写入该值，配置缺失workflow时也按同一默认解析。日常自然语言联网沿`search → background summary → same-turn continuation`完成，不创建Curator、不等待用户批准。`summary-review`只在用户于Settings明确选择、单次tool call明确覆盖，或Agent响应用户明确的来源审查/挑选要求时进入；`none`继续直接返回raw results。已有文件中显式保存的workflow保持原值，不因默认变化被改写，也不为尚未发行的默认调整新增迁移平台。
+
 Web Access的runtime Provider定义是服务stable ID、参与`auto/all/explicit-only`、配置前提、连接角色与routing eligibility的唯一来源。供Settings、Curator、Timeline和技术详情使用的presentation字段必须与这些exact定义同源并由Server做credential-blind投影，不能在Web、AgentGateway或另一个manifest中平行枚举服务；presentation字段缺失只触发中性UI fallback，绝不能改变路由、可用性或active set。新增、删除或重命名上游Provider时，同一fork revision必须同时闭合runtime定义、presentation覆盖、品牌资产准入和作者/OmniMind回归，不能让UI冻结在某个历史“26家”快照。
 
 Web Access canonical配置只由fork package导出的config read/mutation service拥有；Settings在没有Pi Session/Extension instance时调用同一服务，Session内Provider也消费它，不能各自解析、缓存或写入第二份配置。`web-search.json`只在首次进入Web Search Settings或首次启动OmniMind Agent Session时由先发生的一方原子创建；App启动、普通页面和被动readiness不ambient write，Settings也不得为读取配置实例化Session或执行Extension。package同时唯一拥有`schemaVersion`、known-schema解析与有界迁移：读取不因版本旧而ambient rewrite，已知旧版本只在显式mutation的原子提交内升级并保留unknown fields；损坏JSON或高于当前实现的schema必须fail closed并保留原文件，不能自动覆盖、降级或另建Host migration平台。

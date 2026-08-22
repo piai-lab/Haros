@@ -295,9 +295,9 @@ function normalizeCuratorTimeoutSeconds(value: unknown): number | undefined {
 function resolveWorkflow(input: unknown, hasUI: boolean): WebSearchWorkflow {
 	const normalized = typeof input === "string" ? input.trim().toLowerCase() : "";
 	if (normalized === "auto-summary") return "auto-summary";
-	if (!hasUI) return "none";
 	if (normalized === "none") return "none";
-	return "summary-review";
+	if (normalized === "summary-review") return hasUI ? "summary-review" : "none";
+	return "auto-summary";
 }
 
 function normalizeQueryList(queryList: unknown[]): string[] {
@@ -1616,9 +1616,9 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		name: toolNames.webSearch,
 		label: "Web Search",
 		description:
-			`Search the web using OpenAI, Brave, Parallel, Parallel MCP, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, SearXNG, DuckDuckGo, Exa, Perplexity, Gemini, AnySearch, Valyu, xAI, Bright Data, SerpBase, or Serper. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper. Returns an AI-synthesized answer with source citations. OpenAI search uses a Codex subscription or OpenAI API key; xAI search uses a SuperGrok/X Premium subscription or xAI API key. Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper are available only when explicitly selected. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches auto-open the interactive browser curator and stream results live; set workflow to "none" to skip curation or "auto-summary" for a model-generated summary without the browser curator. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Without a configured provider, auto-selects OpenAI when suitable and available, then Exa, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, Perplexity, Gemini API, or Gemini Web. When SearXNG is configured, it is preferred first for local/private search.`,
+			`Search the web using OpenAI, Brave, Parallel, Parallel MCP, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, SearXNG, DuckDuckGo, Exa, Perplexity, Gemini, AnySearch, Valyu, xAI, Bright Data, SerpBase, or Serper. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper. Returns an AI-synthesized answer with source citations. OpenAI search uses a Codex subscription or OpenAI API key; xAI search uses a SuperGrok/X Premium subscription or xAI API key. Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper are available only when explicitly selected. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches generate a background summary by default and continue without opening the curator. Use workflow "summary-review" only when the user explicitly asks to review or select sources, or workflow "none" to return raw results. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Without a configured provider, auto-selects OpenAI when suitable and available, then Exa, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, Perplexity, Gemini API, or Gemini Web. When SearXNG is configured, it is preferred first for local/private search.`,
 		promptSnippet:
-			"Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles over a single query for broader coverage. Omit provider unless explicitly overriding the configured default.",
+			"Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles over a single query for broader coverage. Omit provider unless explicitly overriding the configured default. Use summary-review only when the user explicitly asks to review or select sources.",
 		parameters: Type.Object({
 			query: Type.Optional(Type.String({ description: "Single search query. For research tasks, prefer 'queries' with multiple varied angles instead." })),
 			queries: Type.Optional(Type.Array(Type.String(), { description: "Multiple queries searched in sequence, each returning its own synthesized answer. Prefer this for research — vary phrasing, scope, and angle across 2-4 queries to maximize coverage. Good: ['React vs Vue performance benchmarks 2026', 'React vs Vue developer experience comparison', 'React ecosystem size vs Vue ecosystem']. Bad: ['React vs Vue', 'React vs Vue comparison', 'React vs Vue review'] (too similar, redundant results)." })),
@@ -1631,7 +1631,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			provider: Type.Optional(searchProviderSchema("Search provider or non-empty list of providers to search simultaneously; use all to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, xAI, Bright Data, SerpBase, Serper, and Valyu, omit this field to use the configured provider, or use auto when none is configured")),
 			workflow: Type.Optional(
 				StringEnum(["none", "summary-review", "auto-summary"], {
-					description: "Search workflow mode: none = no curator, summary-review = open curator with auto summary draft (default), auto-summary = generate summary without opening curator",
+					description: "Search workflow mode: auto-summary = generate a summary without opening the curator (default), summary-review = pause for interactive source review, none = return raw results",
 				}),
 			),
 		}),
