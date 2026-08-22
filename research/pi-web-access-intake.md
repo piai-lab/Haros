@@ -37,8 +37,8 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | Runtime owner | Pi `AgentSession`、`ResourceLoader`、Tool Registry / active set 和 Extension lifecycle |
 | 明确非 owner | AgentGateway、Host Built-in policy、跨 Engine Tool Registry、Product Orchestration、Thread、Timeline、Workbench |
 | 工具名 | 保留 `web_search`、`source_check`、`fetch_content`、`get_search_content`，不允许产品 profile 改名 |
-| 结果处理 | 默认 `auto-summary`，无打扰地后台摘要并继续；显式 `summary-review` 才进入当前 Thread 的 Right Dock Browser；不自动打开系统浏览器 |
-| Curator Tab | 每个 pending tool call 使用独立、短时、非历史 Browser Tab；第一次创建、之后按 exact tool call 聚焦或重开，不能复用并改写用户当前 Tab；控制台 internal-only |
+| 结果处理 | workflow与展示独立：默认`auto-summary`且展示关闭；`auto-summary/none`在展示开启时可进入非阻塞observer，`summary-review`进入pending审查；不自动打开系统浏览器 |
+| Web Search / Curator Tab | observer与review都使用独立、短时、非历史Browser Tab；只有pending review按exact tool call进入Timeline聚焦/重开，observer terminal后无reopen；控制台internal-only |
 | 关闭语义 | 关闭 Curator Tab、Right Dock 或隐藏 Browser 只关闭展示；call terminal 只清理该 call，Run abort 只中止该 Run，Session shutdown 才清理整个 Extension instance |
 | Curator 语言/主题 | 创建时消费当前 OmniMind locale 与 resolved light/dark theme 的短时展示快照，不跟随 OS/browser 猜测，也不建立第二设置 owner |
 | Slash commands | OmniMind profile 不注册 `/websearch`、`/curator`、`/search`、`/google-account` |
@@ -300,7 +300,7 @@ OmniMind 不是每次都弹一个“选择工作流”的表单。默认值来�
 - `Ctrl+Shift+S`：上游在仍有 pending search 时打开/重新打开最后一个 Curator。
 - `Ctrl+Shift+W`：显示 TUI widget，逐条列 API/GET、目标、状态码、耗时和成功/失败。
 
-OmniMind 已有 Right Dock、Timeline、错误与技术详情；注册 TUI shortcut/widget 会形成第二呈现面。因此 runtime profile 禁用它们。Curator 自动呈现，关闭后可从对应 Timeline activity 重开；网络活动只在现有 diagnostics/technical detail 有真实用户用途时薄投影，不新建常驻监控器。
+OmniMind 已有 Right Dock、Timeline、错误与技术详情；注册 TUI shortcut/widget 会形成第二呈现面。因此 runtime profile 禁用它们。`summary-review`在owning Thread前台自动呈现，关闭后仍pending时可从对应Timeline activity重开；observer只在展示开启且owning Thread前台时自动呈现，terminal后不进入Timeline reopen。网络活动只在现有diagnostics/technical detail有真实用户用途时薄投影，不新建常驻监控器。
 
 ### 3.7 Session events 的通俗解释
 
@@ -431,22 +431,22 @@ OmniMind profile继续尊重上游`webSearch.enabled`与`tools.webSearch/sourceC
 - `ctx.hasUI === false` 不能再强制 `summary-review → none`；应区分 Pi TUI 与 OmniMind Host-presentable Web surface；
 - 继续使用 ephemeral loopback server + token，但 fork 的主合同必须通过 typed Curator presentation seam 交给现有 engine-web-surface intent bridge；递归扫描任意 tool-result 字符串只能是旧兼容证据，不能成为 `@omnimind/om-web-access` 的长期接口；
 - 当前 Thread、Engine、Tool call provenance 和 TTL 必须齐全；
-- 页面默认在 Right Dock，第一次为该 tool call 创建独立 Tab，不能 `reuse` 并导航用户当前 Tab；后续 presentation 按 exact tool call 聚焦原 Tab，原 Tab 已关闭时才重建；
+- review页面在Right Dock提供可操作审查；展示开关开启时，`auto-summary/none`可在owning foreground Thread创建非阻塞observer。两者第一次都为该tool call创建独立Tab，不能`reuse`并导航用户当前Tab；只有仍pending的review按exact tool call聚焦原Tab或在原Tab已关闭时重建；
 - Browser owner 的内部 typed presentation seam 返回并复用 `tabId`，原子标记该 Tab 为 ephemeral/non-history；不得为此扩张 Agent 可见的 `browser_open` schema，也不得建立 Curator tab store；
 - ephemeral Curator Tab由同一presentation metadata派生internal-only chrome：隐藏external-open、raw-link copy与raw token地址，不创建第二toolbar状态；来源链接打开为普通Browser Tab，之后服从普通Browser行为；
-- per-call presentation handle 只在当前运行内存保存 `threadId/toolCallId/tabId/url/expiry` 等最小事实；Timeline action 携带 exact tool call identity，不能只展开通用 Browser pane；
-- 关闭 Tab、关闭 Right Dock 或隐藏 Browser 只关闭展示，tool call 与 Curator server继续等待；在 token/Curator仍有效时可从对应 Timeline activity重开；
+- per-call presentation handle只在当前运行内存保存`threadId/toolCallId/tabId/url/expiry`等最小事实；只有review的pending Timeline action携带exact tool call identity，不能只展开通用Browser pane；observer不进入waiting/reopen；
+- 关闭Tab、关闭Right Dock或隐藏Browser只关闭展示，不取消tool call。review继续等待合法settlement且在token仍有效时可从对应Timeline activity重开；observer继续自动完成，terminal后不保留reopen；
 - 单个tool call terminal只清理该call自己的Curator server、stream、timer、request、presentation handle与临时资源，不能清理同Session其他并发call或revision listener；Run abort只中止属于该Run的in-flight calls；`session_start/session_tree`保留上游语义但只作用于当前Extension instance及对应branch；`session_shutdown`才清理整个instance的剩余请求、cache、storedResults、listener与临时资源；
-- 可恢复presentation失败保持pending并允许retry；Curator server/protocol或Host handoff不可恢复失败必须typed-error settle并按call scope cleanup，不能永久pending或只等idle timeout；terminal后不保留可重放Curator页面；
+- review的可恢复presentation失败保持pending并允许retry；Curator server/protocol或Host handoff不可恢复失败必须typed-error settle并按call scope cleanup，不能永久pending或只等idle timeout。observer展示失败不能把自动workflow变成waiting，terminal后两者都不保留可重放协议或Timeline入口；
 - ephemeral Tab 的token URL不得进入Browser recent history、localStorage、持久tab restore、Product event、Timeline raw payload、log、screenshot或diagnostics；loopback response必须使用no-store/no-referrer等短时页面边界，persistent Browser partition也不得把它变成恢复数据；
 - Curator创建时接收当前OmniMind locale与resolved light/dark theme的短时presentation snapshot；不依赖OS `Accept-Language` / `prefers-color-scheme`，不监听全局设置，也不建立第二locale/theme owner；
 - 页面不能抢 Composer focus、覆盖 route 或自动外部打开；
-- 只有owning Thread正处于前台时才自动呈现；后台/非当前Thread只投影既有waiting-for-user activity/attention，不能切换route或抢占当前Right Dock。用户进入该Thread后可按exact activity打开；若一直忽略，继续服从上游idle timeout与deterministic settlement，不建立后台Curator调度器；
+- 只有owning Thread正处于前台时才自动呈现。后台review只投影既有waiting-for-user activity/attention，用户进入该Thread后可按exact activity打开，若一直忽略则继续服从上游idle timeout与deterministic settlement；后台observer不投影waiting/reopen。两者都不能切换route或抢占当前Right Dock，也不建立后台Curator调度器；
 - `curatorRemote` 在 OmniMind profile 恒不可用；作者的`autoOpenBrowser` intent在OmniMind profile只被解释为默认关闭的typed Right Dock搜索过程展示，不恢复系统浏览器或raw-token fallback；
 - 页面改为 OmniMind 品牌和现有 Workbench tokens，完整简中/英文；
 - 移除 Google Fonts 和 jsDelivr `marked` CDN，改用本地/系统字体与 pinned local markdown renderer；
 - 把 presentation/copy/token adapter 从 3,577 行页面生成器中分离，避免每次 upstream sync 手改整页；
-- 多个同时 Curator 各自属于 tool call；最新一个可自动显示，其余通过 Timeline 对应 activity 重开。
+- 多个同时页面各自属于tool call；只有pending review可通过Timeline对应activity精确重开，observer terminal后无reopen。
 
 ### P5. Provider availability → Pi active set
 
@@ -497,7 +497,8 @@ OmniMind profile继续尊重上游`webSearch.enabled`与`tools.webSearch/sourceC
 {
   "schemaVersion": 1,
   "provider": "auto",
-  "workflow": "auto-summary"
+  "workflow": "auto-summary",
+  "autoOpenBrowser": false
 }
 ```
 
@@ -654,14 +655,14 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 - existing `engineWebSurfaceHost.ts` 继续校验 URL、Thread/Engine/Tool provenance、TTL 与一次性 claim；
 - fork 主路径直接发送typed Curator URL/details，不依赖对任意result字符串的递归URL扫描；Host claim失败在OmniMind profile中fail closed/unavailable，不能触发Glimpse或系统浏览器fallback；
 - URL/token 只在内存 handoff，不能进入 Product facts、raw Timeline payload、Browser recent history/localStorage/tab restore、日志、诊断或截图；页面响应禁用缓存与referrer传播；
-- 第一次打开使用独立ephemeral Browser Tab；不能覆盖用户当前Tab。Host保存当前pending tool call的短时tab handle，Timeline按exact tool call聚焦原Tab或在已关闭时重建；多个pending Curator互不覆盖；
-- 关闭Tab、Right Dock或Browser pane只隐藏审查，不取消tool call。对应Timeline row在Curator仍pending时保持可操作；Approve、Cancel、idle timeout、Run abort或Session shutdown才settlement并清理；terminal后不保留reopen action；
+- 第一次打开使用独立ephemeral Browser Tab，不能覆盖用户当前Tab。review时Host保存pending tool call的短时tab handle，Timeline按exact tool call聚焦原Tab或在已关闭时重建；多个pending review互不覆盖。observer只保存当前call的短时展示handle，不进入Timeline reopen；
+- 关闭Tab、Right Dock或Browser pane只隐藏，不取消tool call。review对应Timeline row在仍pending时保持可操作；Approve、Cancel、idle timeout、Run abort或Session shutdown才settlement并清理。observer由tool call自行继续，terminal时清理活跃server/token/presentation且不保留reopen；
 - Right Dock 不抢 Composer focus，不切换当前 route；
 - Curator控制台internal-only：不提供`Open externally`、raw-link copy或raw token展示；结果来源链接打开为普通OmniMind Browser Tab，之后仍可由用户显式外部打开；
 - Host presentation unavailable 时 tool result 准确说明无法展示，不 silent external fallback；
-- Approve、Cancel、timeout、abort、Session shutdown关闭对应server/stream/timer与presentation handle；
+- review的Approve、Cancel、timeout、abort、Session shutdown关闭对应server/stream/timer与presentation handle；observer在tool terminal/abort/Session shutdown关闭对应活跃资源；
 - 多 Session、多 Curator互不清理。
-- 只有owning Thread当前可见时自动展示；后台Thread只留下既有waiting activity/attention，用户进入后再精确打开，未处理则按上游idle timeout settlement。
+- 只有owning Thread当前可见时自动展示；后台review只留下既有waiting activity/attention，用户进入后再精确打开，未处理则按上游idle timeout settlement；后台observer不投影waiting或reopen，也不抢Right Dock。
 
 ### 7.3 UI 产品化
 
@@ -793,13 +794,13 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 ### 10.6 Curator 与产品 UI
 
-- 显式 `summary-review` 在OmniMind runtime能通过Host-presentable surface呈现；默认`auto-summary`不创建Curator或pending用户操作；
+- 显式`summary-review`在OmniMind runtime能通过Host-presentable surface呈现；`auto-summary`默认展示关闭时不创建Tab，展示开启时可创建observer但不产生pending用户操作；
 - `auto-summary/none`在展示关闭时不创建Right Dock Tab；展示开启时创建非阻塞observer Tab但不进入waiting-for-user、不要求Approve，terminal后清理活跃token/settlement且Timeline无假reopen；
 - current Thread Right Dock为每个tool call创建独立Tab，不复用/覆盖当前用户Tab，不外跳、不抢Composer focus；
 - Curator控制台隐藏`Open externally`、raw-link copy与raw token地址；来源链接进入普通OmniMind Browser Tab，普通Tab仍可显式外部打开；
-- 只有owning Thread前台时自动呈现；后台Thread只投影既有waiting activity/attention，不切route、不抢Right Dock，进入该Thread后按exact activity打开；
+- 只有owning Thread前台时自动呈现；后台review投影既有waiting activity/attention并可在进入Thread后按exact activity打开，后台observer不投影waiting/reopen；两者都不切route、不抢Right Dock；
 - 多个pending Curator映射到不同tool call/Tab；Timeline按exact row聚焦，Tab已关闭时重建，不能只展开Browser pane；
-- 关闭Tab/Right Dock只隐藏、不settle；Approve/Cancel/timeout/abort/Session shutdown才settlement与cleanup；terminal后reopen action消失；
+- 关闭Tab/Right Dock只隐藏、不取消tool call；review由Approve/Cancel/timeout/abort/Session shutdown settlement，observer由tool terminal/abort/Session shutdown cleanup；terminal后reopen action消失；
 - loopback token不进入Browser recent history、localStorage、tab restore、cache/referrer、Product payload或日志；persistent Browser partition下仍满足memory-only；
 - Curator使用OmniMind当前locale与resolved theme snapshot，而不是OS/browser默认；
 - typed presentation claim失败fail closed，不触发Glimpse/系统浏览器fallback；
@@ -826,8 +827,8 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 ### 10.8 Real-provider 与 packaged product
 
 - 历史局部门：exact pushed implementation SHA `286df13768de943a2db4df033180251c2f353aca`的fresh任务profile曾证明13个品牌asset与13个中性fallback可渲染；维护者随后把标准提升为26家全部原色品牌asset，因此该视觉证据已经失效。exact pushed SHA `4df9de2474021c1b9396931307acbdb91ee16094`已完成26个identity→25份原色本地资产的fresh隔离Settings/Provider-asset gate。
-- exact pushed implementation SHA `52c8a25e75f702baef36b93fb1f8cc42f270897e`生成DMG SHA-256 `118b55370cbec44308ec68ecbeb5a0efd3bd0d50b88665284e3274aca09c2931`，安装版`app.asar` SHA-256为`018d004a888344e395fa9885f3be2493a1efd9ec0cc15cbaa0c32d4dc26eaeb4`。fresh任务profile证明真实DeepSeek Agent经keyless Exa走默认`auto-summary`时不创建Curator并在同一turn继续；显式`summary-review`创建dedicated ephemeral Tab、批准后terminal cleanup并让同一turn继续；关闭重开仍投影`auto-summary`默认且无假Curator入口。DeepSeek最终措辞未完全满足“一句话总结”，故这里只关闭工具/Curator lifecycle与continuation门，不把模型答案质量写成通过。
-- exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`生成arm64 DMG SHA-256 `4160ec9594e0cbc185b970a645be0e05695344682c255aa9f5bcaed02f831e18`，DMG内与安装后`app.asar` SHA-256均为`3d909eba51ea301e66f8ca71f522fbc1eccf7c98905ca4c46c906e06f767be4`。任务隔离profile复证Main、Renderer与bundled Server均未使用真实用户profile，canonical文件保持`0600`及显式`provider: auto` / `workflow: auto-summary`。真实MiMo-V2.5-Pro从非错误`web_search` tool result读取agent-visible Artifact responseId，随后以该ID成功调用`get_search_content`取回stored result；默认路径未创建Curator。同一安装候选下的DeepSeek V4 Flash显式`summary-review`又一次完成dedicated ephemeral Tab、批准、terminal cleanup与same-turn continuation。
+- exact pushed implementation SHA `52c8a25e75f702baef36b93fb1f8cc42f270897e`生成DMG SHA-256 `118b55370cbec44308ec68ecbeb5a0efd3bd0d50b88665284e3274aca09c2931`，安装版`app.asar` SHA-256为`018d004a888344e395fa9885f3be2493a1efd9ec0cc15cbaa0c32d4dc26eaeb4`。当时尚未实现独立展示设置，fresh任务profile证明真实DeepSeek Agent经keyless Exa走默认`auto-summary`时不创建Curator并在同一turn继续；显式`summary-review`创建dedicated ephemeral Tab、批准后terminal cleanup并让同一turn继续；关闭重开仍投影`auto-summary`默认且无假Curator入口。DeepSeek最终措辞未完全满足“一句话总结”，故这里只关闭旧候选的工具/Curator lifecycle与continuation门，不把模型答案质量或新observer合同写成通过。
+- exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`生成arm64 DMG SHA-256 `4160ec9594e0cbc185b970a645be0e05695344682c255aa9f5bcaed02f831e18`，DMG内与安装后`app.asar` SHA-256均为`3d909eba51ea301e66f8ca71f522fbc1eccf7c98905ca4c46c906e06f767be4`。任务隔离profile复证Main、Renderer与bundled Server均未使用真实用户profile，canonical文件保持`0600`及显式`provider: auto` / `workflow: auto-summary`。真实MiMo-V2.5-Pro从非错误`web_search` tool result读取agent-visible Artifact responseId，随后以该ID成功调用`get_search_content`取回stored result；当时默认展示关闭且尚无observer实现，因此未创建Curator。同一安装候选下的DeepSeek V4 Flash显式`summary-review`又一次完成dedicated ephemeral Tab、批准、terminal cleanup与same-turn continuation；这条证据不证明后续observer合同。
 - 授权Tavily draft-test已通过同一正式Provider runtime发送最小真实请求且未保存draft、未改变canonical bytes；外部资源返回HTTP 433，所以这里只证明request-scoped draft与无写入边界，不能把keyed Provider标为成功。
 - 使用最小真实资源覆盖至少一个 zero-config route、一个 keyed route、一个 route exhaustion；
 - MiMo 与 DeepSeek 作为 OmniMind Agent model锚点验证模型能发现/调用/继续 `get_search_content`；
@@ -880,7 +881,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 第四个风险是品牌层级错位。当前`xai`固定glyph内部title仍标为Grok，Searchinfinity资产来自其BytePlus关联页面；维护者已接受当前准确指称性映射进入candidate，但这些异常必须保留在source记录中。不能为了图标漂亮改写runtime ID，也不能在未来更新时静默把母公司mark、产品mark和传输方式互换。
 
-第五个风险是把Curator当成“打开一个URL”而不是pending tool call的短时交互面。untouched baseline的三个反例是PiAdapter用`browser_open reuse:true`导航用户当前Tab、Timeline callback只展开Browser pane而不能定位对应tool call、Browser recent-history把token URL写入localStorage；当前source candidate已通过typed dedicated ephemeral Tab、exact pending reopen、call-scoped settlement/cleanup与non-history metadata闭合并有focused回归。只有pushed-SHA packaged journey通过后，才能把这项source事实提升为安装产品证据。
+第五个风险是把搜索页面当成“打开一个URL”而忽略其两种生命周期：review Curator是pending tool call的短时交互面，observer是非阻塞typed页面。untouched baseline的三个反例是PiAdapter用`browser_open reuse:true`导航用户当前Tab、Timeline callback只展开Browser pane而不能定位对应review call、Browser recent-history把token URL写入localStorage；source candidate必须同时用typed dedicated ephemeral Tab、review exact pending reopen、observer terminal无reopen、call-scoped settlement/cleanup与non-history metadata闭合。只有pushed-SHA packaged journey通过后，才能把source事实提升为安装产品证据。
 
 第六个风险是为了26个Provider表单发明通用配置DSL，或为了Curator Tab把内部presentation需求塞进Agent可见Browser tool schema。两者都会把一个fork接入升级成新的平台owner。正确边界是package-owned closed field vocabulary与Browser owner内部typed presentation seam；复杂Provider配置保持file-only，Agent-facing Browser schema保持不变。
 
@@ -888,7 +889,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 第八个风险是为了让Settings保存后立即恢复inactive tools，建立全局Session registry或持续file watcher。这会把一次owner-local失效通知升级成第二生命周期控制面。正确实现只有process-local revision invalidation：写入成功后发信号，live Extension instance各自重读、恢复自己移除的工具并在Session shutdown解绑；文件仍是唯一真相，外部编辑按显式刷新/native reload/new Session生效。
 
-第九个风险是显式Curator在后台Thread抢占当前用户界面。`auto-summary`默认路径不创建Curator；当`summary-review`被明确选择时，自动呈现仍只属于当前owning Thread，后台Thread复用既有waiting-for-user activity/attention并继续上游timeout，不切route、不抢Right Dock，也不为此建通知中心或后台Curator scheduler。
+第九个风险是搜索页面在后台Thread抢占当前用户界面。`auto-summary`在默认展示关闭时不创建Tab；展示开启的observer也只在owning Thread前台呈现，后台不投影waiting/reopen。当`summary-review`被明确选择时，自动呈现仍只属于当前owning Thread，后台Thread复用既有waiting-for-user activity/attention并继续上游timeout，不切route、不抢Right Dock，也不为此建通知中心或后台Curator scheduler。
 
 ## 13. Reopen triggers
 
@@ -929,13 +930,17 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "commands": [],
     "tuiShortcuts": [],
     "workflowDefault": "auto-summary",
-    "curatorPresentation": "current-thread-right-dock-dedicated-ephemeral-tab",
+    "presentationDefault": "off",
+    "observerWorkflows": ["auto-summary", "none"],
+    "observerSemantics": "nonblocking-no-waiting-no-timeline-reopen",
+    "curatorPresentation": "review-pending-or-observer-nonblocking-current-thread-right-dock-dedicated-ephemeral-tab",
     "curatorTabClose": "hide-only-tool-continues",
     "curatorReopen": "pending-tool-call-exact-tab-or-recreate",
     "curatorPresentationContext": "omnimind-locale-and-resolved-theme-snapshot",
     "curatorUrlDurability": "memory-only-no-browser-history",
     "curatorInternalOnly": true,
-    "curatorAutoPresent": "owning-thread-foreground-only"
+    "curatorAutoPresent": "owning-thread-foreground-only",
+    "fileLevelToolEnables": "canonical-config-author-semantics"
   },
   "config": {
     "authority": ".omnimind/agent/web-search.json",
