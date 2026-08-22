@@ -55,7 +55,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
 | 图标来源 | runtime Provider定义与presentation字段同源；26家全部使用本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；当前26家原色品牌资产是尚未push/packaged复验的source candidate，旧SHA `286df13768`的13品牌+13中性视觉证据已失效；真实Provider及完整search/Curator journey仍待验证，不能被引用为`packaged-product-proven`或已发行 |
+| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；26家原色品牌资产已由exact pushed SHA `4df9de2474021c1b9396931307acbdb91ee16094`重建并通过fresh隔离Settings/Provider-asset packaged gate，旧SHA `286df13768`的13品牌+13中性视觉证据仅保留为历史；真实Provider及完整search/Curator journey仍待验证，不能被引用为`packaged-product-proven`或已发行 |
 
 ### 0.3 唯一 owner 图
 
@@ -143,7 +143,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 | npm shasum | `78449966e7f682f707bb9964c3e62d5f04318d8c` |
 | downloaded tgz SHA-256 | `d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054` |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物中的 runtime TypeScript 与 exact source 对应文件逐字节一致 |
-| evidence maturity | `source-candidate-pending-packaged`；作者套件现有544项，一次full run 542项通过，失败为已知GitHub SIGTERM进程树baseline与并发负载下Gemini command-aborted瞬态，后者focused `config-path` 7/7；root typecheck、focused Server/Web/Curator/Settings/asset gates与exact-SHA安装Settings gate通过，但尚未达到真实Provider与`packaged-product-proven` |
+| evidence maturity | `candidate-with-partial-packaged-evidence`；作者套件现有544项，exact icon implementation的正确package runner full run 543项通过，唯一失败为已知GitHub SIGTERM进程树baseline；root typecheck、focused Server/Web/Curator/Settings/asset gates与exact-SHA安装Settings/Provider-asset gate通过，但尚未达到真实Provider与`packaged-product-proven` |
 
 ### 2.2 发布物结构
 
@@ -604,7 +604,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 ### 6.6 本轮图标调研结论与生产准入
 
-本轮先完成26个resolved identity的HTML视觉原型，再由维护者明确裁决26家全部采用身份准确、保持原色的本地品牌资产。当前source candidate已把固定研究快照逐字节提升到[`packages/om-web-access/assets/provider-icons/`](../packages/om-web-access/assets/provider-icons/README.md)：26个runtime identity映射到25份物理文件，唯一复用为`parallel-mcp → parallel.svg`。runtime descriptor唯一决定identity→asset投影，Web build机械复制`.svg/.png/.ico`，UI不再反色、重染或运行时热取。该交付准确记录来源与已知权利约束，但不把准确指称性使用伪装成已获授权。
+本轮先完成26个resolved identity的HTML视觉原型，再由维护者明确裁决26家全部采用身份准确、保持原色的本地品牌资产。exact pushed SHA `4df9de2474021c1b9396931307acbdb91ee16094`已把固定研究快照逐字节提升到[`packages/om-web-access/assets/provider-icons/`](../packages/om-web-access/assets/provider-icons/README.md)：26个runtime identity映射到25份物理文件，唯一复用为`parallel-mcp → parallel.svg`。runtime descriptor唯一决定identity→asset投影，Web build机械复制`.svg/.png/.ico`，UI不再反色、重染或运行时热取。由该SHA生成并安装的arm64 DMG已在任务专用profile中证明light/dark与关闭重开后26个identity全部加载、0中性fallback、0主题反色。该交付准确记录来源与已知权利约束，但不把准确指称性使用伪装成已获授权。
 
 | Provider identity | 接受的视觉映射 | 本轮候选来源 | Production disposition |
 | --- | --- | --- | --- |
@@ -976,13 +976,14 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "provider-availability-to-pi-active-set",
     "source-check-honest-unicode-contract"
   ],
-  "evidenceMaturity": "source-candidate-pending-packaged",
+  "evidenceMaturity": "candidate-with-partial-packaged-evidence",
   "implemented": true,
+  "testedImplementationSha": "4df9de2474021c1b9396931307acbdb91ee16094",
   "previousTestedImplementationSha": "286df13768de943a2db4df033180251c2f353aca",
-  "packagedSettingsProviderAssetGate": false,
+  "packagedSettingsProviderAssetGate": true,
   "packagedJourney": false,
   "unresolvedMaintainerChoice": "none"
 }
 ```
 
-后续pushed-SHA构建、真实Provider和packaged journey开始前仍必须实时读取`git status --short`、[`execution-brief.md`](../execution-brief.md)与相关architecture owner，并隔离真实用户profile及并发工作。该并发事实只决定何时安全验证，不重新否决本文已经由维护者确认的产品decision surface；source candidate也不能替代packaged evidence。
+后续真实Provider和完整packaged journey开始前仍必须实时读取`git status --short`、[`execution-brief.md`](../execution-brief.md)与相关architecture owner，并隔离真实用户profile及并发工作。该并发事实只决定何时安全验证，不重新否决本文已经由维护者确认的产品decision surface；当前Settings/Provider-asset packaged evidence也不能替代真实搜索、Curator或发行证据。

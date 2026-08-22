@@ -4,7 +4,7 @@
 
 六组内置工具的 Agent/Chat/Studio 策略已由exact pushed code SHA `586c9661e5`实现并通过merge `d4989f5cee`进入main。该code SHA已重建Desktop/DMG、替换安装，并用任务专用`userData`、home与Provider private home完成隔离fresh-profile验收；post-merge focused gates与root typecheck均通过。当前没有未完成的Host矩阵产品施工；本交付仍是本机ad-hoc candidate，不是签名、公证或Release证据。
 
-`pi-web-access@0.24.1` → `@omnimind/om-web-access`已形成`candidate/pending-packaged` candidate：exact upstream baseline、P1–P6、bundled Agent composition、唯一config owner、Pi active-set、typed Curator/Browser/Timeline lifecycle、Settings与credential-blind Provider projection均已进入任务分支。维护者已把Provider视觉标准提升为26个runtime identity全部使用身份准确、保持原色的本地品牌资产；当前26→25 source candidate已通过descriptor/hash、Settings Browser、typecheck与Web production build，且dist包含全部25份物理文件。旧pushed SHA `286df13768`的13品牌+13中性packaged视觉证据因此失效，必须从新的exact pushed SHA重建并完成fresh隔离复验。它仍只属于bundled OmniMind Agent，不是AgentGateway/第七组Host/stock Pi能力；授权真实Provider、MiMo/DeepSeek及search→Curator→continuation完整packaged journey尚未完成，因此不能称`packaged-product-proven`、已发行或已进入main。
+`pi-web-access@0.24.1` → `@omnimind/om-web-access`已形成`candidate/pending-packaged` candidate：exact upstream baseline、P1–P6、bundled Agent composition、唯一config owner、Pi active-set、typed Curator/Browser/Timeline lifecycle、Settings与credential-blind Provider projection均已进入任务分支。维护者要求的26个runtime identity全部使用身份准确、保持原色的本地品牌资产已由exact pushed implementation SHA `4df9de2474021c1b9396931307acbdb91ee16094`实现，并从该SHA重建DMG、替换安装后以任务专用profile完成Settings-first、深浅主题、关闭重开Provider-asset gate：26个identity均加载、25份物理资产、0中性fallback、无主题反色。旧pushed SHA `286df13768`的13品牌+13中性视觉证据仅保留为历史，不能代表当前交付。它仍只属于bundled OmniMind Agent，不是AgentGateway/第七组Host/stock Pi能力；授权真实Provider、MiMo/DeepSeek及search→Curator→continuation完整packaged journey尚未完成，因此不能称`packaged-product-proven`、已发行或已进入main。
 
 ## 唯一 owner 与当前事实
 
@@ -28,8 +28,9 @@
 2. exact pushed `586c9661e5` 生成DMG SHA-256 `cd97b9dd…51ece`，DMG与安装后的`app.asar`均为`3cdb313e…b784`；安装版进程使用隔离profile且bundled Server来自安装包。
 3. 安装版中文/英文矩阵、Agent/Chat/Studio默认、unsupported文案、真实815px窄屏分层、Chat Goals写入`revision=1`、关闭重开恢复均通过；App最小窗口约815px，390px由浏览器组件回归覆盖。
 4. merge `d4989f5cee`后的Shared/Contracts 15项、Server 412项、Settings Browser 10项及root typecheck 6/6通过；另以独立测试维护提交修正两个既有`@synara/contracts`陈旧导入。真实用户profile与并行research修改未被读取、改写或清理。
-5. Web Access作者套件现有544项；同一full run中542项通过，失败为untouched baseline已复现的GitHub SIGTERM进程树竞态和一个并发负载下的Gemini command-aborted瞬态，后者随即用focused `config-path` 7/7证明非稳定回归。root typecheck 7/7、Web Settings Browser 2/2、双语catalog 22/22以及focused Server/P1–P6/Curator/Browser/Provider-asset gates通过。
+5. Web Access作者套件现有544项；exact icon implementation的正确package runner full run为543项通过，唯一失败是untouched baseline已复现的GitHub SIGTERM进程树竞态。root typecheck 7/7、Web Settings Browser 2/2、双语catalog 22/22以及focused Server/P1–P6/Curator/Browser/Provider-asset gates通过。
 6. 历史pushed SHA `286df13768`生成DMG SHA-256 `228796d58d64d3f2e3544e0a340fc6115db75b87fa8786e5152fa64de458b0c9`，安装版与构建候选`app.asar`均为`4f4abbefef2b7011da70bdac57eccb48b3071053798783f0ab66967a23bbfadb`。该fresh隔离实例曾证明13个品牌asset与13个中性mark可渲染、canonical默认配置为`0600`，但已被26家全部原色品牌asset的新标准取代，不能继续作为当前视觉交付证据。
+7. exact pushed SHA `4df9de2474021c1b9396931307acbdb91ee16094`生成arm64 DMG SHA-256 `a02aff4c4ce3945fbbd9800a18f3a639bf5419c73fdc2a53b4dfe382f74e264e`，DMG与安装版`app.asar`均为`2e40168b9a644c609de94204bab297dec776bd0072852009f14ba3cc3b067b56`。隔离进程证据确认Main、Renderer与bundled Server全部使用`/tmp/omnimind-web-icons-journey.35BS86`下的任务目录；packaged Settings在light/dark与关闭重开后均为26个loaded local assets、25个unique paths、0 neutral、0 CSS inversion。该证据只关闭Settings/Provider-asset安装门，不替代真实搜索、Curator或发行证据。
 
 ## Stop-loss
 
