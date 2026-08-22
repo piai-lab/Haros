@@ -4,7 +4,7 @@
 
 六组内置工具的 Agent/Chat/Studio 策略已由exact pushed code SHA `586c9661e5`实现并通过merge `d4989f5cee`进入main。该code SHA已重建Desktop/DMG、替换安装，并用任务专用`userData`、home与Provider private home完成隔离fresh-profile验收；post-merge focused gates与root typecheck均通过。当前没有未完成的Host矩阵产品施工；本交付仍是本机ad-hoc candidate，不是签名、公证或Release证据。
 
-`pi-web-access@0.24.1` → `@omnimind/om-web-access`已形成`candidate/pending-packaged` source candidate：exact upstream baseline、P1–P6、bundled Agent composition、唯一config owner、Pi active-set、typed Curator/Browser/Timeline lifecycle、Settings与credential-blind Provider projection均已进入任务分支；首次exact-SHA release staging进一步发现并补齐了workspace manifest closure。它仍只属于bundled OmniMind Agent，不是AgentGateway/第七组Host/stock Pi能力。当前尚未从包含该closure的最终pushed implementation SHA重建Desktop，也未完成授权真实Provider、MiMo/DeepSeek与fresh isolated packaged journey；因此只能称source candidate，不能称用户已安装或发行已完成。
+`pi-web-access@0.24.1` → `@omnimind/om-web-access`已形成`candidate/pending-packaged` candidate：exact upstream baseline、P1–P6、bundled Agent composition、唯一config owner、Pi active-set、typed Curator/Browser/Timeline lifecycle、Settings与credential-blind Provider projection均已进入任务分支。exact pushed implementation SHA `286df13768`已完成clean-clone Desktop/DMG重建、替换安装和fresh task profile的Settings-first packaged gate；13个已准入Provider品牌资产在浅色/深色下真实加载，另13个未准入服务使用中性字母mark，默认config以`0600`确定性写出。它仍只属于bundled OmniMind Agent，不是AgentGateway/第七组Host/stock Pi能力；授权真实Provider、MiMo/DeepSeek及search→Curator→continuation完整packaged journey尚未完成，因此不能称`packaged-product-proven`、已发行或已进入main。
 
 ## 唯一 owner 与当前事实
 
@@ -28,7 +28,8 @@
 2. exact pushed `586c9661e5` 生成DMG SHA-256 `cd97b9dd…51ece`，DMG与安装后的`app.asar`均为`3cdb313e…b784`；安装版进程使用隔离profile且bundled Server来自安装包。
 3. 安装版中文/英文矩阵、Agent/Chat/Studio默认、unsupported文案、真实815px窄屏分层、Chat Goals写入`revision=1`、关闭重开恢复均通过；App最小窗口约815px，390px由浏览器组件回归覆盖。
 4. merge `d4989f5cee`后的Shared/Contracts 15项、Server 412项、Settings Browser 10项及root typecheck 6/6通过；另以独立测试维护提交修正两个既有`@synara/contracts`陈旧导入。真实用户profile与并行research修改未被读取、改写或清理。
-5. Web Access source candidate的作者套件543项中542项通过，唯一失败是untouched baseline已复现的GitHub SIGTERM进程树竞态；root typecheck 7/7、Web Settings Browser 2/2、双语catalog 22/22以及focused Server/P1–P6/Curator/Browser gates通过。品牌资产目前全部准确使用中性provider glyph，research候选与未准入mark未进入production bytes；真实Provider与packaged evidence仍待下一关。
+5. Web Access作者套件现有544项；同一full run中542项通过，失败为untouched baseline已复现的GitHub SIGTERM进程树竞态和一个并发负载下的Gemini command-aborted瞬态，后者随即用focused `config-path` 7/7证明非稳定回归。root typecheck 7/7、Web Settings Browser 2/2、双语catalog 22/22以及focused Server/P1–P6/Curator/Browser/Provider-asset gates通过。
+6. pushed SHA `286df13768`生成DMG SHA-256 `228796d58d64d3f2e3544e0a340fc6115db75b87fa8786e5152fa64de458b0c9`，安装版与构建候选`app.asar`均为`4f4abbefef2b7011da70bdac57eccb48b3071053798783f0ab66967a23bbfadb`。fresh隔离安装实例通过exact Electron CDP验证26个Provider identity中13个本地品牌asset全部加载成功、13个未准入identity全部使用中性mark、浅色与深色均可辨识；首次Settings进入生成79-byte、`0600`且显式包含`provider: "auto"`/`workflow: "summary-review"`的canonical配置。验证前后均无真实profile OmniMind进程；会按bundle display name误拉真实profile的Computer Use路径不再作为本候选UI证据。
 
 ## Stop-loss
 

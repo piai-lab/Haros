@@ -2,7 +2,7 @@
 
 > 观察与收口日期：2026-08-22
 >
-> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。2026-08-22 source candidate 已在任务分支形成有序实现提交，但尚未完成最终pushed-SHA Desktop、真实Provider与packaged journey；Host Tools事实仍不能外推为Web Access证据。
+> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。2026-08-22 candidate 已在任务分支形成有序实现提交，并从exact pushed SHA完成Desktop重建、替换安装与fresh-profile Settings/Provider-asset packaged gate；真实Provider、MiMo/DeepSeek与完整search/Curator journey仍待验证。Host Tools事实仍不能外推为Web Access证据。
 >
 > 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
 >
@@ -13,7 +13,7 @@
 > 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，production adoption 只有进入根 [`README.md`](../README.md) 的 `source-adoptions` 后才成立。
 
 > [!IMPORTANT]
-> **当前 disposition：`Fork narrowly`；monorepo-owned source candidate 已实现，状态为`candidate/pending-packaged`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。当前不得把source tests改写成用户已安装、真实Provider已验证或packaged product已交付。
+> **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态仍为`candidate/pending-packaged`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。exact-SHA Settings与Provider-asset安装门已通过，但不得把这项局部packaged evidence改写成真实Provider、Curator完整journey或发行已完成。
 
 > [!IMPORTANT]
 > 本文 supersede [`omnimind-agent-core-ecosystem-orchestration-review.md`](omnimind-agent-core-ecosystem-orchestration-review.md) §8.4 中“机器调用默认关闭 Curator、只有用户明确要求才打开”的历史建议。维护者当前决定是：**Curator 默认开启**；用户可在 Settings 改为关闭，Agent 也可按单次调用选择不打开或在用户要求审查来源时主动打开。
@@ -55,7 +55,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
 | 图标来源 | runtime Provider定义与presentation字段同源；本地固定资产须单独闭合来源、revision/hash、license与trademark，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings source candidate；尚未从pushed exact SHA完成Desktop、真实Provider和packaged journey，不能被引用为“用户已经拿到功能” |
+| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；pushed SHA `286df13768`已完成Desktop重建、替换安装与fresh隔离Settings/Provider-asset gate，真实Provider及完整search/Curator journey仍待验证，不能被引用为`packaged-product-proven`或已发行 |
 
 ### 0.3 唯一 owner 图
 
@@ -143,7 +143,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 | npm shasum | `78449966e7f682f707bb9964c3e62d5f04318d8c` |
 | downloaded tgz SHA-256 | `d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054` |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物中的 runtime TypeScript 与 exact source 对应文件逐字节一致 |
-| evidence maturity | `source-candidate-pending-packaged`；作者套件543项中542项通过，唯一失败为untouched baseline已复现的GitHub SIGTERM进程树竞态；root typecheck、focused Server/Web/Curator/Settings gates通过，但尚未达到真实Provider与`packaged-product-proven` |
+| evidence maturity | `source-candidate-pending-packaged`；作者套件现有544项，一次full run 542项通过，失败为已知GitHub SIGTERM进程树baseline与并发负载下Gemini command-aborted瞬态，后者focused `config-path` 7/7；root typecheck、focused Server/Web/Curator/Settings/asset gates与exact-SHA安装Settings gate通过，但尚未达到真实Provider与`packaged-product-proven` |
 
 ### 2.2 发布物结构
 
@@ -834,6 +834,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 ### 10.8 Real-provider 与 packaged product
 
+- 已完成局部门：exact pushed implementation SHA `286df13768de943a2db4df033180251c2f353aca`经clean clone生成DMG SHA-256 `228796d58d64d3f2e3544e0a340fc6115db75b87fa8786e5152fa64de458b0c9`，安装`app.asar`为`4f4abbefef2b7011da70bdac57eccb48b3071053798783f0ab66967a23bbfadb`；fresh任务profile中backend启动、canonical默认文件、13个准入品牌asset与13个中性fallback的浅/深色真实渲染通过。该证据不包含真实搜索或Curator settlement。
 - 使用最小真实资源覆盖至少一个 zero-config route、一个 keyed route、一个 route exhaustion；
 - MiMo 与 DeepSeek 作为 OmniMind Agent model锚点验证模型能发现/调用/继续 `get_search_content`；
 - exact pushed SHA 构建、安装、fresh task profile、隔离 `.omnimind` / `.pi`；
@@ -987,6 +988,8 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
   ],
   "evidenceMaturity": "source-candidate-pending-packaged",
   "implemented": true,
+  "testedImplementationSha": "286df13768de943a2db4df033180251c2f353aca",
+  "packagedSettingsProviderAssetGate": true,
   "packagedJourney": false,
   "unresolvedMaintainerChoice": "none"
 }
