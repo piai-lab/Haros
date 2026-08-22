@@ -34,4 +34,12 @@ describe("release workspace manifests", () => {
       [...new Set(requiredWorkspaceDependencies.filter((name) => stagedPackageNames.has(name)))].sort(),
     );
   });
+
+  it("keeps the Curator browser renderer on the package version that exports its local asset", async () => {
+    const server = await readPackage("apps/server/package.json");
+    const webAccess = await readPackage("packages/om-web-access/package.json");
+
+    expect(server.dependencies?.marked).toBe(webAccess.dependencies?.marked);
+    expect(server.dependencies?.marked).toBe("15.0.12");
+  });
 });

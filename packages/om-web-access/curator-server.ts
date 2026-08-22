@@ -1,5 +1,6 @@
 import http, { type IncomingMessage, type ServerResponse } from "node:http";
 import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { generateCuratorPage } from "./curator-page.ts";
 import type { SummaryMeta } from "./summary-review.ts";
@@ -10,7 +11,7 @@ const STALE_THRESHOLD_MS = 30000;
 const WATCHDOG_INTERVAL_MS = 1000;
 const MAX_BODY_SIZE = 64 * 1024;
 const MARKED_BROWSER_SOURCE = readFileSync(
-	fileURLToPath(import.meta.resolve("marked/marked.min.js")),
+	join(dirname(fileURLToPath(import.meta.resolve("marked/package.json"))), "marked.min.js"),
 	"utf8",
 );
 
