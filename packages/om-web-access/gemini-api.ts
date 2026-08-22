@@ -1,11 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
+import { scopedValue } from "./runtime-context.ts";
 
 const DEFAULT_API_HOST = "https://generativelanguage.googleapis.com";
 const API_VERSION = "v1beta";
 export const API_BASE = `${DEFAULT_API_HOST}/${API_VERSION}`;
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 export const DEFAULT_MODEL = "gemini-3.6-flash";
 
 interface GeminiApiConfig {
@@ -14,23 +14,8 @@ interface GeminiApiConfig {
 	cloudflareApiKey?: unknown;
 }
 
-let cachedConfig: GeminiApiConfig | null = null;
-
 function loadConfig(): GeminiApiConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	try {
-		cachedConfig = JSON.parse(raw) as GeminiApiConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+	return readWebSearchConfig() as GeminiApiConfig;
 }
 
 function withTimeout(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
@@ -113,13 +98,13 @@ function redactGeminiCredentials(text: string, apiKey: string | null | undefined
 	return redactCredential(redactCredential(text, apiKey), cloudflareApiKey);
 }
 
-const responseCredentials = new WeakMap<Response, {
+const responseCredentials = scopedValue<WeakMap<Response, {
 	apiKey: string | null | undefined;
 	cloudflareApiKey: string | null | undefined;
-}>();
+}>>("gemini-response-credentials", () => new WeakMap());
 
 export function redactGeminiApiResponse(response: Response, text: string, apiKey?: string | null): string {
-	const credentials = responseCredentials.get(response);
+	const credentials = responseCredentials.value.get(response);
 	return redactGeminiCredentials(text, credentials?.apiKey ?? apiKey, credentials?.cloudflareApiKey);
 }
 
@@ -151,7 +136,7 @@ export async function fetchGeminiApi(
 	}
 	try {
 		const response = await fetch(parsedUrl, { ...init, headers });
-		responseCredentials.set(response, { apiKey: resolvedApiKey, cloudflareApiKey });
+		responseCredentials.value.set(response, { apiKey: resolvedApiKey, cloudflareApiKey });
 		return response;
 	} catch (error) {
 		const message = error instanceof Error ? error.message : String(error);
@@ -196,7 +181,7 @@ export async function queryGeminiApiWithInlineData(
 	if (!apiKey && !isGatewayConfigured()) {
 		throw new Error(
 			"Gemini API not configured. Either:\n" +
-			`  1. Configure geminiApiKey in ${CONFIG_PATH} or set GEMINI_API_KEY\n` +
+			`  1. Configure geminiApiKey in ${configPath()} or set GEMINI_API_KEY\n` +
 			"  2. Set GOOGLE_GEMINI_BASE_URL + CLOUDFLARE_API_KEY for Cloudflare AI Gateway routing"
 		);
 	}
@@ -251,7 +236,7 @@ export async function queryGeminiApiWithVideo(
 	if (!apiKey && !isGatewayConfigured()) {
 		throw new Error(
 			"Gemini API not configured. Either:\n" +
-			`  1. Configure geminiApiKey in ${CONFIG_PATH} or set GEMINI_API_KEY\n` +
+			`  1. Configure geminiApiKey in ${configPath()} or set GEMINI_API_KEY\n` +
 			"  2. Set GOOGLE_GEMINI_BASE_URL + CLOUDFLARE_API_KEY for Cloudflare AI Gateway routing"
 		);
 	}

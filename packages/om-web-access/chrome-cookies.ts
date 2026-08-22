@@ -4,6 +4,7 @@ import { copyFileSync, existsSync, mkdtempSync, readdirSync, readFileSync, realp
 import { tmpdir, homedir } from "node:os";
 import { isAbsolute, join, sep } from "node:path";
 import { isBrowserCookieAccessAllowed } from "./gemini-web-config.ts";
+import { scopedMap, scopedValue } from "./runtime-context.ts";
 
 export type CookieMap = Record<string, string>;
 
@@ -54,17 +55,17 @@ const WINDOWS_BROWSER_CONFIGS: BrowserConfig[] = [
 	{ name: "Edge", baseDir: "Microsoft/Edge/User Data", usesLocalAppData: true },
 ];
 
-const browserPasswordCache = new Map<string, Promise<string | null>>();
-let lastCookieDiagnostic: string | null = null;
+const browserPasswordCache = scopedMap<string, Promise<string | null>>("browser-password-cache");
+const cookieDiagnostic = scopedValue<string | null>("browser-cookie-diagnostic", () => null);
 let sqliteModule: typeof import("node:sqlite") | null = null;
 let sqliteImportAttempted = false;
 
 export function getLastGoogleCookieDiagnostic(): string | null {
-	return lastCookieDiagnostic;
+	return cookieDiagnostic.value;
 }
 
 export function getLastBrowserCookieDiagnostic(): string | null {
-	return lastCookieDiagnostic;
+	return cookieDiagnostic.value;
 }
 
 export async function getGoogleCookies(
@@ -82,16 +83,16 @@ export async function getGoogleCookies(
 export async function getBrowserCookiesForHosts(
 	options: { hosts: string[]; profile?: string; requiredCookies?: string[]; cookieNames?: Iterable<string>; requiredLabel?: string; requestUrl?: URL },
 ): Promise<{ cookies: CookieMap; warnings: string[]; cookieHeader?: string } | null> {
-	lastCookieDiagnostic = null;
+	cookieDiagnostic.value = null;
 	if (!isBrowserCookieAccessAllowed()) {
-		lastCookieDiagnostic = "Browser cookie access is disabled; enable allowBrowserCookies to use browser cookies.";
+		cookieDiagnostic.value = "Browser cookie access is disabled; enable allowBrowserCookies to use browser cookies.";
 		return null;
 	}
 
 	const currentPlatform = process.platform;
 	const configs = currentPlatform === "darwin" ? MACOS_BROWSER_CONFIGS : currentPlatform === "linux" ? LINUX_BROWSER_CONFIGS : currentPlatform === "win32" ? WINDOWS_BROWSER_CONFIGS : [];
 	if (configs.length === 0) {
-		lastCookieDiagnostic = "Chromium cookie extraction is unsupported on this platform.";
+		cookieDiagnostic.value = "Chromium cookie extraction is unsupported on this platform.";
 		return null;
 	}
 
@@ -99,14 +100,14 @@ export async function getBrowserCookiesForHosts(
 	const rawProfile = typeof options.profile === "string" ? options.profile.trim() : "";
 	const requestedProfile = normalizeProfileName(options.profile);
 	if (rawProfile && !requestedProfile) {
-		lastCookieDiagnostic = "Configured Chromium profile must be a profile directory name, not a path.";
+		cookieDiagnostic.value = "Configured Chromium profile must be a profile directory name, not a path.";
 		return null;
 	}
 	const requiredCookies = normalizeCookieNames(options.requiredCookies);
 	const cookieNames = normalizeCookieNames(options.cookieNames ? [...options.cookieNames] : undefined);
 	const hosts = normalizeHosts(options.hosts);
 	if (hosts.length === 0) {
-		lastCookieDiagnostic = "No valid cookie hosts were requested.";
+		cookieDiagnostic.value = "No valid cookie hosts were requested.";
 		return null;
 	}
 	const home = currentPlatform === "win32" ? process.env.USERPROFILE || homedir() : homedir();
@@ -197,27 +198,27 @@ export async function getBrowserCookiesForHosts(
 	}
 
 	if (sawBackendFailure === "unavailable") {
-		lastCookieDiagnostic = "SQLite backend unavailable: install sqlite3 or use a runtime with SQLite support.";
+		cookieDiagnostic.value = "SQLite backend unavailable: install sqlite3 or use a runtime with SQLite support.";
 	} else if (sawBackendFailure === "query") {
-		lastCookieDiagnostic = "SQLite query failed while reading the copied Chromium cookie database.";
+		cookieDiagnostic.value = "SQLite query failed while reading the copied Chromium cookie database.";
 	} else if (sawUnsafeProfilePath) {
-		lastCookieDiagnostic = "Configured Chromium profile must resolve inside the browser profile root.";
+		cookieDiagnostic.value = "Configured Chromium profile must resolve inside the browser profile root.";
 	} else if (!sawCookieDatabase) {
-		lastCookieDiagnostic = requestedProfile
+		cookieDiagnostic.value = requestedProfile
 			? `Chromium profile '${requestedProfile}' does not contain a cookie database.`
 			: "No detected Chromium profile contains a cookie database.";
 	} else if (requiredCookies?.length && !sawRequiredCookies) {
-		lastCookieDiagnostic = `No detected Chromium profile contains the required ${options.requiredLabel ?? "browser"} cookies.`;
+		cookieDiagnostic.value = `No detected Chromium profile contains the required ${options.requiredLabel ?? "browser"} cookies.`;
 	} else if (sawWindowsAppBoundCookie) {
-		lastCookieDiagnostic = "Windows Chromium v20 app-bound cookies are not supported.";
+		cookieDiagnostic.value = "Windows Chromium v20 app-bound cookies are not supported.";
 	} else if (!sawAnyHostCookie) {
-		lastCookieDiagnostic = options.requestUrl
+		cookieDiagnostic.value = options.requestUrl
 			? "No detected Chromium profile contains cookies for the requested URL."
 			: "No detected Chromium profile contains cookies for the requested host.";
 	} else if (warningSet.size > 0) {
-		lastCookieDiagnostic = [...warningSet][0];
+		cookieDiagnostic.value = [...warningSet][0];
 	} else {
-		lastCookieDiagnostic = "Required Gemini cookies were not available or could not be decrypted.";
+		cookieDiagnostic.value = "Required Gemini cookies were not available or could not be decrypted.";
 	}
 	return null;
 }

@@ -1,13 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
 import type { ExtractedContent, ExtractOptions } from "./extract.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const SEARCH1API_SEARCH_URL = "https://api.search1api.com/search";
 const SEARCH1API_CRAWL_URL = "https://api.search1api.com/crawl";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 const CRAWL_TIMEOUT_MS = 60_000;
 
@@ -43,31 +42,11 @@ interface Search1APISearchOptions extends SearchOptions {
 	includeContent?: boolean;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${CONFIG_PATH}: expected a JSON object`);
-	}
-	cachedConfig = parsed as WebSearchConfig;
-	return cachedConfig;
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-async function getApiKey(signal?: AbortSignal): Promise<string> {
+async function getApiKey(signal?: AbortSignal): Promise<string>  {
 	const key = await resolveCredential({
 		provider: "Search1API",
 		configuredValue: loadConfig().search1apiApiKey,
@@ -77,7 +56,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	if (!key) {
 		throw new Error(
 			"Search1API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "search1apiApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "search1apiApiKey": "your-key" }\n` +
 			"  2. Set SEARCH1API_KEY environment variable\n" +
 			"Create a key at https://dashboard.search1api.com",
 		);
@@ -85,7 +64,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	return key;
 }
 
-export function isSearch1APIAvailable(): boolean {
+export function isSearch1APIAvailable(): boolean  {
 	return hasCredentialSource({
 		provider: "Search1API",
 		configuredValue: loadConfig().search1apiApiKey,
@@ -93,21 +72,21 @@ export function isSearch1APIAvailable(): boolean {
 	});
 }
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
-function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal  {
 	const timeout = AbortSignal.timeout(timeoutMs);
 	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-function normalizeNumResults(value: number | undefined): number {
+function normalizeNumResults(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return 5;
 	return Math.max(1, Math.min(Math.floor(value), 20));
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -122,7 +101,7 @@ function normalizeDomain(value: string): string | null {
 	return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(input) ? input : null;
 }
 
-function mapDomainFilter(domainFilter: string[] | undefined): { includeSites: string[]; excludeSites: string[] } {
+function mapDomainFilter(domainFilter: string[] | undefined):  { includeSites: string[]; excludeSites: string[] } {
 	const includeSites: string[] = [];
 	const excludeSites: string[] = [];
 	for (const raw of domainFilter ?? []) {
@@ -134,7 +113,7 @@ function mapDomainFilter(domainFilter: string[] | undefined): { includeSites: st
 	return { includeSites, excludeSites };
 }
 
-function buildSearchBody(query: string, options: Search1APISearchOptions): Record<string, unknown> {
+function buildSearchBody(query: string, options: Search1APISearchOptions): Record<string, unknown>  {
 	const numResults = normalizeNumResults(options.numResults);
 	const { includeSites, excludeSites } = mapDomainFilter(options.domainFilter);
 	return {
@@ -186,7 +165,7 @@ async function search1APIJsonRequest<T>(
 	}
 }
 
-function mapSearchResults(results: Search1APISearchResult[] | undefined): SearchResponse["results"] {
+function mapSearchResults(results: Search1APISearchResult[] | undefined): SearchResponse["results"]  {
 	if (!Array.isArray(results)) {
 		throw new Error("Search1API Search API returned an unexpected response shape");
 	}
@@ -201,7 +180,7 @@ function mapSearchResults(results: Search1APISearchResult[] | undefined): Search
 	});
 }
 
-function mapInlineContent(results: Search1APISearchResult[] | undefined): ExtractedContent[] {
+function mapInlineContent(results: Search1APISearchResult[] | undefined): ExtractedContent[]  {
 	if (!Array.isArray(results)) return [];
 	return results.flatMap((item) => {
 		if (!item || typeof item.link !== "string" || item.link.trim().length === 0) return [];
@@ -215,7 +194,7 @@ function mapInlineContent(results: Search1APISearchResult[] | undefined): Extrac
 	});
 }
 
-function buildAnswer(results: SearchResponse["results"]): string {
+function buildAnswer(results: SearchResponse["results"]): string  {
 	return results.map((result) => {
 		if (result.snippet) return `${result.snippet}\nSource: ${result.title} (${result.url})`;
 		return `Source: ${result.title} (${result.url})`;

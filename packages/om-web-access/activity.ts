@@ -1,3 +1,5 @@
+import { currentWebAccessContext } from "./runtime-context.ts";
+
 // Types
 export interface ActivityEntry {
 	id: string;
@@ -98,4 +100,24 @@ export class ActivityMonitor {
 	}
 }
 
-export const activityMonitor = new ActivityMonitor();
+const LEGACY_ACTIVITY_MONITOR = new ActivityMonitor();
+const ACTIVITY_MONITOR_KEY = "activity-monitor";
+
+function activeActivityMonitor(): ActivityMonitor {
+	const context = currentWebAccessContext();
+	if (!context) return LEGACY_ACTIVITY_MONITOR;
+	let monitor = context.values.get(ACTIVITY_MONITOR_KEY) as ActivityMonitor | undefined;
+	if (!monitor) {
+		monitor = new ActivityMonitor();
+		context.values.set(ACTIVITY_MONITOR_KEY, monitor);
+	}
+	return monitor;
+}
+
+export const activityMonitor = new Proxy(LEGACY_ACTIVITY_MONITOR, {
+	get(_target, property) {
+		const monitor = activeActivityMonitor();
+		const value = Reflect.get(monitor, property, monitor) as unknown;
+		return typeof value === "function" ? value.bind(monitor) : value;
+	},
+});

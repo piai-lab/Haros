@@ -1,12 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
 import type { ExtractedContent } from "./extract.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const JINA_SEARCH_BASE_URL = "https://s.jina.ai/";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 
 interface WebSearchConfig {
@@ -29,27 +28,8 @@ interface JinaSearchOptions extends SearchOptions {
 	includeContent?: boolean;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
-function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf8");
-	try {
-		const parsed: unknown = JSON.parse(raw);
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-			throw new Error("expected a JSON object");
-		}
-		cachedConfig = parsed as WebSearchConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+function loadConfig(): WebSearchConfig{
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
 async function getApiKey(signal?: AbortSignal): Promise<string | null> {
@@ -66,7 +46,7 @@ async function requireApiKey(signal?: AbortSignal): Promise<string> {
 	if (!apiKey) {
 		throw new Error(
 			"Jina Search API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "jinaApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "jinaApiKey": "your-key" }\n` +
 			"  2. Set JINA_API_KEY environment variable\n" +
 			"Get a key at https://jina.ai/api-dashboard",
 		);

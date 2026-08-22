@@ -1,38 +1,18 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const BOCHA_SEARCH_URL = "https://api.bochaai.com/v1/web-search";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 
 interface WebSearchConfig {
 	bochaApiKey?: unknown;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${CONFIG_PATH}: expected a JSON object`);
-	}
-	cachedConfig = parsed as WebSearchConfig;
-	return cachedConfig;
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
 async function getApiKey(signal?: AbortSignal): Promise<string | null> {
@@ -49,7 +29,7 @@ async function requireApiKey(signal?: AbortSignal): Promise<string> {
 	if (!apiKey) {
 		throw new Error(
 			"Bocha API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "bochaApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "bochaApiKey": "your-key" }\n` +
 			"  2. Set BOCHA_API_KEY environment variable\n" +
 			"Create a key at https://open.bochaai.com/",
 		);

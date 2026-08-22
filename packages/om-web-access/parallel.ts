@@ -1,13 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import type { ExtractedContent, ExtractOptions } from "./extract.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const PARALLEL_SEARCH_URL = "https://api.parallel.ai/v1/search";
 const PARALLEL_EXTRACT_URL = "https://api.parallel.ai/v1/extract";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const MIN_PARALLEL_API_KEY_LENGTH = 8;
 const MIN_USEFUL_CONTENT = 500;
 const SEARCH_TIMEOUT_MS = 60_000;
@@ -50,27 +49,12 @@ interface ParallelSearchOptions extends SearchOptions {
 	includeContent?: boolean;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
-function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	try {
-		cachedConfig = JSON.parse(raw) as WebSearchConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+function loadConfig(): WebSearchConfig{
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
 export function clearParallelConfigCache(): void {
-	cachedConfig = null;
+	// The package-owned config service has no module-local cache to clear.
 }
 
 function normalizeApiKey(value: unknown): string | null {
@@ -120,7 +104,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	if (!key) {
 		throw new Error(
 			"Parallel API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "parallelApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "parallelApiKey": "your-key" }\n` +
 			"  2. Set PARALLEL_API_KEY environment variable\n" +
 			"Get a key at https://platform.parallel.ai",
 		);

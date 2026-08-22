@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const SEARCHINFINITY_SEARCH_URL = "https://torchlight.byteintlapi.com/search_api/web_search";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 // API Key authenticated requests time out server-side after 30 seconds.
 const SEARCH_TIMEOUT_MS = 30_000;
 
@@ -50,31 +49,11 @@ interface SearchinfinitySearchOptions extends SearchOptions {
 	includeContent?: boolean;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${CONFIG_PATH}: expected a JSON object`);
-	}
-	cachedConfig = parsed as WebSearchConfig;
-	return cachedConfig;
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-async function getApiKey(signal?: AbortSignal): Promise<string> {
+async function getApiKey(signal?: AbortSignal): Promise<string>  {
 	const key = await resolveCredential({
 		provider: "Searchinfinity",
 		configuredValue: loadConfig().searchinfinityApiKey,
@@ -84,7 +63,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	if (!key) {
 		throw new Error(
 			"Searchinfinity API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "searchinfinityApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "searchinfinityApiKey": "your-key" }\n` +
 			"  2. Set SEARCHINFINITY_API_KEY environment variable\n" +
 			"Create a key at https://console.byteplus.com/search-infinity/api-key",
 		);
@@ -92,7 +71,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	return key;
 }
 
-export function isSearchinfinityAvailable(): boolean {
+export function isSearchinfinityAvailable(): boolean  {
 	return hasCredentialSource({
 		provider: "Searchinfinity",
 		configuredValue: loadConfig().searchinfinityApiKey,
@@ -100,21 +79,21 @@ export function isSearchinfinityAvailable(): boolean {
 	});
 }
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
-function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal  {
 	const timeout = AbortSignal.timeout(timeoutMs);
 	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-function normalizeNumResults(value: number | undefined): number {
+function normalizeNumResults(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return 5;
 	return Math.max(1, Math.min(Math.floor(value), 20));
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -129,7 +108,7 @@ function normalizeDomain(value: string): string | null {
 	return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(input) ? input : null;
 }
 
-function mapRecencyFilter(recency: SearchOptions["recencyFilter"]): string | undefined {
+function mapRecencyFilter(recency: SearchOptions["recencyFilter"]): string | undefined  {
 	if (recency === "day") return "OneDay";
 	if (recency === "week") return "OneWeek";
 	if (recency === "month") return "OneMonth";
@@ -137,7 +116,7 @@ function mapRecencyFilter(recency: SearchOptions["recencyFilter"]): string | und
 	return undefined;
 }
 
-function buildSearchBody(query: string, options: SearchinfinitySearchOptions): Record<string, unknown> {
+function buildSearchBody(query: string, options: SearchinfinitySearchOptions): Record<string, unknown>  {
 	const includeSites: string[] = [];
 	const blockHosts: string[] = [];
 	for (const raw of options.domainFilter ?? []) {
@@ -163,7 +142,7 @@ function buildSearchBody(query: string, options: SearchinfinitySearchOptions): R
 // error classification (auth/quota/invalid-request/transient) keeps working.
 // CodeN carries the numeric code (e.g. 700901); Code may be a slug (e.g.
 // "invalid_api_key"), so match both.
-function businessErrorStatus(codeN: number | undefined, code: string, message: string): number | undefined {
+function businessErrorStatus(codeN: number | undefined, code: string, message: string): number | undefined  {
 	if (codeN === 700901 || code === "invalid_api_key") return 401;
 	if (codeN === 700429 || code === "700429") return 429;
 	if (codeN === 10400 || code === "10400") return 400;
@@ -220,7 +199,7 @@ async function searchinfinityJsonRequest(
 	return data;
 }
 
-function mapSearchResults(results: SearchinfinityWebResult[] | undefined): SearchResponse["results"] {
+function mapSearchResults(results: SearchinfinityWebResult[] | undefined): SearchResponse["results"]  {
 	if (!Array.isArray(results)) {
 		throw new Error("Searchinfinity Search API returned an unexpected response shape");
 	}
@@ -237,7 +216,7 @@ function mapSearchResults(results: SearchinfinityWebResult[] | undefined): Searc
 	});
 }
 
-function buildAnswer(results: SearchResponse["results"]): string {
+function buildAnswer(results: SearchResponse["results"]): string  {
 	return results.map((result) => {
 		if (result.snippet) return `${result.snippet}\nSource: ${result.title} (${result.url})`;
 		return `Source: ${result.title} (${result.url})`;

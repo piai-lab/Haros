@@ -1,12 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import type { ExtractedContent } from "./extract.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const SERPDIVE_API_URL = "https://api.serpdive.com/v1/search";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 
 // Retrieval depth. The default is deliberately the free tier: this provider
@@ -43,26 +42,11 @@ interface SerpdiveSearchOptions extends SearchOptions {
 	includeContent?: boolean;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	try {
-		cachedConfig = JSON.parse(raw) as WebSearchConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-async function getApiKey(signal?: AbortSignal): Promise<string | null> {
+async function getApiKey(signal?: AbortSignal): Promise<string | null>  {
 	return resolveCredential({
 		provider: "SERPdive",
 		configuredValue: loadConfig().serpdiveApiKey,
@@ -71,12 +55,12 @@ async function getApiKey(signal?: AbortSignal): Promise<string | null> {
 	});
 }
 
-async function requireApiKey(signal?: AbortSignal): Promise<string> {
+async function requireApiKey(signal?: AbortSignal): Promise<string>  {
 	const apiKey = await getApiKey(signal);
 	if (!apiKey) {
 		throw new Error(
 			"SERPdive API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "serpdiveApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "serpdiveApiKey": "your-key" }\n` +
 			"  2. Set SERPDIVE_API_KEY environment variable\n" +
 			"Get a key at https://serpdive.com/dashboard/keys",
 		);
@@ -86,19 +70,19 @@ async function requireApiKey(signal?: AbortSignal): Promise<string> {
 
 // An unknown value falls back to the free default rather than failing: a typo
 // in a config file must not cost the user money, and must not break search.
-function resolveModel(): SerpdiveModel {
+function resolveModel(): SerpdiveModel  {
 	const raw = process.env.SERPDIVE_MODEL ?? loadConfig().serpdiveModel;
 	if (typeof raw !== "string") return DEFAULT_MODEL;
 	const value = raw.trim().toLowerCase();
 	return (MODELS as readonly string[]).includes(value) ? value as SerpdiveModel : DEFAULT_MODEL;
 }
 
-function normalizeCount(value: number | undefined): number {
+function normalizeCount(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return 5;
 	return Math.max(1, Math.min(Math.floor(value), 20));
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -118,7 +102,7 @@ interface DomainFilters {
 	exclude: string[];
 }
 
-function parseDomainFilter(domainFilter: string[] | undefined): DomainFilters {
+function parseDomainFilter(domainFilter: string[] | undefined): DomainFilters  {
 	const filters: DomainFilters = { include: [], exclude: [] };
 	if (!domainFilter?.length) return filters;
 	for (const raw of domainFilter) {
@@ -130,14 +114,14 @@ function parseDomainFilter(domainFilter: string[] | undefined): DomainFilters {
 	return filters;
 }
 
-function domainMatches(hostname: string, domain: string): boolean {
+function domainMatches(hostname: string, domain: string): boolean  {
 	return hostname === domain || hostname.endsWith(`.${domain}`);
 }
 
 // SERPdive exposes no include/exclude domain parameter, so the filter is applied
 // here, on what came back. It can therefore only ever narrow a page of results —
 // it cannot ask the engine for more pages from a given domain.
-function passesDomainFilters(url: string, filters: DomainFilters): boolean {
+function passesDomainFilters(url: string, filters: DomainFilters): boolean  {
 	if (filters.include.length === 0 && filters.exclude.length === 0) return true;
 	let hostname: string;
 	try {
@@ -154,7 +138,7 @@ function passesDomainFilters(url: string, filters: DomainFilters): boolean {
 // and read by the engine, which biases ranking toward recent pages — it is a
 // hint, never a guaranteed freshness filter, and results outside the window can
 // still come back.
-function applyRecencyHint(query: string, recencyFilter: SearchOptions["recencyFilter"]): string {
+function applyRecencyHint(query: string, recencyFilter: SearchOptions["recencyFilter"]): string  {
 	if (!recencyFilter) return query;
 	const hints: Record<string, string> = {
 		day: "past 24 hours",
@@ -166,12 +150,12 @@ function applyRecencyHint(query: string, recencyFilter: SearchOptions["recencyFi
 	return hint ? `${query} ${hint}` : query;
 }
 
-function requestSignal(signal?: AbortSignal): AbortSignal {
+function requestSignal(signal?: AbortSignal): AbortSignal  {
 	const timeout = AbortSignal.timeout(SEARCH_TIMEOUT_MS);
 	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
@@ -194,7 +178,7 @@ function mapResults(
 	return mapped;
 }
 
-function mapInlineContent(results: SerpdiveResult[] | undefined, filters: DomainFilters): ExtractedContent[] {
+function mapInlineContent(results: SerpdiveResult[] | undefined, filters: DomainFilters): ExtractedContent[]  {
 	if (!Array.isArray(results)) return [];
 	return results.flatMap((item) => {
 		if (!item?.url || !passesDomainFilters(item.url, filters)) return [];
@@ -212,7 +196,7 @@ function mapInlineContent(results: SerpdiveResult[] | undefined, filters: Domain
 // one is assembled from the sources — the same shape brave.ts and searxng.ts
 // produce for providers that do not synthesize. mako and moby ask the API for a
 // real answer and use it when it comes back.
-function buildAnswer(apiAnswer: string | null | undefined, results: SearchResponse["results"]): string {
+function buildAnswer(apiAnswer: string | null | undefined, results: SearchResponse["results"]): string  {
 	if (typeof apiAnswer === "string" && apiAnswer.trim().length > 0) return apiAnswer;
 	return results
 		.map((result) => {
@@ -222,7 +206,7 @@ function buildAnswer(apiAnswer: string | null | undefined, results: SearchRespon
 		.join("\n\n");
 }
 
-export function isSerpdiveAvailable(): boolean {
+export function isSerpdiveAvailable(): boolean  {
 	return hasCredentialSource({
 		provider: "SERPdive",
 		configuredValue: loadConfig().serpdiveApiKey,
@@ -230,7 +214,7 @@ export function isSerpdiveAvailable(): boolean {
 	});
 }
 
-export async function searchWithSerpdive(query: string, options: SerpdiveSearchOptions = {}): Promise<SearchResponse> {
+export async function searchWithSerpdive(query: string, options: SerpdiveSearchOptions = {}): Promise<SearchResponse>  {
 	const apiKey = await requireApiKey(options.signal);
 	const numResults = normalizeCount(options.numResults);
 	const filters = parseDomainFilter(options.domainFilter);

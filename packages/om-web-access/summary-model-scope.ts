@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
+import { currentWebAccessContext } from "./runtime-context.ts";
 
 const THINKING_LEVELS = new Set(["off", "minimal", "low", "medium", "high", "xhigh", "max"]);
 
@@ -61,6 +62,9 @@ function readSettings(path: string): Record<string, unknown> {
 }
 
 export function loadEnabledModelPatterns(ctx: SummaryModelScopeContext): string[] | null {
+	// OmniMind's injected ModelRuntime/SettingsManager already owns its model scope.
+	// Never consult stock Pi global or project state from the bundled profile.
+	if (currentWebAccessContext()?.profile === "omnimind") return null;
 	const globalSettings = readSettings(join(getAgentDir(), "settings.json"));
 	const projectSettings = ctx.isProjectTrusted()
 		? readSettings(join(ctx.cwd, ".pi", "settings.json"))

@@ -1,13 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import type { ExtractedContent, ExtractOptions } from "./extract.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const TINYFISH_SEARCH_URL = "https://api.search.tinyfish.ai";
 const TINYFISH_FETCH_URL = "https://api.fetch.tinyfish.ai";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 const FETCH_TIMEOUT_MS = 150_000;
 const MAX_FETCH_URLS = 10;
@@ -57,30 +56,15 @@ interface TinyFishSearchOptions extends SearchOptions {
 	includeContent?: boolean;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	try {
-		cachedConfig = JSON.parse(raw) as WebSearchConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-export function clearTinyFishConfigCache(): void {
-	cachedConfig = null;
+export function clearTinyFishConfigCache(): void  {
+	// The package-owned config service has no module-local cache to clear.
 }
 
-async function getApiKey(signal?: AbortSignal): Promise<string> {
+async function getApiKey(signal?: AbortSignal): Promise<string>  {
 	const key = await resolveCredential({
 		provider: "TinyFish",
 		configuredValue: loadConfig().tinyfishApiKey,
@@ -90,7 +74,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	if (!key) {
 		throw new Error(
 			"TinyFish API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "tinyfishApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "tinyfishApiKey": "your-key" }\n` +
 			"  2. Set TINYFISH_API_KEY environment variable\n" +
 			"Get a key at https://agent.tinyfish.ai/api-keys",
 		);
@@ -98,7 +82,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	return key;
 }
 
-export function isTinyFishAvailable(): boolean {
+export function isTinyFishAvailable(): boolean  {
 	return hasCredentialSource({
 		provider: "TinyFish",
 		configuredValue: loadConfig().tinyfishApiKey,
@@ -106,16 +90,16 @@ export function isTinyFishAvailable(): boolean {
 	});
 }
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
-function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal  {
 	const timeout = AbortSignal.timeout(timeoutMs);
 	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -130,7 +114,7 @@ function normalizeDomain(value: string): string | null {
 	return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(input) ? input : null;
 }
 
-function mapDomainFilter(domainFilter: string[] | undefined): { includeDomains: string[]; excludeDomains: string[] } {
+function mapDomainFilter(domainFilter: string[] | undefined):  { includeDomains: string[]; excludeDomains: string[] } {
 	const includeDomains: string[] = [];
 	const excludeDomains: string[] = [];
 	for (const raw of domainFilter ?? []) {
@@ -142,7 +126,7 @@ function mapDomainFilter(domainFilter: string[] | undefined): { includeDomains: 
 	return { includeDomains, excludeDomains };
 }
 
-function recencyMinutes(filter: SearchOptions["recencyFilter"]): number | undefined {
+function recencyMinutes(filter: SearchOptions["recencyFilter"]): number | undefined  {
 	if (!filter) return undefined;
 	const minutes: Record<NonNullable<SearchOptions["recencyFilter"]>, number> = {
 		day: 1_440,
@@ -153,12 +137,12 @@ function recencyMinutes(filter: SearchOptions["recencyFilter"]): number | undefi
 	return minutes[filter];
 }
 
-function normalizeNumResults(value: number | undefined): number {
+function normalizeNumResults(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return 5;
 	return Math.max(1, Math.min(Math.floor(value), 20));
 }
 
-function buildSearchUrl(query: string, options: SearchOptions, page: number): string {
+function buildSearchUrl(query: string, options: SearchOptions, page: number): string  {
 	const params = new URLSearchParams({ query });
 	const { includeDomains, excludeDomains } = mapDomainFilter(options.domainFilter);
 	if (includeDomains.length > 0) params.set("include_domains", includeDomains.join(","));
@@ -208,7 +192,7 @@ async function tinyFishJsonRequest<T>(
 	}
 }
 
-function mapSearchResults(results: TinyFishSearchResult[] | undefined): SearchResponse["results"] {
+function mapSearchResults(results: TinyFishSearchResult[] | undefined): SearchResponse["results"]  {
 	if (!Array.isArray(results)) return [];
 	return results.flatMap((item) => {
 		if (!item || typeof item.url !== "string" || item.url.trim().length === 0) return [];
@@ -221,7 +205,7 @@ function mapSearchResults(results: TinyFishSearchResult[] | undefined): SearchRe
 	});
 }
 
-function deduplicateResults(results: SearchResponse["results"], limit: number): SearchResponse["results"] {
+function deduplicateResults(results: SearchResponse["results"], limit: number): SearchResponse["results"]  {
 	const seen = new Set<string>();
 	const unique: SearchResponse["results"] = [];
 	for (const result of results) {
@@ -233,19 +217,19 @@ function deduplicateResults(results: SearchResponse["results"], limit: number): 
 	return unique;
 }
 
-function buildAnswer(results: SearchResponse["results"]): string {
+function buildAnswer(results: SearchResponse["results"]): string  {
 	return results.map((result) => {
 		if (result.snippet) return `${result.snippet}\nSource: ${result.title} (${result.url})`;
 		return `Source: ${result.title} (${result.url})`;
 	}).join("\n\n");
 }
 
-function fetchPerUrlTimeout(value: number | undefined): number {
+function fetchPerUrlTimeout(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return MAX_FETCH_PER_URL_TIMEOUT_MS;
 	return Math.max(1, Math.min(Math.floor(value), MAX_FETCH_PER_URL_TIMEOUT_MS));
 }
 
-function fetchBody(urls: string[], options: ExtractOptions = {}): Record<string, unknown> {
+function fetchBody(urls: string[], options: ExtractOptions = {}): Record<string, unknown>  {
 	const body: Record<string, unknown> = {
 		urls,
 		format: "markdown",
@@ -256,18 +240,18 @@ function fetchBody(urls: string[], options: ExtractOptions = {}): Record<string,
 	return body;
 }
 
-function findFetchError(errors: TinyFishFetchError[] | undefined, url: string): TinyFishFetchError | undefined {
+function findFetchError(errors: TinyFishFetchError[] | undefined, url: string): TinyFishFetchError | undefined  {
 	if (!Array.isArray(errors)) return undefined;
 	return errors.find(item => item?.url === url) ?? errors[0];
 }
 
-function fetchResultContent(result: TinyFishFetchResult): string {
+function fetchResultContent(result: TinyFishFetchResult): string  {
 	if (typeof result.text === "string") return result.text.trim();
 	if (result.text && typeof result.text === "object") return JSON.stringify(result.text, null, 2);
 	return "";
 }
 
-function mapFetchResult(result: TinyFishFetchResult | undefined, requestedUrl: string): ExtractedContent | null {
+function mapFetchResult(result: TinyFishFetchResult | undefined, requestedUrl: string): ExtractedContent | null  {
 	if (!result) return null;
 	const content = fetchResultContent(result);
 	if (!content) return null;
@@ -318,7 +302,7 @@ async function fetchInlineContent(
 	return content;
 }
 
-export async function searchWithTinyFish(query: string, options: TinyFishSearchOptions = {}): Promise<SearchResponse> {
+export async function searchWithTinyFish(query: string, options: TinyFishSearchOptions = {}): Promise<SearchResponse>  {
 	const apiKey = await getApiKey(options.signal);
 	const numResults = normalizeNumResults(options.numResults);
 	const activityId = activityMonitor.logStart({ type: "api", query });

@@ -1,13 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
 import type { ExtractedContent, ExtractOptions } from "./extract.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const QUERIT_SEARCH_URL = "https://api.querit.ai/v1/search";
 const QUERIT_CONTENTS_URL = "https://api.querit.ai/v1/contents";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 const CONTENTS_TIMEOUT_MS = 60_000;
 const MAX_CONTENT_URLS = 10;
@@ -64,31 +63,11 @@ interface QueritSearchOptions extends SearchOptions {
 	includeContent?: boolean;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${CONFIG_PATH}: expected a JSON object`);
-	}
-	cachedConfig = parsed as WebSearchConfig;
-	return cachedConfig;
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-async function getApiKey(signal?: AbortSignal): Promise<string> {
+async function getApiKey(signal?: AbortSignal): Promise<string>  {
 	const key = await resolveCredential({
 		provider: "Querit",
 		configuredValue: loadConfig().queritApiKey,
@@ -98,7 +77,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	if (!key) {
 		throw new Error(
 			"Querit API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "queritApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "queritApiKey": "your-key" }\n` +
 			"  2. Set QUERIT_API_KEY environment variable\n" +
 			"Create a key at https://www.querit.ai/en/dashboard/api-keys",
 		);
@@ -106,7 +85,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	return key;
 }
 
-export function isQueritAvailable(): boolean {
+export function isQueritAvailable(): boolean  {
 	return hasCredentialSource({
 		provider: "Querit",
 		configuredValue: loadConfig().queritApiKey,
@@ -114,21 +93,21 @@ export function isQueritAvailable(): boolean {
 	});
 }
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
-function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal {
+function requestSignal(signal: AbortSignal | undefined, timeoutMs: number): AbortSignal  {
 	const timeout = AbortSignal.timeout(timeoutMs);
 	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-function normalizeNumResults(value: number | undefined): number {
+function normalizeNumResults(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return 5;
 	return Math.max(1, Math.min(Math.floor(value), 20));
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -143,7 +122,7 @@ function normalizeDomain(value: string): string | null {
 	return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(input) ? input : null;
 }
 
-function mapDomainFilter(domainFilter: string[] | undefined): { include: string[]; exclude: string[] } {
+function mapDomainFilter(domainFilter: string[] | undefined):  { include: string[]; exclude: string[] } {
 	const include: string[] = [];
 	const exclude: string[] = [];
 	for (const raw of domainFilter ?? []) {
@@ -155,7 +134,7 @@ function mapDomainFilter(domainFilter: string[] | undefined): { include: string[
 	return { include, exclude };
 }
 
-function mapRecencyFilter(value: SearchOptions["recencyFilter"]): string | undefined {
+function mapRecencyFilter(value: SearchOptions["recencyFilter"]): string | undefined  {
 	if (value === "day") return "d1";
 	if (value === "week") return "w1";
 	if (value === "month") return "m1";
@@ -163,7 +142,7 @@ function mapRecencyFilter(value: SearchOptions["recencyFilter"]): string | undef
 	return undefined;
 }
 
-function buildSearchBody(query: string, options: QueritSearchOptions): Record<string, unknown> {
+function buildSearchBody(query: string, options: QueritSearchOptions): Record<string, unknown>  {
 	const { include, exclude } = mapDomainFilter(options.domainFilter);
 	const date = mapRecencyFilter(options.recencyFilter);
 	const filters: Record<string, unknown> = {};
@@ -181,17 +160,17 @@ function buildSearchBody(query: string, options: QueritSearchOptions): Record<st
 	};
 }
 
-function normalizeTimeoutMs(value: number | undefined): number {
+function normalizeTimeoutMs(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return CONTENTS_TIMEOUT_MS;
 	return Math.max(1, Math.floor(value));
 }
 
-function crawlTimeoutSeconds(value: number | undefined): number {
+function crawlTimeoutSeconds(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return 10;
 	return Math.max(1, Math.min(Math.ceil(value / 1_000), 60));
 }
 
-function buildContentsBody(urls: string[], options: ExtractOptions = {}): Record<string, unknown> {
+function buildContentsBody(urls: string[], options: ExtractOptions = {}): Record<string, unknown>  {
 	return {
 		urls,
 		format: "markdown",
@@ -248,7 +227,7 @@ async function queritJsonRequest<T>(
 	}
 }
 
-function assertApiSuccess(label: "Search" | "Contents", data: QueritSearchResponse | QueritContentsResponse): void {
+function assertApiSuccess(label: "Search" | "Contents", data: QueritSearchResponse | QueritContentsResponse): void  {
 	const code = Number(data.error_code);
 	if (!Number.isFinite(code) || code !== 200) {
 		const renderedCode = data.error_code === undefined ? "unknown" : String(data.error_code);
@@ -257,7 +236,7 @@ function assertApiSuccess(label: "Search" | "Contents", data: QueritSearchRespon
 	}
 }
 
-function mapSearchResults(data: QueritSearchResponse): SearchResponse["results"] {
+function mapSearchResults(data: QueritSearchResponse): SearchResponse["results"]  {
 	const items = data.results?.result;
 	if (!Array.isArray(items)) {
 		throw new Error("Querit Search API returned an unexpected response shape");
@@ -273,14 +252,14 @@ function mapSearchResults(data: QueritSearchResponse): SearchResponse["results"]
 	});
 }
 
-function buildAnswer(results: SearchResponse["results"]): string {
+function buildAnswer(results: SearchResponse["results"]): string  {
 	return results.map((result) => {
 		if (result.snippet) return `${result.snippet}\nSource: ${result.title} (${result.url})`;
 		return `Source: ${result.title} (${result.url})`;
 	}).join("\n\n");
 }
 
-function mapContentResult(result: QueritContentResult | undefined, requestedUrl: string): ExtractedContent | null {
+function mapContentResult(result: QueritContentResult | undefined, requestedUrl: string): ExtractedContent | null  {
 	if (!result || typeof result.content !== "string" || result.content.trim().length === 0) return null;
 	const metadata = result.extrasMeta;
 	return {
@@ -304,7 +283,7 @@ function findContentResult(
 	return data.results.length === requestedCount ? data.results[index] : undefined;
 }
 
-function failedContentStatus(data: QueritContentsResponse, result: QueritContentResult | undefined, index: number): boolean {
+function failedContentStatus(data: QueritContentsResponse, result: QueritContentResult | undefined, index: number): boolean  {
 	if (!Array.isArray(data.statuses)) return false;
 	const status = result?.id
 		? data.statuses.find((item) => item?.id === result.id)
@@ -333,7 +312,7 @@ async function fetchContentsBatch(
 	return data;
 }
 
-async function fetchInlineContent(urls: string[], apiKey: string, signal?: AbortSignal): Promise<ExtractedContent[]> {
+async function fetchInlineContent(urls: string[], apiKey: string, signal?: AbortSignal): Promise<ExtractedContent[]>  {
 	const content: ExtractedContent[] = [];
 	for (let offset = 0; offset < urls.length; offset += MAX_CONTENT_URLS) {
 		const batch = urls.slice(offset, offset + MAX_CONTENT_URLS);

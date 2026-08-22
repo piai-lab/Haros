@@ -1,14 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import { canAttachImages } from "./feature-config.ts";
 import { isGeminiWebAvailable, queryWithCookies } from "./gemini-web.ts";
 import { isGeminiApiAvailable, queryGeminiApiWithVideo } from "./gemini-api.ts";
 import { isPerplexityAvailable, searchWithPerplexity } from "./perplexity.ts";
 import { extractHeadingTitle, type ExtractedContent, type FrameResult, type VideoFrame } from "./extract.ts";
-import { formatSeconds, readExecError, isTimeoutError, trimErrorText, mapFfmpegError, getWebSearchConfigPath } from "./utils.ts";
+import { formatSeconds, readExecError, isTimeoutError, trimErrorText, mapFfmpegError, getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 
 const YOUTUBE_PROMPT = `Extract the complete content of this YouTube video. Include:
 1. Video title, channel name, and duration
@@ -21,15 +20,15 @@ Format as markdown.`;
 const YOUTUBE_REGEX =
 	/(?:(?:www\.|m\.)?youtube\.com\/(?:watch\?.*v=|shorts\/|live\/|embed\/|v\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
-function shouldRethrow(err: unknown): boolean {
+function shouldRethrow(err: unknown): boolean  {
 	return errorMessage(err).startsWith("Failed to parse ");
 }
 
-function addAttemptError(errors: string[], label: string, err: unknown): void {
+function addAttemptError(errors: string[], label: string, err: unknown): void  {
 	const message = errorMessage(err).replace(/\s+/g, " ").trim();
 	if (message) errors.push(`${label}: ${message}`);
 }
@@ -39,44 +38,27 @@ interface YouTubeConfig {
 	preferredModel: string;
 }
 
-function normalizePreferredModel(value: unknown, fallback: string): string {
+function normalizePreferredModel(value: unknown, fallback: string): string  {
 	if (typeof value !== "string") return fallback;
 	const normalized = value.trim();
 	return normalized.length > 0 ? normalized : fallback;
 }
 
-function normalizeEnabled(value: unknown, fallback: boolean): boolean {
+function normalizeEnabled(value: unknown, fallback: boolean): boolean  {
 	return typeof value === "boolean" ? value : fallback;
 }
 
 const defaults: YouTubeConfig = { enabled: true, preferredModel: "gemini-3.6-flash" };
-let cachedConfig: YouTubeConfig | null = null;
-
 function loadYouTubeConfig(): YouTubeConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = { ...defaults };
-		return cachedConfig;
-	}
-
-	const rawText = readFileSync(CONFIG_PATH, "utf-8");
-	let raw: { youtube?: { enabled?: boolean; preferredModel?: string } };
-	try {
-		raw = JSON.parse(rawText) as { youtube?: { enabled?: boolean; preferredModel?: string } };
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-
-	const yt = raw.youtube ?? {};
-	cachedConfig = {
-		enabled: normalizeEnabled(yt.enabled, defaults.enabled),
-		preferredModel: normalizePreferredModel(yt.preferredModel, defaults.preferredModel),
+	const raw = readWebSearchConfig() as { youtube?: { enabled?: boolean; preferredModel?: string } };
+	const youtube = raw.youtube ?? {};
+	return {
+		enabled: normalizeEnabled(youtube.enabled, defaults.enabled),
+		preferredModel: normalizePreferredModel(youtube.preferredModel, defaults.preferredModel),
 	};
-	return cachedConfig;
 }
 
-export function isYouTubeURL(url: string): { isYouTube: boolean; videoId: string | null } {
+export function isYouTubeURL(url: string):  { isYouTube: boolean; videoId: string | null } {
 	try {
 		const parsed = new URL(url);
 		if (parsed.pathname === "/playlist") {
@@ -90,7 +72,7 @@ export function isYouTubeURL(url: string): { isYouTube: boolean; videoId: string
 	return { isYouTube: true, videoId: match[1] };
 }
 
-export function isYouTubeEnabled(): boolean {
+export function isYouTubeEnabled(): boolean  {
 	return loadYouTubeConfig().enabled;
 }
 
@@ -140,7 +122,7 @@ export async function extractYouTube(
 type StreamInfo = { streamUrl: string; duration: number | null };
 type StreamResult = StreamInfo | { error: string };
 
-function mapYtDlpError(err: unknown): string {
+function mapYtDlpError(err: unknown): string  {
 	const { code, stderr, message } = readExecError(err);
 	if (code === "ENOENT") return "yt-dlp is not installed. Install with: brew install yt-dlp";
 	if (isTimeoutError(err)) return "yt-dlp timed out fetching video info";
@@ -153,7 +135,7 @@ function mapYtDlpError(err: unknown): string {
 	return snippet ? `yt-dlp failed: ${snippet}` : "yt-dlp failed";
 }
 
-export async function getYouTubeStreamInfo(videoId: string): Promise<StreamResult> {
+export async function getYouTubeStreamInfo(videoId: string): Promise<StreamResult>  {
 	try {
 		const output = execFileSync("yt-dlp", [
 			"--print", "duration",
@@ -171,7 +153,7 @@ export async function getYouTubeStreamInfo(videoId: string): Promise<StreamResul
 	}
 }
 
-async function extractFrameFromStream(streamUrl: string, seconds: number): Promise<FrameResult> {
+async function extractFrameFromStream(streamUrl: string, seconds: number): Promise<FrameResult>  {
 	try {
 		const buffer = execFileSync("ffmpeg", [
 			"-ss", String(seconds), "-i", streamUrl,
@@ -211,7 +193,7 @@ export async function extractYouTubeFrames(
 	return { frames, duration: info.duration, error: frames.length === 0 && errorResult ? errorResult.error : null };
 }
 
-export async function fetchYouTubeThumbnail(videoId: string): Promise<{ data: string; mimeType: string } | null> {
+export async function fetchYouTubeThumbnail(videoId: string): Promise< { data: string; mimeType: string } | null> {
 	try {
 		const res = await fetch(`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`, {
 			signal: AbortSignal.timeout(5000),

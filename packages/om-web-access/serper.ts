@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import type { SearchOptions, SearchResponse } from "./perplexity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const SERPER_SEARCH_URL = "https://google.serper.dev/search";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 const RECENCY_TBS: Record<NonNullable<SearchOptions["recencyFilter"]>, string> = {
 	day: "qdr:d",
@@ -24,30 +23,11 @@ interface SerperResult {
 	snippet?: unknown;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${CONFIG_PATH}: expected a JSON object`);
-	}
-	cachedConfig = parsed as WebSearchConfig;
-	return cachedConfig;
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-async function getApiKey(signal?: AbortSignal): Promise<string | null> {
+async function getApiKey(signal?: AbortSignal): Promise<string | null>  {
 	return resolveCredential({
 		provider: "Serper",
 		configuredValue: loadConfig().serperApiKey,
@@ -56,12 +36,12 @@ async function getApiKey(signal?: AbortSignal): Promise<string | null> {
 	});
 }
 
-async function requireApiKey(signal?: AbortSignal): Promise<string> {
+async function requireApiKey(signal?: AbortSignal): Promise<string>  {
 	const apiKey = await getApiKey(signal);
 	if (!apiKey) {
 		throw new Error(
 			"Serper API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "serperApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "serperApiKey": "your-key" }\n` +
 			"  2. Set SERPER_API_KEY environment variable\n" +
 			"Get a key at https://serper.dev",
 		);
@@ -69,7 +49,7 @@ async function requireApiKey(signal?: AbortSignal): Promise<string> {
 	return apiKey;
 }
 
-function normalizeCount(value: number | undefined): number {
+function normalizeCount(value: number | undefined): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return 5;
 	return Math.max(1, Math.min(Math.floor(value), 20));
 }
@@ -79,7 +59,7 @@ interface DomainFilters {
 	exclude: string[];
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -94,7 +74,7 @@ function normalizeDomain(value: string): string | null {
 	return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(input) ? input : null;
 }
 
-function parseDomainFilter(domainFilter: string[] | undefined): DomainFilters {
+function parseDomainFilter(domainFilter: string[] | undefined): DomainFilters  {
 	const filters: DomainFilters = { include: [], exclude: [] };
 	for (const raw of domainFilter ?? []) {
 		const domain = normalizeDomain(raw);
@@ -105,7 +85,7 @@ function parseDomainFilter(domainFilter: string[] | undefined): DomainFilters {
 	return filters;
 }
 
-function passesDomainFilters(url: string, filters: DomainFilters): boolean {
+function passesDomainFilters(url: string, filters: DomainFilters): boolean  {
 	if (filters.include.length === 0 && filters.exclude.length === 0) return true;
 	let hostname: string;
 	try {
@@ -118,7 +98,7 @@ function passesDomainFilters(url: string, filters: DomainFilters): boolean {
 	return filters.include.length === 0 || filters.include.some(matches);
 }
 
-function buildQuery(query: string, filters: DomainFilters): string {
+function buildQuery(query: string, filters: DomainFilters): string  {
 	const parts = [query];
 	if (filters.include.length === 1) parts.push(`site:${filters.include[0]}`);
 	if (filters.include.length > 1) parts.push(`(${filters.include.map(domain => `site:${domain}`).join(" OR ")})`);
@@ -126,32 +106,32 @@ function buildQuery(query: string, filters: DomainFilters): string {
 	return parts.join(" ");
 }
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
-function invalidResponse(message: string): Error {
+function invalidResponse(message: string): Error  {
 	return new Error(`Serper API returned invalid response: ${message}`);
 }
 
-function parseResponse(value: unknown): SerperResult[] {
+function parseResponse(value: unknown): SerperResult[]  {
 	if (!value || typeof value !== "object" || Array.isArray(value)) throw invalidResponse("expected an object envelope");
 	const envelope = value as Record<string, unknown>;
 	if (!Array.isArray(envelope.organic)) throw invalidResponse("expected organic array");
 	return envelope.organic as SerperResult[];
 }
 
-function buildAnswer(results: SearchResponse["results"]): string {
+function buildAnswer(results: SearchResponse["results"]): string  {
 	return results.map((result) => result.snippet
 		? `${result.snippet}\nSource: ${result.title} (${result.url})`
 		: `Source: ${result.title} (${result.url})`).join("\n\n");
 }
 
-export function isSerperAvailable(): boolean {
+export function isSerperAvailable(): boolean  {
 	return hasCredentialSource({ provider: "Serper", configuredValue: loadConfig().serperApiKey, environmentValue: process.env.SERPER_API_KEY });
 }
 
-export async function searchWithSerper(query: string, options: SearchOptions = {}): Promise<SearchResponse> {
+export async function searchWithSerper(query: string, options: SearchOptions = {}): Promise<SearchResponse>  {
 	const apiKey = await requireApiKey(options.signal);
 	const numResults = normalizeCount(options.numResults);
 	const filters = parseDomainFilter(options.domainFilter);

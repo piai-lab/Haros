@@ -11,7 +11,7 @@ import { rewriteSearchQuery } from "./query-rewrite.ts";
 import { clearCloneCache } from "./github-extract.ts";
 import { getConfiguredSearchRouting, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, type AttributedSearchResponse, type SearchProvider, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
 import type { SearchResult } from "./perplexity.ts";
-import { formatSeconds, getWebSearchConfigDir, getWebSearchConfigPath, resolveCuratorNetworkConfig } from "./utils.ts";
+import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig, resolveCuratorNetworkConfig } from "./utils.ts";
 import {
 	clearResults,
 	deleteResult,
@@ -37,7 +37,7 @@ import { randomUUID } from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { platform } from "node:os";
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { isPerplexityAvailable } from "./perplexity.ts";
 import { isExaAvailable } from "./exa.ts";
@@ -77,10 +77,21 @@ import {
 	type RecencyFilter,
 	type ResearchArtifact,
 } from "./source-check.ts";
+import {
+	bindExtensionApiToWebAccessContext,
+	clearCurrentWebAccessInstance,
+	createWebAccessInstanceContext,
+	currentWebSearchConfigService,
+	runWithWebAccessContext,
+	scopedMap,
+	scopedValue,
+	type WebAccessRuntimeProfile,
+} from "./runtime-context.ts";
+import {
+	type WebSearchConfigService,
+} from "./config-service.ts";
 
 type ExtensionTheme = ExtensionContext["ui"]["theme"];
-
-const WEB_SEARCH_CONFIG_PATH = getWebSearchConfigPath();
 
 let extractModulePromise: Promise<typeof import("./extract.ts")> | undefined;
 async function fetchAllContent(
@@ -199,29 +210,25 @@ function parseConfigRoot(raw: string): Record<string, unknown> {
 		parsed = JSON.parse(raw);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${WEB_SEARCH_CONFIG_PATH}: ${message}`);
+		throw new Error(`Failed to parse ${getWebSearchConfigPath()}: ${message}`);
 	}
 	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${WEB_SEARCH_CONFIG_PATH}: expected a JSON object`);
+		throw new Error(`Invalid config in ${getWebSearchConfigPath()}: expected a JSON object`);
 	}
 	return parsed as Record<string, unknown>;
 }
 
 function loadConfig(): WebSearchConfig {
-	if (!existsSync(WEB_SEARCH_CONFIG_PATH)) return {};
-	return parseConfigRoot(readFileSync(WEB_SEARCH_CONFIG_PATH, "utf-8")) as WebSearchConfig;
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
 function saveConfig(updates: Partial<WebSearchConfig>): void {
-	let config: Record<string, unknown> = {};
-	if (existsSync(WEB_SEARCH_CONFIG_PATH)) {
-		config = parseConfigRoot(readFileSync(WEB_SEARCH_CONFIG_PATH, "utf-8"));
-	}
-
-	Object.assign(config, updates);
-	const dir = getWebSearchConfigDir();
-	if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-	writeFileSync(WEB_SEARCH_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+	const service = currentWebSearchConfigService();
+	const snapshot = service.readSnapshot();
+	service.mutate({
+		expectedRevision: snapshot.revision,
+		candidate: { ...snapshot.config, ...updates },
+	});
 }
 
 type ToolNames = {
@@ -270,16 +277,16 @@ function joinToolNames(names: string[]): string {
 
 function resolveToolNames(config: WebSearchConfig): ToolNames {
 	if (config.toolNames !== undefined && (!config.toolNames || typeof config.toolNames !== "object" || Array.isArray(config.toolNames))) {
-		throw new Error(`toolNames in ${WEB_SEARCH_CONFIG_PATH} must be an object`);
+		throw new Error(`toolNames in ${getWebSearchConfigPath()} must be an object`);
 	}
 	const names = { ...DEFAULT_TOOL_NAMES };
 	for (const key of Object.keys(DEFAULT_TOOL_NAMES) as Array<keyof ToolNames>) {
 		const value = config.toolNames?.[key];
 		if (value === undefined) continue;
-		if (typeof value !== "string") throw new Error(`toolNames.${key} in ${WEB_SEARCH_CONFIG_PATH} must be a string`);
+		if (typeof value !== "string") throw new Error(`toolNames.${key} in ${getWebSearchConfigPath()} must be a string`);
 		const trimmed = value.trim();
 		if (!TOOL_NAME_PATTERN.test(trimmed)) {
-			throw new Error(`toolNames.${key} in ${WEB_SEARCH_CONFIG_PATH} must start with a letter and contain only letters, numbers, underscores, or hyphens`);
+			throw new Error(`toolNames.${key} in ${getWebSearchConfigPath()} must start with a letter and contain only letters, numbers, underscores, or hyphens`);
 		}
 		names[key] = trimmed;
 	}
@@ -289,7 +296,7 @@ function resolveToolNames(config: WebSearchConfig): ToolNames {
 	for (const key of registeredKeys) {
 		const name = names[key];
 		const previous = seen.get(name);
-		if (previous) throw new Error(`toolNames.${key} duplicates toolNames.${previous} in ${WEB_SEARCH_CONFIG_PATH}`);
+		if (previous) throw new Error(`toolNames.${key} duplicates toolNames.${previous} in ${getWebSearchConfigPath()}`);
 		seen.set(name, key);
 	}
 	return names;
@@ -314,7 +321,7 @@ function resolveRequestedProvider(requested: unknown): SearchProviderSelection {
 	const normalizedRequested = normalizeProviderInput(requested);
 	if (normalizedRequested && normalizedRequested !== "auto") return normalizedRequested;
 	const config = loadConfig();
-	return normalizeProviderInput(config.searchProvider ?? config.provider, `provider in ${WEB_SEARCH_CONFIG_PATH}`) ?? "auto";
+	return normalizeProviderInput(config.searchProvider ?? config.provider, `provider in ${getWebSearchConfigPath()}`) ?? "auto";
 }
 
 function toCuratorProvider(provider: SearchProviderSelection): CuratorProvider | undefined {
@@ -544,13 +551,13 @@ function resolveProvider(
 	return provider;
 }
 
-const pendingFetches = new Map<string, AbortController>();
-let sessionActive = false;
-let widgetVisible = false;
-let widgetUnsubscribe: (() => void) | null = null;
-const pendingCurates = new Map<string, PendingCurate>();
-const activeCurators = new Map<string, CuratorServerHandle>();
-const glimpseWins = new Map<string, GlimpseWindow>();
+const pendingFetches = scopedMap<string, AbortController>("pending-fetches");
+const sessionActive = scopedValue("session-active", () => false);
+const widgetVisible = scopedValue("widget-visible", () => false);
+const widgetUnsubscribe = scopedValue<(() => void) | null>("widget-unsubscribe", () => null);
+const pendingCurates = scopedMap<string, PendingCurate>("pending-curates");
+const activeCurators = scopedMap<string, CuratorServerHandle>("active-curators");
+const glimpseWins = scopedMap<string, GlimpseWindow>("glimpse-windows");
 
 interface PendingCurate {
 	phase: "searching" | "curating";
@@ -949,20 +956,20 @@ function handleSessionChange(ctx: ExtensionContext): void {
 	abortPendingFetches();
 	closeCurator();
 	clearCloneCache();
-	sessionActive = true;
+	sessionActive.value = true;
 	restoreFromSession(ctx);
 	// Unsubscribe before clear() to avoid callback with stale ctx
-	widgetUnsubscribe?.();
-	widgetUnsubscribe = null;
+	widgetUnsubscribe.value?.();
+	widgetUnsubscribe.value = null;
 	activityMonitor.clear();
-	if (widgetVisible) {
+	if (widgetVisible.value) {
 		// Re-subscribe with new ctx
-		widgetUnsubscribe = activityMonitor.onUpdate(() => updateWidget(ctx));
+		widgetUnsubscribe.value = activityMonitor.onUpdate(() => updateWidget(ctx));
 		updateWidget(ctx);
 	}
 }
 
-export default function (pi: ExtensionAPI) {
+function registerWebAccessExtension(pi: ExtensionAPI) {
 	const initConfig = loadConfigForExtensionInit();
 	const toolNames = resolveToolNames(initConfig);
 	const webSearchEnabled = isToolEnabled(initConfig, "webSearch");
@@ -990,7 +997,7 @@ export default function (pi: ExtensionAPI) {
 		pendingFetches.set(fetchId, controller);
 		fetchAllContent(urls, controller.signal)
 			.then((fetched) => {
-				if (!sessionActive || !pendingFetches.has(fetchId)) return;
+				if (!sessionActive.value || !pendingFetches.has(fetchId)) return;
 				const data = {
 					id: fetchId,
 					type: "fetch",
@@ -1014,7 +1021,7 @@ export default function (pi: ExtensionAPI) {
 				);
 			})
 			.catch((err) => {
-				if (!sessionActive || !pendingFetches.has(fetchId)) return;
+				if (!sessionActive.value || !pendingFetches.has(fetchId)) return;
 				const message = err instanceof Error ? err.message : String(err);
 				const isAbort = (err instanceof Error && err.name === "AbortError") || message.toLowerCase().includes("abort");
 				if (!isAbort) {
@@ -1628,13 +1635,13 @@ export default function (pi: ExtensionAPI) {
 	pi.registerShortcut(activityKey, {
 		description: "Toggle web search activity",
 		handler: async (ctx) => {
-			widgetVisible = !widgetVisible;
-			if (widgetVisible) {
-				widgetUnsubscribe = activityMonitor.onUpdate(() => updateWidget(ctx));
+			widgetVisible.value = !widgetVisible.value;
+			if (widgetVisible.value) {
+				widgetUnsubscribe.value = activityMonitor.onUpdate(() => updateWidget(ctx));
 				updateWidget(ctx);
 			} else {
-				widgetUnsubscribe?.();
-				widgetUnsubscribe = null;
+				widgetUnsubscribe.value?.();
+				widgetUnsubscribe.value = null;
 				ctx.ui.setWidget("web-activity", undefined);
 			}
 		},
@@ -1644,16 +1651,17 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_tree", async (_event, ctx) => handleSessionChange(ctx));
 
 	pi.on("session_shutdown", () => {
-		sessionActive = false;
+		sessionActive.value = false;
 		abortPendingFetches();
 		closeCurator();
 		clearCloneCache();
 		clearResults();
 		// Unsubscribe before clear() to avoid callback with stale ctx
-		widgetUnsubscribe?.();
-		widgetUnsubscribe = null;
+		widgetUnsubscribe.value?.();
+		widgetUnsubscribe.value = null;
 		activityMonitor.clear();
-		widgetVisible = false;
+		widgetVisible.value = false;
+		clearCurrentWebAccessInstance();
 	});
 
 	if (webSearchEnabled) pi.registerTool({
@@ -3015,7 +3023,7 @@ export default function (pi: ExtensionAPI) {
 			const commandConfig = loadConfig();
 			const rawSearchProvider = normalizeProviderInput(
 				commandConfig.searchProvider ?? commandConfig.provider ?? "auto",
-				`provider in ${WEB_SEARCH_CONFIG_PATH}`,
+				`provider in ${getWebSearchConfigPath()}`,
 			) ?? "auto";
 			let currentSearchProvider: SearchProviderSelection = Array.isArray(rawSearchProvider)
 				? rawSearchProvider
@@ -3297,7 +3305,7 @@ export default function (pi: ExtensionAPI) {
 			if (!isBrowserCookieAccessAllowed()) {
 				pi.sendMessage({
 					customType: "google-account",
-					content: [{ type: "text", text: `Gemini Web browser cookie access is disabled. Set allowBrowserCookies: true in ${WEB_SEARCH_CONFIG_PATH} to enable it.` }],
+					content: [{ type: "text", text: `Gemini Web browser cookie access is disabled. Set allowBrowserCookies: true in ${getWebSearchConfigPath()} to enable it.` }],
 					display: true,
 					details: { available: false, cookieAccessAllowed: false },
 				}, { triggerTurn: true, deliverAs: "followUp" });
@@ -3400,4 +3408,31 @@ export default function (pi: ExtensionAPI) {
 			}
 		},
 	});
+}
+
+export interface OmniMindWebAccessExtensionOptions {
+	readonly configService: WebSearchConfigService;
+	readonly profile?: WebAccessRuntimeProfile;
+}
+
+export function makeOmniMindWebAccessExtension(
+	options: OmniMindWebAccessExtensionOptions,
+): (pi: ExtensionAPI) => void {
+	return (pi) => {
+		const context = createWebAccessInstanceContext({
+			configService: options.configService,
+			profile: options.profile ?? "omnimind",
+		});
+		return runWithWebAccessContext(context, () => {
+			options.configService.ensureDefault();
+			registerWebAccessExtension(bindExtensionApiToWebAccessContext(pi, context));
+		});
+	};
+}
+
+export default function upstreamWebAccessExtension(pi: ExtensionAPI): void {
+	// Preserve the exact upstream registration semantics for the retained author
+	// harness. Bundled OmniMind Sessions must use makeOmniMindWebAccessExtension,
+	// which supplies the instance boundary and canonical config owner.
+	registerWebAccessExtension(pi);
 }

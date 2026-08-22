@@ -1,7 +1,6 @@
 import { lookup as dnsLookup } from "node:dns/promises";
-import { existsSync, readFileSync, statSync } from "node:fs";
 import net from "node:net";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const DEFAULT_MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
@@ -11,45 +10,10 @@ export type LookupAddress = { address: string; family: number };
 export type Lookup = (hostname: string) => Promise<LookupAddress[]>;
 type Fetch = typeof fetch;
 
-const WEB_SEARCH_CONFIG_PATH = getWebSearchConfigPath();
-
-let cachedConfigRoot: { signature: string; value: Record<string, unknown> | null } | null = null;
+const webSearchConfigPath = () => getWebSearchConfigPath();
 
 function loadConfigRoot(): Record<string, unknown> | null {
-	if (!existsSync(WEB_SEARCH_CONFIG_PATH)) return null;
-
-	let signature: string;
-	try {
-		const stat = statSync(WEB_SEARCH_CONFIG_PATH);
-		signature = `${stat.mtimeMs}:${stat.size}`;
-	} catch {
-		return null;
-	}
-
-	if (cachedConfigRoot?.signature === signature) return cachedConfigRoot.value;
-
-	let raw: string;
-	try {
-		raw = readFileSync(WEB_SEARCH_CONFIG_PATH, "utf-8");
-	} catch {
-		// Do not memoize read failures: a chmod fix changes neither mtime nor size,
-		// so a cached failure would permanently fail-open the domain policy.
-		return null;
-	}
-
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${WEB_SEARCH_CONFIG_PATH}: ${message}`);
-	}
-
-	const value = parsed && typeof parsed === "object" && !Array.isArray(parsed)
-		? parsed as Record<string, unknown>
-		: null;
-	cachedConfigRoot = { signature, value };
-	return value;
+	return readWebSearchConfig();
 }
 
 export interface SsrfConfig {
@@ -70,12 +34,12 @@ export function loadFetchContentDomainPolicy(): DomainPolicy {
 	const fetchContent = parsed.fetchContent;
 	if (fetchContent === undefined || fetchContent === null) return { ...DEFAULT_DOMAIN_POLICY };
 	if (typeof fetchContent !== "object" || Array.isArray(fetchContent)) {
-		throw new Error(`fetchContent in ${WEB_SEARCH_CONFIG_PATH} must be an object`);
+		throw new Error(`fetchContent in ${webSearchConfigPath()} must be an object`);
 	}
 	const policy = (fetchContent as { domainPolicy?: unknown }).domainPolicy;
 	if (policy === undefined || policy === null) return { ...DEFAULT_DOMAIN_POLICY };
 	if (typeof policy !== "object" || Array.isArray(policy)) {
-		throw new Error(`fetchContent.domainPolicy in ${WEB_SEARCH_CONFIG_PATH} must be an object`);
+		throw new Error(`fetchContent.domainPolicy in ${webSearchConfigPath()} must be an object`);
 	}
 	const config = policy as { allow?: unknown; deny?: unknown };
 	return {
@@ -87,15 +51,15 @@ export function loadFetchContentDomainPolicy(): DomainPolicy {
 function parseDomainEntries(value: unknown, field: "allow" | "deny"): string[] {
 	if (value === undefined || value === null) return [];
 	if (!Array.isArray(value)) {
-		throw new Error(`fetchContent.domainPolicy.${field} in ${WEB_SEARCH_CONFIG_PATH} must be an array of hostnames`);
+		throw new Error(`fetchContent.domainPolicy.${field} in ${webSearchConfigPath()} must be an array of hostnames`);
 	}
 	return value.map((entry, index) => {
 		if (typeof entry !== "string") {
-			throw new Error(`fetchContent.domainPolicy.${field} in ${WEB_SEARCH_CONFIG_PATH} must contain only hostnames; entry ${index + 1} is ${typeof entry}`);
+			throw new Error(`fetchContent.domainPolicy.${field} in ${webSearchConfigPath()} must contain only hostnames; entry ${index + 1} is ${typeof entry}`);
 		}
 		const hostname = normalizeDomainEntry(entry);
 		if (!hostname) {
-			throw new Error(`fetchContent.domainPolicy.${field} in ${WEB_SEARCH_CONFIG_PATH} contains an invalid hostname: ${JSON.stringify(entry)}`);
+			throw new Error(`fetchContent.domainPolicy.${field} in ${webSearchConfigPath()} contains an invalid hostname: ${JSON.stringify(entry)}`);
 		}
 		return hostname;
 	});
@@ -115,19 +79,19 @@ export function loadSsrfConfig(): SsrfConfig {
 	const ssrf = parsed.ssrf;
 	if (ssrf === undefined || ssrf === null) return { allowRanges: [], trustEnvProxy: false };
 	if (typeof ssrf !== "object" || Array.isArray(ssrf)) {
-		throw new Error(`ssrf in ${WEB_SEARCH_CONFIG_PATH} must be an object`);
+		throw new Error(`ssrf in ${webSearchConfigPath()} must be an object`);
 	}
 	const config = ssrf as { allowRanges?: unknown; trustEnvProxy?: unknown };
 	if (config.allowRanges !== undefined && config.allowRanges !== null && !Array.isArray(config.allowRanges)) {
-		throw new Error(`ssrf.allowRanges in ${WEB_SEARCH_CONFIG_PATH} must be an array of CIDR strings`);
+		throw new Error(`ssrf.allowRanges in ${webSearchConfigPath()} must be an array of CIDR strings`);
 	}
 	if (config.trustEnvProxy !== undefined && typeof config.trustEnvProxy !== "boolean") {
-		throw new Error(`ssrf.trustEnvProxy in ${WEB_SEARCH_CONFIG_PATH} must be a boolean`);
+		throw new Error(`ssrf.trustEnvProxy in ${webSearchConfigPath()} must be a boolean`);
 	}
 	const allowRangesValue: unknown[] = Array.isArray(config.allowRanges) ? config.allowRanges : [];
 	const allowRanges = allowRangesValue.map((entry, index) => {
 		if (typeof entry !== "string") {
-			throw new Error(`ssrf.allowRanges in ${WEB_SEARCH_CONFIG_PATH} must contain only CIDR strings; entry ${index + 1} is ${typeof entry}`);
+			throw new Error(`ssrf.allowRanges in ${webSearchConfigPath()} must contain only CIDR strings; entry ${index + 1} is ${typeof entry}`);
 		}
 		return entry.trim();
 	}).filter(Boolean);

@@ -1,8 +1,14 @@
 {
-  "name": "pi-web-access",
-  "version": "0.24.1",
+  "name": "@omnimind/om-web-access",
+  "version": "0.24.1-omnimind.0",
+  "private": true,
   "description": "Web search, URL fetching, GitHub repo cloning, PDF extraction, YouTube video understanding, and local video analysis for Pi coding agent. Supports OpenAI, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Ollama, AnySearch, Bright Data SERP, SerpBase, SearXNG, Exa, Perplexity, and Gemini.",
   "type": "module",
+  "exports": {
+    ".": "./index.ts",
+    "./config-service": "./config-service.ts",
+    "./package.json": "./package.json"
+  },
   "scripts": {
     "test": "node --test",
     "typecheck": "tsc",

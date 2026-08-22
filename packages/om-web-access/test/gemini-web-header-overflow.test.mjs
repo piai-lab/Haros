@@ -106,7 +106,14 @@ test("resolveGeminiFetch falls back to the ambient global fetch when undici is n
 	try {
 		// Copy just the module graph (no node_modules) so the dynamic undici
 		// import fails and the fallback path is exercised.
-		for (const f of ["gemini-web.ts", "chrome-cookies.ts", "gemini-web-config.ts", "utils.ts"]) {
+		for (const f of [
+			"gemini-web.ts",
+			"chrome-cookies.ts",
+			"gemini-web-config.ts",
+			"utils.ts",
+			"runtime-context.ts",
+			"config-service.ts",
+		]) {
 			copyFileSync(join(import.meta.dirname, "..", f), join(dir, f));
 		}
 		const script = [

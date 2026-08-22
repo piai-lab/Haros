@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
 import { activityMonitor } from "./activity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
 import type { ExtractedContent, ExtractOptions } from "./extract.ts";
 import { validateRemoteUrl, type Lookup } from "./ssrf-protection.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const BRIGHTDATA_REQUEST_URL = "https://api.brightdata.com/request";
 const EXTRACT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_REDIRECTS = 5;
@@ -26,8 +25,6 @@ interface BrightDataConfig {
 	brightdataUnlockerZone?: unknown;
 }
 
-let cachedConfig: BrightDataConfig | null = null;
-
 // V8's JSON.parse message quotes a slice of the source text around the offending
 // token — `JSON.parse('{"brightdataApiKey": bd-live-abc123}')` reports
 // `Unexpected token 'b', ..."aApiKey": bd-live-ab"... is not valid JSON`. This
@@ -36,37 +33,21 @@ let cachedConfig: BrightDataConfig | null = null;
 // credential into an error string that extract.ts surfaces to the user. Only the
 // position is safe to repeat; the snippet never is. The `Failed to parse ` prefix
 // is preserved because extract.ts's isConfigParseError matches on it.
-function parseFailureDetail(err: unknown): string {
+function parseFailureDetail(err: unknown): string  {
 	const message = err instanceof Error ? err.message : String(err);
 	const position = message.match(/at position \d+(?: \(line \d+ column \d+\))?/);
 	return position ? `invalid JSON ${position[0]}` : "invalid JSON";
 }
 
 function loadConfig(): BrightDataConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-	const raw = readFileSync(CONFIG_PATH, "utf8");
-	let parsed: unknown;
-	try {
-		parsed = JSON.parse(raw);
-	} catch (err) {
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${parseFailureDetail(err)}`);
-	}
-	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-		throw new Error(`Invalid config in ${CONFIG_PATH}: expected a JSON object`);
-	}
-	cachedConfig = parsed as BrightDataConfig;
-	return cachedConfig;
+	return readWebSearchConfig() as BrightDataConfig;
 }
 
-export function clearBrightDataUnlockerConfigCache(): void {
-	cachedConfig = null;
+export function clearBrightDataUnlockerConfigCache(): void  {
+	// The package-owned config service has no module-local cache to clear.
 }
 
-function normalizeZone(value: unknown): string | null {
+function normalizeZone(value: unknown): string | null  {
 	if (typeof value !== "string") return null;
 	const trimmed = value.trim();
 	if (!trimmed) return null;
@@ -78,15 +59,15 @@ interface ZoneSetting {
 	label: string;
 }
 
-function zoneSetting(): ZoneSetting | null {
+function zoneSetting(): ZoneSetting | null  {
 	const fromEnv = process.env.BRIGHTDATA_UNLOCKER_ZONE;
 	if (typeof fromEnv === "string" && fromEnv.trim()) return { raw: fromEnv.trim(), label: "BRIGHTDATA_UNLOCKER_ZONE" };
 	const configured = loadConfig().brightdataUnlockerZone;
-	if (typeof configured === "string" && configured.trim()) return { raw: configured.trim(), label: `brightdataUnlockerZone in ${CONFIG_PATH}` };
+	if (typeof configured === "string" && configured.trim()) return { raw: configured.trim(), label: `brightdataUnlockerZone in ${configPath()}` };
 	return null;
 }
 
-function getZone(): string | null {
+function getZone(): string | null  {
 	const setting = zoneSetting();
 	return setting ? normalizeZone(setting.raw) : null;
 }
@@ -95,7 +76,7 @@ function getZone(): string | null {
 // type, they are billed separately, and a guess is either an HTTP 400 or a
 // charge against the wrong product. The SERP zone from the search provider is
 // a different zone type and cannot serve Web Unlocker requests.
-function requireZone(): string {
+function requireZone(): string  {
 	const setting = zoneSetting();
 	const zone = setting ? normalizeZone(setting.raw) : null;
 	if (zone) return zone;
@@ -107,13 +88,13 @@ function requireZone(): string {
 	}
 	throw new Error(
 		"Bright Data Web Unlocker zone not configured. Either:\n" +
-		`  1. Set brightdataUnlockerZone in ${CONFIG_PATH}\n` +
+		`  1. Set brightdataUnlockerZone in ${configPath()}\n` +
 		"  2. Set BRIGHTDATA_UNLOCKER_ZONE environment variable\n" +
 		"The zone must be of type \"unblocker\"; a SERP zone will not serve Web Unlocker requests.",
 	);
 }
 
-async function getApiKey(signal?: AbortSignal): Promise<string> {
+async function getApiKey(signal?: AbortSignal): Promise<string>  {
 	const apiKey = await resolveCredential({
 		provider: "Bright Data",
 		configuredValue: loadConfig().brightdataApiKey,
@@ -123,7 +104,7 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	if (!apiKey) {
 		throw new Error(
 			"Bright Data API key not found. Either:\n" +
-			`  1. Create ${CONFIG_PATH} with { "brightdataApiKey": "your-key" }\n` +
+			`  1. Create ${configPath()} with { "brightdataApiKey": "your-key" }\n` +
 			"  2. Set BRIGHTDATA_API_KEY environment variable\n" +
 			"Get a key at https://brightdata.com/cp/setting/users",
 		);
@@ -131,20 +112,20 @@ async function getApiKey(signal?: AbortSignal): Promise<string> {
 	return apiKey;
 }
 
-function requestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal {
+function requestSignal(timeoutMs: number, signal?: AbortSignal): AbortSignal  {
 	const timeout = AbortSignal.timeout(timeoutMs);
 	return signal ? AbortSignal.any([timeout, signal]) : timeout;
 }
 
-function errorMessage(err: unknown): string {
+function errorMessage(err: unknown): string  {
 	return err instanceof Error ? err.message : String(err);
 }
 
-function isAbortError(err: unknown): boolean {
+function isAbortError(err: unknown): boolean  {
 	return errorMessage(err).toLowerCase().includes("abort");
 }
 
-function ssrfOptions(options?: BrightDataExtractOptions): { lookup?: Lookup; allowRanges: string[]; trustEnvProxy: boolean } {
+function ssrfOptions(options?: BrightDataExtractOptions):  { lookup?: Lookup; allowRanges: string[]; trustEnvProxy: boolean } {
 	return {
 		allowRanges: options?.ssrf?.allowRanges ?? [],
 		trustEnvProxy: options?.ssrf?.trustEnvProxy ?? false,
@@ -152,7 +133,7 @@ function ssrfOptions(options?: BrightDataExtractOptions): { lookup?: Lookup; all
 	};
 }
 
-function withoutSensitiveHeaders(headers: Record<string, string>): Record<string, string> {
+function withoutSensitiveHeaders(headers: Record<string, string>): Record<string, string>  {
 	const next = { ...headers };
 	delete next.Authorization;
 	delete next.authorization;
@@ -193,7 +174,7 @@ async function fetchBrightDataApi(
 	}
 }
 
-function unlockerBody(url: string, zone: string): Record<string, unknown> {
+function unlockerBody(url: string, zone: string): Record<string, unknown>  {
 	return {
 		url,
 		zone,
@@ -240,13 +221,13 @@ async function brightDataRequest(
 	}
 }
 
-function headingTitle(text: string): string {
+function headingTitle(text: string): string  {
 	const match = text.match(/^#{1,2}\s+(.+)/m);
 	if (!match) return "";
 	return match[1].replace(/\*+/g, "").trim();
 }
 
-export function isBrightDataUnlockerAvailable(): boolean {
+export function isBrightDataUnlockerAvailable(): boolean  {
 	if (getZone() === null) return false;
 	return hasCredentialSource({
 		provider: "Bright Data",

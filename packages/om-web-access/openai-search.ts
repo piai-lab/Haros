@@ -1,13 +1,12 @@
-import { existsSync, readFileSync } from "node:fs";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { activityMonitor } from "./activity.ts";
 import type { SearchOptions, SearchResponse, SearchResult } from "./perplexity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const CODEX_RESPONSES_URL = "https://chatgpt.com/backend-api/codex/responses";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 
 // The selected model runs the server-side web_search call and writes the cited summary.
@@ -54,26 +53,11 @@ interface NormalizedDomainFilters {
 	blockedDomains?: string[];
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	try {
-		cachedConfig = JSON.parse(raw) as WebSearchConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -88,7 +72,7 @@ function normalizeDomain(value: string): string | null {
 	return /^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$/i.test(input) ? input : null;
 }
 
-function normalizeDomainFilters(domainFilter: string[] | undefined): NormalizedDomainFilters | null {
+function normalizeDomainFilters(domainFilter: string[] | undefined): NormalizedDomainFilters | null  {
 	if (!domainFilter?.length) return null;
 
 	const allowedDomains: string[] = [];
@@ -108,7 +92,7 @@ function normalizeDomainFilters(domainFilter: string[] | undefined): NormalizedD
 		: null;
 }
 
-function decodeJwtPayload(token: string): Record<string, unknown> | null {
+function decodeJwtPayload(token: string): Record<string, unknown> | null  {
 	const parts = token.split(".");
 	if (parts.length !== 3 || !parts[1]) return null;
 	try {
@@ -120,12 +104,12 @@ function decodeJwtPayload(token: string): Record<string, unknown> | null {
 	}
 }
 
-function isCodexJwt(token: string): boolean {
+function isCodexJwt(token: string): boolean  {
 	const payload = decodeJwtPayload(token);
 	return !!payload?.["https://api.openai.com/auth"];
 }
 
-function extractAccountId(token: string): string | undefined {
+function extractAccountId(token: string): string | undefined  {
 	const payload = decodeJwtPayload(token);
 	const auth = payload?.["https://api.openai.com/auth"];
 	if (!auth || typeof auth !== "object") return undefined;
@@ -133,40 +117,40 @@ function extractAccountId(token: string): string | undefined {
 	return typeof id === "string" && id.trim().length > 0 ? id.trim() : undefined;
 }
 
-function resolveConfiguredResponsesUrl(value: unknown): string {
+function resolveConfiguredResponsesUrl(value: unknown): string  {
 	if (value === undefined) return OPENAI_RESPONSES_URL;
 	if (typeof value !== "string" || value.trim().length === 0) {
-		throw new Error(`openaiResponsesUrl in ${CONFIG_PATH} must be an absolute http(s) URL`);
+		throw new Error(`openaiResponsesUrl in ${configPath()} must be an absolute http(s) URL`);
 	}
 	let url: URL;
 	try {
 		url = new URL(value.trim());
 	} catch {
-		throw new Error(`openaiResponsesUrl in ${CONFIG_PATH} must be an absolute http(s) URL`);
+		throw new Error(`openaiResponsesUrl in ${configPath()} must be an absolute http(s) URL`);
 	}
 	if (url.protocol !== "https:" && url.protocol !== "http:") {
-		throw new Error(`openaiResponsesUrl in ${CONFIG_PATH} must use http or https`);
+		throw new Error(`openaiResponsesUrl in ${configPath()} must use http or https`);
 	}
 	return url.toString();
 }
 
-function resolveConfiguredSearchProviders(value: unknown): readonly string[] {
+function resolveConfiguredSearchProviders(value: unknown): readonly string[]  {
 	if (value === undefined) return DEFAULT_SEARCH_PROVIDERS;
 	if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string" || entry.trim().length === 0)) {
-		throw new Error(`openaiSearchProviders in ${CONFIG_PATH} must be an array of non-empty Pi provider ids`);
+		throw new Error(`openaiSearchProviders in ${configPath()} must be an array of non-empty Pi provider ids`);
 	}
 	return value.map((entry) => entry.trim());
 }
 
-function resolveConfiguredSearchModel(value: unknown): string | undefined {
+function resolveConfiguredSearchModel(value: unknown): string | undefined  {
 	if (value == null) return undefined;
 	if (typeof value !== "string" || value.trim().length === 0) {
-		throw new Error(`openaiSearchModel in ${CONFIG_PATH} must be a non-empty string`);
+		throw new Error(`openaiSearchModel in ${configPath()} must be a non-empty string`);
 	}
 	return value.trim();
 }
 
-function toRequestHeaders(headers: ProviderHeaders): Record<string, string> {
+function toRequestHeaders(headers: ProviderHeaders): Record<string, string>  {
 	const requestHeaders: Record<string, string> = {};
 	for (const [name, value] of Object.entries(headers)) {
 		if (value !== null) requestHeaders[name] = value;
@@ -174,7 +158,7 @@ function toRequestHeaders(headers: ProviderHeaders): Record<string, string> {
 	return requestHeaders;
 }
 
-async function resolvePiAuth(ctx: ExtensionContext, responsesUrl: string, providers: readonly string[], modelOverride?: string): Promise<OpenAIAuth | undefined> {
+async function resolvePiAuth(ctx: ExtensionContext, responsesUrl: string, providers: readonly string[], modelOverride?: string): Promise<OpenAIAuth | undefined>  {
 	let models: ReturnType<typeof ctx.modelRegistry.getAll>;
 	try {
 		models = ctx.modelRegistry.getAll();
@@ -201,7 +185,7 @@ async function resolvePiAuth(ctx: ExtensionContext, responsesUrl: string, provid
 	return undefined;
 }
 
-export async function resolveOpenAIAuth(ctx?: ExtensionContext, signal?: AbortSignal): Promise<OpenAIAuth | undefined> {
+export async function resolveOpenAIAuth(ctx?: ExtensionContext, signal?: AbortSignal): Promise<OpenAIAuth | undefined>  {
 	const config = loadConfig();
 	const responsesUrl = resolveConfiguredResponsesUrl(config.openaiResponsesUrl);
 	const modelOverride = resolveConfiguredSearchModel(config.openaiSearchModel);
@@ -228,7 +212,7 @@ export async function resolveOpenAIAuth(ctx?: ExtensionContext, signal?: AbortSi
 		: undefined;
 }
 
-export async function isOpenAISearchAvailable(ctx?: ExtensionContext): Promise<boolean> {
+export async function isOpenAISearchAvailable(ctx?: ExtensionContext): Promise<boolean>  {
 	const config = loadConfig();
 	const responsesUrl = resolveConfiguredResponsesUrl(config.openaiResponsesUrl);
 	const providers = resolveConfiguredSearchProviders(config.openaiSearchProviders);
@@ -240,7 +224,7 @@ export async function isOpenAISearchAvailable(ctx?: ExtensionContext): Promise<b
 	});
 }
 
-function buildInstructions(options: SearchOptions): string {
+function buildInstructions(options: SearchOptions): string  {
 	const lines = [
 		"Search the web and return a concise answer grounded only in the web results.",
 		"Include clickable source citations in the response text when possible.",
@@ -267,7 +251,7 @@ function buildInstructions(options: SearchOptions): string {
 	return lines.join(" ");
 }
 
-function buildWebSearchTool(options: SearchOptions): Record<string, unknown> {
+function buildWebSearchTool(options: SearchOptions): Record<string, unknown>  {
 	const tool: Record<string, unknown> = { type: "web_search" };
 	const filters = normalizeDomainFilters(options.domainFilter);
 	if (filters) {
@@ -279,7 +263,7 @@ function buildWebSearchTool(options: SearchOptions): Record<string, unknown> {
 	return tool;
 }
 
-async function parseOpenAIResponse(response: Response): Promise<Record<string, unknown>> {
+async function parseOpenAIResponse(response: Response): Promise<Record<string, unknown>>  {
 	const text = await response.text();
 	const trimmed = text.trim();
 	if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
@@ -317,7 +301,7 @@ async function parseOpenAIResponse(response: Response): Promise<Record<string, u
 	throw new Error("OpenAI API returned no parseable response output");
 }
 
-function cleanSourceUrl(rawUrl: string): string {
+function cleanSourceUrl(rawUrl: string): string  {
 	try {
 		const url = new URL(rawUrl);
 		if (url.searchParams.get("utm_source") === "openai") url.searchParams.delete("utm_source");
@@ -327,7 +311,7 @@ function cleanSourceUrl(rawUrl: string): string {
 	}
 }
 
-function extractSnippetAround(text: string, start: unknown, end: unknown): string {
+function extractSnippetAround(text: string, start: unknown, end: unknown): string  {
 	if (typeof start !== "number" || typeof end !== "number" || !text) return "";
 	const before = Math.max(0, start - 100);
 	const after = Math.min(text.length, end + 100);
@@ -335,7 +319,7 @@ function extractSnippetAround(text: string, start: unknown, end: unknown): strin
 	return snippet.length > 300 ? `${snippet.slice(0, 297)}...` : snippet;
 }
 
-function addResult(results: SearchResult[], seen: Set<string>, url: unknown, title: unknown, snippet = ""): void {
+function addResult(results: SearchResult[], seen: Set<string>, url: unknown, title: unknown, snippet = ""): void  {
 	if (typeof url !== "string" || url.trim().length === 0) return;
 	const cleanUrl = cleanSourceUrl(url);
 	if (seen.has(cleanUrl)) return;
@@ -347,7 +331,7 @@ function addResult(results: SearchResult[], seen: Set<string>, url: unknown, tit
 	});
 }
 
-function extractSearchResults(output: unknown[], numResults: number | undefined): SearchResult[] {
+function extractSearchResults(output: unknown[], numResults: number | undefined): SearchResult[]  {
 	const results: SearchResult[] = [];
 	const seenUrls = new Set<string>();
 
@@ -396,7 +380,7 @@ function extractSearchResults(output: unknown[], numResults: number | undefined)
 	return results;
 }
 
-function extractAnswer(output: unknown[]): string {
+function extractAnswer(output: unknown[]): string  {
 	const parts: string[] = [];
 	for (const item of output) {
 		if (!item || typeof item !== "object" || (item as { type?: unknown }).type !== "message") continue;
@@ -421,7 +405,7 @@ export async function searchWithOpenAI(
 		throw new Error(
 			"OpenAI web search unavailable. Either:\n" +
 			"  1. Use /login to sign in with a Codex subscription\n" +
-			`  2. Create ${CONFIG_PATH} with { "openaiApiKey": "your-key" }\n` +
+			`  2. Create ${configPath()} with { "openaiApiKey": "your-key" }\n` +
 			"  3. Set OPENAI_API_KEY environment variable",
 		);
 	}

@@ -1,27 +1,28 @@
 import { execFile } from "node:child_process";
 import type { ExtractedContent } from "./extract.ts";
 import type { GitHubUrlInfo } from "./github-extract.ts";
+import { scopedValue } from "./runtime-context.ts";
 
 const MAX_TREE_ENTRIES = 200;
 const MAX_INLINE_FILE_CHARS = 100_000;
 
-let ghAvailable: boolean | null = null;
-let ghHintShown = false;
+const ghAvailable = scopedValue<boolean | null>("github-cli-available", () => null);
+const ghHintShown = scopedValue("github-cli-hint-shown", () => false);
 
 export async function checkGhAvailable(): Promise<boolean> {
-	if (ghAvailable !== null) return ghAvailable;
+	if (ghAvailable.value !== null) return ghAvailable.value;
 
 	return new Promise((resolve) => {
 		execFile("gh", ["--version"], { timeout: 5000 }, (err) => {
-			ghAvailable = !err;
-			resolve(ghAvailable);
+			ghAvailable.value = !err;
+			resolve(ghAvailable.value);
 		});
 	});
 }
 
 export function showGhHint(): void {
-	if (!ghHintShown) {
-		ghHintShown = true;
+	if (!ghHintShown.value) {
+		ghHintShown.value = true;
 		console.error("[pi-web-access] Install `gh` CLI for better GitHub repo access including private repos.");
 	}
 }

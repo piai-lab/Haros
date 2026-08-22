@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve, extname, basename, join, dirname } from "node:path";
 import { activityMonitor } from "./activity.ts";
@@ -7,9 +7,9 @@ import { canAttachImages } from "./feature-config.ts";
 import { isGeminiWebAvailable, queryWithCookies } from "./gemini-web.ts";
 import { queryGeminiApiWithVideo, getApiKey, fetchGeminiApi, getVersionedApiBase, getUploadBase, redactGeminiApiResponse } from "./gemini-api.ts";
 import { extractHeadingTitle, type ExtractedContent, type ExtractOptions, type FrameResult } from "./extract.ts";
-import { readExecError, trimErrorText, mapFfmpegError, getWebSearchConfigPath } from "./utils.ts";
+import { readExecError, trimErrorText, mapFfmpegError, getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 
 const DEFAULT_VIDEO_PROMPT = `Extract the complete content of this video. Include:
 1. Video title (infer from content if not explicit), duration
@@ -32,7 +32,7 @@ const VIDEO_EXTENSIONS: Record<string, string> = {
 	".3gpp": "video/3gpp",
 };
 
-function shouldRethrow(err: unknown): boolean {
+function shouldRethrow(err: unknown): boolean  {
 	const message = err instanceof Error ? err.message : String(err);
 	return message.startsWith("Failed to parse ");
 }
@@ -51,17 +51,17 @@ interface VideoConfig {
 	maxSizeMB: number;
 }
 
-function normalizePreferredModel(value: unknown, fallback: string): string {
+function normalizePreferredModel(value: unknown, fallback: string): string  {
 	if (typeof value !== "string") return fallback;
 	const normalized = value.trim();
 	return normalized.length > 0 ? normalized : fallback;
 }
 
-function normalizeEnabled(value: unknown, fallback: boolean): boolean {
+function normalizeEnabled(value: unknown, fallback: boolean): boolean  {
 	return typeof value === "boolean" ? value : fallback;
 }
 
-function normalizeMaxSizeMB(value: unknown, fallback: number): number {
+function normalizeMaxSizeMB(value: unknown, fallback: number): number  {
 	if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
 	return value > 0 ? value : fallback;
 }
@@ -72,34 +72,17 @@ const VIDEO_CONFIG_DEFAULTS: VideoConfig = {
 	maxSizeMB: 50,
 };
 
-let cachedVideoConfig: VideoConfig | null = null;
-
 function loadVideoConfig(): VideoConfig {
-	if (cachedVideoConfig) return cachedVideoConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedVideoConfig = { ...VIDEO_CONFIG_DEFAULTS };
-		return cachedVideoConfig;
-	}
-
-	const rawText = readFileSync(CONFIG_PATH, "utf-8");
-	let raw: { video?: { enabled?: boolean; preferredModel?: string; maxSizeMB?: number } };
-	try {
-		raw = JSON.parse(rawText) as { video?: { enabled?: boolean; preferredModel?: string; maxSizeMB?: number } };
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-
-	const v = raw.video ?? {};
-	cachedVideoConfig = {
-		enabled: normalizeEnabled(v.enabled, VIDEO_CONFIG_DEFAULTS.enabled),
-		preferredModel: normalizePreferredModel(v.preferredModel, VIDEO_CONFIG_DEFAULTS.preferredModel),
-		maxSizeMB: normalizeMaxSizeMB(v.maxSizeMB, VIDEO_CONFIG_DEFAULTS.maxSizeMB),
+	const raw = readWebSearchConfig() as { video?: { enabled?: boolean; preferredModel?: string; maxSizeMB?: number } };
+	const video = raw.video ?? {};
+	return {
+		enabled: normalizeEnabled(video.enabled, VIDEO_CONFIG_DEFAULTS.enabled),
+		preferredModel: normalizePreferredModel(video.preferredModel, VIDEO_CONFIG_DEFAULTS.preferredModel),
+		maxSizeMB: normalizeMaxSizeMB(video.maxSizeMB, VIDEO_CONFIG_DEFAULTS.maxSizeMB),
 	};
-	return cachedVideoConfig;
 }
 
-export function isVideoFile(input: string): VideoFileInfo | null {
+export function isVideoFile(input: string): VideoFileInfo | null  {
 	const config = loadVideoConfig();
 	if (!config.enabled) return null;
 
@@ -140,7 +123,7 @@ export function isVideoFile(input: string): VideoFileInfo | null {
 	};
 }
 
-function resolveFilePath(filePath: string): string | null {
+function resolveFilePath(filePath: string): string | null  {
 	const absolutePath = resolve(filePath);
 	if (existsSync(absolutePath)) return absolutePath;
 
@@ -157,7 +140,7 @@ function resolveFilePath(filePath: string): string | null {
 	}
 }
 
-function normalizeSpaces(s: string): string {
+function normalizeSpaces(s: string): string  {
 	return s.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000\uFEFF]/g, " ");
 }
 
@@ -201,14 +184,14 @@ export async function extractVideo(
 	return null;
 }
 
-function mapFfprobeError(err: unknown): string {
+function mapFfprobeError(err: unknown): string  {
 	const { code, stderr, message } = readExecError(err);
 	if (code === "ENOENT") return "ffprobe is not installed. Install ffmpeg which includes ffprobe";
 	const snippet = trimErrorText(stderr || message);
 	return snippet ? `ffprobe failed: ${snippet}` : "ffprobe failed";
 }
 
-export async function extractVideoFrame(filePath: string, seconds: number = 1): Promise<FrameResult> {
+export async function extractVideoFrame(filePath: string, seconds: number = 1): Promise<FrameResult>  {
 	try {
 		const buffer = execFileSync("ffmpeg", [
 			"-ss", String(seconds), "-i", filePath,
@@ -221,7 +204,7 @@ export async function extractVideoFrame(filePath: string, seconds: number = 1): 
 	}
 }
 
-export async function getLocalVideoDuration(filePath: string): Promise<number | { error: string }> {
+export async function getLocalVideoDuration(filePath: string): Promise<number |  { error: string }> {
 	try {
 		const output = execFileSync("ffprobe", [
 			"-v", "quiet",
@@ -379,13 +362,13 @@ async function pollFileState(
 	throw new Error("File processing timed out");
 }
 
-function deleteGeminiFile(fileName: string, apiKey: string): void {
+function deleteGeminiFile(fileName: string, apiKey: string): void  {
 	void fetchGeminiApi(`${getVersionedApiBase()}/${fileName}`, { method: "DELETE" }, apiKey).catch((err) => {
 		const message = err instanceof Error ? err.message : String(err);
 		console.error(`Failed to delete Gemini file ${fileName}: ${message}`);
 	});
 }
 
-function extractVideoTitle(text: string, filePath: string): string {
+function extractVideoTitle(text: string, filePath: string): string  {
 	return extractHeadingTitle(text) ?? basename(filePath, extname(filePath));
 }

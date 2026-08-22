@@ -22,7 +22,7 @@ import {
 } from "./datalab-pdf-extract.ts";
 import { isGeminiApiAvailable } from "./gemini-api.ts";
 import { extractPDFViaGemini } from "./gemini-pdf-extract.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 export interface PDFExtractResult {
 	title: string;
@@ -62,32 +62,11 @@ export const MAX_PDF_MAX_SIZE_MB = 50;
 export const MAX_DATALAB_TIMEOUT_MS = 300_000;
 const DEFAULT_MAX_PAGES = 100;
 const DEFAULT_OUTPUT_DIR = join(tmpdir(), "pi-web-pdf");
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const PAGE_MARKER_PATTERN = /^<!-- Page (\d+) -->$/gm;
 
 export function loadPDFConfig(): PDFConfig {
-	if (!existsSync(CONFIG_PATH)) {
-		return {
-			enabled: true,
-			maxSizeMB: DEFAULT_PDF_MAX_SIZE_MB,
-			maxPages: DEFAULT_MAX_PAGES,
-			provider: "auto",
-			datalabMode: normalizeDatalabMode(process.env.DATALAB_MODE),
-			datalabTimeoutMs: DEFAULT_DATALAB_TIMEOUT_MS,
-		};
-	}
-
-	const rawText = readFileSync(CONFIG_PATH, "utf-8");
-	let raw: unknown;
-	try {
-		raw = JSON.parse(rawText) as unknown;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
-
-	const root =
-		raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+	const root = readWebSearchConfig();
 	const pdf =
 		root.pdf && typeof root.pdf === "object"
 			? (root.pdf as Record<string, unknown>)

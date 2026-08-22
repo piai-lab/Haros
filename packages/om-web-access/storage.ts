@@ -5,6 +5,7 @@ import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { ExtractedContent } from "./extract.ts";
 import type { SearchResult } from "./perplexity.ts";
 import { getWebSearchConfigDir } from "./utils.ts";
+import { currentWebAccessContext } from "./runtime-context.ts";
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
 const FETCH_CACHE_DIR = "web-search-cache";
@@ -66,7 +67,19 @@ export interface StoredSearchData {
 	fetchCacheError?: string;
 }
 
-const storedResults = new Map<string, StoredSearchData>();
+const LEGACY_STORED_RESULTS = new Map<string, StoredSearchData>();
+const STORED_RESULTS_KEY = "stored-results";
+
+function storedResults(): Map<string, StoredSearchData> {
+	const context = currentWebAccessContext();
+	if (!context) return LEGACY_STORED_RESULTS;
+	let results = context.maps.get(STORED_RESULTS_KEY) as Map<string, StoredSearchData> | undefined;
+	if (!results) {
+		results = new Map();
+		context.maps.set(STORED_RESULTS_KEY, results as Map<unknown, unknown>);
+	}
+	return results;
+}
 
 export function generateId(): string {
 	return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -432,7 +445,7 @@ export function pruneExpiredFetchCache(now = Date.now(), requestedLimits?: Parti
 }
 
 export function storeResult(id: string, data: StoredSearchData): void {
-	storedResults.set(id, data);
+	storedResults().set(id, data);
 }
 
 export function storeFetchedContentResult(id: string, data: StoredSearchData & { type: "fetch"; urls: ExtractedContent[] }): StoredSearchData {
@@ -443,24 +456,24 @@ export function storeFetchedContentResult(id: string, data: StoredSearchData & {
 	} catch (err) {
 		cacheError = cacheWriteError(err);
 	}
-	storedResults.set(id, ref ? { ...data, fetchCache: ref, urlMetadata: metadataForUrls(data.urls) } : { ...data, fetchCacheError: cacheError });
+	storedResults().set(id, ref ? { ...data, fetchCache: ref, urlMetadata: metadataForUrls(data.urls) } : { ...data, fetchCacheError: cacheError });
 	return createFetchSessionData(data, ref, cacheError);
 }
 
 export function getResult(id: string): StoredSearchData | null {
-	const data = storedResults.get(id);
+	const data = storedResults().get(id);
 	if (!data) return null;
 	const loaded = readCachedFetchData(data);
-	if (loaded !== data) storedResults.set(id, loaded);
+	if (loaded !== data) storedResults().set(id, loaded);
 	return loaded;
 }
 
 export function getAllResults(): StoredSearchData[] {
-	return Array.from(storedResults.values());
+	return Array.from(storedResults().values());
 }
 
 export function deleteResult(id: string): boolean {
-	const data = storedResults.get(id);
+	const data = storedResults().get(id);
 	if (data?.fetchCache) {
 		try {
 			const dir = safeFetchCacheDir(false);
@@ -473,11 +486,11 @@ export function deleteResult(id: string): boolean {
 			}
 		} catch {}
 	}
-	return storedResults.delete(id);
+	return storedResults().delete(id);
 }
 
 export function clearResults(): void {
-	storedResults.clear();
+	storedResults().clear();
 }
 
 function isValidStoredData(data: unknown): data is StoredSearchData {
@@ -497,7 +510,7 @@ function isValidStoredData(data: unknown): data is StoredSearchData {
 }
 
 export function restoreFromSession(ctx: ExtensionContext): void {
-	storedResults.clear();
+	storedResults().clear();
 	const now = Date.now();
 	pruneExpiredFetchCache(now);
 
@@ -505,7 +518,7 @@ export function restoreFromSession(ctx: ExtensionContext): void {
 		if (entry.type === "custom" && entry.customType === "web-search-results") {
 			const data = entry.data;
 			if (isValidStoredData(data) && now - data.timestamp < CACHE_TTL_MS) {
-				storedResults.set(data.id, data);
+				storedResults().set(data.id, data);
 			}
 		}
 	}

@@ -1,15 +1,18 @@
-import { existsSync, readFileSync } from "node:fs";
-import { homedir, hostname } from "node:os";
-import { join } from "node:path";
+import { hostname } from "node:os";
+import { dirname } from "node:path";
+import type { WebSearchConfigRecord } from "./config-service.ts";
+import { currentWebSearchConfigService } from "./runtime-context.ts";
 
 export function getWebSearchConfigDir(): string {
-	if (process.env.PI_CODING_AGENT_DIR) return process.env.PI_CODING_AGENT_DIR;
-	if (process.env.XDG_CONFIG_HOME) return join(process.env.XDG_CONFIG_HOME, "pi");
-	return join(homedir(), ".pi");
+	return dirname(getWebSearchConfigPath());
 }
 
 export function getWebSearchConfigPath(): string {
-	return join(getWebSearchConfigDir(), "web-search.json");
+	return currentWebSearchConfigService().configPath;
+}
+
+export function readWebSearchConfig(): WebSearchConfigRecord {
+	return currentWebSearchConfigService().readSnapshot().config;
 }
 
 interface ApiBaseUrlOptions {
@@ -116,18 +119,14 @@ function trimmedString(value: unknown): string | undefined {
 
 /** Resolves the curator server bind address and URL host from `curatorRemote`. */
 export function resolveCuratorNetworkConfig(): CuratorNetworkConfig {
-	const configPath = getWebSearchConfigPath();
-	if (!existsSync(configPath)) return LOCAL_CURATOR_NETWORK_DEFAULTS;
-
-	let raw: unknown;
+	let raw: WebSearchConfigRecord;
 	try {
-		raw = JSON.parse(readFileSync(configPath, "utf-8"));
+		raw = readWebSearchConfig();
 	} catch {
 		return LOCAL_CURATOR_NETWORK_DEFAULTS;
 	}
-	if (!raw || typeof raw !== "object" || Array.isArray(raw)) return LOCAL_CURATOR_NETWORK_DEFAULTS;
 
-	const curatorRemote = (raw as Record<string, unknown>).curatorRemote;
+	const curatorRemote = raw.curatorRemote;
 	if (curatorRemote === true) return { enabled: true, host: hostname(), bind: "0.0.0.0" };
 
 	if (curatorRemote && typeof curatorRemote === "object" && !Array.isArray(curatorRemote)) {

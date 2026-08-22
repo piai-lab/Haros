@@ -1,10 +1,9 @@
-import { existsSync, readFileSync } from "node:fs";
 import {
 	hasCredentialSource,
 	resolveCredential,
 	redactCredential,
 } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 const DEFAULT_API_HOST = "https://www.datalab.to";
 const API_PREFIX = "/api/v1";
@@ -13,7 +12,7 @@ const DEFAULT_POLL_INTERVAL_MS = 1_500;
 const MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 const MAX_ERROR_BODY_BYTES = 300;
 const CLEANUP_TIMEOUT_MS = 5_000;
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 
 export type DatalabMode = "fast" | "balanced" | "accurate";
 export type DatalabProcessingLocation = "eu" | "us";
@@ -35,37 +34,22 @@ interface DatalabConfig {
 	datalabApiKey?: unknown;
 }
 
-let cachedConfig: DatalabConfig | null = null;
-
 function loadConfig(): DatalabConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const rawText = readFileSync(CONFIG_PATH, "utf-8");
-	try {
-		cachedConfig = JSON.parse(rawText) as DatalabConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+	return readWebSearchConfig() as DatalabConfig;
 }
 
-function normalizeString(value: unknown): string | null {
+function normalizeString(value: unknown): string | null  {
 	if (typeof value !== "string") return null;
 	const normalized = value.trim();
 	return normalized.length > 0 ? normalized : null;
 }
 
-function normalizeFileId(value: unknown): string | null {
+function normalizeFileId(value: unknown): string | null  {
 	if (typeof value === "number" && Number.isFinite(value)) return String(value);
 	return normalizeString(value);
 }
 
-export function isDatalabApiAvailable(): boolean {
+export function isDatalabApiAvailable(): boolean  {
 	return hasCredentialSource({
 		provider: "Datalab",
 		configuredValue: loadConfig().datalabApiKey,
@@ -84,7 +68,7 @@ export async function getDatalabApiKey(
 	});
 }
 
-export function getDatalabApiBase(): string {
+export function getDatalabApiBase(): string  {
 	const normalized = normalizeString(process.env.DATALAB_API_BASE)?.replace(
 		/\/+$/,
 		"",
@@ -100,7 +84,7 @@ export function getDatalabApiBase(): string {
  * extraction fallback chain treats them as fatal, mirroring how malformed
  * web-search config is handled elsewhere.
  */
-export function getDatalabProcessingLocation(): DatalabProcessingLocation {
+export function getDatalabProcessingLocation(): DatalabProcessingLocation  {
 	const value =
 		normalizeString(process.env.DATALAB_PROCESSING_LOCATION) ??
 		DEFAULT_PROCESSING_LOCATION;
@@ -113,7 +97,7 @@ export function getDatalabProcessingLocation(): DatalabProcessingLocation {
 	return normalized;
 }
 
-export function normalizeDatalabMode(value: unknown): DatalabMode {
+export function normalizeDatalabMode(value: unknown): DatalabMode  {
 	const raw = normalizeString(value);
 	if (!raw) return DEFAULT_DATALAB_MODE;
 	const normalized = raw.toLowerCase() as DatalabMode;
@@ -388,7 +372,7 @@ async function deleteDatalabFile(
 	}
 }
 
-function toResult(state: DatalabConversionState): DatalabPDFExtractResult {
+function toResult(state: DatalabConversionState): DatalabPDFExtractResult  {
 	const markdown = normalizeString(state.markdown);
 	if (!markdown) {
 		throw new Error("Datalab PDF conversion returned empty markdown");
@@ -403,17 +387,17 @@ function toResult(state: DatalabConversionState): DatalabPDFExtractResult {
 	};
 }
 
-function numericField(value: unknown): number | null {
+function numericField(value: unknown): number | null  {
 	return typeof value === "number" && Number.isFinite(value) && value > 0
 		? Math.floor(value)
 		: null;
 }
 
-function countPageMarkers(markdown: string): number {
+function countPageMarkers(markdown: string): number  {
 	return [...markdown.matchAll(/^<!-- Page (\d+) -->$/gm)].length;
 }
 
-function normalizeCheckUrl(value: unknown): string {
+function normalizeCheckUrl(value: unknown): string  {
 	if (typeof value !== "string" || !value.trim()) {
 		throw new Error("Datalab PDF conversion failed: missing request_check_url");
 	}
@@ -432,7 +416,7 @@ function normalizeCheckUrl(value: unknown): string {
 	return checkUrl.toString();
 }
 
-function getDatalabApiUrl(): URL {
+function getDatalabApiUrl(): URL  {
 	try {
 		return new URL(getDatalabApiBase());
 	} catch {
@@ -442,7 +426,7 @@ function getDatalabApiUrl(): URL {
 	}
 }
 
-function remaining(deadline: number): number {
+function remaining(deadline: number): number  {
 	return Math.max(1, deadline - Date.now());
 }
 
@@ -454,7 +438,7 @@ function withTimeout(
 	return signal ? AbortSignal.any([signal, timeout]) : timeout;
 }
 
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+function sleep(ms: number, signal?: AbortSignal): Promise<void>  {
 	return new Promise((resolve, reject) => {
 		let timer: ReturnType<typeof setTimeout>;
 		const cleanup = () => signal?.removeEventListener("abort", onAbort);
@@ -509,7 +493,7 @@ async function readJsonResponse(
 	return parseJsonRecord(text);
 }
 
-function parseJsonRecord(text: string): Record<string, unknown> {
+function parseJsonRecord(text: string): Record<string, unknown>  {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(text);
@@ -522,7 +506,7 @@ function parseJsonRecord(text: string): Record<string, unknown> {
 	return parsed as Record<string, unknown>;
 }
 
-async function readResponseText(response: Response): Promise<string> {
+async function readResponseText(response: Response): Promise<string>  {
 	const contentLength = Number(response.headers.get("content-length"));
 	if (Number.isFinite(contentLength) && contentLength > MAX_RESPONSE_BYTES) {
 		throw new Error("Datalab PDF conversion response too large");
@@ -555,7 +539,7 @@ async function readResponseText(response: Response): Promise<string> {
 	}
 }
 
-function datalabFilename(title: string): string {
+function datalabFilename(title: string): string  {
 	return (
 		title
 			.toLowerCase()

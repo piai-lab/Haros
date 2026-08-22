@@ -5,9 +5,9 @@ import test from "node:test";
 const indexSrc = readFileSync(new URL("../index.ts", import.meta.url), "utf8");
 
 test("web_search curator state is keyed per tool call for parallel calls", () => {
-	assert.match(indexSrc, /const pendingCurates = new Map<string, PendingCurate>\(\)/);
-	assert.match(indexSrc, /const activeCurators = new Map<string, CuratorServerHandle>\(\)/);
-	assert.match(indexSrc, /const glimpseWins = new Map<string, GlimpseWindow>\(\)/);
+	assert.match(indexSrc, /const pendingCurates = scopedMap<string, PendingCurate>\("pending-curates"\)/);
+	assert.match(indexSrc, /const activeCurators = scopedMap<string, CuratorServerHandle>\("active-curators"\)/);
+	assert.match(indexSrc, /const glimpseWins = scopedMap<string, GlimpseWindow>\("glimpse-windows"\)/);
 	assert.match(indexSrc, /async execute\(callId, params, signal, onUpdate, ctx\)/);
 	assert.match(indexSrc, /pendingCurates\.set\(callId, pc\)/);
 	assert.match(indexSrc, /activeCurators\.get\(callId\)\?\.getConnectionState\(\)/);

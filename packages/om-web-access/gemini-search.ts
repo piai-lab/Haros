@@ -1,4 +1,3 @@
-import { existsSync, readFileSync } from "node:fs";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { activityMonitor } from "./activity.ts";
 import { CredentialResolutionError } from "./credential-source.ts";
@@ -29,7 +28,7 @@ import { isBrightDataAvailable, searchWithBrightData } from "./brightdata.ts";
 import { isSerpBaseAvailable, searchWithSerpBase } from "./serpbase.ts";
 import { isSerperAvailable, searchWithSerper } from "./serper.ts";
 import { isValyuAvailable, searchWithValyu } from "./valyu.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 export const RESOLVED_SEARCH_PROVIDERS = ["openai", "brave", "parallel", "parallel-mcp", "tinyfish", "search1api", "searchinfinity", "querit", "tavily", "firecrawl", "jina", "searxng", "duckduckgo", "perplexity", "gemini", "exa", "serpdive", "kagi", "ollama", "anysearch", "xai", "brightdata", "serpbase", "serper", "valyu", "bocha"] as const;
 export const SEARCH_PROVIDERS = ["auto", "all", ...RESOLVED_SEARCH_PROVIDERS] as const;
@@ -91,7 +90,7 @@ export interface AttributedSearchResponse extends SearchResponse {
 	providerErrors?: ProviderSearchFailure[];
 }
 
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const DEFAULT_SEARCH_MODEL = "gemini-3.6-flash";
 // Explicit-only providers (Parallel MCP, DuckDuckGo, AnySearch, xAI, Bright Data, SerpBase, Serper, Valyu) are deliberately absent:
 // `all` must never fan out to an opt-in or paid provider without the user asking for it.
@@ -105,52 +104,32 @@ type SearchConfig = {
 	searchModel?: string;
 };
 
-let cachedSearchConfig: SearchConfig | null = null;
-
 function getSearchConfig(): SearchConfig {
-	if (cachedSearchConfig) return cachedSearchConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedSearchConfig = { searchProvider: "auto", searchProviderConfigured: false };
-		return cachedSearchConfig;
-	}
-
-	const rawText = readFileSync(CONFIG_PATH, "utf-8");
-	let raw: Record<string, unknown>;
-	try {
-		const parsed: unknown = JSON.parse(rawText);
-		if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-			throw new Error("expected a JSON object");
-		}
-		raw = parsed as Record<string, unknown>;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+	const raw = readWebSearchConfig();
 
 	const searchModel = normalizeSearchModel(raw.searchModel);
 	const searchProviderConfigured = Object.hasOwn(raw, "searchProvider") || Object.hasOwn(raw, "provider");
-	cachedSearchConfig = {
-		searchProvider: normalizeSearchProviderSelection(raw.searchProvider ?? raw.provider, `provider in ${CONFIG_PATH}`),
+	return {
+		searchProvider: normalizeSearchProviderSelection(raw.searchProvider ?? raw.provider, `provider in ${configPath()}`),
 		searchProviderConfigured,
 		...(Object.hasOwn(raw, "searchRouting") ? { searchRouting: normalizeSearchRouting(raw.searchRouting) } : {}),
 		...(searchModel ? { searchModel } : {}),
 	};
-	return cachedSearchConfig;
 }
 
 function normalizeSearchRouting(value: unknown): SearchRoutingConfig {
 	if (!value || typeof value !== "object" || Array.isArray(value)) {
-		throw new Error(`searchRouting in ${CONFIG_PATH} must be an object`);
+		throw new Error(`searchRouting in ${configPath()} must be an object`);
 	}
 	const raw = value as Record<string, unknown>;
-	const providers = normalizeResolvedProviderList(raw.providers, `searchRouting.providers in ${CONFIG_PATH}`);
+	const providers = normalizeResolvedProviderList(raw.providers, `searchRouting.providers in ${configPath()}`);
 	if (!Array.isArray(raw.fallbackOn) || raw.fallbackOn.length === 0) {
-		throw new Error(`searchRouting.fallbackOn in ${CONFIG_PATH} must be a non-empty array`);
+		throw new Error(`searchRouting.fallbackOn in ${configPath()} must be a non-empty array`);
 	}
 	const fallbackOn: SearchRoutingConfig["fallbackOn"] = [];
 	for (const kind of raw.fallbackOn) {
 		if (typeof kind !== "string" || !VALID_ROUTING_KINDS.includes(kind as typeof VALID_ROUTING_KINDS[number])) {
-			throw new Error(`searchRouting.fallbackOn in ${CONFIG_PATH} may only contain transient, quota, network, or invalid-response`);
+			throw new Error(`searchRouting.fallbackOn in ${configPath()} may only contain transient, quota, network, or invalid-response`);
 		}
 		if (!fallbackOn.includes(kind as SearchRoutingConfig["fallbackOn"][number])) {
 			fallbackOn.push(kind as SearchRoutingConfig["fallbackOn"][number]);
@@ -329,7 +308,7 @@ async function searchWithResolvedProvider(
 		if (result) return { ...result, provider };
 		throw new Error(
 			"Gemini search unavailable. Either:\n" +
-			`  1. Configure geminiApiKey in ${CONFIG_PATH} or set GEMINI_API_KEY\n` +
+			`  1. Configure geminiApiKey in ${configPath()} or set GEMINI_API_KEY\n` +
 			"  2. Set GOOGLE_GEMINI_BASE_URL + CLOUDFLARE_API_KEY for Cloudflare AI Gateway routing\n" +
 			"  3. Sign into gemini.google.com in a supported Chromium-based browser",
 		);
@@ -701,7 +680,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 	throw new Error(
 		"No search provider available. Either:\n" +
 		"  1. Use /login to sign in with a Codex subscription for OpenAI web search\n" +
-		`  2. Set openaiApiKey, braveApiKey, parallelApiKey, tinyfishApiKey, search1apiApiKey, searchinfinityApiKey, queritApiKey, tavilyApiKey, firecrawlBaseUrl, jinaApiKey, serpdiveApiKey, kagiApiKey, ollamaApiKey, searxngBaseUrl, perplexityApiKey, exaApiKey, geminiApiKey, bochaApiKey, or cloudflareApiKey in ${CONFIG_PATH}\n` +
+		`  2. Set openaiApiKey, braveApiKey, parallelApiKey, tinyfishApiKey, search1apiApiKey, searchinfinityApiKey, queritApiKey, tavilyApiKey, firecrawlBaseUrl, jinaApiKey, serpdiveApiKey, kagiApiKey, ollamaApiKey, searxngBaseUrl, perplexityApiKey, exaApiKey, geminiApiKey, bochaApiKey, or cloudflareApiKey in ${configPath()}\n` +
 		"  3. Set OPENAI_API_KEY, BRAVE_API_KEY, PARALLEL_API_KEY, TINYFISH_API_KEY, SEARCH1API_KEY, SEARCHINFINITY_API_KEY, QUERIT_API_KEY, TAVILY_API_KEY, FIRECRAWL_BASE_URL, JINA_API_KEY, SERPDIVE_API_KEY, KAGI_API_KEY, BOCHA_API_KEY, OLLAMA_API_KEY, SEARXNG_BASE_URL, EXA_API_KEY, PERPLEXITY_API_KEY, GEMINI_API_KEY, or CLOUDFLARE_API_KEY env vars\n" +
 		"  4. Set GOOGLE_GEMINI_BASE_URL with CLOUDFLARE_API_KEY for Cloudflare AI Gateway routing\n" +
 		"  5. Sign into gemini.google.com in a supported Chromium-based browser\n" +

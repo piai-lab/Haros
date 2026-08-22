@@ -1,9 +1,8 @@
-import { existsSync, readFileSync } from "node:fs";
 import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { activityMonitor } from "./activity.ts";
 import type { SearchOptions, SearchResponse, SearchResult } from "./perplexity.ts";
 import { hasCredentialSource, redactCredential, resolveCredential } from "./credential-source.ts";
-import { getWebSearchConfigPath } from "./utils.ts";
+import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 
 // xAI's Agent Tools API: a hosted `web_search` tool on an OpenAI-compatible
 // Responses endpoint. The search runs inside xAI's own inference, so — unlike
@@ -23,7 +22,7 @@ import { getWebSearchConfigPath } from "./utils.ts";
 // without asking for them via `include`.
 
 const XAI_RESPONSES_URL = "https://api.x.ai/v1/responses";
-const CONFIG_PATH = getWebSearchConfigPath();
+const configPath = () => getWebSearchConfigPath();
 const SEARCH_TIMEOUT_MS = 60_000;
 
 // Ordered best-first. pi's builtin xai catalog is small and xAI retires models
@@ -44,34 +43,19 @@ interface XaiAuth {
 	headers: ProviderHeaders;
 }
 
-let cachedConfig: WebSearchConfig | null = null;
-
 function loadConfig(): WebSearchConfig {
-	if (cachedConfig) return cachedConfig;
-	if (!existsSync(CONFIG_PATH)) {
-		cachedConfig = {};
-		return cachedConfig;
-	}
-
-	const raw = readFileSync(CONFIG_PATH, "utf-8");
-	try {
-		cachedConfig = JSON.parse(raw) as WebSearchConfig;
-		return cachedConfig;
-	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
-		throw new Error(`Failed to parse ${CONFIG_PATH}: ${message}`);
-	}
+	return readWebSearchConfig() as WebSearchConfig;
 }
 
-function resolveConfiguredSearchModel(value: unknown): string | undefined {
+function resolveConfiguredSearchModel(value: unknown): string | undefined  {
 	if (value == null) return undefined;
 	if (typeof value !== "string" || value.trim().length === 0) {
-		throw new Error(`xaiSearchModel in ${CONFIG_PATH} must be a non-empty string`);
+		throw new Error(`xaiSearchModel in ${configPath()} must be a non-empty string`);
 	}
 	return value.trim();
 }
 
-function toRequestHeaders(headers: ProviderHeaders): Record<string, string> {
+function toRequestHeaders(headers: ProviderHeaders): Record<string, string>  {
 	const requestHeaders: Record<string, string> = {};
 	for (const [name, value] of Object.entries(headers)) {
 		if (value !== null) requestHeaders[name] = value;
@@ -84,7 +68,7 @@ function toRequestHeaders(headers: ProviderHeaders): Record<string, string> {
  * its own searches and no api key has to be configured at all. Mirrors how the
  * OpenAI backend picks up a Codex sign-in.
  */
-async function resolvePiAuth(ctx: ExtensionContext, modelOverride?: string): Promise<XaiAuth | undefined> {
+async function resolvePiAuth(ctx: ExtensionContext, modelOverride?: string): Promise<XaiAuth | undefined>  {
 	for (const modelId of AUTH_MODEL_CANDIDATES) {
 		try {
 			const model = ctx.modelRegistry.find("xai", modelId);
@@ -99,7 +83,7 @@ async function resolvePiAuth(ctx: ExtensionContext, modelOverride?: string): Pro
 	return undefined;
 }
 
-export async function resolveXaiAuth(ctx?: ExtensionContext, signal?: AbortSignal): Promise<XaiAuth | undefined> {
+export async function resolveXaiAuth(ctx?: ExtensionContext, signal?: AbortSignal): Promise<XaiAuth | undefined>  {
 	const config = loadConfig();
 	const modelOverride = resolveConfiguredSearchModel(config.xaiSearchModel);
 	if (ctx) {
@@ -122,7 +106,7 @@ export async function resolveXaiAuth(ctx?: ExtensionContext, signal?: AbortSigna
 	return apiKey ? { apiKey, model: modelOverride ?? AUTH_MODEL_CANDIDATES[0], headers: {} } : undefined;
 }
 
-export async function isXaiSearchAvailable(ctx?: ExtensionContext): Promise<boolean> {
+export async function isXaiSearchAvailable(ctx?: ExtensionContext): Promise<boolean>  {
 	if (ctx && await resolvePiAuth(ctx)) return true;
 	const config = loadConfig();
 	return hasCredentialSource({
@@ -132,7 +116,7 @@ export async function isXaiSearchAvailable(ctx?: ExtensionContext): Promise<bool
 	});
 }
 
-function normalizeDomain(value: string): string | null {
+function normalizeDomain(value: string): string | null  {
 	let input = value.trim().toLowerCase();
 	if (!input) return null;
 	if (input.startsWith("-")) input = input.slice(1).trim();
@@ -153,7 +137,7 @@ function normalizeDomain(value: string): string | null {
  * an unknown field risks a 400 that costs the whole search; steering through
  * the instruction text degrades to "the model ignored it" instead.
  */
-function buildInput(query: string, options: SearchOptions): string {
+function buildInput(query: string, options: SearchOptions): string  {
 	const lines = [
 		"Search the web and answer using only what the web results say.",
 		"Cite your sources inline.",
@@ -187,7 +171,7 @@ function buildInput(query: string, options: SearchOptions): string {
 	return `${lines.join(" ")}\n\n${query}`;
 }
 
-function addResult(results: SearchResult[], seen: Set<string>, url: unknown, title: unknown, snippet = ""): void {
+function addResult(results: SearchResult[], seen: Set<string>, url: unknown, title: unknown, snippet = ""): void  {
 	if (typeof url !== "string" || url.trim().length === 0) return;
 	if (seen.has(url)) return;
 	seen.add(url);
@@ -198,7 +182,7 @@ function addResult(results: SearchResult[], seen: Set<string>, url: unknown, tit
 	});
 }
 
-function extractSnippetAround(text: string, start: unknown, end: unknown): string {
+function extractSnippetAround(text: string, start: unknown, end: unknown): string  {
 	if (typeof start !== "number" || typeof end !== "number" || !text) return "";
 	const before = Math.max(0, start - 100);
 	const after = Math.min(text.length, end + 100);
@@ -206,7 +190,7 @@ function extractSnippetAround(text: string, start: unknown, end: unknown): strin
 	return snippet.length > 300 ? `${snippet.slice(0, 297)}...` : snippet;
 }
 
-function extractAnswer(output: unknown[]): string {
+function extractAnswer(output: unknown[]): string  {
 	const parts: string[] = [];
 	for (const item of output) {
 		if (!item || typeof item !== "object" || (item as { type?: unknown }).type !== "message") continue;
@@ -228,7 +212,7 @@ function extractAnswer(output: unknown[]): string {
  * `web_search_call` visited. A third-party extension that reads `data.citations`
  * silently returns answers with no sources at all — hence both paths here.
  */
-function extractSearchResults(output: unknown[], numResults: number | undefined): SearchResult[] {
+function extractSearchResults(output: unknown[], numResults: number | undefined): SearchResult[]  {
 	const results: SearchResult[] = [];
 	const seenUrls = new Set<string>();
 
@@ -287,7 +271,7 @@ export async function searchWithXai(
 		throw new Error(
 			"xAI web search unavailable. Either:\n" +
 			"  1. Use /login to sign in with a SuperGrok or X Premium subscription\n" +
-			`  2. Create ${CONFIG_PATH} with { "xaiApiKey": "your-key" }\n` +
+			`  2. Create ${configPath()} with { "xaiApiKey": "your-key" }\n` +
 			"  3. Set XAI_API_KEY environment variable",
 		);
 	}
