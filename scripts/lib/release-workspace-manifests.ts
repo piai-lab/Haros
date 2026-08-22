@@ -17,3 +17,17 @@ export const RELEASE_LOCKFILE_PATH = "bun.lock";
 export const RELEASE_PATCHES_PATH = "patches";
 export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH =
   "vendor/omnimind-pi-coding-agent-0.84.2.tgz";
+
+export function omitBundledServerWorkspaceDependencies(
+  dependencies: Readonly<Record<string, unknown>>,
+): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(dependencies).filter(([name, version]) => {
+      if (typeof version !== "string" || !version.startsWith("workspace:")) return true;
+      if (!name.startsWith("@omnimind/")) {
+        throw new Error(`Server workspace dependency '${name}' is not covered by the @omnimind/* bundle rule.`);
+      }
+      return false;
+    }),
+  );
+}

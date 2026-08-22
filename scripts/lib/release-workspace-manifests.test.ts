@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { RELEASE_WORKSPACE_MANIFEST_PATHS } from "./release-workspace-manifests";
+import {
+  omitBundledServerWorkspaceDependencies,
+  RELEASE_WORKSPACE_MANIFEST_PATHS,
+} from "./release-workspace-manifests";
 
 const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 
@@ -41,5 +44,17 @@ describe("release workspace manifests", () => {
 
     expect(server.dependencies?.marked).toBe(webAccess.dependencies?.marked);
     expect(server.dependencies?.marked).toBe("15.0.12");
+  });
+
+  it("does not externalize workspace packages already bundled into the Server", () => {
+    expect(
+      omitBundledServerWorkspaceDependencies({
+        "@omnimind/om-web-access": "workspace:*",
+        marked: "15.0.12",
+      }),
+    ).toEqual({ marked: "15.0.12" });
+    expect(() =>
+      omitBundledServerWorkspaceDependencies({ "foreign-workspace": "workspace:*" }),
+    ).toThrow("not covered by the @omnimind/* bundle rule");
   });
 });
