@@ -1740,7 +1740,7 @@ const SCRIPT = `(function() {
   var availProviders = DATA.availableProviders && typeof DATA.availableProviders === "object" ? DATA.availableProviders : {};
   var providerPresentation = DATA.providerPresentation && typeof DATA.providerPresentation === "object" ? DATA.providerPresentation : {};
   var observerMode = DATA.mode === "observer";
-  var workflow = "summary-review";
+  var workflow = observerMode ? "none" : "summary-review";
   var initialDefaultProvider = typeof DATA.defaultProvider === "string" ? DATA.defaultProvider : "exa";
   if (providers.indexOf(initialDefaultProvider) === -1) initialDefaultProvider = "exa";
   var initialSearchProvider = typeof DATA.searchProvider === "string" ? DATA.searchProvider.toLowerCase() : initialDefaultProvider;
@@ -3175,7 +3175,7 @@ __PROVIDER_LABEL_RESOLVER__
       ? t("observerSummarySent")
       : t("observerResultsSent");
     heroDesc.textContent = terminalCopy;
-    if (heroStatus) heroStatus.textContent = terminalCopy;
+    if (heroStatus) heroStatus.textContent = "";
     document.body.classList.add("observer-terminal");
     if (es) es.close();
   });

@@ -78,8 +78,10 @@ test("observer uses the same bilingual page but removes review settlement contro
   assert.match(observer, /data-surface-mode="observer"/);
   assert.match(observer, /搜索结果会实时显示在这里，Agent 将自动继续/);
   assert.match(observer, /observerMode = DATA\.mode === "observer"/);
+  assert.match(observer, /workflow = observerMode \? "none" : "summary-review"/);
   assert.match(observer, /html\[data-surface-mode="observer"\] \.action-bar/);
   assert.match(observer, /es\.addEventListener\("terminal"/);
+  assert.match(observer, /if \(heroStatus\) heroStatus\.textContent = ""/);
   assert.doesNotThrow(() => new Function(inlineScript(observer)));
 });
 
