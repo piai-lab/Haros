@@ -23,11 +23,13 @@ Synara 不是截图或灵感库，而是长期深耕这些问题的成熟产品�
 flowchart LR
     Root["OmniMind"] --> Agent["Agent"]
     Root --> Chat["Chat"]
+    Root --> Studio["Studio"]
     Agent --> Projects["Projects"]
     Agent --> Groups["Groups · conversation labels"]
     Agent --> Workbench["Files · Diff · Terminal · Git · Artifacts"]
     Agent --> Thread["Project Thread"]
-    Chat --> Studio["Home / Studio managed Thread"]
+    Chat --> ChatHome["Home managed Thread"]
+    Studio --> StudioHome["Studio managed workspace"]
     Thread --> Providers["OmniMind · Pi · Codex · Claude · OpenCode · …"]
     Studio --> Providers
 ```
@@ -77,7 +79,7 @@ Agent 与 Chat 始终作为一级入口可达，不新增显示设置。Studio �
 ### Chat
 
 - 使用 Synara Home managed Thread，无用户选择的 Primary Folder；
-- 可以在 OmniMind-owned managed workspace/outbox 中生成 Artifact；
+- 可以在 OmniMind-owned managed workspace 的 `work/` 中处理文件，并把普通文件结果放入同级 `outputs/`；
 - 上传或引用的外部用户文件默认只读，不默认修改现有 Project；
 - 不显示完整 Project Files/Git/Terminal 工作台，不暗中升级为可写 Agent；
 - Composer 提供明确的文件/文件夹引用入口和只读引用 chip；引用按消息或 draft 保存，不升级为 cwd/Project、不自动扫描；

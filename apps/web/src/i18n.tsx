@@ -439,6 +439,8 @@ export const EN_MESSAGES = {
   "hydration.loading": "Loading conversation",
   "hydration.failed": "This conversation didn’t load.",
   "toolDetails.none": "No detailed payload was available for this tool call.",
+  "toolDetails.summary": "Summary",
+  "toolDetails.rawCall": "Raw call",
   "toolDetails.files": "Files",
   "toolDetails.diff": "Diff",
   "toolDetails.edits": "Edits",
@@ -1295,7 +1297,7 @@ export const EN_MESSAGES = {
   "pdf.openFailed": "Could not open this PDF.",
   "pdf.renderFailed": "Could not render page {page}.",
   "shell.productName": "OmniMind",
-  "shell.switchSurface": "Switch workspace",
+  "shell.switchSurface": "Switch surface",
   "shell.connectingServer": "Connecting to {app} server…",
   "shell.activity": "Activity",
   "shell.activityDescription":
@@ -2155,8 +2157,8 @@ export const EN_MESSAGES = {
   "settings.coreDefaults": "Core defaults",
   "settings.defaultProvider": "Default engine",
   "settings.defaultProviderDescription": "Choose the engine used for new chats.",
-  "settings.chatSurfaceDescription":
-    "Show Chat at the top of the sidebar so you can switch between Agent and Chat. When off, only Agent is shown.",
+  "settings.studioSurfaceDescription":
+    "Show Studio in the work surface menu. Turning it off keeps existing Studio conversations and files.",
   "settings.timeAndReading": "Time and reading",
   "settings.restoreDefaults": "Restore defaults",
   "settings.newThreads": "New tasks",
@@ -4106,6 +4108,8 @@ export const ZH_CN_MESSAGES = {
   "hydration.loading": "正在加载对话",
   "hydration.failed": "无法加载此对话。",
   "toolDetails.none": "此工具调用没有可显示的详细信息。",
+  "toolDetails.summary": "摘要",
+  "toolDetails.rawCall": "原始调用",
   "toolDetails.files": "文件",
   "toolDetails.diff": "差异",
   "toolDetails.edits": "编辑",
@@ -5740,8 +5744,8 @@ export const ZH_CN_MESSAGES = {
   "settings.coreDefaults": "核心默认值",
   "settings.defaultProvider": "默认引擎",
   "settings.defaultProviderDescription": "选择新 Chat 默认使用的引擎。",
-  "settings.chatSurfaceDescription":
-    "在侧栏顶部显示 Chat 入口，方便在 Agent 和 Chat 之间切换。关闭后，侧栏仅显示 Agent。",
+  "settings.studioSurfaceDescription":
+    "在工作面菜单中显示 Studio。关闭后，已有的 Studio 对话和文件仍会保留。",
   "settings.timeAndReading": "时间与阅读",
   "settings.restoreDefaults": "恢复默认值",
   "settings.newThreads": "新任务",

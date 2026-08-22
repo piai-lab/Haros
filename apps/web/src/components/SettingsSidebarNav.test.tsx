@@ -41,6 +41,14 @@ describe("rankSettingsSearchEntries", () => {
     expect(results.some((entry) => entry.id === "notifications:activity-toasts")).toBe(true);
   });
 
+  it("indexes the Studio visibility setting as Studio rather than Chat", () => {
+    const entry = SETTINGS_SEARCH_ENTRIES.find(
+      (candidate) => candidate.id === "general:studio-section",
+    );
+    expect(entry).toMatchObject({ title: "Studio", section: "general" });
+    expect(rankSettingsSearchEntries("Studio", 1)[0]?.id).toBe("general:studio-section");
+  });
+
   it("localizes Model services search without losing its stable entry", () => {
     const results = rankSettingsSearchEntries("模型", SETTINGS_SEARCH_ENTRIES.length, (key) =>
       key === "settings.models" ? "模型服务" : String(key),

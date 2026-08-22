@@ -372,7 +372,7 @@ function SettingsRouteView() {
     ...(settings.sidebarThreadSortOrder !== defaults.sidebarThreadSortOrder
       ? [t("settings.threadOrder")]
       : []),
-    ...(settings.showStudioSection !== defaults.showStudioSection ? [t("nav.chat")] : []),
+    ...(settings.showStudioSection !== defaults.showStudioSection ? [t("nav.studio")] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? [t("settings.uiDensity")] : []),
     ...(settings.chatWidth !== defaults.chatWidth ? [t("settings.chatWidth")] : []),
     ...(settings.desktopAppIcon !== defaults.desktopAppIcon ? [t("settings.appIcon")] : []),
@@ -731,10 +731,10 @@ function SettingsRouteView() {
       <SettingsSection title={t("settings.sidebarSections")}>
         {renderBooleanSettingRow({
           settingKey: "showStudioSection",
-          title: t("nav.chat"),
-          description: t("settings.chatSurfaceDescription"),
-          resetLabel: t("nav.chat"),
-          ariaLabel: t("settings.chatSurfaceDescription"),
+          title: t("nav.studio"),
+          description: t("settings.studioSurfaceDescription"),
+          resetLabel: t("nav.studio"),
+          ariaLabel: t("settings.studioSurfaceDescription"),
         })}
       </SettingsSection>
 

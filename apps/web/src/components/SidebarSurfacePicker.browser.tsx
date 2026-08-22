@@ -78,14 +78,19 @@ describe("SidebarSurfacePicker", () => {
       expect(SIDEBAR_RESIZE_DEFAULT_MIN_WIDTH).toBe(13 * 16);
       const screen = await render(<SurfaceHarness locale={locale} />);
       const trigger = screen.getByRole("button", {
-        name: locale === "en" ? "Switch workspace" : "切换工作面",
+        name: locale === "en" ? "Switch surface" : "切换工作面",
       });
 
       await expect.element(trigger).toBeVisible();
       expect(trigger.element().textContent).toBe("Agent");
-      const disclosureChevron = trigger.element().querySelector('svg[aria-hidden="true"]');
+      const disclosureChevron = trigger
+        .element()
+        .querySelector<SVGElement>('svg[aria-hidden="true"]');
       expect(disclosureChevron).not.toBeNull();
-      expect(disclosureChevron?.classList.contains("rotate-90")).toBe(true);
+      expect(disclosureChevron?.getBoundingClientRect().width).toBeGreaterThan(0);
+      expect(disclosureChevron?.getBoundingClientRect().height).toBeGreaterThan(0);
+      expect(window.getComputedStyle(disclosureChevron!).visibility).not.toBe("hidden");
+      expect(Number(window.getComputedStyle(disclosureChevron!).opacity)).toBeGreaterThan(0);
 
       const row = screen.getByTestId("minimum-sidebar-row").element();
       expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);
@@ -108,7 +113,7 @@ describe("SidebarSurfacePicker", () => {
     const screen = await render(
       <SurfaceHarness locale="en" onSelectView={onSelectView} onPrewarmView={onPrewarmView} />,
     );
-    const trigger = screen.getByRole("button", { name: "Switch workspace" });
+    const trigger = screen.getByRole("button", { name: "Switch surface" });
     (trigger.element() as HTMLButtonElement).click();
     const agent = screen.getByRole("menuitemradio", {
       name: /Agent Work inside a project with execution tools/,
