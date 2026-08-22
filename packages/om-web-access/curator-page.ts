@@ -199,12 +199,12 @@ ${CSS}
 </div>
 </footer>
 
-<div id="success-overlay" class="success-overlay hidden" aria-live="polite">
+<div id="success-overlay" class="success-overlay hidden" aria-live="polite" aria-hidden="true">
 <div class="success-icon">OK</div>
 <p id="success-text">${escapeMarkup(copy.resultsSent)}</p>
 </div>
 
-<div id="expired-overlay" class="expired-overlay hidden" aria-live="polite">
+<div id="expired-overlay" class="expired-overlay hidden" aria-live="polite" aria-hidden="true">
 <div class="expired-content">
 <div class="expired-icon">!</div>
 <h2>${escapeMarkup(copy.sessionEnded)}</h2>
@@ -1284,6 +1284,11 @@ html[data-surface-mode="observer"] .card-alt-chip {
 
 html[data-surface-mode="observer"] main {
   padding-bottom: 40px;
+}
+
+html[data-surface-mode="observer"] .success-overlay,
+html[data-surface-mode="observer"] .expired-overlay {
+  display: none !important;
 }
 
 .btn {
@@ -2904,6 +2909,7 @@ __PROVIDER_LABEL_RESOLVER__
     if (es) { es.close(); es = null; }
     closePreviewModal();
     successText.textContent = text;
+    successOverlay.setAttribute("aria-hidden", "false");
     successOverlay.classList.remove("hidden");
     setTimeout(function() { window.close(); }, 800);
   }
@@ -2912,6 +2918,7 @@ __PROVIDER_LABEL_RESOLVER__
     if (es) { es.close(); es = null; }
     closePreviewModal();
     expiredText.textContent = text;
+    expiredOverlay.setAttribute("aria-hidden", "false");
     expiredOverlay.classList.remove("hidden");
     requestAnimationFrame(function() { expiredOverlay.classList.add("visible"); });
   }
