@@ -4,7 +4,7 @@
 
 六组内置工具的 Agent/Chat/Studio 策略已由exact pushed code SHA `586c9661e5`实现并通过merge `d4989f5cee`进入main。该code SHA已重建Desktop/DMG、替换安装，并用任务专用`userData`、home与Provider private home完成隔离fresh-profile验收；post-merge focused gates与root typecheck均通过。当前没有未完成的Host矩阵产品施工；本交付仍是本机ad-hoc candidate，不是签名、公证或Release证据。
 
-`pi-web-access@0.24.1` → `@omnimind/om-web-access`的完整source decision surface与UI identity方向已在[`research/pi-web-access-intake.md`](research/pi-web-access-intake.md)收敛：它是bundled OmniMind Agent专用Pi-native Extension，不是AgentGateway/第七组Host；Web能力级图标固定`globe`，具体服务使用同源provider descriptor与本地admitted品牌资产。维护者进一步确认：完整source集中内置为OmniMind monorepo私有workspace package，不建立独立GitHub fork或第二发布管道；Curator关闭Tab/Right Dock只隐藏不取消，控制台internal-only但来源链接进入普通Browser Tab；可用性只做首次真实搜索或显式重新检查的惰性检测；默认配置在首次Web Search Settings或首次OmniMind Agent Session由先发生者创建。当前只有`source-matched`研究与自包含HTML视觉原型，尚未导入upstream baseline、接入、配置、测试或进入发行物；下一次产品施工必须从exact upstream baseline和P1–P6 patch inventory开始，不能把本文或原型写成已交付事实。
+`pi-web-access@0.24.1` → `@omnimind/om-web-access`已形成`candidate/pending-packaged` source candidate：exact upstream baseline、P1–P6、bundled Agent composition、唯一config owner、Pi active-set、typed Curator/Browser/Timeline lifecycle、Settings与credential-blind Provider projection均已进入任务分支，当前代码候选止于`395a16b35b`。它仍只属于bundled OmniMind Agent，不是AgentGateway/第七组Host/stock Pi能力。当前尚未从已推送的exact implementation SHA重建Desktop，也未完成授权真实Provider、MiMo/DeepSeek与fresh isolated packaged journey；因此只能称source candidate，不能称用户已安装或发行已完成。
 
 ## 唯一 owner 与当前事实
 
@@ -19,7 +19,7 @@
 - fork package-owned config service必须同时服务Settings与Extension，Settings不能为读写配置启动Session；App/Session启动不发Provider health probe。Provider测试与重新检查都是用户显式触发的最小真实请求，可能消耗额度。
 - Provider测试允许使用当前完整未保存draft作为request-scoped candidate snapshot；不保存、不改routing/active-set或永久状态，并按显式request identity single-flight。单call terminal、Run abort、session tree与session shutdown必须按各自scope清理，fatal Curator/Host失败typed-error settle，不能把全实例cleanup挂在任意terminal上。
 - config service唯一拥有schema与known migration，保存/刷新后只发process-local revision invalidation；live Extension实例各自恢复自己移除的工具，不建全局Session registry、file watcher或第二持久状态。测试/重新检查pending期间single-flight，避免重复计费。
-- 当前source的Engine Web Surface仍存在三个必须随P4闭合的反例：PiAdapter用`browser_open reuse:true`会导航用户当前Tab；Timeline“重开”只展开Browser pane而不定位tool call；Browser recent-history会把token URL持久化到localStorage。实现必须改为Browser owner内部typed dedicated-tab seam、per-call ephemeral handle与non-history projection，不能扩张Agent-visible Browser schema。
+- untouched baseline的三个P4反例是`browser_open reuse:true`导航当前Tab、Timeline假重开与token URL进入recent-history；当前source candidate已以Browser owner内部typed dedicated-tab seam、per-call ephemeral handle、exact pending reopen与non-history projection闭合，focused tests证明三个反例不再出现在候选路径。packaged journey尚未完成，不能把source修复升级成安装产品证据。
 - Curator ephemeral Tab已裁决为internal-only：隐藏`Open externally`、raw-link copy与raw token地址；来源链接打开普通OmniMind Browser Tab，之后遵循一般Browser合同。只在owning Thread前台时自动呈现；后台Thread用既有waiting activity/attention，不抢route或Right Dock。
 
 ## 已闭合证据与剩余顺序
@@ -28,6 +28,7 @@
 2. exact pushed `586c9661e5` 生成DMG SHA-256 `cd97b9dd…51ece`，DMG与安装后的`app.asar`均为`3cdb313e…b784`；安装版进程使用隔离profile且bundled Server来自安装包。
 3. 安装版中文/英文矩阵、Agent/Chat/Studio默认、unsupported文案、真实815px窄屏分层、Chat Goals写入`revision=1`、关闭重开恢复均通过；App最小窗口约815px，390px由浏览器组件回归覆盖。
 4. merge `d4989f5cee`后的Shared/Contracts 15项、Server 412项、Settings Browser 10项及root typecheck 6/6通过；另以独立测试维护提交修正两个既有`@synara/contracts`陈旧导入。真实用户profile与并行research修改未被读取、改写或清理。
+5. Web Access source candidate的作者套件543项中542项通过，唯一失败是untouched baseline已复现的GitHub SIGTERM进程树竞态；root typecheck 7/7、Web Settings Browser 2/2、双语catalog 22/22以及focused Server/P1–P6/Curator/Browser gates通过。品牌资产目前全部准确使用中性provider glyph，research候选与未准入mark未进入production bytes；真实Provider与packaged evidence仍待下一关。
 
 ## Stop-loss
 

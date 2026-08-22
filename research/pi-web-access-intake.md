@@ -2,7 +2,7 @@
 
 > 观察与收口日期：2026-08-22
 >
-> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。Host Tools / Settings 已进入 main，但 Web Access 仍未实施，二者不能互相外推。
+> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。2026-08-22 source candidate 已在任务分支实现至`395a16b35b`，但尚未完成pushed-SHA Desktop、真实Provider与packaged journey；Host Tools事实仍不能外推为Web Access证据。
 >
 > 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
 >
@@ -13,7 +13,7 @@
 > 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，production adoption 只有进入根 [`README.md`](../README.md) 的 `source-adoptions` 后才成立。
 
 > [!IMPORTANT]
-> **当前 disposition：`Fork narrowly`，维护者已确认完整产品方向，但代码、依赖、发行物与 packaged journey 尚未实施。** Fork 的 package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。
+> **当前 disposition：`Fork narrowly`；monorepo-owned source candidate 已实现，状态为`candidate/pending-packaged`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。当前不得把source tests改写成用户已安装、真实Provider已验证或packaged product已交付。
 
 > [!IMPORTANT]
 > 本文 supersede [`omnimind-agent-core-ecosystem-orchestration-review.md`](omnimind-agent-core-ecosystem-orchestration-review.md) §8.4 中“机器调用默认关闭 Curator、只有用户明确要求才打开”的历史建议。维护者当前决定是：**Curator 默认开启**；用户可在 Settings 改为关闭，Agent 也可按单次调用选择不打开或在用户要求审查来源时主动打开。
@@ -55,7 +55,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
 | 图标来源 | runtime Provider定义与presentation字段同源；本地固定资产须单独闭合来源、revision/hash、license与trademark，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 尚未进入产品依赖、composition、Settings 或发行物；本文不能被引用为“功能已经可用” |
+| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings source candidate；尚未从pushed exact SHA完成Desktop、真实Provider和packaged journey，不能被引用为“用户已经拿到功能” |
 
 ### 0.3 唯一 owner 图
 
@@ -143,7 +143,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 | npm shasum | `78449966e7f682f707bb9964c3e62d5f04318d8c` |
 | downloaded tgz SHA-256 | `d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054` |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物中的 runtime TypeScript 与 exact source 对应文件逐字节一致 |
-| evidence maturity | `source-matched`；尚未达到 OmniMind `isolated-runtime-observed`、`product-journey-proven` 或 `packaged-product-proven` |
+| evidence maturity | `source-candidate-pending-packaged`；作者套件543项中542项通过，唯一失败为untouched baseline已复现的GitHub SIGTERM进程树竞态；root typecheck、focused Server/Web/Curator/Settings gates通过，但尚未达到真实Provider与`packaged-product-proven` |
 
 ### 2.2 发布物结构
 
@@ -882,7 +882,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 第四个风险是品牌层级错位。当前`xai`候选glyph内部标为Grok，Searchinfinity候选来自其BytePlus关联页面；它们可能视觉上正确，但production intake仍要确认“runtime Provider → 用户display name → 品牌mark”三者是同一产品层级。不能为了图标漂亮改写runtime ID，也不能把母公司mark、产品mark和传输方式静默混用。
 
-第五个风险是把Curator当成“打开一个URL”而不是pending tool call的短时交互面。当前source反例是PiAdapter用`browser_open reuse:true`，会导航用户当前Tab；Timeline callback只展开Browser pane，不能定位对应tool call；Browser recent-history store还会把token URL写入localStorage。实施必须一次闭合dedicated ephemeral Tab、exact reopen、close不取消、terminal cleanup和non-history，否则默认Curator会直接破坏用户当前浏览上下文并留下假恢复。
+第五个风险是把Curator当成“打开一个URL”而不是pending tool call的短时交互面。untouched baseline的三个反例是PiAdapter用`browser_open reuse:true`导航用户当前Tab、Timeline callback只展开Browser pane而不能定位对应tool call、Browser recent-history把token URL写入localStorage；当前source candidate已通过typed dedicated ephemeral Tab、exact pending reopen、call-scoped settlement/cleanup与non-history metadata闭合并有focused回归。只有pushed-SHA packaged journey通过后，才能把这项source事实提升为安装产品证据。
 
 第六个风险是为了26个Provider表单发明通用配置DSL，或为了Curator Tab把内部presentation需求塞进Agent可见Browser tool schema。两者都会把一个fork接入升级成新的平台owner。正确边界是package-owned closed field vocabulary与Browser owner内部typed presentation seam；复杂Provider配置保持file-only，Agent-facing Browser schema保持不变。
 
@@ -982,10 +982,11 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "provider-availability-to-pi-active-set",
     "source-check-honest-unicode-contract"
   ],
-  "evidenceMaturity": "source-matched",
-  "implemented": false,
+  "evidenceMaturity": "source-candidate-pending-packaged",
+  "implemented": true,
+  "packagedJourney": false,
   "unresolvedMaintainerChoice": "none"
 }
 ```
 
-开始施工前仍必须实时读取 `git status --short`、[`execution-brief.md`](../execution-brief.md) 与相关 architecture owner，确认当前 Host Tools / Settings 在途分支已经合并、隔离或明确让路。该并发事实只决定何时安全施工，不重新否决本文已经由维护者确认的产品 decision surface。
+后续pushed-SHA构建、真实Provider和packaged journey开始前仍必须实时读取`git status --short`、[`execution-brief.md`](../execution-brief.md)与相关architecture owner，并隔离真实用户profile及并发工作。该并发事实只决定何时安全验证，不重新否决本文已经由维护者确认的产品decision surface；source candidate也不能替代packaged evidence。

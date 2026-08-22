@@ -1,3 +1,11 @@
+## OmniMind distribution note
+
+This directory is the private workspace package `@omnimind/om-web-access`, adopted from Nico Bailon's MIT-licensed `pi-web-access@0.24.1` at exact commit `fbbd0cb3b3eb918c8833906aa0b41e257fffe979`. The upstream structure, legal text, mature Provider/fetch/Curator implementation, and author tests remain here; OmniMind's bounded P1–P6 lifecycle differences are tracked in [`research/pi-web-access-intake.md`](../../research/pi-web-access-intake.md).
+
+It is composed only into the bundled OmniMind Agent. It is not a Host capability, AgentGateway backend, npm release, or supported stock Pi package, and it never reads or synchronizes stock Pi's `.pi` state. The current repository state is a source candidate pending pushed-SHA Desktop packaging, real-provider journeys, and packaged evidence.
+
+---
+
 <p>
   <img src="banner.png" alt="pi-web-access" width="1100">
 </p>
