@@ -13,7 +13,7 @@ import { ModelSelection, ProviderKind, ProviderStartOptions } from "./orchestrat
 import { ServerSettingsPatch, ServerSettingsView } from "./settings";
 import { ExecutionEnvironmentDescriptor } from "./environment";
 import { AutomationCompletionPolicy, AutomationMode, AutomationSchedule } from "./automation";
-import { BuiltInToolGroups } from "./agentTools";
+import { BuiltInToolGroupsResult } from "./agentTools";
 
 export const SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 const SERVER_VOICE_TRANSCRIPTION_MAX_AUDIO_BASE64_CHARS = 14_000_000;
@@ -577,7 +577,7 @@ export type ServerProviderUpdateResult = typeof ServerProviderUpdateResult.Type;
 export const ServerGetSettingsResult = ServerSettingsView;
 export type ServerGetSettingsResult = typeof ServerGetSettingsResult.Type;
 
-export const ServerGetBuiltInToolGroupsResult = BuiltInToolGroups;
+export const ServerGetBuiltInToolGroupsResult = BuiltInToolGroupsResult;
 export type ServerGetBuiltInToolGroupsResult = typeof ServerGetBuiltInToolGroupsResult.Type;
 
 export const ServerGetEnvironmentResult = ExecutionEnvironmentDescriptor;

@@ -2,27 +2,64 @@ import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
 import { OMNIMIND_AGENT_PROMPT_MAX_BYTES } from "./editableText";
+import { BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS } from "./agentTools";
 import { DEFAULT_SERVER_SETTINGS, ServerSettings, ServerSettingsPatch } from "./settings";
 
 const decodePatch = Schema.decodeUnknownSync(ServerSettingsPatch);
 
 describe("agent tool settings contract", () => {
-  it("keeps Device disabled for a brand-new settings profile", () => {
-    expect(DEFAULT_SERVER_SETTINGS.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+  it("keeps a brand-new settings profile free of explicit surface overrides", () => {
+    expect(DEFAULT_SERVER_SETTINGS.agentTools.builtInGroupOverrides).toEqual({});
   });
 
-  it("bounds disabled group ids and list size", () => {
+  it("bounds override group ids, values, surfaces, and map size", () => {
+    const specialObjectKey = Object.defineProperty({}, "__proto__", {
+      value: true,
+      enumerable: true,
+    });
     expect(decodePatch({ agentTools: {} })).toEqual({ agentTools: {} });
     expect(() =>
-      decodePatch({ agentTools: { disabledBuiltInGroups: ["x".repeat(65)] } }),
+      decodePatch({
+        agentTools: { builtInGroupOverrides: { agent: { ["x".repeat(65)]: true } } },
+      }),
     ).toThrow();
     expect(() =>
       decodePatch({
         agentTools: {
-          disabledBuiltInGroups: Array.from({ length: 33 }, (_, index) => `group-${index}`),
+          builtInGroupOverrides: {
+            agent: Object.fromEntries(
+              Array.from({ length: BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS + 1 }, (_, index) => [
+                `group-${index}`,
+                false,
+              ]),
+            ),
+          },
         },
       }),
     ).toThrow();
+    expect(() =>
+      decodePatch({ agentTools: { builtInGroupOverrides: { chat: { not_valid: true } } } }),
+    ).toThrow();
+    expect(() =>
+      decodePatch({ agentTools: { builtInGroupOverrides: { chat: specialObjectKey } } }),
+    ).toThrow();
+    expect(() =>
+      decodePatch({ agentTools: { builtInGroupOverrides: { chat: { goals: "yes" } } } }),
+    ).toThrow();
+    const maximumBoundedMap = Object.fromEntries(
+      Array.from({ length: BUILT_IN_TOOL_GROUP_OVERRIDE_MAX_KEYS }, (_, index) => [
+        `group-${index}`,
+        false,
+      ]),
+    );
+    expect(
+      decodePatch({ agentTools: { builtInGroupOverrides: { studio: maximumBoundedMap } } }),
+    ).toEqual({ agentTools: { builtInGroupOverrides: { studio: maximumBoundedMap } } });
+    expect(
+      decodePatch({ agentTools: { builtInGroupOverrides: { chat: { "future-group": false } } } }),
+    ).toEqual({
+      agentTools: { builtInGroupOverrides: { chat: { "future-group": false } } },
+    });
   });
 });
 

@@ -1,10 +1,13 @@
 import {
+  BUILT_IN_TOOL_SURFACES,
+  type BuiltInToolGroupOverrides,
   type ModelSelection,
   type ProviderStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
 } from "@omnimind/contracts";
 import { deepMerge, type DeepPartial } from "./Struct";
+import { isBuiltInToolGroupId, resolveHostGroupSurfacePolicy } from "./hostToolSurfacePolicy";
 import { getDefaultModel } from "./model";
 
 function shouldReplaceTextGenerationModelSelection(
@@ -26,13 +29,46 @@ export function validateServerSettingsPatch(
   ) {
     return `text generation provider ${selectionPatch.provider} requires an explicit model when changing providers`;
   }
+  const overrides = patch.agentTools?.builtInGroupOverrides;
+  if (overrides !== undefined) {
+    for (const surface of BUILT_IN_TOOL_SURFACES) {
+      const currentSurface = current.agentTools.builtInGroupOverrides[surface];
+      const nextSurface = overrides[surface];
+      if (!nextSurface) continue;
+      for (const [group, value] of Object.entries(nextSurface)) {
+        if (!isBuiltInToolGroupId(group)) continue;
+        if (resolveHostGroupSurfacePolicy(group, surface).supported) continue;
+        const existed = currentSurface !== undefined && Object.hasOwn(currentSurface, group);
+        if (!existed || currentSurface[group] !== value) {
+          return `built-in tool group ${group} is unsupported on ${surface}`;
+        }
+      }
+    }
+  }
   return null;
 }
 
-export function normalizeDisabledBuiltInGroups(values: readonly string[]): string[] {
-  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))].sort(
-    (left, right) => (left < right ? -1 : left > right ? 1 : 0),
-  );
+export function normalizeBuiltInGroupOverrides(
+  overrides: BuiltInToolGroupOverrides,
+): BuiltInToolGroupOverrides {
+  const normalized: Partial<
+    Record<(typeof BUILT_IN_TOOL_SURFACES)[number], Record<string, boolean>>
+  > = {};
+  for (const surface of BUILT_IN_TOOL_SURFACES) {
+    const values = overrides[surface];
+    if (!values) continue;
+    const entries = Object.entries(values).toSorted(([left], [right]) =>
+      left < right ? -1 : left > right ? 1 : 0,
+    );
+    if (entries.length === 0) continue;
+    const surfaceValues: Record<string, boolean> = {};
+    for (const [key, value] of entries) {
+      if (!Object.hasOwn(values, key)) continue;
+      surfaceValues[key] = value;
+    }
+    normalized[surface] = surfaceValues;
+  }
+  return normalized;
 }
 
 export function normalizeServerSettings(settings: ServerSettings): ServerSettings {
@@ -40,8 +76,8 @@ export function normalizeServerSettings(settings: ServerSettings): ServerSetting
     ...settings,
     agentTools: {
       ...settings.agentTools,
-      disabledBuiltInGroups: normalizeDisabledBuiltInGroups(
-        settings.agentTools.disabledBuiltInGroups,
+      builtInGroupOverrides: normalizeBuiltInGroupOverrides(
+        settings.agentTools.builtInGroupOverrides,
       ),
     },
   };
@@ -52,7 +88,18 @@ export function applyServerSettingsPatch(
   patch: ServerSettingsPatch,
 ): ServerSettings {
   const selectionPatch = patch.textGenerationModelSelection;
-  const next = normalizeServerSettings(deepMerge(current, patch as DeepPartial<ServerSettings>));
+  const merged = deepMerge(current, patch as DeepPartial<ServerSettings>);
+  const next = normalizeServerSettings(
+    patch.agentTools?.builtInGroupOverrides === undefined
+      ? merged
+      : {
+          ...merged,
+          agentTools: {
+            ...merged.agentTools,
+            builtInGroupOverrides: patch.agentTools.builtInGroupOverrides,
+          },
+        },
+  );
   if (!selectionPatch) {
     return next;
   }

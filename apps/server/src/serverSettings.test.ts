@@ -41,7 +41,7 @@ describe("ServerSettingsService", () => {
       provider: "codex",
       model: DEFAULT_GIT_TEXT_GENERATION_MODEL,
     });
-    expect(settings.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+    expect(settings.agentTools.builtInGroupOverrides).toEqual({});
     expect(result.settingsFileExists).toBe(false);
   });
 
@@ -72,7 +72,7 @@ describe("ServerSettingsService", () => {
           migrationVersion: number;
           settings: {
             textGenerationModelSelection: { model: string };
-            agentTools: { disabledBuiltInGroups: string[] };
+            agentTools: { builtInGroupOverrides: Record<string, Record<string, boolean>> };
           };
         };
         return { settings, persisted };
@@ -80,10 +80,15 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
-    expect(result.settings.agentTools.disabledBuiltInGroups).toEqual([]);
-    expect(result.persisted.migrationVersion).toBe(3);
+    expect(result.settings.agentTools.builtInGroupOverrides).toEqual({
+      agent: { device: true },
+      studio: { device: true },
+    });
+    expect(result.persisted.migrationVersion).toBe(4);
     expect(result.persisted.settings).toMatchObject({
-      agentTools: { disabledBuiltInGroups: [] },
+      agentTools: {
+        builtInGroupOverrides: { agent: { device: true }, studio: { device: true } },
+      },
     });
     expect(result.persisted.settings.textGenerationModelSelection.model).toBe("gpt-5.4-mini");
   });
@@ -116,7 +121,7 @@ describe("ServerSettingsService", () => {
     expect(result.updated.providers.codex.binaryPath).toBe("/usr/local/bin/codex");
     expect(result.parsed).toMatchObject({
       revision: 1,
-      migrationVersion: 3,
+      migrationVersion: 4,
       settings: {
         enableAssistantStreaming: true,
         enableProviderUpdateChecks: false,
@@ -126,7 +131,7 @@ describe("ServerSettingsService", () => {
             customModels: ["gpt-custom"],
           },
         },
-        agentTools: { disabledBuiltInGroups: ["device"] },
+        agentTools: { builtInGroupOverrides: {} },
       },
     });
   });
@@ -143,7 +148,7 @@ describe("ServerSettingsService", () => {
           settingsPath,
           JSON.stringify({
             revision: 4,
-            migrationVersion: 3,
+            migrationVersion: 4,
             settings: {
               enableAssistantStreaming: true,
               enableProviderUpdateChecks: false,
@@ -156,7 +161,7 @@ describe("ServerSettingsService", () => {
                 },
                 codex: { customModels: ["custom/codex-model"] },
               },
-              agentTools: { disabledBuiltInGroups: ["device"] },
+              agentTools: { builtInGroupOverrides: {} },
             },
           }),
         );
@@ -188,7 +193,7 @@ describe("ServerSettingsService", () => {
     });
     expect(result.persisted).toMatchObject({
       revision: 5,
-      migrationVersion: 3,
+      migrationVersion: 4,
       settings: {
         enableAssistantStreaming: false,
         enableProviderUpdateChecks: false,
@@ -197,7 +202,7 @@ describe("ServerSettingsService", () => {
           omnimind: { enabled: false, defaultPrompt: "private prompt" },
           codex: { customModels: ["custom/codex-model"] },
         },
-        agentTools: { disabledBuiltInGroups: ["device"] },
+        agentTools: { builtInGroupOverrides: {} },
       },
     });
     expect(result.persisted.settings.providers.omnimind).not.toHaveProperty(retiredKey);
@@ -207,22 +212,44 @@ describe("ServerSettingsService", () => {
     {
       name: "an explicit legacy Device-on choice",
       disabledBuiltInGroups: [] as string[],
-      expected: [] as string[],
+      expected: { agent: { device: true }, studio: { device: true } },
     },
     {
       name: "an explicit Device-off choice",
       disabledBuiltInGroups: ["device"],
-      expected: ["device"],
+      expected: {},
     },
     {
       name: "unknown bounded group ids",
       disabledBuiltInGroups: ["future-group", "device"],
-      expected: ["device", "future-group"],
+      expected: {
+        agent: { "future-group": false },
+        chat: { "future-group": false },
+        studio: { "future-group": false },
+      },
     },
     {
       name: "the disabled legacy OmniMind aggregate",
       disabledBuiltInGroups: ["omnimind", "future-group"],
-      expected: ["automations", "diagnostics", "future-group", "goals", "tasks"],
+      expected: {
+        agent: {
+          automations: false,
+          device: true,
+          diagnostics: false,
+          "future-group": false,
+          goals: false,
+          tasks: false,
+        },
+        chat: { "future-group": false },
+        studio: {
+          automations: false,
+          device: true,
+          diagnostics: false,
+          "future-group": false,
+          goals: false,
+          tasks: false,
+        },
+      },
     },
   ])(
     "preserves $name while migrating the settings envelope",
@@ -247,18 +274,22 @@ describe("ServerSettingsService", () => {
             persisted: JSON.parse(yield* fs.readFileString(settingsPath)) as {
               revision: number;
               migrationVersion: number;
-              settings: { agentTools: { disabledBuiltInGroups: string[] } };
+              settings: {
+                agentTools: {
+                  builtInGroupOverrides: Record<string, Record<string, boolean>>;
+                };
+              };
             },
           };
         }),
       );
 
       expect(result.snapshot.revision).toBe(5);
-      expect(result.snapshot.settings.agentTools.disabledBuiltInGroups).toEqual(expected);
+      expect(result.snapshot.settings.agentTools.builtInGroupOverrides).toEqual(expected);
       expect(result.persisted).toMatchObject({
         revision: 5,
-        migrationVersion: 3,
-        settings: { agentTools: { disabledBuiltInGroups: expected } },
+        migrationVersion: 4,
+        settings: { agentTools: { builtInGroupOverrides: expected } },
       });
     },
   );
@@ -286,7 +317,119 @@ describe("ServerSettingsService", () => {
     );
 
     expect(result.snapshot.revision).toBe(10);
-    expect(result.persisted).toMatchObject({ revision: 10, migrationVersion: 3 });
+    expect(result.persisted).toMatchObject({ revision: 10, migrationVersion: 4 });
+  });
+
+  it.each([1, 2, 3])("upgrades a raw v%s envelope directly to v4", async (migrationVersion) => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: migrationVersion,
+            migrationVersion,
+            settings: {
+              agentTools: { disabledBuiltInGroups: ["device", "future-group"] },
+            },
+          }),
+        );
+        yield* service.start;
+        return {
+          snapshot: yield* service.getSnapshot,
+          persisted: JSON.parse(yield* fs.readFileString(settingsPath)) as {
+            migrationVersion: number;
+            settings: { agentTools: Record<string, unknown> };
+          },
+        };
+      }),
+    );
+
+    expect(result.snapshot.migrationVersion).toBe(4);
+    expect(result.snapshot.settings.agentTools.builtInGroupOverrides).toEqual({
+      agent: { "future-group": false },
+      chat: { "future-group": false },
+      studio: { "future-group": false },
+    });
+    expect(result.persisted.migrationVersion).toBe(4);
+    expect(result.persisted.settings.agentTools).not.toHaveProperty("disabledBuiltInGroups");
+  });
+
+  it("preserves 32 legacy unknown groups alongside a known Device-on override", async () => {
+    const unknownGroups = Array.from({ length: 32 }, (_, index) => `future-${index}`);
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* fs.makeDirectory(dirname(settingsPath), { recursive: true });
+        yield* fs.writeFileString(
+          settingsPath,
+          JSON.stringify({
+            revision: 8,
+            migrationVersion: 3,
+            settings: { agentTools: { disabledBuiltInGroups: unknownGroups } },
+          }),
+        );
+        yield* service.start;
+        return yield* service.getSnapshot;
+      }),
+    );
+
+    const overrides = result.settings.agentTools.builtInGroupOverrides;
+    expect(overrides.agent?.device).toBe(true);
+    expect(overrides.studio?.device).toBe(true);
+    for (const group of unknownGroups) {
+      expect(overrides.agent?.[group]).toBe(false);
+      expect(overrides.chat?.[group]).toBe(false);
+      expect(overrides.studio?.[group]).toBe(false);
+    }
+    expect(Object.keys(overrides.agent ?? {})).toHaveLength(33);
+    expect(Object.keys(overrides.chat ?? {})).toHaveLength(32);
+    expect(Object.keys(overrides.studio ?? {})).toHaveLength(33);
+  });
+
+  it("returns only revision/settings pairs committed under the same semaphore", async () => {
+    const observations = await Effect.runPromise(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const [, readers] = yield* Effect.all(
+          [
+            Effect.forEach(
+              Array.from({ length: 40 }, (_, index) => index + 1),
+              (revision) =>
+                service
+                  .updateSettings({ addProjectBaseDirectory: String(revision) })
+                  .pipe(Effect.andThen(Effect.yieldNow)),
+              { concurrency: 1, discard: true },
+            ),
+            Effect.all(
+              Array.from({ length: 4 }, () =>
+                Effect.forEach(
+                  Array.from({ length: 80 }),
+                  () => service.getSnapshot.pipe(Effect.tap(() => Effect.yieldNow)),
+                  { concurrency: 1 },
+                ),
+              ),
+              { concurrency: "unbounded" },
+            ),
+          ] as const,
+          { concurrency: "unbounded" },
+        );
+        return readers.flat();
+      }).pipe(Effect.provide(ServerSettingsService.layerTest())),
+    );
+
+    for (const snapshot of observations) {
+      expect(
+        snapshot.revision === 0
+          ? snapshot.settings.addProjectBaseDirectory
+          : Number(snapshot.settings.addProjectBaseDirectory),
+      ).toBe(snapshot.revision === 0 ? "" : snapshot.revision);
+    }
   });
 
   it("fails startup without publishing migrated state when the atomic write cannot commit", async () => {
@@ -318,7 +461,7 @@ describe("ServerSettingsService", () => {
 
     expect(result.startExit._tag).toBe("Failure");
     expect(result.snapshot.revision).toBe(0);
-    expect(result.snapshot.settings.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+    expect(result.snapshot.settings.agentTools.builtInGroupOverrides).toEqual({});
     expect(result.persisted).toMatchObject({ revision: 11, migrationVersion: 1 });
   });
 
@@ -365,7 +508,7 @@ describe("ServerSettingsService", () => {
       }),
     );
 
-    expect(result.settings.agentTools.disabledBuiltInGroups).toEqual(["device"]);
+    expect(result.settings.agentTools.builtInGroupOverrides).toEqual({});
     expect(result.originalExists).toBe(false);
     expect(
       result.siblingNames.some((name) => name.startsWith(`${result.settingsFileName}.invalid-`)),

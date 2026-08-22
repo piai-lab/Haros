@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import {
   applyServerSettingsPatch,
-  normalizeDisabledBuiltInGroups,
+  normalizeBuiltInGroupOverrides,
   providerStartOptionsFromServerSettings,
   validateServerSettingsPatch,
 } from "./serverSettings";
@@ -11,19 +11,58 @@ import {
 const decodeProviderSessionStartInput = Schema.decodeUnknownSync(ProviderSessionStartInput);
 
 describe("applyServerSettingsPatch", () => {
-  it("normalizes disabled built-in groups without discarding unknown bounded ids", () => {
-    expect(normalizeDisabledBuiltInGroups([" browser ", "future-group", "browser", ""])).toEqual([
-      "browser",
-      "future-group",
-    ]);
+  it("normalizes surface overrides without discarding unknown bounded ids", () => {
+    expect(
+      normalizeBuiltInGroupOverrides({
+        agent: { "future-group": false, browser: true },
+      }),
+    ).toEqual({ agent: { browser: true, "future-group": false } });
 
     expect(
       applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
         agentTools: {
-          disabledBuiltInGroups: [" device ", "future-group", "device"],
+          builtInGroupOverrides: { agent: { device: true, "future-group": false } },
         },
-      }).agentTools.disabledBuiltInGroups,
-    ).toEqual(["device", "future-group"]);
+      }).agentTools.builtInGroupOverrides,
+    ).toEqual({ agent: { device: true, "future-group": false } });
+  });
+
+  it("normalizes own properties only", () => {
+    const inherited = Object.create({ browser: false }) as Record<string, boolean>;
+    inherited.device = true;
+
+    expect(normalizeBuiltInGroupOverrides({ agent: inherited })).toEqual({
+      agent: { device: true },
+    });
+  });
+
+  it("replaces only the override field so reset removes known keys", () => {
+    const current = applyServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
+      agentTools: { builtInGroupOverrides: { agent: { browser: false } } },
+      enableProviderUpdateChecks: false,
+    });
+    const reset = applyServerSettingsPatch(current, {
+      agentTools: { builtInGroupOverrides: {} },
+    });
+    expect(reset.agentTools.builtInGroupOverrides).toEqual({});
+    expect(reset.enableProviderUpdateChecks).toBe(false);
+  });
+
+  it("rejects new unsupported overrides while allowing their removal", () => {
+    expect(
+      validateServerSettingsPatch(DEFAULT_SERVER_SETTINGS, {
+        agentTools: { builtInGroupOverrides: { chat: { tasks: true } } },
+      }),
+    ).toContain("unsupported");
+    const poisoned = {
+      ...DEFAULT_SERVER_SETTINGS,
+      agentTools: { builtInGroupOverrides: { chat: { tasks: false } } },
+    };
+    expect(
+      validateServerSettingsPatch(poisoned, {
+        agentTools: { builtInGroupOverrides: {} },
+      }),
+    ).toBeNull();
   });
 
   it("refuses a provider-only switch to a runtime-catalog-only provider", () => {
