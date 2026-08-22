@@ -83,6 +83,9 @@ describe("SidebarSurfacePicker", () => {
 
       await expect.element(trigger).toBeVisible();
       expect(trigger.element().textContent).toBe("Agent");
+      const disclosureChevron = trigger.element().querySelector('svg[aria-hidden="true"]');
+      expect(disclosureChevron).not.toBeNull();
+      expect(disclosureChevron?.classList.contains("rotate-90")).toBe(true);
 
       const row = screen.getByTestId("minimum-sidebar-row").element();
       expect(row.scrollWidth).toBeLessThanOrEqual(row.clientWidth);

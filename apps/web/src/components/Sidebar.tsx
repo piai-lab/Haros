@@ -1274,7 +1274,7 @@ export function SidebarSurfacePicker({
             type="button"
             aria-label={t("shell.switchSurface")}
             className={cn(
-              "flex h-8 min-w-0 flex-1 items-center rounded-lg px-2.5 text-left hover:bg-[var(--color-background-button-secondary-hover)]",
+              "flex h-8 min-w-0 flex-1 items-center gap-1.5 rounded-lg px-2.5 text-left hover:bg-[var(--color-background-button-secondary-hover)]",
               SIDEBAR_ROW_FOCUS_CLASS_NAME,
             )}
             data-slot="sidebar-surface-navigation"
@@ -1284,6 +1284,7 @@ export function SidebarSurfacePicker({
         <span className="font-display min-w-0 truncate text-[17px] text-foreground">
           {presentationByView[activeView].title}
         </span>
+        <DisclosureChevron open className="text-muted-foreground/70" />
       </MenuTrigger>
       <ComposerPickerMenuPopup align="start" side="bottom" className="min-w-64">
         <MenuRadioGroup
