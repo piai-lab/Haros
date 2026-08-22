@@ -32,6 +32,8 @@ import {
   automationRequiresTargetThread,
 } from "@omnimind/shared/automationMode";
 import { buildTemporaryWorktreeBranchName } from "@omnimind/shared/git";
+import { configuredHostGroupEnabled } from "@omnimind/shared/hostToolSurfacePolicy";
+import { projectKindToProductSurface } from "@omnimind/shared/productSurface";
 import { providerStartOptionsFromServerSettings } from "@omnimind/shared/serverSettings";
 import { autoRuntimeModeSelectionIssue } from "@omnimind/shared/runtimeMode";
 import { Cause, Effect, Layer, Option, PubSub, Queue, Stream } from "effect";
@@ -1100,6 +1102,24 @@ export const AutomationServiceLive = Layer.effect(
           );
         }
 
+        const policyProject = yield* requireProject(definition.projectId);
+        const currentSettings = yield* serverSettings.getSettings.pipe(
+          Effect.mapError(toServiceError("Failed to load built-in tool settings.")),
+        );
+        if (
+          !configuredHostGroupEnabled({
+            group: "automations",
+            surface: projectKindToProductSurface(policyProject.kind),
+            overrides: currentSettings.agentTools.builtInGroupOverrides,
+          })
+        ) {
+          return yield* Effect.fail(
+            new AutomationServiceError({
+              message: "Automation tools are unavailable for this work surface.",
+            }),
+          );
+        }
+
         // Enforce the gate at dispatch, not just create/update, so an enabled automation that
         // reached a run unacknowledged (e.g. inserted via the API/DB without consent) cannot run
         // on schedule or via Run now. Reuses the same validators as create/update so the backstop
@@ -1222,7 +1242,7 @@ export const AutomationServiceLive = Layer.effect(
           return { run: started };
         }
 
-        const project = yield* requireProject(definition.projectId);
+        const project = policyProject;
         const threadCreateCommandId = run.threadCreateCommandId;
         if (!threadCreateCommandId) {
           return yield* Effect.fail(

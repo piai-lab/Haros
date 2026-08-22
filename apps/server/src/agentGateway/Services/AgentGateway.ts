@@ -11,7 +11,7 @@
  */
 import { ServiceMap } from "effect";
 import type { Effect } from "effect";
-import type { BuiltInToolGroup } from "@omnimind/contracts";
+import type { BuiltInToolGroupsResult } from "@omnimind/contracts";
 
 export interface AgentGatewayHttpResult {
   readonly status: number;
@@ -20,7 +20,7 @@ export interface AgentGatewayHttpResult {
 }
 
 export interface AgentGatewayShape {
-  readonly getBuiltInToolGroups: Effect.Effect<ReadonlyArray<BuiltInToolGroup>, unknown>;
+  readonly getBuiltInToolGroups: Effect.Effect<BuiltInToolGroupsResult, unknown>;
 
   /**
    * Handle one MCP streamable-HTTP POST. All failures are folded into
