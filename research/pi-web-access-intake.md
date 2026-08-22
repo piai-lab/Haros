@@ -2,7 +2,7 @@
 
 > 观察与收口日期：2026-08-22
 >
-> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。2026-08-22 source candidate 已在任务分支实现至`395a16b35b`，但尚未完成pushed-SHA Desktop、真实Provider与packaged journey；Host Tools事实仍不能外推为Web Access证据。
+> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。2026-08-22 source candidate 已在任务分支形成有序实现提交，但尚未完成最终pushed-SHA Desktop、真实Provider与packaged journey；Host Tools事实仍不能外推为Web Access证据。
 >
 > 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
 >

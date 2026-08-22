@@ -4,7 +4,7 @@
 
 六组内置工具的 Agent/Chat/Studio 策略已由exact pushed code SHA `586c9661e5`实现并通过merge `d4989f5cee`进入main。该code SHA已重建Desktop/DMG、替换安装，并用任务专用`userData`、home与Provider private home完成隔离fresh-profile验收；post-merge focused gates与root typecheck均通过。当前没有未完成的Host矩阵产品施工；本交付仍是本机ad-hoc candidate，不是签名、公证或Release证据。
 
-`pi-web-access@0.24.1` → `@omnimind/om-web-access`已形成`candidate/pending-packaged` source candidate：exact upstream baseline、P1–P6、bundled Agent composition、唯一config owner、Pi active-set、typed Curator/Browser/Timeline lifecycle、Settings与credential-blind Provider projection均已进入任务分支，当前代码候选止于`395a16b35b`。它仍只属于bundled OmniMind Agent，不是AgentGateway/第七组Host/stock Pi能力。当前尚未从已推送的exact implementation SHA重建Desktop，也未完成授权真实Provider、MiMo/DeepSeek与fresh isolated packaged journey；因此只能称source candidate，不能称用户已安装或发行已完成。
+`pi-web-access@0.24.1` → `@omnimind/om-web-access`已形成`candidate/pending-packaged` source candidate：exact upstream baseline、P1–P6、bundled Agent composition、唯一config owner、Pi active-set、typed Curator/Browser/Timeline lifecycle、Settings与credential-blind Provider projection均已进入任务分支；首次exact-SHA release staging进一步发现并补齐了workspace manifest closure。它仍只属于bundled OmniMind Agent，不是AgentGateway/第七组Host/stock Pi能力。当前尚未从包含该closure的最终pushed implementation SHA重建Desktop，也未完成授权真实Provider、MiMo/DeepSeek与fresh isolated packaged journey；因此只能称source candidate，不能称用户已安装或发行已完成。
 
 ## 唯一 owner 与当前事实
 
