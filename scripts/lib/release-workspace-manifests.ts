@@ -18,14 +18,16 @@ export const RELEASE_PATCHES_PATH = "patches";
 export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH =
   "vendor/omnimind-pi-coding-agent-0.84.2.tgz";
 
+const SERVER_BUNDLED_WORKSPACE_DEPENDENCIES = new Set(["@omnimind/om-web-access"]);
+
 export function omitBundledServerWorkspaceDependencies(
   dependencies: Readonly<Record<string, unknown>>,
 ): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(dependencies).filter(([name, version]) => {
       if (typeof version !== "string" || !version.startsWith("workspace:")) return true;
-      if (!name.startsWith("@omnimind/")) {
-        throw new Error(`Server workspace dependency '${name}' is not covered by the @omnimind/* bundle rule.`);
+      if (!SERVER_BUNDLED_WORKSPACE_DEPENDENCIES.has(name)) {
+        throw new Error(`Server workspace dependency '${name}' is not proven to be bundled.`);
       }
       return false;
     }),

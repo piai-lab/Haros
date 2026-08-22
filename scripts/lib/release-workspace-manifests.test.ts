@@ -46,7 +46,7 @@ describe("release workspace manifests", () => {
     expect(server.dependencies?.marked).toBe("15.0.12");
   });
 
-  it("does not externalize workspace packages already bundled into the Server", () => {
+  it("omits only the exact workspace package proven to be bundled into the Server", () => {
     expect(
       omitBundledServerWorkspaceDependencies({
         "@omnimind/om-web-access": "workspace:*",
@@ -54,7 +54,7 @@ describe("release workspace manifests", () => {
       }),
     ).toEqual({ marked: "15.0.12" });
     expect(() =>
-      omitBundledServerWorkspaceDependencies({ "foreign-workspace": "workspace:*" }),
-    ).toThrow("not covered by the @omnimind/* bundle rule");
+      omitBundledServerWorkspaceDependencies({ "@omnimind/future-runtime": "workspace:*" }),
+    ).toThrow("not proven to be bundled");
   });
 });
