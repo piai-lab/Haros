@@ -606,9 +606,12 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 
 本轮已完成26个resolved identity的HTML视觉原型，所有行都有可辨识图标，且HTML自包含、无运行时网络资产。候选字节已拆分保存到[`research/prototypes/pi-web-access-provider-icons/`](prototypes/pi-web-access-provider-icons/README.md)，其中记录26→25 alias、文件大小、SHA-256、来源类别与准入缺口。该原型与候选目录只证明**映射与视觉方向**，不是production asset registry，也不证明商标再分发权。
 
+当前source candidate已从exact locked `@lobehub/icons-static-svg@1.94.0`逐字节准入13个Provider mark：SearXNG、OpenAI、Exa、Brave、Search1API、Tavily、Firecrawl、Jina Search、Kagi、Bocha、Ollama Cloud、Perplexity与Gemini。production bytes、SHA-256、MIT来源与未准入清单由[`packages/om-web-access/assets/provider-icons/README.md`](../packages/om-web-access/assets/provider-icons/README.md)记录，并由runtime descriptor唯一决定是否投影。9个旧研究候选与1.94.0当前字节不同，因此未把research原型反向提升为生产来源。xAI/Grok层级、Bright Data及其他official/favicon候选仍未闭合，继续使用中性字母mark；presentation缺口不改变routing。
+
 | Provider identity | 接受的视觉映射 | 本轮候选来源 | Production disposition |
 | --- | --- | --- | --- |
-| SearXNG、OpenAI、Exa、Brave、Search1API、Tavily、Firecrawl、Jina Search、Kagi、Bocha、Ollama Cloud、Perplexity、Gemini、xAI | 对应服务品牌标记 | 现有OmniMind依赖的`@lobehub/icons-static-svg`候选 | exact版本与MIT/上游品牌边界复核后本地按需打包 |
+| SearXNG、OpenAI、Exa、Brave、Search1API、Tavily、Firecrawl、Jina Search、Kagi、Bocha、Ollama Cloud、Perplexity、Gemini | 对应服务品牌标记 | exact `@lobehub/icons-static-svg@1.94.0` | 已按需本地打包；runtime descriptor投影固定asset ID/path，Web build只机械复制admitted目录 |
+| xAI | 保留中性字母mark | Lobe候选内部title为Grok | runtime Provider与品牌层级闭合前不准入 |
 | Parallel、Parallel MCP | 同一个Parallel品牌标记；`MCP`只用名称/说明表达 | Parallel官方symbol候选 | 两个runtime ID共享一个asset identity；权利闭合后本地打包 |
 | TinyFish | TinyFish app icon | 官方站点/app asset候选 | 权利与hash闭合前仅为原型候选 |
 | Searchinfinity | Searchinfinity/BytePlus官方favicon视觉 | 官方站点候选 | 权利与hash闭合前仅为原型候选 |

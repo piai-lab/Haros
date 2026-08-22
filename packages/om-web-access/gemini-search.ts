@@ -96,6 +96,13 @@ const neutralProviderIcon = {
 	admission: "not-admitted",
 } as const;
 
+const admittedProviderIcon = (assetId: string): SearchProviderIcon => ({
+	kind: "local-asset",
+	assetId,
+	assetPath: `/web-access/provider-icons/${assetId}.svg`,
+	admission: "admitted",
+});
+
 const keyField = (
 	configKey: string,
 	environmentVariable: string,
@@ -318,7 +325,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "openai", displayName: "OpenAI", prerequisite: "key-or-session", costHint: "provider-dependent",
 		curatorOrder: 0,
-		autoOrder: 1, allOrder: 1, all: "included", icon: neutralProviderIcon,
+		autoOrder: 1, allOrder: 1, all: "included", icon: admittedProviderIcon("openai"),
 		fields: [keyField("openaiApiKey", "OPENAI_API_KEY"), textField("openaiSearchModel", "model")],
 		advancedFileOnly: ["openaiResponsesBaseUrl", "openaiSearchProviders"],
 		autoEligible: shouldTryOpenAIInAuto,
@@ -328,7 +335,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "exa", displayName: "Exa", prerequisite: "optional-key", costHint: "keyless-shared-quota",
 		curatorOrder: 1,
-		autoOrder: 2, allOrder: 2, all: "included", icon: neutralProviderIcon,
+		autoOrder: 2, allOrder: 2, all: "included", icon: admittedProviderIcon("exa"),
 		fields: [optionalKeyField("exaApiKey", "EXA_API_KEY"), textField("exaBaseUrl", "endpoint", { environmentVariable: "EXA_BASE_URL" })],
 		advancedFileOnly: [], autoCredentialFailureIsFatal: true,
 		isAvailable: () => isExaAvailable(),
@@ -337,7 +344,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "brave", displayName: "Brave", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 2,
-		autoOrder: 3, allOrder: 3, all: "included", icon: neutralProviderIcon,
+		autoOrder: 3, allOrder: 3, all: "included", icon: admittedProviderIcon("brave"),
 		fields: [keyField("braveApiKey", "BRAVE_API_KEY"), textField("braveBaseUrl", "endpoint", { environmentVariable: "BRAVE_BASE_URL" })],
 		advancedFileOnly: [], isAvailable: () => isBraveAvailable(), search: searchWithBrave,
 	},
@@ -365,7 +372,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "search1api", displayName: "Search1API", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 6,
-		autoOrder: 6, allOrder: 6, all: "included", icon: neutralProviderIcon,
+		autoOrder: 6, allOrder: 6, all: "included", icon: admittedProviderIcon("search1api"),
 		fields: [keyField("search1apiApiKey", "SEARCH1API_KEY")], advancedFileOnly: ["search1api"],
 		isAvailable: () => isSearch1APIAvailable(), search: searchWithSearch1API,
 	},
@@ -386,14 +393,14 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "tavily", displayName: "Tavily", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 9,
-		autoOrder: 9, allOrder: 9, all: "included", icon: neutralProviderIcon,
+		autoOrder: 9, allOrder: 9, all: "included", icon: admittedProviderIcon("tavily"),
 		fields: [keyField("tavilyApiKey", "TAVILY_API_KEY"), textField("tavilyBaseUrl", "endpoint", { environmentVariable: "TAVILY_BASE_URL" })],
 		advancedFileOnly: [], isAvailable: () => isTavilyAvailable(), search: searchWithTavily,
 	},
 	{
 		id: "firecrawl", displayName: "Firecrawl", prerequisite: "endpoint", costHint: "provider-dependent",
 		curatorOrder: 10,
-		autoOrder: 10, allOrder: 10, all: "included", icon: neutralProviderIcon,
+		autoOrder: 10, allOrder: 10, all: "included", icon: admittedProviderIcon("firecrawl"),
 		fields: [textField("firecrawlBaseUrl", "endpoint", { required: true, environmentVariable: "FIRECRAWL_BASE_URL" }), optionalKeyField("firecrawlApiKey", "FIRECRAWL_API_KEY")],
 		advancedFileOnly: ["firecrawlApiVersion", "firecrawlFreshScrape"],
 		isAvailable: () => isFirecrawlAvailable(), search: searchWithFirecrawl,
@@ -401,7 +408,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "jina", displayName: "Jina Search", curatorLabel: "Jina", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 11,
-		autoOrder: 11, allOrder: 11, all: "included", icon: neutralProviderIcon,
+		autoOrder: 11, allOrder: 11, all: "included", icon: admittedProviderIcon("jina"),
 		fields: [keyField("jinaApiKey", "JINA_API_KEY")], advancedFileOnly: ["jina"],
 		isAvailable: () => isJinaSearchAvailable(), search: searchWithJina,
 	},
@@ -415,28 +422,28 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "kagi", displayName: "Kagi", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 13,
-		autoOrder: 13, allOrder: 13, all: "included", icon: neutralProviderIcon,
+		autoOrder: 13, allOrder: 13, all: "included", icon: admittedProviderIcon("kagi"),
 		fields: [keyField("kagiApiKey", "KAGI_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isKagiAvailable(), search: searchWithKagi,
 	},
 	{
 		id: "bocha", displayName: "Bocha", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 14,
-		autoOrder: 14, allOrder: 17, all: "included", icon: neutralProviderIcon,
+		autoOrder: 14, allOrder: 17, all: "included", icon: admittedProviderIcon("bocha"),
 		fields: [keyField("bochaApiKey", "BOCHA_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isBochaAvailable(), search: searchWithBocha,
 	},
 	{
 		id: "ollama", displayName: "Ollama Cloud", curatorLabel: "Ollama", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 15,
-		autoOrder: 15, allOrder: 14, all: "included", icon: neutralProviderIcon,
+		autoOrder: 15, allOrder: 14, all: "included", icon: admittedProviderIcon("ollama"),
 		fields: [keyField("ollamaApiKey", "OLLAMA_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isOllamaAvailable(), search: searchWithOllama,
 	},
 	{
 		id: "searxng", displayName: "SearXNG", prerequisite: "endpoint", costHint: "provider-dependent",
 		curatorOrder: 16,
-		autoOrder: 0, allOrder: 0, all: "included", icon: neutralProviderIcon,
+		autoOrder: 0, allOrder: 0, all: "included", icon: admittedProviderIcon("searxng"),
 		fields: [textField("searxngBaseUrl", "endpoint", { required: true, environmentVariable: "SEARXNG_BASE_URL" })],
 		advancedFileOnly: ["searxngHeaders", "ssrf"], isAvailable: () => isSearXNGAvailable(), search: searchWithSearXNG,
 	},
@@ -449,14 +456,14 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 	{
 		id: "perplexity", displayName: "Perplexity", prerequisite: "key", costHint: "may-charge",
 		curatorOrder: 18,
-		autoOrder: 16, allOrder: 15, all: "included", icon: neutralProviderIcon,
+		autoOrder: 16, allOrder: 15, all: "included", icon: admittedProviderIcon("perplexity"),
 		fields: [keyField("perplexityApiKey", "PERPLEXITY_API_KEY")], advancedFileOnly: [],
 		isAvailable: () => isPerplexityAvailable(), search: searchWithPerplexity,
 	},
 	{
 		id: "gemini", displayName: "Gemini", prerequisite: "gemini", costHint: "provider-dependent",
 		curatorOrder: 19,
-		autoOrder: 17, allOrder: 16, all: "api-only", icon: neutralProviderIcon,
+		autoOrder: 17, allOrder: 16, all: "api-only", icon: admittedProviderIcon("gemini"),
 		fields: [optionalKeyField("geminiApiKey", "GEMINI_API_KEY", "Gemini"), textField("geminiBaseUrl", "endpoint", { environmentVariable: "GOOGLE_GEMINI_BASE_URL", qualifier: "Gemini" }), optionalKeyField("cloudflareApiKey", "CLOUDFLARE_API_KEY", "Cloudflare")],
 		advancedFileOnly: ["allowBrowserCookies", "chromeProfile", "geminiWebModel"],
 		isStructurallyPossible: (config, configured) => configured || config.allowBrowserCookies === true,

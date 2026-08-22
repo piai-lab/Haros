@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { resolveAndPersistPreferredEditor } from "~/editorPreferences";
 import { useI18n } from "~/i18n";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
-import { ArrowLeftIcon, CopyIcon, EyeIcon, PlusIcon, PluginIcon, WebSearchIcon } from "~/lib/icons";
+import { ArrowLeftIcon, CopyIcon, EyeIcon, PlusIcon, WebSearchIcon } from "~/lib/icons";
 import { ensureNativeApi } from "~/nativeApi";
 
 import { Button } from "../ui/button";
@@ -80,9 +80,17 @@ function providerSelectionValue(provider: DraftState["provider"]): string {
 
 function ProviderMark({
   icon,
+  label,
 }: {
   readonly icon: ReadySnapshot["providers"][number]["icon"];
+  readonly label: string;
 }) {
+  const fallbackMonogram = label
+    .split(/\s+/u)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toLocaleUpperCase())
+    .join("");
   return (
     <span
       aria-hidden="true"
@@ -92,7 +100,7 @@ function ProviderMark({
       {icon.kind === "local-asset" ? (
         <img alt="" className="size-5 object-contain" src={icon.assetPath} />
       ) : (
-        <PluginIcon className="size-4" />
+        <span className="text-[10px] font-semibold tracking-tight">{fallbackMonogram}</span>
       )}
     </span>
   );
@@ -333,7 +341,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
             {filteredProviders.map((provider) => (
               <SettingsListRow
                 key={provider.id}
-                title={<span className="flex items-center gap-2"><ProviderMark icon={provider.icon} />{provider.displayName}</span>}
+                title={<span className="flex items-center gap-2"><ProviderMark icon={provider.icon} label={provider.displayName} />{provider.displayName}</span>}
                 description={`${prerequisiteDescription(provider.prerequisite)} · ${provider.configured ? t("settings.webSearch.configured") : t("settings.webSearch.notConfigured")}`}
                 actions={<Button size="xs" variant="outline" onClick={() => setView({ kind: "detail", providerId: provider.id })}>{t("common.edit")}</Button>}
               />
@@ -359,7 +367,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
         <SettingsSectionShell title={selectedProvider.displayName}>
           <SettingsCard>
             <SettingsListRow
-              title={<span className="flex items-center gap-2"><ProviderMark icon={selectedProvider.icon} />{selectedProvider.displayName}</span>}
+              title={<span className="flex items-center gap-2"><ProviderMark icon={selectedProvider.icon} label={selectedProvider.displayName} />{selectedProvider.displayName}</span>}
               description={t("settings.webSearch.providerRequestsMayCost")}
             />
             {selectedProvider.fields.map((field) => {
@@ -461,7 +469,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
         action={<Button size="xs" variant="outline" onClick={() => setView({ kind: "add" })}><PlusIcon className="size-3.5" />{t("settings.webSearch.addProvider")}</Button>}
       >
         {configuredProviders.length > 0 ? (
-          <SettingsCard>{configuredProviders.map((provider) => <SettingsListRow key={provider.id} title={<span className="flex items-center gap-2"><ProviderMark icon={provider.icon} />{provider.displayName}</span>} description={t("settings.webSearch.configured")} actions={<Button size="xs" variant="outline" onClick={() => setView({ kind: "detail", providerId: provider.id })}>{t("common.edit")}</Button>} />)}</SettingsCard>
+          <SettingsCard>{configuredProviders.map((provider) => <SettingsListRow key={provider.id} title={<span className="flex items-center gap-2"><ProviderMark icon={provider.icon} label={provider.displayName} />{provider.displayName}</span>} description={t("settings.webSearch.configured")} actions={<Button size="xs" variant="outline" onClick={() => setView({ kind: "detail", providerId: provider.id })}>{t("common.edit")}</Button>} />)}</SettingsCard>
         ) : <SettingsEmptyState>{t("settings.webSearch.noConfiguredProviders")}</SettingsEmptyState>}
       </SettingsSectionShell>
 

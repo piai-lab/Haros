@@ -25,7 +25,12 @@ test("Settings projection returns literal expressions and credential-blind runti
 	const exa = projection.providers.find(({ id }) => id === "exa");
 	assert.equal(tavily.fields.find(({ configKey }) => configKey === "tavilyApiKey").value, "$TAVILY_API_KEY");
 	assert.equal(exa.fields.find(({ configKey }) => configKey === "exaApiKey").value, "!security find-generic-password -w -s synthetic");
-	assert.deepEqual(tavily.icon, { kind: "neutral", assetId: null, admission: "not-admitted" });
+	assert.deepEqual(tavily.icon, {
+		kind: "local-asset",
+		assetId: "tavily",
+		assetPath: "/web-access/provider-icons/tavily.svg",
+		admission: "admitted",
+	});
 	assert.equal(tavily.costHint, "may-charge");
 });
 

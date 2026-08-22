@@ -26,6 +26,7 @@ const buildSourcemap =
       : false;
 
 const CENTRAL_ICON_DIR = "central-icons-reversed";
+const WEB_ACCESS_PROVIDER_ICON_DIR = "web-access/provider-icons";
 const CENTRAL_ICON_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 
@@ -98,6 +99,33 @@ function centralIconPrunePlugin(): Plugin {
       );
       console.info(
         `[central-icons] kept ${requiredIcons.size}/${availableIcons.size} referenced SVGs, pruned ${removedCount}.`,
+      );
+    },
+  };
+}
+
+function webAccessProviderIconPlugin(): Plugin {
+  let resolvedOutDir = "dist";
+  return {
+    name: "omnimind-web-access-provider-icons",
+    apply: "build",
+    configResolved(config) {
+      resolvedOutDir = path.resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      const sourceDir = path.resolve(
+        import.meta.dirname,
+        "../../packages/om-web-access/assets/provider-icons",
+      );
+      const targetDir = path.join(resolvedOutDir, WEB_ACCESS_PROVIDER_ICON_DIR);
+      await fs.mkdir(targetDir, { recursive: true });
+      const assetNames = (await fs.readdir(sourceDir)).filter((name) => name.endsWith(".svg"));
+      await Promise.all(
+        assetNames.map((name) => fs.copyFile(path.join(sourceDir, name), path.join(targetDir, name))),
+      );
+      await fs.copyFile(
+        path.resolve(import.meta.dirname, "../../LICENSES/lobe-icons-MIT.txt"),
+        path.join(targetDir, "LICENSE.txt"),
       );
     },
   };
@@ -206,6 +234,7 @@ export default defineConfig({
     }),
     tailwindcss(),
     centralIconPrunePlugin(),
+    webAccessProviderIconPlugin(),
     precompressPlugin(),
   ],
   optimizeDeps: {
