@@ -278,11 +278,11 @@ Curator 不是搜索引擎，也不是搜索结果仓库；它是一次 `web_sea
 
 | 值 | 行为 | OmniMind |
 | --- | --- | --- |
-| `auto-summary` | 后台生成 summary，不打开 Curator，同一turn继续 | canonical默认；推荐的日常无打扰路径 |
+| `auto-summary` | 后台生成 summary，同一turn继续；可按独立展示设置打开非阻塞观察Tab | canonical默认；推荐的日常无打扰路径 |
 | `summary-review` | 打开 Curator，生成 draft，等待用户审查 | Settings显式选择；用户明确要求审查时Agent可per-call |
 | `none` | 直接返回 raw results | Settings 可选；Agent 可 per-call |
 
-OmniMind 不是每次都弹一个“选择工作流”的表单。默认值来自 Settings；Agent 在单次 tool call 可覆盖。用户说“帮我查一下”时按`auto-summary`搜索、后台摘要并继续；用户说“直接给原始结果”时可用`none`；用户说“我要审查/挑选来源”时才使用`summary-review`。
+OmniMind 不是每次都弹一个“选择工作流”的表单。默认值来自 Settings；Agent 在单次 tool call 可覆盖。用户说“帮我查一下”时按`auto-summary`搜索、保存完整结果/responseId、后台摘要并继续；用户说“直接给原始结果”时可用`none`；用户说“我要审查/挑选来源”时才使用`summary-review`。独立的“自动显示搜索过程”只决定是否在Right Dock打开非阻塞观察Tab，不改变这三种结果处理语义。
 
 ### 3.5 `/commands` 在上游是什么，OmniMind 为什么不注册
 
@@ -422,7 +422,7 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 - 系统浏览器/Glimpse fallback；
 - `toolNames` override。
 
-同理，上游 `webSearch.enabled`、`tools.*.enabled` 只保留在 fork source 便于同步，不成为 OmniMind product profile 的用户 activation authority。OmniMind 的四工具注册来自显式 bundled composition，搜索依赖工具的临时收缩来自 P5；不通过文件制造第三套 tool-enabled truth。
+OmniMind profile继续尊重上游`webSearch.enabled`与`tools.webSearch/sourceCheck/fetchContent/getSearchContent.enabled`的file-level细粒度注册语义；普通Settings不提供master switch，但高手在唯一canonical文件中显式关闭哪个工具，Pi注册时就不注册哪个工具。搜索依赖工具的动态临时收缩仍来自P5，文件开关不进入Host/AgentGateway，也不形成第三套runtime controller。
 
 这不是把成熟 package 削成四个 API；search/fetch/provider/Curator/storage/tests 全部保留。它只移除不适配 OmniMind 宿主的入口和第二呈现面。
 
@@ -442,7 +442,7 @@ Fork patch inventory 必须保持有限。新增第七类长期 patch 前，先�
 - Curator创建时接收当前OmniMind locale与resolved light/dark theme的短时presentation snapshot；不依赖OS `Accept-Language` / `prefers-color-scheme`，不监听全局设置，也不建立第二locale/theme owner；
 - 页面不能抢 Composer focus、覆盖 route 或自动外部打开；
 - 只有owning Thread正处于前台时才自动呈现；后台/非当前Thread只投影既有waiting-for-user activity/attention，不能切换route或抢占当前Right Dock。用户进入该Thread后可按exact activity打开；若一直忽略，继续服从上游idle timeout与deterministic settlement，不建立后台Curator调度器；
-- `curatorRemote` 在 OmniMind profile 恒不可用；
+- `curatorRemote` 在 OmniMind profile 恒不可用；作者的`autoOpenBrowser` intent在OmniMind profile只被解释为默认关闭的typed Right Dock搜索过程展示，不恢复系统浏览器或raw-token fallback；
 - 页面改为 OmniMind 品牌和现有 Workbench tokens，完整简中/英文；
 - 移除 Google Fonts 和 jsDelivr `marked` CDN，改用本地/系统字体与 pinned local markdown renderer；
 - 把 presentation/copy/token adapter 从 3,577 行页面生成器中分离，避免每次 upstream sync 手改整页；
@@ -519,19 +519,19 @@ Settings UI ─┐
 - 页面已修改且文件外部变化时保留 draft并显示 conflict，不能静默覆盖、自动更新expected revision或自动重试；只有用户明确重新加载或以当前草稿继续时才能再次mutation；
 - 不做常驻 file watcher、daemon、双写 DB 或 periodic sync；
 - provider/routing/workflow/key 等普通运行参数在下一次 tool call 生效；
-- OmniMind product profile 的 tools、commands、shortcuts、tool names、remote Curator 与 browser-open policy是固定结构，不从用户文件热改，也不因此形成 reload 设置。
+- OmniMind product profile 的commands、shortcuts、tool names与remote Curator是固定结构；file-level tool enabled字段继续服从作者注册语义，`autoOpenBrowser`只控制独立的Right Dock过程展示。配置在下一次Session注册或现有owner明确的reload边界生效，不因此新增watcher或per-turn controller。
 - 首次创建使用no-clobber原子创建，竞态中不覆盖已经出现的文件；mutation使用同目录atomic replace与private file mode（支持的平台为`0600`）；no-op保存不写文件、不改mtime、不发布revision invalidation。这只保护literal key所在的唯一canonical文件，不改变维护者已确认的完整key回读产品行为。
 
 从上游配置复制来的以下字段应保留 bytes 但准确标为 OmniMind profile 不支持，不能静默取得运行权：
 
 | 上游字段 | OmniMind 处置 |
 | --- | --- |
-| `webSearch.enabled` / `tools.*.enabled` | 不作为 registration/active authority；四工具由 composition + P5 决定 |
+| `webSearch.enabled` / `tools.*.enabled` | 尊重作者file-level细粒度注册语义；P5仍只负责route exhaustion的动态active-set收缩 |
 | `commands.*` | 不注册 slash commands |
 | `shortcuts.*` | 不注册 Pi TUI shortcuts |
 | `toolNames` | 不改 canonical tool identities |
 | `curatorRemote` | 不允许非 loopback Curator |
-| `autoOpenBrowser` | 不控制呈现；只走 provenance-backed Right Dock handoff |
+| `autoOpenBrowser` | OmniMind profile解释为默认关闭的“自动显示搜索过程”，只走provenance-backed Right Dock handoff；不外跳系统浏览器 |
 
 ### 6.3 Key 的产品决定
 
@@ -556,6 +556,7 @@ Settings UI ─┐
    - 网页读取：ready 或具体缺失能力；
    - 当前 routing：Auto / 单 Provider / ordered fallback / selected parallel / All；
    - 搜索结果处理：自动摘要（推荐默认）/ 摘要审查 / 直接返回；
+   - 独立展示选择：自动显示搜索过程（默认关闭；不暂停Agent、不要求批准）；
    - 已配置 Provider rows；
    - `添加搜索服务`、`重新检查`、`打开配置文件`。
 2. **Add provider / 添加搜索服务**
@@ -793,6 +794,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 ### 10.6 Curator 与产品 UI
 
 - 显式 `summary-review` 在OmniMind runtime能通过Host-presentable surface呈现；默认`auto-summary`不创建Curator或pending用户操作；
+- `auto-summary/none`在展示关闭时不创建Right Dock Tab；展示开启时创建非阻塞observer Tab但不进入waiting-for-user、不要求Approve，terminal后清理活跃token/settlement且Timeline无假reopen；
 - current Thread Right Dock为每个tool call创建独立Tab，不复用/覆盖当前用户Tab，不外跳、不抢Composer focus；
 - Curator控制台隐藏`Open externally`、raw-link copy与raw token地址；来源链接进入普通OmniMind Browser Tab，普通Tab仍可显式外部打开；
 - 只有owning Thread前台时自动呈现；后台Thread只投影既有waiting activity/attention，不切route、不抢Right Dock，进入该Thread后按exact activity打开；
