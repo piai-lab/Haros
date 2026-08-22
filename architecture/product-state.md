@@ -11,7 +11,7 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 | 用户语言            | 直接复用的事实                                                                                      | 明确不新增                                              |
 | ------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | Agent               | folder-backed Synara Project + Thread + Workbench                                                   | `AgentWorkspace`、第二 Conversation/Run store           |
-| Chat                | Synara Home managed Project + Thread + managed workspace/outbox                                     | 用户 Primary Folder、平行 Chat database                 |
+| Chat                | Synara Home managed Project + Thread + managed `work/`、`outputs/`                                  | 用户 Primary Folder、平行 Chat database                 |
 | Studio              | Synara Studio container、managed workspace、outputs、reactor、draft cwd 与恢复生命周期              | OmniMind Studio 状态机或第二 workspace owner            |
 | Groups              | Synara Space identity/name/order + Thread 的 `groupIds` metadata                                    | 新 `Group` aggregate、Project 标签或 membership ledger  |
 | Send to Agent       | contextual fork 到新的 folder-backed Project Thread，带入完整可见历史与明确引用且不自动执行         | Provider Handoff、native continuation、operation replay |
@@ -39,11 +39,11 @@ OmniMind Agent 可以在当前 Root turn 内创建 bounded child Session；Root 
 
 ### Chat
 
-Chat 复用 Synara 的 managed Home container。它没有用户选择的 Primary Folder，也不能因陈旧 draft/cwd 字段升级成 Project；它可以把生成内容写到 OmniMind-owned、按会话隔离的 managed workspace/outbox 并展示为结果。用户明确添加的文件/文件夹只作为可见、可移除的只读引用，不自动扫描，也不激活 Project trust 或 project-local resources。
+Chat 复用 Synara 的 managed Home container。它没有用户选择的 Primary Folder，也不能因陈旧 draft/cwd 字段升级成 Project；它可以在 OmniMind-owned、按会话隔离的 managed `work/` 中处理文件，把结果写入同级 `outputs/`，并按普通文件展示。用户明确添加的文件/文件夹只作为可见、可移除的只读引用，不自动扫描，也不激活 Project trust 或 project-local resources。
 
 需要进入真实项目修改时，用户显式使用 `Send to Agent`：选择或创建 folder-backed Project，保留原 Chat，并创建、打开新的 Agent Thread。目标带入完整的产品层可见用户/助手历史、每条消息的明确 references、可真实读取的受管附件和当前 draft；源 outputs 只作为目标 draft 中可见、可移除的引用。该动作不复制 Provider 私有 Session、不 replay Tool/operation、不保证跨 Provider native continuation，也不自动触发 Provider；用户检查、补充或发送后才开始执行。
 
-附件复制按源消息顺序复用 ManagedAttachmentStore 的既有 reserve/finalize/claim/cleanup owner，并以现有 principal staging数量和字节上限作为单次 fork 上限。单项 missing、unreadable、limit、unsupported 或 clone failure 不阻断 fork：成功项成为目标 Thread 真正拥有的普通附件，失败项只进入本次 fork 的窄持久 receipt/activity 并给出一次非阻塞汇总警告，不能伪造可点击附件。重放同一 command 不重复 clone、警告或目标 Thread；失败清理不得碰源附件或已 claim 的目标附件。
+附件复制按源消息顺序复用 ManagedAttachmentStore 的既有 reserve/finalize/claim/cleanup owner，并以现有 principal staging 数量和字节上限作为单次 fork 上限。单项 `missing`、`unreadable`、`limit` 或 `clone-failed` 不阻断 fork：成功项成为目标 Thread 真正拥有的普通附件，失败项只进入本次 fork 的窄持久 activity 并给出一次非阻塞汇总警告，不能伪造可点击附件。Provider 无法消费某种附件不属于 clone 失败；已成功 clone 的目标文件仍可由目标 Thread 和 RightDock 使用。重放同一 command 不重复 clone、警告或目标 Thread；失败清理不得碰源附件或已 claim 的目标附件。
 
 Studio 默认继承 Synara 现有 container、managed workspace、outputs、reactor、draft cwd、local environment、no-worktree/branch、创建与恢复行为。当前基线的恢复顺序是 remembered Studio route → stored Studio draft → latest non-archived Studio chat → fresh；隐藏时不 prewarm/create，`/studio` 按母体现有行为重定向。本轮没有证据时不重设计；后续必要优化必须先证明具体用户缺口，以既有 owner 内的最小必要偏离完成，不能创建第二 Studio 状态机或恢复 owner。
 

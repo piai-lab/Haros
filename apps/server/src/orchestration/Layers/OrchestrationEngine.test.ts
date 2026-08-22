@@ -629,6 +629,12 @@ describe("OrchestrationEngine", () => {
       contents: "missing source",
       writeBytes: false,
     });
+    const empty = await stageSource({
+      attachmentId: "att_v2_33333333333333333333333333333333",
+      name: "empty.txt",
+      contents: "",
+      writeBytes: true,
+    });
     await system.run(
       engine.dispatch(
         {
@@ -642,12 +648,19 @@ describe("OrchestrationEngine", () => {
             attachments: [
               {
                 type: "assistant-selection",
+                id: "selection-source-missing-assistant",
+                assistantMessageId: asMessageId("msg-chat-fork-not-imported"),
+                text: "Selection whose assistant message is unavailable",
+              },
+              readable,
+              {
+                type: "assistant-selection",
                 id: "selection-source-assistant",
                 assistantMessageId: asMessageId("msg-chat-fork-source-assistant"),
                 text: "Selected assistant context",
               },
-              readable,
               missing,
+              empty,
             ],
             mentions: [
               {
@@ -710,6 +723,7 @@ describe("OrchestrationEngine", () => {
     };
     const rejectedCommandId = CommandId.makeUnsafe("cmd-chat-to-agent-invalid-target");
     const rejectedTargetThreadId = ThreadId.makeUnsafe("thread-chat-fork-invalid-target");
+    const findClaimedById = vi.spyOn(repository, "findClaimedById");
     await expect(
       system.run(
         engine.dispatch(
@@ -723,6 +737,8 @@ describe("OrchestrationEngine", () => {
         ),
       ),
     ).rejects.toThrow(/requires a Chat source and a Project target/);
+    expect(findClaimedById).not.toHaveBeenCalled();
+    findClaimedById.mockRestore();
     const rejectedCloneId = `att_v2_${createHash("sha256")
       .update("omnimind:chat-to-agent:attachment:v1\0")
       .update(rejectedCommandId)
@@ -759,17 +775,22 @@ describe("OrchestrationEngine", () => {
         resourceKind: "directory",
       },
     ]);
-    expect(target?.messages[0]?.attachments).toHaveLength(2);
+    expect(target?.messages[0]?.attachments).toHaveLength(3);
     expect(target?.messages[0]?.attachments?.[0]).toMatchObject({
-      type: "assistant-selection",
-      assistantMessageId: target?.messages[1]?.id,
-    });
-    expect(target?.messages[0]?.attachments?.[1]).toMatchObject({
       type: "file",
       name: "readable.txt",
     });
-    expect(target?.messages[0]?.attachments?.[1]?.id).not.toBe(readable.id);
-    const clonedId = target?.messages[0]?.attachments?.[1]?.id;
+    expect(target?.messages[0]?.attachments?.[0]?.id).not.toBe(readable.id);
+    expect(target?.messages[0]?.attachments?.[1]).toMatchObject({
+      type: "assistant-selection",
+      assistantMessageId: target?.messages[1]?.id,
+    });
+    expect(target?.messages[0]?.attachments?.[2]).toMatchObject({
+      type: "file",
+      name: "empty.txt",
+      sizeBytes: 0,
+    });
+    const clonedId = target?.messages[0]?.attachments?.[0]?.id;
     expect(clonedId).toBeDefined();
     const cloned = await system.run(repository.findClaimedById({ attachmentId: clonedId! }));
     expect(Option.getOrNull(cloned)).toMatchObject({
@@ -789,7 +810,7 @@ describe("OrchestrationEngine", () => {
             expect.objectContaining({
               name: "missing.txt",
               reason: "unreadable",
-              attachmentIndex: 2,
+              attachmentIndex: 3,
             }),
           ],
         },

@@ -373,7 +373,7 @@ export function cloneManagedAttachmentForFork(input: {
       input.source.state !== "claimed" ||
       input.source.sizeBytes === null ||
       input.source.sha256 === null ||
-      input.source.sizeBytes <= 0 ||
+      input.source.sizeBytes < 0 ||
       !/^[a-f0-9]{64}$/u.test(input.source.sha256)
     ) {
       return { status: "failed", reason: "missing" } as const;
