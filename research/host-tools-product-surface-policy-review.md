@@ -2,9 +2,9 @@
 
 > 认知冻结日期：2026-08-22
 >
-> 当前源码基线：`main@9a99d5ccf5ca5fd8c2cf25528fe05f3ec6b05374`，与 `origin/main` 一致。
+> 原始源码基线：`main@9a99d5ccf5ca5fd8c2cf25528fe05f3ec6b05374`。三工作面前置工作已通过`5451e22ce8`进入main。
 >
-> 文档状态：**已锁定的产品与架构候选，尚未实施**。当前生产源码仍是一份全局 `disabledBuiltInGroups`，再由 AgentGateway 对 Chat 追加 Browser-only 特判；本文不得被引用为“代码已经完成”的证据。
+> **2026-08-22 implementation disposition：** 本文锁定的矩阵正在`codex/host-tools-product-surface-policy`实现：pure policy、v4 override migration/atomic snapshot、Gateway read/list/call、Goal/Automation admission与Web三列表格已形成source candidate。exact pushed SHA、packaged journey、main merge与安装证据尚待最终门禁，状态只看`execution-brief.md`和Campaign；下文“当前源码仍是旧全局开关”只描述上述原始基线，不是当前分支事实。
 >
 > 文档角色：记录本轮从当前调用链、三工作面裁决、Settings UI 候选和长期维护审查得出的完整认知，使新会话可以零记忆恢复方案。稳定 UI 与运行时合同在实施时仍须分别进入 [`architecture/workbench.md`](../architecture/workbench.md) 与 [`architecture/execution.md`](../architecture/execution.md)；当前施工状态只由 [`execution-brief.md`](../execution-brief.md) 拥有。
 >

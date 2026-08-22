@@ -8,7 +8,9 @@
 >
 > 文档角色：Settings、AgentGateway、Engine projection与MCP产品边界的证据owner；稳定UI与运行时合同分别由[`architecture/workbench.md`](../architecture/workbench.md)和[`architecture/execution.md`](../architecture/execution.md)拥有。
 >
-> 范围：本文主体只回答“目前 OmniMind Agent 中有哪些常驻工具、何时实际进入模型调用面、设置变化后怎样生效”。Chat/Studio 的当前产品面与信任边界见 [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)；2026-08-22 已锁定但尚未实施的六组 × Agent/Chat/Studio Host 设置矩阵、Chat Goal/Automation opt-in 与长期维护方案见 [`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md)。后者是目标候选，不得覆盖本文绑定 source 的当前代码事实。
+> 范围：本文主体保存“该source snapshot中有哪些常驻工具、何时实际进入模型调用面、设置变化后怎样生效”的历史证据。Chat/Studio产品面见[`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)；当前六组×三工作面目标与source candidate见[`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md)。
+
+> **2026-08-22 supersession：** 六组catalog数量与`e36b189e0c`历史source observation继续有效；全局`disabledBuiltInGroups`、fresh五组全开及Chat Browser-only不再是目标合同。当前source candidate使用三工作面explicit override、ProductSurface policy与Session-scoped guidance，详见Host策略研究和`architecture/execution.md`；最终merged/packaged SHA仍待验收。
 
 ## 当前清单：新会话零记忆入口
 
@@ -16,13 +18,13 @@
 
 “代码里有这个工具”“Pi Registry 里注册了”“模型这轮看得到”“当前机器能执行”“这次调用被授权”不是一回事。本文使用以下精确定义：
 
-| 术语 | 准确定义 | 能否直接算进“当前模型可调用工具数” |
-| --- | --- | --- |
-| canonical/catalogued | 某 owner 定义了稳定名称、schema 和 handler/projection | 不能 |
-| registered/configured | 当前 Pi Session 的 Tool Registry 有这个名字和 definition | 不能；它可能 inactive 或被同名来源覆盖 |
-| active | definition 已进入当前模型请求的 tool surface | 可以，但仍不代表调用会成功 |
-| available/effective | 设置允许，且平台、服务、投影与依赖当前可用 | 只说明具备执行前提 |
-| authorized/executed | 当前 Session、Thread、Turn、scope、runtime mode 与调用参数通过最终检查，并实际执行 | 这是一次调用事实，不是常驻事实 |
+| 术语                  | 准确定义                                                                           | 能否直接算进“当前模型可调用工具数”     |
+| --------------------- | ---------------------------------------------------------------------------------- | -------------------------------------- |
+| canonical/catalogued  | 某 owner 定义了稳定名称、schema 和 handler/projection                              | 不能                                   |
+| registered/configured | 当前 Pi Session 的 Tool Registry 有这个名字和 definition                           | 不能；它可能 inactive 或被同名来源覆盖 |
+| active                | definition 已进入当前模型请求的 tool surface                                       | 可以，但仍不代表调用会成功             |
+| available/effective   | 设置允许，且平台、服务、投影与依赖当前可用                                         | 只说明具备执行前提                     |
+| authorized/executed   | 当前 Session、Thread、Turn、scope、runtime mode 与调用参数通过最终检查，并实际执行 | 这是一次调用事实，不是常驻事实         |
 
 因此，本文把“常驻工具”定义为：**产品默认组装、在一个 fresh OmniMind Agent 的正常 Agent Session 中 initial-active，并持续进入模型 tool schema 的工具**。另外单列“已注册但默认 inactive”的 Pi built-ins，以及用户/Project Extension 动态加入的非固定增量。
 
@@ -46,11 +48,11 @@
 
 ### 三个真实来源，而不是一个“大工具箱”
 
-| 来源 | 当前 owner | 默认 Agent Session | Settings 的六组开关是否控制 | 当前固定数量 |
-| --- | --- | --- | --- | --- |
-| Pi/OmniMind Agent native built-ins | bundled `@omnimind/pi-coding-agent@0.84.2` Session/Tool Registry；`bash` 由 OmniMind process supervisor 提供同名受管实现 | 7 个注册，4 个 active | 否 | active 4；registered 7 |
-| Product Todo Session Extension | `omnimind-agent-task-list` hidden inline Extension | Agent surface 注册并 active | 否 | 1 |
-| AgentGateway Host Projection | AgentGateway canonical catalog + hidden Pi Host Projection Extension | 当前允许且可用的 definitions 注册并 active | 是 | fresh 常见 46；理论上限 58 |
+| 来源                               | 当前 owner                                                                                                               | 默认 Agent Session                         | Settings 的六组开关是否控制 | 当前固定数量               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ | --------------------------- | -------------------------- |
+| Pi/OmniMind Agent native built-ins | bundled `@omnimind/pi-coding-agent@0.84.2` Session/Tool Registry；`bash` 由 OmniMind process supervisor 提供同名受管实现 | 7 个注册，4 个 active                      | 否                          | active 4；registered 7     |
+| Product Todo Session Extension     | `omnimind-agent-task-list` hidden inline Extension                                                                       | Agent surface 注册并 active                | 否                          | 1                          |
+| AgentGateway Host Projection       | AgentGateway canonical catalog + hidden Pi Host Projection Extension                                                     | 当前允许且可用的 definitions 注册并 active | 是                          | fresh 常见 46；理论上限 58 |
 
 用户级、团队级或 Project-local Pi Extension 也可能注册并默认激活自己的工具；它们由 ResourceLoader、Project trust、source precedence 和当前安装事实决定，所以不能写进 product-bundled 固定数量。Skill、Prompt、Package、MCP server 和 Timeline 展示分类也不能仅因“能影响 Agent”就混入这张工具清单。
 
@@ -58,22 +60,22 @@
 
 bundled runtime 的 `createAllToolDefinitions()` 固定建立 7 个 base definitions；没有 `baseToolsOverride` 时，`defaultActiveToolNames` 只有 `read / bash / edit / write`。因此 `grep / find / ls` 是随 runtime 常备的注册能力，但不是当前默认模型调用面的“常驻四件套”。
 
-| 工具 | registered | fresh initial-active | 核心职责 | 关键边界 |
-| --- | --- | --- | --- | --- |
-| `read` | 是 | 是 | 读取文本、图片等受支持文件内容 | 路径与可读性由 native tool/cwd/进程权限决定；不是 Host Browser |
-| `bash` | 是 | 是 | 执行 shell 命令、测试与本地工作流 | OmniMind 传入 process-supervisor-backed 同名 definition；高风险仍受 runtime mode 与调用 authority 约束 |
-| `edit` | 是 | 是 | 对现有文件做精确文本替换 | 不是自由补丁平台；匹配和写入失败必须如实返回 |
-| `write` | 是 | 是 | 创建或完整写入文件 | 会改变工作区；不能因 active 推断已获越界写入授权 |
-| `grep` | 是 | 否 | 内容搜索 | 可由 native active-set 机制启用；默认不占模型 schema |
-| `find` | 是 | 否 | 按名称/模式发现文件 | 同上 |
-| `ls` | 是 | 否 | 列目录 | 同上 |
+| 工具    | registered | fresh initial-active | 核心职责                          | 关键边界                                                                                               |
+| ------- | ---------- | -------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `read`  | 是         | 是                   | 读取文本、图片等受支持文件内容    | 路径与可读性由 native tool/cwd/进程权限决定；不是 Host Browser                                         |
+| `bash`  | 是         | 是                   | 执行 shell 命令、测试与本地工作流 | OmniMind 传入 process-supervisor-backed 同名 definition；高风险仍受 runtime mode 与调用 authority 约束 |
+| `edit`  | 是         | 是                   | 对现有文件做精确文本替换          | 不是自由补丁平台；匹配和写入失败必须如实返回                                                           |
+| `write` | 是         | 是                   | 创建或完整写入文件                | 会改变工作区；不能因 active 推断已获越界写入授权                                                       |
+| `grep`  | 是         | 否                   | 内容搜索                          | 可由 native active-set 机制启用；默认不占模型 schema                                                   |
+| `find`  | 是         | 否                   | 按名称/模式发现文件               | 同上                                                                                                   |
+| `ls`    | 是         | 否                   | 列目录                            | 同上                                                                                                   |
 
 这 7 个 definition 和 Project/Chat/Studio 产品 surface 不是同一个概念。对 OmniMind Agent 的正式 Agent Session，cwd、Project trust 与 project-local resources 由 Product admission 提供；工具本身不会创造 Project authority。
 
 ## Product Todo：1 个独立常驻 Extension 工具
 
-| 工具 | 当前 Agent 状态 | 职责 | 数据合同 | 不是什么 |
-| --- | --- | --- | --- | --- |
+| 工具                    | 当前 Agent 状态                                   | 职责                                   | 数据合同                                                                           | 不是什么                                                                       |
+| ----------------------- | ------------------------------------------------- | -------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | `omnimind_update_tasks` | `workSurface === "agent"` 时注册并 initial-active | 用完整快照替换当前 turn 的可见任务列表 | 1–50 项；`pending / in_progress / completed`；最多一个进行中；可带简短 explanation | 不是 Host tool、不是 Settings 六组之一、不是 durable Todo DB、不是自动必须调用 |
 
 它只在非平凡工作确实受益于可见进度时使用。简单问答不应为了“工具存在”而强制调用。可信成功结果薄投影为 canonical `turn.tasks.updated`；如果 Pi precedence 选择了第三方同名工具，OmniMind 不得把第三方结果伪装为产品 Todo，产品 Todo 应准确降级为 unavailable。
@@ -82,108 +84,108 @@ bundled runtime 的 `createAllToolDefinitions()` 固定建立 7 个 base definit
 
 ### 六组总表
 
-| 顺序 | group ID | 中文职责 | 工具数 | fresh default | availability 来源 | capability 主边界 |
-| ---: | --- | --- | ---: | --- | --- | --- |
-| 1 | `tasks` | 任务与多会话协作 | 12 | enabled | Server/Orchestration 常驻 | `thread:read` / `thread:write` |
-| 2 | `diagnostics` | 诊断 | 4 | enabled | durable/projected/runtime evidence owner | `diagnostics:read` |
-| 3 | `goals` | 目标 | 1 | enabled | Server/Orchestration 常驻 | `thread:write` |
-| 4 | `automations` | 自动化 | 7 | enabled | Automation owner | `thread:read` / `automation:write` |
-| 5 | `browser` | 浏览器 | 22 | enabled | integrated Browser host | `browser:control` |
-| 6 | `device` | 设备 | 12 | **disabled** | supported macOS/Xcode/Simulator service | `device:control` |
+| 顺序 | group ID      | 中文职责         | 工具数 | fresh default | availability 来源                        | capability 主边界                  |
+| ---: | ------------- | ---------------- | -----: | ------------- | ---------------------------------------- | ---------------------------------- |
+|    1 | `tasks`       | 任务与多会话协作 |     12 | enabled       | Server/Orchestration 常驻                | `thread:read` / `thread:write`     |
+|    2 | `diagnostics` | 诊断             |      4 | enabled       | durable/projected/runtime evidence owner | `diagnostics:read`                 |
+|    3 | `goals`       | 目标             |      1 | enabled       | Server/Orchestration 常驻                | `thread:write`                     |
+|    4 | `automations` | 自动化           |      7 | enabled       | Automation owner                         | `thread:read` / `automation:write` |
+|    5 | `browser`     | 浏览器           |     22 | enabled       | integrated Browser host                  | `browser:control`                  |
+|    6 | `device`      | 设备             |     12 | **disabled**  | supported macOS/Xcode/Simulator service  | `device:control`                   |
 
 六组是用户可理解的 global exposure policy 和 catalog provenance；**不是六个物理 Extension、package、进程、Registry 或 lifecycle owner**。OmniMind Agent 仍通过一个 named hidden Host Projection Extension 把当前 allowed + available definitions 注册进 Pi，并直接 active；执行永远回到 AgentGateway 对应 owner。
 
 ### Tasks：12 个
 
-| 工具 | 做什么 | 关键语义/风险 |
-| --- | --- | --- |
-| `omnimind_context` | 读取当前 harness、caller Thread/Turn 与获准的协调能力 | 只读；是自我定位，不是授权生成器 |
-| `omnimind_capabilities` | 列出 canonical Engine/model target、option keys、示例和 Gateway 限制 | 创建子任务前应以此为准，不猜 Provider/model/options |
-| `omnimind_list_projects` | 列出普通 folder-backed Projects 的 id、标题与 workspace root | 排除 Chats/Studio managed containers |
-| `omnimind_list_threads` | 按 Project、层级、Engine、模型、状态、标题、来源或时间发现任务 | archived 默认隐藏；这是 discovery，不启动工作 |
-| `omnimind_read_thread` | 分页读取一个任务的状态和近期消息 | 返回 newest-last、内容有界截断；旧消息用 cursor 继续 |
-| `omnimind_wait_for_threads` | 等待 1–20 个已固定目标任务的当前 Turn，并按输入顺序返回进展/结果 | timeout 只报告进度，不重试、不替换、不取消、不创建工作 |
-| `omnimind_create_threads` | 一次原子计划创建 1–20 个独立任务，可选 local/worktree 与精确 Engine target | preflight 失败不应部分创建；`requestId` 保证同一计划重试语义；可能创建分支/工作树 |
-| `omnimind_create_thread` | 创建恰好一个独立任务 | 两个及以上应使用 batch；同样受 Project、target 与 runtime mode 校验 |
-| `omnimind_send_message` | 给既有任务发送 follow-up；`queue` 等当前 Turn，`steer` 在 Engine 支持时转向运行中 Turn | 需要 caller 有权驱动目标；不把 Provider 不支持的 steer 伪装成功 |
-| `omnimind_interrupt_thread` | 请求中断某任务当前运行 Turn | 返回的是 interrupt requested/当时是否有 active turn，不等于已经 settled |
-| `omnimind_set_thread_title` | 重命名任务 | 需要驱动目标 Thread 的权限 |
-| `omnimind_set_thread_archived` | 归档或取消归档；省略 threadId 时可作用于自身 | 归档可能触发 managed worktree retention 清理；不是删除原始对话 |
+| 工具                           | 做什么                                                                                 | 关键语义/风险                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `omnimind_context`             | 读取当前 harness、caller Thread/Turn 与获准的协调能力                                  | 只读；是自我定位，不是授权生成器                                                  |
+| `omnimind_capabilities`        | 列出 canonical Engine/model target、option keys、示例和 Gateway 限制                   | 创建子任务前应以此为准，不猜 Provider/model/options                               |
+| `omnimind_list_projects`       | 列出普通 folder-backed Projects 的 id、标题与 workspace root                           | 排除 Chats/Studio managed containers                                              |
+| `omnimind_list_threads`        | 按 Project、层级、Engine、模型、状态、标题、来源或时间发现任务                         | archived 默认隐藏；这是 discovery，不启动工作                                     |
+| `omnimind_read_thread`         | 分页读取一个任务的状态和近期消息                                                       | 返回 newest-last、内容有界截断；旧消息用 cursor 继续                              |
+| `omnimind_wait_for_threads`    | 等待 1–20 个已固定目标任务的当前 Turn，并按输入顺序返回进展/结果                       | timeout 只报告进度，不重试、不替换、不取消、不创建工作                            |
+| `omnimind_create_threads`      | 一次原子计划创建 1–20 个独立任务，可选 local/worktree 与精确 Engine target             | preflight 失败不应部分创建；`requestId` 保证同一计划重试语义；可能创建分支/工作树 |
+| `omnimind_create_thread`       | 创建恰好一个独立任务                                                                   | 两个及以上应使用 batch；同样受 Project、target 与 runtime mode 校验               |
+| `omnimind_send_message`        | 给既有任务发送 follow-up；`queue` 等当前 Turn，`steer` 在 Engine 支持时转向运行中 Turn | 需要 caller 有权驱动目标；不把 Provider 不支持的 steer 伪装成功                   |
+| `omnimind_interrupt_thread`    | 请求中断某任务当前运行 Turn                                                            | 返回的是 interrupt requested/当时是否有 active turn，不等于已经 settled           |
+| `omnimind_set_thread_title`    | 重命名任务                                                                             | 需要驱动目标 Thread 的权限                                                        |
+| `omnimind_set_thread_archived` | 归档或取消归档；省略 threadId 时可作用于自身                                           | 归档可能触发 managed worktree retention 清理；不是删除原始对话                    |
 
 ### Diagnostics：4 个
 
-| 工具 | 做什么 | 证据边界 |
-| --- | --- | --- |
-| `omnimind_read_thread_activity` | 分页读取投影后的 Thread Activity | stable page、newest-last、opaque cursor |
-| `omnimind_read_thread_events` | 分页读取 durable orchestration event journal | 同消息连续更新可合并，但不跨越中间事件 |
-| `omnimind_read_thread_runtime_events` | 读取保留的 Provider runtime events | 有全局 retention cap；“没看到”前必须先检查覆盖范围 |
-| `omnimind_diagnose_thread` | 组合状态、消息、Activity、durable events、delivery blocker 与 stream incident，形成有界 forensic snapshot | 是诊断快照，不是第二 event store，也不替代原始证据 |
+| 工具                                  | 做什么                                                                                                    | 证据边界                                           |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `omnimind_read_thread_activity`       | 分页读取投影后的 Thread Activity                                                                          | stable page、newest-last、opaque cursor            |
+| `omnimind_read_thread_events`         | 分页读取 durable orchestration event journal                                                              | 同消息连续更新可合并，但不跨越中间事件             |
+| `omnimind_read_thread_runtime_events` | 读取保留的 Provider runtime events                                                                        | 有全局 retention cap；“没看到”前必须先检查覆盖范围 |
+| `omnimind_diagnose_thread`            | 组合状态、消息、Activity、durable events、delivery blocker 与 stream incident，形成有界 forensic snapshot | 是诊断快照，不是第二 event store，也不替代原始证据 |
 
 ### Goals：1 个
 
-| 工具 | 做什么 | 必须遵守的门 |
-| --- | --- | --- |
+| 工具                       | 做什么                                                    | 必须遵守的门                                                                                                                                                    |
+| -------------------------- | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `omnimind_set_thread_goal` | 设置/清除持久目标，或把 active goal 标为 achieved/blocked | 只有用户明确要求目标或明确创建追求该目标的任务时才能设置；不得从普通任务推断。achieved 只在真的完成时使用；blocked 只在同一外部阻塞连续三次阻止有意义进展后使用 |
 
 ### Automations：7 个
 
-| 工具 | 做什么 | 关键一致性/权限语义 |
-| --- | --- | --- |
-| `omnimind_create_automation` | 创建 heartbeat、standalone 或 dedicated 自动化，指定 execution mode 与 schedule | 默认应 `suggested:true`，除非用户明确要求直接创建 |
-| `omnimind_list_automations` | 列出现有自动化的 identity、mode、schedule、target、enabled 与 next run | 只读发现 |
-| `omnimind_view_automation` | 查看完整 definition、recent runs、next run 与 memory excerpt | 修改前必须先读，取得最新 definition revision |
-| `omnimind_update_automation` | 完整替换 mutable configuration | 不是 partial patch；必须带 `expectedDefinitionRevision` 并重发所有未变字段；stale revision fail closed |
-| `omnimind_cancel_automation` | disable 保留历史，或 delete 归档自动化 | 需要最新 revision；已知停止条件优先写进 completion policy |
-| `omnimind_update_automation_memory` | 完整替换 DB-backed persistent memory，最大 32 KiB UTF-8 | 省略 automationId 只允许 canonical run envelope；普通“继续”不继承 run authority |
-| `omnimind_report_automation_result` | 仅在 canonical automation run Turn 上报 structured result | manual follow-up 不得冒充 run；`silent` 只用于成功且无需注意，失败始终可见 |
+| 工具                                | 做什么                                                                          | 关键一致性/权限语义                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `omnimind_create_automation`        | 创建 heartbeat、standalone 或 dedicated 自动化，指定 execution mode 与 schedule | 默认应 `suggested:true`，除非用户明确要求直接创建                                                      |
+| `omnimind_list_automations`         | 列出现有自动化的 identity、mode、schedule、target、enabled 与 next run          | 只读发现                                                                                               |
+| `omnimind_view_automation`          | 查看完整 definition、recent runs、next run 与 memory excerpt                    | 修改前必须先读，取得最新 definition revision                                                           |
+| `omnimind_update_automation`        | 完整替换 mutable configuration                                                  | 不是 partial patch；必须带 `expectedDefinitionRevision` 并重发所有未变字段；stale revision fail closed |
+| `omnimind_cancel_automation`        | disable 保留历史，或 delete 归档自动化                                          | 需要最新 revision；已知停止条件优先写进 completion policy                                              |
+| `omnimind_update_automation_memory` | 完整替换 DB-backed persistent memory，最大 32 KiB UTF-8                         | 省略 automationId 只允许 canonical run envelope；普通“继续”不继承 run authority                        |
+| `omnimind_report_automation_result` | 仅在 canonical automation run Turn 上报 structured result                       | manual follow-up 不得冒充 run；`silent` 只用于成功且无需注意，失败始终可见                             |
 
 ### Browser：22 个
 
 Browser 控制的是**当前 Thread scope 内共享、可见的 OmniMind integrated Chromium/WebView**：同一 DOM、cookies 和 session；不是独立无痕浏览器，也不是 desktop computer-use。`tools/list` 存在不代表 Browser host 可用；所有真实调用仍绑定 provider Session 与 active Turn。
 
-| 工具 | 做什么 | schema annotation / 关键边界 |
-| --- | --- | --- |
-| `browser_status` | 查询 Browser host 可用性与当前分配 | read-only local；不创建或切换 tab |
-| `browser_tabs` | 列出当前 Thread scope 的 tabs | read-only local；不改变 focus/assignment |
-| `browser_open` | 打开或复用 session-affined scoped tab | mutating open-world；是否显示 surface 由 `show` 等参数决定 |
-| `browser_navigate` | 导航到 http/https URL 或本地解析的 annotationId | mutating open-world；拒绝 tool-input `file:`；导航后应重新 snapshot |
-| `browser_back` | 在真实 Chromium history 后退 | mutating open-world；可能执行页面 lifecycle handlers |
-| `browser_forward` | 在真实 Chromium history 前进 | mutating open-world；结果需重新观察 |
-| `browser_reload` | 重载，cache bypass 需显式请求 | mutating open-world；可能重复网络请求/页面副作用 |
-| `browser_resize` | 改变 guest viewport | idempotent local；会使旧 geometry 失效 |
-| `browser_snapshot` | 读取有界 WAI-ARIA semantics、可见文本、action refs，可选 PNG/diagnostics | read-only open-world；元素动作优先使用带 snapshotId 的 fresh ref |
-| `browser_screenshot` | 截取 viewport 或有界 full-page PNG | read-only open-world；像素确有必要时再用，优先 snapshot |
-| `browser_logs` | 读取有界 console/exception 与 request/response/failure metadata | read-only open-world；不返回 headers、request body 或 response body |
-| `browser_click` | 点击一个精确目标 | destructive/open-world annotation；可能导航、提交或触发外部效果；OAuth popup 要停下让用户完成 |
-| `browser_hover` | 把可信 pointer 移到目标上 | mutating open-world；可能展开菜单/tooltip，使旧 snapshot 过时 |
-| `browser_drag` | 在共享 WebView 内做一次受限 drag | destructive/open-world annotation；可能重排、上传或触发页面效果 |
-| `browser_type` | 替换或 append editable target 的值 | destructive/open-world annotation；不得把秘密写进日志或 evaluate 输出 |
-| `browser_select` | 对一个 select 选择精确 option values | destructive/open-world annotation；普通 select 只能一个 value |
-| `browser_upload` | 向 enabled file input 附加 regular files | destructive/open-world annotation；只接受 workspace-relative，拒绝 traversal、目录和越过 root 的 symlink；无明确意图不得上传秘密 |
-| `browser_press` | 向页面发送规范化 key chords | destructive/open-world annotation；拒绝 privileged OS/app/browser/clipboard chords |
-| `browser_scroll` | 按方向、pixel 或 page 模式滚动 viewport/target | mutating open-world；新内容重要时重新 snapshot |
-| `browser_wait` | 等待 1–8 个闭合条件，或做有界 delay | read-only open-world；timeout 不是后台无限等待，之后仍需 snapshot 验证 |
-| `browser_evaluate` | 在同一页面 main world 执行一个有界表达式并返回 JSON | destructive/open-world annotation；优先 semantic actions，不能用来绕过 navigation/network/native-surface policy |
-| `browser_close` | 永久关闭当前或精确 scoped tab | destructive local；会使全部 refs 失效，工具本身不可撤销 |
+| 工具                 | 做什么                                                                   | schema annotation / 关键边界                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `browser_status`     | 查询 Browser host 可用性与当前分配                                       | read-only local；不创建或切换 tab                                                                                                |
+| `browser_tabs`       | 列出当前 Thread scope 的 tabs                                            | read-only local；不改变 focus/assignment                                                                                         |
+| `browser_open`       | 打开或复用 session-affined scoped tab                                    | mutating open-world；是否显示 surface 由 `show` 等参数决定                                                                       |
+| `browser_navigate`   | 导航到 http/https URL 或本地解析的 annotationId                          | mutating open-world；拒绝 tool-input `file:`；导航后应重新 snapshot                                                              |
+| `browser_back`       | 在真实 Chromium history 后退                                             | mutating open-world；可能执行页面 lifecycle handlers                                                                             |
+| `browser_forward`    | 在真实 Chromium history 前进                                             | mutating open-world；结果需重新观察                                                                                              |
+| `browser_reload`     | 重载，cache bypass 需显式请求                                            | mutating open-world；可能重复网络请求/页面副作用                                                                                 |
+| `browser_resize`     | 改变 guest viewport                                                      | idempotent local；会使旧 geometry 失效                                                                                           |
+| `browser_snapshot`   | 读取有界 WAI-ARIA semantics、可见文本、action refs，可选 PNG/diagnostics | read-only open-world；元素动作优先使用带 snapshotId 的 fresh ref                                                                 |
+| `browser_screenshot` | 截取 viewport 或有界 full-page PNG                                       | read-only open-world；像素确有必要时再用，优先 snapshot                                                                          |
+| `browser_logs`       | 读取有界 console/exception 与 request/response/failure metadata          | read-only open-world；不返回 headers、request body 或 response body                                                              |
+| `browser_click`      | 点击一个精确目标                                                         | destructive/open-world annotation；可能导航、提交或触发外部效果；OAuth popup 要停下让用户完成                                    |
+| `browser_hover`      | 把可信 pointer 移到目标上                                                | mutating open-world；可能展开菜单/tooltip，使旧 snapshot 过时                                                                    |
+| `browser_drag`       | 在共享 WebView 内做一次受限 drag                                         | destructive/open-world annotation；可能重排、上传或触发页面效果                                                                  |
+| `browser_type`       | 替换或 append editable target 的值                                       | destructive/open-world annotation；不得把秘密写进日志或 evaluate 输出                                                            |
+| `browser_select`     | 对一个 select 选择精确 option values                                     | destructive/open-world annotation；普通 select 只能一个 value                                                                    |
+| `browser_upload`     | 向 enabled file input 附加 regular files                                 | destructive/open-world annotation；只接受 workspace-relative，拒绝 traversal、目录和越过 root 的 symlink；无明确意图不得上传秘密 |
+| `browser_press`      | 向页面发送规范化 key chords                                              | destructive/open-world annotation；拒绝 privileged OS/app/browser/clipboard chords                                               |
+| `browser_scroll`     | 按方向、pixel 或 page 模式滚动 viewport/target                           | mutating open-world；新内容重要时重新 snapshot                                                                                   |
+| `browser_wait`       | 等待 1–8 个闭合条件，或做有界 delay                                      | read-only open-world；timeout 不是后台无限等待，之后仍需 snapshot 验证                                                           |
+| `browser_evaluate`   | 在同一页面 main world 执行一个有界表达式并返回 JSON                      | destructive/open-world annotation；优先 semantic actions，不能用来绕过 navigation/network/native-surface policy                  |
+| `browser_close`      | 永久关闭当前或精确 scoped tab                                            | destructive local；会使全部 refs 失效，工具本身不可撤销                                                                          |
 
 ### Device：12 个
 
 Device 当前只表示 OmniMind 的 iOS Simulator 能力。fresh profile 默认关闭；即使用户开启，也必须有受支持的 macOS/Xcode/Simulator service 才会进入 effective catalog。开启分组不证明每个 entry 已通过所有产品准入，也不把 Agent 操作等同于人类 Device pane 操作。
 
-| 工具 | 做什么 | 关键边界 |
-| --- | --- | --- |
-| `device_list` | 列出可驱动 Simulator、runtime、boot state 与 boot owner | 只读；其他 device 工具前先拿精确 udid |
-| `device_boot` | 启动 Simulator | 有 OmniMind 自启动数量上限；`boot-limit-reached` 是应转告用户的拒绝，不是重试错误 |
-| `device_install` | 向已启动 Simulator 安装构建好的 `.app` | OmniMind 不负责 build；必须传现成 bundle path |
-| `device_launch` | 按 bundle id 启动已安装 app | 可带 launch arguments |
-| `device_open_url` | 打开 URL/deep link | **始终需要用户明确批准**；属于 open-world mutation |
-| `device_tap` | 按 accessibility label/role 或 device point 点击 | 优先 label；坐标是 device points 不是 screenshot pixels；按 label 时会自行滚动 |
-| `device_swipe` | 在两个 device points 间滑动 | duration 有界 |
-| `device_type` | 向已聚焦 field 输入文本 | 本工具不会自己 focus，必须先 tap |
-| `device_press_button` | 按 home、lock、volume-up/down | 真实设备状态变更 |
-| `device_screenshot` | 采集 PNG | 只读；定位元素优先 `device_describe_ui` |
-| `device_describe_ui` | 读取 accessibility roles、labels、values、frames 与 activation points | canonical 元素定位方式；可用复读 tree 验证 toggle 状态 |
-| `device_scroll_to_element` | 迭代滚动并重读 tree，直到目标进入 tappable band | 找内容时替代手写 swipe loop；`device_tap(label)` 已内置此能力 |
+| 工具                       | 做什么                                                                | 关键边界                                                                          |
+| -------------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `device_list`              | 列出可驱动 Simulator、runtime、boot state 与 boot owner               | 只读；其他 device 工具前先拿精确 udid                                             |
+| `device_boot`              | 启动 Simulator                                                        | 有 OmniMind 自启动数量上限；`boot-limit-reached` 是应转告用户的拒绝，不是重试错误 |
+| `device_install`           | 向已启动 Simulator 安装构建好的 `.app`                                | OmniMind 不负责 build；必须传现成 bundle path                                     |
+| `device_launch`            | 按 bundle id 启动已安装 app                                           | 可带 launch arguments                                                             |
+| `device_open_url`          | 打开 URL/deep link                                                    | **始终需要用户明确批准**；属于 open-world mutation                                |
+| `device_tap`               | 按 accessibility label/role 或 device point 点击                      | 优先 label；坐标是 device points 不是 screenshot pixels；按 label 时会自行滚动    |
+| `device_swipe`             | 在两个 device points 间滑动                                           | duration 有界                                                                     |
+| `device_type`              | 向已聚焦 field 输入文本                                               | 本工具不会自己 focus，必须先 tap                                                  |
+| `device_press_button`      | 按 home、lock、volume-up/down                                         | 真实设备状态变更                                                                  |
+| `device_screenshot`        | 采集 PNG                                                              | 只读；定位元素优先 `device_describe_ui`                                           |
+| `device_describe_ui`       | 读取 accessibility roles、labels、values、frames 与 activation points | canonical 元素定位方式；可用复读 tree 验证 toggle 状态                            |
+| `device_scroll_to_element` | 迭代滚动并重读 tree，直到目标进入 tappable band                       | 找内容时替代手写 swipe loop；`device_tap(label)` 已内置此能力                     |
 
 ## 数量公式与典型场景
 
@@ -206,13 +208,13 @@ Actual active
  - 所有同名 collision、加载失败、surface admission 或 projection failure
 ```
 
-| 场景 | Host effective | product registered | product initial-active | 说明 |
-| --- | ---: | ---: | ---: | --- |
-| fresh；Browser 可用；Device 默认关闭 | 46 | 54 | **51** | 当前最有代表性的默认基线 |
-| Device 显式开启且 12 项可用 | 58 | 66 | **63** | 当前 product-bundled 理论上限 |
-| Browser 不可用；其余前四组可用；Device 关闭 | 24 | 32 | **29** | Browser enabled intent 不会伪造 availability |
-| 六组全部 disabled | 0 | 8 | **5** | 仍有 Pi 7 registered + Todo；active 为 Pi 4 + Todo |
-| Todo 被 foreign same-name source 覆盖 | 上述 Host 数不变 | 产品 Todo 不可用 | 上述 active 再减 1 | 第三方 winner 不能污染 canonical task projection |
+| 场景                                        |   Host effective | product registered | product initial-active | 说明                                               |
+| ------------------------------------------- | ---------------: | -----------------: | ---------------------: | -------------------------------------------------- |
+| fresh；Browser 可用；Device 默认关闭        |               46 |                 54 |                 **51** | 当前最有代表性的默认基线                           |
+| Device 显式开启且 12 项可用                 |               58 |                 66 |                 **63** | 当前 product-bundled 理论上限                      |
+| Browser 不可用；其余前四组可用；Device 关闭 |               24 |                 32 |                 **29** | Browser enabled intent 不会伪造 availability       |
+| 六组全部 disabled                           |                0 |                  8 |                  **5** | 仍有 Pi 7 registered + Todo；active 为 Pi 4 + Todo |
+| Todo 被 foreign same-name source 覆盖       | 上述 Host 数不变 |   产品 Todo 不可用 |     上述 active 再减 1 | 第三方 winner 不能污染 canonical task projection   |
 
 “Host 46”由 `tasks 12 + diagnostics 4 + goals 1 + automations 7 + browser 22` 得出。“Host 58”再加 `device 12`。如果 Browser service unavailable，它的 22 个 canonical entries 可以仍有 catalog identity，但不会进入 exposed/delivered Host surface；Device service unsupported 时当前 assembly 甚至不会构造其 12 个 Tool entries。UI 必须读 runtime projection 的 `toolCount / availableToolCount / availability / enabled / effective`，不能硬编码这里的数字。
 
@@ -249,16 +251,16 @@ Host tool 已 active 也不构成长期通行证。每次真实 `tools/call` 至
 
 ## 明确不计入“产品常驻工具”的能力
 
-| 能力 | 为什么不计入固定清单 |
-| --- | --- |
-| `grep / find / ls` | 是 Pi base registered definitions，但 fresh 默认 inactive；本文已经作为“常备但非默认 active”单列 |
-| user/team/Project Extensions 的 tools | 数量与 identity 由安装、trust、scope、precedence 和当前 Session 决定，不是 product fixed baseline |
-| Skills / Prompts / Packages | 是不同生命周期资源，不是 ToolDefinition |
-| third-party MCP servers | 首版没有 OmniMind 统一 MCP Settings/总 Registry；只有通过真实 Engine/Extension seam 投递后，具体 tool 才可能进入当前 Session |
-| External connections tools | 外部 app → OmniMind 的 principal、scope、credential 与 public surface，和 Provider Session Host tools 是不同 authority |
-| Timeline 的 command/edit/read/search/agent/tool/image categories | 只是 UI 汇总分类，不是工具来源、注册或 Settings taxonomy |
-| 已删除的 Host search/dynamic loader | 当前没有 `search_tools` / `omnimind_search_tools` 应计入 Host；future dynamic 只能由具体 Extension owner 自己拥有 |
-| Browser/Device 人类 UI actions | 人类界面可用性不由 Agent Built-in policy 开关控制 |
+| 能力                                                             | 为什么不计入固定清单                                                                                                         |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `grep / find / ls`                                               | 是 Pi base registered definitions，但 fresh 默认 inactive；本文已经作为“常备但非默认 active”单列                             |
+| user/team/Project Extensions 的 tools                            | 数量与 identity 由安装、trust、scope、precedence 和当前 Session 决定，不是 product fixed baseline                            |
+| Skills / Prompts / Packages                                      | 是不同生命周期资源，不是 ToolDefinition                                                                                      |
+| third-party MCP servers                                          | 首版没有 OmniMind 统一 MCP Settings/总 Registry；只有通过真实 Engine/Extension seam 投递后，具体 tool 才可能进入当前 Session |
+| External connections tools                                       | 外部 app → OmniMind 的 principal、scope、credential 与 public surface，和 Provider Session Host tools 是不同 authority       |
+| Timeline 的 command/edit/read/search/agent/tool/image categories | 只是 UI 汇总分类，不是工具来源、注册或 Settings taxonomy                                                                     |
+| 已删除的 Host search/dynamic loader                              | 当前没有 `search_tools` / `omnimind_search_tools` 应计入 Host；future dynamic 只能由具体 Extension owner 自己拥有            |
+| Browser/Device 人类 UI actions                                   | 人类界面可用性不由 Agent Built-in policy 开关控制                                                                            |
 
 ## 当前状态、证据边界与复验触发器
 
@@ -349,8 +351,8 @@ GitHub、Notion、数据库、搜索服务等MCP server未来可能成为某个P
 ```text
 Desired Host Surface
 = canonical Gateway catalog
-∩ global Built-in policy
-∩ work-surface admission
+∩ ProductSurface support
+∩ configured intent/default
 ∩ machine/service availability
 
 Delivered Host Surface
@@ -408,15 +410,15 @@ brand-new且没有settings文件时：
 
 不新增store、marker或第二migration framework；复用现有settings文件存在事实、revisioned envelope与`migrationVersion`，并在schema decoding default抹掉字段存在性之前判定：
 
-| raw输入 | 目标 intent | v3 升级结果 |
-| --- | --- | --- |
-| settings 文件不存在 | brand-new；前五组 enabled、Device disabled | 仅在内存使用 fresh default；启动不 ambient write |
-| existing legacy snapshot，字段缺失 | 保留旧三组全部 enabled | Tasks/Diagnostics/Goals/Automations/Browser/Device 全部 enabled |
-| existing snapshot，显式 `[]` | 保留显式旧三组全部 enabled | 六组全部 enabled |
-| existing snapshot，显式 `[omnimind]` | 保留旧 aggregate disabled | 展开为 Tasks/Diagnostics/Goals/Automations 全部 disabled；Browser/Device 仍按旧 intent |
-| existing snapshot，显式 `[device]` | 保留 Device disabled | 当前版本保持 `device` |
-| existing snapshot，含 unknown IDs | 保留已知与 unknown IDs | normalize 后有界 round-trip；unknown 不产生运行效果 |
-| corrupt snapshot | 无法证明任何显式选择 | 沿现有 quarantine/diagnostic，使用当前安全默认；不得称为 fresh 或“保留选择” |
+| raw输入                              | 目标 intent                                | v3 升级结果                                                                            |
+| ------------------------------------ | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| settings 文件不存在                  | brand-new；前五组 enabled、Device disabled | 仅在内存使用 fresh default；启动不 ambient write                                       |
+| existing legacy snapshot，字段缺失   | 保留旧三组全部 enabled                     | Tasks/Diagnostics/Goals/Automations/Browser/Device 全部 enabled                        |
+| existing snapshot，显式 `[]`         | 保留显式旧三组全部 enabled                 | 六组全部 enabled                                                                       |
+| existing snapshot，显式 `[omnimind]` | 保留旧 aggregate disabled                  | 展开为 Tasks/Diagnostics/Goals/Automations 全部 disabled；Browser/Device 仍按旧 intent |
+| existing snapshot，显式 `[device]`   | 保留 Device disabled                       | 当前版本保持 `device`                                                                  |
+| existing snapshot，含 unknown IDs    | 保留已知与 unknown IDs                     | normalize 后有界 round-trip；unknown 不产生运行效果                                    |
+| corrupt snapshot                     | 无法证明任何显式选择                       | 沿现有 quarantine/diagnostic，使用当前安全默认；不得称为 fresh 或“保留选择”            |
 
 迁移必须是一次有界的existing→current版本转换。它不授权新的用户迁移数据库、LKG、双读或长期compat marker。若未来维护者选择pre-public reset，必须在sole owner明确接受覆盖损失后替换本合同，不能让实现自行决定。
 
