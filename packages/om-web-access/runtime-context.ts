@@ -50,6 +50,16 @@ export function runWithWebAccessContext<T>(context: WebAccessInstanceContext, ru
 	return instanceStorage.run(context, run);
 }
 
+/** Bind non-Pi EventEmitter callbacks to the Extension instance that created them. */
+export function bindToCurrentWebAccessContext<T extends (...args: never[]) => unknown>(
+	callback: T,
+): T {
+	const context = currentWebAccessContext();
+	if (!context) return callback;
+	return ((...args: Parameters<T>) =>
+		runWithWebAccessContext(context, () => callback(...args))) as T;
+}
+
 export function clearCurrentWebAccessInstance(): void {
 	const context = currentWebAccessContext();
 	if (!context) return;
@@ -107,8 +117,7 @@ function bindCallback<T extends (...args: never[]) => unknown>(
 	context: WebAccessInstanceContext,
 	callback: T,
 ): T {
-	return ((...args: Parameters<T>) =>
-		runWithWebAccessContext(context, () => callback(...args))) as T;
+	return runWithWebAccessContext(context, () => bindToCurrentWebAccessContext(callback));
 }
 
 function bindCallbackFields<T extends Record<string, unknown>>(

@@ -64,7 +64,10 @@ export interface WebSearchConfigSnapshot {
 
 export interface WebSearchConfigMutation {
 	readonly expectedRevision: string;
-	readonly candidate: WebSearchConfigRecord;
+	/** Closed known-field patch; unknown file-owned fields remain untouched. */
+	readonly patch: WebSearchConfigRecord;
+	/** Top-level known fields intentionally removed by an explicit user action. */
+	readonly remove?: readonly string[];
 	readonly allowOverwriteConflict?: boolean;
 }
 
@@ -77,6 +80,7 @@ export interface WebSearchConfigService {
 	readonly configPath: string;
 	ensureDefault(): WebSearchConfigSnapshot;
 	readSnapshot(): WebSearchConfigSnapshot;
+	refresh(): WebSearchConfigSnapshot;
 	mutate(input: WebSearchConfigMutation): WebSearchConfigMutationResult;
 	subscribeRevision(listener: (revision: string) => void): () => void;
 }
@@ -86,6 +90,7 @@ const servicesByAgentDir = new Map<string, WebSearchConfigService>();
 function defaultConfig(): WebSearchConfigRecord {
 	return {
 		schemaVersion: CURRENT_WEB_SEARCH_SCHEMA_VERSION,
+		provider: "auto",
 		workflow: "summary-review",
 	};
 }
@@ -249,6 +254,24 @@ function migrateKnownConfig(config: WebSearchConfigRecord): WebSearchConfigRecor
 	};
 }
 
+function isRecord(value: unknown): value is WebSearchConfigRecord {
+	return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function mergeKnownPatch(
+	current: WebSearchConfigRecord,
+	patch: WebSearchConfigRecord,
+): WebSearchConfigRecord {
+	const merged: WebSearchConfigRecord = { ...current };
+	for (const [key, value] of Object.entries(patch)) {
+		const previous = merged[key];
+		merged[key] = isRecord(previous) && isRecord(value)
+			? mergeKnownPatch(previous, value)
+			: value;
+	}
+	return merged;
+}
+
 export function createWebSearchConfigService(agentDir: string): WebSearchConfigService {
 	const resolvedAgentDir = resolve(agentDir);
 	const configPath = join(resolvedAgentDir, WEB_SEARCH_CONFIG_FILENAME);
@@ -278,6 +301,11 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
 			return snapshot;
 		},
 		readSnapshot,
+		refresh() {
+			const snapshot = readSnapshot();
+			publish(snapshot.revision);
+			return snapshot;
+		},
 		mutate(input) {
 			const current = readSnapshot();
 			if (
@@ -286,7 +314,9 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
 			) {
 				throw new WebSearchConfigConflictError(input.expectedRevision, current.revision);
 			}
-			const candidate = migrateKnownConfig(input.candidate);
+			const patched = mergeKnownPatch(current.config, input.patch);
+			for (const key of input.remove ?? []) delete patched[key];
+			const candidate = migrateKnownConfig(patched);
 			const raw = serializedConfig(candidate);
 			const revision = revisionFor(raw);
 			if (revision === current.revision && current.exists) {

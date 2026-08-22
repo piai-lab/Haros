@@ -2,16 +2,23 @@
   "name": "@omnimind/om-web-access",
   "version": "0.24.1-omnimind.0",
   "private": true,
-  "description": "Web search, URL fetching, GitHub repo cloning, PDF extraction, YouTube video understanding, and local video analysis for Pi coding agent. Supports OpenAI, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Ollama, AnySearch, Bright Data SERP, SerpBase, SearXNG, Exa, Perplexity, and Gemini.",
+  "description": "Bundled Pi-native web access for OmniMind Agent.",
   "type": "module",
   "exports": {
-    ".": "./index.ts",
-    "./config-service": "./config-service.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./index.ts"
+    },
+    "./config-service": {
+      "types": "./dist/config-service.d.ts",
+      "default": "./config-service.ts"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.types.json",
     "test": "node --test",
-    "typecheck": "tsc",
+    "typecheck": "tsc && tsc -p tsconfig.types.json",
     "audit:runtime": "npm audit --omit=dev --omit=peer"
   },
   "keywords": [
@@ -41,13 +48,11 @@
   "files": [
     "*.ts",
     "CHANGELOG.md",
-    "SECURITY.md",
-    "banner.png",
-    "pi-web-fetch-demo.mp4"
+    "SECURITY.md"
   ],
   "devDependencies": {
     "@types/turndown": "^5.0.6",
-    "typescript": "^7.0.2"
+    "typescript": "^5.7.3"
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
@@ -60,14 +65,8 @@
     "undici": "^8.9.0"
   },
   "peerDependencies": {
-    "@earendil-works/pi-ai": "*",
-    "@earendil-works/pi-coding-agent": "*",
-    "@earendil-works/pi-tui": "*"
-  },
-  "pi": {
-    "extensions": [
-      "./index.ts"
-    ],
-    "video": "https://github.com/nicobailon/pi-web-access/raw/refs/heads/main/pi-web-fetch-demo.mp4"
+    "@earendil-works/pi-ai": "0.84.2",
+    "@earendil-works/pi-coding-agent": "0.84.2",
+    "@earendil-works/pi-tui": "0.84.2"
   }
 }

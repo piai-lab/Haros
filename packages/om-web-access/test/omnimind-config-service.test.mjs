@@ -27,6 +27,10 @@ test("default creation is no-clobber, private, and deterministic", async () => {
 	const secondStat = await stat(service.configPath);
 
 	assert.equal(first.exists, true);
+	assert.equal(
+		await readFile(service.configPath, "utf8"),
+		'{\n  "schemaVersion": 1,\n  "provider": "auto",\n  "workflow": "summary-review"\n}\n',
+	);
 	assert.equal(second.revision, first.revision);
 	assert.equal(secondStat.mtimeMs, firstStat.mtimeMs);
 	if (process.platform !== "win32") assert.equal(firstStat.mode & 0o777, 0o600);
@@ -50,7 +54,7 @@ test("no-op mutation preserves mtime and does not publish invalidation", async (
 
 	const result = service.mutate({
 		expectedRevision: snapshot.revision,
-		candidate: snapshot.config,
+		patch: {},
 	});
 	const after = await stat(service.configPath);
 	unsubscribe();
@@ -72,11 +76,34 @@ test("explicit mutation migrates known schema and round-trips unknown fields", a
 
 	const result = service.mutate({
 		expectedRevision: before.revision,
-		candidate: { ...before.config, workflow: "none" },
+		patch: { workflow: "none" },
 	});
 	assert.equal(result.snapshot.schemaVersion, CURRENT_WEB_SEARCH_SCHEMA_VERSION);
 	assert.deepEqual(result.snapshot.config.futureProviderField, { nested: 7 });
 	assert.equal(result.snapshot.config.workflow, "none");
+});
+
+test("closed Settings fields preserve unknown advanced configuration", async () => {
+	const { service } = await fixture();
+	await writeFile(
+		service.configPath,
+		`${JSON.stringify({
+			schemaVersion: 1,
+			provider: "auto",
+			workflow: "summary-review",
+			futureProviderField: { nested: 7, opaque: { keep: true } },
+		})}\n`,
+		{ mode: 0o600 },
+	);
+	const before = service.readSnapshot();
+	const result = service.mutate({
+		expectedRevision: before.revision,
+		patch: { workflow: "none" },
+	});
+	assert.deepEqual(result.snapshot.config.futureProviderField, {
+		nested: 7,
+		opaque: { keep: true },
+	});
 });
 
 test("dirty draft conflicts remain explicit until reload or overwrite", async () => {
@@ -92,7 +119,7 @@ test("dirty draft conflicts remain explicit until reload or overwrite", async ()
 		() =>
 			service.mutate({
 				expectedRevision: initial.revision,
-				candidate: { ...initial.config, workflow: "none" },
+				patch: { workflow: "none" },
 			}),
 		WebSearchConfigConflictError,
 	);

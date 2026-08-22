@@ -57,6 +57,42 @@ test("configured routing follows order after a selected network failure and retu
 	assert.deepEqual(output.calls, ["https://api.search.brave.com/res/v1/web/search?q=ordered+route&count=5", "https://api.tavily.com/search"]);
 });
 
+test("configured ordered routing reports complete exhaustion as typed route evidence", async () => {
+	const home = await createConfig({
+		provider: "auto",
+		searchRouting: { providers: ["brave", "tavily"], fallbackOn: ["network"] },
+	});
+	const child = runChild(`
+		globalThis.fetch = async () => { throw new TypeError("fetch failed"); };
+		const { search } = await import(${JSON.stringify(searchModuleUrl)});
+		try {
+			await search("exhausted route", { provider: "auto" });
+			console.log(JSON.stringify({ ok: true }));
+		} catch (error) {
+			console.log(JSON.stringify({
+				ok: false,
+				name: error.name,
+				route: error.route,
+				structuralCandidateCount: error.structuralCandidateCount,
+				failureKinds: error.failures?.map(({ kind }) => kind),
+			}));
+		}
+	`, {
+		PI_CODING_AGENT_DIR: home,
+		BRAVE_API_KEY: "brave-test-key",
+		TAVILY_API_KEY: "tavily-test-key",
+	});
+
+	assert.equal(child.status, 0, child.stderr);
+	assert.deepEqual(JSON.parse(child.stdout.trim()), {
+		ok: false,
+		name: "SearchRouteExhaustedError",
+		route: "configured",
+		structuralCandidateCount: 2,
+		failureKinds: ["network", "network"],
+	});
+});
+
 test("configured routing fails closed on quota errors not selected by fallbackOn", async () => {
 	const home = await createConfig({
 		searchRouting: { providers: ["brave", "tavily"], fallbackOn: ["network"] },

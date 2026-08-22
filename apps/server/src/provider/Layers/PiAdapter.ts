@@ -79,6 +79,7 @@ import {
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
+import { inspectOmniMindWebAccessRegistration } from "@omnimind/om-web-access";
 import { type AgentGatewayHostExtensionHandle } from "../agentGatewayHostExtension.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
@@ -86,7 +87,10 @@ import {
   inspectOmniMindTaskListExtensionRegistration,
   OMNIMIND_TASK_LIST_TOOL_NAME,
 } from "../omnimindTaskListExtension.ts";
-import { buildOmniMindSessionExtensions } from "../omnimindSessionExtensions.ts";
+import {
+  buildOmniMindSessionExtensions,
+  type OmniMindSessionExtensionComposition,
+} from "../omnimindSessionExtensions.ts";
 import {
   PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
   type ProviderAdapterShape,
@@ -2689,15 +2693,17 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         provider !== "omnimind" && (input.gatewayTools?.length ?? 0) > 0;
       let resolvedHostProjection: AgentGatewayHostExtensionHandle | undefined;
       const hostProjectionDiagnostics: string[] = [];
+      const webAccessDiagnostics: string[] = [];
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
         cwd,
         agentDir,
         sessionManager,
         sessionStartEvent,
       }) => {
-        const composition =
+        const composition: Pick<OmniMindSessionExtensionComposition, "extensions" | "host"> =
           provider === "omnimind"
             ? buildOmniMindSessionExtensions({
+                agentDir,
                 defineTool: (tool) => input.sdk.defineTool(tool),
                 ...(input.workSurface === undefined ? {} : { workSurface: input.workSurface }),
                 ...(input.gatewayConnection === undefined
@@ -2781,6 +2787,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           resolvedGatewayControlAvailable = inspection.available;
           hostProjectionDiagnostics.push(...inspection.diagnostics);
         }
+        if (provider === "omnimind") {
+          const inspection = inspectOmniMindWebAccessRegistration(
+            createdSession.session.getAllTools(),
+          );
+          webAccessDiagnostics.push(...inspection.diagnostics);
+        }
         return {
           ...createdSession,
           services,
@@ -2797,6 +2809,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         modelRegistry: modelRegistryFacade(runtime.services.modelRuntime, input.sdk),
         gatewayControlAvailable: resolvedGatewayControlAvailable,
         hostProjectionDiagnostics,
+        webAccessDiagnostics,
         ...(resolvedHostProjection === undefined ? {} : { hostProjection: resolvedHostProjection }),
       };
     };
@@ -2976,6 +2989,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           modelRegistry,
           gatewayControlAvailable,
           hostProjectionDiagnostics,
+          webAccessDiagnostics,
           hostProjection,
         } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
           agentGatewaySessionLease,
@@ -3189,8 +3203,35 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             },
           } satisfies ProviderRuntimeEvent);
         }
+        if (webAccessDiagnostics.length > 0) {
+          const diagnostics = [...new Set(webAccessDiagnostics)];
+          offerRuntimeEvent({
+            ...makeEventBase(context, { includeTurnId: false }),
+            type: "runtime.warning",
+            payload: {
+              message:
+                "OmniMind Web Access could not register every canonical tool in this Agent session. The winning foreign tools remain untouched.",
+              detail: {
+                source: "pi-resource-loader",
+                capability: "omnimind-web-access",
+                availability: "degraded",
+                diagnostics,
+              },
+            },
+            raw: {
+              source: "pi.sdk.event",
+              method: "extension/resource-diagnostic",
+              payload: {
+                capability: "omnimind-web-access",
+                diagnosticCount: diagnostics.length,
+              },
+            },
+          } satisfies ProviderRuntimeEvent);
+        }
         warnIfTaskListExtensionUnavailable(context);
-        const loadedExtensions = runtime.session.resourceLoader.getExtensions().extensions;
+        const loadedExtensions = runtime.session.resourceLoader
+          .getExtensions()
+          .extensions.filter((extension) => extension.hidden !== true);
         if (loadedExtensions.length > 0) {
           const extensionNames = loadedExtensions.map(extensionDisplayName);
           offerRuntimeEvent({

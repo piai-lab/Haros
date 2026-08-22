@@ -75,6 +75,32 @@ export class SearchProviderError extends Error {
 	}
 }
 
+export interface SearchRouteFailure {
+	readonly provider: ResolvedSearchProvider;
+	readonly kind: SearchProviderErrorKind;
+	readonly error: string;
+}
+
+/** Auto or configured routing exhausted every structurally eligible candidate. */
+export class SearchRouteExhaustedError extends Error {
+	readonly failures: readonly SearchRouteFailure[];
+	readonly route: "auto" | "configured";
+	readonly structuralCandidateCount: number;
+
+	constructor(
+		message: string,
+		failures: readonly SearchRouteFailure[],
+		route: "auto" | "configured" = "auto",
+		structuralCandidateCount = failures.length,
+	) {
+		super(message);
+		this.name = "SearchRouteExhaustedError";
+		this.failures = failures;
+		this.route = route;
+		this.structuralCandidateCount = structuralCandidateCount;
+	}
+}
+
 export interface ProviderSearchResponse extends SearchResponse {
 	provider: ResolvedSearchProvider;
 }
@@ -108,9 +134,15 @@ function getSearchConfig(): SearchConfig {
 	const raw = readWebSearchConfig();
 
 	const searchModel = normalizeSearchModel(raw.searchModel);
-	const searchProviderConfigured = Object.hasOwn(raw, "searchProvider") || Object.hasOwn(raw, "provider");
+	const searchProvider = normalizeSearchProviderSelection(
+		raw.searchProvider ?? raw.provider,
+		`provider in ${configPath()}`,
+	);
+	const searchProviderConfigured =
+		(Object.hasOwn(raw, "searchProvider") || Object.hasOwn(raw, "provider")) &&
+		searchProvider !== "auto";
 	return {
-		searchProvider: normalizeSearchProviderSelection(raw.searchProvider ?? raw.provider, `provider in ${configPath()}`),
+		searchProvider,
 		searchProviderConfigured,
 		...(Object.hasOwn(raw, "searchRouting") ? { searchRouting: normalizeSearchRouting(raw.searchRouting) } : {}),
 		...(searchModel ? { searchModel } : {}),
@@ -459,22 +491,31 @@ async function searchWithConfiguredRouting(
 	routing: SearchRoutingConfig,
 ): Promise<AttributedSearchResponse> {
 	const diagnostics: string[] = [];
+	const failures: SearchRouteFailure[] = [];
+	let structuralCandidateCount = 0;
 	for (const provider of routing.providers) {
 		if (!(await isResolvedProviderAvailable(provider, options))) {
 			diagnostics.push(`${provider}: unavailable`);
 			continue;
 		}
+		structuralCandidateCount++;
 		try {
 			return await searchWithResolvedProvider(provider, query, options);
 		} catch (err) {
 			const classified = classifyProviderError(provider, err);
 			diagnostics.push(`${provider} [${classified.kind}]: ${errorMessage(err)}`);
+			failures.push({ provider, kind: classified.kind, error: errorMessage(err) });
 			if (!routing.fallbackOn.includes(classified.kind as SearchRoutingConfig["fallbackOn"][number])) {
 				throw classified;
 			}
 		}
 	}
-	throw new Error(`Configured search routing exhausted:\n  - ${diagnostics.join("\n  - ")}`);
+	throw new SearchRouteExhaustedError(
+		`Configured search routing exhausted:\n  - ${diagnostics.join("\n  - ")}`,
+		failures,
+		"configured",
+		structuralCandidateCount,
+	);
 }
 
 export async function search(query: string, options: FullSearchOptions = {}): Promise<AttributedSearchResponse> {
@@ -491,7 +532,15 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 		return searchWithConfiguredRouting(query, options, config.searchRouting);
 	}
 
-	const fallbackErrors: string[] = [];
+	const fallbackFailures: SearchRouteFailure[] = [];
+	const recordFallback = (candidate: ResolvedSearchProvider, error: unknown) => {
+		const classified = classifyProviderError(candidate, error);
+		fallbackFailures.push({
+			provider: candidate,
+			kind: classified.kind,
+			error: errorMessage(error),
+		});
+	};
 
 	if (isSearXNGAvailable()) {
 		try {
@@ -499,7 +548,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "searxng" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`SearXNG: ${errorMessage(err)}`);
+			recordFallback("searxng", err);
 		}
 	}
 
@@ -511,7 +560,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			}
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`OpenAI: ${errorMessage(err)}`);
+			recordFallback("openai", err);
 		}
 	}
 
@@ -519,9 +568,10 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 		try {
 			const result = await searchWithExa(query, options);
 			if (result) return { ...result, provider: "exa" };
+			recordFallback("exa", new Error("Exa search returned no results."));
 		} catch (err) {
 			if (err instanceof CredentialResolutionError || isAbortError(err)) throw err;
-			fallbackErrors.push(`Exa: ${errorMessage(err)}`);
+			recordFallback("exa", err);
 		}
 	}
 
@@ -531,7 +581,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "brave" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Brave: ${errorMessage(err)}`);
+			recordFallback("brave", err);
 		}
 	}
 
@@ -541,7 +591,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "parallel" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Parallel: ${errorMessage(err)}`);
+			recordFallback("parallel", err);
 		}
 	}
 
@@ -551,7 +601,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "tinyfish" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`TinyFish: ${errorMessage(err)}`);
+			recordFallback("tinyfish", err);
 		}
 	}
 
@@ -561,7 +611,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "search1api" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Search1API: ${errorMessage(err)}`);
+			recordFallback("search1api", err);
 		}
 	}
 
@@ -571,7 +621,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "searchinfinity" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Searchinfinity: ${errorMessage(err)}`);
+			recordFallback("searchinfinity", err);
 		}
 	}
 
@@ -581,7 +631,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "querit" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Querit: ${errorMessage(err)}`);
+			recordFallback("querit", err);
 		}
 	}
 
@@ -591,7 +641,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "tavily" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Tavily: ${errorMessage(err)}`);
+			recordFallback("tavily", err);
 		}
 	}
 
@@ -601,7 +651,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "firecrawl" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Firecrawl: ${errorMessage(err)}`);
+			recordFallback("firecrawl", err);
 		}
 	}
 
@@ -611,7 +661,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "jina" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Jina: ${errorMessage(err)}`);
+			recordFallback("jina", err);
 		}
 	}
 
@@ -621,7 +671,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "serpdive" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`SERPdive: ${errorMessage(err)}`);
+			recordFallback("serpdive", err);
 		}
 	}
 
@@ -631,7 +681,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "kagi" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Kagi: ${errorMessage(err)}`);
+			recordFallback("kagi", err);
 		}
 	}
 
@@ -641,7 +691,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "bocha" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Bocha: ${errorMessage(err)}`);
+			recordFallback("bocha", err);
 		}
 	}
 
@@ -651,7 +701,7 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "ollama" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Ollama: ${errorMessage(err)}`);
+			recordFallback("ollama", err);
 		}
 	}
 
@@ -661,30 +711,37 @@ export async function search(query: string, options: FullSearchOptions = {}): Pr
 			return { ...result, provider: "perplexity" };
 		} catch (err) {
 			if (isAbortError(err)) throw err;
-			fallbackErrors.push(`Perplexity: ${errorMessage(err)}`);
+			recordFallback("perplexity", err);
 		}
 	}
 
 	try {
 		const geminiResult = await searchWithGemini(query, options, false);
 		if (geminiResult) return { ...geminiResult, provider: "gemini" };
+		recordFallback("gemini", new Error("Gemini search returned no results."));
 	} catch (err) {
 		if (isAbortError(err)) throw err;
-		fallbackErrors.push(`Gemini: ${errorMessage(err)}`);
+		recordFallback("gemini", err);
 	}
 
-	if (fallbackErrors.length > 0) {
-		throw new Error(`Auto provider search failed:\n  - ${fallbackErrors.join("\n  - ")}`);
+	if (fallbackFailures.length > 0) {
+		throw new SearchRouteExhaustedError(
+			`Auto provider search failed:\n  - ${fallbackFailures
+				.map(({ provider, error }) => `${providerLabel(provider)}: ${error}`)
+				.join("\n  - ")}`,
+			fallbackFailures,
+		);
 	}
 
-	throw new Error(
+	throw new SearchRouteExhaustedError(
 		"No search provider available. Either:\n" +
 		"  1. Use /login to sign in with a Codex subscription for OpenAI web search\n" +
 		`  2. Set openaiApiKey, braveApiKey, parallelApiKey, tinyfishApiKey, search1apiApiKey, searchinfinityApiKey, queritApiKey, tavilyApiKey, firecrawlBaseUrl, jinaApiKey, serpdiveApiKey, kagiApiKey, ollamaApiKey, searxngBaseUrl, perplexityApiKey, exaApiKey, geminiApiKey, bochaApiKey, or cloudflareApiKey in ${configPath()}\n` +
 		"  3. Set OPENAI_API_KEY, BRAVE_API_KEY, PARALLEL_API_KEY, TINYFISH_API_KEY, SEARCH1API_KEY, SEARCHINFINITY_API_KEY, QUERIT_API_KEY, TAVILY_API_KEY, FIRECRAWL_BASE_URL, JINA_API_KEY, SERPDIVE_API_KEY, KAGI_API_KEY, BOCHA_API_KEY, OLLAMA_API_KEY, SEARXNG_BASE_URL, EXA_API_KEY, PERPLEXITY_API_KEY, GEMINI_API_KEY, or CLOUDFLARE_API_KEY env vars\n" +
 		"  4. Set GOOGLE_GEMINI_BASE_URL with CLOUDFLARE_API_KEY for Cloudflare AI Gateway routing\n" +
 		"  5. Sign into gemini.google.com in a supported Chromium-based browser\n" +
-		"  6. Explicitly select provider: \"anysearch\" for anonymous AnySearch, \"xai\" for Grok, \"brightdata\" with brightdataSerpZone for paid Bright Data SERP, \"serpbase\" or \"serper\" for Google SERP, or \"valyu\" for research search"
+		"  6. Explicitly select provider: \"anysearch\" for anonymous AnySearch, \"xai\" for Grok, \"brightdata\" with brightdataSerpZone for paid Bright Data SERP, \"serpbase\" or \"serper\" for Google SERP, or \"valyu\" for research search",
+		[],
 	);
 }
 

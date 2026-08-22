@@ -1,4 +1,10 @@
-import type { AgentToolResult, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import type {
+	AgentToolResult,
+	ExtensionAPI,
+	ExtensionContext,
+	InlineExtension,
+	ToolInfo,
+} from "@earendil-works/pi-coding-agent";
 import { Box, Text, truncateToWidth, type KeyId } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { StringEnum, type ImageContent, type TextContent } from "@earendil-works/pi-ai/compat";
@@ -9,7 +15,7 @@ import { findContent, type FindMode } from "./content-find.ts";
 import { answerFromPage } from "./page-query.ts";
 import { rewriteSearchQuery } from "./query-rewrite.ts";
 import { clearCloneCache } from "./github-extract.ts";
-import { getConfiguredSearchRouting, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, type AttributedSearchResponse, type SearchProvider, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
+import { getConfiguredSearchRouting, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProvider, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
 import type { SearchResult } from "./perplexity.ts";
 import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig, resolveCuratorNetworkConfig } from "./utils.ts";
 import {
@@ -79,8 +85,10 @@ import {
 } from "./source-check.ts";
 import {
 	bindExtensionApiToWebAccessContext,
+	bindToCurrentWebAccessContext,
 	clearCurrentWebAccessInstance,
 	createWebAccessInstanceContext,
+	currentWebAccessContext,
 	currentWebSearchConfigService,
 	runWithWebAccessContext,
 	scopedMap,
@@ -90,6 +98,7 @@ import {
 import {
 	type WebSearchConfigService,
 } from "./config-service.ts";
+import { WebSearchSessionAvailability } from "./availability.ts";
 
 type ExtensionTheme = ExtensionContext["ui"]["theme"];
 
@@ -227,7 +236,7 @@ function saveConfig(updates: Partial<WebSearchConfig>): void {
 	const snapshot = service.readSnapshot();
 	service.mutate({
 		expectedRevision: snapshot.revision,
-		candidate: { ...snapshot.config, ...updates },
+		patch: updates,
 	});
 }
 
@@ -835,19 +844,19 @@ function openInGlimpse(
 	});
 
 	let maxHeight = 1200;
-	win.on("ready", (info) => {
+	win.on("ready", bindToCurrentWebAccessContext((info) => {
 		const visibleHeight = info?.screen?.visibleHeight;
 		if (typeof visibleHeight === "number" && visibleHeight > 0) {
 			maxHeight = Math.floor(visibleHeight * 0.85);
 		}
-	});
-	win.on("message", (data) => {
+	}));
+	win.on("message", bindToCurrentWebAccessContext((data) => {
 		if (!data || typeof data !== "object") return;
 		const msg = data as Record<string, unknown>;
 		if (msg.type !== "resize" || typeof msg.height !== "number") return;
 		const clamped = Math.max(400, Math.min(Math.round(msg.height), maxHeight));
 		win._write({ type: "resize", width: 800, height: clamped });
-	});
+	}));
 
 	return win;
 }
@@ -970,12 +979,35 @@ function handleSessionChange(ctx: ExtensionContext): void {
 }
 
 function registerWebAccessExtension(pi: ExtensionAPI) {
+	const omnimindProfile = currentWebAccessContext()?.profile === "omnimind";
+	const availability = omnimindProfile
+		? new WebSearchSessionAvailability(
+			pi,
+			currentWebSearchConfigService(),
+			isOmniMindWebAccessTool,
+		)
+		: undefined;
 	const initConfig = loadConfigForExtensionInit();
-	const toolNames = resolveToolNames(initConfig);
-	const webSearchEnabled = isToolEnabled(initConfig, "webSearch");
-	const sourceCheckEnabled = isToolEnabled(initConfig, "sourceCheck");
-	const fetchContentEnabled = isToolEnabled(initConfig, "fetchContent");
-	const getSearchContentEnabled = isToolEnabled(initConfig, "getSearchContent");
+	const toolNames = omnimindProfile ? DEFAULT_TOOL_NAMES : resolveToolNames(initConfig);
+	const webSearchEnabled = omnimindProfile || isToolEnabled(initConfig, "webSearch");
+	const sourceCheckEnabled = omnimindProfile || isToolEnabled(initConfig, "sourceCheck");
+	const fetchContentEnabled = omnimindProfile || isToolEnabled(initConfig, "fetchContent");
+	const getSearchContentEnabled = omnimindProfile || isToolEnabled(initConfig, "getSearchContent");
+	const searchErrorMessage = (error: unknown): string => {
+		if (!omnimindProfile || !(error instanceof SearchRouteExhaustedError)) {
+			return error instanceof Error ? error.message : String(error);
+		}
+		const transient = error.failures.some(
+			({ kind }) => kind === "transient" || kind === "network",
+		);
+		if (transient) {
+			return "Web search is temporarily degraded. Check the network or retry; Provider settings remain available under Development > Web search.";
+		}
+		if (error.structuralCandidateCount === 0) {
+			return "No usable web search Provider is configured. Open Development > Web search to add or repair a Provider.";
+		}
+		return "Every configured web search route is currently unavailable. Review credentials or quota under Development > Web search, then use Recheck.";
+	};
 	const storedContentSources = joinToolNames([
 		...(webSearchEnabled ? [toolNames.webSearch] : []),
 		...(sourceCheckEnabled ? [toolNames.sourceCheck] : []),
@@ -1591,12 +1623,12 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				try {
 					const win = openInGlimpse(open, handle.url, "Search Curator");
 					glimpseWins.set(callId, win);
-					win.on("closed", () => {
+					win.on("closed", bindToCurrentWebAccessContext(() => {
 						if (glimpseWins.get(callId) === win) {
 							glimpseWins.delete(callId);
 							closeCurator(callId);
 						}
-					});
+					}));
 					return;
 				} catch (err) {
 					const message = err instanceof Error ? err.message : String(err);
@@ -1617,7 +1649,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		}
 	}
 
-	pi.registerShortcut(curateKey, {
+	if (!omnimindProfile) pi.registerShortcut(curateKey, {
 		description: "Review search results",
 		handler: async (ctx) => {
 			const entries = [...pendingCurates.entries()];
@@ -1632,7 +1664,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerShortcut(activityKey, {
+	if (!omnimindProfile) pi.registerShortcut(activityKey, {
 		description: "Toggle web search activity",
 		handler: async (ctx) => {
 			widgetVisible.value = !widgetVisible.value;
@@ -1647,10 +1679,14 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	pi.on("session_start", async (_event, ctx) => handleSessionChange(ctx));
+	pi.on("session_start", async (_event, ctx) => {
+		availability?.start();
+		handleSessionChange(ctx);
+	});
 	pi.on("session_tree", async (_event, ctx) => handleSessionChange(ctx));
 
 	pi.on("session_shutdown", () => {
+		availability?.shutdown();
 		sessionActive.value = false;
 		abortPendingFetches();
 		closeCurator();
@@ -1823,6 +1859,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 							signal: searchSignal,
 							extensionContext: ctx,
 						});
+						availability?.noteSearchSuccess();
 						if (signal?.aborted || cancelled || searchAbort.signal.aborted) break;
 						if (response.inlineContent) allInlineContent.push(...response.inlineContent);
 						const entries = toCuratorSearchEntries(response);
@@ -1847,7 +1884,8 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						}
 					} catch (err) {
 						if (signal?.aborted || cancelled || searchAbort.signal.aborted) break;
-						const message = err instanceof Error ? err.message : String(err);
+						availability?.noteSearchFailure(err);
+						const message = searchErrorMessage(err);
 						const failedProvider = toCuratorProvider(requestedProvider);
 						searchResults.set(qi, { query: queryList[qi], answer: "", results: [], error: message, provider: failedProvider });
 						resultSlots.set(qi, qi);
@@ -1919,6 +1957,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						signal,
 						extensionContext: ctx,
 					});
+					availability?.noteSearchSuccess();
 
 					searchResults.push({ query, answer, results, error: null, provider });
 					for (const r of results) {
@@ -1929,7 +1968,8 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					if (inlineContent) allInlineContent.push(...inlineContent);
 				} catch (err) {
 					if (signal?.aborted || isAbortError(err)) throw err;
-					const message = err instanceof Error ? err.message : String(err);
+					availability?.noteSearchFailure(err);
+					const message = searchErrorMessage(err);
 					const requestedProvider = toCuratorProvider(resolvedProvider);
 					searchResults.push({ query, answer: "", results: [], error: message, provider: requestedProvider });
 				}
@@ -2291,7 +2331,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					}
 				} catch (err) {
 					if (signal?.aborted || isAbortError(err)) break;
-					errors.push({ query, error: err instanceof Error ? err.message : String(err) });
+					errors.push({ query, error: searchErrorMessage(err) });
 				}
 			}
 
@@ -2996,7 +3036,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 	});
 	}
 
-	if (isCommandEnabled(initConfig, "websearch")) pi.registerCommand("websearch", {
+	if (!omnimindProfile && isCommandEnabled(initConfig, "websearch")) pi.registerCommand("websearch", {
 		description: "Open web search curator",
 		handler: async (args, ctx) => {
 			const sessionToken = randomUUID();
@@ -3178,12 +3218,12 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						try {
 							const win = openInGlimpse(open, handle.url, "Search Curator");
 							glimpseWins.set(commandCallId, win);
-							win.on("closed", () => {
+							win.on("closed", bindToCurrentWebAccessContext(() => {
 								if (glimpseWins.get(commandCallId) === win) {
 									glimpseWins.delete(commandCallId);
 									closeCurator(commandCallId);
 								}
-							});
+							}));
 						} catch (err) {
 							const message = err instanceof Error ? err.message : String(err);
 							console.error(`Failed to open Glimpse curator window: ${message}`);
@@ -3257,7 +3297,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	if (isCommandEnabled(initConfig, "curator")) pi.registerCommand("curator", {
+	if (!omnimindProfile && isCommandEnabled(initConfig, "curator")) pi.registerCommand("curator", {
 		description: "Toggle or configure the search curator workflow",
 		handler: async (args, ctx) => {
 			const arg = args.trim().toLowerCase();
@@ -3299,7 +3339,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	if (isCommandEnabled(initConfig, "google-account")) pi.registerCommand("google-account", {
+	if (!omnimindProfile && isCommandEnabled(initConfig, "google-account")) pi.registerCommand("google-account", {
 		description: "Show the active Google account for Gemini Web",
 		handler: async () => {
 			if (!isBrowserCookieAccessAllowed()) {
@@ -3341,7 +3381,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		},
 	});
 
-	if (isCommandEnabled(initConfig, "search")) pi.registerCommand("search", {
+	if (!omnimindProfile && isCommandEnabled(initConfig, "search")) pi.registerCommand("search", {
 		description: "Browse stored web search results",
 		handler: async (_args, ctx) => {
 			const results = getAllResults();
@@ -3415,6 +3455,45 @@ export interface OmniMindWebAccessExtensionOptions {
 	readonly profile?: WebAccessRuntimeProfile;
 }
 
+export const OMNIMIND_WEB_ACCESS_EXTENSION_NAME = "omnimind-web-access";
+export const OMNIMIND_WEB_ACCESS_EXTENSION_PATH =
+	`<inline:${OMNIMIND_WEB_ACCESS_EXTENSION_NAME}>`;
+
+export function isOmniMindWebAccessTool(tool: ToolInfo | undefined): boolean {
+	return (
+		tool?.sourceInfo.path === OMNIMIND_WEB_ACCESS_EXTENSION_PATH &&
+		tool.sourceInfo.source === "inline" &&
+		tool.sourceInfo.scope === "temporary" &&
+		tool.sourceInfo.origin === "top-level"
+	);
+}
+
+export interface OmniMindWebAccessRegistrationInspection {
+	readonly available: boolean;
+	readonly deliveredToolNames: readonly string[];
+	readonly collidedToolNames: readonly string[];
+	readonly diagnostics: readonly string[];
+}
+
+export function inspectOmniMindWebAccessRegistration(
+	tools: readonly ToolInfo[],
+): OmniMindWebAccessRegistrationInspection {
+	const names = Object.values(DEFAULT_TOOL_NAMES);
+	const deliveredToolNames = names.filter((name) =>
+		isOmniMindWebAccessTool(tools.find((tool) => tool.name === name)),
+	);
+	const delivered = new Set(deliveredToolNames);
+	const collidedToolNames = names.filter((name) => !delivered.has(name));
+	return {
+		available: delivered.has(DEFAULT_TOOL_NAMES.webSearch),
+		deliveredToolNames,
+		collidedToolNames,
+		diagnostics: collidedToolNames.map(
+			(name) => `Pi selected a foreign source or no definition for OmniMind Web Access tool "${name}".`,
+		),
+	};
+}
+
 export function makeOmniMindWebAccessExtension(
 	options: OmniMindWebAccessExtensionOptions,
 ): (pi: ExtensionAPI) => void {
@@ -3427,6 +3506,17 @@ export function makeOmniMindWebAccessExtension(
 			options.configService.ensureDefault();
 			registerWebAccessExtension(bindExtensionApiToWebAccessContext(pi, context));
 		});
+	};
+}
+
+/** The only bundled registration surface; ResourceLoader remains the Registry owner. */
+export function makeOmniMindWebAccessInlineExtension(
+	options: OmniMindWebAccessExtensionOptions,
+): InlineExtension {
+	return {
+		name: OMNIMIND_WEB_ACCESS_EXTENSION_NAME,
+		hidden: true,
+		factory: makeOmniMindWebAccessExtension(options),
 	};
 }
 
