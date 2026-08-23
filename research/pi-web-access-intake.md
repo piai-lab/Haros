@@ -2,7 +2,7 @@
 
 > 观察与收口日期：2026-08-22
 >
-> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。candidate 已在任务分支形成有序实现提交，并从exact pushed SHA完成Desktop重建、替换安装、fresh-profile Settings/Provider-asset gate，以及真实DeepSeek + keyless Exa的默认`auto-summary`、显式Curator和non-review observer packaged局部门；真实MiMo stored search responseId衔接已由exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`完成复验。独立observer/review presentation与V7适配最终由exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`完成隔离packaged复验；同一安装候选现已补齐keyed Tavily draft/named route与A/B多Thread background attention/exact reopen journey。新的truthful Provider/Curator projection与低压力Settings source candidate为`9dc24eb57187f9fbd720632e3d8e5bd3da0f5e07`，source gates已通过但尚待从该精确SHA重建packaged证据。Host Tools事实仍不能外推为Web Access证据。
+> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。candidate 已在任务分支形成有序实现提交，并从exact pushed SHA完成Desktop重建、替换安装、fresh-profile Settings/Provider-asset gate，以及真实DeepSeek + keyless Exa的默认`auto-summary`、显式Curator和non-review observer packaged局部门；真实MiMo stored search responseId衔接已由exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`完成复验。独立observer/review presentation与V7适配最终由exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`完成隔离packaged复验；同一安装候选现已补齐keyed Tavily draft/named route与A/B多Thread background attention/exact reopen journey。新的truthful Provider/Curator projection与低压力Settings source candidate为`7335df428655fcb67919bc2e24fa52651abaed8a`，source gates已通过，packaged视觉探针发现的raw enum泄漏也已收口，尚待从该精确SHA重建packaged证据。Host Tools事实仍不能外推为Web Access证据。
 >
 > 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
 >
@@ -13,7 +13,7 @@
 > 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，production adoption 只有进入根 [`README.md`](../README.md) 的 `source-adoptions` 后才成立。
 
 > [!IMPORTANT]
-> **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态为`source-candidate-pending-packaged-with-prior-evidence`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。默认`auto-summary`、Settings/Provider-asset、显式Curator、non-review observer、真实MiMo stored result continuation、keyed Tavily route与A/B多Thread lifecycle均已有exact-SHA安装证据；当前packaged证据对应`ff67a21a97f9071bd9162dfb61e9f4b632a903a8`，新的source candidate `9dc24eb57187f9fbd720632e3d8e5bd3da0f5e07`收口Provider prerequisite、Curator并行结果真相、Browser本地化标题和Settings信息压力，尚待从该精确SHA重建安装证据。这不等于签名、公证、Release、update feed或整个OmniMind产品已经发行。
+> **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态为`source-candidate-pending-packaged-with-prior-evidence`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。默认`auto-summary`、Settings/Provider-asset、显式Curator、non-review observer、真实MiMo stored result continuation、keyed Tavily route与A/B多Thread lifecycle均已有exact-SHA安装证据；当前packaged证据对应`ff67a21a97f9071bd9162dfb61e9f4b632a903a8`，新的source candidate `7335df428655fcb67919bc2e24fa52651abaed8a`收口Provider prerequisite、Curator并行结果真相、Browser本地化标题、Settings信息压力与选中值本地化，尚待从该精确SHA重建安装证据。这不等于签名、公证、Release、update feed或整个OmniMind产品已经发行。
 
 > [!IMPORTANT]
 > 2026-08-22维护者重新裁决默认体验：canonical默认workflow是`auto-summary`，普通联网后台摘要并同turn继续；Curator不再是日常默认，只在Settings显式选择、per-call override或用户明确要求审查/挑选来源时以`summary-review`进入。该决定supersede本文此前“Curator默认开启”的旧结论，但不删除P4或显式review能力。
@@ -55,7 +55,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
 | 图标来源 | runtime Provider定义与presentation字段同源；26家全部使用本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle均已有exact-SHA packaged证据。当前已测试安装候选是`ff67a21a97f9071bd9162dfb61e9f4b632a903a8`；新的source candidate `9dc24eb57187f9fbd720632e3d8e5bd3da0f5e07`已通过source gates、等待packaged复验，不能冒充已安装或整个产品已发行 |
+| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle均已有exact-SHA packaged证据。当前已测试安装候选是`ff67a21a97f9071bd9162dfb61e9f4b632a903a8`；新的source candidate `7335df428655fcb67919bc2e24fa52651abaed8a`已通过source gates、等待packaged复验，不能冒充已安装或整个产品已发行 |
 
 ### 0.3 唯一 owner 图
 
@@ -995,7 +995,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
   ],
   "evidenceMaturity": "source-candidate-pending-packaged-with-prior-evidence",
   "implemented": true,
-  "currentSourceImplementationSha": "9dc24eb57187f9fbd720632e3d8e5bd3da0f5e07",
+  "currentSourceImplementationSha": "7335df428655fcb67919bc2e24fa52651abaed8a",
   "supersededObserverImplementationSha": "2bf044049d7eeb419975d7426e5d6414d2136814",
   "testedImplementationSha": "ff67a21a97f9071bd9162dfb61e9f4b632a903a8",
   "previousTestedImplementationSha": "3f4d673bce30465cba387df2667d2488a744c05f",
