@@ -797,7 +797,7 @@ main {
 
 .result-card-expand {
   color: var(--fg-dim);
-  font-size: 11px;
+	font-size: 14px;
   margin-top: 2px;
   flex-shrink: 0;
   padding-top: 3px;
@@ -1744,8 +1744,9 @@ const SCRIPT = `(function() {
   var providers = __PROVIDER_IDS__;
   var availProviders = DATA.availableProviders && typeof DATA.availableProviders === "object" ? DATA.availableProviders : {};
   var providerPresentation = DATA.providerPresentation && typeof DATA.providerPresentation === "object" ? DATA.providerPresentation : {};
-  var observerMode = DATA.mode === "observer";
-  var workflow = observerMode ? "none" : "summary-review";
+	var surfaceMode = DATA.mode === "observer" ? "observer" : "review";
+	var observerMode = surfaceMode === "observer";
+	var interactiveReview = surfaceMode === "review";
   var initialDefaultProvider = typeof DATA.defaultProvider === "string" ? DATA.defaultProvider : "exa";
   if (providers.indexOf(initialDefaultProvider) === -1) initialDefaultProvider = "exa";
   var initialSearchProvider = typeof DATA.searchProvider === "string" ? DATA.searchProvider.toLowerCase() : initialDefaultProvider;
@@ -1901,6 +1902,17 @@ const SCRIPT = `(function() {
 
   function extractServerError(data) {
     if (!data || typeof data !== "object") return "";
+	if (typeof data.code === "string") {
+	  var errorCopy = {
+		"invalid-session": "invalidSession",
+		"session-closed": "sessionClosed",
+		"observer-read-only": "observerReadOnly",
+		"invalid-provider": "invalidProvider",
+		"invalid-query": "invalidQuery",
+		"events-unavailable": "sessionClosed"
+	  }[data.code];
+	  if (errorCopy) return t(errorCopy);
+	}
     if (typeof data.error === "string" && data.error.trim()) return data.error.trim();
     return "";
   }
@@ -1964,6 +1976,7 @@ __PROVIDER_LABEL_RESOLVER__
   }
 
   function buildAltChipsHtml(provider, queryText) {
+    if (observerMode) return "";
     var normalizedProv = normalizeProvider(provider, "");
     if (!normalizedProv) return "";
     var altProviders = providers.filter(function(p) { return p !== normalizedProv && availProviders[p] === true; });
@@ -2580,6 +2593,13 @@ __PROVIDER_LABEL_RESOLVER__
       card.classList.add("checked");
       populateResultCard(card, data, queryText, provider);
       setupCardInteraction(card);
+	  if (allQueries.length <= 1 && !resultCardsEl.querySelector(".result-card.is-open")) {
+		var firstBody = card.querySelector(".result-card-body");
+		var firstExpand = card.querySelector(".result-card-expand");
+		if (firstBody) firstBody.classList.add("open");
+		card.classList.add("is-open");
+		if (firstExpand) firstExpand.textContent = "\u25B2";
+	  }
     }
 
     if (card.dataset.completed !== "true") {
@@ -2659,15 +2679,16 @@ __PROVIDER_LABEL_RESOLVER__
     currentSearchProvider = normalized;
     recomputeProviderStates();
     if (persist) {
-      postJson("/provider", { provider: normalized }).then(function(data) {
-        if (data && data.ok === false) {
-          throw new Error(extractServerError(data) || "request rejected");
-        }
-      }).catch(function(err) {
-        var message = err instanceof Error ? err.message : String(err);
-        setError(t("failedToSaveProviderPrefix") + (message || t("unknownError")));
-      });
+	  return postJson("/provider", { provider: normalized }).then(function(data) {
+		if (!data || data.ok === false || !data.persistence) {
+		  throw new Error(extractServerError(data) || "request rejected");
+		}
+		return data.persistence;
+	  }).catch(function() {
+		return { state: "failed", reason: "write-failed" };
+	  });
     }
+	return Promise.resolve({ state: "unchanged" });
   }
 
   providerButtons.forEach(function(btn) {
@@ -2683,8 +2704,15 @@ __PROVIDER_LABEL_RESOLVER__
 
       if (state === "searched" && provider === currentProvider) return;
 
-      setDefaultProvider(provider, true);
+	  var providerPersistence = setDefaultProvider(provider, true);
       if (allQueries.length === 0) {
+		providerPersistence.then(function(persistence) {
+		  var saved = persistence.state === "saved" || persistence.state === "unchanged";
+		  heroDesc.textContent = saved
+			? tf("providerPersisted", { provider: providerLabel(provider) })
+			: tf("providerDefaultNotSaved", { provider: providerLabel(provider) });
+		  if (!saved) setError(t(persistence.reason === "revision-conflict" ? "providerSaveConflict" : "providerSaveFailed"));
+		});
         resetTimer();
         return;
       }
@@ -2696,6 +2724,8 @@ __PROVIDER_LABEL_RESOLVER__
 
       var batchQueries = allQueries.slice();
       var inflight = batchQueries.length;
+	  var successfulSearches = 0;
+	  var failedSearches = 0;
       if (inflight === 0) {
         providerBatchInFlight = false;
         batchLoadingProvider = null;
@@ -2718,6 +2748,7 @@ __PROVIDER_LABEL_RESOLVER__
           .then(function(data) {
             if (submitted || timerExpired) return;
             if (!data || data.ok === false) {
+			  failedSearches += 1;
               applyResponseToCard(searchingCard, {
                 answer: "",
                 results: [],
@@ -2727,9 +2758,13 @@ __PROVIDER_LABEL_RESOLVER__
               return;
             }
             applySearchResponseEntries(searchingCard, data, slot.query, provider, slot.slotId);
+			var entries = Array.isArray(data.entries) && data.entries.length > 0 ? data.entries : [data];
+			if (entries.some(function(entry) { return entry && !entry.error; })) successfulSearches += 1;
+			else failedSearches += 1;
           })
           .catch(function(err) {
             if (submitted || timerExpired) return;
+			failedSearches += 1;
             var message = err instanceof Error ? err.message : String(err);
             applyResponseToCard(searchingCard, {
               answer: "",
@@ -2746,7 +2781,20 @@ __PROVIDER_LABEL_RESOLVER__
               recomputeProviderStates();
               updateStageUI();
               maybeAutoGenerateSummary();
-              heroDesc.textContent = tf("providerPersistedAndResearched", { provider: provider });
+			  providerPersistence.then(function(persistence) {
+				var saved = persistence.state === "saved" || persistence.state === "unchanged";
+				var researched = successfulSearches > 0;
+				var partiallyResearched = researched && failedSearches > 0;
+			  heroDesc.textContent = tf(
+				  partiallyResearched
+					? saved ? "providerPersistedAndPartiallyResearched" : "providerPartiallyResearchedDefaultNotSaved"
+					: researched
+					? saved ? "providerPersistedAndResearched" : "providerResearchedDefaultNotSaved"
+					: saved ? "providerSavedResearchFailed" : "providerNotSavedResearchFailed",
+				  { provider: providerLabel(provider) }
+				);
+				if (!saved) setError(t(persistence.reason === "revision-conflict" ? "providerSaveConflict" : "providerSaveFailed"));
+			  });
             }
           });
       });
@@ -3145,8 +3193,7 @@ __PROVIDER_LABEL_RESOLVER__
       })
       .catch(function(err) {
         if (!showWarning || submitted || timerExpired) return;
-        var message = err instanceof Error ? err.message : String(err);
-        setLiveUpdateWarning(t("liveDisconnectedRetryPrefix") + (message || t("unknownError")));
+        setLiveUpdateWarning(t(observerMode ? "disconnectedObserver" : "disconnectedReview"));
       })
       .finally(function() {
         stateSyncInFlight = false;
@@ -3450,7 +3497,7 @@ __PROVIDER_LABEL_RESOLVER__
   }
 
   function maybeAutoGenerateSummary() {
-    if (workflow !== "summary-review") return;
+	if (!interactiveReview) return;
     if (!searchesDone) return;
     if (stage !== "results") return;
     if (submitted || timerExpired || submitInFlight) return;

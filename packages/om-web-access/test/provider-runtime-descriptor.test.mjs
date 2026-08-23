@@ -77,6 +77,29 @@ test("provider descriptor preserves upstream auto and all ordering", async () =>
 	}
 });
 
+test("agent, Curator, and Settings projections share the runtime provider identities", async () => {
+  const {
+    getSearchProviderAgentProjection,
+    getSearchProviderPresentation,
+    RESOLVED_SEARCH_PROVIDERS,
+  } = await import(searchModuleUrl);
+  const agent = getSearchProviderAgentProjection();
+  const presentation = getSearchProviderPresentation();
+  assert.deepEqual(
+    agent.canonicalIds,
+    presentation.map(({ id }) => id),
+  );
+  assert.deepEqual(new Set(agent.canonicalIds), new Set(RESOLVED_SEARCH_PROVIDERS));
+  assert.deepEqual(agent.autoOrder, EXPECTED_AUTO_ORDER);
+  assert.deepEqual(agent.allOrder, EXPECTED_ALL_ORDER);
+  assert.deepEqual(
+    agent.allExcluded,
+    presentation
+      .filter(({ participation }) => participation.all === "excluded")
+      .map(({ id }) => id),
+  );
+});
+
 test("provider descriptor preserves Curator-native order and labels", async () => {
 	const { getSearchProviderPresentation } = await import(searchModuleUrl);
 	const presentation = getSearchProviderPresentation();

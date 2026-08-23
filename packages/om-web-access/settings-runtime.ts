@@ -8,8 +8,9 @@ import {
 	type WebSearchConfigSnapshot,
 } from "./config-service.ts";
 import {
+	classifySearchProviderFailure,
+	getSearchProviderConfigurationProjection,
 	getSearchProviderPresentation,
-	isSearchProviderStructurallyPossible,
 	normalizeSearchProviderSelection,
 	search,
 	SearchRouteExhaustedError,
@@ -17,6 +18,7 @@ import {
 	type SearchProviderPresentation,
 	type SearchProviderSelection,
 } from "./gemini-search.ts";
+import { resolveWebAccessToolEnablement } from "./tool-enablement.ts";
 import {
 	createWebAccessInstanceContext,
 	runWithWebAccessContext,
@@ -48,6 +50,8 @@ export interface WebSearchSettingsProviderProjection {
 		readonly explicitOnly: boolean;
 	};
 	readonly configured: boolean;
+	readonly configurationState: "not-required" | "session-dependent" | "missing" | "partial" | "complete";
+	readonly missingRequiredConfigKeys: readonly string[];
 	readonly structurallyPossible: boolean;
 	readonly fields: ReadonlyArray<{
 		readonly id: string;
@@ -61,6 +65,7 @@ export interface WebSearchSettingsProviderProjection {
 		readonly invalidStoredValue: boolean;
 	}>;
 	readonly advancedFileOnly: readonly string[];
+	readonly settingsGroup: SearchProviderPresentation["settingsGroup"];
 	readonly icon: SearchProviderPresentation["icon"];
 }
 
@@ -71,6 +76,10 @@ export interface WebSearchSettingsProjection {
 	readonly autoShowSearchProcess: boolean;
 	readonly provider: SearchProviderSelection;
 	readonly capabilityStatus: "possible";
+	readonly tools: Readonly<Record<"webSearch" | "sourceCheck" | "fetchContent" | "getSearchContent", {
+		readonly enabled: boolean;
+		readonly reason: "enabled" | "file-disabled";
+	}>>;
 	readonly providers: readonly WebSearchSettingsProviderProjection[];
 }
 
@@ -81,7 +90,13 @@ export interface WebSearchProviderProbeResult {
 		| "request-succeeded"
 		| "temporary-failure"
 		| "route-exhausted"
-		| "provider-failed";
+		| "provider-failed"
+		| "credential-rejected"
+		| "quota-exhausted"
+		| "missing-configuration"
+		| "network-failure"
+		| "request-cancelled";
+	readonly requestId?: string;
 	readonly durationMs: number;
 }
 
@@ -106,6 +121,12 @@ export function projectWebSearchSettings(
 		autoShowSearchProcess: config.autoOpenBrowser === true,
 		provider: normalizeSearchProviderSelection(config.provider ?? config.searchProvider),
 		capabilityStatus: "possible",
+		tools: Object.fromEntries(
+			Object.entries(resolveWebAccessToolEnablement(config)).map(([key, enabled]) => [
+				key,
+				{ enabled, reason: enabled ? "enabled" : "file-disabled" },
+			]),
+		) as WebSearchSettingsProjection["tools"],
 		providers: getSearchProviderPresentation().map((provider) => {
 			const fields = provider.fields.map((field) => {
 				const stored = config[field.configKey];
@@ -117,13 +138,15 @@ export function projectWebSearchSettings(
 					invalidStoredValue: stored !== undefined && typeof stored !== "string",
 				};
 			});
-			const configured = fields.some(({ value }) => value !== null && value.trim().length > 0);
-			const structurallyPossible = isSearchProviderStructurallyPossible(
-				provider.id,
-				config,
-				configured,
-			);
-			return { ...provider, fields, configured, structurallyPossible };
+			const configuration = getSearchProviderConfigurationProjection(provider.id, config);
+			return {
+				...provider,
+				fields,
+				configured: configuration.configured,
+				configurationState: configuration.state,
+				missingRequiredConfigKeys: configuration.missingRequiredConfigKeys,
+				structurallyPossible: configuration.structurallyPossible,
+			};
 		}),
 	};
 }
@@ -212,6 +235,7 @@ async function executeProbe(input: {
 	readonly draft?: WebSearchSettingsDraft;
 	readonly signal?: AbortSignal;
 	readonly extensionContext?: ExtensionContext;
+	readonly requestId?: string;
 }): Promise<WebSearchProviderProbeResult> {
 	const startedAt = Date.now();
 	const configService = input.draft
@@ -232,14 +256,28 @@ async function executeProbe(input: {
 			provider: response.provider,
 			reason: "request-succeeded",
 			durationMs: Date.now() - startedAt,
+			...(input.requestId ? { requestId: input.requestId } : {}),
 		};
 	} catch (error) {
 		if (input.provider) {
+			const failure = classifySearchProviderFailure(input.provider, error);
+			const reason = failure.kind === "quota"
+				? "quota-exhausted"
+				: failure.kind === "credential" || failure.kind === "auth"
+					? "credential-rejected"
+					: failure.kind === "config" || failure.kind === "invalid-request"
+						? "missing-configuration"
+						: failure.kind === "network" || failure.kind === "transient"
+							? "network-failure"
+							: failure.kind === "aborted"
+								? "request-cancelled"
+								: "provider-failed";
 			return {
 				state: "failed",
 				provider: input.provider,
-				reason: "provider-failed",
+				reason,
 				durationMs: Date.now() - startedAt,
+				...(input.requestId ? { requestId: input.requestId } : {}),
 			};
 		}
 		if (error instanceof SearchRouteExhaustedError) {
@@ -249,6 +287,7 @@ async function executeProbe(input: {
 				provider: null,
 				reason: transient ? "temporary-failure" : "route-exhausted",
 				durationMs: Date.now() - startedAt,
+				...(input.requestId ? { requestId: input.requestId } : {}),
 			};
 		}
 		return {
@@ -256,6 +295,7 @@ async function executeProbe(input: {
 			provider: null,
 			reason: "temporary-failure",
 			durationMs: Date.now() - startedAt,
+			...(input.requestId ? { requestId: input.requestId } : {}),
 		};
 	}
 }
@@ -265,6 +305,7 @@ export function testWebSearchProvider(input: {
 	readonly provider: ResolvedSearchProvider;
 	readonly draft: WebSearchSettingsDraft;
 	readonly signal?: AbortSignal;
+	readonly requestId?: string;
 }): Promise<WebSearchProviderProbeResult> {
 	return executeProbe(input);
 }
@@ -272,6 +313,7 @@ export function testWebSearchProvider(input: {
 export function recheckWebSearchRoute(input: {
 	readonly service: WebSearchConfigService;
 	readonly signal?: AbortSignal;
+	readonly requestId?: string;
 }): Promise<WebSearchProviderProbeResult> {
 	input.service.refresh();
 	return executeProbe(input);

@@ -46,6 +46,11 @@ test("Curator freezes OmniMind locale/theme and ships executable self-contained 
   assert.match(chinese, /直接发送所选结果，不生成摘要/);
   assert.match(chinese, />全部<\/button>/);
   assert.match(chinese, /勾选要采用的结果/);
+  assert.match(chinese, /已用 \{provider\} 重新搜索，但默认服务未保存/);
+  assert.match(chinese, /已将 \{provider\} 设为默认，但重新搜索未完成/);
+  assert.match(chinese, /未能将默认服务更改为 \{provider\}/);
+  assert.match(chinese, /部分搜索已完成，但仍有搜索失败/);
+  assert.match(chinese, /successfulSearches > 0/);
   assert.match(chinese, /btnSummaryBack/);
   assert.doesNotMatch(chinese, /btnSummary返回|btnSummary预览|maybe自动GenerateSummary/);
   assert.doesNotThrow(() => new Function(inlineScript(english)));
@@ -77,13 +82,17 @@ test("observer uses the same bilingual page but removes review settlement contro
 
   assert.match(observer, /data-surface-mode="observer"/);
   assert.match(observer, /搜索结果会实时显示在这里，Agent 将自动继续/);
-  assert.match(observer, /observerMode = DATA\.mode === "observer"/);
-  assert.match(observer, /workflow = observerMode \? "none" : "summary-review"/);
+  assert.match(observer, /surfaceMode = DATA\.mode === "observer" \? "observer" : "review"/);
+  assert.match(observer, /observerMode = surfaceMode === "observer"/);
+  assert.match(observer, /interactiveReview = surfaceMode === "review"/);
+  assert.doesNotMatch(observer, /workflow = observerMode/);
   assert.match(observer, /html\[data-surface-mode="observer"\] \.action-bar/);
   assert.match(observer, /html\[data-surface-mode="observer"\] \.expired-overlay/);
   assert.match(observer, /id="expired-overlay" class="expired-overlay hidden" aria-live="polite" aria-hidden="true"/);
   assert.match(observer, /es\.addEventListener\("terminal"/);
   assert.match(observer, /if \(heroStatus\) heroStatus\.textContent = ""/);
+  assert.match(observer, /搜索可能仍在继续；如需查看，请重试当前页面/);
+  assert.match(observer, /observerMode \? "disconnectedObserver" : "disconnectedReview"/);
   assert.doesNotThrow(() => new Function(inlineScript(observer)));
 });
 
@@ -162,6 +171,11 @@ test("observer server is read-only, never times out, and terminalizes without re
     body: JSON.stringify({ token, provider: "exa" }),
   });
   assert.equal(mutation.status, 409);
+  assert.deepEqual(await mutation.json(), { ok: false, code: "observer-read-only" });
+
+  const invalidSession = await fetch(new URL("/state?session=wrong", pageUrl));
+  assert.equal(invalidSession.status, 403);
+  assert.deepEqual(await invalidSession.json(), { ok: false, code: "invalid-session" });
 
   handle.pushResult(0, { answer: "answer", results: [], provider: "exa" });
   handle.searchesDone();
@@ -169,4 +183,67 @@ test("observer server is read-only, never times out, and terminalizes without re
   assert.deepEqual(cancellations, []);
   handle.completeObserver("summary-sent");
   assert.deepEqual(cancellations, []);
+});
+
+test("provider switch reports canonical persistence truth before acknowledging the request", async (t) => {
+  for (const expected of [
+    { state: "saved" },
+    { state: "conflict", reason: "revision-conflict" },
+    { state: "failed", reason: "write-failed" },
+  ]) {
+    const handle = await startCuratorServer(
+      {
+        mode: "review",
+        queries: ["test"],
+        sessionToken: `provider-${expected.state}`,
+        timeout: 30,
+        availableProviders: availability(),
+        defaultProvider: "exa",
+        searchProvider: "auto",
+        summaryModels: [],
+        defaultSummaryModel: null,
+        presentation: { locale: "zh-CN", theme: "light" },
+      },
+      {
+        onSubmit() {},
+        onCancel() {},
+        async onProviderChange() {
+          return expected;
+        },
+        async onAddSearch() {
+          return [];
+        },
+        onAddSearchResults() {},
+        async onSummarize() {
+          throw new Error("not used");
+        },
+        async onRewriteQuery(query) {
+          return query;
+        },
+      },
+    );
+    t.after(() => handle.close());
+    const pageUrl = new URL(handle.url);
+    const invalidProvider = await fetch(new URL("/provider", pageUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token: pageUrl.searchParams.get("session"),
+        provider: "not-a-provider",
+      }),
+    });
+    assert.equal(invalidProvider.status, 400);
+    assert.deepEqual(await invalidProvider.json(), { ok: false, code: "invalid-provider" });
+    const response = await fetch(new URL("/provider", pageUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        session: undefined,
+        token: pageUrl.searchParams.get("session"),
+        provider: "exa",
+      }),
+    });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true, persistence: expected });
+  }
 });

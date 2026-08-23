@@ -85,11 +85,20 @@ const OmniMindWebSearchProvider = Schema.Struct({
     explicitOnly: Schema.Boolean,
   }),
   configured: Schema.Boolean,
+  configurationState: Schema.Literals([
+    "not-required",
+    "session-dependent",
+    "missing",
+    "partial",
+    "complete",
+  ]),
+  missingRequiredConfigKeys: Schema.Array(ConfigKey).check(Schema.isMaxLength(16)),
   structurallyPossible: Schema.Boolean,
   fields: Schema.Array(OmniMindWebSearchProviderField).check(Schema.isMaxLength(16)),
   advancedFileOnly: Schema.Array(Schema.String.check(Schema.isMaxLength(128))).check(
     Schema.isMaxLength(32),
   ),
+  settingsGroup: Schema.Literals(["no-setup", "credentials", "advanced"]),
   icon: OmniMindWebSearchProviderIcon,
 });
 
@@ -101,6 +110,24 @@ export const OmniMindWebSearchSettingsSnapshot = Schema.Struct({
   autoShowSearchProcess: Schema.Boolean,
   provider: OmniMindWebSearchProviderSelection,
   capabilityStatus: Schema.Literal("possible"),
+  tools: Schema.Struct({
+    webSearch: Schema.Struct({
+      enabled: Schema.Boolean,
+      reason: Schema.Literals(["enabled", "file-disabled"]),
+    }),
+    sourceCheck: Schema.Struct({
+      enabled: Schema.Boolean,
+      reason: Schema.Literals(["enabled", "file-disabled"]),
+    }),
+    fetchContent: Schema.Struct({
+      enabled: Schema.Boolean,
+      reason: Schema.Literals(["enabled", "file-disabled"]),
+    }),
+    getSearchContent: Schema.Struct({
+      enabled: Schema.Boolean,
+      reason: Schema.Literals(["enabled", "file-disabled"]),
+    }),
+  }),
   providers: Schema.Array(OmniMindWebSearchProvider).check(Schema.isMaxLength(64)),
 });
 export type OmniMindWebSearchSettingsSnapshot =
@@ -168,7 +195,13 @@ export const OmniMindWebSearchProbeResult = Schema.Struct({
     "temporary-failure",
     "route-exhausted",
     "provider-failed",
+    "credential-rejected",
+    "quota-exhausted",
+    "missing-configuration",
+    "network-failure",
+    "request-cancelled",
   ]),
+  requestId: Schema.optionalKey(RequestIdentity),
   durationMs: NonNegativeInt,
 });
 export type OmniMindWebSearchProbeResult = typeof OmniMindWebSearchProbeResult.Type;

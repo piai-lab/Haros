@@ -83,6 +83,7 @@ export interface EngineWebSurfacePresentationInput {
   readonly threadId: ThreadId;
   readonly surfaceId: string;
   readonly url: string;
+  readonly title: string;
   readonly expiresAt: number;
 }
 
@@ -277,7 +278,7 @@ function cloneThreadState(state: ThreadBrowserState): ThreadBrowserState {
         ? {
             ...tab,
             url: "omnimind://temporary-page",
-            title: "OmniMind Web Access",
+            title: tab.title,
             faviconUrl: null,
             lastCommittedUrl:
               tab.lastCommittedUrl === null ? null : "omnimind://temporary-page",
@@ -1642,7 +1643,7 @@ export class DesktopBrowserManager {
       });
     if (!existingTab) state.tabs = [...state.tabs, tab];
     tab.url = input.url;
-    tab.title = "OmniMind Web Access";
+    tab.title = input.title;
     tab.lastCommittedUrl = null;
     tab.lastError = null;
     state.open = true;

@@ -89,11 +89,13 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-a",
       url: tokenUrl,
+      title: "OmniMind 网络访问",
       expiresAt,
     });
     const firstTabId = first.activeTabId!;
     expect(firstTabId).not.toBe(ordinaryTabId);
     expect(JSON.stringify(first)).not.toContain("secret-token");
+    expect(first.tabs.find((tab) => tab.id === firstTabId)?.title).toBe("OmniMind 网络访问");
     expect(first.tabs.find((tab) => tab.id === firstTabId)?.presentation).toMatchObject({
       kind: "engine-web-surface",
       surfaceId: "surface-a",
@@ -106,6 +108,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-b",
       url: "http://127.0.0.1:43124/?session=another-secret",
+      title: "OmniMind Web Access",
       expiresAt,
     });
     const secondTabId = second.activeTabId!;
@@ -133,6 +136,9 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-a",
     });
+    expect(reopened.tabs.find((tab) => tab.presentation?.surfaceId === "surface-a")?.title).toBe(
+      "OmniMind 网络访问",
+    );
     expect(reopened.activeTabId).not.toBe(firstTabId);
     expect(reopened.tabs.some((tab) => tab.presentation?.surfaceId === "surface-b")).toBe(true);
 
@@ -147,6 +153,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-observer",
       url: "http://127.0.0.1:43125/?session=observer-private-token",
+      title: "OmniMind Web Access",
       expiresAt: Date.now() + 60_000,
     });
     const observerSettled = manager.settleEngineWebSurface({
@@ -176,6 +183,7 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
       threadId: THREAD_ID,
       surfaceId: "surface-source-link",
       url: "http://127.0.0.1:43123/?session=private-token",
+      title: "OmniMind Web Access",
       expiresAt: Date.now() + 60_000,
     });
     const internalTabId = presented.activeTabId!;

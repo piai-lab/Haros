@@ -79,7 +79,7 @@ export interface IndexedCuratorSearchEntry extends CuratorSearchEntry {
 export interface CuratorServerCallbacks {
 	onSubmit: (payload: { selectedQueryIndices: number[]; summary?: string; summaryMeta?: SummaryMeta; rawResults?: boolean }) => void;
 	onCancel: (reason: "user" | "timeout" | "stale") => void;
-	onProviderChange: (provider: string) => void;
+	onProviderChange: (provider: string) => Promise<CuratorProviderPersistenceResult>;
 	onAddSearch: (query: string, provider?: string) => Promise<CuratorSearchEntry[]>;
 	onAddSearchResults: (entries: IndexedCuratorSearchEntry[]) => void;
 	onSummarize: (
@@ -90,6 +90,13 @@ export interface CuratorServerCallbacks {
 	) => Promise<{ summary: string; meta: SummaryMeta }>;
 	onRewriteQuery: (query: string, signal: AbortSignal) => Promise<string>;
 }
+
+export type CuratorProviderPersistenceResult =
+	| { readonly state: "saved" | "unchanged" }
+	| {
+		readonly state: "conflict" | "failed";
+		readonly reason: "revision-conflict" | "write-failed" | "invalid-config";
+	};
 
 export interface CuratorServerHandle {
 	server: http.Server;
@@ -110,6 +117,18 @@ function sendJson(res: ServerResponse, status: number, payload: unknown): void {
 		"Cache-Control": "no-store",
 	});
 	res.end(JSON.stringify(payload));
+}
+
+type CuratorErrorCode =
+	| "invalid-session"
+	| "session-closed"
+	| "observer-read-only"
+	| "invalid-provider"
+	| "invalid-query"
+	| "events-unavailable";
+
+function sendTypedError(res: ServerResponse, status: number, code: CuratorErrorCode): void {
+	sendJson(res, status, { ok: false, code });
 }
 
 function parseJSONBody(req: IncomingMessage): Promise<unknown> {
@@ -244,6 +263,9 @@ export function startCuratorServer(
 		presentation,
 	} = options;
 	const observerMode = mode === "observer";
+	const invalidSessionText = presentation?.locale === "zh-CN"
+		? "本次网络搜索会话无效或已过期。"
+		: "This Web search session is invalid or has expired.";
 	let browserConnected = false;
 	let lastHeartbeatAt = Date.now();
 	let stateChangedAt = Date.now();
@@ -308,7 +330,7 @@ export function startCuratorServer(
 			return false;
 		}
 		if ((body as { token?: string }).token !== sessionToken) {
-			sendJson(res, 403, { ok: false, error: "Invalid session" });
+			sendTypedError(res, 403, "invalid-session");
 			return false;
 		}
 		return true;
@@ -316,33 +338,8 @@ export function startCuratorServer(
 
 	function isAvailableProvider(provider: string): boolean {
 		if (provider === "all") return availableProviders.all;
-		if (provider === "openai") return availableProviders.openai;
-		if (provider === "brave") return availableProviders.brave;
-		if (provider === "parallel") return availableProviders.parallel;
-		if (provider === "parallel-mcp") return availableProviders["parallel-mcp"];
-		if (provider === "tinyfish") return availableProviders.tinyfish;
-		if (provider === "search1api") return availableProviders.search1api;
-		if (provider === "searchinfinity") return availableProviders.searchinfinity;
-		if (provider === "querit") return availableProviders.querit;
-		if (provider === "tavily") return availableProviders.tavily;
-		if (provider === "firecrawl") return availableProviders.firecrawl;
-		if (provider === "jina") return availableProviders.jina;
-		if (provider === "serpdive") return availableProviders.serpdive;
-		if (provider === "kagi") return availableProviders.kagi;
-		if (provider === "bocha") return availableProviders.bocha;
-		if (provider === "ollama") return availableProviders.ollama;
-		if (provider === "searxng") return availableProviders.searxng;
-		if (provider === "duckduckgo") return availableProviders.duckduckgo;
-		if (provider === "perplexity") return availableProviders.perplexity;
-		if (provider === "exa") return availableProviders.exa;
-		if (provider === "gemini") return availableProviders.gemini;
-		if (provider === "anysearch") return availableProviders.anysearch;
-		if (provider === "xai") return availableProviders.xai;
-		if (provider === "brightdata") return availableProviders.brightdata;
-		if (provider === "serpbase") return availableProviders.serpbase;
-		if (provider === "serper") return availableProviders.serper;
-		if (provider === "valyu") return availableProviders.valyu;
-		return false;
+		const descriptor = getSearchProviderPresentation().find(({ id }) => id === provider);
+		return descriptor ? availableProviders[descriptor.id] === true : false;
 	}
 
 	function writeSSE(res: ServerResponse, event: string, data: unknown): boolean {
@@ -398,7 +395,7 @@ export function startCuratorServer(
 				const token = url.searchParams.get("session");
 				if (token !== sessionToken) {
 					res.writeHead(403, { "Content-Type": "text/plain" });
-					res.end("Invalid session");
+					res.end(invalidSessionText);
 					return;
 				}
 				touchHeartbeat();
@@ -417,7 +414,7 @@ export function startCuratorServer(
 				const token = url.searchParams.get("session");
 				if (token !== sessionToken) {
 					res.writeHead(403, { "Content-Type": "text/plain" });
-					res.end("Invalid session");
+					res.end(invalidSessionText);
 					return;
 				}
 				res.writeHead(200, {
@@ -434,7 +431,7 @@ export function startCuratorServer(
 				const token = url.searchParams.get("session");
 				if (token !== sessionToken) {
 					res.writeHead(403, { "Content-Type": "text/plain" });
-					res.end("Invalid session");
+					res.end(invalidSessionText);
 					return;
 				}
 				const filename = decodeURIComponent(url.pathname.slice("/assets/provider-icons/".length));
@@ -458,11 +455,11 @@ export function startCuratorServer(
 				const token = url.searchParams.get("session");
 				if (token !== sessionToken) {
 					res.writeHead(403, { "Content-Type": "text/plain" });
-					res.end("Invalid session");
+					res.end(invalidSessionText);
 					return;
 				}
 				if (state === "COMPLETED") {
-					sendJson(res, 409, { ok: false, error: "No events available" });
+					sendTypedError(res, 409, "events-unavailable");
 					return;
 				}
 				if (sseResponse) {
@@ -493,7 +490,7 @@ export function startCuratorServer(
 			if (method === "GET" && url.pathname === "/state") {
 				const token = url.searchParams.get("session");
 				if (token !== sessionToken) {
-					sendJson(res, 403, { ok: false, error: "Invalid session" });
+					sendTypedError(res, 403, "invalid-session");
 					return;
 				}
 				touchHeartbeat();
@@ -526,7 +523,7 @@ export function startCuratorServer(
 				method === "POST" &&
 				["/provider", "/search", "/summarize", "/rewrite", "/submit", "/cancel"].includes(url.pathname)
 			) {
-				sendJson(res, 409, { ok: false, error: "Observer surfaces are read-only" });
+				sendTypedError(res, 409, "observer-read-only");
 				return;
 			}
 
@@ -536,15 +533,20 @@ export function startCuratorServer(
 				if (!validateToken(body, res)) return;
 				const { provider } = body as { provider?: string };
 				if (typeof provider !== "string" || provider.length === 0) {
-					sendJson(res, 400, { ok: false, error: "Invalid provider" });
+					sendTypedError(res, 400, "invalid-provider");
 					return;
 				}
 				if (!isAvailableProvider(provider)) {
-					sendJson(res, 400, { ok: false, error: `Provider unavailable: ${provider}` });
+					sendTypedError(res, 400, "invalid-provider");
 					return;
 				}
-				setImmediate(() => callbacks.onProviderChange(provider));
-				sendJson(res, 200, { ok: true });
+				let persistence: CuratorProviderPersistenceResult;
+				try {
+					persistence = await callbacks.onProviderChange(provider);
+				} catch {
+					persistence = { state: "failed", reason: "write-failed" };
+				}
+				sendJson(res, 200, { ok: true, persistence });
 				return;
 			}
 
@@ -553,21 +555,21 @@ export function startCuratorServer(
 				if (!body) return;
 				if (!validateToken(body, res)) return;
 				if (state === "COMPLETED") {
-					sendJson(res, 409, { ok: false, error: "Session closed" });
+					sendTypedError(res, 409, "session-closed");
 					return;
 				}
 				const { query, provider } = body as { query?: string; provider?: string };
 				if (typeof query !== "string" || query.trim().length === 0) {
-					sendJson(res, 400, { ok: false, error: "Invalid query" });
+					sendTypedError(res, 400, "invalid-query");
 					return;
 				}
 				if (provider !== undefined) {
 					if (typeof provider !== "string" || provider.length === 0) {
-						sendJson(res, 400, { ok: false, error: "Invalid provider" });
+						sendTypedError(res, 400, "invalid-provider");
 						return;
 					}
 					if (!isAvailableProvider(provider)) {
-						sendJson(res, 400, { ok: false, error: `Provider unavailable: ${provider}` });
+						sendTypedError(res, 400, "invalid-provider");
 						return;
 					}
 				}
@@ -605,7 +607,7 @@ export function startCuratorServer(
 				if (!body) return;
 				if (!validateToken(body, res)) return;
 				if (state === "COMPLETED") {
-					sendJson(res, 409, { ok: false, error: "Session closed" });
+					sendTypedError(res, 409, "session-closed");
 					return;
 				}
 
@@ -667,12 +669,12 @@ export function startCuratorServer(
 				if (!body) return;
 				if (!validateToken(body, res)) return;
 				if (state === "COMPLETED") {
-					sendJson(res, 409, { ok: false, error: "Session closed" });
+					sendTypedError(res, 409, "session-closed");
 					return;
 				}
 				const { query } = body as { query?: unknown };
 				if (typeof query !== "string" || query.trim().length === 0) {
-					sendJson(res, 400, { ok: false, error: "Invalid query" });
+					sendTypedError(res, 400, "invalid-query");
 					return;
 				}
 				const controller = new AbortController();
@@ -730,7 +732,7 @@ export function startCuratorServer(
 					return;
 				}
 				if (!markCompleted()) {
-					sendJson(res, 409, { ok: false, error: "Session closed" });
+					sendTypedError(res, 409, "session-closed");
 					return;
 				}
 				const rawResults = (body as { rawResults?: unknown }).rawResults === true;

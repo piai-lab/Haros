@@ -104,11 +104,12 @@ export const OmniMindWebSearchSettingsLive = Layer.effect(
             provider: provider.id,
             draft: input.draft,
             signal,
+            requestId: input.requestId,
           });
         }),
       recheck: (input, requestScope) =>
         singleFlight(`${requestScope}:route:${input.requestId}`, (signal) =>
-          recheckWebSearchRoute({ service, signal }),
+          recheckWebSearchRoute({ service, signal, requestId: input.requestId }),
         ),
       diagnoseGemini: (input) =>
         Effect.tryPromise({

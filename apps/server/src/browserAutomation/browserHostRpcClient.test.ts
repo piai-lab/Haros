@@ -111,19 +111,24 @@ describe("browser host RPC client", () => {
           locale: "zh-CN",
           theme: "dark",
         });
-        await expect(presentBrowserHostEngineWebSurface({
-          ...common,
-          threadId: "thread-engine-surface" as never,
-          surfaceId: "surface-opaque-123",
-          url: "http://127.0.0.1:43123/?session=private-token",
-          expiresAt: Date.now() + 60_000,
-        })).resolves.toEqual({ surfaceId: "surface-opaque-123", tabId: "tab-1" });
-        await expect(settleBrowserHostEngineWebSurface({
-          ...common,
-          threadId: "thread-engine-surface" as never,
-          surfaceId: "surface-opaque-123",
-		  preserveTab: true,
-        })).resolves.toEqual({ settled: true });
+        await expect(
+          presentBrowserHostEngineWebSurface({
+            ...common,
+            threadId: "thread-engine-surface" as never,
+            surfaceId: "surface-opaque-123",
+            url: "http://127.0.0.1:43123/?session=private-token",
+            title: "OmniMind 网络访问",
+            expiresAt: Date.now() + 60_000,
+          }),
+        ).resolves.toEqual({ surfaceId: "surface-opaque-123", tabId: "tab-1" });
+        await expect(
+          settleBrowserHostEngineWebSurface({
+            ...common,
+            threadId: "thread-engine-surface" as never,
+            surfaceId: "surface-opaque-123",
+            preserveTab: true,
+          }),
+        ).resolves.toEqual({ settled: true });
       },
     );
 

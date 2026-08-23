@@ -32,6 +32,7 @@ export interface BrowserAutomationHostShape {
     readonly threadId: ThreadId;
     readonly surfaceId: string;
     readonly url: string;
+    readonly title: string;
     readonly expiresAt: number;
   }) => Effect.Effect<{ readonly surfaceId: string; readonly tabId: string }, BrowserHostRpcError>;
   readonly settleEngineWebSurface?: (input: {

@@ -15,7 +15,7 @@ import { findContent, type FindMode } from "./content-find.ts";
 import { answerFromPage } from "./page-query.ts";
 import { rewriteSearchQuery } from "./query-rewrite.ts";
 import { clearCloneCache } from "./github-extract.ts";
-import { getAutoSearchProviderOrder, getConfiguredSearchRouting, getSearchProviderAvailability, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProvider, type SearchProviderAvailability, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
+import { getAutoSearchProviderOrder, getConfiguredSearchRouting, getSearchProviderAgentProjection, getSearchProviderAvailability, getSearchProviderPresentation, normalizeSearchProviderSelection, RESOLVED_SEARCH_PROVIDERS, SEARCH_PROVIDERS, search, SearchRouteExhaustedError, type AttributedSearchResponse, type SearchProvider, type SearchProviderAvailability, type SearchProviderSelection, type ResolvedSearchProvider } from "./gemini-search.ts";
 import type { SearchResult } from "./perplexity.ts";
 import { formatSeconds, getWebSearchConfigPath, readWebSearchConfig, resolveCuratorNetworkConfig } from "./utils.ts";
 import {
@@ -71,11 +71,10 @@ import {
 	scopedValue,
 	type WebAccessRuntimeProfile,
 } from "./runtime-context.ts";
-import {
-	type WebSearchConfigService,
-} from "./config-service.ts";
+import { WebSearchConfigConflictError, type WebSearchConfigService } from "./config-service.ts";
 import type { CuratorPresenter, CuratorPresentationSnapshot } from "./curator-presentation.ts";
 import { WebSearchSessionAvailability } from "./availability.ts";
+import { resolveWebAccessToolEnablement } from "./tool-enablement.ts";
 
 type ExtensionTheme = ExtensionContext["ui"]["theme"];
 
@@ -175,6 +174,25 @@ function saveConfig(updates: Partial<WebSearchConfig>): void {
 	});
 }
 
+function persistProviderAtRevision(
+	provider: Exclude<SearchProvider, "auto">,
+	expectedRevision: string,
+): { readonly result: "saved" | "unchanged" | "conflict" | "failed"; readonly revision: string } {
+	const service = currentWebSearchConfigService();
+	try {
+		const mutation = service.mutate({ expectedRevision, patch: { provider } });
+		return {
+			result: mutation.changed ? "saved" : "unchanged",
+			revision: mutation.snapshot.revision,
+		};
+	} catch (error) {
+		if (error instanceof WebSearchConfigConflictError) {
+			return { result: "conflict", revision: expectedRevision };
+		}
+		return { result: "failed", revision: expectedRevision };
+	}
+}
+
 type ToolNames = {
 	webSearch: string;
 	sourceCheck: string;
@@ -202,10 +220,31 @@ function searchProviderSchema(description: string) {
 	], { description });
 }
 
+function formatProviderNames(ids: readonly ResolvedSearchProvider[]): string {
+	const names = new Map(getSearchProviderPresentation().map(({ id, displayName }) => [id, displayName]));
+	const values = ids.map((id) => names.get(id) ?? id);
+	if (values.length <= 1) return values[0] ?? "";
+	if (values.length === 2) return `${values[0]} or ${values[1]}`;
+	return `${values.slice(0, -1).join(", ")}, or ${values.at(-1)}`;
+}
+
+function webSearchAgentDescription(): { readonly tool: string; readonly provider: string } {
+	const facts = getSearchProviderAgentProjection();
+	const providers = formatProviderNames(facts.canonicalIds);
+	const allExcluded = formatProviderNames(facts.allExcluded);
+	const explicitOnly = formatProviderNames(facts.explicitOnly);
+	const autoOrder = formatProviderNames(facts.autoOrder);
+	const sessionCapable = formatProviderNames(
+		getSearchProviderPresentation().filter(({ prerequisite }) => prerequisite === "key-or-session").map(({ id }) => id),
+	);
+	return {
+		tool: `Search the web using ${providers}. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except ${allExcluded}. Returns an AI-synthesized answer with source citations. ${explicitOnly} are explicit-only services. ${sessionCapable} may use an authenticated Agent session when that runtime path is available. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches generate a background summary by default and continue without waiting for source review; the independent display preference may show a nonblocking Right Dock observer. Use workflow "summary-review" only when the user explicitly asks to review or select sources, or workflow "none" to return raw results. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Auto routing follows this canonical order and stops at the first success: ${autoOrder}. SearXNG is first only when its endpoint is configured; otherwise it is skipped without a request.`,
+		provider: `Search provider or non-empty list of providers to search simultaneously; use all to search every eligible provider except ${allExcluded}, omit this field to use the configured provider, or use auto when none is configured`,
+	};
+}
+
 function isToolEnabled(config: WebSearchConfig, key: keyof ToolNames): boolean {
-	const override = config.tools?.[key]?.enabled;
-	if (typeof override === "boolean") return override;
-	return key !== "webSearch" && key !== "sourceCheck" || config.webSearch?.enabled !== false;
+	return resolveWebAccessToolEnablement(config)[key];
 }
 
 function isCommandEnabled(config: WebSearchConfig, name: "websearch" | "curator" | "search" | "google-account"): boolean {
@@ -1345,7 +1384,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			}, {
 				onSubmit() {},
 				onCancel() {},
-				onProviderChange() {},
+				async onProviderChange() { return { state: "unchanged" }; },
 				async onAddSearch() { return []; },
 				onAddSearchResults() {},
 				async onSummarize() { throw new Error("Observer surfaces cannot generate review summaries."); },
@@ -1368,6 +1407,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				toolCallId: callId,
 				surfaceId,
 				url: handle.url,
+				title: copy.brand,
 				expiresAt: Date.now() + MAX_CURATOR_TIMEOUT_SECONDS * 1_000,
 			});
 		} catch (error) {
@@ -1410,6 +1450,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			pc.surfaceId = randomUUID();
 		}
 		let handle: CuratorServerHandle | null = null;
+		let providerConfigRevision = currentWebSearchConfigService().readSnapshot().revision;
 		const presentationDetails = (): Record<string, unknown> =>
 			omnimindProfile && pc.surfaceId
 				? { engineWebSurface: { surfaceId: pc.surfaceId, status: "pending" } }
@@ -1530,18 +1571,20 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						}
 						closeCurator(callId);
 					},
-					onProviderChange(provider) {
-						if (pendingCurates.get(callId) !== pc) return;
+					async onProviderChange(provider) {
+						if (pendingCurates.get(callId) !== pc) return { state: "failed", reason: "write-failed" };
 						const normalized = normalizeProviderInput(provider);
-						if (!normalized || normalized === "auto" || Array.isArray(normalized)) return;
+						if (!normalized || normalized === "auto" || Array.isArray(normalized)) return { state: "failed", reason: "invalid-config" };
 						pc.defaultProvider = normalized;
 						pc.searchProvider = normalized;
-						try {
-							saveConfig({ provider: normalized });
-						} catch (err) {
-							const message = err instanceof Error ? err.message : String(err);
-							console.error(`Failed to persist default provider: ${message}`);
+						const persisted = persistProviderAtRevision(normalized, providerConfigRevision);
+						if (persisted.result === "saved" || persisted.result === "unchanged") {
+							providerConfigRevision = persisted.revision;
+							return { state: persisted.result };
 						}
+						return persisted.result === "conflict"
+							? { state: "conflict", reason: "revision-conflict" }
+							: { state: "failed", reason: "write-failed" };
 					},
 					async onAddSearch(query, provider) {
 						if (pendingCurates.get(callId) !== pc) throw new Error("Curator session is no longer active.");
@@ -1614,6 +1657,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 					toolCallId: callId,
 					surfaceId: pc.surfaceId,
 					url: handle.url,
+					title: resolveCuratorCopy(presentation?.locale ?? "en").brand,
 					expiresAt: Date.now() + MAX_CURATOR_TIMEOUT_SECONDS * 1_000,
 				});
 				if (result.kind === "presented") return;
@@ -1730,8 +1774,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 	if (webSearchEnabled) pi.registerTool({
 		name: toolNames.webSearch,
 		label: "Web Search",
-		description:
-			`Search the web using OpenAI, Brave, Parallel, Parallel MCP, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, SearXNG, DuckDuckGo, Exa, Perplexity, Gemini, AnySearch, Valyu, xAI, Bright Data, SerpBase, or Serper. Pass a provider array to search only those providers simultaneously, or use provider "all" to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper. Returns an AI-synthesized answer with source citations. OpenAI search uses a Codex subscription or OpenAI API key; xAI search uses a SuperGrok/X Premium subscription or xAI API key. Parallel MCP, DuckDuckGo, AnySearch, Valyu, xAI, Bright Data, SerpBase, and Serper are available only when explicitly selected. For comprehensive research, prefer queries (plural) with 2-4 varied angles over a single query — each query gets its own synthesized answer, so varying phrasing and scope gives much broader coverage. When includeContent is true, full page content is fetched in the background. Searches generate a background summary by default and continue without waiting for source review; the independent display preference may show a nonblocking Right Dock observer. Use workflow "summary-review" only when the user explicitly asks to review or select sources, or workflow "none" to return raw results. The configured provider is used when provider is omitted or set to auto; omit provider unless explicitly overriding it. Without a configured provider, auto-selects OpenAI when suitable and available, then Exa, Brave, Parallel, TinyFish, Search1API, Searchinfinity, Querit, Tavily, Firecrawl, Jina, SERPdive, Kagi, Bocha, Ollama, Perplexity, Gemini API, or Gemini Web. When SearXNG is configured, it is preferred first for local/private search.`,
+		description: webSearchAgentDescription().tool,
 		promptSnippet:
 			"Use for web research questions. Prefer {queries:[...]} with 2-4 varied angles over a single query for broader coverage. Omit provider unless explicitly overriding the configured default. Use summary-review only when the user explicitly asks to review or select sources.",
 		parameters: Type.Object({
@@ -1743,7 +1786,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				StringEnum(["day", "week", "month", "year"], { description: "Filter by recency" }),
 			),
 			domainFilter: Type.Optional(Type.Array(Type.String(), { description: "Limit to domains (prefix with - to exclude)" })),
-			provider: Type.Optional(searchProviderSchema("Search provider or non-empty list of providers to search simultaneously; use all to search every eligible provider except Parallel MCP, DuckDuckGo, AnySearch, xAI, Bright Data, SerpBase, Serper, and Valyu, omit this field to use the configured provider, or use auto when none is configured")),
+			provider: Type.Optional(searchProviderSchema(webSearchAgentDescription().provider)),
 			workflow: Type.Optional(
 				StringEnum(["none", "summary-review", "auto-summary"], {
 					description: "Search workflow mode: auto-summary = generate a summary without waiting for review (OmniMind default; an independent display preference may show a nonblocking observer), summary-review = pause for interactive source review, none = return raw results",
@@ -3155,6 +3198,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			const searchAbort = new AbortController();
 			let aborted = false;
 			let commandHandle: CuratorServerHandle | null = null;
+			let providerConfigRevision = currentWebSearchConfigService().readSnapshot().revision;
 			const isCommandActive = () => commandHandle !== null && activeCurators.get(commandCallId) === commandHandle;
 
 			function sendFollowUpFromReturn(payload: ReturnType<typeof buildSearchReturn>) {
@@ -3237,18 +3281,20 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 							}
 							closeCurator(commandCallId);
 						},
-						onProviderChange(provider) {
-							if (commandHandle && !isCommandActive()) return;
+						async onProviderChange(provider) {
+							if (commandHandle && !isCommandActive()) return { state: "failed", reason: "write-failed" };
 							const normalized = normalizeProviderInput(provider);
-							if (!normalized || normalized === "auto" || Array.isArray(normalized)) return;
+							if (!normalized || normalized === "auto" || Array.isArray(normalized)) return { state: "failed", reason: "invalid-config" };
 							currentProvider = normalized;
 							currentSearchProvider = normalized;
-							try {
-								saveConfig({ provider: normalized });
-							} catch (err) {
-								const message = err instanceof Error ? err.message : String(err);
-								console.error(`Failed to persist default provider: ${message}`);
+							const persisted = persistProviderAtRevision(normalized, providerConfigRevision);
+							if (persisted.result === "saved" || persisted.result === "unchanged") {
+								providerConfigRevision = persisted.revision;
+								return { state: persisted.result };
 							}
+							return persisted.result === "conflict"
+								? { state: "conflict", reason: "revision-conflict" }
+								: { state: "failed", reason: "write-failed" };
 						},
 						async onAddSearch(query, provider) {
 							if (commandHandle && !isCommandActive()) {

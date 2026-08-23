@@ -34,6 +34,8 @@ type ProviderConfigFieldKind = "secret" | "url" | "text";
 type ProviderConfigFieldRole = "api-key" | "endpoint" | "model" | "zone";
 type ProviderPrerequisite = "none" | "optional-key" | "key" | "endpoint" | "key-or-session" | "gemini";
 type ProviderCostHint = "keyless-shared-quota" | "may-charge" | "provider-dependent";
+export type SearchProviderConfigurationState = "not-required" | "session-dependent" | "missing" | "partial" | "complete";
+type ProviderSettingsGroup = "no-setup" | "credentials" | "advanced";
 
 export interface SearchProviderConfigFieldDescriptor {
 	readonly id: string;
@@ -76,6 +78,11 @@ interface SearchProviderRuntimeDescriptor<Id extends string = string> {
 	readonly fields: readonly SearchProviderConfigFieldDescriptor[];
 	readonly advancedFileOnly: readonly string[];
 	readonly icon: SearchProviderIcon;
+	readonly settingsGroup?: ProviderSettingsGroup;
+	readonly evaluateConfiguration?: (
+		config: Readonly<Record<string, unknown>>,
+		hasField: (configKey: string) => boolean,
+	) => SearchProviderConfigurationProjection;
 	readonly isStructurallyPossible?: (
 		config: Readonly<Record<string, unknown>>,
 		configured: boolean,
@@ -322,6 +329,9 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 		autoOrder: 1, allOrder: 1, all: "included", icon: admittedProviderIcon("openai"),
 		fields: [keyField("openaiApiKey", "OPENAI_API_KEY"), textField("openaiSearchModel", "model")],
 		advancedFileOnly: ["openaiResponsesBaseUrl", "openaiSearchProviders"],
+		evaluateConfiguration: (_config, hasField) => hasField("openaiApiKey")
+			? { state: "complete", missingRequiredConfigKeys: [], configured: true, structurallyPossible: true }
+			: { state: "session-dependent", missingRequiredConfigKeys: [], configured: false, structurallyPossible: true },
 		autoEligible: shouldTryOpenAIInAuto,
 		isAvailable: (options) => isOpenAISearchAvailable(options.extensionContext),
 		search: (query, options) => searchWithOpenAI(query, options, options.extensionContext),
@@ -353,7 +363,7 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 		id: "parallel-mcp", displayName: "Parallel MCP", prerequisite: "optional-key", costHint: "keyless-shared-quota",
 		curatorOrder: 4,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("parallel"),
-		fields: [optionalKeyField("parallelApiKey", "PARALLEL_API_KEY")], advancedFileOnly: [],
+		fields: [optionalKeyField("parallelApiKey", "PARALLEL_API_KEY")], advancedFileOnly: [], settingsGroup: "advanced",
 		isAvailable: () => isParallelMcpAvailable(), search: searchWithParallelMcp,
 	},
 	{
@@ -460,6 +470,32 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 		autoOrder: 17, allOrder: 16, all: "api-only", icon: admittedProviderIcon("gemini"),
 		fields: [optionalKeyField("geminiApiKey", "GEMINI_API_KEY", "Gemini"), textField("geminiBaseUrl", "endpoint", { environmentVariable: "GOOGLE_GEMINI_BASE_URL", qualifier: "Gemini" }), optionalKeyField("cloudflareApiKey", "CLOUDFLARE_API_KEY", "Cloudflare")],
 		advancedFileOnly: ["allowBrowserCookies", "chromeProfile", "geminiWebModel"],
+		evaluateConfiguration: (config, hasField) => {
+			if (config.allowBrowserCookies === true || hasField("geminiApiKey")) {
+				return { state: "complete", missingRequiredConfigKeys: [], configured: true, structurallyPossible: true };
+			}
+			const base = typeof config.geminiBaseUrl === "string"
+				? config.geminiBaseUrl.trim()
+				: process.env.GOOGLE_GEMINI_BASE_URL?.trim() ?? "";
+			const gateway = base.includes("gateway.ai.cloudflare.com");
+			const cloudflareKey = hasField("cloudflareApiKey");
+			if (gateway && cloudflareKey) {
+				return { state: "complete", missingRequiredConfigKeys: [], configured: true, structurallyPossible: true };
+			}
+			const anyApiField = base.length > 0 || cloudflareKey;
+			return {
+				state: anyApiField ? "partial" : "missing",
+				missingRequiredConfigKeys: gateway
+					? ["cloudflareApiKey"]
+					: cloudflareKey
+						? ["geminiBaseUrl"]
+						: base.length > 0
+							? ["geminiApiKey"]
+							: [],
+				configured: false,
+				structurallyPossible: false,
+			};
+		},
 		isStructurallyPossible: (config, configured) => configured || config.allowBrowserCookies === true,
 		isAvailable: async () => isGeminiApiAvailable() || !!(await isGeminiWebAvailable()),
 		isAvailableForAuto: () => true,
@@ -480,6 +516,9 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 		curatorOrder: 21,
 		autoOrder: null, allOrder: null, all: "excluded", icon: admittedProviderIcon("xai"),
 		fields: [optionalKeyField("xaiApiKey", "XAI_API_KEY"), textField("xaiSearchModel", "model")], advancedFileOnly: [],
+		evaluateConfiguration: (_config, hasField) => hasField("xaiApiKey")
+			? { state: "complete", missingRequiredConfigKeys: [], configured: true, structurallyPossible: true }
+			: { state: "session-dependent", missingRequiredConfigKeys: [], configured: false, structurallyPossible: true },
 		isAvailable: (options) => isXaiSearchAvailable(options.extensionContext),
 		search: (query, options) => searchWithXai(query, options, options.extensionContext),
 	},
@@ -534,6 +573,14 @@ export interface SearchProviderPresentation {
 	readonly fields: readonly SearchProviderConfigFieldDescriptor[];
 	readonly advancedFileOnly: readonly string[];
 	readonly icon: SearchProviderIcon;
+	readonly settingsGroup: ProviderSettingsGroup;
+}
+
+export interface SearchProviderConfigurationProjection {
+  readonly state: SearchProviderConfigurationState;
+  readonly missingRequiredConfigKeys: readonly string[];
+  readonly configured: boolean;
+  readonly structurallyPossible: boolean;
 }
 
 export function getSearchProviderPresentation(): readonly SearchProviderPresentation[] {
@@ -553,7 +600,71 @@ export function getSearchProviderPresentation(): readonly SearchProviderPresenta
 		fields: descriptor.fields,
 		advancedFileOnly: descriptor.advancedFileOnly,
 		icon: descriptor.icon,
+		settingsGroup: ("settingsGroup" in descriptor ? descriptor.settingsGroup : undefined) ?? (
+			descriptor.prerequisite === "none" || descriptor.prerequisite === "optional-key"
+				? "no-setup"
+				: descriptor.prerequisite === "endpoint" || (descriptor.autoOrder === null && descriptor.all === "excluded")
+					? "advanced"
+					: "credentials"
+		),
 	}));
+}
+
+function hasConfiguredField(
+  field: SearchProviderConfigFieldDescriptor,
+  config: Readonly<Record<string, unknown>>,
+): boolean {
+  const value = config[field.configKey];
+  if (typeof value === "string" && value.trim().length > 0) return true;
+  return (
+    field.environmentVariable !== undefined &&
+    typeof process.env[field.environmentVariable] === "string" &&
+    process.env[field.environmentVariable]!.trim().length > 0
+  );
+}
+
+/** Credential-blind prerequisite truth for Settings and runtime discovery. */
+export function getSearchProviderConfigurationProjection(
+  provider: ResolvedSearchProvider,
+  config: Readonly<Record<string, unknown>>,
+): SearchProviderConfigurationProjection {
+  const descriptor = runtimeDescriptor(provider);
+  const hasField = (configKey: string) => {
+	const field = descriptor.fields.find((candidate) => candidate.configKey === configKey);
+	return field ? hasConfiguredField(field, config) : false;
+  };
+  if (descriptor.evaluateConfiguration) return descriptor.evaluateConfiguration(config, hasField);
+  const configuredFields = descriptor.fields.filter((field) => hasConfiguredField(field, config));
+  const requiredFields = descriptor.fields.filter((field) => field.required);
+  const missingRequiredConfigKeys = requiredFields
+    .filter((field) => !hasConfiguredField(field, config))
+    .map((field) => field.configKey);
+
+  let state: SearchProviderConfigurationState;
+  if (descriptor.prerequisite === "none") {
+    state = "not-required";
+  } else if (descriptor.prerequisite === "optional-key") {
+    state = configuredFields.length > 0 ? "complete" : "not-required";
+  } else if (descriptor.prerequisite === "gemini") {
+    state =
+      configuredFields.length > 0 || config.allowBrowserCookies === true ? "complete" : "missing";
+  } else if (requiredFields.length === 0) {
+    state = configuredFields.length > 0 ? "complete" : "missing";
+  } else if (missingRequiredConfigKeys.length === 0) {
+    state = "complete";
+  } else {
+    state = configuredFields.length > 0 ? "partial" : "missing";
+  }
+
+  const configured = state === "complete";
+  return {
+    state,
+    missingRequiredConfigKeys,
+    configured,
+    structurallyPossible:
+      descriptor.isStructurallyPossible?.(config, configured) ??
+      (state === "not-required" || configured),
+  };
 }
 
 export function isSearchProviderStructurallyPossible(
@@ -567,6 +678,29 @@ export function isSearchProviderStructurallyPossible(
 		|| descriptor.prerequisite === "optional-key"
 		|| configured
 	);
+}
+
+export interface SearchProviderAgentProjection {
+  readonly canonicalIds: readonly ResolvedSearchProvider[];
+  readonly autoOrder: readonly ResolvedSearchProvider[];
+  readonly allOrder: readonly ResolvedSearchProvider[];
+  readonly allExcluded: readonly ResolvedSearchProvider[];
+  readonly explicitOnly: readonly ResolvedSearchProvider[];
+}
+
+export function getSearchProviderAgentProjection(): SearchProviderAgentProjection {
+  const presentation = getSearchProviderPresentation();
+  return {
+    canonicalIds: presentation.map(({ id }) => id),
+    autoOrder: getAutoSearchProviderOrder(),
+    allOrder: getAllSearchProviderOrder(),
+    allExcluded: presentation
+      .filter(({ participation }) => participation.all === "excluded")
+      .map(({ id }) => id),
+    explicitOnly: presentation
+      .filter(({ participation }) => participation.explicitOnly)
+      .map(({ id }) => id),
+  };
 }
 
 export async function getSearchProviderAvailability(
@@ -706,6 +840,14 @@ function classifyProviderError(provider: ResolvedSearchProvider, err: unknown): 
 		kind = "config";
 	}
 	return new SearchProviderError(provider, kind, message, status, err);
+}
+
+/** Shared error taxonomy for credential-blind UI and route decisions. */
+export function classifySearchProviderFailure(
+  provider: ResolvedSearchProvider,
+  error: unknown,
+): SearchProviderError {
+  return classifyProviderError(provider, error);
 }
 
 async function searchWithResolvedProvider(

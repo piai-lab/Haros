@@ -85,6 +85,13 @@ export interface WebSearchConfigService {
 	subscribeRevision(listener: (revision: string) => void): () => void;
 }
 
+/**
+ * Process-profile cache: the Server resolves one immutable Agent directory and
+ * retains its service for the process lifetime so Settings and every Pi Session
+ * share the same revision signal. Entries are never keyed by Session, Thread,
+ * Run, or tool call; isolated tests and explicit alternate process profiles use
+ * createWebSearchConfigService() instead of adding production cache entries.
+ */
 const servicesByAgentDir = new Map<string, WebSearchConfigService>();
 
 function defaultConfig(): WebSearchConfigRecord {

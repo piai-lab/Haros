@@ -511,8 +511,9 @@ export class BrowserHostPipeServer {
     const threadId = asString(request.thread_id);
     const surfaceId = asString(request.surface_id);
     const url = asString(request.url);
+    const title = asString(request.title);
     const expiresAt = request.expires_at;
-    if (!threadId || !surfaceId || !url || typeof expiresAt !== "number") {
+    if (!threadId || !surfaceId || !url || !title || typeof expiresAt !== "number") {
       throw new BrowserAutomationHostError({ code: "BrowserInputUnsupported" });
     }
     if (client.threadId && client.threadId !== threadId) {
@@ -531,6 +532,7 @@ export class BrowserHostPipeServer {
       threadId: threadId as ThreadId,
       surfaceId,
       url,
+      title,
       expiresAt,
     });
   }

@@ -7,6 +7,7 @@ export interface CuratorPresentationRequest {
 	readonly toolCallId: string;
 	readonly surfaceId: string;
 	readonly url: string;
+	readonly title: string;
 	readonly expiresAt: number;
 }
 

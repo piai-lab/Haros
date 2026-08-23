@@ -10,6 +10,7 @@ import {
 	WebSearchConfigConflictError,
 	WebSearchConfigError,
 	createWebSearchConfigService,
+	getWebSearchConfigService,
 } from "../config-service.ts";
 
 async function fixture() {
@@ -18,6 +19,13 @@ async function fixture() {
 	await mkdir(agentDir, { recursive: true });
 	return { root, agentDir, service: createWebSearchConfigService(agentDir) };
 }
+
+test("process config service identity is bounded to the resolved Agent directory", async () => {
+	const { agentDir } = await fixture();
+	const shared = getWebSearchConfigService(agentDir);
+	assert.equal(getWebSearchConfigService(join(agentDir, ".")), shared);
+	assert.notEqual(createWebSearchConfigService(agentDir), shared);
+});
 
 test("default creation is no-clobber, private, and deterministic", async () => {
 	const { service } = await fixture();

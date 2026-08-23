@@ -69,6 +69,9 @@ test("OmniMind profile respects file-level tool switches while keeping canonical
 		on() {},
 	});
 	assert.deepEqual(partialTools.map(({ name }) => name), ["web_search", "fetch_content"]);
+	const webSearch = partialTools.find(({ name }) => name === "web_search");
+	assert.match(webSearch.description, /OpenAI or xAI may use an authenticated Agent session/);
+	assert.match(webSearch.description, /SearXNG is first only when its endpoint is configured/);
 });
 
 function ownedTool(name) {

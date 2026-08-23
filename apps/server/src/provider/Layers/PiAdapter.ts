@@ -2745,6 +2745,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       threadId: input.threadId,
                       surfaceId: request.surfaceId,
                       url: request.url,
+                      title: request.title,
                       expiresAt: request.expiresAt,
                     }),
                   );

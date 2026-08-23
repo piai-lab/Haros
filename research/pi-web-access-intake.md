@@ -553,17 +553,18 @@ Settings UI ─┐
 页面复用现有 Settings shell、search/deep-link、`SettingsCard`、form、focus、dialog 和概览→添加→详情模式。结构：
 
 1. **Overview / 概览**
-   - 搜索：ready / degraded / unavailable / checking；
-   - 网页读取：ready 或具体缺失能力；
+	- 首屏依次回答：能否搜索、默认服务选择、结果处理、是否自动显示过程；
+	- file-level四工具状态只在高级区准确投影，不能把`fetch_content/get_search_content`从workflow或search route猜出来；
    - 当前 routing：Auto / 单 Provider / ordered fallback / selected parallel / All；
    - 搜索结果处理：自动摘要（推荐默认）/ 摘要审查 / 直接返回；
    - 独立展示选择：自动显示搜索过程（默认关闭；不暂停Agent、不要求批准）；
    - 已配置 Provider rows；
    - `添加搜索服务`、`重新检查`、`打开配置文件`。
 2. **Add provider / 添加搜索服务**
-   - 搜索 26 个 Provider；
-   - 一行一个，不做卡片墙；
-   - 显示 `无需配置`、`需要 API Key`、`需要 endpoint`、`需要账号登录` 等真实 prerequisite；
+	- 搜索 26 个 Provider；
+	- 一行一个，不做卡片墙；
+	- 先显示当前/已配置（当前路由即使不完整也保留），再按descriptor同源的无需Key、需要凭据、MCP/自建/高级connection role分组；不能用可选endpoint字段等UI heuristic猜分组，keyless写明共享额度/服务状态限制，不承诺永久免费；
+	- 显示 `无需配置`、`依赖当前Agent会话`、`未配置`、`配置不完整（缺少的必填角色）`、`结构完整但未检查` 等descriptor同源真实prerequisite；多字段Provider不能以任意字段非空冒充已配置，OpenAI/xAI的key-or-Session和Gemini的API key/gateway pair/browser cookie替代路径由descriptor evaluator拥有，Settings不实例化Session；
    - 选择后进入 Provider detail。
 3. **Provider detail / 服务详情**
    - provider-specific fields；
@@ -571,7 +572,8 @@ Settings UI ─┐
    - base URL/model/zone/profile 等真实字段；
    - 保存、取消、清除、测试；
    - 测试把当前完整未保存Provider draft作为request-scoped candidate snapshot，走同一正式Provider runtime发起最小真实request；明确提示“不会保存，可能消耗额度”，不写canonical文件、不改变默认routing/active set、不生成永久“已连接”状态，成功后仍由用户主动保存；
-   - 同一次显式测试按request identity single-flight；不合并正常`web_search`、不跨Session共享请求或取消语义，config service不接管Provider请求生命周期；外部文件冲突时draft仍可测试，但保存继续服从expected revision/conflict。
+	- 同一次显式测试按request identity single-flight；不合并正常`web_search`、不跨Session共享请求或取消语义，config service不接管Provider请求生命周期；外部文件冲突时draft仍可测试，但保存继续服从expected revision/conflict。
+	- pending/success/error/cancel绑定request identity与Provider ID，切换详情后迟到结果不跨Provider显示；credential/quota/network/missing-field错误只给对应下一步，不生成永久connected truth。
 4. **Routing / 搜索方式**
    - `Auto` 为推荐默认；
    - 单 Provider严格模式；
@@ -602,7 +604,7 @@ Fork 应让presentation字段附着在runtime Provider定义的同一exact descr
 - cost/remote-fetch hints；
 - optional local icon identity与asset-admission状态。
 
-Server只把这份projection投影给Web。Web不再手写第二个26-Provider清单；不得另外维护一个会独立增删Provider的静态manifest。presentation字段也不决定runtime availability、路由或credentials，不是Provider Registry。测试必须保证所有`RESOLVED_SEARCH_PROVIDERS`恰好被descriptor覆盖一次；新增/删除Provider若缺少presentation信息只能使用明确fallback，不能从UI消失或阻塞runtime。
+Server只把这份projection投影给Web。Web不再手写第二个26-Provider清单；Curator合法ID校验与Agent tool description/schema也必须由descriptor的窄projection派生，不得另外维护会独立增删Provider的静态manifest或白名单。presentation字段也不决定runtime availability、路由或credentials，不是Provider Registry。测试必须保证所有`RESOLVED_SEARCH_PROVIDERS`恰好被descriptor覆盖一次，并锁定作者auto/all/array/named顺序；新增/删除Provider若缺少presentation信息只能使用明确fallback，不能从UI消失或阻塞runtime。
 
 ### 6.6 本轮图标调研结论与生产准入
 
@@ -667,6 +669,8 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 ### 7.3 UI 产品化
 
 必须完整保留作者已经做好的交互能力：Provider buttons、query 输入/改写、streaming result cards、单项选择、替代 Provider、timer 调整、raw-send、summary model选择、生成、编辑、feedback regenerate、preview、approve、keyboard 与 reduced motion。
+
+Provider切换同时触发当前结果重搜与canonical默认写入，但二者必须分别建模：只有expected-revision mutation提交成功才宣称默认已保存；冲突/损坏/权限失败不丢本次重搜结果，不静默重试或更新revision，并引导用户进入同一Settings config owner恢复；multi-query只有部分重搜成功时保留成功与失败卡片并明确partial，无query时只报告默认写入结果，不能虚构“已重搜”。Browser Tab标题来自创建时locale snapshot；Curator普通错误使用stable typed code与页面双语catalog，不能把Server原始英文直接拼入中文表面。
 
 只改产品归属和宿主适配：
 
@@ -938,7 +942,9 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "curatorUrlDurability": "memory-only-no-browser-history",
     "curatorInternalOnly": true,
     "curatorAutoPresent": "owning-thread-foreground-only",
-    "fileLevelToolEnables": "canonical-config-author-semantics"
+    "fileLevelToolEnables": "canonical-config-author-semantics",
+    "providerPrerequisites": "descriptor-owned-and-or-session-dependent-evaluator",
+    "providerAgentProjection": "canonical-ids-auto-all-explicit-only-and-route-conditions"
   },
   "config": {
     "authority": ".omnimind/agent/web-search.json",
@@ -951,6 +957,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "futureOrCorruptSchema": "preserve-file-fail-closed",
     "liveInvalidation": "process-local-revision-signal-no-session-registry",
     "draftProviderTest": "request-scoped-candidate-no-save-may-cost-quota",
+    "draftProviderTestIdentity": "request-and-provider-bound-single-flight",
     "create": "no-clobber-private-0600",
     "noOpMutation": "no-write-no-revision"
   },
@@ -969,6 +976,8 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
   "presentation": {
     "capabilityIcon": "globe",
     "providerDescriptors": "runtime-definition-co-located-credential-blind-projection",
+    "providerSettingsGrouping": "descriptor-owned-connection-role-no-ui-heuristics",
+    "providerSwitchTruth": "persistence-and-research-independent-with-partial-and-no-query-outcomes",
     "providerListInWeb": false,
     "runtimeRemoteAssets": false,
     "parallelBrandAssetSharedWithMcp": true,

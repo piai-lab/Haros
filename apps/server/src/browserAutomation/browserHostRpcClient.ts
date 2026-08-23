@@ -344,6 +344,7 @@ export function getBrowserHostEngineWebSurfaceContext(
 export function presentBrowserHostEngineWebSurface(
   input: BrowserHostEngineWebSurfaceCall & {
     readonly url: string;
+    readonly title: string;
     readonly expiresAt: number;
   },
 ): Promise<unknown> {
@@ -351,6 +352,7 @@ export function presentBrowserHostEngineWebSurface(
     thread_id: input.threadId,
     surface_id: input.surfaceId,
     url: input.url,
+    title: input.title,
     expires_at: input.expiresAt,
   });
 }
