@@ -43,6 +43,7 @@ describe("bundled OmniMind Web Access composition", () => {
       schemaVersion: 1,
       provider: "auto",
       workflow: "auto-summary",
+      autoOpenBrowser: false,
     });
     if (process.platform !== "win32") {
       expect(statSync(configPath).mode & 0o777).toBe(0o600);
