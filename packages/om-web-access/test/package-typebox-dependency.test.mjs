@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -11,6 +11,10 @@ const repoRoot = resolve(new URL("..", import.meta.url).pathname);
 test("packed installs include typebox without peer dependencies", async () => {
 	const tempDir = await mkdtemp(join(tmpdir(), "pi-web-access-pack-install-"));
 	try {
+		// Anchor npm to this exact test directory. Without a local manifest npm
+		// may walk up to an unrelated package.json under a shared temp root,
+		// polluting that root and changing module resolution for parallel tests.
+		await writeFile(join(tempDir, "package.json"), '{"private":true}\n', "utf8");
 		const packOutput = execFileSync("npm", ["pack", "--json", "--pack-destination", tempDir], {
 			cwd: repoRoot,
 			encoding: "utf8",

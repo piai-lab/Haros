@@ -12,7 +12,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import type { Plugin } from "vite";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
 
 const port = Number(process.env.PORT ?? 5733);
@@ -220,6 +220,9 @@ export default defineConfig({
     // a backing file is configured. Unit tests provide their own in-memory
     // stores, so keep the runtime global disabled in every Vitest worker.
     execArgv: ["--no-experimental-webstorage"],
+    // Direct Bun/Playwright journeys own their own runner and lifecycle. Keep
+    // them out of the Vitest unit-test discovery surface.
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
   plugins: [
     tanstackRouter({
