@@ -2,7 +2,7 @@
 
 > 观察与收口日期：2026-08-22
 >
-> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。candidate 已在任务分支形成有序实现提交，并从exact pushed SHA完成Desktop重建、替换安装、fresh-profile Settings/Provider-asset gate，以及真实DeepSeek + keyless Exa的默认`auto-summary`、显式Curator和non-review observer packaged局部门；真实MiMo stored search responseId衔接已由exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`完成复验。独立observer/review presentation与V7适配最终由exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`完成隔离packaged复验；同一安装候选现已补齐keyed Tavily draft/named route与A/B多Thread background attention/exact reopen journey。新的route-aware Settings与keyboard/inert Curator source implementation candidate为`9d9930f21b654315af9d164ac96b8fcdd59aecef`，source gates已通过，尚待从该精确SHA重建packaged证据。Host Tools事实仍不能外推为Web Access证据。
+> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。candidate 已在任务分支形成有序实现提交，并从exact pushed SHA完成Desktop重建、替换安装、fresh-profile Settings/Provider-asset gate，以及真实DeepSeek + keyless Exa的默认`auto-summary`、显式Curator和non-review observer packaged局部门；真实MiMo stored search responseId衔接已由exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`完成复验。独立observer/review presentation与V7适配最终由exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`完成隔离packaged复验；同一安装候选现已补齐keyed Tavily draft/named route与A/B多Thread background attention/exact reopen journey。新的route-aware Settings与keyboard/inert Curator implementation SHA `9d9930f21b654315af9d164ac96b8fcdd59aecef`已从exact pushed SHA完成Desktop重建、安装与受影响Settings/Curator表面复验。Host Tools事实仍不能外推为Web Access证据。
 >
 > 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
 >
@@ -13,7 +13,7 @@
 > 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，production adoption 只有进入根 [`README.md`](../README.md) 的 `source-adoptions` 后才成立。
 
 > [!IMPORTANT]
-> **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态为`source-candidate-pending-packaged-with-prior-evidence`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。默认`auto-summary`、Settings/Provider-asset、显式Curator、non-review observer、真实MiMo stored result continuation、keyed Tavily route与A/B多Thread lifecycle均已有exact-SHA安装证据；当前packaged证据对应`ff67a21a97f9071bd9162dfb61e9f4b632a903a8`，新的source implementation candidate `9d9930f21b654315af9d164ac96b8fcdd59aecef`进一步闭合route-aware Settings状态、Curator键盘展开、summary inspector inert与Provider切换副作用预告，尚待从该精确SHA重建安装证据。这不等于签名、公证、Release、update feed或整个OmniMind产品已经发行。
+> **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态为`candidate-with-packaged-web-access-evidence`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。默认`auto-summary`、Settings/Provider-asset、显式Curator、non-review observer、真实MiMo stored result continuation、keyed Tavily route与A/B多Thread lifecycle均已有exact-SHA安装证据；当前已测试安装候选对应`9d9930f21b654315af9d164ac96b8fcdd59aecef`，并进一步闭合route-aware Settings状态、Curator结果控件/summary inspector的packaged DOM与Provider切换副作用预告。Enter/Space激活由正式page/server Browser测试证明，本次短生命周期packaged观察不冒充该键盘事件全链。这不等于签名、公证、Release、update feed或整个OmniMind产品已经发行。
 
 > [!IMPORTANT]
 > 2026-08-22维护者重新裁决默认体验：canonical默认workflow是`auto-summary`，普通联网后台摘要并同turn继续；Curator不再是日常默认，只在Settings显式选择、per-call override或用户明确要求审查/挑选来源时以`summary-review`进入。该决定supersede本文此前“Curator默认开启”的旧结论，但不删除P4或显式review能力。
@@ -55,7 +55,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
 | 图标来源 | runtime Provider定义与presentation字段同源；26家全部使用本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle均已有exact-SHA packaged证据。当前已测试安装候选是`ff67a21a97f9071bd9162dfb61e9f4b632a903a8`；新的source implementation candidate `9d9930f21b654315af9d164ac96b8fcdd59aecef`已通过source gates、等待packaged复验，不能冒充已安装或整个产品已发行 |
+| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle均已有exact-SHA packaged证据。当前已测试安装候选是`9d9930f21b654315af9d164ac96b8fcdd59aecef`；route-aware Settings与受影响Curator表面已完成packaged复验，但不能冒充Release或整个产品已发行 |
 
 ### 0.3 唯一 owner 图
 
@@ -143,7 +143,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 | npm shasum | `78449966e7f682f707bb9964c3e62d5f04318d8c` |
 | downloaded tgz SHA-256 | `d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054` |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物中的 runtime TypeScript 与 exact source 对应文件逐字节一致 |
-| evidence maturity | `source-candidate-pending-packaged-with-prior-evidence`；新source implementation candidate的focused route/Settings/Curator gates、Settings Browser 6/6、Curator page/server 4/4、root typecheck 7/7与Web production build已通过；完整package为557/558，唯一失败仍是untouched baseline GitHub SIGTERM-resistant process-tree竞态。`ff67a21a…`的exact-SHA安装Settings/Provider-asset、真实DeepSeek + keyless Exa、真实MiMo stored-result continuation、keyed Tavily与A/B多Thread background attention/exact reopen证据仍有效，但不能证明新shipped bytes；仍不是签名、公证、Release、update feed或整个OmniMind `packaged-product-proven` |
+| evidence maturity | `candidate-with-packaged-web-access-evidence`；exact implementation SHA `9d9930f…`的focused route/Settings/Curator gates、Settings Browser 6/6、Curator page/server 4/4、root typecheck 7/7与Web production build通过；完整package为557/558，唯一失败仍是untouched baseline GitHub SIGTERM-resistant process-tree竞态。该SHA已完成clean-clone Desktop构建、fresh隔离route-aware Settings与任务隔离Curator表面/terminal/reopen复验；`ff67a21a…`的真实DeepSeek + keyless Exa、MiMo stored-result continuation、keyed Tavily与A/B多Thread证据继续保护未改动生命周期。仍不是签名、公证、Release、update feed或整个OmniMind `packaged-product-proven` |
 
 ### 2.2 发布物结构
 
@@ -582,7 +582,7 @@ Settings UI ─┐
    - 配置多个 key 本身不自动并发。
 5. **Search result handling / 搜索结果处理**
    - `Generate summary automatically / 自动生成摘要`（`auto-summary`，推荐且默认；不打断当前turn）；
-   - `Review summary and sources / 审查摘要与来源`（`summary-review`；会暂停等待用户批准）；
+   - `Review summary and sources / 审查摘要与来源`（`summary-review`；结果就绪后等待批准，再让Agent继续）；
    - `Return results directly / 直接返回结果`（`none`）；
    - 用普通语言解释，普通用户不需要理解 `Curator workflow`。
 6. **Content & advanced / 网页读取与高级选项**
@@ -837,6 +837,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - replacement Tavily凭据在同一安装候选与任务profile中先通过Settings“测试当前未保存草稿”走正式runtime成功；UI明确“不保存、可能消耗额度”，pending期间按单一request identity禁用重复提交，canonical bytes/mtime、routing、默认Provider与当前Session搜索工具均未改变。随后只在任务profile显式保存并执行named Tavily搜索，真实结果带Tavily attribution与agent-visible responseId，同一Run以`get_search_content`成功继续取回；测试后canonical文件经同一Settings owner恢复原始bytes、删除Tavily字段且保持`0600`，剪贴板已清空。凭据值、endpoint与原始响应未进入argv、日志、截图、artifact、Git或本文。
 - A/B双Thread安装journey中，A以前台`auto-summary`多query observer运行；B在有界延迟后于后台进入`summary-review` waiting，没有切route、抢A Right Dock或自动打开review。关闭A observer后B仍pending；进入B后Timeline显示exact waiting activity，从该动作重建正确review Tab并批准，只settle B，A/B分别继续到各自terminal。terminal立即移除reopen；App关闭重开后CDP只存在主页面，A/B均无waiting/reopen或ephemeral Web Surface，bundled Server仍只打开任务profile state DB。
 - 已通过zero-config route、keyed named route、MiMo/DeepSeek model锚点、exact pushed SHA构建安装、fresh/复用任务隔离profile，以及search → observer/review → approve/continuation → close/exact reopen → cleanup主路径；route exhaustion、timeout/fatal与生命周期scope另有确定性source测试。这里关闭的是Web Access候选此前剩余的keyed Provider与multiThread安装门，不自动升级为Release或整个产品已发行。
+- exact pushed implementation SHA `9d9930f21b654315af9d164ac96b8fcdd59aecef`生成arm64 DMG SHA-256 `2bbe0b24c140b709340e70bb13dd174fc1b0c664fa048fe7f6eee9f3c1573610`，DMG内与安装后`app.asar` SHA-256均为`ab7d83a1bb9a5beb38acfc882d04a94b488ce790f91d4b02aa0f02b3d76121f6`。fresh任务profile从Main、Renderer与bundled Server复证隔离，并经真实Settings UI证明named Tavily缺凭据时首屏与详情都准确要求设置。任务专用测试profile中的真实review页面显示中文标题、Provider切换“持久默认+重搜+可能消耗额度”预告、可聚焦结果button与`aria-expanded/controls`；summary inspector打开时背景action bar同时`hidden`、`inert`、`aria-hidden`、不可见且零可聚焦控件。正式page/server Browser测试4/4负责Enter/Space激活证据；本次packaged DOM观察不扩写该键盘事件全链。terminal后无Timeline reopen，App关闭重开后只有主页面、零loopback surface与零waiting；任务配置已恢复且所有候选进程关闭。
 
 ## 11. 已拒绝的复杂度
 
@@ -993,14 +994,14 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
     "provider-availability-to-pi-active-set",
     "source-check-honest-unicode-contract"
   ],
-  "evidenceMaturity": "source-candidate-pending-packaged-with-prior-evidence",
+  "evidenceMaturity": "candidate-with-packaged-web-access-evidence",
   "implemented": true,
   "currentSourceImplementationSha": "9d9930f21b654315af9d164ac96b8fcdd59aecef",
   "supersededObserverImplementationSha": "2bf044049d7eeb419975d7426e5d6414d2136814",
-  "testedImplementationSha": "ff67a21a97f9071bd9162dfb61e9f4b632a903a8",
-  "previousTestedImplementationSha": "3f4d673bce30465cba387df2667d2488a744c05f",
-  "testedDmgSha256": "16386d1d8e01c2bd0ca5b2903485bfb5f7651c0fb867df348df458e00084cf1e",
-  "testedAppAsarSha256": "59e6183a0a2e19e4aaa3886249e049fe77dc7f78d4f034ef8b6ccbc892b25844",
+  "testedImplementationSha": "9d9930f21b654315af9d164ac96b8fcdd59aecef",
+  "previousTestedImplementationSha": "ff67a21a97f9071bd9162dfb61e9f4b632a903a8",
+  "testedDmgSha256": "2bbe0b24c140b709340e70bb13dd174fc1b0c664fa048fe7f6eee9f3c1573610",
+  "testedAppAsarSha256": "ab7d83a1bb9a5beb38acfc882d04a94b488ce790f91d4b02aa0f02b3d76121f6",
   "sourceAuthorTests": "557/558; sole failure is the untouched baseline GitHub SIGTERM-resistant process-tree race",
   "packagedSettingsProviderAssetGate": true,
   "packagedDefaultAutoSummaryGate": true,
@@ -1012,6 +1013,8 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
   "packagedWorkflowPresentationMatrixGate": true,
   "packagedKeyedSearchProviderGate": true,
   "packagedMultiThreadGate": true,
+  "packagedRouteAwareSettingsGate": true,
+  "packagedCuratorAccessibilityDomGate": true,
   "packagedJourney": true,
   "releaseStatus": "not-released",
   "unresolvedMaintainerChoice": "none"
