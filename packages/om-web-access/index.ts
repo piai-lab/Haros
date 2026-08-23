@@ -1653,13 +1653,21 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			});
 
 			if (omnimindProfile && presenter && pc.surfaceId) {
-				const result = await presenter.present({
-					toolCallId: callId,
-					surfaceId: pc.surfaceId,
-					url: handle.url,
-					title: resolveCuratorCopy(presentation?.locale ?? "en").brand,
-					expiresAt: Date.now() + MAX_CURATOR_TIMEOUT_SECONDS * 1_000,
-				});
+				let result: Awaited<ReturnType<CuratorPresenter["present"]>>;
+				try {
+					result = await presenter.present({
+						toolCallId: callId,
+						surfaceId: pc.surfaceId,
+						url: handle.url,
+						title: resolveCuratorCopy(presentation?.locale ?? "en").brand,
+						expiresAt: Date.now() + MAX_CURATOR_TIMEOUT_SECONDS * 1_000,
+					});
+				} catch (error) {
+					result = {
+						kind: "fatal-error",
+						message: error instanceof Error ? error.message : String(error),
+					};
+				}
 				if (result.kind === "presented") return;
 				pc.browserOpenError = result.message;
 				if (result.kind === "recoverable-error") {

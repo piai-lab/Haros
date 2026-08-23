@@ -493,4 +493,26 @@ test("recoverable presentation stays pending while fatal presentation settles wi
 	await waitFor(() => fatalPresenter.settlements.length === 1, "fatal presentation was not settled");
 	await fatalHarness.handlers.get("session_shutdown")?.();
 	assert.equal(fatalPresenter.settlements.length, 1, "shutdown settled an already-terminal call twice");
+
+	const rejectedService = createWebSearchConfigService(join(root, "rejected", "agent"));
+	configureCurator(rejectedService);
+	const rejectedPresenter = makePresenter();
+	rejectedPresenter.present = async request => {
+		rejectedPresenter.requests.push(request);
+		throw new Error("Browser handoff rejected before returning a typed result");
+	};
+	const rejectedHarness = makeHarness(rejectedService, rejectedPresenter);
+	const rejected = await rejectedHarness.tool("web_search").execute(
+		"rejected-call",
+		{ query: "rejected", provider: "exa" },
+		undefined,
+		undefined,
+		extensionContext(root),
+	);
+	assert.equal(rejected.details.phase, "curator-presentation-error");
+	assert.match(rejected.content[0].text, /could not present source review/i);
+	assert.doesNotMatch(JSON.stringify(rejected), /Open manually|session=|curatorUrl/);
+	await waitFor(() => rejectedPresenter.settlements.length === 1, "rejected presentation was not settled");
+	await rejectedHarness.handlers.get("session_shutdown")?.();
+	assert.equal(rejectedPresenter.settlements.length, 1, "shutdown settled a rejected presentation twice");
 });
