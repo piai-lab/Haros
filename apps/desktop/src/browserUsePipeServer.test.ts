@@ -302,6 +302,7 @@ describe("canonical browser host RPC", () => {
           thread_id: "surface-thread",
           surface_id: "surface-opaque-123",
           url: "http://127.0.0.1:43123/?session=private-token",
+          title: "OmniMind 网络搜索",
           expires_at: Date.now() + 60_000,
         },
       })).resolves.toMatchObject({ result: { tabId: "tab-internal" } });
@@ -313,7 +314,7 @@ describe("canonical browser host RPC", () => {
           session_id: "surface-session",
           thread_id: "surface-thread",
           surface_id: "surface-opaque-123",
-		  preserve_tab: true,
+          preserve_tab: true,
         },
       })).resolves.toMatchObject({ result: { settled: true } });
       await expect(request(socket, {
@@ -325,6 +326,7 @@ describe("canonical browser host RPC", () => {
           thread_id: "other-thread",
           surface_id: "surface-other-123",
           url: "http://127.0.0.1:43124/?session=other-private-token",
+          title: "OmniMind 网络搜索",
           expires_at: Date.now() + 60_000,
         },
       })).resolves.toMatchObject({
@@ -333,10 +335,17 @@ describe("canonical browser host RPC", () => {
     });
 
     expect(presentEngineWebSurface).toHaveBeenCalledOnce();
+    expect(presentEngineWebSurface).toHaveBeenCalledWith({
+      threadId: "surface-thread",
+      surfaceId: "surface-opaque-123",
+      url: "http://127.0.0.1:43123/?session=private-token",
+      title: "OmniMind 网络搜索",
+      expiresAt: expect.any(Number),
+    });
     expect(settleEngineWebSurface).toHaveBeenCalledWith({
       threadId: "surface-thread",
       surfaceId: "surface-opaque-123",
-	  preserveTab: true,
+      preserveTab: true,
     });
   });
 
