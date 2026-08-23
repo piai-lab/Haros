@@ -29,7 +29,7 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "9aae1ee83f2018539f9e346baa224522aabdf95792077e35447686b6bb7a994e"
+        "value": "a4b2f91b765f283c121d80f284c6d599462a25181372335a00e290e141dd1a65"
       }
     ]
   },
@@ -5496,6 +5496,39 @@
     {
       "type": "library",
       "name": "marked",
+      "version": "15.0.12",
+      "bom-ref": "pkg:npm/marked@15.0.12",
+      "purl": "pkg:npm/marked@15.0.12",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "194e753892e602ddd72c7056dda20b44aad52218a722890a0127fc04b880e2d2"
+        }
+      ],
+      "author": "Christopher Jeffrey",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "git://github.com/markedjs/marked.git"
+        }
+      ],
+      "properties": [
+        {
+          "name": "omnimind:artifact-location",
+          "value": "node_modules/.bun/marked@15.0.12/node_modules/marked"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "marked",
       "version": "18.0.5",
       "bom-ref": "pkg:npm/marked@18.0.5",
       "purl": "pkg:npm/marked@18.0.5",
@@ -7917,6 +7950,8 @@
         "pkg:npm/effect@4.0.0-beta.25",
         "pkg:npm/electron-updater@6.8.3",
         "pkg:npm/jsonc-parser@3.3.1",
+        "pkg:npm/marked@15.0.12",
+        "pkg:npm/marked@18.0.5",
         "pkg:npm/node-pty@1.1.0",
         "pkg:npm/open@10.2.0",
         "pkg:npm/tree-kill@1.2.2",
@@ -9056,6 +9091,10 @@
     },
     {
       "ref": "pkg:npm/lru-cache@11.2.7",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/marked@15.0.12",
       "dependsOn": []
     },
     {
