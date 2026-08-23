@@ -650,6 +650,7 @@ export function BrowserPanel({
     threadBrowserState?.tabs[0] ??
     null;
   const activeTabId = activeTab?.id ?? null;
+  const activeTabInternalOnly = activeTab?.presentation?.internalOnly === true;
   const usesNativeRuntime = activeTab?.runtimeSurface === "native";
   const activeTabInitialUrl = activeTab?.lastCommittedUrl ?? activeTab?.url ?? BROWSER_BLANK_URL;
   activeTabInitialUrlRef.current = activeTabInitialUrl;
@@ -685,7 +686,11 @@ export function BrowserPanel({
     formatOpenTitle: (url) => t("browser.openUrl", { url }),
   });
   const showBrowserAddressSuggestions =
-    isLiveRuntime && isAddressFocused && browserAddressSuggestions.length > 0 && runtimeReady;
+    !activeTabInternalOnly &&
+    isLiveRuntime &&
+    isAddressFocused &&
+    browserAddressSuggestions.length > 0 &&
+    runtimeReady;
   const annotationMethods = api?.browser.annotations;
   const annotationController = useBrowserAnnotations({
     methods: annotationMethods,
@@ -1577,7 +1582,7 @@ export function BrowserPanel({
             variant="ghost"
             size="icon-sm"
             className="size-7 shrink-0"
-            disabled={!activeTab?.canGoBack}
+            disabled={activeTabInternalOnly || !activeTab?.canGoBack}
             onClick={() => {
               if (!ensureLiveRuntime()) return;
               if (!api || !activeTab) return;
@@ -1598,7 +1603,7 @@ export function BrowserPanel({
             variant="ghost"
             size="icon-sm"
             className="size-7 shrink-0"
-            disabled={!activeTab?.canGoForward}
+            disabled={activeTabInternalOnly || !activeTab?.canGoForward}
             onClick={() => {
               if (!ensureLiveRuntime()) return;
               if (!api || !activeTab) return;
@@ -1619,7 +1624,7 @@ export function BrowserPanel({
             variant="ghost"
             size="icon-sm"
             className="size-7 shrink-0"
-            disabled={!activeTab}
+            disabled={activeTabInternalOnly || !activeTab}
             onClick={() => {
               if (!ensureLiveRuntime()) return;
               if (!api || !activeTab) return;
@@ -1640,6 +1645,18 @@ export function BrowserPanel({
             <span className="sr-only">{t("browser.reload")}</span>
           </Button>
         </div>
+        {activeTabInternalOnly ? (
+          <div
+            className={cn(
+              "min-w-0 flex-1 truncate px-3 py-1.5 text-xs text-muted-foreground",
+              BROWSER_CHROME_CONTROL_CLASS_NAME,
+              BROWSER_CHROME_CONTROL_FILLED_CLASS_NAME,
+            )}
+            data-engine-web-surface-chrome="internal-only"
+          >
+            {t("browser.internalWebSurface")}
+          </div>
+        ) : (
         <form
           className="min-w-0 flex-1 [-webkit-app-region:no-drag]"
           onSubmit={(event) => {
@@ -1680,6 +1697,7 @@ export function BrowserPanel({
             )}
           />
         </form>
+        )}
         {showBrowserAddressSuggestions ? (
           <div className="absolute left-0 right-0 top-[calc(100%+6px)] z-30 overflow-hidden rounded-lg border border-border bg-popover shadow-lg [-webkit-app-region:no-drag]">
             <div className="max-h-64 overflow-auto p-1">
@@ -1722,37 +1740,42 @@ export function BrowserPanel({
             !isElectron ||
             !workspaceReady ||
             !activeTab ||
+            activeTabInternalOnly ||
             showLocalServersHome ||
             !annotationMethods
           }
         />
-        <Button
-          ref={copyScreenshotButtonRef}
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          disabled={!activeTab}
-          aria-label={t("browser.copyScreenshot")}
-          title={t("browser.copyScreenshot")}
-          onClick={onCopyScreenshotToClipboard}
-        >
-          <CameraIcon className="size-3.5" />
-          <span className="sr-only">{t("browser.copyScreenshot")}</span>
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="size-7"
-          disabled={!activeTab}
-          aria-label={t("browser.copyLink")}
-          title={t("browser.copyLink")}
-          onClick={copyActiveTabLink}
-        >
-          <LinkIcon className="size-3.5" />
-          <span className="sr-only">{t("browser.copyLink")}</span>
-        </Button>
+        {!activeTabInternalOnly ? (
+          <>
+            <Button
+              ref={copyScreenshotButtonRef}
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="size-7"
+              disabled={!activeTab}
+              aria-label={t("browser.copyScreenshot")}
+              title={t("browser.copyScreenshot")}
+              onClick={onCopyScreenshotToClipboard}
+            >
+              <CameraIcon className="size-3.5" />
+              <span className="sr-only">{t("browser.copyScreenshot")}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="size-7"
+              disabled={!activeTab}
+              aria-label={t("browser.copyLink")}
+              title={t("browser.copyLink")}
+              onClick={copyActiveTabLink}
+            >
+              <LinkIcon className="size-3.5" />
+              <span className="sr-only">{t("browser.copyLink")}</span>
+            </Button>
+          </>
+        ) : null}
         <Menu modal={false} open={browserActionsMenuOpen} onOpenChange={setBrowserActionsMenuOpen}>
           <MenuTrigger
             render={
@@ -1776,26 +1799,30 @@ export function BrowserPanel({
               <BrowserActionMenuIcon icon={PlusIcon} />
               <span>{t("browser.newTab")}</span>
             </MenuItem>
-            <MenuItem
-              className={BROWSER_ACTION_MENU_ITEM_CLASS_NAME}
-              disabled={!activeTab}
-              onClick={onCaptureScreenshot}
-            >
-              <BrowserActionMenuIcon icon={CameraIcon} />
-              <span>{t("browser.captureScreenshot")}</span>
-            </MenuItem>
-            <MenuItem
-              className={BROWSER_ACTION_MENU_ITEM_CLASS_NAME}
-              disabled={!activeTab}
-              onClick={() => {
-                if (!ensureLiveRuntime()) return;
-                if (!api || !activeTab) return;
-                void api.shell.openExternal(activeTab.url);
-              }}
-            >
-              <BrowserActionMenuIcon icon={ExternalLinkIcon} />
-              <span>{t("browser.openExternally")}</span>
-            </MenuItem>
+            {!activeTabInternalOnly ? (
+              <>
+                <MenuItem
+                  className={BROWSER_ACTION_MENU_ITEM_CLASS_NAME}
+                  disabled={!activeTab}
+                  onClick={onCaptureScreenshot}
+                >
+                  <BrowserActionMenuIcon icon={CameraIcon} />
+                  <span>{t("browser.captureScreenshot")}</span>
+                </MenuItem>
+                <MenuItem
+                  className={BROWSER_ACTION_MENU_ITEM_CLASS_NAME}
+                  disabled={!activeTab}
+                  onClick={() => {
+                    if (!ensureLiveRuntime()) return;
+                    if (!api || !activeTab) return;
+                    void api.shell.openExternal(activeTab.url);
+                  }}
+                >
+                  <BrowserActionMenuIcon icon={ExternalLinkIcon} />
+                  <span>{t("browser.openExternally")}</span>
+                </MenuItem>
+              </>
+            ) : null}
             <MenuSeparator />
             <MenuItem className={BROWSER_ACTION_MENU_ITEM_CLASS_NAME} onClick={onClosePanel}>
               <BrowserActionMenuIcon icon={XIcon} />

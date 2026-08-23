@@ -54,12 +54,22 @@ interface PipeClient {
   readonly abortControllers: Map<RpcId, AbortController>;
 }
 
+type BrowserHostAutomationShape = Pick<DesktopBrowserAutomationHost, "executeTool"> &
+  Partial<
+    Pick<
+      DesktopBrowserAutomationHost,
+      | "getEngineWebSurfaceContext"
+      | "presentEngineWebSurface"
+      | "settleEngineWebSurface"
+    >
+  >;
+
 export interface BrowserHostPipeServerOptions {
   readonly pipePath?: string;
   readonly capability?: string;
   readonly platform?: NodeJS.Platform;
   readonly requestOpenPanel?: (threadId: ThreadId) => void | Promise<void>;
-  readonly automationHost?: Pick<DesktopBrowserAutomationHost, "executeTool">;
+  readonly automationHost?: BrowserHostAutomationShape;
   readonly maxInFlightRequests?: number;
   readonly maxQueuedOutputBytes?: number;
 }
@@ -210,7 +220,7 @@ export class BrowserHostPipeServer {
   private readonly server: Net.Server;
   private readonly pipePath: string;
   private readonly platform: NodeJS.Platform;
-  private readonly automationHost: Pick<DesktopBrowserAutomationHost, "executeTool">;
+  private readonly automationHost: BrowserHostAutomationShape;
   private readonly maxInFlightRequests: number;
   private readonly maxQueuedOutputBytes: number;
   private readonly capability: string;
@@ -383,6 +393,12 @@ export class BrowserHostPipeServer {
         return this.getInfo(client, params);
       case "executeTool":
         return this.executeTool(client, params, signal);
+      case "getEngineWebSurfaceContext":
+        return this.getEngineWebSurfaceContext(client);
+      case "presentEngineWebSurface":
+        return this.presentEngineWebSurface(client, params);
+      case "settleEngineWebSurface":
+        return this.settleEngineWebSurface(client, params);
       default:
         throw new Error(`No handler registered for method: ${method}`);
     }
@@ -418,7 +434,12 @@ export class BrowserHostPipeServer {
         sessionId,
         protocolVersion: 1,
         physicalScope: "visible-shared-electron-webview",
-        methods: ["executeTool"],
+        methods: [
+          "executeTool",
+          "getEngineWebSurfaceContext",
+          "presentEngineWebSurface",
+          "settleEngineWebSurface",
+        ],
       },
     };
   }
@@ -451,6 +472,96 @@ export class BrowserHostPipeServer {
       ...(workspaceRoot === undefined ? {} : { workspaceRoot }),
       signal,
     } satisfies BrowserAutomationToolRequest);
+  }
+
+  private requireBoundSession(client: PipeClient, params?: unknown): {
+    readonly sessionId: string;
+    readonly request: Record<string, unknown>;
+  } {
+    const request = asObject(params) ?? {};
+    const sessionId = asString(request.session_id);
+    if (!sessionId || sessionId !== client.sessionId) {
+      throw new BrowserAutomationHostError({
+        code: "BrowserAuthorizationDenied",
+        retryable: false,
+        phase: "auth",
+        effectMayHaveCommitted: false,
+      });
+    }
+    return { sessionId, request };
+  }
+
+  private getEngineWebSurfaceContext(client: PipeClient): unknown {
+    if (!client.sessionId) {
+      throw new BrowserAutomationHostError({
+        code: "BrowserAuthorizationDenied",
+        retryable: false,
+        phase: "auth",
+        effectMayHaveCommitted: false,
+      });
+    }
+    if (!this.automationHost.getEngineWebSurfaceContext) {
+      throw new Error("Engine web-surface context is unavailable.");
+    }
+    return this.automationHost.getEngineWebSurfaceContext();
+  }
+
+  private presentEngineWebSurface(client: PipeClient, params: unknown): Promise<unknown> {
+    const { request } = this.requireBoundSession(client, params);
+    const threadId = asString(request.thread_id);
+    const surfaceId = asString(request.surface_id);
+    const url = asString(request.url);
+    const title = asString(request.title);
+    const expiresAt = request.expires_at;
+    if (!threadId || !surfaceId || !url || !title || typeof expiresAt !== "number") {
+      throw new BrowserAutomationHostError({ code: "BrowserInputUnsupported" });
+    }
+    if (client.threadId && client.threadId !== threadId) {
+      throw new BrowserAutomationHostError({
+        code: "BrowserTabScopeViolation",
+        retryable: false,
+        phase: "routing",
+        effectMayHaveCommitted: false,
+      });
+    }
+    client.threadId = threadId as ThreadId;
+    if (!this.automationHost.presentEngineWebSurface) {
+      throw new Error("Engine web-surface presentation is unavailable.");
+    }
+    return this.automationHost.presentEngineWebSurface({
+      threadId: threadId as ThreadId,
+      surfaceId,
+      url,
+      title,
+      expiresAt,
+    });
+  }
+
+  private settleEngineWebSurface(client: PipeClient, params: unknown): unknown {
+    const { request } = this.requireBoundSession(client, params);
+    const threadId = asString(request.thread_id);
+    const surfaceId = asString(request.surface_id);
+    const preserveTab = request.preserve_tab === true;
+    if (!threadId || !surfaceId) {
+      throw new BrowserAutomationHostError({ code: "BrowserInputUnsupported" });
+    }
+    if (client.threadId && client.threadId !== threadId) {
+      throw new BrowserAutomationHostError({
+        code: "BrowserTabScopeViolation",
+        retryable: false,
+        phase: "routing",
+        effectMayHaveCommitted: false,
+      });
+    }
+    client.threadId = threadId as ThreadId;
+    if (!this.automationHost.settleEngineWebSurface) {
+      throw new Error("Engine web-surface settlement is unavailable.");
+    }
+    return this.automationHost.settleEngineWebSurface({
+      threadId: threadId as ThreadId,
+      surfaceId,
+      ...(preserveTab ? { preserveTab: true } : {}),
+    });
   }
 
   private write(client: PipeClient, message: unknown): WriteResult {

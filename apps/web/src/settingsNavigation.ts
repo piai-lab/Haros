@@ -14,6 +14,7 @@ export const SETTINGS_SECTION_IDS = [
   "worktrees",
   "archived",
   "models",
+  "web-search",
   "providers",
   "skills",
   "prompts",
@@ -159,6 +160,14 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     description: "Configure the model services, credentials, and available models OmniMind uses.",
     icon: "brain",
     eyebrow: "Model services",
+  },
+  {
+    id: "web-search",
+    group: "coding",
+    label: "Web search",
+    description: "Configure OmniMind Web Access routing, source review, and search services.",
+    icon: "globe",
+    eyebrow: "OmniMind Web Access",
   },
   {
     id: "skills",

@@ -178,6 +178,7 @@ describe("deriveWorkLogEntries", () => {
                 status: "waiting-for-user",
                 provenance: "engine-native",
                 presentation: "omnimind-browser",
+                surfaceId: "surface-opaque-123",
               },
             },
           },
@@ -190,6 +191,7 @@ describe("deriveWorkLogEntries", () => {
       status: "waiting-for-user",
       provenance: "engine-native",
       presentation: "omnimind-browser",
+      surfaceId: "surface-opaque-123",
     });
   });
 

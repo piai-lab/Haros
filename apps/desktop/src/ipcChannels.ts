@@ -67,6 +67,8 @@ export const DESKTOP_IPC_CHANNELS = {
     newTab: "desktop:browser-new-tab",
     closeTab: "desktop:browser-close-tab",
     selectTab: "desktop:browser-select-tab",
+    setEngineWebSurfaceContext: "desktop:browser-engine-surface-set-context",
+    reopenEngineWebSurface: "desktop:browser-engine-surface-reopen",
     openDevTools: "desktop:browser-open-devtools",
     annotations: {
       start: "desktop:browser-annotations-start",

@@ -18,6 +18,8 @@ import type {
   BrowserNewTabInput,
   BrowserOpenInput,
   BrowserSetPanelBoundsInput,
+  BrowserSetEngineWebSurfaceContextInput,
+  BrowserReopenEngineWebSurfaceInput,
   BrowserTabInput,
   BrowserThreadInput,
   ThreadBrowserState,
@@ -154,6 +156,24 @@ export function registerBrowserIpcHandlers(
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.selectTab);
   ipcMain.handle(BROWSER_IPC_CHANNELS.selectTab, async (_event, input: BrowserTabInput) =>
     browserManager.selectTab(input),
+  );
+
+  ipcMain.removeHandler(BROWSER_IPC_CHANNELS.setEngineWebSurfaceContext);
+  ipcMain.handle(
+    BROWSER_IPC_CHANNELS.setEngineWebSurfaceContext,
+    async (event, input: BrowserSetEngineWebSurfaceContextInput) => {
+      requireTrustedRenderer(event.sender.id);
+      browserManager.setEngineWebSurfaceContext(input);
+    },
+  );
+
+  ipcMain.removeHandler(BROWSER_IPC_CHANNELS.reopenEngineWebSurface);
+  ipcMain.handle(
+    BROWSER_IPC_CHANNELS.reopenEngineWebSurface,
+    async (event, input: BrowserReopenEngineWebSurfaceInput) => {
+      requireTrustedRenderer(event.sender.id);
+      return browserManager.reopenEngineWebSurface(input);
+    },
   );
 
   ipcMain.removeHandler(BROWSER_IPC_CHANNELS.openDevTools);

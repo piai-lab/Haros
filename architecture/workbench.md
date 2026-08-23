@@ -23,16 +23,16 @@ Synara 不是截图或灵感库，而是长期深耕这些问题的成熟产品�
 flowchart LR
     Root["OmniMind"] --> Agent["Agent"]
     Root --> Chat["Chat"]
-    Root --> Studio["Studio"]
     Agent --> Projects["Projects"]
     Agent --> Groups["Groups · conversation labels"]
     Agent --> Workbench["Files · Diff · Terminal · Git · Artifacts"]
     Agent --> Thread["Project Thread"]
-    Chat --> ChatHome["Home managed Thread"]
-    Studio --> StudioHome["Studio managed workspace"]
+    Chat --> Studio["Home / Studio managed Thread"]
     Thread --> Providers["OmniMind · Pi · Codex · Claude · OpenCode · …"]
     Studio --> Providers
 ```
+
+
 
 `Agent | Chat | Studio` 是三个一级产品工作面，不是持久化类型。侧栏顶部直接复用 Synara 的描述式 `Menu / MenuRadioGroup / MenuRadioItem`：trigger 显示当前工作面，展开后每项同时显示名称和职责说明，键盘、焦点、Chevron 与 disclosure 保持母体行为。不得改成 segmented control、tabpanel、Provider selector或新的 selection authority。`/ → Agent`、`/chat → Chat`、`/studio → Studio`；共享 `/$threadId` 从 canonical Thread→Project.kind 投影当前工作面。
 
@@ -79,7 +79,7 @@ Agent 与 Chat 始终作为一级入口可达，不新增显示设置。Studio �
 ### Chat
 
 - 使用 Synara Home managed Thread，无用户选择的 Primary Folder；
-- 可以在 OmniMind-owned managed workspace 的 `work/` 中处理文件，并把普通文件结果放入同级 `outputs/`；
+- 可以在 OmniMind-owned managed workspace/outbox 中生成 Artifact；
 - 上传或引用的外部用户文件默认只读，不默认修改现有 Project；
 - 不显示完整 Project Files/Git/Terminal 工作台，不暗中升级为可写 Agent；
 - Composer 提供明确的文件/文件夹引用入口和只读引用 chip；引用按消息或 draft 保存，不升级为 cwd/Project、不自动扫描；
@@ -119,14 +119,16 @@ Child Agent、Goal、Todo、Question 继续使用 source 已有的产品语义�
 
 Goal、bounded child、结果驱动执行、会话恢复与 Computer Use 不是新的导航入口或常驻卡。它们只在真实运行条件下投影到既有表面：
 
-| 能力语义      | 平时                                                               | 运行时                                                                                                                                                        | 结果/异常                                                                                     |
-| ------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+
+| 能力语义          | 平时                                           | 运行时                                                                                                                               | 结果/异常                                                                 |
+| ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Goal          | 没有 active Goal 时不显示常驻入口；可由 `/goal` 或明确产品动作设置 | active Goal 使用 Composer stacked panel，显示完整 objective、运行/暂停状态、计时及 edit/pause/resume/clear；恢复与自动 continuation 使用同一 Thread authority | achievement 锚定真实 terminal turn；失败、取消、interrupt 或重复 blocker 准确暂停，不静默继续 |
-| Todo/当前步骤 | 无独立任务管理页                                                   | 逐回合 task snapshot 在 Composer 显示当前步骤并可展开完整列表；它不拥有 Goal 生命周期                                                                         | 当前 turn 完成后折叠或退场；不复制 task state，不替代 Goal achievement                        |
-| bounded child | 不显示 team builder                                                | 活跃时复用 `ComposerSubagentStrip` 和现有 child Thread/detail；只有 adapter 真实支持的 stop/background/message 才显示                                         | Root 汇总来源并对最终结果负责；不建第二 Agent registry                                        |
-| 结果驱动执行  | 不显示通用 workflow editor                                         | 普通 tool/child loop 复用 Todo、Activity、Files/Diff；只有 Engine 已回报的结构化 phase 才显示低噪声里程碑和现有恢复动作                                       | 保留 Engine provenance，不把普通 sequence 画成 DAG；完成后运行控制退场                        |
-| 会话恢复      | 正常重开直接恢复                                                   | native resume 安静继续                                                                                                                                        | degraded/ambiguous 才在 Composer 前显示一条恢复介入                                           |
-| Computer Use  | 无 capability card                                                 | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                                                        | 文件、截图、下载与结果进入现有 Artifact/File 表面                                             |
+| Todo/当前步骤     | 无独立任务管理页                                     | 逐回合 task snapshot 在 Composer 显示当前步骤并可展开完整列表；它不拥有 Goal 生命周期                                                                        | 当前 turn 完成后折叠或退场；不复制 task state，不替代 Goal achievement                  |
+| bounded child | 不显示 team builder                             | 活跃时复用 `ComposerSubagentStrip` 和现有 child Thread/detail；只有 adapter 真实支持的 stop/background/message 才显示                                | Root 汇总来源并对最终结果负责；不建第二 Agent registry                                 |
+| 结果驱动执行        | 不显示通用 workflow editor                        | 普通 tool/child loop 复用 Todo、Activity、Files/Diff；只有 Engine 已回报的结构化 phase 才显示低噪声里程碑和现有恢复动作                                           | 保留 Engine provenance，不把普通 sequence 画成 DAG；完成后运行控制退场                   |
+| 会话恢复          | 正常重开直接恢复                                     | native resume 安静继续                                                                                                                | degraded/ambiguous 才在 Composer 前显示一条恢复介入                              |
+| Computer Use  | 无 capability card                            | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                                 | 文件、截图、下载与结果进入现有 Artifact/File 表面                                      |
+
 
 Memory/Knowledge 当前没有 first-public runtime owner，因此不预建入口、图标、设置、后台状态或 receipt。UI 也不展示 packaged、registered、context-loaded、cache breakpoint 或内部 candidate extraction；自然成功不 Toast。
 
@@ -139,7 +141,7 @@ V1 直接保全 Synara 已有能力：
 - editable/saveable Explorer files、Diff、Changes、Output 与 Artifact；
 - real PTY Terminal 与 per-thread terminal state；
 - Git、commit、push、Pull Request、Kanban、Automations；
-- Browser、Source Control、Side Chat、Subagents 和 Studio outputs；Engine 临时 Web UI 的 Host presentation policy 只由 [`architecture/execution.md`](execution.md#扩展与生态) 定义，Workbench 继续复用当前 Thread 的右侧非模态 Browser。
+- Browser、Source Control、Side Chat、Subagents 和 Studio outputs；Engine 临时 Web UI 的 Host presentation policy 只由 `[architecture/execution.md](execution.md#扩展与生态)` 定义，Workbench 继续复用当前 Thread 的右侧非模态 Browser。
 
 同一母体基线还包括持久 Goal、evidence-first Debug、480/960/1440 chat width、暗色 Dock icon 自动切换、本地 Profile activity PNG 导出，以及 Space→Group 的完整交互结果。它们必须复用现有 Composer/Thread、interaction mode、Settings、Desktop icon、Profile 与 Group owners，并在简体中文和英文中同时完整；不能因历史漏移植而降格成 Todo、提示词或另一套 store/API。
 
@@ -178,7 +180,7 @@ Environment、Thread environment、Workbench 与 Git 使用各自稳定 catalog 
 
 Synara 的 `Project instructions` 表面在 OmniMind 中整体退休，不改名，也不改造成说明、规则或 Prompt 管理入口。产品不再注册其 Environment UI、Settings 开关/search entry、per-Project localStorage store、autosave、手动复制/追加，或首次发送与 Automation promotion 时向 Thread notes 做的隐藏预填。`Notepad / 记事本` 继续只表示当前 Thread 的任务级记录，并沿用既有 `Thread notes` 持久化、保存失败与恢复 owner；退休动作不删除或重写已经存在的 Thread notes，也不把旧 Project instructions 自动迁移为 Notepad、`AGENTS.md` 或其他 Prompt 资源。公开发行前没有用户与兼容义务，因此这里采用干净的 source removal，不新增旧 key reader、cleanup migration、兼容层或第二份存储真相。
 
-完整证据、当前源码反例、两段 2026-08-16 Codex 连续缩放录屏的逐帧测量、storyboard、验证矩阵、stop-loss 与复验触发器见 [`research/omnimind-responsive-workbench-review.md`](../research/omnimind-responsive-workbench-review.md)。研究材料中的具体 breakpoint 不反向拥有 production contract；`480px` 下界由全路由与 exact packaged journey 共同约束，不能只由原型或单张截图推出。
+完整证据、当前源码反例、两段 2026-08-16 Codex 连续缩放录屏的逐帧测量、storyboard、验证矩阵、stop-loss 与复验触发器见 `[research/omnimind-responsive-workbench-review.md](../research/omnimind-responsive-workbench-review.md)`。研究材料中的具体 breakpoint 不反向拥有 production contract；`480px` 下界由全路由与 exact packaged journey 共同约束，不能只由原型或单张截图推出。
 
 ## 6. Settings
 
@@ -198,13 +200,29 @@ Settings 的内部 `coding` 分组对用户统一显示为 `Development / 开发
 
 Custom rules 的外部并发修改必须保留用户草稿并以 conflict 呈现，不能静默覆盖。同一 source 仅正文变化时允许重新载入，或显式保留草稿并基于 fresh version 再次保存；active source 已变化时禁止把旧草稿写到新 source，只允许重新载入。该能力准确表示 OmniMind writer 串行化与 expected-version 乐观冲突检测，不宣传跨进程严格 CAS：Node 公开文件 API 无法把 target identity/version 条件与 replace/unlink 合成一个原子操作，非协作外部编辑器若恰好在最终检查与 commit 之间写入，仍存在极窄竞态。不得为消除该窗口新增 native addon、第二 writer、锁协议或 rollback。首次 create 继续使用原子 no-clobber，目标已出现时不得覆盖。Prompt snapshot 是 bounded standard read，retryable load failure 提供可操作重试。正常页面、空态、Toast、Dialog、错误、帮助与恢复只使用 OmniMind 产品语言，不出现 `Pi`、`Pi-compatible`、`ResourceLoader`、`Engine Contract`、`SYSTEM.md` 或 `APPEND_SYSTEM.md` 等内部术语；真实来源只保留在 architecture、research、诊断、About/Licenses 或明确允许的技术归属面。
 
-`Built-in tools / 内置工具`以一张六行三列矩阵控制Tasks、Diagnostics、Goals、Automations、Browser与Device在Agent、Chat、Studio三个产品工作面的用户intent；它仍作用于所有通过AgentGateway接入的Engine，不提供Engine selector、Provider权限等级、global master或逐tool矩阵。正式support/default为：Tasks与Diagnostics在Agent/Studio支持且默认开、Chat不支持；Goals与Automations在Agent/Studio默认开、Chat支持但默认关；Browser三面默认开；Device三面支持但默认关。页面只消费Server返回的revisioned完整read model，不导入或复制policy，也不硬编码工具数量。
+`Built-in tools / 内置工具`用Tasks、Diagnostics、Goals、Automations、Browser与Device六个全局组级开关控制OmniMind Host capability是否提供给所有Agent引擎，包括OmniMind Agent；不提供Engine selector、Provider维度持久状态或逐tool权限矩阵。brand-new且没有settings文件时默认开放前五组、关闭Device；任何可读取的existing snapshot按下述migration contract保留既有intent。页面按上述顺序显示canonical catalog派生的真实组、计数、用户选择、平台/服务可用性与effective状态，不再显示含混的OmniMind aggregate，也不暴露Pi、MCP transport、动态加载器或工具注册等实现术语，不硬编码当前工具数量。
 
-每个cell必须同时表达surface名称与以下状态：unsupported显示“此工作面不可用”且没有Switch/RPC；configured off保留显式false；configured on但runtime unavailable仍显示Switch为on并说明“已开启，当前不可用”；degraded保留on intent并显示canonical catalog的可用数/总数。Switch accessible name包含group+surface，键盘顺序按行再Agent→Chat→Studio；桌面为三列，390px下每行先显示名称/说明/数量，再显示三等分且带文字surface标签的controls。pending只标记实际变更的cell，不锁整页；Reset只删除known overrides并保留bounded unknown。Studio Tasks/Diagnostics不得因其ProviderWorkSurface为`chat`而误显示unsupported。
+“fresh”只表示从未存在有效ServerSettings文件。升级时，既有有效snapshot继续保留legacy intent：缺失`disabledBuiltInGroups`与显式空数组都按旧三组全部enabled处理；旧`omnimind`被禁用时展开为Tasks、Diagnostics、Goals与Automations全部disabled，否则四组全部enabled；Browser、Device及unknown bounded IDs保留原意，显式禁用Device继续禁用。迁移完成后由现有revisioned settings owner写入当前版本并退休旧aggregate ID，不保留UI alias。损坏snapshot无法恢复用户选择，必须准确提示设置已隔离/恢复默认，而不能显示成一次普通fresh onboarding。页面不新增“是否迁移过”开关或隐藏marker。
 
-用户mutation被Server拒绝时，页面回读server truth、恢复UI并只提示一次保存失败；若mutation响应丢失，回读的canonical override map与本次提交完全一致则视为已接受，不报错也不重发；回读也失败时只显示“无法确认是否保存”，保留当前选择直到后续server projection收敛，不能猜成失败。Server已接受但group projection刷新失败时，保留已接受intent，准确显示“设置已保存，状态刷新失败”，不重发mutation。串行queue与generation/revision fence保证latest intent wins且陈旧response不能覆盖。关闭某组对旧Session的新call立即生效；重新开启只在新Session或真实reload后提供schema，普通toggle不伪取消in-flight。页面固定说明“关闭会立即生效。重新启用的工具会在新会话或重新加载后提供。”这些设置不控制Engine-native tools、Todo Extension、Skills/Prompts/Packages、用户/Project Extensions、sandbox/approval或Browser/Device人类UI。
+关闭某组后，所有Agent的新会话都不再投影或注册该组；旧会话即使暂时仍显示stale schema，所有新调用也由Gateway按当前policy立即拒绝。已准入in-flight call不被普通开关伪装成紧急停止，取消仍由当前任务/会话拥有。重新开启不把能力偷偷加入已经稳定运行的旧会话，只按各引擎真实的安全reload或新会话边界投影；OmniMind Agent中的Device在启用且平台/服务可用后注册并active，而不是预先注册为inactive。该设置只控制Agent使用，不影响Browser/Device的人类UI，enablement也不替代availability、runtime permission、approval或call-time authority。
 
-“fresh”只表示从未存在有效ServerSettings文件。v4升级在decode default抹掉raw presence前迁移旧全局intent：Agent与Studio supported cells保留旧effective状态，Chat只保留旧Browser intent，Chat新能力使用default off，unknown legacy disabled IDs有界保留为fail-closed；随后退休`disabledBuiltInGroups`，不保留UI alias或永久双轨。损坏snapshot继续沿既有quarantine/默认恢复呈现，不能伪称fresh或 preserved；页面不新增migration marker、第二settings store或后台同步。
+`Web search / 网络搜索`进入现有`Development / 开发`分组，页面技术identity为`OmniMind Web Access`。它只管理bundled OmniMind Agent随附的Pi-native Web Access Extension，不进入`Built-in tools`六组矩阵、不进入`Model services`，也不扩张到stock Pi或其他Engine。页面不提供master enable switch：一级能力始终可发现；当前搜索路径不可用时保留设置、配置与重新检查入口，并准确区分搜索、网页读取与来源审查各自的可用状态。首屏“能否搜索”必须直接消费package按当前routing选择投影的结构状态；named服务缺少或部分配置时显示需要设置，不能与同页Provider状态相互矛盾。
+
+页面复用Settings同一shell和**概览 → 添加 → 详情**模式。概览首屏只回答四个普通用户问题：当前能否联网搜索、默认如何选择服务、结果如何交给Agent、是否自动显示搜索过程；当前/已配置服务与单一“添加搜索服务”动作随后出现，逐工具状态与配置文件入口收进高级区。添加视图保留可搜索、可键盘导航的完整服务集合，但先列当前/已配置（包括当前选中但配置不完整的服务），再按descriptor同源的“无需Key、需要凭据、MCP/自建/高级”稳定connection role分组，不得用可选endpoint字段等UI heuristic猜分组，也不铺无差别卡片墙；keyless项必须写“无需配置，可直接尝试；受共享额度或服务状态限制”，不能写成未配置或永久免费。key-or-Session服务在无法从Settings证明当前Session状态时显示“可能使用当前Agent登录会话”，既不伪装缺失也不伪装ready。行级动作按真实状态使用“设置/查看/编辑”。详情只呈现该服务真实拥有的key、endpoint、model、zone、profile等字段及最小测试动作。搜索服务不能被扁平化成同一种产品：search、hosted MCP、browser-account、fetch/extraction等角色使用文字说明；配置多个服务本身不触发并发，只有用户明确选择selected parallel或All时才在选择动作附近说明会同时消耗多份额度。单服务“测试”把当前完整未保存Provider draft作为request-scoped candidate snapshot，走正式Provider runtime执行最小真实请求，并明确说明“不会保存，可能消耗额度”；它不写canonical文件、不改变default routing/active set、不生成永久绿色“已连接”，成功后仍由用户主动保存。pending、success、error、cancel都绑定同一request identity与Provider ID：用户切换详情后，迟到结果不得投影到另一服务。测试与页面级“重新检查”按各自显式request identity single-flight，不能因连点或重渲染产生重复额度消耗；不得合并正常搜索、跨Session共享取消语义或让config service接管Provider请求生命周期。App/Session启动不因页面状态自动探测。
+
+页面与高级文件共同操作`.omnimind/agent/web-search.json`这一份canonical配置。首次进入该页面或首次启动OmniMind Agent Session时由先发生的一方通过同一package service执行no-clobber原子创建；支持的平台保持`0600`，App启动本身不写。Settings不为此启动Session或执行Extension，Renderer不提交绝对路径；打开配置文件由Server/package从resolved Agent directory重新推导。no-op保存不写文件、不改mtime、不发布revision。literal key按维护者决定支持完整show/hide、copy、edit与clear，`$ENV`/`!command`显示原始表达式；这些值不得复制进通用Settings、Timeline或日志。常用字段只使用closed form vocabulary，复杂结构明确标为file-only并提供现有本机打开入口，不能建设通用form DSL。损坏文件或高于当前支持版本的schema必须显示保留原文件的typed error、刷新/打开文件等恢复动作，不得以默认值静默覆盖；unknown fields保持round-trip。Settings重新聚焦/reopen/refresh发现外部变化且本地draft已修改时必须保留draft并显示conflict，不得自动更新expected revision或静默重试；只有用户明确重新加载或以当前草稿继续时才能再次mutation。
+
+Web Access的能力级图标固定复用现有`globe`，用于Settings导航、能力入口与通用网络搜索语义。具体搜索服务使用各自品牌标记；品牌标记不表达ready/degraded/unavailable，也不能替代文字状态。相同品牌的不同runtime identity共享同一品牌标记，例如Parallel与Parallel MCP以文字说明连接方式而不制造第二套视觉身份。Settings、Curator、网络活动/技术详情与Timeline中需要显示服务身份时必须消费同一presentation projection；不得各自维护映射。当前26个resolved Provider identity必须全部投影本地、身份准确且保持原色的品牌资产；未来新增服务若身份或资产尚未确定，仍完整显示服务名与中性服务字母标记或统一provider glyph，不回退成`globe`、不隐藏该服务，也不把图标命中当作runtime capability。
+
+服务集合和stable ID来自`@omnimind/om-web-access`与runtime Provider定义同源的versioned descriptor；Web不得手写固定“26家”清单。品牌资产必须exact-pinned、随App本地打包并记录source snapshot、hash与已知license/trademark约束；普通运行时不得从favicon、CDN或Provider URL热取，也不得重绘、替换成相似mark、统一单色化或随主题反色。本轮维护者明确选择把26家准确指称性的品牌展示作为产品要求：已知书面许可约束继续诚实记录，但不作为本轮视觉交付的阻塞门，也不得伪称已获授权、合作或背书。这个presentation descriptor不保存credential、不探测健康、不决定routing/availability/active set，也不是第二Provider Registry。
+
+日常默认`auto-summary`在后台生成摘要并让同一Run继续，不等待人工批准，也不制造pending用户操作。Settings另有独立、默认关闭的“自动显示搜索过程”：开启后，`auto-summary`与`none`会在owning foreground Thread的Right Dock创建dedicated ephemeral Web Search观察Tab，实时展示完整结果、Provider、来源、进度、错误和恢复，但不出现“批准并继续”作为必要动作，也不改变workflow；terminal后页面可保留当前静态结果，活跃server/token/presentation handle立即清理，Timeline不留reopen。`summary-review`无论展示开关是否关闭都创建可操作审查Tab并保持tool call pending。后台Thread不切route、不抢Right Dock；review继续投影既有waiting-for-user activity/attention，observer只随前台显式展示。每个pending review与Timeline activity保持exact identity：再次点击聚焦原Tab，Tab已关闭且call仍pending时才重建；多个pending review互不覆盖。关闭Tab、Right Dock或Browser pane只隐藏，不取消搜索。单call terminal只清理该call资源，Run abort只中止该Run，Session shutdown才清理整个Extension instance；可恢复presentation失败允许retry，不可恢复Curator/Host失败必须typed-error settle并cleanup。
+
+结果处理使用三个互斥选择：推荐且canonical默认的`auto-summary`后台生成summary后继续且不等待人工审查；`summary-review`在搜索结果就绪后等待用户批准，再让Agent继续，直到批准、取消、timeout、fatal error或其他合法settlement；`none`直接把raw results返回Agent。Settings必须把`auto-summary`表达为无打扰默认，不能把`summary-review`误写成“暂停搜索”，也不能用一个“关闭审查”开关把`auto-summary`偷换成`none`或把“自动显示搜索过程”包装成workflow/批准开关。Gemini Web启用cookie路径时，Provider detail/技术诊断显示当前Chromium profile/account，作为不注册`/google-account`后的产品替代；诊断RPC失败必须保留重试与检查配置文件的恢复动作，不能无反馈。
+
+Web Search Tab采用OmniMind黑白细线、开放式文档流：完整query/result是首屏和视觉主体，单query/少结果默认展开首项，多query按清楚文档流分组；结果展开必须是可聚焦的真实控件，并同步本地化accessible name、expanded状态与内容关系，observer/review都不能只支持鼠标。来源、选择、重搜、补搜、query rewrite与Provider切换都留在结果上下文中，框架状态与技术详情不得抢过结果。`summary-review`的summary只作为右侧辅助检查器，打开时背景settlement action必须从视觉、Tab顺序与accessibility tree中inert/隐藏，并把焦点移入Inspector的可理解起点；返回结果阶段恢复背景action与本次触发控件，触发控件已失效时回退到可见结果操作，不能把焦点留在`body`或已隐藏元素。Provider切换沿作者语义同时请求“用该服务重搜当前结果”和“持久写入后续默认”；review必须在动作旁预告这两项后果和可能消耗额度，observer不显示交互chips或提示，也不新增确认框。两项结果必须分别说真话：只有canonical expected-revision mutation确实提交后才显示“已设为默认”；若重搜成功而保存冲突/损坏/权限失败，保留本次结果并明确显示“已用该服务重新搜索，但默认服务未保存”，恢复动作继续进入现有Settings config owner，不静默重试或推进expected revision；保存成功而重搜失败也必须准确区分。页面必须复用正式Curator endpoints、event replay、token/session校验、markdown sanitization、Provider descriptor与typed Browser/settlement seam；Browser Tab标题消费创建时locale snapshot，不由Browser硬编码英文。正常错误由Curator Server稳定typed code和页面双语catalog投影，原始诊断只进入允许的技术详情；视觉原型只作reference，不能复制mock state machine、维护第二Provider表或接管timeout。全局快捷键不得劫持button、link、input、textarea、select、contenteditable、modal或combobox内部键盘语义。
+
+Curator创建时使用当前OmniMind locale与resolved light/dark theme的短时快照，普通产品文案完整覆盖简中/英文；Provider名称、URL、query和原始结果保持来源事实。该控制台使用internal-only chrome，不显示`Open externally`、raw-link copy或raw token地址；来源链接打开为普通OmniMind Browser Tab，之后不限制普通Browser的显式外部打开。页面不从OS/browser默认推断产品语言或主题，不增加Curator自己的设置、route、history、logo表或状态store。
 
 `External connections / 外部连接`只管理Codex、Claude Code等独立本地应用进入OmniMind的现有任务连接，并准确显示paired、last used、revoked、expired与runtime availability；没有heartbeat就不伪造“当前已连接”。正常页面只表达“哪些外部应用可以连接OmniMind”，不要求用户理解底层协议。V1不提供第三方MCP server Settings、CRUD、credential/OAuth UI、连接测试、全局状态面板或跨Engine自动分发，也不把OmniMind内置能力或未来第三方MCP混进这个页面。
 
@@ -305,7 +323,7 @@ OmniMind Agent内部的product-bundled composition list只是创建Session时的
 
 ## 8. 权限与真实性
 
-Composer 的运行模式是当前任务唯一的自动化选择；用户不应在 Provider、Browser、Device、下载和每个 Tool 上重复支付确认成本。完整语义由 [`architecture/execution.md`](execution.md#runtime-mode一个任务只有一个自动化边界) 拥有，Workbench 只负责准确投影：
+Composer 的运行模式是当前任务唯一的自动化选择；用户不应在 Provider、Browser、Device、下载和每个 Tool 上重复支付确认成本。完整语义由 `[architecture/execution.md](execution.md#runtime-mode一个任务只有一个自动化边界)` 拥有，Workbench 只负责准确投影：
 
 - `完全访问 / Full access`：普通文件、命令、网络、Browser、Device、依赖、测试与任务内下载不出现 approval；
 - `自动批准 / Approve for me`：只有 exact Engine/Host 存在真实自动 reviewer 时显示；
@@ -326,11 +344,21 @@ Provider/Host capability 改变时，Composer mode menu 由 loaded capability tr
 
 ## 10. 视觉、性能、双语与可访问性
 
+### 产品表面准则
+
+- 界面按用户要完成的事组织，不按模块、owner、能力清单或实现拓扑组织。默认层只回答当前状态、下一动作和重要后果；完整能力通过渐进披露保留，不能用同时铺满证明“功能完整”。
+- 主状态使用可观察、可行动的短事实，如“可用、需要设置、暂时不可用、已完成”。测试时效、非永久性、内部不确定性与诊断免责声明只放在对应动作或技术详情附近，不能长期压在首屏制造压力。
+- 成功文案必须等待真实owner提交、settlement或持久化完成后再出现；并行结果分别说真话，不能用一项成功覆盖另一项失败。可识别失败说明发生了什么和下一步，raw error只进入技术详情。
+- 一个控件只表达一个用户意图。展示、执行、审查、批准与取消不得互相冒充；关闭或隐藏默认只改变展示，除非动作本身明确写着会停止或取消。
+- 列表服务于选择：当前与已配置项优先，其他项按稳定用户语义分组；拒绝无差别卡片墙、重复badge和每行同一种动作。品牌图标只负责身份，状态必须由文字、结构或非颜色标记表达。
+- 普通文案和无障碍名称使用同一用户概念；内部字段名、枚举、raw key、模块名和生命周期术语不得因`aria-label`、Tooltip、Toast或空态重新泄漏到正常产品表面。
+- 视觉依靠层级、排版、留白与连续反馈建立秩序；一个区域只保留一个主动作。没有真实信息增益时不增加卡片、渐变、装饰图标、常驻说明、动效或第二层导航。
+
 ### Device pane
 
 iOS Simulator 作为现有 right dock 的 `device` pane 呈现，不新增顶层导航、Workspace 对象或跨 Provider 状态。入口只在 Server 运行于受支持的 macOS/Xcode 环境时出现；pane 以设备选择器、模拟器屏幕、真实 hardware/action controls、setup/degraded/boot/stream 状态和 destructive confirmation 组成。后台、preview 或不可见 pane 不持有视频订阅；断流按有界退避重连，sequence gap 重新请求 keyframe，不能让视频 backpressure 阻塞 RPC。
 
-用户在 pane 内的点击、键盘、启动、关机、截图与录屏是显式 UI 操作；Agent mutation 的 approval 语义由 [`execution.md`](execution.md#本地系统能力) 唯一拥有。setup 状态允许直接展示命令、路径、Xcode 版本和原始 helper diagnostics，但所有 OmniMind-owned 标题、动作、进度、错误摘要、确认与无障碍标签必须进入同一 en/zh-CN catalog。capability degraded 是不遮挡屏幕的 notice：一个 private symbol 失效不能连带禁用仍可工作的 stream/input/capture。
+用户在 pane 内的点击、键盘、启动、关机、截图与录屏是显式 UI 操作；Agent mutation 的 approval 语义由 `[execution.md](execution.md#本地系统能力)` 唯一拥有。setup 状态允许直接展示命令、路径、Xcode 版本和原始 helper diagnostics，但所有 OmniMind-owned 标题、动作、进度、错误摘要、确认与无障碍标签必须进入同一 en/zh-CN catalog。capability degraded 是不遮挡屏幕的 notice：一个 private symbol 失效不能连带禁用仍可工作的 stream/input/capture。
 
 先保全 Synara 当前 shell、panel geometry、Composer、Timeline、list density、theme、focus、motion 与 stream/scroll，再做一次完整 OmniMind 品牌和整体视觉校准。普通用户路径不得出现 Synara、Pi-derived、Native Host、adapter、donor 或 source-alignment 术语。拒绝重复 headers、胶囊泛滥、过度 cards、假 Activity 与模板化 AI 风。
 

@@ -293,6 +293,18 @@ import type {
   OmniMindAgentPromptSnapshot,
 } from "./omnimindAgentPrompts";
 import type {
+  OmniMindWebSearchGeminiDiagnosticInput,
+  OmniMindWebSearchGeminiDiagnosticResult,
+  OmniMindWebSearchMutationInput,
+  OmniMindWebSearchMutationResult,
+  OmniMindWebSearchOpenConfigInput,
+  OmniMindWebSearchProbeResult,
+  OmniMindWebSearchProviderTestInput,
+  OmniMindWebSearchReadResult,
+  OmniMindWebSearchRecheckInput,
+  OmniMindWebSearchRefreshInput,
+} from "./omnimindWebSearch";
+import type {
   StatsGetProfileStatsInput,
   StatsGetProfileStatsResult,
   StatsGetProfileTokenStatsInput,
@@ -372,6 +384,17 @@ export interface BrowserTabState {
   faviconUrl: string | null;
   lastCommittedUrl: string | null;
   lastError: string | null;
+  /**
+   * Credential-blind presentation metadata for a short-lived internal page.
+   * The backing URL and protocol state never cross into renderer state.
+   */
+  presentation?: {
+    kind: "engine-web-surface";
+    surfaceId: string;
+    ephemeral: true;
+    nonHistory: true;
+    internalOnly: true;
+  };
 }
 
 export interface ThreadBrowserState {
@@ -407,6 +430,19 @@ export interface BrowserNewTabInput {
   threadId: ThreadId;
   url?: string;
   activate?: boolean;
+}
+
+export interface EngineWebSurfacePresentationContext {
+  locale: "en" | "zh-CN";
+  theme: "light" | "dark";
+}
+
+export interface BrowserSetEngineWebSurfaceContextInput
+  extends EngineWebSurfacePresentationContext {}
+
+export interface BrowserReopenEngineWebSurfaceInput {
+  threadId: ThreadId;
+  surfaceId: string;
 }
 
 export interface BrowserPanelBounds {
@@ -535,6 +571,12 @@ interface BrowserControlMethods {
   newTab: (input: BrowserNewTabInput) => Promise<ThreadBrowserState>;
   closeTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
   selectTab: (input: BrowserTabInput) => Promise<ThreadBrowserState>;
+  setEngineWebSurfaceContext: (
+    input: BrowserSetEngineWebSurfaceContextInput,
+  ) => Promise<void>;
+  reopenEngineWebSurface: (
+    input: BrowserReopenEngineWebSurfaceInput,
+  ) => Promise<ThreadBrowserState>;
   openDevTools: (input: BrowserTabInput) => Promise<void>;
   onState: (listener: (state: ThreadBrowserState) => void) => () => void;
 }
@@ -926,6 +968,24 @@ export interface NativeApi {
       input?: OmniMindAgentPromptGetSnapshotInput,
     ) => Promise<OmniMindAgentPromptSnapshot>;
     mutate: (input: OmniMindAgentPromptMutationInput) => Promise<OmniMindAgentPromptMutationResult>;
+  };
+  omnimindWebSearch: {
+    open: () => Promise<OmniMindWebSearchReadResult>;
+    refresh: (input?: OmniMindWebSearchRefreshInput) => Promise<OmniMindWebSearchReadResult>;
+    mutate: (input: OmniMindWebSearchMutationInput) => Promise<OmniMindWebSearchMutationResult>;
+    testProvider: (
+      input: OmniMindWebSearchProviderTestInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindWebSearchProbeResult>;
+    recheck: (
+      input: OmniMindWebSearchRecheckInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindWebSearchProbeResult>;
+    openConfig: (input: OmniMindWebSearchOpenConfigInput) => Promise<void>;
+    diagnoseGemini: (
+      input: OmniMindWebSearchGeminiDiagnosticInput,
+      options?: { readonly signal?: AbortSignal },
+    ) => Promise<OmniMindWebSearchGeminiDiagnosticResult>;
   };
   orchestration: {
     getSnapshot: () => Promise<OrchestrationReadModel>;

@@ -31,6 +31,7 @@ import type {
   BrowserSetPanelBoundsInput,
   BrowserTabInput,
   BrowserTabState,
+  EngineWebSurfacePresentationContext,
   BrowserThreadInput,
   ThreadBrowserState,
   ThreadId,
@@ -77,6 +78,18 @@ type BrowserCopyLinkListener = (event: BrowserCopyLinkEvent) => void;
 type BrowserHumanControlListener = () => void;
 type BrowserAutomationWindowOpenListener = (event: BrowserAutomationWindowOpenEvent) => void;
 type BrowserAutomationDownloadListener = (event: BrowserAutomationDownloadEvent) => void;
+
+export interface EngineWebSurfacePresentationInput {
+  readonly threadId: ThreadId;
+  readonly surfaceId: string;
+  readonly url: string;
+  readonly title: string;
+  readonly expiresAt: number;
+}
+
+interface EngineWebSurfacePresentationRecord extends EngineWebSurfacePresentationInput {
+  tabId: string | null;
+}
 
 export type BrowserAutomationExpectedInput =
   | {
@@ -226,7 +239,10 @@ export interface DesktopBrowserManagerOptions {
   annotationPreloadPath?: string;
 }
 
-function createBrowserTab(url = ABOUT_BLANK_URL): BrowserTabState {
+function createBrowserTab(
+  url = ABOUT_BLANK_URL,
+  presentation?: BrowserTabState["presentation"],
+): BrowserTabState {
   return {
     id: Crypto.randomUUID(),
     url,
@@ -239,6 +255,7 @@ function createBrowserTab(url = ABOUT_BLANK_URL): BrowserTabState {
     faviconUrl: null,
     lastCommittedUrl: null,
     lastError: null,
+    ...(presentation === undefined ? {} : { presentation }),
   };
 }
 
@@ -256,7 +273,18 @@ function defaultThreadBrowserState(threadId: ThreadId): ThreadBrowserState {
 function cloneThreadState(state: ThreadBrowserState): ThreadBrowserState {
   return {
     ...state,
-    tabs: state.tabs.map((tab) => ({ ...tab })),
+    tabs: state.tabs.map((tab) =>
+      tab.presentation?.internalOnly
+        ? {
+            ...tab,
+            url: "omnimind://temporary-page",
+            title: tab.title,
+            faviconUrl: null,
+            lastCommittedUrl:
+              tab.lastCommittedUrl === null ? null : "omnimind://temporary-page",
+          }
+        : { ...tab },
+    ),
   };
 }
 
@@ -398,6 +426,11 @@ export class DesktopBrowserManager {
   private attachedRuntimeKey: string | null = null;
   private attachedBoundsSignature: string | null = null;
   private readonly states = new Map<ThreadId, ThreadBrowserState>();
+  private readonly engineWebSurfaces = new Map<string, EngineWebSurfacePresentationRecord>();
+  private engineWebSurfaceContext: EngineWebSurfacePresentationContext = {
+    locale: "en",
+    theme: "light",
+  };
   private readonly threadVersionById = new Map<ThreadId, number>();
   private readonly snapshotCacheByThreadId = new Map<
     ThreadId,
@@ -1152,6 +1185,7 @@ export class DesktopBrowserManager {
     this.listeners.clear();
     this.copyLinkListeners.clear();
     this.states.clear();
+    this.engineWebSurfaces.clear();
     this.threadVersionById.clear();
     this.snapshotCacheByThreadId.clear();
     this.lastEmittedVersionByThreadId.clear();
@@ -1200,9 +1234,18 @@ export class DesktopBrowserManager {
 
   /** Prepares an agent-owned tab whose native runtime can outlive the chat route. */
   prepareAutomationTab(input: BrowserAutomationPrepareTabInput): ThreadBrowserState {
-    const hadExistingTab = (this.states.get(input.threadId)?.tabs.length ?? 0) > 0;
+    const existingState = this.states.get(input.threadId);
+    const existingAutomationTabs =
+      existingState?.tabs.filter((tab) => !tab.presentation?.internalOnly) ?? [];
+    const hadExistingTab = existingAutomationTabs.length > 0;
     const state = this.ensureWorkspace(input.threadId, input.url);
-    let tab = input.reuse || !hadExistingTab ? this.getActiveTab(state) : null;
+    const activeTab = this.getActiveTab(state);
+    let tab =
+      input.reuse || !hadExistingTab
+        ? activeTab && !activeTab.presentation?.internalOnly
+          ? activeTab
+          : (state.tabs.findLast((candidate) => !candidate.presentation?.internalOnly) ?? null)
+        : null;
     if (!tab) {
       tab = createBrowserTab(normalizeUrlInput(input.url));
       state.tabs = [...state.tabs, tab];
@@ -1229,7 +1272,7 @@ export class DesktopBrowserManager {
   selectAutomationTab(input: BrowserTabInput): ThreadBrowserState {
     const state = this.states.get(input.threadId);
     const tab = state ? this.getTab(state, input.tabId) : null;
-    if (!state?.open || !tab) {
+    if (!state?.open || !tab || tab.presentation?.internalOnly) {
       throw new Error("The requested browser tab is not available in this thread.");
     }
 
@@ -1251,7 +1294,7 @@ export class DesktopBrowserManager {
   prepareAutomationNavigation(input: BrowserAutomationPrepareNavigationInput): ThreadBrowserState {
     const state = this.states.get(input.threadId);
     const tab = state ? this.getTab(state, input.tabId) : null;
-    if (!state?.open || !tab) {
+    if (!state?.open || !tab || tab.presentation?.internalOnly) {
       throw new Error("The requested browser tab is not available in this thread.");
     }
     this.claimAutomationTab(input.threadId, tab);
@@ -1275,7 +1318,7 @@ export class DesktopBrowserManager {
   getVisibleAutomationRuntime(input: BrowserTabInput): BrowserAutomationVisibleRuntime {
     const state = this.states.get(input.threadId);
     const tab = state ? this.getTab(state, input.tabId) : null;
-    if (!state?.open || !tab) {
+    if (!state?.open || !tab || tab.presentation?.internalOnly) {
       throw new Error("The requested browser tab is not available in this thread.");
     }
     if (state.activeTabId !== tab.id) {
@@ -1335,7 +1378,46 @@ export class DesktopBrowserManager {
   ): Promise<BrowserAutomationVisibleRuntime> {
     const state = this.states.get(input.threadId);
     const tab = state ? this.getTab(state, input.tabId) : null;
-    if (!state?.open || !tab) {
+    if (!state?.open || !tab || tab.presentation?.internalOnly) {
+      throw new Error("The requested browser tab is not available in this thread.");
+    }
+    return this.getAutomationRuntimeForTab(input, tab, options);
+  }
+
+  /** Loads one exact internal surface without exposing it to public Browser automation. */
+  async getEngineWebSurfaceRuntime(input: {
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+  }): Promise<BrowserAutomationVisibleRuntime> {
+    const surface = this.engineWebSurfaces.get(input.surfaceId);
+    const state = this.states.get(input.threadId);
+    const tab =
+      surface?.threadId === input.threadId && surface.tabId
+        ? state && this.getTab(state, surface.tabId)
+        : null;
+    if (
+      !state?.open ||
+      !surface ||
+      !tab ||
+      tab.presentation?.kind !== "engine-web-surface" ||
+      tab.presentation.surfaceId !== input.surfaceId
+    ) {
+      throw new Error("The temporary web surface is not available in this thread.");
+    }
+    return this.getAutomationRuntimeForTab(
+      { threadId: input.threadId, tabId: tab.id },
+      tab,
+      { restore: true },
+    );
+  }
+
+  private async getAutomationRuntimeForTab(
+    input: BrowserTabInput,
+    tab: BrowserTabState,
+    options: { readonly restore?: boolean },
+  ): Promise<BrowserAutomationVisibleRuntime> {
+    const state = this.states.get(input.threadId);
+    if (!state?.open) {
       throw new Error("The requested browser tab is not available in this thread.");
     }
     if (state.activeTabId !== tab.id) {
@@ -1377,7 +1459,7 @@ export class DesktopBrowserManager {
   closeAutomationTab(input: BrowserTabInput): ThreadBrowserState {
     const state = this.states.get(input.threadId);
     const tab = state ? this.getTab(state, input.tabId) : null;
-    if (!state?.open || !tab) {
+    if (!state?.open || !tab || tab.presentation?.internalOnly) {
       throw new Error("The requested browser tab is not available in this thread.");
     }
 
@@ -1484,6 +1566,10 @@ export class DesktopBrowserManager {
     const existingState = this.states.get(input.threadId);
     this.destroyThreadRuntimes(input.threadId);
     for (const tab of existingState?.tabs ?? []) {
+      if (tab.presentation?.kind === "engine-web-surface") {
+        const surface = this.engineWebSurfaces.get(tab.presentation.surfaceId);
+        if (surface) surface.tabId = null;
+      }
       this.annotations.clearProjection(input.threadId, tab.id);
       this.rendererOnlyRuntimeKeys.delete(buildRuntimeKey(input.threadId, tab.id));
       this.automationRuntimeKeys.delete(buildRuntimeKey(input.threadId, tab.id));
@@ -1523,6 +1609,91 @@ export class DesktopBrowserManager {
   }
 
   getState(input: BrowserThreadInput): ThreadBrowserState {
+    return this.snapshotThreadState(input.threadId);
+  }
+
+  setEngineWebSurfaceContext(context: EngineWebSurfacePresentationContext): void {
+    this.engineWebSurfaceContext = { ...context };
+  }
+
+  getEngineWebSurfaceContext(): EngineWebSurfacePresentationContext {
+    return { ...this.engineWebSurfaceContext };
+  }
+
+  /** Creates or focuses one dedicated, memory-only tab for an exact pending call. */
+  presentEngineWebSurface(input: EngineWebSurfacePresentationInput): ThreadBrowserState {
+    const existing = this.engineWebSurfaces.get(input.surfaceId);
+    if (existing && existing.threadId !== input.threadId) {
+      throw new Error("The temporary web surface belongs to another thread.");
+    }
+    if (input.expiresAt <= Date.now()) {
+      throw new Error("The temporary web surface has expired.");
+    }
+
+    const state = this.getOrCreateState(input.threadId);
+    const existingTab = existing?.tabId ? this.getTab(state, existing.tabId) : null;
+    const tab =
+      existingTab ??
+      createBrowserTab(input.url, {
+        kind: "engine-web-surface",
+        surfaceId: input.surfaceId,
+        ephemeral: true,
+        nonHistory: true,
+        internalOnly: true,
+      });
+    if (!existingTab) state.tabs = [...state.tabs, tab];
+    tab.url = input.url;
+    tab.title = input.title;
+    tab.lastCommittedUrl = null;
+    tab.lastError = null;
+    state.open = true;
+    state.activeTabId = tab.id;
+    this.engineWebSurfaces.set(input.surfaceId, { ...input, tabId: tab.id });
+    syncThreadLastError(state);
+    this.markThreadStateChanged(input.threadId);
+    this.emitState(input.threadId);
+    return this.snapshotThreadState(input.threadId, state);
+  }
+
+  reopenEngineWebSurface(input: {
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+  }): ThreadBrowserState {
+    const surface = this.engineWebSurfaces.get(input.surfaceId);
+    if (!surface || surface.threadId !== input.threadId || surface.expiresAt <= Date.now()) {
+      if (surface?.expiresAt !== undefined && surface.expiresAt <= Date.now()) {
+        this.engineWebSurfaces.delete(input.surfaceId);
+      }
+      throw new Error("This temporary web surface is no longer pending.");
+    }
+    return this.presentEngineWebSurface(surface);
+  }
+
+  settleEngineWebSurface(input: {
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+	readonly preserveTab?: boolean;
+  }): ThreadBrowserState {
+    const surface = this.engineWebSurfaces.get(input.surfaceId);
+    if (!surface || surface.threadId !== input.threadId) {
+      return this.snapshotThreadState(input.threadId);
+    }
+    this.engineWebSurfaces.delete(input.surfaceId);
+    const state = this.states.get(input.threadId);
+    const tab = state && surface.tabId ? this.getTab(state, surface.tabId) : null;
+	if (state && tab && input.preserveTab) {
+		this.markThreadStateChanged(input.threadId);
+		this.emitState(input.threadId);
+		return this.snapshotThreadState(input.threadId, state);
+	}
+    if (state && tab) {
+      this.destroyRuntime(input.threadId, tab.id);
+      state.tabs = state.tabs.filter((candidate) => candidate.id !== tab.id);
+      if (state.activeTabId === tab.id) state.activeTabId = state.tabs.at(-1)?.id ?? null;
+      syncThreadLastError(state);
+      this.markThreadStateChanged(input.threadId);
+      this.emitState(input.threadId);
+    }
     return this.snapshotThreadState(input.threadId);
   }
 
@@ -1820,6 +1991,7 @@ export class DesktopBrowserManager {
   closeTab(input: BrowserTabInput): ThreadBrowserState {
     this.markHumanControl(input.threadId);
     const state = this.ensureWorkspace(input.threadId);
+    const closingTab = state.tabs.find((tab) => tab.id === input.tabId);
     const nextTabs = state.tabs.filter((tab) => tab.id !== input.tabId);
     if (nextTabs.length === state.tabs.length) {
       return this.snapshotThreadState(input.threadId, state);
@@ -1830,6 +2002,10 @@ export class DesktopBrowserManager {
     this.annotations.clearProjection(input.threadId, input.tabId);
     this.rendererOnlyRuntimeKeys.delete(buildRuntimeKey(input.threadId, input.tabId));
     this.automationRuntimeKeys.delete(buildRuntimeKey(input.threadId, input.tabId));
+    if (closingTab?.presentation?.kind === "engine-web-surface") {
+      const surface = this.engineWebSurfaces.get(closingTab.presentation.surfaceId);
+      if (surface) surface.tabId = null;
+    }
     state.tabs = nextTabs;
 
     if (nextTabs.length === 0) {
@@ -3195,6 +3371,7 @@ export class DesktopBrowserManager {
   ): string | null {
     const state = this.states.get(threadId);
     const tab = state ? this.getTab(state, tabId) : null;
+    if (tab?.presentation?.internalOnly) return null;
     const liveUrl =
       runtime && !runtime.webContents.isDestroyed() ? runtime.webContents.getURL() : null;
     return resolveCopyableBrowserTabUrl(tab, liveUrl);

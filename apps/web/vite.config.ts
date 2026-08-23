@@ -12,7 +12,7 @@ import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import babel from "@rolldown/plugin-babel";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import type { Plugin } from "vite";
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import pkg from "./package.json" with { type: "json" };
 
 const port = Number(process.env.PORT ?? 5733);
@@ -26,6 +26,8 @@ const buildSourcemap =
       : false;
 
 const CENTRAL_ICON_DIR = "central-icons-reversed";
+const WEB_ACCESS_PROVIDER_ICON_DIR = "web-access/provider-icons";
+const WEB_ACCESS_PROVIDER_ICON_EXTENSIONS = new Set([".svg", ".png", ".ico"]);
 const CENTRAL_ICON_NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 
@@ -98,6 +100,35 @@ function centralIconPrunePlugin(): Plugin {
       );
       console.info(
         `[central-icons] kept ${requiredIcons.size}/${availableIcons.size} referenced SVGs, pruned ${removedCount}.`,
+      );
+    },
+  };
+}
+
+function webAccessProviderIconPlugin(): Plugin {
+  let resolvedOutDir = "dist";
+  return {
+    name: "omnimind-web-access-provider-icons",
+    apply: "build",
+    configResolved(config) {
+      resolvedOutDir = path.resolve(config.root, config.build.outDir);
+    },
+    async closeBundle() {
+      const sourceDir = path.resolve(
+        import.meta.dirname,
+        "../../packages/om-web-access/assets/provider-icons",
+      );
+      const targetDir = path.join(resolvedOutDir, WEB_ACCESS_PROVIDER_ICON_DIR);
+      await fs.mkdir(targetDir, { recursive: true });
+      const assetNames = (await fs.readdir(sourceDir)).filter((name) =>
+        WEB_ACCESS_PROVIDER_ICON_EXTENSIONS.has(path.extname(name).toLowerCase()),
+      );
+      await Promise.all(
+        assetNames.map((name) => fs.copyFile(path.join(sourceDir, name), path.join(targetDir, name))),
+      );
+      await fs.copyFile(
+        path.resolve(import.meta.dirname, "../../LICENSES/lobe-icons-MIT.txt"),
+        path.join(targetDir, "LOBEHUB-LICENSE.txt"),
       );
     },
   };
@@ -189,6 +220,9 @@ export default defineConfig({
     // a backing file is configured. Unit tests provide their own in-memory
     // stores, so keep the runtime global disabled in every Vitest worker.
     execArgv: ["--no-experimental-webstorage"],
+    // Direct Bun/Playwright journeys own their own runner and lifecycle. Keep
+    // them out of the Vitest unit-test discovery surface.
+    exclude: [...configDefaults.exclude, "e2e/**"],
   },
   plugins: [
     tanstackRouter({
@@ -206,6 +240,7 @@ export default defineConfig({
     }),
     tailwindcss(),
     centralIconPrunePlugin(),
+    webAccessProviderIconPlugin(),
     precompressPlugin(),
   ],
   optimizeDeps: {

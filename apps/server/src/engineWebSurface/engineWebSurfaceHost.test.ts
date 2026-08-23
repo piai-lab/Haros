@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   extractPiCuratorWebSurfaceUrl,
+  extractTypedEngineWebSurface,
   isEngineWebSurfaceUrl,
   registerEngineWebSurfaceIntent,
   sanitizeEngineWebSurfacePayload,
@@ -32,6 +33,35 @@ describe("Engine web-surface host", () => {
     };
     expect(extractPiCuratorWebSurfaceUrl("web_search", result)).toBe(TEST_CURATOR_URL);
     expect(extractPiCuratorWebSurfaceUrl("bash", result)).toBeUndefined();
+  });
+
+  it("prefers the typed token-free surface contract for the bundled extension", () => {
+    const result = {
+      content: [{ type: "text", text: "Source review is waiting." }],
+      details: {
+        phase: "curating",
+        engineWebSurface: { surfaceId: "surface-opaque-123", status: "pending" },
+      },
+    };
+    expect(extractTypedEngineWebSurface("web_search", result)).toEqual({
+      surfaceId: "surface-opaque-123",
+      status: "pending",
+    });
+    expect(extractTypedEngineWebSurface("bash", result)).toBeUndefined();
+    expect(extractPiCuratorWebSurfaceUrl("web_search", result)).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain("session=");
+  });
+
+  it("accepts nonblocking observer surfaces without changing them into pending review", () => {
+    const result = {
+      details: {
+        engineWebSurface: { surfaceId: "surface-observer-123", status: "observing" },
+      },
+    };
+    expect(extractTypedEngineWebSurface("web_search", result)).toEqual({
+      surfaceId: "surface-observer-123",
+      status: "observing",
+    });
   });
 
   it("removes the bearer URL from structured and human-readable runtime payloads", () => {

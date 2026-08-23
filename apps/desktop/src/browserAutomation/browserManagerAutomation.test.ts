@@ -78,6 +78,147 @@ class FakeWebContents extends EventEmitter {
 }
 
 describe("DesktopBrowserManager automation runtime boundary", () => {
+  it("keeps internal Engine Web surfaces memory-only and outside public Browser automation", async () => {
+    const manager = new DesktopBrowserManager();
+    const ordinary = manager.open({ threadId: THREAD_ID });
+    const ordinaryTabId = ordinary.activeTabId!;
+    const tokenUrl = "http://127.0.0.1:43123/?session=secret-token";
+    const expiresAt = Date.now() + 60_000;
+
+    const first = manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-a",
+      url: tokenUrl,
+      title: "OmniMind 网络访问",
+      expiresAt,
+    });
+    const firstTabId = first.activeTabId!;
+    expect(firstTabId).not.toBe(ordinaryTabId);
+    expect(JSON.stringify(first)).not.toContain("secret-token");
+    expect(first.tabs.find((tab) => tab.id === firstTabId)?.title).toBe("OmniMind 网络访问");
+    expect(first.tabs.find((tab) => tab.id === firstTabId)?.presentation).toMatchObject({
+      kind: "engine-web-surface",
+      surfaceId: "surface-a",
+      ephemeral: true,
+      nonHistory: true,
+      internalOnly: true,
+    });
+
+    const second = manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-b",
+      url: "http://127.0.0.1:43124/?session=another-secret",
+      title: "OmniMind Web Access",
+      expiresAt,
+    });
+    const secondTabId = second.activeTabId!;
+    expect(secondTabId).not.toBe(firstTabId);
+
+    expect(() =>
+      manager.selectAutomationTab({ threadId: THREAD_ID, tabId: secondTabId }),
+    ).toThrow(/not available/i);
+    expect(() =>
+      manager.prepareAutomationNavigation({
+        threadId: THREAD_ID,
+        tabId: secondTabId,
+        url: "https://example.test/stolen",
+      }),
+    ).toThrow(/not available/i);
+    await expect(
+      manager.getAutomationRuntime({ threadId: THREAD_ID, tabId: secondTabId }),
+    ).rejects.toThrow(/not available/i);
+
+    const prepared = manager.prepareAutomationTab({ threadId: THREAD_ID, reuse: true });
+    expect(prepared.activeTabId).toBe(ordinaryTabId);
+
+    manager.closeTab({ threadId: THREAD_ID, tabId: firstTabId });
+    const reopened = manager.reopenEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-a",
+    });
+    expect(reopened.tabs.find((tab) => tab.presentation?.surfaceId === "surface-a")?.title).toBe(
+      "OmniMind 网络访问",
+    );
+    expect(reopened.activeTabId).not.toBe(firstTabId);
+    expect(reopened.tabs.some((tab) => tab.presentation?.surfaceId === "surface-b")).toBe(true);
+
+    const settled = manager.settleEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-a",
+    });
+    expect(settled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-a")).toBe(false);
+    expect(settled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-b")).toBe(true);
+
+    manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-observer",
+      url: "http://127.0.0.1:43125/?session=observer-private-token",
+      title: "OmniMind Web Access",
+      expiresAt: Date.now() + 60_000,
+    });
+    const observerSettled = manager.settleEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-observer",
+      preserveTab: true,
+    });
+    expect(observerSettled.tabs.some((tab) => tab.presentation?.surfaceId === "surface-observer")).toBe(true);
+    expect(observerSettled.tabs.find((tab) => tab.presentation?.surfaceId === "surface-observer")?.url).toBe("omnimind://temporary-page");
+    expect(() => manager.reopenEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-observer",
+    })).toThrow(/no longer pending/i);
+
+    manager.close({ threadId: THREAD_ID });
+    const afterPaneClose = manager.reopenEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-b",
+    });
+    expect(afterPaneClose.tabs).toHaveLength(1);
+    expect(afterPaneClose.tabs[0]?.presentation?.surfaceId).toBe("surface-b");
+  });
+
+  it("opens a Curator source link as an ordinary OmniMind Browser tab", async () => {
+    const manager = new DesktopBrowserManager();
+    const presented = manager.presentEngineWebSurface({
+      threadId: THREAD_ID,
+      surfaceId: "surface-source-link",
+      url: "http://127.0.0.1:43123/?session=private-token",
+      title: "OmniMind Web Access",
+      expiresAt: Date.now() + 60_000,
+    });
+    const internalTabId = presented.activeTabId!;
+    const webContents = new FakeWebContents();
+    const runtime = {
+      key: `${THREAD_ID}:${internalTabId}`,
+      threadId: THREAD_ID,
+      tabId: internalTabId,
+      webContents: webContents as unknown as WebContents,
+      view: null,
+      ownsWebContents: false as const,
+      listenerDisposers: [] as Array<() => void>,
+    };
+    const access = manager as unknown as {
+      runtimes: Map<string, typeof runtime>;
+      configureRuntimeWebContents(value: typeof runtime): void;
+    };
+    access.runtimes.set(runtime.key, runtime);
+    access.configureRuntimeWebContents(runtime);
+
+    expect(webContents.windowOpenHandler?.({
+      url: "https://source.example/article",
+      frameName: "",
+      features: "",
+      disposition: "foreground-tab",
+    })).toEqual({ action: "deny" });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+
+    const state = manager.getState({ threadId: THREAD_ID });
+    const sourceTab = state.tabs.find((tab) => tab.url === "https://source.example/article");
+    expect(sourceTab).toBeDefined();
+    expect(sourceTab?.presentation).toBeUndefined();
+    expect(state.tabs.find((tab) => tab.id === internalTabId)?.presentation?.internalOnly).toBe(true);
+  });
+
   it("refuses a detached native fallback and returns an adopted renderer webview", () => {
     const manager = new DesktopBrowserManager();
     const state = manager.open({ threadId: THREAD_ID });

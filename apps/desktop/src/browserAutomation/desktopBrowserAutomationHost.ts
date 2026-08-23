@@ -27,6 +27,7 @@ import {
   type BrowserTypeInput,
   type BrowserUploadInput,
   type BrowserWaitInput,
+  type EngineWebSurfacePresentationContext,
   type ThreadBrowserState,
   type ThreadId,
 } from "@omnimind/contracts";
@@ -40,6 +41,7 @@ import type {
   BrowserAutomationWindowOpenEvent,
   BrowserAutomationVisibleRuntime,
   DesktopBrowserManager,
+  EngineWebSurfacePresentationInput,
 } from "../browserManager";
 import { abortReason, observePage, sendCdpCommand, throwIfAborted } from "./cdpRuntime";
 import { BrowserAutomationHostError, browserHostError } from "./hostErrors";
@@ -318,6 +320,41 @@ export class DesktopBrowserAutomationHost {
     options: DesktopBrowserAutomationHostOptions = {},
   ) {
     this.requestOpenPanel = options.requestOpenPanel;
+  }
+
+  getEngineWebSurfaceContext(): EngineWebSurfacePresentationContext {
+    return this.browserManager.getEngineWebSurfaceContext();
+  }
+
+  async presentEngineWebSurface(
+    input: EngineWebSurfacePresentationInput,
+  ): Promise<{ readonly surfaceId: string; readonly tabId: string }> {
+    const state = this.browserManager.presentEngineWebSurface(input);
+    const tabId = state.activeTabId;
+    if (!tabId) throw new Error("The temporary web surface did not create a tab.");
+    await this.browserManager.getEngineWebSurfaceRuntime({
+      threadId: input.threadId,
+      surfaceId: input.surfaceId,
+    });
+    this.requestPanelReveal(input.threadId);
+    return { surfaceId: input.surfaceId, tabId };
+  }
+
+  reopenEngineWebSurface(input: {
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+  }): ThreadBrowserState {
+    const state = this.browserManager.reopenEngineWebSurface(input);
+    this.requestPanelReveal(input.threadId);
+    return state;
+  }
+
+  settleEngineWebSurface(input: {
+    readonly threadId: ThreadId;
+    readonly surfaceId: string;
+	readonly preserveTab?: boolean;
+  }): ThreadBrowserState {
+    return this.browserManager.settleEngineWebSurface(input);
   }
 
   async executeTool(request: BrowserAutomationToolRequest): Promise<unknown> {
@@ -748,7 +785,10 @@ export class DesktopBrowserAutomationHost {
   private resolveTabId(affinity: SessionAffinity, requested: unknown): string {
     const state = this.browserManager.getState({ threadId: affinity.threadId });
     const tabId = typeof requested === "string" ? requested : (affinity.tabId ?? state.activeTabId);
-    if (!tabId || !state.tabs.some((tab) => tab.id === tabId)) {
+    if (
+      !tabId ||
+      !state.tabs.some((tab) => tab.id === tabId && !tab.presentation?.internalOnly)
+    ) {
       browserHostError({
         code: "BrowserTabNotFound",
         retryable: false,
@@ -1225,7 +1265,7 @@ export class DesktopBrowserAutomationHost {
     if (
       !openedTabId ||
       openedTabId === targetTabId ||
-      !state.tabs.some((tab) => tab.id === openedTabId)
+      !state.tabs.some((tab) => tab.id === openedTabId && !tab.presentation?.internalOnly)
     ) {
       return reconciledResult;
     }
@@ -1250,18 +1290,23 @@ export class DesktopBrowserAutomationHost {
 
   private tabs(affinity: SessionAffinity): BrowserTabsOutput {
     const state = this.browserManager.getState({ threadId: affinity.threadId });
+    const tabs = state.tabs.filter((tab) => !tab.presentation?.internalOnly);
+    const activeTabId = tabs.some((tab) => tab.id === state.activeTabId)
+      ? state.activeTabId
+      : null;
+    const assignedTabId = tabs.some((tab) => tab.id === affinity.tabId) ? affinity.tabId : null;
     return {
-      tabs: state.tabs.slice(0, 24).map((tab) => ({
+      tabs: tabs.slice(0, 24).map((tab) => ({
         tabId: tab.id as BrowserTabId,
         title: tab.title,
         url: tab.lastCommittedUrl ?? tab.url,
-        active: state.activeTabId === tab.id,
+        active: activeTabId === tab.id,
         loading: tab.isLoading,
         routable: state.open,
         state: browserTabLifecycleState(tab),
       })),
-      activeTabId: state.activeTabId as BrowserTabId | null,
-      assignedTabId: affinity.tabId as BrowserTabId | null,
+      activeTabId: activeTabId as BrowserTabId | null,
+      assignedTabId: assignedTabId as BrowserTabId | null,
     };
   }
 
@@ -1277,7 +1322,14 @@ export class DesktopBrowserAutomationHost {
     const url = input.url === undefined ? undefined : validateWebUrl(input.url);
     const show = input.show ?? true;
     const before = this.browserManager.getState({ threadId: affinity.threadId });
-    const hiddenTabId = !show && (input.reuse ?? true) ? before.activeTabId : null;
+    const hiddenTabId =
+      !show &&
+      (input.reuse ?? true) &&
+      before.tabs.some(
+        (tab) => tab.id === before.activeTabId && !tab.presentation?.internalOnly,
+      )
+        ? before.activeTabId
+        : null;
     if (!show) {
       if (!hiddenTabId) {
         browserHostError({

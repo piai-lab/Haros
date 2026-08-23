@@ -29,6 +29,7 @@ import { verifyPackagedLegalClosure } from "./lib/packaged-legal-closure.ts";
 import { writeReleaseLegalMetadata } from "./lib/release-legal-metadata.ts";
 import {
   OMNIMIND_PI_RUNTIME_PACKAGE_PATH,
+  omitBundledServerWorkspaceDependencies,
   RELEASE_LOCKFILE_PATH,
   RELEASE_PATCHES_PATH,
   RELEASE_WORKSPACE_MANIFEST_PATHS,
@@ -924,7 +925,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
   const resolvedServerDependencies = yield* Effect.try({
     try: () =>
       resolveCatalogDependencies(
-        serverDependencies,
+        omitBundledServerWorkspaceDependencies(serverDependencies),
         rootPackageJson.workspaces.catalog,
         "apps/server",
       ),

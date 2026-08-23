@@ -163,6 +163,7 @@ describe("MessagesTimeline", () => {
                 status: "waiting-for-user",
                 provenance: "engine-native",
                 presentation: "omnimind-browser",
+                surfaceId: "surface-opaque-123",
               },
             },
           },
@@ -173,6 +174,43 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain('data-engine-web-surface-status="waiting-for-user"');
     expect(markup).toContain('aria-label="Reopen in OmniMind Browser"');
     expect(markup).toContain("Waiting for curation");
+    expect(markup).not.toContain("session=");
+  });
+
+  it("removes the reopen action as soon as the Engine web surface is terminal", async () => {
+    const { MessagesTimeline } = await import("./MessagesTimeline");
+    const markup = renderToStaticMarkup(
+      <MessagesTimeline
+        {...makeTimelineBaseProps()}
+        onOpenEngineWebSurface={() => {}}
+        timelineEntries={[
+          {
+            id: "entry-pi-curator-terminal",
+            kind: "work",
+            createdAt: "2026-08-10T12:00:01.000Z",
+            entry: {
+              id: "work-pi-curator-terminal",
+              createdAt: "2026-08-10T12:00:01.000Z",
+              label: "Web search",
+              tone: "tool",
+              itemType: "web_search",
+              toolTitle: "Web search",
+              toolName: "web_search",
+              activityKind: "tool.completed",
+              engineWebSurface: {
+                status: "completed",
+                provenance: "engine-native",
+                presentation: "omnimind-browser",
+                surfaceId: "surface-opaque-123",
+              },
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(markup).not.toContain("Reopen in OmniMind Browser");
+    expect(markup).not.toContain("Waiting for curation");
     expect(markup).not.toContain("session=");
   });
 

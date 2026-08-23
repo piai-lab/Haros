@@ -347,6 +347,13 @@ const createManager = () => {
     getAutomationRuntime: vi.fn((input: { threadId: ThreadId; tabId: string }) =>
       Promise.resolve(getVisibleAutomationRuntime(input)),
     ),
+    getEngineWebSurfaceRuntime: vi.fn(() =>
+      Promise.resolve(getVisibleAutomationRuntime({ threadId: THREAD_ID, tabId: TAB_ID })),
+    ),
+    getEngineWebSurfaceContext: vi.fn(() => ({ locale: "en" as const, theme: "light" as const })),
+    presentEngineWebSurface: vi.fn(() => state),
+    reopenEngineWebSurface: vi.fn(() => state),
+    settleEngineWebSurface: vi.fn(() => state),
     closeAutomationTab: vi.fn(() => ({ ...state, activeTabId: null, tabs: [] })),
   };
   return { manager: manager as unknown as DesktopBrowserManager, raw: manager, webContents };
@@ -404,6 +411,79 @@ describe("DesktopBrowserAutomationHost", () => {
         }),
       ).resolves.toMatchObject({ activeTabId: TAB_ID });
     }
+  });
+
+  it("does not expose or route internal Engine Web surfaces through public Browser tools", async () => {
+    const { manager, raw } = createManager();
+    const internalTabId = "1f2c3d4e-5a6b-4789-8123-abcdefabcdef";
+    raw.getState.mockReturnValue({
+      threadId: THREAD_ID,
+      version: 2,
+      open: true,
+      activeTabId: internalTabId,
+      tabs: [
+        {
+          id: TAB_ID,
+          url: "https://example.test/",
+          title: "Example",
+          status: "live" as const,
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+          faviconUrl: null,
+          lastCommittedUrl: "https://example.test/",
+          lastError: null,
+        },
+        {
+          id: internalTabId,
+          url: "omnimind://temporary-page",
+          title: "OmniMind Web Access",
+          status: "live" as const,
+          isLoading: false,
+          canGoBack: false,
+          canGoForward: false,
+          faviconUrl: null,
+          lastCommittedUrl: null,
+          lastError: null,
+          presentation: {
+            kind: "engine-web-surface" as const,
+            surfaceId: "surface-private",
+            ephemeral: true as const,
+            nonHistory: true as const,
+            internalOnly: true as const,
+          },
+        },
+      ],
+      lastError: null,
+    } as never);
+    const host = new DesktopBrowserAutomationHost(manager);
+
+    await expect(
+      host.executeTool({
+        sessionId: "internal-filter",
+        provider: "codex",
+        threadId: THREAD_ID,
+        name: "browser_tabs",
+        arguments: {},
+      }),
+    ).resolves.toMatchObject({
+      activeTabId: null,
+      assignedTabId: null,
+      tabs: [{ tabId: TAB_ID }],
+    });
+    await expect(
+      host.executeTool({
+        sessionId: "internal-filter",
+        provider: "codex",
+        threadId: THREAD_ID,
+        name: "browser_snapshot",
+        arguments: { tabId: internalTabId },
+      }),
+    ).rejects.toMatchObject({ browserError: { code: "BrowserTabNotFound" } });
+    expect(raw.selectAutomationTab).not.toHaveBeenCalledWith({
+      threadId: THREAD_ID,
+      tabId: internalTabId,
+    });
   });
 
   it("resolves annotation navigation locally and rejects stale annotation ids", async () => {

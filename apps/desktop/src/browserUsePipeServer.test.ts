@@ -61,7 +61,12 @@ async function withPipeServer(
   options: {
     readonly maxInFlightRequests?: number;
     readonly maxQueuedOutputBytes?: number;
-    readonly automationHost?: { executeTool: (request: unknown) => Promise<unknown> };
+    readonly automationHost?: {
+      executeTool: (request: unknown) => Promise<unknown>;
+      getEngineWebSurfaceContext?: () => unknown;
+      presentEngineWebSurface?: (request: unknown) => Promise<unknown>;
+      settleEngineWebSurface?: (request: unknown) => unknown;
+    };
   },
   run: (socket: Socket) => Promise<void>,
 ): Promise<void> {
@@ -259,6 +264,88 @@ describe("canonical browser host RPC", () => {
         workspaceRoot: "/workspace/project-one",
         signal: expect.any(AbortSignal),
       });
+    });
+  });
+
+  it("authenticates and thread-scopes the private Engine Web surface lifecycle", async () => {
+    const presentEngineWebSurface = vi.fn(async () => ({
+      surfaceId: "surface-opaque-123",
+      tabId: "tab-internal",
+    }));
+    const settleEngineWebSurface = vi.fn(() => ({ settled: true }));
+    await withPipeServer({
+      automationHost: {
+        executeTool: async () => ({}),
+        getEngineWebSurfaceContext: () => ({ locale: "zh-CN", theme: "dark" }),
+        presentEngineWebSurface,
+        settleEngineWebSurface,
+      },
+    }, async (socket) => {
+      await request(socket, {
+        jsonrpc: "2.0",
+        id: 1,
+        method: "getInfo",
+        params: { session_id: "surface-session", capability: TEST_CAPABILITY },
+      });
+      await expect(request(socket, {
+        jsonrpc: "2.0",
+        id: 2,
+        method: "getEngineWebSurfaceContext",
+        params: { session_id: "surface-session" },
+      })).resolves.toMatchObject({ result: { locale: "zh-CN", theme: "dark" } });
+      await expect(request(socket, {
+        jsonrpc: "2.0",
+        id: 3,
+        method: "presentEngineWebSurface",
+        params: {
+          session_id: "surface-session",
+          thread_id: "surface-thread",
+          surface_id: "surface-opaque-123",
+          url: "http://127.0.0.1:43123/?session=private-token",
+          title: "OmniMind 网络搜索",
+          expires_at: Date.now() + 60_000,
+        },
+      })).resolves.toMatchObject({ result: { tabId: "tab-internal" } });
+      await expect(request(socket, {
+        jsonrpc: "2.0",
+        id: 4,
+        method: "settleEngineWebSurface",
+        params: {
+          session_id: "surface-session",
+          thread_id: "surface-thread",
+          surface_id: "surface-opaque-123",
+          preserve_tab: true,
+        },
+      })).resolves.toMatchObject({ result: { settled: true } });
+      await expect(request(socket, {
+        jsonrpc: "2.0",
+        id: 5,
+        method: "presentEngineWebSurface",
+        params: {
+          session_id: "surface-session",
+          thread_id: "other-thread",
+          surface_id: "surface-other-123",
+          url: "http://127.0.0.1:43124/?session=other-private-token",
+          title: "OmniMind 网络搜索",
+          expires_at: Date.now() + 60_000,
+        },
+      })).resolves.toMatchObject({
+        error: { data: { error: { code: "BrowserTabScopeViolation" } } },
+      });
+    });
+
+    expect(presentEngineWebSurface).toHaveBeenCalledOnce();
+    expect(presentEngineWebSurface).toHaveBeenCalledWith({
+      threadId: "surface-thread",
+      surfaceId: "surface-opaque-123",
+      url: "http://127.0.0.1:43123/?session=private-token",
+      title: "OmniMind 网络搜索",
+      expiresAt: expect.any(Number),
+    });
+    expect(settleEngineWebSurface).toHaveBeenCalledWith({
+      threadId: "surface-thread",
+      surfaceId: "surface-opaque-123",
+      preserveTab: true,
     });
   });
 

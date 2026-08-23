@@ -79,6 +79,8 @@ import {
 import { PiAdapter, type PiAdapterShape } from "../Services/PiAdapter.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { buildAgentGatewayPiToolDefinitions } from "../agentGatewayPiProjection.ts";
+import { inspectOmniMindWebAccessRegistration } from "@omnimind/om-web-access";
+import type { CuratorPresenter } from "@omnimind/om-web-access/curator-presentation";
 import { type AgentGatewayHostExtensionHandle } from "../agentGatewayHostExtension.ts";
 import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { AUTOMATION_RUN_GATEWAY_TOOL_NAMES } from "../../automation/runEnvelope.ts";
@@ -86,7 +88,10 @@ import {
   inspectOmniMindTaskListExtensionRegistration,
   OMNIMIND_TASK_LIST_TOOL_NAME,
 } from "../omnimindTaskListExtension.ts";
-import { buildOmniMindSessionExtensions } from "../omnimindSessionExtensions.ts";
+import {
+  buildOmniMindSessionExtensions,
+  type OmniMindSessionExtensionComposition,
+} from "../omnimindSessionExtensions.ts";
 import {
   PROVIDER_ADAPTER_RUNTIME_EVENT_BUFFER_CAPACITY,
   type ProviderAdapterShape,
@@ -112,9 +117,11 @@ import {
   teardownProviderProcessTree,
 } from "../supervisedProcessTeardown.ts";
 import { BrowserAutomationHost } from "../../browserAutomation/Services/BrowserAutomationHost.ts";
+import { BrowserHostRpcError } from "../../browserAutomation/browserHostRpcClient.ts";
 import {
   engineWebSurfacePresentationMetadata,
   extractPiCuratorWebSurfaceUrl,
+  extractTypedEngineWebSurface,
   registerEngineWebSurfaceIntent,
   sanitizeEngineWebSurfacePayload,
 } from "../../engineWebSurface/engineWebSurfaceHost.ts";
@@ -538,8 +545,10 @@ interface PiTrackedToolCall {
   readonly itemId: RuntimeItemId;
   readonly itemType: "command_execution" | "file_change" | "dynamic_tool_call" | "web_search";
   engineWebSurface?: {
-    readonly url: string;
-    readonly unregister: () => void;
+    readonly url?: string;
+    readonly surfaceId?: string;
+    readonly unregister?: () => void;
+	readonly status?: "pending" | "observing";
   };
 }
 
@@ -1147,6 +1156,7 @@ function toolLifecycleData(input: {
   partialResult?: unknown;
   isError?: boolean;
   engineWebSurfaceStatus?: "waiting-for-user" | "unavailable" | "completed";
+  engineWebSurfaceId?: string;
 }): Record<string, unknown> {
   const { toolCallId, toolName, args } = input;
   const rawOutput = toolRawOutput(input.result ?? input.partialResult);
@@ -1173,7 +1183,10 @@ function toolLifecycleData(input: {
     ...(input.isError !== undefined ? { isError: input.isError } : {}),
     ...(input.engineWebSurfaceStatus
       ? {
-          engineWebSurface: engineWebSurfacePresentationMetadata(input.engineWebSurfaceStatus),
+          engineWebSurface: engineWebSurfacePresentationMetadata(
+            input.engineWebSurfaceStatus,
+            input.engineWebSurfaceId,
+          ),
         }
       : {}),
   };
@@ -1618,7 +1631,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       url: string,
     ) => {
       if (tracked.engineWebSurface?.url === url) return;
-      tracked.engineWebSurface?.unregister();
+      tracked.engineWebSurface?.unregister?.();
       const unregister = registerEngineWebSurfaceIntent({
         url,
         identity: {
@@ -1992,7 +2005,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         context.pendingUserInputs.clear();
         for (const tracked of context.activeToolItems.values()) {
-          tracked.engineWebSurface?.unregister();
+          tracked.engineWebSurface?.unregister?.();
         }
         context.activeToolItems.clear();
         context.stopped = true;
@@ -2149,7 +2162,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       context.activeAssistantItemId = undefined;
       context.activeReasoningItemId = undefined;
       for (const tracked of context.activeToolItems.values()) {
-        tracked.engineWebSurface?.unregister();
+        tracked.engineWebSurface?.unregister?.();
       }
       context.activeToolItems.clear();
     };
@@ -2403,7 +2416,20 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           if (discoveredSurfaceUrl) {
             registerPiCuratorWebSurface(context, tracked, discoveredSurfaceUrl);
           }
+          const typedSurface = extractTypedEngineWebSurface(
+            event.toolName,
+            event.partialResult,
+          );
+          if (typedSurface) {
+            tracked.engineWebSurface = {
+              ...tracked.engineWebSurface,
+              surfaceId: typedSurface.surfaceId,
+              status: typedSurface.status,
+            };
+          }
+          const engineSurfaceId = typedSurface?.surfaceId ?? tracked.engineWebSurface?.surfaceId;
           const surfaceUrl = tracked.engineWebSurface?.url;
+          const engineSurfacePending = surfaceUrl !== undefined || tracked.engineWebSurface?.status === "pending";
           const safePartialResult = sanitizeEngineWebSurfacePayload(
             event.partialResult,
             surfaceUrl,
@@ -2434,6 +2460,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 args: tracked.args,
                 partialResult: safePartialResult,
                 ...(surfaceUrl ? { engineWebSurfaceStatus: "waiting-for-user" } : {}),
+                ...(engineSurfaceId && engineSurfacePending
+                  ? {
+                      engineWebSurfaceStatus: "waiting-for-user",
+                      engineWebSurfaceId: engineSurfaceId,
+                    }
+                  : {}),
               }),
             },
             raw: {
@@ -2458,7 +2490,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           const safeResult = sanitizeEngineWebSurfacePayload(event.result, surfaceUrl);
           const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
           context.activeToolItems.delete(event.toolCallId);
-          tracked.engineWebSurface?.unregister();
+          tracked.engineWebSurface?.unregister?.();
           const detail = piToolTimelineDetail(safeResult);
           recordItem(context, {
             type: "tool_call",
@@ -2486,6 +2518,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 result: safeResult,
                 isError: event.isError,
                 ...(surfaceUrl ? { engineWebSurfaceStatus: "completed" } : {}),
+                ...(tracked.engineWebSurface?.surfaceId && tracked.engineWebSurface.status === "pending"
+                  ? {
+                      engineWebSurfaceStatus: "completed",
+                      engineWebSurfaceId: tracked.engineWebSurface.surfaceId,
+                    }
+                  : {}),
               }),
             },
             raw: {
@@ -2663,6 +2701,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     };
 
     const createSdkRuntime = async (input: {
+      threadId: ThreadId;
       sdk: PiCodingAgentModule;
       cwd: string;
       agentDir: string;
@@ -2685,20 +2724,73 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       projectContextRoot?: string;
     }) => {
       const modelRuntime = await family.createModelRuntime(input.agentDir);
+      const curatorPresenter: CuratorPresenter | undefined =
+        provider === "omnimind" &&
+        browserAutomationHost?.available &&
+        browserAutomationHost.getEngineWebSurfaceContext &&
+        browserAutomationHost.presentEngineWebSurface &&
+        browserAutomationHost.settleEngineWebSurface
+          ? {
+              snapshot: () =>
+                Effect.runPromise(
+                  browserAutomationHost.getEngineWebSurfaceContext!(
+                    `engine-web-surface:${provider}:${input.threadId}`,
+                  ),
+                ),
+              present: async (request) => {
+                try {
+                  const result = await Effect.runPromise(
+                    browserAutomationHost.presentEngineWebSurface!({
+                      sessionKey: `engine-web-surface:${provider}:${input.threadId}`,
+                      threadId: input.threadId,
+                      surfaceId: request.surfaceId,
+                      url: request.url,
+                      title: request.title,
+                      expiresAt: request.expiresAt,
+                    }),
+                  );
+                  return { kind: "presented", tabId: result.tabId };
+                } catch (error) {
+                  const recoverable =
+                    error instanceof BrowserHostRpcError &&
+                    ["unavailable", "timeout", "transport"].includes(error.kind);
+                  return {
+                    kind: recoverable ? "recoverable-error" : "fatal-error",
+                    message: error instanceof Error ? error.message : String(error),
+                  };
+                }
+              },
+              settle: async ({ surfaceId, preserveTab }) => {
+                await Effect.runPromise(
+                  browserAutomationHost
+                    .settleEngineWebSurface!({
+                      sessionKey: `engine-web-surface:${provider}:${input.threadId}`,
+                      threadId: input.threadId,
+                      surfaceId,
+                      ...(preserveTab === undefined ? {} : { preserveTab }),
+                    })
+                    .pipe(Effect.ignore),
+                );
+              },
+            }
+          : undefined;
       let resolvedGatewayControlAvailable =
         provider !== "omnimind" && (input.gatewayTools?.length ?? 0) > 0;
       let resolvedHostProjection: AgentGatewayHostExtensionHandle | undefined;
       const hostProjectionDiagnostics: string[] = [];
+      const webAccessDiagnostics: string[] = [];
       const createRuntime: CreateAgentSessionRuntimeFactory = async ({
         cwd,
         agentDir,
         sessionManager,
         sessionStartEvent,
       }) => {
-        const composition =
+        const composition: Pick<OmniMindSessionExtensionComposition, "extensions" | "host"> =
           provider === "omnimind"
             ? buildOmniMindSessionExtensions({
+                agentDir,
                 defineTool: (tool) => input.sdk.defineTool(tool),
+                ...(curatorPresenter === undefined ? {} : { curatorPresenter }),
                 ...(input.workSurface === undefined ? {} : { workSurface: input.workSurface }),
                 ...(input.gatewayConnection === undefined
                   ? {}
@@ -2781,6 +2873,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           resolvedGatewayControlAvailable = inspection.available;
           hostProjectionDiagnostics.push(...inspection.diagnostics);
         }
+        if (provider === "omnimind") {
+          const inspection = inspectOmniMindWebAccessRegistration(
+            createdSession.session.getAllTools(),
+          );
+          webAccessDiagnostics.push(...inspection.diagnostics);
+        }
         return {
           ...createdSession,
           services,
@@ -2797,6 +2895,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         modelRegistry: modelRegistryFacade(runtime.services.modelRuntime, input.sdk),
         gatewayControlAvailable: resolvedGatewayControlAvailable,
         hostProjectionDiagnostics,
+        webAccessDiagnostics,
         ...(resolvedHostProjection === undefined ? {} : { hostProjection: resolvedHostProjection }),
       };
     };
@@ -2976,12 +3075,14 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           modelRegistry,
           gatewayControlAvailable,
           hostProjectionDiagnostics,
+          webAccessDiagnostics,
           hostProjection,
         } = yield* releaseAgentGatewaySessionLeaseOnInterrupt(
           agentGatewaySessionLease,
           Effect.tryPromise({
             try: () =>
               createSdkRuntime({
+                threadId: input.threadId,
                 sdk: piSdk,
                 cwd,
                 agentDir,
@@ -3189,8 +3290,35 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             },
           } satisfies ProviderRuntimeEvent);
         }
+        if (webAccessDiagnostics.length > 0) {
+          const diagnostics = [...new Set(webAccessDiagnostics)];
+          offerRuntimeEvent({
+            ...makeEventBase(context, { includeTurnId: false }),
+            type: "runtime.warning",
+            payload: {
+              message:
+                "OmniMind Web Access could not register every canonical tool in this Agent session. The winning foreign tools remain untouched.",
+              detail: {
+                source: "pi-resource-loader",
+                capability: "omnimind-web-access",
+                availability: "degraded",
+                diagnostics,
+              },
+            },
+            raw: {
+              source: "pi.sdk.event",
+              method: "extension/resource-diagnostic",
+              payload: {
+                capability: "omnimind-web-access",
+                diagnosticCount: diagnostics.length,
+              },
+            },
+          } satisfies ProviderRuntimeEvent);
+        }
         warnIfTaskListExtensionUnavailable(context);
-        const loadedExtensions = runtime.session.resourceLoader.getExtensions().extensions;
+        const loadedExtensions = runtime.session.resourceLoader
+          .getExtensions()
+          .extensions.filter((extension) => extension.hidden !== true);
         if (loadedExtensions.length > 0) {
           const extensionNames = loadedExtensions.map(extensionDisplayName);
           offerRuntimeEvent({

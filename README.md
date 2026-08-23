@@ -195,6 +195,22 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "changes": "OmniMind retains the reviewed 400ms -4px entry, 1.6s opacity 1-to-.25 breathe and five-second keyed replacement. The initial hint is randomized, later hints advance without changing on ordinary renders, trailing static ellipses are replaced by the approved three-dot symmetric tide, and reduced-motion freezes all decorative motion. The presentation stays inside OmniMind's existing transient Timeline row; it creates no runtime-status store, transcript item, reasoning claim or progress authority. The original one-second blank delay and BitFun dot-matrix icon are not adopted because OmniMind preserves immediate feedback with its selected Composing orb.",
       "updatePolicy": "Pinned historical motion revision, catalog reference revision, exact catalog-input digests and retained legal text. Catalog edits must preserve bilingual count/index parity and uniqueness; motion edits require focused Timeline, reduced-motion, truncation, stream/scroll and pixel review.",
       "licenseFiles": ["LICENSES/bitfun-MIT.txt"]
+    },
+    {
+      "id": "bundled-omnimind-web-access",
+      "url": "https://github.com/nicobailon/pi-web-access.git",
+      "revision": "fbbd0cb3b3eb918c8833906aa0b41e257fffe979",
+      "status": "production-adopted",
+      "paths": ["packages/om-web-access", "packages/contracts/src/omnimindWebSearch.ts", "apps/server/src/engineWebSurface", "apps/server/src/provider/Layers/OmniMindWebSearchSettings.ts", "apps/server/src/provider/Services/OmniMindWebSearchSettings.ts", "apps/desktop/src/browserManager.ts", "apps/web/src/components/settings/WebSearchSettingsPanel.tsx", "apps/web/src/components/chat/MessagesTimeline.tsx", "apps/web/src/components/chat/TimelineWorkEntryRow.tsx", "scripts/lib/release-workspace-manifests.ts"],
+      "sourcePaths": ["."],
+      "upstreamPackage": "pi-web-access@0.24.1",
+      "upstreamPackageIntegrity": "sha512-kNYVqPT2wbWbDKD2mfMsrCie1DyVsE/KYNVgpp7yqq072sG2PciKAB28PG4h0+klSO3MtCFRoPWAyA+l0CS7/A==",
+      "upstreamTarballSha256": "d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054",
+      "rights": "The fixed pi-web-access source is MIT-licensed under the retained exact legal text by Nico Bailon. OmniMind keeps the upstream LICENSE, provenance and author tests. The 26 runtime Provider identities use 25 exact-pinned local original-color identifying assets with recorded source, SHA-256 and known license or trademark disposition; those marks identify their respective services and do not assert ownership, partnership or endorsement. Runtime routing never depends on asset admission.",
+      "mode": "fork-narrowly",
+      "changes": "The complete mature upstream source remains one private workspace package for the bundled OmniMind Agent. OmniMind adds only the six bounded seams for per-Session and per-call lifecycle isolation, one package-owned canonical config service, the OmniMind runtime profile, typed bilingual observer/review presentation, route evidence to the Pi active set, and honest Unicode source_check evidence semantics. The OmniMind profile defaults to auto-summary with process display off while retaining raw results, responseId, storedResults and continuation; explicit review uses dedicated ephemeral internal-only Browser tabs with exact pending reopen and scoped settlement. Settings consumes the same config and credential-blind Provider projections. It is not a Host capability, AgentGateway backend, npm release or stock Pi compatibility profile.",
+      "updatePolicy": "Pinned exact version and commit; no automatic latest tracking and no second fork repository. Every maintainer-triggered update restarts at research/pi-web-access-intake.md, re-runs PI-ECOSYSTEM-INTAKE Gate A, preserves the upstream structure and author tests, regenerates the auditable upstream/P1-P6 diff inventory, and jointly revalidates Provider routing and projection, Curator protocol, config schema, source_check, rights, asset admission, focused OmniMind journeys and packaged closure. Remove the narrow fork when a lower-maintenance equivalent Pi ecosystem capability proves equal or better.",
+      "licenseFiles": ["LICENSES/pi-web-access-MIT.txt"]
     }
   ]
 }
@@ -232,7 +248,7 @@ omni-harness
 }
 ```
 
-当前 production-adopted baseline 是 exact reviewed Synara head `57f48ef…` 的单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`。产品关系是 Synara upstream platform → OmniMind downstream distribution，不是 selective donor 拼装；上方 adoption record 只描述已完成 evidence invariant 的 revision 与固定 divergence。`apps/service`、`apps/native-host` 与旧 Product Control Plane 不属于生产拓扑；维护者已确认不存在前代用户，Synara/DP Code legacy profile/storage migration 因 first-public identity safety 永久排除，不读取或改写这些无关身份路径。Pi 与其他对照项目仍只是研究来源，除非进入上述 adoption 清单；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以 [`research/source-review.md`](research/source-review.md) 为证据 owner，法定文本保存在 `LICENSES/`。
+当前 production-adopted baseline 是 exact reviewed Synara head `57f48ef…` 的单一物理 substrate：`apps/desktop + apps/web + apps/server + packages/contracts + packages/shared`。产品关系是 Synara upstream platform → OmniMind downstream distribution，不是 selective donor 拼装；上方 adoption record描述已完成 evidence invariant 的 revision 与固定 divergence，`bundled-omnimind-web-access`已在exact pushed-SHA source、完整作者/OmniMind测试、clean-clone Desktop构建与任务隔离packaged journey闭合后进入production adoption，但这不等于签名、公证、Release或update feed。`apps/service`、`apps/native-host` 与旧 Product Control Plane 不属于生产拓扑；维护者已确认不存在前代用户，Synara/DP Code legacy profile/storage migration 因 first-public identity safety 永久排除，不读取或改写这些无关身份路径。未进入清单的Pi与其他对照项目仍只是研究来源；exact revision/tree、rights/lineage/assets、构建/测试/运行观察和兼容限制只以对应research owner为准，法定文本保存在`LICENSES/`。
 
 未来每轮 Synara 审查、辩证吸收、`$converge` 提问、实施授权与 exact-SHA 交付统一遵循根 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)；该手册不自动轮询上游，也不取代本 README 的 production adoption authority。
 
