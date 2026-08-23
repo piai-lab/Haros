@@ -145,6 +145,8 @@ describe("WebSearchSettingsPanel", () => {
     await expect.element(page.getByText("Web search")).toBeVisible();
     await expect.element(page.getByText("Available", { exact: true }).first()).toBeVisible();
     await expect.element(page.getByText("Can the Agent search the web?")).toBeVisible();
+    await expect.element(page.getByText("Auto · first success", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("Automatic summary · Recommended", { exact: true })).toBeVisible();
     expect(document.body.textContent).not.toContain("Enable Web search");
 	const processSwitch = page.getByRole("switch", { name: "Show search progress automatically" });
 	await expect.element(processSwitch).not.toBeChecked();

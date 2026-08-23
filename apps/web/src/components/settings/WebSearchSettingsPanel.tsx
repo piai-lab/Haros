@@ -680,7 +680,17 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           description={t("settings.webSearch.routingDescription")}
           control={
             <Select value={providerSelectionValue(draft.provider)} onValueChange={(value) => value && value !== "__selected_parallel__" && setDraft((current) => current ? { ...current, provider: value } : current)}>
-              <SelectTrigger size="sm" className="w-full sm:w-52"><SelectValue /></SelectTrigger>
+              <SelectTrigger size="sm" className="w-full sm:w-52" aria-label={t("settings.webSearch.routing")}>
+                <SelectValue>
+                  {Array.isArray(draft.provider)
+                    ? t("settings.webSearch.selectedParallel")
+                    : draft.provider === "auto"
+                      ? t("settings.webSearch.routeAuto")
+                      : draft.provider === "all"
+                        ? t("settings.webSearch.routeAll")
+                        : base.providers.find((provider) => provider.id === draft.provider)?.displayName ?? draft.provider}
+                </SelectValue>
+              </SelectTrigger>
               <SettingsSelectPopup>
                 {Array.isArray(draft.provider) ? <SelectItem value="__selected_parallel__">{t("settings.webSearch.selectedParallel")}</SelectItem> : null}
                 <SelectItem value="auto">{t("settings.webSearch.routeAuto")}</SelectItem>
@@ -699,7 +709,9 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           description={t("settings.webSearch.workflowDescription")}
           control={
             <Select value={draft.workflow} onValueChange={(value) => value && workflowOptions.includes(value as OmniMindWebSearchWorkflow) && setDraft((current) => current ? { ...current, workflow: value as OmniMindWebSearchWorkflow } : current)}>
-              <SelectTrigger size="sm" className="w-full sm:w-52"><SelectValue /></SelectTrigger>
+              <SelectTrigger size="sm" className="w-full sm:w-52" aria-label={t("settings.webSearch.workflow")}>
+                <SelectValue>{t(`settings.webSearch.workflow.${draft.workflow}` as const)}</SelectValue>
+              </SelectTrigger>
               <SettingsSelectPopup>{workflowOptions.map((workflow) => <SelectItem key={workflow} value={workflow}>{t(`settings.webSearch.workflow.${workflow}` as const)}</SelectItem>)}</SettingsSelectPopup>
             </Select>
           }
