@@ -87,6 +87,14 @@ interface SearchProviderRuntimeDescriptor<Id extends string = string> {
 		config: Readonly<Record<string, unknown>>,
 		configured: boolean,
 	) => boolean;
+	readonly isStructurallyPossibleForAuto?: (
+		config: Readonly<Record<string, unknown>>,
+		configuration: SearchProviderConfigurationProjection,
+	) => boolean;
+	readonly isStructurallyPossibleForAll?: (
+		config: Readonly<Record<string, unknown>>,
+		configuration: SearchProviderConfigurationProjection,
+	) => boolean;
 	readonly autoEligible?: (options: SearchProviderRuntimeOptions) => boolean;
 	readonly autoCredentialFailureIsFatal?: boolean;
 	readonly isAvailable: (options: SearchProviderRuntimeOptions) => boolean | Promise<boolean>;
@@ -497,6 +505,25 @@ export const SEARCH_PROVIDER_RUNTIME_DEFINITIONS = [
 			};
 		},
 		isStructurallyPossible: (config, configured) => configured || config.allowBrowserCookies === true,
+		isStructurallyPossibleForAuto: () => true,
+		isStructurallyPossibleForAll: (config, configuration) => {
+			if (configuration.state !== "complete") return false;
+			const hasGeminiApiKey = (
+				typeof config.geminiApiKey === "string" && config.geminiApiKey.trim().length > 0
+			) || (
+				typeof process.env.GEMINI_API_KEY === "string" && process.env.GEMINI_API_KEY.trim().length > 0
+			);
+			if (config.allowBrowserCookies === true && !hasGeminiApiKey) {
+				const base = typeof config.geminiBaseUrl === "string"
+					? config.geminiBaseUrl.trim()
+					: process.env.GOOGLE_GEMINI_BASE_URL?.trim() ?? "";
+				return base.includes("gateway.ai.cloudflare.com") && (
+					typeof config.cloudflareApiKey === "string" && config.cloudflareApiKey.trim().length > 0
+					|| typeof process.env.CLOUDFLARE_API_KEY === "string" && process.env.CLOUDFLARE_API_KEY.trim().length > 0
+				);
+			}
+			return true;
+		},
 		isAvailable: async () => isGeminiApiAvailable() || !!(await isGeminiWebAvailable()),
 		isAvailableForAuto: () => true,
 		isAvailableForAll: () => isGeminiApiAvailable(),
@@ -667,17 +694,30 @@ export function getSearchProviderConfigurationProjection(
   };
 }
 
-export function isSearchProviderStructurallyPossible(
+export interface SearchProviderRouteConfigurationProjection {
+	readonly named: boolean;
+	readonly auto: boolean;
+	readonly all: boolean;
+}
+
+/** Credential-blind structural route truth. Runtime probes remain the evidence owner. */
+export function getSearchProviderRouteConfigurationProjection(
 	provider: ResolvedSearchProvider,
 	config: Readonly<Record<string, unknown>>,
-	configured: boolean,
-): boolean {
+): SearchProviderRouteConfigurationProjection {
 	const descriptor = runtimeDescriptor(provider);
-	return descriptor.isStructurallyPossible?.(config, configured) ?? (
-		descriptor.prerequisite === "none"
-		|| descriptor.prerequisite === "optional-key"
-		|| configured
-	);
+	const configuration = getSearchProviderConfigurationProjection(provider, config);
+	return {
+		named: configuration.structurallyPossible,
+		auto: descriptor.autoOrder !== null && (
+			descriptor.isStructurallyPossibleForAuto?.(config, configuration)
+			?? configuration.structurallyPossible
+		),
+		all: descriptor.all !== "excluded" && (
+			descriptor.isStructurallyPossibleForAll?.(config, configuration)
+			?? configuration.structurallyPossible
+		),
+	};
 }
 
 export interface SearchProviderAgentProjection {

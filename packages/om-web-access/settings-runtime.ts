@@ -11,6 +11,7 @@ import {
 	classifySearchProviderFailure,
 	getSearchProviderConfigurationProjection,
 	getSearchProviderPresentation,
+	getSearchProviderRouteConfigurationProjection,
 	normalizeSearchProviderSelection,
 	search,
 	SearchRouteExhaustedError,
@@ -75,7 +76,7 @@ export interface WebSearchSettingsProjection {
 	readonly workflow: WebSearchWorkflow;
 	readonly autoShowSearchProcess: boolean;
 	readonly provider: SearchProviderSelection;
-	readonly capabilityStatus: "possible";
+	readonly capabilityStatus: "possible" | "needs-configuration" | "file-disabled";
 	readonly tools: Readonly<Record<"webSearch" | "sourceCheck" | "fetchContent" | "getSearchContent", {
 		readonly enabled: boolean;
 		readonly reason: "enabled" | "file-disabled";
@@ -114,15 +115,34 @@ export function projectWebSearchSettings(
 	snapshot: WebSearchConfigSnapshot,
 ): WebSearchSettingsProjection {
 	const config = snapshot.config;
+	const provider = normalizeSearchProviderSelection(config.provider ?? config.searchProvider);
+	const toolEnablement = resolveWebAccessToolEnablement(config);
+	const routeProjection = new Map(
+		getSearchProviderPresentation().map(({ id }) => [
+			id,
+			getSearchProviderRouteConfigurationProjection(id, config),
+		]),
+	);
+	const routeStructurallyPossible = Array.isArray(provider)
+		? provider.some((id) => routeProjection.get(id)?.named === true)
+		: provider === "auto"
+			? [...routeProjection.values()].some(({ auto }) => auto)
+			: provider === "all"
+				? [...routeProjection.values()].some(({ all }) => all)
+				: routeProjection.get(provider)?.named === true;
 	return {
 		revision: snapshot.revision,
 		schemaVersion: snapshot.schemaVersion,
 		workflow: workflowFrom(config.workflow),
 		autoShowSearchProcess: config.autoOpenBrowser === true,
-		provider: normalizeSearchProviderSelection(config.provider ?? config.searchProvider),
-		capabilityStatus: "possible",
+		provider,
+		capabilityStatus: !toolEnablement.webSearch
+			? "file-disabled"
+			: routeStructurallyPossible
+				? "possible"
+				: "needs-configuration",
 		tools: Object.fromEntries(
-			Object.entries(resolveWebAccessToolEnablement(config)).map(([key, enabled]) => [
+			Object.entries(toolEnablement).map(([key, enabled]) => [
 				key,
 				{ enabled, reason: enabled ? "enabled" : "file-disabled" },
 			]),

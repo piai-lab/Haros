@@ -109,7 +109,7 @@ export const OmniMindWebSearchSettingsSnapshot = Schema.Struct({
   workflow: OmniMindWebSearchWorkflow,
   autoShowSearchProcess: Schema.Boolean,
   provider: OmniMindWebSearchProviderSelection,
-  capabilityStatus: Schema.Literal("possible"),
+  capabilityStatus: Schema.Literals(["possible", "needs-configuration", "file-disabled"]),
   tools: Schema.Struct({
     webSearch: Schema.Struct({
       enabled: Schema.Boolean,

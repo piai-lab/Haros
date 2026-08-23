@@ -10,6 +10,7 @@ import {
 	projectWebSearchSettings,
 	testWebSearchProvider,
 } from "../settings-runtime.ts";
+import { getSearchProviderRouteConfigurationProjection } from "../gemini-search.ts";
 
 async function withoutProviderEnvironment(names, run) {
 	const original = new Map(names.map((name) => [name, process.env[name]]));
@@ -172,6 +173,32 @@ test("Provider Settings grouping follows descriptor connection roles", async () 
 	assert.equal(group("parallel-mcp"), "advanced");
 	assert.equal(group("searxng"), "advanced");
 	assert.equal(group("exa"), "no-setup");
+});
+
+test("Settings capability status follows the selected route's structural prerequisites", async () => {
+	await withoutProviderEnvironment(["TAVILY_API_KEY", "TAVILY_BASE_URL", "OPENAI_API_KEY", "GEMINI_API_KEY", "GOOGLE_GEMINI_BASE_URL", "CLOUDFLARE_API_KEY"], async () => {
+		const agentDir = await mkdtemp(join(tmpdir(), "omnimind-web-settings-route-status-"));
+		const configPath = join(agentDir, "web-search.json");
+		const project = async (config) => {
+			await writeFile(configPath, JSON.stringify({ schemaVersion: 1, workflow: "auto-summary", ...config }) + "\n", { mode: 0o600 });
+			return projectWebSearchSettings(createWebSearchConfigService(agentDir).readSnapshot());
+		};
+
+		assert.equal((await project({ provider: "tavily" })).capabilityStatus, "needs-configuration");
+		assert.equal((await project({ provider: "tavily", tavilyBaseUrl: "https://example.invalid" })).capabilityStatus, "needs-configuration");
+		assert.equal((await project({ provider: "tavily", tavilyApiKey: "synthetic" })).capabilityStatus, "possible");
+		assert.equal((await project({ provider: "openai" })).capabilityStatus, "possible");
+		assert.equal((await project({ provider: "auto" })).capabilityStatus, "possible");
+		assert.equal((await project({ provider: ["tavily", "exa"] })).capabilityStatus, "possible");
+		assert.equal((await project({ provider: ["tavily"] })).capabilityStatus, "needs-configuration");
+		assert.equal((await project({ provider: "all" })).capabilityStatus, "possible");
+		assert.equal((await project({ provider: "auto", webSearch: { enabled: false } })).capabilityStatus, "file-disabled");
+
+		assert.deepEqual(
+			getSearchProviderRouteConfigurationProjection("gemini", { allowBrowserCookies: true }),
+			{ named: true, auto: true, all: false },
+		);
+	});
 });
 
 test("Settings projects the same file-level tool policy used by registration", async () => {

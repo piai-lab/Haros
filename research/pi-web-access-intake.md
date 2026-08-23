@@ -454,7 +454,7 @@ OmniMind profile继续尊重上游`webSearch.enabled`与`tools.webSearch/sourceC
 
 状态只来自两类证据：
 
-1. Session init 的结构候选：配置/凭据 source/endpoint/native auth 表明“可能可用”；
+1. Session init与Settings的结构候选：package按当前`auto/named/array/all`选择及descriptor-owned prerequisite投影“可能可用/需要设置/文件关闭”；named缺少或部分配置不得显示可用，Web不得重写这套判断；
 2. 真实 tool call 的结果：实际成功或 typed failure。
 
 `isExaAvailable() === true` 只能说明零配置 route 存在，不能说明额度可用。正确状态语义：
