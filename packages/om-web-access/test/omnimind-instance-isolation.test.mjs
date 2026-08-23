@@ -144,6 +144,23 @@ test("canonical default search auto-summarizes without presenting Curator", asyn
 	await harness.handlers.get("session_shutdown")?.();
 });
 
+test("OmniMind named Provider errors point to Settings without leaking upstream commands or paths", async () => {
+	const root = await mkdtemp(join(tmpdir(), "omnimind-web-error-projection-"));
+	const configService = createWebSearchConfigService(join(root, "agent"));
+	configService.ensureDefault();
+	const harness = makeHarness(configService, makePresenter());
+	const result = await harness.tool("web_search").execute(
+		"named-provider-error",
+		{ query: "provider error", provider: "xai", workflow: "none" },
+		undefined,
+		undefined,
+		extensionContext(root),
+	);
+	const serialized = JSON.stringify(result);
+	assert.match(serialized, /Development > Web search/);
+	assert.doesNotMatch(serialized, /\/login|web-search\.json|\.pi\//);
+});
+
 test("auto-summary and none can observe live results without becoming pending review", async (t) => {
 	const originalFetch = globalThis.fetch;
 	t.after(() => { globalThis.fetch = originalFetch; });

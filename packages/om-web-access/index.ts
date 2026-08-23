@@ -914,8 +914,13 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 	const fetchContentEnabled = isToolEnabled(initConfig, "fetchContent");
 	const getSearchContentEnabled = isToolEnabled(initConfig, "getSearchContent");
 	const searchErrorMessage = (error: unknown): string => {
-		if (!omnimindProfile || !(error instanceof SearchRouteExhaustedError)) {
-			return error instanceof Error ? error.message : String(error);
+		const raw = error instanceof Error ? error.message : String(error);
+		if (!omnimindProfile) return raw;
+		if (!(error instanceof SearchRouteExhaustedError)) {
+			if (raw.includes("/login") || raw.includes(getWebSearchConfigPath())) {
+				return "The selected web search Provider is not ready. Open Development > Web search to configure it or choose another Provider.";
+			}
+			return raw;
 		}
 		const transient = error.failures.some(
 			({ kind }) => kind === "transient" || kind === "network",
@@ -1719,6 +1724,14 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 		} catch (err) {
 			const message = err instanceof Error ? err.message : String(err);
 			console.error(`Failed to open curator UI: ${message}`);
+			if (omnimindProfile && pendingCurates.get(callId) === pc) {
+				pc.finish({
+					content: [{ type: "text", text: "OmniMind Web Access could not start source review. Open Development > Web search and retry." }],
+					details: { phase: "curator-presentation-error", error: message },
+				});
+				closeCurator(callId);
+				return;
+			}
 			if (handle && activeCurators.get(callId) === handle && pendingCurates.get(callId) === pc) {
 				pc.browserOpenError = message;
 				sendCuratorFallbackUpdate("Search curator is running, but the browser did not open automatically.");
