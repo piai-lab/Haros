@@ -14,6 +14,7 @@ import {
 	currentWebSearchConfigService,
 	runWithWebAccessContext,
 } from "../runtime-context.ts";
+import { resolveCuratorNetworkConfig } from "../utils.ts";
 
 function registerContextProbe(context, emitter, ready) {
 	let tool;
@@ -94,4 +95,22 @@ test("OmniMind injected config never falls back to the upstream Pi directory", a
 		if (previous === undefined) delete process.env.PI_CODING_AGENT_DIR;
 		else process.env.PI_CODING_AGENT_DIR = previous;
 	}
+});
+
+test("OmniMind profile ignores retained upstream remote Curator binding", async () => {
+	const root = await mkdtemp(join(tmpdir(), "omnimind-web-curator-bind-"));
+	const service = createWebSearchConfigService(join(root, "agent"));
+	const initial = service.ensureDefault();
+	service.mutate({
+		expectedRevision: initial.revision,
+		patch: { curatorRemote: true },
+	});
+	const context = createWebAccessInstanceContext({
+		configService: service,
+		profile: "omnimind",
+	});
+	assert.deepEqual(
+		runWithWebAccessContext(context, () => resolveCuratorNetworkConfig()),
+		{ enabled: false, host: "localhost", bind: "127.0.0.1" },
+	);
 });

@@ -1,7 +1,7 @@
 import { hostname } from "node:os";
 import { dirname } from "node:path";
 import type { WebSearchConfigRecord } from "./config-service.ts";
-import { currentWebSearchConfigService } from "./runtime-context.ts";
+import { currentWebAccessContext, currentWebSearchConfigService } from "./runtime-context.ts";
 
 export function getWebSearchConfigDir(): string {
 	return dirname(getWebSearchConfigPath());
@@ -119,6 +119,9 @@ function trimmedString(value: unknown): string | undefined {
 
 /** Resolves the curator server bind address and URL host from `curatorRemote`. */
 export function resolveCuratorNetworkConfig(): CuratorNetworkConfig {
+	if (currentWebAccessContext()?.profile === "omnimind") {
+		return LOCAL_CURATOR_NETWORK_DEFAULTS;
+	}
 	let raw: WebSearchConfigRecord;
 	try {
 		raw = readWebSearchConfig();
