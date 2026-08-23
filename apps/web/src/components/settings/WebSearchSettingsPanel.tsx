@@ -146,6 +146,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     readonly profile: string | null;
     readonly account: string | null;
   } | null>(null);
+  const [geminiDiagnosticFailed, setGeminiDiagnosticFailed] = useState(false);
   const probeRequestRef = useRef<Promise<void> | null>(null);
 
   const cleanDraft = useMemo(() => (base ? draftFrom(base) : null), [base]);
@@ -353,6 +354,24 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
       setBusy(null);
     }
   }, [configQuery.data?.availableEditors, t]);
+
+  const diagnoseGemini = useCallback(async () => {
+    if (!draft) return;
+    setGeminiDiagnosticFailed(false);
+    try {
+      setGeminiDiagnostic(
+        await ensureNativeApi().omnimindWebSearch.diagnoseGemini({ draft: mutationDraft(draft) }),
+      );
+    } catch {
+      setGeminiDiagnostic(null);
+      setGeminiDiagnosticFailed(true);
+      toastManager.add({
+        type: "error",
+        title: t("settings.webSearch.geminiDiagnosticFailed"),
+        description: t("settings.webSearch.geminiDiagnosticRecovery"),
+      });
+    }
+  }, [draft, t]);
 
   if (!active) return null;
   if (!readResult && failure === "load") {
@@ -620,8 +639,8 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
             <SettingsRow
               title={t("settings.webSearch.geminiAccount")}
               description={t("settings.webSearch.geminiAccountDescription")}
-              status={geminiDiagnostic ? geminiDiagnostic.state === "available" ? [geminiDiagnostic.browser, geminiDiagnostic.profile, geminiDiagnostic.account].filter(Boolean).join(" · ") : t("settings.webSearch.geminiUnavailable") : null}
-              control={<Button size="xs" variant="outline" onClick={() => void ensureNativeApi().omnimindWebSearch.diagnoseGemini({ draft: mutationDraft(draft) }).then(setGeminiDiagnostic)}>{t("settings.webSearch.inspectAccount")}</Button>}
+              status={geminiDiagnostic ? geminiDiagnostic.state === "available" ? [geminiDiagnostic.browser, geminiDiagnostic.profile, geminiDiagnostic.account].filter(Boolean).join(" · ") : t("settings.webSearch.geminiUnavailable") : geminiDiagnosticFailed ? t("settings.webSearch.geminiDiagnosticRecovery") : null}
+              control={<Button size="xs" variant="outline" onClick={() => void diagnoseGemini()}>{t("settings.webSearch.inspectAccount")}</Button>}
             />
           ) : null}
         </SettingsSection>
@@ -641,6 +660,11 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
   );
   const toolStatus = (enabled: boolean) =>
     enabled ? t("settings.webSearch.tool.available") : t("settings.webSearch.tool.fileDisabled");
+  const capabilityStatus = base.capabilityStatus === "possible"
+    ? t("settings.webSearch.possible")
+    : base.capabilityStatus === "file-disabled"
+      ? t("settings.webSearch.tool.fileDisabled")
+      : t("settings.webSearch.needsConfiguration");
   return (
     <div className="space-y-6">
       <div>
@@ -656,17 +680,15 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           title={t("settings.webSearch.availability")}
           description={t("settings.webSearch.availabilityDescription")}
           status={
-            base.tools.webSearch.enabled
-              ? probeRun?.target === "__route__" && probeRun.result
-                ? probeDescription(probeRun.result)
-                : t("settings.webSearch.possible")
-              : t("settings.webSearch.tool.fileDisabled")
+            probeRun?.target === "__route__" && probeRun.result
+              ? probeDescription(probeRun.result)
+              : capabilityStatus
           }
           control={
             <Button
               size="xs"
               variant="outline"
-              disabled={probeRun?.status === "pending" || !base.tools.webSearch.enabled}
+              disabled={probeRun?.status === "pending" || base.capabilityStatus === "file-disabled"}
               onClick={() => void recheck()}
             >
               {probeRun?.target === "__route__" && probeRun.status === "pending"

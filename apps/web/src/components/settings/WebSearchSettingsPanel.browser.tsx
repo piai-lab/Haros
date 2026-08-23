@@ -59,6 +59,7 @@ function snapshot(input: {
   readonly tavilyKey?: string | null;
   readonly workflow?: "none" | "auto-summary" | "summary-review";
   readonly autoShowSearchProcess?: boolean;
+  readonly capabilityStatus?: "possible" | "needs-configuration" | "file-disabled";
 } = {}): OmniMindWebSearchSettingsSnapshot {
   return {
     state: "ready",
@@ -67,7 +68,7 @@ function snapshot(input: {
     provider: input.provider ?? "auto",
     workflow: input.workflow ?? "auto-summary",
     autoShowSearchProcess: input.autoShowSearchProcess ?? false,
-    capabilityStatus: "possible",
+    capabilityStatus: input.capabilityStatus ?? "possible",
     tools: {
       webSearch: { enabled: true, reason: "enabled" },
       sourceCheck: { enabled: true, reason: "enabled" },
@@ -100,6 +101,7 @@ function installApi(input: {
   readonly refresh?: NativeApi["omnimindWebSearch"]["refresh"];
   readonly mutate?: NativeApi["omnimindWebSearch"]["mutate"];
   readonly testProvider?: NativeApi["omnimindWebSearch"]["testProvider"];
+  readonly diagnoseGemini?: NativeApi["omnimindWebSearch"]["diagnoseGemini"];
 }) {
   window.nativeApi = {
     omnimindWebSearch: {
@@ -109,7 +111,7 @@ function installApi(input: {
       testProvider: input.testProvider ?? vi.fn(),
       recheck: vi.fn(),
       openConfig: vi.fn(),
-      diagnoseGemini: vi.fn(),
+      diagnoseGemini: input.diagnoseGemini ?? vi.fn(),
     },
   } as unknown as NativeApi;
 }
@@ -147,6 +149,7 @@ describe("WebSearchSettingsPanel", () => {
     await expect.element(page.getByText("Can the Agent search the web?")).toBeVisible();
     await expect.element(page.getByText("Auto · first success", { exact: true })).toBeVisible();
     await expect.element(page.getByText("Automatic summary · Recommended", { exact: true })).toBeVisible();
+    await expect.element(page.getByText(/Summary review waits for your approval before the Agent continues/)).toBeVisible();
     expect(document.body.textContent).not.toContain("Enable Web search");
 	const processSwitch = page.getByRole("switch", { name: "Show search progress automatically" });
 	await expect.element(processSwitch).not.toBeChecked();
@@ -182,9 +185,11 @@ describe("WebSearchSettingsPanel", () => {
   });
 
   it("keeps the selected service visible as current while its setup is incomplete", async () => {
-    installApi({ open: vi.fn().mockResolvedValue(snapshot({ provider: "tavily" })) });
+    installApi({ open: vi.fn().mockResolvedValue(snapshot({ provider: "tavily", capabilityStatus: "needs-configuration" })) });
 
     await renderPanel();
+    await expect.element(page.getByText("Set up the selected service", { exact: true })).toBeVisible();
+    expect(document.body.textContent).not.toContain("Can the Agent search the web?Available");
     await page.getByRole("button", { name: "Add service" }).click();
 
     const currentGroup = document.querySelector('[data-provider-group="configured"]');
@@ -302,5 +307,18 @@ describe("WebSearchSettingsPanel", () => {
         translate("zh-CN", "settings.webSearch.fieldRole.api-key"),
       ),
     ).toBe("Tavily · API Key");
+  });
+
+  it("offers a recoverable Gemini account diagnostic failure", async () => {
+    const diagnoseGemini = vi.fn().mockRejectedValue(new Error("synthetic IPC failure"));
+    installApi({ diagnoseGemini });
+
+    await renderPanel();
+    await page.getByRole("button", { name: "Add service" }).click();
+    await page.getByRole("button", { name: "Set up" }).last().click();
+    await page.getByRole("button", { name: "Inspect account" }).click();
+
+    await expect.element(page.getByText("Try again, or check the Chromium profile in the configuration file.").first()).toBeVisible();
+    await expect.element(page.getByRole("button", { name: "Inspect account" })).toBeEnabled();
   });
 });

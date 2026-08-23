@@ -2236,7 +2236,7 @@ export const EN_MESSAGES = {
     "Auto stops at the first successful service. All can make several paid or quota-limited requests.",
   "settings.webSearch.workflow": "Result handling",
   "settings.webSearch.workflowDescription":
-    "Automatic summary is the recommended no-interruption default. Summary review pauses the search until you approve it.",
+    "Automatic summary is the recommended no-interruption default. Summary review waits for your approval before the Agent continues.",
   "settings.webSearch.workflow.summary-review": "Summary review · Wait for approval",
   "settings.webSearch.workflow.auto-summary": "Automatic summary · Recommended",
   "settings.webSearch.workflow.none": "Raw results",
@@ -2314,6 +2314,7 @@ export const EN_MESSAGES = {
   "settings.webSearch.reviewCapabilityDescription":
     "The selected workflow controls whether results return directly, summarize automatically, or wait for review.",
   "settings.webSearch.possible": "Available",
+  "settings.webSearch.needsConfiguration": "Set up the selected service",
   "settings.webSearch.recheck": "Recheck",
   "settings.webSearch.rechecking": "Rechecking…",
   "settings.webSearch.configFile": "Configuration file",
@@ -2371,6 +2372,8 @@ export const EN_MESSAGES = {
     "Explicitly inspect the Chromium profile and Google account used by the Gemini Web cookie route.",
   "settings.webSearch.inspectAccount": "Inspect account",
   "settings.webSearch.geminiUnavailable": "No usable Gemini Web Chromium account was found.",
+  "settings.webSearch.geminiDiagnosticFailed": "Could not inspect the Gemini Web account",
+  "settings.webSearch.geminiDiagnosticRecovery": "Try again, or check the Chromium profile in the configuration file.",
   "settings.providersDescription":
     "Choose visible coding agents and manage their installed CLI tools.",
   "settings.skillsDescription":
@@ -5992,7 +5995,7 @@ export const ZH_CN_MESSAGES = {
     "自动路由在首个服务成功后停止；全部模式可能产生多份额度或费用。",
   "settings.webSearch.workflow": "结果处理",
   "settings.webSearch.workflowDescription":
-    "自动摘要是推荐的无打扰默认；摘要审查会暂停搜索，等待你批准。",
+    "自动摘要是推荐的无打扰默认；摘要审查会在结果就绪后等待你批准，再让 Agent 继续。",
   "settings.webSearch.workflow.summary-review": "摘要审查 · 等待批准",
   "settings.webSearch.workflow.auto-summary": "自动摘要 · 推荐",
   "settings.webSearch.workflow.none": "原始结果",
@@ -6063,6 +6066,7 @@ export const ZH_CN_MESSAGES = {
   "settings.webSearch.reviewCapabilityDescription":
     "当前方式决定直接返回、自动摘要，或等待你审查来源。",
   "settings.webSearch.possible": "可用",
+  "settings.webSearch.needsConfiguration": "请设置当前选择的服务",
   "settings.webSearch.recheck": "重新检查",
   "settings.webSearch.rechecking": "正在检查…",
   "settings.webSearch.configFile": "配置文件",
@@ -6109,6 +6113,8 @@ export const ZH_CN_MESSAGES = {
   "settings.webSearch.geminiAccountDescription": "显式检查 Gemini Web Cookie 路径使用的 Chromium Profile 与 Google 账号。",
   "settings.webSearch.inspectAccount": "检查账号",
   "settings.webSearch.geminiUnavailable": "未找到可用的 Gemini Web Chromium 账号。",
+  "settings.webSearch.geminiDiagnosticFailed": "无法检查 Gemini Web 账号",
+  "settings.webSearch.geminiDiagnosticRecovery": "请重试，或在配置文件中检查 Chromium Profile。",
   "settings.providersDescription": "选择可见的编码 Agent，并管理已安装的 CLI 工具。",
   "settings.skillsDescription": "查看从所有已配置引擎中发现的可复用工作流。",
   "settings.usagePanelDescription": "查看每个已登录引擎的剩余额度与点数。",
