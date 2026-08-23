@@ -167,3 +167,90 @@ test("Curator Provider switch without queries only reports persistence", async (
     }
   }
 }, 10_000);
+
+async function openInteractivePage(mode: "observer" | "review") {
+  const handle = await startCuratorServer(
+    {
+      mode,
+      queries: ["keyboard result"],
+      sessionToken: `${mode}-${crypto.randomUUID()}`,
+      timeout: 30,
+      availableProviders: availability,
+      defaultProvider: "exa",
+      searchProvider: "auto",
+      summaryModels: [{ value: "synthetic", label: "Synthetic", provider: "test" }],
+      defaultSummaryModel: "synthetic",
+      presentation: { locale: "en", theme: "light" },
+    },
+    {
+      onSubmit() {},
+      onCancel() {},
+      async onProviderChange() { return { state: "saved" }; },
+      async onAddSearch() { return []; },
+      onAddSearchResults() {},
+      async onSummarize() {
+        return {
+          summary: "Synthetic summary",
+          meta: { model: "synthetic", durationMs: 1, tokenEstimate: 2, fallbackUsed: false, edited: false },
+        };
+      },
+      async onRewriteQuery(query) { return query; },
+    },
+  );
+  const page = await browser.newPage({ viewport: { width: 360, height: 700 } });
+  await page.goto(handle.url);
+  handle.pushResult(0, {
+    answer: "A complete result body",
+    results: [{ title: "Source", url: "https://example.com/source", domain: "example.com" }],
+    provider: "exa",
+  });
+  handle.searchesDone();
+  await playwrightExpect(page.locator(".result-card")).toHaveCount(1);
+  return { handle, page };
+}
+
+test("observer and review results expose keyboard expansion without horizontal overflow", async () => {
+  for (const mode of ["observer", "review"] as const) {
+    const { handle, page } = await openInteractivePage(mode);
+    try {
+      const expand = page.getByRole("button", { name: "Collapse search result" });
+      await playwrightExpect(expand).toHaveAttribute("aria-expanded", "true");
+      await expand.focus();
+      await page.keyboard.press("Enter");
+      await playwrightExpect(page.getByRole("button", { name: "Expand search result" })).toHaveAttribute("aria-expanded", "false");
+      await page.keyboard.press("Space");
+      await playwrightExpect(page.getByRole("button", { name: "Collapse search result" })).toHaveAttribute("aria-expanded", "true");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1)).toBe(true);
+
+      const consequence = page.locator(".provider-switch-consequence");
+      if (mode === "review") {
+        await playwrightExpect(consequence).toContainText("sets the new default");
+      } else {
+        await playwrightExpect(consequence).toBeHidden();
+      }
+    } finally {
+      await page.close();
+      handle.close();
+    }
+  }
+}, 20_000);
+
+test("summary inspector removes background settlement controls from focus and accessibility", async () => {
+  const { handle, page } = await openInteractivePage("review");
+  try {
+    await playwrightExpect(page.locator("#summary-input")).toHaveValue("Synthetic summary");
+    const actionBar = page.locator(".action-bar");
+    await playwrightExpect(actionBar).toBeHidden();
+    await playwrightExpect(actionBar).toHaveAttribute("aria-hidden", "true");
+    expect(await actionBar.evaluate((element) => (element as HTMLElement & { inert: boolean }).inert)).toBe(true);
+    await playwrightExpect(page.locator("#btn-send")).not.toBeFocused();
+
+    await page.locator("#btn-summary-back").click();
+    await playwrightExpect(actionBar).toBeVisible();
+    expect(await actionBar.evaluate((element) => (element as HTMLElement & { inert: boolean }).inert)).toBe(false);
+    await playwrightExpect(actionBar).not.toHaveAttribute("aria-hidden", "true");
+  } finally {
+    await page.close();
+    handle.close();
+  }
+}, 20_000);

@@ -140,6 +140,7 @@ ${CSS}
 <span class="hero-meta-sep"></span>
 <div class="provider-buttons" id="provider-buttons">${providerButtonsHtml}</div>
 </div>
+<p class="provider-switch-consequence">${escapeMarkup(copy.providerSwitchConsequence)}</p>
 </div>
 <div id="result-cards"></div>
 <div class="send-raw-row hidden" id="send-raw-row">
@@ -453,6 +454,13 @@ main {
   align-items: center;
   flex-wrap: wrap;
   gap: 6px;
+}
+.provider-switch-consequence {
+  max-width: 620px;
+  margin-top: 8px;
+  color: var(--fg-dim);
+  font-size: 11px;
+  line-height: 1.5;
 }
 .summary-model-controls {
   display: flex;
@@ -796,6 +804,9 @@ main {
 }
 
 .result-card-expand {
+	appearance: none;
+	border: 0;
+	background: transparent;
   color: var(--fg-dim);
 	font-size: 14px;
   margin-top: 2px;
@@ -803,6 +814,7 @@ main {
   padding-top: 3px;
   transition: color 0.12s;
 }
+.result-card-expand:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 .result-card-header:hover .result-card-expand { color: var(--fg-muted); }
 
 .result-card-body {
@@ -1246,6 +1258,7 @@ main {
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
 }
+.action-bar[hidden] { display: none; }
 .action-shortcuts { display: flex; align-items: center; gap: 16px; }
 .shortcut { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--fg-dim); }
 .shortcut kbd {
@@ -1273,6 +1286,7 @@ body.summary-open .action-bar {
 html[data-surface-mode="observer"] .timer-badge,
 html[data-surface-mode="observer"] .timer-adjust,
 html[data-surface-mode="observer"] .provider-buttons,
+html[data-surface-mode="observer"] .provider-switch-consequence,
 html[data-surface-mode="observer"] .send-raw-row,
 html[data-surface-mode="observer"] .add-search,
 html[data-surface-mode="observer"] .summary-panel,
@@ -1780,6 +1794,7 @@ const SCRIPT = `(function() {
   var nextSlotId = queries.length;
   var queryIndexToSlot = new Map();
   var providerCoverage = new Map();
+  var resultCardControlSeq = 0;
 
   var currentProvider = initialDefaultProvider;
   var currentSearchProvider = initialSearchProvider;
@@ -1832,6 +1847,7 @@ const SCRIPT = `(function() {
   var previewPopoverInput = document.getElementById("preview-popover-input");
   var previewPopoverRegen = document.getElementById("preview-popover-regen");
   var providerButtons = Array.prototype.slice.call(document.querySelectorAll(".provider-btn"));
+  var actionBar = document.querySelector(".action-bar");
   var loadingPanelEl = null;
 
   var summaryModelsByProvider = Object.create(null);
@@ -2307,6 +2323,13 @@ __PROVIDER_LABEL_RESOLVER__
   function updateStageUI() {
     var showSummary = stage === "summary-review" || stage === "generating-summary" || isRegenerating;
     document.body.classList.toggle("summary-open", showSummary && !observerMode);
+    var summaryOwnsSettlement = showSummary && !observerMode;
+    if (actionBar) {
+      actionBar.hidden = summaryOwnsSettlement;
+      actionBar.inert = summaryOwnsSettlement;
+      if (summaryOwnsSettlement) actionBar.setAttribute("aria-hidden", "true");
+      else actionBar.removeAttribute("aria-hidden");
+    }
     if (summaryPanel) {
       summaryPanel.classList.toggle("hidden", !showSummary);
       summaryPanel.classList.toggle("updating", isRegenerating);
@@ -2502,6 +2525,7 @@ __PROVIDER_LABEL_RESOLVER__
 
     var altChipsHtml = buildAltChipsHtml(provider, queryText);
 
+    var resultBodyId = "result-card-body-" + (++resultCardControlSeq);
     card.innerHTML =
       '<div class="result-card-header">' +
         '<input type="checkbox" checked>' +
@@ -2513,10 +2537,10 @@ __PROVIDER_LABEL_RESOLVER__
           '<div class="result-card-meta">' + escHtml(metaText) + "</div>" +
           (preview ? '<div class="result-card-preview">' + escHtml(preview) + "</div>" : "") +
         "</div>" +
-        '<div class="result-card-expand">\u25BC</div>' +
+        '<button type="button" class="result-card-expand" aria-expanded="false" aria-controls="' + resultBodyId + '" aria-label="' + escHtml(t("expandResult")) + '">\u25BC</button>' +
       "</div>" +
       altChipsHtml +
-      '<div class="result-card-body">' + bodyHtml + "</div>";
+      '<div class="result-card-body" id="' + resultBodyId + '">' + bodyHtml + "</div>";
   }
 
   function createSearchingCard(queryText, provider) {
@@ -2598,7 +2622,11 @@ __PROVIDER_LABEL_RESOLVER__
 		var firstExpand = card.querySelector(".result-card-expand");
 		if (firstBody) firstBody.classList.add("open");
 		card.classList.add("is-open");
-		if (firstExpand) firstExpand.textContent = "\u25B2";
+		if (firstExpand) {
+			firstExpand.textContent = "\u25B2";
+			firstExpand.setAttribute("aria-expanded", "true");
+			firstExpand.setAttribute("aria-label", t("collapseResult"));
+		}
 	  }
     }
 
@@ -3253,6 +3281,17 @@ __PROVIDER_LABEL_RESOLVER__
 
     if (!header || !cb) return;
 
+    function toggleExpanded() {
+      var isExpanded = body && body.classList.contains("open");
+      if (body) body.classList.toggle("open");
+	  card.classList.toggle("is-open", !isExpanded);
+      if (expandEl) {
+        expandEl.textContent = isExpanded ? "\u25BC" : "\u25B2";
+        expandEl.setAttribute("aria-expanded", isExpanded ? "false" : "true");
+        expandEl.setAttribute("aria-label", t(isExpanded ? "expandResult" : "collapseResult"));
+      }
+    }
+
     header.addEventListener("click", function(e) {
       if (e.target.tagName === "A") return;
       if (e.target === cb) {
@@ -3268,10 +3307,7 @@ __PROVIDER_LABEL_RESOLVER__
         maybeAutoGenerateSummary();
         return;
       }
-      var isExpanded = body && body.classList.contains("open");
-      if (body) body.classList.toggle("open");
-	  card.classList.toggle("is-open", !isExpanded);
-      if (expandEl) expandEl.textContent = isExpanded ? "\u25BC" : "\u25B2";
+      toggleExpanded();
     });
 
     if (body) {

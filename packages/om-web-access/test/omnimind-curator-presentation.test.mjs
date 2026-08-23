@@ -50,6 +50,12 @@ test("Curator freezes OmniMind locale/theme and ships executable self-contained 
   assert.match(chinese, /已将 \{provider\} 设为默认，但重新搜索未完成/);
   assert.match(chinese, /未能将默认服务更改为 \{provider\}/);
   assert.match(chinese, /部分搜索已完成，但仍有搜索失败/);
+  assert.match(chinese, /切换服务会将其设为默认，并重新搜索当前结果；可能消耗服务额度/);
+  assert.match(chinese, /展开搜索结果/);
+  assert.match(chinese, /t\("expandResult"\)/);
+  assert.match(chinese, /aria-expanded="false"/);
+  assert.match(chinese, /actionBar\.inert = summaryOwnsSettlement/);
+  assert.match(chinese, /actionBar\.setAttribute\("aria-hidden", "true"\)/);
   assert.match(chinese, /successfulSearches > 0/);
   assert.match(chinese, /btnSummaryBack/);
   assert.doesNotMatch(chinese, /btnSummary返回|btnSummary预览|maybe自动GenerateSummary/);
@@ -93,6 +99,7 @@ test("observer uses the same bilingual page but removes review settlement contro
   assert.match(observer, /if \(heroStatus\) heroStatus\.textContent = ""/);
   assert.match(observer, /搜索可能仍在继续；如需查看，请重试当前页面/);
   assert.match(observer, /observerMode \? "disconnectedObserver" : "disconnectedReview"/);
+  assert.match(observer, /html\[data-surface-mode="observer"\] \.provider-switch-consequence/);
   assert.doesNotThrow(() => new Function(inlineScript(observer)));
 });
 
