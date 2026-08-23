@@ -112,6 +112,45 @@ describe("OmniMindWebSearchSettingsLive", () => {
     expect(fetchCalls).toBe(1);
   });
 
+  it("does not merge the same request identity across different Providers", async () => {
+    const test = harness();
+    const opened = await test.run((service) => service.open());
+    if (opened.state !== "ready") throw new Error("expected ready snapshot");
+    let fetchCalls = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      fetchCalls += 1;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      return String(url).includes("tavily")
+        ? new Response(JSON.stringify({ answer: "ok", results: [] }), { status: 200 })
+        : new Response(JSON.stringify({ web: { results: [] } }), { status: 200 });
+    });
+    const common = {
+      requestId: "same-id-different-provider",
+      draft: {
+        provider: "auto",
+        workflow: "auto-summary",
+        autoShowSearchProcess: false,
+        fields: [
+          { configKey: "braveApiKey", value: "synthetic-test-key" },
+          { configKey: "tavilyApiKey", value: "synthetic-test-key" },
+        ],
+      },
+    } as const;
+
+    const results = await test.run((service) =>
+      Effect.all(
+        [
+          service.testProvider({ ...common, providerId: "brave" }, "client-a"),
+          service.testProvider({ ...common, providerId: "tavily" }, "client-a"),
+        ],
+        { concurrency: "unbounded" },
+      ),
+    );
+
+    expect(results.map(({ provider }) => provider)).toEqual(["brave", "tavily"]);
+    expect(fetchCalls).toBe(2);
+  });
+
   it("opens the canonical file server-side without returning its path to the Renderer", async () => {
     const test = harness();
     await test.run((service) => service.open());

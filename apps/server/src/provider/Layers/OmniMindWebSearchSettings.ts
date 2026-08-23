@@ -94,7 +94,7 @@ export const OmniMindWebSearchSettingsLive = Layer.effect(
           }
         }),
       testProvider: (input, requestScope) =>
-        singleFlight(`${requestScope}:provider:${input.requestId}`, async (signal) => {
+        singleFlight(`${requestScope}:provider:${input.providerId}:${input.requestId}`, async (signal) => {
           const provider = projectWebSearchSettings(service.readSnapshot()).providers.find(
             ({ id }) => id === input.providerId,
           );
