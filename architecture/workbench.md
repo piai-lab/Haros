@@ -208,7 +208,7 @@ Custom rules 的外部并发修改必须保留用户草稿并以 conflict 呈现
 
 `Web search / 网络搜索`进入现有`Development / 开发`分组，页面技术identity为`OmniMind Web Access`。它只管理bundled OmniMind Agent随附的Pi-native Web Access Extension，不进入`Built-in tools`六组矩阵、不进入`Model services`，也不扩张到stock Pi或其他Engine。页面不提供master enable switch：一级能力始终可发现；当前搜索路径不可用时保留设置、配置与重新检查入口，并准确区分搜索、网页读取与来源审查各自的可用状态。
 
-页面复用Settings同一shell和**概览 → 添加 → 详情**模式。概览显示当前搜索方式、结果处理方式、已配置服务与分能力状态；添加视图使用可搜索、可键盘导航的紧凑服务行，不铺卡片墙；详情只呈现该服务真实拥有的key、endpoint、model、zone、profile等字段及最小测试动作。搜索服务不能被扁平化成同一种产品：search、hosted MCP、browser-account、fetch/extraction等角色使用文字说明；配置多个服务本身不触发并发，只有用户明确选择selected parallel或All时才说明会同时消耗多份额度。单服务“测试”把当前完整未保存Provider draft作为request-scoped candidate snapshot，走正式Provider runtime执行最小真实请求，并明确说明“不会保存，可能消耗额度”；它不写canonical文件、不改变default routing/active set、不生成永久绿色“已连接”，成功后仍由用户主动保存。测试与页面级“重新检查”按各自显式request identity single-flight，不能因连点或重渲染产生重复额度消耗；不得合并正常搜索、跨Session共享取消语义或让config service接管Provider请求生命周期。App/Session启动不因页面状态自动探测。
+页面复用Settings同一shell和**概览 → 添加 → 详情**模式。概览首屏只回答四个普通用户问题：当前能否联网搜索、默认如何选择服务、结果如何交给Agent、是否自动显示搜索过程；当前/已配置服务与单一“添加搜索服务”动作随后出现，逐工具状态与配置文件入口收进高级区。添加视图保留可搜索、可键盘导航的完整服务集合，但先列当前/已配置（包括当前选中但配置不完整的服务），再按descriptor同源的“无需Key、需要凭据、MCP/自建/高级”稳定connection role分组，不得用可选endpoint字段等UI heuristic猜分组，也不铺无差别卡片墙；keyless项必须写“无需配置，可直接尝试；受共享额度或服务状态限制”，不能写成未配置或永久免费。key-or-Session服务在无法从Settings证明当前Session状态时显示“可能使用当前Agent登录会话”，既不伪装缺失也不伪装ready。行级动作按真实状态使用“设置/查看/编辑”。详情只呈现该服务真实拥有的key、endpoint、model、zone、profile等字段及最小测试动作。搜索服务不能被扁平化成同一种产品：search、hosted MCP、browser-account、fetch/extraction等角色使用文字说明；配置多个服务本身不触发并发，只有用户明确选择selected parallel或All时才在选择动作附近说明会同时消耗多份额度。单服务“测试”把当前完整未保存Provider draft作为request-scoped candidate snapshot，走正式Provider runtime执行最小真实请求，并明确说明“不会保存，可能消耗额度”；它不写canonical文件、不改变default routing/active set、不生成永久绿色“已连接”，成功后仍由用户主动保存。pending、success、error、cancel都绑定同一request identity与Provider ID：用户切换详情后，迟到结果不得投影到另一服务。测试与页面级“重新检查”按各自显式request identity single-flight，不能因连点或重渲染产生重复额度消耗；不得合并正常搜索、跨Session共享取消语义或让config service接管Provider请求生命周期。App/Session启动不因页面状态自动探测。
 
 页面与高级文件共同操作`.omnimind/agent/web-search.json`这一份canonical配置。首次进入该页面或首次启动OmniMind Agent Session时由先发生的一方通过同一package service执行no-clobber原子创建；支持的平台保持`0600`，App启动本身不写。Settings不为此启动Session或执行Extension，Renderer不提交绝对路径；打开配置文件由Server/package从resolved Agent directory重新推导。no-op保存不写文件、不改mtime、不发布revision。literal key按维护者决定支持完整show/hide、copy、edit与clear，`$ENV`/`!command`显示原始表达式；这些值不得复制进通用Settings、Timeline或日志。常用字段只使用closed form vocabulary，复杂结构明确标为file-only并提供现有本机打开入口，不能建设通用form DSL。损坏文件或高于当前支持版本的schema必须显示保留原文件的typed error、刷新/打开文件等恢复动作，不得以默认值静默覆盖；unknown fields保持round-trip。Settings重新聚焦/reopen/refresh发现外部变化且本地draft已修改时必须保留draft并显示conflict，不得自动更新expected revision或静默重试；只有用户明确重新加载或以当前草稿继续时才能再次mutation。
 
@@ -220,7 +220,7 @@ Web Access的能力级图标固定复用现有`globe`，用于Settings导航、�
 
 结果处理使用三个互斥选择：推荐且canonical默认的`auto-summary`后台生成summary后继续且不等待人工审查；`summary-review`保持tool call pending直到批准、取消、timeout、fatal error或其他合法settlement；`none`直接把raw results返回Agent。Settings必须把`auto-summary`表达为无打扰默认，把`summary-review`表达为会暂停等待批准的专业模式；不能用一个“关闭审查”开关把`auto-summary`偷换成`none`，也不能把“自动显示搜索过程”包装成workflow或批准开关。Gemini Web启用cookie路径时，Provider detail/技术诊断显示当前Chromium profile/account，作为不注册`/google-account`后的产品替代。
 
-Web Search Tab采用OmniMind黑白细线、开放式文档流：完整query/result是首屏和视觉主体，来源、选择、重搜、补搜、query rewrite与Provider切换都留在结果上下文中；`summary-review`的summary只作为右侧辅助检查器，打开时背景settlement action必须inert或隐藏。Provider切换沿作者语义持久写入后续默认并重新搜索当前结果，文案必须明确“已将该服务设为默认，并重新搜索当前结果”。页面必须复用正式Curator endpoints、event replay、token/session校验、markdown sanitization、Provider descriptor与typed Browser/settlement seam；视觉原型只作reference，不能复制mock state machine、维护第二Provider表或接管timeout。全局快捷键不得劫持button、link、input、textarea、select、contenteditable、modal或combobox内部键盘语义。
+Web Search Tab采用OmniMind黑白细线、开放式文档流：完整query/result是首屏和视觉主体，单query/少结果默认展开首项，多query按清楚文档流分组；来源、选择、重搜、补搜、query rewrite与Provider切换都留在结果上下文中，框架状态与技术详情不得抢过结果。`summary-review`的summary只作为右侧辅助检查器，打开时背景settlement action必须inert或隐藏。Provider切换沿作者语义同时请求“用该服务重搜当前结果”和“持久写入后续默认”，但两项结果必须分别说真话：只有canonical expected-revision mutation确实提交后才显示“已设为默认”；若重搜成功而保存冲突/损坏/权限失败，保留本次结果并明确显示“已用该服务重新搜索，但默认服务未保存”，恢复动作继续进入现有Settings config owner，不静默重试或推进expected revision；保存成功而重搜失败也必须准确区分。页面必须复用正式Curator endpoints、event replay、token/session校验、markdown sanitization、Provider descriptor与typed Browser/settlement seam；Browser Tab标题消费创建时locale snapshot，不由Browser硬编码英文。正常错误由Curator Server稳定typed code和页面双语catalog投影，原始诊断只进入允许的技术详情；视觉原型只作reference，不能复制mock state machine、维护第二Provider表或接管timeout。全局快捷键不得劫持button、link、input、textarea、select、contenteditable、modal或combobox内部键盘语义。
 
 Curator创建时使用当前OmniMind locale与resolved light/dark theme的短时快照，普通产品文案完整覆盖简中/英文；Provider名称、URL、query和原始结果保持来源事实。该控制台使用internal-only chrome，不显示`Open externally`、raw-link copy或raw token地址；来源链接打开为普通OmniMind Browser Tab，之后不限制普通Browser的显式外部打开。页面不从OS/browser默认推断产品语言或主题，不增加Curator自己的设置、route、history、logo表或状态store。
 
@@ -343,6 +343,16 @@ Provider/Host capability 改变时，Composer mode menu 由 loaded capability tr
 用户看到的是 source 已有且可观察的状态：ready/warning/error、available、auth、binary/version/update、model/capability 与具体 diagnostics。缺证据时显示 unknown 或不可用原因，而不是创造品牌级 tier。
 
 ## 10. 视觉、性能、双语与可访问性
+
+### 产品表面准则
+
+- 界面按用户要完成的事组织，不按模块、owner、能力清单或实现拓扑组织。默认层只回答当前状态、下一动作和重要后果；完整能力通过渐进披露保留，不能用同时铺满证明“功能完整”。
+- 主状态使用可观察、可行动的短事实，如“可用、需要设置、暂时不可用、已完成”。测试时效、非永久性、内部不确定性与诊断免责声明只放在对应动作或技术详情附近，不能长期压在首屏制造压力。
+- 成功文案必须等待真实owner提交、settlement或持久化完成后再出现；并行结果分别说真话，不能用一项成功覆盖另一项失败。可识别失败说明发生了什么和下一步，raw error只进入技术详情。
+- 一个控件只表达一个用户意图。展示、执行、审查、批准与取消不得互相冒充；关闭或隐藏默认只改变展示，除非动作本身明确写着会停止或取消。
+- 列表服务于选择：当前与已配置项优先，其他项按稳定用户语义分组；拒绝无差别卡片墙、重复badge和每行同一种动作。品牌图标只负责身份，状态必须由文字、结构或非颜色标记表达。
+- 普通文案和无障碍名称使用同一用户概念；内部字段名、枚举、raw key、模块名和生命周期术语不得因`aria-label`、Tooltip、Toast或空态重新泄漏到正常产品表面。
+- 视觉依靠层级、排版、留白与连续反馈建立秩序；一个区域只保留一个主动作。没有真实信息增益时不增加卡片、渐变、装饰图标、常驻说明、动效或第二层导航。
 
 ### Device pane
 

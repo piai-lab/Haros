@@ -41,10 +41,27 @@ type DraftState = {
   readonly autoShowSearchProcess: boolean;
   readonly fields: Readonly<Record<string, string | null>>;
 };
-type View = { readonly kind: "overview" } | { readonly kind: "add" } | {
-  readonly kind: "detail";
-  readonly providerId: string;
+type View =
+  | { readonly kind: "overview" }
+  | { readonly kind: "add" }
+  | {
+      readonly kind: "detail";
+      readonly providerId: string;
+    };
+type ProbeRun = {
+  readonly requestId: string;
+  readonly target: string;
+  readonly status: "pending" | "settled";
+  readonly result: OmniMindWebSearchProbeResult | null;
 };
+type SettingsFailure = "load" | "save" | "open-config";
+
+export function webSearchProviderFieldAccessibleLabel(
+  providerName: string,
+  localizedFieldLabel: string,
+): string {
+  return `${providerName} · ${localizedFieldLabel}`;
+}
 
 const workflowOptions: readonly OmniMindWebSearchWorkflow[] = [
   "auto-summary",
@@ -120,8 +137,8 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
   const [view, setView] = useState<View>({ kind: "overview" });
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<"loading" | "saving" | "opening" | null>(null);
-  const [probe, setProbe] = useState<OmniMindWebSearchProbeResult | null>(null);
-  const [probeProvider, setProbeProvider] = useState<string | null>(null);
+  const [probeRun, setProbeRun] = useState<ProbeRun | null>(null);
+  const [failure, setFailure] = useState<SettingsFailure | null>(null);
   const [visibleSecrets, setVisibleSecrets] = useState<ReadonlySet<string>>(new Set());
   const [geminiDiagnostic, setGeminiDiagnostic] = useState<{
     readonly state: "available" | "unavailable";
@@ -139,8 +156,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     setBase(snapshot);
     setDraft(draftFrom(snapshot));
     setConflict(null);
-    setProbe(null);
-    setProbeProvider(null);
+    setProbeRun(null);
   }, []);
 
   const applyReadResult = useCallback(
@@ -166,11 +182,13 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           ? await api.omnimindWebSearch.open()
           : await api.omnimindWebSearch.refresh(base ? { knownRevision: base.revision } : {});
         applyReadResult(result, mode === "refresh");
-      } catch (error) {
+        setFailure(null);
+      } catch {
+        setFailure("load");
         toastManager.add({
           type: "error",
           title: t("settings.webSearch.loadFailed"),
-          description: error instanceof Error ? error.message : t("settings.webSearch.unknownError"),
+          description: t("settings.webSearch.loadRecovery"),
         });
       } finally {
         setBusy(null);
@@ -211,12 +229,18 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           return;
         }
         acceptSnapshot(result.snapshot);
+        setFailure(null);
         toastManager.add({
           type: "success",
           title: result.state === "changed" ? t("settings.webSearch.saved") : t("settings.webSearch.noChanges"),
         });
-      } catch (error) {
-        toastManager.add({ type: "error", title: t("settings.webSearch.saveFailed"), description: error instanceof Error ? error.message : t("settings.webSearch.unknownError") });
+      } catch {
+        setFailure("save");
+        toastManager.add({
+          type: "error",
+          title: t("settings.webSearch.saveFailed"),
+          description: t("settings.webSearch.saveRecovery"),
+        });
       } finally {
         setBusy(null);
       }
@@ -224,44 +248,81 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     [acceptSnapshot, base, busy, conflict, draft, t],
   );
 
-  const runProviderTest = useCallback((providerId: string) => {
-    if (!draft) return Promise.resolve();
-    if (probeRequestRef.current) return probeRequestRef.current;
-    const requestId = crypto.randomUUID();
-    const request = (async () => {
-      setProbe(null);
-      setProbeProvider(providerId);
-      try {
-        setProbe(await ensureNativeApi().omnimindWebSearch.testProvider({
-          requestId,
-          providerId,
-          draft: mutationDraft(draft),
-        }));
-      } catch {
-        setProbe({ state: "failed", provider: providerId, reason: "provider-failed", durationMs: 0 });
-      } finally {
-        setProbeProvider(null);
-      }
-    })();
-    probeRequestRef.current = request;
-    void request.finally(() => {
-      if (probeRequestRef.current === request) probeRequestRef.current = null;
-    });
-    return request;
-  }, [draft]);
+  const runProviderTest = useCallback(
+    (providerId: string) => {
+      if (!draft) return Promise.resolve();
+      if (probeRequestRef.current) return probeRequestRef.current;
+      const requestId = crypto.randomUUID();
+      const request = (async () => {
+        setProbeRun({ requestId, target: providerId, status: "pending", result: null });
+        try {
+          const result = await ensureNativeApi().omnimindWebSearch.testProvider({
+            requestId,
+            providerId,
+            draft: mutationDraft(draft),
+          });
+          setProbeRun((current) =>
+            current?.requestId === requestId
+              ? { requestId, target: providerId, status: "settled", result }
+              : current,
+          );
+        } catch {
+          setProbeRun((current) =>
+            current?.requestId === requestId
+              ? {
+                  requestId,
+                  target: providerId,
+                  status: "settled",
+                  result: {
+                    state: "failed",
+                    provider: providerId,
+                    reason: "provider-failed",
+                    requestId,
+                    durationMs: 0,
+                  },
+                }
+              : current,
+          );
+        }
+      })();
+      probeRequestRef.current = request;
+      void request.finally(() => {
+        if (probeRequestRef.current === request) probeRequestRef.current = null;
+      });
+      return request;
+    },
+    [draft],
+  );
 
   const recheck = useCallback(() => {
     if (probeRequestRef.current) return probeRequestRef.current;
     const requestId = crypto.randomUUID();
     const request = (async () => {
-      setProbe(null);
-      setProbeProvider("__route__");
+      setProbeRun({ requestId, target: "__route__", status: "pending", result: null });
       try {
-        setProbe(await ensureNativeApi().omnimindWebSearch.recheck({ requestId }));
+        const result = await ensureNativeApi().omnimindWebSearch.recheck({ requestId });
+        setProbeRun((current) =>
+          current?.requestId === requestId
+            ? { requestId, target: "__route__", status: "settled", result }
+            : current,
+        );
       } catch {
-        setProbe({ state: "degraded", provider: null, reason: "temporary-failure", durationMs: 0 });
-      } finally {
-        setProbeProvider(null);
+        setProbeRun((current) =>
+          current?.requestId === requestId
+            ? {
+                requestId,
+                target: "__route__",
+                status: "settled",
+                result: {
+                  state: "degraded",
+                  provider: null,
+                  reason: "temporary-failure",
+                  requestId,
+                  durationMs: 0,
+                },
+              }
+            : current,
+        );
       }
     })();
     probeRequestRef.current = request;
@@ -280,14 +341,29 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     setBusy("opening");
     try {
       await ensureNativeApi().omnimindWebSearch.openConfig({ editor });
-    } catch (error) {
-      toastManager.add({ type: "error", title: t("settings.webSearch.openConfigFailed"), description: error instanceof Error ? error.message : t("settings.webSearch.unknownError") });
+      setFailure(null);
+    } catch {
+      setFailure("open-config");
+      toastManager.add({
+        type: "error",
+        title: t("settings.webSearch.openConfigFailed"),
+        description: t("settings.webSearch.openConfigRecovery"),
+      });
     } finally {
       setBusy(null);
     }
   }, [configQuery.data?.availableEditors, t]);
 
   if (!active) return null;
+  if (!readResult && failure === "load") {
+    return (
+      <SettingsEmptyState tone="destructive" className="space-y-3">
+        <div className="font-medium text-foreground">{t("settings.webSearch.loadFailed")}</div>
+        <div>{t("settings.webSearch.loadRecovery")}</div>
+        <Button size="xs" variant="outline" onClick={() => void load("open")}>{t("common.retry")}</Button>
+      </SettingsEmptyState>
+    );
+  }
   if (!readResult || busy === "loading" && !base) {
     return <SettingsEmptyState layout="status">{t("settings.webSearch.loading")}</SettingsEmptyState>;
   }
@@ -295,7 +371,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     return (
       <SettingsEmptyState tone="destructive" className="space-y-3">
         <div className="font-medium text-foreground">{t("settings.webSearch.recoveryTitle")}</div>
-        <div>{readResult.message}</div>
+        <div>{t(`settings.webSearch.recovery.${readResult.reason}` as const)}</div>
         <div className="flex justify-center gap-2">
           <Button size="xs" variant="outline" onClick={() => void load("refresh")}>{t("common.refresh")}</Button>
           <Button size="xs" variant="outline" onClick={() => void openConfig()}>{t("settings.webSearch.openConfig")}</Button>
@@ -321,6 +397,36 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
       case "gemini": return t("settings.webSearch.prerequisite.gemini");
     }
   };
+  const providerStateDescription = (provider: ReadySnapshot["providers"][number]) => {
+    if (provider.configurationState === "not-required")
+      return t("settings.webSearch.state.noSetup");
+    if (provider.configurationState === "complete") return t("settings.webSearch.state.complete");
+    if (provider.configurationState === "session-dependent") {
+      return t("settings.webSearch.state.sessionDependent");
+    }
+    if (provider.configurationState === "partial") {
+      return t("settings.webSearch.state.partial", {
+        count: provider.missingRequiredConfigKeys.length,
+      });
+    }
+    return t("settings.webSearch.state.missing");
+  };
+  const providerActionLabel = (provider: ReadySnapshot["providers"][number]) =>
+    provider.configurationState === "complete"
+      ? t("common.edit")
+      : provider.configurationState === "not-required" || provider.configurationState === "session-dependent"
+        ? t("settings.webSearch.view")
+        : t("settings.webSearch.setup");
+  const fieldLabel = (field: ReadySnapshot["providers"][number]["fields"][number]) => {
+    const label = t(`settings.webSearch.fieldRole.${field.role}` as const);
+    return field.qualifier ? `${field.qualifier} · ${label}` : label;
+  };
+  const fieldAccessibleLabel = (
+    provider: ReadySnapshot["providers"][number],
+    field: ReadySnapshot["providers"][number]["fields"][number],
+  ) => webSearchProviderFieldAccessibleLabel(provider.displayName, fieldLabel(field));
+  const probeDescription = (result: OmniMindWebSearchProbeResult) =>
+    t(`settings.webSearch.probeReason.${result.reason}` as const);
 
   const conflictNotice = conflict ? (
     <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-foreground">
@@ -332,32 +438,105 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
       </div>
     </div>
   ) : null;
+  const failureNotice = failure && failure !== "load" ? (
+    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-foreground">
+      <div className="font-medium">
+        {failure === "save" ? t("settings.webSearch.saveFailed") : t("settings.webSearch.openConfigFailed")}
+      </div>
+      <p className="mt-1 text-muted-foreground">
+        {failure === "save" ? t("settings.webSearch.saveRecovery") : t("settings.webSearch.openConfigRecovery")}
+      </p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {failure === "save" ? (
+          <Button size="xs" variant="outline" onClick={() => void save()}>{t("common.retry")}</Button>
+        ) : null}
+        <Button size="xs" variant="outline" onClick={() => void load("refresh")}>{t("common.refresh")}</Button>
+        <Button size="xs" variant="outline" onClick={() => void openConfig()}>{t("settings.webSearch.openConfig")}</Button>
+      </div>
+    </div>
+  ) : null;
 
   if (view.kind === "add") {
+    const selectedIds = new Set(
+      (Array.isArray(draft.provider) ? draft.provider : [draft.provider])
+        .filter((id) => id !== "auto" && id !== "all"),
+    );
+    const configured = filteredProviders.filter((provider) =>
+      selectedIds.has(provider.id) || provider.configurationState === "complete",
+    );
+    const remaining = filteredProviders.filter((provider) => !configured.includes(provider));
+    const noSetup = remaining.filter((provider) => provider.settingsGroup === "no-setup");
+    const credentials = remaining.filter((provider) => provider.settingsGroup === "credentials");
+    const advanced = remaining.filter((provider) => provider.settingsGroup === "advanced");
+    const groups = [
+      { key: "configured", label: t("settings.webSearch.group.configured"), providers: configured },
+      { key: "no-setup", label: t("settings.webSearch.group.noSetup"), providers: noSetup },
+      {
+        key: "credentials",
+        label: t("settings.webSearch.group.credentials"),
+        providers: credentials,
+      },
+      { key: "advanced", label: t("settings.webSearch.group.advanced"), providers: advanced },
+    ].filter(({ providers }) => providers.length > 0);
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <Button size="xs" variant="ghost" onClick={() => setView({ kind: "overview" })}><ArrowLeftIcon className="size-3.5" />{t("common.back")}</Button>
         </div>
         <SettingsSectionShell title={t("settings.webSearch.addProvider")}>
-          <div className="mb-3"><SearchInput value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("settings.webSearch.searchProviders")} /></div>
-          <SettingsCard>
-            {filteredProviders.map((provider) => (
-              <SettingsListRow
-                key={provider.id}
-                title={<span className="flex items-center gap-2"><ProviderMark icon={provider.icon} label={provider.displayName} />{provider.displayName}</span>}
-                description={`${prerequisiteDescription(provider.prerequisite)} · ${provider.configured ? t("settings.webSearch.configured") : t("settings.webSearch.notConfigured")}`}
-                actions={<Button size="xs" variant="outline" onClick={() => setView({ kind: "detail", providerId: provider.id })}>{t("common.edit")}</Button>}
-              />
+          <div className="mb-3">
+            <SearchInput
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t("settings.webSearch.searchProviders")}
+            />
+          </div>
+          <div className="space-y-5">
+            {groups.map((group) => (
+              <div key={group.key} data-provider-group={group.key} className="space-y-2">
+                <div className="px-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                  {group.label}
+                </div>
+                <SettingsCard>
+                  {group.providers.map((provider) => (
+                    <SettingsListRow
+                      key={provider.id}
+                      title={
+                        <span className="flex items-center gap-2">
+                          <ProviderMark icon={provider.icon} label={provider.displayName} />
+                          {provider.displayName}
+                        </span>
+                      }
+                      description={`${prerequisiteDescription(provider.prerequisite)} · ${providerStateDescription(provider)}`}
+                      actions={
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          onClick={() => setView({ kind: "detail", providerId: provider.id })}
+                        >
+                          {providerActionLabel(provider)}
+                        </Button>
+                      }
+                    />
+                  ))}
+                </SettingsCard>
+              </div>
             ))}
-          </SettingsCard>
+            {groups.length === 0 ? (
+              <SettingsEmptyState>{t("settings.webSearch.noProviderMatches")}</SettingsEmptyState>
+            ) : null}
+          </div>
         </SettingsSectionShell>
       </div>
     );
   }
 
   if (view.kind === "detail" && selectedProvider) {
-    const testingThis = probeProvider === selectedProvider.id;
+    const testingThis = probeRun?.target === selectedProvider.id && probeRun.status === "pending";
+    const providerProbe =
+      probeRun?.target === selectedProvider.id && probeRun.status === "settled"
+        ? probeRun.result
+        : null;
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between gap-3">
@@ -368,6 +547,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           </div>
         </div>
         {conflictNotice}
+        {failureNotice}
         <SettingsSectionShell title={selectedProvider.displayName}>
           <SettingsCard>
             <SettingsListRow
@@ -381,13 +561,23 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
               return (
                 <SettingsRow
                   key={field.configKey}
-                  title={field.qualifier ? `${field.qualifier} · ${field.configKey}` : field.configKey}
-                  description={field.environmentVariable ? t("settings.webSearch.fieldEnv", { env: field.environmentVariable }) : t("settings.webSearch.fieldFile")}
-                  status={field.invalidStoredValue ? <span className="text-destructive">{t("settings.webSearch.invalidStoredValue")}</span> : null}
+                  title={fieldLabel(field)}
+                  description={
+                    field.environmentVariable
+                      ? t("settings.webSearch.fieldEnv", { env: field.environmentVariable })
+                      : t("settings.webSearch.fieldFile")
+                  }
+                  status={
+                    field.invalidStoredValue ? (
+                      <span className="text-destructive">
+                        {t("settings.webSearch.invalidStoredValue")}
+                      </span>
+                    ) : null
+                  }
                 >
                   <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                     <Input
-                      aria-label={field.configKey}
+                      aria-label={fieldAccessibleLabel(selectedProvider, field)}
                       type={secret && !visible ? "password" : "text"}
                       value={value}
                       spellCheck={false}
@@ -414,8 +604,17 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           <SettingsRow
             title={t("settings.webSearch.testCurrentDraft")}
             description={t("settings.webSearch.testDraftDescription")}
-            status={probe && probeProvider === null ? t(`settings.webSearch.probe.${probe.state}` as const) : null}
-            control={<Button size="xs" variant="outline" disabled={Boolean(probeProvider)} onClick={() => void runProviderTest(selectedProvider.id)}>{testingThis ? t("settings.webSearch.testing") : t("settings.webSearch.test")}</Button>}
+            status={providerProbe ? probeDescription(providerProbe) : null}
+            control={
+              <Button
+                size="xs"
+                variant="outline"
+                disabled={probeRun?.status === "pending"}
+                onClick={() => void runProviderTest(selectedProvider.id)}
+              >
+                {testingThis ? t("settings.webSearch.testing") : t("settings.webSearch.test")}
+              </Button>
+            }
           />
           {selectedProvider.id === "gemini" ? (
             <SettingsRow
@@ -430,17 +629,52 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     );
   }
 
-  const configuredProviders = base.providers.filter((provider) => provider.configured);
+  const overviewSelectedIds = new Set(
+    (Array.isArray(draft.provider) ? draft.provider : [draft.provider])
+      .filter((id) => id !== "auto" && id !== "all"),
+  );
+  const configuredProviders = base.providers.filter((provider) =>
+    overviewSelectedIds.has(provider.id)
+    || provider.configurationState === "complete"
+    || provider.configurationState === "not-required"
+    || provider.configurationState === "session-dependent",
+  );
+  const toolStatus = (enabled: boolean) =>
+    enabled ? t("settings.webSearch.tool.available") : t("settings.webSearch.tool.fileDisabled");
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-sm font-semibold text-foreground">OmniMind Web Access</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t("settings.webSearch.title")}</h2>
         <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
           {t("settings.webSearch.capabilityDescription")}
         </p>
       </div>
       {conflictNotice}
+      {failureNotice}
       <SettingsSection title={t("settings.webSearch.defaults")}>
+        <SettingsRow
+          title={t("settings.webSearch.availability")}
+          description={t("settings.webSearch.availabilityDescription")}
+          status={
+            base.tools.webSearch.enabled
+              ? probeRun?.target === "__route__" && probeRun.result
+                ? probeDescription(probeRun.result)
+                : t("settings.webSearch.possible")
+              : t("settings.webSearch.tool.fileDisabled")
+          }
+          control={
+            <Button
+              size="xs"
+              variant="outline"
+              disabled={probeRun?.status === "pending" || !base.tools.webSearch.enabled}
+              onClick={() => void recheck()}
+            >
+              {probeRun?.target === "__route__" && probeRun.status === "pending"
+                ? t("settings.webSearch.rechecking")
+                : t("settings.webSearch.recheck")}
+            </Button>
+          }
+        />
         <SettingsRow
           title={t("settings.webSearch.routing")}
           description={t("settings.webSearch.routingDescription")}
@@ -451,7 +685,11 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
                 {Array.isArray(draft.provider) ? <SelectItem value="__selected_parallel__">{t("settings.webSearch.selectedParallel")}</SelectItem> : null}
                 <SelectItem value="auto">{t("settings.webSearch.routeAuto")}</SelectItem>
                 <SelectItem value="all">{t("settings.webSearch.routeAll")}</SelectItem>
-                {base.providers.map((provider) => <SelectItem key={provider.id} value={provider.id}>{provider.displayName}</SelectItem>)}
+                {base.providers.map((provider) => (
+                  <SelectItem key={provider.id} value={provider.id}>
+                    {provider.displayName} · {providerStateDescription(provider)}
+                  </SelectItem>
+                ))}
               </SettingsSelectPopup>
             </Select>
           }
@@ -481,6 +719,11 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
             />
           }
         />
+        {providerSelectionValue(draft.provider) === "all" || Array.isArray(draft.provider) ? (
+          <p className="px-3 pb-2 text-xs text-warning">
+            {t("settings.webSearch.parallelCostWarning")}
+          </p>
+        ) : null}
       </SettingsSection>
 
       <SettingsSectionShell
@@ -488,29 +731,82 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
         action={<Button size="xs" variant="outline" onClick={() => setView({ kind: "add" })}><PlusIcon className="size-3.5" />{t("settings.webSearch.addProvider")}</Button>}
       >
         {configuredProviders.length > 0 ? (
-          <SettingsCard>{configuredProviders.map((provider) => <SettingsListRow key={provider.id} title={<span className="flex items-center gap-2"><ProviderMark icon={provider.icon} label={provider.displayName} />{provider.displayName}</span>} description={t("settings.webSearch.configured")} actions={<Button size="xs" variant="outline" onClick={() => setView({ kind: "detail", providerId: provider.id })}>{t("common.edit")}</Button>} />)}</SettingsCard>
-        ) : <SettingsEmptyState>{t("settings.webSearch.noConfiguredProviders")}</SettingsEmptyState>}
+          <SettingsCard>
+            {configuredProviders.map((provider) => (
+              <SettingsListRow
+                key={provider.id}
+                title={
+                  <span className="flex items-center gap-2">
+                    <ProviderMark icon={provider.icon} label={provider.displayName} />
+                    {provider.displayName}
+                  </span>
+                }
+                description={providerStateDescription(provider)}
+                actions={
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    onClick={() => setView({ kind: "detail", providerId: provider.id })}
+                  >
+                    {providerActionLabel(provider)}
+                  </Button>
+                }
+              />
+            ))}
+          </SettingsCard>
+        ) : (
+          <SettingsEmptyState>{t("settings.webSearch.noConfiguredProviders")}</SettingsEmptyState>
+        )}
       </SettingsSectionShell>
 
-      <SettingsSection title={t("settings.webSearch.statusAndFiles")}>
-        <SettingsRow
-          title={<span className="flex items-center gap-2"><WebSearchIcon className="size-4" />{t("settings.webSearch.searchCapability")}</span>}
-          description={t("settings.webSearch.searchCapabilityDescription")}
-          status={probe ? t(`settings.webSearch.probe.${probe.state}` as const) : t("settings.webSearch.possible")}
-          control={<Button size="xs" variant="outline" disabled={Boolean(probeProvider)} onClick={() => void recheck()}>{probeProvider === "__route__" ? t("settings.webSearch.rechecking") : t("settings.webSearch.recheck")}</Button>}
-        />
-        <SettingsRow
-          title={t("settings.webSearch.readCapability")}
-          description={t("settings.webSearch.readCapabilityDescription")}
-          status={t("settings.webSearch.readCapabilityStatus")}
-        />
-        <SettingsRow
-          title={t("settings.webSearch.reviewCapability")}
-          description={t("settings.webSearch.reviewCapabilityDescription")}
-          status={t(`settings.webSearch.workflow.${draft.workflow}` as const)}
-        />
-        <SettingsRow title={t("settings.webSearch.configFile")} description={t("settings.webSearch.configFileDescription")} control={<Button size="xs" variant="outline" disabled={busy === "opening"} onClick={() => void openConfig()}>{t("settings.webSearch.openConfig")}</Button>} />
-      </SettingsSection>
+      <details className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+        <summary className="cursor-pointer select-none text-xs font-medium text-foreground">
+          {t("settings.webSearch.statusAndFiles")}
+        </summary>
+        <div className="mt-3">
+          <SettingsSection title={t("settings.webSearch.toolStates")}>
+            <SettingsRow
+              title={
+                <span className="flex items-center gap-2">
+                  <WebSearchIcon className="size-4" />
+                  {t("settings.webSearch.tool.webSearch")}
+                </span>
+              }
+              description={t("settings.webSearch.tool.fileLevelDescription")}
+              status={toolStatus(base.tools.webSearch.enabled)}
+            />
+            <SettingsRow
+              title={t("settings.webSearch.tool.sourceCheck")}
+              description={t("settings.webSearch.tool.fileLevelDescription")}
+              status={toolStatus(base.tools.sourceCheck.enabled)}
+            />
+            <SettingsRow
+              title={t("settings.webSearch.tool.fetchContent")}
+              description={t("settings.webSearch.tool.fileLevelDescription")}
+              status={toolStatus(base.tools.fetchContent.enabled)}
+            />
+            <SettingsRow
+              title={t("settings.webSearch.tool.getSearchContent")}
+              description={t("settings.webSearch.tool.fileLevelDescription")}
+              status={toolStatus(base.tools.getSearchContent.enabled)}
+            />
+            <SettingsRow
+              title={t("settings.webSearch.configFile")}
+              description={t("settings.webSearch.configFileDescription")}
+              control={
+                <Button
+                  size="xs"
+                  variant="outline"
+                  disabled={busy === "opening"}
+                  onClick={() => void openConfig()}
+                >
+                  {t("settings.webSearch.openConfig")}
+                </Button>
+              }
+            />
+          </SettingsSection>
+        </div>
+      </details>
 
       <div className="flex justify-end gap-2">
         <Button size="xs" variant="outline" disabled={!dirty} onClick={() => setDraft(draftFrom(base))}>{t("common.cancel")}</Button>

@@ -444,13 +444,13 @@ export const SETTINGS_SEARCH_ENTRIES: readonly SettingsSearchEntry[] = [
   {
     id: "web-search:workflow",
     section: "web-search",
-    title: "Source workflow",
+    title: "Result handling",
     keywords: "raw results automatic summary review curator source approval",
   },
   {
     id: "web-search:config-file",
     section: "web-search",
-    title: "Canonical configuration",
+    title: "Configuration file",
     keywords: "web-search.json keys credentials advanced file provider",
   },
   {
@@ -553,7 +553,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Terminal font": "settings.terminalFont",
   "Terminal font size": "settings.terminalFontSize",
   "Text markers": "settings.textMarkers",
-  "Source workflow": "settings.webSearch.workflow",
+  "Result handling": "settings.webSearch.workflow",
   Theme: "settings.theme",
   "Thread order": "settings.threadOrder",
   "Time format": "settings.timeFormat",
@@ -562,7 +562,7 @@ const SETTINGS_SEARCH_TITLE_KEY_BY_TITLE: Readonly<Record<string, MessageKey>> =
   "Usage and billing": "settings.usage",
   "Use system UI font": "settings.systemUiFont",
   Version: "settings.version",
-  "Canonical configuration": "settings.webSearch.configFile",
+  "Configuration file": "settings.webSearch.configFile",
   "Visible providers": "settings.visibleProviders",
 };
 
