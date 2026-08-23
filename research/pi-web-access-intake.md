@@ -2,7 +2,7 @@
 
 > 观察与收口日期：2026-08-22
 >
-> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。candidate 已在任务分支形成有序实现提交，并从exact pushed SHA完成Desktop重建、替换安装、fresh-profile Settings/Provider-asset gate，以及真实DeepSeek + keyless Exa的默认`auto-summary`、显式Curator和non-review observer packaged局部门；真实MiMo stored search responseId衔接已由exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`完成复验。独立observer/review presentation与V7适配最终由exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`完成隔离packaged复验；keyed搜索Provider成功与多Thread完整journey仍待验证。Host Tools事实仍不能外推为Web Access证据。
+> OmniMind 首轮观察基线：`codex/host-tools-product-surface-policy@5451e22ce80b34e0d1d9f6fe4143b7760564d659`；2026-08-22 double check 基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`。candidate 已在任务分支形成有序实现提交，并从exact pushed SHA完成Desktop重建、替换安装、fresh-profile Settings/Provider-asset gate，以及真实DeepSeek + keyless Exa的默认`auto-summary`、显式Curator和non-review observer packaged局部门；真实MiMo stored search responseId衔接已由exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`完成复验。独立observer/review presentation与V7适配最终由exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`完成隔离packaged复验；同一安装候选现已补齐keyed Tavily draft/named route与A/B多Thread background attention/exact reopen journey。Host Tools事实仍不能外推为Web Access证据。
 >
 > 上游 exact source：[`nicobailon/pi-web-access@fbbd0cb3b3eb918c8833906aa0b41e257fffe979`](https://github.com/nicobailon/pi-web-access/tree/fbbd0cb3b3eb918c8833906aa0b41e257fffe979)
 >
@@ -13,7 +13,7 @@
 > 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，production adoption 只有进入根 [`README.md`](../README.md) 的 `source-adoptions` 后才成立。
 
 > [!IMPORTANT]
-> **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态为`candidate-with-partial-packaged-evidence`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。默认`auto-summary`、Settings/Provider-asset、显式Curator、non-review observer与真实MiMo stored result continuation已有exact-SHA局部安装证据；当前最终observer实现与安装证据对应exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`。keyed搜索Provider成功与多Thread完整journey仍未取得，不能把局部证据改写成完整`packaged-product-proven`或发行已完成。
+> **当前 disposition：`Fork narrowly`；monorepo-owned candidate 已实现，状态为`candidate-with-packaged-web-access-evidence`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。默认`auto-summary`、Settings/Provider-asset、显式Curator、non-review observer、真实MiMo stored result continuation、keyed Tavily route与A/B多Thread lifecycle均已有exact-SHA安装证据；当前最终实现与安装证据对应exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`。这不等于签名、公证、Release、update feed或整个OmniMind产品已经发行。
 
 > [!IMPORTANT]
 > 2026-08-22维护者重新裁决默认体验：canonical默认workflow是`auto-summary`，普通联网后台摘要并同turn继续；Curator不再是日常默认，只在Settings显式选择、per-call override或用户明确要求审查/挑选来源时以`summary-review`进入。该决定supersede本文此前“Curator默认开启”的旧结论，但不删除P4或显式review能力。
@@ -55,7 +55,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 服务品牌 | 具体搜索服务使用各自品牌标记；Parallel 与 Parallel MCP 共享 Parallel 标记，连接方式用文字区分 |
 | 图标来源 | runtime Provider定义与presentation字段同源；26家全部使用本地固定、保持原色的品牌资产并记录source snapshot/hash/已知约束，不能运行时热取favicon |
 | 上游同步 | 精确版本、人工 intake、最小 patch inventory；不自动追 `latest` |
-| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation及observer/review分层分别已有exact-SHA局部packaged证据。最终observer安装候选是exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`。keyed搜索Provider成功与多Thread完整journey仍待验证，不能被引用为完整`packaged-product-proven`或已发行 |
+| 当前实施状态 | 已进入private workspace package、bundled Agent composition、typed Curator/Browser/Timeline seam与Settings candidate；26家原色品牌资产、默认`auto-summary`、MiMo stored-result continuation、observer/review分层、keyed Tavily route及A/B多Thread lifecycle均已有exact-SHA packaged证据。最终安装候选是exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`；它证明当前Web Access安装链，不冒充整个产品已发行 |
 
 ### 0.3 唯一 owner 图
 
@@ -143,7 +143,7 @@ Browser 成为 Host capability有意义，因为许多 Engine 没有同等、可
 | npm shasum | `78449966e7f682f707bb9964c3e62d5f04318d8c` |
 | downloaded tgz SHA-256 | `d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054` |
 | source/artifact relation | npm `gitHead` 指向 exact commit；发布物中的 runtime TypeScript 与 exact source 对应文件逐字节一致 |
-| evidence maturity | `candidate-with-partial-packaged-evidence`；当前正确package runner 549/549、root typecheck、focused Server/Web/Curator/Settings/asset gates、exact-SHA安装Settings/Provider-asset、真实DeepSeek + keyless Exa、真实MiMo stored-result continuation与non-review observer已通过，但keyed搜索Provider成功与多Thread packaged覆盖尚未取得，仍不是`packaged-product-proven` |
+| evidence maturity | `candidate-with-packaged-web-access-evidence`；当前正确package runner 549/549、root typecheck、focused Server/Web/Curator/Settings/asset gates、exact-SHA安装Settings/Provider-asset、真实DeepSeek + keyless Exa、真实MiMo stored-result continuation、keyed Tavily与A/B多Thread background attention/exact reopen均已通过；仍不是签名、公证、Release、update feed或整个OmniMind `packaged-product-proven` |
 
 ### 2.2 发布物结构
 
@@ -830,9 +830,9 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
 - exact pushed implementation SHA `52c8a25e75f702baef36b93fb1f8cc42f270897e`生成DMG SHA-256 `118b55370cbec44308ec68ecbeb5a0efd3bd0d50b88665284e3274aca09c2931`，安装版`app.asar` SHA-256为`018d004a888344e395fa9885f3be2493a1efd9ec0cc15cbaa0c32d4dc26eaeb4`。当时尚未实现独立展示设置，fresh任务profile证明真实DeepSeek Agent经keyless Exa走默认`auto-summary`时不创建Curator并在同一turn继续；显式`summary-review`创建dedicated ephemeral Tab、批准后terminal cleanup并让同一turn继续；关闭重开仍投影`auto-summary`默认且无假Curator入口。DeepSeek最终措辞未完全满足“一句话总结”，故这里只关闭旧候选的工具/Curator lifecycle与continuation门，不把模型答案质量或新observer合同写成通过。
 - exact pushed implementation SHA `3f4d673bce30465cba387df2667d2488a744c05f`生成arm64 DMG SHA-256 `4160ec9594e0cbc185b970a645be0e05695344682c255aa9f5bcaed02f831e18`，DMG内与安装后`app.asar` SHA-256均为`3d909eba51ea301e66f8ca71f522fbc1eccf7c98905ca4c46c906e06f767be4`。任务隔离profile复证Main、Renderer与bundled Server均未使用真实用户profile，canonical文件保持`0600`及显式`provider: auto` / `workflow: auto-summary`。真实MiMo-V2.5-Pro从非错误`web_search` tool result读取agent-visible Artifact responseId，随后以该ID成功调用`get_search_content`取回stored result；当时默认展示关闭且尚无observer实现，因此未创建Curator。同一安装候选下的DeepSeek V4 Flash显式`summary-review`又一次完成dedicated ephemeral Tab、批准、terminal cleanup与same-turn continuation；这条证据不证明后续observer合同。
 - exact pushed implementation SHA `ff67a21a97f9071bd9162dfb61e9f4b632a903a8`生成arm64 DMG SHA-256 `16386d1d8e01c2bd0ca5b2903485bfb5f7651c0fb867df348df458e00084cf1e`，DMG内与安装后`app.asar` SHA-256均为`59e6183a0a2e19e4aaa3886249e049fe77dc7f78d4f034ef8b6ccbc892b25844`。fresh任务profile复证Main、Renderer与bundled Server全部隔离，并完成`auto-summary`与`none`各自展示关/开、显式`summary-review`批准、observer in-flight关闭不取消、agent-visible responseId继续取回、关闭重开无waiting/假reopen/过期observer。observer页面使用正式协议和本地原色Provider资产，不出现review settlement控件或临时审查Browser chrome；作者完整套件549/549通过。该证据关闭observer/presentation安装门，但不证明keyed搜索成功或多Thread packaged生命周期。
-- 授权Tavily draft-test已通过同一正式Provider runtime发送最小真实请求且未保存draft、未改变canonical bytes；外部资源返回HTTP 433，所以这里只证明request-scoped draft与无写入边界，不能把keyed Provider标为成功。
-- 已通过zero-config route、MiMo/DeepSeek model锚点、exact pushed SHA构建安装、fresh隔离profile，以及search → observer/review → approve/continuation → close/reopen → cleanup主路径；route exhaustion与生命周期scope已有确定性source测试。
-- 仍需成功的keyed真实搜索与多Thread/background attention packaged journey；只有这些剩余门完成后才能重新裁决是否把evidence maturity提升到`packaged-product-proven`。
+- replacement Tavily凭据在同一安装候选与任务profile中先通过Settings“测试当前未保存草稿”走正式runtime成功；UI明确“不保存、可能消耗额度”，pending期间按单一request identity禁用重复提交，canonical bytes/mtime、routing、默认Provider与当前Session搜索工具均未改变。随后只在任务profile显式保存并执行named Tavily搜索，真实结果带Tavily attribution与agent-visible responseId，同一Run以`get_search_content`成功继续取回；测试后canonical文件经同一Settings owner恢复原始bytes、删除Tavily字段且保持`0600`，剪贴板已清空。凭据值、endpoint与原始响应未进入argv、日志、截图、artifact、Git或本文。
+- A/B双Thread安装journey中，A以前台`auto-summary`多query observer运行；B在有界延迟后于后台进入`summary-review` waiting，没有切route、抢A Right Dock或自动打开review。关闭A observer后B仍pending；进入B后Timeline显示exact waiting activity，从该动作重建正确review Tab并批准，只settle B，A/B分别继续到各自terminal。terminal立即移除reopen；App关闭重开后CDP只存在主页面，A/B均无waiting/reopen或ephemeral Web Surface，bundled Server仍只打开任务profile state DB。
+- 已通过zero-config route、keyed named route、MiMo/DeepSeek model锚点、exact pushed SHA构建安装、fresh/复用任务隔离profile，以及search → observer/review → approve/continuation → close/exact reopen → cleanup主路径；route exhaustion、timeout/fatal与生命周期scope另有确定性source测试。这里关闭的是Web Access候选此前剩余的keyed Provider与multiThread安装门，不自动升级为Release或整个产品已发行。
 
 ## 11. 已拒绝的复杂度
 
@@ -984,7 +984,7 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
     "provider-availability-to-pi-active-set",
     "source-check-honest-unicode-contract"
   ],
-  "evidenceMaturity": "candidate-with-partial-packaged-evidence",
+  "evidenceMaturity": "candidate-with-packaged-web-access-evidence",
   "implemented": true,
   "currentSourceImplementationSha": "ff67a21a97f9071bd9162dfb61e9f4b632a903a8",
   "supersededObserverImplementationSha": "2bf044049d7eeb419975d7426e5d6414d2136814",
@@ -1001,11 +1001,12 @@ Server只把这份projection投影给Web。Web不再手写第二个26-Provider�
   "sourceFileLevelToolEnableGate": true,
   "packagedObserverPresentationGate": true,
   "packagedWorkflowPresentationMatrixGate": true,
-  "packagedKeyedSearchProviderGate": false,
-  "packagedMultiThreadGate": false,
-  "packagedJourney": false,
+  "packagedKeyedSearchProviderGate": true,
+  "packagedMultiThreadGate": true,
+  "packagedJourney": true,
+  "releaseStatus": "not-released",
   "unresolvedMaintainerChoice": "none"
 }
 ```
 
-后续keyed搜索Provider与多Thread完整packaged journey开始前仍必须实时读取`git status --short`、[`execution-brief.md`](../execution-brief.md)与相关architecture owner，并隔离真实用户profile及并发工作。该并发事实只决定何时安全验证，不重新否决本文已经由维护者确认的产品decision surface；当前Settings/Provider-asset、默认`auto-summary`、MiMo stored-result continuation与显式Curator局部packaged evidence也不能替代尚未覆盖的完整产品或发行证据。
+未来重新构建、升级上游、改变Provider/Curator协议或准备发行前仍必须实时读取`git status --short`、[`execution-brief.md`](../execution-brief.md)与相关architecture owner，并隔离真实用户profile及并发工作。当前packaged Web Access journey证明的是exact implementation SHA与安装候选，不替代签名、公证、Release、update feed或整个OmniMind产品发行证据。
