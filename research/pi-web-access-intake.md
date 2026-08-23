@@ -840,6 +840,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - exact pushed implementation SHA `9d9930f21b654315af9d164ac96b8fcdd59aecef`生成arm64 DMG SHA-256 `2bbe0b24c140b709340e70bb13dd174fc1b0c664fa048fe7f6eee9f3c1573610`，DMG内与安装后`app.asar` SHA-256均为`ab7d83a1bb9a5beb38acfc882d04a94b488ce790f91d4b02aa0f02b3d76121f6`。fresh任务profile从Main、Renderer与bundled Server复证隔离，并经真实Settings UI证明named Tavily缺凭据时首屏与详情都准确要求设置。任务专用测试profile中的真实review页面显示中文标题、Provider切换“持久默认+重搜+可能消耗额度”预告、可聚焦结果button与`aria-expanded/controls`；summary inspector打开时背景action bar同时`hidden`、`inert`、`aria-hidden`、不可见且零可聚焦控件。正式page/server Browser测试4/4负责Enter/Space激活证据；本次packaged DOM观察不扩写该键盘事件全链。terminal后无Timeline reopen，App关闭重开后只有主页面、零loopback surface与零waiting；任务配置已恢复且所有候选进程关闭。
 - exact pushed implementation SHA `6a0990cc7c3d22eb531a4d428972fbbd65a3444f`生成arm64 DMG SHA-256 `61da05da40b2bc86b31367cc58242802dac4e4327f8241c0ef443c4d8cc92f2e`，DMG内与安装后`app.asar` SHA-256均为`8d3131e704b94e48c6aaa71f908747bfa520601ae8ad7a8d01b69f59b69a64e1`。任务profile从Main、Renderer与bundled Server复证隔离；真实packaged review在Inspector ready后将焦点置于可见的`summary-heading`，返回后恢复到可见结果阶段的`btn-send`，均不是`body`或隐藏元素。raw settlement后无waiting/reopen，App关闭重开后只有主页面、零loopback surface与零waiting；任务配置经同一Settings owner恢复且保持`0600`，所有候选进程关闭。真实page/server E2E 4/4、focused Curator 22/22、完整作者套件558/558、root typecheck 7/7与Web production build通过；该焦点修复不新增focus trap、modal或第二状态机。
 - exact pushed implementation SHA `d7017961b13c9604799c833e340bfc27fc9245c7`是合并终审冻结候选：presenter rejection与Curator handoff按call scope typed-error settle且不泄漏token URL，named Provider恢复文案不暴露Pi/TUI命令或private path，OmniMind profile只绑定loopback Curator，draft probe single-flight按scope/Provider/request identity隔离；默认文件bytes与本地化Web Surface title由回归锁定。完整root test 10/10，其中package作者套件560/560、Web 4183/4183、Server 4404/4404；root typecheck 7/7、lint 0 error（602既有warning）、production build 5/5、241组件legal check均通过。该SHA从远端clean clone生成arm64 DMG SHA-256 `844066e944057e169d9a80f12a00d8169fcce62275843759f65e32c14fce8ec6`，DMG内与安装版`app.asar` SHA-256均为`876e9cfe2fe2c34f9f682fb3c73a11c87b65b4d90f1e14cc4d4ddf85ba1e04be`。fresh任务profile复证Main、Renderer、Helper与bundled Server全部隔离；首次进入网络搜索生成`0600` canonical文件，显式包含`provider:auto`、`workflow:auto-summary`和`autoOpenBrowser:false`；中文Settings主路径正确，关闭重开后localStorage无loopback token、页面无waiting review或Right Dock假Tab。此前real-provider、observer/review与多Thread exact-SHA证据继续保护本轮未改变路径；该结果仍不是签名、公证、Release或update feed。
+- task tip `7931d5be5286d5b067392c65438cadf769790003`以no-ff merge `6875e6275d0d4b132a342e5507e79b0065d3ced7`进入并推送`origin/main`。从该精确pushed main merge SHA的clean clone生成arm64 DMG SHA-256 `11d309092a3e0441c99cfff1347db44419886ecb362593b1bd6894a6deae535f`，DMG内与安装版`app.asar` SHA-256均为`2f5d9bf686d1f48fb1269a478a7116079f9a4ceeef574c9877beef6c26168825`。fresh main任务profile复证四进程隔离、首次Settings创建的`0600`完整默认bytes、中文Agent-native主路径与关闭重开无token/waiting/假Tab。记录该证据的尾随commit不属于上述已测试shipped bytes；仍不代表签名、公证、Release或update feed。
 
 ## 11. 已拒绝的复杂度
 
@@ -1004,6 +1005,10 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
   "previousTestedImplementationSha": "6a0990cc7c3d22eb531a4d428972fbbd65a3444f",
   "testedDmgSha256": "844066e944057e169d9a80f12a00d8169fcce62275843759f65e32c14fce8ec6",
   "testedAppAsarSha256": "876e9cfe2fe2c34f9f682fb3c73a11c87b65b4d90f1e14cc4d4ddf85ba1e04be",
+  "mergedTaskTipSha": "7931d5be5286d5b067392c65438cadf769790003",
+  "testedMainMergeSha": "6875e6275d0d4b132a342e5507e79b0065d3ced7",
+  "postMergeDmgSha256": "11d309092a3e0441c99cfff1347db44419886ecb362593b1bd6894a6deae535f",
+  "postMergeAppAsarSha256": "2f5d9bf686d1f48fb1269a478a7116079f9a4ceeef574c9877beef6c26168825",
   "sourceAuthorTests": "560/560",
   "packagedSettingsProviderAssetGate": true,
   "packagedDefaultAutoSummaryGate": true,
