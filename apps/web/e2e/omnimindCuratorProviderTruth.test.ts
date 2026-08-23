@@ -239,6 +239,8 @@ test("summary inspector removes background settlement controls from focus and ac
   const { handle, page } = await openInteractivePage("review");
   try {
     await playwrightExpect(page.locator("#summary-input")).toHaveValue("Synthetic summary");
+    await playwrightExpect(page.locator("#summary-heading")).toBeFocused();
+    expect(await page.locator("#summary-panel").evaluate((panel) => panel.contains(document.activeElement))).toBe(true);
     const actionBar = page.locator(".action-bar");
     await playwrightExpect(actionBar).toBeHidden();
     await playwrightExpect(actionBar).toHaveAttribute("aria-hidden", "true");
@@ -249,6 +251,8 @@ test("summary inspector removes background settlement controls from focus and ac
     await playwrightExpect(actionBar).toBeVisible();
     expect(await actionBar.evaluate((element) => (element as HTMLElement & { inert: boolean }).inert)).toBe(false);
     await playwrightExpect(actionBar).not.toHaveAttribute("aria-hidden", "true");
+    await playwrightExpect(page.locator("#btn-send")).toBeFocused();
+    expect(await page.evaluate(() => document.activeElement !== document.body && !(document.activeElement as HTMLElement).hidden)).toBe(true);
   } finally {
     await page.close();
     handle.close();

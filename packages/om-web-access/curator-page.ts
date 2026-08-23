@@ -156,7 +156,7 @@ ${CSS}
 <div class="summary-header">
 <div class="summary-header-top">
 <div>
-<h2 class="summary-title">${escapeMarkup(copy.reviewSummaryDraft)}</h2>
+<h2 class="summary-title" id="summary-heading" tabindex="-1">${escapeMarkup(copy.reviewSummaryDraft)}</h2>
 <p class="summary-subtitle" id="summary-subtitle">${escapeMarkup(copy.editSummary)}</p>
 </div>
 <div class="summary-model-controls">
@@ -1815,6 +1815,7 @@ const SCRIPT = `(function() {
   var btnSendRaw = document.getElementById("btn-send-raw");
   var sendRawRow = document.getElementById("send-raw-row");
   var summaryPanel = document.getElementById("summary-panel");
+  var summaryHeading = document.getElementById("summary-heading");
   var summarySubtitle = document.getElementById("summary-subtitle");
   var summaryGeneratingEl = document.getElementById("summary-generating");
   var summaryGeneratingCopy = document.getElementById("summary-generating-copy");
@@ -1849,6 +1850,8 @@ const SCRIPT = `(function() {
   var providerButtons = Array.prototype.slice.call(document.querySelectorAll(".provider-btn"));
   var actionBar = document.querySelector(".action-bar");
   var loadingPanelEl = null;
+  var summaryReturnFocusTarget = null;
+  var summaryEntryFocusPending = false;
 
   var summaryModelsByProvider = Object.create(null);
   var summaryProviders = [];
@@ -2415,6 +2418,51 @@ __PROVIDER_LABEL_RESOLVER__
     }
 
     applyProviderInterlocks();
+  }
+
+  function isVisibleFocusTarget(element) {
+    if (!element || !element.isConnected || typeof element.focus !== "function") return false;
+    if (element.disabled || element.hidden) return false;
+    if (typeof element.closest === "function" && element.closest('[hidden], .hidden, [inert]')) return false;
+    return typeof element.getClientRects !== "function" || element.getClientRects().length > 0;
+  }
+
+  function rememberSummaryReturnFocus() {
+    var active = document.activeElement;
+    if (active && active !== document.body && active !== document.documentElement && isVisibleFocusTarget(active)) {
+      summaryReturnFocusTarget = active;
+    } else if (isVisibleFocusTarget(btnSend)) {
+      summaryReturnFocusTarget = btnSend;
+    } else {
+      summaryReturnFocusTarget = resultCardsEl
+        ? resultCardsEl.querySelector('.result-expand-toggle, button, input:not([disabled])')
+        : null;
+    }
+    summaryEntryFocusPending = true;
+  }
+
+  function focusSummaryInspectorWhenReady() {
+    if (!summaryEntryFocusPending || stage !== "summary-review") return;
+    summaryEntryFocusPending = false;
+    requestAnimationFrame(function() {
+      if (stage !== "summary-review" || !summaryPanel || summaryPanel.classList.contains("hidden")) return;
+      var target = isVisibleFocusTarget(summaryHeading) ? summaryHeading : summaryInput;
+      if (isVisibleFocusTarget(target)) target.focus();
+    });
+  }
+
+  function restoreResultsFocus() {
+    summaryEntryFocusPending = false;
+    requestAnimationFrame(function() {
+      if (stage !== "results") return;
+      var target = isVisibleFocusTarget(summaryReturnFocusTarget) ? summaryReturnFocusTarget : null;
+      if (!target && isVisibleFocusTarget(btnSend)) target = btnSend;
+      if (!target && resultCardsEl) {
+        target = resultCardsEl.querySelector('.result-expand-toggle, button, input:not([disabled])');
+      }
+      summaryReturnFocusTarget = null;
+      if (isVisibleFocusTarget(target)) target.focus();
+    });
   }
 
   function shouldShowLoadingPanel() {
@@ -3419,6 +3467,7 @@ __PROVIDER_LABEL_RESOLVER__
     clearError();
     stage = "results";
     updateStageUI();
+    restoreResultsFocus();
     return true;
   }
 
@@ -3442,6 +3491,8 @@ __PROVIDER_LABEL_RESOLVER__
     clearError();
     var previousStage = stage;
     var wasRegenerating = isRegenerating;
+    var openingSummaryInspector = previousStage === "results" && !wasRegenerating;
+    if (openingSummaryInspector) rememberSummaryReturnFocus();
     var selectedSummaryModel = getSelectedSummaryModel();
     summaryPendingModel = selectedSummaryModel;
     summaryGeneratingStartedAt = Date.now();
@@ -3512,6 +3563,7 @@ __PROVIDER_LABEL_RESOLVER__
         isRegenerating = false;
         stage = "summary-review";
         updateStageUI();
+        if (openingSummaryInspector) focusSummaryInspectorWhenReady();
       })
       .catch(function(err) {
         if (requestId !== summaryRequestSeq) return;
@@ -3525,6 +3577,7 @@ __PROVIDER_LABEL_RESOLVER__
           stage = previousStage === "summary-review" ? "summary-review" : "results";
         }
         updateStageUI();
+        if (openingSummaryInspector && stage === "results") restoreResultsFocus();
       });
   }
 
@@ -3640,6 +3693,7 @@ __PROVIDER_LABEL_RESOLVER__
       clearError();
       stage = "results";
       updateStageUI();
+      restoreResultsFocus();
       resetTimer();
     });
   }
@@ -3879,6 +3933,7 @@ __PROVIDER_LABEL_RESOLVER__
         stage = "results";
         clearError();
         updateStageUI();
+        restoreResultsFocus();
       } else if (stage === "results") {
         doCancel();
       }
