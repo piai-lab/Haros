@@ -7,7 +7,7 @@ import { EN_MESSAGES, ZH_CN_MESSAGES } from "./i18n";
 import {
   localizeSettingsSearchEntryTitle,
   rankSettingsSearchEntries,
-  SETTINGS_SEARCH_ENTRIES,
+  SETTINGS_SEARCH_RECORDS,
 } from "./settingsSearchIndex";
 
 const PRODUCT_COPY_SOURCES = [
@@ -429,21 +429,21 @@ describe("reachable OmniMind-owned product copy", () => {
   });
 
   it("projects every canonical Settings search record through both language catalogs", () => {
-    for (const entry of SETTINGS_SEARCH_ENTRIES) {
+    for (const entry of SETTINGS_SEARCH_RECORDS) {
       expect(localizeSettingsSearchEntryTitle(entry, (key) => EN_MESSAGES[key])).toBeTruthy();
       expect(localizeSettingsSearchEntryTitle(entry, (key) => ZH_CN_MESSAGES[key])).toBeTruthy();
     }
 
     const expectedZhW1Titles = new Map([
-      ["Usage", "用量"],
-      ["Repository", "代码仓库"],
-      ["Recap", "摘要"],
-      ["Pinned messages", "置顶消息"],
-      ["Text markers", "文本标记"],
-      ["Notepad", "记事本"],
+      ["settings.usageLabel", "用量"],
+      ["settings.repositoryLabel", "代码仓库"],
+      ["settings.recap", "摘要"],
+      ["settings.pinnedMessages", "置顶消息"],
+      ["settings.textMarkers", "文本标记"],
+      ["settings.notepad", "记事本"],
     ]);
-    for (const [canonicalTitle, localizedTitle] of expectedZhW1Titles) {
-      const entry = SETTINGS_SEARCH_ENTRIES.find((candidate) => candidate.title === canonicalTitle);
+    for (const [titleKey, localizedTitle] of expectedZhW1Titles) {
+      const entry = SETTINGS_SEARCH_RECORDS.find((candidate) => candidate.titleKey === titleKey);
       expect(entry).toBeDefined();
       expect(localizeSettingsSearchEntryTitle(entry!, (key) => ZH_CN_MESSAGES[key])).toBe(
         localizedTitle,

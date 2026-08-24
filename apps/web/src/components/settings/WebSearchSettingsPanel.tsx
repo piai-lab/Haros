@@ -17,6 +17,7 @@ import { useI18n } from "~/i18n";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ArrowLeftIcon, CopyIcon, EyeIcon, PlusIcon, WebSearchIcon } from "~/lib/icons";
 import { ensureNativeApi } from "~/nativeApi";
+import { WEB_SEARCH_SETTINGS_SEARCH } from "~/settingsMetadata/webSearchSettings";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -62,7 +63,6 @@ export function webSearchProviderFieldAccessibleLabel(
 ): string {
   return `${providerName} · ${localizedFieldLabel}`;
 }
-
 const workflowOptions: readonly OmniMindWebSearchWorkflow[] = [
   "auto-summary",
   "summary-review",
@@ -698,6 +698,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           }
         />
         <SettingsRow
+          anchorId={WEB_SEARCH_SETTINGS_SEARCH.routing.target}
           title={t("settings.webSearch.routing")}
           description={t("settings.webSearch.routingDescription")}
           control={
@@ -727,6 +728,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           }
         />
         <SettingsRow
+          anchorId={WEB_SEARCH_SETTINGS_SEARCH.workflow.target}
           title={t("settings.webSearch.workflow")}
           description={t("settings.webSearch.workflowDescription")}
           control={
@@ -825,6 +827,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
               status={toolStatus(base.tools.getSearchContent.enabled)}
             />
             <SettingsRow
+              anchorId={WEB_SEARCH_SETTINGS_SEARCH.configFile.target}
               title={t("settings.webSearch.configFile")}
               description={t("settings.webSearch.configFileDescription")}
               control={

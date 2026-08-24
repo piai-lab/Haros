@@ -20,6 +20,7 @@ import { SETTINGS_INSET_LIST_CLASS_NAME } from "~/settingsPanelStyles";
 import { useStore } from "~/store";
 import { createAllThreadsMessagelessSelector, createThreadShellsSelector } from "~/storeSelectors";
 import { useI18n } from "~/i18n";
+import { ADVANCED_SETTINGS_SEARCH } from "~/settingsMetadata/advancedSettings";
 import { useSettingsRestoreSignal } from "./SettingControls";
 import { SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
 
@@ -156,6 +157,7 @@ export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: numb
 
       <SettingsSection title={t("settings.developerTools")}>
         <SettingsRow
+          anchorId={ADVANCED_SETTINGS_SEARCH.keybindings.target}
           title={t("settings.keybindings")}
           description={t("settings.keybindingsDescription")}
           status={
@@ -183,6 +185,7 @@ export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: numb
         />
 
         <SettingsRow
+          anchorId={ADVANCED_SETTINGS_SEARCH.recoveryTools.target}
           title={t("settings.recoveryTools")}
           description={t("settings.recoveryToolsDescription")}
           status={
@@ -233,11 +236,13 @@ export function AdvancedSettingsPanel(props: { active: boolean; resetEpoch: numb
 
       <SettingsSection title={t("settings.about")}>
         <SettingsRow
+          anchorId={ADVANCED_SETTINGS_SEARCH.version.target}
           title={t("settings.version")}
           description={t("settings.versionDescription")}
           control={<code className="text-xs font-medium text-muted-foreground">{APP_VERSION}</code>}
         />
         <SettingsRow
+          anchorId={ADVANCED_SETTINGS_SEARCH.releaseHistory.target}
           title={t("settings.releaseHistory")}
           description={t("settings.releaseHistoryUnavailable")}
           control={<Button disabled>{t("settings.unavailable")}</Button>}

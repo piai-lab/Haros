@@ -32,6 +32,10 @@ import { Switch } from "~/components/ui/switch";
 import { toastManager } from "~/components/ui/toast";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useI18n, type MessageKey } from "~/i18n";
+import {
+  APPSNAP_SETTINGS_SEARCH,
+  NOTIFICATIONS_SETTINGS_SEARCH,
+} from "~/settingsMetadata/desktopSettings";
 import { AppSnapShortcutControl } from "./AppSnapShortcutControl";
 import { SettingResetButton } from "./SettingControls";
 import { SettingsCard, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
@@ -187,6 +191,7 @@ export function NotificationsSettingsPanel({
     <div className="space-y-6">
       <SettingsSection title={t("settings.activityAlerts")}>
         <SettingsRow
+          anchorId={NOTIFICATIONS_SETTINGS_SEARCH.activityToasts.target}
           title={t("settings.activityToasts")}
           description={t("settings.activityToastsDescription")}
           resetAction={
@@ -213,6 +218,7 @@ export function NotificationsSettingsPanel({
         />
 
         <SettingsRow
+          anchorId={NOTIFICATIONS_SETTINGS_SEARCH.desktopNotifications.target}
           title={t("settings.desktopNotifications")}
           description={t("settings.desktopNotificationsDescription")}
           status={notificationSupportText(browserNotificationPermission, t)}
@@ -372,6 +378,7 @@ export function AppSnapSettingsPanel({
 
       <SettingsSection title={t("settings.capture")}>
         <SettingsRow
+          anchorId={APPSNAP_SETTINGS_SEARCH.enable.target}
           title={t("settings.enableAppSnap")}
           description={t("settings.enableAppSnapDescription")}
           status={appSnapStatusText(appSnapState, t)}
@@ -394,6 +401,7 @@ export function AppSnapSettingsPanel({
         />
 
         <SettingsRow
+          anchorId={APPSNAP_SETTINGS_SEARCH.shortcut.target}
           title={t("settings.shortcut")}
           description={t("settings.appSnapShortcutDescription")}
           control={
@@ -416,6 +424,7 @@ export function AppSnapSettingsPanel({
         />
 
         <SettingsRow
+          anchorId={APPSNAP_SETTINGS_SEARCH.destination.target}
           title={t("settings.destination")}
           description={t("settings.appSnapDestinationDescription")}
           control={
@@ -426,6 +435,7 @@ export function AppSnapSettingsPanel({
         />
 
         <SettingsRow
+          anchorId={APPSNAP_SETTINGS_SEARCH.captureSound.target}
           title={t("settings.captureSound")}
           description={t("settings.captureSoundDescription")}
           resetAction={

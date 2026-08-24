@@ -31,7 +31,7 @@ import { toastManager } from "~/components/ui/toast";
 import { useI18n } from "~/i18n";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
-import { SETTINGS_TARGETS } from "~/settingsNavigation";
+import { PROMPTS_SETTINGS_SEARCH } from "~/settingsMetadata/promptSettings";
 
 type EditorKind = "defaultPrompt" | "customRules";
 type EditorConflict = {
@@ -336,7 +336,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
     <div className="space-y-6">
       <SettingsSectionShell title={t("settings.defaultPrompt")}>
         <SettingsCard divided={false}>
-          <div id={SETTINGS_TARGETS.defaultPrompt} className="space-y-4 p-4">
+          <div id={PROMPTS_SETTINGS_SEARCH.defaultPrompt.target} className="space-y-4 p-4">
             <p className="text-xs leading-relaxed text-muted-foreground">
               {t("settings.defaultPromptDescription")}
             </p>
@@ -411,7 +411,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
 
       <SettingsSectionShell title={t("settings.customRules")}>
         <SettingsCard divided={false}>
-          <div id={SETTINGS_TARGETS.customRules} className="space-y-4 p-4">
+          <div id={PROMPTS_SETTINGS_SEARCH.customRules.target} className="space-y-4 p-4">
             <p className="text-xs leading-relaxed text-muted-foreground">
               {t("settings.customRulesDescription")}
             </p>
