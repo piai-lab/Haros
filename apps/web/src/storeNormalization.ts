@@ -1221,7 +1221,9 @@ export function withOrchestrationEventSequence(
   activity: OrchestrationThreadActivity,
   sequence: number,
 ): OrchestrationThreadActivity {
-  return { ...activity, sequence };
+  // Runtime activities share their causal sequence domain with assistant text
+  // segments; the envelope sequence is only a fallback for generic activities.
+  return activity.sequence === undefined ? { ...activity, sequence } : activity;
 }
 
 /**

@@ -24,7 +24,7 @@ import { deriveTimelineEntries } from "../../session-logic";
 import { applyOrchestrationEvents } from "../../storeEventReducer";
 import { makeActivity, makeDomainEvent, makeState, makeThread } from "../../storeTestFixtures";
 import { getThreadsFromState } from "../../threadDerivation";
-import { deriveWorkLogEntries, type WorkLogEntry } from "../../workLog";
+import { deriveWorkLogEntries } from "../../workLog";
 import { deriveAgentActivityTimelineState } from "./agentActivity.logic";
 import { MessagesTimeline } from "./MessagesTimeline";
 import { TimelineWorkEntryRow } from "./TimelineWorkEntryRow";
@@ -61,9 +61,7 @@ function ReasoningRow(props: {
       {...(props.reasoningDefaultOpen === undefined
         ? {}
         : { reasoningDefaultOpen: props.reasoningDefaultOpen })}
-      {...(props.onOpenAgentActivity
-        ? { onOpenAgentActivity: props.onOpenAgentActivity }
-        : {})}
+      {...(props.onOpenAgentActivity ? { onOpenAgentActivity: props.onOpenAgentActivity } : {})}
       timestampFormat="locale"
     />
   );
@@ -217,7 +215,7 @@ function ReducedLiveCausalTimeline(props: { settled: boolean }) {
   const thread = makeThread();
   const turnId = TurnId.makeUnsafe("turn-reduced-live-browser");
   const messageId = MessageId.makeUnsafe("assistant-reduced-live-browser");
-  const messageEvents = [
+  const events = [
     makeDomainEvent(
       "thread.message-sent",
       {
@@ -226,7 +224,7 @@ function ReducedLiveCausalTimeline(props: { settled: boolean }) {
         role: "assistant",
         text: "Narration from the live reducer.",
         segmentStartedAt: "2026-08-24T13:30:40.000Z",
-        segmentSequence: 10,
+        segmentSequence: 9,
         turnId,
         streaming: true,
         createdAt: "2026-08-24T13:30:40.000Z",
@@ -234,7 +232,131 @@ function ReducedLiveCausalTimeline(props: { settled: boolean }) {
         attachments: [],
         source: "native",
       },
-      { sequence: 10 },
+      { sequence: 15 },
+    ),
+    makeDomainEvent(
+      "thread.activity-appended",
+      {
+        threadId: thread.id,
+        activity: makeActivity({
+          id: "reasoning-reduced-live-1",
+          createdAt: "2026-08-24T13:30:41.000Z",
+          sequence: 11,
+          turnId,
+          kind: "reasoning.completed",
+          summary: "Reasoning trace",
+          tone: "info",
+          payload: {
+            status: "completed",
+            detail: "First reasoning from the live timeline.",
+            data: { toolCallId: "reasoning-reduced-live-1" },
+          },
+        }),
+      },
+      { sequence: 16 },
+    ),
+    makeDomainEvent(
+      "thread.activity-appended",
+      {
+        threadId: thread.id,
+        activity: makeActivity({
+          id: "tool-reduced-live-1-started",
+          createdAt: "2026-08-24T13:30:42.000Z",
+          sequence: 12,
+          turnId,
+          kind: "tool.started",
+          summary: "Read first live source",
+          payload: {
+            status: "running",
+            itemType: "dynamic_tool_call",
+            data: { toolCallId: "tool-reduced-live-1", toolName: "Read" },
+          },
+        }),
+      },
+      { sequence: 17 },
+    ),
+    makeDomainEvent(
+      "thread.activity-appended",
+      {
+        threadId: thread.id,
+        activity: makeActivity({
+          id: "tool-reduced-live-1-completed",
+          createdAt: "2026-08-24T13:30:42.100Z",
+          sequence: 13,
+          turnId,
+          kind: "tool.completed",
+          summary: "Read first live source",
+          payload: {
+            status: "completed",
+            itemType: "dynamic_tool_call",
+            detail: "Read first live source",
+            data: { toolCallId: "tool-reduced-live-1", toolName: "Read" },
+          },
+        }),
+      },
+      { sequence: 18 },
+    ),
+    makeDomainEvent(
+      "thread.activity-appended",
+      {
+        threadId: thread.id,
+        activity: makeActivity({
+          id: "reasoning-reduced-live-2",
+          createdAt: "2026-08-24T13:30:43.000Z",
+          sequence: 14,
+          turnId,
+          kind: "reasoning.completed",
+          summary: "Reasoning trace",
+          tone: "info",
+          payload: {
+            status: "completed",
+            detail: "Second reasoning from the live timeline.",
+            data: { toolCallId: "reasoning-reduced-live-2" },
+          },
+        }),
+      },
+      { sequence: 19 },
+    ),
+    makeDomainEvent(
+      "thread.activity-appended",
+      {
+        threadId: thread.id,
+        activity: makeActivity({
+          id: "tool-reduced-live-2-started",
+          createdAt: "2026-08-24T13:30:44.000Z",
+          sequence: 15,
+          turnId,
+          kind: "tool.started",
+          summary: "Read second live source",
+          payload: {
+            status: "running",
+            itemType: "dynamic_tool_call",
+            data: { toolCallId: "tool-reduced-live-2", toolName: "Read" },
+          },
+        }),
+      },
+      { sequence: 20 },
+    ),
+    makeDomainEvent(
+      "thread.activity-appended",
+      {
+        threadId: thread.id,
+        activity: makeActivity({
+          id: "tool-reduced-live-2-completed",
+          createdAt: "2026-08-24T13:30:44.100Z",
+          sequence: 16,
+          turnId,
+          kind: "tool.completed",
+          summary: "Read second live source",
+          payload: {
+            status: "completed",
+            itemType: "dynamic_tool_call",
+            detail: "Read second live source",
+            data: { toolCallId: "tool-reduced-live-2", toolName: "Read" },
+          },
+        }),
+      },
+      { sequence: 21 },
     ),
     makeDomainEvent(
       "thread.message-sent",
@@ -244,7 +366,7 @@ function ReducedLiveCausalTimeline(props: { settled: boolean }) {
         role: "assistant",
         text: "Answer from the live reducer.",
         segmentStartedAt: "2026-08-24T13:30:45.000Z",
-        segmentSequence: 60,
+        segmentSequence: 17,
         turnId,
         streaming: true,
         createdAt: "2026-08-24T13:30:45.000Z",
@@ -252,7 +374,7 @@ function ReducedLiveCausalTimeline(props: { settled: boolean }) {
         attachments: [],
         source: "native",
       },
-      { sequence: 60 },
+      { sequence: 22 },
     ),
     ...(props.settled
       ? [
@@ -270,55 +392,15 @@ function ReducedLiveCausalTimeline(props: { settled: boolean }) {
               attachments: [],
               source: "native" as const,
             },
-            { sequence: 61 },
+            { sequence: 23 },
           ),
         ]
       : []),
   ];
-  const reducedState = applyOrchestrationEvents(makeState(thread), messageEvents);
-  const messages = getThreadsFromState(reducedState)[0]!.messages;
-  const workEntries: WorkLogEntry[] = [
-    {
-      id: "reasoning-reduced-live-1",
-      createdAt: "2026-08-24T13:30:41.000Z",
-      sequence: 20,
-      turnId,
-      label: "Reasoning",
-      tone: "info",
-      activityKind: "reasoning.completed",
-      detail: "First reasoning from the live timeline.",
-    },
-    {
-      id: "tool-reduced-live-1",
-      createdAt: "2026-08-24T13:30:42.000Z",
-      sequence: 30,
-      turnId,
-      label: "Read first live source",
-      toolTitle: "Read first live source",
-      tone: "tool",
-      itemType: "dynamic_tool_call",
-    },
-    {
-      id: "reasoning-reduced-live-2",
-      createdAt: "2026-08-24T13:30:43.000Z",
-      sequence: 40,
-      turnId,
-      label: "Reasoning",
-      tone: "info",
-      activityKind: "reasoning.completed",
-      detail: "Second reasoning from the live timeline.",
-    },
-    {
-      id: "tool-reduced-live-2",
-      createdAt: "2026-08-24T13:30:44.000Z",
-      sequence: 50,
-      turnId,
-      label: "Read second live source",
-      toolTitle: "Read second live source",
-      tone: "tool",
-      itemType: "dynamic_tool_call",
-    },
-  ];
+  const reducedState = applyOrchestrationEvents(makeState(thread), events);
+  const reducedThread = getThreadsFromState(reducedState)[0]!;
+  const messages = reducedThread.messages;
+  const workEntries = deriveWorkLogEntries(reducedThread.activities, undefined);
   const projectedWork = deriveAgentActivityTimelineState(workEntries, messages);
   const timelineEntries = deriveTimelineEntries(messages, [], projectedWork.timelineWorkEntries);
 
@@ -773,6 +855,7 @@ describe("Timeline public reasoning disclosure", () => {
       const positions = orderedText.map((value) => text.indexOf(value));
       expect(positions.every((position) => position >= 0)).toBe(true);
       expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
+      expect(document.querySelectorAll('[data-tool-detail-trigger="true"]')).toHaveLength(2);
 
       const triggers = screen.getByRole("button", { name: "Reasoning" }).elements();
       expect(triggers).toHaveLength(2);

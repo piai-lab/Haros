@@ -1627,7 +1627,7 @@ describe("store event reducer", () => {
     expect(next.sidebarThreadSummaryById[threadId]?.updatedAt).toBe("2026-02-27T00:00:10.000Z");
   });
 
-  it("replaces provider-local activity sequences with durable orchestration sequences", () => {
+  it("preserves explicit causal activity sequences and falls back to event sequences", () => {
     const threadId = ThreadId.makeUnsafe("thread-1");
     const events = [
       makeDomainEvent(
@@ -1646,6 +1646,14 @@ describe("store event reducer", () => {
         },
         { sequence: 41 },
       ),
+      makeDomainEvent(
+        "thread.activity-appended",
+        {
+          threadId,
+          activity: makeActivity({ id: "activity-without-sequence" }),
+        },
+        { sequence: 42 },
+      ),
     ];
     const initialState = makeState(makeThread());
 
@@ -1655,12 +1663,14 @@ describe("store event reducer", () => {
     );
     const batched = applyOrchestrationEventsHotPath(initialState, events);
 
-    expect(threadsOf(sequential)[0]?.activities.map((activity) => activity.sequence)).toEqual([
-      40, 41,
-    ]);
-    expect(threadsOf(batched)[0]?.activities.map((activity) => activity.sequence)).toEqual([
-      40, 41,
-    ]);
+    for (const state of [sequential, batched]) {
+      const sequenceById = new Map(
+        threadsOf(state)[0]?.activities.map((activity) => [activity.id, activity.sequence]),
+      );
+      expect(sequenceById.get(EventId.makeUnsafe("activity-before-restart"))).toBe(99);
+      expect(sequenceById.get(EventId.makeUnsafe("activity-after-restart"))).toBe(0);
+      expect(sequenceById.get(EventId.makeUnsafe("activity-without-sequence"))).toBe(42);
+    }
   });
 
   it("keeps batched activity timestamps equivalent when a generic duplicate is discarded", () => {

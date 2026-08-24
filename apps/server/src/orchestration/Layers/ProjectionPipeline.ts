@@ -1362,8 +1362,9 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             kind: event.payload.activity.kind,
             summary: event.payload.activity.summary,
             payload: event.payload.activity.payload,
-            // The orchestration log is durable and monotonic across provider
-            // restarts, unlike provider-local counters that may reset to zero.
+            // Provider runtime activities already carry the durable runtime-journal
+            // causal sequence shared with assistant text segments. The orchestration
+            // envelope only sequences generic activities that do not carry one.
             sequence: event.payload.activity.sequence ?? event.sequence,
             createdAt: event.payload.activity.createdAt,
           });
