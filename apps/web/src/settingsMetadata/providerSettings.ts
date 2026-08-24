@@ -1,12 +1,6 @@
 import { SETTINGS_TARGETS, defineSettingsSearchRow } from "../settingsSearchMetadata";
 
 export const PROVIDERS_SETTINGS_SEARCH = {
-  independentEngineModels: defineSettingsSearchRow({
-    id: "providers:independent-engine-models",
-    titleKey: "settings.independentEngineModels",
-    keywords: "Add remove reset custom model slugs managed by each engine.",
-    target: SETTINGS_TARGETS.engineDetails,
-  }),
   automaticCliUpdateChecks: defineSettingsSearchRow({
     id: "providers:automatic-cli-update-checks",
     titleKey: "settings.automaticCliUpdates",
@@ -29,7 +23,7 @@ export const PROVIDERS_SETTINGS_SEARCH = {
     id: "providers:installed-clis",
     titleKey: "settings.installedClis",
     keywords:
-      "Review engine versions, paths, update tools, and custom model slugs. binary overrides install",
+      "Review engine versions, paths, update tools, independent engine models, and custom model slugs. add remove reset binary overrides install",
     target: SETTINGS_TARGETS.engineDetails,
   }),
 } as const;

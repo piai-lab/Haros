@@ -11,7 +11,7 @@ import {
 import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   type AppSettings,
@@ -143,6 +143,7 @@ type BooleanSettingKey = {
 // ── Route screen ───────────────────────────────────────────────────────────
 
 function SettingsRouteView() {
+  const navigate = useNavigate();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
@@ -1437,7 +1438,18 @@ function SettingsRouteView() {
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
-                <WebSearchSettingsPanel active={activeSection === "web-search"} />
+                <WebSearchSettingsPanel
+                  active={activeSection === "web-search"}
+                  activeTarget={settingsTarget}
+                  onTargetInvalidated={() => {
+                    if (!settingsTarget) return;
+                    void navigate({
+                      to: "/settings",
+                      replace: true,
+                      search: (previous) => ({ ...previous, target: undefined }),
+                    });
+                  }}
+                />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}
                   settings={settings}

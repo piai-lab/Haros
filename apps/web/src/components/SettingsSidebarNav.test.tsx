@@ -102,6 +102,10 @@ describe("rankSettingsSearchEntries", () => {
 
     const ids = SETTINGS_SEARCH_RECORDS.map((record) => record.id);
     expect(new Set(ids).size).toBe(ids.length);
+    const exactTargets = SETTINGS_SEARCH_RECORDS.flatMap((record) =>
+      record.target === null ? [] : [record.target],
+    );
+    expect(new Set(exactTargets).size).toBe(exactTargets.length);
     for (const record of SETTINGS_SEARCH_RECORDS) {
       expect(record.id.startsWith(`${record.section}:`)).toBe(true);
       if (record.target !== null) {
@@ -154,7 +158,10 @@ describe("rankSettingsSearchEntries", () => {
 
   it("keeps the former Installed CLIs deep link stable after the row broadens", () => {
     expect(SETTINGS_TARGETS.engineDetails).toBe("setting-installed-clis");
-    expect(PROVIDERS_SETTINGS_SEARCH.independentEngineModels.target).toBe("setting-installed-clis");
+    expect(PROVIDERS_SETTINGS_SEARCH.installedClis.target).toBe("setting-installed-clis");
+    expect(rankSettingsSearchEntries("independent engine models", 1, translateEn)[0]?.id).toBe(
+      "providers:installed-clis",
+    );
   });
 
   it("routes Git writing to its calling-feature setting instead of Model services", () => {
