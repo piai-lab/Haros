@@ -13,26 +13,17 @@ import { type ComposerSlashCommand } from "../../composerSlashCommands";
 import {
   BotIcon,
   BrainIcon,
-  BugIcon,
   ChangesIcon,
-  ClockIcon,
   DeviceLaptopIcon,
-  EraserIcon,
-  FastModeIcon,
   GitBranchIcon,
-  GitForkIcon,
-  GoalIcon,
-  InfoIcon,
-  ListTodoIcon,
-  type LucideIcon,
-  MessageCircleIcon,
-  Minimize2,
   PluginIcon,
   SkillCubeIcon,
-  TemporaryThreadIcon,
-  TerminalIcon,
   WorktreeIcon,
 } from "~/lib/icons";
+import {
+  builtInComposerSlashCommandIcon,
+  resolveBuiltInComposerSlashCommandPresentation,
+} from "~/composerSlashCommandPresentation";
 import { formatSkillScope } from "~/lib/providerDiscovery";
 import { cn } from "~/lib/utils";
 import {
@@ -64,38 +55,10 @@ function commandMenuTitle(
   item: Extract<ComposerCommandItem, { type: "slash-command" | "provider-native-command" }>,
   t: ReturnType<typeof useI18n>["t"],
 ): string {
-  switch (item.command) {
-    case "clear":
-      return t("composer.command.clear");
-    case "compact":
-      return t("composer.command.compact");
-    case "model":
-      return t("term.model");
-    case "fast":
-      return t("composer.command.fast");
-    case "plan":
-      return t("composer.command.plan");
-    case "default":
-      return t("composer.command.default");
-    case "review":
-      return t("composer.command.review");
-    case "fork":
-      return t("composer.command.fork");
-    case "side":
-      return t("composer.command.side");
-    case "status":
-      return t("composer.command.status");
-    case "subagents":
-      return t("composer.command.subagents");
-    case "export":
-      return t("composer.command.export");
-    case "feedback":
-      return t("composer.command.feedback");
-    case "automation":
-      return t("composer.command.automation");
-    default:
-      return humanizeProviderCommandName(item.command);
+  if (item.type === "slash-command") {
+    return resolveBuiltInComposerSlashCommandPresentation(item.command, t).title;
   }
+  return humanizeProviderCommandName(item.command);
 }
 
 function commandMenuTrailingMeta(
@@ -182,7 +145,6 @@ export type ComposerCommandItem =
       command: ComposerSlashCommand;
       label: string;
       description: string;
-      source: "app" | "shared";
     }
   | {
       id: string;
@@ -485,31 +447,6 @@ const COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME = "size-3.5 text-[var(--color-ic
 
 const COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME = "size-3.5";
 
-// Reuse the app's existing icon components for each concept so the command menu
-// stays coherent with how plan/fork/review/model/etc. appear everywhere else.
-// Don't introduce bespoke glyphs here — map to the shared `~/lib/icons` exports.
-const SLASH_COMMAND_ICONS: Record<string, LucideIcon> = {
-  clear: EraserIcon,
-  compact: Minimize2,
-  model: BrainIcon,
-  fast: FastModeIcon,
-  plan: ListTodoIcon,
-  default: MessageCircleIcon,
-  review: BugIcon,
-  fork: GitForkIcon,
-  side: TemporaryThreadIcon,
-  status: InfoIcon,
-  subagents: BotIcon,
-  feedback: BugIcon,
-  automation: ClockIcon,
-  goal: GoalIcon,
-};
-
-function commandMenuSlashGlyph(command: string, fallback: LucideIcon): ReactNode {
-  const Icon = SLASH_COMMAND_ICONS[command] ?? fallback;
-  return <Icon className={COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME} />;
-}
-
 function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"): ReactNode {
   const cls = COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME;
   switch (item.type) {
@@ -538,13 +475,15 @@ function commandMenuItemGlyph(item: ComposerCommandItem, theme: "light" | "dark"
       ) : (
         <GitBranchIcon className={cls} />
       );
-    case "slash-command":
-      return commandMenuSlashGlyph(item.command, TerminalIcon);
+    case "slash-command": {
+      const BuiltInCommandIcon = builtInComposerSlashCommandIcon(item.command);
+      return <BuiltInCommandIcon className={cls} />;
+    }
     case "provider-native-command":
       // Provider native commands surface skills (e.g. Claude exposes skills as
       // slash commands), so default to the skill block glyph used for skill
       // tokens in the composer/timeline — named commands still keep their icon.
-      return commandMenuSlashGlyph(item.command, SkillCubeIcon);
+      return <SkillCubeIcon className={cls} />;
     case "model":
       return <BrainIcon className={cls} />;
     case "agent":

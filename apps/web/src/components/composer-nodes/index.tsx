@@ -43,7 +43,7 @@ import {
   resolveAgentChipColor,
 } from "../composerInlineChip";
 import { AGENT_ROBOT_ICON_NAME, MessageCircleIcon } from "~/lib/icons";
-import { slashCommandIcon } from "~/lib/slashCommandIcons";
+import { builtInComposerSlashCommandIcon } from "~/composerSlashCommandPresentation";
 import type { ComposerSlashCommand } from "~/composerSlashCommands";
 import { InlineLinkChip } from "../InlineLinkChip";
 import { ComposerPendingTerminalContextChip } from "../chat/ComposerPendingTerminalContexts";
@@ -179,7 +179,7 @@ function slashCommandIconMarkup(command: ComposerSlashCommand): string {
   if (cached !== undefined) {
     return cached;
   }
-  const Icon = slashCommandIcon(command, MessageCircleIcon);
+  const Icon = builtInComposerSlashCommandIcon(command);
   const markup = renderToStaticMarkup(
     <Icon aria-hidden="true" className={COMPOSER_INLINE_CHIP_INLINE_ICON_CLASS_NAME} />,
   );

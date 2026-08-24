@@ -280,6 +280,7 @@ const RAW_FACT_ALLOWLIST = [
   "useComposerCommandMenuItems.ts:property:`@${name}`",
   "useComposerCommandMenuItems.ts:property:`@${alias}`",
   "useComposerCommandMenuItems.ts:property:`@${LOCAL_FOLDER_MENTION_NAME}`",
+  "useComposerCommandMenuItems.ts:property:`/${command}`",
   "useComposerCommandMenuItems.ts:property:`/${command.name}`",
   "useComposerCommandMenuItems.ts:property:`${providerLabel} · ${slug}`",
   // Persisted internal placeholder; ChatView maps it through the catalog at presentation time.

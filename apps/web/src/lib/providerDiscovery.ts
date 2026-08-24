@@ -46,7 +46,7 @@ interface RankedProviderDiscoveryItem<T> {
   index: number;
 }
 
-const PROVIDER_DISCOVERY_SECONDARY_FIELD_WEIGHT = 200;
+export const PROVIDER_DISCOVERY_SECONDARY_FIELD_WEIGHT = 200;
 const PROVIDER_DISCOVERY_TERTIARY_FIELD_WEIGHT = 400;
 
 // Lower scores mean stronger intent: title/name hits beat descriptions, and

@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { ComposerCommandMenu } from "./ComposerCommandMenu";
+import type { ComposerCommandItem } from "./ComposerCommandMenu";
 import { I18nProvider } from "~/i18n";
 
 const harness = vi.hoisted(() => ({ settings: { localePreference: "zh-CN" } }));
@@ -17,12 +18,14 @@ async function mountMenu(input: {
   isLoading: boolean;
   triggerKind: "mention" | "skill" | "slash-command" | null;
   emptyStateText?: string;
+  items?: ComposerCommandItem[];
+  withI18n?: boolean;
 }) {
   const host = document.createElement("div");
   document.body.append(host);
-  const screen = await render(
+  const menu = (
     <ComposerCommandMenu
-      items={[]}
+      items={input.items ?? []}
       resolvedTheme="dark"
       isLoading={input.isLoading}
       triggerKind={input.triggerKind}
@@ -30,9 +33,11 @@ async function mountMenu(input: {
       activeItemId={null}
       onHighlightedItemChange={vi.fn()}
       onSelect={vi.fn()}
-    />,
-    { container: host },
+    />
   );
+  const screen = await render(input.withI18n ? <I18nProvider>{menu}</I18nProvider> : menu, {
+    container: host,
+  });
 
   return {
     cleanup: async () => {
@@ -104,5 +109,57 @@ describe("ComposerCommandMenu empty states", () => {
     await expect.element(page.getByText("正在搜索引用…", { exact: true })).toBeVisible();
     await expect.element(page.getByText("文件", { exact: true })).toBeVisible();
     await screen.unmount();
+  });
+
+  it("renders complete Chinese built-in presentation without lending it to native collisions", async () => {
+    const items: ComposerCommandItem[] = [
+      {
+        id: "slash:debug",
+        type: "slash-command",
+        command: "debug",
+        label: "/debug",
+        description: "将此任务切换到证据优先调试模式",
+      },
+      {
+        id: "slash:goal",
+        type: "slash-command",
+        command: "goal",
+        label: "/goal",
+        description: "设置当前任务的持久目标",
+      },
+      ...(["status", "model", "compact"] as const).map((command) => ({
+        id: `provider-command:codex:${command}`,
+        type: "provider-native-command" as const,
+        provider: "codex" as const,
+        command,
+        label: `/${command}`,
+        description: `Provider native ${command}`,
+      })),
+    ];
+    const menu = await mountMenu({
+      isLoading: false,
+      triggerKind: "slash-command",
+      items,
+      withI18n: true,
+    });
+
+    try {
+      await expect.element(page.getByText("调试", { exact: true })).toBeVisible();
+      await expect.element(page.getByText("目标", { exact: true })).toBeVisible();
+      for (const title of ["Status", "Model", "Compact"]) {
+        await expect.element(page.getByText(title, { exact: true })).toBeVisible();
+      }
+      expect(document.body.textContent).not.toContain("状态");
+      expect(document.body.textContent).not.toContain("压缩上下文");
+
+      const statusTitle = [...document.querySelectorAll("span")].find(
+        (element) => element.textContent === "Status",
+      );
+      const statusRow = statusTitle?.closest('[data-slot="command-item"]');
+      expect(statusRow?.querySelector('[data-slot="central-icon"]')).not.toBeNull();
+      expect(statusRow?.querySelector("svg")).toBeNull();
+    } finally {
+      await menu.cleanup();
+    }
   });
 });

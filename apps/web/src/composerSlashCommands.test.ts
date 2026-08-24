@@ -7,7 +7,6 @@ import {
   canOfferForkSlashCommand,
   canOfferReviewSlashCommand,
   canOfferSideSlashCommand,
-  filterComposerSlashCommands,
   getAvailableComposerSlashCommands,
   hasProviderNativeSlashCommand,
   isBuiltInComposerSlashCommand,
@@ -31,24 +30,6 @@ describe("composerSlashCommands", () => {
     expect(isBuiltInComposerSlashCommand("debug")).toBe(true);
     expect(isBuiltInComposerSlashCommand("goal")).toBe(true);
     expect(isBuiltInComposerSlashCommand("unknown")).toBe(false);
-  });
-
-  it("filters slash commands by query", () => {
-    expect(filterComposerSlashCommands("rev").map((entry) => entry.command)).toEqual(["review"]);
-    expect(filterComposerSlashCommands("fast").map((entry) => entry.command)).toEqual(["fast"]);
-    expect(filterComposerSlashCommands("auto").map((entry) => entry.command)).toEqual([
-      "automation",
-    ]);
-    expect(filterComposerSlashCommands("feed").map((entry) => entry.command)).toEqual(["feedback"]);
-    expect(filterComposerSlashCommands("debug").map((entry) => entry.command)).toEqual(["debug"]);
-  });
-
-  it("ranks slash command name matches before description-only matches", () => {
-    expect(
-      filterComposerSlashCommands("mode", ["fast", "default", "model"]).map(
-        (entry) => entry.command,
-      ),
-    ).toEqual(["model", "fast", "default"]);
   });
 
   it("parses slash invocations with optional arguments", () => {

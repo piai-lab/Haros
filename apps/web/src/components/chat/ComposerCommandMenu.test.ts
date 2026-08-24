@@ -96,7 +96,6 @@ describe("groupCommandItems", () => {
         command: "review",
         label: "/review",
         description: "Review changes",
-        source: "app",
       },
       {
         id: "provider-command:codex:help",
