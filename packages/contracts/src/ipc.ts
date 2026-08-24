@@ -188,10 +188,13 @@ import type {
   ServerProviderUpdateInput,
   ServerProviderUpdateResult,
   ServerRefreshProvidersResult,
+  ServerResetSettingsResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
   ServerUpdateSettingsInput,
   ServerUpdateSettingsResult,
+  ServerUpdateProviderCredentialInput,
+  ServerUpdateProviderCredentialResult,
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
   ServerVoicePrewarmInput,
@@ -839,6 +842,10 @@ export interface NativeApi {
     getBuiltInToolGroups: () => Promise<ServerGetBuiltInToolGroupsResult>;
     getSettings: () => Promise<ServerGetSettingsResult>;
     updateSettings: (input: ServerUpdateSettingsInput) => Promise<ServerUpdateSettingsResult>;
+    resetSettings: () => Promise<ServerResetSettingsResult>;
+    updateProviderCredential: (
+      input: ServerUpdateProviderCredentialInput,
+    ) => Promise<ServerUpdateProviderCredentialResult>;
     getAuthSession: () => Promise<AuthSessionState>;
     bootstrapAuth: (input: AuthBootstrapInput) => Promise<AuthBootstrapResult>;
     bootstrapBearerAuth: (input: AuthBootstrapInput) => Promise<AuthBearerBootstrapResult>;

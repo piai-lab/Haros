@@ -9,7 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { AppSettings } from "../appSettings";
+import type { LocalPreferences } from "../localPreferences";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { showConfirmDialogFallback } from "../confirmDialogFallback";
 import {
@@ -85,8 +85,8 @@ interface DeleteProjectThreadsOptions {
 
 export function useSidebarThreadActions(input: {
   readonly activeSplitView: SplitView | null | undefined;
-  readonly appSettings: Pick<
-    AppSettings,
+  readonly preferences: Pick<
+    LocalPreferences,
     "confirmThreadArchive" | "confirmThreadDelete" | "sidebarThreadSortOrder"
   >;
   readonly clearTerminalState: (threadId: ThreadId) => void;
@@ -101,7 +101,7 @@ export function useSidebarThreadActions(input: {
 }) {
   const {
     activeSplitView,
-    appSettings,
+    preferences,
     clearTerminalState,
     handleNewChat,
     projectById,
@@ -472,7 +472,7 @@ export function useSidebarThreadActions(input: {
             threads: sidebarThreads,
             deletedThreadId: threadId,
             deletedThreadIds: opts.deletedThreadIds ?? new Set<ThreadId>(),
-            sortOrder: appSettings.sidebarThreadSortOrder,
+            sortOrder: preferences.sidebarThreadSortOrder,
           }),
           deletedPaneInActiveSplit: activeSplitView
             ? resolveSplitViewPaneIdForThread(activeSplitView, threadId)
@@ -525,7 +525,7 @@ export function useSidebarThreadActions(input: {
     },
     [
       activeSplitView,
-      appSettings.sidebarThreadSortOrder,
+      preferences.sidebarThreadSortOrder,
       clearComposerDraftForThread,
       clearProjectDraftThreadById,
       clearTemporaryThread,
@@ -545,7 +545,7 @@ export function useSidebarThreadActions(input: {
     async (threadId: ThreadId) => {
       const thread = sidebarThreadSummaryById[threadId];
       if (!thread) return;
-      if (appSettings.confirmThreadDelete) {
+      if (preferences.confirmThreadDelete) {
         const api = readNativeApi();
         const confirmationMessage = [
           `Delete thread "${thread.title}"?`,
@@ -558,7 +558,7 @@ export function useSidebarThreadActions(input: {
       }
       await deleteThread(threadId);
     },
-    [deleteThread, appSettings.confirmThreadDelete, sidebarThreadSummaryById],
+    [deleteThread, preferences.confirmThreadDelete, sidebarThreadSummaryById],
   );
 
   const archiveThread = useCallback(
@@ -578,7 +578,7 @@ export function useSidebarThreadActions(input: {
             threads: sidebarThreads,
             deletedThreadId: threadId,
             deletedThreadIds: new Set<ThreadId>(),
-            sortOrder: appSettings.sidebarThreadSortOrder,
+            sortOrder: preferences.sidebarThreadSortOrder,
           });
           if (fallbackThreadId) {
             await navigate({
@@ -596,7 +596,7 @@ export function useSidebarThreadActions(input: {
         pendingThreadIds.delete(threadId);
       });
     },
-    [appSettings.sidebarThreadSortOrder, handleNewChat, routeThreadId, sidebarThreads, navigate],
+    [preferences.sidebarThreadSortOrder, handleNewChat, routeThreadId, sidebarThreads, navigate],
   );
 
   const restoreArchivedThreadFromToast = useCallback(
@@ -688,7 +688,7 @@ export function useSidebarThreadActions(input: {
     async (threadId: ThreadId) => {
       const thread = sidebarThreadSummaryById[threadId];
       if (!thread) return;
-      if (appSettings.confirmThreadArchive) {
+      if (preferences.confirmThreadArchive) {
         const api = readNativeApi();
         const confirmationMessage = [
           `Archive thread "${thread.title}"?`,
@@ -701,7 +701,7 @@ export function useSidebarThreadActions(input: {
       }
       await archiveThreadWithUndo(threadId);
     },
-    [archiveThreadWithUndo, appSettings.confirmThreadArchive, sidebarThreadSummaryById],
+    [archiveThreadWithUndo, preferences.confirmThreadArchive, sidebarThreadSummaryById],
   );
 
   const archiveAllThreadsInProject = useCallback(

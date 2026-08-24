@@ -6,7 +6,7 @@
 import type { ProjectId, ThreadId } from "@omnimind/contracts";
 import { useEffect, useRef } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import { useStableValue } from "~/hooks/useStableValue";
 import { useI18n } from "~/i18n";
 import { toastManager } from "~/components/ui/toast";
@@ -45,7 +45,7 @@ export function useKanbanBoard(): KanbanBoard {
   const homeDir = useWorkspacePathsStore((state) => state.homeDir);
   const chatWorkspaceRoot = useWorkspacePathsStore((state) => state.chatWorkspaceRoot);
   const studioWorkspaceRoot = useWorkspacePathsStore((state) => state.studioWorkspaceRoot);
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const projectSortOrder = settings.sidebarProjectSortOrder;
 
   // Mirror the sidebar's grouping: projects in the user's sidebar sort order, then one

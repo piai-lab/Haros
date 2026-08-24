@@ -2,14 +2,6 @@
 // Purpose: Atomically upgrades known pre-visual-system appearance defaults before React mounts.
 // Layer: Web appearance persistence owner
 
-import { Schema } from "effect";
-
-import {
-  APP_SETTINGS_STORAGE_KEY,
-  AppSettingsSchema,
-  migrateLegacyTypographyDefaults,
-} from "./appSettings";
-
 export const THREAD_SIDEBAR_WIDTH_STORAGE_KEY = "chat_thread_sidebar_width";
 export const DEFAULT_THREAD_SIDEBAR_WIDTH_PX = 23 * 16;
 // The compact docked width remains a real, user-controlled Sidebar state. Only
@@ -17,7 +9,6 @@ export const DEFAULT_THREAD_SIDEBAR_WIDTH_PX = 23 * 16;
 // narrow but usable preference must never be expanded back to the authored default.
 export const THREAD_SIDEBAR_MIN_WIDTH_PX = 13 * 16;
 
-const TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:typography-defaults-migrated:v2";
 const SIDEBAR_WIDTH_DEFAULTS_MIGRATION_STORAGE_KEY = "omnimind:sidebar-width-defaults-migrated:v3";
 
 export type AppearanceMigrationDisposition = "already-complete" | "migrated" | "preserved";
@@ -36,45 +27,6 @@ function persistMarker(storage: Storage, key: string): void {
   if (!isVerifiedMarker(storage, key)) {
     throw new Error("Appearance migration marker could not be verified.");
   }
-}
-
-function migratePersistedTypographyDefaults(
-  storage: Storage,
-  platform: string,
-): AppearanceMigrationDisposition {
-  if (isVerifiedMarker(storage, TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY)) {
-    return "already-complete";
-  }
-
-  const rawSettings = storage.getItem(APP_SETTINGS_STORAGE_KEY);
-  if (rawSettings === null) {
-    persistMarker(storage, TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY);
-    return "preserved";
-  }
-
-  const decode = Schema.decodeSync(Schema.fromJsonString(AppSettingsSchema));
-  const encode = Schema.encodeSync(Schema.fromJsonString(AppSettingsSchema));
-  const previous = decode(rawSettings);
-  const next = migrateLegacyTypographyDefaults(previous, platform);
-  const changed =
-    next.chatFontSizePx !== previous.chatFontSizePx ||
-    next.enableNativeFontSmoothing !== previous.enableNativeFontSmoothing;
-
-  if (changed) {
-    storage.setItem(APP_SETTINGS_STORAGE_KEY, encode(next));
-    const persisted = decode(storage.getItem(APP_SETTINGS_STORAGE_KEY) ?? "");
-    if (
-      persisted.chatFontSizePx !== next.chatFontSizePx ||
-      persisted.enableNativeFontSmoothing !== next.enableNativeFontSmoothing
-    ) {
-      throw new Error("Typography defaults migration could not be verified.");
-    }
-  }
-
-  // The marker is deliberately last: an interrupted/failed settings write must
-  // retry on the next launch instead of claiming completion.
-  persistMarker(storage, TYPOGRAPHY_DEFAULTS_MIGRATION_STORAGE_KEY);
-  return changed ? "migrated" : "preserved";
 }
 
 export function resolveMigratedThreadSidebarWidth(width: number): number {
@@ -119,16 +71,12 @@ function migratePersistedSidebarWidth(storage: Storage): AppearanceMigrationDisp
  */
 export function migratePersistedAppearanceDefaults(
   storage = globalThis.localStorage,
-  platform = globalThis.navigator?.platform ?? "",
+  _platform = globalThis.navigator?.platform ?? "",
 ): AppearanceMigrationResult {
-  let typography: AppearanceMigrationResult["typography"] = "retry";
+  // First-public local preferences start from their own namespace. The retired
+  // mixed AppSettings key is deliberately not read, rewritten, migrated, or deleted.
+  const typography: AppearanceMigrationResult["typography"] = "preserved";
   let sidebarWidth: AppearanceMigrationResult["sidebarWidth"] = "retry";
-
-  try {
-    typography = migratePersistedTypographyDefaults(storage, platform);
-  } catch {
-    // Keep the marker absent. A later launch can retry from durable state.
-  }
   try {
     sidebarWidth = migratePersistedSidebarWidth(storage);
   } catch {

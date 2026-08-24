@@ -2,14 +2,15 @@
 
 ## 当前目标
 
-OmniMind Web Access 深度安全复核已闭合，当前为`packaged-candidate / not-released`；没有获授权的后续代码任务。实现已直接进入并推送`main@62814532f6fbb0977866d7019637cf665583d656`，在既有package/config/Session availability owner内修复四项边界：GitHub子进程不再继承无关Provider秘密；`source_check`取消不再写artifact/entry；`source_check`与`web_search`共享route可用性；配置读取固定目录与文件身份、同FD限界读取并以1 MiB上限fail closed。后续证据提交只记录状态，不属于该安装版shipped bytes；未创建Release、未修改update feed。
+Settings 状态 owner 收口已形成 `packaged-not-released` candidate：万能 `AppSettings` 与浏览器/Server 双写已退休，事实分别收回 Web local preferences、ServerSettings、ProviderCredentials 与 Desktop native runtime。旧 `omnimind:app-settings:v1` 采用 first-public clean break：生产路径零读取、零迁移、零改写、零删除，安装版 canary 证明原字节在 mutation、partial reset 与 App reopen 后保持不变。
 
 ## 当前协调与下一动作
 
-- Source gates通过：`@omnimind/om-web-access`完整565/565、focused 36/36、Server Settings 6/6、Web双语catalog 22/22、root 7-package typecheck与root lint；lint为0 error，601个warning是未触达基线。最小keyless Exa live `source_check`为1来源、0错误、1条entry。
-- 从已推送的`62814532f6…`构建arm64 DMG并核验241个disclosed component identity；DMG SHA-256为`d61b7da52eee918332e83cb8be31c01df73f8de0ca7b248a0d6b20437facb1c4`，安装版`app.asar` SHA-256为`0519ca390c3454255afcb7f094608cc0dc0a3c9f213fdf3b9c41c830ff55b0e7`。
-- `/Applications/OmniMind.app`已替换为该候选。任务专用HOME、显式userData、OmniMind home、Pi Agent目录和XDG配置下，Main、Renderer、GPU/Network Helper与bundled Server隔离成立；默认Web Search Settings为可用/自动路由/自动摘要，1 MiB+1配置进入双语typed recovery且原hash不变，恢复有效文件后关闭重开仍可用。
-- 当前alpha产物严格codesign核验失败，因此不能声称已签名或公证。旧App和纯测试profile已移入Trash，可分别从`OmniMind.app.pre-62814532f6`与`omnimind-webaccess-62814532f6-test-profile`恢复；隔离进程已停止、DMG已卸载。下一步仅在新授权到来时切换本brief的当前目标。
+- 实现与authority已推送到 `codex/settings-owner-boundary@bf0cd9e24b`；`SYNARA-INTAKE.md`的维护者修改以独立提交 `652ca27a9a` 纳入同一候选，没有夹入Settings实现提交。
+- Source gates：Web 328 files / 4145 tests、Server Settings 27/27、Contracts Settings 7/7、root 7-package typecheck、lint（0 error）与production build通过；完整作者套件 565/565。完整Browser门唯一失败为未触达的Theme暖色期望基线，ChatView性能比例与Web Access Gemini偶发并发失败均已用精确单测复跑归因为非introduced regression。
+- 从精确pushed implementation SHA的clean clone构建arm64 DMG：DMG SHA-256 `d2c80644b15a2af4cc6471faa1c7bb14b59d8fafb1c94ff30b7ca01e7d8518a3`，安装版与DMG内 `app.asar` SHA-256 `35ef6b5180646b8164d822b6c93b4609fba0413bb7c490afa1e1df267f330fb5`。
+- 隔离packaged journey已通过：MiMo new Thread/first turn/continuation；DeepSeek discovery/new Thread/first turn/startup model projection；Provider Save partial、跨subscriber credential projection、Restore defaults partial、local durable-write failure、简中/英文、900px窄窗键盘、AppSnap runtime与App reopen。Main、Renderer、Helper与bundled Server均复证只使用任务profile；未读取真实用户profile。
+- 当前没有新的获授权代码修改；下一动作是维护者裁决是否将该candidate合并到最新`main`。候选已安装供本机复核，但不是Release、公开发行或update feed adoption。
 
 ## Stop-loss
 

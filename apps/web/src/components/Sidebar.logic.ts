@@ -15,7 +15,7 @@ import { getDefaultModel } from "@omnimind/shared/model";
 import { pluralize } from "@omnimind/shared/text";
 import { resolveThreadEnvironmentMode } from "@omnimind/shared/threadEnvironment";
 import { isWorkspaceRootWithin, workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
-import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "../appSettings";
+import type { SidebarProjectSortOrder, SidebarThreadSortOrder } from "../localPreferences";
 import { resolveRestorableThreadRoute, type LastThreadRoute } from "../chatRouteRestore";
 import type { ChatMessage, Project, SidebarThreadSummary, Thread } from "../types";
 import { cn } from "../lib/utils";

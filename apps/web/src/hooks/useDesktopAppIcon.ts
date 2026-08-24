@@ -1,73 +1,72 @@
 // FILE: useDesktopAppIcon.ts
-// Purpose: Keep the persisted app-icon preference applied to the native desktop shell.
-// Layer: Web-to-desktop lifecycle bridge
+// Purpose: Read and mutate the native desktop app-icon preference.
+// Layer: Web-to-desktop typed presentation bridge
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { DesktopAppIcon } from "@omnimind/contracts";
-import { useAppSettings } from "~/appSettings";
+export type DesktopAppIconMutationResult =
+  | { readonly state: "saved"; readonly icon: DesktopAppIcon }
+  | { readonly state: "failed"; readonly icon: DesktopAppIcon; readonly error: unknown };
 
-interface DesktopAppIconSynchronizerInput {
-  readonly getAppIcon: () => Promise<DesktopAppIcon>;
-  readonly setAppIcon: (icon: DesktopAppIcon) => Promise<void>;
-  readonly updateRendererIcon: (icon: DesktopAppIcon) => void;
+type DesktopAppIconBridge = Pick<
+  NonNullable<Window["desktopBridge"]>,
+  "getAppIcon" | "setAppIcon"
+>;
+
+export async function readDesktopAppIconFromNative(
+  bridge: DesktopAppIconBridge | undefined,
+): Promise<DesktopAppIcon> {
+  return bridge?.getAppIcon ? bridge.getAppIcon() : "default";
 }
 
-export function createDesktopAppIconSynchronizer(input: DesktopAppIconSynchronizerInput) {
-  let nativeIcon: DesktopAppIcon | null = null;
-
-  const hydrate = async (rendererIcon: DesktopAppIcon): Promise<void> => {
-    const durableIcon = await input.getAppIcon().catch(() => rendererIcon);
-    nativeIcon = durableIcon;
-    if (durableIcon !== rendererIcon) input.updateRendererIcon(durableIcon);
-  };
-
-  const apply = async (rendererIcon: DesktopAppIcon): Promise<void> => {
-    if (nativeIcon === null || nativeIcon === rendererIcon) return;
-    const previousIcon = nativeIcon;
-    nativeIcon = rendererIcon;
-    try {
-      await input.setAppIcon(rendererIcon);
-    } catch (error) {
-      nativeIcon = previousIcon;
-      input.updateRendererIcon(previousIcon);
-      throw error;
-    }
-  };
-
-  return { hydrate, apply } as const;
+export async function writeDesktopAppIconToNative(
+  bridge: DesktopAppIconBridge | undefined,
+  icon: DesktopAppIcon,
+): Promise<void> {
+  if (!bridge) throw new Error("Desktop icon bridge is unavailable.");
+  await bridge.setAppIcon(icon);
 }
 
-export function useDesktopAppIcon(): void {
-  const { settings, updateSettings } = useAppSettings();
-  const latestRendererIconRef = useRef(settings.desktopAppIcon);
-  const updateSettingsRef = useRef(updateSettings);
-  const synchronizerRef = useRef<ReturnType<typeof createDesktopAppIconSynchronizer> | null>(null);
-  latestRendererIconRef.current = settings.desktopAppIcon;
-  updateSettingsRef.current = updateSettings;
+export function useDesktopAppIcon() {
+  const [icon, setIcon] = useState<DesktopAppIcon>("default");
+  const [loading, setLoading] = useState(true);
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     const bridge = window.desktopBridge;
-    if (!bridge) return;
-
+    if (!bridge?.getAppIcon) {
+      setLoading(false);
+      return;
+    }
     let disposed = false;
-    const synchronizer = createDesktopAppIconSynchronizer({
-      getAppIcon: bridge.getAppIcon ?? (() => Promise.resolve(latestRendererIconRef.current)),
-      setAppIcon: bridge.setAppIcon,
-      updateRendererIcon: (desktopAppIcon) => {
-        if (!disposed) updateSettingsRef.current({ desktopAppIcon });
-      },
-    });
-    synchronizerRef.current = synchronizer;
-    void synchronizer.hydrate(latestRendererIconRef.current);
+    void readDesktopAppIconFromNative(bridge)
+      .then((value) => {
+        if (!disposed) setIcon(value);
+      })
+      .finally(() => {
+        if (!disposed) setLoading(false);
+      });
 
     return () => {
       disposed = true;
-      if (synchronizerRef.current === synchronizer) synchronizerRef.current = null;
     };
   }, []);
 
-  useEffect(() => {
-    void synchronizerRef.current?.apply(settings.desktopAppIcon).catch(() => undefined);
-  }, [settings.desktopAppIcon]);
+  const updateIcon = useCallback(
+    async (next: DesktopAppIcon): Promise<DesktopAppIconMutationResult> => {
+      const requestId = ++requestIdRef.current;
+      const previous = icon;
+      try {
+        await writeDesktopAppIconToNative(window.desktopBridge, next);
+        if (requestId === requestIdRef.current) setIcon(next);
+        return { state: "saved", icon: next };
+      } catch (error) {
+        return { state: "failed", icon: previous, error };
+      }
+    },
+    [icon],
+  );
+
+  return { icon, loading, updateIcon } as const;
 }

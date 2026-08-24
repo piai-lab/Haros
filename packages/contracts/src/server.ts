@@ -588,3 +588,22 @@ export type ServerUpdateSettingsInput = typeof ServerUpdateSettingsInput.Type;
 
 export const ServerUpdateSettingsResult = ServerSettingsView;
 export type ServerUpdateSettingsResult = typeof ServerUpdateSettingsResult.Type;
+
+export const ServerProviderCredentialProvider = Schema.Literals(["kilo", "opencode"]);
+export type ServerProviderCredentialProvider = typeof ServerProviderCredentialProvider.Type;
+
+export const ServerUpdateProviderCredentialInput = Schema.Struct({
+  provider: ServerProviderCredentialProvider,
+  serverPassword: Schema.String.check(Schema.isMaxLength(4096)),
+});
+export type ServerUpdateProviderCredentialInput =
+  typeof ServerUpdateProviderCredentialInput.Type;
+
+// Credential bytes never cross back to Web. The result is the fresh, credential-blind
+// settings projection emitted to every existing settings subscriber.
+export const ServerUpdateProviderCredentialResult = ServerSettingsView;
+export type ServerUpdateProviderCredentialResult =
+  typeof ServerUpdateProviderCredentialResult.Type;
+
+export const ServerResetSettingsResult = ServerSettingsView;
+export type ServerResetSettingsResult = typeof ServerResetSettingsResult.Type;

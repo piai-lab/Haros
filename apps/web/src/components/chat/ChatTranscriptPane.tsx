@@ -17,7 +17,7 @@ import {
   type TouchEventHandler,
   type WheelEventHandler,
 } from "react";
-import { type TimestampFormat } from "../../appSettings";
+import { type TimestampFormat } from "../../localPreferences";
 import { type TurnDiffSummary, type WorktreeSetupSnapshot } from "../../types";
 import { ArrowDownIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";

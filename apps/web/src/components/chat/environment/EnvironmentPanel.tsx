@@ -28,7 +28,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import { useI18n } from "~/i18n";
 import { SETTINGS_TARGETS } from "~/settingsNavigation";
 import {
@@ -266,7 +266,7 @@ export function EnvironmentPanel({
   const recap = recapProp ?? null;
   const onOpenEditorView = onOpenEditorViewProp ?? null;
   const navigate = useNavigate();
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const { t } = useI18n();
   const { additions, deletions, hasChanges } = diffTotals;
   const modal = modalProp === true;
@@ -462,7 +462,7 @@ export function EnvironmentPanel({
       {/*
         Optional sections below the git block. Each renders its own leading divider only when it
         actually shows, so toggling any section via the header gear menu never leaves a doubled or
-        dangling rule. Visibility is gated on the per-section AppSettings flags.
+        dangling rule. Visibility is gated on the per-section local preference flags.
       */}
       {settings.showEnvironmentUsage ? <EnvironmentUsageSection provider={activeProvider} /> : null}
 

@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { useAppSettings } from "./appSettings";
+import { useLocalPreferences } from "./localPreferences";
 import { resolveAppLocale, type AppLocale } from "./locale";
 import { THINKING_HINT_CATALOGS } from "./i18n/thinkingHints";
 
@@ -2391,12 +2391,30 @@ export const EN_MESSAGES = {
     "Manage sessions, recovery tools, low-level keybindings, and version details.",
   "settings.restoreConfirmTitle": "Restore default settings?",
   "settings.restoreConfirmDescription": "This will reset: {settings}.",
+  "settings.restoreCompleted": "Default settings restored",
+  "settings.restorePartiallyCompleted": "Some defaults could not be applied",
+  "settings.restorePartiallyCompletedDescription":
+    "The completed items were kept. Retry the remaining settings when their service is available.",
+  "settings.restoreAppSnapRuntimePending":
+    "Default AppSnap preferences were saved, but the current app state was not fully updated.",
+  "settings.restoreAppSnapRuntimeCompleted": "AppSnap now uses the default settings",
+  "settings.restoreAppSnapRuntimeFailed": "AppSnap still could not apply the default settings",
+  "settings.localPreferenceSaveFailed": "Could not save this preference",
+  "settings.localPreferenceSaveRecovery": "Your previous saved value is still active. Try again.",
+  "settings.serverSettingsUnavailable":
+    "Server-owned settings are loading or temporarily unavailable. Reconnect and try again.",
+  "settings.providerConfigSaveFailed": "Could not save this engine setting",
+  "settings.providerConfigSaveRecovery": "Your draft is still here. Check the value and try again.",
+  "settings.providerConfigSavedCredentialFailed": "Settings saved, but the credential was not",
+  "settings.providerConfigSavedCredentialFailedDescription":
+    "The non-secret settings are saved. Your credential draft is still here; check it and retry.",
   "settings.themeSection": "Theme",
   "settings.theme": "Theme",
   "settings.themeDescription": "Choose how OmniMind looks across the app.",
   "settings.themePreference": "Theme preference",
   "settings.appSection": "App",
   "settings.appIcon": "App icon",
+  "settings.appIconUpdateFailed": "App icon could not be saved",
   "settings.appIconDescription": "Choose the icon OmniMind uses in the dock or taskbar.",
   "settings.updatingAppIcon": "Updating app icon",
   "settings.customTitleBar": "Use custom title bar",
@@ -3151,6 +3169,12 @@ export const EN_MESSAGES = {
   "settings.appsnapFinishSetup": "Finish AppSnap setup",
   "settings.appsnapPermissionRequired": "Allow the required macOS permissions, then try again.",
   "settings.appsnapSetupFailed": "AppSnap setup failed",
+  "settings.appsnapCaptureAddFailed": "AppSnap could not add this capture",
+  "settings.appsnapCaptureAddFailedDescription":
+    "The capture remains available. Retry when the app is ready.",
+  "settings.appsnapRuntimeFailed": "AppSnap stopped working",
+  "settings.appsnapRuntimeFailedDescription":
+    "The capture listener could not continue. Restart it and try again.",
   "settings.appsnapConfigureFailed": "Could not configure AppSnap.",
   "settings.appsnapPermissionCheckFailed": "Could not check AppSnap permissions",
   "settings.appsnapPermissionCheckUnknown": "Permission check failed.",
@@ -6131,12 +6155,29 @@ export const ZH_CN_MESSAGES = {
   "settings.advancedDescription": "管理会话、恢复工具、底层快捷键与版本详情。",
   "settings.restoreConfirmTitle": "恢复默认设置？",
   "settings.restoreConfirmDescription": "以下设置将被重置：{settings}。",
+  "settings.restoreCompleted": "已恢复默认设置",
+  "settings.restorePartiallyCompleted": "部分默认设置未能应用",
+  "settings.restorePartiallyCompletedDescription":
+    "已成功的项目会保留。请在对应服务恢复后重试其余设置。",
+  "settings.restoreAppSnapRuntimePending":
+    "AppSnap 默认偏好已保存，但当前应用状态尚未完全更新。",
+  "settings.restoreAppSnapRuntimeCompleted": "AppSnap 已应用默认设置",
+  "settings.restoreAppSnapRuntimeFailed": "AppSnap 仍无法应用默认设置",
+  "settings.localPreferenceSaveFailed": "无法保存此偏好",
+  "settings.localPreferenceSaveRecovery": "仍使用此前保存的值。请重试。",
+  "settings.serverSettingsUnavailable": "共享设置正在加载或暂时不可用。请重新连接后重试。",
+  "settings.providerConfigSaveFailed": "无法保存此引擎设置",
+  "settings.providerConfigSaveRecovery": "草稿仍在。请检查内容后重试。",
+  "settings.providerConfigSavedCredentialFailed": "配置已保存，但凭据未保存",
+  "settings.providerConfigSavedCredentialFailedDescription":
+    "非秘密配置已经保存，凭据草稿仍在。请检查后重试。",
   "settings.themeSection": "主题",
   "settings.theme": "主题",
   "settings.themeDescription": "选择 OmniMind 在整个应用中的外观。",
   "settings.themePreference": "主题偏好",
   "settings.appSection": "应用",
   "settings.appIcon": "应用图标",
+  "settings.appIconUpdateFailed": "应用图标未能保存",
   "settings.appIconDescription": "选择 OmniMind 在程序坞或任务栏中使用的图标。",
   "settings.updatingAppIcon": "正在更新应用图标",
   "settings.customTitleBar": "使用自定义标题栏",
@@ -6836,6 +6877,10 @@ export const ZH_CN_MESSAGES = {
   "settings.appsnapFinishSetup": "完成 AppSnap 设置",
   "settings.appsnapPermissionRequired": "请授予所需的 macOS 权限后重试。",
   "settings.appsnapSetupFailed": "AppSnap 设置失败",
+  "settings.appsnapCaptureAddFailed": "AppSnap 未能添加这次捕获",
+  "settings.appsnapCaptureAddFailedDescription": "捕获仍然保留。应用就绪后可以重试。",
+  "settings.appsnapRuntimeFailed": "AppSnap 已停止工作",
+  "settings.appsnapRuntimeFailedDescription": "捕获监听器无法继续运行。请重新启动后重试。",
   "settings.appsnapConfigureFailed": "无法配置 AppSnap。",
   "settings.appsnapPermissionCheckFailed": "无法检查 AppSnap 权限",
   "settings.appsnapPermissionCheckUnknown": "权限检查失败。",
@@ -7541,7 +7586,7 @@ const DEFAULT_I18N_CONTEXT: I18nContextValue = {
 const I18nContext = createContext<I18nContextValue>(DEFAULT_I18N_CONTEXT);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const { settings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
   const [systemLanguages, setSystemLanguages] = useState<readonly string[]>(() => [
     ...(globalThis.navigator?.languages ?? []),
   ]);
@@ -7552,7 +7597,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     return () => globalThis.removeEventListener?.("languagechange", handleLanguageChange);
   }, []);
 
-  const locale = resolveAppLocale(settings.localePreference, systemLanguages);
+  const locale = resolveAppLocale(preferences.localePreference, systemLanguages);
   const t = useCallback(
     (key: MessageKey, params?: MessageParams) => translate(locale, key, params),
     [locale],

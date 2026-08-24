@@ -12,8 +12,8 @@ const harness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN" } 
   settings: { localePreference: "en" },
 }));
 
-vi.mock("../../appSettings", () => ({
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("../../localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 const THREAD_ID = ThreadId.makeUnsafe("thread-grok-model-effort-picker");

@@ -20,17 +20,33 @@ const harness = vi.hoisted(() => ({
   runStackedAction: vi.fn<(input: Record<string, unknown>) => Promise<GitRunStackedActionResult>>(),
   openExternal: vi.fn<(url: string) => Promise<void>>(),
   refreshAvailability: vi.fn<() => Promise<void>>(),
+  serverSettingsError: null as Error | null,
 }));
 
-vi.mock("~/appSettings", () => ({
+vi.mock("~/providerSettings", () => ({
   getProviderStartOptions: () => null,
-  useAppSettings: () => ({
-    settings: {
-      localePreference: harness.localePreference,
-      codexHomePath: "",
-      textGenerationProvider: "codex",
-      textGenerationModel: null,
-    },
+}));
+
+vi.mock("~/serverSettings", () => ({
+  useServerSettings: () => {
+    const settings = {
+      providers: { codex: { homePath: "" } },
+      textGenerationModelSelection: { provider: "codex", model: null },
+    };
+    return {
+      settings,
+      defaults: settings,
+      fetchSettings: async () => {
+        if (harness.serverSettingsError) throw harness.serverSettingsError;
+        return settings;
+      },
+    };
+  },
+}));
+
+vi.mock("~/localPreferences", () => ({
+  useLocalPreferences: () => ({
+    preferences: { localePreference: harness.localePreference },
   }),
 }));
 
@@ -239,6 +255,7 @@ describe("GitActionsControl Commit action matrix", () => {
     harness.openExternal.mockResolvedValue(undefined);
     harness.refreshAvailability.mockReset();
     harness.refreshAvailability.mockResolvedValue(undefined);
+    harness.serverSettingsError = null;
   });
 
   afterEach(async () => {

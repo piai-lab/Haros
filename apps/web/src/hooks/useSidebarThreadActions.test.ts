@@ -236,7 +236,7 @@ function render(
   reactHarness.beginRender();
   return useSidebarThreadActions({
     activeSplitView: overrides.activeSplitView ?? null,
-    appSettings: {
+    preferences: {
       confirmThreadArchive: false,
       confirmThreadDelete: false,
       sidebarThreadSortOrder: "updated_at",

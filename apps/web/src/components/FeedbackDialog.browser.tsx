@@ -11,8 +11,8 @@ import { cleanup, render } from "vitest-browser-react";
 const delivery = vi.hoisted(() => ({ submit: vi.fn() }));
 const i18n = vi.hoisted(() => ({ settings: { localePreference: "zh-CN" } }));
 
-vi.mock("../appSettings", () => ({
-  useAppSettings: () => ({ settings: i18n.settings }),
+vi.mock("../localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: i18n.settings }),
 }));
 
 vi.mock("../feedback", async (importOriginal) => {

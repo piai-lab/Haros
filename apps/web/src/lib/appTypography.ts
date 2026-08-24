@@ -2,7 +2,7 @@ import {
   DEFAULT_APP_FONT_SIZE_PX,
   MAX_CHAT_FONT_SIZE_PX,
   normalizeChatFontSizePx,
-} from "../appSettings";
+} from "../localPreferences";
 
 export interface AppTypographyScale {
   basePx: number;

@@ -6,7 +6,9 @@
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
   PROVIDER_DISPLAY_NAMES,
+  type DesktopAppIcon,
   type ProviderKind,
+  type ServerSettingsPatch,
 } from "@omnimind/contracts";
 import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
@@ -14,7 +16,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
-  type AppSettings,
   type FollowUpBehavior,
   DEFAULT_CHAT_WIDTH,
   DEFAULT_UI_DENSITY,
@@ -26,11 +27,15 @@ import {
   normalizeChatFontSizePx,
   normalizeTerminalFontFamily,
   normalizeTerminalFontSizePx,
+  TERMINAL_FONT_FAMILY_SUGGESTIONS,
+  type LocalPreferences,
+  useLocalPreferences,
+} from "../localPreferences";
+import {
   getGitTextGenerationModelOptions,
   isGitTextGenerationSettingsDirty,
-  TERMINAL_FONT_FAMILY_SUGGESTIONS,
-  useAppSettings,
-} from "../appSettings";
+} from "../providerSettings";
+import { useServerSettings } from "../serverSettings";
 import { AdvancedSettingsPanel } from "~/components/settings/AdvancedSettingsPanel";
 import { AppIconPicker } from "~/components/settings/AppIconPicker";
 import {
@@ -91,6 +96,7 @@ import { toastManager } from "../components/ui/toast";
 import { RouteInsetSurface } from "../components/RouteInsetSurface";
 import { SidebarHeaderNavigationControls } from "../components/SidebarHeaderNavigationControls";
 import { useDesktopCustomTitleBarState } from "../hooks/useDesktopCustomTitleBar";
+import { useDesktopAppIcon } from "../hooks/useDesktopAppIcon";
 import { useDesktopTopBarTrafficLightGutterClassName } from "../hooks/useDesktopTopBarGutter";
 import { useProviderModelCatalog } from "../hooks/useProviderModelCatalog";
 import { useTheme } from "../hooks/useTheme";
@@ -134,11 +140,11 @@ function isProviderSelectOption(value: string): value is ProviderKind {
   return PROVIDER_SELECT_OPTIONS.includes(value as ProviderKind);
 }
 
-// Keys of AppSettings whose value is a plain boolean — the only ones that can be
+// Keys of LocalPreferences whose value is a plain boolean — the only ones that can be
 // driven by the shared on/off toggle row below.
 type BooleanSettingKey = {
-  [Key in keyof AppSettings]-?: AppSettings[Key] extends boolean ? Key : never;
-}[keyof AppSettings];
+  [Key in keyof LocalPreferences]-?: LocalPreferences[Key] extends boolean ? Key : never;
+}[keyof LocalPreferences];
 
 // ── Route screen ───────────────────────────────────────────────────────────
 
@@ -156,12 +162,84 @@ function SettingsRouteView() {
     systemUiFont,
     setSystemUiFont,
   } = useTheme();
-  const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
+  const {
+    preferences: settings,
+    defaults,
+    updatePreferences,
+    resetPreferences,
+  } = useLocalPreferences();
+  const {
+    query: serverSettingsQuery,
+    settings: serverSettings,
+    defaults: serverDefaults,
+    updateServerSettings: mutateServerSettings,
+    updateProviderCredential: mutateProviderCredential,
+    resetServerSettings,
+  } = useServerSettings();
+  const activeServerSettings = serverSettings ?? serverDefaults;
+  const { icon: desktopAppIcon, updateIcon: updateDesktopAppIcon } = useDesktopAppIcon();
   const { t } = useI18n();
+  const serverSettingsStatus = serverSettings
+    ? undefined
+    : serverSettingsQuery.isError
+      ? (
+          <span className="inline-flex items-center gap-2">
+            <span>{t("settings.unavailable")}</span>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => void serverSettingsQuery.refetch()}
+            >
+              {t("common.retry")}
+            </Button>
+          </span>
+        )
+      : t("common.loading");
+  const updateSettings = (patch: Partial<LocalPreferences>) => {
+    const result = updatePreferences(patch);
+    if (result.state === "failed") {
+      toastManager.add({
+        type: "error",
+        title: t("settings.localPreferenceSaveFailed"),
+        description: t("settings.localPreferenceSaveRecovery"),
+      });
+    }
+    return result;
+  };
+  const updateServerSettings = async (patch: ServerSettingsPatch) => {
+    const result = await mutateServerSettings(patch);
+    if (result.state === "failed") {
+      toastManager.add({
+        type: "error",
+        title: t("settings.providerConfigSaveFailed"),
+        description: t("settings.providerConfigSaveRecovery"),
+      });
+    }
+    return result;
+  };
+  const updateProviderCredential = async (
+    provider: "kilo" | "opencode",
+    serverPassword: string,
+  ) => {
+    const result = await mutateProviderCredential(provider, serverPassword);
+    if (result.state === "failed") {
+      toastManager.add({
+        type: "error",
+        title: t("settings.providerConfigSaveFailed"),
+        description: t("settings.providerConfigSaveRecovery"),
+      });
+    }
+    return result;
+  };
   const activeSectionDescriptor = SETTINGS_SECTION_BY_ID.get(activeSection);
-  const currentGitTextGenerationProvider = settings.textGenerationProvider ?? "codex";
+  const currentGitTextGenerationProvider =
+    serverSettings?.textGenerationModelSelection.provider ??
+    serverDefaults.textGenerationModelSelection.provider;
   const currentGitTextGenerationModel =
-    settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
+    serverSettings?.textGenerationModelSelection.model ??
+    serverDefaults.textGenerationModelSelection.model ??
+    DEFAULT_GIT_TEXT_GENERATION_MODEL;
   const serverConfigQuery = useQuery({
     ...serverConfigQueryOptions(),
     enabled: activeSection === "general",
@@ -182,7 +260,7 @@ function SettingsRouteView() {
   });
   const gitTextGenerationModelOptions = useMemo(
     () =>
-      getGitTextGenerationModelOptions(settings, {
+      getGitTextGenerationModelOptions(activeServerSettings, {
         codex: gitWritingCatalogOptionsByProvider.codex,
         kilo: gitWritingCatalogOptionsByProvider.kilo,
         opencode: gitWritingCatalogOptionsByProvider.opencode,
@@ -191,7 +269,7 @@ function SettingsRouteView() {
       gitWritingCatalogOptionsByProvider.codex,
       gitWritingCatalogOptionsByProvider.kilo,
       gitWritingCatalogOptionsByProvider.opencode,
-      settings,
+      activeServerSettings,
     ],
   );
   const currentGitTextGenerationValue = `${currentGitTextGenerationProvider}:${currentGitTextGenerationModel}`;
@@ -246,12 +324,12 @@ function SettingsRouteView() {
     isElectron && (isWindowsPlatform(platform) || isLinuxPlatform(platform));
   const customTitleBarState = useDesktopCustomTitleBarState();
   const customTitleBarRestartRequired =
-    customTitleBarState.supported && settings.useCustomTitleBar !== customTitleBarState.active;
+    customTitleBarState.supported &&
+    customTitleBarState.preference !== customTitleBarState.active;
   const customTitleBarPreferenceDirty =
     supportsCustomTitleBarSetting &&
-    (settings.useCustomTitleBar !== defaults.useCustomTitleBar ||
-      (customTitleBarState.supported &&
-        customTitleBarState.preference !== defaults.useCustomTitleBar));
+    customTitleBarState.supported &&
+    customTitleBarState.preference !== true;
 
   function showCustomTitleBarRestartToast(): void {
     toastManager.add({
@@ -289,14 +367,20 @@ function SettingsRouteView() {
   }
 
   async function applyCustomTitleBarPreference(enabled: boolean): Promise<void> {
-    const previous = settings.useCustomTitleBar;
-    updateSettings({ useCustomTitleBar: enabled });
     const state = await persistCustomTitleBarPreference(enabled);
-    if (state === null) {
-      updateSettings({ useCustomTitleBar: previous });
-      return;
-    }
+    if (state === null) return;
     if (state.restartRequired) showCustomTitleBarRestartToast();
+  }
+
+  async function applyDesktopAppIcon(icon: DesktopAppIcon): Promise<void> {
+    const result = await updateDesktopAppIcon(icon);
+    if (result.state === "failed") {
+      toastManager.add({
+        type: "error",
+        title: t("settings.appIconUpdateFailed"),
+        description: t("settings.retryAfterReconnect"),
+      });
+    }
   }
 
   const visibleTerminalFontFamilySuggestions = useMemo(() => {
@@ -307,8 +391,14 @@ function SettingsRouteView() {
     );
   }, [settings.terminalFontFamily]);
 
-  const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(settings, defaults);
-  const isInstallSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
+  const isGitTextGenerationModelDirty = isGitTextGenerationSettingsDirty(
+    serverSettings ?? serverDefaults,
+    serverDefaults,
+  );
+  const isInstallSettingsDirty = isProviderInstallSettingsDirty(
+    serverSettings ?? serverDefaults,
+    serverDefaults,
+  );
   const hiddenProviderCount = new Set(settings.hiddenProviders).size;
   const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
 
@@ -327,10 +417,11 @@ function SettingsRouteView() {
     ...(settings.localePreference !== defaults.localePreference ? [t("settings.language")] : []),
     ...(theme !== "system" ? [t("settings.theme")] : []),
     ...(!isDefaultActiveTheme ? [t("settings.theme")] : []),
-    ...(settings.defaultProvider !== defaults.defaultProvider
+    ...((serverSettings ?? serverDefaults).defaultProvider !== serverDefaults.defaultProvider
       ? [t("settings.defaultProvider")]
       : []),
-    ...(settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode
+    ...((serverSettings ?? serverDefaults).defaultThreadEnvMode !==
+    serverDefaults.defaultThreadEnvMode
       ? [t("settings.defaultThreadMode")]
       : []),
     ...(settings.sidebarProjectSortOrder !== defaults.sidebarProjectSortOrder
@@ -342,7 +433,7 @@ function SettingsRouteView() {
     ...(settings.showStudioSection !== defaults.showStudioSection ? [t("nav.studio")] : []),
     ...(settings.uiDensity !== defaults.uiDensity ? [t("settings.uiDensity")] : []),
     ...(settings.chatWidth !== defaults.chatWidth ? [t("settings.chatWidth")] : []),
-    ...(settings.desktopAppIcon !== defaults.desktopAppIcon ? [t("settings.appIcon")] : []),
+    ...(desktopAppIcon !== "default" ? [t("settings.appIcon")] : []),
     ...(settings.chatFontSizePx !== defaults.chatFontSizePx ? [t("settings.baseFontSize")] : []),
     ...(settings.terminalFontSizePx !== defaults.terminalFontSizePx
       ? [t("settings.terminalFontSize")]
@@ -363,7 +454,8 @@ function SettingsRouteView() {
     defaults.enableSystemTaskCompletionNotifications
       ? [t("settings.desktopNotifications")]
       : []),
-    ...(settings.enableAssistantStreaming !== defaults.enableAssistantStreaming
+    ...((serverSettings ?? serverDefaults).enableAssistantStreaming !==
+    serverDefaults.enableAssistantStreaming
       ? [t("settings.assistantOutput")]
       : []),
     ...(settings.followUpBehavior !== defaults.followUpBehavior
@@ -376,7 +468,8 @@ function SettingsRouteView() {
     ...(settings.appSnapPlaySound !== defaults.appSnapPlaySound
       ? [t("settings.captureSound")]
       : []),
-    ...(settings.enableProviderUpdateChecks !== defaults.enableProviderUpdateChecks
+    ...((serverSettings ?? serverDefaults).enableProviderUpdateChecks !==
+    serverDefaults.enableProviderUpdateChecks
       ? [t("settings.automaticCliUpdates")]
       : []),
     ...(settings.diffWordWrap !== defaults.diffWordWrap ? [t("settings.diffLineWrapping")] : []),
@@ -393,15 +486,9 @@ function SettingsRouteView() {
       ? [t("settings.terminalCloseConfirmation")]
       : []),
     ...(isGitTextGenerationModelDirty ? [t("settings.gitWritingModel")] : []),
-    ...(settings.customCodexModels.length > 0 ||
-    settings.customClaudeModels.length > 0 ||
-    settings.customCursorModels.length > 0 ||
-    settings.customAntigravityModels.length > 0 ||
-    settings.customGrokModels.length > 0 ||
-    settings.customDroidModels.length > 0 ||
-    settings.customKiloModels.length > 0 ||
-    settings.customOpenCodeModels.length > 0 ||
-    settings.customPiModels.length > 0
+    ...(Object.values((serverSettings ?? serverDefaults).providers).some(
+      (provider) => "customModels" in provider && provider.customModels.length > 0,
+    )
       ? [t("settings.customModels")]
       : []),
     ...(isInstallSettingsDirty ? [t("settings.providerTools")] : []),
@@ -423,19 +510,87 @@ function SettingsRouteView() {
     );
     if (!confirmed) return;
 
-    if (customTitleBarPreferenceDirty) {
-      const state = await persistCustomTitleBarPreference(defaults.useCustomTitleBar);
-      if (state === null) return;
-      if (state.restartRequired) showCustomTitleBarRestartToast();
+    let appearanceResetFailed = false;
+    try {
+      resetAllThemes();
+    } catch {
+      appearanceResetFailed = true;
+    }
+    const localResult = resetPreferences();
+    const [serverResult, kiloCredentialResult, openCodeCredentialResult, iconResult, titleBarResult] =
+      await Promise.all([
+        resetServerSettings(),
+        updateProviderCredential("kilo", ""),
+        updateProviderCredential("opencode", ""),
+        isElectron
+          ? updateDesktopAppIcon("default")
+          : Promise.resolve({ state: "saved" as const }),
+        customTitleBarPreferenceDirty
+          ? persistCustomTitleBarPreference(true)
+          : Promise.resolve({ restartRequired: false }),
+      ]);
+
+    const applyDefaultAppSnapRuntime = async (): Promise<boolean> => {
+      const appSnapBridge = window.desktopBridge?.appSnap;
+      if (!appSnapBridge) return true;
+      try {
+        await appSnapBridge.setShortcut(defaults.appSnapShortcut);
+        await appSnapBridge.setEnabled(defaults.enableAppSnap);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+    let appSnapNativeApplied = true;
+    if (localResult.state !== "failed") {
+      appSnapNativeApplied = await applyDefaultAppSnapRuntime();
     }
 
-    setTheme("system");
-    resetAllThemes();
-    resetSettings();
+    const failed =
+      appearanceResetFailed ||
+      localResult.state === "failed" ||
+      serverResult.state === "failed" ||
+      kiloCredentialResult.state === "failed" ||
+      openCodeCredentialResult.state === "failed" ||
+      iconResult.state === "failed" ||
+      titleBarResult === null ||
+      !appSnapNativeApplied;
+    if (failed) {
+      toastManager.add({
+        type: "warning",
+        title: t("settings.restorePartiallyCompleted"),
+        description:
+          !appSnapNativeApplied && localResult.state !== "failed"
+            ? t("settings.restoreAppSnapRuntimePending")
+            : t("settings.restorePartiallyCompletedDescription"),
+        ...(!appSnapNativeApplied && localResult.state !== "failed"
+          ? {
+              actionProps: {
+                children: t("common.retry"),
+                onClick: () => {
+                  void applyDefaultAppSnapRuntime().then((applied) => {
+                    toastManager.add({
+                      type: applied ? "success" : "error",
+                      title: t(
+                        applied
+                          ? "settings.restoreAppSnapRuntimeCompleted"
+                          : "settings.restoreAppSnapRuntimeFailed",
+                      ),
+                    });
+                  });
+                },
+              },
+            }
+          : {}),
+      });
+    } else {
+      toastManager.add({ type: "success", title: t("settings.restoreCompleted") });
+    }
+    if (titleBarResult?.restartRequired) showCustomTitleBarRestartToast();
     setResetEpoch((current) => current + 1);
   }
 
-  // Shared on/off settings row: a labelled Switch bound to a boolean AppSettings
+  // Shared on/off settings row: a labelled Switch bound to a boolean local preference
   // key, with the standard "reset to default" affordance shown only when changed.
   // Rows with bespoke controls (e.g. the desktop-notifications Test button) keep
   // their own markup instead of using this helper.
@@ -461,7 +616,7 @@ function SettingsRouteView() {
               onClick={() =>
                 updateSettings({
                   [settingKey]: defaults[settingKey],
-                } as Partial<AppSettings>)
+                } as Partial<LocalPreferences>)
               }
             />
           ) : null
@@ -472,7 +627,7 @@ function SettingsRouteView() {
             onCheckedChange={(checked) =>
               updateSettings({
                 [settingKey]: Boolean(checked),
-              } as Partial<AppSettings>)
+              } as Partial<LocalPreferences>)
             }
             aria-label={ariaLabel}
           />
@@ -532,26 +687,30 @@ function SettingsRouteView() {
           anchorId={GENERAL_SETTINGS_SEARCH.defaultProvider.target}
           title={t("settings.defaultProvider")}
           description={t("settings.defaultProviderDescription")}
+          status={serverSettingsStatus}
           resetAction={
-            settings.defaultProvider !== defaults.defaultProvider ? (
+            activeServerSettings.defaultProvider !== serverDefaults.defaultProvider ? (
               <SettingResetButton
                 label={t("settings.defaultProvider")}
-                onClick={() => updateSettings({ defaultProvider: defaults.defaultProvider })}
+                onClick={() =>
+                  void updateServerSettings({ defaultProvider: serverDefaults.defaultProvider })
+                }
               />
             ) : null
           }
           control={
             <SettingsSelectControl
-              value={settings.defaultProvider}
+              disabled={!serverSettings}
+              value={activeServerSettings.defaultProvider}
               onValueChange={(value) => {
                 if (!isProviderSelectOption(value)) return;
-                updateSettings({ defaultProvider: value });
+                void updateServerSettings({ defaultProvider: value });
               }}
               ariaLabel={t("settings.defaultProvider")}
               valueContent={
                 <ProviderOptionLabel
-                  provider={settings.defaultProvider}
-                  label={PROVIDER_DISPLAY_NAMES[settings.defaultProvider]}
+                  provider={activeServerSettings.defaultProvider}
+                  label={PROVIDER_DISPLAY_NAMES[activeServerSettings.defaultProvider]}
                 />
               }
             >
@@ -571,13 +730,14 @@ function SettingsRouteView() {
           anchorId={GENERAL_SETTINGS_SEARCH.newThreads.target}
           title={t("settings.newThreads")}
           description={t("settings.newThreadsDescription")}
+          status={serverSettingsStatus}
           resetAction={
-            settings.defaultThreadEnvMode !== defaults.defaultThreadEnvMode ? (
+            activeServerSettings.defaultThreadEnvMode !== serverDefaults.defaultThreadEnvMode ? (
               <SettingResetButton
                 label={t("settings.newThreads")}
                 onClick={() =>
-                  updateSettings({
-                    defaultThreadEnvMode: defaults.defaultThreadEnvMode,
+                  void updateServerSettings({
+                    defaultThreadEnvMode: serverDefaults.defaultThreadEnvMode,
                   })
                 }
               />
@@ -585,16 +745,17 @@ function SettingsRouteView() {
           }
           control={
             <SettingsSelectControl
-              value={settings.defaultThreadEnvMode}
+              disabled={!serverSettings}
+              value={activeServerSettings.defaultThreadEnvMode}
               onValueChange={(value) => {
                 if (value !== "local" && value !== "worktree") return;
-                updateSettings({
+                void updateServerSettings({
                   defaultThreadEnvMode: value,
                 });
               }}
               ariaLabel={t("settings.defaultThreadMode")}
               valueContent={
-                settings.defaultThreadEnvMode === "worktree"
+                activeServerSettings.defaultThreadEnvMode === "worktree"
                   ? t("settings.newWorktree")
                   : t("settings.local")
               }
@@ -736,14 +897,17 @@ function SettingsRouteView() {
             <SettingsRow
               title={t("settings.gitWritingModel")}
               description={t("settings.gitWritingModelDescription")}
+              status={serverSettingsStatus}
               resetAction={
                 isGitTextGenerationModelDirty ? (
                   <SettingResetButton
                     label={t("settings.gitWritingModel")}
                     onClick={() =>
-                      updateSettings({
-                        textGenerationProvider: defaults.textGenerationProvider,
-                        textGenerationModel: defaults.textGenerationModel,
+                      void updateServerSettings({
+                        textGenerationModelSelection: {
+                          provider: serverDefaults.textGenerationModelSelection.provider,
+                          model: serverDefaults.textGenerationModelSelection.model,
+                        },
                       })
                     }
                   />
@@ -751,6 +915,7 @@ function SettingsRouteView() {
               }
               control={
                 <SettingsSelectControl
+                  disabled={!serverSettings}
                   value={currentGitTextGenerationValue}
                   onValueChange={(value) => {
                     const separatorIndex = value.indexOf(":");
@@ -758,9 +923,8 @@ function SettingsRouteView() {
                     const provider = value.slice(0, separatorIndex) as ProviderKind;
                     const model = value.slice(separatorIndex + 1);
                     if (!PROVIDER_SELECT_OPTIONS.includes(provider)) return;
-                    updateSettings({
-                      textGenerationProvider: provider,
-                      textGenerationModel: model,
+                    void updateServerSettings({
+                      textGenerationModelSelection: { provider, model },
                     });
                   }}
                   ariaLabel={t("settings.gitTextGenerationModel")}
@@ -884,22 +1048,19 @@ function SettingsRouteView() {
             title={t("settings.appIcon")}
             description={t("settings.appIconDescription")}
             resetAction={
-              settings.desktopAppIcon !== defaults.desktopAppIcon ? (
+              desktopAppIcon !== "default" ? (
                 <SettingResetButton
                   label={t("settings.appIcon")}
-                  onClick={() => updateSettings({ desktopAppIcon: defaults.desktopAppIcon })}
+                  onClick={() => void applyDesktopAppIcon("default")}
                 />
               ) : null
             }
             control={
               <AppIconPicker
                 platform={typeof navigator === "undefined" ? "" : navigator.platform}
-                value={settings.desktopAppIcon}
+                value={desktopAppIcon}
                 onValueChange={async (desktopAppIcon) => {
-                  if (desktopAppIcon !== settings.desktopAppIcon) {
-                    updateSettings({ desktopAppIcon });
-                  }
-                  await window.desktopBridge?.setAppIcon(desktopAppIcon);
+                  await applyDesktopAppIcon(desktopAppIcon);
                 }}
               />
             }
@@ -922,7 +1083,7 @@ function SettingsRouteView() {
                   <SettingResetButton
                     label={t("settings.customTitleBar")}
                     onClick={() => {
-                      void applyCustomTitleBarPreference(defaults.useCustomTitleBar);
+                      void applyCustomTitleBarPreference(true);
                     }}
                   />
                 ) : null
@@ -942,7 +1103,7 @@ function SettingsRouteView() {
                     </Button>
                   ) : null}
                   <Switch
-                    checked={settings.useCustomTitleBar}
+                    checked={customTitleBarState.preference}
                     onCheckedChange={(checked) => {
                       void applyCustomTitleBarPreference(Boolean(checked));
                     }}
@@ -1272,14 +1433,35 @@ function SettingsRouteView() {
           }
         />
 
-        {renderBooleanSettingRow({
-          settingKey: "enableAssistantStreaming",
-          anchorId: BEHAVIOR_SETTINGS_SEARCH.assistantOutput.target,
-          title: t("settings.assistantOutput"),
-          description: t("settings.assistantOutputDescription"),
-          resetLabel: t("settings.assistantOutput"),
-          ariaLabel: t("settings.streamAssistant"),
-        })}
+        <SettingsRow
+          anchorId={BEHAVIOR_SETTINGS_SEARCH.assistantOutput.target}
+          title={t("settings.assistantOutput")}
+          description={t("settings.assistantOutputDescription")}
+          status={serverSettingsStatus}
+          resetAction={
+            activeServerSettings.enableAssistantStreaming !==
+            serverDefaults.enableAssistantStreaming ? (
+              <SettingResetButton
+                label={t("settings.assistantOutput")}
+                onClick={() =>
+                  void updateServerSettings({
+                    enableAssistantStreaming: serverDefaults.enableAssistantStreaming,
+                  })
+                }
+              />
+            ) : null
+          }
+          control={
+            <Switch
+              disabled={!serverSettings}
+              checked={activeServerSettings.enableAssistantStreaming}
+              onCheckedChange={(checked) => {
+                void updateServerSettings({ enableAssistantStreaming: Boolean(checked) });
+              }}
+              aria-label={t("settings.streamAssistant")}
+            />
+          }
+        />
       </SettingsSection>
 
       <SettingsSection title={t("settings.reviewSection")}>
@@ -1423,18 +1605,8 @@ function SettingsRouteView() {
               {/* These workflow owners stay mounted so drafts, request guards, and pending
                   mutations retain route lifetime while inactive panels render no DOM. */}
               <div className="contents">
-                <NotificationsSettingsPanel
-                  active={activeSection === "notifications"}
-                  settings={settings}
-                  defaults={defaults}
-                  updateSettings={updateSettings}
-                />
-                <AppSnapSettingsPanel
-                  active={activeSection === "appsnap"}
-                  settings={settings}
-                  defaults={defaults}
-                  updateSettings={updateSettings}
-                />
+                <NotificationsSettingsPanel active={activeSection === "notifications"} />
+                <AppSnapSettingsPanel active={activeSection === "appsnap"} />
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
@@ -1452,9 +1624,6 @@ function SettingsRouteView() {
                 />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}
-                  settings={settings}
-                  defaults={defaults}
-                  updateSettings={updateSettings}
                   resetEpoch={resetEpoch}
                 />
                 <BuiltInToolsSettingsPanel active={activeSection === "built-in-tools"} />

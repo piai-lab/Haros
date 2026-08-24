@@ -5,7 +5,7 @@
 
 import { useEffect } from "react";
 
-import { useAppSettings } from "../appSettings";
+import { useLocalPreferences } from "../localPreferences";
 import {
   getChatWidthCssVariables,
   normalizeChatWidthMode,
@@ -17,8 +17,8 @@ const CHAT_WIDTH_CSS_VARIABLES = Object.keys(
 ) as readonly ChatWidthCssVariable[];
 
 export function useChatWidth() {
-  const { settings } = useAppSettings();
-  const chatWidth = normalizeChatWidthMode(settings.chatWidth);
+  const { preferences } = useLocalPreferences();
+  const chatWidth = normalizeChatWidthMode(preferences.chatWidth);
 
   useEffect(() => {
     const root = document.documentElement;

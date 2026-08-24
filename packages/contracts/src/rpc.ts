@@ -259,7 +259,10 @@ import {
   ServerProviderUpdateError,
   ServerProviderUpdateInput,
   ServerProviderUpdateResult,
+  ServerUpdateProviderCredentialInput,
+  ServerUpdateProviderCredentialResult,
   ServerRefreshProvidersResult,
+  ServerResetSettingsResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
   ServerUpdateSettingsInput,
@@ -982,6 +985,21 @@ export const WsServerUpdateSettingsRpc = Rpc.make(WS_METHODS.serverUpdateSetting
   error: WsRpcError,
 });
 
+export const WsServerResetSettingsRpc = Rpc.make(WS_METHODS.serverResetSettings, {
+  payload: Schema.Struct({}),
+  success: ServerResetSettingsResult,
+  error: WsRpcError,
+});
+
+export const WsServerUpdateProviderCredentialRpc = Rpc.make(
+  WS_METHODS.serverUpdateProviderCredential,
+  {
+    payload: ServerUpdateProviderCredentialInput,
+    success: ServerUpdateProviderCredentialResult,
+    error: WsRpcError,
+  },
+);
+
 export const WsServerRefreshProvidersRpc = Rpc.make(WS_METHODS.serverRefreshProviders, {
   payload: Schema.Struct({}),
   success: ServerRefreshProvidersResult,
@@ -1539,6 +1557,8 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsServerGetBuiltInToolGroupsRpc,
   WsServerGetSettingsRpc,
   WsServerUpdateSettingsRpc,
+  WsServerResetSettingsRpc,
+  WsServerUpdateProviderCredentialRpc,
   WsServerRefreshProvidersRpc,
   WsServerUpdateProviderRpc,
   WsServerListExternalMcpIntegrationsRpc,

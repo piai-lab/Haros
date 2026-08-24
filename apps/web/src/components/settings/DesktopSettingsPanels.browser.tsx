@@ -5,7 +5,6 @@
 import "../../index.css";
 
 import type { DesktopAppSnapState } from "@omnimind/contracts";
-import type { AppSettingsBinding } from "~/appSettings";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -44,17 +43,17 @@ vi.mock("~/components/ui/toast", () => ({
   toastManager: { add: harness.toastAdd },
 }));
 
+vi.mock("~/localPreferences", () => ({
+  useLocalPreferences: () => ({
+    preferences: harness.settings,
+    defaults: harness.defaults,
+    updatePreferences: harness.updateSettings,
+  }),
+}));
+
 import { AppSnapSettingsPanel, NotificationsSettingsPanel } from "./DesktopSettingsPanels";
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-
-function settingsBinding(): AppSettingsBinding {
-  return {
-    settings: harness.settings,
-    defaults: harness.defaults,
-    updateSettings: harness.updateSettings,
-  } as unknown as AppSettingsBinding;
-}
 
 function AppSnapActivityHarness() {
   const [active, setActive] = useState(true);
@@ -66,7 +65,7 @@ function AppSnapActivityHarness() {
       <button type="button" onClick={() => setActive(true)}>
         Return to AppSnap
       </button>
-      <AppSnapSettingsPanel active={active} {...settingsBinding()} />
+      <AppSnapSettingsPanel active={active} />
     </QueryClientProvider>
   );
 }
@@ -90,7 +89,10 @@ function setDesktopBridge(value: unknown): void {
 }
 
 beforeEach(() => {
-  harness.updateSettings.mockReset();
+  harness.updateSettings.mockReset().mockImplementation((patch) => ({
+    state: "saved",
+    preferences: { ...harness.settings, ...patch },
+  }));
   harness.readBrowserPermission.mockReset().mockReturnValue("default");
   harness.requestBrowserPermission.mockReset();
   harness.toastAdd.mockReset();
@@ -106,7 +108,7 @@ afterEach(() => {
 describe("NotificationsSettingsPanel", () => {
   it("keeps the preference disabled and explains a denied browser permission", async () => {
     harness.requestBrowserPermission.mockResolvedValue("denied");
-    const mounted = await render(<NotificationsSettingsPanel active {...settingsBinding()} />);
+    const mounted = await render(<NotificationsSettingsPanel active />);
 
     await mounted.getByLabelText("Desktop activity notifications").click();
 
@@ -169,6 +171,41 @@ describe("AppSnapSettingsPanel", () => {
 
     await mounted.unmount();
     expect(unsubscribe).toHaveBeenCalledOnce();
+  });
+
+  it("restores reversible native state when the durable enable intent cannot be saved", async () => {
+    const disabledState = { ...READY_STATE, enabled: false };
+    const setEnabled = vi
+      .fn()
+      .mockResolvedValueOnce(READY_STATE)
+      .mockResolvedValueOnce(disabledState);
+    harness.updateSettings.mockReturnValueOnce({
+      state: "failed",
+      preferences: harness.settings,
+      error: new Error("storage unavailable"),
+    });
+    setDesktopBridge({
+      appSnap: {
+        getState: vi.fn().mockResolvedValue(disabledState),
+        requestPermissions: vi.fn().mockResolvedValue(READY_STATE),
+        setEnabled,
+        checkShortcut: vi.fn().mockResolvedValue({ available: true, reason: null }),
+        setShortcut: vi.fn(),
+        onState: vi.fn(() => vi.fn()),
+      },
+    });
+
+    const mounted = await render(<AppSnapActivityHarness />);
+    await mounted.getByLabelText("Enable AppSnap").click();
+
+    await vi.waitFor(() => {
+      expect(setEnabled).toHaveBeenNthCalledWith(1, true);
+      expect(setEnabled).toHaveBeenNthCalledWith(2, false);
+      expect(harness.toastAdd).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "error" }),
+      );
+    });
+    await mounted.unmount();
   });
 
   it("records two keys, checks availability, and saves the shortcut", async () => {

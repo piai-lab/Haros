@@ -8,7 +8,7 @@ import { BotIcon, ChevronLeftIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import type { WorkLogEntry } from "../../session-logic";
 import { formatShortTimestamp } from "../../timestampFormat";
-import type { TimestampFormat } from "../../appSettings";
+import type { TimestampFormat } from "../../localPreferences";
 import ChatMarkdown from "../ChatMarkdown";
 import { getChatMessageFooterTextStyle, getChatTranscriptTextStyle } from "./chatTypography";
 import {

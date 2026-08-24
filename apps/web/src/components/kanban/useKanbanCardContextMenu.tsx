@@ -11,7 +11,7 @@ import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type MouseEvent, useState } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import { RenameThreadDialog } from "~/components/RenameThreadDialog";
 import { useCopyPathToClipboard, useCopyThreadIdToClipboard } from "~/hooks/useCopyToClipboard";
 import { deleteActiveThreadFromClient } from "~/lib/activeThreadDelete";
@@ -75,7 +75,7 @@ async function setThreadPinned(threadId: ThreadId, isPinned: boolean) {
 
 export function useKanbanCardContextMenu(): KanbanCardContextMenuController {
   const { t } = useI18n();
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const queryClient = useQueryClient();
   const removeWorktreeMutation = useMutation(gitRemoveWorktreeMutationOptions({ queryClient }));
   const clearComposerContent = useComposerDraftStore((store) => store.clearComposerContent);

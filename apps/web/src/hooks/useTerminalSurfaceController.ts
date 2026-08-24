@@ -11,7 +11,7 @@ import { type ThreadId } from "@omnimind/contracts";
 import { type TerminalCliKind } from "@omnimind/shared/terminalThreads";
 import { useState } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import {
   confirmTerminalTabClose,
   resolveTerminalCloseTitle,
@@ -29,7 +29,7 @@ type TerminalActivity = {
 };
 
 export function useTerminalSurfaceController(threadId: ThreadId) {
-  const { settings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
   const terminalState = useTerminalStateStore((state) =>
     selectThreadTerminalState(state.terminalStateByThreadId, threadId),
   );
@@ -87,7 +87,7 @@ export function useTerminalSurfaceController(threadId: ThreadId) {
     const confirmed = await confirmTerminalTabClose({
       api,
       enabled: shouldPromptForTerminalClose({
-        confirmationEnabled: settings.confirmTerminalTabClose,
+        confirmationEnabled: preferences.confirmTerminalTabClose,
         runningTerminalIds: terminalState.runningTerminalIds,
         terminalAttentionStatesById: terminalState.terminalAttentionStatesById,
         terminalId,

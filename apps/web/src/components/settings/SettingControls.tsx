@@ -57,6 +57,7 @@ export function SettingsSelectControl({
   ariaLabel,
   triggerClassName: triggerClassNameProp,
   valueContent,
+  disabled = false,
   children,
 }: {
   value: string;
@@ -65,6 +66,7 @@ export function SettingsSelectControl({
   triggerClassName?: string;
   valueContent: ReactNode;
   children: ReactNode;
+  disabled?: boolean;
 }) {
   const triggerClassName = triggerClassNameProp ?? "w-full sm:w-44";
   return (
@@ -75,6 +77,7 @@ export function SettingsSelectControl({
       }}
     >
       <SelectTrigger
+        disabled={disabled}
         className={cn(SETTINGS_CONTROL_RADIUS_CLASS_NAME, triggerClassName)}
         aria-label={ariaLabel}
       >
@@ -98,11 +101,13 @@ export function SettingsSegmentedControl<T extends string>({
   onValueChange,
   options,
   ariaLabel,
+  disabled = false,
 }: {
   value: T;
   onValueChange: (value: T) => void;
   options: readonly SettingsSegmentedOption<T>[];
   ariaLabel: string;
+  disabled?: boolean;
 }) {
   const radioItemProps = useRadioGroupKeyboardNav({
     values: options.map((option) => option.value),
@@ -119,6 +124,7 @@ export function SettingsSegmentedControl<T extends string>({
         const isActive = option.value === value;
         return (
           <Button
+            disabled={disabled}
             key={option.value}
             role="radio"
             aria-checked={isActive}

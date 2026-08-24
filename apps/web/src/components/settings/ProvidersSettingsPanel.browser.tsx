@@ -14,8 +14,8 @@ import { useEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { APP_SETTINGS_STORAGE_KEY, AppSettingsSchema } from "~/appSettings";
 import { I18nProvider } from "~/i18n";
+import { LOCAL_PREFERENCES_STORAGE_KEY } from "~/localPreferences";
 import { serverQueryKeys } from "~/lib/serverReactQuery";
 import { SETTINGS_TARGETS, type SettingsSectionId } from "~/settingsNavigation";
 import { createBrowserTestServerConfig } from "~/test/browserHarness";
@@ -46,10 +46,7 @@ function outdatedCodex(): ServerProviderStatus {
   };
 }
 
-function ProviderSearchHarness(props: {
-  settings: ReturnType<typeof AppSettingsSchema.makeUnsafe>;
-  queryClient: QueryClient;
-}) {
+function ProviderSearchHarness(props: { queryClient: QueryClient }) {
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("general");
   const [target, setTarget] = useState<string | null>(null);
   useEffect(() => {
@@ -66,13 +63,7 @@ function ProviderSearchHarness(props: {
           setTarget(options?.target ?? null);
         }}
       />
-      <ProvidersSettingsPanel
-        active={activeSection === "providers"}
-        resetEpoch={0}
-        settings={props.settings}
-        defaults={props.settings}
-        updateSettings={() => {}}
-      />
+      <ProvidersSettingsPanel active={activeSection === "providers"} resetEpoch={0} />
     </QueryClientProvider>
   );
 }
@@ -83,7 +74,7 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     delete window.nativeApi;
     document.body.innerHTML = "";
     document.documentElement.classList.remove("dark");
-    localStorage.removeItem(APP_SETTINGS_STORAGE_KEY);
+    localStorage.removeItem(LOCAL_PREFERENCES_STORAGE_KEY);
     vi.restoreAllMocks();
   });
 
@@ -114,7 +105,7 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     },
   ])("shows Engine identity and truthful readiness in $locale $theme", async (testCase) => {
     localStorage.setItem(
-      APP_SETTINGS_STORAGE_KEY,
+      LOCAL_PREFERENCES_STORAGE_KEY,
       JSON.stringify({ localePreference: testCase.locale }),
     );
     document.documentElement.classList.toggle("dark", testCase.theme === "dark");
@@ -164,18 +155,11 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     });
     queryClient.setQueryData(serverQueryKeys.config(), config);
     queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
-    const settings = AppSettingsSchema.makeUnsafe({ localePreference: testCase.locale });
     const screen = await render(
       <QueryClientProvider client={queryClient}>
         <div style={{ width: 480 }}>
           <I18nProvider>
-            <ProvidersSettingsPanel
-              active
-              resetEpoch={0}
-              settings={settings}
-              defaults={settings}
-              updateSettings={() => {}}
-            />
+            <ProvidersSettingsPanel active resetEpoch={0} />
           </I18nProvider>
         </div>
       </QueryClientProvider>,
@@ -251,18 +235,11 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     });
     queryClient.setQueryData(serverQueryKeys.config(), initialConfig);
     queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
-    const settings = AppSettingsSchema.makeUnsafe({});
     const addToast = vi.spyOn(toastManager, "add");
     const updateToast = vi.spyOn(toastManager, "update");
     const screen = await render(
       <QueryClientProvider client={queryClient}>
-        <ProvidersSettingsPanel
-          active
-          resetEpoch={0}
-          settings={settings}
-          defaults={settings}
-          updateSettings={() => {}}
-        />
+        <ProvidersSettingsPanel active resetEpoch={0} />
       </QueryClientProvider>,
     );
 
@@ -287,30 +264,32 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
 
   it("keeps custom model management reachable inside the owning Engine detail", async () => {
     const config = createBrowserTestServerConfig(checkedAt);
+    const savedSettings = {
+      ...DEFAULT_SERVER_SETTINGS_VIEW,
+      providers: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+        codex: {
+          ...DEFAULT_SERVER_SETTINGS_VIEW.providers.codex,
+          customModels: ["custom/codex-saved"],
+        },
+      },
+    };
+    const updateSettings = vi.fn().mockResolvedValue(savedSettings);
     window.nativeApi = {
       server: {
         getConfig: vi.fn().mockResolvedValue(config),
-        getSettings: vi.fn().mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW),
+        getSettings: vi.fn().mockResolvedValue(savedSettings),
+        updateSettings,
       },
     } as unknown as NativeApi;
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
     queryClient.setQueryData(serverQueryKeys.config(), config);
-    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
-    const settings = AppSettingsSchema.makeUnsafe({
-      customCodexModels: ["custom/codex-saved"],
-    });
-    const updateSettings = vi.fn();
+    queryClient.setQueryData(serverQueryKeys.settings(), savedSettings);
     const screen = await render(
       <QueryClientProvider client={queryClient}>
-        <ProvidersSettingsPanel
-          active
-          resetEpoch={0}
-          settings={settings}
-          defaults={settings}
-          updateSettings={updateSettings}
-        />
+        <ProvidersSettingsPanel active resetEpoch={0} />
       </QueryClientProvider>,
     );
 
@@ -318,7 +297,9 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     await screen.getByRole("textbox", { name: "Engine model slug" }).fill("custom/codex-next");
     await screen.getByRole("button", { name: "Add" }).click();
     expect(updateSettings).toHaveBeenCalledWith({
-      customCodexModels: ["custom/codex-saved", "custom/codex-next"],
+      providers: {
+        codex: { customModels: ["custom/codex-saved", "custom/codex-next"] },
+      },
     });
 
     await screen.unmount();
@@ -338,18 +319,9 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     });
     queryClient.setQueryData(serverQueryKeys.config(), config);
     queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
-    const settings = AppSettingsSchema.makeUnsafe({
-      customPiModels: ["anthropic/legacy-pi-hint"],
-    });
     const screen = await render(
       <QueryClientProvider client={queryClient}>
-        <ProvidersSettingsPanel
-          active
-          resetEpoch={0}
-          settings={settings}
-          defaults={settings}
-          updateSettings={() => {}}
-        />
+        <ProvidersSettingsPanel active resetEpoch={0} />
       </QueryClientProvider>,
     );
 
@@ -358,6 +330,185 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     await piDisclosure.click();
     await expect.poll(() => document.body.textContent).not.toContain("anthropic/legacy-pi-hint");
     expect(screen.getByRole("textbox", { name: "Engine model slug" }).query()).toBeNull();
+
+    await screen.unmount();
+    queryClient.clear();
+  });
+
+  it("distinguishes unavailable ServerSettings from loading and offers retry", async () => {
+    const config = createBrowserTestServerConfig(checkedAt);
+    const getSettings = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("disconnected"))
+      .mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW);
+    window.nativeApi = {
+      server: {
+        getConfig: vi.fn().mockResolvedValue(config),
+        getSettings,
+      },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(serverQueryKeys.config(), config);
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <ProvidersSettingsPanel active resetEpoch={0} />
+      </QueryClientProvider>,
+    );
+
+    await expect.element(screen.getByText("Unavailable")).toBeVisible();
+    await screen.getByRole("button", { name: "Retry" }).click();
+    await expect.poll(() => getSettings).toHaveBeenCalledTimes(2);
+    await expect.element(screen.getByText("Automatic CLI update checks")).toBeVisible();
+
+    await screen.unmount();
+    queryClient.clear();
+  });
+
+  it("does not write a credential when the non-secret provider settings are rejected", async () => {
+    const config = createBrowserTestServerConfig(checkedAt);
+    const updateSettings = vi.fn().mockRejectedValue(new Error("settings rejected"));
+    const updateProviderCredential = vi.fn().mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW);
+    window.nativeApi = {
+      server: {
+        getConfig: vi.fn().mockResolvedValue(config),
+        getSettings: vi.fn().mockResolvedValue(DEFAULT_SERVER_SETTINGS_VIEW),
+        updateSettings,
+        updateProviderCredential,
+      },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(serverQueryKeys.config(), config);
+    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <ProvidersSettingsPanel active resetEpoch={0} />
+      </QueryClientProvider>,
+    );
+
+    await screen.getByRole("button", { name: "Kilo" }).last().click();
+    await screen.getByRole("textbox", { name: "Kilo binary path" }).fill("/tmp/kilo-next");
+    await screen.getByRole("textbox", { name: "Kilo server password" }).fill("draft-secret");
+    await screen.getByRole("button", { name: "Save" }).click();
+
+    await expect
+      .poll(() => updateSettings)
+      .toHaveBeenCalledWith({
+        providers: { kilo: { binaryPath: "/tmp/kilo-next" } },
+      });
+    expect(updateProviderCredential).not.toHaveBeenCalled();
+    await expect
+      .element(screen.getByRole("textbox", { name: "Kilo server password" }))
+      .toHaveValue("draft-secret");
+
+    await screen.unmount();
+    queryClient.clear();
+  });
+
+  it("reports partial success and preserves the credential draft after ordered save", async () => {
+    const config = createBrowserTestServerConfig(checkedAt);
+    const callOrder: string[] = [];
+    const updatedSettings = {
+      ...DEFAULT_SERVER_SETTINGS_VIEW,
+      providers: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+        kilo: { ...DEFAULT_SERVER_SETTINGS_VIEW.providers.kilo, binaryPath: "/tmp/kilo-next" },
+      },
+    };
+    const updateSettings = vi.fn(async () => {
+      callOrder.push("settings");
+      return updatedSettings;
+    });
+    const updateProviderCredential = vi.fn(async () => {
+      callOrder.push("credential");
+      throw new Error("credential rejected");
+    });
+    window.nativeApi = {
+      server: {
+        getConfig: vi.fn().mockResolvedValue(config),
+        getSettings: vi.fn().mockResolvedValue(updatedSettings),
+        updateSettings,
+        updateProviderCredential,
+      },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(serverQueryKeys.config(), config);
+    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
+    const addToast = vi.spyOn(toastManager, "add");
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <ProvidersSettingsPanel active resetEpoch={0} />
+      </QueryClientProvider>,
+    );
+
+    await screen.getByRole("button", { name: "Kilo" }).last().click();
+    await screen.getByRole("textbox", { name: "Kilo binary path" }).fill("/tmp/kilo-next");
+    await screen.getByRole("textbox", { name: "Kilo server password" }).fill("draft-secret");
+    await screen.getByRole("button", { name: "Save" }).click();
+
+    await expect.poll(() => callOrder).toEqual(["settings", "credential"]);
+    expect(addToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "warning",
+        title: "Settings saved, but the credential was not",
+      }),
+    );
+    await expect
+      .element(screen.getByRole("textbox", { name: "Kilo server password" }))
+      .toHaveValue("draft-secret");
+
+    await screen.unmount();
+    queryClient.clear();
+  });
+
+  it("saves a credential-only draft without mutating ServerSettings JSON fields", async () => {
+    const config = createBrowserTestServerConfig(checkedAt);
+    const configuredSettings = {
+      ...DEFAULT_SERVER_SETTINGS_VIEW,
+      providers: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+        kilo: { ...DEFAULT_SERVER_SETTINGS_VIEW.providers.kilo, serverPasswordConfigured: true },
+      },
+    };
+    const updateSettings = vi.fn();
+    const updateProviderCredential = vi.fn().mockResolvedValue(configuredSettings);
+    window.nativeApi = {
+      server: {
+        getConfig: vi.fn().mockResolvedValue(config),
+        getSettings: vi.fn().mockResolvedValue(configuredSettings),
+        updateSettings,
+        updateProviderCredential,
+      },
+    } as unknown as NativeApi;
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    queryClient.setQueryData(serverQueryKeys.config(), config);
+    queryClient.setQueryData(serverQueryKeys.settings(), DEFAULT_SERVER_SETTINGS_VIEW);
+    const screen = await render(
+      <QueryClientProvider client={queryClient}>
+        <ProvidersSettingsPanel active resetEpoch={0} />
+      </QueryClientProvider>,
+    );
+
+    await screen.getByRole("button", { name: "Kilo" }).last().click();
+    const password = screen.getByRole("textbox", { name: "Kilo server password" });
+    await password.fill("credential-only");
+    await screen.getByRole("button", { name: "Save" }).click();
+
+    await expect
+      .poll(() => updateProviderCredential)
+      .toHaveBeenCalledWith({
+        provider: "kilo",
+        serverPassword: "credential-only",
+      });
+    expect(updateSettings).not.toHaveBeenCalled();
+    await expect.element(password).toHaveValue("");
 
     await screen.unmount();
     queryClient.clear();
@@ -379,12 +530,7 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     const scrollIntoView = vi
       .spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => {});
-    const screen = await render(
-      <ProviderSearchHarness
-        settings={AppSettingsSchema.makeUnsafe({})}
-        queryClient={queryClient}
-      />,
-    );
+    const screen = await render(<ProviderSearchHarness queryClient={queryClient} />);
 
     await screen
       .getByRole("textbox", { name: "Search settings" })

@@ -17,7 +17,7 @@ import {
 } from "react";
 
 import { basenameOfPath } from "~/file-icons";
-import type { TimestampFormat } from "../../appSettings";
+import type { TimestampFormat } from "../../localPreferences";
 import {
   ArrowUpCircleIcon,
   BackgroundTrayIcon,

@@ -27,9 +27,9 @@ vi.mock("@tanstack/react-query", () => ({
   useMutation: () => ({ mutateAsync: vi.fn() }),
   useQueryClient: () => ({}),
 }));
-vi.mock("~/appSettings", () => ({
-  useAppSettings: () => ({
-    settings: { confirmThreadArchive: false, confirmThreadDelete: false },
+vi.mock("~/localPreferences", () => ({
+  useLocalPreferences: () => ({
+    preferences: { confirmThreadArchive: false, confirmThreadDelete: false },
   }),
 }));
 vi.mock("~/hooks/useCopyToClipboard", () => ({

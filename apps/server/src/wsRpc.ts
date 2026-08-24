@@ -1669,6 +1669,13 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(serverSettings.getSettingsView, "Failed to load server settings"),
         [WS_METHODS.serverUpdateSettings]: (input) =>
           rpcEffect(serverSettings.updateSettingsView(input), "Failed to update server settings"),
+        [WS_METHODS.serverResetSettings]: () =>
+          rpcEffect(serverSettings.resetSettingsView, "Failed to reset server settings"),
+        [WS_METHODS.serverUpdateProviderCredential]: (input) =>
+          rpcEffect(
+            serverSettings.updateProviderCredential(input.provider, input.serverPassword),
+            "Failed to update provider credential",
+          ),
         [WS_METHODS.serverRefreshProviders]: () =>
           rpcEffect(
             providerHealth.refresh.pipe(Effect.flatMap(providerStatusPayload)),

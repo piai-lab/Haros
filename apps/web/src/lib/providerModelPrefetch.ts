@@ -6,10 +6,9 @@
 // Layer: Web lib
 // Exports: resolve + prefetch helpers that mirror ChatView's listModels query keys.
 
-import type { ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind, ServerSettingsView } from "@omnimind/contracts";
 import type { QueryClient } from "@tanstack/react-query";
 
-import type { AppSettings } from "../appSettings";
 import { resolveProviderDiscoveryCwd } from "./providerDiscovery";
 import { resolveNewThreadDiscoveryWorktreePath } from "./threadBootstrap";
 import {
@@ -18,20 +17,7 @@ import {
   providerModelsQueryOptions,
 } from "./providerDiscoveryReactQuery";
 
-export type ProviderModelPrefetchSettings = Pick<
-  AppSettings,
-  | "defaultProvider"
-  | "claudeBinaryPath"
-  | "cursorBinaryPath"
-  | "cursorApiEndpoint"
-  | "antigravityBinaryPath"
-  | "grokBinaryPath"
-  | "droidBinaryPath"
-  | "kiloBinaryPath"
-  | "openCodeBinaryPath"
-  | "piBinaryPath"
-  | "piAgentDir"
->;
+export type ProviderModelPrefetchSettings = Pick<ServerSettingsView, "defaultProvider" | "providers">;
 
 export function resolveNewThreadModelPrefetchProvider(input: {
   providerOverride?: ProviderKind | null | undefined;
@@ -95,50 +81,50 @@ export function providerModelsPrefetchQueryOptions(input: {
     case "claudeAgent":
       return providerModelsQueryOptions({
         provider: "claudeAgent",
-        binaryPath: settings.claudeBinaryPath || null,
+        binaryPath: settings.providers.claudeAgent.binaryPath || null,
       });
     case "codex":
       return providerModelsQueryOptions({ provider: "codex" });
     case "cursor":
       return providerModelsQueryOptions({
         provider: "cursor",
-        binaryPath: settings.cursorBinaryPath || null,
-        apiEndpoint: settings.cursorApiEndpoint || null,
+        binaryPath: settings.providers.cursor.binaryPath || null,
+        apiEndpoint: settings.providers.cursor.apiEndpoint || null,
       });
     case "antigravity":
       return providerModelsQueryOptions({
         provider: "antigravity",
-        binaryPath: settings.antigravityBinaryPath || null,
+        binaryPath: settings.providers.antigravity.binaryPath || null,
         cwd,
       });
     case "grok":
       return providerModelsQueryOptions({
         provider: "grok",
-        binaryPath: settings.grokBinaryPath || null,
+        binaryPath: settings.providers.grok.binaryPath || null,
       });
     case "droid":
       return providerModelsQueryOptions({
         provider: "droid",
-        binaryPath: settings.droidBinaryPath || null,
+        binaryPath: settings.providers.droid.binaryPath || null,
         cwd,
       });
     case "kilo":
       return providerModelsQueryOptions({
         provider: "kilo",
-        binaryPath: settings.kiloBinaryPath || null,
+        binaryPath: settings.providers.kilo.binaryPath || null,
         cwd,
       });
     case "opencode":
       return providerModelsQueryOptions({
         provider: "opencode",
-        binaryPath: settings.openCodeBinaryPath || null,
+        binaryPath: settings.providers.opencode.binaryPath || null,
         cwd,
       });
     case "pi":
       return providerModelsQueryOptions({
         provider: "pi",
-        binaryPath: settings.piBinaryPath || null,
-        agentDir: settings.piAgentDir || null,
+        binaryPath: settings.providers.pi.binaryPath || null,
+        agentDir: settings.providers.pi.agentDir || null,
         cwd,
       });
   }
@@ -160,13 +146,13 @@ function providerAgentsPrefetchQueryOptions(input: {
     case "kilo":
       return providerAgentsQueryOptions({
         provider: "kilo",
-        binaryPath: settings.kiloBinaryPath || null,
+        binaryPath: settings.providers.kilo.binaryPath || null,
         cwd,
       });
     case "opencode":
       return providerAgentsQueryOptions({
         provider: "opencode",
-        binaryPath: settings.openCodeBinaryPath || null,
+        binaryPath: settings.providers.opencode.binaryPath || null,
         cwd,
       });
     default:

@@ -4,13 +4,14 @@
 
 import { describe, expect, it } from "vitest";
 
-import { APP_SETTINGS_STORAGE_KEY } from "./appSettings";
 import {
   migratePersistedAppearanceDefaults,
   resolveMigratedThreadSidebarWidth,
   THREAD_SIDEBAR_MIN_WIDTH_PX,
   THREAD_SIDEBAR_WIDTH_STORAGE_KEY,
 } from "./appearanceMigrations";
+
+const LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY = "omnimind:app-settings:v1";
 
 function createMemoryStorage(initial: Record<string, string> = {}): Storage {
   const entries = new Map(Object.entries(initial));
@@ -27,36 +28,32 @@ function createMemoryStorage(initial: Record<string, string> = {}): Storage {
 }
 
 describe("appearance migrations", () => {
-  it("atomically upgrades the exact legacy macOS typography signature", () => {
+  it("does not read or rewrite the retired mixed settings key", () => {
+    const legacyBytes = JSON.stringify({
+      chatFontSizePx: 12,
+      enableNativeFontSmoothing: true,
+      kiloServerPassword: "opaque-secret-canary",
+    });
     const storage = createMemoryStorage({
-      [APP_SETTINGS_STORAGE_KEY]: JSON.stringify({
-        chatFontSizePx: 12,
-        enableNativeFontSmoothing: true,
-      }),
+      [LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY]: legacyBytes,
     });
 
-    expect(migratePersistedAppearanceDefaults(storage, "MacIntel").typography).toBe("migrated");
-    expect(JSON.parse(storage.getItem(APP_SETTINGS_STORAGE_KEY) ?? "null")).toMatchObject({
-      chatFontSizePx: 14,
-      enableNativeFontSmoothing: false,
-    });
-    expect(storage.getItem("omnimind:typography-defaults-migrated:v2")).toBe("1");
+    expect(migratePersistedAppearanceDefaults(storage, "MacIntel").typography).toBe("preserved");
+    expect(storage.getItem(LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY)).toBe(legacyBytes);
+    expect(storage.getItem("omnimind:typography-defaults-migrated:v2")).toBeNull();
   });
 
-  it("writes no completion marker when typography persistence fails", () => {
+  it("does not touch retired bytes even when storage writes fail", () => {
+    const legacyBytes = "not-json-and-must-stay-opaque";
     const storage = createMemoryStorage({
-      [APP_SETTINGS_STORAGE_KEY]: JSON.stringify({
-        chatFontSizePx: 12,
-        enableNativeFontSmoothing: true,
-      }),
+      [LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY]: legacyBytes,
     });
-    const originalSetItem = storage.setItem.bind(storage);
-    storage.setItem = (key, value) => {
-      if (key === APP_SETTINGS_STORAGE_KEY) throw new Error("disk full");
-      originalSetItem(key, value);
+    storage.setItem = () => {
+      throw new Error("disk full");
     };
 
-    expect(migratePersistedAppearanceDefaults(storage, "MacIntel").typography).toBe("retry");
+    expect(migratePersistedAppearanceDefaults(storage, "MacIntel").typography).toBe("preserved");
+    expect(storage.getItem(LEGACY_MIXED_APP_SETTINGS_STORAGE_KEY)).toBe(legacyBytes);
     expect(storage.getItem("omnimind:typography-defaults-migrated:v2")).toBeNull();
   });
 

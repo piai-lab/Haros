@@ -16,7 +16,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { lazy, Suspense, useRef, useState } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useServerSettings } from "~/serverSettings";
 import {
   CHAT_HEADER_CONTROL_CLASS_NAME,
   CHAT_HEADER_ICON_CONTROL_CLASS_NAME,
@@ -150,7 +150,7 @@ export function PullRequestDetailPanel({
   const initialTab = initialTabProp ?? "summary";
   const pollingEnabled = pollingEnabledProp ?? true;
   const queryClient = useQueryClient();
-  const { settings } = useAppSettings();
+  const { fetchSettings } = useServerSettings();
   const { handleNewThread } = useHandleNewThread();
   // Panel state keyed to the PR it belongs to: switching PRs (or landing tab)
   // derives straight back to the defaults with no state-resetting effect.
@@ -267,14 +267,25 @@ export function PullRequestDetailPanel({
   // "Fix findings" and "Resolve conflicts" hand the PR to a fresh thread the same way:
   // prepare a worktree on the PR branch, create the thread, and pre-fill the composer with
   // the task-specific prompt for the user to review and send.
-  const startPullRequestThread = (
+  const startPullRequestThread = async (
     kind: "findings" | "conflicts",
     prompt: string,
     errorTitle: string,
   ) => {
     if (!detail || preparingThread !== null) return;
     setPreparingThread(kind);
-    const mode = settings.defaultThreadEnvMode;
+    let mode: "local" | "worktree";
+    try {
+      mode = (await fetchSettings()).defaultThreadEnvMode;
+    } catch (error) {
+      setPreparingThread(null);
+      toastManager.add({
+        type: "error",
+        title: errorTitle,
+        description: error instanceof Error ? error.message : t("pullRequest.prepareTaskFailed"),
+      });
+      return;
+    }
     void prepareThreadMutation
       .mutateAsync({ reference: detail.url, mode })
       .then((prepared) =>

@@ -11,8 +11,8 @@ import { ComposerEnginePicker } from "./ComposerEnginePicker";
 
 const harness = vi.hoisted(() => ({ settings: { localePreference: "en" } }));
 
-vi.mock("../../appSettings", () => ({
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("../../localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 const READY_AT = "2026-08-12T00:00:00.000Z";
