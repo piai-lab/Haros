@@ -417,6 +417,45 @@ function ReducedLiveCausalTimeline(props: { settled: boolean }) {
   );
 }
 
+function InsertedLiveCausalTimeline(props: { split: boolean }) {
+  const turnId = TurnId.makeUnsafe("turn-inserted-live-browser");
+  const terminal = assistantEntry(
+    "assistant-inserted-live-browser",
+    turnId,
+    "Answer from the inserted live row.",
+    { streaming: true },
+  );
+  const timelineEntries: TimelineEntries = props.split
+    ? [
+        assistantEntry(
+          "assistant-inserted-live-browser#segment:0",
+          turnId,
+          "Narration inserted before the live answer.",
+          { completed: true },
+        ),
+        reasoningEntry(
+          "reasoning-inserted-live",
+          turnId,
+          "Reasoning before the inserted live answer.",
+        ),
+        toolEntry("tool-inserted-live", turnId, { label: "Read inserted live source" }),
+        terminal,
+      ]
+    : [terminal];
+
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking
+      activeTurnInProgress
+      activeTurnId={turnId}
+      timelineEntries={timelineEntries}
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
+    />
+  );
+}
+
 function FailedReasoningTimeline() {
   const turnId = TurnId.makeUnsafe("turn-failed-reasoning-browser");
   const failedReasoning = projectedReasoningEntry(
@@ -672,6 +711,12 @@ function createNarrowHost(): HTMLDivElement {
   return host;
 }
 
+function timelineAssistantRowIds(): Array<string | undefined> {
+  return [...document.querySelectorAll<HTMLElement>(
+    "[data-timeline-row-kind='message'][data-message-role='assistant']",
+  )].map((row) => row.dataset.messageId);
+}
+
 async function settleLayout(): Promise<void> {
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
   await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
@@ -868,6 +913,37 @@ describe("Timeline public reasoning disclosure", () => {
       await expect
         .poll(() => triggers.map((trigger) => trigger.getAttribute("aria-expanded")))
         .toEqual(["true", "true"]);
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("keeps virtualized live rows in canonical DOM order when a segment is inserted", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<InsertedLiveCausalTimeline split={false} />, {
+      container: host,
+    });
+
+    try {
+      expect(timelineAssistantRowIds()).toEqual(["assistant-inserted-live-browser"]);
+      await screen.rerender(<InsertedLiveCausalTimeline split />);
+      await settleLayout();
+      expect(timelineAssistantRowIds()).toEqual([
+        "assistant-inserted-live-browser#segment:0",
+        "assistant-inserted-live-browser",
+      ]);
+
+      const text = document.body.textContent ?? "";
+      const orderedText = [
+        "Narration inserted before the live answer.",
+        "Reasoning before the inserted live answer.",
+        "Read inserted live source",
+        "Answer from the inserted live row.",
+      ];
+      const positions = orderedText.map((value) => text.indexOf(value));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
     } finally {
       await screen.unmount();
       host.remove();

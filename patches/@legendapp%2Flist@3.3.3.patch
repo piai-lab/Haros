@@ -1,0 +1,185 @@
+diff --git a/react.d.ts b/react.d.ts
+index db7841d8cf328b46f70f5b4b4754bc58d1a33335..14ae9f4fa5f4dbf8d971cc44c39ca4cfc0c5df2d 100644
+--- a/react.d.ts
++++ b/react.d.ts
+@@ -218,6 +218,12 @@ interface LegendListSpecificProps<ItemT, TItemType extends string | undefined> {
+      * Extra data to trigger re-rendering when changed.
+      */
+     extraData?: any;
++    /**
++     * Keeps absolutely positioned item containers in data order before the next paint.
++     * Intended for lists whose DOM/accessibility reading order must immediately match visual order.
++     * @default false
++     */
++    immediateDOMOrder?: boolean;
+     /**
+      * In case items always have a fixed size, you can provide a function to return it.
+      */
+diff --git a/react.js b/react.js
+index 544cca82136ab14cbeec0a01499f554bd4eca75f..7ce56b23d5e4d0eff97451a61ca9dcacfe3b896a 100644
+--- a/react.js
++++ b/react.js
+@@ -5656,6 +5656,12 @@ function sortDOMElements(container, indexByElement) {
+     }
+   }
+ }
++function sortDOMElementsPreservingFocus(container, indexByElement) {
++  const activeElement = container.ownerDocument.activeElement;
++  const focusedElement = activeElement && container.contains(activeElement) && typeof activeElement.focus === "function" ? activeElement : null;
++  sortDOMElements(container, indexByElement);
++  if (focusedElement && container.ownerDocument.activeElement !== focusedElement && focusedElement.isConnected) focusedElement.focus({ preventScroll: true });
++}
+ function findLIS(arr) {
+   const n = arr.length;
+   const tails = [];
+@@ -5695,8 +5701,43 @@ function findLIS(arr) {
+ // src/hooks/useDOMOrder.ts
+ function useDOMOrder(ref) {
+   const ctx = useStateContext();
++  const immediateDOMOrder = ctx.state.props.immediateDOMOrder;
++  React3.useLayoutEffect(() => {
++    if (!immediateDOMOrder) return;
++    let disposed = false;
++    let reorderFrame = void 0;
++    const reorderDOM = () => {
++      const parent = ref.current;
++      if (parent) {
++        const indexByElement = /* @__PURE__ */ new Map();
++        for (const [containerId, viewRef] of ctx.viewRefs) {
++          const element = viewRef.current;
++          const index = peek$(ctx, `containerItemIndex${containerId}`);
++          if (element && index !== void 0) {
++            indexByElement.set(element, index);
++          }
++        }
++        sortDOMElementsPreservingFocus(parent, indexByElement);
++      }
++    };
++    const scheduleDOMReorder = () => {
++      if (reorderFrame !== void 0) return;
++      reorderFrame = requestAnimationFrame(() => {
++        reorderFrame = void 0;
++        if (!disposed) reorderDOM();
++      });
++    };
++    const unsubscribe = listen$(ctx, "lastPositionUpdate", scheduleDOMReorder);
++    reorderDOM();
++    return () => {
++      disposed = true;
++      if (reorderFrame !== void 0) cancelAnimationFrame(reorderFrame);
++      unsubscribe();
++    };
++  }, [ctx, immediateDOMOrder]);
+   const debounceRef = React3.useRef(void 0);
+   React3.useEffect(() => {
++    if (immediateDOMOrder) return;
+     const unsubscribe = listen$(ctx, "lastPositionUpdate", () => {
+       if (debounceRef.current !== void 0) {
+         clearTimeout(debounceRef.current);
+@@ -5723,5 +5764,5 @@ function useDOMOrder(ref) {
+         clearTimeout(debounceRef.current);
+       }
+     };
+-  }, [ctx]);
++  }, [ctx, immediateDOMOrder]);
+ }
+@@ -7590,6 +7631,7 @@ var LegendListInner = typedForwardRef(function LegendListInner2(props, forwarded
+     initialScrollAtEnd = false,
+     initialScrollIndex: initialScrollIndexProp,
+     initialScrollOffset: initialScrollOffsetProp,
++    immediateDOMOrder = false,
+     experimental_adaptiveRender,
+     itemsAreEqual,
+     keyExtractor: keyExtractorProp,
+@@ -7842,6 +7884,7 @@ var LegendListInner = typedForwardRef(function LegendListInner2(props, forwarded
+     getFixedItemSize: useWrapIfItem(getFixedItemSize),
+     getItemType: useWrapIfItem(getItemType),
+     horizontal: !!horizontal,
++    immediateDOMOrder: !!immediateDOMOrder,
+     itemsAreEqual,
+     keyExtractor: useWrapIfItem(keyExtractor),
+     maintainScrollAtEnd: maintainScrollAtEndConfig,
+diff --git a/react.mjs b/react.mjs
+index 6b2d9011f6c5e85664eca195de538617fe7d9dee..88fce2140e179ee2df15999b6120b49a5320b0e6 100644
+--- a/react.mjs
++++ b/react.mjs
+@@ -5635,6 +5635,12 @@ function sortDOMElements(container, indexByElement) {
+     }
+   }
+ }
++function sortDOMElementsPreservingFocus(container, indexByElement) {
++  const activeElement = container.ownerDocument.activeElement;
++  const focusedElement = activeElement && container.contains(activeElement) && typeof activeElement.focus === "function" ? activeElement : null;
++  sortDOMElements(container, indexByElement);
++  if (focusedElement && container.ownerDocument.activeElement !== focusedElement && focusedElement.isConnected) focusedElement.focus({ preventScroll: true });
++}
+ function findLIS(arr) {
+   const n = arr.length;
+   const tails = [];
+@@ -5674,8 +5680,43 @@ function findLIS(arr) {
+ // src/hooks/useDOMOrder.ts
+ function useDOMOrder(ref) {
+   const ctx = useStateContext();
++  const immediateDOMOrder = ctx.state.props.immediateDOMOrder;
++  useLayoutEffect(() => {
++    if (!immediateDOMOrder) return;
++    let disposed = false;
++    let reorderFrame = void 0;
++    const reorderDOM = () => {
++      const parent = ref.current;
++      if (parent) {
++        const indexByElement = /* @__PURE__ */ new Map();
++        for (const [containerId, viewRef] of ctx.viewRefs) {
++          const element = viewRef.current;
++          const index = peek$(ctx, `containerItemIndex${containerId}`);
++          if (element && index !== void 0) {
++            indexByElement.set(element, index);
++          }
++        }
++        sortDOMElementsPreservingFocus(parent, indexByElement);
++      }
++    };
++    const scheduleDOMReorder = () => {
++      if (reorderFrame !== void 0) return;
++      reorderFrame = requestAnimationFrame(() => {
++        reorderFrame = void 0;
++        if (!disposed) reorderDOM();
++      });
++    };
++    const unsubscribe = listen$(ctx, "lastPositionUpdate", scheduleDOMReorder);
++    reorderDOM();
++    return () => {
++      disposed = true;
++      if (reorderFrame !== void 0) cancelAnimationFrame(reorderFrame);
++      unsubscribe();
++    };
++  }, [ctx, immediateDOMOrder]);
+   const debounceRef = useRef(void 0);
+   useEffect(() => {
++    if (immediateDOMOrder) return;
+     const unsubscribe = listen$(ctx, "lastPositionUpdate", () => {
+       if (debounceRef.current !== void 0) {
+         clearTimeout(debounceRef.current);
+@@ -5702,5 +5743,5 @@ function useDOMOrder(ref) {
+         clearTimeout(debounceRef.current);
+       }
+     };
+-  }, [ctx]);
++  }, [ctx, immediateDOMOrder]);
+ }
+@@ -7569,6 +7610,7 @@ var LegendListInner = typedForwardRef(function LegendListInner2(props, forwarded
+     initialScrollAtEnd = false,
+     initialScrollIndex: initialScrollIndexProp,
+     initialScrollOffset: initialScrollOffsetProp,
++    immediateDOMOrder = false,
+     experimental_adaptiveRender,
+     itemsAreEqual,
+     keyExtractor: keyExtractorProp,
+@@ -7821,6 +7863,7 @@ var LegendListInner = typedForwardRef(function LegendListInner2(props, forwarded
+     getFixedItemSize: useWrapIfItem(getFixedItemSize),
+     getItemType: useWrapIfItem(getItemType),
+     horizontal: !!horizontal,
++    immediateDOMOrder: !!immediateDOMOrder,
+     itemsAreEqual,
+     keyExtractor: useWrapIfItem(keyExtractor),
+     maintainScrollAtEnd: maintainScrollAtEndConfig,
