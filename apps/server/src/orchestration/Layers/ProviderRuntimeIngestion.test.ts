@@ -3160,6 +3160,21 @@ describe("ProviderRuntimeIngestion", () => {
       itemId: reasoningItemId,
       payload: { streamKind: "reasoning_text", delta: "Reasoning before the second tool." },
     });
+    const firstToolCompleted = await push({
+      type: "item.completed",
+      eventId: asEventId("evt-pi-causal-tool-1-completed"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: asItemId("tool-pi-causal-1"),
+      payload: {
+        itemType: "dynamic_tool_call",
+        status: "completed",
+        title: "read",
+        detail: "Read completed",
+      },
+    });
     const secondTool = await push({
       type: "item.started",
       eventId: asEventId("evt-pi-causal-tool-2"),
@@ -3188,7 +3203,12 @@ describe("ProviderRuntimeIngestion", () => {
       threadId,
       turnId,
       itemId: reasoningItemId,
-      payload: { itemType: "reasoning", status: "completed", title: "Reasoning" },
+      payload: {
+        itemType: "reasoning",
+        status: "completed",
+        title: "Reasoning",
+        detail: "Reasoning before the first tool.\n\nReasoning before the second tool.",
+      },
     });
     await push({
       type: "item.completed",
@@ -3225,9 +3245,7 @@ describe("ProviderRuntimeIngestion", () => {
     ]);
     expect(reasoningActivities).toHaveLength(2);
     expect(
-      reasoningActivities.map(
-        (activity) => (activity.payload as { detail?: unknown }).detail,
-      ),
+      reasoningActivities.map((activity) => (activity.payload as { detail?: unknown }).detail),
     ).toEqual(["Reasoning before the first tool.", "Reasoning before the second tool."]);
     expect(reasoningActivities.map((activity) => activity.sequence)).toEqual([
       firstReasoning.sequence,
@@ -3238,7 +3256,8 @@ describe("ProviderRuntimeIngestion", () => {
     );
     expect(reasoningActivities[0]?.sequence).toBeLessThan(firstToolActivity?.sequence ?? -1);
     expect(firstToolActivity?.sequence).toBeLessThan(reasoningActivities[1]?.sequence ?? -1);
-    expect(reasoningActivities[1]?.sequence).toBeLessThan(secondToolActivity?.sequence ?? -1);
+    expect(reasoningActivities[1]?.sequence).toBeLessThan(firstToolCompleted.sequence);
+    expect(firstToolCompleted.sequence).toBeLessThan(secondToolActivity?.sequence ?? -1);
     expect(secondToolActivity?.sequence).toBeLessThan(message?.textSegments?.[1]?.sequence ?? -1);
   });
 
@@ -3282,10 +3301,77 @@ describe("ProviderRuntimeIngestion", () => {
         (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
       ),
     ).toMatchObject({
+      tone: "error",
       summary: "Reasoning trace",
       payload: {
         status: "failed",
         detail: "**Preserve this partial summary**\n\n<!-- -->",
+      },
+    });
+  });
+
+  it("marks buffered reasoning truncated when a provider exceeds the supported part count", async () => {
+    const harness = await createHarness();
+    const now = new Date().toISOString();
+    const threadId = asThreadId("thread-1");
+    const turnId = asTurnId("turn-reasoning-too-many-parts");
+    const itemId = asItemId("reasoning-too-many-parts");
+
+    harness.emit({
+      type: "content.delta",
+      eventId: asEventId("evt-reasoning-visible-part"),
+      provider: "codex",
+      createdAt: now,
+      threadId,
+      turnId,
+      itemId,
+      payload: {
+        streamKind: "reasoning_summary_text",
+        summaryIndex: 0,
+        delta: "Visible provider reasoning",
+      },
+    });
+    harness.emit({
+      type: "content.delta",
+      eventId: asEventId("evt-reasoning-unsupported-part"),
+      provider: "codex",
+      createdAt: now,
+      threadId,
+      turnId,
+      itemId,
+      payload: {
+        streamKind: "reasoning_summary_text",
+        summaryIndex: 24,
+        delta: "This part exceeds the bounded part count",
+      },
+    });
+    harness.emit({
+      type: "turn.completed",
+      eventId: asEventId("evt-reasoning-too-many-parts-completed"),
+      provider: "codex",
+      createdAt: now,
+      threadId,
+      turnId,
+      payload: { state: "completed" },
+    });
+
+    const stableActivityId = `provider-reasoning:${threadId}:${itemId}`;
+    const thread = await waitForThread(harness.engine, (entry) =>
+      entry.activities.some(
+        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      ),
+    );
+    expect(
+      thread.activities.find(
+        (activity: ProviderRuntimeTestActivity) => activity.id === stableActivityId,
+      ),
+    ).toMatchObject({
+      payload: {
+        detail: "Visible provider reasoning",
+        data: {
+          toolCallId: itemId,
+          reasoningDetailTruncated: true,
+        },
       },
     });
   });

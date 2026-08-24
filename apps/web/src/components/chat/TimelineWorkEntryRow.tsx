@@ -992,7 +992,7 @@ function ReasoningDisclosureRow(props: {
     props.workEntry.reasoningEntries ??
     (() => {
       const text = formatAgentActivityEntryPreview(props.workEntry);
-      return text ? [{ id: props.workEntry.id, text }] : [];
+      return text ? [{ id: props.workEntry.id, text, truncated: false }] : [];
     })();
 
   useEffect(() => {
@@ -1056,18 +1056,30 @@ function ReasoningDisclosureRow(props: {
             data-reasoning-content="true"
           >
             {entries.map((entry) => (
-              <ChatMarkdown
-                key={entry.id}
-                text={entry.text}
-                cwd={props.markdownCwd}
-                isStreaming={false}
-                className="min-w-0 max-w-full leading-relaxed text-muted-foreground/78 [&_*]:max-w-full"
-                style={{
-                  fontSize: `${props.textFontSizePx}px`,
-                  lineHeight: props.compact ? "19px" : "20px",
-                }}
-                onImageExpand={props.onImageExpand}
-              />
+              <div key={entry.id} className="min-w-0 max-w-full">
+                <div className="min-w-0 max-w-full" data-reasoning-provider-text="true">
+                  <ChatMarkdown
+                    text={entry.text}
+                    cwd={props.markdownCwd}
+                    isStreaming={false}
+                    className="min-w-0 max-w-full leading-relaxed text-muted-foreground/78 [&_*]:max-w-full"
+                    style={{
+                      fontSize: `${props.textFontSizePx}px`,
+                      lineHeight: props.compact ? "19px" : "20px",
+                    }}
+                    onImageExpand={props.onImageExpand}
+                  />
+                </div>
+                {entry.truncated ? (
+                  <p
+                    className="mt-1 min-w-0 max-w-full break-words text-muted-foreground/60"
+                    data-reasoning-truncation-notice="true"
+                    style={{ fontSize: `${Math.max(11, props.textFontSizePx - 1)}px` }}
+                  >
+                    {t("agentActivity.contentTruncated")}
+                  </p>
+                ) : null}
+              </div>
             ))}
           </div>
         </DisclosureRegion>

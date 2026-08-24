@@ -19,6 +19,7 @@ const MAX_ACTIVITY_DATA_STRING_CHARS = 2_000;
 const MAX_ACTIVITY_DATA_ARRAY_ITEMS = 24;
 const MAX_ACTIVITY_DATA_OBJECT_KEYS = 64;
 const ACTIVITY_DATA_TRUNCATION_MARKER = "__omnimindTruncated";
+export const MAX_REASONING_ACTIVITY_DETAIL_CHARS = 8_000;
 
 type ActivityPayload = OrchestrationThreadActivity["payload"];
 
@@ -107,6 +108,25 @@ function toTurnId(value: TurnId | string | undefined): TurnId | undefined {
 
 function truncateDetail(value: string, limit = 180): string {
   return value.length > limit ? `${value.slice(0, limit - 3)}...` : value;
+}
+
+function projectReasoningDetail(value: string): { detail: string; truncated: boolean } {
+  if (value.length <= MAX_REASONING_ACTIVITY_DETAIL_CHARS) {
+    return { detail: value, truncated: false };
+  }
+  return {
+    detail: value.slice(0, MAX_REASONING_ACTIVITY_DETAIL_CHARS),
+    truncated: true,
+  };
+}
+
+function reasoningActivityTone(
+  status: Extract<ProviderRuntimeEvent, { type: "item.completed" }>["payload"]["status"],
+): "info" | "error" {
+  // RuntimeItemStatus has no aborted/cancelled member. Ingestion deliberately
+  // settles interrupted turns as `failed`, while provider-declined terminal
+  // items are also non-successful public reasoning.
+  return status === "failed" || status === "declined" ? "error" : "info";
 }
 
 function stringifyJsonLike(value: unknown): string {
@@ -491,17 +511,24 @@ export function projectProviderRuntimeActivities(
   ) {
     const reasoningItemId = String(event.itemId);
     const reasoningDetail = readableReasoningDetail(event.payload.detail)!;
+    const projectedReasoning = projectReasoningDetail(reasoningDetail);
+    const sourceData = asObject(event.payload.data);
+    const reasoningDetailTruncated =
+      projectedReasoning.truncated || sourceData?.reasoningDetailTruncated === true;
     return [
       {
         id: EventId.makeUnsafe(`provider-reasoning:${event.threadId}:${reasoningItemId}`),
         createdAt: event.createdAt,
-        tone: "info",
+        tone: reasoningActivityTone(event.payload.status),
         kind: "reasoning.completed",
         summary: "Reasoning trace",
         payload: toActivityPayload({
           ...(event.payload.status ? { status: event.payload.status } : {}),
-          detail: truncateDetail(reasoningDetail, MAX_ACTIVITY_DATA_STRING_CHARS),
-          data: { toolCallId: reasoningItemId },
+          detail: projectedReasoning.detail,
+          data: {
+            toolCallId: reasoningItemId,
+            ...(reasoningDetailTruncated ? { reasoningDetailTruncated: true } : {}),
+          },
         }),
         turnId: toTurnId(event.turnId) ?? null,
         ...maybeSequence,

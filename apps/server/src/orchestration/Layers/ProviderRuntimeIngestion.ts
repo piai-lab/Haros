@@ -80,6 +80,7 @@ import {
   type ProviderRuntimeIngestionShape,
 } from "../Services/ProviderRuntimeIngestion.ts";
 import {
+  MAX_REASONING_ACTIVITY_DETAIL_CHARS,
   projectProviderRuntimeActivities,
   providerActivityUpdateDedupeKey,
   providerActivityUpdateFingerprint,
@@ -131,7 +132,6 @@ const MAX_PENDING_GENERATED_IMAGES_PER_TURN = 32;
 const MAX_BUFFERED_ASSISTANT_CHARS = 24_000;
 const MAX_BUFFERED_PROPOSED_PLAN_CHARS = 64_000;
 const MAX_BUFFERED_TOOL_OUTPUT_CHARS = 24_000;
-const MAX_BUFFERED_REASONING_SUMMARY_CHARS = 8_000;
 const MAX_BUFFERED_REASONING_SUMMARY_PARTS = 24;
 const BUFFERED_TEXT_TRUNCATION_MARKER = "... [truncated]";
 const STRICT_PROVIDER_LIFECYCLE_GUARD =
@@ -188,6 +188,8 @@ type BufferedReasoningSummary = {
   readonly parts: ReadonlyMap<number, string>;
   readonly sourceEvent: Extract<ProviderRuntimeEvent, { readonly type: "content.delta" }>;
   readonly lastRuntimeSequence: number;
+  readonly truncated: boolean;
+  readonly segmented: boolean;
 };
 type AssistantDeliveryModeBindingState = {
   readonly pendingModesByThreadId: ReadonlyMap<ThreadId, ReadonlyArray<AssistantDeliveryMode>>;
@@ -322,6 +324,11 @@ export function appendCappedBufferedText(existing: string, delta: string, limit:
   )}${BUFFERED_TEXT_TRUNCATION_MARKER}`;
 }
 
+function appendCappedProviderText(existing: string, delta: string, limit: number): string {
+  const normalizedLimit = Math.max(0, Math.floor(limit));
+  return `${existing}${delta}`.slice(0, normalizedLimit);
+}
+
 function assistantMessageSegmentKey(threadId: ThreadId, messageId: MessageId): string {
   return JSON.stringify([threadId, messageId]);
 }
@@ -381,12 +388,13 @@ function joinedBufferedReasoningSummary(
 function withBufferedReasoningSummary(
   event: ProviderRuntimeEvent,
   summary: BufferedReasoningSummary | undefined,
+  preferBufferedDetail = false,
 ): ProviderRuntimeEvent {
   if (
     event.type !== "item.completed" ||
     !supportsReadableReasoningProjection(event.provider) ||
     event.payload.itemType !== "reasoning" ||
-    readableReasoningDetail(event.payload.detail)
+    (!preferBufferedDetail && readableReasoningDetail(event.payload.detail))
   ) {
     return event;
   }
@@ -399,6 +407,14 @@ function withBufferedReasoningSummary(
     payload: {
       ...event.payload,
       detail: bufferedDetail,
+      ...(summary?.truncated
+        ? {
+            data: {
+              ...(isJsonObject(event.payload.data) ? event.payload.data : {}),
+              reasoningDetailTruncated: true,
+            },
+          }
+        : {}),
     },
   };
 }
@@ -1131,29 +1147,43 @@ const make = Effect.gen(function* () {
       Effect.flatMap((existingEntry) => {
         const summaryIndex = event.payload.summaryIndex ?? 0;
         const delta = event.payload.delta;
-        if (
-          summaryIndex < 0 ||
-          summaryIndex >= MAX_BUFFERED_REASONING_SUMMARY_PARTS ||
-          delta.length === 0
-        ) {
+        if (summaryIndex < 0 || delta.length === 0) {
           return Effect.void;
         }
         const existingSummary = Option.getOrUndefined(existingEntry);
+        if (summaryIndex >= MAX_BUFFERED_REASONING_SUMMARY_PARTS) {
+          return Cache.set(bufferedReasoningSummaryByKey, key, {
+            parts: new Map(existingSummary?.parts ?? []),
+            sourceEvent: event,
+            lastRuntimeSequence: runtimeSequence,
+            truncated: true,
+            segmented: existingSummary?.segmented === true,
+          });
+        }
         const parts = new Map(existingSummary?.parts ?? []);
         const existingPart = parts.get(summaryIndex) ?? "";
         const otherChars = Array.from(parts.entries()).reduce(
           (total, [index, text]) => total + (index === summaryIndex ? 0 : text.length),
           0,
         );
-        const partLimit = Math.max(0, MAX_BUFFERED_REASONING_SUMMARY_CHARS - otherChars);
+        const partLimit = Math.max(0, MAX_REASONING_ACTIVITY_DETAIL_CHARS - otherChars);
         if (partLimit === 0) {
-          return Effect.void;
+          return Cache.set(bufferedReasoningSummaryByKey, key, {
+            parts,
+            sourceEvent: event,
+            lastRuntimeSequence: runtimeSequence,
+            truncated: true,
+            segmented: existingSummary?.segmented === true,
+          });
         }
-        parts.set(summaryIndex, appendCappedBufferedText(existingPart, delta, partLimit));
+        const truncated = existingPart.length + delta.length > partLimit;
+        parts.set(summaryIndex, appendCappedProviderText(existingPart, delta, partLimit));
         return Cache.set(bufferedReasoningSummaryByKey, key, {
           parts,
           sourceEvent: event,
           lastRuntimeSequence: runtimeSequence,
+          truncated: existingSummary?.truncated === true || truncated,
+          segmented: existingSummary?.segmented === true,
         });
       }),
     );
@@ -1198,6 +1228,7 @@ const make = Effect.gen(function* () {
                     status: "completed",
                     title: "Reasoning",
                     detail,
+                    ...(summary.truncated ? { data: { reasoningDetailTruncated: true } } : {}),
                   },
                 };
                 const activities = projectProviderRuntimeActivities(
@@ -1205,7 +1236,14 @@ const make = Effect.gen(function* () {
                   summary.lastRuntimeSequence,
                 );
                 return dispatchProjectedActivities(completionEvent, threadId, activities).pipe(
-                  Effect.andThen(Cache.invalidate(bufferedReasoningSummaryByKey, key)),
+                  Effect.andThen(
+                    Cache.set(bufferedReasoningSummaryByKey, key, {
+                      ...summary,
+                      parts: new Map<number, string>(),
+                      truncated: false,
+                      segmented: true,
+                    }),
+                  ),
                 );
               }),
             ),
@@ -1237,7 +1275,7 @@ const make = Effect.gen(function* () {
               Effect.flatMap((summary) => {
                 const detail = joinedBufferedReasoningSummary(summary);
                 if (!summary || !detail || !summary.sourceEvent.itemId) {
-                  return Effect.void;
+                  return Cache.invalidate(bufferedReasoningSummaryByKey, key);
                 }
                 const completionEvent: ProviderRuntimeEvent = {
                   ...summary.sourceEvent,
@@ -1251,6 +1289,7 @@ const make = Effect.gen(function* () {
                     status,
                     title: "Reasoning",
                     detail,
+                    ...(summary.truncated ? { data: { reasoningDetailTruncated: true } } : {}),
                   },
                 };
                 const activities = projectProviderRuntimeActivities(
@@ -2931,18 +2970,27 @@ const make = Effect.gen(function* () {
         }
       }
 
+      const bufferedReasoningSummary =
+        event.type === "item.completed" && reasoningSummaryKey
+          ? yield* getBufferedReasoningSummary(reasoningSummaryKey)
+          : undefined;
+      const reasoningWasSegmented = bufferedReasoningSummary?.segmented === true;
       const activityEvent =
         event.type === "item.completed" && reasoningSummaryKey
-          ? withBufferedReasoningSummary(
-              event,
-              yield* getBufferedReasoningSummary(reasoningSummaryKey),
-            )
+          ? withBufferedReasoningSummary(event, bufferedReasoningSummary, reasoningWasSegmented)
           : event.type === "item.completed" && toolOutputKey
             ? withBufferedToolOutputData(event, yield* getBufferedToolOutput(toolOutputKey))
             : event.type === "item.updated" && toolOutputKey
               ? withBufferedToolOutputData(event, yield* getBufferedToolOutput(toolOutputKey))
               : event;
-      const projectedActivities = projectProviderRuntimeActivities(activityEvent, runtimeSequence);
+      const suppressReplayedReasoningCompletion =
+        event.type === "item.completed" &&
+        event.payload.itemType === "reasoning" &&
+        reasoningWasSegmented &&
+        joinedBufferedReasoningSummary(bufferedReasoningSummary) === undefined;
+      const projectedActivities = suppressReplayedReasoningCompletion
+        ? []
+        : projectProviderRuntimeActivities(activityEvent, runtimeSequence);
       yield* dispatchProjectedActivities(activityEvent, thread.id, projectedActivities);
       if (event.type === "item.completed" && reasoningSummaryKey) {
         yield* Cache.invalidate(bufferedReasoningSummaryByKey, reasoningSummaryKey);

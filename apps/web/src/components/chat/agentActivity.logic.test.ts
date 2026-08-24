@@ -1,7 +1,8 @@
 import { MessageId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 import type { WorkLogEntry } from "../../session-logic";
-import { deriveTimelineEntries } from "../../workLog";
+import { makeActivity } from "../../storeTestFixtures";
+import { deriveTimelineEntries, deriveWorkLogEntries } from "../../workLog";
 import {
   deriveAgentActivityTimelineState,
   formatAgentActivityEntryPreview,
@@ -22,6 +23,39 @@ function workEntry(overrides: Partial<WorkLogEntry> & Pick<WorkLogEntry, "id">):
 }
 
 describe("deriveAgentActivityTimelineState", () => {
+  it("keeps a projected failed reasoning activity failed through the inline grouping", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "reasoning-failed-projected",
+          kind: "reasoning.completed",
+          summary: "Reasoning trace",
+          tone: "error",
+          turnId: "turn-reasoning-failed-projected",
+          payload: {
+            status: "failed",
+            detail: "Public reasoning preserved before abort",
+            data: { toolCallId: "reasoning-failed-projected" },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(deriveAgentActivityTimelineState(entries).timelineWorkEntries).toMatchObject([
+      {
+        id: "agent-reasoning:reasoning-failed-projected",
+        tone: "error",
+        reasoningEntries: [
+          {
+            id: "reasoning-failed-projected",
+            text: "Public reasoning preserved before abort",
+          },
+        ],
+      },
+    ]);
+  });
+
   it("groups consecutive reasoning text into ordered inline paragraphs", () => {
     const state = deriveAgentActivityTimelineState([
       workEntry({

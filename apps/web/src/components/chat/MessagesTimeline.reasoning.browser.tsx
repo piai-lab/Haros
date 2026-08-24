@@ -20,6 +20,9 @@ vi.mock("../../appSettings", async (importOriginal) => ({
 }));
 
 import { I18nProvider } from "../../i18n";
+import { makeActivity } from "../../storeTestFixtures";
+import { deriveWorkLogEntries } from "../../workLog";
+import { deriveAgentActivityTimelineState } from "./agentActivity.logic";
 import { MessagesTimeline } from "./MessagesTimeline";
 import { TimelineWorkEntryRow } from "./TimelineWorkEntryRow";
 
@@ -103,6 +106,34 @@ function reasoningEntry(
   } satisfies TimelineEntries[number];
 }
 
+function projectedReasoningEntry(
+  id: string,
+  turnId: TurnId,
+  text: string,
+  tone: "info" | "error" = "info",
+  truncated = false,
+) {
+  const [entry] = deriveWorkLogEntries(
+    [
+      makeActivity({
+        id,
+        createdAt: "2026-08-24T13:30:41.000Z",
+        kind: "reasoning.completed",
+        summary: "Reasoning trace",
+        tone,
+        turnId,
+        payload: {
+          status: tone === "error" ? "failed" : "completed",
+          detail: text,
+          data: { toolCallId: id, ...(truncated ? { reasoningDetailTruncated: true } : {}) },
+        },
+      }),
+    ],
+    undefined,
+  );
+  return deriveAgentActivityTimelineState([entry!]).timelineWorkEntries[0]!;
+}
+
 function toolEntry(
   id: string,
   turnId: TurnId,
@@ -181,6 +212,12 @@ function AnswerStageTimeline(props: { settled: boolean }) {
 
 function FailedReasoningTimeline() {
   const turnId = TurnId.makeUnsafe("turn-failed-reasoning-browser");
+  const failedReasoning = projectedReasoningEntry(
+    "reasoning-failure",
+    turnId,
+    "Public reasoning before failure.",
+    "error",
+  );
   return (
     <MessagesTimeline
       {...baseTimelineProps}
@@ -190,13 +227,40 @@ function FailedReasoningTimeline() {
         assistantEntry("assistant-failure-before", turnId, "I will try this.", {
           completed: true,
         }),
-        reasoningEntry("reasoning-failure", turnId, "Public reasoning before failure.", "error"),
+        {
+          id: failedReasoning.id,
+          kind: "work" as const,
+          createdAt: failedReasoning.createdAt,
+          entry: failedReasoning,
+        },
         assistantEntry("assistant-failure-after", turnId, "The operation failed.", {
           completed: true,
         }),
       ]}
       expandedWorkGroups={{}}
       onToggleWorkGroup={() => {}}
+    />
+  );
+}
+
+function TruncatedReasoningRow() {
+  const text = "UnbrokenReasoningToken".repeat(380);
+  const entry = projectedReasoningEntry(
+    "reasoning-truncated-browser",
+    TurnId.makeUnsafe("turn-truncated-reasoning-browser"),
+    text,
+    "info",
+    true,
+  );
+  return (
+    <TimelineWorkEntryRow
+      workEntry={entry}
+      chatMetaFontSizePx={12}
+      textFontSizePx={13}
+      density="compact"
+      onImageExpand={() => {}}
+      markdownCwd={undefined}
+      timestampFormat="locale"
     />
   );
 }
@@ -482,6 +546,55 @@ describe("Timeline public reasoning disclosure", () => {
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
       expect(document.body.textContent ?? "").not.toContain("条更新");
       expect(document.body.textContent ?? "").toContain(LONG_REASONING);
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("shows the localized reasoning truncation notice without altering provider text or overflowing at 480px", async () => {
+    const host = createNarrowHost();
+    const screen = await render(
+      <I18nProvider>
+        <TruncatedReasoningRow />
+      </I18nProvider>,
+      { container: host },
+    );
+
+    try {
+      await settleLayout();
+      const disclosure = document.querySelector<HTMLElement>("[data-reasoning-disclosure='true']");
+      const providerText = document.querySelector<HTMLElement>(
+        "[data-reasoning-provider-text='true']",
+      );
+      const notice = document.querySelector<HTMLElement>(
+        "[data-reasoning-truncation-notice='true']",
+      );
+      expect(providerText?.textContent ?? "").not.toContain("... [truncated]");
+      expect(notice?.textContent).toBe("Content truncated");
+      expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
+      expect(disclosure?.scrollWidth ?? 0).toBeLessThanOrEqual(disclosure?.clientWidth ?? 0);
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("localizes the reasoning truncation notice in Simplified Chinese", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const host = createNarrowHost();
+    const screen = await render(
+      <I18nProvider>
+        <TruncatedReasoningRow />
+      </I18nProvider>,
+      { container: host },
+    );
+
+    try {
+      await settleLayout();
+      expect(document.body.textContent ?? "").toContain("内容已截断");
+      expect(document.body.textContent ?? "").not.toContain("Content truncated");
+      expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
     } finally {
       await screen.unmount();
       host.remove();

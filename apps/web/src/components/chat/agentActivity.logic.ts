@@ -159,7 +159,15 @@ export function deriveAgentActivityTimelineState(
     const groupId = `${REASONING_GROUP_PREFIX}:${first.id}`;
     const reasoningEntries = groupEntries.flatMap((entry) => {
       const text = formatAgentActivityReasoningText(entry);
-      return text ? [{ id: entry.id, text }] : [];
+      return text
+        ? [
+            {
+              id: entry.id,
+              text,
+              ...(entry.reasoningDetailTruncated ? { truncated: true } : {}),
+            },
+          ]
+        : [];
     });
     const failed = groupEntries.some(
       (entry) =>

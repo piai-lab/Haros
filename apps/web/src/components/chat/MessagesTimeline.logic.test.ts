@@ -280,6 +280,41 @@ describe("computeStableMessagesTimelineRows", () => {
     expect(second.result[0]).toBe(enrichedRow);
   });
 
+  it("replaces a reasoning row when its truncation state changes", () => {
+    const firstRow: WorkTimelineRow = {
+      kind: "work",
+      id: "reasoning-truncation-group",
+      createdAt: "2026-05-09T10:00:00.000Z",
+      groupedEntries: [
+        {
+          id: "agent-reasoning:reasoning-truncated",
+          createdAt: "2026-05-09T10:00:00.000Z",
+          label: "Reasoning",
+          tone: "thinking",
+          activityKind: "reasoning.completed",
+          reasoningEntries: [{ id: "reasoning-truncated", text: "Inspect the owner." }],
+        },
+      ],
+    };
+    const first = computeStableMessagesTimelineRows([firstRow], emptyStableRows());
+    const truncatedRow: WorkTimelineRow = {
+      ...firstRow,
+      groupedEntries: [
+        {
+          ...firstRow.groupedEntries[0]!,
+          reasoningEntries: [
+            { id: "reasoning-truncated", text: "Inspect the owner.", truncated: true },
+          ],
+        },
+      ],
+    };
+
+    const second = computeStableMessagesTimelineRows([truncatedRow], first);
+
+    expect(second).not.toBe(first);
+    expect(second.result[0]).toBe(truncatedRow);
+  });
+
   it("replaces work rows when live activity settles without a final tool event", () => {
     const firstRow: WorkTimelineRow = {
       kind: "work",

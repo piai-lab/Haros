@@ -139,6 +139,93 @@ describe("deriveWorkLogEntries", () => {
     expect(entry?.itemType).toBeUndefined();
   });
 
+  it("preserves failed reasoning tone from the canonical activity projection", () => {
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "reasoning-failed-canonical",
+          kind: "reasoning.completed",
+          tone: "error",
+          summary: "Reasoning trace",
+          turnId: TurnId.makeUnsafe("turn-reasoning-failed"),
+          payload: {
+            status: "failed",
+            detail: "Public reasoning before interruption",
+            data: { toolCallId: "reasoning-failed-1" },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry).toMatchObject({
+      tone: "error",
+      activityKind: "reasoning.completed",
+      detail: "Public reasoning before interruption",
+    });
+  });
+
+  it("keeps a merged tool at its first lifecycle sequence across interleaved reasoning", () => {
+    const turnId = TurnId.makeUnsafe("turn-tool-reasoning-order");
+    const activities: OrchestrationThreadActivity[] = [
+      makeActivity({
+        id: "tool-started-before-reasoning",
+        sequence: 10,
+        kind: "tool.started",
+        tone: "tool",
+        summary: "Read",
+        turnId,
+        payload: {
+          itemType: "dynamic_tool_call",
+          status: "inProgress",
+          detail: "Reading source",
+          data: { toolCallId: "read-interleaved", toolName: "Read" },
+        },
+      }),
+      makeActivity({
+        id: "reasoning-after-tool-start",
+        sequence: 11,
+        kind: "reasoning.completed",
+        tone: "info",
+        summary: "Reasoning trace",
+        turnId,
+        payload: { detail: "Verify the first tool result" },
+      }),
+      makeActivity({
+        id: "tool-completed-after-reasoning",
+        sequence: 12,
+        kind: "tool.completed",
+        tone: "tool",
+        summary: "Read",
+        turnId,
+        payload: {
+          itemType: "dynamic_tool_call",
+          status: "completed",
+          detail: "Read completed safely",
+          data: { toolCallId: "read-interleaved", toolName: "Read" },
+        },
+      }),
+    ];
+
+    const entries = deriveWorkLogEntries(activities, undefined);
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      id: "tool-completed-after-reasoning",
+      sequence: 10,
+      toolStatus: "completed",
+      detail: "Read completed safely",
+    });
+    expect(entries[1]).toMatchObject({
+      id: "reasoning-after-tool-start",
+      sequence: 11,
+      activityKind: "reasoning.completed",
+    });
+    expect(deriveTimelineEntries([], [], entries).map((entry) => entry.id)).toEqual([
+      "tool-completed-after-reasoning",
+      "reasoning-after-tool-start",
+    ]);
+  });
+
   it("keeps the typed active-edit failure reason for localized presentation", () => {
     const [entry] = deriveWorkLogEntries(
       [

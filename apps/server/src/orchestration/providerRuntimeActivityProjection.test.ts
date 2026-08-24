@@ -13,6 +13,7 @@ import { describe, expect, it } from "vitest";
 import { isPotentiallyVisibleProviderRuntimeActivity } from "@omnimind/shared/providerActivityVisibility";
 
 import {
+  MAX_REASONING_ACTIVITY_DETAIL_CHARS,
   projectProviderRuntimeActivities,
   providerActivityUpdateDedupeKey,
   providerActivityUpdateFingerprint,
@@ -441,6 +442,55 @@ describe("provider runtime activity projection", () => {
           data: { toolCallId: `reasoning-${provider}` },
         },
       });
+    }
+  });
+
+  it("preserves public reasoning beyond the generic activity limit and marks the dedicated cap", () => {
+    const overGenericLimit = "a".repeat(3_000);
+    const [preserved] = projectProviderRuntimeActivities(
+      runtimeEvent({
+        type: "item.completed",
+        eventId: "reasoning-over-generic-limit",
+        itemId: RuntimeItemId.makeUnsafe("reasoning-over-generic-limit"),
+        payload: { itemType: "reasoning", status: "completed", detail: overGenericLimit },
+      }),
+    );
+    expect(preserved).toBeDefined();
+    expect((preserved!.payload as { detail?: string }).detail).toBe(overGenericLimit);
+
+    const [capped] = projectProviderRuntimeActivities(
+      runtimeEvent({
+        type: "item.completed",
+        eventId: "reasoning-over-dedicated-limit",
+        itemId: RuntimeItemId.makeUnsafe("reasoning-over-dedicated-limit"),
+        payload: {
+          itemType: "reasoning",
+          status: "completed",
+          detail: "b".repeat(MAX_REASONING_ACTIVITY_DETAIL_CHARS + 1_000),
+        },
+      }),
+    );
+    const cappedPayload = capped?.payload as {
+      detail?: string;
+      data?: { reasoningDetailTruncated?: boolean };
+    };
+    expect(cappedPayload.detail).toHaveLength(MAX_REASONING_ACTIVITY_DETAIL_CHARS);
+    expect(cappedPayload.detail).toBe("b".repeat(MAX_REASONING_ACTIVITY_DETAIL_CHARS));
+    expect(cappedPayload.detail).not.toContain("truncated");
+    expect(cappedPayload.data?.reasoningDetailTruncated).toBe(true);
+  });
+
+  it("projects unsuccessful reasoning terminal statuses as errors", () => {
+    for (const status of ["failed", "declined"] as const) {
+      const [activity] = projectProviderRuntimeActivities(
+        runtimeEvent({
+          type: "item.completed",
+          eventId: `reasoning-${status}`,
+          itemId: RuntimeItemId.makeUnsafe(`reasoning-${status}`),
+          payload: { itemType: "reasoning", status, detail: "Public terminal reasoning" },
+        }),
+      );
+      expect(activity).toMatchObject({ tone: "error", payload: { status } });
     }
   });
 

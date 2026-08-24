@@ -1037,7 +1037,12 @@ function workLogReasoningEntriesEqual(
   if (!left || !right || left.length !== right.length) return false;
   return left.every((entry, index) => {
     const other = right[index];
-    return other !== undefined && entry.id === other.id && entry.text === other.text;
+    return (
+      other !== undefined &&
+      entry.id === other.id &&
+      entry.text === other.text &&
+      entry.truncated === other.truncated
+    );
   });
 }
 

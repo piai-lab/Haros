@@ -97,7 +97,9 @@ export interface WorkLogEntry {
   reasoningEntries?: ReadonlyArray<{
     id: string;
     text: string;
+    truncated?: boolean;
   }>;
+  reasoningDetailTruncated?: boolean;
   skillDelivery?: {
     skillName: string;
     mode: "inline" | "reference";
@@ -484,6 +486,9 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   const toolCallId = extractToolCallId(payload);
   const toolStatus = deriveToolLifecycleStatus(activity.kind, payload);
   const engineWebSurface = extractEngineWebSurface(payload);
+  const reasoningDetailTruncated =
+    activity.kind === "reasoning.completed" &&
+    asRecord(payload?.data)?.reasoningDetailTruncated === true;
   const entry: DerivedWorkLogEntry = {
     id: activity.id,
     createdAt: activity.createdAt,
@@ -496,6 +501,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     ...(toolCallId ? { toolCallId } : {}),
     ...(toolStatus ? { toolStatus } : {}),
     ...(engineWebSurface ? { engineWebSurface } : {}),
+    ...(reasoningDetailTruncated ? { reasoningDetailTruncated: true } : {}),
     ...(payload && Schema.is(ProviderTurnStartFailureReason)(payload.failureReason)
       ? { failureReason: payload.failureReason }
       : {}),
@@ -1205,7 +1211,7 @@ function mergeDerivedWorkLogEntries(
   const liveActivity = mergeWorkLogLiveActivity(previous.liveActivity, next.liveActivity);
   const toolDetails = mergeWorkLogToolDetails(previous.toolDetails, next.toolDetails);
   const turnId = next.turnId ?? previous.turnId;
-  return {
+  const merged: DerivedWorkLogEntry = {
     ...previous,
     ...next,
     ...(turnId !== undefined ? { turnId } : {}),
@@ -1227,6 +1233,15 @@ function mergeDerivedWorkLogEntries(
     ...(liveActivity ? { liveActivity } : {}),
     ...(toolDetails ? { toolDetails } : {}),
   };
+  // A lifecycle update enriches the first visible tool row; it does not move
+  // that tool to the terminal event's causal position. This matters when
+  // public reasoning arrives between started and completed.
+  if (previous.sequence === undefined) {
+    delete merged.sequence;
+  } else {
+    merged.sequence = previous.sequence;
+  }
+  return merged;
 }
 
 function mergeWorkLogLiveActivity(
