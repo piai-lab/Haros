@@ -154,6 +154,8 @@ Thread 的 `runtimeMode` 是用户对该任务自动化程度的唯一产品级�
 - `auto`：仅在当前 Engine/Host 有可验证的自动裁决路径时可选；没有真实 reviewer/classifier 就不显示，不得退化成每步询问；
 - `approval-required`：仅在当前 Engine/Host 有可完成的 approval request/response path 时可选；没有 bridge 就显示该模式不可用，不能先让用户选择再在运行时一律拒绝。
 
+Product State只拥有持久选择，不拥有capability。结构支持与当前可执行性由Execution在每次读取或dispatch admission依据loaded Engine/model/Host/runtime evidence投影；两者变化不得静默改写Thread。已有选择失效时仍原样保存，dispatch准确失败并给出typed原因；用户主动改选才产生新的Product mutation，能力恢复后旧选择自然重新可执行。
+
 共同 UI 不建设第二 permission broker，也不维护跨 Provider deny-side-effect matrix。一次 `acceptForSession` 若实际会把持久 Thread 切换为 `full-access`，产品文案必须准确写成“此任务始终允许”，不能声称只影响易失 runtime session。Provider-native permission set、macOS/Windows 系统授权、OAuth/2FA 与不可逆外部发布继续保留自己的真实名称、scope、结果和取消语义。
 
 Pi adapter 当前没有暴露 OmniMind approval request 时，`approval-required` 对该 Engine 就不是可用产品能力；记录一个未执行的 mode 不构成支持。进程隔离、Package verification、Provider 自述或“完全访问”标签都不等于 OS sandbox；只有 exact call path 能证明的自动执行、拒绝或介入行为才进入产品文案和验收。
