@@ -1732,16 +1732,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           const buildWorkDisplay = (workEntries: WorkLogEntry[], workGroupId: string | null) => {
             const displayEntries = workEntries.filter((entry) => !entry.omnimindThreadCreation);
             const toolEntries = displayEntries.filter((entry) => entry.tone === "tool");
-            const statusEntries = displayEntries.filter((entry) => entry.tone !== "tool");
             const toolGroupId = toolEntries.length > 0 ? workGroupId : null;
             const toolExpanded =
               toolGroupId !== null ? (expandedWorkGroupsState[toolGroupId] ?? false) : false;
-            const visibleToolEntries =
-              toolExpanded || toolEntries.length <= MAX_VISIBLE_INLINE_TOOL_ENTRIES
-                ? toolEntries
-                : activeTurnInProgress
-                  ? toolEntries.slice(-MAX_VISIBLE_INLINE_TOOL_ENTRIES)
-                  : toolEntries.slice(0, MAX_VISIBLE_INLINE_TOOL_ENTRIES);
             const hasGenericFileChangeEntry = toolEntries.some(
               (workEntry) =>
                 isFileChangeWorkLogEntry(workEntry) && (workEntry.changedFiles?.length ?? 0) === 0,
@@ -1753,16 +1746,12 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 (workEntry.changedFiles?.length ?? 0) === 0
               );
             return {
-              toolEntries,
-              statusEntries,
               toolGroupId,
               toolExpanded,
-              // Ordered (tool + narration interleaved) so chunking sees the
-              // thinking/info boundaries that split tool runs mid-turn.
+              // Tool limits and summaries may hide only tool entries; this
+              // ordered stream remains the sole visual sequence for public
+              // reasoning, tool activity, and other status rows.
               orderedRenderableEntries: displayEntries.filter(isRenderableToolEntry),
-              renderableToolEntries: toolEntries.filter(isRenderableToolEntry),
-              visibleRenderableToolEntries: visibleToolEntries.filter(isRenderableToolEntry),
-              hiddenToolCount: toolEntries.length - visibleToolEntries.length,
               hasGenericFileChangeEntry,
             };
           };
@@ -1861,13 +1850,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             display: typeof leadingWorkDisplay,
             placement: "leading" | "inline",
           ) => {
-            const renderInlineToolRow = (workEntry: WorkLogEntry) => (
+            const renderInlineWorkRow = (workEntry: WorkLogEntry) => (
               <TimelineWorkEntryRow
-                key={`${placement}-tool-row:${row.message.id}:${workEntry.id}`}
+                key={`${placement}-work-row:${row.message.id}:${workEntry.id}`}
                 workEntry={workEntry}
                 chatMetaFontSizePx={appTypographyScale.chatMetaPx}
                 textFontSizePx={appTypographyScale.activityPx}
-                density="compact"
+                density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
                 fileDiffStatByPath={fileDiffStatByPath}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
@@ -1898,110 +1887,60 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               shouldCapEntry: (workEntry) => workEntry.tone === "tool",
             });
             const renderChunks = cappedRenderPlan.chunks;
-            const collapseAsSummary = renderChunks.some((chunk) => chunk.summary !== null);
+            const hasVisibleEntries = renderChunks.some(
+              (chunk) => chunk.summary !== null || chunk.entries.length > 0,
+            );
+            if (hasCollapsedWork || !hasVisibleEntries) {
+              return null;
+            }
             return (
-              <>
-                {!hasCollapsedWork &&
-                  collapseAsSummary &&
-                  display.renderableToolEntries.length > 0 && (
-                    <div className={placement === "leading" ? "mb-1.5" : "mt-1.5"}>
-                      <div className="space-y-px">
-                        {renderChunks.map((chunk) => {
-                          if (!chunk.summary) {
-                            // Narration-tone entries render in the status block
-                            // below; here they only serve as run boundaries.
-                            return chunk.entries
-                              .filter((workEntry) => workEntry.tone === "tool")
-                              .map(renderInlineToolRow);
-                          }
-                          const summary = chunk.summary;
-                          // Message ids stay stable while a live group's first-entry id can drift.
-                          const summaryOverrideKey = `${placement}:${row.message.id}:${chunk.id}`;
-                          return (
-                            <ToolCallGroupSummaryRow
-                              key={`inline-tool-summary:${summaryOverrideKey}`}
-                              summary={summary}
-                              open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
-                              onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
-                              fontSizePx={appTypographyScale.activityPx}
-                              renderChildren={() => (
-                                <div className="space-y-px pt-0.5">
-                                  {chunk.entries.map(renderInlineToolRow)}
-                                </div>
-                              )}
-                            />
-                          );
-                        })}
-                      </div>
-                      {display.toolGroupId && cappedRenderPlan.hasOverflow && (
-                        <div className="py-0.5">
-                          <button
-                            type="button"
-                            className="text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
-                            style={{ fontSize: `${appTypographyScale.activityPx}px` }}
-                            onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
-                          >
-                            {display.toolExpanded
-                              ? "Show less"
-                              : `+${cappedRenderPlan.hiddenEntryCount} more tool calls`}
-                          </button>
+              <div
+                className={cn(
+                  "space-y-0.5",
+                  placement === "leading"
+                    ? row.assistantTurnInProgress
+                      ? "mb-0.5"
+                      : "mb-2"
+                    : "mt-2",
+                )}
+              >
+                {renderChunks.map((chunk) => {
+                  if (!chunk.summary) {
+                    return chunk.entries.map(renderInlineWorkRow);
+                  }
+                  const summary = chunk.summary;
+                  // Message ids stay stable while a live group's first-entry id can drift.
+                  const summaryOverrideKey = `${placement}:${row.message.id}:${chunk.id}`;
+                  return (
+                    <ToolCallGroupSummaryRow
+                      key={`inline-tool-summary:${summaryOverrideKey}`}
+                      summary={summary}
+                      open={toolGroupSummaryOverrides[summaryOverrideKey] ?? false}
+                      onToggle={(open) => setToolGroupSummaryOpen(summaryOverrideKey, open)}
+                      fontSizePx={appTypographyScale.activityPx}
+                      renderChildren={() => (
+                        <div className="space-y-px pt-0.5">
+                          {chunk.entries.map(renderInlineWorkRow)}
                         </div>
                       )}
-                    </div>
-                  )}
-                {!hasCollapsedWork &&
-                  !collapseAsSummary &&
-                  display.visibleRenderableToolEntries.length > 0 && (
-                    <div className={placement === "leading" ? "mb-1.5" : "mt-1.5"}>
-                      <div className="space-y-px">
-                        {display.visibleRenderableToolEntries.map(renderInlineToolRow)}
-                      </div>
-                      {display.toolGroupId &&
-                        display.toolEntries.length > MAX_VISIBLE_INLINE_TOOL_ENTRIES && (
-                          <div className="py-0.5">
-                            <button
-                              type="button"
-                              className="text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
-                              style={{ fontSize: `${appTypographyScale.activityPx}px` }}
-                              onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
-                            >
-                              {display.toolExpanded
-                                ? "Show less"
-                                : `+${display.hiddenToolCount} more tool calls`}
-                            </button>
-                          </div>
-                        )}
-                    </div>
-                  )}
-                {!hasCollapsedWork && display.statusEntries.length > 0 && (
-                  <div
-                    className={cn(
-                      "space-y-0.5",
-                      placement === "leading"
-                        ? row.assistantTurnInProgress
-                          ? "mb-0.5"
-                          : "mb-2"
-                        : "mt-2",
-                    )}
-                  >
-                    {display.statusEntries.map((workEntry) => (
-                      <TimelineWorkEntryRow
-                        key={`${placement}-status-row:${row.message.id}:${workEntry.id}`}
-                        workEntry={workEntry}
-                        chatMetaFontSizePx={appTypographyScale.chatMetaPx}
-                        textFontSizePx={appTypographyScale.activityPx}
-                        density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
-                        markdownCwd={markdownCwd}
-                        onImageExpand={onImageExpand}
-                        timestampFormat={timestampFormat}
-                        {...(onOpenAgentActivity ? { onOpenAgentActivity } : {})}
-                        {...(onOpenAutomation ? { onOpenAutomation } : {})}
-                        {...(onOpenEngineWebSurface ? { onOpenEngineWebSurface } : {})}
-                      />
-                    ))}
+                    />
+                  );
+                })}
+                {display.toolGroupId && cappedRenderPlan.hasOverflow && (
+                  <div className="py-0.5">
+                    <button
+                      type="button"
+                      className="text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
+                      style={{ fontSize: `${appTypographyScale.activityPx}px` }}
+                      onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
+                    >
+                      {display.toolExpanded
+                        ? "Show less"
+                        : `+${cappedRenderPlan.hiddenEntryCount} more tool calls`}
+                    </button>
                   </div>
                 )}
-              </>
+              </div>
             );
           };
           const renderCollapsedTurnItem = (item: CollapsedTurnItem, keyPrefix: string) =>
