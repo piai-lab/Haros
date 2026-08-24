@@ -1013,7 +1013,7 @@ function ReasoningDisclosureRow(props: {
       <button
         type="button"
         className={cn(
-          "group/reasoning flex w-full min-w-0 items-center rounded-md text-left text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          "group/reasoning flex w-full min-w-0 items-center rounded-md text-left text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
           props.compact ? "gap-1.5" : "gap-2",
         )}
         aria-expanded={open}
