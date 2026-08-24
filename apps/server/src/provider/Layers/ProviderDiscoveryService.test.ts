@@ -361,7 +361,13 @@ describe("ProviderDiscoveryService.getComposerCapabilities", () => {
     const baseLayer = Layer.mergeAll(
       makeConfigLayer(),
       ServerSettingsService.layerTest(),
-      makeRegistryLayer({}),
+      makeRegistryLayer({
+        capabilities: {
+          sessionModelSwitch: "restart-session",
+          supportsSkillMentions: false,
+          supportsSkillDiscovery: false,
+        },
+      }),
     ).pipe(Layer.provideMerge(NodeServices.layer));
     const testLayer = ProviderDiscoveryServiceLive.pipe(Layer.provideMerge(baseLayer));
 

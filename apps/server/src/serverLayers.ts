@@ -55,6 +55,7 @@ import { ThreadDiagnosticsQueryLive } from "./diagnostics/Layers/ThreadDiagnosti
 import { ManagedAttachmentCleanupLive } from "./managedAttachmentCleanup";
 import { PullRequestServiceLive } from "./pullRequests/Layers/PullRequestService";
 import { ProviderHealthLive } from "./provider/Layers/ProviderHealth";
+import { ProviderExecutionCapabilitiesLive } from "./provider/Layers/ProviderExecutionCapabilities";
 import { makeServerProviderLayer } from "./provider/runtimeLayer";
 
 export { makeServerProviderLayer } from "./provider/runtimeLayer";
@@ -80,6 +81,9 @@ export function makeServerRuntimeServicesLayer(
   const agentGatewayCredentialsLayer =
     options.agentGatewayCredentialsLayer ?? AgentGatewayCredentialsWithSecretsLive;
   const providerHealthLayer = ProviderHealthLive.pipe(Layer.provideMerge(ServerSettingsLive));
+  const providerExecutionCapabilitiesLayer = ProviderExecutionCapabilitiesLive.pipe(
+    Layer.provideMerge(providerHealthLayer),
+  );
   const checkpointStoreLayer = CheckpointStoreLive.pipe(Layer.provide(GitCoreLive));
 
   const checkpointDiffQueryLayer = CheckpointDiffQueryLive.pipe(
@@ -168,6 +172,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(GitCoreLive),
     Layer.provideMerge(TextGenerationLayerLive),
     Layer.provideMerge(ServerSettingsLive),
+    Layer.provideMerge(providerExecutionCapabilitiesLayer),
     Layer.provideMerge(runtimeServicesLayer),
   );
   const automationSchedulerLayer = AutomationSchedulerLive.pipe(
@@ -190,6 +195,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(AgentGatewayOperationRepositoryLive),
     Layer.provideMerge(ServerSettingsLive),
     Layer.provideMerge(providerHealthLayer),
+    Layer.provideMerge(providerExecutionCapabilitiesLayer),
   );
   const agentGatewayLayer = AgentGatewayLive.pipe(
     Layer.provideMerge(agentGatewayCredentialsLayer),
@@ -203,6 +209,7 @@ export function makeServerRuntimeServicesLayer(
     Layer.provideMerge(ThreadDiagnosticsQueryLive),
     Layer.provideMerge(ServerSettingsLive),
     Layer.provideMerge(providerHealthLayer),
+    Layer.provideMerge(providerExecutionCapabilitiesLayer),
     Layer.provideMerge(BrowserAutomationHostLive),
     // The gateway exposes device_* tools only where a backend can exist, but it
     // resolves the service on every platform to make that decision.
@@ -228,6 +235,7 @@ export function makeServerRuntimeServicesLayer(
     externalMcpServiceLayer,
     externalMcpGatewayLayer,
     providerHealthLayer,
+    providerExecutionCapabilitiesLayer,
     ProjectPullRequestPinsLive,
     pullRequestServiceLayer,
     orchestrationReactorLayer,

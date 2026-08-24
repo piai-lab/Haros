@@ -1,5 +1,7 @@
 import type {
+  ProviderExecutionCapabilities,
   ProviderComposerCapabilities,
+  ModelSelection,
   ProviderKind,
   ProviderListAgentsResult,
   ProviderListCommandsResult,
@@ -55,6 +57,9 @@ export const providerDiscoveryQueryKeys = {
   all: ["provider-discovery"] as const,
   composerCapabilities: (provider: ProviderKind) =>
     ["provider-discovery", "composer-capabilities", provider] as const,
+  executionCapabilitiesAll: ["provider-discovery", "execution-capabilities"] as const,
+  executionCapabilities: (modelSelection: ModelSelection) =>
+    [...providerDiscoveryQueryKeys.executionCapabilitiesAll, modelSelection] as const,
   commands: (
     provider: ProviderKind,
     cwd: string | null,
@@ -117,6 +122,31 @@ export function providerComposerCapabilitiesQueryOptions(provider: ProviderKind)
     },
     staleTime: Infinity,
   });
+}
+
+export function providerExecutionCapabilitiesQueryOptions(modelSelection: ModelSelection) {
+  return queryOptions({
+    queryKey: providerDiscoveryQueryKeys.executionCapabilities(modelSelection),
+    queryFn: async () => {
+      const api = ensureNativeApi();
+      const result = await api.provider.getExecutionCapabilities({ modelSelection });
+      if (!providerExecutionCapabilitiesMatchSelection(result, modelSelection)) {
+        throw new Error(
+          "Provider execution capability response identity did not match the request.",
+        );
+      }
+      return result;
+    },
+  });
+}
+
+export function providerExecutionCapabilitiesMatchSelection(
+  capabilities: ProviderExecutionCapabilities,
+  modelSelection: ModelSelection,
+): boolean {
+  return (
+    capabilities.provider === modelSelection.provider && capabilities.model === modelSelection.model
+  );
 }
 
 export function providerSkillsQueryOptions(input: {

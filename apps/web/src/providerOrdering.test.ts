@@ -3,8 +3,8 @@
 // Layer: Web settings tests
 // Depends on: provider display metadata from contracts and providerOrdering helpers.
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
+import { PROVIDER_KINDS, type ProviderKind } from "@omnimind/contracts";
+import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -14,7 +14,7 @@ import {
   normalizeProviderOrder,
 } from "./providerOrdering";
 
-const ALL_PROVIDER_KINDS = Object.keys(PROVIDER_DISPLAY_NAMES) as ProviderKind[];
+const ALL_PROVIDER_KINDS: readonly ProviderKind[] = PROVIDER_KINDS;
 
 describe("providerOrdering", () => {
   it("includes every displayable provider in the default order", () => {
@@ -22,7 +22,7 @@ describe("providerOrdering", () => {
     expect(new Set(DEFAULT_PROVIDER_ORDER)).toEqual(new Set(ALL_PROVIDER_KINDS));
   });
 
-  it("keeps the shared descriptor exhaustive and aligned with contract labels", () => {
+  it("keeps the shared presentation descriptor exhaustive and internally aligned", () => {
     expect(PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind)).toEqual(
       DEFAULT_PROVIDER_ORDER,
     );

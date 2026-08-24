@@ -49,20 +49,6 @@ const decodeInputOrValidationError = <S extends Schema.Top>(input: {
     ),
   );
 
-const disabledCapabilitiesForProvider = (
-  provider: ProviderComposerCapabilities["provider"],
-): ProviderComposerCapabilities => ({
-  provider,
-  supportsSkillMentions: false,
-  supportsSkillDiscovery: false,
-  supportsNativeSlashCommandDiscovery: false,
-  supportsPluginMentions: false,
-  supportsPluginDiscovery: false,
-  supportsRuntimeModelList: false,
-  supportsThreadCompaction: false,
-  supportsThreadImport: false,
-});
-
 type NativeSkillDiscovery = ProviderListSkillsResult | "failed" | "unsupported";
 type CatalogSkillDiscovery = ReadonlyArray<ProviderSkillDescriptor> | "failed";
 
@@ -183,9 +169,18 @@ const make = Effect.gen(function* () {
         payload: input,
       });
       const adapter = yield* registry.getByProvider(parsed.provider);
-      const capabilities = adapter.getComposerCapabilities
-        ? yield* adapter.getComposerCapabilities()
-        : disabledCapabilitiesForProvider(parsed.provider);
+      const capabilities: ProviderComposerCapabilities = {
+        provider: parsed.provider,
+        supportsSkillMentions: adapter.capabilities.supportsSkillMentions === true,
+        supportsSkillDiscovery: adapter.capabilities.supportsSkillDiscovery === true,
+        supportsNativeSlashCommandDiscovery:
+          adapter.capabilities.supportsNativeSlashCommandDiscovery === true,
+        supportsPluginMentions: adapter.capabilities.supportsPluginMentions === true,
+        supportsPluginDiscovery: adapter.capabilities.supportsPluginDiscovery === true,
+        supportsRuntimeModelList: adapter.capabilities.supportsRuntimeModelList === true,
+        supportsThreadCompaction: adapter.capabilities.supportsThreadCompaction === true,
+        supportsThreadImport: adapter.capabilities.supportsThreadImport === true,
+      };
       // The unified OmniMind skills catalog backs skill discovery for every
       // provider, including ones without native skill support.
       return {

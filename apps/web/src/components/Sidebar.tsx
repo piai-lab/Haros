@@ -80,7 +80,6 @@ import {
   MAX_PINNED_PROJECTS,
   type DesktopUpdateState,
   type OrchestrationShellSnapshot,
-  PROVIDER_DISPLAY_NAMES,
   ProjectId,
   SpaceId,
   type ProviderKind,
@@ -90,6 +89,7 @@ import {
 } from "@omnimind/contracts";
 import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
 import { getDefaultModel } from "@omnimind/shared/model";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";

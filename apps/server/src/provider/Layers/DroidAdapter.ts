@@ -6,7 +6,6 @@
 import {
   ApprovalRequestId,
   EventId,
-  type ProviderComposerCapabilities,
   type ProviderApprovalDecision,
   type ProviderInteractionMode,
   type ProviderListCommandsResult,
@@ -120,6 +119,7 @@ import {
   isFormElicitationRequest,
 } from "../acp/AcpElicitationSupport.ts";
 import { DroidAdapter, type DroidAdapterShape } from "../Services/DroidAdapter.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = "droid" as const;
@@ -2050,21 +2050,6 @@ export function makeDroidAdapter(
         return ctx !== undefined && !ctx.stopped;
       });
 
-    const getComposerCapabilities: NonNullable<DroidAdapterShape["getComposerCapabilities"]> = () =>
-      Effect.succeed({
-        provider: PROVIDER,
-        supportsSkillMentions: false,
-        supportsSkillDiscovery: false,
-        supportsNativeSlashCommandDiscovery: true,
-        supportsPluginMentions: true,
-        supportsPluginDiscovery: true,
-        supportsRuntimeModelList: true,
-        // Droid's TUI has /compact, but ACP currently exposes no compaction RPC
-        // and treats that text as an ordinary model prompt.
-        supportsThreadCompaction: false,
-        supportsThreadImport: true,
-      } satisfies ProviderComposerCapabilities);
-
     const listModels: NonNullable<DroidAdapterShape["listModels"]> = (input) =>
       discoveryLock.withPermits(1)(
         Effect.gen(function* () {
@@ -2275,8 +2260,17 @@ export function makeDroidAdapter(
     return {
       provider: PROVIDER,
       capabilities: {
+        ...providerExecutionStructure(PROVIDER),
         sessionModelSwitch: "restart-session",
         conversationRollback: "restart-session",
+        supportsSkillMentions: false,
+        supportsSkillDiscovery: false,
+        supportsNativeSlashCommandDiscovery: true,
+        supportsPluginMentions: true,
+        supportsPluginDiscovery: true,
+        supportsRuntimeModelList: true,
+        supportsThreadCompaction: false,
+        supportsThreadImport: true,
       },
       startSession,
       sendTurn,
@@ -2289,7 +2283,6 @@ export function makeDroidAdapter(
       respondToUserInput,
       stopSession,
       listSessions,
-      getComposerCapabilities,
       listCommands,
       listModels,
       listPlugins,

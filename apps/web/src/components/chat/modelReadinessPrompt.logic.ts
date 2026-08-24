@@ -1,11 +1,11 @@
 import {
   type ModelSelection,
   type OmniMindModelServiceDescriptor,
+  PROVIDER_KINDS,
   type ProviderKind,
   type ServerProviderStatus,
 } from "@omnimind/contracts";
 
-import { COMPOSER_PROVIDER_KINDS } from "~/composerDraftModels";
 import type { ProviderModelCatalogState } from "~/hooks/useProviderModelCatalog";
 import { findProviderStatus, isProviderUsable } from "~/lib/providerAvailability";
 import type { ProviderModelOption } from "~/providerModelOptions";
@@ -23,7 +23,7 @@ export function hasUsableExactModelBinding(input: {
   readonly providerStatuses: readonly ServerProviderStatus[];
   readonly exactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
 }): boolean {
-  return COMPOSER_PROVIDER_KINDS.some((provider) => {
+  return PROVIDER_KINDS.some((provider) => {
     const selection = input.exactModelSelections[provider];
     const status = findProviderStatus(input.providerStatuses, provider);
     // Bundled OmniMind/stock Pi runtimes can enumerate models before any
@@ -83,7 +83,7 @@ export function areUsableProviderCatalogsSettled(input: {
   readonly catalogStateByProvider: Partial<Record<ProviderKind, ProviderModelCatalogState>>;
   readonly explicitExactModelSelections: Partial<Record<ProviderKind, ModelSelection>>;
 }): boolean {
-  return COMPOSER_PROVIDER_KINDS.every(
+  return PROVIDER_KINDS.every(
     (provider) =>
       input.explicitExactModelSelections[provider] === undefined ||
       !isProviderUsable(findProviderStatus(input.providerStatuses, provider)) ||

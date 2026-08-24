@@ -1,6 +1,5 @@
 import {
   type EngineWebSurfaceThemeSnapshot,
-  PROVIDER_DISPLAY_NAMES,
   ThreadId,
   type OrchestrationEvent,
   type OrchestrationShellSnapshot,
@@ -10,6 +9,7 @@ import {
   type ServerProviderStatus,
   type WsCompatibilityError,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { defaultTerminalTitleForCliKind } from "@omnimind/shared/terminalThreads";
 import { isThreadDetailEventFor } from "@omnimind/shared/threadDetailEvents";
 import {
@@ -2282,6 +2282,9 @@ function EventRouter() {
         });
         void queryClient.invalidateQueries({
           queryKey: providerDiscoveryQueryKeys.agentsForProvider("opencode"),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: providerDiscoveryQueryKeys.executionCapabilitiesAll,
         });
       }
     });

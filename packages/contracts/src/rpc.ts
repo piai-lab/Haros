@@ -209,6 +209,10 @@ import {
   ProviderReadPluginResult,
 } from "./providerDiscovery";
 import {
+  ProviderExecutionCapabilitiesInput,
+  ProviderExecutionCapabilities,
+} from "./providerExecution";
+import {
   ProjectCreateLocalFilePreviewGrantInput,
   ProjectCreateLocalFilePreviewGrantResult,
   ProjectDevServerEvent,
@@ -1175,6 +1179,15 @@ export const WsProviderGetComposerCapabilitiesRpc = Rpc.make(
   },
 );
 
+export const WsProviderGetExecutionCapabilitiesRpc = Rpc.make(
+  WS_METHODS.providerGetExecutionCapabilities,
+  {
+    payload: ProviderExecutionCapabilitiesInput,
+    success: ProviderExecutionCapabilities,
+    error: WsRpcError,
+  },
+);
+
 export const WsProviderCompactThreadRpc = Rpc.make(WS_METHODS.providerCompactThread, {
   payload: ProviderCompactThreadInput,
   success: Schema.Void,
@@ -1584,6 +1597,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsSubscribeServerProviderStatusesRpc,
   WsSubscribeServerSettingsRpc,
   WsProviderGetComposerCapabilitiesRpc,
+  WsProviderGetExecutionCapabilitiesRpc,
   WsProviderCompactThreadRpc,
   WsProviderListCommandsRpc,
   WsProviderListSkillsRpc,

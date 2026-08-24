@@ -1,10 +1,10 @@
 import {
-  PROVIDER_DISPLAY_NAMES,
   THREAD_GOAL_MAX_CHARS,
   type GitBranch,
   type ProviderInteractionMode,
   type ProviderKind,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { DEFAULT_PROVIDER_ORDER } from "./providerOrdering";
 import {
   BUILT_IN_COMPOSER_SLASH_COMMANDS,

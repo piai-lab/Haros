@@ -9,7 +9,6 @@ import {
   ApprovalRequestId,
   type CursorModelOptions,
   EventId,
-  type ProviderComposerCapabilities,
   type ProviderApprovalDecision,
   type ProviderInteractionMode,
   type ProviderListModelsResult,
@@ -127,6 +126,7 @@ import {
 import { CursorAdapter, type CursorAdapterShape } from "../Services/CursorAdapter.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 import { discoverCursorSkills } from "../cursorSkillsDiscovery.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
 const PROVIDER = "cursor" as const;
 
@@ -1516,21 +1516,6 @@ export function makeCursorAdapter(
         return c !== undefined && !c.stopped;
       });
 
-    const getComposerCapabilities: NonNullable<
-      CursorAdapterShape["getComposerCapabilities"]
-    > = () =>
-      Effect.succeed({
-        provider: PROVIDER,
-        supportsSkillMentions: true,
-        supportsSkillDiscovery: true,
-        supportsNativeSlashCommandDiscovery: false,
-        supportsPluginMentions: false,
-        supportsPluginDiscovery: false,
-        supportsRuntimeModelList: true,
-        supportsThreadCompaction: false,
-        supportsThreadImport: true,
-      } satisfies ProviderComposerCapabilities);
-
     const listSkills: NonNullable<CursorAdapterShape["listSkills"]> = (input) =>
       Effect.tryPromise({
         try: async () =>
@@ -1819,8 +1804,16 @@ export function makeCursorAdapter(
     return {
       provider: PROVIDER,
       capabilities: {
+        ...providerExecutionStructure(PROVIDER),
         sessionModelSwitch: "in-session",
+        supportsSkillMentions: true,
+        supportsSkillDiscovery: true,
+        supportsNativeSlashCommandDiscovery: false,
+        supportsPluginMentions: false,
+        supportsPluginDiscovery: false,
         supportsRuntimeModelList: true,
+        supportsThreadCompaction: false,
+        supportsThreadImport: true,
       },
       startSession,
       sendTurn,
@@ -1832,7 +1825,6 @@ export function makeCursorAdapter(
       respondToUserInput,
       stopSession,
       listSessions,
-      getComposerCapabilities,
       listSkills,
       listModels,
       hasSession,

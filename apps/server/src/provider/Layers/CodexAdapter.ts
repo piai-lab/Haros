@@ -11,7 +11,6 @@ import {
   type CanonicalItemType,
   type CanonicalRequestType,
   type ModelSelection,
-  type ProviderComposerCapabilities,
   type ProviderEvent,
   type ProviderListModelsResult,
   type ProviderListPluginsResult,
@@ -72,6 +71,7 @@ import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { omnimindSkillsDir } from "../skillsCatalog.ts";
 import { makeBoundedCallbackIngress } from "../boundedCallbackIngress.ts";
 import { assignDerivedProviderRuntimeEventIds } from "../providerRuntimeEventIdentity.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 import {
   compactProviderRuntimeEventForIngress,
   isTerminalProviderRuntimeEvent,
@@ -2108,9 +2108,6 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           }),
       });
 
-    const getComposerCapabilities: NonNullable<CodexAdapterShape["getComposerCapabilities"]> = () =>
-      Effect.succeed(manager.getComposerCapabilities() satisfies ProviderComposerCapabilities);
-
     const listSkills: NonNullable<CodexAdapterShape["listSkills"]> = (input) =>
       Effect.tryPromise({
         try: () =>
@@ -2310,6 +2307,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     return {
       provider: PROVIDER,
       capabilities: {
+        ...providerExecutionStructure(PROVIDER),
         sessionModelSwitch: "in-session",
         supportsSkillMentions: true,
         supportsSkillDiscovery: true,
@@ -2317,7 +2315,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
         supportsPluginMentions: true,
         supportsPluginDiscovery: true,
         supportsRuntimeModelList: true,
-        supportsTurnSteering: true,
+        supportsThreadCompaction: true,
+        supportsThreadImport: true,
         supportsLiveTurnDiffPatch: true,
       },
       startSession,
@@ -2336,7 +2335,6 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       listSessions,
       hasSession,
       stopAll,
-      getComposerCapabilities,
       listSkills,
       listPlugins,
       readPlugin,

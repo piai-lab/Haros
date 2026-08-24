@@ -52,7 +52,6 @@ import {
   ThreadId,
   TurnId,
   type UserInputQuestion,
-  type ProviderComposerCapabilities,
   type ProviderListCommandsInput,
   type ProviderListCommandsResult,
   type ProviderListSkillsInput,
@@ -158,6 +157,7 @@ import {
 } from "../Errors.ts";
 import { extractProposedPlanMarkdown, withProviderPlanModePrompt } from "../planMode.ts";
 import { ClaudeAdapter, type ClaudeAdapterShape } from "../Services/ClaudeAdapter.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 import {
   teardownChildProcessTree,
@@ -6253,22 +6253,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       }).pipe(Effect.ignore, Effect.andThen(Queue.shutdown(runtimeEventQueue))),
     );
 
-    const composerCapabilities: ProviderComposerCapabilities = {
-      provider: PROVIDER,
-      supportsSkillMentions: false,
-      supportsSkillDiscovery: false,
-      supportsNativeSlashCommandDiscovery: true,
-      supportsPluginMentions: false,
-      supportsPluginDiscovery: false,
-      supportsRuntimeModelList: true,
-      supportsThreadCompaction: false,
-      supportsThreadImport: true,
-    };
-
-    const getComposerCapabilities: NonNullable<
-      ClaudeAdapterShape["getComposerCapabilities"]
-    > = () => Effect.succeed(composerCapabilities);
-
     const listModels: NonNullable<ClaudeAdapterShape["listModels"]> = (input) =>
       Effect.gen(function* () {
         if (cachedModels) {
@@ -6361,6 +6345,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     return {
       provider: PROVIDER,
       capabilities: {
+        ...providerExecutionStructure(PROVIDER),
         sessionModelSwitch: "in-session",
         conversationRollback: "restart-session",
         supportsSkillMentions: false,
@@ -6369,7 +6354,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         supportsPluginMentions: false,
         supportsPluginDiscovery: false,
         supportsRuntimeModelList: true,
-        supportsTurnSteering: true,
+        supportsThreadCompaction: false,
+        supportsThreadImport: true,
         supportsLiveTurnDiffPatch: false,
       },
       startSession,
@@ -6388,7 +6374,6 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
       listSessions,
       hasSession,
       stopAll,
-      getComposerCapabilities,
       listCommands,
       listSkills,
       listModels,

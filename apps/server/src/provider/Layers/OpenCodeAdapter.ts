@@ -5,7 +5,6 @@ import {
   EventId,
   type ProviderInteractionMode,
   type ProviderKind,
-  type ProviderComposerCapabilities,
   type ProviderListCommandsResult,
   type ProviderRuntimeEvent,
   type ProviderSession,
@@ -90,6 +89,7 @@ import {
   resolvePreferredOpenCodeModelProviders,
 } from "../OpenCodeDiscovery.ts";
 import { nonNegativeFiniteNumber, nonNegativeInteger, positiveInteger } from "../tokenUsage.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
 export { flattenOpenCodeCliModels, flattenOpenCodeModels, resolvePreferredOpenCodeModelProviders };
 
@@ -4724,21 +4724,6 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         );
       };
 
-      const getComposerCapabilities: NonNullable<
-        OpenCodeAdapterShape["getComposerCapabilities"]
-      > = () =>
-        Effect.succeed({
-          provider,
-          supportsSkillMentions: false,
-          supportsSkillDiscovery: false,
-          supportsNativeSlashCommandDiscovery: provider === "opencode",
-          supportsPluginMentions: false,
-          supportsPluginDiscovery: false,
-          supportsRuntimeModelList: true,
-          supportsThreadCompaction: true,
-          supportsThreadImport: true,
-        } satisfies ProviderComposerCapabilities);
-
       const stopAll: OpenCodeAdapterShape["stopAll"] = () =>
         Effect.gen(function* () {
           const contexts = [...sessions.values()];
@@ -4753,9 +4738,16 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
       return {
         provider,
         capabilities: {
+          ...providerExecutionStructure(provider),
           sessionModelSwitch: "in-session",
           supportsRuntimeModelList: true,
           supportsNativeSlashCommandDiscovery: provider === "opencode",
+          supportsSkillMentions: false,
+          supportsSkillDiscovery: false,
+          supportsPluginMentions: false,
+          supportsPluginDiscovery: false,
+          supportsThreadCompaction: true,
+          supportsThreadImport: true,
         },
         startSession,
         sendTurn,
@@ -4774,7 +4766,6 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         listModels,
         listAgents,
         ...(provider === "opencode" ? { listCommands } : {}),
-        getComposerCapabilities,
         get streamEvents() {
           return Stream.fromQueue(runtimeEvents);
         },

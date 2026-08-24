@@ -16,6 +16,7 @@ import type {
   StatsGetProfileStatsInput,
   StatsGetProfileTokenStatsInput,
 } from "@omnimind/contracts";
+import { PROVIDER_KINDS } from "@omnimind/contracts";
 import { isBuiltInComposerSlashCommandName } from "@omnimind/shared/composerSlashCommands";
 import { Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
@@ -24,18 +25,7 @@ import { ServerConfig } from "./config";
 
 const HEATMAP_WINDOW_DAYS = 274; // ~9 months, GitHub-style contribution grid.
 const SKILL_RESULT_LIMIT = 12;
-const PROVIDER_KINDS = new Set<ProviderKind>([
-  "omnimind",
-  "codex",
-  "claudeAgent",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-]);
+const PROVIDER_KIND_SET = new Set<ProviderKind>(PROVIDER_KINDS);
 
 type HeatmapCell = ProfileStats["activity"]["heatmap"][number];
 type ProviderModelUsage = ProfileStats["providerModels"][number];
@@ -437,7 +427,7 @@ function arcName(startHour: number): string {
 
 function normalizeProviderKind(value: unknown): ProviderKind | "unknown" {
   const provider = nonEmptyString(value);
-  return provider && PROVIDER_KINDS.has(provider as ProviderKind)
+  return provider && PROVIDER_KIND_SET.has(provider as ProviderKind)
     ? (provider as ProviderKind)
     : "unknown";
 }

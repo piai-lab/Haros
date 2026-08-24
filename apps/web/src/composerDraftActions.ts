@@ -5,6 +5,7 @@
 import {
   type ModelSelection,
   type ProviderKind,
+  PROVIDER_KINDS,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   ProviderInteractionMode,
   RuntimeMode,
@@ -59,7 +60,6 @@ import {
   terminalContextDedupKey,
 } from "./composerDraftDomain";
 import {
-  COMPOSER_PROVIDER_KINDS,
   makeModelSelection,
   normalizeModelSelection,
   normalizeProviderKind,
@@ -863,7 +863,7 @@ export const createComposerDraftStoreState =
         }
         const base = existing ?? createEmptyThreadDraft();
         const nextMap = { ...base.modelSelectionByProvider };
-        for (const provider of COMPOSER_PROVIDER_KINDS) {
+        for (const provider of PROVIDER_KINDS) {
           // Only touch providers explicitly present in the input
           if (!normalizedOpts || !(provider in normalizedOpts)) continue;
           const opts = normalizedOpts[provider];

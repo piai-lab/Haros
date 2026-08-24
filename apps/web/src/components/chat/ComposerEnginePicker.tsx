@@ -127,9 +127,7 @@ export function ComposerEnginePicker(props: ComposerEnginePickerProps) {
         >
           {options.map((option) => {
             const liveStatus = findProviderStatus(props.providers, option.value);
-            const availability = option.available
-              ? deriveProviderPickerAvailability(liveStatus)
-              : { disabled: true, state: "coming_soon" as const };
+            const availability = deriveProviderPickerAvailability(liveStatus);
             const trailing =
               availability.state === "ready" ? null : (
                 <span className="text-[11px] text-muted-foreground/80">

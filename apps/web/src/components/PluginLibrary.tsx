@@ -4,7 +4,7 @@
 // Exports: PluginLibrary
 
 import {
-  PROVIDER_DISPLAY_NAMES,
+  PROVIDER_KINDS,
   type ThreadId,
   WS_OMNIMIND_ECOSYSTEM_CAPABILITY,
   type OmniMindPackageDescriptor,
@@ -13,7 +13,8 @@ import {
   type ProviderPluginDescriptor,
   type ProviderSkillDescriptor,
 } from "@omnimind/contracts";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import React, {
   useMemo,
   type ReactNode,
@@ -36,7 +37,7 @@ import {
   SiStripe,
   SiVercel,
 } from "react-icons/si";
-import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "./ProviderIcon";
+import { ProviderIcon } from "./ProviderIcon";
 import { useStore } from "~/store";
 import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
 import {
@@ -64,14 +65,7 @@ import {
 } from "~/lib/providerDiscoveryReactQuery";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { useFocusedChatContext } from "~/focusedChatContext";
-import {
-  CheckIcon,
-  CircleAlertIcon,
-  HammerIcon,
-  ListChecksIcon,
-  PluginIcon,
-  SearchIcon,
-} from "~/lib/icons";
+import { CheckIcon, CircleAlertIcon, ListChecksIcon, PluginIcon, SearchIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "./ui/input-group";
 import { SidebarInset } from "./ui/sidebar";
@@ -123,10 +117,6 @@ type PackageReloadState = "reloaded" | "no_active_session" | "different_engine" 
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
-const PROVIDER_ICON: Record<ProviderKind, React.FC<React.SVGProps<SVGSVGElement>>> = {
-  ...PROVIDER_ICON_COMPONENT_BY_PROVIDER,
-  codex: HammerIcon,
-};
 const KNOWN_PLUGIN_BRANDS: Record<string, PluginBrandArtwork> = {
   canva: { icon: SiCanva, color: "#00C4CC" },
   figma: { icon: SiFigma, color: "#F24E1E" },
@@ -320,7 +310,6 @@ function ProviderToggleButton({
   onClick: () => void;
   provider: ProviderKind;
 }) {
-  const Icon = PROVIDER_ICON[provider] ?? HammerIcon;
   return (
     <button
       type="button"
@@ -335,7 +324,7 @@ function ProviderToggleButton({
       disabled={disabled}
       aria-pressed={active}
     >
-      <Icon className="size-3.5 shrink-0" />
+      <ProviderIcon provider={provider} className="size-3.5 shrink-0" />
       {label}
     </button>
   );
@@ -698,61 +687,21 @@ export function PluginLibrary({ sourceThreadId = null }: { sourceThreadId?: Thre
   };
 
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const omniMindCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("omnimind"));
-  const codexCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("codex"));
-  const claudeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("claudeAgent"));
-  const cursorCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("cursor"));
-  const antigravityCapabilitiesQuery = useQuery(
-    providerComposerCapabilitiesQueryOptions("antigravity"),
-  );
-  const grokCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("grok"));
-  const droidCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("droid"));
-  const kiloCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("kilo"));
-  const openCodeCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("opencode"));
-  const piCapabilitiesQuery = useQuery(providerComposerCapabilitiesQueryOptions("pi"));
-
-  const providerCapabilities: Record<ProviderKind, ProviderCapabilities> = {
-    omnimind: {
-      plugins: supportsPluginDiscovery(omniMindCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(omniMindCapabilitiesQuery.data),
-    },
-    codex: {
-      plugins: supportsPluginDiscovery(codexCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(codexCapabilitiesQuery.data),
-    },
-    claudeAgent: {
-      plugins: supportsPluginDiscovery(claudeCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(claudeCapabilitiesQuery.data),
-    },
-    cursor: {
-      plugins: supportsPluginDiscovery(cursorCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(cursorCapabilitiesQuery.data),
-    },
-    antigravity: {
-      plugins: supportsPluginDiscovery(antigravityCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(antigravityCapabilitiesQuery.data),
-    },
-    grok: {
-      plugins: supportsPluginDiscovery(grokCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(grokCapabilitiesQuery.data),
-    },
-    droid: {
-      plugins: supportsPluginDiscovery(droidCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(droidCapabilitiesQuery.data),
-    },
-    kilo: {
-      plugins: supportsPluginDiscovery(kiloCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(kiloCapabilitiesQuery.data),
-    },
-    opencode: {
-      plugins: supportsPluginDiscovery(openCodeCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(openCodeCapabilitiesQuery.data),
-    },
-    pi: {
-      plugins: supportsPluginDiscovery(piCapabilitiesQuery.data),
-      skills: supportsSkillDiscovery(piCapabilitiesQuery.data),
-    },
-  };
+  const capabilityQueries = useQueries({
+    queries: PROVIDER_KINDS.map((provider) => providerComposerCapabilitiesQueryOptions(provider)),
+  });
+  const providerCapabilities = Object.fromEntries(
+    PROVIDER_KINDS.map((provider, index) => {
+      const capability = capabilityQueries[index]?.data;
+      return [
+        provider,
+        {
+          plugins: supportsPluginDiscovery(capability),
+          skills: supportsSkillDiscovery(capability),
+        },
+      ];
+    }),
+  ) as Record<ProviderKind, ProviderCapabilities>;
 
   // Library discovery stays bound to the Engine the user selected. Unsupported
   // tabs render an accurate unavailable state instead of reading another Engine.

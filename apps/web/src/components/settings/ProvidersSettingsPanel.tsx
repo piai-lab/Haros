@@ -3,13 +3,12 @@
 // Layer: Settings panel
 
 import {
-  PROVIDER_DISPLAY_NAMES,
   type ProviderKind,
   type ServerProviderStatus,
   type ServerSettingsPatch,
   type ServerSettingsView,
 } from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
+import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { deepMerge } from "@omnimind/shared/Struct";
 import {
   closestCenter,

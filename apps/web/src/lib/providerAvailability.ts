@@ -1,8 +1,5 @@
-import {
-  PROVIDER_DISPLAY_NAMES,
-  type ProviderKind,
-  type ServerProviderStatus,
-} from "@omnimind/contracts";
+import { type ProviderKind, type ServerProviderStatus } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 
 export interface ProviderSendAvailability {
   readonly provider: ProviderKind;
@@ -140,9 +137,7 @@ export function isProviderUsable(status: ServerProviderStatus | null | undefined
   return status.available && status.authStatus !== "unauthenticated";
 }
 
-export function providerUnavailableReason(
-  status: ServerProviderStatus | null | undefined,
-): string {
+export function providerUnavailableReason(status: ServerProviderStatus | null | undefined): string {
   if (!status) {
     return "Provider status is still loading.";
   }

@@ -5,18 +5,15 @@
 // Layer: Web UI state utilities
 // Exports: load/save helpers for the confirmed-path record.
 
-import type { ProviderKind } from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
+import { PROVIDER_KINDS, type ProviderKind } from "@omnimind/contracts";
 import { isPlainObject } from "./persistedRecord";
 
 const STORAGE_KEY = "omnimind:confirmed-custom-binary-paths:v1";
 
-const PROVIDER_KINDS: ReadonlySet<ProviderKind> = new Set(
-  PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind),
-);
+const PROVIDER_KIND_SET: ReadonlySet<ProviderKind> = new Set(PROVIDER_KINDS);
 
 function isProviderKind(value: string): value is ProviderKind {
-  return PROVIDER_KINDS.has(value as ProviderKind);
+  return PROVIDER_KIND_SET.has(value as ProviderKind);
 }
 
 export function loadConfirmedCustomBinaryPaths(): Partial<Record<ProviderKind, string>> {

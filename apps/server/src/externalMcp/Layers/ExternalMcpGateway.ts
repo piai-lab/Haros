@@ -20,6 +20,7 @@ import { ProjectionSnapshotQuery } from "../../orchestration/Services/Projection
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
 import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
+import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { AgentGatewayOperationRepository } from "../../agentGateway/Services/AgentGatewayOperationRepository.ts";
 import { makeCreateThreadsHandler } from "../../agentGateway/creationCoordinator.ts";
@@ -155,6 +156,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
   const projectionTurns = yield* ProjectionTurnRepository;
   const providerDiscovery = yield* ProviderDiscoveryService;
   const providerHealth = yield* ProviderHealth;
+  const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
   const settings = yield* ServerSettingsService;
   const orchestrationEngine = yield* OrchestrationEngineService;
   const git = yield* GitCore;
@@ -223,6 +225,7 @@ export const makeExternalMcpGateway = Effect.gen(function* () {
     externalMcpRepository: externalRepository,
     serverConfig,
     loadProviderAvailabilities,
+    getProviderExecutionCapabilities: providerExecutionCapabilities.get,
     requireThreadShell,
   });
 

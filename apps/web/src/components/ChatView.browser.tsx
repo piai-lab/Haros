@@ -13,6 +13,7 @@ import {
   ORCHESTRATION_WS_METHODS,
   type OrchestrationReadModel,
   type ProjectId,
+  type ProviderExecutionCapabilities,
   type ProviderKind,
   type ProviderListCommandsResult,
   type ProviderListModelsResult,
@@ -142,6 +143,9 @@ interface TestFixture {
   gitBranchByCwd: Record<string, string>;
   gitHasWorkingTreeChanges?: boolean;
   providerCommandsByProvider: Partial<Record<ProviderKind, ProviderListCommandsResult>>;
+  providerExecutionCapabilitiesByProvider: Partial<
+    Record<ProviderKind, ProviderExecutionCapabilities>
+  >;
   providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
 }
 
@@ -672,6 +676,7 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
     serverSettings: DEFAULT_SERVER_SETTINGS_VIEW,
     gitBranchByCwd: {},
     providerCommandsByProvider: {},
+    providerExecutionCapabilitiesByProvider: {},
     providerModelsByProvider: {
       codex: {
         source: "browser.fixture",
@@ -1481,6 +1486,30 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       supportsRuntimeModelList: false,
       supportsThreadCompaction: false,
       supportsThreadImport: false,
+    };
+  }
+  if (tag === WS_METHODS.providerGetExecutionCapabilities) {
+    const modelSelection = body.modelSelection as {
+      provider: ProviderKind;
+      model: string;
+      supportsAutoMode?: boolean;
+    };
+    const configured = fixture.providerExecutionCapabilitiesByProvider[modelSelection.provider];
+    if (configured) return configured;
+    const capability = (mode: "full-access" | "auto" | "approval-required") => ({
+      mode,
+      structurallySupported: true,
+      status: "ready" as const,
+    });
+    return {
+      provider: modelSelection.provider,
+      model: modelSelection.model,
+      supportsNativeTurnSteering: false,
+      runtimeModes: {
+        "full-access": capability("full-access"),
+        auto: capability("auto"),
+        "approval-required": capability("approval-required"),
+      },
     };
   }
   if (tag === WS_METHODS.providerListCommands) {
@@ -4912,6 +4941,78 @@ describe("ChatView timeline estimator parity (full app)", () => {
           "approval-required",
         );
       });
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.runtime-mode.set"),
+      ).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps an unsupported persisted access mode visible until the user chooses a replacement", async () => {
+    const baseSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-runtime-unsupported" as MessageId,
+      targetText: "runtime unsupported",
+    });
+    const snapshot: OrchestrationReadModel = {
+      ...baseSnapshot,
+      threads: baseSnapshot.threads.map((thread) => ({
+        ...thread,
+        runtimeMode: "auto",
+        session: null,
+      })),
+    };
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot,
+      configureFixture: (nextFixture) => {
+        nextFixture.providerExecutionCapabilitiesByProvider.codex = {
+          provider: "codex",
+          model: "gpt-5",
+          supportsNativeTurnSteering: true,
+          runtimeModes: {
+            "full-access": {
+              mode: "full-access",
+              structurallySupported: true,
+              status: "ready",
+            },
+            auto: {
+              mode: "auto",
+              structurallySupported: false,
+              status: "unavailable",
+              reason: "mode-unsupported",
+            },
+            "approval-required": {
+              mode: "approval-required",
+              structurallySupported: true,
+              status: "ready",
+            },
+          },
+        };
+      },
+    });
+
+    try {
+      const autoTrigger = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>('button[title^="Approve for me:"]'),
+        "The persisted Auto selection was not preserved in the Composer.",
+      );
+      autoTrigger.click();
+      const autoOption = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>('[data-slot="menu-radio-item"]')).find(
+            (item) => item.textContent?.includes("Approve for me"),
+          ) ?? null,
+        "Unable to find the persisted Auto menu item.",
+      );
+      expect(autoOption.getAttribute("aria-disabled")).toBe("true");
+      expect(autoOption.textContent).toContain("Not supported by this engine and model");
+      expect(useStore.getState().threadShellById?.[THREAD_ID]?.runtimeMode).toBe("auto");
+      expect(
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.runtimeMode ?? null,
+      ).toBeNull();
       expect(
         wsRequests
           .map(readDispatchedCommand)

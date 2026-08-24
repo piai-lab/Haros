@@ -28,7 +28,11 @@ import {
   type ServerProviderStatus,
   type TurnDispatchMode,
 } from "@omnimind/contracts";
-import { runtimeModeEscalatesPrivilege } from "@omnimind/shared/runtimeMode";
+import {
+  isProviderRuntimeModeExecutable,
+  isProviderRuntimeModePermanentlyUnsupported,
+  runtimeModeEscalatesPrivilege,
+} from "@omnimind/shared/runtimeMode";
 import { Effect, Layer, Option } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";
@@ -47,6 +51,7 @@ import { AgentGatewayCredentials } from "../Services/AgentGatewayCredentials.ts"
 import { AgentGatewayOperationRepository } from "../Services/AgentGatewayOperationRepository.ts";
 import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
 import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
+import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import {
   AGENT_GATEWAY_TARGET_OPTIONS_DESCRIPTION,
@@ -133,6 +138,7 @@ export const makeAgentGateway = Effect.gen(function* () {
   const git = yield* GitCore;
   const providerDiscovery = yield* ProviderDiscoveryService;
   const providerHealth = yield* ProviderHealth;
+  const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
   const serverSettings = yield* ServerSettingsService;
   const operationRepository = yield* AgentGatewayOperationRepository;
   const projectionTurns = yield* ProjectionTurnRepository;
@@ -257,6 +263,7 @@ export const makeAgentGateway = Effect.gen(function* () {
     operationRepository,
     serverConfig,
     loadProviderAvailabilities,
+    getProviderExecutionCapabilities: providerExecutionCapabilities.get,
     requireThreadShell,
   });
 
@@ -461,6 +468,19 @@ export const makeAgentGateway = Effect.gen(function* () {
         const caller = yield* requireThreadShell(context.callerThreadId);
         const target = yield* requireThreadShell(threadId);
         yield* assertCallerMayDriveThread(caller, target);
+        const executionCapabilities = yield* providerExecutionCapabilities.get(
+          target.modelSelection,
+        );
+        const runtimeModeCapability = executionCapabilities.runtimeModes[target.runtimeMode];
+        if (!isProviderRuntimeModeExecutable(runtimeModeCapability)) {
+          return yield* Effect.fail(
+            new ToolInputError(
+              isProviderRuntimeModePermanentlyUnsupported(runtimeModeCapability)
+                ? `Thread runtime mode "${target.runtimeMode}" is not supported by its current Engine and model.`
+                : `Thread runtime mode "${target.runtimeMode}" is temporarily unavailable. Check the Engine, sign-in, or version and try again.`,
+            ),
+          );
+        }
         // Pass the requested mode through unchanged: the reactor checks live
         // provider state (authoritative, unlike this projection snapshot) and
         // already downgrades steers whose turn is not actually live.

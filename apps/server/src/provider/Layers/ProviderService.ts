@@ -33,10 +33,6 @@ import {
   type ProviderRuntimeEvent,
   type ProviderSession,
 } from "@omnimind/contracts";
-import {
-  providerSupportsAutoRuntimeMode,
-  unsupportedAutoRuntimeModeMessage,
-} from "@omnimind/shared/runtimeMode";
 import { createHash, randomUUID } from "node:crypto";
 import {
   Cause,
@@ -52,6 +48,7 @@ import {
   Stream,
 } from "effect";
 import { nonEmptyTrimmed } from "@omnimind/shared/text";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
 import { ProviderAdapterProcessError, ProviderValidationError } from "../Errors.ts";
 import { ProviderAdapterRegistry } from "../Services/ProviderAdapterRegistry.ts";
@@ -112,17 +109,17 @@ const PROVIDER_RUNTIME_IDLE_STOP_MS = Number.isFinite(Number(configuredProviderR
   : DEFAULT_PROVIDER_RUNTIME_IDLE_STOP_MS;
 const MAX_TARGETED_CHILD_INTERRUPT_TOMBSTONES = 16_384;
 
-function validateAutoRuntimeMode(
+function validateRuntimeModeStructure(
   operation: string,
   provider: ProviderSession["provider"],
   runtimeMode: ProviderSession["runtimeMode"],
 ) {
-  return runtimeMode !== "auto" || providerSupportsAutoRuntimeMode(provider)
+  return providerExecutionStructure(provider).supportedRuntimeModes.has(runtimeMode)
     ? Effect.void
     : Effect.fail(
         new ProviderValidationError({
           operation,
-          issue: unsupportedAutoRuntimeModeMessage(provider),
+          issue: "The selected runtime mode is not supported by this Provider.",
         }),
       );
 }
@@ -1717,7 +1714,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
               persistedWorkSurface === "agent"
                 ? readPersistedProjectContextRoot(binding.runtimePayload)
                 : undefined;
-            yield* validateAutoRuntimeMode(
+            yield* validateRuntimeModeStructure(
               input.operation,
               binding.provider,
               binding.runtimeMode ?? "full-access",
@@ -1985,7 +1982,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           threadId,
           provider: parsed.provider ?? "codex",
         };
-        yield* validateAutoRuntimeMode(
+        yield* validateRuntimeModeStructure(
           "ProviderService.startSession",
           input.provider,
           input.runtimeMode,
@@ -2604,7 +2601,7 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           input.providerOptions ?? readPersistedProviderOptions(sourceBinding.runtimePayload);
         const sourceCwd = readPersistedCwd(sourceBinding.runtimePayload);
         const targetCwd = input.cwd ?? sourceCwd;
-        yield* validateAutoRuntimeMode(
+        yield* validateRuntimeModeStructure(
           "ProviderService.forkThread",
           sourceBinding.provider,
           input.runtimeMode,

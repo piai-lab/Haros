@@ -83,7 +83,7 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
     });
   });
 
-  it("downgrades an Auto automation when refreshed capability is unavailable", () => {
+  it("preserves an Auto automation when refreshed capability is unavailable", () => {
     const form = {
       ...formFromDefinition(null, "project-1"),
       modelSelection: {
@@ -100,7 +100,7 @@ describe("reconcileAutomationFormAutoModeSupport", () => {
         model: "sonnet",
         supportsAutoMode: false,
       },
-      runtimeMode: "approval-required",
+      runtimeMode: "auto",
     });
   });
 });

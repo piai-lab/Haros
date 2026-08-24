@@ -17,7 +17,7 @@ import type {
   ServerProviderStatusState,
   ServerProviderUpdateState,
 } from "@omnimind/contracts";
-import { ServerProviderUpdateError } from "@omnimind/contracts";
+import { PROVIDER_KINDS, ServerProviderUpdateError } from "@omnimind/contracts";
 import { parseCodexConfigModelProvider } from "@omnimind/shared/codexConfig";
 import { decodeJsonResult } from "@omnimind/shared/schemaJson";
 import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
@@ -129,18 +129,7 @@ type ProviderStatuses = ReadonlyArray<ServerProviderStatus>;
 const DISABLED_PROVIDER_STATUS_MESSAGE = "Provider is disabled in OmniMind settings.";
 const MINIMUM_ANTIGRAVITY_CLI_VERSION = "1.0.12";
 
-const PROVIDERS = [
-  OMNIMIND_AGENT_PROVIDER,
-  CODEX_PROVIDER,
-  CLAUDE_AGENT_PROVIDER,
-  CURSOR_PROVIDER,
-  ANTIGRAVITY_PROVIDER,
-  GROK_PROVIDER,
-  DROID_PROVIDER,
-  KILO_PROVIDER,
-  OPENCODE_PROVIDER,
-  PI_PROVIDER,
-] as const satisfies ReadonlyArray<ProviderKind>;
+const PROVIDERS = PROVIDER_KINDS;
 
 const providerChildKind = (provider: ProviderKind): ProviderChildKind =>
   provider === CLAUDE_AGENT_PROVIDER

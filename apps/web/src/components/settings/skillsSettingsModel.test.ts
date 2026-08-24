@@ -2,13 +2,19 @@
 // Purpose: Locks down Settings -> Skills grouping for duplicate provider skill copies.
 // Layer: Web settings logic tests
 
-import type { ProviderSkillDescriptor } from "@omnimind/contracts";
+import {
+  PROVIDER_KINDS,
+  type ProviderSkillDescriptor,
+} from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { describe, expect, it } from "vitest";
 
 import {
   buildSettingsSkillGroups,
   buildSettingsSkillSections,
   isOmniMindSkillSource,
+  ORIGIN_SECTION_ORDER,
+  skillOriginInfo,
 } from "./skillsSettingsModel";
 
 function skill(partial: Partial<ProviderSkillDescriptor>): ProviderSkillDescriptor {
@@ -108,5 +114,24 @@ describe("buildSettingsSkillSections", () => {
 
     expect(sections.map((section) => section.title)).toEqual(["Shared skills", "From Cursor"]);
     expect(sections[0]?.groups.map((group) => group.key)).toEqual(["logic-consolidator"]);
+  });
+});
+
+describe("Settings skill Provider projection", () => {
+  it("derives Provider-backed origins from canonical identity instead of a second member list", () => {
+    const providerOrigins = ORIGIN_SECTION_ORDER.slice(0, PROVIDER_KINDS.length);
+    expect(providerOrigins).toEqual(
+      PROVIDER_KINDS.map((provider) => (provider === "claudeAgent" ? "claude" : provider)),
+    );
+
+    for (const provider of PROVIDER_KINDS) {
+      const origin = provider === "claudeAgent" ? "claude" : provider;
+      const info = skillOriginInfo(origin);
+      if (provider === "omnimind") {
+        expect(info).toEqual({ label: "OmniMind", provider: null });
+      } else {
+        expect(info).toEqual({ label: PROVIDER_DISPLAY_NAMES[provider], provider });
+      }
+    }
   });
 });

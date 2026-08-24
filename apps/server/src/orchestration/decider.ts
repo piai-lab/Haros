@@ -26,8 +26,7 @@ import {
 } from "@omnimind/shared/threadWorkspace";
 import { doThreadMarkerRangesOverlap } from "@omnimind/shared/threadMarkers";
 import { collectSubagentDescendants } from "@omnimind/shared/threadHierarchy";
-import { autoRuntimeModeSelectionIssue } from "@omnimind/shared/runtimeMode";
-import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
+import { providerExecutionStructure } from "../provider/providerExecutionStructure.ts";
 import {
   collectTailTurnIds,
   resolveTailUserMessageEditTarget,
@@ -73,12 +72,21 @@ const STUDIO_PROJECT_KIND_SET = new Set<ProjectKind>(["studio"]);
 // use placeholder roots (e.g. the home dir) that legitimately coexist with real projects.
 const WORKSPACE_OWNING_PROJECT_KIND_SET = new Set<ProjectKind>(["project", "studio"]);
 
-function validateAutoRuntimeMode(
+function validateStructuralRuntimeMode(
   command: OrchestrationCommand,
   modelSelection: OrchestrationThread["modelSelection"],
   runtimeMode: OrchestrationThread["runtimeMode"],
 ) {
-  const issue = autoRuntimeModeSelectionIssue({ runtimeMode, modelSelection });
+  const structure = providerExecutionStructure(modelSelection.provider);
+  const issue = !structure.supportedRuntimeModes.has(runtimeMode)
+    ? `The selected runtime mode is not supported by this Provider.`
+    : runtimeMode === "auto" &&
+        modelSelection.provider === "claudeAgent" &&
+        modelSelection.supportsAutoMode !== true
+      ? modelSelection.supportsAutoMode === false
+        ? `The selected model does not support Auto mode.`
+        : `The selected model has not been verified to support Auto mode.`
+      : null;
   return issue === null
     ? Effect.void
     : Effect.fail(
@@ -661,11 +669,18 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
   command,
   readModel,
   workspacePaths,
+  turnAdmissionCapabilities,
 }: {
   readonly command: OrchestrationCommand;
   readonly readModel: OrchestrationReadModel;
   /** Reserved container roots; when provided, space assignment rejects legacy chat containers. */
   readonly workspacePaths?: SpaceAssignmentWorkspacePaths | undefined;
+  readonly turnAdmissionCapabilities?:
+    | {
+        readonly provider: OrchestrationThread["modelSelection"]["provider"];
+        readonly supportsNativeTurnSteering: boolean;
+      }
+    | undefined;
 }): Effect.fn.Return<
   Omit<OrchestrationEvent, "sequence"> | ReadonlyArray<Omit<OrchestrationEvent, "sequence">>,
   OrchestrationCommandInvariantError
@@ -1052,7 +1067,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       // check can only reject the projection (and durably poison the runtime
       // journal replaying it), never prevent an unverified Auto session.
       if (command.creationSource !== "provider_native") {
-        yield* validateAutoRuntimeMode(command, command.modelSelection, command.runtimeMode);
+        yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
       }
       return {
         ...withEventBase({
@@ -1112,7 +1127,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      yield* validateAutoRuntimeMode(command, command.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
 
       const sourceThread = yield* requireThread({
         readModel,
@@ -1217,7 +1232,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      yield* validateAutoRuntimeMode(command, command.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
 
       const sourceThread = yield* requireThread({
         readModel,
@@ -1446,11 +1461,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           requireSpace({ readModel, command, spaceId }),
         );
       }
-      // Provider-native threads: see thread.create — the selection mirrors the
-      // provider's own subagent, so the Auto-mode capability check doesn't apply.
-      if (command.modelSelection !== undefined && thread.creationSource !== "provider_native") {
-        yield* validateAutoRuntimeMode(command, command.modelSelection, thread.runtimeMode);
-      }
+      // A persisted runtime-mode selection is Product State, not a capability
+      // cache. A model/Engine change may make it temporarily or permanently
+      // unavailable, but must not silently rewrite or reject that persisted
+      // choice. Turn admission and an explicit runtime-mode mutation revalidate
+      // executability against the loaded capability projection.
       const occurredAt = nowIso();
       return {
         ...withEventBase({
@@ -1793,7 +1808,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      yield* validateAutoRuntimeMode(command, thread.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, thread.modelSelection, command.runtimeMode);
       const occurredAt = nowIso();
       return {
         ...withEventBase({
@@ -1849,7 +1864,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       }
       const sourceProposedPlan = command.sourceProposedPlan;
       const admittedModelSelection = command.modelSelection ?? targetThread.modelSelection;
-      yield* validateAutoRuntimeMode(command, admittedModelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, admittedModelSelection, command.runtimeMode);
       const sourceThread = sourceProposedPlan
         ? yield* requireThread({
             readModel,
@@ -1904,7 +1919,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           updatedAt: command.createdAt,
         },
       };
-      const turnRequestPayload = {
+      const turnRequestPayloadBase = {
         threadId: command.threadId,
         messageId: command.message.messageId,
         modelSelection: admittedModelSelection,
@@ -1932,6 +1947,19 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         requestedRuntimeMode: command.runtimeMode,
         requestedInteractionMode: command.interactionMode,
       });
+      const supportsNativeTurnSteering =
+        turnAdmissionCapabilities?.provider === activeProvider &&
+        turnAdmissionCapabilities.supportsNativeTurnSteering;
+      const steeringDisposition =
+        dispatchMode === "steer" && isThreadRunning
+          ? supportsNativeTurnSteering && admittedBindingMatchesCurrent
+            ? ("native" as const)
+            : ("queue-interrupt-redispatch" as const)
+          : undefined;
+      const turnRequestPayload = {
+        ...turnRequestPayloadBase,
+        ...(steeringDisposition !== undefined ? { steeringDisposition } : {}),
+      };
       // Subagent threads never queue: their messages steer the running child task
       // through the parent session, so deferring until the turn settles would
       // deliver the message only after the subagent already finished.
@@ -1940,9 +1968,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
       const shouldQueue =
         targetThread.parentThreadId === null &&
         isThreadRunning &&
-        (dispatchMode === "queue" ||
-          !admittedBindingMatchesCurrent ||
-          !providerSupportsNativeTurnSteering(activeProvider));
+        (dispatchMode === "queue" || !admittedBindingMatchesCurrent || !supportsNativeTurnSteering);
       const queuedEvent: Omit<OrchestrationEvent, "sequence"> = {
         ...withEventBase({
           aggregateKind: "thread",
@@ -1996,7 +2022,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           detail: "Queued turn promotion is missing its admission-time model selection.",
         });
       }
-      yield* validateAutoRuntimeMode(command, command.modelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, command.modelSelection, command.runtimeMode);
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -2301,7 +2327,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         });
       }
       const admittedModelSelection = command.modelSelection ?? thread.modelSelection;
-      yield* validateAutoRuntimeMode(command, admittedModelSelection, command.runtimeMode);
+      yield* validateStructuralRuntimeMode(command, admittedModelSelection, command.runtimeMode);
       const editTarget = resolveTailUserMessageEditTarget({
         messages: thread.messages,
         messageId: command.messageId,
@@ -2421,7 +2447,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
             detail: "Committed runtime mode must match the provider Session.",
           });
         }
-        yield* validateAutoRuntimeMode(
+        yield* validateStructuralRuntimeMode(
           command,
           command.binding.modelSelection,
           command.binding.runtimeMode,

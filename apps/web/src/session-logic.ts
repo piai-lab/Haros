@@ -49,11 +49,9 @@ export type ProviderPickerKind = ProviderKind;
 export const PROVIDER_OPTIONS: Array<{
   value: ProviderPickerKind;
   label: string;
-  available: boolean;
 }> = PROVIDER_DESCRIPTORS.map((descriptor) => ({
   value: descriptor.kind,
   label: descriptor.displayName,
-  available: descriptor.available,
 }));
 
 export interface ActiveTaskListState {

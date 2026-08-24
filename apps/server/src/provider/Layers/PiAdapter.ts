@@ -25,7 +25,6 @@ import {
   type BuiltInToolGroupId,
   type ChatAttachment,
   EventId,
-  type ProviderComposerCapabilities,
   type ProviderListCommandsResult,
   type ProviderListModelsResult,
   type ProviderListSkillsResult,
@@ -133,6 +132,7 @@ import {
 } from "../omnimindAgentRuntime.ts";
 import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntimeMutation.ts";
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -4138,19 +4138,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           }),
       });
 
-    const getComposerCapabilities: NonNullable<PiAdapterShape["getComposerCapabilities"]> = () =>
-      Effect.succeed({
-        provider: provider,
-        supportsSkillMentions: true,
-        supportsSkillDiscovery: true,
-        supportsNativeSlashCommandDiscovery: true,
-        supportsPluginMentions: false,
-        supportsPluginDiscovery: false,
-        supportsRuntimeModelList: true,
-        supportsThreadCompaction: true,
-        supportsThreadImport: false,
-      } satisfies ProviderComposerCapabilities);
-
     yield* Effect.addFinalizer(() =>
       stopAll().pipe(
         Effect.orDie,
@@ -4167,6 +4154,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     return {
       provider: provider,
       capabilities: {
+        ...providerExecutionStructure(provider),
         sessionModelSwitch: "in-session",
         supportsSkillMentions: true,
         supportsSkillDiscovery: true,
@@ -4174,7 +4162,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         supportsPluginMentions: false,
         supportsPluginDiscovery: false,
         supportsRuntimeModelList: true,
-        supportsTurnSteering: true,
+        supportsThreadCompaction: true,
+        supportsThreadImport: false,
       },
       startSession,
       sendTurn,
@@ -4193,7 +4182,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       listModels,
       listSkills,
       listCommands,
-      getComposerCapabilities,
       get streamEvents() {
         return Stream.fromQueue(runtimeEventQueue);
       },
