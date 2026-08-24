@@ -12,18 +12,10 @@ import {
   normalizeComposerSlashCommandName,
   type BuiltInComposerSlashCommand,
 } from "@omnimind/shared/composerSlashCommands";
-import { rankProviderDiscoveryItems } from "./lib/providerDiscovery";
 
 export { BUILT_IN_COMPOSER_SLASH_COMMANDS };
 
 export type ComposerSlashCommand = BuiltInComposerSlashCommand;
-
-export interface ComposerSlashCommandDefinition {
-  command: ComposerSlashCommand;
-  label: `/${ComposerSlashCommand}`;
-  description: string;
-  source: "app" | "shared";
-}
 
 export interface ComposerSlashInvocation {
   command: ComposerSlashCommand;
@@ -155,108 +147,6 @@ export function getProviderNativeSlashCommandSearchTerms(
   return [normalizedCommand, ...getProviderNativeSlashCommandAliases(provider, normalizedCommand)];
 }
 
-const COMPOSER_SLASH_COMMAND_DEFINITIONS: Record<
-  ComposerSlashCommand,
-  ComposerSlashCommandDefinition
-> = {
-  clear: {
-    command: "clear",
-    label: "/clear",
-    description: "Start a fresh thread and clear the current conversation context",
-    source: "shared",
-  },
-  compact: {
-    command: "compact",
-    label: "/compact",
-    description: "Compact the current thread context to free space",
-    source: "app",
-  },
-  model: {
-    command: "model",
-    label: "/model",
-    description: "Switch response model for this thread",
-    source: "shared",
-  },
-  plan: {
-    command: "plan",
-    label: "/plan",
-    description: "Switch this thread into plan mode",
-    source: "app",
-  },
-  default: {
-    command: "default",
-    label: "/default",
-    description: "Switch this thread back to normal chat mode",
-    source: "app",
-  },
-  debug: {
-    command: "debug",
-    label: "/debug",
-    description: "Switch this thread into evidence-first debug mode",
-    source: "app",
-  },
-  review: {
-    command: "review",
-    label: "/review",
-    description: "Start a code review for current changes",
-    source: "app",
-  },
-  fork: {
-    command: "fork",
-    label: "/fork",
-    description: "Fork this thread into local or a new worktree",
-    source: "app",
-  },
-  side: {
-    command: "side",
-    label: "/side",
-    description: "Open a guarded Side from this thread, optionally on another provider",
-    source: "app",
-  },
-  status: {
-    command: "status",
-    label: "/status",
-    description: "Show context usage and rate-limit status",
-    source: "app",
-  },
-  goal: {
-    command: "goal",
-    label: "/goal",
-    description: "Set, edit, pause, resume, or clear this thread's persistent goal",
-    source: "app",
-  },
-  subagents: {
-    command: "subagents",
-    label: "/subagents",
-    description: "Insert a prompt that asks the assistant to delegate work",
-    source: "app",
-  },
-  fast: {
-    command: "fast",
-    label: "/fast",
-    description: "Turn fast mode on or off for this thread",
-    source: "app",
-  },
-  export: {
-    command: "export",
-    label: "/export",
-    description: "Download this thread as a ZIP archive (thread.json + transcript.md)",
-    source: "app",
-  },
-  feedback: {
-    command: "feedback",
-    label: "/feedback",
-    description: "Send feedback to the OmniMind team",
-    source: "app",
-  },
-  automation: {
-    command: "automation",
-    label: "/automation",
-    description: "Create a scheduled automation from this prompt",
-    source: "app",
-  },
-};
-
 export function isBuiltInComposerSlashCommand(value: string): value is ComposerSlashCommand {
   return isBuiltInComposerSlashCommandName(value);
 }
@@ -281,22 +171,6 @@ export function parseComposerSlashInvocationForCommands(
     command: command as ComposerSlashCommand,
     args: (match[2] ?? "").trim(),
   };
-}
-
-export function filterComposerSlashCommands(
-  query: string,
-  commands: ReadonlyArray<ComposerSlashCommand> = BUILT_IN_COMPOSER_SLASH_COMMANDS,
-): ComposerSlashCommandDefinition[] {
-  const matches = rankProviderDiscoveryItems(commands, query, (command) => {
-    const definition = COMPOSER_SLASH_COMMAND_DEFINITIONS[command];
-    return [
-      { value: command },
-      { value: definition.label.slice(1) },
-      { value: definition.description, weight: 200 },
-    ];
-  });
-
-  return matches.map((command) => COMPOSER_SLASH_COMMAND_DEFINITIONS[command]);
 }
 
 function hasMeaningfulComposerText(prompt: string): boolean {

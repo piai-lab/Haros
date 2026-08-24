@@ -23,11 +23,14 @@ import {
 import { basenameOfPath } from "../file-icons";
 import type { ComposerTrigger } from "../composer-logic";
 import {
-  filterComposerSlashCommands,
   getAvailableComposerSlashCommands,
   getProviderNativeSlashCommandSearchTerms,
   shouldHideProviderNativeCommandFromComposerMenu,
 } from "../composerSlashCommands";
+import {
+  filterBuiltInComposerSlashCommands,
+  resolveBuiltInComposerSlashCommandPresentation,
+} from "../composerSlashCommandPresentation";
 import { threadMentionPathForThreadId } from "@omnimind/shared/threadMentions";
 
 import type { ComposerCommandItem } from "../components/chat/ComposerCommandMenu";
@@ -400,37 +403,20 @@ export function useComposerCommandMenuItems(input: {
       ? availableCommands.filter((command) => surfaceAppSlashCommands.has(command))
       : availableCommands;
     const visibleAppCommandSet = new Set(visibleAppCommands);
-    const builtInItems = filterComposerSlashCommands(composerTrigger.query, visibleAppCommands).map(
-      (definition) => ({
-        id: `slash:${definition.command}`,
+    const builtInItems = filterBuiltInComposerSlashCommands(
+      composerTrigger.query,
+      visibleAppCommands,
+      t,
+    ).map((command) => {
+      const presentation = resolveBuiltInComposerSlashCommandPresentation(command, t);
+      return {
+        id: `slash:${command}`,
         type: "slash-command" as const,
-        command: definition.command,
-        label: definition.label,
-        description: t(
-          (
-            {
-              clear: "composer.command.clearDescription",
-              compact: "composer.command.compactDescription",
-              model: "composer.command.modelDescription",
-              plan: "composer.command.planDescription",
-              default: "composer.command.defaultDescription",
-              debug: "composer.command.debugDescription",
-              goal: "composer.command.goalDescription",
-              review: "composer.command.reviewDescription",
-              fork: "composer.command.forkDescription",
-              side: "composer.command.sideDescription",
-              status: "composer.command.statusDescription",
-              subagents: "composer.command.subagentsDescription",
-              fast: "composer.command.fastDescription",
-              export: "composer.command.exportDescription",
-              feedback: "composer.command.feedbackDescription",
-              automation: "composer.command.automationDescription",
-            } as const
-          )[definition.command],
-        ),
-        source: definition.source,
-      }),
-    );
+        command,
+        label: `/${command}`,
+        description: presentation.description,
+      };
+    });
     const providerCommandItems = providerNativeCommands
       .filter(
         (command) =>
