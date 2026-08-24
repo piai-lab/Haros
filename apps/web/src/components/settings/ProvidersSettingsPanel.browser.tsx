@@ -389,7 +389,7 @@ describe("ProvidersSettingsPanel provider update feedback", () => {
     await screen
       .getByRole("textbox", { name: "Search settings" })
       .fill("independent engine models");
-    await screen.getByRole("button", { name: "Independent engine models" }).click();
+    await screen.getByRole("button", { name: "Engine details" }).click();
 
     await expect.poll(() => document.getElementById(SETTINGS_TARGETS.engineDetails)).toBeTruthy();
     await expect.poll(() => scrollIntoView).toHaveBeenCalled();

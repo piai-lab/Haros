@@ -10,13 +10,14 @@ import type {
   OmniMindWebSearchWorkflow,
 } from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { resolveAndPersistPreferredEditor } from "~/editorPreferences";
 import { useI18n } from "~/i18n";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { ArrowLeftIcon, CopyIcon, EyeIcon, PlusIcon, WebSearchIcon } from "~/lib/icons";
 import { ensureNativeApi } from "~/nativeApi";
+import { WEB_SEARCH_SETTINGS_SEARCH } from "~/settingsMetadata/webSearchSettings";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -56,13 +57,17 @@ type ProbeRun = {
 };
 type SettingsFailure = "load" | "save" | "open-config";
 
+const OVERVIEW_VIEW: View = { kind: "overview" };
+const WEB_SEARCH_OVERVIEW_TARGETS = new Set<string>(
+  Object.values(WEB_SEARCH_SETTINGS_SEARCH).map((record) => record.target),
+);
+
 export function webSearchProviderFieldAccessibleLabel(
   providerName: string,
   localizedFieldLabel: string,
 ): string {
   return `${providerName} · ${localizedFieldLabel}`;
 }
-
 const workflowOptions: readonly OmniMindWebSearchWorkflow[] = [
   "auto-summary",
   "summary-review",
@@ -127,14 +132,22 @@ function ProviderMark({
   );
 }
 
-export function WebSearchSettingsPanel({ active }: { readonly active: boolean }) {
+export function WebSearchSettingsPanel({
+  active,
+  activeTarget,
+  onTargetInvalidated,
+}: {
+  readonly active: boolean;
+  readonly activeTarget: string | null;
+  readonly onTargetInvalidated: () => void;
+}) {
   const { t } = useI18n();
   const configQuery = useQuery(serverConfigQueryOptions());
   const [readResult, setReadResult] = useState<OmniMindWebSearchReadResult | null>(null);
   const [base, setBase] = useState<ReadySnapshot | null>(null);
   const [draft, setDraft] = useState<DraftState | null>(null);
   const [conflict, setConflict] = useState<ReadySnapshot | null>(null);
-  const [view, setView] = useState<View>({ kind: "overview" });
+  const [view, setView] = useState<View>(OVERVIEW_VIEW);
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<"loading" | "saving" | "opening" | null>(null);
   const [probeRun, setProbeRun] = useState<ProbeRun | null>(null);
@@ -148,6 +161,30 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
   } | null>(null);
   const [geminiDiagnosticFailed, setGeminiDiagnosticFailed] = useState(false);
   const probeRequestRef = useRef<Promise<void> | null>(null);
+  const statusAndFilesRef = useRef<HTMLDetailsElement | null>(null);
+
+  const targetRequestsOverview =
+    active && activeTarget !== null && WEB_SEARCH_OVERVIEW_TARGETS.has(activeTarget);
+  const renderedView = targetRequestsOverview ? OVERVIEW_VIEW : view;
+
+  useEffect(() => {
+    if (!targetRequestsOverview) return;
+    setView((current) => (current.kind === "overview" ? current : OVERVIEW_VIEW));
+  }, [activeTarget, targetRequestsOverview]);
+
+  useLayoutEffect(() => {
+    if (active && activeTarget === WEB_SEARCH_SETTINGS_SEARCH.configFile.target) {
+      statusAndFilesRef.current?.setAttribute("open", "");
+    }
+  }, [active, activeTarget]);
+
+  const showView = useCallback(
+    (next: View) => {
+      if (next.kind !== "overview") onTargetInvalidated();
+      setView(next);
+    },
+    [onTargetInvalidated],
+  );
 
   const cleanDraft = useMemo(() => (base ? draftFrom(base) : null), [base]);
   const dirty = !sameDraft(draft, cleanDraft);
@@ -400,8 +437,8 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
   }
   if (!base || !draft) return null;
 
-  const selectedProvider = view.kind === "detail"
-    ? base.providers.find((provider) => provider.id === view.providerId) ?? null
+  const selectedProvider = renderedView.kind === "detail"
+    ? base.providers.find((provider) => provider.id === renderedView.providerId) ?? null
     : null;
   const filteredProviders = base.providers.filter((provider) =>
     `${provider.displayName} ${provider.id}`.toLowerCase().includes(query.trim().toLowerCase()),
@@ -475,7 +512,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     </div>
   ) : null;
 
-  if (view.kind === "add") {
+  if (renderedView.kind === "add") {
     const selectedIds = new Set(
       (Array.isArray(draft.provider) ? draft.provider : [draft.provider])
         .filter((id) => id !== "auto" && id !== "all"),
@@ -531,7 +568,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
                         <Button
                           size="xs"
                           variant="outline"
-                          onClick={() => setView({ kind: "detail", providerId: provider.id })}
+                          onClick={() => showView({ kind: "detail", providerId: provider.id })}
                         >
                           {providerActionLabel(provider)}
                         </Button>
@@ -550,7 +587,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
     );
   }
 
-  if (view.kind === "detail" && selectedProvider) {
+  if (renderedView.kind === "detail" && selectedProvider) {
     const testingThis = probeRun?.target === selectedProvider.id && probeRun.status === "pending";
     const providerProbe =
       probeRun?.target === selectedProvider.id && probeRun.status === "settled"
@@ -698,6 +735,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           }
         />
         <SettingsRow
+          anchorId={WEB_SEARCH_SETTINGS_SEARCH.routing.target}
           title={t("settings.webSearch.routing")}
           description={t("settings.webSearch.routingDescription")}
           control={
@@ -727,6 +765,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
           }
         />
         <SettingsRow
+          anchorId={WEB_SEARCH_SETTINGS_SEARCH.workflow.target}
           title={t("settings.webSearch.workflow")}
           description={t("settings.webSearch.workflowDescription")}
           control={
@@ -762,7 +801,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
 
       <SettingsSectionShell
         title={t("settings.webSearch.providers")}
-        action={<Button size="xs" variant="outline" onClick={() => setView({ kind: "add" })}><PlusIcon className="size-3.5" />{t("settings.webSearch.addProvider")}</Button>}
+        action={<Button size="xs" variant="outline" onClick={() => showView({ kind: "add" })}><PlusIcon className="size-3.5" />{t("settings.webSearch.addProvider")}</Button>}
       >
         {configuredProviders.length > 0 ? (
           <SettingsCard>
@@ -780,7 +819,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
                   <Button
                     size="xs"
                     variant="outline"
-                    onClick={() => setView({ kind: "detail", providerId: provider.id })}
+                    onClick={() => showView({ kind: "detail", providerId: provider.id })}
                   >
                     {providerActionLabel(provider)}
                   </Button>
@@ -793,7 +832,18 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
         )}
       </SettingsSectionShell>
 
-      <details className="rounded-xl border border-border/70 bg-background/40 px-3 py-2">
+      <details
+        ref={statusAndFilesRef}
+        className="rounded-xl border border-border/70 bg-background/40 px-3 py-2"
+        onToggle={(event) => {
+          if (
+            !event.currentTarget.open &&
+            activeTarget === WEB_SEARCH_SETTINGS_SEARCH.configFile.target
+          ) {
+            onTargetInvalidated();
+          }
+        }}
+      >
         <summary className="cursor-pointer select-none text-xs font-medium text-foreground">
           {t("settings.webSearch.statusAndFiles")}
         </summary>
@@ -825,6 +875,7 @@ export function WebSearchSettingsPanel({ active }: { readonly active: boolean })
               status={toolStatus(base.tools.getSearchContent.enabled)}
             />
             <SettingsRow
+              anchorId={WEB_SEARCH_SETTINGS_SEARCH.configFile.target}
               title={t("settings.webSearch.configFile")}
               description={t("settings.webSearch.configFileDescription")}
               control={

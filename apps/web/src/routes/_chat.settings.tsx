@@ -11,7 +11,7 @@ import {
 import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useSearch } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   type AppSettings,
@@ -97,7 +97,7 @@ import { useTheme } from "../hooks/useTheme";
 import { isUiDensity } from "../lib/appDensity";
 import { isChatWidthMode, type ChatWidthMode } from "../lib/chatWidth";
 import { isElectron } from "../env";
-import { useI18n, type MessageKey } from "../i18n";
+import { useI18n } from "../i18n";
 import { RotateCcwIcon } from "../lib/icons";
 import {
   cn,
@@ -111,58 +111,20 @@ import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 import { sameProviderOrder } from "../providerOrdering";
 import {
   normalizeSettingsSection,
-  SETTINGS_NAV_ITEMS,
+  SETTINGS_SECTION_BY_ID,
   SETTINGS_TARGETS,
-  settingRowAnchorId,
 } from "../settingsNavigation";
+import {
+  APPEARANCE_SETTINGS_SEARCH,
+  BEHAVIOR_SETTINGS_SEARCH,
+  GENERAL_SETTINGS_SEARCH,
+} from "../settingsMetadata/coreSettings";
 import { SETTINGS_PAGE_BACKGROUND_CLASS_NAME } from "../settingsPanelStyles";
 
 // ── Settings taxonomy ──────────────────────────────────────────────────────
 
 const PROVIDER_SELECT_OPTIONS = PROVIDER_DESCRIPTORS.map((descriptor) => descriptor.kind);
 const GIT_WRITING_DISCOVERY_PROVIDERS = ["codex", "kilo", "opencode"] as const;
-
-const SETTINGS_SECTION_LABEL_KEY = {
-  general: "settings.general",
-  profile: "settings.profile",
-  appearance: "settings.appearance",
-  notifications: "settings.notifications",
-  behavior: "settings.behavior",
-  appsnap: "settings.appsnap",
-  shortcuts: "settings.shortcuts",
-  worktrees: "settings.worktrees",
-  archived: "settings.archived",
-  models: "settings.models",
-  "web-search": "settings.webSearch",
-  providers: "settings.providers",
-  skills: "settings.skills",
-  prompts: "settings.prompts",
-  usage: "settings.usage",
-  "built-in-tools": "settings.builtInTools",
-  integrations: "settings.integrations",
-  advanced: "settings.advanced",
-} as const satisfies Record<(typeof SETTINGS_NAV_ITEMS)[number]["id"], MessageKey>;
-
-const SETTINGS_SECTION_DESCRIPTION_KEY = {
-  general: "settings.generalDescription",
-  profile: "settings.profileDescription",
-  appearance: "settings.appearanceDescription",
-  notifications: "settings.notificationsDescription",
-  behavior: "settings.behaviorDescription",
-  appsnap: "settings.appsnapDescription",
-  shortcuts: "settings.shortcutsDescription",
-  worktrees: "settings.worktreesDescription",
-  archived: "settings.archivedDescription",
-  models: "settings.modelsDescription",
-  "web-search": "settings.webSearchDescription",
-  providers: "settings.providersDescription",
-  skills: "settings.skillsDescription",
-  prompts: "settings.promptsDescription",
-  usage: "settings.usagePanelDescription",
-  "built-in-tools": "settings.builtInToolsDescription",
-  integrations: "settings.integrationsDescription",
-  advanced: "settings.advancedDescription",
-} as const satisfies Record<(typeof SETTINGS_NAV_ITEMS)[number]["id"], MessageKey>;
 
 // ── Settings UI primitives ────────────────────────────────────────────────
 
@@ -181,6 +143,7 @@ type BooleanSettingKey = {
 // ── Route screen ───────────────────────────────────────────────────────────
 
 function SettingsRouteView() {
+  const navigate = useNavigate();
   const routeSearch = useSearch({ strict: false }) as Record<string, unknown>;
   const activeSection = normalizeSettingsSection(routeSearch.section);
   const settingsTarget = typeof routeSearch.target === "string" ? routeSearch.target : null;
@@ -195,6 +158,7 @@ function SettingsRouteView() {
   } = useTheme();
   const { settings, defaults, updateSettings, resetSettings } = useAppSettings();
   const { t } = useI18n();
+  const activeSectionDescriptor = SETTINGS_SECTION_BY_ID.get(activeSection);
   const currentGitTextGenerationProvider = settings.textGenerationProvider ?? "codex";
   const currentGitTextGenerationModel =
     settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL;
@@ -477,15 +441,17 @@ function SettingsRouteView() {
   // their own markup instead of using this helper.
   const renderBooleanSettingRow = (config: {
     settingKey: BooleanSettingKey;
+    anchorId?: string;
     title: string;
     description: string;
     resetLabel: string;
     ariaLabel: string;
   }) => {
-    const { settingKey, title, description, resetLabel, ariaLabel } = config;
+    const { settingKey, anchorId, title, description, resetLabel, ariaLabel } = config;
     const isChanged = settings[settingKey] !== defaults[settingKey];
     return (
       <SettingsRow
+        {...(anchorId ? { anchorId } : {})}
         title={title}
         description={description}
         resetAction={
@@ -563,6 +529,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={GENERAL_SETTINGS_SEARCH.defaultProvider.target}
           title={t("settings.defaultProvider")}
           description={t("settings.defaultProviderDescription")}
           resetAction={
@@ -601,6 +568,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={GENERAL_SETTINGS_SEARCH.newThreads.target}
           title={t("settings.newThreads")}
           description={t("settings.newThreadsDescription")}
           resetAction={
@@ -644,6 +612,7 @@ function SettingsRouteView() {
 
       <SettingsSection title={t("settings.sidebarOrganization")}>
         <SettingsRow
+          anchorId={GENERAL_SETTINGS_SEARCH.projectOrder.target}
           title={t("settings.projectOrder")}
           description={t("settings.projectOrderDescription")}
           resetAction={
@@ -690,6 +659,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={GENERAL_SETTINGS_SEARCH.threadOrder.target}
           title={t("settings.threadOrder")}
           description={t("settings.threadOrderDescription")}
           resetAction={
@@ -734,6 +704,7 @@ function SettingsRouteView() {
       <SettingsSection title={t("settings.sidebarSections")}>
         {renderBooleanSettingRow({
           settingKey: "showStudioSection",
+          anchorId: GENERAL_SETTINGS_SEARCH.studioSection.target,
           title: t("nav.studio"),
           description: t("settings.studioSurfaceDescription"),
           resetLabel: t("nav.studio"),
@@ -745,6 +716,7 @@ function SettingsRouteView() {
         <SettingsSection title={t("settings.codeAndStatus")}>
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentUsage",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentUsage.target,
             title: t("settings.usageLabel"),
             description: t("settings.usageDescription"),
             resetLabel: t("settings.usageLabel"),
@@ -753,13 +725,14 @@ function SettingsRouteView() {
 
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentRepository",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentRepository.target,
             title: t("settings.repositoryLabel"),
             description: t("settings.repositoryDescription"),
             resetLabel: t("settings.repositoryLabel"),
             ariaLabel: t("settings.repositoryDescription"),
           })}
 
-          <div id={SETTINGS_TARGETS.gitWritingModel}>
+          <div id={GENERAL_SETTINGS_SEARCH.gitWritingModel.target}>
             <SettingsRow
               title={t("settings.gitWritingModel")}
               description={t("settings.gitWritingModelDescription")}
@@ -810,6 +783,7 @@ function SettingsRouteView() {
 
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentPullRequest",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentPullRequest.target,
             title: t("settings.pullRequest"),
             description: t("settings.pullRequestDescription"),
             resetLabel: t("settings.pullRequest"),
@@ -818,6 +792,7 @@ function SettingsRouteView() {
 
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentEditor",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentEditor.target,
             title: t("settings.editor"),
             description: t("settings.editorDescription"),
             resetLabel: t("settings.editor"),
@@ -828,6 +803,7 @@ function SettingsRouteView() {
         <SettingsSection title={t("settings.contextAndNotes")}>
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentRecap",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentRecap.target,
             title: t("settings.recap"),
             description: t("settings.recapDescription"),
             resetLabel: t("settings.recap"),
@@ -836,6 +812,7 @@ function SettingsRouteView() {
 
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentPinned",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentPinned.target,
             title: t("settings.pinnedMessages"),
             description: t("settings.pinnedMessagesDescription"),
             resetLabel: t("settings.pinnedMessages"),
@@ -844,6 +821,7 @@ function SettingsRouteView() {
 
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentMarkers",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentMarkers.target,
             title: t("settings.textMarkers"),
             description: t("settings.textMarkersDescription"),
             resetLabel: t("settings.textMarkers"),
@@ -852,6 +830,7 @@ function SettingsRouteView() {
 
           {renderBooleanSettingRow({
             settingKey: "showEnvironmentNotepad",
+            anchorId: GENERAL_SETTINGS_SEARCH.environmentNotepad.target,
             title: t("settings.notepad"),
             description: t("settings.notepadDescription"),
             resetLabel: t("settings.notepad"),
@@ -876,7 +855,7 @@ function SettingsRouteView() {
             instead of inside a card — the mockups are the whole UI, so boxing them in
             a card reads as chrome around chrome. The anchor keeps search deep-links
             (`?target=setting-theme`) working without the SettingsRow. */}
-        <div id={settingRowAnchorId("Theme")} className="scroll-mt-24 pb-1.5">
+        <div id={APPEARANCE_SETTINGS_SEARCH.theme.target} className="scroll-mt-24 pb-1.5">
           <ThemeModePicker
             value={theme}
             onValueChange={setTheme}
@@ -978,6 +957,7 @@ function SettingsRouteView() {
 
       <SettingsSection title={t("settings.typography")}>
         <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.systemUiFont.target}
           title={t("settings.systemUiFont")}
           description={t("settings.systemUiFontDescription")}
           resetAction={
@@ -998,6 +978,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.uiDensity.target}
           title={t("settings.uiDensity")}
           description={t("settings.uiDensityDescription")}
           resetAction={
@@ -1028,6 +1009,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.chatWidth.target}
           title={t("settings.chatWidth")}
           description={t("settings.chatWidthDescription")}
           resetAction={
@@ -1054,6 +1036,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.baseFontSize.target}
           title={t("settings.baseFontSize")}
           description={t("settings.baseFontSizeDescription")}
           resetAction={
@@ -1095,6 +1078,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.terminalFontSize.target}
           title={t("settings.terminalFontSize")}
           description={t("settings.terminalFontSizeDescription")}
           resetAction={
@@ -1136,6 +1120,7 @@ function SettingsRouteView() {
         />
 
         <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.terminalFont.target}
           title={t("settings.terminalFont")}
           description={t("settings.terminalFontDescription")}
           resetAction={
@@ -1212,6 +1197,7 @@ function SettingsRouteView() {
 
       <SettingsSection title={t("settings.timeAndReading")}>
         <SettingsRow
+          anchorId={APPEARANCE_SETTINGS_SEARCH.timeFormat.target}
           title={t("settings.timeFormat")}
           description={t("settings.timeFormatDescription")}
           resetAction={
@@ -1261,6 +1247,7 @@ function SettingsRouteView() {
     <div className="space-y-6">
       <SettingsSection title={t("settings.conversation")}>
         <SettingsRow
+          anchorId={BEHAVIOR_SETTINGS_SEARCH.followUpBehavior.target}
           title={t("settings.followUpBehavior")}
           description={t("settings.followUpBehaviorDescription")}
           resetAction={
@@ -1287,6 +1274,7 @@ function SettingsRouteView() {
 
         {renderBooleanSettingRow({
           settingKey: "enableAssistantStreaming",
+          anchorId: BEHAVIOR_SETTINGS_SEARCH.assistantOutput.target,
           title: t("settings.assistantOutput"),
           description: t("settings.assistantOutputDescription"),
           resetLabel: t("settings.assistantOutput"),
@@ -1305,6 +1293,7 @@ function SettingsRouteView() {
 
         {renderBooleanSettingRow({
           settingKey: "diffWordWrap",
+          anchorId: BEHAVIOR_SETTINGS_SEARCH.diffLineWrapping.target,
           title: t("settings.diffLineWrapping"),
           description: t("settings.diffLineWrappingDescription"),
           resetLabel: t("settings.diffLineWrapping"),
@@ -1315,6 +1304,7 @@ function SettingsRouteView() {
       <SettingsSection title={t("settings.safetyConfirmations")}>
         {renderBooleanSettingRow({
           settingKey: "confirmThreadDelete",
+          anchorId: BEHAVIOR_SETTINGS_SEARCH.deleteConfirmation.target,
           title: t("settings.deleteConfirmation"),
           description: t("settings.deleteConfirmationDescription"),
           resetLabel: t("settings.deleteConfirmation"),
@@ -1323,6 +1313,7 @@ function SettingsRouteView() {
 
         {renderBooleanSettingRow({
           settingKey: "confirmThreadArchive",
+          anchorId: BEHAVIOR_SETTINGS_SEARCH.archiveConfirmation.target,
           title: t("settings.archiveConfirmation"),
           description: t("settings.archiveConfirmationDescription"),
           resetLabel: t("settings.archiveConfirmation"),
@@ -1331,6 +1322,7 @@ function SettingsRouteView() {
 
         {renderBooleanSettingRow({
           settingKey: "confirmTerminalTabClose",
+          anchorId: BEHAVIOR_SETTINGS_SEARCH.terminalCloseConfirmation.target,
           title: t("settings.terminalCloseConfirmation"),
           description: t("settings.terminalCloseConfirmationDescription"),
           resetLabel: t("settings.terminalCloseConfirmation"),
@@ -1404,22 +1396,12 @@ function SettingsRouteView() {
                 <div className="mb-8 flex items-start justify-between gap-4">
                   <div className="min-w-0">
                     <h1 className="text-xl font-medium tracking-tight text-foreground">
-                      {activeSection === "general"
-                        ? t("settings.general")
-                        : activeSection === "appearance"
-                          ? t("settings.appearance")
-                          : activeSection === "behavior"
-                            ? t("settings.behavior")
-                            : t(SETTINGS_SECTION_LABEL_KEY[activeSection])}
+                      {activeSectionDescriptor
+                        ? t(activeSectionDescriptor.labelKey)
+                        : activeSection}
                     </h1>
                     <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                      {activeSection === "general"
-                        ? t("settings.generalDescription")
-                        : activeSection === "appearance"
-                          ? t("settings.appearanceDescription")
-                          : activeSection === "behavior"
-                            ? t("settings.behaviorDescription")
-                            : t(SETTINGS_SECTION_DESCRIPTION_KEY[activeSection])}
+                      {activeSectionDescriptor ? t(activeSectionDescriptor.descriptionKey) : null}
                     </p>
                   </div>
                   {activeSection !== "prompts" && activeSection !== "web-search" ? (
@@ -1456,7 +1438,18 @@ function SettingsRouteView() {
                 <WorktreesSettingsPanel active={activeSection === "worktrees"} />
                 <ArchivedSettingsPanel active={activeSection === "archived"} />
                 <ModelsSettingsPanel active={activeSection === "models"} resetEpoch={resetEpoch} />
-                <WebSearchSettingsPanel active={activeSection === "web-search"} />
+                <WebSearchSettingsPanel
+                  active={activeSection === "web-search"}
+                  activeTarget={settingsTarget}
+                  onTargetInvalidated={() => {
+                    if (!settingsTarget) return;
+                    void navigate({
+                      to: "/settings",
+                      replace: true,
+                      search: (previous) => ({ ...previous, target: undefined }),
+                    });
+                  }}
+                />
                 <ProvidersSettingsPanel
                   active={activeSection === "providers"}
                   settings={settings}

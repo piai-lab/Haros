@@ -3,227 +3,260 @@
 // Layer: Route/UI support
 // Exports: section ids, nav items, and search normalization helper
 
-export const SETTINGS_SECTION_IDS = [
-  "general",
-  "profile",
-  "appearance",
-  "notifications",
-  "behavior",
-  "appsnap",
-  "shortcuts",
-  "worktrees",
-  "archived",
-  "models",
-  "web-search",
-  "providers",
-  "skills",
-  "prompts",
-  "usage",
-  "built-in-tools",
-  "integrations",
-  "advanced",
-] as const;
+import type { MessageKey } from "./i18n";
+import { ADVANCED_SETTINGS_SEARCH } from "./settingsMetadata/advancedSettings";
+import {
+  APPEARANCE_SETTINGS_SEARCH,
+  BEHAVIOR_SETTINGS_SEARCH,
+  GENERAL_SETTINGS_SEARCH,
+} from "./settingsMetadata/coreSettings";
+import {
+  APPSNAP_SETTINGS_SEARCH,
+  NOTIFICATIONS_SETTINGS_SEARCH,
+} from "./settingsMetadata/desktopSettings";
+import { PROMPTS_SETTINGS_SEARCH } from "./settingsMetadata/promptSettings";
+import { PROVIDERS_SETTINGS_SEARCH } from "./settingsMetadata/providerSettings";
+import { WEB_SEARCH_SETTINGS_SEARCH } from "./settingsMetadata/webSearchSettings";
+import {
+  SETTINGS_TARGETS,
+  defineSettingsSearchPanel,
+  type OwnedSettingsSearchRecord,
+} from "./settingsSearchMetadata";
 
-export type SettingsSectionId = (typeof SETTINGS_SECTION_IDS)[number];
+export { SETTINGS_TARGETS } from "./settingsSearchMetadata";
+
 export type SettingsNavGroupId = "personal" | "integrations" | "coding" | "system" | "archived";
 
-/**
- * Deep-link scroll targets inside settings panels. Each id is shared by its DOM owner and callers
- * that navigate with `?target=…`; the settings route resolves every target after the active panel
- * mounts.
- */
-export const SETTINGS_TARGETS = {
-  providerUpdates: "provider-updates",
-  // Keep the original Installed CLIs deep-link byte stable while the visible row broadens to
-  // Engine details. Existing shared URLs must not break when product copy changes.
-  engineDetails: "setting-installed-clis",
-  environmentPanel: "environment-panel",
-  gitWritingModel: "setting-git-writing-model",
-  defaultPrompt: "setting-default-prompt",
-  customRules: "setting-custom-rules",
-} as const;
-
 export type SettingsNavItem = {
-  id: SettingsSectionId;
+  readonly id: string;
   group: SettingsNavGroupId;
-  label: string;
-  description: string;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
   /** Basename of a SVG under `/central-icons-reversed`. */
   icon: string;
-  eyebrow: string;
+  searchRecords: readonly OwnedSettingsSearchRecord[];
 };
 
 export const SETTINGS_NAV_GROUPS: ReadonlyArray<{
   id: SettingsNavGroupId;
-  label: string;
+  labelKey: MessageKey;
 }> = [
-  { id: "personal", label: "Personal" },
-  { id: "integrations", label: "Integrations" },
-  { id: "coding", label: "Development" },
-  { id: "system", label: "System" },
-  { id: "archived", label: "Archived" },
+  { id: "personal", labelKey: "settings.groupPersonal" },
+  { id: "integrations", labelKey: "settings.groupIntegrations" },
+  { id: "coding", labelKey: "settings.groupCoding" },
+  { id: "system", labelKey: "settings.groupSystem" },
+  { id: "archived", labelKey: "settings.groupArchived" },
 ] as const;
 
-export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
+export const SETTINGS_NAV_ITEMS = [
   {
     id: "general",
     group: "personal",
-    label: "General",
-    description: "Choose defaults for new chats, navigation, and the Environment panel.",
+    labelKey: "settings.general",
+    descriptionKey: "settings.generalDescription",
     icon: "settings-gear-4",
-    eyebrow: "Workflow defaults",
+    searchRecords: Object.values(GENERAL_SETTINGS_SEARCH),
   },
   {
     id: "profile",
     group: "personal",
-    label: "Profile",
-    description: "Your local activity, streaks, and a shareable stats card.",
+    labelKey: "settings.profile",
+    descriptionKey: "settings.profileDescription",
     icon: "user",
-    eyebrow: "Your stats",
+    searchRecords: [],
   },
   {
     id: "appearance",
     group: "personal",
-    label: "Appearance",
-    description: "Customize the theme, typography, density, and time format.",
+    labelKey: "settings.appearance",
+    descriptionKey: "settings.appearanceDescription",
     icon: "color-palette",
-    eyebrow: "Visual language",
+    searchRecords: Object.values(APPEARANCE_SETTINGS_SEARCH),
   },
   {
     id: "notifications",
     group: "personal",
-    label: "Notifications",
-    description: "Choose how OmniMind tells you when work finishes or needs attention.",
+    labelKey: "settings.notifications",
+    descriptionKey: "settings.notificationsDescription",
     icon: "bell",
-    eyebrow: "Alerts",
+    searchRecords: Object.values(NOTIFICATIONS_SETTINGS_SEARCH),
   },
   {
     id: "behavior",
     group: "personal",
-    label: "Chat behavior",
-    description: "Control live responses, follow-ups, review defaults, and safety confirmations.",
+    labelKey: "settings.behavior",
+    descriptionKey: "settings.behaviorDescription",
     icon: "settings-slider-hor",
-    eyebrow: "Interaction rules",
+    searchRecords: Object.values(BEHAVIOR_SETTINGS_SEARCH),
   },
   {
     id: "shortcuts",
     group: "personal",
-    label: "Keybindings",
-    description: "Capture, customize, and add shortcuts for every OmniMind command.",
+    labelKey: "settings.shortcuts",
+    descriptionKey: "settings.shortcutsDescription",
     icon: "shortcut",
-    eyebrow: "Key bindings",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "shortcuts:keyboard-shortcuts",
+        titleKey: "settings.keybindings",
+        keywords:
+          "Every keyboard shortcut available in OmniMind, grouped by context. keybindings hotkeys key combo cmd ctrl reference",
+      }),
+    ],
   },
   {
     id: "usage",
     group: "personal",
-    label: "Usage & limits",
-    description: "See remaining quota and credits for every signed-in provider.",
+    labelKey: "settings.usage",
+    descriptionKey: "settings.usagePanelDescription",
     icon: "gauge",
-    eyebrow: "Provider limits",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "usage:usage",
+        titleKey: "settings.usage",
+        keywords: "Remaining quota and credits for each signed-in provider. limits credits",
+      }),
+    ],
   },
   {
     id: "appsnap",
     group: "integrations",
-    label: "AppSnap",
-    description: "Capture another app's frontmost window directly into a task.",
+    labelKey: "settings.appsnap",
+    descriptionKey: "settings.appsnapDescription",
     icon: "screen-capture",
-    eyebrow: "Screen capture",
+    searchRecords: Object.values(APPSNAP_SETTINGS_SEARCH),
   },
   {
     id: "built-in-tools",
     group: "integrations",
-    label: "Built-in tools",
-    description: "Choose which OmniMind capabilities are available to Agents.",
+    labelKey: "settings.builtInTools",
+    descriptionKey: "settings.builtInToolsDescription",
     icon: "toolbox",
-    eyebrow: "Agent capabilities",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "built-in-tools:groups",
+        titleKey: "settings.builtInTools",
+        keywords:
+          "Agent capabilities OmniMind Browser Device availability enabled disabled exposure tools",
+      }),
+    ],
   },
   {
     id: "integrations",
     group: "integrations",
-    label: "External connections",
-    description: "Let Codex, Claude Code, and other local apps use OmniMind.",
+    labelKey: "settings.integrations",
+    descriptionKey: "settings.integrationsDescription",
     icon: "plugin-1",
-    eyebrow: "Connected apps",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "integrations:external-mcp",
+        titleKey: "settings.integrations",
+        keywords:
+          "Pair Codex Claude Code and other local apps with scoped project access. revoke credential task create wait read worktree approval MCP",
+      }),
+    ],
   },
   {
     id: "providers",
     group: "coding",
-    label: "Agent providers",
-    description: "Choose visible coding agents and manage their installed CLI tools.",
+    labelKey: "settings.providers",
+    descriptionKey: "settings.providersDescription",
     icon: "puzzle",
-    eyebrow: "Coding agents",
+    searchRecords: Object.values(PROVIDERS_SETTINGS_SEARCH),
   },
   {
     id: "models",
     group: "coding",
-    label: "Model services",
-    description: "Configure the model services, credentials, and available models OmniMind uses.",
+    labelKey: "settings.models",
+    descriptionKey: "settings.modelsDescription",
     icon: "brain",
-    eyebrow: "Model services",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "models:model-services",
+        titleKey: "settings.models",
+        keywords:
+          "Configure OmniMind model services credentials authentication available models catalog provider API key OAuth.",
+      }),
+    ],
   },
   {
     id: "web-search",
     group: "coding",
-    label: "Web search",
-    description: "Configure OmniMind Web Access routing, source review, and search services.",
+    labelKey: "settings.webSearch",
+    descriptionKey: "settings.webSearchDescription",
     icon: "globe",
-    eyebrow: "OmniMind Web Access",
+    searchRecords: Object.values(WEB_SEARCH_SETTINGS_SEARCH),
   },
   {
     id: "skills",
     group: "coding",
-    label: "Agent skills",
-    description: "Review reusable workflows discovered across all configured providers.",
+    labelKey: "settings.skills",
+    descriptionKey: "settings.skillsDescription",
     icon: "building-blocks",
-    eyebrow: "Reusable workflows",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "skills:skills",
+        titleKey: "settings.skills",
+        keywords: "Every skill found across providers, with toggles to control availability. agent",
+      }),
+    ],
   },
   {
     id: "prompts",
     group: "coding",
-    label: "Prompts",
-    description: "Customize OmniMind Agent's default instructions and personal rules.",
+    labelKey: "settings.prompts",
+    descriptionKey: "settings.promptsDescription",
     icon: "prompt",
-    eyebrow: "Agent instructions",
+    searchRecords: Object.values(PROMPTS_SETTINGS_SEARCH),
   },
   {
     id: "worktrees",
     group: "coding",
-    label: "Managed worktrees",
-    description: "Review and clean up isolated workspaces created by OmniMind.",
+    labelKey: "settings.worktrees",
+    descriptionKey: "settings.worktreesDescription",
     icon: "branch-simple",
-    eyebrow: "Workspace management",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "worktrees:managed-worktrees",
+        titleKey: "settings.worktrees",
+        keywords: "Review and clean up the worktrees created by OmniMind. git branch remove",
+      }),
+    ],
   },
   {
     id: "advanced",
     group: "system",
-    label: "System tools",
-    description: "Manage sessions, recovery tools, low-level keybindings, and version details.",
+    labelKey: "settings.advanced",
+    descriptionKey: "settings.advancedDescription",
     icon: "toolbox",
-    eyebrow: "System tools",
+    searchRecords: Object.values(ADVANCED_SETTINGS_SEARCH),
   },
   {
     id: "archived",
     group: "archived",
-    label: "Archived threads",
-    description: "Find and restore threads you previously archived.",
+    labelKey: "settings.archived",
+    descriptionKey: "settings.archivedDescription",
     icon: "archive",
-    eyebrow: "Thread management",
+    searchRecords: [
+      defineSettingsSearchPanel({
+        id: "archived:archived-threads",
+        titleKey: "settings.archived",
+        keywords: "View and restore archived threads. unarchive history",
+      }),
+    ],
   },
-] as const;
+] as const satisfies readonly SettingsNavItem[];
 
-/**
- * Stable DOM id for a settings row, derived from its (string) title. Shared by the row that
- * renders the anchor and by the search index that deep-links to it via `?target=…`, so the
- * two can't drift. Panels stay mounted and render null while inactive, so the slug only needs
- * to be unique within a section.
- */
-export function settingRowAnchorId(title: string): string {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^\p{Letter}\p{Number}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
-  return `setting-${slug}`;
-}
+export type SettingsSectionId = (typeof SETTINGS_NAV_ITEMS)[number]["id"];
+
+export const SETTINGS_SECTION_IDS: readonly SettingsSectionId[] = SETTINGS_NAV_ITEMS.map(
+  (item) => item.id,
+);
+
+export const SETTINGS_SECTION_BY_ID = new Map<
+  SettingsSectionId,
+  (typeof SETTINGS_NAV_ITEMS)[number]
+>(SETTINGS_NAV_ITEMS.map((item) => [item.id, item]));
 
 export function normalizeSettingsSection(value: unknown): SettingsSectionId {
   if (typeof value !== "string") {

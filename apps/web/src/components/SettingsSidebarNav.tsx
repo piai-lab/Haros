@@ -14,6 +14,7 @@ import { SidebarLeadingIcon } from "./SidebarLeadingIcon";
 import {
   SETTINGS_NAV_GROUPS,
   SETTINGS_NAV_ITEMS,
+  SETTINGS_SECTION_BY_ID,
   type SettingsSectionId,
 } from "../settingsNavigation";
 import {
@@ -36,43 +37,10 @@ import {
   SETTINGS_SIDEBAR_SECTION_CLASS_NAME,
   SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME,
 } from "../settingsSidebarNavStyles";
-import { useI18n, type MessageKey } from "~/i18n";
+import { useI18n } from "~/i18n";
 
 // Cap the result list so a broad query stays a quick scan rather than a wall of rows.
 const SETTINGS_SEARCH_RESULTS_LIMIT = 12;
-
-const SETTINGS_SECTION_ICON_BY_ID = new Map<SettingsSectionId, string>(
-  SETTINGS_NAV_ITEMS.map((item) => [item.id, item.icon]),
-);
-
-const SETTINGS_SECTION_LABEL_KEY: Record<SettingsSectionId, MessageKey> = {
-  general: "settings.general",
-  profile: "settings.profile",
-  appearance: "settings.appearance",
-  notifications: "settings.notifications",
-  behavior: "settings.behavior",
-  appsnap: "settings.appsnap",
-  shortcuts: "settings.shortcuts",
-  worktrees: "settings.worktrees",
-  archived: "settings.archived",
-  models: "settings.models",
-  "web-search": "settings.webSearch",
-  providers: "settings.providers",
-  skills: "settings.skills",
-  prompts: "settings.prompts",
-  usage: "settings.usage",
-  "built-in-tools": "settings.builtInTools",
-  integrations: "settings.integrations",
-  advanced: "settings.advanced",
-};
-
-const SETTINGS_GROUP_LABEL_KEY = {
-  personal: "settings.groupPersonal",
-  integrations: "settings.groupIntegrations",
-  coding: "settings.groupCoding",
-  system: "settings.groupSystem",
-  archived: "settings.groupArchived",
-} as const satisfies Record<(typeof SETTINGS_NAV_GROUPS)[number]["id"], MessageKey>;
 
 function SettingsSearchResultRow(props: {
   entry: SettingsSearchEntry;
@@ -80,7 +48,8 @@ function SettingsSearchResultRow(props: {
 }) {
   const { t } = useI18n();
   const { entry, onSelect } = props;
-  const icon = SETTINGS_SECTION_ICON_BY_ID.get(entry.section) ?? "settings-gear-4";
+  const section = SETTINGS_SECTION_BY_ID.get(entry.section);
+  const icon = section?.icon ?? "settings-gear-4";
   // Mirrors the project header + nested thread layout: the section reuses the nav row
   // (muted icon + label) and the matched setting sits below as an indented thread-style row.
   return (
@@ -94,7 +63,7 @@ function SettingsSearchResultRow(props: {
           <CentralIcon name={icon} className={SETTINGS_SIDEBAR_ICON_CLASS_NAME} />
         </SidebarLeadingIcon>
         <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>
-          {t(SETTINGS_SECTION_LABEL_KEY[entry.section])}
+          {section ? t(section.labelKey) : entry.section}
         </span>
       </button>
       <button
@@ -208,7 +177,7 @@ export function SettingsSidebarNav(props: {
                   id={`settings-nav-${group.id}`}
                   className={SETTINGS_SIDEBAR_SECTION_LABEL_CLASS_NAME}
                 >
-                  {t(SETTINGS_GROUP_LABEL_KEY[group.id])}
+                  {t(group.labelKey)}
                 </h2>
                 <ul className={cn("flex flex-col", SETTINGS_SIDEBAR_LIST_GAP_CLASS_NAME)}>
                   {items.map((item) => {
@@ -233,7 +202,7 @@ export function SettingsSidebarNav(props: {
                             />
                           </SidebarLeadingIcon>
                           <span className={SETTINGS_SIDEBAR_ITEM_LABEL_CLASS_NAME}>
-                            {t(SETTINGS_SECTION_LABEL_KEY[item.id])}
+                            {t(item.labelKey)}
                           </span>
                         </button>
                       </li>

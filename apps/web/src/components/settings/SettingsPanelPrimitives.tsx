@@ -6,7 +6,6 @@
 
 import { type ComponentProps, type ReactNode } from "react";
 import { cn } from "~/lib/utils";
-import { settingRowAnchorId } from "~/settingsNavigation";
 import {
   SETTINGS_CARD_CLASS_NAME,
   SETTINGS_CARD_ROW_CLASS_NAME,
@@ -213,10 +212,9 @@ export function SettingsRow({
   children?: ReactNode;
   onClick?: () => void;
 }) {
-  // String-titled rows expose a stable anchor so the sidebar search can deep-link to them
-  // via `?target=…`; scroll-margin keeps the row clear of the sticky settings header.
-  const anchorId =
-    explicitAnchorId ?? (typeof title === "string" ? settingRowAnchorId(title) : undefined);
+  // Searchable rows receive a locale-independent anchor from their Settings domain owner.
+  // Visible copy must never become URL or DOM identity.
+  const anchorId = explicitAnchorId;
   return (
     <div
       id={anchorId}

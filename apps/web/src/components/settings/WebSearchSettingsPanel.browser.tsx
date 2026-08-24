@@ -117,12 +117,23 @@ function installApi(input: {
 }
 
 import { translate } from "../../i18n";
+import { WEB_SEARCH_SETTINGS_SEARCH } from "../../settingsMetadata/webSearchSettings";
 import {
   WebSearchSettingsPanel,
   webSearchProviderFieldAccessibleLabel,
 } from "./WebSearchSettingsPanel";
 
-const renderPanel = () => render(<WebSearchSettingsPanel active />);
+const renderPanel = (input: {
+  readonly activeTarget?: string | null;
+  readonly onTargetInvalidated?: () => void;
+} = {}) =>
+  render(
+    <WebSearchSettingsPanel
+      active
+      activeTarget={input.activeTarget ?? null}
+      onTargetInvalidated={input.onTargetInvalidated ?? (() => {})}
+    />,
+  );
 
 describe("WebSearchSettingsPanel", () => {
   afterEach(() => {
@@ -320,5 +331,29 @@ describe("WebSearchSettingsPanel", () => {
 
     await expect.element(page.getByText("Try again, or check the Chromium profile in the configuration file.").first()).toBeVisible();
     await expect.element(page.getByRole("button", { name: "Inspect account" })).toBeEnabled();
+  });
+
+  it("restores the overview and opens a hidden exact target after visiting a subview", async () => {
+    installApi({});
+    const onTargetInvalidated = vi.fn();
+    const screen = await renderPanel({ onTargetInvalidated });
+
+    await page.getByRole("button", { name: "Add service" }).click();
+    expect(onTargetInvalidated).toHaveBeenCalledTimes(1);
+    await expect.element(page.getByText("Add service", { exact: true })).toBeVisible();
+
+    await screen.rerender(
+      <WebSearchSettingsPanel
+        active
+        activeTarget={WEB_SEARCH_SETTINGS_SEARCH.configFile.target}
+        onTargetInvalidated={onTargetInvalidated}
+      />,
+    );
+
+    await expect.element(page.getByRole("button", { name: "Open config file" })).toBeVisible();
+    const advancedDisclosure = document
+      .getElementById(WEB_SEARCH_SETTINGS_SEARCH.configFile.target)
+      ?.closest("details");
+    expect(advancedDisclosure?.open).toBe(true);
   });
 });

@@ -2,16 +2,13 @@
 
 ## 当前目标
 
-当前没有已授权、正在施工的产品代码任务。最新闭合关注点是全局主题系统：task tip `aae6699b2cdeb836427faea12a70eb5cb10b5ed4` 已通过 no-ff merge `8f59ccad2089ecaaa2b501358a2dd328ef494ee5` 进入 `main`，post-merge 证据记录于 `98f66b4ec59d9bc04002977ee1aa627e69e206b5`。状态为 `global-theme-system-candidate / packaged-not-released`；稳定合同见 `architecture/workbench.md` 与 `architecture/execution.md`，exact source、测试、DMG、隔离 profile 与复验边界见 `research/omnimind-theme-system-review.md`。
-
-Web Access 与六组 Built-in Host surface 均无进行中的施工。Web Access 的 production adoption、P1–P6、真实 Provider/observer/review/多 Thread packaged 证据见 `research/pi-web-access-intake.md`；Host 六组 × Agent/Chat/Studio 的策略与证据见 `research/host-tools-product-surface-policy-review.md`。它们不因退出当前工作而失去既有架构合同，也不在本 brief 重复保存历史 SHA、测试计数或 journey。
+Settings stable identity / search / deep-link owner cut 已形成 `merge-candidate / pending-main-packaged`。任务分支 `codex/settings-stable-identity` 在合并终审中进一步消除了重复 exact target，并让 Web Search 的子页面与折叠配置入口服从真实 URL/DOM 生命周期；section identity、row/panel search metadata、URL target 与真实 DOM anchor 已与可见文案解耦，Sidebar/Search只消费owner投影。终审修复进入 shipped bytes，旧安装版证据已 superseded；当前尚未合并、发行或修改update feed。
 
 ## 当前协调与下一动作
 
-- 当前工作区应保持 clean `main`；没有任务分支、任务进程或隔离测试环境需要接管。
-- 当前没有产品或证据 blocker。官方签名、公证、Windows/Linux发行、GitHub Release 与 update feed 仍属于 Campaign F-18，不是本机 candidate 的当前阻塞。
-- 若维护者授权下一项长期修改半径收口，首选 Settings taxonomy/search/deep-link：先用当前 source 复证稳定 row ID、section projection与中英文真实target，再在既有 Workbench owner内做单一owner cut。该项尚未实施，不能从本文推断代码已修复。
-- 后续候选依次为内置Slash Command presentation、AppSettings/ServerSettings持久化双轨退休、Provider capability projection、i18n物理domain切片；它们是已举证的维护portfolio，不是一个mega-refactor的施工授权。每项必须独立复读sole owners、确认exact调用链、做修改半径演练并在完整关注点闭合后提交。
+- focused Settings合同、Settings Browser 13-file/91-test suite、Web 326-file/4196-test unit suite、root 7-package typecheck、root lint与production build已通过；lint为0 error，既有warning未扩张。
+- 合并终审发现并修复两项真实反例：`providers:independent-engine-models`与`providers:installed-clis`曾共享一个target；Web Search exact target曾可能在Add/Detail子页面或关闭的配置disclosure中不可见。当前唯一target与真实subview/disclosure反例已有focused回归。
+- 下一动作：推送终审任务分支，合并最新`origin/main`，再从已推送的精确main merge SHA干净构建并完成任务profile隔离的安装版复核；不新增research总账，不创建Release或修改update feed。
 
 ## Stop-loss
 

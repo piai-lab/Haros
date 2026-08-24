@@ -66,7 +66,7 @@ import {
   createProviderUpdateToastData,
   withProviderUpdateTimeout,
 } from "~/providerUpdates";
-import { SETTINGS_TARGETS } from "~/settingsNavigation";
+import { PROVIDERS_SETTINGS_SEARCH } from "~/settingsMetadata/providerSettings";
 import {
   SETTINGS_INSET_LIST_CLASS_NAME,
   SETTINGS_INSET_RADIUS_CLASS_NAME,
@@ -1208,9 +1208,10 @@ export function ProvidersSettingsPanel({
 
   return (
     <div className="space-y-6">
-      <div id={SETTINGS_TARGETS.providerUpdates}>
+      <div id={PROVIDERS_SETTINGS_SEARCH.providerUpdates.target}>
         <SettingsSection title={t("settings.updates")}>
           <SettingsRow
+            anchorId={PROVIDERS_SETTINGS_SEARCH.automaticCliUpdateChecks.target}
             title={t("settings.automaticCliUpdates")}
             description={t("settings.automaticCliUpdatesDescription")}
             resetAction={
@@ -1290,6 +1291,7 @@ export function ProvidersSettingsPanel({
 
       <SettingsSection title={t("settings.providerPicker")}>
         <SettingsRow
+          anchorId={PROVIDERS_SETTINGS_SEARCH.visibleProviders.target}
           title={t("settings.visibleProviders")}
           description={t("settings.visibleProvidersDescription")}
           status={
@@ -1358,7 +1360,7 @@ export function ProvidersSettingsPanel({
       <div>
         <SettingsSection title={t("settings.providerTools")}>
           <SettingsRow
-            anchorId={SETTINGS_TARGETS.engineDetails}
+            anchorId={PROVIDERS_SETTINGS_SEARCH.installedClis.target}
             title={t("settings.installedClis")}
             description={t("settings.installedClisDescription")}
             status={
