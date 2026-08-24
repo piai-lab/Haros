@@ -341,6 +341,23 @@ describe("deriveReadableToolTitle", () => {
     ).toBe("Bash");
   });
 
+  it("turns provider tool identifiers into readable labels", () => {
+    for (const [identifier, label] of [
+      ["Web_search", "Web search"],
+      ["Fetch_content", "Fetch content"],
+      ["Get_search_content", "Get search content"],
+      ["readLocalFile", "read Local File"],
+    ] as const) {
+      expect(
+        deriveReadableToolTitle({
+          title: identifier,
+          fallbackLabel: identifier,
+          itemType: "dynamic_tool_call",
+        }),
+      ).toBe(label);
+    }
+  });
+
   it("extracts a descriptor from payload when the title is generic", () => {
     expect(
       deriveReadableToolTitle({

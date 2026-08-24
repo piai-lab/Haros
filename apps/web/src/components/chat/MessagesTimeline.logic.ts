@@ -707,11 +707,10 @@ function findTailTerminalAssistantMessageId(
 }
 
 // Post-pass: collapse each *settled* turn into a single "Worked for Xs"
-// disclosure on the turn's terminal assistant message. Unlike a per-message
-// collapse, this folds every non-terminal assistant narration (preambles) AND
-// the turn's tool work into one ordered group, so the transcript shows a single
-// toggle + the final answer per turn (Remodex-style). The live turn stays
-// expanded/inline so streaming output is never hidden behind a toggle.
+// disclosure on the turn's terminal assistant message. This only folds turns
+// with one assistant message: once a provider interleaves visible narration and
+// tools, the UI cannot safely infer which text is a preamble versus the answer,
+// so the causal transcript stays inline. The live turn also stays expanded.
 function collapseSettledTurns(
   rows: MessagesTimelineRow[],
   options: {
@@ -761,6 +760,7 @@ function collapseSettledTurns(
     // mini-turns can have distinct turnIds inside one assistant answer, so the
     // user message boundary is the stable UI grouping point.
     const foldIndices: number[] = [];
+    let hasPriorAssistantNarration = false;
     for (let scan = pass - 1; scan >= 0; scan -= 1) {
       const prev = rows[scan]!;
       if (prev.kind === "work") {
@@ -768,6 +768,7 @@ function collapseSettledTurns(
         continue;
       }
       if (prev.kind === "message" && prev.message.role === "assistant") {
+        hasPriorAssistantNarration = true;
         foldIndices.push(scan);
         continue;
       }
@@ -778,6 +779,11 @@ function collapseSettledTurns(
       }
       break;
     }
+    // Interleaved assistant text is user-visible content, not a reliable
+    // "preamble" signal. Keep the whole causal transcript inline instead of
+    // guessing which segment is the answer and moving the rest behind Worked
+    // for. Single-answer turns still collapse their tool-only work normally.
+    if (hasPriorAssistantNarration) continue;
     foldIndices.reverse();
 
     const collapsedItems: CollapsedTurnItem[] = [];

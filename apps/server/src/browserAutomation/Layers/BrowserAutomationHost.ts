@@ -1,3 +1,4 @@
+import { parseEngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
 
 import {
@@ -13,6 +14,19 @@ import {
   resolveBrowserHostPipePath,
   settleBrowserHostEngineWebSurface,
 } from "../browserHostRpcClient.ts";
+
+export function decodeBrowserHostEngineWebSurfaceContext(value: unknown) {
+  const record = value as { locale?: unknown; theme?: unknown; themeSnapshot?: unknown };
+  const themeSnapshot = parseEngineWebSurfaceThemeSnapshot(record?.themeSnapshot);
+  if (
+    (record?.locale !== "en" && record?.locale !== "zh-CN") ||
+    (record?.theme !== "light" && record?.theme !== "dark") ||
+    themeSnapshot === null
+  ) {
+    throw new BrowserHostRpcError("malformed", "Browser presentation context is invalid.");
+  }
+  return { locale: record.locale, theme: record.theme, themeSnapshot };
+}
 
 export function makeBrowserAutomationHost(
   env: NodeJS.ProcessEnv = process.env,
@@ -57,14 +71,7 @@ export function makeBrowserAutomationHost(
           timeoutMs: 5_000,
           signal,
         });
-        const record = value as { locale?: unknown; theme?: unknown };
-        if (
-          (record?.locale !== "en" && record?.locale !== "zh-CN") ||
-          (record?.theme !== "light" && record?.theme !== "dark")
-        ) {
-          throw new BrowserHostRpcError("malformed", "Browser presentation context is invalid.");
-        }
-        return { locale: record.locale, theme: record.theme };
+        return decodeBrowserHostEngineWebSurfaceContext(value);
       }),
     presentEngineWebSurface: (input) =>
       runPrivate(async (signal) => {

@@ -55,6 +55,20 @@ export function ToolCallDetailsContent({
 
   return (
     <>
+      {details?.toolName ? (
+        <ToolDetailSection title={t("toolDetails.toolName")}>
+          <code className="inline-flex max-w-full rounded-md border border-border/45 bg-background/70 px-2 py-1 font-chat-code text-[11px] text-foreground/82">
+            {details.toolName}
+          </code>
+        </ToolDetailSection>
+      ) : null}
+
+      {details?.input ? (
+        <ToolDetailSection title={t("toolDetails.input")}>
+          <MarkdownToolCodeBlock language="json">{details.input}</MarkdownToolCodeBlock>
+        </ToolDetailSection>
+      ) : null}
+
       {activity ? (
         <LiveActivityMetadata activity={activity} timestampFormat={timestampFormat} />
       ) : null}

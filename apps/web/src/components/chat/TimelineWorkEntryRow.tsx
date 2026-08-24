@@ -360,6 +360,16 @@ function capitalizePhrase(value: string): string {
   return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`;
 }
 
+function normalizeBundledWebAccessToolName(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return normalized.length > 0 ? normalized : null;
+}
+
 function toolWorkEntryHeading(workEntry: TimelineWorkEntry): string {
   const omnimindTitle = deriveOmniMindMcpToolTitle({
     toolName: workEntry.toolName,
@@ -571,6 +581,24 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
           : isMcpToolRow
             ? "mcp"
             : undefined;
+  const bundledWebAccessHeading = (() => {
+    switch (
+      normalizeBundledWebAccessToolName(
+        workEntry.toolName ?? workEntry.toolTitle ?? workEntry.label,
+      )
+    ) {
+      case "web_search":
+        return t("settings.webSearch.tool.webSearch");
+      case "source_check":
+        return t("settings.webSearch.tool.sourceCheck");
+      case "fetch_content":
+        return t("settings.webSearch.tool.fetchContent");
+      case "get_search_content":
+        return t("settings.webSearch.tool.getSearchContent");
+      default:
+        return null;
+    }
+  })();
   // Task progress is product copy, not a tool lifecycle suffix. Rendering the
   // structured count through the shared catalog both localizes it and keeps a
   // terminal "completed" from the compact heading normalizer.
@@ -587,7 +615,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       ? t("tool.command.single")
       : workEntry.taskListProgress
         ? t("taskList.progress", workEntry.taskListProgress)
-        : toolWorkEntryHeading(workEntry);
+        : (bundledWebAccessHeading ?? toolWorkEntryHeading(workEntry));
   const rawPreview = workEntryPreview(workEntry);
   const preview =
     isOmniMindBrowserToolRow || isOmniMindToolRow

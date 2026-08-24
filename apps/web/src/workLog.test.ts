@@ -3912,7 +3912,7 @@ describe("deriveTimelineEntries", () => {
     ]);
   });
 
-  it("keeps segmented streaming output as one live message row", () => {
+  it("keeps a single live segment as the streaming message row", () => {
     const messageId = MessageId.makeUnsafe("assistant-streaming-segmented");
     const entries = deriveTimelineEntries(
       [
@@ -3939,7 +3939,63 @@ describe("deriveTimelineEntries", () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({
       kind: "message",
+      sequence: 10,
       message: { id: messageId, text: "partial", streaming: true },
+    });
+  });
+
+  it("interleaves completed live segments with tools while the tail keeps streaming", () => {
+    const messageId = MessageId.makeUnsafe("assistant-streaming-interleaved");
+    const entries = deriveTimelineEntries(
+      [
+        {
+          id: messageId,
+          role: "assistant",
+          text: "Before tool.After tool, still streaming",
+          textSegments: [
+            {
+              sequence: 10,
+              startedAt: "2026-02-23T00:00:01.000Z",
+              endedAt: "2026-02-23T00:00:02.000Z",
+              text: "Before tool.",
+            },
+            {
+              sequence: 30,
+              startedAt: "2026-02-23T00:00:03.000Z",
+              endedAt: "2026-02-23T00:00:04.000Z",
+              text: "After tool, still streaming",
+            },
+          ],
+          turnId: TurnId.makeUnsafe("turn-streaming-interleaved"),
+          createdAt: "2026-02-23T00:00:01.000Z",
+          streaming: true,
+        },
+      ],
+      [],
+      [
+        {
+          id: "work-between-live-segments",
+          createdAt: "2026-02-23T00:00:02.500Z",
+          sequence: 20,
+          label: "tool",
+          tone: "tool",
+        },
+      ],
+    );
+
+    expect(entries.map((entry) => entry.id)).toEqual([
+      `${messageId}#segment:0`,
+      "work-between-live-segments",
+      messageId,
+    ]);
+    expect(entries[0]).toMatchObject({
+      kind: "message",
+      message: { text: "Before tool.", streaming: false },
+    });
+    expect(entries[2]).toMatchObject({
+      kind: "message",
+      assistantCopyText: "Before tool.After tool, still streaming",
+      message: { id: messageId, text: "After tool, still streaming", streaming: true },
     });
   });
 });

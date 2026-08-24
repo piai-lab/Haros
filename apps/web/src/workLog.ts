@@ -33,6 +33,7 @@ import {
   type OmniMindMcpToolStatus,
 } from "./lib/toolCallLabel";
 import {
+  deriveToolInvocationPreview,
   deriveWorkLogToolDetails,
   mergeWorkLogToolDetails,
   type WorkLogToolDetails,
@@ -684,9 +685,17 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     changedFiles: entry.changedFiles ?? changedFiles,
     label: entry.label,
     toolTitle: entry.toolTitle,
+    toolName: toolName ?? undefined,
   });
   if (toolDetails) {
     entry.toolDetails = toolDetails;
+  }
+  const invocationPreview = deriveToolInvocationPreview({
+    payload,
+    toolName: toolName ?? undefined,
+  });
+  if (!entry.preview && invocationPreview) {
+    entry.preview = invocationPreview;
   }
   const collapseKey =
     deriveProviderRuntimeReconciliationCollapseKey(activity, payload) ??
@@ -2315,9 +2324,8 @@ export function deriveTimelineEntries(
     const textSegments = displayMessage.textSegments;
     if (
       displayMessage.role === "assistant" &&
-      !displayMessage.streaming &&
       textSegments !== undefined &&
-      textSegments.length > 1
+      (textSegments.length > 1 || (displayMessage.streaming && textSegments.length === 1))
     ) {
       const { textSegments: _textSegments, ...messageWithoutSegments } = displayMessage;
       const segmentRows: TimelineEntry[] = [];
@@ -2336,7 +2344,10 @@ export function deriveTimelineEntries(
             id: segmentId,
             text: stripProposedPlanBlocksFromText(segment.text),
             createdAt: segment.startedAt,
-            completedAt: segment.endedAt,
+            streaming: isTerminalSegment ? displayMessage.streaming : false,
+            ...(!isTerminalSegment || !displayMessage.streaming
+              ? { completedAt: segment.endedAt }
+              : {}),
           },
           ...(isTerminalSegment ? { assistantCopyText: displayMessage.text } : {}),
         });

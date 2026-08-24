@@ -463,6 +463,8 @@ export function sanitizeOmniMindMcpToolPreview(input: {
 export function deriveReadableToolTitle(input: ReadableToolTitleInput): string | null {
   const normalizedTitle = normalizeCompactToolLabel(input.title ?? "");
   const normalizedFallback = normalizeCompactToolLabel(input.fallbackLabel);
+  const readableTitle = normalizeToolIdentifierCandidate(normalizedTitle);
+  const readableFallback = normalizeToolIdentifierCandidate(normalizedFallback);
   const commandLabel = input.command
     ? deriveReadableCommandDisplay(input.command, input.isRunning).verb
     : null;
@@ -472,7 +474,7 @@ export function deriveReadableToolTitle(input: ReadableToolTitleInput): string |
   const requestKindLabel = humanizeRequestKind(input.requestKind, input.itemType);
 
   if (normalizedTitle.length > 0 && !isGenericToolTitle(normalizedTitle)) {
-    return normalizedTitle;
+    return readableTitle ?? normalizedTitle;
   }
 
   // Use verbal requestKind label before falling back to raw descriptors
@@ -490,15 +492,22 @@ export function deriveReadableToolTitle(input: ReadableToolTitleInput): string |
   }
 
   if (normalizedFallback.length > 0 && !isGenericToolTitle(normalizedFallback)) {
-    return normalizedFallback;
+    return readableFallback ?? normalizedFallback;
   }
   if (normalizedTitle.length > 0) {
-    return normalizedTitle;
+    return readableTitle ?? normalizedTitle;
   }
   if (normalizedFallback.length > 0) {
-    return normalizedFallback;
+    return readableFallback ?? normalizedFallback;
   }
   return null;
+}
+
+function normalizeToolIdentifierCandidate(value: string): string | null {
+  if (!value) return null;
+  const identifierShaped =
+    value.startsWith("mcp__") || /[_-]/.test(value) || /[a-z0-9][A-Z]/.test(value);
+  return identifierShaped ? normalizeToolDescriptor(value) : value;
 }
 
 export interface ReadableCommandDisplay {
@@ -555,7 +564,11 @@ function normalizeToolDescriptor(value: string | null): string | null {
   if (mcpIdentifier) {
     return mcpIdentifier;
   }
-  const normalized = value.replace(/[_-]/g, " ").replace(/\s+/g, " ").trim();
+  const normalized = value
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!normalized) {
     return null;
   }

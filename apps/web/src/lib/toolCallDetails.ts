@@ -23,8 +23,10 @@ export interface WorkLogToolEditDetails {
 }
 
 export interface WorkLogToolDetails {
-  kind: "command" | "file-change";
+  kind: "command" | "file-change" | "tool";
   title: string;
+  toolName?: string;
+  input?: string;
   command?: string;
   output?: WorkLogToolOutputDetails;
   diff?: string;
@@ -43,6 +45,7 @@ export interface DeriveWorkLogToolDetailsInput {
   changedFiles?: ReadonlyArray<string> | undefined;
   label: string;
   toolTitle?: string | undefined;
+  toolName?: string | undefined;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -363,6 +366,100 @@ function shouldBuildFileChangeDetails(input: DeriveWorkLogToolDetailsInput): boo
   return input.requestKind === "file-change" || input.itemType === "file_change";
 }
 
+const INSPECTABLE_WEB_ACCESS_INPUT_KEYS = new Set([
+  "query",
+  "queries",
+  "claim",
+  "numResults",
+  "includeContent",
+  "fetchContent",
+  "recencyFilter",
+  "domainFilter",
+  "provider",
+  "workflow",
+  "url",
+  "urls",
+  "forceClone",
+  "prompt",
+  "mode",
+  "timestamp",
+  "frames",
+  "model",
+  "answerModel",
+  "responseId",
+  "queryIndex",
+  "urlIndex",
+  "offset",
+  "limit",
+  "findText",
+  "findMode",
+]);
+
+function normalizedToolName(value: string | undefined): string | null {
+  if (!value) return null;
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return normalized.length > 0 ? normalized : null;
+}
+
+function isBundledWebAccessTool(toolName: string | null): boolean {
+  return (
+    toolName === "web_search" ||
+    toolName === "source_check" ||
+    toolName === "fetch_content" ||
+    toolName === "get_search_content"
+  );
+}
+
+function inspectableToolInput(
+  payload: Record<string, unknown> | null,
+  toolName: string | undefined,
+): Record<string, unknown> | null {
+  const normalizedName = normalizedToolName(toolName);
+  if (!isBundledWebAccessTool(normalizedName)) return null;
+  const data = asRecord(payload?.data);
+  const rawInput = asRecord(data?.rawInput) ?? asRecord(data?.input);
+  if (!rawInput) return null;
+  const visibleEntries = Object.entries(rawInput).filter(([key]) =>
+    INSPECTABLE_WEB_ACCESS_INPUT_KEYS.has(key),
+  );
+  return visibleEntries.length > 0 ? Object.fromEntries(visibleEntries) : null;
+}
+
+function formatInspectableInput(value: Record<string, unknown> | null): string | undefined {
+  if (!value) return undefined;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return undefined;
+  }
+}
+
+export function deriveToolInvocationPreview(input: {
+  payload: Record<string, unknown> | null;
+  toolName?: string | undefined;
+}): string | null {
+  const visibleInput = inspectableToolInput(input.payload, input.toolName);
+  if (!visibleInput) return null;
+  const candidate =
+    asTrimmedString(visibleInput.query) ??
+    (Array.isArray(visibleInput.queries)
+      ? asTrimmedString(visibleInput.queries.find((value) => typeof value === "string"))
+      : null) ??
+    asTrimmedString(visibleInput.claim) ??
+    asTrimmedString(visibleInput.url) ??
+    (Array.isArray(visibleInput.urls)
+      ? asTrimmedString(visibleInput.urls.find((value) => typeof value === "string"))
+      : null) ??
+    asTrimmedString(visibleInput.findText);
+  return candidate && candidate.length > 160
+    ? `${candidate.slice(0, 157).trimEnd()}...`
+    : candidate;
+}
+
 export function deriveWorkLogToolDetails(
   input: DeriveWorkLogToolDetailsInput,
 ): WorkLogToolDetails | undefined {
@@ -385,7 +482,25 @@ export function deriveWorkLogToolDetails(
   }
 
   if (!shouldBuildFileChangeDetails(input)) {
-    return undefined;
+    const toolName = input.toolName?.trim();
+    const inspectableInput = formatInspectableInput(
+      inspectableToolInput(input.payload, input.toolName),
+    );
+    const output = extractToolOutputDetails({
+      payload: input.payload,
+      detail: input.detail,
+      command: undefined,
+    });
+    if (!toolName && !inspectableInput && !output) {
+      return undefined;
+    }
+    return {
+      kind: "tool",
+      title: detailsTitle(input),
+      ...(toolName ? { toolName } : {}),
+      ...(inspectableInput ? { input: inspectableInput } : {}),
+      ...(output ? { output } : {}),
+    };
   }
   const diff = extractUnifiedDiff(input.payload);
   const content = extractWriteContent(input.payload);
@@ -446,6 +561,8 @@ export function mergeWorkLogToolDetails(
   return {
     kind: right.kind,
     title: right.title || left.title,
+    ...((right.toolName ?? left.toolName) ? { toolName: right.toolName ?? left.toolName } : {}),
+    ...((right.input ?? left.input) ? { input: right.input ?? left.input } : {}),
     ...((right.command ?? left.command) ? { command: right.command ?? left.command } : {}),
     ...(output ? { output } : {}),
     ...((right.diff ?? left.diff) ? { diff: right.diff ?? left.diff } : {}),

@@ -113,6 +113,8 @@ Composer 显式选中的 OmniMind Skill 由 Host 在本轮投递后逐 Skill 投
 
 wire noise、逐 token event、重复系统消息与隐藏不可读 reasoning 不进入 Timeline。同一 stream item 原位归并；自然成功不额外 Toast。只有失败、结果未知、隐藏副作用或需要用户处理时升级提示。
 
+Assistant 可见文本与 Tool activity 必须在 live 与 settled 两种投影中保持同一因果顺序。一个仍在流式输出的 Assistant item 若已被可见 Tool activity 打断，已经结束的文本 segment、Tool 行与当前流式 tail 按 canonical sequence 原位交错；不能为了维持单一 live message row，把完整正文钉在首段位置、把后续 Tool 堆到正文下方，再在 terminal settlement 时重排。只有整个用户可见 response 确实只有一个 Assistant message 时，完成后才可把纯 Tool work 收入单一 `Worked for / 工作了` disclosure；一旦存在多个 Assistant message 或 segment，Timeline 不得猜测哪段是“前言”或“最终答案”，不得把任何模型可见文本折进 Tool disclosure，必须保留完整因果 transcript。技术 Tool identifier 与调用输入/输出可进入展开详情；普通行使用明确的双语产品名称或对未知 identifier 做无损可读化，不直接显示 `x_y`、MCP transport prefix 或内部诊断作为产品标签。
+
 Timeline 尾部只有一条通用 live-status 行，继续直接由现有 `isWorking`、turn、worktree setup 与虚拟列表生命周期控制；不新增 Thinking message、runtime status store 或第二条进度事实。该行的普通视觉固定为 `20px Composing Orb + 双语趣味提示 + 对称潮汐三点`：提示首次随机选择，之后每五秒替换且普通重渲染不换句；它只是等待氛围，不进入 transcript、reasoning、journal、Session 或恢复数据，也不能覆盖真实 Tool、approval、error、recovery 和 Provider activity。图标与文本容器保持固定尺寸，长文案单行省略；隐藏文档和离屏状态暂停不必要绘制，`prefers-reduced-motion` 下图标、文字与三点全部静止。用户可见行不再显示笼统的 `Thinking / 正在思考` 或 `Loading`，screen reader 使用稳定、非轮播的本地化工作状态。
 
 Child Agent、Goal、Todo、Question 继续使用 source 已有的产品语义；不得借此创建第二 task system 或 Run hierarchy。
@@ -422,7 +424,7 @@ Settings 提供 `System / 简体中文 / English`，默认跟随 OS/browser；�
 - “Agent 团队 / Agent Team”是能力与研究语义；运行时集合标题使用更具体的“子智能体 / Subagents”，单个实例直接显示其 nickname/任务名，不把“团队”重复到每一行。集合图标不冒充 child identity；具体 child 以 canonical identity、名称和现有 presentation tone保持跨表面连续。
 - Codex、Pi、OpenCode 与 OmniMind 在普通界面称为“引擎”；OpenAI、MiMo、DeepSeek 等模型/API 来源称为“模型服务商”。`Provider` 只在内部 API 或主动展开的技术详情中保留。
 - Workbench、Library、Project、Group、Kanban、Terminal、Skill、Plugin、Repository、Branch、Commit、Push、Diff、Worktree、Pull Request 等采用自然中文产品词；`Git`、`MCP`、`API`、`CLI`、`JSON`、`URL`、`ID` 与 AI 计量单位 `token` 保留标准写法。命令、参数、环境变量、路径、文件名、模型名和品牌名保持原文。
-- 技能、插件、工具与 MCP 服务的真实名称始终保留来源原文。OmniMind-owned 资产的名称说明与操作文案完整双语；Engine-native 或第三方资产的原始简介保留 provenance，不由 Host 擅自翻译或运行时机翻。
+- 技能、插件、工具与 MCP 服务的真实名称始终保留来源原文。机器调用 identifier 不是产品名称：普通 Timeline 行可去除 transport prefix、拆分 snake/kebab/camel case，并把原 identifier 留在技术详情；不得据此翻译、改名或伪造第三方品牌。OmniMind-owned 资产的名称说明与操作文案完整双语；Engine-native 或第三方资产的原始简介保留 provenance，不由 Host 擅自翻译或运行时机翻。
 - 中文产品文案简洁、直接、友好；标签和按钮省略无意义主语，引导在必要时使用“你”而不用“您”，错误明确说明发生了什么和下一步动作。英文独立按自然英文写作，不从中文逐字回译。
 - 可识别故障显示本地化摘要与恢复动作；Engine、模型服务商或 CLI 的原始错误、日志和 stack 保持原文，只进入可展开、可复制的技术详情。未知故障不得编造原因。
 - locale 只控制 OmniMind-owned 产品界面、日期、时间与数字格式；不向模型静默注入回复语言，不翻译或改写用户内容、项目/分组名称、既有对话或模型输出。

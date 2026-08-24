@@ -226,6 +226,60 @@ describe("MessagesTimeline tool details", () => {
     }
   });
 
+  it("shows a readable Web Access label and keeps its payload inspectable", async () => {
+    const host = createTimelineHost();
+    const screen = await render(
+      <TimelineWorkEntryRow
+        workEntry={{
+          id: "work-web-search-details",
+          createdAt: "2026-03-17T19:12:28.000Z",
+          label: "Web_search",
+          tone: "tool",
+          itemType: "web_search",
+          toolName: "web_search",
+          toolTitle: "Web search",
+          preview: "AI agent memory frameworks",
+          toolDetails: {
+            kind: "tool",
+            title: "Web search",
+            toolName: "web_search",
+            input: '{\n  "query": "AI agent memory frameworks"\n}',
+            output: { output: "Search completed with three sources." },
+          },
+        }}
+        chatMetaFontSizePx={12}
+        textFontSizePx={13}
+        density="compact"
+        onImageExpand={() => {}}
+        markdownCwd={undefined}
+        timestampFormat="locale"
+      />,
+      { container: host },
+    );
+
+    try {
+      expect(document.body.textContent ?? "").toContain(
+        "Search the web AI agent memory frameworks",
+      );
+      expect(document.body.textContent ?? "").not.toContain("Web_search");
+      expect(document.body.textContent ?? "").not.toContain("Search completed with three sources");
+
+      const trigger = document.querySelector<HTMLButtonElement>(
+        '[data-tool-detail-trigger="true"]',
+      );
+      trigger?.click();
+
+      await expect.poll(() => document.body.textContent ?? "").toContain("Technical name");
+      expect(document.body.textContent ?? "").toContain("web_search");
+      expect(document.body.textContent ?? "").toContain("AI agent memory frameworks");
+      expect(document.body.textContent ?? "").toContain("Search completed with three sources");
+    } finally {
+      await screen.unmount();
+      host.remove();
+      await settleLayout();
+    }
+  });
+
   it("opens a Codex image-view row in the shared local image preview", async () => {
     const onImageExpand = vi.fn();
     const imagePath = "/private/tmp/omnimind/image-preview.png";
