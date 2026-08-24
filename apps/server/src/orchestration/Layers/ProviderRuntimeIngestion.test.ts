@@ -3109,6 +3109,139 @@ describe("ProviderRuntimeIngestion", () => {
     },
   );
 
+  it("flushes one long-lived Pi reasoning item at assistant and tool boundaries", async () => {
+    const harness = await createHarness({ startIngestion: false });
+    const threadId = asThreadId("thread-1");
+    const turnId = asTurnId("turn-pi-causal-reasoning");
+    const reasoningItemId = asItemId("reasoning-pi-causal");
+    const assistantItemId = asItemId("assistant-pi-causal");
+    const createdAt = "2026-07-14T00:20:00.000Z";
+    await harness.bindLegacyRuntimeSource("pi");
+    const push = (event: ProviderRuntimeEvent) =>
+      Effect.runPromise(harness.runtimeEventRepository.append(event));
+
+    const narration = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-pi-causal-narration"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: "Inspect first." },
+    });
+    const firstReasoning = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-pi-causal-reasoning-1"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: reasoningItemId,
+      payload: { streamKind: "reasoning_text", delta: "Reasoning before the first tool." },
+    });
+    const firstTool = await push({
+      type: "item.started",
+      eventId: asEventId("evt-pi-causal-tool-1"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: asItemId("tool-pi-causal-1"),
+      payload: { itemType: "dynamic_tool_call", status: "inProgress", title: "read" },
+    });
+    const secondReasoning = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-pi-causal-reasoning-2"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: reasoningItemId,
+      payload: { streamKind: "reasoning_text", delta: "Reasoning before the second tool." },
+    });
+    const secondTool = await push({
+      type: "item.started",
+      eventId: asEventId("evt-pi-causal-tool-2"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: asItemId("tool-pi-causal-2"),
+      payload: { itemType: "dynamic_tool_call", status: "inProgress", title: "read" },
+    });
+    const answer = await push({
+      type: "content.delta",
+      eventId: asEventId("evt-pi-causal-answer"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { streamKind: "assistant_text", delta: "Done." },
+    });
+    await push({
+      type: "item.completed",
+      eventId: asEventId("evt-pi-causal-reasoning-completed"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: reasoningItemId,
+      payload: { itemType: "reasoning", status: "completed", title: "Reasoning" },
+    });
+    await push({
+      type: "item.completed",
+      eventId: asEventId("evt-pi-causal-assistant-completed"),
+      provider: "pi",
+      createdAt,
+      threadId,
+      turnId,
+      itemId: assistantItemId,
+      payload: { itemType: "assistant_message", status: "completed" },
+    });
+
+    await harness.startIngestion();
+    await harness.drain();
+    const thread = await waitForThread(harness.engine, (entry) =>
+      entry.messages.some(
+        (message) => message.id === `assistant:${assistantItemId}` && !message.streaming,
+      ),
+    );
+    const message = thread.messages.find((entry) => entry.id === `assistant:${assistantItemId}`);
+    const reasoningActivities = thread.activities.filter(
+      (activity) => activity.kind === "reasoning.completed",
+    );
+    const firstToolActivity = thread.activities.find(
+      (activity) => activity.id === firstTool.event.eventId,
+    );
+    const secondToolActivity = thread.activities.find(
+      (activity) => activity.id === secondTool.event.eventId,
+    );
+
+    expect(message?.textSegments?.map((segment) => [segment.sequence, segment.text])).toEqual([
+      [narration.sequence, "Inspect first."],
+      [answer.sequence, "Done."],
+    ]);
+    expect(reasoningActivities).toHaveLength(2);
+    expect(
+      reasoningActivities.map(
+        (activity) => (activity.payload as { detail?: unknown }).detail,
+      ),
+    ).toEqual(["Reasoning before the first tool.", "Reasoning before the second tool."]);
+    expect(reasoningActivities.map((activity) => activity.sequence)).toEqual([
+      firstReasoning.sequence,
+      secondReasoning.sequence,
+    ]);
+    expect(message?.textSegments?.[0]?.sequence).toBeLessThan(
+      reasoningActivities[0]?.sequence ?? -1,
+    );
+    expect(reasoningActivities[0]?.sequence).toBeLessThan(firstToolActivity?.sequence ?? -1);
+    expect(firstToolActivity?.sequence).toBeLessThan(reasoningActivities[1]?.sequence ?? -1);
+    expect(reasoningActivities[1]?.sequence).toBeLessThan(secondToolActivity?.sequence ?? -1);
+    expect(secondToolActivity?.sequence).toBeLessThan(message?.textSegments?.[1]?.sequence ?? -1);
+  });
+
   it("settles buffered Codex reasoning when a turn is aborted", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();

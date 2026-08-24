@@ -187,6 +187,7 @@ type BufferedToolOutput = {
 type BufferedReasoningSummary = {
   readonly parts: ReadonlyMap<number, string>;
   readonly sourceEvent: Extract<ProviderRuntimeEvent, { readonly type: "content.delta" }>;
+  readonly lastRuntimeSequence: number;
 };
 type AssistantDeliveryModeBindingState = {
   readonly pendingModesByThreadId: ReadonlyMap<ThreadId, ReadonlyArray<AssistantDeliveryMode>>;
@@ -1124,6 +1125,7 @@ const make = Effect.gen(function* () {
   const appendBufferedReasoningSummary = (
     key: string,
     event: Extract<ProviderRuntimeEvent, { readonly type: "content.delta" }>,
+    runtimeSequence: number,
   ) =>
     Cache.getOption(bufferedReasoningSummaryByKey, key).pipe(
       Effect.flatMap((existingEntry) => {
@@ -1151,12 +1153,66 @@ const make = Effect.gen(function* () {
         return Cache.set(bufferedReasoningSummaryByKey, key, {
           parts,
           sourceEvent: event,
+          lastRuntimeSequence: runtimeSequence,
         });
       }),
     );
 
   const getBufferedReasoningSummary = (key: string) =>
     Cache.getOption(bufferedReasoningSummaryByKey, key).pipe(Effect.map(Option.getOrUndefined));
+
+  // Some runtimes keep one reasoning item open across multiple tool calls. The
+  // public text is still causally segmented by each visible assistant/tool
+  // boundary, so flush the text received so far before projecting that boundary.
+  // A segment-specific item id prevents the next fragment of the same runtime
+  // item from overwriting the first activity row.
+  const flushBufferedReasoningBeforeBoundary = (
+    threadId: ThreadId,
+    boundaryEvent: ProviderRuntimeEvent,
+    turnId?: TurnId,
+  ) => {
+    const prefix = turnId ? `${threadId}:${turnId}:` : `${threadId}:`;
+    return Cache.keys(bufferedReasoningSummaryByKey).pipe(
+      Effect.flatMap((keys) =>
+        Effect.forEach(
+          Array.from(keys).filter((key) => key.startsWith(prefix)),
+          (key) =>
+            getBufferedReasoningSummary(key).pipe(
+              Effect.flatMap((summary) => {
+                const detail = joinedBufferedReasoningSummary(summary);
+                if (!summary || !detail || !summary.sourceEvent.itemId) {
+                  return Effect.void;
+                }
+                const sourceItemId = String(summary.sourceEvent.itemId);
+                const segmentItemId = `${sourceItemId}:segment:${summary.lastRuntimeSequence}`;
+                const completionEvent: ProviderRuntimeEvent = {
+                  ...summary.sourceEvent,
+                  eventId: EventId.makeUnsafe(
+                    `${boundaryEvent.eventId}:reasoning:${segmentItemId}`,
+                  ),
+                  itemId: segmentItemId as NonNullable<ProviderRuntimeEvent["itemId"]>,
+                  threadId,
+                  type: "item.completed",
+                  payload: {
+                    itemType: "reasoning",
+                    status: "completed",
+                    title: "Reasoning",
+                    detail,
+                  },
+                };
+                const activities = projectProviderRuntimeActivities(
+                  completionEvent,
+                  summary.lastRuntimeSequence,
+                );
+                return dispatchProjectedActivities(completionEvent, threadId, activities).pipe(
+                  Effect.andThen(Cache.invalidate(bufferedReasoningSummaryByKey, key)),
+                );
+              }),
+            ),
+        ).pipe(Effect.asVoid),
+      ),
+    );
+  };
 
   const settleBufferedReasoningSummaries = (
     threadId: ThreadId,
@@ -2434,7 +2490,7 @@ const make = Effect.gen(function* () {
         isReadableReasoningDelta(event.provider, event.payload.streamKind) &&
         event.payload.delta.length > 0
       ) {
-        yield* appendBufferedReasoningSummary(reasoningSummaryKey, event);
+        yield* appendBufferedReasoningSummary(reasoningSummaryKey, event, runtimeSequence);
       }
 
       const assistantDelta =
@@ -2443,6 +2499,24 @@ const make = Effect.gen(function* () {
           : undefined;
       const proposedPlanDelta =
         event.type === "turn.proposed.delta" ? event.payload.delta : undefined;
+
+      const assistantOrActivityBoundary =
+        (assistantDelta !== undefined && assistantDelta.length > 0) ||
+        ((event.type === "item.started" ||
+          event.type === "item.updated" ||
+          event.type === "item.completed") &&
+          event.payload.itemType !== "reasoning" &&
+          event.payload.itemType !== "assistant_message") ||
+        (event.type === "item.completed" &&
+          event.payload.itemType === "assistant_message" &&
+          hasRenderableAssistantText(event.payload.detail ?? ""));
+      if (assistantOrActivityBoundary) {
+        yield* flushBufferedReasoningBeforeBoundary(
+          thread.id,
+          event,
+          toTurnId(event.turnId) ?? activeTurnId ?? undefined,
+        );
+      }
 
       if (assistantDelta && assistantDelta.length > 0) {
         const assistantMessageId = MessageId.makeUnsafe(
