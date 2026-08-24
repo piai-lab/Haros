@@ -852,7 +852,7 @@ describe("hasLiveTurnTailWork", () => {
 });
 
 describe("PROVIDER_OPTIONS", () => {
-  it("lists available providers", () => {
+  it("lists every discoverable provider without claiming runtime availability", () => {
     const omnimind = PROVIDER_OPTIONS.find((option) => option.value === "omnimind");
     const claude = PROVIDER_OPTIONS.find((option) => option.value === "claudeAgent");
     const cursor = PROVIDER_OPTIONS.find((option) => option.value === "cursor");
@@ -862,56 +862,48 @@ describe("PROVIDER_OPTIONS", () => {
     const opencode = PROVIDER_OPTIONS.find((option) => option.value === "opencode");
     const pi = PROVIDER_OPTIONS.find((option) => option.value === "pi");
     expect(PROVIDER_OPTIONS).toEqual([
-      { value: "omnimind", label: "OmniMind", available: true },
-      { value: "codex", label: "Codex", available: true },
-      { value: "claudeAgent", label: "Claude", available: true },
-      { value: "cursor", label: "Cursor", available: true },
-      { value: "antigravity", label: "Antigravity", available: true },
-      { value: "grok", label: "Grok", available: true },
-      { value: "droid", label: "Droid", available: true },
-      { value: "kilo", label: "Kilo", available: true },
-      { value: "opencode", label: "OpenCode", available: true },
-      { value: "pi", label: "Pi", available: true },
+      { value: "omnimind", label: "OmniMind" },
+      { value: "codex", label: "Codex" },
+      { value: "claudeAgent", label: "Claude" },
+      { value: "cursor", label: "Cursor" },
+      { value: "antigravity", label: "Antigravity" },
+      { value: "grok", label: "Grok" },
+      { value: "droid", label: "Droid" },
+      { value: "kilo", label: "Kilo" },
+      { value: "opencode", label: "OpenCode" },
+      { value: "pi", label: "Pi" },
     ]);
     expect(omnimind).toEqual({
       value: "omnimind",
       label: "OmniMind",
-      available: true,
     });
     expect(claude).toEqual({
       value: "claudeAgent",
       label: "Claude",
-      available: true,
     });
     expect(cursor).toEqual({
       value: "cursor",
       label: "Cursor",
-      available: true,
     });
     expect(grok).toEqual({
       value: "grok",
       label: "Grok",
-      available: true,
     });
     expect(droid).toEqual({
       value: "droid",
       label: "Droid",
-      available: true,
     });
     expect(kilo).toEqual({
       value: "kilo",
       label: "Kilo",
-      available: true,
     });
     expect(opencode).toEqual({
       value: "opencode",
       label: "OpenCode",
-      available: true,
     });
     expect(pi).toEqual({
       value: "pi",
       label: "Pi",
-      available: true,
     });
   });
 });

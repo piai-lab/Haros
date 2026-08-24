@@ -1,7 +1,8 @@
 // FILE: ProviderUsageMenuControl.tsx
 // Purpose: Shared provider-usage chip/menu used in the chat header and Environment panel.
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { type ReactNode } from "react";
 
 import { useAccountCapacity } from "~/hooks/useAccountCapacity";

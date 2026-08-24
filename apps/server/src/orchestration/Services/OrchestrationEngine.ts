@@ -11,6 +11,7 @@
  * @module OrchestrationEngineService
  */
 import type {
+  DispatchResult,
   OrchestrationCommand,
   OrchestrationEvent,
   OrchestrationReadModel,
@@ -118,7 +119,7 @@ export interface OrchestrationEngineShape {
   readonly dispatch: (
     command: OrchestrationCommand,
     context?: OrchestrationDispatchContext,
-  ) => Effect.Effect<{ sequence: number }, OrchestrationDispatchError, never>;
+  ) => Effect.Effect<DispatchResult, OrchestrationDispatchError, never>;
 
   /**
    * Repair project-facing projection state for older installs without clearing

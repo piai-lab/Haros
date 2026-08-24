@@ -4,6 +4,7 @@
 
 import {
   GROK_REASONING_EFFORT_OPTIONS,
+  PROVIDER_KINDS,
   ProviderKind,
   type ClaudeCodeEffort,
   type CodexReasoningEffort,
@@ -25,19 +26,6 @@ import {
 } from "@omnimind/shared/model";
 import type { ComposerThreadDraftState } from "./composerDraftDomain";
 import { classifyProviderReasoningEffortSupport } from "./lib/codexReasoningEffort";
-
-export const COMPOSER_PROVIDER_KINDS = [
-  "omnimind",
-  "codex",
-  "claudeAgent",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-] as const satisfies readonly ProviderKind[];
 
 const isProviderKind = Schema.is(ProviderKind);
 
@@ -681,7 +669,7 @@ export function legacyToModelSelectionByProvider(
   const result: Partial<Record<ProviderKind, ModelSelection>> = {};
   // Add entries from the options bag (for non-active providers)
   if (modelOptions) {
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
+    for (const provider of PROVIDER_KINDS) {
       const options = modelOptions[provider];
       if (options && Object.keys(options).length > 0) {
         const model =
@@ -784,7 +772,7 @@ export function resolvePreferredComposerModelSelection(input: {
   defaultProvider?: ProviderKind | null | undefined;
 }): ModelSelection | null {
   const draftProviderWithSelection =
-    COMPOSER_PROVIDER_KINDS.find(
+    PROVIDER_KINDS.find(
       (provider) => input.draft?.modelSelectionByProvider?.[provider] !== undefined,
     ) ?? null;
   const preferredProvider =

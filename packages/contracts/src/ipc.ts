@@ -215,6 +215,7 @@ import type {
 } from "./terminal";
 import type {
   ClientOrchestrationCommand,
+  DispatchResult,
   OrchestrationGetFullThreadDiffInput,
   OrchestrationGetFullThreadDiffResult,
   OrchestrationGetThreadDetailSnapshotInput,
@@ -255,6 +256,10 @@ import type {
   ProviderReadPluginInput,
   ProviderReadPluginResult,
 } from "./providerDiscovery";
+import type {
+  ProviderExecutionCapabilities,
+  ProviderExecutionCapabilitiesInput,
+} from "./providerExecution";
 import type { ProviderCompactThreadInput } from "./provider";
 import type {
   OmniMindCustomModelServiceRemoveInput,
@@ -904,6 +909,9 @@ export interface NativeApi {
     getComposerCapabilities: (
       input: ProviderGetComposerCapabilitiesInput,
     ) => Promise<ProviderComposerCapabilities>;
+    getExecutionCapabilities: (
+      input: ProviderExecutionCapabilitiesInput,
+    ) => Promise<ProviderExecutionCapabilities>;
     compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
     listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
     listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
@@ -1008,7 +1016,7 @@ export interface NativeApi {
     getThreadDetailSnapshot: (
       input: OrchestrationGetThreadDetailSnapshotInput,
     ) => Promise<OrchestrationGetThreadDetailSnapshotResult>;
-    dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
+    dispatchCommand: (command: ClientOrchestrationCommand) => Promise<DispatchResult>;
     importThread: (
       input: OrchestrationImportThreadInput,
     ) => Promise<OrchestrationImportThreadResult>;

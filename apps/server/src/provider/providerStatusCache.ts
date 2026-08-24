@@ -6,29 +6,16 @@
  *
  * @module providerStatusCache
  */
-import { ServerProviderStatus } from "@omnimind/contracts";
+import { PROVIDER_KINDS, ServerProviderStatus } from "@omnimind/contracts";
 import { Cause, Effect, FileSystem, Schema } from "effect";
 import { writeFileStringAtomically } from "../atomicWrite";
-
-const PROVIDER_STATUS_CACHE_IDS = [
-  "omnimind",
-  "codex",
-  "claudeAgent",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-] as const satisfies ReadonlyArray<ServerProviderStatus["provider"]>;
 
 const decodeProviderStatusCache = Schema.decodeUnknownEffect(
   Schema.fromJsonString(ServerProviderStatus),
 );
 
 const providerOrderRank = (provider: ServerProviderStatus["provider"]): number => {
-  const rank = PROVIDER_STATUS_CACHE_IDS.indexOf(provider);
+  const rank = PROVIDER_KINDS.indexOf(provider);
   return rank === -1 ? Number.MAX_SAFE_INTEGER : rank;
 };
 

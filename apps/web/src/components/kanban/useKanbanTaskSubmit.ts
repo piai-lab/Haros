@@ -17,6 +17,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
 import { toastManager } from "~/components/ui/toast";
+import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
 import type { DraftThreadEnvMode } from "~/composerDraftStore";
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
@@ -196,7 +197,13 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
         toastManager.add({
           type: "error",
           title: t("kanban.couldNotStart"),
-          description: result.kind === "error" ? result.message : t("kanban.savedToDraftsInstead"),
+          description:
+            result.kind === "error"
+              ? (() => {
+                  const messageKey = runtimeModeAvailabilityMessageKeyFromError(result);
+                  return messageKey ? t(messageKey) : result.message;
+                })()
+              : t("kanban.savedToDraftsInstead"),
         });
         isCreatingRef.current = false;
         setIsCreating(false);

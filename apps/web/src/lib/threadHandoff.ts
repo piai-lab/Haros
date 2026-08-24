@@ -7,7 +7,6 @@ import {
   EventId,
   MessageId,
   type OrchestrationThreadActivity,
-  PROVIDER_DISPLAY_NAMES,
   type ModelSelection,
   type ProviderKind,
   type ServerProviderStatus,
@@ -16,6 +15,7 @@ import {
   type ThreadForkScope,
 } from "@omnimind/contracts";
 import { getDefaultModel } from "@omnimind/shared/model";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { sanitizeImportedUserMessageText } from "@omnimind/shared/importedTranscript";
 import { type Thread } from "../types";
 import { DEFAULT_PROVIDER_ORDER } from "../providerOrdering";

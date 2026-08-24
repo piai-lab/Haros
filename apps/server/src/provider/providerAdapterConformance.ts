@@ -9,6 +9,7 @@ type CapabilityFlag = Exclude<
   | "conversationRollback"
   | "supportsSkillMentions"
   | "supportsPluginMentions"
+  | "supportedRuntimeModes"
   | "supportsLiveTurnDiffPatch"
 >;
 
@@ -18,7 +19,8 @@ type OptionalAdapterMethod =
   | "listCommands"
   | "listPlugins"
   | "readPlugin"
-  | "listModels";
+  | "listModels"
+  | "compactThread";
 
 export interface ProviderAdapterConformanceIssue {
   readonly capability: CapabilityFlag;
@@ -34,6 +36,7 @@ const CAPABILITY_METHOD_REQUIREMENTS: ReadonlyArray<{
   { capability: "supportsNativeSlashCommandDiscovery", methods: ["listCommands"] },
   { capability: "supportsPluginDiscovery", methods: ["listPlugins", "readPlugin"] },
   { capability: "supportsRuntimeModelList", methods: ["listModels"] },
+  { capability: "supportsThreadCompaction", methods: ["compactThread"] },
 ];
 
 export function providerAdapterConformanceIssues(

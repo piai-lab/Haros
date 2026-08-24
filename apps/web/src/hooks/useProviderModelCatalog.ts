@@ -9,6 +9,7 @@ import type {
   ProviderKind,
   ProviderModelDescriptor,
 } from "@omnimind/contracts";
+import { PROVIDER_KINDS } from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
@@ -16,7 +17,6 @@ import { getAppModelOptions, getCustomModelsByProvider } from "../providerSettin
 import { useLocalPreferences } from "../localPreferences";
 import { useServerSettings } from "../serverSettings";
 import { resolveRuntimeModelDescriptor } from "../components/chat/runtimeModelCapabilities";
-import { COMPOSER_PROVIDER_KINDS } from "../composerDraftModels";
 import { collapseCursorModelVariants } from "../cursorModelVariants";
 import {
   isInitialModelDiscoveryPending,
@@ -561,7 +561,7 @@ export function useProviderModelCatalog(input: {
     Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>
   >(() => {
     const result = {} as Record<ProviderKind, ReadonlyArray<ProviderModelDescriptor>>;
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
+    for (const provider of PROVIDER_KINDS) {
       const state = catalogStateByProvider[provider];
       result[provider] =
         state === "ready" || state === "stale" ? discoveredRuntimeModelsByProvider[provider] : [];
@@ -571,7 +571,7 @@ export function useProviderModelCatalog(input: {
 
   const configuredCustomModelSlugsByProvider = useMemo(() => {
     const result = {} as Record<ProviderKind, ReadonlySet<string>>;
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
+    for (const provider of PROVIDER_KINDS) {
       result[provider] = new Set(
         getAppModelOptions(provider, customModelsByProvider[provider])
           .filter((option) => option.isCustom)
@@ -585,7 +585,7 @@ export function useProviderModelCatalog(input: {
     Record<ProviderKind, ReadonlyArray<ProviderModelOption>>
   >(() => {
     const result = {} as Record<ProviderKind, ReadonlyArray<ProviderModelOption>>;
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
+    for (const provider of PROVIDER_KINDS) {
       const runtimeModels = runtimeModelsByProvider[provider];
       const catalogState = catalogStateByProvider[provider];
       if (catalogState === "idle" || catalogState === "checking") {
@@ -660,7 +660,7 @@ export function useProviderModelCatalog(input: {
 
   const loadingModelProviders = useMemo<Record<ProviderKind, boolean>>(() => {
     const result = {} as Record<ProviderKind, boolean>;
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
+    for (const provider of PROVIDER_KINDS) {
       result[provider] = catalogStateByProvider[provider] === "checking";
     }
     return result;

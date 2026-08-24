@@ -63,10 +63,6 @@ import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
 import { findProviderStatus } from "~/lib/providerAvailability";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
-import {
-  normalizeRuntimeModeForProvider,
-  providerModelSupportsAutoRuntimeMode,
-} from "~/lib/runtimeMode";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import {
@@ -193,11 +189,6 @@ export function KanbanNewTaskDialog({
     () => findProviderStatus(providerStatuses, "codex"),
     [providerStatuses],
   );
-  const selectedProviderStatus = useMemo(
-    () => findProviderStatus(providerStatuses, selectedProvider),
-    [providerStatuses, selectedProvider],
-  );
-
   const modelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
     () => ({ [selectedProvider]: selectedModel }),
     [selectedProvider, selectedModel],
@@ -241,23 +232,10 @@ export function KanbanNewTaskDialog({
         model,
         runtimeModels: runtimeModelsByProvider[provider],
       });
-      setRuntimeMode((current) => normalizeRuntimeModeForProvider(current, provider));
       setScratchProviderModel(provider, model, runtimeModel?.supportsAutoMode);
     },
     [runtimeModelsByProvider, setScratchProviderModel],
   );
-  useEffect(() => {
-    if (
-      runtimeMode === "auto" &&
-      !providerModelSupportsAutoRuntimeMode(
-        selectedProvider,
-        selectedRuntimeModelForCapabilities,
-        selectedProviderStatus,
-      )
-    ) {
-      setRuntimeMode("approval-required");
-    }
-  }, [runtimeMode, selectedProvider, selectedProviderStatus, selectedRuntimeModelForCapabilities]);
   const trimmedPrompt = prompt.trim();
   const hasSendableContent =
     trimmedPrompt.length > 0 ||
@@ -589,9 +567,18 @@ export function KanbanNewTaskDialog({
                     onEnvModeChange={setEnvMode}
                   />
                   <RuntimeUsageControls
-                    provider={selectedProvider}
-                    runtimeModel={selectedRuntimeModelForCapabilities}
-                    providerStatus={selectedProviderStatus}
+                    modelSelection={
+                      selectedModel
+                        ? buildModelSelection(
+                            selectedProvider,
+                            selectedModel,
+                            undefined,
+                            selectedProvider === "claudeAgent"
+                              ? selectedRuntimeModelForCapabilities?.supportsAutoMode
+                              : undefined,
+                          )
+                        : undefined
+                    }
                     runtimeMode={runtimeMode}
                     onRuntimeModeChange={setRuntimeMode}
                   />

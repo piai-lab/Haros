@@ -7,11 +7,11 @@ import {
   type EditorId,
   type ProjectId,
   type ProjectScript,
-  PROVIDER_DISPLAY_NAMES,
   type ProviderKind,
   type ResolvedKeybindingsConfig,
   type ThreadId,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { useQuery } from "@tanstack/react-query";
 import React, { type Dispatch, type SetStateAction, useEffect, useRef, useState } from "react";
 import { FiGitBranch } from "react-icons/fi";

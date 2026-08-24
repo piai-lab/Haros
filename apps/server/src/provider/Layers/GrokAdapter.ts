@@ -7,7 +7,6 @@ import {
   ApprovalRequestId,
   type GrokModelOptions,
   EventId,
-  type ProviderComposerCapabilities,
   type ProviderApprovalDecision,
   type ProviderInteractionMode,
   type ProviderListModelsResult,
@@ -133,6 +132,7 @@ import {
   type GrokAcpRuntimeSettings,
 } from "../acp/GrokAcpSupport.ts";
 import { GrokAdapter, type GrokAdapterShape } from "../Services/GrokAdapter.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 
 const PROVIDER = "grok" as const;
@@ -2231,19 +2231,6 @@ export function makeGrokAdapter(
         return ctx !== undefined && !ctx.stopped;
       });
 
-    const getComposerCapabilities: NonNullable<GrokAdapterShape["getComposerCapabilities"]> = () =>
-      Effect.succeed({
-        provider: PROVIDER,
-        supportsSkillMentions: false,
-        supportsSkillDiscovery: false,
-        supportsNativeSlashCommandDiscovery: false,
-        supportsPluginMentions: false,
-        supportsPluginDiscovery: false,
-        supportsRuntimeModelList: true,
-        supportsThreadCompaction: true,
-        supportsThreadImport: false,
-      } satisfies ProviderComposerCapabilities);
-
     const compactThread: NonNullable<GrokAdapterShape["compactThread"]> = (threadId) =>
       Effect.gen(function* () {
         // Wait for a settling resume replay before taking the thread lock:
@@ -2668,7 +2655,16 @@ export function makeGrokAdapter(
     return {
       provider: PROVIDER,
       capabilities: {
+        ...providerExecutionStructure(PROVIDER),
         sessionModelSwitch: "restart-session",
+        supportsSkillMentions: false,
+        supportsSkillDiscovery: false,
+        supportsNativeSlashCommandDiscovery: false,
+        supportsPluginMentions: false,
+        supportsPluginDiscovery: false,
+        supportsRuntimeModelList: true,
+        supportsThreadCompaction: true,
+        supportsThreadImport: false,
       },
       startSession,
       sendTurn,
@@ -2680,7 +2676,6 @@ export function makeGrokAdapter(
       respondToUserInput,
       stopSession,
       listSessions,
-      getComposerCapabilities,
       compactThread,
       listModels,
       hasSession,

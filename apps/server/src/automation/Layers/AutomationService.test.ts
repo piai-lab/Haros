@@ -6,6 +6,7 @@ import {
   CommandId,
   DEFAULT_AUTOMATION_STOP_CONFIDENCE_THRESHOLD,
   MessageId,
+  PROVIDER_KINDS,
   ProjectId,
   ThreadId,
   TurnId,
@@ -17,6 +18,7 @@ import {
   type OrchestrationCommand,
   type OrchestrationProjectShell,
   type OrchestrationThreadShell,
+  type ServerProviderStatus,
 } from "@omnimind/contracts";
 import { isTemporaryWorktreeBranch } from "@omnimind/shared/git";
 import { Deferred, Duration, Effect, Fiber, Layer, Option, Stream } from "effect";
@@ -31,6 +33,12 @@ import { ProjectionSnapshotQuery } from "../../orchestration/Services/Projection
 import type { ProjectionSnapshotQueryShape } from "../../orchestration/Services/ProjectionSnapshotQuery.ts";
 import { AutomationRepositoryLive } from "../../persistence/Layers/AutomationRepository.ts";
 import { ProjectionTurnRepositoryLive } from "../../persistence/Layers/ProjectionTurns.ts";
+import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
+import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
+import {
+  ProviderExecutionCapabilities,
+  type ProviderExecutionCapabilitiesShape,
+} from "../../provider/Services/ProviderExecutionCapabilities.ts";
 import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import {
   AutomationRepository,
@@ -120,6 +128,7 @@ function resetHarness() {
   failDispatchType = null;
   dispatchHook = null;
   activeProjectKind = "project";
+  providerStatuses = [...readyProviderStatuses];
 }
 
 // Build a partial thread shell; only the fields reconcileThread reads are populated.
@@ -547,6 +556,28 @@ const gitCore = {
     }),
 } as unknown as GitCoreShape;
 
+const readyProviderStatuses: ServerProviderStatus[] = PROVIDER_KINDS.map((provider) => ({
+  provider,
+  status: "ready" as const,
+  available: true,
+  authStatus: "authenticated" as const,
+  supportsAutoRuntimeMode: true,
+  checkedAt: "2026-08-25T00:00:00.000Z",
+}));
+let providerStatuses = [...readyProviderStatuses];
+const providerExecutionCapabilities: ProviderExecutionCapabilitiesShape = {
+  get: (modelSelection) =>
+    Effect.sync(() =>
+      resolveProviderExecutionCapabilities({
+        modelSelection,
+        adapterCapabilities: providerExecutionStructure(modelSelection.provider),
+        providerStatus: providerStatuses.find(
+          (status) => status.provider === modelSelection.provider,
+        ),
+      }),
+    ),
+};
+
 const layer = it.layer(
   AutomationServiceLive.pipe(
     Layer.provideMerge(AutomationRepositoryLive),
@@ -556,6 +587,7 @@ const layer = it.layer(
     Layer.provideMerge(Layer.succeed(ProjectionSnapshotQuery, projectionSnapshotQuery)),
     Layer.provideMerge(Layer.succeed(TextGeneration, textGeneration)),
     Layer.provideMerge(ServerSettingsService.layerTest()),
+    Layer.provideMerge(Layer.succeed(ProviderExecutionCapabilities, providerExecutionCapabilities)),
     Layer.provideMerge(Layer.succeed(GitCore, gitCore)),
   ),
 );
@@ -592,7 +624,7 @@ layer("AutomationService", (it) => {
           runtimeMode: "auto",
         })
         .pipe(Effect.flip);
-      assert.match(createError.message, /does not support Auto mode/);
+      assert.match(createError.message, /not supported by this Provider and model/);
 
       const definition = yield* service.create({
         ...createInput(),
@@ -609,7 +641,29 @@ layer("AutomationService", (it) => {
           modelSelection: unsupportedModelSelection,
         })
         .pipe(Effect.flip);
-      assert.match(updateError.message, /does not support Auto mode/);
+      assert.match(updateError.message, /not supported by this Provider and model/);
+    }),
+  );
+
+  it.effect("keeps structural support but rejects a currently unauthenticated runtime", () =>
+    Effect.gen(function* () {
+      resetHarness();
+      providerStatuses = readyProviderStatuses.map((status) =>
+        status.provider === "codex"
+          ? {
+              ...status,
+              status: "warning" as const,
+              available: false,
+              authStatus: "unauthenticated" as const,
+            }
+          : status,
+      );
+      const service = yield* AutomationService;
+
+      const error = yield* service.create(createInput()).pipe(Effect.flip);
+
+      assert.strictEqual(error.code, "authentication-required");
+      assert.match(error.message, /temporarily unavailable/);
     }),
   );
 

@@ -54,7 +54,6 @@ import {
 } from "@omnimind/shared/conversationEdit";
 import { isTemporaryWorktreeBranch, WORKTREE_BRANCH_PREFIX } from "@omnimind/shared/git";
 import { claudeSelectionRequiresRestart } from "@omnimind/shared/model";
-import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
 import {
   formatProviderDeliveryBlockDetail,
   PROVIDER_DELIVERY_BLOCK_SUMMARY,
@@ -2963,7 +2962,7 @@ const make = Effect.gen(function* () {
           requestedRuntimeMode: event.payload.runtimeMode,
           requestedInteractionMode: event.payload.interactionMode,
         }) &&
-        providerSupportsNativeTurnSteering(activeProvider) &&
+        event.payload.steeringDisposition === "native" &&
         hasLiveTurn;
       if (!isEditResendTurnStart && !isNativeSteer && hasLiveTurn) {
         yield* enqueueQueuedTurnStart(event);

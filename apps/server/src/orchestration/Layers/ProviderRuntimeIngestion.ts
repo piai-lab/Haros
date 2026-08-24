@@ -25,7 +25,6 @@ import {
   startDrainableWorkerProducers,
 } from "@omnimind/shared/DrainableWorker";
 import { isPotentiallyVisibleProviderRuntimeActivity } from "@omnimind/shared/providerActivityVisibility";
-import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
 import { buildStalePendingRequestFailureDetail } from "@omnimind/shared/threadSummary";
 import {
   buildSubagentIdentityDirectory,
@@ -2930,7 +2929,7 @@ const make = Effect.gen(function* () {
       const isNativeSteer =
         event.payload.dispatchMode === "steer" &&
         steerProvider !== undefined &&
-        providerSupportsNativeTurnSteering(steerProvider);
+        event.payload.steeringDisposition === "native";
       let deliveryTurnId: TurnId | undefined;
       if (isNativeSteer) {
         let activeTurnId = thread?.session?.activeTurnId ?? undefined;

@@ -1251,18 +1251,3 @@ Object.assign(MODEL_CAPABILITIES_INDEX.grok, {
   "grok-build": GROK_BUILD_CAPABILITIES,
   "grok-4.5": GROK_4_5_CAPABILITIES,
 });
-
-// ── Provider display names ────────────────────────────────────────────
-
-export const PROVIDER_DISPLAY_NAMES: Record<ProviderKind, string> = {
-  omnimind: "OmniMind",
-  codex: "Codex",
-  claudeAgent: "Claude",
-  cursor: "Cursor",
-  antigravity: "Antigravity",
-  grok: "Grok",
-  droid: "Droid",
-  kilo: "Kilo",
-  opencode: "OpenCode",
-  pi: "Pi",
-};

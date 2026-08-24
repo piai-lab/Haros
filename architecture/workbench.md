@@ -341,6 +341,8 @@ Composer 的运行模式是当前任务唯一的自动化选择；用户不应�
 
 Provider/Host capability 改变时，Composer mode menu 由 loaded capability truth 决定：不支持的项隐藏或显示 unavailable reason，不能允许用户选择一个底层只会一律拒绝的 mode。Pi-family 当前没有 OmniMind approval request path 时，不显示 `需要时询问`。`acceptForSession` 若实际持久切换当前 Thread 为 `full-access`，按钮显示“此任务始终允许 / Always allow for this task”，不能显示“本会话始终允许”。
 
+已保存的mode与当前可执行性是两个事实。若重启、CLI版本、adapter、model、Host closure或health变化使原选择永久不支持，Workbench保留并显示该选择、说明不支持原因，并让用户主动改选；若只是暂时不可用或降级，则保留选择并提供登录、升级、重试等真实恢复动作。任何consumer都不得把`auto`静默降为`approval-required`、自动持久回写或把临时故障误报为永久不支持；能力恢复后原选择无需重新保存即可继续使用。普通文案消费Server的typed reason code，不直接暴露英文runtime诊断。
+
 共同 UI 仍不建设第二 permission broker，也不把不同产品的 sandbox 字段判为相同底层实现。进程隔离、Package verification 与 Provider 声明不得包装成 OS sandbox；但这些隐藏工程边界不能被转化为无必要的用户审批仪式。
 
 ## 9. 运行时状态

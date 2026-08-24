@@ -407,6 +407,24 @@ describe("OrchestrationEngine", () => {
       }),
     );
 
+    await system.run(
+      engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-managed-attachment-session-running"),
+        threadId,
+        session: {
+          threadId,
+          status: "running",
+          providerName: "codex",
+          runtimeMode: "approval-required",
+          activeTurnId: asTurnId("turn-managed-attachment-active"),
+          lastError: null,
+          updatedAt: createdAt,
+        },
+        createdAt,
+      }),
+    );
+
     const repository = system.managedAttachmentRepository;
     const stage = async (attachmentId: string) => {
       const reserved = await system.run(
@@ -460,11 +478,13 @@ describe("OrchestrationEngine", () => {
           },
         ],
       },
+      dispatchMode: "steer" as const,
       interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
       runtimeMode: "approval-required" as const,
       createdAt,
     };
     const accepted = await system.run(engine.dispatch(command, { attachmentPrincipal: principal }));
+    expect(accepted.steeringDisposition).toBe("native");
     await expect(
       system.run(engine.dispatch(command, { attachmentPrincipal: principal })),
     ).resolves.toEqual(accepted);
@@ -502,6 +522,79 @@ describe("OrchestrationEngine", () => {
 
     const claimed = await system.run(repository.findClaimedForCommand({ commandId }));
     expect(claimed.map((attachment) => attachment.attachmentId)).toEqual([firstAttachmentId]);
+    await system.dispose();
+  });
+
+  it("restores the exact fallback steering disposition on an accepted retry", async () => {
+    const createdAt = now();
+    const system = await createOrchestrationSystem();
+    const { engine } = system;
+    const projectId = asProjectId("project-fallback-steer-retry");
+    const threadId = ThreadId.makeUnsafe("thread-fallback-steer-retry");
+
+    await system.run(
+      engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-fallback-steer-project"),
+        projectId,
+        title: "Fallback steer retry",
+        workspaceRoot: "/tmp/project-fallback-steer-retry",
+        defaultModelSelection: { provider: "cursor", model: "cursor-default" },
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-fallback-steer-thread"),
+        threadId,
+        projectId,
+        title: "Fallback steer retry",
+        modelSelection: { provider: "cursor", model: "cursor-default" },
+        interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+        runtimeMode: "approval-required",
+        branch: null,
+        worktreePath: null,
+        createdAt,
+      }),
+    );
+    await system.run(
+      engine.dispatch({
+        type: "thread.session.set",
+        commandId: CommandId.makeUnsafe("cmd-fallback-steer-session"),
+        threadId,
+        session: {
+          threadId,
+          status: "running",
+          providerName: "cursor",
+          runtimeMode: "approval-required",
+          activeTurnId: asTurnId("turn-fallback-steer-active"),
+          lastError: null,
+          updatedAt: createdAt,
+        },
+        createdAt,
+      }),
+    );
+
+    const command = {
+      type: "thread.turn.start" as const,
+      commandId: CommandId.makeUnsafe("cmd-fallback-steer-turn"),
+      threadId,
+      message: {
+        messageId: asMessageId("msg-fallback-steer"),
+        role: "user" as const,
+        text: "redirect",
+        attachments: [],
+      },
+      dispatchMode: "steer" as const,
+      interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+      runtimeMode: "approval-required" as const,
+      createdAt,
+    };
+    const accepted = await system.run(engine.dispatch(command));
+    expect(accepted.steeringDisposition).toBe("queue-interrupt-redispatch");
+    await expect(system.run(engine.dispatch(command))).resolves.toEqual(accepted);
+
     await system.dispose();
   });
 

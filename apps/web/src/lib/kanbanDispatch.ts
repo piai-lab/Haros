@@ -61,7 +61,7 @@ export type KanbanDraftDispatchResult =
   /** The board cannot dispatch this card faithfully — open the chat instead. */
   | { kind: "open-thread"; reason: KanbanDraftOpenThreadReason }
   | { kind: "unavailable" }
-  | { kind: "error"; message: string };
+  | { kind: "error"; message: string; code?: string };
 
 export async function dispatchKanbanDraftCard(input: {
   card: KanbanCard;
@@ -335,6 +335,9 @@ async function dispatchKanbanDraftThreadOnce(
     return {
       kind: "error",
       message: error instanceof Error ? error.message : "Could not send the drafted prompt.",
+      ...(typeof error === "object" && error !== null && "code" in error
+        ? { code: String(error.code) }
+        : {}),
     };
   }
 

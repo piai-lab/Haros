@@ -21,6 +21,7 @@ import { useRef, useState } from "react";
 import { getProviderStartOptions, resolveAssistantDeliveryMode } from "~/providerSettings";
 import { useServerSettings } from "~/serverSettings";
 import { toastManager } from "~/components/ui/toast";
+import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { useI18n } from "~/i18n";
@@ -157,7 +158,10 @@ export function KanbanProjectBoardView({
     toastManager.add({
       type: "error",
       title: t("kanban.couldNotSend"),
-      description: result.message,
+      description: (() => {
+        const messageKey = runtimeModeAvailabilityMessageKeyFromError(result);
+        return messageKey ? t(messageKey) : result.message;
+      })(),
     });
   };
 

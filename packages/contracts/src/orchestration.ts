@@ -10,6 +10,8 @@ import {
   PiModelOptions,
 } from "./model";
 import { ProviderMentionReference, ProviderSkillReference } from "./providerDiscovery";
+import { DEFAULT_PROVIDER_KIND, PROVIDER_KINDS, ProviderKind } from "./providerIdentity";
+export { DEFAULT_PROVIDER_KIND, PROVIDER_KINDS, ProviderKind } from "./providerIdentity";
 import { ProjectKind } from "./project";
 import {
   ApprovalRequestId,
@@ -53,21 +55,6 @@ export const ORCHESTRATION_WS_CHANNELS = {
   threadEvent: "orchestration.threadEvent",
 } as const;
 
-export const PROVIDER_KINDS = [
-  "omnimind",
-  "codex",
-  "claudeAgent",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-] as const;
-
-export const ProviderKind = Schema.Literals(PROVIDER_KINDS);
-export type ProviderKind = typeof ProviderKind.Type;
 export const ProviderApprovalPolicy = Schema.Literals([
   "untrusted",
   "on-failure",
@@ -81,7 +68,6 @@ export const ProviderSandboxMode = Schema.Literals([
   "danger-full-access",
 ]);
 export type ProviderSandboxMode = typeof ProviderSandboxMode.Type;
-export const DEFAULT_PROVIDER_KIND: ProviderKind = "omnimind";
 
 export const OmniMindModelSelection = Schema.Struct({
   provider: Schema.Literal("omnimind"),
@@ -2033,6 +2019,9 @@ export const ThreadMessageSentPayload = Schema.Struct({
   updatedAt: IsoDateTime,
 });
 
+export const SteeringDisposition = Schema.Literals(["native", "queue-interrupt-redispatch"]);
+export type SteeringDisposition = typeof SteeringDisposition.Type;
+
 export const ThreadTurnStartRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   messageId: MessageId,
@@ -2041,6 +2030,7 @@ export const ThreadTurnStartRequestedPayload = Schema.Struct({
   reviewTarget: Schema.optional(ProviderReviewTarget),
   assistantDeliveryMode: Schema.optional(AssistantDeliveryMode),
   dispatchMode: TurnDispatchMode.pipe(Schema.withDecodingDefault(() => DEFAULT_TURN_DISPATCH_MODE)),
+  steeringDisposition: Schema.optional(SteeringDisposition),
   dispatchOrigin: Schema.optional(MessageDispatchOrigin),
   runtimeMode: RuntimeMode.pipe(Schema.withDecodingDefault(() => DEFAULT_RUNTIME_MODE)),
   interactionMode: ProviderInteractionMode.pipe(
@@ -2472,6 +2462,7 @@ export type ProjectionCheckpointRow = typeof ProjectionCheckpointRow.Type;
 
 export const DispatchResult = Schema.Struct({
   sequence: NonNegativeInt,
+  steeringDisposition: Schema.optional(SteeringDisposition),
 });
 export type DispatchResult = typeof DispatchResult.Type;
 

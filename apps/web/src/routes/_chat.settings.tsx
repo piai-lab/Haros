@@ -5,12 +5,11 @@
 
 import {
   DEFAULT_GIT_TEXT_GENERATION_MODEL,
-  PROVIDER_DISPLAY_NAMES,
   type DesktopAppIcon,
   type ProviderKind,
   type ServerSettingsPatch,
 } from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
+import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { sameAppSnapShortcut } from "@omnimind/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";

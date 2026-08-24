@@ -94,6 +94,7 @@ import {
 } from "../Services/StudioOutputReactor.ts";
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { resolveProviderAttachmentPath } from "../../provider/providerAttachmentPaths.ts";
+import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { checkpointRefForThreadTurn } from "../../checkpointing/Utils.ts";
 import {
@@ -229,6 +230,11 @@ describe("ProviderCommandReactor", () => {
       provider: "codex",
       model: "gpt-5-codex",
     };
+    const initialRuntimeMode = providerExecutionStructure(
+      modelSelection.provider,
+    ).supportedRuntimeModes.has("approval-required")
+      ? "approval-required"
+      : "full-access";
     const startSession = vi.fn((_: unknown, input: unknown) => {
       const sessionIndex = nextSessionIndex++;
       const sessionModelSelection =
@@ -290,7 +296,7 @@ describe("ProviderCommandReactor", () => {
       const base: ProviderSession = runtimeSessions[index] ?? {
         provider: modelSelection.provider,
         status: "ready",
-        runtimeMode: "approval-required",
+        runtimeMode: initialRuntimeMode,
         model: modelSelection.model,
         threadId,
         resumeCursor: { opaque: "resume-synthetic" },
@@ -626,7 +632,7 @@ describe("ProviderCommandReactor", () => {
         title: "Thread",
         modelSelection: modelSelection,
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
+        runtimeMode: initialRuntimeMode,
         branch: null,
         worktreePath: null,
         ...(input?.gatewayOperationId
@@ -2788,7 +2794,7 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
           skills: [{ name: "Aihot", path: skillPath }],
         },
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
         createdAt: now,
       }),
@@ -6332,7 +6338,7 @@ describe("ProviderCommandReactor", () => {
           model: "deepseek/deepseek-chat",
         },
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         branch: null,
         worktreePath: null,
         createdAt: now,
@@ -6351,7 +6357,7 @@ describe("ProviderCommandReactor", () => {
           attachments: [],
         },
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         createdAt: now,
       }),
     );
@@ -6362,7 +6368,7 @@ describe("ProviderCommandReactor", () => {
         provider: "omnimind",
         model: "deepseek/deepseek-chat",
       },
-      runtimeMode: "approval-required",
+      runtimeMode: "full-access",
       workSurface: "chat",
     });
     expect(harness.startSession.mock.calls[0]?.[1]).not.toHaveProperty("cwd");
@@ -6449,7 +6455,7 @@ describe("ProviderCommandReactor", () => {
           model: "Gemini 3.5 Flash",
         },
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         createdAt: now,
       }),
     );
@@ -6500,7 +6506,7 @@ describe("ProviderCommandReactor", () => {
           model: "Gemini 3.5 Flash",
         },
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         createdAt: now,
       }),
     );
@@ -6716,7 +6722,7 @@ describe("ProviderCommandReactor", () => {
           model: "Gemini 3.5 Flash",
         },
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         createdAt: now,
       }),
     );
@@ -6783,7 +6789,7 @@ describe("ProviderCommandReactor", () => {
           model: "Gemini 3.5 Flash",
         },
         interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
-        runtimeMode: "approval-required",
+        runtimeMode: "full-access",
         createdAt: now,
       }),
     );

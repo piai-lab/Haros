@@ -1,5 +1,6 @@
 import type {
   ChatAttachment,
+  DispatchResult,
   OrchestrationEvent,
   OrchestrationReadModel,
   ProjectId,
@@ -11,6 +12,7 @@ import {
   MessageId,
   OrchestrationCommand,
   ORCHESTRATION_WS_METHODS,
+  ProviderKind,
   type ThreadHandoffImportedMessage,
 } from "@omnimind/contracts";
 import { createHash, randomUUID } from "node:crypto";
@@ -81,6 +83,7 @@ import {
   usesReservedCommandAdmission,
 } from "../orchestrationAdmission.ts";
 import { decideOrchestrationCommand } from "../decider.ts";
+import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
 import { PROJECT_METADATA_SNAPSHOT_PROJECTORS } from "../projectMetadataProjection.ts";
 import { createEmptyReadModel, projectEvent } from "../projector.ts";
 import {
@@ -108,7 +111,7 @@ type OrchestrationEnginePhase = "running" | "quiescing" | "draining" | "stopped"
 interface CommandEnvelope {
   command: OrchestrationCommand;
   attachmentPrincipal: ManagedAttachmentPrincipal;
-  result: Deferred.Deferred<{ sequence: number }, OrchestrationDispatchError>;
+  result: Deferred.Deferred<DispatchResult, OrchestrationDispatchError>;
   executionState: Ref.Ref<CommandExecutionState>;
   deadlineAtMs: number;
 }
@@ -528,10 +531,40 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       }
     });
 
+  const dispatchResultForAcceptedReceipt = (
+    command: OrchestrationCommand,
+    receipt: OrchestrationCommandReceipt,
+  ): Effect.Effect<DispatchResult, OrchestrationEventStoreError> => {
+    if (command.type !== "thread.turn.start") {
+      return Effect.succeed({ sequence: receipt.resultSequence });
+    }
+    return eventStore
+      .readThreadEvents({
+        threadId: command.threadId,
+        throughSequenceInclusive: receipt.resultSequence,
+        limit: 1,
+        eventTypes: ["thread.turn-start-requested", "thread.turn-queued"],
+      })
+      .pipe(
+        Effect.map((events) => {
+          const event = events.find((candidate) => candidate.commandId === command.commandId);
+          return {
+            sequence: receipt.resultSequence,
+            ...(event?.type === "thread.turn-start-requested" ||
+            event?.type === "thread.turn-queued"
+              ? event.payload.steeringDisposition === undefined
+                ? {}
+                : { steeringDisposition: event.payload.steeringDisposition }
+              : {}),
+          };
+        }),
+      );
+  };
+
   const resolveStoredCommandOutcome = (
     command: OrchestrationCommand,
     principal: ManagedAttachmentPrincipal,
-  ): Effect.Effect<{ sequence: number }, OrchestrationDispatchError, never> =>
+  ): Effect.Effect<DispatchResult, OrchestrationDispatchError, never> =>
     Effect.gen(function* () {
       const receiptExit = yield* Effect.exit(
         commandReceiptRepository.getByCommandId({
@@ -546,9 +579,7 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       yield* validateCommandReceiptIdentity(existingReceipt.value, fingerprint);
       if (existingReceipt.value.status === "accepted") {
         yield* validateAcceptedAttachmentRetry(command, principal);
-        return {
-          sequence: existingReceipt.value.resultSequence,
-        };
+        return yield* dispatchResultForAcceptedReceipt(command, existingReceipt.value);
       }
       return yield* new OrchestrationCommandPreviouslyRejectedError({
         commandId: command.commandId,
@@ -919,9 +950,10 @@ const makeOrchestrationEngine = Effect.gen(function* () {
         }
         if (existingReceipt.value.status === "accepted") {
           yield* validateAcceptedAttachmentRetry(envelope.command, envelope.attachmentPrincipal);
-          yield* Deferred.succeed(envelope.result, {
-            sequence: existingReceipt.value.resultSequence,
-          });
+          yield* Deferred.succeed(
+            envelope.result,
+            yield* dispatchResultForAcceptedReceipt(envelope.command, existingReceipt.value),
+          );
           return;
         }
         yield* Deferred.fail(
@@ -1064,10 +1096,32 @@ const makeOrchestrationEngine = Effect.gen(function* () {
         };
         chatToAgentCommand = command;
       }
+      const turnAdmissionCapabilities =
+        command.type === "thread.turn.start"
+          ? (() => {
+              const turnCommand = command;
+              const thread = deciderReadModel.threads.find(
+                (candidate) => candidate.id === turnCommand.threadId,
+              );
+              const sessionProvider = thread?.session?.providerName;
+              const provider =
+                sessionProvider !== undefined && Schema.is(ProviderKind)(sessionProvider)
+                  ? sessionProvider
+                  : (thread?.modelSelection.provider ??
+                    turnCommand.modelSelection?.provider ??
+                    "omnimind");
+              return {
+                provider,
+                supportsNativeTurnSteering:
+                  providerExecutionStructure(provider).supportsTurnSteering,
+              } as const;
+            })()
+          : undefined;
       const eventBase = yield* decideOrchestrationCommand({
         command,
         readModel: deciderReadModel,
         workspacePaths: deciderWorkspacePaths,
+        ...(turnAdmissionCapabilities ? { turnAdmissionCapabilities } : {}),
       }).pipe(
         Effect.tapError(() =>
           cleanupPreparedChatToAgentAttachments === null
@@ -1281,8 +1335,19 @@ const makeOrchestrationEngine = Effect.gen(function* () {
       for (const event of committedCommand.committedEvents) {
         yield* publishCommittedEvent(event);
       }
+      const turnAdmissionEvent = committedCommand.committedEvents.find(
+        (event) =>
+          event.commandId === envelope.command.commandId &&
+          (event.type === "thread.turn-start-requested" || event.type === "thread.turn-queued"),
+      );
       yield* Deferred.succeed(envelope.result, {
         sequence: committedCommand.lastSequence,
+        ...(turnAdmissionEvent?.type === "thread.turn-start-requested" ||
+        turnAdmissionEvent?.type === "thread.turn-queued"
+          ? turnAdmissionEvent.payload.steeringDisposition === undefined
+            ? {}
+            : { steeringDisposition: turnAdmissionEvent.payload.steeringDisposition }
+          : {}),
       });
     }).pipe(
       Effect.timeoutOption(remainingBudgetMs),

@@ -1,20 +1,11 @@
 // FILE: providerMetadata.ts
-// Purpose: Exhaustive non-secret provider identity and presentation metadata.
+// Purpose: Exhaustive credential-blind provider presentation metadata.
 
-import { PROVIDER_DISPLAY_NAMES, type ProviderKind } from "@omnimind/contracts";
+import type { ProviderKind } from "@omnimind/contracts";
 
 export interface ProviderDescriptor {
   readonly kind: ProviderKind;
   readonly displayName: string;
-  readonly available: boolean;
-  /**
-   * True when the provider runtime can inject a user message into a live turn
-   * without interrupting it (Codex `turn/steer`, Pi `session.steer`, Claude
-   * streaming-input prompt queue). Mirrors the adapter's
-   * `supportsTurnSteering` capability so the pure decider and the web client
-   * can route steers without a runtime round-trip; keep the two in sync.
-   */
-  readonly supportsNativeTurnSteering: boolean;
   readonly usage: {
     readonly signInCommand: string;
     readonly learnMoreHref: string;
@@ -33,16 +24,12 @@ function defineProviderDescriptors<const Descriptors extends readonly ProviderDe
 export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   {
     kind: "omnimind",
-    displayName: PROVIDER_DISPLAY_NAMES.omnimind,
-    available: true,
-    supportsNativeTurnSteering: true,
+    displayName: "OmniMind",
     usage: null,
   },
   {
     kind: "codex",
-    displayName: PROVIDER_DISPLAY_NAMES.codex,
-    available: true,
-    supportsNativeTurnSteering: true,
+    displayName: "Codex",
     usage: {
       signInCommand: "codex login",
       learnMoreHref: "https://platform.openai.com/usage",
@@ -50,9 +37,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "claudeAgent",
-    displayName: PROVIDER_DISPLAY_NAMES.claudeAgent,
-    available: true,
-    supportsNativeTurnSteering: true,
+    displayName: "Claude",
     usage: {
       signInCommand: "claude",
       learnMoreHref: "https://docs.anthropic.com/en/docs/about-claude/models#rate-limits",
@@ -60,9 +45,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "cursor",
-    displayName: PROVIDER_DISPLAY_NAMES.cursor,
-    available: true,
-    supportsNativeTurnSteering: false,
+    displayName: "Cursor",
     usage: {
       signInCommand: "cursor-agent login",
       learnMoreHref: "https://cursor.com/dashboard",
@@ -70,9 +53,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "antigravity",
-    displayName: PROVIDER_DISPLAY_NAMES.antigravity,
-    available: true,
-    supportsNativeTurnSteering: false,
+    displayName: "Antigravity",
     usage: {
       signInCommand: "agy",
       learnMoreHref: "https://antigravity.google",
@@ -80,9 +61,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "grok",
-    displayName: PROVIDER_DISPLAY_NAMES.grok,
-    available: true,
-    supportsNativeTurnSteering: false,
+    displayName: "Grok",
     usage: {
       signInCommand: "grok login",
       learnMoreHref: "https://console.x.ai",
@@ -90,9 +69,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "droid",
-    displayName: PROVIDER_DISPLAY_NAMES.droid,
-    available: true,
-    supportsNativeTurnSteering: false,
+    displayName: "Droid",
     usage: {
       signInCommand: "droid",
       learnMoreHref: "https://docs.factory.ai/pricing",
@@ -100,9 +77,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "kilo",
-    displayName: PROVIDER_DISPLAY_NAMES.kilo,
-    available: true,
-    supportsNativeTurnSteering: false,
+    displayName: "Kilo",
     usage: {
       signInCommand: "kilo",
       learnMoreHref: "https://kilo.ai",
@@ -110,9 +85,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "opencode",
-    displayName: PROVIDER_DISPLAY_NAMES.opencode,
-    available: true,
-    supportsNativeTurnSteering: false,
+    displayName: "OpenCode",
     usage: {
       signInCommand: "opencode auth login",
       learnMoreHref: "https://opencode.ai",
@@ -120,9 +93,7 @@ export const PROVIDER_DESCRIPTORS = defineProviderDescriptors([
   },
   {
     kind: "pi",
-    displayName: PROVIDER_DISPLAY_NAMES.pi,
-    available: true,
-    supportsNativeTurnSteering: true,
+    displayName: "Pi",
     // Stock Pi private state is intentionally isolated. OmniMind must not discover or read
     // ~/.pi merely to populate a background settings panel.
     usage: null,
@@ -133,9 +104,6 @@ export const PROVIDER_DESCRIPTOR_BY_KIND = Object.fromEntries(
   PROVIDER_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor]),
 ) as Record<ProviderKind, (typeof PROVIDER_DESCRIPTORS)[number]>;
 
-// Accepts plain strings so projection-sourced provider names can be checked
-// without casts; unknown providers are simply not steerable.
-export const providerSupportsNativeTurnSteering = (kind: string): boolean =>
-  PROVIDER_DESCRIPTORS.some(
-    (descriptor) => descriptor.kind === kind && descriptor.supportsNativeTurnSteering,
-  );
+export const PROVIDER_DISPLAY_NAMES: Readonly<Record<ProviderKind, string>> = Object.fromEntries(
+  PROVIDER_DESCRIPTORS.map((descriptor) => [descriptor.kind, descriptor.displayName]),
+) as Record<ProviderKind, string>;

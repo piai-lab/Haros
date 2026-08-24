@@ -140,6 +140,7 @@ import {
   ProviderListSkillsInput,
   ProviderSkillsCatalogInput,
 } from "./providerDiscovery";
+import { ProviderExecutionCapabilitiesInput } from "./providerExecution";
 import { ProviderCompactThreadInput } from "./provider";
 import {
   OmniMindCustomModelServiceRemoveInput,
@@ -310,6 +311,7 @@ export const WS_METHODS = {
 
   // Provider discovery
   providerGetComposerCapabilities: "provider.getComposerCapabilities",
+  providerGetExecutionCapabilities: "provider.getExecutionCapabilities",
   providerCompactThread: "provider.compactThread",
   providerListCommands: "provider.listCommands",
   providerListSkills: "provider.listSkills",
@@ -574,6 +576,7 @@ const WebSocketRequestBody = Schema.Union([
 
   // Provider discovery
   tagRequestBody(WS_METHODS.providerGetComposerCapabilities, ProviderGetComposerCapabilitiesInput),
+  tagRequestBody(WS_METHODS.providerGetExecutionCapabilities, ProviderExecutionCapabilitiesInput),
   tagRequestBody(WS_METHODS.providerCompactThread, ProviderCompactThreadInput),
   tagRequestBody(WS_METHODS.providerListCommands, ProviderListCommandsInput),
   tagRequestBody(WS_METHODS.providerListSkills, ProviderListSkillsInput),

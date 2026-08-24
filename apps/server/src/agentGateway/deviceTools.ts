@@ -15,9 +15,9 @@
  *   in-tool whenever the gateway cannot verify approval, following the
  *   `BrowserDownloadApprovalRequired` precedent of cancelling before the effect
  *   and telling the agent that explicit user approval is required.
- * - Every input tool is refused the same way for gateless providers. Antigravity
- *   runs with `--dangerously-skip-permissions`, so without this a prompt-injected
- *   agent could drive the device with no user in the loop.
+ * - Every input tool is refused the same way when the loaded Engine/Host closure
+ *   has no approval bridge, so a prompt-injected agent cannot drive the device
+ *   without a user in the loop.
  *
  * @module agentGateway/deviceTools
  */
@@ -28,11 +28,11 @@ import {
   DEVICE_SWIPE_DURATION_MIN_MS,
   type DeviceHardwareButton,
   type DeviceOpenPaneReason,
-  type ProviderKind,
 } from "@omnimind/contracts";
 import { Effect } from "effect";
 
 import type { DeviceManager } from "../device/DeviceManager.ts";
+import { providerExecutionStructure } from "../provider/providerExecutionStructure.ts";
 import { readTapRequest } from "../device/uiTreeTargeting.ts";
 import { mcpToolResultError, mcpToolResultJson, type McpToolCallResult } from "./protocol.ts";
 import {
@@ -51,13 +51,6 @@ import {
 } from "./toolRuntime.ts";
 
 export const DEVICE_CONTROL_CAPABILITY = "device:control" as const;
-
-/**
- * Providers whose sessions run without a per-tool approval gate. OmniMind cannot
- * put a human in the loop for them, so device actions with a physical or
- * exfiltration effect are refused rather than silently auto-approved.
- */
-const PROVIDERS_WITHOUT_APPROVAL_GATE = new Set<ProviderKind>(["antigravity"]);
 
 export function deviceToolRequiresApproval(name: string): boolean {
   return DEVICE_APPROVAL_REQUIRED_TOOLS.has(name);
@@ -210,7 +203,9 @@ export function makeAgentGatewayDeviceTools(
       Effect.gen(function* () {
         if (
           deviceToolRequiresApproval(name) &&
-          (PROVIDERS_WITHOUT_APPROVAL_GATE.has(context.callerProvider) ||
+          (!providerExecutionStructure(context.callerProvider).supportedRuntimeModes.has(
+            "approval-required",
+          ) ||
             !isExplicitlyApproved({ name, args, context }))
         ) {
           return approvalUnavailableResult(name);

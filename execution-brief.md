@@ -2,19 +2,18 @@
 
 ## 当前目标
 
-Settings 状态 owner 收口已形成 `packaged-not-released` candidate：万能 `AppSettings` 与浏览器/Server 双写已退休，事实分别收回 Web local preferences、ServerSettings、ProviderCredentials 与 Desktop native runtime。旧 `omnimind:app-settings:v1` 采用 first-public clean break：生产路径零读取、零迁移、零改写、零删除，安装版 canary 证明原字节在 mutation、partial reset 与 App reopen 后保持不变。
+Provider identity / capability projection已在独立任务分支形成`packaged-not-released`候选：重复Provider identity/schema与静态capability名单已退出，registered adapter、model、Host closure和current runtime evidence经Server窄投影共同决定steering与三种runtime mode；Thread已持久选择与effective availability保持分离。
 
 ## 当前协调与下一动作
 
-- 实现与authority已推送到 `codex/settings-owner-boundary@bf0cd9e24b`；`SYNARA-INTAKE.md`的维护者修改以独立提交 `652ca27a9a` 纳入同一候选，没有夹入Settings实现提交。
-- Source gates：Web 328 files / 4145 tests、Server Settings 27/27、Contracts Settings 7/7、root 7-package typecheck、lint（0 error）与production build通过；完整作者套件 565/565。完整Browser门唯一失败为未触达的Theme暖色期望基线，ChatView性能比例与Web Access Gemini偶发并发失败均已用精确单测复跑归因为非introduced regression。
-- 从精确pushed implementation SHA的clean clone构建arm64 DMG：DMG SHA-256 `d2c80644b15a2af4cc6471faa1c7bb14b59d8fafb1c94ff30b7ca01e7d8518a3`，安装版与DMG内 `app.asar` SHA-256 `35ef6b5180646b8164d822b6c93b4609fba0413bb7c490afa1e1df267f330fb5`。
-- 隔离packaged journey已通过：MiMo new Thread/first turn/continuation；DeepSeek discovery/new Thread/first turn/startup model projection；Provider Save partial、跨subscriber credential projection、Restore defaults partial、local durable-write failure、简中/英文、900px窄窗键盘、AppSnap runtime与App reopen。Main、Renderer、Helper与bundled Server均复证只使用任务profile；未读取真实用户profile。
-- 当前没有新的获授权代码修改；下一动作是维护者裁决是否将该candidate合并到最新`main`。候选已安装供本机复核，但不是Release、公开发行或update feed adoption。
+- Settings四owner候选已通过合并终审、进入并推送`main@95ac1f1ec9`，并从该main SHA完成隔离安装版复核；其任务分支与临时资源已清理。
+- 当前D任务分支为`codex/provider-capability-projection@ca69d86ee6`，local/remote一致并基于上述干净main。focused、完整unit、root typecheck、lint、production build及`git diff --check`通过；Browser剩余5项已在untouched main基线复现，不是D引入。
+- exact pushed implementation SHA生成arm64 DMG SHA-256 `b402bdf084cccb5ddca976b984bbccbef4be918bc155def47bbaaf118729c37a`，DMG内`app.asar` SHA-256 `05010d7f8e8493d92b7c1b447717b2492425924132ccfa6b57e0bc2ad2bd56a4`。任务profile复证Main、Renderer、Helper和bundled Server隔离；真实MiMo OpenAI-compatible链完成首轮与continuation，DeepSeek内置service完成discovery与首轮；中文Composer及英文Composer/Automation均按loaded truth显示三种mode，App重开后模型服务与任务状态恢复。凭据只落任务profile的`0600` credential owner，日志和artifact零命中。
+- `/Applications/OmniMind.app`在本轮安装后被并行工作替换；替换前的本任务安装实例及随后从同一DMG解出的临时packaged App共同提供上述证据，当前系统安装版不冒充D候选。下一动作是集成最新`origin/main`、重跑受影响门、合并并从精确main merge SHA做最终隔离复核；未完成前不写成released或当前安装版已采用。
 
 ## Stop-loss
 
-- 不把上述portfolio合成全仓重写，不因文件大或行数多机械拆分成熟生命周期owner。
-- 不新增Settings/Command/Provider god registry、通用form/JSON DSL、第二store/writer/cache、watcher、daemon、Session Registry、runtime i18n平台或证据ledger。
-- 同一事实若仍要求多个consumer手写清单、顺序、palette、schema、capability或fallback，必须继续`SIMPLIFY`；不能用`keep in sync`注释、同步清单或只加parity test供养明显可删除的第二真相。
-- 当前工作、阻塞和下一动作只在本文件维护；稳定合同进`architecture/`，固定证据进`research/`，production adoption进根`README.md`，Campaign claim状态进`missions/independent-omnimind-v1.md`。关闭关注点时本brief应缩短或切换pointer，不再追加永久历史。
+- 不新增Provider god registry、第二health/cache/stream、runtime-mode controller、动态插件系统或capability持久副本。
+- 不用Provider identity或静态`available`推断ready，不让Web/Shared继续拥有runtime capability truth，也不把identity、adapter结构能力、current health、model能力和presentation揉成一个对象。
+- 不夹带Theme、Web Access Provider体系、i18n物理切片或Settings owner再重构；真实Provider-specific composition、health、model、credential和asset责任继续留在各自owner。
+- 当前工作、阻塞和下一动作只在本文件维护；稳定合同进`architecture/`，固定来源证据按`research/README.md`路由，不新增handoff、ledger或研究总账。

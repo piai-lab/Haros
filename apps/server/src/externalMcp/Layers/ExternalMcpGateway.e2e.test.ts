@@ -24,6 +24,9 @@ import { SqlitePersistenceMemory } from "../../persistence/Layers/Sqlite.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
 import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
 import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
+import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
+import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
+import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { serveExternalMcpStdio, writeExternalMcpClientCredential } from "../bridge.ts";
 import {
@@ -335,6 +338,25 @@ describe("external MCP gateway stdio flow", () => {
       Layer.provide(gitLayer),
       Layer.provide(providerDiscoveryLayer),
       Layer.provide(providerHealthLayer),
+      Layer.provide(
+        Layer.succeed(ProviderExecutionCapabilities, {
+          get: (modelSelection) =>
+            Effect.succeed(
+              resolveProviderExecutionCapabilities({
+                modelSelection,
+                adapterCapabilities: providerExecutionStructure(modelSelection.provider),
+                providerStatus: {
+                  provider: modelSelection.provider,
+                  status: "ready",
+                  available: true,
+                  authStatus: "authenticated",
+                  supportsAutoRuntimeMode: true,
+                  checkedAt: NOW,
+                },
+              }),
+            ),
+        }),
+      ),
       Layer.provide(ServerSettingsService.layerTest()),
       Layer.provide(projectionTurnsLayer),
       Layer.provide(operationLayer),

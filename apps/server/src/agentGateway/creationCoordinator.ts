@@ -12,13 +12,18 @@ import {
   type OrchestrationThreadShell,
   type ProviderInteractionMode,
   type ProviderKind,
+  type ProviderExecutionCapabilities,
   type OmniMindCreateThreadsInput,
   type OmniMindCreateThreadsResult,
 } from "@omnimind/contracts";
 import { buildPromptThreadTitleFallback } from "@omnimind/shared/chatThreads";
 import { WORKTREE_BRANCH_PREFIX } from "@omnimind/shared/git";
 import { parseGitHubRepositoryNameWithOwnerFromPullRequestUrl } from "@omnimind/shared/githubRepository";
-import { runtimeModeEscalatesPrivilege } from "@omnimind/shared/runtimeMode";
+import {
+  isProviderRuntimeModeExecutable,
+  isProviderRuntimeModePermanentlyUnsupported,
+  runtimeModeEscalatesPrivilege,
+} from "@omnimind/shared/runtimeMode";
 import { Cause, Effect, Option, Semaphore } from "effect";
 
 import type { ServerConfigShape } from "../config.ts";
@@ -100,6 +105,9 @@ interface CreationCoordinatorDependencies {
     ReadonlyMap<ProviderKind, AgentGatewayProviderAvailability>,
     unknown
   >;
+  readonly getProviderExecutionCapabilities: (
+    modelSelection: ModelSelection,
+  ) => Effect.Effect<ProviderExecutionCapabilities, unknown>;
   readonly requireThreadShell: (
     threadId: string,
   ) => Effect.Effect<OrchestrationThreadShell, ToolInputError>;
@@ -182,6 +190,7 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
     externalMcpRepository,
     serverConfig,
     loadProviderAvailabilities,
+    getProviderExecutionCapabilities,
     requireThreadShell,
   } = dependencies;
   const lockIndex = yield* Semaphore.make(1);
@@ -530,6 +539,24 @@ export const makeCreateThreadsHandler = Effect.fn(function* (
             return yield* Effect.fail(
               new ToolInputError(
                 `Your thread runs in "${caller!.runtimeMode}" mode, so created threads cannot use higher-privileged "${runtimeMode}".`,
+              ),
+            );
+          }
+          const executionCapabilities = yield* getProviderExecutionCapabilities(target).pipe(
+            Effect.mapError(
+              () =>
+                new ToolInputError(
+                  "Could not verify the selected runtime mode. Check the Engine and try again.",
+                ),
+            ),
+          );
+          const runtimeModeCapability = executionCapabilities.runtimeModes[runtimeMode];
+          if (!isProviderRuntimeModeExecutable(runtimeModeCapability)) {
+            return yield* Effect.fail(
+              new ToolInputError(
+                isProviderRuntimeModePermanentlyUnsupported(runtimeModeCapability)
+                  ? `Runtime mode "${runtimeMode}" is not supported by this Engine and model.`
+                  : `Runtime mode "${runtimeMode}" is temporarily unavailable. Check the Engine, sign-in, or version and try again.`,
               ),
             );
           }

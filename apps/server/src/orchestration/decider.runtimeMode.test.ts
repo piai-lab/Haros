@@ -85,24 +85,24 @@ async function makeProjectOnlyReadModel(): Promise<OrchestrationReadModel> {
 }
 
 describe("decider Auto model compatibility", () => {
-  it("rejects changing an Auto thread to a Claude model reported as unsupported", async () => {
-    await expect(
-      Effect.runPromise(
-        decideOrchestrationCommand({
-          command: {
-            type: "thread.meta.update",
-            commandId: CommandId.makeUnsafe("cmd-unsupported-claude-model"),
-            threadId: THREAD_ID,
-            modelSelection: {
-              provider: "claudeAgent",
-              model: "claude-haiku-4-5",
-              supportsAutoMode: false,
-            },
+  it("preserves persisted Auto when a model change makes it unsupported", async () => {
+    const event = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.meta.update",
+          commandId: CommandId.makeUnsafe("cmd-unsupported-claude-model"),
+          threadId: THREAD_ID,
+          modelSelection: {
+            provider: "claudeAgent",
+            model: "claude-haiku-4-5",
+            supportsAutoMode: false,
           },
-          readModel: makeReadModel(true),
-        }),
-      ),
-    ).rejects.toThrow('Claude model "claude-haiku-4-5" does not support Auto mode.');
+        },
+        readModel: makeReadModel(true),
+      }),
+    );
+
+    expect("type" in event ? event.type : event[0]?.type).toBe("thread.meta-updated");
   });
 
   it("rejects enabling Auto when the current Claude model is reported as unsupported", async () => {
@@ -119,7 +119,7 @@ describe("decider Auto model compatibility", () => {
           readModel: makeReadModel(false),
         }),
       ),
-    ).rejects.toThrow('Claude model "claude-opus-4-6" does not support Auto mode.');
+    ).rejects.toThrow("The selected model does not support Auto mode.");
   });
 
   it("allows a Claude model reported as Auto-compatible", async () => {
@@ -211,7 +211,7 @@ describe("decider Auto model compatibility", () => {
           readModel,
         }),
       ),
-    ).rejects.toThrow('Claude model "claude-fable-5" has not been verified to support Auto mode.');
+    ).rejects.toThrow("The selected model has not been verified to support Auto mode.");
   });
 
   it("allows a provider-native subagent thread in Auto without a verified flag", async () => {

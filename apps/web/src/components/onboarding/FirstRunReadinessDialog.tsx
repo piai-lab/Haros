@@ -344,16 +344,14 @@ export function FirstRunReadinessDialog() {
                   const status = controller.providerStatuses.find(
                     (candidate) => candidate.provider === provider,
                   );
-                  const availability = option.available
-                    ? deriveProviderPickerAvailability(status)
-                    : { disabled: true, state: "coming_soon" as const };
+                  const availability = deriveProviderPickerAvailability(status);
                   const selected = selectedProvider === provider;
                   return (
                     <button
                       key={provider}
                       type="button"
                       aria-pressed={selected}
-                      disabled={!option.available}
+                      disabled={availability.disabled}
                       className={cn(
                         "flex min-w-0 items-center gap-2 rounded-[13px] border px-2.5 py-3 text-left outline-none transition-colors hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/60 disabled:cursor-default disabled:opacity-55 motion-reduce:transition-none",
                         selected && "border-primary/45 bg-primary/[0.05]",

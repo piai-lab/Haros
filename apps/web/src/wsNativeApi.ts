@@ -745,6 +745,8 @@ export function createWsNativeApi(): NativeApi {
     provider: {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetComposerCapabilities, input),
+      getExecutionCapabilities: (input) =>
+        transport.request(WS_METHODS.providerGetExecutionCapabilities, input),
       // Compaction is capped server-side per provider (ACP providers allow up
       // to the 10-minute turn-idle ceiling), so the server owns this bound.
       compactThread: (input) =>
