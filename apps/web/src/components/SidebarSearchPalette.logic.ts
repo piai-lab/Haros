@@ -25,12 +25,12 @@ export interface SidebarSearchAction {
 
 export interface SidebarSearchTheme {
   id: string;
-  type: "mode" | "code-theme";
+  type: "mode" | "theme-preset";
   label: string;
   description: string;
   keywords?: readonly string[];
   mode?: ThemeMode;
-  codeThemeId?: string;
+  presetId?: string;
   variant?: ThemeVariant;
   isActive: boolean;
 }

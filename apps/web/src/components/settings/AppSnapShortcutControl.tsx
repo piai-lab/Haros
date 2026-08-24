@@ -284,7 +284,7 @@ export function AppSnapShortcutControl({
           checkState.availability?.available === false
             ? "text-destructive"
             : checkState.availability?.available === true
-              ? "text-emerald-600 dark:text-emerald-400"
+              ? "text-[var(--status-success)]"
               : "text-muted-foreground",
         )}
       >

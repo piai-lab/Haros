@@ -9,9 +9,6 @@ import { cn } from "~/lib/utils";
 import { extendButtonIconChildSelectors } from "~/lib/central-icons";
 
 /** Slightly softer outline border for header chrome buttons in dark mode. */
-const headerButtonDarkBorderClassName =
-  "dark:border-[color:color-mix(in_srgb,var(--color-border)_80%,transparent)]";
-
 // Variant taxonomy (visual treatment) × size axis × content (icon / text / icon+text).
 //
 //   filled      → default (primary) | secondary | destructive | prominent
@@ -81,7 +78,7 @@ const buttonVariants = cva(
         chrome:
           "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-0 [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)] data-pressed:bg-[var(--color-background-elevated-secondary)] data-pressed:text-[var(--color-text-foreground)]",
         "chrome-outline": extendButtonIconChildSelectors(
-          `border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-secondary ${headerButtonDarkBorderClassName} dark:[:hover,[data-pressed]]:bg-secondary [&_svg]:mx-0`,
+          "border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-secondary [&_svg]:mx-0",
         ),
         default:
           "border-transparent bg-primary text-primary-foreground [:hover,[data-pressed]]:bg-primary/90",
@@ -93,7 +90,7 @@ const buttonVariants = cva(
           "border-transparent bg-transparent text-[var(--color-text-foreground-secondary)] focus-visible:ring-[color:var(--color-border-focus)]/60 focus-visible:ring-offset-0 [:hover,[data-pressed]]:bg-[var(--color-background-button-secondary-hover)] [:hover,[data-pressed]]:text-[var(--color-text-foreground)] data-pressed:bg-[var(--color-background-button-secondary)] data-pressed:text-[var(--color-text-foreground)]",
         link: "border-transparent underline-offset-4 [:hover,[data-pressed]]:underline",
         outline:
-          "border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)] dark:[:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)]",
+          "border-[color:var(--color-border)] bg-transparent text-[var(--color-text-foreground)] focus-visible:ring-[color:var(--color-border-focus)]/60 [:hover,[data-pressed]]:bg-[var(--color-background-elevated-secondary)]",
         "primary-outline":
           "border-[color:var(--color-border)] bg-[var(--color-background-elevated-primary-opaque)] text-primary [:hover,[data-pressed]]:border-primary/32 [:hover,[data-pressed]]:bg-primary/4",
         prominent:
@@ -154,4 +151,4 @@ function Button({ className, variant, size, shape, render, ...props }: ButtonPro
 const dialogActionButtonClassName =
   "!h-auto !min-h-8 !rounded-md !px-3 !py-1 !font-normal sm:!min-h-7";
 
-export { Button, buttonVariants, dialogActionButtonClassName, headerButtonDarkBorderClassName };
+export { Button, buttonVariants, dialogActionButtonClassName };

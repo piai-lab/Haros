@@ -18,9 +18,9 @@ const NOTIFICATION_FOREGROUND_CLASS_NAME =
 // notably the dismiss "X") clickable in the desktop app. Toasts render at the
 // top edge over Electron's draggable titlebar region; without this the OS
 // captures clicks in that band for window dragging and the X stops working.
-export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-xl border border-border bg-popover/94 [--notification-fg:var(--popover-foreground)] text-[var(--notification-fg)] shadow-lg/10 backdrop-blur-xl before:hidden [-webkit-app-region:no-drag] dark:shadow-lg/15`;
+export const COMPACT_NOTIFICATION_SURFACE_CLASS_NAME = `w-max max-w-[min(calc(100vw-2rem),28rem)] rounded-xl border border-border bg-popover/94 [--notification-fg:var(--popover-foreground)] text-[var(--notification-fg)] shadow-[var(--app-shadow-notification)] backdrop-blur-xl before:hidden [-webkit-app-region:no-drag]`;
 
-export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-2xl border border-[color-mix(in_srgb,var(--color-text-accent)_14%,transparent)] bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-lg/10 backdrop-blur-xl before:hidden [-webkit-app-region:no-drag] dark:border-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] dark:shadow-lg/15`;
+export const EXPANDED_NOTIFICATION_SURFACE_CLASS_NAME = `w-full rounded-2xl border border-[color-mix(in_srgb,var(--color-text-accent)_12%,transparent)] bg-[color-mix(in_srgb,var(--color-text-accent)_10%,transparent)] ${NOTIFICATION_FOREGROUND_CLASS_NAME} shadow-[var(--app-shadow-notification)] backdrop-blur-xl before:hidden [-webkit-app-region:no-drag]`;
 
 // The icon carries the tone color while the copy stays on the neutral
 // `--notification-fg`, so tones only need to set `--notification-icon-fg`.
@@ -34,7 +34,7 @@ export type NotificationTone = "default" | "error";
 // (near-white in dark themes, near-black in light ones) instead of the destructive
 // role color, which reads muddy against the tint; the icon carries the red instead.
 const ERROR_NOTIFICATION_TONE_CLASS_NAME =
-  "border-[color-mix(in_srgb,var(--destructive)_16%,transparent)] bg-[color-mix(in_srgb,var(--destructive)_5%,var(--popover))] [--notification-icon-fg:var(--destructive)] dark:border-[color-mix(in_srgb,var(--destructive)_13%,transparent)] dark:bg-[color-mix(in_srgb,var(--destructive)_8%,var(--popover))]";
+  "border-[color-mix(in_srgb,var(--destructive)_14%,transparent)] bg-[color-mix(in_srgb,var(--destructive)_7%,var(--popover))] [--notification-icon-fg:var(--destructive)]";
 
 export function notificationSurfaceClassName(options: {
   compact: boolean;

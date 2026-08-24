@@ -47,7 +47,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   // wrapper renders without a `class` attribute at all (unstyled callers).
   const controlClassName = cn(
     !unstyled &&
-      "relative inline-flex w-full min-h-9 items-center rounded-lg border border-border bg-background text-[length:var(--app-font-size-ui,12px)] text-foreground has-aria-invalid:border-destructive/30 has-focus-visible:has-aria-invalid:border-destructive/50 has-focus-visible:border-foreground/30 has-autofill:bg-foreground/4 has-disabled:opacity-64 sm:min-h-8 sm:text-[length:var(--app-font-size-ui,12px)] dark:bg-input/32 dark:has-autofill:bg-foreground/8",
+      "relative inline-flex w-full min-h-9 items-center rounded-lg border border-border bg-[var(--color-background-control)] text-[length:var(--app-font-size-ui,12px)] text-foreground has-aria-invalid:border-destructive/30 has-focus-visible:has-aria-invalid:border-destructive/50 has-focus-visible:border-foreground/30 has-autofill:bg-foreground/6 has-disabled:opacity-64 sm:min-h-8 sm:text-[length:var(--app-font-size-ui,12px)]",
     size === "sm" && "min-h-8 sm:min-h-7",
     size === "lg" && "min-h-10 sm:min-h-9",
     variant === "soft" && SOFT_SURFACE_FILL_CLASS_NAME,

@@ -1,13 +1,14 @@
 // FILE: theme.logic.ts
-// Purpose: Owns the Codex-style theme model, share-string parsing, and derived CSS token math.
+// Purpose: Owns OmniMind appearance presets, share parsing, and resolved semantic token math.
 // Layer: Web appearance domain logic
 // Exports: Theme types, normalization helpers, import/export utilities, and CSS variable builders.
 
-import { THEME_SEED_CATALOG } from "./theme.seed.generated";
+import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
 import {
   normalizeFontFamilyCssValue,
   normalizeMonospaceFontFamilyCssValue,
 } from "../lib/fontFamily";
+import { THEME_SEED_CATALOG } from "./theme.seed.generated";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type ThemeVariant = "light" | "dark";
@@ -35,26 +36,30 @@ export interface ChromeTheme {
 }
 
 export interface ThemePack {
+  /** Legacy persisted field name; semantically this is the app theme preset id. */
   codeThemeId: string;
   theme: ChromeTheme;
 }
 
 export interface ThemeState {
   chromeThemes: Record<ThemeVariant, ChromeTheme>;
+  /** Legacy persisted field name; semantically these are app theme preset ids. */
   codeThemeIds: Record<ThemeVariant, string>;
   mode: ThemeMode;
   /** Ignore the theme pack's custom UI font and let the native system stack apply. */
   systemUiFont: boolean;
 }
 
-export interface CodeThemeOption {
+export interface ThemePresetOption {
   id: string;
   label: string;
   variants: readonly ThemeVariant[];
 }
 
+type ThemePresetCatalog = Readonly<Record<string, Partial<Record<ThemeVariant, ChromeTheme>>>>;
+
 export interface ThemeSharePayload {
-  codeThemeId: string;
+  presetId: string;
   theme: ChromeTheme;
   variant: ThemeVariant;
 }
@@ -122,7 +127,7 @@ type ChromeThemeSeedPatch = Partial<
   semanticColors?: Partial<ThemeSemanticColors>;
 };
 
-type CodeThemeSeedPatchMetadata = {
+type ThemePresetSeedPatchMetadata = {
   contrast?: true;
   fonts?: Partial<Record<keyof ThemeFonts, true>>;
   opaqueWindows?: true;
@@ -137,7 +142,8 @@ type RgbColor = {
 const BLACK: RgbColor = { blue: 0, green: 0, red: 0 };
 const WHITE: RgbColor = { blue: 255, green: 255, red: 255 };
 const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/;
-const THEME_SHARE_PREFIX = "codex-theme-v1:";
+const THEME_SHARE_PREFIX = "omnimind-theme-v1:";
+const LEGACY_THEME_SHARE_PREFIX = "codex-theme-v1:";
 const CONTRAST_CURVE_BELOW_BASELINE = 0.7;
 const CONTRAST_CURVE_ABOVE_BASELINE = 2;
 // Keep Codex's original curve anchors while treating OmniMind's zero setting as the
@@ -167,8 +173,8 @@ const PANEL_CONTRAST_STEP: Record<ThemeVariant, number> = {
   dark: 0.03,
   light: 0.008,
 };
-const CODE_THEME_SEED_PATCH_METADATA: Partial<
-  Record<string, Partial<Record<ThemeVariant, CodeThemeSeedPatchMetadata>>>
+const THEME_PRESET_SEED_PATCH_METADATA: Partial<
+  Record<string, Partial<Record<ThemeVariant, ThemePresetSeedPatchMetadata>>>
 > = {
   linear: {
     dark: { fonts: { ui: true }, opaqueWindows: true },
@@ -206,36 +212,40 @@ const CODE_THEME_SEED_PATCH_METADATA: Partial<
 
 // Mirror the packaged Codex catalog closely enough that share-string validation
 // can preserve the "known theme + variant availability" behavior.
-export const CODE_THEME_OPTIONS: readonly CodeThemeOption[] = [
-  { id: "absolutely", label: "Absolutely", variants: ["light", "dark"] },
-  { id: "ayu", label: "Ayu", variants: ["dark"] },
-  { id: "catppuccin", label: "Catppuccin", variants: ["light", "dark"] },
-  { id: "codex", label: "Codex", variants: ["light", "dark"] },
-  { id: "omnimind", label: "OmniMind", variants: ["light", "dark"] },
-  { id: "dracula", label: "Dracula", variants: ["dark"] },
-  { id: "everforest", label: "Everforest", variants: ["light", "dark"] },
-  { id: "github", label: "GitHub", variants: ["light", "dark"] },
-  { id: "gruvbox", label: "Gruvbox", variants: ["light", "dark"] },
-  { id: "linear", label: "Linear", variants: ["light", "dark"] },
-  { id: "lobster", label: "Lobster", variants: ["dark"] },
-  { id: "material", label: "Material", variants: ["dark"] },
-  { id: "matrix", label: "Matrix", variants: ["dark"] },
-  { id: "monokai", label: "Monokai", variants: ["dark"] },
-  { id: "night-owl", label: "Night Owl", variants: ["dark"] },
-  { id: "nord", label: "Nord", variants: ["dark"] },
-  { id: "notion", label: "Notion", variants: ["light", "dark"] },
-  { id: "one", label: "One", variants: ["light", "dark"] },
-  { id: "oscurange", label: "Oscurange", variants: ["dark"] },
-  { id: "proof", label: "Proof", variants: ["light"] },
-  { id: "raycast", label: "Raycast", variants: ["light", "dark"] },
-  { id: "rose-pine", label: "Rose Pine", variants: ["light", "dark"] },
-  { id: "sentry", label: "Sentry", variants: ["dark"] },
-  { id: "solarized", label: "Solarized", variants: ["light", "dark"] },
-  { id: "temple", label: "Temple", variants: ["dark"] },
-  { id: "tokyo-night", label: "Tokyo Night", variants: ["dark"] },
-  { id: "vercel", label: "Vercel", variants: ["light", "dark"] },
-  { id: "vscode-plus", label: "VS Code Plus", variants: ["light", "dark"] },
-] as const;
+const THEME_PRESET_LABEL_OVERRIDES: Readonly<Record<string, string>> = {
+  codex: "Codex",
+  github: "GitHub",
+  omnimind: "OmniMind",
+  "vscode-plus": "VS Code Plus",
+};
+
+function themePresetLabel(id: string): string {
+  return (
+    THEME_PRESET_LABEL_OVERRIDES[id] ??
+    id
+      .split("-")
+      .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+      .join(" ")
+  );
+}
+
+/**
+ * The seed catalog owns preset identity, order, and supported variants. Keeping
+ * a second handwritten list made adding a theme a multi-owner operation and
+ * allowed declared variants to drift from the actual bundled bytes.
+ */
+export function buildThemePresetOptions(catalog: ThemePresetCatalog): readonly ThemePresetOption[] {
+  return Object.keys(catalog).map((id) => ({
+    id,
+    label: themePresetLabel(id),
+    variants: (["light", "dark"] as const).filter(
+      (variant) => catalog[id]?.[variant] !== undefined,
+    ),
+  }));
+}
+
+export const THEME_PRESET_OPTIONS: readonly ThemePresetOption[] =
+  buildThemePresetOptions(THEME_SEED_CATALOG);
 
 export const DEFAULT_CHROME_THEME_BY_VARIANT: Record<ThemeVariant, ChromeTheme> = {
   dark: {
@@ -268,8 +278,8 @@ export const DEFAULT_CHROME_THEME_BY_VARIANT: Record<ThemeVariant, ChromeTheme> 
 
 export const DEFAULT_THEME_STATE: ThemeState = {
   chromeThemes: {
-    dark: getCodeThemeSeed("codex", "dark"),
-    light: getCodeThemeSeed("codex", "light"),
+    dark: getThemePresetSeed("codex", "dark"),
+    light: getThemePresetSeed("codex", "light"),
   },
   codeThemeIds: {
     dark: "codex",
@@ -289,25 +299,24 @@ export function isThemeVariant(value: unknown): value is ThemeVariant {
   return value === "light" || value === "dark";
 }
 
-export function getAvailableCodeThemes(variant: ThemeVariant): readonly CodeThemeOption[] {
-  return CODE_THEME_OPTIONS.filter((option) => option.variants.includes(variant));
+export function getAvailableThemePresets(variant: ThemeVariant): readonly ThemePresetOption[] {
+  return THEME_PRESET_OPTIONS.filter((option) => option.variants.includes(variant));
 }
 
-export function isCodeThemeAvailable(codeThemeId: string, variant: ThemeVariant): boolean {
-  const normalizedCodeThemeId = codeThemeId.trim().toLowerCase();
-  return CODE_THEME_OPTIONS.some(
-    (option) => option.id === normalizedCodeThemeId && option.variants.includes(variant),
+export function isThemePresetAvailable(presetId: string, variant: ThemeVariant): boolean {
+  const normalizedPresetId = presetId.trim().toLowerCase();
+  return THEME_PRESET_OPTIONS.some(
+    (option) => option.id === normalizedPresetId && option.variants.includes(variant),
   );
 }
 
-export function normalizeCodeThemeId(
-  codeThemeId: unknown,
+export function normalizeThemePresetId(
+  presetId: unknown,
   variant: ThemeVariant,
   fallback = DEFAULT_THEME_STATE.codeThemeIds[variant],
 ): string {
-  const normalizedCodeThemeId =
-    typeof codeThemeId === "string" ? codeThemeId.trim().toLowerCase() : "";
-  return isCodeThemeAvailable(normalizedCodeThemeId, variant) ? normalizedCodeThemeId : fallback;
+  const normalizedCodeThemeId = typeof presetId === "string" ? presetId.trim().toLowerCase() : "";
+  return isThemePresetAvailable(normalizedCodeThemeId, variant) ? normalizedCodeThemeId : fallback;
 }
 
 // ─── Theme normalization ──────────────────────────────────────────────────
@@ -353,7 +362,7 @@ export function normalizeChromeTheme(value: unknown, variant: ThemeVariant): Chr
 export function normalizeThemePack(value: unknown, variant: ThemeVariant): ThemePack {
   const pack = isRecord(value) ? value : {};
   return {
-    codeThemeId: normalizeCodeThemeId(pack.codeThemeId, variant),
+    codeThemeId: normalizeThemePresetId(pack.codeThemeId, variant),
     theme: normalizeChromeTheme(pack.theme, variant),
   };
 }
@@ -395,8 +404,8 @@ export function normalizeThemeState(value: unknown): ThemeState {
           : DEFAULT_THEME_STATE.chromeThemes.light,
     },
     codeThemeIds: {
-      dark: normalizeCodeThemeId(codeThemeIds.dark ?? legacyDarkPack.codeThemeId, "dark"),
-      light: normalizeCodeThemeId(codeThemeIds.light ?? legacyLightPack.codeThemeId, "light"),
+      dark: normalizeThemePresetId(codeThemeIds.dark ?? legacyDarkPack.codeThemeId, "dark"),
+      light: normalizeThemePresetId(codeThemeIds.light ?? legacyLightPack.codeThemeId, "light"),
     },
     mode: isThemeMode(state.mode) ? state.mode : DEFAULT_THEME_STATE.mode,
     // Preserve the UI font older theme states already rendered. New/default states use the
@@ -432,7 +441,7 @@ export function serializeThemeState(state: ThemeState): string {
 
 export function createThemeShareString(variant: ThemeVariant, pack: ThemePack): string {
   return `${THEME_SHARE_PREFIX}${JSON.stringify({
-    codeThemeId: pack.codeThemeId,
+    presetId: pack.codeThemeId,
     theme: pack.theme,
     variant,
   })}`;
@@ -440,11 +449,16 @@ export function createThemeShareString(variant: ThemeVariant, pack: ThemePack): 
 
 export function parseThemeShareString(rawValue: string): ThemeSharePayload {
   const value = rawValue.trim();
-  if (!value.startsWith(THEME_SHARE_PREFIX)) {
-    throw new Error("Theme share string must start with codex-theme-v1:");
+  const prefix = value.startsWith(THEME_SHARE_PREFIX)
+    ? THEME_SHARE_PREFIX
+    : value.startsWith(LEGACY_THEME_SHARE_PREFIX)
+      ? LEGACY_THEME_SHARE_PREFIX
+      : null;
+  if (!prefix) {
+    throw new Error("Theme share string must start with omnimind-theme-v1:");
   }
 
-  const payloadText = value.slice(THEME_SHARE_PREFIX.length);
+  const payloadText = value.slice(prefix.length);
   const jsonText = payloadText.startsWith("{") ? payloadText : decodeURIComponent(payloadText);
   let payload: unknown;
   try {
@@ -454,14 +468,14 @@ export function parseThemeShareString(rawValue: string): ThemeSharePayload {
   }
 
   const themeShare = parseThemeSharePayload(payload);
-  if (!isCodeThemeAvailable(themeShare.codeThemeId, themeShare.variant)) {
+  if (!isThemePresetAvailable(themeShare.presetId, themeShare.variant)) {
     throw new Error(
-      `Code theme "${themeShare.codeThemeId}" is not available for ${themeShare.variant}.`,
+      `Theme preset "${themeShare.presetId}" is not available for ${themeShare.variant}.`,
     );
   }
 
   return {
-    codeThemeId: themeShare.codeThemeId,
+    presetId: themeShare.presetId,
     theme: normalizeChromeTheme(themeShare.theme, themeShare.variant),
     variant: themeShare.variant,
   };
@@ -503,7 +517,7 @@ export function updateThemePackFromShareString(
     },
     codeThemeIds: {
       ...state.codeThemeIds,
-      [targetVariant]: payload.codeThemeId,
+      [targetVariant]: payload.presetId,
     },
   };
 }
@@ -532,15 +546,15 @@ export function updateChromeTheme(
   };
 }
 
-export function setThemeCodeThemeId(
+export function setThemePresetId(
   state: ThemeState,
   variant: ThemeVariant,
-  codeThemeId: string,
+  presetId: string,
 ): ThemeState {
-  const normalized = normalizeCodeThemeId(codeThemeId, variant);
+  const normalized = normalizeThemePresetId(presetId, variant);
   const previousTheme = resolveThemePack(state, variant).theme;
   const nextTheme = normalizeChromeTheme(
-    mergeThemeSeedPatch(previousTheme, getCodeThemeSeedPatch(normalized, variant)),
+    mergeThemeSeedPatch(previousTheme, getThemePresetSeedPatch(normalized, variant)),
     variant,
   );
   return {
@@ -556,23 +570,23 @@ export function setThemeCodeThemeId(
   };
 }
 
-export function getCodeThemeSeed(codeThemeId: string, variant: ThemeVariant): ChromeTheme {
+export function getThemePresetSeed(presetId: string, variant: ThemeVariant): ChromeTheme {
   const fallback = DEFAULT_CHROME_THEME_BY_VARIANT[variant];
-  const themeSeed = THEME_SEED_CATALOG[codeThemeId]?.[variant];
+  const themeSeed = THEME_SEED_CATALOG[presetId]?.[variant];
   return themeSeed ? normalizeChromeTheme(themeSeed, variant) : fallback;
 }
 
-export function getCodeThemeSeedPatch(
-  codeThemeId: string,
+export function getThemePresetSeedPatch(
+  presetId: string,
   variant: ThemeVariant,
 ): ChromeThemeSeedPatch {
-  const themeSeed = THEME_SEED_CATALOG[codeThemeId]?.[variant];
+  const themeSeed = THEME_SEED_CATALOG[presetId]?.[variant];
   if (!themeSeed) {
     return {};
   }
 
   const normalizedSeed = normalizeChromeTheme(themeSeed, variant);
-  const metadata = CODE_THEME_SEED_PATCH_METADATA[codeThemeId]?.[variant];
+  const metadata = THEME_PRESET_SEED_PATCH_METADATA[presetId]?.[variant];
   const patch: ChromeThemeSeedPatch = {
     accent: normalizedSeed.accent,
     ink: normalizedSeed.ink,
@@ -655,7 +669,7 @@ export function resetThemeVariant(state: ThemeState, variant: ThemeVariant): The
 
 export function resolveThemePack(state: ThemeState, variant: ThemeVariant): ThemePack {
   return {
-    codeThemeId: normalizeCodeThemeId(state.codeThemeIds[variant], variant),
+    codeThemeId: normalizeThemePresetId(state.codeThemeIds[variant], variant),
     theme: normalizeChromeTheme(state.chromeThemes[variant], variant),
   };
 }
@@ -742,12 +756,36 @@ export function buildThemeCssVariables(
     "--app-composer-picker-backdrop-filter": material === "translucent" ? "blur(32px)" : "none",
     "--app-composer-picker-surface": composerPickerMenuSurface,
     "--app-chat-code-surface": chatCodeSurface,
+    "--app-shadow-dialog":
+      variant === "dark"
+        ? "0 16px 50px -12px rgba(0, 0, 0, 0.7)"
+        : "0 16px 50px -12px rgba(0, 0, 0, 0.34)",
+    "--app-shadow-raised-edge":
+      variant === "dark" ? "0 -1px rgba(255, 255, 255, 0.06)" : "0 1px rgba(0, 0, 0, 0.04)",
+    "--app-shadow-composer":
+      variant === "dark"
+        ? "0 16px 40px -20px rgba(0, 0, 0, 0.62), 0 1px 2px 0 rgba(0, 0, 0, 0.42)"
+        : "0 10px 28px -16px color-mix(in srgb, var(--foreground) 28%, transparent), 0 1px 2px 0 color-mix(in srgb, var(--foreground) 7%, transparent)",
+    "--app-shadow-notification":
+      variant === "dark"
+        ? "0 10px 15px -3px rgba(0, 0, 0, 0.15)"
+        : "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+    "--app-shadow-sidebar-overlay":
+      variant === "dark"
+        ? "12px 0 28px -18px rgba(0, 0, 0, 0.56)"
+        : "12px 0 28px -18px rgba(0, 0, 0, 0.24)",
+    "--app-skeleton-highlight":
+      variant === "dark" ? "rgba(255, 255, 255, 0.04)" : "rgba(255, 255, 255, 0.64)",
     "--app-user-message-background": chatCodeSurface,
     "--app-sidebar-backdrop-filter": "none",
     // Settings mirrors the chat surface (opaque --color-background-surface) so every
     // settings element reads as outline-only. With an opaque page there is nothing to
     // frost, so we skip the backdrop blur (and its compositing cost) entirely.
     "--app-settings-backdrop-filter": "none",
+    "--app-sidebar-gap-sheen":
+      variant === "dark"
+        ? "radial-gradient(90% 75% at 0% 0%, rgba(255, 255, 255, 0.04), transparent 58%), linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.006))"
+        : "radial-gradient(90% 75% at 0% 0%, rgba(255, 255, 255, 0.06), transparent 58%), linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.008))",
     // Translucent light mode raises the white share above the old 48% so the
     // frost doesn't read grey; dark keeps the raw surface thinned over the vibrancy.
     "--app-sidebar-surface":
@@ -831,6 +869,40 @@ export function buildResolvedThemeTokens(
       surfaceUnder: computedTheme.surfaceUnder,
     },
     derived,
+  };
+}
+
+/**
+ * Resolves the minimum appearance contract for an OmniMind-owned page rendered
+ * outside the Web DOM (for example the Web Access observer/Curator). Consumers
+ * receive colors, not ThemeState, preset ids, CSS variables, or mutation rights.
+ */
+export function buildEngineWebSurfaceThemeSnapshot(
+  pack: ThemePack,
+  variant: ThemeVariant,
+): EngineWebSurfaceThemeSnapshot {
+  const resolved = buildResolvedThemeTokens(pack, variant);
+  const variables = resolved.codexVariables;
+  const read = (name: string) => getRequiredVariable(variables, name);
+  return {
+    accent: read("--color-text-accent"),
+    border: read("--color-border-light"),
+    borderStrong: read("--color-border-heavy"),
+    danger: read("--color-accent-red"),
+    elevatedSurface: read("--color-background-elevated-primary-opaque"),
+    hoverSurface: read("--color-background-button-tertiary-hover"),
+    primaryBackground: read("--color-background-button-primary"),
+    primaryBackgroundHover: read("--color-background-button-primary-hover"),
+    primaryText: read("--color-text-button-primary"),
+    secondaryBackground: read("--color-background-button-secondary"),
+    secondaryBackgroundHover: read("--color-background-button-secondary-hover"),
+    success: read("--color-accent-green"),
+    surface: read("--color-background-surface"),
+    surfaceUnder: read("--color-background-surface-under"),
+    text: read("--color-text-foreground"),
+    textDim: read("--color-text-foreground-tertiary"),
+    textMuted: read("--color-text-foreground-secondary"),
+    warning: read("--color-accent-yellow"),
   };
 }
 
@@ -1231,7 +1303,10 @@ function parseThemeSharePayload(value: unknown): ThemeSharePayload {
     throw new Error("Theme share payload must be an object.");
   }
 
-  const codeThemeId = normalizeRequiredString(value.codeThemeId, "Theme share codeThemeId");
+  const presetId = normalizeRequiredString(
+    value.presetId ?? value.codeThemeId,
+    "Theme share presetId",
+  );
   const variant = value.variant;
   if (!isThemeVariant(variant)) {
     throw new Error("Theme share variant must be either light or dark.");
@@ -1239,7 +1314,7 @@ function parseThemeSharePayload(value: unknown): ThemeSharePayload {
 
   const theme = parseStrictChromeTheme(value.theme);
   return {
-    codeThemeId: codeThemeId.toLowerCase(),
+    presetId: presetId.toLowerCase(),
     theme,
     variant,
   };

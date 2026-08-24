@@ -465,7 +465,7 @@ function WorkspaceSearchResultRow(props: {
                 segment.matched ? (
                   <mark
                     key={segment.start}
-                    className="rounded-[3px] bg-amber-200/80 px-[1px] text-current dark:bg-amber-300/25"
+                    className="rounded-[3px] bg-warning/20 px-[1px] text-current"
                   >
                     {segment.text}
                   </mark>

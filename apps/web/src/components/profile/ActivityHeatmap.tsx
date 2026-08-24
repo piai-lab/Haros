@@ -13,7 +13,7 @@ import { formatCompact, formatShortDate } from "./profileFormatting";
 // Single-hue ramp built from the theme accent (`--info`, defaults to blue-500) for the
 // in-app page (level 0 → 4). Mixes toward transparent so it sits well on light/dark.
 export const APP_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
-  "bg-muted/70 dark:bg-white/[0.06]",
+  "bg-[var(--color-background-elevated-secondary)]",
   "bg-[color-mix(in_srgb,var(--info)_24%,transparent)]",
   "bg-[color-mix(in_srgb,var(--info)_46%,transparent)]",
   "bg-[color-mix(in_srgb,var(--info)_72%,transparent)]",

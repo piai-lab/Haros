@@ -147,12 +147,8 @@ function KanbanCardViewComponent({
       className={cn(
         "flex w-full cursor-pointer flex-col gap-1.5 rounded-lg bg-card/70 px-3 py-2.5 text-left transition-colors",
         RAISED_SURFACE_CHROME_CLASS_NAME,
-        // The shared raised chrome drops its border in dark mode (shadow-only),
-        // which leaves kanban cards edgeless against the column. Re-add a faint
-        // hairline so each card stays visually separated in dark mode.
-        "dark:border dark:border-white/[0.05]",
         "hover:bg-card focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none",
-        isOverlay && "bg-card shadow-lg dark:shadow-lg",
+        isOverlay && "bg-card shadow-lg",
         isDragSource && "opacity-40",
       )}
     >
@@ -194,10 +190,7 @@ function KanbanCardViewComponent({
         ) : null}
         {isForked ? (
           <span title={t("kanban.forkedThread")} className="flex shrink-0 items-center">
-            <GoRepoForked
-              className="size-3 text-emerald-600 dark:text-emerald-300/90"
-              aria-hidden
-            />
+            <GoRepoForked className="size-3 text-[var(--status-success)]" aria-hidden />
           </span>
         ) : null}
         {pr ? <PrStateChip pr={pr} /> : null}
@@ -209,7 +202,7 @@ function KanbanCardViewComponent({
             // Optimistically In Progress — the thread's real status (Draft/Completed)
             // would contradict the column until the first runtime signal arrives.
             <>
-              <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-sky-600 dark:text-sky-300/90">
+              <span className="flex shrink-0 items-center gap-1.5 text-[11px] text-info">
                 <LoaderIcon className="size-3 shrink-0 animate-spin" aria-hidden />
                 {t("kanban.starting")}
               </span>

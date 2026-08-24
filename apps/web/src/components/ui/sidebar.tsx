@@ -449,7 +449,7 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
         align="start"
         side="bottom"
         sideOffset={7}
-        className="border-transparent bg-[rgba(28,28,30,0.96)] text-white before:hidden shadow-[0_8px_24px_rgba(0,0,0,0.24)]"
+        className="before:hidden"
       >
         <span className="inline-flex items-center gap-2 whitespace-nowrap px-0.5 py-0.5 text-xs font-medium">
           <span>{t("nav.toggleSidebar")}</span>
@@ -457,7 +457,7 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
             <ShortcutKbd
               shortcutLabel={toggleShortcutLabel}
               groupClassName="gap-0.5"
-              className="h-4 min-w-4 rounded bg-white/12 px-1 text-[10px] text-white/80"
+              className="h-4 min-w-4 rounded bg-foreground/8 px-1 text-[10px] text-foreground/70"
             />
           ) : null}
         </span>

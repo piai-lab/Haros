@@ -42,7 +42,7 @@ export const OmniMindThreadCreationCard = memo(function OmniMindThreadCreationCa
 
   return (
     <div
-      className="overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]"
+      className="overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)] bg-[var(--color-background-elevated-primary)]"
       data-omnimind-thread-creation-card="true"
     >
       <div className="flex min-w-0 items-center gap-3 px-3 py-2.5">

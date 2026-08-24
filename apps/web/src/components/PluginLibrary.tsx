@@ -479,7 +479,7 @@ function PackageRow({
         <div className="flex min-w-0 items-center gap-2">
           <p className="truncate text-[13px] font-semibold text-foreground">{item.displayName}</p>
           {item.updateAvailable ? (
-            <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400">
+            <span className="shrink-0 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
               {t("library.updateAvailable")}
             </span>
           ) : null}

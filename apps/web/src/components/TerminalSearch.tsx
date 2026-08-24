@@ -4,8 +4,10 @@
 // Exports: TerminalSearch
 
 import type { SearchAddon, ISearchOptions } from "@xterm/addon-search";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { IconButton } from "~/components/ui/icon-button";
+import { terminalSearchDecorationsFromTheme } from "~/components/terminal/terminalRuntimeAppearance";
+import { useTheme } from "~/hooks/useTheme";
 import { useI18n } from "~/i18n";
 import { ChevronDownIcon, ChevronUpIcon, XIcon } from "~/lib/icons";
 import { cn } from "~/lib/utils";
@@ -16,29 +18,29 @@ interface TerminalSearchProps {
   onClose: () => void;
 }
 
-const SEARCH_DECORATIONS = {
-  matchBackground: "#515c6a",
-  matchBorder: "#74879f",
-  matchOverviewRuler: "#d186167e",
-  activeMatchBackground: "#515c6a",
-  activeMatchBorder: "#ffd33d",
-  activeMatchColorOverviewRuler: "#ffd33d",
-} satisfies NonNullable<ISearchOptions["decorations"]>;
 const SEARCH_DEBOUNCE_MS = 90;
 
 export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchProps) {
   const { t } = useI18n();
+  const { activeTheme, resolvedTheme } = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
   const searchTimerRef = useRef<number | null>(null);
   const [query, setQuery] = useState("");
   const [hasResults, setHasResults] = useState<boolean | null>(null);
   const [caseSensitive, setCaseSensitive] = useState(false);
+  const searchDecorations = useMemo(
+    () => terminalSearchDecorationsFromTheme(activeTheme, resolvedTheme),
+    [activeTheme, resolvedTheme],
+  );
 
-  const searchOptions: ISearchOptions = {
-    caseSensitive,
-    regex: false,
-    decorations: SEARCH_DECORATIONS as NonNullable<ISearchOptions["decorations"]>,
-  };
+  const searchOptions = useMemo<ISearchOptions>(
+    () => ({
+      caseSensitive,
+      regex: false,
+      decorations: searchDecorations,
+    }),
+    [caseSensitive, searchDecorations],
+  );
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -66,11 +68,11 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
     setHasResults(found);
   };
 
-  const clearSearchTimer = () => {
+  const clearSearchTimer = useCallback(() => {
     if (searchTimerRef.current === null) return;
     window.clearTimeout(searchTimerRef.current);
     searchTimerRef.current = null;
-  };
+  }, []);
 
   const scheduleSearch = (nextQuery: string) => {
     clearSearchTimer();
@@ -92,16 +94,18 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
     scheduleSearch(newQuery);
   };
 
-  // Re-run search when case sensitivity or search addon changes
-  // (but not on query change — handleInputChange handles that).
-  const prevCaseSensitiveRef = useRef(caseSensitive);
+  // Re-run the active query when the addon or any resolved search option
+  // changes. This keeps existing decorations in sync when the app theme
+  // changes without making TerminalSearch interpret a theme preset itself.
+  // Query edits remain owned by handleInputChange.
+  const prevSearchOptionsRef = useRef(searchOptions);
   const prevSearchAddonRef = useRef<SearchAddon | null>(searchAddon);
   useEffect(() => {
-    const caseSensitivityChanged = prevCaseSensitiveRef.current !== caseSensitive;
+    const searchOptionsChanged = prevSearchOptionsRef.current !== searchOptions;
     const searchAddonChanged = prevSearchAddonRef.current !== searchAddon;
-    if (!caseSensitivityChanged && !searchAddonChanged) return;
+    if (!searchOptionsChanged && !searchAddonChanged) return;
 
-    prevCaseSensitiveRef.current = caseSensitive;
+    prevSearchOptionsRef.current = searchOptions;
     prevSearchAddonRef.current = searchAddon;
     if (searchAddon && query) {
       // Inline debounce (rather than scheduleSearch) so every state write in
@@ -112,7 +116,7 @@ export function TerminalSearch({ searchAddon, isOpen, onClose }: TerminalSearchP
         setHasResults(searchAddon.findNext(query, searchOptions));
       }, SEARCH_DEBOUNCE_MS);
     }
-  }, [searchAddon, query, clearSearchTimer, caseSensitive, searchOptions]);
+  }, [searchAddon, query, clearSearchTimer, searchOptions]);
 
   useEffect(() => () => clearSearchTimer(), [clearSearchTimer]);
 

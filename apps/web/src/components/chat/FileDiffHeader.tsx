@@ -53,7 +53,7 @@ export const FileDiffHeader = function FileDiffHeader(props: {
           pathValue={filePath}
           kind="file"
           theme={props.theme}
-          className="size-3.5 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80"
+          className="size-3.5 text-[var(--color-icon-secondary)]"
         />
       </span>
       <div className="flex min-w-0 flex-1 items-baseline gap-1.5 overflow-hidden">

@@ -699,11 +699,7 @@ function resolveThreadRowMetaChips(input: {
       id: "fork",
       tooltip: input.forkedThreadLabel,
       icon: (
-        <SidebarGlyph
-          icon={GoRepoForked}
-          variant="meta"
-          className="text-emerald-600 dark:text-emerald-300/90"
-        />
+        <SidebarGlyph icon={GoRepoForked} variant="meta" className="text-[var(--status-success)]" />
       ),
     });
   }
@@ -744,21 +740,21 @@ function terminalStatusFromThreadState(input: {
   if (terminalAttentionStates.includes("attention")) {
     return {
       label: input.inputNeededLabel,
-      colorClass: "text-amber-600 dark:text-amber-300/90",
+      colorClass: "text-warning",
       pulse: false,
     };
   }
   if ((input.runningTerminalIds?.length ?? 0) > 0) {
     return {
       label: input.runningLabel,
-      colorClass: "text-teal-600 dark:text-teal-300/90",
+      colorClass: "text-info",
       pulse: true,
     };
   }
   if (terminalAttentionStates.includes("review")) {
     return {
       label: input.completedLabel,
-      colorClass: "text-emerald-600 dark:text-emerald-300/90",
+      colorClass: "text-[var(--status-success)]",
       pulse: false,
     };
   }

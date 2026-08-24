@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { bootstrapPairingSession } from "./pairingBootstrap";
+import { bootstrapPairingSession, createPairingFailureMarkup } from "./pairingBootstrap";
 
 function makeDependencies(input: {
   readonly pathname?: string;
@@ -39,6 +39,20 @@ function makeDependencies(input: {
 }
 
 describe("bootstrapPairingSession", () => {
+  it("keeps the pre-React failure surface on a bounded system light/dark palette", () => {
+    const markup = createPairingFailureMarkup();
+
+    expect(markup).toContain("color-scheme: light dark");
+    expect(markup).toContain("@media (prefers-color-scheme: dark)");
+    expect(markup).toContain("background:var(--startup-canvas)");
+    expect(markup).not.toContain("#token=");
+  });
+
+  it("ships complete English and Simplified Chinese copy without requiring the React catalog", () => {
+    expect(createPairingFailureMarkup("en")).toContain("This pairing link could not be used.");
+    expect(createPairingFailureMarkup("zh-CN")).toContain("此配对链接无法使用");
+  });
+
   it("ignores every route except the dedicated pairing route", async () => {
     const test = makeDependencies({ pathname: "/" });
 

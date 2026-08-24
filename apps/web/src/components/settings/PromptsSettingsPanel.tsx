@@ -423,7 +423,7 @@ export function PromptsSettingsPanel(props: { active: boolean }) {
               onChange={(event) => setCustomRulesDraft(event.currentTarget.value)}
             />
             {customRulesUnavailable ? (
-              <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+              <p className="text-xs leading-relaxed text-warning">
                 {snapshot.customRules.unavailableReason === "too_large"
                   ? t("settings.customRulesTooLarge")
                   : t("settings.customRulesUnavailable")}

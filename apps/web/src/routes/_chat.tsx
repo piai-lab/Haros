@@ -610,7 +610,7 @@ function ChatRouteGlobalShortcuts() {
 /** Subtle top-corner sheen on the sidebar gap. The sidebar always sits on the left, so
  *  the radial highlight is anchored to the top-left corner. */
 const SIDEBAR_GAP_CLASS =
-  "overflow-hidden before:absolute before:inset-0 before:bg-[radial-gradient(90%_75%_at_0%_0%,rgba(255,255,255,0.06),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.025),rgba(255,255,255,0.008))] dark:before:bg-[radial-gradient(90%_75%_at_0%_0%,rgba(255,255,255,0.04),transparent_58%),linear-gradient(180deg,rgba(255,255,255,0.018),rgba(255,255,255,0.006))]";
+  "overflow-hidden before:absolute before:inset-0 before:bg-[image:var(--app-sidebar-gap-sheen)]";
 
 /** No inline-start/end border: the chat content card provides the edge (rounded + overlap).
  *  A sidebar border here draws a full-height vertical line through the titlebar seam. */
@@ -913,7 +913,7 @@ function ChatRouteLayout() {
         sidebarPeekIsExiting &&
           "duration-[180ms]! ease-[cubic-bezier(0.4,0,1,1)]! motion-reduce:transition-none! motion-reduce:duration-0!",
         sidebarUsesRaisedLayer &&
-          "z-30 will-change-[left,opacity] shadow-[12px_0_28px_-18px_rgba(0,0,0,0.24)]",
+          "z-30 will-change-[left,opacity] shadow-[var(--app-shadow-sidebar-overlay)]",
       )}
       gapClassName={cn(
         SIDEBAR_GAP_CLASS,

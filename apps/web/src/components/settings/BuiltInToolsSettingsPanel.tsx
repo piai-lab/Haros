@@ -295,12 +295,12 @@ export function BuiltInToolsSettingsPanel(props: { active: boolean }) {
           {t("settings.builtInToolsForSurfacesDescription")}
         </p>
         {refreshFailed ? (
-          <p className="mb-3 text-xs text-amber-700 dark:text-amber-300" role="status">
+          <p className="mb-3 text-xs text-warning" role="status">
             {t("settings.builtInRefreshFailedInline")}
           </p>
         ) : null}
         {confirmationFailed ? (
-          <p className="mb-3 text-xs text-amber-700 dark:text-amber-300" role="status">
+          <p className="mb-3 text-xs text-warning" role="status">
             {t("settings.builtInConfirmationFailedInline")}
           </p>
         ) : null}

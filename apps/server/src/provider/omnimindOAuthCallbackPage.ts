@@ -57,12 +57,12 @@ export function createOmniMindOAuthPageRenderer(input: {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="light" />
+  <meta name="color-scheme" content="light dark" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; base-uri 'none'; form-action 'none'" />
   <title>${englishTitle} · OmniMind</title>
   <style>
     :root {
-      color-scheme: light;
+      color-scheme: light dark;
       --canvas: #f5f7fa;
       --surface: #ffffff;
       --border: #dfe5ec;
@@ -72,6 +72,18 @@ export function createOmniMindOAuthPageRenderer(input: {
       --success: #0f8a5f;
       --error: #c83b4b;
       --font: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #111315;
+        --surface: #191c20;
+        --border: #30363d;
+        --text: #f5f7fa;
+        --text-secondary: #aab2bd;
+        --accent: #8ab4f8;
+        --success: #55c99a;
+        --error: #ff8a98;
+      }
     }
     * { box-sizing: border-box; }
     body {

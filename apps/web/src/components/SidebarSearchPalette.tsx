@@ -51,7 +51,7 @@ import {
   matchSidebarSearchThreads,
 } from "./SidebarSearchPalette.logic";
 import { useTheme } from "../hooks/useTheme";
-import { getAvailableCodeThemes, getCodeThemeSeed } from "../theme/theme.logic";
+import { getAvailableThemePresets, getThemePresetSeed } from "../theme/theme.logic";
 import {
   Command,
   CommandDialog,
@@ -263,7 +263,7 @@ function buildThemeCommandItems(input: {
   return [];
 }
 
-function CodeThemeBadge(props: { accent: string; background: string; foreground: string }) {
+function ThemePresetBadge(props: { accent: string; background: string; foreground: string }) {
   return (
     <span
       aria-hidden="true"
@@ -349,10 +349,7 @@ function HighlightedText(props: { text: string; query: string; className?: strin
     <span className={props.className}>
       {segments.map((segment) =>
         segment.highlighted ? (
-          <mark
-            key={segment.key}
-            className="rounded-[3px] bg-amber-200/80 px-[1px] text-current dark:bg-amber-300/25"
-          >
+          <mark key={segment.key} className="rounded-[3px] bg-warning/20 px-[1px] text-current">
             {segment.text}
           </mark>
         ) : (
@@ -365,7 +362,7 @@ function HighlightedText(props: { text: string; query: string; className?: strin
 
 export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const { locale, t } = useI18n();
-  const { activeTheme, resolvedTheme, setCodeThemeId, setTheme, theme } = useTheme();
+  const { activeTheme, resolvedTheme, setTheme, setThemePresetId, theme } = useTheme();
   const [query, setQuery] = useState("");
   const [highlightedItemValue, setHighlightedItemValue] = useState<string | null>(null);
   const [importProviderState, setImportProvider] = useState<ImportProviderKind>(
@@ -459,16 +456,16 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
     theme,
     t,
   });
-  const currentCodeThemeItems: SidebarSearchTheme[] = getAvailableCodeThemes(resolvedTheme).map(
+  const currentThemePresetItems: SidebarSearchTheme[] = getAvailableThemePresets(resolvedTheme).map(
     (option) => ({
       id: `theme-code:${resolvedTheme}:${option.id}`,
-      type: "code-theme",
+      type: "theme-preset",
       label: option.label,
-      description: t("search.applyCodeTheme", {
+      description: t("search.applyThemePreset", {
         theme: resolvedTheme === "dark" ? t("settings.themeDark") : t("settings.themeLight"),
       }),
       keywords: ["appearance", "theme", resolvedTheme, option.id],
-      codeThemeId: option.id,
+      presetId: option.id,
       variant: resolvedTheme,
       isActive: activeTheme.codeThemeId === option.id,
     }),
@@ -476,7 +473,7 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
   const matchedCurrentThemes =
     isBrowsing || query.trim().length === 0
       ? []
-      : matchSidebarSearchThemes(currentCodeThemeItems, query);
+      : matchSidebarSearchThemes(currentThemePresetItems, query);
   const showThemeSection =
     !isBrowsing &&
     query.trim().length > 0 &&
@@ -1046,8 +1043,8 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                           </CommandGroupLabel>
                           {matchedCurrentThemes.map((themeItem) => {
                             const seed =
-                              themeItem.codeThemeId && themeItem.variant
-                                ? getCodeThemeSeed(themeItem.codeThemeId, themeItem.variant)
+                              themeItem.presetId && themeItem.variant
+                                ? getThemePresetSeed(themeItem.presetId, themeItem.variant)
                                 : null;
                             return (
                               <CommandItem
@@ -1058,13 +1055,13 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                   event.preventDefault();
                                 }}
                                 onClick={() => {
-                                  if (!themeItem.codeThemeId || !themeItem.variant) return;
+                                  if (!themeItem.presetId || !themeItem.variant) return;
                                   props.onOpenChange(false);
-                                  setCodeThemeId(themeItem.variant, themeItem.codeThemeId);
+                                  setThemePresetId(themeItem.variant, themeItem.presetId);
                                 }}
                               >
                                 {seed ? (
-                                  <CodeThemeBadge
+                                  <ThemePresetBadge
                                     accent={seed.accent}
                                     background={seed.surface}
                                     foreground={seed.ink}
@@ -1075,8 +1072,8 @@ export function SidebarSearchPalette(props: SidebarSearchPaletteProps) {
                                 </span>
                                 <span className="shrink-0 text-[length:var(--app-font-size-ui-meta,10px)] text-muted-foreground/79">
                                   {resolvedTheme === "dark"
-                                    ? t("search.darkColorTheme")
-                                    : t("search.lightColorTheme")}
+                                    ? t("search.darkThemePreset")
+                                    : t("search.lightThemePreset")}
                                 </span>
                                 <span
                                   className="flex size-3.5 shrink-0 items-center justify-center"

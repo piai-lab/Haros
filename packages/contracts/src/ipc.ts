@@ -165,6 +165,7 @@ import type {
   DeviceTypeTextInput,
   ThreadDeviceState,
 } from "./device";
+import type { EngineWebSurfaceThemeSnapshot } from "./engineWebSurfaceTheme";
 import type { StudioListThreadOutputsInput, StudioListThreadOutputsResult } from "./studio";
 import type {
   ServerConfig,
@@ -435,6 +436,13 @@ export interface BrowserNewTabInput {
 export interface EngineWebSurfacePresentationContext {
   locale: "en" | "zh-CN";
   theme: "light" | "dark";
+  /**
+   * Credential-blind, fully resolved colors for OmniMind-owned pages that live
+   * outside the renderer DOM. The renderer theme owner creates this snapshot;
+   * Browser and Engine packages may project it, but never reinterpret a theme
+   * preset or persist a second palette.
+   */
+  themeSnapshot?: EngineWebSurfaceThemeSnapshot;
 }
 
 export interface BrowserSetEngineWebSurfaceContextInput
