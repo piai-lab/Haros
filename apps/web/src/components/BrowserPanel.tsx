@@ -438,7 +438,7 @@ function BrowserLocalServerThumbnail({ server }: { server: ServerLocalServerProc
   return (
     <span
       aria-hidden="true"
-      className="flex h-12 w-[4.5rem] shrink-0 flex-col gap-1 overflow-hidden rounded-md border border-border/70 bg-[#f7f7f2] p-1.5 shadow-sm"
+      className="flex h-12 w-[4.5rem] shrink-0 flex-col gap-1 overflow-hidden rounded-md border border-border/70 bg-card p-1.5 shadow-sm"
     >
       <span className="flex gap-[3px]">
         <span className="size-[3px] rounded-full bg-[#ff6b65]" />
@@ -446,9 +446,9 @@ function BrowserLocalServerThumbnail({ server }: { server: ServerLocalServerProc
         <span className="size-[3px] rounded-full bg-[#45cf77]" />
       </span>
       <span className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
-        <span className="truncate text-[7px] font-bold leading-none text-[#2a2a2a]">{label}</span>
+        <span className="truncate text-[7px] font-bold leading-none text-foreground">{label}</span>
         {port ? (
-          <span className="truncate text-[6px] font-medium leading-none text-[#9a9a9a]">
+          <span className="truncate text-[6px] font-medium leading-none text-muted-foreground">
             localhost:{port}
           </span>
         ) : null}
@@ -538,7 +538,7 @@ export function BrowserLocalServersHome({
                   <BrowserLocalServerThumbnail server={server} />
                   <LocalServerIdentity server={server} tone="browser" />
                   <span
-                    className="mr-1 size-2 rounded-full bg-[#36d07b] shadow-[0_0_0_2.5px_rgba(54,208,123,0.16)]"
+                    className="mr-1 size-2 rounded-full bg-success ring-[2.5px] ring-success/15"
                     aria-hidden
                   />
                 </button>

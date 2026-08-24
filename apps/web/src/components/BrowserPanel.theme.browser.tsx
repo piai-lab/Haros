@@ -9,21 +9,17 @@ import { render } from "vitest-browser-react";
 
 import { BrowserLocalServersHome } from "./BrowserPanel";
 
-function applyResolvedTheme(theme: "light" | "dark") {
+function applyResolvedTheme(theme: {
+  variant: "light" | "dark";
+  surface: string;
+  foreground: string;
+  mutedForeground: string;
+}) {
   const root = document.documentElement;
-  root.classList.toggle("dark", theme === "dark");
-  root.style.setProperty(
-    "--color-background-surface",
-    theme === "light" ? "rgb(250, 250, 250)" : "rgb(14, 14, 14)",
-  );
-  root.style.setProperty(
-    "--foreground",
-    theme === "light" ? "rgb(31, 31, 31)" : "rgb(245, 245, 245)",
-  );
-  root.style.setProperty(
-    "--muted-foreground",
-    theme === "light" ? "rgb(102, 102, 102)" : "rgb(163, 163, 163)",
-  );
+  root.classList.toggle("dark", theme.variant === "dark");
+  root.style.setProperty("--color-background-surface", theme.surface);
+  root.style.setProperty("--foreground", theme.foreground);
+  root.style.setProperty("--muted-foreground", theme.mutedForeground);
 }
 
 afterEach(() => {
@@ -35,8 +31,13 @@ afterEach(() => {
 });
 
 describe("BrowserPanel resolved theme", () => {
-  it("keeps the local-server home synchronized with light and dark app surfaces", async () => {
-    applyResolvedTheme("light");
+  it("keeps the local-server home synchronized with every resolved app palette", async () => {
+    applyResolvedTheme({
+      variant: "light",
+      surface: "rgb(250, 250, 250)",
+      foreground: "rgb(31, 31, 31)",
+      mutedForeground: "rgb(102, 102, 102)",
+    });
     const mounted = await render(
       <BrowserLocalServersHome
         activeTabId={null}
@@ -53,7 +54,24 @@ describe("BrowserPanel resolved theme", () => {
       "rgb(31, 31, 31)",
     );
 
-    applyResolvedTheme("dark");
+    // A future skin changes the resolved palette, not Browser state or component code.
+    applyResolvedTheme({
+      variant: "light",
+      surface: "rgb(247, 242, 232)",
+      foreground: "rgb(54, 45, 35)",
+      mutedForeground: "rgb(116, 98, 78)",
+    });
+    expect(getComputedStyle(home!).backgroundColor).toBe("rgb(247, 242, 232)");
+    expect(getComputedStyle(mounted.getByText("No local servers").element()).color).toBe(
+      "rgb(54, 45, 35)",
+    );
+
+    applyResolvedTheme({
+      variant: "dark",
+      surface: "rgb(14, 14, 14)",
+      foreground: "rgb(245, 245, 245)",
+      mutedForeground: "rgb(163, 163, 163)",
+    });
     expect(getComputedStyle(home!).backgroundColor).toBe("rgb(14, 14, 14)");
     expect(getComputedStyle(mounted.getByText("No local servers").element()).color).toBe(
       "rgb(245, 245, 245)",
