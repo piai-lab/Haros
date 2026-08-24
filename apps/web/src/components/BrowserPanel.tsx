@@ -438,7 +438,7 @@ function BrowserLocalServerThumbnail({ server }: { server: ServerLocalServerProc
   return (
     <span
       aria-hidden="true"
-      className="flex h-12 w-[4.5rem] shrink-0 flex-col gap-1 overflow-hidden rounded-md border border-white/12 bg-[#f7f7f2] p-1.5 shadow-[0_4px_12px_rgba(0,0,0,0.28)]"
+      className="flex h-12 w-[4.5rem] shrink-0 flex-col gap-1 overflow-hidden rounded-md border border-border/70 bg-[#f7f7f2] p-1.5 shadow-sm"
     >
       <span className="flex gap-[3px]">
         <span className="size-[3px] rounded-full bg-[#ff6b65]" />
@@ -457,8 +457,8 @@ function BrowserLocalServerThumbnail({ server }: { server: ServerLocalServerProc
   );
 }
 
-// Replaces about:blank with a local-server launcher so the browser never opens to white.
-function BrowserLocalServersHome({
+// Replaces about:blank with a local-server launcher that follows the resolved app theme.
+export function BrowserLocalServersHome({
   activeTabId,
   loading,
   onNavigate,
@@ -475,15 +475,18 @@ function BrowserLocalServersHome({
   const hasServers = servers.length > 0;
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col overflow-hidden bg-[#0d0d0d] text-white">
+    <div
+      className="absolute inset-0 z-20 flex flex-col overflow-hidden bg-[var(--color-background-surface)] text-foreground"
+      data-browser-local-servers-home
+    >
       <div className="mx-auto flex h-full w-full max-w-[52rem] flex-col px-8 py-9">
         <div className="flex shrink-0 items-center justify-between">
-          <p className="text-[15px] font-medium text-white/35">{t("browser.local")}</p>
+          <p className="text-[15px] font-medium text-muted-foreground">{t("browser.local")}</p>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="size-8 text-white/35 hover:bg-white/[0.06] hover:text-white/70"
+            className="size-8 text-muted-foreground hover:bg-muted/60 hover:text-foreground"
             disabled={loading}
             onClick={onRefresh}
             aria-label={t("browser.refreshLocalServers")}
@@ -497,17 +500,21 @@ function BrowserLocalServersHome({
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
             {loading ? (
               <>
-                <RefreshCwIcon className="mb-4 size-12 animate-spin text-white/20" />
-                <p className="text-base font-semibold text-white">
+                <RefreshCwIcon className="mb-4 size-12 animate-spin text-muted-foreground/50" />
+                <p className="text-base font-semibold text-foreground">
                   {t("browser.scanningLocalServers")}
                 </p>
-                <p className="mt-2 text-sm text-white/35">{t("browser.checkingLocalhostPorts")}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("browser.checkingLocalhostPorts")}
+                </p>
               </>
             ) : (
               <>
-                <GlobeIcon className="mb-4 size-16 stroke-[1.5] text-white/30" />
-                <p className="text-base font-semibold text-white">{t("browser.noLocalServers")}</p>
-                <p className="mt-2 text-sm text-white/35">{t("browser.tryAnotherUrl")}</p>
+                <GlobeIcon className="mb-4 size-16 stroke-[1.5] text-muted-foreground/60" />
+                <p className="text-base font-semibold text-foreground">
+                  {t("browser.noLocalServers")}
+                </p>
+                <p className="mt-2 text-sm text-muted-foreground">{t("browser.tryAnotherUrl")}</p>
               </>
             )}
           </div>
@@ -526,7 +533,7 @@ function BrowserLocalServersHome({
                       onNavigate(url, activeTabId);
                     }
                   }}
-                  className="group grid w-full shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3.5 rounded-xl border border-white/[0.07] px-3 py-2.5 text-left transition-colors hover:border-white/[0.14] hover:bg-white/[0.04] disabled:cursor-not-allowed disabled:opacity-45"
+                  className="group grid w-full shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3.5 rounded-xl border border-border/60 px-3 py-2.5 text-left transition-colors hover:border-border hover:bg-muted/35 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   <BrowserLocalServerThumbnail server={server} />
                   <LocalServerIdentity server={server} tone="browser" />
@@ -887,7 +894,7 @@ export function BrowserPanel({
       webview.style.display = "flex";
       webview.style.width = "100%";
       webview.style.height = "100%";
-      webview.style.backgroundColor = "#0d0d0d";
+      webview.style.backgroundColor = "var(--color-background-surface)";
       webview.setAttribute("partition", BROWSER_WEBVIEW_PARTITION);
       webview.setAttribute("webpreferences", "contextIsolation=yes,nodeIntegration=no,sandbox=yes");
       // A <webview> blocks window.open() unless `allowpopups` is set. Without it, clicking
@@ -1939,7 +1946,7 @@ export function BrowserPanel({
           {isLiveRuntime ? (
             <div
               ref={browserViewportRef}
-              className="absolute inset-0 bg-[#0d0d0d]"
+              className="absolute inset-0 bg-[var(--color-background-surface)]"
               data-browser-panel-viewport
             />
           ) : null}
