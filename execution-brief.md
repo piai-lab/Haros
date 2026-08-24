@@ -2,14 +2,13 @@
 
 ## 当前目标
 
-OmniMind Web Access 深度安全复核已闭合，当前为`packaged-candidate / not-released`；没有获授权的后续代码任务。实现已直接进入并推送`main@62814532f6fbb0977866d7019637cf665583d656`，在既有package/config/Session availability owner内修复四项边界：GitHub子进程不再继承无关Provider秘密；`source_check`取消不再写artifact/entry；`source_check`与`web_search`共享route可用性；配置读取固定目录与文件身份、同FD限界读取并以1 MiB上限fail closed。后续证据提交只记录状态，不属于该安装版shipped bytes；未创建Release、未修改update feed。
+Settings 状态 owner 收口正在形成 source candidate：退休万能 `AppSettings` 与浏览器/Server 双写，把事实分别收回 Web local preferences、ServerSettings、ProviderCredentials 与 Desktop native runtime。旧 `omnimind:app-settings:v1` 采用 first-public clean break：生产路径零读取、零迁移、零改写、零删除，原字节保持不变。当前实现尚未冻结或推送，不能写成 packaged、installed 或 released。
 
 ## 当前协调与下一动作
 
-- Source gates通过：`@omnimind/om-web-access`完整565/565、focused 36/36、Server Settings 6/6、Web双语catalog 22/22、root 7-package typecheck与root lint；lint为0 error，601个warning是未触达基线。最小keyless Exa live `source_check`为1来源、0错误、1条entry。
-- 从已推送的`62814532f6…`构建arm64 DMG并核验241个disclosed component identity；DMG SHA-256为`d61b7da52eee918332e83cb8be31c01df73f8de0ca7b248a0d6b20437facb1c4`，安装版`app.asar` SHA-256为`0519ca390c3454255afcb7f094608cc0dc0a3c9f213fdf3b9c41c830ff55b0e7`。
-- `/Applications/OmniMind.app`已替换为该候选。任务专用HOME、显式userData、OmniMind home、Pi Agent目录和XDG配置下，Main、Renderer、GPU/Network Helper与bundled Server隔离成立；默认Web Search Settings为可用/自动路由/自动摘要，1 MiB+1配置进入双语typed recovery且原hash不变，恢复有效文件后关闭重开仍可用。
-- 当前alpha产物严格codesign核验失败，因此不能声称已签名或公证。旧App和纯测试profile已移入Trash，可分别从`OmniMind.app.pre-62814532f6`与`omnimind-webaccess-62814532f6-test-profile`恢复；隔离进程已停止、DMG已卸载。下一步仅在新授权到来时切换本brief的当前目标。
+- 已完成的 source gates：Web 328 files / 4145 tests、Server Settings 27/27、Contracts Settings 7/7、root 7-package typecheck与production build；Settings/Provider/Chat/Git/PR Browser 197项通过，唯一性能比例基准单独复跑通过，仍需最终同SHA归因与完整门确认。
+- 当前下一动作：完成全diff终审与 absence/radius proof，提交并推送任务分支；再从精确 pushed candidate完成MiMo/DeepSeek最小真实跨Provider证伪与clean-clone packaged隔离journey。
+- `SYNARA-INTAKE.md`是维护者明确确认的独立修改，保留原内容并单独提交；不得夹入Settings实现提交，也不得遗落。
 
 ## Stop-loss
 
