@@ -1642,7 +1642,7 @@ describe("store event reducer", () => {
         "thread.activity-appended",
         {
           threadId,
-          activity: makeActivity({ id: "activity-after-restart", sequence: 0 }),
+          activity: makeActivity({ id: "activity-explicit-zero", sequence: 0 }),
         },
         { sequence: 41 },
       ),
@@ -1668,7 +1668,7 @@ describe("store event reducer", () => {
         threadsOf(state)[0]?.activities.map((activity) => [activity.id, activity.sequence]),
       );
       expect(sequenceById.get(EventId.makeUnsafe("activity-before-restart"))).toBe(99);
-      expect(sequenceById.get(EventId.makeUnsafe("activity-after-restart"))).toBe(0);
+      expect(sequenceById.get(EventId.makeUnsafe("activity-explicit-zero"))).toBe(0);
       expect(sequenceById.get(EventId.makeUnsafe("activity-without-sequence"))).toBe(42);
     }
   });
