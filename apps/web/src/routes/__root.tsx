@@ -952,6 +952,13 @@ function errorDetails(error: unknown): string {
   }
 }
 
+function hasExplicitMessageTextSegmentBoundary(payload: {
+  readonly segmentStartedAt?: string | undefined;
+  readonly segmentSequence?: number | undefined;
+}): boolean {
+  return payload.segmentSequence !== undefined || payload.segmentStartedAt !== undefined;
+}
+
 function coalesceOrchestrationUiEvents(
   events: ReadonlyArray<OrchestrationEvent>,
 ): OrchestrationEvent[] {
@@ -966,7 +973,13 @@ function coalesceOrchestrationUiEvents(
       previous?.type === "thread.message-sent" &&
       event.type === "thread.message-sent" &&
       previous.payload.threadId === event.payload.threadId &&
-      previous.payload.messageId === event.payload.messageId
+      previous.payload.messageId === event.payload.messageId &&
+      !(
+        hasExplicitMessageTextSegmentBoundary(event.payload) &&
+        (event.payload.segmentSequence !== previous.payload.segmentSequence ||
+          event.payload.segmentStartedAt !== previous.payload.segmentStartedAt)
+      ) &&
+      !(hasExplicitMessageTextSegmentBoundary(previous.payload) && !event.payload.streaming)
     ) {
       coalesced[coalesced.length - 1] = {
         ...event,
@@ -974,6 +987,8 @@ function coalesceOrchestrationUiEvents(
           ...event.payload,
           attachments: event.payload.attachments ?? previous.payload.attachments,
           createdAt: previous.payload.createdAt,
+          segmentStartedAt: event.payload.segmentStartedAt ?? previous.payload.segmentStartedAt,
+          segmentSequence: event.payload.segmentSequence ?? previous.payload.segmentSequence,
           text:
             !event.payload.streaming && event.payload.text.length > 0
               ? event.payload.text

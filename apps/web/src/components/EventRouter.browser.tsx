@@ -48,6 +48,7 @@ vi.mock("../wsNativeApi", async (importOriginal) => {
 
 import { useComposerDraftStore } from "../composerDraftStore";
 import { getRouter } from "../router";
+import { deriveTimelineEntries } from "../session-logic";
 import { useStore } from "../store";
 import {
   createShellSnapshotFromReadModel,
@@ -1885,6 +1886,267 @@ describe("EventRouter scoped orchestration sync", () => {
         },
         { timeout: 4_000, interval: 16 },
       );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("preserves a causal assistant segment through throttled deltas and terminal settlement", async () => {
+    const mounted = await mountApp();
+
+    try {
+      const messageId = MessageId.makeUnsafe("msg-assistant-causal-segments");
+      const turnId = TurnId.makeUnsafe("turn-causal-segments");
+      const firstSegmentStartedAt = "2026-03-04T12:00:05.000Z";
+      const secondSegmentStartedAt = "2026-03-04T12:00:07.000Z";
+      const baseEvent = {
+        aggregateKind: "thread" as const,
+        aggregateId: THREAD_ID,
+        commandId: null,
+        causationEventId: null,
+        correlationId: null,
+        metadata: {},
+        type: "thread.message-sent" as const,
+      };
+
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 2,
+        eventId: EventId.makeUnsafe("event-causal-segment-first"),
+        occurredAt: firstSegmentStartedAt,
+        payload: {
+          threadId: THREAD_ID,
+          messageId,
+          role: "assistant",
+          text: "Before work.",
+          segmentStartedAt: firstSegmentStartedAt,
+          segmentSequence: 10,
+          turnId,
+          source: "native",
+          streaming: true,
+          createdAt: firstSegmentStartedAt,
+          updatedAt: firstSegmentStartedAt,
+        },
+      });
+
+      await vi.waitFor(() => {
+        const message = getThreadFromState(useStore.getState(), THREAD_ID)?.messages.find(
+          (entry) => entry.id === messageId,
+        );
+        expect(message?.textSegments).toMatchObject([
+          { sequence: 10, startedAt: firstSegmentStartedAt, text: "Before work." },
+        ]);
+      });
+
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 3,
+        eventId: EventId.makeUnsafe("event-causal-segment-second-start"),
+        occurredAt: secondSegmentStartedAt,
+        payload: {
+          threadId: THREAD_ID,
+          messageId,
+          role: "assistant",
+          text: "After",
+          segmentStartedAt: secondSegmentStartedAt,
+          segmentSequence: 30,
+          turnId,
+          source: "native",
+          streaming: true,
+          createdAt: firstSegmentStartedAt,
+          updatedAt: secondSegmentStartedAt,
+        },
+      });
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 4,
+        eventId: EventId.makeUnsafe("event-causal-segment-second-tail"),
+        occurredAt: "2026-03-04T12:00:07.050Z",
+        payload: {
+          threadId: THREAD_ID,
+          messageId,
+          role: "assistant",
+          text: " work.",
+          turnId,
+          source: "native",
+          streaming: true,
+          createdAt: firstSegmentStartedAt,
+          updatedAt: "2026-03-04T12:00:07.050Z",
+        },
+      });
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 5,
+        eventId: EventId.makeUnsafe("event-causal-segment-terminal"),
+        occurredAt: "2026-03-04T12:00:08.000Z",
+        payload: {
+          threadId: THREAD_ID,
+          messageId,
+          role: "assistant",
+          text: "",
+          turnId,
+          source: "native",
+          streaming: false,
+          createdAt: firstSegmentStartedAt,
+          updatedAt: "2026-03-04T12:00:08.000Z",
+        },
+      });
+
+      await vi.waitFor(
+        () => {
+          const message = getThreadFromState(useStore.getState(), THREAD_ID)?.messages.find(
+            (entry) => entry.id === messageId,
+          );
+          expect(message).toMatchObject({
+            text: "Before work.After work.",
+            streaming: false,
+            textSegments: [
+              { sequence: 10, startedAt: firstSegmentStartedAt, text: "Before work." },
+              { sequence: 30, startedAt: secondSegmentStartedAt, text: "After work." },
+            ],
+          });
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps same-millisecond segment sequences distinct before the live turn settles", async () => {
+    const mounted = await mountApp();
+
+    try {
+      const messageId = MessageId.makeUnsafe("msg-assistant-same-millisecond-segments");
+      const turnId = TurnId.makeUnsafe("turn-same-millisecond-segments");
+      const firstStartedAt = "2026-03-04T12:00:05.000Z";
+      const sharedBoundaryTime = "2026-03-04T12:00:07.000Z";
+      const baseEvent = {
+        aggregateKind: "thread" as const,
+        aggregateId: THREAD_ID,
+        commandId: null,
+        causationEventId: null,
+        correlationId: null,
+        metadata: {},
+        type: "thread.message-sent" as const,
+      };
+      const payload = (text: string, updatedAt: string) => ({
+        threadId: THREAD_ID,
+        messageId,
+        role: "assistant" as const,
+        text,
+        turnId,
+        source: "native" as const,
+        streaming: true,
+        createdAt: firstStartedAt,
+        updatedAt,
+      });
+
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 2,
+        eventId: EventId.makeUnsafe("event-same-ms-first"),
+        occurredAt: firstStartedAt,
+        payload: {
+          ...payload("Before work.", firstStartedAt),
+          segmentStartedAt: firstStartedAt,
+          segmentSequence: 10,
+        },
+      });
+
+      await vi.waitFor(() => {
+        const message = getThreadFromState(useStore.getState(), THREAD_ID)?.messages.find(
+          (entry) => entry.id === messageId,
+        );
+        expect(message?.textSegments).toHaveLength(1);
+      });
+
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 3,
+        eventId: EventId.makeUnsafe("event-same-ms-second"),
+        occurredAt: sharedBoundaryTime,
+        payload: {
+          ...payload("Middle work.", sharedBoundaryTime),
+          segmentStartedAt: sharedBoundaryTime,
+          segmentSequence: 30,
+        },
+      });
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 4,
+        eventId: EventId.makeUnsafe("event-same-ms-third"),
+        occurredAt: sharedBoundaryTime,
+        payload: {
+          ...payload("After work.", sharedBoundaryTime),
+          segmentStartedAt: sharedBoundaryTime,
+          segmentSequence: 40,
+        },
+      });
+
+      await vi.waitFor(
+        () => {
+          const message = getThreadFromState(useStore.getState(), THREAD_ID)?.messages.find(
+            (entry) => entry.id === messageId,
+          );
+          expect(message).toMatchObject({
+            text: "Before work.Middle work.After work.",
+            streaming: true,
+            textSegments: [
+              { sequence: 10, startedAt: firstStartedAt, text: "Before work." },
+              { sequence: 30, startedAt: sharedBoundaryTime, text: "Middle work." },
+              { sequence: 40, startedAt: sharedBoundaryTime, text: "After work." },
+            ],
+          });
+          const timeline = deriveTimelineEntries(
+            message ? [message] : [],
+            [],
+            [
+              {
+                id: "tool-between-first-and-second",
+                createdAt: sharedBoundaryTime,
+                sequence: 20,
+                label: "First tool",
+                tone: "tool",
+              },
+              {
+                id: "tool-between-second-and-third",
+                createdAt: sharedBoundaryTime,
+                sequence: 35,
+                label: "Second tool",
+                tone: "tool",
+              },
+            ],
+          );
+          expect(timeline.map((entry) => entry.id)).toEqual([
+            `${messageId}#segment:0`,
+            "tool-between-first-and-second",
+            `${messageId}#segment:1`,
+            "tool-between-second-and-third",
+            messageId,
+          ]);
+        },
+        { timeout: 4_000, interval: 16 },
+      );
+
+      sendThreadEventPush({
+        ...baseEvent,
+        sequence: 5,
+        eventId: EventId.makeUnsafe("event-same-ms-terminal"),
+        occurredAt: "2026-03-04T12:00:08.000Z",
+        payload: {
+          ...payload("", "2026-03-04T12:00:08.000Z"),
+          streaming: false,
+        },
+      });
+
+      await vi.waitFor(() => {
+        const message = getThreadFromState(useStore.getState(), THREAD_ID)?.messages.find(
+          (entry) => entry.id === messageId,
+        );
+        expect(message?.streaming).toBe(false);
+        expect(message?.textSegments?.map((segment) => segment.sequence)).toEqual([10, 30, 40]);
+      });
     } finally {
       await mounted.cleanup();
     }
