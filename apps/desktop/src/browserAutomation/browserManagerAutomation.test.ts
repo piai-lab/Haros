@@ -166,10 +166,18 @@ describe("DesktopBrowserManager automation runtime boundary", () => {
     expect(prepared.activeTabId).toBe(ordinaryTabId);
 
     manager.closeTab({ threadId: THREAD_ID, tabId: firstTabId });
+    const presentExistingSurface = vi.spyOn(manager, "presentEngineWebSurface");
     const reopened = manager.reopenEngineWebSurface({
       threadId: THREAD_ID,
       surfaceId: "surface-a",
     });
+    expect(presentExistingSurface).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        surfaceId: "surface-a",
+        title: "OmniMind 网络访问",
+        url: tokenUrl,
+      }),
+    );
     expect(reopened.tabs.find((tab) => tab.presentation?.surfaceId === "surface-a")?.title).toBe(
       "OmniMind 网络访问",
     );

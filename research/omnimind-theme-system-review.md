@@ -19,11 +19,11 @@ OmniMind 已经有一套值得保留的主题内核，不应重写：
 2026-08-24审计证明的主要问题不在核心，而在外围修改半径：
 
 1. `@omnimind/om-web-access` 的内部Curator/observer只收到`light|dark`，又维护一套固定黑白palette；自定义暖色或未来主题会在这里静默失效。
-2. 主题seed catalog已经拥有实际预设字节，但另有手写预设列表重复声明ID、顺序和支持的明暗槽；新增主题需要同步两份事实。
+2. 主题seed catalog已经拥有实际预设字节，但另有手写预设列表及按preset ID分叉的字段应用metadata，重复声明ID、顺序、明暗槽与字体/对比度/窗口材质套用语义；新增rich主题需要同步多份事实。
 3. UI把整套App palette预设称为“代码主题”，但Shiki与Pierre Diff实际只根据`light|dark`选择固定GitHub syntax theme；用户语言和代码概念不诚实。
 4. 全仓存在大量硬编码颜色，但不能用“全部替换成token”处理：其中混合了产品chrome、品牌identity、内容、截图/导出、设备bezel、图片遮罩、状态语义、第三方页和首帧fallback。机械清理会破坏真实边界。
 
-本轮采用`SIMPLIFY / CONSOLIDATE`而非重建：主题preset identity从实际seed catalog派生；普通UI改称“主题预设”；新的分享串归一为`omnimind-theme-v1`，旧`codex-theme-v1`只作为有界reader输入；OmniMind-owned Engine Web Surface消费appearance owner生成的credential-blind resolved snapshot。上游/default profile仍可保留作者fallback。
+本轮采用`SIMPLIFY / CONSOLIDATE`而非重建：主题preset identity、variant、seed与选择时字段应用语义从同一catalog descriptor派生；普通UI改称“主题预设”；新的分享串归一为`omnimind-theme-v1`，旧`codex-theme-v1`只作为有界reader输入；OmniMind-owned Engine Web Surface消费appearance owner生成的credential-blind resolved snapshot。Appearance owner同时把原始身份/装饰色与可读文本角色分开派生，避免在页面逐个修正不合格对比度。上游/default profile仍可保留作者fallback。
 
 ## 2. 维护者 taste：什么才叫“主题完整”
 
@@ -38,7 +38,7 @@ OmniMind 已经有一套值得保留的主题内核，不应重写：
 - UI、读屏、focus、loading/error/recovery和terminal状态一起换肤，不只静态截图；
 - 原色Provider/品牌mark不反色、不统一单色、不被主题accent替代；
 - 网页、PDF、图片、设备屏幕和用户内容不被App强制滤镜；
-- 同一renderer内的主题变化只重绘presentation，不重启Run、Session、Tab、Terminal或Browser lifecycle；隔离页面保持创建时snapshot，新建或exact reopen才取新主题，不为换肤增加持续同步控制面；
+- 同一renderer内的主题变化只重绘presentation，不重启Run、Session、Tab、Terminal或Browser lifecycle；隔离页面在完整surface生命周期内保持创建时snapshot，关闭Tab后的exact reopen仍复用该snapshot，只有新surface才取当前主题，不为换肤增加持续同步控制面；
 - 普通用户看到“主题预设”，而不是内部字段、seed、codeThemeId或实现来源；
 - 未来修改一个主题时，修改半径小、测试定位明确、删除可回滚。
 
@@ -97,15 +97,15 @@ Appearance UI / Sidebar search / import
 
 ### 3.3 主题目录
 
-`apps/web/src/theme/theme.seed.generated.ts`包含实际bundled preset seed。2026-08-24以前，`theme.logic.ts`另有`CODE_THEME_OPTIONS`手写ID、顺序和variants；两者可漂移。当前候选将`THEME_PRESET_OPTIONS`从seed catalog派生，只有少量纯展示label override，不再重复variant事实。
+`apps/web/src/theme/theme.seed.generated.ts`包含实际bundled preset descriptor。2026-08-24以前，`theme.logic.ts`另有`CODE_THEME_OPTIONS`手写ID/顺序/variants，以及按九个preset ID维护字体、对比度和窗口材质套用规则的第二metadata表；两者可漂移。当前候选将`THEME_PRESET_OPTIONS`与选择时patch都从同一descriptor派生，只有少量纯展示label override，不再重复成员、variant或rich seed应用事实。
 
 这里的preset是**可编辑模板**，不是live-linked theme：选择preset时把seed合并进当前槽，之后`chromeThemes`持久化完整palette并允许用户继续修改；`resolveThemePack`读取持久值，不会因为未来同ID seed变化而覆盖已有profile。因此“只改seed”的修改半径只描述实现、新profile和用户下一次明确套用的结果，不代表无迁移地更新全部既有用户。若维护者未来要求linked preset，必须单独裁决自定义覆盖、版本、迁移、冲突与回滚，不能把当前normalizer偷偷改成远端/catalog authority。
 
 新增一个主题预设的理想修改面：
 
-1. 在唯一seed catalog加入stable ID及一个或两个variant的真实seed；
+1. 在唯一seed catalog加入stable ID、一个或两个variant的真实seed，以及该模板确需套用的可选字体、对比度与窗口材质字段；
 2. 如品牌大小写不能可靠从ID派生，只在同一owner补label override；
-3. 增加focused preset/contrast/快照测试和必要视觉journey；
+3. 增加focused rich-preset、全catalog 4.5:1文本对比、快照测试和必要视觉journey；
 4. 不手改Settings、侧栏搜索、Browser、Curator、Terminal、Diff或Provider图标表。
 
 若第4步失败，说明出现第二owner，必须先收口再合并。
@@ -122,7 +122,7 @@ Appearance UI / Sidebar search / import
 | A    | Terminal                                                            | `terminalRuntimeAppearance.ts`从resolved CSS读取surface/text/ANSI     | ANSI是领域语义；固定值只作DOM不可用时fallback                                         |
 | A/C  | Diff与代码块                                                        | 外壳/added/removed消费tokens；Pierre/Shiki syntax只消费light/dark     | “主题预设”不冒充独立syntax theme                                                      |
 | B    | Browser annotation closed shadow root                               | `BrowserAnnotationTheme` bounded numeric snapshot                     | guest不继承宿主CSS；snapshot拒绝`var()`、URL与任意CSS                                 |
-| B    | Curator/observer与未来loopback/internal Web Surface                 | typed Engine Web Surface snapshot                                     | bundled缺snapshot时fail closed；创建时冻结，新建/exact reopen读取最新；upstream/default profile保留有界fallback |
+| B    | Curator/observer与未来loopback/internal Web Surface                 | typed Engine Web Surface snapshot                                     | bundled缺snapshot时fail closed；完整surface生命周期冻结（含exact reopen），只有新surface读取当前主题；upstream/default profile保留有界fallback |
 | C    | Electron titlebar/menu/window首帧、native dialog、Dock/平台图标变体 | `nativeTheme.themeSource`、OS appearance、light/dark resource variant | OS不支持完整App palette，不伪造；不得反向创建Server ThemeState                        |
 | C    | React挂载前boot、pairing、signed-out、无可信App context的OAuth callback | `startupSurface.ts`或平台variant                                   | 只提供中性light/dark可读性，不复制preset catalog；同一Web启动owner服务pairing/signed-out，OAuth回调保留Server有界en/zh-CN边界 |
 | D    | Provider/Engine/品牌图标                                            | 本地exact-pinned identity assets                                      | 可按contrast选择官方变体，但不invert、不accent染色                                    |
