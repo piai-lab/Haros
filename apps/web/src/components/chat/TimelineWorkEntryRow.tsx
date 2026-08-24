@@ -528,6 +528,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   onOpenAgentActivity?: (activityId: string) => void;
   onOpenAutomation?: (automationId: string) => void;
   onOpenEngineWebSurface?: (surfaceId: string) => void;
+  reasoningDefaultOpen?: boolean;
   timestampFormat: TimestampFormat;
 }) {
   // Defaults are applied in the body (not in the destructuring pattern): a default
@@ -546,6 +547,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     onOpenAgentActivity,
     onOpenAutomation,
     onOpenEngineWebSurface,
+    reasoningDefaultOpen,
     timestampFormat,
   } = props;
   const textFontSizePx = textFontSizePxProp ?? chatMetaFontSizePx;
@@ -703,6 +705,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       <ReasoningDisclosureRow
         workEntry={workEntry}
         compact={compact}
+        defaultOpen={reasoningDefaultOpen ?? true}
         textFontSizePx={textFontSizePx}
         markdownCwd={markdownCwd}
         onImageExpand={onImageExpand}
@@ -976,12 +979,14 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
 function ReasoningDisclosureRow(props: {
   workEntry: TimelineWorkEntry;
   compact: boolean;
+  defaultOpen: boolean;
   textFontSizePx: number;
   markdownCwd: string | undefined;
   onImageExpand: (preview: ExpandedImagePreview) => void;
 }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(props.defaultOpen);
+  const interactionDirtyRef = useRef(false);
   const regionId = useId();
   const entries =
     props.workEntry.reasoningEntries ??
@@ -989,6 +994,12 @@ function ReasoningDisclosureRow(props: {
       const text = formatAgentActivityEntryPreview(props.workEntry);
       return text ? [{ id: props.workEntry.id, text }] : [];
     })();
+
+  useEffect(() => {
+    if (!interactionDirtyRef.current) {
+      setOpen(props.defaultOpen);
+    }
+  }, [props.defaultOpen]);
 
   if (entries.length === 0) {
     return null;
@@ -1007,7 +1018,10 @@ function ReasoningDisclosureRow(props: {
         )}
         aria-expanded={open}
         aria-controls={regionId}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          interactionDirtyRef.current = true;
+          setOpen((current) => !current);
+        }}
       >
         <span
           className={cn(

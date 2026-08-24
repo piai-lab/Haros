@@ -11,7 +11,6 @@ import {
   type ThreadMarker,
   type TurnId,
 } from "@omnimind/contracts";
-import { pluralize } from "@omnimind/shared/text";
 import { LegendList, type AnchoredEndSpaceConfig, type LegendListRef } from "@legendapp/list/react";
 import {
   memo,
@@ -179,6 +178,15 @@ const JUMP_HIGHLIGHT_DURATION_MS = 1200;
 const MARKER_FINE_SCROLL_RETRY_TIMEOUT_MS = 900;
 const MARKER_FINE_SCROLL_MAX_RETRY_FRAMES = 90;
 const MESSAGE_SEND_ENTER_ANIMATION_MS = 180;
+
+function reasoningDisclosureDefaultOpen(entry: WorkLogEntry, turnIsLive: boolean): boolean {
+  return (
+    !turnIsLive &&
+    entry.tone !== "error" &&
+    entry.toolStatus !== "failed" &&
+    entry.liveActivity?.state !== "failed"
+  );
+}
 const MESSAGE_SEND_ENTER_CLEANUP_BUFFER_MS = 60;
 // Treat any partially visible row (>= 1px) as in view, so the navigation trail's
 // "active" tick tracks the topmost rendered row rather than waiting for a turn to
@@ -1377,6 +1385,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               chatMetaFontSizePx={appTypographyScale.chatMetaPx}
               textFontSizePx={appTypographyScale.activityPx}
               density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
+              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(workEntry, isLiveGroup)}
               markdownCwd={markdownCwd}
               onImageExpand={onImageExpand}
               timestampFormat={timestampFormat}
@@ -1395,60 +1404,34 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             expanded: isExpanded,
             maxVisibleEntries: MAX_VISIBLE_WORK_LOG_ENTRIES,
             keep: "last",
+            shouldCapEntry: (workEntry) => workEntry.tone === "tool",
           });
           const renderChunks = cappedRenderPlan.chunks;
-          const hasCollapsedChunk = renderChunks.some((chunk) => chunk.summary !== null);
-          if (hasCollapsedChunk) {
-            return (
-              <div>
-                <div className="space-y-0.5">
-                  {renderChunks.map((chunk) => {
-                    if (!chunk.summary) return chunk.entries.map(renderEntryRow);
-                    const summary = chunk.summary;
-                    const summaryKey = `${groupId}:${chunk.id}`;
-                    return (
-                      <ToolCallGroupSummaryRow
-                        key={`tool-summary:${summaryKey}`}
-                        summary={summary}
-                        open={toolGroupSummaryOverrides[summaryKey] ?? false}
-                        onToggle={(open) => setToolGroupSummaryOpen(summaryKey, open)}
-                        fontSizePx={appTypographyScale.activityPx}
-                        renderChildren={() => (
-                          <div className="space-y-0.5 pt-0.5">
-                            {chunk.entries.map(renderEntryRow)}
-                          </div>
-                        )}
-                      />
-                    );
-                  })}
-                </div>
-                {cappedRenderPlan.hasOverflow && (
-                  <div className="mt-1.5 flex items-center justify-start gap-2 px-0.5">
-                    <button
-                      type="button"
-                      className="font-system-ui text-[var(--color-text-foreground-secondary)] transition-colors duration-150 hover:text-foreground"
-                      style={{ fontSize: `${appTypographyScale.uiSmPx}px` }}
-                      onClick={() => handleToggleWorkGroup(groupId)}
-                    >
-                      {isExpanded ? "Show less" : `Show ${cappedRenderPlan.hiddenEntryCount} more`}
-                    </button>
-                  </div>
-                )}
-              </div>
-            );
-          }
-          const hasOverflow = groupedEntries.length > MAX_VISIBLE_WORK_LOG_ENTRIES;
-          const visibleEntries =
-            hasOverflow && !isExpanded
-              ? groupedEntries.slice(-MAX_VISIBLE_WORK_LOG_ENTRIES)
-              : groupedEntries;
-          const hiddenCount = groupedEntries.length - visibleEntries.length;
-          const showOverflowToggle = hasOverflow;
 
           return (
             <div>
-              <div className="space-y-0.5">{visibleEntries.map(renderEntryRow)}</div>
-              {showOverflowToggle && (
+              <div className="space-y-0.5">
+                {renderChunks.map((chunk) => {
+                  if (!chunk.summary) return chunk.entries.map(renderEntryRow);
+                  const summary = chunk.summary;
+                  const summaryKey = `${groupId}:${chunk.id}`;
+                  return (
+                    <ToolCallGroupSummaryRow
+                      key={`tool-summary:${summaryKey}`}
+                      summary={summary}
+                      open={toolGroupSummaryOverrides[summaryKey] ?? false}
+                      onToggle={(open) => setToolGroupSummaryOpen(summaryKey, open)}
+                      fontSizePx={appTypographyScale.activityPx}
+                      renderChildren={() => (
+                        <div className="space-y-0.5 pt-0.5">
+                          {chunk.entries.map(renderEntryRow)}
+                        </div>
+                      )}
+                    />
+                  );
+                })}
+              </div>
+              {cappedRenderPlan.hasOverflow && (
                 <div className="mt-1.5 flex items-center justify-start gap-2 px-0.5">
                   <button
                     type="button"
@@ -1456,7 +1439,14 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     style={{ fontSize: `${appTypographyScale.uiSmPx}px` }}
                     onClick={() => handleToggleWorkGroup(groupId)}
                   >
-                    {isExpanded ? "Show less" : `Show ${hiddenCount} more`}
+                    {isExpanded
+                      ? t("common.showLess")
+                      : t(
+                          cappedRenderPlan.hiddenEntryCount === 1
+                            ? "timeline.showMoreToolCall"
+                            : "timeline.showMoreToolCalls",
+                          { count: cappedRenderPlan.hiddenEntryCount },
+                        )}
                   </button>
                 </div>
               )}
@@ -1746,6 +1736,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 (workEntry.changedFiles?.length ?? 0) === 0
               );
             return {
+              workGroupId,
               toolGroupId,
               toolExpanded,
               // Tool limits and summaries may hide only tool entries; this
@@ -1850,6 +1841,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             display: typeof leadingWorkDisplay,
             placement: "leading" | "inline",
           ) => {
+            // A leading work group can still belong to the active turn while the
+            // assistant answer streams after it. Keep that turn lifecycle
+            // separate from the tool-tail projection below: leading tools may
+            // collapse, while their reasoning disclosure remains initially shut.
+            const reasoningTurnIsLive = row.assistantTurnInProgress === true;
             const renderInlineWorkRow = (workEntry: WorkLogEntry) => (
               <TimelineWorkEntryRow
                 key={`${placement}-work-row:${row.message.id}:${workEntry.id}`}
@@ -1857,6 +1853,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 chatMetaFontSizePx={appTypographyScale.chatMetaPx}
                 textFontSizePx={appTypographyScale.activityPx}
                 density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
+                reasoningDefaultOpen={reasoningDisclosureDefaultOpen(
+                  workEntry,
+                  reasoningTurnIsLive,
+                )}
                 fileDiffStatByPath={fileDiffStatByPath}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
@@ -1869,8 +1869,9 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               />
             );
             const isLiveGroup =
-              display.toolGroupId !== null &&
-              display.toolGroupId === lastLiveWorkGroupId &&
+              placement === "inline" &&
+              display.workGroupId !== null &&
+              display.workGroupId === lastLiveWorkGroupId &&
               (activeTurnInProgress || isWorking);
             // Leading groups are never a live tail: the message's own text
             // already follows them, so their last tool run collapses too.
@@ -1935,8 +1936,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       onClick={() => handleToggleWorkGroup(display.toolGroupId!)}
                     >
                       {display.toolExpanded
-                        ? "Show less"
-                        : `+${cappedRenderPlan.hiddenEntryCount} more tool calls`}
+                        ? t("common.showLess")
+                        : t(
+                            cappedRenderPlan.hiddenEntryCount === 1
+                              ? "timeline.showMoreToolCall"
+                              : "timeline.showMoreToolCalls",
+                            { count: cappedRenderPlan.hiddenEntryCount },
+                          )}
                     </button>
                   </div>
                 )}
@@ -1951,6 +1957,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 chatMetaFontSizePx={appTypographyScale.chatMetaPx}
                 textFontSizePx={appTypographyScale.activityPx}
                 density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
+                reasoningDefaultOpen={reasoningDisclosureDefaultOpen(item.entry, false)}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
                 timestampFormat={timestampFormat}
@@ -2158,10 +2165,10 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     (sum, file) => sum + (file.deletions ?? 0),
                     0,
                   );
-                  const editedFilesLabel = `Edited ${checkpointFiles.length} ${pluralize(
-                    checkpointFiles.length,
-                    "file",
-                  )}`;
+                  const editedFilesLabel = t(
+                    checkpointFiles.length === 1 ? "toolGroup.editSingle" : "toolGroup.edit",
+                    { count: checkpointFiles.length },
+                  );
                   const firstCheckpointFiles = checkpointFiles.slice(0, MAX_VISIBLE_CHANGED_FILES);
                   const overflowCheckpointFiles = checkpointFiles.slice(MAX_VISIBLE_CHANGED_FILES);
                   const renderCheckpointFileRow = (
@@ -2300,11 +2307,13 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                             <DisclosureChevron open={fileListExpanded} />
                             <span>
                               {fileListExpanded
-                                ? "Show less"
-                                : `Show ${overflowCheckpointFiles.length} more ${pluralize(
-                                    overflowCheckpointFiles.length,
-                                    "file",
-                                  )}`}
+                                ? t("common.showLess")
+                                : t(
+                                    overflowCheckpointFiles.length === 1
+                                      ? "timeline.showMoreFile"
+                                      : "timeline.showMoreFiles",
+                                    { count: overflowCheckpointFiles.length },
+                                  )}
                             </span>
                           </button>
                         ) : null}

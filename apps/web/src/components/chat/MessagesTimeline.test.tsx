@@ -1815,7 +1815,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("+2 more tool calls");
   });
 
-  it("renders inline reasoning with Central brain-2 while the sole wait row remains live", async () => {
+  it("renders live reasoning collapsed with Central brain-2 while the sole wait row remains live", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const activeTurnId = TurnId.makeUnsafe("turn-reasoning-live");
     const markup = renderToStaticMarkup(
@@ -1906,7 +1906,7 @@ describe("MessagesTimeline", () => {
     expect(markup).toContain('data-testid="thinking-status"');
     expect(markup.match(/data-reasoning-disclosure="true"/g) ?? []).toHaveLength(2);
     expect(markup.match(/data-central-icon-name="brain-2"/g) ?? []).toHaveLength(2);
-    expect(markup.match(/aria-expanded="true"/g) ?? []).toHaveLength(2);
+    expect(markup.match(/aria-expanded="false"/g) ?? []).toHaveLength(2);
     expect(markup).toContain("Inspecting apps/web/src/store.ts");
     expect(markup).toContain("Updating the adapter");
     expect(markup).not.toContain("Reasoning ·");
@@ -3287,6 +3287,10 @@ describe("MessagesTimeline", () => {
                     additions: 2,
                     deletions: 0,
                   },
+                  { path: "apps/web/src/components/chat/TimelineWorkEntryRow.tsx" },
+                  { path: "apps/web/src/components/chat/ToolCallGroupSummaryRow.tsx" },
+                  { path: "apps/web/src/components/chat/agentActivity.logic.ts" },
+                  { path: "apps/web/src/i18n.tsx" },
                 ],
               },
             ],
@@ -3310,7 +3314,9 @@ describe("MessagesTimeline", () => {
     // The tool work collapses, but the changed-files summary stays anchored at
     // the end of the turn with every file from the turn diff.
     expect(markup).toContain("Worked for");
-    expect(markup).toContain("Edited 2 files");
+    expect(markup).toContain("Edited 6 files");
+    expect(markup).toContain("Show 1 more file");
+    expect(markup).not.toContain("Show 1 more files");
     expect(markup).toContain("apps/web/src/components/chat/MessagesTimeline.test.tsx");
     expect(markup).toContain("apps/web/src/components/chat/MessagesTimeline.tsx");
     expect(markup).toContain("+1");

@@ -5,6 +5,7 @@
 import "../../index.css";
 
 import { MessageId, TurnId } from "@omnimind/contracts";
+import { useState, type ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import { render } from "vitest-browser-react";
@@ -25,7 +26,10 @@ import { TimelineWorkEntryRow } from "./TimelineWorkEntryRow";
 const LONG_REASONING =
   "I am checking the canonical sequence before opening https://example.test/a/very/long/source/path?query=reasoning-timeline-layout and then validating SupercalifragilisticexpialidociousRepeatedWithoutABreakSupercalifragilisticexpialidociousRepeatedWithoutABreak at the narrowest supported width.";
 
-function ReasoningRow(props: { onOpenAgentActivity?: (id: string) => void }) {
+function ReasoningRow(props: {
+  onOpenAgentActivity?: (id: string) => void;
+  reasoningDefaultOpen?: boolean;
+}) {
   return (
     <TimelineWorkEntryRow
       workEntry={{
@@ -48,10 +52,222 @@ function ReasoningRow(props: { onOpenAgentActivity?: (id: string) => void }) {
       density="compact"
       onImageExpand={() => {}}
       markdownCwd={undefined}
+      {...(props.reasoningDefaultOpen === undefined
+        ? {}
+        : { reasoningDefaultOpen: props.reasoningDefaultOpen })}
       {...(props.onOpenAgentActivity
         ? { onOpenAgentActivity: props.onOpenAgentActivity }
         : {})}
       timestampFormat="locale"
+    />
+  );
+}
+
+type TimelineEntries = ComponentProps<typeof MessagesTimeline>["timelineEntries"];
+
+const baseTimelineProps = {
+  hasMessages: true,
+  activeTurnStartedAt: null,
+  turnDiffSummaryByAssistantMessageId: new Map(),
+  nowIso: "2026-08-24T13:30:50.000Z",
+  onOpenTurnDiff: () => {},
+  revertTurnCountByUserMessageId: new Map(),
+  onRevertUserMessage: () => {},
+  isRevertingCheckpoint: false,
+  onImageExpand: () => {},
+  markdownCwd: undefined,
+  resolvedTheme: "light" as const,
+  timestampFormat: "locale" as const,
+  workspaceRoot: undefined,
+};
+
+function reasoningEntry(
+  id: string,
+  turnId: TurnId,
+  text: string,
+  tone: "thinking" | "error" = "thinking",
+) {
+  return {
+    id,
+    kind: "work" as const,
+    createdAt: `2026-08-24T13:30:${id.endsWith("2") ? "43" : "41"}.000Z`,
+    entry: {
+      id,
+      createdAt: "2026-08-24T13:30:41.000Z",
+      turnId,
+      label: "Reasoning",
+      tone,
+      activityKind: "reasoning.completed" as const,
+      reasoningEntries: [{ id: `${id}-part`, text }],
+    },
+  } satisfies TimelineEntries[number];
+}
+
+function toolEntry(
+  id: string,
+  turnId: TurnId,
+  options: {
+    label: string;
+    itemType?: "dynamic_tool_call" | "web_search";
+    requestKind?: "file-read";
+    toolStatus?: "running";
+  },
+) {
+  return {
+    id,
+    kind: "work" as const,
+    createdAt: "2026-08-24T13:30:42.000Z",
+    entry: {
+      id,
+      createdAt: "2026-08-24T13:30:42.000Z",
+      turnId,
+      label: options.label,
+      toolTitle: options.label,
+      tone: "tool" as const,
+      itemType: options.itemType ?? "dynamic_tool_call",
+      ...(options.requestKind ? { requestKind: options.requestKind } : {}),
+      ...(options.toolStatus ? { toolStatus: options.toolStatus } : {}),
+    },
+  } satisfies TimelineEntries[number];
+}
+
+function assistantEntry(
+  id: string,
+  turnId: TurnId,
+  text: string,
+  options: { streaming?: boolean; completed?: boolean } = {},
+) {
+  return {
+    id: MessageId.makeUnsafe(id),
+    kind: "message" as const,
+    createdAt: "2026-08-24T13:30:45.000Z",
+    message: {
+      id: MessageId.makeUnsafe(id),
+      role: "assistant" as const,
+      text,
+      turnId,
+      createdAt: "2026-08-24T13:30:45.000Z",
+      ...(options.completed ? { completedAt: "2026-08-24T13:30:45.100Z" } : {}),
+      streaming: options.streaming ?? false,
+    },
+  } satisfies TimelineEntries[number];
+}
+
+function AnswerStageTimeline(props: { settled: boolean }) {
+  const turnId = TurnId.makeUnsafe("turn-answer-stage-browser");
+  const timelineEntries: TimelineEntries = [
+    assistantEntry("assistant-answer-preamble", turnId, "I will inspect the source.", {
+      completed: true,
+    }),
+    reasoningEntry("reasoning-answer-stage", turnId, "Reasoning before the streamed answer."),
+    toolEntry("tool-answer-stage", turnId, { label: "Read answer source" }),
+    assistantEntry("assistant-answer-stream", turnId, "Streaming answer text.", {
+      streaming: !props.settled,
+      completed: props.settled,
+    }),
+  ];
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking={!props.settled}
+      activeTurnInProgress={!props.settled}
+      activeTurnId={props.settled ? null : turnId}
+      timelineEntries={timelineEntries}
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
+    />
+  );
+}
+
+function FailedReasoningTimeline() {
+  const turnId = TurnId.makeUnsafe("turn-failed-reasoning-browser");
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking={false}
+      activeTurnInProgress={false}
+      timelineEntries={[
+        assistantEntry("assistant-failure-before", turnId, "I will try this.", {
+          completed: true,
+        }),
+        reasoningEntry("reasoning-failure", turnId, "Public reasoning before failure.", "error"),
+        assistantEntry("assistant-failure-after", turnId, "The operation failed.", {
+          completed: true,
+        }),
+      ]}
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
+    />
+  );
+}
+
+function SettledSummaryTimeline() {
+  const turnId = TurnId.makeUnsafe("turn-summary-browser");
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking={false}
+      activeTurnInProgress={false}
+      timelineEntries={[
+        assistantEntry("assistant-summary-before", turnId, "Before grouped work.", {
+          completed: true,
+        }),
+        toolEntry("read-summary-1", turnId, {
+          label: "Read alpha.ts",
+          requestKind: "file-read",
+        }),
+        toolEntry("read-summary-2", turnId, {
+          label: "Read beta.ts",
+          requestKind: "file-read",
+        }),
+        reasoningEntry("reasoning-summary", turnId, "Reasoning between grouped tools."),
+        toolEntry("search-summary-1", turnId, {
+          label: "Search first source",
+          itemType: "web_search",
+        }),
+        toolEntry("search-summary-2", turnId, {
+          label: "Search second source",
+          itemType: "web_search",
+        }),
+        assistantEntry("assistant-summary-after", turnId, "After grouped work.", {
+          completed: true,
+        }),
+      ]}
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
+    />
+  );
+}
+
+function ToolCapTimeline() {
+  const turnId = TurnId.makeUnsafe("turn-tool-cap-browser");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const toolsBefore = Array.from({ length: 5 }, (_, index) =>
+    toolEntry(`cap-tool-${index + 1}`, turnId, {
+      label: `Cap tool ${index + 1}`,
+      toolStatus: "running",
+    }),
+  );
+  const toolsAfter = Array.from({ length: 2 }, (_, index) =>
+    toolEntry(`cap-tool-${index + 6}`, turnId, {
+      label: `Cap tool ${index + 6}`,
+      toolStatus: "running",
+    }),
+  );
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking={false}
+      activeTurnInProgress={false}
+      timelineEntries={[
+        ...toolsBefore,
+        reasoningEntry("reasoning-cap", turnId, "Reasoning remains at its causal position."),
+        ...toolsAfter,
+      ]}
+      expandedWorkGroups={expanded}
+      onToggleWorkGroup={(groupId) =>
+        setExpanded((current) => ({ ...current, [groupId]: !current[groupId] }))
+      }
     />
   );
 }
@@ -289,6 +505,131 @@ describe("Timeline public reasoning disclosure", () => {
       const positions = orderedText.map((value) => text.indexOf(value));
       expect(positions.every((position) => position >= 0)).toBe(true);
       expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("keeps settled tool summaries on each side of reasoning in DOM order", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<SettledSummaryTimeline />, {
+      container: host,
+    });
+
+    try {
+      const text = document.body.textContent ?? "";
+      const orderedText = [
+        "Before grouped work.",
+        "Read 2 files",
+        "Reasoning between grouped tools.",
+        "Searched 2 files",
+        "After grouped work.",
+      ];
+      const positions = orderedText.map((value) => text.indexOf(value));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
+      expect(screen.getByRole("button", { name: /Read 2 files/ }).element()).toBeTruthy();
+      expect(screen.getByRole("button", { name: /Searched 2 files/ }).element()).toBeTruthy();
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("caps only tool rows, preserves reasoning position, and uses singular overflow copy", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<ToolCapTimeline />, { container: host });
+
+    try {
+      const text = document.body.textContent ?? "";
+      expect(text).not.toContain("Cap tool 1");
+      expect(text).toContain("Reasoning remains at its causal position.");
+      const positions = [
+        text.indexOf("Cap tool 2"),
+        text.indexOf("Reasoning remains at its causal position."),
+        text.indexOf("Cap tool 6"),
+      ];
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
+
+      await userEvent.click(screen.getByRole("button", { name: "Show 1 more tool call" }));
+      expect(document.body.textContent ?? "").toContain("Cap tool 1");
+      expect(screen.getByRole("button", { name: "Show less" }).element()).toBeTruthy();
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("localizes the tool overflow disclosure in Simplified Chinese", async () => {
+    harness.settings.localePreference = "zh-CN";
+    const host = createNarrowHost();
+    const screen = await render(
+      <I18nProvider>
+        <ToolCapTimeline />
+      </I18nProvider>,
+      { container: host },
+    );
+
+    try {
+      await userEvent.click(screen.getByRole("button", { name: "再显示 1 个工具调用" }));
+      expect(screen.getByRole("button", { name: "收起" }).element()).toBeTruthy();
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("starts answer-stage leading reasoning collapsed and opens it when the turn settles", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<AnswerStageTimeline settled={false} />, {
+      container: host,
+    });
+
+    try {
+      const trigger = screen.getByRole("button", { name: "Reasoning" }).element();
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      await screen.rerender(<AnswerStageTimeline settled />);
+      await expect.poll(() => trigger.getAttribute("aria-expanded")).toBe("true");
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("does not overwrite a disclosure choice when a live turn settles", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<AnswerStageTimeline settled={false} />, {
+      container: host,
+    });
+
+    try {
+      const trigger = screen.getByRole("button", { name: "Reasoning" }).element();
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      await userEvent.click(trigger);
+      await userEvent.click(trigger);
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+      await screen.rerender(<AnswerStageTimeline settled />);
+      await settleLayout();
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("starts failed reasoning collapsed", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<FailedReasoningTimeline />, {
+      container: host,
+    });
+
+    try {
+      expect(
+        screen.getByRole("button", { name: "Reasoning" }).element().getAttribute("aria-expanded"),
+      ).toBe("false");
     } finally {
       await screen.unmount();
       host.remove();

@@ -100,28 +100,27 @@ export function formatAgentActivityEntryPreview(entry: WorkLogEntry): string | n
 // activity payload. Canonical reasoning stays verbatim; the legacy branch only
 // removes old transport prefixes that were never part of the authored text.
 export function formatAgentActivityReasoningText(entry: WorkLogEntry): string | null {
-  const value = entry.detail?.trim() ? entry.detail : entry.preview;
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed || !hasReadableReasoningText(trimmed)) {
-    return null;
-  }
+  const candidates = [entry.detail, entry.preview].flatMap((value) =>
+    value?.trim() ? [value.trim()] : [],
+  );
   if (entry.activityKind === "reasoning.completed") {
-    return trimmed;
+    return candidates.find(hasReadableReasoningText) ?? null;
   }
 
-  const withoutComments = trimmed
-    .replace(/<!--[\s\S]*?-->/gu, "")
-    .replace(/\n[\t ]*\n(?:[\t ]*\n)+/gu, "\n\n")
-    .trim();
-  const withoutReasoningPrefix = withoutComments
-    .replace(/^reasoning(?:\s+(?:update|trace|summary))?\b[\s:.-]*/iu, "")
-    .trim();
-  const withoutRunningPrefix = withoutReasoningPrefix.replace(/^running\b[\s:.-]*/iu, "").trim();
-  return withoutRunningPrefix || withoutReasoningPrefix || null;
+  for (const candidate of candidates) {
+    const withoutComments = candidate
+      .replace(/<!--[\s\S]*?-->/gu, "")
+      .replace(/\n[\t ]*\n(?:[\t ]*\n)+/gu, "\n\n")
+      .trim();
+    const withoutReasoningPrefix = withoutComments
+      .replace(/^reasoning(?:\s+(?:update|trace|summary))?\b[\s:.-]*/iu, "")
+      .trim();
+    const withoutRunningPrefix = withoutReasoningPrefix.replace(/^running\b[\s:.-]*/iu, "").trim();
+    if (hasReadableReasoningText(withoutRunningPrefix)) {
+      return withoutRunningPrefix;
+    }
+  }
+  return null;
 }
 
 export function formatAgentActivityEntrySummary(entry: WorkLogEntry): string | null {
@@ -162,13 +161,19 @@ export function deriveAgentActivityTimelineState(
       const text = formatAgentActivityReasoningText(entry);
       return text ? [{ id: entry.id, text }] : [];
     });
+    const failed = groupEntries.some(
+      (entry) =>
+        entry.tone === "error" ||
+        entry.toolStatus === "failed" ||
+        entry.liveActivity?.state === "failed",
+    );
     const displayEntry: WorkLogEntry = {
       ...latest,
       id: groupId,
       createdAt: first.createdAt,
       label: "Reasoning",
       toolTitle: "Reasoning",
-      tone: "thinking",
+      tone: failed ? "error" : "thinking",
       reasoningEntries,
     };
     delete displayEntry.preview;

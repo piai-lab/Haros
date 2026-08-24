@@ -352,6 +352,18 @@ describe("deriveAgentActivityTimelineState", () => {
     expect(formatAgentActivityEntryPreview(summary)).toBe("Update the adapter");
   });
 
+  it("falls back to legacy preview text when detail contains only a transport label", () => {
+    const entry = workEntry({
+      id: "legacy-reasoning-preview",
+      label: "Reasoning trace",
+      detail: "Reasoning",
+      preview: "Running Inspect the provider sequence",
+      tone: "thinking",
+    });
+
+    expect(formatAgentActivityEntryPreview(entry)).toBe("Inspect the provider sequence");
+  });
+
   it("keeps generic agent task rows openable without compacting them away", () => {
     const state = deriveAgentActivityTimelineState([
       workEntry({
