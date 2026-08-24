@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chmod, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readFile, rename, stat, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { mkdtemp } from "node:fs/promises";
@@ -7,6 +7,7 @@ import test from "node:test";
 
 import {
 	CURRENT_WEB_SEARCH_SCHEMA_VERSION,
+	MAX_WEB_SEARCH_CONFIG_BYTES,
 	WebSearchConfigConflictError,
 	WebSearchConfigError,
 	createWebSearchConfigService,
@@ -150,4 +151,41 @@ test("damaged and future schemas preserve original bytes and fail closed", async
 	);
 	assert.equal(await readFile(service.configPath, "utf8"), future);
 	await chmod(service.configPath, 0o600);
+});
+
+test("oversized config is rejected before parsing and preserves original bytes", async () => {
+	const { service } = await fixture();
+	const oversized = "x".repeat(MAX_WEB_SEARCH_CONFIG_BYTES + 1);
+	await writeFile(service.configPath, oversized, { mode: 0o600 });
+
+	assert.throws(
+		() => service.readSnapshot(),
+		(error) => error instanceof WebSearchConfigError && error.kind === "too-large",
+	);
+	assert.equal(await readFile(service.configPath, "utf8"), oversized);
+});
+
+test("symlink config leaf is rejected as an unsafe path", async () => {
+	const { root, service } = await fixture();
+	const outside = join(root, "outside.json");
+	await writeFile(outside, '{"schemaVersion":1}\n', { mode: 0o600 });
+	await symlink(outside, service.configPath);
+
+	assert.throws(
+		() => service.readSnapshot(),
+		(error) => error instanceof WebSearchConfigError && error.kind === "unsafe-path",
+	);
+});
+
+test("a live service rejects replacement of its pinned Agent directory", async () => {
+	const { root, agentDir, service } = await fixture();
+	service.ensureDefault();
+	const moved = join(root, "agent-original");
+	await rename(agentDir, moved);
+	await symlink(moved, agentDir);
+
+	assert.throws(
+		() => service.readSnapshot(),
+		(error) => error instanceof WebSearchConfigError && error.kind === "unsafe-path",
+	);
 });

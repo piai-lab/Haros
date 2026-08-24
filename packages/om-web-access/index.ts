@@ -2450,7 +2450,7 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 			let provider: string | undefined;
 
 			for (const query of queries) {
-				if (signal?.aborted) break;
+				signal?.throwIfAborted();
 				try {
 					const response = await search(query, {
 						provider: resolveRequestedProvider(params.provider),
@@ -2460,17 +2460,21 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 						signal,
 						extensionContext: ctx,
 					});
-					if (signal?.aborted) break;
+					availability?.noteSearchSuccess();
+					signal?.throwIfAborted();
 					provider ??= response.provider;
 					if (response.answer) summaries.push(`${query}: ${response.answer}`);
 					for (const result of response.results) {
 						if (!resultsByUrl.has(result.url)) resultsByUrl.set(result.url, result);
 					}
 				} catch (err) {
-					if (signal?.aborted || isAbortError(err)) break;
+					if (signal?.aborted) signal.throwIfAborted();
+					if (isAbortError(err)) throw err;
+					availability?.noteSearchFailure(err);
 					errors.push({ query, error: searchErrorMessage(err) });
 				}
 			}
+			signal?.throwIfAborted();
 
 			const results = [...resultsByUrl.values()].slice(0, 20).map((result, index) => ({ ...result, rank: index + 1 }));
 			let fetched: ExtractedContent[] = [];
@@ -2479,7 +2483,8 @@ function registerWebAccessExtension(pi: ExtensionAPI) {
 				try {
 					fetched = await fetchAllContent(urls, signal);
 				} catch (err) {
-					if (signal?.aborted || isAbortError(err)) throw err;
+					if (signal?.aborted) signal.throwIfAborted();
+					if (isAbortError(err)) throw err;
 					fetched = urls.map((url) => ({ url, title: "", content: "", error: err instanceof Error ? err.message : String(err) }));
 				}
 			}

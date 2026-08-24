@@ -7,6 +7,7 @@ import type { ExtractedContent } from "./extract.ts";
 import { checkGhAvailable, checkRepoSize, fetchViaApi, showGhHint } from "./github-api.ts";
 import { getWebSearchConfigPath, readWebSearchConfig } from "./utils.ts";
 import { scopedMap } from "./runtime-context.ts";
+import { githubChildEnvironment } from "./github-child-environment.ts";
 
 const configPath = () => getWebSearchConfigPath();
 
@@ -211,7 +212,7 @@ function terminateProcessTree(child: ChildProcess): void {
 		const killer = execFile(
 			"taskkill",
 			["/pid", String(pid), "/T", "/F"],
-			{ windowsHide: true },
+			{ windowsHide: true, env: githubChildEnvironment() },
 			(err) => {
 				if (err) child.kill();
 			},
@@ -263,12 +264,7 @@ function execClone(args: string[], destination: CloneDestination, timeoutMs: num
 
 		const child = spawn(args[0], args.slice(1), {
 			detached: process.platform !== "win32",
-			env: {
-				...process.env,
-				GIT_TERMINAL_PROMPT: "0",
-				GCM_INTERACTIVE: "Never",
-				GH_PROMPT_DISABLED: "1",
-			},
+			env: githubChildEnvironment(),
 			stdio: "ignore",
 			windowsHide: true,
 		});

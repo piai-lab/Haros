@@ -238,15 +238,26 @@ test("GitHub clones disable interactive credential prompts", { skip: process.pla
 	const agentDir = join(root, "agent-dir");
 	const binDir = join(root, "bin");
 	const clonePath = join(root, "repos");
-	const envFile = join(root, "clone-env.json");
+	const ghEnvFile = join(root, "gh-env.json");
+	const gitEnvFile = join(root, "git-env.json");
 	await mkdir(agentDir, { recursive: true });
 	await mkdir(binDir, { recursive: true });
 	await writeFile(
 		join(agentDir, "web-search.json"),
-		JSON.stringify({ githubClone: { clonePath, cloneTimeoutSeconds: 1 } }),
+		JSON.stringify({ githubClone: { clonePath, cloneTimeoutSeconds: 3 } }),
 		"utf8",
 	);
-	await writeFakeExecutable(binDir, "gh", "process.exit(1);");
+	await writeFakeExecutable(binDir, "gh", `
+		const { writeFileSync } = require("node:fs");
+		writeFileSync(${JSON.stringify(ghEnvFile)}, JSON.stringify({
+			providerSecret: process.env.OMNIMIND_TEST_PROVIDER_SECRET,
+			githubToken: process.env.GH_TOKEN,
+			gitTerminalPrompt: process.env.GIT_TERMINAL_PROMPT,
+			gcmInteractive: process.env.GCM_INTERACTIVE,
+			ghPromptDisabled: process.env.GH_PROMPT_DISABLED,
+		}));
+		process.exit(1);
+	`);
 	await writeFakeExecutable(
 		binDir,
 		"git",
@@ -256,7 +267,9 @@ test("GitHub clones disable interactive credential prompts", { skip: process.pla
 			const destination = process.argv.at(-1);
 			mkdirSync(destination, { recursive: true });
 			writeFileSync(join(destination, "README.md"), "fixture");
-			writeFileSync(process.env.CLONE_ENV_FILE, JSON.stringify({
+			writeFileSync(${JSON.stringify(gitEnvFile)}, JSON.stringify({
+				providerSecret: process.env.OMNIMIND_TEST_PROVIDER_SECRET,
+				githubToken: process.env.GH_TOKEN,
 				gitTerminalPrompt: process.env.GIT_TERMINAL_PROMPT,
 				gcmInteractive: process.env.GCM_INTERACTIVE,
 				ghPromptDisabled: process.env.GH_PROMPT_DISABLED,
@@ -274,7 +287,8 @@ test("GitHub clones disable interactive credential prompts", { skip: process.pla
 		timeout: 5000,
 		env: {
 			...process.env,
-			CLONE_ENV_FILE: envFile,
+			OMNIMIND_TEST_PROVIDER_SECRET: "must-not-cross-child-boundary",
+			GH_TOKEN: "github-auth-must-cross-child-boundary",
 			PATH: `${binDir}${delimiter}${process.env.PATH || ""}`,
 			PI_CODING_AGENT_DIR: agentDir,
 		},
@@ -282,11 +296,14 @@ test("GitHub clones disable interactive credential prompts", { skip: process.pla
 
 	assert.equal(child.status, 0, child.stderr);
 	assert.equal(JSON.parse(child.stdout), true);
-	assert.deepEqual(JSON.parse(await readFile(envFile, "utf8")), {
-		gitTerminalPrompt: "0",
-		gcmInteractive: "Never",
-		ghPromptDisabled: "1",
-	});
+	for (const envFile of [ghEnvFile, gitEnvFile]) {
+		assert.deepEqual(JSON.parse(await readFile(envFile, "utf8")), {
+			githubToken: "github-auth-must-cross-child-boundary",
+			gitTerminalPrompt: "0",
+			gcmInteractive: "Never",
+			ghPromptDisabled: "1",
+		});
+	}
 });
 
 test("GitHub clone timeout force-kills the SIGTERM-resistant process group", { skip: process.platform === "win32" }, async () => {
@@ -298,7 +315,7 @@ test("GitHub clone timeout force-kills the SIGTERM-resistant process group", { s
 	await mkdir(binDir, { recursive: true });
 	await writeFile(
 		join(agentDir, "web-search.json"),
-		JSON.stringify({ githubClone: { clonePath: join(root, "repos"), cloneTimeoutSeconds: 0.5 } }),
+		JSON.stringify({ githubClone: { clonePath: join(root, "repos"), cloneTimeoutSeconds: 2 } }),
 		"utf8",
 	);
 	await writeFakeExecutable(binDir, "gh", "process.exit(1);");
@@ -311,7 +328,7 @@ test("GitHub clone timeout force-kills the SIGTERM-resistant process group", { s
 			const helperSource = ${JSON.stringify(`
 				const { writeFileSync } = require("node:fs");
 				process.on("SIGTERM", () => {});
-				writeFileSync(process.env.CLONE_PROCESS_PID_FILE, JSON.stringify({
+				writeFileSync(${JSON.stringify(processPidFile)}, JSON.stringify({
 					rootPid: process.ppid,
 					helperPid: process.pid,
 				}));
@@ -332,7 +349,6 @@ test("GitHub clone timeout force-kills the SIGTERM-resistant process group", { s
 		timeout: 10000,
 		env: {
 			...process.env,
-			CLONE_PROCESS_PID_FILE: processPidFile,
 			PATH: `${binDir}${delimiter}${process.env.PATH || ""}`,
 			PI_CODING_AGENT_DIR: agentDir,
 		},

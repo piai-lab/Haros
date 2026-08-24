@@ -4,6 +4,7 @@ import path from "node:path";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { Effect, Layer } from "effect";
+import { MAX_WEB_SEARCH_CONFIG_BYTES } from "@omnimind/om-web-access/config-service";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ServerConfig } from "../../config.ts";
@@ -159,5 +160,18 @@ describe("OmniMindWebSearchSettingsLive", () => {
       cwd: path.join(fs.realpathSync(test.agentDir), "web-search.json"),
       editor: "vscode",
     });
+  });
+
+  it("projects oversized config as typed recovery without replacing the file", async () => {
+    const test = harness();
+    fs.mkdirSync(test.agentDir, { recursive: true, mode: 0o700 });
+    const configPath = path.join(test.agentDir, "web-search.json");
+    const oversized = "x".repeat(MAX_WEB_SEARCH_CONFIG_BYTES + 1);
+    fs.writeFileSync(configPath, oversized, { mode: 0o600 });
+
+    const result = await test.run((service) => service.refresh());
+
+    expect(result).toMatchObject({ state: "recovery", reason: "too-large" });
+    expect(fs.readFileSync(configPath, "utf8")).toBe(oversized);
   });
 });

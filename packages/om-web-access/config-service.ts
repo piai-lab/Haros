@@ -2,13 +2,16 @@ import {
 	chmodSync,
 	closeSync,
 	constants,
-	existsSync,
+	fchmodSync,
+	fstatSync,
 	fsyncSync,
 	lstatSync,
 	mkdirSync,
 	openSync,
-	readFileSync,
+	readSync,
+	realpathSync,
 	renameSync,
+	type Stats,
 	unlinkSync,
 	writeFileSync,
 } from "node:fs";
@@ -17,6 +20,7 @@ import { dirname, join, resolve } from "node:path";
 
 export const WEB_SEARCH_CONFIG_FILENAME = "web-search.json";
 export const CURRENT_WEB_SEARCH_SCHEMA_VERSION = 1;
+export const MAX_WEB_SEARCH_CONFIG_BYTES = 1024 * 1024;
 
 const PRIVATE_FILE_MODE = 0o600;
 const PRIVATE_DIRECTORY_MODE = 0o700;
@@ -28,6 +32,7 @@ export type WebSearchConfigFailureKind =
 	| "damaged-json"
 	| "invalid-root"
 	| "future-schema"
+	| "too-large"
 	| "unsafe-path";
 
 export class WebSearchConfigError extends Error {
@@ -161,29 +166,101 @@ function parseConfig(raw: string, configPath: string): {
 	return { config, schemaVersion };
 }
 
-function assertPrivateRegularFile(configPath: string): void {
-	const metadata = lstatSync(configPath);
-	if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.nlink !== 1) {
-		throw new WebSearchConfigError(
-			"unsafe-path",
-			configPath,
-			"Web search settings must be a private regular file owned by this profile.",
-		);
+interface FileIdentity {
+	readonly dev: number;
+	readonly ino: number;
+}
+
+function sameIdentity(left: FileIdentity, right: FileIdentity): boolean {
+	return left.dev === right.dev && left.ino === right.ino;
+}
+
+function unsafePath(
+	configPath: string,
+	message = "Web search settings must be a private regular file owned by this profile.",
+): WebSearchConfigError {
+	return new WebSearchConfigError("unsafe-path", configPath, message);
+}
+
+function isMissingPathError(error: unknown): boolean {
+	return (error as NodeJS.ErrnoException | undefined)?.code === "ENOENT";
+}
+
+function openPrivateRegularFile(configPath: string): { fd: number; metadata: Stats } {
+	const before = lstatSync(configPath);
+	if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1) {
+		throw unsafePath(configPath);
+	}
+
+	let fd: number;
+	try {
+		fd = openSync(configPath, constants.O_RDONLY | O_NOFOLLOW);
+	} catch (error) {
+		if (
+			["EACCES", "ELOOP", "EMLINK", "ENOTDIR", "EPERM"].includes(
+				(error as NodeJS.ErrnoException).code ?? "",
+			)
+		) {
+			throw unsafePath(configPath);
+		}
+		throw error;
+	}
+	try {
+		const metadata = fstatSync(fd);
+		if (!metadata.isFile() || metadata.nlink !== 1 || !sameIdentity(before, metadata)) {
+			throw unsafePath(configPath, "Web search settings changed while they were being opened.");
+		}
+		return { fd, metadata };
+	} catch (error) {
+		closeSync(fd);
+		throw error;
 	}
 }
 
-function readExisting(configPath: string): WebSearchConfigSnapshot {
-	assertPrivateRegularFile(configPath);
-	const raw = readFileSync(configPath, "utf8");
-	const { config, schemaVersion } = parseConfig(raw, configPath);
-	const metadata = lstatSync(configPath);
-	return {
-		config,
-		revision: revisionFor(raw),
-		schemaVersion,
-		exists: true,
-		mtimeMs: metadata.mtimeMs,
-	};
+function readExisting(
+	configPath: string,
+	verifyAgentDirectory: () => void,
+): WebSearchConfigSnapshot {
+	const { fd, metadata } = openPrivateRegularFile(configPath);
+	try {
+		verifyAgentDirectory();
+		if (process.platform !== "win32") fchmodSync(fd, PRIVATE_FILE_MODE);
+		if (metadata.size > MAX_WEB_SEARCH_CONFIG_BYTES) {
+			throw new WebSearchConfigError(
+				"too-large",
+				configPath,
+				`Web search settings exceed the ${MAX_WEB_SEARCH_CONFIG_BYTES}-byte safety limit. The original file was preserved.`,
+			);
+		}
+		const bytes = Buffer.alloc(metadata.size + 1);
+		let total = 0;
+		while (total < bytes.length) {
+			const count = readSync(fd, bytes, total, bytes.length - total, null);
+			if (count === 0) break;
+			total += count;
+		}
+		const after = fstatSync(fd);
+		if (
+			total !== metadata.size ||
+			after.size !== metadata.size ||
+			after.nlink !== 1 ||
+			!sameIdentity(metadata, after)
+		) {
+			throw unsafePath(configPath, "Web search settings changed while they were being read.");
+		}
+		verifyAgentDirectory();
+		const raw = bytes.subarray(0, total).toString("utf8");
+		const { config, schemaVersion } = parseConfig(raw, configPath);
+		return {
+			config,
+			revision: revisionFor(raw),
+			schemaVersion,
+			exists: true,
+			mtimeMs: after.mtimeMs,
+		};
+	} finally {
+		closeSync(fd);
+	}
 }
 
 function absentSnapshot(): WebSearchConfigSnapshot {
@@ -197,13 +274,7 @@ function absentSnapshot(): WebSearchConfigSnapshot {
 	};
 }
 
-function ensurePrivateDirectory(path: string): void {
-	mkdirSync(path, { recursive: true, mode: PRIVATE_DIRECTORY_MODE });
-	if (process.platform !== "win32") chmodSync(path, PRIVATE_DIRECTORY_MODE);
-}
-
 function writeNoClobber(configPath: string, raw: string): boolean {
-	ensurePrivateDirectory(dirname(configPath));
 	let fd: number | undefined;
 	try {
 		fd = openSync(
@@ -223,7 +294,6 @@ function writeNoClobber(configPath: string, raw: string): boolean {
 }
 
 function atomicReplace(configPath: string, raw: string): void {
-	ensurePrivateDirectory(dirname(configPath));
 	const temporaryPath = join(
 		dirname(configPath),
 		`.${WEB_SEARCH_CONFIG_FILENAME}.${process.pid}.${randomBytes(8).toString("hex")}.tmp`,
@@ -284,9 +354,88 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
 	const resolvedAgentDir = resolve(agentDir);
 	const configPath = join(resolvedAgentDir, WEB_SEARCH_CONFIG_FILENAME);
 	const listeners = new Set<(revision: string) => void>();
+	let agentDirectoryIdentity: FileIdentity | undefined;
+	let agentDirectoryPhysicalPath: string | undefined;
 
-	const readSnapshot = (): WebSearchConfigSnapshot =>
-		existsSync(configPath) ? readExisting(configPath) : absentSnapshot();
+	const secureAgentDirectory = (create: boolean): boolean => {
+		if (create) mkdirSync(resolvedAgentDir, { recursive: true, mode: PRIVATE_DIRECTORY_MODE });
+		let before: Stats;
+		try {
+			before = lstatSync(resolvedAgentDir);
+		} catch (error) {
+			if (!create && isMissingPathError(error)) return false;
+			throw error;
+		}
+		if (!before.isDirectory() || before.isSymbolicLink()) {
+			throw unsafePath(configPath, "The OmniMind Agent settings directory is not a private directory.");
+		}
+
+		let fd: number | undefined;
+		try {
+			if (process.platform !== "win32") {
+				fd = openSync(resolvedAgentDir, constants.O_RDONLY | constants.O_DIRECTORY | O_NOFOLLOW);
+				const opened = fstatSync(fd);
+				if (!opened.isDirectory() || !sameIdentity(before, opened)) {
+					throw unsafePath(
+						configPath,
+						"The OmniMind Agent settings directory changed while it was being opened.",
+					);
+				}
+				fchmodSync(fd, PRIVATE_DIRECTORY_MODE);
+				before = opened;
+			} else {
+				chmodSync(resolvedAgentDir, PRIVATE_DIRECTORY_MODE);
+			}
+
+			const physical = realpathSync.native(resolvedAgentDir);
+			const after = lstatSync(resolvedAgentDir);
+			if (!after.isDirectory() || after.isSymbolicLink() || !sameIdentity(before, after)) {
+				throw unsafePath(
+					configPath,
+					"The OmniMind Agent settings directory changed while it was being secured.",
+				);
+			}
+			if (agentDirectoryIdentity && !sameIdentity(agentDirectoryIdentity, after)) {
+				throw unsafePath(
+					configPath,
+					"The OmniMind Agent settings directory was replaced during this process.",
+				);
+			}
+			if (agentDirectoryPhysicalPath && agentDirectoryPhysicalPath !== physical) {
+				throw unsafePath(
+					configPath,
+					"The OmniMind Agent settings directory resolved to a different location.",
+				);
+			}
+			agentDirectoryIdentity ??= { dev: after.dev, ino: after.ino };
+			agentDirectoryPhysicalPath ??= physical;
+			return true;
+		} catch (error) {
+			if (["ELOOP", "ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) {
+				throw unsafePath(
+					configPath,
+					"The OmniMind Agent settings directory changed while it was being secured.",
+				);
+			}
+			throw error;
+		} finally {
+			if (fd !== undefined) closeSync(fd);
+		}
+	};
+
+	const verifyAgentDirectory = () => {
+		secureAgentDirectory(false);
+	};
+
+	const readSnapshot = (): WebSearchConfigSnapshot => {
+		if (!secureAgentDirectory(false)) return absentSnapshot();
+		try {
+			return readExisting(configPath, verifyAgentDirectory);
+		} catch (error) {
+			if (isMissingPathError(error)) return absentSnapshot();
+			throw error;
+		}
+	};
 
 	const publish = (revision: string) => {
 		for (const listener of listeners) {
@@ -301,12 +450,10 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
 	return {
 		configPath,
 		ensureDefault() {
-			if (!existsSync(configPath)) {
-				writeNoClobber(configPath, serializedConfig(defaultConfig()));
-			}
-			const snapshot = readExisting(configPath);
-			if (process.platform !== "win32") chmodSync(configPath, PRIVATE_FILE_MODE);
-			return snapshot;
+			secureAgentDirectory(true);
+			writeNoClobber(configPath, serializedConfig(defaultConfig()));
+			verifyAgentDirectory();
+			return readExisting(configPath, verifyAgentDirectory);
 		},
 		readSnapshot,
 		refresh() {
@@ -315,6 +462,7 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
 			return snapshot;
 		},
 		mutate(input) {
+			secureAgentDirectory(true);
 			const current = readSnapshot();
 			if (
 				!input.allowOverwriteConflict &&
@@ -332,7 +480,7 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
 			}
 			if (!current.exists) {
 				if (!writeNoClobber(configPath, raw)) {
-					const raced = readExisting(configPath);
+					const raced = readExisting(configPath, verifyAgentDirectory);
 					if (!input.allowOverwriteConflict && raced.revision !== input.expectedRevision) {
 						throw new WebSearchConfigConflictError(input.expectedRevision, raced.revision);
 					}
@@ -341,7 +489,8 @@ export function createWebSearchConfigService(agentDir: string): WebSearchConfigS
 			} else {
 				atomicReplace(configPath, raw);
 			}
-			const snapshot = readExisting(configPath);
+			verifyAgentDirectory();
+			const snapshot = readExisting(configPath, verifyAgentDirectory);
 			publish(snapshot.revision);
 			return { snapshot, changed: true };
 		},

@@ -149,11 +149,14 @@ test("source_check stops on cancellation instead of continuing queries", async (
     controller.abort();
     throw new Error("AbortError: canceled");
   };
-  try {
-    const { tool } = registerSourceCheck();
-    const response = await tool.execute("call", { claim: "cancel this", queries: ["first", "second"], provider: "openai" }, controller.signal, undefined, { modelRegistry: {} });
-    assert.equal(calls, 1);
-    assert.equal(response.details.sourceCount, 0);
+	try {
+		const { tool, entries } = registerSourceCheck();
+		await assert.rejects(
+			() => tool.execute("call", { claim: "cancel this", queries: ["first", "second"], provider: "openai" }, controller.signal, undefined, { modelRegistry: {} }),
+			(error) => error?.name === "AbortError",
+		);
+		assert.equal(calls, 1);
+		assert.deepEqual(entries, []);
   } finally {
     globalThis.fetch = previousFetch;
     if (previousKey === undefined) delete process.env.OPENAI_API_KEY;

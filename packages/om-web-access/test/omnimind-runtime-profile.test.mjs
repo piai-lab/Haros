@@ -198,3 +198,51 @@ test("OmniMind route exhaustion points to Settings and never leaks Pi slash comm
 	assert.match(text, /Development > Web search/);
 	assert.doesNotMatch(text, /\/login|\/websearch|\/curator/);
 });
+
+test("source_check route evidence removes and restores the owned search tool pair", async () => {
+	const root = await mkdtemp(join(tmpdir(), "omnimind-source-check-active-set-"));
+	const service = createWebSearchConfigService(join(root, "agent"));
+	const initial = service.ensureDefault();
+	service.mutate({
+		expectedRevision: initial.revision,
+		patch: {
+			braveApiKey: "test-key",
+			searchRouting: { providers: ["brave"], fallbackOn: ["quota"] },
+		},
+	});
+	const previousFetch = globalThis.fetch;
+	const previousOpenAiKey = process.env.OPENAI_API_KEY;
+	const tools = [];
+	const handlers = new Map();
+	let active = [...CANONICAL_TOOLS];
+	makeOmniMindWebAccessExtension({ configService: service })({
+		registerTool(tool) { tools.push(tool); },
+		registerCommand() {},
+		registerShortcut() {},
+		on(name, handler) { handlers.set(name, handler); },
+		appendEntry() {},
+		getActiveTools: () => [...active],
+		getAllTools: () => tools.map(({ name }) => ownedTool(name)),
+		setActiveTools: (names) => { active = [...names]; },
+	});
+	const sourceCheck = tools.find(({ name }) => name === "source_check");
+
+	try {
+		globalThis.fetch = async () => new Response("quota", { status: 429 });
+		await sourceCheck.execute("failure", { claim: "route evidence" });
+		assert.ok(!active.includes("web_search"));
+		assert.ok(!active.includes("source_check"));
+
+		process.env.OPENAI_API_KEY = "test-key";
+		globalThis.fetch = async () => new Response(JSON.stringify({
+			output: [{ type: "message", content: [{ type: "output_text", text: "No sources." }] }],
+		}), { status: 200 });
+		await sourceCheck.execute("success", { claim: "route evidence", provider: "openai" });
+		assert.deepEqual(new Set(active), new Set(CANONICAL_TOOLS));
+	} finally {
+		globalThis.fetch = previousFetch;
+		if (previousOpenAiKey === undefined) delete process.env.OPENAI_API_KEY;
+		else process.env.OPENAI_API_KEY = previousOpenAiKey;
+		await handlers.get("session_shutdown")?.();
+	}
+});

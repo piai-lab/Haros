@@ -135,7 +135,13 @@ export type OmniMindWebSearchSettingsSnapshot =
 
 export const OmniMindWebSearchRecoverySnapshot = Schema.Struct({
   state: Schema.Literal("recovery"),
-  reason: Schema.Literals(["damaged-json", "invalid-root", "future-schema", "unsafe-path"]),
+  reason: Schema.Literals([
+    "damaged-json",
+    "invalid-root",
+    "future-schema",
+    "too-large",
+    "unsafe-path",
+  ]),
   message: Schema.String.check(Schema.isMaxLength(1_024)),
 });
 export type OmniMindWebSearchRecoverySnapshot =

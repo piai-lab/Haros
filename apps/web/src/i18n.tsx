@@ -2364,6 +2364,8 @@ export const EN_MESSAGES = {
     "The configuration file has an unsupported structure. The original file was preserved.",
   "settings.webSearch.recovery.future-schema":
     "This file was written by a newer OmniMind version. Update OmniMind before editing it here.",
+  "settings.webSearch.recovery.too-large":
+    "This config is too large to read safely. The original file was preserved. Reduce its size, then reload.",
   "settings.webSearch.recovery.unsafe-path":
     "OmniMind cannot safely use this configuration file. Check the file and its permissions.",
   "settings.webSearch.reloadFile": "Reload file",
@@ -6108,6 +6110,8 @@ export const ZH_CN_MESSAGES = {
   "settings.webSearch.recovery.invalid-root": "配置文件结构不受支持。原文件已保留。",
   "settings.webSearch.recovery.future-schema":
     "该文件由更新版本的 OmniMind 写入。请先更新 OmniMind，再在此编辑。",
+  "settings.webSearch.recovery.too-large":
+    "此配置文件过大，无法安全读取。原文件已保留。请缩小文件后重新加载。",
   "settings.webSearch.recovery.unsafe-path":
     "OmniMind 无法安全使用该配置文件。请检查文件及其权限。",
   "settings.webSearch.reloadFile": "重新加载文件",
