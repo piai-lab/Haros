@@ -124,7 +124,7 @@ import {
   DEFAULT_CHAT_FONT_SIZE_PX,
   normalizeChatFontSizePx,
   type TimestampFormat,
-} from "../../appSettings";
+} from "../../localPreferences";
 import {
   CHAT_COLUMN_FRAME_CLASS_NAME,
   CHAT_COLUMN_GUTTER_CLASS_NAME,

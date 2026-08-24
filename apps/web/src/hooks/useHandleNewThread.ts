@@ -3,7 +3,7 @@ import { getDefaultModel } from "@omnimind/shared/model";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { startTransition } from "react";
-import { useAppSettings } from "../appSettings";
+import { fetchAuthoritativeServerSettings, useServerSettings } from "../serverSettings";
 import {
   type ComposerThreadDraftState,
   type DraftThreadState,
@@ -48,7 +48,7 @@ export interface NewThreadNavigationOptions {
 
 export function useHandleNewThread() {
   const projects = useStore((store) => store.projects);
-  const { settings, serverSettings } = useAppSettings();
+  const { settings } = useServerSettings();
   const queryClient = useQueryClient();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const navigate = useNavigate();
@@ -61,11 +61,17 @@ export function useHandleNewThread() {
   const markTemporaryThread = useTemporaryThreadStore((store) => store.markTemporaryThread);
   const clearTemporaryThread = useTemporaryThreadStore((store) => store.clearTemporaryThread);
 
-  const handleNewThread = (
+  const handleNewThread = async (
     projectId: ProjectId,
-    options?: NewThreadOptions,
+    requestedOptions?: NewThreadOptions,
     navigation?: NewThreadNavigationOptions,
   ): Promise<ThreadId | null> => {
+    const authoritativeSettings =
+      settings ?? (await fetchAuthoritativeServerSettings(queryClient));
+    const options: NewThreadOptions = {
+      ...requestedOptions,
+      envMode: requestedOptions?.envMode ?? authoritativeSettings.defaultThreadEnvMode,
+    };
     const entryPoint = options?.entryPoint ?? "chat";
     const wantsTemporaryThread = options?.temporary === true;
     const applyProviderOverride = (threadId: ThreadId) => {
@@ -156,7 +162,7 @@ export function useHandleNewThread() {
         draftActiveProvider: targetComposer?.activeProvider ?? null,
         stickyActiveProvider: draftStore.stickyActiveProvider,
         projectDefaultProvider: project?.defaultModelSelection?.provider ?? null,
-        defaultProvider: settings.defaultProvider,
+        defaultProvider: authoritativeSettings.defaultProvider,
       });
       const cwd = resolveNewThreadModelPrefetchCwd({
         worktreePath: options?.worktreePath ?? null,
@@ -170,9 +176,9 @@ export function useHandleNewThread() {
       });
       prefetchProviderModelsForNewThread(queryClient, {
         provider,
-        settings,
+        settings: authoritativeSettings,
         cwd,
-        enabled: serverSettings?.providers[provider]?.enabled !== false,
+        enabled: authoritativeSettings.providers[provider]?.enabled !== false,
       });
     }
     // Read from the store at call time so post-sync sidebar flows can use the latest project defaults.
@@ -189,7 +195,7 @@ export function useHandleNewThread() {
       resolveTerminalThreadCreationState({
         activeDraftThread: activeDraftThreadSnapshot,
         activeThread: activeThreadSnapshot,
-        defaultProvider: options?.provider ?? settings.defaultProvider,
+        defaultProvider: options?.provider ?? authoritativeSettings.defaultProvider,
         draftComposerState:
           useComposerDraftStore.getState().draftsByThreadId[targetThreadId] ?? null,
         draftThread,

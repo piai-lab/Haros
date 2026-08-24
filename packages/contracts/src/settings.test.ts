@@ -102,3 +102,14 @@ describe("server-only OmniMind default prompt settings", () => {
     expect(() => decodeSettings(`${withinLimit}${emoji}`)).toThrow();
   });
 });
+
+describe("provider credential boundary", () => {
+  it.each(["kilo", "opencode"] as const)(
+    "rejects %s secrets from the generic ServerSettings patch",
+    (provider) => {
+      expect(() =>
+        decodePatch({ providers: { [provider]: { serverPassword: "must-not-pass" } } }),
+      ).toThrow();
+    },
+  );
+});

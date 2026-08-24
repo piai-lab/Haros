@@ -110,6 +110,7 @@ export const AgentToolsServerSettings = Schema.Struct({
 export type AgentToolsServerSettings = typeof AgentToolsServerSettings.Type;
 
 export const ServerSettings = Schema.Struct({
+  defaultProvider: ProviderKind.pipe(Schema.withDecodingDefault(() => "omnimind")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -146,6 +147,7 @@ const OmniMindServerProviderSettingsView = Schema.Struct({
 // Public settings deliberately omit the customized default prompt. Its only
 // projection and mutation authority is the dedicated OmniMind prompt contract.
 export const ServerSettingsView = Schema.Struct({
+  defaultProvider: ProviderKind.pipe(Schema.withDecodingDefault(() => "omnimind")),
   enableAssistantStreaming: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   enableProviderUpdateChecks: Schema.Boolean.pipe(Schema.withDecodingDefault(() => true)),
   defaultThreadEnvMode: ThreadEnvironmentMode.pipe(Schema.withDecodingDefault(() => "local")),
@@ -190,6 +192,7 @@ const ProviderSettingsBasePatch = {
 };
 
 export const ServerSettingsPatch = Schema.Struct({
+  defaultProvider: Schema.optionalKey(ProviderKind),
   enableAssistantStreaming: Schema.optionalKey(Schema.Boolean),
   enableProviderUpdateChecks: Schema.optionalKey(Schema.Boolean),
   defaultThreadEnvMode: Schema.optionalKey(ThreadEnvironmentMode),
@@ -227,14 +230,14 @@ export const ServerSettingsPatch = Schema.Struct({
         Schema.Struct({
           ...ProviderSettingsBasePatch,
           serverUrl: Schema.optionalKey(StringSetting),
-          serverPassword: Schema.optionalKey(StringSetting),
+          serverPassword: Schema.optional(Schema.Never),
         }),
       ),
       opencode: Schema.optionalKey(
         Schema.Struct({
           ...ProviderSettingsBasePatch,
           serverUrl: Schema.optionalKey(StringSetting),
-          serverPassword: Schema.optionalKey(StringSetting),
+          serverPassword: Schema.optional(Schema.Never),
           experimentalWebSockets: Schema.optionalKey(Schema.Boolean),
         }),
       ),

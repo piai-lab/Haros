@@ -16,8 +16,8 @@ const harness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN" } 
   settings: { localePreference: "zh-CN" },
 }));
 
-vi.mock("../../appSettings", () => ({
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("../../localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 async function renderTaskSnapshotRow(input: {

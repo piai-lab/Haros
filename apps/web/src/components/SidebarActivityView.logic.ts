@@ -5,7 +5,7 @@
 import type { ProjectId, ThreadId } from "@omnimind/contracts";
 
 import { formatRelativeTime } from "~/lib/relativeTime";
-import type { TimestampFormat } from "../appSettings";
+import type { TimestampFormat } from "../localPreferences";
 import { canSessionAnswerPendingRequests, isLatestTurnSettled } from "../session-logic";
 import { formatShortTimestamp } from "../timestampFormat";
 import type { SidebarThreadSummary } from "../types";

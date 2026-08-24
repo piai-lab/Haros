@@ -1,75 +1,45 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createDesktopAppIconSynchronizer } from "./useDesktopAppIcon";
+import {
+  readDesktopAppIconFromNative,
+  writeDesktopAppIconToNative,
+} from "./useDesktopAppIcon";
 
-describe("desktop app icon synchronization", () => {
-  it("hydrates renderer settings from the durable native preference without overwriting it", async () => {
+describe("desktop app icon native owner", () => {
+  it("reads the durable native preference without writing a renderer mirror", async () => {
     const setAppIcon = vi.fn();
-    const updateRendererIcon = vi.fn();
-    const synchronizer = createDesktopAppIconSynchronizer({
+    const bridge = {
       getAppIcon: vi.fn().mockResolvedValue("icon"),
       setAppIcon,
-      updateRendererIcon,
-    });
+    } as const;
 
-    await synchronizer.hydrate("default");
-
-    expect(updateRendererIcon).toHaveBeenCalledWith("icon");
-    expect(setAppIcon).not.toHaveBeenCalled();
-  });
-
-  it("does not apply renderer defaults before native hydration completes", async () => {
-    const setAppIcon = vi.fn();
-    const synchronizer = createDesktopAppIconSynchronizer({
-      getAppIcon: vi.fn().mockResolvedValue("icon"),
-      setAppIcon,
-      updateRendererIcon: vi.fn(),
-    });
-
-    await synchronizer.apply("default");
+    await expect(readDesktopAppIconFromNative(bridge)).resolves.toBe("icon");
 
     expect(setAppIcon).not.toHaveBeenCalled();
   });
 
-  it("persists user selections after native hydration", async () => {
+  it("uses the product default when no desktop bridge exists", async () => {
+    await expect(readDesktopAppIconFromNative(undefined)).resolves.toBe("default");
+  });
+
+  it("persists user selections only through the native owner", async () => {
     const setAppIcon = vi.fn().mockResolvedValue(undefined);
-    const synchronizer = createDesktopAppIconSynchronizer({
+    const bridge = {
       getAppIcon: vi.fn().mockResolvedValue("icon"),
       setAppIcon,
-      updateRendererIcon: vi.fn(),
-    });
-    await synchronizer.hydrate("icon");
+    } as const;
 
-    await synchronizer.apply("default");
+    await writeDesktopAppIconToNative(bridge, "default");
 
     expect(setAppIcon).toHaveBeenCalledWith("default");
   });
 
-  it("keeps later selections writable when native hydration fails", async () => {
-    const setAppIcon = vi.fn().mockResolvedValue(undefined);
-    const synchronizer = createDesktopAppIconSynchronizer({
-      getAppIcon: vi.fn().mockRejectedValue(new Error("unavailable")),
-      setAppIcon,
-      updateRendererIcon: vi.fn(),
-    });
-    await synchronizer.hydrate("default");
-
-    await synchronizer.apply("icon");
-
-    expect(setAppIcon).toHaveBeenCalledWith("icon");
-  });
-
-  it("restores renderer settings when native persistence fails", async () => {
-    const updateRendererIcon = vi.fn();
-    const synchronizer = createDesktopAppIconSynchronizer({
+  it("surfaces native persistence failure without creating a Web fallback", async () => {
+    const bridge = {
       getAppIcon: vi.fn().mockResolvedValue("default"),
       setAppIcon: vi.fn().mockRejectedValue(new Error("read-only")),
-      updateRendererIcon,
-    });
-    await synchronizer.hydrate("default");
+    } as const;
 
-    await expect(synchronizer.apply("icon")).rejects.toThrow("read-only");
-
-    expect(updateRendererIcon).toHaveBeenCalledWith("default");
+    await expect(writeDesktopAppIconToNative(bridge, "icon")).rejects.toThrow("read-only");
   });
 });

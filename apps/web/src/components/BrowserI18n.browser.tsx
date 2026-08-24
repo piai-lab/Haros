@@ -12,9 +12,9 @@ const harness = vi.hoisted(() => ({
   settings: { localePreference: "zh-CN" },
 }));
 
-vi.mock("../appSettings", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("../appSettings")>()),
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("../localPreferences", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../localPreferences")>()),
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 import type { BrowserAnnotationDraft } from "../lib/browserAnnotations";

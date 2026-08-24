@@ -11,7 +11,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import { useAppSettings } from "../appSettings";
+import { useLocalPreferences } from "../localPreferences";
 import {
   RestoreOrCreateChatRoute,
   type RestoreRouteResolver,
@@ -33,7 +33,7 @@ const WORKSPACE_PATHS_TIMEOUT_MS = 10_000;
 
 function StudioIndexRouteView() {
   const { t } = useI18n();
-  const { settings: appSettings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
   const { handleNewStudioChat } = useHandleNewStudioChat();
   const threadIds = useStore((state) => state.threadIds ?? EMPTY_THREAD_IDS);
   const projects = useStore((state) => state.projects);
@@ -73,7 +73,7 @@ function StudioIndexRouteView() {
   // The most recent Studio chat (if any), used to restore the surface instead of always opening
   // a brand-new draft.
   const latestStudioThreadId =
-    sortThreadsForSidebar(studioThreadSummaries, appSettings.sidebarThreadSortOrder)[0]?.id ?? null;
+    sortThreadsForSidebar(studioThreadSummaries, preferences.sidebarThreadSortOrder)[0]?.id ?? null;
 
   // Same landing policy as the Studio segment switch and settings back: remembered route first
   // (scoped to Studio threads plus the stored draft), then the stored draft, then the latest
@@ -105,7 +105,7 @@ function StudioIndexRouteView() {
   // A hidden Studio tab must never start the restore/create flow: a direct /studio link would
   // otherwise race the sidebar's hidden-section redirect and could mint a hidden Studio draft.
   const navigate = useNavigate();
-  const studioSectionVisible = appSettings.showStudioSection;
+  const studioSectionVisible = preferences.showStudioSection;
   useEffect(() => {
     if (!studioSectionVisible) {
       void navigate({ to: "/", replace: true });

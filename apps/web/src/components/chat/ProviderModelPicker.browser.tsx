@@ -13,8 +13,8 @@ const i18nHarness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN
   settings: { localePreference: "en" },
 }));
 
-vi.mock("../../appSettings", () => ({
-  useAppSettings: () => ({ settings: i18nHarness.settings }),
+vi.mock("../../localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: i18nHarness.settings }),
 }));
 
 const MODEL_OPTIONS_BY_PROVIDER = {

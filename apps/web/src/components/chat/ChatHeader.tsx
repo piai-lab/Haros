@@ -51,7 +51,7 @@ import { SidebarHeaderNavigationControls } from "../SidebarHeaderNavigationContr
 import ProjectScriptsControl, { type NewProjectScriptInput } from "../ProjectScriptsControl";
 import { Toggle } from "../ui/toggle";
 import { useSidebar } from "../ui/sidebar";
-import { useAppSettings } from "../../appSettings";
+import { useLocalPreferences } from "../../localPreferences";
 import { useI18n } from "../../i18n";
 import { useStore } from "../../store";
 import { createSidebarDisplayThreadsSelector } from "../../storeSelectors";
@@ -224,7 +224,7 @@ function EditorChatHistoryMenu(props: {
   activeThreadId: ThreadId;
   onNavigateToThread: (threadId: ThreadId) => void;
 }) {
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const { t } = useI18n();
   const selectDisplayThreads = createSidebarDisplayThreadsSelector();
   const displayThreads = useStore(selectDisplayThreads);
@@ -297,7 +297,7 @@ function EditorRailTabs(props: {
   onCloseTerminal: () => void;
   onNavigateToThread: (threadId: ThreadId) => void;
 }) {
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const { t } = useI18n();
   const [openChatTabs, setOpenChatTabs] = useState<ReadonlyArray<EditorRailChatTab>>(() => {
     const storedTabs = readEditorRailChatTabs(props.projectId);

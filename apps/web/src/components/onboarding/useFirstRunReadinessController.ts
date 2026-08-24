@@ -6,7 +6,7 @@ import type {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useSyncExternalStore } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useServerSettings } from "~/serverSettings";
 import { COMPOSER_PROVIDER_KINDS } from "~/composerDraftModels";
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { useFocusedChatContext } from "~/focusedChatContext";
@@ -74,7 +74,8 @@ export function useFirstRunReadinessController(
   selectedProvider: ProviderKind,
 ): FirstRunReadinessController {
   const queryClient = useQueryClient();
-  const { settings } = useAppSettings();
+  const { settings, defaults } = useServerSettings();
+  const settingsSnapshot = settings ?? defaults;
   const focusedContext = useFocusedChatContext();
   const projects = useStore((state) => state.projects);
   const threadsHydrated = useStore((state) => state.threadsHydrated);
@@ -139,7 +140,7 @@ export function useFirstRunReadinessController(
       focusedContext.activeThread?.modelSelection.provider ??
       focusedContext.activeProject?.defaultModelSelection?.provider ??
       stickyActiveProvider ??
-      settings.defaultProvider;
+      settingsSnapshot.defaultProvider;
     const focusedSelection =
       focusedDraft?.modelSelectionByProvider[focusedProvider] ??
       (focusedContext.activeThread?.modelSelection.provider === focusedProvider
@@ -172,7 +173,7 @@ export function useFirstRunReadinessController(
     focusedContext.focusedThreadId,
     providerStatuses,
     rememberedSelections,
-    settings.defaultProvider,
+    settingsSnapshot.defaultProvider,
     stickyActiveProvider,
     stickyModelSelectionByProvider,
   ]);

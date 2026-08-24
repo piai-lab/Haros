@@ -21,9 +21,9 @@ const harness = vi.hoisted(() => ({
   notesError: null as unknown,
 }));
 
-vi.mock("~/appSettings", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/appSettings")>()),
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("~/localPreferences", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/localPreferences")>()),
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 vi.mock("~/pinnedMessages", async (importOriginal) => ({

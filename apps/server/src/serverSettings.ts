@@ -63,6 +63,11 @@ export interface ServerSettingsShape {
   readonly updateSettingsView: (
     patch: ServerSettingsPatch,
   ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
+  readonly resetSettingsView: Effect.Effect<ServerSettingsView, ServerSettingsError>;
+  readonly updateProviderCredential: (
+    provider: ExternalProviderServer,
+    serverPassword: string,
+  ) => Effect.Effect<ServerSettingsView, ServerSettingsError>;
   readonly mutateOmniMindDefaultPrompt: (
     expected: string | null,
     next: string | null,
@@ -133,6 +138,56 @@ export class ServerSettingsService extends ServiceMap.Service<
               Effect.map(resolveTextGenerationProvider),
             ),
           );
+        const updateProviderCredential = (
+          provider: ExternalProviderServer,
+          serverPassword: string,
+        ) =>
+          writeSemaphore.withPermits(1)(
+            Effect.gen(function* () {
+              const configured = serverPassword.trim().length > 0;
+              const current = yield* Ref.get(currentSettingsRef);
+              const next = {
+                ...current,
+                providers: {
+                  ...current.providers,
+                  [provider]: {
+                    ...current.providers[provider],
+                    serverPasswordConfigured: configured,
+                  },
+                },
+              } satisfies ServerSettings;
+              yield* Ref.set(currentSettingsRef, next);
+              yield* emitChange(next);
+              return toServerSettingsView(resolveTextGenerationProvider(next));
+            }),
+          );
+        const resetSettingsView = writeSemaphore.withPermits(1)(
+          Effect.gen(function* () {
+            const current = yield* Ref.get(currentSettingsRef);
+            const next = {
+              ...DEFAULT_SERVER_SETTINGS,
+              providers: {
+                ...DEFAULT_SERVER_SETTINGS.providers,
+                omnimind: {
+                  ...DEFAULT_SERVER_SETTINGS.providers.omnimind,
+                  defaultPrompt: current.providers.omnimind.defaultPrompt,
+                },
+                kilo: {
+                  ...DEFAULT_SERVER_SETTINGS.providers.kilo,
+                  serverPasswordConfigured: current.providers.kilo.serverPasswordConfigured,
+                },
+                opencode: {
+                  ...DEFAULT_SERVER_SETTINGS.providers.opencode,
+                  serverPasswordConfigured: current.providers.opencode.serverPasswordConfigured,
+                },
+              },
+            } satisfies ServerSettings;
+            yield* Ref.set(currentSettingsRef, next);
+            yield* Ref.update(revisionRef, (revision) => revision + 1);
+            yield* emitChange(next);
+            return toServerSettingsView(next);
+          }),
+        );
         const mutateOmniMindDefaultPrompt = (expected: string | null, next: string | null) =>
           writeSemaphore.withPermits(1)(
             Effect.gen(function* () {
@@ -172,6 +227,8 @@ export class ServerSettingsService extends ServiceMap.Service<
           updateSettings,
           updateSettingsView: (patch) =>
             updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
+          resetSettingsView,
+          updateProviderCredential,
           mutateOmniMindDefaultPrompt,
           get streamChanges() {
             return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationProvider));
@@ -284,20 +341,6 @@ function readLegacyProviderPasswords(raw: string): ReadonlyMap<ExternalProviderS
   } catch {
     return new Map();
   }
-}
-
-function omitProviderPasswords(patch: ServerSettingsPatch): ServerSettingsPatch {
-  if (!patch.providers) return patch;
-  const { serverPassword: _kiloPassword, ...kilo } = patch.providers.kilo ?? {};
-  const { serverPassword: _openCodePassword, ...opencode } = patch.providers.opencode ?? {};
-  return {
-    ...patch,
-    providers: {
-      ...patch.providers,
-      ...(patch.providers.kilo ? { kilo } : {}),
-      ...(patch.providers.opencode ? { opencode } : {}),
-    },
-  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -613,26 +656,7 @@ const makeServerSettings = Effect.gen(function* () {
       Effect.gen(function* () {
         const disk = yield* loadSettingsFromDisk;
         const current = disk.settings;
-        const normalized = yield* normalizeSettings(
-          settingsPath,
-          current,
-          omitProviderPasswords(patch),
-        );
-        for (const provider of EXTERNAL_SERVER_PROVIDERS) {
-          const password = patch.providers?.[provider]?.serverPassword;
-          if (password !== undefined) {
-            yield* providerCredentials.replaceServerPassword(provider, password).pipe(
-              Effect.mapError(
-                (cause) =>
-                  new ServerSettingsError({
-                    settingsPath,
-                    detail: `failed to update ${provider} server password`,
-                    cause,
-                  }),
-              ),
-            );
-          }
-        }
+        const normalized = yield* normalizeSettings(settingsPath, current, patch);
         const next = yield* withCredentialState(normalized);
         const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
         yield* writeSettingsAtomically({
@@ -668,6 +692,71 @@ const makeServerSettings = Effect.gen(function* () {
       }),
     );
 
+  const updateProviderCredential = (provider: ExternalProviderServer, serverPassword: string) =>
+    writeSemaphore.withPermits(1)(
+      Effect.gen(function* () {
+        // Refresh non-secret settings before committing the credential. If the
+        // settings file cannot be read, fail before the secret owner changes;
+        // after credential acceptance, projection cannot fail independently.
+        const disk = yield* loadSettingsFromDisk;
+        yield* providerCredentials.replaceServerPassword(provider, serverPassword).pipe(
+          Effect.mapError(
+            (cause) =>
+              new ServerSettingsError({
+                settingsPath,
+                detail: `failed to update ${provider} server credential`,
+                cause,
+              }),
+          ),
+        );
+        // Ordinary mutations and external file edits both converge through the
+        // same serialized snapshot before the credential-blind push is emitted.
+        const current = disk.settings;
+        const configured = serverPassword.trim().length > 0;
+        const fresh = resolveTextGenerationProvider({
+          ...current,
+          providers: {
+            ...current.providers,
+            [provider]: {
+              ...current.providers[provider],
+              serverPasswordConfigured: configured,
+            },
+          },
+        });
+        yield* Ref.set(settingsRef, fresh);
+        yield* Ref.update(revisionRef, (revision) => Math.max(revision, disk.revision));
+        yield* emitChange(fresh);
+        return toServerSettingsView(fresh);
+      }),
+    );
+
+  const resetSettingsView = writeSemaphore.withPermits(1)(
+    Effect.gen(function* () {
+      const disk = yield* loadSettingsFromDisk;
+      const credentialState = yield* withCredentialState(DEFAULT_SERVER_SETTINGS);
+      const next = {
+        ...credentialState,
+        providers: {
+          ...credentialState.providers,
+          omnimind: {
+            ...credentialState.providers.omnimind,
+            defaultPrompt: disk.settings.providers.omnimind.defaultPrompt,
+          },
+        },
+      } satisfies ServerSettings;
+      const nextRevision = Math.max(disk.revision, yield* Ref.get(revisionRef)) + 1;
+      yield* writeSettingsAtomically({
+        revision: nextRevision,
+        migrationVersion: SERVER_SETTINGS_MIGRATION_VERSION,
+        settings: next,
+      });
+      yield* Ref.set(settingsRef, next);
+      yield* Ref.set(revisionRef, nextRevision);
+      yield* emitChange(next);
+      return toServerSettingsView(resolveTextGenerationProvider(next));
+    }),
+  );
+
   return {
     start,
     ready: Deferred.await(startedDeferred),
@@ -684,6 +773,8 @@ const makeServerSettings = Effect.gen(function* () {
     ),
     updateSettings,
     updateSettingsView: (patch) => updateSettings(patch).pipe(Effect.map(toServerSettingsView)),
+    resetSettingsView,
+    updateProviderCredential,
     mutateOmniMindDefaultPrompt,
     get streamChanges() {
       return Stream.fromPubSub(changesPubSub).pipe(Stream.map(resolveTextGenerationProvider));

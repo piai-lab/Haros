@@ -6,14 +6,15 @@
 import type { ServerProviderStatus } from "@omnimind/contracts";
 import { useQuery } from "@tanstack/react-query";
 
-import { getCustomBinaryPathForProvider, useAppSettings } from "../appSettings";
+import { getCustomBinaryPathForProvider } from "../providerSettings";
+import { useServerSettings } from "../serverSettings";
 import { normalizeProviderStatusForLocalConfig } from "../lib/providerAvailability";
 import { serverConfigQueryOptions } from "../lib/serverReactQuery";
 
 const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
 
 export function useProviderStatusesForLocalConfig(): readonly ServerProviderStatus[] {
-  const { settings } = useAppSettings();
+  const { settings } = useServerSettings();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
 
   return (serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES)
@@ -21,7 +22,9 @@ export function useProviderStatusesForLocalConfig(): readonly ServerProviderStat
       normalizeProviderStatusForLocalConfig({
         provider: status.provider,
         status,
-        customBinaryPath: getCustomBinaryPathForProvider(settings, status.provider),
+        customBinaryPath: settings
+          ? getCustomBinaryPathForProvider(settings, status.provider)
+          : "",
       }),
     )
     .flatMap((status) => (status ? [status] : []));

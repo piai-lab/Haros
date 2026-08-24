@@ -27,11 +27,11 @@ const fixture = vi.hoisted(() => ({
   sourceProject: null as Record<string, unknown> | null,
 }));
 
-vi.mock("../appSettings", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../appSettings")>();
+vi.mock("../localPreferences", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../localPreferences")>();
   return {
     ...actual,
-    useAppSettings: () => ({ settings: { localePreference: fixture.locale } }),
+    useLocalPreferences: () => ({ preferences: { localePreference: fixture.locale } }),
   };
 });
 

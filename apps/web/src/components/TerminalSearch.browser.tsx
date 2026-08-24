@@ -17,9 +17,9 @@ const harness = vi.hoisted(() => ({
   settings: { localePreference: "en" as const },
 }));
 
-vi.mock("~/appSettings", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/appSettings")>()),
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("~/localPreferences", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/localPreferences")>()),
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 vi.mock("~/hooks/useTheme", () => ({

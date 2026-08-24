@@ -11,7 +11,8 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef } from "react";
 
-import { useAppSettings } from "../appSettings";
+import { useLocalPreferences } from "../localPreferences";
+import { useI18n } from "../i18n";
 import {
   type AppSnapThreadTarget,
   type TimedAppSnapThreadTarget,
@@ -208,7 +209,8 @@ async function hydratePersistedAppSnaps(
 
 export function AppSnapCoordinator() {
   const navigate = useNavigate();
-  const { settings } = useAppSettings();
+  const { t } = useI18n();
+  const { preferences: settings } = useLocalPreferences();
   const { handleNewChat } = useHandleNewChat();
   const { focusedThreadId, splitView } = useFocusedChatContext();
   const openChatThreadPage = useTerminalStateStore((state) => state.openChatThreadPage);
@@ -226,10 +228,12 @@ export function AppSnapCoordinator() {
   // capture listener (which would re-deliver pending captures).
   const playCaptureSoundRef = useRef(settings.appSnapPlaySound);
   const enableAppSnapRef = useRef(settings.enableAppSnap);
+  const tRef = useRef(t);
   useEffect(() => {
     playCaptureSoundRef.current = settings.appSnapPlaySound;
     enableAppSnapRef.current = settings.enableAppSnap;
-  }, [settings.appSnapPlaySound, settings.enableAppSnap]);
+    tRef.current = t;
+  }, [settings.appSnapPlaySound, settings.enableAppSnap, t]);
 
   useEffect(() => {
     let disposed = false;
@@ -306,7 +310,7 @@ export function AppSnapCoordinator() {
       shortcutModifier && shortcutKey
         ? { kind: "key-chord", modifier: shortcutModifier, key: shortcutKey }
         : { kind: "both-option-keys" };
-    // The opt-in preference lives in the renderer settings store. This root
+    // The durable opt-in intent lives in the Web local preference owner. This root
     // coordinator is mounted for the full UI lifetime and owns the native listener.
     // Enable even when the saved shortcut is unavailable: the manager surfaces
     // the conflict as an error state instead of AppSnap silently staying off.
@@ -535,13 +539,13 @@ export function AppSnapCoordinator() {
             const attach = attachCaptureRef.current;
             if (!attach) throw new Error("The AppSnap composer is not ready yet.");
             persistence = await attach(capture);
-          } catch (error) {
+          } catch {
             toastManager.add({
               type: "error",
-              title: "AppSnap could not be added",
-              description: error instanceof Error ? error.message : "AppSnap capture failed.",
+              title: tRef.current("settings.appsnapCaptureAddFailed"),
+              description: tRef.current("settings.appsnapCaptureAddFailedDescription"),
               actionProps: {
-                children: "Retry",
+                children: tRef.current("common.retry"),
                 onClick: () => {
                   captureIdsRef.current.delete(capture.id);
                   enqueueCapture(capture);
@@ -573,12 +577,12 @@ export function AppSnapCoordinator() {
     const unsubscribeError = bridge.onError((error) => {
       toastManager.add({
         type: "error",
-        title: "AppSnap failed",
-        description: error.message,
+        title: tRef.current("settings.appsnapRuntimeFailed"),
+        description: tRef.current("settings.appsnapRuntimeFailedDescription"),
         ...(error.code === "helper-stopped"
           ? {
               actionProps: {
-                children: "Restart",
+                children: tRef.current("common.restart"),
                 onClick: () => {
                   void bridge
                     .setEnabled(enableAppSnapRef.current)

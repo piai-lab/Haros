@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { ServerProviderStatus } from "@omnimind/contracts";
-
-import { type AppSettings, AppSettingsSchema } from "~/appSettings";
+import { DEFAULT_SERVER_SETTINGS_VIEW, type ServerProviderStatus } from "@omnimind/contracts";
 
 import {
   createProviderInstallResetPatch,
@@ -11,7 +9,7 @@ import {
   validateProviderCustomModelInput,
 } from "./ProvidersSettingsPanel";
 
-const defaults = AppSettingsSchema.makeUnsafe({});
+const defaults = DEFAULT_SERVER_SETTINGS_VIEW;
 
 describe("validateProviderCustomModelInput", () => {
   it("normalizes a new Engine-owned custom slug and rejects duplicates", () => {
@@ -34,40 +32,62 @@ describe("validateProviderCustomModelInput", () => {
 
 describe("isProviderInstallSettingsDirty", () => {
   it("covers every provider install text and boolean field", () => {
-    const dirtyPatches = [
-      { codexBinaryPath: "/opt/codex" },
-      { codexHomePath: "/tmp/codex-home" },
-      { claudeBinaryPath: "/opt/claude" },
-      { cursorBinaryPath: "/opt/cursor" },
-      { cursorApiEndpoint: "https://cursor.example" },
-      { antigravityBinaryPath: "/opt/agy" },
-      { grokBinaryPath: "/opt/grok" },
-      { droidBinaryPath: "/opt/droid" },
-      { kiloBinaryPath: "/opt/kilo" },
-      { kiloServerUrl: "http://127.0.0.1:5000" },
-      { openCodeBinaryPath: "/opt/opencode" },
-      { openCodeServerUrl: "http://127.0.0.1:5001" },
-      { openCodeExperimentalWebSockets: true },
-      { piBinaryPath: "/opt/pi" },
-      { piAgentDir: "/tmp/pi-agent" },
-    ] satisfies ReadonlyArray<Partial<AppSettings>>;
+    const dirtySettings = [
+      { provider: "codex", field: "binaryPath", value: "/opt/codex" },
+      { provider: "codex", field: "homePath", value: "/tmp/codex-home" },
+      { provider: "claudeAgent", field: "binaryPath", value: "/opt/claude" },
+      { provider: "cursor", field: "binaryPath", value: "/opt/cursor" },
+      { provider: "cursor", field: "apiEndpoint", value: "https://cursor.example" },
+      { provider: "antigravity", field: "binaryPath", value: "/opt/agy" },
+      { provider: "grok", field: "binaryPath", value: "/opt/grok" },
+      { provider: "droid", field: "binaryPath", value: "/opt/droid" },
+      { provider: "kilo", field: "binaryPath", value: "/opt/kilo" },
+      { provider: "kilo", field: "serverUrl", value: "http://127.0.0.1:5000" },
+      { provider: "opencode", field: "binaryPath", value: "/opt/opencode" },
+      { provider: "opencode", field: "serverUrl", value: "http://127.0.0.1:5001" },
+      { provider: "opencode", field: "experimentalWebSockets", value: true },
+      { provider: "pi", field: "binaryPath", value: "/opt/pi" },
+      { provider: "pi", field: "agentDir", value: "/tmp/pi-agent" },
+    ] as const;
 
     expect(isProviderInstallSettingsDirty(defaults, defaults)).toBe(false);
-    for (const patch of dirtyPatches) {
-      expect(isProviderInstallSettingsDirty({ ...defaults, ...patch }, defaults)).toBe(true);
+    for (const dirty of dirtySettings) {
+      const settings = {
+        ...defaults,
+        providers: {
+          ...defaults.providers,
+          [dirty.provider]: {
+            ...defaults.providers[dirty.provider],
+            [dirty.field]: dirty.value,
+          },
+        },
+      };
+      expect(isProviderInstallSettingsDirty(settings, defaults)).toBe(true);
     }
   });
 
   it("uses configured flags instead of unreadable password values", () => {
     expect(
-      isProviderInstallSettingsDirty({ ...defaults, kiloServerPassword: "secret" }, defaults),
+      isProviderInstallSettingsDirty(defaults, defaults),
     ).toBe(false);
     expect(
-      isProviderInstallSettingsDirty({ ...defaults, kiloServerPasswordConfigured: true }, defaults),
+      isProviderInstallSettingsDirty({
+        ...defaults,
+        providers: {
+          ...defaults.providers,
+          kilo: { ...defaults.providers.kilo, serverPasswordConfigured: true },
+        },
+      }, defaults),
     ).toBe(true);
     expect(
       isProviderInstallSettingsDirty(
-        { ...defaults, openCodeServerPasswordConfigured: true },
+        {
+          ...defaults,
+          providers: {
+            ...defaults.providers,
+            opencode: { ...defaults.providers.opencode, serverPasswordConfigured: true },
+          },
+        },
         defaults,
       ),
     ).toBe(true);
@@ -75,36 +95,27 @@ describe("isProviderInstallSettingsDirty", () => {
 });
 
 describe("createProviderInstallResetPatch", () => {
-  it("resets every configured field and writes password values so configured flags clear", () => {
-    const patch = createProviderInstallResetPatch({
-      ...defaults,
-      kiloServerPassword: "",
-      openCodeServerPassword: "",
-    });
+  it("resets public provider fields without routing secrets through ServerSettings", () => {
+    const patch = createProviderInstallResetPatch(defaults);
 
-    expect(Object.keys(patch).sort()).toEqual(
-      [
-        "antigravityBinaryPath",
-        "claudeBinaryPath",
-        "codexBinaryPath",
-        "codexHomePath",
-        "cursorApiEndpoint",
-        "cursorBinaryPath",
-        "droidBinaryPath",
-        "grokBinaryPath",
-        "kiloBinaryPath",
-        "kiloServerPassword",
-        "kiloServerUrl",
-        "openCodeBinaryPath",
-        "openCodeExperimentalWebSockets",
-        "openCodeServerPassword",
-        "openCodeServerUrl",
-        "piAgentDir",
-        "piBinaryPath",
-      ].sort(),
-    );
-    expect(patch.kiloServerPassword).toBe("");
-    expect(patch.openCodeServerPassword).toBe("");
+    expect(patch.providers?.codex).toEqual({
+      binaryPath: defaults.providers.codex.binaryPath,
+      homePath: defaults.providers.codex.homePath,
+    });
+    expect(patch.providers?.cursor).toEqual({
+      binaryPath: defaults.providers.cursor.binaryPath,
+      apiEndpoint: defaults.providers.cursor.apiEndpoint,
+    });
+    expect(patch.providers?.kilo).toEqual({
+      binaryPath: defaults.providers.kilo.binaryPath,
+      serverUrl: defaults.providers.kilo.serverUrl,
+    });
+    expect(patch.providers?.opencode).toEqual({
+      binaryPath: defaults.providers.opencode.binaryPath,
+      serverUrl: defaults.providers.opencode.serverUrl,
+      experimentalWebSockets: defaults.providers.opencode.experimentalWebSockets,
+    });
+    expect(JSON.stringify(patch)).not.toContain("Password");
   });
 });
 

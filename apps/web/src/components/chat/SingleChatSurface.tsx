@@ -17,7 +17,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
-import { useAppSettings } from "../../appSettings";
+import { useLocalPreferences } from "../../localPreferences";
 import { useComposerDraftStore } from "../../composerDraftStore";
 import type { DiffRouteSearch } from "../../diffRouteSearch";
 import { stripDiffSearchParams } from "../../diffRouteSearch";
@@ -371,7 +371,7 @@ export function SingleChatSurface(props: {
   const availableDockPaneKinds = dockLauncherItems.map(({ kind }) => kind);
   const projects = useStore((store) => store.projects);
   const threadsHydrated = useStore((store) => store.threadsHydrated);
-  const { settings: appSettings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
   const { handleNewThread } = useHandleNewThread();
   const queryClient = useQueryClient();
   const lastAppliedRoutePanelSearchKeyRef = useRef<string | null>(null);
@@ -802,7 +802,7 @@ export function SingleChatSurface(props: {
   const openEditorProject = async (projectId: ProjectId) => {
     const latestThread = sortThreadsForSidebar(
       threadSummaries.filter((thread) => thread.projectId === projectId),
-      appSettings.sidebarThreadSortOrder,
+      preferences.sidebarThreadSortOrder,
     )[0];
 
     if (latestThread) {
@@ -819,9 +819,7 @@ export function SingleChatSurface(props: {
 
     await handleNewThread(
       projectId,
-      {
-        envMode: appSettings.defaultThreadEnvMode,
-      },
+      undefined,
       {
         search: (previous) => ({
           ...stripEditorViewSearchParams(stripDiffSearchParams(previous)),

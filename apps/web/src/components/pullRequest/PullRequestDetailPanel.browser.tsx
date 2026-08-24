@@ -17,10 +17,12 @@ const harness = vi.hoisted(() => ({
   action: vi.fn<(input: Record<string, unknown>) => Promise<Record<string, unknown>>>(),
 }));
 
-vi.mock("~/appSettings", () => ({
-  useAppSettings: () => ({
-    settings: { defaultThreadEnvMode: "current", localePreference: "en" },
-  }),
+vi.mock("~/serverSettings", () => ({
+  useServerSettings: () => ({ settings: { defaultThreadEnvMode: "current" } }),
+}));
+
+vi.mock("~/localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: { localePreference: "en" } }),
 }));
 
 vi.mock("~/hooks/useHandleNewThread", () => ({

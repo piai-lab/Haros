@@ -4,7 +4,7 @@
 // Exports: transcript measurement helpers and inline styles for chat text
 
 import type { CSSProperties } from "react";
-import { DEFAULT_CHAT_FONT_SIZE_PX, normalizeChatFontSizePx } from "../../appSettings";
+import { DEFAULT_CHAT_FONT_SIZE_PX, normalizeChatFontSizePx } from "../../localPreferences";
 
 export const USER_MESSAGE_BUBBLE_RADIUS_CLASS_NAME = "rounded-[var(--radius-user-message)]";
 export const USER_MESSAGE_BUBBLE_SHELL_PADDING_CLASS_NAME = "py-1.5";

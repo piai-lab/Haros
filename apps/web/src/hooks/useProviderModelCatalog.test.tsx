@@ -3,7 +3,7 @@
 // Layer: Web hook tests
 
 import {
-  DEFAULT_SERVER_SETTINGS,
+  DEFAULT_SERVER_SETTINGS_VIEW,
   type ProviderKind,
   type ProviderModelDescriptor,
 } from "@omnimind/contracts";
@@ -15,7 +15,8 @@ import type { ProviderModelCatalog } from "./useProviderModelCatalog";
 import { useProviderModelCatalog } from "./useProviderModelCatalog";
 
 const mocks = vi.hoisted(() => ({
-  useAppSettings: vi.fn(),
+  useLocalPreferences: vi.fn(),
+  useServerSettings: vi.fn(),
   useQuery: vi.fn(),
 }));
 
@@ -24,10 +25,12 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   return { ...actual, useQuery: mocks.useQuery };
 });
 
-vi.mock("../appSettings", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../appSettings")>();
-  return { ...actual, useAppSettings: mocks.useAppSettings };
+vi.mock("../localPreferences", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../localPreferences")>();
+  return { ...actual, useLocalPreferences: mocks.useLocalPreferences };
 });
+
+vi.mock("../serverSettings", () => ({ useServerSettings: mocks.useServerSettings }));
 
 interface QueryOptionsLike {
   readonly queryKey: readonly unknown[];
@@ -56,26 +59,18 @@ const EMPTY_QUERY: QueryResultLike = {
 const modelQueries = new Map<ProviderKind, QueryResultLike>();
 const agentQueries = new Map<ProviderKind, QueryResultLike>();
 const MODEL_HINTS = { cursor: "composer-2" } as const;
-const SETTINGS = {
-  antigravityBinaryPath: "",
-  cursorApiEndpoint: "",
-  cursorBinaryPath: "",
-  customAntigravityModels: [],
-  customClaudeModels: [],
-  customCodexModels: [],
-  customCursorModels: ["cursor-custom"],
-  customDroidModels: [],
-  customGrokModels: [],
-  customKiloModels: [],
-  customOpenCodeModels: [],
-  customPiModels: [],
-  droidBinaryPath: "",
-  grokBinaryPath: "",
-  hiddenProviders: [],
-  kiloBinaryPath: "",
-  openCodeBinaryPath: "",
-  piAgentDir: "",
-  piBinaryPath: "",
+const LOCAL_PREFERENCES = {
+  hiddenProviders: [] as ProviderKind[],
+};
+const SERVER_SETTINGS = {
+  ...DEFAULT_SERVER_SETTINGS_VIEW,
+  providers: {
+    ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+    cursor: {
+      ...DEFAULT_SERVER_SETTINGS_VIEW.providers.cursor,
+      customModels: ["cursor-custom"],
+    },
+  },
 };
 
 function readCatalogRenders(
@@ -116,9 +111,8 @@ function readModelQueryEnabled(provider: ProviderKind): boolean | undefined {
 beforeEach(() => {
   modelQueries.clear();
   agentQueries.clear();
-  mocks.useAppSettings
-    .mockReset()
-    .mockReturnValue({ settings: SETTINGS, serverSettings: DEFAULT_SERVER_SETTINGS });
+  mocks.useLocalPreferences.mockReset().mockReturnValue({ preferences: LOCAL_PREFERENCES });
+  mocks.useServerSettings.mockReset().mockReturnValue({ settings: SERVER_SETTINGS });
   mocks.useQuery.mockReset().mockImplementation((value: QueryOptionsLike) => {
     const [, resource, provider] = value.queryKey;
     if (resource === "models") {
@@ -178,9 +172,8 @@ describe("useProviderModelCatalog", () => {
   });
 
   it("does not prefetch providers hidden from picker surfaces", () => {
-    mocks.useAppSettings.mockReturnValue({
-      settings: { ...SETTINGS, hiddenProviders: ["cursor"] },
-      serverSettings: DEFAULT_SERVER_SETTINGS,
+    mocks.useLocalPreferences.mockReturnValue({
+      preferences: { ...LOCAL_PREFERENCES, hiddenProviders: ["cursor"] },
     });
 
     readCatalogRenders({ selectedProvider: "codex", discoveryEnabled: true });
@@ -208,14 +201,13 @@ describe("useProviderModelCatalog", () => {
   });
 
   it("does not discover disabled stock Pi after explicit browse intent", () => {
-    mocks.useAppSettings.mockReturnValue({
-      settings: SETTINGS,
-      serverSettings: {
-        ...DEFAULT_SERVER_SETTINGS,
+    mocks.useServerSettings.mockReturnValue({
+      settings: {
+        ...SERVER_SETTINGS,
         providers: {
-          ...DEFAULT_SERVER_SETTINGS.providers,
+          ...SERVER_SETTINGS.providers,
           pi: {
-            ...DEFAULT_SERVER_SETTINGS.providers.pi,
+            ...SERVER_SETTINGS.providers.pi,
             enabled: false,
           },
         },
@@ -232,9 +224,8 @@ describe("useProviderModelCatalog", () => {
   });
 
   it("keeps an enabled selected provider discoverable when it is hidden", () => {
-    mocks.useAppSettings.mockReturnValue({
-      settings: { ...SETTINGS, hiddenProviders: ["cursor"] },
-      serverSettings: DEFAULT_SERVER_SETTINGS,
+    mocks.useLocalPreferences.mockReturnValue({
+      preferences: { ...LOCAL_PREFERENCES, hiddenProviders: ["cursor"] },
     });
 
     readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: false });
@@ -254,14 +245,13 @@ describe("useProviderModelCatalog", () => {
   });
 
   it("does not discover a disabled provider even when it is selected", () => {
-    mocks.useAppSettings.mockReturnValue({
-      settings: SETTINGS,
-      serverSettings: {
-        ...DEFAULT_SERVER_SETTINGS,
+    mocks.useServerSettings.mockReturnValue({
+      settings: {
+        ...SERVER_SETTINGS,
         providers: {
-          ...DEFAULT_SERVER_SETTINGS.providers,
+          ...SERVER_SETTINGS.providers,
           cursor: {
-            ...DEFAULT_SERVER_SETTINGS.providers.cursor,
+            ...SERVER_SETTINGS.providers.cursor,
             enabled: false,
           },
         },
@@ -277,7 +267,7 @@ describe("useProviderModelCatalog", () => {
     // `serverSettings` is undefined until the settings query resolves, and stays
     // undefined for good if it fails — the query never refetches on its own. Failing
     // closed here would blank every provider's model list, selected one included.
-    mocks.useAppSettings.mockReturnValue({ settings: SETTINGS, serverSettings: undefined });
+    mocks.useServerSettings.mockReturnValue({ settings: undefined });
 
     readCatalogRenders({ selectedProvider: "claudeAgent", discoveryEnabled: true });
 
@@ -288,10 +278,9 @@ describe("useProviderModelCatalog", () => {
   it("keeps discovering the selected provider when the settings omit it", () => {
     // A client talking to a server whose provider set it does not fully know must not
     // lose model discovery over the unknown key — and must not throw reading it.
-    const { cursor: _cursor, ...providersWithoutCursor } = DEFAULT_SERVER_SETTINGS.providers;
-    mocks.useAppSettings.mockReturnValue({
-      settings: SETTINGS,
-      serverSettings: { ...DEFAULT_SERVER_SETTINGS, providers: providersWithoutCursor },
+    const { cursor: _cursor, ...providersWithoutCursor } = SERVER_SETTINGS.providers;
+    mocks.useServerSettings.mockReturnValue({
+      settings: { ...SERVER_SETTINGS, providers: providersWithoutCursor },
     });
 
     readCatalogRenders({ selectedProvider: "cursor", discoveryEnabled: false });
@@ -392,12 +381,17 @@ describe("useProviderModelCatalog", () => {
   });
 
   it("keeps a configured independent Engine custom model selectable when runtime omits it", () => {
-    mocks.useAppSettings.mockReturnValue({
+    mocks.useServerSettings.mockReturnValue({
       settings: {
-        ...SETTINGS,
-        customAntigravityModels: ["custom/private-model"],
+        ...SERVER_SETTINGS,
+        providers: {
+          ...SERVER_SETTINGS.providers,
+          antigravity: {
+            ...SERVER_SETTINGS.providers.antigravity,
+            customModels: ["custom/private-model"],
+          },
+        },
       },
-      serverSettings: DEFAULT_SERVER_SETTINGS,
     });
     modelQueries.set("antigravity", {
       data: {

@@ -56,7 +56,8 @@ import {
   type GitCreatePrDialogBrowserRequest,
   type GitCreatePrDialogSubmission,
 } from "./GitCreatePrDialog";
-import { getProviderStartOptions, useAppSettings } from "~/appSettings";
+import { getProviderStartOptions } from "~/providerSettings";
+import { useServerSettings } from "~/serverSettings";
 import { formatClockDuration } from "~/session-logic";
 import { Button } from "~/components/ui/button";
 import {
@@ -551,16 +552,7 @@ export default function GitActionsControl({
   const hideQuickActionLabel = hideQuickActionLabelProp ?? false;
   const variant = variantProp ?? "header";
   const isPanel = variant === "panel";
-  const { settings } = useAppSettings();
-  // Manual memoization kept: this file does not compile under React Compiler (see compile-report).
-  const providerOptions = useMemo(() => getProviderStartOptions(settings), [settings]);
-  const gitTextGenerationModelSelection = useMemo(
-    (): ModelSelection => ({
-      provider: settings.textGenerationProvider ?? "codex",
-      model: settings.textGenerationModel ?? DEFAULT_GIT_TEXT_GENERATION_MODEL,
-    }),
-    [settings.textGenerationModel, settings.textGenerationProvider],
-  );
+  const { fetchSettings } = useServerSettings();
   const activeThread = useStore(
     useMemo(() => createThreadSelector(activeThreadId), [activeThreadId]),
   );
@@ -648,10 +640,6 @@ export default function GitActionsControl({
     gitRunStackedActionMutationOptions({
       cwd: gitCwd,
       queryClient,
-      codexHomePath: settings.codexHomePath || null,
-      model: settings.textGenerationModel ?? null,
-      modelSelection: gitTextGenerationModelSelection,
-      ...(providerOptions ? { providerOptions } : {}),
     }),
   );
   const persistThreadPr = useCallback(
@@ -1052,6 +1040,25 @@ export default function GitActionsControl({
           return;
         }
       }
+      let authoritativeSettings;
+      try {
+        authoritativeSettings = await fetchSettings();
+      } catch (error) {
+        toastManager.add({
+          type: "error",
+          title: t("git.action.failed"),
+          description: error instanceof Error ? error.message : t("git.action.errorDetails"),
+          data: threadToastData,
+        });
+        return;
+      }
+      const modelSelection: ModelSelection = {
+        provider: authoritativeSettings.textGenerationModelSelection.provider,
+        model:
+          authoritativeSettings.textGenerationModelSelection.model ??
+          DEFAULT_GIT_TEXT_GENERATION_MODEL,
+      };
+      const providerOptions = getProviderStartOptions(authoritativeSettings);
       onConfirmed?.();
 
       const progressStages = buildGitActionProgressStages({
@@ -1107,6 +1114,10 @@ export default function GitActionsControl({
         ...(prBody ? { prBody } : {}),
         ...(prDraft ? { prDraft } : {}),
         ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
+        codexHomePath: authoritativeSettings.providers.codex.homePath || null,
+        model: authoritativeSettings.textGenerationModelSelection.model ?? null,
+        modelSelection,
+        ...(providerOptions ? { providerOptions } : {}),
       });
 
       try {
@@ -1242,6 +1253,7 @@ export default function GitActionsControl({
     },
     [
       defaultBranchName,
+      fetchSettings,
       gitStatusForActions,
       hasOriginRemote,
       isDefaultBranch,

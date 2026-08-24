@@ -20,7 +20,7 @@ import { automationRequiresTargetThread } from "@omnimind/shared/automationMode"
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import type { Thread } from "~/types";
 import {
   ComposerPickerMenuPopup,
@@ -998,7 +998,7 @@ export function AutomationModelPicker({
   readonly onChange: (value: ModelSelection) => void;
   readonly onAutoModeSupportChange?: (supported: boolean) => void;
 }) {
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const providerStatuses = useProviderStatusesForLocalConfig();
   const [open, setOpen] = useState(false);

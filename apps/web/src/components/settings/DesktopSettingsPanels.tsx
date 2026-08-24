@@ -12,7 +12,7 @@ import { appSnapShortcutLabels } from "@omnimind/shared/appSnapShortcut";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 
-import type { AppSettingsBinding } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import { createLatestAppSnapRequestGuard } from "~/appSnap.logic";
 import { playAppSnapCaptureSound } from "~/lib/appSnapSound";
 import { CentralIcon } from "~/lib/central-icons";
@@ -102,13 +102,9 @@ function AppSnapPermissionBadge({ permission }: { permission: DesktopAppSnapPerm
   );
 }
 
-export function NotificationsSettingsPanel({
-  settings,
-  defaults,
-  updateSettings,
-  active,
-}: AppSettingsBinding & { readonly active: boolean }) {
+export function NotificationsSettingsPanel({ active }: { readonly active: boolean }) {
   const { t } = useI18n();
+  const { preferences: settings, defaults, updatePreferences } = useLocalPreferences();
   const [browserNotificationPermission, setBrowserNotificationPermission] = useState(
     readBrowserNotificationPermissionState(),
   );
@@ -122,12 +118,12 @@ export function NotificationsSettingsPanel({
 
   async function setSystemNotificationsEnabled(nextEnabled: boolean) {
     if (!nextEnabled) {
-      updateSettings({ enableSystemTaskCompletionNotifications: false });
+      updatePreferences({ enableSystemTaskCompletionNotifications: false });
       return;
     }
 
     if (isElectron) {
-      updateSettings({ enableSystemTaskCompletionNotifications: true });
+      updatePreferences({ enableSystemTaskCompletionNotifications: true });
       return;
     }
 
@@ -135,11 +131,11 @@ export function NotificationsSettingsPanel({
     setBrowserNotificationPermission(permission);
 
     if (permission === "granted") {
-      updateSettings({ enableSystemTaskCompletionNotifications: true });
+      updatePreferences({ enableSystemTaskCompletionNotifications: true });
       return;
     }
 
-    updateSettings({ enableSystemTaskCompletionNotifications: false });
+    updatePreferences({ enableSystemTaskCompletionNotifications: false });
     toastManager.add({
       type: permission === "denied" ? "warning" : "error",
       title: t("settings.desktopNotificationsUnavailable"),
@@ -199,7 +195,7 @@ export function NotificationsSettingsPanel({
               <SettingResetButton
                 label={t("settings.activityToasts")}
                 onClick={() =>
-                  updateSettings({
+                  updatePreferences({
                     enableTaskCompletionToasts: defaults.enableTaskCompletionToasts,
                   })
                 }
@@ -210,7 +206,7 @@ export function NotificationsSettingsPanel({
             <Switch
               checked={settings.enableTaskCompletionToasts}
               onCheckedChange={(checked) =>
-                updateSettings({ enableTaskCompletionToasts: Boolean(checked) })
+                updatePreferences({ enableTaskCompletionToasts: Boolean(checked) })
               }
               aria-label={t("settings.activityToastAria")}
             />
@@ -228,7 +224,7 @@ export function NotificationsSettingsPanel({
               <SettingResetButton
                 label={t("settings.desktopNotifications")}
                 onClick={() =>
-                  updateSettings({
+                  updatePreferences({
                     enableSystemTaskCompletionNotifications:
                       defaults.enableSystemTaskCompletionNotifications,
                   })
@@ -256,13 +252,9 @@ export function NotificationsSettingsPanel({
   );
 }
 
-export function AppSnapSettingsPanel({
-  settings,
-  defaults,
-  updateSettings,
-  active,
-}: AppSettingsBinding & { readonly active: boolean }) {
+export function AppSnapSettingsPanel({ active }: { readonly active: boolean }) {
   const { t } = useI18n();
+  const { preferences: settings, defaults, updatePreferences } = useLocalPreferences();
   const [appSnapState, setAppSnapState] = useState<DesktopAppSnapState | null>(null);
   const appSnapRequestGuardRef = useRef(createLatestAppSnapRequestGuard());
   const serverConfigQuery = useQuery({ ...serverConfigQueryOptions(), enabled: active });
@@ -307,9 +299,21 @@ export function AppSnapSettingsPanel({
         setAppSnapState(permissionState);
       }
       if (!requestGuard.isCurrent(requestId)) return;
-      updateSettings({ enableAppSnap: nextEnabled });
       const state = await bridge.setEnabled(nextEnabled);
       if (!requestGuard.isCurrent(requestId)) return;
+      const localResult = updatePreferences({ enableAppSnap: nextEnabled });
+      if (localResult.state === "failed") {
+        const restoredState = await bridge.setEnabled(settings.enableAppSnap).catch(() => null);
+        if (restoredState && requestGuard.isCurrent(requestId)) {
+          setAppSnapState(restoredState);
+        }
+        toastManager.add({
+          type: "error",
+          title: t("settings.localPreferenceSaveFailed"),
+          description: t("settings.localPreferenceSaveRecovery"),
+        });
+        return;
+      }
       setAppSnapState(state);
       if (nextEnabled && (state.status === "permission-required" || state.status === "error")) {
         toastManager.add({
@@ -320,7 +324,6 @@ export function AppSnapSettingsPanel({
       }
     } catch (error) {
       if (!requestGuard.isCurrent(requestId)) return;
-      updateSettings({ enableAppSnap: false });
       toastManager.add({
         type: "error",
         title: t("settings.appsnapSetupFailed"),
@@ -415,9 +418,11 @@ export function AppSnapSettingsPanel({
               enabled={enabled}
               reserved={enabled && appSnapState?.status === "ready"}
               keybindings={keybindings}
-              onSaved={(shortcut, state) => {
-                updateSettings({ appSnapShortcut: shortcut });
+              onSaved={async (shortcut, state) => {
+                const result = updatePreferences({ appSnapShortcut: shortcut });
+                if (result.state === "failed") return false;
                 setAppSnapState(state);
+                return true;
               }}
             />
           }
@@ -442,7 +447,7 @@ export function AppSnapSettingsPanel({
             settings.appSnapPlaySound !== defaults.appSnapPlaySound ? (
               <SettingResetButton
                 label={t("settings.captureSound")}
-                onClick={() => updateSettings({ appSnapPlaySound: defaults.appSnapPlaySound })}
+                onClick={() => updatePreferences({ appSnapPlaySound: defaults.appSnapPlaySound })}
               />
             ) : null
           }
@@ -454,7 +459,7 @@ export function AppSnapSettingsPanel({
               <Switch
                 checked={settings.appSnapPlaySound}
                 onCheckedChange={(checked) =>
-                  updateSettings({ appSnapPlaySound: Boolean(checked) })
+                  updatePreferences({ appSnapPlaySound: Boolean(checked) })
                 }
                 aria-label={t("settings.captureSoundAria")}
               />

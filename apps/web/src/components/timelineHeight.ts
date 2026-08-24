@@ -6,7 +6,7 @@
 import type { MessageId } from "@omnimind/contracts";
 
 import type { TurnDiffFileChange } from "../types";
-import { DEFAULT_CHAT_FONT_SIZE_PX, normalizeChatFontSizePx } from "../appSettings";
+import { DEFAULT_CHAT_FONT_SIZE_PX, normalizeChatFontSizePx } from "../localPreferences";
 import { deriveDisplayedUserMessageState } from "../lib/terminalContext";
 import { buildInlineTerminalContextText } from "./chat/userMessageTerminalContexts";
 import { resolveCollapsedUserMessageLineEstimate } from "./chat/userMessageCollapse";

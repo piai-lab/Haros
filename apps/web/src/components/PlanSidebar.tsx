@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { type TimestampFormat } from "../appSettings";
+import { type TimestampFormat } from "../localPreferences";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";

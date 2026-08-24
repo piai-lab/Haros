@@ -2,7 +2,8 @@ import { type AutomationDefinition, type AutomationRun } from "@omnimind/contrac
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { getProviderStartOptions, useAppSettings } from "~/appSettings";
+import { getProviderStartOptions } from "~/providerSettings";
+import { useServerSettings } from "~/serverSettings";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
   CHAT_SURFACE_HEADER_HEIGHT_CLASS,
@@ -187,7 +188,7 @@ function rowSubtitle(
 function AutomationsRouteView() {
   const navigate = useNavigate();
   const { locale, t } = useI18n();
-  const { settings } = useAppSettings();
+  const { settings } = useServerSettings();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -220,7 +221,7 @@ function AutomationsRouteView() {
     deleteMutation,
     runsByAutomationId,
   } = useAutomations((threadId) => void navigate({ to: "/$threadId", params: { threadId } }));
-  const providerOptionsForDispatch = getProviderStartOptions(settings);
+  const providerOptionsForDispatch = settings ? getProviderStartOptions(settings) : undefined;
 
   const updateDialogForm = (nextForm: AutomationFormState) => {
     setForm(nextForm);

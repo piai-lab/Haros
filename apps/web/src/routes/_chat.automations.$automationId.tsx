@@ -19,7 +19,8 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { getProviderStartOptions, useAppSettings } from "~/appSettings";
+import { getProviderStartOptions } from "~/providerSettings";
+import { useServerSettings } from "~/serverSettings";
 import { AutomationProposalActions } from "~/components/automation/AutomationProposalActions";
 import {
   CHAT_SURFACE_HEADER_DIVIDER_CLASS_NAME,
@@ -183,7 +184,7 @@ function intervalOptions(current: number, locale: AppLocale): readonly SelectOpt
 function AutomationDetailView() {
   const { automationId } = Route.useParams();
   const navigate = useNavigate();
-  const { settings } = useAppSettings();
+  const { settings } = useServerSettings();
   const { locale, t } = useI18n();
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
@@ -224,7 +225,7 @@ function AutomationDetailView() {
   const streamedMemory =
     (data.memories ?? []).find((candidate) => candidate.automationId === automationId) ?? null;
   const memory = streamedMemory ?? memoryQuery.data ?? null;
-  const providerOptionsForDispatch = getProviderStartOptions(settings);
+  const providerOptionsForDispatch = settings ? getProviderStartOptions(settings) : undefined;
 
   if (!definition) {
     return (

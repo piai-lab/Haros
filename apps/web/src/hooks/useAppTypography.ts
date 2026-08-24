@@ -1,5 +1,5 @@
 import { useLayoutEffect } from "react";
-import { resolveTerminalFontFamilyStack, useAppSettings } from "../appSettings";
+import { resolveTerminalFontFamilyStack, useLocalPreferences } from "../localPreferences";
 import { getAppTypographyScale } from "../lib/appTypography";
 
 const TERMINAL_FONT_FAMILY_CSS_VARIABLE = "--terminal-font-family";
@@ -23,13 +23,13 @@ const TYPOGRAPHY_CSS_VARIABLES = [
 ] as const;
 
 export function useAppTypography() {
-  const { settings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
 
   // Typography changes affect every measured workbench surface. Apply the
   // persisted scale before paint so custom settings never flash at the CSS
   // fallback size or feed stale geometry into the virtualized transcript.
   useLayoutEffect(() => {
-    const scale = getAppTypographyScale(settings.chatFontSizePx);
+    const scale = getAppTypographyScale(preferences.chatFontSizePx);
     const rootStyle = document.documentElement.style;
     const variableValues: Record<(typeof TYPOGRAPHY_CSS_VARIABLES)[number], string> = {
       "--app-font-size-base": `${scale.basePx}px`,
@@ -46,7 +46,7 @@ export function useAppTypography() {
       "--app-font-size-chat-code": `${scale.chatCodePx}px`,
       "--app-font-size-chat-meta": `${scale.chatMetaPx}px`,
       "--app-font-size-chat-tiny": `${scale.chatTinyPx}px`,
-      "--app-font-size-terminal": `${settings.terminalFontSizePx}px`,
+      "--app-font-size-terminal": `${preferences.terminalFontSizePx}px`,
     };
 
     for (const cssVariable of TYPOGRAPHY_CSS_VARIABLES) {
@@ -56,7 +56,7 @@ export function useAppTypography() {
     // Terminal font family overrides the bundled default only when a non-default
     // font is chosen; otherwise leave the index.css value in place. The terminal
     // runtime observes inline `style` mutations and re-applies the font live.
-    const terminalFontFamilyStack = resolveTerminalFontFamilyStack(settings.terminalFontFamily);
+    const terminalFontFamilyStack = resolveTerminalFontFamilyStack(preferences.terminalFontFamily);
     if (terminalFontFamilyStack) {
       rootStyle.setProperty(TERMINAL_FONT_FAMILY_CSS_VARIABLE, terminalFontFamilyStack);
     } else {
@@ -69,5 +69,5 @@ export function useAppTypography() {
       }
       rootStyle.removeProperty(TERMINAL_FONT_FAMILY_CSS_VARIABLE);
     };
-  }, [settings.chatFontSizePx, settings.terminalFontSizePx, settings.terminalFontFamily]);
+  }, [preferences.chatFontSizePx, preferences.terminalFontSizePx, preferences.terminalFontFamily]);
 }

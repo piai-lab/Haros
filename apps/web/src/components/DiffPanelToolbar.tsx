@@ -30,7 +30,7 @@ import {
   ELEVATED_HOVER_SURFACE_CLASS_NAME,
   ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME,
 } from "~/surfaceStyles";
-import type { TimestampFormat } from "~/appSettings";
+import type { TimestampFormat } from "~/localPreferences";
 import type { TurnDiffSummary } from "~/types";
 import type { RepoDiffScope } from "~/repoDiffScopeStore";
 import { formatShortTimestamp } from "~/timestampFormat";

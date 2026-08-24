@@ -4,13 +4,13 @@
 // Exports: useNativeFontSmoothing
 
 import { useLayoutEffect } from "react";
-import { useAppSettings } from "../appSettings";
+import { useLocalPreferences } from "../localPreferences";
 import { isMacPlatform } from "../lib/utils";
 
 export function useNativeFontSmoothing() {
-  const { settings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
   const shouldApply =
-    settings.enableNativeFontSmoothing &&
+    preferences.enableNativeFontSmoothing &&
     isMacPlatform(typeof navigator === "undefined" ? "" : navigator.platform);
 
   useLayoutEffect(() => {

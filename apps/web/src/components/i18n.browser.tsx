@@ -8,8 +8,8 @@ const harness = vi.hoisted(() => ({
   settings: { localePreference: "zh-CN" },
 }));
 
-vi.mock("../appSettings", () => ({
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("../localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 import { DocumentLocaleSync, I18nProvider, useI18n } from "../i18n";
