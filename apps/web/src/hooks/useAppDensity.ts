@@ -5,15 +5,15 @@ import {
   getDensityCssVariables,
   type DensityCssVariable,
 } from "../lib/appDensity";
-import { useAppSettings } from "../appSettings";
+import { useLocalPreferences } from "../localPreferences";
 
 const DENSITY_CSS_VARIABLES = Object.keys(
   getDensityCssVariables(),
 ) as readonly DensityCssVariable[];
 
 export function useAppDensity() {
-  const { settings } = useAppSettings();
-  const uiDensity = normalizeUiDensity(settings.uiDensity);
+  const { preferences } = useLocalPreferences();
+  const uiDensity = normalizeUiDensity(preferences.uiDensity);
 
   useEffect(() => {
     const root = document.documentElement;

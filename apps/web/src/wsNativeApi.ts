@@ -650,6 +650,9 @@ export function createWsNativeApi(): NativeApi {
       getBuiltInToolGroups: () => transport.request(WS_METHODS.serverGetBuiltInToolGroups),
       getSettings: () => transport.request(WS_METHODS.serverGetSettings),
       updateSettings: (input) => transport.request(WS_METHODS.serverUpdateSettings, input),
+      resetSettings: () => transport.request(WS_METHODS.serverResetSettings),
+      updateProviderCredential: (input) =>
+        transport.request(WS_METHODS.serverUpdateProviderCredential, input),
       getAuthSession: () => requestAuthJson<AuthSessionState>("/api/auth/session"),
       bootstrapAuth: (input: AuthBootstrapInput) =>
         requestAuthJson<AuthBootstrapResult>("/api/auth/bootstrap", {
@@ -742,6 +745,8 @@ export function createWsNativeApi(): NativeApi {
     provider: {
       getComposerCapabilities: (input) =>
         transport.request(WS_METHODS.providerGetComposerCapabilities, input),
+      getExecutionCapabilities: (input) =>
+        transport.request(WS_METHODS.providerGetExecutionCapabilities, input),
       // Compaction is capped server-side per provider (ACP providers allow up
       // to the 10-minute turn-idle ceiling), so the server owns this bound.
       compactThread: (input) =>

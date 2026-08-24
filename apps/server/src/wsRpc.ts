@@ -26,6 +26,7 @@ import {
   type ProjectDevServerEvent,
   type OrchestrationShellStreamEvent,
   type OrchestrationShellStreamItem,
+  type OrchestrationThread,
   type OrchestrationThreadDetailSnapshot,
   type OrchestrationThreadStreamItem,
   type ServerConfigStreamEvent,
@@ -57,6 +58,10 @@ import {
 import { ServerConfig, type ServerConfigShape } from "./config";
 import { realpathNearestExisting } from "./realpathNearestExisting";
 import { workspaceRootsEqual } from "@omnimind/shared/threadWorkspace";
+import {
+  isProviderRuntimeModeExecutable,
+  isProviderRuntimeModePermanentlyUnsupported,
+} from "@omnimind/shared/runtimeMode";
 import {
   isThreadDetailEventFor,
   THREAD_DETAIL_EVENT_TYPES,
@@ -108,6 +113,7 @@ import { OmniMindModelServices } from "./provider/Services/OmniMindModelServices
 import { discoverSkillsCatalog, omnimindSkillsDir } from "./provider/skillsCatalog";
 import { recoverUnregisteredGitHubCheckout } from "./project/githubProjectRegistration";
 import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegistry";
+import { ProviderExecutionCapabilities } from "./provider/Services/ProviderExecutionCapabilities";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
 import { listProviderUsage } from "./providerUsage";
@@ -372,6 +378,7 @@ const makeWsRpcHandlersLayer = () =>
       const usageHistory = yield* UsageHistory;
       const projectionReadModelQuery = yield* ProjectionSnapshotQuery;
       const providerAdapterRegistry = yield* ProviderAdapterRegistry;
+      const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
       const providerDiscoveryService = yield* ProviderDiscoveryService;
       const omniMindEcosystem = yield* OmniMindEcosystem;
       const omniMindAgentPromptFiles = yield* OmniMindAgentPromptFiles;
@@ -388,6 +395,58 @@ const makeWsRpcHandlersLayer = () =>
       const workspaceEntries = yield* WorkspaceEntries;
       const workspaceFileSystem = yield* WorkspaceFileSystem;
       const threadDiagnostics = yield* ThreadDiagnosticsQuery;
+      const requireExecutableRuntimeMode = (
+        modelSelection: OrchestrationThread["modelSelection"],
+        runtimeMode: OrchestrationThread["runtimeMode"],
+      ) =>
+        providerExecutionCapabilities.get(modelSelection).pipe(
+          Effect.flatMap((capabilities) => {
+            const capability = capabilities.runtimeModes[runtimeMode];
+            if (isProviderRuntimeModeExecutable(capability)) {
+              return Effect.void;
+            }
+            const permanentlyUnsupported = isProviderRuntimeModePermanentlyUnsupported(capability);
+            return Effect.fail(
+              new WsRpcError({
+                message: permanentlyUnsupported
+                  ? "The selected runtime mode is not supported by this Provider and model."
+                  : "The selected runtime mode is temporarily unavailable.",
+                code: capability.reason ?? "runtime-health-unknown",
+                retryable: !permanentlyUnsupported,
+              }),
+            );
+          }),
+        );
+      const validateExternalRuntimeModeAdmission = (command: OrchestrationCommand) =>
+        Effect.gen(function* () {
+          if (command.type === "thread.create" && command.creationSource === "provider_native") {
+            return;
+          }
+          if (
+            command.type === "thread.create" ||
+            command.type === "thread.handoff.create" ||
+            command.type === "thread.fork.create"
+          ) {
+            return yield* requireExecutableRuntimeMode(command.modelSelection, command.runtimeMode);
+          }
+          if (
+            command.type !== "thread.runtime-mode.set" &&
+            command.type !== "thread.turn.start" &&
+            command.type !== "thread.message.edit-and-resend"
+          ) {
+            return;
+          }
+          const snapshot = yield* projectionReadModelQuery.getSnapshot();
+          const thread = snapshot.threads.find((candidate) => candidate.id === command.threadId);
+          if (!thread) {
+            return;
+          }
+          const modelSelection =
+            command.type === "thread.runtime-mode.set"
+              ? thread.modelSelection
+              : (command.modelSelection ?? thread.modelSelection);
+          return yield* requireExecutableRuntimeMode(modelSelection, command.runtimeMode);
+        });
       // Optional so route-level tests and non-macOS builds can mount the RPC
       // group without a device engine; the handlers below then refuse cleanly
       // with the same unsupported-platform answer the backend would give.
@@ -905,6 +964,7 @@ const makeWsRpcHandlersLayer = () =>
             Effect.gen(function* () {
               const { command: normalizedCommand, prepareWorkspaceRoot } =
                 yield* normalizeDispatchCommand({ command });
+              yield* validateExternalRuntimeModeAdmission(normalizedCommand);
               const result = yield* dispatchOrchestrationCommand(normalizedCommand);
               // Only scaffold managed workspace-root subdirectories (Inbox/Outbox/work/outputs)
               // AFTER the decider has accepted the command. A rejected dispatch (e.g. a
@@ -1669,6 +1729,13 @@ const makeWsRpcHandlersLayer = () =>
           rpcEffect(serverSettings.getSettingsView, "Failed to load server settings"),
         [WS_METHODS.serverUpdateSettings]: (input) =>
           rpcEffect(serverSettings.updateSettingsView(input), "Failed to update server settings"),
+        [WS_METHODS.serverResetSettings]: () =>
+          rpcEffect(serverSettings.resetSettingsView, "Failed to reset server settings"),
+        [WS_METHODS.serverUpdateProviderCredential]: (input) =>
+          rpcEffect(
+            serverSettings.updateProviderCredential(input.provider, input.serverPassword),
+            "Failed to update provider credential",
+          ),
         [WS_METHODS.serverRefreshProviders]: () =>
           rpcEffect(
             providerHealth.refresh.pipe(Effect.flatMap(providerStatusPayload)),
@@ -1958,6 +2025,11 @@ const makeWsRpcHandlersLayer = () =>
             providerDiscoveryService.getComposerCapabilities(input),
             "Failed to get composer capabilities",
           ),
+        [WS_METHODS.providerGetExecutionCapabilities]: (input) =>
+          rpcEffect(
+            providerExecutionCapabilities.get(input.modelSelection),
+            "Failed to get provider execution capabilities",
+          ),
         [WS_METHODS.providerCompactThread]: (input) =>
           rpcEffect(providerService.compactThread(input), "Failed to compact thread"),
         [WS_METHODS.providerListCommands]: (input) =>
@@ -2072,9 +2144,7 @@ const makeWsRpcHandlersLayer = () =>
           ),
         [WS_METHODS.omnimindWebSearchGeminiDiagnostic]: (input) =>
           rpcEffect(
-            requireOwnerRole.pipe(
-              Effect.andThen(omniMindWebSearchSettings.diagnoseGemini(input)),
-            ),
+            requireOwnerRole.pipe(Effect.andThen(omniMindWebSearchSettings.diagnoseGemini(input))),
             "Failed to inspect Gemini Web account",
           ),
         [WS_METHODS.omnimindModelServicesList]: (input) =>

@@ -10,6 +10,7 @@ import type {
   OrchestrationProjectShell,
   OrchestrationThread,
   OrchestrationThreadShell,
+  ProviderExecutionCapabilities as ProviderExecutionCapabilitiesSnapshot,
   ProviderKind,
   ServerProviderStatus,
   ThreadId as ThreadIdType,
@@ -52,6 +53,9 @@ import type {
 import type { ProviderBlockingDeliveryEvidence } from "../../persistence/Services/OrchestrationEventDeliveries.ts";
 import { ProviderDiscoveryService } from "../../provider/Services/ProviderDiscoveryService.ts";
 import { ProviderHealth } from "../../provider/Services/ProviderHealth.ts";
+import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
+import { resolveProviderExecutionCapabilities } from "../../provider/executionCapabilityProjection.ts";
+import { providerExecutionStructure } from "../../provider/providerExecutionStructure.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { DeviceManager } from "../../device/DeviceManager.ts";
@@ -247,6 +251,9 @@ function makeHarnessLayer(
     readonly dispatchDelayMs?: number;
     readonly interruptedOperations?: ReadonlyArray<AgentGatewayOperationRecord>;
     readonly providerStatuses?: ReadonlyArray<ServerProviderStatus>;
+    readonly executionCapabilities?: (
+      modelSelection: ModelSelection,
+    ) => ProviderExecutionCapabilitiesSnapshot;
     readonly existingBranches?: ReadonlyArray<string>;
     readonly existingWorktrees?: Readonly<Record<string, string>>;
     readonly verifiedOwnershipTokens?: ReadonlyArray<string>;
@@ -1149,6 +1156,26 @@ function makeHarnessLayer(
     Layer.provide(gitLayer),
     Layer.provide(providerDiscoveryLayer),
     Layer.provide(providerHealthLayer),
+    Layer.provide(
+      Layer.succeed(ProviderExecutionCapabilities, {
+        get: (modelSelection) =>
+          Effect.succeed(
+            options.executionCapabilities?.(modelSelection) ??
+              resolveProviderExecutionCapabilities({
+                modelSelection,
+                adapterCapabilities: providerExecutionStructure(modelSelection.provider),
+                providerStatus: {
+                  provider: modelSelection.provider,
+                  status: "ready",
+                  available: true,
+                  authStatus: "authenticated",
+                  supportsAutoRuntimeMode: true,
+                  checkedAt: NOW,
+                },
+              }),
+          ),
+      }),
+    ),
     Layer.provideMerge(
       ServerSettingsService.layerTest(
         options.builtInGroupOverrides
@@ -2149,6 +2176,37 @@ describe("AgentGateway", () => {
         assert.equal(turn.dispatchOrigin, "agent");
         assert.equal(turn.message.text, "analyze the feature");
       }
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("rejects creation when the requested runtime mode is not loaded for the target", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
+      executionCapabilities: (modelSelection) =>
+        resolveProviderExecutionCapabilities({
+          modelSelection,
+          adapterCapabilities: {
+            ...providerExecutionStructure(modelSelection.provider),
+            supportedRuntimeModes: new Set(["full-access"]),
+          },
+          providerStatus: {
+            provider: modelSelection.provider,
+            status: "ready",
+            available: true,
+            authStatus: "authenticated",
+            checkedAt: NOW,
+          },
+        }),
+    });
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "omnimind_create_thread",
+        args: { requestId: "create-unsupported-mode", prompt: "analyze", provider: "grok" },
+      });
+      assert.isTrue(isToolError(response.result));
+      assert.include(toolErrorText(response.result), "not supported");
+      assert.equal(harness.dispatched.length, 0);
     }).pipe(Effect.provide(gatewayLayer));
   });
 
@@ -4227,6 +4285,34 @@ describe("AgentGateway", () => {
         assert.equal(turn.dispatchMode, "steer");
         assert.equal(turn.threadId, "thread-child");
       }
+    }).pipe(Effect.provide(gatewayLayer));
+  });
+
+  it.effect("rejects a send while the persisted runtime mode is unavailable", () => {
+    const { gatewayLayer, makeHarness } = makeHarnessLayer(baseThreads, [], {
+      executionCapabilities: (modelSelection) =>
+        resolveProviderExecutionCapabilities({
+          modelSelection,
+          adapterCapabilities: providerExecutionStructure(modelSelection.provider),
+          providerStatus: {
+            provider: modelSelection.provider,
+            status: "error",
+            available: false,
+            authStatus: "unknown",
+            checkedAt: NOW,
+          },
+        }),
+    });
+    return Effect.gen(function* () {
+      const harness = yield* makeHarness;
+      const response = yield* harness.callTool({
+        token: "token-parent",
+        name: "omnimind_send_message",
+        args: { threadId: "thread-child", message: "status check" },
+      });
+      assert.isTrue(isToolError(response.result));
+      assert.include(toolErrorText(response.result), "temporarily unavailable");
+      assert.equal(harness.dispatched.length, 0);
     }).pipe(Effect.provide(gatewayLayer));
   });
 

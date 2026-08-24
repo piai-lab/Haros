@@ -13,6 +13,7 @@ import {
   type ProfileTokenStats,
   type ProviderKind,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import {
   serverProfileStatsQueryOptions,
   serverProfileTokenStatsQueryOptions,
@@ -363,28 +364,7 @@ function formatPeakHourLabel(startHour: number | null, locale: "en" | "zh-CN"): 
 }
 
 function formatProviderLabel(provider: ProviderKind): string {
-  switch (provider) {
-    case "omnimind":
-      return "OmniMind";
-    case "codex":
-      return "Codex";
-    case "claudeAgent":
-      return "Claude";
-    case "cursor":
-      return "Cursor";
-    case "antigravity":
-      return "Antigravity";
-    case "grok":
-      return "Grok";
-    case "droid":
-      return "Droid";
-    case "kilo":
-      return "Kilo";
-    case "opencode":
-      return "OpenCode";
-    case "pi":
-      return "Pi";
-  }
+  return PROVIDER_DISPLAY_NAMES[provider];
 }
 
 function ModelUsageRow({

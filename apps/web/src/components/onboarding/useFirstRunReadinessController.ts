@@ -1,13 +1,13 @@
-import type {
-  ModelSelection,
-  OmniMindModelServicesListResult,
-  ProviderKind,
+import {
+  PROVIDER_KINDS,
+  type ModelSelection,
+  type OmniMindModelServicesListResult,
+  type ProviderKind,
 } from "@omnimind/contracts";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useSyncExternalStore } from "react";
 
-import { useAppSettings } from "~/appSettings";
-import { COMPOSER_PROVIDER_KINDS } from "~/composerDraftModels";
+import { useServerSettings } from "~/serverSettings";
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { useFocusedChatContext } from "~/focusedChatContext";
 import { useProviderModelCatalog } from "~/hooks/useProviderModelCatalog";
@@ -74,7 +74,8 @@ export function useFirstRunReadinessController(
   selectedProvider: ProviderKind,
 ): FirstRunReadinessController {
   const queryClient = useQueryClient();
-  const { settings } = useAppSettings();
+  const { settings, defaults } = useServerSettings();
+  const settingsSnapshot = settings ?? defaults;
   const focusedContext = useFocusedChatContext();
   const projects = useStore((state) => state.projects);
   const threadsHydrated = useStore((state) => state.threadsHydrated);
@@ -117,7 +118,7 @@ export function useFirstRunReadinessController(
 
   const rememberedSelections = useMemo(() => {
     const result: Partial<Record<ProviderKind, ModelSelection>> = {};
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
+    for (const provider of PROVIDER_KINDS) {
       const selection =
         stickyModelSelectionByProvider[provider] ??
         threadShells.find((thread) => thread.modelSelection.provider === provider)
@@ -139,7 +140,7 @@ export function useFirstRunReadinessController(
       focusedContext.activeThread?.modelSelection.provider ??
       focusedContext.activeProject?.defaultModelSelection?.provider ??
       stickyActiveProvider ??
-      settings.defaultProvider;
+      settingsSnapshot.defaultProvider;
     const focusedSelection =
       focusedDraft?.modelSelectionByProvider[focusedProvider] ??
       (focusedContext.activeThread?.modelSelection.provider === focusedProvider
@@ -151,7 +152,7 @@ export function useFirstRunReadinessController(
       stickyModelSelectionByProvider[focusedProvider] ??
       null;
     if (focusedSelection) result[focusedProvider] = focusedSelection;
-    for (const provider of COMPOSER_PROVIDER_KINDS) {
+    for (const provider of PROVIDER_KINDS) {
       const status = providerStatuses.find((candidate) => candidate.provider === provider);
       if (
         result[provider] &&
@@ -172,7 +173,7 @@ export function useFirstRunReadinessController(
     focusedContext.focusedThreadId,
     providerStatuses,
     rememberedSelections,
-    settings.defaultProvider,
+    settingsSnapshot.defaultProvider,
     stickyActiveProvider,
     stickyModelSelectionByProvider,
   ]);
@@ -219,7 +220,7 @@ export function useFirstRunReadinessController(
       services: cachedPassiveServices.services,
     });
   const hasRememberedIndependentEngineBinding = hasRememberedExactModelBinding({
-    providers: COMPOSER_PROVIDER_KINDS.filter((provider) => provider !== "omnimind"),
+    providers: PROVIDER_KINDS.filter((provider) => provider !== "omnimind"),
     explicitExactModelSelections: rememberedSelections,
   });
   const hasRememberedOmniMindBinding = hasRememberedExactModelBinding({

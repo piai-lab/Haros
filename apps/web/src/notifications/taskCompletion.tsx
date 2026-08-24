@@ -8,7 +8,7 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useMemo, useEffect, useRef, useState } from "react";
 import { toastManager } from "../components/ui/toast";
 import { resolveVisibleToastThreadIds } from "../components/ui/toastRouteVisibility";
-import { useAppSettings } from "../appSettings";
+import { useLocalPreferences } from "../localPreferences";
 import { isElectron } from "../env";
 import { useDiffRouteSearch } from "../hooks/useDiffRouteSearch";
 import { selectSplitView, useSplitViewStore } from "../splitViewStore";
@@ -150,7 +150,7 @@ function showThreadToast(
 }
 
 export function TaskCompletionNotifications() {
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const navigate = useNavigate();
   const activeThreadId = useParams({
     strict: false,

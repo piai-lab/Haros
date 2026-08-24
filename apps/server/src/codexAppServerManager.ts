@@ -5,7 +5,6 @@ import { EventEmitter } from "node:events";
 import {
   ApprovalRequestId,
   EventId,
-  type ProviderComposerCapabilities,
   ProviderItemId,
   type ProviderListModelsResult,
   type ProviderListPluginsResult,
@@ -2511,20 +2510,6 @@ export class CodexAppServerManager extends EventEmitter<CodexAppServerManagerEve
       refreshToken: false,
     });
     return { ready: true };
-  }
-
-  getComposerCapabilities(): ProviderComposerCapabilities {
-    return {
-      provider: "codex",
-      supportsSkillMentions: true,
-      supportsSkillDiscovery: true,
-      supportsNativeSlashCommandDiscovery: false,
-      supportsPluginMentions: true,
-      supportsPluginDiscovery: true,
-      supportsRuntimeModelList: true,
-      supportsThreadCompaction: true,
-      supportsThreadImport: true,
-    };
   }
 
   private requireSession(threadId: ThreadId): CodexSessionContext {

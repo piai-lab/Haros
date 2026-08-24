@@ -3,12 +3,13 @@
 // Layer: Settings panel
 
 import {
-  PROVIDER_DISPLAY_NAMES,
   type ProviderKind,
   type ServerProviderStatus,
+  type ServerSettingsPatch,
   type ServerSettingsView,
 } from "@omnimind/contracts";
-import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
+import { PROVIDER_DESCRIPTORS, PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
+import { deepMerge } from "@omnimind/shared/Struct";
 import {
   closestCenter,
   DndContext,
@@ -26,7 +27,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { type MouseEvent, useCallback, useMemo, useState } from "react";
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS,
@@ -35,9 +36,9 @@ import {
   getCustomBinaryPathForProvider,
   getDefaultCustomModelsForProvider,
   patchCustomModels,
-  type AppSettings,
-  type AppSettingsBinding,
-} from "~/appSettings";
+} from "~/providerSettings";
+import { useLocalPreferences } from "~/localPreferences";
+import { useServerSettings } from "~/serverSettings";
 import {
   deriveProviderPickerAvailability,
   normalizeProviderStatusForLocalConfig,
@@ -50,7 +51,6 @@ import {
   reconcileServerProviderStatuses,
   serverConfigQueryOptions,
   serverQueryKeys,
-  serverSettingsQueryOptions,
 } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import { ensureNativeApi } from "~/nativeApi";
@@ -83,7 +83,6 @@ import { Input } from "../ui/input";
 import { Switch } from "../ui/switch";
 import { toastManager } from "../ui/toast";
 import { ProviderIcon } from "../ProviderIcon";
-import { DebouncedSettingTextInput } from "./DebouncedSettingTextInput";
 import { SettingResetButton, useSettingsRestoreSignal } from "./SettingControls";
 import { SettingsListRow, SettingsRow, SettingsSection } from "./SettingsPanelPrimitives";
 
@@ -107,6 +106,11 @@ type ProviderInstallPasswordConfiguredKey =
   | "kiloServerPasswordConfigured"
   | "openCodeServerPasswordConfigured";
 type ProviderInstallBooleanKey = "openCodeExperimentalWebSockets";
+type ProviderInstallFieldKey =
+  | ProviderInstallTextKey
+  | ProviderInstallPasswordKey
+  | ProviderInstallBooleanKey;
+type ProviderInstallDraft = Partial<Record<ProviderInstallFieldKey, string | boolean>>;
 type SettingsTranslator = ReturnType<typeof useI18n>["t"];
 
 type ProviderInstallTextField = {
@@ -420,27 +424,146 @@ const PROVIDER_INSTALL_SETTINGS: readonly ProviderInstallSettings[] = [
   },
 ];
 
+function readProviderInstallField(
+  settings: ServerSettingsView,
+  field: ProviderInstallField,
+): string | boolean {
+  switch (field.settingsKey) {
+    case "claudeBinaryPath":
+      return settings.providers.claudeAgent.binaryPath;
+    case "codexBinaryPath":
+      return settings.providers.codex.binaryPath;
+    case "codexHomePath":
+      return settings.providers.codex.homePath;
+    case "cursorBinaryPath":
+      return settings.providers.cursor.binaryPath;
+    case "cursorApiEndpoint":
+      return settings.providers.cursor.apiEndpoint;
+    case "antigravityBinaryPath":
+      return settings.providers.antigravity.binaryPath;
+    case "grokBinaryPath":
+      return settings.providers.grok.binaryPath;
+    case "droidBinaryPath":
+      return settings.providers.droid.binaryPath;
+    case "kiloBinaryPath":
+      return settings.providers.kilo.binaryPath;
+    case "kiloServerUrl":
+      return settings.providers.kilo.serverUrl;
+    case "kiloServerPassword":
+      return settings.providers.kilo.serverPasswordConfigured;
+    case "openCodeBinaryPath":
+      return settings.providers.opencode.binaryPath;
+    case "openCodeServerUrl":
+      return settings.providers.opencode.serverUrl;
+    case "openCodeServerPassword":
+      return settings.providers.opencode.serverPasswordConfigured;
+    case "openCodeExperimentalWebSockets":
+      return settings.providers.opencode.experimentalWebSockets;
+    case "piBinaryPath":
+      return settings.providers.pi.binaryPath;
+    case "piAgentDir":
+      return settings.providers.pi.agentDir;
+  }
+}
+
+function providerInstallFieldPatch(
+  field: Exclude<ProviderInstallField, ProviderInstallPasswordField>,
+  value: string | boolean,
+): ServerSettingsPatch {
+  switch (field.settingsKey) {
+    case "claudeBinaryPath":
+      return { providers: { claudeAgent: { binaryPath: String(value) } } };
+    case "codexBinaryPath":
+      return { providers: { codex: { binaryPath: String(value) } } };
+    case "codexHomePath":
+      return { providers: { codex: { homePath: String(value) } } };
+    case "cursorBinaryPath":
+      return { providers: { cursor: { binaryPath: String(value) } } };
+    case "cursorApiEndpoint":
+      return { providers: { cursor: { apiEndpoint: String(value) } } };
+    case "antigravityBinaryPath":
+      return { providers: { antigravity: { binaryPath: String(value) } } };
+    case "grokBinaryPath":
+      return { providers: { grok: { binaryPath: String(value) } } };
+    case "droidBinaryPath":
+      return { providers: { droid: { binaryPath: String(value) } } };
+    case "kiloBinaryPath":
+      return { providers: { kilo: { binaryPath: String(value) } } };
+    case "kiloServerUrl":
+      return { providers: { kilo: { serverUrl: String(value) } } };
+    case "openCodeBinaryPath":
+      return { providers: { opencode: { binaryPath: String(value) } } };
+    case "openCodeServerUrl":
+      return { providers: { opencode: { serverUrl: String(value) } } };
+    case "openCodeExperimentalWebSockets":
+      return { providers: { opencode: { experimentalWebSockets: Boolean(value) } } };
+    case "piBinaryPath":
+      return { providers: { pi: { binaryPath: String(value) } } };
+    case "piAgentDir":
+      return { providers: { pi: { agentDir: String(value) } } };
+  }
+}
+
+function createProviderInstallDraft(
+  config: ProviderInstallSettings,
+  settings: ServerSettingsView,
+): ProviderInstallDraft {
+  return Object.fromEntries(
+    config.fields.map((field) => [
+      field.settingsKey,
+      field.kind === "password" ? "" : readProviderInstallField(settings, field),
+    ]),
+  );
+}
+
+function providerInstallDraftValue(
+  draft: ProviderInstallDraft,
+  settings: ServerSettingsView,
+  field: ProviderInstallField,
+): string | boolean {
+  return (
+    draft[field.settingsKey] ??
+    (field.kind === "password" ? "" : readProviderInstallField(settings, field))
+  );
+}
+
+function createProviderInstallDraftServerPatch(input: {
+  config: ProviderInstallSettings;
+  settings: ServerSettingsView;
+  draft: ProviderInstallDraft;
+  dirtyKeys: ReadonlySet<ProviderInstallFieldKey>;
+}): ServerSettingsPatch | null {
+  let patch: ServerSettingsPatch | null = null;
+  for (const field of input.config.fields) {
+    if (field.kind === "password" || !input.dirtyKeys.has(field.settingsKey)) continue;
+    const fieldPatch = providerInstallFieldPatch(
+      field,
+      providerInstallDraftValue(input.draft, input.settings, field),
+    );
+    patch = patch === null ? fieldPatch : deepMerge(patch, fieldPatch);
+  }
+  return patch;
+}
+
 function isProviderInstallFieldDirty(
   field: ProviderInstallField,
-  settings: AppSettings,
-  defaults: AppSettings,
+  settings: ServerSettingsView,
+  defaults: ServerSettingsView,
 ): boolean {
-  return field.kind === "password"
-    ? settings[field.configuredKey] !== defaults[field.configuredKey]
-    : settings[field.settingsKey] !== defaults[field.settingsKey];
+  return readProviderInstallField(settings, field) !== readProviderInstallField(defaults, field);
 }
 
 function isProviderInstallConfigDirty(
   config: ProviderInstallSettings,
-  settings: AppSettings,
-  defaults: AppSettings,
+  settings: ServerSettingsView,
+  defaults: ServerSettingsView,
 ): boolean {
   return config.fields.some((field) => isProviderInstallFieldDirty(field, settings, defaults));
 }
 
 export function isProviderInstallSettingsDirty(
-  settings: AppSettings,
-  defaults: AppSettings,
+  settings: ServerSettingsView,
+  defaults: ServerSettingsView,
 ): boolean {
   return PROVIDER_INSTALL_SETTINGS.some((config) =>
     isProviderInstallConfigDirty(config, settings, defaults),
@@ -448,7 +571,8 @@ export function isProviderInstallSettingsDirty(
 }
 
 function createProviderInstallDisclosureState(
-  settings: AppSettings,
+  settings: ServerSettingsView,
+  defaults: ServerSettingsView,
 ): Record<ProviderKind, boolean> {
   return Object.fromEntries(
     PROVIDER_INSTALL_SETTINGS.map((config) => {
@@ -457,13 +581,13 @@ function createProviderInstallDisclosureState(
       );
       return [
         config.provider,
-        config.fields.some((field) =>
-          field.kind === "password"
-            ? settings[field.configuredKey]
-            : Boolean(settings[field.settingsKey]),
+        config.fields.some(
+          (field) =>
+            readProviderInstallField(settings, field) !== readProviderInstallField(defaults, field),
         ) ||
           (customModelsConfig !== undefined &&
-            getCustomModelsForProvider(settings, customModelsConfig.provider).length > 0),
+            getCustomModelsForProvider(settings, customModelsConfig.provider).length >
+              getCustomModelsForProvider(defaults, customModelsConfig.provider).length),
       ];
     }),
   ) as Record<ProviderKind, boolean>;
@@ -475,12 +599,36 @@ function createClosedProviderInstallDisclosureState(): Record<ProviderKind, bool
   ) as Record<ProviderKind, boolean>;
 }
 
-export function createProviderInstallResetPatch(defaults: AppSettings): Partial<AppSettings> {
-  return Object.fromEntries(
-    PROVIDER_INSTALL_SETTINGS.flatMap((config) =>
-      config.fields.map((field) => [field.settingsKey, defaults[field.settingsKey]]),
-    ),
-  ) as Partial<AppSettings>;
+export function createProviderInstallResetPatch(defaults: ServerSettingsView): ServerSettingsPatch {
+  return {
+    providers: {
+      codex: {
+        binaryPath: defaults.providers.codex.binaryPath,
+        homePath: defaults.providers.codex.homePath,
+      },
+      claudeAgent: { binaryPath: defaults.providers.claudeAgent.binaryPath },
+      cursor: {
+        binaryPath: defaults.providers.cursor.binaryPath,
+        apiEndpoint: defaults.providers.cursor.apiEndpoint,
+      },
+      antigravity: { binaryPath: defaults.providers.antigravity.binaryPath },
+      grok: { binaryPath: defaults.providers.grok.binaryPath },
+      droid: { binaryPath: defaults.providers.droid.binaryPath },
+      kilo: {
+        binaryPath: defaults.providers.kilo.binaryPath,
+        serverUrl: defaults.providers.kilo.serverUrl,
+      },
+      opencode: {
+        binaryPath: defaults.providers.opencode.binaryPath,
+        serverUrl: defaults.providers.opencode.serverUrl,
+        experimentalWebSockets: defaults.providers.opencode.experimentalWebSockets,
+      },
+      pi: {
+        binaryPath: defaults.providers.pi.binaryPath,
+        agentDir: defaults.providers.pi.agentDir,
+      },
+    },
+  };
 }
 
 function setProviderHidden(
@@ -679,8 +827,10 @@ function ProviderUpdateAction(props: {
 
 function ProviderInstallFieldControl(props: {
   field: ProviderInstallField;
-  settings: AppSettings;
-  updateSettings: (patch: Partial<AppSettings>) => void;
+  settings: ServerSettingsView;
+  value: string | boolean;
+  disabled: boolean;
+  onChange: (value: string | boolean) => void;
 }) {
   const { t } = useI18n();
   const id = `provider-install-${props.field.settingsKey}`;
@@ -704,30 +854,30 @@ function ProviderInstallFieldControl(props: {
         </span>
         <Switch
           id={id}
-          checked={props.settings[props.field.settingsKey]}
-          onCheckedChange={(checked) =>
-            props.updateSettings({ [props.field.settingsKey]: Boolean(checked) })
-          }
+          disabled={props.disabled}
+          checked={Boolean(props.value)}
+          onCheckedChange={(checked) => props.onChange(Boolean(checked))}
         />
       </label>
     );
   }
 
   const configured =
-    props.field.kind === "password" ? props.settings[props.field.configuredKey] : false;
+    props.field.kind === "password"
+      ? Boolean(readProviderInstallField(props.settings, props.field))
+      : false;
   const isPassword = props.field.kind === "password";
   return (
     <label htmlFor={id} className="block">
       <span className="block text-xs font-medium text-foreground">{label}</span>
-      <DebouncedSettingTextInput
+      <Input
         id={id}
         size="sm"
         variant="soft"
         className="mt-1"
-        value={isPassword ? "" : props.settings[props.field.settingsKey]}
-        onCommit={(nextValue) =>
-          props.updateSettings({ [props.field.settingsKey]: nextValue } as Partial<AppSettings>)
-        }
+        disabled={props.disabled}
+        value={String(props.value)}
+        onChange={(event) => props.onChange(event.target.value)}
         placeholder={
           isPassword && configured
             ? t("settings.configuredPassword")
@@ -746,9 +896,11 @@ function ProviderInstallFieldControl(props: {
 
 function ProviderCustomModelsEditor(props: {
   provider: ProviderKind;
-  settings: AppSettings;
-  defaults: AppSettings;
-  updateSettings: (patch: Partial<AppSettings>) => void;
+  settings: ServerSettingsView;
+  defaults: ServerSettingsView;
+  updateServerSettings: (
+    patch: ServerSettingsPatch,
+  ) => Promise<{ readonly state: "saved" | "failed" }>;
 }) {
   const { t } = useI18n();
   const config = CUSTOM_MODEL_EDITOR_PROVIDER_SETTINGS.find(
@@ -760,7 +912,7 @@ function ProviderCustomModelsEditor(props: {
 
   const provider = config.provider;
   const savedModels = getCustomModelsForProvider(props.settings, provider);
-  const defaultModels = getDefaultCustomModelsForProvider(props.defaults, provider);
+  const defaultModels = getDefaultCustomModelsForProvider(provider);
   const isDirty = JSON.stringify(savedModels) !== JSON.stringify(defaultModels);
   const addModel = () => {
     const result = validateProviderCustomModelInput({
@@ -780,7 +932,7 @@ function ProviderCustomModelsEditor(props: {
       );
       return;
     }
-    props.updateSettings(patchCustomModels(provider, [...savedModels, result.model]));
+    void props.updateServerSettings(patchCustomModels(provider, [...savedModels, result.model]));
     setInput("");
     setError(null);
   };
@@ -797,7 +949,9 @@ function ProviderCustomModelsEditor(props: {
         {isDirty ? (
           <SettingResetButton
             label={t("settings.customModels")}
-            onClick={() => props.updateSettings(patchCustomModels(provider, [...defaultModels]))}
+            onClick={() =>
+              void props.updateServerSettings(patchCustomModels(provider, [...defaultModels]))
+            }
           />
         ) : null}
       </div>
@@ -838,7 +992,7 @@ function ProviderCustomModelsEditor(props: {
                 variant="ghost"
                 aria-label={t("settings.removeModel", { model })}
                 onClick={() =>
-                  props.updateSettings(
+                  void props.updateServerSettings(
                     patchCustomModels(
                       provider,
                       savedModels.filter((candidate) => candidate !== model),
@@ -859,19 +1013,139 @@ function ProviderCustomModelsEditor(props: {
 function ProviderToolRow(props: {
   config: ProviderInstallSettings;
   open: boolean;
-  settings: AppSettings;
-  defaults: AppSettings;
+  settings: ServerSettingsView;
+  defaults: ServerSettingsView;
   hiddenProviderSet: ReadonlySet<ProviderKind>;
   serverSettings: Pick<ServerSettingsView, "providers" | "enableProviderUpdateChecks"> | null;
   providerStatus: ServerProviderStatus | undefined;
   updatingProviders: ReadonlySet<ProviderKind>;
   onOpenChange: (open: boolean) => void;
   onUpdate: (provider: ProviderKind) => void;
-  updateSettings: (patch: Partial<AppSettings>) => void;
+  updateServerSettings: (
+    patch: ServerSettingsPatch,
+  ) => Promise<{ readonly state: "saved" | "failed" }>;
+  updateCredential: (
+    provider: "kilo" | "opencode",
+    password: string,
+  ) => Promise<{ readonly state: "saved" | "failed" }>;
 }) {
   const { t } = useI18n();
   const title = PROVIDER_DISPLAY_NAMES[props.config.provider];
-  const isDirty = isProviderInstallConfigDirty(props.config, props.settings, props.defaults);
+  const [draft, setDraft] = useState<ProviderInstallDraft>(() =>
+    createProviderInstallDraft(props.config, props.settings),
+  );
+  const [dirtyKeys, setDirtyKeys] = useState<ReadonlySet<ProviderInstallFieldKey>>(() => new Set());
+  const [saving, setSaving] = useState(false);
+  const saveRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    setDirtyKeys((current) => {
+      const next = new Set(current);
+      for (const field of props.config.fields) {
+        if (
+          field.kind !== "password" &&
+          next.has(field.settingsKey) &&
+          providerInstallDraftValue(draft, props.settings, field) ===
+            readProviderInstallField(props.settings, field)
+        ) {
+          next.delete(field.settingsKey);
+        }
+      }
+      return next.size === current.size && [...next].every((key) => current.has(key))
+        ? current
+        : next;
+    });
+  }, [draft, props.config.fields, props.settings]);
+
+  useEffect(() => {
+    setDraft((current) => {
+      let changed = false;
+      const next = { ...current };
+      for (const field of props.config.fields) {
+        if (dirtyKeys.has(field.settingsKey)) continue;
+        const authoritative =
+          field.kind === "password" ? "" : readProviderInstallField(props.settings, field);
+        if (next[field.settingsKey] !== authoritative) {
+          next[field.settingsKey] = authoritative;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+  }, [dirtyKeys, props.config.fields, props.settings]);
+
+  const updateDraft = (field: ProviderInstallField, value: string | boolean) => {
+    saveRequestIdRef.current += 1;
+    setSaving(false);
+    setDraft((current) => ({ ...current, [field.settingsKey]: value }));
+    setDirtyKeys((current) => new Set(current).add(field.settingsKey));
+  };
+
+  const discardDraft = () => {
+    saveRequestIdRef.current += 1;
+    setSaving(false);
+    setDraft(createProviderInstallDraft(props.config, props.settings));
+    setDirtyKeys(new Set());
+  };
+
+  const saveDraft = async () => {
+    const requestId = ++saveRequestIdRef.current;
+    setSaving(true);
+    const serverPatch = createProviderInstallDraftServerPatch({
+      config: props.config,
+      settings: props.settings,
+      draft,
+      dirtyKeys,
+    });
+    if (serverPatch !== null) {
+      const result = await props.updateServerSettings(serverPatch);
+      if (requestId !== saveRequestIdRef.current) return;
+      if (result.state === "failed") {
+        setSaving(false);
+        return;
+      }
+    }
+
+    const passwordField = props.config.fields.find(
+      (field): field is ProviderInstallPasswordField =>
+        field.kind === "password" && dirtyKeys.has(field.settingsKey),
+    );
+    if (passwordField) {
+      const provider = passwordField.settingsKey === "kiloServerPassword" ? "kilo" : "opencode";
+      const result = await props.updateCredential(
+        provider,
+        String(providerInstallDraftValue(draft, props.settings, passwordField)),
+      );
+      if (requestId !== saveRequestIdRef.current) return;
+      if (result.state === "failed") {
+        toastManager.add({
+          type: serverPatch === null ? "error" : "warning",
+          title: t(
+            serverPatch === null
+              ? "settings.providerConfigSaveFailed"
+              : "settings.providerConfigSavedCredentialFailed",
+          ),
+          description: t(
+            serverPatch === null
+              ? "settings.providerConfigSaveRecovery"
+              : "settings.providerConfigSavedCredentialFailedDescription",
+          ),
+        });
+        setSaving(false);
+        return;
+      }
+      setDraft((current) => ({ ...current, [passwordField.settingsKey]: "" }));
+      setDirtyKeys((current) => {
+        const next = new Set(current);
+        next.delete(passwordField.settingsKey);
+        return next;
+      });
+    }
+    if (requestId === saveRequestIdRef.current) setSaving(false);
+  };
+  const isDirty =
+    dirtyKeys.size > 0 ||
+    isProviderInstallConfigDirty(props.config, props.settings, props.defaults);
   const showProviderUpdateStatus = props.providerStatus
     ? shouldShowProviderUpdateStatus({
         provider: props.providerStatus,
@@ -982,14 +1256,27 @@ function ProviderToolRow(props: {
                   key={field.settingsKey}
                   field={field}
                   settings={props.settings}
-                  updateSettings={props.updateSettings}
+                  value={providerInstallDraftValue(draft, props.settings, field)}
+                  disabled={saving}
+                  onChange={(value) => updateDraft(field, value)}
                 />
               ))}
+              {dirtyKeys.size > 0 ? (
+                <div className="flex items-center justify-end gap-2">
+                  <Button size="sm" variant="ghost" disabled={saving} onClick={discardDraft}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button size="sm" disabled={saving} onClick={() => void saveDraft()}>
+                    {saving ? <Loader2Icon className="size-3.5 animate-spin" /> : null}
+                    {t("settings.save")}
+                  </Button>
+                </div>
+              ) : null}
               <ProviderCustomModelsEditor
                 provider={props.config.provider}
                 settings={props.settings}
                 defaults={props.defaults}
-                updateSettings={props.updateSettings}
+                updateServerSettings={props.updateServerSettings}
               />
             </div>
           </div>
@@ -999,31 +1286,62 @@ function ProviderToolRow(props: {
   );
 }
 
-export type ProvidersSettingsPanelProps = AppSettingsBinding & {
+export type ProvidersSettingsPanelProps = {
   readonly active: boolean;
   readonly resetEpoch: number;
 };
 
-export function ProvidersSettingsPanel({
-  settings,
-  defaults,
-  updateSettings,
-  active,
-  resetEpoch,
-}: ProvidersSettingsPanelProps) {
+export function ProvidersSettingsPanel({ active, resetEpoch }: ProvidersSettingsPanelProps) {
   const { t } = useI18n();
   const queryClient = useQueryClient();
+  const { preferences, defaults: preferenceDefaults, updatePreferences } = useLocalPreferences();
+  const {
+    query: serverSettingsQuery,
+    settings,
+    defaults,
+    updateServerSettings: mutateServerSettings,
+    updateProviderCredential: mutateProviderCredential,
+  } = useServerSettings();
+  const updateServerSettings = useCallback(
+    async (patch: ServerSettingsPatch) => {
+      const result = await mutateServerSettings(patch);
+      if (result.state === "failed") {
+        toastManager.add({
+          type: "error",
+          title: t("settings.providerConfigSaveFailed"),
+          description: t("settings.providerConfigSaveRecovery"),
+        });
+      }
+      return result;
+    },
+    [mutateServerSettings, t],
+  );
+  const resetProviderTools = useCallback(async () => {
+    const results = await Promise.all([
+      mutateServerSettings(createProviderInstallResetPatch(defaults)),
+      mutateProviderCredential("kilo", ""),
+      mutateProviderCredential("opencode", ""),
+    ]);
+    if (results.some((result) => result.state === "failed")) {
+      toastManager.add({
+        type: "warning",
+        title: t("settings.restorePartiallyCompleted"),
+        description: t("settings.restorePartiallyCompletedDescription"),
+      });
+      return;
+    }
+    setOpenInstallProviders(createClosedProviderInstallDisclosureState());
+  }, [defaults, mutateProviderCredential, mutateServerSettings, t]);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
-  const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const [openInstallProviders, setOpenInstallProviders] = useState<Record<ProviderKind, boolean>>(
-    () => createProviderInstallDisclosureState(settings),
+    () => createProviderInstallDisclosureState(settings ?? defaults, defaults),
   );
   const [updatingProviders, setUpdatingProviders] = useState<ReadonlySet<ProviderKind>>(
     () => new Set(),
   );
   const hiddenProviderSet = useMemo(
-    () => new Set<ProviderKind>(settings.hiddenProviders),
-    [settings.hiddenProviders],
+    () => new Set<ProviderKind>(preferences.hiddenProviders),
+    [preferences.hiddenProviders],
   );
   const hiddenProviderCount = hiddenProviderSet.size;
   const providerVisibilityOptionsByProvider = useMemo(
@@ -1032,16 +1350,19 @@ export function ProvidersSettingsPanel({
   );
   const orderedProviderVisibilityOptions = useMemo(
     () =>
-      settings.providerOrder.flatMap((provider) => {
+      preferences.providerOrder.flatMap((provider) => {
         const option = providerVisibilityOptionsByProvider.get(provider);
         return option ? [option] : [];
       }),
-    [providerVisibilityOptionsByProvider, settings.providerOrder],
+    [providerVisibilityOptionsByProvider, preferences.providerOrder],
   );
   const providerVisibilitySensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
-  const isProviderOrderDirty = !sameProviderOrder(settings.providerOrder, defaults.providerOrder);
+  const isProviderOrderDirty = !sameProviderOrder(
+    preferences.providerOrder,
+    preferenceDefaults.providerOrder,
+  );
   const providerStatusByProvider = useMemo(
     () =>
       new Map((serverConfigQuery.data?.providers ?? []).map((status) => [status.provider, status])),
@@ -1054,7 +1375,9 @@ export function ProvidersSettingsPanel({
           const normalized = normalizeProviderStatusForLocalConfig({
             provider: status.provider,
             status,
-            customBinaryPath: getCustomBinaryPathForProvider(settings, status.provider),
+            customBinaryPath: settings
+              ? getCustomBinaryPathForProvider(settings, status.provider)
+              : "",
           });
           return normalized ? ([[normalized.provider, normalized]] as const) : [];
         }),
@@ -1066,25 +1389,27 @@ export function ProvidersSettingsPanel({
   ).length;
   const providerUpdateServerSettings = useMemo(
     () =>
-      serverSettingsQuery.data
+      settings
         ? {
-            ...serverSettingsQuery.data,
+            ...settings,
             enableProviderUpdateChecks: settings.enableProviderUpdateChecks,
           }
         : null,
-    [serverSettingsQuery.data, settings.enableProviderUpdateChecks],
+    [settings],
   );
   const outdatedProviderStatuses = useMemo(
     () =>
       getVisibleProviderUpdateStatuses({
         providers: serverConfigQuery.data?.providers ?? [],
-        hiddenProviders: settings.hiddenProviders,
+        hiddenProviders: preferences.hiddenProviders,
         serverSettings: providerUpdateServerSettings,
       }),
-    [providerUpdateServerSettings, serverConfigQuery.data?.providers, settings.hiddenProviders],
+    [providerUpdateServerSettings, serverConfigQuery.data?.providers, preferences.hiddenProviders],
   );
   const outdatedProviderCount = outdatedProviderStatuses.length;
-  const installSettingsDirty = isProviderInstallSettingsDirty(settings, defaults);
+  const installSettingsDirty = settings
+    ? isProviderInstallSettingsDirty(settings, defaults)
+    : false;
 
   useSettingsRestoreSignal(resetEpoch, () => {
     setOpenInstallProviders(createClosedProviderInstallDisclosureState());
@@ -1094,12 +1419,14 @@ export function ProvidersSettingsPanel({
     (event: DragEndEvent) => {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
-      const fromIndex = settings.providerOrder.indexOf(active.id as ProviderKind);
-      const toIndex = settings.providerOrder.indexOf(over.id as ProviderKind);
+      const fromIndex = preferences.providerOrder.indexOf(active.id as ProviderKind);
+      const toIndex = preferences.providerOrder.indexOf(over.id as ProviderKind);
       if (fromIndex < 0 || toIndex < 0) return;
-      updateSettings({ providerOrder: arrayMove([...settings.providerOrder], fromIndex, toIndex) });
+      updatePreferences({
+        providerOrder: arrayMove([...preferences.providerOrder], fromIndex, toIndex),
+      });
     },
-    [settings.providerOrder, updateSettings],
+    [preferences.providerOrder, updatePreferences],
   );
 
   const runProviderUpdate = useCallback(
@@ -1205,6 +1532,28 @@ export function ProvidersSettingsPanel({
   );
 
   if (!active) return null;
+  if (!settings) {
+    return (
+      <SettingsSection title={t("settings.providerTools")}>
+        <SettingsRow
+          title={t("settings.providerTools")}
+          description={t("settings.serverSettingsUnavailable")}
+          status={serverSettingsQuery.isPending ? t("common.loading") : t("settings.unavailable")}
+          control={
+            serverSettingsQuery.isError ? (
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => void serverSettingsQuery.refetch()}
+              >
+                {t("common.retry")}
+              </Button>
+            ) : undefined
+          }
+        />
+      </SettingsSection>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -1219,7 +1568,7 @@ export function ProvidersSettingsPanel({
                 <SettingResetButton
                   label={t("settings.automaticCliUpdates")}
                   onClick={() =>
-                    updateSettings({
+                    void updateServerSettings({
                       enableProviderUpdateChecks: defaults.enableProviderUpdateChecks,
                     })
                   }
@@ -1229,9 +1578,9 @@ export function ProvidersSettingsPanel({
             control={
               <Switch
                 checked={settings.enableProviderUpdateChecks}
-                onCheckedChange={(checked) =>
-                  updateSettings({ enableProviderUpdateChecks: Boolean(checked) })
-                }
+                onCheckedChange={(checked) => {
+                  void updateServerSettings({ enableProviderUpdateChecks: Boolean(checked) });
+                }}
                 aria-label={t("settings.automaticCliUpdates")}
               />
             }
@@ -1313,9 +1662,9 @@ export function ProvidersSettingsPanel({
               <SettingResetButton
                 label={t("settings.providerPicker")}
                 onClick={() =>
-                  updateSettings({
-                    hiddenProviders: defaults.hiddenProviders,
-                    providerOrder: defaults.providerOrder,
+                  updatePreferences({
+                    hiddenProviders: preferenceDefaults.hiddenProviders,
+                    providerOrder: preferenceDefaults.providerOrder,
                   })
                 }
               />
@@ -1341,9 +1690,9 @@ export function ProvidersSettingsPanel({
                     statusPending={serverConfigQuery.isPending}
                     isHidden={hiddenProviderSet.has(option.provider)}
                     onHiddenChange={(hidden) =>
-                      updateSettings({
+                      updatePreferences({
                         hiddenProviders: setProviderHidden(
-                          settings.hiddenProviders,
+                          preferences.hiddenProviders,
                           option.provider,
                           hidden,
                         ),
@@ -1375,8 +1724,7 @@ export function ProvidersSettingsPanel({
                 <SettingResetButton
                   label={t("settings.providerTools")}
                   onClick={() => {
-                    updateSettings(createProviderInstallResetPatch(defaults));
-                    setOpenInstallProviders(createClosedProviderInstallDisclosureState());
+                    void resetProviderTools();
                   }}
                 />
               ) : null
@@ -1402,7 +1750,8 @@ export function ProvidersSettingsPanel({
                       }))
                     }
                     onUpdate={(provider) => void runProviderUpdate(provider)}
-                    updateSettings={updateSettings}
+                    updateServerSettings={updateServerSettings}
+                    updateCredential={mutateProviderCredential}
                   />
                 ))}
               </div>

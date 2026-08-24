@@ -14,15 +14,7 @@ import {
   deriveProviderPickerAvailability,
   type ProviderPickerAvailabilityState,
 } from "../../lib/providerAvailability";
-import {
-  Menu,
-  MenuItem,
-  MenuRadioGroup,
-  MenuSeparator,
-  MenuSub,
-  MenuSubTrigger,
-  MenuTrigger,
-} from "../ui/menu";
+import { Menu, MenuItem, MenuRadioGroup, MenuSub, MenuSubTrigger, MenuTrigger } from "../ui/menu";
 import { PROVIDER_ICON_COMPONENT_BY_PROVIDER } from "../ProviderIcon";
 import { cn } from "~/lib/utils";
 import { PickerPanelShell } from "./PickerPanelShell";
@@ -53,16 +45,7 @@ import { useI18n } from "~/i18n";
 import type { ProviderModelCatalogState } from "../../hooks/useProviderModelCatalog";
 import { resolveComposerModelFallbackMessageKey } from "./modelCatalogPresentation";
 
-function isAvailableProviderOption(option: (typeof PROVIDER_OPTIONS)[number]): option is {
-  value: ProviderKind;
-  label: string;
-  available: true;
-} {
-  return option.available;
-}
-
-export const AVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter(isAvailableProviderOption);
-const UNAVAILABLE_PROVIDER_OPTIONS = PROVIDER_OPTIONS.filter((option) => !option.available);
+export const PROVIDER_MODEL_OPTIONS = PROVIDER_OPTIONS;
 
 function providerIconClassName(
   provider: ProviderKind | ProviderPickerKind,
@@ -182,15 +165,8 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
   if (props.lockedProvider !== null) {
     protectedProviderSet.add(props.lockedProvider);
   }
-  const visibleAvailableProviderOptions = filterProviderOptionsByVisibility(
-    AVAILABLE_PROVIDER_OPTIONS.toSorted((left, right) =>
-      compareProvidersByOrder(providerOrder ?? [], left.value, right.value),
-    ),
-    hiddenProviderSet,
-    protectedProviderSet,
-  );
-  const visibleUnavailableProviderOptions = filterProviderOptionsByVisibility(
-    UNAVAILABLE_PROVIDER_OPTIONS.toSorted((left, right) =>
+  const visibleProviderOptions = filterProviderOptionsByVisibility(
+    PROVIDER_MODEL_OPTIONS.toSorted((left, right) =>
       compareProvidersByOrder(providerOrder ?? [], left.value, right.value),
     ),
     hiddenProviderSet,
@@ -337,7 +313,7 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
 
   return (
     <>
-      {visibleAvailableProviderOptions.map((option) => {
+      {visibleProviderOptions.map((option) => {
         const OptionIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[option.value];
         const liveProvider = props.providers?.find((entry) => entry.provider === option.value);
         const availability = deriveProviderPickerAvailability(liveProvider);
@@ -397,22 +373,6 @@ export const ProviderModelMenuItems = function ProviderModelMenuItems(
               {renderModelRadioGroup(option.value)}
             </ComposerPickerMenuSubPopup>
           </MenuSub>
-        );
-      })}
-      {visibleUnavailableProviderOptions.length > 0 && <MenuSeparator />}
-      {visibleUnavailableProviderOptions.map((option) => {
-        const OptionIcon = PROVIDER_ICON_COMPONENT_BY_PROVIDER[option.value];
-        return (
-          <MenuItem key={option.value} disabled>
-            <OptionIcon
-              aria-hidden="true"
-              className="size-3 shrink-0 text-muted-foreground/85 opacity-80"
-            />
-            <span>{option.label}</span>
-            <span className="ms-auto text-[11px] text-muted-foreground/80">
-              {t("composer.engineComingSoon")}
-            </span>
-          </MenuItem>
         );
       })}
     </>

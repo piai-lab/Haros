@@ -6,19 +6,7 @@
 import { Schema } from "effect";
 import { TrimmedNonEmptyString } from "./baseSchemas";
 import { ProviderOptionDescriptor } from "./model";
-
-const ProviderDiscoveryKind = Schema.Literals([
-  "omnimind",
-  "codex",
-  "claudeAgent",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
-]);
+import { ProviderKind } from "./providerIdentity";
 
 export const ProviderSkillInterface = Schema.Struct({
   displayName: Schema.optional(TrimmedNonEmptyString),
@@ -51,7 +39,7 @@ export const ProviderMentionReference = Schema.Struct({
 export type ProviderMentionReference = typeof ProviderMentionReference.Type;
 
 export const ProviderComposerCapabilities = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
   supportsSkillMentions: Schema.Boolean,
   supportsSkillDiscovery: Schema.Boolean,
   supportsNativeSlashCommandDiscovery: Schema.Boolean,
@@ -64,12 +52,12 @@ export const ProviderComposerCapabilities = Schema.Struct({
 export type ProviderComposerCapabilities = typeof ProviderComposerCapabilities.Type;
 
 export const ProviderGetComposerCapabilitiesInput = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
 });
 export type ProviderGetComposerCapabilitiesInput = typeof ProviderGetComposerCapabilitiesInput.Type;
 
 export const ProviderListSkillsInput = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
@@ -111,7 +99,7 @@ export const ProviderNativeCommandDescriptor = Schema.Struct({
 export type ProviderNativeCommandDescriptor = typeof ProviderNativeCommandDescriptor.Type;
 
 export const ProviderListCommandsInput = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
   cwd: TrimmedNonEmptyString,
   threadId: Schema.optional(TrimmedNonEmptyString),
   binaryPath: Schema.optional(TrimmedNonEmptyString),
@@ -205,7 +193,7 @@ export const ProviderPluginAppSummary = Schema.Struct({
 export type ProviderPluginAppSummary = typeof ProviderPluginAppSummary.Type;
 
 export const ProviderListPluginsInput = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
   cwd: Schema.optional(TrimmedNonEmptyString),
   threadId: Schema.optional(TrimmedNonEmptyString),
   forceRemoteSync: Schema.optional(Schema.Boolean),
@@ -224,7 +212,7 @@ export const ProviderListPluginsResult = Schema.Struct({
 export type ProviderListPluginsResult = typeof ProviderListPluginsResult.Type;
 
 export const ProviderReadPluginInput = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
   marketplacePath: TrimmedNonEmptyString,
   pluginName: TrimmedNonEmptyString,
   cwd: Schema.optional(TrimmedNonEmptyString),
@@ -251,7 +239,7 @@ export const ProviderReadPluginResult = Schema.Struct({
 export type ProviderReadPluginResult = typeof ProviderReadPluginResult.Type;
 
 export const ProviderListModelsInput = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   apiEndpoint: Schema.optional(TrimmedNonEmptyString),
   agentDir: Schema.optional(TrimmedNonEmptyString),
@@ -304,7 +292,7 @@ export const ProviderListModelsResult = Schema.Struct({
 export type ProviderListModelsResult = typeof ProviderListModelsResult.Type;
 
 export const ProviderListAgentsInput = Schema.Struct({
-  provider: ProviderDiscoveryKind,
+  provider: ProviderKind,
   binaryPath: Schema.optional(TrimmedNonEmptyString),
   cwd: Schema.optional(TrimmedNonEmptyString),
 });

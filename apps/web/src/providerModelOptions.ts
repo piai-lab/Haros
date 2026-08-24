@@ -4,7 +4,6 @@ import {
   normalizeModelSlug,
 } from "@omnimind/shared/model";
 import {
-  PROVIDER_DISPLAY_NAMES,
   type AntigravityModelOptions,
   type AntigravityModelSelection,
   type ClaudeModelOptions,
@@ -26,6 +25,7 @@ import {
   type ProviderKind,
   type ProviderModelOptions,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { normalizeCursorModelVariantBaseId } from "./cursorModelVariants";
 
 export type ProviderOptions = ProviderModelOptions[ProviderKind];

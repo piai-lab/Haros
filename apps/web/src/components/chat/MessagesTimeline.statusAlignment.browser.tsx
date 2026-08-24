@@ -12,9 +12,9 @@ const harness = vi.hoisted((): { settings: { localePreference: "en" | "zh-CN" } 
   settings: { localePreference: "en" },
 }));
 
-vi.mock("~/appSettings", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/appSettings")>()),
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("~/localPreferences", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/localPreferences")>()),
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 import { I18nProvider } from "~/i18n";
@@ -148,7 +148,7 @@ describe("MessagesTimeline turn-status alignment", () => {
         expect(headerRow).not.toBeNull();
         expect(workingRow).not.toBeNull();
         expect(headerLabel?.textContent).toContain(
-          locale === "zh-CN" ? "正在工作，已用时 2s" : "Working for 2s",
+          locale === "zh-CN" ? "正在工作，已用时 2.0秒" : "Working for 2s",
         );
         expect(orb).not.toBeNull();
         if (!headerRow || !workingRow || !headerLabel || !orb) return;

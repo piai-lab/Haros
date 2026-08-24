@@ -10,7 +10,6 @@
 import type {
   ApprovalRequestId,
   MessageDispatchOrigin,
-  ProviderComposerCapabilities,
   ProviderApprovalDecision,
   ProviderForkThreadInput,
   ProviderForkThreadResult,
@@ -30,6 +29,7 @@ import type {
   ProviderStartReviewInput,
   ProviderUserInputAnswers,
   ProviderRuntimeEvent,
+  RuntimeMode,
   ProviderSendTurnInput,
   ProviderSteerTurnInput,
   ProviderSession,
@@ -100,7 +100,11 @@ export interface ProviderAdapterCapabilities {
   readonly supportsPluginMentions?: boolean;
   readonly supportsPluginDiscovery?: boolean;
   readonly supportsRuntimeModelList?: boolean;
+  readonly supportsThreadCompaction?: boolean;
+  readonly supportsThreadImport?: boolean;
   readonly supportsTurnSteering?: boolean;
+  /** Structurally executable modes for this exact adapter and Host bridge. */
+  readonly supportedRuntimeModes?: ReadonlySet<RuntimeMode>;
   /** True when `turn.diff.updated.payload.unifiedDiff` contains a parseable live patch. */
   readonly supportsLiveTurnDiffPatch?: boolean;
 }
@@ -270,11 +274,6 @@ export interface ProviderAdapterShape<TError> {
    * Canonical runtime event stream emitted by this adapter.
    */
   readonly streamEvents: Stream.Stream<ProviderRuntimeEvent>;
-
-  /**
-   * Read provider-specific composer capabilities.
-   */
-  readonly getComposerCapabilities?: () => Effect.Effect<ProviderComposerCapabilities, TError>;
 
   /**
    * List skills available for a given cwd.

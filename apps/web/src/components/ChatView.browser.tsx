@@ -13,10 +13,13 @@ import {
   ORCHESTRATION_WS_METHODS,
   type OrchestrationReadModel,
   type ProjectId,
+  type ProviderExecutionCapabilities,
   type ProviderKind,
   type ProviderListCommandsResult,
   type ProviderListModelsResult,
   type ServerConfig,
+  type ServerSettingsView,
+  DEFAULT_SERVER_SETTINGS_VIEW,
   ThreadId,
   TurnId,
   type WsWelcomePayload,
@@ -42,7 +45,7 @@ import {
   useComposerDraftStore,
 } from "../composerDraftStore";
 import { appHistory } from "../appNavigation";
-import { APP_SETTINGS_STORAGE_KEY } from "../appSettings";
+import { LOCAL_PREFERENCES_STORAGE_KEY } from "../localPreferences";
 import { THREAD_SIDEBAR_WIDTH_STORAGE_KEY } from "../appearanceMigrations";
 import { EN_MESSAGES, ZH_CN_MESSAGES } from "../i18n";
 import {
@@ -134,11 +137,15 @@ interface WsRequestEnvelope {
 interface TestFixture {
   snapshot: OrchestrationReadModel;
   serverConfig: ServerConfig;
+  serverSettings: ServerSettingsView;
   providerPassivePresence?: ReadonlyArray<ProviderKind>;
   welcome: WsWelcomePayload;
   gitBranchByCwd: Record<string, string>;
   gitHasWorkingTreeChanges?: boolean;
   providerCommandsByProvider: Partial<Record<ProviderKind, ProviderListCommandsResult>>;
+  providerExecutionCapabilitiesByProvider: Partial<
+    Record<ProviderKind, ProviderExecutionCapabilities>
+  >;
   providerModelsByProvider: Partial<Record<ProviderKind, ProviderListModelsResult>>;
 }
 
@@ -666,8 +673,10 @@ function buildFixture(snapshot: OrchestrationReadModel): TestFixture {
   return {
     snapshot,
     serverConfig: createBaseServerConfig(),
+    serverSettings: DEFAULT_SERVER_SETTINGS_VIEW,
     gitBranchByCwd: {},
     providerCommandsByProvider: {},
+    providerExecutionCapabilitiesByProvider: {},
     providerModelsByProvider: {
       codex: {
         source: "browser.fixture",
@@ -1452,6 +1461,9 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
   if (tag === WS_METHODS.serverGetConfig) {
     return fixture.serverConfig;
   }
+  if (tag === WS_METHODS.serverGetSettings) {
+    return fixture.serverSettings;
+  }
   if (tag === WS_METHODS.providerListModels) {
     const provider = typeof body.provider === "string" ? (body.provider as ProviderKind) : null;
     return provider
@@ -1474,6 +1486,30 @@ function resolveWsRpc(body: WsRequestEnvelope["body"]): unknown {
       supportsRuntimeModelList: false,
       supportsThreadCompaction: false,
       supportsThreadImport: false,
+    };
+  }
+  if (tag === WS_METHODS.providerGetExecutionCapabilities) {
+    const modelSelection = body.modelSelection as {
+      provider: ProviderKind;
+      model: string;
+      supportsAutoMode?: boolean;
+    };
+    const configured = fixture.providerExecutionCapabilitiesByProvider[modelSelection.provider];
+    if (configured) return configured;
+    const capability = (mode: "full-access" | "auto" | "approval-required") => ({
+      mode,
+      structurallySupported: true,
+      status: "ready" as const,
+    });
+    return {
+      provider: modelSelection.provider,
+      model: modelSelection.model,
+      supportsNativeTurnSteering: false,
+      runtimeModes: {
+        "full-access": capability("full-access"),
+        auto: capability("auto"),
+        "approval-required": capability("approval-required"),
+      },
     };
   }
   if (tag === WS_METHODS.providerListCommands) {
@@ -2773,7 +2809,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("does not translate a wide chat column underneath the message trail", async () => {
-    localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
+    localStorage.setItem(LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
     const mounted = await mountChatView({
       viewport: { ...DEFAULT_VIEWPORT, width: 1358, height: 1072 },
       snapshot: createSnapshotForTargetUser({
@@ -3598,7 +3634,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     "keeps the constrained shell bounded at 480x620 in $locale $theme mode",
     async ({ locale, theme }) => {
       localStorage.setItem(
-        "omnimind:app-settings:v1",
+        LOCAL_PREFERENCES_STORAGE_KEY,
         JSON.stringify({ localePreference: locale }),
       );
       document.documentElement.classList.toggle("dark", theme === "dark");
@@ -4607,7 +4643,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
     "keeps an empty $mode header identity-free in $locale",
     async ({ locale, mode, projectId, threadId }) => {
       localStorage.setItem(
-        "omnimind:app-settings:v1",
+        LOCAL_PREFERENCES_STORAGE_KEY,
         JSON.stringify({ localePreference: locale }),
       );
       const draftThreadId = ThreadId.makeUnsafe(threadId);
@@ -4905,6 +4941,78 @@ describe("ChatView timeline estimator parity (full app)", () => {
           "approval-required",
         );
       });
+      expect(
+        wsRequests
+          .map(readDispatchedCommand)
+          .filter((command) => command?.type === "thread.runtime-mode.set"),
+      ).toHaveLength(0);
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps an unsupported persisted access mode visible until the user chooses a replacement", async () => {
+    const baseSnapshot = createSnapshotForTargetUser({
+      targetMessageId: "msg-user-runtime-unsupported" as MessageId,
+      targetText: "runtime unsupported",
+    });
+    const snapshot: OrchestrationReadModel = {
+      ...baseSnapshot,
+      threads: baseSnapshot.threads.map((thread) => ({
+        ...thread,
+        runtimeMode: "auto",
+        session: null,
+      })),
+    };
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot,
+      configureFixture: (nextFixture) => {
+        nextFixture.providerExecutionCapabilitiesByProvider.codex = {
+          provider: "codex",
+          model: "gpt-5",
+          supportsNativeTurnSteering: true,
+          runtimeModes: {
+            "full-access": {
+              mode: "full-access",
+              structurallySupported: true,
+              status: "ready",
+            },
+            auto: {
+              mode: "auto",
+              structurallySupported: false,
+              status: "unavailable",
+              reason: "mode-unsupported",
+            },
+            "approval-required": {
+              mode: "approval-required",
+              structurallySupported: true,
+              status: "ready",
+            },
+          },
+        };
+      },
+    });
+
+    try {
+      const autoTrigger = await waitForElement(
+        () => document.querySelector<HTMLButtonElement>('button[title^="Approve for me:"]'),
+        "The persisted Auto selection was not preserved in the Composer.",
+      );
+      autoTrigger.click();
+      const autoOption = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLElement>('[data-slot="menu-radio-item"]')).find(
+            (item) => item.textContent?.includes("Approve for me"),
+          ) ?? null,
+        "Unable to find the persisted Auto menu item.",
+      );
+      expect(autoOption.getAttribute("aria-disabled")).toBe("true");
+      expect(autoOption.textContent).toContain("Not supported by this engine and model");
+      expect(useStore.getState().threadShellById?.[THREAD_ID]?.runtimeMode).toBe("auto");
+      expect(
+        useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.runtimeMode ?? null,
+      ).toBeNull();
       expect(
         wsRequests
           .map(readDispatchedCommand)
@@ -8018,7 +8126,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("applies the selected chat width to the transcript column", async () => {
-    localStorage.setItem(APP_SETTINGS_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
+    localStorage.setItem(LOCAL_PREFERENCES_STORAGE_KEY, JSON.stringify({ chatWidth: "wide" }));
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
       snapshot: createSnapshotForTargetUser({
@@ -9464,7 +9572,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("steers a running turn when Follow-up behavior is set to Steer", async () => {
-    localStorage.setItem("omnimind:app-settings:v1", JSON.stringify({ followUpBehavior: "steer" }));
+    localStorage.setItem(
+      LOCAL_PREFERENCES_STORAGE_KEY,
+      JSON.stringify({ followUpBehavior: "steer" }),
+    );
     useComposerDraftStore.getState().setPrompt(THREAD_ID, "steer this running turn");
 
     const mounted = await mountChatView({
@@ -10947,10 +11058,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("offers first-run model setup only for a truly empty product and preserves the Chat draft", async () => {
-    localStorage.setItem(
-      "omnimind:app-settings:v1",
-      JSON.stringify({ defaultProvider: "omnimind" }),
-    );
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const setupImage = createComposerImage({
       id: "first-run-setup-image",
@@ -11302,10 +11409,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("persists a first-run defer choice without reopening on a cold mount", async () => {
-    localStorage.setItem(
-      "omnimind:app-settings:v1",
-      JSON.stringify({ defaultProvider: "omnimind" }),
-    );
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setPrompt(THREAD_ID, "Keep this deferred draft.");
     const listModelServices = vi.fn(async () => ({
@@ -11415,10 +11518,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("does not overwrite a newer Composer model intent when first-run setup finishes late", async () => {
-    localStorage.setItem(
-      "omnimind:app-settings:v1",
-      JSON.stringify({ defaultProvider: "omnimind" }),
-    );
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     const restoreNativeApi = installDeterministicSendNativeApi();
     const nativeApi = window.nativeApi!;
@@ -11514,10 +11613,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("requires an explicit model choice instead of sending with a configured catalog fallback", async () => {
-    localStorage.setItem(
-      "omnimind:app-settings:v1",
-      JSON.stringify({ defaultProvider: "omnimind" }),
-    );
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setActiveProviderAndSticky(THREAD_ID, "omnimind");
     const restoreNativeApi = installDeterministicSendNativeApi();
@@ -11644,10 +11739,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   });
 
   it("keeps an explicitly selected stored Extension model ready without passive execution", async () => {
-    localStorage.setItem(
-      "omnimind:app-settings:v1",
-      JSON.stringify({ defaultProvider: "omnimind" }),
-    );
     seedLocalDraftThread({ threadId: THREAD_ID, projectId: PROJECT_ID });
     useComposerDraftStore.getState().setModelSelectionAndSticky(THREAD_ID, {
       provider: "omnimind",
@@ -13543,7 +13634,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
   it.each(["omnimind", "pi"] as const)(
     "keeps a no-model Pi terminal rename local when the app default is %s",
     async (defaultProvider) => {
-      localStorage.setItem("omnimind:app-settings:v1", JSON.stringify({ defaultProvider }));
       const draftThreadId = ThreadId.makeUnsafe(`thread-terminal-pi-rename-${defaultProvider}`);
       seedLocalDraftThread({
         threadId: draftThreadId,
@@ -13557,6 +13647,10 @@ describe("ChatView timeline estimator parity (full app)", () => {
         snapshot: createDraftOnlySnapshot(),
         initialEntry: `/${draftThreadId}`,
         configureFixture: (nextFixture) => {
+          nextFixture.serverSettings = {
+            ...nextFixture.serverSettings,
+            defaultProvider,
+          };
           nextFixture.providerModelsByProvider.pi = {
             source: "browser.fixture",
             models: [],

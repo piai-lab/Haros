@@ -18,12 +18,10 @@ import {
 } from "@dnd-kit/core";
 import { useRef, useState } from "react";
 
-import {
-  getProviderStartOptions,
-  resolveAssistantDeliveryMode,
-  useAppSettings,
-} from "~/appSettings";
+import { getProviderStartOptions, resolveAssistantDeliveryMode } from "~/providerSettings";
+import { useServerSettings } from "~/serverSettings";
 import { toastManager } from "~/components/ui/toast";
+import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
 import { useProviderStatusesForLocalConfig } from "~/hooks/useProviderStatusesForLocalConfig";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
 import { useI18n } from "~/i18n";
@@ -72,9 +70,7 @@ export function KanbanProjectBoardView({
   nowMs?: number;
 }) {
   const { t } = useI18n();
-  const { settings } = useAppSettings();
-  const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
-  const providerOptionsForDispatch = getProviderStartOptions(settings);
+  const { fetchSettings } = useServerSettings();
   const providerStatuses = useProviderStatusesForLocalConfig();
   const refreshProviderStatuses = useRefreshProviderStatusesNow();
   const setDraftOrder = useKanbanUiStore((state) => state.setDraftOrder);
@@ -96,7 +92,18 @@ export function KanbanProjectBoardView({
   };
 
   const handleDispatchDrop = async (card: KanbanCard) => {
-    const targetProvider = card.provider ?? settings.defaultProvider;
+    let settingsSnapshot;
+    try {
+      settingsSnapshot = await fetchSettings();
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: t("kanban.couldNotSend"),
+        description: error instanceof Error ? error.message : t("kanban.notConnected"),
+      });
+      return;
+    }
+    const targetProvider = card.provider ?? settingsSnapshot.defaultProvider;
     const sendAvailability = await resolveProviderSendAvailabilityWithRefresh({
       provider: targetProvider,
       statuses: providerStatuses,
@@ -113,9 +120,9 @@ export function KanbanProjectBoardView({
     // to In Progress before any round-trip; failure results revert it.
     const result = await dispatchKanbanDraftCard({
       card,
-      defaultProvider: settings.defaultProvider,
-      assistantDeliveryMode,
-      providerOptions: providerOptionsForDispatch,
+      defaultProvider: settingsSnapshot.defaultProvider,
+      assistantDeliveryMode: resolveAssistantDeliveryMode(settingsSnapshot),
+      providerOptions: getProviderStartOptions(settingsSnapshot),
     });
     if (result.kind === "dispatched") {
       toastManager.add({
@@ -151,7 +158,10 @@ export function KanbanProjectBoardView({
     toastManager.add({
       type: "error",
       title: t("kanban.couldNotSend"),
-      description: result.message,
+      description: (() => {
+        const messageKey = runtimeModeAvailabilityMessageKeyFromError(result);
+        return messageKey ? t(messageKey) : result.message;
+      })(),
     });
   };
 

@@ -2,16 +2,17 @@
 // Purpose: Renders the chat thread's compact workspace controls, including the
 // local usage popover, inline workspace handoff actions, and runtime access toggle.
 import type {
-  ProviderKind,
-  ProviderModelDescriptor,
-  ServerProviderStatus,
+  ModelSelection,
+  ProviderExecutionCapabilities,
   ThreadId,
   RuntimeMode,
 } from "@omnimind/contracts";
 import { CheckIcon, ChevronDownIcon, HandoffIcon, WorktreeIcon } from "~/lib/icons";
 import { HiOutlineHandRaised } from "react-icons/hi2";
 import { CentralIcon } from "~/lib/central-icons";
+import { isProviderRuntimeModeExecutable } from "@omnimind/shared/runtimeMode";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useI18n } from "~/i18n";
 
 import { newCommandId, cn } from "../lib/utils";
@@ -19,7 +20,8 @@ import { readNativeApi } from "../nativeApi";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { useAccountCapacity } from "../hooks/useAccountCapacity";
 import { resolveThreadEnvironmentPresentation } from "../lib/threadEnvironment";
-import { providerModelSupportsAutoRuntimeMode } from "../lib/runtimeMode";
+import { providerExecutionCapabilitiesQueryOptions } from "../lib/providerDiscoveryReactQuery";
+import { RuntimeModeAvailabilityHint } from "./chat/RuntimeModeAvailabilityHint";
 import { useStore } from "../store";
 import { createProjectSelector, createThreadSelector } from "../storeSelectors";
 import {
@@ -105,10 +107,14 @@ function RuntimeModeMenuItem({
   mode,
   icon,
   accent = false,
+  capability,
+  capabilityResolution,
 }: {
   mode: RuntimeMode;
   icon: ReactNode;
   accent?: boolean;
+  capability?: ProviderExecutionCapabilities["runtimeModes"][RuntimeMode] | undefined;
+  capabilityResolution?: "pending" | "failed" | "resolved";
 }) {
   const { t } = useI18n();
   const presentation =
@@ -129,6 +135,7 @@ function RuntimeModeMenuItem({
   return (
     <MenuRadioItem
       value={mode}
+      disabled={!isProviderRuntimeModeExecutable(capability)}
       className={cn(
         "runtime-mode-menu-item",
         mode === "auto" && "runtime-mode-menu-item--auto",
@@ -148,6 +155,7 @@ function RuntimeModeMenuItem({
           >
             {presentation.description}
           </span>
+          <RuntimeModeAvailabilityHint capability={capability} resolution={capabilityResolution} />
         </span>
       </span>
     </MenuRadioItem>
@@ -176,9 +184,7 @@ export interface BranchToolbarProps {
 }
 
 export interface RuntimeUsageControlsProps {
-  provider?: ProviderKind | undefined;
-  runtimeModel?: ProviderModelDescriptor | undefined;
-  providerStatus?: ServerProviderStatus | null | undefined;
+  modelSelection?: ModelSelection | null | undefined;
   runtimeMode?: RuntimeMode | undefined;
   onRuntimeModeChange?: ((mode: RuntimeMode) => void) | undefined;
   contextWindow?: ContextWindowSnapshot | null | undefined;
@@ -193,18 +199,25 @@ export interface RuntimeUsageControlsProps {
 }
 
 export function RuntimeUsageControls({
-  provider,
-  runtimeModel,
-  providerStatus,
+  modelSelection,
   runtimeMode,
   onRuntimeModeChange,
   className,
   hideLabel: hideLabelProp,
 }: RuntimeUsageControlsProps) {
   const { t } = useI18n();
-  const autoModeAvailable =
-    provider !== undefined &&
-    providerModelSupportsAutoRuntimeMode(provider, runtimeModel, providerStatus);
+  const executionCapabilitiesQuery = useQuery({
+    ...providerExecutionCapabilitiesQueryOptions(
+      modelSelection ?? { provider: "omnimind", model: "default" },
+    ),
+    enabled: modelSelection !== undefined,
+  });
+  const executionCapabilities = executionCapabilitiesQuery.data;
+  const capabilityResolution = executionCapabilitiesQuery.isPending
+    ? "pending"
+    : executionCapabilitiesQuery.isError
+      ? "failed"
+      : "resolved";
   const runtimePresentation =
     runtimeMode === "full-access"
       ? {
@@ -280,26 +293,34 @@ export function RuntimeUsageControls({
                 if (
                   !value ||
                   (value !== "full-access" && value !== "auto" && value !== "approval-required") ||
-                  (value === "auto" && !autoModeAvailable) ||
                   value === runtimeMode
                 ) {
                   return;
                 }
-                onRuntimeModeChange(value);
+                const nextMode = value as RuntimeMode;
+                const capability = executionCapabilities?.runtimeModes[nextMode];
+                if (!isProviderRuntimeModeExecutable(capability)) {
+                  return;
+                }
+                onRuntimeModeChange(nextMode);
               }}
             >
               <RuntimeModeMenuItem
                 mode="approval-required"
+                capability={executionCapabilities?.runtimeModes["approval-required"]}
+                capabilityResolution={capabilityResolution}
                 icon={<HiOutlineHandRaised className="size-4 shrink-0" />}
               />
-              {autoModeAvailable ? (
-                <RuntimeModeMenuItem
-                  mode="auto"
-                  icon={<CentralIcon name="shield-code" className="size-4 shrink-0" />}
-                />
-              ) : null}
+              <RuntimeModeMenuItem
+                mode="auto"
+                capability={executionCapabilities?.runtimeModes.auto}
+                capabilityResolution={capabilityResolution}
+                icon={<CentralIcon name="shield-code" className="size-4 shrink-0" />}
+              />
               <RuntimeModeMenuItem
                 mode="full-access"
+                capability={executionCapabilities?.runtimeModes["full-access"]}
+                capabilityResolution={capabilityResolution}
                 accent
                 icon={<CentralIcon name="shield-access" className="size-4 shrink-0" />}
               />

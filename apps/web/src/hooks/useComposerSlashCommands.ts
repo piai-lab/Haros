@@ -1,5 +1,4 @@
 import {
-  PROVIDER_DISPLAY_NAMES,
   type ClientOrchestrationCommand,
   type ModelSelection,
   type MessageId,
@@ -14,6 +13,7 @@ import {
   type ThreadId,
   WsRpcError,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { deriveAssociatedWorktreeMetadata } from "@omnimind/shared/threadWorkspace";
 import { Schema } from "effect";
 import { useCallback, useEffect, useRef, useState } from "react";

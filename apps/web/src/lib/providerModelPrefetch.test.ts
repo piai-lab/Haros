@@ -3,7 +3,12 @@
 //          the same React Query keys ChatView uses for listModels.
 // Layer: Web lib tests
 
-import type { NativeApi, ProviderKind } from "@omnimind/contracts";
+import {
+  DEFAULT_SERVER_SETTINGS_VIEW,
+  type NativeApi,
+  type ProviderKind,
+  type ServerSettingsView,
+} from "@omnimind/contracts";
 import { QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -21,22 +26,53 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function makeSettings(
-  overrides: Partial<ProviderModelPrefetchSettings> = {},
-): ProviderModelPrefetchSettings {
+type ProviderOverrides = {
+  [Provider in keyof ServerSettingsView["providers"]]?: Partial<
+    ServerSettingsView["providers"][Provider]
+  >;
+};
+
+function makeSettings(overrides: {
+  defaultProvider?: ProviderKind;
+  providers?: ProviderOverrides;
+} = {}): ProviderModelPrefetchSettings {
   return {
-    defaultProvider: "codex",
-    claudeBinaryPath: "",
-    cursorBinaryPath: "",
-    cursorApiEndpoint: "",
-    antigravityBinaryPath: "",
-    grokBinaryPath: "",
-    droidBinaryPath: "",
-    kiloBinaryPath: "",
-    openCodeBinaryPath: "",
-    piBinaryPath: "",
-    piAgentDir: "",
-    ...overrides,
+    defaultProvider: overrides.defaultProvider ?? "codex",
+    providers: {
+      ...DEFAULT_SERVER_SETTINGS_VIEW.providers,
+      claudeAgent: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.claudeAgent,
+        ...overrides.providers?.claudeAgent,
+      },
+      cursor: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.cursor,
+        ...overrides.providers?.cursor,
+      },
+      antigravity: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.antigravity,
+        ...overrides.providers?.antigravity,
+      },
+      grok: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.grok,
+        ...overrides.providers?.grok,
+      },
+      droid: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.droid,
+        ...overrides.providers?.droid,
+      },
+      kilo: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.kilo,
+        ...overrides.providers?.kilo,
+      },
+      opencode: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.opencode,
+        ...overrides.providers?.opencode,
+      },
+      pi: {
+        ...DEFAULT_SERVER_SETTINGS_VIEW.providers.pi,
+        ...overrides.providers?.pi,
+      },
+    },
   };
 }
 
@@ -149,13 +185,13 @@ describe("resolveNewThreadModelPrefetchCwd", () => {
 describe("providerModelsPrefetchQueryOptions", () => {
   it("matches ChatView cache keys for cwd-scoped and binary-scoped providers", () => {
     const settings = makeSettings({
-      claudeBinaryPath: "/bin/claude",
-      cursorBinaryPath: "/bin/agent",
-      cursorApiEndpoint: "https://api.example",
-      antigravityBinaryPath: "/bin/antigravity",
-      openCodeBinaryPath: "/bin/opencode",
-      piBinaryPath: "/bin/pi",
-      piAgentDir: "/tmp/pi-agent",
+      providers: {
+        claudeAgent: { binaryPath: "/bin/claude" },
+        cursor: { binaryPath: "/bin/agent", apiEndpoint: "https://api.example" },
+        antigravity: { binaryPath: "/bin/antigravity" },
+        opencode: { binaryPath: "/bin/opencode" },
+        pi: { binaryPath: "/bin/pi", agentDir: "/tmp/pi-agent" },
+      },
     });
 
     const cursorOptions = providerModelsPrefetchQueryOptions({
@@ -234,7 +270,7 @@ describe("prefetchProviderModelsForNewThread", () => {
     prefetchProviderModelsForNewThread(queryClient, {
       provider: "kilo" satisfies ProviderKind,
       settings: makeSettings({
-        kiloBinaryPath: "/bin/kilo",
+        providers: { kilo: { binaryPath: "/bin/kilo" } },
       }),
       cwd: "/tmp/project",
     });
@@ -258,7 +294,7 @@ describe("prefetchProviderModelsForNewThread", () => {
 
     prefetchProviderModelsForNewThread(queryClient, {
       provider: "cursor",
-      settings: makeSettings({ cursorBinaryPath: "/bin/agent" }),
+      settings: makeSettings({ providers: { cursor: { binaryPath: "/bin/agent" } } }),
     });
 
     expect(prefetchQuery).toHaveBeenCalledTimes(2);
@@ -337,7 +373,7 @@ describe("prefetchProviderModelsForNewThread", () => {
     const queryClient = new QueryClient();
     const input = {
       provider: "droid" as const,
-      settings: makeSettings({ droidBinaryPath: "/bin/droid" }),
+      settings: makeSettings({ providers: { droid: { binaryPath: "/bin/droid" } } }),
       cwd: "/tmp/project",
     };
 

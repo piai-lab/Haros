@@ -14,6 +14,7 @@ import {
   providerAgentsQueryOptions,
   providerCommandsQueryOptions,
   providerDiscoveryQueryKeys,
+  providerExecutionCapabilitiesMatchSelection,
   providerModelsQueryOptions,
   providerSkillsQueryOptions,
   shouldRetryProviderCatalogDiscovery,
@@ -29,6 +30,48 @@ function mockListModels(listModels: ReturnType<typeof vi.fn>) {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("provider execution capability identity", () => {
+  const capabilities = {
+    provider: "codex" as const,
+    model: "gpt-test",
+    supportsNativeTurnSteering: true,
+    runtimeModes: {
+      "full-access": {
+        mode: "full-access" as const,
+        structurallySupported: true,
+        status: "ready" as const,
+      },
+      auto: { mode: "auto" as const, structurallySupported: true, status: "ready" as const },
+      "approval-required": {
+        mode: "approval-required" as const,
+        structurallySupported: true,
+        status: "ready" as const,
+      },
+    },
+  };
+
+  it("rejects a late projection for a different Provider or model", () => {
+    expect(
+      providerExecutionCapabilitiesMatchSelection(capabilities, {
+        provider: "codex",
+        model: "gpt-test",
+      }),
+    ).toBe(true);
+    expect(
+      providerExecutionCapabilitiesMatchSelection(capabilities, {
+        provider: "codex",
+        model: "gpt-newer",
+      }),
+    ).toBe(false);
+    expect(
+      providerExecutionCapabilitiesMatchSelection(capabilities, {
+        provider: "claudeAgent",
+        model: "gpt-test",
+      }),
+    ).toBe(false);
+  });
 });
 
 describe("isInitialModelDiscoveryPending", () => {

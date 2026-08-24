@@ -188,10 +188,13 @@ import type {
   ServerProviderUpdateInput,
   ServerProviderUpdateResult,
   ServerRefreshProvidersResult,
+  ServerResetSettingsResult,
   ServerStopLocalServerInput,
   ServerStopLocalServerResult,
   ServerUpdateSettingsInput,
   ServerUpdateSettingsResult,
+  ServerUpdateProviderCredentialInput,
+  ServerUpdateProviderCredentialResult,
   ServerUpsertKeybindingInput,
   ServerUpsertKeybindingResult,
   ServerVoicePrewarmInput,
@@ -212,6 +215,7 @@ import type {
 } from "./terminal";
 import type {
   ClientOrchestrationCommand,
+  DispatchResult,
   OrchestrationGetFullThreadDiffInput,
   OrchestrationGetFullThreadDiffResult,
   OrchestrationGetThreadDetailSnapshotInput,
@@ -252,6 +256,10 @@ import type {
   ProviderReadPluginInput,
   ProviderReadPluginResult,
 } from "./providerDiscovery";
+import type {
+  ProviderExecutionCapabilities,
+  ProviderExecutionCapabilitiesInput,
+} from "./providerExecution";
 import type { ProviderCompactThreadInput } from "./provider";
 import type {
   OmniMindCustomModelServiceRemoveInput,
@@ -839,6 +847,10 @@ export interface NativeApi {
     getBuiltInToolGroups: () => Promise<ServerGetBuiltInToolGroupsResult>;
     getSettings: () => Promise<ServerGetSettingsResult>;
     updateSettings: (input: ServerUpdateSettingsInput) => Promise<ServerUpdateSettingsResult>;
+    resetSettings: () => Promise<ServerResetSettingsResult>;
+    updateProviderCredential: (
+      input: ServerUpdateProviderCredentialInput,
+    ) => Promise<ServerUpdateProviderCredentialResult>;
     getAuthSession: () => Promise<AuthSessionState>;
     bootstrapAuth: (input: AuthBootstrapInput) => Promise<AuthBootstrapResult>;
     bootstrapBearerAuth: (input: AuthBootstrapInput) => Promise<AuthBearerBootstrapResult>;
@@ -897,6 +909,9 @@ export interface NativeApi {
     getComposerCapabilities: (
       input: ProviderGetComposerCapabilitiesInput,
     ) => Promise<ProviderComposerCapabilities>;
+    getExecutionCapabilities: (
+      input: ProviderExecutionCapabilitiesInput,
+    ) => Promise<ProviderExecutionCapabilities>;
     compactThread: (input: ProviderCompactThreadInput) => Promise<void>;
     listCommands: (input: ProviderListCommandsInput) => Promise<ProviderListCommandsResult>;
     listSkills: (input: ProviderListSkillsInput) => Promise<ProviderListSkillsResult>;
@@ -1001,7 +1016,7 @@ export interface NativeApi {
     getThreadDetailSnapshot: (
       input: OrchestrationGetThreadDetailSnapshotInput,
     ) => Promise<OrchestrationGetThreadDetailSnapshotResult>;
-    dispatchCommand: (command: ClientOrchestrationCommand) => Promise<{ sequence: number }>;
+    dispatchCommand: (command: ClientOrchestrationCommand) => Promise<DispatchResult>;
     importThread: (
       input: OrchestrationImportThreadInput,
     ) => Promise<OrchestrationImportThreadResult>;

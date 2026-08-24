@@ -91,6 +91,7 @@ function serverSettings(
   };
 
   return {
+    defaultProvider: "omnimind",
     enableAssistantStreaming: false,
     enableProviderUpdateChecks: true,
     defaultThreadEnvMode: "local",

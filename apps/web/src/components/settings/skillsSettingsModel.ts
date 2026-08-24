@@ -3,8 +3,12 @@
 // Layer: Settings UI logic
 // Exports: origin metadata, canonical skill grouping, and section ordering helpers.
 
-import type { ProviderKind, ProviderSkillDescriptor } from "@omnimind/contracts";
-import { PROVIDER_DISPLAY_NAMES } from "@omnimind/contracts";
+import {
+  PROVIDER_KINDS,
+  type ProviderKind,
+  type ProviderSkillDescriptor,
+} from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { DEFAULT_PROVIDER_ORDER } from "~/providerOrdering";
 
 export interface SkillOriginInfo {
@@ -36,48 +40,34 @@ export interface SettingsSkillSection {
 
 const SHARED_SKILLS_SECTION = "shared";
 const PERSONAL_ORIGIN = "personal";
+const PROVIDER_KIND_SET = new Set<string>(PROVIDER_KINDS);
+const skillOriginForProvider = (provider: ProviderKind): string =>
+  provider === "claudeAgent" ? "claude" : provider;
 export const ORIGIN_SECTION_ORDER = [
-  "omnimind",
-  "codex",
-  "claude",
-  "cursor",
-  "antigravity",
-  "grok",
-  "droid",
-  "kilo",
-  "opencode",
-  "pi",
+  ...PROVIDER_KINDS.map(skillOriginForProvider),
   "agents",
   "project",
 ] as const;
+
+function providerForSkillOrigin(origin: string): ProviderKind | null {
+  const candidate = origin === "claude" ? "claudeAgent" : origin;
+  return PROVIDER_KIND_SET.has(candidate) ? (candidate as ProviderKind) : null;
+}
+
 export function skillOriginInfo(scope: string | undefined): SkillOriginInfo {
   switch (scope) {
     case "omnimind":
       return { label: "OmniMind", provider: null };
-    case "codex":
-      return { label: PROVIDER_DISPLAY_NAMES.codex, provider: "codex" };
-    case "claude":
-      return { label: PROVIDER_DISPLAY_NAMES.claudeAgent, provider: "claudeAgent" };
-    case "cursor":
-      return { label: PROVIDER_DISPLAY_NAMES.cursor, provider: "cursor" };
-    case "antigravity":
-      return { label: PROVIDER_DISPLAY_NAMES.antigravity, provider: "antigravity" };
-    case "grok":
-      return { label: PROVIDER_DISPLAY_NAMES.grok, provider: "grok" };
-    case "droid":
-      return { label: PROVIDER_DISPLAY_NAMES.droid, provider: "droid" };
-    case "kilo":
-      return { label: PROVIDER_DISPLAY_NAMES.kilo, provider: "kilo" };
-    case "opencode":
-      return { label: PROVIDER_DISPLAY_NAMES.opencode, provider: "opencode" };
-    case "pi":
-      return { label: PROVIDER_DISPLAY_NAMES.pi, provider: "pi" };
     case "agents":
       return { label: "Shared (.agents)", provider: null };
     case "project":
       return { label: "Project", provider: null };
-    default:
-      return { label: scope ?? "Personal", provider: null };
+    default: {
+      const provider = scope === undefined ? null : providerForSkillOrigin(scope);
+      return provider
+        ? { label: PROVIDER_DISPLAY_NAMES[provider], provider }
+        : { label: scope ?? "Personal", provider: null };
+    }
   }
 }
 

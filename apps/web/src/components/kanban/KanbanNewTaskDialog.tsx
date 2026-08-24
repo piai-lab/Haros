@@ -17,11 +17,9 @@ import type {
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  getProviderStartOptions,
-  resolveAssistantDeliveryMode,
-  useAppSettings,
-} from "~/appSettings";
+import { getProviderStartOptions } from "~/providerSettings";
+import { useLocalPreferences } from "~/localPreferences";
+import { useServerSettings } from "~/serverSettings";
 import { RuntimeUsageControls } from "~/components/BranchToolbar";
 import {
   ComposerPromptEditor,
@@ -65,10 +63,6 @@ import { ChevronRightIcon, LoaderCircleIcon, PaperclipIcon } from "~/lib/icons";
 import { formatComposerMentionToken } from "~/lib/composerMentions";
 import { findProviderStatus } from "~/lib/providerAvailability";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
-import {
-  normalizeRuntimeModeForProvider,
-  providerModelSupportsAutoRuntimeMode,
-} from "~/lib/runtimeMode";
 import { serverConfigQueryOptions } from "~/lib/serverReactQuery";
 import { cn } from "~/lib/utils";
 import {
@@ -118,10 +112,14 @@ export function KanbanNewTaskDialog({
 }: KanbanNewTaskDialogProps) {
   const { t } = useI18n();
   const initialSendAsDraft = initialSendAsDraftProp ?? false;
-  const { settings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
+  const { settings, defaults, fetchSettings } = useServerSettings();
+  const settingsSnapshot = settings ?? defaults;
   const { resolvedTheme } = useTheme();
-  const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
-  const providerOptionsForDispatch = useMemo(() => getProviderStartOptions(settings), [settings]);
+  const providerOptionsForDispatch = useMemo(
+    () => getProviderStartOptions(settingsSnapshot),
+    [settingsSnapshot],
+  );
   const projects = useStore((state) => state.projects);
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const providerStatuses = useProviderStatusesForLocalConfig();
@@ -158,7 +156,7 @@ export function KanbanNewTaskDialog({
     clearComposerAssistantSelections,
     clearComposerFileComments,
     removeComposerTerminalContext,
-  } = useKanbanTaskScratchDraft({ defaultProvider: settings.defaultProvider });
+  } = useKanbanTaskScratchDraft({ defaultProvider: settingsSnapshot.defaultProvider });
   const promptRef = useRef(prompt);
 
   const [runtimeMode, setRuntimeMode] = useState<RuntimeMode>(DEFAULT_RUNTIME_MODE);
@@ -191,11 +189,6 @@ export function KanbanNewTaskDialog({
     () => findProviderStatus(providerStatuses, "codex"),
     [providerStatuses],
   );
-  const selectedProviderStatus = useMemo(
-    () => findProviderStatus(providerStatuses, selectedProvider),
-    [providerStatuses, selectedProvider],
-  );
-
   const modelHintByProvider = useMemo<Partial<Record<ProviderKind, string | null>>>(
     () => ({ [selectedProvider]: selectedModel }),
     [selectedProvider, selectedModel],
@@ -239,23 +232,10 @@ export function KanbanNewTaskDialog({
         model,
         runtimeModels: runtimeModelsByProvider[provider],
       });
-      setRuntimeMode((current) => normalizeRuntimeModeForProvider(current, provider));
       setScratchProviderModel(provider, model, runtimeModel?.supportsAutoMode);
     },
     [runtimeModelsByProvider, setScratchProviderModel],
   );
-  useEffect(() => {
-    if (
-      runtimeMode === "auto" &&
-      !providerModelSupportsAutoRuntimeMode(
-        selectedProvider,
-        selectedRuntimeModelForCapabilities,
-        selectedProviderStatus,
-      )
-    ) {
-      setRuntimeMode("approval-required");
-    }
-  }, [runtimeMode, selectedProvider, selectedProviderStatus, selectedRuntimeModelForCapabilities]);
   const trimmedPrompt = prompt.trim();
   const hasSendableContent =
     trimmedPrompt.length > 0 ||
@@ -284,9 +264,7 @@ export function KanbanNewTaskDialog({
     interactionMode,
     envMode,
     sendAsDraft,
-    defaultProvider: settings.defaultProvider,
-    assistantDeliveryMode,
-    providerOptionsForDispatch,
+    resolveServerSettingsForDispatch: fetchSettings,
     providerStatuses,
     isPreparingImages,
     waitForPendingImages,
@@ -330,9 +308,9 @@ export function KanbanNewTaskDialog({
     serverCwd: serverConfigQuery.data?.cwd ?? null,
     serverHomeDir: serverConfigQuery.data?.homeDir ?? null,
     providerOptionsForDispatch,
-    hiddenProviders: settings.hiddenProviders,
-    providerOrder: settings.providerOrder,
-    piAgentDir: settings.piAgentDir || null,
+    hiddenProviders: preferences.hiddenProviders,
+    providerOrder: preferences.providerOrder,
+    piAgentDir: settingsSnapshot.providers.pi.agentDir || null,
     handleProviderModelChange,
     setInteractionMode,
     onCreate: handleCreateRequest,
@@ -589,9 +567,18 @@ export function KanbanNewTaskDialog({
                     onEnvModeChange={setEnvMode}
                   />
                   <RuntimeUsageControls
-                    provider={selectedProvider}
-                    runtimeModel={selectedRuntimeModelForCapabilities}
-                    providerStatus={selectedProviderStatus}
+                    modelSelection={
+                      selectedModel
+                        ? buildModelSelection(
+                            selectedProvider,
+                            selectedModel,
+                            undefined,
+                            selectedProvider === "claudeAgent"
+                              ? selectedRuntimeModelForCapabilities?.supportsAutoMode
+                              : undefined,
+                          )
+                        : undefined
+                    }
                     runtimeMode={runtimeMode}
                     onRuntimeModeChange={setRuntimeMode}
                   />
@@ -608,8 +595,8 @@ export function KanbanNewTaskDialog({
                     modelOptionsByProvider={modelOptionsByProvider}
                     catalogStateByProvider={catalogStateByProvider}
                     loadingModelProviders={loadingModelProviders}
-                    hiddenProviders={settings.hiddenProviders}
-                    providerOrder={settings.providerOrder}
+                    hiddenProviders={preferences.hiddenProviders}
+                    providerOrder={preferences.providerOrder}
                     onProviderModelChange={handleProviderModelChange}
                     open={isModelPickerOpen}
                     onOpenChange={(open) => {

@@ -40,7 +40,6 @@ import {
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
 import { respondingInteractionReclaimAt } from "@omnimind/shared/pendingInteractions";
-import { providerSupportsNativeTurnSteering } from "@omnimind/shared/providerMetadata";
 import { getDefaultModel, normalizeModelSlug } from "@omnimind/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
@@ -305,10 +304,6 @@ import { useThreadHandoff } from "../hooks/useThreadHandoff";
 import { useThreadUnblock } from "../hooks/useThreadUnblock";
 import { useTurnDiffSummaries } from "../hooks/useTurnDiffSummaries";
 import BranchToolbar, { RuntimeUsageControls } from "./BranchToolbar";
-import {
-  normalizeRuntimeModeForProvider,
-  providerModelSupportsAutoRuntimeMode,
-} from "../lib/runtimeMode";
 import { OmniMindLogoButton } from "./OmniMindLogoButton";
 import { ThreadWorktreeHandoffDialog } from "./ThreadWorktreeHandoffDialog";
 import {
@@ -330,6 +325,7 @@ import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
+import { runtimeModeAvailabilityMessageKeyFromError } from "./chat/RuntimeModeAvailabilityHint";
 import { Button } from "./ui/button";
 import { Menu, MenuItem, MenuTrigger } from "./ui/menu";
 import { randomTerminalId } from "./terminal/terminalIds";
@@ -356,13 +352,13 @@ import {
   type LocalDraftPromotionOwnership,
 } from "~/lib/threadCreatePromotion";
 import { readFavoriteModelSlugs } from "~/lib/modelFavorites";
+import { resolveFollowUpDispatchMode, useLocalPreferences } from "../localPreferences";
 import {
   getCustomBinaryPathForProvider,
   getProviderStartOptions,
   resolveAssistantDeliveryMode,
-  resolveFollowUpDispatchMode,
-  useAppSettings,
-} from "../appSettings";
+} from "../providerSettings";
+import { useServerSettings } from "../serverSettings";
 import { useI18n } from "../i18n";
 import { isTerminalFocused } from "../lib/terminalFocus";
 import { isEditableEventTarget } from "../lib/editableEventTarget";
@@ -491,7 +487,7 @@ import type { MessagesTimelineController } from "./chat/MessagesTimeline";
 import { buildTurnDiffSummaryByAssistantMessageId } from "./chat/MessagesTimeline.logic";
 import { deriveAgentActivityTimelineState } from "./chat/agentActivity.logic";
 import { ExpandedImagePreview } from "./chat/ExpandedImagePreview";
-import { AVAILABLE_PROVIDER_OPTIONS, resolveProviderModelLabel } from "./chat/ProviderModelPicker";
+import { PROVIDER_MODEL_OPTIONS, resolveProviderModelLabel } from "./chat/ProviderModelPicker";
 import { providerModelsPrefetchQueryOptions } from "../lib/providerModelPrefetch";
 import { ComposerModelEffortPicker } from "./chat/ComposerModelEffortPicker";
 import { ComposerEnginePicker } from "./chat/ComposerEnginePicker";
@@ -1366,9 +1362,12 @@ export default function ChatView({
   const syncServerShellSnapshot = useStore((store) => store.syncServerShellSnapshot);
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
+  const { settings: serverSettings, defaults: serverDefaults } = useServerSettings();
+  const serverSettingsReady = serverSettings !== undefined;
+  const serverSettingsSnapshot = serverSettings ?? serverDefaults;
   const { t } = useI18n();
-  const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
+  const assistantDeliveryMode = resolveAssistantDeliveryMode(serverSettingsSnapshot);
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
     useDesktopTopBarWindowControlsGutterClassName();
@@ -2017,7 +2016,7 @@ export default function ChatView({
     const desiredProvider =
       composerDraft.activeProvider ??
       fallbackDraftProject?.defaultModelSelection?.provider ??
-      settings.defaultProvider;
+      serverSettingsSnapshot.defaultProvider;
     const desiredModelSelection =
       composerDraft.modelSelectionByProvider[desiredProvider] ??
       (fallbackDraftProject?.defaultModelSelection?.provider === desiredProvider
@@ -2038,7 +2037,7 @@ export default function ChatView({
     draftThread,
     fallbackDraftProject?.defaultModelSelection,
     localDraftError,
-    settings.defaultProvider,
+    serverSettingsSnapshot.defaultProvider,
     threadId,
   ]);
   const activeThread = serverThread ?? localDraftThread;
@@ -2426,7 +2425,7 @@ export default function ChatView({
   const threadProvider =
     serverThread?.modelSelection.provider ?? activeProject?.defaultModelSelection?.provider ?? null;
   const selectedProvider: ProviderKind =
-    selectedProviderByThreadId ?? threadProvider ?? settings.defaultProvider;
+    selectedProviderByThreadId ?? threadProvider ?? serverSettingsSnapshot.defaultProvider;
   // A draft/thread/project OmniMind binding is durable user intent, unlike the
   // untouched application default. Reopen may therefore begin its global-only
   // catalog before the user pays a second click on the Model picker.
@@ -2448,7 +2447,10 @@ export default function ChatView({
     () =>
       (serverConfigQuery.data?.providers ?? EMPTY_PROVIDER_STATUSES)
         .map((status) => {
-          const customBinaryPath = getCustomBinaryPathForProvider(settings, status.provider);
+          const customBinaryPath = getCustomBinaryPathForProvider(
+            serverSettingsSnapshot,
+            status.provider,
+          );
           return normalizeProviderStatusForLocalConfig({
             provider: status.provider,
             status,
@@ -2457,7 +2459,11 @@ export default function ChatView({
           });
         })
         .flatMap((status) => (status ? [status] : [])),
-    [confirmedCustomBinaryPathsByProvider, serverConfigQuery.data?.providers, settings],
+    [
+      confirmedCustomBinaryPathsByProvider,
+      serverConfigQuery.data?.providers,
+      serverSettingsSnapshot,
+    ],
   );
   const composerModelHintByProvider = useMemo<Record<ProviderKind, string | null>>(() => {
     const threadModelSelection = serverThread?.modelSelection ?? null;
@@ -2584,7 +2590,10 @@ export default function ChatView({
     selectedProvider,
     selectedRuntimeModel,
   ]);
-  const providerOptionsForDispatch = useMemo(() => getProviderStartOptions(settings), [settings]);
+  const providerOptionsForDispatch = useMemo(
+    () => getProviderStartOptions(serverSettingsSnapshot),
+    [serverSettingsSnapshot],
+  );
   const selectedModelForPicker =
     selectedModelSelection?.provider === selectedProvider
       ? selectedModelSelection.model
@@ -2601,7 +2610,7 @@ export default function ChatView({
   const searchableModelOptions = useMemo(
     () =>
       buildSearchableModelOptions({
-        providerOptions: AVAILABLE_PROVIDER_OPTIONS,
+        providerOptions: PROVIDER_MODEL_OPTIONS,
         modelOptionsByProvider: selectableModelOptionsByProvider,
         providerOrder: settings.providerOrder,
         hiddenProviders: settings.hiddenProviders,
@@ -3852,7 +3861,8 @@ export default function ChatView({
         selectedProvider === "opencode"
           ? providerOptionsForDispatch?.opencode?.experimentalWebSockets
           : undefined,
-      agentDir: selectedProvider === "pi" ? settings.piAgentDir || null : null,
+      agentDir:
+        selectedProvider === "pi" ? serverSettingsSnapshot.providers.pi.agentDir || null : null,
       enabled:
         (composerTriggerKind === "slash-command" || composerTriggerKind === "slash-model") &&
         supportsNativeSlashCommandDiscovery(providerComposerCapabilitiesQuery.data) &&
@@ -3867,7 +3877,8 @@ export default function ChatView({
       cwd: composerSkillCwd,
       threadId,
       activeSession: hasActiveProviderDiscoverySession,
-      agentDir: selectedProvider === "pi" ? settings.piAgentDir || null : null,
+      agentDir:
+        selectedProvider === "pi" ? serverSettingsSnapshot.providers.pi.agentDir || null : null,
       enabled:
         (isSkillTrigger || composerTriggerKind === "slash-command" || selectedProvider === "pi") &&
         canDiscoverProviderSkills &&
@@ -4578,12 +4589,12 @@ export default function ChatView({
       void queryClient.prefetchQuery(
         providerModelsPrefetchQueryOptions({
           provider,
-          settings,
+          settings: serverSettingsSnapshot,
           cwd: providerModelDiscoveryCwd,
         }),
       );
     },
-    [providerModelDiscoveryCwd, queryClient, settings],
+    [providerModelDiscoveryCwd, queryClient, serverSettingsSnapshot],
   );
   const handleTraitsPickerOpenChange = useCallback(
     (open: boolean) => {
@@ -4907,7 +4918,7 @@ export default function ChatView({
     cwd: threadWorkspaceCwd,
     enabled: environmentPanelVisible,
     latestTurnSettled,
-    codexHomePath: settings.codexHomePath || null,
+    codexHomePath: serverSettingsSnapshot.providers.codex.homePath || null,
     providerOptions: providerOptionsForDispatch ?? null,
   });
   const hasRightDockPanes = useRightDockStore(
@@ -5336,10 +5347,15 @@ export default function ChatView({
           try {
             await persistModelSelectionBeforeRuntimeMode(persistenceInput);
           } catch (error) {
+            const runtimeModeMessageKey = runtimeModeAvailabilityMessageKeyFromError(error);
             toastManager.add({
               type: "error",
               title: t("conversation.accessModeUpdateFailed"),
-              description: error instanceof Error ? error.message : t("error.somethingWrong"),
+              description: runtimeModeMessageKey
+                ? t(runtimeModeMessageKey)
+                : error instanceof Error
+                  ? error.message
+                  : t("error.somethingWrong"),
             });
             return false;
           }
@@ -5385,27 +5401,6 @@ export default function ChatView({
     },
     [desiredBindingCanPersistRuntimeMode, persistRuntimeModeChange, setNextTurnRuntimeMode],
   );
-
-  useEffect(() => {
-    if (
-      activeThread &&
-      runtimeMode === "auto" &&
-      !providerModelSupportsAutoRuntimeMode(
-        selectedProvider,
-        selectedRuntimeModel,
-        activeProviderStatus,
-      )
-    ) {
-      handleRuntimeModeChange("approval-required");
-    }
-  }, [
-    activeProviderStatus,
-    activeThread,
-    handleRuntimeModeChange,
-    runtimeMode,
-    selectedProvider,
-    selectedRuntimeModel,
-  ]);
 
   const handleInteractionModeChange = useCallback(
     (mode: ProviderInteractionMode) => {
@@ -6627,24 +6622,6 @@ export default function ChatView({
         undefined,
         provider === "claudeAgent" ? runtimeModel?.supportsAutoMode : undefined,
       );
-      const providerStatus = findProviderStatus(providerStatuses, provider);
-      const nextRuntimeMode =
-        runtimeMode === "auto" &&
-        !providerModelSupportsAutoRuntimeMode(provider, runtimeModel, providerStatus)
-          ? "approval-required"
-          : normalizeRuntimeModeForProvider(runtimeMode, provider);
-      if (nextRuntimeMode !== runtimeMode) {
-        setNextTurnRuntimeMode(nextRuntimeMode);
-        if (
-          desiredBindingCanPersistWithoutActiveSession({
-            desiredModelSelection: nextModelSelection,
-            serverModelSelection: serverThread?.modelSelection ?? null,
-            activeSession: serverThread?.session ?? null,
-          })
-        ) {
-          void persistRuntimeModeChange(nextRuntimeMode);
-        }
-      }
       setComposerDraftModelSelectionAndSticky(activeThread.id, nextModelSelection);
       if (provider === "cursor") {
         setComposerDraftProviderModelOptions(activeThread.id, provider, undefined, {
@@ -6656,16 +6633,11 @@ export default function ChatView({
     },
     [
       activeThread,
-      persistRuntimeModeChange,
-      providerStatuses,
-      runtimeMode,
       runtimeModelsByProvider,
       selectableModelOptionsByProvider,
       scheduleComposerFocus,
       setComposerDraftModelSelectionAndSticky,
       setComposerDraftProviderModelOptions,
-      serverThread,
-      setNextTurnRuntimeMode,
     ],
   );
   const onComposerEngineSelect = useCallback(
@@ -7847,6 +7819,7 @@ export default function ChatView({
       !api ||
       !lateSendHandlers ||
       !activeThread ||
+      !serverSettingsReady ||
       isSendBusy ||
       isConnecting ||
       isVoiceTranscribing ||
@@ -9089,7 +9062,7 @@ export default function ChatView({
         providerOptions: providerOptionsForDispatchForSend,
       });
       turnStartAttempted = true;
-      await api.orchestration.dispatchCommand({
+      const dispatchResult = await api.orchestration.dispatchCommand({
         type: "thread.turn.start",
         commandId: turnStartCommandId,
         threadId: threadIdForSend,
@@ -9117,17 +9090,9 @@ export default function ChatView({
       stagedTurnAttachments.commit();
       turnStartSucceeded = true;
       armLocalDispatchAckFallback(threadIdForSend);
-      // Steers on providers without native mid-turn steering interrupt the live
-      // turn before re-dispatching; hold queued auto-dispatch through that gap
-      // so it can't race the steer. The live session provider decides the
-      // interrupt path server-side, so the gate keys off it rather than the
-      // requested model selection.
-      const liveProviderForSteerGate =
-        activeThread?.session?.provider ?? selectedModelSelectionForSend.provider;
-      if (
-        dispatchMode === "steer" &&
-        !providerSupportsNativeTurnSteering(liveProviderForSteerGate)
-      ) {
+      // Consume the exact admission result instead of independently guessing
+      // capability from a Provider id after the command was accepted.
+      if (dispatchResult.steeringDisposition === "queue-interrupt-redispatch") {
         setQueuedSteerGate({
           sawInterruptGap: false,
           gapStartedAt: null,
@@ -9318,9 +9283,14 @@ export default function ChatView({
       }
       if (!cancelledAndCleaned) {
         const failure = cleanupFailure ?? err;
+        const runtimeModeMessageKey = runtimeModeAvailabilityMessageKeyFromError(failure);
         setThreadError(
           threadIdForSend,
-          failure instanceof Error ? failure.message : "Failed to send message.",
+          runtimeModeMessageKey
+            ? t(runtimeModeMessageKey)
+            : failure instanceof Error
+              ? failure.message
+              : "Failed to send message.",
         );
       }
     });
@@ -9603,6 +9573,7 @@ export default function ChatView({
       !api ||
       !activeThread ||
       !isServerThread ||
+      !serverSettingsReady ||
       isSendBusy ||
       isConnecting ||
       sendInFlightRef.current
@@ -9673,7 +9644,7 @@ export default function ChatView({
         provider: modelSelectionForPlanDispatch.provider,
         providerOptions: providerOptionsForPlanDispatch,
       });
-      await api.orchestration.dispatchCommand({
+      const dispatchResult = await api.orchestration.dispatchCommand({
         type: "thread.turn.start",
         commandId: newCommandId(),
         threadId: threadIdForSend,
@@ -9696,17 +9667,7 @@ export default function ChatView({
         ...(sourceProposedPlan ? { sourceProposedPlan } : {}),
         createdAt: messageCreatedAt,
       });
-      // Steers on providers without native mid-turn steering interrupt the live
-      // turn before re-dispatching; hold queued auto-dispatch through that gap
-      // so it can't race the steer. The live session provider decides the
-      // interrupt path server-side, so the gate keys off it rather than the
-      // requested model selection.
-      const livePlanProviderForSteerGate =
-        activeThread?.session?.provider ?? modelSelectionForPlanDispatch.provider;
-      if (
-        dispatchMode === "steer" &&
-        !providerSupportsNativeTurnSteering(livePlanProviderForSteerGate)
-      ) {
+      if (dispatchResult.steeringDisposition === "queue-interrupt-redispatch") {
         setQueuedSteerGate({
           sawInterruptGap: false,
           gapStartedAt: null,
@@ -9767,7 +9728,7 @@ export default function ChatView({
         setThreadError(activeThread.id, "Only the latest rollbackable user message can be edited.");
         return false;
       }
-      if (isSendBusy || isConnecting || sendInFlightRef.current) {
+      if (!serverSettingsReady || isSendBusy || isConnecting || sendInFlightRef.current) {
         setThreadError(activeThread.id, "Wait for the current send to start before editing.");
         return false;
       }
@@ -9833,6 +9794,7 @@ export default function ChatView({
       selectedModelSelection,
       selectedPromptEffort,
       selectedProvider,
+      serverSettingsReady,
       setThreadError,
       assistantDeliveryMode,
       t,
@@ -9985,6 +9947,7 @@ export default function ChatView({
     if (
       hasQueueableLiveTurn ||
       phase === "disconnected" ||
+      !serverSettingsReady ||
       isSendBusy ||
       isConnecting ||
       queuedSteerGate !== null ||
@@ -10023,6 +9986,7 @@ export default function ChatView({
     activePendingProgress,
     dispatchQueuedComposerTurn,
     phase,
+    serverSettingsReady,
     isConnecting,
     isSendBusy,
     pendingUserInputs.length,
@@ -10042,6 +10006,7 @@ export default function ChatView({
       !activeProject ||
       !activeProposedPlan ||
       !isServerThread ||
+      !serverSettingsReady ||
       isSendBusy ||
       isConnecting ||
       sendInFlightRef.current ||
@@ -10180,6 +10145,7 @@ export default function ChatView({
     syncServerShellSnapshot,
     t,
     selectedModel,
+    serverSettingsReady,
   ]);
 
   const setPromptFromTraits = useCallback(
@@ -11906,9 +11872,7 @@ export default function ChatView({
   };
 
   const runtimeUsageControlsProps = {
-    provider: selectedProvider,
-    runtimeModel: selectedRuntimeModel,
-    providerStatus: activeProviderStatus,
+    modelSelection: selectedModelSelection,
     runtimeMode,
     onRuntimeModeChange: handleRuntimeModeChange,
     contextWindow: runtimeUsageContextWindow,
@@ -12606,7 +12570,12 @@ export default function ChatView({
                               type="submit"
                               size="sm"
                               className="h-9 rounded-full px-4 sm:h-8"
-                              disabled={isSendBusy || isConnecting || !selectedModelSelection}
+                              disabled={
+                                isSendBusy ||
+                                isConnecting ||
+                                !serverSettingsReady ||
+                                !selectedModelSelection
+                              }
                             >
                               {isConnecting || isSendBusy
                                 ? t("conversation.sending")
@@ -12618,7 +12587,12 @@ export default function ChatView({
                                 type="submit"
                                 size="sm"
                                 className="h-9 rounded-l-full rounded-r-none px-4 sm:h-8"
-                                disabled={isSendBusy || isConnecting || !selectedModelSelection}
+                                disabled={
+                                  isSendBusy ||
+                                  isConnecting ||
+                                  !serverSettingsReady ||
+                                  !selectedModelSelection
+                                }
                               >
                                 {isConnecting || isSendBusy
                                   ? t("conversation.sending")
@@ -12633,7 +12607,10 @@ export default function ChatView({
                                       className="h-9 rounded-l-none rounded-r-full border-l-white/12 px-2 sm:h-8"
                                       aria-label={t("conversation.implementationActions")}
                                       disabled={
-                                        isSendBusy || isConnecting || !selectedModelSelection
+                                        isSendBusy ||
+                                        isConnecting ||
+                                        !serverSettingsReady ||
+                                        !selectedModelSelection
                                       }
                                     />
                                   }
@@ -12642,7 +12619,12 @@ export default function ChatView({
                                 </MenuTrigger>
                                 <ComposerPickerMenuPopup align="end" side="top">
                                   <MenuItem
-                                    disabled={isSendBusy || isConnecting || !selectedModelSelection}
+                                    disabled={
+                                      isSendBusy ||
+                                      isConnecting ||
+                                      !serverSettingsReady ||
+                                      !selectedModelSelection
+                                    }
                                     onClick={() => void onImplementPlanInNewThread()}
                                   >
                                     {t("conversation.implementInNewTask")}
@@ -12670,6 +12652,7 @@ export default function ChatView({
                               disabled={
                                 isSendBusy ||
                                 isConnecting ||
+                                !serverSettingsReady ||
                                 isVoiceTranscribing ||
                                 isPreparingComposerImages ||
                                 !selectedModelSelection ||

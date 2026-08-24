@@ -5,7 +5,7 @@ import {
   type OrchestrationThreadActivity,
   ProviderTurnStartFailureReason,
   type ProviderTurnStartFailureReason as ProviderTurnStartFailureReasonValue,
-  type ProviderKind,
+  ProviderKind,
   type ToolLifecycleItemType,
   type TurnId,
 } from "@omnimind/contracts";
@@ -23,7 +23,6 @@ import {
 } from "@omnimind/shared/threadSummary";
 import { summarizeToolRawOutput } from "@omnimind/shared/toolOutputSummary";
 import { pluralize } from "@omnimind/shared/text";
-import { PROVIDER_DESCRIPTORS } from "@omnimind/shared/providerMetadata";
 import {
   deriveReadableToolTitle,
   deriveOmniMindMcpToolTitle,
@@ -414,9 +413,7 @@ function extractWorkLogOmniMindThreadCreation(
     const model = asTrimmedString(thread?.model);
     const environment = asTrimmedString(thread?.environment);
     const status = asTrimmedString(thread?.status) ?? "created";
-    const providerKind = PROVIDER_DESCRIPTORS.find(
-      (descriptor) => descriptor.kind === provider,
-    )?.kind;
+    const providerKind = provider !== null && Schema.is(ProviderKind)(provider) ? provider : null;
     if (
       !threadId ||
       !title ||

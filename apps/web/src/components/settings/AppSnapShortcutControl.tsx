@@ -63,7 +63,7 @@ export function AppSnapShortcutControl({
   enabled: boolean;
   reserved: boolean;
   keybindings: ResolvedKeybindingsConfig;
-  onSaved: (shortcut: DesktopAppSnapShortcut, state: DesktopAppSnapState) => void;
+  onSaved: (shortcut: DesktopAppSnapShortcut, state: DesktopAppSnapState) => Promise<boolean>;
 }) {
   const { t } = useI18n();
   const [capture, setCapture] = useState<CaptureState>(IDLE_CAPTURE);
@@ -186,9 +186,20 @@ export function AppSnapShortcutControl({
     const bridge = window.desktopBridge?.appSnap;
     if (!bridge) return;
     const result = await bridge.setShortcut(nextShortcut);
-    // The manager adopts every well-formed shortcut, so keep settings in sync
-    // even if availability regressed between the check and the save.
-    onSaved(nextShortcut, result.state);
+    // Native acceptance happens first. The local owner must durably commit the
+    // intent before the UI can call this saved; otherwise restore the reversible
+    // native shortcut reservation and keep the user's draft available.
+    const committed = await onSaved(nextShortcut, result.state);
+    if (!committed) {
+      await bridge.setShortcut(shortcut).catch(() => undefined);
+      setCandidate(nextShortcut);
+      toastManager.add({
+        type: "error",
+        title: t("settings.localPreferenceSaveFailed"),
+        description: t("settings.localPreferenceSaveRecovery"),
+      });
+      return;
+    }
     if (result.availability.available) {
       toastManager.add({
         type: "success",

@@ -5,6 +5,7 @@ import {
   type ProviderStartOptions,
   type ServerSettings,
   type ServerSettingsPatch,
+  type ServerSettingsView,
 } from "@omnimind/contracts";
 import { deepMerge, type DeepPartial } from "./Struct";
 import { isBuiltInToolGroupId, resolveHostGroupSurfacePolicy } from "./hostToolSurfacePolicy";
@@ -137,7 +138,7 @@ export function applyServerSettingsPatch(
 
 /** Server-owned launch options derived from the persisted non-secret settings snapshot. */
 export function providerStartOptionsFromServerSettings(
-  settings: ServerSettings,
+  settings: Pick<ServerSettingsView, "providers">,
 ): ProviderStartOptions {
   const { providers } = settings;
   return {

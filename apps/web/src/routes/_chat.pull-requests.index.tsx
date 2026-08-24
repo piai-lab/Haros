@@ -77,7 +77,7 @@ import {
 } from "~/rightDockStore.logic";
 import { useStore } from "~/store";
 import { PR_FINE_TEXT_CLASS_NAME } from "~/components/pullRequest/pullRequestText";
-import { useAppSettings } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import { useI18n } from "~/i18n";
 
 export interface PullRequestsSearch {
@@ -138,7 +138,7 @@ export const Route = createFileRoute("/_chat/pull-requests/")({
 
 function PullRequestsRouteView() {
   const { t } = useI18n();
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const search = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
   const trafficLightGutter = useDesktopTopBarTrafficLightGutterClassName();

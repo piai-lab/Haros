@@ -91,6 +91,10 @@ Provider Registry 只做 `ProviderKind → ProviderAdapter` lookup；Provider Se
 
 Provider identity与runtime capability必须沿同一单向责任链投影。Contracts/provider identity owner唯一给出合法ProviderKind及稳定identity；已注册adapter/runtime owner唯一给出其真实capability与当前health，Server据此组装credential-blind capability snapshot供Composer、Settings、profile stats与runtime-mode consumer使用。Shared或Web不得再维护“支持turn steering的Provider”“可用auto mode的Provider”或完整ProviderKind白名单等手写镜像。若某个启动前或编译期路径确实必须使用静态capability descriptor，该descriptor必须同时驱动adapter registration与外部projection，并以确定性parity gate防止漂移；不能只靠`keep in sync`注释。这里不授权把identity、assets、models、credentials、Settings与executor揉成巨型Provider registry。
 
+这条链严格区分五类事实：Contracts只拥有合法identity；adapter/runtime拥有结构能力；runtime evidence拥有当前health、auth与version；model descriptor拥有model级能力；Workbench presentation拥有普通用户名称、图标、说明和恢复文案。identity存在不能推导registered、ready或available，结构支持也不能推导此刻可执行。Server只组合与请求Provider/model identity绑定的credential-blind projection；unknown、未注册、错配或畸形输入fail closed。全量Discovery schema必须直接复用canonical ProviderKind；真正有不同成员语义的domain subset必须具名并从identity owner派生，不能匿名复制完整literal集合。
+
+通用ServerSettings只接收和持久化非秘密Server事实；Provider server password等credential由ProviderCredentials唯一写入，不能出现在通用Settings patch或settings JSON。credential mutation成功后，ServerSettings/view owner必须复用现有write semaphore或等价串行边界，基于fresh非秘密settings snapshot重算credential-blind configured projection并沿既有settings stream发布；该动作不写settings JSON、不增加settings revision，也不新建锁、stream或cache。这样credential mutation与普通Settings update并发时，subscriber最终同时看到最新非秘密字段与最新configured状态，不会由旧snapshot倒灌其他字段。Web只消费该projection，不能缓存secret或自行推断configured。
+
 V1 只向现有闭合 `ProviderKind` 增加一个 `omnimind` literal，并让既有schema、settings、model discovery、usage、health与UI consumer通过上述identity/capability owner的窄projection获得它；不把 ProviderKind 改成动态插件系统，也不要求consumer各自增加完整Provider清单。Pi-family implementation 只参数化真实变化的 provider ID、runtime entry、state/version/policy，不能复制整份 Pi adapter。
 
 adapter contract 只保留 source 实际支持的操作，例如 start/stop/send/interrupt、native resume、canonical event stream 与可选 discovery。optional 表示不同 Provider 可以不存在该能力；不表示 Host 可以省略当前 runtime 已暴露且属于 V1 产品面的能力。存在时必须由既有 adapter/provenance owner投影并保持用户可达，不存在时才隐藏或显示 unavailable；不模拟成功、不 silent fallback、不由另一 Provider 接管。
@@ -209,6 +213,10 @@ Product Thread 的 `runtimeMode` 是 Engine adapter 与 OmniMind Host capability
 `acceptForSession` 是 wire decision 名，不拥有用户语义。当前实现若会把持久 Thread mode 改为 `full-access`，UI 必须表达“此任务始终允许”；若未来要提供真正的 process-session override，应由 adapter 保存为易失 native state，不能与 Thread mode 同名。
 
 Engine/Host 对某一 mode 没有真实实现时，capability projection 必须返回 unavailable/unsupported，并由 Composer 隐藏该选项。尤其 Pi-family adapter 当前只保存 `runtimeMode`、没有 OmniMind approval request path；在实现真实 gate 之前不能把 `approval-required` 宣称为可用。
+
+运行模式有三个不能互相覆盖的事实层：Product State持久保存用户选择；Engine + exact model + Host closure决定结构支持；结构支持再叠加当前health/auth/version才决定此刻能否执行。永久`unsupported`与暂时`unavailable/degraded`必须分别投影。重启、CLI降级、adapter/model/Host变化或临时故障不得由consumer静默改写持久选择；恢复后原选择自然重新可执行，用户也可主动选择替代模式。
+
+turn steering参与同一次command admission的确定性决策。Server拥有一份同时驱动loaded adapter capability与admission projection的结构描述；Orchestration在接纳前从该owner读取一次bounded snapshot并作为显式输入交给pure decider。该次operation采用native steer或queue-interrupt-redispatch的结果随canonical command/event事实传递，reactor、runtime ingestion与Web只消费该结果，不在不同时间重新按Provider ID判断。能力在admission后变化只影响后续command；restart随当前Server composition重建，不持久化第二份全局capability state。若某Provider未注册，面向consumer的execution projection仍必须fail closed。
 
 ## 扩展与生态
 

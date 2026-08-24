@@ -547,15 +547,12 @@ describe("ServerSettingsService", () => {
         const { settingsPath } = yield* ServerConfig;
         const fs = yield* FileSystem.FileSystem;
         yield* service.start;
-        const view = yield* service.updateSettingsView({
-          providers: {
-            kilo: { serverPassword: "kilo-secret" },
-            opencode: { serverPassword: "opencode-secret" },
-          },
-        });
+        yield* service.updateProviderCredential("kilo", "kilo-secret");
+        const view = yield* service.updateProviderCredential("opencode", "opencode-secret");
         const internal = yield* service.getSettings;
-        const persisted = yield* fs.readFileString(settingsPath);
-        return { view, internal, persisted };
+        const settingsFileExists = yield* fs.exists(settingsPath);
+        const persisted = settingsFileExists ? yield* fs.readFileString(settingsPath) : "";
+        return { view, internal, persisted, settingsFileExists };
       }),
     );
 
@@ -568,8 +565,165 @@ describe("ServerSettingsService", () => {
     expect(JSON.stringify(result.view)).not.toContain("kilo-secret");
     expect(JSON.stringify(result.view)).not.toContain("opencode-secret");
     expect(JSON.stringify(result.view)).not.toContain('"serverPassword"');
+    expect(result.settingsFileExists).toBe(false);
     expect(result.persisted).not.toContain("kilo-secret");
     expect(result.persisted).not.toContain("opencode-secret");
+  });
+
+  it("publishes credential state without writing settings JSON or incrementing its revision", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* service.start;
+        yield* service.updateSettings({ defaultProvider: "codex" });
+        const before = yield* fs.readFileString(settingsPath);
+        const beforeSnapshot = yield* service.getSnapshot;
+        const view = yield* service.updateProviderCredential("kilo", "credential-canary");
+        const after = yield* fs.readFileString(settingsPath);
+        const afterSnapshot = yield* service.getSnapshot;
+        return { before, beforeSnapshot, view, after, afterSnapshot };
+      }),
+    );
+
+    expect(result.after).toBe(result.before);
+    expect(result.afterSnapshot.revision).toBe(result.beforeSnapshot.revision);
+    expect(result.view.providers.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.afterSnapshot.settings.providers.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.after).not.toContain("credential-canary");
+  });
+
+  it("projects credentials onto the latest external non-secret settings snapshot", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* service.start;
+        yield* service.updateSettings({ defaultProvider: "codex" });
+        const external = JSON.parse(yield* fs.readFileString(settingsPath)) as {
+          revision: number;
+          settings: { defaultProvider: string; addProjectBaseDirectory: string };
+        };
+        external.revision = 9;
+        external.settings.defaultProvider = "pi";
+        external.settings.addProjectBaseDirectory = "/tmp/external-projects";
+        const externalBytes = `${JSON.stringify(external, null, 2)}\n`;
+        yield* fs.writeFileString(settingsPath, externalBytes);
+
+        const view = yield* service.updateProviderCredential("kilo", "credential-canary");
+        const snapshot = yield* service.getSnapshot;
+        return {
+          view,
+          snapshot,
+          persisted: yield* fs.readFileString(settingsPath),
+          externalBytes,
+        };
+      }),
+    );
+
+    expect(result.view).toMatchObject({
+      defaultProvider: "pi",
+      addProjectBaseDirectory: "/tmp/external-projects",
+      providers: { kilo: { serverPasswordConfigured: true } },
+    });
+    expect(result.snapshot.revision).toBe(9);
+    expect(result.persisted).toBe(result.externalBytes);
+    expect(result.persisted).not.toContain("credential-canary");
+  });
+
+  it("does not mutate the credential when the fresh non-secret snapshot cannot be loaded", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        const { settingsPath } = yield* ServerConfig;
+        const fs = yield* FileSystem.FileSystem;
+        yield* service.start;
+        yield* service.updateSettings({ defaultProvider: "codex" });
+        yield* service.updateProviderCredential("kilo", "credential-canary");
+        const validBytes = yield* fs.readFileString(settingsPath);
+        yield* fs.remove(settingsPath);
+        yield* fs.makeDirectory(settingsPath);
+
+        const rejected = yield* Effect.exit(service.updateProviderCredential("kilo", ""));
+        yield* fs.remove(settingsPath, { recursive: true });
+        yield* fs.writeFileString(settingsPath, validBytes);
+        const afterRecovery = yield* service.updateSettings({ enableAssistantStreaming: false });
+        return { rejected, afterRecovery };
+      }),
+    );
+
+    expect(result.rejected._tag).toBe("Failure");
+    expect(result.afterRecovery.providers.kilo.serverPasswordConfigured).toBe(true);
+  });
+
+  it("converges concurrent settings and credential mutations to one fresh projection", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        yield* service.start;
+        const firstSubscriber = yield* Stream.runCollect(
+          service.streamViews.pipe(Stream.take(2)),
+        ).pipe(Effect.forkChild({ startImmediately: true }));
+        const secondSubscriber = yield* Stream.runCollect(
+          service.streamViews.pipe(Stream.take(2)),
+        ).pipe(Effect.forkChild({ startImmediately: true }));
+        yield* Effect.yieldNow;
+        yield* Effect.all(
+          [
+            service.updateSettings({
+              defaultProvider: "pi",
+              addProjectBaseDirectory: "/tmp/latest-projects",
+            }),
+            service.updateProviderCredential("opencode", "credential-canary"),
+          ],
+          { concurrency: "unbounded" },
+        );
+        return {
+          first: [...(yield* Fiber.join(firstSubscriber))],
+          second: [...(yield* Fiber.join(secondSubscriber))],
+          snapshot: yield* service.getSnapshot,
+          view: yield* service.getSettingsView,
+        };
+      }),
+    );
+
+    for (const subscriber of [result.first, result.second]) {
+      expect(subscriber.at(-1)).toMatchObject({
+        defaultProvider: "pi",
+        addProjectBaseDirectory: "/tmp/latest-projects",
+        providers: { opencode: { serverPasswordConfigured: true } },
+      });
+    }
+    expect(result.snapshot.revision).toBe(1);
+    expect(result.view).toMatchObject({
+      defaultProvider: "pi",
+      addProjectBaseDirectory: "/tmp/latest-projects",
+      providers: { opencode: { serverPasswordConfigured: true } },
+    });
+  });
+
+  it("resets non-secret settings independently from provider credentials", async () => {
+    const result = await runWithSettings(
+      Effect.gen(function* () {
+        const service = yield* ServerSettingsService;
+        yield* service.start;
+        yield* service.updateSettings({
+          defaultProvider: "pi",
+          addProjectBaseDirectory: "/tmp/custom",
+        });
+        yield* service.updateProviderCredential("kilo", "credential-canary");
+        const reset = yield* service.resetSettingsView;
+        const cleared = yield* service.updateProviderCredential("kilo", "");
+        return { reset, cleared };
+      }),
+    );
+
+    expect(result.reset.defaultProvider).toBe("omnimind");
+    expect(result.reset.addProjectBaseDirectory).toBe("");
+    expect(result.reset.providers.kilo.serverPasswordConfigured).toBe(true);
+    expect(result.cleared.providers.kilo.serverPasswordConfigured).toBe(false);
   });
 
   it("keeps the customized default prompt out of public views and streams", async () => {
@@ -617,7 +771,7 @@ describe("ServerSettingsService", () => {
       }).pipe(Effect.provide(ServerSettingsService.layerTest())),
     );
 
-    expect(result.mutations.map(({ state }) => state).sort()).toEqual(["changed", "conflict"]);
+    expect(result.mutations.map(({ state }) => state).toSorted()).toEqual(["changed", "conflict"]);
     expect(["first", "second"]).toContain(
       result.snapshot.settings.providers.omnimind.defaultPrompt,
     );

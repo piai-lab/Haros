@@ -530,6 +530,70 @@ describe("decider project scripts", () => {
       },
     });
 
+    const nativeSteerResult = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-native-steer-admission"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("message-native-steer"),
+            role: "user",
+            text: "steer natively",
+            attachments: [],
+          },
+          dispatchMode: "steer",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        },
+        readModel: runningReadModel,
+        turnAdmissionCapabilities: {
+          provider: "codex",
+          supportsNativeTurnSteering: true,
+        },
+      }),
+    );
+    const nativeSteerEvents = Array.isArray(nativeSteerResult)
+      ? nativeSteerResult
+      : [nativeSteerResult];
+    expect(nativeSteerEvents[1]).toMatchObject({
+      type: "thread.turn-start-requested",
+      payload: { steeringDisposition: "native" },
+    });
+
+    const fallbackSteerResult = await Effect.runPromise(
+      decideOrchestrationCommand({
+        command: {
+          type: "thread.turn.start",
+          commandId: CommandId.makeUnsafe("cmd-fallback-steer-admission"),
+          threadId: ThreadId.makeUnsafe("thread-1"),
+          message: {
+            messageId: asMessageId("message-fallback-steer"),
+            role: "user",
+            text: "steer through the queue",
+            attachments: [],
+          },
+          dispatchMode: "steer",
+          interactionMode: DEFAULT_PROVIDER_INTERACTION_MODE,
+          runtimeMode: "approval-required",
+          createdAt: now,
+        },
+        readModel: runningReadModel,
+        turnAdmissionCapabilities: {
+          provider: "codex",
+          supportsNativeTurnSteering: false,
+        },
+      }),
+    );
+    const fallbackSteerEvents = Array.isArray(fallbackSteerResult)
+      ? fallbackSteerResult
+      : [fallbackSteerResult];
+    expect(fallbackSteerEvents[1]).toMatchObject({
+      type: "thread.turn-queued",
+      payload: { steeringDisposition: "queue-interrupt-redispatch" },
+    });
+
     const promotedResult = await Effect.runPromise(
       decideOrchestrationCommand({
         command: {

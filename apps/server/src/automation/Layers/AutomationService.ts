@@ -34,8 +34,11 @@ import {
 import { buildTemporaryWorktreeBranchName } from "@omnimind/shared/git";
 import { configuredHostGroupEnabled } from "@omnimind/shared/hostToolSurfacePolicy";
 import { projectKindToProductSurface } from "@omnimind/shared/productSurface";
+import {
+  isProviderRuntimeModeExecutable,
+  isProviderRuntimeModePermanentlyUnsupported,
+} from "@omnimind/shared/runtimeMode";
 import { providerStartOptionsFromServerSettings } from "@omnimind/shared/serverSettings";
-import { autoRuntimeModeSelectionIssue } from "@omnimind/shared/runtimeMode";
 import { Cause, Effect, Layer, Option, PubSub, Queue, Stream } from "effect";
 
 import { GitCore } from "../../git/Services/GitCore.ts";
@@ -50,6 +53,7 @@ import {
   type DeferredOneShotOwnerTransition,
 } from "../../persistence/Services/AutomationRepository.ts";
 import { ProjectionTurnRepository } from "../../persistence/Services/ProjectionTurns.ts";
+import { ProviderExecutionCapabilities } from "../../provider/Services/ProviderExecutionCapabilities.ts";
 import { runWorktreeSetupScript } from "../../worktreeSetup.ts";
 import type { ProjectionTurn } from "../../persistence/Services/ProjectionTurns.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
@@ -699,6 +703,7 @@ export const AutomationServiceLive = Layer.effect(
     const git = yield* GitCore;
     const textGeneration = yield* TextGeneration;
     const serverSettings = yield* ServerSettingsService;
+    const providerExecutionCapabilities = yield* ProviderExecutionCapabilities;
     const orchestrationEngine = yield* OrchestrationEngineService;
     const projectionSnapshotQuery = yield* ProjectionSnapshotQuery;
     const projectionTurnRepository = yield* ProjectionTurnRepository;
@@ -928,15 +933,23 @@ export const AutomationServiceLive = Layer.effect(
         : Effect.void;
     };
 
-    const validateAutoRuntimeMode = (input: {
+    const validateRuntimeModeAvailability = Effect.fn(function* (input: {
       readonly modelSelection: AutomationDefinition["modelSelection"];
       readonly runtimeMode: AutomationDefinition["runtimeMode"];
-    }) => {
-      const issue = autoRuntimeModeSelectionIssue(input);
-      return issue === null
-        ? Effect.void
-        : Effect.fail(new AutomationServiceError({ message: issue }));
-    };
+    }) {
+      const capability = (yield* providerExecutionCapabilities.get(input.modelSelection))
+        .runtimeModes[input.runtimeMode];
+      if (isProviderRuntimeModeExecutable(capability)) {
+        return;
+      }
+      const permanentlyUnsupported = isProviderRuntimeModePermanentlyUnsupported(capability);
+      return yield* new AutomationServiceError({
+        code: capability.reason ?? "runtime-health-unknown",
+        message: permanentlyUnsupported
+          ? "The selected runtime mode is not supported by this Provider and model."
+          : "The selected runtime mode is temporarily unavailable.",
+      });
+    });
 
     // Run-path backstop for the fast-interval policy. validateSchedulePolicy enforces this at
     // create/update; this guards the run path it never covers. Effect.try converts a throwing
@@ -1131,7 +1144,7 @@ export const AutomationServiceLive = Layer.effect(
           worktreeMode: definition.worktreeMode,
           acknowledgedRisks: definition.acknowledgedRisks,
         });
-        yield* validateAutoRuntimeMode(definition);
+        yield* validateRuntimeModeAvailability(definition);
         yield* validateFastIntervalPolicy({
           schedule: definition.schedule,
           enabled: definition.enabled,
@@ -2642,7 +2655,7 @@ export const AutomationServiceLive = Layer.effect(
           worktreeMode: input.worktreeMode ?? "auto",
           acknowledgedRisks: input.acknowledgedRisks ?? [],
         });
-        yield* validateAutoRuntimeMode({
+        yield* validateRuntimeModeAvailability({
           modelSelection: input.modelSelection,
           runtimeMode: input.runtimeMode ?? "approval-required",
         });
@@ -2711,7 +2724,7 @@ export const AutomationServiceLive = Layer.effect(
             worktreeMode: updated.worktreeMode,
             acknowledgedRisks: updated.acknowledgedRisks,
           });
-          yield* validateAutoRuntimeMode(updated);
+          yield* validateRuntimeModeAvailability(updated);
           yield* validateHeartbeatTarget(updated);
           const saved = yield* automationRepository
             .saveDefinition({

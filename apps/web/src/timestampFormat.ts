@@ -1,4 +1,4 @@
-import { type TimestampFormat } from "./appSettings";
+import { type TimestampFormat } from "./localPreferences";
 
 export function getTimestampFormatOptions(
   timestampFormat: TimestampFormat,

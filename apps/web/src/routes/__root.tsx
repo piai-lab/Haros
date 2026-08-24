@@ -1,6 +1,5 @@
 import {
   type EngineWebSurfaceThemeSnapshot,
-  PROVIDER_DISPLAY_NAMES,
   ThreadId,
   type OrchestrationEvent,
   type OrchestrationShellSnapshot,
@@ -10,6 +9,7 @@ import {
   type ServerProviderStatus,
   type WsCompatibilityError,
 } from "@omnimind/contracts";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { defaultTerminalTitleForCliKind } from "@omnimind/shared/terminalThreads";
 import { isThreadDetailEventFor } from "@omnimind/shared/threadDetailEvents";
 import {
@@ -101,7 +101,6 @@ import {
 import { getThreadFromState, getThreadsFromState } from "../threadDerivation";
 import { useAppDensity } from "../hooks/useAppDensity";
 import { useChatWidth } from "../hooks/useChatWidth";
-import { useDesktopAppIcon } from "../hooks/useDesktopAppIcon";
 import { useAppTypography } from "../hooks/useAppTypography";
 import { usePreloadRouteChunks } from "../hooks/usePreloadRouteChunks";
 import { useSyncDesktopTopBarTrafficLightGutterZoom } from "../hooks/useDesktopTopBarGutter";
@@ -125,7 +124,7 @@ import { resolveVisibleDockSidechatThreadIds } from "../rightDockStore.logic";
 import { arraysShallowEqual } from "../storeNormalization";
 import { providerModelDiscoveryInvalidationFingerprint } from "../lib/providerDiscoveryInvalidation";
 import { providerDiscoveryQueryKeys } from "../lib/providerDiscoveryReactQuery";
-import { useAppSettings } from "../appSettings";
+import { useLocalPreferences } from "../localPreferences";
 import { DocumentLocaleSync, I18nProvider, useI18n } from "../i18n";
 import {
   getNotifiableProviderUpdateStatuses,
@@ -228,7 +227,6 @@ function RootRouteView() {
   useAppTypography();
   useAppDensity();
   useChatWidth();
-  useDesktopAppIcon();
   usePreloadRouteChunks();
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
@@ -397,12 +395,11 @@ function GitProgressToastPreviewDev() {
 }
 
 function ProviderStatusRefreshCoordinator() {
-  const { settings } = useAppSettings();
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const [transportOpen, setTransportOpen] = useState(false);
   const [liveVersionCheckCompleted, setLiveVersionCheckCompleted] = useState(false);
   const providerUpdateChecksEnabled =
-    serverSettingsQuery.data !== undefined && settings.enableProviderUpdateChecks;
+    serverSettingsQuery.data?.enableProviderUpdateChecks === true;
   const providerUpdateRefreshEnabled = providerUpdateChecksEnabled && transportOpen;
   const markLiveVersionCheckCompleted = useCallback(() => {
     setLiveVersionCheckCompleted(true);
@@ -661,13 +658,13 @@ function ProviderUpdateNotifications({
   const { locale, t } = useI18n();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { settings } = useAppSettings();
+  const { preferences } = useLocalPreferences();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const serverSettingsQuery = useQuery(serverSettingsQueryOptions());
   const providerUpdateServerSettings = serverSettingsQuery.data
     ? {
         ...serverSettingsQuery.data,
-        enableProviderUpdateChecks: settings.enableProviderUpdateChecks,
+        enableProviderUpdateChecks: serverSettingsQuery.data.enableProviderUpdateChecks,
       }
     : null;
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
@@ -676,7 +673,7 @@ function ProviderUpdateNotifications({
   const progressToastDismissedRef = useRef(false);
   const outdatedProviders = getNotifiableProviderUpdateStatuses({
     providers: serverConfigQuery.data?.providers ?? [],
-    hiddenProviders: settings.hiddenProviders,
+    hiddenProviders: preferences.hiddenProviders,
     serverSettings: providerUpdateServerSettings,
     liveVersionCheckCompleted,
   });
@@ -2300,6 +2297,9 @@ function EventRouter() {
         });
         void queryClient.invalidateQueries({
           queryKey: providerDiscoveryQueryKeys.agentsForProvider("opencode"),
+        });
+        void queryClient.invalidateQueries({
+          queryKey: providerDiscoveryQueryKeys.executionCapabilitiesAll,
         });
       }
     });

@@ -14,8 +14,8 @@ import { I18nProvider } from "~/i18n";
 
 const harness = vi.hoisted(() => ({ settings: { localePreference: "zh-CN" } }));
 
-vi.mock("~/appSettings", () => ({
-  useAppSettings: () => ({ settings: harness.settings }),
+vi.mock("~/localPreferences", () => ({
+  useLocalPreferences: () => ({ preferences: harness.settings }),
 }));
 
 const EMPTY_KEYBINDINGS: ResolvedKeybindingsConfig = [];

@@ -9,10 +9,11 @@ import {
   type OrchestrationSessionStatus,
   type OrchestrationShellSnapshot,
   type OrchestrationThreadActivity,
-  type ProviderKind,
+  ProviderKind,
   ThreadId,
   type TurnId,
 } from "@omnimind/contracts";
+import { Schema } from "effect";
 import { resolveThreadBranchRegressionGuard } from "@omnimind/shared/git";
 import { normalizeModelSlug } from "@omnimind/shared/model";
 import { deriveThreadSummaryMetadata } from "@omnimind/shared/threadSummary";
@@ -1896,18 +1897,7 @@ function toLegacySessionStatus(
 }
 
 function toLegacyProvider(providerName: string | null): ProviderKind {
-  if (
-    providerName === "omnimind" ||
-    providerName === "codex" ||
-    providerName === "claudeAgent" ||
-    providerName === "cursor" ||
-    providerName === "antigravity" ||
-    providerName === "grok" ||
-    providerName === "droid" ||
-    providerName === "kilo" ||
-    providerName === "opencode" ||
-    providerName === "pi"
-  ) {
+  if (Schema.is(ProviderKind)(providerName)) {
     return providerName;
   }
   return "codex";

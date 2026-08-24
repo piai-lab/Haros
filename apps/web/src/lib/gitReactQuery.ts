@@ -596,10 +596,6 @@ export function gitUnstageFilesMutationOptions(input: {
 export function gitRunStackedActionMutationOptions(input: {
   cwd: string | null;
   queryClient: QueryClient;
-  model?: string | null;
-  modelSelection?: ModelSelection | null;
-  codexHomePath?: string | null;
-  providerOptions?: ProviderStartOptions | null;
 }) {
   return makeGitMutationOptions<
     {
@@ -612,6 +608,10 @@ export function gitRunStackedActionMutationOptions(input: {
       prBody?: string;
       prDraft?: boolean;
       allowDirtyWorkingTree?: boolean;
+      model?: string | null;
+      modelSelection?: ModelSelection | null;
+      codexHomePath?: string | null;
+      providerOptions?: ProviderStartOptions | null;
     },
     Awaited<ReturnType<NativeApi["git"]["runStackedAction"]>>
   >({
@@ -634,6 +634,10 @@ export function gitRunStackedActionMutationOptions(input: {
         prBody,
         prDraft,
         allowDirtyWorkingTree,
+        model,
+        modelSelection,
+        codexHomePath,
+        providerOptions,
       },
     ) =>
       api.git.runStackedAction({
@@ -647,10 +651,10 @@ export function gitRunStackedActionMutationOptions(input: {
         ...(prBody ? { prBody } : {}),
         ...(prDraft !== undefined ? { prDraft } : {}),
         ...(allowDirtyWorkingTree ? { allowDirtyWorkingTree } : {}),
-        ...(input.codexHomePath ? { codexHomePath: input.codexHomePath } : {}),
-        ...(input.model ? { textGenerationModel: input.model } : {}),
-        ...(input.modelSelection ? { textGenerationModelSelection: input.modelSelection } : {}),
-        ...(input.providerOptions ? { providerOptions: input.providerOptions } : {}),
+        ...(codexHomePath ? { codexHomePath } : {}),
+        ...(model ? { textGenerationModel: model } : {}),
+        ...(modelSelection ? { textGenerationModelSelection: modelSelection } : {}),
+        ...(providerOptions ? { providerOptions } : {}),
       }),
   });
 }

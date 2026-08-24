@@ -120,6 +120,7 @@ import {
   ServerGenerateThreadRecapInput,
   ServerLifecycleStreamEvent,
   ServerProviderUpdateInput,
+  ServerUpdateProviderCredentialInput,
   ServerUpdateSettingsInput,
   ServerListProviderUsageInput,
   ServerProviderStatusesUpdatedPayload,
@@ -139,6 +140,7 @@ import {
   ProviderListSkillsInput,
   ProviderSkillsCatalogInput,
 } from "./providerDiscovery";
+import { ProviderExecutionCapabilitiesInput } from "./providerExecution";
 import { ProviderCompactThreadInput } from "./provider";
 import {
   OmniMindCustomModelServiceRemoveInput,
@@ -276,6 +278,8 @@ export const WS_METHODS = {
   serverGetBuiltInToolGroups: "server.getBuiltInToolGroups",
   serverGetSettings: "server.getSettings",
   serverUpdateSettings: "server.updateSettings",
+  serverResetSettings: "server.resetSettings",
+  serverUpdateProviderCredential: "server.updateProviderCredential",
   serverRefreshProviders: "server.refreshProviders",
   serverUpdateProvider: "server.updateProvider",
   serverListExternalMcpIntegrations: "server.listExternalMcpIntegrations",
@@ -307,6 +311,7 @@ export const WS_METHODS = {
 
   // Provider discovery
   providerGetComposerCapabilities: "provider.getComposerCapabilities",
+  providerGetExecutionCapabilities: "provider.getExecutionCapabilities",
   providerCompactThread: "provider.compactThread",
   providerListCommands: "provider.listCommands",
   providerListSkills: "provider.listSkills",
@@ -545,6 +550,11 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverGetBuiltInToolGroups, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverGetSettings, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpdateSettings, ServerUpdateSettingsInput),
+  tagRequestBody(WS_METHODS.serverResetSettings, Schema.Struct({})),
+  tagRequestBody(
+    WS_METHODS.serverUpdateProviderCredential,
+    ServerUpdateProviderCredentialInput,
+  ),
   tagRequestBody(WS_METHODS.serverRefreshProviders, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpdateProvider, ServerProviderUpdateInput),
   tagRequestBody(WS_METHODS.serverListExternalMcpIntegrations, Schema.Struct({})),
@@ -566,6 +576,7 @@ const WebSocketRequestBody = Schema.Union([
 
   // Provider discovery
   tagRequestBody(WS_METHODS.providerGetComposerCapabilities, ProviderGetComposerCapabilitiesInput),
+  tagRequestBody(WS_METHODS.providerGetExecutionCapabilities, ProviderExecutionCapabilitiesInput),
   tagRequestBody(WS_METHODS.providerCompactThread, ProviderCompactThreadInput),
   tagRequestBody(WS_METHODS.providerListCommands, ProviderListCommandsInput),
   tagRequestBody(WS_METHODS.providerListSkills, ProviderListSkillsInput),

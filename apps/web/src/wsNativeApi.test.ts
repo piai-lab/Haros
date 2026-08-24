@@ -347,6 +347,7 @@ describe("wsNativeApi", () => {
 
     const payload = {
       settings: {
+        defaultProvider: "omnimind",
         enableAssistantStreaming: true,
         enableProviderUpdateChecks: true,
         defaultThreadEnvMode: "local",

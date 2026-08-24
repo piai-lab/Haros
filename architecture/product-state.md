@@ -29,9 +29,9 @@ Goal 与 Todo 是两条互补事实。Goal 保存用户明确设定、可跨 tur
 
 ## 用户设置状态边界
 
-用户设置按事实生命周期拥有不同writer，但同一事实只能有一个持久authority：纯浏览器appearance、一次性presentation与明确local-only的交互偏好由Web本地owner保存；跨窗口、Server执行、Provider路径/endpoint、Host工具intent与其他Server-owned设置只由ServerSettings或该能力的专用Server/package owner保存；credential与Provider private state继续属于各自秘密/runtime owner。页面可以把这些事实组合成一个用户任务视图，但不得建立覆盖全部来源的第二`AppSettings`持久schema、先写localStorage再写Server的dual-write或由浏览器缓存冒充Server成功。
+用户设置按事实生命周期拥有不同writer，但同一事实只能有一个持久authority：纯浏览器appearance、一次性presentation与明确local-only的交互偏好由Web本地owner保存；跨窗口、Server执行、Provider路径/endpoint、Host工具intent与其他Server-owned设置只由ServerSettings或该能力的专用Server/package owner保存；credential与Provider private state继续属于各自秘密/runtime owner；Desktop图标、原生titlebar、AppSnap listener/shortcut reservation与当前进程native state由Desktop owner保存或执行。页面可以把这些事实组合成一个用户任务视图，但不得建立覆盖全部来源的第二`AppSettings`持久schema、先写localStorage再写Server的dual-write或由浏览器缓存冒充Server成功。ServerSettings只投影credential-blind configured状态；secret mutation后由现有ServerSettings/view串行边界基于fresh snapshot发布同一投影，不把secret写回settings JSON，也不建立第二stream或cache。
 
-旧浏览器字段如需退出，只允许对应幸存owner执行有界、幂等、一次性的legacy读取/迁移；成功后旧字段不再参与normal read、mutation、fallback或恢复。迁移失败必须保留真实旧字节并让Server truth保持未提交，不能形成永久migration flag、双向mapper或两份长期可写真相。新增一个Server-owned字段时，合法修改半径应集中在Server schema/owner、typed projection与真实UI consumer，不得再次要求为浏览器localStorage补defaults、normalizer和双向映射。
+本first-public产品不继承旧浏览器mixed settings草稿：旧key不读、不迁移、不改写、不删除，新local-only namespace从产品默认值开始。未来已发行schema若确需迁移，只允许对应幸存owner执行有界、幂等、一次性的legacy读取；成功后旧字段不再参与normal read、mutation、fallback或恢复，失败必须保留真实旧字节并让目标truth保持未提交。不能形成永久migration flag、双向mapper或两份长期可写真相。新增一个Server-owned字段时，合法修改半径应集中在Server schema/owner、typed projection与真实UI consumer，不得再次要求为浏览器localStorage补defaults、normalizer和双向映射。
 
 ## Agent 与 Chat
 
@@ -153,6 +153,8 @@ Thread 的 `runtimeMode` 是用户对该任务自动化程度的唯一产品级�
 - `full-access`：当前任务范围内的普通文件、命令、网络、Browser、Device 与工具副作用不再逐项询问；只有登录、2FA、系统原生授权或用户尚未表达的不可逆外部结果确实需要人完成时才介入；
 - `auto`：仅在当前 Engine/Host 有可验证的自动裁决路径时可选；没有真实 reviewer/classifier 就不显示，不得退化成每步询问；
 - `approval-required`：仅在当前 Engine/Host 有可完成的 approval request/response path 时可选；没有 bridge 就显示该模式不可用，不能先让用户选择再在运行时一律拒绝。
+
+Product State只拥有持久选择，不拥有capability。结构支持与当前可执行性由Execution在每次读取或dispatch admission依据loaded Engine/model/Host/runtime evidence投影；两者变化不得静默改写Thread。已有选择失效时仍原样保存，dispatch准确失败并给出typed原因；用户主动改选才产生新的Product mutation，能力恢复后旧选择自然重新可执行。
 
 共同 UI 不建设第二 permission broker，也不维护跨 Provider deny-side-effect matrix。一次 `acceptForSession` 若实际会把持久 Thread 切换为 `full-access`，产品文案必须准确写成“此任务始终允许”，不能声称只影响易失 runtime session。Provider-native permission set、macOS/Windows 系统授权、OAuth/2FA 与不可逆外部发布继续保留自己的真实名称、scope、结果和取消语义。
 

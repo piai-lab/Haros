@@ -4,20 +4,20 @@
 // Exports: useKanbanTaskSubmit
 
 import type {
-  AssistantDeliveryMode,
   ModelSlug,
   ProjectId,
   ProviderInteractionMode,
   ProviderKind,
-  ProviderStartOptions,
   RuntimeMode,
   ServerProviderStatus,
+  ServerSettingsView,
   ThreadId,
 } from "@omnimind/contracts";
 import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 
 import { toastManager } from "~/components/ui/toast";
+import { runtimeModeAvailabilityMessageKeyFromError } from "~/components/chat/RuntimeModeAvailabilityHint";
 import type { DraftThreadEnvMode } from "~/composerDraftStore";
 import { useComposerDraftStore } from "~/composerDraftStore";
 import { useRefreshProviderStatusesNow } from "~/hooks/useProviderStatusRefresh";
@@ -25,6 +25,7 @@ import { useI18n } from "~/i18n";
 import { createAndSendKanbanTask, createKanbanDraftTask } from "~/lib/kanbanTaskCreate";
 import { resolveProviderSendAvailabilityWithRefresh } from "~/lib/providerAvailability";
 import { buildModelSelection } from "~/providerModelOptions";
+import { getProviderStartOptions, resolveAssistantDeliveryMode } from "~/providerSettings";
 import { truncateKanbanTaskPreview } from "./KanbanNewTaskDialog.logic";
 
 interface UseKanbanTaskSubmitInput {
@@ -40,9 +41,7 @@ interface UseKanbanTaskSubmitInput {
   readonly interactionMode: ProviderInteractionMode;
   readonly envMode: DraftThreadEnvMode;
   readonly sendAsDraft: boolean;
-  readonly defaultProvider: ProviderKind;
-  readonly assistantDeliveryMode: AssistantDeliveryMode;
-  readonly providerOptionsForDispatch: ProviderStartOptions | undefined;
+  readonly resolveServerSettingsForDispatch: () => Promise<ServerSettingsView>;
   readonly providerStatuses: readonly ServerProviderStatus[];
   readonly isPreparingImages: boolean;
   readonly waitForPendingImages: () => Promise<void>;
@@ -64,9 +63,7 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     interactionMode,
     envMode,
     sendAsDraft,
-    defaultProvider,
-    assistantDeliveryMode,
-    providerOptionsForDispatch,
+    resolveServerSettingsForDispatch,
     providerStatuses,
     isPreparingImages,
     waitForPendingImages,
@@ -153,11 +150,24 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
     }
 
     setIsCreating(true);
+    let serverSettings: ServerSettingsView;
+    try {
+      serverSettings = await resolveServerSettingsForDispatch();
+    } catch (error) {
+      toastManager.add({
+        type: "error",
+        title: t("kanban.couldNotStart"),
+        description: error instanceof Error ? error.message : t("kanban.notConnected"),
+      });
+      isCreatingRef.current = false;
+      setIsCreating(false);
+      return;
+    }
     void createAndSendKanbanTask({
       ...taskInput,
-      defaultProvider,
-      assistantDeliveryMode,
-      providerOptions: providerOptionsForDispatch,
+      defaultProvider: serverSettings.defaultProvider,
+      assistantDeliveryMode: resolveAssistantDeliveryMode(serverSettings),
+      providerOptions: getProviderStartOptions(serverSettings),
     })
       .then(({ threadId, result }) => {
         if (result.kind === "dispatched") {
@@ -187,7 +197,13 @@ export function useKanbanTaskSubmit(input: UseKanbanTaskSubmitInput) {
         toastManager.add({
           type: "error",
           title: t("kanban.couldNotStart"),
-          description: result.kind === "error" ? result.message : t("kanban.savedToDraftsInstead"),
+          description:
+            result.kind === "error"
+              ? (() => {
+                  const messageKey = runtimeModeAvailabilityMessageKeyFromError(result);
+                  return messageKey ? t(messageKey) : result.message;
+                })()
+              : t("kanban.savedToDraftsInstead"),
         });
         isCreatingRef.current = false;
         setIsCreating(false);

@@ -7,7 +7,6 @@ import path from "node:path";
 import {
   type AntigravityModelOptions,
   EventId,
-  type ProviderComposerCapabilities,
   type ProviderListModelsResult,
   type ProviderRuntimeEvent,
   type ProviderSession,
@@ -63,6 +62,7 @@ import {
   providerRuntimeEventBytes,
 } from "../providerRuntimeEventIngress.ts";
 import { teardownChildProcessTree } from "../supervisedProcessTeardown.ts";
+import { providerExecutionStructure } from "../providerExecutionStructure.ts";
 
 const PROVIDER = "antigravity" as const;
 const DEFAULT_MODEL = "Gemini 3.5 Flash";
@@ -2447,9 +2447,19 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
     return {
       provider: PROVIDER,
       capabilities: {
+        ...providerExecutionStructure(PROVIDER),
         sessionModelSwitch: "restart-session",
         conversationRollback: "restart-session",
+        supportsSkillMentions: true,
+        // Antigravity can consume the unified OmniMind skill projection, but it does
+        // not expose a provider-native listSkills() seam.
+        supportsSkillDiscovery: false,
+        supportsNativeSlashCommandDiscovery: false,
+        supportsPluginMentions: false,
+        supportsPluginDiscovery: false,
         supportsRuntimeModelList: true,
+        supportsThreadCompaction: false,
+        supportsThreadImport: false,
         supportsLiveTurnDiffPatch: false,
       },
       startSession,
@@ -2465,18 +2475,6 @@ const makeAntigravityAdapter = (dependencies: AntigravityAdapterDependencies = {
       rollbackThread,
       stopAll,
       listModels,
-      getComposerCapabilities: () =>
-        Effect.succeed({
-          provider: PROVIDER,
-          supportsSkillMentions: true,
-          supportsSkillDiscovery: true,
-          supportsNativeSlashCommandDiscovery: false,
-          supportsPluginMentions: false,
-          supportsPluginDiscovery: false,
-          supportsRuntimeModelList: true,
-          supportsThreadCompaction: false,
-          supportsThreadImport: false,
-        } satisfies ProviderComposerCapabilities),
       get streamEvents() {
         return Stream.fromQueue(eventQueue);
       },

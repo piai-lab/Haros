@@ -80,7 +80,6 @@ import {
   MAX_PINNED_PROJECTS,
   type DesktopUpdateState,
   type OrchestrationShellSnapshot,
-  PROVIDER_DISPLAY_NAMES,
   ProjectId,
   SpaceId,
   type ProviderKind,
@@ -90,14 +89,16 @@ import {
 } from "@omnimind/contracts";
 import { isGenericChatThreadTitle } from "@omnimind/shared/chatThreads";
 import { getDefaultModel } from "@omnimind/shared/model";
+import { PROVIDER_DISPLAY_NAMES } from "@omnimind/shared/providerMetadata";
 import { resolveThreadWorkspaceCwd } from "@omnimind/shared/threadEnvironment";
 import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import {
   type SidebarProjectSortOrder,
   type SidebarThreadSortOrder,
-  useAppSettings,
-} from "../appSettings";
+  useLocalPreferences,
+} from "../localPreferences";
+import { useServerSettings } from "../serverSettings";
 import { isElectron } from "../env";
 import { useI18n, type MessageKey } from "../i18n";
 import { formatRelativeTime } from "../lib/relativeTime";
@@ -1418,9 +1419,10 @@ export default function Sidebar() {
     () => groupAutomationsByContinuedThread(automationListQuery.data?.definitions ?? []),
     [automationListQuery.data],
   );
-  const { settings: appSettings, updateSettings } = useAppSettings();
+  const { preferences, updatePreferences } = useLocalPreferences();
+  const { fetchSettings } = useServerSettings();
   // Agent and Chat are always available; Studio retains its existing visibility setting.
-  const studioSectionVisible = appSettings.showStudioSection;
+  const studioSectionVisible = preferences.showStudioSection;
   const { handleNewThread } = useHandleNewThread();
   const { handleNewChat } = useHandleNewChat();
   const { handleNewStudioChat } = useHandleNewStudioChat();
@@ -1836,7 +1838,7 @@ export default function Sidebar() {
     deleteProjectThreads,
   } = useSidebarThreadActions({
     activeSplitView,
-    appSettings,
+    preferences,
     clearTerminalState,
     handleNewChat,
     projectById,
@@ -2096,7 +2098,7 @@ export default function Sidebar() {
     (projectId: ProjectId) => {
       const latestThread = sortThreadsForSidebar(
         sidebarThreads.filter((thread) => thread.projectId === projectId),
-        appSettings.sidebarThreadSortOrder,
+        preferences.sidebarThreadSortOrder,
       )[0];
       if (!latestThread) return;
 
@@ -2105,7 +2107,7 @@ export default function Sidebar() {
         params: { threadId: latestThread.id },
       });
     },
-    [appSettings.sidebarThreadSortOrder, navigate, sidebarThreads],
+    [preferences.sidebarThreadSortOrder, navigate, sidebarThreads],
   );
 
   const openOrCreateProjectThreadFromSnapshot = useCallback(
@@ -2121,7 +2123,7 @@ export default function Sidebar() {
             updatedAt: thread.updatedAt,
             latestUserMessageAt: thread.latestUserMessageAt,
           })),
-        appSettings.sidebarThreadSortOrder,
+        preferences.sidebarThreadSortOrder,
       )[0];
       if (latestThread) {
         await navigate({
@@ -2131,14 +2133,11 @@ export default function Sidebar() {
         return true;
       }
 
-      void handleNewThread(projectId, {
-        envMode: appSettings.defaultThreadEnvMode,
-      }).catch(() => undefined);
+      void handleNewThread(projectId).catch(() => undefined);
       return true;
     },
     [
-      appSettings.defaultThreadEnvMode,
-      appSettings.sidebarThreadSortOrder,
+      preferences.sidebarThreadSortOrder,
       handleNewThread,
       navigate,
     ],
@@ -2163,7 +2162,7 @@ export default function Sidebar() {
             updatedAt: thread.updatedAt,
             latestUserMessageAt: thread.latestUserMessageAt,
           })),
-        appSettings.sidebarThreadSortOrder,
+        preferences.sidebarThreadSortOrder,
       )[0];
       if (latestThread) {
         await navigate({
@@ -2174,14 +2173,11 @@ export default function Sidebar() {
       }
 
       setProjectExpanded(projectId, true);
-      void handleNewThread(projectId, {
-        envMode: appSettings.defaultThreadEnvMode,
-      }).catch(() => undefined);
+      void handleNewThread(projectId).catch(() => undefined);
       return true;
     },
     [
-      appSettings.defaultThreadEnvMode,
-      appSettings.sidebarThreadSortOrder,
+      preferences.sidebarThreadSortOrder,
       handleNewThread,
       navigate,
       setProjectExpanded,
@@ -2297,14 +2293,9 @@ export default function Sidebar() {
         return;
       }
 
-      void handleNewThread(typedProjectId, {
-        envMode: resolveSidebarNewThreadEnvMode({
-          defaultEnvMode: appSettings.defaultThreadEnvMode,
-        }),
-      });
+      void handleNewThread(typedProjectId);
     },
     [
-      appSettings.defaultThreadEnvMode,
       focusMostRecentThreadForProject,
       handleNewThread,
       sidebarThreads,
@@ -2317,7 +2308,7 @@ export default function Sidebar() {
   const resolveBackTargetForThreads = useCallback(
     (threads: readonly SidebarThreadSummary[], extraAvailableThreadIds?: ReadonlySet<string>) => {
       const latestThread =
-        sortThreadsForSidebar(threads, appSettings.sidebarThreadSortOrder)[0] ?? null;
+        sortThreadsForSidebar(threads, preferences.sidebarThreadSortOrder)[0] ?? null;
       const availableThreadIds = new Set<string>(threads.map((thread) => thread.id));
       if (extraAvailableThreadIds) {
         for (const threadId of extraAvailableThreadIds) {
@@ -2343,7 +2334,7 @@ export default function Sidebar() {
         latestThreadId: latestThread?.id ?? null,
       });
     },
-    [appSettings.sidebarThreadSortOrder, lastThreadRoute, recentViews, splitViewsById],
+    [preferences.sidebarThreadSortOrder, lastThreadRoute, recentViews, splitViewsById],
   );
 
   // Fresh unsent chats have a route id but no persisted sidebar summary yet. Keep those draft
@@ -2575,6 +2566,7 @@ export default function Sidebar() {
       // is unset. Nested function bodies are lowered separately and are unaffected, and the
       // catch below still sees every rejection. See Sidebar.compiler.test.ts.
       const runAddProject = async () => {
+        const authoritativeSettings = await fetchSettings();
         const existing = findWorkspaceRootMatch(projects, cwd, (project) => project.cwd);
         const existingRecovery = await recoverExistingAddProjectTarget({
           existingProjectId: existing?.id,
@@ -2595,7 +2587,7 @@ export default function Sidebar() {
           api,
           workspaceRoot: cwd,
           defaultModelSelection: resolveNewProjectDefaultModelSelection(
-            appSettings.defaultProvider,
+            authoritativeSettings.defaultProvider,
           ),
           ...(options.createIfMissing === undefined
             ? {}
@@ -2634,16 +2626,13 @@ export default function Sidebar() {
         // snapshot is just slow to catch up, continue with the local new-thread flow
         // instead of surfacing a false-negative sidebar sync error.
         setProjectExpanded(creationResult.projectId, true);
-        void handleNewThread(creationResult.projectId, {
-          envMode: appSettings.defaultThreadEnvMode,
-        }).catch(() => undefined);
+        void handleNewThread(creationResult.projectId).catch(() => undefined);
       };
 
       await runExclusiveProjectAddition(projectAdditionLockRef, runAddProject);
     },
     [
-      appSettings.defaultProvider,
-      appSettings.defaultThreadEnvMode,
+      fetchSettings,
       handleNewThread,
       projects,
       recoverExistingProjectFromServer,
@@ -2685,11 +2674,7 @@ export default function Sidebar() {
 
   const handlePrimaryNewThread = useCallback(() => {
     if (primaryNewThreadTarget) {
-      void handleNewThread(primaryNewThreadTarget.projectId, {
-        envMode: resolveSidebarNewThreadEnvMode({
-          defaultEnvMode: appSettings.defaultThreadEnvMode,
-        }),
-      });
+      void handleNewThread(primaryNewThreadTarget.projectId);
       return;
     }
 
@@ -2700,7 +2685,6 @@ export default function Sidebar() {
     }
     handleStartAddProject();
   }, [
-    appSettings.defaultThreadEnvMode,
     handleNewThread,
     handleStartAddProject,
     primaryNewThreadTarget,
@@ -2740,6 +2724,7 @@ export default function Sidebar() {
       }
       const threadId = newThreadId();
       const createdAt = new Date().toISOString();
+      const authoritativeSettings = await fetchSettings();
       const trimmedExternalId = externalId.trim();
       const suffix = trimmedExternalId.slice(-8);
       const providerName =
@@ -2769,7 +2754,7 @@ export default function Sidebar() {
           runtimeMode: "full-access",
           interactionMode: "default",
           envMode: resolveSidebarNewThreadEnvMode({
-            defaultEnvMode: appSettings.defaultThreadEnvMode,
+            defaultEnvMode: authoritativeSettings.defaultThreadEnvMode,
           }),
           branch: null,
           worktreePath: null,
@@ -2799,7 +2784,7 @@ export default function Sidebar() {
         throw error;
       }
     },
-    [appSettings.defaultThreadEnvMode, currentProjectShortcutTargetId, navigate, projects, t],
+    [currentProjectShortcutTargetId, fetchSettings, navigate, projects, t],
   );
 
   const commitRename = useCallback(
@@ -3215,7 +3200,7 @@ export default function Sidebar() {
           removeFromSelection(ids);
           return;
         }
-        if (appSettings.confirmThreadArchive) {
+        if (preferences.confirmThreadArchive) {
           const confirmed = await api.dialogs.confirm(
             [
               t("thread.archiveConfirmCount", { count: archiveIds.length }),
@@ -3234,7 +3219,7 @@ export default function Sidebar() {
 
       if (clicked !== "delete") return;
 
-      if (appSettings.confirmThreadDelete) {
+      if (preferences.confirmThreadDelete) {
         const confirmed = await api.dialogs.confirm(
           [t("thread.deleteConfirmCount", { count }), t("thread.deleteConfirmDescription")].join(
             "\n",
@@ -3263,8 +3248,8 @@ export default function Sidebar() {
       removeFromSelection(ids);
     },
     [
-      appSettings.confirmThreadArchive,
-      appSettings.confirmThreadDelete,
+      preferences.confirmThreadArchive,
+      preferences.confirmThreadDelete,
       archiveThread,
       clearSelection,
       clearDismissedThreadStatus,
@@ -3323,6 +3308,7 @@ export default function Sidebar() {
   const handleCreateProjectSubmit = useCallback(
     async (value: CreateProjectSubmitValue, options: CreateProjectSubmitOptions) => {
       const runCreateProject = async () => {
+        const authoritativeSettings = await fetchSettings();
         if (value.source === "github") {
           const api = readNativeApi();
           if (!api) throw new Error(t("project.appServerUnavailable"));
@@ -3358,7 +3344,7 @@ export default function Sidebar() {
                     commandId: newCommandId(),
                     projectId: requestedProjectId,
                     defaultModelSelection: resolveNewProjectDefaultModelSelection(
-                      appSettings.defaultProvider,
+                      authoritativeSettings.defaultProvider,
                     ),
                     createdAt: new Date().toISOString(),
                   },
@@ -3395,7 +3381,7 @@ export default function Sidebar() {
     },
     [
       addProjectFromPath,
-      appSettings.defaultProvider,
+      fetchSettings,
       homeDir,
       openExistingProjectFromSnapshot,
       syncServerShellSnapshot,
@@ -3571,7 +3557,7 @@ export default function Sidebar() {
 
   const handleProjectDragEnd = useCallback(
     (event: DragEndEvent) => {
-      if (appSettings.sidebarProjectSortOrder !== "manual") {
+      if (preferences.sidebarProjectSortOrder !== "manual") {
         dragInProgressRef.current = false;
         return;
       }
@@ -3583,18 +3569,18 @@ export default function Sidebar() {
       if (!activeProject || !overProject) return;
       reorderProjects(activeProject.id, overProject.id);
     },
-    [appSettings.sidebarProjectSortOrder, projects, reorderProjects],
+    [preferences.sidebarProjectSortOrder, projects, reorderProjects],
   );
 
   const handleProjectDragStart = useCallback(
     (_event: DragStartEvent) => {
-      if (appSettings.sidebarProjectSortOrder !== "manual") {
+      if (preferences.sidebarProjectSortOrder !== "manual") {
         return;
       }
       dragInProgressRef.current = true;
       suppressProjectClickAfterDragRef.current = true;
     },
-    [appSettings.sidebarProjectSortOrder],
+    [preferences.sidebarProjectSortOrder],
   );
 
   const handleProjectDragCancel = useCallback((_event: DragCancelEvent) => {
@@ -3621,11 +3607,11 @@ export default function Sidebar() {
     for (const [projectId, projectThreads] of sidebarThreadsByProjectId) {
       byProjectId.set(
         projectId,
-        sortThreadsForSidebar(projectThreads, appSettings.sidebarThreadSortOrder),
+        sortThreadsForSidebar(projectThreads, preferences.sidebarThreadSortOrder),
       );
     }
     return byProjectId;
-  }, [appSettings.sidebarThreadSortOrder, sidebarThreadsByProjectId]);
+  }, [preferences.sidebarThreadSortOrder, sidebarThreadsByProjectId]);
   const handleProjectTitlePointerDownCapture = useCallback(() => {
     suppressProjectClickAfterDragRef.current = false;
   }, []);
@@ -3643,8 +3629,8 @@ export default function Sidebar() {
   );
 
   const sortedProjects = useMemo(
-    () => sortProjectsForSidebar(projects, sidebarThreads, appSettings.sidebarProjectSortOrder),
-    [appSettings.sidebarProjectSortOrder, projects, sidebarThreads],
+    () => sortProjectsForSidebar(projects, sidebarThreads, preferences.sidebarProjectSortOrder),
+    [preferences.sidebarProjectSortOrder, projects, sidebarThreads],
   );
   const studioProjects = useMemo(
     () =>
@@ -3673,13 +3659,13 @@ export default function Sidebar() {
           ),
           pinnedThreadIds,
         ),
-        appSettings.sidebarThreadSortOrder,
+        preferences.sidebarThreadSortOrder,
       ),
       forceVisibleThreadId: activeSidebarThreadId ?? undefined,
     });
   }, [
     activeSidebarThreadId,
-    appSettings.sidebarThreadSortOrder,
+    preferences.sidebarThreadSortOrder,
     isOnStudio,
     pinnedThreadIds,
     sortedSidebarThreadsByProjectId,
@@ -3697,13 +3683,13 @@ export default function Sidebar() {
           chatProjects.flatMap((project) => sortedSidebarThreadsByProjectId.get(project.id) ?? []),
           pinnedThreadIds,
         ),
-        appSettings.sidebarThreadSortOrder,
+        preferences.sidebarThreadSortOrder,
       ),
       forceVisibleThreadId: activeSidebarThreadId ?? undefined,
     });
   }, [
     activeSidebarThreadId,
-    appSettings.sidebarThreadSortOrder,
+    preferences.sidebarThreadSortOrder,
     chatProjects,
     isOnChat,
     pinnedThreadIds,
@@ -4093,7 +4079,7 @@ export default function Sidebar() {
     threads: visibleSidebarThreads,
     projectCwdById,
   });
-  const isManualProjectSorting = appSettings.sidebarProjectSortOrder === "manual";
+  const isManualProjectSorting = preferences.sidebarProjectSortOrder === "manual";
   const threadJumpCommandByThreadId = useMemo(() => {
     const mapping = new Map<ThreadId, NonNullable<ReturnType<typeof threadJumpCommandForIndex>>>();
     for (const [visibleThreadIndex, threadId] of visibleSidebarThreadIds.entries()) {
@@ -4973,9 +4959,6 @@ export default function Sidebar() {
                   event.preventDefault();
                   event.stopPropagation();
                   void handleNewThread(project.id, {
-                    envMode: resolveSidebarNewThreadEnvMode({
-                      defaultEnvMode: appSettings.defaultThreadEnvMode,
-                    }),
                     entryPoint: "terminal",
                   });
                 }}
@@ -4993,11 +4976,7 @@ export default function Sidebar() {
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();
-                  void handleNewThread(project.id, {
-                    envMode: resolveSidebarNewThreadEnvMode({
-                      defaultEnvMode: appSettings.defaultThreadEnvMode,
-                    }),
-                  });
+                  void handleNewThread(project.id);
                 }}
               />
             </SidebarSectionToolbar>
@@ -5884,9 +5863,9 @@ export default function Sidebar() {
                 />
                 {isOnContainerSurface && containerThreadRows.length > 1 ? (
                   <ChatSortMenu
-                    threadSortOrder={appSettings.sidebarThreadSortOrder}
+                    threadSortOrder={preferences.sidebarThreadSortOrder}
                     onThreadSortOrderChange={(sortOrder) => {
-                      updateSettings({ sidebarThreadSortOrder: sortOrder });
+                      updatePreferences({ sidebarThreadSortOrder: sortOrder });
                     }}
                   />
                 ) : null}
@@ -6052,13 +6031,13 @@ export default function Sidebar() {
                         />
                       ) : null}
                       <ProjectSortMenu
-                        projectSortOrder={appSettings.sidebarProjectSortOrder}
-                        threadSortOrder={appSettings.sidebarThreadSortOrder}
+                        projectSortOrder={preferences.sidebarProjectSortOrder}
+                        threadSortOrder={preferences.sidebarThreadSortOrder}
                         onProjectSortOrderChange={(sortOrder) => {
-                          updateSettings({ sidebarProjectSortOrder: sortOrder });
+                          updatePreferences({ sidebarProjectSortOrder: sortOrder });
                         }}
                         onThreadSortOrderChange={(sortOrder) => {
-                          updateSettings({ sidebarThreadSortOrder: sortOrder });
+                          updatePreferences({ sidebarThreadSortOrder: sortOrder });
                         }}
                       />
                       <SidebarIconButton

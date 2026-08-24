@@ -17,10 +17,11 @@ import {
   type ThreadId,
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
+import { isProviderRuntimeModeExecutable } from "@omnimind/shared/runtimeMode";
 import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 
-import { useAppSettings } from "~/appSettings";
+import { useLocalPreferences } from "~/localPreferences";
 import type { Thread } from "~/types";
 import {
   ComposerPickerMenuPopup,
@@ -28,6 +29,10 @@ import {
 } from "~/components/chat/ComposerPickerMenuPopup";
 import { ProviderModelPicker } from "~/components/chat/ProviderModelPicker";
 import { RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME } from "~/components/chat/composerPickerStyles";
+import {
+  RuntimeModeAvailabilityHint,
+  runtimeModeAvailabilityMessageKeyFromError,
+} from "~/components/chat/RuntimeModeAvailabilityHint";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Dialog, DialogPopup, DialogTitle } from "~/components/ui/dialog";
@@ -94,11 +99,7 @@ import { SkillCubeIcon, WorktreeIcon } from "~/lib/icons";
 import { CentralIcon } from "~/lib/central-icons";
 import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
-import {
-  normalizeRuntimeModeForProvider,
-  providerModelSupportsAutoRuntimeMode,
-  providerSupportsAutoRuntimeMode,
-} from "~/lib/runtimeMode";
+import { providerExecutionCapabilitiesQueryOptions } from "~/lib/providerDiscoveryReactQuery";
 import { findProviderStatus } from "~/lib/providerAvailability";
 import { cn } from "~/lib/utils";
 import type { AppLocale } from "~/locale";
@@ -756,12 +757,15 @@ export function applyAutomationEvent(
 export function useAutomations(onRunStarted?: (threadId: ThreadId) => void) {
   const queryClient = useQueryClient();
   const { t } = useI18n();
-  const showMutationError = (title: MessageKey, error: Error, description = error.message) =>
+  const showMutationError = (title: MessageKey, error: Error, description?: string) => {
+    const runtimeModeMessageKey = runtimeModeAvailabilityMessageKeyFromError(error);
     toastManager.add({
       type: "error",
       title: t(title),
-      description,
+      description:
+        description ?? (runtimeModeMessageKey ? t(runtimeModeMessageKey) : error.message),
     });
+  };
   const showDefinitionMutationError = async (fallbackTitle: MessageKey, error: Error) => {
     if ("code" in error && error.code === "AUTOMATION_DEFINITION_CONFLICT") {
       await queryClient.invalidateQueries({ queryKey: automationQueryKey });
@@ -998,7 +1002,7 @@ export function AutomationModelPicker({
   readonly onChange: (value: ModelSelection) => void;
   readonly onAutoModeSupportChange?: (supported: boolean) => void;
 }) {
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const serverConfigQuery = useQuery(serverConfigQueryOptions());
   const providerStatuses = useProviderStatusesForLocalConfig();
   const [open, setOpen] = useState(false);
@@ -1029,7 +1033,6 @@ export function AutomationModelPicker({
     // cold-start burst against the Server's bounded expensive-read admission.
     prefetchProviders,
   });
-  const providerStatus = findProviderStatus(providerStatuses, value.provider);
   const persistedRuntimeModel =
     value.provider === "claudeAgent" && typeof value.supportsAutoMode === "boolean"
       ? {
@@ -1038,11 +1041,9 @@ export function AutomationModelPicker({
           supportsAutoMode: value.supportsAutoMode,
         }
       : undefined;
-  const autoModeSupported = providerModelSupportsAutoRuntimeMode(
-    value.provider,
-    selectedRuntimeModel ?? persistedRuntimeModel,
-    providerStatus,
-  );
+  const autoModeSupported =
+    value.provider !== "claudeAgent" ||
+    (selectedRuntimeModel ?? persistedRuntimeModel)?.supportsAutoMode === true;
   useEffect(() => {
     onAutoModeSupportChange?.(autoModeSupported);
   }, [autoModeSupported, onAutoModeSupportChange]);
@@ -1094,11 +1095,7 @@ export function reconcileAutomationFormAutoModeSupport(
     form.modelSelection.supportsAutoMode !== supported
       ? { ...form.modelSelection, supportsAutoMode: supported }
       : form.modelSelection;
-  const runtimeMode =
-    !supported && form.runtimeMode === "auto" ? "approval-required" : form.runtimeMode;
-  return modelSelection !== form.modelSelection || runtimeMode !== form.runtimeMode
-    ? { ...form, modelSelection, runtimeMode }
-    : form;
+  return modelSelection !== form.modelSelection ? { ...form, modelSelection } : form;
 }
 
 export function AutomationDialog({
@@ -1136,14 +1133,18 @@ export function AutomationDialog({
     onFormChange({ ...form, [key]: value });
   const projectThreads = threads.filter((thread) => thread.projectId === form.projectId);
   const selectedProject = projects.find((project) => project.id === form.projectId);
-  const [selectedModelSupportsAuto, setSelectedModelSupportsAuto] = useState(() =>
-    form.modelSelection.provider === "claudeAgent"
-      ? form.modelSelection.supportsAutoMode !== false
-      : providerSupportsAutoRuntimeMode(form.modelSelection.provider),
+  const executionCapabilitiesQuery = useQuery(
+    providerExecutionCapabilitiesQueryOptions(form.modelSelection),
   );
+  const executionCapabilities = executionCapabilitiesQuery.data;
+  const capabilityResolution = executionCapabilitiesQuery.isPending
+    ? "pending"
+    : executionCapabilitiesQuery.isError
+      ? "failed"
+      : "resolved";
+  const selectedModeCapability = executionCapabilities?.runtimeModes[form.runtimeMode];
   const handleAutoModeSupportChange = useCallback(
     (supported: boolean) => {
-      setSelectedModelSupportsAuto(supported);
       const reconciled = reconcileAutomationFormAutoModeSupport(form, supported);
       if (reconciled !== form) {
         onFormChange(reconciled);
@@ -1154,7 +1155,10 @@ export function AutomationDialog({
   const schedule = scheduleFromForm(form);
   const hasFastIntervalLimit = automationFastIntervalLimitMessage(form) !== null;
   const hasBlockingWarning = hasBlockingAutomationDraftWarnings(warnings, acknowledgedWarningIds);
-  const submittable = isFormSubmittable(form) && !hasBlockingWarning;
+  const submittable =
+    isFormSubmittable(form) &&
+    !hasBlockingWarning &&
+    isProviderRuntimeModeExecutable(selectedModeCapability);
   const intervalValue = intervalOptionValue({
     amount: form.intervalAmount,
     unit: form.intervalUnit,
@@ -1187,7 +1191,6 @@ export function AutomationDialog({
       ...form,
       projectId,
       modelSelection,
-      runtimeMode: normalizeRuntimeModeForProvider(form.runtimeMode, modelSelection.provider),
       targetThreadId: targetStillMatches ? form.targetThreadId : "",
     });
   };
@@ -1379,7 +1382,6 @@ export function AutomationDialog({
                 onFormChange({
                   ...form,
                   modelSelection: value,
-                  runtimeMode: normalizeRuntimeModeForProvider(form.runtimeMode, value.provider),
                 });
               }}
               onAutoModeSupportChange={handleAutoModeSupportChange}
@@ -1677,20 +1679,55 @@ export function AutomationDialog({
                   value={form.runtimeMode}
                   onValueChange={(value) => setField("runtimeMode", value as RuntimeMode)}
                 >
-                  <MenuRadioItem value="approval-required">
-                    {t("automation.permissionApproval")}
-                  </MenuRadioItem>
-                  {selectedModelSupportsAuto ? (
-                    <MenuRadioItem value="auto">
-                      <CentralIcon
-                        name="shield-code"
-                        className={cn("size-4", RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME)}
+                  <MenuRadioItem
+                    value="approval-required"
+                    disabled={
+                      !isProviderRuntimeModeExecutable(
+                        executionCapabilities?.runtimeModes["approval-required"],
+                      )
+                    }
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span>{t("automation.permissionApproval")}</span>
+                      <RuntimeModeAvailabilityHint
+                        capability={executionCapabilities?.runtimeModes["approval-required"]}
+                        resolution={capabilityResolution}
                       />
-                      {t("automation.permissionAuto")}
-                    </MenuRadioItem>
-                  ) : null}
-                  <MenuRadioItem value="full-access">
-                    {t("automation.permissionFullAccess")}
+                    </span>
+                  </MenuRadioItem>
+                  <MenuRadioItem
+                    value="auto"
+                    disabled={
+                      !isProviderRuntimeModeExecutable(executionCapabilities?.runtimeModes.auto)
+                    }
+                  >
+                    <CentralIcon
+                      name="shield-code"
+                      className={cn("size-4", RUNTIME_AUTO_ICON_ACCENT_CLASS_NAME)}
+                    />
+                    <span className="flex min-w-0 flex-col">
+                      <span>{t("automation.permissionAuto")}</span>
+                      <RuntimeModeAvailabilityHint
+                        capability={executionCapabilities?.runtimeModes.auto}
+                        resolution={capabilityResolution}
+                      />
+                    </span>
+                  </MenuRadioItem>
+                  <MenuRadioItem
+                    value="full-access"
+                    disabled={
+                      !isProviderRuntimeModeExecutable(
+                        executionCapabilities?.runtimeModes["full-access"],
+                      )
+                    }
+                  >
+                    <span className="flex min-w-0 flex-col">
+                      <span>{t("automation.permissionFullAccess")}</span>
+                      <RuntimeModeAvailabilityHint
+                        capability={executionCapabilities?.runtimeModes["full-access"]}
+                        resolution={capabilityResolution}
+                      />
+                    </span>
                   </MenuRadioItem>
                 </MenuRadioGroup>
               </ComposerPickerMenuPopup>

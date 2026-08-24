@@ -36,7 +36,7 @@ import {
 } from "~/lib/providerDiscoveryReactQuery";
 import { projectSearchEntriesQueryOptions } from "~/lib/projectReactQuery";
 import { isMacPlatform } from "~/lib/utils";
-import { AVAILABLE_PROVIDER_OPTIONS } from "../chat/ProviderModelPicker";
+import { PROVIDER_MODEL_OPTIONS } from "../chat/ProviderModelPicker";
 import type { ProviderModelOption } from "../../providerModelOptions";
 
 type ComposerPluginSuggestion = {
@@ -193,7 +193,7 @@ export function useKanbanTaskComposerDiscovery(input: UseKanbanTaskComposerDisco
     providerCommandsQuery.data?.commands ?? EMPTY_PROVIDER_NATIVE_COMMANDS;
   const providerSkills = providerSkillsQuery.data?.skills ?? EMPTY_PROVIDER_SKILLS;
   const searchableModelOptions = buildSearchableModelOptions({
-    providerOptions: AVAILABLE_PROVIDER_OPTIONS,
+    providerOptions: PROVIDER_MODEL_OPTIONS,
     modelOptionsByProvider,
     providerOrder,
     hiddenProviders,

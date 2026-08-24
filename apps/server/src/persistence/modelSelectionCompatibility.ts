@@ -3,19 +3,10 @@
 // Layer: Persistence compatibility helper
 // Exports: normalizeLegacyModelSelection, normalizePersistedModelSelection
 
-import { MODEL_OPTIONS_BY_PROVIDER } from "@omnimind/contracts";
+import { MODEL_OPTIONS_BY_PROVIDER, ProviderKind } from "@omnimind/contracts";
+import { Schema } from "effect";
 
-type ModelProviderKind =
-  | "omnimind"
-  | "codex"
-  | "claudeAgent"
-  | "cursor"
-  | "antigravity"
-  | "grok"
-  | "droid"
-  | "kilo"
-  | "opencode"
-  | "pi";
+type ModelProviderKind = ProviderKind;
 
 const NON_DROID_MODEL_SLUGS = new Set(
   Object.entries(MODEL_OPTIONS_BY_PROVIDER).flatMap(([provider, models]) =>
@@ -86,18 +77,7 @@ function inferProviderFromLabel(label: string): ModelProviderKind | undefined {
 }
 
 function inferLegacyModelProvider(provider: unknown, model: string): ModelProviderKind {
-  if (
-    provider === "omnimind" ||
-    provider === "codex" ||
-    provider === "claudeAgent" ||
-    provider === "cursor" ||
-    provider === "antigravity" ||
-    provider === "grok" ||
-    provider === "droid" ||
-    provider === "kilo" ||
-    provider === "opencode" ||
-    provider === "pi"
-  ) {
+  if (Schema.is(ProviderKind)(provider)) {
     return provider;
   }
   if (provider === "gemini") {

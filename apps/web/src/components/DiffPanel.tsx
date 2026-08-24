@@ -42,7 +42,7 @@ import { type RepoDiffScope, useRepoDiffScopeStore } from "../repoDiffScopeStore
 import { useStore } from "../store";
 import { createProjectSelector } from "../storeSelectors";
 import { inferCheckpointTurnCountByTurnId } from "../session-logic";
-import { type TimestampFormat, useAppSettings } from "../appSettings";
+import { type TimestampFormat, useLocalPreferences } from "../localPreferences";
 import { useComposerDraftStore } from "../composerDraftStore";
 import { DOCK_HEADER_ICON_BUTTON_CLASS, type DiffRenderMode } from "./chat/chatHeaderControls";
 import {
@@ -399,7 +399,7 @@ export default function DiffPanel({
   const hideHeader = hideHeaderProp ?? false;
   const navigate = useNavigate();
   const { resolvedTheme } = useTheme();
-  const { settings } = useAppSettings();
+  const { preferences: settings } = useLocalPreferences();
   const [diffRenderMode, setDiffRenderMode] = useState<DiffRenderMode>("split");
   const [diffWordWrap, setDiffWordWrap] = useState(settings.diffWordWrap);
   const [diffIgnoreWhitespace, setDiffIgnoreWhitespace] = useState(true);
