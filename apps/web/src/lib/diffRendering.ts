@@ -53,18 +53,18 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   --diffs-bg-separator-override: color-mix(in srgb, var(--background) 95%, var(--foreground)) !important;
   --diffs-bg-buffer-override: color-mix(in srgb, var(--background) 92%, var(--foreground)) !important;
 
-  --diffs-bg-addition-override: color-mix(in srgb, var(--background) 92%, var(--success)) !important;
-  --diffs-bg-addition-number-override: color-mix(in srgb, var(--background) 88%, var(--success)) !important;
-  --diffs-bg-addition-hover-override: color-mix(in srgb, var(--background) 85%, var(--success)) !important;
-  --diffs-bg-addition-emphasis-override: color-mix(in srgb, var(--background) 80%, var(--success)) !important;
+  --diffs-bg-addition-override: color-mix(in srgb, var(--background) 92%, var(--color-decoration-added)) !important;
+  --diffs-bg-addition-number-override: color-mix(in srgb, var(--background) 88%, var(--color-decoration-added)) !important;
+  --diffs-bg-addition-hover-override: color-mix(in srgb, var(--background) 85%, var(--color-decoration-added)) !important;
+  --diffs-bg-addition-emphasis-override: color-mix(in srgb, var(--background) 80%, var(--color-decoration-added)) !important;
 
-  --diffs-bg-deletion-override: color-mix(in srgb, var(--background) 92%, var(--destructive)) !important;
-  --diffs-bg-deletion-number-override: color-mix(in srgb, var(--background) 88%, var(--destructive)) !important;
-  --diffs-bg-deletion-hover-override: color-mix(in srgb, var(--background) 85%, var(--destructive)) !important;
+  --diffs-bg-deletion-override: color-mix(in srgb, var(--background) 92%, var(--color-decoration-deleted)) !important;
+  --diffs-bg-deletion-number-override: color-mix(in srgb, var(--background) 88%, var(--color-decoration-deleted)) !important;
+  --diffs-bg-deletion-hover-override: color-mix(in srgb, var(--background) 85%, var(--color-decoration-deleted)) !important;
   --diffs-bg-deletion-emphasis-override: color-mix(
     in srgb,
     var(--background) 80%,
-    var(--destructive)
+    var(--color-decoration-deleted)
   ) !important;
 
   /* Force the derived tokens Pierre reads for hunk rows (not only the *-override knobs).
@@ -73,14 +73,14 @@ export function buildDiffPanelUnsafeCSS(theme: "light" | "dark"): string {
   --diffs-bg-context-number: var(--background) !important;
   --diffs-bg-buffer: color-mix(in srgb, var(--background) 92%, var(--foreground)) !important;
   --diffs-bg-separator: color-mix(in srgb, var(--background) 95%, var(--foreground)) !important;
-  --diffs-bg-addition: color-mix(in srgb, var(--background) 92%, var(--success)) !important;
-  --diffs-bg-addition-number: color-mix(in srgb, var(--background) 88%, var(--success)) !important;
-  --diffs-bg-addition-hover: color-mix(in srgb, var(--background) 85%, var(--success)) !important;
-  --diffs-bg-addition-emphasis: color-mix(in srgb, var(--background) 80%, var(--success)) !important;
-  --diffs-bg-deletion: color-mix(in srgb, var(--background) 92%, var(--destructive)) !important;
-  --diffs-bg-deletion-number: color-mix(in srgb, var(--background) 88%, var(--destructive)) !important;
-  --diffs-bg-deletion-hover: color-mix(in srgb, var(--background) 85%, var(--destructive)) !important;
-  --diffs-bg-deletion-emphasis: color-mix(in srgb, var(--background) 80%, var(--destructive)) !important;
+  --diffs-bg-addition: color-mix(in srgb, var(--background) 92%, var(--color-decoration-added)) !important;
+  --diffs-bg-addition-number: color-mix(in srgb, var(--background) 88%, var(--color-decoration-added)) !important;
+  --diffs-bg-addition-hover: color-mix(in srgb, var(--background) 85%, var(--color-decoration-added)) !important;
+  --diffs-bg-addition-emphasis: color-mix(in srgb, var(--background) 80%, var(--color-decoration-added)) !important;
+  --diffs-bg-deletion: color-mix(in srgb, var(--background) 92%, var(--color-decoration-deleted)) !important;
+  --diffs-bg-deletion-number: color-mix(in srgb, var(--background) 88%, var(--color-decoration-deleted)) !important;
+  --diffs-bg-deletion-hover: color-mix(in srgb, var(--background) 85%, var(--color-decoration-deleted)) !important;
+  --diffs-bg-deletion-emphasis: color-mix(in srgb, var(--background) 80%, var(--color-decoration-deleted)) !important;
 
   font-family: var(--font-chat-code-family) !important;
   font-size: var(--app-font-size-chat-code, 11px) !important;

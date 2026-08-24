@@ -8,7 +8,7 @@ import {
   normalizeFontFamilyCssValue,
   normalizeMonospaceFontFamilyCssValue,
 } from "../lib/fontFamily";
-import { THEME_SEED_CATALOG } from "./theme.seed.generated";
+import { THEME_SEED_CATALOG, type ThemePresetSeed } from "./theme.seed.generated";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type ThemeVariant = "light" | "dark";
@@ -56,7 +56,7 @@ export interface ThemePresetOption {
   variants: readonly ThemeVariant[];
 }
 
-type ThemePresetCatalog = Readonly<Record<string, Partial<Record<ThemeVariant, ChromeTheme>>>>;
+type ThemePresetCatalog = Readonly<Record<string, Partial<Record<ThemeVariant, ThemePresetSeed>>>>;
 
 export interface ThemeSharePayload {
   presetId: string;
@@ -127,12 +127,6 @@ type ChromeThemeSeedPatch = Partial<
   semanticColors?: Partial<ThemeSemanticColors>;
 };
 
-type ThemePresetSeedPatchMetadata = {
-  contrast?: true;
-  fonts?: Partial<Record<keyof ThemeFonts, true>>;
-  opaqueWindows?: true;
-};
-
 type RgbColor = {
   red: number;
   green: number;
@@ -165,6 +159,9 @@ const WARNING_COLOR_BY_VARIANT: Record<ThemeVariant, string> = {
   dark: "#f5b44a",
   light: "#d97706",
 };
+const STATUS_COLOR_MERGED = "#6366f1";
+const STATUS_COLOR_NEUTRAL = "#71717a";
+const NORMAL_TEXT_CONTRAST_RATIO = 4.5;
 const PANEL_BASE_ALPHA: Record<ThemeVariant, number> = {
   dark: 0.03,
   light: 0.18,
@@ -173,43 +170,6 @@ const PANEL_CONTRAST_STEP: Record<ThemeVariant, number> = {
   dark: 0.03,
   light: 0.008,
 };
-const THEME_PRESET_SEED_PATCH_METADATA: Partial<
-  Record<string, Partial<Record<ThemeVariant, ThemePresetSeedPatchMetadata>>>
-> = {
-  linear: {
-    dark: { fonts: { ui: true }, opaqueWindows: true },
-    light: { fonts: { ui: true }, opaqueWindows: true },
-  },
-  lobster: {
-    dark: { fonts: { ui: true } },
-  },
-  matrix: {
-    dark: { fonts: { code: true, ui: true }, opaqueWindows: true },
-  },
-  notion: {
-    dark: { fonts: { code: true, ui: true }, opaqueWindows: true },
-    light: { fonts: { code: true, ui: true }, opaqueWindows: true },
-  },
-  proof: {
-    light: { fonts: { code: true, ui: true }, opaqueWindows: true },
-  },
-  raycast: {
-    dark: { fonts: { code: true, ui: true }, opaqueWindows: true },
-    light: { fonts: { code: true, ui: true }, opaqueWindows: true },
-  },
-  sentry: {
-    dark: { fonts: { code: true, ui: true } },
-  },
-  vercel: {
-    dark: { contrast: true, fonts: { code: true, ui: true }, opaqueWindows: true },
-    light: { contrast: true, fonts: { code: true, ui: true }, opaqueWindows: true },
-  },
-  omnimind: {
-    dark: { contrast: true },
-    light: { contrast: true },
-  },
-};
-
 // Mirror the packaged Codex catalog closely enough that share-string validation
 // can preserve the "known theme + variant availability" behavior.
 const THEME_PRESET_LABEL_OVERRIDES: Readonly<Record<string, string>> = {
@@ -585,8 +545,15 @@ export function getThemePresetSeedPatch(
     return {};
   }
 
+  return buildThemePresetSeedPatch(themeSeed, variant);
+}
+
+export function buildThemePresetSeedPatch(
+  themeSeed: ThemePresetSeed,
+  variant: ThemeVariant,
+): ChromeThemeSeedPatch {
   const normalizedSeed = normalizeChromeTheme(themeSeed, variant);
-  const metadata = THEME_PRESET_SEED_PATCH_METADATA[presetId]?.[variant];
+  const metadata = themeSeed.apply;
   const patch: ChromeThemeSeedPatch = {
     accent: normalizedSeed.accent,
     ink: normalizedSeed.ink,
@@ -715,7 +682,6 @@ export function buildThemeCssVariables(
     options?.electron === true && options?.isMac === true && !pack.theme.opaqueWindows
       ? "translucent"
       : "opaque";
-  const warningColor = WARNING_COLOR_BY_VARIANT[variant];
   // Keep the navigation plane slightly distinct from the reading surface. The
   // neutral ink mix is opaque and theme-derived: it avoids wallpaper tinting on
   // macOS while preserving the native light/dark temperature of each theme.
@@ -802,10 +768,10 @@ export function buildThemeCssVariables(
     "--card": readCodexVariable("--color-background-panel"),
     "--card-foreground": readCodexVariable("--color-text-foreground"),
     "--composer-surface": composerSurface,
-    "--destructive": pack.theme.semanticColors.diffRemoved,
+    "--destructive": readCodexVariable("--color-text-danger"),
     "--destructive-foreground": pack.theme.surface,
     "--foreground": readCodexVariable("--color-text-foreground"),
-    "--info": pack.theme.accent,
+    "--info": readCodexVariable("--color-text-accent"),
     // Keep legacy app-level "info" consumers on Codex's accent-text path so
     // links, file labels, and similar affordances inherit the real light/dark logic.
     "--info-foreground": readCodexVariable("--color-text-accent"),
@@ -825,7 +791,12 @@ export function buildThemeCssVariables(
     "--sidebar-accent-foreground": readCodexVariable("--color-text-foreground"),
     "--sidebar-border": readCodexVariable("--color-border"),
     "--sidebar-foreground": readCodexVariable("--color-text-foreground"),
-    "--success": pack.theme.semanticColors.diffAdded,
+    "--status-failure": readCodexVariable("--color-text-danger"),
+    "--status-merged": readCodexVariable("--color-text-status-merged"),
+    "--status-neutral": readCodexVariable("--color-text-status-neutral"),
+    "--status-open": readCodexVariable("--color-text-success"),
+    "--status-success": readCodexVariable("--color-text-success"),
+    "--success": readCodexVariable("--color-text-success"),
     "--success-foreground": pack.theme.surface,
     "--theme-font-code-family": normalizeMonospaceFontFamilyCssValue(pack.theme.fonts.code) ?? "",
     // Empty string → the applier removes the property, so the base -apple-system stack
@@ -833,7 +804,7 @@ export function buildThemeCssVariables(
     "--theme-font-ui-family": options?.systemUiFont
       ? ""
       : (normalizeFontFamilyCssValue(pack.theme.fonts.ui) ?? ""),
-    "--warning": warningColor,
+    "--warning": readCodexVariable("--color-text-warning"),
     "--warning-foreground": pack.theme.surface,
   };
 
@@ -852,11 +823,11 @@ export function buildResolvedThemeTokens(
   variant: ThemeVariant,
 ): ResolvedThemeTokens {
   const computedTheme = buildComputedTheme(pack.theme, variant);
+  const panel = buildPanelBackground(computedTheme);
   const derived =
     variant === "light"
-      ? buildLightDerivedTokens(computedTheme)
-      : buildDarkDerivedTokens(computedTheme);
-  const panel = buildPanelBackground(computedTheme);
+      ? buildLightDerivedTokens(computedTheme, panel)
+      : buildDarkDerivedTokens(computedTheme, panel);
   const codexVariables = buildCodexCssVariables(computedTheme, derived, panel);
 
   return {
@@ -888,7 +859,7 @@ export function buildEngineWebSurfaceThemeSnapshot(
     accent: read("--color-text-accent"),
     border: read("--color-border-light"),
     borderStrong: read("--color-border-heavy"),
-    danger: read("--color-accent-red"),
+    danger: read("--color-text-danger"),
     elevatedSurface: read("--color-background-elevated-primary-opaque"),
     hoverSurface: read("--color-background-button-tertiary-hover"),
     primaryBackground: read("--color-background-button-primary"),
@@ -896,13 +867,13 @@ export function buildEngineWebSurfaceThemeSnapshot(
     primaryText: read("--color-text-button-primary"),
     secondaryBackground: read("--color-background-button-secondary"),
     secondaryBackgroundHover: read("--color-background-button-secondary-hover"),
-    success: read("--color-accent-green"),
+    success: read("--color-text-success"),
     surface: read("--color-background-surface"),
     surfaceUnder: read("--color-background-surface-under"),
     text: read("--color-text-foreground"),
     textDim: read("--color-text-foreground-tertiary"),
     textMuted: read("--color-text-foreground-secondary"),
-    warning: read("--color-accent-yellow"),
+    warning: read("--color-text-warning"),
   };
 }
 
@@ -932,6 +903,21 @@ function buildCodexCssVariables(
   panelBackground: string,
 ) {
   const terminalAnsiGreen = buildTerminalAnsiGreen(theme.theme.semanticColors.diffAdded);
+  const readableBackgrounds = [theme.theme.surface, theme.surfaceUnder, panelBackground];
+  const readableDanger = ensureReadableTextColor(
+    theme.theme.semanticColors.diffRemoved,
+    readableBackgrounds,
+  );
+  const readableSuccess = ensureReadableTextColor(
+    theme.theme.semanticColors.diffAdded,
+    readableBackgrounds,
+  );
+  const readableWarning = ensureReadableTextColor(
+    WARNING_COLOR_BY_VARIANT[theme.variant],
+    readableBackgrounds,
+  );
+  const readableMerged = ensureReadableTextColor(STATUS_COLOR_MERGED, readableBackgrounds);
+  const readableNeutral = ensureReadableTextColor(STATUS_COLOR_NEUTRAL, readableBackgrounds);
 
   return {
     "--codex-base-accent": theme.theme.accent,
@@ -990,12 +976,17 @@ function buildCodexCssVariables(
     "--color-icon-tertiary": derivedTokens.iconTertiary,
     "--color-simple-scrim": derivedTokens.simpleScrim,
     "--color-text-accent": derivedTokens.textAccent,
+    "--color-text-danger": readableDanger,
     "--color-text-button-primary": derivedTokens.textButtonPrimary,
     "--color-text-button-secondary": derivedTokens.textButtonSecondary,
     "--color-text-button-tertiary": derivedTokens.textButtonTertiary,
     "--color-text-foreground": derivedTokens.textForeground,
     "--color-text-foreground-secondary": derivedTokens.textForegroundSecondary,
     "--color-text-foreground-tertiary": derivedTokens.textForegroundTertiary,
+    "--color-text-status-merged": readableMerged,
+    "--color-text-status-neutral": readableNeutral,
+    "--color-text-success": readableSuccess,
+    "--color-text-warning": readableWarning,
     "--vscode-terminal-ansiBlack": derivedTokens.textForegroundTertiary,
     "--vscode-terminal-ansiBlue": theme.theme.accent,
     "--vscode-terminal-ansiBrightBlack": derivedTokens.textForegroundSecondary,
@@ -1130,11 +1121,17 @@ function getRequiredVariable(variables: Record<string, string>, name: string): s
   return value;
 }
 
-function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
+function buildLightDerivedTokens(
+  theme: ReturnType<typeof buildComputedTheme>,
+  panelBackground: string,
+) {
   // Mirrors Codex Electron's light chrome derivation from chrome-theme-C3NmvE0H.js.
   const controlBase = mixRgb(theme.surface, WHITE, 0.09 + theme.contrast * 0.04);
   const elevatedSecondaryBase = mixRgb(theme.surface, WHITE, 0.08 + theme.contrast * 0.08);
   const elevatedPrimaryBase = mixRgb(theme.surface, WHITE, 0.16 + theme.contrast * 0.12);
+  const readableBackgrounds = [theme.theme.surface, theme.surfaceUnder, panelBackground];
+  const readableInk = ensureReadableTextColor(theme.theme.ink, readableBackgrounds);
+  const readableAccent = ensureReadableTextColor(theme.theme.accent, readableBackgrounds);
 
   return {
     accentBackground: mixHex(theme.theme.surface, theme.theme.accent, 0.11 + theme.contrast * 0.04),
@@ -1155,7 +1152,7 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     borderFocus: theme.theme.accent,
     borderHeavy: formatRgba(theme.ink, 0.09 + theme.contrast * 0.06),
     borderLight: formatRgba(theme.ink, 0.07 + theme.contrast * 0.02),
-    buttonPrimaryBackground: theme.theme.ink,
+    buttonPrimaryBackground: readableInk,
     buttonPrimaryBackgroundActive: formatRgba(theme.ink, 0.1 + theme.contrast * 0.12),
     buttonPrimaryBackgroundHover: formatRgba(theme.ink, 0.05 + theme.contrast * 0.06),
     buttonPrimaryBackgroundInactive: formatRgba(theme.ink, 0.18 + theme.contrast * 0.14),
@@ -1177,21 +1174,27 @@ function buildLightDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     iconSecondary: formatRgba(theme.ink, 0.65 + theme.contrast * 0.1),
     iconTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
     simpleScrim: formatRgba(BLACK, 0.08 + theme.contrast * 0.04),
-    textAccent: theme.theme.accent,
+    textAccent: readableAccent,
     textButtonPrimary: theme.theme.surface,
-    textButtonSecondary: theme.theme.ink,
-    textButtonTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
-    textForeground: theme.theme.ink,
+    textButtonSecondary: readableInk,
+    textButtonTertiary: readableInk,
+    textForeground: readableInk,
     textForegroundSecondary: formatRgba(theme.ink, 0.65 + theme.contrast * 0.1),
     textForegroundTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
   };
 }
 
-function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
+function buildDarkDerivedTokens(
+  theme: ReturnType<typeof buildComputedTheme>,
+  panelBackground: string,
+) {
   // Mirrors Codex Electron's dark chrome derivation from chrome-theme-C3NmvE0H.js.
   const controlBase = mixRgb(theme.surface, theme.ink, 0.06 + theme.contrast * 0.05);
   const focusBase = mixRgb(theme.accent, WHITE, 0.3 + theme.contrast * 0.15);
   const elevatedPrimaryBase = mixRgb(theme.surface, theme.ink, 0.08 + theme.contrast * 0.08);
+  const readableBackgrounds = [theme.theme.surface, theme.surfaceUnder, panelBackground];
+  const readableInk = ensureReadableTextColor(theme.theme.ink, readableBackgrounds);
+  const readableAccent = ensureReadableTextColor(formatHex(focusBase), readableBackgrounds);
 
   return {
     accentBackground: mixHex("#000000", theme.theme.accent, 0.2 + theme.contrast * 0.08),
@@ -1204,7 +1207,7 @@ function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     // High-contrast primary button (white-on-dark) mirroring the light-mode
     // derivation (bg = ink, text = surface). Intentionally diverges from Codex
     // Electron's dark elevated primary so the primary action reads as filled.
-    buttonPrimaryBackground: theme.theme.ink,
+    buttonPrimaryBackground: readableInk,
     buttonPrimaryBackgroundActive: formatRgba(theme.ink, 0.07 + theme.contrast * 0.05),
     buttonPrimaryBackgroundHover: formatRgba(theme.ink, 0.04 + theme.contrast * 0.03),
     buttonPrimaryBackgroundInactive: formatRgba(theme.ink, 0.02 + theme.contrast * 0.02),
@@ -1232,11 +1235,11 @@ function buildDarkDerivedTokens(theme: ReturnType<typeof buildComputedTheme>) {
     simpleScrim: formatRgba(theme.ink, 0.08 + theme.contrast * 0.04),
     // Codex brightens dark accent affordances through the same focus mix used
     // for the border, rather than using the raw accent directly.
-    textAccent: formatOpaqueRgb(focusBase),
+    textAccent: readableAccent,
     textButtonPrimary: theme.theme.surface,
-    textButtonSecondary: mixHex(theme.theme.ink, theme.theme.surface, 0.7 + theme.contrast * 0.1),
-    textButtonTertiary: formatRgba(theme.ink, 0.45 + theme.contrast * 0.1),
-    textForeground: theme.theme.ink,
+    textButtonSecondary: readableInk,
+    textButtonTertiary: readableInk,
+    textForeground: readableInk,
     textForegroundSecondary: formatRgba(theme.ink, 0.65 + theme.contrast * 0.1),
     textForegroundTertiary: formatRgba(theme.ink, 0.42 + theme.contrast * 0.13),
   };
@@ -1441,6 +1444,79 @@ function parseHexColor(value: string): RgbColor {
 
 function mixHex(from: string, to: string, amount: number): string {
   return formatHex(mixRgb(parseHexColor(from), parseHexColor(to), amount));
+}
+
+export function themeColorContrastRatio(foreground: string, background: string): number {
+  const foregroundLuminance = relativeLuminance(parseHexColor(foreground));
+  const backgroundLuminance = relativeLuminance(parseHexColor(background));
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance);
+  const darker = Math.min(foregroundLuminance, backgroundLuminance);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+function ensureReadableTextColor(
+  color: string,
+  backgrounds: readonly string[],
+  minimumContrast = NORMAL_TEXT_CONTRAST_RATIO,
+): string {
+  if (minimumContrastAgainst(color, backgrounds) >= minimumContrast) {
+    return color.toLowerCase();
+  }
+
+  const candidates = ["#000000", "#ffffff"]
+    .map((anchor) => findReadableMix(color, anchor, backgrounds, minimumContrast))
+    .filter((candidate): candidate is { amount: number; color: string } => candidate !== null)
+    .sort((left, right) => left.amount - right.amount);
+
+  if (candidates[0]) {
+    return candidates[0].color;
+  }
+
+  return minimumContrastAgainst("#000000", backgrounds) >=
+    minimumContrastAgainst("#ffffff", backgrounds)
+    ? "#000000"
+    : "#ffffff";
+}
+
+function findReadableMix(
+  color: string,
+  anchor: string,
+  backgrounds: readonly string[],
+  minimumContrast: number,
+): { amount: number; color: string } | null {
+  if (minimumContrastAgainst(anchor, backgrounds) < minimumContrast) {
+    return null;
+  }
+
+  let lower = 0;
+  let upper = 1;
+  for (let index = 0; index < 24; index += 1) {
+    const midpoint = (lower + upper) / 2;
+    const candidate = mixHex(color, anchor, midpoint);
+    if (minimumContrastAgainst(candidate, backgrounds) >= minimumContrast) {
+      upper = midpoint;
+    } else {
+      lower = midpoint;
+    }
+  }
+
+  return { amount: upper, color: mixHex(color, anchor, upper) };
+}
+
+function minimumContrastAgainst(color: string, backgrounds: readonly string[]): number {
+  return Math.min(...backgrounds.map((background) => themeColorContrastRatio(color, background)));
+}
+
+function relativeLuminance(color: RgbColor): number {
+  const channelLuminance = (channel: number) => {
+    const normalized = channel / 255;
+    return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+  };
+  return (
+    channelLuminance(color.red) * 0.2126 +
+    channelLuminance(color.green) * 0.7152 +
+    channelLuminance(color.blue) * 0.0722
+  );
 }
 
 function mixRgb(from: RgbColor, to: RgbColor, amount: number): RgbColor {

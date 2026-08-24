@@ -22,7 +22,8 @@ const badgeVariants = cva(
       },
       variant: {
         default: "bg-primary text-primary-foreground [button&,a&]:hover:bg-primary/90",
-        destructive: "bg-destructive text-white [button&,a&]:hover:bg-destructive/90",
+        destructive:
+          "bg-destructive text-destructive-foreground [button&,a&]:hover:bg-destructive/90",
         error: "bg-destructive/12 text-destructive",
         info: "bg-info/12 text-info-foreground",
         outline:

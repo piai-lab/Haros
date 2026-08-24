@@ -11,6 +11,7 @@ import {
   DEFAULT_THEME_STATE,
   buildEngineWebSurfaceThemeSnapshot,
   buildResolvedThemeTokens,
+  buildThemePresetSeedPatch,
   buildThemePresetOptions,
   buildThemeCssVariables,
   createThemeShareString,
@@ -22,8 +23,10 @@ import {
   parseThemeShareStringForVariant,
   resolveThemePack,
   setThemePresetId,
+  themeColorContrastRatio,
   updateThemePackFromShareString,
 } from "./theme.logic";
+import { THEME_SEED_CATALOG, type ThemePresetSeed } from "./theme.seed.generated";
 import { DEFAULT_MONOSPACE_FONT_FAMILY_STACK } from "../lib/fontFamily";
 
 const PROVIDED_THEME_STRING =
@@ -191,6 +194,36 @@ describe("theme preset seeds", () => {
     expect(buildThemePresetOptions({ paper: { light: warmLight } })).toEqual([
       { id: "paper", label: "Paper", variants: ["light"] },
     ]);
+  });
+
+  it("keeps rich preset application semantics inside the catalog descriptor", () => {
+    const richPaper: ThemePresetSeed = {
+      ...DEFAULT_CHROME_THEME_BY_VARIANT.light,
+      accent: "#85500e",
+      apply: {
+        contrast: true,
+        fonts: { code: true, ui: true },
+        opaqueWindows: true,
+      },
+      contrast: 18,
+      fonts: { code: '"Berkeley Mono"', ui: "Source Serif 4" },
+      ink: "#2e2315",
+      opaqueWindows: true,
+      surface: "#fffbf4",
+    };
+
+    expect(buildThemePresetOptions({ paper: { light: richPaper } })).toEqual([
+      { id: "paper", label: "Paper", variants: ["light"] },
+    ]);
+    expect(buildThemePresetSeedPatch(richPaper, "light")).toEqual({
+      accent: "#85500e",
+      contrast: 18,
+      fonts: { code: '"Berkeley Mono"', ui: "Source Serif 4" },
+      ink: "#2e2315",
+      opaqueWindows: true,
+      semanticColors: DEFAULT_CHROME_THEME_BY_VARIANT.light.semanticColors,
+      surface: "#fffbf4",
+    });
   });
 
   it("derives every declared preset variant from an actual bundled seed", () => {
@@ -478,6 +511,74 @@ describe("buildThemeCssVariables", () => {
         expect(parseEngineWebSurfaceThemeSnapshot(snapshot)).toEqual(snapshot);
       }
     }
+  });
+
+  it("keeps bundled normal text, links, and small status roles readable on app surfaces", () => {
+    const readableTextTokens = [
+      "--color-text-foreground",
+      "--color-text-accent",
+      "--color-text-danger",
+      "--color-text-success",
+      "--color-text-warning",
+      "--color-text-status-merged",
+      "--color-text-status-neutral",
+      "--destructive",
+      "--info",
+      "--status-failure",
+      "--status-merged",
+      "--status-neutral",
+      "--status-open",
+      "--status-success",
+      "--success",
+      "--warning",
+    ] as const;
+
+    for (const [presetId, variants] of Object.entries(THEME_SEED_CATALOG)) {
+      for (const variant of ["light", "dark"] as const) {
+        const seed = variants[variant];
+        if (!seed) {
+          continue;
+        }
+        const variables = buildThemeCssVariables(
+          { codeThemeId: presetId, theme: getThemePresetSeed(presetId, variant) },
+          variant,
+        ).variables;
+        const backgrounds = [
+          variables["--color-background-surface"],
+          variables["--color-background-surface-under"],
+          variables["--color-background-panel"],
+        ];
+
+        for (const token of readableTextTokens) {
+          for (const background of backgrounds) {
+            expect(
+              themeColorContrastRatio(variables[token]!, background!),
+              `${presetId}/${variant} ${token} on ${background}`,
+            ).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    }
+  });
+
+  it("preserves Solarized identity accent while deriving readable link text", () => {
+    const variables = buildThemeCssVariables(
+      {
+        codeThemeId: "solarized",
+        theme: getThemePresetSeed("solarized", "light"),
+      },
+      "light",
+    ).variables;
+
+    expect(variables["--codex-base-accent"]).toBe("#b58900");
+    expect(variables["--color-decoration-added"]).toBe("#859900");
+    expect(variables["--color-text-accent"]).not.toBe("#b58900");
+    expect(
+      themeColorContrastRatio(
+        variables["--color-text-accent"]!,
+        variables["--color-background-surface"]!,
+      ),
+    ).toBeGreaterThanOrEqual(4.5);
   });
 
   it("uses the zero-contrast dark composer and dropdown control color", () => {
