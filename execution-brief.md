@@ -2,14 +2,13 @@
 
 ## 当前目标
 
-Settings stable identity / search / deep-link owner cut 已形成 `packaged-candidate / not-released`。实现提交为任务分支 `codex/settings-stable-identity` 的 `a6e4503166`，本次安装版从已推送任务 SHA `aa8ac31bff61d9592d02345cc80b8e09e6595ec3` 干净构建；section identity、row/panel search metadata、URL target 与真实 DOM anchor 已与可见文案解耦，Sidebar/Search只消费owner投影。当前尚未合并、发行或修改update feed。
+Settings stable identity / search / deep-link owner cut 已形成 `merge-candidate / pending-main-packaged`。任务分支 `codex/settings-stable-identity` 在合并终审中进一步消除了重复 exact target，并让 Web Search 的子页面与折叠配置入口服从真实 URL/DOM 生命周期；section identity、row/panel search metadata、URL target 与真实 DOM anchor 已与可见文案解耦，Sidebar/Search只消费owner投影。终审修复进入 shipped bytes，旧安装版证据已 superseded；当前尚未合并、发行或修改update feed。
 
 ## 当前协调与下一动作
 
-- focused Settings合同、受影响Browser、Web 326-file unit suite、root 7-package typecheck、root lint与Web production build已通过；changed-file lint为0 warning。全Browser中本任务触达的Settings文件全部通过，剩余确定性失败只出现在本任务未触达的Theme/Timeline基线；两个并发时失败的Composer/ChatView用例单文件复跑通过。
-- arm64 DMG SHA-256为 `882188a27a764c854b590821aa9bce9b9c32d99457a91865f77ca29ea743d596`，构建产物与安装版 `app.asar` SHA-256均为 `8b129cb73202b17f88e8639b52df43d142035e1608a3b7eb4005a09fcb3c694f`。任务专用HOME、userData与Provider private home隔离已从Main、Renderer、Helper与bundled Server参数复证。
-- 安装版已通过简中/英文搜索同一稳定target、跨locale URL、刷新、Enter/Escape与焦点、720px窄窗、panel-only无假target、既有Theme/Engine/Provider updates/Environment/Prompt target，以及关闭重开后直接链接定位；测试结束后候选进程为零。
-- 下一动作：等待维护者决定是否合并；不新增research总账，不自动合并main、创建Release或修改update feed。
+- focused Settings合同、Settings Browser 13-file/91-test suite、Web 326-file/4196-test unit suite、root 7-package typecheck、root lint与production build已通过；lint为0 error，既有warning未扩张。
+- 合并终审发现并修复两项真实反例：`providers:independent-engine-models`与`providers:installed-clis`曾共享一个target；Web Search exact target曾可能在Add/Detail子页面或关闭的配置disclosure中不可见。当前唯一target与真实subview/disclosure反例已有focused回归。
+- 下一动作：推送终审任务分支，合并最新`origin/main`，再从已推送的精确main merge SHA干净构建并完成任务profile隔离的安装版复核；不新增research总账，不创建Release或修改update feed。
 
 ## Stop-loss
 
