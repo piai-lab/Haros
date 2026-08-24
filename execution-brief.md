@@ -2,13 +2,14 @@
 
 ## 当前目标
 
-Settings stable identity / search / deep-link owner cut 已形成 `merge-candidate / pending-main-packaged`。任务分支 `codex/settings-stable-identity` 在合并终审中进一步消除了重复 exact target，并让 Web Search 的子页面与折叠配置入口服从真实 URL/DOM 生命周期；section identity、row/panel search metadata、URL target 与真实 DOM anchor 已与可见文案解耦，Sidebar/Search只消费owner投影。终审修复进入 shipped bytes，旧安装版证据已 superseded；当前尚未合并、发行或修改update feed。
+Settings stable identity / search / deep-link owner cut 已合并为 `packaged-candidate / not-released`。任务分支最终tip为`2546b77cf4a839def5c7f655b208f4b6309d4ebd`，进入安装版并被测试的main merge SHA为`56af65ef671a3f527240e1ffa3e2ab202852da1c`；section identity、row/panel search metadata、URL target与真实DOM anchor已与可见文案解耦，Sidebar/Search只消费owner投影。当前未创建Release、未修改update feed。
 
 ## 当前协调与下一动作
 
-- focused Settings合同、Settings Browser 13-file/91-test suite、Web 326-file/4196-test unit suite、root 7-package typecheck、root lint与production build已通过；lint为0 error，既有warning未扩张。
-- 合并终审发现并修复两项真实反例：`providers:independent-engine-models`与`providers:installed-clis`曾共享一个target；Web Search exact target曾可能在Add/Detail子页面或关闭的配置disclosure中不可见。当前唯一target与真实subview/disclosure反例已有focused回归。
-- 下一动作：推送终审任务分支，合并最新`origin/main`，再从已推送的精确main merge SHA干净构建并完成任务profile隔离的安装版复核；不新增research总账，不创建Release或修改update feed。
+- focused Settings合同、Settings Browser 13-file/91-test suite、Web 326-file/4196-test unit suite、root 7-package typecheck、root lint与production build通过；lint为0 error，既有warning未扩张。合并终审修复了重复 exact target，以及 Web Search 子页面/折叠配置入口的假定位反例。
+- 从已推送main merge SHA干净构建的arm64 DMG SHA-256为`57ede8d8bd10b83b5da4402cfb534b524d859060b4494182b1491fcada92c367`；DMG内与当前安装版`app.asar` SHA-256均为`5cdc393d361797b6fc22064e14ff101edd65a63caf3486999a3c409b5cbc3c6b`。
+- 安装版使用任务专用HOME、userData、Provider private home和XDG目录；Main、Renderer、Helper、bundled Server均复证隔离。简中/英文搜索同一target、跨locale URL、Enter/Escape与焦点、720px窄窗、panel-only无假target、47/47个唯一exact target、Web Search subview/disclosure生命周期及关闭重开后的直接链接均通过；候选进程已归零。
+- 下一动作：只清理本任务分支与临时构建/验证资源；清理后没有已授权的后续代码任务。不新增research总账，不创建Release或修改update feed。
 
 ## Stop-loss
 
