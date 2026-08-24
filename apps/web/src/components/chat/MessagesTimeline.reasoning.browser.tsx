@@ -20,8 +20,11 @@ vi.mock("../../appSettings", async (importOriginal) => ({
 }));
 
 import { I18nProvider } from "../../i18n";
-import { makeActivity } from "../../storeTestFixtures";
-import { deriveWorkLogEntries } from "../../workLog";
+import { deriveTimelineEntries } from "../../session-logic";
+import { applyOrchestrationEvents } from "../../storeEventReducer";
+import { makeActivity, makeDomainEvent, makeState, makeThread } from "../../storeTestFixtures";
+import { getThreadsFromState } from "../../threadDerivation";
+import { deriveWorkLogEntries, type WorkLogEntry } from "../../workLog";
 import { deriveAgentActivityTimelineState } from "./agentActivity.logic";
 import { MessagesTimeline } from "./MessagesTimeline";
 import { TimelineWorkEntryRow } from "./TimelineWorkEntryRow";
@@ -197,6 +200,128 @@ function AnswerStageTimeline(props: { settled: boolean }) {
       completed: props.settled,
     }),
   ];
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking={!props.settled}
+      activeTurnInProgress={!props.settled}
+      activeTurnId={props.settled ? null : turnId}
+      timelineEntries={timelineEntries}
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
+    />
+  );
+}
+
+function ReducedLiveCausalTimeline(props: { settled: boolean }) {
+  const thread = makeThread();
+  const turnId = TurnId.makeUnsafe("turn-reduced-live-browser");
+  const messageId = MessageId.makeUnsafe("assistant-reduced-live-browser");
+  const messageEvents = [
+    makeDomainEvent(
+      "thread.message-sent",
+      {
+        threadId: thread.id,
+        messageId,
+        role: "assistant",
+        text: "Narration from the live reducer.",
+        segmentStartedAt: "2026-08-24T13:30:40.000Z",
+        segmentSequence: 10,
+        turnId,
+        streaming: true,
+        createdAt: "2026-08-24T13:30:40.000Z",
+        updatedAt: "2026-08-24T13:30:40.000Z",
+        attachments: [],
+        source: "native",
+      },
+      { sequence: 10 },
+    ),
+    makeDomainEvent(
+      "thread.message-sent",
+      {
+        threadId: thread.id,
+        messageId,
+        role: "assistant",
+        text: "Answer from the live reducer.",
+        segmentStartedAt: "2026-08-24T13:30:45.000Z",
+        segmentSequence: 60,
+        turnId,
+        streaming: true,
+        createdAt: "2026-08-24T13:30:45.000Z",
+        updatedAt: "2026-08-24T13:30:45.000Z",
+        attachments: [],
+        source: "native",
+      },
+      { sequence: 60 },
+    ),
+    ...(props.settled
+      ? [
+          makeDomainEvent(
+            "thread.message-sent",
+            {
+              threadId: thread.id,
+              messageId,
+              role: "assistant" as const,
+              text: "",
+              turnId,
+              streaming: false,
+              createdAt: "2026-08-24T13:30:46.000Z",
+              updatedAt: "2026-08-24T13:30:46.000Z",
+              attachments: [],
+              source: "native" as const,
+            },
+            { sequence: 61 },
+          ),
+        ]
+      : []),
+  ];
+  const reducedState = applyOrchestrationEvents(makeState(thread), messageEvents);
+  const messages = getThreadsFromState(reducedState)[0]!.messages;
+  const workEntries: WorkLogEntry[] = [
+    {
+      id: "reasoning-reduced-live-1",
+      createdAt: "2026-08-24T13:30:41.000Z",
+      sequence: 20,
+      turnId,
+      label: "Reasoning",
+      tone: "info",
+      activityKind: "reasoning.completed",
+      detail: "First reasoning from the live timeline.",
+    },
+    {
+      id: "tool-reduced-live-1",
+      createdAt: "2026-08-24T13:30:42.000Z",
+      sequence: 30,
+      turnId,
+      label: "Read first live source",
+      toolTitle: "Read first live source",
+      tone: "tool",
+      itemType: "dynamic_tool_call",
+    },
+    {
+      id: "reasoning-reduced-live-2",
+      createdAt: "2026-08-24T13:30:43.000Z",
+      sequence: 40,
+      turnId,
+      label: "Reasoning",
+      tone: "info",
+      activityKind: "reasoning.completed",
+      detail: "Second reasoning from the live timeline.",
+    },
+    {
+      id: "tool-reduced-live-2",
+      createdAt: "2026-08-24T13:30:44.000Z",
+      sequence: 50,
+      turnId,
+      label: "Read second live source",
+      toolTitle: "Read second live source",
+      tone: "tool",
+      itemType: "dynamic_tool_call",
+    },
+  ];
+  const projectedWork = deriveAgentActivityTimelineState(workEntries, messages);
+  const timelineEntries = deriveTimelineEntries(messages, [], projectedWork.timelineWorkEntries);
+
   return (
     <MessagesTimeline
       {...baseTimelineProps}
@@ -618,6 +743,48 @@ describe("Timeline public reasoning disclosure", () => {
       const positions = orderedText.map((value) => text.indexOf(value));
       expect(positions.every((position) => position >= 0)).toBe(true);
       expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("keeps reducer-produced live assistant segments interleaved and settles disclosures in place", async () => {
+    const host = createNarrowHost();
+    const screen = await render(<ReducedLiveCausalTimeline settled={false} />, {
+      container: host,
+    });
+
+    try {
+      const narrationId = "assistant-reduced-live-browser#segment:0";
+      const answerId = "assistant-reduced-live-browser";
+      expect(document.querySelector(`[data-assistant-message-id="${narrationId}"]`)).not.toBeNull();
+      expect(document.querySelector(`[data-assistant-message-id="${answerId}"]`)).not.toBeNull();
+
+      const text = document.body.textContent ?? "";
+      const orderedText = [
+        "Narration from the live reducer.",
+        "First reasoning from the live timeline.",
+        "Read first live source",
+        "Second reasoning from the live timeline.",
+        "Read second live source",
+        "Answer from the live reducer.",
+      ];
+      const positions = orderedText.map((value) => text.indexOf(value));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
+
+      const triggers = screen.getByRole("button", { name: "Reasoning" }).elements();
+      expect(triggers).toHaveLength(2);
+      expect(triggers.map((trigger) => trigger.getAttribute("aria-expanded"))).toEqual([
+        "false",
+        "false",
+      ]);
+
+      await screen.rerender(<ReducedLiveCausalTimeline settled />);
+      await expect
+        .poll(() => triggers.map((trigger) => trigger.getAttribute("aria-expanded")))
+        .toEqual(["true", "true"]);
     } finally {
       await screen.unmount();
       host.remove();

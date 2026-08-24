@@ -21,6 +21,7 @@ import {
   setThreadMarkerDone,
   setThreadMarkerLabel,
 } from "@omnimind/shared/threadMarkers";
+import { deriveNextMessageTextSegments } from "@omnimind/shared/threadMessageTextSegments";
 
 import { isSessionRunningTurn } from "./session-logic";
 import {
@@ -38,6 +39,7 @@ import {
   normalizeTurnDiffFiles,
   providerReferenceArraysEqual,
   resolveCreateBranchFlowCompletedMerge,
+  textSegmentArraysEqual,
   withOrchestrationEventSequence,
 } from "./storeNormalization";
 import {
@@ -630,6 +632,7 @@ function mergeStreamingMessage(
       ? incomingMessage.dispatchOrigin
       : existingMessage.dispatchOrigin;
   const nextSource = incomingMessage.source ?? existingMessage.source;
+  const nextTextSegments = incomingMessage.textSegments;
 
   if (
     existingMessage.text === nextText &&
@@ -641,15 +644,20 @@ function mergeStreamingMessage(
     existingMessage.turnId === nextTurnId &&
     existingMessage.dispatchMode === nextDispatchMode &&
     existingMessage.dispatchOrigin === nextDispatchOrigin &&
-    existingMessage.source === nextSource
+    existingMessage.source === nextSource &&
+    textSegmentArraysEqual(existingMessage.textSegments, nextTextSegments)
   ) {
     return null;
   }
 
+  const { textSegments: _textSegments, ...existingMessageWithoutTextSegments } = existingMessage;
   return {
-    ...existingMessage,
+    ...existingMessageWithoutTextSegments,
     text: nextText,
     streaming: incomingMessage.streaming,
+    ...(nextTextSegments && nextTextSegments.length > 0
+      ? { textSegments: [...nextTextSegments] }
+      : {}),
     ...(nextAttachments ? { attachments: nextAttachments } : {}),
     ...(nextSkills && nextSkills.length > 0 ? { skills: [...nextSkills] } : {}),
     ...(nextMentions && nextMentions.length > 0 ? { mentions: [...nextMentions] } : {}),
@@ -672,11 +680,26 @@ function applyThreadMessageSentEvent(thread: Thread, event: ThreadMessageSentEve
     }
   }
   const existingMessage = existingIndex >= 0 ? thread.messages[existingIndex] : undefined;
+  const nextTextSegments =
+    payload.role === "assistant"
+      ? deriveNextMessageTextSegments(existingMessage?.textSegments, {
+          text:
+            payload.streaming || payload.text.length > 0
+              ? payload.text
+              : (existingMessage?.text ?? payload.text),
+          streaming: payload.streaming,
+          segmentStartedAt: payload.segmentStartedAt,
+          sequence: payload.segmentSequence ?? event.sequence,
+          createdAt: payload.createdAt,
+          updatedAt: payload.updatedAt,
+        })
+      : undefined;
   const incomingMessage = normalizeChatMessage(
     {
       id: payload.messageId,
       role: payload.role,
       text: payload.text,
+      ...(nextTextSegments !== undefined ? { textSegments: nextTextSegments } : {}),
       dispatchMode: payload.dispatchMode,
       dispatchOrigin: payload.dispatchOrigin,
       turnId: payload.turnId,

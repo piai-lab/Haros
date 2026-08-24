@@ -4,7 +4,6 @@ import {
   OrchestrationMessage,
   OrchestrationSession,
   OrchestrationThread,
-  type OrchestrationMessageTextSegment,
 } from "@omnimind/contracts";
 import {
   addPinnedMessage,
@@ -18,6 +17,7 @@ import {
   setThreadMarkerDone,
   setThreadMarkerLabel,
 } from "@omnimind/shared/threadMarkers";
+import { deriveNextMessageTextSegments } from "@omnimind/shared/threadMessageTextSegments";
 import { Effect, Schema } from "effect";
 
 import { toProjectorDecodeError, type OrchestrationProjectorDecodeError } from "./Errors.ts";
@@ -305,56 +305,6 @@ export function createEmptyReadModel(nowIso: string): OrchestrationReadModel {
     threads: [],
     updatedAt: nowIso,
   };
-}
-
-function deriveNextMessageTextSegments(
-  previous: ReadonlyArray<OrchestrationMessageTextSegment> | undefined,
-  input: {
-    readonly text: string;
-    readonly streaming: boolean;
-    readonly segmentStartedAt: string | undefined;
-    readonly sequence: number;
-    readonly createdAt: string;
-    readonly updatedAt: string;
-  },
-): ReadonlyArray<OrchestrationMessageTextSegment> | undefined {
-  if (input.streaming) {
-    if (input.segmentStartedAt) {
-      return [
-        ...(previous ?? []),
-        {
-          sequence: input.sequence,
-          startedAt: input.segmentStartedAt,
-          endedAt: input.updatedAt,
-          text: input.text,
-        },
-      ];
-    }
-    if (previous && previous.length > 0) {
-      const tail = previous[previous.length - 1]!;
-      return [
-        ...previous.slice(0, -1),
-        { ...tail, text: `${tail.text}${input.text}`, endedAt: input.updatedAt },
-      ];
-    }
-    return [
-      {
-        sequence: input.sequence,
-        startedAt: input.createdAt,
-        endedAt: input.updatedAt,
-        text: input.text,
-      },
-    ];
-  }
-
-  if (previous && previous.length > 1) {
-    const collatedSegmentText = previous.map((segment) => segment.text).join("");
-    if (collatedSegmentText === input.text || input.text.length === 0) {
-      const tail = previous[previous.length - 1]!;
-      return [...previous.slice(0, -1), { ...tail, endedAt: input.updatedAt }];
-    }
-  }
-  return undefined;
 }
 
 export function projectEvent(

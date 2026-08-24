@@ -128,6 +128,10 @@
       "types": "./src/threadDetailEvents.ts",
       "import": "./src/threadDetailEvents.ts"
     },
+    "./threadMessageTextSegments": {
+      "types": "./src/threadMessageTextSegments.ts",
+      "import": "./src/threadMessageTextSegments.ts"
+    },
     "./threadSummary": {
       "types": "./src/threadSummary.ts",
       "import": "./src/threadSummary.ts"

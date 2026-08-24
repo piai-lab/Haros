@@ -1325,6 +1325,92 @@ describe("store event reducer", () => {
     });
   });
 
+  it("preserves causal assistant text segments across live deltas and completion", () => {
+    const threadId = ThreadId.makeUnsafe("thread-1");
+    const messageId = MessageId.makeUnsafe("assistant-interleaved-live");
+    const turnId = TurnId.makeUnsafe("turn-interleaved-live");
+    const events = [
+      makeDomainEvent(
+        "thread.message-sent",
+        {
+          threadId,
+          messageId,
+          role: "assistant",
+          text: "Before tool.",
+          segmentStartedAt: "2026-02-27T00:01:00.000Z",
+          segmentSequence: 10,
+          turnId,
+          streaming: true,
+          createdAt: "2026-02-27T00:01:00.000Z",
+          updatedAt: "2026-02-27T00:01:00.000Z",
+          attachments: [],
+          source: "native",
+        },
+        { sequence: 101 },
+      ),
+      makeDomainEvent(
+        "thread.message-sent",
+        {
+          threadId,
+          messageId,
+          role: "assistant",
+          text: "After tool",
+          segmentStartedAt: "2026-02-27T00:01:02.000Z",
+          segmentSequence: 30,
+          turnId,
+          streaming: true,
+          createdAt: "2026-02-27T00:01:02.000Z",
+          updatedAt: "2026-02-27T00:01:02.000Z",
+          attachments: [],
+          source: "native",
+        },
+        { sequence: 103 },
+      ),
+    ];
+    const live = applyOrchestrationEvents(makeState(makeThread()), events);
+    const liveMessage = threadsOf(live)[0]?.messages.at(-1);
+
+    expect(liveMessage?.text).toBe("Before tool.After tool");
+    expect(
+      liveMessage?.textSegments?.map((segment) => [
+        segment.sequence,
+        segment.startedAt,
+        segment.text,
+      ]),
+    ).toEqual([
+      [10, "2026-02-27T00:01:00.000Z", "Before tool."],
+      [30, "2026-02-27T00:01:02.000Z", "After tool"],
+    ]);
+
+    const settled = applyOrchestrationEvents(live, [
+      makeDomainEvent(
+        "thread.message-sent",
+        {
+          threadId,
+          messageId,
+          role: "assistant",
+          text: "",
+          turnId,
+          streaming: false,
+          createdAt: "2026-02-27T00:01:03.000Z",
+          updatedAt: "2026-02-27T00:01:03.000Z",
+          attachments: [],
+          source: "native",
+        },
+        { sequence: 104 },
+      ),
+    ]);
+    const settledMessage = threadsOf(settled)[0]?.messages.at(-1);
+
+    expect(settledMessage?.streaming).toBe(false);
+    expect(
+      settledMessage?.textSegments?.map((segment) => [segment.sequence, segment.text]),
+    ).toEqual([
+      [10, "Before tool."],
+      [30, "After tool"],
+    ]);
+  });
+
   it("replaces duplicate live activities by id instead of appending duplicate ids", () => {
     const threadId = ThreadId.makeUnsafe("thread-1");
     const initialState = makeState(
