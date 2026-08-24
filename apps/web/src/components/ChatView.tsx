@@ -1367,7 +1367,7 @@ export default function ChatView({
   const setStoreThreadError = useStore((store) => store.setError);
   const setStoreThreadWorkspace = useStore((store) => store.setThreadWorkspace);
   const { settings } = useAppSettings();
-  const { locale, t } = useI18n();
+  const { t } = useI18n();
   const assistantDeliveryMode = resolveAssistantDeliveryMode(settings);
   const desktopTopBarTrafficLightGutterClassName = useDesktopTopBarTrafficLightGutterClassName();
   const desktopTopBarWindowControlsGutterClassName =
@@ -1397,12 +1397,6 @@ export default function ChatView({
   );
   const removeThreadFromSplitViews = useSplitViewStore((store) => store.removeThreadFromSplitViews);
   const { resolvedTheme } = useTheme();
-  useEffect(() => {
-    const api = readNativeApi();
-    void api?.browser
-      .setEngineWebSurfaceContext({ locale, theme: resolvedTheme })
-      .catch(() => undefined);
-  }, [locale, resolvedTheme]);
   const queryClient = useQueryClient();
   const createWorktreeMutation = useMutation(
     gitCreateDetachedWorktreeMutationOptions({ queryClient }),

@@ -78,6 +78,40 @@ class FakeWebContents extends EventEmitter {
 }
 
 describe("DesktopBrowserManager automation runtime boundary", () => {
+  it("transports a resolved surface snapshot without sharing mutable theme state", () => {
+    const manager = new DesktopBrowserManager();
+    const themeSnapshot = {
+      accent: "rgb(133, 77, 14)",
+      border: "rgba(46, 35, 21, 0.08)",
+      borderStrong: "rgba(46, 35, 21, 0.18)",
+      danger: "#b42d26",
+      elevatedSurface: "rgb(255, 252, 246)",
+      hoverSurface: "rgba(46, 35, 21, 0.05)",
+      primaryBackground: "#2e2315",
+      primaryBackgroundHover: "rgba(46, 35, 21, 0.08)",
+      primaryText: "#fffbf4",
+      secondaryBackground: "rgba(46, 35, 21, 0.04)",
+      secondaryBackgroundHover: "rgba(46, 35, 21, 0.07)",
+      success: "#26844c",
+      surface: "#fffbf4",
+      surfaceUnder: "#f7f0e5",
+      text: "#2e2315",
+      textDim: "rgba(46, 35, 21, 0.45)",
+      textMuted: "rgba(46, 35, 21, 0.65)",
+      warning: "#d97706",
+    };
+
+    manager.setEngineWebSurfaceContext({ locale: "zh-CN", theme: "light", themeSnapshot });
+    themeSnapshot.surface = "#000000";
+    const firstRead = manager.getEngineWebSurfaceContext();
+    expect(firstRead.themeSnapshot?.surface).toBe("#fffbf4");
+
+    if (firstRead.themeSnapshot) {
+      (firstRead.themeSnapshot as { surface: string }).surface = "#ffffff";
+    }
+    expect(manager.getEngineWebSurfaceContext().themeSnapshot?.surface).toBe("#fffbf4");
+  });
+
   it("keeps internal Engine Web surfaces memory-only and outside public Browser automation", async () => {
     const manager = new DesktopBrowserManager();
     const ordinary = manager.open({ threadId: THREAD_ID });

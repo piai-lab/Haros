@@ -1,4 +1,5 @@
 import {
+  type EngineWebSurfaceThemeSnapshot,
   PROVIDER_DISPLAY_NAMES,
   ThreadId,
   type OrchestrationEvent,
@@ -231,7 +232,7 @@ function RootRouteView() {
   usePreloadRouteChunks();
   useNativeFontSmoothing();
   useSyncDesktopTopBarTrafficLightGutterZoom();
-  useTheme();
+  const { engineWebSurfaceThemeSnapshot, resolvedTheme } = useTheme();
   const [compatibilityIssue, setCompatibilityIssue] = useState<WsCompatibilityError | null>(() =>
     readLatestWsCompatibilityIssue(),
   );
@@ -284,6 +285,10 @@ function RootRouteView() {
         <ToastProvider position="bottom-right">
           <AnchoredToastProvider>
             <DocumentLocaleSync />
+            <EngineWebSurfaceAppearanceProjection
+              theme={resolvedTheme}
+              themeSnapshot={engineWebSurfaceThemeSnapshot}
+            />
             <GitProgressToastPreviewDev />
             <EventRouter />
             <ProviderStatusRefreshCoordinator />
@@ -300,6 +305,29 @@ function RootRouteView() {
       {desktopWindowControls}
     </>
   );
+}
+
+/**
+ * App-level composition for isolated OmniMind web pages. Publishing here keeps
+ * the global appearance snapshot available on Settings and other non-ChatView
+ * routes without introducing a second theme store or feature-owned bridge.
+ */
+function EngineWebSurfaceAppearanceProjection(props: {
+  readonly theme: "light" | "dark";
+  readonly themeSnapshot: EngineWebSurfaceThemeSnapshot;
+}) {
+  const { locale } = useI18n();
+  useEffect(() => {
+    const api = readNativeApi();
+    void api?.browser
+      .setEngineWebSurfaceContext({
+        locale,
+        theme: props.theme,
+        themeSnapshot: props.themeSnapshot,
+      })
+      .catch(() => undefined);
+  }, [locale, props.theme, props.themeSnapshot]);
+  return null;
 }
 
 function ConnectingView() {

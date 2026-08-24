@@ -70,6 +70,26 @@ async function withRpcServer<T>(
 describe("browser host RPC client", () => {
   it("routes the private typed Engine Web surface lifecycle without exposing it as a Browser tool", async () => {
     const requests: Array<Record<string, unknown>> = [];
+    const themeSnapshot = {
+      accent: "rgb(133, 77, 14)",
+      border: "rgba(46, 35, 21, 0.08)",
+      borderStrong: "rgba(46, 35, 21, 0.18)",
+      danger: "#b42d26",
+      elevatedSurface: "rgb(255, 252, 246)",
+      hoverSurface: "rgba(46, 35, 21, 0.05)",
+      primaryBackground: "#2e2315",
+      primaryBackgroundHover: "rgba(46, 35, 21, 0.08)",
+      primaryText: "#fffbf4",
+      secondaryBackground: "rgba(46, 35, 21, 0.04)",
+      secondaryBackgroundHover: "rgba(46, 35, 21, 0.07)",
+      success: "#26844c",
+      surface: "#fffbf4",
+      surfaceUnder: "#f7f0e5",
+      text: "#2e2315",
+      textDim: "rgba(46, 35, 21, 0.45)",
+      textMuted: "rgba(46, 35, 21, 0.65)",
+      warning: "#d97706",
+    };
     await withRpcServer(
       (request) => {
         requests.push(request);
@@ -93,7 +113,15 @@ describe("browser host RPC client", () => {
           };
         }
         if (request.method === "getEngineWebSurfaceContext") {
-          return { jsonrpc: "2.0", id, result: { locale: "zh-CN", theme: "dark" } };
+          return {
+            jsonrpc: "2.0",
+            id,
+            result: {
+              locale: "zh-CN",
+              theme: "light",
+              themeSnapshot,
+            },
+          };
         }
         if (request.method === "presentEngineWebSurface") {
           return { jsonrpc: "2.0", id, result: { surfaceId: "surface-opaque-123", tabId: "tab-1" } };
@@ -109,7 +137,8 @@ describe("browser host RPC client", () => {
         };
         await expect(getBrowserHostEngineWebSurfaceContext(common)).resolves.toEqual({
           locale: "zh-CN",
-          theme: "dark",
+          theme: "light",
+          themeSnapshot,
         });
         await expect(
           presentBrowserHostEngineWebSurface({

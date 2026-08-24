@@ -1,6 +1,10 @@
+import type { EngineWebSurfaceThemeSnapshot } from "@omnimind/contracts/engineWebSurfaceTheme";
+
 export interface CuratorPresentationSnapshot {
 	readonly locale: "en" | "zh-CN";
 	readonly theme: "light" | "dark";
+	/** Bundled OmniMind presenters must supply the renderer-owned resolved snapshot. */
+	readonly themeSnapshot: Readonly<EngineWebSurfaceThemeSnapshot>;
 }
 
 export interface CuratorPresentationRequest {

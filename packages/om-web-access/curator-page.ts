@@ -1745,6 +1745,49 @@ main {
 
 const SCRIPT = `(function() {
   var DATA = __INLINE_DATA__;
+  function applyResolvedThemeSnapshot() {
+    var snapshot = DATA.presentation && DATA.presentation.themeSnapshot;
+    if (!snapshot || typeof snapshot !== "object") return;
+    var root = document.documentElement;
+    var variables = {
+      "--bg": snapshot.surface,
+      "--bg-card": snapshot.surface,
+      "--bg-elevated": snapshot.elevatedSurface,
+      "--bg-hover": snapshot.hoverSurface,
+      "--fg": snapshot.text,
+      "--fg-muted": snapshot.textMuted,
+      "--fg-dim": snapshot.textDim,
+      "--accent": snapshot.accent,
+      "--accent-hover": snapshot.accent,
+      "--border": snapshot.border,
+      "--border-muted": snapshot.borderStrong,
+      "--border-checked": snapshot.borderStrong,
+      "--check-bg": snapshot.primaryBackground,
+      "--btn-primary": snapshot.primaryBackground,
+      "--btn-primary-hover": snapshot.primaryBackgroundHover,
+      "--btn-primary-fg": snapshot.primaryText,
+      "--btn-secondary": snapshot.secondaryBackground,
+      "--btn-secondary-hover": snapshot.secondaryBackgroundHover,
+      "--timer-bg": snapshot.elevatedSurface,
+      "--timer-fg": snapshot.textDim,
+      "--timer-warn-fg": snapshot.warning,
+      "--timer-urgent-fg": snapshot.danger,
+      "--success": snapshot.success,
+      "--warning": snapshot.warning
+    };
+    Object.keys(variables).forEach(function(name) {
+      var value = variables[name];
+      if (typeof value !== "string" || value.length === 0 || value.length > 160) return;
+      if (/[;{}<>]/.test(value)) return;
+      root.style.setProperty(name, value);
+    });
+    root.style.setProperty("--accent-muted", "color-mix(in srgb, var(--accent) 12%, transparent)");
+    root.style.setProperty("--accent-subtle", "color-mix(in srgb, var(--accent) 6%, transparent)");
+    root.style.setProperty("--timer-warn-bg", "color-mix(in srgb, var(--warning) 12%, transparent)");
+    root.style.setProperty("--timer-urgent-bg", "color-mix(in srgb, var(--timer-urgent-fg) 12%, transparent)");
+    root.style.setProperty("--overlay-bg", "color-mix(in srgb, var(--bg) 92%, transparent)");
+  }
+  applyResolvedThemeSnapshot();
   var COPY = DATA.copy && typeof DATA.copy === "object" ? DATA.copy : {};
   function t(key) { return typeof COPY[key] === "string" ? COPY[key] : key; }
   function tf(key, values) {
