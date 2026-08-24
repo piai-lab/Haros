@@ -91,7 +91,13 @@ export interface WorkLogEntry {
     completed: number;
     total: number;
   };
-  reasoningUpdateCount?: number;
+  // Public reasoning text grouped for one inline Timeline disclosure. Each
+  // paragraph keeps its source event id and provider-authored text; this is a
+  // presentation projection only, never a second event model.
+  reasoningEntries?: ReadonlyArray<{
+    id: string;
+    text: string;
+  }>;
   skillDelivery?: {
     skillName: string;
     mode: "inline" | "reference";

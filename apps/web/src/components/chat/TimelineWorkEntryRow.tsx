@@ -9,6 +9,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -32,6 +33,7 @@ import {
   type LucideIcon,
   McpIcon,
   PencilIcon,
+  ReasoningIcon,
   SearchIcon,
   SkillCubeIcon,
   TerminalIcon,
@@ -235,7 +237,7 @@ function commandWorkEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
 }
 
 function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
-  if (isReasoningUpdateWorkEntry(workEntry)) return BotIcon;
+  if (isReasoningUpdateWorkEntry(workEntry)) return ReasoningIcon;
   // User-input rows read as a question (awaiting an answer) and an upload
   // (answer submitted) rather than the generic "info" checkmark.
   if (workEntry.activityKind === "user-input.requested") return CircleQuestionIcon;
@@ -634,16 +636,9 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // the verb already carries the tense and `liveActivityMetaText` covers the rest.
   const displayText = localizedActivityText
     ? localizedActivityText
-    : isReasoningUpdateWorkEntry(workEntry)
-      ? t(
-          (workEntry.reasoningUpdateCount ?? 1) === 1
-            ? "agentActivity.reasoningUpdate"
-            : "agentActivity.reasoningUpdates",
-          { count: workEntry.reasoningUpdateCount ?? 1 },
-        )
-      : webFetchUrl
-        ? describeLinkChip(webFetchUrl).label
-        : combineWorkEntryDisplayText(heading, preview);
+    : webFetchUrl
+      ? describeLinkChip(webFetchUrl).label
+      : combineWorkEntryDisplayText(heading, preview);
   const showInlineAgentTaskPreview =
     workEntry.itemType === "collab_agent_tool_call" &&
     Boolean(preview) &&
@@ -699,6 +694,21 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   const engineWebSurfaceId = workEntry.engineWebSurface?.surfaceId;
   const canOpenEngineWebSurface =
     engineWebSurfaceWaiting && Boolean(engineWebSurfaceId && onOpenEngineWebSurface);
+
+  // Reasoning is authored transcript content, not a tool row or a route into
+  // AgentActivityDetailView. Keep this after the shared hooks so changing row
+  // kinds never changes the parent component's hook order.
+  if (isReasoningUpdateWorkEntry(workEntry)) {
+    return (
+      <ReasoningDisclosureRow
+        workEntry={workEntry}
+        compact={compact}
+        textFontSizePx={textFontSizePx}
+        markdownCwd={markdownCwd}
+        onImageExpand={onImageExpand}
+      />
+    );
+  }
 
   // A created-automation row renders as its own card instead of a tool-call line.
   // Kept after the hooks above so the early return never changes hook order.
@@ -962,6 +972,95 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     </div>
   );
 });
+
+function ReasoningDisclosureRow(props: {
+  workEntry: TimelineWorkEntry;
+  compact: boolean;
+  textFontSizePx: number;
+  markdownCwd: string | undefined;
+  onImageExpand: (preview: ExpandedImagePreview) => void;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(true);
+  const regionId = useId();
+  const entries =
+    props.workEntry.reasoningEntries ??
+    (() => {
+      const text = formatAgentActivityEntryPreview(props.workEntry);
+      return text ? [{ id: props.workEntry.id, text }] : [];
+    })();
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return (
+    <section
+      className={cn("min-w-0 max-w-full overflow-hidden", props.compact ? "py-0.5" : "py-1")}
+      data-reasoning-disclosure="true"
+    >
+      <button
+        type="button"
+        className={cn(
+          "group/reasoning flex w-full min-w-0 items-center rounded-md text-left text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          props.compact ? "gap-1.5" : "gap-2",
+        )}
+        aria-expanded={open}
+        aria-controls={regionId}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span
+          className={cn(
+            "flex shrink-0 items-center justify-center text-muted-foreground/65",
+            props.compact ? "size-4" : "size-5",
+          )}
+        >
+          <ReasoningIcon className={props.compact ? "size-3.5" : "size-4"} />
+        </span>
+        <span
+          className="min-w-0 flex-1 truncate leading-5"
+          style={{ fontSize: `${props.textFontSizePx}px` }}
+        >
+          {t("agentActivity.reasoning")}
+        </span>
+        <DisclosureChevron
+          open={open}
+          className="mr-0.5 size-3 shrink-0 text-muted-foreground/45"
+        />
+      </button>
+
+      <div id={regionId}>
+        <DisclosureRegion
+          open={open}
+          contentClassName={cn(
+            "min-w-0 max-w-full overflow-hidden pr-1",
+            props.compact ? "pl-[22px] pt-1" : "pl-7 pt-1.5",
+          )}
+        >
+          <div
+            className="min-w-0 max-w-full space-y-2 overflow-hidden break-words [overflow-wrap:anywhere]"
+            data-reasoning-content="true"
+          >
+            {entries.map((entry) => (
+              <ChatMarkdown
+                key={entry.id}
+                text={entry.text}
+                cwd={props.markdownCwd}
+                isStreaming={false}
+                className="min-w-0 max-w-full leading-relaxed text-muted-foreground/78 [&_*]:max-w-full"
+                style={{
+                  fontSize: `${props.textFontSizePx}px`,
+                  lineHeight: props.compact ? "19px" : "20px",
+                }}
+                onImageExpand={props.onImageExpand}
+              />
+            ))}
+          </div>
+        </DisclosureRegion>
+      </div>
+    </section>
+  );
+}
 
 // Inner content for an "Edited <file> +n/-m" row. Mirrors the tool-call row treatment
 // (muted leading icon + label that brightens to foreground on hover/focus, same font

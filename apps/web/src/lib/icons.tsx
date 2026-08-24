@@ -118,12 +118,16 @@ export const ArrowUpRightIcon = adaptIcon(IconArrowUpRight);
 export const TagIcon = adaptIcon(IconTag);
 export const SortIcon: LucideIcon = centralIconWrapper("arrow-top-bottom");
 // Single source for the robot/agent glyph. Sourced from the Central icon set so
-// every robot affordance (reasoning rows, agent-task rows, agent mention chips,
-// subagent menus, agent-activity headers) renders one identical icon. Use
+// every agent affordance (agent-task rows, agent mention chips, subagent menus,
+// agent-activity headers) renders one identical icon. Use
 // BotIcon in React; AGENT_ROBOT_ICON_NAME for imperative DOM via
 // createCentralIconElement.
 export const AGENT_ROBOT_ICON_NAME = "robot";
 export const BotIcon: LucideIcon = centralIconWrapper(AGENT_ROBOT_ICON_NAME);
+// Public provider reasoning has its own Timeline meaning. Keep this Central
+// brain-2 wrapper separate from BrainIcon, whose Tabler glyph belongs to the
+// model/thinking selector contract.
+export const ReasoningIcon: LucideIcon = centralIconWrapper("brain-2");
 export const BookIcon: LucideIcon = centralIconWrapper("book-simple");
 export const BugIcon = adaptIcon(IconBug);
 export const CameraIcon = adaptIcon(IconCamera);

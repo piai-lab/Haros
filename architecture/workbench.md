@@ -105,7 +105,7 @@ Composer内置Slash Command的技术identity与执行继续属于Shared/runtime 
 
 Timeline 长期显示用户输入、Assistant 可见结果、结构化请求、重要 Tool/Activity，以及 File、Diff、Terminal、Artifact、Studio Output 引用和必要的 failure/unknown/recovery。
 
-Timeline 的高层语义由 canonical activity facts 决定，不由 Engine 文案、首条事件或 icon 猜测：有可读内容的 `reasoning.completed` 是独立的非 Tool activity，在同一 turn 内连续更新默认折叠为「思考 · N 条更新」，使用 Bot icon；展开只显示 Engine 已公开的原文，不展示隐藏思维链、不摘要、不翻译。Assistant 旁白保持独立；与相邻 reasoning 在同一 turn 内经 Unicode 空白归一化后完全重复时只隐藏 reasoning 副本，旁白保留。旧 `task.progress`/Reasoning trace 记录仅在展示层兼容识别。
+Timeline 的高层语义由 canonical activity facts 决定，不由 Engine 文案、首条事件或 icon 猜测：有可读内容的 `reasoning.completed` 是正文中独立的非 Tool activity，只展示 Engine 已主动公开且产品已收到的原文，不索取或推导隐藏思维链，也不翻译、改写或再摘要。同一 turn 内连续且未被 Assistant/Tool 边界打断的 reasoning 按事件顺序合为一个「思考 / Reasoning」内联 disclosure，使用 Central `brain-2` icon、不显示更新计数；完成态默认展开且可原位折叠，不能进入独立 Activity detail。Assistant 或 Tool 出现时立即结束当前 reasoning 组，后续 reasoning 在真实 sequence 位置另起一组；空白、不可读或没有公开文本的事件不渲染占位。Assistant 旁白保持独立；与相邻 reasoning 在同一 turn 内经 Unicode 空白归一化后完全重复时只隐藏 reasoning 副本，旁白保留，禁止模糊去重。旧 `task.progress`/Reasoning trace 记录仅在展示层兼容识别。
 
 Composer 显式选中的 OmniMind Skill 由 Host 在本轮投递后逐 Skill 投影 `skill.instructions.delivered` 或 `skill.instructions.failed` 回执；成功行使用 Skill/Central icon，失败行使用 warning icon，回执只证明 Host 已投递 inline 或 reference，不证明模型读取、执行或遵循。文件不可读、单 Skill 超限或剩余预算不足均按 Skill 独立失败，后续 Skill 仍继续尝试；部分失败仍发送原始请求。Tool 汇总只接受结构化类别（command、edit、read、search、agent、MCP/dynamic、image view、image generation），同类使用精确类别 icon，混合使用通用执行 icon，未知事件保持独立技术行且不计入 Tool 数量。
 
@@ -113,7 +113,7 @@ Composer 显式选中的 OmniMind Skill 由 Host 在本轮投递后逐 Skill 投
 
 wire noise、逐 token event、重复系统消息与隐藏不可读 reasoning 不进入 Timeline。同一 stream item 原位归并；自然成功不额外 Toast。只有失败、结果未知、隐藏副作用或需要用户处理时升级提示。
 
-Assistant 可见文本与 Tool activity 必须在 live 与 settled 两种投影中保持同一因果顺序。一个仍在流式输出的 Assistant item 若已被可见 Tool activity 打断，已经结束的文本 segment、Tool 行与当前流式 tail 按 canonical sequence 原位交错；不能为了维持单一 live message row，把完整正文钉在首段位置、把后续 Tool 堆到正文下方，再在 terminal settlement 时重排。只有整个用户可见 response 确实只有一个 Assistant message 时，完成后才可把纯 Tool work 收入单一 `Worked for / 工作了` disclosure；一旦存在多个 Assistant message 或 segment，Timeline 不得猜测哪段是“前言”或“最终答案”，不得把任何模型可见文本折进 Tool disclosure，必须保留完整因果 transcript。技术 Tool identifier 与调用输入/输出可进入展开详情；普通行使用明确的双语产品名称或对未知 identifier 做无损可读化，不直接显示 `x_y`、MCP transport prefix 或内部诊断作为产品标签。
+Assistant 可见文本与 Tool activity 必须在 live 与 settled 两种投影中保持同一因果顺序。一个仍在流式输出的 Assistant item 若已被可见 Tool activity 打断，已经结束的文本 segment、Tool 行与当前流式 tail 按 canonical sequence 原位交错；不能为了维持单一 live message row，把完整正文钉在首段位置、把后续 Tool 堆到正文下方，再在 terminal settlement 时重排。只有整个用户可见 response 确实只有一个 Assistant message、且该 turn 不含可见 reasoning 时，完成后才可把纯 Tool work 收入单一 `Worked for / 工作了` disclosure；一旦存在可见 reasoning、多个 Assistant message 或 segment，Timeline 不得猜测哪段是“前言”或“最终答案”，不得把任何模型可见文本折进 Tool disclosure，必须保留完整因果 transcript。技术 Tool identifier 与调用输入/输出可进入展开详情；普通行使用明确的双语产品名称或对未知 identifier 做无损可读化，不直接显示 `x_y`、MCP transport prefix 或内部诊断作为产品标签。
 
 Timeline 尾部只有一条通用 live-status 行，继续直接由现有 `isWorking`、turn、worktree setup 与虚拟列表生命周期控制；不新增 Thinking message、runtime status store 或第二条进度事实。该行的普通视觉固定为 `20px Composing Orb + 双语趣味提示 + 对称潮汐三点`：提示首次随机选择，之后每五秒替换且普通重渲染不换句；它只是等待氛围，不进入 transcript、reasoning、journal、Session 或恢复数据，也不能覆盖真实 Tool、approval、error、recovery 和 Provider activity。图标与文本容器保持固定尺寸，长文案单行省略；隐藏文档和离屏状态暂停不必要绘制，`prefers-reduced-motion` 下图标、文字与三点全部静止。用户可见行不再显示笼统的 `Thinking / 正在思考` 或 `Loading`，screen reader 使用稳定、非轮播的本地化工作状态。
 

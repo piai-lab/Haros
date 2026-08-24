@@ -20,7 +20,6 @@ import {
   type AgentActivityDetail,
   formatAgentActivityEntryPreview,
   formatAgentActivityEntryTitle,
-  isReasoningUpdateWorkEntry,
 } from "./agentActivity.logic";
 import { useI18n } from "../../i18n";
 
@@ -85,9 +84,7 @@ export function AgentActivityDetailView({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <h2 className="truncate text-[18px] font-medium leading-6 text-foreground/92">
-                  {isReasoningUpdateWorkEntry(detail.primaryEntry)
-                    ? t("agentActivity.reasoning")
-                    : detail.title}
+                  {detail.title}
                 </h2>
                 <span className="rounded-full border border-border/45 px-2 py-0.5 text-[10px] font-medium text-muted-foreground/56">
                   {t(
@@ -170,7 +167,7 @@ function AgentActivityEventRow(props: {
 }) {
   const preview = formatAgentActivityEntryPreview(props.entry);
   const title = formatAgentActivityEntryTitle(props.entry);
-  const body = isReasoningUpdateWorkEntry(props.entry) ? preview : (preview ?? props.entry.detail);
+  const body = preview ?? props.entry.detail;
 
   return (
     <div className="py-3 first:pt-0 last:pb-0">

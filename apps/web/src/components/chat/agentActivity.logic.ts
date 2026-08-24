@@ -53,7 +53,7 @@ export function isCodexActivityStatusWorkEntry(entry: WorkLogEntry): boolean {
 }
 
 export function isAgentActivityWorkEntry(entry: WorkLogEntry): boolean {
-  return entry.itemType === "collab_agent_tool_call" || isReasoningUpdateWorkEntry(entry);
+  return entry.itemType === "collab_agent_tool_call";
 }
 
 // Unmapped provider events keep their native type as the title and a safe detail as preview.
@@ -81,7 +81,7 @@ export function formatAgentActivityEntryTitle(entry: WorkLogEntry): string {
 
 export function formatAgentActivityEntryPreview(entry: WorkLogEntry): string | null {
   if (isReasoningUpdateWorkEntry(entry)) {
-    return cleanReasoningProgressText(entry.preview ?? entry.detail ?? entry.label);
+    return formatAgentActivityReasoningText(entry);
   }
 
   if (entry.itemType === "collab_agent_tool_call") {
@@ -94,6 +94,34 @@ export function formatAgentActivityEntryPreview(entry: WorkLogEntry): string | n
   }
 
   return normalizeOptionalText(entry.preview) ?? normalizeOptionalText(entry.detail);
+}
+
+// Returns only provider/engine-authored reasoning already present in the public
+// activity payload. Canonical reasoning stays verbatim; the legacy branch only
+// removes old transport prefixes that were never part of the authored text.
+export function formatAgentActivityReasoningText(entry: WorkLogEntry): string | null {
+  const value = entry.detail?.trim() ? entry.detail : entry.preview;
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed || !hasReadableReasoningText(trimmed)) {
+    return null;
+  }
+  if (entry.activityKind === "reasoning.completed") {
+    return trimmed;
+  }
+
+  const withoutComments = trimmed
+    .replace(/<!--[\s\S]*?-->/gu, "")
+    .replace(/\n[\t ]*\n(?:[\t ]*\n)+/gu, "\n\n")
+    .trim();
+  const withoutReasoningPrefix = withoutComments
+    .replace(/^reasoning(?:\s+(?:update|trace|summary))?\b[\s:.-]*/iu, "")
+    .trim();
+  const withoutRunningPrefix = withoutReasoningPrefix.replace(/^running\b[\s:.-]*/iu, "").trim();
+  return withoutRunningPrefix || withoutReasoningPrefix || null;
 }
 
 export function formatAgentActivityEntrySummary(entry: WorkLogEntry): string | null {
@@ -130,10 +158,10 @@ export function deriveAgentActivityTimelineState(
     const first = groupEntries[0]!;
     const latest = groupEntries[groupEntries.length - 1]!;
     const groupId = `${REASONING_GROUP_PREFIX}:${first.id}`;
-    const latestPreview = findLatestPreview(groupEntries);
-    const updateCount = groupEntries.length;
-    const displayPreview =
-      latestPreview;
+    const reasoningEntries = groupEntries.flatMap((entry) => {
+      const text = formatAgentActivityReasoningText(entry);
+      return text ? [{ id: entry.id, text }] : [];
+    });
     const displayEntry: WorkLogEntry = {
       ...latest,
       id: groupId,
@@ -141,9 +169,10 @@ export function deriveAgentActivityTimelineState(
       label: "Reasoning",
       toolTitle: "Reasoning",
       tone: "thinking",
-      reasoningUpdateCount: updateCount,
-      ...(displayPreview ? { preview: displayPreview, detail: displayPreview } : {}),
+      reasoningEntries,
     };
+    delete displayEntry.preview;
+    delete displayEntry.detail;
     if (first.sequence === undefined) {
       delete displayEntry.sequence;
     } else {
@@ -151,7 +180,6 @@ export function deriveAgentActivityTimelineState(
     }
 
     timelineWorkEntries.push(displayEntry);
-    detailById.set(groupId, buildAgentActivityDetail(groupId, displayEntry, groupEntries));
   };
 
   const orderedTimeline =
@@ -172,9 +200,15 @@ export function deriveAgentActivityTimelineState(
     }
     const entry = timelineEntry.entry;
     if (isReasoningUpdateWorkEntry(entry)) {
-      const reasoningPreview = formatAgentActivityEntryPreview(entry);
-      if (!reasoningPreview || isDuplicateAdjacentAssistantNarration(orderedTimeline, index, entry)) {
+      const reasoningText = formatAgentActivityReasoningText(entry);
+      if (!reasoningText || isDuplicateAdjacentAssistantNarration(orderedTimeline, index, entry)) {
         continue;
+      }
+      if (
+        pendingReasoningEntries.length > 0 &&
+        pendingReasoningEntries[0]!.turnId !== entry.turnId
+      ) {
+        flushReasoningEntries();
       }
       pendingReasoningEntries.push(entry);
       continue;
@@ -199,7 +233,10 @@ function isDuplicateAdjacentAssistantNarration(
   if (!entry.turnId) {
     return false;
   }
-  const rawReasoningText = entry.preview ?? entry.detail ?? entry.label;
+  const rawReasoningText = formatAgentActivityReasoningText(entry);
+  if (!rawReasoningText) {
+    return false;
+  }
   const normalizedReasoningText = normalizeExactVisibleText(rawReasoningText);
   if (!normalizedReasoningText) {
     return false;
@@ -219,7 +256,11 @@ function isDuplicateAdjacentAssistantNarration(
 }
 
 function normalizeExactVisibleText(value: string): string {
-  return value.normalize("NFC").replace(/\s+/gu, " ").trim();
+  return value
+    .replace(/<!--[\s\S]*?-->/gu, "")
+    .normalize("NFC")
+    .replace(/\s+/gu, " ")
+    .trim();
 }
 
 function buildAgentActivityDetail(
@@ -237,16 +278,6 @@ function buildAgentActivityDetail(
   };
 }
 
-function findLatestPreview(entries: ReadonlyArray<WorkLogEntry>): string | null {
-  for (let index = entries.length - 1; index >= 0; index -= 1) {
-    const preview = formatAgentActivityEntryPreview(entries[index]!);
-    if (preview) {
-      return preview;
-    }
-  }
-  return null;
-}
-
 function findLatestSummary(entries: ReadonlyArray<WorkLogEntry>): string | null {
   for (let index = entries.length - 1; index >= 0; index -= 1) {
     const summary = formatAgentActivityEntrySummary(entries[index]!);
@@ -257,35 +288,8 @@ function findLatestSummary(entries: ReadonlyArray<WorkLogEntry>): string | null 
   return null;
 }
 
-function cleanReasoningProgressText(value: string | undefined): string | null {
-  if (!value) {
-    return null;
-  }
-
-  // Codex summaries are Markdown blocks such as
-  // `**Planning the implementation**\n\n<!-- -->`. Its compact UI label is the
-  // last readable line, with comments and lightweight Markdown removed.
-  const readableLines = value
-    .replace(/<!--[\s\S]*?-->/gu, "")
-    .split(/\r?\n/u)
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0 && !line.startsWith("<!--"));
-  const latestLine = readableLines.at(-1);
-  if (!latestLine) {
-    return null;
-  }
-  const trimmed = latestLine
-    .replace(/^#{1,6}\s+/u, "")
-    .replace(/^\*\*(.+)\*\*$/u, "$1")
-    .replace(/^__(.+)__$/u, "$1")
-    .replace(/^`(.+)`$/u, "$1")
-    .trim();
-
-  const withoutReasoningPrefix = trimmed
-    .replace(/^reasoning(?:\s+(?:update|trace|summary))?\b[\s:.-]*/i, "")
-    .trim();
-  const withoutRunningPrefix = withoutReasoningPrefix.replace(/^running\b[\s:.-]*/i, "").trim();
-  return withoutRunningPrefix || withoutReasoningPrefix || null;
+function hasReadableReasoningText(value: string): boolean {
+  return value.replace(/<!--[\s\S]*?-->/gu, "").trim().length > 0;
 }
 
 function normalizeOptionalText(value: string | undefined): string | null {

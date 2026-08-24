@@ -244,6 +244,42 @@ describe("computeStableMessagesTimelineRows", () => {
     expect(second.result[0]).toBe(enrichedRows[0]);
   });
 
+  it("replaces a reasoning row when another public paragraph joins its disclosure", () => {
+    const firstRow: WorkTimelineRow = {
+      kind: "work",
+      id: "reasoning-group",
+      createdAt: "2026-05-09T10:00:00.000Z",
+      groupedEntries: [
+        {
+          id: "agent-reasoning:reasoning-1",
+          createdAt: "2026-05-09T10:00:00.000Z",
+          label: "Reasoning",
+          tone: "thinking",
+          activityKind: "reasoning.completed",
+          reasoningEntries: [{ id: "reasoning-1", text: "Inspect the owner." }],
+        },
+      ],
+    };
+    const first = computeStableMessagesTimelineRows([firstRow], emptyStableRows());
+    const enrichedRow: WorkTimelineRow = {
+      ...firstRow,
+      groupedEntries: [
+        {
+          ...firstRow.groupedEntries[0]!,
+          reasoningEntries: [
+            { id: "reasoning-1", text: "Inspect the owner." },
+            { id: "reasoning-2", text: "Verify the projection." },
+          ],
+        },
+      ],
+    };
+
+    const second = computeStableMessagesTimelineRows([enrichedRow], first);
+
+    expect(second).not.toBe(first);
+    expect(second.result[0]).toBe(enrichedRow);
+  });
+
   it("replaces work rows when live activity settles without a final tool event", () => {
     const firstRow: WorkTimelineRow = {
       kind: "work",
@@ -971,6 +1007,89 @@ describe("deriveMessagesTimelineRows", () => {
     expect(rows.some((row) => row.kind === "work")).toBe(false);
   });
 
+  it("keeps assistant, reasoning, failed/retried tools, and continuation in one stable sequence", () => {
+    const timelineEntries: TimelineEntry[] = [
+      userEntry("u-causal", "2026-01-01T00:00:00Z"),
+      assistantEntry("a-causal-start", "2026-01-01T00:00:01Z", {
+        turnId: "t-causal",
+        text: "I’ll inspect the source first.",
+        completedAt: "2026-01-01T00:00:01Z",
+      }),
+      {
+        id: "entry-reasoning-causal-1",
+        kind: "work",
+        createdAt: "2026-01-01T00:00:02Z",
+        entry: {
+          id: "reasoning-causal-1",
+          createdAt: "2026-01-01T00:00:02Z",
+          label: "Reasoning",
+          tone: "thinking",
+          activityKind: "reasoning.completed",
+          reasoningEntries: [{ id: "reasoning-source-1", text: "Check the current owner." }],
+        },
+      },
+      workEntry("tool-causal-failed", "2026-01-01T00:00:03Z", "Search failed", "error"),
+      {
+        id: "entry-reasoning-causal-2",
+        kind: "work",
+        createdAt: "2026-01-01T00:00:04Z",
+        entry: {
+          id: "reasoning-causal-2",
+          createdAt: "2026-01-01T00:00:04Z",
+          label: "Reasoning",
+          tone: "thinking",
+          activityKind: "reasoning.completed",
+          reasoningEntries: [{ id: "reasoning-source-2", text: "Use the recovery path." }],
+        },
+      },
+      workEntry("tool-causal-retry", "2026-01-01T00:00:05Z", "Retried search"),
+      assistantEntry("a-causal-final", "2026-01-01T00:00:06Z", {
+        turnId: "t-causal",
+        text: "The retry succeeded.",
+        completedAt: "2026-01-01T00:00:07Z",
+      }),
+    ];
+
+    const settledRows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries,
+    });
+    const liveRows = deriveMessagesTimelineRows({
+      ...baseInput,
+      timelineEntries,
+      isWorking: true,
+      activeTurnInProgress: true,
+      activeTurnId: TurnId.makeUnsafe("t-causal"),
+      activeTurnStartedAt: "2026-01-01T00:00:00Z",
+    });
+
+    const visibleSignature = (rows: MessagesTimelineRow[]) =>
+      rows.flatMap((row) => {
+        if (row.kind === "working-header" || row.kind === "working") return [];
+        if (row.kind === "message") {
+          return [
+            ...(row.leadingWorkEntries ?? []).map((entry) => `work:${entry.id}`),
+            `message:${String(row.message.id)}`,
+            ...(row.inlineWorkEntries ?? []).map((entry) => `work:${entry.id}`),
+          ];
+        }
+        return row.kind === "work" ? row.groupedEntries.map((entry) => `work:${entry.id}`) : [];
+      });
+
+    const expected = [
+      "message:u-causal",
+      "message:a-causal-start",
+      "work:reasoning-causal-1",
+      "work:tool-causal-failed",
+      "work:reasoning-causal-2",
+      "work:tool-causal-retry",
+      "message:a-causal-final",
+    ];
+    expect(visibleSignature(settledRows)).toEqual(expected);
+    expect(visibleSignature(liveRows)).toEqual(expected);
+    expect(messageRow(settledRows, "a-causal-final")?.collapsedTurnItems).toBeUndefined();
+  });
+
   it("keeps interleaved assistant segments in their causal positions after settlement", () => {
     const rows = deriveMessagesTimelineRows({
       ...baseInput,
@@ -999,7 +1118,7 @@ describe("deriveMessagesTimelineRows", () => {
     expect(terminal?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["w-segmented"]);
   });
 
-  it("folds settled reasoning traces into the terminal turn disclosure", () => {
+  it("keeps settled reasoning inline instead of folding it into Worked for", () => {
     const reasoning = workEntry("reasoning-1", "2026-01-01T00:00:02Z", "Reasoning trace");
     if (reasoning.kind === "work") {
       reasoning.entry = {
@@ -1023,8 +1142,8 @@ describe("deriveMessagesTimelineRows", () => {
     });
 
     const terminal = messageRow(rows, "a1");
-    expect(collapsedSignature(terminal!)).toEqual(["work:reasoning-1"]);
-    expect(rows.some((row) => row.kind === "work")).toBe(false);
+    expect(collapsedSignature(terminal!)).toEqual([]);
+    expect(terminal?.leadingWorkEntries?.map((entry) => entry.id)).toEqual(["reasoning-1"]);
   });
 
   it("keeps a provider failure and retry transcript visible instead of guessing the final answer", () => {

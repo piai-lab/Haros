@@ -1815,7 +1815,7 @@ describe("MessagesTimeline", () => {
     expect(markup).not.toContain("+2 more tool calls");
   });
 
-  it("renders reasoning activity with a bot icon while the wait row remains live", async () => {
+  it("renders inline reasoning with Central brain-2 while the sole wait row remains live", async () => {
     const { MessagesTimeline } = await import("./MessagesTimeline");
     const activeTurnId = TurnId.makeUnsafe("turn-reasoning-live");
     const markup = renderToStaticMarkup(
@@ -1903,9 +1903,14 @@ describe("MessagesTimeline", () => {
     );
 
     expect(markup.match(/data-codex-status-row="true"/g) ?? []).toHaveLength(0);
-    expect(markup.match(/data-work-entry-icon="true"/g) ?? []).toHaveLength(4);
     expect(markup).toContain('data-testid="thinking-status"');
-    expect(markup).toContain("Reasoning · 1 update");
+    expect(markup.match(/data-reasoning-disclosure="true"/g) ?? []).toHaveLength(2);
+    expect(markup.match(/data-central-icon-name="brain-2"/g) ?? []).toHaveLength(2);
+    expect(markup.match(/aria-expanded="true"/g) ?? []).toHaveLength(2);
+    expect(markup).toContain("Inspecting apps/web/src/store.ts");
+    expect(markup).toContain("Updating the adapter");
+    expect(markup).not.toContain("Reasoning ·");
+    expect(markup).not.toContain("update");
     expect(markup).not.toContain("Reasoning trace Inspecting");
   });
 

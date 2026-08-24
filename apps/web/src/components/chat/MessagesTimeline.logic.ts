@@ -17,6 +17,7 @@ import {
   summarizeToolCallGroup,
   type ToolCallGroupSummary,
 } from "./toolCallGroup.logic";
+import { isReasoningUpdateWorkEntry } from "./agentActivity.logic";
 import {
   type ChatMessage,
   type ProposedPlan,
@@ -786,6 +787,19 @@ function collapseSettledTurns(
     if (hasPriorAssistantNarration) continue;
     foldIndices.reverse();
 
+    // Public reasoning is itself visible transcript content. Keeping the whole
+    // turn inline preserves reasoning/tool/answer causality and leaves the
+    // reasoning disclosure as the only owner of its collapsed state.
+    const hasReasoningActivity = [
+      ...foldIndices.flatMap((index) => {
+        const folded = rows[index]!;
+        return folded.kind === "work" ? folded.groupedEntries : [];
+      }),
+      ...(row.leadingWorkEntries ?? []),
+      ...(row.inlineWorkEntries ?? []),
+    ].some(isReasoningUpdateWorkEntry);
+    if (hasReasoningActivity) continue;
+
     const collapsedItems: CollapsedTurnItem[] = [];
     // The disclosure folds everything back to the user boundary, so "Worked
     // for" must start where the folded segment starts. The terminal row's own
@@ -1015,6 +1029,18 @@ function workLogLiveActivitiesEqual(
   );
 }
 
+function workLogReasoningEntriesEqual(
+  left: WorkLogEntry["reasoningEntries"],
+  right: WorkLogEntry["reasoningEntries"],
+): boolean {
+  if (left === right) return true;
+  if (!left || !right || left.length !== right.length) return false;
+  return left.every((entry, index) => {
+    const other = right[index];
+    return other !== undefined && entry.id === other.id && entry.text === other.text;
+  });
+}
+
 function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
   return (
     a.id === b.id &&
@@ -1034,6 +1060,7 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     a.toolName === b.toolName &&
     a.toolCallId === b.toolCallId &&
     a.toolStatus === b.toolStatus &&
+    workLogReasoningEntriesEqual(a.reasoningEntries, b.reasoningEntries) &&
     stringArraysEqual(a.changedFiles, b.changedFiles) &&
     workLogSubagentActionsEqual(a.subagentAction, b.subagentAction) &&
     workLogSubagentsEqual(a.subagents, b.subagents) &&
