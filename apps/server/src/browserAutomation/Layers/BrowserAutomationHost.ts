@@ -1,4 +1,7 @@
-import { parseEngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
+import {
+  type EngineWebSurfacePresentationContext,
+  parseEngineWebSurfaceThemeSnapshot,
+} from "@omnimind/contracts";
 import { Effect, Layer } from "effect";
 
 import {
@@ -15,7 +18,9 @@ import {
   settleBrowserHostEngineWebSurface,
 } from "../browserHostRpcClient.ts";
 
-export function decodeBrowserHostEngineWebSurfaceContext(value: unknown) {
+export function decodeBrowserHostEngineWebSurfaceContext(
+  value: unknown,
+): EngineWebSurfacePresentationContext {
   const record = value as { locale?: unknown; theme?: unknown; themeSnapshot?: unknown };
   const themeSnapshot = parseEngineWebSurfaceThemeSnapshot(record?.themeSnapshot);
   if (
