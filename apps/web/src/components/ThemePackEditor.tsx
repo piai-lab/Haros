@@ -1,5 +1,5 @@
 // FILE: ThemePackEditor.tsx
-// Purpose: Per-variant theme card matching the Codex appearance settings layout.
+// Purpose: Per-variant theme preset and appearance editor.
 // Layer: Web settings UI
 // Exports: ThemePackEditor
 
@@ -34,10 +34,10 @@ import {
 import { ELEVATED_HOVER_SURFACE_RAISED_TEXT_CLASS_NAME } from "../surfaceStyles";
 import { useI18n } from "../i18n";
 import {
-  CODE_THEME_OPTIONS,
   DEFAULT_THEME_STATE,
-  getAvailableCodeThemes,
-  getCodeThemeSeed,
+  THEME_PRESET_OPTIONS,
+  getAvailableThemePresets,
+  getThemePresetSeed,
   resolveThemePack,
 } from "../theme/theme.logic";
 
@@ -71,7 +71,7 @@ export function ThemePackEditor({
     importThemeString,
     isDefaultThemePack,
     resetThemeVariant,
-    setCodeThemeId,
+    setThemePresetId,
     updateThemePack,
     updateThemeFonts,
   } = useTheme();
@@ -79,17 +79,18 @@ export function ThemePackEditor({
   const pack = variant === "dark" ? darkTheme : lightTheme;
   const theme = pack.theme;
   const defaultTheme = resolveThemePack(DEFAULT_THEME_STATE, variant).theme;
-  const codeThemes = useMemo(() => {
-    const options = getAvailableCodeThemes(variant);
+  const themePresets = useMemo(() => {
+    const options = getAvailableThemePresets(variant);
     return options.map((option) => ({
       id: option.id,
       label: option.label,
-      previewTheme: getCodeThemeSeed(option.id, variant),
+      previewTheme: getThemePresetSeed(option.id, variant),
       variants: option.variants,
     }));
   }, [variant]);
-  const codeThemeLabel =
-    CODE_THEME_OPTIONS.find((option) => option.id === pack.codeThemeId)?.label ?? pack.codeThemeId;
+  const themePresetLabel =
+    THEME_PRESET_OPTIONS.find((option) => option.id === pack.codeThemeId)?.label ??
+    pack.codeThemeId;
   const isPristine = isDefaultThemePack(variant);
   const variantLabel = variant === "dark" ? t("settings.themeDark") : t("settings.themeLight");
   const modeLabel = mode === "dark" ? t("settings.themeDark") : t("settings.themeLight");
@@ -155,27 +156,27 @@ export function ThemePackEditor({
             value={pack.codeThemeId}
             onValueChange={(value) => {
               if (typeof value !== "string") return;
-              setCodeThemeId(variant, value);
+              setThemePresetId(variant, value);
             }}
           >
             <SelectTrigger
               size="sm"
               className={cn(SETTINGS_CONTROL_RADIUS_CLASS_NAME, "ml-1 min-w-52 gap-2")}
-              aria-label={t("settings.codeThemeAria", { theme: titleLabel })}
+              aria-label={t("settings.themePresetAria", { theme: titleLabel })}
             >
               <SelectValue className="flex-1 text-left">
-                <CodeThemeSelectOption label={codeThemeLabel} theme={theme} />
+                <ThemePresetSelectOption label={themePresetLabel} theme={theme} />
               </SelectValue>
             </SelectTrigger>
             <SettingsSelectPopup align="end" alignItemWithTrigger={false} className="p-1.5">
-              {codeThemes.map((option) => (
+              {themePresets.map((option) => (
                 <SelectItem
                   hideIndicator
                   key={option.id}
                   value={option.id}
                   className={cn(SETTINGS_CONTROL_RADIUS_CLASS_NAME, "px-2 py-2")}
                 >
-                  <CodeThemeSelectOption label={option.label} theme={option.previewTheme} />
+                  <ThemePresetSelectOption label={option.label} theme={option.previewTheme} />
                 </SelectItem>
               ))}
             </SettingsSelectPopup>
@@ -461,7 +462,7 @@ function ColorPill({
   );
 }
 
-function CodeThemeBadge({ theme }: { theme: ChromeTheme }) {
+function ThemePresetBadge({ theme }: { theme: ChromeTheme }) {
   return (
     <span
       aria-hidden
@@ -477,10 +478,10 @@ function CodeThemeBadge({ theme }: { theme: ChromeTheme }) {
   );
 }
 
-function CodeThemeSelectOption({ label, theme }: { label: string; theme: ChromeTheme }) {
+function ThemePresetSelectOption({ label, theme }: { label: string; theme: ChromeTheme }) {
   return (
     <div className="flex min-w-0 items-center gap-2.5">
-      <CodeThemeBadge theme={theme} />
+      <ThemePresetBadge theme={theme} />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] text-[var(--color-text-foreground)]">{label}</div>
       </div>
@@ -612,7 +613,7 @@ function ImportThemeDialog({
               setValue(event.target.value);
               setError(null);
             }}
-            placeholder='codex-theme-v1:{"codeThemeId":"linear",...}'
+            placeholder='omnimind-theme-v1:{"presetId":"linear",...}'
             spellCheck={false}
             rows={5}
             className="font-chat-code text-[11px]"

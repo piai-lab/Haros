@@ -40,7 +40,7 @@ OmniMind 不需要自造通用 `web_search` Host 能力；应当深 fork 成熟�
 | 结果处理 | workflow与展示独立：默认`auto-summary`且展示关闭；`auto-summary/none`在展示开启时可进入非阻塞observer，`summary-review`进入pending审查；不自动打开系统浏览器 |
 | Web Search / Curator Tab | observer与review都使用独立、短时、非历史Browser Tab；只有pending review按exact tool call进入Timeline聚焦/重开，observer terminal后无reopen；控制台internal-only |
 | 关闭语义 | 关闭 Curator Tab、Right Dock 或隐藏 Browser 只关闭展示；call terminal 只清理该 call，Run abort 只中止该 Run，Session shutdown 才清理整个 Extension instance |
-| Curator 语言/主题 | 创建时消费当前 OmniMind locale 与 resolved light/dark theme 的短时展示快照，不跟随 OS/browser 猜测，也不建立第二设置 owner |
+| Curator 语言/主题 | 创建时消费当前 OmniMind locale、resolved light/dark 对比变体与 appearance owner 生成的 credential-blind resolved theme token 快照；不跟随 OS/browser 猜测，也不建立第二设置或 palette owner |
 | Slash commands | OmniMind profile 不注册 `/websearch`、`/curator`、`/search`、`/google-account` |
 | TUI shortcuts/widget | OmniMind profile 不注册 `Ctrl+Shift+S`、`Ctrl+Shift+W` 或 TUI activity widget |
 | Settings 主开关 | 不提供“启用网络搜索”总开关；一级能力一直可见，当前不可用时准确说明并提供配置/重试 |
@@ -439,7 +439,7 @@ OmniMind profile继续尊重上游`webSearch.enabled`与`tools.webSearch/sourceC
 - 单个tool call terminal只清理该call自己的Curator server、stream、timer、request、presentation handle与临时资源，不能清理同Session其他并发call或revision listener；Run abort只中止属于该Run的in-flight calls；`session_start/session_tree`保留上游语义但只作用于当前Extension instance及对应branch；`session_shutdown`才清理整个instance的剩余请求、cache、storedResults、listener与临时资源；
 - review的可恢复presentation失败保持pending并允许retry；Curator server/protocol或Host handoff不可恢复失败必须typed-error settle并按call scope cleanup，不能永久pending或只等idle timeout。observer展示失败不能把自动workflow变成waiting，terminal后两者都不保留可重放协议或Timeline入口；
 - ephemeral Tab 的token URL不得进入Browser recent history、localStorage、持久tab restore、Product event、Timeline raw payload、log、screenshot或diagnostics；loopback response必须使用no-store/no-referrer等短时页面边界，persistent Browser partition也不得把它变成恢复数据；
-- Curator创建时接收当前OmniMind locale与resolved light/dark theme的短时presentation snapshot；不依赖OS `Accept-Language` / `prefers-color-scheme`，不监听全局设置，也不建立第二locale/theme owner；
+- Curator创建时接收当前OmniMind locale、resolved light/dark对比变体与appearance owner生成的credential-blind resolved theme token短时presentation snapshot；不依赖OS `Accept-Language` / `prefers-color-scheme`，不监听全局设置，也不建立第二locale/theme/palette owner。snapshot在surface创建时冻结并覆盖其完整生命周期；关闭Tab后的exact reopen继续使用同一server/page与原snapshot，只有新surface读取当前值，已打开或重开的页面不因换肤重启协议或增加持续同步listener；
 - 页面不能抢 Composer focus、覆盖 route 或自动外部打开；
 - 只有owning Thread正处于前台时才自动呈现。后台review只投影既有waiting-for-user activity/attention，用户进入该Thread后可按exact activity打开，若一直忽略则继续服从上游idle timeout与deterministic settlement；后台observer不投影waiting/reopen。两者都不能切换route或抢占当前Right Dock，也不建立后台Curator调度器；
 - `curatorRemote` 在 OmniMind profile 恒不可用；作者的`autoOpenBrowser` intent在OmniMind profile只被解释为默认关闭的typed Right Dock搜索过程展示，不恢复系统浏览器或raw-token fallback；
@@ -676,7 +676,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 
 - title/copy/logo/tokens 使用 OmniMind；
 - 简中/英文完整 catalog；
-- locale与resolved light/dark theme来自创建该Curator时的OmniMind presentation snapshot，不从OS/browser推断；
+- locale、resolved light/dark对比变体与credential-blind resolved theme tokens来自创建该Curator时的OmniMind presentation snapshot，不从OS/browser推断；
 - 页面 self-contained/offline；
 - 响应式适配 Right Dock 的真实窄宽度；
 - 不出现 Pi、`pi-web-access`、Glimpse、TUI、外部浏览器或 internal runtime 术语；
@@ -806,7 +806,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - 多个pending Curator映射到不同tool call/Tab；Timeline按exact row聚焦，Tab已关闭时重建，不能只展开Browser pane；
 - 关闭Tab/Right Dock只隐藏、不取消tool call；review由Approve/Cancel/timeout/abort/Session shutdown settlement，observer由tool terminal/abort/Session shutdown cleanup；terminal后reopen action消失；
 - loopback token不进入Browser recent history、localStorage、tab restore、cache/referrer、Product payload或日志；persistent Browser partition下仍满足memory-only；
-- Curator使用OmniMind当前locale与resolved theme snapshot，而不是OS/browser默认；
+- Curator使用OmniMind当前locale、对比变体与appearance owner生成的resolved theme token snapshot，而不是OS/browser默认；
 - typed presentation claim失败fail closed，不触发Glimpse/系统浏览器fallback；
 - 简中/英文、keyboard、screen reader、390px/Right Dock窄宽、dark/light、reduced motion；
 - 无 Google Fonts/jsDelivr/运行时 CDN；

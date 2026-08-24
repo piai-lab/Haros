@@ -1,11 +1,22 @@
 // FILE: theme.seed.generated.ts
-// Purpose: Stores normalized theme seeds with OmniMind's zero-contrast default.
+// Purpose: Stores the ordered, normalized OmniMind theme-preset catalog.
 // Layer: Web appearance generated catalog
-// Exports: THEME_SEED_CATALOG for code-theme seed lookup.
+// Exports: THEME_SEED_CATALOG as the sole preset identity/variant/seed owner.
 
 import type { ChromeTheme, ThemeVariant } from "./theme.logic";
 
-export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, ChromeTheme>>> = {
+export interface ThemePresetSeedApply {
+  contrast?: true;
+  fonts?: Partial<Record<keyof ChromeTheme["fonts"], true>>;
+  opaqueWindows?: true;
+}
+
+export type ThemePresetSeed = ChromeTheme & {
+  /** Optional template fields applied when the user selects this preset. */
+  apply?: ThemePresetSeedApply;
+};
+
+export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, ThemePresetSeed>>> = {
   absolutely: {
     dark: {
       accent: "#cc7d5e",
@@ -128,6 +139,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   omnimind: {
     dark: {
+      apply: { contrast: true },
       accent: "#6073cc",
       contrast: 0,
       fonts: {
@@ -144,6 +156,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
       surface: "#0e0e0e",
     },
     light: {
+      apply: { contrast: true },
       accent: "#526fff",
       contrast: 0,
       fonts: {
@@ -282,6 +295,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   linear: {
     dark: {
+      apply: { fonts: { ui: true }, opaqueWindows: true },
       accent: "#606acc",
       contrast: 0,
       fonts: {
@@ -298,6 +312,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
       surface: "#0f0f11",
     },
     light: {
+      apply: { fonts: { ui: true }, opaqueWindows: true },
       accent: "#5e6ad2",
       contrast: 0,
       fonts: {
@@ -316,6 +331,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   lobster: {
     dark: {
+      apply: { fonts: { ui: true } },
       accent: "#ff5c5c",
       contrast: 0,
       fonts: {
@@ -352,6 +368,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   matrix: {
     dark: {
+      apply: { fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#1eff5a",
       contrast: 0,
       fonts: {
@@ -424,6 +441,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   notion: {
     dark: {
+      apply: { fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#3183d8",
       contrast: 0,
       fonts: {
@@ -440,6 +458,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
       surface: "#191919",
     },
     light: {
+      apply: { fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#3183d8",
       contrast: 0,
       fonts: {
@@ -510,6 +529,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   proof: {
     light: {
+      apply: { fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#3d755d",
       contrast: 0,
       fonts: {
@@ -528,6 +548,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   raycast: {
     dark: {
+      apply: { fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#ff6363",
       contrast: 0,
       fonts: {
@@ -544,6 +565,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
       surface: "#101010",
     },
     light: {
+      apply: { fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#ff6363",
       contrast: 0,
       fonts: {
@@ -596,6 +618,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   sentry: {
     dark: {
+      apply: { fonts: { code: true, ui: true } },
       accent: "#7055f6",
       contrast: 0,
       fonts: {
@@ -684,6 +707,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
   },
   vercel: {
     dark: {
+      apply: { contrast: true, fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#006efe",
       contrast: 0,
       fonts: {
@@ -700,6 +724,7 @@ export const THEME_SEED_CATALOG: Record<string, Partial<Record<ThemeVariant, Chr
       surface: "#000000",
     },
     light: {
+      apply: { contrast: true, fonts: { code: true, ui: true }, opaqueWindows: true },
       accent: "#006aff",
       contrast: 0,
       fonts: {

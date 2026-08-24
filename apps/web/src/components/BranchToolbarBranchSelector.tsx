@@ -288,7 +288,7 @@ function handleCheckoutError(
                   actionProps: {
                     children: translate(input.locale, "git.branch.discardStash"),
                     className:
-                      "border-destructive bg-destructive text-white shadow-destructive/24 hover:bg-destructive/90",
+                      "border-destructive bg-destructive text-destructive-foreground shadow-destructive/24 hover:bg-destructive/90",
                     onClick: () => {
                       closeActiveBranchRecoveryToast();
                       input.onRequestDiscardStash({ cwd: input.cwd });

@@ -3,7 +3,12 @@
 // Layer: Server host integration
 // Exports: narrow intent registration plus Pi curator extraction/sanitization helpers
 
-import type { ProviderKind, ThreadId } from "@omnimind/contracts";
+import type {
+  EngineWebSurfacePresentationContext,
+  ProviderKind,
+  ThreadId,
+} from "@omnimind/contracts";
+import { parseEngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
 
 const ENGINE_WEB_SURFACE_PRESENTER_SYMBOL = Symbol.for(
   "omnimind.engineWebSurface.presenter.v1",
@@ -37,6 +42,33 @@ type EngineWebSurfaceGlobal = typeof globalThis & {
 };
 
 const intentsByUrl = new Map<string, RegisteredEngineWebSurfaceIntent>();
+
+export type ReadyEngineWebSurfacePresentationContext = EngineWebSurfacePresentationContext & {
+  readonly themeSnapshot: NonNullable<EngineWebSurfacePresentationContext["themeSnapshot"]>;
+};
+
+/**
+ * Bundled Engine surfaces may only start after the renderer appearance owner
+ * has published a resolved snapshot. Missing readiness must fail closed rather
+ * than silently selecting the package's black/white upstream fallback.
+ */
+export function requireReadyEngineWebSurfaceContext(
+  context: EngineWebSurfacePresentationContext,
+): ReadyEngineWebSurfacePresentationContext {
+  const themeSnapshot = parseEngineWebSurfaceThemeSnapshot(context.themeSnapshot);
+  if (
+    (context.locale !== "en" && context.locale !== "zh-CN") ||
+    (context.theme !== "light" && context.theme !== "dark") ||
+    themeSnapshot === null
+  ) {
+    throw new Error("The OmniMind appearance snapshot is not ready for this internal page.");
+  }
+  return {
+    locale: context.locale,
+    theme: context.theme,
+    themeSnapshot,
+  };
+}
 
 function isLoopbackHostname(hostname: string): boolean {
   const normalized = hostname.toLowerCase();

@@ -2,7 +2,14 @@
 // Purpose: Resolve terminal theme, font, and system-message styling from app chrome tokens.
 // Layer: Terminal runtime infrastructure
 
+import type { ISearchOptions } from "@xterm/addon-search";
 import { Terminal, type ITheme } from "@xterm/xterm";
+
+import {
+  buildResolvedThemeTokens,
+  type ThemePack,
+  type ThemeVariant,
+} from "~/theme/theme.logic";
 
 const FALLBACK_MONO_FONT_FAMILY =
   '"JetBrains Mono", "JetBrainsMono NFM", "JetBrainsMono NF", monospace';
@@ -120,9 +127,6 @@ function toLegacyXtermColor(cssColor: string, fallback: string): string {
   if (!trimmedCssColor) {
     return fallback;
   }
-  if (/^#[\da-f]{3,8}$/i.test(trimmedCssColor)) {
-    return trimmedCssColor;
-  }
   if (/^rgba?\(\s*\d{1,3}\s*,/i.test(trimmedCssColor)) {
     return trimmedCssColor;
   }
@@ -151,131 +155,101 @@ function toLegacyXtermColor(cssColor: string, fallback: string): string {
   return `rgba(${red}, ${green}, ${blue}, ${Number((alpha / 255).toFixed(3))})`;
 }
 
-function resolveTerminalCssColor(
-  cssColor: string,
-  fallback: string,
-  property: "backgroundColor" | "color" = "color",
-): string {
+function resolveTerminalThemeColors(
+  sources: Readonly<Record<string, string>>,
+  fallbacks: Readonly<Record<string, string>>,
+): ITheme {
   if (typeof window === "undefined" || typeof document === "undefined" || !document.body) {
-    return fallback;
+    return { ...fallbacks };
   }
 
   const probe = document.createElement("div");
   probe.style.position = "fixed";
   probe.style.pointerEvents = "none";
   probe.style.opacity = "0";
-  probe.style[property] = cssColor;
+  for (const [name, cssColor] of Object.entries(sources)) {
+    probe.style.setProperty(`--omnimind-terminal-${name}`, cssColor);
+  }
   document.body.append(probe);
 
-  const resolvedColor = getComputedStyle(probe)[property];
+  // One computed-style snapshot resolves the complete terminal palette. The
+  // previous per-color probe forced more than twenty synchronous DOM/style
+  // cycles for every open terminal whenever the root theme changed.
+  const computedStyle = getComputedStyle(probe);
+  const theme: Record<string, string> = {};
+  for (const [name, fallback] of Object.entries(fallbacks)) {
+    theme[name] = toLegacyXtermColor(
+      computedStyle.getPropertyValue(`--omnimind-terminal-${name}`),
+      fallback,
+    );
+  }
   probe.remove();
 
-  return toLegacyXtermColor(resolvedColor, fallback);
+  return theme;
 }
 
 export function terminalThemeFromApp(): ITheme {
   const isDark = document.documentElement.classList.contains("dark");
   const fallbackTheme = isDark ? DARK_TERMINAL_THEME_FALLBACK : LIGHT_TERMINAL_THEME_FALLBACK;
-  const foregroundFallback = fallbackTheme.foreground;
+  return resolveTerminalThemeColors(
+    {
+      background: "var(--color-token-terminal-background, var(--color-background-surface))",
+      black: "var(--color-token-terminal-ansi-black, var(--color-text-foreground-tertiary))",
+      blue: "var(--color-token-terminal-ansi-blue, var(--color-accent-blue, var(--color-text-accent)))",
+      brightBlack:
+        "var(--color-token-terminal-ansi-bright-black, var(--color-text-foreground-secondary))",
+      brightBlue:
+        "var(--color-token-terminal-ansi-bright-blue, var(--color-accent-blue, var(--color-text-accent)))",
+      brightCyan:
+        "var(--color-token-terminal-ansi-bright-cyan, var(--color-accent-blue, var(--color-text-accent)))",
+      brightGreen:
+        "var(--color-token-terminal-ansi-bright-green, var(--color-decoration-added))",
+      brightMagenta:
+        "var(--color-token-terminal-ansi-bright-magenta, var(--color-accent-purple, var(--color-text-accent)))",
+      brightRed:
+        "var(--color-token-terminal-ansi-bright-red, var(--color-decoration-deleted))",
+      brightWhite:
+        "var(--color-token-terminal-ansi-bright-white, var(--color-text-foreground))",
+      brightYellow: "var(--color-token-terminal-ansi-bright-yellow, var(--warning))",
+      cursor:
+        "var(--color-token-terminal-foreground, var(--color-text-foreground, var(--foreground)))",
+      cyan: "var(--color-token-terminal-ansi-cyan, var(--color-accent-blue, var(--color-text-accent)))",
+      foreground:
+        "var(--color-token-terminal-foreground, var(--color-text-foreground, var(--foreground)))",
+      green: "var(--color-token-terminal-ansi-green, var(--color-decoration-added))",
+      magenta:
+        "var(--color-token-terminal-ansi-magenta, var(--color-accent-purple, var(--color-text-accent)))",
+      red: "var(--color-token-terminal-ansi-red, var(--color-decoration-deleted))",
+      scrollbarSliderActiveBackground:
+        "var(--color-token-scrollbar-slider-active-background)",
+      scrollbarSliderBackground: "var(--color-token-scrollbar-slider-background)",
+      scrollbarSliderHoverBackground: "var(--color-token-scrollbar-slider-hover-background)",
+      selectionBackground: "color-mix(in srgb, var(--color-text-accent) 26%, transparent)",
+      white: "var(--color-token-terminal-ansi-white, var(--color-text-foreground))",
+      yellow: "var(--color-token-terminal-ansi-yellow, var(--warning))",
+    },
+    fallbackTheme,
+  );
+}
 
+/**
+ * Search decorations are part of the terminal's domain projection, not a
+ * second fixed dark palette. Xterm needs resolved color strings rather than
+ * CSS variables, so derive them from the same ThemePack as the terminal.
+ */
+export function terminalSearchDecorationsFromTheme(
+  pack: ThemePack,
+  variant: ThemeVariant,
+): NonNullable<ISearchOptions["decorations"]> {
+  const variables = buildResolvedThemeTokens(pack, variant).codexVariables;
+  const read = (name: string) => variables[name] ?? "transparent";
   return {
-    background: resolveTerminalCssColor(
-      "var(--color-token-terminal-background, var(--color-background-surface))",
-      fallbackTheme.background,
-      "backgroundColor",
-    ),
-    black: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-black, var(--color-text-foreground-tertiary))",
-      fallbackTheme.black,
-    ),
-    blue: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-blue, var(--color-accent-blue, var(--color-text-accent)))",
-      fallbackTheme.blue,
-    ),
-    brightBlack: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-black, var(--color-text-foreground-secondary))",
-      fallbackTheme.brightBlack,
-    ),
-    brightBlue: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-blue, var(--color-accent-blue, var(--color-text-accent)))",
-      fallbackTheme.brightBlue,
-    ),
-    brightCyan: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-cyan, var(--color-accent-blue, var(--color-text-accent)))",
-      fallbackTheme.brightCyan,
-    ),
-    brightGreen: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-green, var(--color-decoration-added))",
-      fallbackTheme.brightGreen,
-    ),
-    brightMagenta: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-magenta, var(--color-accent-purple, var(--color-text-accent)))",
-      fallbackTheme.brightMagenta,
-    ),
-    brightRed: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-red, var(--color-decoration-deleted))",
-      fallbackTheme.brightRed,
-    ),
-    brightWhite: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-white, var(--color-text-foreground))",
-      fallbackTheme.brightWhite,
-    ),
-    brightYellow: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-bright-yellow, var(--warning))",
-      fallbackTheme.brightYellow,
-    ),
-    cursor: resolveTerminalCssColor(
-      "var(--color-token-terminal-foreground, var(--color-text-foreground, var(--foreground)))",
-      foregroundFallback,
-    ),
-    cyan: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-cyan, var(--color-accent-blue, var(--color-text-accent)))",
-      fallbackTheme.cyan,
-    ),
-    foreground: resolveTerminalCssColor(
-      "var(--color-token-terminal-foreground, var(--color-text-foreground, var(--foreground)))",
-      fallbackTheme.foreground,
-    ),
-    green: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-green, var(--color-decoration-added))",
-      fallbackTheme.green,
-    ),
-    magenta: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-magenta, var(--color-accent-purple, var(--color-text-accent)))",
-      fallbackTheme.magenta,
-    ),
-    red: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-red, var(--color-decoration-deleted))",
-      fallbackTheme.red,
-    ),
-    scrollbarSliderActiveBackground: resolveTerminalCssColor(
-      "var(--color-token-scrollbar-slider-active-background)",
-      fallbackTheme.scrollbarSliderActiveBackground,
-      "backgroundColor",
-    ),
-    scrollbarSliderBackground: resolveTerminalCssColor(
-      "var(--color-token-scrollbar-slider-background)",
-      fallbackTheme.scrollbarSliderBackground,
-      "backgroundColor",
-    ),
-    scrollbarSliderHoverBackground: resolveTerminalCssColor(
-      "var(--color-token-scrollbar-slider-hover-background)",
-      fallbackTheme.scrollbarSliderHoverBackground,
-      "backgroundColor",
-    ),
-    selectionBackground: resolveTerminalCssColor(
-      "color-mix(in srgb, var(--color-text-accent) 26%, transparent)",
-      fallbackTheme.selectionBackground,
-      "backgroundColor",
-    ),
-    white: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-white, var(--color-text-foreground))",
-      fallbackTheme.white,
-    ),
-    yellow: resolveTerminalCssColor(
-      "var(--color-token-terminal-ansi-yellow, var(--warning))",
-      fallbackTheme.yellow,
-    ),
+    activeMatchBackground: read("--color-background-accent"),
+    activeMatchBorder: read("--color-text-accent"),
+    activeMatchColorOverviewRuler: read("--color-text-accent"),
+    matchBackground: read("--color-background-button-secondary"),
+    matchBorder: read("--color-border-heavy"),
+    matchOverviewRuler: read("--color-accent-yellow"),
   };
 }
 

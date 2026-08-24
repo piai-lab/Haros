@@ -481,8 +481,7 @@ const COMPOSER_COMMAND_ITEM_ICON_SLOT_CLASSNAME =
 // Files mirror the recap / diff changed-files treatment (FileEntryIcon at
 // size-3.5 with the same dimmed foreground) so a file reads identically whether
 // it appears in a turn summary or in the composer.
-const COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME =
-  "size-3.5 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80";
+const COMPOSER_COMMAND_ITEM_FILE_ICON_CLASSNAME = "size-3.5 text-[var(--color-icon-secondary)]";
 
 const COMPOSER_COMMAND_ITEM_GLYPH_CLASSNAME = "size-3.5";
 

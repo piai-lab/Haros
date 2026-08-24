@@ -273,10 +273,34 @@ describe("canonical browser host RPC", () => {
       tabId: "tab-internal",
     }));
     const settleEngineWebSurface = vi.fn(() => ({ settled: true }));
+    const themeSnapshot = {
+      accent: "rgb(133, 77, 14)",
+      border: "rgba(46, 35, 21, 0.08)",
+      borderStrong: "rgba(46, 35, 21, 0.18)",
+      danger: "#b42d26",
+      elevatedSurface: "rgb(255, 252, 246)",
+      hoverSurface: "rgba(46, 35, 21, 0.05)",
+      primaryBackground: "#2e2315",
+      primaryBackgroundHover: "rgba(46, 35, 21, 0.08)",
+      primaryText: "#fffbf4",
+      secondaryBackground: "rgba(46, 35, 21, 0.04)",
+      secondaryBackgroundHover: "rgba(46, 35, 21, 0.07)",
+      success: "#26844c",
+      surface: "#fffbf4",
+      surfaceUnder: "#f7f0e5",
+      text: "#2e2315",
+      textDim: "rgba(46, 35, 21, 0.45)",
+      textMuted: "rgba(46, 35, 21, 0.65)",
+      warning: "#d97706",
+    };
     await withPipeServer({
       automationHost: {
         executeTool: async () => ({}),
-        getEngineWebSurfaceContext: () => ({ locale: "zh-CN", theme: "dark" }),
+        getEngineWebSurfaceContext: () => ({
+          locale: "zh-CN",
+          theme: "light",
+          themeSnapshot,
+        }),
         presentEngineWebSurface,
         settleEngineWebSurface,
       },
@@ -292,7 +316,13 @@ describe("canonical browser host RPC", () => {
         id: 2,
         method: "getEngineWebSurfaceContext",
         params: { session_id: "surface-session" },
-      })).resolves.toMatchObject({ result: { locale: "zh-CN", theme: "dark" } });
+      })).resolves.toMatchObject({
+        result: {
+          locale: "zh-CN",
+          theme: "light",
+          themeSnapshot,
+        },
+      });
       await expect(request(socket, {
         jsonrpc: "2.0",
         id: 3,

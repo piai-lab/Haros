@@ -8,8 +8,7 @@ import { ELEVATED_HOVER_SURFACE_CLASS_NAME, MUTED_LABEL_TEXT_CLASS_NAME } from "
 export { COMPOSER_PICKER_SIZE, type ComposerPickerSize } from "./composerPickerSize";
 
 /** Restrained two-plane shadow for the composer input shell and floating pickers. */
-export const COMPOSER_SURFACE_SHADOW_CLASS_NAME =
-  "shadow-[0_10px_28px_-16px_color-mix(in_srgb,var(--foreground)_28%,transparent),0_1px_2px_0_color-mix(in_srgb,var(--foreground)_7%,transparent)] dark:shadow-[0_16px_40px_-20px_rgba(0,0,0,0.62),0_1px_2px_0_rgba(0,0,0,0.42)]";
+export const COMPOSER_SURFACE_SHADOW_CLASS_NAME = "shadow-[var(--app-shadow-composer)]";
 
 // Uses the UI-sm token so picker labels sit slightly below the editor text size.
 // The sm: override is required to beat the Button component's base responsive text classes.
@@ -34,7 +33,7 @@ export const COMPOSER_PICKER_SEARCH_HEADER_CLASS_NAME =
 
 /** Search field styling inside composer picker submenus. */
 export const COMPOSER_PICKER_SEARCH_INPUT_CLASS_NAME =
-  "rounded-lg border-[color:color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[color-mix(in_srgb,white_94%,transparent)] shadow-none before:hidden has-focus-visible:border-[color:color-mix(in_srgb,var(--foreground)_18%,transparent)] has-focus-visible:ring-0 [&_input]:font-sans [&_input]:placeholder:text-[var(--color-text-foreground-tertiary)]";
+  "rounded-lg border-[color:color-mix(in_srgb,var(--foreground)_10%,transparent)] bg-[var(--color-background-control-opaque)] shadow-none before:hidden has-focus-visible:border-[color:color-mix(in_srgb,var(--foreground)_18%,transparent)] has-focus-visible:ring-0 [&_input]:font-sans [&_input]:placeholder:text-[var(--color-text-foreground-tertiary)]";
 
 /** Scrollable model list body inside searchable provider submenus. */
 export const COMPOSER_PICKER_MODEL_LIST_MAX_HEIGHT_CLASS_NAME =
@@ -140,10 +139,9 @@ export const RAISED_SURFACE_BORDER_CLASS_NAME = "border-[color:var(--surface-bor
 export const COMPOSER_STACKED_SURFACE_BORDER_CLASS_NAME =
   "border-[color:var(--composer-stacked-border)]";
 
-/** Border + shadow chrome for raised opaque surfaces (kanban cards): a real border
- *  follows squircle/corner-shape geometry more evenly than an outer ring (box-shadow).
- *  Dark mode drops the border and leans on the shadow for separation. */
-export const RAISED_SURFACE_CHROME_CLASS_NAME = `border ${RAISED_SURFACE_BORDER_CLASS_NAME} ${COMPOSER_SURFACE_SHADOW_CLASS_NAME} dark:border-0`;
+/** Border + shadow chrome for raised opaque surfaces (kanban cards). Both roles
+ *  are resolved by the appearance owner, so consumers do not branch on contrast. */
+export const RAISED_SURFACE_CHROME_CLASS_NAME = `border ${RAISED_SURFACE_BORDER_CLASS_NAME} ${COMPOSER_SURFACE_SHADOW_CLASS_NAME}`;
 
 /** Composer input shell. Like RAISED_SURFACE_CHROME but keeps a visible border in
  *  dark mode (via `--surface-border`) instead of dropping to shadow-only separation. */

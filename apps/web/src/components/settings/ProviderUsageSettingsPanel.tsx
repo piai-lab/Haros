@@ -59,14 +59,14 @@ function statusPill(status: ServerProviderUsageSnapshot["status"]): StatusPill |
     case "needs-auth":
       return {
         labelKey: "settings.notSignedIn",
-        className: "bg-amber-500/12 text-amber-600 dark:text-amber-400",
+        className: "bg-warning/12 text-warning",
       };
     case "unsupported":
       return { labelKey: "settings.unsupported", className: "bg-muted text-muted-foreground" };
     case "error":
       return {
         labelKey: "settings.usageUnavailable",
-        className: "bg-red-500/12 text-red-600 dark:text-red-400",
+        className: "bg-destructive/12 text-destructive",
       };
     default:
       return null;
@@ -111,7 +111,7 @@ function ProviderUsageCard({ snapshot }: { snapshot: ServerProviderUsageSnapshot
         {status === "ok" && hasUsage ? (
           <>
             {usageSummary.usageNotice ? (
-              <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-600 dark:text-amber-300/90">
+              <p className="flex items-start gap-1.5 text-xs leading-relaxed text-warning">
                 <TriangleAlertIcon className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
                 <span>{usageSummary.usageNotice}</span>
               </p>
@@ -468,7 +468,7 @@ export function UsageHistorySection() {
                 </div>
               </div>
               {command.isError ? (
-                <p className="text-xs leading-relaxed text-red-600 dark:text-red-400">
+                <p className="text-xs leading-relaxed text-destructive">
                   {t("settings.usageHistoryCommandFailed")}
                 </p>
               ) : null}

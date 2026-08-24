@@ -147,6 +147,16 @@ interface NativeBrowserViewVisibility {
   setVisible?: (visible: boolean) => void;
 }
 
+function cloneEngineWebSurfaceContext(
+  context: EngineWebSurfacePresentationContext,
+): EngineWebSurfacePresentationContext {
+  return {
+    locale: context.locale,
+    theme: context.theme,
+    ...(context.themeSnapshot === undefined ? {} : { themeSnapshot: { ...context.themeSnapshot } }),
+  };
+}
+
 interface PendingRuntimeSync {
   threadId: ThreadId;
   tabId: string;
@@ -1613,11 +1623,11 @@ export class DesktopBrowserManager {
   }
 
   setEngineWebSurfaceContext(context: EngineWebSurfacePresentationContext): void {
-    this.engineWebSurfaceContext = { ...context };
+    this.engineWebSurfaceContext = cloneEngineWebSurfaceContext(context);
   }
 
   getEngineWebSurfaceContext(): EngineWebSurfacePresentationContext {
-    return { ...this.engineWebSurfaceContext };
+    return cloneEngineWebSurfaceContext(this.engineWebSurfaceContext);
   }
 
   /** Creates or focuses one dedicated, memory-only tab for an exact pending call. */

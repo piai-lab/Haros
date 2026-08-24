@@ -134,13 +134,13 @@ function PullRequestThreadDialogContent({
   let statusTone: string;
   switch (resolvedPullRequest?.state) {
     case "merged":
-      statusTone = "text-indigo-600 dark:text-indigo-300/90";
+      statusTone = "text-[var(--color-accent-purple)]";
       break;
     case "closed":
-      statusTone = "text-zinc-500 dark:text-zinc-400/80";
+      statusTone = "text-[var(--color-text-foreground-secondary)]";
       break;
     case "open":
-      statusTone = "text-emerald-600 dark:text-emerald-300/90";
+      statusTone = "text-[var(--status-success)]";
       break;
     default:
       statusTone = "text-muted-foreground";

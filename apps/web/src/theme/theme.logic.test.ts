@@ -1,26 +1,32 @@
 // FILE: theme.logic.test.ts
-// Purpose: Locks down Codex-style theme parsing, normalization, and CSS token derivation.
+// Purpose: Locks down OmniMind theme parsing, preset normalization, and CSS token derivation.
 // Layer: Web appearance domain tests
 // Exports: Vitest coverage for theme.logic.
 
 import { describe, expect, it } from "vitest";
+import { parseEngineWebSurfaceThemeSnapshot } from "@omnimind/contracts";
 import {
-  CODE_THEME_OPTIONS,
+  THEME_PRESET_OPTIONS,
   DEFAULT_CHROME_THEME_BY_VARIANT,
   DEFAULT_THEME_STATE,
+  buildEngineWebSurfaceThemeSnapshot,
   buildResolvedThemeTokens,
+  buildThemePresetSeedPatch,
+  buildThemePresetOptions,
   buildThemeCssVariables,
   createThemeShareString,
-  getCodeThemeSeed,
-  getCodeThemeSeedPatch,
+  getThemePresetSeed,
+  getThemePresetSeedPatch,
   normalizeThemeState,
   parseStoredThemeState,
   parseThemeShareString,
   parseThemeShareStringForVariant,
   resolveThemePack,
-  setThemeCodeThemeId,
+  setThemePresetId,
+  themeColorContrastRatio,
   updateThemePackFromShareString,
 } from "./theme.logic";
+import { THEME_SEED_CATALOG, type ThemePresetSeed } from "./theme.seed.generated";
 import { DEFAULT_MONOSPACE_FONT_FAMILY_STACK } from "../lib/fontFamily";
 
 const PROVIDED_THEME_STRING =
@@ -119,8 +125,9 @@ describe("theme share strings", () => {
       resolveThemePack(DEFAULT_THEME_STATE, "dark"),
     );
 
+    expect(shareString).toMatch(/^omnimind-theme-v1:/);
     expect(parseThemeShareString(shareString)).toEqual({
-      codeThemeId: "codex",
+      presetId: "codex",
       theme: resolveThemePack(DEFAULT_THEME_STATE, "dark").theme,
       variant: "dark",
     });
@@ -128,7 +135,7 @@ describe("theme share strings", () => {
 
   it("parses the provided dark Linear theme and preserves its normalized values", () => {
     expect(parseThemeShareString(PROVIDED_THEME_STRING)).toEqual({
-      codeThemeId: "linear",
+      presetId: "linear",
       theme: {
         accent: "#606acc",
         contrast: 30,
@@ -167,17 +174,81 @@ describe("theme share strings", () => {
   });
 });
 
-describe("code theme seeds", () => {
+describe("theme preset seeds", () => {
+  it("projects a newly added or removed preset from the catalog without a consumer list", () => {
+    const warmLight = {
+      ...DEFAULT_CHROME_THEME_BY_VARIANT.light,
+      accent: "#85500e",
+      ink: "#2e2315",
+      surface: "#fffbf4",
+    };
+    const withPaper = buildThemePresetOptions({
+      existing: { dark: DEFAULT_CHROME_THEME_BY_VARIANT.dark },
+      paper: { light: warmLight },
+    });
+
+    expect(withPaper).toEqual([
+      { id: "existing", label: "Existing", variants: ["dark"] },
+      { id: "paper", label: "Paper", variants: ["light"] },
+    ]);
+    expect(buildThemePresetOptions({ paper: { light: warmLight } })).toEqual([
+      { id: "paper", label: "Paper", variants: ["light"] },
+    ]);
+  });
+
+  it("keeps rich preset application semantics inside the catalog descriptor", () => {
+    const richPaper: ThemePresetSeed = {
+      ...DEFAULT_CHROME_THEME_BY_VARIANT.light,
+      accent: "#85500e",
+      apply: {
+        contrast: true,
+        fonts: { code: true, ui: true },
+        opaqueWindows: true,
+      },
+      contrast: 18,
+      fonts: { code: '"Berkeley Mono"', ui: "Source Serif 4" },
+      ink: "#2e2315",
+      opaqueWindows: true,
+      surface: "#fffbf4",
+    };
+
+    expect(buildThemePresetOptions({ paper: { light: richPaper } })).toEqual([
+      { id: "paper", label: "Paper", variants: ["light"] },
+    ]);
+    expect(buildThemePresetSeedPatch(richPaper, "light")).toEqual({
+      accent: "#85500e",
+      contrast: 18,
+      fonts: { code: '"Berkeley Mono"', ui: "Source Serif 4" },
+      ink: "#2e2315",
+      opaqueWindows: true,
+      semanticColors: DEFAULT_CHROME_THEME_BY_VARIANT.light.semanticColors,
+      surface: "#fffbf4",
+    });
+  });
+
+  it("derives every declared preset variant from an actual bundled seed", () => {
+    expect(THEME_PRESET_OPTIONS).toContainEqual({
+      id: "github",
+      label: "GitHub",
+      variants: ["light", "dark"],
+    });
+    expect(THEME_PRESET_OPTIONS).toContainEqual({
+      id: "ayu",
+      label: "Ayu",
+      variants: ["dark"],
+    });
+  });
+
   it("starts every bundled theme variant at zero contrast", () => {
-    for (const option of CODE_THEME_OPTIONS) {
+    for (const option of THEME_PRESET_OPTIONS) {
       for (const variant of option.variants) {
-        expect(getCodeThemeSeed(option.id, variant).contrast).toBe(0);
+        expect(getThemePresetSeed(option.id, variant).contrast).toBe(0);
       }
     }
   });
 
-  it("loads the exact normalized seed for a bundled code theme", () => {
-    expect(getCodeThemeSeed("linear", "dark")).toEqual({
+  it("loads the exact normalized seed for a bundled theme preset", () => {
+    expect(getThemePresetSeed("linear", "dark")).toEqual({
       accent: "#606acc",
       contrast: 0,
       fonts: {
@@ -196,7 +267,7 @@ describe("code theme seeds", () => {
   });
 
   it("exposes only the raw seed fields that Codex merges on theme switching", () => {
-    expect(getCodeThemeSeedPatch("linear", "dark")).toEqual({
+    expect(getThemePresetSeedPatch("linear", "dark")).toEqual({
       accent: "#606acc",
       fonts: {
         ui: "Inter",
@@ -213,7 +284,7 @@ describe("code theme seeds", () => {
   });
 
   it("merges the selected theme seed into the current pack instead of hard-resetting", () => {
-    const nextState = setThemeCodeThemeId(
+    const nextState = setThemePresetId(
       {
         ...DEFAULT_THEME_STATE,
         chromeThemes: {
@@ -256,7 +327,7 @@ describe("code theme seeds", () => {
   });
 
   it("preserves current optional values when the new seed does not define them", () => {
-    const nextState = setThemeCodeThemeId(
+    const nextState = setThemePresetId(
       {
         ...DEFAULT_THEME_STATE,
         chromeThemes: {
@@ -280,22 +351,22 @@ describe("code theme seeds", () => {
       codeThemeId: "lobster",
       theme: {
         ...DEFAULT_THEME_STATE.chromeThemes.dark,
-        accent: getCodeThemeSeed("lobster", "dark").accent,
+        accent: getThemePresetSeed("lobster", "dark").accent,
         contrast: 22,
         fonts: {
           code: '"JetBrains Mono"',
           ui: "Satoshi",
         },
-        ink: getCodeThemeSeed("lobster", "dark").ink,
+        ink: getThemePresetSeed("lobster", "dark").ink,
         opaqueWindows: true,
-        semanticColors: getCodeThemeSeed("lobster", "dark").semanticColors,
-        surface: getCodeThemeSeed("lobster", "dark").surface,
+        semanticColors: getThemePresetSeed("lobster", "dark").semanticColors,
+        surface: getThemePresetSeed("lobster", "dark").surface,
       },
     });
   });
 
   it("applies explicit contrast overrides when a seed defines them", () => {
-    const nextState = setThemeCodeThemeId(
+    const nextState = setThemePresetId(
       {
         ...DEFAULT_THEME_STATE,
         chromeThemes: {
@@ -312,7 +383,7 @@ describe("code theme seeds", () => {
 
     expect(resolveThemePack(nextState, "dark")).toEqual({
       codeThemeId: "vercel",
-      theme: getCodeThemeSeed("vercel", "dark"),
+      theme: getThemePresetSeed("vercel", "dark"),
     });
   });
 });
@@ -322,7 +393,7 @@ describe("buildThemeCssVariables", () => {
     const importedTheme = parseThemeShareString(PROVIDED_THEME_STRING);
     const cssVariables = buildThemeCssVariables(
       {
-        codeThemeId: importedTheme.codeThemeId,
+        codeThemeId: importedTheme.presetId,
         theme: importedTheme.theme,
       },
       importedTheme.variant,
@@ -362,7 +433,7 @@ describe("buildThemeCssVariables", () => {
     const importedTheme = parseThemeShareString(PROVIDED_THEME_STRING);
     const tokens = buildResolvedThemeTokens(
       {
-        codeThemeId: importedTheme.codeThemeId,
+        codeThemeId: importedTheme.presetId,
         theme: importedTheme.theme,
       },
       importedTheme.variant,
@@ -398,6 +469,118 @@ describe("buildThemeCssVariables", () => {
     expect(tokens.aliases["--color-token-terminal-ansi-yellow"]).toBe("#f5b44a");
   });
 
+  it("projects a custom palette to isolated OmniMind surfaces without exposing ThemeState", () => {
+    const pack = {
+      codeThemeId: "custom-light",
+      theme: {
+        ...DEFAULT_THEME_STATE.chromeThemes.light,
+        accent: "#85500e",
+        ink: "#2e2315",
+        semanticColors: {
+          diffAdded: "#26844c",
+          diffRemoved: "#b42d26",
+          skill: "#7648a8",
+        },
+        surface: "#fffbf4",
+      },
+    };
+
+    const snapshot = buildEngineWebSurfaceThemeSnapshot(pack, "light");
+
+    expect(snapshot).toMatchObject({
+      accent: expect.any(String),
+      danger: "#b42d26",
+      success: "#26844c",
+      surface: "#fffbf4",
+      text: "#2e2315",
+    });
+    expect(snapshot).not.toHaveProperty("codeThemeId");
+    expect(snapshot).not.toHaveProperty("theme");
+  });
+
+  it("keeps every bundled preset inside the bounded cross-process color contract", () => {
+    for (const option of THEME_PRESET_OPTIONS) {
+      for (const variant of option.variants) {
+        const snapshot = buildEngineWebSurfaceThemeSnapshot(
+          {
+            codeThemeId: option.id,
+            theme: getThemePresetSeed(option.id, variant),
+          },
+          variant,
+        );
+        expect(parseEngineWebSurfaceThemeSnapshot(snapshot)).toEqual(snapshot);
+      }
+    }
+  });
+
+  it("keeps bundled normal text, links, and small status roles readable on app surfaces", () => {
+    const readableTextTokens = [
+      "--color-text-foreground",
+      "--color-text-accent",
+      "--color-text-danger",
+      "--color-text-success",
+      "--color-text-warning",
+      "--color-text-status-merged",
+      "--color-text-status-neutral",
+      "--destructive",
+      "--info",
+      "--status-failure",
+      "--status-merged",
+      "--status-neutral",
+      "--status-open",
+      "--status-success",
+      "--success",
+      "--warning",
+    ] as const;
+
+    for (const [presetId, variants] of Object.entries(THEME_SEED_CATALOG)) {
+      for (const variant of ["light", "dark"] as const) {
+        const seed = variants[variant];
+        if (!seed) {
+          continue;
+        }
+        const variables = buildThemeCssVariables(
+          { codeThemeId: presetId, theme: getThemePresetSeed(presetId, variant) },
+          variant,
+        ).variables;
+        const backgrounds = [
+          variables["--color-background-surface"],
+          variables["--color-background-surface-under"],
+          variables["--color-background-panel"],
+        ];
+
+        for (const token of readableTextTokens) {
+          for (const background of backgrounds) {
+            expect(
+              themeColorContrastRatio(variables[token]!, background!),
+              `${presetId}/${variant} ${token} on ${background}`,
+            ).toBeGreaterThanOrEqual(4.5);
+          }
+        }
+      }
+    }
+  });
+
+  it("preserves Solarized identity accent while deriving readable link text", () => {
+    const variables = buildThemeCssVariables(
+      {
+        codeThemeId: "solarized",
+        theme: getThemePresetSeed("solarized", "light"),
+      },
+      "light",
+    ).variables;
+
+    expect(variables["--codex-base-accent"]).toBe("#b58900");
+    expect(variables["--color-decoration-added"]).toBe("#859900");
+    expect(variables["--color-text-accent"]).not.toBe("#b58900");
+    expect(
+      themeColorContrastRatio(
+        variables["--color-text-accent"]!,
+        variables["--color-background-surface"]!,
+      ),
+    ).toBeGreaterThanOrEqual(4.5);
+  });
+
   it("uses the zero-contrast dark composer and dropdown control color", () => {
     const tokens = buildResolvedThemeTokens(
       {
@@ -415,7 +598,7 @@ describe("buildThemeCssVariables", () => {
     const cssVariables = buildThemeCssVariables(
       {
         codeThemeId: "absolutely",
-        theme: getCodeThemeSeed("absolutely", "light"),
+        theme: getThemePresetSeed("absolutely", "light"),
       },
       "light",
       { electron: true },

@@ -1,9 +1,9 @@
 // FILE: useTheme.ts
-// Purpose: Persists the Codex-style theme store and projects the active pack into DOM CSS variables.
+// Purpose: Persists OmniMind appearance intent and projects one active pack into typed surfaces.
 // Layer: Web appearance state hook
 // Exports: useTheme for mode, resolved variant, theme-pack import/export, and active theme metadata.
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { isElectron } from "../env";
 import { isMacPlatform } from "../lib/utils";
 import {
@@ -15,6 +15,7 @@ import {
   type ThemeState,
   type ThemeVariant,
   areThemePacksEqual,
+  buildEngineWebSurfaceThemeSnapshot,
   buildThemeCssVariables,
   canParseThemeShareString,
   createThemeShareString,
@@ -23,7 +24,7 @@ import {
   resolveThemePack,
   resolveThemeVariant,
   serializeThemeState,
-  setThemeCodeThemeId,
+  setThemePresetId as setThemePresetIdState,
   setThemeFonts,
   updateChromeTheme,
   updateThemePackFromShareString,
@@ -162,7 +163,7 @@ function applyThemeState(state: ThemeState, suppressTransitions = false) {
   });
 
   root.classList.toggle("dark", variant === "dark");
-  root.setAttribute("data-code-theme-id", activeTheme.codeThemeId);
+  root.setAttribute("data-theme-preset-id", activeTheme.codeThemeId);
   root.setAttribute("data-theme-mode", state.mode);
   root.setAttribute("data-theme-variant", variant);
   root.setAttribute("data-window-material", cssVariableBuild.material);
@@ -242,8 +243,8 @@ function updateThemeFonts(variant: ThemeVariant, patch: Partial<ThemeFonts>) {
   updateStoredThemeState((state) => setThemeFonts(state, variant, patch));
 }
 
-function setCodeThemeId(variant: ThemeVariant, codeThemeId: string) {
-  updateStoredThemeState((state) => setThemeCodeThemeId(state, variant, codeThemeId));
+function setThemePresetId(variant: ThemeVariant, presetId: string) {
+  updateStoredThemeState((state) => setThemePresetIdState(state, variant, presetId));
 }
 
 export function useTheme() {
@@ -253,11 +254,18 @@ export function useTheme() {
   }));
   const theme = snapshot.state.mode;
   const resolvedTheme = resolveThemeVariant(theme, snapshot.systemDark);
-  const activeTheme = resolveThemePack(snapshot.state, resolvedTheme);
+  const activeTheme = useMemo(
+    () => resolveThemePack(snapshot.state, resolvedTheme),
+    [snapshot.state, resolvedTheme],
+  );
   const darkTheme = resolveThemePack(snapshot.state, "dark");
   const lightTheme = resolveThemePack(snapshot.state, "light");
   const defaultActiveTheme = resolveThemePack(DEFAULT_THEME_STATE, resolvedTheme);
   const isDefaultActiveTheme = areThemePacksEqual(activeTheme, defaultActiveTheme);
+  const engineWebSurfaceThemeSnapshot = useMemo(
+    () => buildEngineWebSurfaceThemeSnapshot(activeTheme, resolvedTheme),
+    [activeTheme, resolvedTheme],
+  );
 
   const canImportThemeString = (value: string, variant: ThemeVariant = resolvedTheme) =>
     canParseThemeShareString(value, variant);
@@ -290,6 +298,7 @@ export function useTheme() {
     systemUiFont: snapshot.state.systemUiFont,
     setSystemUiFont,
     darkTheme,
+    engineWebSurfaceThemeSnapshot,
     defaultActiveTheme,
     exportThemeString,
     importThemeString,
@@ -300,7 +309,7 @@ export function useTheme() {
     resetAllThemes,
     resetThemeVariant,
     resolvedTheme,
-    setCodeThemeId,
+    setThemePresetId,
     setTheme,
     theme,
     themeState: snapshot.state,

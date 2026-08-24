@@ -37,6 +37,7 @@ export * from "./githubProjectProvisioning";
 export * from "./pullRequests";
 export * from "./orchestration";
 export * from "./editor";
+export * from "./engineWebSurfaceTheme";
 export * from "./environment";
 export * from "./project";
 export * from "./studio";

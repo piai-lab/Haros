@@ -8,7 +8,7 @@ import {
 } from "./omnimindOAuthCallbackPage.ts";
 
 describe("OmniMind OAuth callback page", () => {
-  it("renders a self-contained light branded success page with the shipped OmniMind icon", () => {
+  it("renders a self-contained system-variant branded success page with the shipped icon", () => {
     const logoDataUrl = loadOmniMindOAuthLogoDataUrl(
       fileURLToPath(new URL("../../../web/public", import.meta.url)),
     );
@@ -19,7 +19,8 @@ describe("OmniMind OAuth callback page", () => {
       logoDataUrl,
     })({ kind: "authorization_received" });
 
-    expect(html).toContain('meta name="color-scheme" content="light"');
+    expect(html).toContain('meta name="color-scheme" content="light dark"');
+    expect(html).toContain("@media (prefers-color-scheme: dark)");
     expect(html).toContain('alt="OmniMind"');
     expect(html).toContain("Authorization received");
     expect(html).toContain("已收到授权");

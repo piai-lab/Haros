@@ -5,12 +5,51 @@ import {
   extractTypedEngineWebSurface,
   isEngineWebSurfaceUrl,
   registerEngineWebSurfaceIntent,
+  requireReadyEngineWebSurfaceContext,
   sanitizeEngineWebSurfacePayload,
 } from "./engineWebSurfaceHost";
 
 const TEST_CURATOR_URL = "http://127.0.0.1:43129/?session=fixture-token-123456";
 
 describe("Engine web-surface host", () => {
+  it("fails closed before the renderer publishes a resolved appearance snapshot", () => {
+    expect(() => requireReadyEngineWebSurfaceContext({ locale: "en", theme: "light" })).toThrow(
+      "appearance snapshot is not ready",
+    );
+    expect(() =>
+      requireReadyEngineWebSurfaceContext({
+        locale: "en",
+        theme: "light",
+        themeSnapshot: { surface: "#fff3df", text: "#392c20" } as never,
+      }),
+    ).toThrow("appearance snapshot is not ready");
+    const ready = requireReadyEngineWebSurfaceContext({
+      locale: "en",
+      theme: "light",
+      themeSnapshot: {
+        accent: "#b65a32",
+        border: "#d9c8af",
+        borderStrong: "#bca98d",
+        danger: "#b13b32",
+        elevatedSurface: "#f7e8cf",
+        hoverSurface: "#f0ddbe",
+        primaryBackground: "#392c20",
+        primaryBackgroundHover: "#4a3929",
+        primaryText: "#fff3df",
+        secondaryBackground: "#ead7b8",
+        secondaryBackgroundHover: "#dec69f",
+        success: "#2d7c55",
+        surface: "#fff3df",
+        surfaceUnder: "#f9e9ce",
+        text: "#392c20",
+        textDim: "#6c5945",
+        textMuted: "#86725c",
+        warning: "#a06116",
+      },
+    });
+    expect(ready.themeSnapshot.surface).toBe("#fff3df");
+  });
+
   it("accepts only the exact short-lived loopback curator URL shape", () => {
     expect(isEngineWebSurfaceUrl(TEST_CURATOR_URL)).toBe(true);
     expect(isEngineWebSurfaceUrl("https://127.0.0.1:43129/?session=fixture-token-123456")).toBe(

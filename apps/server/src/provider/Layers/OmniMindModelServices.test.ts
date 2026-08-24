@@ -1080,7 +1080,7 @@ describe("OmniMindModelServicesLive", () => {
     expect(callbackHtml).toContain("已收到来自 OpenAI Codex 的授权");
     expect(callbackHtml).not.toContain("Signed in");
     expect(callbackHtml).not.toContain("is connected");
-    expect(callbackHtml).toContain('meta name="color-scheme" content="light"');
+    expect(callbackHtml).toContain('meta name="color-scheme" content="light dark"');
     expect(callbackHtml).not.toContain("Authentication successful");
     expect(callbackHtml).not.toContain("#09090b");
   });

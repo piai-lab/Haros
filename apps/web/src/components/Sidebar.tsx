@@ -699,11 +699,7 @@ function resolveThreadRowMetaChips(input: {
       id: "fork",
       tooltip: input.forkedThreadLabel,
       icon: (
-        <SidebarGlyph
-          icon={GoRepoForked}
-          variant="meta"
-          className="text-emerald-600 dark:text-emerald-300/90"
-        />
+        <SidebarGlyph icon={GoRepoForked} variant="meta" className="text-[var(--status-success)]" />
       ),
     });
   }
@@ -744,21 +740,21 @@ function terminalStatusFromThreadState(input: {
   if (terminalAttentionStates.includes("attention")) {
     return {
       label: input.inputNeededLabel,
-      colorClass: "text-amber-600 dark:text-amber-300/90",
+      colorClass: "text-warning",
       pulse: false,
     };
   }
   if ((input.runningTerminalIds?.length ?? 0) > 0) {
     return {
       label: input.runningLabel,
-      colorClass: "text-teal-600 dark:text-teal-300/90",
+      colorClass: "text-info",
       pulse: true,
     };
   }
   if (terminalAttentionStates.includes("review")) {
     return {
       label: input.completedLabel,
-      colorClass: "text-emerald-600 dark:text-emerald-300/90",
+      colorClass: "text-[var(--status-success)]",
       pulse: false,
     };
   }
@@ -5432,7 +5428,7 @@ export default function Sidebar() {
     desktopUpdateButtonPresentation.secondaryLabel !== null;
   const desktopUpdateDownloadPercent = getDesktopUpdateDownloadPercent(desktopUpdateState);
   const desktopUpdateRowButtonClasses = cn(
-    "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--info)] px-2.5 font-system-ui text-[length:var(--app-font-size-ui-xs,10px)] font-medium leading-none text-white transition-colors",
+    "inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded-full bg-[var(--info)] px-2.5 font-system-ui text-[length:var(--app-font-size-ui-xs,10px)] font-medium leading-none text-[var(--color-background-surface)] transition-colors",
     desktopUpdateButtonHasSecondaryLabel && "min-h-6 py-0.5",
     desktopUpdateButtonInteractivityClasses,
   );

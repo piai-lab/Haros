@@ -222,7 +222,7 @@ Web Access的能力级图标固定复用现有`globe`，用于Settings导航、�
 
 Web Search Tab采用OmniMind黑白细线、开放式文档流：完整query/result是首屏和视觉主体，单query/少结果默认展开首项，多query按清楚文档流分组；结果展开必须是可聚焦的真实控件，并同步本地化accessible name、expanded状态与内容关系，observer/review都不能只支持鼠标。来源、选择、重搜、补搜、query rewrite与Provider切换都留在结果上下文中，框架状态与技术详情不得抢过结果。`summary-review`的summary只作为右侧辅助检查器，打开时背景settlement action必须从视觉、Tab顺序与accessibility tree中inert/隐藏，并把焦点移入Inspector的可理解起点；返回结果阶段恢复背景action与本次触发控件，触发控件已失效时回退到可见结果操作，不能把焦点留在`body`或已隐藏元素。Provider切换沿作者语义同时请求“用该服务重搜当前结果”和“持久写入后续默认”；review必须在动作旁预告这两项后果和可能消耗额度，observer不显示交互chips或提示，也不新增确认框。两项结果必须分别说真话：只有canonical expected-revision mutation确实提交后才显示“已设为默认”；若重搜成功而保存冲突/损坏/权限失败，保留本次结果并明确显示“已用该服务重新搜索，但默认服务未保存”，恢复动作继续进入现有Settings config owner，不静默重试或推进expected revision；保存成功而重搜失败也必须准确区分。页面必须复用正式Curator endpoints、event replay、token/session校验、markdown sanitization、Provider descriptor与typed Browser/settlement seam；Browser Tab标题消费创建时locale snapshot，不由Browser硬编码英文。正常错误由Curator Server稳定typed code和页面双语catalog投影，原始诊断只进入允许的技术详情；视觉原型只作reference，不能复制mock state machine、维护第二Provider表或接管timeout。全局快捷键不得劫持button、link、input、textarea、select、contenteditable、modal或combobox内部键盘语义。
 
-Curator创建时使用当前OmniMind locale与resolved light/dark theme的短时快照，普通产品文案完整覆盖简中/英文；Provider名称、URL、query和原始结果保持来源事实。该控制台使用internal-only chrome，不显示`Open externally`、raw-link copy或raw token地址；来源链接打开为普通OmniMind Browser Tab，之后不限制普通Browser的显式外部打开。页面不从OS/browser默认推断产品语言或主题，不增加Curator自己的设置、route、history、logo表或状态store。
+Curator创建时使用当前OmniMind locale、resolved light/dark变体和credential-blind resolved theme tokens的短时快照，普通产品文案完整覆盖简中/英文；Provider名称、URL、query和原始结果保持来源事实。该控制台使用internal-only chrome，不显示`Open externally`、raw-link copy或raw token地址；来源链接打开为普通OmniMind Browser Tab，之后不限制普通Browser的显式外部打开。页面不从OS/browser默认推断产品语言或主题，不解释主题预设，也不增加Curator自己的palette、设置、route、history、logo表或状态store。无OmniMind presentation snapshot的upstream/default profile可使用作者有界fallback；bundled OmniMind正常路径必须消费snapshot。
 
 `External connections / 外部连接`只管理Codex、Claude Code等独立本地应用进入OmniMind的现有任务连接，并准确显示paired、last used、revoked、expired与runtime availability；没有heartbeat就不伪造“当前已连接”。正常页面只表达“哪些外部应用可以连接OmniMind”，不要求用户理解底层协议。V1不提供第三方MCP server Settings、CRUD、credential/OAuth UI、连接测试、全局状态面板或跨Engine自动分发，也不把OmniMind内置能力或未来第三方MCP混进这个页面。
 
@@ -353,6 +353,33 @@ Provider/Host capability 改变时，Composer mode menu 由 loaded capability tr
 - 列表服务于选择：当前与已配置项优先，其他项按稳定用户语义分组；拒绝无差别卡片墙、重复badge和每行同一种动作。品牌图标只负责身份，状态必须由文字、结构或非颜色标记表达。
 - 普通文案和无障碍名称使用同一用户概念；内部字段名、枚举、raw key、模块名和生命周期术语不得因`aria-label`、Tooltip、Toast或空态重新泄漏到正常产品表面。
 - 视觉依靠层级、排版、留白与连续反馈建立秩序；一个区域只保留一个主动作。没有真实信息增益时不增加卡片、渐变、装饰图标、常驻说明、动效或第二层导航。
+
+### 主题与换肤
+
+OmniMind只维护一个外观状态与解析owner。Appearance保存用户选择的`system/light/dark`模式、明暗两个主题槽及其主题预设、自定义色、对比度、字体和窗口材质意图；同一Web appearance domain把它解析成当前`light|dark`对比变体、完整ThemePack与语义tokens。`light|dark`只表示浏览器/OS需要的color-scheme与对比基槽，不是主题目录；未来增加暖色、品牌色、高对比或其他命名主题时，优先作为明暗槽中的数据化主题预设进入，不为每个主题扩展mode枚举、CSS根分支、组件variant或第二Settings状态。
+
+主题预设的stable ID、顺序、支持的明暗槽、实际seed及选择时应套用的可选字体、对比度与窗口材质字段由同一catalog descriptor拥有。Settings、侧栏搜索、导入导出和预览只消费其窄projection；新增、删除或重命名预设不能要求在这些consumer手改第二张列表或ID metadata表。预设遵循可编辑模板语义：用户选择时把该descriptor声明的seed字段套用到当前明暗槽，随后完整palette与自定义修改由Appearance state持久化，而不是与catalog保持live link；未来替换seed只影响新profile、再次明确套用该预设及实现默认，不静默覆盖已有用户的持久palette。若未来希望已保存profile自动跟随catalog升级，必须先裁决迁移、自定义冲突与回滚，不能由consumer暗中实现。主题切换只改变Appearance state，代码高亮、Diff与Terminal继续消费各自从resolved theme得到的窄语义投影；UI不得把整套App palette误称为“代码主题”，也不得从某个预设名推断组件行为。
+
+OmniMind-owned普通产品表面必须消费语义tokens，不读取主题名，不为明暗分别手写常驻palette。Shell、Sidebar、Settings、Composer、Timeline、Browser自身chrome与空态、Terminal、Diff、dialog、popover、toast、loading/error/recovery和焦点状态都服从同一resolved theme。端口、shadow DOM、webview guest或loopback内部页面无法继承CSS变量时，由appearance owner生成一次credential-blind、已解析、有限字段的presentation snapshot，经typed seam投影；Browser、Desktop、Server与package只转交或渲染，不保存第二主题状态、不解释主题预设。仅用于首帧、Host缺失或upstream/default profile的有界fallback可以保留，正常OmniMind路径不得长期落回固定黑白palette。Desktop原生窗口、系统菜单与Dock图标只消费`system/light/dark`这一OS可表达子集，不伪造原生系统支持任意App palette。
+
+所有产品surface必须在实现前归入以下一个类别；类别决定它能依赖什么，不能由页面自行选择更方便的路径：
+
+| 类别                  | 合同                                                                                                                                         | 当前与未来surface                                                                                                                                   |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A · DOM自动继承       | 只使用appearance owner发布的语义CSS tokens与共享UI primitives；业务组件不判断preset ID、不自持palette，新增普通页面不需要主题专用接线        | Shell、Chat、Composer、Settings、Timeline、Dialog、Popover、Toast、Browser chrome/空态/错误态、Terminal与Diff外壳、普通loading/error/recovery/focus |
+| B · resolved snapshot | 无法继承同一DOM变量的OmniMind-owned文档、shadow root或guest只消费窄typed、credential-blind resolved snapshot；传输层不解释、不修改、不持久化 | Browser annotation、Curator/observer及未来loopback/internal Web Surface                                                                             |
+| C · variant only      | 平台或启动边界确实只能表达系统跟随或`light`/`dark`时，只消费该子集；不得因此复制完整App preset catalog                                        | Electron titlebar/menu/window首帧、native dialog、Dock/平台图标变体、React挂载前boot/pairing/signed-out页、无法取得可信App snapshot的OAuth回调页     |
+| D · 不换肤            | 保持内容、来源或品牌字节；主题只影响其外部OmniMind chrome、toolbar、selection与annotation                                                    | 第三方网页、OAuth登录网站、PDF、图片、视频、Device Screen、用户导出内容、Provider/品牌图标、截图、设备bezel与有明确输出合同的打印/导出画布          |
+
+普通React功能若已经位于A类，必须默认随未来主题工作：Settings或工具页面不得新增主题参数、preset switch或成对light/dark色表；真正需要新的视觉角色时，先在appearance owner增加一个有用户语义的token，再由primitive消费。新增B类surface必须复用同一snapshot seam，或举证现有字段不能表达真实结果后扩展该typed contract；不得复制Browser/Curator palette。C类是能力受限边界，不是普通页面逃离语义tokens的借口。D类不得被全局`filter`、`invert`、`grayscale`或accent覆盖。
+
+主题不拥有内容。任意第三方网页、PDF/图片/视频、设备屏幕、用户生成文件、Provider/品牌图标、截图导出模板以及有明确领域语义的success/warning/danger/diff/ANSI颜色，均不得因“统一换肤”被反色、滤镜化或覆盖来源字节；OmniMind覆盖层、工具栏和选择标记仍使用resolved tokens。Appearance owner必须区分原始accent/diff/identity锚点与正文可读角色：原色继续服务装饰、身份与内容语义，正文、普通链接和小字号状态文字从同一锚点中央派生，并在bundled catalog每个variant上对App主surface、under-surface与panel满足至少4.5:1；consumer不得按页面补深色。沉浸式图片遮罩、设备黑色bezel、打印/导出白底和OAuth/pairing等独立安全页面允许有内容或场景自有palette，但必须在代码与测试中写清边界，不能被普通产品surface复制。
+
+Appearance state当前由Web appearance owner在当前产品profile本地持久化，并通过同一窗口的storage订阅与Electron theme bridge同步；Server、Product State与Browser不建立副本。未来若引入账号同步、多窗口共享或主题市场，必须先明确新的authority与冲突/离线语义，并替换单一writer，不能在localStorage、Server Settings、Browser history与云端之间双写。损坏或旧形状只由同一normalizer有界恢复；主题导入必须校验variant、preset与颜色/字体边界，不允许导入任意CSS、脚本或远程asset。
+
+每次新增主题至少验证：明暗对应槽与System切换、首帧无反色闪烁、480px窗口、简中/英文、键盘/焦点/读屏、WCAG可读性、loading/partial/error/terminal、Browser空态与annotation、Terminal ANSI、代码/Diff、内部Engine Web Surface、原色品牌和关闭重开。A类表面与Browser chrome在同一renderer内随resolved tokens重绘，不得重建Thread、Run、Tab、Terminal或Browser lifecycle；B类内部页面继续使用创建时冻结的bounded snapshot，关闭Tab后的exact reopen仍属于同一surface生命周期并消费原snapshot，只有创建新surface才读取当前主题。已打开或重开的页面不为换肤重启协议、settlement或页面生命周期。B类live theme update若未来成为明确用户需求，必须重新裁决单向更新seam，不能静默建设持续同步控制面。若新增主题需要在Theme owner之外同时手改多个页面、Browser/Curator固定色表、Provider图标表或运行时状态，必须在合并前`SIMPLIFY`，不能靠维护清单维持一致。
+
+候选冻结前必须做与变更相称的修改半径演练：新增/删除一个preset只触达catalog与focused evidence；替换palette的实现面只改seed并作用于新profile或下一次明确套用，不伪装成已有持久palette自动迁移；新增普通Settings页不写主题接线；新增语义token只改appearance owner与真正消费它的primitive；新增隔离internal Web Surface只接typed snapshot；未来多窗口或账号同步先替换/扩展唯一writer并裁决冲突、离线和隐私；退休preset由normalizer有界回退，不在consumer保留空壳。任一演练需要同时手改Browser、Curator、Settings、Timeline或多个palette表，即说明唯一owner尚未成立，不能把候选称为全局主题系统。
 
 ### Device pane
 

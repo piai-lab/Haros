@@ -262,7 +262,7 @@ const RAW_FACT_ALLOWLIST = [
   "PdfViewerToolbar.tsx:text:PDF",
   'ThemePackEditor.tsx:attribute:"JetBrains Mono"',
   "ThemePackEditor.tsx:text:Aa",
-  'ThemePackEditor.tsx:attribute:codex-theme-v1:{"codeThemeId":"linear",...}',
+  'ThemePackEditor.tsx:attribute:omnimind-theme-v1:{"presetId":"linear",...}',
   "ProfileSettingsPanel.tsx:text:OmniMind",
   "ProvidersSettingsPanel.tsx:property:CODEX_HOME",
   "ProvidersSettingsPanel.tsx:property:https://api2.cursor.sh",

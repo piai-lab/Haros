@@ -2239,7 +2239,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                         key={file.path}
                         type="button"
                         className={cn(
-                          "group/file-row flex w-full items-center gap-2 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-background-button-secondary-hover)] dark:bg-transparent dark:hover:bg-transparent",
+                          "group/file-row flex w-full items-center gap-2 border-t border-[color:var(--color-border-light)] bg-transparent px-3 py-2.5 text-left transition-colors hover:bg-[var(--color-background-button-secondary-hover)]",
                           withFirstReset && "first:border-t-0",
                         )}
                         onClick={() => onOpenTurnDiff(turnSummary.turnId, file.path)}
@@ -2249,7 +2249,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           kind="file"
                           theme={resolvedTheme}
                           colorMode="inherit"
-                          className="size-4 shrink-0 text-[var(--color-text-foreground)] opacity-70 dark:opacity-80"
+                          className="size-4 shrink-0 text-[var(--color-icon-secondary)]"
                         />
                         <span
                           className="font-system-ui truncate font-normal text-[var(--color-text-foreground)] underline-offset-2 group-hover/file-row:underline group-focus-visible/file-row:underline"
@@ -2269,7 +2269,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                     );
                   };
                   return (
-                    <div className="mt-2 mb-1 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)] dark:border-[color:color-mix(in_srgb,var(--color-border-light)_55%,transparent)]">
+                    <div className="mt-2 mb-1 overflow-hidden rounded-[0.65rem] border border-[color:var(--color-border-light)]">
                       <div
                         className={cn(
                           "flex items-center justify-between gap-3 bg-[color:color-mix(in_srgb,var(--app-user-message-background)_40%,transparent)] px-3 py-1.5",
@@ -2336,7 +2336,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                           >
                             <DisclosureChevron
                               open={fileChangesExpanded}
-                              className="dark:text-muted-foreground/50"
+                              className="text-[var(--color-text-foreground-tertiary)]"
                             />
                           </button>
                         </div>
@@ -3032,7 +3032,7 @@ const UserImageAttachmentThumbnail = memo(function UserImageAttachmentThumbnail(
   return (
     <button
       type="button"
-      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background/82 text-left shadow-[0_1px_0_rgba(255,255,255,0.2)_inset] transition-colors hover:bg-background/94"
+      className="flex size-15 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-background/82 text-left shadow-[var(--app-shadow-raised-edge)] transition-colors hover:bg-background/94"
       aria-label={`Preview ${props.image.name}`}
       title={props.image.name}
       onClick={() => {

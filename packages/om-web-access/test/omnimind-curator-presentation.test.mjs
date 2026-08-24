@@ -36,6 +36,27 @@ function inlineScript(html) {
   return script;
 }
 
+const warmLightThemeSnapshot = {
+  accent: "rgb(133, 77, 14)",
+  border: "rgba(46, 35, 21, 0.12)",
+  borderStrong: "rgba(46, 35, 21, 0.22)",
+  danger: "rgb(180, 45, 38)",
+  elevatedSurface: "rgb(255, 247, 232)",
+  hoverSurface: "rgba(46, 35, 21, 0.06)",
+  primaryBackground: "rgb(46, 35, 21)",
+  primaryBackgroundHover: "rgb(65, 49, 29)",
+  primaryText: "rgb(255, 251, 244)",
+  secondaryBackground: "rgba(46, 35, 21, 0.07)",
+  secondaryBackgroundHover: "rgba(46, 35, 21, 0.11)",
+  success: "rgb(38, 132, 76)",
+  surface: "rgb(255, 251, 244)",
+  surfaceUnder: "rgb(250, 242, 226)",
+  text: "rgb(46, 35, 21)",
+  textDim: "rgb(135, 119, 98)",
+  textMuted: "rgb(100, 83, 61)",
+  warning: "rgb(180, 105, 16)",
+};
+
 test("Curator freezes OmniMind locale/theme and ships executable self-contained bilingual UI", () => {
   const english = page({ locale: "en", theme: "dark" });
   const chinese = page({ locale: "zh-CN", theme: "light" });
@@ -70,6 +91,21 @@ test("Curator freezes OmniMind locale/theme and ships executable self-contained 
 	assert.match(html, /class="provider-icon"/);
     assert.match(html, /class="source-link"[^>]+target="_blank"/);
   }
+});
+
+test("OmniMind presentation projects one resolved custom palette instead of re-owning theme presets", () => {
+  const custom = page({
+    locale: "zh-CN",
+    theme: "light",
+    themeSnapshot: warmLightThemeSnapshot,
+  });
+
+  assert.match(custom, /"themeSnapshot":\{"accent":"rgb\(133, 77, 14\)"/);
+  assert.match(custom, /applyResolvedThemeSnapshot\(\)/);
+  assert.match(custom, /"--bg": snapshot\.surface/);
+  assert.match(custom, /"--btn-primary": snapshot\.primaryBackground/);
+  assert.match(custom, /"--timer-urgent-fg": snapshot\.danger/);
+  assert.doesNotThrow(() => new Function(inlineScript(custom)));
 });
 
 test("observer uses the same bilingual page but removes review settlement controls", () => {

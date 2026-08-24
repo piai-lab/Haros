@@ -51,7 +51,7 @@ export function ContextWindowMeter(props: {
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
-                  className="text-muted-foreground/25 dark:text-muted-foreground/40"
+                  className="text-[var(--color-text-foreground-tertiary)]"
                 />
                 <circle
                   cx="8"
@@ -63,7 +63,7 @@ export function ContextWindowMeter(props: {
                   strokeLinecap="round"
                   strokeDasharray={circumference}
                   strokeDashoffset={dashOffset}
-                  className="text-primary transition-[stroke-dashoffset] duration-500 ease-out motion-reduce:transition-none dark:text-[var(--color-text-foreground)]"
+                  className="text-[var(--color-text-foreground)] transition-[stroke-dashoffset] duration-500 ease-out motion-reduce:transition-none"
                 />
               </svg>
             </span>

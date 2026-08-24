@@ -123,6 +123,7 @@ import {
   extractPiCuratorWebSurfaceUrl,
   extractTypedEngineWebSurface,
   registerEngineWebSurfaceIntent,
+  requireReadyEngineWebSurfaceContext,
   sanitizeEngineWebSurfacePayload,
 } from "../../engineWebSurface/engineWebSurfaceHost.ts";
 import {
@@ -2731,10 +2732,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         browserAutomationHost.presentEngineWebSurface &&
         browserAutomationHost.settleEngineWebSurface
           ? {
-              snapshot: () =>
-                Effect.runPromise(
-                  browserAutomationHost.getEngineWebSurfaceContext!(
-                    `engine-web-surface:${provider}:${input.threadId}`,
+              snapshot: async () =>
+                requireReadyEngineWebSurfaceContext(
+                  await Effect.runPromise(
+                    browserAutomationHost.getEngineWebSurfaceContext!(
+                      `engine-web-surface:${provider}:${input.threadId}`,
+                    ),
                   ),
                 ),
               present: async (request) => {
