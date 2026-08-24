@@ -99,6 +99,8 @@ Composer 复用现有输入、attachments、`+`、`@`、Provider、Model、trait
 
 Provider-specific 控制只在 capability data 支持时显示。这里的 capability gate 是逐 Provider 的可见性条件，不是实施团队可跳过真实能力的许可：当前选定 runtime 已暴露、且属于 V1 产品面的能力必须保持可发现、可操作和可恢复；不存在的能力才隐藏或准确显示 unavailable。不能伪造 steer、review、compaction、fork、approval、Skill 或 Plugin 能力，也不能 silent fallback。
 
+Composer内置Slash Command的技术identity与执行继续属于Shared/runtime owner；Web只拥有一个以canonical command ID为key、穷尽内置命令的presentation descriptor，统一投影双语title、description与icon。Provider动态命令可在缺少产品文案时使用明确标注来源的原生名称或有界humanize fallback；OmniMind内置命令不得落入该fallback，也不得让title switch、description map与icon map成为三张需人肉同步的清单。新增或删除内置命令时，presentation完整性测试必须在简中/英文同时证明可读名称、说明和图标存在；availability与执行行为仍由真实command owner决定，不能把展示descriptor扩成第二Command Registry。
+
 ## 4. Conversation、Timeline 与 Activity
 
 Timeline 长期显示用户输入、Assistant 可见结果、结构化请求、重要 Tool/Activity，以及 File、Diff、Terminal、Artifact、Studio Output 引用和必要的 failure/unknown/recovery。
@@ -118,7 +120,6 @@ Child Agent、Goal、Todo、Question 继续使用 source 已有的产品语义�
 ### 自动能力的显示原则
 
 Goal、bounded child、结果驱动执行、会话恢复与 Computer Use 不是新的导航入口或常驻卡。它们只在真实运行条件下投影到既有表面：
-
 
 | 能力语义          | 平时                                           | 运行时                                                                                                                               | 结果/异常                                                                 |
 | ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
@@ -185,6 +186,10 @@ Synara 的 `Project instructions` 表面在 OmniMind 中整体退休，不改名
 ## 6. Settings
 
 V1 保留 Synara 当前设置 IA、搜索、deep-link、分组和 keyboard behavior，不另起 `Models / Agents / Packages / Application` 四域重构。
+
+Settings taxonomy与导航identity必须稳定且与可见文案解耦。一个section descriptor唯一拥有locale-independent的section ID、group、icon、label key与description key；每个可搜索row/panel在其真实owner中声明稳定row ID和搜索metadata，Settings侧栏与搜索只聚合这些窄projection。deep-link不得从英文标题、本地化title或DOM文案生成，重命名/翻译不能改变目标；简中与英文真实渲染都必须证明每个搜索target存在且section/row ID唯一。具体section的render dispatch继续允许显式switch，不能为了消除列表同步而建设通用JSON form DSL、第二Settings schema或万能页面registry。
+
+Settings页面可以组合浏览器本地偏好与Server-owned设置的两个typed read model，但不能把它们压成一个同时写localStorage和Server的通用对象/通用mutation。纯appearance、临时presentation等明确local-only偏好只写本地owner；Provider路径、endpoint、模型、Host工具intent及其他Server事实只经ServerSettings或各自专用owner提交，UI只有在真实mutation receipt后显示成功。legacy浏览器字段只允许由对应owner做有界、一次性读取/迁移；迁移后退出运行时读写，不得继续dual-write或让失败的Server mutation留下本地“已保存”假象。完整持久事实边界由`architecture/product-state.md`拥有。
 
 当前section继续复用source的Settings母体、分组与顺序，例如General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent engines、Model services、Agent skills、Built-in tools、Managed worktrees、System tools与Archived threads；Integrations中的现有MCP连接页准确命名为`External connections / 外部连接`。`Model services / 模型服务`是对原`Models & writing / 模型与写作` section的定向改名与职责修正：保留现有route、内部section id `models`、搜索、deep-link、分组和keyboard behavior，不借此重排整个Settings taxonomy。
 
@@ -405,7 +410,9 @@ iOS Simulator 作为现有 right dock 的 `device` pane 呈现，不新增顶层
 
 性能以真实 journey/profile 验证：startup、Thread switch、continuous stream、long thread、large list/output、Viewer/Diff、Terminal、watcher storm、background work、memory growth 与 IME。不设任意 100k 字符门槛。
 
-Synara `02c8a6c…` 没有覆盖完整产品面的 i18n catalog；浏览器 locale、零散本地文案和英文默认 UI 不能冒充完整双语。source reset 后只新增一套逻辑上的轻量 OmniMind message catalog；实现可以按语言或稳定产品域拆开源码，但不能形成第二套运行时 catalog、Settings 或 localization platform。继续沿用 source 的组件、DOM、focus、geometry 与交互，不为翻译重写 Workbench。
+Synara `02c8a6c…` 没有覆盖完整产品面的 i18n catalog；浏览器 locale、零散本地文案和英文默认 UI 不能冒充完整双语。source reset 后只新增一套逻辑上的轻量 OmniMind message catalog；实现按稳定产品域组织slice，域内可再按语言分开物理文件，但不能形成第二套运行时 catalog、Settings 或 localization platform。继续沿用 source 的组件、DOM、focus、geometry 与交互，不为翻译重写 Workbench。
+
+catalog的物理组织必须避免所有功能长期争用一个巨型文件。允许并推荐在同一i18n owner内按稳定产品域拆分，例如common、settings、composer、browser；每个slice同时闭合已支持语言的对应key与placeholder，root composer确定性合并、拒绝duplicate key并保持全量类型/parity。物理切片不改变locale runtime、fallback或Settings authority，也不授权runtime loader、翻译服务、代码生成控制面或第二catalog。新增一项功能文案应只触达其domain slice；若仍需编辑全产品总表或多个语言索引，候选冻结前必须继续`SIMPLIFY`。
 
 Settings 提供 `System / 简体中文 / English`，默认跟随 OS/browser；中文界面的第一项显示“跟随系统”，英文界面显示 `System`。简体中文和英文是首发及未来功能的默认完整路径：任何新增或修改的 OmniMind-owned 用户文案必须在同一变更中交付两种语言，key 与 placeholder 一一对应；已支持语言缺少 key 时构建失败，不允许在正常路径逐项 fallback 成中英混杂。未来语言只有完整覆盖正常产品路径后才能进入 Settings；未支持的系统语言回退英文。
 

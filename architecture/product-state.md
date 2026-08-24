@@ -27,6 +27,12 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 
 Goal 与 Todo 是两条互补事实。Goal 保存用户明确设定、可跨 turn 继续追求的完整 objective；Todo 只解释当前 turn 内正在做什么。Todo 完成不能自行清除 Goal，Goal 继续也不能伪造 Todo 已完成。Synara ThreadGoal 已在本产品继承的同一 Orchestration 内，不是竞争控制面；OmniMind 只做品牌、双语、Provider 与安全适配，并保留作者的持久化、恢复和竞态语义。
 
+## 用户设置状态边界
+
+用户设置按事实生命周期拥有不同writer，但同一事实只能有一个持久authority：纯浏览器appearance、一次性presentation与明确local-only的交互偏好由Web本地owner保存；跨窗口、Server执行、Provider路径/endpoint、Host工具intent与其他Server-owned设置只由ServerSettings或该能力的专用Server/package owner保存；credential与Provider private state继续属于各自秘密/runtime owner。页面可以把这些事实组合成一个用户任务视图，但不得建立覆盖全部来源的第二`AppSettings`持久schema、先写localStorage再写Server的dual-write或由浏览器缓存冒充Server成功。
+
+旧浏览器字段如需退出，只允许对应幸存owner执行有界、幂等、一次性的legacy读取/迁移；成功后旧字段不再参与normal read、mutation、fallback或恢复。迁移失败必须保留真实旧字节并让Server truth保持未提交，不能形成永久migration flag、双向mapper或两份长期可写真相。新增一个Server-owned字段时，合法修改半径应集中在Server schema/owner、typed projection与真实UI consumer，不得再次要求为浏览器localStorage补defaults、normalizer和双向映射。
+
 ## Agent 与 Chat
 
 ### Agent

@@ -89,7 +89,9 @@ Projects 不再按 Space 过滤或归组；Group 删除只从 Thread metadata �
 
 Provider Registry 只做 `ProviderKind → ProviderAdapter` lookup；Provider Service/Session Directory 使用现有 Thread binding 管理 lifecycle。
 
-V1 只向现有闭合 `ProviderKind` 增加一个 `omnimind` literal，并穷尽更新已有 descriptor、schema、settings、model discovery、usage、health 与 UI maps；不把 ProviderKind 改成动态插件系统。Pi-family implementation 只参数化真实变化的 provider ID、runtime entry、state/version/policy，不能复制整份 Pi adapter。
+Provider identity与runtime capability必须沿同一单向责任链投影。Contracts/provider identity owner唯一给出合法ProviderKind及稳定identity；已注册adapter/runtime owner唯一给出其真实capability与当前health，Server据此组装credential-blind capability snapshot供Composer、Settings、profile stats与runtime-mode consumer使用。Shared或Web不得再维护“支持turn steering的Provider”“可用auto mode的Provider”或完整ProviderKind白名单等手写镜像。若某个启动前或编译期路径确实必须使用静态capability descriptor，该descriptor必须同时驱动adapter registration与外部projection，并以确定性parity gate防止漂移；不能只靠`keep in sync`注释。这里不授权把identity、assets、models、credentials、Settings与executor揉成巨型Provider registry。
+
+V1 只向现有闭合 `ProviderKind` 增加一个 `omnimind` literal，并让既有schema、settings、model discovery、usage、health与UI consumer通过上述identity/capability owner的窄projection获得它；不把 ProviderKind 改成动态插件系统，也不要求consumer各自增加完整Provider清单。Pi-family implementation 只参数化真实变化的 provider ID、runtime entry、state/version/policy，不能复制整份 Pi adapter。
 
 adapter contract 只保留 source 实际支持的操作，例如 start/stop/send/interrupt、native resume、canonical event stream 与可选 discovery。optional 表示不同 Provider 可以不存在该能力；不表示 Host 可以省略当前 runtime 已暴露且属于 V1 产品面的能力。存在时必须由既有 adapter/provenance owner投影并保持用户可达，不存在时才隐藏或显示 unavailable；不模拟成功、不 silent fallback、不由另一 Provider 接管。
 
