@@ -123,6 +123,10 @@ Workbench state 沿用 Synara 已有的 per-thread tabs、panes、viewer、termi
 
 用户 consent、暂停、checkpoint、last-good、partial/stale 与 provider-scoped failure 属于同一历史索引 owner。未确认前 archive 零读取；确认后允许低优先级、可取消的增量维护。启动、Header、普通对话恢复与账户额度查询只读各自现有状态，不触发 archive discovery 或扫描。
 
+`Usage insights / 使用洞察`是另一条无需Provider archive授权的本地产品projection：它只消费现有Orchestration message/turn/activity、canonical runtime Token快照与Profile删除归档，固定呈现活动、30天模型选择、30天Token/缓存、工作重心、工作方式及Skills/Agents；它不拥有账户容量、费用、筛选器、index consent或原始archive读取。页面和导出均不建立持久前端统计store。
+
+显式purge Thread前，Profile archive在同一事务中保存不含提示词/回复的逐轮`thread_id / created_at / provider / model / reasoning`、当时project title及可信Token总量；只有互斥三桶与总量一致时才保存cached/uncached/output拆分。新tombstone标记逐轮事件complete；legacy tombstone保持incomplete与nullable拆分，不能伪造日期或缓存率。最近30天窗口触及legacy缺口时coverage为partial，窗口自然越过后自动恢复complete。purge重试先替换该Thread的partial snapshot再删除live rows，保持事务内幂等；legacy聚合turn表只服务旧tombstone，不再接收新记录。
+
 ## 扩展与生态边界
 
 V1 没有跨 Provider Package authority：

@@ -99,6 +99,10 @@ V1 只向现有闭合 `ProviderKind` 增加一个 `omnimind` literal，并让既
 
 adapter contract 只保留 source 实际支持的操作，例如 start/stop/send/interrupt、native resume、canonical event stream 与可选 discovery。optional 表示不同 Provider 可以不存在该能力；不表示 Host 可以省略当前 runtime 已暴露且属于 V1 产品面的能力。存在时必须由既有 adapter/provenance owner投影并保持用户可达，不存在时才隐藏或显示 unavailable；不模拟成功、不 silent fallback、不由另一 Provider 接管。
 
+runtime Token拆分只有一个Provider-neutral合同：`TokenUsageBreakdown { cachedInputTokens, uncachedInputTokens, outputTokens }`；`ThreadTokenUsageSnapshot.totalTokenBreakdown`是当前runtime session累计、可做单调delta的canonical值，`lastTokenBreakdown`是最近一次已结算请求。三桶互斥：cache read进入cached input，cache write/creation进入uncached input，reasoning只在上游独立于output报告时进入output一次。Codex把cached视为input子集；Pi使用`cacheRead / input+cacheWrite / output`；Claude使用`cache_read / base input+cache_creation / output`；OpenCode使用`cache.read / input+cache.write / output+独立reasoning`。ACP及其他来源无法证明拆分时省略breakdown；负数、非整数或相互矛盾的字段在adapter边界fail closed，Web不得补猜。旧含义不一致的input/cache/output/reasoning scalar不再是runtime合同。
+
+Profile只从canonical累计breakdown做有序delta：重复快照不累计，counter reset以当前值作为新基线，产生delta的真实turn selection拥有模型归因。最近30天按客户端传入的同一固定UTC offset补齐无活动日期；unknown拆分不进入缓存率分母，coverage准确为complete/partial/unavailable。此projection复用现有Profile RPC、SQLite writer与projection event，不建立前端累计store、第二usage数据库或借用需另行授权的Usage History indexer。
+
 Provider 切换沿用 stop-first replacement：当前 operation 结束或停止后才启动目标 Provider；目标失败时恢复上一 exact binding。Product transcript 不能替代 Provider native context。
 
 ProviderService 在任何当前 adapter 可发出 runtime event 之前，必须先持久化带 lifecycle generation 的 `starting` binding；journal row 只能投影到同 Thread、同 Provider、同 generation 的 durable binding。无 binding 的 row 一律只推进消费 cursor 并跳过 Product 投影；generation-less row 只能兼容仍明确标为 `legacy` 的同 Provider binding，不能进入 UUID generation，也不能由 Ingestion 猜测或补写为当前 generation。该兼容只处理既有诊断尾部，不授权 adapter、测试注入或新调用方省略 generation。

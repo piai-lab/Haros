@@ -99,6 +99,8 @@ Composer 复用现有输入、attachments、`+`、`@`、Provider、Model、trait
 
 Provider-specific 控制只在 capability data 支持时显示。这里的 capability gate 是逐 Provider 的可见性条件，不是实施团队可跳过真实能力的许可：当前选定 runtime 已暴露、且属于 V1 产品面的能力必须保持可发现、可操作和可恢复；不存在的能力才隐藏或准确显示 unavailable。不能伪造 steer、review、compaction、fork、approval、Skill 或 Plugin 能力，也不能 silent fallback。
 
+Composer 的 16px 上下文圆环只有一个稳定语义：当前上下文压力。尺寸、位置、线宽和动效不为缓存信息改变，也不增加双环、双色或常驻百分比。已有 Popover 可在最近一次已结算请求拥有真实互斥输入拆分且总输入大于零时追加 `缓存命中 R% · C / I 输入`；无可比拆分时整行消失，不显示 `0%`。trigger 的 accessible name 同时描述上下文占用与可用的最近一轮缓存命中。既有 Session cost 行继续属于原 Composer，不扩张到使用洞察或导出摘要。
+
 Composer内置Slash Command的技术identity与执行继续属于Shared/runtime owner；Web只拥有一个以canonical command ID为key、穷尽内置命令的presentation descriptor，统一投影双语title、description与icon。Provider动态命令可在缺少产品文案时使用明确标注来源的原生名称或有界humanize fallback；OmniMind内置命令不得落入该fallback，也不得让title switch、description map与icon map成为三张需人肉同步的清单。新增或删除内置命令时，presentation完整性测试必须在简中/英文同时证明可读名称、说明和图标存在；availability与执行行为仍由真实command owner决定，不能把展示descriptor扩成第二Command Registry。
 
 ### Canonical User Input
@@ -158,11 +160,11 @@ V1 直接保全 Synara 已有能力：
 - Git、commit、push、Pull Request、Kanban、Automations；
 - Browser、Source Control、Side Chat、Subagents 和 Studio outputs；Engine 临时 Web UI 的 Host presentation policy 只由 `[architecture/execution.md](execution.md#扩展与生态)` 定义，Workbench 继续复用当前 Thread 的右侧非模态 Browser。
 
-同一母体基线还包括持久 Goal、evidence-first Debug、480/960/1440 chat width、暗色 Dock icon 自动切换、本地 Profile activity PNG 导出，以及 Space→Group 的完整交互结果。它们必须复用现有 Composer/Thread、interaction mode、Settings、Desktop icon、Profile 与 Group owners，并在简体中文和英文中同时完整；不能因历史漏移植而降格成 Todo、提示词或另一套 store/API。
+同一母体基线还包括持久 Goal、evidence-first Debug、480/960/1440 chat width、暗色 Dock icon 自动切换、本地使用洞察PNG导出，以及 Space→Group 的完整交互结果。它们必须复用现有 Composer/Thread、interaction mode、Settings、Desktop icon、Profile stats 与 Group owners，并在简体中文和英文中同时完整；不能因历史漏移植而降格成 Todo、提示词或另一套 store/API。
 
 持续同步还保留同一批既有 owner 的冰山行为：Workspace 搜索同时覆盖文件和目录，目录结果必须展开祖先链并在现有 Explorer 中 reveal；Engine 图标、安装/登录/受限状态与容量信息继续来自 canonical Provider descriptors、health 和 usage owners；managed Thread 删除只回收产品创建且可安全证明干净的 worktree，遇到脏目录必须保留并准确提示。Windows taskbar 图标切换和 Windows/Linux custom titlebar 复用 Desktop window/icon owner，偏好写入后若重启失败必须回滚；macOS 继续使用原生 titlebar。不得为这些差异另建 Palette、Provider catalog、worktree registry、window state 或第二套 UI。
 
-Profile 分享首版只提供设备本地、确定性的 render/copy/save，不包含 Synara 社交 handle、domain 或外部发帖链接。Release history/What's New 可以保留通用 UI 机制，但只有存在真实 OmniMind version、changelog 与 publication evidence 才能激活；未满足时准确显示不可用，不复制 Synara release identity。
+使用洞察摘要只提供设备本地、确定性的render/copy/save，不包含姓名、头像、handle、domain或外部发帖链接；完整产物合同见Settings段。Release history/What's New 可以保留通用 UI 机制，但只有存在真实 OmniMind version、changelog 与 publication evidence 才能激活；未满足时准确显示不可用，不复制 Synara release identity。
 
 每个 Thread 恢复其 tabs、open files、layout、viewer refs 与 terminal state。具体 state 直接复用 source 实现，不新增 WorkbenchLayout aggregate。
 
@@ -208,6 +210,18 @@ Settings页面可以组合Web local preferences、ServerSettings、ProviderCrede
 同一Provider详情同时编辑普通配置与secret时，先提交非秘密Server字段；只有成功后才提交secret。普通配置失败不得写secret；secret失败则保留其draft，并准确显示“配置已保存，但凭据未保存”。全局`Restore defaults / 恢复默认设置`不是跨owner原子事务：Web local/Appearance、ServerSettings、ProviderCredentials与Desktop native分别报告结果，成功项不回滚，失败项可单独重试。AppSnap restore先持久重置local intent，再显式应用Desktop listener/shortcut；native失败时准确说明“默认偏好已保存，但当前应用状态未完全更新”，App重开继续按durable intent收敛，已授予的OS权限不撤销。完整持久事实边界由`architecture/product-state.md`拥有。
 
 当前section继续复用source的Settings母体、分组与顺序，例如General、Profile、Appearance、Notifications、Chat behavior、Keybindings、Usage & limits、Agent engines、Model services、Agent skills、Built-in tools、Managed worktrees、System tools与Archived threads；Integrations中的现有MCP连接页准确命名为`External connections / 外部连接`。`Model services / 模型服务`是对原`Models & writing / 模型与写作` section的定向改名与职责修正：保留现有route、内部section id `models`、搜索、deep-link、分组和keyboard behavior，不借此重排整个Settings taxonomy。
+
+原 `Profile` section 的内部 ID 继续固定为 `profile`，用户可见名称收敛为 `Usage insights / 使用洞察`，中央图标库的图表图标替换身份图标。页面不再读取或展示头像、姓名、handle、badge与编辑资料入口；已有local-only身份值不破坏性清除。页头固定为标题、无句号副标题 `了解你如何使用 OmniMind / Understand how you use OmniMind` 与克制的 `导出摘要 / Export summary`；不常驻显示笼统的“所有统计都仅保存在此设备上”。
+
+使用洞察的DOM和视觉顺序固定为：页头 → 一体式五项统计条（累计 token、峰值日期、提示词总数、当前连续天数、最长连续天数）→ 既有活动热力图 → 30天模型使用 → 30天Token使用 → 工作重心与工作方式 → Skills与Agents。活动、模型与Token永不进入tab、segmented control或互斥panel，也不默认折叠；现有ActivityHeatmap的密度、月份、单色强度、Tooltip和Token→prompts fallback保持不变。统计条的数值与标签几何居中、数字使用tabular numerals，`dd`必须显式清零margin；峰值日期渲染真实本地化日期，不用峰值Token数冒充。
+
+模型使用按包含今天的最近30个本地自然日统计user-origin模型选择轮次：显示前五个已知模型，其余已知模型聚合为其他模型，无法确定的轮次独立显示未知模型；原模型名与Provider图标保持事实身份，长名称在Tooltip/focus可读。Token使用按同一30日本地日界线显示日级堆叠柱与常驻图例，固定区分缓存输入、未缓存输入、输出；缓存命中严格为 `C/(C+U)`，输出不进分母，unknown不冒充未缓存，零可比输入显示不可用，部分覆盖明确说明。30根柱只形成一个roving tab stop并用方向键/Home/End移动日期，pointer、键盘、触摸都能获得不透明主题Tooltip。
+
+工作重心按lifetime user prompt显示前两个具名项目，剩余、已删除或不可命名项目合并为其他项目且显示百分比严格合计100%。工作方式只在明确reasoning选择内计算最常用强度，按lifetime prompt给出并列取较早起点的最佳连续两小时窗口，并复用最长连续天数。Skills与Agents保留真实身份和run count，默认前三项，可展开完整owner排名；标题同时显示探索数量与累计运行次数。
+
+页面继续消费Settings route已有`max-w-3xl`，最大内容宽约720px，不复制原型外壳或扩大Settings shell。480px下五项按原顺序自然换行、工作双栏转纵向、模型与Token始终可见且页面无横向overflow。所有图表颜色只消费Appearance语义token：最强accent表示缓存输入，同accent低强度表示未缓存输入，中性foreground表示输出；不硬编码preset hex、不增加chart palette、卡墙、渐变或玻璃。
+
+`UsageInsightsShareCard`固定本地输出1200×1600 PNG并复用同一Profile数据与静态presenter；内容包含OmniMind标识和日期、五项统计、活动、30天模型、30天Token/缓存、工作重心、工作方式及Skills/Agents摘要。产物不含姓名、头像、handle、workspace路径、费用或原始提示词；partial仍保留完整结构并准确标记。copy/save沿用现有本地流程，文件名固定为`omnimind-usage-insights-YYYY-MM-DD.png`。
 
 Settings 的内部 `coding` 分组对用户统一显示为 `Development / 开发`。其中新增 `Prompts / 提示词`，只管理 OmniMind Agent 的两项用户结果：`Default prompt / 默认提示词` 与 `Custom rules / 自定义规则`。它不是 Prompt 文件管理器，不成为其他 Engine、Project rules、模板、历史或最终有效 Prompt 的管理入口。
 

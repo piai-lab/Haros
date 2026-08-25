@@ -1,10 +1,10 @@
 # OmniMind 使用洞察：从 Composer 圆环到 Settings 洞察页的产品认知
 
-状态：`maintainer-converged / design-cognition / not-production-implementation`
+状态：`maintainer-converged / production-contract / implementation-candidate`
 
 收敛日期：2026-08-25
 
-源码核对基线：`main@67813a35575cd89382101b45dd9aca9418ecb6ae`。本文写入时工作树另有与本主题无关的用户修改；下述 `SOURCE FACT` 均由本主题所列文件在该基线上的实际内容核对，后续不能仅凭日期沿用。
+原始认知核对基线：`main@67813a35575cd89382101b45dd9aca9418ecb6ae`。生产实现基线为 `origin/main@17f0fb314c` 上的 `codex/usage-insights` candidate；是否已推送、packaged或进入main只看Git与`execution-brief.md`的exact evidence，不能从本文状态推断。
 
 适用范围：OmniMind Composer 上下文圆环中的缓存信息，以及 Settings 中原 `Profile / 个人资料` 表面向 `Usage insights / 使用洞察` 的产品收敛。
 
@@ -25,7 +25,7 @@
 | `SOURCE FACT` | 2026-08-25 当前源码的可复核事实，源码变化后需重验 |
 | `PROTOTYPE EVIDENCE` | HTML 候选已验证的视觉或交互，不等于生产合同 |
 | `INFERENCE` | 为保持现有 owner、最小修改半径而得出的实现判断 |
-| `OPEN` | 本轮没有确认，不能把原型中的临时内容写成产品事实 |
+| `OPEN` | 仍缺维护者裁决；当前本文没有遗留 `OPEN` 项 |
 
 ## 1. 一句话结论
 
@@ -48,7 +48,7 @@
 4. `DECISION`：简体中文副标题精确为 `了解你如何使用 OmniMind`，末尾没有句号。
 5. `DECISION`：删除副标题中的 `所有统计都仅保存在此设备上`。这句话不应常驻占据首屏，也不能在没有逐数据源证明时笼统承诺。
 6. `INFERENCE`：内部 section ID 保持 `profile`。`architecture/workbench.md` 要求 Settings taxonomy 的稳定 ID 与可见文案解耦；改可见名称不构成新 route、迁移或 deep-link 破坏的理由。
-7. `OPEN`：导航 icon 没有被维护者单独锁定。原型的洞察/图表 icon 方向合理，但实现前应复用现有中央 icon owner，不为页面手绘图标。
+7. `DECISION`：导航使用现有中央 icon owner的洞察/图表图标，不手绘页面专属图标。
 
 ### 2.2 不可打乱的页面顺序
 
@@ -59,7 +59,8 @@
 3. 现有 `活动` 年度热力图；
 4. 新增、独立、默认可见的 `模型使用`；
 5. 新增、独立、默认可见的 `Token 使用`；
-6. 其后的既有内容是否保留、改名或重排，未在本轮锁定。
+6. `工作重心` + `工作方式`；
+7. `Skills 与 Agents`。
 
 以下行为被明确否决：
 
@@ -122,9 +123,7 @@
 - 条形颜色消费主题 accent 的语义角色，不使用通用 SaaS 蓝；
 - Tooltip 可给出模型名、占比、精确 Token 或使用次数、来源和统计范围，但必须与实际 metric 一致。
 
-`SOURCE FACT`：当前已有 `selectProfileModelUsage`：Token telemetry 可用时按 lifetime counted tokens 排名，否则按 turn count fallback；`ProfileTokenStats.models` 已包含 provider、model、tokens、percent。当前 UI 已有细条列表，但位置在现有洞察/插件之后，且标题中文为 `模型用量`。目标应复用同一 selector/data owner，把可见区块移动到活动之后并收敛为 `模型使用`，而不是新增第二 model-usage store 或 RPC。
-
-`OPEN`：原型的 `过去 30 天 · 286 次模型选择` 与四个模型假数据只是视觉 fixture。当前生产 selector 是 lifetime 且 metric 可能是 tokens 或 turns。若产品要锁定 30 天，必须先让同一 owner 提供真实 range 与 metric，不能只改标题；在此之前，Tooltip 和 meta 必须准确说 `按 Token`、`按使用轮次` 或 `累计`。
+`DECISION`：范围固定为包含今天在内的最近30个本地自然日，metric固定为真实user-origin运行轮次/模型选择次数，不使用Token占比。展示前五个已知模型；其余已知模型聚合为`其他模型`，无法确定模型的轮次独立为`未知模型`。百分比由同一owner计算并精确合计100%；legacy删除记录缺少逐轮日期或unknown模型时coverage为partial，而不是伪造归因。
 
 ### 2.6 Token 使用与缓存率
 
@@ -154,13 +153,7 @@ UI 需要一个跨 Provider 归一后的互斥桶合同：
 
 #### 2.6.2 当前数据缺口
 
-`SOURCE FACT`：`ThreadTokenUsageSnapshot` 已有 `inputTokens`、`cachedInputTokens`、`outputTokens` 和 last-* 字段；Pi、Codex、Claude、OpenCode 等 adapter 也投影了不同程度的真实字段。但当前 `ProfileTokenStats` 只导出累计总 Token、峰值、模型占比和单值 heatmap，没有日级 `C/U/O` bucket。
-
-`SOURCE FACT`：当前 `profileStats.ts` 从 `context-window.updated` 只按 `totalProcessedTokens` 或 `usedTokens` 做增量，缓存和输入/输出明细在该查询路径中被丢弃。现有 `compactTurnModelUsage` 还明确把 cache read/write 折进 inputTokens，只适合模型归因，不足以反推缓存命中率。
-
-`SOURCE FACT`：不同 adapter 的上游语义并不完全同形。例如有的 `inputTokens` 包含 cached subset，有的把 cache read/write 与 input 分开；OpenCode 当前把 cache read 与 cache write 合并为 `cachedInputTokens`，而“命中率”只应计 cache read。实现必须在 provider/runtime owner 附近建立经过测试的 canonical 互斥桶，不能在 React 中统一执行 `input - cached` 或 `input + cached`。
-
-`INFERENCE`：最小完整路径是扩展现有 runtime usage projection 与 `ProfileTokenStats`，保留一个 profile-stats owner，按本地日导出已归一的 `cachedInputTokens / uncachedInputTokens / outputTokens`。不能为这张图建立第二数据库、第二索引器或前端累计 store。
+`DECISION`：runtime合同已收敛为互斥`TokenUsageBreakdown`，session累计值只在`totalTokenBreakdown`，最近已结算请求只在`lastTokenBreakdown`；旧含义不一致的input/cache/output/reasoning scalar退出合同。Codex、Pi、Claude和OpenCode的精确归一口径由`architecture/execution.md`拥有，ACP/其他无法证明拆分时省略。Profile按同一客户端UTC offset导出补齐的30天日级C/U/O、cache ratio、coverage和unsupported Provider；重复累计快照、counter reset与模型切换均在owner做delta，不在React修补。
 
 ### 2.7 费用边界
 
@@ -315,24 +308,22 @@ Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最�
 - Profile activity 本地 export/copy/save 能力；
 - 中英 message catalog owner。
 
-### 6.2 部分已有但目标展示不正确
+### 6.2 candidate 已完成的生产实现
 
-- 可见 section 仍叫 `Profile / 个人资料`；
-- 当前 panel 仍以头像、姓名、handle、Edit 为视觉中心，与“使用洞察”目标不符；
-- 第二统计格 label 是峰值日期，value 却是峰值 Token 数；
-- 模型数据已有，但当前位置在活动洞察/插件之后，表现只是细列表，中文名是 `模型用量`；
-- runtime usage snapshot 已有输入/缓存/输出字段，但 profile aggregation 只保留总 Token；
-- 某些 Provider 有真实 cache breakdown，某些只有总量或字段语义不同。
+- stable `profile` ID下的双语`Usage insights / 使用洞察`与精确无句号副标题；
+- 身份UI和localStorage读取退出，五项统计条保持一体式并修正真实峰值日期与`dd`几何居中；
+- 现有ActivityHeatmap原位复用；
+- 30天user-origin模型排名、30天日级C/U/O与缓存命中、coverage和单一roving chart focus；
+- lifetime工作重心、工作方式、可展开Skills/Agents；
+- 1200×1600 identity-free完整摘要、固定文件名与local copy/save；
+- canonical runtime breakdown、四类Provider normalization、Profile delta和删除归档migration/测试。
 
-### 6.3 缺失
+### 6.3 仍需由交付证据关闭
 
-- `Usage insights / 使用洞察` 双语可见命名与精确副标题；
-- 日级 canonical `缓存输入 / 未缓存输入 / 输出` profile contract；
-- 按 comparable input 计算并披露覆盖范围的缓存命中率；
-- 独立 Token stacked chart 与键盘/触摸可达 Tooltip；
-- 目标位置与表现的模型横向排名图；
-- 对 cache write、reasoning output、unknown Provider telemetry 的跨 adapter 防重复口径测试；
-- 生产 route 上的 480px、明暗主题、中英和完整 a11y journey 证据。
+- exact branch commit与push；
+- MiMo/DeepSeek真实wire是否提供cache detail，以及unsupported时的unknown结论；
+- exact pushed SHA的clean build、fresh隔离packaged App中英/明暗/480px/Tooltip/摘要/reopen journey；
+- 全仓门若受并行工作树修改影响，必须在clean SHA重新运行并精确归因。
 
 ### 6.4 不应复用为捷径的链路
 
@@ -340,12 +331,12 @@ Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最�
 
 ## 7. 最小完整实现路径
 
-这不是当前实施状态，只是基于现有 owner 的施工约束。
+以下已成为production implementation合同，而不是原型建议。
 
 1. 保留 `profile` stable ID、route、query owner 与 `max-w-3xl`；只改双语 label/description 和 panel presentation。
 2. 移除或退出首屏 identity-centric header；建立正常 Settings 页头：标题、副标题和真实 export action。
 3. 原样保留五项统计条与 `ActivityHeatmap`，修正 `peakDay` value 和 `dd` centering。
-4. 把现有 `selectProfileModelUsage` 投影为活动下方的横向排名区；先如实显示当前 metric/range，不伪造 30 天。
+4. 由Profile owner固定投影最近30天user-origin模型选择，活动下方以横向排名条显示。
 5. 在 runtime usage projection/profile-stats owner 中保留 canonical component deltas；扩展现有 `ProfileTokenStats`，不新建平行 RPC/store。
 6. 在同一 panel 内新增 Token 图，消费 typed daily buckets 和 coverage；缓存率只由 owner 给出的 comparable totals 计算或直接由 owner 导出。
 7. 复用共享 Tooltip/Button/Icon/semantic token；不要复制原型 palette、SVG state machine 或假 sidebar。
@@ -365,7 +356,7 @@ Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最�
 - 某日无输入只有输出：该日可画输出，缓存率该日不可用；
 - 日界线使用 client 传入的固定 UTC offset，与现有 profile heatmap 一致；不能一张图按 UTC、另一张按本地日。
 
-`OPEN`：缓存 coverage 的精确用户文案未锁定，实施时需用普通语言，不暴露 adapter、payload 或 telemetry 内部术语。
+`DECISION`：部分覆盖统一使用克制的`部分较早的本机历史未计入 / Some earlier local history is not included.`；完全无可比拆分显示缓存命中率不可用/尚无可比较缓存数据，不暴露adapter、payload或telemetry术语。
 
 ## 9. 原型中哪些被接受，哪些不能继承
 
@@ -380,13 +371,12 @@ Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最�
 - 无 tab、无费用、低 chrome；
 - light/dark 与窄宽 clamp 的视觉可行性。
 
-### 9.2 只是 fixture 或尚未裁决
+### 9.2 仍然只是 fixture
 
 - 所有数字、日期、模型、百分比、项目、Skill/Agent 排名；
-- 模型/Token 的“过去 30 天”范围；
-- `286 次模型选择` 等 meta；
-- `工作重心 / 工作方式 / Skills 与 Agents` 下半区的最终存在、命名和顺序；
-- 原型的 `导出摘要` 文案与 toast。当前生产只证明 activity image export；如果产物仍只是活动卡，就不能把动作改称“摘要”；
+- `286 次模型选择`等具体数值；范围本身已固定为最近30天；
+- 示例中的具体项目、思考强度、时段与Skill/Agent名称；下半区存在、命名和顺序已锁定；
+- 原型toast的具体动效；生产动作已锁定为`导出摘要`且产物必须是完整摘要；
 - 830px page width、假 window/sidebar、具体 breakpoint；
 - 原型 CSS 中成对 light/dark hex 与手写 SVG/JS；
 - Tooltip 的固定像素尺寸、圆角与 shadow。
