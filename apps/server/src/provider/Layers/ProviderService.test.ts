@@ -3505,7 +3505,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
           session.threadId,
           asRequestId("req-user-input-1"),
           {
-            sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+            status: "answered",
+            answers: {
+              sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+            },
           },
         ],
       ]);
@@ -4223,7 +4226,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
             threadId,
             asRequestId("req-live-user-input"),
             {
-              answer: { selectedOptionLabels: [], customText: "continue" },
+              status: "answered",
+              answers: {
+                answer: { selectedOptionLabels: [], customText: "continue" },
+              },
             },
           ],
         ]);

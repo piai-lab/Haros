@@ -46,17 +46,18 @@ describe("release workspace manifests", () => {
     expect(server.dependencies?.marked).toBe("15.0.12");
   });
 
-  it("keeps the unregistered Ask fork as a lockfile importer without making it a production dependency", async () => {
+  it("ships the Ask fork through the Server bundle without creating a second Desktop dependency", async () => {
     expect(RELEASE_WORKSPACE_MANIFEST_PATHS).toContain("packages/om-ask/package.json");
     const desktop = await readPackage("apps/desktop/package.json");
     const server = await readPackage("apps/server/package.json");
     expect(desktop.dependencies?.["@omnimind/om-ask"]).toBeUndefined();
-    expect(server.dependencies?.["@omnimind/om-ask"]).toBeUndefined();
+    expect(server.dependencies?.["@omnimind/om-ask"]).toBe("workspace:*");
   });
 
   it("omits only the exact workspace package proven to be bundled into the Server", () => {
     expect(
       omitBundledServerWorkspaceDependencies({
+        "@omnimind/om-ask": "workspace:*",
         "@omnimind/om-web-access": "workspace:*",
         marked: "15.0.12",
       }),

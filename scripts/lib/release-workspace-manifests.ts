@@ -8,8 +8,8 @@ export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
   "apps/desktop/package.json",
   "apps/web/package.json",
   "packages/contracts/package.json",
-  // Keep the unregistered fork importer available only while Bun verifies the
-  // repository lock. The build never copies its source or runtime into stage.
+  // Keep the Ask fork importer available while Bun reconstructs the frozen
+  // workspace. Server tsdown owns the shipped runtime bytes via noExternal.
   "packages/om-ask/package.json",
   "packages/om-web-access/package.json",
   "packages/shared/package.json",
@@ -21,7 +21,10 @@ export const RELEASE_PATCHES_PATH = "patches";
 export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH =
   "vendor/omnimind-pi-coding-agent-0.84.2.tgz";
 
-const SERVER_BUNDLED_WORKSPACE_DEPENDENCIES = new Set(["@omnimind/om-web-access"]);
+const SERVER_BUNDLED_WORKSPACE_DEPENDENCIES = new Set([
+  "@omnimind/om-ask",
+  "@omnimind/om-web-access",
+]);
 
 export function omitBundledServerWorkspaceDependencies(
   dependencies: Readonly<Record<string, unknown>>,
