@@ -102,13 +102,15 @@ source revision 与 vendored legal-text digest 同时匹配时才能使用补充
 
 ## 5. Source lineage and activation
 
-固定 UI 母体中 exact 14 条 `apps/marketing/`\*\* path 是 public capability lineage；donor domain、账号、内容、
-品牌资产、backend 和发布历史不属于 adoption。现存 Sidebar/Feedback/release 代码是 Product re-entry anchors，
-继续保持它们原有的 adapted disposition，不混入这 14 条 fixed marketing path。
+固定 UI 母体中的 public-surface lineage、adopted paths、rights 与排除边界只由根
+[`source-adoptions.json`](../source-adoptions.json) 记录；donor domain、账号、内容、品牌资产、backend 和发布历史不因
+某条产品机制被采用而自动进入 OmniMind。现存 Sidebar、Feedback 与 release 代码是当前 Product re-entry anchors，
+其真实 activation 继续由本 owner 与生产 wiring证明，不能从来源路径、相似页面或历史 disposition 推断。
 
-`scripts/check-source-closure.mjs` 是固定路径 disposition 的唯一机器 owner：这 14 条 path 必须被精确标为
-`public-surface-lineage`，指向本 owner，并进入完整计数与排序 digest。不能以 `excluded-non-product` 或普通
-`adapted-removed` 洗掉这条 lineage，也不能把现存 re-entry anchors 误重分类为 marketing lineage。
+旧的全树 path-count/digest checker 已随其绑定的历史 substrate 退休。机器合同只验证清单结构；每轮 source intake 与发行
+gate 还必须分别验证真实 tracked paths、法定文本和各 target 的 dependency/artifact closure。不得恢复一份需要手工同步
+数千条历史 disposition 的第二 adoption truth，也不得用删除 checker 洗掉
+[`source-adoptions.json`](../source-adoptions.json) 中仍存在的 lineage。
 
 激活任何 capability 需要一次独立、可撤销的生产变更与对应 proof。Website 与 Feedback 当前已按各自 gate 激活；这
 不激活 Download artifact actions、Update discovery、deep link 或任何 Developer API。真实 release artifact、签名、

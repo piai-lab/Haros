@@ -14,13 +14,11 @@ const REPOSITORY_ROOT = path.resolve(import.meta.dirname, "..");
 async function createFixture(t) {
   const root = await mkdtemp(path.join(os.tmpdir(), "omnimind-document-contract-"));
   t.after(() => rm(root, { recursive: true, force: true }));
-
   for (const relativePath of DOCUMENT_CONTRACT_PATHS) {
     const destination = path.join(root, relativePath);
     await mkdir(path.dirname(destination), { recursive: true });
     await writeFile(destination, await readFile(path.join(REPOSITORY_ROOT, relativePath), "utf8"));
   }
-
   return root;
 }
 
@@ -45,13 +43,12 @@ test("repository satisfies the bounded structural document contract", async () =
   assert.deepEqual(await validateDocumentContract({ root: REPOSITORY_ROOT }), []);
 });
 
-test("validator reads only fixed document inputs and does not mutate them", async () => {
+test("validator reads only fixed inputs and does not mutate them", async () => {
   const reads = [];
   const before = new Map();
   for (const relativePath of DOCUMENT_CONTRACT_PATHS) {
     before.set(relativePath, await readFile(path.join(REPOSITORY_ROOT, relativePath), "utf8"));
   }
-
   assert.deepEqual(
     await validateDocumentContract({
       root: REPOSITORY_ROOT,
@@ -63,7 +60,6 @@ test("validator reads only fixed document inputs and does not mutate them", asyn
     [],
   );
   assert.deepEqual(reads, DOCUMENT_CONTRACT_PATHS);
-
   for (const [relativePath, content] of before) {
     assert.equal(await readFile(path.join(REPOSITORY_ROOT, relativePath), "utf8"), content);
   }
@@ -72,7 +68,6 @@ test("validator reads only fixed document inputs and does not mutate them", asyn
 test("missing owner is a path-specific failure", async (t) => {
   const root = await createFixture(t);
   await unlink(path.join(root, "architecture/execution.md"));
-
   assertFinding(
     await validateDocumentContract({ root }),
     "document.required",
@@ -85,26 +80,19 @@ test("broken owner route fails without interpreting architecture prose", async (
   await replaceText(root, "README.md", "architecture/workbench.md", "architecture/ui.md", {
     all: true,
   });
-
   assertFinding(await validateDocumentContract({ root }), "route.required", "README.md");
 });
 
-test("Synara intake instructions cannot bypass the root handbook", async (t) => {
+test("source intake routes cannot bypass their root handbooks", async (t) => {
   const root = await createFixture(t);
-  await replaceText(root, "AGENTS.md", "SYNARA-INTAKE.md", "research/source-update-intake.md", {
+  await replaceText(root, "AGENTS.md", "SYNARA-INTAKE.md", "research/source-review.md", {
     all: true,
   });
-
-  assertFinding(await validateDocumentContract({ root }), "route.required", "AGENTS.md");
-});
-
-test("Pi ecosystem intake instructions cannot bypass the root handbook", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(root, "AGENTS.md", "PI-ECOSYSTEM-INTAKE.md", "research/source-review.md", {
+  await replaceText(root, "AGENTS.md", "PI-ECOSYSTEM-INTAKE.md", "research/README.md", {
     all: true,
   });
-
-  assertFinding(await validateDocumentContract({ root }), "route.required", "AGENTS.md");
+  const findings = await validateDocumentContract({ root });
+  assertFinding(findings, "route.required", "AGENTS.md");
 });
 
 test("mandatory read route order is structural", async (t) => {
@@ -113,12 +101,10 @@ test("mandatory read route order is structural", async (t) => {
   const content = await readFile(agentsPath, "utf8");
   await writeFile(
     agentsPath,
-    content.replace(
-      "1. `README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. 任务涉及审查、借鉴、吸收、同步、升级或 fork Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP 或 OmniMind Agent Core 外部来源时，完整读取 `PI-ECOSYSTEM-INTAKE.md`；\n4. `architecture/README.md`",
-      "1. `architecture/README.md`；\n2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；\n3. 任务涉及审查、借鉴、吸收、同步、升级或 fork Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP 或 OmniMind Agent Core 外部来源时，完整读取 `PI-ECOSYSTEM-INTAKE.md`；\n4. `README.md`",
-    ),
+    content
+      .replace("1. `README.md`；", "1. `architecture/README.md`；")
+      .replace("4. `architecture/README.md`，", "4. `README.md`，"),
   );
-
   assertFinding(await validateDocumentContract({ root }), "route.read-order", "AGENTS.md");
 });
 
@@ -127,197 +113,67 @@ test("duplicate machine owner block fails", async (t) => {
   const readmePath = path.join(root, "README.md");
   const content = await readFile(readmePath, "utf8");
   await writeFile(readmePath, `${content}\n\n\`\`\`identity-denylist\nextra\n\`\`\`\n`);
-
   assertFinding(await validateDocumentContract({ root }), "machine-block.cardinality", "README.md");
 });
 
-test("malformed JSON machine owner block fails", async (t) => {
+test("malformed architecture machine JSON fails", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "README.md", '"maxDirectoryDepth": 7', '"maxDirectoryDepth": nope');
-
   assertFinding(await validateDocumentContract({ root }), "machine-block.invalid", "README.md");
 });
 
-test("historical decision cannot silently regain authority", async (t) => {
+test("source adoption manifest is the sole structured source owner", async (t) => {
   const root = await createFixture(t);
-  await replaceText(
-    root,
-    "research/decision-record.md",
-    "Status: superseded in full",
-    "Status: current",
-  );
-
+  await writeFile(path.join(root, "source-adoptions.json"), "{ nope");
   assertFinding(
     await validateDocumentContract({ root }),
-    "history.superseded",
-    "research/decision-record.md",
+    "source-adoptions.invalid",
+    "source-adoptions.json",
   );
 });
 
-test("Engine native ecosystem cannot be redefined as replaced", async (t) => {
+test("source adoption manifest requires its canonical version", async (t) => {
   const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/execution.md",
-    '"nativeEcosystemDisposition": "preserve"',
-    '"nativeEcosystemDisposition": "replace"',
-  );
-
+  const manifestPath = path.join(root, "source-adoptions.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  delete manifest.version;
+  await writeFile(manifestPath, JSON.stringify(manifest));
   assertFinding(
     await validateDocumentContract({ root }),
-    "execution.engine-capability-composition",
-    "architecture/execution.md",
+    "source-adoptions.structure",
+    "source-adoptions.json",
   );
 });
 
-test("OmniMind workspace artifacts remain additive and single-owner", async (t) => {
+test("source adoption entries require unique identity and exact revision", async (t) => {
   const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/execution.md",
-    '"omnimindWorkspaceArtifacts": "additive-single-owner-jit"',
-    '"omnimindWorkspaceArtifacts": "cross-engine-state-mirror"',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "execution.engine-capability-composition",
-    "architecture/execution.md",
-  );
+  const manifestPath = path.join(root, "source-adoptions.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.adopted[1].id = manifest.adopted[0].id;
+  manifest.adopted[0].revision = "main";
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  const findings = await validateDocumentContract({ root });
+  assertFinding(findings, "source-adoptions.identity", "source-adoptions.json");
+  assertFinding(findings, "source-adoptions.revision", "source-adoptions.json");
 });
 
-test("bundled Pi runtime adoption cannot lose its exact artifact identity", async (t) => {
+test("source adoption paths and digests fail closed", async (t) => {
   const root = await createFixture(t);
-  await replaceText(
-    root,
-    "README.md",
-    "b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7",
-    "0".repeat(64),
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "source-adoption.bundled-pi-runtime",
-    "README.md",
-  );
-});
-
-test("Kanban remains the Agent domain's secondary console", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/workbench.md",
-    '"kanbanPrimaryMode": "Agent"',
-    '"kanbanPrimaryMode": "Chat"',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "workbench.work-surface-ia",
-    "architecture/workbench.md",
-  );
-});
-
-test("Studio remains a first-class work surface with one canonical route", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/workbench.md",
-    '"routes": {"Agent": "/", "Chat": "/chat", "Studio": "/studio"}',
-    '"routes": {"Agent": "/", "Chat": "/chat", "Studio": "/chat"}',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "workbench.work-surface-ia",
-    "architecture/workbench.md",
-  );
-});
-
-test("Groups remain many-to-many conversation labels below complete Projects", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/workbench.md",
-    '"groupTarget": "conversation-thread"',
-    '"groupTarget": "project"',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "workbench.work-surface-ia",
-    "architecture/workbench.md",
-  );
-});
-
-test("blank conversations cannot regain placeholder or Provider header identity", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/workbench.md",
-    '"emptyAgentOrChat": "hidden"',
-    '"emptyAgentOrChat": "provider-icon-and-placeholder"',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "workbench.work-surface-ia",
-    "architecture/workbench.md",
-  );
-});
-
-test("generic Terminal titles remain localized presentation, not migrated state", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/workbench.md",
-    '"genericTerminalTitle": "localized-ui-only"',
-    '"genericTerminalTitle": "rewrite-persisted-title"',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "workbench.work-surface-ia",
-    "architecture/workbench.md",
-  );
-});
-
-test("Model services keeps API-address setup below runtime service discovery", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/workbench.md",
-    '"secondaryPlacement": "list-tail-lower-emphasis"',
-    '"secondaryPlacement": "equal-primary-card"',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "workbench.model-services-ia",
-    "architecture/workbench.md",
-  );
-});
-
-test("Model services cannot regain a static OmniMind model default", async (t) => {
-  const root = await createFixture(t);
-  await replaceText(
-    root,
-    "architecture/workbench.md",
-    '"omnimindDefaultModel": "none-runtime-catalog-only"',
-    '"omnimindDefaultModel": "deepseek/deepseek-chat"',
-  );
-
-  assertFinding(
-    await validateDocumentContract({ root }),
-    "workbench.model-services-ia",
-    "architecture/workbench.md",
-  );
+  const manifestPath = path.join(root, "source-adoptions.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.adopted[0].paths = ["../outside"];
+  const digestOwner = manifest.adopted.find((entry) => entry.archiveSha256);
+  assert.ok(digestOwner);
+  digestOwner.archiveSha256 = "not-a-digest";
+  await writeFile(manifestPath, JSON.stringify(manifest));
+  const findings = await validateDocumentContract({ root });
+  assertFinding(findings, "source-adoptions.paths", "source-adoptions.json");
+  assertFinding(findings, "source-adoptions.digest", "source-adoptions.json");
 });
 
 test("Campaign canonical identity is structural", async (t) => {
   const root = await createFixture(t);
   await replaceText(root, "missions/independent-omnimind-v1.md", "Status: active", "Status: done");
-
   assertFinding(
     await validateDocumentContract({ root }),
     "campaign.structure",

@@ -7,7 +7,7 @@ OmniMind 会持续吸收 Synara。这里的“持续”表示长期保持 source
 本手册允许两种必须准确区分的结果：
 
 - **scoped source review**：只读研究维护者指定的 commit、PR、机制或责任域，形成可复核的理解、风险与建议；它不得进入 Gate B、更新 production-adopted head，或把研究结论写成产品已经采用；
-- **adopted-head advancement**：准备把新的 Synara 母体机制正式吸收进 OmniMind，并推进 README 中的 production-adopted revision；它必须闭合完整 range、与 reconciliation mode 相称的 path/behavior accounting、作者测试、权利、维护者偏离确认与交付证据。
+- **adopted-head advancement**：准备把新的 Synara 母体机制正式吸收进 OmniMind，并推进 `source-adoptions.json` 中的 production-adopted revision；它必须闭合完整 range、与 reconciliation mode 相称的 path/behavior accounting、作者测试、权利、维护者偏离确认与交付证据。
 
 触发本手册只表示开始按 source-first 方法工作，不自动把 scoped review 升级为 adopted-head advancement，也不允许把正式采用降格成局部代码借鉴。Agent 必须按维护者的真实意图判断：仅要求“看看、比较、研究”时默认停在 scoped source review；明确要求“吸收、同步、更新”时进入 adopted-head advancement。若语境无法唯一判断是否授权产品采用，先用 `$converge` 收敛这一项，不按关键词机械推断。
 
@@ -83,7 +83,7 @@ Synara source set 中若带入 Pi-compatible Extension，还必须识别其真�
 - 分支、worktree、直接在 `main` 施工、等待并发任务结束、加快执行、继续已有工作或使用某个执行 Skill 的授权，只决定**在哪里/何时/如何施工**，不等于维护者批准“吸收什么、暂缓什么、拒绝什么”；
 - 维护者对当次明确更新集的批准只覆盖该更新集，不自动扩张到更新后的新 commit；
 - `execution-brief.md` 只协调真实并发、依赖、阻塞和下一动作，不能在维护者确认完整 decision surface 后另设阶段门或否决已确认采用；
-- 后续新 commit 重新从当时 README 记录的 exact adopted head 开始；
+- 后续新 commit 重新从当时 `source-adoptions.json` 记录的 exact adopted head 开始；
 - “尽量全部吸收”是 standing default：母体内可安全吸收、没有越过固定 divergence 或新增真实高风险的机制默认进入当前 adoption set，不需要逐个 accepted patch 再等口令；Agent 必须把每个建议不吸收、延期、已有覆盖或新增高风险变化的损失和理由列给维护者确认。
 
 ## 3. 唯一权威与必读顺序
@@ -92,7 +92,7 @@ Synara source set 中若带入 Pi-compatible Extension，还必须识别其真�
 
 | Fact                                                                           | 唯一 owner                                                                                   |
 | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| 当前 production-adopted Synara revision、采用路径、模式、rights 与总体排除边界 | 根 [`README.md`](README.md) 的 `source-adoptions` 机器块                                     |
+| 当前 production-adopted Synara revision、采用路径、模式、rights 与总体排除边界 | 根 [`source-adoptions.json`](source-adoptions.json)                                          |
 | 持续 intake 的方法、判断原则、提问门与交付要求                                 | 本文件                                                                                       |
 | 固定源事实、逐轮 commit disposition、失败、反例、权利与复验触发器              | [`research/source-review.md`](research/source-review.md)                                     |
 | UI、产品状态、公共出口、执行 topology 等稳定约束                               | [`architecture/`](architecture/README.md) 对应专题 owner                                     |
@@ -100,12 +100,12 @@ Synara source set 中若带入 Pi-compatible Extension，还必须识别其真�
 | Claim 状态与 exact-SHA evidence pointer                                        | active [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md) Campaign |
 | 法定文本                                                                       | [`LICENSES/`](LICENSES) 及必须随 artifact 保留的对应位置                                     |
 
-本文件不得复制当前 adopted SHA 作为长期真相。每轮都从 README 的机器块读取；README 未更新时，不得把研究候选称为 production-adopted head。
+本文件不得复制当前 adopted SHA 作为长期真相。每轮都从 `source-adoptions.json` 读取；清单未更新时，不得把研究候选称为 production-adopted head。
 
 ### 3.2 每轮必读顺序
 
 1. 根 [`AGENTS.md`](AGENTS.md)；
-2. 根 [`README.md`](README.md)，特别是 `source-adoptions`；
+2. 根 [`README.md`](README.md) 与 [`source-adoptions.json`](source-adoptions.json)；
 3. 本 [`SYNARA-INTAKE.md`](SYNARA-INTAKE.md)；
 4. [`architecture/README.md`](architecture/README.md) 以及本轮所有受影响专题 owner；
 5. [`execution-brief.md`](execution-brief.md)；
@@ -125,7 +125,7 @@ Synara source set 中若带入 Pi-compatible Extension，还必须识别其真�
 
 Gate A 必须完成：
 
-1. 解析 README 中 exact adopted head；
+1. 解析 `source-adoptions.json` 中 exact adopted head；
 2. 解析维护者要求检查的 exact source set：scoped source review 可以是固定 commit、PR、机制或路径；adopted-head advancement 必须解析 exact candidate head；
 3. 记录 source set 与 adopted head 的 ancestry；adopted-head advancement 的线性增量路径必须验证 candidate 是 adopted head 的 descendant；
 4. scoped source review 枚举指定 source set 及其必要依赖和后续修正；adopted-head advancement 枚举完整 commit range，包括 merge、revert、删除和后续修正；
@@ -140,14 +140,14 @@ Gate A 必须完成：
 13. 向维护者展示完整而紧凑的 decision surface：默认吸收项可以按稳定责任分组说明；每个 material defer/decline/already-covered/exclusion 必须逐项说明“不纳入会失去什么、为什么仍不建议纳入、什么证据会改变建议”；
 14. adopted-head advancement 必须明确询问维护者是否同意**全部建议未纳入项与高风险偏离**，并等待维护者确认；没有建议未纳入项或新增高风险分叉时，可在报告“无待确认偏离”后直接进入 Gate B。scoped source review 只标明仍待决定的分叉，不取得实施授权。
 
-scoped source review 在完成指定范围的证据、owner、风险与建议后即停在只读结论，不进入 Gate B，也不更新 README、Campaign 或产品代码。只有 adopted-head advancement 才适用第 14 项及“无待确认偏离后进入 Gate B”的 standing default。
+scoped source review 在完成指定范围的证据、owner、风险与建议后即停在只读结论，不进入 Gate B，也不更新 source adoption、Campaign 或产品代码。只有 adopted-head advancement 才适用第 14 项及“无待确认偏离后进入 Gate B”的 standing default。
 
 #### Gate A 的 reconciliation mode
 
 adopted-head advancement 必须先选择并记录一种模式：
 
-- **linear incremental advancement**：candidate 是 adopted head 的 descendant，且上轮全树基线、README production substrate、产品 owner、固定 divergence 与来源/权利边界均未失效。完整闭合新的 exact commit range、changed paths、受影响 owner/consumer、作者测试，以及被本轮变化触发的历史 divergence；复用触发器未变化的既有全树证明，不重新枚举整棵树；
-- **baseline reconciliation**：首次建立可信基线，candidate 非 descendant 或历史被改写，README production substrate、关键 owner、来源/权利边界发生 material 变化，或证据表明既有全树基线已失效。对 README 声明的 Synara production substrate 完成全树 path/behavior accounting，至少覆盖 upstream-only、downstream-only 与所有同路径分叉，并闭合其依赖、构建、生成物、资产和法律 transitive closure。
+- **linear incremental advancement**：candidate 是 adopted head 的 descendant，且上轮全树基线、manifest production substrate、产品 owner、固定 divergence 与来源/权利边界均未失效。完整闭合新的 exact commit range、changed paths、受影响 owner/consumer、作者测试，以及被本轮变化触发的历史 divergence；复用触发器未变化的既有全树证明，不重新枚举整棵树；
+- **baseline reconciliation**：首次建立可信基线，candidate 非 descendant 或历史被改写，manifest production substrate、关键 owner、来源/权利边界发生 material 变化，或证据表明既有全树基线已失效。对 `source-adoptions.json` 声明的 Synara production substrate 完成全树 path/behavior accounting，至少覆盖 upstream-only、downstream-only 与所有同路径分叉，并闭合其依赖、构建、生成物、资产和法律 transitive closure。
 
 不能证明 linear incremental advancement 的前提时，必须升级为 baseline reconciliation；不能为了省事把未知写成“旧证明仍有效”。反过来，前提成立时不得把完整全树重算当作默认仪式。
 
@@ -183,7 +183,7 @@ Gate B 必须：
 6. 运行最窄的 falsifier，再按风险扩展到相关 unit、browser、typecheck、lint、build、native、live 或 recovery proof；
 7. 对用户可观察 Desktop 行为，从最终 exact pushed SHA 重建、安装，并用任务专用 fresh profile 完成真实 journey、关闭和重开；
 8. 更新唯一权威和证据引用，不建立平行 manifest、ledger、wiki 或第二 Campaign；
-9. 一个关注点一个 commit，只 stage 本轮路径；代码、README adoption、research disposition 与当前状态可以形成一组有序 commits，但必须作为一个事实闭合的 adoption set 推送，不能把已实现与仍 pending 的权威冲突留在共享分支；
+9. 一个关注点一个 commit，只 stage 本轮路径；代码、source adoption、research disposition 与当前状态可以形成一组有序 commits，但必须作为一个事实闭合的 adoption set 推送，不能把已实现与仍 pending 的权威冲突留在共享分支；
 10. 明确报告已证明、未证明、阻塞和触发后续复验的条件。
 
 Gate B 优化的是相对 Synara 的长期偏离、owner 数量和未来修改半径，不是本次 diff、文件数或净行数。若上游变化暴露 OmniMind 在同一获准责任内已有重复 truth、consumer 特判、万能 adapter、第二 cache/writer 或待退休旧支持图，必须选择幸存 owner、切换全部当前 consumer 并删除旧路径；不得用逐 consumer 补丁、永久 compatibility facade 或同步 framework 完成“表面吸收”。完整 owner cut 可以跨很多文件和有序 commits，但每一步都必须可验证、可回滚且不夹带无关格式化或相邻产品债务。
@@ -219,7 +219,7 @@ range 中每个 commit 的全部 material change units
 Change-unit accounting 只是第一张表；baseline reconciliation 还必须闭合完整全树等式，linear incremental advancement 则闭合 changed-path 等式并引用仍有效的基线：
 
 ```text
-README 声明的 Synara production substrate 路径
+`source-adoptions.json` 声明的 Synara production substrate 路径
 = byte-identical inherited
 + direct/semantic adoption
 + confirmed current-stronger divergence
@@ -289,7 +289,7 @@ Defer 只是一项建议，维护者确认前不得固化为施工顺序或后�
 
 donor icon、品牌、version、Changelog、What’s New、release metadata、账号和发布身份默认不进入 OmniMind。若同一 commit 同时包含产品机制，必须拆开处置，不能因 release/brand 字节被排除而丢掉机制。
 
-production-adopted `revision` 表示该上游边界已经完成 change-unit disposition，所有 accepted mechanisms 已实现并达到本手册要求的 adoption proof；它不表示 candidate 的所有原始字节均被复制。README 必须准确说明选择性边界。
+production-adopted `revision` 表示该上游边界已经完成 change-unit disposition，所有 accepted mechanisms 已实现并达到本手册要求的 adoption proof；它不表示 candidate 的所有原始字节均被复制。`source-adoptions.json` 必须准确说明选择性边界。
 
 ## 7. 默认判断原则
 
@@ -429,7 +429,7 @@ OmniMind 是 Synara 的 downstream fork。当前缺少可用共同 Git ancestry�
 
 只更新实际受影响的文件：
 
-1. 根 README `source-adoptions`：candidate 成为真实 production adoption 时更新 exact revision、paths、mode、changes、rights、exclusions 与 update policy；
+1. 根 `source-adoptions.json`：candidate 成为真实 production adoption 时更新 exact revision、paths、mode、changes、rights、exclusions 与 update policy；
 2. `research/source-review.md`：保存本轮 exact range、逐责任 disposition、风险、外部来源和复验触发器；
 3. architecture owner：只有稳定产品约束确实改变时更新；
 4. `execution-brief.md`：只有当前目标、并发、真实阻塞或下一动作发生变化时更新；
@@ -451,7 +451,7 @@ OmniMind 是 Synara 的 downstream fork。当前缺少可用共同 Git ancestry�
 - 输出明确声明它没有进入 Gate B、没有更新 production-adopted head，也没有证明产品已经采用；
 - 没有用局部研究替代正式 adoption 所需的完整 range、与 reconciliation mode 相称的 path/behavior accounting、rights、作者测试或 packaged 证据。
 
-`review-complete` 是真实完成状态，不应被写成“adoption 尚未闭合”的失败；但任何产品写入、移植、README revision 前进或 adoption claim 都必须重新进入 adopted-head advancement。
+`review-complete` 是真实完成状态，不应被写成“adoption 尚未闭合”的失败；但任何产品写入、移植、adopted revision 前进或 adoption claim 都必须重新进入 adopted-head advancement。
 
 ### 13.2 Adopted-head advancement complete
 
@@ -470,7 +470,7 @@ OmniMind 是 Synara 的 downstream fork。当前缺少可用共同 Git ancestry�
 - 获准责任内的重复 truth、consumer 特判、待退休 divergence 与旧支持图已经收口，未来变更和删除演练通过；
 - focused 和 candidate proof 与风险匹配；
 - 用户可观察改动完成 exact pushed-SHA packaged fresh-profile journey，或准确标明 blocker；
-- README adoption、research evidence、Campaign pointer 与代码一致；
+- source adoption、research evidence、Campaign pointer 与代码一致；
 - 产生 candidate artifact 的 source tree clean，本轮任务路径已按项目规则提交并推送，已识别的非重叠用户修改保持隔离且未被纳入；
 - 最终报告明确区分：完整审查、机制吸收、原始字节采用、交付验证和公开发行。
 
@@ -516,7 +516,7 @@ non-descendant 或 history rewrite 不阻止 scoped source review 继续收集�
 
 下一轮维护者发起 Synara intake 时：
 
-1. 从 README 读取当时 exact adopted head；
+1. 从 `source-adoptions.json` 读取当时 exact adopted head；
 2. 解析维护者指定或当次共同确认的 candidate head；
 3. 验证 ancestry；
 4. candidate 为 descendant 时选择 linear incremental advancement，只审查新的 exact range、changed paths、受影响责任和被触发的历史 divergence；

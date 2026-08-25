@@ -1,0 +1,253 @@
+{
+  "version": 1,
+  "adopted": [
+    {
+      "id": "ui-mother",
+      "url": "https://github.com/Emanuele-web04/synara.git",
+      "revision": "57f48ef1a3354ae7967d4a8f9f83a1105691ede6",
+      "paths": [
+        ".github",
+        ".gitattributes",
+        ".gitignore",
+        ".mise.toml",
+        ".oxfmtrc.json",
+        ".oxlintrc.json",
+        "apps/desktop",
+        "apps/web",
+        "apps/server",
+        "packages/contracts",
+        "packages/shared",
+        "patches",
+        "scripts",
+        "package.json",
+        "bun.lock",
+        "bunfig.toml",
+        "tsconfig.base.json",
+        "turbo.json",
+        "vitest.config.ts"
+      ],
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. The maintainer has authorized retention, adaptation and redistribution of the reviewed code. Former product identity assets, release identity and release history are not adopted.",
+      "mode": "adapt",
+      "changes": "OmniMind is a downstream distribution of the exact Synara product platform. It retains the inherited Desktop, Web, Server, contracts, shared Product Orchestration, Workbench, Provider and recovery substrate. OmniMind owns truthful bilingual branding, package/app/protocol/updater/profile/storage/artifact namespace, stock-Pi isolation and its distribution authorities. Synara release/account/public identity, website, headless release tarball and legacy Synara/DP Code storage migration are excluded. Product differences stay in the existing owners: ThreadGoal remains distinct from per-turn Todo; Groups translate inherited Space semantics to conversation membership; Engine identity/readiness reuse the Provider owners; Automation uses consecutive-failure choices of one, three, five or keep running with three as default.",
+      "updatePolicy": "Pinned production revision. Each maintainer-triggered update begins with an exact read-only intake; safe mother mechanisms enter by standing default, while every proposed non-adoption, defer, current-stronger disposition, identity divergence or new high-risk change must state its loss and receive contextual maintainer confirmation before the fact-closed adoption set is pushed.",
+      "licenseFiles": ["LICENSES/ui-mother-MIT.txt"]
+    },
+    {
+      "id": "device-helper-hid-reference",
+      "url": "https://github.com/facebook/idb.git",
+      "revision": "dd0cb550510331f2d11e9130cb003d2425688e28",
+      "paths": [
+        "apps/server/native/device-helper/Sources/HIDBridge.h",
+        "apps/server/native/device-helper/Sources/HIDBridge.m"
+      ],
+      "sourcePaths": [
+        "PrivateHeaders/SimulatorApp/Indigo.h",
+        "FBSimulatorControl/HID/FBSimulatorIndigoHID.swift"
+      ],
+      "rights": "The selected HID message layout and delivery mechanism are adapted from facebook/idb under its retained MIT license. No idb binary, service, product identity or unrelated source is adopted.",
+      "mode": "adapt",
+      "changes": "Namespaced Objective-C bridge for OmniMind's locally built iOS Simulator helper; packaged artifacts must retain the exact license notice.",
+      "updatePolicy": "Pinned revision; re-review private API compatibility and rights before changing the reference revision.",
+      "licenseFiles": [
+        "LICENSES/facebook-idb-MIT.txt",
+        "apps/server/native/device-helper/LICENSE.facebook-idb"
+      ]
+    },
+    {
+      "id": "bundled-omnimind-agent-runtime",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
+      "paths": [
+        "vendor/omnimind-pi-coding-agent-0.84.2.tgz",
+        "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
+        "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
+        "scripts/vendor-omnimind-pi-runtime.mjs"
+      ],
+      "sourcePaths": ["packages/coding-agent"],
+      "archiveSha256": "b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7",
+      "upstreamPackage": "@earendil-works/pi-coding-agent@0.84.2",
+      "upstreamPackageIntegrity": "sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==",
+      "generation": {
+        "sharedRuntimeBytes": "patched",
+        "factoryDefaultSeam": "The product runtime exports its stable identity-neutral default instruction segment and accepts one caller-supplied replacement as an input to the same native builder. Dynamic tools, guidelines, context, Skills, cwd, manual SYSTEM replacement and Extension mutation remain native; no second composer or Prompt registry is introduced.",
+        "patchPath": "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
+        "patchSha256": "499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af",
+        "stockPatchPath": "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
+        "stockPatchSha256": "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77",
+        "generatorPath": "scripts/vendor-omnimind-pi-runtime.mjs",
+        "behavioralDifferences": [
+          "package identity",
+          "piConfig.configDir",
+          "identity-neutral default system prompt without unshipped docs navigation",
+          "bounded project context root or global-only context projection",
+          "host-owned immutable engine contract appended after extension turn mutation",
+          "injectable models.json content reader",
+          "accepted model-config provider provenance",
+          "credential-blind model-config projection",
+          "typed persistent model-config provider mutation with retained-model merge, preview and safe credential-reference intent",
+          "typed credential-blind model cost and tier editing",
+          "typed nested editing for a closed protocol-specific compat subset",
+          "write-only environment header-reference set/clear with value-blind metadata",
+          "explicit generic model discovery through the configured Pi protocol and credential",
+          "typed prompt outcomes for handled extension commands and input hooks, including current-session Agent work started through sendUserMessage or sendMessage triggerTurn",
+          "explicit reader-mode models store path remains file-backed",
+          "request-scoped missing-package policy for resource loading",
+          "intent-scoped package resource listing and filtering",
+          "credential-blind public npm package identities and actions"
+        ],
+        "archiveDisposition": "The product archive is rebuilt from exact Pi 0.84.2 source with one committed product patch, retains the upstream LICENSE, removes standalone CLI entrypoint exposure, omits development/public documentation and example payloads, and exact-pins the Pi-family dependency closure. Its default prompt base is identity-neutral and contains no navigation to omitted docs/examples; OmniMind identity remains in a separate immutable engine contract that is normalized and appended exactly once after Extension turn mutation, while general Host/tool guidance stays in the mutable native append lifecycle. ResourceLoader remains the sole context owner while accepting either a canonical Project root boundary for an admitted Agent Session or global-only mode for Chat and passive discovery. Passive discovery never obtains Project trust or executes Project Extension factories. The stock Pi dependency receives only the compiled typed prompt-outcome behavior through the separately hashed Bun patch; its package identity, default prompt, config, state and catalog remain stock. The product patch adds no registry, trust store, Prompt store or second persisted configuration."
+      },
+      "rights": "The fixed Pi coding-agent source and generated runtime are MIT-licensed. The shipped archive retains its upstream LICENSE, and the exact root redistribution text is LICENSES/pi-coding-agent-MIT.txt.",
+      "mode": "adapt",
+      "changes": "The product-owned physical module is generated from packages/coding-agent at the fixed revision. Its default base is identity-neutral, preserves dynamic tools/guidelines/context/skills/cwd assembly and removes Pi identity plus navigation to docs/examples that the product archive intentionally omits. A narrow ResourceLoader input constrains context candidates to global agent-dir context plus canonical Project root through cwd for an admitted Agent Session, or to global-only context for Chat and passive discovery; containment uses physical paths without changing the loader's existing lexical path projection. Passive discovery stays untrusted, does not execute Project Extension factories and cannot expose pre-session project-local Skills or Prompt commands; the first real Agent Session loads those trusted resources before its request. A narrow AgentSession seam lets Extensions keep replacing the mutable prompt in their native order, then removes any duplicate canonical engine contract and appends the frozen engine contract exactly once before each model request; general Host/tool guidance remains in the native mutable append order. The same source patch lets a caller inject raw models.json UTF-8 content into Pi's existing ModelConfig parser, read back only accepted provider IDs, request one typed provider upsert or removal through the same official schema, encode a typed environment-variable, command or clear credential-reference intent without exposing retained references, safely edit credential-blind model cost rates, tiers and a closed protocol-specific compat subset while retaining hidden fields, set or clear provider/model header environment references through a write-only typed intent while projecting only header name and source kind, explicitly discover model identities for Pi's four generic models.json protocols through the configured endpoint and effective credential, and distinguish a normal Agent run from a handled extension command or input hook without an Agent run. For those two handled paths only, current-session Agent work started through `sendUserMessage` or `sendMessage({ triggerTurn: true })` is owned through settlement rather than inferred from timing; this does not adopt TUI-only actions, session replacement or general Extension UI parity. The same narrow prompt-outcome behavior is applied to the stock coding-agent dependency as a compiled patch so Desktop-exposed commands settle identically without sharing OmniMind config, state, identity or Project trust. It also provides a request-scoped missing-package policy to ResourceLoader reloads and manages one explicitly selected package's resource filters through Pi's existing PackageManager. Compat edits use nested public-field set/clear semantics and preserve complex routing, templates and unknown fields. Header values remain recursively redacted; imported literal and command-backed entries are only classified, preserved or cleared, new command-backed headers are rejected, and reserved request/authentication headers cannot be newly configured. Discovery is bounded, cancellable, credential-blind at its return boundary, and never mutates models.json or the catalog store. Credential and header references remain passive during projection and resolve only through explicit Pi auth/request operations. Prompt outcomes contain only the handling kind and success bit; extension error text remains on Pi's diagnostic channel. The mutation seam preserves unrelated JSONC bytes, serializes writers, validates before a private same-directory atomic replacement, and remains mutually exclusive with passive path-based reads. Create and refresh share the safe reader; an explicitly supplied modelsStorePath remains Pi FileModelsStore-backed so Settings, discovery and Session share one persisted catalog. The missing-package policy is forwarded through both trust passes and defaults to stock Pi behavior when absent. Passive package listing stays configuration-only; the product bridge receives only process-scoped opaque package IDs, credential-blind display names and capability facts. Pi rematches every action against current configuration; public install accepts only canonical npm identities. Git, local, private and unsupported entries remain redacted and unavailable without poisoning the list. Resource resolution requires an exact package intent, fails closed when that package is missing, and never resolves unrelated packages. Package identity and piConfig configDir/name route private state to .omnimind. Packaging metadata removes the standalone pi bin and development-only scripts/dependencies, omits unshipped docs/examples, and pins the Pi-family dependency closure.",
+      "updatePolicy": "Pinned revision, upstream npm integrity, exact product-source and stock dependency patch digests, and product archive SHA-256. Reproduction runs `node scripts/vendor-omnimind-pi-runtime.mjs --source <clean-exact-pi-checkout>`: before any source build the generator verifies both committed patch identities, rejects the wrong or dirty revision, applies the sole product source patch with a conflict check, restores pinned generated model data, builds and runs focused Pi reader/mutation/runtime tests with network discovery disabled, applies the recorded identity/configDir/archive closure, verifies deterministic packing and cleans its temporary tree. Bun applies the separately hashed stock dependency patch or fails on conflict. On every Pi intake, first remove the patches if upstream exposes equivalent safe reader/provenance/persistent-mutation/store/prompt-outcome APIs; otherwise update the affected patch, its digest owner and this adoption record together, and stop loudly on any digest drift or conflict. Pi post-tag code is excluded until separately adopted. Any source, version, generation rule, dependency closure, archive digest, rights or license change requires explicit source intake and affected runtime/ecosystem revalidation before replacement.",
+      "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
+    },
+    {
+      "id": "pi-ai-oauth-page-renderer",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
+      "paths": ["patches/@earendil-works%2Fpi-ai@0.84.2.patch", "package.json", "bun.lock"],
+      "sourcePaths": [
+        "packages/ai/src/auth/types.ts",
+        "packages/ai/src/auth/oauth/oauth-page.ts",
+        "packages/ai/src/auth/oauth/openai-codex.ts",
+        "packages/ai/src/auth/oauth/anthropic.ts",
+        "packages/ai/src/auth/oauth/openrouter.ts",
+        "packages/ai/src/auth/oauth/radius.ts"
+      ],
+      "upstreamPackage": "@earendil-works/pi-ai@0.84.2",
+      "upstreamPackageIntegrity": "sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==",
+      "rights": "The fixed Pi AI source and patched dependency remain MIT-licensed under the retained Pi redistribution text. No OAuth protocol, credential store or Provider identity is adopted as OmniMind product authority.",
+      "mode": "adapt",
+      "changes": "A per-login optional AuthInteraction renderer may replace only the browser loopback completion/error HTML. It receives only the safe authorization-received/error state, never Provider messages, diagnostics, codes or token-exchange results. OpenAI Codex, Anthropic, OpenRouter and Radius pass the same request-scoped renderer through their existing callback servers; absent or failing renderers retain the stock Pi page. Provider authorization, state validation, token exchange, cancellation and device-code flows remain unchanged.",
+      "updatePolicy": "Pinned package integrity plus Bun patchedDependencies. Every install applies the committed patch or fails on conflict; remove it when upstream exposes an equivalent request-scoped renderer. A Pi update must re-check all four browser callback providers and prove the stock default and device-code paths remain unchanged before changing the pinned package or patch. The current provider-default automation is valid only because each OAuth select prompt it can consume in pinned Pi 0.84.2 marks its first option as default/recommended; source intake must re-prove that property or fail closed to an explicit user choice rather than treating array order as a permanent API.",
+      "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
+    },
+    {
+      "id": "thinking-orbs-composing-20px",
+      "url": "https://github.com/Jakubantalik/thinking-orbs.git",
+      "revision": "bd204b73c9b6660fad7210b1ad48d9dc2adbb89d",
+      "paths": [
+        "apps/web/src/components/chat/ComposingOrb.tsx",
+        "apps/web/src/components/chat/composingOrbPainter.ts",
+        "apps/web/src/components/chat/composingOrbPainter.test.ts",
+        "apps/web/src/components/chat/ThinkingStatus.browser.tsx"
+      ],
+      "sourcePaths": [
+        "src/ThinkingOrb.tsx",
+        "src/theme.ts",
+        "src/presets.ts",
+        "src/engine/core.ts",
+        "src/engine/profiles.ts",
+        "src/engine/ribbon.ts"
+      ],
+      "upstreamPackage": "thinking-orbs@0.3.1",
+      "upstreamPackageIntegrity": "sha512-3BG1aeB1RUTxItCml/BBuIz5JRM4kZqGuyx+vouv0fXTtcR9ZNoKjWGneHPx94y74GxgArwJZ1qbJR5dt54kSw==",
+      "upstreamTarballSha256": "f561ab192d0f80a367c2cf56d9fd409f3dc0570521c08300c3bbf232ede79296",
+      "rights": "The fixed source is MIT-licensed under the retained exact legal text. Adoption is limited to the Composing/Ribbon 20px painter and the runtime guards needed by OmniMind's single live-status consumer; no package binary or unrelated state is shipped.",
+      "mode": "copied-adapted",
+      "changes": "The official Composing 20px preset is resolved to one fixed local painter with the exact 208-mark geometry, projection, depth ink, dot sizing and speed. A product-local canvas wrapper retains DPR cap 2, requestAnimationFrame, offscreen and hidden-document pause, reduced-motion static frame and the existing OmniMind theme authority. The other eight states, 64px presets, registries, generic React API, package dependency and unused configuration were deliberately removed. Fixed geometry and Chromium pixel baselines prevent drift.",
+      "updatePolicy": "Pinned package version, Git revision, npm integrity and tarball SHA-256. Do not tune or rewrite the painter from memory. Any source, preset, rights or lifecycle change requires exact upstream comparison plus affected geometry, pixel, theme, visibility and reduced-motion revalidation before replacement.",
+      "licenseFiles": ["LICENSES/thinking-orbs-MIT.txt"]
+    },
+    {
+      "id": "bitfun-thinking-hints-motion",
+      "url": "https://github.com/GCWing/BitFun.git",
+      "revision": "f9aebc102b21d6d4ac3ffd4088defebf7f4baff1",
+      "catalogReferenceRevision": "142d7e38729b3d646ae305c162e6848d0d44fff9",
+      "paths": [
+        "apps/web/src/components/chat/ThinkingStatus.tsx",
+        "apps/web/src/components/chat/ThinkingStatus.browser.tsx",
+        "apps/web/src/i18n/thinking-hints.en-US.json",
+        "apps/web/src/i18n/thinking-hints.zh-CN.json",
+        "apps/web/src/i18n/thinkingHints.ts",
+        "apps/web/src/index.css"
+      ],
+      "sourcePaths": [
+        "src/web-ui/src/flow_chat/components/modern/ProcessingIndicator.tsx",
+        "src/web-ui/src/flow_chat/components/modern/ProcessingIndicator.scss",
+        "src/web-ui/src/locales/en-US/flow-chat/processing-hints.json",
+        "src/web-ui/src/locales/zh-CN/flow-chat/processing-hints.json"
+      ],
+      "catalogInputSha256": {
+        "en-US": "54faf3727ef54e1d3a4dea4e3ef1002cfb596a28683ae73d319701476dd598b3",
+        "zh-CN": "f5249bbd0b49f20c038a0be2d4839ed18c8c96aa48cd139bf99d201c4b9d1135"
+      },
+      "rights": "The selected historical motion and upstream catalog lineage are MIT-licensed under the retained BitFun legal text. The maintainer supplied and approved the final index-aligned 338-item Chinese and English catalog inputs for OmniMind.",
+      "mode": "copied-adapted",
+      "changes": "OmniMind retains the reviewed 400ms -4px entry, 1.6s opacity 1-to-.25 breathe and five-second keyed replacement. The initial hint is randomized, later hints advance without changing on ordinary renders, trailing static ellipses are replaced by the approved three-dot symmetric tide, and reduced-motion freezes all decorative motion. The presentation stays inside OmniMind's existing transient Timeline row; it creates no runtime-status store, transcript item, reasoning claim or progress authority. The original one-second blank delay and BitFun dot-matrix icon are not adopted because OmniMind preserves immediate feedback with its selected Composing orb.",
+      "updatePolicy": "Pinned historical motion revision, catalog reference revision, exact catalog-input digests and retained legal text. Catalog edits must preserve bilingual count/index parity and uniqueness; motion edits require focused Timeline, reduced-motion, truncation, stream/scroll and pixel review.",
+      "licenseFiles": ["LICENSES/bitfun-MIT.txt"]
+    },
+    {
+      "id": "bundled-omnimind-web-access",
+      "url": "https://github.com/nicobailon/pi-web-access.git",
+      "revision": "fbbd0cb3b3eb918c8833906aa0b41e257fffe979",
+      "paths": [
+        "packages/om-web-access",
+        "packages/contracts/src/omnimindWebSearch.ts",
+        "apps/server/src/engineWebSurface",
+        "apps/server/src/browserAutomation",
+        "apps/server/src/provider/Layers/OmniMindWebSearchSettings.ts",
+        "apps/server/src/provider/Services/OmniMindWebSearchSettings.ts",
+        "apps/desktop/src/browserManager.ts",
+        "apps/web/src/components/settings/WebSearchSettingsPanel.tsx",
+        "apps/web/src/components/chat/MessagesTimeline.tsx",
+        "apps/web/src/components/chat/TimelineWorkEntryRow.tsx",
+        "scripts/lib/release-workspace-manifests.ts"
+      ],
+      "sourcePaths": ["."],
+      "upstreamPackage": "pi-web-access@0.24.1",
+      "upstreamPackageIntegrity": "sha512-kNYVqPT2wbWbDKD2mfMsrCie1DyVsE/KYNVgpp7yqq072sG2PciKAB28PG4h0+klSO3MtCFRoPWAyA+l0CS7/A==",
+      "upstreamTarballSha256": "d82adba93034bdbd3d4f3ffb092fb57789069441723a3f9d582faa4aab68b054",
+      "rights": "The fixed pi-web-access source is MIT-licensed under the retained exact legal text by Nico Bailon. OmniMind keeps the upstream LICENSE, provenance and author tests. The 26 runtime Provider identities use 25 exact-pinned local original-color identifying assets with recorded source, SHA-256 and known license or trademark disposition; those marks identify their respective services and do not assert ownership, partnership or endorsement. Runtime routing never depends on asset admission.",
+      "mode": "fork-narrowly",
+      "changes": "The complete mature upstream source remains one private workspace package for the bundled OmniMind Agent. OmniMind adds only the six bounded seams for per-Session and per-call lifecycle isolation, one package-owned canonical config service, the OmniMind runtime profile, typed bilingual observer/review presentation, route evidence to the Pi active set, and honest Unicode source_check evidence semantics. The config owner pins directory and file identity, reads through the verified descriptor, enforces a 1 MiB fail-closed limit and preserves rejected bytes; GitHub subprocesses receive a positive environment allowlist instead of ambient Provider secrets. source_check propagates cancellation without storing partial artifacts and reports the same route success/failure evidence as web_search. The OmniMind profile defaults to auto-summary with process display off while retaining raw results, responseId, storedResults and continuation; explicit review uses dedicated ephemeral internal-only Browser tabs with exact pending reopen and scoped settlement. Renderer-owned locale/theme context crosses Desktop and Browser Automation as one bounded typed snapshot and fails closed when malformed; Timeline projects readable product labels plus allowlisted Web Access input, output and source detail without exposing arbitrary third-party arguments. Settings consumes the same config and credential-blind Provider projections. It is not a Host capability, AgentGateway backend, npm release or stock Pi compatibility profile.",
+      "updatePolicy": "Pinned exact version and commit; no automatic latest tracking and no second fork repository. Every maintainer-triggered update restarts at research/pi-web-access-intake.md, re-runs PI-ECOSYSTEM-INTAKE Gate A, preserves the upstream structure and author tests, regenerates the auditable upstream/P1-P6 diff inventory, and jointly revalidates Provider routing and projection, Curator protocol, config schema, source_check, rights, asset admission, typed presentation-context round trips, Timeline label/detail/causal-order contracts, focused OmniMind journeys and packaged closure. Remove the narrow fork when a lower-maintenance equivalent Pi ecosystem capability proves equal or better.",
+      "licenseFiles": ["LICENSES/pi-web-access-MIT.txt"]
+    },
+    {
+      "id": "bundled-omnimind-ask-user",
+      "url": "https://github.com/mrclrchtr/supi.git",
+      "revision": "ce8af5f57304ad114319aa75c00920f029ceb8e7",
+      "paths": [
+        "packages/om-ask",
+        "apps/server/src/provider/askUserHostBridge.ts",
+        "apps/server/src/provider/omnimindAskUserExtension.ts",
+        "apps/server/src/provider/userInputPresenterRegistry.ts",
+        "apps/server/src/provider/Layers/PiAdapter.ts",
+        "packages/contracts/src/orchestration.ts",
+        "packages/contracts/src/rpc.ts",
+        "apps/web/src/components/chat/ComposerPendingUserInputPanel.tsx"
+      ],
+      "sourcePaths": ["packages/supi-ask-user"],
+      "upstreamPackage": "@mrclrchtr/supi-ask-user@5.0.0",
+      "upstreamPackageIntegrity": "sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==",
+      "upstreamTarballSha256": "d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e",
+      "rights": "The fixed supi-ask-user source is MIT-licensed by Marcel Richter under the exact legal text retained in packages/om-ask/LICENSE. The npm artifact omitted LICENSE/NOTICE; OmniMind distributes only the reviewed source fork with retained ancestry and changes, not the upstream package artifact, TUI, branding or supi-core bundle.",
+      "mode": "fork-subtractively",
+      "changes": "OmniMind retains the stable question and option identities, choice/text domain, controller, lease and structured-result lineage while deleting the upstream TUI, transcript, supi-core, configuration, events, timers, terminal/session helpers, recommendation preselection, trimming and product caps. The private Host-neutral fork supplies the single ask_user definition and deterministic structured result. OmniMind's canonical contract, Composer Question UI, presenter lease, value-label bridge, terminal settlement, restart fencing and provenance remain product-owned. Registration is limited to bundled OmniMind Agent Sessions with a compatible presenter and exactly one bundled same-name provenance; stock Pi, AgentGateway and third-party Extensions receive no Product Ask authority.",
+      "updatePolicy": "Pinned exact version, commit, npm integrity and tarball digest; no latest tracking or direct install. Every update starts at research/pi-ask-user-intake.md, re-runs the retained upstream baseline, replays P1-P7, preserves the author-test disposition and removes the fork if a lower-maintenance mature runtime proves equal. TUI, supi-core, second config/lifecycle owners, arbitrary caps, trim, preselection, ordinary-text fallback and fake restart recovery remain rejected.",
+      "licenseFiles": ["packages/om-ask/LICENSE"]
+    },
+    {
+      "id": "pi-agent-core-interactive-barrier",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
+      "paths": [
+        "patches/@earendil-works%2Fpi-agent-core@0.84.2.patch",
+        "package.json",
+        "bun.lock",
+        "apps/server/src/provider/piBarrierPatch.test.ts"
+      ],
+      "upstreamPackage": "@earendil-works/pi-agent-core@0.84.2",
+      "patchSha256": "c63f6877299935fd9ee85c05b81d9e3f571f640704ff85a7f8e03209620e8e78",
+      "rights": "The fixed Pi agent-core source and patched dependency remain MIT-licensed under the retained Pi redistribution text.",
+      "mode": "adapt",
+      "changes": "Adds one default-inert executionMode named barrier. Before any sibling argument preparation, hook or execute, the batch runs only the source-order first barrier and emits structured blocked results for every sibling. An answered barrier continues with a fresh model request; terminal or failed barriers stop the loop. No stock Tool selects barrier, and batches without one retain the upstream parallel/sequential path.",
+      "updatePolicy": "Bun applies the exact patch or fails on conflict. On every Pi intake, first delete it if upstream provides equivalent preflight barrier semantics. Otherwise re-prove sibling prepare/before/execute are zero on both sides of the barrier, multiple-barrier behavior, answered replan, terminal no-continuation and unchanged stock batches. Stop if maintenance would require an ask_user name special-case, duplicated scheduler or agent-loop rewrite.",
+      "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
+    }
+  ]
+}

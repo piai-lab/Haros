@@ -18,10 +18,7 @@ const EXPECTED_WORKSPACE_PACKAGES = new Map([
 ]);
 
 async function readAdoptedDonorIdentity() {
-  const readme = await readFile(path.join(root, "README.md"), "utf8");
-  const block = /```source-adoptions\s*\n([\s\S]*?)^```\s*$/gmu.exec(readme);
-  assert.ok(block, "README source-adoptions block is required");
-  const record = JSON.parse(block[1]);
+  const record = JSON.parse(await readFile(path.join(root, "source-adoptions.json"), "utf8"));
   const adoption = record.adopted.find((entry) => entry.id === "ui-mother");
   assert.ok(adoption, "ui-mother adoption is required");
   const pathname = new URL(adoption.url).pathname;

@@ -7,8 +7,8 @@
 开始任何设计、代码或移植前按同一顺序读取：
 
 1. `README.md`；
-2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，完整读取 `SYNARA-INTAKE.md`；
-3. 任务涉及审查、借鉴、吸收、同步、升级或 fork Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP 或 OmniMind Agent Core 外部来源时，完整读取 `PI-ECOSYSTEM-INTAKE.md`；
+2. 任务涉及审查、借鉴、吸收、同步或更新 Synara 时，读取 `source-adoptions.json` 并完整读取 `SYNARA-INTAKE.md`；
+3. 任务涉及审查、借鉴、吸收、同步、升级或 fork Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP 或 OmniMind Agent Core 外部来源时，读取 `source-adoptions.json` 并完整读取 `PI-ECOSYSTEM-INTAKE.md`；
 4. `architecture/README.md`，并完整读取本任务涉及的专题 owner；
 5. `execution-brief.md`；
 6. `missions/independent-omnimind-v1.md`（status 为 active 时），仅用于状态与证据引用；
@@ -23,6 +23,7 @@
 - Workspace、Conversation、Entry、Run、Queue、权限、receipt、恢复或产品事实：`architecture/product-state.md`。
 - 进程、Provider Registry/adapters、runtime/Session、系统能力或 execution topology：`architecture/execution.md`。
 - 当前工作目标、冲突协调、阻塞和下一动作：`execution-brief.md`。它不能推翻维护者对完整 source decision surface 的明确决定，也不能以历史阶段或 stale Slice 形成第二准入门。
+- exact adopted source、revision、rights、paths、digest 与更新策略：`source-adoptions.json`。README、research、package README 与测试不得复制一份可独立修改的 adoption 清单。
 - Claim 状态与已有证据指针：active Campaign。
 - 固定来源、版本、权利、构建/运行观察或结构性反证：`research/README.md` 路由的对应 evidence owner。
 - 用户主动要求审查、借鉴、吸收、同步或更新 Synara：必须完整遵循根 `SYNARA-INTAKE.md`。长期默认是尽量吸收，但不自动轮询或静默实施；每轮先完成只读研究，并用 `$converge` 消除会影响范围、产品结果、安全、权利或验证方式的不确定性。母体内可安全吸收且不越过固定 divergence 的机制按 standing default 进入；只有建议不吸收/延期/已有覆盖、高风险变化或固定 divergence 的变化需要再次向用户说明损失并确认。

@@ -1,32 +1,25 @@
 # Execution brief
 
-## 当前目标
+## 当前状态
 
-Ask User Gate B 在专用分支 `codex/ask-user-gate-b` 继续；`usage-insights` 已独立结束并进入 `main@b002b53a6d`，两条列车不再共享分支或提交。direct-submit、strict contract、跨Provider terminal/presenter与exactly-once基线由 `bd0f9aa002` / `5626d4b7b3` 提供；`6012c7452ef59abff0f310e5526516b9014bb748` 进一步关闭了intentional App shutdown绕过Server finalizer、presenter seal后复活、异步`unavailable` handoff早于drain返回及quiesce放宽普通client append四个生命周期缺口。旧 `67813a3557` Review UI、`3cf617e531` shutdown实现和旧的双行/inline-summary packaged Timeline均已被后续反证或产品裁决supersede。最新产品裁决删除Question card内重复的Stop入口：等待回答只显示`取消`；answer claim后仍由Composer右下角既有全局Stop owner中止运行。exact code SHA `2f063611cd3f479d04df94be61e3e6e13aaf4b31` 已完成clean-clone packaged DeepSeek Cancel journey并安装，不是released；完整Gate仍不能用该Cancel证据覆盖尚未完成的packaged global Stop、pending-close/restart、collision与headless矩阵。
+当前没有活动中的产品施工列车、并发 owner 冲突或待续分支。新任务从维护者的最新请求开始，先读取根 [`README.md`](README.md) 与对应 [`architecture/`](architecture/README.md) owner；不要续跑历史 Ask User、Usage Insights、Tool/Timeline、i18n、Model services 或 Synara adoption 的旧阶段计划。
 
-## 当前协调与下一动作
+主线是唯一工作基线。当前安装版、历史 DMG、测试计数、Provider probe 与 packaged journey 只在精确证据需要时从 Git 或对应 research owner查找，不在本文件维护镜像。
 
-- `codex/usage-insights` 的 shipped-code 候选为 exact pushed `e21307fddced082dfc4144b871430c8bdabf5fa4`：在既有 Provider Runtime、Profile Stats、Settings 与 Export owner 内闭合 canonical Token breakdown、30 日模型/Token/缓存统计、删除归档、Composer 最近一轮缓存行和完整「使用洞察」页面；未新增前端统计 store、图表框架、费用视图或平行持久化。45 个变更文件 scoped format、根 typecheck、lint 0 errors、15 个 focused files / 458 tests、Web 331 files / 4,177 tests、Server 385 files / 4,451 tests及 production build 已通过；MiMo 与 DeepSeek 的真实重复前缀各自证明第二轮 cache read 进入 Pi stats 和 canonical breakdown。由该 exact pushed SHA clean clone 生成的 arm64 packaged App 已在 fresh 隔离 profile 闭合真实 DeepSeek 两轮 Composer→圆环→Profile 即时刷新、中文/英文、浅色/深色、480px 下界、1200×1600 摘要 copy/save、关闭重开与进程路径隔离；DMG SHA-256 为 `dfc634da44d546b2b72c4c96cc4156521a1b5ac5478cc6e116d88cfe8b596495`，`app.asar` SHA-256 为 `390c1cb62bfd852f303ba2f1d4dec60e272ec63c17d01250563257466fb048a5`。该分支尚未合并或发行；稳定合同与完整裁决由 [`research/omnimind-usage-insights-cognition.md`](research/omnimind-usage-insights-cognition.md) 拥有。
-- Ask fork保留 types/normalize/controller/lease lock/structured result/Host-neutral kernel 作为 source-and-test-only upstream lineage，删除完整TUI/transcript、`supi-core`、config、events、timer、terminal/session helper、上游registration/schema/guidance、推荐预选/文本预填、trim与product caps；根 API 和确定性 clean build 只发行 `product.ts`/`tool.ts` Product graph，donor comments/`needs_discussion` 不进入 public declarations 或 shipped JavaScript。Server仍只消费窄 Product composition。exact module/test/stop-loss由[`research/omnimind-ask-user-cognition.md`](research/omnimind-ask-user-cognition.md) §13.1/13.3拥有，未来更新程序由[`research/pi-ask-user-intake.md`](research/pi-ask-user-intake.md)拥有。
-- exact upstream author baseline 9 files / 152 tests通过；feasibility fork 5/61，当前fork 6/72。作者cases disposition仍是55 preserve/adapt、9 intentionally reverse、88 delete；新增测试保护OmniMind Tool/schema/result与source/distribution边界，不能冒充upstream 152。
-- canonical Web slice 保持主 Composer 不接管 Ask answer；Host projection 自动追加 `自定义` sentinel，custom inline autofocus。answer 只有 presets/customText。单题单选 preset 直接提交；多题中间单选自动下一题、末题停留并显式提交；custom/text/multiple显式前进或提交。没有 Review 或 Composer 完成卡。维护者已确认 Timeline 最终方向；`e65bc82c4b` 在 WorkLog presentation owner 按 requestId + owning turn + lifecycle generation 将 persisted requested/resolved 投影为一个稳定 interaction row，折叠 answered 只显示 `已回答`，展开才读取 persisted 问题与 structured answer，Reasoning/Tool/User Input 共用 compact leading geometry；`55f825ee27` 进一步删除展开详情里重复的 `Selected / 已选择`，问题下直接显示预设答案。canonical facts、fork、barrier、presenter 与 Composer answer owner 均未改变；缺 correlation 的 terminal 不误合并。focused 140/140、Timeline Browser 4/4、Web 331 files / 4,191 tests、Web typecheck与scoped lint均绿色；奥卡姆收口另通过Timeline unit 19/19、Browser 4/4和Web typecheck。
-- exact pushed `6012c7452e` 通过fork既有72/72基线、Desktop 65 files / 607 passed（1 file / 5 skipped）、Server 385 files / 4,477 passed（3 files / 16 skipped）、根typecheck 8/8与lint 0 errors（615个既有warnings）。focused shutdown/adapters矩阵另证明authenticated request-first POSIX close、seal后acquire拒绝、晚注册handoff等待、client append quiesce拒绝、trusted runtime fact准入及quiescing requested→unavailable有序落盘。Panel/Timeline Browser 16/16仍只是前一UI候选证据。发行边界实物检查仍证明fork clean dist只剩api/product/tool；ACP共享seam和MiMo/DeepSeek Provider-wire证据强度不变。
-- release stage 首次反证了 private fork importer 已进入 repository lock、却遗漏于 frozen release importer set；`1f3dac395b` 只把其 `package.json` 加入临时 lock verification 并用 13/13 tests 证明 Desktop/Server 无 production dependency。clean-clone build 的 installed `app.asar` 不含 `@omnimind/om-ask` 或其源码。
-- exact pushed `main@1f3dac395b233137d4c579111f97818c54f2fbe1` 从 clean clone 生成 arm64 DMG SHA-256 `1efe4a1b708bf92482ec71caade6a086f4215e7a9895f6740b92bd37d8758fc3`（245,154,792 bytes），legal closure 241 components；安装版 `app.asar` SHA-256 `b41849354be5ede2eb1318ee53ffd5cd179c698217e6a6450a3f76291c63b679` 并嵌入同一 commit。fresh 任务 profile 与同 profile reopen 均完成 Main window + bundled Server ready，Main/Helper/Renderer/Server 的 userData 指向隔离 root，最终零存活进程。该证据只关闭 canonical UI bytes 与 startup/reopen，不证明 Ask Tool、真实回答 continuation 或 runtime safety gates。
-- `67813a3557` 的 MiMo 与 DeepSeek 各完成 2 次 2xx 模型请求、唯一 canonical request、answered settlement、raw customText 无损 structured result 与 replan marker；这只是 Provider-wire proof，不宣称两个 Provider 都已经过真实 Composer 回答。
-- superseded packaged baseline `55f825ee27ded81fdd829afea667294afa0e8f37` 曾从clean clone生成arm64 DMG（SHA-256 `1f43fe4f15b98b1866fde7ccb2ba55fe27bf8d181bd65d5a29a678554399be0b`）；其DeepSeek journey证明唯一`ask_user` schema call、single preset direct-submit、structured Tool result、`REPLAN_OK` replan与单Timeline interaction，但Question card仍带已删除的重复Stop，不能作为当前UI Gate证据。`2c0c5bf702` 的fresh packaged DeepSeek probe证明重复Stop删除、`取消回答`可见、cancelled receipt与取消后零continuation，但其文案已被更简的`取消`裁决supersede。最终exact code SHA `2f063611cd3f479d04df94be61e3e6e13aaf4b31` 从clean checkout生成arm64 DMG SHA-256 `cf1134d6187751713064a6ab7d2d764fdc2b201075dab64e59a8f500f1341d33`，DMG与安装版`app.asar`均为`d706464c9c643489ea1493b4f1cd171116342671037299987df25e44ee5eec17`且安装版ad-hoc签名通过。fresh任务profile中Main/Helper/Renderer使用显式isolated userData，Server cwd/state/log均位于同一任务root；真实DeepSeek产生唯一Question card，等待态只有`取消`且无局部Stop，点击后持久化`已取消提问`、模型零continuation、正常Composer恢复。结束时Main/Helper/Server零残留，两个任务profile及其state DB已精确删除。MiMo在此前packaged probe因授权资源中的当前凭据被服务端拒绝而未进入Ask，不得写成MiMo Composer绿色；既有`67813a3557`只继续作为MiMo/DeepSeek provider-wire proof。下一硬门是在exact current product shape上完成answer claim后的Composer global Stop、pending close/restart、provenance collision与headless fail-closed；此前source/fixture证据不能冒充这些真实App journey。
-- E 通过 merge `4e23564a07` 收口：实现提交 `2b6932218e` 将根 catalog 组合为 21 个稳定产品 domain slice，合同提交 `636d5476d0` 锁定双语 exact key/value/placeholder 与跨 domain duplicate 拒绝；`3,492 × 2` canonical catalog 在迁移和集成 `cab8a9ab5b` 两项 Timeline 文案后保持零差异。固定源码证据由 [`research/omnimind-i18n-system-review.md`](research/omnimind-i18n-system-review.md) 拥有。
-- Tool/Timeline repair 通过 merge `b4871621b3` 进入 main；`cab8a9ab5b` 完成 active reasoning 有界贴尾、正文区域无符号展开/收回、选择/滚动/链接保护与 settled 默认折叠。责任归因、Synara `dd290…` 持续保证和 exact repair commits 由 [`research/source-review.md`](research/source-review.md) §21 拥有。
-- `main@4e23564a07` 通过 Web unit 330 files / 4,160 tests、Reasoning Browser 15/15、catalog 3/3、root typecheck、lint（0 errors）、Web production build与Desktop DMG build；fresh 安装态的 live、settled、关闭重开均保持 Assistant→Reasoning→Read→Reasoning→Read→Assistant 的视觉、DOM source order 与 Chromium accessibility tree 顺序，中文、英文、480px、长内容、焦点和横向溢出已覆盖。
-- `/Applications/OmniMind.app` 已替换为 Ask exact code SHA `2f063611cd3f479d04df94be61e3e6e13aaf4b31` 的ad-hoc build，`app.asar` SHA-256为`d706464c9c643489ea1493b4f1cd171116342671037299987df25e44ee5eec17`。后续纯文档收口不进入shipped bytes，不把文档HEAD冒充重打包证据。
-- 完整 stable Browser 仍有 5 项历史 Worked-for、Terminal/theme 与 tail-anchor 失败，代表项已在改动前基线复现；不能报告为全绿，也不归因给本轮 Tool/Reasoning 或 E。验证准备阶段曾误启动一次默认 profile App 并立即停止，其持久影响无法证明为零；accepted journey 只使用后来核验完整隔离路径的任务 profile。
-- 当前Ask User已获授权并完成ToolDefinition、prompt/model exposure、Pi composition的source接入；live provider和packaged continuation仍是验证范围，不是已完成事实。
+## 下一动作
+
+等待维护者提出新的具体目标。开始后只在这里记录：
+
+- 当前唯一用户结果；
+- 正在修改的 sole owner；
+- 真实并发或同文件冲突；
+- 会阻止继续施工的外部依赖、安全或产品分叉；
+- 一个可观察的下一动作。
+
+没有这些事实时保持本文件简短，不把已完成工作、SHA、artifact hash、测试流水或长期架构复制回来。
 
 ## Stop-loss
 
-- 不增加第二Ask Tool、Setting、activation control plane、UI/store/request channel或按Tool名称特判的scheduler；不把source integration写成packaged/released。
-- future Gate B 若需重建 questionnaire controller、让 `supi-core`/TUI/第二 config 或 lifecycle owner 回流，或 retained author tests 不再能映射 upstream module，立即回 Gate A，不堆 adapter。
-- 不新增runtime locale loader、lazy locale chunk、codegen、翻译平台、第二catalog、第三语言或consumer-side domain map。
-- 不重新引入按正文/Tool/reasoning二次分桶、settlement后重排、raw `x_y`普通标签、无详情first-party Tool或缺失theme snapshot时的静默fallback。
-- 不以当前focused和packaged绿色覆盖stable Browser的既有失败，也不把ad-hoc本机安装称为公开发行。
-- 当前状态只在本文件维护；稳定合同进`architecture/`，固定source证据按`research/README.md`路由，不新增handoff、ledger或研究总账。
+- 本文件只协调现在，不授予 source adoption、产品行为、发行或高风险动作。
+- 稳定合同进入 `architecture/`；exact adoption进入 `source-adoptions.json`；固定反证进入 `research/`；claim状态进入active Campaign。
+- 一项工作完成后删除其施工叙事，只保留仍真实存在的阻塞或下一动作。Git 历史承担历史，不建立第二总账。

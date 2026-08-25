@@ -57,11 +57,12 @@ OmniMind Agent 的默认技术哲学、规则和路线以 exact bundled Pi 为�
 每次 intake 必须在同一个精确工作区、同一轮上下文中按以下顺序完整读取：
 
 1. [`README.md`](README.md)：产品定义、承诺与总入口；
-2. 本文 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)：intake 方法与授权边界；
-3. [`architecture/README.md`](architecture/README.md) 及任务涉及的专题 owner：唯一产品事实；
-4. [`execution-brief.md`](execution-brief.md)：当前工作目标、并发协调、真实阻塞与下一动作；
-5. [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md)：仅在 active 时读取状态与证据指针；
-6. [`research/README.md`](research/README.md) 路由的相关 evidence owner；
+2. [`source-adoptions.json`](source-adoptions.json)：当前 exact adopted source、revision、rights、路径、digest 与更新策略；
+3. 本文 [`PI-ECOSYSTEM-INTAKE.md`](PI-ECOSYSTEM-INTAKE.md)：intake 方法与授权边界；
+4. [`architecture/README.md`](architecture/README.md) 及任务涉及的专题 owner：唯一产品事实；
+5. [`execution-brief.md`](execution-brief.md)：当前工作目标、并发协调、真实阻塞与下一动作；
+6. [`missions/independent-omnimind-v1.md`](missions/independent-omnimind-v1.md)：仅在 active 时读取状态与证据指针；
+7. [`research/README.md`](research/README.md) 路由的相关 evidence owner；
 
 权威关系不可倒置：
 

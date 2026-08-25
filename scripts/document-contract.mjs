@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 export const DOCUMENT_CONTRACT_PATHS = [
   "AGENTS.md",
   "README.md",
+  "source-adoptions.json",
   "SYNARA-INTAKE.md",
   "PI-ECOSYSTEM-INTAKE.md",
   "architecture/README.md",
@@ -14,11 +15,10 @@ export const DOCUMENT_CONTRACT_PATHS = [
   "execution-brief.md",
   "missions/independent-omnimind-v1.md",
   "research/README.md",
-  "research/source-update-intake.md",
-  "research/decision-record.md",
 ];
 
 const REQUIRED_ROUTES = [
+  ["README.md", "source-adoptions.json"],
   ["README.md", "architecture/README.md"],
   ["README.md", "architecture/workbench.md"],
   ["README.md", "architecture/public-surface.md"],
@@ -31,12 +31,13 @@ const REQUIRED_ROUTES = [
   ["README.md", "PI-ECOSYSTEM-INTAKE.md"],
   ["AGENTS.md", "SYNARA-INTAKE.md"],
   ["AGENTS.md", "PI-ECOSYSTEM-INTAKE.md"],
-  ["SYNARA-INTAKE.md", "README.md"],
+  ["SYNARA-INTAKE.md", "source-adoptions.json"],
   ["SYNARA-INTAKE.md", "research/source-review.md"],
   ["SYNARA-INTAKE.md", "architecture/README.md"],
   ["SYNARA-INTAKE.md", "execution-brief.md"],
   ["SYNARA-INTAKE.md", "missions/independent-omnimind-v1.md"],
   ["PI-ECOSYSTEM-INTAKE.md", "README.md"],
+  ["PI-ECOSYSTEM-INTAKE.md", "source-adoptions.json"],
   ["PI-ECOSYSTEM-INTAKE.md", "research/README.md"],
   ["PI-ECOSYSTEM-INTAKE.md", "architecture/README.md"],
   ["PI-ECOSYSTEM-INTAKE.md", "execution-brief.md"],
@@ -48,10 +49,8 @@ const REQUIRED_ROUTES = [
   ["architecture/README.md", "../execution-brief.md"],
   ["architecture/README.md", "../missions/independent-omnimind-v1.md"],
   ["missions/independent-omnimind-v1.md", "../execution-brief.md"],
-  ["research/README.md", "source-update-intake.md"],
   ["research/README.md", "../SYNARA-INTAKE.md"],
   ["research/README.md", "../PI-ECOSYSTEM-INTAKE.md"],
-  ["research/README.md", "decision-record.md"],
 ];
 
 const REQUIRED_READ_ORDER = [
@@ -65,7 +64,6 @@ const REQUIRED_READ_ORDER = [
 ];
 
 const MACHINE_BLOCKS = [
-  { path: "README.md", tag: "source-adoptions", format: "json" },
   { path: "README.md", tag: "identity-denylist", format: "unique-lines" },
   { path: "README.md", tag: "structure-policy", format: "json" },
   {
@@ -73,11 +71,7 @@ const MACHINE_BLOCKS = [
     tag: "public-surface-denylist",
     format: "unique-lines",
   },
-  {
-    path: "architecture/execution.md",
-    tag: "engine-capability-composition",
-    format: "json",
-  },
+  { path: "architecture/execution.md", tag: "engine-capability-composition", format: "json" },
   { path: "architecture/workbench.md", tag: "work-surface-ia", format: "json" },
   { path: "architecture/workbench.md", tag: "model-services-ia", format: "json" },
 ];
@@ -142,7 +136,6 @@ function validateMachineBlocks(findings, documents) {
       );
       continue;
     }
-
     if (definition.format === "json") {
       try {
         JSON.parse(blocks[0]);
@@ -156,7 +149,6 @@ function validateMachineBlocks(findings, documents) {
       }
       continue;
     }
-
     const entries = blocks[0]
       .split("\n")
       .map((entry) => entry.trim())
@@ -170,6 +162,124 @@ function validateMachineBlocks(findings, documents) {
       );
     }
   }
+}
+
+function isSafeRelativePath(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    !path.isAbsolute(value) &&
+    !value.split(/[\\/]/u).includes("..")
+  );
+}
+
+function validateDigestFields(findings, value, trail = "source-adoptions") {
+  if (!value || typeof value !== "object") return;
+  for (const [key, child] of Object.entries(value)) {
+    const nextTrail = `${trail}.${key}`;
+    if (
+      /sha256$/iu.test(key) &&
+      (typeof child !== "object" || child === null) &&
+      (typeof child !== "string" || !/^[0-9a-f]{64}$/u.test(child))
+    ) {
+      addFinding(
+        findings,
+        "source-adoptions.digest",
+        "source-adoptions.json",
+        `${nextTrail} must be a lowercase SHA-256`,
+      );
+    }
+    validateDigestFields(findings, child, nextTrail);
+  }
+}
+
+function validateSourceAdoptions(findings, documents) {
+  const documentPath = "source-adoptions.json";
+  let manifest;
+  try {
+    manifest = JSON.parse(documents.get(documentPath) ?? "");
+  } catch {
+    addFinding(
+      findings,
+      "source-adoptions.invalid",
+      documentPath,
+      "manifest must contain valid JSON",
+    );
+    return;
+  }
+  if (
+    !manifest ||
+    typeof manifest !== "object" ||
+    manifest.version !== 1 ||
+    !Array.isArray(manifest.adopted) ||
+    manifest.adopted.length === 0
+  ) {
+    addFinding(
+      findings,
+      "source-adoptions.structure",
+      documentPath,
+      "manifest must declare version 1 and contain a non-empty adopted array",
+    );
+    return;
+  }
+  const ids = new Set();
+  for (const [index, adoption] of manifest.adopted.entries()) {
+    const trail = `adopted[${index}]`;
+    if (!adoption || typeof adoption !== "object" || Array.isArray(adoption)) {
+      addFinding(
+        findings,
+        "source-adoptions.structure",
+        documentPath,
+        `${trail} must be an object`,
+      );
+      continue;
+    }
+    for (const field of ["id", "url", "revision", "rights", "mode", "updatePolicy"]) {
+      if (typeof adoption[field] !== "string" || adoption[field].trim().length === 0) {
+        addFinding(
+          findings,
+          "source-adoptions.structure",
+          documentPath,
+          `${trail}.${field} must be a non-empty string`,
+        );
+      }
+    }
+    if (typeof adoption.id === "string") {
+      if (ids.has(adoption.id))
+        addFinding(
+          findings,
+          "source-adoptions.identity",
+          documentPath,
+          `duplicate adoption id: ${adoption.id}`,
+        );
+      ids.add(adoption.id);
+    }
+    if (typeof adoption.revision === "string" && !/^[0-9a-f]{40}$/u.test(adoption.revision)) {
+      addFinding(
+        findings,
+        "source-adoptions.revision",
+        documentPath,
+        `${trail}.revision must be a full lowercase Git commit`,
+      );
+    }
+    for (const field of ["paths", "licenseFiles"]) {
+      const values = adoption[field];
+      if (
+        !Array.isArray(values) ||
+        values.length === 0 ||
+        values.some((entry) => !isSafeRelativePath(entry)) ||
+        new Set(values).size !== values.length
+      ) {
+        addFinding(
+          findings,
+          "source-adoptions.paths",
+          documentPath,
+          `${trail}.${field} must contain unique safe relative paths`,
+        );
+      }
+    }
+  }
+  validateDigestFields(findings, manifest);
 }
 
 function validateCurrentState(findings, documents) {
@@ -190,291 +300,15 @@ function validateCurrentState(findings, documents) {
       "Campaign canonical path is missing or changed",
     );
   }
-
-  const decision = documents.get("research/decision-record.md") ?? "";
-  if (!/^> \*\*Status: superseded in full on /m.test(decision)) {
-    addFinding(
-      findings,
-      "history.superseded",
-      "research/decision-record.md",
-      "historical decision record must be explicitly superseded",
-    );
-  }
 }
 
-function validateEngineCapabilityComposition(findings, documents) {
-  const documentPath = "architecture/execution.md";
-  const blocks = blocksFor(documents.get(documentPath) ?? "", "engine-capability-composition");
-  if (blocks.length !== 1) return;
-
-  let policy;
-  try {
-    policy = JSON.parse(blocks[0]);
-  } catch {
-    return;
-  }
-  const expectedCapabilities = [
-    "engine-native-ecosystem",
-    "compatible-omnimind-library",
-    "omnimind-workbench",
-  ];
-  if (
-    JSON.stringify(policy.effectiveCapabilities) !== JSON.stringify(expectedCapabilities) ||
-    policy.nativeEcosystemDisposition !== "preserve" ||
-    policy.nativeCapabilityReachability !== "required-when-runtime-exposes" ||
-    policy.omnimindAssetDelivery !== "adapter-or-session-mount" ||
-    policy.enginePrivateHomeMutation !== "forbidden" ||
-    policy.identityConflict !== "explicit" ||
-    policy.crossEngineDurableState !== "forbidden" ||
-    policy.omnimindWorkspaceArtifacts !== "additive-single-owner-jit" ||
-    policy.temporaryWebSurfacePresentation !== "current-thread-omnimind-browser" ||
-    policy.temporaryWebSurfaceProvenance !== "engine-thread-tool-required" ||
-    policy.externalBrowserActivation !== "explicit-user-only" ||
-    policy.temporaryWebSurfaceDurability !== "memory-only"
-  ) {
-    addFinding(
-      findings,
-      "execution.engine-capability-composition",
-      documentPath,
-      "Engine native ecosystem must remain the preserved base of additive OmniMind composition",
-    );
-  }
-}
-
-function validateBundledPiRuntimeAdoption(findings, documents) {
-  const documentPath = "README.md";
-  const blocks = blocksFor(documents.get(documentPath) ?? "", "source-adoptions");
-  if (blocks.length !== 1) return;
-
-  let record;
-  try {
-    const parsed = JSON.parse(blocks[0]);
-    record = parsed?.adopted?.find((entry) => entry?.id === "bundled-omnimind-agent-runtime");
-  } catch {
-    return;
-  }
-
-  const expected = {
-    url: "https://github.com/earendil-works/pi.git",
-    revision: "914cf1472e715297caa30db4b9535d534a9eb718",
-    paths: [
-      "vendor/omnimind-pi-coding-agent-0.84.2.tgz",
-      "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
-      "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
-      "scripts/vendor-omnimind-pi-runtime.mjs",
-    ],
-    sourcePaths: ["packages/coding-agent"],
-    archiveSha256: "b57b866dff4917eb24432a8292ee927139c34dd137208f5fcdff71cc337d37a7",
-    upstreamPackage: "@earendil-works/pi-coding-agent@0.84.2",
-    upstreamPackageIntegrity:
-      "sha512-l4E+B7hgXKWddRo8bC/eSue2aWZjEgJ9xIpf5p0Og+lq8a2TArCwJ0HCoCPCgaBP/tN4zbYH/wOwvx9pJpeLCA==",
-    licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
-    sharedRuntimeBytes: "patched",
-    patchPath: "patches/pi-coding-agent/0.84.2-model-config-reader.patch",
-    patchSha256: "499b1257c2bc8f98beab1c799bcf669b3b1836f61a06349a2b52247ea1a873af",
-    stockPatchPath: "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
-    stockPatchSha256: "7acead23cba0ac9243b85150049c8ab98a0f1d5d9ed05e133a17afd20165cc77",
-    generatorPath: "scripts/vendor-omnimind-pi-runtime.mjs",
-    behavioralDifferences: [
-      "package identity",
-      "piConfig.configDir",
-      "identity-neutral default system prompt without unshipped docs navigation",
-      "bounded project context root or global-only context projection",
-      "host-owned immutable engine contract appended after extension turn mutation",
-      "injectable models.json content reader",
-      "accepted model-config provider provenance",
-      "credential-blind model-config projection",
-      "typed persistent model-config provider mutation with retained-model merge, preview and safe credential-reference intent",
-      "typed credential-blind model cost and tier editing",
-      "typed nested editing for a closed protocol-specific compat subset",
-      "write-only environment header-reference set/clear with value-blind metadata",
-      "explicit generic model discovery through the configured Pi protocol and credential",
-      "typed prompt outcomes for handled extension commands and input hooks, including current-session Agent work started through sendUserMessage or sendMessage triggerTurn",
-      "explicit reader-mode models store path remains file-backed",
-      "request-scoped missing-package policy for resource loading",
-      "intent-scoped package resource listing and filtering",
-      "credential-blind public npm package identities and actions",
-    ],
-  };
-  const actual = record
-    ? {
-        url: record.url,
-        revision: record.revision,
-        paths: record.paths,
-        sourcePaths: record.sourcePaths,
-        archiveSha256: record.archiveSha256,
-        upstreamPackage: record.upstreamPackage,
-        upstreamPackageIntegrity: record.upstreamPackageIntegrity,
-        licenseFiles: record.licenseFiles,
-        sharedRuntimeBytes: record.generation?.sharedRuntimeBytes,
-        patchPath: record.generation?.patchPath,
-        patchSha256: record.generation?.patchSha256,
-        stockPatchPath: record.generation?.stockPatchPath,
-        stockPatchSha256: record.generation?.stockPatchSha256,
-        generatorPath: record.generation?.generatorPath,
-        behavioralDifferences: record.generation?.behavioralDifferences,
-      }
-    : null;
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    addFinding(
-      findings,
-      "source-adoption.bundled-pi-runtime",
-      documentPath,
-      "bundled OmniMind Agent must retain its exact Pi source, artifact, generation, and legal identity",
-    );
-  }
-}
-
-function validatePiAiOAuthPageRendererAdoption(findings, documents) {
-  const documentPath = "README.md";
-  const blocks = blocksFor(documents.get(documentPath) ?? "", "source-adoptions");
-  if (blocks.length !== 1) return;
-
-  let record;
-  try {
-    const parsed = JSON.parse(blocks[0]);
-    record = parsed?.adopted?.find((entry) => entry?.id === "pi-ai-oauth-page-renderer");
-  } catch {
-    return;
-  }
-
-  const expected = {
-    url: "https://github.com/earendil-works/pi.git",
-    revision: "914cf1472e715297caa30db4b9535d534a9eb718",
-    paths: ["patches/@earendil-works%2Fpi-ai@0.84.2.patch", "package.json", "bun.lock"],
-    sourcePaths: [
-      "packages/ai/src/auth/types.ts",
-      "packages/ai/src/auth/oauth/oauth-page.ts",
-      "packages/ai/src/auth/oauth/openai-codex.ts",
-      "packages/ai/src/auth/oauth/anthropic.ts",
-      "packages/ai/src/auth/oauth/openrouter.ts",
-      "packages/ai/src/auth/oauth/radius.ts",
-    ],
-    upstreamPackage: "@earendil-works/pi-ai@0.84.2",
-    upstreamPackageIntegrity:
-      "sha512-6MzsrYIYNVlE7SfpbL2yYb67Qo58p/7Q+xWG1RZvoX1P80aRCHSod2/13aFpxkow1lPO2LEh3c495J0Gwmyjig==",
-    licenseFiles: ["LICENSES/pi-coding-agent-MIT.txt"],
-  };
-  const actual = record
-    ? {
-        url: record.url,
-        revision: record.revision,
-        paths: record.paths,
-        sourcePaths: record.sourcePaths,
-        upstreamPackage: record.upstreamPackage,
-        upstreamPackageIntegrity: record.upstreamPackageIntegrity,
-        licenseFiles: record.licenseFiles,
-      }
-    : null;
-  if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-    addFinding(
-      findings,
-      "source-adoption.pi-ai-oauth-page-renderer",
-      documentPath,
-      "Pi AI OAuth page renderer must retain its exact source, package, patch, and legal identity",
-    );
-  }
-}
-
-function validateWorkSurfaceInformationArchitecture(findings, documents) {
-  const documentPath = "architecture/workbench.md";
-  const blocks = blocksFor(documents.get(documentPath) ?? "", "work-surface-ia");
-  if (blocks.length !== 1) return;
-
-  let policy;
-  try {
-    policy = JSON.parse(blocks[0]);
-  } catch {
-    return;
-  }
-  const expected = {
-    primaryModes: ["Agent", "Chat", "Studio"],
-    routes: { Agent: "/", Chat: "/chat", Studio: "/studio" },
-    agentSecondary: ["New Task", "Kanban", "Pull Requests", "Automations"],
-    kanbanRoutes: ["/kanban", "/kanban/:projectId"],
-    kanbanPrimaryMode: "Agent",
-    kanbanCardTarget: "folder-backed Agent Thread",
-    projectContextAction: "Open in Kanban",
-    agentSidebarSections: ["Projects", "Groups"],
-    groupTarget: "conversation-thread",
-    groupCardinality: "many-to-many",
-    ungroupedPresentation: "projects-only",
-    groupsDefaultState: "collapsed",
-    threadHeaderIdentity: {
-      emptyAgentOrChat: "hidden",
-      titledAgentOrChat: "title-only",
-      terminal: "terminal-icon-and-title",
-      genericTerminalTitle: "localized-ui-only",
-    },
-  };
-  if (JSON.stringify(policy) !== JSON.stringify(expected)) {
-    addFinding(
-      findings,
-      "workbench.work-surface-ia",
-      documentPath,
-      "Agent navigation and conversation headers must preserve their direct-mode, grouping, and identity semantics",
-    );
-  }
-}
-
-function validateModelServicesInformationArchitecture(findings, documents) {
-  const documentPath = "architecture/workbench.md";
-  const blocks = blocksFor(documents.get(documentPath) ?? "", "model-services-ia");
-  if (blocks.length !== 1) return;
-
-  let policy;
-  try {
-    policy = JSON.parse(blocks[0]);
-  } catch {
-    return;
-  }
-  const expected = {
-    scope: ["connection", "authentication", "catalog", "models", "status-and-recovery"],
-    primaryAction: "select-runtime-model-service",
-    secondaryAction: "connect-by-api-address",
-    secondaryPlacement: "list-tail-lower-emphasis",
-    secondaryVisibility: "capability-gated-no-disabled-placeholder",
-    genericApiProtocols: [
-      "openai-completions",
-      "openai-responses",
-      "anthropic-messages",
-      "google-generative-ai",
-    ],
-    nonstandardApiOwner: "pi-extension",
-    extensionServiceOutcome: "required-intent-scoped-runtime-projection",
-    customMutationOwner: "pi-model-config",
-    customMutationOutcome: "test-save-reopen-edit-refresh-delete",
-    customMutationAuthorization: "maintainer-approved-narrow-pi-owned-seam",
-    gitWritingOwner: "calling-feature-settings",
-    omnimindDefaultModel: "none-runtime-catalog-only",
-    customMutationGate: "E6",
-  };
-  if (JSON.stringify(policy) !== JSON.stringify(expected)) {
-    addFinding(
-      findings,
-      "workbench.model-services-ia",
-      documentPath,
-      "Model services must keep runtime discovery primary, make API-address setup persistable, and keep mutation authority with Pi",
-    );
-  }
-}
-
-/**
- * Validate only the durable document graph and machine-readable owner blocks.
- * Product semantics remain in the sole owners and are reviewed as prose/design;
- * this checker deliberately does not turn architecture keywords into executable policy.
- *
- * @param {{ root: string, read?: (path: string, encoding: string) => Promise<string> }} options
- * @returns {Promise<Array<{rule: string, path: string, message: string}>>}
- */
+/** Validate durable routing and machine structure without duplicating product semantics. */
 export async function validateDocumentContract({ root, read = readFile }) {
   if (typeof root !== "string" || root.length === 0) {
     throw new TypeError("validateDocumentContract requires a repository root");
   }
-
   const findings = [];
   const documents = new Map();
-
   for (const documentPath of DOCUMENT_CONTRACT_PATHS) {
     try {
       const content = await read(path.join(root, documentPath), "utf8");
@@ -484,16 +318,10 @@ export async function validateDocumentContract({ root, read = readFile }) {
       addFinding(findings, "document.required", documentPath, "required contract input is missing");
     }
   }
-
   validateReadOrder(findings, documents);
   validateRoutes(findings, documents);
   validateMachineBlocks(findings, documents);
+  validateSourceAdoptions(findings, documents);
   validateCurrentState(findings, documents);
-  validateEngineCapabilityComposition(findings, documents);
-  validateBundledPiRuntimeAdoption(findings, documents);
-  validatePiAiOAuthPageRendererAdoption(findings, documents);
-  validateWorkSurfaceInformationArchitecture(findings, documents);
-  validateModelServicesInformationArchitecture(findings, documents);
-
   return findings;
 }
