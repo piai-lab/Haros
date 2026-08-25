@@ -22,11 +22,11 @@ import { basenameOfPath } from "~/file-icons";
 import type { TimestampFormat } from "../../localPreferences";
 import {
   ArrowUpCircleIcon,
+  AskUserIcon,
   BackgroundTrayIcon,
   BotIcon,
   CheckIcon,
   CircleAlertIcon,
-  CircleQuestionIcon,
   EyeIcon,
   GitHubIcon,
   GlobeIcon,
@@ -239,9 +239,9 @@ function commandWorkEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
 
 function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   if (isReasoningUpdateWorkEntry(workEntry)) return ReasoningIcon;
-  // User-input rows read as a question (awaiting an answer) and an upload
-  // (answer submitted) rather than the generic "info" checkmark.
-  if (workEntry.activityKind === "user-input.requested") return CircleQuestionIcon;
+  // Canonical User Input is a two-way interaction while waiting; its terminal
+  // receipt stays distinct from both the request and generic info checkmarks.
+  if (workEntry.activityKind === "user-input.requested") return AskUserIcon;
   if (workEntry.activityKind === "user-input.resolved") return ArrowUpCircleIcon;
   // "Moved to background" notices read as a tray drop, not a warning check.
   if (workEntry.nativeEventType === "background_tasks_changed") return BackgroundTrayIcon;
@@ -286,6 +286,10 @@ export function renderWorkEntryIcon(Icon: LucideIcon, className: string): ReactE
 export function workEntryLeftIcon(workEntry: TimelineWorkEntry): LucideIcon {
   if (workEntry.activityKind === "skill.instructions.failed") return CircleAlertIcon;
   if (workEntry.activityKind === "skill.instructions.delivered") return SkillCubeIcon;
+  // Structure owns User Input identity. It deliberately wins over Provider,
+  // Tool-name, MCP, browser, and brand marks so every truthful adapter shares
+  // this projection without teaching the Web resolver native Ask aliases.
+  if (workEntry.activityKind === "user-input.requested") return AskUserIcon;
   if (isGitHubMcpToolCall(workEntry)) return GitHubIcon;
   if (isOmniMindBrowserWorkEntry(workEntry)) return GlobeIcon;
   if (isOmniMindToolCall(workEntry)) return OmniMindToolIcon;

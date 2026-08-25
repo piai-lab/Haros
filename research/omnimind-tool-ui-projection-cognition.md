@@ -1,8 +1,8 @@
 # OmniMind Tool UI Projection Cognition
 
-Status: `selected-research-candidate / production-not-yet-updated`
+Status: `maintainer-selected Read-and-Ask projections / production-not-yet-updated`
 
-Source snapshot: `main@ed9813ed18492e166ba60a7f35f4216f7284b2cb` · 2026-08-25
+Source snapshot: `main@f2ac1da7ea` · 2026-08-25
 
 Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection.html)
 
@@ -30,21 +30,66 @@ Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection
 
 因此 `Read` 与 `Search` 不应继续共用放大镜。维护者已选择第一版 `Lucide Book Open` 作为 Read family 的目标图标：无页内文字、默认描边、Timeline 工作尺寸 14px。放大镜只保留给搜索、查找、定位与目录检查语义。
 
+### 2.1 Canonical User Input 的维护者最终 taste：双气泡
+
+维护者在 2026-08-25 的真实 Timeline 密度候选中明确选择 OmniMind 已打包的 Central `bubbles` 双气泡，而不是先前建议的 `bubble-question`。这个 identity 归属跨 Engine 的 canonical User Input 交互，不归属 Pi 的某个字符串：
+
+- Ask User 的本质不是“出现一个问号”，而是 Agent 主动把信息/偏好决策交还用户，用户回答后模型重新规划；双气泡更准确地表达这段双向协作；
+- `bubble-question` 更接近单向提问，`circle-questionmark` 更接近帮助入口或等待状态，文本气泡缺少回合关系，锤子只表达匿名执行；
+- 图标服务一级交互 identity，不承担 answered/cancelled/aborted/unavailable/stale 等 settlement 语义；状态必须继续由结构化 activity、文案、tone 和 terminal receipt 表达；
+- 默认灰阶、14px Timeline 工作尺寸、现有 leading column 与 hover/focus tone 全部保持，不加品牌色、动画、badge 或新的 Ask chrome；
+- Composer Question card 已经完整表达问题，不重复加双气泡；复杂度继续藏在 canonical contract/state，而不是堆视觉装饰。
+
+选中资产：
+
+<img src="../apps/web/public/central-icons-reversed/bubbles.svg" alt="OmniMind Ask User 双气泡 Tool 图标" width="28" height="28" />
+
+这一裁决来自维护者对 approval-grade HTML 中 A–D 四个现有 Central 候选的直接选择。候选页只用于裁决；production 仍必须由主会话在真实 Timeline owner 中实现和验证，不能把本文或 HTML 写成“代码已完成”。
+
+### 2.2 冰山法则：不要只看 Pi `ask_user`
+
+真实调用链已经证明，Ask 的原生名字和运行机制并不统一，但 adapter 已经把它们收口为同一 activity：
+
+| Engine / 来源 | 原生入口 | OmniMind canonical 投影 | 双气泡规则 |
+| --- | --- | --- | --- |
+| Codex | `item/tool/requestUserInput` | `user-input.requested` | 启用 |
+| Claude | `AskUserQuestion` | `user-input.requested` | 启用；adapter 已抑制重复 generic Tool row |
+| Cursor | `cursor/ask_question` | `user-input.requested` | 启用 |
+| Grok | `x.ai/ask_user_question` / `_x.ai/ask_user_question` | `user-input.requested` | 启用 |
+| OpenCode | `question.asked` | `user-input.requested` | 启用 |
+| Droid | ACP `session/elicitation` form | `user-input.requested` | 启用 |
+| Pi / OmniMind Agent | bundled `ask_user` 以及可投影的 Extension UI primitive | `user-input.requested` | 启用；必须防止原始 Tool lifecycle 重复出行 |
+
+因此，Web 的 primary predicate 必须是结构事实 `activityKind === "user-input.requested"`，而不是 `toolName === "ask_user"`。Provider-native 名称不应再被复制进 Web icon resolver；否则每增加一个 Engine 都要手改展示层，并且会把类似名字误当产品 authority。
+
+未来 Engine 只有在 adapter 诚实产生 canonical `user-input.requested` 后才自动获得双气泡。一个名为 `ask-user`、`question`、`prompt_user` 或者本地化“询问用户”的普通第三方 Tool，如果没有进入 canonical User Input 合同，必须继续是普通 dynamic Tool，不得仅凭名字冒充 Product Ask。
+
+同样重要的反向边界：不是所有“等用户”都是 Ask User。
+
+- `approval.requested`、Claude `ExitPlanMode`、Provider permission、OAuth/auth 和危险操作授权必须保留各自 authority icon，不得用双气泡混淆“表达偏好”与“授权副作用”；
+- Browser / Engine Web Surface 内的网页输入属于那个 surface，除非 Host 真正收到 canonical User Input request，否则不使用双气泡；
+- no-UI 时 bundled Pi Tool 应不暴露，执行竞态应 fail closed；图标只投影已发生的真实 canonical activity，不能反向宣称 UI 或 Promise 尚可用；
+- replay / reopen 可以显示已持久的 request/settlement 事实，但不得因为仍显示双气泡就复活已消失的 Tool Promise；
+- child/subagent 发起的请求只要经唯一 canonical contract 与真实 correlation 投影，也使用双气泡；不另建 child Ask icon 或私有 Question UI；
+- 双气泡只表明“这是用户输入交互”，不保证某个原生 Provider 已支持 Preview、Review、Notes 等全部强合同能力；能力是 canonical contract / adapter 的真实交付问题，不能由 icon 伪造。
+
 ## 3. 投影优先级
 
 同一调用可能同时命中“动作类别”“产品 surface”“品牌”和“生命周期状态”。Timeline leading icon 按以下顺序裁决：
 
 1. **明确的特殊回执**：`skill.instructions.failed` 使用 warning；`skill.instructions.delivered` 使用 Skill 图标。
-2. **精确品牌或 surface identity**：GitHub MCP → GitHub；OmniMind Browser → globe；OmniMind Gateway → OmniMind mark；其余 MCP → MCP mark。
-3. **结构化工具类别**：file read、file change、command、web search、image view、image generation、child agent、dynamic tool。
-4. **有界 identifier 识别**：`Read` / `read_file` / `view_file` 等常见 Provider 名称；WebFetch URL；wrapped `git` / `gh` / `hub` 与 inspect shell command。
-5. **tone fallback**：error、thinking、info、tool 仅在没有更强 identity 时使用兜底图标。
+2. **Canonical 产品交互**：`activityKind=user-input.requested` → Central `bubbles`；这一条跨 Engine，不从 Provider 名称或本地化文案猜测。
+3. **精确品牌或 surface identity**：GitHub MCP → GitHub；OmniMind Browser → globe；OmniMind Gateway → OmniMind mark；其余 MCP → MCP mark。
+4. **结构化工具类别**：file read、file change、command、web search、image view、image generation、child agent、dynamic tool。
+5. **有界 identifier 识别**：`Read` / `read_file` / `view_file` 等常见 Provider 名称；WebFetch URL；wrapped `git` / `gh` / `hub` 与 inspect shell command。
+6. **tone fallback**：error、thinking、info、tool 仅在没有更强 identity 时使用兜底图标。
 
 这意味着：
 
 - `omnimind_read_thread` 虽然包含 `read`，仍显示 OmniMind mark；它的主要辨识是 OmniMind Gateway，不是本地文件读取。
 - `browser_logs` 虽然读取诊断，仍显示 globe；它属于 Browser surface。
 - GitHub MCP 的“读取 PR”仍显示 GitHub mark。
+- 任何 Engine 的 Ask 只要已投影为 canonical `user-input.requested`，都显示双气泡；Pi `ask_user` 只是其中一个 runtime source。
 - 普通第三方 `Read` 才进入 Read family，显示开卷。
 
 ## 4. 目标 UI 映射
@@ -63,6 +108,7 @@ Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection
 | 图片查看 | `itemType=image_view` | 眼睛 | Tabler `IconEye` | 表达查看既有视觉内容 |
 | 图片生成 | `itemType=image_generation` | 闪电 | Tabler `IconBolt` | 当前真实映射，不把研究偏好冒充已改设计 |
 | 子智能体任务 | `itemType=collab_agent_tool_call` | 机器人 | Central `robot` | 有 routed child metadata 时主要进入 Composer child surface |
+| Canonical User Input | `activityKind=user-input.requested` | 双气泡 | Central `bubbles` | Codex / Claude / Cursor / Grok / OpenCode / Droid / Pi 共用；不匹配原生名字 |
 | 普通动态工具 | `itemType=dynamic_tool_call` | 锤子 | Central `hammer` | 无更强 identity 时使用 |
 | 普通 MCP | `itemType=mcp_tool_call` | MCP mark | VS Code `VscMcp` | 不把 transport prefix 暴露为普通标题 |
 | GitHub MCP | `mcp__codex_apps__github*` | GitHub mark | Simple Icons `SiGithub` | 品牌优先于 generic MCP |
@@ -82,7 +128,7 @@ Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection
 | failed | 保持类别/品牌 icon | danger tone；详情保留可操作错误 | 明确失败与恢复动作 |
 | cancelled | 保持类别/品牌 icon | 降低强调，不伪装成功 | 明确已停止/取消 |
 
-以下不是普通 Tool lifecycle，必须保留独立语义：Reasoning 使用 Central `brain-2`；等待用户回答使用 `circle-questionmark`；已提交回答使用 `arrow-up-circle`；转入后台使用 `arrow-down-wall`；混合类别汇总使用 `hammer`。
+以下不是普通 Tool lifecycle，必须保留独立语义：canonical `user-input.requested` 使用 Central `bubbles`；`user-input.resolved` 保留 `arrow-up-circle` 或未来由 settlement 决定的 terminal receipt icon；Reasoning 使用 Central `brain-2`；转入后台使用 `arrow-down-wall`；混合类别汇总使用 `hammer`。双气泡回答“谁在向我要输入”，terminal receipt 回答“交互如何结束”，二者不得被 Provider 名称覆盖。
 
 ## 6. 汇总规则
 
@@ -107,6 +153,8 @@ Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection
 ### 已存在
 
 - Timeline 已有 `workEntryLeftIcon → workEntryIcon → workToneIcon` 的单向 fallback 链。
+- Codex、Claude、Cursor、Grok、OpenCode、Droid 与 Pi adapter 都已把各自的原生 Ask / elicitation 投影为 canonical `user-input.requested`；Web WorkLog 也已保留 `activityKind` 供 icon owner 消费。
+- Claude 已明确把 `AskUserQuestion` 列为 client-surfaced Tool，抑制 generic Tool lifecycle row，以避免和 canonical User Input 重复。这是 Pi product Ask 应对齐的成熟先例。
 - GitHub MCP、OmniMind Browser、OmniMind Gateway、generic MCP 已有高优先级 identity override。
 - WebFetch 已按目标 URL 投影 favicon。
 - `Read` / `read_file` / `view_file` 已被有界识别为 file-read family。
@@ -118,8 +166,10 @@ Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection
 - `requestKind=file-read` 与 `Read` family 当前仍返回 `SearchIcon`。
 - shell inspection 当前只有一个 `inspect` visual kind，`cat/sed/head/...` 与 `rg/grep/find/ls/...` 都返回放大镜；目标语义要求拆成 `read` 与 `search/list` 两类。
 - collapsed read group 当前借用首条 entry icon，因此在生产代码更新前仍可能显示放大镜。
+- canonical `user-input.requested` 当前使用 `CircleQuestionIcon`，尚未切换到维护者选定的 Central `bubbles`。如果只对 exact Pi `ask_user` 加名称分支，会同时犯两个错：漏掉其他 Engine 的内置 Ask，并可能让 Pi 的 generic Tool row 与 canonical request row 重复显示。
+- Pi adapter 当前一方面对所有 `tool_execution_start/end` 发送 item lifecycle，另一方面在 product `ask_user` interaction port 中发送 `user-input.requested/resolved`。在主会话证明 Timeline 不会出现双行之前，不得只加 icon branch 就宣称完成。
 
-这三个差异必须在一次真实 UI 实现中由现有 presentation owner 收口，并以 focused tests 保护。本文和 HTML 不构成“代码已经改好”的证据。
+这些差异必须在真实 UI 实现中由现有 presentation owner 收口，并以 focused tests 保护。本文和 HTML 不构成“代码已经改好”的证据。
 
 ## 8. Canonical catalog 边界
 
@@ -136,7 +186,10 @@ HTML 明细列出当前 22 个 Browser action 与 28 个非 Browser OmniMind Gat
 ## 9. 修改半径演练
 
 - **新增一个 Browser action**：只更新 Browser canonical descriptor/presentation；因 Browser surface override，共享 globe，无需在 Timeline 新增 icon 分支。HTML 可在下一次研究同步时补明细。
-- **新增一个普通动态 Tool**：若没有稳定品牌/surface identity，自动落到 hammer；不为每个 identifier 增加 glyph。
+- **新增一个普通动态 Tool**：若没有稳定品牌/surface identity 也没有进入 canonical User Input 合同，自动落到 hammer；不为每个 identifier 增加 glyph。
+- **新增或替换 Ask User icon**：只改 `icons.tsx` 的窄 wrapper 与 canonical activity 的现有 Timeline icon owner；所有已接入 adapter 自动共享。Question card、canonical contract、fork 与 status receipt 不因资产替换而改。
+- **新增一个 Engine-native Ask**：只在该 Engine adapter 中完成原生请求→canonical `user-input.requested/resolved` 的诚实映射；Web、HTML 和 icon resolver 零修改。
+- **退休 Pi bundled `ask_user`**：删除 Pi composition / bridge 不能破坏其他 Engine 的双气泡投影；这是判断 icon owner 是否收对的关键删除演练。
 - **新增一个一等产品类别**：只有在连续 Timeline 中有真实可读性收益，才扩展现有 presentation classifier 与同一组 focused tests；不得创建平行 registry。
 - **替换 Read 资产**：只替换 Read family 的窄 icon owner；搜索、Browser、Gateway、MCP 与状态逻辑不动。
 - **退休一个 Tool**：从 canonical runtime/descriptor 删除后，UI 通过现有 fallback 安全退化；不得为旧 identifier 永久保留空壳。
@@ -150,6 +203,7 @@ HTML 明细列出当前 22 个 Browser action 与 28 个非 Browser OmniMind Gat
 - Browser 或 OmniMind Gateway canonical tool catalog 增删；
 - Central、Tabler、Simple Icons、MCP 或 OmniMind 品牌资产替换；
 - Timeline 基准尺寸、字体、leading column 或主题 token 改变；
+- canonical `user-input.requested/resolved` 合同、adapter 投影、Pi `ask_user` same-name provenance gate 或 Tool/User Input 去重规则改变；
 - 新 Provider 产生无法被现有结构事实或有界名称识别的 Read/Search 调用。
 
 目标方案被下列证据推翻时必须重开，而不是维护第二套映射：开卷在 14px/480px/暗亮主题下无法稳定辨识；Read 与 Knowledge/Docs 等相邻产品入口发生不可消除的冲突；实际多 Provider journey 中 file read 无法可靠归类；或品牌/surface override 导致用户无法判断真实动作且详情也不能补足。
@@ -163,4 +217,35 @@ HTML 明细列出当前 22 个 Browser action 与 28 个非 Browser OmniMind Gat
 - live → completed/failed/cancelled 不替换 identity icon、不重排 Timeline；
 - homogeneous read group 使用开卷，mixed group 使用 hammer；
 - Browser、OmniMind Gateway、GitHub MCP 继续保持 surface/品牌优先；
+- 由 Codex、Claude、Cursor、Grok、OpenCode、Droid 与 Pi 生成的 canonical `user-input.requested` 全部使用 Central `bubbles`；`user-input.resolved` 仍是结构化 terminal receipt；
+- `ask-user`、`prompt_user`、本地化标题和其他 near-miss 普通 Tool 不得仅凭名字冒充；mixed Tool group 仍使用 hammer；
+- 同一 Pi product Ask 在 Timeline 中只有一个用户可读的 Ask identity 投影，不同时显示 generic Tool row 与 canonical request row；Question card 不重复增加 icon；
 - unknown/dynamic tool 安全回退，不显示 raw transport prefix，不误读敏感参数。
+
+## 12. 主会话实施指令
+
+这是一项已由维护者完成产品选择、无需再次询问方向的直接 UI 修复。生产代码只允许主会话按现有 owner 实施；本 research side conversation 不修改生产源码。
+
+### 12.1 最小真实修改
+
+1. 在 `apps/web/src/lib/icons.tsx` 复用现有 Central asset，导出语义化 `AskUserIcon = centralIconWrapper("bubbles")`；不复制 SVG、不新增依赖或第二 icon registry。
+2. 在 `apps/web/src/components/chat/TimelineWorkEntryRow.tsx` 的现有 `activityKind` precedence 中，把 `user-input.requested` 从 `CircleQuestionIcon` 改为 `AskUserIcon`。不在 Web 中枚举 `AskUserQuestion`、`requestUserInput`、`ask_question`、`ask_user_question`、`session/elicitation` 或 Pi `ask_user`；adapter 已经是这些名称的唯一翻译 owner。
+3. `user-input.resolved` 继续使用 terminal receipt icon；answered/cancelled/aborted/timed_out/unavailable/stale 继续由 `userInputSettlementStatus` 文案与结构化事实表达。本轮不借 icon 变更改写 settlement 语义。
+4. 先用真实 WorkLog / Timeline 证明 Pi product `ask_user` 是否同时显示 generic `tool.started/completed` row 与 canonical `user-input.requested/resolved` row。当前 adapter 源码会产生两套 runtime event，因此“没有重复 UI”不能靠假设。
+5. 如果重复存在，以 Claude `isClientSurfacedClaudeTool` 的已有原则为参考：让 canonical User Input 成为唯一用户可见交互行，抑制 Pi bundled product Ask 的 generic lifecycle 投影。判定必须依赖已验证的 bundled provenance 与 structured correlation，不能让一个第三方同名 Tool 被静默伪装成 Product Ask，也不能在 Web 中用标题字符串做脑补去重。
+6. 不向 `ComposerPendingUserInputPanel` / `ComposerChoiceRow` 增加 icon，不新建 Ask shell、icon registry 或 Provider-specific UI。除上述必要的可见重复收口外，不借此修改 canonical response contract、fork domain model、Pi barrier 或 presenter lease。
+
+### 12.2 Focused falsifiers
+
+- 为 Codex、Claude、Cursor、Grok、OpenCode、Droid 和 Pi 各构造一个 adapter-produced canonical `user-input.requested`，实际渲染均出现 `data-central-icon-name="bubbles"`；
+- `user-input.resolved` 的 answered/cancelled/aborted/timed_out/unavailable/stale 仍可区分，且不伪造为另一次 Ask request；
+- `ask-user`、`Ask user` label、相似 third-party identifier 与普通 dynamic Tool 仍是 hammer；同名 provenance collision 仍 fail closed；
+- Pi bundled `ask_user` 从 Tool execute→canonical request→answer/cancel→Tool result 的整段 journey 只生成一个可见 Ask identity；不出现一行 hammer/双气泡 Tool 再加一行双气泡 request 的重复；
+- Pi Extension UI primitive 发起的 canonical User Input 同样使用双气泡，但未发起 canonical interaction 的普通 Extension Tool 不获得该 identity；
+- 关闭 bundled Pi Ask 或新增一个如实投影的未来 Engine，Web icon resolver 零修改；
+- 亮/暗主题、14px、480px、hover、focus 与 collapsed/expanded Timeline 无 material finding；
+- no-UI、late answer、restart stale、Session replacement 及 exact same-name provenance 的运行时 fail-closed 不因 UI semantic mapping 被放宽。
+
+### 12.3 交付边界
+
+图标变化属于用户可观察 Desktop 行为，应进入主会话下一次 exact pushed-SHA source gates 与 fresh packaged Ask journey；在生产提交、focused/browser proof 和 packaged artifact 完成前，状态保持 `selected / production pending`，不得把本 research 更新写成已交付。

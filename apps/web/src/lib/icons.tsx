@@ -143,9 +143,10 @@ export const CircleCheckIcon = adaptIcon(IconCircleCheck);
 // same visual language as the other trailing thread-row icons (worktree, fork,
 // pull-request) instead of the react-icons outline check it replaced.
 export const CheckCircle2Icon: LucideIcon = centralIconWrapper("check-circle-2");
-// User-input rows: a question-mark circle while the agent waits for an answer,
-// and an up-arrow circle once the answer is submitted. Sourced from the Central
-// set so they sit visually beside the other timeline glyphs (robot, search, …).
+// Canonical User Input uses a quiet two-way conversation glyph while the agent
+// waits for an answer. The terminal receipt keeps its distinct submitted glyph.
+// Both are sourced from Central so they sit beside the other Timeline glyphs.
+export const AskUserIcon: LucideIcon = centralIconWrapper("bubbles");
 export const CircleQuestionIcon: LucideIcon = centralIconWrapper("circle-questionmark");
 export const ArrowUpCircleIcon: LucideIcon = centralIconWrapper("arrow-up-circle");
 export const CloudSyncIcon = centralIconWrapper("cloud-sync");

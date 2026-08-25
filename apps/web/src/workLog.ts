@@ -79,7 +79,7 @@ export interface WorkLogEntry {
     surfaceId?: string;
   };
   // Source activity kind, kept so the timeline can pick a kind-specific icon
-  // (e.g. user-input.requested -> question glyph) instead of the generic
+  // (e.g. user-input.requested -> canonical interaction glyph) instead of the generic
   // tone fallback. Same rationale as `toolName` below.
   activityKind?: OrchestrationThreadActivity["kind"];
   userInputSettlementStatus?:

@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="data:," />
     <title>OmniMind Tool UI Projection</title>
     <style>
       :root {
@@ -102,6 +103,11 @@
       .timeline-row span:nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .timeline-row time { margin-left: auto; color: var(--quiet); font-size: 10px; }
       .mapping-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .engine-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .engine-row { min-width: 0; display: grid; grid-template-columns: 18px 88px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 12px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+      .engine-row b { font-size: 10px; }
+      .engine-row p { min-width: 0; margin: 0; color: var(--quiet); font-size: 9px; line-height: 1.45; overflow-wrap: anywhere; }
+      .engine-row code { color: var(--accent); }
       .tool-card { min-width: 0; padding: 14px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel); }
       .tool-card.selected { border-color: color-mix(in srgb, var(--accent) 46%, var(--line)); box-shadow: inset 0 0 0 1px var(--accent-soft); }
       .tool-head { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding-bottom: 12px; }
@@ -129,7 +135,7 @@
       .catalog-row:last-child { border-bottom: 0; }
       .catalog-row b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 9px ui-monospace, SFMono-Regular, Menlo, monospace; }
       .catalog-row small { display: block; margin-top: 3px; color: var(--quiet); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-      .precedence { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
+      .precedence { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
       .precedence article { position: relative; min-height: 130px; padding: 16px 14px; border-right: 1px solid var(--line); }
       .precedence article:last-child { border-right: 0; }
       .precedence .n { color: var(--quiet); font: 10px ui-monospace, SFMono-Regular, Menlo, monospace; }
@@ -164,7 +170,9 @@
         .footer { padding: 14px 22px; flex-direction: column; align-items: flex-start; }
       }
       @media (max-width: 680px) {
-        .mapping-grid, .special-grid { grid-template-columns: 1fr; }
+        .mapping-grid, .engine-grid, .special-grid { grid-template-columns: 1fr; }
+        .engine-row { grid-template-columns: 18px 70px minmax(0, 1fr); }
+        .engine-row code { grid-column: 3; }
         .section-heading { align-items: flex-start; }
         .section-heading > p { display: none; }
         .state-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -189,23 +197,24 @@
           <nav aria-label="页面章节">
             <a href="#timeline">Timeline 真值</a>
             <a href="#mapping">工具家族</a>
+            <a href="#engines">跨 Engine Ask</a>
             <a href="#catalogs">完整工具明细</a>
             <a href="#precedence">投影优先级</a>
             <a href="#special">特殊状态</a>
           </nav>
-          <div class="snapshot">selected research candidate<br />main@ed9813ed1849<br />2026-08-25</div>
+          <div class="snapshot">maintainer-selected projection<br />main@f2ac1da7ea<br />production change pending main thread</div>
         </aside>
         <main>
           <section class="hero">
             <div>
               <p class="eyebrow">TOOL PRESENTATION / RESEARCH COMPANION</p>
               <h1>每一个工具，如何投影成用户看得懂的 UI</h1>
-              <p class="lede">图标表达稳定身份，文字表达具体动作，状态表达当前结果。Read 使用开卷，Search 使用放大镜；Browser、OmniMind Gateway、GitHub MCP 等 surface/品牌 identity 保持更高优先级。</p>
+              <p class="lede">图标表达稳定身份，文字表达具体动作，状态表达当前结果。Read 使用开卷，Search 使用放大镜；所有 Engine 投影到 canonical User Input 的 Ask 统一使用双气泡，不以 Pi Tool 名为 UI authority。Browser、OmniMind Gateway、GitHub MCP 等 surface/品牌 identity 保持更高优先级。</p>
             </div>
             <aside class="decision-card">
               <small>Selected direction</small>
-              <strong>Read → Lucide Book Open</strong>
-              <p>第一版，无页内文字，默认描边，Timeline 工作尺寸 14px。</p>
+              <strong>Read → Book Open<br />Ask User → Double Bubbles</strong>
+              <p>维护者已选择 Central <code>bubbles</code>。它属于 canonical <code>user-input.requested</code>，Codex、Claude、Cursor、Grok、OpenCode、Droid 与 Pi 共用。</p>
             </aside>
           </section>
 
@@ -213,7 +222,7 @@
             <div class="section-heading"><div><span class="index">01</span><h2>Timeline 上下文</h2></div><p>13px 文字 · 14px 图标 · 同一 leading column</p></div>
             <div class="callout">
               <span id="callout-icon"></span>
-              <span><b>这是已选研究候选，不是当前生产完成态。</b>当前源码仍把 file-read 和所有 inspect shell command 投影为放大镜；目标实现要把 <code>cat/sed/head/…</code> 拆到 Read，把 <code>rg/grep/find/ls/…</code> 留给 Search。</span>
+              <span><b>这是维护者已选投影，不是当前生产完成态。</b>当前源码仍把 file-read 投影为放大镜，并把 canonical <code>user-input.requested</code> 显示为 circle-questionmark。主会话应以 canonical activity 为唯一 Ask icon owner，使所有 Engine 自动共享 Central <code>bubbles</code>；还必须证明 Pi 的原始 Tool lifecycle 与 canonical request 不会重复出行。Question card 不重复加图标。</span>
             </div>
             <div class="timeline-shell">
               <div class="timeline-top"><b>工具投影审阅</b><span>OmniMind · Timeline</span></div>
@@ -227,8 +236,17 @@
             <div class="mapping-grid" id="mapping-grid"></div>
           </section>
 
+          <section class="section" id="engines">
+            <div class="section-heading"><div><span class="index">03</span><h2>一个 canonical Ask，七种 Engine 入口</h2></div><p>native source → adapter → user-input.requested → bubbles</p></div>
+            <div class="callout">
+              <span id="engine-callout-icon"></span>
+              <span><b>双气泡不认 Tool 名，只认经 adapter 证实的 canonical 交互。</b>未来 Engine 接入 <code>user-input.requested</code> 后零 Web 改动获得同一投影；相似名字的第三方 Tool 不会冒充 Product Ask。Approval、Plan exit、OAuth 与 Browser 网页输入虽然也可能“等人”，但不属于 User Input，不使用双气泡。Pi 还需通过 structured correlation / bundled provenance 避免 Tool row 与 canonical row 重复，不做 Web 字符串去重。</span>
+            </div>
+            <div class="engine-grid" id="engine-grid" style="margin-top: 12px"></div>
+          </section>
+
           <section class="section" id="catalogs">
-            <div class="section-heading"><div><span class="index">03</span><h2>完整一等工具明细</h2></div><p>22 Browser actions · 28 Gateway actions</p></div>
+            <div class="section-heading"><div><span class="index">04</span><h2>完整一等工具明细</h2></div><p>22 Browser actions · 28 Gateway actions</p></div>
             <div class="catalogs">
               <section class="catalog">
                 <header><h3>OmniMind Browser</h3><p>每个 action 都显示 globe。动作名由 canonical Browser presentation 提供，icon 不按 click/read/type 再分叉。</p></header>
@@ -242,18 +260,19 @@
           </section>
 
           <section class="section" id="precedence">
-            <div class="section-heading"><div><span class="index">04</span><h2>投影优先级</h2></div><p>从最具体到最安全的 fallback</p></div>
+            <div class="section-heading"><div><span class="index">05</span><h2>投影优先级</h2></div><p>从最具体到最安全的 fallback</p></div>
             <div class="precedence">
               <article><span class="n">01</span><h3>特殊回执</h3><p>Skill failed / delivered 等明确产品语义。</p></article>
-              <article><span class="n">02</span><h3>品牌 / Surface</h3><p>GitHub、Browser、OmniMind、MCP。</p></article>
-              <article><span class="n">03</span><h3>结构类别</h3><p>read、edit、command、image、agent。</p></article>
-              <article><span class="n">04</span><h3>有界识别</h3><p>Read aliases、WebFetch URL、wrapped shell。</p></article>
-              <article><span class="n">05</span><h3>Tone fallback</h3><p>只有没有更强 identity 时才兜底。</p></article>
+              <article><span class="n">02</span><h3>Canonical 交互</h3><p>user-input.requested → double bubbles。</p></article>
+              <article><span class="n">03</span><h3>品牌 / Surface</h3><p>GitHub、Browser、OmniMind、MCP。</p></article>
+              <article><span class="n">04</span><h3>结构类别</h3><p>read、edit、command、image、agent。</p></article>
+              <article><span class="n">05</span><h3>有界识别</h3><p>Read aliases、WebFetch URL、wrapped shell。</p></article>
+              <article><span class="n">06</span><h3>Tone fallback</h3><p>只有没有更强 identity 时才兜底。</p></article>
             </div>
           </section>
 
           <section class="section" id="special">
-            <div class="section-heading"><div><span class="index">05</span><h2>Timeline 特殊状态</h2></div><p>不属于普通 Tool lifecycle</p></div>
+            <div class="section-heading"><div><span class="index">06</span><h2>Timeline 特殊状态</h2></div><p>不属于普通 Tool lifecycle</p></div>
             <div class="special-grid" id="special-grid"></div>
           </section>
         </main>
@@ -307,6 +326,7 @@
         { id: "image-view", name: "Image View", detail: "查看既有图片", icon: "eye", asset: "Tabler eye" },
         { id: "image-generation", name: "Image Generation", detail: "生成图片", icon: "bolt", asset: "Tabler bolt" },
         { id: "agent", name: "Child Agent / Agent Task", detail: "子智能体任务；routed child 主要进入 Composer child surface", icon: "central:robot", asset: "Central robot" },
+        { id: "ask-user", name: "Canonical User Input / user-input.requested", detail: "一级产品交互；所有 Engine 经 adapter 投影后共享，Pi ask_user 只是其中一个 source", icon: "central:bubbles", asset: "Central bubbles", selected: true },
         { id: "dynamic", name: "Dynamic Tool", detail: "没有更强 identity 的普通动态工具", icon: "central:hammer", asset: "Central hammer" },
         { id: "mcp", name: "Generic MCP Tool", detail: "非特化 MCP 调用", icon: "mcp", asset: "VS Code MCP" },
         { id: "github-mcp", name: "GitHub MCP", detail: "mcp__codex_apps__github*；品牌优先", icon: "github", asset: "Simple Icons GitHub" },
@@ -325,6 +345,7 @@
         ["eye", "已查看 tool-projection.png", "", ""],
         ["bolt", "已生成图标审阅图", "", ""],
         ["central:robot", "已运行 1 个子智能体任务", "", ""],
+        ["central:bubbles", "需要你的回答：确认交付偏好", "等待回答", "selected"],
         ["central:hammer", "已使用动态工具", "", ""],
         ["mcp", "已调用 Slack：搜索消息", "", ""],
         ["omnimind", "OmniMind 已创建任务", "", ""],
@@ -351,9 +372,19 @@
         ["omnimind_update_automation", "Update automation"], ["omnimind_update_automation_memory", "Update automation memory"], ["omnimind_report_automation_result", "Report automation result"], ["omnimind_cancel_automation", "Stop automation"],
       ];
 
+      const askEngines = [
+        ["Codex", "item/tool/requestUserInput"],
+        ["Claude", "AskUserQuestion"],
+        ["Cursor", "cursor/ask_question"],
+        ["Grok", "x.ai/ask_user_question"],
+        ["OpenCode", "question.asked"],
+        ["Droid", "session/elicitation"],
+        ["Pi", "ask_user / Extension UI"],
+      ];
+
       const special = [
+        ["central:bubbles", "Canonical User Input", "七种 Engine 的双向澄清请求", "bubbles"],
         ["central:brain-2", "Reasoning", "公开推理内容", "brain-2"],
-        ["central:circle-questionmark", "等待回答", "需要用户输入", "circle-questionmark"],
         ["central:arrow-up-circle", "已提交回答", "用户输入已发送", "arrow-up-circle"],
         ["central:arrow-down-wall", "转入后台", "后台任务状态", "arrow-down-wall"],
         ["check", "普通信息完成", "非工具里程碑", "check"],
@@ -363,8 +394,10 @@
       ];
 
       document.getElementById("callout-icon").innerHTML = icon("alert");
+      document.getElementById("engine-callout-icon").innerHTML = icon("central:bubbles");
       document.getElementById("timeline-list").innerHTML = timeline.map(([kind, text, meta, cls]) => `<div class="timeline-row ${cls}">${icon(kind)}<span>${text}</span>${meta ? `<time>${meta}</time>` : ""}</div>`).join("");
       document.getElementById("mapping-grid").innerHTML = tools.map(tool => `<article class="tool-card ${tool.selected ? "selected" : ""}"><div class="tool-head">${icon(tool.icon, true)}<div><h3>${tool.name}${tool.selected ? '<span class="badge">已选目标</span>' : ""}</h3><p>${tool.detail}</p></div><code>${tool.asset}</code></div><div class="state-strip">${states.map(([id, label, suffix]) => `<div class="state ${id}">${icon(tool.icon)}<div><b>${label}</b><small>${suffix}</small></div></div>`).join("")}</div></article>`).join("");
+      document.getElementById("engine-grid").innerHTML = askEngines.map(([engine, source]) => `<article class="engine-row">${icon("central:bubbles")}<b>${engine}</b><p>${source}</p><code>user-input.requested</code></article>`).join("");
       const catalogRows = (rows, kind) => rows.map(([id, title]) => `<div class="catalog-row">${icon(kind)}<div><b>${id}</b><small>${title}</small></div></div>`).join("");
       document.getElementById("browser-catalog").innerHTML = catalogRows(browserTools, "central:globe");
       document.getElementById("gateway-catalog").innerHTML = catalogRows(gatewayTools, "omnimind");
