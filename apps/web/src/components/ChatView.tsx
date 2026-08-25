@@ -266,6 +266,7 @@ import {
 import {
   buildPendingUserInputAnswers,
   derivePendingUserInputProgress,
+  derivePendingUserInputSinglePresetDestination,
   type PendingUserInputDraftAnswer,
 } from "../pendingUserInput";
 import { selectRightDockState, useRightDockStore } from "../rightDockStore";
@@ -9360,6 +9361,39 @@ export default function ChatView({
     [activePendingUserInputKey],
   );
 
+  const onSelectActivePendingUserInputSinglePreset = useCallback(
+    (questionId: string, nextDraftAnswer: PendingUserInputDraftAnswer) => {
+      if (!activePendingUserInputKey || !activePendingUserInput || !activePendingProgress) return;
+      const currentAnswers =
+        pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey] ??
+        activePendingDraftAnswers;
+      const destination = derivePendingUserInputSinglePresetDestination(
+        activePendingUserInput.questions,
+        currentAnswers,
+        activePendingProgress.questionIndex,
+        questionId,
+        nextDraftAnswer,
+      );
+      onChangeActivePendingUserInputAnswer(questionId, nextDraftAnswer);
+      if (destination?.kind === "question") {
+        setActivePendingUserInputQuestionIndex(destination.questionIndex);
+      } else if (destination?.kind === "review") {
+        setPendingUserInputReviewByRequestId((existing) => ({
+          ...existing,
+          [activePendingUserInputKey]: true,
+        }));
+      }
+    },
+    [
+      activePendingDraftAnswers,
+      activePendingProgress,
+      activePendingUserInput,
+      activePendingUserInputKey,
+      onChangeActivePendingUserInputAnswer,
+      setActivePendingUserInputQuestionIndex,
+    ],
+  );
+
   const onAdvanceActivePendingUserInput = useCallback((): boolean => {
     if (!activePendingUserInput || !activePendingUserInputKey || !activePendingProgress) {
       return false;
@@ -12067,6 +12101,7 @@ export default function ChatView({
                     questionIndex={activePendingQuestionIndex}
                     isReviewing={activePendingIsReviewing}
                     onChangeAnswer={onChangeActivePendingUserInputAnswer}
+                    onSelectSinglePreset={onSelectActivePendingUserInputSinglePreset}
                     onAdvance={onAdvanceActivePendingUserInput}
                     onPrevious={onPreviousActivePendingUserInputQuestion}
                     onEditQuestion={onEditActivePendingUserInputQuestion}

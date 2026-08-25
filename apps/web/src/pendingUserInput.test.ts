@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   buildPendingUserInputAnswers,
   derivePendingUserInputProgress,
+  derivePendingUserInputSinglePresetDestination,
   resolvePendingUserInputAnswer,
   setPendingUserInputCustomText,
-  setPendingUserInputNote,
   togglePendingUserInputCustomSelection,
   togglePendingUserInputOptionSelection,
 } from "./pendingUserInput";
@@ -39,27 +39,22 @@ const freeText = {
 } as const;
 
 describe("canonical user-input answer semantics", () => {
-  it("keeps selected labels, custom text, and note structurally independent", () => {
+  it("keeps selected labels and custom text structurally independent", () => {
     const draft = {
       selectedOptionLabels: ["Implementation", "Tests"],
       customSelected: true,
       customText: "Keep author tests.  ",
-      note: "Protect lifecycle semantics.  ",
     };
     expect(resolvePendingUserInputAnswer(multiple, draft)).toEqual({
       selectedOptionLabels: ["Implementation", "Tests"],
       customText: "Keep author tests.  ",
-      note: "Protect lifecycle semantics.  ",
     });
   });
 
-  it("lets a single custom answer replace the preset and its note", () => {
-    const withPreset = setPendingUserInputNote(
-      single,
-      { selectedOptionLabels: ["Preserve"] },
-      "Only for the current release. ",
-    );
-    const customSelected = togglePendingUserInputCustomSelection(single, withPreset);
+  it("lets a single custom answer replace the preset", () => {
+    const customSelected = togglePendingUserInputCustomSelection(single, {
+      selectedOptionLabels: ["Preserve"],
+    });
     expect(customSelected).toEqual({ customSelected: true, customText: "" });
     expect(
       resolvePendingUserInputAnswer(
@@ -69,23 +64,13 @@ describe("canonical user-input answer semantics", () => {
     ).toEqual({ selectedOptionLabels: [], customText: "A third direction.  " });
   });
 
-  it("clears a single-choice note when the preset changes", () => {
+  it("replaces a single-choice preset without retaining parallel answer state", () => {
     const next = togglePendingUserInputOptionSelection(
       single,
-      { selectedOptionLabels: ["Preserve"], note: "About Preserve" },
+      { selectedOptionLabels: ["Preserve"] },
       "Rebuild",
     );
     expect(next).toEqual({ selectedOptionLabels: ["Rebuild"] });
-  });
-
-  it("clears a multiple-choice note only after the last preset is removed", () => {
-    const oneLeft = togglePendingUserInputOptionSelection(
-      multiple,
-      { selectedOptionLabels: ["Implementation", "Tests"], note: "Shared note" },
-      "Implementation",
-    );
-    expect(oneLeft).toEqual({ selectedOptionLabels: ["Tests"], note: "Shared note" });
-    expect(togglePendingUserInputOptionSelection(multiple, oneLeft, "Tests")).toEqual({});
   });
 
   it("does not let preset toggles erase a multiple-choice custom answer", () => {
@@ -118,24 +103,21 @@ describe("canonical user-input answer semantics", () => {
   it("builds a lossless structured result for every question", () => {
     expect(
       buildPendingUserInputAnswers([single, multiple, freeText], {
-        direction: { selectedOptionLabels: ["Preserve"], note: "No second UI.  " },
+        direction: { selectedOptionLabels: ["Preserve"] },
         delivery: {
           selectedOptionLabels: ["Implementation", "Tests"],
           customSelected: true,
           customText: "Keep author tests.  ",
-          note: "Protect lifecycle.  ",
         },
         constraint: { customText: "No product caps.\nKeep raw text. " },
       }),
     ).toEqual({
       direction: {
         selectedOptionLabels: ["Preserve"],
-        note: "No second UI.  ",
       },
       delivery: {
         selectedOptionLabels: ["Implementation", "Tests"],
         customText: "Keep author tests.  ",
-        note: "Protect lifecycle.  ",
       },
       constraint: {
         selectedOptionLabels: [],
@@ -144,7 +126,7 @@ describe("canonical user-input answer semantics", () => {
     });
   });
 
-  it("derives explicit advancement without auto-submit semantics", () => {
+  it("derives an answer that can advance without implying submission", () => {
     expect(
       derivePendingUserInputProgress(
         [single, freeText],
@@ -158,5 +140,33 @@ describe("canonical user-input answer semantics", () => {
       isComplete: false,
       customSelected: false,
     });
+  });
+
+  it("routes single preset selection to the next question or final Review", () => {
+    expect(
+      derivePendingUserInputSinglePresetDestination([single, freeText], {}, 0, single.id, {
+        selectedOptionLabels: ["Preserve"],
+      }),
+    ).toEqual({ kind: "question", questionIndex: 1 });
+
+    expect(
+      derivePendingUserInputSinglePresetDestination([single], {}, 0, single.id, {
+        selectedOptionLabels: ["Preserve"],
+      }),
+    ).toEqual({ kind: "review" });
+  });
+
+  it("never auto-advances custom or multiple-choice answers", () => {
+    expect(
+      derivePendingUserInputSinglePresetDestination([single], {}, 0, single.id, {
+        customSelected: true,
+        customText: "Complete answer",
+      }),
+    ).toBeNull();
+    expect(
+      derivePendingUserInputSinglePresetDestination([multiple], {}, 0, multiple.id, {
+        selectedOptionLabels: ["Implementation"],
+      }),
+    ).toBeNull();
   });
 });

@@ -148,40 +148,34 @@ describe("AskUserController", () => {
       });
     });
 
-    it("preserves multi selection, custom text, and note as independent facts", () => {
+    it("preserves multi selection and custom text as independent facts", () => {
       const choice = choiceAt(controller.questionnaire, 1);
       controller.toggleChoiceOption(choice, 0);
       controller.toggleChoiceOption(choice, 1);
       controller.setChoiceCustomText(choice, "  another path\n  ");
-      controller.setChoiceNote("features", "  shared constraint  ");
       expect(controller.outcome().responses[1].answer).toMatchObject({
         kind: "choice",
         answered: true,
         selectedValues: ["x", "y"],
         customText: "  another path\n  ",
-        note: "  shared constraint  ",
       });
     });
 
-    it("single custom text clears the preset and its note", () => {
+    it("single custom text clears the preset", () => {
       const choice = choiceAt(controller.questionnaire, 0);
       controller.selectChoiceOption(choice, 0);
-      controller.setChoiceNote("approach", "only A");
       controller.setChoiceCustomText(choice, "  my answer  ");
       expect(controller.outcome().responses[0].answer).toMatchObject({
         selectedValues: [],
         customText: "  my answer  ",
       });
-      expect(controller.getChoiceNote("approach")).toBeUndefined();
     });
 
-    it("removing the final multi preset clears only the note", () => {
+    it("removing the final multi preset preserves custom text", () => {
       const choice = choiceAt(controller.questionnaire, 1);
       controller.toggleChoiceOption(choice, 0);
       controller.setChoiceCustomText(choice, "custom");
-      controller.setChoiceNote("features", "about X");
       controller.toggleChoiceOption(choice, 0);
-      expect(controller.getChoiceNote("features")).toBeUndefined();
       expect(controller.getChoiceCustomText("features")).toBe("custom");
     });
   });

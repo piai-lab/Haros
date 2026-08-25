@@ -593,7 +593,6 @@ describe("wsNativeApi", () => {
         Language: { selectedOptionLabels: [], customText: "TypeScript  " },
         Runtime: {
           selectedOptionLabels: ["Bun"],
-          note: "Use the current stable release.  ",
         },
       },
       createdAt: "2026-02-24T00:00:00.000Z",

@@ -647,7 +647,6 @@ describe("Pi native OmniMind gateway tools", () => {
                 answers: {
                   runtime: {
                     selectedOptionLabels: ["Pi"],
-                    note: "Keep the mature lifecycle.  ",
                   },
                 },
               },
@@ -804,7 +803,6 @@ describe("Pi native OmniMind gateway tools", () => {
           {
             questionId: "runtime",
             selectedValues: ["stable-pi"],
-            note: "Keep the mature lifecycle.  ",
           },
         ],
       });

@@ -39,7 +39,6 @@ export interface AskUserAnswer {
   questionId: string;
   selectedValues: string[];
   customText?: string;
-  note?: string;
 }
 
 export type AskUserResultStatus =
@@ -202,17 +201,10 @@ export function validateAskUserResult(
         `Answer "${answer.questionId}" has an empty custom answer.`,
       );
     }
-    if (answer.note !== undefined && !nonBlank(answer.note)) {
-      throw new AskUserProductValidationError(`Answer "${answer.questionId}" has an empty note.`);
-    }
     if (question.type === "text") {
-      if (
-        answer.selectedValues.length > 0 ||
-        answer.note !== undefined ||
-        answer.customText === undefined
-      ) {
+      if (answer.selectedValues.length > 0 || answer.customText === undefined) {
         throw new AskUserProductValidationError(
-          `Text answer "${answer.questionId}" cannot carry selections or note.`,
+          `Text answer "${answer.questionId}" cannot carry selections.`,
         );
       }
       continue;
@@ -236,11 +228,6 @@ export function validateAskUserResult(
     if (!question.multi && answer.customText !== undefined && answer.selectedValues.length > 0) {
       throw new AskUserProductValidationError(
         `Single-choice answer "${answer.questionId}" cannot combine custom text and a preset.`,
-      );
-    }
-    if (answer.note !== undefined && answer.selectedValues.length === 0) {
-      throw new AskUserProductValidationError(
-        `Answer "${answer.questionId}" cannot carry a note without a preset selection.`,
       );
     }
     if (answer.selectedValues.length === 0 && answer.customText === undefined) {

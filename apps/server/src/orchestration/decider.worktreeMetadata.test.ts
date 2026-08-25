@@ -473,7 +473,7 @@ describe("decider worktree metadata", () => {
 });
 
 describe("decider user input answers", () => {
-  it("preserves raw custom text and notes in the canonical envelope", async () => {
+  it("preserves raw custom text in the canonical envelope", async () => {
     const now = new Date().toISOString();
     const readModel = await createWorktreeThreadReadModel(now);
 
@@ -486,7 +486,7 @@ describe("decider user input answers", () => {
           requestId: ApprovalRequestId.makeUnsafe("request-1"),
           answers: {
             Language: { selectedOptionLabels: [], customText: "TypeScript  " },
-            Runtime: { selectedOptionLabels: ["Bun"], note: "Stable release.  " },
+            Runtime: { selectedOptionLabels: ["Bun"] },
           },
           createdAt: now,
         },
@@ -503,7 +503,7 @@ describe("decider user input answers", () => {
       status: "answered",
       answers: {
         Language: { selectedOptionLabels: [], customText: "TypeScript  " },
-        Runtime: { selectedOptionLabels: ["Bun"], note: "Stable release.  " },
+        Runtime: { selectedOptionLabels: ["Bun"] },
       },
     });
   });

@@ -34,7 +34,7 @@ describe("product Ask User tool", () => {
         requestId: "request-1",
         status: "answered" as const,
         answers: [
-          { questionId: "scope", selectedValues: ["a", "b"], customText: " 自定义  \n", note: " note  " },
+          { questionId: "scope", selectedValues: ["a", "b"], customText: " 自定义  \n" },
           { questionId: "detail", selectedValues: [], customText: "  text\n  " },
         ],
       })),
@@ -51,7 +51,6 @@ describe("product Ask User tool", () => {
       questionId: "scope",
       selectedValues: ["a", "b"],
       customText: " 自定义  \n",
-      note: " note  ",
     });
     expect(result.content).toEqual([{ type: "text", text: JSON.stringify(result.details) }]);
   });

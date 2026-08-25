@@ -20,7 +20,7 @@ function iconMarkup(workEntry: WorkLogEntry): string {
 
 describe("canonical User Input Timeline identity", () => {
   it.each(["codex", "claude", "cursor", "grok", "opencode", "droid", "pi"])(
-    "renders the shared bubbles glyph for %s adapter output",
+    "keeps the bubbles identity independent of the canonical source label for %s",
     (engine) => {
       const markup = iconMarkup(
         entry({

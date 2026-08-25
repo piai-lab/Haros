@@ -71,13 +71,8 @@ export function resolveAskUserResponse(input: {
     const answer = input.response.answers[question.id];
     if (!answer) return null;
     if (answer.customText !== undefined && !meaningful(answer.customText)) return null;
-    if (answer.note !== undefined && !meaningful(answer.note)) return null;
     if (question.type === "text") {
-      if (
-        answer.selectedOptionLabels.length > 0 ||
-        answer.note !== undefined ||
-        answer.customText === undefined
-      ) {
+      if (answer.selectedOptionLabels.length > 0 || answer.customText === undefined) {
         return null;
       }
       answers.push({
@@ -98,13 +93,11 @@ export function resolveAskUserResponse(input: {
     if (!question.multi && selectedValues.length > 1) return null;
     if (!question.multi && selectedValues.length > 0 && answer.customText !== undefined)
       return null;
-    if (answer.note !== undefined && selectedValues.length === 0) return null;
     if (selectedValues.length === 0 && answer.customText === undefined) return null;
     answers.push({
       questionId: question.id,
       selectedValues,
       ...(answer.customText === undefined ? {} : { customText: answer.customText }),
-      ...(answer.note === undefined ? {} : { note: answer.note }),
     });
   }
   return { version: 1, requestId: input.requestId, status: "answered", answers };

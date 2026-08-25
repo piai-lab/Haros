@@ -4,7 +4,6 @@ import {
   derivePendingUserInputProgress,
   resolvePendingUserInputAnswer,
   setPendingUserInputCustomText,
-  setPendingUserInputNote,
   togglePendingUserInputCustomSelection,
   togglePendingUserInputOptionSelection,
   type PendingUserInputDraftAnswer,
@@ -22,6 +21,7 @@ interface PendingUserInputPanelProps {
   questionIndex: number;
   isReviewing: boolean;
   onChangeAnswer: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
+  onSelectSinglePreset: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onAdvance: () => void;
   onPrevious: () => void;
   onEditQuestion: (questionIndex: number) => void;
@@ -41,6 +41,7 @@ export function ComposerPendingUserInputPanel({
   questionIndex,
   isReviewing,
   onChangeAnswer,
+  onSelectSinglePreset,
   onAdvance,
   onPrevious,
   onEditQuestion,
@@ -59,6 +60,7 @@ export function ComposerPendingUserInputPanel({
       questionIndex={questionIndex}
       isReviewing={isReviewing}
       onChangeAnswer={onChangeAnswer}
+      onSelectSinglePreset={onSelectSinglePreset}
       onAdvance={onAdvance}
       onPrevious={onPrevious}
       onEditQuestion={onEditQuestion}
@@ -75,6 +77,7 @@ function ComposerPendingUserInputCard({
   questionIndex,
   isReviewing,
   onChangeAnswer,
+  onSelectSinglePreset,
   onAdvance,
   onPrevious,
   onEditQuestion,
@@ -87,6 +90,7 @@ function ComposerPendingUserInputCard({
   questionIndex: number;
   isReviewing: boolean;
   onChangeAnswer: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
+  onSelectSinglePreset: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onAdvance: () => void;
   onPrevious: () => void;
   onEditQuestion: (questionIndex: number) => void;
@@ -97,6 +101,7 @@ function ComposerPendingUserInputCard({
   const progress = derivePendingUserInputProgress(prompt.questions, answers, questionIndex);
   const activeQuestion = progress.activeQuestion;
   const customInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const questionHeadingRef = useRef<HTMLParagraphElement | null>(null);
   const [expandedPreviewLabel, setExpandedPreviewLabel] = useState<string | null>(null);
   const [suggestionExpanded, setSuggestionExpanded] = useState(false);
 
@@ -110,6 +115,10 @@ function ComposerPendingUserInputCard({
     setExpandedPreviewLabel(null);
     setSuggestionExpanded(false);
   }, [activeQuestion?.id]);
+
+  useEffect(() => {
+    questionHeadingRef.current?.focus({ preventScroll: true });
+  }, [activeQuestion?.id, isReviewing]);
 
   if (!activeQuestion) return null;
   const questionCount = prompt.questions.length;
@@ -127,10 +136,13 @@ function ComposerPendingUserInputCard({
       const option = activeQuestion.options[index];
       if (!option) return;
       event.preventDefault();
-      onChangeAnswer(
-        activeQuestion.id,
-        togglePendingUserInputOptionSelection(activeQuestion, progress.activeDraft, option.label),
+      const nextAnswer = togglePendingUserInputOptionSelection(
+        activeQuestion,
+        progress.activeDraft,
+        option.label,
       );
+      if (activeQuestion.multiSelect) onChangeAnswer(activeQuestion.id, nextAnswer);
+      else onSelectSinglePreset(activeQuestion.id, nextAnswer);
       return;
     }
     if (index === activeQuestion.options.length && activeQuestion.options.length > 0) {
@@ -152,7 +164,11 @@ function ComposerPendingUserInputCard({
           {!isReviewing && activeQuestion.header !== activeQuestion.question ? (
             <p className="mb-0.5 text-[11px] text-muted-foreground/55">{activeQuestion.header}</p>
           ) : null}
-          <p className="text-[13px] font-medium leading-snug text-foreground/90">
+          <p
+            ref={questionHeadingRef}
+            tabIndex={-1}
+            className="text-[13px] font-medium leading-snug text-foreground/90 outline-none"
+          >
             {isReviewing ? t("pendingInput.reviewTitle") : activeQuestion.question}
           </p>
           {isReviewing ? (
@@ -209,6 +225,7 @@ function ComposerPendingUserInputCard({
         </div>
       </div>
 
+      {/* Focused heading announces question text; this live region announces only view progress. */}
       <span className="sr-only" role="status" aria-live="polite">
         {isReviewing
           ? t("pendingInput.reviewAnnouncement")
@@ -257,11 +274,6 @@ function ComposerPendingUserInputCard({
                       {answer.customText}
                     </span>
                   ) : null}
-                  {answer?.note ? (
-                    <span className="block whitespace-pre-wrap break-words text-muted-foreground/70">
-                      {t("pendingInput.noteLabel")}: {answer.note}
-                    </span>
-                  ) : null}
                 </span>
               </button>
             );
@@ -289,16 +301,18 @@ function ComposerPendingUserInputCard({
                   selected={selected}
                   selectionRole={selectionRole}
                   disabled={isResponding}
-                  onSelect={() =>
-                    onChangeAnswer(
-                      activeQuestion.id,
-                      togglePendingUserInputOptionSelection(
-                        activeQuestion,
-                        progress.activeDraft,
-                        option.label,
-                      ),
-                    )
-                  }
+                  onSelect={() => {
+                    const nextAnswer = togglePendingUserInputOptionSelection(
+                      activeQuestion,
+                      progress.activeDraft,
+                      option.label,
+                    );
+                    if (activeQuestion.multiSelect) {
+                      onChangeAnswer(activeQuestion.id, nextAnswer);
+                    } else {
+                      onSelectSinglePreset(activeQuestion.id, nextAnswer);
+                    }
+                  }}
                   trailing={
                     selected ? (
                       <CheckIcon className="mt-0.5 size-3.5 shrink-0 text-[var(--color-text-foreground)]" />
@@ -390,29 +404,6 @@ function ComposerPendingUserInputCard({
               />
             ) : null}
           </div>
-          {progress.selectedOptionLabels.length > 0 ? (
-            <label className="mt-1 grid grid-cols-[72px_minmax(0,1fr)] items-start border-t border-[var(--color-border)] px-9">
-              <span className="pt-2 text-[11px] text-muted-foreground/65">
-                {t("pendingInput.noteLabel")}
-              </span>
-              <textarea
-                rows={1}
-                value={progress.note}
-                onChange={(event) =>
-                  onChangeAnswer(
-                    activeQuestion.id,
-                    setPendingUserInputNote(
-                      activeQuestion,
-                      progress.activeDraft,
-                      event.currentTarget.value,
-                    ),
-                  )
-                }
-                className={cn(INLINE_TEXTAREA_CLASS_NAME, "min-h-9 py-2")}
-                placeholder={t("pendingInput.notePlaceholder")}
-              />
-            </label>
-          ) : null}
         </div>
       ) : (
         <div className="mt-2.5">

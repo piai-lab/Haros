@@ -273,15 +273,14 @@ export type ProviderUserInputAnswers = typeof ProviderUserInputAnswers.Type;
  *
  * Provider-native protocols may still encode answers as a scalar or string array,
  * but the Product command/result boundary keeps preset selections, the user's own
- * answer, and an annotation about selected presets as three independent facts.
+ * answer as independent facts.
  * String fields intentionally use the raw Schema.String contract: consumers may
  * trim only to decide whether a field is empty and must preserve submitted bytes.
  */
 export const CanonicalUserInputAnswer = Schema.Struct({
   selectedOptionLabels: Schema.Array(Schema.String),
   customText: Schema.optional(Schema.String),
-  note: Schema.optional(Schema.String),
-});
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 export type CanonicalUserInputAnswer = typeof CanonicalUserInputAnswer.Type;
 export const CanonicalUserInputAnswers = Schema.Record(Schema.String, CanonicalUserInputAnswer);
 export type CanonicalUserInputAnswers = typeof CanonicalUserInputAnswers.Type;

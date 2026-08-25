@@ -24,25 +24,24 @@ describe("canonical user-input Provider encoding", () => {
       answers: {},
       cancelled: true,
     });
-    expect(
-      encodeCanonicalUserInputResponse({ status: "answered", answers: {} }),
-    ).toEqual({ answers: {}, cancelled: false });
+    expect(encodeCanonicalUserInputResponse({ status: "answered", answers: {} })).toEqual({
+      answers: {},
+      cancelled: false,
+    });
     expect(normalizeCanonicalUserInputResponse({})).toEqual({ status: "answered", answers: {} });
   });
 
-  it("uses a structured wire envelope when custom text and note must remain distinct", () => {
+  it("uses a structured wire envelope when presets and custom text coexist", () => {
     const encoded = encodeCanonicalUserInputAnswers({
       delivery: {
         selectedOptionLabels: ["Implementation", "Tests"],
         customText: "Keep author tests.  ",
-        note: "Protect lifecycle.  ",
       },
     });
     expect(typeof encoded.delivery).toBe("string");
     expect(JSON.parse(encoded.delivery as string)).toEqual({
       selectedOptionLabels: ["Implementation", "Tests"],
       customText: "Keep author tests.  ",
-      note: "Protect lifecycle.  ",
     });
   });
 });

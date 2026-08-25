@@ -16,7 +16,7 @@ import { OmniMindAgentAdapter } from "../src/provider/Services/OmniMindAgentAdap
 import { makeOmniMindAgentAdapterLive } from "../src/provider/Layers/PiAdapter.ts";
 import { userInputPresenterRegistry } from "../src/provider/userInputPresenterRegistry.ts";
 
-const LIVE_NOTE = "live-note  ";
+const LIVE_CUSTOM_TEXT = "live custom answer  \n";
 const TIMEOUT_MS = 120_000;
 
 let failureTarget = "unknown";
@@ -136,7 +136,7 @@ function answeredToolResult(body: unknown) {
         readonly status?: unknown;
         readonly answers?: ReadonlyArray<{
           readonly selectedValues?: unknown;
-          readonly note?: unknown;
+          readonly customText?: unknown;
         }>;
       };
       if (result.version === 1 && result.status === "answered") return result;
@@ -262,9 +262,6 @@ async function run() {
           if (!question || question.kind !== "choice" || question.options.length < 2) {
             throw new Error("Provider did not produce the required choice question");
           }
-          const selectedOption = question.options[0];
-          if (!selectedOption)
-            throw new Error("Choice question did not contain a selectable option");
           failureStage = "answer-settlement";
           yield* adapter.respondToUserInput(
             threadId,
@@ -273,8 +270,8 @@ async function run() {
               status: "answered",
               answers: {
                 [question.id]: {
-                  selectedOptionLabels: [selectedOption.label],
-                  note: LIVE_NOTE,
+                  selectedOptionLabels: [],
+                  customText: LIVE_CUSTOM_TEXT,
                 },
               },
             },
@@ -320,8 +317,8 @@ async function run() {
       modelResponseStatuses.every((status) => status >= 200 && status < 300) &&
       askSchemaCount >= 1 &&
       Array.isArray(selectedValues) &&
-      selectedValues.length === 1 &&
-      result?.answers?.[0]?.note === LIVE_NOTE &&
+      selectedValues.length === 0 &&
+      result?.answers?.[0]?.customText === LIVE_CUSTOM_TEXT &&
       finalText.includes("ASK_REPLAN_OK");
 
     failureStage = "complete";
@@ -337,7 +334,7 @@ async function run() {
         canonicalRequestCount: requestEventCount,
         answeredSettlementObserved,
         structuredToolResultObserved: Boolean(result),
-        losslessNoteObserved: result?.answers?.[0]?.note === LIVE_NOTE,
+        losslessCustomTextObserved: result?.answers?.[0]?.customText === LIVE_CUSTOM_TEXT,
         replanMarkerObserved: finalText.includes("ASK_REPLAN_OK"),
       })}\n`,
     );

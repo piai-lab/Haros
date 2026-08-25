@@ -46,11 +46,10 @@ describe("Ask User Host bridge", () => {
         response: {
           status: "answered",
           answers: {
-            single: { selectedOptionLabels: ["A"], note: " single note  \n" },
+            single: { selectedOptionLabels: ["A"] },
             multi: {
               selectedOptionLabels: ["X", "Y"],
               customText: " custom  \n",
-              note: " multi note  ",
             },
             text: { selectedOptionLabels: [], customText: " line 1\nline 2  " },
           },
@@ -61,12 +60,11 @@ describe("Ask User Host bridge", () => {
       requestId: "request-1",
       status: "answered",
       answers: [
-        { questionId: "single", selectedValues: ["stable-a"], note: " single note  \n" },
+        { questionId: "single", selectedValues: ["stable-a"] },
         {
           questionId: "multi",
           selectedValues: ["stable-x", "stable-y"],
           customText: " custom  \n",
-          note: " multi note  ",
         },
         { questionId: "text", selectedValues: [], customText: " line 1\nline 2  " },
       ],

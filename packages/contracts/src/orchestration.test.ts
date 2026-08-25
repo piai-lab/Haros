@@ -3,6 +3,7 @@ import { it } from "@effect/vitest";
 import { Effect, Schema } from "effect";
 
 import {
+  CanonicalUserInputAnswer,
   ClientOrchestrationCommand,
   DEFAULT_PROVIDER_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
@@ -1160,12 +1161,10 @@ it.effect("preserves structured user-input answers through the RPC JSON codec", 
       answers: {
         single: {
           selectedOptionLabels: ["Purple"],
-          note: "Only for the header.  ",
         },
         multi: {
           selectedOptionLabels: ["Reading", "Coding"],
           customText: "Music\nWriting  ",
-          note: "Keep these together. ",
         },
       },
       createdAt: "2026-05-19T16:14:28.202Z",
@@ -1176,14 +1175,40 @@ it.effect("preserves structured user-input answers through the RPC JSON codec", 
       {
         single: {
           selectedOptionLabels: ["Purple"],
-          note: "Only for the header.  ",
         },
         multi: {
           selectedOptionLabels: ["Reading", "Coding"],
           customText: "Music\nWriting  ",
-          note: "Keep these together. ",
         },
       },
     );
+  }),
+);
+
+it.effect("rejects retired and unknown canonical answer fields without stripping them", () =>
+  Effect.gen(function* () {
+    const decode = Schema.decodeUnknownEffect(CanonicalUserInputAnswer);
+    const retired = yield* Effect.exit(decode({ selectedOptionLabels: ["A"], note: "legacy" }));
+    const unknown = yield* Effect.exit(
+      decode({ selectedOptionLabels: ["A"], explanation: "hidden" }),
+    );
+    assert.equal(retired._tag, "Failure");
+    assert.equal(unknown._tag, "Failure");
+
+    const nestedRetired = yield* Effect.exit(
+      Schema.decodeUnknownEffect(ClientOrchestrationCommand)({
+        type: "thread.user-input.respond",
+        commandId: "cmd-strict-answer",
+        threadId: "thread-1",
+        requestId: "req-1",
+        answers: { q1: { selectedOptionLabels: ["A"], note: "legacy" } },
+        createdAt: "2026-05-19T16:14:28.202Z",
+      }),
+    );
+    assert.equal(nestedRetired._tag, "Failure");
+
+    const raw = " line one\nline two  ";
+    const accepted = yield* decode({ selectedOptionLabels: ["A"], customText: raw });
+    assert.deepStrictEqual(accepted, { selectedOptionLabels: ["A"], customText: raw });
   }),
 );

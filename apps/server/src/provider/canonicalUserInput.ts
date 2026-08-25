@@ -17,7 +17,7 @@ function hasMeaningfulText(value: string | undefined): value is string {
 /**
  * Native question protocols commonly accept only one string or a string array.
  * Keep their compact legacy shape when it is lossless. When custom text coexists
- * with presets, or a note is present, use one explicit JSON envelope so the model
+ * with presets, use one explicit JSON envelope so the model
  * receives every raw field without Host interpretation or string concatenation.
  */
 export function encodeCanonicalUserInputAnswer(
@@ -25,12 +25,10 @@ export function encodeCanonicalUserInputAnswer(
 ): ProviderUserInputAnswer {
   const selectedOptionLabels = [...answer.selectedOptionLabels];
   const customText = hasMeaningfulText(answer.customText) ? answer.customText : undefined;
-  const note = hasMeaningfulText(answer.note) ? answer.note : undefined;
-  if (note !== undefined || (customText !== undefined && selectedOptionLabels.length > 0)) {
+  if (customText !== undefined && selectedOptionLabels.length > 0) {
     return JSON.stringify({
       selectedOptionLabels,
       ...(customText !== undefined ? { customText } : {}),
-      ...(note !== undefined ? { note } : {}),
     });
   }
   if (customText !== undefined) return customText;
