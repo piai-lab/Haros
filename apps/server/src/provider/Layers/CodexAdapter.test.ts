@@ -26,12 +26,33 @@ import { ServerConfig } from "../../config.ts";
 import { ProviderAdapterValidationError } from "../Errors.ts";
 import { CodexAdapter } from "../Services/CodexAdapter.ts";
 import { ProviderSessionDirectory } from "../Services/ProviderSessionDirectory.ts";
-import { makeCodexAdapterLive } from "./CodexAdapter.ts";
+import { makeCodexAdapterLive, normalizeCodexTokenUsage } from "./CodexAdapter.ts";
 
 const asThreadId = (value: string): ThreadId => ThreadId.makeUnsafe(value);
 const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
 const asEventId = (value: string): EventId => EventId.makeUnsafe(value);
 const asItemId = (value: string): ProviderItemId => ProviderItemId.makeUnsafe(value);
+
+it("rejects contradictory or malformed Codex token breakdowns", () => {
+  const base = {
+    total: { inputTokens: 100, cachedInputTokens: 60, outputTokens: 20, totalTokens: 180 },
+    last: { inputTokens: 20, cachedInputTokens: 10, outputTokens: 5, totalTokens: 35 },
+  };
+  assert.equal(
+    normalizeCodexTokenUsage({
+      ...base,
+      total: { ...base.total, cachedInputTokens: 101 },
+    })?.totalTokenBreakdown,
+    undefined,
+  );
+  assert.equal(
+    normalizeCodexTokenUsage({
+      ...base,
+      last: { ...base.last, outputTokens: -1 },
+    })?.lastTokenBreakdown,
+    undefined,
+  );
+});
 
 class FakeCodexManager extends CodexAppServerManager {
   public startSessionImpl = vi.fn(
@@ -1578,15 +1599,17 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
         usedTokens: 126,
         totalProcessedTokens: 11_839,
         maxTokens: 258_400,
-        inputTokens: 120,
-        cachedInputTokens: 0,
-        outputTokens: 6,
-        reasoningOutputTokens: 0,
         lastUsedTokens: 126,
-        lastInputTokens: 120,
-        lastCachedInputTokens: 0,
-        lastOutputTokens: 6,
-        lastReasoningOutputTokens: 0,
+        totalTokenBreakdown: {
+          cachedInputTokens: 3456,
+          uncachedInputTokens: 8377,
+          outputTokens: 6,
+        },
+        lastTokenBreakdown: {
+          cachedInputTokens: 0,
+          uncachedInputTokens: 120,
+          outputTokens: 6,
+        },
         compactsAutomatically: true,
       });
     }),

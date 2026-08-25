@@ -57,6 +57,30 @@ function finiteClaudeTokenCountOrZero(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
+function finiteNonNegativeClaudeTokenCount(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+function claudeTokenBreakdownFromRawUsage(usage: Record<string, unknown>) {
+  const baseInputTokens = finiteNonNegativeClaudeTokenCount(usage.input_tokens);
+  const cacheCreationTokens = finiteNonNegativeClaudeTokenCount(usage.cache_creation_input_tokens);
+  const cacheReadTokens = finiteNonNegativeClaudeTokenCount(usage.cache_read_input_tokens);
+  const outputTokens = finiteNonNegativeClaudeTokenCount(usage.output_tokens);
+  if (
+    baseInputTokens === undefined ||
+    cacheCreationTokens === undefined ||
+    cacheReadTokens === undefined ||
+    outputTokens === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    cachedInputTokens: cacheReadTokens,
+    uncachedInputTokens: baseInputTokens + cacheCreationTokens,
+    outputTokens,
+  } as const;
+}
+
 export function claudePromptTokensFromRawUsage(usage: Record<string, unknown>): number {
   return (
     finiteClaudeTokenCountOrZero(usage.input_tokens) +
@@ -94,8 +118,12 @@ export function normalizeClaudeTokenUsage(
   }
 
   const usage = value as Record<string, unknown>;
-  const inputTokens = claudePromptTokensFromRawUsage(usage);
+  const baseInputTokens = finiteClaudeTokenCountOrZero(usage.input_tokens);
+  const cacheCreationTokens = finiteClaudeTokenCountOrZero(usage.cache_creation_input_tokens);
+  const cacheReadTokens = finiteClaudeTokenCountOrZero(usage.cache_read_input_tokens);
+  const inputTokens = baseInputTokens + cacheCreationTokens + cacheReadTokens;
   const outputTokens = finiteClaudeTokenCountOrZero(usage.output_tokens);
+  const tokenBreakdown = claudeTokenBreakdownFromRawUsage(usage);
   const derivedTotalProcessedTokens = inputTokens + outputTokens;
   const totalProcessedTokens =
     (typeof usage.total_tokens === "number" && Number.isFinite(usage.total_tokens)
@@ -113,8 +141,7 @@ export function normalizeClaudeTokenUsage(
     usedTokens,
     lastUsedTokens: usedTokens,
     ...(totalProcessedTokens > usedTokens ? { totalProcessedTokens } : {}),
-    ...(inputTokens > 0 ? { inputTokens } : {}),
-    ...(outputTokens > 0 ? { outputTokens } : {}),
+    ...(tokenBreakdown ? { lastTokenBreakdown: tokenBreakdown } : {}),
     ...(maxTokens !== undefined ? { maxTokens } : {}),
     ...(typeof usage.tool_uses === "number" && Number.isFinite(usage.tool_uses)
       ? { toolUses: usage.tool_uses }
@@ -212,18 +239,6 @@ export function snapshotFromClaudeContextUsage(
     positiveFiniteNumber(usage.rawMaxTokens);
   const usedTokens = Math.max(0, Math.round(usage.totalTokens));
   const rawApiUsage = usage.apiUsage as Record<string, unknown> | undefined;
-  const inputTokens = Math.max(
-    0,
-    Math.round(rawApiUsage ? claudePromptTokensFromRawUsage(rawApiUsage) : 0),
-  );
-  const cachedInputTokens = Math.max(
-    0,
-    Math.round(finiteClaudeTokenCountOrZero(rawApiUsage?.cache_read_input_tokens)),
-  );
-  const outputTokens = Math.max(
-    0,
-    Math.round(finiteClaudeTokenCountOrZero(rawApiUsage?.output_tokens)),
-  );
   return {
     usedTokens:
       effectiveMaxTokens !== undefined ? Math.min(usedTokens, effectiveMaxTokens) : usedTokens,
@@ -237,11 +252,6 @@ export function snapshotFromClaudeContextUsage(
     ...(totalProcessedTokens !== undefined && totalProcessedTokens > usedTokens
       ? { totalProcessedTokens }
       : {}),
-    ...(inputTokens > 0 ? { inputTokens, lastInputTokens: inputTokens } : {}),
-    ...(cachedInputTokens > 0
-      ? { cachedInputTokens, lastCachedInputTokens: cachedInputTokens }
-      : {}),
-    ...(outputTokens > 0 ? { outputTokens, lastOutputTokens: outputTokens } : {}),
     compactsAutomatically: usage.isAutoCompactEnabled,
   };
 }

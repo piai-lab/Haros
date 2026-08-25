@@ -274,7 +274,7 @@ function providerErrorMapsToWarning(event: ProviderEvent): boolean {
   );
 }
 
-function normalizeCodexTokenUsage(value: unknown): ThreadTokenUsageSnapshot | undefined {
+export function normalizeCodexTokenUsage(value: unknown): ThreadTokenUsageSnapshot | undefined {
   const usage = asObject(value);
   const totalUsage = asObject(usage?.total_token_usage ?? usage?.total);
   const lastUsage = asObject(usage?.last_token_usage ?? usage?.last);
@@ -288,12 +288,34 @@ function normalizeCodexTokenUsage(value: unknown): ThreadTokenUsageSnapshot | un
   }
 
   const maxTokens = asNumber(usage?.model_context_window) ?? asNumber(usage?.modelContextWindow);
-  const inputTokens = asNumber(lastUsage?.input_tokens) ?? asNumber(lastUsage?.inputTokens);
-  const cachedInputTokens =
-    asNumber(lastUsage?.cached_input_tokens) ?? asNumber(lastUsage?.cachedInputTokens);
-  const outputTokens = asNumber(lastUsage?.output_tokens) ?? asNumber(lastUsage?.outputTokens);
-  const reasoningOutputTokens =
-    asNumber(lastUsage?.reasoning_output_tokens) ?? asNumber(lastUsage?.reasoningOutputTokens);
+  const breakdown = (record: Record<string, unknown> | undefined) => {
+    const inputTokens = asNumber(record?.input_tokens) ?? asNumber(record?.inputTokens);
+    const cachedInputTokens =
+      asNumber(record?.cached_input_tokens) ?? asNumber(record?.cachedInputTokens);
+    const outputTokens = asNumber(record?.output_tokens) ?? asNumber(record?.outputTokens);
+    if (
+      inputTokens === undefined ||
+      cachedInputTokens === undefined ||
+      outputTokens === undefined ||
+      !Number.isInteger(inputTokens) ||
+      !Number.isInteger(cachedInputTokens) ||
+      !Number.isInteger(outputTokens) ||
+      inputTokens < 0 ||
+      cachedInputTokens < 0 ||
+      outputTokens < 0 ||
+      cachedInputTokens > inputTokens
+    ) {
+      return undefined;
+    }
+    return {
+      cachedInputTokens,
+      uncachedInputTokens: inputTokens - cachedInputTokens,
+      // Codex reports reasoning as a subset of output_tokens.
+      outputTokens,
+    };
+  };
+  const totalTokenBreakdown = breakdown(totalUsage);
+  const lastTokenBreakdown = breakdown(lastUsage);
 
   return {
     usedTokens,
@@ -301,17 +323,9 @@ function normalizeCodexTokenUsage(value: unknown): ThreadTokenUsageSnapshot | un
       ? { totalProcessedTokens }
       : {}),
     ...(maxTokens !== undefined ? { maxTokens } : {}),
-    ...(inputTokens !== undefined ? { inputTokens } : {}),
-    ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
-    ...(outputTokens !== undefined ? { outputTokens } : {}),
-    ...(reasoningOutputTokens !== undefined ? { reasoningOutputTokens } : {}),
     ...(usedTokens !== undefined ? { lastUsedTokens: usedTokens } : {}),
-    ...(inputTokens !== undefined ? { lastInputTokens: inputTokens } : {}),
-    ...(cachedInputTokens !== undefined ? { lastCachedInputTokens: cachedInputTokens } : {}),
-    ...(outputTokens !== undefined ? { lastOutputTokens: outputTokens } : {}),
-    ...(reasoningOutputTokens !== undefined
-      ? { lastReasoningOutputTokens: reasoningOutputTokens }
-      : {}),
+    ...(totalTokenBreakdown ? { totalTokenBreakdown } : {}),
+    ...(lastTokenBreakdown ? { lastTokenBreakdown } : {}),
     compactsAutomatically: true,
   };
 }

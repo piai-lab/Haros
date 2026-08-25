@@ -317,6 +317,18 @@ const ThreadMetadataUpdatedPayload = Schema.Struct({
 });
 export type ThreadMetadataUpdatedPayload = typeof ThreadMetadataUpdatedPayload.Type;
 
+/**
+ * Provider-neutral processed-token buckets. The three values are mutually
+ * exclusive: cache writes belong to uncached input, and generated reasoning is
+ * included in output exactly once by the provider adapter.
+ */
+export const TokenUsageBreakdown = Schema.Struct({
+  cachedInputTokens: NonNegativeInt,
+  uncachedInputTokens: NonNegativeInt,
+  outputTokens: NonNegativeInt,
+});
+export type TokenUsageBreakdown = typeof TokenUsageBreakdown.Type;
+
 export const ThreadTokenUsageSnapshot = Schema.Struct({
   usedTokens: NonNegativeInt,
   usedPercent: Schema.optional(
@@ -324,15 +336,9 @@ export const ThreadTokenUsageSnapshot = Schema.Struct({
   ),
   totalProcessedTokens: Schema.optional(NonNegativeInt),
   maxTokens: Schema.optional(PositiveInt),
-  inputTokens: Schema.optional(NonNegativeInt),
-  cachedInputTokens: Schema.optional(NonNegativeInt),
-  outputTokens: Schema.optional(NonNegativeInt),
-  reasoningOutputTokens: Schema.optional(NonNegativeInt),
   lastUsedTokens: Schema.optional(NonNegativeInt),
-  lastInputTokens: Schema.optional(NonNegativeInt),
-  lastCachedInputTokens: Schema.optional(NonNegativeInt),
-  lastOutputTokens: Schema.optional(NonNegativeInt),
-  lastReasoningOutputTokens: Schema.optional(NonNegativeInt),
+  totalTokenBreakdown: Schema.optional(TokenUsageBreakdown),
+  lastTokenBreakdown: Schema.optional(TokenUsageBreakdown),
   toolUses: Schema.optional(NonNegativeInt),
   durationMs: Schema.optional(NonNegativeInt),
   compactsAutomatically: Schema.optional(Schema.Boolean),

@@ -202,6 +202,7 @@ interface OpenCodeSessionContext {
   readonly turns: Array<OpenCodeTurnSnapshot>;
   readonly modelContextLimitBySlug: Map<string, number>;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
+  cumulativeTokenBreakdown: ThreadTokenUsageSnapshot["totalTokenBreakdown"];
   lastEmittedTokenUsageKey: string | undefined;
   latestTurnCostUsd: number | undefined;
   activeTurnId: TurnId | undefined;
@@ -1178,9 +1179,8 @@ export function normalizeOpenCodeTokenUsage(
 
   const { inputTokens, outputTokens, reasoningOutputTokens, cacheReadTokens, cacheWriteTokens } =
     normalizedTokens;
-  const cachedInputTokens = cacheReadTokens + cacheWriteTokens;
   const totalProcessedTokens =
-    inputTokens + cachedInputTokens + outputTokens + reasoningOutputTokens;
+    inputTokens + cacheReadTokens + cacheWriteTokens + outputTokens + reasoningOutputTokens;
   if (totalProcessedTokens <= 0) {
     return undefined;
   }
@@ -1195,16 +1195,32 @@ export function normalizeOpenCodeTokenUsage(
     usedTokens,
     totalProcessedTokens,
     ...(normalizedMaxTokens !== undefined ? { maxTokens: normalizedMaxTokens } : {}),
-    inputTokens,
-    cachedInputTokens,
-    outputTokens,
-    reasoningOutputTokens,
     lastUsedTokens: usedTokens,
-    lastInputTokens: inputTokens,
-    lastCachedInputTokens: cachedInputTokens,
-    lastOutputTokens: outputTokens,
-    lastReasoningOutputTokens: reasoningOutputTokens,
+    lastTokenBreakdown: {
+      cachedInputTokens: cacheReadTokens,
+      uncachedInputTokens: inputTokens + cacheWriteTokens,
+      outputTokens: outputTokens + reasoningOutputTokens,
+    },
   };
+}
+
+function accumulateOpenCodeTokenUsage(
+  context: OpenCodeSessionContext,
+  usage: ThreadTokenUsageSnapshot,
+): ThreadTokenUsageSnapshot {
+  const last = usage.lastTokenBreakdown;
+  if (!last) {
+    return usage;
+  }
+  const totalTokenBreakdown = {
+    cachedInputTokens:
+      (context.cumulativeTokenBreakdown?.cachedInputTokens ?? 0) + last.cachedInputTokens,
+    uncachedInputTokens:
+      (context.cumulativeTokenBreakdown?.uncachedInputTokens ?? 0) + last.uncachedInputTokens,
+    outputTokens: (context.cumulativeTokenBreakdown?.outputTokens ?? 0) + last.outputTokens,
+  };
+  context.cumulativeTokenBreakdown = totalTokenBreakdown;
+  return { ...usage, totalTokenBreakdown };
 }
 
 function buildOpenCodeTokenUsageKey(input: {
@@ -1877,10 +1893,13 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           selectedModel !== undefined
             ? context.modelContextLimitBySlug.get(selectedModel)
             : undefined;
-        const normalizedUsage = normalizeOpenCodeTokenUsage(
+        const rawUsage = normalizeOpenCodeTokenUsage(
           (input.assistantEntry.info as Partial<AssistantMessage>).tokens,
           maxTokens,
         );
+        const normalizedUsage = rawUsage
+          ? accumulateOpenCodeTokenUsage(context, rawUsage)
+          : undefined;
         if (normalizedUsage !== undefined) {
           context.lastKnownTokenUsage = normalizedUsage;
           yield* emit(context, {
@@ -3035,7 +3054,10 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
               selectedModel !== undefined
                 ? context.modelContextLimitBySlug.get(selectedModel)
                 : undefined;
-            const normalizedUsage = normalizeOpenCodeTokenUsage(event.properties.tokens, maxTokens);
+            const rawUsage = normalizeOpenCodeTokenUsage(event.properties.tokens, maxTokens);
+            const normalizedUsage = rawUsage
+              ? accumulateOpenCodeTokenUsage(context, rawUsage)
+              : undefined;
             if (normalizedUsage !== undefined) {
               context.lastKnownTokenUsage = normalizedUsage;
               yield* emit(context, {
@@ -3775,6 +3797,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                   turns: [],
                   modelContextLimitBySlug: started.modelContextLimitBySlug,
                   lastKnownTokenUsage: undefined,
+                  cumulativeTokenBreakdown: undefined,
                   lastEmittedTokenUsageKey: undefined,
                   latestTurnCostUsd: undefined,
                   activeTurnId: undefined,

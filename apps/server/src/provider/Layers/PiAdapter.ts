@@ -836,14 +836,28 @@ function makeSessionSnapshot(
   };
 }
 
-function normalizeTokenUsage(
+export function normalizePiTokenUsage(
   stats: ReturnType<PiAgentSession["getSessionStats"]>,
   contextWindow?: number | null,
+  previous?: ThreadTokenUsageSnapshot,
+  useCurrentAsLastWhenPreviousMissing = false,
 ): ThreadTokenUsageSnapshot | undefined {
-  const inputTokens = stats.tokens.input;
-  const cachedInputTokens = stats.tokens.cacheRead;
-  const outputTokens = stats.tokens.output;
-  const totalProcessedTokens = stats.tokens.total;
+  const rawInputTokens = nonNegativeFiniteNumber(stats.tokens.input);
+  const rawCacheReadTokens = nonNegativeFiniteNumber(stats.tokens.cacheRead);
+  const rawCacheWriteTokens = nonNegativeFiniteNumber(stats.tokens.cacheWrite);
+  const rawOutputTokens = nonNegativeFiniteNumber(stats.tokens.output);
+  const rawTotalProcessedTokens = nonNegativeFiniteNumber(stats.tokens.total);
+  const hasValidBreakdown =
+    rawInputTokens !== undefined &&
+    rawCacheReadTokens !== undefined &&
+    rawCacheWriteTokens !== undefined &&
+    rawOutputTokens !== undefined;
+  const inputTokens = hasValidBreakdown ? Math.round(rawInputTokens) : 0;
+  const cacheReadTokens = hasValidBreakdown ? Math.round(rawCacheReadTokens) : 0;
+  const cacheWriteTokens = hasValidBreakdown ? Math.round(rawCacheWriteTokens) : 0;
+  const outputTokens = hasValidBreakdown ? Math.round(rawOutputTokens) : 0;
+  const totalProcessedTokens =
+    rawTotalProcessedTokens === undefined ? 0 : Math.round(rawTotalProcessedTokens);
   const contextUsage = stats.contextUsage;
   const contextUsageWindowValue = positiveFiniteNumber(contextUsage?.contextWindow);
   const contextUsageWindow =
@@ -871,25 +885,55 @@ function normalizeTokenUsage(
   if (
     usedTokens <= 0 &&
     inputTokens <= 0 &&
-    cachedInputTokens <= 0 &&
+    cacheReadTokens <= 0 &&
+    cacheWriteTokens <= 0 &&
     outputTokens <= 0 &&
     maxTokens === undefined &&
     usedPercent === undefined
   ) {
     return undefined;
   }
+  const totalTokenBreakdown = hasValidBreakdown
+    ? {
+        cachedInputTokens: cacheReadTokens,
+        uncachedInputTokens: inputTokens + cacheWriteTokens,
+        outputTokens,
+      }
+    : undefined;
+  const previousBreakdown = previous?.totalTokenBreakdown;
+  const lastTokenBreakdown =
+    totalTokenBreakdown && previousBreakdown
+      ? {
+          cachedInputTokens:
+            totalTokenBreakdown.cachedInputTokens >= previousBreakdown.cachedInputTokens
+              ? totalTokenBreakdown.cachedInputTokens - previousBreakdown.cachedInputTokens
+              : totalTokenBreakdown.cachedInputTokens,
+          uncachedInputTokens:
+            totalTokenBreakdown.uncachedInputTokens >= previousBreakdown.uncachedInputTokens
+              ? totalTokenBreakdown.uncachedInputTokens - previousBreakdown.uncachedInputTokens
+              : totalTokenBreakdown.uncachedInputTokens,
+          outputTokens:
+            totalTokenBreakdown.outputTokens >= previousBreakdown.outputTokens
+              ? totalTokenBreakdown.outputTokens - previousBreakdown.outputTokens
+              : totalTokenBreakdown.outputTokens,
+        }
+      : totalTokenBreakdown && useCurrentAsLastWhenPreviousMissing
+        ? totalTokenBreakdown
+        : undefined;
+  const hasLastBreakdown =
+    lastTokenBreakdown !== undefined &&
+    lastTokenBreakdown.cachedInputTokens +
+      lastTokenBreakdown.uncachedInputTokens +
+      lastTokenBreakdown.outputTokens >
+      0;
   return {
     usedTokens,
     ...(usedPercent !== undefined ? { usedPercent } : {}),
     ...(totalProcessedTokens > usedTokens ? { totalProcessedTokens } : {}),
-    inputTokens,
-    cachedInputTokens,
-    outputTokens,
+    ...(totalTokenBreakdown ? { totalTokenBreakdown } : {}),
+    ...(hasLastBreakdown ? { lastTokenBreakdown } : {}),
     ...(maxTokens !== undefined ? { maxTokens } : {}),
     lastUsedTokens: usedTokens,
-    lastInputTokens: inputTokens,
-    lastCachedInputTokens: cachedInputTokens,
-    lastOutputTokens: outputTokens,
   };
 }
 
@@ -2780,7 +2824,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         }
         case "agent_end": {
           const stats = context.runtime.session.getSessionStats();
-          const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
+          const usage = normalizePiTokenUsage(
+            stats,
+            context.runtime.session.model?.contextWindow,
+            context.lastKnownTokenUsage,
+            true,
+          );
           context.lastKnownTokenUsage = usage;
           const turnId = context.activeTurnId;
           const errorMessage = context.runtime.session.agent.state.errorMessage;
@@ -2808,7 +2857,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         case "agent_settled": {
           if (!context.activeTurnId) return;
           const stats = context.runtime.session.getSessionStats();
-          const usage = normalizeTokenUsage(stats, context.runtime.session.model?.contextWindow);
+          const usage = normalizePiTokenUsage(
+            stats,
+            context.runtime.session.model?.contextWindow,
+            context.lastKnownTokenUsage,
+            true,
+          );
           context.lastKnownTokenUsage = usage;
           const errorMessage = context.runtime.session.agent.state.errorMessage;
           const failure = errorMessage ? classifyPiTurnFailure(errorMessage) : undefined;

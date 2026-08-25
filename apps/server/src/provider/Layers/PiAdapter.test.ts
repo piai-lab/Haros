@@ -40,6 +40,7 @@ import {
   makePiHostSystemPrompt,
   makeOmniMindEngineSystemPrompt,
   makePiRuntimeEventBase,
+  normalizePiTokenUsage,
   makePiUserInputOptions,
   makePiAdapterLive,
   piModelHasConfiguredCredentials,
@@ -49,6 +50,51 @@ import {
   makeOmniMindAgentAdapterLive,
   promptRequiredAgentGatewayToolNames,
 } from "./PiAdapter";
+
+describe("normalizePiTokenUsage", () => {
+  const stats = (
+    input: number,
+    cacheRead: number,
+    cacheWrite: number,
+    output: number,
+    total: number,
+  ) =>
+    ({
+      tokens: { input, cacheRead, cacheWrite, output, total },
+      contextUsage: undefined,
+    }) as Parameters<typeof normalizePiTokenUsage>[0];
+
+  it("normalizes cumulative cache read/write and reset-aware last-request deltas", () => {
+    const first = normalizePiTokenUsage(stats(100, 60, 20, 30, 210), undefined, undefined, true);
+    expect(first?.totalTokenBreakdown).toEqual({
+      cachedInputTokens: 60,
+      uncachedInputTokens: 120,
+      outputTokens: 30,
+    });
+    expect(first?.lastTokenBreakdown).toEqual(first?.totalTokenBreakdown);
+
+    const second = normalizePiTokenUsage(stats(150, 90, 25, 45, 310), undefined, first, true);
+    expect(second?.lastTokenBreakdown).toEqual({
+      cachedInputTokens: 30,
+      uncachedInputTokens: 55,
+      outputTokens: 15,
+    });
+    expect(
+      normalizePiTokenUsage(stats(150, 90, 25, 45, 310), undefined, second, true)
+        ?.lastTokenBreakdown,
+    ).toBeUndefined();
+    expect(
+      normalizePiTokenUsage(stats(10, 5, 2, 3, 20), undefined, second, true)?.lastTokenBreakdown,
+    ).toEqual({ cachedInputTokens: 5, uncachedInputTokens: 12, outputTokens: 3 });
+  });
+
+  it("omits an invalid breakdown without inventing uncached input", () => {
+    expect(normalizePiTokenUsage(stats(-1, 20, 5, 10, 100), undefined, undefined, true)).toEqual({
+      usedTokens: 100,
+      lastUsedTokens: 100,
+    });
+  });
+});
 
 describe("Pi native resource projection", () => {
   it("keeps native slash input in Pi and injects OmniMind policy through its system prompt", () => {

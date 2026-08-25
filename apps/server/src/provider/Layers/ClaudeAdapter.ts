@@ -42,6 +42,7 @@ import {
   type ProviderSendTurnInput,
   type ProviderSession,
   type ThreadTokenUsageSnapshot,
+  type TokenUsageBreakdown,
   type ProviderUserInputAnswers,
   type RuntimeContentStreamKind,
   type RuntimeSessionState,
@@ -360,6 +361,7 @@ interface ClaudeSessionContext {
   lastKnownAutoCompactThreshold: number | undefined;
   contextUsageControlEnabled: boolean;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
+  cumulativeTokenBreakdown: TokenUsageBreakdown | undefined;
   lastAssistantUuid: string | undefined;
   lastThreadStartedId: string | undefined;
   // Original API model id the runtime rerouted away from (safeguard refusal
@@ -2711,9 +2713,36 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           : undefined;
         const lastGoodUsage = liveSnapshot ?? context.lastKnownTokenUsage;
         const maxTokens = claudeEffectiveContextBudget(context);
-        const usageSnapshot: ThreadTokenUsageSnapshot | undefined = lastGoodUsage
+        const displayUsage: ThreadTokenUsageSnapshot | undefined = lastGoodUsage
           ? mergeClaudeTokenUsageSnapshot(lastGoodUsage, accumulatedSnapshot, maxTokens)
           : accumulatedSnapshot;
+        const lastTokenBreakdown = accumulatedSnapshot?.lastTokenBreakdown;
+        const totalTokenBreakdown = lastTokenBreakdown
+          ? {
+              cachedInputTokens:
+                (context.cumulativeTokenBreakdown?.cachedInputTokens ?? 0) +
+                lastTokenBreakdown.cachedInputTokens,
+              uncachedInputTokens:
+                (context.cumulativeTokenBreakdown?.uncachedInputTokens ?? 0) +
+                lastTokenBreakdown.uncachedInputTokens,
+              outputTokens:
+                (context.cumulativeTokenBreakdown?.outputTokens ?? 0) +
+                lastTokenBreakdown.outputTokens,
+            }
+          : context.cumulativeTokenBreakdown;
+        if (totalTokenBreakdown) {
+          context.cumulativeTokenBreakdown = totalTokenBreakdown;
+        }
+        const usageSnapshot: ThreadTokenUsageSnapshot | undefined = displayUsage
+          ? {
+              ...displayUsage,
+              ...(totalTokenBreakdown ? { totalTokenBreakdown } : {}),
+              ...(lastTokenBreakdown ? { lastTokenBreakdown } : {}),
+            }
+          : undefined;
+        if (usageSnapshot) {
+          context.lastKnownTokenUsage = usageSnapshot;
+        }
 
         // A safeguard reroute only applies to the turn that just finished.
         // Restore the user-selected model so subsequent turns do not silently
@@ -2967,6 +2996,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           // only; subagent completion must not poll them.
           contextUsageControlEnabled: false,
           lastKnownTokenUsage: undefined,
+          cumulativeTokenBreakdown: undefined,
           lastAssistantUuid: undefined,
           lastThreadStartedId: undefined,
           rerouteOriginalApiModelId: undefined,
@@ -5346,6 +5376,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             lastKnownAutoCompactThreshold: requestedAutoCompactWindowTokens,
             contextUsageControlEnabled: true,
             lastKnownTokenUsage: undefined,
+            cumulativeTokenBreakdown: undefined,
             lastAssistantUuid: resumeState?.resumeSessionAt,
             lastThreadStartedId: undefined,
             rerouteOriginalApiModelId: undefined,

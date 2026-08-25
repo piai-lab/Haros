@@ -6080,8 +6080,16 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
           usage: {
             usedTokens: 24542,
             lastUsedTokens: 24542,
-            inputTokens: 23863,
-            outputTokens: 679,
+            totalTokenBreakdown: {
+              cachedInputTokens: 21144,
+              uncachedInputTokens: 2719,
+              outputTokens: 679,
+            },
+            lastTokenBreakdown: {
+              cachedInputTokens: 21144,
+              uncachedInputTokens: 2719,
+              outputTokens: 679,
+            },
             maxTokens: 200000,
           },
         });
@@ -8796,8 +8804,8 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       if (usageEvent._tag === "Some" && usageEvent.value.type === "thread.token-usage.updated") {
         assert.equal(usageEvent.value.payload.usage.usedTokens, 120_000);
         assert.equal(usageEvent.value.payload.usage.maxTokens, 200_000);
-        assert.equal(usageEvent.value.payload.usage.inputTokens, 120_000);
-        assert.equal(usageEvent.value.payload.usage.cachedInputTokens, 105_000);
+        assert.equal(usageEvent.value.payload.usage.totalTokenBreakdown, undefined);
+        assert.equal(usageEvent.value.payload.usage.lastTokenBreakdown, undefined);
         assert.equal(usageEvent.value.payload.usage.compactsAutomatically, true);
       }
       assert.equal(harness.query.getContextUsageCalls, 1);

@@ -45,8 +45,11 @@ describe("Claude token arithmetic", () => {
       expected: {
         usedTokens: 24_542,
         lastUsedTokens: 24_542,
-        inputTokens: 23_863,
-        outputTokens: 679,
+        lastTokenBreakdown: {
+          cachedInputTokens: 21_144,
+          uncachedInputTokens: 2_719,
+          outputTokens: 679,
+        },
         maxTokens: 200_000,
       },
     },
@@ -127,12 +130,6 @@ describe("Claude token arithmetic", () => {
       maxTokens: 200_000,
       usedPercent: 100,
       totalProcessedTokens: 535_000,
-      inputTokens: 120_000,
-      lastInputTokens: 120_000,
-      cachedInputTokens: 105_000,
-      lastCachedInputTokens: 105_000,
-      outputTokens: 2_000,
-      lastOutputTokens: 2_000,
       compactsAutomatically: true,
     });
   });

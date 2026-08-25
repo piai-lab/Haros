@@ -467,15 +467,12 @@ describe("normalizeOpenCodeTokenUsage", () => {
       usedTokens: 190,
       totalProcessedTokens: 190,
       maxTokens: 200_000,
-      inputTokens: 100,
-      cachedInputTokens: 15,
-      outputTokens: 50,
-      reasoningOutputTokens: 25,
       lastUsedTokens: 190,
-      lastInputTokens: 100,
-      lastCachedInputTokens: 15,
-      lastOutputTokens: 50,
-      lastReasoningOutputTokens: 25,
+      lastTokenBreakdown: {
+        cachedInputTokens: 10,
+        uncachedInputTokens: 105,
+        outputTokens: 75,
+      },
     });
   });
 
@@ -3068,16 +3065,13 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
         usage: {
           usedTokens: 245,
           totalProcessedTokens: 245,
-          inputTokens: 120,
-          cachedInputTokens: 15,
-          outputTokens: 80,
-          reasoningOutputTokens: 30,
           maxTokens: 200_000,
           lastUsedTokens: 245,
-          lastInputTokens: 120,
-          lastCachedInputTokens: 15,
-          lastOutputTokens: 80,
-          lastReasoningOutputTokens: 30,
+          lastTokenBreakdown: {
+            cachedInputTokens: 10,
+            uncachedInputTokens: 125,
+            outputTokens: 110,
+          },
         },
       },
       raw: {
