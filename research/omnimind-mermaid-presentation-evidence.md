@@ -51,6 +51,7 @@ Bun 1.3.12 的 fresh resolution 把 Web direct range `katex@^0.16.45` 与 Mermai
 - hostile returned script/navigation/remote-image markup 放入最终 opaque sandbox 后，不能改写 parent、导航 parent 或发出外部请求；
 - light/dark concurrent render 保持各自配置，证明 initialize+render transaction 没有主题串扰；pre-aborted work 不加载或渲染；
 - ChatMarkdown browser journey 观察到 streaming 与 unsafe input 不加载 Mermaid resource；settled source ready 后切换、源码可恢复、Dialog 使用相同 `srcDoc`、Esc 返回 trigger focus；
+- packaged live stream 进一步暴露 info string 会经历 `m`、`mermai` 等未完成 token；若只在完整 `mermaid` 标签上绕过高亮，Shiki 仍会为这些瞬态伪语言执行失败加载。最终策略因此是所有 streaming fence 只读 plain source，settled 后普通 fence 才进入 Shiki；这不把前缀启发式升级为第二状态真相；
 - Timeline SSR 只在 canonical Assistant body 产生 opt-in，User 与其他 Markdown consumer 保持原路径。
 
 2026-08-26 的 production-mode transcript harness 固定观察如下：
@@ -60,7 +61,9 @@ Bun 1.3.12 的 fresh resolution 把 Web direct range `katex@^0.16.45` 与 Mermai
 - 20 个不同 source+theme cache key 的 80-edge 图经停读式往返遍历后恰好 render 20 次，第二轮不增加 render；强制 GC 后 heap 从 `22,689,927B` 增至首轮 `29,109,453B`、第二轮 `30,420,435B`，第二轮增量 `1,310,982B`，没有按图数重复首轮增长；count/byte LRU 硬边界另由纯逻辑测试直接证伪；
 - 无 Mermaid 的初始 route、streaming Mermaid 与 300-edge 拒绝路径均观察到 `0` Mermaid resource 和 `0` import mark；production HTML 只 module-preload pipeline/runtime/workload，Mermaid core 与各 diagram implementation 保持独立 lazy chunks；
 - 五组相同字节的 plain-fence / Mermaid-fence streaming 对照中，两者 Mermaid import、resource 与 Long Task 均为 `0`；Mermaid fence 的 React commit count 中位增量约 `0.7%`，commit time 中位数没有回退，frame p95 中位数没有回退。
-- release legal owner 纳入 shipped Web manifest 后，development-host inventory/notices/SBOM 从 242 个运行时组件扩展为 541 个 Web/Server/Desktop 生产组件；`licenses:generate` 与 `licenses:check` 确定性闭合，并精确包含 `mermaid@11.17.2`、root/nested KaTeX 及 Mermaid 生产依赖；
+- release legal owner 纳入 shipped Web manifest 后，development-host inventory/notices/SBOM 从 242 个运行时组件扩展为 541 个 Web/Server/Desktop 生产组件；packager staging 还必须合并实际安装闭包与 bundled Web 闭包并验证 ASAR 内 runtime receipt，否则 stage 重生成会把 Web disclosure 覆盖回 242 项。修复后的 staging 与最终 ASAR verifier 均观察到 541 项，并精确包含 `mermaid@11.17.2`、root/nested KaTeX、Mermaid lazy chunks 与对应 legal text；
+- fresh isolated packaged profile 中，MiMo-V2.5-Pro 与 DeepSeek V4 Pro 均完成真实 stream→settled journey：源码先于 Mermaid work 可读；前者首次 lazy path 的 settled-to-ready 为 `304.6ms`，后者 cache-warm render 为 `48.2ms`、settled-to-ready 为 `305.6ms`。最终 frame 均为 opaque `sandbox=""`、`no-referrer`、pointer-disabled，renderer 未观察到外部 resource request；
+- 同一 packaged profile 的 init directive 保持源码且 import/render 为 `0`，未闭合允许类型产生局部“源码已保留 + 重试”，245-connector/246-nonempty-line DeepSeek fixture 在 import/render 前回退源码；源码切换、精确复制、复用 `srcDoc` 的 Dialog、zoom、Esc/focus return、深色主题以及关闭前状态均通过真实窗口验证；
 - 仓库未为 `bun pm scan` 配置 scanner，该命令不能提供安全结论；同一 lockfile 的 `bun audit --audit-level=high` 报告 1 critical 与 23 high 的既有跨仓 advisory，路径中没有 Mermaid closure。该观察只证明未新增被 audit 命中的 Mermaid advisory，不把项目级 audit 非绿色改写成通过。
 
 以上数值只绑定该日期的 production bundle、fixture 和机器环境，不形成跨机器 SLA；重开条件中的 dependency、browser、theme、budget 或 transcript lifecycle 变化后需重测。

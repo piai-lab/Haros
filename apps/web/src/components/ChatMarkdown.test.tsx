@@ -91,6 +91,13 @@ describe("ChatMarkdown", () => {
     expect(markup).not.toContain("chat-markdown-shiki");
   });
 
+  it("keeps an incomplete streaming fence info string away from Shiki", async () => {
+    const markup = await renderTimelineMermaid("```mermai\ngraph TD\nA-->B", true);
+    expect(markup).toContain("graph TD");
+    expect(markup).not.toContain("chat-markdown-shiki");
+    expect(markup).not.toContain("data-mermaid-presentation");
+  });
+
   it("does not promote Mermaid fences outside the canonical assistant opt-in", async () => {
     const markup = await renderMarkdown("```mermaid\ngraph TD\nA-->B\n```");
     expect(markup).not.toContain("data-mermaid-presentation");

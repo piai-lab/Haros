@@ -1276,26 +1276,42 @@ function ChatMarkdown({
         const fence = parseCodeFenceInfo(extractRawFenceInfo(codeBlock.className));
         const code = dedentCode(codeBlock.code);
 
-        if (
+        const mermaidPresentationId =
           mermaidPresentationMessageId &&
           fence.language.toLowerCase() === "mermaid" &&
           codeBlock.mermaidOrdinal !== null
+            ? `${mermaidPresentationMessageId}:${codeBlock.mermaidOrdinal}`
+            : null;
+
+        // A streaming info string arrives as `m`, `mer`, `mermai`, then `mermaid`.
+        // Highlighting those transient language ids would load Shiki and repeatedly
+        // redo work before the fence has a stable identity. Keep every streaming
+        // fence as plain source; settled ordinary fences still use the normal highlighter.
+        if (isStreaming) {
+          return (
+            <MarkdownCodeBlock
+              code={code}
+              fence={fence}
+              {...(mermaidPresentationId
+                ? {
+                    wrapControl: false,
+                    wrapped: true,
+                    presentationId: mermaidPresentationId,
+                  }
+                : {})}
+            >
+              <pre>
+                <code>{code}</code>
+              </pre>
+            </MarkdownCodeBlock>
+          );
+        }
+
+        if (
+          mermaidPresentationId &&
+          mermaidPresentationMessageId &&
+          codeBlock.mermaidOrdinal !== null
         ) {
-          if (isStreaming) {
-            return (
-              <MarkdownCodeBlock
-                code={code}
-                fence={fence}
-                wrapControl={false}
-                wrapped
-                presentationId={`${mermaidPresentationMessageId}:${codeBlock.mermaidOrdinal}`}
-              >
-                <pre>
-                  <code>{code}</code>
-                </pre>
-              </MarkdownCodeBlock>
-            );
-          }
           return (
             <MermaidCodeBlock
               code={code}
