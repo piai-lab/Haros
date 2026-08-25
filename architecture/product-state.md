@@ -6,6 +6,14 @@ OmniMind 直接继承 Synara 的 Project、Thread、Space、Studio 与单一 Pro
 
 产品层只保存已经由继承 substrate 证明必须跨 Provider 稳定、恢复和解释的用户事实。Provider adapter/runtime 继续拥有 native Session、protocol、transcript、Tool、permission 和私有生态语义；filesystem、Git 与 PTY 继续拥有各自真实状态。
 
+## Canonical User Input
+
+跨 Provider 的 User Input request、draft、response 与 terminal settlement 属于 Product Orchestration，不属于某个 Provider adapter、Pi Extension 或 Composer 的临时组件状态。每题提交的 canonical answer envelope 固定区分三类事实：`selectedOptionLabels: string[]` 是用户选择的 authored option labels，`customText?: string` 是答案本身的自由输入，`note?: string` 是对当前所选预设项的整体补充说明。三者不能在 UI、RPC、adapter 或 Timeline seam 中被拼成不可还原的普通字符串；只有进入仍仅支持 scalar/array 的 Provider-native 协议时，adapter 才可在最后边界做显式、可测试的 lossless encoding。
+
+自定义 option 是 Host projection 合成的保留 sentinel，不属于模型 authored options，也不作为 label/value 返回。单选的 `customText` 替代预设选择；多选允许预设选择与 `customText` 共存；`note` 只有在至少一个预设项仍被选择时有效。draft/controller 负责单选改选清除旧 note、单选切自定义清除预设与 note、多选取消最后预设清除 note，而不影响独立 custom。`customText` 与 `note` 的空值判断可以 trim，canonical 存储与提交值不得 trim、Unicode normalize、改换行、归并或解释。
+
+Ask 与 Approval 是不同 authority。User Input response 不得修改 `runtimeMode`、sandbox、permission 或 approval state，`Full Access` 也不能消除需求澄清。answered、cancelled、aborted、timed out、unavailable 与 restart stale 是不同 terminal facts；当前 response command 若尚不能无歧义表达这些 settlement，就只能作为激活阻断，不能用空 answers、普通 user message 或 Provider 猜测冒充完成。Session replacement、App/Server 退出与进程重启使旧 generation/request promise 失效；历史可以展示，late answer 必须拒绝，新 Session 只能产生新的 request。
+
 ## 产品语言到既有事实的映射
 
 | 用户语言            | 直接复用的事实                                                                                      | 明确不新增                                              |

@@ -4,9 +4,9 @@
 >
 > 当前 fork lineage：[`@mrclrchtr/supi-ask-user@5.0.0`](https://www.npmjs.com/package/@mrclrchtr/supi-ask-user/v/5.0.0) / [`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)。减法 feasibility slice 已 GO，但它仍不是 adopted dependency，也不是自动追更授权。
 >
-> 当前 OmniMind source 观察基线：`main@1e8ea260df8a1009a464587725400e5581117102`；fork source commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`
+> 当前 OmniMind source 观察起点：`14fa9f3e93048d51dc8e3d9d81812418a3590cf2`；fork feasibility source commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`
 >
-> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` private fork feasibility kernel 已建立并判 GO；Tool 注册、public schema、Composer/Host/Pi 接入、live 与 packaged proof 均未实施。
+> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` private fork feasibility kernel 已建立并判 GO；canonical answer/controller 与既有 Composer Question source slice 已获授权并实施。Tool 注册、public Ask schema、structured Host/Pi lifecycle、live 与 packaged proof仍未实施。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -66,15 +66,16 @@ feasibility_slice:
   decision: go
   retained_source_modules: [types, normalize, controller, lock, structured_result, host_neutral_kernel]
   deleted_owners: [tui, transcript, supi_core, config, events, timer, terminal_session_helpers, tool_registration, public_schema, prompt_guidance]
-  fork_tests: 61
+  fork_tests: 64
   registered: false
   model_exposed: false
-  ui_connected: false
+  canonical_contract_connected: true
+  composer_projection_connected: true
   shipped: false
-status: gate_b_feasibility_go_product_integration_not_authorized
+status: gate_b_contract_and_composer_source_slice_tool_registration_forbidden
 ```
 
-只有完整 Gate B 产品接入获批并闭合后，本 block 才能改为 adopted upstream base、runtime registration、shipped artifact hashes、Pi journey 与生产证据等级；不能把当前 feasibility kernel 冒充运行版本。
+只有完整 Gate B runtime/activation/production gates 获批并闭合后，本 block 才能改为 adopted upstream base、runtime registration、shipped artifact hashes、Pi journey 与生产证据等级；不能把当前 contract/UI source slice 或 feasibility kernel 冒充运行版本。
 
 ### 0.3 每轮必须产出的结论
 
@@ -106,7 +107,7 @@ status: gate_b_feasibility_go_product_integration_not_authorized
 | result | structured details only | model summary、Timeline receipt 与 selected-only context 归未来产品 owner |
 | dependencies | runtime dependencies = 0 | 不重新引入 `supi-core`、TUI 或完整 lifecycle package |
 | registration/activation | none | `pi.extensions`、ToolDefinition、prompt、public schema 未经新授权禁止出现 |
-| tests | upstream 9/152 baseline；fork 5/61；55 preserve/adapt、9 reverse、88 delete | upstream baseline 与 fork suite 必须分开跑，不能用 fork 61 替代作者 152 |
+| tests | upstream 9/152 baseline；feasibility fork 5/61；当前 fork 5/64；55 preserve/adapt、9 reverse、88 delete | 新增 3 项只保护 OmniMind custom/note delta；不能用 fork tests 替代作者 152 |
 
 Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposition 只看 [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md) §13.1；本文把它转成未来 update gate，不建立第二 source decision。
 
@@ -165,7 +166,7 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 ### 2.2 默认拒绝或改造成 product profile
 
 - 人为题目/选项数量上限；
-- 可关闭 freeform 或依赖 LLM author “其他”；
+- 可关闭 freeform 或依赖 LLM author `自定义` sentinel；
 - single/multi/preview 混成互斥 type；
 - schema 接受但 TUI/RPC/Host 丢弃字段；
 - Ask 替代 Approval 或从选择推断权限；
@@ -356,8 +357,10 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 检查：
 
 - 是否出现 question/option cap；
-- choice sentinel 是否仍由 Host 合成；
-- single replacement、multi coexistence、question/selected-option supplements losslessness；
+- choice sentinel 是否仍由 Host 合成，且简中精确显示单选 `自定义` / `输入自己的答案`、多选 `自定义` / `补充自己的答案`；
+- canonical selection、`customText`、`note` 是否三个独立字段；
+- single replacement、multi coexistence、selected-preset note losslessness；
+- single 改选/切 custom 与 multi 取消最后 preset 时，note/custom 清理是否严格按产品语义而非字段互斥猜测；
 - selection cardinality 与 Preview presentation 是否正交；
 - recommendation 是否仅作展示，绝不预选 choice 或预填成 text answer；
 - `required` 是否真的 enforce；
@@ -382,6 +385,8 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 - Codex/Claude/其他 Provider 是否也能受益或至少不退化；
 - Composer 是否出现第二私有 Ask panel；
 - Review、Preview、Notes、recommendation、sentinel、Cancel；
+- custom 输入是否在 sentinel row 内原地展开并 autofocus，自由回答是否在 Question card 内编辑，主 Composer 是否保持非 answer owner；
+- 默认是否只显示当前问题，Preview/Review/note 是否按显式请求或当前状态渐进出现；
 - keyboard/IME/a11y/reduced motion/overflow；
 - zh-CN/en catalog；
 - TUI tests 中可移植的行为是否转成 Host tests。
@@ -404,7 +409,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 检查：
 
-- 只把 selected decisions 与 exact supplements/freeform 给模型；
+- 只把 selected decisions 与 exact customText/note 给模型；
 - unknown/unselected alternatives 不冒充答案；
 - selected-only rewrite 是否精确定位 product-owned call；
 - Provider serialization 是否保留 IDs 与原文；
@@ -510,7 +515,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - sentinel duplicate/absence；
 - single freeform replacement；
 - multi preset + freeform；
-- question/option notes exact roundtrip；
+- canonical selected labels/values、customText 与 note exact roundtrip；
 - duplicate labels/stable IDs；
 - required/optional/skip；
 - Unicode/newlines/whitespace；
@@ -533,8 +538,11 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 ### 9.4 UI fixtures
 
 - no single-select auto-submit；
+- explicit Next / Review / Submit；
 - draft across navigation/review/edit；
-- option deselect with notes；
+- single A→B / preset→custom 与 multi last-preset deselect 的 note/custom state；
+- custom row inline autofocus、free-text in-card 与 Composer non-ownership；
+- scoped numeric shortcuts、input digits、radio/checkbox/aria-checked/focus/announcement；
 - Preview sanitization；
 - background attention/no focus steal；
 - 480px/desktop/stress/200% zoom；
@@ -729,10 +737,11 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 ## 15. 当前开放事项
 
-fork placement 与 lineage stop-loss 已由 feasibility slice 闭合为 GO。以下仍是未来完整 Gate B 的真实开放项，不能被该 GO 冒充关闭：
+fork placement 与 lineage stop-loss 已由 feasibility slice 闭合为 GO；canonical answer/controller 与 quiet Composer source slice 已闭合其 focused tests。以下仍是完整 Gate B runtime/activation 的真实开放项，不能被上述局部绿色冒充关闭：
 
-- 维护者是否授权进入 product contract、registration、Host/UI 与 Pi barrier 接入；
-- final canonical TypeScript field names 与 migration；
+- Tool registration、model exposure、public Ask schema 与 Pi composition 仍未授权；
+- canonical terminal settlement 仍需从 inherited empty-answer cancel 收回 typed submit/cancel/abort/timeout/unavailable/stale；
+- final public request fields 只有在 Preview/Notes/Review 等全链兑现后才可公开；
 - exact Pi `0.84.2` scheduler 已知为原顺序整批 sequential；待实施的是最窄 Ask-first + batch-terminate + answer-after-replan barrier seam；
 - Product State 对 restart stale 与 draft presentation 的最终形状；
 - same-name sourceInfo/instance provenance 的稳定 seam；
@@ -772,11 +781,12 @@ current_fork:
   commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
   status: pushed_source_candidate_unregistered
   feasibility: go
-  tests: 61
+  tests: 64
   runtime_dependencies: 0
   registered: false
   model_exposed: false
-  ui_connected: false
+  canonical_contract_connected: true
+  composer_projection_connected: true
   shipped: false
 update_policy:
   mode: manual_exact-source

@@ -101,6 +101,16 @@ Provider-specific 控制只在 capability data 支持时显示。这里的 capab
 
 Composer内置Slash Command的技术identity与执行继续属于Shared/runtime owner；Web只拥有一个以canonical command ID为key、穷尽内置命令的presentation descriptor，统一投影双语title、description与icon。Provider动态命令可在缺少产品文案时使用明确标注来源的原生名称或有界humanize fallback；OmniMind内置命令不得落入该fallback，也不得让title switch、description map与icon map成为三张需人肉同步的清单。新增或删除内置命令时，presentation完整性测试必须在简中/英文同时证明可读名称、说明和图标存在；availability与执行行为仍由真实command owner决定，不能把展示descriptor扩成第二Command Registry。
 
+### Canonical User Input
+
+User Input 是跨 Codex、Claude、Pi、OmniMind Agent 与未来 Engine 的同一产品投影；Provider、Pi Extension、RPC fallback 与第三方 TUI 都不能拥有私有 Ask UI 或定义能力上限。所有 `user-input.requested` 都进入既有 Composer Question surface：复用 Composer 约 736px 内容列、浅色圆角 Question card、安静灰阶、编号选项、逐题分页与显式动作，不新增页面、侧栏、弹窗、问卷后台、大标题或第二 Ask shell。复杂度属于 canonical contract/state，默认画面只显示当前问题与当前必须操作的控件；Preview 只在用户显式请求时展开，Review 只在最终提交前出现一次，补充说明只在至少一个预设项已选后出现。
+
+每道有预设选项的题都由 Host projection 在 authored options 之后合成一个保留 identity 的末项，模型不得 author，也不进入回答值。简中单选显示 `自定义` / `输入自己的答案`，多选显示 `自定义` / `补充自己的答案`；英文使用同一 catalog 的语义对等文案。单选与多选复用同一 option-row 结构，仅改变 radio/checkbox、selection 与 result 语义。点击 `自定义` 后，输入框在该行内部原地展开并立即聚焦；自由回答也直接在 Question card 内编辑。主 Composer 不是 Ask answer owner，等待回答时不得把 Ask draft 同步进主 Composer 或要求用户到远处输入。
+
+选择预设项后才在列表下方渐进显示低噪声的 `补充说明` 内联字段。自定义答案与补充说明是两个可同时存在、可分别复核的事实：单选自定义替代预设；多选可同时提交多个预设、自定义答案和补充说明。单选切换预设时清除旧说明，切到自定义时清除预设与说明；多选取消最后一个预设时清除说明，但不改变仍被选择的自定义答案。用户文本只可用 trim 判断是否为空，展示、draft、transport 与 result 均保留原文、换行和尾随空格，不静默归并或解释。
+
+单选不自动前进，末题不自动提交；Next、Review、Submit 都是显式动作。Review 结构化区分主答案与补充说明，并允许回到任意一题修改。数字快捷键只在 Question card 的交互焦点域生效，输入框聚焦时数字保持正常输入；选项使用真实 radiogroup/radio 或 group/checkbox 语义、`aria-checked`、可见 focus 与问题切换 announcement。题目数和选项数没有产品硬上限，只允许 contract owner 针对异常超大 payload 定义可测的性能/安全 guard，且不得静默截断或写进模型 guidance 形成能力上限。任何 Preview、Notes、Review、recommendation 等字段只有在 UI 与结果链真实、无损兑现后才能进入 public schema。
+
 ## 4. Conversation、Timeline 与 Activity
 
 Timeline 长期显示用户输入、Assistant 可见结果、结构化请求、重要 Tool/Activity，以及 File、Diff、Terminal、Artifact、Studio Output 引用和必要的 failure/unknown/recovery。因果 transcript 是第一事实，`Worked for / 工作了`、同类 Tool 汇总和连续 reasoning 合并只是其可逆展示压缩；consumer 只能在 canonical sequence 已成立后压缩连续片段，不能先按“正文/工具/思考”二次分桶，再凭标题、到达批次或完成态猜回顺序。

@@ -2,9 +2,9 @@
 
 > Gate A 重审 / Gate B fork feasibility 日期：2026-08-25
 >
-> 状态：`source-matched / Gate-B-feasibility-GO / pushed-source-candidate / not-registered / not-adopted`
+> 状态：`source-matched / Gate-B-feasibility-GO / canonical-contract-and-composer-source-slice / not-registered / not-adopted`
 >
-> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已通过减法 fork 可行性门，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。该 GO 只证明母体值得继续，不代表 Tool、schema、UI 或产品接入获准。**
+> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已通过减法 fork 可行性门，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。维护者现已授权 canonical response/controller 与既有 Composer Question projection 的 Gate B source slice，但仍未授权 Tool registration、model exposure、Pi composition 或 public schema。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库只有 [`packages/om-ask`](../packages/om-ask) 的未注册、Host-neutral feasibility kernel；本文不表示 `ask_user` 已注册、模型已能调用、canonical schema 已公开、Composer 已接线、App 已打包或产品已发布。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的未注册 Host-neutral fork kernel，以及 Product-owned canonical answer/controller 和 Composer Question source slice；本文不表示 `ask_user` 已注册、模型已能调用、public Ask schema 已公开、App 已打包或产品已发布。
 
 ## 0. 先给结论
 
@@ -67,7 +67,7 @@ Ask User 不是“弹一个问题”。它是 Agent 在信息不足、存在多�
 1. 成熟、好用优先于包小、diff 小或本次施工省事。
 2. 当前代码/UI/Provider 不是产品能力天花板。
 3. 不人为限制题目数或选项数；只允许异常 payload 的性能/安全 guard。
-4. 每道选择题由 Host 合成固定最后一项“其他 / 自行输入……”，不依赖 LLM author sentinel。
+4. 每道选择题由 Host 合成固定最后一项自定义 sentinel，不依赖 LLM author，也不把 sentinel identity 返回模型。可见文案严格为：单选 `自定义` / `输入自己的答案`，多选 `自定义` / `补充自己的答案`，无斜杠与省略号。
 5. 单选自由文本可以完全替代预设项；多选自由文本可与已选预设项共存。
 6. 选择预设项后仍能补充说明；自由文本与补充说明原样、无损返回模型。
 7. Preview、Notes、Review、推荐项等一旦进入 schema，就必须 UI 与结果链真实兑现。
@@ -302,7 +302,7 @@ recommendation 在 UI 中会成为初始选择或文本。推荐项是 presentat
 
 supi normalize 会 trim 文本，并把题目限制为 1–10、选项限制为 2–12。对 OmniMind：
 
-- display labels 可做 blank validation，但用户自由文本/supplement 不得 trim 后冒充原文；
+- display labels 可做 blank validation，但用户自由文本/note 不得 trim 后冒充原文；
 - schema 不写产品题数上限；
 - 只在 transport/renderer 前做字节、深度、总节点等异常 payload guard；
 - guard 触发时明确报错，不静默截断。
@@ -365,7 +365,7 @@ supi 5.0.0 `supi-ask-user` 自身约 3,200 行生产 TypeScript；直接的 UI/r
 | P3 Structured Host seam | request correlation、capability discovery、terminal settlement、late fencing | Pi 提供等价、versioned、Host-neutral seam |
 | P4 Workbench projection | Composer Question 的完整 en/zh UI、Review/Preview/Notes/a11y | 不删除；这是 OmniMind 产品 owner，不属于 fork runtime |
 | P5 Lifecycle & barrier | sequential 之外的 Ask-first、batch terminate、replan、Abort/Cancel/restart stale | Pi Core 原生提供并由 exact tests 证明 |
-| P6 Truthful result/context | selected-only、custom/supplement 无损、recommendation 不进答案 | upstream result 与 context 完全等价 |
+| P6 Truthful result/context | selected-only、custom/note 无损、recommendation 不进答案 | upstream result 与 context 完全等价 |
 | P7 Provenance/reload | same-name winner、sourceInfo、instance generation、reload/branch/resume | Pi 暴露稳定 product provenance primitive并由 Session 验证 |
 
 若未来出现 P8，Gate A 必须先说明为什么 P1–P7 和既有 architecture owner 都不能承担，再请求维护者裁决；不能用编号扩张掩盖 fork 失控。
@@ -449,34 +449,36 @@ type AskUserResult = {
     questionId: string;
     selectedValues?: string[];
     customText?: string;
-    supplement?: string;
-    notes?: Array<{ target: "question" | "option"; optionValue?: string; text: string }>;
+    note?: string;
   }>;
 };
 ```
 
-不返回“看起来合理”的合成答案；不把 option label 代替 stable value；不把 recommendation、未选 option、placeholder 或 preview 当成用户决定。
+运行时 fork 内部使用 stable option `value`；现有跨 Provider `UserInputQuestion` 只有 authored label，因此 Product command 当前使用同构的 `selectedOptionLabels: string[]`。Host bridge 必须在唯一映射处完成 value/label 对应，不能让 Web 猜 value，也不能用 sentinel label 冒充 authored option。无论哪一层，都必须独立保留 selection、`customText` 与 `note`，不返回“看起来合理”的合成答案，不把 recommendation、未选 option、placeholder 或 preview 当成用户决定。
 
-### 8.4 固定 Other sentinel
+### 8.4 固定 Custom sentinel
 
 每道 choice question 的 projection 最后一项必须是 Host 合成 sentinel：
 
 - LLM schema/guide 明确禁止 author sentinel；
 - normalize 拒绝或去歧义化与 sentinel identity 冲突的模型选项；
 - sentinel 使用保留 internal identity，不占用模型 option value；
+- 单选可见文案：`自定义`，同一行副文案 `输入自己的答案`；
+- 多选可见文案：`自定义`，同一行副文案 `补充自己的答案`；
+- 英文从同一 catalog 提供语义对等文案；不得回退为“其他 / 自行输入……”“其他…”或让 LLM author 可见 sentinel；
 - single：customText 完全替代预设 selection；
 - multiple：customText 与 selectedValues 共存；
-- selectedValues 仍可带 supplement；
+- 只要仍有 selectedValues，就可独立带一个对当前预设选择整体生效的 `note`；
 - sentinel 文案本地化，但 identity 不随语言变化；
 - result 不把 sentinel label/value 返回模型，只返回 customText 原文。
 
 ### 8.5 无损文本
 
-用户输入的 customText、supplement、notes：
+用户输入的 customText 与 note：
 
 - 不 trim、不 normalize Unicode、不自动改换行；
 - 不合并、不总结、不解释；
-- 允许空格本身是内容，但提交空字符串与未填写必须有明确 UI 区分；
+- trim 只用于判定是否为空；仅由空白组成的字段不提交，但非空原文中的前后空格、换行与 Unicode 全部保留；
 - display 可做视觉折行，storage/result 保持原文；
 - transport 编码后 round-trip 必须 byte-equivalent（约定的 JSON 编码除外）。
 
@@ -486,18 +488,24 @@ type AskUserResult = {
 
 ## 9. UI projection
 
-Composer Question 是唯一 owner，第三方 UI 只提供 donor 行为。目标 journey：
+Composer Question 是唯一 owner，第三方 UI 只提供 donor 行为。真实视觉母体是现有 `ComposerPendingUserInputPanel` / `ComposerChoiceRow`：约 736px Composer 列宽、浅色圆角 Question card、编号选项、安静灰阶、分页与显式动作。不得新增页面、侧栏、弹窗、问卷后台、大标题、解释面板或第二 Ask shell。复杂能力藏在合同与状态层；默认只展示当前问题和当前必须操作的控件。
+
+目标 journey：
 
 1. Agent 发 canonical request；
 2. Workbench 将当前 Run 标为 waiting for user；
 3. Composer 进入 Question mode，保持同一 conversation/thread；
-4. 用户逐题选择、自由输入、补充、预览或写 notes；
+4. 用户逐题选择；点 `自定义` 后在该 option 内原地展开并 autofocus，自由回答也在卡内编辑；选中预设后才显示低噪声的 `补充说明`；
 5. Review 汇总真实答案，可回到任意题修改；
 6. Submit 原子提交一个 result；
 7. UI 退场，Timeline 留下可读 receipt；
 8. Pi 收到真实 Tool result 并重新规划。
 
-多题导航、Preview、Review、Notes、推荐理由、required policy、键盘操作、屏幕阅读器与中英 catalog 都是可演进能力，不由当前截图或 package TUI 上限决定。若某字段未被 UI/result 完整支持，就不能先公开进 schema。
+单选不能自动前进，末题不能自动提交；Next、Review、Submit 都要求显式动作。Review 只在最终提交前出现一次，结构化区分主答案与补充说明，并可返回任意题修改。单选改选清除旧 note；单选切到 custom 清除预设与 note；多选取消最后一个预设清除 note，但 custom 独立保留。主 Composer 不是 Ask answer owner，不同步 Ask draft，也不接收替代输入。
+
+数字快捷键只在 Question card 的交互焦点域生效，输入框内数字不被劫持；单选/多选使用真实 radio/checkbox、`aria-checked`、可见 focus 与问题切换 announcement。多题导航、Preview、Review、Notes、推荐理由、required policy、键盘操作、屏幕阅读器与中英 catalog 都是可演进能力，不由当前截图或 package TUI 上限决定。若某字段未被 UI/result 完整支持，就不能先公开进 schema。
+
+维护者明确否决旧的 `omnimind-ask-user-ui.html` 与 `omnimind-ask-user-final-projection.html`：它们虚构 App shell，并把 Preview、Notes、Review、自定义、补充和自由表达同时摊开，导致卡片与工具栏过重。2026-08-25 的 `omnimind-ask-user-occam.html` 只作为 decision candidate，证明安静投影可以容纳完整状态，不是 production source，也不授权复制其模拟 state machine 或创建新 UI primitive。
 
 ## 10. Ask 与 Approval
 
@@ -560,13 +568,13 @@ created -> projected -> waiting -> answered
 
 ## 13. Gate B 施工顺序
 
-维护者已授权并完成前两步的 fork feasibility slice；第 3–10 步仍未获授权：
+维护者已授权并完成前两步的 fork feasibility slice，并授权第 3 步与第 5 步中不涉及 Tool 激活的 canonical contract/Composer source slice。第 4、6–10 步仍是后续 runtime/activation/production gates；任何 `ask_user` registration、model exposure、public Ask schema 或 Pi composition 仍未授权：
 
 1. 固定 fork exact source、artifact、license 与作者测试 baseline；
 2. 建立 subtractive product profile，先切掉 TUI/supi-core/ambient lifecycle；
-3. 冻结 canonical request/result 与 sentinel/无损 invariants；
+3. 冻结 canonical response/controller 与 sentinel/无损 invariants；
 4. 建立 structured Host bridge 与 request fencing；
-5. 接 Composer Question 完整 UI 和 en/zh；
+5. 在既有 Composer Question 接 quiet default UI、inline custom/note、Review、a11y 与 en/zh；
 6. 在 Pi seam 完成 Ask-first/batch terminate/replan；
 7. provenance、reload、branch/resume、restart stale；
 8. focused fixtures；
@@ -632,6 +640,22 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 
 **结论：GO。** `supi@ce8af5f…` 足以作为 domain/controller fork lineage 继续进入下一次维护者授权；但它不再被描述成“成熟完整 runtime”。OmniMind 仍需完整拥有 canonical contract、Host bridge、Composer projection、Ask-first barrier、provenance、restart stale 与 distribution proof。若未来这些责任被塞回单一 fork adapter，或连续 intake 破坏 controller/normalize 的 ancestry/test 映射，立即回 Gate A。
 
+### 13.2 Canonical contract / Composer source slice
+
+本轮在保持 Tool 未注册的前提下，已经把以下阻断收回唯一 owner：
+
+| Surface | Source decision | 已锁定 falsifier |
+|---|---|---|
+| Product response | `selectedOptionLabels[]`、`customText?`、`note?` 三个独立字段；string 使用 raw contract | RPC codec、Web state 与 Provider command tests 保留换行/尾随空格 |
+| Web controller | single custom replacement；multi preset + custom coexist；note 只绑定 preset selection | A→B 清 note、preset→custom 清 selection/note、multi last-preset off 清 note 且保留 custom |
+| Host sentinel | Web projection 自动 append 保留 custom row；不改 request/authored options，不回传 sentinel label | browser test 证明 preset + custom + note 同时 selected/submittable |
+| Review | 最终一次、结构化显示主答案与 note、可回题修改 | browser component journey + pure build test |
+| Cross-Provider | canonical command/event 在 adapter 之前保持 structured；每个 native adapter 只在最后边界 lossless encode | common encoder tests覆盖 scalar/array 与 JSON envelope；多 Provider adapter focused tests |
+| Ask/Approval | 删除 `user-input.resolved` 对 runtimeMode/sandbox/approval 的反向推断 | ingestion test 证明名为 `sandbox_mode` 的 Ask 答案也不能改变 permission |
+| Fork kernel | choice response 新增 first-class `selectedValues[]` / `customText` / `note`，未引入 UI/config/registration | fork suite 从 feasibility 61 增至 64，新增三项产品差异回归 |
+
+这一 slice 仍未解决或未授权：submit/cancel/abort 的完整 typed settlement、structured Host interaction port、ToolDefinition/public request schema、same-turn barrier、same-name provenance、restart stale、MiMo/DeepSeek 与 packaged continuation。尤其当前 inherited Provider response 仍以空 answer map 表示 UI cancel，不能被描述成最终稳定 Cancel contract；它是 registration 前必须消除的 Gate B 阻断。
+
 ## 14. Required proof
 
 ### 14.1 Source/supply
@@ -649,7 +673,7 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 - LLM-authored sentinel collision；
 - single custom replacement；
 - multi selected + custom coexistence；
-- selected + supplement；
+- selected + note；
 - Preview/Notes/Review round-trip；
 - whitespace/newline/Unicode losslessness；
 - abnormal payload guard 不静默截断。
@@ -669,8 +693,8 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 ### 14.4 UI
 
 - single/multi/text；
-- Other 始终最后；
-- custom 与 supplement 区分；
+- 自定义 sentinel 始终最后；
+- custom 与 note 区分；
 - recommendation 不预选；
 - 多题导航与 Review 编辑回跳；
 - narrow/wide、keyboard、focus、screen reader；
@@ -769,14 +793,14 @@ supi 高速变化使“定期 merge upstream main”不成立。未来更新必�
 
 错。安全应表达为异常 payload guard，不能把当前渲染方便写成产品能力上限。
 
-### “有一个 Other 文案就完成自由表达”
+### “有一个自定义文案就完成自由表达”
 
-错。还必须覆盖 single replacement、multi coexistence、supplement、无损返回、sentinel identity 与重复 author 防御。
+错。还必须覆盖 single replacement、multi coexistence、note、无损返回、sentinel identity 与重复 author 防御。
 
 ## 17. 零记忆机器摘要
 
 ```yaml
-status: gate_b_fork_feasibility_go_pushed_source_candidate_not_adopted
+status: gate_b_contract_and_composer_source_slice_not_registered_not_adopted
 date: 2026-08-25
 product:
   capability: canonical_user_input
@@ -808,10 +832,10 @@ donors:
   sentinel: "pi-tian-ask-user@1.0.0"
 hard_invariants:
   - ask_approval_separation
-  - host_synthesized_other_sentinel
+  - host_synthesized_custom_sentinel
   - single_custom_replaces_preset
   - multi_custom_coexists_with_presets
-  - supplements_and_user_text_lossless
+  - custom_text_notes_and_user_text_lossless
   - no_product_question_or_option_caps
   - ask_first_batch_terminate_answer_after_replan
   - abort_cancel_timeout_late_fencing
@@ -821,6 +845,7 @@ hard_invariants:
   - no_public_fake_capability
 gate_b:
   feasibility_slice: go
-  product_integration: requires_maintainer_confirmation
+  canonical_contract_and_composer_source_slice: authorized_and_implemented
+  tool_registration_and_model_exposure: forbidden_pending_runtime_gates
 update_manual: research/pi-ask-user-intake.md
 ```
