@@ -1046,6 +1046,36 @@ function workLogReasoningEntriesEqual(
   });
 }
 
+function workLogUserInputInteractionsEqual(
+  a: WorkLogEntry["userInputInteraction"],
+  b: WorkLogEntry["userInputInteraction"],
+): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.requestId !== b.requestId || a.questions.length !== b.questions.length) {
+    return false;
+  }
+  return a.questions.every((question, index) => {
+    const other = b.questions[index];
+    if (
+      !other ||
+      question.id !== other.id ||
+      question.prompt !== other.prompt ||
+      question.kind !== other.kind ||
+      !stringArraysEqual(question.optionLabels, other.optionLabels)
+    ) {
+      return false;
+    }
+    if (question.answer === other.answer) return true;
+    if (!question.answer || !other.answer) return false;
+    return (
+      stringArraysEqual(
+        question.answer.selectedOptionLabels,
+        other.answer.selectedOptionLabels,
+      ) && question.answer.customText === other.answer.customText
+    );
+  });
+}
+
 function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
   return (
     a.id === b.id &&
@@ -1065,6 +1095,9 @@ function workLogEntryContentEqual(a: WorkLogEntry, b: WorkLogEntry): boolean {
     a.toolName === b.toolName &&
     a.toolCallId === b.toolCallId &&
     a.toolStatus === b.toolStatus &&
+    a.userInputSettlementStatus === b.userInputSettlementStatus &&
+    workLogUserInputInteractionsEqual(a.userInputInteraction, b.userInputInteraction) &&
+    a.askUserProvenanceUnavailable === b.askUserProvenanceUnavailable &&
     workLogReasoningEntriesEqual(a.reasoningEntries, b.reasoningEntries) &&
     stringArraysEqual(a.changedFiles, b.changedFiles) &&
     workLogSubagentActionsEqual(a.subagentAction, b.subagentAction) &&

@@ -364,6 +364,103 @@ describe("computeStableMessagesTimelineRows", () => {
     expect(second.result[0]).toBe(settledRow);
   });
 
+  it("replaces a canonical User Input row when its persisted settlement arrives", () => {
+    const pendingRow: WorkTimelineRow = {
+      kind: "work",
+      id: "user-input-request",
+      createdAt: "2026-05-09T10:00:00.000Z",
+      groupedEntries: [
+        {
+          id: "user-input-request",
+          createdAt: "2026-05-09T10:00:00.000Z",
+          label: "User input requested",
+          tone: "info",
+          activityKind: "user-input.requested",
+          userInputInteraction: {
+            requestId: "request-1",
+            questions: [
+              {
+                id: "q1",
+                prompt: "Continue?",
+                kind: "choice",
+                optionLabels: ["Continue", "Stop"],
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const first = computeStableMessagesTimelineRows([pendingRow], emptyStableRows());
+    const abortedRow: WorkTimelineRow = {
+      ...pendingRow,
+      groupedEntries: [
+        {
+          ...pendingRow.groupedEntries[0]!,
+          tone: "error",
+          userInputSettlementStatus: "aborted",
+        },
+      ],
+    };
+
+    const second = computeStableMessagesTimelineRows([abortedRow], first);
+
+    expect(second).not.toBe(first);
+    expect(second.result[0]).toBe(abortedRow);
+  });
+
+  it("replaces an answered User Input row when persisted answer details change", () => {
+    const firstRow: WorkTimelineRow = {
+      kind: "work",
+      id: "user-input-request",
+      createdAt: "2026-05-09T10:00:00.000Z",
+      groupedEntries: [
+        {
+          id: "user-input-request",
+          createdAt: "2026-05-09T10:00:00.000Z",
+          label: "User input requested",
+          tone: "info",
+          activityKind: "user-input.requested",
+          userInputSettlementStatus: "answered",
+          userInputInteraction: {
+            requestId: "request-1",
+            questions: [
+              {
+                id: "q1",
+                prompt: "What else?",
+                kind: "text",
+                optionLabels: [],
+                answer: { selectedOptionLabels: [], customText: "First" },
+              },
+            ],
+          },
+        },
+      ],
+    };
+    const first = computeStableMessagesTimelineRows([firstRow], emptyStableRows());
+    const changed: WorkTimelineRow = {
+      ...firstRow,
+      groupedEntries: [
+        {
+          ...firstRow.groupedEntries[0]!,
+          userInputInteraction: {
+            ...firstRow.groupedEntries[0]!.userInputInteraction!,
+            questions: [
+              {
+                ...firstRow.groupedEntries[0]!.userInputInteraction!.questions[0]!,
+                answer: { selectedOptionLabels: [], customText: "Second" },
+              },
+            ],
+          },
+        },
+      ],
+    };
+
+    const second = computeStableMessagesTimelineRows([changed], first);
+
+    expect(second).not.toBe(first);
+    expect(second.result[0]).toBe(changed);
+  });
+
   it("reuses worktree-setup rows until a step status or open state changes", () => {
     const makeRow = (
       status: "active" | "done",
