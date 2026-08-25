@@ -22,4 +22,19 @@ describe("thread detail events", () => {
     expect(isThreadDetailEventFor(shellOnlyEvent, threadId)).toBe(false);
     expect(isThreadDetailEventFor(detailEvent, ThreadId.makeUnsafe("thread-2"))).toBe(false);
   });
+
+  it.each(["thread.turn-interrupt-requested", "thread.user-input-response-requested"] as const)(
+    "streams %s so the Web terminal fence can recover the asynchronous durable fact",
+    (type) => {
+      const threadId = ThreadId.makeUnsafe("thread-1");
+      const intentEvent = {
+        aggregateKind: "thread",
+        aggregateId: threadId,
+        type,
+      } as OrchestrationEvent;
+
+      expect(THREAD_DETAIL_EVENT_TYPES).toContain(type);
+      expect(isThreadDetailEventFor(intentEvent, threadId)).toBe(true);
+    },
+  );
 });
