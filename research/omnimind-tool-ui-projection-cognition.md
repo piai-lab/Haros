@@ -1,8 +1,8 @@
 # OmniMind Tool UI Projection Cognition
 
-Status: `Ask User source-implemented + focused/browser-verified / latest packaged gate superseded; Read selected + source-pending`
+Status: `Ask User single-interaction source-implemented + focused/browser-verified / packaged pending; Read selected + source-pending`
 
-Source lineage: baseline `main@f2ac1da7ea` → Ask implementation `main@ffa1333d3a` · 2026-08-25
+Source lineage: baseline `main@f2ac1da7ea` → Ask icon `main@ffa1333d3a` → single interaction `codex/ask-user-gate-b@e65bc82c4b` · 2026-08-25
 
 Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection.html)
 
@@ -128,7 +128,7 @@ Visual companion: [omnimind-tool-ui-projection.html](omnimind-tool-ui-projection
 | failed | 保持类别/品牌 icon | danger tone；详情保留可操作错误 | 明确失败与恢复动作 |
 | cancelled | 保持类别/品牌 icon | 降低强调，不伪装成功 | 明确已停止/取消 |
 
-以下不是普通 Tool lifecycle，必须保留独立语义：canonical `user-input.requested` 使用 Central `bubbles`；`user-input.resolved` 保留 `arrow-up-circle` 或未来由 settlement 决定的 terminal receipt icon；Reasoning 使用 Central `brain-2`；转入后台使用 `arrow-down-wall`；混合类别汇总使用 `hammer`。双气泡回答“谁在向我要输入”，terminal receipt 回答“交互如何结束”，二者不得被 Provider 名称覆盖。
+以下不是普通 Tool lifecycle，必须保留独立语义：canonical `user-input.requested` 与可信关联的 `user-input.resolved` 是同一个 User Input interaction 的两个持久事实，Timeline presentation 保持同一 Central `bubbles` identity 与 requested 稳定位置，只由结构化 settlement 改变状态文案、tone 与可展开内容；Reasoning 使用 Central `brain-2`；转入后台使用 `arrow-down-wall`；混合类别汇总使用 `hammer`。双气泡回答“哪一种一级交互正在发生”，terminal settlement 回答“这次交互如何结束”，二者都不得被 Provider 名称覆盖。
 
 ## 6. 汇总规则
 
@@ -217,7 +217,7 @@ HTML 明细列出当前 22 个 Browser action 与 28 个非 Browser OmniMind Gat
 - live → completed/failed/cancelled 不替换 identity icon、不重排 Timeline；
 - homogeneous read group 使用开卷，mixed group 使用 hammer；
 - Browser、OmniMind Gateway、GitHub MCP 继续保持 surface/品牌优先；
-- 由 Codex、Claude、Cursor、Grok、OpenCode、Droid 与 Pi 生成的 canonical `user-input.requested` 全部使用 Central `bubbles`；`user-input.resolved` 仍是结构化 terminal receipt；
+- 由 Codex、Claude、Cursor、Grok、OpenCode、Droid 与 Pi 生成的 canonical `user-input.requested` 全部使用 Central `bubbles`；可信关联的 `user-input.resolved` 在同一 interaction row 上更新状态，orphan terminal 也保持双气泡但不伪造问题；
 - `ask-user`、`prompt_user`、本地化标题和其他 near-miss 普通 Tool 不得仅凭名字冒充；mixed Tool group 仍使用 hammer；
 - 同一 Pi product Ask 在 Timeline 中只有一个用户可读的 Ask identity 投影，不同时显示 generic Tool row 与 canonical request row；Question card 不重复增加 icon；
 - unknown/dynamic tool 安全回退，不显示 raw transport prefix，不误读敏感参数。
@@ -230,8 +230,8 @@ HTML 明细列出当前 22 个 Browser action 与 28 个非 Browser OmniMind Gat
 
 1. 在 `apps/web/src/lib/icons.tsx` 复用现有 Central asset，导出语义化 `AskUserIcon = centralIconWrapper("bubbles")`；不复制 SVG、不新增依赖或第二 icon registry。
 2. 在 `apps/web/src/components/chat/TimelineWorkEntryRow.tsx` 的现有 `activityKind` precedence 中，把 `user-input.requested` 从 `CircleQuestionIcon` 改为 `AskUserIcon`。不在 Web 中枚举 `AskUserQuestion`、`requestUserInput`、`ask_question`、`ask_user_question`、`session/elicitation` 或 Pi `ask_user`；adapter 已经是这些名称的唯一翻译 owner。
-3. `user-input.resolved` 继续使用 terminal receipt icon；answered/cancelled/aborted/timed_out/unavailable/stale 继续由 `userInputSettlementStatus` 文案与结构化事实表达。本轮不借 icon 变更改写 settlement 语义。
-4. 先用真实 WorkLog / Timeline 证明 Pi product `ask_user` 是否同时显示 generic `tool.started/completed` row 与 canonical `user-input.requested/resolved` row。当前 adapter 源码会产生两套 runtime event，因此“没有重复 UI”不能靠假设。
+3. `user-input.resolved` 不再创建第二种视觉 identity：底层事实保持独立，WorkLog 按 requestId + owning turn + lifecycle generation 在 presentation 层更新 requested 行。answered/cancelled/aborted/timed_out/unavailable/stale 继续由 `userInputSettlementStatus` 文案与结构化事实表达；缺失可信 correlation 时宁可保留独立 terminal，也不按相邻或文案误合并。
+4. WorkLog/Timeline 必须分别证明 Pi product `ask_user` 不产生 generic Tool + canonical Ask 双身份，并证明同一 canonical requested/resolved 不产生两条 Ask 行；两层去重都不能靠假设。
 5. 如果重复存在，以 Claude `isClientSurfacedClaudeTool` 的已有原则为参考：让 canonical User Input 成为唯一用户可见交互行，抑制 Pi bundled product Ask 的 generic lifecycle 投影。判定必须依赖已验证的 bundled provenance 与 structured correlation，不能让一个第三方同名 Tool 被静默伪装成 Product Ask，也不能在 Web 中用标题字符串做脑补去重。
 6. 不向 `ComposerPendingUserInputPanel` / `ComposerChoiceRow` 增加 icon，不新建 Ask shell、icon registry 或 Provider-specific UI。除上述必要的可见重复收口外，不借此修改 canonical response contract、fork domain model、Pi barrier 或 presenter lease。
 
@@ -249,4 +249,4 @@ HTML 明细列出当前 22 个 Browser action 与 28 个非 Browser OmniMind Gat
 
 ### 12.3 交付边界
 
-Ask icon 已在 exact pushed `main@ffa1333d3a` 完成 source implementation 与 focused/browser proof；它仍须随最新 Ask answer 语义的 exact pushed SHA 重新进入 fresh packaged journey。旧 packaged artifact 只证明旧候选，已被维护者的新裁决 supersede。Read family 仍是 `selected / source pending`，不得因 Ask 已实现而扩写为 Read 已交付。
+Ask icon 基线已在 exact pushed `main@ffa1333d3a` 完成；`codex/ask-user-gate-b@e65bc82c4b` 进一步实现 canonical requested/resolved 单 interaction row、collapsed-only status、persisted expanded detail 与 compact leading geometry，并通过 focused WorkLog/Timeline/browser/typecheck。它仍须随包含 authority 的新 exact pushed HEAD 进入 fresh packaged journey；旧 packaged artifact 只证明旧候选，已被维护者的新裁决 supersede。Read family 仍是 `selected / source pending`，不得因 Ask 已实现而扩写为 Read 已交付。

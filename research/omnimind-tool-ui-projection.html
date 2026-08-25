@@ -263,7 +263,7 @@
             <div class="section-heading"><div><span class="index">05</span><h2>投影优先级</h2></div><p>从最具体到最安全的 fallback</p></div>
             <div class="precedence">
               <article><span class="n">01</span><h3>特殊回执</h3><p>Skill failed / delivered 等明确产品语义。</p></article>
-              <article><span class="n">02</span><h3>Canonical 交互</h3><p>user-input.requested → double bubbles。</p></article>
+              <article><span class="n">02</span><h3>Canonical 交互</h3><p>requested → resolved 保持同一 bubbles interaction。</p></article>
               <article><span class="n">03</span><h3>品牌 / Surface</h3><p>GitHub、Browser、OmniMind、MCP。</p></article>
               <article><span class="n">04</span><h3>结构类别</h3><p>read、edit、command、image、agent。</p></article>
               <article><span class="n">05</span><h3>有界识别</h3><p>Read aliases、WebFetch URL、wrapped shell。</p></article>
@@ -385,7 +385,7 @@
       const special = [
         ["central:bubbles", "Canonical User Input", "七种 Engine 的双向澄清请求", "bubbles"],
         ["central:brain-2", "Reasoning", "公开推理内容", "brain-2"],
-        ["central:arrow-up-circle", "已提交回答", "用户输入已发送", "arrow-up-circle"],
+        ["central:bubbles", "User Input 已回答", "同一 interaction 原位更新；详情按需展开", "bubbles"],
         ["central:arrow-down-wall", "转入后台", "后台任务状态", "arrow-down-wall"],
         ["check", "普通信息完成", "非工具里程碑", "check"],
         ["alert", "错误 / Skill 失败", "失败需要处理", "alert-circle"],
