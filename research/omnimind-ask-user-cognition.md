@@ -2,9 +2,9 @@
 
 > Gate A 重审 / Gate B fork feasibility 日期：2026-08-25
 >
-> 状态：`latest-direct-submit-source-implemented-focused-verified / historical-provider-wire-passed / packaged-proof-pending / not-released`
+> 状态：`latest-direct-submit-and-shutdown-source-implemented-verified / historical-provider-wire-passed / final-timeline-decision-and-packaged-proof-pending / not-released`
 >
-> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。历史 Gate B 已接入唯一 bundled Pi-native `ask_user`、barrier、provenance 与 Host bridge，`67813a3557` 的 MiMo/DeepSeek只证明Provider wire。维护者随后删除Review并要求direct-submit、strict contract、truthful cross-provider terminal/presenter；最新source由`bd0f9aa002`与`5626d4b7b3`实现并通过相关包完整测试，但旧package仍不能证明新语义。**
+> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。历史 Gate B 已接入唯一 bundled Pi-native `ask_user`、barrier、provenance 与 Host bridge，`67813a3557` 的 MiMo/DeepSeek只证明Provider wire。维护者随后删除Review并要求direct-submit、strict contract、truthful cross-provider terminal/presenter；`bd0f9aa002`与`5626d4b7b3`形成产品基线，`6012c7452e`闭合intentional shutdown handoff。旧package仍不能证明新语义，最新Timeline单行投影仍是已认可但待最终生产确认的设计草稿。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。bundled Extension 始终进入受provenance约束的OmniMind Session composition，模型只在兼容presenter lease存在且winner唯一时看到`ask_user`。历史MiMo/DeepSeek proof只证明wire；最新direct-submit与异常生命周期已完成source gate，fresh packaged gate仍未关闭。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。bundled Extension 始终进入受provenance约束的OmniMind Session composition，模型只在兼容presenter lease存在且winner唯一时看到`ask_user`。历史MiMo/DeepSeek proof只证明wire；latest direct-submit与shutdown lifecycle已完成source gate，最终Timeline生产裁决与fresh packaged gate仍未关闭。
 
 ## 0. 先给结论
 
@@ -691,14 +691,14 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 - foreign winner、product winner + foreign loser、reload 漂移都从 active set移除；不会改名创建第二 Ask，Full Access/Approval不影响 Ask availability。
 - canonical UI 继续复用 `ComposerPendingUserInputPanel` / `ComposerChoiceRow`。Host/UI 自动提供末尾 `自定义` row；single副文案“输入自己的答案”，multiple副文案“补充自己的答案”。
 - custom 在 row 内原地展开并 autofocus；free text在 card 内编辑。单题单选 preset 直接提交；多题中间单选自动 next，末题 stay；custom/multi/text 显式前进或提交。Preview/推荐/suggestion按需展开且不触发选择。
-- Composer 不显示完成卡；Timeline 从 persisted settlement 区分六种 terminal receipt，answered 用双气泡显示有界答案摘要。新增正常文案都有 en/zh catalog，same-name fail-closed也不泄漏 Server 英文诊断。
+- Composer 不显示完成卡。当前source从persisted settlement区分六种terminal receipt，answered使用双气泡但仍以独立requested/resolved行和collapsed有界摘要呈现；该旧presentation已被维护者认可的单interaction-row草稿supersede，不能作为最终Gate UI。草稿要求collapsed只显示状态、expanded读取persisted request/settlement详情、leading geometry与reasoning/tool统一；在最终生产确认前只记录为decision input，不冒充implemented。正常产品文案继续保持en/zh parity，same-name fail-closed也不泄漏Server英文诊断。
 
 #### 最新 source closure 与剩余门
 
-- fork 71/71 与旧跨层 matrix 是保留基线。最新source通过Contracts 25 files / 274 tests、Web 331 files / 4,184 tests、Server 385 files / 4,470 passed（3 files / 16 tests skipped）、Panel/Timeline Browser 16/16与根typecheck 8/8。根全仓test仍被未修改的`@omnimind/om-web-access` credential-command aborted用例阻断，不能写成全仓绿色，也不能为Ask跨owner修它。
+- fork 72/72 与旧跨层 matrix 是保留基线。latest shutdown source通过Desktop 65 files / 607 passed（1 file / 5 skipped）、Server 385 files / 4,477 passed（3 files / 16 skipped）、根typecheck 8/8及lint 0 errors（615个既有warnings）；前一UI候选的Contracts 25 files / 274 tests、Web 331 files / 4,184 tests与Panel/Timeline Browser 16/16保持历史source证据。根全仓test此前仍被未修改的`@omnimind/om-web-access` credential-command aborted用例阻断，不能写成全仓test绿色，也不能为Ask跨owner修它。
 - barrier tests覆盖 Ask位于 sibling前后、sibling hooks/execute为零、multiple barrier、answered continuation、terminal无 continuation；Host bridge覆盖 single/multi/custom/raw whitespace与非法 label/空答案。
-- source present：是。`bd0f9aa002`闭合strict canonical request/response、跨Provider truthful terminal/presenter与Stop exactly-once；`5626d4b7b3`闭合direct-submit、responding/retry、native selection、focused-pane focus与persisted Timeline receipt。ACP的0/1/N lease与terminal由Cursor/Grok/Droid共同调用的生产seam测试证明，不扩写成三套真实adapter journey。
-- runtime activation沿用历史source接入；shipped bytes 与公开 Release 仍未由新候选证明。MiMo/DeepSeek Provider wire只证明旧exact SHA的schema call、程序化answer settlement、structured result与replan，不冒充Composer journey。下一硬门是exact pushed HEAD的clean-clone packaged gate。
+- source present：是。`bd0f9aa002`闭合strict canonical request/response、跨Provider truthful terminal/presenter与Stop exactly-once；`5626d4b7b3`闭合direct-submit、responding/retry、native selection、focused-pane focus与当时的persisted Timeline receipt；`6012c7452e`把Desktop POSIX close改为authenticated request-first，seal presenter并等待异步/晚注册`unavailable` handoff，恢复普通client append在quiesce时fail closed，并在Provider producers/subscribers关闭后做最终engine drain。ACP的0/1/N lease与terminal由Cursor/Grok/Droid共同调用的生产seam测试证明，不扩写成三套真实adapter journey。
+- runtime activation沿用历史source接入；shipped bytes 与公开 Release 仍未由新候选证明。MiMo/DeepSeek Provider wire只证明旧exact SHA的schema call、程序化answer settlement、structured result与replan，不冒充Composer journey。维护者已认可但尚未最终授权施工的Timeline草稿会把requested/resolved两个persisted facts按可信correlation投影为一个可展开interaction row；在该UI裁决、source proof与push闭合前，不重跑clean-clone packaged gate，也不把当前双行/inline摘要Timeline写成最终产品。
 
 ## 14. Required proof
 
@@ -844,7 +844,7 @@ supi 高速变化使“定期 merge upstream main”不成立。未来更新必�
 ## 17. 零记忆机器摘要
 
 ```yaml
-status: latest_direct_submit_source_implemented_provider_wire_historical_packaged_pending
+status: latest_direct_submit_shutdown_source_implemented_final_timeline_and_packaged_pending
 date: 2026-08-25
 product:
   capability: canonical_user_input
@@ -901,7 +901,8 @@ hard_invariants:
 gate_b:
   feasibility_slice: go
   canonical_contract_and_composer_source_slice: implemented_bd0f9aa002_5626d4b7b3
-  runtime_host_barrier_provenance_activation: implemented_source_packaged_pending
+  shutdown_handoff_slice: implemented_6012c7452e
+  runtime_host_barrier_provenance_activation: implemented_source_final_timeline_and_packaged_pending
   focused_source_tests: relevant_full_packages_passed
   live_mimo_deepseek: provider_wire_passed_not_composer_ui
   packaged_fresh_profile: pending
