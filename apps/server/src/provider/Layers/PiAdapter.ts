@@ -582,6 +582,7 @@ interface PiPendingProductUserInput {
   readonly turnId?: TurnId;
   readonly toolCallId: string;
   readonly resolve: (response: CanonicalUserInputResponse) => boolean;
+  readonly settleAborted: () => void;
   readonly settleStale: () => void;
 }
 
@@ -1784,6 +1785,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...(context.activeTurnId === undefined ? {} : { turnId: context.activeTurnId }),
           toolCallId: input.toolCallId,
           resolve: respond,
+          settleAborted: () => settleStatus("aborted"),
           settleStale: () => settleStatus("stale"),
         });
         removeUnavailableListener = userInputPresenterRegistry.onUnavailable(() =>
@@ -3960,6 +3962,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           activeTurnId,
           Effect.try({
             try: () => {
+              // Pi may mark an executing Tool call cancelled without forwarding
+              // the turn AbortSignal into the Tool's pending Promise. Settle the
+              // Product Ask explicitly before aborting the agent so the durable
+              // user-input projection cannot remain actionable after Stop Turn.
+              for (const pending of context.pendingProductUserInputs.values()) {
+                if (pending.turnId === activeTurnId) pending.settleAborted();
+              }
               context.runtime.session.abortRetry();
               context.runtime.session.agent.abort();
             },

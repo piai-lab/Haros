@@ -559,7 +559,9 @@ describe("Pi native OmniMind gateway tools", () => {
       );
       modelRequest += 1;
       if (modelRequest === 1) return piOpenAiSuccessResponse("No UI journey complete.");
-      if (modelRequest === 2 || modelRequest === 4) return piOpenAiAskUserToolCallResponse();
+      if (modelRequest === 2 || modelRequest === 4 || modelRequest === 5) {
+        return piOpenAiAskUserToolCallResponse();
+      }
       return piOpenAiSuccessResponse("Replanned after the answer.");
     });
     let presenterLease: ReturnType<typeof userInputPresenterRegistry.acquire> | undefined;
@@ -712,6 +714,41 @@ describe("Pi native OmniMind gateway tools", () => {
               ),
             );
             presenterLease = userInputPresenterRegistry.acquire("pi-adapter-test-reload", 1);
+            const interruptedTurn = yield* adapter.sendTurn({
+              threadId: askThreadId,
+              input: "Ask again, then stop the owning turn.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.filter((event) => event.type === "user-input.requested").length === 3,
+                "Interrupted Ask User request was not projected.",
+              ),
+            );
+            yield* adapter.interruptTurn(askThreadId, interruptedTurn.turnId);
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "user-input.resolved" &&
+                      event.turnId === interruptedTurn.turnId &&
+                      (event.payload as any).settlement?.status === "aborted",
+                  ),
+                "Stop Turn did not settle Ask User as aborted.",
+              ),
+            );
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === interruptedTurn.turnId,
+                  ),
+                "Interrupted Ask User turn did not terminate.",
+              ),
+            );
             mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
             writeFileSync(
               path.join(agentDir, "extensions", "same-named-ask-tool.ts"),
@@ -755,7 +792,7 @@ describe("Pi native OmniMind gateway tools", () => {
       expect(piRequestToolNames(requestBodies[1]).filter((name) => name === "ask_user")).toEqual([
         "ask_user",
       ]);
-      expect(requestBodies).toHaveLength(5);
+      expect(requestBodies).toHaveLength(6);
       const toolResult = JSON.parse(
         requestBodies[2].messages.find((message: any) => message.role === "tool")?.content ?? "{}",
       );
@@ -771,7 +808,10 @@ describe("Pi native OmniMind gateway tools", () => {
           },
         ],
       });
-      expect(piRequestToolNames(requestBodies[4])).not.toContain("ask_user");
+      expect(piRequestToolNames(requestBodies[4]).filter((name) => name === "ask_user")).toEqual([
+        "ask_user",
+      ]);
+      expect(piRequestToolNames(requestBodies[5])).not.toContain("ask_user");
     } finally {
       presenterLease?.release();
       vi.restoreAllMocks();
