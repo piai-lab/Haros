@@ -100,6 +100,17 @@ export function verifyPackagedLegalClosureArchive(archivePath: string): {
         .join(" "),
     );
   }
+  for (const component of inventory.components) {
+    for (const location of component.locations ?? []) {
+      if (!location.startsWith("bundled:")) continue;
+      const runtimePath = normalizedArchivePath(location.slice("bundled:".length));
+      if (!runtimePath || !archiveEntries.has(runtimePath)) {
+        throw new Error(
+          `Bundled dependency ${component.id} runtime receipt is absent: ${runtimePath || "<empty>"}.`,
+        );
+      }
+    }
+  }
   for (const name of REQUIRED_PI_PACKAGES) {
     if (![...packaged].some((id) => id.startsWith(`${name}@`))) {
       throw new Error(`Packaged dependency closure omitted required Pi package ${name}.`);

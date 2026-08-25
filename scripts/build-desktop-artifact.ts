@@ -1114,6 +1114,7 @@ const buildDesktopArtifact = Effect.fn("buildDesktopArtifact")(function* (
           platform: options.platform,
           arch: options.arch,
         },
+        bundledWebRuntimePath: "apps/server/dist/client/index.html",
       }),
     catch: (cause) =>
       new BuildScriptError({

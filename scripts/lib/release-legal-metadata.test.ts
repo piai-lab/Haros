@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
   collectReleaseDependencyInventory,
+  mergeBundledRuntimeInventory,
   renderReleaseLegalMetadata,
   resolveReleaseDependencyRoots,
   type ReleaseDependencyInventory,
@@ -153,6 +154,37 @@ describe("release legal metadata", () => {
     );
     expect(target?.license).toBe("MIT");
     expect(target?.licenseFiles[0]?.provenance.kind).toBe("exact-upstream");
+  });
+
+  it("merges a bundled Web closure with an exact packaged runtime receipt", () => {
+    const installed = collectReleaseDependencyInventory(fixture());
+    const template = installed.components[0]!;
+    const web: ReleaseDependencyInventory = {
+      ...installed,
+      componentCount: 1,
+      roots: ["mermaid"],
+      components: [
+        {
+          ...template,
+          name: "mermaid",
+          version: "11.17.2",
+          id: "mermaid@11.17.2",
+          manifestSha256: "a".repeat(64),
+          locations: ["node_modules/mermaid"],
+          dependencies: [],
+        },
+      ],
+    };
+
+    const merged = mergeBundledRuntimeInventory(
+      installed,
+      web,
+      "apps/server/dist/client/index.html",
+    );
+    expect(merged.componentCount).toBe(installed.componentCount + 1);
+    expect(merged.components.find((component) => component.name === "mermaid")?.locations).toEqual([
+      "bundled:apps/server/dist/client/index.html",
+    ]);
   });
 
   it("fails closed when packaged legal text and an exact override are both absent", () => {
