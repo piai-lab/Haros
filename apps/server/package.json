@@ -16,6 +16,7 @@
     "build": "node scripts/cli.ts build",
     "start": "node dist/index.mjs",
     "prepare": "effect-language-service patch",
+    "ask-user-live": "bun run scripts/verify-ask-user-live.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --maxWorkers=1 --no-file-parallelism"
   },
