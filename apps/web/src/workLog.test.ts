@@ -11,7 +11,7 @@ import {
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
-  it("projects the canonical user-input terminal settlement for localized receipts", () => {
+  it("keeps an orphan canonical user-input terminal honest", () => {
     const [entry] = deriveWorkLogEntries(
       [
         makeActivity({
@@ -34,7 +34,7 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
-  it("summarizes persisted answered selections and custom text without mutating the payload", () => {
+  it("coalesces persisted request and answered facts into one stable interaction row", () => {
     const settlement = {
       status: "answered",
       answers: {
@@ -46,37 +46,132 @@ describe("deriveWorkLogEntries", () => {
       },
     } as const;
     const before = JSON.stringify(settlement);
-    const [entry] = deriveWorkLogEntries(
+    const entries = deriveWorkLogEntries(
       [
+        makeActivity({
+          id: "ask-requested",
+          kind: "user-input.requested",
+          tone: "info",
+          summary: "User input requested",
+          turnId: "turn-1",
+          sequence: 1,
+          payload: {
+            requestId: "ask-1",
+            lifecycleGeneration: "generation-1",
+            questions: [
+              {
+                kind: "choice",
+                id: "direction",
+                prompt: "Which direction?",
+                cardinality: "single",
+                options: [{ label: "Preserve" }],
+              },
+              {
+                kind: "choice",
+                id: "delivery",
+                prompt: "What should ship?",
+                cardinality: "multiple",
+                options: [{ label: "Implementation" }, { label: "Tests" }],
+              },
+            ],
+          },
+        }),
         makeActivity({
           id: "ask-answered",
           kind: "user-input.resolved",
           tone: "info",
           summary: "User input answered",
-          payload: { requestId: "ask-1", settlement },
+          turnId: "turn-1",
+          sequence: 2,
+          payload: {
+            requestId: "ask-1",
+            lifecycleGeneration: "generation-1",
+            settlement,
+          },
         }),
       ],
       undefined,
     );
 
-    expect(entry).toMatchObject({
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      id: "ask-requested",
+      activityKind: "user-input.requested",
       userInputSettlementStatus: "answered",
-      userInputAnswerSummary: "Preserve · Implementation · Tests · Keep raw text.",
+      userInputInteraction: {
+        requestId: "ask-1",
+        questions: [
+          {
+            id: "direction",
+            prompt: "Which direction?",
+            kind: "choice",
+            answer: { selectedOptionLabels: ["Preserve"] },
+          },
+          {
+            id: "delivery",
+            prompt: "What should ship?",
+            kind: "choice",
+            answer: {
+              selectedOptionLabels: ["Implementation", "Tests"],
+              customText: "Keep\nraw text.  ",
+            },
+          },
+        ],
+      },
     });
     expect(JSON.stringify(settlement)).toBe(before);
   });
 
-  it("keeps native scalar answers readable and terminal failures free of answer text", () => {
+  it("maps native scalar and list answers by persisted question order", () => {
     const entries = deriveWorkLogEntries(
       [
+        makeActivity({
+          id: "ask-native-requested",
+          kind: "user-input.requested",
+          tone: "info",
+          summary: "User input requested",
+          turnId: "turn-native",
+          sequence: 1,
+          payload: {
+            requestId: "ask-native",
+            lifecycleGeneration: "generation-native",
+            questions: [
+              {
+                id: "q1",
+                header: "Choice",
+                question: "Choose",
+                options: [{ label: "A" }],
+              },
+              {
+                id: "q2",
+                header: "Text",
+                question: "Explain",
+                options: [],
+                kind: "text",
+              },
+              {
+                id: "q3",
+                header: "Custom",
+                question: "Choose or write",
+                options: [{ label: "Preset" }],
+              },
+            ],
+          },
+        }),
         makeActivity({
           id: "ask-native-answered",
           kind: "user-input.resolved",
           tone: "info",
           summary: "User input answered",
+          turnId: "turn-native",
+          sequence: 2,
           payload: {
             requestId: "ask-native",
-            settlement: { status: "answered", answers: { q1: "A", q2: ["B", "C"] } },
+            lifecycleGeneration: "generation-native",
+            settlement: {
+              status: "answered",
+              answers: { q1: "A", q2: "raw\ntext  ", q3: "custom raw  " },
+            },
           },
         }),
         makeActivity({
@@ -84,6 +179,7 @@ describe("deriveWorkLogEntries", () => {
           kind: "user-input.resolved",
           tone: "error",
           summary: "User input cancelled",
+          sequence: 3,
           payload: {
             requestId: "ask-cancelled",
             settlement: { status: "cancelled" },
@@ -95,34 +191,179 @@ describe("deriveWorkLogEntries", () => {
 
     expect(entries[0]).toMatchObject({
       userInputSettlementStatus: "answered",
-      userInputAnswerSummary: "A · B · C",
+      userInputInteraction: {
+        questions: [
+          { id: "q1", answer: { selectedOptionLabels: ["A"] } },
+          {
+            id: "q2",
+            answer: { selectedOptionLabels: [], customText: "raw\ntext  " },
+          },
+          {
+            id: "q3",
+            answer: { selectedOptionLabels: [], customText: "custom raw  " },
+          },
+        ],
+      },
     });
-    expect(entries[1]).toMatchObject({ userInputSettlementStatus: "cancelled" });
-    expect(entries[1]?.userInputAnswerSummary).toBeUndefined();
+    expect(entries[1]).toMatchObject({
+      userInputSettlementStatus: "cancelled",
+    });
+    expect(entries[1]?.userInputInteraction).toBeUndefined();
   });
 
-  it("truncates presentation summaries at grapheme boundaries", () => {
-    const family = "👨‍👩‍👧‍👦";
-    const [entry] = deriveWorkLogEntries(
+  it("does not merge reused request ids across turns or lifecycle generations", () => {
+    const entries = deriveWorkLogEntries(
       [
         makeActivity({
-          id: "ask-long-answered",
+          id: "ask-requested-generation-1",
+          kind: "user-input.requested",
+          tone: "info",
+          summary: "User input requested",
+          turnId: "turn-1",
+          sequence: 1,
+          payload: {
+            requestId: "reused",
+            lifecycleGeneration: "generation-1",
+            questions: [{ id: "q1", prompt: "First?", kind: "text" }],
+          },
+        }),
+        makeActivity({
+          id: "ask-resolved-generation-2",
           kind: "user-input.resolved",
           tone: "info",
           summary: "User input answered",
+          turnId: "turn-1",
+          sequence: 2,
           payload: {
-            requestId: "ask-long",
+            requestId: "reused",
+            lifecycleGeneration: "generation-2",
             settlement: {
               status: "answered",
-              answers: { q1: { selectedOptionLabels: [], customText: family.repeat(300) } },
+              answers: { q1: "wrong generation" },
             },
+          },
+        }),
+        makeActivity({
+          id: "ask-resolved-turn-2",
+          kind: "user-input.resolved",
+          tone: "info",
+          summary: "User input answered",
+          turnId: "turn-2",
+          sequence: 3,
+          payload: {
+            requestId: "reused",
+            lifecycleGeneration: "generation-1",
+            settlement: { status: "answered", answers: { q1: "wrong turn" } },
           },
         }),
       ],
       undefined,
     );
 
-    expect(entry?.userInputAnswerSummary).toBe(`${family.repeat(219)}…`);
+    expect(entries).toHaveLength(3);
+    expect(entries[0]?.userInputSettlementStatus).toBeUndefined();
+    expect(entries.slice(1).map((entry) => entry.activityKind)).toEqual([
+      "user-input.resolved",
+      "user-input.resolved",
+    ]);
+  });
+
+  it.each(["cancelled", "aborted", "timed_out", "unavailable", "stale"] as const)(
+    "coalesces %s without exposing answer details",
+    (status) => {
+      const entries = deriveWorkLogEntries(
+        [
+          makeActivity({
+            id: `ask-${status}-requested`,
+            kind: "user-input.requested",
+            summary: "User input requested",
+            tone: "info",
+            turnId: "turn-terminal",
+            sequence: 1,
+            payload: {
+              requestId: `ask-${status}`,
+              lifecycleGeneration: "generation-terminal",
+              questions: [
+                {
+                  id: "q1",
+                  prompt: "Choose?",
+                  kind: "choice",
+                  cardinality: "single",
+                  options: [{ label: "A" }],
+                },
+              ],
+            },
+          }),
+          makeActivity({
+            id: `ask-${status}-resolved`,
+            kind: "user-input.resolved",
+            summary: `User input ${status}`,
+            tone: "error",
+            turnId: "turn-terminal",
+            sequence: 2,
+            payload: {
+              requestId: `ask-${status}`,
+              lifecycleGeneration: "generation-terminal",
+              settlement: { status },
+            },
+          }),
+        ],
+        undefined,
+      );
+
+      expect(entries).toHaveLength(1);
+      expect(entries[0]).toMatchObject({
+        id: `ask-${status}-requested`,
+        activityKind: "user-input.requested",
+        userInputSettlementStatus: status,
+        userInputInteraction: {
+          questions: [{ id: "q1", prompt: "Choose?" }],
+        },
+      });
+      expect(entries[0]?.userInputInteraction?.questions[0]?.answer).toBeUndefined();
+    },
+  );
+
+  it("rebuilds the same interaction projection on replay without mutating persisted facts", () => {
+    const activities = [
+      makeActivity({
+        id: "ask-replay-requested",
+        kind: "user-input.requested",
+        summary: "User input requested",
+        turnId: "turn-replay",
+        sequence: 1,
+        payload: {
+          requestId: "ask-replay",
+          lifecycleGeneration: "generation-replay",
+          questions: [
+            {
+              id: "q1",
+              header: "Choice",
+              question: "Choose?",
+              options: [{ label: "A" }],
+            },
+          ],
+        },
+      }),
+      makeActivity({
+        id: "ask-replay-resolved",
+        kind: "user-input.resolved",
+        summary: "User input answered",
+        turnId: "turn-replay",
+        sequence: 2,
+        payload: {
+          requestId: "ask-replay",
+          lifecycleGeneration: "generation-replay",
+          settlement: { status: "answered", answers: { q1: "A" } },
+        },
+      }),
+    ];
+    const before = JSON.stringify(activities);
+
+    expect(deriveWorkLogEntries(activities, undefined)).toEqual(
+      deriveWorkLogEntries(structuredClone(activities), undefined),
+    );
+    expect(JSON.stringify(activities)).toBe(before);
   });
 
   it("keeps Ask provenance failures structured instead of leaking server copy", () => {
@@ -463,7 +704,10 @@ describe("deriveWorkLogEntries", () => {
           payload: {
             nativeEventType: "item/future/completed",
             data: {
-              rawOutput: { stdout: "must-not-render", error: "must-not-render-error" },
+              rawOutput: {
+                stdout: "must-not-render",
+                error: "must-not-render-error",
+              },
             },
           },
         }),
@@ -655,7 +899,9 @@ describe("deriveWorkLogEntries", () => {
         kind: "turn.tasks.updated",
         summary: "Tasks updated",
         tone: "info",
-        payload: { tasks: [{ task: "Unknown boundary A", status: "completed" }] },
+        payload: {
+          tasks: [{ task: "Unknown boundary A", status: "completed" }],
+        },
       }),
       makeActivity({
         id: "tasks-turnless-2",
@@ -663,7 +909,9 @@ describe("deriveWorkLogEntries", () => {
         kind: "turn.tasks.updated",
         summary: "Tasks updated",
         tone: "info",
-        payload: { tasks: [{ task: "Unknown boundary B", status: "inProgress" }] },
+        payload: {
+          tasks: [{ task: "Unknown boundary B", status: "inProgress" }],
+        },
       }),
     ];
 
@@ -719,14 +967,23 @@ describe("deriveWorkLogEntries", () => {
 
   it("filters by turn id when provided", () => {
     const activities: OrchestrationThreadActivity[] = [
-      makeActivity({ id: "turn-1", turnId: "turn-1", summary: "Tool call", kind: "tool.started" }),
+      makeActivity({
+        id: "turn-1",
+        turnId: "turn-1",
+        summary: "Tool call",
+        kind: "tool.started",
+      }),
       makeActivity({
         id: "turn-2",
         turnId: "turn-2",
         summary: "Tool call complete",
         kind: "tool.completed",
       }),
-      makeActivity({ id: "no-turn", summary: "Checkpoint captured", tone: "info" }),
+      makeActivity({
+        id: "no-turn",
+        summary: "Checkpoint captured",
+        tone: "info",
+      }),
     ];
 
     const entries = deriveWorkLogEntries(activities, TurnId.makeUnsafe("turn-2"));
@@ -735,7 +992,12 @@ describe("deriveWorkLogEntries", () => {
 
   it("keeps work for every visible transcript turn when requested", () => {
     const activities: OrchestrationThreadActivity[] = [
-      makeActivity({ id: "turn-1", turnId: "turn-1", summary: "First tool", kind: "tool.started" }),
+      makeActivity({
+        id: "turn-1",
+        turnId: "turn-1",
+        summary: "First tool",
+        kind: "tool.started",
+      }),
       makeActivity({
         id: "turn-2",
         turnId: "turn-2",
@@ -762,7 +1024,12 @@ describe("deriveWorkLogEntries", () => {
 
   it("falls back to the latest-turn filter when visible turn ids are empty", () => {
     const activities: OrchestrationThreadActivity[] = [
-      makeActivity({ id: "turn-1", turnId: "turn-1", summary: "First tool", kind: "tool.started" }),
+      makeActivity({
+        id: "turn-1",
+        turnId: "turn-1",
+        summary: "First tool",
+        kind: "tool.started",
+      }),
       makeActivity({
         id: "turn-2",
         turnId: "turn-2",
@@ -1272,7 +1539,11 @@ describe("deriveWorkLogEntries", () => {
         payload: {
           itemType: "dynamic_tool_call",
           detail: 'Workflow: {"script":"x"}',
-          data: { toolCallId: "toolu_a", toolName: "Workflow", input: { script: "x" } },
+          data: {
+            toolCallId: "toolu_a",
+            toolName: "Workflow",
+            input: { script: "x" },
+          },
         },
       }),
       makeActivity({
@@ -1283,7 +1554,11 @@ describe("deriveWorkLogEntries", () => {
         payload: {
           itemType: "dynamic_tool_call",
           detail: 'WebFetch: {"url":"https://x.dev"}',
-          data: { toolCallId: "toolu_b", toolName: "WebFetch", input: { url: "https://x.dev" } },
+          data: {
+            toolCallId: "toolu_b",
+            toolName: "WebFetch",
+            input: { url: "https://x.dev" },
+          },
         },
       }),
     ];
@@ -2463,7 +2738,12 @@ describe("deriveWorkLogEntries", () => {
           title: "Read",
           data: {
             kind: "read",
-            locations: [{ path: "apps/server/src/provider/acp/AcpRuntimeModel.ts", line: 12 }],
+            locations: [
+              {
+                path: "apps/server/src/provider/acp/AcpRuntimeModel.ts",
+                line: 12,
+              },
+            ],
           },
         },
       }),
@@ -3207,7 +3487,9 @@ describe("deriveWorkLogEntries", () => {
               toolName: "mcp__omnimind__omnimind_create_threads",
               rawOutput: {
                 is_error: 1,
-                output: { Error: "Invalid target options\n  at target.options" },
+                output: {
+                  Error: "Invalid target options\n  at target.options",
+                },
               },
             },
           },
@@ -3528,7 +3810,10 @@ describe("deriveWorkLogEntries", () => {
     const entries = deriveWorkLogEntries(activities, undefined);
     expect(entries).toHaveLength(1);
     expect(entries[0]?.subagents).toEqual([
-      expect.objectContaining({ threadId: "toolu_x", providerThreadId: "toolu_x" }),
+      expect.objectContaining({
+        threadId: "toolu_x",
+        providerThreadId: "toolu_x",
+      }),
     ]);
     expect(omitRoutedSubagentWorkEntries(entries)).toEqual([]);
   });
@@ -4018,7 +4303,10 @@ describe("deriveTimelineEntries", () => {
       messageId,
       "work-after",
     ]);
-    expect(entries[0]).toMatchObject({ kind: "message", message: { text: "Plan first." } });
+    expect(entries[0]).toMatchObject({
+      kind: "message",
+      message: { text: "Plan first." },
+    });
     expect(entries[2]).toMatchObject({
       kind: "message",
       assistantCopyText: fullText,
@@ -4035,8 +4323,18 @@ describe("deriveTimelineEntries", () => {
         role: "assistant" as const,
         text: "beforeafter",
         textSegments: [
-          { sequence: 10, startedAt: createdAt, endedAt: createdAt, text: "before" },
-          { sequence: 30, startedAt: createdAt, endedAt: createdAt, text: "after" },
+          {
+            sequence: 10,
+            startedAt: createdAt,
+            endedAt: createdAt,
+            text: "before",
+          },
+          {
+            sequence: 30,
+            startedAt: createdAt,
+            endedAt: createdAt,
+            text: "after",
+          },
         ],
         turnId: TurnId.makeUnsafe("turn-total-order"),
         createdAt,
@@ -4063,7 +4361,13 @@ describe("deriveTimelineEntries", () => {
       },
     ];
     const work = [
-      { id: "work-total-order", createdAt, sequence: 20, label: "tool", tone: "tool" as const },
+      {
+        id: "work-total-order",
+        createdAt,
+        sequence: 20,
+        label: "tool",
+        tone: "tool" as const,
+      },
     ];
 
     const first = deriveTimelineEntries(messages, plans, work).map((entry) => entry.id);
@@ -4218,7 +4522,11 @@ describe("deriveTimelineEntries", () => {
     expect(entries[2]).toMatchObject({
       kind: "message",
       assistantCopyText: "Before tool.After tool, still streaming",
-      message: { id: messageId, text: "After tool, still streaming", streaming: true },
+      message: {
+        id: messageId,
+        text: "After tool, still streaming",
+        streaming: true,
+      },
     });
   });
 });

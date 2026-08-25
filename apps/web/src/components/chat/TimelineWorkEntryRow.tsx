@@ -352,6 +352,12 @@ export function prefersCompactWorkEntryRow(workEntry: TimelineWorkEntry): boolea
   if (isReasoningUpdateWorkEntry(workEntry)) {
     return true;
   }
+  if (
+    workEntry.activityKind === "user-input.requested" ||
+    workEntry.activityKind === "user-input.resolved"
+  ) {
+    return true;
+  }
   if (isCodexActivityStatusWorkEntry(workEntry)) {
     return true;
   }
@@ -507,7 +513,9 @@ function AttachmentTransferFailuresRow(props: {
           className={cn("min-w-0 flex-1 truncate", WORK_ROW_MUTED_HOVER_TONE["tool-row"])}
           style={{ fontSize: `${props.rowFontSizePx}px` }}
         >
-          {t("chatToAgent.attachmentsPartial", { count: props.failures.length })}
+          {t("chatToAgent.attachmentsPartial", {
+            count: props.failures.length,
+          })}
         </span>
         <DisclosureChevron open={open} />
       </button>
@@ -631,28 +639,26 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     ? t("pendingInput.provenanceUnavailable")
     : workEntry.userInputSettlementStatus
       ? t(`pendingInput.receipt.${workEntry.userInputSettlementStatus}`)
-      : workEntry.skillDelivery
-        ? t(
-            workEntry.activityKind === "skill.instructions.failed"
-              ? "skill.instructionsFailed"
-              : "skill.instructionsLoaded",
-            { skillName: workEntry.skillDelivery.skillName },
-          )
-        : workEntry.itemType === "command_execution" ||
-            workEntry.requestKind === "command" ||
-            Boolean(workEntry.command ?? workEntry.rawCommand)
-          ? t("tool.command.single")
-          : workEntry.taskListProgress
-            ? t("taskList.progress", workEntry.taskListProgress)
-            : (bundledWebAccessHeading ?? toolWorkEntryHeading(workEntry));
+      : workEntry.activityKind === "user-input.requested"
+        ? t("pendingInput.waitingForAnswer")
+        : workEntry.skillDelivery
+          ? t(
+              workEntry.activityKind === "skill.instructions.failed"
+                ? "skill.instructionsFailed"
+                : "skill.instructionsLoaded",
+              { skillName: workEntry.skillDelivery.skillName },
+            )
+          : workEntry.itemType === "command_execution" ||
+              workEntry.requestKind === "command" ||
+              Boolean(workEntry.command ?? workEntry.rawCommand)
+            ? t("tool.command.single")
+            : workEntry.taskListProgress
+              ? t("taskList.progress", workEntry.taskListProgress)
+              : (bundledWebAccessHeading ?? toolWorkEntryHeading(workEntry));
   const rawPreview = workEntry.askUserProvenanceUnavailable
     ? ""
     : workEntry.userInputSettlementStatus
-      ? workEntry.userInputSettlementStatus === "answered"
-        ? workEntry.userInputAnswerSummary
-          ? `· ${workEntry.userInputAnswerSummary}`
-          : ""
-        : ""
+      ? ""
       : workEntryPreview(workEntry);
   const preview =
     isOmniMindBrowserToolRow || isOmniMindToolRow
@@ -743,6 +749,19 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
         textFontSizePx={textFontSizePx}
         markdownCwd={markdownCwd}
         onImageExpand={onImageExpand}
+      />
+    );
+  }
+
+  if (
+    workEntry.activityKind === "user-input.requested" ||
+    workEntry.activityKind === "user-input.resolved"
+  ) {
+    return (
+      <UserInputInteractionRow
+        workEntry={workEntry}
+        compact={compact}
+        textFontSizePx={textFontSizePx}
       />
     );
   }
@@ -1010,6 +1029,138 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   );
 });
 
+function UserInputInteractionRow(props: {
+  workEntry: TimelineWorkEntry;
+  compact: boolean;
+  textFontSizePx: number;
+}) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const regionId = useId();
+  const status = props.workEntry.userInputSettlementStatus;
+  const questions = props.workEntry.userInputInteraction?.questions ?? [];
+  const canExpand =
+    status === "answered" && questions.some((question) => question.answer !== undefined);
+  const heading = status ? t(`pendingInput.receipt.${status}`) : t("pendingInput.waitingForAnswer");
+  const compact = props.compact;
+
+  const headingChildren = (
+    <>
+      <span
+        className={cn(
+          "flex shrink-0 items-center justify-center text-muted-foreground/65",
+          compact ? "size-4" : "size-5",
+        )}
+        data-work-entry-icon="true"
+      >
+        <AskUserIcon className={compact ? "size-3.5" : "size-4"} />
+      </span>
+      <span
+        className="min-w-0 flex-1 truncate leading-5"
+        data-work-entry-display-text="true"
+        style={{ fontSize: `${props.textFontSizePx}px` }}
+      >
+        {heading}
+      </span>
+      {canExpand ? (
+        <DisclosureChevron
+          open={open}
+          className="mr-0.5 size-3 shrink-0 text-muted-foreground/45"
+        />
+      ) : null}
+    </>
+  );
+
+  return (
+    <section
+      className={cn("min-w-0 max-w-full overflow-hidden", compact ? "py-0.5" : "py-1")}
+      data-user-input-interaction="true"
+      data-user-input-status={status ?? "pending"}
+    >
+      {canExpand ? (
+        <button
+          type="button"
+          className={cn(
+            "group/user-input flex w-full min-w-0 items-center rounded-md text-left text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring",
+            compact ? "gap-1.5" : "gap-2",
+          )}
+          aria-expanded={open}
+          aria-controls={regionId}
+          onClick={() => setOpen((current) => !current)}
+        >
+          {headingChildren}
+        </button>
+      ) : (
+        <div
+          className={cn(
+            "flex w-full min-w-0 items-center text-muted-foreground",
+            compact ? "gap-1.5" : "gap-2",
+          )}
+        >
+          {headingChildren}
+        </div>
+      )}
+
+      {canExpand ? (
+        <div id={regionId}>
+          <DisclosureRegion
+            open={open}
+            contentClassName={cn(
+              "min-w-0 max-w-full overflow-hidden pr-1",
+              compact ? "pl-[22px] pt-1" : "pl-7 pt-1.5",
+            )}
+          >
+            <div
+              className="min-w-0 space-y-3 text-foreground/85"
+              data-user-input-details="true"
+              style={{ fontSize: `${props.textFontSizePx}px` }}
+            >
+              {questions.map((question, index) => (
+                <div key={question.id} className="min-w-0 space-y-1.5">
+                  <p className="break-words font-medium leading-5">
+                    {index + 1}. {question.prompt}
+                  </p>
+                  {question.answer?.selectedOptionLabels.length ? (
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-[0.92em] text-muted-foreground">
+                        {t("pendingInput.timeline.selected")}
+                      </p>
+                      <ul className="min-w-0 space-y-0.5 pl-4">
+                        {question.answer.selectedOptionLabels.map((label) => (
+                          <li
+                            key={`${question.id}:selected:${label}`}
+                            className="list-disc break-words whitespace-pre-wrap"
+                          >
+                            {label}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {question.answer?.customText !== undefined ? (
+                    <div className="min-w-0 space-y-1">
+                      <p className="text-[0.92em] text-muted-foreground">
+                        {t(
+                          question.kind === "text"
+                            ? "pendingInput.timeline.answer"
+                            : "pendingInput.timeline.customAnswer",
+                        )}
+                      </p>
+                      <p className="break-words whitespace-pre-wrap">
+                        {question.answer.customText}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </DisclosureRegion>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function ReasoningDisclosureRow(props: {
   workEntry: TimelineWorkEntry;
   compact: boolean;
@@ -1259,7 +1410,9 @@ function ReasoningBodyViewport(props: {
               <p
                 className="mt-1 min-w-0 max-w-full break-words text-muted-foreground/60"
                 data-reasoning-truncation-notice="true"
-                style={{ fontSize: `${Math.max(11, props.textFontSizePx - 1)}px` }}
+                style={{
+                  fontSize: `${Math.max(11, props.textFontSizePx - 1)}px`,
+                }}
               >
                 {t("agentActivity.contentTruncated")}
               </p>

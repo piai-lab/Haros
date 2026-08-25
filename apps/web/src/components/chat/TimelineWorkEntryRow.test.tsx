@@ -2,7 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type { WorkLogEntry } from "../../workLog";
-import { renderWorkEntryIcon, workEntryLeftIcon } from "./TimelineWorkEntryRow";
+import {
+  prefersCompactWorkEntryRow,
+  renderWorkEntryIcon,
+  workEntryLeftIcon,
+} from "./TimelineWorkEntryRow";
 
 function entry(overrides: Partial<WorkLogEntry> = {}): WorkLogEntry {
   return {
@@ -86,5 +90,20 @@ describe("canonical User Input Timeline identity", () => {
     ]) {
       expect(iconMarkup(workEntry)).not.toContain('data-central-icon-name="bubbles"');
     }
+  });
+
+  it("uses the shared compact Timeline geometry for pending and terminal User Input", () => {
+    expect(
+      prefersCompactWorkEntryRow(entry({ activityKind: "user-input.requested", tone: "info" })),
+    ).toBe(true);
+    expect(
+      prefersCompactWorkEntryRow(
+        entry({
+          activityKind: "user-input.resolved",
+          tone: "info",
+          userInputSettlementStatus: "answered",
+        }),
+      ),
+    ).toBe(true);
   });
 });

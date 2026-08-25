@@ -40,9 +40,27 @@ function CanonicalAnsweredRow() {
           createdAt: "2026-08-25T00:00:01.000Z",
           label: "User input answered",
           tone: "info",
-          activityKind: "user-input.resolved",
+          activityKind: "user-input.requested",
           userInputSettlementStatus: "answered",
-          userInputAnswerSummary: "A · B · 自定义内容",
+          userInputInteraction: {
+            requestId: "request-1",
+            questions: [
+              {
+                id: "direction",
+                prompt: "选择实现方向",
+                kind: "choice",
+                optionLabels: ["A", "B"],
+                answer: { selectedOptionLabels: ["A", "B"], customText: "自定义内容  " },
+              },
+              {
+                id: "context",
+                prompt: "还有什么背景？",
+                kind: "text",
+                optionLabels: [],
+                answer: { selectedOptionLabels: [], customText: "第一行\n第二行" },
+              },
+            ],
+          },
         }}
         chatMetaFontSizePx={12}
         textFontSizePx={13}
@@ -50,6 +68,53 @@ function CanonicalAnsweredRow() {
         onImageExpand={() => {}}
         markdownCwd={undefined}
         timestampFormat="24-hour"
+      />
+    </I18nProvider>
+  );
+}
+
+function CompactPeerRows() {
+  const shared = {
+    chatMetaFontSizePx: 12,
+    textFontSizePx: 13,
+    density: "compact" as const,
+    onImageExpand: () => {},
+    markdownCwd: undefined,
+    timestampFormat: "24-hour" as const,
+  };
+  return (
+    <I18nProvider>
+      <TimelineWorkEntryRow
+        {...shared}
+        workEntry={{
+          id: "reasoning",
+          createdAt: "2026-08-25T00:00:00.000Z",
+          label: "Reasoning",
+          tone: "thinking",
+          activityKind: "reasoning.updated",
+          reasoningEntries: [{ id: "reasoning-1", text: "Thinking" }],
+        }}
+      />
+      <TimelineWorkEntryRow
+        {...shared}
+        workEntry={{
+          id: "tool",
+          createdAt: "2026-08-25T00:00:01.000Z",
+          label: "Tool",
+          tone: "tool",
+          itemType: "dynamic_tool_call",
+          toolName: "ordinary_tool",
+        }}
+      />
+      <TimelineWorkEntryRow
+        {...shared}
+        workEntry={{
+          id: "ask",
+          createdAt: "2026-08-25T00:00:02.000Z",
+          label: "User input requested",
+          tone: "info",
+          activityKind: "user-input.requested",
+        }}
       />
     </I18nProvider>
   );
@@ -86,13 +151,51 @@ describe("canonical User Input Timeline projection", () => {
     await screen.unmount();
   });
 
-  it("shows the persisted answered summary on the quiet bubbles receipt", async () => {
+  it("keeps answered collapsed and reveals only persisted question details on demand", async () => {
     const host = createHost(430);
     const screen = await render(<CanonicalAnsweredRow />, { container: host });
 
     expect(host.querySelector('[data-central-icon-name="bubbles"]')).not.toBeNull();
-    expect(host.textContent).toContain("Answered · A · B · 自定义内容");
+    const trigger = host.querySelector<HTMLButtonElement>("[aria-expanded]");
+    const details = host.querySelector<HTMLElement>("[data-user-input-details='true']");
+    expect(trigger?.textContent?.trim()).toBe("Answered");
+    expect(trigger?.getAttribute("aria-expanded")).toBe("false");
+    expect(details?.closest("[aria-hidden='true']")).not.toBeNull();
+
+    await screen.getByRole("button", { name: "Answered" }).click();
+
+    await expect.poll(() => trigger?.getAttribute("aria-expanded")).toBe("true");
+    expect(details?.closest("[aria-hidden='true']")).toBeNull();
+    expect(host.textContent).toContain("选择实现方向");
+    expect(host.textContent).toContain("A");
+    expect(host.textContent).toContain("B");
+    expect(host.textContent).toContain("自定义内容  ");
+    expect(host.textContent).toContain("第一行\n第二行");
     expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
+
+    await screen.unmount();
+  });
+
+  it("aligns reasoning, tool, and User Input on one compact leading geometry", async () => {
+    const host = createHost(480);
+    const screen = await render(<CompactPeerRows />, { container: host });
+    const icons = Array.from(host.querySelectorAll<HTMLElement>("[data-work-entry-icon='true']"));
+    const labels = Array.from(
+      host.querySelectorAll<HTMLElement>("[data-work-entry-display-text='true']"),
+    );
+
+    expect(icons).toHaveLength(3);
+    expect(labels).toHaveLength(3);
+    expect(icons.map((icon) => icon.getBoundingClientRect().left)).toEqual([
+      icons[0]!.getBoundingClientRect().left,
+      icons[0]!.getBoundingClientRect().left,
+      icons[0]!.getBoundingClientRect().left,
+    ]);
+    expect(labels.map((label) => label.getBoundingClientRect().left)).toEqual([
+      labels[0]!.getBoundingClientRect().left,
+      labels[0]!.getBoundingClientRect().left,
+      labels[0]!.getBoundingClientRect().left,
+    ]);
 
     await screen.unmount();
   });

@@ -89,8 +89,12 @@ export interface WorkLogEntry {
     | "timed_out"
     | "unavailable"
     | "stale";
-  /** Bounded presentation-only summary derived from the persisted terminal fact. */
-  userInputAnswerSummary?: string;
+  /**
+   * Read-only Timeline projection assembled from persisted request + settlement
+   * facts. It never points at the Composer draft and never changes the payload
+   * returned to the Provider/model.
+   */
+  userInputInteraction?: WorkLogUserInputInteraction;
   askUserProvenanceUnavailable?: boolean;
   failureReason?: ProviderTurnStartFailureReasonValue;
   // Provider-native event type carried through the activity payload (e.g.
@@ -120,6 +124,24 @@ export interface WorkLogEntry {
     attachmentIndex: number;
     reason: "missing" | "unreadable" | "limit" | "clone-failed";
   }>;
+}
+
+export interface WorkLogUserInputAnswer {
+  selectedOptionLabels: ReadonlyArray<string>;
+  customText?: string;
+}
+
+export interface WorkLogUserInputQuestion {
+  id: string;
+  prompt: string;
+  kind: "choice" | "text";
+  optionLabels: ReadonlyArray<string>;
+  answer?: WorkLogUserInputAnswer;
+}
+
+export interface WorkLogUserInputInteraction {
+  requestId: string;
+  questions: ReadonlyArray<WorkLogUserInputQuestion>;
 }
 
 export type WorkLogLiveActivityState =
@@ -202,6 +224,8 @@ interface DerivedWorkLogEntry extends WorkLogEntry {
   runtimeWarningMessage?: string;
   suppressStandaloneCommandStart?: boolean;
   taskListSnapshotValid?: boolean;
+  userInputCorrelationKey?: string;
+  userInputResolvedAnswers?: unknown;
 }
 
 export function isFileChangeWorkLogEntry(
@@ -318,7 +342,7 @@ export function deriveWorkLogEntries(
   // `toolName` here previously made those icon checks dead code, leaving the
   // generic wrench.
   return reconcileSettledLiveActivities(
-    collapseDerivedWorkLogEntries(entries),
+    collapseDerivedWorkLogEntries(coalesceCanonicalUserInputEntries(entries)),
     ordered,
     latestTurnId,
     options,
@@ -332,6 +356,8 @@ export function deriveWorkLogEntries(
         runtimeWarningRepeatCount: _runtimeWarningRepeatCount,
         suppressStandaloneCommandStart: _suppressStandaloneCommandStart,
         taskListSnapshotValid: _taskListSnapshotValid,
+        userInputCorrelationKey: _userInputCorrelationKey,
+        userInputResolvedAnswers: _userInputResolvedAnswers,
         ...entry
       }) => entry,
     );
@@ -480,60 +506,9 @@ export function parseTaskListTasks(payload: unknown): TaskListTaskSnapshot[] | n
   return tasks;
 }
 
-const USER_INPUT_ANSWER_SUMMARY_MAX_GRAPHEMES = 220;
-
-function normalizeUserInputAnswerSummaryPart(value: string): string | null {
-  const normalized = value.replace(/\s+/gu, " ").trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function truncateUserInputAnswerSummary(value: string): string {
-  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
-  const graphemes = Array.from(segmenter.segment(value), (segment) => segment.segment);
-  if (graphemes.length <= USER_INPUT_ANSWER_SUMMARY_MAX_GRAPHEMES) {
-    return value;
-  }
-  return `${graphemes.slice(0, USER_INPUT_ANSWER_SUMMARY_MAX_GRAPHEMES - 1).join("")}…`;
-}
-
-function extractUserInputAnswerSummary(answers: unknown): string | null {
-  const answerRecord = asRecord(answers);
-  if (!answerRecord) return null;
-  const parts: string[] = [];
-  for (const answer of Object.values(answerRecord)) {
-    if (typeof answer === "string") {
-      const part = normalizeUserInputAnswerSummaryPart(answer);
-      if (part) parts.push(part);
-      continue;
-    }
-    if (Array.isArray(answer)) {
-      for (const value of answer) {
-        if (typeof value !== "string") continue;
-        const part = normalizeUserInputAnswerSummaryPart(value);
-        if (part) parts.push(part);
-      }
-      continue;
-    }
-    const structured = asRecord(answer);
-    if (!structured) continue;
-    if (Array.isArray(structured.selectedOptionLabels)) {
-      for (const value of structured.selectedOptionLabels) {
-        if (typeof value !== "string") continue;
-        const part = normalizeUserInputAnswerSummaryPart(value);
-        if (part) parts.push(part);
-      }
-    }
-    if (typeof structured.customText === "string") {
-      const part = normalizeUserInputAnswerSummaryPart(structured.customText);
-      if (part) parts.push(part);
-    }
-  }
-  return parts.length > 0 ? truncateUserInputAnswerSummary(parts.join(" · ")) : null;
-}
-
 function extractUserInputResolution(payload: Record<string, unknown> | null): {
   status: NonNullable<WorkLogEntry["userInputSettlementStatus"]>;
-  answerSummary: string | null;
+  answers?: unknown;
 } | null {
   const settlement = asRecord(payload?.settlement);
   const status = settlement?.status;
@@ -547,8 +522,7 @@ function extractUserInputResolution(payload: Record<string, unknown> | null): {
   ) {
     return {
       status,
-      answerSummary:
-        status === "answered" ? extractUserInputAnswerSummary(settlement?.answers) : null,
+      ...(status === "answered" ? { answers: settlement?.answers } : {}),
     };
   }
   // Named legacy/native decode seam: older persisted Provider activities carried
@@ -557,10 +531,105 @@ function extractUserInputResolution(payload: Record<string, unknown> | null): {
   if (asRecord(payload?.answers)) {
     return {
       status: "answered",
-      answerSummary: extractUserInputAnswerSummary(payload?.answers),
+      answers: payload?.answers,
     };
   }
   return null;
+}
+
+function extractUserInputCorrelationKey(
+  activity: OrchestrationThreadActivity,
+  payload: Record<string, unknown> | null,
+): string | null {
+  const requestId = payload?.requestId;
+  const lifecycleGeneration = payload?.lifecycleGeneration;
+  // A request id alone is not globally unique. Refuse to coalesce old or malformed
+  // facts that lack their owning turn/generation; an honest orphan terminal row is
+  // safer than merging two different interactions that reused the same id.
+  if (
+    typeof requestId !== "string" ||
+    requestId.length === 0 ||
+    activity.turnId === null ||
+    typeof lifecycleGeneration !== "string" ||
+    lifecycleGeneration.length === 0
+  ) {
+    return null;
+  }
+  return JSON.stringify([requestId, activity.turnId, lifecycleGeneration]);
+}
+
+function extractUserInputQuestions(
+  payload: Record<string, unknown> | null,
+): WorkLogUserInputQuestion[] {
+  if (!Array.isArray(payload?.questions)) return [];
+  return payload.questions.flatMap((value): WorkLogUserInputQuestion[] => {
+    const question = asRecord(value);
+    if (!question || typeof question.id !== "string") return [];
+    const prompt =
+      typeof question.prompt === "string"
+        ? question.prompt
+        : typeof question.question === "string"
+          ? question.question
+          : null;
+    if (prompt === null) return [];
+    const kind =
+      question.kind === "text" ||
+      (question.kind !== "choice" &&
+        Array.isArray(question.options) &&
+        question.options.length === 0)
+        ? "text"
+        : "choice";
+    const optionLabels = Array.isArray(question.options)
+      ? question.options.flatMap((value): string[] => {
+          const option = asRecord(value);
+          return typeof option?.label === "string" ? [option.label] : [];
+        })
+      : [];
+    return [{ id: question.id, prompt, kind, optionLabels }];
+  });
+}
+
+function extractUserInputAnswer(
+  value: unknown,
+  question: WorkLogUserInputQuestion,
+): WorkLogUserInputAnswer | null {
+  if (typeof value === "string") {
+    if (question.kind === "text") {
+      return { selectedOptionLabels: [], customText: value };
+    }
+    return question.optionLabels.includes(value)
+      ? { selectedOptionLabels: [value] }
+      : { selectedOptionLabels: [], customText: value };
+  }
+  if (Array.isArray(value)) {
+    return {
+      selectedOptionLabels: value.filter((item): item is string => typeof item === "string"),
+    };
+  }
+  const structured = asRecord(value);
+  if (!structured) return null;
+  const selectedOptionLabels = Array.isArray(structured.selectedOptionLabels)
+    ? structured.selectedOptionLabels.filter((item): item is string => typeof item === "string")
+    : [];
+  return {
+    selectedOptionLabels,
+    ...(typeof structured.customText === "string" ? { customText: structured.customText } : {}),
+  };
+}
+
+function attachUserInputAnswers(
+  interaction: WorkLogUserInputInteraction,
+  answers: unknown,
+): WorkLogUserInputInteraction {
+  const answerRecord = asRecord(answers);
+  if (!answerRecord) return interaction;
+  return {
+    ...interaction,
+    questions: interaction.questions.map((question) => {
+      const answer = extractUserInputAnswer(answerRecord[question.id], question);
+      return answer ? { ...question, answer } : question;
+    }),
+  };
 }
 
 function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWorkLogEntry {
@@ -580,6 +649,16 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     activity.kind === "reasoning.completed" &&
     asRecord(payload?.data)?.reasoningDetailTruncated === true;
   const userInputResolution = extractUserInputResolution(payload);
+  const userInputCorrelationKey =
+    activity.kind === "user-input.requested" || activity.kind === "user-input.resolved"
+      ? extractUserInputCorrelationKey(activity, payload)
+      : null;
+  const userInputRequestId =
+    typeof payload?.requestId === "string" && payload.requestId.length > 0
+      ? payload.requestId
+      : null;
+  const userInputQuestions =
+    activity.kind === "user-input.requested" ? extractUserInputQuestions(payload) : [];
   const entry: DerivedWorkLogEntry = {
     id: activity.id,
     createdAt: activity.createdAt,
@@ -588,14 +667,23 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     label: activity.summary,
     tone: activity.tone === "approval" ? "info" : activity.tone,
     activityKind: activity.kind,
+    ...(activity.kind === "user-input.requested" && userInputRequestId
+      ? {
+          userInputInteraction: {
+            requestId: userInputRequestId,
+            questions: userInputQuestions,
+          },
+        }
+      : {}),
     ...(activity.kind === "user-input.resolved" && userInputResolution
       ? {
           userInputSettlementStatus: userInputResolution.status,
-          ...(userInputResolution.answerSummary
-            ? { userInputAnswerSummary: userInputResolution.answerSummary }
+          ...(userInputResolution.answers !== undefined
+            ? { userInputResolvedAnswers: userInputResolution.answers }
             : {}),
         }
       : {}),
+    ...(userInputCorrelationKey ? { userInputCorrelationKey } : {}),
     ...(toolName ? { toolName } : {}),
     ...(toolCallId ? { toolCallId } : {}),
     ...(toolStatus ? { toolStatus } : {}),
@@ -1074,6 +1162,53 @@ function normalizeCollabTaskOutput(value: string | null): string | null {
     .replace(/\s*<\/task>\s*$/i, "")
     .trim();
   return (unwrappedTask || output).trim() || null;
+}
+
+function coalesceCanonicalUserInputEntries(
+  entries: ReadonlyArray<DerivedWorkLogEntry>,
+): DerivedWorkLogEntry[] {
+  const projected: DerivedWorkLogEntry[] = [];
+  const requestedIndexByCorrelation = new Map<string, number>();
+
+  for (const entry of entries) {
+    const correlationKey = entry.userInputCorrelationKey;
+    if (entry.activityKind === "user-input.requested" && correlationKey) {
+      // Duplicate requested facts remain visible instead of silently replacing an
+      // earlier interaction. Only the first well-formed request can own a terminal.
+      if (!requestedIndexByCorrelation.has(correlationKey)) {
+        requestedIndexByCorrelation.set(correlationKey, projected.length);
+      }
+      projected.push(entry);
+      continue;
+    }
+
+    if (entry.activityKind === "user-input.resolved" && correlationKey) {
+      const requestedIndex = requestedIndexByCorrelation.get(correlationKey);
+      const requested = requestedIndex === undefined ? undefined : projected[requestedIndex];
+      if (requested?.userInputInteraction && entry.userInputSettlementStatus) {
+        projected[requestedIndex!] = {
+          ...requested,
+          // Preserve the request row's id/order/position and canonical identity;
+          // only its presentation state changes when the terminal fact arrives.
+          tone: entry.tone,
+          userInputSettlementStatus: entry.userInputSettlementStatus,
+          userInputInteraction:
+            entry.userInputSettlementStatus === "answered"
+              ? attachUserInputAnswers(
+                  requested.userInputInteraction,
+                  entry.userInputResolvedAnswers,
+                )
+              : requested.userInputInteraction,
+        };
+        requestedIndexByCorrelation.delete(correlationKey);
+        continue;
+      }
+    }
+
+    projected.push(entry);
+  }
+
+  return projected;
 }
 
 function collapseDerivedWorkLogEntries(
