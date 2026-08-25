@@ -6,7 +6,7 @@
 >
 > 当前 OmniMind source 观察起点：`14fa9f3e93048d51dc8e3d9d81812418a3590cf2`；fork feasibility source commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`
 >
-> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` private fork feasibility kernel 已建立并判 GO；canonical answer/controller 与既有 Composer Question source slice 已获授权并实施。Tool 注册、public Ask schema、structured Host/Pi lifecycle、live 与 packaged proof仍未实施。
+> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` private fork feasibility kernel 已建立并判 GO；canonical answer/controller 与既有 Composer Question source slice 已获授权并实施，并完成 exact-SHA 安装版 startup/reopen。Tool 注册、public Ask schema、structured Host/Pi lifecycle、live 与 packaged Ask continuation 仍未实施。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -71,7 +71,8 @@ feasibility_slice:
   model_exposed: false
   canonical_contract_connected: true
   composer_projection_connected: true
-  shipped: false
+  fork_shipped: false
+  canonical_ui_installed_candidate: true
 status: gate_b_contract_and_composer_source_slice_tool_registration_forbidden
 ```
 
@@ -750,7 +751,7 @@ fork placement 与 lineage stop-loss 已由 feasibility slice 闭合为 GO；can
 - Agent/Chat prompt guidance 与 live calling behavior；
 - cross-provider richer-field compatibility；
 - production build/package/export/SBOM/license assembly；
-- full packaged proof 与 production adoption。
+- full packaged Ask continuation/safety proof 与 production adoption。
 
 这些是待实施/待验证，不是产品应被限制的理由。
 
@@ -787,7 +788,8 @@ current_fork:
   model_exposed: false
   canonical_contract_connected: true
   composer_projection_connected: true
-  shipped: false
+  fork_shipped: false
+  canonical_ui_installed_candidate: true
 update_policy:
   mode: manual_exact-source
   latest_tracking: forbidden

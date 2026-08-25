@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的未注册 Host-neutral fork kernel，以及 Product-owned canonical answer/controller 和 Composer Question source slice；本文不表示 `ask_user` 已注册、模型已能调用、public Ask schema 已公开、App 已打包或产品已发布。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的未注册 Host-neutral fork kernel，以及 Product-owned canonical answer/controller 和 Composer Question source slice；后者已进入 exact-SHA 本机安装 candidate，但这不表示 `ask_user` 已注册、fork 已进入 shipped bytes、模型已能调用、public Ask schema 已公开或产品已发布。
 
 ## 0. 先给结论
 
@@ -655,6 +655,8 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 | Fork kernel | choice response 新增 first-class `selectedValues[]` / `customText` / `note`，未引入 UI/config/registration | fork suite 从 feasibility 61 增至 64，新增三项产品差异回归 |
 
 这一 slice 仍未解决或未授权：submit/cancel/abort 的完整 typed settlement、structured Host interaction port、ToolDefinition/public request schema、same-turn barrier、same-name provenance、restart stale、MiMo/DeepSeek 与 packaged continuation。尤其当前 inherited Provider response 仍以空 answer map 表示 UI cancel，不能被描述成最终稳定 Cancel contract；它是 registration 前必须消除的 Gate B 阻断。
+
+packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818c54f2fbe1` 的 clean-clone arm64 DMG SHA-256 为 `1efe4a1b708bf92482ec71caade6a086f4215e7a9895f6740b92bd37d8758fc3`，通过 241-component legal closure；安装版 `app.asar` SHA-256 为 `b41849354be5ede2eb1318ee53ffd5cd179c698217e6a6450a3f76291c63b679`，嵌入同一 commit，且 exact scan 不含 `@omnimind/om-ask` / `packages/om-ask`。fresh 隔离 profile 与同 profile reopen 都完成 Main window 和 bundled Server ready，Helper/Renderer/Server 全部指向任务 userData，关闭后零候选进程。它证明 canonical UI bytes 可打包、安装和重开；由于 Tool 仍未注册，它故意不声称 Ask 调用、回答 continuation、Cancel/Abort fencing 或 MiMo/DeepSeek 通过。
 
 ## 14. Required proof
 
