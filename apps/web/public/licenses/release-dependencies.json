@@ -1,12 +1,12 @@
 {
-  "schemaVersion": 2,
-  "derivation": "installed-production-dependency-closure",
+  "schemaVersion": 3,
+  "derivation": "installed-production-and-bundled-workspace-closure",
   "target": {
     "kind": "development-host",
     "platform": "darwin",
     "arch": "arm64"
   },
-  "componentCount": 241,
+  "componentCount": 242,
   "roots": [
     "@agentclientprotocol/sdk",
     "@anthropic-ai/claude-agent-sdk",
@@ -16,6 +16,7 @@
     "@earendil-works/pi-coding-agent",
     "@effect/platform-node",
     "@effect/sql-sqlite-bun",
+    "@omnimind/om-ask",
     "@omnimind/pi-coding-agent",
     "@opencode-ai/sdk",
     "@pierre/diffs",
@@ -1579,6 +1580,34 @@
             "sourceUrl": "https://github.com/kriszyp/msgpackr-extract/blob/db8f5b97e7aaab0bcad95f10582915d417153689/LICENSE",
             "revision": "db8f5b97e7aaab0bcad95f10582915d417153689",
             "sourcePath": "LICENSE",
+            "upstreamLegalTextAbsent": false
+          }
+        }
+      ],
+      "dependencies": []
+    },
+    {
+      "name": "@omnimind/om-ask",
+      "version": "5.0.0-omnimind.1",
+      "id": "@omnimind/om-ask@5.0.0-omnimind.1",
+      "license": "MIT",
+      "author": null,
+      "repository": null,
+      "homepage": null,
+      "manifestSha256": "533bad1676e05681e6227d051d64733bb6df098d0eb599231c3cc29d1e69b812",
+      "locations": [
+        "bundled:apps/server/dist/index.mjs"
+      ],
+      "licenseFiles": [
+        {
+          "name": "LICENSE",
+          "sha256": "c2fe0d24e4492a448b1645a11972bcf1ed221cc2212fecd76596dea8fd39f319",
+          "text": "MIT License\n\nCopyright (c) 2026 Marcel Richter\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.",
+          "provenance": {
+            "kind": "bundled-source",
+            "sourceUrl": null,
+            "revision": null,
+            "sourcePath": "packages/om-ask/LICENSE",
             "upstreamLegalTextAbsent": false
           }
         }

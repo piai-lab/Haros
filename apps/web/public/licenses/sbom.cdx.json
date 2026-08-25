@@ -13,7 +13,7 @@
     "properties": [
       {
         "name": "omnimind:derivation",
-        "value": "installed-production-dependency-closure"
+        "value": "installed-production-and-bundled-workspace-closure"
       },
       {
         "name": "omnimind:target-kind",
@@ -29,7 +29,7 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "a4b2f91b765f283c121d80f284c6d599462a25181372335a00e290e141dd1a65"
+        "value": "a4b2e222d519da28f171ebe8327b8004cf4deecdd48144e10e4a98cc28dcc3f7"
       }
     ]
   },
@@ -1568,6 +1568,32 @@
         {
           "name": "omnimind:artifact-location",
           "value": "node_modules/.bun/@msgpackr-extract+msgpackr-extract-darwin-arm64@3.0.3/node_modules/@msgpackr-extract/msgpackr-extract-darwin-arm64"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "name": "@omnimind/om-ask",
+      "version": "5.0.0-omnimind.1",
+      "bom-ref": "pkg:npm/%40omnimind/om-ask@5.0.0-omnimind.1",
+      "purl": "pkg:npm/%40omnimind/om-ask@5.0.0-omnimind.1",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "533bad1676e05681e6227d051d64733bb6df098d0eb599231c3cc29d1e69b812"
+        }
+      ],
+      "properties": [
+        {
+          "name": "omnimind:artifact-location",
+          "value": "bundled:apps/server/dist/index.mjs"
         }
       ]
     },
@@ -7943,6 +7969,7 @@
         "pkg:npm/%40earendil-works/pi-coding-agent@0.84.2",
         "pkg:npm/%40effect/platform-node@4.0.0-beta.25",
         "pkg:npm/%40effect/sql-sqlite-bun@4.0.0-beta.25",
+        "pkg:npm/%40omnimind/om-ask@5.0.0-omnimind.1",
         "pkg:npm/%40omnimind/pi-coding-agent@0.84.2",
         "pkg:npm/%40opencode-ai/sdk@1.15.13",
         "pkg:npm/%40pierre/diffs@1.2.12",
@@ -8384,6 +8411,10 @@
     },
     {
       "ref": "pkg:npm/%40msgpackr-extract/msgpackr-extract-darwin-arm64@3.0.3",
+      "dependsOn": []
+    },
+    {
+      "ref": "pkg:npm/%40omnimind/om-ask@5.0.0-omnimind.1",
       "dependsOn": []
     },
     {

@@ -18,13 +18,26 @@ export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
 
 export const RELEASE_LOCKFILE_PATH = "bun.lock";
 export const RELEASE_PATCHES_PATH = "patches";
-export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH =
-  "vendor/omnimind-pi-coding-agent-0.84.2.tgz";
+export const OMNIMIND_PI_RUNTIME_PACKAGE_PATH = "vendor/omnimind-pi-coding-agent-0.84.2.tgz";
 
-const SERVER_BUNDLED_WORKSPACE_DEPENDENCIES = new Set([
-  "@omnimind/om-ask",
-  "@omnimind/om-web-access",
-]);
+export const SERVER_BUNDLED_WORKSPACE_COMPONENTS = [
+  {
+    name: "@omnimind/om-ask",
+    manifestPath: "packages/om-ask/package.json",
+    runtimePath: "apps/server/dist/index.mjs",
+    includeInLegalClosure: true,
+  },
+  {
+    name: "@omnimind/om-web-access",
+    manifestPath: "packages/om-web-access/package.json",
+    runtimePath: "apps/server/dist/index.mjs",
+    includeInLegalClosure: false,
+  },
+] as const;
+
+const SERVER_BUNDLED_WORKSPACE_DEPENDENCY_NAMES = new Set<string>(
+  SERVER_BUNDLED_WORKSPACE_COMPONENTS.map((component) => component.name),
+);
 
 export function omitBundledServerWorkspaceDependencies(
   dependencies: Readonly<Record<string, unknown>>,
@@ -32,7 +45,7 @@ export function omitBundledServerWorkspaceDependencies(
   return Object.fromEntries(
     Object.entries(dependencies).filter(([name, version]) => {
       if (typeof version !== "string" || !version.startsWith("workspace:")) return true;
-      if (!SERVER_BUNDLED_WORKSPACE_DEPENDENCIES.has(name)) {
+      if (!SERVER_BUNDLED_WORKSPACE_DEPENDENCY_NAMES.has(name)) {
         throw new Error(`Server workspace dependency '${name}' is not proven to be bundled.`);
       }
       return false;

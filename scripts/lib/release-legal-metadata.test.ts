@@ -216,5 +216,12 @@ describe("release legal metadata", () => {
     ]) {
       expect(inventory.components.some((component) => component.name === name)).toBe(true);
     }
+    const ask = inventory.components.find((component) => component.name === "@omnimind/om-ask");
+    expect(ask?.locations).toEqual(["bundled:apps/server/dist/index.mjs"]);
+    expect(ask?.licenseFiles).toHaveLength(1);
+    expect(ask?.licenseFiles[0]?.provenance).toMatchObject({
+      kind: "bundled-source",
+      sourcePath: "packages/om-ask/LICENSE",
+    });
   });
 });

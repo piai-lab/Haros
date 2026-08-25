@@ -12,6 +12,7 @@ import {
   RELEASE_SBOM_FILE,
   type ReleaseDependencyInventory,
 } from "./release-legal-metadata.ts";
+import { SERVER_BUNDLED_WORKSPACE_COMPONENTS } from "./release-workspace-manifests.ts";
 
 const LEGAL_DIRECTORY = "apps/server/dist/client/licenses";
 const REQUIRED_PI_PACKAGES = [
@@ -69,8 +70,8 @@ export function verifyPackagedLegalClosureArchive(archivePath: string): {
     ).toString("utf8"),
   ) as ReleaseDependencyInventory;
   if (
-    inventory.schemaVersion !== 2 ||
-    inventory.derivation !== "installed-production-dependency-closure" ||
+    inventory.schemaVersion !== 3 ||
+    inventory.derivation !== "installed-production-and-bundled-workspace-closure" ||
     inventory.target?.kind !== "release-target" ||
     inventory.componentCount !== inventory.components.length
   ) {
@@ -78,9 +79,16 @@ export function verifyPackagedLegalClosureArchive(archivePath: string): {
   }
 
   const disclosed = new Set(inventory.components.map((component) => component.id));
+  const bundled = new Set(
+    inventory.components
+      .filter((component) =>
+        component.locations?.some((location) => location.startsWith("bundled:")),
+      )
+      .map((component) => component.id),
+  );
   const packaged = packageIdsInArchive(archivePath);
   const missing = [...packaged].filter((id) => !disclosed.has(id)).toSorted();
-  const phantom = [...disclosed].filter((id) => !packaged.has(id)).toSorted();
+  const phantom = [...disclosed].filter((id) => !packaged.has(id) && !bundled.has(id)).toSorted();
   if (missing.length > 0 || phantom.length > 0) {
     throw new Error(
       [
@@ -95,6 +103,23 @@ export function verifyPackagedLegalClosureArchive(archivePath: string): {
   for (const name of REQUIRED_PI_PACKAGES) {
     if (![...packaged].some((id) => id.startsWith(`${name}@`))) {
       throw new Error(`Packaged dependency closure omitted required Pi package ${name}.`);
+    }
+  }
+  for (const descriptor of SERVER_BUNDLED_WORKSPACE_COMPONENTS) {
+    if (!descriptor.includeInLegalClosure) continue;
+    const component = inventory.components.find((candidate) => candidate.name === descriptor.name);
+    if (!component) {
+      throw new Error(`Packaged legal closure omitted bundled workspace ${descriptor.name}.`);
+    }
+    if (!component.locations.includes(`bundled:${descriptor.runtimePath}`)) {
+      throw new Error(
+        `Bundled workspace ${descriptor.name} has no exact runtime location receipt.`,
+      );
+    }
+    if (!archiveEntries.has(descriptor.runtimePath)) {
+      throw new Error(
+        `Bundled workspace ${descriptor.name} runtime is absent: ${descriptor.runtimePath}.`,
+      );
     }
   }
   return { archivePath, componentCount: inventory.componentCount };

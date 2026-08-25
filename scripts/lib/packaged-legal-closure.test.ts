@@ -36,11 +36,17 @@ async function archiveFixture(extraPackage = false): Promise<string> {
     );
   }
   const components = packages.map((name) => ({ id: `${name}@0.84.2` }));
+  components.push({
+    id: "@omnimind/om-ask@5.0.0-omnimind.1",
+    name: "@omnimind/om-ask",
+    locations: ["bundled:apps/server/dist/index.mjs"],
+  } as (typeof components)[number]);
+  write(join(source, "apps/server/dist/index.mjs"), "export {};\n");
   write(
     join(source, "apps/server/dist/client/licenses/release-dependencies.json"),
     JSON.stringify({
-      schemaVersion: 2,
-      derivation: "installed-production-dependency-closure",
+      schemaVersion: 3,
+      derivation: "installed-production-and-bundled-workspace-closure",
       target: { kind: "release-target", platform: "fixture", arch: "fixture" },
       componentCount: components.length,
       roots: packages,
@@ -60,7 +66,7 @@ afterEach(() => {
 describe("packaged legal closure", () => {
   it("accepts an ASAR only when every packaged dependency is disclosed", async () => {
     const result = verifyPackagedLegalClosureArchive(await archiveFixture());
-    expect(result.componentCount).toBe(8);
+    expect(result.componentCount).toBe(9);
   });
 
   it("rejects an undisclosed dependency found in the actual ASAR", async () => {

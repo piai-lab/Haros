@@ -2,9 +2,9 @@ OmniMind third-party notices
 ==============================
 
 Application version: 0.1.0-alpha.0
-Derivation: installed-production-dependency-closure
+Derivation: installed-production-and-bundled-workspace-closure
 Target: development-host darwin/arm64
-Installed production components: 241
+Installed production components: 242
 
 This checked-in copy is a development-host snapshot for local browsing and source checks.
 Each release target regenerates these files from its staged dependency closure and is
@@ -6543,6 +6543,38 @@ Upstream legal text absent: no
 MIT License
 
 Copyright (c) 2020 Kris Zyp
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+@omnimind/om-ask@5.0.0-omnimind.1
+---------------------------------
+License: MIT
+Packaged location(s): bundled:apps/server/dist/index.mjs
+
+Legal text provenance: bundled-source
+Legal source: source packages/om-ask/LICENSE
+Upstream legal text absent: no
+[LICENSE; SHA-256 c2fe0d24e4492a448b1645a11972bcf1ed221cc2212fecd76596dea8fd39f319]
+MIT License
+
+Copyright (c) 2026 Marcel Richter
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

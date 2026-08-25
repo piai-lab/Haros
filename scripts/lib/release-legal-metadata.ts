@@ -14,6 +14,8 @@ import {
 } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
+import { SERVER_BUNDLED_WORKSPACE_COMPONENTS } from "./release-workspace-manifests.ts";
+
 export const RELEASE_DEPENDENCY_INVENTORY_FILE = "release-dependencies.json";
 export const RELEASE_SBOM_FILE = "sbom.cdx.json";
 export const RELEASE_NOTICES_FILE = "THIRD-PARTY-NOTICES.txt";
@@ -51,7 +53,7 @@ export interface ReleaseLicenseFile {
   readonly sha256: string;
   readonly text: string;
   readonly provenance: {
-    readonly kind: "packaged" | "exact-upstream" | "canonical-spdx-recovery";
+    readonly kind: "packaged" | "bundled-source" | "exact-upstream" | "canonical-spdx-recovery";
     readonly sourceUrl: string | null;
     readonly revision: string | null;
     readonly sourcePath: string;
@@ -88,8 +90,8 @@ export interface ReleaseDependencyComponent {
 }
 
 export interface ReleaseDependencyInventory {
-  readonly schemaVersion: 2;
-  readonly derivation: "installed-production-dependency-closure";
+  readonly schemaVersion: 3;
+  readonly derivation: "installed-production-and-bundled-workspace-closure";
   readonly target: {
     readonly kind: "development-host" | "release-target";
     readonly platform: string;
@@ -283,6 +285,19 @@ export function collectReleaseDependencyInventory(options: {
   >();
   const pending: Array<{ name: string; fromDirectory: string; optional: boolean }> =
     options.roots.map((root) => ({ ...root, optional: false }));
+  for (const descriptor of SERVER_BUNDLED_WORKSPACE_COMPONENTS) {
+    if (!descriptor.includeInLegalClosure) continue;
+    const manifestPath = join(options.repositoryRoot, descriptor.manifestPath);
+    if (!existsSync(manifestPath)) continue;
+    const manifest = readJson(manifestPath);
+    const stagedWorkspaceDirectory = join(options.packageRoot, dirname(descriptor.manifestPath));
+    for (const name of Object.keys(manifest.dependencies ?? {}).toSorted()) {
+      pending.push({ name, fromDirectory: stagedWorkspaceDirectory, optional: false });
+    }
+    for (const name of Object.keys(manifest.optionalDependencies ?? {}).toSorted()) {
+      pending.push({ name, fromDirectory: stagedWorkspaceDirectory, optional: true });
+    }
+  }
 
   while (pending.length > 0) {
     const request = pending.shift()!;
@@ -420,6 +435,87 @@ export function collectReleaseDependencyInventory(options: {
     merged.set(id, current);
   }
 
+  const bundledRecords: Array<{
+    readonly descriptor: (typeof SERVER_BUNDLED_WORKSPACE_COMPONENTS)[number];
+    readonly manifest: PackageManifest;
+    readonly id: string;
+  }> = [];
+  const serverManifestPath = join(options.repositoryRoot, "apps/server/package.json");
+  const serverManifest = existsSync(serverManifestPath) ? readJson(serverManifestPath) : null;
+  for (const descriptor of SERVER_BUNDLED_WORKSPACE_COMPONENTS) {
+    if (!descriptor.includeInLegalClosure) continue;
+    const manifestPath = join(options.repositoryRoot, descriptor.manifestPath);
+    if (!existsSync(manifestPath)) continue;
+    if (serverManifest?.dependencies?.[descriptor.name] !== "workspace:*") {
+      throw new Error(
+        `Bundled workspace component ${descriptor.name} is not an exact Server production dependency.`,
+      );
+    }
+    const packageDirectory = dirname(manifestPath);
+    const manifestText = readFileSync(manifestPath, "utf8");
+    const manifest = readJson(manifestPath);
+    const name = requiredString(manifest.name, "name", packageDirectory);
+    const version = requiredString(manifest.version, "version", packageDirectory);
+    if (name !== descriptor.name) {
+      throw new Error(
+        `Bundled workspace manifest identity mismatch: ${name} != ${descriptor.name}.`,
+      );
+    }
+    const id = packageId(name, version);
+    if (merged.has(id)) {
+      throw new Error(
+        `Bundled workspace component ${id} was also collected as an installed package.`,
+      );
+    }
+    const license = metadataText(manifest.license) ?? "UNDECLARED";
+    if (license === "UNDECLARED") {
+      throw new Error(`Bundled workspace component ${id} has no declared license.`);
+    }
+    const sourceLicenseFiles = packageLicenseFiles(packageDirectory);
+    if (sourceLicenseFiles.length === 0) {
+      throw new Error(`Bundled workspace component ${id} has no source legal text.`);
+    }
+    const sourceDirectory = dirname(descriptor.manifestPath).replaceAll("\\", "/");
+    merged.set(id, {
+      name,
+      version,
+      license,
+      author: metadataText(manifest.author),
+      repository: repositoryText(manifest.repository),
+      homepage: metadataText(manifest.homepage),
+      manifestHashes: new Set([sha256(manifestText)]),
+      locations: new Set([`bundled:${descriptor.runtimePath}`]),
+      licenseFiles: new Map(
+        sourceLicenseFiles.map((file) => [
+          file.sha256,
+          {
+            ...file,
+            provenance: {
+              ...file.provenance,
+              kind: "bundled-source" as const,
+              sourcePath: `${sourceDirectory}/${file.name}`,
+            },
+          },
+        ]),
+      ),
+      dependencies: new Set(),
+    });
+    bundledRecords.push({ descriptor, manifest, id });
+  }
+
+  for (const record of bundledRecords) {
+    const component = merged.get(record.id)!;
+    for (const dependencyName of Object.keys(record.manifest.dependencies ?? {}).toSorted()) {
+      const dependencyIds = [...merged.keys()].filter((id) => id.startsWith(`${dependencyName}@`));
+      if (dependencyIds.length === 0) {
+        throw new Error(
+          `Bundled workspace component ${record.id} requires missing ${dependencyName}.`,
+        );
+      }
+      for (const dependencyId of dependencyIds) component.dependencies.add(dependencyId);
+    }
+  }
+
   const components = [...merged.values()]
     .map(
       (component): ReleaseDependencyComponent => ({
@@ -447,11 +543,16 @@ export function collectReleaseDependencyInventory(options: {
     }
   }
   return {
-    schemaVersion: 2,
-    derivation: "installed-production-dependency-closure",
+    schemaVersion: 3,
+    derivation: "installed-production-and-bundled-workspace-closure",
     target: options.target,
     componentCount: components.length,
-    roots: [...new Set(options.roots.map((root) => root.name))].toSorted(),
+    roots: [
+      ...new Set([
+        ...options.roots.map((root) => root.name),
+        ...bundledRecords.map((record) => record.descriptor.name),
+      ]),
+    ].toSorted(),
     components,
   };
 }
@@ -576,7 +677,10 @@ export function renderReleaseLegalMetadata(
       notices.push(
         "",
         `Legal text provenance: ${provenance.kind}`,
-        `Legal source: ${provenance.sourceUrl ?? `packaged ${provenance.sourcePath}`}`,
+        `Legal source: ${
+          provenance.sourceUrl ??
+          `${provenance.kind === "bundled-source" ? "source" : "packaged"} ${provenance.sourcePath}`
+        }`,
         `Upstream legal text absent: ${provenance.upstreamLegalTextAbsent ? "yes" : "no"}`,
         `[${file.name}; SHA-256 ${file.sha256}]`,
         file.text,
