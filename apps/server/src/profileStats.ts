@@ -1453,11 +1453,9 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         if (provider !== "unknown") breakdownProviders.add(provider);
       }
       const recentTurnProviders = new Set<ProviderKind>();
-      let recentTurnsHaveUnknownProvider = false;
       for (const row of recentTurnRows) {
         const provider = normalizeProviderKind(row.provider);
-        if (provider === "unknown") recentTurnsHaveUnknownProvider = true;
-        else recentTurnProviders.add(provider);
+        if (provider !== "unknown") recentTurnProviders.add(provider);
       }
       const recentUnavailableProviders = [...recentTurnProviders]
         .filter((provider) => !breakdownProviders.has(provider))
@@ -1484,8 +1482,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const recentTokenCoverage = !hasRecentBreakdown
         ? "unavailable"
         : num(recentUnknownRows[0]?.count) > 0 ||
-            recentUnavailableProviders.length > 0 ||
-            recentTurnsHaveUnknownProvider
+            recentUnavailableProviders.length > 0
           ? "partial"
           : "complete";
 
