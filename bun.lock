@@ -231,6 +231,7 @@
     },
   },
   "patchedDependencies": {
+    "@earendil-works/pi-agent-core@0.84.2": "patches/@earendil-works%2Fpi-agent-core@0.84.2.patch",
     "@legendapp/list@3.3.3": "patches/@legendapp%2Flist@3.3.3.patch",
     "@earendil-works/pi-coding-agent@0.84.2": "patches/@earendil-works%2Fpi-coding-agent@0.84.2.patch",
     "@earendil-works/pi-ai@0.84.2": "patches/@earendil-works%2Fpi-ai@0.84.2.patch",

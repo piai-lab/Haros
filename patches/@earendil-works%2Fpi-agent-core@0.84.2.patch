@@ -1,0 +1,102 @@
+diff --git a/dist/agent-loop.js b/dist/agent-loop.js
+index 569149f932..065e7f66bf 100644
+--- a/dist/agent-loop.js
++++ b/dist/agent-loop.js
+@@ -286,12 +286,76 @@ async function failToolCallsFromTruncatedMessage(toolCalls, emit) {
+  */
+ async function executeToolCalls(currentContext, assistantMessage, config, signal, emit) {
+     const toolCalls = assistantMessage.content.filter((c) => c.type === "toolCall");
++    const barrierIndex = toolCalls.findIndex((tc) => currentContext.tools?.find((t) => t.name === tc.name)?.executionMode === "barrier");
++    if (barrierIndex >= 0) {
++        return executeToolCallsWithBarrier(currentContext, assistantMessage, toolCalls, barrierIndex, config, signal, emit);
++    }
+     const hasSequentialToolCall = toolCalls.some((tc) => currentContext.tools?.find((t) => t.name === tc.name)?.executionMode === "sequential");
+     if (config.toolExecution === "sequential" || hasSequentialToolCall) {
+         return executeToolCallsSequential(currentContext, assistantMessage, toolCalls, config, signal, emit);
+     }
+     return executeToolCallsParallel(currentContext, assistantMessage, toolCalls, config, signal, emit);
+ }
++async function executeToolCallsWithBarrier(currentContext, assistantMessage, toolCalls, barrierIndex, config, signal, emit) {
++    const barrierCall = toolCalls[barrierIndex];
++    await emit({
++        type: "tool_execution_start",
++        toolCallId: barrierCall.id,
++        toolName: barrierCall.name,
++        args: barrierCall.arguments,
++    });
++    const preparation = await prepareToolCall(currentContext, assistantMessage, barrierCall, config, signal);
++    let barrierFinalized;
++    if (preparation.kind === "immediate") {
++        barrierFinalized = {
++            toolCall: barrierCall,
++            result: { ...preparation.result, ...(preparation.isError ? { terminate: true } : {}) },
++            isError: preparation.isError,
++        };
++    }
++    else {
++        const executed = await executePreparedToolCall(preparation, signal, emit);
++        const finalized = await finalizeExecutedToolCall(currentContext, assistantMessage, preparation, executed, config, signal);
++        barrierFinalized = finalized.isError
++            ? { ...finalized, result: { ...finalized.result, terminate: true } }
++            : finalized;
++    }
++    await emitToolExecutionEnd(barrierFinalized, emit);
++    const finalizedCalls = [];
++    for (let index = 0; index < toolCalls.length; index++) {
++        const toolCall = toolCalls[index];
++        if (index === barrierIndex) {
++            finalizedCalls.push(barrierFinalized);
++            continue;
++        }
++        await emit({
++            type: "tool_execution_start",
++            toolCallId: toolCall.id,
++            toolName: toolCall.name,
++            args: toolCall.arguments,
++        });
++        const finalized = {
++            toolCall,
++            result: {
++                ...createErrorToolResult(`Tool call "${toolCall.name}" was not executed because an interactive barrier requires the model to replan.`),
++                terminate: true,
++            },
++            isError: true,
++        };
++        await emitToolExecutionEnd(finalized, emit);
++        finalizedCalls.push(finalized);
++    }
++    const messages = [];
++    for (const finalized of finalizedCalls) {
++        const toolResultMessage = createToolResultMessage(finalized);
++        await emitToolResultMessage(toolResultMessage, emit);
++        messages.push(toolResultMessage);
++    }
++    return {
++        messages,
++        terminate: shouldTerminateToolBatch(finalizedCalls),
++    };
++}
+ async function executeToolCallsSequential(currentContext, assistantMessage, toolCalls, config, signal, emit) {
+     const finalizedCalls = [];
+     const messages = [];
+diff --git a/dist/types.d.ts b/dist/types.d.ts
+index a2d0ba2866..dd5cd878a1 100644
+--- a/dist/types.d.ts
++++ b/dist/types.d.ts
+@@ -19,7 +19,7 @@ export type StreamFn = (model: Model<Api>, context: Context, options?: SimpleStr
+  *   `tool_execution_end` is emitted in tool completion order after each tool is finalized,
+  *   while tool-result message artifacts are emitted later in assistant source order.
+  */
+-export type ToolExecutionMode = "sequential" | "parallel";
++export type ToolExecutionMode = "sequential" | "parallel" | "barrier";
+ /**
+  * Controls how many queued user messages are injected when the agent loop reaches a queue drain point.
+  *
+@@ -350,6 +350,7 @@ export interface AgentTool<TParameters extends TSchema = TSchema, TDetails = any
+      * Per-tool execution mode override.
+      * - "sequential": this tool must execute one at a time with other tool calls.
+      * - "parallel": this tool can execute concurrently with other tool calls.
++     * - "barrier": this tool executes before every sibling and requires siblings to replan.
+      *
+      * If omitted, the default execution mode applies.
+      */
