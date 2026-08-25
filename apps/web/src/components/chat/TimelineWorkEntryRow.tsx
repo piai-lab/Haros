@@ -10,6 +10,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -529,6 +530,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   onOpenAutomation?: (automationId: string) => void;
   onOpenEngineWebSurface?: (surfaceId: string) => void;
   reasoningDefaultOpen?: boolean;
+  reasoningIsLive?: boolean;
   timestampFormat: TimestampFormat;
 }) {
   // Defaults are applied in the body (not in the destructuring pattern): a default
@@ -548,6 +550,7 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
     onOpenAutomation,
     onOpenEngineWebSurface,
     reasoningDefaultOpen,
+    reasoningIsLive,
     timestampFormat,
   } = props;
   const textFontSizePx = textFontSizePxProp ?? chatMetaFontSizePx;
@@ -705,7 +708,8 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
       <ReasoningDisclosureRow
         workEntry={workEntry}
         compact={compact}
-        defaultOpen={reasoningDefaultOpen ?? true}
+        defaultOpen={reasoningDefaultOpen ?? false}
+        isLive={reasoningIsLive ?? false}
         textFontSizePx={textFontSizePx}
         markdownCwd={markdownCwd}
         onImageExpand={onImageExpand}
@@ -980,6 +984,7 @@ function ReasoningDisclosureRow(props: {
   workEntry: TimelineWorkEntry;
   compact: boolean;
   defaultOpen: boolean;
+  isLive: boolean;
   textFontSizePx: number;
   markdownCwd: string | undefined;
   onImageExpand: (preview: ExpandedImagePreview) => void;
@@ -1051,40 +1056,183 @@ function ReasoningDisclosureRow(props: {
             props.compact ? "pl-[22px] pt-1" : "pl-7 pt-1.5",
           )}
         >
-          <div
-            className="min-w-0 max-w-full space-y-2 overflow-hidden break-words [overflow-wrap:anywhere]"
-            data-reasoning-content="true"
-          >
-            {entries.map((entry) => (
-              <div key={entry.id} className="min-w-0 max-w-full">
-                <div className="min-w-0 max-w-full" data-reasoning-provider-text="true">
-                  <ChatMarkdown
-                    text={entry.text}
-                    cwd={props.markdownCwd}
-                    isStreaming={false}
-                    className="min-w-0 max-w-full leading-relaxed text-muted-foreground/78 [&_*]:max-w-full"
-                    style={{
-                      fontSize: `${props.textFontSizePx}px`,
-                      lineHeight: props.compact ? "19px" : "20px",
-                    }}
-                    onImageExpand={props.onImageExpand}
-                  />
-                </div>
-                {entry.truncated ? (
-                  <p
-                    className="mt-1 min-w-0 max-w-full break-words text-muted-foreground/60"
-                    data-reasoning-truncation-notice="true"
-                    style={{ fontSize: `${Math.max(11, props.textFontSizePx - 1)}px` }}
-                  >
-                    {t("agentActivity.contentTruncated")}
-                  </p>
-                ) : null}
-              </div>
-            ))}
-          </div>
+          <ReasoningBodyViewport
+            entries={entries}
+            isLive={props.isLive}
+            compact={props.compact}
+            textFontSizePx={props.textFontSizePx}
+            markdownCwd={props.markdownCwd}
+            onImageExpand={props.onImageExpand}
+          />
         </DisclosureRegion>
       </div>
     </section>
+  );
+}
+
+type ReasoningPresentationEntry = NonNullable<WorkLogEntry["reasoningEntries"]>[number];
+
+function reasoningSelectionIsInside(element: HTMLElement): boolean {
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+    return false;
+  }
+  return (
+    (selection.anchorNode !== null && element.contains(selection.anchorNode)) ||
+    (selection.focusNode !== null && element.contains(selection.focusNode))
+  );
+}
+
+function reasoningClickTargetIsInteractive(target: EventTarget | null, viewport: HTMLElement) {
+  if (!(target instanceof Element)) {
+    return false;
+  }
+  const interactive = target.closest(
+    "a, button, input, textarea, select, summary, [contenteditable='true'], [role='button']",
+  );
+  return interactive !== null && interactive !== viewport;
+}
+
+function ReasoningBodyViewport(props: {
+  entries: ReadonlyArray<ReasoningPresentationEntry>;
+  isLive: boolean;
+  compact: boolean;
+  textFontSizePx: number;
+  markdownCwd: string | undefined;
+  onImageExpand: (preview: ExpandedImagePreview) => void;
+}) {
+  const { t } = useI18n();
+  const [fullHeight, setFullHeight] = useState(false);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const followingTailRef = useRef(true);
+  const repinAfterCompactRef = useRef(false);
+  const pointerStartRef = useRef<{
+    x: number;
+    y: number;
+    scrollTop: number;
+  } | null>(null);
+  const viewportId = useId();
+
+  useLayoutEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport || !props.isLive || fullHeight) {
+      return;
+    }
+    if (followingTailRef.current || repinAfterCompactRef.current) {
+      viewport.scrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+      followingTailRef.current = true;
+      repinAfterCompactRef.current = false;
+    }
+  }, [props.entries, fullHeight, props.isLive]);
+
+  const toggleFullHeight = useCallback(() => {
+    if (!props.isLive) {
+      return;
+    }
+    if (fullHeight) {
+      followingTailRef.current = true;
+      repinAfterCompactRef.current = true;
+    }
+    setFullHeight(!fullHeight);
+  }, [fullHeight, props.isLive]);
+
+  const heightToggleLabel = fullHeight
+    ? t("agentActivity.compactReasoning")
+    : t("agentActivity.expandReasoningFully");
+
+  return (
+    <div className="relative min-w-0 max-w-full">
+      {props.isLive ? (
+        <button
+          type="button"
+          className="pointer-events-none absolute inset-0 z-10 rounded-md opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
+          aria-label={heightToggleLabel}
+          aria-expanded={fullHeight}
+          aria-controls={viewportId}
+          data-reasoning-height-toggle="true"
+          onClick={toggleFullHeight}
+        />
+      ) : null}
+      <div
+        ref={viewportRef}
+        id={viewportId}
+        className={cn(
+          "min-w-0 max-w-full space-y-2 break-words [overflow-wrap:anywhere]",
+          props.isLive && !fullHeight
+            ? "scroll-fade-y max-h-[126px] cursor-pointer overflow-x-hidden overflow-y-auto overscroll-contain [scrollbar-width:none] max-[520px]:max-h-[112px] [&::-webkit-scrollbar]:hidden"
+            : "overflow-hidden",
+          props.isLive && fullHeight ? "cursor-pointer" : null,
+        )}
+        data-reasoning-content="true"
+        data-reasoning-scroll-viewport="true"
+        data-reasoning-height-state={props.isLive ? (fullHeight ? "full" : "compact") : "settled"}
+        onPointerDown={(event) => {
+          if (!props.isLive || event.button !== 0) {
+            pointerStartRef.current = null;
+            return;
+          }
+          pointerStartRef.current = {
+            x: event.clientX,
+            y: event.clientY,
+            scrollTop: event.currentTarget.scrollTop,
+          };
+        }}
+        onScroll={(event) => {
+          if (!props.isLive || fullHeight) {
+            return;
+          }
+          const viewport = event.currentTarget;
+          followingTailRef.current =
+            viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop <= 2;
+        }}
+        onClick={(event) => {
+          if (
+            !props.isLive ||
+            reasoningClickTargetIsInteractive(event.target, event.currentTarget)
+          ) {
+            return;
+          }
+          const pointerStart = pointerStartRef.current;
+          pointerStartRef.current = null;
+          if (
+            reasoningSelectionIsInside(event.currentTarget) ||
+            (pointerStart !== null &&
+              (Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 4 ||
+                Math.abs(event.currentTarget.scrollTop - pointerStart.scrollTop) > 1))
+          ) {
+            return;
+          }
+          toggleFullHeight();
+        }}
+      >
+        {props.entries.map((entry) => (
+          <div key={entry.id} className="min-w-0 max-w-full">
+            <div className="min-w-0 max-w-full" data-reasoning-provider-text="true">
+              <ChatMarkdown
+                text={entry.text}
+                cwd={props.markdownCwd}
+                isStreaming={false}
+                className="min-w-0 max-w-full leading-relaxed text-muted-foreground/78 [&_*]:max-w-full"
+                style={{
+                  fontSize: `${props.textFontSizePx}px`,
+                  lineHeight: props.compact ? "19px" : "20px",
+                }}
+                onImageExpand={props.onImageExpand}
+              />
+            </div>
+            {entry.truncated ? (
+              <p
+                className="mt-1 min-w-0 max-w-full break-words text-muted-foreground/60"
+                data-reasoning-truncation-notice="true"
+                style={{ fontSize: `${Math.max(11, props.textFontSizePx - 1)}px` }}
+              >
+                {t("agentActivity.contentTruncated")}
+              </p>
+            ) : null}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 

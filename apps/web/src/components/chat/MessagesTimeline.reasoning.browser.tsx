@@ -31,10 +31,16 @@ import { TimelineWorkEntryRow } from "./TimelineWorkEntryRow";
 
 const LONG_REASONING =
   "I am checking the canonical sequence before opening https://example.test/a/very/long/source/path?query=reasoning-timeline-layout and then validating SupercalifragilisticexpialidociousRepeatedWithoutABreakSupercalifragilisticexpialidociousRepeatedWithoutABreak at the narrowest supported width.";
+const LIVE_REASONING = Array.from(
+  { length: 14 },
+  (_, index) => `Public reasoning paragraph ${index + 1} stays in the provider's original text.`,
+).join("\n\n");
 
 function ReasoningRow(props: {
   onOpenAgentActivity?: (id: string) => void;
   reasoningDefaultOpen?: boolean;
+  reasoningIsLive?: boolean;
+  reasoningText?: string;
 }) {
   return (
     <TimelineWorkEntryRow
@@ -45,13 +51,15 @@ function ReasoningRow(props: {
         toolTitle: "Reasoning",
         activityKind: "reasoning.completed",
         tone: "thinking",
-        reasoningEntries: [
-          {
-            id: "reasoning-1",
-            text: "First public paragraph from the provider.",
-          },
-          { id: "reasoning-2", text: LONG_REASONING },
-        ],
+        reasoningEntries: props.reasoningText
+          ? [{ id: "reasoning-live", text: props.reasoningText }]
+          : [
+              {
+                id: "reasoning-1",
+                text: "First public paragraph from the provider.",
+              },
+              { id: "reasoning-2", text: LONG_REASONING },
+            ],
       }}
       chatMetaFontSizePx={12}
       textFontSizePx={13}
@@ -61,9 +69,18 @@ function ReasoningRow(props: {
       {...(props.reasoningDefaultOpen === undefined
         ? {}
         : { reasoningDefaultOpen: props.reasoningDefaultOpen })}
+      {...(props.reasoningIsLive === undefined ? {} : { reasoningIsLive: props.reasoningIsLive })}
       {...(props.onOpenAgentActivity ? { onOpenAgentActivity: props.onOpenAgentActivity } : {})}
       timestampFormat="locale"
     />
+  );
+}
+
+function liveReasoningRow(text: string) {
+  return (
+    <I18nProvider>
+      <ReasoningRow reasoningDefaultOpen reasoningIsLive reasoningText={text} />
+    </I18nProvider>
   );
 }
 
@@ -728,32 +745,61 @@ describe("Timeline public reasoning disclosure", () => {
     harness.settings.localePreference = "en";
   });
 
-  it("uses brain-2, expands original paragraphs by default, and never opens activity detail", async () => {
+  it("uses brain-2 and keeps live public reasoning open in a bounded, icon-free viewport", async () => {
     const onOpenAgentActivity = vi.fn();
     const consoleError = vi.spyOn(console, "error");
     const host = createNarrowHost();
     const screen = await render(
       <I18nProvider>
-        <ReasoningRow onOpenAgentActivity={onOpenAgentActivity} />
+        <ReasoningRow
+          onOpenAgentActivity={onOpenAgentActivity}
+          reasoningDefaultOpen
+          reasoningIsLive
+          reasoningText={LIVE_REASONING}
+        />
       </I18nProvider>,
       { container: host },
     );
 
     try {
-      const trigger = screen.getByRole("button", { name: "Reasoning" }).element();
+      const trigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
       const controlledId = trigger.getAttribute("aria-controls");
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
       expect(controlledId).toBeTruthy();
       expect(document.getElementById(controlledId!)).not.toBeNull();
       expect(document.querySelector('[data-central-icon-name="brain-2"]')).not.toBeNull();
-      expect(document.body.textContent ?? "").toContain(
-        "First public paragraph from the provider.",
-      );
-      expect(document.body.textContent ?? "").toContain(LONG_REASONING);
+      expect(document.body.textContent ?? "").toContain("Public reasoning paragraph 14");
       expect(document.body.textContent ?? "").not.toContain("updates");
       expect(document.body.textContent ?? "").not.toContain("hidden reasoning");
       expect(document.querySelector("[data-agent-activity-detail='true']")).toBeNull();
       expect(onOpenAgentActivity).not.toHaveBeenCalled();
+
+      await settleLayout();
+      const viewport = document.querySelector<HTMLElement>(
+        "[data-reasoning-scroll-viewport='true']",
+      )!;
+      const heightToggle = screen.getByRole("button", { name: "Expand reasoning fully" }).element();
+      expect(viewport.dataset.reasoningHeightState).toBe("compact");
+      expect(viewport.clientHeight).toBeLessThanOrEqual(126);
+      expect(viewport.scrollHeight).toBeGreaterThan(viewport.clientHeight);
+      expect(
+        viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop,
+      ).toBeLessThanOrEqual(2);
+      expect(heightToggle.textContent).toBe("");
+      expect(document.querySelector("[data-reasoning-height-icon]")).toBeNull();
+
+      await userEvent.click(viewport);
+      expect(viewport.dataset.reasoningHeightState).toBe("full");
+      expect(heightToggle.getAttribute("aria-expanded")).toBe("true");
+      expect(viewport.scrollHeight).toBeLessThanOrEqual(viewport.clientHeight);
+
+      await userEvent.click(viewport);
+      await settleLayout();
+      expect(viewport.dataset.reasoningHeightState).toBe("compact");
+      expect(heightToggle.getAttribute("aria-expanded")).toBe("false");
+      expect(
+        viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop,
+      ).toBeLessThanOrEqual(2);
 
       trigger.focus();
       await userEvent.keyboard("{Enter}");
@@ -772,7 +818,6 @@ describe("Timeline public reasoning disclosure", () => {
         "[class*='motion-reduce:transition-none']",
       );
       expect((motionNodes?.length ?? 0) >= 2).toBe(true);
-      await settleLayout();
       expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
       expect(disclosure?.scrollWidth ?? 0).toBeLessThanOrEqual(disclosure?.clientWidth ?? 0);
       expect(consoleError).not.toHaveBeenCalled();
@@ -783,21 +828,100 @@ describe("Timeline public reasoning disclosure", () => {
     }
   });
 
-  it("renders the same disclosure contract in Simplified Chinese", async () => {
+  it("localizes the icon-free height control in Simplified Chinese", async () => {
     harness.settings.localePreference = "zh-CN";
     const host = createNarrowHost();
     const screen = await render(
       <I18nProvider>
-        <ReasoningRow />
+        <ReasoningRow reasoningDefaultOpen reasoningIsLive reasoningText={LIVE_REASONING} />
       </I18nProvider>,
       { container: host },
     );
 
     try {
-      const trigger = screen.getByRole("button", { name: "思考" }).element();
+      const trigger = screen.getByRole("button", { name: "思考", exact: true }).element();
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
       expect(document.body.textContent ?? "").not.toContain("条更新");
-      expect(document.body.textContent ?? "").toContain(LONG_REASONING);
+      expect(document.body.textContent ?? "").toContain("Public reasoning paragraph 14");
+      expect(screen.getByRole("button", { name: "完整展开思考" }).element().textContent).toBe("");
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("toggles live height from the keyboard and does not toggle while selecting text", async () => {
+    const host = createNarrowHost();
+    const screen = await render(
+      <I18nProvider>
+        <ReasoningRow reasoningDefaultOpen reasoningIsLive reasoningText={LIVE_REASONING} />
+      </I18nProvider>,
+      { container: host },
+    );
+
+    try {
+      const viewport = document.querySelector<HTMLElement>(
+        "[data-reasoning-scroll-viewport='true']",
+      )!;
+      const heightToggle = screen.getByRole("button", { name: "Expand reasoning fully" }).element();
+      heightToggle.focus();
+      await userEvent.keyboard("{Enter}");
+      expect(viewport.dataset.reasoningHeightState).toBe("full");
+      await userEvent.keyboard(" ");
+      expect(viewport.dataset.reasoningHeightState).toBe("compact");
+
+      const providerText = document.querySelector<HTMLElement>(
+        "[data-reasoning-provider-text='true']",
+      )!;
+      const textNode = providerText.querySelector("p")?.firstChild;
+      expect(textNode).not.toBeUndefined();
+      const selection = window.getSelection()!;
+      const range = document.createRange();
+      range.setStart(textNode!, 0);
+      range.setEnd(textNode!, Math.min(12, textNode!.textContent?.length ?? 0));
+      selection.removeAllRanges();
+      selection.addRange(range);
+      viewport.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      expect(viewport.dataset.reasoningHeightState).toBe("compact");
+      selection.removeAllRanges();
+    } finally {
+      await screen.unmount();
+      host.remove();
+    }
+  });
+
+  it("follows appended live reasoning until the reader scrolls away, then resumes at the tail", async () => {
+    const host = createNarrowHost();
+    const screen = await render(liveReasoningRow(LIVE_REASONING), { container: host });
+
+    try {
+      await settleLayout();
+      const viewport = document.querySelector<HTMLElement>(
+        "[data-reasoning-scroll-viewport='true']",
+      )!;
+      expect(
+        viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop,
+      ).toBeLessThanOrEqual(2);
+
+      viewport.scrollTop = 0;
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      await screen.rerender(
+        liveReasoningRow(`${LIVE_REASONING}\n\nAn appended paragraph stays below.`),
+      );
+      await settleLayout();
+      expect(viewport.scrollTop).toBe(0);
+
+      viewport.scrollTop = viewport.scrollHeight;
+      viewport.dispatchEvent(new Event("scroll", { bubbles: true }));
+      await screen.rerender(
+        liveReasoningRow(
+          `${LIVE_REASONING}\n\nAn appended paragraph stays below.\n\nThe newest paragraph.`,
+        ),
+      );
+      await settleLayout();
+      expect(
+        viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop,
+      ).toBeLessThanOrEqual(2);
     } finally {
       await screen.unmount();
       host.remove();
@@ -814,6 +938,9 @@ describe("Timeline public reasoning disclosure", () => {
     );
 
     try {
+      const trigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      await userEvent.click(trigger);
       await settleLayout();
       const disclosure = document.querySelector<HTMLElement>("[data-reasoning-disclosure='true']");
       const providerText = document.querySelector<HTMLElement>(
@@ -843,6 +970,9 @@ describe("Timeline public reasoning disclosure", () => {
     );
 
     try {
+      const trigger = screen.getByRole("button", { name: "思考", exact: true }).element();
+      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      await userEvent.click(trigger);
       await settleLayout();
       expect(document.body.textContent ?? "").toContain("内容已截断");
       expect(document.body.textContent ?? "").not.toContain("Content truncated");
@@ -902,17 +1032,17 @@ describe("Timeline public reasoning disclosure", () => {
       expect(positions).toEqual([...positions].toSorted((left, right) => left - right));
       expect(document.querySelectorAll('[data-tool-detail-trigger="true"]')).toHaveLength(2);
 
-      const triggers = screen.getByRole("button", { name: "Reasoning" }).elements();
+      const triggers = screen.getByRole("button", { name: "Reasoning", exact: true }).elements();
       expect(triggers).toHaveLength(2);
       expect(triggers.map((trigger) => trigger.getAttribute("aria-expanded"))).toEqual([
-        "false",
-        "false",
+        "true",
+        "true",
       ]);
 
       await screen.rerender(<ReducedLiveCausalTimeline settled />);
       await expect
         .poll(() => triggers.map((trigger) => trigger.getAttribute("aria-expanded")))
-        .toEqual(["true", "true"]);
+        .toEqual(["false", "false"]);
     } finally {
       await screen.unmount();
       host.remove();
@@ -1020,17 +1150,22 @@ describe("Timeline public reasoning disclosure", () => {
     }
   });
 
-  it("starts answer-stage leading reasoning collapsed and opens it when the turn settles", async () => {
+  it("starts answer-stage reasoning open and bounded, then closes it when the turn settles", async () => {
     const host = createNarrowHost();
     const screen = await render(<AnswerStageTimeline settled={false} />, {
       container: host,
     });
 
     try {
-      const trigger = screen.getByRole("button", { name: "Reasoning" }).element();
-      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      const trigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
+      expect(
+        document.querySelector<HTMLElement>("[data-reasoning-height-state]")?.dataset
+          .reasoningHeightState,
+      ).toBe("compact");
       await screen.rerender(<AnswerStageTimeline settled />);
-      await expect.poll(() => trigger.getAttribute("aria-expanded")).toBe("true");
+      await expect.poll(() => trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(document.querySelector("[data-reasoning-height-toggle='true']")).toBeNull();
     } finally {
       await screen.unmount();
       host.remove();
@@ -1044,15 +1179,15 @@ describe("Timeline public reasoning disclosure", () => {
     });
 
     try {
-      const trigger = screen.getByRole("button", { name: "Reasoning" }).element();
-      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      const trigger = screen.getByRole("button", { name: "Reasoning", exact: true }).element();
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
       await userEvent.click(trigger);
       await userEvent.click(trigger);
-      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
 
       await screen.rerender(<AnswerStageTimeline settled />);
       await settleLayout();
-      expect(trigger.getAttribute("aria-expanded")).toBe("false");
+      expect(trigger.getAttribute("aria-expanded")).toBe("true");
     } finally {
       await screen.unmount();
       host.remove();
@@ -1067,7 +1202,10 @@ describe("Timeline public reasoning disclosure", () => {
 
     try {
       expect(
-        screen.getByRole("button", { name: "Reasoning" }).element().getAttribute("aria-expanded"),
+        screen
+          .getByRole("button", { name: "Reasoning", exact: true })
+          .element()
+          .getAttribute("aria-expanded"),
       ).toBe("false");
     } finally {
       await screen.unmount();
