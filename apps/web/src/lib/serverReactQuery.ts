@@ -350,7 +350,10 @@ export function serverProfileTokenStatsQueryOptions(input: { enabled?: boolean }
   return queryOptions({
     queryKey: serverQueryKeys.profileTokenStats(utcOffsetMinutes),
     enabled: input.enabled ?? true,
-    staleTime: 5 * 60_000,
+    // A completed turn can change both the lifetime total and the latest
+    // cache split while the Settings route is unmounted. Re-entering Usage
+    // insights must not replay the pre-turn snapshot for another five minutes.
+    staleTime: 0,
     refetchOnWindowFocus: false,
     retry: false,
     queryFn: async () => {
