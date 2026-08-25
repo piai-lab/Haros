@@ -1172,3 +1172,79 @@ the fresh window also remained on a nonexistent thread route and did not project
 Project/Model state already present over authenticated packaged RPC. That bounded stale-UI observation
 is kept separate for reproduction and owner diagnosis; it is not attributed to this schema fix and did
 not trigger a reload shim or fallback.
+
+## 21. Timeline and Web Access regression responsibility audit
+
+### 21.1 Source ancestry and fault ownership
+
+The 2026-08-25 review was prompted by five user-visible symptoms: raw underscore tool labels, an
+OmniMind Web Access language/theme error, tool rows without useful detail, reasoning duplication or
+misstated lifecycle, and live Assistant text appearing above later Tool rows before terminal settlement
+reordered the transcript. The review covered the complete user path rather than assigning ownership by
+similar appearance.
+
+Synara had historically encountered the causal-order class, but exact upstream commit
+`dd29079747eaeee096558a56275ce9a97b6f1879` fixed it by persisting Assistant text segments and
+interleaving them with Tool rows. Commit `c4a82e0efbc2d71e10c499dd606e04027fb6bc49` separately anchored
+compacted reasoning identity and durable sequence to its first update. OmniMind had already translated
+those guarantees through `6d4ba0f876`, `2c3dd0b8f9` and `91f7b6596c`. Later downstream semantic
+alignment at `5b47a4cd10` grouped Timeline content across engines without preserving the complete segment
+boundary through live batching, reducer projection and final consumer compaction. The old symptom
+therefore reappeared in OmniMind after adoption; it is an OmniMind regression, not an unresolved Synara
+defect.
+
+The other symptom classes are downstream-only:
+
+| Symptom | Fault owner | Evidence-based reason |
+| --- | --- | --- |
+| Raw `Web_search`, `Fetch_content` and similar labels | OmniMind Timeline presentation | Runtime identifiers reached ordinary product copy without the central readable/bilingual projection. |
+| Web Access said it could not resolve language/theme | OmniMind cross-process presentation wiring | Renderer produced a bounded theme snapshot, but the Desktop/Server Browser Automation path did not preserve the required typed field. Synara does not own this OmniMind bilingual/theme contract. |
+| Tool rows had no inspectable input, output or source detail | OmniMind activity projection | Canonical events retained more data than the Timeline preview consumed; fallback merge/truncation dropped presentation facts before the disclosure. |
+| Reasoning repeated, looked successful on failure, or truncated silently | OmniMind ingestion/projection lifecycle | Completion replay, grouping boundaries, failure tone and structured truncation were not carried by one canonical reasoning activity contract. |
+| Live order differed from settled/reopened order | OmniMind preservation failure of an adopted Synara guarantee | Runtime sequence, Assistant segment boundaries, batch coalescing, consumer grouping and virtualized DOM order did not remain one end-to-end invariant. |
+
+The systemic cause was not that `SYNARA-INTAKE.md` lacked a strong one-time Gate A/B review. It was that
+the repository did not make an adopted behavioral guarantee a mandatory re-entry dependency for later
+downstream work in the same owner. A locally reasonable “align activity semantics” change could modify
+the live reducer and second-stage Timeline grouping, update tests to the new grouped result, and never
+re-read the exact upstream interleave regression. The missing control was durable preservation across
+future owner changes, plus a journey falsifier that traversed live batching, settlement, virtualization
+and reopen. Section “已采用保证的持续 re-entry” in `SYNARA-INTAKE.md` now owns that method; this section
+only records why it was added.
+
+### 21.2 Implemented closure and bounded residuals
+
+The Tool/Timeline repair set entered `main` through merge `b4871621b3`. The relevant exact commits are
+`8793e7fd55` for readable labels, typed Web Access context and inspectable details; `7791fb0df3`,
+`98d64d1681`, `a05d58fcd1` and `fffd1bcf7d` for public reasoning projection and lifecycle; `90ac3c455f`,
+`9177db61ed` and `c9f17dfe4c` for causal segments across live ingestion, batching and reduction; and
+`e269e06067` for same-frame virtualized DOM order. Later interaction commit `cab8a9ab5b` kept active
+public reasoning open in a bounded, tail-following viewport, made the body itself toggle bounded/full
+height without a visible second control, protected selection/scroll/links, and preserved manual
+disclosure intent. The subsequent i18n owner merge did not change those semantics; current shipped-code
+integration was revalidated at exact `main@4e23564a072690666784ff029f2d6e12d89a756f`.
+
+That exact pushed SHA passed 330 Web unit files / 4,160 tests, 15/15 focused reasoning browser cases,
+3/3 catalog composition tests, TypeScript, lint, production Web build and Desktop DMG build. Its
+fresh isolated installed journey observed the canonical sequence
+Assistant → Reasoning → Read → Reasoning → Read → Assistant in visual position, DOM source order and
+Chromium accessibility tree during live output, after settlement and after App reopen. Both live
+reasoning groups were bounded and tail-following, body click expanded and restored height, settled
+groups defaulted closed, manual disclosure choice survived ordinary rerender, and Chinese, English,
+480px and overflow cases were covered. The ad-hoc DMG SHA-256 was
+`94ad19f936f2bc24fcdf28ef58775bf9a2ac7573134a09410fdc2d475531278c`; this is packaged-not-released,
+not official signing, notarization, Release or update-feed activation.
+
+Two boundaries remain explicit. The complete stable browser suite still has five failures in historical
+Worked-for, Terminal/theme and tail-anchor cases; representative failures reproduce on the untouched
+pre-change baseline, so they are not evidence against this repair but the suite must not be reported as
+globally green. During setup, one default-profile App was accidentally launched and stopped before the
+accepted isolated journey; its durable impact cannot be proven zero. The accepted evidence therefore
+uses only the later verified task profile and records the earlier impact as unknown.
+
+Future changes to engine event normalization, Assistant segmentation, reasoning lifecycle, live batch
+coalescing, store reduction, Timeline grouping, LegendList/virtualization, Tool schemas, Browser
+Automation presentation context or i18n catalog composition must rerun the corresponding focused
+regressions. Any causal-order change must additionally prove live, settled and reopen order in visual,
+DOM and accessibility projections; any first-party Tool or B-class Web Surface change must prove typed
+detail/context round trips and fail-closed malformed-input behavior.

@@ -388,7 +388,8 @@ function validateWorkSurfaceInformationArchitecture(findings, documents) {
     return;
   }
   const expected = {
-    primaryModes: ["Agent", "Chat"],
+    primaryModes: ["Agent", "Chat", "Studio"],
+    routes: { Agent: "/", Chat: "/chat", Studio: "/studio" },
     agentSecondary: ["New Task", "Kanban", "Pull Requests", "Automations"],
     kanbanRoutes: ["/kanban", "/kanban/:projectId"],
     kanbanPrimaryMode: "Agent",

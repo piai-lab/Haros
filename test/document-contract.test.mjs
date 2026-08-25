@@ -218,6 +218,22 @@ test("Kanban remains the Agent domain's secondary console", async (t) => {
   );
 });
 
+test("Studio remains a first-class work surface with one canonical route", async (t) => {
+  const root = await createFixture(t);
+  await replaceText(
+    root,
+    "architecture/workbench.md",
+    '"routes": {"Agent": "/", "Chat": "/chat", "Studio": "/studio"}',
+    '"routes": {"Agent": "/", "Chat": "/chat", "Studio": "/chat"}',
+  );
+
+  assertFinding(
+    await validateDocumentContract({ root }),
+    "workbench.work-surface-ia",
+    "architecture/workbench.md",
+  );
+});
+
 test("Groups remain many-to-many conversation labels below complete Projects", async (t) => {
   const root = await createFixture(t);
   await replaceText(

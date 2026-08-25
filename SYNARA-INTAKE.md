@@ -183,6 +183,14 @@ Gate B 优化的是相对 Synara 的长期偏离、owner 数量和未来修改�
 
 Gate B 的完成不等于自动发布、合并受保护分支、更新 feed、签名或创建 Release。这些动作继续遵循各自授权。
 
+### 已采用保证的持续 re-entry
+
+一次 adoption 关闭的是当轮 source range，不会把已采用机制降格成“以后可以忘记的历史实现”。后续 OmniMind 施工即使不是新一轮 Synara 同步，只要触达某项已采用保证的 lifecycle owner、事件合同或关键 consumer，就必须在设计前读取 `research/source-review.md` 中对应 disposition、exact upstream regression/test 与现行 architecture owner。尤其是 live/settled/replay/recovery、stream batching、event reducer、Timeline grouping、virtualization、DOM source order 和 accessibility tree 等跨阶段链路，不能因为入口文件没有 `Synara` 名称就跳过来源语义。
+
+这种 preservation re-entry 不自动重开完整 Gate A：若 exact source 没有前移、产品决定没有变化，施工者只需证明新改动继续满足已采用结果，并把上游或语义等价 regression 留在正常测试门中。若无法证明、发现当前实现已经偏离，或计划改变该结果、owner、失败语义与固定 divergence，则必须停止把它当普通重构；来源变化按本手册重新进入 Gate A，纯下游产品分叉按 `$converge` 重新取得维护者决定。不得用“代码已经写了”“新测试已经按新行为通过”或同时修改 architecture 文案，倒推出旧保证已被合法替换。
+
+持续证明必须穿过真实生命周期，而不是只测最终静态数组。对 stream、reasoning、Tool 与 Timeline，至少覆盖运行中增量、terminal settlement、关闭重开，并在存在虚拟化或重排风险时同时断言视觉顺序、DOM source order 与 accessibility tree；对跨进程 typed presentation，必须覆盖字段正常往返、缺失/畸形输入的 fail-closed 行为和用户可恢复错误。一次性截图、mock 最终态或只验证文案不能关闭这类保证。
+
 ## 5. 完整覆盖算法
 
 每轮 adopted-head advancement 不能只回答“重要更新已经吸收”。必须建立可复核的闭合计数：
