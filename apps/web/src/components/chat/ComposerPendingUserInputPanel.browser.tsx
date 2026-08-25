@@ -28,9 +28,29 @@ const prompt = {
       question: "哪些结果需要一并交付？",
       multiSelect: true,
       options: [
-        { label: "功能实现", description: "可直接使用的完整路径" },
+        {
+          label: "功能实现",
+          description: "可直接使用的完整路径",
+          preview: "只在用户显式展开后显示。",
+          recommended: true,
+          recommendationReason: "与当前成熟运行时一致。",
+        },
         { label: "自动化测试", description: "保护关键生命周期" },
       ],
+    },
+  ],
+} as const;
+
+const textPrompt = {
+  requestId: ApprovalRequestId.makeUnsafe("ask-text-suggestion"),
+  createdAt: "2026-08-25T00:00:00.000Z",
+  questions: [
+    {
+      id: "constraint",
+      header: "Constraint",
+      question: "还有什么约束？",
+      options: [],
+      suggestion: { text: "不要建立第二套 UI。  ", reason: "保持唯一投影 owner" },
     },
   ],
 } as const;
@@ -38,16 +58,18 @@ const prompt = {
 function Harness({
   reviewing = false,
   initialAnswers = {},
+  pending = prompt,
 }: {
   reviewing?: boolean;
   initialAnswers?: Record<string, PendingUserInputDraftAnswer>;
+  pending?: typeof prompt | typeof textPrompt;
 }) {
   const [answers, setAnswers] =
     useState<Record<string, PendingUserInputDraftAnswer>>(initialAnswers);
   return (
     <I18nProvider>
       <ComposerPendingUserInputPanel
-        pendingUserInputs={[prompt]}
+        pendingUserInputs={[pending]}
         isResponding={false}
         answers={answers}
         questionIndex={0}
@@ -98,6 +120,31 @@ describe("ComposerPendingUserInputPanel", () => {
     await customInput.fill("2026");
     expect((customInput.element() as HTMLTextAreaElement).value).toBe("2026");
     expect(document.querySelectorAll('[role="checkbox"][aria-checked="true"]')).toHaveLength(1);
+    await screen.unmount();
+  });
+
+  it("keeps recommendation and preview advisory until the user selects the option", async () => {
+    const screen = await render(<Harness />);
+    await expect.element(page.getByText("推荐", { exact: true })).toBeVisible();
+    expect(document.querySelectorAll('[role="checkbox"][aria-checked="true"]')).toHaveLength(0);
+
+    await page.getByRole("button", { name: "预览" }).click();
+    await expect.element(page.getByText("只在用户显式展开后显示。", { exact: true })).toBeVisible();
+    await expect.element(page.getByText("与当前成熟运行时一致。", { exact: true })).toBeVisible();
+    expect(document.querySelectorAll('[role="checkbox"][aria-checked="true"]')).toHaveLength(0);
+    await screen.unmount();
+  });
+
+  it("copies a text suggestion only after the explicit use action", async () => {
+    const screen = await render(<Harness pending={textPrompt} />);
+    const input = page.getByRole("textbox", { name: "回答" });
+    expect((input.element() as HTMLTextAreaElement).value).toBe("");
+
+    await page.getByRole("button", { name: "查看建议" }).click();
+    await expect.element(page.getByText("不要建立第二套 UI。", { exact: true })).toBeVisible();
+    expect((input.element() as HTMLTextAreaElement).value).toBe("");
+    await page.getByRole("button", { name: "采用建议" }).click();
+    expect((input.element() as HTMLTextAreaElement).value).toBe("不要建立第二套 UI。  ");
     await screen.unmount();
   });
 
