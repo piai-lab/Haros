@@ -8,6 +8,9 @@ export const RELEASE_WORKSPACE_MANIFEST_PATHS = [
   "apps/desktop/package.json",
   "apps/web/package.json",
   "packages/contracts/package.json",
+  // Keep the unregistered fork importer available only while Bun verifies the
+  // repository lock. The build never copies its source or runtime into stage.
+  "packages/om-ask/package.json",
   "packages/om-web-access/package.json",
   "packages/shared/package.json",
   "scripts/package.json",
