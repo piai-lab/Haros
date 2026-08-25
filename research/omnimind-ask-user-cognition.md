@@ -2,9 +2,9 @@
 
 > Gate A 重审 / Gate B fork feasibility 日期：2026-08-25
 >
-> 状态：`latest-direct-submit-and-shutdown-source-implemented-verified / historical-provider-wire-passed / final-timeline-decision-and-packaged-proof-pending / not-released`
+> 角色：Ask User 的 package-specific product decision 与固定 evidence snapshot；不拥有当前施工、packaged 或 release 状态。
 >
-> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。历史 Gate B 已接入唯一 bundled Pi-native `ask_user`、barrier、provenance 与 Host bridge，`67813a3557` 的 MiMo/DeepSeek只证明Provider wire。维护者随后删除Review并要求direct-submit、strict contract、truthful cross-provider terminal/presenter；`bd0f9aa002`与`5626d4b7b3`形成产品基线，`6012c7452e`闭合intentional shutdown handoff。旧package仍不能证明新语义，最新Timeline单行投影仍是已认可但待最终生产确认的设计草稿。**
+> 固定裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` exact-source lineage 是 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史是 UX/test donor。OmniMind 自己拥有 canonical contract、Composer Question 与 Timeline projection；fork只提供窄 runtime kernel。历史 source、Provider-wire、direct-submit、shutdown、Timeline和packaged证据各自只证明其实际覆盖范围。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。bundled Extension 始终进入受provenance约束的OmniMind Session composition，模型只在兼容presenter lease存在且winner唯一时看到`ask_user`。历史MiMo/DeepSeek proof只证明wire；latest direct-submit与shutdown lifecycle已完成source gate，最终Timeline生产裁决与fresh packaged gate仍未关闭。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同只由 `architecture/` 拥有，未来 source intake只由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与 [`pi-ask-user-intake.md`](pi-ask-user-intake.md) 决定。当前实现或交付状态必须读取真实源码、Git、`execution-brief.md` 与 Campaign，不能从本文的历史 SHA 或阶段叙事推断。
 
 ## 0. 先给结论
 
@@ -693,12 +693,12 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 - custom 在 row 内原地展开并 autofocus；free text在 card 内编辑。单题单选 preset 直接提交；多题中间单选自动 next，末题 stay；custom/multi/text 显式前进或提交。Preview/推荐/suggestion按需展开且不触发选择。
 - Composer 不显示完成卡。维护者已确认单 interaction row 为最终产品投影：底层 persisted requested/resolved 两项事实保持不变，WorkLog 只按 requestId + owning turn + lifecycle generation 做可信 presentation coalescing；缺任一关联事实时保留独立 terminal，不能按相邻、标题或 Tool 名猜测。pending 折叠显示双气泡与 `等待回答`，answered 折叠只显示 `已回答`，展开后读取 persisted request/settlement，按题序结构化展示 selectedOptionLabels 与 customText；其他 terminal 不展示答案。canonical User Input 与 reasoning/tool 共用 compact leading geometry，Question card 不加 icon。exact source `e65bc82c4b` 已实现并通过 focused WorkLog/Timeline/browser、Web 331 files / 4,191 tests与Web typecheck，packaged 仍待包含authority的exact pushed HEAD证明。正常产品文案保持 en/zh parity，same-name fail-closed 也不泄漏 Server 英文诊断。
 
-#### 最新 source closure 与剩余门
+#### 2026-08-25 source closure snapshot（非当前状态）
 
 - fork 72/72 与旧跨层 matrix 是保留基线。latest shutdown source通过Desktop 65 files / 607 passed（1 file / 5 skipped）、Server 385 files / 4,477 passed（3 files / 16 skipped）、根typecheck 8/8及lint 0 errors（615个既有warnings）；前一UI候选的Contracts 25 files / 274 tests、Web 331 files / 4,184 tests与Panel/Timeline Browser 16/16保持历史source证据。根全仓test此前仍被未修改的`@omnimind/om-web-access` credential-command aborted用例阻断，不能写成全仓test绿色，也不能为Ask跨owner修它。
 - barrier tests覆盖 Ask位于 sibling前后、sibling hooks/execute为零、multiple barrier、answered continuation、terminal无 continuation；Host bridge覆盖 single/multi/custom/raw whitespace与非法 label/空答案。
 - source present：是。`bd0f9aa002`闭合strict canonical request/response、跨Provider truthful terminal/presenter与Stop exactly-once；`5626d4b7b3`闭合direct-submit、responding/retry、native selection、focused-pane focus与当时的persisted Timeline receipt；`6012c7452e`把Desktop POSIX close改为authenticated request-first，seal presenter并等待异步/晚注册`unavailable` handoff，恢复普通client append在quiesce时fail closed，并在Provider producers/subscribers关闭后做最终engine drain。ACP的0/1/N lease与terminal由Cursor/Grok/Droid共同调用的生产seam测试证明，不扩写成三套真实adapter journey。
-- runtime activation沿用历史source接入；shipped bytes 与公开 Release 仍未由新候选证明。MiMo/DeepSeek Provider wire只证明旧exact SHA的schema call、程序化answer settlement、structured result与replan，不冒充Composer journey。单行 Timeline source candidate 已闭合 trusted correlation、persisted detail、collapsed-only status 与统一 leading geometry；只有提交推送 exact SHA 后才能重跑 clean-clone packaged gate，当前已安装 App 的双行/inline 摘要仍是 superseded 历史 UI，不能作为最终产品证据。
+- 本条记录的是该审计时点：runtime activation沿用历史source接入；MiMo/DeepSeek Provider wire只证明旧exact SHA的schema call、程序化answer settlement、structured result与replan，不冒充Composer journey。当时单行Timeline只有source证据，后续实现与packaged状态必须从Git和当前状态owner判断，不能继续执行本段旧“剩余门”。
 
 ## 14. Required proof
 
@@ -841,10 +841,10 @@ supi 高速变化使“定期 merge upstream main”不成立。未来更新必�
 
 错。还必须覆盖 single replacement、multi coexistence、customText 无损返回、sentinel identity 与重复 author 防御。
 
-## 17. 零记忆机器摘要
+## 17. 固定机器证据摘要
 
 ```yaml
-status: latest_direct_submit_shutdown_source_implemented_final_timeline_and_packaged_pending
+snapshot_status: direct_submit_shutdown_source_implemented_timeline_packaged_pending_at_capture_time
 date: 2026-08-25
 product:
   capability: canonical_user_input
@@ -902,9 +902,9 @@ gate_b:
   feasibility_slice: go
   canonical_contract_and_composer_source_slice: implemented_bd0f9aa002_5626d4b7b3
   shutdown_handoff_slice: implemented_6012c7452e
-  runtime_host_barrier_provenance_activation: implemented_source_final_timeline_and_packaged_pending
+  runtime_host_barrier_provenance_activation_at_capture_time: implemented_source_timeline_packaged_pending
   focused_source_tests: relevant_full_packages_passed
   live_mimo_deepseek: provider_wire_passed_not_composer_ui
-  packaged_fresh_profile: pending
+  packaged_fresh_profile_at_capture_time: pending
 update_manual: research/pi-ask-user-intake.md
 ```

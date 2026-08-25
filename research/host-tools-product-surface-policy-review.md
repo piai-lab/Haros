@@ -6,7 +6,7 @@
 >
 > **2026-08-22 implementation disposition：** 本文锁定的矩阵已由exact pushed code SHA `586c9661e5`实现，并通过merge `d4989f5cee`进入main：pure policy、v4 override migration/atomic snapshot、Gateway read/list/call、Goal/Automation admission与Web三列表格均通过source和post-merge gates。该code SHA构建的arm64 DMG（SHA-256 `cd97b9dd…51ece`）已替换安装，并在隔离fresh profile完成中英矩阵、815px窄屏、设置写入与关闭重开验收。下文“当前源码仍是旧全局开关”只描述上述原始基线，不是当前代码事实。
 >
-> 文档角色：记录本轮从当前调用链、三工作面裁决、Settings UI 候选和长期维护审查得出的完整认知，使新会话可以零记忆恢复方案。稳定 UI 与运行时合同在实施时仍须分别进入 [`architecture/workbench.md`](../architecture/workbench.md) 与 [`architecture/execution.md`](../architecture/execution.md)；当前施工状态只由 [`execution-brief.md`](../execution-brief.md) 拥有。
+> 文档角色：保存本轮调用链、三工作面裁决、Settings 候选和长期维护反证。稳定 UI 与运行时合同只见 [`architecture/workbench.md`](../architecture/workbench.md) 与 [`architecture/execution.md`](../architecture/execution.md)；本文不拥有当前施工状态。
 >
 > 相关现状证据：六组 Host catalog、当前全局 Settings、Engine projection、availability、旧 Session 与 call-time authority 继续由 [`agent-tools-mcp-settings-review.md`](agent-tools-mcp-settings-review.md) 拥有；Chat/Agent/Studio 产品面、Provider trust 与 Chat→Agent 边界见 [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)。
 

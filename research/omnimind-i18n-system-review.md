@@ -1,6 +1,6 @@
 # OmniMind i18n 物理归属审计
 
-> 状态：`source-audited / architecture-decided / implementation-not-started`
+> 角色：绑定审计快照的 source evidence；后续 catalog 分域已经实施，但当前状态不由本文拥有。
 > 审计快照：`main@4acfe9763e0bcefe223920ddb91d4aa827a5d4a3`
 > 稳定合同 owner：[`architecture/workbench.md`](../architecture/workbench.md)
 > 当前施工状态 owner：[`execution-brief.md`](../execution-brief.md)
@@ -32,7 +32,7 @@
 | 大约 244 个 Web source 文件直接从根 i18n seam import             | local observation                 | 对审计 SHA/工作树 import 路径的静态检索；数量只描述审计时规模，不是验收阈值            |
 | 巨型物理文件已形成跨产品域 review/merge hotspot                  | inference                         | 设置、Composer、Git、Automation、Pull Request 等高频域共享同一对语言对象；历史触达面广 |
 | 逻辑 catalog 保持唯一、物理上按稳定产品域切片                    | accepted architecture disposition | Workbench“语言、产品文案与技术原文”章节                                                |
-| E 已经实现或 packaged 验证                                       | false                             | 本快照仍是单一根文件；本文不拥有完成状态                                               |
+| 审计快照当时 E 是否已实现                                       | false                             | 该 snapshot 仍是单一根文件；后续实现与交付不由本文维护                                 |
 
 行数、字节数、import 数与 commit 数只是定位真实维护税的证据，不是“文件超过某个阈值就拆分”的规则。若未来消费面很小、修改不再冲突或切片反而增加同步点，应重新审判，而不是机械维持分片。
 

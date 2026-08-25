@@ -10,9 +10,9 @@
 >
 > 范围：本文主体保存“该source snapshot中有哪些常驻工具、何时实际进入模型调用面、设置变化后怎样生效”的历史证据。Chat/Studio产品面见[`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)；当前六组×三工作面目标与source candidate见[`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md)。
 
-> **2026-08-22 supersession：** 六组catalog数量与`e36b189e0c`历史source observation继续有效；全局`disabledBuiltInGroups`、fresh五组全开及Chat Browser-only不再是目标合同。当前source candidate使用三工作面explicit override、ProductSurface policy与Session-scoped guidance，详见Host策略研究和`architecture/execution.md`；最终merged/packaged SHA仍待验收。
+> **2026-08-22 supersession：** 六组catalog数量与`e36b189e0c`历史source observation继续有效；全局`disabledBuiltInGroups`、fresh五组全开及Chat Browser-only不再是目标合同。三工作面explicit override、ProductSurface policy与Session-scoped guidance的最终合同只见Host策略研究和`architecture/execution.md`；本文不维护后续交付状态。
 
-## 当前清单：新会话零记忆入口
+## 固定清单与术语
 
 ### “常驻”必须拆成五个不同事实
 

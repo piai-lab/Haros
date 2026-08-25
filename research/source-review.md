@@ -2,11 +2,11 @@
 
 > Nature: fixed-source research evidence. It does not grant production authority or Campaign status.
 
-> Sections 1–9 preserve the evidence and decisions available at their original review dates. Where their former next-step language conflicts with the 2026-08-09 Occam reset, it is superseded by §10 and the current architecture/execution owners; it must not be executed as backlog. Section 10 owns only the current research comparison inputs, not production adoption.
+> Every section preserves evidence and decisions at its recorded review date. Former next-step language is historical and must not be executed as backlog. Current product contracts, adoption and work state are owned only by architecture, `source-adoptions.json` and `execution-brief.md`.
 
 ## 1. Fixed input
 
-- Repository: U1（exact source URL 只由根 `README.md` 的 adoption record 持有）
+- Repository: U1（exact source URL 只由根 `source-adoptions.json` 持有）
 - Revision: `6aca3dcc505894481430967c2acb762b3dd1b358`
 - Imported baseline: `vendor/ui`
 - Tracked files at the fixed revision: 6,425
@@ -160,7 +160,7 @@ owned by [`SYNARA-INTAKE.md`](../SYNARA-INTAKE.md). It does not replace the prod
 record or claim that the full upstream range enters OmniMind.
 
 - Production UI-mother baseline: `6aca3dcc505894481430967c2acb762b3dd1b358`.
-- Reviewed source: the same repository URL owned by the root `README.md` adoption record.
+- Reviewed source: the same repository URL owned by the root `source-adoptions.json` record.
 - Frozen review candidate: `be6dcad3f63fa121fbe3180f257ba1ff128696c4`, tag `v0.6.7`, resolved
   from `origin/main` on 2026-08-05.
 - Exact range: 26 commits, 223 changed files, 14,241 insertions and 1,550 deletions.
@@ -320,7 +320,7 @@ responsibility where current OmniMind regressed.
 
 Implementation must compare current OmniMind to Synara `02c8a6c…` by stable responsibility and choose
 only Restore source / Keep a narrow evidenced OmniMind difference / Delete duplicate. After actual
-source bytes are accepted, the root `source-adoptions` block must record the resulting exact revision,
+source bytes are accepted, the root `source-adoptions.json` must record the resulting exact revision,
 paths, rights and changes; this research decision cannot pre-authorize that production fact.
 
 Pi stable `v0.84.1` is the first code-lineage and ecosystem compatibility baseline for OmniMind Agent,
@@ -359,7 +359,7 @@ Registry, bilingual catalog, brand, first-public storage/update identities and s
 The Device HID bridge adapts the Indigo layout/delivery mechanism from facebook/idb exact revision
 `dd0cb550510331f2d11e9130cb003d2425688e28`; the canonical MIT text is retained at
 `LICENSES/facebook-idb-MIT.txt` and beside the packaged helper source. This section is research
-evidence only; the root `source-adoptions` block remains the production adoption authority.
+evidence only; the root `source-adoptions.json` remains the production adoption authority.
 
 ## 12. Adopted provider-usage archive OOM follow-up
 
@@ -707,7 +707,7 @@ only proposed non-adoption, defer, current-stronger or high-risk divergence requ
 
 These 61 responsibilities are implemented on `main` by `22bbd70a6` and `d86d5766b`. Their focused
 tests and bounded live/runtime evidence close the listed defects at source level; they do not close the
-whole `8f9f600…` upstream sync, advance README adoption truth or authorize the non-adoption rows below.
+whole `8f9f600…` upstream sync, advance the root adoption truth or authorize the non-adoption rows below.
 
 ### 15.3 Disposition of the remaining responsibilities in `18ff998…8f9f600`
 

@@ -2,7 +2,7 @@
 
 > 研究与维护者裁决日期：2026-08-21
 >
-> 当前 OmniMind source snapshot：`533fa40f073e0903fc9c2e135e6c6fd48cb3b0c8`
+> OmniMind source snapshot：`533fa40f073e0903fc9c2e135e6c6fd48cb3b0c8`
 >
 > 对照 Synara source：`/Users/liuzaoqu/Desktop/Develop/πCode/synara`，clean exact `57f48ef1a3354ae7967d4a8f9f83a1105691ede6`
 >
@@ -10,7 +10,7 @@
 
 > **2026-08-22 supersession：** `§10–§14` 仍是对 `533fa40…` 的历史源码观察，不能倒改；当前目标是“三个 ProductSurface、两个 Provider execution/trust surface、immutable surface Prompt + Session-scoped Delivered Host guidance”。Host settings/list/call可实时变化，但不承诺per-turn schema/prompt热重载：关闭由Gateway立即拒绝新call，重新开启只在新Session或真实native reload后提供。Chat也不再永久Browser-only：Browser默认开，Goals/Automations支持但默认关，Device支持默认关，Tasks/Diagnostics不支持。Chat→Agent仍为服务端权威完整可见历史、有界Provider bootstrap、逐附件target-owned部分复制及“一条Timeline activity + 发起时一次Toast”。当前实现与验收状态只看`execution-brief.md`和Campaign。
 
-## 0. 本文的角色、权威与新会话读法
+## 0. 本文的角色、权威与证据读法
 
 本文保存 2026-08-21 围绕 OmniMind `Chat` 工作面形成的完整认知：维护者已经确认的产品方向、当前代码事实、Synara/Pi/Proma 证据、互相冲突之处、明确否决的路线，以及未来重新进入施工时必须证伪的条件。
 
@@ -22,7 +22,7 @@
 - 当前工作只看 [`execution-brief.md`](../execution-brief.md)；
 - 验收状态只看 active Campaign。
 
-新会话应按以下顺序理解本文：
+只有任务命中本文的来源或复验条件时，才按以下顺序理解这份固定证据：
 
 1. `§1–§9` 是维护者已经锁定的目标认知；
 2. `§10–§13` 是绑定上述 source snapshot 的当前事实与来源证据；

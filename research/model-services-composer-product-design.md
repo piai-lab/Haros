@@ -26,7 +26,7 @@ Status: local source observation + maintainer-confirmed product direction + impl
 - 最小、可维护的施工依据；
 - 每个行为应由什么证据验收。
 
-当时的实现分解与验证方法保存在 [`model-services-composer-new-session-execution-guide.md`](model-services-composer-new-session-execution-guide.md)。该文件现已退休为历史参考，不是新会话入口，不决定当前切片、准入、施工顺序或完成状态。
+当时的实现分解与验证方法已从当前文档树退休，完整历史由 Git 保留；它不是新会话入口，也不决定当前切片、准入、施工顺序或完成状态。
 
 本文不拥有稳定产品事实。发生冲突时，按以下 sole owner 裁决：
 
@@ -1756,7 +1756,7 @@ E7 可以新增一个局部 `ModelServiceIcon`/resolver，精确锁定并显式�
 ## 12. 历史实施依据与分解
 
 以下顺序只解释当时的设计依赖，不取代现行 owner，也不作为新会话 runbook。历史验证方法见
-[`model-services-composer-new-session-execution-guide.md`](model-services-composer-new-session-execution-guide.md)；该文件已退休为非阻塞参考。当前任务必须从当前 HEAD、dirty state、现行 owner、维护者决定与真实阻塞独立推出最小路径。
+旧执行指南已从当前文档树退休并由 Git 保留。当前任务必须从当前 HEAD、dirty state、现行 owner、维护者决定与真实阻塞独立推出最小路径。
 
 ### 联合优先顺序
 

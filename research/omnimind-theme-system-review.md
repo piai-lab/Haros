@@ -1,4 +1,4 @@
-# OmniMind 主题系统：零记忆全局审计与扩展地图
+# OmniMind 主题系统：固定来源审计与扩展地图
 
 > 更新时间：2026-08-24
 >
@@ -6,7 +6,7 @@
 >
 > 权威边界：稳定用户合同只看 [`architecture/workbench.md`](../architecture/workbench.md#主题与换肤)；跨进程投影只看 [`architecture/execution.md`](../architecture/execution.md)；当前施工/证据状态只看 [`execution-brief.md`](../execution-brief.md)。本文不能推翻它们，也不建立第二 Theme Registry、roadmap 或完成状态。
 
-## 1. 零记忆结论
+## 1. 结论摘要
 
 OmniMind 已经有一套值得保留的主题内核，不应重写：
 
@@ -284,7 +284,7 @@ exact pushed implementation SHA `9c4740da87a894913f30f4b3648340a8d2ef3cdc`取得
 - Theme seed、Settings option、搜索option和分享validator再次形成平行清单；
 - 测试复制完整token算法或视觉治理材料增长快于真实surface改进。
 
-## 10. 新会话最短读取路径
+## 10. 未来复验的最短读取路径
 
 涉及任何主题、明暗模式、换肤、颜色、字体、ThemePack、Browser/Curator样式、Terminal/Diff配色、Provider图标反色或native appearance时：
 

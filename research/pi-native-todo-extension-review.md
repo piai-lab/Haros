@@ -2,11 +2,11 @@
 
 > 证据日期：2026-08-19
 >
-> 状态：责任方向与exact-source事实已核验；Todo Extension source由Gate B merge `e7137c7dc873400d9a801f333f41e278e544e001`合入main，并已有focused/full与隔离packaged startup证据；Extension Architecture candidate的同SHA packaged DeepSeek Agent证明Todo没有被initial-active强制首轮调用，但没有实际调用Todo，因此result provenance packaged journey、安装与Release仍须另行证明
+> 证据范围：本文保存2026-08-19的exact-source、Gate B merge与当时focused/packaged startup观察；不拥有当前安装、交付或Release状态。
 >
 > 唯一职责：记录OmniMind Agent Todo Extension。稳定运行时合同属于[`architecture/execution.md`](../architecture/execution.md)；OmniMind Agent Extension composition与AgentGateway Host投影属于[`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md)。
 >
-> **2026-08-21 supersession notice：**维护者现已明确选择让 OmniMind Chat 也注册并按需使用同一 Todo Extension；简单问答仍不强制使用。该目标与当前 source/architecture 尚未同步，完整新裁决见 [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)。下文“仅 Agent / Chat 不注册”继续保留为 2026-08-19 source 与当时产品决定的历史证据，不能再作为未来方向。
+> **2026-08-21 supersession notice：**维护者随后选择让OmniMind Chat也按需使用同一Todo Extension；简单问答仍不强制使用。完整后续裁决见[`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md)与当前architecture。下文“仅Agent / Chat不注册”只保留为2026-08-19历史证据，不能作为当前方向。
 
 ## 1. 已确认的产品与 owner 结论
 

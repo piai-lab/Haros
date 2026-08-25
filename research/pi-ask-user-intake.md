@@ -6,7 +6,7 @@
 >
 > 当前 OmniMind source 观察起点：`14fa9f3e93048d51dc8e3d9d81812418a3590cf2`；fork feasibility commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`；source activation commit：`36e3bec7e789122c731028c1a8b791a68a6c1fea`
 >
-> 当前状态：Gate A 已重审；没有候选获准原装采用。历史 Gate B integration、`67813a3557` MiMo/DeepSeek Provider-wire proof 与 fork/barrier/provenance基线保留；维护者随后以 direct-submit、strict contract、truthful cross-provider terminal/presenter supersede旧Composer语义。`bd0f9aa002` / `5626d4b7b3`形成产品基线，`6012c7452e`进一步闭合authenticated Desktop shutdown、presenter seal/async handoff与quiescing admission；exact packaged candidate与Release仍未形成，最新Timeline单行投影仍是已认可但待最终生产确认的设计草稿。
+> 证据范围：Gate A 证明没有候选可原装采用，并固定了 fork lineage、P1–P7 与更新反证。后续 direct-submit、strict contract、cross-provider terminal/presenter、Timeline 单行投影和若干 packaged journeys 已进入 Git 历史；本文不维护当前交付状态，不能把下方任何旧 stage 字段当成今天的施工入口。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -16,7 +16,7 @@
 > [!WARNING]
 > 版本号更高、README 更漂亮、npm `latest`、GitHub stars、测试数量增加或 merge 无冲突，都不等于可以更新。每次 intake 必须重新固定 exact source/artifact，完成只读 Gate A，并在维护者确认当次完整 decision surface 后才能进入 Gate B。本文不能作为自动升级授权。
 
-## 0. 零记忆执行摘要
+## 0. 更新维护摘要
 
 ### 0.1 目标
 
@@ -30,7 +30,7 @@ fork_package: "@omnimind/om-ask"
 fork_version: "5.0.0-omnimind.1"
 fork_feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
 activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
-fork_stage: latest_direct_submit_shutdown_source_implemented_final_timeline_and_packaged_pending
+snapshot_stage: direct_submit_shutdown_source_implemented_timeline_packaged_pending_at_capture_time
 runtime_closure_commit: 6012c7452ef59abff0f310e5526516b9014bb748
 workbench_closure_commit: 5626d4b7b3
 runtime_tool: ask_user
@@ -106,7 +106,7 @@ feasibility_slice:
   shutdown_handoff_connected: authenticated_sealed_drained_source_6012c7452e
   fork_shipped: pending_exact_packaged_scan
   canonical_ui_installed_candidate: true
-status: latest_shutdown_source_implemented_provider_wire_historical_final_timeline_and_packaged_pending
+snapshot_status: shutdown_source_implemented_provider_wire_historical_timeline_packaged_pending_at_capture_time
 ```
 
 当前 block 分开记录历史 source adoption/provider-wire proof 与最新source closure；在exact packaged journey闭合前，不能填入shipped artifact hash、packaged candidate或released等级。
@@ -649,7 +649,7 @@ comments/`needs_discussion` 只保留在 source 和作者映射测试中；包�
 - `research/README.md` 路由；
 - execution brief 当前工作状态；
 - active Campaign evidence pointer（若适用）；
-- 根 README source-adoption（只有 production adoption 事实成立时）；
+- 根 `source-adoptions.json`（只有 source adoption 事实成立时；packaged/release evidence 仍单独举证）；
 - focused/live/packaged evidence pointer。
 
 不能 push “代码已采用、research 仍写 pending”或“文档宣布 production、package 尚未进入 build”的自相矛盾状态。
@@ -799,7 +799,7 @@ fork placement、Host bridge、Pi barrier、same-name provenance与历史Tool ac
 
 这些是待验证，不是产品应被限制的理由。任何 live/package失败都先归因；不得降级canonical合同、恢复普通文本 fallback或把失败渠道写成静态Provider blacklist。
 
-## 16. 零记忆机器摘要
+## 16. 固定机器证据摘要
 
 ```yaml
 manual: pi-ask-user-intake
@@ -825,7 +825,7 @@ current_fork:
   package: "@omnimind/om-ask@5.0.0-omnimind.1"
   feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
   activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
-  status: latest_direct_submit_shutdown_source_implemented_final_timeline_and_packaged_pending
+  snapshot_status: direct_submit_shutdown_source_implemented_timeline_packaged_pending_at_capture_time
   feasibility: go
   tests: 72
   runtime_dependencies: 0

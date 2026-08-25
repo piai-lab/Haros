@@ -1,16 +1,16 @@
 # OmniMind 使用洞察：从 Composer 圆环到 Settings 洞察页的产品认知
 
-状态：`maintainer-converged / production-contract / implementation-candidate`
+角色：维护者裁决与固定证据 snapshot；不拥有当前实现或交付状态。
 
 收敛日期：2026-08-25
 
-原始认知核对基线：`main@67813a35575cd89382101b45dd9aca9418ecb6ae`。生产 shipped-code 基线为 `origin/main@17f0fb314c` 上的 `codex/usage-insights@e21307fddced082dfc4144b871430c8bdabf5fa4` candidate；该 exact pushed SHA 已完成 clean packaged journey，但尚未合并或发行。当前分支、后续提交与交付状态仍只看 Git、`execution-brief.md` 和 active Campaign 的 exact evidence，不能从本文标题或更新时间推断。
+原始认知核对基线：`main@67813a35575cd89382101b45dd9aca9418ecb6ae`；实施证据候选为 `e21307fddced082dfc4144b871430c8bdabf5fa4`，后续已通过主线合并。本文只保留口径、taste、反证与复验条件；当前分支、交付与发行状态必须从 Git、`execution-brief.md` 和 active Campaign 判断。
 
 适用范围：OmniMind Composer 上下文圆环中的缓存信息，以及 Settings 中原 `Profile / 个人资料` 表面向 `Usage insights / 使用洞察` 的产品收敛。
 
-## 0. 零记忆入口与权威边界
+## 0. 证据摘要与权威边界
 
-新会话在动设计或代码前，必须依次读取根 `README.md`、`architecture/README.md`、`architecture/workbench.md`、`execution-brief.md`、active Campaign、`research/README.md`，再读本文。本文把本轮维护者已确认的 taste、视觉判断、信息架构和源码反证沉淀为可复核认知，但不取代以下 owner：
+只有任务直接涉及使用洞察时才在现行 owner 之后读取本文。它把本轮维护者已确认的 taste、视觉判断、信息架构和源码反证沉淀为可复核认知，但不取代以下 owner：
 
 - 稳定 UI、Settings、主题、响应式和双语合同只由 `architecture/workbench.md` 拥有；
 - 当前工作与准入只看 `execution-brief.md`；
@@ -480,7 +480,9 @@ Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最�
 
 任一演练若要求同时手改多个 Provider 映射、Settings palette、Usage History store 和 Profile chart，说明 seam 仍不够窄，候选冻结前必须简化。
 
-## 14. 新会话的施工前检查单
+## 14. 历史复验检查单
+
+以下条目只在任务重新打开本研究时帮助验证原结论，不拥有当前施工顺序：
 
 1. 重读当前 `architecture/workbench.md` 的 Settings、Usage & limits、主题、480px、i18n 条款。
 2. 重验 `settingsNavigation.ts`、`_chat.settings.tsx`、`ProfileSettingsPanel.tsx`、`profileSelectors.ts`、`profileStats.ts`、`packages/contracts/src/stats.ts` 和 runtime token snapshot；不要依赖本文的行号。

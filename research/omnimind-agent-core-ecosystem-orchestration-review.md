@@ -6,12 +6,12 @@
 >
 > 文档性质：local observation + external evidence + inference + maintainer-confirmed direction
 >
-> 权威边界：本文是可复核的研究、反方压力测试和零背景实施交接；不取代 `architecture/` 中的产品与执行 contract，不声明功能已经实现，也不拥有 Campaign 状态。
+> 权威边界：本文是绑定下述日期与源码的固定研究、候选比较和反方压力测试；不取代 `architecture/` 中的产品与执行 contract，不声明功能已经实现，也不拥有 Campaign 或当前施工状态。
 >
-> 相邻研究：`research/model-services-composer-product-design.md` 拥有 Composer、Engine 选择、OmniMind Agent Model services 与 Pi ModelRuntime 接线的详细产品设计；`research/model-services-composer-new-session-execution-guide.md` 是该设计的新会话施工入口。本文消费其结论，只描述这些事实如何约束 Agent Core、Subagent 与 Workflow；不复制第二套 Model services 设计。
+> 相邻研究：`research/model-services-composer-product-design.md` 保存 Composer、Engine 选择、OmniMind Agent Model services 与 Pi ModelRuntime 接线的设计来源。本文消费其历史结论，只描述这些事实如何约束 Agent Core、Subagent 与 Workflow；当前稳定合同与施工状态仍分别只看 `architecture/` 与 `execution-brief.md`。
 
 > [!IMPORTANT]
-> **当前处置（2026-08-15）**：本文保留为绑定 `a9adf9fb9a30f6b0a9fb43fc3349c8d2fdfd5a9d` 的历史研究证据，不再是当前施工顺序或零背景执行入口。它仍保存后续研究需要的 Prompt Diet、Agentic Search、Memory/Wiki 分工、Pi package 候选矩阵、外部证据、压力测试和风险登记；其中关于当前代码状态、package 时点信号、Slice 顺序和执行准入的文字必须在最新 `main` 重新验证。
+> **处置（2026-08-15）**：本文保留为绑定 `a9adf9fb9a30f6b0a9fb43fc3349c8d2fdfd5a9d` 的历史研究证据，不是当前施工顺序或新会话入口。它仍保存后续研究需要的 Prompt Diet、Agentic Search、Memory/Wiki 分工、Pi package 候选矩阵、外部证据、压力测试和风险登记；其中关于代码状态、package 时点信号、Slice 顺序和执行准入的文字必须在最新 `main` 重新验证。
 >
 > 本文不是当前 Agent Core 研究或执行入口。现行稳定事实只看 `architecture/*`，Pi 生态重新进入遵循根 `PI-ECOSYSTEM-INTAKE.md`，当前工作只看 `execution-brief.md`；Pi 成熟 runtime 能力边界见 `research/pi-native-product-integration-review.md`，用户可见能力投影候选见 `research/omnimind-agent-capability-surface.md`。已弃用设计与退休施工门只由 Git 历史保留；不得从本文直接恢复旧分支、安装 package、创建第二控制面或复制旧 Slice 顺序。
 >
@@ -27,7 +27,7 @@
 
 > OmniMind 要吃掉兼容 Pi 的生态，但最终交付的不是一份 Pi 套壳或 package 合集，而是一个能吸收 Pi、Claude Code、Codex 及自有资产优点、原生支持异构多模型协作、Agentic Search、Goal、Todo、Dynamic Workflow、Markdown Memory/Wiki 和可验证完成闭环的 OmniMind Agent。
 
-本文为新的、没有历史聊天上下文的会话回答以下问题：
+本文在该历史快照内回答以下研究问题：
 
 1. 维护者究竟要什么，明确反对什么；
 2. OmniMind 当前已经具备什么，缺口在哪里；
@@ -1594,9 +1594,9 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 41. **Subagent 错误共享**：为了 cache locality 复用不该共享的 Session/context，会污染隔离、权限、Role 与 provenance。
 42. **预热投机**：默认 prewarm 产生写入费用、失效和额外请求，却未必被后续 exact request 命中。
 
-## 20. 新会话启动清单
+## 20. 历史复验清单
 
-任何接手此议题的新会话应按以下顺序工作：
+只有新证据命中本文复验触发器、且当前 owner 要求重新打开本研究时，才参考以下历史清单；它不能替代根读取路由：
 
 1. 读根 `README.md`；
 2. 读 `architecture/README.md`；
@@ -1604,18 +1604,17 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 4. 按任务读 `architecture/product-state.md` 与 `architecture/workbench.md`；
 5. 读 `execution-brief.md` 与 active Campaign；
 6. 完整读 `research/model-services-composer-product-design.md`，因为任何 Subagent/Workflow target 都依赖其 Engine/Model services truth；
-7. 若本轮要施工 Composer/Model services，再读 `research/model-services-composer-new-session-execution-guide.md`；
-8. 读本文件；
-9. 查看 `git status --short`，不得覆盖未知修改；
-10. 复核当前 SHA、Host gateway limits、Pi package exact versions、targetResolver static defaults 与 Model services Host surface；
-11. 先建立同 bundled revision 的 Pi preservation baseline，定位已有 Host regression；
-12. 把本文方向先写入相应 architecture owner，再施工；
-13. 施工时坚持一个 Orchestration、一个 Provider Registry、一个 Product Thread truth；
-14. 每个增强先证明 Pi public surface/薄 bridge 是否足够，默认不改 Pi core；
-15. focused fixture 后主动用真实 Provider 证伪；
-16. 用户可见代码必须双语；
-17. candidate 必须经过 packaged fresh-profile journey，并与 Pi baseline 做受影响能力的差分；
-18. research 结论、architecture contract、Campaign evidence 不得互相冒充。
+7. 读本文件中与本轮来源或反证直接相关的章节；
+8. 查看 `git status --short`，不得覆盖未知修改；
+9. 复核当前 SHA、Host gateway limits、Pi package exact versions、targetResolver static defaults 与 Model services Host surface；
+10. 先建立同 bundled revision 的 Pi preservation baseline，定位已有 Host regression；
+11. 把被再次接受的稳定方向写入相应 architecture owner，再施工；
+12. 施工时坚持一个 Orchestration、一个 Provider Registry、一个 Product Thread truth；
+13. 每个增强先证明 Pi public surface/薄 bridge 是否足够，默认不改 Pi core；
+14. focused fixture 后主动用真实 Provider 证伪；
+15. 用户可见代码必须双语；
+16. candidate 必须经过 packaged fresh-profile journey，并与 Pi baseline 做受影响能力的差分；
+17. research 结论、architecture contract、Campaign evidence 不得互相冒充。
 
 ## 21. 本地证据锚点
 
@@ -1638,7 +1637,6 @@ Fork 后代码只保留一个明确 owner。若为了“未来兼容”同时保
 - `architecture/workbench.md`：Subagents/Todo/Question/Browser 等 Workbench surface owner。
 - `missions/independent-omnimind-v1.md`：F-11/F-12 等 package compatibility evidence pointers。
 - `research/model-services-composer-product-design.md`：Model services/Composer/Provider options 的相邻产品设计说明。
-- `research/model-services-composer-new-session-execution-guide.md`：上述相邻设计面向零聊天记忆新会话的实施入口。
 
 ## 22. 外部证据锚点
 

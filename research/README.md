@@ -1,40 +1,66 @@
 # Research
 
-本目录保存可推翻、可复核的证据：固定来源审判、实验、失败、反例、被替代路线和复验条件。它不拥有产品 doctrine、架构 contract、施工顺序或 Campaign 状态。
+`research/` 只保存可复核的固定证据：exact source、实验、失败、反例、候选比较、被拒绝路线与复验触发器。它不拥有当前产品设计、实施顺序、准入状态或下一动作。
 
-## 规则
+## 使用规则
 
-- 外部项目、作者、仓库、revision、package 和模型名称应真实记录，不能用中性代号牺牲可审计性。
-- 每项结论区分 fixed-source fact、local observation、external evidence、inference 和 assumption。
-- README、截图、stars、下载量和作者宣传只能发现候选，不能证明能力。
-- 同一输入和调用路径没有新 falsifier 时不重复 probe；revision、artifact、toolchain、platform、protocol 或真实调用路径变化时，只复验受影响结论。
-- 被接受的稳定职责进入 `architecture/`；真实生产 adoption 进入根 README 的机器披露；验收状态只进入 Campaign。
-- research 文件可以保留历史错误，但必须明确 superseded，不能倒改成今天看起来正确的故事。
+- 先读根 [`README.md`](../README.md) 与相关 [`architecture/`](../architecture/README.md) owner；只有确实需要来源证据或反证时才打开本目录。
+- 每份文件都应被视为绑定其记录的 source/revision/环境的 snapshot。出现“当前、下一步、pending、candidate”时，除非顶部明确声明仍有效，否则只描述当时观察。
+- 接受的稳定职责进入 `architecture/`；真实 source adoption 进入 [`source-adoptions.json`](../source-adoptions.json)；当前交付状态进入 [`execution-brief.md`](../execution-brief.md) 或 active Campaign。
+- research 可以保留历史错误及 donor 原能力，但必须写明最终 disposition；不能把历史能力表、原型或测试计划重新当成产品要求。
+- Git 保存完整历史。一个文件若不再拥有独特证据或重开触发器，就从当前树删除，不建立 `archive/` 垃圾场。
 
-## 索引
+## 路由
 
-- [source-review.md](source-review.md)：固定UI母体及其原生Engine接入的源码、权利、构建和兼容事实；§14–15保存Synara adopted-source intake与whole-tree/packaged closure，§17核对Todo责任模式，§18锁定`8f9f600…c79fab4`范围的canonical Gateway Host平权、stock Pi eager投影与无Host search基线。它只保存exact-source证据，不取代Extension Architecture或当前状态owner。
-- [../SYNARA-INTAKE.md](../SYNARA-INTAKE.md)：未来每轮 Synara 审查、辩证吸收、`$converge` 提问、实施授权与 exact-SHA 交付的唯一操作手册。
-- [../PI-ECOSYSTEM-INTAKE.md](../PI-ECOSYSTEM-INTAKE.md)：未来每轮 Pi Core、Pi-compatible package/extension/skill/prompt/tool/MCP、OmniMind Agent Core 外部来源与必要 fork 的发现、exact-source 复核、两门授权、最小接入、验证和重新进入手册；不保存当前版本榜、安装状态或第二 package registry。
-- [source-update-intake.md](source-update-intake.md)：2026-08-11 已完成 intake 的历史协议兼容入口；仅供旧链接与研究上下文引用，不拥有未来操作规则。
-- [interface-surface-inventory.md](interface-surface-inventory.md)：绑定 2026-08-10 source snapshot 的历史接口清单；其中 Feedback “仅预留、尚未激活”的状态已被 `architecture/public-surface.md` 记录的 2026-08-13 production activation supersede。本文只保存当时可复核观察，不拥有当前激活状态，也不取代架构 owner。
-- [model-services-composer-product-design.md](model-services-composer-product-design.md)：Model services 设置中心与 Composer Engine/模型/私有选项的产品设计说明，覆盖当前实现、Proma 可借鉴机制、Pi ModelRuntime 边界、目标交互、失败语义与完整验收矩阵；保存设计依据，不取代 Workbench、Product State、Execution 或 Campaign owner。
-- [model-services-composer-new-session-execution-guide.md](model-services-composer-new-session-execution-guide.md)：绑定 2026-08-12 source snapshot 的历史实现分解与验证参考；保留当时的 owner map、纵向结果、focused/live/packaged falsifier 和 stop-loss，但不再是新会话入口，不决定今天的切片、准入、施工顺序或完成状态。
-- [pi-native-product-integration-review.md](pi-native-product-integration-review.md)：锁定 Pi runtime 的成熟能力、OmniMind 产品 owner、Project membership trust、system prompt、动态工具、Extension Session replacement、fork/compaction/usage/package/TUI 边界与研究 SHA 反例；其中“先完成原 Model services 关注点、再从 merged main 复核”的顺序只描述当时快照，不约束今天的分支、准入或施工先后，也不取代 architecture、execution brief 或 Campaign。
-- [pi-native-host-tool-loading-review.md](pi-native-host-tool-loading-review.md)：OmniMind Agent Extension Architecture 1.0与AgentGateway Host投影研究入口。Pi拥有runtime内Extension/Tool Registry与Session truth，AgentGateway拥有Host catalog/execution/authority；2026-08-22 supersession将Desired公式更新为`catalog ∩ ProductSurface support ∩ configured intent/default ∩ availability`，并保持Session-scoped guidance与live call deny，不建立Host/global loader或per-turn schema controller。
-- [pi-native-todo-extension-review.md](pi-native-todo-extension-review.md)：OmniMind Agent Todo Extension的唯一bounded证据owner。本文严格区分已确认的产品/owner方向、Pi `0.84.2` exact-source事实、已合入main的source、已通过的source/startup证据、待packaged Todo真实journey问题与未来非承诺；记录Todo的Agent-surface initial-active、非must-call时机、三态全量快照、provenance/collision与branch/resume/reload falsifier。它不编目Pi built-ins、supervised Bash、Host tools或未来session tools，也不拥有通用Extension fork/安装规则。
-- [omnimind-ask-user-cognition.md](omnimind-ask-user-cognition.md)：OmniMind Ask User 的唯一 package-specific 产品认知与 source decision owner。2026-08-25 Gate A 重审后，明确“无候选可原装采用”，并证明 `@mrclrchtr/supi-ask-user@5.0.0` / `ce8af5f…` 可作为 domain/controller 减法 fork lineage；`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` ancestry 仍是首要 UX/test donor。完整 Gate B source integration现已闭合 canonical contract/settlement、Host sentinel与bridge、presenter lease、唯一 bundled Pi-native `ask_user`、Pi `0.84.2` barrier、same-name provenance、restart/late fencing、shared Composer Question、i18n/a11y与focused真实Pi journey。exact `main@67813a3557` 的 MiMo/DeepSeek Provider-wire proof 已闭合 schema、structured result 与 replan，但不是 Composer UI journey。当前是 `source-integrated / presenter-and-provenance-gated / provider-wire-passed / packaged-pending / not-released`；本文不把live wire绿色冒充packaged Composer证据。
-- [pi-ask-user-intake.md](pi-ask-user-intake.md)：`@omnimind/om-ask` 未来吃 lineage 与有界 donor 更新的唯一 package-specific 操作手册。当前 baseline 固定 source-adopted private fork `5.0.0-omnimind.1`、supi exact ancestry、Pi barrier patch digest、gated registration与未闭合的live/packaged门；按 U0–U8 固定 exact source/artifact/rights、结构化 diff、作者基线与最强反证、逐项 rebase P1–P7、审计 source/shipped/activated 和隐藏 lifecycle。它只拥有更新程序，不重复定义产品合同，也不授权自动追 `latest`。
-- [pi-web-access-intake.md](pi-web-access-intake.md)：`pi-web-access@0.24.1` → `@omnimind/om-web-access` 的唯一 package-specific 零记忆入口。固定 exact source/artifact/author/MIT、26 Provider与四种routing、四工具、responseId/storedResults continuation、`source_check` evidence/heuristic边界及P1–P6，并记录bundled-OmniMind-Agent-only、非AgentGateway/非第七组Host、默认`auto-summary`且搜索过程展示关闭、非阻塞observer与pending review分层、dedicated ephemeral internal-only Browser Tab、review exact reopen与token non-history、唯一canonical config owner、Pi active-set收缩、26 identity→25份exact-pinned原色本地品牌资产、同步/删除边界和required proof。当前是已实现并具有exact pushed-SHA任务隔离packaged证据的production-adopted source integration；品牌资产的已知许可/trademark disposition仍逐项保留，不把指称性展示写成合作、背书或整个产品已Release。
-- [agent-tools-mcp-settings-review.md](agent-tools-mcp-settings-review.md)：OmniMind Agent常驻工具数量、Settings、AgentGateway、Engine projection、External connections与third-party MCP边界的历史source证据；顶部supersession把全局开关/Chat Browser-only路由到最新三工作面策略，旧数量仍只绑定其exact snapshot。
-- [host-tools-product-surface-policy-review.md](host-tools-product-surface-policy-review.md)：六组×Agent/Chat/Studio Host策略的零记忆主入口，冻结support/default matrix、explicit override、pure policy、v4迁移与原子snapshot、Session-scoped guidance/live deny、Goal/Automation后台admission、六行三列UI和stop-loss；顶部implementation disposition区分当前source candidate与尚待的exact packaged/main证据。
-- [omnimind-prompt-management-review.md](omnimind-prompt-management-review.md)：OmniMind Agent 提示词设置的研究与证据 owner。当前维护者决定把页面收敛为“默认提示词 + 自定义规则”：前者是 bundled native builder 的 factory/custom stable segment，后者继续使用 runtime-active global context candidate；Settings 不管理 `SYSTEM.md` / `APPEND_SYSTEM.md`、Project rules、模板、其他 Engine、raw effective Prompt 或历史。本文保留 exact-source precedence、save/reload/reopen/operation、缓存保护、安全写入、产品语言、focused/live/packaged falsifier及旧三文件 installed candidate 被 supersede 的事实；稳定职责仍由 Workbench/Product State/Execution 唯一拥有。
-- [omnimind-agent-core-ecosystem-orchestration-review.md](omnimind-agent-core-ecosystem-orchestration-review.md)：绑定旧 SHA `a9adf9fb9` 的历史深度研究，保留 Prompt Diet、Agentic Search、Memory/Wiki 分工、Pi package 候选矩阵、外部证据、压力测试与风险登记；其旧代码状态、时点信号和 Slice 顺序必须在当前 `main` 重验，不是现行施工入口。Agent Core 的现行稳定事实只由 `architecture/*` 拥有，外部来源准入只看 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)，当前工作只看 `execution-brief.md`。已弃用设计与退休施工门已从当前文档树删除，历史仍由 Git 保留。
-- [omnimind-agent-capability-surface.md](omnimind-agent-capability-surface.md)：基于当前 OmniMind 真实侧栏、header、Composer stack、Timeline、Workbench Environment card 和 right dock 的 Agent 能力投影规格；先用 host-reuse ledger 固定 Todo、子智能体、审批、Browser/Device、Files/Diff、Knowledge/Memory 与恢复的现有 owner，阻止研究原型生成第二组件树；再定义目标、Engine-native workflow、自动记忆/知识、恢复、Computer Use、Skills/Plugins 何时无 UI、何时显示结果、何时允许介入。HTML 用接近真实宿主的 integrated storyboard 验证同一 exact-task workflow snapshot 的四个互斥职责，以及顺序/并行/选择/回环四种最小结构原语、4/20/120-Agent 层级和 running→terminal result morph；Environment 只保留当前任务 latest receipt，Composer 完成后退场，RightDock 冻结为结果图。当前 Claude fixture 仍只画真实 phase order/containment；其他拓扑是独立 explicit research fixture，不反向伪造 runtime dependency。它供后续与 React Flow read-only profile 做 focused bake-off，自身不是 production component 或 renderer 结论。不取代 `architecture/workbench.md`，也不拥有实施顺序。
-- [chat-work-surface-contract-review.md](chat-work-surface-contract-review.md)：Chat/Agent/Studio工作面认知与历史source证据入口。顶部supersession固定三个ProductSurface Prompt overlay、两个Provider execution/trust surface、Session-scoped Delivered Host guidance、Chat可选Goals/Automations与服务端权威Chat→Agent；`§10–§14`继续保存绑定`533fa40…`的旧源码观察，不冒充当前实现。
-- [omnimind-responsive-workbench-review.md](omnimind-responsive-workbench-review.md)：以用户提供的 OmniMind/Codex 连续窗口截图、当前 `main` 的 Chat shell/Environment/Sidebar/RightDock/Composer/i18n 真实调用链、官方 Codex 产品职责说明和已冻结 `.zq-ui/responsive-workbench` storyboard 为证据，审判 Environment 固定 `312px` inset、Sidebar 仅移动断点、RightDock 固定分栏、手动偏好与自动压制混合、Environment/Workbench 同名及中英表面缺口；给出稳定主画布、辅助 inspector、真实工作台、全局导航四角色、几何不变量、最小 presentation state、冰山验证矩阵、stop-loss 与复验触发器。其 W1 “不改变 Project instructions”是当轮 scope 证据，已被 2026-08-18 的独立审计与维护者退休决定 supersede；本文不取代 Workbench、Execution、Campaign 或施工顺序 owner。
-- [omnimind-usage-insights-cognition.md](omnimind-usage-insights-cognition.md)：从 Composer 上下文圆环到 Settings `使用洞察` 的维护者收敛认知：圆环继续只表达上下文压力，最近一轮缓存命中只进入原浮层；stable `profile` ID 不动；五项统计条与活动热力图保持旧结构，30天模型与Token/cache、工作重心/方式及Skills/Agents向下独立常显；完整1200×1600摘要严格无身份、无费用、无tab、无通用SaaS蓝。本文固定真实max-width、canonical C/U/O口径、删除归档、partial语义、原型fixture边界、验收矩阵和stop-loss，不取代Workbench、当前源码或Campaign状态owner。
-- [omnimind-theme-system-review.md](omnimind-theme-system-review.md)：主题/换肤任务的零记忆全局证据入口。沿`ThemeState → ThemePack/preset → resolved semantic tokens → Web/Browser/Terminal/Diff/native/Engine Web Surface`记录唯一owner、surface与内容边界、硬编码颜色分类、已举证的Curator第二palette和preset重复清单、未来新增/删除/同步演练、packaged验证冰山与stop-loss；稳定合同仍只由Workbench/Execution拥有，当前完成状态仍只看execution brief。
-- [omnimind-i18n-system-review.md](omnimind-i18n-system-review.md)：i18n物理分域的零记忆证据入口。绑定审计SHA记录单一逻辑catalog、en/zh key与placeholder保护、巨型物理文件的可量化修改税、thinking hints特殊数据边界、按稳定产品域切片的反例/修改半径演练及stop-loss；稳定合同仍只由Workbench拥有，当前施工状态仍只看execution brief，本文不冒充E已实施或A–E总账。
-- [omnimind-tool-ui-projection-cognition.md](omnimind-tool-ui-projection-cognition.md)：Tool/Activity 进入 Timeline 时的 UI 投影认知与已选视觉候选；固定 identity/brand/surface/category/status 的优先级、Read 开卷与 Search 放大镜的目标语义分离、所有当前工具家族及 Browser/Gateway 明细、生产差异、修改半径和复验条件，并索引同目录的[完整可视化 HTML](omnimind-tool-ui-projection.html)。它不取代 Workbench、runtime Tool Registry、Timeline presentation owner 或当前实现状态。
-- [decision-record.md](decision-record.md)：已明确 superseded 的历史路线、当时的反方压力测试与被替代原因；不拥有当前执行权。
+### Synara 与产品母体
+
+| 文件 | 只在什么问题下读取 |
+| --- | --- |
+| [`source-review.md`](source-review.md) | Synara exact-source、rights、range disposition、母体机制与复验触发器 |
+| [`interface-surface-inventory.md`](interface-surface-inventory.md) | 需要复核 2026-08-10 历史 public/interface surface snapshot |
+
+未来 Synara review/adoption 的操作方法只见根 [`SYNARA-INTAKE.md`](../SYNARA-INTAKE.md)。
+
+### Pi、OmniMind Agent 与生态
+
+| 文件 | 只在什么问题下读取 |
+| --- | --- |
+| [`pi-native-product-integration-review.md`](pi-native-product-integration-review.md) | Pi runtime、Project trust、prompt、compaction、package/TUI 边界的 fixed review |
+| [`omnimind-agent-core-ecosystem-orchestration-review.md`](omnimind-agent-core-ecosystem-orchestration-review.md) | Agent Core、异构协作、Workflow、Search、Memory/Wiki、Prompt/Cache 经济学与 package 候选的 2026-08-12 固定研究 |
+| [`pi-native-host-tool-loading-review.md`](pi-native-host-tool-loading-review.md) | Pi Extension Registry 与 AgentGateway Host projection 的 owner 证据 |
+| [`pi-native-todo-extension-review.md`](pi-native-todo-extension-review.md) | product-bundled Todo Extension 的 bounded source evidence |
+| [`agent-tools-mcp-settings-review.md`](agent-tools-mcp-settings-review.md) | Host tool/MCP Settings 的历史基线与反证 |
+| [`host-tools-product-surface-policy-review.md`](host-tools-product-surface-policy-review.md) | 六组 Host capability 在 Agent/Chat/Studio 的 policy evidence |
+| [`chat-work-surface-contract-review.md`](chat-work-surface-contract-review.md) | ProductSurface 与 Provider execution/trust surface 的历史对照 |
+| [`model-services-composer-product-design.md`](model-services-composer-product-design.md) | Model services/Composer 的完整设计来源与旧 snapshot；不按其中阶段表施工 |
+| [`omnimind-prompt-management-review.md`](omnimind-prompt-management-review.md) | default prompt + custom rules 的 source precedence 与失败证据 |
+| [`pi-web-access-intake.md`](pi-web-access-intake.md) | `@omnimind/om-web-access` exact lineage、P1–P6、rights、更新与删除边界 |
+| [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md) | canonical Ask User 产品裁决、fork decision、生命周期反证与证据 |
+| [`pi-ask-user-intake.md`](pi-ask-user-intake.md) | `@omnimind/om-ask` 的 upstream update/replay 手册 |
+
+通用 Pi/package/fork intake 方法只见根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md)。
+
+### Workbench、视觉与用户表面
+
+| 文件 | 只在什么问题下读取 |
+| --- | --- |
+| [`omnimind-agent-capability-surface.md`](omnimind-agent-capability-surface.md) | Agent capability 如何复用 Composer、Timeline、child Thread、Files/Diff 等真实宿主 |
+| [`omnimind-responsive-workbench-review.md`](omnimind-responsive-workbench-review.md) | 响应式 Workbench、Sidebar/RightDock/Environment 角色与几何反证 |
+| [`omnimind-usage-insights-cognition.md`](omnimind-usage-insights-cognition.md) | context pressure、usage stats、heatmap 与 export 的口径和视觉 taste |
+| [`omnimind-theme-system-review.md`](omnimind-theme-system-review.md) | Theme owner、semantic tokens、跨 Web/Browser/Terminal/native surface 边界 |
+| [`omnimind-i18n-system-review.md`](omnimind-i18n-system-review.md) | catalog 分域、placeholder、normal surface language 与修改半径证据 |
+| [`omnimind-tool-ui-projection-cognition.md`](omnimind-tool-ui-projection-cognition.md) | canonical Activity/Tool identity、icon、density 与 Timeline projection taste |
+
+原型、HTML、截图和设计候选只证明相应文件声明的视觉或交互问题，不证明生产 owner、runtime correlation、packaged App 或发布状态。
+
+## 写入准则
+
+一份新的 research 文件只有在现有 evidence owner 无法承载独立来源或独立重开触发器时才成立。它必须在开头写清：
+
+1. 绑定的 exact source/artifact/环境；
+2. 它拥有的证据与明确不拥有的事实；
+3. 最强反证与最终 disposition；
+4. 什么变化才需要重读或复验；
+5. 接受后的稳定合同位于哪个 architecture owner。
+
+不要把施工 checklist、当前分支、最新 SHA、测试流水、packaged 状态或“新会话从这里开始”写进 research；这些内容会把证据 snapshot变成第二状态 owner。

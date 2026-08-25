@@ -8,17 +8,17 @@
 >
 > 上游 exact artifact：[`pi-web-access@0.24.1`](https://www.npmjs.com/package/pi-web-access/v/0.24.1)
 >
-> 文档性质：fixed-source fact + current OmniMind source observation + maintainer-confirmed product decision + bounded implementation reference。
+> 文档性质：fixed-source fact + dated OmniMind source observation + maintainer-confirmed product decision + bounded implementation reference。
 >
-> 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，production adoption 只有进入根 [`README.md`](../README.md) 的 `source-adoptions` 后才成立。
+> 权威边界：本文是 `pi-web-access` / `@omnimind/om-web-access` 唯一 package-specific research owner。它保存来源、能力、反证、fork patch inventory、维护方式和实施 falsifier；稳定 UI 与 runtime 合同仍分别由 [`architecture/workbench.md`](../architecture/workbench.md) 和 [`architecture/execution.md`](../architecture/execution.md) 拥有，当前施工只看 [`execution-brief.md`](../execution-brief.md)，source adoption 只有进入根 [`source-adoptions.json`](../source-adoptions.json) 后才成立。
 
 > [!IMPORTANT]
-> **当前 disposition：`Fork narrowly`；monorepo-owned integration 已实现并进入production adoption，证据成熟度为`production-adopted-with-packaged-web-access-evidence`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入 AgentGateway，不增加第七组 Host Built-in capability，不跨 Engine 分发，也不承担通用 stock Pi package 的安装、兼容或支持责任。默认`auto-summary`、Settings/Provider-asset、显式Curator、non-review observer、真实MiMo stored result continuation、keyed Tavily route与A/B多Thread lifecycle均已有exact-SHA安装证据；当前安全复核安装候选对应`62814532f6fbb0977866d7019637cf665583d656`，并在既有六个fork seam内补齐取消无副作用、route availability、child environment隔离与配置文件fail-closed边界。此前route-aware Settings、Curator结果控件、summary inspector inert/focus与Provider切换真相证据继续有效。这不等于签名、公证、Release、update feed或整个OmniMind产品已经发行。
+> **Adopted disposition：`Fork narrowly`。** Package 名是 `@omnimind/om-web-access`，产品名是 **OmniMind Web Access**。它只作为 OmniMind Agent 随产品内置的 Pi-native Extension 受支持；不进入AgentGateway，不增加第七组Host Built-in capability，不跨Engine分发，也不承担通用stock Pi package的安装、兼容或支持责任。本文记录的exact-SHA packaged证据只证明其列出的journey；当前source adoption只由根`source-adoptions.json`决定，本文不维护最新安装或发行状态。
 
 > [!IMPORTANT]
 > 2026-08-22维护者重新裁决默认体验：canonical默认workflow是`auto-summary`，普通联网后台摘要并同turn继续；Curator不再是日常默认，只在Settings显式选择、per-call override或用户明确要求审查/挑选来源时以`summary-review`进入。该决定supersede本文此前“Curator默认开启”的旧结论，但不删除P4或显式review能力。
 
-## 0. 新会话先读这里
+## 0. 固定裁决摘要
 
 ### 0.1 一句话结论
 
@@ -700,7 +700,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 4. 按 P1–P6 逐项判断：upstream 已解决则删除 patch，发生冲突则说明用户影响；
 5. 在独立untouched baseline上重放或重做最小P1–P6差异，生成可重复upstream diff/patch inventory；不以目录重排或“干净架构”扩大修改半径；
 6. 运行 OmniMind conformance、isolated runtime、real-provider、packaged journey；
-7. 只有 exact pushed SHA 全链通过后才更新产品 pin、README adoption、license/SBOM 和 evidence；
+7. 只有 exact pushed SHA 全链通过后才更新产品 pin、`source-adoptions.json`、license/SBOM 和 evidence；
 8. 不自动追 latest，不因 README 新功能直接扩大 Settings 或 runtime activation。
 
 候选交付使用两段事实链：实现、authority、research与execution status先在本地共同冻结为`candidate/pending-packaged`后才推送任务分支；Desktop必须从该次已pushed的exact implementation SHA构建。packaged journey通过后再以evidence/status commit记录被测implementation SHA、产物与结果，并明确evidence-recording SHA不属于Desktop shipped bytes；不在commit内容中嵌入自身SHA，也不制造尾随提交循环。
@@ -910,7 +910,7 @@ Provider切换同时触发当前结果重搜与canonical默认写入，但二者
 - Engine-native search + Browser 的简单基线在真实 journey 中达到同等或更好结果；
 - 维护者改变 Curator 默认、key 可回读、stock Pi support 或非 Host 边界。
 
-## 14. 新会话执行摘要
+## 14. 固定 intake 摘要
 
 ```om-web-access-intake
 {

@@ -1,6 +1,6 @@
 # OmniMind Tool UI Projection Cognition
 
-Status: `Ask User single-interaction source-implemented + focused/browser-verified / packaged pending; Read selected + source-pending`
+Role: fixed Tool/Activity projection evidence and selected visual semantics; current implementation and delivery state are not owned here.
 
 Source lineage: baseline `main@f2ac1da7ea` → Ask icon `main@ffa1333d3a` → single interaction `codex/ask-user-gate-b@e65bc82c4b` · 2026-08-25
 
@@ -249,4 +249,4 @@ HTML 明细列出当前 22 个 Browser action 与 28 个非 Browser OmniMind Gat
 
 ### 12.3 交付边界
 
-Ask icon 基线已在 exact pushed `main@ffa1333d3a` 完成；`codex/ask-user-gate-b@e65bc82c4b` 进一步实现 canonical requested/resolved 单 interaction row、collapsed-only status、persisted expanded detail 与 compact leading geometry，并通过 focused WorkLog/Timeline/browser/typecheck。它仍须随包含 authority 的新 exact pushed HEAD 进入 fresh packaged journey；旧 packaged artifact 只证明旧候选，已被维护者的新裁决 supersede。Read family 仍是 `selected / source pending`，不得因 Ask 已实现而扩写为 Read 已交付。
+在本文记录的历史基线中，Ask icon 与 canonical single-interaction projection 已形成source/browser证据，后续packaged证据由Git和状态owner记录；不得继续把本段旧pending当作施工指令。Read family在本文中只有selected视觉结论，是否已实现必须读取当前源码，不能因Ask已交付而外推。
