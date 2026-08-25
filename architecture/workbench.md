@@ -103,13 +103,15 @@ Composer内置Slash Command的技术identity与执行继续属于Shared/runtime 
 
 ### Canonical User Input
 
-User Input 是跨 Codex、Claude、Pi、OmniMind Agent 与未来 Engine 的同一产品投影；Provider、Pi Extension、RPC fallback 与第三方 TUI 都不能拥有私有 Ask UI 或定义能力上限。所有 `user-input.requested` 都进入既有 Composer Question surface：复用 Composer 约 736px 内容列、浅色圆角 Question card、安静灰阶、编号选项、逐题分页与必要动作，不新增页面、侧栏、弹窗、问卷后台、大标题或第二 Ask shell。复杂度属于 canonical contract/state，默认画面只显示当前问题与当前必须操作的控件；Preview 只在用户显式请求时展开，Review 只在最终提交前出现一次。
+User Input 是跨 Codex、Claude、Pi、OmniMind Agent 与未来 Engine 的同一产品投影；Provider、Pi Extension、RPC fallback 与第三方 TUI 都不能拥有私有 Ask UI 或定义能力上限。所有 `user-input.requested` 都进入既有 Composer Question surface：复用 Composer 约 736px 内容列、浅色圆角 Question card、安静灰阶、编号选项、逐题分页与必要动作，不新增页面、侧栏、弹窗、问卷后台、大标题、Review 画面或第二 Ask shell。复杂度属于 canonical contract/state，默认画面只显示当前问题与当前必须操作的控件；Preview 只在用户显式请求时于对应选项内展开。
 
 每道有预设选项的题都由 Host projection 在 authored options 之后合成一个保留 identity 的末项，模型不得 author，也不进入回答值。简中单选显示 `自定义` / `输入自己的答案`，多选显示 `自定义` / `补充自己的答案`；英文使用同一 catalog 的语义对等文案。单选与多选复用同一 option-row 结构，仅改变 radio/checkbox、selection 与 result 语义。点击 `自定义` 后，输入框在该行内部原地展开并立即聚焦；自由回答也直接在 Question card 内编辑。主 Composer 不是 Ask answer owner，等待回答时不得把 Ask draft 同步进主 Composer 或要求用户到远处输入。
 
 Ask answer 只包含 authored preset selections 与可选 `customText`。单选自定义替代预设；多选可同时提交多个预设与自定义答案。单选需要边界、条件或理由时，用户通过自定义入口写出完整真实答案，不建立第二个注释字段。用户文本只可用 trim 判断是否为空，展示、draft、transport 与 result 均保留原文、换行和尾随空格，不静默归并或解释。
 
-选择单选预设项后立即进入下一题；最后一题只自动进入 Review，绝不自动 Submit。单选自定义在 option row 内展开并聚焦，填写后仍需显式 Next/Review；多选始终显式 Next/Review。Review 结构化区分 preset selections 与 customText，并允许回到任意一题修改。数字快捷键只在 Question card 的交互焦点域生效，输入框聚焦时数字与 Enter 保持正常输入；选项使用真实 radiogroup/radio 或 group/checkbox 语义、`aria-checked`、可见 focus 与问题切换 announcement。题目数和选项数没有产品硬上限，只允许 contract owner 针对异常超大 payload 定义可测的性能/安全 guard，且不得静默截断或写进模型 guidance 形成能力上限。任何 Preview、Review、recommendation 等字段只有在 UI 与结果链真实、无损兑现后才能进入 public schema。
+只有一道题且为单选时，选择预设项立即提交；多题时，中间题选择单选预设项后立即进入下一题，最后一题选择后留在原题并等待显式 `提交`。单选自定义在 option row 内展开并聚焦，填写后显式 `下一题` 或 `提交`；多选与自由回答始终显式前进或提交。不存在独立 Review/确认回答步骤。Previous 允许回题修改；Preview、推荐理由和 suggestion 展开不构成选择。数字快捷键只在 Question card 的交互焦点域生效，输入框聚焦时数字与 Enter 保持正常输入；选项使用原生 radio/checkbox、可见 focus 与同组方向键语义。只有 owning focused pane 可自动聚焦题目；后台 pane 不抢焦点。题目数和选项数没有产品硬上限，只允许 contract owner 针对异常 payload 执行 1 MiB、10,000 authored question+option nodes 与固定 schema depth guard，且不得静默截断或写进模型 guidance 形成能力上限。任何 Preview、recommendation 等字段只有在 UI 与结果链真实兑现后才能进入 public schema。
+
+Web 提交使用 request instance 的同步 exactly-once claim，不经过普通 Composer message preflight。Provider 已 claim 时 Question card 继续可见但答案控件真实 disabled；Stop Turn 始终可用。只有 canonical `user-input.resolved` 或明确 retryable/uncertain 事实才能分别移除 card 或释放 claim，dispatch 失败保留 draft 并允许重试。resolved 后不在 Composer 显示完成卡或 Toast，而由 Timeline 从已持久 settlement 投影低噪声双气泡 receipt：answered 显示 `已回答 · …`，其他 terminal 只显示真实状态且不泄露答案。展示摘要可以有界归一化/截断，但不得改写底层 canonical answer 或 Tool result。
 
 ## 4. Conversation、Timeline 与 Activity
 

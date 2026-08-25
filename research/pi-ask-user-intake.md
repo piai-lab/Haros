@@ -6,7 +6,7 @@
 >
 > 当前 OmniMind source 观察起点：`14fa9f3e93048d51dc8e3d9d81812418a3590cf2`；fork feasibility commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`；source activation commit：`36e3bec7e789122c731028c1a8b791a68a6c1fea`
 >
-> 当前状态：Gate A 已重审；没有候选获准原装采用。完整 Gate B source integration 已实施：canonical contract、Composer projection、presenter lease、Host bridge、Pi barrier、同名 provenance、terminal/late/restart fencing 与唯一 bundled Tool registration均在 source 中闭合。exact `main@67813a35575cd89382101b45dd9aca9418ecb6ae` 的 MiMo/DeepSeek Provider-wire proof 已闭合真实 schema、structured result 与 replan，但不是 Composer UI journey。exact pushed-SHA packaged Ask continuation仍未闭合，因此当前不是 packaged candidate或 Release。
+> 当前状态：Gate A 已重审；没有候选获准原装采用。历史 Gate B integration、`67813a3557` MiMo/DeepSeek Provider-wire proof 与 fork/barrier/provenance基线保留；维护者随后以 direct-submit、strict contract、truthful cross-provider terminal/presenter supersede旧Composer语义。最新source由`bd0f9aa002` / `5626d4b7b3`实现并通过相关包完整gate；exact packaged candidate与Release仍未形成。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -30,7 +30,9 @@ fork_package: "@omnimind/om-ask"
 fork_version: "5.0.0-omnimind.1"
 fork_feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
 activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
-fork_stage: source_integrated_packaged_pending
+fork_stage: latest_direct_submit_source_implemented_packaged_pending
+runtime_closure_commit: bd0f9aa002
+workbench_closure_commit: 5626d4b7b3
 runtime_tool: ask_user
 conditional_runtime_lineage:
   package: "@mrclrchtr/supi-ask-user@5.0.0"
@@ -96,16 +98,16 @@ feasibility_slice:
       provenance_gate,
     ]
   fork_tests: 71
-  registered: presenter_and_provenance_gated_omnimind_agent_only
-  model_exposed: true_only_when_registered
-  canonical_contract_connected: true
-  composer_projection_connected: true
+  registered: bundled_extension_always_composed_in_omnimind_session
+  model_exposed: true_only_when_presenter_and_provenance_active
+  canonical_contract_connected: strict_source_bd0f9aa002
+  composer_projection_connected: direct_submit_source_5626d4b7b3
   fork_shipped: pending_exact_packaged_scan
   canonical_ui_installed_candidate: true
-status: gate_b_source_integrated_provider_wire_passed_packaged_pending
+status: latest_source_implemented_provider_wire_historical_packaged_pending
 ```
 
-当前 block 已记录 source adoption、gated runtime registration 与 MiMo/DeepSeek Provider-wire proof，但不能在 exact packaged journey闭合前填入 shipped artifact hash、packaged candidate或 released等级。
+当前 block 分开记录历史 source adoption/provider-wire proof 与最新source closure；在exact packaged journey闭合前，不能填入shipped artifact hash、packaged candidate或released等级。
 
 ### 0.3 每轮必须产出的结论
 
@@ -181,7 +183,7 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 
 在 exact source、权利、owner 与验证闭合后，优先吸收：
 
-- 多问题、Review、Preview、recommendation、freeform 的成熟 UX 改进；
+- 多问题、direct-submit、逐题导航、Preview、recommendation、freeform 的成熟 UX 改进；独立 Review 属于已拒绝产品差异，不得从 donor 重新引入；
 - keyboard、screen reader、IME、responsive、overflow、Markdown safety 修复；
 - abort、cancel、timeout、late-answer、listener cleanup、idempotent settlement 修复；
 - 更强的作者 regression tests、property tests、fuzz tests；
@@ -365,7 +367,7 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 
 - 新版 UI 更漂亮，但 multi + freeform serialization 退化；
 - 新增 recovery，但伪造 promise continuation；
-- 新增 headless RPC，但 Preview/Review silent loss；
+- 新增 headless RPC，但其公开声明的 presentation metadata silent loss；
 - 新 tests 多了，但 sequential 被移除；
 - dependency 简化，但 ancestry/license 断裂。
 
@@ -391,7 +393,7 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 - choice sentinel 是否仍由 Host 合成，且简中精确显示单选 `自定义` / `输入自己的答案`、多选 `自定义` / `补充自己的答案`；
 - canonical selection、`customText` 是否两个独立字段；
 - single replacement、multi coexistence、customText losslessness；
-- single preset 自动进入 next/review、custom/multi 显式前进是否严格由 Product state owner 控制；
+- exact 单题 single preset direct submit、多题 single preset next/stay、custom/multi 显式前进是否严格由 Product state owner 控制；
 - selection cardinality 与 Preview presentation 是否正交；
 - recommendation 是否仅作展示，绝不预选 choice 或预填成 text answer；
 - `required` 是否真的 enforce；
@@ -415,9 +417,9 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 - 新上游 UX 是否应映射到 shared UI；
 - Codex/Claude/其他 Provider 是否也能受益或至少不退化；
 - Composer 是否出现第二私有 Ask panel；
-- Review、Preview、recommendation、sentinel、Cancel；
+- direct-submit、Preview、recommendation、sentinel、Cancel；
 - custom 输入是否在 sentinel row 内原地展开并 autofocus，自由回答是否在 Question card 内编辑，主 Composer 是否保持非 answer owner；
-- 默认是否只显示当前问题，Preview/Review 是否按显式请求或当前状态渐进出现；
+- 默认是否只显示当前问题，Preview 是否只在显式请求后渐进出现；
 - keyboard/IME/a11y/reduced motion/overflow；
 - zh-CN/en catalog；
 - TUI tests 中可移植的行为是否转成 Host tests。
@@ -568,10 +570,10 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 ### 9.4 UI fixtures
 
-- no single-select auto-submit；
-- single preset 自动进入下一题或最终 Review；single custom 与 multi 显式 Next/Review；Submit 永远显式；
-- draft across navigation/review/edit；
-- single preset→next/review、preset→custom 与 multi preset/custom coexistence state；
+- exact 单题 single preset 直接提交一次；
+- 多题中间 single preset 自动 Next，末题 stay；single custom、text 与 multi 显式 Next/Submit；
+- draft across navigation/edit/responding/retry；
+- single preset→submit/next/stay、preset→custom 与 multi preset/custom coexistence state；
 - custom row inline autofocus、free-text in-card 与 Composer non-ownership；
 - scoped numeric shortcuts、input digits、radio/checkbox/aria-checked/focus/announcement；
 - Preview sanitization；
@@ -616,7 +618,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 4. 停止所有既有 OmniMind 实例；
 5. 用任务专用 `userData`、home、Provider private home 启动；
 6. 从进程参数/运行证据核验隔离；
-7. 完成 launch → ask → preview/review → submit → continuation；
+7. 完成 launch → ask → preview/direct-or-explicit-submit → continuation；
 8. 验证 background Thread、cancel/abort、close/reopen stale/re-ask；
 9. 正常关闭并清理任务专用进程；
 10. 不触碰真实用户 `.pi` / `.omnimind`。
@@ -763,7 +765,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - [ ] 没有新增未裁决 P8
 - [ ] source / shipped / activated 三层清楚
 - [ ] 没有 TUI/commands/settings/config/remote/recovery ambient owner
-- [ ] sentinel、freeform、review、preview 无损
+- [ ] sentinel、freeform、direct-submit、preview 无损
 - [ ] 无题目/选项产品 cap
 - [ ] Ask/Approval 分离
 - [ ] sequential + same-turn barrier 有 exact runtime 证据
@@ -776,12 +778,12 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 ## 15. 当前开放事项
 
-fork placement、canonical contract、typed settlement、Host bridge、presenter lease、Pi barrier、same-name provenance、restart stale、quiet Composer projection和最终Tool activation已在 source层闭合。以下只剩 production proof，不能被 source绿色冒充关闭：
+fork placement、Host bridge、Pi barrier、same-name provenance与历史Tool activation已有source基线；最新direct-submit、strict canonical guard、cross-provider terminal/presenter与exactly-once Stop已由`bd0f9aa002` / `5626d4b7b3`完成source closure。相关完整source gate已绿，但以下事项不能被source测试冒充关闭：
 
 - exact `main@67813a35575cd89382101b45dd9aca9418ecb6ae` 已让 Xiaomi MiMo 与 DeepSeek 各完成真实 `ask_user` schema call、程序化 canonical answer settlement、structured Tool result 和模型 replan；这是 Provider-wire proof，不是 Composer UI journey；
 - packaged Composer 对同一 canonical request/result 的真实回答证据；不得把已闭合的 MiMo/DeepSeek Provider-wire proof 扩写成两个 Provider 各自的 UI journey；
 - exact pushed SHA clean-clone DMG、SBOM/LICENSE、fork与Pi core patch进入shipped bytes的扫描；
-- fresh task-only `userData`、home与Provider private home下的single/multi/custom/Preview/Review/Cancel；
+- fresh task-only `userData`、home与Provider private home下的single/multi/custom/Preview/direct-submit/Cancel；
 - pending中Stop Turn、最后presenter消失、Server终止/reopen stale、同名Extension collision、headless no-tool与零残留进程；
 - Desktop/mobile几何、keyboard/VoiceOver/IME等最终运行态证据；
 - 正式Release/update authority（不由普通Gate B source integration自动获得）。
@@ -814,14 +816,14 @@ current_fork:
   package: "@omnimind/om-ask@5.0.0-omnimind.1"
   feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
   activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
-  status: source_integrated_provider_wire_passed_packaged_pending
+  status: latest_direct_submit_source_implemented_packaged_pending
   feasibility: go
   tests: 71
   runtime_dependencies: 0
-  registered: presenter_and_provenance_gated_omnimind_agent_only
-  model_exposed: true_only_when_registered
-  canonical_contract_connected: true
-  composer_projection_connected: true
+  registered: bundled_extension_always_composed_in_omnimind_session
+  model_exposed: true_only_when_presenter_and_provenance_active
+  canonical_contract_connected: strict_source_bd0f9aa002
+  composer_projection_connected: direct_submit_source_5626d4b7b3
   fork_shipped: pending_exact_packaged_scan
   canonical_ui_installed_candidate: true
 pi_barrier:

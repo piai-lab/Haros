@@ -2,9 +2,9 @@
 
 > Gate A 重审 / Gate B fork feasibility 日期：2026-08-25
 >
-> 状态：`Gate-B-source-integrated / presenter-gated-product-registration / MiMo-and-DeepSeek-provider-wire-passed / packaged-proof-pending / not-released`
+> 状态：`latest-direct-submit-source-implemented-focused-verified / historical-provider-wire-passed / packaged-proof-pending / not-released`
 >
-> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。维护者已授权并完成 source-level Gate B：唯一 bundled Pi-native `ask_user`、canonical response/settlement、Composer Question、presenter lease、barrier、provenance 与 stale fencing 已接入；exact `main@67813a35575cd89382101b45dd9aca9418ecb6ae` 的 MiMo/DeepSeek Provider-wire proof 已闭合真实 schema、structured result 与 replan，但不是 Composer UI journey；exact pushed-SHA packaged App 仍是未闭合的交付门。**
+> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。历史 Gate B 已接入唯一 bundled Pi-native `ask_user`、barrier、provenance 与 Host bridge，`67813a3557` 的 MiMo/DeepSeek只证明Provider wire。维护者随后删除Review并要求direct-submit、strict contract、truthful cross-provider terminal/presenter；最新source由`bd0f9aa002`与`5626d4b7b3`实现并通过相关包完整测试，但旧package仍不能证明新语义。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。模型只在兼容 presenter lease 存在且 bundled provenance 唯一时看到 `ask_user`；这项 source integration 已由 MiMo/DeepSeek 的真实 Provider wire 证明 schema/result/replan，但尚未由 fresh packaged App 证明 Composer 与完整异常生命周期，也不等于公开 Release。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。bundled Extension 始终进入受provenance约束的OmniMind Session composition，模型只在兼容presenter lease存在且winner唯一时看到`ask_user`。历史MiMo/DeepSeek proof只证明wire；最新direct-submit与异常生命周期已完成source gate，fresh packaged gate仍未关闭。
 
 ## 0. 先给结论
 
@@ -49,6 +49,8 @@ OmniMind 应把 `ask_user` 做成与 Todo 同等级的 bundled Pi-native Session
 | sentinel donor          | `pi-tian-ask-user@1.0.0`                             | 拒绝模型重复 author “Other”的测试思路                                                      |
 | 直接安装                | 全部拒绝                                             | 没有候选通过完整运行时硬门，也都会造成双 UI 或双 lifecycle                                 |
 
+表中的 notes/Review 只记录 donor 的真实能力与可借鉴测试，不代表 OmniMind 产品保留它们；最终 Product contract 已明确删除独立 note 与 Review。
+
 ## 1. 产品本质与维护者 taste
 
 Ask User 不是“弹一个问题”。它是 Agent 在信息不足、存在多条合理路线或必须取得用户偏好时，暂停自主执行、交还决策权、等待真实回答，再基于回答重新规划的认知刹车。
@@ -70,7 +72,7 @@ Ask User 不是“弹一个问题”。它是 Agent 在信息不足、存在多�
 4. 每道选择题由 Host 合成固定最后一项自定义 sentinel，不依赖 LLM author，也不把 sentinel identity 返回模型。可见文案严格为：单选 `自定义` / `输入自己的答案`，多选 `自定义` / `补充自己的答案`，无斜杠与省略号。
 5. 单选自由文本可以完全替代预设项；多选自由文本可与已选预设项共存。
 6. 答案只包含预设选择与可选自定义文本；自定义文本原样、无损返回模型。
-7. Preview、Review、推荐项等一旦进入 schema，就必须 UI 与结果链真实兑现。
+7. Preview、推荐项等一旦进入 schema，就必须 UI 与结果链真实兑现；独立 Review 已被最终产品裁决删除，不是待实现能力。
 8. Ask 与 Approval 分离；无 UI fail closed；Abort/Cancel/late answer、重启与同名 provenance 必须诚实。
 
 ## 2. OmniMind 不是从零开始
@@ -93,9 +95,9 @@ Ask User 不是“弹一个问题”。它是 Agent 在信息不足、存在多�
 
 ### 2.3 当前仍缺的交付证据
 
-- Xiaomi MiMo 与 DeepSeek 的真实 schema call、Composer 回答、Tool result 与模型 replan；
+- Xiaomi MiMo 与 DeepSeek 已有真实 schema call、程序化 canonical settlement、Tool result 与模型 replan；仍缺二者各自真实 Composer journey，若最终只完成共享 Composer packaged proof，报告必须把两类证据拆开；
 - exact pushed SHA clean-clone DMG、SBOM/LICENSE 与 shipped-byte 核验；
-- fresh isolated packaged App 的 single/multi/custom/Preview/Review/Cancel/Stop/close/restart/collision/headless 全链；
+- fresh isolated packaged App 的 single/multi/custom/Preview/direct-submit/Cancel/Stop/close/restart/collision/headless 全链；
 - Desktop 800×520、mobile 430×820、VoiceOver/IME 等最终运行态证据；
 - 正式 Release/update authority（本任务不自动授权）。
 
@@ -348,7 +350,7 @@ supi 5.0.0 `supi-ask-user` 自身约 3,200 行生产 TypeScript；直接的 UI/r
 | identity/composition | bundled package identity、唯一注册、active intent、sourceInfo assertion     |
 | canonical contract   | request/result schema、sentinel、无损文本、version/capability               |
 | Host bridge          | request correlation、Composer projection、terminal settlement、late fencing |
-| Workbench projection | 多题/多选/freeform/Preview/Review/i18n/a11y                                 |
+| Workbench projection | 多题/多选/freeform/Preview/direct-submit/i18n/a11y                          |
 | Pi barrier           | Ask-first、batch terminate、answer-after-replan                             |
 | lifecycle            | Abort/Cancel/timeout/reload/branch/resume/restart stale                     |
 | result/context       | 只返回真实答案，不把 recommendation/unselected metadata 伪造成决定          |
@@ -362,7 +364,7 @@ supi 5.0.0 `supi-ask-user` 自身约 3,200 行生产 TypeScript；直接的 UI/r
 | P1 Identity & product profile | OmniMind identity、bundled-only、禁用 upstream TUI/config/events/commands        | 上游提供不建立第二 owner 的正式 Host-neutral product profile |
 | P2 Canonical contract         | stable IDs/values、sentinel、无损文本、无产品 caps、正交 schema/result           | 上游合同逐项满足 canonical invariants                        |
 | P3 Structured Host seam       | request correlation、capability discovery、terminal settlement、late fencing     | Pi 提供等价、versioned、Host-neutral seam                    |
-| P4 Workbench projection       | Composer Question 的完整 en/zh UI、Review/Preview/a11y                           | 不删除；这是 OmniMind 产品 owner，不属于 fork runtime        |
+| P4 Workbench projection       | Composer Question 的完整 en/zh UI、direct-submit/Preview/a11y                    | 不删除；这是 OmniMind 产品 owner，不属于 fork runtime        |
 | P5 Lifecycle & barrier        | sequential 之外的 Ask-first、batch terminate、replan、Abort/Cancel/restart stale | Pi Core 原生提供并由 exact tests 证明                        |
 | P6 Truthful result/context    | selected-only、customText 无损、recommendation 不进答案                          | upstream result 与 context 完全等价                          |
 | P7 Provenance/reload          | same-name winner、sourceInfo、instance generation、reload/branch/resume          | Pi 暴露稳定 product provenance primitive并由 Session 验证    |
@@ -389,7 +391,7 @@ supi 5.0.0 `supi-ask-user` 自身约 3,200 行生产 TypeScript；直接的 UI/r
 - versioned、可演进；
 - input 与 presentation metadata 分离；
 - IDs/values 稳定；
-- choice cardinality 与 Preview/Review 正交；
+- choice cardinality 与 Preview 正交；
 - 用户文本无损；
 - sentinel 由 Host 合成；
 - schema 只宣称 UI/result 已完整实现的能力。
@@ -486,16 +488,16 @@ Composer Question 是唯一 owner，第三方 UI 只提供 donor 行为。真实
 2. Workbench 将当前 Run 标为 waiting for user；
 3. Composer 进入 Question mode，保持同一 conversation/thread；
 4. 用户逐题选择；点 `自定义` 后在该 option 内原地展开并 autofocus，自由回答也在卡内编辑；
-5. Review 汇总真实答案，可回到任意题修改；
-6. Submit 原子提交一个 result；
-7. UI 退场，Timeline 留下可读 receipt；
+5. 单题单选 preset 直接提交；多题末题以及 custom/text/multiple 使用卡内显式提交；
+6. canonical response 被 claim 后 card 保持可见且禁用，直到 persisted terminal fact 到达；
+7. UI 退场，Timeline 从 persisted settlement 留下低噪声答案 receipt；
 8. Pi 收到真实 Tool result 并重新规划。
 
-选择单选预设项后自动进入下一题；最后一题只进入 Review，绝不自动 Submit。单选 custom 在原地展开并聚焦，填完后显式 Next/Review；多选始终显式 Next/Review。Review 只在最终提交前出现一次，结构化区分 presets 与 customText，并可返回任意题修改。主 Composer 不是 Ask answer owner，不同步 Ask draft，也不接收替代输入。
+exact 单题单选 preset 直接提交；多题中间单选 preset 自动进入下一题，末题停留并显式提交。单选 custom 在原地展开并聚焦，填完后显式 Next/Submit；多选与自由回答始终显式 Next/Submit。不存在 Review/确认回答状态。Previous 可回题修改；主 Composer 不是 Ask answer owner，不同步 Ask draft，也不接收替代输入。
 
-数字快捷键只在 Question card 的交互焦点域生效，输入框内数字不被劫持；单选/多选使用真实 radio/checkbox、`aria-checked`、可见 focus 与问题切换 announcement。多题导航、Preview、Review、推荐理由、required policy、键盘操作、屏幕阅读器与中英 catalog 都是可演进能力，不由当前截图或 package TUI 上限决定。若某字段未被 UI/result 完整支持，就不能先公开进 schema。
+数字快捷键只在 Question card 的交互焦点域生效，输入框内数字不被劫持；单选/多选使用原生 radio/checkbox、可见 focus、同组方向键与问题切换 announcement。多题导航、Preview、推荐理由、required policy、键盘操作、屏幕阅读器与中英 catalog 都是可演进能力，不由当前截图或 package TUI 上限决定。若某字段未被 UI/result 完整支持，就不能先公开进 schema。
 
-维护者明确否决旧的 `omnimind-ask-user-ui.html` 与 `omnimind-ask-user-final-projection.html`：它们虚构 App shell，并把 Preview、Review、自定义和过多辅助控件同时摊开，导致卡片与工具栏过重。2026-08-25 的 `omnimind-ask-user-occam.html` 只作为历史 decision candidate，不是 production source，也不授权复制其模拟 state machine 或创建新 UI primitive；其中已被后续裁决删除的字段不再构成产品能力。
+维护者明确否决旧的 `omnimind-ask-user-ui.html` 与 `omnimind-ask-user-final-projection.html`：它们虚构 App shell，并把 Preview、Review、自定义和过多辅助控件同时摊开，导致卡片与工具栏过重。2026-08-25 的 `omnimind-ask-user-occam.html` 与后续带 Review 的候选都只作为历史 decision candidate，不是 production source；最终 direct-submit 裁决明确删除第二状态机，其中已删除的字段不再构成产品能力。
 
 ## 10. Ask 与 Approval
 
@@ -558,13 +560,13 @@ created -> projected -> waiting -> answered
 
 ## 13. Gate B 施工顺序
 
-维护者已授权并完成 source-level 第 1–8 步；第 9–10 步仍是 production verification gates。Tool 只在前四层全部绿色后通过独立激活提交进入 composition：
+维护者已授权完整 Gate B；旧 source integration 曾完成第 1–8 步，但最新 direct-submit、strict contract 与跨 Provider terminal/presenter 裁决正在同一列车重新闭合，不能沿用旧完成状态。Tool 激活只在对应 source hard gates 全绿后保留：
 
 1. 固定 fork exact source、artifact、license 与作者测试 baseline；
 2. 建立 subtractive product profile，先切掉 TUI/supi-core/ambient lifecycle；
 3. 冻结 canonical response/controller 与 sentinel/无损 invariants；
 4. 建立 structured Host bridge 与 request fencing；
-5. 在既有 Composer Question 接 quiet default UI、inline custom、Review、a11y 与 en/zh；
+5. 在既有 Composer Question 接 quiet default UI、inline custom、direct-submit、a11y 与 en/zh；
 6. 在 Pi seam 完成 Ask-first/batch terminate/replan；
 7. provenance、reload、branch/resume、restart stale；
 8. focused fixtures；
@@ -637,9 +639,8 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 | Surface          | Source decision                                                                                          | 已锁定 falsifier                                                                          |
 | ---------------- | -------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Product response | `selectedOptionLabels[]`、`customText?` 两个独立字段；string 使用 raw contract                           | RPC codec、Web state 与 Provider command tests 保留换行/尾随空格                          |
-| Web controller   | single custom replacement；multi preset + custom coexist；single preset 自动进入 next/review             | custom/multi 不自动前进；末题只进 Review 不提交                                           |
+| Web controller   | single custom replacement；multi preset + custom coexist；single preset 按题位 direct-submit/next/stay   | custom/multi 不自动提交；多题末题无 Review、显式提交                                      |
 | Host sentinel    | Web projection 自动 append 保留 custom row；不改 request/authored options，不回传 sentinel label         | browser test 证明 multi preset + custom 同时 selected/submittable                         |
-| Review           | 最终一次、结构化显示 presets/customText、可回题修改                                                      | browser component journey + pure build test                                               |
 | Cross-Provider   | canonical command/event 在 adapter 之前保持 structured；每个 native adapter 只在最后边界 lossless encode | common encoder tests覆盖 scalar/array 与 JSON envelope；多 Provider adapter focused tests |
 | Ask/Approval     | 删除 `user-input.resolved` 对 runtimeMode/sandbox/approval 的反向推断                                    | ingestion test 证明名为 `sandbox_mode` 的 Ask 答案也不能改变 permission                   |
 | Fork kernel      | choice response 新增 first-class `selectedValues[]` / `customText`，未引入 UI/config/registration        | fork suite 保留 upstream lifecycle 并覆盖产品差异                                         |
@@ -648,9 +649,9 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 
 packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818c54f2fbe1` 的 clean-clone arm64 DMG SHA-256 为 `1efe4a1b708bf92482ec71caade6a086f4215e7a9895f6740b92bd37d8758fc3`，通过 241-component legal closure；安装版 `app.asar` SHA-256 为 `b41849354be5ede2eb1318ee53ffd5cd179c698217e6a6450a3f76291c63b679`，嵌入同一 commit，且 exact scan 不含 `@omnimind/om-ask` / `packages/om-ask`。fresh 隔离 profile 与同 profile reopen 都完成 Main window 和 bundled Server ready，Helper/Renderer/Server 全部指向任务 userData，关闭后零候选进程。它证明 canonical UI bytes 可打包、安装和重开；由于 Tool 仍未注册，它故意不声称 Ask 调用、回答 continuation、Cancel/Abort fencing 或 MiMo/DeepSeek 通过。
 
-### 13.3 完整 Gate B source integration
+### 13.3 历史 source integration 与最新 direct-submit 收口
 
-2026-08-25 的后续维护者授权关闭了 registration 前硬门。实现按“先合同、后调度、再 fork/Host/UI、最后激活”分成可回滚提交；最终激活提交为 `36e3bec7e789122c731028c1a8b791a68a6c1fea`。当前事实如下。
+2026-08-25 的后续维护者授权曾关闭 registration 前硬门，历史激活提交为 `36e3bec7e789122c731028c1a8b791a68a6c1fea`。之后维护者删除 Review、改为精确 direct-submit，并要求 runtime command 单合同、strict excess-property/size/node guard、跨 Provider truthful terminal 与 presenter fail-closed。最新 runtime/Web 实现分别固定在 `bd0f9aa002` / `5626d4b7b3`；旧 packaged artifact 不证明新语义。
 
 #### Canonical owner
 
@@ -671,7 +672,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 #### Presenter、correlation 与 settlement
 
 - Web feature socket 通过 `orchestration.user-input.presenter` 持有 versioned ephemeral lease；0/1/N lease 有独立测试，最后一个兼容 lease消失才触发 unavailable。
-- Session 创建时无 lease，不 composition/register `ask_user`；execute 前再次检查，等待期间监听 lease 消失。
+- Session 始终 composition/register 受 provenance 约束的 bundled Extension；无 lease 时 active schema 不暴露，send/continuation 前重算，execute 前再次检查，等待期间监听 lease 消失。
 - live pending record 固定 `{sessionGeneration, turnId, toolCallId, requestId}`；内存只保存 Promise resolver、Abort listener、label/value map 与有界 recent-settlement fence，不建立第二数据库。
 - duplicate、late、foreign、旧 generation response拒绝；settlement统一释放 listener、map entry 与 pending record。重启不重建 Promise，只把 durable history结算为 stale。
 - 进程内指标只记录 requested/terminal status、late reject、provenance collision、barrier sibling blocked与等待时长聚合；不记录用户文本，也不拥有产品状态。
@@ -689,15 +690,15 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 - bundled Extension 使用固定 inline path/source/scope/origin；检查 winner 之外，还枚举 ResourceLoader 全部 Extension registration，必须恰好一个同名 Tool且为 product source。
 - foreign winner、product winner + foreign loser、reload 漂移都从 active set移除；不会改名创建第二 Ask，Full Access/Approval不影响 Ask availability。
 - canonical UI 继续复用 `ComposerPendingUserInputPanel` / `ComposerChoiceRow`。Host/UI 自动提供末尾 `自定义` row；single副文案“输入自己的答案”，multiple副文案“补充自己的答案”。
-- custom 在 row 内原地展开并 autofocus；free text在 card 内编辑。单选 preset 自动进入下一题或最终 Review但不提交；custom/multi显式前进；Preview/推荐/suggestion按需展开，Review最终一次并可回题。
-- Review结构化区分 presets/customText，Timeline区分六种 terminal receipt；新增正常文案都有 en/zh catalog，same-name fail-closed也不泄漏 Server 英文诊断。
+- custom 在 row 内原地展开并 autofocus；free text在 card 内编辑。单题单选 preset 直接提交；多题中间单选自动 next，末题 stay；custom/multi/text 显式前进或提交。Preview/推荐/suggestion按需展开且不触发选择。
+- Composer 不显示完成卡；Timeline 从 persisted settlement 区分六种 terminal receipt，answered 用双气泡显示有界答案摘要。新增正常文案都有 en/zh catalog，same-name fail-closed也不泄漏 Server 英文诊断。
 
-#### Source proof 与剩余门
+#### 最新 source closure 与剩余门
 
-- fork 71/71；最终跨层 focused matrix 16 files / 404 tests；新增真实 Pi adapter fixture 证明 no-presenter schema absent、presenter schema exactly once、Composer projection不含 stable value、answer后出现第二模型 request、raw customText 保留、presenter loss无 continuation、reload同名 collision后 Tool absent。
+- fork 71/71 与旧跨层 matrix 是保留基线。最新source通过Contracts 25 files / 274 tests、Web 331 files / 4,184 tests、Server 385 files / 4,470 passed（3 files / 16 tests skipped）、Panel/Timeline Browser 16/16与根typecheck 8/8。根全仓test仍被未修改的`@omnimind/om-web-access` credential-command aborted用例阻断，不能写成全仓绿色，也不能为Ask跨owner修它。
 - barrier tests覆盖 Ask位于 sibling前后、sibling hooks/execute为零、multiple barrier、answered continuation、terminal无 continuation；Host bridge覆盖 single/multi/custom/raw whitespace与非法 label/空答案。
-- source present：是；runtime activated：仅 bundled OmniMind Agent且 presenter/provenance gate通过时；shipped bytes：尚待 exact pushed-SHA clean-clone artifact核验；公开 Release：否。
-- 剩余硬门只有 §14.5 的 fresh isolated packaged App 全链。MiMo/DeepSeek Provider wire 已各自闭合真实 schema call、程序化 answer settlement、structured result 与 replan，但不冒充 Composer journey。packaged 任一门失败都停止 production claim；不能靠 adapter降级 schema、启用非结构化 fallback或把历史 source tests冒充 live evidence。
+- source present：是。`bd0f9aa002`闭合strict canonical request/response、跨Provider truthful terminal/presenter与Stop exactly-once；`5626d4b7b3`闭合direct-submit、responding/retry、native selection、focused-pane focus与persisted Timeline receipt。ACP的0/1/N lease与terminal由Cursor/Grok/Droid共同调用的生产seam测试证明，不扩写成三套真实adapter journey。
+- runtime activation沿用历史source接入；shipped bytes 与公开 Release 仍未由新候选证明。MiMo/DeepSeek Provider wire只证明旧exact SHA的schema call、程序化answer settlement、structured result与replan，不冒充Composer journey。下一硬门是exact pushed HEAD的clean-clone packaged gate。
 
 ## 14. Required proof
 
@@ -717,7 +718,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 - single custom replacement；
 - multi selected + custom coexistence；
 - selected preset；
-- Preview/Review round-trip；
+- Preview round-trip；
 - whitespace/newline/Unicode losslessness；
 - abnormal payload guard 不静默截断。
 
@@ -739,7 +740,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 - 自定义 sentinel 始终最后；
 - presets 与 customText 区分；
 - recommendation 不预选；
-- 多题导航与 Review 编辑回跳；
+- 单题 direct-submit、多题末题显式提交与 Previous 回跳；
 - narrow/wide、keyboard、focus、screen reader；
 - zh/en key/value parity；
 - Cancel/Abort/unavailable/stale copy；
@@ -843,7 +844,7 @@ supi 高速变化使“定期 merge upstream main”不成立。未来更新必�
 ## 17. 零记忆机器摘要
 
 ```yaml
-status: gate_b_source_integrated_provider_wire_passed_packaged_pending
+status: latest_direct_submit_source_implemented_provider_wire_historical_packaged_pending
 date: 2026-08-25
 product:
   capability: canonical_user_input
@@ -860,8 +861,8 @@ runtime_mother:
   fork_shape: subtractive_not_narrow
   fork_package: "@omnimind/om-ask@5.0.0-omnimind.1"
   activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
-  registered: presenter_and_provenance_gated_omnimind_agent_only
-  model_exposed: true_only_when_registered
+  registered: bundled_extension_always_composed_in_omnimind_session
+  model_exposed: true_only_when_presenter_and_provenance_active
   public_schema: product_tool_schema_v1
   risks:
     [
@@ -899,9 +900,9 @@ hard_invariants:
   - no_public_fake_capability
 gate_b:
   feasibility_slice: go
-  canonical_contract_and_composer_source_slice: implemented
-  runtime_host_barrier_provenance_activation: implemented
-  focused_source_tests: passed
+  canonical_contract_and_composer_source_slice: implemented_bd0f9aa002_5626d4b7b3
+  runtime_host_barrier_provenance_activation: implemented_source_packaged_pending
+  focused_source_tests: relevant_full_packages_passed
   live_mimo_deepseek: provider_wire_passed_not_composer_ui
   packaged_fresh_profile: pending
 update_manual: research/pi-ask-user-intake.md
