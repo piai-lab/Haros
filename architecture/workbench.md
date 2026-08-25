@@ -32,8 +32,6 @@ flowchart LR
     Studio --> Providers
 ```
 
-
-
 `Agent | Chat | Studio` 是三个一级产品工作面，不是持久化类型。侧栏顶部直接复用 Synara 的描述式 `Menu / MenuRadioGroup / MenuRadioItem`：trigger 显示当前工作面，展开后每项同时显示名称和职责说明，键盘、焦点、Chevron 与 disclosure 保持母体行为。不得改成 segmented control、tabpanel、Provider selector或新的 selection authority。`/ → Agent`、`/chat → Chat`、`/studio → Studio`；共享 `/$threadId` 从 canonical Thread→Project.kind 投影当前工作面。
 
 Agent 与 Chat 始终作为一级入口可达，不新增显示设置。Studio 继续只服从既有 `showStudioSection`：隐藏不删除数据，且精确保留母体的 deep-link、redirect、prewarm 与 restore 行为。菜单在最小侧栏宽度、简体中文/英文、键盘与 screen reader 下保持可见性、focus 和单次激活。
@@ -137,15 +135,14 @@ Child Agent、Goal、Todo、Question 继续使用 source 已有的产品语义�
 
 Goal、bounded child、结果驱动执行、会话恢复与 Computer Use 不是新的导航入口或常驻卡。它们只在真实运行条件下投影到既有表面：
 
-| 能力语义          | 平时                                           | 运行时                                                                                                                               | 结果/异常                                                                 |
-| ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 能力语义      | 平时                                                               | 运行时                                                                                                                                                        | 结果/异常                                                                                     |
+| ------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | Goal          | 没有 active Goal 时不显示常驻入口；可由 `/goal` 或明确产品动作设置 | active Goal 使用 Composer stacked panel，显示完整 objective、运行/暂停状态、计时及 edit/pause/resume/clear；恢复与自动 continuation 使用同一 Thread authority | achievement 锚定真实 terminal turn；失败、取消、interrupt 或重复 blocker 准确暂停，不静默继续 |
-| Todo/当前步骤     | 无独立任务管理页                                     | 逐回合 task snapshot 在 Composer 显示当前步骤并可展开完整列表；它不拥有 Goal 生命周期                                                                        | 当前 turn 完成后折叠或退场；不复制 task state，不替代 Goal achievement                  |
-| bounded child | 不显示 team builder                             | 活跃时复用 `ComposerSubagentStrip` 和现有 child Thread/detail；只有 adapter 真实支持的 stop/background/message 才显示                                | Root 汇总来源并对最终结果负责；不建第二 Agent registry                                 |
-| 结果驱动执行        | 不显示通用 workflow editor                        | 普通 tool/child loop 复用 Todo、Activity、Files/Diff；只有 Engine 已回报的结构化 phase 才显示低噪声里程碑和现有恢复动作                                           | 保留 Engine provenance，不把普通 sequence 画成 DAG；完成后运行控制退场                   |
-| 会话恢复          | 正常重开直接恢复                                     | native resume 安静继续                                                                                                                | degraded/ambiguous 才在 Composer 前显示一条恢复介入                              |
-| Computer Use  | 无 capability card                            | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                                 | 文件、截图、下载与结果进入现有 Artifact/File 表面                                      |
-
+| Todo/当前步骤 | 无独立任务管理页                                                   | 逐回合 task snapshot 在 Composer 显示当前步骤并可展开完整列表；它不拥有 Goal 生命周期                                                                         | 当前 turn 完成后折叠或退场；不复制 task state，不替代 Goal achievement                        |
+| bounded child | 不显示 team builder                                                | 活跃时复用 `ComposerSubagentStrip` 和现有 child Thread/detail；只有 adapter 真实支持的 stop/background/message 才显示                                         | Root 汇总来源并对最终结果负责；不建第二 Agent registry                                        |
+| 结果驱动执行  | 不显示通用 workflow editor                                         | 普通 tool/child loop 复用 Todo、Activity、Files/Diff；只有 Engine 已回报的结构化 phase 才显示低噪声里程碑和现有恢复动作                                       | 保留 Engine provenance，不把普通 sequence 画成 DAG；完成后运行控制退场                        |
+| 会话恢复      | 正常重开直接恢复                                                   | native resume 安静继续                                                                                                                                        | degraded/ambiguous 才在 Composer 前显示一条恢复介入                                           |
+| Computer Use  | 无 capability card                                                 | 复用现有 Browser/Device pane 与 Timeline tool activity                                                                                                        | 文件、截图、下载与结果进入现有 Artifact/File 表面                                             |
 
 Memory/Knowledge 当前没有 first-public runtime owner，因此不预建入口、图标、设置、后台状态或 receipt。UI 也不展示 packaged、registered、context-loaded、cache breakpoint 或内部 candidate extraction；自然成功不 Toast。
 
@@ -405,7 +402,7 @@ OmniMind-owned普通产品表面必须消费语义tokens，不读取主题名，
 | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A · DOM自动继承       | 只使用appearance owner发布的语义CSS tokens与共享UI primitives；业务组件不判断preset ID、不自持palette，新增普通页面不需要主题专用接线        | Shell、Chat、Composer、Settings、Timeline、Dialog、Popover、Toast、Browser chrome/空态/错误态、Terminal与Diff外壳、普通loading/error/recovery/focus |
 | B · resolved snapshot | 无法继承同一DOM变量的OmniMind-owned文档、shadow root或guest只消费窄typed、credential-blind resolved snapshot；传输层不解释、不修改、不持久化 | Browser annotation、Curator/observer及未来loopback/internal Web Surface                                                                             |
-| C · variant only      | 平台或启动边界确实只能表达系统跟随或`light`/`dark`时，只消费该子集；不得因此复制完整App preset catalog                                        | Electron titlebar/menu/window首帧、native dialog、Dock/平台图标变体、React挂载前boot/pairing/signed-out页、无法取得可信App snapshot的OAuth回调页     |
+| C · variant only      | 平台或启动边界确实只能表达系统跟随或`light`/`dark`时，只消费该子集；不得因此复制完整App preset catalog                                       | Electron titlebar/menu/window首帧、native dialog、Dock/平台图标变体、React挂载前boot/pairing/signed-out页、无法取得可信App snapshot的OAuth回调页    |
 | D · 不换肤            | 保持内容、来源或品牌字节；主题只影响其外部OmniMind chrome、toolbar、selection与annotation                                                    | 第三方网页、OAuth登录网站、PDF、图片、视频、Device Screen、用户导出内容、Provider/品牌图标、截图、设备bezel与有明确输出合同的打印/导出画布          |
 
 普通React功能若已经位于A类，必须默认随未来主题工作：Settings或工具页面不得新增主题参数、preset switch或成对light/dark色表；真正需要新的视觉角色时，先在appearance owner增加一个有用户语义的token，再由primitive消费。新增B类surface必须复用同一snapshot seam，或举证现有字段不能表达真实结果后扩展该typed contract；不得复制Browser/Curator palette。C类是能力受限边界，不是普通页面逃离语义tokens的借口。D类不得被全局`filter`、`invert`、`grayscale`或accent覆盖。

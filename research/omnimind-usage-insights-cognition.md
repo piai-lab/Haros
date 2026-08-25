@@ -19,13 +19,13 @@
 
 本文中的证据类别：
 
-| 标记 | 含义 |
-| --- | --- |
-| `DECISION` | 维护者在本轮明确确认，后续不得以“更像仪表盘”为由反转 |
-| `SOURCE FACT` | 2026-08-25 当前源码的可复核事实，源码变化后需重验 |
-| `PROTOTYPE EVIDENCE` | HTML 候选已验证的视觉或交互，不等于生产合同 |
-| `INFERENCE` | 为保持现有 owner、最小修改半径而得出的实现判断 |
-| `OPEN` | 仍缺维护者裁决；当前本文没有遗留 `OPEN` 项 |
+| 标记                 | 含义                                                 |
+| -------------------- | ---------------------------------------------------- |
+| `DECISION`           | 维护者在本轮明确确认，后续不得以“更像仪表盘”为由反转 |
+| `SOURCE FACT`        | 2026-08-25 当前源码的可复核事实，源码变化后需重验    |
+| `PROTOTYPE EVIDENCE` | HTML 候选已验证的视觉或交互，不等于生产合同          |
+| `INFERENCE`          | 为保持现有 owner、最小修改半径而得出的实现判断       |
+| `OPEN`               | 仍缺维护者裁决；当前本文没有遗留 `OPEN` 项           |
 
 ## 1. 一句话结论
 
@@ -165,10 +165,10 @@ UI 需要一个跨 Provider 归一后的互斥桶合同：
 
 职责边界：
 
-| 表面 | 用户问题 | 数据/交互特征 | 不应接管 |
-| --- | --- | --- | --- |
-| 使用洞察 | 我平时怎样使用 OmniMind | 低操作性、固定概览、活动/模型/Token 行为回顾 | 账户余额、索引控制、费用、复杂筛选 |
-| 用量与限额 | 还剩多少；授权后的详细历史是什么 | 账户 capacity、授权、索引进度、range/group、恢复动作、费用估算 | 个人画像式首屏或年度活动身份 |
+| 表面       | 用户问题                         | 数据/交互特征                                                  | 不应接管                           |
+| ---------- | -------------------------------- | -------------------------------------------------------------- | ---------------------------------- |
+| 使用洞察   | 我平时怎样使用 OmniMind          | 低操作性、固定概览、活动/模型/Token 行为回顾                   | 账户余额、索引控制、费用、复杂筛选 |
+| 用量与限额 | 还剩多少；授权后的详细历史是什么 | 账户 capacity、授权、索引进度、range/group、恢复动作、费用估算 | 个人画像式首屏或年度活动身份       |
 
 两页可能共享底层 Token 事实，但不能共享模糊文案、互相接管控制面，或通过复制 store 形成两套真相。
 
@@ -262,7 +262,7 @@ Tooltip 必须同时支持 pointer 与键盘焦点；触摸/窄屏需要 click/t
 `SOURCE FACT`：当前 Settings route 对 `profile` 使用：
 
 ```tsx
-className="mx-auto w-full px-6 py-8 max-w-3xl"
+className = "mx-auto w-full px-6 py-8 max-w-3xl";
 ```
 
 Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最大内容宽约 720px。目标实现应沿用这条 route owner，不新增页面级 830px 宽度。
@@ -415,20 +415,20 @@ Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最�
 
 ## 11. 数据与回归验收矩阵
 
-| 场景 | 必须证明 |
-| --- | --- |
-| Codex cached input 是 input subset | 归一后 C/U 互斥，总量不重复 |
-| Pi/OpenCode cache 字段与 input 分列 | 不错误执行 `input - cache` 导致负数或漏计 |
-| cache creation/write | 不冒充 cache hit；按真实语义进入 U 或明确不可比 |
-| reasoning output | 进入 O 一次，不与 output 重复 |
-| 同 Thread 切换 model/Provider | 日级 Token 和模型排名归因到真实处理该 turn 的选择 |
-| cumulative counter reset/compact/restart | delta 不变负、不重复累计 |
-| Provider 只发 usedTokens | 活动总量可 fallback，cache rate 保持 unknown |
-| 部分 Provider 无 telemetry | 模型/热力 fallback 真实，综合 cache rate 不把 unknown 视为 0 |
-| 删除 Thread/Project | 继续服从现有 lifetime archive 语义，不因 UI 改造改变统计历史 |
-| local timezone | 峰值日期、heatmap、Token 日柱使用同一日界线 |
-| I = 0 | cache rate 不显示 0% 或 NaN |
-| C > I 的畸形输入 | owner fail/normalize 并记录测试，UI 不自行掩盖 |
+| 场景                                     | 必须证明                                                     |
+| ---------------------------------------- | ------------------------------------------------------------ |
+| Codex cached input 是 input subset       | 归一后 C/U 互斥，总量不重复                                  |
+| Pi/OpenCode cache 字段与 input 分列      | 不错误执行 `input - cache` 导致负数或漏计                    |
+| cache creation/write                     | 不冒充 cache hit；按真实语义进入 U 或明确不可比              |
+| reasoning output                         | 进入 O 一次，不与 output 重复                                |
+| 同 Thread 切换 model/Provider            | 日级 Token 和模型排名归因到真实处理该 turn 的选择            |
+| cumulative counter reset/compact/restart | delta 不变负、不重复累计                                     |
+| Provider 只发 usedTokens                 | 活动总量可 fallback，cache rate 保持 unknown                 |
+| 部分 Provider 无 telemetry               | 模型/热力 fallback 真实，综合 cache rate 不把 unknown 视为 0 |
+| 删除 Thread/Project                      | 继续服从现有 lifetime archive 语义，不因 UI 改造改变统计历史 |
+| local timezone                           | 峰值日期、heatmap、Token 日柱使用同一日界线                  |
+| I = 0                                    | cache rate 不显示 0% 或 NaN                                  |
+| C > I 的畸形输入                         | owner fail/normalize 并记录测试，UI 不自行掩盖               |
 
 ## 12. 压力测试与 stop-loss
 
