@@ -1481,8 +1481,7 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const hasRecentBreakdown = recentBreakdownRows.length > 0;
       const recentTokenCoverage = !hasRecentBreakdown
         ? "unavailable"
-        : num(recentUnknownRows[0]?.count) > 0 ||
-            recentUnavailableProviders.length > 0
+        : num(recentUnknownRows[0]?.count) > 0 || recentUnavailableProviders.length > 0
           ? "partial"
           : "complete";
 
