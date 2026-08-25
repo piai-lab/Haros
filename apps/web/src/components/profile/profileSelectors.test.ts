@@ -34,7 +34,7 @@ const baseStats = {
     heatmapMetric: "prompts",
     heatmap: [promptHeatmapCell],
   },
-  activeHours: { startHour: null, endHour: null, turnCount: 0, label: null },
+  activeHours: { startHour: null, endHour: null, turnCount: 0 },
   recentModelUsage: {
     rangeDays: 30,
     totalTurns: 3,
