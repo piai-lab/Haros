@@ -93,7 +93,7 @@ const exactSinglePrompt = {
 function Harness({
   initialAnswers = {},
   pending = prompt,
-  onStop = vi.fn(),
+  onCancel = vi.fn(),
   onAdvance = vi.fn(),
   onSubmit = vi.fn(),
   isResponding = false,
@@ -101,7 +101,7 @@ function Harness({
 }: {
   initialAnswers?: Record<string, PendingUserInputDraftAnswer>;
   pending?: PendingUserInput;
-  onStop?: () => void;
+  onCancel?: () => void;
   onAdvance?: () => void;
   onSubmit?: (answers: unknown) => void;
   isResponding?: boolean;
@@ -135,8 +135,7 @@ function Harness({
         }}
         onAdvance={onAdvance}
         onPrevious={vi.fn()}
-        onCancel={vi.fn()}
-        onStop={onStop}
+        onCancel={onCancel}
       />
     </I18nProvider>
   );
@@ -199,14 +198,14 @@ describe("ComposerPendingUserInputPanel", () => {
     await screen.unmount();
   });
 
-  it("keeps Stop Turn distinct from cancelling the Ask", async () => {
-    const onStop = vi.fn();
-    const screen = await render(<Harness onStop={onStop} />);
+  it("keeps the Question card focused on cancelling the answer", async () => {
+    const onCancel = vi.fn();
+    const screen = await render(<Harness onCancel={onCancel} />);
 
-    await page.getByRole("button", { name: "停止生成" }).click();
+    await page.getByRole("button", { name: "取消回答" }).click();
 
-    expect(onStop).toHaveBeenCalledTimes(1);
-    await expect.element(page.getByRole("button", { name: "取消" })).toBeVisible();
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(page.getByRole("button", { name: "停止生成" }).query()).toBeNull();
     await screen.unmount();
   });
 
@@ -273,14 +272,12 @@ describe("ComposerPendingUserInputPanel", () => {
     await screen.unmount();
   });
 
-  it("keeps Stop available and makes answer controls truly disabled while responding", async () => {
-    const onStop = vi.fn();
-    const screen = await render(<Harness isResponding onStop={onStop} />);
+  it("keeps answer controls disabled while responding without duplicating global Stop", async () => {
+    const screen = await render(<Harness isResponding />);
 
     await expect.element(page.getByRole("checkbox", { name: /功能实现/ })).toBeDisabled();
-    await page.getByRole("button", { name: "停止生成" }).click();
-    expect(onStop).toHaveBeenCalledTimes(1);
-    await expect.element(page.getByRole("button", { name: "取消" })).toBeDisabled();
+    await expect.element(page.getByRole("button", { name: "取消回答" })).toBeDisabled();
+    expect(page.getByRole("button", { name: "停止生成" }).query()).toBeNull();
     await screen.unmount();
   });
 

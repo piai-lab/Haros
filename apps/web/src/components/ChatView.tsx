@@ -12181,7 +12181,6 @@ export default function ChatView({
                     onAdvance={onAdvanceActivePendingUserInput}
                     onPrevious={onPreviousActivePendingUserInputQuestion}
                     onCancel={onCancelActivePendingUserInput}
-                    onStop={onInterruptFromStopControl}
                   />
                 </div>
               ) : null}
@@ -12453,7 +12452,7 @@ export default function ChatView({
                           }}
                         />
                       ) : null}
-                      {activePendingProgress ? (
+                      {activePendingProgress && !activePendingIsResponding ? (
                         <Button
                           type="button"
                           size="sm"
@@ -12461,13 +12460,11 @@ export default function ChatView({
                           onClick={onAdvanceActivePendingUserInput}
                           disabled={activePendingIsResponding || !activePendingProgress.canAdvance}
                         >
-                          {activePendingIsResponding
-                            ? t("conversation.submitting")
-                            : activePendingProgress.isLastQuestion
-                              ? t("pendingInput.submit")
-                              : t("pendingInput.next")}
+                          {activePendingProgress.isLastQuestion
+                            ? t("pendingInput.submit")
+                            : t("pendingInput.next")}
                         </Button>
-                      ) : phase === "running" ? (
+                      ) : phase === "running" || activePendingIsResponding ? (
                         <Button
                           type="button"
                           variant="prominent"

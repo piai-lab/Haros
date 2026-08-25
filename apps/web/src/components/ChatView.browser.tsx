@@ -2,11 +2,13 @@
 import "../index.css";
 
 import {
+  ApprovalRequestId,
   AutomationId,
   type AutomationCreateInput,
   type AutomationDefinition,
   type ChatAttachment,
   CheckpointRef,
+  CommandId,
   EventId,
   MessageId,
   DEVICE_WS_METHODS,
@@ -423,6 +425,87 @@ function createSnapshotForTargetUser(options: {
       },
     ],
     updatedAt: NOW_ISO,
+  };
+}
+
+function createSnapshotWithRespondingUserInput(): OrchestrationReadModel {
+  const snapshot = createSnapshotForTargetUser({
+    targetMessageId: "msg-user-responding-ask" as MessageId,
+    targetText: "ask a focused question",
+    sessionStatus: "running",
+  });
+  const requestedAt = new Date().toISOString();
+  const turnId = TurnId.makeUnsafe("turn-browser-fixture-active");
+  const requestId = ApprovalRequestId.makeUnsafe("ask-browser-responding");
+  const lifecycleGeneration = "generation-browser-responding";
+  const threads = [...snapshot.threads];
+  const threadIndex = threads.findIndex((thread) => thread.id === THREAD_ID);
+  if (threadIndex < 0) return snapshot;
+  const thread = threads[threadIndex]!;
+  threads[threadIndex] = {
+    ...thread,
+    hasPendingUserInput: true,
+    latestTurn: {
+      turnId,
+      state: "running",
+      requestedAt,
+      startedAt: requestedAt,
+      completedAt: null,
+      assistantMessageId: null,
+    },
+    activities: [
+      ...thread.activities,
+      {
+        id: EventId.makeUnsafe("activity-user-input-responding"),
+        createdAt: requestedAt,
+        kind: "user-input.requested",
+        summary: "User input requested",
+        tone: "info" as const,
+        turnId,
+        payload: {
+          requestId,
+          lifecycleGeneration,
+          questions: [
+            {
+              kind: "choice",
+              id: "runtime",
+              prompt: "Choose the runtime?",
+              cardinality: "single",
+              options: [{ label: "Mature runtime" }],
+            },
+          ],
+        },
+      },
+    ],
+    pendingInteractions: [
+      {
+        interactionKind: "userInput",
+        requestId,
+        threadId: THREAD_ID,
+        turnId,
+        lifecycleGeneration,
+        status: "responding",
+        decision: null,
+        responseCommandId: CommandId.makeUnsafe("command-user-input-responding"),
+        responseRequestedAt: requestedAt,
+        createdAt: requestedAt,
+        resolvedAt: null,
+      },
+    ],
+    session: thread.session
+      ? {
+          ...thread.session,
+          status: "running" as const,
+          activeTurnId: turnId,
+          updatedAt: requestedAt,
+        }
+      : null,
+    updatedAt: requestedAt,
+  };
+  return {
+    ...snapshot,
+    updatedAt: requestedAt,
+    threads,
   };
 }
 
@@ -9523,6 +9606,33 @@ describe("ChatView timeline estimator parity (full app)", () => {
       );
 
       expect(getComputedStyle(stopButton).cursor).toBe("pointer");
+    } finally {
+      await mounted.cleanup();
+    }
+  });
+
+  it("keeps global Stop in the Composer while a claimed Ask remains visible", async () => {
+    const mounted = await mountChatView({
+      viewport: DEFAULT_VIEWPORT,
+      snapshot: createSnapshotWithRespondingUserInput(),
+    });
+
+    try {
+      const cancelAnswer = await waitForElement(
+        () =>
+          Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
+            (button) => button.textContent?.trim() === "Cancel answer",
+          ) ?? null,
+        "Unable to find the Ask cancel button.",
+      );
+      expect(cancelAnswer.disabled).toBe(true);
+
+      const stopButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("button")).filter(
+        (button) => button.getAttribute("aria-label") === "Stop generation",
+      );
+      expect(stopButtons).toHaveLength(1);
+      expect(stopButtons[0]?.closest("[data-chat-composer-footer='true']")).not.toBeNull();
+      expect(document.body.textContent).not.toContain("Submitting");
     } finally {
       await mounted.cleanup();
     }
