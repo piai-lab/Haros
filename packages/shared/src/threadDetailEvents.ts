@@ -4,8 +4,6 @@ export const THREAD_DETAIL_EVENT_TYPES = [
   "thread.message-sent",
   "thread.proposed-plan-upserted",
   "thread.activity-appended",
-  "thread.turn-interrupt-requested",
-  "thread.user-input-response-requested",
   "thread.turn-diff-completed",
   "thread.reverted",
   "thread.conversation-rolled-back",

@@ -1,33 +1,10 @@
 // FILE: -threadTerminalFence.ts
-// Purpose: Decide when terminal intent arms a projection fence and when that fence can retire.
+// Purpose: Decide when a terminal-session fence can be retired after projection reconcile.
 // Layer: Web EventRouter helper
 // Why: ProviderRuntimeIngestion settles the session before it flushes buffered
 //      assistant finals. A snapshot taken at the session-set sequence can look
 //      terminal while the reply text has not been projected yet. Clearing the
 //      fence there leaves the UI stuck on a spinner until a full reload (#548).
-
-import type { OrchestrationEvent } from "@omnimind/contracts";
-
-/**
- * Some provider terminals are appended asynchronously after the command that
- * requested them. Arm the existing durable projection reconcile from that
- * intent instead of waiting for the later session/activity event: that later
- * event is exactly what the fence must recover if its live delivery is lost.
- *
- * This never chooses a terminal status. The snapshot remains authoritative.
- */
-export function shouldArmThreadProjectionTerminalFence(event: OrchestrationEvent): boolean {
-  if (event.type === "thread.turn-interrupt-requested") {
-    return true;
-  }
-  if (event.type === "thread.user-input-response-requested") {
-    return event.payload.response.status === "cancelled";
-  }
-  return (
-    event.type === "thread.session-set" &&
-    isTerminalThreadSessionStatus(event.payload.session.status)
-  );
-}
 
 export function isTerminalThreadSessionStatus(status: string): boolean {
   return (

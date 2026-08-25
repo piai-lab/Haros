@@ -97,7 +97,6 @@ import { canApplyThreadSnapshot, selectOrphanedThreadDetailIds } from "./-thread
 import {
   doesSnapshotSatisfyTerminalFence,
   isTerminalThreadSessionStatus,
-  shouldArmThreadProjectionTerminalFence,
 } from "./-threadTerminalFence";
 import { getThreadFromState, getThreadsFromState } from "../threadDerivation";
 import { useAppDensity } from "../hooks/useAppDensity";
@@ -2061,11 +2060,12 @@ function EventRouter() {
         const pendingThreadEvents = pendingThreadEventsById.get(threadId) ?? [];
         appendBounded(pendingThreadEvents, item.event, PENDING_THREAD_EVENT_BUFFER_LIMIT);
         pendingThreadEventsById.set(threadId, pendingThreadEvents);
-        if (shouldArmThreadProjectionTerminalFence(item.event)) {
+        if (
+          item.event.type === "thread.session-set" &&
+          isTerminalThreadSessionStatus(item.event.payload.session.status)
+        ) {
           // Arm even while buffered: the immediate reconcile below may return a
-          // premature snapshot, and the fence must outlive it (#548). Stop and
-          // Ask Cancel arm from their intent because their terminal activity is
-          // appended asynchronously and may itself be the missed live event.
+          // premature session-set snapshot, and the fence must outlive it (#548).
           armThreadProjectionTerminalFence(threadId, item.event.sequence);
         } else if (item.event.type === "thread.session-set") {
           clearThreadProjectionTerminalFence(threadId);
@@ -2081,7 +2081,10 @@ function EventRouter() {
       if (!applyFencedThreadEvent(threadId, item.event)) {
         return;
       }
-      if (shouldArmThreadProjectionTerminalFence(item.event)) {
+      if (
+        item.event.type === "thread.session-set" &&
+        isTerminalThreadSessionStatus(item.event.payload.session.status)
+      ) {
         // Arm after the generic post-event schedule so the fast first-reconcile
         // delay is not overwritten back to the slower cadence.
         armThreadProjectionTerminalFence(threadId, item.event.sequence);
