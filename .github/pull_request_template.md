@@ -1,38 +1,32 @@
-<!--
-⚠️ READ BEFORE OPENING ⚠️
-
-We are not actively accepting contributions right now.
-
-You can still open a PR, but please do so knowing there is a high chance
-we may close it without merging it, or never review it.
-
-- Small, focused PRs are strongly preferred. Bug fixes are most likely to be merged.
-- New features will most likely just annoy us.
-- 1,000+ line PRs with a bunch of new features will probably get you banned from the repo.
--->
-
 ## What Changed
 
-<!-- Describe the change clearly and keep scope tight. -->
+<!-- Describe the user-visible result and the exact responsibility changed. -->
 
 ## Why
 
-<!-- Explain the problem being solved and why this approach is the right one. -->
+<!-- Explain the observed problem, sole owner, strongest alternative, and why this change has the lowest lifecycle cost. -->
+
+## Owner and Risk
+
+<!-- Name the state/config/runtime/presentation owner. Note data, permission, security, release, migration, upstream or compatibility impact. Write "none" when genuinely absent. -->
 
 ## UI Changes
 
-<!-- If this PR changes UI, include clear before/after screenshots.
-     If the change involves motion or interaction, include a short video.
-     Delete this section if not applicable. -->
+<!-- For user-visible UI, include focused before/after evidence and cover English/简体中文, keyboard, focus, responsive behavior and failure states as applicable. Delete when not applicable. -->
 
 ## Verification
 
-<!-- List the checks you ran. For focused web tests from the repository root:
-     bun run test:web:focused src/path/to/example.test.ts -->
+<!-- List the exact checks and journeys run. Keep source, live-provider, browser, packaged and release evidence at their real strength. -->
+
+## Source and Provenance
+
+<!-- For adopted/forked/copied code or assets: exact source, revision/artifact, rights, retained tests, local differences, update/delete boundary. Delete when not applicable. -->
 
 ## Checklist
 
-- [ ] This PR is small and focused
-- [ ] I explained what changed and why
-- [ ] I included before/after screenshots for any UI changes
-- [ ] I included a video for animation/interaction changes
+- [ ] The change closes one coherent responsibility and leaves one fact owner
+- [ ] Unknown or unrelated working-tree changes are not included
+- [ ] Normal, failure and relevant restart/shutdown behavior were checked
+- [ ] User-visible copy is complete in English and 简体中文
+- [ ] Evidence claims do not exceed the paths actually tested
+- [ ] Adopted source, legal text and shipped bytes are accurate when applicable
