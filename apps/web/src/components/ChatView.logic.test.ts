@@ -17,6 +17,7 @@ import { createEmptyThreadDraft } from "../composerDraftDomain";
 
 import {
   appendVoiceTranscriptToPrompt,
+  awaitTurnPreparationWithWorktreeResolution,
   buildComposerMenuSelectionKey,
   buildTranscriptAutoFollowSignal,
   buildTranscriptTailKey,
@@ -58,6 +59,7 @@ import {
   resolveThreadDetailHydration,
   resolveThreadArtifactWorkspaceRoot,
   runWorktreeCreationFlow,
+  WorktreeSetupCancelledError,
   QUEUED_STEER_GATE_TIMEOUT_MS,
   sanitizeVoiceErrorMessage,
   buildExpiredTerminalContextToastCopy,
@@ -2105,6 +2107,47 @@ describe("runWorktreeCreationFlow", () => {
     await expect(harness.flow).rejects.toThrow("worktree add failed");
     expect(harness.unsubscribeCount()).toBe(1);
     expect(harness.removedPaths).toEqual([]);
+  });
+});
+
+describe("awaitTurnPreparationWithWorktreeResolution", () => {
+  it("consumes a resolution that arrives while preparation is pending", async () => {
+    let releasePreparation!: (value: string) => void;
+    const preparation = new Promise<string>((resolve) => {
+      releasePreparation = resolve;
+    });
+    let cancelled = false;
+    const consumeResolution = vi.fn(async () => {
+      if (cancelled) {
+        throw new WorktreeSetupCancelledError();
+      }
+    });
+
+    const result = awaitTurnPreparationWithWorktreeResolution({
+      preparation,
+      consumeResolution,
+    });
+    await Promise.resolve();
+    expect(consumeResolution).toHaveBeenCalledTimes(1);
+
+    cancelled = true;
+    releasePreparation("prepared");
+
+    await expect(result).rejects.toBeInstanceOf(WorktreeSetupCancelledError);
+    expect(consumeResolution).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns the exact prepared value after both resolution checkpoints", async () => {
+    const prepared = { attachments: ["attachment-1"] };
+    const consumeResolution = vi.fn(async () => undefined);
+
+    await expect(
+      awaitTurnPreparationWithWorktreeResolution({
+        preparation: Promise.resolve(prepared),
+        consumeResolution,
+      }),
+    ).resolves.toBe(prepared);
+    expect(consumeResolution).toHaveBeenCalledTimes(2);
   });
 });
 

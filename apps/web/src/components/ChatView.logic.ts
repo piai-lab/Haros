@@ -1182,6 +1182,22 @@ export async function runWorktreeCreationFlow<Result extends { worktree: { path:
   }
 }
 
+/**
+ * Keeps the worktree resolution checkpoint live while parallel turn preparation
+ * (notably attachment upload) is pending. The same checkpoint runs before and
+ * after the await so a Cancel/Work locally action cannot slip between upload
+ * completion and turn dispatch.
+ */
+export async function awaitTurnPreparationWithWorktreeResolution<T>(input: {
+  preparation: Promise<T>;
+  consumeResolution: () => Promise<void>;
+}): Promise<T> {
+  await input.consumeResolution();
+  const prepared = await input.preparation;
+  await input.consumeResolution();
+  return prepared;
+}
+
 export async function cleanupPreparedWorktreeBeforeTurn(input: {
   turnStartAttempted: boolean;
   ownership: "promoted" | "existing" | "unowned";

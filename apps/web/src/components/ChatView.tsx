@@ -558,6 +558,7 @@ import {
 import {
   ACTIVE_TURN_LAYOUT_SETTLE_DELAY_MS,
   appendVoiceTranscriptToPrompt,
+  awaitTurnPreparationWithWorktreeResolution,
   shouldStartActiveTurnLayoutGrace,
   buildExpiredTerminalContextToastCopy,
   buildLocalDraftThread,
@@ -8880,13 +8881,10 @@ export default function ChatView({
       }
       // Covers a resolution set while the thread was linked or the setup
       // script ran (the creation-step race above only guards the first step).
-      await consumeWorktreeSetupResolution();
-
-      const stagedTurnAttachments = await turnAttachmentsPromise;
-      // Keep setup resolvable while attachment uploads are still preparing the
-      // turn. Once they settle, consume the last possible choice before the
-      // card advances to the non-resolvable "Starting session" step.
-      await consumeWorktreeSetupResolution();
+      const stagedTurnAttachments = await awaitTurnPreparationWithWorktreeResolution({
+        preparation: turnAttachmentsPromise,
+        consumeResolution: consumeWorktreeSetupResolution,
+      });
       // Carry the expected message id so a snapshot rebuilt after an interim
       // reset (thread switch, ack effect) keeps the message-echo ack signal.
       beginLocalDispatch({
