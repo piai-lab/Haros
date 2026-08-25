@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 const packageRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-describe("feasibility package boundary", () => {
+describe("fork package boundary", () => {
   it("has no Pi Extension registration or runtime dependency", async () => {
     const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as {
       dependencies?: Record<string, string>;
@@ -22,7 +22,9 @@ describe("feasibility package boundary", () => {
       "kernel.ts",
       "lock.ts",
       "normalize.ts",
+      "product.ts",
       "result.ts",
+      "tool.ts",
       "types.ts",
     ]);
   });

@@ -1,8 +1,8 @@
 {
   "name": "@omnimind/om-ask",
-  "version": "5.0.0-omnimind.feasibility.0",
+  "version": "5.0.0-omnimind.1",
   "private": true,
-  "description": "Unregistered Host-neutral Ask User fork feasibility kernel for OmniMind.",
+  "description": "Host-neutral Ask User runtime fork for OmniMind's canonical user-input product.",
   "license": "MIT",
   "type": "module",
   "exports": {
