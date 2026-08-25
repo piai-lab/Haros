@@ -181,7 +181,7 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 
 在 exact source、权利、owner 与验证闭合后，优先吸收：
 
-- 多问题、Review、Notes、Preview、recommendation、freeform 的成熟 UX 改进；
+- 多问题、Review、Preview、recommendation、freeform 的成熟 UX 改进；
 - keyboard、screen reader、IME、responsive、overflow、Markdown safety 修复；
 - abort、cancel、timeout、late-answer、listener cleanup、idempotent settlement 修复；
 - 更强的作者 regression tests、property tests、fuzz tests；
@@ -299,7 +299,7 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 | ------------ | ------------------------------------------ | --------------------------------------------------- |
 | tool schema  | questions/options/types/required/freeform  | 人为 cap、字段假支持、provider incompatibility      |
 | prompt       | usage guidance、examples                   | 1–3 题限制、模型 author sentinel、Ask/Approval 混淆 |
-| domain state | selections/drafts/notes/review             | 自由输入丢失、单多选错误、静默 trim                 |
+| domain state | selections/drafts/upstream notes/review    | 上游 note 仅作反证面；OmniMind 明确拒绝并删除       |
 | result       | serialization/context rewrite              | 未选项污染、字段丢失、历史错改                      |
 | UI           | TUI custom component、responsive、keyboard | 不能直接替代 Host UI，但可提供行为与 test donor     |
 | RPC/headless | request/response/capability fallback       | silent downgrade、signal 缺失、one-scalar collapse  |
@@ -349,7 +349,7 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 
 - 多题导航；
 - single/multiple/freeform；
-- question/option notes；
+- question/option notes（上游事实；OmniMind 产品差异明确删除，更新时不得重引入）；
 - preview/recommendation；
 - Review/edit/submit/cancel；
 - signal/timeout/no UI；
@@ -365,7 +365,7 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 
 - 新版 UI 更漂亮，但 multi + freeform serialization 退化；
 - 新增 recovery，但伪造 promise continuation；
-- 新增 headless RPC，但 Notes/Review silent loss；
+- 新增 headless RPC，但 Preview/Review silent loss；
 - 新 tests 多了，但 sequential 被移除；
 - dependency 简化，但 ancestry/license 断裂。
 
@@ -389,9 +389,9 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 
 - 是否出现 question/option cap；
 - choice sentinel 是否仍由 Host 合成，且简中精确显示单选 `自定义` / `输入自己的答案`、多选 `自定义` / `补充自己的答案`；
-- canonical selection、`customText`、`note` 是否三个独立字段；
-- single replacement、multi coexistence、selected-preset note losslessness；
-- single 改选/切 custom 与 multi 取消最后 preset 时，note/custom 清理是否严格按产品语义而非字段互斥猜测；
+- canonical selection、`customText` 是否两个独立字段；
+- single replacement、multi coexistence、customText losslessness；
+- single preset 自动进入 next/review、custom/multi 显式前进是否严格由 Product state owner 控制；
 - selection cardinality 与 Preview presentation 是否正交；
 - recommendation 是否仅作展示，绝不预选 choice 或预填成 text answer；
 - `required` 是否真的 enforce；
@@ -415,9 +415,9 @@ Gate A 必须主动寻找至少一条会推翻更新建议的事实，例如：
 - 新上游 UX 是否应映射到 shared UI；
 - Codex/Claude/其他 Provider 是否也能受益或至少不退化；
 - Composer 是否出现第二私有 Ask panel；
-- Review、Preview、Notes、recommendation、sentinel、Cancel；
+- Review、Preview、recommendation、sentinel、Cancel；
 - custom 输入是否在 sentinel row 内原地展开并 autofocus，自由回答是否在 Question card 内编辑，主 Composer 是否保持非 answer owner；
-- 默认是否只显示当前问题，Preview/Review/note 是否按显式请求或当前状态渐进出现；
+- 默认是否只显示当前问题，Preview/Review 是否按显式请求或当前状态渐进出现；
 - keyboard/IME/a11y/reduced motion/overflow；
 - zh-CN/en catalog；
 - TUI tests 中可移植的行为是否转成 Host tests。
@@ -440,7 +440,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 检查：
 
-- 只把 selected decisions 与 exact customText/note 给模型；
+- 只把 selected decisions 与 exact customText 给模型；
 - unknown/unselected alternatives 不冒充答案；
 - selected-only rewrite 是否精确定位 product-owned call；
 - Provider serialization 是否保留 IDs 与原文；
@@ -546,7 +546,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - sentinel duplicate/absence；
 - single freeform replacement；
 - multi preset + freeform；
-- canonical selected labels/values、customText 与 note exact roundtrip；
+- canonical selected labels/values 与 customText exact roundtrip；
 - duplicate labels/stable IDs；
 - required/optional/skip；
 - Unicode/newlines/whitespace；
@@ -571,7 +571,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - no single-select auto-submit；
 - explicit Next / Review / Submit；
 - draft across navigation/review/edit；
-- single A→B / preset→custom 与 multi last-preset deselect 的 note/custom state；
+- single preset→next/review、preset→custom 与 multi preset/custom coexistence state；
 - custom row inline autofocus、free-text in-card 与 Composer non-ownership；
 - scoped numeric shortcuts、input digits、radio/checkbox/aria-checked/focus/announcement；
 - Preview sanitization；
@@ -616,7 +616,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 4. 停止所有既有 OmniMind 实例；
 5. 用任务专用 `userData`、home、Provider private home 启动；
 6. 从进程参数/运行证据核验隔离；
-7. 完成 launch → ask → preview/notes/review → submit → continuation；
+7. 完成 launch → ask → preview/review → submit → continuation；
 8. 验证 background Thread、cancel/abort、close/reopen stale/re-ask；
 9. 正常关闭并清理任务专用进程；
 10. 不触碰真实用户 `.pi` / `.omnimind`。
@@ -763,7 +763,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - [ ] 没有新增未裁决 P8
 - [ ] source / shipped / activated 三层清楚
 - [ ] 没有 TUI/commands/settings/config/remote/recovery ambient owner
-- [ ] sentinel、freeform、notes、review、preview 无损
+- [ ] sentinel、freeform、review、preview 无损
 - [ ] 无题目/选项产品 cap
 - [ ] Ask/Approval 分离
 - [ ] sequential + same-turn barrier 有 exact runtime 证据
@@ -779,9 +779,9 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 fork placement、canonical contract、typed settlement、Host bridge、presenter lease、Pi barrier、same-name provenance、restart stale、quiet Composer projection和最终Tool activation已在 source层闭合。以下只剩 production proof，不能被 source绿色冒充关闭：
 
 - Xiaomi MiMo与DeepSeek各一次真实 `ask_user` schema call、Composer answer、structured Tool result和模型 replan；
-- 真实 Provider对 `oneOf` schema、multiple/custom/note与不确定性调用行为的兼容证据；
+- 真实 Provider对 `oneOf` schema、multiple/custom与不确定性调用行为的兼容证据；
 - exact pushed SHA clean-clone DMG、SBOM/LICENSE、fork与Pi core patch进入shipped bytes的扫描；
-- fresh task-only `userData`、home与Provider private home下的single/multi/custom/note/Preview/Review/Cancel；
+- fresh task-only `userData`、home与Provider private home下的single/multi/custom/Preview/Review/Cancel；
 - pending中Stop Turn、最后presenter消失、Server终止/reopen stale、同名Extension collision、headless no-tool与零残留进程；
 - Desktop/mobile几何、keyboard/VoiceOver/IME等最终运行态证据；
 - 正式Release/update authority（不由普通Gate B source integration自动获得）。

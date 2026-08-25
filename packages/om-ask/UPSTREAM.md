@@ -32,12 +32,14 @@ defect by retaining the source repository's exact MIT text.
   behavior while explicitly reversing preselection, trimming, and hard caps.
 
 The subsequent OmniMind product profile keeps the same upstream controller
-lineage while making choice results explicit: `selectedValues`, `customText`,
-and `note` are independent fields. Single-choice custom input replaces presets;
-multi-choice custom input coexists with presets; notes remain attached only to
-selected presets. Empty checks may inspect whitespace, but submitted text is
-never rebuilt from trimmed data. These are concentrated product deltas, not a
-second questionnaire state machine.
+lineage while making choice results explicit: `selectedValues` and `customText`
+are independent fields. Single-choice custom input replaces presets;
+multi-choice custom input coexists with presets. OmniMind deliberately deletes
+upstream note semantics: explanations are
+complete custom answers for single choice, while multi choice may combine presets
+with custom text. Empty checks may inspect whitespace, but submitted text is never
+rebuilt from trimmed data. These are concentrated product deltas, not a second
+questionnaire state machine.
 
 ## Deliberately deleted
 
@@ -72,5 +74,5 @@ this explicit disposition:
 The fork's executable suite is intentionally smaller than the upstream suite:
 it protects retained runtime/domain behavior and the deletion boundary, not a
 second presentation system. The feasibility baseline was 61 fork tests; the
-canonical custom/note delta and final Tool/schema/result boundary bring the
+canonical custom-answer delta and final Tool/schema/result boundary bring the
 current fork suite to 71 tests.
