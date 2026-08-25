@@ -217,7 +217,7 @@ const ZH_CN_MESSAGES = {
   "settings.reasoningIntensity": "思考强度",
   "settings.mostActiveTime": "最活跃时段",
   "settings.longestContinuousUse": "最长连续使用",
-  "settings.skillsAndAgents": "Skills 与 Agents",
+  "settings.skillsAndAgents": "技能与 Agents",
   "settings.skillsSummary": "探索 {explored} 个 · 使用 {runs} 次",
   "settings.viewAll": "查看全部",
   "settings.collapse": "收起",
