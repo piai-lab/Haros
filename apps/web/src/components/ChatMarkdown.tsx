@@ -3,8 +3,8 @@
 // Layer: Web chat presentation component
 // Exports: ChatMarkdown
 
-import { CheckIcon, CopyIcon, TextWrapIcon, TriangleAlertIcon } from "~/lib/icons";
-import type { ProviderMentionReference, ThreadMarker } from "@omnimind/contracts";
+import { TriangleAlertIcon } from "~/lib/icons";
+import type { MessageId, ProviderMentionReference, ThreadMarker } from "@omnimind/contracts";
 import { isLocalAbsolutePath } from "@omnimind/shared/path";
 import "katex/dist/katex.min.css";
 import React, {
@@ -19,7 +19,6 @@ import React, {
   useId,
   useMemo,
   useRef,
-  useState,
   type ReactNode,
 } from "react";
 import type { Components } from "react-markdown";
@@ -29,11 +28,9 @@ import rehypeKatex from "rehype-katex";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import { copyTextToClipboard } from "../hooks/useCopyToClipboard";
 import { resolveDiffThemeName, type DiffThemeName } from "../lib/diffRendering";
-import { dedentCode, parseCodeFenceInfo, type CodeFenceInfo } from "../lib/codeFence";
-import { getFileIconName, pathLooksLikeKnownFile } from "../file-icons";
-import { CentralIcon } from "~/lib/central-icons";
+import { dedentCode, parseCodeFenceInfo } from "../lib/codeFence";
+import { pathLooksLikeKnownFile } from "../file-icons";
 import { isLocalImageMarkdownSrc } from "../lib/localImageUrls";
 import { repairMarkdownTableDelimiters } from "../lib/markdownTableRepair";
 import {
@@ -69,6 +66,8 @@ import { InlineLinkChip } from "./InlineLinkChip";
 import { InlineMentionChip } from "./chat/InlineMentionChip";
 import { InlineSkillChip } from "./chat/InlineSkillChip";
 import { InlineSlashCommandChip } from "./chat/InlineSlashCommandChip";
+import { MarkdownCodeBlock } from "./chat/MarkdownCodeBlock";
+import { MermaidCodeBlock } from "./chat/MermaidCodeBlock";
 import {
   COMPOSER_CHIP_SEGMENT_ATTRIBUTE,
   COMPOSER_CHIP_TAG_NAME,
@@ -77,7 +76,6 @@ import {
   createComposerChipsRemarkPlugin,
   parseComposerChipSegment,
 } from "../lib/remarkComposerChips";
-import { IconButton } from "./ui/icon-button";
 import { useI18n } from "../i18n";
 
 const EXTERNAL_HTTP_HREF_PATTERN = /^https?:\/\//i;
@@ -139,6 +137,8 @@ interface ChatMarkdownProps {
    * length- and newline-preserving). Without it checkboxes render read-only.
    */
   onTaskToggle?: ((input: { sourceLine: number; checked: boolean }) => void) | undefined;
+  /** Canonical assistant Timeline body opt-in; all other Markdown keeps source rendering. */
+  mermaidPresentation?: { readonly messageId: MessageId } | undefined;
 }
 
 // Source line of the enclosing task-list item, provided by the `li` override.
@@ -165,6 +165,7 @@ function MarkdownTaskCheckbox(props: {
 }
 
 const CODE_FENCE_LANGUAGE_REGEX = /(?:^|\s)language-([^\s]+)/;
+const MERMAID_FENCE_ORDINAL_ATTRIBUTE = "data-mermaid-ordinal";
 type MarkdownRemarkPlugins = NonNullable<
   React.ComponentProps<typeof ReactMarkdown>["remarkPlugins"]
 >;
@@ -175,6 +176,33 @@ const MARKDOWN_REMARK_PLUGINS: MarkdownRemarkPlugins = [
   remarkGfm,
   [remarkMath, { singleDollarTextMath: true }],
 ];
+
+type RemarkNode = {
+  type?: string;
+  lang?: string | null;
+  children?: RemarkNode[];
+  data?: {
+    hProperties?: Record<string, unknown>;
+  };
+};
+
+function mermaidFenceOrdinalRemarkPlugin() {
+  return (tree: RemarkNode) => {
+    let ordinal = 0;
+    const visit = (node: RemarkNode) => {
+      if (node.type === "code" && node.lang?.toLowerCase() === "mermaid") {
+        ordinal += 1;
+        node.data ??= {};
+        node.data.hProperties = {
+          ...node.data.hProperties,
+          [MERMAID_FENCE_ORDINAL_ATTRIBUTE]: ordinal,
+        };
+      }
+      node.children?.forEach(visit);
+    };
+    visit(tree);
+  };
+}
 // User prompts are casual typing, not authored markdown: hard-break single
 // newlines and skip math entirely (the composer chip plugin is appended per
 // render because it closes over the message's mention references).
@@ -817,7 +845,7 @@ function MarkdownTableIntegrityFallback(props: {
 
 function extractCodeBlock(
   children: ReactNode,
-): { className: string | undefined; code: string } | null {
+): { className: string | undefined; code: string; mermaidOrdinal: number | null } | null {
   const childNodes = Children.toArray(children);
   if (childNodes.length !== 1) {
     return null;
@@ -828,13 +856,28 @@ function extractCodeBlock(
   // below, so detect by shape (a valid element carrying the code text) rather
   // than by tag identity. `pre` only ever wraps a code element in markdown.
   const onlyChild = childNodes[0];
-  if (!isValidElement<{ className?: string; children?: ReactNode }>(onlyChild)) {
+  if (
+    !isValidElement<{
+      className?: string;
+      children?: ReactNode;
+      [MERMAID_FENCE_ORDINAL_ATTRIBUTE]?: string | number;
+    }>(onlyChild)
+  ) {
     return null;
   }
+
+  const rawOrdinal = onlyChild.props[MERMAID_FENCE_ORDINAL_ATTRIBUTE];
+  const mermaidOrdinal =
+    typeof rawOrdinal === "number"
+      ? rawOrdinal
+      : typeof rawOrdinal === "string"
+        ? Number.parseInt(rawOrdinal, 10)
+        : Number.NaN;
 
   return {
     className: onlyChild.props.className,
     code: nodeToPlainText(onlyChild.props.children),
+    mermaidOrdinal: Number.isInteger(mermaidOrdinal) ? mermaidOrdinal : null,
   };
 }
 
@@ -936,101 +979,6 @@ function ComposerChipElement(props: {
     return <InlineSlashCommandChip command={segment.command} />;
   }
   return <InlineLinkChip url={segment.url} interactive />;
-}
-
-function CodeBlockHeaderTitle({ fence }: { fence: CodeFenceInfo }) {
-  if (fence.isFileReference && fence.fileName) {
-    return (
-      <span className="chat-markdown-codeblock__file" title={fence.filePath ?? fence.fileName}>
-        <CentralIcon
-          name={getFileIconName(fence.filePath ?? fence.fileName)}
-          className="chat-markdown-codeblock__file-icon"
-        />
-        <span className="chat-markdown-codeblock__file-name">{fence.fileName}</span>
-        {fence.directory ? (
-          <span className="chat-markdown-codeblock__file-dir">{fence.directory}</span>
-        ) : null}
-        {fence.lineRange ? (
-          <span className="chat-markdown-codeblock__file-lines">{fence.lineRange}</span>
-        ) : null}
-      </span>
-    );
-  }
-
-  return <span className="chat-markdown-codeblock__lang">{fence.language}</span>;
-}
-
-function MarkdownCodeBlock({
-  code,
-  fence,
-  children,
-}: {
-  code: string;
-  fence: CodeFenceInfo;
-  children: ReactNode;
-}) {
-  const { t } = useI18n();
-  const [copied, setCopied] = useState(false);
-  const [wrap, setWrap] = useState(false);
-  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const handleCopy = () => {
-    void copyTextToClipboard(code)
-      .then(() => {
-        if (copiedTimerRef.current != null) {
-          clearTimeout(copiedTimerRef.current);
-        }
-        setCopied(true);
-        copiedTimerRef.current = setTimeout(() => {
-          setCopied(false);
-          copiedTimerRef.current = null;
-        }, 1200);
-      })
-      .catch(() => undefined);
-  };
-  const toggleWrap = () => setWrap((previous) => !previous);
-
-  useEffect(
-    () => () => {
-      if (copiedTimerRef.current != null) {
-        clearTimeout(copiedTimerRef.current);
-        copiedTimerRef.current = null;
-      }
-    },
-    [],
-  );
-
-  return (
-    <div className="chat-markdown-codeblock" data-wrap={wrap ? "true" : "false"}>
-      <div className="chat-markdown-codeblock__header">
-        <CodeBlockHeaderTitle fence={fence} />
-        <div className="chat-markdown-codeblock__actions">
-          <IconButton
-            className="chat-markdown-codeblock__action"
-            onClick={toggleWrap}
-            title={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
-            label={wrap ? t("common.disableSoftWrap") : t("common.enableSoftWrap")}
-            aria-pressed={wrap}
-            data-active={wrap ? "true" : "false"}
-            size="icon-xs"
-            variant="ghost"
-          >
-            <TextWrapIcon className="size-3" />
-          </IconButton>
-          <IconButton
-            className="chat-markdown-codeblock__action"
-            onClick={handleCopy}
-            title={copied ? t("common.copied") : t("common.copyCode")}
-            label={copied ? t("common.copied") : t("common.copyCode")}
-            size="icon-xs"
-            variant="ghost"
-          >
-            {copied ? <CheckIcon className="size-3" /> : <CopyIcon className="size-3" />}
-          </IconButton>
-        </div>
-      </div>
-      <div className="chat-markdown-codeblock__body">{children}</div>
-    </div>
-  );
 }
 
 interface SuspenseShikiCodeBlockProps {
@@ -1143,6 +1091,7 @@ function ChatMarkdown({
   variant: variantProp,
   mentionReferences,
   terminalContexts,
+  mermaidPresentation,
 }: ChatMarkdownProps) {
   // Defaults applied with ?? in the body, not in the destructuring: default
   // values in parameter destructuring make React Compiler 1.0.0 bail on the
@@ -1150,8 +1099,9 @@ function ChatMarkdown({
   const isStreaming = isStreamingProp ?? false;
   const className = classNameProp ?? "text-sm leading-[1.7]";
   const variant = variantProp ?? "assistant";
+  const mermaidPresentationMessageId = mermaidPresentation?.messageId;
   const { t } = useI18n();
-  const { resolvedTheme } = useTheme();
+  const { resolvedTheme, engineWebSurfaceThemeSnapshot } = useTheme();
   const diffThemeName = resolveDiffThemeName(resolvedTheme);
   const isUserVariant = variant === "user";
   // Footnote ids are document-global. Scope every Markdown instance so two
@@ -1223,6 +1173,9 @@ function ChatMarkdown({
         : null,
     [isUserVariant, mentionReferences, terminalContexts],
   );
+  const mermaidOrdinalPlugin = mermaidPresentationMessageId
+    ? mermaidFenceOrdinalRemarkPlugin
+    : null;
   const remarkPlugins = useMemo<MarkdownRemarkPlugins>(() => {
     if (composerChipsRemarkPlugin) {
       return [
@@ -1231,10 +1184,16 @@ function ChatMarkdown({
         tableIntegrityRemarkPlugin,
       ];
     }
-    return threadMarkerRemarkPlugin
+    const assistantPlugins = threadMarkerRemarkPlugin
       ? [...MARKDOWN_REMARK_PLUGINS, threadMarkerRemarkPlugin, tableIntegrityRemarkPlugin]
       : [...MARKDOWN_REMARK_PLUGINS, tableIntegrityRemarkPlugin];
-  }, [composerChipsRemarkPlugin, tableIntegrityRemarkPlugin, threadMarkerRemarkPlugin]);
+    return mermaidOrdinalPlugin ? [...assistantPlugins, mermaidOrdinalPlugin] : assistantPlugins;
+  }, [
+    composerChipsRemarkPlugin,
+    mermaidOrdinalPlugin,
+    tableIntegrityRemarkPlugin,
+    threadMarkerRemarkPlugin,
+  ]);
   const rehypePlugins = isUserVariant ? USER_MARKDOWN_REHYPE_PLUGINS : MARKDOWN_REHYPE_PLUGINS;
   const markdownComponents = useMemo<Components>(
     () => ({
@@ -1316,6 +1275,37 @@ function ChatMarkdown({
 
         const fence = parseCodeFenceInfo(extractRawFenceInfo(codeBlock.className));
         const code = dedentCode(codeBlock.code);
+
+        if (
+          mermaidPresentationMessageId &&
+          fence.language.toLowerCase() === "mermaid" &&
+          codeBlock.mermaidOrdinal !== null
+        ) {
+          if (isStreaming) {
+            return (
+              <MarkdownCodeBlock
+                code={code}
+                fence={fence}
+                wrapControl={false}
+                wrapped
+                presentationId={`${mermaidPresentationMessageId}:${codeBlock.mermaidOrdinal}`}
+              >
+                <pre>
+                  <code>{code}</code>
+                </pre>
+              </MarkdownCodeBlock>
+            );
+          }
+          return (
+            <MermaidCodeBlock
+              code={code}
+              fence={fence}
+              messageId={mermaidPresentationMessageId}
+              ordinal={codeBlock.mermaidOrdinal}
+              theme={engineWebSurfaceThemeSnapshot}
+            />
+          );
+        }
 
         return (
           <MarkdownCodeBlock code={code} fence={fence}>
@@ -1459,11 +1449,13 @@ function ChatMarkdown({
     [
       cwd,
       diffThemeName,
+      engineWebSurfaceThemeSnapshot,
       footnoteClobberPrefix,
       footnoteLabelId,
       isStreaming,
       isUserVariant,
       mentionReferences,
+      mermaidPresentationMessageId,
       onImageExpand,
       onTaskToggle,
       resolvedTheme,

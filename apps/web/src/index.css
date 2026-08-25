@@ -1182,6 +1182,44 @@ label:has(> select#reasoning-effort) select {
   word-break: break-word;
 }
 
+.chat-markdown .chat-markdown-mermaid {
+  overflow: hidden;
+  padding: 0.75rem;
+  background: var(--app-chat-code-surface);
+}
+
+.chat-markdown .chat-markdown-mermaid__frame {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  border: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+.chat-markdown .chat-markdown-mermaid__fallback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  padding: 0.45rem 0.65rem 0.5rem;
+  color: var(--muted-foreground);
+  font-size: var(--app-font-size-ui-sm, 11px);
+  line-height: 1.4;
+}
+
+.chat-markdown .chat-markdown-mermaid__fallback button {
+  flex-shrink: 0;
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.chat-markdown .chat-markdown-mermaid__fallback button:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .chat-markdown .chat-markdown-shiki .shiki {
   background: transparent !important;
   font-family: var(--font-chat-code-family) !important;

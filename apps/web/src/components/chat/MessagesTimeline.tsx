@@ -2103,6 +2103,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                       style={chatTypographyStyle}
                       onImageExpand={onImageExpand}
                       markers={messageMarkers}
+                      mermaidPresentation={{ messageId: row.message.id }}
                     />
                   </div>
                 ) : null}
@@ -2428,11 +2429,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             {nowIso ? (
               t("timeline.workingFor", {
                 duration:
-                  formatClockElapsed(
-                    row.createdAt,
-                    nowIso,
-                    locale === "zh-CN" ? "zh" : "en",
-                  ) ?? (locale === "zh-CN" ? "0秒" : "0s"),
+                  formatClockElapsed(row.createdAt, nowIso, locale === "zh-CN" ? "zh" : "en") ??
+                  (locale === "zh-CN" ? "0秒" : "0s"),
               })
             ) : (
               <WorkingTimer createdAt={row.createdAt} />
