@@ -1,5 +1,6 @@
 import type { InlineExtension, ToolDefinition } from "@earendil-works/pi-coding-agent";
 import type { ProviderWorkSurface, TurnTasksUpdatedPayload } from "@omnimind/contracts";
+import type { AskUserProductInteractionPort } from "@omnimind/om-ask";
 import { makeOmniMindWebAccessInlineExtension } from "@omnimind/om-web-access";
 import type { CuratorPresenter } from "@omnimind/om-web-access/curator-presentation";
 import { getWebSearchConfigService } from "@omnimind/om-web-access/config-service";
@@ -11,12 +12,14 @@ import {
   type AgentGatewayHostExtensionHandle,
 } from "./agentGatewayHostExtension.ts";
 import { makeOmniMindTaskListExtension } from "./omnimindTaskListExtension.ts";
+import { makeOmniMindAskUserExtension } from "./omnimindAskUserExtension.ts";
 
 export interface OmniMindSessionExtensionComposition {
   readonly extensions: InlineExtension[];
   readonly todoExtension?: InlineExtension;
   readonly host?: AgentGatewayHostExtensionHandle;
   readonly webAccess: InlineExtension;
+  readonly askUserExtension?: InlineExtension;
 }
 
 /** Explicit product wiring only; user and third-party Extensions stay in Pi's ResourceLoader. */
@@ -31,6 +34,7 @@ export function buildOmniMindSessionExtensions(input: {
     readonly toolCallId: string;
     readonly payload: TurnTasksUpdatedPayload;
   }) => void;
+  readonly askUserInteraction?: AskUserProductInteractionPort;
 }): OmniMindSessionExtensionComposition {
   const webAccess = makeOmniMindWebAccessInlineExtension({
     configService: getWebSearchConfigService(input.agentDir),
@@ -51,14 +55,23 @@ export function buildOmniMindSessionExtensions(input: {
           defineTool: input.defineTool,
           ...(input.gatewayFetch === undefined ? {} : { fetch: input.gatewayFetch }),
         });
+  const askUserExtension =
+    input.askUserInteraction === undefined
+      ? undefined
+      : makeOmniMindAskUserExtension({
+          defineTool: input.defineTool,
+          interaction: input.askUserInteraction,
+        });
   return {
     extensions: [
       webAccess,
       ...(todoExtension === undefined ? [] : [todoExtension]),
+      ...(askUserExtension === undefined ? [] : [askUserExtension]),
       ...(host === undefined ? [] : [host.extension]),
     ],
     ...(todoExtension === undefined ? {} : { todoExtension }),
     ...(host === undefined ? {} : { host }),
+    ...(askUserExtension === undefined ? {} : { askUserExtension }),
     webAccess,
   };
 }

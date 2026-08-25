@@ -49,4 +49,28 @@ describe("bundled OmniMind Web Access composition", () => {
       expect(statSync(configPath).mode & 0o777).toBe(0o600);
     }
   });
+
+  it("adds Ask User only when the Host supplies the canonical interaction port", async () => {
+    const root = mkdtempSync(join(tmpdir(), "omnimind-ask-composition-"));
+    const withoutPresenter = buildOmniMindSessionExtensions({
+      agentDir: join(root, "without"),
+      defineTool: (tool) => tool,
+    });
+    expect(withoutPresenter.askUserExtension).toBeUndefined();
+
+    const withPresenter = buildOmniMindSessionExtensions({
+      agentDir: join(root, "with"),
+      defineTool: (tool) => tool,
+      askUserInteraction: {
+        present: async () => ({ version: 1, requestId: "request-1", status: "unavailable" }),
+      },
+    });
+    expect(withPresenter.askUserExtension).toBeDefined();
+    expect(
+      withPresenter.extensions.filter(
+        (extension) =>
+          typeof extension !== "function" && extension.name === "omnimind-agent-ask-user",
+      ),
+    ).toHaveLength(1);
+  });
 });

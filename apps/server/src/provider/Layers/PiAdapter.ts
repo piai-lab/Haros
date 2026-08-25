@@ -21,9 +21,17 @@ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { Api, ImageContent, Model, TextContent } from "@earendil-works/pi-ai";
 import type { PromptOutcome as OmniMindPromptOutcome } from "@omnimind/pi-coding-agent";
 import {
+  ASK_USER_TOOL_NAME,
+  type AskUserProductInteractionPort,
+  type AskUserResult,
+  type AskUserToolInput,
+} from "@omnimind/om-ask";
+import {
   ApprovalRequestId,
   type BuiltInToolGroupId,
   type ChatAttachment,
+  type CanonicalUserInputResponse,
+  type CanonicalUserInputSettlement,
   EventId,
   type ProviderListCommandsResult,
   type ProviderListModelsResult,
@@ -64,7 +72,10 @@ import {
   withAgentGatewayTurnCancellation,
 } from "../../agentGateway/sessionLease.ts";
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
-import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
+import {
+  encodeCanonicalUserInputResponse,
+  normalizeCanonicalUserInputResponse,
+} from "../canonicalUserInput.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { lazyModule } from "../../lazyModule.ts";
@@ -88,6 +99,8 @@ import {
   inspectOmniMindTaskListExtensionRegistration,
   OMNIMIND_TASK_LIST_TOOL_NAME,
 } from "../omnimindTaskListExtension.ts";
+import { inspectOmniMindAskUserRegistration } from "../omnimindAskUserExtension.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import {
   buildOmniMindSessionExtensions,
   type OmniMindSessionExtensionComposition,
@@ -134,6 +147,8 @@ import {
 import { getOmniMindModelRuntimeMutationRevision } from "../omnimindModelRuntimeMutation.ts";
 import { resolveRealPathWithinRoot } from "../../workspace/realPathContainment.ts";
 import { providerExecutionStructure } from "../providerExecutionStructure.ts";
+import { projectAskUserRequest, resolveAskUserResponse } from "../askUserHostBridge.ts";
+import { askUserMetrics } from "../askUserMetrics.ts";
 
 type PiFamilyProvider = Extract<ProviderKind, "pi" | "omnimind">;
 const DEFAULT_PI_THINKING_LEVEL: ThinkingLevel = "medium";
@@ -506,6 +521,9 @@ interface PiSessionContext {
   activeToolItems: Map<string, PiTrackedToolCall>;
   pendingPromptSubmission: PiPromptSubmission | undefined;
   pendingUserInputs: Map<ApprovalRequestId, PiPendingUserInput>;
+  pendingProductUserInputs: Map<ApprovalRequestId, PiPendingProductUserInput>;
+  settledProductUserInputIds: Set<ApprovalRequestId>;
+  askUserProvenanceCollisionRecorded: boolean;
   stopped: boolean;
   lastKnownTokenUsage: ThreadTokenUsageSnapshot | undefined;
   unsubscribe: (() => void) | undefined;
@@ -550,12 +568,21 @@ interface PiTrackedToolCall {
     readonly url?: string;
     readonly surfaceId?: string;
     readonly unregister?: () => void;
-	readonly status?: "pending" | "observing";
+    readonly status?: "pending" | "observing";
   };
 }
 
 interface PiPendingUserInput {
   readonly resolve: (answers: ProviderUserInputAnswers) => void;
+}
+
+interface PiPendingProductUserInput {
+  readonly requestId: ApprovalRequestId;
+  readonly sessionGeneration?: string;
+  readonly turnId?: TurnId;
+  readonly toolCallId: string;
+  readonly resolve: (response: CanonicalUserInputResponse) => boolean;
+  readonly settleStale: () => void;
 }
 
 export interface PiUserInputOptionMapping {
@@ -1676,6 +1703,115 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       return true;
     };
 
+    const requestProductAskUser = (
+      context: PiSessionContext,
+      input: {
+        readonly toolCallId: string;
+        readonly request: AskUserToolInput;
+        readonly signal?: AbortSignal;
+      },
+    ): Promise<AskUserResult> => {
+      const requestId = ApprovalRequestId.makeUnsafe(crypto.randomUUID());
+      const runtimeRequestId = RuntimeRequestId.makeUnsafe(requestId);
+      const terminal = (status: Exclude<AskUserResult["status"], "answered">): AskUserResult => ({
+        version: 1,
+        requestId,
+        status,
+      });
+      if (context.stopped) return Promise.resolve(terminal("stale"));
+      if (input.signal?.aborted) return Promise.resolve(terminal("aborted"));
+      if (!userInputPresenterRegistry.available) return Promise.resolve(terminal("unavailable"));
+
+      const projection = projectAskUserRequest(input.request);
+      const requestedAt = Date.now();
+      askUserMetrics.increment("requested");
+
+      return new Promise((resolve) => {
+        let settled = false;
+        let removeUnavailableListener: () => void = () => undefined;
+        let removeAbortListener: () => void = () => undefined;
+        const cleanup = () => {
+          removeUnavailableListener();
+          removeAbortListener();
+          context.pendingProductUserInputs.delete(requestId);
+        };
+        const finish = (result: AskUserResult, settlement: CanonicalUserInputSettlement) => {
+          if (settled) return;
+          settled = true;
+          askUserMetrics.settle(result.status, Date.now() - requestedAt);
+          cleanup();
+          context.settledProductUserInputIds.add(requestId);
+          if (context.settledProductUserInputIds.size > 128) {
+            const oldest = context.settledProductUserInputIds.values().next().value;
+            if (oldest !== undefined) context.settledProductUserInputIds.delete(oldest);
+          }
+          offerRuntimeEvent({
+            ...makeEventBase(context),
+            type: "user-input.resolved",
+            requestId: runtimeRequestId,
+            payload: { settlement },
+            raw: {
+              source: "pi.sdk.event",
+              method: "ask_user/settled",
+              payload: { requestId, toolCallId: input.toolCallId, status: result.status },
+            },
+          } satisfies ProviderRuntimeEvent);
+          resolve(result);
+        };
+        const settleStatus = (status: Exclude<AskUserResult["status"], "answered">) =>
+          finish(terminal(status), { status });
+        const respond = (response: CanonicalUserInputResponse): boolean => {
+          if (settled) return false;
+          if (response.status === "cancelled") {
+            settleStatus("cancelled");
+            return true;
+          }
+          const result = resolveAskUserResponse({
+            request: input.request,
+            projection,
+            response,
+            requestId,
+          });
+          if (!result || result.status !== "answered") return false;
+          finish(result, { status: "answered", answers: response.answers });
+          return true;
+        };
+        context.pendingProductUserInputs.set(requestId, {
+          requestId,
+          ...(context.lifecycleGeneration === undefined
+            ? {}
+            : { sessionGeneration: context.lifecycleGeneration }),
+          ...(context.activeTurnId === undefined ? {} : { turnId: context.activeTurnId }),
+          toolCallId: input.toolCallId,
+          resolve: respond,
+          settleStale: () => settleStatus("stale"),
+        });
+        removeUnavailableListener = userInputPresenterRegistry.onUnavailable(() =>
+          settleStatus("unavailable"),
+        );
+        if (input.signal) {
+          const abort = () => settleStatus("aborted");
+          input.signal.addEventListener("abort", abort, { once: true });
+          removeAbortListener = () => input.signal?.removeEventListener("abort", abort);
+        }
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          type: "user-input.requested",
+          requestId: runtimeRequestId,
+          payload: projection.request,
+          raw: {
+            source: "pi.sdk.event",
+            method: "ask_user/requested",
+            payload: {
+              requestId,
+              toolCallId: input.toolCallId,
+              questionCount: projection.request.questions.length,
+            },
+          },
+        } satisfies ProviderRuntimeEvent);
+      });
+    };
+
     const requestPiExtensionUserInput = (
       context: PiSessionContext,
       input: {
@@ -2006,6 +2142,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           pending.resolve({});
         }
         context.pendingUserInputs.clear();
+        for (const pending of Array.from(context.pendingProductUserInputs.values())) {
+          pending.settleStale();
+        }
+        context.pendingProductUserInputs.clear();
         for (const tracked of context.activeToolItems.values()) {
           tracked.engineWebSurface?.unregister?.();
         }
@@ -2418,10 +2558,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           if (discoveredSurfaceUrl) {
             registerPiCuratorWebSurface(context, tracked, discoveredSurfaceUrl);
           }
-          const typedSurface = extractTypedEngineWebSurface(
-            event.toolName,
-            event.partialResult,
-          );
+          const typedSurface = extractTypedEngineWebSurface(event.toolName, event.partialResult);
           if (typedSurface) {
             tracked.engineWebSurface = {
               ...tracked.engineWebSurface,
@@ -2431,7 +2568,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           }
           const engineSurfaceId = typedSurface?.surfaceId ?? tracked.engineWebSurface?.surfaceId;
           const surfaceUrl = tracked.engineWebSurface?.url;
-          const engineSurfacePending = surfaceUrl !== undefined || tracked.engineWebSurface?.status === "pending";
+          const engineSurfacePending =
+            surfaceUrl !== undefined || tracked.engineWebSurface?.status === "pending";
           const safePartialResult = sanitizeEngineWebSurfacePayload(
             event.partialResult,
             surfaceUrl,
@@ -2491,6 +2629,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             extractPiCuratorWebSurfaceUrl(event.toolName, event.result);
           const safeResult = sanitizeEngineWebSurfacePayload(event.result, surfaceUrl);
           const safeEvent = sanitizeEngineWebSurfacePayload(event, surfaceUrl);
+          const barrierDetails = toolRecord(toolRecord(event.result)?.details)?.barrier;
+          if (toolRecord(barrierDetails)?.status === "blocked") {
+            askUserMetrics.increment("barrier_sibling_blocked");
+          }
           context.activeToolItems.delete(event.toolCallId);
           tracked.engineWebSurface?.unregister?.();
           const detail = piToolTimelineDetail(safeResult);
@@ -2520,7 +2662,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 result: safeResult,
                 isError: event.isError,
                 ...(surfaceUrl ? { engineWebSurfaceStatus: "completed" } : {}),
-                ...(tracked.engineWebSurface?.surfaceId && tracked.engineWebSurface.status === "pending"
+                ...(tracked.engineWebSurface?.surfaceId &&
+                tracked.engineWebSurface.status === "pending"
                   ? {
                       engineWebSurfaceStatus: "completed",
                       engineWebSurfaceId: tracked.engineWebSurface.surfaceId,
@@ -2702,6 +2845,57 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       } satisfies ProviderRuntimeEvent);
     };
 
+    const reconcileAskUserTool = (context: PiSessionContext) => {
+      if (provider !== "omnimind") return undefined;
+      const inspection = inspectOmniMindAskUserRegistration({
+        extensions: context.runtime.session.resourceLoader.getExtensions(),
+        tools: context.runtime.session.getAllTools(),
+        activeToolNames: context.runtime.session.getActiveToolNames(),
+      });
+      const shouldBeActive = userInputPresenterRegistry.available && inspection.registered;
+      if (inspection.collision && !context.askUserProvenanceCollisionRecorded) {
+        context.askUserProvenanceCollisionRecorded = true;
+        askUserMetrics.increment("provenance_collision");
+      }
+      const active = context.runtime.session.getActiveToolNames();
+      const isActive = active.includes(ASK_USER_TOOL_NAME);
+      if (shouldBeActive !== isActive) {
+        context.runtime.session.setActiveToolsByName(
+          shouldBeActive
+            ? [...active.filter((name) => name !== ASK_USER_TOOL_NAME), ASK_USER_TOOL_NAME]
+            : active.filter((name) => name !== ASK_USER_TOOL_NAME),
+        );
+      }
+      return { ...inspection, available: shouldBeActive };
+    };
+
+    const warnIfAskUserUnavailable = (context: PiSessionContext) => {
+      if (provider !== "omnimind" || !userInputPresenterRegistry.available) return;
+      const inspection = reconcileAskUserTool(context);
+      if (inspection?.available) return;
+      offerRuntimeEvent({
+        ...makeEventBase(context, { includeTurnId: false }),
+        type: "runtime.warning",
+        payload: {
+          message: "ask_user_provenance_unavailable",
+          detail: {
+            source: "pi-resource-loader",
+            capability: "ask-user",
+            availability: "unavailable",
+            diagnostics: inspection?.diagnostics ?? [],
+          },
+        },
+        raw: {
+          source: "pi.sdk.event",
+          method: "extension/resource-diagnostic",
+          payload: {
+            capability: "ask-user",
+            diagnosticCount: inspection?.diagnostics.length ?? 0,
+          },
+        },
+      } satisfies ProviderRuntimeEvent);
+    };
+
     const createSdkRuntime = async (input: {
       threadId: ThreadId;
       sdk: PiCodingAgentModule;
@@ -2718,6 +2912,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         readonly toolCallId: string;
         readonly payload: TurnTasksUpdatedPayload;
       }) => void;
+      askUserInteraction?: AskUserProductInteractionPort;
       hostSystemPrompt: (gatewayControlAvailable: boolean) => string;
       defaultPrompt?: string;
       immutableSystemPrompt?: string;
@@ -2766,14 +2961,12 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               },
               settle: async ({ surfaceId, preserveTab }) => {
                 await Effect.runPromise(
-                  browserAutomationHost
-                    .settleEngineWebSurface!({
-                      sessionKey: `engine-web-surface:${provider}:${input.threadId}`,
-                      threadId: input.threadId,
-                      surfaceId,
-                      ...(preserveTab === undefined ? {} : { preserveTab }),
-                    })
-                    .pipe(Effect.ignore),
+                  browserAutomationHost.settleEngineWebSurface!({
+                    sessionKey: `engine-web-surface:${provider}:${input.threadId}`,
+                    threadId: input.threadId,
+                    surfaceId,
+                    ...(preserveTab === undefined ? {} : { preserveTab }),
+                  }).pipe(Effect.ignore),
                 );
               },
             }
@@ -2805,6 +2998,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                 ...(input.onTaskListUpdate === undefined
                   ? {}
                   : { onTasksUpdated: input.onTaskListUpdate }),
+                ...(input.askUserInteraction === undefined
+                  ? {}
+                  : { askUserInteraction: input.askUserInteraction }),
               })
             : { extensions: [] };
         const inlineExtensions = composition.extensions;
@@ -3074,6 +3270,27 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           agentGatewaySessionLease?.release();
         }
         let taskProjectionContext: PiSessionContext | undefined;
+        let askProjectionContext: PiSessionContext | undefined;
+        const askUserInteraction: AskUserProductInteractionPort | undefined =
+          provider === "omnimind" && userInputPresenterRegistry.available
+            ? {
+                present: ({ toolCallId, request, signal }) => {
+                  const current = askProjectionContext;
+                  if (!current || current.stopped || sessions.get(input.threadId) !== current) {
+                    return Promise.resolve({
+                      version: 1,
+                      requestId: crypto.randomUUID(),
+                      status: "stale",
+                    });
+                  }
+                  return requestProductAskUser(current, {
+                    toolCallId,
+                    request,
+                    ...(signal === undefined ? {} : { signal }),
+                  });
+                },
+              }
+            : undefined;
         const {
           runtime,
           modelRegistry,
@@ -3131,6 +3348,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
                       },
                     }
                   : {}),
+                ...(askUserInteraction === undefined ? {} : { askUserInteraction }),
                 hostSystemPrompt: (available) =>
                   makePiHostSystemPrompt({
                     gatewayControlAvailable:
@@ -3212,11 +3430,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           activeToolItems: new Map(),
           pendingPromptSubmission: undefined,
           pendingUserInputs: new Map(),
+          pendingProductUserInputs: new Map(),
+          settledProductUserInputIds: new Set(),
+          askUserProvenanceCollisionRecorded: false,
           stopped: false,
           lastKnownTokenUsage: undefined,
           unsubscribe: undefined,
         };
         taskProjectionContext = context;
+        askProjectionContext = context;
+        reconcileAskUserTool(context);
         context.unsubscribe = runtime.session.subscribe((event) =>
           handleSessionEvent(context, event),
         );
@@ -3320,6 +3543,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           } satisfies ProviderRuntimeEvent);
         }
         warnIfTaskListExtensionUnavailable(context);
+        warnIfAskUserUnavailable(context);
         const loadedExtensions = runtime.session.resourceLoader
           .getExtensions()
           .extensions.filter((extension) => extension.hidden !== true);
@@ -3491,6 +3715,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               });
               warnIfTaskListExtensionUnavailable(context);
             }
+            reconcileAskUserTool(context);
           }
           if (input.modelSelection?.provider === provider) {
             const model = findModelInRegistry(context.modelRegistry, input.modelSelection.model);
@@ -3761,18 +3986,58 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const respondToUserInput: PiAdapterShape["respondToUserInput"] = (
       threadId,
       requestId,
-      answers,
+      response,
     ) =>
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
+        const canonicalResponse = normalizeCanonicalUserInputResponse(response);
+        const productPending = context.pendingProductUserInputs.get(requestId);
+        if (productPending) {
+          if (
+            productPending.requestId !== requestId ||
+            productPending.sessionGeneration !== context.lifecycleGeneration ||
+            productPending.turnId !== context.activeTurnId
+          ) {
+            productPending.settleStale();
+            askUserMetrics.increment("late_response_rejected");
+            return yield* new ProviderAdapterRequestError({
+              provider: provider,
+              method: "user-input/respond",
+              detail: `Stale ${displayName} ask_user correlation: ${requestId}`,
+            });
+          }
+          if (!productPending.resolve(canonicalResponse)) {
+            return yield* new ProviderAdapterRequestError({
+              provider: provider,
+              method: "user-input/respond",
+              detail: `Invalid or stale ${displayName} ask_user response: ${requestId}`,
+            });
+          }
+          return;
+        }
+        if (context.settledProductUserInputIds.has(requestId)) {
+          askUserMetrics.increment("late_response_rejected");
+          return yield* new ProviderAdapterRequestError({
+            provider: provider,
+            method: "user-input/respond",
+            detail: `Stale ${displayName} ask_user response: ${requestId}`,
+          });
+        }
         if (
-          !resolvePiExtensionUserInput(context, requestId, encodeCanonicalUserInputAnswers(answers))
+          !resolvePiExtensionUserInput(
+            context,
+            requestId,
+            encodeCanonicalUserInputResponse(canonicalResponse).answers,
+          )
         ) {
           return yield* new ProviderAdapterRequestError({
             provider: provider,
             method: "user-input/respond",
             detail: `Unknown pending ${displayName} user-input request: ${requestId}`,
           });
+        }
+        if (canonicalResponse.status === "cancelled") {
+          context.runtime.session.agent.abort();
         }
       });
 
@@ -3817,7 +4082,8 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             context.activeTurnId !== undefined ||
             context.runtime.session.isStreaming ||
             context.activeToolItems.size > 0 ||
-            context.pendingUserInputs.size > 0
+            context.pendingUserInputs.size > 0 ||
+            context.pendingProductUserInputs.size > 0
           ) {
             return "busy" as const;
           }
@@ -3868,6 +4134,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               }),
           });
           warnIfTaskListExtensionUnavailable(context);
+          warnIfAskUserUnavailable(context);
           return "reloaded" as const;
         }),
       );

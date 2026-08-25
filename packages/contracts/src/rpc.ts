@@ -1146,6 +1146,13 @@ export const WsSubscribeServerLifecycleRpc = Rpc.make(WS_METHODS.subscribeServer
   stream: true,
 });
 
+export const WsUserInputPresenterRpc = Rpc.make(WS_METHODS.orchestrationUserInputPresenter, {
+  payload: Schema.Struct({ version: Schema.Literal(1) }),
+  success: Schema.Struct({ status: Schema.Literal("ready") }),
+  error: WsRpcError,
+  stream: true,
+});
+
 export const WsSubscribeServerConfigRpc = Rpc.make(WS_METHODS.subscribeServerConfig, {
   payload: Schema.Struct({}),
   success: ServerConfigStreamEvent,
@@ -1405,14 +1412,11 @@ export const WsOmniMindWebSearchRecheckRpc = Rpc.make(WS_METHODS.omnimindWebSear
   success: OmniMindWebSearchProbeResult,
   error: WsRpcError,
 });
-export const WsOmniMindWebSearchOpenConfigRpc = Rpc.make(
-  WS_METHODS.omnimindWebSearchOpenConfig,
-  {
-    payload: OmniMindWebSearchOpenConfigInput,
-    success: Schema.Void,
-    error: WsRpcError,
-  },
-);
+export const WsOmniMindWebSearchOpenConfigRpc = Rpc.make(WS_METHODS.omnimindWebSearchOpenConfig, {
+  payload: OmniMindWebSearchOpenConfigInput,
+  success: Schema.Void,
+  error: WsRpcError,
+});
 export const WsOmniMindWebSearchGeminiDiagnosticRpc = Rpc.make(
   WS_METHODS.omnimindWebSearchGeminiDiagnostic,
   {
@@ -1508,6 +1512,7 @@ export const WsFeatureRpcGroup = RpcGroup.make(
   WsOrchestrationSubscribeThreadRpc,
   WsOrchestrationUnsubscribeThreadRpc,
   WsOrchestrationSubscribeDomainEventsRpc,
+  WsUserInputPresenterRpc,
   WsProjectsDiscoverScriptsRpc,
   WsProjectsListDirectoriesRpc,
   WsProjectsSearchEntriesRpc,

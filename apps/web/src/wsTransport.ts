@@ -599,20 +599,26 @@ function omitNullUserInputAnswers(input: unknown): unknown {
   if (!input || typeof input !== "object") {
     return input;
   }
-  const command = input as { type?: unknown; answers?: unknown };
-  if (command.type !== "thread.user-input.respond" || !command.answers) {
+  const command = input as { type?: unknown; response?: unknown; answers?: unknown };
+  if (command.type !== "thread.user-input.respond") {
     return input;
   }
-  if (typeof command.answers !== "object") {
+  const response =
+    command.response && typeof command.response === "object"
+      ? (command.response as { status?: unknown; answers?: unknown })
+      : undefined;
+  const answers = response?.status === "answered" ? response.answers : command.answers;
+  if (!answers || typeof answers !== "object") {
     return input;
   }
+  const filtered = Object.fromEntries(
+    Object.entries(answers).filter(([, answer]) => answer !== null && answer !== undefined),
+  );
   return {
     ...command,
-    answers: Object.fromEntries(
-      Object.entries(command.answers).filter(
-        ([, answer]) => answer !== null && answer !== undefined,
-      ),
-    ),
+    ...(response?.status === "answered"
+      ? { response: { ...response, answers: filtered } }
+      : { answers: filtered }),
   };
 }
 
@@ -1031,6 +1037,7 @@ export class WsTransport {
       if (!this.disposed && this.sessionVersion === sessionVersion) {
         this.adoptNegotiation(compatibility);
         this.setState("open");
+        this.startUserInputPresenterLease(client);
       }
       return client;
     })().catch((error) => {
@@ -1451,6 +1458,23 @@ export class WsTransport {
         }
       },
       restartLifecycle,
+    );
+  }
+
+  private startUserInputPresenterLease(client: RpcClientInstance): void {
+    if (this.disposed) return;
+    const restart = () => {
+      if (this.disposed) return;
+      void this.getClient()
+        .then((nextClient) => this.startUserInputPresenterLease(nextClient))
+        .catch((error) => console.warn("User-input presenter lease failed to restart", error));
+    };
+    this.startStream(
+      client,
+      "orchestration.user-input.presenter",
+      client[WS_METHODS.orchestrationUserInputPresenter]({ version: 1 }),
+      () => undefined,
+      restart,
     );
   }
 

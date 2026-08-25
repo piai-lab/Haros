@@ -304,6 +304,7 @@ export const WS_METHODS = {
   subscribeServerConfig: "server.subscribeConfig",
   subscribeServerProviderStatuses: "server.subscribeProviderStatuses",
   subscribeServerSettings: "server.subscribeSettings",
+  orchestrationUserInputPresenter: "orchestration.user-input.presenter",
 
   // Streaming subscriptions
   subscribeTerminalEvents: "terminal.subscribeEvents",
@@ -551,10 +552,7 @@ const WebSocketRequestBody = Schema.Union([
   tagRequestBody(WS_METHODS.serverGetSettings, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpdateSettings, ServerUpdateSettingsInput),
   tagRequestBody(WS_METHODS.serverResetSettings, Schema.Struct({})),
-  tagRequestBody(
-    WS_METHODS.serverUpdateProviderCredential,
-    ServerUpdateProviderCredentialInput,
-  ),
+  tagRequestBody(WS_METHODS.serverUpdateProviderCredential, ServerUpdateProviderCredentialInput),
   tagRequestBody(WS_METHODS.serverRefreshProviders, Schema.Struct({})),
   tagRequestBody(WS_METHODS.serverUpdateProvider, ServerProviderUpdateInput),
   tagRequestBody(WS_METHODS.serverListExternalMcpIntegrations, Schema.Struct({})),

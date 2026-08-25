@@ -13,7 +13,7 @@ import path from "node:path";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { ModelRegistry, ModelRuntime } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
-import { type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
+import { ApprovalRequestId, type ProviderRuntimeEvent, ThreadId } from "@omnimind/contracts";
 import { Cause, Effect, Fiber, Layer, Stream } from "effect";
 import { describe, expect, it, vi } from "vitest";
 import { ServerConfig } from "../../config.ts";
@@ -27,6 +27,7 @@ import { GOAL_CONTINUATION_GATEWAY_TOOL_NAMES } from "../goalMode.ts";
 import { OmniMindAgentAdapter } from "../Services/OmniMindAgentAdapter.ts";
 import { PiAdapter } from "../Services/PiAdapter.ts";
 import { publishOmniMindModelRuntimeMutation } from "../omnimindModelRuntimeMutation.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import {
   createPiModelRuntime,
   createOmniMindModelRuntime,
@@ -517,6 +518,262 @@ describe("Pi native OmniMind gateway tools", () => {
         Array.from({ length: 9 }, () => "tools/list"),
       );
     } finally {
+      vi.restoreAllMocks();
+      rmSync(serverRoot, { recursive: true, force: true });
+    }
+  });
+
+  it("exposes the trusted Ask tool only with a presenter and replans after a structured answer", async () => {
+    const serverRoot = mkdtempSync(path.join(tmpdir(), "omnimind-ask-user-journey-"));
+    const agentDir = path.join(serverRoot, "agent");
+    const cwd = path.join(serverRoot, "workspace");
+    const noUiThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000091");
+    const askThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000092");
+    mkdirSync(agentDir, { recursive: true });
+    mkdirSync(cwd, { recursive: true });
+    writeFileSync(
+      path.join(agentDir, "models.json"),
+      JSON.stringify({
+        providers: {
+          local: {
+            api: "openai-completions",
+            baseUrl: "https://local-model.example.test/v1",
+            models: [{ id: "safe-model", contextWindow: 128_000, maxTokens: 16_384 }],
+          },
+        },
+      }),
+    );
+    writeFileSync(
+      path.join(agentDir, "auth.json"),
+      JSON.stringify({ local: { type: "api_key", key: "test-key" } }),
+    );
+    writeFileSync(
+      path.join(agentDir, "settings.json"),
+      JSON.stringify({ retry: { enabled: false } }),
+    );
+    const requestBodies: any[] = [];
+    let modelRequest = 0;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (request, init) => {
+      requestBodies.push(
+        request instanceof Request ? await request.clone().json() : JSON.parse(String(init?.body)),
+      );
+      modelRequest += 1;
+      if (modelRequest === 1) return piOpenAiSuccessResponse("No UI journey complete.");
+      if (modelRequest === 2 || modelRequest === 4) return piOpenAiAskUserToolCallResponse();
+      return piOpenAiSuccessResponse("Replanned after the answer.");
+    });
+    let presenterLease: ReturnType<typeof userInputPresenterRegistry.acquire> | undefined;
+
+    try {
+      const layer = makeOmniMindAgentAdapterLive().pipe(
+        Layer.provideMerge(ServerConfig.layerTest(cwd, serverRoot)),
+        Layer.provideMerge(ServerSettingsService.layerTest()),
+        Layer.provideMerge(NodeServices.layer),
+      );
+      await Effect.runPromise(
+        Effect.scoped(
+          Effect.gen(function* () {
+            const adapter = yield* OmniMindAgentAdapter;
+            const events: ProviderRuntimeEvent[] = [];
+            const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
+              Effect.sync(() => events.push(event)),
+            ).pipe(Effect.forkChild);
+
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: noUiThreadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const noUiTurn = yield* adapter.sendTurn({
+              threadId: noUiThreadId,
+              input: "Complete without a presenter.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === noUiTurn.turnId,
+                  ),
+                "No-UI turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(noUiThreadId);
+
+            presenterLease = userInputPresenterRegistry.acquire("pi-adapter-test", 1);
+            yield* adapter.startSession({
+              provider: "omnimind",
+              threadId: askThreadId,
+              cwd,
+              workSurface: "chat",
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+              runtimeMode: "full-access",
+            });
+            const askTurn = yield* adapter.sendTurn({
+              threadId: askThreadId,
+              input: "Ask before deciding.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.some((event) => event.type === "user-input.requested"),
+                "Ask User request was not projected.",
+              ),
+            );
+            const askEvent = events.find((event) => event.type === "user-input.requested");
+            expect(askEvent?.payload).toMatchObject({
+              version: 1,
+              questions: [
+                {
+                  kind: "choice",
+                  id: "runtime",
+                  options: [{ label: "Pi" }, { label: "Future" }],
+                },
+              ],
+            });
+            expect(JSON.stringify(askEvent?.payload)).not.toContain("stable-pi");
+            yield* adapter.respondToUserInput(
+              askThreadId,
+              ApprovalRequestId.makeUnsafe(String(askEvent?.requestId)),
+              {
+                status: "answered",
+                answers: {
+                  runtime: {
+                    selectedOptionLabels: ["Pi"],
+                    note: "Keep the mature lifecycle.  ",
+                  },
+                },
+              },
+            );
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) => event.type === "turn.completed" && event.turnId === askTurn.turnId,
+                  ),
+                "Answered Ask User turn did not replan and settle.",
+              ),
+            );
+            const lateResponse = yield* Effect.exit(
+              adapter.respondToUserInput(
+                askThreadId,
+                ApprovalRequestId.makeUnsafe(String(askEvent?.requestId)),
+                {
+                  status: "answered",
+                  answers: { runtime: { selectedOptionLabels: ["Future"] } },
+                },
+              ),
+            );
+            expect(lateResponse._tag).toBe("Failure");
+            if (lateResponse._tag === "Failure") {
+              expect(Cause.pretty(lateResponse.cause)).toContain(
+                "Stale OmniMind ask_user response",
+              );
+            }
+            const disconnectedTurn = yield* adapter.sendTurn({
+              threadId: askThreadId,
+              input: "Ask again, then lose the presenter.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () => events.filter((event) => event.type === "user-input.requested").length === 2,
+                "Second Ask User request was not projected.",
+              ),
+            );
+            presenterLease?.release();
+            presenterLease = undefined;
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "user-input.resolved" &&
+                      event.turnId === disconnectedTurn.turnId &&
+                      (event.payload as any).settlement?.status === "unavailable",
+                  ),
+                "Presenter loss did not settle Ask User as unavailable.",
+              ),
+            );
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === disconnectedTurn.turnId,
+                  ),
+                "Unavailable Ask User turn did not terminate.",
+              ),
+            );
+            presenterLease = userInputPresenterRegistry.acquire("pi-adapter-test-reload", 1);
+            mkdirSync(path.join(agentDir, "extensions"), { recursive: true });
+            writeFileSync(
+              path.join(agentDir, "extensions", "same-named-ask-tool.ts"),
+              [
+                'import { Type } from "typebox";',
+                "export default function setup(pi) {",
+                "  pi.registerTool({",
+                '    name: "ask_user",',
+                '    label: "Foreign Ask User",',
+                '    description: "Must never acquire Product Ask authority.",',
+                "    parameters: Type.Object({}),",
+                '    execute: async () => ({ content: [{ type: "text", text: "foreign" }] }),',
+                "  });",
+                "}",
+              ].join("\n"),
+            );
+            expect(yield* adapter.reloadSessionResources!(askThreadId)).toBe("reloaded");
+            const collisionTurn = yield* adapter.sendTurn({
+              threadId: askThreadId,
+              input: "Continue after a same-name Extension appears.",
+              attachments: [],
+              modelSelection: { provider: "omnimind", model: "local/safe-model" },
+            });
+            yield* Effect.promise(() =>
+              waitForTestCondition(
+                () =>
+                  events.some(
+                    (event) =>
+                      event.type === "turn.completed" && event.turnId === collisionTurn.turnId,
+                  ),
+                "Same-name collision turn did not settle.",
+              ),
+            );
+            yield* adapter.stopSession(askThreadId);
+            yield* Fiber.interrupt(eventsFiber);
+          }).pipe(Effect.provide(layer)),
+        ),
+      );
+
+      expect(piRequestToolNames(requestBodies[0])).not.toContain("ask_user");
+      expect(piRequestToolNames(requestBodies[1]).filter((name) => name === "ask_user")).toEqual([
+        "ask_user",
+      ]);
+      expect(requestBodies).toHaveLength(5);
+      const toolResult = JSON.parse(
+        requestBodies[2].messages.find((message: any) => message.role === "tool")?.content ?? "{}",
+      );
+      expect(toolResult).toEqual({
+        version: 1,
+        requestId: expect.any(String),
+        status: "answered",
+        answers: [
+          {
+            questionId: "runtime",
+            selectedValues: ["stable-pi"],
+            note: "Keep the mature lifecycle.  ",
+          },
+        ],
+      });
+      expect(piRequestToolNames(requestBodies[4])).not.toContain("ask_user");
+    } finally {
+      presenterLease?.release();
       vi.restoreAllMocks();
       rmSync(serverRoot, { recursive: true, force: true });
     }
@@ -1015,6 +1272,61 @@ function piOpenAiTaskToolCallResponse() {
       })}`,
       `data: ${JSON.stringify({
         id: "chatcmpl-task",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [{ index: 0, delta: {}, finish_reason: "tool_calls" }],
+      })}`,
+      "data: [DONE]",
+      "",
+    ].join("\n\n"),
+    { headers: { "content-type": "text/event-stream" } },
+  );
+}
+
+function piOpenAiAskUserToolCallResponse() {
+  return new Response(
+    [
+      `data: ${JSON.stringify({
+        id: "chatcmpl-ask-user",
+        object: "chat.completion.chunk",
+        created: 1,
+        model: "safe-model",
+        choices: [
+          {
+            index: 0,
+            delta: {
+              role: "assistant",
+              tool_calls: [
+                {
+                  index: 0,
+                  id: "call-ask-user",
+                  type: "function",
+                  function: {
+                    name: "ask_user",
+                    arguments: JSON.stringify({
+                      questions: [
+                        {
+                          type: "choice",
+                          id: "runtime",
+                          prompt: "Which runtime should be primary?",
+                          options: [
+                            { value: "stable-pi", label: "Pi" },
+                            { value: "future-engine", label: "Future" },
+                          ],
+                        },
+                      ],
+                    }),
+                  },
+                },
+              ],
+            },
+            finish_reason: null,
+          },
+        ],
+      })}`,
+      `data: ${JSON.stringify({
+        id: "chatcmpl-ask-user",
         object: "chat.completion.chunk",
         created: 1,
         model: "safe-model",

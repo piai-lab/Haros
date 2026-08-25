@@ -116,6 +116,7 @@ import { ProviderAdapterRegistry } from "./provider/Services/ProviderAdapterRegi
 import { ProviderExecutionCapabilities } from "./provider/Services/ProviderExecutionCapabilities";
 import { ProviderHealth } from "./provider/Services/ProviderHealth";
 import { ProviderService } from "./provider/Services/ProviderService";
+import { userInputPresenterRegistry } from "./provider/userInputPresenterRegistry";
 import { listProviderUsage } from "./providerUsage";
 import { UsageHistory } from "./usageHistory/UsageHistory";
 import { ProfileStatsQuery } from "./profileStats";
@@ -1219,6 +1220,23 @@ const makeWsRpcHandlersLayer = () =>
             bufferLiveUiStream(orchestrationEngine.streamDomainEvents, {
               label: "orchestration.domain-events",
             }),
+          ),
+        [WS_METHODS.orchestrationUserInputPresenter]: (input, { clientId }) =>
+          streamAdmission.guard(
+            clientId,
+            { key: "orchestration.user-input.presenter" },
+            Stream.fromEffect(
+              Effect.acquireRelease(
+                Effect.sync(() =>
+                  userInputPresenterRegistry.acquire(String(clientId), input.version),
+                ),
+                (lease) => Effect.sync(() => lease.release()),
+              ),
+            ).pipe(
+              Stream.flatMap(() =>
+                Stream.concat(Stream.succeed({ status: "ready" as const }), Stream.never),
+              ),
+            ),
           ),
 
         [WS_METHODS.projectsListDirectories]: (input) =>
