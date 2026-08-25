@@ -3657,9 +3657,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           type: "thread.started",
           payload: { providerThreadId: runtime.session.sessionId },
         } satisfies ProviderRuntimeEvent);
-        const initialUsage = normalizeTokenUsage(
+        const initialUsage = normalizePiTokenUsage(
           runtime.session.getSessionStats(),
           runtime.session.model?.contextWindow,
+          undefined,
+          true,
         );
         context.lastKnownTokenUsage = initialUsage;
         if (initialUsage) {

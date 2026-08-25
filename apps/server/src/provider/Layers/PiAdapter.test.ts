@@ -62,7 +62,7 @@ describe("normalizePiTokenUsage", () => {
     ({
       tokens: { input, cacheRead, cacheWrite, output, total },
       contextUsage: undefined,
-    }) as Parameters<typeof normalizePiTokenUsage>[0];
+    }) as unknown as Parameters<typeof normalizePiTokenUsage>[0];
 
   it("normalizes cumulative cache read/write and reset-aware last-request deltas", () => {
     const first = normalizePiTokenUsage(stats(100, 60, 20, 30, 210), undefined, undefined, true);
