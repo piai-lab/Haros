@@ -2,21 +2,13 @@
 
 ## 当前状态
 
-当前没有活动中的产品施工列车、并发 owner 冲突或待续分支。新任务从维护者的最新请求开始，先读取根 [`README.md`](README.md) 与对应 [`architecture/`](architecture/README.md) owner；不要续跑历史 Ask User、Usage Insights、Tool/Timeline、i18n、Model services 或 Synara adoption 的旧阶段计划。
+当前唯一施工列车是 `codex/simplify-web-test-owners`：保持产品行为不变，把 Web/Browser 断言迁回 pure policy、controller、focused component 等真实 owner，并把 `ChatView.browser.tsx` 收窄为跨 owner 接线证明。没有并发 owner 冲突或其他待合并工作树。
 
-主线是唯一工作基线。当前安装版、历史 DMG、测试计数、Provider probe 与 packaged journey 只在精确证据需要时从 Git 或对应 research owner查找，不在本文件维护镜像。
+Source candidate 已将 ChatView browser suite 从 174 项收窄到 134 项；顺序运行与固定 seed shuffled 运行均为 134/134，Web unit 4200/4200、typecheck、build 与 release legal metadata 均绿色。迁出的 owner gate 冷启动约 0.1–6 秒；保留的真正 ChatView integration 仍需约 40 秒冷 import，原因是 500KB 的生产 `ChatView.tsx`，本轮 stop-loss 明确不借测试治理拆整个产品组件。
 
 ## 下一动作
 
-等待维护者提出新的具体目标。开始后只在这里记录：
-
-- 当前唯一用户结果；
-- 正在修改的 sole owner；
-- 真实并发或同文件冲突；
-- 会阻止继续施工的外部依赖、安全或产品分叉；
-- 一个可观察的下一动作。
-
-没有这些事实时保持本文件简短，不把已完成工作、SHA、artifact hash、测试流水或长期架构复制回来。
+下一动作是推送精确 source SHA，从该 SHA clean clone 构建并以 fresh task-only profile 完成代表性的 Chat/Ask/Timeline packaged smoke。绿色后非 force 合并到 `main`、推送，并删除本地与远程任务分支；失败则只回滚对应 owner 迁移，不引入 timeout、串行 allowlist 或第二测试语义。
 
 ## Stop-loss
 
