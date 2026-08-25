@@ -2,11 +2,11 @@
 
 > 初版日期：2026-08-22；Gate A 重审：2026-08-25
 >
-> 当前 fork lineage：[`@mrclrchtr/supi-ask-user@5.0.0`](https://www.npmjs.com/package/@mrclrchtr/supi-ask-user/v/5.0.0) / [`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)。减法 feasibility slice 已 GO，但它仍不是 adopted dependency，也不是自动追更授权。
+> 当前 fork lineage：[`@mrclrchtr/supi-ask-user@5.0.0`](https://www.npmjs.com/package/@mrclrchtr/supi-ask-user/v/5.0.0) / [`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)。减法 lineage 已 source-adopted 为 private `@omnimind/om-ask@5.0.0-omnimind.1`；禁止 direct install，也不构成自动追更授权。
 >
-> 当前 OmniMind source 观察起点：`14fa9f3e93048d51dc8e3d9d81812418a3590cf2`；fork feasibility source commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`
+> 当前 OmniMind source 观察起点：`14fa9f3e93048d51dc8e3d9d81812418a3590cf2`；fork feasibility commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`；source activation commit：`36e3bec7e789122c731028c1a8b791a68a6c1fea`
 >
-> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` private fork feasibility kernel 已建立并判 GO；canonical answer/controller 与既有 Composer Question source slice 已获授权并实施，并完成 exact-SHA 安装版 startup/reopen。Tool 注册、public Ask schema、structured Host/Pi lifecycle、live 与 packaged Ask continuation 仍未实施。
+> 当前状态：Gate A 已重审；没有候选获准原装采用。完整 Gate B source integration 已实施：canonical contract、Composer projection、presenter lease、Host bridge、Pi barrier、同名 provenance、terminal/late/restart fencing 与唯一 bundled Tool registration均在 source 中闭合。MiMo/DeepSeek live 与 exact pushed-SHA packaged Ask continuation仍未闭合，因此当前不是 packaged candidate或 Release。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -27,9 +27,10 @@
 ```yaml
 product: OmniMind Ask User
 fork_package: "@omnimind/om-ask"
-fork_version: "5.0.0-omnimind.feasibility.0"
-fork_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
-fork_stage: pushed_source_candidate_unregistered
+fork_version: "5.0.0-omnimind.1"
+fork_feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
+activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
+fork_stage: source_integrated_packaged_pending
 runtime_tool: ask_user
 conditional_runtime_lineage:
   package: "@mrclrchtr/supi-ask-user@5.0.0"
@@ -41,7 +42,7 @@ conditional_runtime_lineage:
   npm_integrity: sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==
   npm_shasum: cabb06df40ab95be1a67b4f3b32c83bc257ea38a
   tgz_sha256: d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e
-  evidence: exact_source_matched_gate_b_feasibility_go_not_adopted
+  evidence: exact_source_matched_subtractive_lineage_adopted
   fork_shape: subtractive_not_narrow
   direct_install: forbidden
 primary_donor:
@@ -62,21 +63,49 @@ patch_inventory:
   - P5_lifecycle_and_same-turn_barrier
   - P6_truthful_result_and_context
   - P7_provenance_reload_and_collision
+pi_barrier:
+  package: "@earendil-works/pi-agent-core@0.84.2"
+  patch: "patches/@earendil-works%2Fpi-agent-core@0.84.2.patch"
+  patch_sha256: c63f6877299935fd9ee85c05b81d9e3f571f640704ff85a7f8e03209620e8e78
+  delete_when: upstream_provides_equivalent_preflight_barrier
 feasibility_slice:
   decision: go
-  retained_source_modules: [types, normalize, controller, lock, structured_result, host_neutral_kernel]
-  deleted_owners: [tui, transcript, supi_core, config, events, timer, terminal_session_helpers, tool_registration, public_schema, prompt_guidance]
-  fork_tests: 64
-  registered: false
-  model_exposed: false
+  retained_source_modules:
+    [types, normalize, controller, lock, structured_result, host_neutral_kernel]
+  deleted_upstream_owners:
+    [
+      tui,
+      transcript,
+      supi_core,
+      config,
+      events,
+      timer,
+      terminal_session_helpers,
+      upstream_registration,
+      upstream_schema,
+      upstream_prompt_guidance,
+    ]
+  omnimind_replacements:
+    [
+      product_schema,
+      tool_definition,
+      host_bridge,
+      presenter_lease,
+      canonical_composer,
+      pi_barrier,
+      provenance_gate,
+    ]
+  fork_tests: 71
+  registered: presenter_and_provenance_gated_omnimind_agent_only
+  model_exposed: true_only_when_registered
   canonical_contract_connected: true
   composer_projection_connected: true
-  fork_shipped: false
+  fork_shipped: pending_exact_packaged_scan
   canonical_ui_installed_candidate: true
-status: gate_b_contract_and_composer_source_slice_tool_registration_forbidden
+status: gate_b_source_integrated_live_and_packaged_pending
 ```
 
-只有完整 Gate B runtime/activation/production gates 获批并闭合后，本 block 才能改为 adopted upstream base、runtime registration、shipped artifact hashes、Pi journey 与生产证据等级；不能把当前 contract/UI source slice 或 feasibility kernel 冒充运行版本。
+当前 block 已记录 source adoption与 gated runtime registration，但不能在 MiMo/DeepSeek和 exact packaged journey闭合前填入 shipped artifact hash、packaged candidate或 released等级。
 
 ### 0.3 每轮必须产出的结论
 
@@ -97,18 +126,18 @@ status: gate_b_contract_and_composer_source_slice_tool_registration_forbidden
 
 未来每轮 intake 必须从以下已证明边界出发，不能重新把删除项 merge 回来：
 
-| Surface | Current fork baseline | Update rule |
-|---|---|---|
-| source ancestry | supi exact `ce8af5f…`；fork source `a96c60256…` | 每个 retained hunk 必须继续映射 exact upstream module/test |
-| domain/controller | 选择/文本正交、stable IDs/values、navigation、comments、ordered structured outcome、cancel/abort terminal | 优先吃 upstream bugfix；若 controller/normalize 连续大面积冲突，回 Gate A |
-| recommendation | metadata only；零默认选择、零文本预填 | 任何恢复 preselection/prefill 的更新拒绝 |
-| text | 不 trim、不 Unicode rewrite、不静默归并 | blank validation 可检查但不能改写原值 |
-| limits | 只保留“至少一题、choice 至少一个 authored option”的语义有效性；无 product max | transport/security guard 未来由 canonical contract owner 明确，不能回写 guidance cap |
-| runtime shell | Host-neutral interaction port、lease lock、pre/in-flight abort、late settlement fence | 不是 Pi registration/Host bridge；不能在这里偷接 composition |
-| result | structured details only | model summary、Timeline receipt 与 selected-only context 归未来产品 owner |
-| dependencies | runtime dependencies = 0 | 不重新引入 `supi-core`、TUI 或完整 lifecycle package |
-| registration/activation | none | `pi.extensions`、ToolDefinition、prompt、public schema 未经新授权禁止出现 |
-| tests | upstream 9/152 baseline；feasibility fork 5/61；当前 fork 5/64；55 preserve/adapt、9 reverse、88 delete | 新增 3 项只保护 OmniMind custom/note delta；不能用 fork tests 替代作者 152 |
+| Surface                 | Current fork baseline                                                                                        | Update rule                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| source ancestry         | supi exact `ce8af5f…`；feasibility `a96c60256…`；activation `36e3bec7e…`                                     | 每个 retained hunk 必须继续映射 exact upstream module/test                           |
+| domain/controller       | 选择/文本正交、stable IDs/values、navigation、comments、ordered structured outcome、cancel/abort terminal    | 优先吃 upstream bugfix；若 controller/normalize 连续大面积冲突，回 Gate A            |
+| recommendation          | metadata only；零默认选择、零文本预填                                                                        | 任何恢复 preselection/prefill 的更新拒绝                                             |
+| text                    | 不 trim、不 Unicode rewrite、不静默归并                                                                      | blank validation 可检查但不能改写原值                                                |
+| limits                  | 只保留“至少一题、choice 至少一个 authored option”的语义有效性；无 product max                                | transport/security guard 未来由 canonical contract owner 明确，不能回写 guidance cap |
+| runtime shell           | Host-neutral interaction port、lease lock、pre/in-flight abort、late settlement fence                        | package不自注册；Server composition/Host bridge是唯一 consumer                       |
+| result                  | deterministic JSON content +同构 structured details                                                          | Timeline receipt继续归 canonical Product owner                                       |
+| dependencies            | runtime dependencies = 0                                                                                     | 不重新引入 `supi-core`、TUI 或完整 lifecycle package                                 |
+| registration/activation | bundled OmniMind Agent only；compatible presenter + unique product provenance双门；stock Pi/AgentGateway均无 | 后续更新不得增加第二 Tool、Setting或activation control plane                         |
+| tests                   | upstream 9/152 baseline；feasibility fork 5/61；current fork 6/71；55 preserve/adapt、9 reverse、88 delete   | fork新增测试保护OmniMind Tool/schema/result；不能用71替代作者152                     |
 
 Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposition 只看 [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md) §13.1；本文把它转成未来 update gate，不建立第二 source decision。
 
@@ -211,6 +240,7 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 
 ```md
 ## Intake run identity
+
 - date:
 - operator:
 - workspace:
@@ -227,22 +257,22 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 
 ### 4.1 必须记录
 
-| 字段 | 证据 |
-| --- | --- |
-| package name/version | npm registry exact version metadata |
-| repository + package path | package metadata + source tree |
-| exact commit | npm `gitHead` 或 SLSA provenance；无则必须说明 source/artifact 不能直接绑定 |
-| tarball URL | registry exact tarball，不用 `latest` alias |
-| integrity / shasum | registry metadata |
-| downloaded SHA-256 | 本地只读 artifact hash |
-| license | exact source 与 artifact 中法定文件 |
-| author/maintainer | package/repository metadata；不能只看用户名猜身份 |
-| provenance | npm provenance / workflow / signing facts |
-| publish time | exact version time |
-| files / unpacked size | artifact inventory |
-| direct/peer/optional deps | exact manifest 与 lock evidence |
-| scripts / binaries / install hooks | exact manifest |
-| tests shipped/source-only | source/artifact 分开记录 |
+| 字段                               | 证据                                                                        |
+| ---------------------------------- | --------------------------------------------------------------------------- |
+| package name/version               | npm registry exact version metadata                                         |
+| repository + package path          | package metadata + source tree                                              |
+| exact commit                       | npm `gitHead` 或 SLSA provenance；无则必须说明 source/artifact 不能直接绑定 |
+| tarball URL                        | registry exact tarball，不用 `latest` alias                                 |
+| integrity / shasum                 | registry metadata                                                           |
+| downloaded SHA-256                 | 本地只读 artifact hash                                                      |
+| license                            | exact source 与 artifact 中法定文件                                         |
+| author/maintainer                  | package/repository metadata；不能只看用户名猜身份                           |
+| provenance                         | npm provenance / workflow / signing facts                                   |
+| publish time                       | exact version time                                                          |
+| files / unpacked size              | artifact inventory                                                          |
+| direct/peer/optional deps          | exact manifest 与 lock evidence                                             |
+| scripts / binaries / install hooks | exact manifest                                                              |
+| tests shipped/source-only          | source/artifact 分开记录                                                    |
 
 ### 4.2 Source/artifact 无法绑定时
 
@@ -265,20 +295,20 @@ Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposi
 
 从当前 adopted base 到候选 exact source，至少按以下维度分类：
 
-| Surface | 必查内容 | 典型风险 |
-| --- | --- | --- |
-| tool schema | questions/options/types/required/freeform | 人为 cap、字段假支持、provider incompatibility |
-| prompt | usage guidance、examples | 1–3 题限制、模型 author sentinel、Ask/Approval 混淆 |
-| domain state | selections/drafts/notes/review | 自由输入丢失、单多选错误、静默 trim |
-| result | serialization/context rewrite | 未选项污染、字段丢失、历史错改 |
-| UI | TUI custom component、responsive、keyboard | 不能直接替代 Host UI，但可提供行为与 test donor |
-| RPC/headless | request/response/capability fallback | silent downgrade、signal 缺失、one-scalar collapse |
-| lifecycle | executionMode、signal、timeout、settlement | sibling side effect、double resolve、late answer |
-| recovery | replay/restart/session hooks | 伪造 vanished promise、跨 Thread cleanup |
-| registration | commands/skills/settings/listeners | 第二入口、ambient writer/control plane |
-| dependencies | direct/transitive/peer | supply-chain、bundle、license、runtime mismatch |
-| packaging | exports/files/assets/build | source retained ≠ shipped ≠ activated |
-| tests | additions/deletions/coverage intent | 作者保护网退化或只测 happy path |
+| Surface      | 必查内容                                   | 典型风险                                            |
+| ------------ | ------------------------------------------ | --------------------------------------------------- |
+| tool schema  | questions/options/types/required/freeform  | 人为 cap、字段假支持、provider incompatibility      |
+| prompt       | usage guidance、examples                   | 1–3 题限制、模型 author sentinel、Ask/Approval 混淆 |
+| domain state | selections/drafts/notes/review             | 自由输入丢失、单多选错误、静默 trim                 |
+| result       | serialization/context rewrite              | 未选项污染、字段丢失、历史错改                      |
+| UI           | TUI custom component、responsive、keyboard | 不能直接替代 Host UI，但可提供行为与 test donor     |
+| RPC/headless | request/response/capability fallback       | silent downgrade、signal 缺失、one-scalar collapse  |
+| lifecycle    | executionMode、signal、timeout、settlement | sibling side effect、double resolve、late answer    |
+| recovery     | replay/restart/session hooks               | 伪造 vanished promise、跨 Thread cleanup            |
+| registration | commands/skills/settings/listeners         | 第二入口、ambient writer/control plane              |
+| dependencies | direct/transitive/peer                     | supply-chain、bundle、license、runtime mismatch     |
+| packaging    | exports/files/assets/build                 | source retained ≠ shipped ≠ activated               |
+| tests        | additions/deletions/coverage intent        | 作者保护网退化或只测 happy path                     |
 
 ### 5.1 每个 diff hunk 的 disposition
 
@@ -433,14 +463,14 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 每轮填：
 
 | Patch | upstream change | keep / rewrite / delete | reason | tests | new responsibility |
-| --- | --- | --- | --- | --- | --- |
-| P1 |  |  |  |  |  |
-| P2 |  |  |  |  |  |
-| P3 |  |  |  |  |  |
-| P4 |  |  |  |  |  |
-| P5 |  |  |  |  |  |
-| P6 |  |  |  |  |  |
-| P7 |  |  |  |  |  |
+| ----- | --------------- | ----------------------- | ------ | ----- | ------------------ |
+| P1    |                 |                         |        |       |                    |
+| P2    |                 |                         |        |       |                    |
+| P3    |                 |                         |        |       |                    |
+| P4    |                 |                         |        |       |                    |
+| P5    |                 |                         |        |       |                    |
+| P6    |                 |                         |        |       |                    |
+| P7    |                 |                         |        |       |                    |
 
 若需要 P8，Gate A 报告必须单列：上游原行为、精确缺口、为何 P1–P7 无法承担、全链影响、长期成本、回滚方式。维护者未确认前停止施工。
 
@@ -450,18 +480,18 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 每个 upstream module/feature 必须区分：
 
-| Feature | source retained | shipped bytes | runtime activated | owner |
-| --- | --- | --- | --- | --- |
-| core domain/validation |  |  |  | fork |
-| author tests |  | n/a | n/a | source maintenance |
-| TUI component |  |  |  | upstream-only / disabled |
-| slash commands |  |  |  | disabled |
-| settings/config |  |  |  | disabled |
-| notifications |  |  |  | disabled |
-| remote/RPC |  |  |  | structured Host seam only |
-| recovery/replay |  |  |  | Product stale semantics |
-| tool definition |  |  |  | fork/Pi Registry |
-| Workbench UI | n/a | OmniMind | OmniMind | canonical Workbench |
+| Feature                | source retained | shipped bytes | runtime activated | owner                     |
+| ---------------------- | --------------- | ------------- | ----------------- | ------------------------- |
+| core domain/validation |                 |               |                   | fork                      |
+| author tests           |                 | n/a           | n/a               | source maintenance        |
+| TUI component          |                 |               |                   | upstream-only / disabled  |
+| slash commands         |                 |               |                   | disabled                  |
+| settings/config        |                 |               |                   | disabled                  |
+| notifications          |                 |               |                   | disabled                  |
+| remote/RPC             |                 |               |                   | structured Host seam only |
+| recovery/replay        |                 |               |                   | Product stale semantics   |
+| tool definition        |                 |               |                   | fork/Pi Registry          |
+| Workbench UI           | n/a             | OmniMind      | OmniMind          | canonical Workbench       |
 
 “没有入口按钮”不能证明 runtime inactive；必须检查 imports、registration、event listener、timer、filesystem writer、network channel 与 process singleton。
 
@@ -643,6 +673,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 # Ask User upstream intake decision — <date>
 
 ## Outcome first
+
 - recommendation:
 - user-visible gain:
 - strongest reason to reject:
@@ -650,32 +681,39 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - requested maintainer decision:
 
 ## Exact identity
+
 - current adopted upstream:
 - candidate upstream:
 - artifact integrity/provenance:
 - license/dependency delta:
 
 ## What actually changed
+
 | area | user result | hidden lifecycle | disposition |
 
 ## P1–P7
+
 | patch | keep/rewrite/delete | evidence | risk |
 
 ## Owner and activation delta
+
 - new owner/state/listener/timer/writer:
 - source/shipped/activated delta:
 
 ## Falsifiers
+
 - author tests:
 - focused tests:
 - live required:
 - packaged required:
 
 ## Rollback
+
 - exact rollback unit:
 - persistent data impact:
 
 ## Status
+
 - research only / source candidate / packaged candidate / released
 ```
 
@@ -738,22 +776,17 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 ## 15. 当前开放事项
 
-fork placement 与 lineage stop-loss 已由 feasibility slice 闭合为 GO；canonical answer/controller 与 quiet Composer source slice 已闭合其 focused tests。以下仍是完整 Gate B runtime/activation 的真实开放项，不能被上述局部绿色冒充关闭：
+fork placement、canonical contract、typed settlement、Host bridge、presenter lease、Pi barrier、same-name provenance、restart stale、quiet Composer projection和最终Tool activation已在 source层闭合。以下只剩 production proof，不能被 source绿色冒充关闭：
 
-- Tool registration、model exposure、public Ask schema 与 Pi composition 仍未授权；
-- canonical terminal settlement 仍需从 inherited empty-answer cancel 收回 typed submit/cancel/abort/timeout/unavailable/stale；
-- final public request fields 只有在 Preview/Notes/Review 等全链兑现后才可公开；
-- exact Pi `0.84.2` scheduler 已知为原顺序整批 sequential；待实施的是最窄 Ask-first + batch-terminate + answer-after-replan barrier seam；
-- Product State 对 restart stale 与 draft presentation 的最终形状；
-- same-name sourceInfo/instance provenance 的稳定 seam；
-- selected-only context rewrite 是否值得采用及 exact safe boundary；
-- abnormal payload bytes/render thresholds 的测量；
-- Agent/Chat prompt guidance 与 live calling behavior；
-- cross-provider richer-field compatibility；
-- production build/package/export/SBOM/license assembly；
-- full packaged Ask continuation/safety proof 与 production adoption。
+- Xiaomi MiMo与DeepSeek各一次真实 `ask_user` schema call、Composer answer、structured Tool result和模型 replan；
+- 真实 Provider对 `oneOf` schema、multiple/custom/note与不确定性调用行为的兼容证据；
+- exact pushed SHA clean-clone DMG、SBOM/LICENSE、fork与Pi core patch进入shipped bytes的扫描；
+- fresh task-only `userData`、home与Provider private home下的single/multi/custom/note/Preview/Review/Cancel；
+- pending中Stop Turn、最后presenter消失、Server终止/reopen stale、同名Extension collision、headless no-tool与零残留进程；
+- Desktop/mobile几何、keyboard/VoiceOver/IME等最终运行态证据；
+- 正式Release/update authority（不由普通Gate B source integration自动获得）。
 
-这些是待实施/待验证，不是产品应被限制的理由。
+这些是待验证，不是产品应被限制的理由。任何 live/package失败都先归因；不得降级canonical合同、恢复普通文本 fallback或把失败渠道写成静态Provider blacklist。
 
 ## 16. 零记忆机器摘要
 
@@ -765,7 +798,7 @@ general_gate_authority: PI-ECOSYSTEM-INTAKE.md
 conditional_runtime_lineage:
   package: "@mrclrchtr/supi-ask-user@5.0.0"
   commit: ce8af5f57304ad114319aa75c00920f029ceb8e7
-  evidence: gate_b_feasibility_go_not_adopted
+  evidence: exact_source_matched_subtractive_lineage_adopted
   direct_install: forbidden
   fork_shape: subtractive_not_narrow
 primary_donor:
@@ -778,24 +811,40 @@ bounded_donors:
   correctness_tests: "@qmahyar/pi-ask@1.4.0"
   sentinel: "pi-tian-ask-user@1.0.0"
 current_fork:
-  package: "@omnimind/om-ask@5.0.0-omnimind.feasibility.0"
-  commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
-  status: pushed_source_candidate_unregistered
+  package: "@omnimind/om-ask@5.0.0-omnimind.1"
+  feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
+  activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
+  status: source_integrated_packaged_and_live_pending
   feasibility: go
-  tests: 64
+  tests: 71
   runtime_dependencies: 0
-  registered: false
-  model_exposed: false
+  registered: presenter_and_provenance_gated_omnimind_agent_only
+  model_exposed: true_only_when_registered
   canonical_contract_connected: true
   composer_projection_connected: true
-  fork_shipped: false
+  fork_shipped: pending_exact_packaged_scan
   canonical_ui_installed_candidate: true
+pi_barrier:
+  package: "@earendil-works/pi-agent-core@0.84.2"
+  patch_sha256: c63f6877299935fd9ee85c05b81d9e3f571f640704ff85a7f8e03209620e8e78
+  delete_when: upstream_provides_equivalent_preflight_barrier
 update_policy:
   mode: manual_exact-source
   latest_tracking: forbidden
   preserve: [ancestry, license, author_tests, mature_behavior]
   prefer: [ux_improvements, lifecycle_fixes, test_strengthening, patch_deletion]
-  reject: [arbitrary_caps, freeform_disable, fake_fields, ask_as_approval, sibling_side_effects, fake_restart_recovery, name-only_provenance, no-ui_guessing, second_control_plane]
+  reject:
+    [
+      arbitrary_caps,
+      freeform_disable,
+      fake_fields,
+      ask_as_approval,
+      sibling_side_effects,
+      fake_restart_recovery,
+      name-only_provenance,
+      no-ui_guessing,
+      second_control_plane,
+    ]
 gates:
   - U0_workspace_authority
   - U1_exact_source_artifact_rights

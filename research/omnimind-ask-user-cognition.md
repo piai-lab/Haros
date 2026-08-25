@@ -2,9 +2,9 @@
 
 > Gate A 重审 / Gate B fork feasibility 日期：2026-08-25
 >
-> 状态：`source-matched / Gate-B-feasibility-GO / canonical-contract-and-composer-source-slice / not-registered / not-adopted`
+> 状态：`Gate-B-source-integrated / presenter-gated-product-registration / packaged-and-live-proof-pending / not-released`
 >
-> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已通过减法 fork 可行性门，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。维护者现已授权 canonical response/controller 与既有 Composer Question projection 的 Gate B source slice，但仍未授权 Tool registration、model exposure、Pi composition 或 public schema。**
+> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。维护者已授权并完成 source-level Gate B：唯一 bundled Pi-native `ask_user`、canonical response/settlement、Composer Question、presenter lease、barrier、provenance 与 stale fencing 已接入；MiMo/DeepSeek 和 exact pushed-SHA packaged App 仍是未闭合的交付门。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的未注册 Host-neutral fork kernel，以及 Product-owned canonical answer/controller 和 Composer Question source slice；后者已进入 exact-SHA 本机安装 candidate，但这不表示 `ask_user` 已注册、fork 已进入 shipped bytes、模型已能调用、public Ask schema 已公开或产品已发布。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。模型只在兼容 presenter lease 存在且 bundled provenance 唯一时看到 `ask_user`；这项 source integration 尚未由 MiMo/DeepSeek 和 fresh packaged App 证明，也不等于公开 Release。
 
 ## 0. 先给结论
 
@@ -28,7 +28,7 @@ OmniMind 应把 `ask_user` 做成与 Todo 同等级的 bundled Pi-native Session
 - 不是“upstream 很成熟”的背书；
 - 不是“几处窄 patch 就能产品化”；
 - 不是未来自动追 `latest` 的授权；
-- 不是完整 Gate B 产品接入授权；已获授权并完成的只有 fork feasibility slice；
+- 历史上先只授权 fork feasibility；维护者随后明确授权了本文记录的完整 Gate B source integration；
 - 若下文 stop-loss 被触发，必须重新选型，而不是为保住旧判断继续堆 adapter。
 
 ### 0.3 最重要的反直觉
@@ -37,17 +37,17 @@ OmniMind 应把 `ask_user` 做成与 Todo 同等级的 bundled Pi-native Session
 
 ### 0.4 最终分工
 
-| 职责 | 当前裁决 | 为什么 |
-|---|---|---|
-| Product/contract owner | OmniMind canonical User Input | 跨 Codex、Claude、Pi 与未来 Engine，共用一种产品语义 |
-| UI owner | Composer Question / Workbench | 第三方 TUI 不得定义能力上限或建立第二 UI |
-| Pi runtime fork lineage | 条件性选择 `supi-ask-user@5.0.0` exact source | runtime/domain 骨架最接近硬门；必须减法式 fork |
-| UX/test donor | `@geoqiao/pi-ask@1.3.0` + `eko24ive/pi-ask` ancestry | 最完整的 stable ID/value、freeform、notes、Review 与响应式行为测试 |
-| lifecycle donor | `@pi9/ask@0.4.2` | 无 UI 时从 active tools 移除、deadline、selected-only context、172 项测试 |
-| compatibility donor | `pi-ask-user@0.14.0` | 最长公开使用史、最多下载/社区 issue、Provider-friendly flat schema、signal/sequential |
-| correctness/test donor | `@qmahyar/pi-ask@1.4.0` | 证明 supi 的 shutdown/late/dispose 缺口可修，并提供 362 项测试；自身过新，不能冒充成熟母体 |
-| sentinel donor | `pi-tian-ask-user@1.0.0` | 拒绝模型重复 author “Other”的测试思路 |
-| 直接安装 | 全部拒绝 | 没有候选通过完整运行时硬门，也都会造成双 UI 或双 lifecycle |
+| 职责                    | 当前裁决                                             | 为什么                                                                                     |
+| ----------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Product/contract owner  | OmniMind canonical User Input                        | 跨 Codex、Claude、Pi 与未来 Engine，共用一种产品语义                                       |
+| UI owner                | Composer Question / Workbench                        | 第三方 TUI 不得定义能力上限或建立第二 UI                                                   |
+| Pi runtime fork lineage | 条件性选择 `supi-ask-user@5.0.0` exact source        | runtime/domain 骨架最接近硬门；必须减法式 fork                                             |
+| UX/test donor           | `@geoqiao/pi-ask@1.3.0` + `eko24ive/pi-ask` ancestry | 最完整的 stable ID/value、freeform、notes、Review 与响应式行为测试                         |
+| lifecycle donor         | `@pi9/ask@0.4.2`                                     | 无 UI 时从 active tools 移除、deadline、selected-only context、172 项测试                  |
+| compatibility donor     | `pi-ask-user@0.14.0`                                 | 最长公开使用史、最多下载/社区 issue、Provider-friendly flat schema、signal/sequential      |
+| correctness/test donor  | `@qmahyar/pi-ask@1.4.0`                              | 证明 supi 的 shutdown/late/dispose 缺口可修，并提供 362 项测试；自身过新，不能冒充成熟母体 |
+| sentinel donor          | `pi-tian-ask-user@1.0.0`                             | 拒绝模型重复 author “Other”的测试思路                                                      |
+| 直接安装                | 全部拒绝                                             | 没有候选通过完整运行时硬门，也都会造成双 UI 或双 lifecycle                                 |
 
 ## 1. 产品本质与维护者 taste
 
@@ -83,37 +83,34 @@ Ask User 不是“弹一个问题”。它是 Agent 在信息不足、存在多�
 - Pi runtime 已物理固定在 `0.84.2`，并支持 Session Extension、Tool provenance 与 per-tool `executionMode`；
 - Todo 已证明 bundled Pi-native first-class capability 的 owner 模式。
 
-### 2.2 部分存在但不能冒充完成
+### 2.2 已接入 source 但不能冒充 production proof
 
 - Composer Question 当前形状不等于未来合同上限；
-- RPC/primitive UI fallback 不等于 structured Host seam；
-- Tool 名叫 `ask_user` 不等于产品 Ask 已交付；
-- `executionMode: "sequential"` 不等于同轮副作用屏障；
-- session 中有冲突诊断不等于 provenance 已 fail closed；
-- 能在重启后重新显示问题不等于原 Tool Promise 被恢复。
+- Tool 已注册不等于 packaged App、真实 Provider 与发行物已经验收；
+- `executionMode: "barrier"` 只有 exact patch 与 agent-loop tests 能证明，名称本身不构成屏障；
+- bundled winner 还不够；当前实现枚举全部同名 Extension registration，任何重复都会移除 active Tool；
+- presenter reconnect 只建立新 lease，不会恢复已经消失的旧 Tool Promise。
 
-### 2.3 真正缺失
+### 2.3 当前仍缺的交付证据
 
-- 唯一 bundled `ask_user` Extension；
-- canonical schema/result 与 Composer Question 的完整无损映射；
-- Ask-first、同批终止、answer-after-replan；
-- Host request correlation、Abort/Cancel/late-answer fencing；
-- exact source provenance assertion；
-- restart stale 语义；
-- product-owned limits、i18n、telemetry 与 packaged journey。
+- Xiaomi MiMo 与 DeepSeek 的真实 schema call、Composer 回答、Tool result 与模型 replan；
+- exact pushed SHA clean-clone DMG、SBOM/LICENSE 与 shipped-byte 核验；
+- fresh isolated packaged App 的 single/multi/custom/note/Preview/Review/Cancel/Stop/close/restart/collision/headless 全链；
+- Desktop 800×520、mobile 430×820、VoiceOver/IME 等最终运行态证据；
+- 正式 Release/update authority（本任务不自动授权）。
 
 ## 3. Gate A 方法：什么算证据
 
 ### 3.1 证据等级
 
-| 等级 | 可证明什么 | 不能证明什么 |
-|---|---|---|
-| exact source/artifact | 实际 schema、代码、依赖、许可证、hash、发布内容 | 用户 journey 成熟 |
-| 作者测试 | 作者已意识到并保护的行为 | OmniMind Host 路径和真实 Session |
-| 真实 Pi 0.84.2 Session | 注册、active set、provenance、no-UI、batch 顺序 | 未实现的 Composer bridge |
-| issue/release history | 维护反应、真实 bug、发布稳定性 | 任一 bug 已在目标版本修复 |
-| stars/downloads | 发现优先级与使用信号 | 正确性、安全或兼容性 |
-| README/demo/TUI | 作者意图和 UX donor 线索 | runtime hard gate |
+| 等级                   | 可证明什么                                      | 不能证明什么                     |
+| ---------------------- | ----------------------------------------------- | -------------------------------- |
+| exact source/artifact  | 实际 schema、代码、依赖、许可证、hash、发布内容 | 用户 journey 成熟                |
+| 作者测试               | 作者已意识到并保护的行为                        | OmniMind Host 路径和真实 Session |
+| 真实 Pi 0.84.2 Session | 注册、active set、provenance、no-UI、batch 顺序 | 未实现的 Composer bridge         |
+| issue/release history  | 维护反应、真实 bug、发布稳定性                  | 任一 bug 已在目标版本修复        |
+| stars/downloads        | 发现优先级与使用信号                            | 正确性、安全或兼容性             |
+| README/demo/TUI        | 作者意图和 UX donor 线索                        | runtime hard gate                |
 
 ### 3.2 本轮实际做了什么
 
@@ -128,14 +125,14 @@ Ask User 不是“弹一个问题”。它是 Agent 在信息不足、存在多�
 
 ### 3.3 本轮 focused 结果
 
-| 候选 | 作者测试 | Pi 0.84.2 注册 | `executionMode` | no-UI 真实结果 |
-|---|---:|---|---|---|
-| supi 5.0.0 | 9 files / 152 tests，全部通过 | 注册且 active | sequential | 执行时抛错 |
-| qmahyar 1.4.0 | 15 / 362，全部通过 | 注册且 active | sequential | 执行时抛错 |
-| pi9 0.4.2 | 公开 repo 的同版本 snapshot：11 / 172，全部通过；npm `gitHead` 未能从公开 history 取回，非 artifact-exact 证据 | 注册，但 print Session 主动从 active set 移除 | sequential | 不向模型暴露工具 |
-| geoqiao 1.3.0 | 220 tests，全部通过 | 注册且 active | **缺失** | 返回 cancelled 结果并提示模型改用普通文本提问 |
-| pi-ask-user 0.14.0 | exact source，Bun 1.3.14：2 files / 82 tests，全部通过 | 注册且 active | sequential | 返回 `isError` fallback，内容仍提示普通文本提问 |
-| tian 1.0.0 | 12 tests，全部通过 | 注册且 active | sequential | 返回 cancelled fallback，要求普通文本再问 |
+| 候选               |                                                                                                       作者测试 | Pi 0.84.2 注册                                | `executionMode` | no-UI 真实结果                                  |
+| ------------------ | -------------------------------------------------------------------------------------------------------------: | --------------------------------------------- | --------------- | ----------------------------------------------- |
+| supi 5.0.0         |                                                                                  9 files / 152 tests，全部通过 | 注册且 active                                 | sequential      | 执行时抛错                                      |
+| qmahyar 1.4.0      |                                                                                             15 / 362，全部通过 | 注册且 active                                 | sequential      | 执行时抛错                                      |
+| pi9 0.4.2          | 公开 repo 的同版本 snapshot：11 / 172，全部通过；npm `gitHead` 未能从公开 history 取回，非 artifact-exact 证据 | 注册，但 print Session 主动从 active set 移除 | sequential      | 不向模型暴露工具                                |
+| geoqiao 1.3.0      |                                                                                            220 tests，全部通过 | 注册且 active                                 | **缺失**        | 返回 cancelled 结果并提示模型改用普通文本提问   |
+| pi-ask-user 0.14.0 |                                                         exact source，Bun 1.3.14：2 files / 82 tests，全部通过 | 注册且 active                                 | sequential      | 返回 `isError` fallback，内容仍提示普通文本提问 |
+| tian 1.0.0         |                                                                                             12 tests，全部通过 | 注册且 active                                 | sequential      | 返回 cancelled fallback，要求普通文本再问       |
 
 ## 4. 真实 Pi 语义：候选不能替 Host 解决的事
 
@@ -148,7 +145,7 @@ Pi `0.84.2` 实测：一批中只要有一个 sequential tool，整批按模型�
 [ask_user, side_effect] => ask:start -> ask:end -> side:start -> side:end
 ```
 
-即使 `ask_user` result 带 `terminate: true`，第二种情况下 sibling side effect 仍已执行；Pi 的 batch early termination 不是“某一个结果要求终止就立刻停”。因此产品必须增加：
+即使 `ask_user` result 带 `terminate: true`，第二种情况下 sibling side effect 仍已执行；Pi 的 batch early termination 不是“某一个结果要求终止就立刻停”。source integration 已增加：
 
 1. preflight 识别含 canonical Ask 的 batch；
 2. Ask-first：Ask 前面的 sibling side effect 也不得先执行；
@@ -156,7 +153,7 @@ Pi `0.84.2` 实测：一批中只要有一个 sequential tool，整批按模型�
 4. answer-after-replan：把回答加入真实 Tool result 后重新请求模型；
 5. 模型在新 turn 重新决定是否执行原 sibling，而不是自动续跑旧计划。
 
-这个责任属于 OmniMind/Pi composition seam，不属于某个问卷 TUI。
+这个责任由 pinned `@earendil-works/pi-agent-core@0.84.2` 的默认惰性 `executionMode: "barrier"` patch 承担，不按 Tool 名称特判；没有 barrier Tool 的 stock Pi 批次保持原路径。
 
 ### 4.2 同名 Tool provenance
 
@@ -208,21 +205,21 @@ geoqiao 的自动 recovery 正是反例：它有用户价值，但语义上是�
 
 ### 5.1 核心矩阵
 
-| 候选 | 维护/供应信号 | runtime 优点 | 关键反证 | Disposition |
-|---|---|---|---|---|
-| `@mrclrchtr/supi-ask-user@5.0.0` | repo 2026-04 创建；76 stars；发布活跃；npm SLSA；单 maintainer | stable IDs/values、choice/text、structured result、controller、lock、sequential、signal、cancel/abort、no-UI throw | 明称 pre-release；短期快速 major；发布后继续重构；依赖并捆绑 supi-core；tgz 缺 LICENSE；TUI-only；预选推荐；trim；1–10/2–12 caps | **条件性 fork 母体；禁止直装** |
-| `@qmahyar/pi-ask@1.4.0` | 2026-08 才建 repo；0 stars/forks/issues；无 npm SLSA | supi 派生；standalone；shutdown lock、dispose/late 测试更强；362 tests；artifact 有法律文件 | 无保留 Git ancestry；一次大导入；同样 TUI/caps/trim/preselect；仍带 config/events/labels；历史太短 | correctness/test donor，不作母体 |
-| `@geoqiao/pi-ask@1.3.0` | 新 namespace/repo，但明确保留 eko 历史；npm SLSA；220 tests | stable IDs/values、多题、freeform、notes、Review、RPC、响应式行为最完整 | 无 sequential；无 UI 退回模型；fake restart；commands/settings/skill/notifications/remote bus/replay；trim；TUI 状态深 | **首要 UX/test donor** |
-| `@eko24ive/pi-ask@1.2.0` | 2026-03 起、46 stars/15 forks、持续到 8 月；作者说明 chill maintenance | geoqiao 的真实成熟 ancestry | 与 geoqiao 已形成独立 continuation；母体更新 authority 分裂；同样 runtime 硬缺口 | lineage/evidence donor |
-| `@pi9/ask@0.4.2` | repo 2026-05；4 stars；172 tests；ask 线 7–8 月 | sequential、no-UI deactivation、deadline、signal、selected-only context、shutdown cleanup | tool 名是 `ask`；单问题；index-based selection；trim；domain 扩展会重写核心 | lifecycle donor |
-| `pi-ask-user@0.14.0` | 2026-02 起；142 stars/30 forks；最近月约 10k 下载；真实 issue/PR 最多 | `ask_user`、sequential、signal、Provider-friendly schema、广泛兼容 | 单问题、约 2k 行 TUI 单文件、stable IDs/values 弱、trim、primitive fallback；batch questions 仍是开放 PR | compatibility donor；不是母体 |
-| `pi-tian-ask-user@1.0.0` | 新、单 maintainer、测试少 | sequential、signal、内建 Other、拒绝重复 sentinel | choice-only；1–5/2–5 hard caps；label 作为结果；trim；fallback | sentinel donor |
-| `@d3ara1n/pi-ask-user@2.4.3` | 活跃 monorepo；12 stars；SLSA；仅少量 tests；artifact 缺 LICENSE | 多题/multi+freeform/notes/review/preview/Other | 无 sequential、忽略 signal、无 shutdown、生成 ID、label answer、2–4 schema guidance、TUI 单文件 | UX donor only |
-| `@nativepi/ask-user@1.0.0` | 新平台包 | sequential、NativePi UI connection | 被 NativePi 平台/React/icons 绑定；单题；推荐必填；生命周期不独立 | 拒绝 |
-| `@nguyenquangthai/pi-ask@0.1.14` | 新；有公开 crash issue 与待合 fix | 有基本交互 | 已知 multiline result 触发 terminal crash；版本与维护史不足 | 拒绝 |
-| `@zhushanwen/pi-ask-user@7.0.14` | 高版本号但无可核 repo/provenance | 表面功能多 | headless 会继续、不 sequential、caps、global handshake、无法审计 source | 拒绝 |
-| `@xynogen/pix-ask@0.2.22` | 新 | 多题 | 1–4/2–4 caps；multi 禁 freeform；依赖较多 | 拒绝 |
-| `@juicesharp/rpiv-ask-user-question@2.7.1` | suite 使用信号 | 丰富 TUI | 无 sequential/忽略 signal；prewarm/control plane/caps；owner 过宽 | 拒绝 |
+| 候选                                       | 维护/供应信号                                                          | runtime 优点                                                                                                       | 关键反证                                                                                                                         | Disposition                      |
+| ------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| `@mrclrchtr/supi-ask-user@5.0.0`           | repo 2026-04 创建；76 stars；发布活跃；npm SLSA；单 maintainer         | stable IDs/values、choice/text、structured result、controller、lock、sequential、signal、cancel/abort、no-UI throw | 明称 pre-release；短期快速 major；发布后继续重构；依赖并捆绑 supi-core；tgz 缺 LICENSE；TUI-only；预选推荐；trim；1–10/2–12 caps | **条件性 fork 母体；禁止直装**   |
+| `@qmahyar/pi-ask@1.4.0`                    | 2026-08 才建 repo；0 stars/forks/issues；无 npm SLSA                   | supi 派生；standalone；shutdown lock、dispose/late 测试更强；362 tests；artifact 有法律文件                        | 无保留 Git ancestry；一次大导入；同样 TUI/caps/trim/preselect；仍带 config/events/labels；历史太短                               | correctness/test donor，不作母体 |
+| `@geoqiao/pi-ask@1.3.0`                    | 新 namespace/repo，但明确保留 eko 历史；npm SLSA；220 tests            | stable IDs/values、多题、freeform、notes、Review、RPC、响应式行为最完整                                            | 无 sequential；无 UI 退回模型；fake restart；commands/settings/skill/notifications/remote bus/replay；trim；TUI 状态深           | **首要 UX/test donor**           |
+| `@eko24ive/pi-ask@1.2.0`                   | 2026-03 起、46 stars/15 forks、持续到 8 月；作者说明 chill maintenance | geoqiao 的真实成熟 ancestry                                                                                        | 与 geoqiao 已形成独立 continuation；母体更新 authority 分裂；同样 runtime 硬缺口                                                 | lineage/evidence donor           |
+| `@pi9/ask@0.4.2`                           | repo 2026-05；4 stars；172 tests；ask 线 7–8 月                        | sequential、no-UI deactivation、deadline、signal、selected-only context、shutdown cleanup                          | tool 名是 `ask`；单问题；index-based selection；trim；domain 扩展会重写核心                                                      | lifecycle donor                  |
+| `pi-ask-user@0.14.0`                       | 2026-02 起；142 stars/30 forks；最近月约 10k 下载；真实 issue/PR 最多  | `ask_user`、sequential、signal、Provider-friendly schema、广泛兼容                                                 | 单问题、约 2k 行 TUI 单文件、stable IDs/values 弱、trim、primitive fallback；batch questions 仍是开放 PR                         | compatibility donor；不是母体    |
+| `pi-tian-ask-user@1.0.0`                   | 新、单 maintainer、测试少                                              | sequential、signal、内建 Other、拒绝重复 sentinel                                                                  | choice-only；1–5/2–5 hard caps；label 作为结果；trim；fallback                                                                   | sentinel donor                   |
+| `@d3ara1n/pi-ask-user@2.4.3`               | 活跃 monorepo；12 stars；SLSA；仅少量 tests；artifact 缺 LICENSE       | 多题/multi+freeform/notes/review/preview/Other                                                                     | 无 sequential、忽略 signal、无 shutdown、生成 ID、label answer、2–4 schema guidance、TUI 单文件                                  | UX donor only                    |
+| `@nativepi/ask-user@1.0.0`                 | 新平台包                                                               | sequential、NativePi UI connection                                                                                 | 被 NativePi 平台/React/icons 绑定；单题；推荐必填；生命周期不独立                                                                | 拒绝                             |
+| `@nguyenquangthai/pi-ask@0.1.14`           | 新；有公开 crash issue 与待合 fix                                      | 有基本交互                                                                                                         | 已知 multiline result 触发 terminal crash；版本与维护史不足                                                                      | 拒绝                             |
+| `@zhushanwen/pi-ask-user@7.0.14`           | 高版本号但无可核 repo/provenance                                       | 表面功能多                                                                                                         | headless 会继续、不 sequential、caps、global handshake、无法审计 source                                                          | 拒绝                             |
+| `@xynogen/pix-ask@0.2.22`                  | 新                                                                     | 多题                                                                                                               | 1–4/2–4 caps；multi 禁 freeform；依赖较多                                                                                        | 拒绝                             |
+| `@juicesharp/rpiv-ask-user-question@2.7.1` | suite 使用信号                                                         | 丰富 TUI                                                                                                           | 无 sequential/忽略 signal；prewarm/control plane/caps；owner 过宽                                                                | 拒绝                             |
 
 ### 5.2 Primary source 路由
 
@@ -344,29 +341,29 @@ supi 5.0.0 `supi-ask-user` 自身约 3,200 行生产 TypeScript；直接的 UI/r
 
 ### 7.3 OmniMind-owned seams
 
-| Seam | 唯一责任 |
-|---|---|
-| identity/composition | bundled package identity、唯一注册、active intent、sourceInfo assertion |
-| canonical contract | request/result schema、sentinel、无损文本、version/capability |
-| Host bridge | request correlation、Composer projection、terminal settlement、late fencing |
-| Workbench projection | 多题/多选/freeform/Preview/Notes/Review/i18n/a11y |
-| Pi barrier | Ask-first、batch terminate、answer-after-replan |
-| lifecycle | Abort/Cancel/timeout/reload/branch/resume/restart stale |
-| result/context | 只返回真实答案，不把 recommendation/unselected metadata 伪造成决定 |
+| Seam                 | 唯一责任                                                                    |
+| -------------------- | --------------------------------------------------------------------------- |
+| identity/composition | bundled package identity、唯一注册、active intent、sourceInfo assertion     |
+| canonical contract   | request/result schema、sentinel、无损文本、version/capability               |
+| Host bridge          | request correlation、Composer projection、terminal settlement、late fencing |
+| Workbench projection | 多题/多选/freeform/Preview/Notes/Review/i18n/a11y                           |
+| Pi barrier           | Ask-first、batch terminate、answer-after-replan                             |
+| lifecycle            | Abort/Cancel/timeout/reload/branch/resume/restart stale                     |
+| result/context       | 只返回真实答案，不把 recommendation/unselected metadata 伪造成决定          |
 
 任何单个 adapter 同时拥有四项以上责任都视为 lone wolf，Gate B 必须拆回 owner。
 
 为让未来 intake 有稳定 diff 语言，fork patch 继续固定为 P1–P7；这不是第二套架构 owner：
 
-| Patch | 含义 | 删除条件 |
-|---|---|---|
-| P1 Identity & product profile | OmniMind identity、bundled-only、禁用 upstream TUI/config/events/commands | 上游提供不建立第二 owner 的正式 Host-neutral product profile |
-| P2 Canonical contract | stable IDs/values、sentinel、无损文本、无产品 caps、正交 schema/result | 上游合同逐项满足 canonical invariants |
-| P3 Structured Host seam | request correlation、capability discovery、terminal settlement、late fencing | Pi 提供等价、versioned、Host-neutral seam |
-| P4 Workbench projection | Composer Question 的完整 en/zh UI、Review/Preview/Notes/a11y | 不删除；这是 OmniMind 产品 owner，不属于 fork runtime |
-| P5 Lifecycle & barrier | sequential 之外的 Ask-first、batch terminate、replan、Abort/Cancel/restart stale | Pi Core 原生提供并由 exact tests 证明 |
-| P6 Truthful result/context | selected-only、custom/note 无损、recommendation 不进答案 | upstream result 与 context 完全等价 |
-| P7 Provenance/reload | same-name winner、sourceInfo、instance generation、reload/branch/resume | Pi 暴露稳定 product provenance primitive并由 Session 验证 |
+| Patch                         | 含义                                                                             | 删除条件                                                     |
+| ----------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| P1 Identity & product profile | OmniMind identity、bundled-only、禁用 upstream TUI/config/events/commands        | 上游提供不建立第二 owner 的正式 Host-neutral product profile |
+| P2 Canonical contract         | stable IDs/values、sentinel、无损文本、无产品 caps、正交 schema/result           | 上游合同逐项满足 canonical invariants                        |
+| P3 Structured Host seam       | request correlation、capability discovery、terminal settlement、late fencing     | Pi 提供等价、versioned、Host-neutral seam                    |
+| P4 Workbench projection       | Composer Question 的完整 en/zh UI、Review/Preview/Notes/a11y                     | 不删除；这是 OmniMind 产品 owner，不属于 fork runtime        |
+| P5 Lifecycle & barrier        | sequential 之外的 Ask-first、batch terminate、replan、Abort/Cancel/restart stale | Pi Core 原生提供并由 exact tests 证明                        |
+| P6 Truthful result/context    | selected-only、custom/note 无损、recommendation 不进答案                         | upstream result 与 context 完全等价                          |
+| P7 Provenance/reload          | same-name winner、sourceInfo、instance generation、reload/branch/resume          | Pi 暴露稳定 product provenance primitive并由 Session 验证    |
 
 若未来出现 P8，Gate A 必须先说明为什么 P1–P7 和既有 architecture owner 都不能承担，再请求维护者裁决；不能用编号扩张掩盖 fork 失控。
 
@@ -397,14 +394,11 @@ supi 5.0.0 `supi-ask-user` 自身约 3,200 行生产 TypeScript；直接的 UI/r
 
 ### 8.2 目标 request 形状
 
-以下是认知模型，不是当前已发布 API：
+以下是当前 source-level Product request 合同；它尚不是独立网络公共 API：
 
 ```ts
 type AskUserRequest = {
   version: 1;
-  requestId: string;
-  title?: string;
-  context?: string;
   questions: Array<
     | {
         kind: "choice";
@@ -413,15 +407,12 @@ type AskUserRequest = {
         prompt: string;
         cardinality: "single" | "multiple";
         options: Array<{
-          value: string;
           label: string;
           description?: string;
           preview?: string;
           recommended?: boolean;
           recommendationReason?: string;
         }>;
-        allowSupplement?: boolean;
-        presentation?: { preview?: boolean; review?: boolean; notes?: boolean };
       }
     | {
         kind: "text";
@@ -429,14 +420,13 @@ type AskUserRequest = {
         header?: string;
         prompt: string;
         placeholder?: string;
-        suggestedText?: string;
-        presentation?: { review?: boolean; notes?: boolean };
+        suggestion?: { text: string; reason?: string };
       }
   >;
 };
 ```
 
-`suggestedText` 与 `recommended` 永远不是 answer 初值。
+`suggestion` 与 `recommended` 永远不是 answer 初值。Stable option `value` 只存在于 fork Tool input 和 Server 的内存映射中；canonical Product UI 只接触 label，避免 label/value 双重真相。
 
 ### 8.3 目标 result 形状
 
@@ -509,13 +499,13 @@ Composer Question 是唯一 owner，第三方 UI 只提供 donor 行为。真实
 
 ## 10. Ask 与 Approval
 
-| 维度 | Ask User | Approval |
-|---|---|---|
-| 目的 | 获取偏好、信息、决策 | 授权高风险动作 |
-| 默认结果 | 答案内容 | allow/deny/limited authority |
-| 可否用普通答案替代 | 可以自由表达 | 不可以把模糊文本当授权 |
-| 超时/无 UI | unavailable/cancelled，停止依赖它的执行 | fail closed，动作不得执行 |
-| 生命周期 | 回答后 replan | 授权范围内才可继续动作 |
+| 维度               | Ask User                                | Approval                     |
+| ------------------ | --------------------------------------- | ---------------------------- |
+| 目的               | 获取偏好、信息、决策                    | 授权高风险动作               |
+| 默认结果           | 答案内容                                | allow/deny/limited authority |
+| 可否用普通答案替代 | 可以自由表达                            | 不可以把模糊文本当授权       |
+| 超时/无 UI         | unavailable/cancelled，停止依赖它的执行 | fail closed，动作不得执行    |
+| 生命周期           | 回答后 replan                           | 授权范围内才可继续动作       |
 
 同一 UI shell 可以复用 presentation primitive，但合同、authority、receipt、审计与 result type 必须分离。
 
@@ -554,21 +544,21 @@ created -> projected -> waiting -> answered
 
 ## 12. 运行时与发行 owner
 
-| Owner | 责任 |
-|---|---|
-| source owner | exact upstream commit/artifact、license、ancestry、donor attribution |
-| maintenance owner | fork patch、upstream intake、author tests、stop-loss |
-| registration owner | bundled discovery、active intent、same-name winner、reload |
-| execution owner | Pi Session execute、barrier、Abort/Cancel、result |
-| state owner | canonical request/result、Timeline receipt、restart stale |
-| UI owner | Workbench/Composer projection |
-| distribution owner | OmniMind build、SBOM/license、packaged verification |
+| Owner              | 责任                                                                 |
+| ------------------ | -------------------------------------------------------------------- |
+| source owner       | exact upstream commit/artifact、license、ancestry、donor attribution |
+| maintenance owner  | fork patch、upstream intake、author tests、stop-loss                 |
+| registration owner | bundled discovery、active intent、same-name winner、reload           |
+| execution owner    | Pi Session execute、barrier、Abort/Cancel、result                    |
+| state owner        | canonical request/result、Timeline receipt、restart stale            |
+| UI owner           | Workbench/Composer projection                                        |
+| distribution owner | OmniMind build、SBOM/license、packaged verification                  |
 
-`@omnimind/om-ask` 已作为 monorepo private feasibility package 创建，但没有 `pi.extensions`、ToolDefinition、runtime dependency、composition consumer 或 shipped activation。只有未来完整 Gate B 通过后，它才可能随 OmniMind Agent distribution；它不能被一个 adapter 静默包装成 AgentGateway tool，也不能让第三方 package 自己拥有 Settings、Product State 或 release cadence。
+`@omnimind/om-ask@5.0.0-omnimind.1` 是 monorepo private、Host-neutral runtime fork。它导出 ToolDefinition/validation/structured result，但不自注册、不拥有 UI、Settings、Product State、timer 或 process lifecycle。OmniMind Server 的显式 composition 是唯一 registration owner；AgentGateway 不分发它，stock Pi 不注册它，第三方 Extension 不能取得 Product Ask provenance。是否进入 shipped bytes仍由后续 exact-SHA package gate证明。
 
 ## 13. Gate B 施工顺序
 
-维护者已授权并完成前两步的 fork feasibility slice，并授权第 3 步与第 5 步中不涉及 Tool 激活的 canonical contract/Composer source slice。第 4、6–10 步仍是后续 runtime/activation/production gates；任何 `ask_user` registration、model exposure、public Ask schema 或 Pi composition 仍未授权：
+维护者已授权并完成 source-level 第 1–8 步；第 9–10 步仍是 production verification gates。Tool 只在前四层全部绿色后通过独立激活提交进入 composition：
 
 1. 固定 fork exact source、artifact、license 与作者测试 baseline；
 2. 建立 subtractive product profile，先切掉 TUI/supi-core/ambient lifecycle；
@@ -583,37 +573,37 @@ created -> projected -> waiting -> answered
 
 禁止先把 Tool 暴露给模型、以后再补 UI/result。那会公开假能力。
 
-### 13.1 Fork feasibility slice：GO
+### 13.1 历史 Fork feasibility slice：GO
 
 exact source、artifact 与法律基线已固定：
 
-| 项 | 固定事实 |
-|---|---|
-| npm | `@mrclrchtr/supi-ask-user@5.0.0` |
-| source | `mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user` |
-| provenance | npm SLSA resolved dependency 指向同一 commit |
+| 项                 | 固定事实                                                                                                                                       |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| npm                | `@mrclrchtr/supi-ask-user@5.0.0`                                                                                                               |
+| source             | `mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`                                                               |
+| provenance         | npm SLSA resolved dependency 指向同一 commit                                                                                                   |
 | integrity / shasum | `sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==` / `cabb06df40ab95be1a67b4f3b32c83bc257ea38a` |
-| tarball SHA-256 | `d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e` |
-| rights | source MIT；fork 保留 Marcel Richter 2026 exact license text；npm tgz 缺 LICENSE/NOTICE 的发行缺口已在 fork source 修复 |
-| author baseline | exact source，Vitest 4.1.10，9 files / 152 tests passed |
-| fork source commit | `a96c60256bd6e391af57f4d2994b4a12d32aa6a5` |
+| tarball SHA-256    | `d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e`                                                                             |
+| rights             | source MIT；fork 保留 Marcel Richter 2026 exact license text；npm tgz 缺 LICENSE/NOTICE 的发行缺口已在 fork source 修复                        |
+| author baseline    | exact source，Vitest 4.1.10，9 files / 152 tests passed                                                                                        |
+| fork source commit | `a96c60256bd6e391af57f4d2994b4a12d32aa6a5`                                                                                                     |
 
-切片是 monorepo private package，不包含 `pi.extensions`、ToolDefinition、TypeBox schema、prompt guidance、composition consumer 或 runtime dependency。它既不注册 `ask_user`，也不向模型或 UI 宣称能力。
+该句只描述 feasibility commit `a96c6025…` 的历史边界：当时不包含 ToolDefinition、schema、guidance、composition 或 runtime dependency。它已被 §13.3 的后续授权 source integration supersede，不能再当作当前状态。
 
 #### Retained / deleted module
 
-| 上游模块 | 处置 | fork 模块 | 行级证据与真实价值 |
-|---|---|---|---|
-| `src/types.ts` | adapt | `src/types.ts` | 131 行中约 94 行原样；保留 choice/text、stable ID/value 与 structured outcome，recommendation 改为纯 metadata |
-| `src/normalize.ts` | adapt | `src/normalize.ts` | 266 行中约 120 行原样；保留 identity/shape/recommendation validation，删除 trim、Unicode 改写与数量上限 |
-| `src/session/controller.ts` | retain/adapt | `src/controller.ts` | 314 行中约 223 行原样；导航、single/multi、comments、unanswered、ordered result、cancel/abort 主状态机仍是上游实现；删除所有预选/预填并补 terminal late-mutation fence |
-| `src/session/lock.ts` | strengthen | `src/lock.ts` | 保留 one-active 责任，boolean 改成 lease token，stale release 不再误解锁新 interaction |
-| `src/render/result.ts` | subtract/rebuild | `src/result.ts` | 只保留 structured details builder；Pi summary、英文拼接、unselected narrative 与 truncation owner 全删 |
-| `src/ask-user.ts` | subtract/rebuild shell | `src/kernel.ts` | 保留 validation → availability → lock → signal → interaction → result → cleanup 顺序；Pi registration、TUI、core、event、timer、terminal/session 全删，并补 pre/in-flight abort 与 late settlement fence |
-| `src/ui/**`（1,715 行） | delete | 无 | canonical Composer Question 已拥有 UI；保留会制造第二 UI owner |
-| `src/render/transcript.ts` | delete | 无 | Timeline/Workbench 未来统一投影，不继承 TUI transcript |
-| `src/schema.ts` / `tool/guidance.ts` / `extension.ts` | delete | 无 | 当前不公开 schema/prompt、不注册 Tool，不制造假能力 |
-| `supi-core` bundled dependency | delete | 无 | prompt/config/session/terminal 是第二 owner；fork runtime dependencies 为零 |
+| 上游模块                                                       | 处置                   | fork 模块           | 行级证据与真实价值                                                                                                                                                                                       |
+| -------------------------------------------------------------- | ---------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/types.ts`                                                 | adapt                  | `src/types.ts`      | 131 行中约 94 行原样；保留 choice/text、stable ID/value 与 structured outcome，recommendation 改为纯 metadata                                                                                            |
+| `src/normalize.ts`                                             | adapt                  | `src/normalize.ts`  | 266 行中约 120 行原样；保留 identity/shape/recommendation validation，删除 trim、Unicode 改写与数量上限                                                                                                  |
+| `src/session/controller.ts`                                    | retain/adapt           | `src/controller.ts` | 314 行中约 223 行原样；导航、single/multi、comments、unanswered、ordered result、cancel/abort 主状态机仍是上游实现；删除所有预选/预填并补 terminal late-mutation fence                                   |
+| `src/session/lock.ts`                                          | strengthen             | `src/lock.ts`       | 保留 one-active 责任，boolean 改成 lease token，stale release 不再误解锁新 interaction                                                                                                                   |
+| `src/render/result.ts`                                         | subtract/rebuild       | `src/result.ts`     | 只保留 structured details builder；Pi summary、英文拼接、unselected narrative 与 truncation owner 全删                                                                                                   |
+| `src/ask-user.ts`                                              | subtract/rebuild shell | `src/kernel.ts`     | 保留 validation → availability → lock → signal → interaction → result → cleanup 顺序；Pi registration、TUI、core、event、timer、terminal/session 全删，并补 pre/in-flight abort 与 late settlement fence |
+| `src/ui/**`（1,715 行）                                        | delete                 | 无                  | canonical Composer Question 已拥有 UI；保留会制造第二 UI owner                                                                                                                                           |
+| `src/render/transcript.ts`                                     | delete                 | 无                  | Timeline/Workbench 未来统一投影，不继承 TUI transcript                                                                                                                                                   |
+| upstream `src/schema.ts` / `tool/guidance.ts` / `extension.ts` | delete                 | 无                  | 不继承 TUI/private lifecycle；后续由 `src/product.ts` / `src/tool.ts` 与 Server composition 建立 OmniMind-owned replacement                                                                              |
+| `supi-core` bundled dependency                                 | delete                 | 无                  | prompt/config/session/terminal 是第二 owner；fork runtime dependencies 为零                                                                                                                              |
 
 上游 production source 共 3,164 行；feasibility kernel source 共 778 行，缩减约 75%。六个映射模块的新 fork code 中约 473/745 行仍是上游原行（约 63%）；最关键 controller 约 71% 原样。这个比例不能证明正确性，但能反驳“只借 fork 名义自研”：问卷主状态机和大部分 domain 仍清楚映射到 exact upstream。
 
@@ -621,42 +611,93 @@ exact source、artifact 与法律基线已固定：
 
 152 个 upstream cases 没有被整体复制后冒充保留：
 
-| Disposition | Cases | 含义 |
-|---|---:|---|
-| preserve/adapt | 55 | controller 34、normalize 14、execute lifecycle 7；保持同一用户/状态语义，必要时换成 Host-neutral fixture |
-| intentionally reverse | 9 | 推荐预选/文本预填、trim、空白丢弃、literal Unicode 重写、trim 后 identity collapse；都有相反断言 |
-| delete | 88 | 81 个 TUI/transcript、6 个 registration/config/event/terminal、1 个 Pi summary truncation |
+| Disposition           | Cases | 含义                                                                                                     |
+| --------------------- | ----: | -------------------------------------------------------------------------------------------------------- |
+| preserve/adapt        |    55 | controller 34、normalize 14、execute lifecycle 7；保持同一用户/状态语义，必要时换成 Host-neutral fixture |
+| intentionally reverse |     9 | 推荐预选/文本预填、trim、空白丢弃、literal Unicode 重写、trim 后 identity collapse；都有相反断言         |
+| delete                |    88 | 81 个 TUI/transcript、6 个 registration/config/event/terminal、1 个 Pi summary truncation                |
 
 fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 caps、文本无损、推荐零默认答案、lease、pre/in-flight abort、late answer、no-UI fail closed 与 forbidden-owner snapshot；`typecheck`、独立 JS/declaration build、built-package import、Oxlint 0 warning 和 Oxfmt check 均通过。
 
 #### Stop-loss 裁决
 
-| Stop-loss | 证据 | 裁决 |
-|---|---|---|
-| 保留实质过少 | fork 映射源码约 63% 是上游原行；controller 约 71% 原样 | 未触发 |
-| 作者测试大量失去意义 | 55 保留/适配，9 有意反转且有 replacement，88 删除项全部属于明确拒绝的 presentation/ambient owner | 未触发 |
-| 仍需重建主要状态机 | questionnaire controller 未重建；重写的是必须被替换的 Pi/TUI execute shell 与 trivial result presentation | 未触发 |
+| Stop-loss                 | 证据                                                                                                                 | 裁决   |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------ |
+| 保留实质过少              | fork 映射源码约 63% 是上游原行；controller 约 71% 原样                                                               | 未触发 |
+| 作者测试大量失去意义      | 55 保留/适配，9 有意反转且有 replacement，88 删除项全部属于明确拒绝的 presentation/ambient owner                     | 未触发 |
+| 仍需重建主要状态机        | questionnaire controller 未重建；重写的是必须被替换的 Pi/TUI execute shell 与 trivial result presentation            | 未触发 |
 | 为 lineage 保留第二 owner | source test 断言无 TUI、`supi-core`、config、event、timer、terminal/session hook、registration 或 runtime dependency | 未触发 |
 
 **结论：GO。** `supi@ce8af5f…` 足以作为 domain/controller fork lineage 继续进入下一次维护者授权；但它不再被描述成“成熟完整 runtime”。OmniMind 仍需完整拥有 canonical contract、Host bridge、Composer projection、Ask-first barrier、provenance、restart stale 与 distribution proof。若未来这些责任被塞回单一 fork adapter，或连续 intake 破坏 controller/normalize 的 ancestry/test 映射，立即回 Gate A。
 
-### 13.2 Canonical contract / Composer source slice
+### 13.2 历史 Canonical contract / Composer source slice
 
-本轮在保持 Tool 未注册的前提下，已经把以下阻断收回唯一 owner：
+该历史 slice 在当时保持 Tool 未注册，并把以下阻断收回唯一 owner：
 
-| Surface | Source decision | 已锁定 falsifier |
-|---|---|---|
-| Product response | `selectedOptionLabels[]`、`customText?`、`note?` 三个独立字段；string 使用 raw contract | RPC codec、Web state 与 Provider command tests 保留换行/尾随空格 |
-| Web controller | single custom replacement；multi preset + custom coexist；note 只绑定 preset selection | A→B 清 note、preset→custom 清 selection/note、multi last-preset off 清 note 且保留 custom |
-| Host sentinel | Web projection 自动 append 保留 custom row；不改 request/authored options，不回传 sentinel label | browser test 证明 preset + custom + note 同时 selected/submittable |
-| Review | 最终一次、结构化显示主答案与 note、可回题修改 | browser component journey + pure build test |
-| Cross-Provider | canonical command/event 在 adapter 之前保持 structured；每个 native adapter 只在最后边界 lossless encode | common encoder tests覆盖 scalar/array 与 JSON envelope；多 Provider adapter focused tests |
-| Ask/Approval | 删除 `user-input.resolved` 对 runtimeMode/sandbox/approval 的反向推断 | ingestion test 证明名为 `sandbox_mode` 的 Ask 答案也不能改变 permission |
-| Fork kernel | choice response 新增 first-class `selectedValues[]` / `customText` / `note`，未引入 UI/config/registration | fork suite 从 feasibility 61 增至 64，新增三项产品差异回归 |
+| Surface          | Source decision                                                                                            | 已锁定 falsifier                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Product response | `selectedOptionLabels[]`、`customText?`、`note?` 三个独立字段；string 使用 raw contract                    | RPC codec、Web state 与 Provider command tests 保留换行/尾随空格                          |
+| Web controller   | single custom replacement；multi preset + custom coexist；note 只绑定 preset selection                     | A→B 清 note、preset→custom 清 selection/note、multi last-preset off 清 note 且保留 custom |
+| Host sentinel    | Web projection 自动 append 保留 custom row；不改 request/authored options，不回传 sentinel label           | browser test 证明 preset + custom + note 同时 selected/submittable                        |
+| Review           | 最终一次、结构化显示主答案与 note、可回题修改                                                              | browser component journey + pure build test                                               |
+| Cross-Provider   | canonical command/event 在 adapter 之前保持 structured；每个 native adapter 只在最后边界 lossless encode   | common encoder tests覆盖 scalar/array 与 JSON envelope；多 Provider adapter focused tests |
+| Ask/Approval     | 删除 `user-input.resolved` 对 runtimeMode/sandbox/approval 的反向推断                                      | ingestion test 证明名为 `sandbox_mode` 的 Ask 答案也不能改变 permission                   |
+| Fork kernel      | choice response 新增 first-class `selectedValues[]` / `customText` / `note`，未引入 UI/config/registration | fork suite 从 feasibility 61 增至 64，新增三项产品差异回归                                |
 
-这一 slice 仍未解决或未授权：submit/cancel/abort 的完整 typed settlement、structured Host interaction port、ToolDefinition/public request schema、same-turn barrier、same-name provenance、restart stale、MiMo/DeepSeek 与 packaged continuation。尤其当前 inherited Provider response 仍以空 answer map 表示 UI cancel，不能被描述成最终稳定 Cancel contract；它是 registration 前必须消除的 Gate B 阻断。
+该历史 slice 当时尚未解决 typed settlement、Host interaction、ToolDefinition、barrier、provenance 与 restart stale；这些阻断现已由 §13.3 的 source integration 关闭。MiMo/DeepSeek 与 packaged continuation 仍未关闭。
 
 packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818c54f2fbe1` 的 clean-clone arm64 DMG SHA-256 为 `1efe4a1b708bf92482ec71caade6a086f4215e7a9895f6740b92bd37d8758fc3`，通过 241-component legal closure；安装版 `app.asar` SHA-256 为 `b41849354be5ede2eb1318ee53ffd5cd179c698217e6a6450a3f76291c63b679`，嵌入同一 commit，且 exact scan 不含 `@omnimind/om-ask` / `packages/om-ask`。fresh 隔离 profile 与同 profile reopen 都完成 Main window 和 bundled Server ready，Helper/Renderer/Server 全部指向任务 userData，关闭后零候选进程。它证明 canonical UI bytes 可打包、安装和重开；由于 Tool 仍未注册，它故意不声称 Ask 调用、回答 continuation、Cancel/Abort fencing 或 MiMo/DeepSeek 通过。
+
+### 13.3 完整 Gate B source integration
+
+2026-08-25 的后续维护者授权关闭了 registration 前硬门。实现按“先合同、后调度、再 fork/Host/UI、最后激活”分成可回滚提交；最终激活提交为 `36e3bec7e789122c731028c1a8b791a68a6c1fea`。当前事实如下。
+
+#### Canonical owner
+
+- Product request 固定 `version: 1`，choice/text 可判别，question ID 与同题 option label 唯一；UI 不接触 Pi option value。
+- Product answer 固定 `selectedOptionLabels[]` / `customText?` / `note?`；response 只有 `answered | cancelled`，runtime settlement 是 `answered | cancelled | aborted | timed_out | unavailable | stale`。
+- Web 只能产生 answered/cancelled；restart、Session replacement、Stop/Abort、presenter loss等 settlement 由 runtime owner产生。
+- request/response UTF-8 总量 guard 为 1 MiB，总 question+option 节点为 10,000；超限失败、不截断、不写成产品题数/选项数 guidance。
+- legacy `{answers}` 只在 persistence/provider decode seam 转为 answered；运行时不维护第二合同。
+
+#### Fork 与 Tool
+
+- `@omnimind/om-ask@5.0.0-omnimind.1` 导出唯一 `ask_user` definition、Host-neutral interaction port、validation 与同构 `content`/`details` structured result。
+- Tool input 保留 stable question ID / option value；Server projection 删除 value，response 再由唯一 label→value map 严格还原。
+- schema 不含产品 maxItems；`__omnimind_custom__` 是保留 identity，模型不得 author catch-all sentinel。
+- recommendation、preview、suggestion只作 metadata；不预选、不预填、不进入答案。
+- fork 不含 upstream TUI、`supi-core`、Settings、事件总线、timer、terminal/session helper、第二 config 或第二 lifecycle owner。当前 fork suite 6 files / 71 tests。
+
+#### Presenter、correlation 与 settlement
+
+- Web feature socket 通过 `orchestration.user-input.presenter` 持有 versioned ephemeral lease；0/1/N lease 有独立测试，最后一个兼容 lease消失才触发 unavailable。
+- Session 创建时无 lease，不 composition/register `ask_user`；execute 前再次检查，等待期间监听 lease 消失。
+- live pending record 固定 `{sessionGeneration, turnId, toolCallId, requestId}`；内存只保存 Promise resolver、Abort listener、label/value map 与有界 recent-settlement fence，不建立第二数据库。
+- duplicate、late、foreign、旧 generation response拒绝；settlement统一释放 listener、map entry 与 pending record。重启不重建 Promise，只把 durable history结算为 stale。
+- 进程内指标只记录 requested/terminal status、late reject、provenance collision、barrier sibling blocked与等待时长聚合；不记录用户文本，也不拥有产品状态。
+
+#### Pi barrier
+
+- exact base 是 `@earendil-works/pi-agent-core@0.84.2`；Bun patch 为 `patches/@earendil-works%2Fpi-agent-core@0.84.2.patch`，当前 SHA-256 `c63f6877299935fd9ee85c05b81d9e3f571f640704ff85a7f8e03209620e8e78`。
+- `executionMode: "barrier"` 默认惰性：任何 stock Tool 都未采用，无 barrier 的 parallel/sequential 路径保持原 bytes/顺序。
+- batch preflight 在任何 sibling prepare/hook/execute 前找到 source-order 第一个 barrier；只执行它，其余 sibling生成结构化 blocked result，prepare/before/execute 均为零。
+- answered barrier `terminate:false`，Tool result 和 skipped sibling result进入下一次模型调用；terminal/error barrier `terminate:true`，当前 loop结束；多个 barrier只执行第一个。
+- 若上游提供等价 barrier，应优先删除本地 patch；若未来需要重写 agent loop、复制 scheduler或按 `ask_user` 名称特判，立即回 Gate A。
+
+#### Provenance 与 UI
+
+- bundled Extension 使用固定 inline path/source/scope/origin；检查 winner 之外，还枚举 ResourceLoader 全部 Extension registration，必须恰好一个同名 Tool且为 product source。
+- foreign winner、product winner + foreign loser、reload 漂移都从 active set移除；不会改名创建第二 Ask，Full Access/Approval不影响 Ask availability。
+- canonical UI 继续复用 `ComposerPendingUserInputPanel` / `ComposerChoiceRow`。Host/UI 自动提供末尾 `自定义` row；single副文案“输入自己的答案”，multiple副文案“补充自己的答案”。
+- custom 在 row 内原地展开并 autofocus；free text在 card 内编辑；preset被选择后才出现 note。单选不自动前进，最后一题不自动提交；Preview/推荐/suggestion按需展开，Review最终一次并可回题。
+- Review与Timeline结构化区分 presets/customText/note 和六种 terminal receipt；新增正常文案都有 en/zh catalog，same-name fail-closed也不泄漏 Server 英文诊断。
+
+#### Source proof 与剩余门
+
+- fork 71/71；最终跨层 focused matrix 16 files / 404 tests；新增真实 Pi adapter fixture 证明 no-presenter schema absent、presenter schema exactly once、Composer projection不含 stable value、answer后出现第二模型 request、raw note保留、presenter loss无 continuation、reload同名 collision后 Tool absent。
+- barrier tests覆盖 Ask位于 sibling前后、sibling hooks/execute为零、multiple barrier、answered continuation、terminal无 continuation；Host bridge覆盖 single/multi/custom/note/raw whitespace与非法 label/空答案。
+- source present：是；runtime activated：仅 bundled OmniMind Agent且 presenter/provenance gate通过时；shipped bytes：尚待 exact pushed-SHA clean-clone artifact核验；公开 Release：否。
+- 剩余硬门只有 §14.5 的 MiMo/DeepSeek与 fresh isolated packaged App全链。任一失败都停止 production claim；不能靠 adapter降级 schema、启用非结构化 fallback或把历史 source tests冒充 live evidence。
 
 ## 14. Required proof
 
@@ -802,7 +843,7 @@ supi 高速变化使“定期 merge upstream main”不成立。未来更新必�
 ## 17. 零记忆机器摘要
 
 ```yaml
-status: gate_b_contract_and_composer_source_slice_not_registered_not_adopted
+status: gate_b_source_integrated_packaged_and_live_pending
 date: 2026-08-25
 product:
   capability: canonical_user_input
@@ -811,18 +852,29 @@ product:
   ui_owner: composer_question_workbench
   agent_gateway_tool: false
 runtime_mother:
-  disposition: feasibility_proven_subtractive_fork_lineage
+  disposition: adopted_subtractive_fork_lineage
   package: "@mrclrchtr/supi-ask-user@5.0.0"
   commit: ce8af5f57304ad114319aa75c00920f029ceb8e7
   direct_install: forbidden
   claim: runtime_kernel_only
   fork_shape: subtractive_not_narrow
-  fork_package: "@omnimind/om-ask@5.0.0-omnimind.feasibility.0"
-  fork_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
-  registered: false
-  model_exposed: false
-  public_schema: false
-  risks: [pre_release, rapid_majors, short_history, supi_core, missing_artifact_license, tui_coupling, preselection, trim, hard_caps]
+  fork_package: "@omnimind/om-ask@5.0.0-omnimind.1"
+  activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
+  registered: presenter_and_provenance_gated_omnimind_agent_only
+  model_exposed: true_only_when_registered
+  public_schema: product_tool_schema_v1
+  risks:
+    [
+      pre_release,
+      rapid_majors,
+      short_history,
+      supi_core,
+      missing_artifact_license,
+      tui_coupling,
+      preselection,
+      trim,
+      hard_caps,
+    ]
 donors:
   ux_tests:
     package: "@geoqiao/pi-ask@1.3.0"
@@ -847,7 +899,10 @@ hard_invariants:
   - no_public_fake_capability
 gate_b:
   feasibility_slice: go
-  canonical_contract_and_composer_source_slice: authorized_and_implemented
-  tool_registration_and_model_exposure: forbidden_pending_runtime_gates
+  canonical_contract_and_composer_source_slice: implemented
+  runtime_host_barrier_provenance_activation: implemented
+  focused_source_tests: passed
+  live_mimo_deepseek: pending
+  packaged_fresh_profile: pending
 update_manual: research/pi-ask-user-intake.md
 ```

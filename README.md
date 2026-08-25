@@ -211,6 +211,36 @@ authority，也不得带入 donor branding、竞争编排、第二 Session 状�
       "changes": "The complete mature upstream source remains one private workspace package for the bundled OmniMind Agent. OmniMind adds only the six bounded seams for per-Session and per-call lifecycle isolation, one package-owned canonical config service, the OmniMind runtime profile, typed bilingual observer/review presentation, route evidence to the Pi active set, and honest Unicode source_check evidence semantics. The config owner pins directory and file identity, reads through the verified descriptor, enforces a 1 MiB fail-closed limit and preserves rejected bytes; GitHub subprocesses receive a positive environment allowlist instead of ambient Provider secrets. source_check propagates cancellation without storing partial artifacts and reports the same route success/failure evidence as web_search. The OmniMind profile defaults to auto-summary with process display off while retaining raw results, responseId, storedResults and continuation; explicit review uses dedicated ephemeral internal-only Browser tabs with exact pending reopen and scoped settlement. Renderer-owned locale/theme context crosses Desktop and Browser Automation as one bounded typed snapshot and fails closed when malformed; Timeline projects readable product labels plus allowlisted Web Access input, output and source detail without exposing arbitrary third-party arguments. Settings consumes the same config and credential-blind Provider projections. It is not a Host capability, AgentGateway backend, npm release or stock Pi compatibility profile.",
       "updatePolicy": "Pinned exact version and commit; no automatic latest tracking and no second fork repository. Every maintainer-triggered update restarts at research/pi-web-access-intake.md, re-runs PI-ECOSYSTEM-INTAKE Gate A, preserves the upstream structure and author tests, regenerates the auditable upstream/P1-P6 diff inventory, and jointly revalidates Provider routing and projection, Curator protocol, config schema, source_check, rights, asset admission, typed presentation-context round trips, Timeline label/detail/causal-order contracts, focused OmniMind journeys and packaged closure. Remove the narrow fork when a lower-maintenance equivalent Pi ecosystem capability proves equal or better.",
       "licenseFiles": ["LICENSES/pi-web-access-MIT.txt"]
+    },
+    {
+      "id": "bundled-omnimind-ask-user",
+      "url": "https://github.com/mrclrchtr/supi.git",
+      "revision": "ce8af5f57304ad114319aa75c00920f029ceb8e7",
+      "status": "source-adopted-packaged-proof-pending",
+      "paths": ["packages/om-ask", "apps/server/src/provider/askUserHostBridge.ts", "apps/server/src/provider/omnimindAskUserExtension.ts", "apps/server/src/provider/userInputPresenterRegistry.ts", "apps/server/src/provider/Layers/PiAdapter.ts", "packages/contracts/src/orchestration.ts", "packages/contracts/src/rpc.ts", "apps/web/src/components/chat/ComposerPendingUserInputPanel.tsx"],
+      "sourcePaths": ["packages/supi-ask-user"],
+      "upstreamPackage": "@mrclrchtr/supi-ask-user@5.0.0",
+      "upstreamPackageIntegrity": "sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==",
+      "upstreamTarballSha256": "d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e",
+      "rights": "The fixed supi-ask-user source is MIT-licensed by Marcel Richter under the exact legal text retained in packages/om-ask/LICENSE. The npm artifact omitted LICENSE/NOTICE; OmniMind distributes only the reviewed source fork with retained ancestry and changes, not the upstream package artifact, TUI, branding or supi-core bundle.",
+      "mode": "fork-subtractively",
+      "changes": "OmniMind retains the stable question and option identities, choice/text domain, controller, lease and structured-result lineage while deleting the upstream TUI, transcript, supi-core, configuration, events, timers, terminal/session helpers, recommendation preselection, trimming and product caps. The private Host-neutral fork supplies the single ask_user definition and deterministic structured result. OmniMind's canonical contract, Composer Question UI, presenter lease, value-label bridge, terminal settlement, restart fencing and provenance remain product-owned. Registration is limited to bundled OmniMind Agent Sessions with a compatible presenter and exactly one bundled same-name provenance; stock Pi, AgentGateway and third-party Extensions receive no Product Ask authority.",
+      "updatePolicy": "Pinned exact version, commit, npm integrity and tarball digest; no latest tracking or direct install. Every update starts at research/pi-ask-user-intake.md, re-runs the retained upstream baseline, replays P1-P7, preserves the author-test disposition and removes the fork if a lower-maintenance mature runtime proves equal. TUI, supi-core, second config/lifecycle owners, arbitrary caps, trim, preselection, ordinary-text fallback and fake restart recovery remain rejected.",
+      "licenseFiles": ["packages/om-ask/LICENSE"]
+    },
+    {
+      "id": "pi-agent-core-interactive-barrier",
+      "url": "https://github.com/earendil-works/pi.git",
+      "revision": "914cf1472e715297caa30db4b9535d534a9eb718",
+      "status": "source-adopted-packaged-proof-pending",
+      "paths": ["patches/@earendil-works%2Fpi-agent-core@0.84.2.patch", "package.json", "bun.lock", "apps/server/src/provider/piBarrierPatch.test.ts"],
+      "upstreamPackage": "@earendil-works/pi-agent-core@0.84.2",
+      "patchSha256": "c63f6877299935fd9ee85c05b81d9e3f571f640704ff85a7f8e03209620e8e78",
+      "rights": "The fixed Pi agent-core source and patched dependency remain MIT-licensed under the retained Pi redistribution text.",
+      "mode": "adapt",
+      "changes": "Adds one default-inert executionMode named barrier. Before any sibling argument preparation, hook or execute, the batch runs only the source-order first barrier and emits structured blocked results for every sibling. An answered barrier continues with a fresh model request; terminal or failed barriers stop the loop. No stock Tool selects barrier, and batches without one retain the upstream parallel/sequential path.",
+      "updatePolicy": "Bun applies the exact patch or fails on conflict. On every Pi intake, first delete it if upstream provides equivalent preflight barrier semantics. Otherwise re-prove sibling prepare/before/execute are zero on both sides of the barrier, multiple-barrier behavior, answered replan, terminal no-continuation and unchanged stock batches. Stop if maintenance would require an ask_user name special-case, duplicated scheduler or agent-loop rewrite.",
+      "licenseFiles": ["LICENSES/pi-coding-agent-MIT.txt"]
     }
   ]
 }

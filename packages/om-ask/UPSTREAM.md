@@ -1,7 +1,9 @@
 # Upstream provenance
 
-This directory is a subtractive, modified fork feasibility slice. It is not a
-registered Pi Extension and is not exposed to models or OmniMind users.
+This directory is OmniMind's subtractive, modified Ask User runtime fork. The
+package itself remains Host-neutral and side-effect free; OmniMind Server owns
+the only bundled Pi Extension registration and exposes it only when a compatible
+canonical presenter lease and exact bundled provenance are both present.
 
 - Package: `@mrclrchtr/supi-ask-user@5.0.0`
 - Repository: `https://github.com/mrclrchtr/supi.git`
@@ -29,7 +31,7 @@ defect by retaining the source repository's exact MIT text.
 - Tests marked `upstream-adapted` preserve the corresponding author-test
   behavior while explicitly reversing preselection, trimming, and hard caps.
 
-The subsequent OmniMind contract slice keeps the same upstream controller
+The subsequent OmniMind product profile keeps the same upstream controller
 lineage while making choice results explicit: `selectedValues`, `customText`,
 and `note` are independent fields. Single-choice custom input replaces presets;
 multi-choice custom input coexists with presets; notes remain attached only to
@@ -46,9 +48,11 @@ text trimming, and product question/option caps are absent. The package has no
 `pi.extensions` manifest, runtime dependencies, registration side effect, UI,
 configuration, persistence, timer, event bus, or process singleton.
 
-OmniMind-specific product contracts, Composer Question UI, registration,
-same-turn barrier, provenance, Product State, and restart semantics are
-intentionally outside this feasibility slice.
+The replacement `src/product.ts` and `src/tool.ts` are explicit OmniMind product
+deltas: they define the Host-neutral `ask_user` contract, validation, deterministic
+structured result and `executionMode: "barrier"`. Composer Question UI, presenter
+leases, Pi registration/provenance, Product State, restart settlement and the
+pinned Pi Core barrier scheduler remain outside this replaceable package.
 
 ## Author-test disposition
 
@@ -68,4 +72,5 @@ this explicit disposition:
 The fork's executable suite is intentionally smaller than the upstream suite:
 it protects retained runtime/domain behavior and the deletion boundary, not a
 second presentation system. The feasibility baseline was 61 fork tests; the
-canonical custom/note delta adds three focused controller regressions, for 64.
+canonical custom/note delta and final Tool/schema/result boundary bring the
+current fork suite to 71 tests.
