@@ -419,11 +419,12 @@ describe("MessagesTimeline tail anchor", () => {
       // Streamed in chunks, the way a real turn arrives: the transcript has to
       // stay at the live edge as it grows past the reserve, rather than being
       // yanked to the bottom in one jump.
-      for (let chunk = 0; chunk < 10; chunk += 1) {
+      for (let chunk = 0; chunk < 40 && handle().activeTailAnchor !== null; chunk += 1) {
         handle().growStream(SECOND_STREAMING_MESSAGE_ID, 4);
         await settleFrames(2);
       }
-      await expect.poll(() => reservePx(), { timeout: 5_000 }).toBe(0);
+      await expect.poll(() => handle().activeTailAnchor, { timeout: 5_000 }).toBeNull();
+      expect(reservePx()).toBe(0);
       await expect
         .poll(() => distanceFromBottomPx(handle()), { timeout: 5_000 })
         .toBeLessThanOrEqual(AUTO_FOLLOW_TOLERANCE_PX);
