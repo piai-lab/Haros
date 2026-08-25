@@ -12071,6 +12071,7 @@ export default function ChatView({
                     onPrevious={onPreviousActivePendingUserInputQuestion}
                     onEditQuestion={onEditActivePendingUserInputQuestion}
                     onCancel={onCancelActivePendingUserInput}
+                    onStop={onInterruptFromStopControl}
                   />
                 </div>
               ) : null}

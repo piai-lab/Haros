@@ -26,6 +26,7 @@ interface PendingUserInputPanelProps {
   onPrevious: () => void;
   onEditQuestion: (questionIndex: number) => void;
   onCancel: () => void;
+  onStop: () => void;
 }
 
 const NAV_BUTTON_CLASS_NAME =
@@ -44,6 +45,7 @@ export function ComposerPendingUserInputPanel({
   onPrevious,
   onEditQuestion,
   onCancel,
+  onStop,
 }: PendingUserInputPanelProps) {
   if (pendingUserInputs.length === 0) return null;
   const activePrompt = pendingUserInputs[0];
@@ -61,6 +63,7 @@ export function ComposerPendingUserInputPanel({
       onPrevious={onPrevious}
       onEditQuestion={onEditQuestion}
       onCancel={onCancel}
+      onStop={onStop}
     />
   );
 }
@@ -76,6 +79,7 @@ function ComposerPendingUserInputCard({
   onPrevious,
   onEditQuestion,
   onCancel,
+  onStop,
 }: {
   prompt: PendingUserInput;
   isResponding: boolean;
@@ -87,6 +91,7 @@ function ComposerPendingUserInputCard({
   onPrevious: () => void;
   onEditQuestion: (questionIndex: number) => void;
   onCancel: () => void;
+  onStop: () => void;
 }) {
   const { t } = useI18n();
   const progress = derivePendingUserInputProgress(prompt.questions, answers, questionIndex);
@@ -164,6 +169,14 @@ function ComposerPendingUserInputCard({
             className="mr-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/45 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
           >
             {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            disabled={isResponding}
+            onClick={onStop}
+            className="mr-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/45 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
+          >
+            {t("conversation.stopGeneration")}
           </button>
           {!isReviewing && questionCount > 1 ? (
             <>

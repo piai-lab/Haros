@@ -59,10 +59,12 @@ function Harness({
   reviewing = false,
   initialAnswers = {},
   pending = prompt,
+  onStop = vi.fn(),
 }: {
   reviewing?: boolean;
   initialAnswers?: Record<string, PendingUserInputDraftAnswer>;
   pending?: typeof prompt | typeof textPrompt;
+  onStop?: () => void;
 }) {
   const [answers, setAnswers] =
     useState<Record<string, PendingUserInputDraftAnswer>>(initialAnswers);
@@ -81,6 +83,7 @@ function Harness({
         onPrevious={vi.fn()}
         onEditQuestion={vi.fn()}
         onCancel={vi.fn()}
+        onStop={onStop}
       />
     </I18nProvider>
   );
@@ -145,6 +148,17 @@ describe("ComposerPendingUserInputPanel", () => {
     expect((input.element() as HTMLTextAreaElement).value).toBe("");
     await page.getByRole("button", { name: "采用建议" }).click();
     expect((input.element() as HTMLTextAreaElement).value).toBe("不要建立第二套 UI。  ");
+    await screen.unmount();
+  });
+
+  it("keeps Stop Turn distinct from cancelling the Ask", async () => {
+    const onStop = vi.fn();
+    const screen = await render(<Harness onStop={onStop} />);
+
+    await page.getByRole("button", { name: "停止生成" }).click();
+
+    expect(onStop).toHaveBeenCalledTimes(1);
+    await expect.element(page.getByRole("button", { name: "取消" })).toBeVisible();
     await screen.unmount();
   });
 
