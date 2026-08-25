@@ -2,11 +2,11 @@
 
 > 初版日期：2026-08-22；Gate A 重审：2026-08-25
 >
-> 当前 Gate A 条件性 fork lineage：[`@mrclrchtr/supi-ask-user@5.0.0`](https://www.npmjs.com/package/@mrclrchtr/supi-ask-user/v/5.0.0) / [`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)。它不是 adopted dependency，也不是自动追更授权。
+> 当前 fork lineage：[`@mrclrchtr/supi-ask-user@5.0.0`](https://www.npmjs.com/package/@mrclrchtr/supi-ask-user/v/5.0.0) / [`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)。减法 feasibility slice 已 GO，但它仍不是 adopted dependency，也不是自动追更授权。
 >
-> 当前 OmniMind source 观察基线：`main@071293d4bb519071cfb17758658cdc8ac784f7af`
+> 当前 OmniMind source 观察基线：`main@1e8ea260df8a1009a464587725400e5581117102`；fork source commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`
 >
-> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` fork、产品接入与 packaged proof 尚未实施。
+> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` private fork feasibility kernel 已建立并判 GO；Tool 注册、public schema、Composer/Host/Pi 接入、live 与 packaged proof 均未实施。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -27,6 +27,9 @@
 ```yaml
 product: OmniMind Ask User
 fork_package: "@omnimind/om-ask"
+fork_version: "5.0.0-omnimind.feasibility.0"
+fork_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
+fork_stage: pushed_source_candidate_unregistered
 runtime_tool: ask_user
 conditional_runtime_lineage:
   package: "@mrclrchtr/supi-ask-user@5.0.0"
@@ -38,7 +41,7 @@ conditional_runtime_lineage:
   npm_integrity: sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==
   npm_shasum: cabb06df40ab95be1a67b4f3b32c83bc257ea38a
   tgz_sha256: d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e
-  evidence: source-matched_gate_a_candidate_not_adopted
+  evidence: exact_source_matched_gate_b_feasibility_go_not_adopted
   fork_shape: subtractive_not_narrow
   direct_install: forbidden
 primary_donor:
@@ -59,10 +62,19 @@ patch_inventory:
   - P5_lifecycle_and_same-turn_barrier
   - P6_truthful_result_and_context
   - P7_provenance_reload_and_collision
-status: gate_a_complete_fork_not_yet_authorized_or_implemented
+feasibility_slice:
+  decision: go
+  retained_source_modules: [types, normalize, controller, lock, structured_result, host_neutral_kernel]
+  deleted_owners: [tui, transcript, supi_core, config, events, timer, terminal_session_helpers, tool_registration, public_schema, prompt_guidance]
+  fork_tests: 61
+  registered: false
+  model_exposed: false
+  ui_connected: false
+  shipped: false
+status: gate_b_feasibility_go_product_integration_not_authorized
 ```
 
-当 Gate B 获批且 fork 真正建立后，本 block 才能改为 adopted upstream base、fork commit、artifact hashes、Pi baseline 与证据等级；不能把本轮条件性候选永久冒充运行版本。
+只有完整 Gate B 产品接入获批并闭合后，本 block 才能改为 adopted upstream base、runtime registration、shipped artifact hashes、Pi journey 与生产证据等级；不能把当前 feasibility kernel 冒充运行版本。
 
 ### 0.3 每轮必须产出的结论
 
@@ -78,6 +90,25 @@ status: gate_a_complete_fork_not_yet_authorized_or_implemented
 8. 对用户和维护者的净收益是什么；
 9. 失败如何回滚；
 10. 当前只到 research candidate、source candidate、packaged candidate 还是 released。
+
+### 0.4 当前 fork feasibility baseline
+
+未来每轮 intake 必须从以下已证明边界出发，不能重新把删除项 merge 回来：
+
+| Surface | Current fork baseline | Update rule |
+|---|---|---|
+| source ancestry | supi exact `ce8af5f…`；fork source `a96c60256…` | 每个 retained hunk 必须继续映射 exact upstream module/test |
+| domain/controller | 选择/文本正交、stable IDs/values、navigation、comments、ordered structured outcome、cancel/abort terminal | 优先吃 upstream bugfix；若 controller/normalize 连续大面积冲突，回 Gate A |
+| recommendation | metadata only；零默认选择、零文本预填 | 任何恢复 preselection/prefill 的更新拒绝 |
+| text | 不 trim、不 Unicode rewrite、不静默归并 | blank validation 可检查但不能改写原值 |
+| limits | 只保留“至少一题、choice 至少一个 authored option”的语义有效性；无 product max | transport/security guard 未来由 canonical contract owner 明确，不能回写 guidance cap |
+| runtime shell | Host-neutral interaction port、lease lock、pre/in-flight abort、late settlement fence | 不是 Pi registration/Host bridge；不能在这里偷接 composition |
+| result | structured details only | model summary、Timeline receipt 与 selected-only context 归未来产品 owner |
+| dependencies | runtime dependencies = 0 | 不重新引入 `supi-core`、TUI 或完整 lifecycle package |
+| registration/activation | none | `pi.extensions`、ToolDefinition、prompt、public schema 未经新授权禁止出现 |
+| tests | upstream 9/152 baseline；fork 5/61；55 preserve/adapt、9 reverse、88 delete | upstream baseline 与 fork suite 必须分开跑，不能用 fork 61 替代作者 152 |
+
+Feasibility GO 的 stop-loss 依据、行级保留比例和完整 module disposition 只看 [`omnimind-ask-user-cognition.md`](omnimind-ask-user-cognition.md) §13.1；本文把它转成未来 update gate，不建立第二 source decision。
 
 ## 1. 适用范围与触发条件
 
@@ -698,10 +729,9 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 ## 15. 当前开放事项
 
-本手册建立时，以下仍是未来 Gate B 的真实开放项，不能被 intake 文档本身关闭：
+fork placement 与 lineage stop-loss 已由 feasibility slice 闭合为 GO。以下仍是未来完整 Gate B 的真实开放项，不能被该 GO 冒充关闭：
 
-- 维护者是否确认 Gate B，以及 `@omnimind/om-ask` fork repository/package placement；
-- subtractive fork 后 retained runtime kernel 是否仍足以诚实地继承 supi lineage，还是已触发重新选型 stop-loss；
+- 维护者是否授权进入 product contract、registration、Host/UI 与 Pi barrier 接入；
 - final canonical TypeScript field names 与 migration；
 - exact Pi `0.84.2` scheduler 已知为原顺序整批 sequential；待实施的是最窄 Ask-first + batch-terminate + answer-after-replan barrier seam；
 - Product State 对 restart stale 与 draft presentation 的最终形状；
@@ -710,7 +740,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - abnormal payload bytes/render thresholds 的测量；
 - Agent/Chat prompt guidance 与 live calling behavior；
 - cross-provider richer-field compatibility；
-- build/package/export/license assembly；
+- production build/package/export/SBOM/license assembly；
 - full packaged proof 与 production adoption。
 
 这些是待实施/待验证，不是产品应被限制的理由。
@@ -725,7 +755,7 @@ general_gate_authority: PI-ECOSYSTEM-INTAKE.md
 conditional_runtime_lineage:
   package: "@mrclrchtr/supi-ask-user@5.0.0"
   commit: ce8af5f57304ad114319aa75c00920f029ceb8e7
-  evidence: source-matched_gate_a_candidate_not_adopted
+  evidence: gate_b_feasibility_go_not_adopted
   direct_install: forbidden
   fork_shape: subtractive_not_narrow
 primary_donor:
@@ -737,7 +767,17 @@ bounded_donors:
   compatibility: "pi-ask-user@0.14.0"
   correctness_tests: "@qmahyar/pi-ask@1.4.0"
   sentinel: "pi-tian-ask-user@1.0.0"
-current_fork_status: not_implemented
+current_fork:
+  package: "@omnimind/om-ask@5.0.0-omnimind.feasibility.0"
+  commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
+  status: pushed_source_candidate_unregistered
+  feasibility: go
+  tests: 61
+  runtime_dependencies: 0
+  registered: false
+  model_exposed: false
+  ui_connected: false
+  shipped: false
 update_policy:
   mode: manual_exact-source
   latest_tracking: forbidden

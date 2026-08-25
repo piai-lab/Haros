@@ -1,10 +1,10 @@
 # OmniMind Ask User：一级公民、运行时母体与长期维护认知
 
-> Gate A 重审日期：2026-08-25
+> Gate A 重审 / Gate B fork feasibility 日期：2026-08-25
 >
-> 状态：`source-matched / Gate-A-complete / Gate-B-not-authorized / not-adopted`
+> 状态：`source-matched / Gate-B-feasibility-GO / pushed-source-candidate / not-registered / not-adopted`
 >
-> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 是条件性 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史是首要 UX/test donor。**
+> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已通过减法 fork 可行性门，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。该 GO 只证明母体值得继续，不代表 Tool、schema、UI 或产品接入获准。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -12,13 +12,13 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。本文不表示代码已接入、依赖已增加、App 已打包或产品已发布。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库只有 [`packages/om-ask`](../packages/om-ask) 的未注册、Host-neutral feasibility kernel；本文不表示 `ask_user` 已注册、模型已能调用、canonical schema 已公开、Composer 已接线、App 已打包或产品已发布。
 
 ## 0. 先给结论
 
 ### 0.1 一句话裁决
 
-OmniMind 应把 `ask_user` 做成与 Todo 同等级的 bundled Pi-native Session Extension 和跨 Engine canonical User Input 能力；Composer Question UI 独立拥有全部展示。现阶段没有一个第三方包可以原装成为产品 runtime。`supi-ask-user@5.0.0` 仅因其 **stable question ID / option value、choice/text 正交 domain、structured result、controller terminal state、one-form lock、sequential、Abort/Cancel 与 no-UI throw** 在运行时骨架上领先，而获得“条件性 fork 母体”资格；不是因为它的 TUI、Preview 或 Review 更漂亮。
+OmniMind 应把 `ask_user` 做成与 Todo 同等级的 bundled Pi-native Session Extension 和跨 Engine canonical User Input 能力；Composer Question UI 独立拥有全部展示。现阶段没有一个第三方包可以原装成为产品 runtime。`supi-ask-user@5.0.0` 仅因其 **stable question ID / option value、choice/text 正交 domain、structured result、controller terminal state、one-form lock、sequential、Abort/Cancel 与 no-UI throw** 在运行时骨架上领先；本轮减法切片进一步证明，删掉 TUI 与 ambient lifecycle 后，真正可继承的是 domain/controller/normalize 核心，而不是它的完整 Pi/TUI runtime。
 
 ### 0.2 旧结论如何被降级
 
@@ -28,7 +28,7 @@ OmniMind 应把 `ask_user` 做成与 Todo 同等级的 bundled Pi-native Session
 - 不是“upstream 很成熟”的背书；
 - 不是“几处窄 patch 就能产品化”；
 - 不是未来自动追 `latest` 的授权；
-- 不是 Gate B 实施授权；
+- 不是完整 Gate B 产品接入授权；已获授权并完成的只有 fork feasibility slice；
 - 若下文 stop-loss 被触发，必须重新选型，而不是为保住旧判断继续堆 adapter。
 
 ### 0.3 最重要的反直觉
@@ -556,11 +556,11 @@ created -> projected -> waiting -> answered
 | UI owner | Workbench/Composer projection |
 | distribution owner | OmniMind build、SBOM/license、packaged verification |
 
-`@omnimind/om-ask` 是建议身份，不是本轮已创建 package。它只随 OmniMind Agent distribution，不能被一个 adapter 静默包装成 AgentGateway tool，也不能让第三方 package 自己拥有 Settings、Product State 或 release cadence。
+`@omnimind/om-ask` 已作为 monorepo private feasibility package 创建，但没有 `pi.extensions`、ToolDefinition、runtime dependency、composition consumer 或 shipped activation。只有未来完整 Gate B 通过后，它才可能随 OmniMind Agent distribution；它不能被一个 adapter 静默包装成 AgentGateway tool，也不能让第三方 package 自己拥有 Settings、Product State 或 release cadence。
 
 ## 13. Gate B 施工顺序
 
-Gate A 不授权以下施工。维护者确认完整 decision surface 后，Gate B 应按顺序：
+维护者已授权并完成前两步的 fork feasibility slice；第 3–10 步仍未获授权：
 
 1. 固定 fork exact source、artifact、license 与作者测试 baseline；
 2. 建立 subtractive product profile，先切掉 TUI/supi-core/ambient lifecycle；
@@ -574,6 +574,63 @@ Gate A 不授权以下施工。维护者确认完整 decision surface 后，Gate
 10. exact pushed SHA rebuild/install，fresh isolated profile packaged journey。
 
 禁止先把 Tool 暴露给模型、以后再补 UI/result。那会公开假能力。
+
+### 13.1 Fork feasibility slice：GO
+
+exact source、artifact 与法律基线已固定：
+
+| 项 | 固定事实 |
+|---|---|
+| npm | `@mrclrchtr/supi-ask-user@5.0.0` |
+| source | `mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user` |
+| provenance | npm SLSA resolved dependency 指向同一 commit |
+| integrity / shasum | `sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==` / `cabb06df40ab95be1a67b4f3b32c83bc257ea38a` |
+| tarball SHA-256 | `d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e` |
+| rights | source MIT；fork 保留 Marcel Richter 2026 exact license text；npm tgz 缺 LICENSE/NOTICE 的发行缺口已在 fork source 修复 |
+| author baseline | exact source，Vitest 4.1.10，9 files / 152 tests passed |
+| fork source commit | `a96c60256bd6e391af57f4d2994b4a12d32aa6a5` |
+
+切片是 monorepo private package，不包含 `pi.extensions`、ToolDefinition、TypeBox schema、prompt guidance、composition consumer 或 runtime dependency。它既不注册 `ask_user`，也不向模型或 UI 宣称能力。
+
+#### Retained / deleted module
+
+| 上游模块 | 处置 | fork 模块 | 行级证据与真实价值 |
+|---|---|---|---|
+| `src/types.ts` | adapt | `src/types.ts` | 131 行中约 94 行原样；保留 choice/text、stable ID/value 与 structured outcome，recommendation 改为纯 metadata |
+| `src/normalize.ts` | adapt | `src/normalize.ts` | 266 行中约 120 行原样；保留 identity/shape/recommendation validation，删除 trim、Unicode 改写与数量上限 |
+| `src/session/controller.ts` | retain/adapt | `src/controller.ts` | 314 行中约 223 行原样；导航、single/multi、comments、unanswered、ordered result、cancel/abort 主状态机仍是上游实现；删除所有预选/预填并补 terminal late-mutation fence |
+| `src/session/lock.ts` | strengthen | `src/lock.ts` | 保留 one-active 责任，boolean 改成 lease token，stale release 不再误解锁新 interaction |
+| `src/render/result.ts` | subtract/rebuild | `src/result.ts` | 只保留 structured details builder；Pi summary、英文拼接、unselected narrative 与 truncation owner 全删 |
+| `src/ask-user.ts` | subtract/rebuild shell | `src/kernel.ts` | 保留 validation → availability → lock → signal → interaction → result → cleanup 顺序；Pi registration、TUI、core、event、timer、terminal/session 全删，并补 pre/in-flight abort 与 late settlement fence |
+| `src/ui/**`（1,715 行） | delete | 无 | canonical Composer Question 已拥有 UI；保留会制造第二 UI owner |
+| `src/render/transcript.ts` | delete | 无 | Timeline/Workbench 未来统一投影，不继承 TUI transcript |
+| `src/schema.ts` / `tool/guidance.ts` / `extension.ts` | delete | 无 | 当前不公开 schema/prompt、不注册 Tool，不制造假能力 |
+| `supi-core` bundled dependency | delete | 无 | prompt/config/session/terminal 是第二 owner；fork runtime dependencies 为零 |
+
+上游 production source 共 3,164 行；feasibility kernel source 共 778 行，缩减约 75%。六个映射模块的新 fork code 中约 473/745 行仍是上游原行（约 63%）；最关键 controller 约 71% 原样。这个比例不能证明正确性，但能反驳“只借 fork 名义自研”：问卷主状态机和大部分 domain 仍清楚映射到 exact upstream。
+
+#### 作者测试 disposition
+
+152 个 upstream cases 没有被整体复制后冒充保留：
+
+| Disposition | Cases | 含义 |
+|---|---:|---|
+| preserve/adapt | 55 | controller 34、normalize 14、execute lifecycle 7；保持同一用户/状态语义，必要时换成 Host-neutral fixture |
+| intentionally reverse | 9 | 推荐预选/文本预填、trim、空白丢弃、literal Unicode 重写、trim 后 identity collapse；都有相反断言 |
+| delete | 88 | 81 个 TUI/transcript、6 个 registration/config/event/terminal、1 个 Pi summary truncation |
+
+fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 caps、文本无损、推荐零默认答案、lease、pre/in-flight abort、late answer、no-UI fail closed 与 forbidden-owner snapshot；`typecheck`、独立 JS/declaration build、built-package import、Oxlint 0 warning 和 Oxfmt check 均通过。
+
+#### Stop-loss 裁决
+
+| Stop-loss | 证据 | 裁决 |
+|---|---|---|
+| 保留实质过少 | fork 映射源码约 63% 是上游原行；controller 约 71% 原样 | 未触发 |
+| 作者测试大量失去意义 | 55 保留/适配，9 有意反转且有 replacement，88 删除项全部属于明确拒绝的 presentation/ambient owner | 未触发 |
+| 仍需重建主要状态机 | questionnaire controller 未重建；重写的是必须被替换的 Pi/TUI execute shell 与 trivial result presentation | 未触发 |
+| 为 lineage 保留第二 owner | source test 断言无 TUI、`supi-core`、config、event、timer、terminal/session hook、registration 或 runtime dependency | 未触发 |
+
+**结论：GO。** `supi@ce8af5f…` 足以作为 domain/controller fork lineage 继续进入下一次维护者授权；但它不再被描述成“成熟完整 runtime”。OmniMind 仍需完整拥有 canonical contract、Host bridge、Composer projection、Ask-first barrier、provenance、restart stale 与 distribution proof。若未来这些责任被塞回单一 fork adapter，或连续 intake 破坏 controller/normalize 的 ancestry/test 映射，立即回 Gate A。
 
 ## 14. Required proof
 
@@ -719,7 +776,7 @@ supi 高速变化使“定期 merge upstream main”不成立。未来更新必�
 ## 17. 零记忆机器摘要
 
 ```yaml
-status: gate_a_complete_not_adopted
+status: gate_b_fork_feasibility_go_pushed_source_candidate_not_adopted
 date: 2026-08-25
 product:
   capability: canonical_user_input
@@ -728,12 +785,17 @@ product:
   ui_owner: composer_question_workbench
   agent_gateway_tool: false
 runtime_mother:
-  disposition: conditional_fork_lineage
+  disposition: feasibility_proven_subtractive_fork_lineage
   package: "@mrclrchtr/supi-ask-user@5.0.0"
   commit: ce8af5f57304ad114319aa75c00920f029ceb8e7
   direct_install: forbidden
   claim: runtime_kernel_only
   fork_shape: subtractive_not_narrow
+  fork_package: "@omnimind/om-ask@5.0.0-omnimind.feasibility.0"
+  fork_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
+  registered: false
+  model_exposed: false
+  public_schema: false
   risks: [pre_release, rapid_majors, short_history, supi_core, missing_artifact_license, tui_coupling, preselection, trim, hard_caps]
 donors:
   ux_tests:
@@ -757,6 +819,8 @@ hard_invariants:
   - restart_is_stale_not_fake_resume
   - exact_same_name_provenance
   - no_public_fake_capability
-gate_b: requires_maintainer_confirmation
+gate_b:
+  feasibility_slice: go
+  product_integration: requires_maintainer_confirmation
 update_manual: research/pi-ask-user-intake.md
 ```
