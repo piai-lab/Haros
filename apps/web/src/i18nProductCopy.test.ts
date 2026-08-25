@@ -455,6 +455,16 @@ describe("reachable OmniMind-owned product copy", () => {
     }
   });
 
+  it("uses the localized AppSnap product name throughout the Chinese catalog", () => {
+    expect(EN_MESSAGES["settings.appsnap"]).toBe("AppSnap");
+    expect(ZH_CN_MESSAGES["settings.appsnap"]).toBe("应用快照");
+
+    for (const [key, value] of Object.entries(ZH_CN_MESSAGES)) {
+      if (!key.toLowerCase().includes("appsnap")) continue;
+      expect(value, `${key} must use the Chinese product name`).not.toContain("AppSnap");
+    }
+  });
+
   it("locks the W1 Environment, thread environment, Workbench, and Git taxonomy", () => {
     const exact = [
       ["environment.title", "Environment", "环境信息"],

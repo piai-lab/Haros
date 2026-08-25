@@ -126,9 +126,10 @@ const ZH_CN_MESSAGES = {
   "settings.restorePartiallyCompleted": "部分默认设置未能应用",
   "settings.restorePartiallyCompletedDescription":
     "已成功的项目会保留。请在对应服务恢复后重试其余设置。",
-  "settings.restoreAppSnapRuntimePending": "AppSnap 默认偏好已保存，但当前应用状态尚未完全更新。",
-  "settings.restoreAppSnapRuntimeCompleted": "AppSnap 已应用默认设置",
-  "settings.restoreAppSnapRuntimeFailed": "AppSnap 仍无法应用默认设置",
+  "settings.restoreAppSnapRuntimePending":
+    "应用快照的默认偏好已保存，但当前应用状态尚未完全更新。",
+  "settings.restoreAppSnapRuntimeCompleted": "应用快照已应用默认设置",
+  "settings.restoreAppSnapRuntimeFailed": "应用快照仍无法应用默认设置",
   "settings.restartOmniMind": "重新启动 OmniMind",
   "settings.conversation": "对话",
   "settings.archiveConfirmation": "归档确认",
