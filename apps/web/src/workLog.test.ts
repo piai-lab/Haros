@@ -11,6 +11,29 @@ import {
 import { makeActivity } from "./storeTestFixtures";
 
 describe("deriveWorkLogEntries", () => {
+  it("projects the canonical user-input terminal settlement for localized receipts", () => {
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "ask-stale",
+          kind: "user-input.resolved",
+          tone: "info",
+          summary: "User input expired",
+          payload: {
+            requestId: "ask-1",
+            settlement: { status: "stale" },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry).toMatchObject({
+      activityKind: "user-input.resolved",
+      userInputSettlementStatus: "stale",
+    });
+  });
+
   it("keeps one thread-level partial attachment receipt with only valid safe failure items", () => {
     const entries = deriveWorkLogEntries(
       [

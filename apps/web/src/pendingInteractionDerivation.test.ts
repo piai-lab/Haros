@@ -839,4 +839,76 @@ describe("derivePendingUserInputs", () => {
 
     expect(derivePendingUserInputs(activities)[0]?.questions[0]?.options).toEqual([]);
   });
+
+  it("projects canonical choice and text metadata into the shared Composer shape", () => {
+    const activities: OrchestrationThreadActivity[] = [
+      makeActivity({
+        id: "user-input-canonical-v1",
+        createdAt: "2026-08-25T00:00:01.000Z",
+        kind: "user-input.requested",
+        summary: "User input requested",
+        tone: "info",
+        payload: {
+          requestId: "req-user-input-canonical-v1",
+          version: 1,
+          questions: [
+            {
+              kind: "choice",
+              id: "runtime",
+              header: "Runtime",
+              prompt: "Which runtime should be primary?",
+              cardinality: "multiple",
+              options: [
+                {
+                  label: "Pi",
+                  description: "Bundled runtime",
+                  preview: "Uses the pinned runtime.",
+                  recommended: true,
+                  recommendationReason: "Preserves the tested lifecycle.",
+                },
+              ],
+            },
+            {
+              kind: "text",
+              id: "constraint",
+              prompt: "Add a constraint.",
+              placeholder: "Keep the raw answer",
+              suggestion: { text: "No second UI.  ", reason: "One owner" },
+            },
+          ],
+        },
+      }),
+    ];
+
+    expect(derivePendingUserInputs(activities)[0]?.questions).toEqual([
+      {
+        id: "runtime",
+        header: "Runtime",
+        question: "Which runtime should be primary?",
+        kind: "choice",
+        prompt: "Which runtime should be primary?",
+        cardinality: "multiple",
+        multiSelect: true,
+        options: [
+          {
+            label: "Pi",
+            description: "Bundled runtime",
+            preview: "Uses the pinned runtime.",
+            recommended: true,
+            recommendationReason: "Preserves the tested lifecycle.",
+          },
+        ],
+      },
+      {
+        id: "constraint",
+        header: "Add a constraint.",
+        question: "Add a constraint.",
+        kind: "text",
+        prompt: "Add a constraint.",
+        placeholder: "Keep the raw answer",
+        suggestion: { text: "No second UI.  ", reason: "One owner" },
+        options: [],
+      },
+    ]);
+  });
 });

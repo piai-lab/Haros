@@ -246,6 +246,63 @@ function parseUserInputQuestions(
       if (!entry || typeof entry !== "object") return null;
       const question = entry as Record<string, unknown>;
       if (
+        (question.kind === "choice" || question.kind === "text") &&
+        typeof question.id === "string" &&
+        typeof question.prompt === "string"
+      ) {
+        const rawOptions =
+          question.kind === "choice" && Array.isArray(question.options) ? question.options : [];
+        const options = rawOptions
+          .map<UserInputQuestion["options"][number] | null>((option) => {
+            if (!option || typeof option !== "object") return null;
+            const record = option as Record<string, unknown>;
+            if (typeof record.label !== "string") return null;
+            return {
+              label: record.label,
+              ...(typeof record.description === "string"
+                ? { description: record.description }
+                : {}),
+              ...(typeof record.preview === "string" ? { preview: record.preview } : {}),
+              ...(record.recommended === true ? { recommended: true } : {}),
+              ...(typeof record.recommendationReason === "string"
+                ? { recommendationReason: record.recommendationReason }
+                : {}),
+            };
+          })
+          .filter((option): option is UserInputQuestion["options"][number] => option !== null);
+        return {
+          id: question.id,
+          header: typeof question.header === "string" ? question.header : question.prompt,
+          question: question.prompt,
+          options,
+          kind: question.kind,
+          prompt: question.prompt,
+          ...(question.cardinality === "multiple"
+            ? { cardinality: "multiple" as const, multiSelect: true }
+            : question.kind === "choice"
+              ? { cardinality: "single" as const }
+              : {}),
+          ...(typeof question.placeholder === "string"
+            ? { placeholder: question.placeholder }
+            : {}),
+          ...(question.suggestion && typeof question.suggestion === "object"
+            ? (() => {
+                const suggestion = question.suggestion as Record<string, unknown>;
+                return typeof suggestion.text === "string"
+                  ? {
+                      suggestion: {
+                        text: suggestion.text,
+                        ...(typeof suggestion.reason === "string"
+                          ? { reason: suggestion.reason }
+                          : {}),
+                      },
+                    }
+                  : {};
+              })()
+            : {}),
+        };
+      }
+      if (
         typeof question.id !== "string" ||
         typeof question.header !== "string" ||
         typeof question.question !== "string" ||
@@ -257,15 +314,19 @@ function parseUserInputQuestions(
         .map<UserInputQuestion["options"][number] | null>((option) => {
           if (!option || typeof option !== "object") return null;
           const optionRecord = option as Record<string, unknown>;
-          if (
-            typeof optionRecord.label !== "string" ||
-            typeof optionRecord.description !== "string"
-          ) {
+          if (typeof optionRecord.label !== "string") {
             return null;
           }
           return {
             label: optionRecord.label,
-            description: optionRecord.description,
+            ...(typeof optionRecord.description === "string"
+              ? { description: optionRecord.description }
+              : {}),
+            ...(typeof optionRecord.preview === "string" ? { preview: optionRecord.preview } : {}),
+            ...(optionRecord.recommended === true ? { recommended: true } : {}),
+            ...(typeof optionRecord.recommendationReason === "string"
+              ? { recommendationReason: optionRecord.recommendationReason }
+              : {}),
           };
         })
         .filter((option): option is UserInputQuestion["options"][number] => option !== null);
@@ -274,6 +335,27 @@ function parseUserInputQuestions(
         header: question.header,
         question: question.question,
         options,
+        ...(question.kind === "choice" || question.kind === "text" ? { kind: question.kind } : {}),
+        ...(typeof question.prompt === "string" ? { prompt: question.prompt } : {}),
+        ...(question.cardinality === "single" || question.cardinality === "multiple"
+          ? { cardinality: question.cardinality }
+          : {}),
+        ...(typeof question.placeholder === "string" ? { placeholder: question.placeholder } : {}),
+        ...(question.suggestion && typeof question.suggestion === "object"
+          ? (() => {
+              const suggestion = question.suggestion as Record<string, unknown>;
+              return typeof suggestion.text === "string"
+                ? {
+                    suggestion: {
+                      text: suggestion.text,
+                      ...(typeof suggestion.reason === "string"
+                        ? { reason: suggestion.reason }
+                        : {}),
+                    },
+                  }
+                : {};
+            })()
+          : {}),
         ...(question.multiSelect === true ? { multiSelect: true } : {}),
       };
     })

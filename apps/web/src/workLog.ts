@@ -82,6 +82,13 @@ export interface WorkLogEntry {
   // (e.g. user-input.requested -> question glyph) instead of the generic
   // tone fallback. Same rationale as `toolName` below.
   activityKind?: OrchestrationThreadActivity["kind"];
+  userInputSettlementStatus?:
+    | "answered"
+    | "cancelled"
+    | "aborted"
+    | "timed_out"
+    | "unavailable"
+    | "stale";
   failureReason?: ProviderTurnStartFailureReasonValue;
   // Provider-native event type carried through the activity payload (e.g.
   // "background_tasks_changed") so the timeline can pick a specific icon.
@@ -494,6 +501,19 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     label: activity.summary,
     tone: activity.tone === "approval" ? "info" : activity.tone,
     activityKind: activity.kind,
+    ...(activity.kind === "user-input.resolved" &&
+    (asRecord(payload?.settlement)?.status === "answered" ||
+      asRecord(payload?.settlement)?.status === "cancelled" ||
+      asRecord(payload?.settlement)?.status === "aborted" ||
+      asRecord(payload?.settlement)?.status === "timed_out" ||
+      asRecord(payload?.settlement)?.status === "unavailable" ||
+      asRecord(payload?.settlement)?.status === "stale")
+      ? {
+          userInputSettlementStatus: asRecord(payload?.settlement)!.status as NonNullable<
+            WorkLogEntry["userInputSettlementStatus"]
+          >,
+        }
+      : {}),
     ...(toolName ? { toolName } : {}),
     ...(toolCallId ? { toolCallId } : {}),
     ...(toolStatus ? { toolStatus } : {}),

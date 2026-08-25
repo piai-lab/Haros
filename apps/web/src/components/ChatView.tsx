@@ -2,7 +2,7 @@ import {
   type AutomationDefinition,
   type AutomationSchedule,
   type ApprovalRequestId,
-  type CanonicalUserInputAnswers,
+  type CanonicalUserInputResponse,
   EventId,
   MessageId,
   type ModelSelection,
@@ -9287,7 +9287,7 @@ export default function ChatView({
   const onRespondToUserInput = useCallback(
     async (
       requestId: ApprovalRequestId,
-      answers: CanonicalUserInputAnswers,
+      response: CanonicalUserInputResponse,
       lifecycleGeneration?: string,
     ) => {
       const api = readNativeApi();
@@ -9302,7 +9302,7 @@ export default function ChatView({
           commandId: newCommandId(),
           threadId: activeThreadId,
           requestId,
-          answers,
+          response,
           ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
           createdAt: new Date().toISOString(),
         })
@@ -9323,7 +9323,7 @@ export default function ChatView({
     }
     void onRespondToUserInput(
       activePendingUserInput.requestId,
-      {},
+      { status: "cancelled" },
       activePendingUserInput.lifecycleGeneration,
     );
   }, [activePendingIsResponding, activePendingUserInput, onRespondToUserInput]);
@@ -9375,7 +9375,7 @@ export default function ChatView({
       if (resolvedAnswers) {
         void onRespondToUserInput(
           activePendingUserInput.requestId,
-          resolvedAnswers,
+          { status: "answered", answers: resolvedAnswers },
           activePendingUserInput.lifecycleGeneration,
         );
         return true;

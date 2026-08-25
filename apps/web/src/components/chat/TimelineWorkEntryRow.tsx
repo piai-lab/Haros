@@ -615,20 +615,22 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
   // Task progress is product copy, not a tool lifecycle suffix. Rendering the
   // structured count through the shared catalog both localizes it and keeps a
   // terminal "completed" from the compact heading normalizer.
-  const heading = workEntry.skillDelivery
-    ? t(
-        workEntry.activityKind === "skill.instructions.failed"
-          ? "skill.instructionsFailed"
-          : "skill.instructionsLoaded",
-        { skillName: workEntry.skillDelivery.skillName },
-      )
-    : workEntry.itemType === "command_execution" ||
-        workEntry.requestKind === "command" ||
-        Boolean(workEntry.command ?? workEntry.rawCommand)
-      ? t("tool.command.single")
-      : workEntry.taskListProgress
-        ? t("taskList.progress", workEntry.taskListProgress)
-        : (bundledWebAccessHeading ?? toolWorkEntryHeading(workEntry));
+  const heading = workEntry.userInputSettlementStatus
+    ? t(`pendingInput.receipt.${workEntry.userInputSettlementStatus}`)
+    : workEntry.skillDelivery
+      ? t(
+          workEntry.activityKind === "skill.instructions.failed"
+            ? "skill.instructionsFailed"
+            : "skill.instructionsLoaded",
+          { skillName: workEntry.skillDelivery.skillName },
+        )
+      : workEntry.itemType === "command_execution" ||
+          workEntry.requestKind === "command" ||
+          Boolean(workEntry.command ?? workEntry.rawCommand)
+        ? t("tool.command.single")
+        : workEntry.taskListProgress
+          ? t("taskList.progress", workEntry.taskListProgress)
+          : (bundledWebAccessHeading ?? toolWorkEntryHeading(workEntry));
   const rawPreview = workEntryPreview(workEntry);
   const preview =
     isOmniMindBrowserToolRow || isOmniMindToolRow
