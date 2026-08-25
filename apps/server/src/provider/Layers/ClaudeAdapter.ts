@@ -4849,8 +4849,8 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
             });
 
             pendingUserInputs.set(requestId, pendingInput);
-            const settleUnavailable = () => {
-              Effect.runFork(
+            const settleUnavailable = () =>
+              Effect.runPromise(
                 settlePendingUserInput(context, requestId, pendingInput, {
                   settlement: { status: "unavailable" },
                   answers: {},
@@ -4861,12 +4861,14 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
                       catch: () => undefined,
                     }).pipe(Effect.ignore),
                   ),
+                  Effect.ignore,
                 ),
               );
-            };
             const removePresenterWatch =
               userInputPresenterRegistry.onUnavailable(settleUnavailable);
-            if (!userInputPresenterRegistry.available) settleUnavailable();
+            if (!userInputPresenterRegistry.available) {
+              userInputPresenterRegistry.handoffUnavailable(settleUnavailable);
+            }
             if (
               callbackOptions.agentID !== undefined &&
               context.terminalTaskIds.has(callbackOptions.agentID)

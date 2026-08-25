@@ -189,96 +189,18 @@ function unrefTimer(timer: ReturnType<typeof setTimeout>): void {
   }
 }
 
-function runPosixBackendShutdown(input: {
-  readonly child: BackendShutdownProcess;
-  readonly forceKillDelayMs: number;
-  readonly timeoutMs: number;
-}): Promise<void> {
-  if (hasExited(input.child)) {
-    return Promise.resolve();
-  }
-
-  return new Promise<void>((resolve, reject) => {
-    let settled = false;
-    let forced = false;
-    let forceTimer: ReturnType<typeof setTimeout> | null = null;
-    let deadlineTimer: ReturnType<typeof setTimeout> | null = null;
-
-    const cleanup = (): void => {
-      input.child.off("exit", onExit);
-      if (forceTimer) clearTimeout(forceTimer);
-      if (deadlineTimer) clearTimeout(deadlineTimer);
-    };
-    const settle = (error?: Error): void => {
-      if (settled) return;
-      settled = true;
-      cleanup();
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    };
-    const onExit = (): void => {
-      settle();
-    };
-    const forceIfRunning = (): void => {
-      if (settled || hasExited(input.child)) {
-        if (hasExited(input.child)) onExit();
-        return;
-      }
-      forced = true;
-      try {
-        input.child.kill("SIGKILL");
-      } catch {
-        // The absolute deadline below still fails closed if the process survives.
-      }
-      if (hasExited(input.child)) {
-        onExit();
-      }
-    };
-
-    input.child.once("exit", onExit);
-    try {
-      input.child.kill("SIGTERM");
-    } catch {
-      // A failed graceful signal still gets the bounded force-kill attempt.
-    }
-
-    if (hasExited(input.child)) {
-      onExit();
-      return;
-    }
-
-    if (input.forceKillDelayMs === 0) {
-      forceIfRunning();
-    } else {
-      forceTimer = setTimeout(forceIfRunning, input.forceKillDelayMs);
-      unrefTimer(forceTimer);
-    }
-
-    if (settled) return;
-
-    deadlineTimer = setTimeout(() => {
-      if (hasExited(input.child)) {
-        onExit();
-        return;
-      }
-      settle(new PosixBackendShutdownTimeoutError(forced));
-    }, input.timeoutMs);
-    unrefTimer(deadlineTimer);
-  });
-}
-
 /**
- * Stops a macOS/Linux backend and resolves only after the OS reports child exit.
- * A signal being sent is not proof of exit: updater handoff must fail closed or
- * a surviving old backend can retain the database lifecycle lock.
+ * Requests the authenticated Server shutdown path on macOS/Linux and resolves
+ * only after the OS reports child exit. SIGKILL is a bounded fallback, never
+ * the graceful path, so Server scope finalizers can settle pending interactions.
  */
 export function stopPosixBackendAndWait(input: {
   readonly child: BackendShutdownProcess;
+  readonly backendHttpUrl: string;
+  readonly shutdownToken: string;
   readonly forceKillDelayMs: number;
   readonly timeoutMs: number;
+  readonly startRequest?: StartDesktopBackendShutdownRequest;
 }): Promise<void> {
   if (!Number.isFinite(input.forceKillDelayMs) || input.forceKillDelayMs < 0) {
     return Promise.reject(new RangeError("forceKillDelayMs must be a non-negative number."));
@@ -294,16 +216,26 @@ export function stopPosixBackendAndWait(input: {
   const existing = posixShutdownsByProcess.get(key);
   if (existing) return existing;
 
-  const shutdown = runPosixBackendShutdown(input).finally(() => {
-    if (posixShutdownsByProcess.get(key) === shutdown) {
-      posixShutdownsByProcess.delete(key);
-    }
-  });
+  const shutdown = runRequestFirstBackendShutdown({
+    ...input,
+    startRequest: input.startRequest ?? startDesktopBackendShutdownRequest,
+    forceTerminate: (child) => void child.kill("SIGKILL"),
+  })
+    .then((result) => {
+      if (result.type === "timed-out") {
+        throw new PosixBackendShutdownTimeoutError(result.forced);
+      }
+    })
+    .finally(() => {
+      if (posixShutdownsByProcess.get(key) === shutdown) {
+        posixShutdownsByProcess.delete(key);
+      }
+    });
   posixShutdownsByProcess.set(key, shutdown);
   return shutdown;
 }
 
-function runWindowsBackendShutdown(input: {
+function runRequestFirstBackendShutdown(input: {
   readonly child: BackendShutdownProcess;
   readonly backendHttpUrl: string;
   readonly shutdownToken: string;
@@ -433,7 +365,7 @@ export function stopWindowsBackendAndWait(input: {
     throw new RangeError("Backend force-kill delay must be non-negative and precede timeout.");
   }
 
-  const operation = runWindowsBackendShutdown({
+  const operation = runRequestFirstBackendShutdown({
     ...input,
     startRequest: input.startRequest ?? startDesktopBackendShutdownRequest,
     forceTerminate: input.forceTerminate ?? ((child) => void child.kill("SIGTERM")),

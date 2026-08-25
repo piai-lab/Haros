@@ -2709,7 +2709,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
               if (pending.durableTerminalEmitted) return;
               pending.durableTerminalEmitted = true;
               pending.removePresenterWatch?.();
-              Effect.runFork(
+              return Effect.runPromise(
                 emit(context, {
                   ...buildEventBase({
                     threadId: context.session.threadId,
@@ -2730,12 +2730,15 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                       context.client.session.abort({ sessionID: context.openCodeSessionId }),
                     ).pipe(Effect.ignore),
                   ),
+                  Effect.ignore,
                 ),
               );
             };
             pending.removePresenterWatch =
               userInputPresenterRegistry.onUnavailable(settleUnavailable);
-            if (!userInputPresenterRegistry.available) settleUnavailable();
+            if (!userInputPresenterRegistry.available) {
+              userInputPresenterRegistry.handoffUnavailable(settleUnavailable);
+            }
             break;
           }
 

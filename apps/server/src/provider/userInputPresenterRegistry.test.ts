@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { userInputPresenterRegistry } from "./userInputPresenterRegistry.ts";
+import { UserInputPresenterRegistry } from "./userInputPresenterRegistry.ts";
 
 describe("canonical user-input presenter registry", () => {
   it("notifies only when the last compatible presenter lease disappears", () => {
-    expect(userInputPresenterRegistry.size).toBe(0);
+    const userInputPresenterRegistry = new UserInputPresenterRegistry();
     const unavailable = vi.fn();
     const remove = userInputPresenterRegistry.onUnavailable(unavailable);
     const first = userInputPresenterRegistry.acquire("window-a", 1);
@@ -20,21 +20,48 @@ describe("canonical user-input presenter registry", () => {
     remove();
   });
 
-  it("revokes every lease exactly once during intentional server shutdown", () => {
-    expect(userInputPresenterRegistry.size).toBe(0);
-    const unavailable = vi.fn();
+  it("seals registration and awaits asynchronous settlement handoffs", async () => {
+    const userInputPresenterRegistry = new UserInputPresenterRegistry();
+    let releaseHandoff: (() => void) | undefined;
+    const unavailable = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          releaseHandoff = resolve;
+        }),
+    );
     const remove = userInputPresenterRegistry.onUnavailable(unavailable);
     const first = userInputPresenterRegistry.acquire("window-a", 1);
     const second = userInputPresenterRegistry.acquire("window-b", 1);
 
-    userInputPresenterRegistry.revokeAll();
+    const shutdown = userInputPresenterRegistry.sealAndRevoke();
     expect(userInputPresenterRegistry.size).toBe(0);
     expect(unavailable).toHaveBeenCalledTimes(1);
+    await expect(
+      Promise.race([shutdown.then(() => "settled"), Promise.resolve("pending")]),
+    ).resolves.toBe("pending");
+    expect(() => userInputPresenterRegistry.acquire("late-window", 1)).toThrow(
+      "presenter registration is closed",
+    );
 
-    userInputPresenterRegistry.revokeAll();
+    releaseHandoff?.();
+    await expect(shutdown).resolves.toBe(0);
+    await expect(userInputPresenterRegistry.sealAndRevoke()).resolves.toBe(0);
     first.release();
     second.release();
     expect(unavailable).toHaveBeenCalledTimes(1);
     remove();
+  });
+
+  it("tracks an immediate settlement registered after shutdown sealing", async () => {
+    const userInputPresenterRegistry = new UserInputPresenterRegistry();
+    await userInputPresenterRegistry.sealAndRevoke();
+    const unavailable = vi.fn(async () => undefined);
+
+    userInputPresenterRegistry.onUnavailable(unavailable);
+    expect(unavailable).not.toHaveBeenCalled();
+    userInputPresenterRegistry.handoffUnavailable(unavailable);
+    await expect(userInputPresenterRegistry.drainUnavailableHandoffs()).resolves.toBe(0);
+
+    expect(unavailable).toHaveBeenCalledTimes(1);
   });
 });

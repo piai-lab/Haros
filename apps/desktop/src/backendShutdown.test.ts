@@ -18,6 +18,7 @@ import {
   type BackendShutdownProcess,
   type DesktopBackendShutdownRequestOutcome,
   type PendingDesktopBackendShutdownRequest,
+  type StartDesktopBackendShutdownRequest,
 } from "./backendShutdown";
 
 class FakeBackendProcess extends EventEmitter {
@@ -55,6 +56,16 @@ function makePendingRequest(
   return {
     outcome,
     cancel: vi.fn<() => void>(),
+  };
+}
+
+function makePosixRequestOptions(
+  startRequest: StartDesktopBackendShutdownRequest = () => makePendingRequest(),
+) {
+  return {
+    backendHttpUrl: "http://127.0.0.1:3773",
+    shutdownToken: "desktop-only-token",
+    startRequest,
   };
 }
 
@@ -96,32 +107,44 @@ describe("stopPosixBackendAndWait", () => {
 
   it("resolves only after the child exits", async () => {
     const child = makeTestBackendShutdownProcess();
+    const pendingRequest = makePendingRequest(
+      Promise.resolve({ type: "response", statusCode: 202 }),
+    );
+    const startRequest = vi.fn(() => pendingRequest);
     const shutdown = stopPosixBackendAndWait({
       child,
+      ...makePosixRequestOptions(startRequest),
       forceKillDelayMs: 8_000,
       timeoutMs: 10_000,
     });
 
-    expect(child.killSignals).toEqual(["SIGTERM"]);
+    expect(startRequest).toHaveBeenCalledOnce();
+    expect(startRequest).toHaveBeenCalledWith({
+      backendHttpUrl: "http://127.0.0.1:3773",
+      shutdownToken: "desktop-only-token",
+    });
+    expect(child.killSignals).toEqual([]);
     await vi.advanceTimersByTimeAsync(7_999);
     await expectPromisePending(shutdown);
 
     child.exit(0);
 
     await expect(shutdown).resolves.toBeUndefined();
-    expect(child.killSignals).toEqual(["SIGTERM"]);
+    expect(child.killSignals).toEqual([]);
+    expect(pendingRequest.cancel).toHaveBeenCalledOnce();
   });
 
   it("force-kills a surviving child and still requires an exit event", async () => {
     const child = makeTestBackendShutdownProcess();
     const shutdown = stopPosixBackendAndWait({
       child,
+      ...makePosixRequestOptions(),
       forceKillDelayMs: 8_000,
       timeoutMs: 10_000,
     });
 
     await vi.advanceTimersByTimeAsync(8_000);
-    expect(child.killSignals).toEqual(["SIGTERM", "SIGKILL"]);
+    expect(child.killSignals).toEqual(["SIGKILL"]);
     await expectPromisePending(shutdown);
 
     child.exit(null, "SIGKILL");
@@ -132,6 +155,7 @@ describe("stopPosixBackendAndWait", () => {
     const child = makeTestBackendShutdownProcess();
     const shutdown = stopPosixBackendAndWait({
       child,
+      ...makePosixRequestOptions(),
       forceKillDelayMs: 8_000,
       timeoutMs: 10_000,
     });
@@ -142,13 +166,14 @@ describe("stopPosixBackendAndWait", () => {
     });
     await vi.advanceTimersByTimeAsync(10_000);
     await rejection;
-    expect(child.killSignals).toEqual(["SIGTERM", "SIGKILL"]);
+    expect(child.killSignals).toEqual(["SIGKILL"]);
   });
 
   it("shares duplicate shutdown calls for the same process", async () => {
     const child = makeTestBackendShutdownProcess();
     const input = {
       child,
+      ...makePosixRequestOptions(),
       forceKillDelayMs: 8_000,
       timeoutMs: 10_000,
     };
@@ -156,7 +181,7 @@ describe("stopPosixBackendAndWait", () => {
     const first = stopPosixBackendAndWait(input);
     const second = stopPosixBackendAndWait(input);
     expect(second).toBe(first);
-    expect(child.killSignals).toEqual(["SIGTERM"]);
+    expect(child.killSignals).toEqual([]);
 
     child.exit(0);
     await expect(first).resolves.toBeUndefined();
@@ -168,6 +193,7 @@ describe("stopPosixBackendAndWait", () => {
     await expect(
       stopPosixBackendAndWait({
         child,
+        ...makePosixRequestOptions(),
         forceKillDelayMs: 10_000,
         timeoutMs: 10_000,
       }),
@@ -179,6 +205,7 @@ describe("stopPosixBackendAndWait", () => {
     const child = makeTestBackendShutdownProcess();
     const shutdown = stopPosixBackendAndWait({
       child,
+      ...makePosixRequestOptions(),
       forceKillDelayMs: 8_000,
       timeoutMs: 10_000,
     });
@@ -186,6 +213,28 @@ describe("stopPosixBackendAndWait", () => {
     const rejection = expect(shutdown).rejects.toBeInstanceOf(PosixBackendShutdownTimeoutError);
     await vi.advanceTimersByTimeAsync(10_000);
     await rejection;
+  });
+
+  it("keeps the original fallback deadline when the graceful request fails", async () => {
+    const child = makeTestBackendShutdownProcess();
+    const startRequest = vi.fn(() => makePendingRequest(Promise.reject(new Error("offline"))));
+    const shutdown = stopPosixBackendAndWait({
+      child,
+      ...makePosixRequestOptions(startRequest),
+      forceKillDelayMs: 8_000,
+      timeoutMs: 10_000,
+    });
+
+    await Promise.resolve();
+    expect(startRequest).toHaveBeenCalledOnce();
+    expect(child.killSignals).toEqual([]);
+    await vi.advanceTimersByTimeAsync(7_999);
+    expect(child.killSignals).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(child.killSignals).toEqual(["SIGKILL"]);
+
+    child.exit(null, "SIGKILL");
+    await expect(shutdown).resolves.toBeUndefined();
   });
 });
 

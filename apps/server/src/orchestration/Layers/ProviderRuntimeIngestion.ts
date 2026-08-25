@@ -894,17 +894,20 @@ const make = Effect.gen(function* () {
       }
     }
 
-    yield* orchestrationEngine.dispatch({
-      type: "thread.activity.append",
-      commandId: providerCommandId(
-        event,
-        "thread-activity-append",
-        `${threadId}:${activity.kind}:${activity.id}`,
-      ),
-      threadId,
-      activity,
-      createdAt: activity.createdAt,
-    });
+    yield* orchestrationEngine.dispatch(
+      {
+        type: "thread.activity.append",
+        commandId: providerCommandId(
+          event,
+          "thread-activity-append",
+          `${threadId}:${activity.kind}:${activity.id}`,
+        ),
+        threadId,
+        activity,
+        createdAt: activity.createdAt,
+      },
+      { admission: "in-flight-runtime-fact" },
+    );
     if (key && fingerprint) {
       yield* Cache.set(latestActivityUpdateFingerprintByKey, key, fingerprint);
     }

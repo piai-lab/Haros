@@ -8012,6 +8012,73 @@ describe("ProviderRuntimeIngestion", () => {
     expect(thread.runtimeMode).toBe("approval-required");
   });
 
+  it("drains a late user-input request together with its terminal fact while quiescing", async () => {
+    const harness = await createHarness();
+    const createdAt = new Date().toISOString();
+    const lifecycleGeneration = "shutdown-user-input-generation";
+    const requestId = ApprovalRequestId.makeUnsafe("req-shutdown-user-input");
+    await Effect.runPromise(
+      harness.providerSessionDirectory.upsert({
+        threadId: asThreadId("thread-1"),
+        provider: "codex",
+        status: "running",
+        lifecycleGeneration,
+      }),
+    );
+    await Effect.runPromise(harness.engine.quiesce);
+
+    harness.emit({
+      type: "user-input.requested",
+      eventId: asEventId("evt-shutdown-user-input-requested"),
+      provider: "codex",
+      createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId: asTurnId("turn-shutdown-user-input"),
+      lifecycleGeneration,
+      requestId,
+      payload: {
+        questions: [
+          {
+            id: "shutdown_choice",
+            header: "Shutdown",
+            question: "Choose before shutdown",
+            options: [{ label: "A" }],
+          },
+        ],
+      },
+    });
+    harness.emit({
+      type: "user-input.resolved",
+      eventId: asEventId("evt-shutdown-user-input-resolved"),
+      provider: "codex",
+      createdAt,
+      threadId: asThreadId("thread-1"),
+      turnId: asTurnId("turn-shutdown-user-input"),
+      lifecycleGeneration,
+      requestId,
+      payload: { settlement: { status: "unavailable" } },
+    });
+
+    await harness.drain();
+    await Effect.runPromise(harness.engine.drain);
+    const readModel = await Effect.runPromise(harness.engine.getReadModel());
+    const thread = readModel.threads.find((entry) => entry.id === "thread-1");
+    const interactionActivities =
+      thread?.activities.filter((activity) =>
+        ["user-input.requested", "user-input.resolved"].includes(activity.kind),
+      ) ?? [];
+
+    expect(interactionActivities.map((activity) => activity.kind)).toEqual([
+      "user-input.requested",
+      "user-input.resolved",
+    ]);
+    expect(interactionActivities[1]?.payload).toMatchObject({
+      requestId,
+      lifecycleGeneration,
+      settlement: { status: "unavailable" },
+    });
+  });
+
   it("creates and routes subagent runtime events into child threads", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();

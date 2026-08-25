@@ -2356,13 +2356,14 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
               type: "user-input.resolved" as const,
               payload: { settlement: { status: "unavailable" as const } },
             } satisfies ProviderRuntimeEvent;
-            const settleNativeUnavailable = () => {
-              if (pendingUserInputTerminals.get(key) !== pending) return;
+            const settleNativeUnavailable = (): Promise<void> | void => {
+              if (pendingUserInputTerminals.get(key) !== pending) return undefined;
               pending.status = "unavailable";
-              void manager
+              return manager
                 .respondToUserInput(event.threadId, ApprovalRequestId.makeUnsafe(requestId), {})
                 .then(() => manager.interruptTurn(event.threadId))
-                .catch(() => undefined);
+                .catch(() => undefined)
+                .then(() => undefined);
             };
             const settleUnavailableAfterProjection = () => {
               if (pendingUserInputTerminals.get(key) !== pending) return;
@@ -2379,7 +2380,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
               settleUnavailableAfterProjection,
             );
             if (!userInputPresenterRegistry.available) {
-              settleNativeUnavailable();
+              userInputPresenterRegistry.handoffUnavailable(settleNativeUnavailable);
               pending.durableTerminalEmitted = true;
               pending.removePresenterWatch();
               immediateUnavailableEventIds.add(unavailableTerminal.eventId);

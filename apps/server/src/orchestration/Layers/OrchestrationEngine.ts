@@ -78,7 +78,6 @@ import {
   ORCHESTRATION_EVENT_PUBSUB_CAPACITY,
   type OrchestrationCommandAdmissionDecision,
   type OrchestrationCommandQueues,
-  allowsQuiescingCommandAdmission,
   takeNextOrchestrationCommand,
   tryAdmitOrchestrationCommand,
   usesReservedCommandAdmission,
@@ -1669,7 +1668,9 @@ const makeOrchestrationEngine = Effect.gen(function* () {
           if (
             current.phase === "draining" ||
             current.phase === "stopped" ||
-            (current.phase === "quiescing" && !allowsQuiescingCommandAdmission(command.type))
+            (current.phase === "quiescing" &&
+              !usesReservedCommandAdmission(command.type) &&
+              context?.admission !== "in-flight-runtime-fact")
           ) {
             return [{ accepted: false, reason: "stopped" as const }, current] as const;
           }

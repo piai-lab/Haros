@@ -2,8 +2,6 @@ import { Effect, Queue } from "effect";
 import { describe, expect, it } from "vitest";
 
 import {
-  allowsQuiescingCommandAdmission,
-  orchestrationCommandLane,
   takeNextOrchestrationCommand,
   tryAdmitOrchestrationCommand,
 } from "./orchestrationAdmission.ts";
@@ -18,13 +16,6 @@ const makeQueues = Effect.gen(function* () {
 });
 
 describe("orchestration command admission", () => {
-  it("admits persisted runtime facts during quiesce without granting control capacity", () => {
-    expect(allowsQuiescingCommandAdmission("thread.activity.append")).toBe(true);
-    expect(orchestrationCommandLane("thread.activity.append")).toBe("normal");
-    expect(allowsQuiescingCommandAdmission("thread.turn.start")).toBe(false);
-    expect(allowsQuiescingCommandAdmission("thread.meta.update")).toBe(false);
-  });
-
   it("keeps reserved lifecycle capacity available under normal-command overload", async () => {
     await Effect.runPromise(
       Effect.gen(function* () {

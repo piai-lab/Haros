@@ -28,6 +28,8 @@ import type { ManagedAttachmentPrincipal } from "../../managedAttachmentPrincipa
 
 export interface OrchestrationDispatchContext {
   readonly attachmentPrincipal?: ManagedAttachmentPrincipal;
+  /** Trusted Provider Runtime ingestion of a fact emitted before shutdown quiesced. */
+  readonly admission?: "in-flight-runtime-fact";
 }
 
 export interface OrchestrationProjectionCatchUpStatus {

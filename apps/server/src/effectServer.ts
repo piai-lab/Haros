@@ -96,9 +96,10 @@ export function closeServerRuntimePipeline(input: {
   readonly providerService: Pick<ProviderServiceShape, "closeRuntimeEvents">;
   readonly managedAttachmentCleanup: Pick<ManagedAttachmentCleanupShape, "drain">;
   readonly subscriptionsScope: Scope.Closeable;
-  readonly revokeUserInputPresenters: Effect.Effect<void>;
+  readonly sealUserInputPresenters: Effect.Effect<void>;
+  readonly drainUserInputPresenterHandoffs: Effect.Effect<void>;
 }): Effect.Effect<void> {
-  return input.revokeUserInputPresenters.pipe(
+  return input.sealUserInputPresenters.pipe(
     // Presenter loss settles live native callbacks as `unavailable` while the
     // provider event fanout and durable projectors are still accepting work.
     Effect.andThen(input.orchestrationEngine.quiesce),
@@ -107,7 +108,12 @@ export function closeServerRuntimePipeline(input: {
     // close drains those workers before the engine accepts its final stop.
     Effect.andThen(input.orchestrationEngine.drain),
     Effect.andThen(input.providerService.closeRuntimeEvents),
+    Effect.andThen(input.drainUserInputPresenterHandoffs),
     Effect.andThen(Scope.close(input.subscriptionsScope, Exit.void)),
+    // Provider Runtime ingestion owns a trusted quiescing admission seam for
+    // already-emitted facts. Once its scope is closed, this fence proves every
+    // admitted terminal append completed before the engine enters draining.
+    Effect.andThen(input.orchestrationEngine.drain),
     Effect.andThen(input.managedAttachmentCleanup.drain),
     Effect.andThen(input.orchestrationEngine.stop),
   );
@@ -204,7 +210,24 @@ export const createEffectServer = Effect.fn(function* (
       providerService,
       managedAttachmentCleanup,
       subscriptionsScope,
-      revokeUserInputPresenters: Effect.sync(() => userInputPresenterRegistry.revokeAll()),
+      sealUserInputPresenters: Effect.promise(() =>
+        userInputPresenterRegistry.sealAndRevoke().then((failures) => {
+          if (failures > 0) {
+            console.warn(
+              `[user-input-presenter] ${failures} unavailable settlement handoff(s) failed during shutdown`,
+            );
+          }
+        }),
+      ),
+      drainUserInputPresenterHandoffs: Effect.promise(() =>
+        userInputPresenterRegistry.drainUnavailableHandoffs().then((failures) => {
+          if (failures > 0) {
+            console.warn(
+              `[user-input-presenter] ${failures} late unavailable settlement handoff(s) failed during shutdown`,
+            );
+          }
+        }),
+      ),
     }),
   );
   yield* Scope.provide(orchestrationReactor.start, subscriptionsScope);

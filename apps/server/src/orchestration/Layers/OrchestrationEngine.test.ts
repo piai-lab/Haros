@@ -217,6 +217,35 @@ describe("OrchestrationEngine", () => {
           createdAt,
         }),
       ),
+    ).rejects.toMatchObject({
+      _tag: "OrchestrationCommandAdmissionError",
+      reason: "stopped",
+    });
+
+    await expect(
+      system.run(
+        system.engine.dispatch(
+          {
+            type: "thread.activity.append",
+            commandId: CommandId.makeUnsafe("cmd-engine-quiesce-trusted-runtime-fact"),
+            threadId,
+            activity: {
+              id: EventId.makeUnsafe("evt-engine-quiesce-trusted-runtime-fact"),
+              tone: "info",
+              kind: "user-input.resolved",
+              summary: "User input unavailable",
+              payload: {
+                requestId: "req-engine-quiesce-trusted-runtime-fact",
+                settlement: { status: "unavailable" },
+              },
+              turnId: null,
+              createdAt,
+            },
+            createdAt,
+          },
+          { admission: "in-flight-runtime-fact" },
+        ),
+      ),
     ).resolves.toMatchObject({ sequence: expect.any(Number) });
 
     // A turn start takes the priority `user` lane, but priority is not

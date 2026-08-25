@@ -1868,7 +1868,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         removeUnavailableListener = userInputPresenterRegistry.onUnavailable(() =>
           settleStatus("unavailable"),
         );
-        if (!userInputPresenterRegistry.available) settleStatus("unavailable");
+        if (!userInputPresenterRegistry.available) {
+          userInputPresenterRegistry.handoffUnavailable(() => settleStatus("unavailable"));
+        }
         if (input.signal) {
           const abort = () => settleStatus("aborted");
           input.signal.addEventListener("abort", abort, { once: true });
@@ -1977,7 +1979,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         removeUnavailableListener = userInputPresenterRegistry.onUnavailable(() =>
           finish({ status: "unavailable" }),
         );
-        if (!userInputPresenterRegistry.available) finish({ status: "unavailable" });
+        if (!userInputPresenterRegistry.available) {
+          userInputPresenterRegistry.handoffUnavailable(() => finish({ status: "unavailable" }));
+        }
       });
     };
 

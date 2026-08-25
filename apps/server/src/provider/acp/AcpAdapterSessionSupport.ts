@@ -186,11 +186,12 @@ export function acpUserInputAnswers(
 export function watchAcpUserInputPresenter(
   settlement: Deferred.Deferred<CanonicalUserInputSettlement>,
 ): () => void {
-  const settleUnavailable = () => {
-    Effect.runFork(Deferred.succeed(settlement, { status: "unavailable" }).pipe(Effect.ignore));
-  };
+  const settleUnavailable = () =>
+    Effect.runPromise(Deferred.succeed(settlement, { status: "unavailable" }).pipe(Effect.ignore));
   const remove = userInputPresenterRegistry.onUnavailable(settleUnavailable);
-  if (!userInputPresenterRegistry.available) settleUnavailable();
+  if (!userInputPresenterRegistry.available) {
+    userInputPresenterRegistry.handoffUnavailable(settleUnavailable);
+  }
   return remove;
 }
 
