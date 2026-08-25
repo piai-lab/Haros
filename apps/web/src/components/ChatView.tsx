@@ -2,7 +2,6 @@ import {
   type AutomationDefinition,
   type AutomationSchedule,
   type ApprovalRequestId,
-  type CanonicalUserInputResponse,
   EventId,
   MessageId,
   type ModelSelection,
@@ -39,7 +38,6 @@ import {
   RuntimeMode,
 } from "@omnimind/contracts";
 import { automationRequiresTargetThread } from "@omnimind/shared/automationMode";
-import { respondingInteractionReclaimAt } from "@omnimind/shared/pendingInteractions";
 import { getDefaultModel, normalizeModelSlug } from "@omnimind/shared/model";
 import {
   resolveLatestTailUserMessageEditTarget,
@@ -247,7 +245,6 @@ import {
 } from "../composerSlashCommands";
 import {
   derivePendingApprovals,
-  derivePendingUserInputs,
   derivePhase,
   deriveTimelineEntries,
   deriveActiveWorkStartedAt,
@@ -263,13 +260,6 @@ import {
   isLatestTurnSettled,
   type ActiveTaskListState,
 } from "../session-logic";
-import {
-  buildPendingUserInputAnswers,
-  dispatchClaimedPendingUserInputResponse,
-  derivePendingUserInputProgress,
-  derivePendingUserInputSinglePresetAction,
-  type PendingUserInputDraftAnswer,
-} from "../pendingUserInput";
 import { selectRightDockState, useRightDockStore } from "../rightDockStore";
 import { useStore } from "../store";
 import { RenameThreadDialog } from "./RenameThreadDialog";
@@ -322,6 +312,7 @@ import {
 import { ComposerQueuedHeader } from "./chat/ComposerQueuedHeader";
 import { ComposerLiveChangesHeader } from "./chat/ComposerLiveChangesHeader";
 import { ComposerGoalHeader } from "./chat/ComposerGoalHeader";
+import { usePendingUserInputController } from "./chat/usePendingUserInputController";
 import { ComposerPickerMenuPopup } from "./chat/ComposerPickerMenuPopup";
 import { runtimeModeAvailabilityMessageKeyFromError } from "./chat/RuntimeModeAvailabilityHint";
 import { Button } from "./ui/button";
@@ -1058,12 +1049,6 @@ function canHandleComposerPickerShortcut(
 }
 const EMPTY_AVAILABLE_EDITORS: EditorId[] = [];
 const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
-const EMPTY_PENDING_USER_INPUT_ANSWERS: Record<string, PendingUserInputDraftAnswer> = {};
-const pendingUserInputClientKey = (
-  threadId: ThreadId,
-  requestId: ApprovalRequestId,
-  lifecycleGeneration: string | undefined,
-) => `${threadId}:${pendingRequestInstanceKey(requestId, lifecycleGeneration)}`;
 const EMPTY_TERMINAL_RUNTIME_ENV: Record<string, string> = {};
 const MAX_DISMISSED_PROVIDER_HEALTH_BANNERS = 50;
 const EMPTY_LAST_INVOKED_SCRIPT_BY_PROJECT: Record<string, string> = {};
@@ -1624,18 +1609,11 @@ export default function ChatView({
   const [pendingFileUndo, setPendingFileUndo] = useState<PendingFileUndo | null>(null);
   const [showScrollToBottom, setShowScrollToBottom] = useState(false);
   const [respondingRequestKeys, setRespondingRequestKeys] = useState<string[]>([]);
-  const [respondingUserInputRequestKeys, setRespondingUserInputRequestKeys] = useState<string[]>(
+  const pendingUserInputFocusRecoveryRef = useRef<() => void>(() => undefined);
+  const schedulePendingUserInputComposerFocus = useCallback(
+    () => pendingUserInputFocusRecoveryRef.current(),
     [],
   );
-  const [pendingUserInputAnswersByRequestId, setPendingUserInputAnswersByRequestId] = useState<
-    Record<string, Record<string, PendingUserInputDraftAnswer>>
-  >({});
-  const pendingUserInputAnswersByRequestIdRef = useRef(pendingUserInputAnswersByRequestId);
-  const [pendingUserInputQuestionIndexByRequestId, setPendingUserInputQuestionIndexByRequestId] =
-    useState<Record<string, number>>({});
-  const claimedUserInputResponseKeysRef = useRef<Set<string>>(new Set());
-  const previousPendingUserInputKeysByThreadRef = useRef<Map<ThreadId, Set<string>>>(new Map());
-  const previousPendingUserInputActiveThreadRef = useRef<ThreadId | null>(null);
   const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
   useLayoutEffect(() => {
     onPlanSidebarOpenChange?.(planSidebarOpen);
@@ -2863,87 +2841,29 @@ export default function ChatView({
       threadActivities,
     ],
   );
-  const nextUserInputResponseReclaimAt = useMemo(() => {
-    let earliest: string | null = null;
-    for (const interaction of activeThread?.pendingInteractions ?? []) {
-      if (interaction.interactionKind !== "userInput" || interaction.status !== "responding") {
-        continue;
-      }
-      if (interaction.responseRequestedAt === null) {
-        return new Date(0).toISOString();
-      }
-      const reclaimAt = respondingInteractionReclaimAt(interaction.responseRequestedAt);
-      if (earliest === null || reclaimAt < earliest) {
-        earliest = reclaimAt;
-      }
-    }
-    return earliest;
-  }, [activeThread?.pendingInteractions]);
-  const [userInputResponseClaimReferenceAt, setUserInputResponseClaimReferenceAt] = useState(() =>
-    new Date().toISOString(),
+  const reportPendingUserInputSubmissionError = useCallback(
+    (targetThreadId: ThreadId, message: string) => setStoreThreadError(targetThreadId, message),
+    [setStoreThreadError],
   );
-  useEffect(() => {
-    if (nextUserInputResponseReclaimAt === null) {
-      return;
-    }
-    const delayMs = Math.max(0, Date.parse(nextUserInputResponseReclaimAt) - Date.now());
-    const timeoutId = window.setTimeout(() => {
-      setUserInputResponseClaimReferenceAt(new Date().toISOString());
-    }, delayMs);
-    return () => window.clearTimeout(timeoutId);
-  }, [nextUserInputResponseReclaimAt]);
-  const pendingUserInputs = useMemo(
-    () =>
-      derivePendingUserInputs(threadActivities, activeThread?.pendingInteractions, {
-        authoritativeHasPending: activeThread?.hasPendingUserInput,
-        latestTurnId: activeThread?.latestTurn?.turnId,
-        responseClaimReferenceAt: userInputResponseClaimReferenceAt,
-      }),
-    [
-      activeThread?.hasPendingUserInput,
-      activeThread?.latestTurn?.turnId,
-      activeThread?.pendingInteractions,
-      threadActivities,
-      userInputResponseClaimReferenceAt,
-    ],
-  );
-  const activePendingUserInput = pendingUserInputs[0] ?? null;
-  const activePendingUserInputKey = activePendingUserInput
-    ? pendingUserInputClientKey(
-        activeThreadId!,
-        activePendingUserInput.requestId,
-        activePendingUserInput.lifecycleGeneration,
-      )
-    : null;
-  const activePendingDraftAnswers = useMemo(
-    () =>
-      activePendingUserInputKey
-        ? (pendingUserInputAnswersByRequestId[activePendingUserInputKey] ??
-          EMPTY_PENDING_USER_INPUT_ANSWERS)
-        : EMPTY_PENDING_USER_INPUT_ANSWERS,
-    [activePendingUserInputKey, pendingUserInputAnswersByRequestId],
-  );
-  const activePendingQuestionIndex = activePendingUserInputKey
-    ? (pendingUserInputQuestionIndexByRequestId[activePendingUserInputKey] ?? 0)
-    : 0;
-  const activePendingProgress = useMemo(
-    () =>
-      activePendingUserInput
-        ? derivePendingUserInputProgress(
-            activePendingUserInput.questions,
-            activePendingDraftAnswers,
-            activePendingQuestionIndex,
-          )
-        : null,
-    [activePendingDraftAnswers, activePendingQuestionIndex, activePendingUserInput],
-  );
-  // Read once here for the same reason as `activeLatestTurnId`: an `activePendingProgress?.x`
-  // read inside a memo body makes React Compiler infer `activePendingProgress` as the
-  // dependency, which no longer matches the hand-written property-path dep.
-  const activePendingIsResponding = activePendingUserInputKey
-    ? respondingUserInputRequestKeys.includes(activePendingUserInputKey) ||
-      activePendingUserInput?.responseClaimable === false
-    : false;
+  const pendingUserInputController = usePendingUserInputController({
+    threadId: activeThreadId,
+    activities: threadActivities,
+    pendingInteractions: activeThread?.pendingInteractions,
+    authoritativeHasPending: activeThread?.hasPendingUserInput,
+    latestTurnId: activeThread?.latestTurn?.turnId ?? undefined,
+    // A canonical Ask request itself is detail activity evidence. The synced
+    // bit covers the empty/resolved edge without treating a shell-only thread
+    // switch as settlement.
+    threadDetailReady:
+      !isServerThread || threadActivities.length > 0 || threadDetailSyncState === "synced",
+    isFocusedPane: !isInactiveSplitPane,
+    scheduleComposerFocus: schedulePendingUserInputComposerFocus,
+    reportSubmissionError: reportPendingUserInputSubmissionError,
+  });
+  const pendingUserInputs = pendingUserInputController.pendingUserInputs;
+  const activePendingUserInput = pendingUserInputController.active?.request ?? null;
+  const activePendingProgress = pendingUserInputController.active?.progress ?? null;
+  const activePendingIsResponding = pendingUserInputController.active?.isResponding ?? false;
   const activeProposedPlan = useMemo(() => {
     if (!latestTurnSettled) {
       return null;
@@ -4478,90 +4398,9 @@ export default function ChatView({
       focusComposer();
     });
   }, [focusComposer]);
-  useEffect(() => {
-    if (!activeThreadId || threadDetailHydration !== "ready") {
-      return;
-    }
-
-    const threadKeyPrefix = `${activeThreadId}:`;
-    const currentKeys = new Set(
-      pendingUserInputs.map((request) =>
-        pendingUserInputClientKey(activeThreadId, request.requestId, request.lifecycleGeneration),
-      ),
-    );
-    const previousKeys =
-      previousPendingUserInputKeysByThreadRef.current.get(activeThreadId) ?? new Set<string>();
-    const stayedOnSameActiveThread =
-      previousPendingUserInputActiveThreadRef.current === activeThreadId;
-
-    const locallyRetryableKeys = new Set(
-      pendingUserInputs
-        .filter(
-          (request) =>
-            request.settlementStatus === "retryable" ||
-            request.settlementStatus === "uncertain" ||
-            (request.settlementStatus === "responding" && request.responseClaimable === true),
-        )
-        .map((request) =>
-          pendingUserInputClientKey(activeThreadId, request.requestId, request.lifecycleGeneration),
-        ),
-    );
-
-    let removedResolvedRequest = false;
-    for (const key of previousKeys) {
-      if (!currentKeys.has(key)) {
-        removedResolvedRequest = true;
-        claimedUserInputResponseKeysRef.current.delete(key);
-      }
-    }
-    for (const key of locallyRetryableKeys) {
-      claimedUserInputResponseKeysRef.current.delete(key);
-    }
-
-    const nextAnswers = { ...pendingUserInputAnswersByRequestIdRef.current };
-    let answersChanged = false;
-    for (const key of Object.keys(nextAnswers)) {
-      if (key.startsWith(threadKeyPrefix) && !currentKeys.has(key)) {
-        delete nextAnswers[key];
-        answersChanged = true;
-      }
-    }
-    if (answersChanged) {
-      pendingUserInputAnswersByRequestIdRef.current = nextAnswers;
-      setPendingUserInputAnswersByRequestId(nextAnswers);
-    }
-    setPendingUserInputQuestionIndexByRequestId((existing) => {
-      let changed = false;
-      const next = { ...existing };
-      for (const key of Object.keys(next)) {
-        if (key.startsWith(threadKeyPrefix) && !currentKeys.has(key)) {
-          delete next[key];
-          changed = true;
-        }
-      }
-      return changed ? next : existing;
-    });
-    setRespondingUserInputRequestKeys((existing) => {
-      const next = existing.filter(
-        (key) =>
-          !key.startsWith(threadKeyPrefix) ||
-          (currentKeys.has(key) && !locallyRetryableKeys.has(key)),
-      );
-      return next.length === existing.length ? existing : next;
-    });
-
-    previousPendingUserInputKeysByThreadRef.current.set(activeThreadId, currentKeys);
-    previousPendingUserInputActiveThreadRef.current = activeThreadId;
-    if (stayedOnSameActiveThread && removedResolvedRequest && !isInactiveSplitPane) {
-      scheduleComposerFocus();
-    }
-  }, [
-    activeThreadId,
-    isInactiveSplitPane,
-    pendingUserInputs,
-    scheduleComposerFocus,
-    threadDetailHydration,
-  ]);
+  useLayoutEffect(() => {
+    pendingUserInputFocusRecoveryRef.current = scheduleComposerFocus;
+  }, [scheduleComposerFocus]);
   // External panels (diff headers, file explorer, preview) bump this nonce after
   // inserting a reference so the composer visibly receives the text.
   const composerFocusRequestNonce = useComposerFocusRequestStore(
@@ -9363,175 +9202,13 @@ export default function ChatView({
     [activeThreadId, runtimeMode, setComposerDraftRuntimeMode, setStoreThreadError],
   );
 
-  const onRespondToUserInput = useCallback(
-    async (
-      requestId: ApprovalRequestId,
-      response: CanonicalUserInputResponse,
-      lifecycleGeneration?: string,
-    ): Promise<boolean> => {
-      const api = readNativeApi();
-      if (!api || !activeThreadId) return false;
-      const requestKey = pendingUserInputClientKey(activeThreadId, requestId, lifecycleGeneration);
-      try {
-        return await dispatchClaimedPendingUserInputResponse({
-          claimedKeys: claimedUserInputResponseKeysRef.current,
-          key: requestKey,
-          dispatch: async () => {
-            setRespondingUserInputRequestKeys((existing) =>
-              existing.includes(requestKey) ? existing : [...existing, requestKey],
-            );
-            await api.orchestration.dispatchCommand({
-              type: "thread.user-input.respond",
-              commandId: newCommandId(),
-              threadId: activeThreadId,
-              requestId,
-              response,
-              ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
-              createdAt: new Date().toISOString(),
-            });
-          },
-        });
-      } catch {
-        setRespondingUserInputRequestKeys((existing) =>
-          existing.filter((key) => key !== requestKey),
-        );
-        setStoreThreadError(activeThreadId, t("pendingInput.submitFailed"));
-        return false;
-      }
-    },
-    [activeThreadId, setStoreThreadError, t],
-  );
-
-  const onCancelActivePendingUserInput = useCallback(() => {
-    if (!activePendingUserInput || activePendingIsResponding) {
-      return;
-    }
-    void onRespondToUserInput(
-      activePendingUserInput.requestId,
-      { status: "cancelled" },
-      activePendingUserInput.lifecycleGeneration,
-    );
-  }, [activePendingIsResponding, activePendingUserInput, onRespondToUserInput]);
-
-  const setActivePendingUserInputQuestionIndex = useCallback(
-    (nextQuestionIndex: number) => {
-      if (!activePendingUserInputKey) {
-        return;
-      }
-      setPendingUserInputQuestionIndexByRequestId((existing) => ({
-        ...existing,
-        [activePendingUserInputKey]: nextQuestionIndex,
-      }));
-    },
-    [activePendingUserInputKey],
-  );
-
-  const onChangeActivePendingUserInputAnswer = useCallback(
-    (questionId: string, nextDraftAnswer: PendingUserInputDraftAnswer) => {
-      if (!activePendingUserInputKey || activePendingIsResponding) return;
-      const nextRequestAnswers = {
-        ...pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey],
-        [questionId]: nextDraftAnswer,
-      };
-      pendingUserInputAnswersByRequestIdRef.current = {
-        ...pendingUserInputAnswersByRequestIdRef.current,
-        [activePendingUserInputKey]: nextRequestAnswers,
-      };
-      setPendingUserInputAnswersByRequestId((existing) => ({
-        ...existing,
-        [activePendingUserInputKey]: nextRequestAnswers,
-      }));
-    },
-    [activePendingIsResponding, activePendingUserInputKey],
-  );
-
-  const onSelectActivePendingUserInputSinglePreset = useCallback(
-    (questionId: string, nextDraftAnswer: PendingUserInputDraftAnswer) => {
-      if (
-        !activePendingUserInputKey ||
-        !activePendingUserInput ||
-        !activePendingProgress ||
-        activePendingIsResponding
-      ) {
-        return;
-      }
-      const currentAnswers =
-        pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey] ??
-        activePendingDraftAnswers;
-      const action = derivePendingUserInputSinglePresetAction(
-        activePendingUserInput.questions,
-        currentAnswers,
-        activePendingProgress.questionIndex,
-        questionId,
-        nextDraftAnswer,
-      );
-      onChangeActivePendingUserInputAnswer(questionId, nextDraftAnswer);
-      if (action?.kind === "question") {
-        setActivePendingUserInputQuestionIndex(action.questionIndex);
-      } else if (action?.kind === "submit") {
-        void onRespondToUserInput(
-          activePendingUserInput.requestId,
-          { status: "answered", answers: action.answers },
-          activePendingUserInput.lifecycleGeneration,
-        );
-      }
-    },
-    [
-      activePendingDraftAnswers,
-      activePendingIsResponding,
-      activePendingProgress,
-      activePendingUserInput,
-      activePendingUserInputKey,
-      onChangeActivePendingUserInputAnswer,
-      onRespondToUserInput,
-      setActivePendingUserInputQuestionIndex,
-    ],
-  );
-
-  const onAdvanceActivePendingUserInput = useCallback((): boolean => {
-    if (
-      !activePendingUserInput ||
-      !activePendingUserInputKey ||
-      !activePendingProgress ||
-      activePendingIsResponding ||
-      !activePendingProgress.canAdvance
-    ) {
-      return false;
-    }
-    const pendingDraftAnswers =
-      pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey] ??
-      activePendingDraftAnswers;
-    const resolvedAnswers = buildPendingUserInputAnswers(
-      activePendingUserInput.questions,
-      pendingDraftAnswers,
-    );
-    if (activePendingProgress.isLastQuestion) {
-      if (!resolvedAnswers) return false;
-      void onRespondToUserInput(
-        activePendingUserInput.requestId,
-        { status: "answered", answers: resolvedAnswers },
-        activePendingUserInput.lifecycleGeneration,
-      );
-      return true;
-    }
-    setActivePendingUserInputQuestionIndex(activePendingProgress.questionIndex + 1);
-    return true;
-  }, [
-    activePendingDraftAnswers,
-    activePendingIsResponding,
-    activePendingProgress,
-    activePendingUserInput,
-    activePendingUserInputKey,
-    onRespondToUserInput,
-    setActivePendingUserInputQuestionIndex,
-  ]);
-
-  const onPreviousActivePendingUserInputQuestion = useCallback(() => {
-    if (!activePendingProgress) {
-      return;
-    }
-    setActivePendingUserInputQuestionIndex(Math.max(activePendingProgress.questionIndex - 1, 0));
-  }, [activePendingProgress, setActivePendingUserInputQuestionIndex]);
+  const {
+    changeAnswer: onChangeActivePendingUserInputAnswer,
+    selectSinglePreset: onSelectActivePendingUserInputSinglePreset,
+    advance: onAdvanceActivePendingUserInput,
+    previous: onPreviousActivePendingUserInputQuestion,
+    cancel: onCancelActivePendingUserInput,
+  } = pendingUserInputController.actions;
 
   async function onSubmitPlanFollowUp({
     text,
@@ -12168,13 +11845,10 @@ export default function ChatView({
                     onRespond={onRespondToApproval}
                   />
                 </div>
-              ) : pendingUserInputs.length > 0 ? (
+              ) : pendingUserInputController.active ? (
                 <div className="pb-2">
                   <ComposerPendingUserInputPanel
-                    pendingUserInputs={pendingUserInputs}
-                    isResponding={activePendingIsResponding}
-                    answers={activePendingDraftAnswers}
-                    questionIndex={activePendingQuestionIndex}
+                    active={pendingUserInputController.active}
                     isFocusedPane={!isInactiveSplitPane}
                     onChangeAnswer={onChangeActivePendingUserInputAnswer}
                     onSelectSinglePreset={onSelectActivePendingUserInputSinglePreset}

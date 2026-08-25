@@ -1,7 +1,5 @@
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
-import { type PendingUserInput } from "../../session-logic";
 import {
-  derivePendingUserInputProgress,
   setPendingUserInputCustomText,
   togglePendingUserInputCustomSelection,
   togglePendingUserInputOptionSelection,
@@ -12,12 +10,10 @@ import { cn } from "~/lib/utils";
 import { ComposerChoiceRow } from "./ComposerChoiceRow";
 import { COMPOSER_INPUT_SURFACE_CLASS_NAME } from "./composerPickerStyles";
 import { useI18n } from "../../i18n";
+import type { PendingUserInputControllerActive } from "./usePendingUserInputController";
 
 interface PendingUserInputPanelProps {
-  pendingUserInputs: PendingUserInput[];
-  isResponding: boolean;
-  answers: Record<string, PendingUserInputDraftAnswer>;
-  questionIndex: number;
+  active: PendingUserInputControllerActive;
   isFocusedPane: boolean;
   onChangeAnswer: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onSelectSinglePreset: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
@@ -32,10 +28,7 @@ const INLINE_TEXTAREA_CLASS_NAME =
   "w-full resize-none bg-transparent text-xs leading-relaxed text-[var(--color-text-foreground)] outline-none placeholder:text-[var(--color-text-foreground-tertiary)]";
 
 export function ComposerPendingUserInputPanel({
-  pendingUserInputs,
-  isResponding,
-  answers,
-  questionIndex,
+  active,
   isFocusedPane,
   onChangeAnswer,
   onSelectSinglePreset,
@@ -43,16 +36,10 @@ export function ComposerPendingUserInputPanel({
   onPrevious,
   onCancel,
 }: PendingUserInputPanelProps) {
-  if (pendingUserInputs.length === 0) return null;
-  const activePrompt = pendingUserInputs[0];
-  if (!activePrompt) return null;
   return (
     <ComposerPendingUserInputCard
-      key={`${activePrompt.requestId}:${activePrompt.lifecycleGeneration ?? "legacy"}`}
-      prompt={activePrompt}
-      isResponding={isResponding}
-      answers={answers}
-      questionIndex={questionIndex}
+      key={`${active.request.requestId}:${active.request.lifecycleGeneration ?? "legacy"}`}
+      active={active}
       isFocusedPane={isFocusedPane}
       onChangeAnswer={onChangeAnswer}
       onSelectSinglePreset={onSelectSinglePreset}
@@ -64,10 +51,7 @@ export function ComposerPendingUserInputPanel({
 }
 
 function ComposerPendingUserInputCard({
-  prompt,
-  isResponding,
-  answers,
-  questionIndex,
+  active,
   isFocusedPane,
   onChangeAnswer,
   onSelectSinglePreset,
@@ -75,10 +59,7 @@ function ComposerPendingUserInputCard({
   onPrevious,
   onCancel,
 }: {
-  prompt: PendingUserInput;
-  isResponding: boolean;
-  answers: Record<string, PendingUserInputDraftAnswer>;
-  questionIndex: number;
+  active: PendingUserInputControllerActive;
   isFocusedPane: boolean;
   onChangeAnswer: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onSelectSinglePreset: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
@@ -87,7 +68,7 @@ function ComposerPendingUserInputCard({
   onCancel: () => void;
 }) {
   const { t } = useI18n();
-  const progress = derivePendingUserInputProgress(prompt.questions, answers, questionIndex);
+  const { request: prompt, progress, isResponding } = active;
   const activeQuestion = progress.activeQuestion;
   const customInputRef = useRef<HTMLTextAreaElement | null>(null);
   const questionHeadingRef = useRef<HTMLParagraphElement | null>(null);

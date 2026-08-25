@@ -8,6 +8,7 @@ import { useState } from "react";
 
 import { I18nProvider } from "../../i18n";
 import {
+  derivePendingUserInputProgress,
   derivePendingUserInputSinglePresetAction,
   type PendingUserInputDraftAnswer,
 } from "../../pendingUserInput";
@@ -113,10 +114,12 @@ function Harness({
   return (
     <I18nProvider>
       <ComposerPendingUserInputPanel
-        pendingUserInputs={[pending]}
-        isResponding={isResponding}
-        answers={answers}
-        questionIndex={questionIndex}
+        active={{
+          request: pending,
+          answers,
+          progress: derivePendingUserInputProgress(pending.questions, answers, questionIndex),
+          isResponding,
+        }}
         isFocusedPane={isFocusedPane}
         onChangeAnswer={(questionId, answer) =>
           setAnswers((current) => ({ ...current, [questionId]: answer }))
