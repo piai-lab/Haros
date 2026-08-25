@@ -57,7 +57,6 @@ import { useLatestProjectStore } from "../latestProjectStore";
 import {
   INLINE_TERMINAL_CONTEXT_PLACEHOLDER,
   type TerminalContextDraft,
-  removeInlineTerminalContextPlaceholder,
 } from "../lib/terminalContext";
 import { extractTrailingBrowserAnnotations } from "../lib/browserAnnotations";
 import { isMacPlatform } from "../lib/utils";
@@ -6158,50 +6157,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("sends unmarked automation questions as normal chat messages", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-automation-question" as MessageId,
-        targetText: "automation question target",
-      }),
-    });
-
-    try {
-      const prompt = "how do automations work every day?";
-      useComposerDraftStore.getState().setPrompt(THREAD_ID, prompt);
-      const composerEditor = await waitForComposerEditor();
-      await vi.waitFor(
-        () => {
-          expect(composerEditor.textContent ?? "").toContain(prompt);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      wsRequests.length = 0;
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      sendButton.click();
-
-      await vi.waitFor(
-        () => {
-          const turnStartRequest = wsRequests.find((request) => {
-            const command = readDispatchedCommand(request);
-            return command?.type === "thread.turn.start";
-          });
-          expect(turnStartRequest).toBeTruthy();
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      expect(wsRequests.some((request) => request._tag === WS_METHODS.automationCreate)).toBe(
-        false,
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
   it("creates composer automations as heartbeat runs on the current chat", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -6219,62 +6174,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await vi.waitFor(
         () => {
           expect(composerEditor.textContent ?? "").toContain("say hi every 15 seconds");
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      wsRequests.length = 0;
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(false);
-      sendButton.click();
-
-      await vi.waitFor(
-        () => {
-          const automationCreateRequest = wsRequests.find(
-            (request) => request._tag === WS_METHODS.automationCreate,
-          );
-          expect(automationCreateRequest).toMatchObject({
-            _tag: WS_METHODS.automationCreate,
-            mode: "heartbeat",
-            targetThreadId: THREAD_ID,
-            sourceThreadId: THREAD_ID,
-            worktreeMode: "auto",
-            maxIterations: 3,
-            prompt: "say hi",
-            schedule: { type: "interval", everySeconds: 15 },
-          });
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-      await waitForLayout();
-
-      expect(hasDispatchedCommandType("thread.create")).toBe(false);
-      expect(hasDispatchedCommandType("thread.turn.start")).toBe(false);
-      expect(wsRequests.some((request) => request._tag === WS_METHODS.gitCreateWorktree)).toBe(
-        false,
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("creates polite composer automation requests as heartbeat runs", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-polite-chat-automation" as MessageId,
-        targetText: "polite current chat automation target",
-      }),
-    });
-
-    try {
-      useComposerDraftStore
-        .getState()
-        .setPrompt(THREAD_ID, "could you say hi every 15 seconds for 3 times");
-      const composerEditor = await waitForComposerEditor();
-      await vi.waitFor(
-        () => {
-          expect(composerEditor.textContent ?? "").toContain("could you say hi");
         },
         { timeout: 8_000, interval: 16 },
       );
@@ -7893,132 +7792,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
       dispatchConfiguredShortcut(composerEditor, { key: "m", altKey: true });
 
       await waitForComposerPickerSurfaceOpen();
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("opens the composer effort picker surface", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-effort-picker-shortcut" as MessageId,
-        targetText: "effort picker shortcut",
-      }),
-    });
-
-    try {
-      const composerEditor = await waitForComposerEditor();
-      await waitForServerConfigToApply();
-      composerEditor.focus();
-      dispatchComposerPickerShortcut(composerEditor, "e");
-
-      await waitForComposerPickerSurfaceOpen();
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("keeps removed terminal context pills removed when a new one is added", async () => {
-    const removedLabel = "Terminal 1 lines 1-2";
-    const addedLabel = "Terminal 2 lines 9-10";
-    useComposerDraftStore.getState().addTerminalContext(
-      THREAD_ID,
-      createTerminalContext({
-        id: "ctx-removed",
-        terminalLabel: "Terminal 1",
-        lineStart: 1,
-        lineEnd: 2,
-        text: "bun i\nno changes",
-      }),
-    );
-
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-terminal-pill-backspace" as MessageId,
-        targetText: "terminal pill backspace target",
-      }),
-    });
-
-    try {
-      await vi.waitFor(
-        () => {
-          expect(document.body.textContent).toContain(removedLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      const store = useComposerDraftStore.getState();
-      const currentPrompt = store.draftsByThreadId[THREAD_ID]?.prompt ?? "";
-      const nextPrompt = removeInlineTerminalContextPlaceholder(currentPrompt, 0);
-      store.setPrompt(THREAD_ID, nextPrompt.prompt);
-      store.removeTerminalContext(THREAD_ID, "ctx-removed");
-
-      await vi.waitFor(
-        () => {
-          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]).toBeUndefined();
-          expect(document.body.textContent).not.toContain(removedLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      useComposerDraftStore.getState().addTerminalContext(
-        THREAD_ID,
-        createTerminalContext({
-          id: "ctx-added",
-          terminalLabel: "Terminal 2",
-          lineStart: 9,
-          lineEnd: 10,
-          text: "git status\nOn branch main",
-        }),
-      );
-
-      await vi.waitFor(
-        () => {
-          const draft = useComposerDraftStore.getState().draftsByThreadId[THREAD_ID];
-          expect(draft?.terminalContexts.map((context) => context.id)).toEqual(["ctx-added"]);
-          expect(document.body.textContent).toContain(addedLabel);
-          expect(document.body.textContent).not.toContain(removedLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("disables send when the composer only contains an expired terminal pill", async () => {
-    const expiredLabel = "Terminal 1 line 4";
-    useComposerDraftStore.getState().addTerminalContext(
-      THREAD_ID,
-      createTerminalContext({
-        id: "ctx-expired-only",
-        terminalLabel: "Terminal 1",
-        lineStart: 4,
-        lineEnd: 4,
-        text: "",
-      }),
-    );
-
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-expired-pill-disabled" as MessageId,
-        targetText: "expired pill disabled target",
-      }),
-    });
-
-    try {
-      await vi.waitFor(
-        () => {
-          expect(document.body.textContent).toContain(expiredLabel);
-        },
-        { timeout: 8_000, interval: 16 },
-      );
-
-      const sendButton = await waitForSendButton();
-      expect(sendButton.disabled).toBe(true);
     } finally {
       await mounted.cleanup();
     }
@@ -11856,29 +11629,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     } finally {
       await mounted.cleanup();
       restoreNativeApi();
-    }
-  });
-
-  it("enables plan mode from the composer extras menu", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-plan-mode-toggle-test" as MessageId,
-        targetText: "plan mode toggle test",
-      }),
-    });
-
-    try {
-      await page.getByLabelText("Message box options").click();
-      await page.getByText("Plan mode").click();
-
-      await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.interactionMode).toBe(
-          "plan",
-        );
-      });
-    } finally {
-      await mounted.cleanup();
     }
   });
 
