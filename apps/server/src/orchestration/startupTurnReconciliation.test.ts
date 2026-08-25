@@ -1,4 +1,4 @@
-import { EventId, ThreadId, TurnId } from "@omnimind/contracts";
+import { ApprovalRequestId, EventId, ThreadId, TurnId } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -44,6 +44,16 @@ const makeActivity = (
   payload,
   sequence,
   createdAt: `2026-06-13T09:00:0${sequence}.000Z`,
+});
+
+const makePendingInteraction = (
+  requestId: string,
+  overrides: Partial<NonNullable<ReconcilableThread["pendingInteractions"]>[number]> = {},
+): NonNullable<ReconcilableThread["pendingInteractions"]>[number] => ({
+  interactionKind: "userInput",
+  requestId: ApprovalRequestId.makeUnsafe(requestId),
+  status: "pending",
+  ...overrides,
 });
 
 const expectSessionCommands = (commands: ReturnType<typeof planRestartTurnReconciliation>) =>
@@ -374,6 +384,78 @@ describe("planRestartTurnReconciliation", () => {
         activeTurnId: null,
       },
     });
+  });
+
+  it("settles durable pending interactions even when activity hydration omits the request", () => {
+    const thread = makeThread("stuck-persisted-input", {
+      session: makeSession("stuck-persisted-input"),
+      latestTurn: { state: "running" },
+      activities: [],
+      pendingInteractions: [makePendingInteraction("persisted-input")],
+    });
+
+    expect(planRestartTurnReconciliation({ threads: [thread], now: NOW })).toMatchObject([
+      {
+        type: "thread.activity.append",
+        commandId: `restart-reconcile:stuck-persisted-input:user-input:persisted-input:${NOW}`,
+        activity: {
+          kind: "user-input.resolved",
+          payload: {
+            requestId: "persisted-input",
+            settlement: { status: "stale" },
+          },
+        },
+      },
+      { type: "thread.session.set" },
+    ]);
+  });
+
+  it("deduplicates activity and durable interaction evidence for the same request", () => {
+    const thread = makeThread("stuck-deduplicated-input", {
+      session: makeSession("stuck-deduplicated-input"),
+      latestTurn: { state: "running" },
+      activities: [
+        makeActivity(
+          "canonical-input-requested",
+          "user-input.requested",
+          {
+            requestId: "canonical-input",
+            lifecycleGeneration: "generation-1",
+            questions: [
+              {
+                kind: "choice",
+                id: "direction",
+                prompt: "Choose a direction",
+                cardinality: "single",
+                options: [{ label: "Ship" }],
+              },
+            ],
+          },
+          1,
+        ),
+      ],
+      pendingInteractions: [makePendingInteraction("canonical-input", { status: "responding" })],
+    });
+
+    const commands = planRestartTurnReconciliation({
+      threads: [thread],
+      now: NOW,
+    });
+    expect(
+      commands.filter(
+        (command) =>
+          command.type === "thread.activity.append" &&
+          command.activity.kind === "user-input.resolved",
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("does not stale a confirmed durable interaction", () => {
+    const thread = makeThread("confirmed-input", {
+      pendingInteractions: [makePendingInteraction("confirmed-input", { status: "confirmed" })],
+    });
+
+    expect(planRestartTurnReconciliation({ threads: [thread], now: NOW })).toEqual([]);
   });
 
   it("reconciles an in-flight session even with no active turn id (starting/running)", () => {

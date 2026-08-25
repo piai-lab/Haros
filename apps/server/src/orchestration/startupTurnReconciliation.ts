@@ -30,6 +30,7 @@
  */
 import type {
   OrchestrationCommand,
+  OrchestrationPendingInteraction,
   OrchestrationThreadActivity,
   OrchestrationSession,
   RuntimeMode,
@@ -71,6 +72,11 @@ export interface ReconcilableThread {
   readonly activities?: ReadonlyArray<
     Pick<OrchestrationThreadActivity, "createdAt" | "id" | "kind" | "payload" | "sequence">
   >;
+  readonly pendingInteractions?:
+    | ReadonlyArray<
+        Pick<OrchestrationPendingInteraction, "interactionKind" | "requestId" | "status">
+      >
+    | undefined;
 }
 
 /**
@@ -99,8 +105,22 @@ function planStalePendingRequestCommands(input: {
   const pendingRequestIds = derivePendingThreadRequestIds({
     activities: input.thread.activities ?? [],
   });
+  // projection_pending_interactions is the durable lifecycle owner. Activities
+  // remain a compatibility fallback for history created before that projection
+  // existed, but a request must not survive restart merely because its
+  // presentation payload shape evolved or fell outside the activity window.
+  const approvalRequestIds = new Set(pendingRequestIds.approvalRequestIds);
+  const userInputRequestIds = new Set(pendingRequestIds.userInputRequestIds);
+  for (const interaction of input.thread.pendingInteractions ?? []) {
+    if (interaction.status === "confirmed") continue;
+    if (interaction.interactionKind === "approval") {
+      approvalRequestIds.add(interaction.requestId);
+    } else {
+      userInputRequestIds.add(interaction.requestId);
+    }
+  }
   const commands: ThreadActivityAppendCommand[] = [];
-  for (const requestId of pendingRequestIds.approvalRequestIds) {
+  for (const requestId of approvalRequestIds) {
     commands.push(
       buildStalePendingRequestCommand({
         threadId: input.thread.id,
@@ -111,7 +131,7 @@ function planStalePendingRequestCommands(input: {
     );
   }
 
-  for (const requestId of pendingRequestIds.userInputRequestIds) {
+  for (const requestId of userInputRequestIds) {
     commands.push(
       buildStalePendingRequestCommand({
         threadId: input.thread.id,
@@ -142,7 +162,9 @@ function planStaleCheckpointRevertCommand(input: {
       tone: "error",
       kind: CHECKPOINT_REVERT_FAILED_ACTIVITY_KIND,
       summary: "Checkpoint revert failed",
-      payload: { detail: "Checkpoint revert was interrupted by a server restart." },
+      payload: {
+        detail: "Checkpoint revert was interrupted by a server restart.",
+      },
       turnId: null,
       createdAt: input.now,
     },

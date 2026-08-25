@@ -340,4 +340,45 @@ describe("deriveThreadSummaryMetadata", () => {
       hasActionableProposedPlan: false,
     });
   });
+
+  it("recognizes current canonical choice and text requests as pending", () => {
+    const activities: OrchestrationThreadActivity[] = [
+      {
+        id: EventId.makeUnsafe("canonical-choice"),
+        tone: "info",
+        kind: "user-input.requested",
+        summary: "Questions requested",
+        payload: {
+          requestId: "canonical-input",
+          lifecycleGeneration: "generation-1",
+          questions: [
+            {
+              kind: "choice",
+              id: "direction",
+              prompt: "Choose a direction",
+              cardinality: "single",
+              options: [{ label: "Ship" }],
+            },
+            {
+              kind: "text",
+              id: "detail",
+              prompt: "Add detail",
+            },
+          ],
+        },
+        sequence: 1,
+        turnId: TurnId.makeUnsafe("turn-1"),
+        createdAt: "2026-02-27T00:01:00.000Z",
+      },
+    ];
+
+    expect(
+      deriveThreadSummaryMetadata({
+        messages: [],
+        activities,
+        proposedPlans: [],
+        latestTurn: null,
+      }),
+    ).toMatchObject({ hasPendingUserInput: true });
+  });
 });

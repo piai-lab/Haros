@@ -136,6 +136,26 @@ function hasStructuredUserInputQuestions(payload: Record<string, unknown> | null
     }
     const question = entry as Record<string, unknown>;
     const options = Array.isArray(question.options) ? question.options : null;
+    const hasCanonicalShape =
+      typeof question.id === "string" &&
+      typeof question.prompt === "string" &&
+      (question.kind === "text" ||
+        (question.kind === "choice" &&
+          (question.cardinality === "single" || question.cardinality === "multiple") &&
+          options !== null &&
+          options.some((option) => {
+            if (!option || typeof option !== "object") {
+              return false;
+            }
+            return typeof (option as Record<string, unknown>).label === "string";
+          })));
+    if (hasCanonicalShape) {
+      return true;
+    }
+
+    // Historical persisted requests used the provider-native question shape.
+    // Keep recognizing those at the activity replay seam without making that
+    // legacy shape part of the current canonical runtime contract.
     return (
       typeof question.id === "string" &&
       typeof question.header === "string" &&
