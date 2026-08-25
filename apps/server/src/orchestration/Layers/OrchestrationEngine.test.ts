@@ -2,6 +2,7 @@ import {
   CheckpointRef,
   CommandId,
   DEFAULT_PROVIDER_INTERACTION_MODE,
+  EventId,
   MessageId,
   ProjectId,
   ThreadId,
@@ -194,6 +195,29 @@ describe("OrchestrationEngine", () => {
       _tag: "OrchestrationCommandAdmissionError",
       reason: "stopped",
     });
+
+    await expect(
+      system.run(
+        system.engine.dispatch({
+          type: "thread.activity.append",
+          commandId: CommandId.makeUnsafe("cmd-engine-quiesce-runtime-fact"),
+          threadId,
+          activity: {
+            id: EventId.makeUnsafe("evt-engine-quiesce-runtime-fact"),
+            tone: "info",
+            kind: "user-input.resolved",
+            summary: "User input unavailable",
+            payload: {
+              requestId: "req-engine-quiesce-runtime-fact",
+              settlement: { status: "unavailable" },
+            },
+            turnId: null,
+            createdAt,
+          },
+          createdAt,
+        }),
+      ),
+    ).resolves.toMatchObject({ sequence: expect.any(Number) });
 
     // A turn start takes the priority `user` lane, but priority is not
     // admissibility: the WebSocket keeps serving while the engine quiesces, and

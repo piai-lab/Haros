@@ -65,6 +65,16 @@ export function usesReservedCommandAdmission(type: OrchestrationCommand["type"])
   }
 }
 
+/**
+ * Facts already emitted by an in-flight runtime must remain persistable while
+ * shutdown rejects commands that could create new work. Activity append stays
+ * on the normal lane and cannot consume the control reserve; this predicate is
+ * only the quiescing admission fence.
+ */
+export function allowsQuiescingCommandAdmission(type: OrchestrationCommand["type"]): boolean {
+  return usesReservedCommandAdmission(type) || type === "thread.activity.append";
+}
+
 export function orchestrationCommandLane(
   type: OrchestrationCommand["type"],
 ): OrchestrationCommandLane {
