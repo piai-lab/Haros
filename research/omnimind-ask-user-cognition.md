@@ -2,9 +2,9 @@
 
 > Gate A 重审 / Gate B fork feasibility 日期：2026-08-25
 >
-> 状态：`Gate-B-source-integrated / presenter-gated-product-registration / packaged-and-live-proof-pending / not-released`
+> 状态：`Gate-B-source-integrated / presenter-gated-product-registration / MiMo-and-DeepSeek-provider-wire-passed / packaged-proof-pending / not-released`
 >
-> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。维护者已授权并完成 source-level Gate B：唯一 bundled Pi-native `ask_user`、canonical response/settlement、Composer Question、presenter lease、barrier、provenance 与 stale fencing 已接入；MiMo/DeepSeek 和 exact pushed-SHA packaged App 仍是未闭合的交付门。**
+> 当前裁决不是“安装某个 npm 包”，而是：**无候选可原装采用；`@mrclrchtr/supi-ask-user@5.0.0` 的 exact-source lineage 已成为 `@omnimind/om-ask@5.0.0-omnimind.1` 的减法 fork 母体，`@geoqiao/pi-ask@1.3.0` 连同 `eko24ive/pi-ask` 历史仍是首要 UX/test donor。维护者已授权并完成 source-level Gate B：唯一 bundled Pi-native `ask_user`、canonical response/settlement、Composer Question、presenter lease、barrier、provenance 与 stale fencing 已接入；exact `main@67813a35575cd89382101b45dd9aca9418ecb6ae` 的 MiMo/DeepSeek Provider-wire proof 已闭合真实 schema、structured result 与 replan，但不是 Composer UI journey；exact pushed-SHA packaged App 仍是未闭合的交付门。**
 >
 > Gate A exact runtime candidate：[`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
 >
@@ -12,7 +12,7 @@
 >
 > 未来更新程序：[`pi-ask-user-intake.md`](pi-ask-user-intake.md)
 
-本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。模型只在兼容 presenter lease 存在且 bundled provenance 唯一时看到 `ask_user`；这项 source integration 尚未由 MiMo/DeepSeek 和 fresh packaged App 证明，也不等于公开 Release。
+本文是 Ask User 的 package-specific 研究与 source decision owner。稳定产品合同仍由 `architecture/` 拥有，施工准入仍由根 [`PI-ECOSYSTEM-INTAKE.md`](../PI-ECOSYSTEM-INTAKE.md) 与维护者 Gate B 决定。当前仓库包含 [`packages/om-ask`](../packages/om-ask) 的 Host-neutral fork runtime、Server-owned bundled registration/Host bridge，以及 Product-owned canonical contract 和 Composer Question projection。模型只在兼容 presenter lease 存在且 bundled provenance 唯一时看到 `ask_user`；这项 source integration 已由 MiMo/DeepSeek 的真实 Provider wire 证明 schema/result/replan，但尚未由 fresh packaged App 证明 Composer 与完整异常生命周期，也不等于公开 Release。
 
 ## 0. 先给结论
 
@@ -644,7 +644,7 @@ fork 自身 5 files / 61 tests 通过，覆盖 retained semantics、无产品 ca
 | Ask/Approval     | 删除 `user-input.resolved` 对 runtimeMode/sandbox/approval 的反向推断                                    | ingestion test 证明名为 `sandbox_mode` 的 Ask 答案也不能改变 permission                   |
 | Fork kernel      | choice response 新增 first-class `selectedValues[]` / `customText`，未引入 UI/config/registration        | fork suite 保留 upstream lifecycle 并覆盖产品差异                                         |
 
-该历史 slice 当时尚未解决 typed settlement、Host interaction、ToolDefinition、barrier、provenance 与 restart stale；这些阻断现已由 §13.3 的 source integration 关闭。MiMo/DeepSeek 与 packaged continuation 仍未关闭。
+该历史 slice 当时尚未解决 typed settlement、Host interaction、ToolDefinition、barrier、provenance 与 restart stale；这些阻断现已由 §13.3 的 source integration 关闭。MiMo/DeepSeek Provider wire 已在 `67813a3557` 闭合；packaged Composer 与 continuation 仍未关闭。
 
 packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818c54f2fbe1` 的 clean-clone arm64 DMG SHA-256 为 `1efe4a1b708bf92482ec71caade6a086f4215e7a9895f6740b92bd37d8758fc3`，通过 241-component legal closure；安装版 `app.asar` SHA-256 为 `b41849354be5ede2eb1318ee53ffd5cd179c698217e6a6450a3f76291c63b679`，嵌入同一 commit，且 exact scan 不含 `@omnimind/om-ask` / `packages/om-ask`。fresh 隔离 profile 与同 profile reopen 都完成 Main window 和 bundled Server ready，Helper/Renderer/Server 全部指向任务 userData，关闭后零候选进程。它证明 canonical UI bytes 可打包、安装和重开；由于 Tool 仍未注册，它故意不声称 Ask 调用、回答 continuation、Cancel/Abort fencing 或 MiMo/DeepSeek 通过。
 
@@ -697,7 +697,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 - fork 71/71；最终跨层 focused matrix 16 files / 404 tests；新增真实 Pi adapter fixture 证明 no-presenter schema absent、presenter schema exactly once、Composer projection不含 stable value、answer后出现第二模型 request、raw customText 保留、presenter loss无 continuation、reload同名 collision后 Tool absent。
 - barrier tests覆盖 Ask位于 sibling前后、sibling hooks/execute为零、multiple barrier、answered continuation、terminal无 continuation；Host bridge覆盖 single/multi/custom/raw whitespace与非法 label/空答案。
 - source present：是；runtime activated：仅 bundled OmniMind Agent且 presenter/provenance gate通过时；shipped bytes：尚待 exact pushed-SHA clean-clone artifact核验；公开 Release：否。
-- 剩余硬门只有 §14.5 的 MiMo/DeepSeek与 fresh isolated packaged App全链。任一失败都停止 production claim；不能靠 adapter降级 schema、启用非结构化 fallback或把历史 source tests冒充 live evidence。
+- 剩余硬门只有 §14.5 的 fresh isolated packaged App 全链。MiMo/DeepSeek Provider wire 已各自闭合真实 schema call、程序化 answer settlement、structured result 与 replan，但不冒充 Composer journey。packaged 任一门失败都停止 production claim；不能靠 adapter降级 schema、启用非结构化 fallback或把历史 source tests冒充 live evidence。
 
 ## 14. Required proof
 
@@ -747,7 +747,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 
 ### 14.5 Live/packaged
 
-- MiMo/DeepSeek 真实 tool call schema、stream、answer continuation；
+- MiMo/DeepSeek 真实 tool call schema、stream、程序化 answer continuation（`67813a3557` 已通过 Provider-wire proof，非 Composer UI journey）；
 - Provider 重复/畸形 sentinel；
 - abort/disconnect/recovery；
 - fresh isolated profile 的 packaged App 启动、Ask、回答、继续、关闭、重开；
@@ -843,7 +843,7 @@ supi 高速变化使“定期 merge upstream main”不成立。未来更新必�
 ## 17. 零记忆机器摘要
 
 ```yaml
-status: gate_b_source_integrated_packaged_and_live_pending
+status: gate_b_source_integrated_provider_wire_passed_packaged_pending
 date: 2026-08-25
 product:
   capability: canonical_user_input
@@ -902,7 +902,7 @@ gate_b:
   canonical_contract_and_composer_source_slice: implemented
   runtime_host_barrier_provenance_activation: implemented
   focused_source_tests: passed
-  live_mimo_deepseek: pending
+  live_mimo_deepseek: provider_wire_passed_not_composer_ui
   packaged_fresh_profile: pending
 update_manual: research/pi-ask-user-intake.md
 ```

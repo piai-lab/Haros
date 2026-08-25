@@ -6,7 +6,7 @@
 >
 > 当前 OmniMind source 观察起点：`14fa9f3e93048d51dc8e3d9d81812418a3590cf2`；fork feasibility commit：`a96c60256bd6e391af57f4d2994b4a12d32aa6a5`；source activation commit：`36e3bec7e789122c731028c1a8b791a68a6c1fea`
 >
-> 当前状态：Gate A 已重审；没有候选获准原装采用。完整 Gate B source integration 已实施：canonical contract、Composer projection、presenter lease、Host bridge、Pi barrier、同名 provenance、terminal/late/restart fencing 与唯一 bundled Tool registration均在 source 中闭合。MiMo/DeepSeek live 与 exact pushed-SHA packaged Ask continuation仍未闭合，因此当前不是 packaged candidate或 Release。
+> 当前状态：Gate A 已重审；没有候选获准原装采用。完整 Gate B source integration 已实施：canonical contract、Composer projection、presenter lease、Host bridge、Pi barrier、同名 provenance、terminal/late/restart fencing 与唯一 bundled Tool registration均在 source 中闭合。exact `main@67813a35575cd89382101b45dd9aca9418ecb6ae` 的 MiMo/DeepSeek Provider-wire proof 已闭合真实 schema、structured result 与 replan，但不是 Composer UI journey。exact pushed-SHA packaged Ask continuation仍未闭合，因此当前不是 packaged candidate或 Release。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -102,10 +102,10 @@ feasibility_slice:
   composer_projection_connected: true
   fork_shipped: pending_exact_packaged_scan
   canonical_ui_installed_candidate: true
-status: gate_b_source_integrated_live_and_packaged_pending
+status: gate_b_source_integrated_provider_wire_passed_packaged_pending
 ```
 
-当前 block 已记录 source adoption与 gated runtime registration，但不能在 MiMo/DeepSeek和 exact packaged journey闭合前填入 shipped artifact hash、packaged candidate或 released等级。
+当前 block 已记录 source adoption、gated runtime registration 与 MiMo/DeepSeek Provider-wire proof，但不能在 exact packaged journey闭合前填入 shipped artifact hash、packaged candidate或 released等级。
 
 ### 0.3 每轮必须产出的结论
 
@@ -569,7 +569,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 ### 9.4 UI fixtures
 
 - no single-select auto-submit；
-- explicit Next / Review / Submit；
+- single preset 自动进入下一题或最终 Review；single custom 与 multi 显式 Next/Review；Submit 永远显式；
 - draft across navigation/review/edit；
 - single preset→next/review、preset→custom 与 multi preset/custom coexistence state；
 - custom row inline autofocus、free-text in-card 与 Composer non-ownership；
@@ -769,7 +769,7 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 - [ ] sequential + same-turn barrier 有 exact runtime 证据
 - [ ] terminal/late/noUI/restart/provenance 有证据
 - [ ] canonical shared UI 与 cross-provider regressions 通过
-- [ ] MiMo / DeepSeek live 按风险完成
+- [x] MiMo / DeepSeek 真实 Provider-wire schema/result/replan 按风险完成（非 Composer UI journey）
 - [ ] exact pushed SHA packaged fresh-profile journey 完成
 - [ ] cognition/intake/index/execution/adoption 状态一致
 - [ ] 回滚可在一个 fork revision/composition seam 完成
@@ -778,8 +778,8 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 fork placement、canonical contract、typed settlement、Host bridge、presenter lease、Pi barrier、same-name provenance、restart stale、quiet Composer projection和最终Tool activation已在 source层闭合。以下只剩 production proof，不能被 source绿色冒充关闭：
 
-- Xiaomi MiMo与DeepSeek各一次真实 `ask_user` schema call、Composer answer、structured Tool result和模型 replan；
-- 真实 Provider对 `oneOf` schema、multiple/custom与不确定性调用行为的兼容证据；
+- exact `main@67813a35575cd89382101b45dd9aca9418ecb6ae` 已让 Xiaomi MiMo 与 DeepSeek 各完成真实 `ask_user` schema call、程序化 canonical answer settlement、structured Tool result 和模型 replan；这是 Provider-wire proof，不是 Composer UI journey；
+- packaged Composer 对同一 canonical request/result 的真实回答证据；不得把已闭合的 MiMo/DeepSeek Provider-wire proof 扩写成两个 Provider 各自的 UI journey；
 - exact pushed SHA clean-clone DMG、SBOM/LICENSE、fork与Pi core patch进入shipped bytes的扫描；
 - fresh task-only `userData`、home与Provider private home下的single/multi/custom/Preview/Review/Cancel；
 - pending中Stop Turn、最后presenter消失、Server终止/reopen stale、同名Extension collision、headless no-tool与零残留进程；
@@ -814,7 +814,7 @@ current_fork:
   package: "@omnimind/om-ask@5.0.0-omnimind.1"
   feasibility_commit: a96c60256bd6e391af57f4d2994b4a12d32aa6a5
   activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
-  status: source_integrated_packaged_and_live_pending
+  status: source_integrated_provider_wire_passed_packaged_pending
   feasibility: go
   tests: 71
   runtime_dependencies: 0
