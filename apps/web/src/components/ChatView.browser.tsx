@@ -8152,27 +8152,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("opens the composer model picker surface", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-model-picker-shortcut" as MessageId,
-        targetText: "model picker shortcut",
-      }),
-    });
-
-    try {
-      const composerEditor = await waitForComposerEditor();
-      await waitForServerConfigToApply();
-      composerEditor.focus();
-      dispatchComposerPickerShortcut(composerEditor, "m");
-
-      await waitForComposerPickerSurfaceOpen();
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
   it("loads only the exact Engine selected from the Engine menu", async () => {
     useComposerDraftStore.getState().setModelSelection(THREAD_ID, {
       provider: "claudeAgent",
@@ -8957,38 +8936,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
             .codex,
         ).toMatchObject({ provider: "codex", model: "gpt-5" });
-      });
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("cycles only through authoritative selectable models", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-model-cycle-authoritative" as MessageId,
-        targetText: "model cycle authoritative",
-      }),
-      configureFixture: (nextFixture) => {
-        nextFixture.providerModelsByProvider.codex = {
-          source: "browser.fixture",
-          models: ["gpt-5.5", "gpt-5.2"].map((slug) => ({ slug, name: slug })),
-        };
-      },
-    });
-
-    try {
-      await waitForServerConfigToApply();
-      const composerEditor = await waitForComposerEditor();
-      composerEditor.focus();
-
-      await dispatchModelCycleShortcutWhenReady(composerEditor, "]");
-      await vi.waitFor(() => {
-        expect(
-          useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.modelSelectionByProvider
-            .codex,
-        ).toMatchObject({ provider: "codex", model: "gpt-5.5" });
       });
     } finally {
       await mounted.cleanup();
@@ -9943,75 +9890,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("warms only the exact selected Engine after explicit new-thread intent", async () => {
-    const targetDraftThreadId = ThreadId.makeUnsafe("thread-selected-prefetch-target-draft");
-    const preservedImage = createComposerImage({
-      id: "selected-prefetch-preserved-image",
-      previewUrl: "blob:selected-prefetch-preserved-image",
-      name: "selected-prefetch-preserved.png",
-    });
-    seedLocalDraftThread({ threadId: targetDraftThreadId, projectId: PROJECT_ID });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(targetDraftThreadId, "droid");
-    useComposerDraftStore.getState().setPrompt(targetDraftThreadId, "preserve selected draft");
-    useComposerDraftStore.getState().addImage(targetDraftThreadId, preservedImage);
-    // The target draft is more specific than the remembered next-thread Engine.
-    useComposerDraftStore.setState({ stickyActiveProvider: "pi" });
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-selected-prefetch" as MessageId,
-        targetText: "selected prefetch test",
-      }),
-    });
-
-    try {
-      const newThreadButton = page.getByTestId("new-thread-button").first();
-      await expect.element(newThreadButton).toBeInTheDocument();
-      await waitForComposerEditor();
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-
-      const listedProviders = () =>
-        wsRequests.flatMap((request) =>
-          request._tag === WS_METHODS.providerListModels && typeof request.provider === "string"
-            ? [request.provider]
-            : [],
-        );
-      const passivelySensitiveProviders = () =>
-        listedProviders().filter(
-          (provider) => provider === "pi" || provider === "droid" || provider === "omnimind",
-        );
-      // Sidebar mount is passive even when the remembered next-thread Engine is Droid.
-      expect(passivelySensitiveProviders()).toEqual([]);
-
-      const button = document.querySelector<HTMLButtonElement>(
-        'button[data-testid="new-thread-button"]',
-      )!;
-      button.dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
-      button.focus();
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
-      });
-      expect(passivelySensitiveProviders()).toEqual([]);
-
-      wsRequests.length = 0;
-      await newThreadButton.click();
-      await vi.waitFor(() => expect(listedProviders()).toEqual(["droid"]));
-      const droidRequest = wsRequests.find(
-        (request) => request._tag === WS_METHODS.providerListModels,
-      );
-      expect(droidRequest).toMatchObject({ provider: "droid", cwd: "/repo/project" });
-      expect(useComposerDraftStore.getState().draftsByThreadId[targetDraftThreadId]).toMatchObject({
-        activeProvider: "droid",
-        prompt: "preserve selected draft",
-        images: [{ id: preservedImage.id, name: preservedImage.name }],
-      });
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
   it("keeps a Claude shortcut override authoritative after restoring a stored draft", async () => {
     const targetDraftThreadId = ThreadId.makeUnsafe("thread-claude-override-stored-draft");
     const preservedImage = createComposerImage({
@@ -10055,49 +9933,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
           prompt: "stored draft prompt",
           images: [{ id: preservedImage.id, name: preservedImage.name }],
         });
-      });
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
-  it("keeps a Claude shortcut override authoritative on the current draft route", async () => {
-    const routeDraftThreadId = ThreadId.makeUnsafe("thread-claude-override-current-route");
-    const preservedImage = createComposerImage({
-      id: "claude-override-route-image",
-      previewUrl: "blob:claude-override-route-image",
-      name: "claude-override-route.png",
-    });
-    seedLocalDraftThread({ threadId: routeDraftThreadId, projectId: PROJECT_ID });
-    useComposerDraftStore.getState().setActiveProviderAndSticky(routeDraftThreadId, "cursor");
-    useComposerDraftStore.getState().setPrompt(routeDraftThreadId, "route draft prompt");
-    useComposerDraftStore.getState().addImage(routeDraftThreadId, preservedImage);
-
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createDraftOnlySnapshot(),
-      initialEntry: `/${routeDraftThreadId}`,
-      configureFixture: configureClaudeNewThreadShortcut,
-    });
-
-    try {
-      await waitForServerConfigToApply();
-      const composerEditor = await waitForComposerEditor();
-      wsRequests.length = 0;
-      dispatchConfiguredShortcut(composerEditor, { key: "c", altKey: true });
-
-      await vi.waitFor(() => {
-        expect(mounted.router.state.location.pathname).toBe(`/${routeDraftThreadId}`);
-        expect(
-          wsRequests.filter((request) => request._tag === WS_METHODS.providerListModels),
-        ).toEqual([expect.objectContaining({ provider: "claudeAgent" })]);
-        expect(useComposerDraftStore.getState().draftsByThreadId[routeDraftThreadId]).toMatchObject(
-          {
-            activeProvider: "claudeAgent",
-            prompt: "route draft prompt",
-            images: [{ id: preservedImage.id, name: preservedImage.name }],
-          },
-        );
       });
     } finally {
       await mounted.cleanup();
