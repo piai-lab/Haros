@@ -6,10 +6,7 @@
 // and every query here merges live projections with those archived aggregates.
 // Layer: server stats query service (SqlClient + ServerConfig).
 
-import nodePath from "node:path";
-
 import type {
-  ProfileQuota,
   ProfileStats,
   ProfileTokenStats,
   ProviderKind,
@@ -21,16 +18,13 @@ import { isBuiltInComposerSlashCommandName } from "@omnimind/shared/composerSlas
 import { Effect, Layer, ServiceMap } from "effect";
 import * as SqlClient from "effect/unstable/sql/SqlClient";
 
-import { ServerConfig } from "./config";
-
 const HEATMAP_WINDOW_DAYS = 274; // ~9 months, GitHub-style contribution grid.
+const RECENT_USAGE_WINDOW_DAYS = 30;
 const SKILL_RESULT_LIMIT = 12;
 const PROVIDER_KIND_SET = new Set<ProviderKind>(PROVIDER_KINDS);
 
 type HeatmapCell = ProfileStats["activity"]["heatmap"][number];
-type ProviderModelUsage = ProfileStats["providerModels"][number];
 type SkillUsage = ProfileStats["skills"][number];
-type MostWorkedProject = ProfileStats["mostWorkedProject"];
 
 interface CountRow {
   readonly count: number;
@@ -61,21 +55,29 @@ interface ArchivedSkillUsageRow {
   readonly runCount: number;
 }
 
-interface MostWorkedProjectRow {
-  readonly projectId: string | null;
-  readonly title: string | null;
-  readonly workspaceRoot: string | null;
-  readonly promptCount: number;
-  readonly threadCount: number;
-  readonly activeDays: number;
-  readonly lastWorkedAt: string | null;
-}
-
 interface TokenDayRow {
   readonly day: string | null;
   readonly provider: string | null;
   readonly model: string | null;
   readonly tokens: number;
+}
+
+interface RecentTurnRow extends TurnInsightRow {
+  readonly legacyIncomplete: number;
+}
+
+interface WorkFocusRow {
+  readonly projectId: string | null;
+  readonly title: string | null;
+  readonly promptCount: number;
+}
+
+interface TokenBreakdownDayRow {
+  readonly day: string | null;
+  readonly provider: string | null;
+  readonly cachedInputTokens: number;
+  readonly uncachedInputTokens: number;
+  readonly outputTokens: number;
 }
 
 type UsageKind = "skill" | "agent";
@@ -101,6 +103,18 @@ export function sqliteModifierFromUtcOffsetMinutes(offsetMinutes: number): strin
 
 function localToday(utcOffsetMinutes: number): string {
   return new Date(Date.now() + utcOffsetMinutes * 60_000).toISOString().slice(0, 10);
+}
+
+function addUtcDays(day: string, delta: number): string {
+  const [year, month, date] = day.split("-").map(Number);
+  return new Date(Date.UTC(year ?? 1970, (month ?? 1) - 1, (date ?? 1) + delta))
+    .toISOString()
+    .slice(0, 10);
+}
+
+function recentDayKeys(today: string): string[] {
+  const start = addUtcDays(today, -(RECENT_USAGE_WINDOW_DAYS - 1));
+  return Array.from({ length: RECENT_USAGE_WINDOW_DAYS }, (_, index) => addUtcDays(start, index));
 }
 
 function num(value: unknown): number {
@@ -388,41 +402,25 @@ function percent1(part: number, total: number): number {
   return total > 0 ? Math.round((part / total) * 1000) / 10 : 0;
 }
 
+function exactPercentageShares(counts: readonly number[]): number[] {
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  if (total <= 0) return counts.map(() => 0);
+  let allocated = 0;
+  return counts.map((count, index) => {
+    if (index === counts.length - 1) {
+      return Math.max(0, Math.round((100 - allocated) * 10) / 10);
+    }
+    const percent = percent1(count, total);
+    allocated += percent;
+    return percent;
+  });
+}
+
 function compareNullableText(
   left: string | null | undefined,
   right: string | null | undefined,
 ): number {
   return (left ?? "").localeCompare(right ?? "");
-}
-
-function deriveInitials(name: string): string {
-  const parts = name.split(/[\s._-]+/u).filter((part) => part.length > 0);
-  if (parts.length >= 2) {
-    return `${parts[0]?.[0] ?? ""}${parts[1]?.[0] ?? ""}`.toUpperCase() || "SY";
-  }
-  const single = parts[0] ?? name;
-  return (single.slice(0, 2) || "SY").toUpperCase();
-}
-
-function sanitizeHandle(basename: string): string {
-  const slug = basename.toLowerCase().replace(/[^a-z0-9_]/gu, "");
-  return `@${slug || "omnimind"}`;
-}
-
-function formatHour(hour: number): string {
-  const normalized = ((hour % 24) + 24) % 24;
-  if (normalized === 0) return "12 AM";
-  if (normalized === 12) return "12 PM";
-  return normalized < 12 ? `${normalized} AM` : `${normalized - 12} PM`;
-}
-
-function arcName(startHour: number): string {
-  if (startHour < 5) return "Late-Night Dev Arc";
-  if (startHour < 9) return "Early Bird Arc";
-  if (startHour < 12) return "Morning Arc";
-  if (startHour < 17) return "Afternoon Arc";
-  if (startHour < 21) return "Evening Arc";
-  return "Night Owl Arc";
 }
 
 function normalizeProviderKind(value: unknown): ProviderKind | "unknown" {
@@ -432,23 +430,13 @@ function normalizeProviderKind(value: unknown): ProviderKind | "unknown" {
     : "unknown";
 }
 
-interface TokenModelUsageCount {
-  readonly provider: ProviderKind | "unknown";
-  readonly model: string;
-  tokens: number;
-}
-
 interface TokenActivityAggregate {
   readonly tokensByDay: Map<string, number>;
-  readonly tokensByProvider: Map<ProviderKind, number>;
-  readonly tokensByProviderModel: Map<string, TokenModelUsageCount>;
   readonly lifetime: number;
 }
 
 function aggregateTokenActivity(rows: ReadonlyArray<TokenDayRow>): TokenActivityAggregate {
   const tokensByDay = new Map<string, number>();
-  const tokensByProvider = new Map<ProviderKind, number>();
-  const tokensByProviderModel = new Map<string, TokenModelUsageCount>();
   let lifetime = 0;
   for (const row of rows) {
     const day = nonEmptyString(row.day);
@@ -458,20 +446,8 @@ function aggregateTokenActivity(rows: ReadonlyArray<TokenDayRow>): TokenActivity
     }
     tokensByDay.set(day, (tokensByDay.get(day) ?? 0) + tokens);
     lifetime += tokens;
-    const provider = normalizeProviderKind(row.provider);
-    if (provider !== "unknown") {
-      tokensByProvider.set(provider, (tokensByProvider.get(provider) ?? 0) + tokens);
-    }
-    const model = nonEmptyString(row.model) ?? "unknown";
-    const providerModelKey = `${provider}\u0000${model}`;
-    const existing = tokensByProviderModel.get(providerModelKey);
-    if (existing) {
-      existing.tokens += tokens;
-    } else {
-      tokensByProviderModel.set(providerModelKey, { provider, model, tokens });
-    }
   }
-  return { tokensByDay, tokensByProvider, tokensByProviderModel, lifetime };
+  return { tokensByDay, lifetime };
 }
 
 function computeStreaks(
@@ -536,41 +512,6 @@ function buildHeatmap(countByDay: ReadonlyMap<string, number>, todayKey: string)
   return heatmap;
 }
 
-function emptyQuota(): ProfileQuota {
-  return {
-    status: "unavailable",
-    provider: null,
-    window: null,
-    usedPercent: null,
-    resetsAt: null,
-    planName: null,
-  };
-}
-
-function buildMostWorkedProject(row: MostWorkedProjectRow | undefined): MostWorkedProject {
-  if (!row) {
-    return null;
-  }
-
-  const projectId = nonEmptyString(row.projectId);
-  const title = nonEmptyString(row.title);
-  const workspaceRoot = nonEmptyString(row.workspaceRoot);
-  const lastWorkedAt = nonEmptyString(row.lastWorkedAt);
-  if (!projectId || !title || !workspaceRoot || !lastWorkedAt) {
-    return null;
-  }
-
-  return {
-    projectId,
-    title,
-    workspaceRoot,
-    promptCount: num(row.promptCount),
-    threadCount: num(row.threadCount),
-    activeDays: num(row.activeDays),
-    lastWorkedAt,
-  };
-}
-
 // ── Shared SQL ─────────────────────────────────────────────────────────
 
 // Maps every turn to the provider/model selected when it was started: turn-start
@@ -624,7 +565,6 @@ export class ProfileStatsQuery extends ServiceMap.Service<
 
 const makeProfileStatsQuery = Effect.gen(function* () {
   const sql = yield* SqlClient.SqlClient;
-  const config = yield* ServerConfig;
 
   function profileStatsErrorMessage(error: unknown): string {
     return error instanceof Error ? error.message : String(error);
@@ -942,15 +882,27 @@ const makeProfileStatsQuery = Effect.gen(function* () {
             ON um.thread_id = COALESCE(json_extract(e.payload_json, '$.threadId'), e.stream_id)
            AND um.message_id = json_extract(e.payload_json, '$.messageId')
           WHERE e.event_type = 'thread.turn-start-requested'
-            AND (um.dispatch_origin IS NULL OR um.dispatch_origin = 'user')
+            AND COALESCE(
+              json_extract(e.payload_json, '$.dispatchOrigin'),
+              um.dispatch_origin,
+              CASE WHEN e.actor_kind = 'client' THEN 'user' END
+            ) = 'user'
         ),
         turn_counts AS (
           SELECT provider, model, reasoning, COUNT(*) AS count
           FROM per_turn
           GROUP BY provider, model, reasoning
           UNION ALL
-          SELECT provider, model, reasoning, turn_count AS count
-          FROM profile_stats_deleted_turns
+          SELECT d.provider, d.model, d.reasoning, COUNT(*) AS count
+          FROM profile_stats_deleted_turn_events d
+          JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
+          WHERE t.turn_events_complete = 1
+          GROUP BY d.provider, d.model, d.reasoning
+          UNION ALL
+          SELECT d.provider, d.model, d.reasoning, d.turn_count AS count
+          FROM profile_stats_deleted_turns d
+          JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
+          WHERE t.turn_events_complete = 0
         )
         SELECT provider, model, reasoning, SUM(count) AS count
         FROM turn_counts
@@ -1019,44 +971,195 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       `,
     );
 
-  const queryMostWorkedProject = (tz: string) =>
+  const queryRecentTurns = (tz: string, startDay: string, endDay: string) =>
     legacyCompatibleQuery(
-      "profileStats.mostWorkedProject",
-      sql<MostWorkedProjectRow>`
-        WITH project_prompts AS (
+      "profileStats.recentTurns",
+      sql<RecentTurnRow>`
+        WITH recent_turns AS (
           SELECT
-            t.project_id AS project_id,
-            m.thread_id AS thread_id,
-            m.created_at AS created_at
+            json_extract(e.payload_json, '$.modelSelection.provider') AS provider,
+            json_extract(e.payload_json, '$.modelSelection.model') AS model,
+            COALESCE(
+              json_extract(e.payload_json, '$.modelSelection.options.reasoningEffort'),
+              json_extract(e.payload_json, '$.modelSelection.options.effort')
+            ) AS reasoning
+          FROM orchestration_events e
+          LEFT JOIN projection_thread_messages m
+            ON m.thread_id = COALESCE(json_extract(e.payload_json, '$.threadId'), e.stream_id)
+           AND m.message_id = json_extract(e.payload_json, '$.messageId')
+          WHERE e.event_type = 'thread.turn-start-requested'
+            AND COALESCE(
+              json_extract(e.payload_json, '$.dispatchOrigin'),
+              m.dispatch_origin,
+              CASE WHEN e.actor_kind = 'client' THEN 'user' END
+            ) = 'user'
+            AND STRFTIME('%Y-%m-%d', DATETIME(e.occurred_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
+          UNION ALL
+          SELECT d.provider, d.model, d.reasoning
+          FROM profile_stats_deleted_turn_events d
+          JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
+          WHERE t.turn_events_complete = 1
+            AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
+        )
+        SELECT provider, model, reasoning, COUNT(*) AS count, 0 AS legacyIncomplete
+        FROM recent_turns
+        GROUP BY provider, model, reasoning
+        ORDER BY count DESC, provider ASC, model ASC, reasoning ASC
+      `,
+    );
+
+  const queryRecentLegacyTurnGap = (tz: string, startDay: string, endDay: string) =>
+    legacyCompatibleQuery(
+      "profileStats.recentLegacyTurnGap",
+      sql<CountRow>`
+        SELECT COUNT(DISTINCT d.thread_id) AS count
+        FROM profile_stats_deleted_prompts d
+        JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
+        WHERE t.turn_events_complete = 0
+          AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
+          AND EXISTS (
+            SELECT 1 FROM profile_stats_deleted_turns x WHERE x.thread_id = d.thread_id
+          )
+      `,
+    );
+
+  const queryWorkFocus = () =>
+    legacyCompatibleQuery(
+      "profileStats.workFocus",
+      sql<WorkFocusRow>`
+        WITH prompts AS (
+          SELECT t.project_id AS project_id, p.title AS title
           FROM projection_thread_messages m
           JOIN projection_threads t ON t.thread_id = m.thread_id
+          LEFT JOIN projection_projects p ON p.project_id = t.project_id
           WHERE m.role = 'user'
             AND m.source = 'native'
             AND (m.dispatch_origin IS NULL OR m.dispatch_origin = 'user')
           UNION ALL
-          SELECT
-            d.project_id AS project_id,
-            d.thread_id AS thread_id,
-            d.created_at AS created_at
+          SELECT d.project_id AS project_id, COALESCE(t.project_title, p.title) AS title
           FROM profile_stats_deleted_prompts d
+          LEFT JOIN profile_stats_deleted_threads t ON t.thread_id = d.thread_id
+          LEFT JOIN projection_projects p ON p.project_id = d.project_id
         )
-        SELECT
-          p.project_id AS projectId,
-          p.title AS title,
-          p.workspace_root AS workspaceRoot,
-          COUNT(*) AS promptCount,
-          COUNT(DISTINCT e.thread_id) AS threadCount,
-          COUNT(DISTINCT STRFTIME('%Y-%m-%d', DATETIME(e.created_at, ${tz}))) AS activeDays,
-          MAX(e.created_at) AS lastWorkedAt
-        FROM project_prompts e
-        JOIN projection_projects p ON p.project_id = e.project_id
-        GROUP BY p.project_id, p.title, p.workspace_root
-        ORDER BY
-          promptCount DESC,
-          activeDays DESC,
-          lastWorkedAt DESC,
-          p.title ASC
-        LIMIT 1
+        SELECT project_id AS projectId, title, COUNT(*) AS promptCount
+        FROM prompts
+        GROUP BY project_id, title
+        ORDER BY promptCount DESC, title ASC
+      `,
+    );
+
+  const queryRecentTokenBreakdown = (tz: string, startDay: string, endDay: string) =>
+    legacyCompatibleQuery(
+      "profileStats.recentTokenBreakdown",
+      sql<TokenBreakdownDayRow>`
+        WITH known AS (
+          SELECT
+            a.thread_id,
+            a.created_at,
+            a.sequence,
+            a.activity_id,
+            COALESCE(json_extract(a.payload_json, '$.provider'), 'unknown') AS provider,
+            pm.dispatch_origin,
+            CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') AS INTEGER) AS cached,
+            CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') AS INTEGER) AS uncached,
+            CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') AS INTEGER) AS output
+          FROM projection_thread_activities a
+          JOIN projection_threads t ON t.thread_id = a.thread_id
+          LEFT JOIN projection_turns pt
+            ON pt.thread_id = a.thread_id AND pt.turn_id = a.turn_id
+          LEFT JOIN projection_thread_messages pm
+            ON pm.thread_id = pt.thread_id AND pm.message_id = pt.pending_message_id
+          WHERE a.kind = 'context-window.updated'
+            AND json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') IS NOT NULL
+            AND json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') IS NOT NULL
+            AND json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') IS NOT NULL
+        ),
+        deltas AS (
+          SELECT
+            STRFTIME('%Y-%m-%d', DATETIME(created_at, ${tz})) AS day,
+            provider,
+            dispatch_origin,
+            CASE WHEN previous_cached IS NULL OR cached < previous_cached
+              THEN cached ELSE MAX(0, cached - previous_cached) END AS cached_delta,
+            CASE WHEN previous_uncached IS NULL OR uncached < previous_uncached
+              THEN uncached ELSE MAX(0, uncached - previous_uncached) END AS uncached_delta,
+            CASE WHEN previous_output IS NULL OR output < previous_output
+              THEN output ELSE MAX(0, output - previous_output) END AS output_delta
+          FROM (
+            SELECT *,
+              LAG(cached) OVER token_order AS previous_cached,
+              LAG(uncached) OVER token_order AS previous_uncached,
+              LAG(output) OVER token_order AS previous_output
+            FROM known
+            WINDOW token_order AS (
+              PARTITION BY thread_id
+              ORDER BY CASE WHEN sequence IS NULL THEN 0 ELSE 1 END ASC,
+                sequence ASC, created_at ASC, activity_id ASC
+            )
+          )
+        ),
+        all_rows AS (
+          SELECT day, provider, cached_delta AS cached, uncached_delta AS uncached, output_delta AS output
+          FROM deltas
+          WHERE (dispatch_origin IS NULL OR dispatch_origin = 'user')
+            AND day BETWEEN ${startDay} AND ${endDay}
+          UNION ALL
+          SELECT
+            STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) AS day,
+            COALESCE(d.provider, 'unknown') AS provider,
+            d.cached_input_tokens AS cached,
+            d.uncached_input_tokens AS uncached,
+            d.output_tokens AS output
+          FROM profile_stats_deleted_tokens d
+          WHERE d.cached_input_tokens IS NOT NULL
+            AND d.uncached_input_tokens IS NOT NULL
+            AND d.output_tokens IS NOT NULL
+            AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
+        )
+        SELECT day, provider,
+          SUM(cached) AS cachedInputTokens,
+          SUM(uncached) AS uncachedInputTokens,
+          SUM(output) AS outputTokens
+        FROM all_rows
+        GROUP BY day, provider
+        ORDER BY day ASC, provider ASC
+      `,
+    );
+
+  const queryRecentUnknownTokenBreakdown = (tz: string, startDay: string, endDay: string) =>
+    legacyCompatibleQuery(
+      "profileStats.recentUnknownTokenBreakdown",
+      sql<CountRow>`
+        SELECT (
+          SELECT COUNT(*)
+          FROM projection_thread_activities a
+          JOIN projection_threads t ON t.thread_id = a.thread_id
+          LEFT JOIN projection_turns pt
+            ON pt.thread_id = a.thread_id AND pt.turn_id = a.turn_id
+          LEFT JOIN projection_thread_messages pm
+            ON pm.thread_id = pt.thread_id AND pm.message_id = pt.pending_message_id
+          WHERE a.kind = 'context-window.updated'
+            AND (pm.dispatch_origin IS NULL OR pm.dispatch_origin = 'user')
+            AND COALESCE(
+              json_extract(a.payload_json, '$.totalProcessedTokens'),
+              json_extract(a.payload_json, '$.usedTokens')
+            ) IS NOT NULL
+            AND (
+              json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') IS NULL
+              OR json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') IS NULL
+              OR json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') IS NULL
+            )
+            AND STRFTIME('%Y-%m-%d', DATETIME(a.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
+        ) + (
+          SELECT COUNT(*)
+          FROM profile_stats_deleted_tokens d
+          WHERE (
+            d.cached_input_tokens IS NULL
+            OR d.uncached_input_tokens IS NULL
+            OR d.output_tokens IS NULL
+          )
+          AND STRFTIME('%Y-%m-%d', DATETIME(d.created_at, ${tz})) BETWEEN ${startDay} AND ${endDay}
+        ) AS count
       `,
     );
 
@@ -1068,13 +1171,17 @@ const makeProfileStatsQuery = Effect.gen(function* () {
     Effect.gen(function* () {
       const tz = sqliteModifierFromUtcOffsetMinutes(input.utcOffsetMinutes);
       const todayKey = localToday(input.utcOffsetMinutes);
+      const recentDays = recentDayKeys(todayKey);
+      const recentStartDay = recentDays[0]!;
 
       const promptActivityRows = yield* queryPromptActivity(tz);
       const totalThreadRows = yield* queryTotalThreads();
       const turnInsightRows = yield* queryTurnInsights();
       const skillMessageRows = yield* querySkillUsageMessages();
       const archivedSkillRows = yield* queryArchivedSkillUsage();
-      const mostWorkedProjectRows = yield* queryMostWorkedProject(tz);
+      const recentTurnRows = yield* queryRecentTurns(tz, recentStartDay, todayKey);
+      const recentLegacyGapRows = yield* queryRecentLegacyTurnGap(tz, recentStartDay, todayKey);
+      const workFocusRows = yield* queryWorkFocus();
 
       // ── Activity / heatmap / streaks ──
       const countByDay = new Map<string, number>();
@@ -1100,13 +1207,13 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         todayKey,
       );
 
-      // ── Peak hour (single highest local-hour bucket) ──
+      // ── Most active rolling two-hour local window ──
       const totalHourTurns = hourCounts.reduce((sum, value) => sum + value, 0);
       let bestHour: number | null = null;
       let bestHourCount = 0;
       if (totalHourTurns > 0) {
         for (let hour = 0; hour < 24; hour += 1) {
-          const hourCount = hourCounts[hour] ?? 0;
+          const hourCount = (hourCounts[hour] ?? 0) + (hourCounts[(hour + 1) % 24] ?? 0);
           if (hourCount > bestHourCount) {
             bestHourCount = hourCount;
             bestHour = hour;
@@ -1115,33 +1222,128 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       }
       const activeHours =
         bestHour === null
-          ? { startHour: null, endHour: null, turnCount: 0, label: null }
+          ? { startHour: null, endHour: null, turnCount: 0 }
           : {
               startHour: bestHour,
-              endHour: null,
+              endHour: (bestHour + 2) % 24,
               turnCount: bestHourCount,
-              label: `${formatHour(bestHour)} · ${arcName(bestHour)}`,
             };
 
-      // ── Provider / model mix ──
-      const providerModelCounts = new Map<
+      const recentModelCounts = new Map<
         string,
-        { readonly provider: string | null; readonly model: string | null; count: number }
+        {
+          provider: ProviderKind | "unknown";
+          model: string;
+          count: number;
+          kind: "model" | "unknown";
+        }
       >();
+      let recentTotalTurns = 0;
+      for (const row of recentTurnRows) {
+        const count = num(row.count);
+        recentTotalTurns += count;
+        const provider = normalizeProviderKind(row.provider);
+        const model = nonEmptyString(row.model);
+        const kind = model ? "model" : "unknown";
+        const key = `${provider}\u0000${model ?? ""}`;
+        const existing = recentModelCounts.get(key);
+        if (existing) existing.count += count;
+        else recentModelCounts.set(key, { provider, model: model ?? "unknown", count, kind });
+      }
+      const recentRows = [...recentModelCounts.values()].toSorted(
+        (left, right) => right.count - left.count || left.model.localeCompare(right.model),
+      );
+      const knownRecentRows = recentRows.filter((row) => row.kind === "model");
+      const unknownRecentTurns = recentRows
+        .filter((row) => row.kind === "unknown")
+        .reduce((sum, row) => sum + row.count, 0);
+      const visibleKnownRows = knownRecentRows.slice(0, 5);
+      const otherRecentTurns = knownRecentRows.slice(5).reduce((sum, row) => sum + row.count, 0);
+      const recentModelBuckets = [
+        ...visibleKnownRows.map((row) => ({
+          provider: row.provider,
+          model: row.model,
+          turnCount: row.count,
+          kind: "model" as const,
+        })),
+        ...(otherRecentTurns > 0
+          ? [
+              {
+                provider: "unknown" as const,
+                model: "other",
+                turnCount: otherRecentTurns,
+                kind: "other" as const,
+              },
+            ]
+          : []),
+        ...(unknownRecentTurns > 0
+          ? [
+              {
+                provider: "unknown" as const,
+                model: "unknown",
+                turnCount: unknownRecentTurns,
+                kind: "unknown" as const,
+              },
+            ]
+          : []),
+      ];
+      const recentModelPercents = exactPercentageShares(
+        recentModelBuckets.map((entry) => entry.turnCount),
+      );
+      const recentModels: ProfileStats["recentModelUsage"]["models"] = recentModelBuckets.map(
+        (entry, index) => ({
+          ...entry,
+          percent: recentModelPercents[index]!,
+        }),
+      );
+      const recentModelCoverage =
+        recentTotalTurns === 0
+          ? "unavailable"
+          : num(recentLegacyGapRows[0]?.count) > 0 || unknownRecentTurns > 0
+            ? "partial"
+            : "complete";
+
+      const focusTotal = workFocusRows.reduce((sum, row) => sum + num(row.promptCount), 0);
+      const namedFocusRows = workFocusRows
+        .filter((row) => nonEmptyString(row.title))
+        .toSorted(
+          (left, right) =>
+            num(right.promptCount) - num(left.promptCount) ||
+            (nonEmptyString(left.title) ?? "").localeCompare(nonEmptyString(right.title) ?? ""),
+        );
+      const topFocusRows = namedFocusRows.slice(0, 2);
+      const topFocusPrompts = topFocusRows.reduce((sum, row) => sum + num(row.promptCount), 0);
+      const workFocusBuckets = [
+        ...topFocusRows.map((row) => ({
+          title: nonEmptyString(row.title)!,
+          promptCount: num(row.promptCount),
+          kind: "project" as const,
+        })),
+        ...(focusTotal > topFocusPrompts
+          ? [
+              {
+                title: "other",
+                promptCount: focusTotal - topFocusPrompts,
+                kind: "other" as const,
+              },
+            ]
+          : []),
+      ];
+      const workFocusPercents = exactPercentageShares(
+        workFocusBuckets.map((entry) => entry.promptCount),
+      );
+      const workFocus: ProfileStats["workFocus"] = {
+        totalPrompts: focusTotal,
+        entries: workFocusBuckets.map((entry, index) => ({
+          ...entry,
+          percent: workFocusPercents[index]!,
+        })),
+      };
+
       const reasoningCounts = new Map<string, { readonly reasoning: string; count: number }>();
 
       for (const row of turnInsightRows) {
         const count = num(row.count);
-        const provider = nonEmptyString(row.provider);
-        const model = nonEmptyString(row.model);
-        const providerModelKey = `${provider ?? ""}\u0000${model ?? ""}`;
-        const existingProviderModel = providerModelCounts.get(providerModelKey);
-        if (existingProviderModel) {
-          existingProviderModel.count += count;
-        } else {
-          providerModelCounts.set(providerModelKey, { provider, model, count });
-        }
-
         const reasoning = nonEmptyString(row.reasoning);
         if (reasoning) {
           const existingReasoning = reasoningCounts.get(reasoning);
@@ -1152,52 +1354,6 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           }
         }
       }
-
-      const providerModelRows = [...providerModelCounts.values()].toSorted(
-        (left, right) =>
-          right.count - left.count ||
-          compareNullableText(left.provider, right.provider) ||
-          compareNullableText(left.model, right.model),
-      );
-      const totalModelTurns = providerModelRows.reduce((sum, row) => sum + num(row.count), 0);
-      const providerModels: ProviderModelUsage[] = providerModelRows.slice(0, 8).map((row) => {
-        const count = num(row.count);
-        return {
-          provider: normalizeProviderKind(row.provider),
-          model: nonEmptyString(row.model) ?? "unknown",
-          turnCount: count,
-          percent: percent1(count, totalModelTurns),
-        };
-      });
-
-      const providerTurnCounts = new Map<ProviderKind, number>();
-      // Turn-based ranking: the token-based one lives on ProfileTokenStats so the
-      // heavy token query runs once, and clients prefer it when available.
-      for (const row of providerModelRows) {
-        const provider = normalizeProviderKind(row.provider);
-        if (provider === "unknown") {
-          continue;
-        }
-        providerTurnCounts.set(provider, (providerTurnCounts.get(provider) ?? 0) + num(row.count));
-      }
-      const totalKnownProviderTurns = [...providerTurnCounts.values()].reduce(
-        (sum, count) => sum + count,
-        0,
-      );
-      let topProvider: ProviderKind | null = null;
-      let topProviderTurns = 0;
-      for (const [provider, count] of providerTurnCounts) {
-        if (count > topProviderTurns) {
-          topProvider = provider;
-          topProviderTurns = count;
-        }
-      }
-
-      // ── Insights (top provider, top reasoning) ──
-      const topProviderPercent =
-        topProvider && totalKnownProviderTurns > 0
-          ? percent1(topProviderTurns, totalKnownProviderTurns)
-          : null;
 
       const reasoningRows = [...reasoningCounts.values()].toSorted(
         (left, right) =>
@@ -1217,17 +1373,9 @@ const makeProfileStatsQuery = Effect.gen(function* () {
       const skills = allSkillUsages.slice(0, SKILL_RESULT_LIMIT);
       const totalSkillsUsed = allSkillUsages.reduce((sum, row) => sum + row.runCount, 0);
 
-      // ── Identity ──
-      const homeDirBasename = nodePath.basename(config.homeDir) || "omnimind";
-
       return {
         generatedAt: new Date().toISOString(),
         timezone: { utcOffsetMinutes: input.utcOffsetMinutes, today: todayKey },
-        identity: {
-          homeDirBasename,
-          initials: deriveInitials(homeDirBasename),
-          defaultHandle: sanitizeHandle(homeDirBasename),
-        },
         activity: {
           currentStreakDays,
           longestStreakDays,
@@ -1238,19 +1386,20 @@ const makeProfileStatsQuery = Effect.gen(function* () {
           heatmap,
         },
         activeHours,
+        recentModelUsage: {
+          rangeDays: 30,
+          totalTurns: recentTotalTurns,
+          coverage: recentModelCoverage,
+          models: recentModels,
+        },
+        workFocus,
         insights: {
-          topProvider,
-          topProviderPercent,
           topReasoning,
           topReasoningPercent,
           skillsExplored: allSkillUsages.length,
           totalSkillsUsed,
         },
-        providerModels,
         skills,
-        mostUsedSkill: skills[0] ?? null,
-        mostWorkedProject: buildMostWorkedProject(mostWorkedProjectRows[0]),
-        quota: emptyQuota(),
       } satisfies ProfileStats;
     });
 
@@ -1260,10 +1409,17 @@ const makeProfileStatsQuery = Effect.gen(function* () {
     Effect.gen(function* () {
       const tz = sqliteModifierFromUtcOffsetMinutes(input.utcOffsetMinutes);
       const todayKey = localToday(input.utcOffsetMinutes);
+      const recentDays = recentDayKeys(todayKey);
+      const recentStartDay = recentDays[0]!;
       const rows = yield* queryTokenActivity(tz);
-      const turnInsightRows = yield* queryTurnInsights();
-      const { tokensByDay, tokensByProvider, tokensByProviderModel, lifetime } =
-        aggregateTokenActivity(rows);
+      const recentTurnRows = yield* queryRecentTurns(tz, recentStartDay, todayKey);
+      const recentBreakdownRows = yield* queryRecentTokenBreakdown(tz, recentStartDay, todayKey);
+      const recentUnknownRows = yield* queryRecentUnknownTokenBreakdown(
+        tz,
+        recentStartDay,
+        todayKey,
+      );
+      const { tokensByDay, lifetime } = aggregateTokenActivity(rows);
 
       let peakDay: string | null = null;
       let peakDayTokens: number | null = null;
@@ -1274,69 +1430,85 @@ const makeProfileStatsQuery = Effect.gen(function* () {
         }
       }
 
-      const providers = [...tokensByProvider.entries()]
-        .filter(([, tokens]) => tokens > 0)
-        .toSorted((a, b) => b[1] - a[1])
-        .map(([provider]) => provider);
       const available = lifetime > 0;
 
-      // Providers the user actually ran turns with but whose adapters never emit
-      // token telemetry — they cannot participate in token-based rankings, and the
-      // UI uses this list to say so instead of silently under-reporting them.
-      const providersWithTurns = new Set<ProviderKind>();
-      for (const row of turnInsightRows) {
+      const breakdownByDay = new Map<
+        string,
+        { cachedInputTokens: number; uncachedInputTokens: number; outputTokens: number }
+      >();
+      const breakdownProviders = new Set<ProviderKind>();
+      for (const row of recentBreakdownRows) {
+        const day = nonEmptyString(row.day);
+        if (!day) continue;
+        const current = breakdownByDay.get(day) ?? {
+          cachedInputTokens: 0,
+          uncachedInputTokens: 0,
+          outputTokens: 0,
+        };
+        current.cachedInputTokens += num(row.cachedInputTokens);
+        current.uncachedInputTokens += num(row.uncachedInputTokens);
+        current.outputTokens += num(row.outputTokens);
+        breakdownByDay.set(day, current);
         const provider = normalizeProviderKind(row.provider);
-        if (provider !== "unknown") {
-          providersWithTurns.add(provider);
-        }
+        if (provider !== "unknown") breakdownProviders.add(provider);
       }
-      const unavailableProviders = [...providersWithTurns]
-        .filter((provider) => !tokensByProvider.has(provider))
+      const recentTurnProviders = new Set<ProviderKind>();
+      let recentTurnsHaveUnknownProvider = false;
+      for (const row of recentTurnRows) {
+        const provider = normalizeProviderKind(row.provider);
+        if (provider === "unknown") recentTurnsHaveUnknownProvider = true;
+        else recentTurnProviders.add(provider);
+      }
+      const recentUnavailableProviders = [...recentTurnProviders]
+        .filter((provider) => !breakdownProviders.has(provider))
         .toSorted();
-
-      // "Most used provider" by tokens processed: one heavy turn is more work than
-      // many tiny ones. Percent is the share among providers with token telemetry.
-      const totalProviderTokens = [...tokensByProvider.values()].reduce(
-        (sum, tokens) => sum + tokens,
+      const recentTokenDays = recentDays.map((day) => ({
+        day,
+        ...(breakdownByDay.get(day) ?? {
+          cachedInputTokens: 0,
+          uncachedInputTokens: 0,
+          outputTokens: 0,
+        }),
+      }));
+      const recentCachedInputTokens = recentTokenDays.reduce(
+        (sum, day) => sum + day.cachedInputTokens,
         0,
       );
-      const topProvider = providers[0] ?? null;
-      const topProviderPercent =
-        topProvider && totalProviderTokens > 0
-          ? percent1(tokensByProvider.get(topProvider) ?? 0, totalProviderTokens)
-          : null;
-
-      // Token-based model mix, same shape/cap as the turn-based providerModels.
-      // Percent is the share of ALL counted tokens (lifetime), unknowns included,
-      // so the list always sums to ~100%.
-      const models = [...tokensByProviderModel.values()]
-        .filter((row) => row.tokens > 0)
-        .toSorted(
-          (left, right) =>
-            right.tokens - left.tokens ||
-            compareNullableText(left.provider, right.provider) ||
-            compareNullableText(left.model, right.model),
-        )
-        .slice(0, 8)
-        .map((row) => ({
-          provider: row.provider,
-          model: row.model,
-          tokens: row.tokens,
-          percent: percent1(row.tokens, lifetime),
-        }));
+      const recentUncachedInputTokens = recentTokenDays.reduce(
+        (sum, day) => sum + day.uncachedInputTokens,
+        0,
+      );
+      const recentOutputTokens = recentTokenDays.reduce((sum, day) => sum + day.outputTokens, 0);
+      const recentInputTokens = recentCachedInputTokens + recentUncachedInputTokens;
+      const hasRecentBreakdown = recentBreakdownRows.length > 0;
+      const recentTokenCoverage = !hasRecentBreakdown
+        ? "unavailable"
+        : num(recentUnknownRows[0]?.count) > 0 ||
+            recentUnavailableProviders.length > 0 ||
+            recentTurnsHaveUnknownProvider
+          ? "partial"
+          : "complete";
 
       return {
         available,
         lifetimeTotalTokens: available ? lifetime : null,
         peakDayTokens,
         peakDay,
-        providers,
-        unavailableProviders,
-        topProvider,
-        topProviderPercent,
-        models,
         heatmapMetric: "tokens",
         heatmap: buildHeatmap(tokensByDay, todayKey),
+        recentTokenUsage: {
+          rangeDays: 30,
+          startDay: recentStartDay,
+          endDay: todayKey,
+          cachedInputTokens: recentCachedInputTokens,
+          uncachedInputTokens: recentUncachedInputTokens,
+          outputTokens: recentOutputTokens,
+          cacheHitPercent:
+            recentInputTokens > 0 ? percent1(recentCachedInputTokens, recentInputTokens) : null,
+          coverage: recentTokenCoverage,
+          unavailableProviders: recentUnavailableProviders,
+          days: recentTokenDays,
+        },
       } satisfies ProfileTokenStats;
     });
 

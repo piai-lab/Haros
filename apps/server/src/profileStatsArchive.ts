@@ -31,6 +31,7 @@ import { THREAD_RETENTION_COMMAND_ID_PREFIX } from "./threadRetention";
 
 interface PurgeThreadRow {
   readonly projectId: string | null;
+  readonly projectTitle: string | null;
   readonly modelSelectionJson: string | null;
   readonly deletedAt: string | null;
   readonly envMode: string | null;
@@ -42,6 +43,7 @@ interface PurgeThreadRow {
 
 interface TurnEventRow {
   readonly payloadJson: string | null;
+  readonly createdAt?: string | null;
 }
 
 interface TokenActivityRow {
@@ -57,6 +59,9 @@ interface TokenActivityRow {
   readonly model: string | null;
   readonly dispatchOrigin?: string | null;
   readonly createdAt: string | null;
+  readonly totalCachedInputTokens?: number | bigint | null;
+  readonly totalUncachedInputTokens?: number | bigint | null;
+  readonly totalOutputTokens?: number | bigint | null;
 }
 
 interface SkillMessageRow {
@@ -92,6 +97,16 @@ export interface ThreadTokenSnapshotRow {
   readonly provider: string | null;
   readonly model: string | null;
   readonly tokens: number;
+  readonly cachedInputTokens: number | null;
+  readonly uncachedInputTokens: number | null;
+  readonly outputTokens: number | null;
+}
+
+export interface ThreadTurnEventSnapshotRow {
+  readonly createdAt: string;
+  readonly provider: string | null;
+  readonly model: string | null;
+  readonly reasoning: string | null;
 }
 
 // ── Pure helpers ───────────────────────────────────────────────────────
@@ -241,9 +256,38 @@ export function aggregateThreadTurnSnapshotRows(
   return [...counts.values()];
 }
 
-function tokenCounterValue(value: number | bigint | null): number | null {
+export function collectThreadTurnEventSnapshotRows(
+  events: ReadonlyArray<TurnEventRow>,
+  threadModelSelectionJson: string | null,
+): ThreadTurnEventSnapshotRow[] {
+  const rows: ThreadTurnEventSnapshotRow[] = [];
+  const threadSelection = parseModelSelectionJson(threadModelSelectionJson);
+  for (const event of events) {
+    if (!event.createdAt) continue;
+    let selection: ModelSelectionLike | null = null;
+    if (event.payloadJson) {
+      try {
+        const payload: unknown = JSON.parse(event.payloadJson);
+        if (payload !== null && typeof payload === "object") {
+          selection = parseModelSelection((payload as { modelSelection?: unknown }).modelSelection);
+        }
+      } catch {
+        // Keep the timestamped turn with unknown selection.
+      }
+    }
+    rows.push({
+      createdAt: event.createdAt,
+      provider: (selection ?? threadSelection)?.provider ?? null,
+      model: (selection ?? threadSelection)?.model ?? null,
+      reasoning: (selection ?? threadSelection)?.reasoning ?? null,
+    });
+  }
+  return rows;
+}
+
+function tokenCounterValue(value: number | bigint | null | undefined): number | null {
   const total = typeof value === "bigint" ? Number(value) : value;
-  return total !== null && Number.isFinite(total) ? total : null;
+  return total !== null && total !== undefined && Number.isFinite(total) ? total : null;
 }
 
 function tokenProviderModelKey(provider: string | null, model: string | null): string {
@@ -271,7 +315,22 @@ function addTokenSnapshotRow(
   const key = `${row.createdAt}\u0000${tokenProviderModelKey(row.provider, row.model)}`;
   const existing = rows.get(key);
   if (existing) {
-    rows.set(key, { ...existing, tokens: existing.tokens + row.tokens });
+    rows.set(key, {
+      ...existing,
+      tokens: existing.tokens + row.tokens,
+      cachedInputTokens:
+        existing.cachedInputTokens === null || row.cachedInputTokens === null
+          ? null
+          : existing.cachedInputTokens + row.cachedInputTokens,
+      uncachedInputTokens:
+        existing.uncachedInputTokens === null || row.uncachedInputTokens === null
+          ? null
+          : existing.uncachedInputTokens + row.uncachedInputTokens,
+      outputTokens:
+        existing.outputTokens === null || row.outputTokens === null
+          ? null
+          : existing.outputTokens + row.outputTokens,
+    });
   } else {
     rows.set(key, row);
   }
@@ -300,6 +359,9 @@ export function aggregateThreadTokenRows(
   }
 
   let previousCumulativeTotal: number | null = null;
+  let previousCachedInputTokens: number | null = null;
+  let previousUncachedInputTokens: number | null = null;
+  let previousOutputTokens: number | null = null;
   for (const row of rows) {
     const total = tokenCounterValue(row.totalProcessedTokens);
     if (total === null) {
@@ -310,6 +372,27 @@ export function aggregateThreadTokenRows(
         ? total
         : Math.max(0, total - previousCumulativeTotal);
     previousCumulativeTotal = total;
+    const currentCached = tokenCounterValue(row.totalCachedInputTokens);
+    const currentUncached = tokenCounterValue(row.totalUncachedInputTokens);
+    const currentOutput = tokenCounterValue(row.totalOutputTokens);
+    const hasBreakdown =
+      currentCached !== null && currentUncached !== null && currentOutput !== null;
+    const componentDelta = (current: number, previous: number | null) =>
+      previous === null || current < previous ? current : Math.max(0, current - previous);
+    const cachedInputDelta = hasBreakdown
+      ? componentDelta(currentCached, previousCachedInputTokens)
+      : null;
+    const uncachedInputDelta = hasBreakdown
+      ? componentDelta(currentUncached, previousUncachedInputTokens)
+      : null;
+    const outputDelta = hasBreakdown ? componentDelta(currentOutput, previousOutputTokens) : null;
+    const hasConsistentBreakdown =
+      hasBreakdown && cachedInputDelta! + uncachedInputDelta! + outputDelta! === delta;
+    if (hasBreakdown) {
+      previousCachedInputTokens = currentCached;
+      previousUncachedInputTokens = currentUncached;
+      previousOutputTokens = currentOutput;
+    }
     if (
       delta <= 0 ||
       row.createdAt === null ||
@@ -323,6 +406,9 @@ export function aggregateThreadTokenRows(
       provider,
       model,
       tokens: delta,
+      cachedInputTokens: hasConsistentBreakdown ? cachedInputDelta : null,
+      uncachedInputTokens: hasConsistentBreakdown ? uncachedInputDelta : null,
+      outputTokens: hasConsistentBreakdown ? outputDelta : null,
     });
   }
 
@@ -357,6 +443,9 @@ export function aggregateThreadTokenRows(
       provider,
       model,
       tokens: delta,
+      cachedInputTokens: null,
+      uncachedInputTokens: null,
+      outputTokens: null,
     });
   }
   return [...tokensByKey.values()];
@@ -445,6 +534,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
       const threadRows = yield* sql<PurgeThreadRow>`
         SELECT
           t.project_id AS projectId,
+          p.title AS projectTitle,
           t.model_selection_json AS modelSelectionJson,
           t.deleted_at AS deletedAt,
           t.env_mode AS envMode,
@@ -575,6 +665,7 @@ const makeProfileStatsArchive = Effect.gen(function* () {
       const threadRows = yield* sql<PurgeThreadRow>`
         SELECT
           t.project_id AS projectId,
+          p.title AS projectTitle,
           t.model_selection_json AS modelSelectionJson,
           t.deleted_at AS deletedAt,
           t.env_mode AS envMode,
@@ -597,13 +688,18 @@ const makeProfileStatsArchive = Effect.gen(function* () {
       const projectId = thread.projectId ?? null;
 
       const turnEventRows = yield* sql<TurnEventRow>`
-        SELECT e.payload_json AS payloadJson
+        SELECT e.payload_json AS payloadJson, e.occurred_at AS createdAt
         FROM orchestration_events e
         LEFT JOIN projection_thread_messages m
-          ON m.message_id = json_extract(e.payload_json, '$.messageId')
+          ON m.thread_id = COALESCE(json_extract(e.payload_json, '$.threadId'), e.stream_id)
+         AND m.message_id = json_extract(e.payload_json, '$.messageId')
         WHERE e.event_type = 'thread.turn-start-requested'
           AND COALESCE(json_extract(e.payload_json, '$.threadId'), e.stream_id) = ${threadId}
-          AND (m.dispatch_origin IS NULL OR m.dispatch_origin = 'user')
+          AND COALESCE(
+            json_extract(e.payload_json, '$.dispatchOrigin'),
+            m.dispatch_origin,
+            CASE WHEN e.actor_kind = 'client' THEN 'user' END
+          ) = 'user'
       `;
       // Same counters and per-turn attribution as the live
       // profileStats.queryTokenActivity: both token counters come back raw so
@@ -620,7 +716,13 @@ const makeProfileStatsArchive = Effect.gen(function* () {
           COALESCE(tm.provider, json_extract(a.payload_json, '$.provider')) AS provider,
           tm.model AS model,
           pm.dispatch_origin AS dispatchOrigin,
-          a.created_at AS createdAt
+          a.created_at AS createdAt,
+          CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.cachedInputTokens') AS INTEGER)
+            AS totalCachedInputTokens,
+          CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.uncachedInputTokens') AS INTEGER)
+            AS totalUncachedInputTokens,
+          CAST(json_extract(a.payload_json, '$.totalTokenBreakdown.outputTokens') AS INTEGER)
+            AS totalOutputTokens
         FROM projection_thread_activities a
         LEFT JOIN turn_model tm
           ON tm.thread_id = a.thread_id
@@ -658,6 +760,10 @@ const makeProfileStatsArchive = Effect.gen(function* () {
       `;
 
       const turnRows = aggregateThreadTurnSnapshotRows(turnEventRows, thread.modelSelectionJson);
+      const turnEventSnapshots = collectThreadTurnEventSnapshotRows(
+        turnEventRows,
+        thread.modelSelectionJson,
+      );
       const threadSelection = parseModelSelectionJson(thread.modelSelectionJson);
       const tokenRows = aggregateThreadTokenRows(tokenActivityRows, {
         provider: threadSelection?.provider ?? null,
@@ -676,13 +782,16 @@ const makeProfileStatsArchive = Effect.gen(function* () {
       yield* sql`DELETE FROM profile_stats_deleted_threads WHERE thread_id = ${threadId}`;
       yield* sql`DELETE FROM profile_stats_deleted_prompts WHERE thread_id = ${threadId}`;
       yield* sql`DELETE FROM profile_stats_deleted_turns WHERE thread_id = ${threadId}`;
+      yield* sql`DELETE FROM profile_stats_deleted_turn_events WHERE thread_id = ${threadId}`;
       yield* sql`DELETE FROM profile_stats_deleted_skills WHERE thread_id = ${threadId}`;
       yield* sql`DELETE FROM profile_stats_deleted_tokens WHERE thread_id = ${threadId}`;
 
       if (hasStatsContribution) {
         yield* sql`
-          INSERT INTO profile_stats_deleted_threads (thread_id, project_id, deleted_at)
-          VALUES (${threadId}, ${projectId}, ${deletedAt})
+          INSERT INTO profile_stats_deleted_threads (
+            thread_id, project_id, project_title, deleted_at, turn_events_complete
+          )
+          VALUES (${threadId}, ${projectId}, ${thread.projectTitle}, ${deletedAt}, 1)
         `;
         yield* sql`
           INSERT INTO profile_stats_deleted_prompts (thread_id, project_id, created_at)
@@ -694,10 +803,12 @@ const makeProfileStatsArchive = Effect.gen(function* () {
             AND (dispatch_origin IS NULL OR dispatch_origin = 'user')
         `;
         yield* Effect.forEach(
-          turnRows,
+          turnEventSnapshots,
           (row) => sql`
-            INSERT INTO profile_stats_deleted_turns (thread_id, provider, model, reasoning, turn_count)
-            VALUES (${threadId}, ${row.provider}, ${row.model}, ${row.reasoning}, ${row.turnCount})
+            INSERT INTO profile_stats_deleted_turn_events (
+              thread_id, created_at, provider, model, reasoning
+            )
+            VALUES (${threadId}, ${row.createdAt}, ${row.provider}, ${row.model}, ${row.reasoning})
           `,
           { concurrency: 1, discard: true },
         );
@@ -712,8 +823,14 @@ const makeProfileStatsArchive = Effect.gen(function* () {
         yield* Effect.forEach(
           tokenRows,
           (row) => sql`
-            INSERT INTO profile_stats_deleted_tokens (thread_id, created_at, provider, model, tokens)
-            VALUES (${threadId}, ${row.createdAt}, ${row.provider}, ${row.model}, ${row.tokens})
+            INSERT INTO profile_stats_deleted_tokens (
+              thread_id, created_at, provider, model, tokens,
+              cached_input_tokens, uncached_input_tokens, output_tokens
+            )
+            VALUES (
+              ${threadId}, ${row.createdAt}, ${row.provider}, ${row.model}, ${row.tokens},
+              ${row.cachedInputTokens}, ${row.uncachedInputTokens}, ${row.outputTokens}
+            )
           `,
           { concurrency: 1, discard: true },
         );

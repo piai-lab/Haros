@@ -297,16 +297,10 @@ describe("ProfileStatsQuery", () => {
         expect(stats.activity.totalPromptsSent).toBe(3);
         expect(stats.activity.totalThreads).toBe(2);
         expect(stats.activeHours.startHour).toBe(9);
-        expect(stats.activeHours.turnCount).toBe(2);
-        expect(stats.insights.topProvider).toBe("codex");
-        expect(stats.insights.topProviderPercent).toBeCloseTo(66.7);
+        expect(stats.activeHours.endHour).toBe(11);
+        expect(stats.activeHours.turnCount).toBe(3);
         expect(stats.insights.topReasoning).toBe("high");
         expect(stats.insights.topReasoningPercent).toBeCloseTo(66.7);
-        expect(stats.providerModels[0]).toMatchObject({
-          provider: "codex",
-          model: "gpt-5-codex",
-          turnCount: 2,
-        });
       }),
     );
   });
@@ -335,6 +329,7 @@ describe("ProfileStatsQuery", () => {
               '2026-06-13T10:00:00.000Z', NULL
             )
         `;
+        const recentNow = new Date().toISOString();
         yield* sql`
           INSERT INTO projection_thread_messages (
             message_id, thread_id, turn_id, role, text, dispatch_origin,
@@ -356,27 +351,33 @@ describe("ProfileStatsQuery", () => {
           ) VALUES
             (
               'event-reused-user', 'thread', 'thread-reused-user', 1,
-              'thread.turn-start-requested', '2026-06-13T09:05:00.000Z', 'client',
+              'thread.turn-start-requested', ${recentNow}, 'client',
               '{"threadId":"thread-reused-user","messageId":"shared-message-id","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}', '{}'
             ),
             (
               'event-reused-agent', 'thread', 'thread-reused-agent', 1,
-              'thread.turn-start-requested', '2026-06-13T10:05:00.000Z', 'system',
+              'thread.turn-start-requested', ${recentNow}, 'system',
               '{"threadId":"thread-reused-agent","messageId":"shared-message-id","modelSelection":{"provider":"claudeAgent","model":"claude-sonnet-4-6"}}', '{}'
             )
         `;
 
         const stats = yield* statsQuery.getProfileStats({ utcOffsetMinutes: 0 });
-        expect(stats.insights.topProvider).toBe("codex");
-        expect(stats.insights.topProviderPercent).toBe(100);
-        expect(stats.providerModels).toEqual([
-          expect.objectContaining({ provider: "codex", model: "gpt-5-codex", turnCount: 1 }),
+        expect(stats.insights.topReasoning).toBeNull();
+        expect(stats.recentModelUsage.totalTurns).toBe(1);
+        expect(stats.recentModelUsage.models).toEqual([
+          {
+            provider: "codex",
+            model: "gpt-5-codex",
+            turnCount: 1,
+            percent: 100,
+            kind: "model",
+          },
         ]);
       }),
     );
   });
 
-  it("reports token-based provider ranking separately from turn-count profile stats", async () => {
+  it("reports lifetime token totals independently from turn-count profile stats", async () => {
     await runProfileStatsTest(
       Effect.gen(function* () {
         const sql = yield* SqlClient.SqlClient;
@@ -512,18 +513,9 @@ describe("ProfileStatsQuery", () => {
         const stats = yield* statsQuery.getProfileStats({ utcOffsetMinutes: 0 });
         const tokenStats = yield* statsQuery.getProfileTokenStats({ utcOffsetMinutes: 0 });
 
-        expect(stats.insights.topProvider).toBe("codex");
-        expect(stats.insights.topProviderPercent).toBeCloseTo(66.7);
-        expect(tokenStats.topProvider).toBe("claudeAgent");
-        expect(tokenStats.topProviderPercent).toBeCloseTo(83.3);
-        expect(tokenStats.providers).toEqual(["claudeAgent", "codex"]);
-        // Token-based model mix mirrors the token ranking, not the turn counts.
-        expect(tokenStats.models).toEqual([
-          { provider: "claudeAgent", model: "claude-sonnet-4-6", tokens: 5000, percent: 83.3 },
-          { provider: "codex", model: "gpt-5-codex", tokens: 1000, percent: 16.7 },
-        ]);
-        // Turn-based provider/model mix is unchanged by the token ranking.
-        expect(stats.providerModels[0]).toMatchObject({ provider: "codex", turnCount: 2 });
+        expect(stats.insights.topReasoning).toBeNull();
+        expect(tokenStats.lifetimeTotalTokens).toBe(6000);
+        expect(tokenStats.peakDayTokens).toBe(6000);
       }),
     );
   });
@@ -732,12 +724,6 @@ describe("ProfileStatsQuery", () => {
 
         expect(tokenStats.available).toBe(true);
         expect(tokenStats.lifetimeTotalTokens).toBe(11000);
-        expect(tokenStats.topProvider).toBe("codex");
-        expect(tokenStats.models).toEqual([
-          { provider: "codex", model: "gpt-5-codex", tokens: 6000, percent: 54.5 },
-          { provider: "claudeAgent", model: "claude-fable-5", tokens: 3000, percent: 27.3 },
-          { provider: "claudeAgent", model: "claude-opus-4-8", tokens: 2000, percent: 18.2 },
-        ]);
       }),
     );
   });
@@ -916,10 +902,6 @@ describe("ProfileStatsQuery", () => {
         const tokenStats = yield* statsQuery.getProfileTokenStats({ utcOffsetMinutes: 0 });
 
         expect(tokenStats.lifetimeTotalTokens).toBe(4200);
-        expect(tokenStats.models).toEqual([
-          { provider: "codex", model: "gpt-5-codex", tokens: 2500, percent: 59.5 },
-          { provider: "claudeAgent", model: "claude-haiku-4-5", tokens: 1700, percent: 40.5 },
-        ]);
       }),
     );
   });
@@ -1330,16 +1312,13 @@ describe("ProfileStatsQuery", () => {
         // Lifetime totals: deleted threads/projects keep their contribution.
         expect(stats.activity.totalPromptsSent).toBe(7);
         expect(stats.activity.totalThreads).toBe(4);
-        // Alpha and Beta tie on prompts (3) and active days (2); the deleted
-        // Alpha thread's later prompt breaks the tie via lastWorkedAt.
-        expect(stats.mostWorkedProject).toEqual({
-          projectId: "project-alpha",
-          title: "Alpha",
-          workspaceRoot: "/work/alpha",
-          promptCount: 3,
-          threadCount: 2,
-          activeDays: 2,
-          lastWorkedAt: "2026-06-14T11:05:00.000Z",
+        expect(stats.workFocus).toEqual({
+          totalPrompts: 7,
+          entries: [
+            { title: "Alpha", promptCount: 3, percent: 42.9, kind: "project" },
+            { title: "Beta", promptCount: 3, percent: 42.9, kind: "project" },
+            { title: "other", promptCount: 1, percent: 14.2, kind: "other" },
+          ],
         });
       }),
     );
@@ -1529,10 +1508,113 @@ describe("ProfileStatsQuery", () => {
 
         expect(tokenStats.available).toBe(true);
         expect(tokenStats.lifetimeTotalTokens).toBe(1500);
-        expect(tokenStats.providers).toEqual(["claudeAgent"]);
-        expect(tokenStats.models).toEqual([
-          { provider: "claudeAgent", model: "unknown", tokens: 1500, percent: 100 },
-        ]);
+      }),
+    );
+  });
+
+  it("builds dense 30-day model and canonical cache usage from current local history", async () => {
+    await runProfileStatsTest(
+      Effect.gen(function* () {
+        const sql = yield* SqlClient.SqlClient;
+        const statsQuery = yield* ProfileStatsQuery;
+        const now = new Date().toISOString();
+
+        yield* sql`
+          INSERT INTO projection_threads (
+            thread_id, project_id, title, model_selection_json, runtime_mode,
+            interaction_mode, env_mode, created_at, updated_at, deleted_at
+          ) VALUES (
+            'thread-recent-usage', 'project-recent-usage', 'Recent usage',
+            '{"provider":"codex","model":"gpt-5-codex"}',
+            'full-access', 'default', 'local', ${now}, ${now}, NULL
+          )
+        `;
+        yield* sql`
+          INSERT INTO orchestration_events (
+            event_id, aggregate_kind, stream_id, stream_version, event_type,
+            occurred_at, actor_kind, payload_json, metadata_json
+          ) VALUES
+            (
+              'event-recent-usage-1', 'thread', 'thread-recent-usage', 1,
+              'thread.turn-start-requested', ${now}, 'client',
+              '{"threadId":"thread-recent-usage","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}', '{}'
+            ),
+            (
+              'event-recent-usage-2', 'thread', 'thread-recent-usage', 2,
+              'thread.turn-start-requested', ${now}, 'client',
+              '{"threadId":"thread-recent-usage","modelSelection":{"provider":"codex","model":"gpt-5-codex"}}', '{}'
+            ),
+            (
+              'event-recent-usage-3', 'thread', 'thread-recent-usage', 3,
+              'thread.turn-start-requested', ${now}, 'client',
+              '{"threadId":"thread-recent-usage"}', '{}'
+            )
+        `;
+        yield* sql`
+          INSERT INTO projection_thread_activities (
+            activity_id, thread_id, turn_id, tone, kind, summary,
+            payload_json, sequence, created_at
+          ) VALUES
+            (
+              'activity-recent-usage-1', 'thread-recent-usage', NULL, 'info',
+              'context-window.updated', 'tokens updated',
+              '{"provider":"codex","totalProcessedTokens":175,"totalTokenBreakdown":{"cachedInputTokens":100,"uncachedInputTokens":50,"outputTokens":25}}',
+              1, ${now}
+            ),
+            (
+              'activity-recent-usage-2', 'thread-recent-usage', NULL, 'info',
+              'context-window.updated', 'tokens updated',
+              '{"provider":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
+              2, ${now}
+            ),
+            (
+              'activity-recent-usage-duplicate', 'thread-recent-usage', NULL, 'info',
+              'context-window.updated', 'tokens updated',
+              '{"provider":"codex","totalProcessedTokens":255,"totalTokenBreakdown":{"cachedInputTokens":150,"uncachedInputTokens":70,"outputTokens":35}}',
+              3, ${now}
+            ),
+            (
+              'activity-recent-usage-reset', 'thread-recent-usage', NULL, 'info',
+              'context-window.updated', 'tokens updated',
+              '{"provider":"codex","totalProcessedTokens":17,"totalTokenBreakdown":{"cachedInputTokens":10,"uncachedInputTokens":5,"outputTokens":2}}',
+              4, ${now}
+            )
+        `;
+
+        const stats = yield* statsQuery.getProfileStats({ utcOffsetMinutes: 0 });
+        const tokenStats = yield* statsQuery.getProfileTokenStats({ utcOffsetMinutes: 0 });
+
+        expect(stats.recentModelUsage).toEqual({
+          rangeDays: 30,
+          totalTurns: 3,
+          coverage: "partial",
+          models: [
+            {
+              provider: "codex",
+              model: "gpt-5-codex",
+              turnCount: 2,
+              percent: 66.7,
+              kind: "model",
+            },
+            {
+              provider: "unknown",
+              model: "unknown",
+              turnCount: 1,
+              percent: 33.3,
+              kind: "unknown",
+            },
+          ],
+        });
+        expect(tokenStats.recentTokenUsage.days).toHaveLength(30);
+        expect(tokenStats.recentTokenUsage).toMatchObject({
+          cachedInputTokens: 160,
+          uncachedInputTokens: 75,
+          outputTokens: 37,
+          cacheHitPercent: 68.1,
+          coverage: "complete",
+          unavailableProviders: [],
+        });
+        expect(tokenStats.lifetimeTotalTokens).toBe(272);
       }),
     );
   });

@@ -322,24 +322,36 @@ describe("ProfileStatsArchive", () => {
         provider: "codex",
         model: "gpt-5-codex",
         tokens: 2000,
+        cachedInputTokens: null,
+        uncachedInputTokens: null,
+        outputTokens: null,
       },
       {
         createdAt: "2026-06-13T12:04:00.000Z",
         provider: "codex",
         model: "gpt-5-codex",
         tokens: 500,
+        cachedInputTokens: null,
+        uncachedInputTokens: null,
+        outputTokens: null,
       },
       {
         createdAt: "2026-06-13T12:11:00.000Z",
         provider: "claudeAgent",
         model: "claude-haiku-4-5",
         tokens: 700,
+        cachedInputTokens: null,
+        uncachedInputTokens: null,
+        outputTokens: null,
       },
       {
         createdAt: "2026-06-13T12:12:00.000Z",
         provider: "claudeAgent",
         model: "claude-haiku-4-5",
         tokens: 1000,
+        cachedInputTokens: null,
+        uncachedInputTokens: null,
+        outputTokens: null,
       },
     ]);
   });
@@ -378,6 +390,74 @@ describe("ProfileStatsArchive", () => {
     ]);
   });
 
+  it("keeps a trustworthy total while dropping contradictory token breakdowns", () => {
+    const rows = aggregateThreadTokenRows([
+      {
+        totalProcessedTokens: 100,
+        totalCachedInputTokens: 60,
+        totalUncachedInputTokens: 30,
+        totalOutputTokens: 10,
+        usedTokens: null,
+        provider: "codex",
+        model: "gpt-5.5",
+        dispatchOrigin: "user",
+        createdAt: "2026-06-13T12:00:00.000Z",
+      },
+      {
+        totalProcessedTokens: 200,
+        totalCachedInputTokens: 110,
+        totalUncachedInputTokens: 60,
+        totalOutputTokens: 25,
+        usedTokens: null,
+        provider: "codex",
+        model: "gpt-5.5",
+        dispatchOrigin: "user",
+        createdAt: "2026-06-13T12:01:00.000Z",
+      },
+      {
+        totalProcessedTokens: 40,
+        totalCachedInputTokens: 10,
+        totalUncachedInputTokens: 20,
+        totalOutputTokens: 10,
+        usedTokens: null,
+        provider: "codex",
+        model: "gpt-5.5",
+        dispatchOrigin: "user",
+        createdAt: "2026-06-13T12:02:00.000Z",
+      },
+    ]);
+
+    expect(rows).toEqual([
+      {
+        createdAt: "2026-06-13T12:00:00.000Z",
+        provider: "codex",
+        model: "gpt-5.5",
+        tokens: 100,
+        cachedInputTokens: 60,
+        uncachedInputTokens: 30,
+        outputTokens: 10,
+      },
+      {
+        createdAt: "2026-06-13T12:01:00.000Z",
+        provider: "codex",
+        model: "gpt-5.5",
+        tokens: 100,
+        cachedInputTokens: null,
+        uncachedInputTokens: null,
+        outputTokens: null,
+      },
+      {
+        createdAt: "2026-06-13T12:02:00.000Z",
+        provider: "codex",
+        model: "gpt-5.5",
+        tokens: 40,
+        cachedInputTokens: 10,
+        uncachedInputTokens: 20,
+        outputTokens: 10,
+      },
+    ]);
+  });
+
   it("keeps a stamped activity provider instead of a mismatched thread fallback", () => {
     const rows = aggregateThreadTokenRows(
       [
@@ -398,6 +478,9 @@ describe("ProfileStatsArchive", () => {
         provider: "claudeAgent",
         model: null,
         tokens: 1_500,
+        cachedInputTokens: null,
+        uncachedInputTokens: null,
+        outputTokens: null,
       },
     ]);
   });
@@ -556,9 +639,8 @@ describe("ProfileStatsArchive", () => {
         expect(statsAfter.activity).toEqual(statsBefore.activity);
         expect(statsAfter.activeHours).toEqual(statsBefore.activeHours);
         expect(statsAfter.insights).toEqual(statsBefore.insights);
-        expect(statsAfter.providerModels).toEqual(statsBefore.providerModels);
         expect(statsAfter.skills).toEqual(statsBefore.skills);
-        expect(statsAfter.mostWorkedProject).toEqual(statsBefore.mostWorkedProject);
+        expect(statsAfter.workFocus).toEqual(statsBefore.workFocus);
         expect(tokenStatsAfter).toEqual(tokenStatsBefore);
 
         const statsAfterIst = yield* statsQuery.getProfileStats({ utcOffsetMinutes: 330 });

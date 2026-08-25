@@ -1,7 +1,7 @@
 // FILE: stats.ts
-// Purpose: Schemas for the local profile-stats RPCs that power the Profile page and
-// the shareable activity card. All metrics are backed by OmniMind's local DB
-// projections; no provider archive or cloud data is part of this contract.
+// Purpose: Schemas for the local profile-stats RPCs that power Usage Insights and
+// its complete, identity-free summary card. All metrics are backed by OmniMind's
+// local DB projections; no cloud data is part of this contract.
 // Metrics are lifetime totals: deleting a thread or project from the app never
 // subtracts the work it already contributed to the profile.
 // Layer: shared contracts (schema-only, no runtime logic)
@@ -35,25 +35,6 @@ export const ProfileHeatmapCell = Schema.Struct({
 });
 export type ProfileHeatmapCell = typeof ProfileHeatmapCell.Type;
 
-export const ProfileProviderUsage = Schema.Struct({
-  provider: Schema.Union([ProviderKind, Schema.Literal("unknown")]),
-  model: TrimmedNonEmptyString,
-  turnCount: NonNegativeInt,
-  percent: Schema.Number,
-});
-export type ProfileProviderUsage = typeof ProfileProviderUsage.Type;
-
-// Token-based model mix. Tokens are attributed to the model selected for the
-// turn that processed them (thread selection is only a legacy-data fallback),
-// so switching models mid-thread keeps each model's share accurate.
-export const ProfileTokenModelUsage = Schema.Struct({
-  provider: Schema.Union([ProviderKind, Schema.Literal("unknown")]),
-  model: TrimmedNonEmptyString,
-  tokens: NonNegativeInt,
-  percent: Schema.Number,
-});
-export type ProfileTokenModelUsage = typeof ProfileTokenModelUsage.Type;
-
 export const ProfileSkillUsage = Schema.Struct({
   name: TrimmedNonEmptyString,
   displayName: TrimmedNonEmptyString,
@@ -61,27 +42,6 @@ export const ProfileSkillUsage = Schema.Struct({
   runCount: NonNegativeInt,
 });
 export type ProfileSkillUsage = typeof ProfileSkillUsage.Type;
-
-export const ProfileMostWorkedProject = Schema.Struct({
-  projectId: TrimmedNonEmptyString,
-  title: TrimmedNonEmptyString,
-  workspaceRoot: TrimmedNonEmptyString,
-  promptCount: NonNegativeInt,
-  threadCount: NonNegativeInt,
-  activeDays: NonNegativeInt,
-  lastWorkedAt: IsoDateTime,
-});
-export type ProfileMostWorkedProject = typeof ProfileMostWorkedProject.Type;
-
-export const ProfileQuota = Schema.Struct({
-  status: Schema.Literals(["available", "unavailable"]),
-  provider: Schema.NullOr(ProviderKind),
-  window: Schema.NullOr(Schema.String),
-  usedPercent: Schema.NullOr(Schema.Number),
-  resetsAt: Schema.NullOr(IsoDateTime),
-  planName: Schema.NullOr(Schema.String),
-});
-export type ProfileQuota = typeof ProfileQuota.Type;
 
 export const ProfileActivity = Schema.Struct({
   currentStreakDays: NonNegativeInt,
@@ -100,15 +60,10 @@ export const ProfileActiveHours = Schema.Struct({
   startHour: Schema.NullOr(Schema.Int),
   endHour: Schema.NullOr(Schema.Int),
   turnCount: NonNegativeInt,
-  label: Schema.NullOr(Schema.String),
 });
 export type ProfileActiveHours = typeof ProfileActiveHours.Type;
 
 export const ProfileInsights = Schema.Struct({
-  // Ranked by turn count. Token-based ranking lives on ProfileTokenStats; clients
-  // prefer it when available (see selectProfileTopProvider on the web).
-  topProvider: Schema.NullOr(ProviderKind),
-  topProviderPercent: Schema.NullOr(Schema.Number),
   topReasoning: Schema.NullOr(Schema.String),
   topReasoningPercent: Schema.NullOr(Schema.Number),
   skillsExplored: NonNegativeInt,
@@ -116,33 +71,56 @@ export const ProfileInsights = Schema.Struct({
 });
 export type ProfileInsights = typeof ProfileInsights.Type;
 
-export const ProfileIdentity = Schema.Struct({
-  homeDirBasename: Schema.String,
-  initials: Schema.String,
-  defaultHandle: Schema.String,
-});
-export type ProfileIdentity = typeof ProfileIdentity.Type;
-
 export const ProfileTimezone = Schema.Struct({
   utcOffsetMinutes: Schema.Int,
   today: TrimmedNonEmptyString,
 });
 export type ProfileTimezone = typeof ProfileTimezone.Type;
 
+export const ProfileCoverage = Schema.Literals(["complete", "partial", "unavailable"]);
+export type ProfileCoverage = typeof ProfileCoverage.Type;
+
+export const ProfileRecentModelUsage = Schema.Struct({
+  rangeDays: Schema.Literal(30),
+  totalTurns: NonNegativeInt,
+  coverage: ProfileCoverage,
+  models: Schema.Array(
+    Schema.Struct({
+      provider: Schema.Union([ProviderKind, Schema.Literal("unknown")]),
+      model: TrimmedNonEmptyString,
+      turnCount: NonNegativeInt,
+      percent: Schema.Number,
+      kind: Schema.Literals(["model", "other", "unknown"]),
+    }),
+  ),
+});
+export type ProfileRecentModelUsage = typeof ProfileRecentModelUsage.Type;
+
+export const ProfileWorkFocusEntry = Schema.Struct({
+  title: TrimmedNonEmptyString,
+  promptCount: NonNegativeInt,
+  percent: Schema.Number,
+  kind: Schema.Literals(["project", "other"]),
+});
+export type ProfileWorkFocusEntry = typeof ProfileWorkFocusEntry.Type;
+
+export const ProfileWorkFocus = Schema.Struct({
+  totalPrompts: NonNegativeInt,
+  entries: Schema.Array(ProfileWorkFocusEntry),
+});
+export type ProfileWorkFocus = typeof ProfileWorkFocus.Type;
+
 // ── Aggregate result ─────────────────────────────────────────────────
 
 export const ProfileStats = Schema.Struct({
   generatedAt: IsoDateTime,
   timezone: ProfileTimezone,
-  identity: ProfileIdentity,
   activity: ProfileActivity,
   activeHours: ProfileActiveHours,
+  recentModelUsage: ProfileRecentModelUsage,
+  workFocus: ProfileWorkFocus,
   insights: ProfileInsights,
-  providerModels: Schema.Array(ProfileProviderUsage),
   skills: Schema.Array(ProfileSkillUsage),
-  mostUsedSkill: Schema.NullOr(ProfileSkillUsage),
-  mostWorkedProject: Schema.NullOr(ProfileMostWorkedProject),
-  quota: ProfileQuota,
 });
 export type ProfileStats = typeof ProfileStats.Type;
 
@@ -156,18 +134,27 @@ export const ProfileTokenStats = Schema.Struct({
   lifetimeTotalTokens: Schema.NullOr(NonNegativeInt),
   peakDayTokens: Schema.NullOr(NonNegativeInt),
   peakDay: Schema.NullOr(TrimmedNonEmptyString),
-  providers: Schema.Array(ProviderKind),
-  // Providers with recorded turns but no token telemetry (their adapters never
-  // emit context-window updates); excluded from token-based rankings.
-  unavailableProviders: Schema.Array(ProviderKind),
-  // Most-used provider by tokens processed, among providers with token telemetry.
-  topProvider: Schema.NullOr(ProviderKind),
-  topProviderPercent: Schema.NullOr(Schema.Number),
-  // Per-model token shares; clients prefer this over the turn-based
-  // ProfileStats.providerModels when token telemetry is available.
-  models: Schema.Array(ProfileTokenModelUsage),
   heatmapMetric: Schema.Literal("tokens"),
   heatmap: Schema.Array(ProfileHeatmapCell),
+  recentTokenUsage: Schema.Struct({
+    rangeDays: Schema.Literal(30),
+    startDay: TrimmedNonEmptyString,
+    endDay: TrimmedNonEmptyString,
+    cachedInputTokens: NonNegativeInt,
+    uncachedInputTokens: NonNegativeInt,
+    outputTokens: NonNegativeInt,
+    cacheHitPercent: Schema.NullOr(Schema.Number),
+    coverage: ProfileCoverage,
+    unavailableProviders: Schema.Array(ProviderKind),
+    days: Schema.Array(
+      Schema.Struct({
+        day: TrimmedNonEmptyString,
+        cachedInputTokens: NonNegativeInt,
+        uncachedInputTokens: NonNegativeInt,
+        outputTokens: NonNegativeInt,
+      }),
+    ),
+  }),
 });
 export type ProfileTokenStats = typeof ProfileTokenStats.Type;
 
