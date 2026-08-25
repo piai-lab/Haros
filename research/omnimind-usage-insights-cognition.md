@@ -4,7 +4,7 @@
 
 收敛日期：2026-08-25
 
-原始认知核对基线：`main@67813a35575cd89382101b45dd9aca9418ecb6ae`。生产实现基线为 `origin/main@17f0fb314c` 上的 `codex/usage-insights` candidate；是否已推送、packaged或进入main只看Git与`execution-brief.md`的exact evidence，不能从本文状态推断。
+原始认知核对基线：`main@67813a35575cd89382101b45dd9aca9418ecb6ae`。生产 shipped-code 基线为 `origin/main@17f0fb314c` 上的 `codex/usage-insights@e21307fddced082dfc4144b871430c8bdabf5fa4` candidate；该 exact pushed SHA 已完成 clean packaged journey，但尚未合并或发行。当前分支、后续提交与交付状态仍只看 Git、`execution-brief.md` 和 active Campaign 的 exact evidence，不能从本文标题或更新时间推断。
 
 适用范围：OmniMind Composer 上下文圆环中的缓存信息，以及 Settings 中原 `Profile / 个人资料` 表面向 `Usage insights / 使用洞察` 的产品收敛。
 
@@ -318,12 +318,14 @@ Tailwind `max-w-3xl` 为 48rem，即 768px；左右 `px-6` 各 24px，因此最�
 - 1200×1600 identity-free完整摘要、固定文件名与local copy/save；
 - canonical runtime breakdown、四类Provider normalization、Profile delta和删除归档migration/测试。
 
-### 6.3 仍需由交付证据关闭
+### 6.3 已闭合的交付证据与剩余边界
 
-- exact branch commit与push；
-- MiMo/DeepSeek真实wire是否提供cache detail，以及unsupported时的unknown结论；
-- exact pushed SHA的clean build、fresh隔离packaged App中英/明暗/480px/Tooltip/摘要/reopen journey；
-- 全仓门若受并行工作树修改影响，必须在clean SHA重新运行并精确归因。
+- exact shipped-code commit `e21307fddced082dfc4144b871430c8bdabf5fa4` 已推送到 `codex/usage-insights`；
+- MiMo 与 DeepSeek 的真实重复前缀均提供可证明 cache detail；第二轮 cache read 已进入 Pi stats 与 canonical breakdown。ACP 或其他未提供可信互斥拆分的来源继续是 unknown，不显示伪造的 `0%`；
+- 该 exact pushed SHA 已从 clean clone 构建 arm64 packaged App，并在 fresh、任务专用的 `userData`、home 与 Provider private home 中证明主进程、Helper、Server 均使用隔离路径；
+- packaged journey 已闭合真实 DeepSeek 两轮请求、Composer 最近一轮缓存行与 accessible name、先访问空洞察后立即返回的 RPC 刷新、中文/英文、浅色/深色、480px 最小窗口、1200×1600 PNG copy/save、关闭重开与数据持久化；
+- 自动化覆盖 200% zoom、reduced motion、长模型名、极大数值、Token 图 pointer/键盘/触摸与 Tooltip；focused、Web/Server 全量、typecheck、lint、scoped format、production build 均通过。并行工作区中的 Ask User 修改未被 stage、覆盖或混入提交；
+- DMG SHA-256 为 `dfc634da44d546b2b72c4c96cc4156521a1b5ac5478cc6e116d88cfe8b596495`，packaged `app.asar` SHA-256 为 `390c1cb62bfd852f303ba2f1d4dec60e272ec63c17d01250563257466fb048a5`。这些是 candidate evidence，不等于合并 `main`、公开 Release 或修改 update feed。
 
 ### 6.4 不应复用为捷径的链路
 
