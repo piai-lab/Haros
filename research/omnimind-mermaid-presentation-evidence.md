@@ -60,6 +60,8 @@ Bun 1.3.12 的 fresh resolution 把 Web direct range `katex@^0.16.45` 与 Mermai
 - 20 个不同 source+theme cache key 的 80-edge 图经停读式往返遍历后恰好 render 20 次，第二轮不增加 render；强制 GC 后 heap 从 `22,689,927B` 增至首轮 `29,109,453B`、第二轮 `30,420,435B`，第二轮增量 `1,310,982B`，没有按图数重复首轮增长；count/byte LRU 硬边界另由纯逻辑测试直接证伪；
 - 无 Mermaid 的初始 route、streaming Mermaid 与 300-edge 拒绝路径均观察到 `0` Mermaid resource 和 `0` import mark；production HTML 只 module-preload pipeline/runtime/workload，Mermaid core 与各 diagram implementation 保持独立 lazy chunks；
 - 五组相同字节的 plain-fence / Mermaid-fence streaming 对照中，两者 Mermaid import、resource 与 Long Task 均为 `0`；Mermaid fence 的 React commit count 中位增量约 `0.7%`，commit time 中位数没有回退，frame p95 中位数没有回退。
+- release legal owner 纳入 shipped Web manifest 后，development-host inventory/notices/SBOM 从 242 个运行时组件扩展为 541 个 Web/Server/Desktop 生产组件；`licenses:generate` 与 `licenses:check` 确定性闭合，并精确包含 `mermaid@11.17.2`、root/nested KaTeX 及 Mermaid 生产依赖；
+- 仓库未为 `bun pm scan` 配置 scanner，该命令不能提供安全结论；同一 lockfile 的 `bun audit --audit-level=high` 报告 1 critical 与 23 high 的既有跨仓 advisory，路径中没有 Mermaid closure。该观察只证明未新增被 audit 命中的 Mermaid advisory，不把项目级 audit 非绿色改写成通过。
 
 以上数值只绑定该日期的 production bundle、fixture 和机器环境，不形成跨机器 SLA；重开条件中的 dependency、browser、theme、budget 或 transcript lifecycle 变化后需重测。
 

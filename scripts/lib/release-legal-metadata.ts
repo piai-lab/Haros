@@ -369,13 +369,19 @@ export function collectReleaseDependencyInventory(options: {
     const name = requiredString(record.manifest.name, "name", record.packageDirectory);
     const version = requiredString(record.manifest.version, "version", record.packageDirectory);
     const id = packageId(name, version);
-    const license = metadataText(record.manifest.license) ?? "UNDECLARED";
+    const override = legalOverrides.get(id);
+    const declaredLicense = metadataText(record.manifest.license);
+    const license = declaredLicense ?? override?.license ?? "UNDECLARED";
     let licenseFiles = packageLicenseFiles(record.packageDirectory);
     if (license === "UNDECLARED") {
       throw new Error(`Release dependency ${id} has no declared license.`);
     }
+    if (!declaredLicense) {
+      // An exact, manifest-bound override owns both the missing metadata and legal text.
+      // Do not silently infer a license identifier from an arbitrary packaged filename.
+      licenseFiles = [];
+    }
     if (licenseFiles.length === 0) {
-      const override = legalOverrides.get(id);
       if (!override) {
         throw new Error(`Release dependency ${id} has no packaged legal text or exact override.`);
       }
@@ -700,6 +706,7 @@ export function resolveReleaseDependencyRoots(packageRoot: string): ReleaseDepen
   const workspaceManifests = [
     join(packageRoot, "apps/server/package.json"),
     join(packageRoot, "apps/desktop/package.json"),
+    join(packageRoot, "apps/web/package.json"),
   ].filter(existsSync);
   const manifests =
     workspaceManifests.length > 0 ? workspaceManifests : [join(packageRoot, "package.json")];

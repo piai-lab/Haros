@@ -25,7 +25,12 @@ function write(path: string, value: string): void {
 }
 
 function fixture(
-  options: { override?: boolean; manifestDigest?: string; assetDigest?: string } = {},
+  options: {
+    override?: boolean;
+    manifestDigest?: string;
+    assetDigest?: string;
+    undeclaredLicense?: boolean;
+  } = {},
 ) {
   const root = mkdtempSync(join(tmpdir(), "omnimind-release-legal-"));
   temporaryRoots.push(root);
@@ -41,7 +46,15 @@ function fixture(
   ];
   let targetManifest = "";
   for (const name of piNames) {
-    const manifest = `${JSON.stringify({ name, version: "0.84.2", license: "MIT" }, null, 2)}\n`;
+    const manifest = `${JSON.stringify(
+      {
+        name,
+        version: "0.84.2",
+        ...(options.undeclaredLicense && name === piNames[0] ? {} : { license: "MIT" }),
+      },
+      null,
+      2,
+    )}\n`;
     const packageDirectory = join(root, "node_modules", ...name.split("/"));
     write(join(packageDirectory, "package.json"), manifest);
     if (name === piNames[0]) targetManifest = manifest;
@@ -91,7 +104,7 @@ afterEach(() => {
 });
 
 describe("release legal metadata", () => {
-  it("uses Server and Desktop as repository dependency owners", () => {
+  it("uses Server, Desktop and bundled Web as repository dependency owners", () => {
     const root = mkdtempSync(join(tmpdir(), "omnimind-release-roots-"));
     temporaryRoots.push(root);
     write(
@@ -108,6 +121,10 @@ describe("release legal metadata", () => {
       join(root, "apps/desktop/package.json"),
       JSON.stringify({ dependencies: { electron: "40.10.6", "electron-updater": "6.6.2" } }),
     );
+    write(
+      join(root, "apps/web/package.json"),
+      JSON.stringify({ dependencies: { "@omnimind/shared": "workspace:*", mermaid: "11.17.2" } }),
+    );
 
     expect(resolveReleaseDependencyRoots(root)).toEqual([
       {
@@ -116,6 +133,7 @@ describe("release legal metadata", () => {
       },
       { name: "effect", fromDirectory: join(root, "apps/server") },
       { name: "electron-updater", fromDirectory: join(root, "apps/desktop") },
+      { name: "mermaid", fromDirectory: join(root, "apps/web") },
     ]);
   });
 
@@ -126,6 +144,15 @@ describe("release legal metadata", () => {
     );
     expect(target?.licenseFiles[0]?.provenance.kind).toBe("exact-upstream");
     expect(target?.licenseFiles[0]?.text).toBe("fixture exact legal text");
+  });
+
+  it("accepts missing license metadata only from an exact manifest-bound override", () => {
+    const inventory = collectReleaseDependencyInventory(fixture({ undeclaredLicense: true }));
+    const target = inventory.components.find(
+      (component) => component.name === "@earendil-works/pi-agent-core",
+    );
+    expect(target?.license).toBe("MIT");
+    expect(target?.licenseFiles[0]?.provenance.kind).toBe("exact-upstream");
   });
 
   it("fails closed when packaged legal text and an exact override are both absent", () => {
