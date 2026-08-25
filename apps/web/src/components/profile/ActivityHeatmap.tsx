@@ -20,15 +20,13 @@ export const APP_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
   "bg-[var(--info)]",
 ];
 
-// Accent ramp for the exported card. Mixes toward white so the steps stay opaque on the
-// card's white background and reproduce identically via html-to-image. Level 0 mirrors the
-// in-app heatmap's empty cell (`bg-muted/70`, i.e. black ~2.8%) flattened to an opaque color
-// on white, so the exported image matches the empty-box color shown in the app.
+// Export uses the same semantic theme ramp as the in-app chart; html-to-image resolves the
+// active OmniMind theme variables into the local PNG.
 export const CARD_HEATMAP_INTENSITY_CLASSES: readonly string[] = [
-  "bg-[color-mix(in_srgb,black_2.8%,white)]",
-  "bg-[color-mix(in_srgb,var(--info)_22%,white)]",
-  "bg-[color-mix(in_srgb,var(--info)_45%,white)]",
-  "bg-[color-mix(in_srgb,var(--info)_70%,white)]",
+  "bg-[var(--color-background-elevated-secondary)]",
+  "bg-[color-mix(in_srgb,var(--info)_22%,transparent)]",
+  "bg-[color-mix(in_srgb,var(--info)_45%,transparent)]",
+  "bg-[color-mix(in_srgb,var(--info)_70%,transparent)]",
   "bg-[var(--info)]",
 ];
 

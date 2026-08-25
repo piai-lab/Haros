@@ -16,6 +16,19 @@ export function ContextWindowMeter(props: {
   const { t } = useI18n();
   const { usage, cumulativeCostUsd, activeWindowLabel, pendingWindowLabel } = props;
   const display = deriveContextWindowMeterDisplay(usage);
+  const lastBreakdown = usage.lastTokenBreakdown;
+  const comparableInputTokens = lastBreakdown
+    ? lastBreakdown.cachedInputTokens + lastBreakdown.uncachedInputTokens
+    : 0;
+  const cacheHitPercent =
+    lastBreakdown && comparableInputTokens > 0
+      ? Math.round((lastBreakdown.cachedInputTokens / comparableInputTokens) * 100)
+      : null;
+  const contextAriaLabel = display.usedPercentageLabel
+    ? t("contextWindow.ariaPercentage", {
+        percentage: display.usedPercentageLabel,
+      })
+    : t("contextWindow.ariaTokens", { tokens: display.tokenUsageLabel });
   const radius = 6;
   const circumference = 2 * Math.PI * radius;
   const dashOffset = circumference - (display.normalizedPercentage / 100) * circumference;
@@ -31,11 +44,12 @@ export function ContextWindowMeter(props: {
             type="button"
             className="group inline-flex shrink-0 items-center justify-center rounded-full p-0.5 transition-opacity hover:opacity-80"
             aria-label={
-              display.usedPercentageLabel
-                ? t("contextWindow.ariaPercentage", {
-                    percentage: display.usedPercentageLabel,
+              cacheHitPercent === null
+                ? contextAriaLabel
+                : t("contextWindow.cacheHitCombinedAria", {
+                    context: contextAriaLabel,
+                    percentage: cacheHitPercent,
                   })
-                : t("contextWindow.ariaTokens", { tokens: display.tokenUsageLabel })
             }
           >
             <span className="relative flex h-4 w-4 items-center justify-center">
@@ -120,6 +134,15 @@ export function ContextWindowMeter(props: {
             <div className="text-xs text-muted-foreground">
               {t("contextWindow.totalProcessed", {
                 tokens: formatContextWindowTokens(usage.totalProcessedTokens ?? null),
+              })}
+            </div>
+          ) : null}
+          {cacheHitPercent !== null && lastBreakdown ? (
+            <div className="whitespace-nowrap text-xs text-muted-foreground">
+              {t("contextWindow.cacheHitLine", {
+                percentage: cacheHitPercent,
+                cached: formatContextWindowTokens(lastBreakdown.cachedInputTokens),
+                input: formatContextWindowTokens(comparableInputTokens),
               })}
             </div>
           ) : null}

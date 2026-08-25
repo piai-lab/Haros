@@ -6,11 +6,7 @@
 import type { ProfileStats, ProfileTokenStats } from "@omnimind/contracts";
 import { describe, expect, it } from "vitest";
 
-import {
-  selectProfileHeatmap,
-  selectProfileModelUsage,
-  selectProfileTopProvider,
-} from "./profileSelectors";
+import { selectProfileHeatmap } from "./profileSelectors";
 
 const promptHeatmapCell = {
   day: "2026-07-01",
@@ -29,7 +25,6 @@ const tokenHeatmapCell = {
 const baseStats = {
   generatedAt: "2026-07-02T10:00:00.000Z",
   timezone: { utcOffsetMinutes: 0, today: "2026-07-02" },
-  identity: { homeDirBasename: "omnimind", initials: "O", defaultHandle: "@omnimind" },
   activity: {
     currentStreakDays: 0,
     longestStreakDays: 0,
@@ -40,29 +35,35 @@ const baseStats = {
     heatmap: [promptHeatmapCell],
   },
   activeHours: { startHour: null, endHour: null, turnCount: 0, label: null },
+  recentModelUsage: {
+    rangeDays: 30,
+    totalTurns: 3,
+    coverage: "complete",
+    models: [
+      {
+        provider: "codex",
+        model: "gpt-5-codex",
+        turnCount: 2,
+        percent: 66.7,
+        kind: "model",
+      },
+      {
+        provider: "claudeAgent",
+        model: "claude-sonnet-4-6",
+        turnCount: 1,
+        percent: 33.3,
+        kind: "model",
+      },
+    ],
+  },
+  workFocus: { totalPrompts: 0, entries: [] },
   insights: {
-    topProvider: "codex",
-    topProviderPercent: 66.7,
     topReasoning: null,
     topReasoningPercent: null,
     skillsExplored: 0,
     totalSkillsUsed: 0,
   },
-  providerModels: [
-    { provider: "codex", model: "gpt-5-codex", turnCount: 2, percent: 66.7 },
-    { provider: "claudeAgent", model: "claude-sonnet-4-6", turnCount: 1, percent: 33.3 },
-  ],
   skills: [],
-  mostUsedSkill: null,
-  mostWorkedProject: null,
-  quota: {
-    status: "unavailable",
-    provider: null,
-    window: null,
-    usedPercent: null,
-    resetsAt: null,
-    planName: null,
-  },
 } satisfies ProfileStats;
 
 const tokenStats = {
@@ -70,55 +71,34 @@ const tokenStats = {
   lifetimeTotalTokens: 6000,
   peakDayTokens: 5000,
   peakDay: "2026-07-02",
-  providers: ["claudeAgent", "codex"],
-  unavailableProviders: [],
-  topProvider: "claudeAgent",
-  topProviderPercent: 83.3,
-  models: [
-    { provider: "claudeAgent", model: "claude-sonnet-4-6", tokens: 5000, percent: 83.3 },
-    { provider: "codex", model: "gpt-5-codex", tokens: 1000, percent: 16.7 },
-  ],
   heatmapMetric: "tokens",
   heatmap: [tokenHeatmapCell],
+  recentTokenUsage: {
+    rangeDays: 30,
+    startDay: "2026-06-03",
+    endDay: "2026-07-02",
+    cachedInputTokens: 0,
+    uncachedInputTokens: 5000,
+    outputTokens: 1000,
+    cacheHitPercent: 0,
+    coverage: "complete",
+    unavailableProviders: [],
+    days: [],
+  },
 } satisfies ProfileTokenStats;
 
 describe("profile selectors", () => {
   it("prefers token telemetry once available", () => {
-    expect(selectProfileTopProvider(baseStats, tokenStats)).toEqual({
-      provider: "claudeAgent",
-      percent: 83.3,
-      metric: "tokens",
-    });
     expect(selectProfileHeatmap(baseStats, tokenStats)).toEqual({
       cells: [tokenHeatmapCell],
       unit: "tokens",
     });
-    expect(selectProfileModelUsage(baseStats, tokenStats)).toEqual({
-      entries: tokenStats.models,
-      metric: "tokens",
-    });
   });
 
   it("falls back to core profile stats while token telemetry is unavailable", () => {
-    expect(selectProfileTopProvider(baseStats, null)).toEqual({
-      provider: "codex",
-      percent: 66.7,
-      metric: "turns",
-    });
     expect(selectProfileHeatmap(baseStats, null)).toEqual({
       cells: [promptHeatmapCell],
       unit: "prompts",
-    });
-    expect(selectProfileModelUsage(baseStats, null)).toEqual({
-      entries: baseStats.providerModels,
-      metric: "turns",
-    });
-  });
-
-  it("falls back to turn-based model usage when token telemetry has no model rows", () => {
-    expect(selectProfileModelUsage(baseStats, { ...tokenStats, models: [] })).toEqual({
-      entries: baseStats.providerModels,
-      metric: "turns",
     });
   });
 });

@@ -12,6 +12,24 @@ function asBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
 
+function asTokenUsageBreakdown(value: unknown) {
+  const record = asRecord(value);
+  const cachedInputTokens = asFiniteNumber(record?.cachedInputTokens);
+  const uncachedInputTokens = asFiniteNumber(record?.uncachedInputTokens);
+  const outputTokens = asFiniteNumber(record?.outputTokens);
+  if (
+    cachedInputTokens === null ||
+    uncachedInputTokens === null ||
+    outputTokens === null ||
+    cachedInputTokens < 0 ||
+    uncachedInputTokens < 0 ||
+    outputTokens < 0
+  ) {
+    return null;
+  }
+  return { cachedInputTokens, uncachedInputTokens, outputTokens };
+}
+
 function asContextWindowPercent(value: unknown): number | null {
   const percent = asFiniteNumber(value);
   if (percent === null) {
@@ -92,15 +110,9 @@ function deriveLatestUsageContextWindowSnapshot(
       remainingTokens,
       usedPercentage,
       remainingPercentage,
-      inputTokens: asFiniteNumber(payload?.inputTokens),
-      cachedInputTokens: asFiniteNumber(payload?.cachedInputTokens),
-      outputTokens: asFiniteNumber(payload?.outputTokens),
-      reasoningOutputTokens: asFiniteNumber(payload?.reasoningOutputTokens),
       lastUsedTokens: asFiniteNumber(payload?.lastUsedTokens),
-      lastInputTokens: asFiniteNumber(payload?.lastInputTokens),
-      lastCachedInputTokens: asFiniteNumber(payload?.lastCachedInputTokens),
-      lastOutputTokens: asFiniteNumber(payload?.lastOutputTokens),
-      lastReasoningOutputTokens: asFiniteNumber(payload?.lastReasoningOutputTokens),
+      totalTokenBreakdown: asTokenUsageBreakdown(payload?.totalTokenBreakdown),
+      lastTokenBreakdown: asTokenUsageBreakdown(payload?.lastTokenBreakdown),
       toolUses: asFiniteNumber(payload?.toolUses),
       durationMs: asFiniteNumber(payload?.durationMs),
       compactsAutomatically: asBoolean(payload?.compactsAutomatically) ?? false,
@@ -163,15 +175,9 @@ export function deriveLatestContextWindowSnapshot(
     remainingTokens,
     usedPercentage,
     remainingPercentage,
-    inputTokens: usageSnapshot?.inputTokens ?? null,
-    cachedInputTokens: usageSnapshot?.cachedInputTokens ?? null,
-    outputTokens: usageSnapshot?.outputTokens ?? null,
-    reasoningOutputTokens: usageSnapshot?.reasoningOutputTokens ?? null,
     lastUsedTokens: usageSnapshot?.lastUsedTokens ?? null,
-    lastInputTokens: usageSnapshot?.lastInputTokens ?? null,
-    lastCachedInputTokens: usageSnapshot?.lastCachedInputTokens ?? null,
-    lastOutputTokens: usageSnapshot?.lastOutputTokens ?? null,
-    lastReasoningOutputTokens: usageSnapshot?.lastReasoningOutputTokens ?? null,
+    totalTokenBreakdown: usageSnapshot?.totalTokenBreakdown ?? null,
+    lastTokenBreakdown: usageSnapshot?.lastTokenBreakdown ?? null,
     toolUses: usageSnapshot?.toolUses ?? null,
     durationMs: usageSnapshot?.durationMs ?? null,
     compactsAutomatically: usageSnapshot?.compactsAutomatically ?? false,
@@ -201,15 +207,9 @@ export function deriveSelectedContextWindowSnapshot(
     remainingTokens: maxTokens,
     usedPercentage: 0,
     remainingPercentage: 100,
-    inputTokens: null,
-    cachedInputTokens: null,
-    outputTokens: null,
-    reasoningOutputTokens: null,
     lastUsedTokens: null,
-    lastInputTokens: null,
-    lastCachedInputTokens: null,
-    lastOutputTokens: null,
-    lastReasoningOutputTokens: null,
+    totalTokenBreakdown: null,
+    lastTokenBreakdown: null,
     toolUses: null,
     durationMs: null,
     compactsAutomatically: false,

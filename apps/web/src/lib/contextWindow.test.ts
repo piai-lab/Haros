@@ -145,6 +145,36 @@ describe("contextWindow", () => {
     expect(snapshot?.totalProcessedTokens).toBe(748_126);
   });
 
+  it("preserves canonical total and latest cache breakdowns", () => {
+    const snapshot = deriveLatestContextWindowSnapshot([
+      makeActivity("activity-cache", "context-window.updated", {
+        usedTokens: 100,
+        maxTokens: 1000,
+        totalTokenBreakdown: {
+          cachedInputTokens: 420,
+          uncachedInputTokens: 70,
+          outputTokens: 30,
+        },
+        lastTokenBreakdown: {
+          cachedInputTokens: 42,
+          uncachedInputTokens: 7,
+          outputTokens: 3,
+        },
+      }),
+    ]);
+
+    expect(snapshot?.totalTokenBreakdown).toEqual({
+      cachedInputTokens: 420,
+      uncachedInputTokens: 70,
+      outputTokens: 30,
+    });
+    expect(snapshot?.lastTokenBreakdown).toEqual({
+      cachedInputTokens: 42,
+      uncachedInputTokens: 7,
+      outputTokens: 3,
+    });
+  });
+
   it("uses the configured session max tokens when usage snapshots lag behind", () => {
     const snapshot = deriveLatestContextWindowSnapshot([
       makeActivity("activity-1", "context-window.configured", {

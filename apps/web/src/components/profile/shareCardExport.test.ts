@@ -19,19 +19,16 @@ afterEach(() => {
   toBlob.mockReset();
 });
 
-describe("local profile activity export", () => {
-  it("renders a deterministic two-times PNG without contacting an external service", async () => {
+describe("local Usage Insights export", () => {
+  it("renders the requested exact PNG dimensions without contacting an external service", async () => {
     const blob = new Blob(["png"], { type: "image/png" });
     const node = {} as HTMLElement;
     toBlob.mockResolvedValue(blob);
 
-    await expect(
-      renderNodeToPngBlob(node, { width: 860, height: 440 }),
-    ).resolves.toBe(blob);
+    await expect(renderNodeToPngBlob(node, { width: 860, height: 440 })).resolves.toBe(blob);
     expect(toBlob).toHaveBeenCalledExactlyOnceWith(node, {
-      pixelRatio: 2,
+      pixelRatio: 1,
       cacheBust: true,
-      backgroundColor: "#ffffff",
       width: 860,
       height: 440,
     });

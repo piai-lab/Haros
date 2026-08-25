@@ -62,7 +62,7 @@ export const SETTINGS_NAV_ITEMS = [
     group: "personal",
     labelKey: "settings.profile",
     descriptionKey: "settings.profileDescription",
-    icon: "user",
+    icon: "chart-2",
     searchRecords: [],
   },
   {
