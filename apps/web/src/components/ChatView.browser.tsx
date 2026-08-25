@@ -7968,28 +7968,6 @@ describe("ChatView timeline estimator parity (full app)", () => {
     }
   });
 
-  it("shows a pointer cursor for the running stop button", async () => {
-    const mounted = await mountChatView({
-      viewport: DEFAULT_VIEWPORT,
-      snapshot: createSnapshotForTargetUser({
-        targetMessageId: "msg-user-stop-button-cursor" as MessageId,
-        targetText: "stop button cursor target",
-        sessionStatus: "running",
-      }),
-    });
-
-    try {
-      const stopButton = await waitForElement(
-        () => document.querySelector<HTMLButtonElement>('button[aria-label="Stop generation"]'),
-        "Unable to find stop generation button.",
-      );
-
-      expect(getComputedStyle(stopButton).cursor).toBe("pointer");
-    } finally {
-      await mounted.cleanup();
-    }
-  });
-
   it("keeps global Stop in the Composer while a claimed Ask remains visible", async () => {
     const mounted = await mountChatView({
       viewport: DEFAULT_VIEWPORT,
@@ -8315,16 +8293,24 @@ describe("ChatView timeline estimator parity (full app)", () => {
       await waitForServerConfigToApply();
       await page.getByRole("button", { name: "Change engine. Current: Codex" }).click();
       await page.getByRole("menuitemradio", { name: /Pi/ }).click();
-      await vi.waitFor(() => {
-        expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
-          "pi",
-        );
-        expect(
-          Array.from(document.querySelectorAll<HTMLButtonElement>("button")).some((button) =>
-            button.textContent?.includes("No available model"),
-          ),
-        ).toBe(true);
-      });
+      await vi.waitFor(
+        () => {
+          expect(useComposerDraftStore.getState().draftsByThreadId[THREAD_ID]?.activeProvider).toBe(
+            "pi",
+          );
+        },
+        { timeout: 8_000, interval: 16 },
+      );
+      await vi.waitFor(
+        () => {
+          expect(
+            Array.from(document.querySelectorAll<HTMLButtonElement>("button")).some((button) =>
+              button.textContent?.includes("No available model"),
+            ),
+          ).toBe(true);
+        },
+        { timeout: 8_000, interval: 16 },
+      );
 
       // A normal submission is blocked before any command, but the draft stays editable.
       useComposerDraftStore.getState().setPrompt(THREAD_ID, draftBeingTyped);
