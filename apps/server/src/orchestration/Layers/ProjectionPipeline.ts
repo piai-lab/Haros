@@ -1353,7 +1353,27 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
   ) =>
     Effect.gen(function* () {
       switch (event.type) {
-        case "thread.activity-appended":
+        case "thread.activity-appended": {
+          if (event.payload.activity.kind === "user-input.resolved") {
+            const requestId = extractActivityRequestId(event.payload.activity.payload);
+            const lifecycleGeneration = payloadNonEmptyString(
+              event.payload.activity.payload,
+              "lifecycleGeneration",
+            );
+            if (requestId !== null) {
+              const existingActivities = yield* projectionThreadActivityRepository.listByThreadId({
+                threadId: event.payload.threadId,
+              });
+              const alreadySettled = existingActivities.some(
+                (activity) =>
+                  activity.kind === "user-input.resolved" &&
+                  extractActivityRequestId(activity.payload) === requestId &&
+                  payloadNonEmptyString(activity.payload, "lifecycleGeneration") ===
+                    lifecycleGeneration,
+              );
+              if (alreadySettled) return;
+            }
+          }
           yield* projectionThreadActivityRepository.upsert({
             activityId: event.payload.activity.id,
             threadId: event.payload.threadId,
@@ -1369,6 +1389,7 @@ const makeOrchestrationProjectionPipeline = Effect.gen(function* () {
             createdAt: event.payload.activity.createdAt,
           });
           return;
+        }
 
         case "thread.reverted":
         case "thread.conversation-rolled-back": {

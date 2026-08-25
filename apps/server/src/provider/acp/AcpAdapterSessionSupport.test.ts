@@ -1,15 +1,25 @@
-import { ThreadId, TurnId, type ProviderSession } from "@omnimind/contracts";
+import {
+  ThreadId,
+  TurnId,
+  type CanonicalUserInputSettlement,
+  type ProviderSession,
+} from "@omnimind/contracts";
+import { Deferred, Effect } from "effect";
 import { describe, expect, it } from "vitest";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 
 import {
   clearAcpActiveTurn,
   finalizeAcpActiveTurnCost,
+  acpUserInputAnswers,
   recordAcpSessionCost,
   resolveAcpSessionCwd,
   resolveRequestedAcpSessionModeId,
   resolveAcpTurnInteractionMode,
   scopeAcpRuntimeItemIdForTurn,
   scopeAcpToolCallStateForTurn,
+  settleAcpPendingUserInputs,
+  watchAcpUserInputPresenter,
   withAcpPlanModePrompt,
 } from "./AcpAdapterSessionSupport.ts";
 
@@ -211,5 +221,44 @@ describe("ACP adapter session support", () => {
         homeDir: "/home/test",
       }),
     ).toBe("/server");
+  });
+
+  it("keeps canonical ACP answers, cancellation, and Stop settlement distinct", async () => {
+    expect(
+      acpUserInputAnswers({
+        status: "answered",
+        answers: { q1: { selectedOptionLabels: ["A"], customText: "Custom  " } },
+      }),
+    ).toEqual({ q1: '{"selectedOptionLabels":["A"],"customText":"Custom  "}' });
+    expect(acpUserInputAnswers({ status: "cancelled" })).toEqual({});
+
+    const deferred = await Effect.runPromise(Deferred.make<CanonicalUserInputSettlement>());
+    const pending = { settlement: deferred, suppressDurableTerminal: false };
+    await Effect.runPromise(
+      settleAcpPendingUserInputs(new Map([["request", pending]]), "aborted", {
+        suppressDurableTerminal: true,
+      }),
+    );
+    expect(await Effect.runPromise(Deferred.await(deferred))).toEqual({ status: "aborted" });
+    expect(pending.suppressDurableTerminal).toBe(true);
+    await Effect.runPromise(settleAcpPendingUserInputs(new Map([["request", pending]]), "stale"));
+    expect(await Effect.runPromise(Deferred.await(deferred))).toEqual({ status: "aborted" });
+  });
+
+  it("settles unavailable only when the final compatible presenter disappears", async () => {
+    const firstLease = userInputPresenterRegistry.acquire("acp-presenter-a", 1);
+    const secondLease = userInputPresenterRegistry.acquire("acp-presenter-b", 1);
+    const deferred = await Effect.runPromise(Deferred.make<CanonicalUserInputSettlement>());
+    const removeWatch = watchAcpUserInputPresenter(deferred);
+    firstLease.release();
+    expect(await Effect.runPromise(Deferred.isDone(deferred))).toBe(false);
+    secondLease.release();
+    expect(await Effect.runPromise(Deferred.await(deferred))).toEqual({ status: "unavailable" });
+    removeWatch();
+
+    const headless = await Effect.runPromise(Deferred.make<CanonicalUserInputSettlement>());
+    const removeHeadlessWatch = watchAcpUserInputPresenter(headless);
+    expect(await Effect.runPromise(Deferred.await(headless))).toEqual({ status: "unavailable" });
+    removeHeadlessWatch();
   });
 });

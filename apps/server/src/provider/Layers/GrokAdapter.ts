@@ -5,6 +5,7 @@
  */
 import {
   ApprovalRequestId,
+  type CanonicalUserInputSettlement,
   type GrokModelOptions,
   EventId,
   type ProviderApprovalDecision,
@@ -13,7 +14,6 @@ import {
   type ProviderModelDescriptor,
   type ProviderRuntimeEvent,
   type ProviderSession,
-  type ProviderUserInputAnswers,
   RuntimeItemId,
   RuntimeRequestId,
   type ThreadId,
@@ -67,7 +67,7 @@ import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
-import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
+import { canonicalUserInputRequestFromQuestions } from "../canonicalUserInput.ts";
 import {
   ProviderAdapterProcessError,
   ProviderAdapterRequestError,
@@ -84,6 +84,7 @@ import {
 } from "../acp/AcpAdapterSupport.ts";
 import {
   acceptAcpPlanUpdate,
+  acpUserInputAnswers,
   clearAcpActiveTurn,
   finalizeAcpActiveTurnCost,
   makeAcpThreadLock,
@@ -93,7 +94,8 @@ import {
   scopeAcpRuntimeItemIdForTurn,
   scopeAcpToolCallStateForTurn,
   settleAcpPendingApprovalsAsCancelled,
-  settleAcpPendingUserInputsAsEmptyAnswers,
+  settleAcpPendingUserInputs,
+  watchAcpUserInputPresenter,
   withAcpPlanModePrompt,
 } from "../acp/AcpAdapterSessionSupport.ts";
 import { forkViaAcpRuntime } from "../acp/acpFork.ts";
@@ -344,7 +346,8 @@ interface PendingApproval {
 }
 
 interface PendingUserInput {
-  readonly answers: Deferred.Deferred<ProviderUserInputAnswers>;
+  readonly settlement: Deferred.Deferred<CanonicalUserInputSettlement>;
+  suppressDurableTerminal?: boolean;
 }
 
 interface GrokSessionContext {
@@ -820,7 +823,7 @@ export function makeGrokAdapter(
         yield* cancelAgentGatewayTurn(ctx.gatewaySessionLease, ctx.activeTurnId);
         ctx.gatewaySessionLease?.release();
         yield* settleAcpPendingApprovalsAsCancelled(ctx.pendingApprovals);
-        yield* settleAcpPendingUserInputsAsEmptyAnswers(ctx.pendingUserInputs);
+        yield* settleAcpPendingUserInputs(ctx.pendingUserInputs, "stale");
         if (ctx.sessionConfigReady !== undefined) {
           yield* Deferred.succeed(ctx.sessionConfigReady, undefined);
           ctx.sessionConfigReady = undefined;
@@ -1178,10 +1181,13 @@ export function makeGrokAdapter(
               yield* acp.handleExtRequest(method, GrokAskUserQuestionRequest, (params) =>
                 Effect.gen(function* () {
                   yield* logNative(input.threadId, method, params);
+                  const canonicalRequest = canonicalUserInputRequestFromQuestions(
+                    extractGrokUserInputQuestions(params),
+                  );
                   const requestId = ApprovalRequestId.makeUnsafe(crypto.randomUUID());
                   const runtimeRequestId = RuntimeRequestId.makeUnsafe(requestId);
-                  const answers = yield* Deferred.make<ProviderUserInputAnswers>();
-                  pendingUserInputs.set(requestId, { answers });
+                  const settlement = yield* Deferred.make<CanonicalUserInputSettlement>();
+                  pendingUserInputs.set(requestId, { settlement });
                   yield* offerRuntimeEvent(input.lifecycleGeneration, {
                     type: "user-input.requested",
                     ...(yield* makeEventStamp()),
@@ -1189,25 +1195,36 @@ export function makeGrokAdapter(
                     threadId: input.threadId,
                     turnId: ctx?.activeTurnId,
                     requestId: runtimeRequestId,
-                    payload: { questions: extractGrokUserInputQuestions(params) },
+                    payload: canonicalRequest,
                     raw: {
                       source: "acp.jsonrpc",
                       method,
                       payload: params,
                     },
                   });
-                  const resolved = yield* Deferred.await(answers);
+                  const removePresenterWatch = watchAcpUserInputPresenter(settlement);
+                  const resolved = yield* Deferred.await(settlement).pipe(
+                    Effect.ensuring(Effect.sync(removePresenterWatch)),
+                  );
+                  const answers = acpUserInputAnswers(resolved);
+                  const suppressDurableTerminal =
+                    pendingUserInputs.get(requestId)?.suppressDurableTerminal === true;
                   pendingUserInputs.delete(requestId);
-                  yield* offerRuntimeEvent(input.lifecycleGeneration, {
-                    type: "user-input.resolved",
-                    ...(yield* makeEventStamp()),
-                    provider: PROVIDER,
-                    threadId: input.threadId,
-                    turnId: ctx?.activeTurnId,
-                    requestId: runtimeRequestId,
-                    payload: { answers: resolved },
-                  });
-                  return makeGrokQuestionResponse(params, resolved);
+                  if (!suppressDurableTerminal) {
+                    yield* offerRuntimeEvent(input.lifecycleGeneration, {
+                      type: "user-input.resolved",
+                      ...(yield* makeEventStamp()),
+                      provider: PROVIDER,
+                      threadId: input.threadId,
+                      turnId: ctx?.activeTurnId,
+                      requestId: runtimeRequestId,
+                      payload: { settlement: resolved },
+                    });
+                  }
+                  if (resolved.status === "unavailable") {
+                    yield* ctx.acp.cancel.pipe(Effect.ignore);
+                  }
+                  return makeGrokQuestionResponse(params, answers);
                 }),
               );
             }
@@ -2140,7 +2157,9 @@ export function makeGrokAdapter(
           activeTurnId,
           Effect.gen(function* () {
             yield* settleAcpPendingApprovalsAsCancelled(ctx.pendingApprovals);
-            yield* settleAcpPendingUserInputsAsEmptyAnswers(ctx.pendingUserInputs);
+            yield* settleAcpPendingUserInputs(ctx.pendingUserInputs, "aborted", {
+              suppressDurableTerminal: true,
+            });
             const activePromptFiber = ctx.activePromptFiber;
             yield* Effect.ignore(
               ctx.acp.cancel.pipe(
@@ -2189,9 +2208,8 @@ export function makeGrokAdapter(
             detail: `Unknown pending user-input request: ${requestId}`,
           });
         }
-        const encoded = encodeCanonicalUserInputResponse(response);
-        yield* Deferred.succeed(pending.answers, encoded.answers);
-        if (encoded.cancelled) yield* interruptTurn(threadId);
+        yield* Deferred.succeed(pending.settlement, response);
+        if (response.status === "cancelled") yield* interruptTurn(threadId);
       });
 
     const readThread: GrokAdapterShape["readThread"] = (threadId) =>

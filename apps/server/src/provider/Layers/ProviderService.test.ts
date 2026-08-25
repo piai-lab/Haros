@@ -2419,7 +2419,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
           threadId,
           requestId: asRequestId("user-input-from-old-generation"),
           lifecycleGeneration: String(firstGeneration),
-          answers: { answer: { selectedOptionLabels: [], customText: "stale" } },
+          response: {
+            status: "answered",
+            answers: { answer: { selectedOptionLabels: [], customText: "stale" } },
+          },
         }),
       );
       assertFailure(
@@ -3239,7 +3242,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
         provider.respondToUserInput({
           threadId,
           requestId: asRequestId("claude-user-input-without-generation"),
-          answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+          response: {
+            status: "answered",
+            answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+          },
         }),
       );
       assertFailure(
@@ -3262,7 +3268,10 @@ routing.layer("ProviderServiceLive routing", (it) => {
         threadId,
         requestId: asRequestId("claude-user-input-current-generation"),
         lifecycleGeneration,
-        answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+        response: {
+          status: "answered",
+          answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+        },
       });
       assert.equal(routing.claude.respondToRequest.mock.calls.length, approvalCallCount + 1);
       assert.equal(routing.claude.respondToUserInput.mock.calls.length, userInputCallCount + 1);
@@ -3496,8 +3505,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
         threadId: session.threadId,
         requestId: asRequestId("req-user-input-1"),
         lifecycleGeneration,
-        answers: {
-          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+        response: {
+          status: "answered",
+          answers: {
+            sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+          },
         },
       });
       assert.deepEqual(routing.codex.respondToUserInput.mock.calls, [
@@ -4213,8 +4225,11 @@ routing.layer("ProviderServiceLive routing", (it) => {
         yield* provider.respondToUserInput({
           threadId,
           requestId: asRequestId("req-live-user-input"),
-          answers: {
-            answer: { selectedOptionLabels: [], customText: "continue" },
+          response: {
+            status: "answered",
+            answers: {
+              answer: { selectedOptionLabels: [], customText: "continue" },
+            },
           },
         });
 
@@ -5794,7 +5809,10 @@ piInteractionRouting.layer("ProviderServiceLive Pi interaction generation", (it)
         provider.respondToUserInput({
           threadId,
           requestId: asRequestId("pi-user-input-without-generation"),
-          answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+          response: {
+            status: "answered",
+            answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+          },
         }),
       );
       assertFailure(
@@ -5811,7 +5829,10 @@ piInteractionRouting.layer("ProviderServiceLive Pi interaction generation", (it)
         threadId,
         requestId: asRequestId("pi-user-input-current-generation"),
         lifecycleGeneration,
-        answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+        response: {
+          status: "answered",
+          answers: { answer: { selectedOptionLabels: [], customText: "continue" } },
+        },
       });
       assert.equal(
         piInteractionRouting.pi.respondToUserInput.mock.calls.length,

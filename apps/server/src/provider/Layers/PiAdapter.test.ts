@@ -574,7 +574,7 @@ describe("Pi native OmniMind gateway tools", () => {
     const agentDir = path.join(serverRoot, "agent");
     const cwd = path.join(serverRoot, "workspace");
     const noUiThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000091");
-    const askThreadId = ThreadId.makeUnsafe("00000000-0000-4000-8000-000000000092");
+    const askThreadId = noUiThreadId;
     mkdirSync(agentDir, { recursive: true });
     mkdirSync(cwd, { recursive: true });
     writeFileSync(
@@ -650,17 +650,7 @@ describe("Pi native OmniMind gateway tools", () => {
                 "No-UI turn did not settle.",
               ),
             );
-            yield* adapter.stopSession(noUiThreadId);
-
             presenterLease = userInputPresenterRegistry.acquire("pi-adapter-test", 1);
-            yield* adapter.startSession({
-              provider: "omnimind",
-              threadId: askThreadId,
-              cwd,
-              workSurface: "chat",
-              modelSelection: { provider: "omnimind", model: "local/safe-model" },
-              runtimeMode: "full-access",
-            });
             const askTurn = yield* adapter.sendTurn({
               threadId: askThreadId,
               input: "Ask before deciding.",
@@ -777,18 +767,6 @@ describe("Pi native OmniMind gateway tools", () => {
                 () =>
                   events.some(
                     (event) =>
-                      event.type === "user-input.resolved" &&
-                      event.turnId === interruptedTurn.turnId &&
-                      (event.payload as any).settlement?.status === "aborted",
-                  ),
-                "Stop Turn did not settle Ask User as aborted.",
-              ),
-            );
-            yield* Effect.promise(() =>
-              waitForTestCondition(
-                () =>
-                  events.some(
-                    (event) =>
                       event.type === "turn.completed" && event.turnId === interruptedTurn.turnId,
                   ),
                 "Interrupted Ask User turn did not terminate.",
@@ -865,7 +843,14 @@ describe("Pi native OmniMind gateway tools", () => {
       );
       expect(visibleProductAskToolLifecycles).toEqual([]);
       expect(events.filter((event) => event.type === "user-input.requested")).toHaveLength(3);
-      expect(events.filter((event) => event.type === "user-input.resolved")).toHaveLength(3);
+      expect(events.filter((event) => event.type === "user-input.resolved")).toHaveLength(2);
+      expect(
+        events.some(
+          (event) =>
+            event.type === "user-input.resolved" &&
+            (event.payload as any).settlement?.status === "aborted",
+        ),
+      ).toBe(false);
     } finally {
       presenterLease?.release();
       vi.restoreAllMocks();

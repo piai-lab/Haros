@@ -10,7 +10,6 @@
 import type {
   ApprovalRequestId,
   CanonicalUserInputResponse,
-  CanonicalUserInputAnswers,
   MessageDispatchOrigin,
   ProviderApprovalDecision,
   ProviderForkThreadInput,
@@ -200,7 +199,7 @@ export interface ProviderAdapterShape<TError> {
   readonly respondToUserInput: (
     threadId: ThreadId,
     requestId: ApprovalRequestId,
-    response: CanonicalUserInputResponse | CanonicalUserInputAnswers,
+    response: CanonicalUserInputResponse,
   ) => Effect.Effect<void, TError>;
 
   /**

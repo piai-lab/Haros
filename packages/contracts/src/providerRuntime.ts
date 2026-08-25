@@ -13,6 +13,11 @@ import {
   TurnId,
 } from "./baseSchemas";
 import { CanonicalUserInputSettlement, ProviderKind } from "./orchestration";
+import {
+  CANONICAL_USER_INPUT_MAX_NODES,
+  CANONICAL_USER_INPUT_MAX_UTF8_BYTES,
+  canonicalUserInputPayloadFits,
+} from "./canonicalUserInputGuard";
 
 const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 const UnknownRecordSchema = Schema.Record(Schema.String, Schema.Unknown);
@@ -468,8 +473,7 @@ const RequestResolvedPayload = Schema.Struct({
 export type RequestResolvedPayload = typeof RequestResolvedPayload.Type;
 
 export const CANONICAL_USER_INPUT_VERSION = 1 as const;
-export const CANONICAL_USER_INPUT_MAX_UTF8_BYTES = 1024 * 1024;
-export const CANONICAL_USER_INPUT_MAX_NODES = 10_000;
+export { CANONICAL_USER_INPUT_MAX_NODES, CANONICAL_USER_INPUT_MAX_UTF8_BYTES };
 
 const UserInputQuestionOption = Schema.Struct({
   label: TrimmedNonEmptyStringSchema,
@@ -477,7 +481,7 @@ const UserInputQuestionOption = Schema.Struct({
   preview: Schema.optional(Schema.String),
   recommended: Schema.optional(Schema.Boolean),
   recommendationReason: Schema.optional(Schema.String),
-});
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 export type UserInputQuestionOption = typeof UserInputQuestionOption.Type;
 
 export const CanonicalUserInputChoiceQuestion = Schema.Struct({
@@ -486,14 +490,14 @@ export const CanonicalUserInputChoiceQuestion = Schema.Struct({
   header: Schema.optional(TrimmedNonEmptyStringSchema),
   prompt: TrimmedNonEmptyStringSchema,
   cardinality: Schema.Literals(["single", "multiple"]),
-  options: Schema.Array(UserInputQuestionOption),
-});
+  options: Schema.Array(UserInputQuestionOption).check(Schema.isMinLength(1)),
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 export type CanonicalUserInputChoiceQuestion = typeof CanonicalUserInputChoiceQuestion.Type;
 
 const UserInputTextSuggestion = Schema.Struct({
   text: Schema.String,
   reason: Schema.optional(Schema.String),
-});
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 
 export const CanonicalUserInputTextQuestion = Schema.Struct({
   kind: Schema.Literal("text"),
@@ -502,7 +506,7 @@ export const CanonicalUserInputTextQuestion = Schema.Struct({
   prompt: TrimmedNonEmptyStringSchema,
   placeholder: Schema.optional(Schema.String),
   suggestion: Schema.optional(UserInputTextSuggestion),
-});
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 export type CanonicalUserInputTextQuestion = typeof CanonicalUserInputTextQuestion.Type;
 
 export const CanonicalUserInputQuestion = Schema.Union([
@@ -513,8 +517,39 @@ export type CanonicalUserInputQuestion = typeof CanonicalUserInputQuestion.Type;
 
 export const CanonicalUserInputRequest = Schema.Struct({
   version: Schema.Literal(CANONICAL_USER_INPUT_VERSION),
-  questions: Schema.Array(CanonicalUserInputQuestion),
-});
+  questions: Schema.Array(CanonicalUserInputQuestion).check(Schema.isMinLength(1)),
+})
+  .annotate({ parseOptions: { onExcessProperty: "error" } })
+  .check(
+    Schema.makeFilter(
+      (request) => {
+        if (!canonicalUserInputPayloadFits(request)) {
+          return "canonical user-input request exceeds 1 MiB";
+        }
+        const questionIds = new Set<string>();
+        let nodes = 0;
+        for (const question of request.questions) {
+          nodes += 1;
+          if (questionIds.has(question.id)) return `duplicate question id: ${question.id}`;
+          questionIds.add(question.id);
+          if (question.kind === "choice") {
+            const labels = new Set<string>();
+            nodes += question.options.length;
+            for (const option of question.options) {
+              if (labels.has(option.label)) return `duplicate option label: ${option.label}`;
+              labels.add(option.label);
+            }
+          }
+        }
+        return nodes <= CANONICAL_USER_INPUT_MAX_NODES
+          ? undefined
+          : `canonical user-input request exceeds ${CANONICAL_USER_INPUT_MAX_NODES} nodes`;
+      },
+      { expected: "a valid bounded canonical user-input request" },
+      true,
+    ),
+  )
+  .annotate({ parseOptions: { onExcessProperty: "error" } });
 export type CanonicalUserInputRequest = typeof CanonicalUserInputRequest.Type;
 
 /** Decode-only compatibility for Provider protocols that still emit the original flat shape. */
@@ -531,22 +566,56 @@ export const UserInputQuestion = Schema.Struct({
   multiSelect: Schema.optional(Schema.Boolean).pipe(
     Schema.withConstructorDefault(() => Option.some(false)),
   ),
-});
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 export type UserInputQuestion = typeof UserInputQuestion.Type;
 
 const LegacyUserInputRequestedPayload = Schema.Struct({
-  questions: Schema.Array(UserInputQuestion),
-});
+  questions: Schema.Array(UserInputQuestion).check(Schema.isMinLength(1)),
+})
+  .annotate({ parseOptions: { onExcessProperty: "error" } })
+  .check(
+    Schema.makeFilter(
+      (request) => {
+        if (!canonicalUserInputPayloadFits(request)) {
+          return "legacy user-input request exceeds 1 MiB";
+        }
+        const questionIds = new Set<string>();
+        let nodes = 0;
+        for (const question of request.questions) {
+          nodes += 1 + question.options.length;
+          if (questionIds.has(question.id)) return `duplicate question id: ${question.id}`;
+          questionIds.add(question.id);
+          if (question.kind === "choice" && question.options.length === 0) {
+            return `choice question has no options: ${question.id}`;
+          }
+          const labels = new Set<string>();
+          for (const option of question.options) {
+            if (labels.has(option.label)) return `duplicate option label: ${option.label}`;
+            labels.add(option.label);
+          }
+        }
+        return nodes <= CANONICAL_USER_INPUT_MAX_NODES
+          ? undefined
+          : `legacy user-input request exceeds ${CANONICAL_USER_INPUT_MAX_NODES} nodes`;
+      },
+      { expected: "a valid bounded legacy user-input request" },
+      true,
+    ),
+  );
 const UserInputRequestedPayload = Schema.Union([
   CanonicalUserInputRequest,
   LegacyUserInputRequestedPayload,
 ]);
 export type UserInputRequestedPayload = typeof UserInputRequestedPayload.Type;
 
-const UserInputResolvedPayload = Schema.Struct({
-  settlement: Schema.optional(CanonicalUserInputSettlement),
-  answers: Schema.optional(UnknownRecordSchema),
-});
+const UserInputResolvedPayload = Schema.Union([
+  Schema.Struct({ settlement: CanonicalUserInputSettlement }).annotate({
+    parseOptions: { onExcessProperty: "error" },
+  }),
+  Schema.Struct({ answers: UnknownRecordSchema }).annotate({
+    parseOptions: { onExcessProperty: "error" },
+  }),
+]);
 export type UserInputResolvedPayload = typeof UserInputResolvedPayload.Type;
 
 // Phase declared in a workflow script's `meta.phases` literal.

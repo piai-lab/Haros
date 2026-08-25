@@ -10585,6 +10585,28 @@ describe("ProviderCommandReactor", () => {
 
     await Effect.runPromise(
       harness.engine.dispatch({
+        type: "thread.activity.append",
+        commandId: CommandId.makeUnsafe("cmd-interrupt-user-input-requested"),
+        threadId: ThreadId.makeUnsafe("thread-1"),
+        activity: {
+          id: EventId.makeUnsafe("activity-interrupt-user-input-requested"),
+          tone: "info",
+          kind: "user-input.requested",
+          summary: "User input requested",
+          payload: {
+            requestId: "interrupt-user-input-1",
+            lifecycleGeneration: "interrupt-generation-1",
+            questions: [],
+          },
+          turnId: asTurnId("turn-1"),
+          createdAt: now,
+        },
+        createdAt: now,
+      }),
+    );
+
+    await Effect.runPromise(
+      harness.engine.dispatch({
         type: "thread.turn.interrupt",
         commandId: CommandId.makeUnsafe("cmd-turn-interrupt"),
         threadId: ThreadId.makeUnsafe("thread-1"),
@@ -10603,9 +10625,29 @@ describe("ProviderCommandReactor", () => {
       const thread = await readHarnessThread(harness);
       return thread?.session?.status === "interrupted" && thread.session.activeTurnId === null;
     });
+    await waitFor(async () => {
+      const thread = await readHarnessThread(harness);
+      return (
+        thread?.activities.filter(
+          (activity) =>
+            activity.kind === "user-input.resolved" &&
+            (activity.payload as Record<string, unknown>).requestId === "interrupt-user-input-1",
+        ).length === 1
+      );
+    });
+    const thread = await readHarnessThread(harness);
+    const terminal = thread?.activities.find(
+      (activity) =>
+        activity.kind === "user-input.resolved" &&
+        (activity.payload as Record<string, unknown>).requestId === "interrupt-user-input-1",
+    );
+    expect(terminal?.payload).toMatchObject({
+      lifecycleGeneration: "interrupt-generation-1",
+      settlement: { status: "aborted" },
+    });
   });
 
-  it("targets the live provider turn when an interrupt carries a stale projected turn", async () => {
+  it("rejects a stale interrupt instead of terminating the current provider turn", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 
@@ -10642,11 +10684,13 @@ describe("ProviderCommandReactor", () => {
       }),
     );
 
-    await waitFor(() => harness.interruptTurn.mock.calls.length === 1);
-    expect(harness.interruptTurn.mock.calls[0]?.[0]).toEqual({
-      threadId: "thread-1",
-      turnId: "turn-live-current",
-    });
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    expect(harness.interruptTurn).not.toHaveBeenCalled();
+    const thread = await readHarnessThread(harness);
+    expect(thread?.session?.activeTurnId).toBe("turn-projected-stale");
+    expect(thread?.activities.some((activity) => activity.kind === "user-input.resolved")).toBe(
+      false,
+    );
   });
 
   it("routes subagent interrupts through the parent provider session using the child provider thread id", async () => {
@@ -11079,8 +11123,11 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-1"),
         lifecycleGeneration: "user-input-generation-1",
-        answers: {
-          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+        response: {
+          status: "answered",
+          answers: {
+            sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+          },
         },
         createdAt: now,
       }),
@@ -11119,7 +11166,10 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-1"),
         lifecycleGeneration: "user-input-generation-1",
-        answers: { sandbox_mode: { selectedOptionLabels: ["danger-full-access"] } },
+        response: {
+          status: "answered",
+          answers: { sandbox_mode: { selectedOptionLabels: ["danger-full-access"] } },
+        },
         createdAt: now,
       }),
     );
@@ -11156,8 +11206,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-respond-early"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-early"),
-        answers: {
-          input: { selectedOptionLabels: [], customText: "continue" },
+        response: {
+          status: "answered",
+          answers: {
+            input: { selectedOptionLabels: [], customText: "continue" },
+          },
         },
         createdAt: now,
       }),
@@ -11291,8 +11344,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-respond-stopped"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-stopped"),
-        answers: {
-          input: { selectedOptionLabels: [], customText: "continue" },
+        response: {
+          status: "answered",
+          answers: {
+            input: { selectedOptionLabels: [], customText: "continue" },
+          },
         },
         createdAt: now,
       }),
@@ -11371,10 +11427,13 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-respond-multi"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-multi"),
-        answers: {
-          single: { selectedOptionLabels: ["TypeScript"] },
-          features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] },
-          rating: { selectedOptionLabels: [], customText: "Solid" },
+        response: {
+          status: "answered",
+          answers: {
+            single: { selectedOptionLabels: ["TypeScript"] },
+            features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] },
+            rating: { selectedOptionLabels: [], customText: "Solid" },
+          },
         },
         createdAt: now,
       }),
@@ -11684,8 +11743,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-respond-stale"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-1"),
-        answers: {
-          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+        response: {
+          status: "answered",
+          answers: {
+            sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+          },
         },
         createdAt: now,
       }),
@@ -11743,8 +11805,11 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-respond-retry"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-1"),
-        answers: {
-          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+        response: {
+          status: "answered",
+          answers: {
+            sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+          },
         },
         createdAt: new Date().toISOString(),
       }),
@@ -11820,7 +11885,10 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-respond-full-context"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-full-context"),
-        answers: { continue: { selectedOptionLabels: ["Yes"] } },
+        response: {
+          status: "answered",
+          answers: { continue: { selectedOptionLabels: ["Yes"] } },
+        },
         createdAt: now,
       }),
     );
@@ -11896,7 +11964,10 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-retry-full-context"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-full-context"),
-        answers: { continue: { selectedOptionLabels: ["Yes"] } },
+        response: {
+          status: "answered",
+          answers: { continue: { selectedOptionLabels: ["Yes"] } },
+        },
         createdAt: recoveredAt,
       }),
     );
@@ -11969,7 +12040,10 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-unclaimable"),
         lifecycleGeneration: "generation-stale",
-        answers: { input: { selectedOptionLabels: [], customText: "continue" } },
+        response: {
+          status: "answered",
+          answers: { input: { selectedOptionLabels: [], customText: "continue" } },
+        },
         createdAt: now,
       }),
     );

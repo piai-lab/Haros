@@ -7,6 +7,7 @@ import * as nodePath from "node:path";
 
 import {
   ApprovalRequestId,
+  type CanonicalUserInputSettlement,
   type CursorModelOptions,
   EventId,
   type ProviderApprovalDecision,
@@ -15,7 +16,6 @@ import {
   type ProviderListSkillsResult,
   type ProviderRuntimeEvent,
   type ProviderSession,
-  type ProviderUserInputAnswers,
   RuntimeRequestId,
   type RuntimeMode,
   type ThreadId,
@@ -56,7 +56,7 @@ import {
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
-import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
+import { canonicalUserInputRequestFromQuestions } from "../canonicalUserInput.ts";
 import {
   ProviderAdapterProcessError,
   ProviderAdapterRequestError,
@@ -73,12 +73,14 @@ import {
 } from "../acp/AcpAdapterSupport.ts";
 import {
   acceptAcpPlanUpdate,
+  acpUserInputAnswers,
   makeAcpThreadLock,
   readAcpUsdCost,
   resolveRequestedAcpSessionModeId,
   resolveAcpTurnInteractionMode,
   settleAcpPendingApprovalsAsCancelled,
-  settleAcpPendingUserInputsAsEmptyAnswers,
+  settleAcpPendingUserInputs,
+  watchAcpUserInputPresenter,
 } from "../acp/AcpAdapterSessionSupport.ts";
 import type * as AcpErrors from "../acp/AcpErrors.ts";
 import { forkViaAcpRuntime } from "../acp/acpFork.ts";
@@ -193,7 +195,8 @@ interface PendingApproval {
 }
 
 interface PendingUserInput {
-  readonly answers: Deferred.Deferred<ProviderUserInputAnswers>;
+  readonly settlement: Deferred.Deferred<CanonicalUserInputSettlement>;
+  suppressDurableTerminal?: boolean;
 }
 
 interface CursorSessionContext {
@@ -651,7 +654,7 @@ export function makeCursorAdapter(
         yield* cancelAgentGatewayTurn(ctx.gatewaySessionLease, ctx.activeTurnId);
         ctx.gatewaySessionLease?.release();
         yield* settleAcpPendingApprovalsAsCancelled(ctx.pendingApprovals);
-        yield* settleAcpPendingUserInputsAsEmptyAnswers(ctx.pendingUserInputs);
+        yield* settleAcpPendingUserInputs(ctx.pendingUserInputs, "stale");
         if (ctx.notificationFiber) {
           yield* Fiber.interrupt(ctx.notificationFiber);
         }
@@ -774,10 +777,13 @@ export function makeCursorAdapter(
                   params,
                   "acp.cursor.extension",
                 );
+                const canonicalRequest = canonicalUserInputRequestFromQuestions(
+                  extractAskQuestions(params),
+                );
                 const requestId = ApprovalRequestId.makeUnsafe(crypto.randomUUID());
                 const runtimeRequestId = RuntimeRequestId.makeUnsafe(requestId);
-                const answers = yield* Deferred.make<ProviderUserInputAnswers>();
-                pendingUserInputs.set(requestId, { answers });
+                const settlement = yield* Deferred.make<CanonicalUserInputSettlement>();
+                pendingUserInputs.set(requestId, { settlement });
                 yield* offerRuntimeEvent(input.lifecycleGeneration, {
                   type: "user-input.requested",
                   ...(yield* makeEventStamp()),
@@ -785,25 +791,36 @@ export function makeCursorAdapter(
                   threadId: input.threadId,
                   turnId: ctx?.activeTurnId,
                   requestId: runtimeRequestId,
-                  payload: { questions: extractAskQuestions(params) },
+                  payload: canonicalRequest,
                   raw: {
                     source: "acp.cursor.extension",
                     method: "cursor/ask_question",
                     payload: params,
                   },
                 });
-                const resolved = yield* Deferred.await(answers);
+                const removePresenterWatch = watchAcpUserInputPresenter(settlement);
+                const resolved = yield* Deferred.await(settlement).pipe(
+                  Effect.ensuring(Effect.sync(removePresenterWatch)),
+                );
+                const answers = acpUserInputAnswers(resolved);
+                const suppressDurableTerminal =
+                  pendingUserInputs.get(requestId)?.suppressDurableTerminal === true;
                 pendingUserInputs.delete(requestId);
-                yield* offerRuntimeEvent(input.lifecycleGeneration, {
-                  type: "user-input.resolved",
-                  ...(yield* makeEventStamp()),
-                  provider: PROVIDER,
-                  threadId: input.threadId,
-                  turnId: ctx?.activeTurnId,
-                  requestId: runtimeRequestId,
-                  payload: { answers: resolved },
-                });
-                return { answers: resolved };
+                if (!suppressDurableTerminal) {
+                  yield* offerRuntimeEvent(input.lifecycleGeneration, {
+                    type: "user-input.resolved",
+                    ...(yield* makeEventStamp()),
+                    provider: PROVIDER,
+                    threadId: input.threadId,
+                    turnId: ctx?.activeTurnId,
+                    requestId: runtimeRequestId,
+                    payload: { settlement: resolved },
+                  });
+                }
+                if (resolved.status === "unavailable") {
+                  yield* ctx.acp.cancel.pipe(Effect.ignore);
+                }
+                return { answers };
               }),
             );
             yield* acp.handleExtRequest("cursor/create_plan", CursorCreatePlanRequest, (params) =>
@@ -1425,7 +1442,9 @@ export function makeCursorAdapter(
           activeTurnId,
           Effect.gen(function* () {
             yield* settleAcpPendingApprovalsAsCancelled(ctx.pendingApprovals);
-            yield* settleAcpPendingUserInputsAsEmptyAnswers(ctx.pendingUserInputs);
+            yield* settleAcpPendingUserInputs(ctx.pendingUserInputs, "aborted", {
+              suppressDurableTerminal: true,
+            });
             const activePromptFiber = ctx.activePromptFiber;
             yield* Effect.ignore(
               ctx.acp.cancel.pipe(
@@ -1474,9 +1493,8 @@ export function makeCursorAdapter(
             detail: `Unknown pending user-input request: ${requestId}`,
           });
         }
-        const encoded = encodeCanonicalUserInputResponse(response);
-        yield* Deferred.succeed(pending.answers, encoded.answers);
-        if (encoded.cancelled) yield* interruptTurn(threadId);
+        yield* Deferred.succeed(pending.settlement, response);
+        if (response.status === "cancelled") yield* interruptTurn(threadId);
       });
 
     const readThread: CursorAdapterShape["readThread"] = (threadId) =>

@@ -2205,8 +2205,11 @@ it.layer(
         payload: {
           threadId,
           requestId,
-          answers: {
-            q1: { selectedOptionLabels: ["yes"] },
+          response: {
+            status: "answered",
+            answers: {
+              q1: { selectedOptionLabels: ["yes"] },
+            },
           },
           createdAt: respondedAt,
         },
@@ -2317,7 +2320,10 @@ it.layer(
         payload: {
           threadId,
           requestId,
-          answers: { q1: { selectedOptionLabels: ["yes"] } },
+          response: {
+            status: "answered",
+            answers: { q1: { selectedOptionLabels: ["yes"] } },
+          },
           createdAt: retryAt,
         },
       });
@@ -4905,6 +4911,102 @@ engineLayer("OrchestrationProjectionPipeline via engine dispatch", (it) => {
         { projector: "projection.thread-activities" },
         { projector: "projection.thread-shell-summaries" },
       ]);
+    }),
+  );
+
+  it.effect("keeps exactly one user-input terminal per request generation", () =>
+    Effect.gen(function* () {
+      const engine = yield* OrchestrationEngineService;
+      const sql = yield* SqlClient.SqlClient;
+      const createdAt = "2026-08-25T16:00:00.000Z";
+      const projectId = ProjectId.makeUnsafe("project-user-input-terminal-fence");
+      const threadId = ThreadId.makeUnsafe("thread-user-input-terminal-fence");
+      yield* engine.dispatch({
+        type: "project.create",
+        commandId: CommandId.makeUnsafe("cmd-user-input-terminal-project"),
+        projectId,
+        title: "User input terminal fence",
+        workspaceRoot: "/tmp/project-user-input-terminal-fence",
+        defaultModelSelection: { provider: "codex", model: "gpt-5-codex" },
+        createdAt,
+      });
+      yield* engine.dispatch({
+        type: "thread.create",
+        commandId: CommandId.makeUnsafe("cmd-user-input-terminal-thread"),
+        threadId,
+        projectId,
+        title: "User input terminal fence",
+        modelSelection: { provider: "codex", model: "gpt-5-codex" },
+        interactionMode: "default",
+        runtimeMode: "full-access",
+        branch: null,
+        worktreePath: null,
+        createdAt,
+      });
+
+      const appendTerminal = (
+        suffix: string,
+        generation: string,
+        settlement:
+          | {
+              status: "answered";
+              answers: Record<string, { selectedOptionLabels: ReadonlyArray<string> }>;
+            }
+          | { status: "aborted" },
+      ) =>
+        engine.dispatch({
+          type: "thread.activity.append",
+          commandId: CommandId.makeUnsafe(`cmd-user-input-terminal-${suffix}`),
+          threadId,
+          activity: {
+            id: EventId.makeUnsafe(`activity-user-input-terminal-${suffix}`),
+            tone: "info",
+            kind: "user-input.resolved",
+            summary: "User input terminal",
+            payload: {
+              requestId: "reused-request-id",
+              lifecycleGeneration: generation,
+              settlement,
+            },
+            turnId: null,
+            createdAt,
+          },
+          createdAt,
+        });
+
+      yield* appendTerminal("answered-first", "generation-1", {
+        status: "answered",
+        answers: { q1: { selectedOptionLabels: ["A"] } },
+      });
+      yield* appendTerminal("aborted-late", "generation-1", { status: "aborted" });
+      yield* appendTerminal("aborted-first", "generation-2", { status: "aborted" });
+      yield* appendTerminal("answered-late", "generation-2", {
+        status: "answered",
+        answers: { q1: { selectedOptionLabels: ["B"] } },
+      });
+
+      const rows = yield* sql<{ readonly payload: string }>`
+        SELECT payload_json AS payload
+        FROM projection_thread_activities
+        WHERE thread_id = ${threadId} AND kind = 'user-input.resolved'
+        ORDER BY activity_id ASC
+      `;
+      assert.equal(rows.length, 2);
+      const payloads = rows
+        .map((row) => JSON.parse(row.payload) as Record<string, unknown>)
+        .toSorted((left, right) =>
+          String(left.lifecycleGeneration).localeCompare(String(right.lifecycleGeneration)),
+        );
+      assert.deepEqual(
+        payloads.map((payload) => [
+          payload.lifecycleGeneration,
+          (payload.settlement as { status: string }).status,
+        ]),
+        [
+          ["generation-1", "answered"],
+          ["generation-2", "aborted"],
+        ],
+      );
     }),
   );
 });

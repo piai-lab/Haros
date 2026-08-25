@@ -5,6 +5,7 @@
  */
 import {
   ApprovalRequestId,
+  type CanonicalUserInputSettlement,
   EventId,
   type ProviderApprovalDecision,
   type ProviderInteractionMode,
@@ -12,7 +13,6 @@ import {
   type ProviderListModelsResult,
   type ProviderRuntimeEvent,
   type ProviderSession,
-  type ProviderUserInputAnswers,
   RuntimeItemId,
   RuntimeRequestId,
   RuntimeTaskId,
@@ -55,7 +55,7 @@ import {
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
-import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
+import { canonicalUserInputRequestFromQuestions } from "../canonicalUserInput.ts";
 import { listFactoryPlugins, readFactoryPlugin } from "../FactoryPluginDiscovery.ts";
 import { readFactorySessionHistory } from "../FactorySessionHistory.ts";
 import { appendProviderReferencesPromptBlock } from "../promptReferenceProjection.ts";
@@ -75,6 +75,7 @@ import {
 } from "../acp/AcpAdapterSupport.ts";
 import {
   acceptAcpPlanUpdate,
+  acpUserInputAnswers,
   clearAcpActiveTurn,
   finalizeAcpActiveTurnCost,
   makeAcpThreadLock,
@@ -84,7 +85,8 @@ import {
   scopeAcpRuntimeItemIdForTurn,
   scopeAcpToolCallStateForTurn,
   settleAcpPendingApprovalsAsCancelled,
-  settleAcpPendingUserInputsAsEmptyAnswers,
+  settleAcpPendingUserInputs,
+  watchAcpUserInputPresenter,
   withAcpPlanModePrompt,
 } from "../acp/AcpAdapterSessionSupport.ts";
 import { forkViaAcpRuntime } from "../acp/acpFork.ts";
@@ -194,7 +196,8 @@ interface PendingApproval {
 }
 
 interface PendingUserInput {
-  readonly answers: Deferred.Deferred<ProviderUserInputAnswers>;
+  readonly settlement: Deferred.Deferred<CanonicalUserInputSettlement>;
+  suppressDurableTerminal?: boolean;
 }
 
 interface DroidSessionContext {
@@ -574,7 +577,7 @@ export function makeDroidAdapter(
             sessionTeardownGate.track(ctx.threadId, ctx.teardownComplete);
             sessions.delete(ctx.threadId);
             yield* settleAcpPendingApprovalsAsCancelled(ctx.pendingApprovals);
-            yield* settleAcpPendingUserInputsAsEmptyAnswers(ctx.pendingUserInputs);
+            yield* settleAcpPendingUserInputs(ctx.pendingUserInputs, "stale");
             if (ctx.sessionConfigReady !== undefined) {
               yield* Deferred.succeed(ctx.sessionConfigReady, undefined);
               ctx.sessionConfigReady = undefined;
@@ -981,10 +984,11 @@ export function makeDroidAdapter(
                 if (questions.length === 0) {
                   return { action: "decline" as const };
                 }
+                const canonicalRequest = canonicalUserInputRequestFromQuestions(questions);
                 const requestId = ApprovalRequestId.makeUnsafe(crypto.randomUUID());
                 const runtimeRequestId = RuntimeRequestId.makeUnsafe(requestId);
-                const answers = yield* Deferred.make<ProviderUserInputAnswers>();
-                pendingUserInputs.set(requestId, { answers });
+                const settlement = yield* Deferred.make<CanonicalUserInputSettlement>();
+                pendingUserInputs.set(requestId, { settlement });
                 yield* offerRuntimeEvent(input.lifecycleGeneration, {
                   type: "user-input.requested",
                   ...(yield* makeEventStamp()),
@@ -992,25 +996,38 @@ export function makeDroidAdapter(
                   threadId: input.threadId,
                   turnId: ctx?.activeTurnId,
                   requestId: runtimeRequestId,
-                  payload: { questions },
+                  payload: canonicalRequest,
                   raw: {
                     source: "acp.jsonrpc",
                     method: "session/elicitation",
                     payload: params,
                   },
                 });
-                const resolved = yield* Deferred.await(answers);
+                const removePresenterWatch = watchAcpUserInputPresenter(settlement);
+                const resolved = yield* Deferred.await(settlement).pipe(
+                  Effect.ensuring(Effect.sync(removePresenterWatch)),
+                );
+                const answers = acpUserInputAnswers(resolved);
+                const suppressDurableTerminal =
+                  pendingUserInputs.get(requestId)?.suppressDurableTerminal === true;
                 pendingUserInputs.delete(requestId);
-                yield* offerRuntimeEvent(input.lifecycleGeneration, {
-                  type: "user-input.resolved",
-                  ...(yield* makeEventStamp()),
-                  provider: PROVIDER,
-                  threadId: input.threadId,
-                  turnId: ctx?.activeTurnId,
-                  requestId: runtimeRequestId,
-                  payload: { answers: resolved },
-                });
-                return elicitationResponseFromAnswers(params, resolved);
+                if (!suppressDurableTerminal) {
+                  yield* offerRuntimeEvent(input.lifecycleGeneration, {
+                    type: "user-input.resolved",
+                    ...(yield* makeEventStamp()),
+                    provider: PROVIDER,
+                    threadId: input.threadId,
+                    turnId: ctx?.activeTurnId,
+                    requestId: runtimeRequestId,
+                    payload: { settlement: resolved },
+                  });
+                }
+                if (resolved.status === "unavailable") {
+                  yield* ctx.acp.cancel.pipe(Effect.ignore);
+                }
+                return resolved.status === "answered"
+                  ? elicitationResponseFromAnswers(params, answers)
+                  : { action: "decline" as const };
               }),
             );
             const startedOption = yield* acp
@@ -1829,7 +1846,9 @@ export function makeDroidAdapter(
           activeTurnId,
           Effect.gen(function* () {
             yield* settleAcpPendingApprovalsAsCancelled(ctx.pendingApprovals);
-            yield* settleAcpPendingUserInputsAsEmptyAnswers(ctx.pendingUserInputs);
+            yield* settleAcpPendingUserInputs(ctx.pendingUserInputs, "aborted", {
+              suppressDurableTerminal: true,
+            });
             const activePromptFiber = ctx.activePromptFiber;
             yield* cancelDroidPromptWithGrace(ctx, activePromptFiber);
             // Closing the process group is intentional: Factory can acknowledge
@@ -1875,9 +1894,8 @@ export function makeDroidAdapter(
             detail: `Unknown pending user-input request: ${requestId}`,
           });
         }
-        const encoded = encodeCanonicalUserInputResponse(response);
-        yield* Deferred.succeed(pending.answers, encoded.answers);
-        if (encoded.cancelled) yield* interruptTurn(threadId);
+        yield* Deferred.succeed(pending.settlement, response);
+        if (response.status === "cancelled") yield* interruptTurn(threadId);
       });
 
     const readThread: DroidAdapterShape["readThread"] = (threadId) =>

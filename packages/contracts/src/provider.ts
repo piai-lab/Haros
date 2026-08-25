@@ -10,7 +10,6 @@ import {
 } from "./baseSchemas";
 import {
   ChatAttachment,
-  CanonicalUserInputAnswers,
   CanonicalUserInputResponse,
   ModelSelection,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
@@ -173,9 +172,8 @@ export const ProviderRespondToUserInputInput = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  response: Schema.optional(CanonicalUserInputResponse),
-  answers: Schema.optional(CanonicalUserInputAnswers),
-});
+  response: CanonicalUserInputResponse,
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 export type ProviderRespondToUserInputInput = typeof ProviderRespondToUserInputInput.Type;
 
 const ProviderEventKind = Schema.Literals(["session", "notification", "request", "error"]);

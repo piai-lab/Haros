@@ -6,6 +6,7 @@
 import * as nodePath from "node:path";
 
 import type {
+  CanonicalUserInputSettlement,
   ProviderApprovalDecision,
   ProviderInteractionMode,
   ProviderSession,
@@ -15,6 +16,8 @@ import type {
 } from "@omnimind/contracts";
 import { Deferred, Effect, Option, Semaphore, SynchronizedRef } from "effect";
 import type * as Acp from "@agentclientprotocol/sdk";
+import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 
 import type { AcpSessionMode, AcpSessionModeState, AcpToolCallState } from "./AcpRuntimeModel.ts";
 
@@ -146,17 +149,49 @@ export function settleAcpPendingApprovalsAsCancelled(
 }
 
 // Resolves outstanding elicitation requests so shutdown cannot strand their handlers.
-export function settleAcpPendingUserInputsAsEmptyAnswers(
+export function settleAcpPendingUserInputs(
   pendingUserInputs: ReadonlyMap<
     unknown,
-    { readonly answers: Deferred.Deferred<ProviderUserInputAnswers> }
+    {
+      readonly settlement: Deferred.Deferred<CanonicalUserInputSettlement>;
+      suppressDurableTerminal?: boolean;
+    }
   >,
+  status: Exclude<CanonicalUserInputSettlement["status"], "answered">,
+  options: { readonly suppressDurableTerminal?: boolean } = {},
 ): Effect.Effect<void> {
   return Effect.forEach(
     Array.from(pendingUserInputs.values()),
-    (pending) => Deferred.succeed(pending.answers, {}).pipe(Effect.ignore),
+    (pending) =>
+      Effect.gen(function* () {
+        if (yield* Deferred.isDone(pending.settlement)) return;
+        if (options.suppressDurableTerminal) pending.suppressDurableTerminal = true;
+        yield* Deferred.succeed(pending.settlement, { status });
+      }),
     { discard: true },
   );
+}
+
+export function acpUserInputAnswers(
+  settlement: CanonicalUserInputSettlement,
+): ProviderUserInputAnswers {
+  if (settlement.status !== "answered") return {};
+  return encodeCanonicalUserInputResponse(settlement).answers;
+}
+
+/**
+ * Settles one ACP elicitation when the last compatible Product presenter is
+ * gone. The ACP adapter still owns its native callback and turn cancellation.
+ */
+export function watchAcpUserInputPresenter(
+  settlement: Deferred.Deferred<CanonicalUserInputSettlement>,
+): () => void {
+  const settleUnavailable = () => {
+    Effect.runFork(Deferred.succeed(settlement, { status: "unavailable" }).pipe(Effect.ignore));
+  };
+  const remove = userInputPresenterRegistry.onUnavailable(settleUnavailable);
+  if (!userInputPresenterRegistry.available) settleUnavailable();
+  return remove;
 }
 
 // Accepts only finite, non-negative USD totals from ACP cost notifications.

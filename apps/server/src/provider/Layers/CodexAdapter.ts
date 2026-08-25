@@ -7,9 +7,11 @@
  * @module CodexAdapterLive
  */
 import {
+  ApprovalRequestId,
   type ChatAttachment,
   type CanonicalItemType,
   type CanonicalRequestType,
+  type CanonicalUserInputResponse,
   type ModelSelection,
   type ProviderEvent,
   type ProviderListModelsResult,
@@ -66,7 +68,11 @@ import {
 import { isNonFatalCodexErrorMessage } from "../../codexErrorClassification.ts";
 import { ServerConfig } from "../../config.ts";
 import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
-import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
+import {
+  canonicalUserInputRequestFromQuestions,
+  encodeCanonicalUserInputResponse,
+} from "../canonicalUserInput.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { omnimindSkillsDir } from "../skillsCatalog.ts";
@@ -972,9 +978,7 @@ function mapToRuntimeEvents(
         {
           ...runtimeEventBase(event, canonicalThreadId),
           type: "user-input.requested",
-          payload: {
-            questions,
-          },
+          payload: canonicalUserInputRequestFromQuestions(questions),
         },
       ];
     }
@@ -1782,6 +1786,29 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     // decision pauses it), driven by one shared ticker because codex activity
     // arrives on a single manager event stream instead of per-session fibers.
     const turnWatchdogs = new Map<ThreadId, CodexTurnWatchdogEntry>();
+    const pendingUserInputTerminals = new Map<
+      string,
+      {
+        response?: CanonicalUserInputResponse;
+        status?: "cancelled" | "aborted" | "unavailable" | "stale";
+        suppressDurableTerminal?: boolean;
+        durableTerminalEmitted?: boolean;
+        removePresenterWatch?: () => void;
+      }
+    >();
+    const userInputKey = (threadId: ThreadId, requestId: string) => `${threadId}\u0000${requestId}`;
+    const markPendingUserInputs = (
+      threadId: ThreadId,
+      status: "cancelled" | "aborted" | "unavailable" | "stale",
+      suppressDurableTerminal = false,
+    ) => {
+      const prefix = `${threadId}\u0000`;
+      for (const [key, pending] of pendingUserInputTerminals) {
+        if (!key.startsWith(prefix) || pending.status !== undefined) continue;
+        pending.status = status;
+        if (suppressDurableTerminal) pending.suppressDurableTerminal = true;
+      }
+    };
 
     const armTurnWatchdog = (threadId: ThreadId, turnId: TurnId): void => {
       turnWatchdogs.set(threadId, { turnId, lastActivityAt: Date.now() });
@@ -2003,11 +2030,13 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       threadId,
       turnId,
       providerThreadId,
-    ) =>
-      Effect.tryPromise({
+    ) => {
+      markPendingUserInputs(threadId, "aborted", true);
+      return Effect.tryPromise({
         try: () => manager.interruptTurn(threadId, turnId, providerThreadId),
         catch: (cause) => toRequestError(threadId, "turn/interrupt", cause),
       });
+    };
 
     const readThread: CodexAdapterShape["readThread"] = (threadId) =>
       Effect.tryPromise({
@@ -2091,14 +2120,22 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       Effect.tryPromise({
         try: async () => {
           const encoded = encodeCanonicalUserInputResponse(response);
+          if (response.status === "cancelled") {
+            const pending = pendingUserInputTerminals.get(userInputKey(threadId, requestId));
+            if (pending) pending.status = "cancelled";
+          } else {
+            const pending = pendingUserInputTerminals.get(userInputKey(threadId, requestId));
+            if (pending) pending.response = response;
+          }
           await manager.respondToUserInput(threadId, requestId, encoded.answers);
           if (encoded.cancelled) await manager.interruptTurn(threadId);
         },
         catch: (cause) => toRequestError(threadId, "item/tool/requestUserInput", cause),
       });
 
-    const stopSession: CodexAdapterShape["stopSession"] = (threadId) =>
-      Effect.tryPromise({
+    const stopSession: CodexAdapterShape["stopSession"] = (threadId) => {
+      markPendingUserInputs(threadId, "stale");
+      return Effect.tryPromise({
         try: () => manager.stopSession(threadId),
         catch: (cause) =>
           new ProviderAdapterProcessError({
@@ -2108,6 +2145,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             cause,
           }),
       });
+    };
 
     const listSessions: CodexAdapterShape["listSessions"] = () =>
       Effect.sync(() => manager.listSessions());
@@ -2115,8 +2153,9 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     const hasSession: CodexAdapterShape["hasSession"] = (threadId) =>
       Effect.sync(() => manager.hasSession(threadId));
 
-    const stopAll: CodexAdapterShape["stopAll"] = () =>
-      Effect.tryPromise({
+    const stopAll: CodexAdapterShape["stopAll"] = () => {
+      for (const pending of pendingUserInputTerminals.values()) pending.status ??= "stale";
+      return Effect.tryPromise({
         try: () => manager.stopAll(),
         catch: (cause) =>
           new ProviderAdapterProcessError({
@@ -2126,6 +2165,7 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
             cause,
           }),
       });
+    };
 
     const listSkills: NonNullable<CodexAdapterShape["listSkills"]> = (input) =>
       Effect.tryPromise({
@@ -2275,9 +2315,96 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           },
         );
         const listener = (event: ProviderEvent) => {
-          const mappedRuntimeEvents = assignDerivedProviderRuntimeEventIds(
-            mapToRuntimeEvents(event, event.threadId),
-          );
+          let mappedRuntimeEvents: ReadonlyArray<ProviderRuntimeEvent>;
+          try {
+            mappedRuntimeEvents = assignDerivedProviderRuntimeEventIds(
+              mapToRuntimeEvents(event, event.threadId),
+            );
+          } catch {
+            if (event.method !== "item/tool/requestUserInput" || event.requestId === undefined) {
+              return;
+            }
+            void manager
+              .respondToUserInput(event.threadId, event.requestId, {})
+              .then(() => manager.interruptTurn(event.threadId))
+              .catch(() => undefined);
+            mappedRuntimeEvents = assignDerivedProviderRuntimeEventIds([
+              {
+                ...runtimeEventBase(event, event.threadId),
+                type: "user-input.resolved",
+                payload: { settlement: { status: "unavailable" } },
+              },
+            ]);
+          }
+          const immediateUnavailableEventIds = new Set<string>();
+          for (const runtimeEvent of mappedRuntimeEvents) {
+            if (runtimeEvent.type !== "user-input.requested" || !runtimeEvent.requestId) continue;
+            const requestId = runtimeEvent.requestId;
+            const key = userInputKey(event.threadId, requestId);
+            if (pendingUserInputTerminals.has(key)) continue;
+            const pending: {
+              response?: CanonicalUserInputResponse;
+              status?: "cancelled" | "aborted" | "unavailable" | "stale";
+              suppressDurableTerminal?: boolean;
+              durableTerminalEmitted?: boolean;
+              removePresenterWatch?: () => void;
+            } = {};
+            pendingUserInputTerminals.set(key, pending);
+            const unavailableTerminal = {
+              ...runtimeEvent,
+              eventId: EventId.makeUnsafe(`${runtimeEvent.eventId}:unavailable`),
+              type: "user-input.resolved" as const,
+              payload: { settlement: { status: "unavailable" as const } },
+            } satisfies ProviderRuntimeEvent;
+            const settleNativeUnavailable = () => {
+              if (pendingUserInputTerminals.get(key) !== pending) return;
+              pending.status = "unavailable";
+              void manager
+                .respondToUserInput(event.threadId, ApprovalRequestId.makeUnsafe(requestId), {})
+                .then(() => manager.interruptTurn(event.threadId))
+                .catch(() => undefined);
+            };
+            const settleUnavailableAfterProjection = () => {
+              if (pendingUserInputTerminals.get(key) !== pending) return;
+              settleNativeUnavailable();
+              if (pending.durableTerminalEmitted) return;
+              pending.durableTerminalEmitted = true;
+              pending.removePresenterWatch?.();
+              ingress.offer({
+                nativeEvent: compactCodexNativeEventForIngress(event),
+                runtimeEvents: [compactProviderRuntimeEventForIngress(unavailableTerminal)],
+              });
+            };
+            pending.removePresenterWatch = userInputPresenterRegistry.onUnavailable(
+              settleUnavailableAfterProjection,
+            );
+            if (!userInputPresenterRegistry.available) {
+              settleNativeUnavailable();
+              pending.durableTerminalEmitted = true;
+              pending.removePresenterWatch();
+              immediateUnavailableEventIds.add(unavailableTerminal.eventId);
+              mappedRuntimeEvents = [...mappedRuntimeEvents, unavailableTerminal];
+            }
+          }
+          mappedRuntimeEvents = mappedRuntimeEvents
+            .map((runtimeEvent) => {
+              if (runtimeEvent.type !== "user-input.resolved" || !runtimeEvent.requestId) {
+                return runtimeEvent;
+              }
+              if (immediateUnavailableEventIds.has(runtimeEvent.eventId)) return runtimeEvent;
+              const key = userInputKey(event.threadId, runtimeEvent.requestId);
+              const pending = pendingUserInputTerminals.get(key);
+              pendingUserInputTerminals.delete(key);
+              pending?.removePresenterWatch?.();
+              return pending?.suppressDurableTerminal || pending?.durableTerminalEmitted
+                ? null
+                : pending?.status
+                  ? { ...runtimeEvent, payload: { settlement: { status: pending.status } } }
+                  : pending?.response?.status === "answered"
+                    ? { ...runtimeEvent, payload: { settlement: pending.response } }
+                    : runtimeEvent;
+            })
+            .filter((runtimeEvent): runtimeEvent is ProviderRuntimeEvent => runtimeEvent !== null);
           const hasUnmappedEvent = mappedRuntimeEvents.some(
             (runtimeEvent) => runtimeEvent.type === "event.unmapped",
           );
@@ -2316,6 +2443,10 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
           yield* Effect.sync(() => {
             clearInterval(watchdogTicker);
             turnWatchdogs.clear();
+            for (const pending of pendingUserInputTerminals.values()) {
+              pending.removePresenterWatch?.();
+            }
+            pendingUserInputTerminals.clear();
             manager.off("event", listener);
           });
           yield* ingress.stop;

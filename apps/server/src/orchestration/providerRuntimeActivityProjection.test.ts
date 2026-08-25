@@ -699,6 +699,27 @@ describe("provider runtime activity projection", () => {
     ]);
   });
 
+  it.each(["cancelled", "aborted", "timed_out", "unavailable", "stale"] as const)(
+    "preserves the %s user-input terminal without inventing an answer",
+    (status) => {
+      const [activity] = projectProviderRuntimeActivities(
+        runtimeEvent({
+          type: "user-input.resolved",
+          eventId: `user-input-${status}`,
+          turnId: TURN_ID,
+          requestId: ApprovalRequestId.makeUnsafe(`request-${status}`),
+          payload: { settlement: { status } },
+        }),
+      );
+
+      expect(activity).toMatchObject({
+        kind: "user-input.resolved",
+        payload: { settlement: { status } },
+      });
+      expect(JSON.stringify(activity?.payload)).not.toContain("answers");
+    },
+  );
+
   it("bounds pathological tool payloads before persistence", () => {
     const data = Object.fromEntries(
       Array.from({ length: 120 }, (_, index) => [

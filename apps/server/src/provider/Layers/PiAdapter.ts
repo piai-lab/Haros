@@ -73,8 +73,8 @@ import {
 } from "../../agentGateway/sessionLease.ts";
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
 import {
+  canonicalUserInputRequestFromQuestions,
   encodeCanonicalUserInputResponse,
-  normalizeCanonicalUserInputResponse,
 } from "../canonicalUserInput.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
@@ -574,7 +574,9 @@ interface PiTrackedToolCall {
 }
 
 interface PiPendingUserInput {
-  readonly resolve: (answers: ProviderUserInputAnswers) => void;
+  readonly turnId?: TurnId;
+  readonly resolve: (settlement: CanonicalUserInputSettlement) => void;
+  readonly settleAborted: (emitRuntimeEvent?: boolean) => void;
 }
 
 interface PiPendingProductUserInput {
@@ -583,7 +585,7 @@ interface PiPendingProductUserInput {
   readonly turnId?: TurnId;
   readonly toolCallId: string;
   readonly resolve: (response: CanonicalUserInputResponse) => boolean;
-  readonly settleAborted: () => void;
+  readonly settleAborted: (emitRuntimeEvent?: boolean) => void;
   readonly settleStale: () => void;
 }
 
@@ -598,10 +600,6 @@ export interface PiAdapterLiveOptions {
   readonly spawnProcess?: PiBashProcessSupervisorOptions["spawnProcess"];
   readonly teardownProcessTree?: typeof teardownProviderProcessTree;
   readonly agentGatewayFetch?: AgentGatewayMcpFetch;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**
@@ -1741,11 +1739,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     const resolvePiExtensionUserInput = (
       context: PiSessionContext,
       requestId: ApprovalRequestId,
-      answers: ProviderUserInputAnswers,
+      response: CanonicalUserInputResponse,
     ) => {
       const pending = context.pendingUserInputs.get(requestId);
       if (!pending) return false;
-      pending.resolve(answers);
+      pending.resolve(response);
       return true;
     };
 
@@ -1766,8 +1764,6 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       });
       if (context.stopped) return Promise.resolve(terminal("stale"));
       if (input.signal?.aborted) return Promise.resolve(terminal("aborted"));
-      if (!userInputPresenterRegistry.available) return Promise.resolve(terminal("unavailable"));
-
       const projection = projectAskUserRequest(input.request);
       const trackedToolCall = context.activeToolItems.get(input.toolCallId);
       if (
@@ -1782,6 +1778,24 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       const requestedAt = Date.now();
       askUserMetrics.increment("requested");
 
+      if (!userInputPresenterRegistry.available) {
+        const result = terminal("unavailable");
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          type: "user-input.requested",
+          requestId: runtimeRequestId,
+          payload: projection.request,
+        } satisfies ProviderRuntimeEvent);
+        offerRuntimeEvent({
+          ...makeEventBase(context),
+          type: "user-input.resolved",
+          requestId: runtimeRequestId,
+          payload: { settlement: { status: "unavailable" } },
+        } satisfies ProviderRuntimeEvent);
+        askUserMetrics.settle("unavailable", Date.now() - requestedAt);
+        return Promise.resolve(result);
+      }
+
       return new Promise((resolve) => {
         let settled = false;
         let removeUnavailableListener: () => void = () => undefined;
@@ -1791,7 +1805,11 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           removeAbortListener();
           context.pendingProductUserInputs.delete(requestId);
         };
-        const finish = (result: AskUserResult, settlement: CanonicalUserInputSettlement) => {
+        const finish = (
+          result: AskUserResult,
+          settlement: CanonicalUserInputSettlement,
+          emitSettlement = true,
+        ) => {
           if (settled) return;
           settled = true;
           askUserMetrics.settle(result.status, Date.now() - requestedAt);
@@ -1801,21 +1819,25 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             const oldest = context.settledProductUserInputIds.values().next().value;
             if (oldest !== undefined) context.settledProductUserInputIds.delete(oldest);
           }
-          offerRuntimeEvent({
-            ...makeEventBase(context),
-            type: "user-input.resolved",
-            requestId: runtimeRequestId,
-            payload: { settlement },
-            raw: {
-              source: "pi.sdk.event",
-              method: "ask_user/settled",
-              payload: { requestId, toolCallId: input.toolCallId, status: result.status },
-            },
-          } satisfies ProviderRuntimeEvent);
+          if (emitSettlement) {
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              type: "user-input.resolved",
+              requestId: runtimeRequestId,
+              payload: { settlement },
+              raw: {
+                source: "pi.sdk.event",
+                method: "ask_user/settled",
+                payload: { requestId, toolCallId: input.toolCallId, status: result.status },
+              },
+            } satisfies ProviderRuntimeEvent);
+          }
           resolve(result);
         };
-        const settleStatus = (status: Exclude<AskUserResult["status"], "answered">) =>
-          finish(terminal(status), { status });
+        const settleStatus = (
+          status: Exclude<AskUserResult["status"], "answered">,
+          emitSettlement = true,
+        ) => finish(terminal(status), { status }, emitSettlement);
         const respond = (response: CanonicalUserInputResponse): boolean => {
           if (settled) return false;
           if (response.status === "cancelled") {
@@ -1840,12 +1862,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...(context.activeTurnId === undefined ? {} : { turnId: context.activeTurnId }),
           toolCallId: input.toolCallId,
           resolve: respond,
-          settleAborted: () => settleStatus("aborted"),
+          settleAborted: (emitSettlement = true) => settleStatus("aborted", emitSettlement),
           settleStale: () => settleStatus("stale"),
         });
         removeUnavailableListener = userInputPresenterRegistry.onUnavailable(() =>
           settleStatus("unavailable"),
         );
+        if (!userInputPresenterRegistry.available) settleStatus("unavailable");
         if (input.signal) {
           const abort = () => settleStatus("aborted");
           input.signal.addEventListener("abort", abort, { once: true });
@@ -1884,11 +1907,13 @@ const makePiAdapter = <P extends PiFamilyProvider>(
 
       const requestId = ApprovalRequestId.makeUnsafe(crypto.randomUUID());
       const runtimeRequestId = RuntimeRequestId.makeUnsafe(requestId);
+      const canonicalRequest = canonicalUserInputRequestFromQuestions([input.question]);
 
       return new Promise((resolve) => {
         let settled = false;
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         let abort: () => void = () => undefined;
+        let removeUnavailableListener: () => void = () => undefined;
 
         const cleanup = () => {
           if (timeoutId !== undefined) {
@@ -1896,30 +1921,42 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             timeoutId = undefined;
           }
           input.opts?.signal?.removeEventListener("abort", abort);
+          removeUnavailableListener();
         };
-        const finish = (answers: ProviderUserInputAnswers) => {
+        const finish = (settlement: CanonicalUserInputSettlement, emitRuntimeEvent = true) => {
           if (settled) return;
           settled = true;
           cleanup();
           context.pendingUserInputs.delete(requestId);
-          offerRuntimeEvent({
-            ...makeEventBase(context),
-            type: "user-input.resolved",
-            requestId: runtimeRequestId,
-            payload: { answers },
-            raw: {
-              source: "pi.sdk.event",
-              method: `${input.method}/answered`,
-              payload: { requestId, answers },
-            },
-          } satisfies ProviderRuntimeEvent);
-          resolve(answers);
+          if (emitRuntimeEvent) {
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              type: "user-input.resolved",
+              requestId: runtimeRequestId,
+              payload: { settlement },
+              raw: {
+                source: "pi.sdk.event",
+                method: `${input.method}/settled`,
+                payload: { requestId, status: settlement.status },
+              },
+            } satisfies ProviderRuntimeEvent);
+          }
+          resolve(
+            settlement.status === "answered"
+              ? encodeCanonicalUserInputResponse(settlement).answers
+              : {},
+          );
         };
-        abort = () => finish({});
+        abort = () => finish({ status: "aborted" });
 
-        context.pendingUserInputs.set(requestId, { resolve: finish });
+        context.pendingUserInputs.set(requestId, {
+          ...(context.activeTurnId === undefined ? {} : { turnId: context.activeTurnId }),
+          resolve: finish,
+          settleAborted: (emitRuntimeEvent = true) =>
+            finish({ status: "aborted" }, emitRuntimeEvent),
+        });
         if (typeof input.opts?.timeout === "number" && input.opts.timeout > 0) {
-          timeoutId = setTimeout(abort, input.opts.timeout);
+          timeoutId = setTimeout(() => finish({ status: "timed_out" }), input.opts.timeout);
         }
         input.opts?.signal?.addEventListener("abort", abort, { once: true });
 
@@ -1927,7 +1964,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           ...makeEventBase(context),
           type: "user-input.requested",
           requestId: runtimeRequestId,
-          payload: { questions: [input.question] },
+          payload: canonicalRequest,
           raw: {
             source: "pi.sdk.event",
             method: input.method,
@@ -1937,6 +1974,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             },
           },
         } satisfies ProviderRuntimeEvent);
+        removeUnavailableListener = userInputPresenterRegistry.onUnavailable(() =>
+          finish({ status: "unavailable" }),
+        );
+        if (!userInputPresenterRegistry.available) finish({ status: "unavailable" });
       });
     };
 
@@ -2196,7 +2237,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         context.unsubscribe?.();
         context.unsubscribe = undefined;
         for (const pending of Array.from(context.pendingUserInputs.values())) {
-          pending.resolve({});
+          pending.resolve({ status: "stale" });
         }
         context.pendingUserInputs.clear();
         for (const pending of Array.from(context.pendingProductUserInputs.values())) {
@@ -3347,7 +3388,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
         let taskProjectionContext: PiSessionContext | undefined;
         let askProjectionContext: PiSessionContext | undefined;
         const askUserInteraction: AskUserProductInteractionPort | undefined =
-          provider === "omnimind" && userInputPresenterRegistry.available
+          provider === "omnimind"
             ? {
                 present: ({ toolCallId, request, signal }) => {
                   const current = askProjectionContext;
@@ -4042,7 +4083,10 @@ const makePiAdapter = <P extends PiFamilyProvider>(
               // Product Ask explicitly before aborting the agent so the durable
               // user-input projection cannot remain actionable after Stop Turn.
               for (const pending of context.pendingProductUserInputs.values()) {
-                if (pending.turnId === activeTurnId) pending.settleAborted();
+                if (pending.turnId === activeTurnId) pending.settleAborted(false);
+              }
+              for (const pending of context.pendingUserInputs.values()) {
+                if (pending.turnId === activeTurnId) pending.settleAborted(false);
               }
               context.runtime.session.abortRetry();
               context.runtime.session.agent.abort();
@@ -4074,7 +4118,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     ) =>
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
-        const canonicalResponse = normalizeCanonicalUserInputResponse(response);
+        const canonicalResponse = response;
         const productPending = context.pendingProductUserInputs.get(requestId);
         if (productPending) {
           if (
@@ -4107,13 +4151,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             detail: `Stale ${displayName} ask_user response: ${requestId}`,
           });
         }
-        if (
-          !resolvePiExtensionUserInput(
-            context,
-            requestId,
-            encodeCanonicalUserInputResponse(canonicalResponse).answers,
-          )
-        ) {
+        if (!resolvePiExtensionUserInput(context, requestId, canonicalResponse)) {
           return yield* new ProviderAdapterRequestError({
             provider: provider,
             method: "user-input/respond",

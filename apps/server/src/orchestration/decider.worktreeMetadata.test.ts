@@ -484,9 +484,12 @@ describe("decider user input answers", () => {
           commandId: CommandId.makeUnsafe("cmd-user-input-null-answer"),
           threadId: THREAD_ID,
           requestId: ApprovalRequestId.makeUnsafe("request-1"),
-          answers: {
-            Language: { selectedOptionLabels: [], customText: "TypeScript  " },
-            Runtime: { selectedOptionLabels: ["Bun"] },
+          response: {
+            status: "answered",
+            answers: {
+              Language: { selectedOptionLabels: [], customText: "TypeScript  " },
+              Runtime: { selectedOptionLabels: ["Bun"] },
+            },
           },
           createdAt: now,
         },
@@ -519,11 +522,14 @@ describe("decider user input answers", () => {
           commandId: CommandId.makeUnsafe("cmd-user-input-valid-answer"),
           threadId: THREAD_ID,
           requestId: ApprovalRequestId.makeUnsafe("request-1"),
-          answers: {
-            Language: { selectedOptionLabels: [], customText: "TypeScript" },
-            Frontend: {
-              selectedOptionLabels: ["React", "Astro"],
-              customText: "Solid",
+          response: {
+            status: "answered",
+            answers: {
+              Language: { selectedOptionLabels: [], customText: "TypeScript" },
+              Frontend: {
+                selectedOptionLabels: ["React", "Astro"],
+                customText: "Solid",
+              },
             },
           },
           createdAt: now,

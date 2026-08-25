@@ -308,7 +308,8 @@ async function run() {
     const selectedValues = result?.answers?.[0]?.selectedValues;
     const answeredSettlementObserved =
       resolvedEvent?.type === "user-input.resolved" &&
-      resolvedEvent.payload.settlement?.status === "answered";
+      "settlement" in resolvedEvent.payload &&
+      resolvedEvent.payload.settlement.status === "answered";
     const passed =
       requestEventCount === 1 &&
       answeredSettlementObserved &&

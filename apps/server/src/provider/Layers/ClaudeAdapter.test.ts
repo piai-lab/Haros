@@ -22,6 +22,7 @@ import {
 } from "@omnimind/contracts";
 import { assert, describe, it } from "@effect/vitest";
 import { Effect, Exit, Fiber, Layer, Random, Stream } from "effect";
+import { afterEach, beforeEach } from "vitest";
 
 import { attachmentRelativePath } from "../../attachmentStore.ts";
 import { OMNIMIND_HARNESS_POLICY_MARKER } from "../../agentGateway/harnessPolicy.ts";
@@ -33,6 +34,16 @@ import { ServerConfig } from "../../config.ts";
 import { MINIMUM_CLAUDE_AUTO_MODE_CLI_VERSION } from "../claudeCliVersion.ts";
 import { ProviderAdapterRequestError, ProviderAdapterValidationError } from "../Errors.ts";
 import { ClaudeAdapter } from "../Services/ClaudeAdapter.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
+
+let userInputPresenterLease: ReturnType<typeof userInputPresenterRegistry.acquire> | undefined;
+beforeEach(() => {
+  userInputPresenterLease = userInputPresenterRegistry.acquire("claude-adapter-test", 1);
+});
+afterEach(() => {
+  userInputPresenterLease?.release();
+  userInputPresenterLease = undefined;
+});
 import {
   buildEmbeddedClaudeSystemPromptAppend,
   makeClaudeAdapterLive as makeClaudeAdapterLiveBase,
@@ -9360,9 +9371,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const requestId = requestedEvent.value.requestId;
       assert.equal(typeof requestId, "string");
       assert.equal(requestedEvent.value.payload.questions.length, 1);
-      assert.equal("version" in requestedEvent.value.payload, false);
-      if ("version" in requestedEvent.value.payload) return;
-      assert.equal(requestedEvent.value.payload.questions[0]?.question, "Which framework?");
+      assert.equal("version" in requestedEvent.value.payload, true);
+      if (!("version" in requestedEvent.value.payload)) return;
+      assert.equal(requestedEvent.value.payload.version, 1);
+      assert.equal(requestedEvent.value.payload.questions[0]?.prompt, "Which framework?");
       assert.deepEqual(requestedEvent.value.providerRefs, {
         providerItemId: ProviderItemId.makeUnsafe("tool-ask-1"),
       });
@@ -9371,7 +9383,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       yield* adapter.respondToUserInput(
         session.threadId,
         ApprovalRequestId.makeUnsafe(requestId!),
-        { Framework: { selectedOptionLabels: ["React"] } },
+        {
+          status: "answered",
+          answers: { Framework: { selectedOptionLabels: ["React"] } },
+        },
       );
 
       // The adapter should emit a user-input.resolved event.
@@ -9384,8 +9399,11 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       if (resolvedEvent.value.type !== "user-input.resolved") {
         return;
       }
-      assert.deepEqual(resolvedEvent.value.payload.answers, {
-        "Which framework?": "React",
+      assert.deepEqual(resolvedEvent.value.payload, {
+        settlement: {
+          status: "answered",
+          answers: { Framework: { selectedOptionLabels: ["React"] } },
+        },
       });
       assert.deepEqual(resolvedEvent.value.providerRefs, {
         providerItemId: ProviderItemId.makeUnsafe("tool-ask-1"),
@@ -9482,7 +9500,12 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       yield* adapter.respondToUserInput(
         session.threadId,
         ApprovalRequestId.makeUnsafe(requestId!),
-        { Features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] } },
+        {
+          status: "answered",
+          answers: {
+            Features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] },
+          },
+        },
       );
 
       yield* Stream.runHead(adapter.streamEvents);
@@ -9494,6 +9517,61 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       assert.deepEqual(updatedInput.answers, {
         "Which features do you use most?": "CLI scaffolding, Type checking",
       });
+    }).pipe(
+      Effect.provideService(Random.Random, makeDeterministicRandomService()),
+      Effect.provide(harness.layer),
+    );
+  });
+
+  it.effect("preserves an explicit Ask cancellation as canonical cancelled", () => {
+    const harness = makeHarness();
+    return Effect.gen(function* () {
+      const adapter = yield* ClaudeAdapter;
+      const session = yield* adapter.startSession({
+        threadId: THREAD_ID,
+        provider: "claudeAgent",
+        runtimeMode: "full-access",
+      });
+      yield* Stream.take(adapter.streamEvents, 3).pipe(Stream.runDrain);
+      const canUseTool = harness.getLastCreateQueryInput()?.options.canUseTool;
+      if (!canUseTool) return assert.fail("Expected canUseTool");
+      const permissionPromise = canUseTool(
+        "AskUserQuestion",
+        {
+          questions: [
+            {
+              question: "Continue?",
+              header: "Continue",
+              options: [{ label: "Yes", description: "Proceed" }],
+              multiSelect: false,
+            },
+          ],
+        },
+        {
+          signal: new AbortController().signal,
+          toolUseID: "tool-ask-cancel",
+          requestId: "request-tool-ask-cancel",
+        },
+      );
+      const requested = yield* Stream.runHead(adapter.streamEvents);
+      if (requested._tag !== "Some" || requested.value.type !== "user-input.requested") {
+        return assert.fail("Expected user-input.requested");
+      }
+
+      yield* adapter.respondToUserInput(
+        session.threadId,
+        ApprovalRequestId.makeUnsafe(requested.value.requestId!),
+        { status: "cancelled" },
+      );
+      const resolved = yield* Stream.runHead(adapter.streamEvents);
+      if (resolved._tag !== "Some" || resolved.value.type !== "user-input.resolved") {
+        return assert.fail("Expected user-input.resolved");
+      }
+      assert.deepEqual(resolved.value.payload, { settlement: { status: "cancelled" } });
+      assert.deepEqual(yield* Effect.promise(() => permissionPromise), {
+        behavior: "deny",
+        message: "User cancelled tool execution.",
+      } satisfies PermissionResult);
     }).pipe(
       Effect.provideService(Random.Random, makeDeterministicRandomService()),
       Effect.provide(harness.layer),
@@ -9554,7 +9632,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       yield* adapter.respondToUserInput(
         session.threadId,
         ApprovalRequestId.makeUnsafe(requestId!),
-        { "Deploy to which env?": { selectedOptionLabels: ["Staging"] } },
+        {
+          status: "answered",
+          answers: { "Deploy to which env?": { selectedOptionLabels: ["Staging"] } },
+        },
       );
 
       // Drain the resolved event.
@@ -9627,7 +9708,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         assert.fail("Expected user-input.resolved event");
         return;
       }
-      assert.deepEqual(resolvedEvent.value.payload.answers, {});
+      assert.deepEqual(resolvedEvent.value.payload, { settlement: { status: "aborted" } });
 
       const permissionResult = yield* Effect.promise(() => permissionPromise);
       assert.deepEqual(permissionResult, {
@@ -9731,7 +9812,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         return;
       }
       assert.equal(resolvedEvent.requestId, rawRequestId);
-      assert.deepEqual(resolvedEvent.payload.answers, {});
+      assert.deepEqual(resolvedEvent.payload, { settlement: { status: "stale" } });
       assert.equal(resolvedEvent.turnId, terminalLifecycle[1]?.turnId);
 
       const permissionResult = yield* Effect.promise(() => permissionPromise);
@@ -9742,7 +9823,8 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const lateResponse = yield* Effect.exit(
         adapter.respondToUserInput(session.threadId, requestId, {
-          Continue: { selectedOptionLabels: ["Yes"] },
+          status: "answered",
+          answers: { Continue: { selectedOptionLabels: ["Yes"] } },
         }),
       );
       assert.equal(Exit.isFailure(lateResponse), true);
@@ -9843,7 +9925,10 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         yield* adapter.respondToUserInput(
           session.threadId,
           ApprovalRequestId.makeUnsafe(requestedEvent.value.requestId!),
-          { Environment: { selectedOptionLabels: ["Staging"] } },
+          {
+            status: "answered",
+            answers: { Environment: { selectedOptionLabels: ["Staging"] } },
+          },
         );
         const resolvedEvent = yield* Stream.runHead(adapter.streamEvents);
         assert.equal(resolvedEvent._tag, "Some");
@@ -9909,12 +9994,14 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         [
           Effect.exit(
             adapter.respondToUserInput(session.threadId, requestId, {
-              Mode: { selectedOptionLabels: ["Safe"] },
+              status: "answered",
+              answers: { Mode: { selectedOptionLabels: ["Safe"] } },
             }),
           ),
           Effect.exit(
             adapter.respondToUserInput(session.threadId, requestId, {
-              Mode: { selectedOptionLabels: ["Fast"] },
+              status: "answered",
+              answers: { Mode: { selectedOptionLabels: ["Fast"] } },
             }),
           ),
         ],

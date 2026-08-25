@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { Schema } from "effect";
 
-import { ProviderRuntimeEvent, type ProviderRuntimeEventType } from "./providerRuntime";
+import {
+  CANONICAL_USER_INPUT_MAX_NODES,
+  CANONICAL_USER_INPUT_MAX_UTF8_BYTES,
+  CanonicalUserInputRequest,
+  ProviderRuntimeEvent,
+  type ProviderRuntimeEventType,
+} from "./providerRuntime";
+import { canonicalUserInputUtf8Bytes } from "./canonicalUserInputGuard";
 
 const decodeRuntimeEvent = Schema.decodeUnknownSync(ProviderRuntimeEvent);
 
@@ -97,6 +104,45 @@ describe("ProviderRuntimeEvent", () => {
     expect(parsed.payload.questions[0]?.options).toHaveLength(2);
   });
 
+  it("keeps the named legacy request seam strict and bounded", () => {
+    const base = {
+      type: "user-input.requested",
+      eventId: "event-legacy-strict",
+      provider: "claudeAgent",
+      createdAt: "2026-02-28T00:00:01.000Z",
+      threadId: "thread-2",
+      requestId: "request-legacy-strict",
+    } as const;
+    expect(() =>
+      decodeRuntimeEvent({
+        ...base,
+        payload: {
+          questions: [
+            {
+              id: "q1",
+              header: "Choice",
+              question: "Choose",
+              options: [{ label: "A" }],
+              notes: "unsupported",
+            },
+          ],
+        },
+      }),
+    ).toThrow();
+    expect(() => decodeRuntimeEvent({ ...base, payload: { questions: [] } })).toThrow();
+    expect(() =>
+      decodeRuntimeEvent({
+        ...base,
+        payload: {
+          questions: [
+            { id: "q", header: "One", question: "One?", options: [] },
+            { id: "q", header: "Two", question: "Two?", options: [] },
+          ],
+        },
+      }),
+    ).toThrow();
+  });
+
   it("decodes user-input.resolved with answer map", () => {
     const parsed = decodeRuntimeEvent({
       type: "user-input.resolved",
@@ -117,7 +163,9 @@ describe("ProviderRuntimeEvent", () => {
     if (parsed.type !== "user-input.resolved") {
       throw new Error("expected user-input.resolved");
     }
-    expect(parsed.payload.answers?.sandbox_mode).toBe("workspace-write");
+    expect("answers" in parsed.payload && parsed.payload.answers.sandbox_mode).toBe(
+      "workspace-write",
+    );
   });
 
   it("rejects legacy message.delta type", () => {
@@ -195,5 +243,192 @@ describe("ProviderRuntimeEvent", () => {
     expect(parsed.type).toBe("item.completed");
     if (parsed.type !== "item.completed") throw new Error("expected item.completed");
     expect(parsed.payload.detail).toBe(rawOutput);
+  });
+});
+
+describe("canonical user-input request", () => {
+  const decodeRequest = Schema.decodeUnknownSync(CanonicalUserInputRequest);
+  const validRequest = () => ({
+    version: 1 as const,
+    questions: [
+      {
+        kind: "choice" as const,
+        id: "q1",
+        prompt: "Choose",
+        cardinality: "single" as const,
+        options: [{ label: "A" }],
+      },
+    ],
+  });
+
+  it("rejects empty, duplicate, and unknown authored structures", () => {
+    expect(() => decodeRequest({ version: 1, questions: [] })).toThrow();
+    expect(() =>
+      decodeRequest({
+        version: 1,
+        questions: [{ kind: "choice", id: "q", prompt: "One", cardinality: "single", options: [] }],
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeRequest({
+        version: 1,
+        questions: [
+          {
+            kind: "choice",
+            id: "q",
+            prompt: "One",
+            cardinality: "single",
+            options: [{ label: "A" }],
+          },
+          { kind: "text", id: "q", prompt: "Two" },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeRequest({
+        version: 1,
+        questions: [
+          {
+            kind: "choice",
+            id: "q",
+            prompt: "One",
+            cardinality: "single",
+            options: [{ label: "A" }, { label: "A" }],
+          },
+        ],
+      }),
+    ).toThrow();
+
+    expect(() => decodeRequest({ ...validRequest(), review: true })).toThrow();
+    expect(() =>
+      decodeRequest({
+        version: 1,
+        questions: [
+          {
+            ...validRequest().questions[0],
+            notes: "unsupported",
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeRequest({
+        version: 1,
+        questions: [
+          {
+            ...validRequest().questions[0],
+            options: [{ label: "A", note: "unsupported" }],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("enforces exactly 10,000 authored question and option nodes", () => {
+    const labels = Array.from({ length: CANONICAL_USER_INPUT_MAX_NODES - 1 }, (_, index) => ({
+      label: `option-${index}`,
+    }));
+    expect(() =>
+      decodeRequest({
+        version: 1,
+        questions: [
+          { kind: "choice", id: "q", prompt: "Choose", cardinality: "multiple", options: labels },
+        ],
+      }),
+    ).not.toThrow();
+    expect(() =>
+      decodeRequest({
+        version: 1,
+        questions: [
+          {
+            kind: "choice",
+            id: "q",
+            prompt: "Choose",
+            cardinality: "multiple",
+            options: [...labels, { label: "one-too-many" }],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("enforces the 1 MiB UTF-8 request boundary without truncation", () => {
+    const base = {
+      version: 1 as const,
+      questions: [
+        {
+          kind: "choice" as const,
+          id: "q",
+          prompt: "Choose",
+          cardinality: "single" as const,
+          options: [{ label: "A", preview: "" }],
+        },
+      ],
+    };
+    const exactPreview = "x".repeat(
+      CANONICAL_USER_INPUT_MAX_UTF8_BYTES - canonicalUserInputUtf8Bytes(base),
+    );
+    const exact = {
+      ...base,
+      questions: [
+        {
+          ...base.questions[0],
+          options: [
+            {
+              label: "A",
+              preview: exactPreview,
+            },
+          ],
+        },
+      ],
+    };
+    expect(canonicalUserInputUtf8Bytes(exact)).toBe(CANONICAL_USER_INPUT_MAX_UTF8_BYTES);
+    expect(decodeRequest(exact)).toEqual(exact);
+    expect(() =>
+      decodeRequest({
+        ...exact,
+        questions: [
+          {
+            ...exact.questions[0],
+            options: [{ label: "A", preview: `${exactPreview}é` }],
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+});
+
+describe("canonical user-input terminal payload", () => {
+  it("requires exactly one strict canonical or legacy terminal envelope", () => {
+    const base = {
+      type: "user-input.resolved",
+      eventId: "terminal-1",
+      provider: "codex",
+      createdAt: "2026-02-28T00:00:03.000Z",
+      threadId: "thread-1",
+      requestId: "request-1",
+    } as const;
+    expect(() => decodeRuntimeEvent({ ...base, payload: {} })).toThrow();
+    expect(() =>
+      decodeRuntimeEvent({
+        ...base,
+        payload: {
+          settlement: { status: "cancelled" },
+          answers: {},
+        },
+      }),
+    ).toThrow();
+    expect(() =>
+      decodeRuntimeEvent({
+        ...base,
+        payload: { settlement: { status: "cancelled", answers: {} } },
+      }),
+    ).toThrow();
+    expect(
+      decodeRuntimeEvent({ ...base, payload: { settlement: { status: "cancelled" } } }).type,
+    ).toBe("user-input.resolved");
+    expect(decodeRuntimeEvent({ ...base, payload: { answers: {} } }).type).toBe(
+      "user-input.resolved",
+    );
   });
 });

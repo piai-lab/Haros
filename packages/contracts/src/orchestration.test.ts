@@ -4,6 +4,8 @@ import { Effect, Schema } from "effect";
 
 import {
   CanonicalUserInputAnswer,
+  CanonicalUserInputResponse,
+  CanonicalUserInputSettlement,
   ClientOrchestrationCommand,
   DEFAULT_PROVIDER_INTERACTION_MODE,
   DEFAULT_RUNTIME_MODE,
@@ -33,6 +35,10 @@ import {
   ThreadTurnStartRequestedPayload,
   RuntimeMode,
 } from "./orchestration";
+import {
+  CANONICAL_USER_INPUT_MAX_UTF8_BYTES,
+  canonicalUserInputUtf8Bytes,
+} from "./canonicalUserInputGuard";
 
 const decodeTurnDiffInput = Schema.decodeUnknownEffect(OrchestrationGetTurnDiffInput);
 const decodeFullThreadDiffInput = Schema.decodeUnknownEffect(OrchestrationGetFullThreadDiffInput);
@@ -1158,27 +1164,33 @@ it.effect("preserves structured user-input answers through the RPC JSON codec", 
       commandId: "cmd-1",
       threadId: "thread-1",
       requestId: "req-1",
-      answers: {
-        single: {
-          selectedOptionLabels: ["Purple"],
-        },
-        multi: {
-          selectedOptionLabels: ["Reading", "Coding"],
-          customText: "Music\nWriting  ",
+      response: {
+        status: "answered",
+        answers: {
+          single: {
+            selectedOptionLabels: ["Purple"],
+          },
+          multi: {
+            selectedOptionLabels: ["Reading", "Coding"],
+            customText: "Music\nWriting  ",
+          },
         },
       },
       createdAt: "2026-05-19T16:14:28.202Z",
     };
     const decoded = yield* Schema.decodeUnknownEffect(codec)(wire);
     assert.deepStrictEqual(
-      (decoded as Extract<typeof decoded, { type: "thread.user-input.respond" }>).answers,
+      (decoded as Extract<typeof decoded, { type: "thread.user-input.respond" }>).response,
       {
-        single: {
-          selectedOptionLabels: ["Purple"],
-        },
-        multi: {
-          selectedOptionLabels: ["Reading", "Coding"],
-          customText: "Music\nWriting  ",
+        status: "answered",
+        answers: {
+          single: {
+            selectedOptionLabels: ["Purple"],
+          },
+          multi: {
+            selectedOptionLabels: ["Reading", "Coding"],
+            customText: "Music\nWriting  ",
+          },
         },
       },
     );
@@ -1201,14 +1213,95 @@ it.effect("rejects retired and unknown canonical answer fields without stripping
         commandId: "cmd-strict-answer",
         threadId: "thread-1",
         requestId: "req-1",
-        answers: { q1: { selectedOptionLabels: ["A"], note: "legacy" } },
+        response: {
+          status: "answered",
+          answers: { q1: { selectedOptionLabels: ["A"], note: "legacy" } },
+        },
         createdAt: "2026-05-19T16:14:28.202Z",
       }),
     );
     assert.equal(nestedRetired._tag, "Failure");
 
+    const legacyShortcut = yield* Effect.exit(
+      Schema.decodeUnknownEffect(ClientOrchestrationCommand)({
+        type: "thread.user-input.respond",
+        commandId: "cmd-legacy-answer",
+        threadId: "thread-1",
+        requestId: "req-1",
+        answers: { q1: { selectedOptionLabels: ["A"] } },
+        createdAt: "2026-05-19T16:14:28.202Z",
+      }),
+    );
+    assert.equal(legacyShortcut._tag, "Failure");
+
     const raw = " line one\nline two  ";
     const accepted = yield* decode({ selectedOptionLabels: ["A"], customText: raw });
     assert.deepStrictEqual(accepted, { selectedOptionLabels: ["A"], customText: raw });
+  }),
+);
+
+it.effect("keeps canonical response and settlement terminal members strict", () =>
+  Effect.gen(function* () {
+    const decodeResponse = Schema.decodeUnknownEffect(CanonicalUserInputResponse);
+    const decodeSettlement = Schema.decodeUnknownEffect(CanonicalUserInputSettlement);
+    const answers = { q1: { selectedOptionLabels: ["A"], customText: " 解释\n  " } };
+
+    const legal = yield* decodeResponse({ status: "answered", answers });
+    assert.deepStrictEqual(legal, { status: "answered", answers });
+
+    const invalidResponses = [
+      { status: "cancelled", answers },
+      { status: "answered" },
+      { status: "cancelled", mystery: true },
+    ];
+    for (const value of invalidResponses) {
+      assert.equal((yield* Effect.exit(decodeResponse(value)))._tag, "Failure");
+    }
+
+    for (const status of ["aborted", "timed_out", "unavailable", "stale"] as const) {
+      assert.equal((yield* Effect.exit(decodeSettlement({ status, answers })))._tag, "Failure");
+      assert.equal(
+        (yield* Effect.exit(decodeSettlement({ status, mystery: true })))._tag,
+        "Failure",
+      );
+    }
+  }),
+);
+
+it.effect("enforces the canonical response UTF-8 boundary without rewriting raw text", () =>
+  Effect.gen(function* () {
+    const decode = Schema.decodeUnknownEffect(CanonicalUserInputResponse);
+    const base = {
+      status: "answered" as const,
+      answers: { q1: { selectedOptionLabels: [], customText: "" } },
+    };
+    const exact = {
+      ...base,
+      answers: {
+        q1: {
+          selectedOptionLabels: [],
+          customText: "x".repeat(
+            CANONICAL_USER_INPUT_MAX_UTF8_BYTES - canonicalUserInputUtf8Bytes(base),
+          ),
+        },
+      },
+    };
+    assert.equal(canonicalUserInputUtf8Bytes(exact), CANONICAL_USER_INPUT_MAX_UTF8_BYTES);
+    const accepted = yield* decode(exact);
+    assert.equal(accepted.status, "answered");
+    if (accepted.status !== "answered") return;
+    assert.equal(accepted.answers.q1?.customText, exact.answers.q1.customText);
+
+    const tooLarge = {
+      ...exact,
+      answers: {
+        q1: {
+          selectedOptionLabels: [],
+          customText: `${exact.answers.q1.customText}é`,
+        },
+      },
+    };
+    assert.equal(canonicalUserInputUtf8Bytes(tooLarge), CANONICAL_USER_INPUT_MAX_UTF8_BYTES + 2);
+    assert.equal((yield* Effect.exit(decode(tooLarge)))._tag, "Failure");
   }),
 );

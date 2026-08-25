@@ -28,6 +28,7 @@ import {
 } from "../opencodeRuntime.ts";
 import { OpenCodeAdapter } from "../Services/OpenCodeAdapter.ts";
 import { KiloAdapter } from "../Services/KiloAdapter.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import {
   appendOpenCodeAssistantTextDelta,
   makeOpenCodeAdapterLive,
@@ -93,6 +94,8 @@ function createMockOpenCodeRuntime(options?: {
   const updateCalls: Array<Record<string, unknown>> = [];
   const forkCalls: Array<{ sessionID: string }> = [];
   const permissionReplyCalls: Array<Record<string, unknown>> = [];
+  const questionRejectCalls: Array<Record<string, unknown>> = [];
+  const questionReplyCalls: Array<Record<string, unknown>> = [];
   const promptCalls: Array<Record<string, unknown>> = [];
   const promptCallKinds: Array<"async" | "sync"> = [];
   const mcpAddCalls: Array<Record<string, unknown>> = [];
@@ -171,7 +174,14 @@ function createMockOpenCodeRuntime(options?: {
     question: {
       list: async () =>
         options?.questionList ? options.questionList() : { data: options?.pendingQuestions ?? [] },
-      reply: async () => ({ data: null }),
+      reply: async (input: Record<string, unknown>) => {
+        questionReplyCalls.push(input);
+        return { data: null };
+      },
+      reject: async (input: Record<string, unknown>) => {
+        questionRejectCalls.push(input);
+        return { data: null };
+      },
     },
     command: {
       list: options?.commandList ?? (async () => ({ data: [] })),
@@ -265,6 +275,8 @@ function createMockOpenCodeRuntime(options?: {
     updateCalls,
     forkCalls,
     permissionReplyCalls,
+    questionRejectCalls,
+    questionReplyCalls,
     promptCalls,
     promptCallKinds,
     mcpAddCalls,
@@ -4046,6 +4058,122 @@ describe("OpenCodeAdapter runtime lifecycle", () => {
     expect(runtime.permissionReplyCalls).toEqual([
       { requestID: "permission-late-1", reply: "once" },
     ]);
+  });
+
+  it("projects an explicit OpenCode question rejection as cancelled", async () => {
+    const eventQueue = createSubscribedEventQueue();
+    const runtime = createMockOpenCodeRuntime();
+    const client = runtime.runtime.createOpenCodeSdkClient({
+      baseUrl: "http://127.0.0.1:4099",
+      directory: process.cwd(),
+    }) as unknown as { event: { subscribe: () => Promise<{ stream: AsyncIterable<unknown> }> } };
+    client.event.subscribe = async () => ({ stream: eventQueue.stream });
+    const presenterLease = userInputPresenterRegistry.acquire("opencode-cancel-test", 1);
+    try {
+      const result = await Effect.runPromise(
+        Effect.gen(function* () {
+          const adapter = yield* OpenCodeAdapter;
+          const eventsFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 4)).pipe(
+            Effect.forkChild,
+          );
+          yield* adapter.startSession({
+            provider: "opencode",
+            threadId: asThreadId("thread-opencode-question-cancel"),
+            runtimeMode: "full-access",
+          });
+          eventQueue.push({
+            id: "evt-question-cancel-asked",
+            type: "question.asked",
+            properties: {
+              id: "question-cancel-1",
+              sessionID: "opencode-session-1",
+              questions: [
+                {
+                  question: "Proceed?",
+                  header: "Confirm",
+                  options: [{ label: "Yes", description: "" }],
+                  multiple: false,
+                  custom: false,
+                },
+              ],
+              tool: undefined,
+            },
+          });
+          eventQueue.push({
+            id: "evt-question-cancel-rejected",
+            type: "question.rejected",
+            properties: {
+              sessionID: "opencode-session-1",
+              requestID: "question-cancel-1",
+            },
+          });
+          return Array.from(yield* Fiber.join(eventsFiber));
+        }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
+      );
+
+      expect(result.map((event) => event.type)).toEqual([
+        "session.started",
+        "thread.started",
+        "user-input.requested",
+        "user-input.resolved",
+      ]);
+      expect(result[3]?.payload).toEqual({ settlement: { status: "cancelled" } });
+    } finally {
+      presenterLease.release();
+      eventQueue.close();
+    }
+  });
+
+  it("rejects an invalid OpenCode question without creating a pending interaction", async () => {
+    const eventQueue = createSubscribedEventQueue();
+    const runtime = createMockOpenCodeRuntime();
+    const client = runtime.runtime.createOpenCodeSdkClient({
+      baseUrl: "http://127.0.0.1:4099",
+      directory: process.cwd(),
+    }) as unknown as { event: { subscribe: () => Promise<{ stream: AsyncIterable<unknown> }> } };
+    client.event.subscribe = async () => ({ stream: eventQueue.stream });
+    const result = await Effect.runPromise(
+      Effect.gen(function* () {
+        const adapter = yield* OpenCodeAdapter;
+        const eventsFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 3)).pipe(
+          Effect.forkChild,
+        );
+        yield* adapter.startSession({
+          provider: "opencode",
+          threadId: asThreadId("thread-opencode-invalid-question"),
+          runtimeMode: "full-access",
+        });
+        eventQueue.push({
+          id: "evt-question-invalid-asked",
+          type: "question.asked",
+          properties: {
+            id: "question-invalid-1",
+            sessionID: "opencode-session-1",
+            questions: [
+              {
+                question: "",
+                header: "Invalid",
+                options: [{ label: "Yes", description: "" }],
+                multiple: false,
+                custom: false,
+              },
+            ],
+            tool: undefined,
+          },
+        });
+        return Array.from(yield* Fiber.join(eventsFiber));
+      }).pipe(Effect.provide(makeOpenCodeAdapterTestLayer(runtime.runtime))),
+    );
+
+    expect(result.map((event) => event.type)).toEqual([
+      "session.started",
+      "thread.started",
+      "user-input.resolved",
+    ]);
+    expect(result[2]?.payload).toEqual({ settlement: { status: "unavailable" } });
+    await vi.waitFor(() => expect(runtime.questionRejectCalls).toHaveLength(1));
+    expect(runtime.abortCalls.length).toBeGreaterThanOrEqual(1);
+    eventQueue.close();
   });
 
   it("surfaces OpenCode permission asks as approvals in approval-required mode", async () => {

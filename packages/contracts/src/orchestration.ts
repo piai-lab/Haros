@@ -30,6 +30,7 @@ import {
   TrimmedNonEmptyString,
   TurnId,
 } from "./baseSchemas";
+import { canonicalUserInputPayloadFits } from "./canonicalUserInputGuard";
 
 export const ORCHESTRATION_WS_METHODS = {
   getSnapshot: "orchestration.getSnapshot",
@@ -288,21 +289,35 @@ export const CanonicalUserInputResponse = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("answered"),
     answers: CanonicalUserInputAnswers,
+  }).annotate({ parseOptions: { onExcessProperty: "error" } }),
+  Schema.Struct({ status: Schema.Literal("cancelled") }).annotate({
+    parseOptions: { onExcessProperty: "error" },
   }),
-  Schema.Struct({ status: Schema.Literal("cancelled") }),
-]);
+]).check(
+  Schema.makeFilter(
+    canonicalUserInputPayloadFits,
+    { expected: "a canonical user-input response no larger than 1 MiB" },
+    true,
+  ),
+);
 export type CanonicalUserInputResponse = typeof CanonicalUserInputResponse.Type;
 export const CanonicalUserInputSettlement = Schema.Union([
   Schema.Struct({
     status: Schema.Literal("answered"),
     answers: CanonicalUserInputAnswers,
-  }),
-  Schema.Struct({ status: Schema.Literal("cancelled") }),
-  Schema.Struct({ status: Schema.Literal("aborted") }),
-  Schema.Struct({ status: Schema.Literal("timed_out") }),
-  Schema.Struct({ status: Schema.Literal("unavailable") }),
-  Schema.Struct({ status: Schema.Literal("stale") }),
-]);
+  }).annotate({ parseOptions: { onExcessProperty: "error" } }),
+  ...(["cancelled", "aborted", "timed_out", "unavailable", "stale"] as const).map((status) =>
+    Schema.Struct({ status: Schema.Literal(status) }).annotate({
+      parseOptions: { onExcessProperty: "error" },
+    }),
+  ),
+]).check(
+  Schema.makeFilter(
+    canonicalUserInputPayloadFits,
+    { expected: "a canonical user-input settlement no larger than 1 MiB" },
+    true,
+  ),
+);
 export type CanonicalUserInputSettlement = typeof CanonicalUserInputSettlement.Type;
 export const ThreadHandoffBootstrapStatus = Schema.Literals(["pending", "completed"]);
 export type ThreadHandoffBootstrapStatus = typeof ThreadHandoffBootstrapStatus.Type;
@@ -1490,11 +1505,9 @@ const ThreadUserInputRespondCommand = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  response: Schema.optional(CanonicalUserInputResponse),
-  /** Decode-only compatibility; new callers must send `response`. */
-  answers: Schema.optional(CanonicalUserInputAnswers),
+  response: CanonicalUserInputResponse,
   createdAt: IsoDateTime,
-});
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 
 const ThreadCheckpointRevertCommand = Schema.Struct({
   type: Schema.Literal("thread.checkpoint.revert"),
@@ -2118,11 +2131,9 @@ const ThreadUserInputResponseRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  response: Schema.optional(CanonicalUserInputResponse),
-  /** Decode-only compatibility for pre-settlement events. */
-  answers: Schema.optional(CanonicalUserInputAnswers),
+  response: CanonicalUserInputResponse,
   createdAt: IsoDateTime,
-});
+}).annotate({ parseOptions: { onExcessProperty: "error" } });
 
 export const ThreadCheckpointRevertRequestedPayload = Schema.Struct({
   threadId: ThreadId,

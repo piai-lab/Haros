@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import {
+  type CanonicalUserInputResponse,
+  type CanonicalUserInputSettlement,
   EventId,
   type ProviderInteractionMode,
   type ProviderKind,
@@ -27,7 +29,11 @@ import type {
 } from "@opencode-ai/sdk/v2";
 
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
-import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
+import {
+  canonicalUserInputRequestFromQuestions,
+  encodeCanonicalUserInputResponse,
+} from "../canonicalUserInput.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import { ServerConfig } from "../../config.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 import {
@@ -169,6 +175,15 @@ interface OpenCodeResumeCursor {
   readonly harnessPolicyDelivery?: OpenCodeHarnessPolicyDelivery;
 }
 
+interface PendingOpenCodeQuestion {
+  readonly request: QuestionRequest;
+  response?: CanonicalUserInputResponse;
+  terminalStatus?: Exclude<CanonicalUserInputSettlement["status"], "answered">;
+  suppressDurableTerminal?: boolean;
+  durableTerminalEmitted?: boolean;
+  removePresenterWatch?: () => void;
+}
+
 interface OpenCodeSessionContext {
   harnessPolicyDelivered?: boolean;
   pendingHarnessPolicyTurnId: TurnId | undefined;
@@ -187,7 +202,7 @@ interface OpenCodeSessionContext {
   readonly policyResolvedPermissionIds: Set<string>;
   /** Human replies settled from permission.list while their permission.replied echo is pending. */
   readonly locallyResolvedPermissionIds: Set<string>;
-  readonly pendingQuestions: Map<string, QuestionRequest>;
+  readonly pendingQuestions: Map<string, PendingOpenCodeQuestion>;
   readonly pendingTextDeltasByPartId: Map<
     string,
     { readonly text: string; readonly bufferedAfterKnownSnapshot: boolean }
@@ -1290,6 +1305,9 @@ const stopOpenCodeContext = Effect.fn("stopOpenCodeContext")(function* (
     return;
   }
 
+  for (const pending of context.pendingQuestions.values()) {
+    pending.terminalStatus ??= "stale";
+  }
   yield* runOpenCodeSdk("session.abort", () =>
     context.client.session.abort({ sessionID: context.openCodeSessionId }),
   ).pipe(Effect.ignore({ log: true }));
@@ -2645,7 +2663,36 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             if (context.pendingQuestions.has(event.properties.id)) {
               break;
             }
-            context.pendingQuestions.set(event.properties.id, event.properties);
+            const canonicalRequest = yield* Effect.sync(() => {
+              try {
+                return canonicalUserInputRequestFromQuestions(
+                  normalizeQuestionRequest(event.properties),
+                );
+              } catch {
+                return null;
+              }
+            });
+            if (canonicalRequest === null) {
+              yield* emit(context, {
+                ...buildEventBase({
+                  threadId: context.session.threadId,
+                  turnId,
+                  requestId: event.properties.id,
+                  raw: event,
+                }),
+                type: "user-input.resolved",
+                payload: { settlement: { status: "unavailable" } },
+              });
+              yield* runOpenCodeSdk("question.reject", () =>
+                context.client.question.reject({ requestID: event.properties.id }),
+              ).pipe(Effect.ignore);
+              yield* runOpenCodeSdk("session.abort", () =>
+                context.client.session.abort({ sessionID: context.openCodeSessionId }),
+              ).pipe(Effect.ignore);
+              break;
+            }
+            const pending: PendingOpenCodeQuestion = { request: event.properties };
+            context.pendingQuestions.set(event.properties.id, pending);
             yield* emit(context, {
               ...buildEventBase({
                 threadId: context.session.threadId,
@@ -2654,47 +2701,91 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
                 raw: event,
               }),
               type: "user-input.requested",
-              payload: {
-                questions: normalizeQuestionRequest(event.properties),
-              },
+              payload: canonicalRequest,
             });
+            const settleUnavailable = () => {
+              if (context.pendingQuestions.get(event.properties.id) !== pending) return;
+              pending.terminalStatus = "unavailable";
+              if (pending.durableTerminalEmitted) return;
+              pending.durableTerminalEmitted = true;
+              pending.removePresenterWatch?.();
+              Effect.runFork(
+                emit(context, {
+                  ...buildEventBase({
+                    threadId: context.session.threadId,
+                    turnId,
+                    requestId: event.properties.id,
+                    raw: event,
+                  }),
+                  type: "user-input.resolved",
+                  payload: { settlement: { status: "unavailable" } },
+                }).pipe(
+                  Effect.andThen(
+                    runOpenCodeSdk("question.reject", () =>
+                      context.client.question.reject({ requestID: event.properties.id }),
+                    ).pipe(Effect.ignore),
+                  ),
+                  Effect.andThen(
+                    runOpenCodeSdk("session.abort", () =>
+                      context.client.session.abort({ sessionID: context.openCodeSessionId }),
+                    ).pipe(Effect.ignore),
+                  ),
+                ),
+              );
+            };
+            pending.removePresenterWatch =
+              userInputPresenterRegistry.onUnavailable(settleUnavailable);
+            if (!userInputPresenterRegistry.available) settleUnavailable();
             break;
           }
 
           case "question.replied": {
-            const request = context.pendingQuestions.get(event.properties.requestID);
+            const pending = context.pendingQuestions.get(event.properties.requestID);
             context.pendingQuestions.delete(event.properties.requestID);
+            pending?.removePresenterWatch?.();
             const answers = Object.fromEntries(
-              (request?.questions ?? []).map((question, index) => [
+              (pending?.request.questions ?? []).map((question, index) => [
                 openCodeQuestionId(index, question),
                 event.properties.answers[index]?.join(", ") ?? "",
               ]),
             );
-            yield* emit(context, {
-              ...buildEventBase({
-                threadId: context.session.threadId,
-                turnId,
-                requestId: event.properties.requestID,
-                raw: event,
-              }),
-              type: "user-input.resolved",
-              payload: { answers },
-            });
+            if (!pending?.suppressDurableTerminal && !pending?.durableTerminalEmitted) {
+              yield* emit(context, {
+                ...buildEventBase({
+                  threadId: context.session.threadId,
+                  turnId,
+                  requestId: event.properties.requestID,
+                  raw: event,
+                }),
+                type: "user-input.resolved",
+                payload: pending?.terminalStatus
+                  ? { settlement: { status: pending.terminalStatus } }
+                  : pending?.response?.status === "answered"
+                    ? { settlement: pending.response }
+                    : { answers },
+              });
+            }
             break;
           }
 
           case "question.rejected": {
+            const pending = context.pendingQuestions.get(event.properties.requestID);
             context.pendingQuestions.delete(event.properties.requestID);
-            yield* emit(context, {
-              ...buildEventBase({
-                threadId: context.session.threadId,
-                turnId,
-                requestId: event.properties.requestID,
-                raw: event,
-              }),
-              type: "user-input.resolved",
-              payload: { answers: {} },
-            });
+            pending?.removePresenterWatch?.();
+            if (!pending?.suppressDurableTerminal && !pending?.durableTerminalEmitted) {
+              yield* emit(context, {
+                ...buildEventBase({
+                  threadId: context.session.threadId,
+                  turnId,
+                  requestId: event.properties.requestID,
+                  raw: event,
+                }),
+                type: "user-input.resolved",
+                payload: {
+                  settlement: { status: pending?.terminalStatus ?? "cancelled" },
+                },
+              });
+            }
             break;
           }
 
@@ -4081,6 +4172,12 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
             return;
           }
           const activeTurnId = turnId ?? context.activeTurnId;
+          for (const pending of context.pendingQuestions.values()) {
+            if (pending.terminalStatus === undefined) {
+              pending.terminalStatus = "aborted";
+              pending.suppressDurableTerminal = true;
+            }
+          }
           yield* withAgentGatewayTurnCancellation(
             context.gatewaySessionLease,
             activeTurnId,
@@ -4227,8 +4324,8 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         "respondToUserInput",
       )(function* (threadId, requestId, response) {
         const context = ensureAdapterSessionContext(threadId);
-        const request = context.pendingQuestions.get(requestId);
-        if (!request) {
+        const pending = context.pendingQuestions.get(requestId);
+        if (!pending) {
           return yield* new ProviderAdapterRequestError({
             provider,
             method: "question.reply",
@@ -4237,13 +4334,21 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         }
 
         const encoded = encodeCanonicalUserInputResponse(response);
+        if (response.status === "cancelled") {
+          pending.terminalStatus = "cancelled";
+          yield* runOpenCodeSdk("question.reject", () =>
+            context.client.question.reject({ requestID: requestId }),
+          ).pipe(Effect.mapError(toAdapterRequestError));
+          yield* interruptTurn(threadId);
+          return;
+        }
+        pending.response = response;
         yield* runOpenCodeSdk("question.reply", () =>
           context.client.question.reply({
             requestID: requestId,
-            answers: toOpenCodeQuestionAnswers(request, encoded.answers),
+            answers: toOpenCodeQuestionAnswers(pending.request, encoded.answers),
           }),
         ).pipe(Effect.mapError(toAdapterRequestError));
-        if (encoded.cancelled) yield* interruptTurn(threadId);
       });
 
       const stopSession: OpenCodeAdapterShape["stopSession"] = Effect.fn("stopSession")(

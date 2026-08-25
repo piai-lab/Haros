@@ -14,6 +14,7 @@ import {
 } from "@omnimind/contracts";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { afterAll, it, vi } from "@effect/vitest";
+import { afterEach, beforeEach } from "vitest";
 
 import { Effect, Fiber, FileSystem, Layer, Option, Stream } from "effect";
 
@@ -26,7 +27,17 @@ import { ServerConfig } from "../../config.ts";
 import { ProviderAdapterValidationError } from "../Errors.ts";
 import { CodexAdapter } from "../Services/CodexAdapter.ts";
 import { ProviderSessionDirectory } from "../Services/ProviderSessionDirectory.ts";
+import { userInputPresenterRegistry } from "../userInputPresenterRegistry.ts";
 import { makeCodexAdapterLive, normalizeCodexTokenUsage } from "./CodexAdapter.ts";
+
+let userInputPresenterLease: ReturnType<typeof userInputPresenterRegistry.acquire> | undefined;
+beforeEach(() => {
+  userInputPresenterLease = userInputPresenterRegistry.acquire("codex-adapter-test", 1);
+});
+afterEach(() => {
+  userInputPresenterLease?.release();
+  userInputPresenterLease = undefined;
+});
 
 const asThreadId = (value: string): ThreadId => ThreadId.makeUnsafe(value);
 const asTurnId = (value: string): TurnId => TurnId.makeUnsafe(value);
@@ -1272,7 +1283,7 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
       if (firstEvent.value.type !== "user-input.resolved") {
         return;
       }
-      assert.deepEqual(firstEvent.value.payload.answers, {
+      assert.deepEqual("answers" in firstEvent.value.payload && firstEvent.value.payload.answers, {
         scope: [],
       });
     }),
@@ -1385,11 +1396,223 @@ lifecycleLayer("CodexAdapterLive lifecycle", (it) => {
         if (events[1]?.type === "user-input.resolved") {
           assert.equal(events[1].requestId, "req-user-input-1");
           assert.equal(events[1].lifecycleGeneration, "generation-request-a");
-          assert.deepEqual(events[1].payload.answers, {
+          assert.deepEqual("answers" in events[1].payload && events[1].payload.answers, {
             sandbox_mode: "workspace-write",
           });
         }
       }),
+  );
+
+  it.effect("preserves canonical cancellation through Codex empty-answer acknowledgement", () =>
+    Effect.gen(function* () {
+      lifecycleManager.respondToUserInputImpl.mockClear();
+      lifecycleManager.interruptTurnImpl.mockClear();
+      const adapter = yield* CodexAdapter;
+      const eventsFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 2)).pipe(
+        Effect.forkChild,
+      );
+      const threadId = asThreadId("thread-codex-cancel");
+      const requestId = ApprovalRequestId.makeUnsafe("req-codex-cancel");
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-cancel-requested"),
+        kind: "request",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "item/tool/requestUserInput",
+        requestId,
+        payload: {
+          questions: [
+            {
+              id: "continue",
+              header: "Continue",
+              question: "Continue?",
+              options: [{ label: "Yes", description: "Proceed" }],
+            },
+          ],
+        },
+      } satisfies ProviderEvent);
+      yield* adapter.respondToUserInput(threadId, requestId, { status: "cancelled" });
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-cancel-ack"),
+        kind: "notification",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "item/tool/requestUserInput/answered",
+        requestId,
+        payload: { answers: {} },
+      } satisfies ProviderEvent);
+
+      const events = Array.from(yield* Fiber.join(eventsFiber));
+      assert.equal(events[0]?.type, "user-input.requested");
+      assert.equal(events[1]?.type, "user-input.resolved");
+      if (events[1]?.type === "user-input.resolved") {
+        assert.deepEqual(events[1].payload, { settlement: { status: "cancelled" } });
+      }
+      assert.deepEqual(lifecycleManager.respondToUserInputImpl.mock.calls[0]?.[2], {});
+      assert.equal(lifecycleManager.interruptTurnImpl.mock.calls.length, 1);
+    }),
+  );
+
+  it.effect("preserves the canonical answered envelope through Codex native acknowledgement", () =>
+    Effect.gen(function* () {
+      const adapter = yield* CodexAdapter;
+      const eventsFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 2)).pipe(
+        Effect.forkChild,
+      );
+      const threadId = asThreadId("thread-codex-answer");
+      const requestId = ApprovalRequestId.makeUnsafe("req-codex-answer");
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-answer-requested"),
+        kind: "request",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "item/tool/requestUserInput",
+        requestId,
+        payload: {
+          questions: [
+            {
+              id: "scope",
+              header: "Scope",
+              question: "Which scope?",
+              options: [{ label: "A", description: "First" }],
+            },
+          ],
+        },
+      } satisfies ProviderEvent);
+      const response = {
+        status: "answered" as const,
+        answers: {
+          scope: { selectedOptionLabels: ["A"], customText: "raw  \n" },
+        },
+      };
+      yield* adapter.respondToUserInput(threadId, requestId, response);
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-answer-ack"),
+        kind: "notification",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "item/tool/requestUserInput/answered",
+        requestId,
+        payload: { answers: { scope: "native echo" } },
+      } satisfies ProviderEvent);
+
+      const events = Array.from(yield* Fiber.join(eventsFiber));
+      assert.equal(events[1]?.type, "user-input.resolved");
+      if (events[1]?.type === "user-input.resolved") {
+        assert.deepEqual(events[1].payload, { settlement: response });
+      }
+    }),
+  );
+
+  it.effect("fails a headless Codex user-input request closed as unavailable exactly once", () =>
+    Effect.gen(function* () {
+      userInputPresenterLease?.release();
+      userInputPresenterLease = undefined;
+      lifecycleManager.respondToUserInputImpl.mockClear();
+      lifecycleManager.interruptTurnImpl.mockClear();
+      const adapter = yield* CodexAdapter;
+      const eventsFiber = yield* Stream.runCollect(Stream.take(adapter.streamEvents, 3)).pipe(
+        Effect.forkChild,
+      );
+      const threadId = asThreadId("thread-codex-headless");
+      const requestId = ApprovalRequestId.makeUnsafe("req-codex-headless");
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-headless-requested"),
+        kind: "request",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "item/tool/requestUserInput",
+        requestId,
+        payload: {
+          questions: [
+            {
+              id: "continue",
+              header: "Continue",
+              question: "Continue?",
+              options: [{ label: "Yes", description: "Proceed" }],
+            },
+          ],
+        },
+      } satisfies ProviderEvent);
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-headless-late-ack"),
+        kind: "notification",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "item/tool/requestUserInput/answered",
+        requestId,
+        payload: { answers: {} },
+      } satisfies ProviderEvent);
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-headless-followup"),
+        kind: "error",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "process/stderr",
+        message: "headless follow-up warning",
+      } satisfies ProviderEvent);
+
+      const events = Array.from(yield* Fiber.join(eventsFiber));
+      assert.deepEqual(
+        events.map((event) => event.type),
+        ["user-input.requested", "user-input.resolved", "runtime.warning"],
+      );
+      if (events[1]?.type === "user-input.resolved") {
+        assert.deepEqual(events[1].payload, { settlement: { status: "unavailable" } });
+      }
+      assert.equal(lifecycleManager.respondToUserInputImpl.mock.calls.length, 1);
+      assert.deepEqual(lifecycleManager.respondToUserInputImpl.mock.calls[0]?.[2], {});
+      assert.equal(lifecycleManager.interruptTurnImpl.mock.calls.length, 1);
+    }),
+  );
+
+  it.effect("rejects an invalid native Codex request before it can become pending", () =>
+    Effect.gen(function* () {
+      lifecycleManager.respondToUserInputImpl.mockClear();
+      lifecycleManager.interruptTurnImpl.mockClear();
+      const adapter = yield* CodexAdapter;
+      const eventFiber = yield* Stream.runHead(adapter.streamEvents).pipe(Effect.forkChild);
+      const threadId = asThreadId("thread-codex-invalid-question");
+      const requestId = ApprovalRequestId.makeUnsafe("req-codex-invalid-question");
+      lifecycleManager.emit("event", {
+        id: asEventId("evt-codex-invalid-question"),
+        kind: "request",
+        provider: "codex",
+        threadId,
+        createdAt: new Date().toISOString(),
+        method: "item/tool/requestUserInput",
+        requestId,
+        payload: {
+          questions: [
+            { id: "duplicate", header: "One", question: "One?", options: [] },
+            { id: "duplicate", header: "Two", question: "Two?", options: [] },
+          ],
+        },
+      } satisfies ProviderEvent);
+
+      const event = yield* Fiber.join(eventFiber);
+      assert.equal(event._tag, "Some");
+      if (event._tag === "Some") {
+        assert.equal(event.value.type, "user-input.resolved");
+        if (event.value.type === "user-input.resolved") {
+          assert.deepEqual(event.value.payload, { settlement: { status: "unavailable" } });
+        }
+      }
+      yield* Effect.promise(() =>
+        vi.waitFor(() =>
+          assert.equal(lifecycleManager.respondToUserInputImpl.mock.calls.length, 1),
+        ),
+      );
+      assert.deepEqual(lifecycleManager.respondToUserInputImpl.mock.calls[0]?.[2], {});
+      assert.equal(lifecycleManager.interruptTurnImpl.mock.calls.length, 1);
+    }),
   );
 
   it.effect("maps Codex task and reasoning event chunks into canonical runtime events", () =>

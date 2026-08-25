@@ -2180,11 +2180,6 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      const response =
-        command.response ??
-        (command.answers === undefined
-          ? { status: "cancelled" as const }
-          : { status: "answered" as const, answers: command.answers });
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -2202,7 +2197,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(command.lifecycleGeneration !== undefined
             ? { lifecycleGeneration: command.lifecycleGeneration }
             : {}),
-          response,
+          response: command.response,
           createdAt: command.createdAt,
         },
       };

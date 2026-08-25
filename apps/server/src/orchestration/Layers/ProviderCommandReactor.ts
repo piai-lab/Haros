@@ -1095,6 +1095,48 @@ const make = Effect.gen(function* () {
     });
   });
 
+  const settleInterruptedUserInputs = Effect.fnUntraced(function* (input: {
+    readonly threadId: ThreadId;
+    readonly turnId: TurnId;
+    readonly createdAt: string;
+  }) {
+    const rows = yield* pendingInteractions.listByThreadId({ threadId: input.threadId });
+    yield* Effect.forEach(
+      rows.filter(
+        (row) =>
+          row.interactionKind === "userInput" &&
+          row.turnId === input.turnId &&
+          row.status !== "confirmed",
+      ),
+      (row) => {
+        const generation = row.lifecycleGeneration ?? "legacy";
+        const identity = `${input.threadId}:${generation}:${row.requestId}`;
+        return orchestrationEngine.dispatch({
+          type: "thread.activity.append",
+          commandId: CommandId.makeUnsafe(`server:user-input-aborted:${identity}`),
+          threadId: input.threadId,
+          activity: {
+            id: EventId.makeUnsafe(`server:user-input-aborted:${identity}`),
+            tone: "info",
+            kind: "user-input.resolved",
+            summary: "User input stopped",
+            payload: {
+              requestId: row.requestId,
+              ...(row.lifecycleGeneration !== null
+                ? { lifecycleGeneration: row.lifecycleGeneration }
+                : {}),
+              settlement: { status: "aborted" },
+            },
+            turnId: input.turnId,
+            createdAt: input.createdAt,
+          },
+          createdAt: input.createdAt,
+        });
+      },
+      { concurrency: 1, discard: true },
+    );
+  });
+
   const resolveThread = Effect.fnUntraced(function* (threadId: ThreadId) {
     return Option.getOrUndefined(yield* projectionSnapshotQuery.getThreadDetailById(threadId));
   });
@@ -3722,6 +3764,7 @@ const make = Effect.gen(function* () {
     if (!thread) {
       return;
     }
+    const expectedTurnId = input.turnId ?? thread.session?.activeTurnId ?? undefined;
 
     const reportInterruptFailure = (detail: string, settlementStatus?: "uncertain") =>
       appendProviderFailureActivity({
@@ -3736,6 +3779,13 @@ const make = Effect.gen(function* () {
 
     if (!providerThread || !providerThread.session || providerThread.session.status === "stopped") {
       yield* reportInterruptFailure("No active provider session is bound to this thread.");
+      if (expectedTurnId) {
+        yield* settleInterruptedUserInputs({
+          threadId: input.threadId,
+          turnId: expectedTurnId,
+          createdAt: input.createdAt,
+        });
+      }
       // Nothing is left that could ever emit a terminal event for this turn.
       return yield* settleInterruptedProviderTurn({
         threadId: input.threadId,
@@ -3747,7 +3797,13 @@ const make = Effect.gen(function* () {
     // exact generation-scoped provider turn and rejects a stale mismatch.
     const providerThreadId = resolveSubagentProviderThreadId(thread.id, providerThread.id);
     const liveTurnId = yield* resolveLiveProviderTurnId(input.threadId);
-    const turnId = liveTurnId ?? input.turnId ?? thread.session?.activeTurnId ?? undefined;
+    if (input.turnId !== undefined && liveTurnId !== undefined && input.turnId !== liveTurnId) {
+      yield* reportInterruptFailure(
+        "The requested turn is no longer the active provider turn; no interruption was sent.",
+      );
+      return;
+    }
+    const turnId = input.turnId ?? liveTurnId ?? thread.session?.activeTurnId ?? undefined;
     const result = yield* runBoundedProviderCall({
       label: "The provider interrupt",
       timeout: PROVIDER_COMMAND_INTERRUPT_TIMEOUT,
@@ -3765,6 +3821,13 @@ const make = Effect.gen(function* () {
       // interrupts keep the shared parent generation and still settle from the
       // provider terminal event.
       if (providerThreadId === undefined) {
+        if (turnId) {
+          yield* settleInterruptedUserInputs({
+            threadId: input.threadId,
+            turnId,
+            createdAt: input.createdAt,
+          });
+        }
         return yield* settleInterruptedProviderTurn({
           threadId: input.threadId,
           createdAt: input.createdAt,
@@ -3783,6 +3846,13 @@ const make = Effect.gen(function* () {
           ? `${result.detail} Stopping the provider session to settle the turn.`
           : `${result.outcome.detail}\nStopping the provider session to settle the turn.`;
       yield* reportInterruptFailure(detail, "uncertain");
+      if (turnId) {
+        yield* settleInterruptedUserInputs({
+          threadId: input.threadId,
+          turnId,
+          createdAt: input.createdAt,
+        });
+      }
       return yield* processThreadSessionStop({
         threadId: input.threadId,
         createdAt: input.createdAt,
@@ -3794,6 +3864,13 @@ const make = Effect.gen(function* () {
     // thread and settle locally, since the provider never accepted the request.
     if (result.outcome._tag === "rejected") {
       yield* reportInterruptFailure(result.outcome.detail);
+      if (turnId) {
+        yield* settleInterruptedUserInputs({
+          threadId: input.threadId,
+          turnId,
+          createdAt: input.createdAt,
+        });
+      }
       return yield* settleInterruptedProviderTurn({
         threadId: input.threadId,
         createdAt: input.createdAt,
@@ -4043,11 +4120,7 @@ const make = Effect.gen(function* () {
         ...(event.payload.lifecycleGeneration !== undefined
           ? { lifecycleGeneration: event.payload.lifecycleGeneration }
           : {}),
-        response:
-          event.payload.response ??
-          (event.payload.answers === undefined
-            ? { status: "cancelled" as const }
-            : { status: "answered" as const, answers: event.payload.answers }),
+        response: event.payload.response,
       })
       .pipe(
         Effect.asVoid,

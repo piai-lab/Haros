@@ -2,16 +2,70 @@
 // Purpose: Encode the product-owned structured answer envelope at legacy Provider boundaries.
 // Layer: Provider composition seam
 
-import type {
+import {
+  CanonicalUserInputRequest,
+  type UserInputQuestion,
   CanonicalUserInputAnswer,
   CanonicalUserInputAnswers,
   CanonicalUserInputResponse,
   ProviderUserInputAnswer,
   ProviderUserInputAnswers,
 } from "@omnimind/contracts";
+import { Schema } from "effect";
 
 function hasMeaningfulText(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+/**
+ * One Provider-owned seam upgrades native/legacy question arrays into the
+ * versioned Product request and runs the canonical bounds/identity decoder.
+ * Adapters must call this before publishing `user-input.requested`.
+ */
+export function canonicalUserInputRequestFromQuestions(
+  questions: ReadonlyArray<UserInputQuestion>,
+): CanonicalUserInputRequest {
+  const request = {
+    version: 1 as const,
+    questions: questions.map((question) => {
+      const shared = {
+        id: question.id,
+        header: question.header,
+        prompt: question.prompt ?? question.question,
+      };
+      if (
+        question.kind === "text" ||
+        (question.kind !== "choice" && question.options.length === 0)
+      ) {
+        return {
+          ...shared,
+          kind: "text" as const,
+          ...(question.placeholder === undefined ? {} : { placeholder: question.placeholder }),
+          ...(question.suggestion === undefined ? {} : { suggestion: question.suggestion }),
+        };
+      }
+      return {
+        ...shared,
+        kind: "choice" as const,
+        cardinality:
+          question.cardinality === "multiple" || question.multiSelect
+            ? ("multiple" as const)
+            : ("single" as const),
+        options: question.options.map((option) => ({
+          label: option.label,
+          ...(typeof option.description === "string" && option.description.trim().length > 0
+            ? { description: option.description }
+            : {}),
+          ...(option.preview === undefined ? {} : { preview: option.preview }),
+          ...(option.recommended === undefined ? {} : { recommended: option.recommended }),
+          ...(option.recommendationReason === undefined
+            ? {}
+            : { recommendationReason: option.recommendationReason }),
+        })),
+      };
+    }),
+  };
+  return Schema.decodeUnknownSync(CanonicalUserInputRequest)(request);
 }
 
 /**
@@ -47,23 +101,11 @@ export function encodeCanonicalUserInputAnswers(
   );
 }
 
-export function encodeCanonicalUserInputResponse(
-  input: CanonicalUserInputResponse | CanonicalUserInputAnswers,
-): {
+export function encodeCanonicalUserInputResponse(response: CanonicalUserInputResponse): {
   readonly answers: ProviderUserInputAnswers;
   readonly cancelled: boolean;
 } {
-  const response = normalizeCanonicalUserInputResponse(input);
   return response.status === "answered"
     ? { answers: encodeCanonicalUserInputAnswers(response.answers), cancelled: false }
     : { answers: {}, cancelled: true };
-}
-
-export function normalizeCanonicalUserInputResponse(
-  response: CanonicalUserInputResponse | CanonicalUserInputAnswers,
-): CanonicalUserInputResponse {
-  const status = (response as { readonly status?: unknown }).status;
-  return status === "answered" || status === "cancelled"
-    ? (response as CanonicalUserInputResponse)
-    : { status: "answered", answers: response as CanonicalUserInputAnswers };
 }
