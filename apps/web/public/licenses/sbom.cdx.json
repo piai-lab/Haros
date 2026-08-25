@@ -29,7 +29,7 @@
       },
       {
         "name": "omnimind:inventory-sha256",
-        "value": "a4b2e222d519da28f171ebe8327b8004cf4deecdd48144e10e4a98cc28dcc3f7"
+        "value": "a508f6a3f8ed2cc55bf982231fbe0eb7395f06ca1c0f0cb7283157199718319e"
       }
     ]
   },
@@ -1587,7 +1587,7 @@
       "hashes": [
         {
           "alg": "SHA-256",
-          "content": "533bad1676e05681e6227d051d64733bb6df098d0eb599231c3cc29d1e69b812"
+          "content": "71be1e19a69b68fc527d37762daaf40617f1f590d951514d3d87a8aae3f3606e"
         }
       ],
       "properties": [
