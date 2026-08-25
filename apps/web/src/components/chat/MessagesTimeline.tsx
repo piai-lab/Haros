@@ -181,7 +181,7 @@ const MESSAGE_SEND_ENTER_ANIMATION_MS = 180;
 
 function reasoningDisclosureDefaultOpen(entry: WorkLogEntry, turnIsLive: boolean): boolean {
   return (
-    !turnIsLive &&
+    turnIsLive &&
     entry.tone !== "error" &&
     entry.toolStatus !== "failed" &&
     entry.liveActivity?.state !== "failed"
@@ -1378,6 +1378,11 @@ export const MessagesTimeline = memo(function MessagesTimeline({
           if (groupedEntries.length === 0) {
             return null;
           }
+          const reasoningTurnIsLive =
+            (activeTurnInProgress || isWorking) &&
+            (activeTurnId
+              ? groupedEntries.some((workEntry) => workEntry.turnId === activeTurnId)
+              : groupId === lastLiveWorkGroupId);
           const renderEntryRow = (workEntry: WorkLogEntry) => (
             <TimelineWorkEntryRow
               key={`work-row:${workEntry.id}`}
@@ -1385,7 +1390,8 @@ export const MessagesTimeline = memo(function MessagesTimeline({
               chatMetaFontSizePx={appTypographyScale.chatMetaPx}
               textFontSizePx={appTypographyScale.activityPx}
               density={prefersCompactWorkEntryRow(workEntry) ? "compact" : "default"}
-              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(workEntry, isLiveGroup)}
+              reasoningDefaultOpen={reasoningDisclosureDefaultOpen(workEntry, reasoningTurnIsLive)}
+              reasoningIsLive={reasoningTurnIsLive}
               markdownCwd={markdownCwd}
               onImageExpand={onImageExpand}
               timestampFormat={timestampFormat}
@@ -1844,7 +1850,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
             // A leading work group can still belong to the active turn while the
             // assistant answer streams after it. Keep that turn lifecycle
             // separate from the tool-tail projection below: leading tools may
-            // collapse, while their reasoning disclosure remains initially shut.
+            // collapse, while public reasoning stays live in its bounded viewport.
             const reasoningTurnIsLive = row.assistantTurnInProgress === true;
             const renderInlineWorkRow = (workEntry: WorkLogEntry) => (
               <TimelineWorkEntryRow
@@ -1857,6 +1863,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                   workEntry,
                   reasoningTurnIsLive,
                 )}
+                reasoningIsLive={reasoningTurnIsLive}
                 fileDiffStatByPath={fileDiffStatByPath}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
@@ -1958,6 +1965,7 @@ export const MessagesTimeline = memo(function MessagesTimeline({
                 textFontSizePx={appTypographyScale.activityPx}
                 density={prefersCompactWorkEntryRow(item.entry) ? "compact" : "default"}
                 reasoningDefaultOpen={reasoningDisclosureDefaultOpen(item.entry, false)}
+                reasoningIsLive={false}
                 markdownCwd={markdownCwd}
                 onImageExpand={onImageExpand}
                 timestampFormat={timestampFormat}
