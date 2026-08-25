@@ -1167,42 +1167,53 @@ function normalizeCollabTaskOutput(value: string | null): string | null {
 function coalesceCanonicalUserInputEntries(
   entries: ReadonlyArray<DerivedWorkLogEntry>,
 ): DerivedWorkLogEntry[] {
-  const projected: DerivedWorkLogEntry[] = [];
-  const requestedIndexByCorrelation = new Map<string, number>();
+  const requestedByCorrelation = new Map<string, DerivedWorkLogEntry>();
+  const terminalByCorrelation = new Map<string, DerivedWorkLogEntry>();
 
   for (const entry of entries) {
     const correlationKey = entry.userInputCorrelationKey;
     if (entry.activityKind === "user-input.requested" && correlationKey) {
       // Duplicate requested facts remain visible instead of silently replacing an
       // earlier interaction. Only the first well-formed request can own a terminal.
-      if (!requestedIndexByCorrelation.has(correlationKey)) {
-        requestedIndexByCorrelation.set(correlationKey, projected.length);
+      if (!requestedByCorrelation.has(correlationKey)) {
+        requestedByCorrelation.set(correlationKey, entry);
       }
-      projected.push(entry);
+      continue;
+    }
+    if (
+      entry.activityKind === "user-input.resolved" &&
+      correlationKey &&
+      entry.userInputSettlementStatus &&
+      !terminalByCorrelation.has(correlationKey)
+    ) {
+      terminalByCorrelation.set(correlationKey, entry);
+    }
+  }
+
+  const projected: DerivedWorkLogEntry[] = [];
+  for (const entry of entries) {
+    const correlationKey = entry.userInputCorrelationKey;
+    const requested = correlationKey ? requestedByCorrelation.get(correlationKey) : undefined;
+    const terminal = correlationKey ? terminalByCorrelation.get(correlationKey) : undefined;
+
+    if (entry === requested && entry.userInputInteraction && terminal?.userInputSettlementStatus) {
+      projected.push({
+        ...entry,
+        // Runtime and orchestration activities have independent causal sequence domains,
+        // so a terminal may sort before its request. The request still owns the stable
+        // presentation position and identity regardless of fact arrival/order.
+        tone: terminal.tone,
+        userInputSettlementStatus: terminal.userInputSettlementStatus,
+        userInputInteraction:
+          terminal.userInputSettlementStatus === "answered"
+            ? attachUserInputAnswers(entry.userInputInteraction, terminal.userInputResolvedAnswers)
+            : entry.userInputInteraction,
+      });
       continue;
     }
 
-    if (entry.activityKind === "user-input.resolved" && correlationKey) {
-      const requestedIndex = requestedIndexByCorrelation.get(correlationKey);
-      const requested = requestedIndex === undefined ? undefined : projected[requestedIndex];
-      if (requested?.userInputInteraction && entry.userInputSettlementStatus) {
-        projected[requestedIndex!] = {
-          ...requested,
-          // Preserve the request row's id/order/position and canonical identity;
-          // only its presentation state changes when the terminal fact arrives.
-          tone: entry.tone,
-          userInputSettlementStatus: entry.userInputSettlementStatus,
-          userInputInteraction:
-            entry.userInputSettlementStatus === "answered"
-              ? attachUserInputAnswers(
-                  requested.userInputInteraction,
-                  entry.userInputResolvedAnswers,
-                )
-              : requested.userInputInteraction,
-        };
-        requestedIndexByCorrelation.delete(correlationKey);
-        continue;
-      }
+    if (entry === terminal && requested?.userInputInteraction) {
+      continue;
     }
 
     projected.push(entry);

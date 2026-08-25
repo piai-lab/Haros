@@ -324,6 +324,50 @@ describe("deriveWorkLogEntries", () => {
     },
   );
 
+  it("coalesces a terminal that sorts before its request across causal sequence domains", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "ask-cross-domain-requested",
+          kind: "user-input.requested",
+          summary: "User input requested",
+          tone: "info",
+          turnId: "turn-cross-domain",
+          sequence: 260,
+          createdAt: "2026-08-25T13:59:31.727Z",
+          payload: {
+            requestId: "ask-cross-domain",
+            lifecycleGeneration: "generation-cross-domain",
+            questions: [{ id: "q1", prompt: "Continue?", kind: "choice" }],
+          },
+        }),
+        makeActivity({
+          id: "ask-cross-domain-aborted",
+          kind: "user-input.resolved",
+          summary: "User input aborted",
+          tone: "error",
+          turnId: "turn-cross-domain",
+          sequence: 99,
+          createdAt: "2026-08-25T13:59:42.758Z",
+          payload: {
+            requestId: "ask-cross-domain",
+            lifecycleGeneration: "generation-cross-domain",
+            settlement: { status: "aborted" },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      id: "ask-cross-domain-requested",
+      activityKind: "user-input.requested",
+      userInputSettlementStatus: "aborted",
+      userInputInteraction: { requestId: "ask-cross-domain" },
+    });
+  });
+
   it("rebuilds the same interaction projection on replay without mutating persisted facts", () => {
     const activities = [
       makeActivity({
