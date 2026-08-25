@@ -169,7 +169,7 @@ function ComposerPendingUserInputCard({
             onClick={onCancel}
             className="mr-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/45 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
           >
-            {t("pendingInput.cancelAnswer")}
+            {t("common.cancel")}
           </button>
           {questionCount > 1 ? (
             <>

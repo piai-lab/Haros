@@ -793,7 +793,7 @@ fork placement、Host bridge、Pi barrier、same-name provenance与历史Tool ac
 - packaged Composer 对同一 canonical request/result 的真实回答证据；不得把已闭合的 MiMo/DeepSeek Provider-wire proof 扩写成两个 Provider 各自的 UI journey；
 - exact pushed SHA clean-clone DMG、SBOM/LICENSE、fork与Pi core patch进入shipped bytes的扫描；
 - fresh task-only `userData`、home与Provider private home下的single/multi/custom/Preview/direct-submit/Cancel；
-- Ask等待回答时以`取消回答`结束owning turn，answer claim后由Composer全局Stop中止运行；另需覆盖最后presenter消失、Server终止/reopen stale、同名Extension collision、headless no-tool与零残留进程；
+- Ask等待回答时以`取消`结束owning turn，answer claim后由Composer全局Stop中止运行；另需覆盖最后presenter消失、Server终止/reopen stale、同名Extension collision、headless no-tool与零残留进程；
 - Desktop/mobile几何、keyboard/VoiceOver/IME等最终运行态证据；
 - 正式Release/update authority（不由普通Gate B source integration自动获得）。
 

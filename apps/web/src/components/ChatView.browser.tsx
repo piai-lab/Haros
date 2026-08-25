@@ -9621,7 +9621,7 @@ describe("ChatView timeline estimator parity (full app)", () => {
       const cancelAnswer = await waitForElement(
         () =>
           Array.from(document.querySelectorAll<HTMLButtonElement>("button")).find(
-            (button) => button.textContent?.trim() === "Cancel answer",
+            (button) => button.textContent?.trim() === "Cancel",
           ) ?? null,
         "Unable to find the Ask cancel button.",
       );

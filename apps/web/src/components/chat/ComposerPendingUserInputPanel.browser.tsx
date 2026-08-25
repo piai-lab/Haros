@@ -202,7 +202,7 @@ describe("ComposerPendingUserInputPanel", () => {
     const onCancel = vi.fn();
     const screen = await render(<Harness onCancel={onCancel} />);
 
-    await page.getByRole("button", { name: "取消回答" }).click();
+    await page.getByRole("button", { name: "取消" }).click();
 
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(page.getByRole("button", { name: "停止生成" }).query()).toBeNull();
@@ -276,7 +276,7 @@ describe("ComposerPendingUserInputPanel", () => {
     const screen = await render(<Harness isResponding />);
 
     await expect.element(page.getByRole("checkbox", { name: /功能实现/ })).toBeDisabled();
-    await expect.element(page.getByRole("button", { name: "取消回答" })).toBeDisabled();
+    await expect.element(page.getByRole("button", { name: "取消" })).toBeDisabled();
     expect(page.getByRole("button", { name: "停止生成" }).query()).toBeNull();
     await screen.unmount();
   });
