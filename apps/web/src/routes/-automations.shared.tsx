@@ -100,7 +100,6 @@ import { CentralIcon } from "~/lib/central-icons";
 import { resolveRuntimeModelDescriptor } from "~/components/chat/runtimeModelCapabilities";
 import { resolveProviderDiscoveryCwd } from "~/lib/providerDiscovery";
 import { providerExecutionCapabilitiesQueryOptions } from "~/lib/providerDiscoveryReactQuery";
-import { findProviderStatus } from "~/lib/providerAvailability";
 import { cn } from "~/lib/utils";
 import type { AppLocale } from "~/locale";
 import { useI18n, type MessageKey } from "~/i18n";

@@ -238,7 +238,6 @@ export function snapshotFromClaudeContextUsage(
     positiveFiniteNumber(usage.maxTokens) ??
     positiveFiniteNumber(usage.rawMaxTokens);
   const usedTokens = Math.max(0, Math.round(usage.totalTokens));
-  const rawApiUsage = usage.apiUsage as Record<string, unknown> | undefined;
   return {
     usedTokens:
       effectiveMaxTokens !== undefined ? Math.min(usedTokens, effectiveMaxTokens) : usedTokens,

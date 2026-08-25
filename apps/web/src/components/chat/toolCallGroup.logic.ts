@@ -124,11 +124,7 @@ const CATEGORY_ORDER: ReadonlyArray<ToolCallSummaryCategory> = [
   "image_generation",
 ];
 
-function summaryPartLabel(
-  category: ToolCallSummaryCategory,
-  count: number,
-  isSolePart: boolean,
-): string {
+function summaryPartLabel(category: ToolCallSummaryCategory, count: number): string {
   switch (category) {
     case "command":
       return `Ran ${count} ${pluralize(count, "command")}`;
@@ -196,7 +192,7 @@ export function summarizeToolCallGroup(
     return {
       category,
       count,
-      label: summaryPartLabel(category, count, populated.length === 1),
+      label: summaryPartLabel(category, count),
     };
   });
 

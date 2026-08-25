@@ -17,8 +17,6 @@ import {
   type AuthSessionState,
   type AuthWebSocketTokenResult,
   type ExternalMcpCreateIntegrationInput,
-  type ExternalMcpCreateIntegrationResult,
-  type ExternalMcpIntegration,
   type ExternalMcpRefreshPairingInput,
   type ExternalMcpRevokeIntegrationInput,
   type ThreadId,

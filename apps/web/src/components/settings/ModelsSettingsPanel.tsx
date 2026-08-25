@@ -84,7 +84,6 @@ import {
   SettingsCard,
   SettingsEmptyState,
   SettingsListRow,
-  SettingsSection,
   SettingsSectionShell,
   SettingsSelectPopup,
 } from "./SettingsPanelPrimitives";

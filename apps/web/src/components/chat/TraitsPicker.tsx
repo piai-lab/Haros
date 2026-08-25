@@ -13,7 +13,6 @@ import {
 import { applyClaudePromptEffortPrefix } from "@omnimind/shared/model";
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDownIcon, FastModeIcon, FastModeOutlineIcon, SettingsIcon } from "~/lib/icons";
-import { cn } from "~/lib/utils";
 import { Button } from "../ui/button";
 import {
   Menu,

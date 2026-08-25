@@ -1447,7 +1447,7 @@ export function makeOmniMindModelServicesLive(options: OmniMindModelServicesLive
                 });
               },
             );
-          } catch (error) {
+          } catch {
             if (authenticationUpdated && previousService) {
               finishRequest(request, {
                 state: "auth_updated_sync_failed",
