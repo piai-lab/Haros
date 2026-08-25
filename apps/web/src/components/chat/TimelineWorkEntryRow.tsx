@@ -1121,21 +1121,16 @@ function UserInputInteractionRow(props: {
                     {index + 1}. {question.prompt}
                   </p>
                   {question.answer?.selectedOptionLabels.length ? (
-                    <div className="min-w-0 space-y-1">
-                      <p className="text-[0.92em] text-muted-foreground">
-                        {t("pendingInput.timeline.selected")}
-                      </p>
-                      <ul className="min-w-0 space-y-0.5 pl-4">
-                        {question.answer.selectedOptionLabels.map((label) => (
-                          <li
-                            key={`${question.id}:selected:${label}`}
-                            className="list-disc break-words whitespace-pre-wrap"
-                          >
-                            {label}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
+                    <ul className="min-w-0 space-y-0.5 pl-4">
+                      {question.answer.selectedOptionLabels.map((label) => (
+                        <li
+                          key={`${question.id}:selected:${label}`}
+                          className="list-disc break-words whitespace-pre-wrap"
+                        >
+                          {label}
+                        </li>
+                      ))}
+                    </ul>
                   ) : null}
                   {question.answer?.customText !== undefined ? (
                     <div className="min-w-0 space-y-1">

@@ -167,6 +167,8 @@ describe("canonical User Input Timeline projection", () => {
     await expect.poll(() => trigger?.getAttribute("aria-expanded")).toBe("true");
     expect(details?.closest("[aria-hidden='true']")).toBeNull();
     expect(host.textContent).toContain("选择实现方向");
+    expect(host.textContent).not.toContain("Selected");
+    expect(host.textContent).not.toContain("已选择");
     expect(host.textContent).toContain("A");
     expect(host.textContent).toContain("B");
     expect(host.textContent).toContain("自定义内容  ");
