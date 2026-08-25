@@ -1,12 +1,12 @@
 # `@omnimind/om-ask` 上游更新 Intake：exact-source、patch rebase 与发布门
 
-> 初版日期：2026-08-22
+> 初版日期：2026-08-22；Gate A 重审：2026-08-25
 >
-> 当前母体 baseline：[`@mrclrchtr/supi-ask-user@5.0.0`](https://www.npmjs.com/package/@mrclrchtr/supi-ask-user/v/5.0.0) / [`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)
+> 当前 Gate A 条件性 fork lineage：[`@mrclrchtr/supi-ask-user@5.0.0`](https://www.npmjs.com/package/@mrclrchtr/supi-ask-user/v/5.0.0) / [`mrclrchtr/supi@ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user`](https://github.com/mrclrchtr/supi/tree/ce8af5f57304ad114319aa75c00920f029ceb8e7/packages/supi-ask-user)。它不是 adopted dependency，也不是自动追更授权。
 >
-> 当前 OmniMind source 观察基线：`main@d5bd737d96008733d6ba854c6bbce2ad880f1bc1`
+> 当前 OmniMind source 观察基线：`main@071293d4bb519071cfb17758658cdc8ac784f7af`
 >
-> 当前状态：Intake 手册已建立；`@omnimind/om-ask` fork、产品接入与 packaged proof 尚未实施。
+> 当前状态：Gate A 已重审；没有候选获准原装采用。`@omnimind/om-ask` fork、产品接入与 packaged proof 尚未实施。
 >
 > 文档性质：package-specific update operating manual。它不重新定义 Ask User 的产品合同。
 
@@ -28,7 +28,7 @@
 product: OmniMind Ask User
 fork_package: "@omnimind/om-ask"
 runtime_tool: ask_user
-upstream:
+conditional_runtime_lineage:
   package: "@mrclrchtr/supi-ask-user@5.0.0"
   repository: https://github.com/mrclrchtr/supi.git
   commit: ce8af5f57304ad114319aa75c00920f029ceb8e7
@@ -38,11 +38,19 @@ upstream:
   npm_integrity: sha512-uBlvlXTvSrdvTvvdbpapwVwA4I3DMcIaHSGe18mtd4KdWAhd36yY1UwGvAbFXcS2NvJ18VIkaJpi112CSoabJQ==
   npm_shasum: cabb06df40ab95be1a67b4f3b32c83bc257ea38a
   tgz_sha256: d687d4d448cc115a67ceb473b8e9ceeb56dddb047901b1f2daa05d6ae0cb300e
-  evidence: source-matched
+  evidence: source-matched_gate_a_candidate_not_adopted
+  fork_shape: subtractive_not_narrow
+  direct_install: forbidden
 primary_donor:
   package: "@geoqiao/pi-ask@1.3.0"
   commit: 26496c809870e349429bc2cae72d61b46d0e2bc3
+  ancestry: eko24ive/pi-ask
   role: ux_and_regression_only
+bounded_donors:
+  lifecycle: "@pi9/ask@0.4.2"
+  compatibility: "pi-ask-user@0.14.0"
+  correctness_tests: "@qmahyar/pi-ask@1.4.0"
+  sentinel: "pi-tian-ask-user@1.0.0"
 patch_inventory:
   - P1_identity_and_product_profile
   - P2_canonical_contract_and_freedom_invariants
@@ -51,10 +59,10 @@ patch_inventory:
   - P5_lifecycle_and_same-turn_barrier
   - P6_truthful_result_and_context
   - P7_provenance_reload_and_collision
-status: fork_not_yet_implemented
+status: gate_a_complete_fork_not_yet_authorized_or_implemented
 ```
 
-当 fork 真正建立后，本 block 必须改为当前 adopted upstream base、fork commit、artifact hashes、Pi baseline 与证据等级；不能让最初研究版本永久冒充运行版本。
+当 Gate B 获批且 fork 真正建立后，本 block 才能改为 adopted upstream base、fork commit、artifact hashes、Pi baseline 与证据等级；不能把本轮条件性候选永久冒充运行版本。
 
 ### 0.3 每轮必须产出的结论
 
@@ -75,10 +83,10 @@ status: fork_not_yet_implemented
 
 ### 1.1 必须运行本文的变化
 
-- `@mrclrchtr/supi-ask-user` 新 npm version、tag、commit 或 release；
+- `@mrclrchtr/supi-ask-user` 新 npm version、tag、commit 或 release，包括未发布 main 上的 runtime/schema/controller 变化；
 - 上游 repository/package ownership、license、provenance 或发布 workflow 改变；
 - 维护者考虑换用 supi 的另一 branch/fork，或 `supi-core` 依赖/打包形状变化；
-- 已采用 donor `@geoqiao/pi-ask`、`@pi9/ask`、`pi-ask-user`、`pi-tian-ask-user` 出现值得吸收的 UX/lifecycle/test 机制；
+- 已采用或已固定的 donor `@geoqiao/pi-ask` / `eko24ive/pi-ask` ancestry、`@pi9/ask`、`pi-ask-user`、`@qmahyar/pi-ask`、`pi-tian-ask-user` 出现值得吸收的 UX/lifecycle/test 机制；
 - Pi Core 改变 Extension API、tool execution mode、batch scheduling、`ctx.ui`、RPC、sourceInfo、reload、Session replacement 或 context storage；
 - OmniMind canonical User Input contract、Workbench Question UI、Product State pending lifecycle 或 Agent composition 改变；
 - 安全事件、依赖漏洞、supply-chain 异常或作者测试重大删除；
@@ -692,7 +700,8 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 
 本手册建立时，以下仍是未来 Gate B 的真实开放项，不能被 intake 文档本身关闭：
 
-- `@omnimind/om-ask` fork repository/package placement；
+- 维护者是否确认 Gate B，以及 `@omnimind/om-ask` fork repository/package placement；
+- subtractive fork 后 retained runtime kernel 是否仍足以诚实地继承 supi lineage，还是已触发重新选型 stop-loss；
 - final canonical TypeScript field names 与 migration；
 - exact Pi `0.84.2` scheduler 已知为原顺序整批 sequential；待实施的是最窄 Ask-first + batch-terminate + answer-after-replan barrier seam；
 - Product State 对 restart stale 与 draft presentation 的最终形状；
@@ -713,13 +722,21 @@ manual: pi-ask-user-intake
 purpose: future_exact_upstream_update_and_patch_rebase
 product_truth: research/omnimind-ask-user-cognition.md
 general_gate_authority: PI-ECOSYSTEM-INTAKE.md
-current_upstream:
+conditional_runtime_lineage:
   package: "@mrclrchtr/supi-ask-user@5.0.0"
   commit: ce8af5f57304ad114319aa75c00920f029ceb8e7
-  evidence: source-matched
+  evidence: source-matched_gate_a_candidate_not_adopted
+  direct_install: forbidden
+  fork_shape: subtractive_not_narrow
 primary_donor:
   package: "@geoqiao/pi-ask@1.3.0"
   commit: 26496c809870e349429bc2cae72d61b46d0e2bc3
+  ancestry: eko24ive/pi-ask
+bounded_donors:
+  lifecycle: "@pi9/ask@0.4.2"
+  compatibility: "pi-ask-user@0.14.0"
+  correctness_tests: "@qmahyar/pi-ask@1.4.0"
+  sentinel: "pi-tian-ask-user@1.0.0"
 current_fork_status: not_implemented
 update_policy:
   mode: manual_exact-source
@@ -744,5 +761,7 @@ stop_loss:
   - new_patch_outside_P1_to_P7_without_maintainer_decision
   - silent_contract_or_ui_loss
   - unproven_side-effect_or_restart_safety
+  - retained_runtime_kernel_no_longer_maps_to_upstream_modules_and_tests
+  - repeated_conflict_in_the_same_contract_or_composition_seam
 rollback: one_fork_revision_plus_one_composition_factory
 ```
