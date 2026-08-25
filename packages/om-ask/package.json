@@ -1,0 +1,24 @@
+{
+  "name": "@omnimind/om-ask",
+  "version": "5.0.0-omnimind.feasibility.0",
+  "private": true,
+  "description": "Unregistered Host-neutral Ask User fork feasibility kernel for OmniMind.",
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/api.d.ts",
+      "default": "./dist/api.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
