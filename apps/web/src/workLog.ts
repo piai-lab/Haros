@@ -89,6 +89,7 @@ export interface WorkLogEntry {
     | "timed_out"
     | "unavailable"
     | "stale";
+  askUserProvenanceUnavailable?: boolean;
   failureReason?: ProviderTurnStartFailureReasonValue;
   // Provider-native event type carried through the activity payload (e.g.
   // "background_tasks_changed") so the timeline can pick a specific icon.
@@ -600,7 +601,14 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     payload.message.trim().length > 0
       ? payload.message.trim()
       : undefined;
-  if (runtimeWarningMessage) {
+  const askUserProvenanceUnavailable =
+    activity.kind === "runtime.warning" &&
+    asRecord(payload?.detail)?.capability === "ask-user" &&
+    asRecord(payload?.detail)?.availability === "unavailable";
+  if (askUserProvenanceUnavailable) {
+    entry.askUserProvenanceUnavailable = true;
+    delete entry.detail;
+  } else if (runtimeWarningMessage) {
     entry.detail = runtimeWarningMessage;
     entry.runtimeWarningMessage = runtimeWarningMessage;
   }

@@ -34,6 +34,28 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
+  it("keeps Ask provenance failures structured instead of leaking server copy", () => {
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "ask-collision",
+          kind: "runtime.warning",
+          tone: "info",
+          summary: "Runtime warning",
+          payload: {
+            message: "ask_user_provenance_unavailable",
+            detail: { capability: "ask-user", availability: "unavailable" },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry).toMatchObject({ askUserProvenanceUnavailable: true });
+    expect(entry?.detail).toBeUndefined();
+    expect(entry?.preview).toBeUndefined();
+  });
+
   it("keeps one thread-level partial attachment receipt with only valid safe failure items", () => {
     const entries = deriveWorkLogEntries(
       [
