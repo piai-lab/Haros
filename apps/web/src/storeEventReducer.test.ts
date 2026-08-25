@@ -1857,7 +1857,7 @@ describe("store event reducer", () => {
           threadId: ThreadId.makeUnsafe("thread-1"),
           requestId: ApprovalRequestId.makeUnsafe("request-1"),
           answers: {
-            q1: "yes",
+            q1: { selectedOptionLabels: ["yes"] },
           },
           lifecycleGeneration: "generation-1",
           createdAt: "2026-02-27T00:01:00.000Z",
@@ -1979,7 +1979,7 @@ describe("store event reducer", () => {
         {
           threadId: ThreadId.makeUnsafe("thread-1"),
           requestId,
-          answers: { q1: "yes" },
+          answers: { q1: { selectedOptionLabels: ["yes"] } },
           lifecycleGeneration,
           createdAt: "2026-07-14T12:31:00.000Z",
         },

@@ -70,6 +70,7 @@ import {
   trimOrNull,
 } from "@omnimind/shared/model";
 import { buildClaudeSubagentPrompt } from "@omnimind/shared/agentMentions";
+import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
 import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
 import {
   Cause,
@@ -6028,7 +6029,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
         }
 
         const submittedResult: PendingUserInputResult = {
-          answers,
+          answers: encodeCanonicalUserInputAnswers(answers),
           cancelled: false,
         };
         const settledResult = yield* settlePendingUserInput(

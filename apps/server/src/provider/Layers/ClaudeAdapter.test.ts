@@ -9361,7 +9361,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       yield* adapter.respondToUserInput(
         session.threadId,
         ApprovalRequestId.makeUnsafe(requestId!),
-        { Framework: "React" },
+        { Framework: { selectedOptionLabels: ["React"] } },
       );
 
       // The adapter should emit a user-input.resolved event.
@@ -9472,7 +9472,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       yield* adapter.respondToUserInput(
         session.threadId,
         ApprovalRequestId.makeUnsafe(requestId!),
-        { Features: ["CLI scaffolding", "Type checking"] },
+        { Features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] } },
       );
 
       yield* Stream.runHead(adapter.streamEvents);
@@ -9544,7 +9544,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       yield* adapter.respondToUserInput(
         session.threadId,
         ApprovalRequestId.makeUnsafe(requestId!),
-        { "Deploy to which env?": "Staging" },
+        { "Deploy to which env?": { selectedOptionLabels: ["Staging"] } },
       );
 
       // Drain the resolved event.
@@ -9732,7 +9732,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const lateResponse = yield* Effect.exit(
         adapter.respondToUserInput(session.threadId, requestId, {
-          Continue: "Yes",
+          Continue: { selectedOptionLabels: ["Yes"] },
         }),
       );
       assert.equal(Exit.isFailure(lateResponse), true);
@@ -9833,7 +9833,7 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
         yield* adapter.respondToUserInput(
           session.threadId,
           ApprovalRequestId.makeUnsafe(requestedEvent.value.requestId!),
-          { Environment: "Staging" },
+          { Environment: { selectedOptionLabels: ["Staging"] } },
         );
         const resolvedEvent = yield* Stream.runHead(adapter.streamEvents);
         assert.equal(resolvedEvent._tag, "Some");
@@ -9897,8 +9897,16 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
 
       const responses = yield* Effect.all(
         [
-          Effect.exit(adapter.respondToUserInput(session.threadId, requestId, { Mode: "Safe" })),
-          Effect.exit(adapter.respondToUserInput(session.threadId, requestId, { Mode: "Fast" })),
+          Effect.exit(
+            adapter.respondToUserInput(session.threadId, requestId, {
+              Mode: { selectedOptionLabels: ["Safe"] },
+            }),
+          ),
+          Effect.exit(
+            adapter.respondToUserInput(session.threadId, requestId, {
+              Mode: { selectedOptionLabels: ["Fast"] },
+            }),
+          ),
         ],
         { concurrency: "unbounded" },
       );

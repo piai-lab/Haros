@@ -77,6 +77,9 @@ export interface ChoiceQuestionResponse {
   answer: {
     kind: "choice";
     answered: boolean;
+    selectedValues: string[];
+    customText?: string;
+    note?: string;
     options: Array<{
       value: string;
       label: string;

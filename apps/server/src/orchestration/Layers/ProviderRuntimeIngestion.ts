@@ -16,7 +16,6 @@ import {
   type OrchestrationThreadShell,
   type ProviderKind,
   type ProviderRuntimeEvent,
-  type RuntimeMode,
 } from "@omnimind/contracts";
 import { Cache, Cause, Deferred, Duration, Effect, Layer, Option, Ref, Stream } from "effect";
 import * as Semaphore from "effect/Semaphore";
@@ -275,34 +274,6 @@ function toTurnId(value: TurnId | string | undefined): TurnId | undefined {
 
 function sameId(left: string | null | undefined, right: string | null | undefined): boolean {
   return typeof left === "string" && typeof right === "string" && left === right;
-}
-
-function inferRuntimeModeFromUserInputAnswers(
-  answers: Record<string, unknown> | undefined,
-): RuntimeMode | null {
-  const sandboxMode = typeof answers?.sandbox_mode === "string" ? answers.sandbox_mode : null;
-  const approvalPolicy =
-    typeof answers?.approval_policy === "string" ? answers.approval_policy : null;
-
-  if (sandboxMode === "danger-full-access") {
-    return approvalPolicy === null || approvalPolicy === "never"
-      ? "full-access"
-      : "approval-required";
-  }
-  if (sandboxMode === "read-only" || sandboxMode === "workspace-write") {
-    return "approval-required";
-  }
-  if (approvalPolicy === "never") {
-    return "full-access";
-  }
-  if (
-    approvalPolicy === "untrusted" ||
-    approvalPolicy === "on-failure" ||
-    approvalPolicy === "on-request"
-  ) {
-    return "approval-required";
-  }
-  return null;
 }
 
 export function appendCappedBufferedText(existing: string, delta: string, limit: number): string {
@@ -2492,19 +2463,6 @@ const make = Effect.gen(function* () {
               }
             }
           }
-        }
-      }
-
-      if (event.type === "user-input.resolved") {
-        const inferredRuntimeMode = inferRuntimeModeFromUserInputAnswers(event.payload.answers);
-        if (inferredRuntimeMode && inferredRuntimeMode !== thread.runtimeMode) {
-          yield* orchestrationEngine.dispatch({
-            type: "thread.runtime-mode.set",
-            commandId: providerCommandId(event, "thread-runtime-mode-set", thread.id),
-            threadId: thread.id,
-            runtimeMode: inferredRuntimeMode,
-            createdAt: now,
-          });
         }
       }
 

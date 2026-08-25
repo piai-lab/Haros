@@ -22,6 +22,8 @@ interface ComposerChoiceRowProps {
   selected?: boolean;
   tone?: ComposerChoiceTone;
   disabled?: boolean;
+  /** Adds native selection semantics for Ask rows; approval actions remain ordinary buttons. */
+  selectionRole?: "radio" | "checkbox";
   /** Trailing affordance, e.g. a check icon on the selected option. */
   trailing?: ReactNode;
   onSelect: () => void;
@@ -50,6 +52,7 @@ export function ComposerChoiceRow({
   selected: selectedProp,
   tone: toneProp,
   disabled: disabledProp,
+  selectionRole,
   trailing,
   onSelect,
 }: ComposerChoiceRowProps) {
@@ -59,10 +62,12 @@ export function ComposerChoiceRow({
   return (
     <button
       type="button"
+      role={selectionRole}
+      aria-checked={selectionRole ? selected : undefined}
       disabled={disabled}
       onClick={onSelect}
       className={cn(
-        "group flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-150",
+        "group flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-text-foreground-tertiary)]",
         selected ? "bg-[var(--color-background-button-secondary)]" : ROW_TONE_CLASS_NAME[tone],
         disabled && "cursor-not-allowed opacity-50",
       )}

@@ -2,275 +2,161 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPendingUserInputAnswers,
-  countAnsweredPendingUserInputQuestions,
   derivePendingUserInputProgress,
-  findFirstUnansweredPendingUserInputQuestionIndex,
-  hasCompletePendingUserInputAnswers,
   resolvePendingUserInputAnswer,
-  setPendingUserInputCustomAnswer,
+  setPendingUserInputCustomText,
+  setPendingUserInputNote,
+  togglePendingUserInputCustomSelection,
   togglePendingUserInputOptionSelection,
 } from "./pendingUserInput";
 
-describe("resolvePendingUserInputAnswer", () => {
-  it("prefers a custom answer over a selected option", () => {
+const single = {
+  id: "direction",
+  header: "Direction",
+  question: "Which direction?",
+  options: [
+    { label: "Preserve", description: "Keep the current shape" },
+    { label: "Rebuild", description: "Change the shape" },
+  ],
+} as const;
+
+const multiple = {
+  id: "delivery",
+  header: "Delivery",
+  question: "What should ship?",
+  multiSelect: true,
+  options: [
+    { label: "Implementation", description: "Production code" },
+    { label: "Tests", description: "Regression tests" },
+  ],
+} as const;
+
+const freeText = {
+  id: "constraint",
+  header: "Constraint",
+  question: "Anything else?",
+  options: [],
+} as const;
+
+describe("canonical user-input answer semantics", () => {
+  it("keeps selected labels, custom text, and note structurally independent", () => {
+    const draft = {
+      selectedOptionLabels: ["Implementation", "Tests"],
+      customSelected: true,
+      customText: "Keep author tests.  ",
+      note: "Protect lifecycle semantics.  ",
+    };
+    expect(resolvePendingUserInputAnswer(multiple, draft)).toEqual({
+      selectedOptionLabels: ["Implementation", "Tests"],
+      customText: "Keep author tests.  ",
+      note: "Protect lifecycle semantics.  ",
+    });
+  });
+
+  it("lets a single custom answer replace the preset and its note", () => {
+    const withPreset = setPendingUserInputNote(
+      single,
+      { selectedOptionLabels: ["Preserve"] },
+      "Only for the current release. ",
+    );
+    const customSelected = togglePendingUserInputCustomSelection(single, withPreset);
+    expect(customSelected).toEqual({ customSelected: true, customText: "" });
     expect(
       resolvePendingUserInputAnswer(
-        {
-          id: "compat",
-          header: "Compat",
-          question: "How strict should compatibility be?",
-          options: [],
-        },
-        {
-          selectedOptionLabels: ["Keep current envelope"],
-          customAnswer: "Keep the existing envelope for one release",
-        },
+        single,
+        setPendingUserInputCustomText(single, customSelected, "A third direction.  "),
       ),
-    ).toBe("Keep the existing envelope for one release");
+    ).toEqual({ selectedOptionLabels: [], customText: "A third direction.  " });
   });
 
-  it("falls back to the selected option", () => {
-    expect(
-      resolvePendingUserInputAnswer(
-        {
-          id: "scope",
-          header: "Scope",
-          question: "What should the plan target first?",
-          options: [],
-        },
-        {
-          selectedOptionLabels: ["Scaffold only"],
-        },
-      ),
-    ).toBe("Scaffold only");
+  it("clears a single-choice note when the preset changes", () => {
+    const next = togglePendingUserInputOptionSelection(
+      single,
+      { selectedOptionLabels: ["Preserve"], note: "About Preserve" },
+      "Rebuild",
+    );
+    expect(next).toEqual({ selectedOptionLabels: ["Rebuild"] });
   });
 
-  it("clears the preset selection when a custom answer is entered", () => {
-    expect(
-      setPendingUserInputCustomAnswer(
-        {
-          selectedOptionLabels: ["Preserve existing tags"],
-        },
-        "doesn't matter",
-      ),
-    ).toEqual({
-      customAnswer: "doesn't matter",
+  it("clears a multiple-choice note only after the last preset is removed", () => {
+    const oneLeft = togglePendingUserInputOptionSelection(
+      multiple,
+      { selectedOptionLabels: ["Implementation", "Tests"], note: "Shared note" },
+      "Implementation",
+    );
+    expect(oneLeft).toEqual({ selectedOptionLabels: ["Tests"], note: "Shared note" });
+    expect(togglePendingUserInputOptionSelection(multiple, oneLeft, "Tests")).toEqual({});
+  });
+
+  it("does not let preset toggles erase a multiple-choice custom answer", () => {
+    const next = togglePendingUserInputOptionSelection(
+      multiple,
+      {
+        selectedOptionLabels: ["Implementation"],
+        customSelected: true,
+        customText: "Documentation too. ",
+      },
+      "Tests",
+    );
+    expect(next).toEqual({
+      selectedOptionLabels: ["Implementation", "Tests"],
+      customSelected: true,
+      customText: "Documentation too. ",
     });
   });
 
-  it("returns all selected options for multi-select questions", () => {
-    expect(
-      resolvePendingUserInputAnswer(
-        {
-          id: "targets",
-          header: "Targets",
-          question: "Which outputs should we ship?",
-          multiSelect: true,
-          options: [],
-        },
-        {
-          selectedOptionLabels: ["CLI", "Desktop"],
-        },
-      ),
-    ).toEqual(["CLI", "Desktop"]);
+  it("uses trim only as an emptiness predicate and preserves raw free text", () => {
+    expect(resolvePendingUserInputAnswer(freeText, { customText: "  \n" })).toBeNull();
+    expect(resolvePendingUserInputAnswer(freeText, { customText: "Line one\nLine two  " })).toEqual(
+      {
+        selectedOptionLabels: [],
+        customText: "Line one\nLine two  ",
+      },
+    );
   });
-});
 
-describe("togglePendingUserInputOptionSelection", () => {
-  it("toggles options for multi-select questions", () => {
-    const question = {
-      id: "targets",
-      header: "Targets",
-      question: "Which outputs should we ship?",
-      multiSelect: true,
-      options: [],
-    } as const;
-
+  it("builds a lossless structured result for every question", () => {
     expect(
-      togglePendingUserInputOptionSelection(question, { selectedOptionLabels: ["CLI"] }, "Desktop"),
-    ).toEqual({
-      customAnswer: "",
-      selectedOptionLabels: ["CLI", "Desktop"],
-    });
-
-    expect(
-      togglePendingUserInputOptionSelection(
-        question,
-        { selectedOptionLabels: ["CLI", "Desktop"] },
-        "CLI",
-      ),
-    ).toEqual({
-      customAnswer: "",
-      selectedOptionLabels: ["Desktop"],
-    });
-  });
-});
-
-describe("buildPendingUserInputAnswers", () => {
-  it("returns a canonical answer map for complete prompts", () => {
-    expect(
-      buildPendingUserInputAnswers(
-        [
-          {
-            id: "scope",
-            header: "Scope",
-            question: "What should the plan target first?",
-            options: [
-              {
-                label: "Orchestration-first",
-                description: "Focus on orchestration first",
-              },
-            ],
-          },
-          {
-            id: "compat",
-            header: "Compat",
-            question: "How strict should compatibility be?",
-            options: [
-              {
-                label: "Keep current envelope",
-                description: "Preserve current wire format",
-              },
-            ],
-          },
-        ],
-        {
-          scope: {
-            selectedOptionLabels: ["Orchestration-first"],
-          },
-          compat: {
-            customAnswer: "Keep the current envelope for one release window",
-          },
+      buildPendingUserInputAnswers([single, multiple, freeText], {
+        direction: { selectedOptionLabels: ["Preserve"], note: "No second UI.  " },
+        delivery: {
+          selectedOptionLabels: ["Implementation", "Tests"],
+          customSelected: true,
+          customText: "Keep author tests.  ",
+          note: "Protect lifecycle.  ",
         },
-      ),
+        constraint: { customText: "No product caps.\nKeep raw text. " },
+      }),
     ).toEqual({
-      scope: "Orchestration-first",
-      compat: "Keep the current envelope for one release window",
+      direction: {
+        selectedOptionLabels: ["Preserve"],
+        note: "No second UI.  ",
+      },
+      delivery: {
+        selectedOptionLabels: ["Implementation", "Tests"],
+        customText: "Keep author tests.  ",
+        note: "Protect lifecycle.  ",
+      },
+      constraint: {
+        selectedOptionLabels: [],
+        customText: "No product caps.\nKeep raw text. ",
+      },
     });
   });
 
-  it("returns null when any question is unanswered", () => {
-    expect(
-      buildPendingUserInputAnswers(
-        [
-          {
-            id: "scope",
-            header: "Scope",
-            question: "What should the plan target first?",
-            options: [
-              {
-                label: "Orchestration-first",
-                description: "Focus on orchestration first",
-              },
-            ],
-          },
-        ],
-        {},
-      ),
-    ).toBeNull();
-  });
-});
-
-describe("hasCompletePendingUserInputAnswers", () => {
-  it("accepts non-empty string and array answers", () => {
-    expect(
-      hasCompletePendingUserInputAnswers({
-        language: "TypeScript",
-        features: ["Auth", "Testing"],
-      }),
-    ).toBe(true);
-  });
-
-  it("rejects null and empty answers before dispatch", () => {
-    expect(
-      hasCompletePendingUserInputAnswers({
-        language: null,
-        features: [],
-      }),
-    ).toBe(false);
-  });
-});
-
-describe("pending user input question progress", () => {
-  const questions = [
-    {
-      id: "scope",
-      header: "Scope",
-      question: "What should the plan target first?",
-      options: [
-        {
-          label: "Orchestration-first",
-          description: "Focus on orchestration first",
-        },
-      ],
-    },
-    {
-      id: "compat",
-      header: "Compat",
-      question: "How strict should compatibility be?",
-      options: [
-        {
-          label: "Keep current envelope",
-          description: "Preserve current wire format",
-        },
-      ],
-    },
-  ] as const;
-
-  it("counts only answered questions", () => {
-    expect(
-      countAnsweredPendingUserInputQuestions(questions, {
-        scope: {
-          selectedOptionLabels: ["Orchestration-first"],
-        },
-      }),
-    ).toBe(1);
-  });
-
-  it("finds the first unanswered question", () => {
-    expect(
-      findFirstUnansweredPendingUserInputQuestionIndex(questions, {
-        scope: {
-          selectedOptionLabels: ["Orchestration-first"],
-        },
-      }),
-    ).toBe(1);
-  });
-
-  it("returns the last question index when all answers are complete", () => {
-    expect(
-      findFirstUnansweredPendingUserInputQuestionIndex(questions, {
-        scope: {
-          selectedOptionLabels: ["Orchestration-first"],
-        },
-        compat: {
-          customAnswer: "Keep it for one release window",
-        },
-      }),
-    ).toBe(1);
-  });
-
-  it("derives the active question and advancement state", () => {
+  it("derives explicit advancement without auto-submit semantics", () => {
     expect(
       derivePendingUserInputProgress(
-        questions,
-        {
-          scope: {
-            selectedOptionLabels: ["Orchestration-first"],
-          },
-        },
+        [single, freeText],
+        { direction: { selectedOptionLabels: ["Preserve"] } },
         0,
       ),
     ).toMatchObject({
       questionIndex: 0,
-      activeQuestion: questions[0],
-      selectedOptionLabels: ["Orchestration-first"],
-      customAnswer: "",
-      resolvedAnswer: "Orchestration-first",
-      answeredQuestionCount: 1,
+      canAdvance: true,
       isLastQuestion: false,
       isComplete: false,
-      canAdvance: true,
+      customSelected: false,
     });
   });
 });

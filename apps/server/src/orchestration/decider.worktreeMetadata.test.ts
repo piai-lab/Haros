@@ -473,7 +473,7 @@ describe("decider worktree metadata", () => {
 });
 
 describe("decider user input answers", () => {
-  it("omits null answers before resolving provider user input", async () => {
+  it("preserves raw custom text and notes in the canonical envelope", async () => {
     const now = new Date().toISOString();
     const readModel = await createWorktreeThreadReadModel(now);
 
@@ -485,8 +485,8 @@ describe("decider user input answers", () => {
           threadId: THREAD_ID,
           requestId: ApprovalRequestId.makeUnsafe("request-1"),
           answers: {
-            Language: null,
-            Runtime: "Bun",
+            Language: { selectedOptionLabels: [], customText: "TypeScript  " },
+            Runtime: { selectedOptionLabels: ["Bun"], note: "Stable release.  " },
           },
           createdAt: now,
         },
@@ -500,11 +500,12 @@ describe("decider user input answers", () => {
       return;
     }
     expect(event.payload.answers).toEqual({
-      Runtime: "Bun",
+      Language: { selectedOptionLabels: [], customText: "TypeScript  " },
+      Runtime: { selectedOptionLabels: ["Bun"], note: "Stable release.  " },
     });
   });
 
-  it("accepts concrete string and array answers", async () => {
+  it("accepts independent preset and custom answers", async () => {
     const now = new Date().toISOString();
     const readModel = await createWorktreeThreadReadModel(now);
 
@@ -516,8 +517,11 @@ describe("decider user input answers", () => {
           threadId: THREAD_ID,
           requestId: ApprovalRequestId.makeUnsafe("request-1"),
           answers: {
-            Language: "TypeScript",
-            Frontend: ["React", "Astro"],
+            Language: { selectedOptionLabels: [], customText: "TypeScript" },
+            Frontend: {
+              selectedOptionLabels: ["React", "Astro"],
+              customText: "Solid",
+            },
           },
           createdAt: now,
         },
@@ -531,8 +535,11 @@ describe("decider user input answers", () => {
       return;
     }
     expect(event.payload.answers).toEqual({
-      Language: "TypeScript",
-      Frontend: ["React", "Astro"],
+      Language: { selectedOptionLabels: [], customText: "TypeScript" },
+      Frontend: {
+        selectedOptionLabels: ["React", "Astro"],
+        customText: "Solid",
+      },
     });
   });
 });

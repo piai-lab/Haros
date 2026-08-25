@@ -56,6 +56,7 @@ import {
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
+import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
 import {
   ProviderAdapterProcessError,
   ProviderAdapterRequestError,
@@ -1473,7 +1474,7 @@ export function makeCursorAdapter(
             detail: `Unknown pending user-input request: ${requestId}`,
           });
         }
-        yield* Deferred.succeed(pending.answers, answers);
+        yield* Deferred.succeed(pending.answers, encodeCanonicalUserInputAnswers(answers));
       });
 
     const readThread: CursorAdapterShape["readThread"] = (threadId) =>

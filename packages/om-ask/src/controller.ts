@@ -21,6 +21,9 @@ type OptionState = {
 type ChoiceState = {
   kind: "choice";
   options: OptionState[];
+  customText?: string;
+  customSelected?: boolean;
+  note?: string;
   questionComment?: string;
   markedUnanswered?: boolean;
 };
@@ -33,6 +36,10 @@ type TextState = {
 };
 
 type QuestionState = ChoiceState | TextState;
+
+function hasContent(value: string | undefined): value is string {
+  return typeof value === "string" && /\S/u.test(value);
+}
 
 export class AskUserController {
   private readonly states: QuestionState[];
@@ -133,9 +140,13 @@ export class AskUserController {
     const state = this.stateFor(question.id);
     if (state.kind !== "choice" || !state.options[optionIndex]) return;
 
+    const previousValue = state.options.find((option) => option.selected)?.value;
     for (const option of state.options) {
       option.selected = option === state.options[optionIndex];
     }
+    if (previousValue !== state.options[optionIndex]?.value) delete state.note;
+    delete state.customSelected;
+    delete state.customText;
     state.markedUnanswered = false;
   }
 
@@ -151,7 +162,43 @@ export class AskUserController {
     if (!option) return;
 
     option.selected = !option.selected;
+    if (!state.options.some((candidate) => candidate.selected)) delete state.note;
     state.markedUnanswered = false;
+  }
+
+  setChoiceCustomText(question: NormalizedChoiceQuestion, text: string, selected = true): void {
+    if (this.terminal) return;
+    const state = this.stateFor(question.id);
+    if (state.kind !== "choice") return;
+    state.customSelected = selected;
+    if (selected) state.customText = text;
+    else delete state.customText;
+    if (!question.multi && selected) {
+      for (const option of state.options) option.selected = false;
+      delete state.note;
+    }
+    if (selected && hasContent(text)) state.markedUnanswered = false;
+  }
+
+  getChoiceCustomText(questionId: string): string | undefined {
+    const state = this.stateFor(questionId);
+    return state.kind === "choice" && state.customSelected ? state.customText : undefined;
+  }
+
+  setChoiceNote(questionId: string, text: string): void {
+    if (this.terminal) return;
+    const state = this.stateFor(questionId);
+    if (state.kind !== "choice") return;
+    if (!state.options.some((option) => option.selected) || !hasContent(text)) {
+      delete state.note;
+      return;
+    }
+    state.note = text;
+  }
+
+  getChoiceNote(questionId: string): string | undefined {
+    const state = this.stateFor(questionId);
+    return state.kind === "choice" ? state.note : undefined;
   }
 
   setTextAnswer(questionId: string, value: string): void {
@@ -159,7 +206,7 @@ export class AskUserController {
     const state = this.stateFor(questionId);
     if (state.kind !== "text") return;
     state.value = value;
-    if (state.value.length > 0) state.markedUnanswered = false;
+    if (hasContent(state.value)) state.markedUnanswered = false;
   }
 
   getTextAnswer(questionId: string): string {
@@ -172,6 +219,9 @@ export class AskUserController {
     const state = this.states[this.index]!;
     if (state.kind === "choice") {
       for (const option of state.options) option.selected = false;
+      delete state.customSelected;
+      delete state.customText;
+      delete state.note;
     } else {
       state.value = "";
     }
@@ -246,12 +296,21 @@ export class AskUserController {
     const touchedOptions = state.options.filter(
       (option) => option.selected || option.comment !== undefined,
     );
+    const selectedValues = state.options
+      .filter((option) => option.selected)
+      .map((option) => option.value);
+    const customText =
+      state.customSelected && hasContent(state.customText) ? state.customText : undefined;
+    const note = selectedValues.length > 0 && hasContent(state.note) ? state.note : undefined;
     return {
       questionId: question.id,
       ...(state.questionComment === undefined ? {} : { questionComment: state.questionComment }),
       answer: {
         kind: "choice",
-        answered: touchedOptions.some((option) => option.selected),
+        answered: selectedValues.length > 0 || customText !== undefined,
+        selectedValues,
+        ...(customText === undefined ? {} : { customText }),
+        ...(note === undefined ? {} : { note }),
         options: touchedOptions.map((option) =>
           option.comment === undefined
             ? { value: option.value, label: option.label, selected: option.selected }
@@ -270,7 +329,7 @@ export class AskUserController {
     question: NormalizedTextQuestion,
     state: TextState,
   ): TextQuestionResponse {
-    const answered = state.value.length > 0;
+    const answered = hasContent(state.value);
     return {
       questionId: question.id,
       ...(state.questionComment === undefined ? {} : { questionComment: state.questionComment }),

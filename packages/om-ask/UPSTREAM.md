@@ -29,6 +29,14 @@ defect by retaining the source repository's exact MIT text.
 - Tests marked `upstream-adapted` preserve the corresponding author-test
   behavior while explicitly reversing preselection, trimming, and hard caps.
 
+The subsequent OmniMind contract slice keeps the same upstream controller
+lineage while making choice results explicit: `selectedValues`, `customText`,
+and `note` are independent fields. Single-choice custom input replaces presets;
+multi-choice custom input coexists with presets; notes remain attached only to
+selected presets. Empty checks may inspect whitespace, but submitted text is
+never rebuilt from trimmed data. These are concentrated product deltas, not a
+second questionnaire state machine.
+
 ## Deliberately deleted
 
 The upstream Extension entry point, Tool registration/schema/guidance,
@@ -59,4 +67,5 @@ this explicit disposition:
 
 The fork's executable suite is intentionally smaller than the upstream suite:
 it protects retained runtime/domain behavior and the deletion boundary, not a
-second presentation system.
+second presentation system. The feasibility baseline was 61 fork tests; the
+canonical custom/note delta adds three focused controller regressions, for 64.

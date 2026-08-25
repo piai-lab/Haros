@@ -10,6 +10,7 @@ import {
 } from "./baseSchemas";
 import {
   ChatAttachment,
+  CanonicalUserInputAnswers,
   ModelSelection,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
@@ -21,7 +22,6 @@ import {
   ProviderReviewTarget,
   ProviderSandboxMode,
   ProviderStartOptions,
-  ProviderUserInputAnswers,
   RuntimeMode,
 } from "./orchestration";
 import { ProviderMentionReference, ProviderSkillReference } from "./providerDiscovery";
@@ -172,7 +172,7 @@ export const ProviderRespondToUserInputInput = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  answers: ProviderUserInputAnswers,
+  answers: CanonicalUserInputAnswers,
 });
 export type ProviderRespondToUserInputInput = typeof ProviderRespondToUserInputInput.Type;
 

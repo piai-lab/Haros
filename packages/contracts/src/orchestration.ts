@@ -268,6 +268,23 @@ export const ProviderUserInputAnswer = Schema.NullOr(
 export type ProviderUserInputAnswer = typeof ProviderUserInputAnswer.Type;
 export const ProviderUserInputAnswers = Schema.Record(Schema.String, ProviderUserInputAnswer);
 export type ProviderUserInputAnswers = typeof ProviderUserInputAnswers.Type;
+/**
+ * Product-owned answer envelope for every user-input projection.
+ *
+ * Provider-native protocols may still encode answers as a scalar or string array,
+ * but the Product command/result boundary keeps preset selections, the user's own
+ * answer, and an annotation about selected presets as three independent facts.
+ * String fields intentionally use the raw Schema.String contract: consumers may
+ * trim only to decide whether a field is empty and must preserve submitted bytes.
+ */
+export const CanonicalUserInputAnswer = Schema.Struct({
+  selectedOptionLabels: Schema.Array(Schema.String),
+  customText: Schema.optional(Schema.String),
+  note: Schema.optional(Schema.String),
+});
+export type CanonicalUserInputAnswer = typeof CanonicalUserInputAnswer.Type;
+export const CanonicalUserInputAnswers = Schema.Record(Schema.String, CanonicalUserInputAnswer);
+export type CanonicalUserInputAnswers = typeof CanonicalUserInputAnswers.Type;
 export const ThreadHandoffBootstrapStatus = Schema.Literals(["pending", "completed"]);
 export type ThreadHandoffBootstrapStatus = typeof ThreadHandoffBootstrapStatus.Type;
 export const ThreadEnvironmentMode = Schema.Literals(["local", "worktree"]);
@@ -1454,7 +1471,7 @@ const ThreadUserInputRespondCommand = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  answers: ProviderUserInputAnswers,
+  answers: CanonicalUserInputAnswers,
   createdAt: IsoDateTime,
 });
 
@@ -2080,7 +2097,7 @@ const ThreadUserInputResponseRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  answers: ProviderUserInputAnswers,
+  answers: CanonicalUserInputAnswers,
   createdAt: IsoDateTime,
 });
 

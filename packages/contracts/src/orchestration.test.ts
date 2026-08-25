@@ -1149,7 +1149,7 @@ it.effect("preserves proposed plan implementation metadata when present", () =>
   }),
 );
 
-it.effect("preserves user-input answer values through the RPC JSON codec", () =>
+it.effect("preserves structured user-input answers through the RPC JSON codec", () =>
   Effect.gen(function* () {
     const codec = Schema.toCodecJson(ClientOrchestrationCommand);
     const wire = {
@@ -1158,9 +1158,15 @@ it.effect("preserves user-input answer values through the RPC JSON codec", () =>
       threadId: "thread-1",
       requestId: "req-1",
       answers: {
-        single: "Purple",
-        multi: ["Reading", "Coding"],
-        skipped: null,
+        single: {
+          selectedOptionLabels: ["Purple"],
+          note: "Only for the header.  ",
+        },
+        multi: {
+          selectedOptionLabels: ["Reading", "Coding"],
+          customText: "Music\nWriting  ",
+          note: "Keep these together. ",
+        },
       },
       createdAt: "2026-05-19T16:14:28.202Z",
     };
@@ -1168,9 +1174,15 @@ it.effect("preserves user-input answer values through the RPC JSON codec", () =>
     assert.deepStrictEqual(
       (decoded as Extract<typeof decoded, { type: "thread.user-input.respond" }>).answers,
       {
-        single: "Purple",
-        multi: ["Reading", "Coding"],
-        skipped: null,
+        single: {
+          selectedOptionLabels: ["Purple"],
+          note: "Only for the header.  ",
+        },
+        multi: {
+          selectedOptionLabels: ["Reading", "Coding"],
+          customText: "Music\nWriting  ",
+          note: "Keep these together. ",
+        },
       },
     );
   }),

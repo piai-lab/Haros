@@ -137,22 +137,6 @@ const gitWorktreeSetupProgressListeners = createListenerRegistry<GitWorktreeSetu
 const projectProvisionProgressListeners =
   createListenerRegistry<GitHubProjectProvisionProgressEvent>();
 
-function omitNullUserInputAnswers(
-  command: Parameters<NativeApi["orchestration"]["dispatchCommand"]>[0],
-) {
-  if (command.type !== "thread.user-input.respond") {
-    return command;
-  }
-
-  return {
-    ...command,
-    answers: Object.fromEntries(
-      Object.entries(command.answers).filter(
-        ([, answer]) => answer !== null && answer !== undefined,
-      ),
-    ),
-  };
-}
 const terminalEventListeners = createListenerRegistry<TerminalEvent>();
 const projectDevServerEventListeners = createListenerRegistry<ProjectDevServerEvent>();
 const automationEventListeners = createListenerRegistry<AutomationStreamEvent>();
@@ -861,8 +845,7 @@ export function createWsNativeApi(): NativeApi {
           timeoutMs: null,
           ...(options?.signal ? { signal: options.signal } : {}),
         }),
-      openConfig: (input) =>
-        transport.request(WS_METHODS.omnimindWebSearchOpenConfig, input),
+      openConfig: (input) => transport.request(WS_METHODS.omnimindWebSearchOpenConfig, input),
       diagnoseGemini: (input, options) =>
         transport.request(WS_METHODS.omnimindWebSearchGeminiDiagnostic, input, {
           timeoutMs: null,
@@ -876,7 +859,7 @@ export function createWsNativeApi(): NativeApi {
         transport.request(ORCHESTRATION_WS_METHODS.getThreadDetailSnapshot, input),
       dispatchCommand: (command) => {
         return transport.request(ORCHESTRATION_WS_METHODS.dispatchCommand, {
-          command: omitNullUserInputAnswers(command),
+          command,
         });
       },
       importThread: (input) => transport.request(ORCHESTRATION_WS_METHODS.importThread, input),

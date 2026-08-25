@@ -2206,7 +2206,7 @@ it.layer(
           threadId,
           requestId,
           answers: {
-            q1: "yes",
+            q1: { selectedOptionLabels: ["yes"] },
           },
           createdAt: respondedAt,
         },
@@ -2317,7 +2317,7 @@ it.layer(
         payload: {
           threadId,
           requestId,
-          answers: { q1: "yes" },
+          answers: { q1: { selectedOptionLabels: ["yes"] } },
           createdAt: retryAt,
         },
       });

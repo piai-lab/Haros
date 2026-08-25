@@ -11080,7 +11080,7 @@ describe("ProviderCommandReactor", () => {
         requestId: asApprovalRequestId("user-input-request-1"),
         lifecycleGeneration: "user-input-generation-1",
         answers: {
-          sandbox_mode: "workspace-write",
+          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
         },
         createdAt: now,
       }),
@@ -11092,7 +11092,7 @@ describe("ProviderCommandReactor", () => {
       requestId: "user-input-request-1",
       lifecycleGeneration: "user-input-generation-1",
       answers: {
-        sandbox_mode: "workspace-write",
+        sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
       },
     });
     const respondingUserInput = await Effect.runPromise(
@@ -11116,7 +11116,7 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-1"),
         lifecycleGeneration: "user-input-generation-1",
-        answers: { sandbox_mode: "danger-full-access" },
+        answers: { sandbox_mode: { selectedOptionLabels: ["danger-full-access"] } },
         createdAt: now,
       }),
     );
@@ -11154,7 +11154,7 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-early"),
         answers: {
-          input: "continue",
+          input: { selectedOptionLabels: [], customText: "continue" },
         },
         createdAt: now,
       }),
@@ -11289,7 +11289,7 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-stopped"),
         answers: {
-          input: "continue",
+          input: { selectedOptionLabels: [], customText: "continue" },
         },
         createdAt: now,
       }),
@@ -11369,9 +11369,9 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-multi"),
         answers: {
-          single: "TypeScript",
-          features: ["CLI scaffolding", "Type checking"],
-          rating: "Solid",
+          single: { selectedOptionLabels: ["TypeScript"] },
+          features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] },
+          rating: { selectedOptionLabels: [], customText: "Solid" },
         },
         createdAt: now,
       }),
@@ -11382,9 +11382,9 @@ describe("ProviderCommandReactor", () => {
       threadId: "thread-1",
       requestId: "user-input-request-multi",
       answers: {
-        single: "TypeScript",
-        features: ["CLI scaffolding", "Type checking"],
-        rating: "Solid",
+        single: { selectedOptionLabels: ["TypeScript"] },
+        features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] },
+        rating: { selectedOptionLabels: [], customText: "Solid" },
       },
     });
   });
@@ -11679,7 +11679,7 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-1"),
         answers: {
-          sandbox_mode: "workspace-write",
+          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
         },
         createdAt: now,
       }),
@@ -11738,7 +11738,7 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-1"),
         answers: {
-          sandbox_mode: "workspace-write",
+          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
         },
         createdAt: new Date().toISOString(),
       }),
@@ -11814,7 +11814,7 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-respond-full-context"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-full-context"),
-        answers: { continue: "Yes" },
+        answers: { continue: { selectedOptionLabels: ["Yes"] } },
         createdAt: now,
       }),
     );
@@ -11890,7 +11890,7 @@ describe("ProviderCommandReactor", () => {
         commandId: CommandId.makeUnsafe("cmd-user-input-retry-full-context"),
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-full-context"),
-        answers: { continue: "Yes" },
+        answers: { continue: { selectedOptionLabels: ["Yes"] } },
         createdAt: recoveredAt,
       }),
     );
@@ -11963,7 +11963,7 @@ describe("ProviderCommandReactor", () => {
         threadId: ThreadId.makeUnsafe("thread-1"),
         requestId: asApprovalRequestId("user-input-request-unclaimable"),
         lifecycleGeneration: "generation-stale",
-        answers: { input: "continue" },
+        answers: { input: { selectedOptionLabels: [], customText: "continue" } },
         createdAt: now,
       }),
     );

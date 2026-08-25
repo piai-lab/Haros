@@ -578,7 +578,7 @@ describe("wsNativeApi", () => {
     expect(requestMock).toHaveBeenCalledWith(WS_METHODS.terminalAckOutput, input);
   });
 
-  it("omits null user-input answers before dispatching to orchestration", async () => {
+  it("forwards the lossless structured user-input envelope", async () => {
     requestMock.mockResolvedValue(undefined);
     const { createWsNativeApi } = await import("./wsNativeApi");
 
@@ -590,20 +590,18 @@ describe("wsNativeApi", () => {
       threadId: ThreadId.makeUnsafe("thread-1"),
       requestId: ApprovalRequestId.makeUnsafe("request-1"),
       answers: {
-        Language: null,
-        Runtime: "Bun",
+        Language: { selectedOptionLabels: [], customText: "TypeScript  " },
+        Runtime: {
+          selectedOptionLabels: ["Bun"],
+          note: "Use the current stable release.  ",
+        },
       },
       createdAt: "2026-02-24T00:00:00.000Z",
     } as const;
     await api.orchestration.dispatchCommand(command);
 
     expect(requestMock).toHaveBeenCalledWith(ORCHESTRATION_WS_METHODS.dispatchCommand, {
-      command: {
-        ...command,
-        answers: {
-          Runtime: "Bun",
-        },
-      },
+      command,
     });
   });
 

@@ -27,6 +27,7 @@ import type {
 } from "@opencode-ai/sdk/v2";
 
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
+import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
 import { ServerConfig } from "../../config.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 import {
@@ -4215,7 +4216,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
         yield* runOpenCodeSdk("question.reply", () =>
           context.client.question.reply({
             requestID: requestId,
-            answers: toOpenCodeQuestionAnswers(request, answers),
+            answers: toOpenCodeQuestionAnswers(request, encodeCanonicalUserInputAnswers(answers)),
           }),
         ).pipe(Effect.mapError(toAdapterRequestError));
       });

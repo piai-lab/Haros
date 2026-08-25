@@ -20,6 +20,7 @@ function submittedOutcome(): AskUserOutcome {
         answer: {
           kind: "choice",
           answered: true,
+          selectedValues: ["a"],
           options: [{ value: "a", label: "A", selected: true }],
         },
       },
@@ -28,6 +29,7 @@ function submittedOutcome(): AskUserOutcome {
         answer: {
           kind: "choice",
           answered: true,
+          selectedValues: ["x"],
           options: [{ value: "x", label: "X", selected: true }],
         },
       },

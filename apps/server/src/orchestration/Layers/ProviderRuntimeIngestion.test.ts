@@ -7952,7 +7952,7 @@ describe("ProviderRuntimeIngestion", () => {
       requestId: ApprovalRequestId.makeUnsafe("req-user-input-1"),
       payload: {
         answers: {
-          sandbox_mode: "workspace-write",
+          sandbox_mode: "danger-full-access",
         },
       },
     });
@@ -7988,7 +7988,7 @@ describe("ProviderRuntimeIngestion", () => {
         : undefined;
     expect(resolved?.kind).toBe("user-input.resolved");
     expect(resolvedPayload?.answers).toEqual({
-      sandbox_mode: "workspace-write",
+      sandbox_mode: "danger-full-access",
     });
     expect(resolvedPayload?.lifecycleGeneration).toBe("user-input-generation");
     expect(thread.runtimeMode).toBe("approval-required");

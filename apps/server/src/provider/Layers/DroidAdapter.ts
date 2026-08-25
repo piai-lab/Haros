@@ -55,6 +55,7 @@ import {
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
+import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
 import { listFactoryPlugins, readFactoryPlugin } from "../FactoryPluginDiscovery.ts";
 import { readFactorySessionHistory } from "../FactorySessionHistory.ts";
 import { appendProviderReferencesPromptBlock } from "../promptReferenceProjection.ts";
@@ -1874,7 +1875,7 @@ export function makeDroidAdapter(
             detail: `Unknown pending user-input request: ${requestId}`,
           });
         }
-        yield* Deferred.succeed(pending.answers, answers);
+        yield* Deferred.succeed(pending.answers, encodeCanonicalUserInputAnswers(answers));
       });
 
     const readThread: DroidAdapterShape["readThread"] = (threadId) =>

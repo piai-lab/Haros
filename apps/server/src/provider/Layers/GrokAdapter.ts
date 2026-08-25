@@ -67,6 +67,7 @@ import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { buildProviderChildEnvironment } from "../../providerChildEnvironment.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
+import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
 import {
   ProviderAdapterProcessError,
   ProviderAdapterRequestError,
@@ -2188,7 +2189,7 @@ export function makeGrokAdapter(
             detail: `Unknown pending user-input request: ${requestId}`,
           });
         }
-        yield* Deferred.succeed(pending.answers, answers);
+        yield* Deferred.succeed(pending.answers, encodeCanonicalUserInputAnswers(answers));
       });
 
     const readThread: GrokAdapterShape["readThread"] = (threadId) =>

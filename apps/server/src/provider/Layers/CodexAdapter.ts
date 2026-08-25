@@ -66,6 +66,7 @@ import {
 import { isNonFatalCodexErrorMessage } from "../../codexErrorClassification.ts";
 import { ServerConfig } from "../../config.ts";
 import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
+import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { omnimindSkillsDir } from "../skillsCatalog.ts";
@@ -2074,7 +2075,8 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
       answers,
     ) =>
       Effect.tryPromise({
-        try: () => manager.respondToUserInput(threadId, requestId, answers),
+        try: () =>
+          manager.respondToUserInput(threadId, requestId, encodeCanonicalUserInputAnswers(answers)),
         catch: (cause) => toRequestError(threadId, "item/tool/requestUserInput", cause),
       });
 

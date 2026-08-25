@@ -64,6 +64,7 @@ import {
   withAgentGatewayTurnCancellation,
 } from "../../agentGateway/sessionLease.ts";
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
+import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
 import { ServerConfig } from "../../config.ts";
 import { ServerSettingsService } from "../../serverSettings.ts";
 import { lazyModule } from "../../lazyModule.ts";
@@ -3764,7 +3765,9 @@ const makePiAdapter = <P extends PiFamilyProvider>(
     ) =>
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
-        if (!resolvePiExtensionUserInput(context, requestId, answers)) {
+        if (
+          !resolvePiExtensionUserInput(context, requestId, encodeCanonicalUserInputAnswers(answers))
+        ) {
           return yield* new ProviderAdapterRequestError({
             provider: provider,
             method: "user-input/respond",
