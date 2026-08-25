@@ -8,6 +8,7 @@ import "../index.css";
 import { page, userEvent } from "vitest/browser";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render } from "vitest-browser-react";
+import { MessageId } from "@omnimind/contracts";
 
 import { DEFAULT_THEME_STATE, serializeThemeState } from "../theme/theme.logic";
 import ChatMarkdown from "./ChatMarkdown";
@@ -191,6 +192,151 @@ describe("ChatMarkdown table overflow", () => {
     const assistantMargin = tableMargin("assistant-surface");
     expect(tableMargin("user-surface")).toBeLessThan(assistantMargin);
     expect(tableMargin("document-surface")).toBeGreaterThan(assistantMargin);
+  });
+});
+
+describe("ChatMarkdown Mermaid presentation", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    document.documentElement.classList.remove("dark");
+    localStorage.removeItem("omnimind:theme");
+  });
+
+  const source = "```mermaid\nflowchart LR\nA[开始]-->B[Ready]\n```";
+  const presentation = { messageId: MessageId.makeUnsafe("browser-mermaid") } as const;
+  const mermaidResourceCount = () =>
+    performance
+      .getEntriesByType("resource")
+      .filter((entry) => /(?:\/|_)mermaid(?:\.min)?(?:\.js|\?)/i.test(entry.name)).length;
+
+  it("does not import or render Mermaid while the message is streaming", async () => {
+    const before = mermaidResourceCount();
+    const mounted = await render(
+      <ChatMarkdown text={source} cwd={undefined} isStreaming mermaidPresentation={presentation} />,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    const host = mounted.container;
+    expect(host.querySelector("iframe")).toBeNull();
+    expect(host.querySelector(".chat-markdown-shiki")).toBeNull();
+    expect(host.textContent).toContain("flowchart LR");
+    expect(mermaidResourceCount()).toBe(before);
+  });
+
+  it("atomically presents a settled diagram in a locked-down iframe and preserves source controls", async () => {
+    const mounted = await render(
+      <ChatMarkdown text={source} cwd={undefined} mermaidPresentation={presentation} />,
+    );
+    const host = mounted.container;
+    await vi.waitFor(
+      () =>
+        expect(
+          host.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame"),
+        ).not.toBeNull(),
+      { timeout: 5000 },
+    );
+    const frame = host.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame")!;
+    expect(frame.getAttribute("sandbox")).toBe("");
+    expect(frame.getAttribute("referrerpolicy")).toBe("no-referrer");
+    expect(frame.hasAttribute("allow")).toBe(false);
+    expect(frame.style.pointerEvents).toBe("none");
+    expect(frame.srcdoc).toContain("default-src 'none'");
+
+    await userEvent.click(page.getByRole("button", { name: "View source" }));
+    expect(host.textContent).toContain("flowchart LR");
+    expect(host.querySelector(".chat-markdown-mermaid__frame")).toBeNull();
+    await userEvent.click(page.getByRole("button", { name: "View diagram" }));
+    expect(host.querySelector(".chat-markdown-mermaid__frame")).not.toBeNull();
+  });
+
+  it("reuses the safe srcDoc in the Base UI dialog and returns focus on Escape", async () => {
+    const mounted = await render(
+      <ChatMarkdown text={source} cwd={undefined} mermaidPresentation={presentation} />,
+    );
+    await vi.waitFor(
+      () =>
+        expect(
+          mounted.container.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame"),
+        ).not.toBeNull(),
+      { timeout: 5000 },
+    );
+    const inlineFrame = mounted.container.querySelector<HTMLIFrameElement>(
+      ".chat-markdown-mermaid__frame",
+    )!;
+    const expand = page.getByRole("button", { name: "Expand diagram" });
+    await userEvent.click(expand);
+    const dialog = page.getByRole("dialog");
+    await expect.element(dialog).toBeVisible();
+    const dialogFrame = dialog.element().querySelector<HTMLIFrameElement>("iframe");
+    expect(dialogFrame).not.toBeNull();
+    expect(dialogFrame!.srcdoc).toBe(inlineFrame.srcdoc);
+    expect(dialogFrame!.getAttribute("sandbox")).toBe("");
+    const dialogViewport = dialog
+      .element()
+      .querySelector<HTMLElement>("[data-mermaid-dialog-viewport]");
+    expect(dialogViewport).not.toBeNull();
+    expect(dialogViewport!.getBoundingClientRect().height).toBeGreaterThan(300);
+    expect(page.getByRole("button", { name: "Fit diagram" })).toBeDefined();
+    expect(page.getByRole("button", { name: "Zoom out" })).toBeDefined();
+    expect(page.getByRole("button", { name: "Zoom in" })).toBeDefined();
+    expect(page.getByRole("button", { name: "Reset zoom" })).toBeDefined();
+
+    await userEvent.keyboard("{Escape}");
+    await vi.waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull());
+    expect(document.activeElement).toBe(expand.element());
+  });
+
+  it("keeps the previous diagram visible until a changed theme result is ready", async () => {
+    const mounted = await render(
+      <ChatMarkdown text={source} cwd={undefined} mermaidPresentation={presentation} />,
+    );
+    await vi.waitFor(
+      () =>
+        expect(
+          mounted.container.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame"),
+        ).not.toBeNull(),
+      { timeout: 5000 },
+    );
+    const frame = mounted.container.querySelector<HTMLIFrameElement>(
+      ".chat-markdown-mermaid__frame",
+    )!;
+    const lightSrcDoc = frame.srcdoc;
+    const darkState = { ...DEFAULT_THEME_STATE, mode: "dark" as const };
+    const serializedDarkState = serializeThemeState(darkState);
+    localStorage.setItem("omnimind:theme", serializedDarkState);
+    window.dispatchEvent(
+      new StorageEvent("storage", {
+        key: "omnimind:theme",
+        newValue: serializedDarkState,
+      }),
+    );
+
+    expect(
+      mounted.container.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame")?.srcdoc,
+    ).toBe(lightSrcDoc);
+    await vi.waitFor(
+      () =>
+        expect(
+          mounted.container.querySelector<HTMLIFrameElement>(".chat-markdown-mermaid__frame")
+            ?.srcdoc,
+        ).not.toBe(lightSrcDoc),
+      { timeout: 5000 },
+    );
+    expect(mounted.container.querySelectorAll(".chat-markdown-mermaid__frame")).toHaveLength(1);
+  });
+
+  it("quietly keeps unsafe and unsupported inputs as source without loading Mermaid", async () => {
+    const before = mermaidResourceCount();
+    const mounted = await render(
+      <ChatMarkdown
+        text={"```mermaid\ngraph TD\nclick A https://example.com\n```"}
+        cwd={undefined}
+        mermaidPresentation={presentation}
+      />,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 650));
+    expect(mounted.container.textContent).toContain("click A");
+    expect(mounted.container.querySelector("iframe")).toBeNull();
+    expect(mermaidResourceCount()).toBe(before);
   });
 });
 

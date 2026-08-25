@@ -53,6 +53,16 @@ Bun 1.3.12 的 fresh resolution 把 Web direct range `katex@^0.16.45` 与 Mermai
 - ChatMarkdown browser journey 观察到 streaming 与 unsafe input 不加载 Mermaid resource；settled source ready 后切换、源码可恢复、Dialog 使用相同 `srcDoc`、Esc 返回 trigger focus；
 - Timeline SSR 只在 canonical Assistant body 产生 opt-in，User 与其他 Markdown consumer 保持原路径。
 
+2026-08-26 的 production-mode transcript harness 固定观察如下：
+
+- 120-message、80-edge、10 个 fresh Chromium context 中，每图只进入一次 render transaction；settled-to-ready p95 为 `496.9ms`，最长 Mermaid render measure 为 `197.0ms`，从真实 queued mark 起观察到的最长 Long Task 为 `154ms`；
+- 300-edge compressed fixture 在 policy connector guard 被拒绝，源码仍可读，queued/import/render/Mermaid resource/diagram frame 均为 `0`；
+- 20 个不同 source+theme cache key 的 80-edge 图经停读式往返遍历后恰好 render 20 次，第二轮不增加 render；强制 GC 后 heap 从 `22,689,927B` 增至首轮 `29,109,453B`、第二轮 `30,420,435B`，第二轮增量 `1,310,982B`，没有按图数重复首轮增长；count/byte LRU 硬边界另由纯逻辑测试直接证伪；
+- 无 Mermaid 的初始 route、streaming Mermaid 与 300-edge 拒绝路径均观察到 `0` Mermaid resource 和 `0` import mark；production HTML 只 module-preload pipeline/runtime/workload，Mermaid core 与各 diagram implementation 保持独立 lazy chunks；
+- 五组相同字节的 plain-fence / Mermaid-fence streaming 对照中，两者 Mermaid import、resource 与 Long Task 均为 `0`；Mermaid fence 的 React commit count 中位增量约 `0.7%`，commit time 中位数没有回退，frame p95 中位数没有回退。
+
+以上数值只绑定该日期的 production bundle、fixture 和机器环境，不形成跨机器 SLA；重开条件中的 dependency、browser、theme、budget 或 transcript lifecycle 变化后需重测。
+
 ## 重开条件
 
 Mermaid 版本或官方 sandbox serialization 变化、相关 advisory、新增/删除 diagram allowlist、请求 HTML labels/link/interactivity、预算变化、renderer 需要 worker/Server/bridge、主线程 stop-loss 被击穿，或第二个真实 diagram implementation 出现时重读本文件。第二个 renderer 只是重新裁决共同责任的证据，不自动授权预建平台。

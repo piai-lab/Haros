@@ -1,7 +1,7 @@
 // FILE: perf/workload.ts
 // Purpose: Deterministic transcript workload builders shared by the perf harnesses,
 //          so paired runs replay identical bytes at identical cadence.
-// Exports: isoAt, assistantText, buildStreamCorpus
+// Exports: isoAt, assistantText, buildStreamCorpus, buildMermaidDiagramSource
 
 const BASE_TIME_MS = Date.parse("2026-08-08T12:00:00.000Z");
 
@@ -35,6 +35,37 @@ export function assistantText(index: number): string {
     ).join("\n\n");
   }
   return `Measured assistant response ${index}. The completed row should remain stable during unrelated updates.`;
+}
+
+export function buildMermaidDiagramSource(edgeCount: number, identity = 0): string {
+  const edges = Array.from(
+    { length: Math.max(0, edgeCount) },
+    (_, index) =>
+      `N${index}[节点 ${index} · representative wide CJK label ${identity}]-->N${index + 1}[Node ${index + 1}]`,
+  );
+  return ["flowchart LR", ...(edgeCount > 240 ? [edges.join(";")] : edges)].join("\n");
+}
+
+export function buildMermaidFence(edgeCount: number, identity = 0): string {
+  return ["```mermaid", buildMermaidDiagramSource(edgeCount, identity), "```"].join("\n");
+}
+
+export function buildDiagramStreamCorpus(
+  totalChars: number,
+  fenceLanguage: "mermaid" | "plain",
+): string {
+  const language = fenceLanguage === "mermaid" ? "mermaid" : "text___";
+  const parts = [`\`\`\`${language}\nflowchart LR\n`];
+  let length = parts[0]!.length;
+  let index = 0;
+  while (length < Math.max(totalChars, 1)) {
+    const edge = `N${index}[stream node ${index}]-->N${index + 1}[stream node ${index + 1}]\n`;
+    parts.push(edge);
+    length += edge.length;
+    index += 1;
+  }
+  const body = parts.join("").slice(0, Math.max(0, totalChars - 4));
+  return `${body}\n\`\`\``.slice(0, totalChars);
 }
 
 /** Deterministic streamed-assistant corpus: prose with inline Markdown plus a growing
