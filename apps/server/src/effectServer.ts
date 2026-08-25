@@ -35,6 +35,7 @@ import { reconcileRestartStuckTurns } from "./orchestration/startupTurnReconcili
 import { ProviderSessionReaper } from "./provider/Services/ProviderSessionReaper";
 import { ProviderRuntimeReconciler } from "./provider/Services/ProviderRuntimeReconciler";
 import { ProviderService, type ProviderServiceShape } from "./provider/Services/ProviderService";
+import { userInputPresenterRegistry } from "./provider/userInputPresenterRegistry";
 import { ServerLifecycleEvents } from "./serverLifecycleEvents";
 import { ServerRuntimeStartup } from "./serverRuntimeStartup";
 import { ServerSettingsService } from "./serverSettings";
@@ -95,8 +96,12 @@ export function closeServerRuntimePipeline(input: {
   readonly providerService: Pick<ProviderServiceShape, "closeRuntimeEvents">;
   readonly managedAttachmentCleanup: Pick<ManagedAttachmentCleanupShape, "drain">;
   readonly subscriptionsScope: Scope.Closeable;
+  readonly revokeUserInputPresenters: Effect.Effect<void>;
 }): Effect.Effect<void> {
-  return input.orchestrationEngine.quiesce.pipe(
+  return input.revokeUserInputPresenters.pipe(
+    // Presenter loss settles live native callbacks as `unavailable` while the
+    // provider event fanout and durable projectors are still accepting work.
+    Effect.andThen(input.orchestrationEngine.quiesce),
     // Drain already-admitted commands while every subscriber is live. Provider
     // close then fences terminal runtime events into subscriber workers; scope
     // close drains those workers before the engine accepts its final stop.
@@ -199,6 +204,7 @@ export const createEffectServer = Effect.fn(function* (
       providerService,
       managedAttachmentCleanup,
       subscriptionsScope,
+      revokeUserInputPresenters: Effect.sync(() => userInputPresenterRegistry.revokeAll()),
     }),
   );
   yield* Scope.provide(orchestrationReactor.start, subscriptionsScope);

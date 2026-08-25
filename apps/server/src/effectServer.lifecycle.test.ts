@@ -23,6 +23,9 @@ describe("server runtime pipeline shutdown", () => {
 
     await Effect.runPromise(
       closeServerRuntimePipeline({
+        revokeUserInputPresenters: Effect.sync(() => {
+          order.push("user-input-presenters-revoked");
+        }),
         orchestrationEngine: {
           quiesce: Effect.sync(() => order.push("engine-quiesced")),
           drain: Effect.sync(() => order.push("admitted-commands-drained")),
@@ -50,6 +53,7 @@ describe("server runtime pipeline shutdown", () => {
     );
 
     expect(order).toEqual([
+      "user-input-presenters-revoked",
       "engine-quiesced",
       "admitted-commands-drained",
       "provider-terminal-events-fenced",
