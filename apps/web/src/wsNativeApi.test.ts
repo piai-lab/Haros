@@ -589,10 +589,13 @@ describe("wsNativeApi", () => {
       commandId: CommandId.makeUnsafe("cmd-user-input-null"),
       threadId: ThreadId.makeUnsafe("thread-1"),
       requestId: ApprovalRequestId.makeUnsafe("request-1"),
-      answers: {
-        Language: { selectedOptionLabels: [], customText: "TypeScript  " },
-        Runtime: {
-          selectedOptionLabels: ["Bun"],
+      response: {
+        status: "answered",
+        answers: {
+          Language: { selectedOptionLabels: [], customText: "TypeScript  " },
+          Runtime: {
+            selectedOptionLabels: ["Bun"],
+          },
         },
       },
       createdAt: "2026-02-24T00:00:00.000Z",

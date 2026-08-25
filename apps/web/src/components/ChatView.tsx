@@ -265,8 +265,9 @@ import {
 } from "../session-logic";
 import {
   buildPendingUserInputAnswers,
+  dispatchClaimedPendingUserInputResponse,
   derivePendingUserInputProgress,
-  derivePendingUserInputSinglePresetDestination,
+  derivePendingUserInputSinglePresetAction,
   type PendingUserInputDraftAnswer,
 } from "../pendingUserInput";
 import { selectRightDockState, useRightDockStore } from "../rightDockStore";
@@ -1058,6 +1059,11 @@ function canHandleComposerPickerShortcut(
 const EMPTY_AVAILABLE_EDITORS: EditorId[] = [];
 const EMPTY_PROVIDER_STATUSES: ServerProviderStatus[] = [];
 const EMPTY_PENDING_USER_INPUT_ANSWERS: Record<string, PendingUserInputDraftAnswer> = {};
+const pendingUserInputClientKey = (
+  threadId: ThreadId,
+  requestId: ApprovalRequestId,
+  lifecycleGeneration: string | undefined,
+) => `${threadId}:${pendingRequestInstanceKey(requestId, lifecycleGeneration)}`;
 const EMPTY_TERMINAL_RUNTIME_ENV: Record<string, string> = {};
 const MAX_DISMISSED_PROVIDER_HEALTH_BANNERS = 50;
 const EMPTY_LAST_INVOKED_SCRIPT_BY_PROJECT: Record<string, string> = {};
@@ -1237,7 +1243,6 @@ interface LateComposerSendHandlers {
     queuedTurn?: QueuedComposerChatTurn,
   ) => Promise<boolean>;
   readonly submitPlanFollowUp: (submission: PlanFollowUpSubmission) => Promise<boolean>;
-  readonly advanceActivePendingUserInput: () => boolean;
   readonly handleStandaloneSlashCommand: (trimmedPrompt: string) => Promise<boolean>;
 }
 
@@ -1628,9 +1633,9 @@ export default function ChatView({
   const pendingUserInputAnswersByRequestIdRef = useRef(pendingUserInputAnswersByRequestId);
   const [pendingUserInputQuestionIndexByRequestId, setPendingUserInputQuestionIndexByRequestId] =
     useState<Record<string, number>>({});
-  const [pendingUserInputReviewByRequestId, setPendingUserInputReviewByRequestId] = useState<
-    Record<string, boolean>
-  >({});
+  const claimedUserInputResponseKeysRef = useRef<Set<string>>(new Set());
+  const previousPendingUserInputKeysByThreadRef = useRef<Map<ThreadId, Set<string>>>(new Map());
+  const previousPendingUserInputActiveThreadRef = useRef<ThreadId | null>(null);
   const [planSidebarOpen, setPlanSidebarOpen] = useState(false);
   useLayoutEffect(() => {
     onPlanSidebarOpenChange?.(planSidebarOpen);
@@ -2904,7 +2909,8 @@ export default function ChatView({
   );
   const activePendingUserInput = pendingUserInputs[0] ?? null;
   const activePendingUserInputKey = activePendingUserInput
-    ? pendingRequestInstanceKey(
+    ? pendingUserInputClientKey(
+        activeThreadId!,
         activePendingUserInput.requestId,
         activePendingUserInput.lifecycleGeneration,
       )
@@ -2920,9 +2926,6 @@ export default function ChatView({
   const activePendingQuestionIndex = activePendingUserInputKey
     ? (pendingUserInputQuestionIndexByRequestId[activePendingUserInputKey] ?? 0)
     : 0;
-  const activePendingIsReviewing = activePendingUserInputKey
-    ? pendingUserInputReviewByRequestId[activePendingUserInputKey] === true
-    : false;
   const activePendingProgress = useMemo(
     () =>
       activePendingUserInput
@@ -2937,15 +2940,9 @@ export default function ChatView({
   // Read once here for the same reason as `activeLatestTurnId`: an `activePendingProgress?.x`
   // read inside a memo body makes React Compiler infer `activePendingProgress` as the
   // dependency, which no longer matches the hand-written property-path dep.
-  const activePendingResolvedAnswers = useMemo(
-    () =>
-      activePendingUserInput
-        ? buildPendingUserInputAnswers(activePendingUserInput.questions, activePendingDraftAnswers)
-        : null,
-    [activePendingDraftAnswers, activePendingUserInput],
-  );
   const activePendingIsResponding = activePendingUserInputKey
-    ? respondingUserInputRequestKeys.includes(activePendingUserInputKey)
+    ? respondingUserInputRequestKeys.includes(activePendingUserInputKey) ||
+      activePendingUserInput?.responseClaimable === false
     : false;
   const activeProposedPlan = useMemo(() => {
     if (!latestTurnSettled) {
@@ -4481,6 +4478,90 @@ export default function ChatView({
       focusComposer();
     });
   }, [focusComposer]);
+  useEffect(() => {
+    if (!activeThreadId || threadDetailHydration !== "ready") {
+      return;
+    }
+
+    const threadKeyPrefix = `${activeThreadId}:`;
+    const currentKeys = new Set(
+      pendingUserInputs.map((request) =>
+        pendingUserInputClientKey(activeThreadId, request.requestId, request.lifecycleGeneration),
+      ),
+    );
+    const previousKeys =
+      previousPendingUserInputKeysByThreadRef.current.get(activeThreadId) ?? new Set<string>();
+    const stayedOnSameActiveThread =
+      previousPendingUserInputActiveThreadRef.current === activeThreadId;
+
+    const locallyRetryableKeys = new Set(
+      pendingUserInputs
+        .filter(
+          (request) =>
+            request.settlementStatus === "retryable" ||
+            request.settlementStatus === "uncertain" ||
+            (request.settlementStatus === "responding" && request.responseClaimable === true),
+        )
+        .map((request) =>
+          pendingUserInputClientKey(activeThreadId, request.requestId, request.lifecycleGeneration),
+        ),
+    );
+
+    let removedResolvedRequest = false;
+    for (const key of previousKeys) {
+      if (!currentKeys.has(key)) {
+        removedResolvedRequest = true;
+        claimedUserInputResponseKeysRef.current.delete(key);
+      }
+    }
+    for (const key of locallyRetryableKeys) {
+      claimedUserInputResponseKeysRef.current.delete(key);
+    }
+
+    const nextAnswers = { ...pendingUserInputAnswersByRequestIdRef.current };
+    let answersChanged = false;
+    for (const key of Object.keys(nextAnswers)) {
+      if (key.startsWith(threadKeyPrefix) && !currentKeys.has(key)) {
+        delete nextAnswers[key];
+        answersChanged = true;
+      }
+    }
+    if (answersChanged) {
+      pendingUserInputAnswersByRequestIdRef.current = nextAnswers;
+      setPendingUserInputAnswersByRequestId(nextAnswers);
+    }
+    setPendingUserInputQuestionIndexByRequestId((existing) => {
+      let changed = false;
+      const next = { ...existing };
+      for (const key of Object.keys(next)) {
+        if (key.startsWith(threadKeyPrefix) && !currentKeys.has(key)) {
+          delete next[key];
+          changed = true;
+        }
+      }
+      return changed ? next : existing;
+    });
+    setRespondingUserInputRequestKeys((existing) => {
+      const next = existing.filter(
+        (key) =>
+          !key.startsWith(threadKeyPrefix) ||
+          (currentKeys.has(key) && !locallyRetryableKeys.has(key)),
+      );
+      return next.length === existing.length ? existing : next;
+    });
+
+    previousPendingUserInputKeysByThreadRef.current.set(activeThreadId, currentKeys);
+    previousPendingUserInputActiveThreadRef.current = activeThreadId;
+    if (stayedOnSameActiveThread && removedResolvedRequest && !isInactiveSplitPane) {
+      scheduleComposerFocus();
+    }
+  }, [
+    activeThreadId,
+    isInactiveSplitPane,
+    pendingUserInputs,
+    scheduleComposerFocus,
+    threadDetailHydration,
+  ]);
   // External panels (diff headers, file explorer, preview) bump this nonce after
   // inserting a reference so the composer visibly receives the text.
   const composerFocusRequestNonce = useComposerFocusRequestStore(
@@ -7793,9 +7874,6 @@ export default function ChatView({
       await waitForPendingComposerImages();
       sendPreflightInFlightRef.current = false;
     }
-    if (activePendingProgress) {
-      return lateSendHandlers.advanceActivePendingUserInput();
-    }
     const queuedChatTurn = queuedTurn ?? null;
     const liveComposerSnapshot =
       queuedChatTurn === null ? (composerEditorRef.current?.readSnapshot() ?? null) : null;
@@ -9290,32 +9368,38 @@ export default function ChatView({
       requestId: ApprovalRequestId,
       response: CanonicalUserInputResponse,
       lifecycleGeneration?: string,
-    ) => {
+    ): Promise<boolean> => {
       const api = readNativeApi();
-      if (!api || !activeThreadId) return;
-      const requestKey = pendingRequestInstanceKey(requestId, lifecycleGeneration);
-      setRespondingUserInputRequestKeys((existing) =>
-        existing.includes(requestKey) ? existing : [...existing, requestKey],
-      );
-      await api.orchestration
-        .dispatchCommand({
-          type: "thread.user-input.respond",
-          commandId: newCommandId(),
-          threadId: activeThreadId,
-          requestId,
-          response,
-          ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
-          createdAt: new Date().toISOString(),
-        })
-        .catch((err: unknown) => {
-          setStoreThreadError(
-            activeThreadId,
-            err instanceof Error ? err.message : "Failed to submit user input.",
-          );
+      if (!api || !activeThreadId) return false;
+      const requestKey = pendingUserInputClientKey(activeThreadId, requestId, lifecycleGeneration);
+      try {
+        return await dispatchClaimedPendingUserInputResponse({
+          claimedKeys: claimedUserInputResponseKeysRef.current,
+          key: requestKey,
+          dispatch: async () => {
+            setRespondingUserInputRequestKeys((existing) =>
+              existing.includes(requestKey) ? existing : [...existing, requestKey],
+            );
+            await api.orchestration.dispatchCommand({
+              type: "thread.user-input.respond",
+              commandId: newCommandId(),
+              threadId: activeThreadId,
+              requestId,
+              response,
+              ...(lifecycleGeneration !== undefined ? { lifecycleGeneration } : {}),
+              createdAt: new Date().toISOString(),
+            });
+          },
         });
-      setRespondingUserInputRequestKeys((existing) => existing.filter((key) => key !== requestKey));
+      } catch {
+        setRespondingUserInputRequestKeys((existing) =>
+          existing.filter((key) => key !== requestKey),
+        );
+        setStoreThreadError(activeThreadId, t("pendingInput.submitFailed"));
+        return false;
+      }
     },
-    [activeThreadId, setStoreThreadError],
+    [activeThreadId, setStoreThreadError, t],
   );
 
   const onCancelActivePendingUserInput = useCallback(() => {
@@ -9344,7 +9428,7 @@ export default function ChatView({
 
   const onChangeActivePendingUserInputAnswer = useCallback(
     (questionId: string, nextDraftAnswer: PendingUserInputDraftAnswer) => {
-      if (!activePendingUserInputKey) return;
+      if (!activePendingUserInputKey || activePendingIsResponding) return;
       const nextRequestAnswers = {
         ...pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey],
         [questionId]: nextDraftAnswer,
@@ -9358,16 +9442,23 @@ export default function ChatView({
         [activePendingUserInputKey]: nextRequestAnswers,
       }));
     },
-    [activePendingUserInputKey],
+    [activePendingIsResponding, activePendingUserInputKey],
   );
 
   const onSelectActivePendingUserInputSinglePreset = useCallback(
     (questionId: string, nextDraftAnswer: PendingUserInputDraftAnswer) => {
-      if (!activePendingUserInputKey || !activePendingUserInput || !activePendingProgress) return;
+      if (
+        !activePendingUserInputKey ||
+        !activePendingUserInput ||
+        !activePendingProgress ||
+        activePendingIsResponding
+      ) {
+        return;
+      }
       const currentAnswers =
         pendingUserInputAnswersByRequestIdRef.current[activePendingUserInputKey] ??
         activePendingDraftAnswers;
-      const destination = derivePendingUserInputSinglePresetDestination(
+      const action = derivePendingUserInputSinglePresetAction(
         activePendingUserInput.questions,
         currentAnswers,
         activePendingProgress.questionIndex,
@@ -9375,27 +9466,36 @@ export default function ChatView({
         nextDraftAnswer,
       );
       onChangeActivePendingUserInputAnswer(questionId, nextDraftAnswer);
-      if (destination?.kind === "question") {
-        setActivePendingUserInputQuestionIndex(destination.questionIndex);
-      } else if (destination?.kind === "review") {
-        setPendingUserInputReviewByRequestId((existing) => ({
-          ...existing,
-          [activePendingUserInputKey]: true,
-        }));
+      if (action?.kind === "question") {
+        setActivePendingUserInputQuestionIndex(action.questionIndex);
+      } else if (action?.kind === "submit") {
+        void onRespondToUserInput(
+          activePendingUserInput.requestId,
+          { status: "answered", answers: action.answers },
+          activePendingUserInput.lifecycleGeneration,
+        );
       }
     },
     [
       activePendingDraftAnswers,
+      activePendingIsResponding,
       activePendingProgress,
       activePendingUserInput,
       activePendingUserInputKey,
       onChangeActivePendingUserInputAnswer,
+      onRespondToUserInput,
       setActivePendingUserInputQuestionIndex,
     ],
   );
 
   const onAdvanceActivePendingUserInput = useCallback((): boolean => {
-    if (!activePendingUserInput || !activePendingUserInputKey || !activePendingProgress) {
+    if (
+      !activePendingUserInput ||
+      !activePendingUserInputKey ||
+      !activePendingProgress ||
+      activePendingIsResponding ||
+      !activePendingProgress.canAdvance
+    ) {
       return false;
     }
     const pendingDraftAnswers =
@@ -9405,49 +9505,26 @@ export default function ChatView({
       activePendingUserInput.questions,
       pendingDraftAnswers,
     );
-    if (activePendingIsReviewing) {
-      if (resolvedAnswers) {
-        void onRespondToUserInput(
-          activePendingUserInput.requestId,
-          { status: "answered", answers: resolvedAnswers },
-          activePendingUserInput.lifecycleGeneration,
-        );
-        return true;
-      }
-      return false;
-    }
-    if (!activePendingProgress.canAdvance) return false;
     if (activePendingProgress.isLastQuestion) {
       if (!resolvedAnswers) return false;
-      setPendingUserInputReviewByRequestId((existing) => ({
-        ...existing,
-        [activePendingUserInputKey]: true,
-      }));
+      void onRespondToUserInput(
+        activePendingUserInput.requestId,
+        { status: "answered", answers: resolvedAnswers },
+        activePendingUserInput.lifecycleGeneration,
+      );
       return true;
     }
     setActivePendingUserInputQuestionIndex(activePendingProgress.questionIndex + 1);
     return true;
   }, [
     activePendingDraftAnswers,
-    activePendingIsReviewing,
+    activePendingIsResponding,
     activePendingProgress,
     activePendingUserInput,
     activePendingUserInputKey,
     onRespondToUserInput,
     setActivePendingUserInputQuestionIndex,
   ]);
-
-  const onEditActivePendingUserInputQuestion = useCallback(
-    (questionIndex: number) => {
-      if (!activePendingUserInputKey) return;
-      setPendingUserInputReviewByRequestId((existing) => ({
-        ...existing,
-        [activePendingUserInputKey]: false,
-      }));
-      setActivePendingUserInputQuestionIndex(questionIndex);
-    },
-    [activePendingUserInputKey, setActivePendingUserInputQuestionIndex],
-  );
 
   const onPreviousActivePendingUserInputQuestion = useCallback(() => {
     if (!activePendingProgress) {
@@ -11018,7 +11095,6 @@ export default function ChatView({
     lateComposerSendHandlersRef.current = {
       send: onSend,
       submitPlanFollowUp: onSubmitPlanFollowUp,
-      advanceActivePendingUserInput: onAdvanceActivePendingUserInput,
       handleStandaloneSlashCommand,
     };
   });
@@ -12099,12 +12175,11 @@ export default function ChatView({
                     isResponding={activePendingIsResponding}
                     answers={activePendingDraftAnswers}
                     questionIndex={activePendingQuestionIndex}
-                    isReviewing={activePendingIsReviewing}
+                    isFocusedPane={!isInactiveSplitPane}
                     onChangeAnswer={onChangeActivePendingUserInputAnswer}
                     onSelectSinglePreset={onSelectActivePendingUserInputSinglePreset}
                     onAdvance={onAdvanceActivePendingUserInput}
                     onPrevious={onPreviousActivePendingUserInputQuestion}
-                    onEditQuestion={onEditActivePendingUserInputQuestion}
                     onCancel={onCancelActivePendingUserInput}
                     onStop={onInterruptFromStopControl}
                   />
@@ -12380,23 +12455,17 @@ export default function ChatView({
                       ) : null}
                       {activePendingProgress ? (
                         <Button
-                          type="submit"
+                          type="button"
                           size="sm"
                           className="rounded-full px-4"
-                          disabled={
-                            activePendingIsResponding ||
-                            (activePendingIsReviewing
-                              ? !activePendingResolvedAnswers
-                              : !activePendingProgress.canAdvance)
-                          }
+                          onClick={onAdvanceActivePendingUserInput}
+                          disabled={activePendingIsResponding || !activePendingProgress.canAdvance}
                         >
                           {activePendingIsResponding
                             ? t("conversation.submitting")
-                            : activePendingIsReviewing
-                              ? t("pendingInput.send")
-                              : activePendingProgress.isLastQuestion
-                                ? t("pendingInput.review")
-                                : t("pendingInput.next")}
+                            : activePendingProgress.isLastQuestion
+                              ? t("pendingInput.submit")
+                              : t("pendingInput.next")}
                         </Button>
                       ) : phase === "running" ? (
                         <Button

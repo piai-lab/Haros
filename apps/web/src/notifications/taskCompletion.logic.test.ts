@@ -1141,6 +1141,41 @@ describe("collectInputNeededThreadCandidates", () => {
       ).map((candidate) => candidate.requestId),
     ).toEqual([ApprovalRequestId.makeUnsafe("retryable-input")]);
   });
+
+  it("does not notify another presenter for user input that is already responding", () => {
+    const activity = {
+      id: EventId.makeUnsafe("activity-responding-input"),
+      tone: "info" as const,
+      kind: "user-input.requested",
+      summary: "User input requested",
+      payload: {
+        requestId: "responding-input",
+        lifecycleGeneration: "generation-1",
+        questions: [
+          {
+            id: "question-responding",
+            header: "Question",
+            question: "Already claimed?",
+            options: [{ label: "Yes", description: "Claimed" }],
+          },
+        ],
+      },
+      turnId: TurnId.makeUnsafe("turn-1"),
+      createdAt: "2026-04-05T10:00:04.000Z",
+    };
+
+    expect(
+      collectInputNeededThreadCandidates(
+        [makeThread({ activities: [] })],
+        [
+          makeThread({
+            activities: [activity],
+            pendingInteractions: [makeInteraction("userInput", "responding-input", "responding")],
+          }),
+        ],
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("buildInputNeededCopy", () => {

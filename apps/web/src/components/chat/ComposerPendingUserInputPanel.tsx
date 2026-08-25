@@ -2,7 +2,6 @@ import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { type PendingUserInput } from "../../session-logic";
 import {
   derivePendingUserInputProgress,
-  resolvePendingUserInputAnswer,
   setPendingUserInputCustomText,
   togglePendingUserInputCustomSelection,
   togglePendingUserInputOptionSelection,
@@ -19,12 +18,11 @@ interface PendingUserInputPanelProps {
   isResponding: boolean;
   answers: Record<string, PendingUserInputDraftAnswer>;
   questionIndex: number;
-  isReviewing: boolean;
+  isFocusedPane: boolean;
   onChangeAnswer: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onSelectSinglePreset: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onAdvance: () => void;
   onPrevious: () => void;
-  onEditQuestion: (questionIndex: number) => void;
   onCancel: () => void;
   onStop: () => void;
 }
@@ -39,12 +37,11 @@ export function ComposerPendingUserInputPanel({
   isResponding,
   answers,
   questionIndex,
-  isReviewing,
+  isFocusedPane,
   onChangeAnswer,
   onSelectSinglePreset,
   onAdvance,
   onPrevious,
-  onEditQuestion,
   onCancel,
   onStop,
 }: PendingUserInputPanelProps) {
@@ -58,12 +55,11 @@ export function ComposerPendingUserInputPanel({
       isResponding={isResponding}
       answers={answers}
       questionIndex={questionIndex}
-      isReviewing={isReviewing}
+      isFocusedPane={isFocusedPane}
       onChangeAnswer={onChangeAnswer}
       onSelectSinglePreset={onSelectSinglePreset}
       onAdvance={onAdvance}
       onPrevious={onPrevious}
-      onEditQuestion={onEditQuestion}
       onCancel={onCancel}
       onStop={onStop}
     />
@@ -75,12 +71,11 @@ function ComposerPendingUserInputCard({
   isResponding,
   answers,
   questionIndex,
-  isReviewing,
+  isFocusedPane,
   onChangeAnswer,
   onSelectSinglePreset,
   onAdvance,
   onPrevious,
-  onEditQuestion,
   onCancel,
   onStop,
 }: {
@@ -88,12 +83,11 @@ function ComposerPendingUserInputCard({
   isResponding: boolean;
   answers: Record<string, PendingUserInputDraftAnswer>;
   questionIndex: number;
-  isReviewing: boolean;
+  isFocusedPane: boolean;
   onChangeAnswer: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onSelectSinglePreset: (questionId: string, answer: PendingUserInputDraftAnswer) => void;
   onAdvance: () => void;
   onPrevious: () => void;
-  onEditQuestion: (questionIndex: number) => void;
   onCancel: () => void;
   onStop: () => void;
 }) {
@@ -109,7 +103,7 @@ function ComposerPendingUserInputCard({
     if (progress.customSelected && activeQuestion?.options.length) {
       customInputRef.current?.focus();
     }
-  }, [activeQuestion?.id, progress.customSelected]);
+  }, [activeQuestion?.id, activeQuestion?.options.length, progress.customSelected]);
 
   useEffect(() => {
     setExpandedPreviewLabel(null);
@@ -117,8 +111,8 @@ function ComposerPendingUserInputCard({
   }, [activeQuestion?.id]);
 
   useEffect(() => {
-    questionHeadingRef.current?.focus({ preventScroll: true });
-  }, [activeQuestion?.id, isReviewing]);
+    if (isFocusedPane) questionHeadingRef.current?.focus({ preventScroll: true });
+  }, [activeQuestion?.id, isFocusedPane]);
 
   if (!activeQuestion) return null;
   const questionCount = prompt.questions.length;
@@ -127,7 +121,7 @@ function ComposerPendingUserInputCard({
   const selectionRole = activeQuestion.multiSelect ? "checkbox" : "radio";
 
   const handleScopedKeyboard = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (isReviewing || isResponding || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (isResponding || event.metaKey || event.ctrlKey || event.altKey) return;
     if ((event.target as HTMLElement).closest("input, textarea, [contenteditable='true']")) return;
     const digit = Number.parseInt(event.key, 10);
     if (Number.isNaN(digit) || digit < 1 || digit > 9) return;
@@ -158,10 +152,11 @@ function ComposerPendingUserInputCard({
     <div
       className={cn(COMPOSER_INPUT_SURFACE_CLASS_NAME, "overflow-hidden px-3.5 py-3")}
       onKeyDown={handleScopedKeyboard}
+      aria-busy={isResponding}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          {!isReviewing && activeQuestion.header !== activeQuestion.question ? (
+          {activeQuestion.header !== activeQuestion.question ? (
             <p className="mb-0.5 text-[11px] text-muted-foreground/55">{activeQuestion.header}</p>
           ) : null}
           <p
@@ -169,13 +164,8 @@ function ComposerPendingUserInputCard({
             tabIndex={-1}
             className="text-[13px] font-medium leading-snug text-foreground/90 outline-none"
           >
-            {isReviewing ? t("pendingInput.reviewTitle") : activeQuestion.question}
+            {activeQuestion.question}
           </p>
-          {isReviewing ? (
-            <p className="mt-0.5 text-[11px] text-muted-foreground/60">
-              {t("pendingInput.reviewHint")}
-            </p>
-          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-0.5 pt-px text-muted-foreground/70">
           <button
@@ -188,13 +178,12 @@ function ComposerPendingUserInputCard({
           </button>
           <button
             type="button"
-            disabled={isResponding}
             onClick={onStop}
             className="mr-1 rounded-md px-1.5 py-0.5 text-[11px] text-muted-foreground/45 transition-colors hover:bg-[var(--color-background-button-secondary-hover)] hover:text-[var(--color-text-foreground-secondary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
           >
             {t("conversation.stopGeneration")}
           </button>
-          {!isReviewing && questionCount > 1 ? (
+          {questionCount > 1 ? (
             <>
               <button
                 type="button"
@@ -226,60 +215,16 @@ function ComposerPendingUserInputCard({
       </div>
 
       {/* Focused heading announces question text; this live region announces only view progress. */}
-      <span className="sr-only" role="status" aria-live="polite">
-        {isReviewing
-          ? t("pendingInput.reviewAnnouncement")
-          : t("pendingInput.questionAnnouncement", {
-              current: progress.questionIndex + 1,
-              total: questionCount,
-            })}
-      </span>
-
-      {isReviewing ? (
-        <div className="mt-2 space-y-0.5">
-          {prompt.questions.map((question, index) => {
-            const answer = resolvePendingUserInputAnswer(question, answers[question.id]);
-            return (
-              <button
-                key={question.id}
-                type="button"
-                className="grid w-full grid-cols-[18px_minmax(0,1fr)] gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-[var(--color-background-button-secondary-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
-                onClick={() => onEditQuestion(index)}
-              >
-                <span className="flex size-[18px] items-center justify-center rounded-full border border-[var(--color-border)] text-[10px] text-[var(--color-text-foreground-secondary)]">
-                  {index + 1}
-                </span>
-                <span className="min-w-0 text-xs leading-relaxed">
-                  <span className="block text-[11px] text-muted-foreground/55">
-                    {question.question}
-                  </span>
-                  {(answer?.selectedOptionLabels.length ?? 0) > 0 ? (
-                    <span className="block whitespace-pre-wrap break-words text-foreground/85">
-                      <span className="mr-1 text-muted-foreground/60">
-                        {t("pendingInput.selectedLabel")}:
-                      </span>
-                      {answer!.selectedOptionLabels.join(t("pendingInput.answerSeparator"))}
-                    </span>
-                  ) : null}
-                  {answer?.customText ? (
-                    <span className="block whitespace-pre-wrap break-words text-foreground/85">
-                      <span className="mr-1 text-muted-foreground/60">
-                        {t(
-                          question.options.length > 0
-                            ? "pendingInput.customInputLabel"
-                            : "pendingInput.freeTextInputLabel",
-                        )}
-                        :
-                      </span>
-                      {answer.customText}
-                    </span>
-                  ) : null}
-                </span>
-              </button>
-            );
+      {isFocusedPane ? (
+        <span className="sr-only" role="status" aria-live="polite">
+          {t("pendingInput.questionAnnouncement", {
+            current: progress.questionIndex + 1,
+            total: questionCount,
           })}
-        </div>
-      ) : activeQuestion.options.length > 0 ? (
+        </span>
+      ) : null}
+
+      {activeQuestion.options.length > 0 ? (
         <div
           className="mt-2.5 space-y-0.5"
           role={activeQuestion.multiSelect ? "group" : "radiogroup"}
@@ -300,6 +245,7 @@ function ComposerPendingUserInputCard({
                   {...(option.description === undefined ? {} : { description: option.description })}
                   selected={selected}
                   selectionRole={selectionRole}
+                  selectionName={`ask:${prompt.requestId}:${prompt.lifecycleGeneration ?? "legacy"}:${activeQuestion.id}`}
                   disabled={isResponding}
                   onSelect={() => {
                     const nextAnswer = togglePendingUserInputOptionSelection(
@@ -367,6 +313,7 @@ function ComposerPendingUserInputCard({
               )}
               selected={progress.customSelected}
               selectionRole={selectionRole}
+              selectionName={`ask:${prompt.requestId}:${prompt.lifecycleGeneration ?? "legacy"}:${activeQuestion.id}`}
               disabled={isResponding}
               onSelect={() =>
                 onChangeAnswer(
@@ -385,6 +332,7 @@ function ComposerPendingUserInputCard({
                 ref={customInputRef}
                 rows={2}
                 value={progress.customText}
+                disabled={isResponding}
                 onChange={(event) =>
                   onChangeAnswer(
                     activeQuestion.id,
@@ -429,6 +377,7 @@ function ComposerPendingUserInputCard({
                   ) : null}
                   <button
                     type="button"
+                    disabled={isResponding}
                     className="mt-1.5 rounded-md border border-[var(--color-border)] px-2 py-1 text-foreground/75 hover:bg-[var(--color-background-button-secondary-hover)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1"
                     onClick={() =>
                       onChangeAnswer(
@@ -450,6 +399,7 @@ function ComposerPendingUserInputCard({
           <textarea
             rows={5}
             value={progress.customText}
+            disabled={isResponding}
             onChange={(event) =>
               onChangeAnswer(
                 activeQuestion.id,

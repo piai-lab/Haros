@@ -29,9 +29,35 @@ export interface PendingUserInputProgress {
   canAdvance: boolean;
 }
 
-export type PendingUserInputSinglePresetDestination =
+export type PendingUserInputSinglePresetAction =
   | { kind: "question"; questionIndex: number }
-  | { kind: "review" };
+  | { kind: "submit"; answers: CanonicalUserInputAnswers }
+  | { kind: "stay" };
+
+export function claimPendingUserInputResponse(claimedKeys: Set<string>, key: string): boolean {
+  if (claimedKeys.has(key)) return false;
+  claimedKeys.add(key);
+  return true;
+}
+
+export function releasePendingUserInputResponse(claimedKeys: Set<string>, key: string): void {
+  claimedKeys.delete(key);
+}
+
+export async function dispatchClaimedPendingUserInputResponse(input: {
+  claimedKeys: Set<string>;
+  key: string;
+  dispatch: () => Promise<void>;
+}): Promise<boolean> {
+  if (!claimPendingUserInputResponse(input.claimedKeys, input.key)) return false;
+  try {
+    await input.dispatch();
+    return true;
+  } catch (error) {
+    releasePendingUserInputResponse(input.claimedKeys, input.key);
+    throw error;
+  }
+}
 
 export function hasMeaningfulPendingUserInputText(value: string | undefined): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -147,13 +173,13 @@ export function buildPendingUserInputAnswers(
   return answers;
 }
 
-export function derivePendingUserInputSinglePresetDestination(
+export function derivePendingUserInputSinglePresetAction(
   questions: ReadonlyArray<UserInputQuestion>,
   draftAnswers: Record<string, PendingUserInputDraftAnswer>,
   questionIndex: number,
   questionId: string,
   nextDraftAnswer: PendingUserInputDraftAnswer,
-): PendingUserInputSinglePresetDestination | null {
+): PendingUserInputSinglePresetAction | null {
   const question = questions[questionIndex];
   if (
     !question ||
@@ -169,7 +195,9 @@ export function derivePendingUserInputSinglePresetDestination(
     return { kind: "question", questionIndex: questionIndex + 1 };
   }
   const nextAnswers = { ...draftAnswers, [questionId]: nextDraftAnswer };
-  return buildPendingUserInputAnswers(questions, nextAnswers) ? { kind: "review" } : null;
+  const answers = buildPendingUserInputAnswers(questions, nextAnswers);
+  if (!answers) return null;
+  return questions.length === 1 ? { kind: "submit", answers } : { kind: "stay" };
 }
 
 export function hasCompletePendingUserInputAnswers(answers: CanonicalUserInputAnswers): boolean {

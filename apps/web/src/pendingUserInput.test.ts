@@ -1,10 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildPendingUserInputAnswers,
+  claimPendingUserInputResponse,
+  dispatchClaimedPendingUserInputResponse,
   derivePendingUserInputProgress,
-  derivePendingUserInputSinglePresetDestination,
+  derivePendingUserInputSinglePresetAction,
   resolvePendingUserInputAnswer,
+  releasePendingUserInputResponse,
   setPendingUserInputCustomText,
   togglePendingUserInputCustomSelection,
   togglePendingUserInputOptionSelection,
@@ -39,6 +42,57 @@ const freeText = {
 } as const;
 
 describe("canonical user-input answer semantics", () => {
+  it("claims rapid response attempts synchronously and releases only for retry", () => {
+    const claims = new Set<string>();
+    expect(claimPendingUserInputResponse(claims, "thread:request:generation")).toBe(true);
+    expect(claimPendingUserInputResponse(claims, "thread:request:generation")).toBe(false);
+    releasePendingUserInputResponse(claims, "thread:request:generation");
+    expect(claimPendingUserInputResponse(claims, "thread:request:generation")).toBe(true);
+  });
+
+  it("dispatches rapid response attempts exactly once and releases only on failure", async () => {
+    const claims = new Set<string>();
+    let settle!: () => void;
+    const pendingDispatch = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    const dispatch = vi.fn(() => pendingDispatch);
+    const first = dispatchClaimedPendingUserInputResponse({
+      claimedKeys: claims,
+      key: "request",
+      dispatch,
+    });
+    expect(
+      await dispatchClaimedPendingUserInputResponse({
+        claimedKeys: claims,
+        key: "request",
+        dispatch,
+      }),
+    ).toBe(false);
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    settle();
+    await expect(first).resolves.toBe(true);
+    expect(claims.has("request")).toBe(true);
+
+    await expect(
+      dispatchClaimedPendingUserInputResponse({
+        claimedKeys: claims,
+        key: "retryable",
+        dispatch: async () => {
+          throw new Error("transport failed");
+        },
+      }),
+    ).rejects.toThrow("transport failed");
+    expect(claims.has("retryable")).toBe(false);
+    await expect(
+      dispatchClaimedPendingUserInputResponse({
+        claimedKeys: claims,
+        key: "retryable",
+        dispatch: async () => undefined,
+      }),
+    ).resolves.toBe(true);
+  });
+
   it("keeps selected labels and custom text structurally independent", () => {
     const draft = {
       selectedOptionLabels: ["Implementation", "Tests"],
@@ -142,29 +196,44 @@ describe("canonical user-input answer semantics", () => {
     });
   });
 
-  it("routes single preset selection to the next question or final Review", () => {
+  it("routes a single preset to the next question or direct single-question submit", () => {
     expect(
-      derivePendingUserInputSinglePresetDestination([single, freeText], {}, 0, single.id, {
+      derivePendingUserInputSinglePresetAction([single, freeText], {}, 0, single.id, {
         selectedOptionLabels: ["Preserve"],
       }),
     ).toEqual({ kind: "question", questionIndex: 1 });
 
     expect(
-      derivePendingUserInputSinglePresetDestination([single], {}, 0, single.id, {
+      derivePendingUserInputSinglePresetAction([single], {}, 0, single.id, {
         selectedOptionLabels: ["Preserve"],
       }),
-    ).toEqual({ kind: "review" });
+    ).toEqual({
+      kind: "submit",
+      answers: { direction: { selectedOptionLabels: ["Preserve"] } },
+    });
+  });
+
+  it("keeps the last single preset in a multi-question request for explicit submit", () => {
+    expect(
+      derivePendingUserInputSinglePresetAction(
+        [freeText, single],
+        { constraint: { customText: "No caps" } },
+        1,
+        single.id,
+        { selectedOptionLabels: ["Preserve"] },
+      ),
+    ).toEqual({ kind: "stay" });
   });
 
   it("never auto-advances custom or multiple-choice answers", () => {
     expect(
-      derivePendingUserInputSinglePresetDestination([single], {}, 0, single.id, {
+      derivePendingUserInputSinglePresetAction([single], {}, 0, single.id, {
         customSelected: true,
         customText: "Complete answer",
       }),
     ).toBeNull();
     expect(
-      derivePendingUserInputSinglePresetDestination([multiple], {}, 0, multiple.id, {
+      derivePendingUserInputSinglePresetAction([multiple], {}, 0, multiple.id, {
         selectedOptionLabels: ["Implementation"],
       }),
     ).toBeNull();

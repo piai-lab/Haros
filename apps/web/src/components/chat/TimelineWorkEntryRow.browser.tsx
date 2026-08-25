@@ -31,6 +31,30 @@ function CanonicalAskRow() {
   );
 }
 
+function CanonicalAnsweredRow() {
+  return (
+    <I18nProvider>
+      <TimelineWorkEntryRow
+        workEntry={{
+          id: "canonical-user-input-answered",
+          createdAt: "2026-08-25T00:00:01.000Z",
+          label: "User input answered",
+          tone: "info",
+          activityKind: "user-input.resolved",
+          userInputSettlementStatus: "answered",
+          userInputAnswerSummary: "A · B · 自定义内容",
+        }}
+        chatMetaFontSizePx={12}
+        textFontSizePx={13}
+        density="compact"
+        onImageExpand={() => {}}
+        markdownCwd={undefined}
+        timestampFormat="24-hour"
+      />
+    </I18nProvider>
+  );
+}
+
 function createHost(width: number): HTMLDivElement {
   const host = document.createElement("div");
   host.style.cssText = `width:${width}px;max-width:100%;overflow:auto;padding:8px;`;
@@ -58,6 +82,17 @@ describe("canonical User Input Timeline projection", () => {
     expect(icon?.getBoundingClientRect().height).toBe(14);
     expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
     expect(host.querySelector('[data-central-icon-name="hammer"]')).toBeNull();
+
+    await screen.unmount();
+  });
+
+  it("shows the persisted answered summary on the quiet bubbles receipt", async () => {
+    const host = createHost(430);
+    const screen = await render(<CanonicalAnsweredRow />, { container: host });
+
+    expect(host.querySelector('[data-central-icon-name="bubbles"]')).not.toBeNull();
+    expect(host.textContent).toContain("Answered · A · B · 自定义内容");
+    expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
 
     await screen.unmount();
   });

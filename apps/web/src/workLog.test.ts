@@ -34,6 +34,97 @@ describe("deriveWorkLogEntries", () => {
     });
   });
 
+  it("summarizes persisted answered selections and custom text without mutating the payload", () => {
+    const settlement = {
+      status: "answered",
+      answers: {
+        direction: { selectedOptionLabels: ["Preserve"] },
+        delivery: {
+          selectedOptionLabels: ["Implementation", "Tests"],
+          customText: "Keep\nraw text.  ",
+        },
+      },
+    } as const;
+    const before = JSON.stringify(settlement);
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "ask-answered",
+          kind: "user-input.resolved",
+          tone: "info",
+          summary: "User input answered",
+          payload: { requestId: "ask-1", settlement },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry).toMatchObject({
+      userInputSettlementStatus: "answered",
+      userInputAnswerSummary: "Preserve · Implementation · Tests · Keep raw text.",
+    });
+    expect(JSON.stringify(settlement)).toBe(before);
+  });
+
+  it("keeps native scalar answers readable and terminal failures free of answer text", () => {
+    const entries = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "ask-native-answered",
+          kind: "user-input.resolved",
+          tone: "info",
+          summary: "User input answered",
+          payload: {
+            requestId: "ask-native",
+            settlement: { status: "answered", answers: { q1: "A", q2: ["B", "C"] } },
+          },
+        }),
+        makeActivity({
+          id: "ask-native-cancelled",
+          kind: "user-input.resolved",
+          tone: "error",
+          summary: "User input cancelled",
+          payload: {
+            requestId: "ask-cancelled",
+            settlement: { status: "cancelled" },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entries[0]).toMatchObject({
+      userInputSettlementStatus: "answered",
+      userInputAnswerSummary: "A · B · C",
+    });
+    expect(entries[1]).toMatchObject({ userInputSettlementStatus: "cancelled" });
+    expect(entries[1]?.userInputAnswerSummary).toBeUndefined();
+  });
+
+  it("truncates presentation summaries at grapheme boundaries", () => {
+    const family = "👨‍👩‍👧‍👦";
+    const [entry] = deriveWorkLogEntries(
+      [
+        makeActivity({
+          id: "ask-long-answered",
+          kind: "user-input.resolved",
+          tone: "info",
+          summary: "User input answered",
+          payload: {
+            requestId: "ask-long",
+            settlement: {
+              status: "answered",
+              answers: { q1: { selectedOptionLabels: [], customText: family.repeat(300) } },
+            },
+          },
+        }),
+      ],
+      undefined,
+    );
+
+    expect(entry?.userInputAnswerSummary).toBe(`${family.repeat(219)}…`);
+  });
+
   it("keeps Ask provenance failures structured instead of leaking server copy", () => {
     const [entry] = deriveWorkLogEntries(
       [

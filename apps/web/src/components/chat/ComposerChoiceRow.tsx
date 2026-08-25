@@ -24,6 +24,8 @@ interface ComposerChoiceRowProps {
   disabled?: boolean;
   /** Adds native selection semantics for Ask rows; approval actions remain ordinary buttons. */
   selectionRole?: "radio" | "checkbox";
+  /** Native radio grouping; ignored for checkbox and ordinary approval rows. */
+  selectionName?: string;
   /** Trailing affordance, e.g. a check icon on the selected option. */
   trailing?: ReactNode;
   onSelect: () => void;
@@ -53,25 +55,15 @@ export function ComposerChoiceRow({
   tone: toneProp,
   disabled: disabledProp,
   selectionRole,
+  selectionName,
   trailing,
   onSelect,
 }: ComposerChoiceRowProps) {
   const selected = selectedProp ?? false;
   const tone = toneProp ?? "neutral";
   const disabled = disabledProp ?? false;
-  return (
-    <button
-      type="button"
-      role={selectionRole}
-      aria-checked={selectionRole ? selected : undefined}
-      disabled={disabled}
-      onClick={onSelect}
-      className={cn(
-        "group flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-text-foreground-tertiary)]",
-        selected ? "bg-[var(--color-background-button-secondary)]" : ROW_TONE_CLASS_NAME[tone],
-        disabled && "cursor-not-allowed opacity-50",
-      )}
-    >
+  const content = (
+    <>
       {shortcut !== null ? (
         <span
           className={cn(
@@ -91,6 +83,38 @@ export function ComposerChoiceRow({
         ) : null}
       </div>
       {trailing}
+    </>
+  );
+  const className = cn(
+    "group relative flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-text-foreground-tertiary)] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-1 has-[:focus-visible]:outline-[var(--color-text-foreground-tertiary)]",
+    selected ? "bg-[var(--color-background-button-secondary)]" : ROW_TONE_CLASS_NAME[tone],
+    disabled && "cursor-not-allowed opacity-50",
+  );
+
+  if (selectionRole) {
+    return (
+      <label className={className}>
+        <input
+          className="absolute inset-0 z-10 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+          type={selectionRole}
+          {...(selectionRole === "radio" && selectionName ? { name: selectionName } : {})}
+          checked={selected}
+          disabled={disabled}
+          onChange={onSelect}
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            onSelect();
+          }}
+        />
+        {content}
+      </label>
+    );
+  }
+
+  return (
+    <button type="button" disabled={disabled} onClick={onSelect} className={className}>
+      {content}
     </button>
   );
 }

@@ -8,7 +8,7 @@ import { useState } from "react";
 
 import { I18nProvider } from "../../i18n";
 import {
-  derivePendingUserInputSinglePresetDestination,
+  derivePendingUserInputSinglePresetAction,
   type PendingUserInputDraftAnswer,
 } from "../../pendingUserInput";
 import type { PendingUserInput } from "../../session-logic";
@@ -84,36 +84,45 @@ const singlePrompt = {
   ],
 } as const;
 
+const exactSinglePrompt = {
+  ...singlePrompt,
+  requestId: ApprovalRequestId.makeUnsafe("ask-single-direct-submit"),
+  questions: [singlePrompt.questions[0]!],
+} as const;
+
 function Harness({
-  reviewing = false,
   initialAnswers = {},
   pending = prompt,
   onStop = vi.fn(),
   onAdvance = vi.fn(),
+  onSubmit = vi.fn(),
+  isResponding = false,
+  isFocusedPane = true,
 }: {
-  reviewing?: boolean;
   initialAnswers?: Record<string, PendingUserInputDraftAnswer>;
   pending?: PendingUserInput;
   onStop?: () => void;
   onAdvance?: () => void;
+  onSubmit?: (answers: unknown) => void;
+  isResponding?: boolean;
+  isFocusedPane?: boolean;
 }) {
   const [answers, setAnswers] =
     useState<Record<string, PendingUserInputDraftAnswer>>(initialAnswers);
   const [questionIndex, setQuestionIndex] = useState(0);
-  const [isReviewing, setIsReviewing] = useState(reviewing);
   return (
     <I18nProvider>
       <ComposerPendingUserInputPanel
         pendingUserInputs={[pending]}
-        isResponding={false}
+        isResponding={isResponding}
         answers={answers}
         questionIndex={questionIndex}
-        isReviewing={isReviewing}
+        isFocusedPane={isFocusedPane}
         onChangeAnswer={(questionId, answer) =>
           setAnswers((current) => ({ ...current, [questionId]: answer }))
         }
         onSelectSinglePreset={(questionId, answer) => {
-          const destination = derivePendingUserInputSinglePresetDestination(
+          const action = derivePendingUserInputSinglePresetAction(
             pending.questions,
             answers,
             questionIndex,
@@ -121,12 +130,11 @@ function Harness({
             answer,
           );
           setAnswers((current) => ({ ...current, [questionId]: answer }));
-          if (destination?.kind === "question") setQuestionIndex(destination.questionIndex);
-          if (destination?.kind === "review") setIsReviewing(true);
+          if (action?.kind === "question") setQuestionIndex(action.questionIndex);
+          if (action?.kind === "submit") onSubmit(action.answers);
         }}
         onAdvance={onAdvance}
         onPrevious={vi.fn()}
-        onEditQuestion={vi.fn()}
         onCancel={vi.fn()}
         onStop={onStop}
       />
@@ -162,19 +170,19 @@ describe("ComposerPendingUserInputPanel", () => {
     const customInput = page.getByRole("textbox", { name: "自定义答案" });
     await customInput.fill("2026");
     expect((customInput.element() as HTMLTextAreaElement).value).toBe("2026");
-    expect(document.querySelectorAll('[role="checkbox"][aria-checked="true"]')).toHaveLength(1);
+    expect(document.querySelectorAll('input[type="checkbox"]:checked')).toHaveLength(1);
     await screen.unmount();
   });
 
   it("keeps recommendation and preview advisory until the user selects the option", async () => {
     const screen = await render(<Harness />);
     await expect.element(page.getByText("推荐", { exact: true })).toBeVisible();
-    expect(document.querySelectorAll('[role="checkbox"][aria-checked="true"]')).toHaveLength(0);
+    expect(document.querySelectorAll('input[type="checkbox"]:checked')).toHaveLength(0);
 
     await page.getByRole("button", { name: "预览" }).click();
     await expect.element(page.getByText("只在用户显式展开后显示。", { exact: true })).toBeVisible();
     await expect.element(page.getByText("与当前成熟运行时一致。", { exact: true })).toBeVisible();
-    expect(document.querySelectorAll('[role="checkbox"][aria-checked="true"]')).toHaveLength(0);
+    expect(document.querySelectorAll('input[type="checkbox"]:checked')).toHaveLength(0);
     await screen.unmount();
   });
 
@@ -202,28 +210,9 @@ describe("ComposerPendingUserInputPanel", () => {
     await screen.unmount();
   });
 
-  it("reviews preset selections and custom text as separate facts", async () => {
-    const screen = await render(
-      <Harness
-        reviewing
-        initialAnswers={{
-          delivery: {
-            selectedOptionLabels: ["功能实现", "自动化测试"],
-            customSelected: true,
-            customText: "同时保留作者测试。  ",
-          },
-        }}
-      />,
-    );
-
-    await expect.element(page.getByText("确认回答", { exact: true })).toBeVisible();
-    await expect.element(page.getByText(/功能实现.*自动化测试.*同时保留作者测试/)).toBeVisible();
-    await screen.unmount();
-  });
-
-  it("auto-advances single presets and enters Review without submitting", async () => {
-    const onAdvance = vi.fn();
-    const screen = await render(<Harness pending={singlePrompt} onAdvance={onAdvance} />);
+  it("auto-advances middle single presets and keeps the final preset for explicit submit", async () => {
+    const onSubmit = vi.fn();
+    const screen = await render(<Harness pending={singlePrompt} onSubmit={onSubmit} />);
 
     await expect.element(page.getByText("选择运行时母体？", { exact: true })).toHaveFocus();
     await expect.element(page.getByRole("status")).toHaveTextContent("第 1 题，共 2 题");
@@ -233,13 +222,25 @@ describe("ComposerPendingUserInputPanel", () => {
     await expect.element(page.getByText("何时激活？", { exact: true })).toBeVisible();
     await expect.element(page.getByText("何时激活？", { exact: true })).toHaveFocus();
     await expect.element(page.getByRole("status")).toHaveTextContent("第 2 题，共 2 题");
-    expect(onAdvance).not.toHaveBeenCalled();
+    expect(onSubmit).not.toHaveBeenCalled();
 
     await page.getByRole("radio", { name: /全部门通过后/ }).click();
-    await expect.element(page.getByText("确认回答", { exact: true })).toBeVisible();
-    await expect.element(page.getByText("确认回答", { exact: true })).toHaveFocus();
-    await expect.element(page.getByRole("status")).toHaveTextContent("发送前请复核你的回答。");
-    expect(onAdvance).not.toHaveBeenCalled();
+    await expect.element(page.getByText("何时激活？", { exact: true })).toBeVisible();
+    expect(onSubmit).not.toHaveBeenCalled();
+    await screen.unmount();
+  });
+
+  it("submits an exact single preset once without a Review screen", async () => {
+    const onSubmit = vi.fn();
+    const screen = await render(<Harness pending={exactSinglePrompt} onSubmit={onSubmit} />);
+
+    await page.getByRole("radio", { name: /成熟母体/ }).click();
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(onSubmit).toHaveBeenCalledWith({
+      runtime: { selectedOptionLabels: ["成熟母体"] },
+    });
+    expect(document.body.textContent).not.toContain("确认回答");
     await screen.unmount();
   });
 
@@ -260,17 +261,37 @@ describe("ComposerPendingUserInputPanel", () => {
     await multiScreen.unmount();
   });
 
-  it("uses scoped number shortcuts for the same single-preset auto-navigation", async () => {
-    const onAdvance = vi.fn();
-    const screen = await render(<Harness pending={singlePrompt} onAdvance={onAdvance} />);
+  it("uses scoped number shortcuts for the same exact single submit owner", async () => {
+    const onSubmit = vi.fn();
+    const screen = await render(<Harness pending={exactSinglePrompt} onSubmit={onSubmit} />);
     const heading = page.getByText("选择运行时母体？", { exact: true });
     heading
       .element()
       .dispatchEvent(new KeyboardEvent("keydown", { key: "1", bubbles: true, cancelable: true }));
 
-    await expect.element(page.getByText("何时激活？", { exact: true })).toBeVisible();
-    await expect.element(page.getByText("何时激活？", { exact: true })).toHaveFocus();
-    expect(onAdvance).not.toHaveBeenCalled();
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    await screen.unmount();
+  });
+
+  it("keeps Stop available and makes answer controls truly disabled while responding", async () => {
+    const onStop = vi.fn();
+    const screen = await render(<Harness isResponding onStop={onStop} />);
+
+    await expect.element(page.getByRole("checkbox", { name: /功能实现/ })).toBeDisabled();
+    await page.getByRole("button", { name: "停止生成" }).click();
+    expect(onStop).toHaveBeenCalledTimes(1);
+    await expect.element(page.getByRole("button", { name: "取消" })).toBeDisabled();
+    await screen.unmount();
+  });
+
+  it("does not steal focus from a background split pane", async () => {
+    const outside = document.createElement("button");
+    outside.textContent = "foreground";
+    document.body.append(outside);
+    outside.focus();
+    const screen = await render(<Harness pending={singlePrompt} isFocusedPane={false} />);
+
+    expect(document.activeElement).toBe(outside);
     await screen.unmount();
   });
 

@@ -703,11 +703,14 @@ export function collectThreadAttentionCandidates(
         latestTurnId: previousThread.latestTurn?.turnId,
       }).map((approval) => approval.requestId),
     );
-    const previousUserInputIds = new Set(
+    const previousUserInputClaimability = new Map(
       derivePendingUserInputs(previousThread.activities, previousThread.pendingInteractions, {
         authoritativeHasPending: previousThread.hasPendingUserInput,
         latestTurnId: previousThread.latestTurn?.turnId,
-      }).map((request) => request.requestId),
+      }).map((request) => [
+        pendingRequestInstanceKey(request.requestId, request.lifecycleGeneration),
+        request.responseClaimable !== false,
+      ]),
     );
     const previousApprovalActivityKeys = requestedActivityInstanceKeys(
       previousThread.activities,
@@ -746,12 +749,12 @@ export function collectThreadAttentionCandidates(
       authoritativeHasPending: thread.hasPendingUserInput,
       latestTurnId: thread.latestTurn?.turnId,
     })) {
+      const requestKey = pendingRequestInstanceKey(request.requestId, request.lifecycleGeneration);
+      const wasPreviouslyClaimable = previousUserInputClaimability.get(requestKey);
       if (
-        previousUserInputIds.has(request.requestId) ||
-        (thread.pendingInteractions === undefined &&
-          previousUserInputActivityKeys.has(
-            pendingRequestInstanceKey(request.requestId, request.lifecycleGeneration),
-          ))
+        request.responseClaimable === false ||
+        wasPreviouslyClaimable === true ||
+        (thread.pendingInteractions === undefined && previousUserInputActivityKeys.has(requestKey))
       ) {
         continue;
       }

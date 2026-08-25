@@ -354,7 +354,7 @@ describe("derivePendingApprovals", () => {
 });
 
 describe("derivePendingUserInputs", () => {
-  it("shows only actionable durable user-input settlements", () => {
+  it("keeps durable user-input cards visible through response settlement", () => {
     const activities: OrchestrationThreadActivity[] = [
       makeActivity({
         id: "user-input-settlement",
@@ -379,13 +379,17 @@ describe("derivePendingUserInputs", () => {
 
     expect(
       derivePendingUserInputs(activities, [makePendingInteraction("userInput", "responding")]),
-    ).toEqual([]);
+    ).toEqual([
+      expect.objectContaining({ settlementStatus: "responding", responseClaimable: false }),
+    ]);
     expect(
       derivePendingUserInputs(activities, [makePendingInteraction("userInput", "uncertain")]),
-    ).toEqual([]);
+    ).toEqual([
+      expect.objectContaining({ settlementStatus: "uncertain", responseClaimable: false }),
+    ]);
     expect(
       derivePendingUserInputs(activities, [makePendingInteraction("userInput", "pending")]),
-    ).toHaveLength(1);
+    ).toEqual([expect.objectContaining({ settlementStatus: "pending", responseClaimable: true })]);
     expect(
       derivePendingUserInputs(activities, [makePendingInteraction("userInput", "pending")], {
         authoritativeHasPending: false,
@@ -428,7 +432,7 @@ describe("derivePendingUserInputs", () => {
         [makePendingInteraction("userInput", "uncertain")],
         options,
       ),
-    ).toHaveLength(1);
+    ).toEqual([expect.objectContaining({ responseClaimable: true })]);
     expect(
       derivePendingUserInputs(
         activities,
@@ -439,7 +443,7 @@ describe("derivePendingUserInputs", () => {
         ],
         options,
       ),
-    ).toHaveLength(0);
+    ).toEqual([expect.objectContaining({ responseClaimable: false })]);
     expect(
       derivePendingUserInputs(
         activities,
@@ -450,7 +454,7 @@ describe("derivePendingUserInputs", () => {
         ],
         options,
       ),
-    ).toHaveLength(1);
+    ).toEqual([expect.objectContaining({ responseClaimable: true })]);
   });
 
   it("uses explicit aggregate input as evidence for the newest unresolved question", () => {

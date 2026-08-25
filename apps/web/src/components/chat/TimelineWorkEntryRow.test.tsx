@@ -55,7 +55,7 @@ describe("canonical User Input Timeline identity", () => {
   );
 
   it.each(["answered", "cancelled", "aborted", "timed_out", "unavailable", "stale"] as const)(
-    "keeps the %s terminal receipt distinct from a new request",
+    "keeps the %s terminal receipt on the canonical User Input identity",
     (status) => {
       const markup = iconMarkup(
         entry({
@@ -65,8 +65,8 @@ describe("canonical User Input Timeline identity", () => {
         }),
       );
 
-      expect(markup).toContain('data-central-icon-name="arrow-up-circle"');
-      expect(markup).not.toContain('data-central-icon-name="bubbles"');
+      expect(markup).toContain('data-central-icon-name="bubbles"');
+      expect(markup).not.toContain('data-central-icon-name="hammer"');
     },
   );
 

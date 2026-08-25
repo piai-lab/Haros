@@ -89,6 +89,8 @@ export interface WorkLogEntry {
     | "timed_out"
     | "unavailable"
     | "stale";
+  /** Bounded presentation-only summary derived from the persisted terminal fact. */
+  userInputAnswerSummary?: string;
   askUserProvenanceUnavailable?: boolean;
   failureReason?: ProviderTurnStartFailureReasonValue;
   // Provider-native event type carried through the activity payload (e.g.
@@ -478,6 +480,89 @@ export function parseTaskListTasks(payload: unknown): TaskListTaskSnapshot[] | n
   return tasks;
 }
 
+const USER_INPUT_ANSWER_SUMMARY_MAX_GRAPHEMES = 220;
+
+function normalizeUserInputAnswerSummaryPart(value: string): string | null {
+  const normalized = value.replace(/\s+/gu, " ").trim();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function truncateUserInputAnswerSummary(value: string): string {
+  const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+  const graphemes = Array.from(segmenter.segment(value), (segment) => segment.segment);
+  if (graphemes.length <= USER_INPUT_ANSWER_SUMMARY_MAX_GRAPHEMES) {
+    return value;
+  }
+  return `${graphemes.slice(0, USER_INPUT_ANSWER_SUMMARY_MAX_GRAPHEMES - 1).join("")}…`;
+}
+
+function extractUserInputAnswerSummary(answers: unknown): string | null {
+  const answerRecord = asRecord(answers);
+  if (!answerRecord) return null;
+  const parts: string[] = [];
+  for (const answer of Object.values(answerRecord)) {
+    if (typeof answer === "string") {
+      const part = normalizeUserInputAnswerSummaryPart(answer);
+      if (part) parts.push(part);
+      continue;
+    }
+    if (Array.isArray(answer)) {
+      for (const value of answer) {
+        if (typeof value !== "string") continue;
+        const part = normalizeUserInputAnswerSummaryPart(value);
+        if (part) parts.push(part);
+      }
+      continue;
+    }
+    const structured = asRecord(answer);
+    if (!structured) continue;
+    if (Array.isArray(structured.selectedOptionLabels)) {
+      for (const value of structured.selectedOptionLabels) {
+        if (typeof value !== "string") continue;
+        const part = normalizeUserInputAnswerSummaryPart(value);
+        if (part) parts.push(part);
+      }
+    }
+    if (typeof structured.customText === "string") {
+      const part = normalizeUserInputAnswerSummaryPart(structured.customText);
+      if (part) parts.push(part);
+    }
+  }
+  return parts.length > 0 ? truncateUserInputAnswerSummary(parts.join(" · ")) : null;
+}
+
+function extractUserInputResolution(payload: Record<string, unknown> | null): {
+  status: NonNullable<WorkLogEntry["userInputSettlementStatus"]>;
+  answerSummary: string | null;
+} | null {
+  const settlement = asRecord(payload?.settlement);
+  const status = settlement?.status;
+  if (
+    status === "answered" ||
+    status === "cancelled" ||
+    status === "aborted" ||
+    status === "timed_out" ||
+    status === "unavailable" ||
+    status === "stale"
+  ) {
+    return {
+      status,
+      answerSummary:
+        status === "answered" ? extractUserInputAnswerSummary(settlement?.answers) : null,
+    };
+  }
+  // Named legacy/native decode seam: older persisted Provider activities carried
+  // only an answers object. Empty answers stay a genuine answered fact; they are
+  // never reverse-inferred as cancellation.
+  if (asRecord(payload?.answers)) {
+    return {
+      status: "answered",
+      answerSummary: extractUserInputAnswerSummary(payload?.answers),
+    };
+  }
+  return null;
+}
+
 function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWorkLogEntry {
   const payload =
     activity.payload && typeof activity.payload === "object"
@@ -494,6 +579,7 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
   const reasoningDetailTruncated =
     activity.kind === "reasoning.completed" &&
     asRecord(payload?.data)?.reasoningDetailTruncated === true;
+  const userInputResolution = extractUserInputResolution(payload);
   const entry: DerivedWorkLogEntry = {
     id: activity.id,
     createdAt: activity.createdAt,
@@ -502,17 +588,12 @@ function toDerivedWorkLogEntry(activity: OrchestrationThreadActivity): DerivedWo
     label: activity.summary,
     tone: activity.tone === "approval" ? "info" : activity.tone,
     activityKind: activity.kind,
-    ...(activity.kind === "user-input.resolved" &&
-    (asRecord(payload?.settlement)?.status === "answered" ||
-      asRecord(payload?.settlement)?.status === "cancelled" ||
-      asRecord(payload?.settlement)?.status === "aborted" ||
-      asRecord(payload?.settlement)?.status === "timed_out" ||
-      asRecord(payload?.settlement)?.status === "unavailable" ||
-      asRecord(payload?.settlement)?.status === "stale")
+    ...(activity.kind === "user-input.resolved" && userInputResolution
       ? {
-          userInputSettlementStatus: asRecord(payload?.settlement)!.status as NonNullable<
-            WorkLogEntry["userInputSettlementStatus"]
-          >,
+          userInputSettlementStatus: userInputResolution.status,
+          ...(userInputResolution.answerSummary
+            ? { userInputAnswerSummary: userInputResolution.answerSummary }
+            : {}),
         }
       : {}),
     ...(toolName ? { toolName } : {}),

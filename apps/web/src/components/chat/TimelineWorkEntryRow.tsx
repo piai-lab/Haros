@@ -21,7 +21,6 @@ import {
 import { basenameOfPath } from "~/file-icons";
 import type { TimestampFormat } from "../../localPreferences";
 import {
-  ArrowUpCircleIcon,
   AskUserIcon,
   BackgroundTrayIcon,
   BotIcon,
@@ -239,10 +238,14 @@ function commandWorkEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
 
 function workEntryIcon(workEntry: TimelineWorkEntry): LucideIcon {
   if (isReasoningUpdateWorkEntry(workEntry)) return ReasoningIcon;
-  // Canonical User Input is a two-way interaction while waiting; its terminal
-  // receipt stays distinct from both the request and generic info checkmarks.
-  if (workEntry.activityKind === "user-input.requested") return AskUserIcon;
-  if (workEntry.activityKind === "user-input.resolved") return ArrowUpCircleIcon;
+  // Requested and terminal rows share one canonical two-way interaction identity;
+  // structured settlement copy and tone distinguish their lifecycle states.
+  if (
+    workEntry.activityKind === "user-input.requested" ||
+    workEntry.activityKind === "user-input.resolved"
+  ) {
+    return AskUserIcon;
+  }
   // "Moved to background" notices read as a tray drop, not a warning check.
   if (workEntry.nativeEventType === "background_tasks_changed") return BackgroundTrayIcon;
 
@@ -289,7 +292,12 @@ export function workEntryLeftIcon(workEntry: TimelineWorkEntry): LucideIcon {
   // Structure owns User Input identity. It deliberately wins over Provider,
   // Tool-name, MCP, browser, and brand marks so every truthful adapter shares
   // this projection without teaching the Web resolver native Ask aliases.
-  if (workEntry.activityKind === "user-input.requested") return AskUserIcon;
+  if (
+    workEntry.activityKind === "user-input.requested" ||
+    workEntry.activityKind === "user-input.resolved"
+  ) {
+    return AskUserIcon;
+  }
   if (isGitHubMcpToolCall(workEntry)) return GitHubIcon;
   if (isOmniMindBrowserWorkEntry(workEntry)) return GlobeIcon;
   if (isOmniMindToolCall(workEntry)) return OmniMindToolIcon;
@@ -637,7 +645,15 @@ export const TimelineWorkEntryRow = memo(function TimelineWorkEntryRow(props: {
           : workEntry.taskListProgress
             ? t("taskList.progress", workEntry.taskListProgress)
             : (bundledWebAccessHeading ?? toolWorkEntryHeading(workEntry));
-  const rawPreview = workEntry.askUserProvenanceUnavailable ? "" : workEntryPreview(workEntry);
+  const rawPreview = workEntry.askUserProvenanceUnavailable
+    ? ""
+    : workEntry.userInputSettlementStatus
+      ? workEntry.userInputSettlementStatus === "answered"
+        ? workEntry.userInputAnswerSummary
+          ? `· ${workEntry.userInputAnswerSummary}`
+          : ""
+        : ""
+      : workEntryPreview(workEntry);
   const preview =
     isOmniMindBrowserToolRow || isOmniMindToolRow
       ? sanitizeOmniMindMcpToolPreview({

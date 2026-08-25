@@ -29,6 +29,8 @@ export interface PendingUserInput {
   lifecycleGeneration?: string;
   createdAt: string;
   questions: ReadonlyArray<UserInputQuestion>;
+  settlementStatus?: OrchestrationPendingInteraction["status"];
+  responseClaimable?: boolean;
 }
 
 type PendingInteractionKind = OrchestrationPendingInteraction["interactionKind"];
@@ -108,7 +110,8 @@ function retainActionableSettlements<T extends { requestId: ApprovalRequestId }>
       .filter(
         (settlement) =>
           settlement.interactionKind === interactionKind &&
-          (settlement.status === "pending" ||
+          (interactionKind === "userInput" ||
+            settlement.status === "pending" ||
             settlement.status === "retryable" ||
             (responseClaimReferenceAt !== undefined &&
               isPendingInteractionResponseClaimable({
@@ -418,7 +421,7 @@ export function derivePendingUserInputs(
   settlements?: ReadonlyArray<OrchestrationPendingInteraction>,
   options?: PendingInteractionDerivationOptions,
 ): PendingUserInput[] {
-  return replayPendingInteractions(
+  const pending = replayPendingInteractions(
     activities,
     settlements,
     {
@@ -441,4 +444,36 @@ export function derivePendingUserInputs(
     },
     options,
   );
+  if (settlements === undefined) return pending;
+  const settlementByKey = new Map(
+    settlements
+      .filter((settlement) => settlement.interactionKind === "userInput")
+      .map((settlement) => [
+        pendingRequestInstanceKey(
+          settlement.requestId,
+          settlement.lifecycleGeneration ?? undefined,
+        ),
+        settlement,
+      ]),
+  );
+  return pending.map((request) => {
+    const settlement = settlementByKey.get(
+      pendingRequestInstanceKey(request.requestId, request.lifecycleGeneration),
+    );
+    if (!settlement) return request;
+    const responseClaimable =
+      settlement.status === "pending" ||
+      settlement.status === "retryable" ||
+      (options?.responseClaimReferenceAt !== undefined &&
+        isPendingInteractionResponseClaimable({
+          status: settlement.status,
+          responseRequestedAt: settlement.responseRequestedAt,
+          requestedAt: options.responseClaimReferenceAt,
+        }));
+    return {
+      ...request,
+      settlementStatus: settlement.status,
+      responseClaimable,
+    };
+  });
 }
