@@ -1502,31 +1502,6 @@ export const AutomationServiceLive = Layer.effect(
       };
     };
 
-    const createPendingRun = (
-      definition: AutomationDefinition,
-      trigger: AutomationRun["trigger"],
-      scheduledFor: string,
-      now: string,
-      options: { readonly threadIdOverride?: ThreadId | null } = {},
-    ) =>
-      Effect.gen(function* () {
-        const settings = yield* serverSettings.getSnapshot;
-        const input = pendingRunInput(
-          definition,
-          trigger,
-          scheduledFor,
-          now,
-          options,
-          settings.revision,
-          providerStartOptionsFromServerSettings(settings.settings),
-        );
-        const run = yield* automationRepository
-          .createRun(input)
-          .pipe(Effect.mapError(toServiceError("Failed to create automation run.")));
-        yield* publish({ type: "run-upserted", run });
-        return { run, inserted: run.id === input.id };
-      });
-
     const claimPendingRun = (
       definition: AutomationDefinition,
       trigger: AutomationRun["trigger"],
