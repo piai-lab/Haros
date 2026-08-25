@@ -7375,15 +7375,17 @@ describe("ProviderRuntimeIngestion", () => {
           usedPercent: 0.83984375,
           totalProcessedTokens: 10_200,
           maxTokens: 128_000,
-          inputTokens: 1000,
-          cachedInputTokens: 500,
-          outputTokens: 50,
-          reasoningOutputTokens: 25,
+          totalTokenBreakdown: {
+            cachedInputTokens: 500,
+            uncachedInputTokens: 500,
+            outputTokens: 50,
+          },
+          lastTokenBreakdown: {
+            cachedInputTokens: 500,
+            uncachedInputTokens: 500,
+            outputTokens: 50,
+          },
           lastUsedTokens: 1075,
-          lastInputTokens: 1000,
-          lastCachedInputTokens: 500,
-          lastOutputTokens: 50,
-          lastReasoningOutputTokens: 25,
           compactsAutomatically: true,
         },
       },
@@ -7404,10 +7406,16 @@ describe("ProviderRuntimeIngestion", () => {
       usedPercent: 0.83984375,
       totalProcessedTokens: 10_200,
       maxTokens: 128_000,
-      inputTokens: 1000,
-      cachedInputTokens: 500,
-      outputTokens: 50,
-      reasoningOutputTokens: 25,
+      totalTokenBreakdown: {
+        cachedInputTokens: 500,
+        uncachedInputTokens: 500,
+        outputTokens: 50,
+      },
+      lastTokenBreakdown: {
+        cachedInputTokens: 500,
+        uncachedInputTokens: 500,
+        outputTokens: 50,
+      },
       lastUsedTokens: 1075,
       compactsAutomatically: true,
     });
@@ -7555,7 +7563,7 @@ describe("ProviderRuntimeIngestion", () => {
     });
   });
 
-  it("projects Codex camelCase token usage payloads into normalized thread activities", async () => {
+  it("projects Codex canonical token breakdowns into normalized thread activities", async () => {
     const harness = await createHarness();
     const now = new Date().toISOString();
 
@@ -7570,15 +7578,17 @@ describe("ProviderRuntimeIngestion", () => {
           usedTokens: 126,
           totalProcessedTokens: 11_839,
           maxTokens: 258_400,
-          inputTokens: 120,
-          cachedInputTokens: 0,
-          outputTokens: 6,
-          reasoningOutputTokens: 0,
+          totalTokenBreakdown: {
+            cachedInputTokens: 0,
+            uncachedInputTokens: 120,
+            outputTokens: 6,
+          },
+          lastTokenBreakdown: {
+            cachedInputTokens: 0,
+            uncachedInputTokens: 120,
+            outputTokens: 6,
+          },
           lastUsedTokens: 126,
-          lastInputTokens: 120,
-          lastCachedInputTokens: 0,
-          lastOutputTokens: 6,
-          lastReasoningOutputTokens: 0,
           compactsAutomatically: true,
         },
       },
@@ -7597,13 +7607,17 @@ describe("ProviderRuntimeIngestion", () => {
       usedTokens: 126,
       totalProcessedTokens: 11_839,
       maxTokens: 258_400,
-      inputTokens: 120,
-      cachedInputTokens: 0,
-      outputTokens: 6,
-      reasoningOutputTokens: 0,
+      totalTokenBreakdown: {
+        cachedInputTokens: 0,
+        uncachedInputTokens: 120,
+        outputTokens: 6,
+      },
+      lastTokenBreakdown: {
+        cachedInputTokens: 0,
+        uncachedInputTokens: 120,
+        outputTokens: 6,
+      },
       lastUsedTokens: 126,
-      lastInputTokens: 120,
-      lastOutputTokens: 6,
       compactsAutomatically: true,
     });
   });
