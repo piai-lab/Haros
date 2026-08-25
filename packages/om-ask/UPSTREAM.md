@@ -41,6 +41,14 @@ with custom text. Empty checks may inspect whitespace, but submitted text is nev
 rebuilt from trimmed data. These are concentrated product deltas, not a second
 questionnaire state machine.
 
+The retained `controller`/`kernel`/`normalize`/`result` modules are intentionally
+source-and-test-only ancestry. The package root exports only `src/api.ts`, and the
+release build cleans `dist` before compiling that Product entry graph. Therefore
+upstream outcomes such as `needs_discussion` and form/question/option comments do
+not enter the public declarations or shipped JavaScript. They remain readable and
+executable only so future intake can replay the mapped author tests without
+mistaking the donor questionnaire contract for an OmniMind Product contract.
+
 ## Deliberately deleted
 
 The upstream Extension entry point, Tool registration/schema/guidance,
@@ -62,17 +70,17 @@ The exact upstream suite is preserved as a separately reproducible baseline;
 it is not copied wholesale and relabeled as fork coverage. Its 152 cases have
 this explicit disposition:
 
-| Upstream suite            | Exact cases | Preserve/adapt | Intentionally reverse | Delete | Reason                                                                                                                                                                       |
-| ------------------------- | ----------: | -------------: | --------------------: | -----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `controller.test.ts`      |          38 |             34 |                     4 |      0 | Preserve navigation, choices, comments, outcome and terminal behavior; reverse recommendation/default preselection and text prefill.                                         |
-| `normalize.test.ts`       |          19 |             14 |                     5 |      0 | Preserve identity, shape and recommendation validation; reverse trim/default/Unicode rewriting behavior.                                                                     |
-| `ask-user.test.ts`        |          13 |              7 |                     0 |      6 | Adapt validation, fail-closed availability, success, incomplete, cancel, abort and concurrency; delete Pi registration, prompt config, TUI editor, event and terminal tests. |
-| `result.test.ts`          |           1 |              0 |                     0 |      1 | Delete Pi model-summary truncation; the fork returns only structured data.                                                                                                   |
-| transcript and TUI suites |          81 |              0 |                     0 |     81 | Entire presentation owner is deliberately absent.                                                                                                                            |
-| **Total**                 |     **152** |         **55** |                 **9** | **88** | The fork suite adds boundary, no-cap, losslessness, stale-lease and late-answer tests.                                                                                       |
+| Upstream suite            | Exact cases | Preserve/adapt | Intentionally reverse | Delete | Reason                                                                                                                                                                                                     |
+| ------------------------- | ----------: | -------------: | --------------------: | -----: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `controller.test.ts`      |          38 |             34 |                     4 |      0 | Preserve source-only navigation, choices, donor comments/outcomes and terminal behavior; reverse recommendation/default preselection and text prefill. Product exports deliberately exclude this contract. |
+| `normalize.test.ts`       |          19 |             14 |                     5 |      0 | Preserve identity, shape and recommendation validation; reverse trim/default/Unicode rewriting behavior.                                                                                                   |
+| `ask-user.test.ts`        |          13 |              7 |                     0 |      6 | Adapt validation, fail-closed availability, success, incomplete, cancel, abort and concurrency; delete Pi registration, prompt config, TUI editor, event and terminal tests.                               |
+| `result.test.ts`          |           1 |              0 |                     0 |      1 | Delete Pi model-summary truncation; the fork returns only structured data.                                                                                                                                 |
+| transcript and TUI suites |          81 |              0 |                     0 |     81 | Entire presentation owner is deliberately absent.                                                                                                                                                          |
+| **Total**                 |     **152** |         **55** |                 **9** | **88** | The fork suite adds boundary, no-cap, losslessness, stale-lease and late-answer tests.                                                                                                                     |
 
 The fork's executable suite is intentionally smaller than the upstream suite:
 it protects retained runtime/domain behavior and the deletion boundary, not a
 second presentation system. The feasibility baseline was 61 fork tests; the
 canonical custom-answer delta and final Tool/schema/result boundary bring the
-current fork suite to 71 tests.
+current fork suite to 72 tests, including the source-versus-distribution boundary.

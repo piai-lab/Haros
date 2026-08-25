@@ -74,6 +74,7 @@ feasibility_slice:
   decision: go
   retained_source_modules:
     [types, normalize, controller, lock, structured_result, host_neutral_kernel]
+  retained_lineage_distribution: source_and_author_tests_only_not_root_api_or_dist
   deleted_upstream_owners:
     [
       tui,
@@ -97,7 +98,7 @@ feasibility_slice:
       pi_barrier,
       provenance_gate,
     ]
-  fork_tests: 71
+  fork_tests: 72
   registered: bundled_extension_always_composed_in_omnimind_session
   model_exposed: true_only_when_presenter_and_provenance_active
   canonical_contract_connected: strict_source_bd0f9aa002
@@ -495,6 +496,13 @@ P4 是 OmniMind 长期 owner，不能因为上游 TUI 重写就直接删除。
 | tool definition        |                 |               |                   | fork/Pi Registry          |
 | Workbench UI           | n/a             | OmniMind      | OmniMind          | canonical Workbench       |
 
+当前 fork 的三层 disposition 已进一步收窄：controller/kernel/normalize/result 与 donor
+comments/`needs_discussion` 只保留在 source 和作者映射测试中；包根 API 与构建产物只包含
+`api.ts` 可达的 Product Tool graph。package build 必须先删除精确包内 `dist`，避免增量构建把
+旧 declaration/JavaScript 冒充当前发行面。未来 intake 可以继续复跑 donor kernel，但任何将
+这些 questionnaire outcome/comment 类型重新加入根 export 的更新都属于 P2/P3 产品合同变化，
+不是普通上游同步。
+
 “没有入口按钮”不能证明 runtime inactive；必须检查 imports、registration、event listener、timer、filesystem writer、network channel 与 process singleton。
 
 ### 8.2 禁止出现的 lone wolf
@@ -818,8 +826,9 @@ current_fork:
   activation_commit: 36e3bec7e789122c731028c1a8b791a68a6c1fea
   status: latest_direct_submit_source_implemented_packaged_pending
   feasibility: go
-  tests: 71
+  tests: 72
   runtime_dependencies: 0
+  retained_lineage_distribution: source_and_author_tests_only_not_root_api_or_dist
   registered: bundled_extension_always_composed_in_omnimind_session
   model_exposed: true_only_when_presenter_and_provenance_active
   canonical_contract_connected: strict_source_bd0f9aa002

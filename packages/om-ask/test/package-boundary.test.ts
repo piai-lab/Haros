@@ -29,6 +29,36 @@ describe("fork package boundary", () => {
     ]);
   });
 
+  it("ships only the product Tool surface while retaining upstream kernel tests internally", async () => {
+    const manifest = JSON.parse(await readFile(join(packageRoot, "package.json"), "utf8")) as {
+      scripts?: Record<string, string>;
+    };
+    expect(manifest.scripts?.build).toBe(
+      "node scripts/clean-dist.mjs && tsc -p tsconfig.build.json",
+    );
+
+    const cleanScript = await readFile(join(packageRoot, "scripts/clean-dist.mjs"), "utf8");
+    expect(cleanScript).toContain('new URL("../dist", import.meta.url)');
+    expect(cleanScript).toContain("recursive: true");
+
+    const apiSource = await readFile(join(packageRoot, "src/api.ts"), "utf8");
+    for (const retiredPublicSurface of [
+      "AskUserController",
+      "executeAskUserKernel",
+      "buildStructuredResult",
+      "AskUserOutcome",
+      "needs_discussion",
+      "questionComment",
+    ]) {
+      expect(apiSource).not.toContain(retiredPublicSurface);
+    }
+
+    const buildConfig = JSON.parse(
+      await readFile(join(packageRoot, "tsconfig.build.json"), "utf8"),
+    ) as { include?: string[] };
+    expect(buildConfig.include).toEqual(["src/api.ts"]);
+  });
+
   it("contains no forbidden TUI, supi-core, config, event, timer, terminal, or session hooks", async () => {
     const files = await readdir(join(packageRoot, "src"));
     const source = (

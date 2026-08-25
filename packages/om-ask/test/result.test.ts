@@ -1,7 +1,8 @@
 // upstream-adapted: supi-ask-user result.test.ts
 
 import { describe, expect, it } from "vitest";
-import { AskUserController, buildStructuredResult } from "../src/api.ts";
+import { AskUserController } from "../src/controller.ts";
+import { buildStructuredResult } from "../src/result.ts";
 import { choiceAt, questionnaire } from "./fixtures.ts";
 
 describe("buildStructuredResult", () => {

@@ -1,7 +1,7 @@
 // upstream-adapted: supi-ask-user controller.test.ts
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { AskUserController } from "../src/api.ts";
+import { AskUserController } from "../src/controller.ts";
 import { choiceAt, questionnaire } from "./fixtures.ts";
 
 describe("AskUserController", () => {

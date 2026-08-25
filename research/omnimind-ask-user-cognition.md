@@ -556,7 +556,7 @@ created -> projected -> waiting -> answered
 | UI owner           | Workbench/Composer projection                                        |
 | distribution owner | OmniMind build、SBOM/license、packaged verification                  |
 
-`@omnimind/om-ask@5.0.0-omnimind.1` 是 monorepo private、Host-neutral runtime fork。它导出 ToolDefinition/validation/structured result，但不自注册、不拥有 UI、Settings、Product State、timer 或 process lifecycle。OmniMind Server 的显式 composition 是唯一 registration owner；AgentGateway 不分发它，stock Pi 不注册它，第三方 Extension 不能取得 Product Ask provenance。是否进入 shipped bytes仍由后续 exact-SHA package gate证明。
+`@omnimind/om-ask@5.0.0-omnimind.1` 是 monorepo private、Host-neutral runtime fork。它的根 API 和构建产物只导出 Product ToolDefinition/validation/structured result；retained controller/kernel/normalize/result 与 donor comments/`needs_discussion` 只作为 source-and-test-only ancestry 保留，不进入 public `.d.ts` 或发行 JavaScript。构建先精确清理包内 `dist`，再从 `src/api.ts` 编译唯一可达 Product graph，防止旧 artifact 重新泄漏第二 questionnaire contract。该包不自注册、不拥有 UI、Settings、Product State、timer 或 process lifecycle。OmniMind Server 的显式 composition 是唯一 registration owner；AgentGateway 不分发它，stock Pi 不注册它，第三方 Extension 不能取得 Product Ask provenance。是否进入最终 shipped App bytes仍由后续 exact-SHA package gate证明。
 
 ## 13. Gate B 施工顺序
 
@@ -594,18 +594,18 @@ exact source、artifact 与法律基线已固定：
 
 #### Retained / deleted module
 
-| 上游模块                                                       | 处置                   | fork 模块           | 行级证据与真实价值                                                                                                                                                                                       |
-| -------------------------------------------------------------- | ---------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/types.ts`                                                 | adapt                  | `src/types.ts`      | 131 行中约 94 行原样；保留 choice/text、stable ID/value 与 structured outcome，recommendation 改为纯 metadata                                                                                            |
-| `src/normalize.ts`                                             | adapt                  | `src/normalize.ts`  | 266 行中约 120 行原样；保留 identity/shape/recommendation validation，删除 trim、Unicode 改写与数量上限                                                                                                  |
-| `src/session/controller.ts`                                    | retain/adapt           | `src/controller.ts` | 314 行中约 223 行原样；导航、single/multi、comments、unanswered、ordered result、cancel/abort 主状态机仍是上游实现；删除所有预选/预填并补 terminal late-mutation fence                                   |
-| `src/session/lock.ts`                                          | strengthen             | `src/lock.ts`       | 保留 one-active 责任，boolean 改成 lease token，stale release 不再误解锁新 interaction                                                                                                                   |
-| `src/render/result.ts`                                         | subtract/rebuild       | `src/result.ts`     | 只保留 structured details builder；Pi summary、英文拼接、unselected narrative 与 truncation owner 全删                                                                                                   |
-| `src/ask-user.ts`                                              | subtract/rebuild shell | `src/kernel.ts`     | 保留 validation → availability → lock → signal → interaction → result → cleanup 顺序；Pi registration、TUI、core、event、timer、terminal/session 全删，并补 pre/in-flight abort 与 late settlement fence |
-| `src/ui/**`（1,715 行）                                        | delete                 | 无                  | canonical Composer Question 已拥有 UI；保留会制造第二 UI owner                                                                                                                                           |
-| `src/render/transcript.ts`                                     | delete                 | 无                  | Timeline/Workbench 未来统一投影，不继承 TUI transcript                                                                                                                                                   |
-| upstream `src/schema.ts` / `tool/guidance.ts` / `extension.ts` | delete                 | 无                  | 不继承 TUI/private lifecycle；后续由 `src/product.ts` / `src/tool.ts` 与 Server composition 建立 OmniMind-owned replacement                                                                              |
-| `supi-core` bundled dependency                                 | delete                 | 无                  | prompt/config/session/terminal 是第二 owner；fork runtime dependencies 为零                                                                                                                              |
+| 上游模块                                                       | 处置                           | fork 模块           | 行级证据与真实价值                                                                                                                                                                                           |
+| -------------------------------------------------------------- | ------------------------------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/types.ts`                                                 | adapt                          | `src/types.ts`      | 131 行中约 94 行原样；保留 choice/text、stable ID/value 与 structured outcome，recommendation 改为纯 metadata                                                                                                |
+| `src/normalize.ts`                                             | adapt                          | `src/normalize.ts`  | 266 行中约 120 行原样；保留 identity/shape/recommendation validation，删除 trim、Unicode 改写与数量上限                                                                                                      |
+| `src/session/controller.ts`                                    | retain/adapt, source/test only | `src/controller.ts` | 314 行中约 223 行原样；导航、single/multi、donor comments/outcomes、cancel/abort 主状态机仍可由作者映射测试复跑，但不从根 API 导出、不进入 Product build；删除所有预选/预填并补 terminal late-mutation fence |
+| `src/session/lock.ts`                                          | strengthen                     | `src/lock.ts`       | 保留 one-active 责任，boolean 改成 lease token，stale release 不再误解锁新 interaction                                                                                                                       |
+| `src/render/result.ts`                                         | subtract/rebuild               | `src/result.ts`     | 只保留 structured details builder；Pi summary、英文拼接、unselected narrative 与 truncation owner 全删                                                                                                       |
+| `src/ask-user.ts`                                              | subtract/rebuild shell         | `src/kernel.ts`     | 保留 validation → availability → lock → signal → interaction → result → cleanup 顺序；Pi registration、TUI、core、event、timer、terminal/session 全删，并补 pre/in-flight abort 与 late settlement fence     |
+| `src/ui/**`（1,715 行）                                        | delete                         | 无                  | canonical Composer Question 已拥有 UI；保留会制造第二 UI owner                                                                                                                                               |
+| `src/render/transcript.ts`                                     | delete                         | 无                  | Timeline/Workbench 未来统一投影，不继承 TUI transcript                                                                                                                                                       |
+| upstream `src/schema.ts` / `tool/guidance.ts` / `extension.ts` | delete                         | 无                  | 不继承 TUI/private lifecycle；后续由 `src/product.ts` / `src/tool.ts` 与 Server composition 建立 OmniMind-owned replacement                                                                                  |
+| `supi-core` bundled dependency                                 | delete                         | 无                  | prompt/config/session/terminal 是第二 owner；fork runtime dependencies 为零                                                                                                                                  |
 
 上游 production source 共 3,164 行；feasibility kernel source 共 778 行，缩减约 75%。六个映射模块的新 fork code 中约 473/745 行仍是上游原行（约 63%）；最关键 controller 约 71% 原样。这个比例不能证明正确性，但能反驳“只借 fork 名义自研”：问卷主状态机和大部分 domain 仍清楚映射到 exact upstream。
 
@@ -667,7 +667,7 @@ packaged 证据严格分层：exact pushed `main@1f3dac395b233137d4c579111f97818
 - Tool input 保留 stable question ID / option value；Server projection 删除 value，response 再由唯一 label→value map 严格还原。
 - schema 不含产品 maxItems；`__omnimind_custom__` 是保留 identity，模型不得 author catch-all sentinel。
 - recommendation、preview、suggestion只作 metadata；不预选、不预填、不进入答案。
-- fork 不含 upstream TUI、`supi-core`、Settings、事件总线、timer、terminal/session helper、第二 config 或第二 lifecycle owner。当前 fork suite 6 files / 71 tests。
+- fork 不含 upstream TUI、`supi-core`、Settings、事件总线、timer、terminal/session helper、第二 config 或第二 lifecycle owner。当前 fork suite 6 files / 72 tests，并锁住 retained source 不进入根 API/发行构建的边界。
 
 #### Presenter、correlation 与 settlement
 

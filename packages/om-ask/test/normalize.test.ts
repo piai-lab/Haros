@@ -1,7 +1,7 @@
 // upstream-adapted: supi-ask-user normalize.test.ts
 
 import { describe, expect, it } from "vitest";
-import { AskUserValidationError, normalizeQuestionnaire } from "../src/api.ts";
+import { AskUserValidationError, normalizeQuestionnaire } from "../src/normalize.ts";
 import { questionnaireInput } from "./fixtures.ts";
 
 describe("normalizeQuestionnaire", () => {

@@ -2,13 +2,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 import {
-  ActiveQuestionnaireLock,
   AskUserBusyError,
   AskUserUnavailableError,
   executeAskUserKernel,
   type AskUserInteractionPort,
-  type AskUserOutcome,
-} from "../src/api.ts";
+} from "../src/kernel.ts";
+import { ActiveQuestionnaireLock } from "../src/lock.ts";
+import type { AskUserOutcome } from "../src/types.ts";
 import { questionnaireInput } from "./fixtures.ts";
 
 function submittedOutcome(): AskUserOutcome {

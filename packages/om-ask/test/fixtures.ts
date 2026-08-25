@@ -2,8 +2,8 @@ import type {
   NormalizedChoiceQuestion,
   NormalizedQuestionnaire,
   QuestionnaireInput,
-} from "../src/api.ts";
-import { normalizeQuestionnaire } from "../src/api.ts";
+} from "../src/types.ts";
+import { normalizeQuestionnaire } from "../src/normalize.ts";
 
 export function questionnaireInput(): QuestionnaireInput {
   return {
