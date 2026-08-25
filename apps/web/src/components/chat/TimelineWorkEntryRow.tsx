@@ -104,7 +104,7 @@ type TimelineWorkEntry = WorkLogEntry;
 const AgentTaskIcon: LucideIcon = (props) => <BotIcon {...props} />;
 
 const OmniMindToolIcon: LucideIcon = ({ className, ...props }) => (
-  <OmniMindLogo {...props} className={cn("text-current", className)} />
+  <OmniMindLogo {...props} className={cn("scale-[1.15] text-current", className)} />
 );
 
 function workToneIcon(tone: TimelineWorkEntry["tone"]): {
@@ -334,6 +334,12 @@ function isOmniMindToolCall(workEntry: TimelineWorkEntry): boolean {
 // compact density so every tool-call line shares one height regardless of whether
 // it carries a disclosure chevron.
 export function prefersCompactWorkEntryRow(workEntry: TimelineWorkEntry): boolean {
+  // Public reasoning is a peer Timeline activity heading, not prose at the
+  // header level. Keep its leading column identical to the surrounding tool
+  // rows; the expanded body continues to own its more generous text rhythm.
+  if (isReasoningUpdateWorkEntry(workEntry)) {
+    return true;
+  }
   if (isCodexActivityStatusWorkEntry(workEntry)) {
     return true;
   }
@@ -1033,11 +1039,16 @@ function ReasoningDisclosureRow(props: {
             "flex shrink-0 items-center justify-center text-muted-foreground/65",
             props.compact ? "size-4" : "size-5",
           )}
+          data-work-entry-icon="true"
         >
-          <ReasoningIcon className={props.compact ? "size-3.5" : "size-4"} />
+          {/* brain-2 is optically lighter than the dense brand/tool marks. At
+              compact density it uses the full 16px slot while preserving the
+              same slot center and text start as every peer activity row. */}
+          <ReasoningIcon className="size-4" />
         </span>
         <span
           className="min-w-0 flex-1 truncate leading-5"
+          data-work-entry-display-text="true"
           style={{ fontSize: `${props.textFontSizePx}px` }}
         >
           {t("agentActivity.reasoning")}

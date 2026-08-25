@@ -228,6 +228,59 @@ function AnswerStageTimeline(props: { settled: boolean }) {
   );
 }
 
+function AlignedActivityRowsTimeline(props: { theme: "light" | "dark" }) {
+  const turnId = TurnId.makeUnsafe("turn-activity-icon-alignment");
+  const timelineEntries: TimelineEntries = [
+    {
+      id: "alignment-git-command",
+      kind: "work",
+      createdAt: "2026-08-24T13:30:40.000Z",
+      entry: {
+        id: "alignment-git-command",
+        createdAt: "2026-08-24T13:30:40.000Z",
+        turnId,
+        label: "Ran command",
+        toolTitle: "Ran command",
+        tone: "tool",
+        itemType: "command_execution",
+        command: "git status",
+      },
+    },
+    reasoningEntry(
+      "alignment-reasoning",
+      turnId,
+      "Public reasoning stays collapsed after settlement.",
+    ),
+    {
+      id: "alignment-omnimind-message",
+      kind: "work",
+      createdAt: "2026-08-24T13:30:42.000Z",
+      entry: {
+        id: "alignment-omnimind-message",
+        createdAt: "2026-08-24T13:30:42.000Z",
+        turnId,
+        label: "OmniMind sent a message",
+        toolTitle: "OmniMind sent a message",
+        toolName: "mcp__omnimind__omnimind_send_message",
+        tone: "tool",
+        itemType: "mcp_tool_call",
+      },
+    },
+  ];
+
+  return (
+    <MessagesTimeline
+      {...baseTimelineProps}
+      isWorking={false}
+      activeTurnInProgress={false}
+      timelineEntries={timelineEntries}
+      expandedWorkGroups={{}}
+      onToggleWorkGroup={() => {}}
+      resolvedTheme={props.theme}
+    />
+  );
+}
+
 function ReducedLiveCausalTimeline(props: { settled: boolean }) {
   const thread = makeThread();
   const turnId = TurnId.makeUnsafe("turn-reduced-live-browser");
@@ -827,6 +880,54 @@ describe("Timeline public reasoning disclosure", () => {
       host.remove();
     }
   });
+
+  it.each(["light", "dark"] as const)(
+    "keeps command, reasoning, and OmniMind activity headings on one leading column in %s mode",
+    async (theme) => {
+      const host = createNarrowHost();
+      host.className =
+        theme === "dark" ? "dark bg-background text-foreground" : "bg-background text-foreground";
+      const screen = await render(
+        <I18nProvider>
+          <AlignedActivityRowsTimeline theme={theme} />
+        </I18nProvider>,
+        { container: host },
+      );
+
+      try {
+        await settleLayout();
+        const iconSlots = [...host.querySelectorAll<HTMLElement>("[data-work-entry-icon='true']")];
+        const labels = [
+          ...host.querySelectorAll<HTMLElement>("[data-work-entry-display-text='true']"),
+        ];
+        expect(iconSlots).toHaveLength(3);
+        expect(labels).toHaveLength(3);
+
+        const iconCenters = iconSlots.map((slot) => {
+          const rect = slot.getBoundingClientRect();
+          expect(rect.width).toBeCloseTo(16, 1);
+          expect(rect.height).toBeCloseTo(16, 1);
+          return rect.left + rect.width / 2;
+        });
+        const labelStarts = labels.map((label) => label.getBoundingClientRect().left);
+        expect(Math.max(...iconCenters) - Math.min(...iconCenters)).toBeLessThanOrEqual(0.5);
+        expect(Math.max(...labelStarts) - Math.min(...labelStarts)).toBeLessThanOrEqual(0.5);
+
+        const brain = host.querySelector<HTMLElement>("[data-central-icon-name='brain-2']");
+        const github = host.querySelector<SVGElement>("[data-tool-icon='github'] svg");
+        const omnimind = host.querySelector<SVGElement>("[data-tool-icon='omnimind'] svg");
+        expect(brain?.getBoundingClientRect().width).toBeCloseTo(16, 1);
+        expect(github?.getBoundingClientRect().width).toBeCloseTo(14, 1);
+        // The product mark has transparent artwork padding, so its narrow icon
+        // owner compensates optically while the shared 16px slot stays fixed.
+        expect(omnimind?.getBoundingClientRect().width ?? 0).toBeGreaterThan(14);
+        expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
+      } finally {
+        await screen.unmount();
+        host.remove();
+      }
+    },
+  );
 
   it("localizes the icon-free height control in Simplified Chinese", async () => {
     harness.settings.localePreference = "zh-CN";
