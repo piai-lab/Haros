@@ -499,9 +499,12 @@ describe("decider user input answers", () => {
     if (!event || event.type !== "thread.user-input-response-requested") {
       return;
     }
-    expect(event.payload.answers).toEqual({
-      Language: { selectedOptionLabels: [], customText: "TypeScript  " },
-      Runtime: { selectedOptionLabels: ["Bun"], note: "Stable release.  " },
+    expect(event.payload.response).toEqual({
+      status: "answered",
+      answers: {
+        Language: { selectedOptionLabels: [], customText: "TypeScript  " },
+        Runtime: { selectedOptionLabels: ["Bun"], note: "Stable release.  " },
+      },
     });
   });
 
@@ -534,11 +537,14 @@ describe("decider user input answers", () => {
     if (!event || event.type !== "thread.user-input-response-requested") {
       return;
     }
-    expect(event.payload.answers).toEqual({
-      Language: { selectedOptionLabels: [], customText: "TypeScript" },
-      Frontend: {
-        selectedOptionLabels: ["React", "Astro"],
-        customText: "Solid",
+    expect(event.payload.response).toEqual({
+      status: "answered",
+      answers: {
+        Language: { selectedOptionLabels: [], customText: "TypeScript" },
+        Frontend: {
+          selectedOptionLabels: ["React", "Astro"],
+          customText: "Solid",
+        },
       },
     });
   });

@@ -70,7 +70,7 @@ import {
   trimOrNull,
 } from "@omnimind/shared/model";
 import { buildClaudeSubagentPrompt } from "@omnimind/shared/agentMentions";
-import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
+import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
 import { prepareWindowsSafeProcess } from "@omnimind/shared/windowsProcess";
 import {
   Cause,
@@ -6015,7 +6015,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
     const respondToUserInput: ClaudeAdapterShape["respondToUserInput"] = (
       threadId,
       requestId,
-      answers,
+      response,
     ) =>
       Effect.gen(function* () {
         const context = yield* requireSession(threadId);
@@ -6028,10 +6028,7 @@ function makeClaudeAdapter(options?: ClaudeAdapterLiveOptions) {
           });
         }
 
-        const submittedResult: PendingUserInputResult = {
-          answers: encodeCanonicalUserInputAnswers(answers),
-          cancelled: false,
-        };
+        const submittedResult: PendingUserInputResult = encodeCanonicalUserInputResponse(response);
         const settledResult = yield* settlePendingUserInput(
           context,
           requestId,

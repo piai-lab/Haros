@@ -11091,8 +11091,11 @@ describe("ProviderCommandReactor", () => {
       threadId: "thread-1",
       requestId: "user-input-request-1",
       lifecycleGeneration: "user-input-generation-1",
-      answers: {
-        sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+      response: {
+        status: "answered",
+        answers: {
+          sandbox_mode: { selectedOptionLabels: ["workspace-write"] },
+        },
       },
     });
     const respondingUserInput = await Effect.runPromise(
@@ -11381,10 +11384,13 @@ describe("ProviderCommandReactor", () => {
     expect(harness.respondToUserInput.mock.calls[0]?.[0]).toEqual({
       threadId: "thread-1",
       requestId: "user-input-request-multi",
-      answers: {
-        single: { selectedOptionLabels: ["TypeScript"] },
-        features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] },
-        rating: { selectedOptionLabels: [], customText: "Solid" },
+      response: {
+        status: "answered",
+        answers: {
+          single: { selectedOptionLabels: ["TypeScript"] },
+          features: { selectedOptionLabels: ["CLI scaffolding", "Type checking"] },
+          rating: { selectedOptionLabels: [], customText: "Solid" },
+        },
       },
     });
   });

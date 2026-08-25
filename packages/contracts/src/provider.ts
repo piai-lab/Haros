@@ -11,6 +11,7 @@ import {
 import {
   ChatAttachment,
   CanonicalUserInputAnswers,
+  CanonicalUserInputResponse,
   ModelSelection,
   PROVIDER_SEND_TURN_MAX_ATTACHMENTS,
   PROVIDER_SEND_TURN_MAX_INPUT_CHARS,
@@ -172,7 +173,8 @@ export const ProviderRespondToUserInputInput = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  answers: CanonicalUserInputAnswers,
+  response: Schema.optional(CanonicalUserInputResponse),
+  answers: Schema.optional(CanonicalUserInputAnswers),
 });
 export type ProviderRespondToUserInputInput = typeof ProviderRespondToUserInputInput.Type;
 

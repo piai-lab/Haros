@@ -27,7 +27,7 @@ import type {
 } from "@opencode-ai/sdk/v2";
 
 import { resolveProviderAttachmentPath } from "../providerAttachmentPaths.ts";
-import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
+import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
 import { ServerConfig } from "../../config.ts";
 import { type EventNdjsonLogger, makeEventNdjsonLogger } from "./EventNdjsonLogger.ts";
 import {
@@ -4202,7 +4202,7 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
 
       const respondToUserInput: OpenCodeAdapterShape["respondToUserInput"] = Effect.fn(
         "respondToUserInput",
-      )(function* (threadId, requestId, answers) {
+      )(function* (threadId, requestId, response) {
         const context = ensureAdapterSessionContext(threadId);
         const request = context.pendingQuestions.get(requestId);
         if (!request) {
@@ -4213,12 +4213,14 @@ export function makeOpenCodeAdapterLive(options?: OpenCodeAdapterLiveOptions) {
           });
         }
 
+        const encoded = encodeCanonicalUserInputResponse(response);
         yield* runOpenCodeSdk("question.reply", () =>
           context.client.question.reply({
             requestID: requestId,
-            answers: toOpenCodeQuestionAnswers(request, encodeCanonicalUserInputAnswers(answers)),
+            answers: toOpenCodeQuestionAnswers(request, encoded.answers),
           }),
         ).pipe(Effect.mapError(toAdapterRequestError));
+        if (encoded.cancelled) yield* interruptTurn(threadId);
       });
 
       const stopSession: OpenCodeAdapterShape["stopSession"] = Effect.fn("stopSession")(

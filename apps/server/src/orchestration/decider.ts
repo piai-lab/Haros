@@ -159,14 +159,6 @@ function checkpointRevertSucceededEvent(input: {
   };
 }
 
-function omitNullUserInputAnswers(
-  command: Extract<OrchestrationCommand, { type: "thread.user-input.respond" }>,
-) {
-  return Object.fromEntries(
-    Object.entries(command.answers).filter(([, answer]) => answer !== null && answer !== undefined),
-  );
-}
-
 function countPinnedProjects(
   readModel: OrchestrationReadModel,
   options?: { readonly excludeProjectIds?: ReadonlySet<string> },
@@ -2188,7 +2180,11 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
         command,
         threadId: command.threadId,
       });
-      const answers = omitNullUserInputAnswers(command);
+      const response =
+        command.response ??
+        (command.answers === undefined
+          ? { status: "cancelled" as const }
+          : { status: "answered" as const, answers: command.answers });
       return {
         ...withEventBase({
           aggregateKind: "thread",
@@ -2206,7 +2202,7 @@ export const decideOrchestrationCommand = Effect.fn("decideOrchestrationCommand"
           ...(command.lifecycleGeneration !== undefined
             ? { lifecycleGeneration: command.lifecycleGeneration }
             : {}),
-          answers,
+          response,
           createdAt: command.createdAt,
         },
       };

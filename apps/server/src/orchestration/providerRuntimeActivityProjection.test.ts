@@ -690,7 +690,10 @@ describe("provider runtime activity projection", () => {
         payload: {
           requestId: "request-2",
           lifecycleGeneration: "generation-2",
-          answers: { sandbox_mode: "workspace-write" },
+          settlement: {
+            status: "answered",
+            answers: { sandbox_mode: "workspace-write" },
+          },
         },
       },
     ]);

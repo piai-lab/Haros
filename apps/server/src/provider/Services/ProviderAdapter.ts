@@ -9,6 +9,7 @@
  */
 import type {
   ApprovalRequestId,
+  CanonicalUserInputResponse,
   CanonicalUserInputAnswers,
   MessageDispatchOrigin,
   ProviderApprovalDecision,
@@ -199,7 +200,7 @@ export interface ProviderAdapterShape<TError> {
   readonly respondToUserInput: (
     threadId: ThreadId,
     requestId: ApprovalRequestId,
-    answers: CanonicalUserInputAnswers,
+    response: CanonicalUserInputResponse | CanonicalUserInputAnswers,
   ) => Effect.Effect<void, TError>;
 
   /**

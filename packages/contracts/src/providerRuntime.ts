@@ -12,7 +12,7 @@ import {
   TrimmedNonEmptyString,
   TurnId,
 } from "./baseSchemas";
-import { ProviderKind } from "./orchestration";
+import { CanonicalUserInputSettlement, ProviderKind } from "./orchestration";
 
 const TrimmedNonEmptyStringSchema = TrimmedNonEmptyString;
 const UnknownRecordSchema = Schema.Record(Schema.String, Schema.Unknown);
@@ -461,30 +461,85 @@ const RequestResolvedPayload = Schema.Struct({
 });
 export type RequestResolvedPayload = typeof RequestResolvedPayload.Type;
 
+export const CANONICAL_USER_INPUT_VERSION = 1 as const;
+export const CANONICAL_USER_INPUT_MAX_UTF8_BYTES = 1024 * 1024;
+export const CANONICAL_USER_INPUT_MAX_NODES = 10_000;
+
 const UserInputQuestionOption = Schema.Struct({
   label: TrimmedNonEmptyStringSchema,
-  description: TrimmedNonEmptyStringSchema,
+  description: Schema.optional(TrimmedNonEmptyStringSchema),
+  preview: Schema.optional(Schema.String),
+  recommended: Schema.optional(Schema.Boolean),
+  recommendationReason: Schema.optional(Schema.String),
 });
 export type UserInputQuestionOption = typeof UserInputQuestionOption.Type;
 
+export const CanonicalUserInputChoiceQuestion = Schema.Struct({
+  kind: Schema.Literal("choice"),
+  id: TrimmedNonEmptyStringSchema,
+  header: Schema.optional(TrimmedNonEmptyStringSchema),
+  prompt: TrimmedNonEmptyStringSchema,
+  cardinality: Schema.Literals(["single", "multiple"]),
+  options: Schema.Array(UserInputQuestionOption),
+});
+export type CanonicalUserInputChoiceQuestion = typeof CanonicalUserInputChoiceQuestion.Type;
+
+const UserInputTextSuggestion = Schema.Struct({
+  text: Schema.String,
+  reason: Schema.optional(Schema.String),
+});
+
+export const CanonicalUserInputTextQuestion = Schema.Struct({
+  kind: Schema.Literal("text"),
+  id: TrimmedNonEmptyStringSchema,
+  header: Schema.optional(TrimmedNonEmptyStringSchema),
+  prompt: TrimmedNonEmptyStringSchema,
+  placeholder: Schema.optional(Schema.String),
+  suggestion: Schema.optional(UserInputTextSuggestion),
+});
+export type CanonicalUserInputTextQuestion = typeof CanonicalUserInputTextQuestion.Type;
+
+export const CanonicalUserInputQuestion = Schema.Union([
+  CanonicalUserInputChoiceQuestion,
+  CanonicalUserInputTextQuestion,
+]);
+export type CanonicalUserInputQuestion = typeof CanonicalUserInputQuestion.Type;
+
+export const CanonicalUserInputRequest = Schema.Struct({
+  version: Schema.Literal(CANONICAL_USER_INPUT_VERSION),
+  questions: Schema.Array(CanonicalUserInputQuestion),
+});
+export type CanonicalUserInputRequest = typeof CanonicalUserInputRequest.Type;
+
+/** Decode-only compatibility for Provider protocols that still emit the original flat shape. */
 export const UserInputQuestion = Schema.Struct({
   id: TrimmedNonEmptyStringSchema,
   header: TrimmedNonEmptyStringSchema,
   question: TrimmedNonEmptyStringSchema,
   options: Schema.Array(UserInputQuestionOption),
+  kind: Schema.optional(Schema.Literals(["choice", "text"])),
+  prompt: Schema.optional(TrimmedNonEmptyStringSchema),
+  cardinality: Schema.optional(Schema.Literals(["single", "multiple"])),
+  placeholder: Schema.optional(Schema.String),
+  suggestion: Schema.optional(UserInputTextSuggestion),
   multiSelect: Schema.optional(Schema.Boolean).pipe(
     Schema.withConstructorDefault(() => Option.some(false)),
   ),
 });
 export type UserInputQuestion = typeof UserInputQuestion.Type;
 
-const UserInputRequestedPayload = Schema.Struct({
+const LegacyUserInputRequestedPayload = Schema.Struct({
   questions: Schema.Array(UserInputQuestion),
 });
+const UserInputRequestedPayload = Schema.Union([
+  CanonicalUserInputRequest,
+  LegacyUserInputRequestedPayload,
+]);
 export type UserInputRequestedPayload = typeof UserInputRequestedPayload.Type;
 
 const UserInputResolvedPayload = Schema.Struct({
-  answers: UnknownRecordSchema,
+  settlement: Schema.optional(CanonicalUserInputSettlement),
+  answers: Schema.optional(UnknownRecordSchema),
 });
 export type UserInputResolvedPayload = typeof UserInputResolvedPayload.Type;
 

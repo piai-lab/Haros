@@ -55,7 +55,7 @@ import {
 import { ServerConfig, type ServerConfigShape } from "../../config.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { loadProviderPromptImageBlocks } from "../promptAttachments.ts";
-import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
+import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
 import { listFactoryPlugins, readFactoryPlugin } from "../FactoryPluginDiscovery.ts";
 import { readFactorySessionHistory } from "../FactorySessionHistory.ts";
 import { appendProviderReferencesPromptBlock } from "../promptReferenceProjection.ts";
@@ -1863,7 +1863,7 @@ export function makeDroidAdapter(
     const respondToUserInput: DroidAdapterShape["respondToUserInput"] = (
       threadId,
       requestId,
-      answers,
+      response,
     ) =>
       Effect.gen(function* () {
         const ctx = yield* requireSession(threadId);
@@ -1875,7 +1875,9 @@ export function makeDroidAdapter(
             detail: `Unknown pending user-input request: ${requestId}`,
           });
         }
-        yield* Deferred.succeed(pending.answers, encodeCanonicalUserInputAnswers(answers));
+        const encoded = encodeCanonicalUserInputResponse(response);
+        yield* Deferred.succeed(pending.answers, encoded.answers);
+        if (encoded.cancelled) yield* interruptTurn(threadId);
       });
 
     const readThread: DroidAdapterShape["readThread"] = (threadId) =>

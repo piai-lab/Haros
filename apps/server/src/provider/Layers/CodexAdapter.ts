@@ -66,7 +66,7 @@ import {
 import { isNonFatalCodexErrorMessage } from "../../codexErrorClassification.ts";
 import { ServerConfig } from "../../config.ts";
 import { makeRuntimeTaskListItem } from "../runtimeTaskList.ts";
-import { encodeCanonicalUserInputAnswers } from "../canonicalUserInput.ts";
+import { encodeCanonicalUserInputResponse } from "../canonicalUserInput.ts";
 import { extractProposedPlanMarkdown } from "../planMode.ts";
 import { appendFileAttachmentsPromptBlock } from "../attachmentProjection.ts";
 import { omnimindSkillsDir } from "../skillsCatalog.ts";
@@ -2072,11 +2072,14 @@ const makeCodexAdapter = (options?: CodexAdapterLiveOptions) =>
     const respondToUserInput: CodexAdapterShape["respondToUserInput"] = (
       threadId,
       requestId,
-      answers,
+      response,
     ) =>
       Effect.tryPromise({
-        try: () =>
-          manager.respondToUserInput(threadId, requestId, encodeCanonicalUserInputAnswers(answers)),
+        try: async () => {
+          const encoded = encodeCanonicalUserInputResponse(response);
+          await manager.respondToUserInput(threadId, requestId, encoded.answers);
+          if (encoded.cancelled) await manager.interruptTurn(threadId);
+        },
         catch: (cause) => toRequestError(threadId, "item/tool/requestUserInput", cause),
       });
 

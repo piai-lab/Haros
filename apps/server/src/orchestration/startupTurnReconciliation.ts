@@ -170,14 +170,16 @@ function buildStalePendingRequestCommand(input: {
     threadId: input.threadId,
     activity: {
       id: EventId.makeUnsafe(commandKey),
-      tone: "error",
-      kind: isApproval ? "provider.approval.respond.failed" : "provider.user-input.respond.failed",
+      tone: isApproval ? "error" : "info",
+      kind: isApproval ? "provider.approval.respond.failed" : "user-input.resolved",
       summary: isApproval
         ? "Provider approval response failed"
         : "Provider user input response failed",
       payload: {
-        detail: buildStalePendingRequestFailureDetail(input.requestKind, input.requestId),
         requestId: input.requestId,
+        ...(isApproval
+          ? { detail: buildStalePendingRequestFailureDetail(input.requestKind, input.requestId) }
+          : { settlement: { status: "stale" } }),
       },
       turnId: null,
       createdAt: input.now,

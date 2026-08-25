@@ -285,6 +285,26 @@ export const CanonicalUserInputAnswer = Schema.Struct({
 export type CanonicalUserInputAnswer = typeof CanonicalUserInputAnswer.Type;
 export const CanonicalUserInputAnswers = Schema.Record(Schema.String, CanonicalUserInputAnswer);
 export type CanonicalUserInputAnswers = typeof CanonicalUserInputAnswers.Type;
+export const CanonicalUserInputResponse = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("answered"),
+    answers: CanonicalUserInputAnswers,
+  }),
+  Schema.Struct({ status: Schema.Literal("cancelled") }),
+]);
+export type CanonicalUserInputResponse = typeof CanonicalUserInputResponse.Type;
+export const CanonicalUserInputSettlement = Schema.Union([
+  Schema.Struct({
+    status: Schema.Literal("answered"),
+    answers: CanonicalUserInputAnswers,
+  }),
+  Schema.Struct({ status: Schema.Literal("cancelled") }),
+  Schema.Struct({ status: Schema.Literal("aborted") }),
+  Schema.Struct({ status: Schema.Literal("timed_out") }),
+  Schema.Struct({ status: Schema.Literal("unavailable") }),
+  Schema.Struct({ status: Schema.Literal("stale") }),
+]);
+export type CanonicalUserInputSettlement = typeof CanonicalUserInputSettlement.Type;
 export const ThreadHandoffBootstrapStatus = Schema.Literals(["pending", "completed"]);
 export type ThreadHandoffBootstrapStatus = typeof ThreadHandoffBootstrapStatus.Type;
 export const ThreadEnvironmentMode = Schema.Literals(["local", "worktree"]);
@@ -1471,7 +1491,9 @@ const ThreadUserInputRespondCommand = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  answers: CanonicalUserInputAnswers,
+  response: Schema.optional(CanonicalUserInputResponse),
+  /** Decode-only compatibility; new callers must send `response`. */
+  answers: Schema.optional(CanonicalUserInputAnswers),
   createdAt: IsoDateTime,
 });
 
@@ -2097,7 +2119,9 @@ const ThreadUserInputResponseRequestedPayload = Schema.Struct({
   threadId: ThreadId,
   requestId: ApprovalRequestId,
   lifecycleGeneration: Schema.optional(TrimmedNonEmptyString),
-  answers: CanonicalUserInputAnswers,
+  response: Schema.optional(CanonicalUserInputResponse),
+  /** Decode-only compatibility for pre-settlement events. */
+  answers: Schema.optional(CanonicalUserInputAnswers),
   createdAt: IsoDateTime,
 });
 

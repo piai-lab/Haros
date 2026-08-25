@@ -92,6 +92,8 @@ describe("ProviderRuntimeEvent", () => {
       throw new Error("expected user-input.requested");
     }
     expect(parsed.payload.questions[0]?.id).toBe("sandbox_mode");
+    expect("version" in parsed.payload).toBe(false);
+    if ("version" in parsed.payload) throw new Error("expected legacy provider payload");
     expect(parsed.payload.questions[0]?.options).toHaveLength(2);
   });
 
@@ -115,7 +117,7 @@ describe("ProviderRuntimeEvent", () => {
     if (parsed.type !== "user-input.resolved") {
       throw new Error("expected user-input.resolved");
     }
-    expect(parsed.payload.answers.sandbox_mode).toBe("workspace-write");
+    expect(parsed.payload.answers?.sandbox_mode).toBe("workspace-write");
   });
 
   it("rejects legacy message.delta type", () => {

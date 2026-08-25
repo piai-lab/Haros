@@ -359,10 +359,10 @@ describe("planRestartTurnReconciliation", () => {
       commandId: `restart-reconcile:stuck-with-requests:user-input:input-1:${NOW}`,
       threadId: "stuck-with-requests",
       activity: {
-        kind: "provider.user-input.respond.failed",
+        kind: "user-input.resolved",
         payload: {
           requestId: "input-1",
-          detail: expect.stringContaining("Stale pending user-input request: input-1"),
+          settlement: { status: "stale" },
         },
       },
     });

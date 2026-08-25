@@ -1913,14 +1913,12 @@ describe("ProviderRuntimeIngestion", () => {
     const readModel = await Effect.runPromise(harness.engine.getReadModel());
     const thread = readModel.threads.find((entry) => entry.id === ThreadId.makeUnsafe("thread-1"));
     const failureActivity = thread?.activities.find(
-      (activity) => activity.kind === "provider.user-input.respond.failed",
+      (activity) => activity.kind === "user-input.resolved",
     );
     expect(failureActivity?.payload).toMatchObject({
       requestId: "user-input-request-orphaned",
       lifecycleGeneration: "generation-before-restart",
-      detail: expect.stringContaining(
-        "Stale pending user-input request: user-input-request-orphaned",
-      ),
+      settlement: { status: "stale" },
     });
 
     // Re-ingesting another session start must not duplicate the settlement.
@@ -1935,7 +1933,12 @@ describe("ProviderRuntimeIngestion", () => {
     const readModelAfter = await Effect.runPromise(harness.engine.getReadModel());
     const failuresAfter = readModelAfter.threads
       .find((entry) => entry.id === ThreadId.makeUnsafe("thread-1"))
-      ?.activities.filter((activity) => activity.kind === "provider.user-input.respond.failed");
+      ?.activities.filter(
+        (activity) =>
+          activity.kind === "user-input.resolved" &&
+          (activity.payload as { settlement?: { status?: string } } | null)?.settlement?.status ===
+            "stale",
+      );
     expect(failuresAfter).toHaveLength(1);
   });
 
@@ -7987,8 +7990,9 @@ describe("ProviderRuntimeIngestion", () => {
         ? (resolved.payload as Record<string, unknown>)
         : undefined;
     expect(resolved?.kind).toBe("user-input.resolved");
-    expect(resolvedPayload?.answers).toEqual({
-      sandbox_mode: "danger-full-access",
+    expect(resolvedPayload?.settlement).toEqual({
+      status: "answered",
+      answers: { sandbox_mode: "danger-full-access" },
     });
     expect(resolvedPayload?.lifecycleGeneration).toBe("user-input-generation");
     expect(thread.runtimeMode).toBe("approval-required");

@@ -9352,6 +9352,8 @@ await agent("Draft the spec", { label: "delta-agent", phase: "Two" });
       const requestId = requestedEvent.value.requestId;
       assert.equal(typeof requestId, "string");
       assert.equal(requestedEvent.value.payload.questions.length, 1);
+      assert.equal("version" in requestedEvent.value.payload, false);
+      if ("version" in requestedEvent.value.payload) return;
       assert.equal(requestedEvent.value.payload.questions[0]?.question, "Which framework?");
       assert.deepEqual(requestedEvent.value.providerRefs, {
         providerItemId: ProviderItemId.makeUnsafe("tool-ask-1"),

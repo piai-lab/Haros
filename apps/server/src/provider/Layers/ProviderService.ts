@@ -3170,7 +3170,10 @@ const makeProviderService = (options?: ProviderServiceLiveOptions) =>
           yield* routed.adapter.respondToUserInput(
             input.threadId,
             input.requestId,
-            response.input.answers,
+            response.input.response ??
+              (response.input.answers === undefined
+                ? { status: "cancelled" as const }
+                : { status: "answered" as const, answers: response.input.answers }),
           );
         }),
       );

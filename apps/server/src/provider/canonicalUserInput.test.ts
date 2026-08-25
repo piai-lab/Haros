@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   encodeCanonicalUserInputAnswer,
   encodeCanonicalUserInputAnswers,
+  encodeCanonicalUserInputResponse,
+  normalizeCanonicalUserInputResponse,
 } from "./canonicalUserInput";
 
 describe("canonical user-input Provider encoding", () => {
@@ -15,6 +17,17 @@ describe("canonical user-input Provider encoding", () => {
     expect(
       encodeCanonicalUserInputAnswer({ selectedOptionLabels: [], customText: "My answer  " }),
     ).toBe("My answer  ");
+  });
+
+  it("keeps cancellation separate from an answered empty map at the canonical boundary", () => {
+    expect(encodeCanonicalUserInputResponse({ status: "cancelled" })).toEqual({
+      answers: {},
+      cancelled: true,
+    });
+    expect(
+      encodeCanonicalUserInputResponse({ status: "answered", answers: {} }),
+    ).toEqual({ answers: {}, cancelled: false });
+    expect(normalizeCanonicalUserInputResponse({})).toEqual({ status: "answered", answers: {} });
   });
 
   it("uses a structured wire envelope when custom text and note must remain distinct", () => {

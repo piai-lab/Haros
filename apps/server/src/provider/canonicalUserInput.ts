@@ -5,6 +5,7 @@
 import type {
   CanonicalUserInputAnswer,
   CanonicalUserInputAnswers,
+  CanonicalUserInputResponse,
   ProviderUserInputAnswer,
   ProviderUserInputAnswers,
 } from "@omnimind/contracts";
@@ -46,4 +47,25 @@ export function encodeCanonicalUserInputAnswers(
       encodeCanonicalUserInputAnswer(answer),
     ]),
   );
+}
+
+export function encodeCanonicalUserInputResponse(
+  input: CanonicalUserInputResponse | CanonicalUserInputAnswers,
+): {
+  readonly answers: ProviderUserInputAnswers;
+  readonly cancelled: boolean;
+} {
+  const response = normalizeCanonicalUserInputResponse(input);
+  return response.status === "answered"
+    ? { answers: encodeCanonicalUserInputAnswers(response.answers), cancelled: false }
+    : { answers: {}, cancelled: true };
+}
+
+export function normalizeCanonicalUserInputResponse(
+  response: CanonicalUserInputResponse | CanonicalUserInputAnswers,
+): CanonicalUserInputResponse {
+  const status = (response as { readonly status?: unknown }).status;
+  return status === "answered" || status === "cancelled"
+    ? (response as CanonicalUserInputResponse)
+    : { status: "answered", answers: response as CanonicalUserInputAnswers };
 }

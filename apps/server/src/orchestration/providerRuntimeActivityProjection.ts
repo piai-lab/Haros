@@ -734,7 +734,14 @@ export function projectProviderRuntimeActivities(
               : {}),
             ...(event.type === "user-input.requested"
               ? { questions: event.payload.questions }
-              : { answers: event.payload.answers }),
+              : "settlement" in event.payload
+                ? { settlement: event.payload.settlement }
+                : {
+                    settlement: {
+                      status: "answered",
+                      answers: event.payload.answers,
+                    },
+                  }),
           }),
           turnId: toTurnId(event.turnId) ?? null,
           ...maybeSequence,

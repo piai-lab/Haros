@@ -4043,7 +4043,11 @@ const make = Effect.gen(function* () {
         ...(event.payload.lifecycleGeneration !== undefined
           ? { lifecycleGeneration: event.payload.lifecycleGeneration }
           : {}),
-        answers: event.payload.answers,
+        response:
+          event.payload.response ??
+          (event.payload.answers === undefined
+            ? { status: "cancelled" as const }
+            : { status: "answered" as const, answers: event.payload.answers }),
       })
       .pipe(
         Effect.asVoid,
