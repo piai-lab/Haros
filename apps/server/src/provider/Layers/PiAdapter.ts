@@ -564,6 +564,7 @@ interface PiTrackedToolCall {
   readonly args: unknown;
   readonly itemId: RuntimeItemId;
   readonly itemType: "command_execution" | "file_change" | "dynamic_tool_call" | "web_search";
+  canonicalUserInputLifecycle?: "candidate" | "projected";
   engineWebSurface?: {
     readonly url?: string;
     readonly surfaceId?: string;
@@ -1724,6 +1725,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
       if (!userInputPresenterRegistry.available) return Promise.resolve(terminal("unavailable"));
 
       const projection = projectAskUserRequest(input.request);
+      const trackedToolCall = context.activeToolItems.get(input.toolCallId);
+      if (
+        trackedToolCall?.toolName === ASK_USER_TOOL_NAME &&
+        trackedToolCall.canonicalUserInputLifecycle === "candidate"
+      ) {
+        // The interaction port is the structured proof that this exact bundled
+        // Tool call became canonical User Input. Its generic Pi lifecycle stays
+        // hidden; third-party and failed pre-interaction calls keep their row.
+        trackedToolCall.canonicalUserInputLifecycle = "projected";
+      }
       const requestedAt = Date.now();
       askUserMetrics.increment("requested");
 
@@ -2510,12 +2521,16 @@ const makePiAdapter = <P extends PiFamilyProvider>(
           return;
         case "tool_execution_start": {
           const itemId = RuntimeItemId.makeUnsafe(`pi-tool-${event.toolCallId}`);
+          const isBundledProductAsk =
+            event.toolName === ASK_USER_TOOL_NAME &&
+            reconcileAskUserTool(context)?.available === true;
           const tracked: PiTrackedToolCall = {
             toolCallId: event.toolCallId,
             toolName: event.toolName,
             args: event.args,
             itemId,
             itemType: toolItemType(event.toolName),
+            ...(isBundledProductAsk ? { canonicalUserInputLifecycle: "candidate" as const } : {}),
           };
           context.activeToolItems.set(event.toolCallId, tracked);
           const title = toolTitle(event.toolName, event.args);
@@ -2525,29 +2540,31 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             toolName: event.toolName,
             args: event.args,
           });
-          offerRuntimeEvent({
-            ...makeEventBase(context),
-            itemId,
-            providerRefs: {
-              providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
-            },
-            type: "item.started",
-            payload: {
-              itemType: tracked.itemType,
-              status: "inProgress",
-              title,
-              data: toolLifecycleData({
-                toolCallId: event.toolCallId,
-                toolName: event.toolName,
-                args: event.args,
-              }),
-            },
-            raw: {
-              source: "pi.sdk.event",
-              messageType: event.type,
-              payload: event,
-            },
-          } satisfies ProviderRuntimeEvent);
+          if (!isBundledProductAsk) {
+            offerRuntimeEvent({
+              ...makeEventBase(context),
+              itemId,
+              providerRefs: {
+                providerItemId: ProviderItemId.makeUnsafe(event.toolCallId),
+              },
+              type: "item.started",
+              payload: {
+                itemType: tracked.itemType,
+                status: "inProgress",
+                title,
+                data: toolLifecycleData({
+                  toolCallId: event.toolCallId,
+                  toolName: event.toolName,
+                  args: event.args,
+                }),
+              },
+              raw: {
+                source: "pi.sdk.event",
+                messageType: event.type,
+                payload: event,
+              },
+            } satisfies ProviderRuntimeEvent);
+          }
           return;
         }
         case "tool_execution_update": {
@@ -2584,6 +2601,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             toolName: event.toolName,
             output: detail,
           });
+          if (tracked.canonicalUserInputLifecycle !== undefined) return;
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId: tracked.itemId,
@@ -2645,6 +2663,7 @@ const makePiAdapter = <P extends PiFamilyProvider>(
             output: detail,
             result: safeResult,
           });
+          if (tracked.canonicalUserInputLifecycle === "projected") return;
           offerRuntimeEvent({
             ...makeEventBase(context),
             itemId: tracked.itemId,

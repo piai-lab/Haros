@@ -565,6 +565,7 @@ describe("Pi native OmniMind gateway tools", () => {
       return piOpenAiSuccessResponse("Replanned after the answer.");
     });
     let presenterLease: ReturnType<typeof userInputPresenterRegistry.acquire> | undefined;
+    const events: ProviderRuntimeEvent[] = [];
 
     try {
       const layer = makeOmniMindAgentAdapterLive().pipe(
@@ -576,7 +577,6 @@ describe("Pi native OmniMind gateway tools", () => {
         Effect.scoped(
           Effect.gen(function* () {
             const adapter = yield* OmniMindAgentAdapter;
-            const events: ProviderRuntimeEvent[] = [];
             const eventsFiber = yield* Stream.runForEach(adapter.streamEvents, (event) =>
               Effect.sync(() => events.push(event)),
             ).pipe(Effect.forkChild);
@@ -812,6 +812,16 @@ describe("Pi native OmniMind gateway tools", () => {
         "ask_user",
       ]);
       expect(piRequestToolNames(requestBodies[5])).not.toContain("ask_user");
+      const visibleProductAskToolLifecycles = events.filter(
+        (event) =>
+          (event.type === "item.started" ||
+            event.type === "item.updated" ||
+            event.type === "item.completed") &&
+          (event.payload.data as any)?.toolName === "ask_user",
+      );
+      expect(visibleProductAskToolLifecycles).toEqual([]);
+      expect(events.filter((event) => event.type === "user-input.requested")).toHaveLength(3);
+      expect(events.filter((event) => event.type === "user-input.resolved")).toHaveLength(3);
     } finally {
       presenterLease?.release();
       vi.restoreAllMocks();
